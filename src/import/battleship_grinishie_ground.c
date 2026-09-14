@@ -27,11 +27,13 @@
  * NULL-guarded at source too, so the seesaws run, the POW timer runs, and
  * neither item appears until its kind lands in P2-5.
  *
- * THE HANG THIS STAGE SHIPS WITH. grInishieMakePowerBlock (grinishie.c:515-522)
+ * THE DEFENSIVE POW GUARD. grInishieMakePowerBlock (grinishie.c:515-522)
  * answers a POW map-object count of zero or above ten with
  * `while (TRUE) syDebugPrintf(...)`, exactly as Hyrule Castle does for its
- * tornado. The admission arm checks the count first and refuses with a
- * counter, for the same reason.
+ * tornado. Validate at grInishieMakeGround instead of entering that source
+ * failure or refusing the whole common
+ * stage setup: malformed POW data suppresses only the POW subsystem while the
+ * scales and Piranha Plants still initialize.
  */
 #if NDS_P2_STAGE_INISHIE
 
@@ -84,7 +86,29 @@ void scManagerRunPrintGObjStatus(void);
 
 void ndsBaseGRCommonSetupInitAll(void);
 
+#define grInishieMakeGround ndsBaseGRInishieMakeGround
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommon/grinishie.c"
+#undef grInishieMakeGround
+
+__attribute__((used)) volatile u32 gNdsGRInishiePowerBlockMapObjCount;
+__attribute__((used)) volatile u32 gNdsGRInishiePowerBlockCountRefusedCount;
+
+GObj *grInishieMakeGround(void)
+{
+    s32 pblock_count = mpCollisionGetMapObjCountKind(nMPMapObjKindPowerBlock);
+
+    gNdsGRInishiePowerBlockMapObjCount = (u32)pblock_count;
+    if ((pblock_count > 0) && (pblock_count <= 10))
+    {
+        return ndsBaseGRInishieMakeGround();
+    }
+
+    gNdsGRInishiePowerBlockCountRefusedCount++;
+    grInishieInitHeaders();
+    grInishieMakeScale();
+    grInishieMakePakkun();
+    return NULL;
+}
 
 /* Gameplay transcription notes (all numeric behaviour is the included source,
  * cited per constant -- nothing below re-states a number):

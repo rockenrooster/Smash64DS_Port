@@ -16,14 +16,14 @@
  * all. And unlike Yoshi's Island and Congo Jungle it references no
  * llGRHyruleMap* offsets, so this file needs no reloc lvalue block.
  *
- * THE ONE HAZARD THAT IS NOT THE TORNADO. grHyruleTwisterInitVars
+ * THE DEFENSIVE HAZARD GUARD. grHyruleTwisterInitVars
  * (grhyrule.c:394-401) answers a Twister map-object count of zero or above ten
- * with `while (TRUE) syDebugPrintf(...)`. That is source behaviour and stays,
- * but on DS there is no console to read it on: it presents as a stage that
+ * with `while (TRUE) syDebugPrintf(...)`. On DS there is no console to read
+ * that failure on: it presents as a stage that
  * boots to black and never returns, with no exception and nothing in a log.
- * The admission arm in battleship_grpupupu_ground.c checks the count before
- * entering and refuses with a published counter instead, which is the port's
- * only defence against a map-object import that silently goes wrong.
+ * Validate at grHyruleMakeGround instead of the common-stage admission seam:
+ * malformed tornado data suppresses only the tornado while the common stage
+ * geometry and actors still initialize.
  */
 #if NDS_P2_STAGE_HYRULE
 
@@ -71,7 +71,25 @@ intptr_t lGRHyruleParticleTextureBankHi;
 
 void ndsBaseGRCommonSetupInitAll(void);
 
+#define grHyruleMakeGround ndsBaseGRHyruleMakeGround
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommon/grhyrule.c"
+#undef grHyruleMakeGround
+
+__attribute__((used)) volatile u32 gNdsGRHyruleTwisterMapObjCount;
+__attribute__((used)) volatile u32 gNdsGRHyruleTwisterCountRefusedCount;
+
+GObj *grHyruleMakeGround(void)
+{
+    s32 twister_count = mpCollisionGetMapObjCountKind(nMPMapObjKindTwister);
+
+    gNdsGRHyruleTwisterMapObjCount = (u32)twister_count;
+    if ((twister_count <= 0) || (twister_count > 10))
+    {
+        gNdsGRHyruleTwisterCountRefusedCount++;
+        return NULL;
+    }
+    return ndsBaseGRHyruleMakeGround();
+}
 
 /* Gameplay transcription notes (all numeric behaviour is the included source,
  * cited per constant -- nothing below re-states a number):

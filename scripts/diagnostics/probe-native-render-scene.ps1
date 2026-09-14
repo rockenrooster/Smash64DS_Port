@@ -109,6 +109,8 @@ try {
         'gNdsNativeStageCastleRoofClipResult','gNdsNativeStageCastleRoofClipFlags',
         'sNdsRendererAdapterNativeStageWorkspace',
         'gNdsInishiePakkunCandidateStep',
+        'gNdsGRHyruleTwisterMapObjCount','gNdsGRHyruleTwisterCountRefusedCount',
+        'gNdsGRInishiePowerBlockMapObjCount','gNdsGRInishiePowerBlockCountRefusedCount',
         'gNdsNativeFighterValidateRejectCode',
         'gNdsFtrDeclineStage',
         'gNdsFtrComposeSourceFail',
@@ -393,6 +395,7 @@ try {
         # own counters say whether the pin set was prepared at all, whether it
         # was violated, and which image the run could not resolve.
         'printf "DIAG_PAKKUN=%u,%#x,%#x,%u,%u,%u,%#x,%#x,%#x,%#x\n", gNdsInishiePakkunCandidateStep, gNdsInishiePakkunMaterialFlags, gNdsInishiePakkunEffects, gNdsInishiePakkunDrawCount, gNdsInishiePakkunSubmitFailCount, gNdsInishiePakkunSubmitStep, gNdsInishiePakkunImageW0, gNdsInishiePakkunImage, gNdsInishiePakkunProjection, gNdsInishiePakkunModelview',
+        'printf "DIAG_STAGE_HAZARD_GUARD=%u,%u,%u,%u\n", gNdsGRHyruleTwisterMapObjCount, gNdsGRHyruleTwisterCountRefusedCount, gNdsGRInishiePowerBlockMapObjCount, gNdsGRInishiePowerBlockCountRefusedCount',
         # The particle env-colour variant cache. The KO blast pillar's pixel is
         # (PRIM - ENV) * TEXEL + ENV, so dropping ENV collapses it to thin
         # streaks -- the owner's exact reported symptom. A bake means the lerp

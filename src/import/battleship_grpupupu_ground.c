@@ -483,17 +483,6 @@ void ndsGRPupupuRunSafeUpdateProbe(void)
     }
 }
 
-#if NDS_P2_STAGE_HYRULE
-/* P2-4s5 witnesses for the Twister map-object count guard above: what the
- * count was, and how many times the stage was refused because of it. */
-__attribute__((used)) volatile u32 gNdsGRHyruleTwisterMapObjCount;
-__attribute__((used)) volatile u32 gNdsGRHyruleTwisterCountRefusedCount;
-#endif
-#if NDS_P2_STAGE_INISHIE
-__attribute__((used)) volatile u32 gNdsGRInishiePowerBlockMapObjCount;
-__attribute__((used)) volatile u32 gNdsGRInishiePowerBlockCountRefusedCount;
-#endif
-
 void grCommonSetupInitAll(void)
 {
     if ((gSCManagerBattleState != NULL) &&
@@ -590,31 +579,16 @@ void grCommonSetupInitAll(void)
 #endif
 
 #if NDS_P2_STAGE_HYRULE
-    /* P2-4 stage 5. Same admission shape as the four above PLUS one guard
-     * the others do not need. grHyruleTwisterInitVars (grhyrule.c:394-401)
-     * answers a Twister map-object count of zero or above ten with an
-     * infinite syDebugPrintf loop -- source behaviour, and on DS a stage
-     * that boots to black with no exception and nothing in a log. Check the
-     * count here, where it is checkable, and refuse with a counter rather
-     * than hand the stage a value that hangs it. */
+    /* P2-4 stage 5. Hazard validation belongs inside grHyruleMakeGround: an
+     * invalid tornado table must not suppress the common geometry, yakumono,
+     * item-appear and effect-appear setup that surrounds grMainSetupMakeGround. */
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindHyrule) &&
         (gMPCollisionGroundData != NULL) &&
         (gNdsSCVSBattleStageGroundDataReady != 0u))
     {
-        s32 twister_count =
-            mpCollisionGetMapObjCountKind(nMPMapObjKindTwister);
-
-        gNdsGRHyruleTwisterMapObjCount = (u32)twister_count;
-        if ((twister_count <= 0) || (twister_count > 10))
-        {
-            gNdsGRHyruleTwisterCountRefusedCount++;
-        }
-        else
-        {
-            ndsGRHyruleSetupInitAll();
-            return;
-        }
+        ndsGRHyruleSetupInitAll();
+        return;
     }
 #endif
 
@@ -631,27 +605,16 @@ void grCommonSetupInitAll(void)
 #endif
 
 #if NDS_P2_STAGE_INISHIE
-    /* P2-4 stage 7. Same admission shape, and the same map-object guard
-     * Hyrule Castle needs: grInishieMakePowerBlock (grinishie.c:515-522)
-     * answers a POW count of zero or above ten with an infinite loop. */
+    /* P2-4 stage 7. The POW table is validated inside grInishieMakeGround so
+     * a bad optional hazard cannot suppress the stage's common setup, scales
+     * or Piranha Plants. */
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindInishie) &&
         (gMPCollisionGroundData != NULL) &&
         (gNdsSCVSBattleStageGroundDataReady != 0u))
     {
-        s32 pblock_count =
-            mpCollisionGetMapObjCountKind(nMPMapObjKindPowerBlock);
-
-        gNdsGRInishiePowerBlockMapObjCount = (u32)pblock_count;
-        if ((pblock_count <= 0) || (pblock_count > 10))
-        {
-            gNdsGRInishiePowerBlockCountRefusedCount++;
-        }
-        else
-        {
-            ndsGRInishieSetupInitAll();
-            return;
-        }
+        ndsGRInishieSetupInitAll();
+        return;
     }
 #endif
 
