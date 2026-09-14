@@ -4625,3 +4625,5 @@ link but is blocked by an unrelated 40-byte ITCM overflow, so new top-chunk stre
 figures are not yet qualified. Slot-12 shell proof is also blocked by the probe's
 current RunnerSlot 1..8 validator. Evidence: `artifacts/visibility/2026-09-14_libc-heap-abort.md`.
 
+
+2026-09-14 P2-6 transition follow-up: 1P Intro keeps source full-file residency after a battle-owned compact experiment loaded Mario/Link but hit native-owner refusal reason 20 for low-detail Link; the accepted route leaves Intro with 148,784 B free. Compact battle residency itself remains registry-owned and independent of `NDS_P2_1P_GAME`. The source manager's win→StageClear and loss→Continue branches are linked, but the third/final slot-7 launch reached only 197 GO presents before the 180-second per-frame-GDB proof ceiling, so no natural KO/tally capture was claimed. Next proof should move the same ordinary fight input guest-side, then capture `1PGame→StageClear→next 1PGame` and the source tally. Evidence: `artifacts/visibility/2026-09-14_1p-followups.md`.

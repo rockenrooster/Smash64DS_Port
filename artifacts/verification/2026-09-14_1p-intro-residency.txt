@@ -1,0 +1,96 @@
+0xfffffffc in ?? ()
+Breakpoint 1 at 0x2094880: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 271.
+Breakpoint 2 at 0x20c6c48: file D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sc/sc1pmode/sc1pgame.c, line 990.
+Breakpoint 3 at 0x20e625c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 272.
+Breakpoint 4 at 0x2125328: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c, line 1507.
+Breakpoint 5 at 0x2068f28: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 280.
+Breakpoint 6 at 0x208ca84: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 504.
+Breakpoint 7 at 0x20e6382: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 213.
+Breakpoint 8 at 0x2083194: syAudioPlayBGM. (4 locations)
+Breakpoint 9 at 0x20831e4: func_800269C0_275C0. (5 locations)
+Breakpoint 10 at 0x200ac78: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3362.
+Breakpoint 11 at 0x2058f60: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 133.
+Breakpoint 12 at 0x205c2b8: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 211.
+Breakpoint 13 at 0x1fffac0: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+CPLINE 1 curr=27 prev=27 enters=0 rej=0 unreg=0 mism=0 arenabase=00000000 arenasize=0
+CPERR 1 allocfail=0 openfail=0 formatfail=0 fixupfail=0 hdr=0 payload=0
+CPGFX 1 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 1 en=0 mask=0 published=0
+CPBATTLE 1 none
+CP1P 1 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 2 curr=1 prev=27 enters=1 rej=0 unreg=1 mism=0 arenabase=00000000 arenasize=0
+CPERR 2 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=3 payload=1
+CPGFX 2 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 2 en=0 mask=0 published=0
+CPBATTLE 2 none
+CP1P 2 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 3 curr=7 prev=1 enters=2 rej=0 unreg=1 mism=0 arenabase=022f3800 arenasize=966400
+CPERR 3 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=181
+CPGFX 3 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 3 en=0 mask=0 published=0
+CPBATTLE 3 none
+CP1P 3 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 4 curr=8 prev=7 enters=3 rej=0 unreg=1 mism=0 arenabase=022f3800 arenasize=966400
+CPERR 4 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=289
+CPGFX 4 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 4 en=0 mask=0 published=0
+CPBATTLE 4 none
+CP1P 4 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 5 curr=17 prev=8 enters=4 rej=0 unreg=1 mism=0 arenabase=022f3800 arenasize=966400
+CPERR 5 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=11 payload=291
+CPGFX 5 peak=0 capacity=32768 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 5 en=1 mask=1 published=0
+CPBATTLE 5 none
+CP1P 5 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSCTRL manual=1 visit=1
+CPCSSBASE visit=1 diff=1 stock=2 fkind=28 costume=0 use_right=1
+CPLINE 6 curr=8 prev=17 enters=5 rej=0 unreg=1 mism=0 arenabase=022f3800 arenasize=966400
+CPERR 6 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=47 payload=307
+CPGFX 6 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 6 en=1 mask=1 published=0
+CPBATTLE 6 none
+CP1P 6 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 7 curr=17 prev=8 enters=6 rej=0 unreg=1 mism=0 arenabase=022f3800 arenasize=966400
+CPERR 7 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=51 payload=309
+CPGFX 7 peak=16 capacity=32768 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 7 en=1 mask=1 published=0
+CPBATTLE 7 none
+CP1P 7 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSBASE visit=2 diff=1 stock=2 fkind=28 costume=0 back=1
+CPCSSMUT base_diff=1 diff=2 base_stock=2 stock=3 base_costume=0 fkind=0 costume=1 selected=1 back=1
+CPLINE 8 curr=14 prev=52 enters=7 rej=0 unreg=1 mism=0 arenabase=022f3800 arenasize=966400
+CPERR 8 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=87 payload=326
+CPGFX 8 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 8 en=1 mask=1 published=0
+CPBATTLE 8 none
+CP1P 8 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPINTROAUDIO updates=209 sched=279 bgm_calls=0 bgm_id=-1 fgm_calls=0 fgm_last=-1 bgm_play_delta=0 track=10 bgm_chunks_delta=0 fgm_plays_delta=0 fgm_unsupported_delta=0
+CPFPCBEGIN scene=14 battle=1 kind=0 free=391072
+CPALLOC size=0 free=391072 lr=0208d167
+CPPACKKIND scene=14 kind=0 free=376600 loads=24 bytes=397960 extern_patches=0 extern_loads=0 foreign_bytes=0
+CPINTRO-LINK-BEFORE free=356640
+CPFPCBEGIN scene=14 battle=1 kind=5 free=356640
+CPALLOC size=5 free=356640 lr=0208d167
+CPPACKKIND scene=14 kind=5 free=320078 loads=25 bytes=412432 extern_patches=12 extern_loads=4 foreign_bytes=0
+CPINTRO-LINK-AFTER free=303104 paid=53536
+CPINTRO-BGM call=1 id=35
+
+Breakpoint 12, ndsPreviewPackLoadHalt (reason=reason@entry=20, kind=5) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c:211
+211	    gNdsPreviewPackFailure = reason;
+CPSTOP n=8 pc=0205c2b8 cpsr=2000003f
+ndsPreviewPackLoadHalt in section .main
+CPREGISTERS r0=00000014 r1=00000005 lr=0207147d cpsr=2000003f
+CPOOM request=0 free=0 align=0 caller=00000000
+CPPACK loaded=26 bytes=445952 failure=0 kind=0
+#0  ndsPreviewPackLoadHalt (reason=reason@entry=20, kind=5) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c:211
+#1  0x0207147c in ndsFighterMarioFoxDLAllDrawForSlot (slot=slot@entry=0, fp=fp@entry=0x237a714, pitch=0, pixels=0x0 <func_ovl24_80131C58>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/renderer_adapter_fighter.c:4130
+#2  0x0208fef8 in ndsFighterIntroTransientSubmit (fighter_gobj=0x237a714) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/renderer_adapter_fighter.c:4793
+#3  ndsFighterDisplayContractSubmit (fighter_gobj=fighter_gobj@entry=0x23a4430) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/renderer_adapter_fighter.c:4853
+#4  0x020929c0 in ftDisplayMainProcDisplay (fighter_gobj=fighter_gobj@entry=0x23a4430) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_fighter_display_seam.c:86
+#5  0x020caaea in sc1PIntroVSFighterProcDisplay (fighter_gobj=0x23a4430) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c:974
+#6  0x01ffe1b8 in gcCaptureCameraGObj (camera_gobj=camera_gobj@entry=0x239f560, is_tag_mask_or_id=is_tag_mask_or_id@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/opening_movie_backend.c:1676
+#7  0x02093e38 in func_80017EC0 (gobj=0x239f560) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/opening_movie_backend.c:1800
+#8  0x02097d78 in gcDrawAll () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sys/objman.c:2233
+#9  0x0208328a in scManagerFuncDraw () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:1482
+[Inferior 1 (Remote target) detached]
+

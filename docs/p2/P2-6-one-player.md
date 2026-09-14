@@ -44,9 +44,9 @@ The manager separately handles challenger fights and ending/progression transiti
 Cycle-2 proof status (2026-09-13):
 - [x] Natural Main Menu → 1P Mode → 1P CSS entry.
 - [x] Source CSS setting/costume changes plus back-out and re-entry.
-- [x] Source 1P intro animation/audio completes.
+- [x] Source 1P intro animation/audio completes; 2026-09-14 heap proof keeps the source full-file Intro residency (148,784 B exit free) because compact Link reaches a native-owner refusal.
 - [x] First ordinary Mario vs Link/Hyrule fight reaches GO and sustains 600 presented fight frames.
-- [ ] Victory/tally/next-stage transition.
+- [ ] Victory/tally/next-stage transition — 2026-09-14 source win/loss routing is linked, but the three-launch proof budget ended after 197 GO frames before a natural KO; move ordinary fight input guest-side before the next run.
 
 **Exit:** This natural prefix works and remains repeatable. **Stop:** Name the failed source→resource→native→output stage; preserve already-working prefix evidence.
 

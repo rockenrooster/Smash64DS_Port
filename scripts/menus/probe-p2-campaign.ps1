@@ -18,7 +18,9 @@ param(
     [string]$Artifact = '',
     [string]$Screenshot = '',
     [string]$GoScreenshot = '',
-    [string]$IntroScreenshot = ''
+    [string]$IntroScreenshot = '',
+    [switch]$TransitionProof,
+    [string]$TallyScreenshot = ''
 )
 
 # CAMPAIGN-ENABLED ROM ACCEPTANCE PROBE. Drives a 1P build from cold boot
@@ -83,6 +85,10 @@ if ([string]::IsNullOrWhiteSpace($Screenshot)) {
 if ([string]::IsNullOrWhiteSpace($GoScreenshot)) {
     $GoScreenshot = Join-Path $root ('artifacts\\visibility\\' +
         (Get-Date -Format 'yyyy-MM-dd') + '_1p-go.png')
+}
+if ($TransitionProof -and [string]::IsNullOrWhiteSpace($TallyScreenshot)) {
+    $TallyScreenshot = Join-Path $root ('artifacts\\visibility\\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_1p-stageclear.png')
 }
 if (-not (Test-Path -LiteralPath $Rom -PathType Leaf)) {
     throw "p2-campaign probe: ROM not found: $Rom (pass -Rom explicitly)."
@@ -195,6 +201,18 @@ $required = @(
     'sMNPlayers1PGameStockValue',
     'sMNPlayers1PGameSlot'
 )
+if ($TransitionProof) {
+    $required += @(
+        'sc1PStageClearStartScene',
+        'mnPlayers1PGameContinueStartScene',
+        'sSC1PStageClearScoreTotal',
+        'sSC1PStageClear1PGameStage',
+        'sSC1PStageClearBonusFlags',
+        'sSC1PStageClearBonusID',
+        'sSC1PStageClearBonusNum',
+        'sSC1PStageClearIsAllowProceedNext'
+    )
+}
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
@@ -330,6 +348,14 @@ try {
         'set $intro_link_seen = 0',
         'set $intro_link_before = 0xffffffff',
         'set $intro_link_after = 0xffffffff',
+        $(if ($TransitionProof) { 'set $transition = 1' } else { 'set $transition = 0' }),
+        'set $first_stage = -1',
+        'set $saw_stageclear = 0',
+        'set $saw_continue = 0',
+        'set $stageclear_frames = 0',
+        'set $continue_frames = 0',
+        'set $tallyshot = 0',
+        'set $tallyfinal = 0',
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
@@ -374,6 +400,38 @@ try {
         'printf "CPBATTLE-HIT %d renderframe=%u\n", $n, gNdsRendererProfileFrameCount',
         'set $inbattle = 1',
         'end',
+        'if $transition != 0',
+        'if gSCManagerSceneData.scene_curr == 52',
+        'if $first_stage < 0',
+        'set $first_stage = gSCManagerSceneData.spgame_stage',
+        'printf "CPTRANSITION-FIRST stage=%d enters=%u\n", $first_stage, gNdsSceneManagerEnterCount',
+        'else',
+        'if ($saw_stageclear != 0) && (gSCManagerSceneData.spgame_stage > $first_stage)',
+        'printf "CPNEXTBATTLE stage=%u first_stage=%d enters=%u score=%d bonuses=%u\n", gSCManagerSceneData.spgame_stage, $first_stage, gNdsSceneManagerEnterCount, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_count',
+        'printf "CPTRANSITIONDONE n=%d stageclear=%d continue=%d\n", $n, $saw_stageclear, $saw_continue',
+        'detach',
+        'quit',
+        'end',
+        'end',
+        'end',
+        'if gSCManagerSceneData.scene_curr == 51',
+        'set $inbattle = 0',
+        'set $saw_stageclear = 1',
+        'set $stageclear_frames = 0',
+        'set $tallyshot = 0',
+        'set $tallyfinal = 0',
+        'printf "CPSTAGECLEAR-ENTER prev=%u stage=%u score=%d masks=%08x/%08x/%08x\n", gSCManagerSceneData.scene_prev, gSCManagerSceneData.spgame_stage, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_get_mask[0], gSCManagerSceneData.bonus_get_mask[1], gSCManagerSceneData.bonus_get_mask[2]',
+        'end',
+        'if gSCManagerSceneData.scene_curr == 49',
+        'set $inbattle = 0',
+        'set $saw_continue = 1',
+        'set $continue_frames = 0',
+        'printf "CPCONTINUE-ENTER prev=%u stage=%u player_stock=%d time=%d\n", gSCManagerSceneData.scene_prev, gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gSCManager1PGameBattleState.time_remain',
+        'end',
+        'if (gSCManagerSceneData.scene_curr == 14) && ($saw_stageclear != 0)',
+        'printf "CPNEXTINTRO stage=%u first_stage=%d score=%d\n", gSCManagerSceneData.spgame_stage, $first_stage, gSCManagerSceneData.spgame_score',
+        'end',
+        'end',
         ('if $n < ' + $Hits),
         'continue',
         'end',
@@ -385,9 +443,21 @@ try {
         'printf "CPSETUP count=%d stage=%u state=%08x\n", $setupcount, gSCManagerSceneData.spgame_stage, gSCManagerBattleState',
         'continue',
         'end',
-        # 1P Intro keeps the source full-file fighter loader. Measure the first
-        # stage's Link tree around that call so the MENU-vs-battle predicate
-        # difference is explicit and budgeted rather than accidental.
+        $(if ($TransitionProof) { 'break sc1PStageClearStartScene' }),
+        $(if ($TransitionProof) { 'commands' }),
+        $(if ($TransitionProof) { 'silent' }),
+        $(if ($TransitionProof) { 'printf "CPWINROUTE stage=%u p0=%d/%d p1=%d/%d p2=%d/%d p3=%d/%d time=%d score=%d masks=%08x/%08x/%08x\n", gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[0].pkind, gSCManager1PGameBattleState.players[0].stock_count, gSCManager1PGameBattleState.players[1].pkind, gSCManager1PGameBattleState.players[1].stock_count, gSCManager1PGameBattleState.players[2].pkind, gSCManager1PGameBattleState.players[2].stock_count, gSCManager1PGameBattleState.players[3].pkind, gSCManager1PGameBattleState.players[3].stock_count, gSCManager1PGameBattleState.time_remain, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_get_mask[0], gSCManagerSceneData.bonus_get_mask[1], gSCManagerSceneData.bonus_get_mask[2]' }),
+        $(if ($TransitionProof) { 'continue' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof) { 'break mnPlayers1PGameContinueStartScene' }),
+        $(if ($TransitionProof) { 'commands' }),
+        $(if ($TransitionProof) { 'silent' }),
+        $(if ($TransitionProof) { 'printf "CPLOSSROUTE stage=%u player_stock=%d time=%d continues=%u\n", gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gSCManager1PGameBattleState.time_remain, gSCManagerSceneData.continues_used' }),
+        $(if ($TransitionProof) { 'continue' }),
+        $(if ($TransitionProof) { 'end' }),
+        # Measure the first Intro stage's Link tree around the source fighter
+        # setup call. The FPC marker makes the accepted full-file Intro
+        # residency (battle=0) distinct from compact battle ownership.
         'break ftManagerSetupFilesAllKind',
         'commands',
         'silent',
@@ -410,15 +480,15 @@ try {
         'break ndsRelocLoadPreviewFighterUnlocked',
         'commands',
         'silent',
-        'if gNdsSceneManagerCurrKind == 52',
+        'if (gNdsSceneManagerCurrKind == 14) || (gNdsSceneManagerCurrKind == 52)',
         'set $fpc_kind = $r0',
         'set $fpc_begin_free = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr',
-        'if ($ring_free_printed == 0) && (gNdsSceneManagerEnterCount >= 2)',
+        'printf "CPFPCBEGIN scene=%u battle=%u kind=%d free=%u\n", gNdsSceneManagerCurrKind, gNdsSceneManagerCurrIsBattle, $fpc_kind, $fpc_begin_free',
+        'if (gNdsSceneManagerCurrKind == 52) && ($ring_free_printed == 0) && (gNdsSceneManagerEnterCount >= 2)',
         'set $ring_free_printed = 1',
         'set $prev_ring = (gNdsSceneManagerEnterCount - 2) % 16',
         'printf "CPRINGFREE prev_kind=%u prev_free=%u enters=%u current_free=%u\n", gNdsSceneManagerRingKind[$prev_ring], gNdsSceneManagerRingArenaFree[$prev_ring], gNdsSceneManagerEnterCount, $fpc_begin_free',
         'end',
-        'printf "CPFPCBEGIN kind=%d free=%u\n", $fpc_kind, $fpc_begin_free',
         'printf "CPALLOC size=%u free=%u lr=%08x\n", $r0, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, $lr',
         'end',
         'continue',
@@ -430,9 +500,9 @@ try {
         'break ndsRelocPatchCompactBattleMainExterns',
         'commands',
         'silent',
-        'if gNdsSceneManagerCurrKind == 52',
+        'if (gNdsSceneManagerCurrKind == 14) || (gNdsSceneManagerCurrKind == 52)',
         'set $extern_before = gNdsBattleCoreExternPatchCount',
-        'printf "CPPACKKIND kind=%d free=%u loads=%u bytes=%u extern_patches=%u extern_loads=%u foreign_bytes=%u\n", $r0, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsBattleCoreForeignImageBytes',
+        'printf "CPPACKKIND scene=%u kind=%d free=%u loads=%u bytes=%u extern_patches=%u extern_loads=%u foreign_bytes=%u\n", gNdsSceneManagerCurrKind, $r0, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsBattleCoreForeignImageBytes',
         'end',
         'continue',
         'end',
@@ -581,6 +651,33 @@ try {
         'if (gNdsSceneManagerCurrKind == 17) && (gSYControllerDevices[0].button_tap & 0x8000)',
         'set $saw_css_a = 1',
         'end',
+        $(if ($TransitionProof) {
+            'if gNdsSceneManagerCurrKind == 51'
+            'set $stageclear_frames = $stageclear_frames + 1'
+            'if $stageclear_frames == 1'
+            'printf "CPTALLY frame=%d stage=%d score=%d bonus_num=%d bonus_id=%d flags=%08x/%08x/%08x allow=%d\n", $stageclear_frames, sSC1PStageClear1PGameStage, sSC1PStageClearScoreTotal, sSC1PStageClearBonusNum, sSC1PStageClearBonusID, sSC1PStageClearBonusFlags[0], sSC1PStageClearBonusFlags[1], sSC1PStageClearBonusFlags[2], sSC1PStageClearIsAllowProceedNext'
+            'end'
+            'if ($stageclear_frames >= 30) && ($tallyshot == 0)'
+            'set $tallyshot = 1'
+            'printf "CPTALLY-SHOT frame=%d stage=%d score=%d bonus_num=%d bonus_id=%d flags=%08x/%08x/%08x allow=%d\n", $stageclear_frames, sSC1PStageClear1PGameStage, sSC1PStageClearScoreTotal, sSC1PStageClearBonusNum, sSC1PStageClearBonusID, sSC1PStageClearBonusFlags[0], sSC1PStageClearBonusFlags[1], sSC1PStageClearBonusFlags[2], sSC1PStageClearIsAllowProceedNext'
+            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+             '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $TallyScreenshot + '"')
+            'end'
+            'if (sSC1PStageClearIsAllowProceedNext != 0) && ($tallyfinal == 0)'
+            'set $tallyfinal = 1'
+            'printf "CPTALLY-FINAL frame=%d stage=%d score=%d bonus_num=%d bonus_id=%d flags=%08x/%08x/%08x allow=%d\n", $stageclear_frames, sSC1PStageClear1PGameStage, sSC1PStageClearScoreTotal, sSC1PStageClearBonusNum, sSC1PStageClearBonusID, sSC1PStageClearBonusFlags[0], sSC1PStageClearBonusFlags[1], sSC1PStageClearBonusFlags[2], sSC1PStageClearIsAllowProceedNext'
+            'end'
+            'if ($stageclear_frames >= 40) && (($stageclear_frames % 12) <= 1)'
+            'set variable sControllerPlaybackPads[0].button = 0x8000'
+            'end'
+            'end'
+            'if gNdsSceneManagerCurrKind == 49'
+            'set $continue_frames = $continue_frames + 1'
+            'if ($continue_frames >= 60) && (($continue_frames % 30) <= 1)'
+            'set variable sControllerPlaybackPads[0].button = 0x8000'
+            'end'
+            'end'
+        }),
         $(if ($IntroScreenshot) {
             'if (gNdsSceneManagerCurrKind == 14) && (dSYTaskmanUpdateCount >= 40) && (gNdsIntroTransientDrawCount >= 20) && ($introshot == 0)'
             'set $introshot = 1'
@@ -619,6 +716,7 @@ try {
         'end',
         'set $goframes = $goframes + 1',
         # Real post-GO human input while the source CPU remains enabled.
+        'if $transition == 0',
         'if ($goframes >= 60) && ($goframes <= 90)',
         'set variable sControllerPlaybackPads[0].stick_x = 80',
         'end',
@@ -631,8 +729,25 @@ try {
         'if ($goframes == 240) || ($goframes == 241)',
         'set variable sControllerPlaybackPads[0].button = 0x4000',
         'end',
+        'else',
+        # Keep the source CPU enabled and exhaust its stock through ordinary
+        # controller input only. Oscillation keeps Mario near the engagement
+        # zone while repeated direction+A attacks continue until battle ends.
+        'if (($goframes % 90) < 45)',
+        'set variable sControllerPlaybackPads[0].stick_x = 80',
+        'else',
+        'set variable sControllerPlaybackPads[0].stick_x = -80',
         'end',
-        ('if $goframes >= ' + $BattlePresents)
+        'if (($goframes % 8) <= 1)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if (($goframes % 120) >= 54) && (($goframes % 120) <= 61)',
+        'set variable sControllerPlaybackPads[0].stick_y = 80',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'end',
+        'end',
+        ('if ($transition == 0) && ($goframes >= ' + $BattlePresents + ')')
     ) + $stopLines + @(
         'printf "CPPACKAUDIT failure=%u failure_kind=%u extern_fighters=%u extern_patches=%u\n", gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, $extern_fighters, gNdsBattleCoreExternPatchCount',
         'printf "CPSCENE mgrkind=%u intro_enters=%u final_enters=%u enter_delta=%u intro_rejects=%u final_rejects=%u reject_delta=%u\n", gNdsSceneManagerCurrKind, $intro_enters, gNdsSceneManagerEnterCount, gNdsSceneManagerEnterCount-$intro_enters, $intro_rejects, gNdsSceneManagerRejectCount, gNdsSceneManagerRejectCount-$intro_rejects',
@@ -764,6 +879,47 @@ if ($failReasons.Count -gt 0) {
 $scenes = @([regex]::Matches($text, '(?m)^CPLINE \d+ curr=(\d+) prev=(\d+).*$') |
     ForEach-Object { [int]$_.Groups[1].Value })
 Write-Output ('route scenes: ' + ($scenes -join ' -> '))
+
+if ($TransitionProof) {
+    $winRoute = [regex]::Match($text, '(?m)^CPWINROUTE .+$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $stageClear = [regex]::Match($text, '(?m)^CPSTAGECLEAR-ENTER .+$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $tally = [regex]::Match($text, '(?m)^CPTALLY-FINAL .+$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $nextIntro = [regex]::Match($text, '(?m)^CPNEXTINTRO .+$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $nextBattle = [regex]::Match($text, '(?m)^CPNEXTBATTLE .+$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $transitionDone = [regex]::Match($text,
+        '(?m)^CPTRANSITIONDONE n=\d+ stageclear=1 continue=(\d+)\s*$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $tallyShotOk = (-not [string]::IsNullOrWhiteSpace($TallyScreenshot) -and
+        (Test-Path -LiteralPath $TallyScreenshot -PathType Leaf))
+    if ($winRoute.Success -and $stageClear.Success -and $tally.Success -and
+        $nextIntro.Success -and $nextBattle.Success -and $transitionDone.Success -and
+        $tallyShotOk) {
+        Write-Output ('win route: ' + $winRoute.Value.Trim())
+        Write-Output ('tally: ' + $tally.Value.Trim())
+        Write-Output ('next: ' + $nextBattle.Value.Trim())
+        Write-Output ('VERDICT: PASS natural 1P win -> StageClear -> next 1P Game; tally=' +
+            $TallyScreenshot)
+        exit 0
+    }
+    Write-Output 'VERDICT: BLOCKED 1P transition proof incomplete.'
+    if (-not $winRoute.Success) { Write-Output 'seam: source manager never called sc1PStageClearStartScene.' }
+    elseif (-not $stageClear.Success) { Write-Output 'seam: StageClear call did not enter registered scene 51.' }
+    elseif (-not $tally.Success) { Write-Output 'seam: source StageClear tally never reached allow-proceed state.' }
+    elseif (-not $nextIntro.Success) { Write-Output 'seam: source manager did not route StageClear to the next intro.' }
+    elseif (-not $nextBattle.Success) { Write-Output 'seam: next 1P Game was not entered after StageClear.' }
+    elseif (-not $tallyShotOk) { Write-Output ('seam: tally capture missing: ' + $TallyScreenshot) }
+    if ($text -match '(?m)^CPLOSSROUTE') {
+        Write-Output 'note: the same run also reached the source Continue call after a natural loss.'
+    }
+    if ($timedOut) { Write-Output 'note: transition run ended at its timeout ceiling.' }
+    exit 2
+}
+
 $saw1PMode = ($scenes -contains 8)
 $saw1PCss = ($scenes -contains 17)
 $sawBattle = ($text -match '(?m)^CPBATTLE-HIT')
