@@ -2502,6 +2502,21 @@ generator, with and without the fix (`artifacts/audio/source_audio_fixed/`).
   23, 24, 27, 28, 30, 33, 35, 38, 39. Boss Stage (23) runs at 352,941 us/qn until
   tick 4,649 and renders at 1,000,000.
 
+**Tempo map, specified and verified outside the repo (2026-09-14).** The owner
+heard the symptom in the census WAVs: Hurry starts too slow and Jungle plays too
+fast.
+- **Patch:** `artifacts/audio/source_audio_fixed/evidence/render-audio-bgm.tempo-map.patch`.
+  Tempo events apply from their tick and replay on every pass of their track's
+  loop, matching `n_env.c` `__n_CSPHandleMetaMsg`, which re-times pending
+  note-offs by remaining ticks. Before the first event the tempo is 500,000.
+  One-segment sequences keep the old arithmetic.
+- **Negative control:** the other 33 sequences render byte-identical.
+- **Engagement:** an independent walk of each tempo track, event by event with
+  loop jumps, reproduces every loop boundary and length of the 14 (Hurry loop
+  6.07 s, was 8.89 s; Jungle 314.3 s, was 264.8 s).
+- **Pins:** unlike the decoder fix, these 14 change length (+157,218 B net;
+  Jungle +546,836 B), so their byte, packet and loop pins move with their SHAs.
+
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 
 MEASURED with a reconnaissance-only witness that owns nothing and draws nothing,
