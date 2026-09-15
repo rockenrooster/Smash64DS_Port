@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-15 after particle quad first-row indexing.
+Updated: 2026-09-15 after exact fighter-packet precheck replay.
 
 **Last integrated Boundary GREEN: `d8660bc2fd9` + owner overlay. Boundary
 is blocked by `decomp/alt_assets/`; acceptance RED (P2-2p8).** Four-CPU
@@ -48,12 +48,10 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Current shared fix:** P2-2p8 particle row indexing after I/O/pose cuts.
-Whole-match same-ROM WORK-H P95 **2,380,032 -> 2,376,576**, paired median
-**-640** ticks/frame. Final stress **1,635,712/2,377,152**, native fail/reject
-**0/0**, heap **111,680 B**; 118/1,973 presents are 2-VBlank. P2-2p8 remains RED.
-Boundary stops on owner
-`decomp/alt_assets/` after generator staleness.
+**Current shared fix:** P2-2p8 exact packet-precheck replay after I/O/pose/particle cuts.
+Whole-match same-ROM WORK-H P95 **2,422,528 -> 2,399,616**, paired median
+**-28,672** ticks/frame. Final stress **1,654,528/2,385,536**, native fail/reject
+**0/0**, heap **108,096 B**. Full Boundary is GREEN; P2-2p8 remains RED.
 In flight: menu-rules close, 1P next stage, roster proofs.
 Next: remaining P2-2p8 whole-frame/SRC/tail cost, DATA surfaces (P2-7), weapon-pool sizing, remaining
 stage captures/visual acceptance, dead code, remaining audit divergences
@@ -128,7 +126,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **I/O + POSE + PARTICLE CUTS KEEP; RED** | Particle index P95 **-3,456**, paired median **-640**; final **1,635,712/2,377,152**, heap **111,680**. Evidence `2026-09-15_p2-2p8-particle-quad-index`. Continue whole-frame/SRC/tail cost. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **PACKET HIT PREP CUT KEEP; RED** | Exact precheck reuse P95 **-22,912**, paired median **-28,672**; final **1,654,528/2,385,536**, Boundary GREEN. Evidence `2026-09-15_p2-2p8-prechecked-replay`. Continue whole-frame/SRC/tail cost. |
 
 ## Queue discipline
 

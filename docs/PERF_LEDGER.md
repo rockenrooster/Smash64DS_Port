@@ -8022,3 +8022,29 @@ failures/direct rejects are **0/0**, pose bind/full/overflow/fallback
 **677/0/0/0**, BPS1 directory **9320/681/0/0**, BGM **329/0**, FGM
 **329/0/0**, and heap low-water **111,680 B**. P2-2p8 remains RED. Evidence:
 `artifacts/performance/2026-09-15_p2-2p8-particle-quad-index`.
+
+## 2026-09-15 — P2-2p8 phase L: exact packet-precheck replay KEEP
+
+The adapter already proved an exact fighter packet match before skipping native
+material rows, but the owner executor then repeated whole-owner preflight, packet
+key matching and live texgen work before DMA replay. The retained route consumes
+that same production-input proof first and leaves the old preflight/record path
+as the fail-safe miss route. Captain HIGH remains direct because its alpha-test
+state is outside the FIFO packet. Kirby copy-hat topology changes invalidate the
+slot through `ftParamResetModelPartAll` -> material/packet invalidation.
+
+On one ROM (`F121EE31...75D5`), the full 1,972-frame A/B records identical
+**6,673 precheck hits / 6,673 packet hits / 178 records / 0 declines**. FTR
+improves on **1,894/1,972** frames (median **-30,016**, mean **-25,934**).
+WORK-H improves on **1,744/1,972** (median **-28,672**, mean **-25,748**) and
+P50/P95 moves **1,692,352/2,422,528 -> 1,665,088/2,399,616**. 5+ VBlank
+presents fall **249 -> 227**.
+
+The measurement route was removed. Final ROM `45869C2A...CC203` exits the
+standing stress verifier 0 at WORK-H **1,654,528/2,385,536**, FTR
+**362,944/753,792**, native failures/rejects **0/0**, BPS1 directory
+**9320/681/0/0**, BGM **331/0**, FGM **329/0/0**, heap low-water **108,096 B**
+and VBlank 2/3/4/5+ **103/818/817/235**. ITCM is **32,704/32,768 B**. The full
+Boundary profile is GREEN, including shell/realtime screenshot checks and the
+four-CPU arm. P2-2p8 remains RED to the product target. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-prechecked-replay`.

@@ -38,6 +38,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     u32 use_low_detail,
     u32 texture_memo_owner_key,
     u32 packet_key,
+    u32 packet_prechecked,
     const void *asset_base_ptr,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
@@ -104,11 +105,46 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     e15b_mark = cpuGetTiming();
 #endif
     if ((stats == NULL) ||
-        (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
-        (ndsRendererNativePreflightProductionOwner(
-             slot, (texture_memo_owner_key >> 9) & 3u,
-             use_low_detail, asset_base, inputs, input_count,
-             NULL, stats) == FALSE))
+        (stats->blocker != NDS_RENDERER_BLOCKER_NONE))
+    {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        ndsRendererProfileM2FinishProduction(
+            m2_owner, m2_total_start,
+            m2_lighting_before, m2_root_gx_before,
+            m2_run_prepare_before, m2_emit_account_before, FALSE);
+#endif
+        return FALSE;
+    }
+#if NDS_FIGHTER_PACKET_LIVE
+    /* The adapter's precheck already validated owner identity, built these
+     * native inputs and proved the exact packet match before it skipped the
+     * material rows. A replay consumes only those inputs plus the packet; the
+     * resolved root/table arrays produced by whole-owner preflight are record
+     * path state. Consume the same-frame proof first and delete that redundant
+     * preflight from steady replay hits. TryReplay fails closed without arming
+     * a recorder if the immediate-handoff contract is ever broken. */
+    if ((packet_prechecked != 0u) &&
+        (ndsFighterPacketTryReplay(
+             slot, use_low_detail, texture_memo_owner_key, packet_key, TRUE,
+             inputs, input_count, stats, out_hardware_started) != 0))
+    {
+#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
+    NDS_RENDERER_M2_DETAILED_LEDGER
+        ndsRendererProfileM2FinishProduction(
+            m2_owner, m2_total_start,
+            m2_lighting_before, m2_root_gx_before,
+            m2_run_prepare_before, m2_emit_account_before, TRUE);
+#endif
+        return TRUE;
+    }
+#else
+    (void)packet_prechecked;
+#endif
+    if (ndsRendererNativePreflightProductionOwner(
+            slot, (texture_memo_owner_key >> 9) & 3u,
+            use_low_detail, asset_base, inputs, input_count,
+            NULL, stats) == FALSE)
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -124,7 +160,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
 #if NDS_FIGHTER_PACKET_LIVE
     if (ndsFighterPacketTryReplay(
-            slot, use_low_detail, texture_memo_owner_key, packet_key,
+            slot, use_low_detail, texture_memo_owner_key, packet_key, FALSE,
             inputs, input_count, stats, out_hardware_started) != 0)
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \

@@ -3958,6 +3958,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                      * already-full ITCM on once-per-owner bookkeeping. */
                     native_owner_texture_key,
                     sNdsFighterPacketMaterialIdentity,
+                    (u32)native_owner_packet_predicted,
                     native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
                     collection.selected_count,

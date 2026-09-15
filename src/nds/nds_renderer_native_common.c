@@ -9187,6 +9187,15 @@ s32 ndsRendererFighterPacketPrecheck(
         sNdsRendererRuntimeFrameSummary.texture_binds;
 #endif
     sNdsFighterPacketRecordBase[7] = sNdsRendererHardwareSourceVertexLoadCount;
+#if NDS_P2_CAPTAIN
+    /* Keep packet eligibility identical to replay. Captain HIGH changes alpha
+     * test state outside the recorded FIFO stream, so it can never be a
+     * prechecked replay hit. */
+    if ((slot == 4u) && (use_low_detail == 0u))
+    {
+        return FALSE;
+    }
+#endif
     if ((inputs == NULL) || (input_count == 0u) ||
         (input_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
         (ndsRendererNativeSelectFighterRuntimeTables(
@@ -9201,11 +9210,12 @@ s32 ndsRendererFighterPacketPrecheck(
         return FALSE;
     }
     /* A predicted hit lets the adapter skip every material row for this draw,
-     * so it must also prove any live texgen words can be refreshed.  Replay
-     * performs the same patch again immediately before DMA; the duplicate
-     * bounded calculation keeps this precheck exact without leaving transient
-     * "prepatched" state that could survive an unrelated early return. */
-    return ndsFighterPacketPatchTexgen(packet, inputs, input_count);
+     * so it must also prove any live texgen words can be refreshed. */
+    if (ndsFighterPacketPatchTexgen(packet, inputs, input_count) == FALSE)
+    {
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /* The per-frame path. A hit patches the moving words, flushes, DMAs the
@@ -9219,6 +9229,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     u32 use_low_detail,
     u32 texture_memo_owner_key,
     u32 packet_key,
+    u32 prechecked,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
     NDSRendererStats *stats,
@@ -9262,13 +9273,34 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         gNdsFighterPacketDeclines++;
         return 0;
     }
-    ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
-                             inputs, input_count, key);
-    if (ndsFighterPacketMatches(packet, key, input_count) != FALSE)
+    /* The adapter precheck evaluates this packet against these exact inputs
+     * immediately before execute. A predicted hit has already checked the full
+     * key, texture slot/name/generation residency and live texgen patch. No
+     * renderer mutation occurs between that proof and this call. Consume it
+     * directly instead of rebuilding the same key and texgen work. */
+    if (prechecked != 0u)
+    {
+        /* Fail safe if a future caller breaks the immediate-handoff contract.
+         * Do not arm a recorder here; the caller will run whole-owner preflight
+         * and retry through the ordinary replay/miss path. */
+        if ((packet->valid == 0u) || (packet->root_count != input_count))
+        {
+            gNdsFighterPacketDeclines++;
+            return 0;
+        }
+    }
+    else
+    {
+        ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
+                                 inputs, input_count, key);
+    }
+    if ((prechecked != 0u) ||
+        (ndsFighterPacketMatches(packet, key, input_count) != FALSE))
     {
         u32 *words = packet->words;
 
-        if (ndsFighterPacketPatchTexgen(packet, inputs, input_count) == FALSE)
+        if ((prechecked == 0u) &&
+            (ndsFighterPacketPatchTexgen(packet, inputs, input_count) == FALSE))
         {
             /* The adapter precheck normally catches this before materials are
              * skipped.  Direct callers still fail closed here: discard the

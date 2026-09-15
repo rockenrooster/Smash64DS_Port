@@ -1719,6 +1719,7 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 use_low_detail,
     u32 texture_memo_owner_key,
     u32 packet_key,
+    u32 packet_prechecked,
     const void *asset_base,
     const NDSRendererNativeFighterRoot *roots,
     u32 root_count,
