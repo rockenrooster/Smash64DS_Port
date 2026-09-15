@@ -2495,7 +2495,7 @@ CURRENT_RELAXED_W_CEILING_RAW = (
 # The generated manifest is the single source of truth for source-W bytes,
 # compact blob bytes, source asset IDs, and fidelity-oracle measurements.
 NATIVE_SHIELD_POSE_MANIFEST = os.path.join(
-    REPO_ROOT, "docs", "optimization", "NDS_SHIELD_POSE_ASSETS.generated.json")
+    REPO_ROOT, "docs", "optimization", "archive", "NDS_SHIELD_POSE_ASSETS.generated.json")
 
 
 def _load_native_shield_pose_assets():

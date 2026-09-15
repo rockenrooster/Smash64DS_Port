@@ -3,7 +3,7 @@ param([string]$Python = 'python')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $generator = Join-Path $PSScriptRoot 'generate_nds_particle_banks.py'
-$reportPath = Join-Path $root 'docs/optimization/NDS_PARTICLE_BANKS.generated.json'
+$reportPath = Join-Path $root 'docs/optimization/archive/NDS_PARTICLE_BANKS.generated.json'
 $headerPath = Join-Path $root 'include/nds/generated/nds_particle_banks.generated.h'
 $effectHeaderPath = Join-Path $root 'include/ef/effect.h'
 $runtimePath = Join-Path $root 'src/import/battleship_lbparticle.c'
@@ -790,6 +790,8 @@ foreach ($token in @(
     # format declaration, and renaming it would churn the NitroFS manifest and
     # every consumer for no behavioural gain.)
     '#define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u',
+    '#define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u',
+    '#define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu',
     '#define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu',
     '#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x0badfd59u',
     # NOT const, deliberately: the loader byte-swaps the bank in place instead
@@ -800,9 +802,34 @@ foreach ($token in @(
     'extern const NDSParticleTexture gNdsParticleTextures[NDS_PARTICLE_TEXTURE_COUNT];',
     'extern const u32 gNdsParticleTextureCount;',
     'extern const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT];',
+    'gNdsParticleQuadFirstRow[NDS_PARTICLE_QUAD_FIRST_ROW_COUNT];',
     'BIG-ENDIAN N64 data')) {
     if (-not $header.Contains($token)) {
         throw "Generated particle bank header lost: $token"
+    }
+}
+
+# The 47-row quad table is sorted by source texture id. Runtime lookup used to
+# restart at row zero for every emitted particle, so each draw repeatedly
+# rescanned unrelated texture rows. The generated 256-byte u8 directory covers
+# the complete texture-key domain and jumps directly to the first row. Pin both
+# the producer and consumer: hand-maintaining this table would turn a generated
+# asset reorder into a silent wrong-cell lookup.
+foreach ($token in @(
+    'quad_first_row = [0xff] * 256',
+    'if quad_first_row[texture] == 0xff:',
+    'quad_first_row[texture] = index',
+    'const u8 gNdsParticleQuadFirstRow[NDS_PARTICLE_QUAD_FIRST_ROW_COUNT]')) {
+    if (-not $source.Contains($token)) {
+        throw "Particle quad first-row generator guard lost: $token"
+    }
+}
+foreach ($token in @(
+    'u32 index = gNdsParticleQuadFirstRow[texture_key];',
+    'if (index == NDS_PARTICLE_QUAD_FIRST_ROW_NONE)',
+    'for (; index < NDS_PARTICLE_QUAD_FRAME_COUNT; index++)')) {
+    if (-not $runtime.Contains($token)) {
+        throw "Particle quad first-row runtime guard lost: $token"
     }
 }
 # The quad-sheet geometry is DERIVED from the report, never pinned as literal

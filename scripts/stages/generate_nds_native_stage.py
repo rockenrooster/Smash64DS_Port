@@ -52,7 +52,7 @@ _STAGE_DEFAULT = _get_stage_descriptor("dreamland")
 
 DEFAULT_OUTPUT = Path("src/nds/nds_native_stage_owner.generated.inc")
 DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
-    "docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json"
+    "docs/optimization/archive/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json"
 )
 # Per-stage const slab cap. The packets are static const, so every LINKED
 # stage's slab is resident in main RAM (Sector Z is the largest VS stage at

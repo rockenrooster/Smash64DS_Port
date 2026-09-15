@@ -7985,3 +7985,40 @@ at WORK-H **1,680,384/2,389,376**, pose bind/full/overflow/wide-fallback
 **677/0/0/0**, native failures/direct rejects **0/0**, and 108,096 B heap
 low-water. P2-2p8 remains RED. Evidence:
 `artifacts/performance/2026-09-15_p2-2p8-pose-joint-mask`.
+
+## 2026-09-15 — P2-2p8 phase K: dense particle quad first-row index KEEP
+
+The post-phase-J profile put `lbParticleDrawTextures` back among the remaining
+hot symbols. Its hottest PCs were in `ndsParticleQuadFrameFor`: the generated
+quad atlas contains only 47 sorted `(texture, frame)` rows, but every particle
+lookup restarted at row zero. The 1400..1527 profile window executed about
+26,454 iterations of that compare loop. The generator now emits a 256-byte u8
+texture-key -> first-row directory (`0xff` = absent), and the runtime scans only
+within the selected texture's rows. Generation exhaustively compares the old
+and indexed algorithms for all **65,536** u8 texture/frame inputs and aborts on
+any differing selected row or NULL result.
+
+Two independent same-ROM 128-frame pairs reproduce the per-frame saving. On
+ROM `5B4D52FA...22E4`, paired WORK-H is **81 wins / 1 tie / 46 losses**, median
+**-1,600** and mean **-1,893 ticks/frame**; WORK-H P50/P95 moves
+**1,710,528/2,445,632 -> 1,713,024/2,390,464**. On rebuilt ROM
+`81DE617D...A88928`, the control records **6,093** historical scan lookups and
+the candidate **6,094** indexed lookups; paired WORK-H is **96/0/32**, median
+**-2,048** and mean **-2,183 ticks/frame**, while WORK-H P50/P95 is
+**1,710,144/2,388,544 -> 1,709,312/2,390,272**. The P95 sign is therefore noisy
+at 128 frames; the KEEP is the reproduced paired median/mean cut, not a claimed
+large tail-P95 reduction.
+
+The first ROM's full 1,972-sample same-ROM pair also favors the index: paired
+WORK-H **1,116 wins / 88 ties / 768 losses**, median **-640**, mean **-695**;
+WORK-H P50/P95 **1,640,320/2,380,032 -> 1,640,320/2,376,576** and 5+ VBlank
+presents **220 -> 216** with identical particle and pose work.
+
+The measurement route/counters were removed. Final hard-on ROM
+`FED52999...607F` passes the standing four-CPU correctness/native/memory gate at
+WORK-H **1,635,712/2,377,152**, SRC P95 **1,066,496**, GCRA P95 **1,058,496**,
+SINT P95 **600,896**, and VBlank 2/3/4/5+ **118/838/797/220**. Native
+failures/direct rejects are **0/0**, pose bind/full/overflow/fallback
+**677/0/0/0**, BPS1 directory **9320/681/0/0**, BGM **329/0**, FGM
+**329/0/0**, and heap low-water **111,680 B**. P2-2p8 remains RED. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-particle-quad-index`.

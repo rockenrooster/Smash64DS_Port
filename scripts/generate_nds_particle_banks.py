@@ -309,7 +309,7 @@ SOURCE_QUAD_ASSETS = (
 
 DEFAULT_HEADER = Path("include/nds/generated/nds_particle_banks.generated.h")
 DEFAULT_INC = Path("src/nds/generated/nds_particle_banks.generated.inc")
-DEFAULT_REPORT = Path("docs/optimization/NDS_PARTICLE_BANKS.generated.json")
+DEFAULT_REPORT = Path("docs/optimization/archive/NDS_PARTICLE_BANKS.generated.json")
 DEFAULT_TEXTURE_ASSET = Path("assets/particles/efcommon_particle_textures.ds.bin")
 DEFAULT_WHISPY_NATIVE_ASSET = Path(
     "assets/particles/grpupupu_whispy_native.ds.bin")
@@ -3321,10 +3321,13 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_TEXEL_BYTES {pack["quads"]["bytes"]}u
 #define NDS_PARTICLE_QUAD_COUNT {len(pack["quads"]["admitted"])}u
 #define NDS_PARTICLE_QUAD_FRAME_COUNT {len(pack["quads"]["frames"])}u
+#define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u
+#define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu
 
-/* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
- * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
- * else. Coordinates are atlas texels, which is what glTexCoord2t16 takes. */
+/* One row per (SOURCE texture id, frame), sorted by both. The dense first-row
+ * directory below skips preceding texture groups; the runtime then walks only
+ * this texture's rows for exact/nearest-earlier frame selection. Coordinates
+ * are atlas texels, which is what glTexCoord2t16 takes. */
 typedef struct NDSParticleQuadFrame
 {{
     u8 texture_id;
@@ -3341,6 +3344,11 @@ typedef struct NDSParticleQuadFrame
 
 extern const NDSParticleQuadFrame
     gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT];
+/* Dense u8 texture-key -> first sorted frame-row index. 0xff means the atlas
+ * has no row for that key. NDSParticleQuadFrame.texture_id is itself u8, so
+ * this covers the complete runtime key domain without another search. */
+extern const u8
+    gNdsParticleQuadFirstRow[NDS_PARTICLE_QUAD_FIRST_ROW_COUNT];
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE {DS_NONE}u
@@ -3475,6 +3483,60 @@ def render_inc(pack: dict) -> str:
         f"{row['x']:3d}, {row['y']:3d}, {row['w']:3d}, {row['h']:3d} }},"
         for row in pack["quads"]["frames"]
     )
+    if len(pack["quads"]["frames"]) >= 0xff:
+        raise SystemExit("quad first-row index requires fewer than 255 frame rows")
+    quad_first_row = [0xff] * 256
+    for index, row in enumerate(pack["quads"]["frames"]):
+        texture = row["texture"]
+        if not 0 <= texture <= 0xff:
+            raise SystemExit(f"quad texture key {texture} does not fit u8")
+        if quad_first_row[texture] == 0xff:
+            quad_first_row[texture] = index
+
+    # Prove the generated directory preserves the old sorted-scan lookup for
+    # the complete u8 runtime input domain. This is cheap at generation time
+    # (256 * 256 * 47 worst case) and makes a future packing-order change fail
+    # here rather than silently selecting a different particle cell on hardware.
+    quad_frames = pack["quads"]["frames"]
+    for texture in range(256):
+        for frame in range(256):
+            scan_result = None
+            for index, row in enumerate(quad_frames):
+                if row["texture"] == texture:
+                    if row["frame"] == frame:
+                        scan_result = index
+                        break
+                    if row["frame"] > frame:
+                        break
+                    scan_result = index
+                elif row["texture"] > texture:
+                    break
+
+            indexed_result = None
+            index = quad_first_row[texture]
+            if index != 0xff:
+                while index < len(quad_frames):
+                    row = quad_frames[index]
+                    if row["texture"] != texture:
+                        break
+                    if row["frame"] == frame:
+                        indexed_result = index
+                        break
+                    if row["frame"] > frame:
+                        break
+                    indexed_result = index
+                    index += 1
+            if indexed_result != scan_result:
+                raise SystemExit(
+                    "quad first-row lookup diverged from sorted scan: "
+                    f"texture={texture} frame={frame} "
+                    f"scan={scan_result} indexed={indexed_result}"
+                )
+    quad_first_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:02x}u" for value in
+                           quad_first_row[index:index + 16]) + ","
+        for index in range(0, len(quad_first_row), 16)
+    )
     pupupu_offset_rows = "\n".join(
         "    " + ", ".join(f"0x{value:08x}u"
                            for value in pack["pupupu"]["offsets"][index:index + 6]) + ","
@@ -3595,6 +3657,13 @@ const u8 gNdsParticleTextureFrames[NDS_PARTICLE_TEXTURE_COUNT] = {{
 const NDSParticleQuadFrame
     gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT] = {{
 {quad_rows}
+}};
+
+/* First row for each u8 texture key in the sorted frame table above. The
+ * runtime still performs the exact nearest-earlier-frame walk; it merely starts
+ * at this texture's first row instead of rescanning preceding textures. */
+const u8 gNdsParticleQuadFirstRow[NDS_PARTICLE_QUAD_FIRST_ROW_COUNT] = {{
+{quad_first_rows}
 }};
 
 /* Paletted texels for the shield, alpha in the high bits and palette index in

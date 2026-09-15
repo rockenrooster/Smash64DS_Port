@@ -2871,10 +2871,9 @@ volatile u32 gNdsWhispyNativeTextureMissCount;
 volatile u32 gNdsWhispyNativeTextureMask;
 volatile u32 gNdsWhispyNativeSourceFrameMask;
 
-/* Atlas row for (texture, frame), or NULL. A linear scan of 31 rows: the table
- * is sorted by (texture, frame) and a frame is looked up once per particle, so
- * at 41 particles a frame this is bounded by ~1,300 compares -- cheaper than
- * the index table it would take to avoid them.
+/* Atlas row for (texture, frame), or NULL. The table is sorted by
+ * (texture, frame). The generator emits the first row for every possible u8
+ * texture key, so this scans only the selected texture's packed source frames.
  *
  * NEAREST EARLIER FRAME, not exact match, and that is what lets the generator
  * DECIMATE an animation. `row->frame` is the SOURCE frame index, so a texture
@@ -2895,25 +2894,32 @@ static const NDSParticleQuadFrame *ndsParticleQuadFrameFor(u32 texture_id,
                                                            u32 frame)
 {
     const NDSParticleQuadFrame *earlier = NULL;
-    u32 index;
+    const u8 texture_key = (u8)texture_id;
+    const u8 frame_key = (u8)frame;
+    u32 index = gNdsParticleQuadFirstRow[texture_key];
 
-    for (index = 0u; index < NDS_PARTICLE_QUAD_FRAME_COUNT; index++)
+    if (index == NDS_PARTICLE_QUAD_FIRST_ROW_NONE)
+    {
+        return NULL;
+    }
+
+    for (; index < NDS_PARTICLE_QUAD_FRAME_COUNT; index++)
     {
         const NDSParticleQuadFrame *row = &gNdsParticleQuadFrames[index];
 
-        if (row->texture_id == (u8)texture_id)
+        if (row->texture_id == texture_key)
         {
-            if (row->frame == (u8)frame)
+            if (row->frame == frame_key)
             {
                 return row;
             }
-            if (row->frame > (u8)frame)
+            if (row->frame > frame_key)
             {
                 return earlier;
             }
             earlier = row;
         }
-        else if (row->texture_id > (u8)texture_id)
+        else if (row->texture_id > texture_key)
         {
             return earlier;
         }

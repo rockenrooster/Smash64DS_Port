@@ -19,7 +19,7 @@ One fact, one owner. `PROJECT_GOAL.md` owns product/fidelity/milestone acceptanc
 | `KNOWN_ISSUES.md` | Durable unresolved gaps |
 | `BACKLOG.md` | Owner-deferred minor bugs |
 | `OPTIMIZE_LIST.md` | Owner specialization/baking/offload wish list, not permission to override current priorities |
-| `optimization/OPTIMIZATION_IDEAS.md` | Dated research/idea bin; corrections and current owner direction govern |
+| `optimization/README.md` + `optimization/Smash64DS_Native_Optimization_Plan.md` | Active native-runtime performance direction and bounded P2-2p8 work packages; older optimization notes live under `optimization/archive/` |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments, lookup-only during ordinary work |
 | `PORTING.md` | Append-only chronology, lookup-only |
 | `DIAGNOSTIC_REFERENCE.md` | Diagnostic marker definitions and manual lookup |

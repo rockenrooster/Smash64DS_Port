@@ -45,7 +45,7 @@ import generate_fighter_production_manifest as production  # noqa: E402
 OUT = ROOT / "src" / "nds" / "generated" / "nds_shield_pose_pack.generated.inc"
 ASSET_DIR = ROOT / "assets" / "fighters" / "shield_pose"
 ASSET_HEADER = ROOT / "include" / "nds" / "generated" / "nds_shield_pose_assets.generated.h"
-ASSET_JSON = ROOT / "docs" / "optimization" / "NDS_SHIELD_POSE_ASSETS.generated.json"
+ASSET_JSON = ROOT / "docs" / "optimization" / "archive" / "NDS_SHIELD_POSE_ASSETS.generated.json"
 
 BLOB_MAGIC = 0x3150534E  # "NSP1" little-endian
 BLOB_VERSION = 1

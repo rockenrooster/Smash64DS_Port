@@ -37,7 +37,7 @@ import generate_nds_native_stage as stage_manifest
 
 
 DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
-    "docs/optimization/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json"
+    "docs/optimization/archive/NDS_NATIVE_FIGHTER_CONSUMED_FIELDS.generated.json"
 )
 
 FIELD_CLASS_IMMUTABLE = stage_manifest.FIELD_CLASS_IMMUTABLE

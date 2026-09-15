@@ -3531,7 +3531,7 @@ NDS_IMPORT_BATTLESHIP_FT_PUBLIC ?= 1
 # walking garbage and allocating a 136-byte DObj per bogus node until syMallocSet
 # gave up; the per-effect cost it was blamed on never existed. The generator
 # already treats all eleven as P1 seams and has packed their scripts and
-# textures (docs/optimization/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
+# textures (docs/optimization/archive/NDS_PARTICLE_BANKS.generated.json, reach.p1_seams).
 NDS_R2_SOURCE_EFFECTS_PARTICLE ?= 1
 # The attachment-position diagnostic for the two 2026-08-12 BUGS.md rows: Fox's
 # muzzle flash/beam Y, and where the burn flames land
@@ -5958,7 +5958,7 @@ NDS_NATIVE_CHARGESHOT_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_samus_chargeshot.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py
 NDS_SHIELD_POSE_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_shield_pose_assets.generated.h
-NDS_SHIELD_POSE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/NDS_SHIELD_POSE_ASSETS.generated.json
+NDS_SHIELD_POSE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/archive/NDS_SHIELD_POSE_ASSETS.generated.json
 NDS_SHIELD_POSE_SOURCE_DIR := $(PROJECT_ROOT)/assets/fighters/shield_pose
 NDS_SHIELD_POSE_ALL_IDS := 02 03 05 07 08 09 10
 NDS_SHIELD_POSE_SOURCE_FILES := $(foreach id,$(NDS_SHIELD_POSE_ALL_IDS),$(NDS_SHIELD_POSE_SOURCE_DIR)/$(id).bin)
@@ -7711,7 +7711,7 @@ NDS_BATTLE_CORE_FILES := $(NDS_BATTLE_CORE_FPC_FILES) $(NDS_BATTLE_CORE_EXT_FILE
 NDS_BATTLE_CORE_NITRO_FPC := $(foreach id,$(NDS_BATTLE_CORE_IDS),$(NITROFS_DIR)/fighters/battle/$(id).fpc)
 NDS_BATTLE_CORE_NITRO_EXT := $(foreach id,$(NDS_BATTLE_CORE_IDS),$(NITROFS_DIR)/fighters/battle/$(id).ext)
 NDS_BATTLE_CORE_NITRO_FILES := $(NDS_BATTLE_CORE_NITRO_FPC) $(NDS_BATTLE_CORE_NITRO_EXT)
-NDS_BATTLE_CORE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/NDS_BATTLE_CORE_PACKS.generated.json
+NDS_BATTLE_CORE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/archive/NDS_BATTLE_CORE_PACKS.generated.json
 NDS_BATTLE_CORE_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_battle_core_packs.py \
 	$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py \
@@ -7721,7 +7721,7 @@ NDS_BATTLE_CORE_DEPS := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
 	$(PROJECT_ROOT)/scripts/fighters/fighter_production_manifest.json \
-	$(PROJECT_ROOT)/docs/optimization/NDS_SHIELD_POSE_ASSETS.generated.json \
+	$(PROJECT_ROOT)/docs/optimization/archive/NDS_SHIELD_POSE_ASSETS.generated.json \
 	$(PROJECT_ROOT)/scripts/_paths.py \
 	$(wildcard $(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/*.py) \
 	$(PROJECT_ROOT)/include/nds/nds_preview_pack.h \

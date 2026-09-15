@@ -164,10 +164,13 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_TEXEL_BYTES 36352u
 #define NDS_PARTICLE_QUAD_COUNT 42u
 #define NDS_PARTICLE_QUAD_FRAME_COUNT 47u
+#define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u
+#define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu
 
-/* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
- * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
- * else. Coordinates are atlas texels, which is what glTexCoord2t16 takes. */
+/* One row per (SOURCE texture id, frame), sorted by both. The dense first-row
+ * directory below skips preceding texture groups; the runtime then walks only
+ * this texture's rows for exact/nearest-earlier frame selection. Coordinates
+ * are atlas texels, which is what glTexCoord2t16 takes. */
 typedef struct NDSParticleQuadFrame
 {
     u8 texture_id;
@@ -184,6 +187,11 @@ typedef struct NDSParticleQuadFrame
 
 extern const NDSParticleQuadFrame
     gNdsParticleQuadFrames[NDS_PARTICLE_QUAD_FRAME_COUNT];
+/* Dense u8 texture-key -> first sorted frame-row index. 0xff means the atlas
+ * has no row for that key. NDSParticleQuadFrame.texture_id is itself u8, so
+ * this covers the complete runtime key domain without another search. */
+extern const u8
+    gNdsParticleQuadFirstRow[NDS_PARTICLE_QUAD_FIRST_ROW_COUNT];
 
 /* DS TEXIMAGE_PARAM texture-format field values. */
 #define NDS_PARTICLE_FORMAT_NONE 0u

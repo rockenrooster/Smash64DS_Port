@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string[]]$CapturePath,
     [string]$GeneratedStage = (Join-Path $PSScriptRoot '..\src\nds\nds_native_stage_owner.generated.inc'),
-    [string]$ConsumedFields = (Join-Path $PSScriptRoot '..\docs\optimization\NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json'),
+    [string]$ConsumedFields = (Join-Path $PSScriptRoot '..\docs\optimization\archive\NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json'),
     [Parameter(Mandatory = $true)][string]$OutputPath
 )
 

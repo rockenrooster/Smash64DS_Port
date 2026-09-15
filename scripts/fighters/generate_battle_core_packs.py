@@ -42,7 +42,7 @@ DISPLAY = {
     "purin": "Purin", "ness": "Ness",
 }
 
-SHARED_MANIFEST = ROOT / "docs" / "optimization" / "NDS_BATTLE_CORE_PACKS.generated.json"
+SHARED_MANIFEST = ROOT / "docs" / "optimization" / "archive" / "NDS_BATTLE_CORE_PACKS.generated.json"
 EXTERN_MAGIC = 0x31584542  # "BEX1" little-endian
 EXTERN_VERSION = 2
 EXTERN_HEADER_FMT = "<IHHIIII"
@@ -686,7 +686,7 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
 
 
 def _shield_asset_map() -> dict[int, int]:
-    path = ROOT / "docs" / "optimization" / "NDS_SHIELD_POSE_ASSETS.generated.json"
+    path = ROOT / "docs" / "optimization" / "archive" / "NDS_SHIELD_POSE_ASSETS.generated.json"
     if not path.is_file():
         return {}
     doc = json.loads(path.read_text(encoding="utf-8"))
