@@ -1,0 +1,2323 @@
+{
+  "schema_version": 2,
+  "plan_date": "2026-09-15",
+  "repository": "rockenrooster/Smash64DS_Port",
+  "baseline_commit": "75f7f6b4b4864c82c01872d0fd2771d171005272",
+  "nature": "STATIC_IMPLEMENTATION_SPECIFICATION_NOT_RUNTIME_EVIDENCE",
+  "status_authority": "docs/P2_EXECUTION_BOARD.md",
+  "tasks": [
+    {
+      "id": "N00.01",
+      "title": "Freeze inputs and resolve active policy",
+      "package": "N00",
+      "dependencies": [],
+      "source_or_edit_targets": [
+        "PROJECT_GOAL.md",
+        "docs/VERIFYING.md",
+        "docs/HANDOFF.md",
+        "docs/P2_EXECUTION_BOARD.md",
+        "scripts/lib/harness-registry.ps1"
+      ],
+      "implementation_steps": [
+        "Confirm the working branch/commit and compare with the pinned snapshot. Record relevant dirty overlays without modifying unrelated files; inspect the latest board checkpoint rather than selecting the oldest green artifact.",
+        "Record source, generated assets, compiler/linker/library versions, ROM/ELF/config hashes, emulator hash/config, save/DLDI state, seed/input and runner identity in the baseline manifest.",
+        "Classify exact, bounded-error and approval-required changes using C8. Resolve obsolete bit-exact-only experiment comments against the current product goal; preserve required discrete mechanics.",
+        "List baseline known bugs and missing native owners by scenario. Do not use missing output to claim a completed full-content performance result.",
+        "Adopt the owner clarification: every legal four-fighter lineup, repeated kinds included, on every selectable VS stage is in scope. Record full product-required and currently implemented content sets separately; a disabled unfinished fighter remains a product gap.",
+        "Retain the original 75f7f6b research evidence as historical. This revision rechecked master at e67e5871ba8c4ae972f4826bfeb89757d3686401; inspect the newer board, particle-quad-index work and moved optimization references before implementation. Do not re-credit retained optimizations."
+      ],
+      "validation": "T-MEAS identity tests; parse manifest; independently verify ROM/ELF/config pairing and non-fast-logic runtime settings.",
+      "work_to_retire": "Ambiguous baselines and repeated rediscovery; no runtime saving claimed.",
+      "completion": "One reproducible identity and explicit policy/coverage scope are linked from P2-2p8.",
+      "stop_or_rollback": "Missing derived inputs or a mismatched ELF block the measurement; do not silently substitute another ROM.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N00.02",
+      "title": "Reproduce work, cadence and resource populations",
+      "package": "N00",
+      "dependencies": [
+        "N00.01"
+      ],
+      "source_or_edit_targets": [
+        "scripts/verify-p2-four-fighter-stress.ps1",
+        "scripts/verify-battle-playable-realtime-harness.ps1",
+        "scripts/census-tick-hud-p95-set.py"
+      ],
+      "implementation_steps": [
+        "Run the current source-normal four-kind stress with existing defaults: frame-1 identity and frames 2–1973 for 1,972 populated timing samples. Use unique output paths and the existing ring collector.",
+        "Collect runtime roster/mask, gameplay clock, item override defaults, positive native output, pool/heap/resource witnesses and timing in the same run.",
+        "Calculate WORK-H from each row, verify accounting identities, and report P50/P95/P99/max, FPS, 2/3/4/5+ VBlank counts and consecutive late presents. Keep cold transition/lifecycle windows separate and test them separately.",
+        "Run the natural two-fighter regression using the required integrated profile when appropriate. Preserve current quality/audio/configuration; do not disable features for the baseline."
+      ],
+      "validation": "T-MEAS populations and T-COVER engagement; retain raw rows and hashes. Confirm cycles/ticks ratio from timer and emulator instrumentation, not a remembered frequency.",
+      "work_to_retire": "Invalid profiling populations; no runtime saving claimed.",
+      "completion": "Comparable baseline rows with exact scope and independently reported correctness/performance verdicts.",
+      "stop_or_rollback": "Stop on timing corruption, unexplained missing frames or unengaged fighters; investigate that cause before attribution.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N00.03",
+      "title": "Assign exclusive costs and concrete deletion candidates",
+      "package": "N00",
+      "dependencies": [
+        "N00.02"
+      ],
+      "source_or_edit_targets": [
+        "scripts/census-tick-hud-p95-set.py",
+        "scripts/task37_softfloat_callers.py",
+        "src/nds/nds_renderer_native_fighter_production.c",
+        "src/port/renderer_adapter_matrix.c"
+      ],
+      "implementation_steps": [
+        "Build one exclusive owner table from existing buckets and per-PC/caller data. Separate SRC/GCRA/SINT/SCPU nesting, intended idle, blocked service, GX backpressure and instrumentation.",
+        "Price successful packet replay preflight, packet miss/recording, static stage preparation, pose evaluation/publication, software float plus conversion callers, memory copying and filesystem events.",
+        "For each high-value candidate record exact repeated work, frequency, immutable/dynamic inputs, native replacement cost, memory cost and the test that proves it was removed.",
+        "Rank against both the P95-tail and cheapest-late-frame populations, then choose structural tasks that can plausibly address the measured deficit. Treat diagnostic work suppression only as an unqualified upper bound."
+      ],
+      "validation": "T-MEAS accounting; sums of exclusive frame rows reconcile; no parent-plus-child or sum-of-percentiles budget.",
+      "work_to_retire": "Unpriced optimization guesses and duplicate attribution.",
+      "completion": "A bounded deletion ledger names the next highest-impact executable slices.",
+      "stop_or_rollback": "If removable costs cannot explain the gap, widen the owner boundary; do not keep surveying individual tiny symbols.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N00.04",
+      "title": "Implement a real product-performance verdict",
+      "package": "N00",
+      "dependencies": [
+        "N00.02"
+      ],
+      "source_or_edit_targets": [
+        "scripts/verify-p2-four-fighter-stress.ps1",
+        "scripts/lib/harness-registry.ps1",
+        "scripts/census-tick-hud-p95-set.py",
+        "proposed scripts/check-p2-native-performance.py"
+      ],
+      "implementation_steps": [
+        "Add a pure host evaluator for existing row/coverage artifacts, or extend the existing evaluator without changing the meaning of its prior reports. Publish explicit correctness, coverage, work-gate and cadence-gate verdicts.",
+        "Adopt the existing percentile convention consistently and store the rank/population. The 1,600-frame rank-80 sizing convention is not hardcoded into the 1,972-sample run.",
+        "Make a required product mode fail for P95 above the configured gate, two-VBlank cadence below 95%, missing coverage or invalid identities. Keep diagnostic candidate runs able to report RED without pretending implementation failed to execute.",
+        "Add final shipping-configuration evaluation and prevent an aggregate green capacity message from being used as performance acceptance.",
+        "Grade work, cadence, coverage, native output and resources PER scenario and PER required run. A pooled good percentile across other rosters cannot mask a slow legal lineup. Feed explicit case verdicts to N10.08.",
+        "Add fixtures where only one of many cases fails, or the same fast result is reused under a different roster, stage, slot order, CPU profile or artifact identity. Missing, stale, skipped and infrastructure-invalid evidence must not count as PASS."
+      ],
+      "validation": "T-MEAS negative fixtures: over-budget-only, cadence-only, omitted slow frames, duplicate/malformed rows, missing identity, unengaged CPU, missing required owner; all fail the appropriate verdict.",
+      "work_to_retire": "The acceptance gap where correctness-only passes are read as FPS closure.",
+      "completion": "A deliberately slow valid ROM/report is explicitly performance RED; a valid fixture at the documented limits grades consistently.",
+      "stop_or_rollback": "Do not tighten the product contract silently or exempt known slow frames. Fix evaluator definitions before using it to rank changes.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N00.05",
+      "title": "Freeze semantic and visual regression fixtures",
+      "package": "N00",
+      "dependencies": [
+        "N00.01",
+        "N00.06"
+      ],
+      "source_or_edit_targets": [
+        "scripts/fighters/test_pose_clock_differential.py",
+        "scripts/fighters/check_native_owner_geometry_closure.py",
+        "docs/p2/BUG_NOTES.md",
+        "docs/BUGS.md",
+        "proposed native optimization fixture manifest"
+      ],
+      "implementation_steps": [
+        "Select controlled state fixtures for movement, hitlag, grabs/throws, platform boundaries, copy/morph/entry states, depth-intersecting effects and scene transitions.",
+        "Derive expected outcomes from the relevant BattleShip source and source assets; use independent native geometry closure rather than candidate output as the oracle.",
+        "Specify tolerance class per field, exact event ticks/order, resource identities, expected visible owners and audio cue timing.",
+        "Add explicit negative cases for no-op rendering and equal-count wrong-resource substitution. Fixtures should run cheaply before full-match qualification.",
+        "Select discriminating fixtures from the source-derived legal catalogue. Include all five duplicate multiplicity classes, directed fighter interactions and slot-specific behavior; reserve exhaustive release runs for N10, not every edit."
+      ],
+      "validation": "T-NUM, T-CLOCK, T-GEOM, T-LIFE and T-COVER fixture sanity; every expected route has a positive witness.",
+      "work_to_retire": "Vague correctness claims and tests that only prove zero error counters.",
+      "completion": "Known tricky states have reproducible triggers and defined outcomes, independent of the implementation being replaced.",
+      "stop_or_rollback": "An untriggered CPU move is not evidence; use source-controller playback or a clearly labeled deterministic state fixture.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N00.06",
+      "title": "Generate the legal content catalogue and base case universe",
+      "package": "N00",
+      "dependencies": [
+        "N00.01"
+      ],
+      "source_or_edit_targets": [
+        "PROJECT_GOAL.md",
+        "source fighter/stage/selectability/rules tables (inspect their actual owners)",
+        "proposed host catalogue adapter and case generator",
+        "16_ALL_ROSTERS_ALL_STAGES.md"
+      ],
+      "implementation_steps": [
+        "Read source and current generated manifests to produce stable fighter and stage IDs, aliases, legal control/rules variants, required-versus-implemented sets and source hashes. Preserve unavailable required content as BLOCKED obligations.",
+        "Generate all four-fighter multisets using combinations-with-replacement and all ordered rosters using the Cartesian product, both crossed with the required VS stage set. Use canonical IDs, not display labels or current menu order.",
+        "Emit base IDs, ordered IDs, duplicate multiplicity class, actual slot mapping and content-catalogue fingerprint. For twelve fighters and nine stages expect 12,285 base cases and 186,624 ordered cases; derive counts, do not bake these numbers into runtime.",
+        "Use separate full scenario keys for rules, controls/CPU levels, costumes/teams, detail/quality/rates, seed/input protocol and source/build/generated/emulator identities. Distinguish catalogue identity from run/result identity.",
+        "Add enumeration fixtures for zero/duplicate/unknown IDs, full versus enabled content, changed ordering/aliases, repeated fighters, missing stages and stability under catalogue input reordering. Independently count by multiplicity.",
+        "Keep the case catalogue host-side and deterministic. Do not add a target combinatorial dispatcher or generate one full asset bank per case. The bundled planning count helper is not a production source extractor."
+      ],
+      "validation": "T-COVER COV01–COV04 and COV14; every ordered case maps to exactly one base multiset and the independent count identities match.",
+      "work_to_retire": "Ambiguous combination scope and hidden omissions caused by generating tests only from accepted/enabled content.",
+      "completion": "A versioned product-required case universe and current-content gap report exist before architecture capacities or release coverage can be declared universal.",
+      "stop_or_rollback": "Do not guess absent catalogue identities or treat disabled required content as out of scope; report the exact source resolution gap.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N01.01",
+      "title": "Produce byte-accurate linked ownership",
+      "package": "N01",
+      "dependencies": [
+        "N00.02"
+      ],
+      "source_or_edit_targets": [
+        "linker/nds_hot_text.ld",
+        "scripts/check-renderer-itcm-placement.ps1",
+        "scripts/check-task20-dtcm-layout.ps1",
+        "scripts/compare-elf-sections.py"
+      ],
+      "implementation_steps": [
+        "Enumerate each ITCM/DTCM output byte by input section, object/member, symbols/aliases, literal pools, alignment and veneers from the actual matching ELF/map.",
+        "Classify explicit placement versus filename wildcard; track .text.hot and .text.hot.draw separately as main-RAM placement, not additional hardware memory.",
+        "Classify CPU-only state versus DMA/IPC/graphics-facing data and include stack reserve/low-water obligations.",
+        "Join execution/caller coverage as a candidate ranking only. Preserve a separate category for necessary unobserved cold/system paths."
+      ],
+      "validation": "T-TCM inventory reconciliation: union of non-overlapping ranges equals section size; aliases never double-count; unnamed bytes are explained.",
+      "work_to_retire": "Opaque group placement and invalid recoverable-byte claims.",
+      "completion": "Every byte has an owner/class and each proposed eviction identifies its actual input-section granularity.",
+      "stop_or_rollback": "Do not use a different debug ELF or sum alias sizes; fix identity/granularity before placement changes.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N01.02",
+      "title": "Decouple instruction mode from residency",
+      "package": "N01",
+      "dependencies": [
+        "N01.01"
+      ],
+      "source_or_edit_targets": [
+        "linker/nds_hot_text.ld",
+        "Makefile",
+        "src/nds/nds_renderer_preamble.c",
+        "include/nds/nds_task37_itcm.h"
+      ],
+      "implementation_steps": [
+        "Create explicit kernel section naming, e.g. .itcm.nds.<kernel>, independent of target(\"arm\")/target(\"thumb\") and optimization level. Only port-owned selected kernels use it.",
+        "Replace accidental .32.o placement with an explicit retained-system allowlist plus deliberate kernel/data sections. Inspect library/OS archive members first; do not globally evict all .32.o code/data.",
+        "Keep output load/start/end symbols and startup copy semantics valid, including reserved vectors and contiguous LMA assumptions.",
+        "Update placement checkers to inspect real sections rather than obsolete filenames, and fail on new accidental placement. Confirm the linked instruction bodies where placement-only equivalence is claimed."
+      ],
+      "validation": "T-TCM boot/IRQ/context/interworking and link-map checks; T-LIFE shell→battle→results; final hard-on timing comparison.",
+      "work_to_retire": "Automatic code/data residency solely because an object was compiled ARM.",
+      "completion": "ISA can change without moving unrelated globals; intended current residents remain explicit and layout effects are measured.",
+      "stop_or_rollback": "Revert the policy slice on stack/IRQ/boot regression; do not paper over it by raising a memory region.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N01.03",
+      "title": "Separate shipping observation from safety",
+      "package": "N01",
+      "dependencies": [
+        "N01.01",
+        "N00.05"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "src/nds/nds_renderer_native_owners.c",
+        "src/import/battleship_ftcomputer.c",
+        "Makefile",
+        "scripts/verify-p2-four-fighter-stress.ps1"
+      ],
+      "implementation_steps": [
+        "Inventory volatile counters, witness arrays, formatting, hashing, detailed timing and oracle state that remain in shipping code. Classify each as safety, product state, coverage witness or debug-only.",
+        "Keep bounded first-failure safety records and necessary admission/range checks. Compile detailed per-joint/per-vertex observers out of low-instrumentation shipping where not required for correctness.",
+        "Provide a compact versioned publication block for verifier-required observations instead of pinning every historical diagnostic global into every target. Update harness readers and missing-symbol behavior together.",
+        "Compare instrumented and shipping build identities; do not credit visible-HUD removal against WORK-H twice. Remove no source gameplay work in this commit."
+      ],
+      "validation": "T-MEAS equivalent workload and T-COVER positive engagement with lean witnesses; no missing-symbol waiver; disassembly confirms observer instructions are absent where disabled.",
+      "work_to_retire": "Unnecessary shipping observer loads/stores and obsolete debug state, not safety checks.",
+      "completion": "Shipping and evidence targets have explicit observation contracts and final shipping timing remains independently measured.",
+      "stop_or_rollback": "A verifier that can no longer prove four engaged fighters blocks the change; restore a compact witness, not all historic telemetry.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N01.04",
+      "title": "Split the first measured cold renderer tails",
+      "package": "N01",
+      "dependencies": [
+        "N00.03",
+        "N01.02"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_native_common.c",
+        "src/nds/nds_renderer_native_owners.c",
+        "src/nds/nds_renderer_native_fighter_production.c"
+      ],
+      "implementation_steps": [
+        "Choose a live large ITCM body whose cold binding/error/setup paths are identified, such as native stage begin/commit responsibilities. Record common-path inputs and immutable invariants.",
+        "Extract the cold responsibility into a noinline main-RAM function without adding a common-case call. Keep hot ARM/Thumb and optimization settings unchanged initially.",
+        "Move invariant processing to existing admission/spawn/status boundaries only after enumerating all mutations that can invalidate it.",
+        "Check emitted hot bytes including literals/veneer costs; measure the reclaimed-space baseline before filling it with gameplay code."
+      ],
+      "validation": "T-TCM exact linked shrinkage; T-GEOM and T-LIFE uncommon routes; full-frame A/B rather than instruction-count prediction.",
+      "work_to_retire": "Cold setup/error code carried inside a hot input section and proven repeated immutable work.",
+      "completion": "A specific kernel is smaller and retains required behavior; reclaimed bytes and net time are recorded separately.",
+      "stop_or_rollback": "Reject a split whose hot call/branch/cache penalty outweighs its benefit; do not repeat broad attribute-only splitting.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N01.05",
+      "title": "Remove dead build variants and create real module boundaries",
+      "package": "N01",
+      "dependencies": [
+        "N01.03",
+        "N03.03"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer.c",
+        "src/nds/nds_renderer_preamble.c",
+        "Makefile",
+        "src/nds/nds_renderer_dispatch_profile.c"
+      ],
+      "implementation_steps": [
+        "For the converted native owner, separate cold binder, immutable generated data and small emitter into real compilation units where it reduces coupling. Explicitly own the remaining mutable GX state.",
+        "Remove obsolete successful-experiment switches and losing implementations for that qualified owner; retain a host oracle and a versioned native diagnostic route only while a current experiment needs it.",
+        "Update Makefile source membership and generator dependencies. A .c textual include converted to a real TU must not leave duplicate definitions or rely on formerly private statics.",
+        "Keep unconverted required content paths until their own replacement passes; source-file size alone does not establish a safe deletion."
+      ],
+      "validation": "T-BUILD target/configuration matrix, symbol uniqueness, native-only linking and generator-staleness checks; compare real text/data bytes.",
+      "work_to_retire": "Retired routes, accidental duplicate object inclusion and module-global coupling in completed slices.",
+      "completion": "The converted path has one shipping implementation with narrow inputs and no stale build switch resurrecting a forbidden route.",
+      "stop_or_rollback": "Do not refactor every file simultaneously or remove a reachable sibling based on one-owner coverage.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N01.06",
+      "title": "Use reclaimed ITCM only for measured winners",
+      "package": "N01",
+      "dependencies": [
+        "N01.04"
+      ],
+      "source_or_edit_targets": [
+        "linker/nds_hot_text.ld",
+        "include/nds/nds_task37_itcm.h",
+        "scripts/census-icache-placement.py"
+      ],
+      "implementation_steps": [
+        "Rerank current unplaced small gameplay/pose/native kernels against the post-shrink ELF and current frame populations.",
+        "Test explicit placement with unchanged operation/ISA where possible; count displaced bytes, literal pools, interworking and added calls.",
+        "Keep individually proven winners, then test the combined pack. Reserve instrument feasibility but do not preserve unused space for its own sake.",
+        "Leave final repacking to N09 after structural work. Record enabling gains honestly; this task does not claim to solve the million-tick deficit."
+      ],
+      "validation": "T-TCM placement A/B and final hard-on whole-frame validation; startup and all supported scene boundaries.",
+      "work_to_retire": "Avoidable instruction-fetch stalls for the selected remaining kernels.",
+      "completion": "New residents improve measured whole-frame behavior and fit the actual byte/stack budget.",
+      "stop_or_rollback": "A prediction based only on stall density is not acceptance; revert a combined pack that loses.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.01",
+      "title": "Inventory simultaneous and transient resource sets",
+      "package": "N02",
+      "dependencies": [
+        "N00.02",
+        "N00.06"
+      ],
+      "source_or_edit_targets": [
+        "docs/p2/P2-texture-residency.md",
+        "docs/p2/P2-1c-vram-map.md",
+        "src/nds/nds_renderer_assets.c",
+        "src/nds/nds_ftanim_track.c",
+        "src/nds/nds_battlepack_anim.c"
+      ],
+      "implementation_steps": [
+        "Build exact source-derived required sets per scene/profile: fighter kinds/instances/copy possibilities, stage/hazards, items/children, UI/VFX, motions and audio cue policy.",
+        "Classify ROM/code, ARM9 heap/arena, ARM7/shared storage, TCM, texture/palette/BG/OAM, graphics scratch and per-instance packet memory separately.",
+        "Include load→commit transient peaks and retained old-scene lifetimes, libc reserve, stacks, object pools and worst concurrent cue/particle bursts.",
+        "Compare required/admitted/excluded identities, not equal counts; emit the first failed constraint with exact resource identity.",
+        "For every legal roster-stage resource case, union immutable banks by identity but charge four mutable instances: clocks, matrices, packet patches, costume state, hit records, CPU state and pending cues. Cover AAAA, AAAB, AABB, AABC and ABCD multiplicities.",
+        "Compute a source-reachable dependency closure for the selected roster and stage, including Kirby copying opponents and legal held-item/summon/capture children. Record mutual exclusion or concurrent occupancy bounds where they reduce memory; unsupported exclusions do not remove requirements."
+      ],
+      "validation": "T-RES set-difference fixtures; missing child and equal-count wrong-resource mutation both fail; runtime admission/pool witnesses from same baseline.",
+      "work_to_retire": "Anonymous allocation guesses and implicit post-GO demand assumptions.",
+      "completion": "A source-derived resource model covers the full required catalogue and exposes per-case deficits, including slot-dependent layouts, uncommon states and transient peaks; a pilot allocation is not universal admission proof.",
+      "stop_or_rollback": "An overfull plan is not solved by marking required content optional or lowering legal pool capacity.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.02",
+      "title": "Recover memory from actually retired representations",
+      "package": "N02",
+      "dependencies": [
+        "N02.01",
+        "N01.03"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_preamble.c",
+        "src/nds/nds_renderer_assets.c",
+        "src/nds/nds_ft_pose.c",
+        "src/port/renderer_adapter_matrix.c",
+        "Makefile"
+      ],
+      "implementation_steps": [
+        "Identify duplicate source/native buffers, retired recorder storage, repeated matrix copies, diagnostic arrays and scene-global reservations with live owners.",
+        "For each candidate prove no remaining consumer across active and cold scene states. Reclaim per-scene storage only after the prior owner is quiescent.",
+        "Where consumer retirement depends on N03/N05, reserve the reclamation task but do not free early. Split independently safe removals from dependent removals.",
+        "Price memory released to the actual match arena and runtime low-water, not merely total ELF BSS shrink. Avoid retaining a second copy for convenience."
+      ],
+      "validation": "T-RES allocation/lifetime tests, cold first-use and repeated transitions; same-run heap/graphics/pool bounds; no stale handles.",
+      "work_to_retire": "Duplicate or dead state proven unused; precise bytes credited only after runtime availability is confirmed.",
+      "completion": "Recovered bytes are available to the intended bank at its allocation boundary, with safety reserves preserved.",
+      "stop_or_rollback": "Keep a necessary buffer until its consumer retires; moving it to another hidden heap is not reclamation.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.03",
+      "title": "Compile compact motion and resource banks",
+      "package": "N02",
+      "dependencies": [
+        "N02.01",
+        "N04.02"
+      ],
+      "source_or_edit_targets": [
+        "scripts/fighters/generate_nds_native_owners.py",
+        "scripts/_paths.py",
+        "src/nds/nds_ftanim_track.c",
+        "proposed native bank generator/loader extensions"
+      ],
+      "implementation_steps": [
+        "Extend existing generators with explicit version/hash/table metadata and fixed numeric payloads. Fold constants and deduplicate identical immutable channels without aliasing mutable state.",
+        "Choose compact keys/coefficient tables and selected precomputed local transforms from measured bank/evaluator tradeoffs. Include event metadata but keep gameplay event semantics independently validated.",
+        "Validate offset/count/stride/alignment/integrity in host output and target admission. Generated outputs have deterministic ordering and no timestamps/host addresses.",
+        "Update generator inputs, Makefile dependencies and staleness checks in the same commit; keep source references read-only.",
+        "Factor reusable fighter/stage/resource banks instead of generating a full payload for every roster-stage combination. Emit deterministic per-case admission metadata from shared records; the combinatorial test catalogue must not become a combinatorial ROM bank.",
+        "Publish worst per-instance patch/scratch/matrix/animation capacities over all required owners and legal variants, not constants observed only for Mario/Fox or the current stress roster."
+      ],
+      "validation": "T-BANK round trip/corruption/version/overflow tests; independent source-derived motion/geometry/resource completeness; deterministic regeneration.",
+      "work_to_retire": "Runtime source format decoding, invariant coefficient work and redundant immutable payloads for converted banks.",
+      "completion": "Banks are smaller/resident enough and directly consumable with a documented version transition.",
+      "stop_or_rollback": "Reject a representation that fits ROM but cannot meet runtime resident/transient limits or event fidelity.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.04",
+      "title": "Implement transactional admission and locked epochs",
+      "package": "N02",
+      "dependencies": [
+        "N02.02",
+        "N02.03"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_assets.c",
+        "src/nds/nds_ftanim_track.c",
+        "src/nds/nds_battlepack_anim.c",
+        "src/port/renderer_adapter_stage.c"
+      ],
+      "implementation_steps": [
+        "Validate the complete new scene plan and reserve all permanent/transient resources before publishing any live handles.",
+        "Prepare/upload at the legal boundary; bind all native owners; commit one generation only after full success. On failure clean partial allocations and restore the prior valid scene or established failure UI.",
+        "Lock the battle epoch: no mandatory motion/texture create/convert/evict/demand-read work after GO. Pre-admitted palette/material animation remains legal.",
+        "Resolve scene transitions and copy/morph/wave changes from admitted data, using C4 mutation ownership and C5 texture/packet lifetime rather than a gameplay-time LRU.",
+        "A source-legal profile that cannot be admitted remains a product failure even when rejection is safe. Never make it illegal in the selector, force an unapproved quality downgrade, omit required assets or defer demand reads until after GO to make the solver pass."
+      ],
+      "validation": "T-RES failure injection at every admission phase; T-LIFE cancelled loads, rematch, same-address arena reuse; class-specific post-GO counters must remain zero.",
+      "work_to_retire": "Mandatory demand reads and repeated resource discovery in converted locked scenes.",
+      "completion": "Complete native content is admitted atomically and stays valid through all qualified battle states.",
+      "stop_or_rollback": "Fail closed at admission on missing resources, but leave product coverage OPEN; containment is not a successful port.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.05",
+      "title": "Separate CSS, battle and transition residency",
+      "package": "N02",
+      "dependencies": [
+        "N02.04",
+        "N03.02"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_menu_shell_css.c",
+        "src/nds/nds_renderer_assets.c",
+        "src/nds/nds_menu_shell_router.c",
+        "docs/p2/P2-1c-vram-map.md"
+      ],
+      "implementation_steps": [
+        "Use compact preview-specific banks for visible/selectable CSS instances without reserving every fighter gameplay closure simultaneously.",
+        "Keep selected-pose and first-use animation resident/prepared before selection presentation; bind preview state separately from battle topology.",
+        "Plan explicit bank retirement/handoff for CSS→stage select→battle→results→CSS and 1P introductions/wave replacements.",
+        "Keep transition presentation responsive under its own cadence budget and avoid state leakage from a previous scene."
+      ],
+      "validation": "T-UI fast selection/selected poses for all roster entries, T-LIFE repeated menu/match loops, T-RES transient peaks and cancellation.",
+      "work_to_retire": "Unnecessary whole-roster gameplay residency in previews and accidental cross-scene reservations.",
+      "completion": "Preview and battle resource sets are independently complete, bounded and correctly retired.",
+      "stop_or_rollback": "Do not hide unresident fighters or reuse the last rendered preview while claiming live output.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.06",
+      "title": "Qualify no-demand-read and bank capacity closure",
+      "package": "N02",
+      "dependencies": [
+        "N02.04",
+        "N02.05",
+        "N03.10",
+        "N05.08",
+        "N02.07",
+        "N10.07"
+      ],
+      "source_or_edit_targets": [
+        "scripts/verify-p2-four-fighter-stress.ps1",
+        "docs/p2/P2-texture-residency.md",
+        "proposed admission manifest artifacts"
+      ],
+      "implementation_steps": [
+        "Exercise cold motion changes, copy/morph/entry, rare item/summon children, simultaneous KO/respawn and long matches under the selected bank.",
+        "Classify every storage event by client and source. A direct NitroROM read remains a read; a cache miss remains a mandatory dependency unless proved optional/declared.",
+        "Validate independent VRAM placement/palette/view/atlas constraints and RAM peaks, not a single total-memory number.",
+        "Publish the scene closure and repeat for the measured worst CPU and worst memory configurations, which may differ.",
+        "Reconcile N02.07 static results with N10 per-case runtime admission. Distinguish an exact structural reuse certificate from an untested case; host byte sums alone never count as target startup or post-GO proof."
+      ],
+      "validation": "T-RES zero mandatory post-GO motion/texture reads, exact required sets, no safety reserve breach; T-AUDIO declared services have no deadline loss.",
+      "work_to_retire": "Residual mandatory storage dependency in qualified battle banks.",
+      "completion": "All required roster-stage capacity cases pass the generated static constraints and their assigned runtime admission/lifetime obligations; every locked profile has complete required resources, no undeclared demand work and no known legal admission failure.",
+      "stop_or_rollback": "No blanket zero-I/O claim when BGM streams; no accepted scene closure with an unclassified storage client.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N02.07",
+      "title": "Solve exhaustive roster-stage resource feasibility",
+      "package": "N02",
+      "dependencies": [
+        "N02.03",
+        "N00.06"
+      ],
+      "source_or_edit_targets": [
+        "existing native bank/resource manifest generators",
+        "docs/p2/P2-texture-residency.md",
+        "docs/p2/P2-1c-vram-map.md",
+        "proposed pure host admission enumeration"
+      ],
+      "implementation_steps": [
+        "Evaluate every base roster-stage case and every required slot-dependent layout. Deduplicate equivalent STATIC resource computations only with an explicit identity/constraint proof; still emit one verdict for each required ordered case.",
+        "Build a source-reachable dependency closure for motion/model/detail/costume/copy/held-item/summon/stage/UI/audio needs. Share immutable assets once and charge writable state per active instance; legal simultaneous limits and exclusions require source evidence.",
+        "Check independent constraints: resident/transient RAM and allocator reserve, TCM/stacks, VRAM bank/mode mappings, palettes/atlas/view slots, packet/matrix/geometry limits and declared service buffers/deadlines. Scalar total-byte fit alone is insufficient.",
+        "Emit deterministic constraint witnesses, exact required/admitted/excluded sets, per-instance versus shared accounting, variant assumptions and first failed identity for every case. A performance-derived service estimate is provisional until measured.",
+        "Add negative cases with a missing late child, four-copy alias, legal costume overflow, one bad stage mapping, compressed-format placement conflict, equal-count wrong resource, temporary peak overflow, hidden post-GO demand and dropped required fighter.",
+        "Provide failed cases directly to the relevant representation/bank task. Support every legal case by improving representation or allocation; admission failure, removing a selectable lineup or unapproved quality loss is not closure.",
+        "Carry runtime admission/lock/lifetime obligations to N02.06 and N10. This host solver is not a new ROM measurement and may not turn static feasibility into target PASS."
+      ],
+      "validation": "T-RES/T-BANK and T-COVER COV05, COV06, COV15; exact case-set reconciliation and allocation-constraint witnesses.",
+      "work_to_retire": "Roster-specific capacity guesses and treating safe rejection as successful support.",
+      "completion": "Every required resource case has a complete legal feasible allocation witness or an explicit blocking deficit; N02.06 remains open until all required deficits and runtime obligations close.",
+      "stop_or_rollback": "Any unexplained missing resource case or legal allocation deficit blocks universal resource acceptance; do not hide it in a global mean.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.01",
+      "title": "Partition preflight into immutable and live checks",
+      "package": "N03",
+      "dependencies": [
+        "N00.03",
+        "N00.05",
+        "N02.01"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_native_fighter_production.c",
+        "src/nds/nds_renderer_assets.c",
+        "src/nds/nds_renderer_native_common.c"
+      ],
+      "implementation_steps": [
+        "Walk each preflight operation and record its inputs, mutation owner, lifetime and failure output. Classify bank-immutable, instance-topology, material/residency or genuinely per-draw.",
+        "Price successful replay hits separately from misses/first use and capture which validation entries actually run.",
+        "Specify the bound descriptor from C3 using existing native tables wherever possible. Preserve copied/foreign-root ownership and distinguish slot, fighter kind and instance identity.",
+        "Add tests for every moved validation condition before relocating its execution boundary.",
+        "Classify invariant checks over all generated owners, stages and variants. Do not bake a small pilot hierarchy limit, one texture format, or a particular roster into the bound ABI."
+      ],
+      "validation": "T-BIND corrupt bank/foreign root/stale epoch/wrong model variant tests; replay-hit counters and measured perflight cost; no candidate branch changes yet.",
+      "work_to_retire": "Only immutable checks demonstrated to repeat are marked for removal; no speculative bulk validation deletion.",
+      "completion": "A validation/mutation matrix states exactly what remains on the hot path and why.",
+      "stop_or_rollback": "Any unowned mutation remains conservatively checked until its writer is identified; do not substitute an optimistic pointer comparison.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.02",
+      "title": "Implement binding and explicit invalidation",
+      "package": "N03",
+      "dependencies": [
+        "N03.01",
+        "N04.02"
+      ],
+      "source_or_edit_targets": [
+        "src/port/renderer_adapter_matrix.c",
+        "src/import/battleship_ftmain.c",
+        "src/nds/nds_renderer_assets.c",
+        "proposed include/nds/nds_native_binding.h"
+      ],
+      "implementation_steps": [
+        "Add small bound-instance records or extend current records; keep immutable bank references distinct from per-instance mutation state.",
+        "Hook genuine scene, spawn, status topology, model-part, copy/morph, costume and resource-epoch changes using C4. Verify all current invalidation callers before narrowing them.",
+        "Build parent/root/material bindings once per relevant change and publish only after all referenced resources and patch metadata are valid.",
+        "Expose fixed native transforms through a narrow API. During migration explicitly mark any legacy producer bridge and its cost; no new floating conversions inside the emitter.",
+        "Key mutable bindings by stable instance identity plus generation, not fighter kind alone. Same-kind instances may share read-only packets/banks but must not share writable patches, pose cursors, materials, light state or copy ownership."
+      ],
+      "validation": "T-BIND same-root reparent, same-address reuse, four identical fighters with different costumes, Kirby copy, Samus morph, rapid status changes and generation wrap.",
+      "work_to_retire": "Repeated immutable root/material/parent discovery for bound instances.",
+      "completion": "All bound fields have a mutation owner; tests invalidate the right scope without invalidating unrelated instances.",
+      "stop_or_rollback": "A stale attachment or valid-looking wrong-generation handle blocks the migration; restore conservative ownership until fixed.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.03",
+      "title": "Prove the contract on one small actor",
+      "package": "N03",
+      "dependencies": [
+        "N03.02"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_native_owners.c",
+        "src/port/renderer_adapter_matrix.c",
+        "existing TaruCann generated tables"
+      ],
+      "implementation_steps": [
+        "Convert TaruCann or an equally small currently admitted native actor to bind invariant vertices, material, texture view and transform class at admission/spawn.",
+        "Remove the per-submit construction of generic traversal/configuration/vertex arrays whose contents are now bound or generated.",
+        "Keep its dynamic world motion and source camera/projection semantics; prove the translation-unit scale and near-plane treatment independently.",
+        "Preserve actor visibility, winding, alpha, depth and required lifetime. Keep the shared executor small rather than adding a second actor-specific generic framework."
+      ],
+      "validation": "T-BIND actor spawn/despawn/bank change; T-GEOM source corner order/material/depth plus visible moving barrel fixture; measure whole actor CPU/scratch.",
+      "work_to_retire": "Generic state construction and immutable conversions on every pilot actor draw.",
+      "completion": "The native actor is complete with a smaller hot path and no extra live mirror; pilot interface proof is separate from campaign speed claims.",
+      "stop_or_rollback": "Do not expand actor coverage until the contract is correct; do not claim significant four-CPU savings from an actor absent in that baseline.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.04",
+      "title": "Move a hot fighter to the bound hit path",
+      "package": "N03",
+      "dependencies": [
+        "N03.02",
+        "N03.03"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_native_fighter_production.c",
+        "src/nds/nds_renderer_preamble.c",
+        "src/port/renderer_adapter_matrix.c"
+      ],
+      "implementation_steps": [
+        "Select a currently expensive admitted fighter/variant from the reproduced four-kind profile, not an easy but unrepresentative idle-only path.",
+        "Route a valid bound replay hit past retired immutable preflight work while preserving live generation/count/capacity checks. Reuse existing packet correctness for split roots and texgen.",
+        "Factor model-local, world, camera and material updates so camera-only motion does not trigger pose/topology rebuilds; directly reference stable matrices instead of copying full workspaces.",
+        "Test the full selected move/entry/damage/capture lifecycle, measure hit/miss behavior and delete the completed owner’s old binding path after acceptance."
+      ],
+      "validation": "T-BIND and T-GEOM full pilot state tour; T-MEAS hit/miss/patch/copy bytes plus same-ROM and hard-on timing; four-slot positive output.",
+      "work_to_retire": "Repeated successful-hit immutable preflight and source-shaped matrix/material setup for the pilot fighter.",
+      "completion": "Whole-owner cost improves in the real stress configuration with stable memory and complete native output.",
+      "stop_or_rollback": "Neutral micro-cost with a large new resident record is not enough; redesign the bound-state boundary before roster rollout.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.05",
+      "title": "Specialize transform and render classes",
+      "package": "N03",
+      "dependencies": [
+        "N03.04",
+        "N04.03"
+      ],
+      "source_or_edit_targets": [
+        "src/port/renderer_adapter_matrix.c",
+        "src/nds/nds_renderer_native_common.c",
+        "src/nds/nds_renderer_native_owners.c"
+      ],
+      "implementation_steps": [
+        "Classify all reachable matrix callbacks from source and current adapters: affine TRS, source orientation replacement, billboard, camera-dependent special cases, cross-root binding and procedural attachments.",
+        "Generate/bind the class once and use a small native fixed kernel per actual class. Preserve scale accumulation, coordinate handedness, translation retention and projection semantics.",
+        "Separate render classes for ordinary depth-tested, translucent, painter/no-Z and exceptional depth behavior; preserve source ordering inside non-commutative groups.",
+        "Use CPU matrices only where gameplay or unsupported GX semantics need them; never build a full CPU hierarchy solely to discard it after equivalent GX composition."
+      ],
+      "validation": "T-XFORM class-by-class oracle, degenerate axes, reflection/negative scale and near-plane cases; T-DEPTH shield/ring/stage ordering; required sockets remain current.",
+      "work_to_retire": "Runtime callback/type discovery and generic whole-state branches inside converted emitters.",
+      "completion": "Every reachable transform/render class is native and bounded; unsupported required classes are explicit blockers, not silent fallback.",
+      "stop_or_rollback": "Do not collapse all classes to generic TRS or globally reorder translucency for material batching.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.06",
+      "title": "Extend the generator with native packet payloads",
+      "package": "N03",
+      "dependencies": [
+        "N03.01",
+        "N04.02",
+        "N00.05"
+      ],
+      "source_or_edit_targets": [
+        "scripts/fighters/generate_nds_native_owners.py",
+        "scripts/fighters/check_native_owner_geometry_closure.py",
+        "src/nds/nds_renderer_assets.c",
+        "proposed generated native packet sections"
+      ],
+      "implementation_steps": [
+        "Add a native command emitter on the already source-validated run/epoch representation. Preserve original material/depth/transform dependencies and explicit unlit vertex color.",
+        "Generate bounded variant directories and typed patch spans with exact source indices. Reuse existing source identities and schema hashes; increment the native ABI only when necessary.",
+        "Build a separate decoder/checker that expands output to oriented triangles, material states and matrix routes and compares to the independent source path, not the emitter’s intermediate objects.",
+        "Emit command/resource/patch size reports and deterministic hashes for every admitted owner and both reachable detail settings."
+      ],
+      "validation": "T-GEOM all six existing closures plus T-PACKET opcode/parameter/patch-boundary tests and corrupted span negatives.",
+      "work_to_retire": "First-use native packet recording and invariant command translation for packet-qualified variants.",
+      "completion": "Generated bytes and patch metadata have independent semantic and structural proof across the emitted owner set.",
+      "stop_or_rollback": "A self-consistent truncated packet must fail source closure; do not equate a valid buffer with complete geometry.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.07",
+      "title": "Implement small typed patch kernels",
+      "package": "N03",
+      "dependencies": [
+        "N03.06",
+        "N03.05"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_preamble.c",
+        "src/nds/nds_renderer_native_fighter_production.c",
+        "proposed native packet patcher"
+      ],
+      "implementation_steps": [
+        "Implement fixed-width, contiguous patch loops using validated descriptors; do not branch through a large generic expression engine per vertex.",
+        "Use generation/dirty dependencies to patch matrices, material words, visibility and texgen only when their inputs change.",
+        "Keep the packet buffer state machine explicit and reserve per-instance ownership. Align shared/writeback ranges safely and count bytes copied/flushed.",
+        "Retain the existing Link texgen math until an independently verified native-hardware substitution is faster; absence of a named library helper is not proof of equivalent texgen."
+      ],
+      "validation": "T-PACKET only-dynamic-word mutation, adjacent-line canaries, same-kind four-instance isolation, rapid camera/costume changes, split-root and Kirby foreign-bank cases.",
+      "work_to_retire": "Per-frame invariant command construction, unnecessarily broad dirty patching and avoidable full packet copies.",
+      "completion": "Patch work is bounded by actual changed inputs and cannot write outside validated spans or into an in-flight buffer.",
+      "stop_or_rollback": "Any stale frame, cross-instance color leak or command-state dependency is a correctness failure even when geometry counts match.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.08",
+      "title": "Qualify native packet transport and GX ownership",
+      "package": "N03",
+      "dependencies": [
+        "N03.07"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_preamble.c",
+        "src/nds/nds_renderer_dispatch_profile.c",
+        "existing GX/DMA submission seam"
+      ],
+      "implementation_steps": [
+        "Identify the actual toolchain/DMA channel owner, FIFO submission API, cache maintenance and completion route in the pinned build.",
+        "Compare packed CPU submission and DMA transport on representative small and large packet sizes including setup, flush, wait and bus contention, not just copy-loop time.",
+        "Prove matrix-store/restore scheduling and resource lifetime across all four fighter packets plus stage/effects. Ensure previous asynchronous work cannot leak state into the next owner.",
+        "Keep the measured winner by packet/work class only when a class distinction is justified; otherwise retain one simple transport route. Do not add an unbounded transport scheduler."
+      ],
+      "validation": "T-PACKET in-flight overwrite/early-free negatives, T-TCM no inaccessible source buffers, T-GPU capacity/backpressure and T-MEAS wall-time.",
+      "work_to_retire": "Actual non-overlapped CPU submission work; no credit for hidden waits moved to another bracket.",
+      "completion": "Whole-frame transport improves or the simpler equivalent route is retained, with valid hardware completion and no audio/service starvation.",
+      "stop_or_rollback": "DMA-only microbench wins that regress total time are reverted; do not assume DMA and ARM9 main-memory work overlap freely.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.09",
+      "title": "Expand packets across native owners and special states",
+      "package": "N03",
+      "dependencies": [
+        "N03.08",
+        "N03.11"
+      ],
+      "source_or_edit_targets": [
+        "scripts/fighters/generate_nds_native_owners.py",
+        "src/nds/nds_renderer_native_fighter_production.c",
+        "src/nds/nds_renderer_assets.c",
+        "source-derived owner/variant manifest"
+      ],
+      "implementation_steps": [
+        "Convert by measured hot owner groups, starting with a discriminating current fighter path; expand to every required fighter, both reachable detail configurations and every selectable VS stage consumer. The pilot roster is an order of work, never an allowlist.",
+        "Include split/cross-root matrices, Link texgen, unlit colors, entries, replacement parts, Samus morph, Kirby foreign/copy hats, grabs, throws, held items, KO/respawn and dynamic topology changes. Preserve existing independent source geometry checks.",
+        "For all five four-fighter multiplicity classes, prove separate writable state and correctly shared immutable banks. Exercise all player slots, costume/team variants, generation changes and interleaved updates/submissions under N03.11.",
+        "Use the exhaustive admission catalogue to find capacity exceptions before closing a converted family. Test resources in combination with stage actors, effects and item children, not merely isolated fighter previews.",
+        "Keep source-legal missing owners and variants as blockers in their existing P2 rows. Reuse small hardware kernels; do not duplicate the entire renderer per fighter, move or lineup."
+      ],
+      "validation": "T-GEOM/T-PACKET/T-BIND/T-COVER including N03.11 instance-isolation witnesses; source-derived required-owner set minus implemented/qualified sets is reported explicitly.",
+      "work_to_retire": "Live recording/immutable preparation across the converted owner set.",
+      "completion": "Every required owner/variant has a complete native packet path and bounded independent instance state; unsupported legal combinations are not hidden behind pilot success.",
+      "stop_or_rollback": "One successful idle or CPU state does not close a fighter; missing special states block owner retirement.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.10",
+      "title": "Retire replaced renderer state and price the integrated path",
+      "package": "N03",
+      "dependencies": [
+        "N03.09",
+        "N01.05"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_preamble.c",
+        "src/nds/nds_renderer_native_common.c",
+        "src/nds/nds_renderer_native_fighter_production.c",
+        "Makefile"
+      ],
+      "implementation_steps": [
+        "Remove obsolete recorder objects, source-shaped state, old binding branches and packet-copy buffers only for fully qualified converted families.",
+        "Return recovered memory to the admitted scene bank and update explicit ITCM/DTCM ownership. Verify no other owner relied on the retired static/global.",
+        "Remove experimental route toggles from shipping, regenerate assets and build the final hard-on target.",
+        "Run the integrated four-way stress and natural shell regression; record per-owner and whole-frame differences plus residual costs. Feed newly freed memory into N02 rather than retaining stale reserves.",
+        "Reclaim recorder/source state only after its complete consumer set across all fighters, stages and rare variants has retired. One fast stress lineup cannot establish global unreachability."
+      ],
+      "validation": "T-RETIRE symbol/caller/data reachability, T-RES runtime low-water and T-MEAS integrated re-ranked results; T-GEOM required content unchanged.",
+      "work_to_retire": "Completed renderer migration’s old preparation/recording infrastructure and redundant storage.",
+      "completion": "One authoritative native route remains for converted content, measured in the real shipped shape.",
+      "stop_or_rollback": "Retain no permanent old/new route pair solely for convenience; unconverted dependencies remain explicit and separate.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N03.11",
+      "title": "Prove duplicate-instance isolation and slot-sensitive behavior",
+      "package": "N03",
+      "dependencies": [
+        "N03.02",
+        "N03.08",
+        "N00.06"
+      ],
+      "source_or_edit_targets": [
+        "native bound-instance and packet owners",
+        "native pose/topology identity contracts",
+        "source slot-ordered hit/grab/target behavior",
+        "proposed duplicate/permutation fixtures"
+      ],
+      "implementation_steps": [
+        "Audit all mutable caches, packets, matrix palettes, visibility/material state, animation/event cursors and copy/attachment owners for kind-only keys or global last-owner assumptions. Document immutable sharing and per-instance storage.",
+        "Test AAAA, AAAB, AABB, AABC and ABCD layouts across all slots, using different motions, legal costumes, teams and update order. Check emitted command semantics and gameplay ownership, not only allocation counts.",
+        "Exercise simultaneous submissions plus status changes, copy/morph, death/respawn and same-address generation reuse; mutate only one instance and independently compare the other three against their expected state.",
+        "For each proposed slot equivalence, state separately what is proved for resource layout, native rendering, mechanical priority, RNG/CPU order and timing. Team/port masks, camera/HUD slot color, hit priority and draw order can invalidate a naive permutation.",
+        "Emit explicit covered ordered-case sets and dependency fingerprints only for proved properties. A structural certificate cannot be reused as timing proof; unproved performance assignments remain runnable obligations under N10.",
+        "Extend the runtime test seam without changing the natural shipping controller configuration, RNG law or legal roster. Do not retain a slow generic target renderer as the comparison oracle."
+      ],
+      "validation": "T-BIND/T-POSE/T-PACKET/T-ORDER and T-COVER COV07, COV08, COV09; deliberate kind-key sharing and swapped-slot-result mutations fail.",
+      "work_to_retire": "Shared mutable state keyed by fighter kind and unsupported slot-symmetry assumptions.",
+      "completion": "Repeated fighters are independent, all required slot-sensitive mechanics have tests, and every claimed equivalence is property-scoped; remaining timing permutations are explicit obligations, not implied passes.",
+      "stop_or_rollback": "A kind-shared clock/patch, wrong directed outcome or unproved timing equivalence blocks the corresponding case; preserve immutable sharing where it is valid.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N04.01",
+      "title": "Build the producer-consumer and helper graph",
+      "package": "N04",
+      "dependencies": [
+        "N00.01",
+        "N00.03"
+      ],
+      "source_or_edit_targets": [
+        "scripts/census-softfloat-callers.ps1",
+        "scripts/task37_softfloat_callers.py",
+        "include/nds/nds_f32_exact.h",
+        "src/import",
+        "src/nds",
+        "src/port"
+      ],
+      "implementation_steps": [
+        "Inventory runtime floating arithmetic using types, preprocessed compilation units, compiler lowering and link/caller data. Include arithmetic, compares, conversions, libm, doubles/varargs and custom mantissa/exponent routines.",
+        "Start at all shipped scene entry points, callbacks, interrupts, service threads and startup/transition roots. Resolve function-pointer and weak-symbol targets conservatively.",
+        "Map helpers to their callers/domains and exact linked input sections. Include parent bridge work rather than only helper self-time.",
+        "Publish a per-domain field/use graph and list the smallest producer-to-consumer closure that removes a real chain."
+      ],
+      "validation": "T-FLOAT audit fixtures: hidden typedef, constant-only literal, indirect libm call, integer IEEE implementation and float formatting are classified correctly.",
+      "work_to_retire": "Unknown float families and leaf-only conversion proposals; no speed saving yet.",
+      "completion": "Every known target arithmetic family and bridge has an owner and migration path.",
+      "stop_or_rollback": "Unknown indirect targets remain blockers; do not declare zero runtime float from grep or the lack of FPU instructions.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N04.02",
+      "title": "Freeze units, ranges and numeric ABI",
+      "package": "N04",
+      "dependencies": [
+        "N04.01",
+        "N00.05"
+      ],
+      "source_or_edit_targets": [
+        "proposed include/nds/nds_native_numeric.h",
+        "include/nds/nds_anim_fixed.h",
+        "include/nds/nds_r2_camera_fixed.h",
+        "source field-use register"
+      ],
+      "implementation_steps": [
+        "For each high-priority chain derive source-legal input bounds and worst intermediate products, sums, shifts and denominators. Add dynamic scene/fighter extremes and rare procedural states.",
+        "Choose fixed widths/fraction bits from that proof and C2 candidate formats; pin coordinate handedness, world-to-GX scale, angle wrap and matrix layout.",
+        "Define named rounding/narrowing operations and class E/B comparison policy. Decide which constants/tables are generated host-side.",
+        "Publish one shared header/contract owned by the integrator. Record each remaining legacy API boundary and prevent independent agents from choosing incompatible representations.",
+        "Range bounds include all fighters/stages, legal scale/status variants, high-speed projectiles, stage hazards and live attachments. Sampling the current four-kind Dream Land run is not a range proof for universal support."
+      ],
+      "validation": "T-NUM extremes/rounding/overflow and compile-time sizeof/alignment checks; test values immediately on both sides of gameplay decision boundaries.",
+      "work_to_retire": "Inconsistent numeric conventions and permanent float sandwiches.",
+      "completion": "Chosen native types have explicit range/rounding proofs and agreed producer/consumer semantics.",
+      "stop_or_rollback": "An unbounded source field requires a new representation or explicit admitted-domain proof, not guessed saturation.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N04.03",
+      "title": "Implement and qualify the small primitive set",
+      "package": "N04",
+      "dependencies": [
+        "N04.02"
+      ],
+      "source_or_edit_targets": [
+        "include/nds/nds_r2_hwmath_unit.h",
+        "proposed native numeric primitives",
+        "existing fixed matrix/vector kernels"
+      ],
+      "implementation_steps": [
+        "Implement only required multiply-accumulate, rounded shifts, vector operations, fixed ratio, angle lookup and normalization primitives with documented domains.",
+        "Use wide intermediates where proved necessary, reciprocal/lookup precompute for invariant operands, and eliminate unnecessary normalization/division before accelerating it.",
+        "Compile with the pinned ARM9 toolchain; inspect generated ARM/Thumb code, library calls, stack pressure and interworking. Compare a C reference and a target kernel independently.",
+        "Integrate overflow/corruption diagnostics at contract boundaries; do not add a global runtime saturation framework."
+      ],
+      "validation": "T-NUM independently generated arithmetic corpus, exhaustive reduced domains, randomized legal extremes, divide-by-zero negatives and sanitizer/UB checks on the host.",
+      "work_to_retire": "Software-float operations and redundant divides inside the selected fixed primitives.",
+      "completion": "Primitives meet documented numeric semantics and target codegen obligations; speed is measured with their real callers.",
+      "stop_or_rollback": "A primitive faster alone but slower after conversions/64-bit helpers is not adopted into the full chain.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N04.04",
+      "title": "Close residual camera, vector and transform chains",
+      "package": "N04",
+      "dependencies": [
+        "N04.03"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_gmcamera.c",
+        "src/port/renderer_adapter_matrix.c",
+        "include/nds/nds_r2_camera_fixed.h",
+        "include/nds/nds_r2_hwmath_unit.h"
+      ],
+      "implementation_steps": [
+        "Keep the already-fixed camera route; identify remaining source float publication, billboard/look-at, projection, material direction and conversion consumers.",
+        "Carry fixed values through those consumers and specialize affine versus perspective operations correctly. Avoid full 4×4 work for a proved affine-only chain.",
+        "Generate invariant trigonometric/reciprocal data where useful without baking live camera or gameplay-dependent state into giant tables.",
+        "Remove obsolete conversion wrappers only after all consumers of that chain use the native ABI."
+      ],
+      "validation": "T-XFORM camera boundary/near-plane/degenerate-up/negative-scale and T-DEPTH regressions; same source-controlled camera trajectories.",
+      "work_to_retire": "Residual mixed-representation camera/transform work, not the fixed route that already exists.",
+      "completion": "Converted camera/transform producers and consumers are native end to end with no extra mirror.",
+      "stop_or_rollback": "A numerical error that changes clipping/attachment/depth behavior must be corrected before acceptance.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N04.05",
+      "title": "Migrate constants and target asset numerics",
+      "package": "N04",
+      "dependencies": [
+        "N04.02",
+        "N02.03"
+      ],
+      "source_or_edit_targets": [
+        "scripts/fighters/generate_nds_native_owners.py",
+        "existing stage/material/audio generators",
+        "Makefile",
+        "proposed numeric asset schema"
+      ],
+      "implementation_steps": [
+        "Convert target-consumed float constants and source numeric payloads into the chosen fixed formats in host tooling; preserve original asset provenance and source values for oracle use.",
+        "Fail generation on overflow, undefined rounding, missing type metadata or an unsupported required asset rather than silently truncating.",
+        "Update bank hashes/versions and loader validation together. A bank schema change cannot be applied to an old resident image.",
+        "Check emitted code/data for runtime initializer/conversion routines that should have become constants."
+      ],
+      "validation": "T-BANK deterministic generation, version mismatch and numeric boundary fixtures; target link audit finds no runtime constant-conversion initializer in converted banks.",
+      "work_to_retire": "Load-time and per-use floating numeric conversion of host-convertible target assets.",
+      "completion": "Fixed constants/data arrive ready for native runtime consumption across converted domains.",
+      "stop_or_rollback": "Do not edit extracted source or reference decomp to make the converter accept invalid inputs.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N04.06",
+      "title": "Build a no-float regression gate",
+      "package": "N04",
+      "dependencies": [
+        "N04.01",
+        "N04.03"
+      ],
+      "source_or_edit_targets": [
+        "proposed scripts/check-native-runtime-numerics.py",
+        "Makefile",
+        "scripts/verify-all.ps1",
+        "include/nds/nds_f32_exact.h"
+      ],
+      "implementation_steps": [
+        "Combine source/type and compiler-output checks with ELF symbol/caller analysis; cover libgcc/libm helpers, custom IEEE code, weak aliases and indirect roots.",
+        "Initially report by converted domain with an explicit temporary migration allowlist. Each entry names consumer, reason and removal task; new entries require review.",
+        "At final closure reject all reachable target floating arithmetic in shipped configurations, not merely the profiled path. Keep host generators/oracles outside the target gate.",
+        "Include independent negative fixtures that introduce one prohibited arithmetic path without using a literal float keyword or a familiar helper name."
+      ],
+      "validation": "T-FLOAT hidden typedef/varargs/indirect/custom IEEE/source-include/constant-folding fixtures; build graph proves host references are not linked into ROM.",
+      "work_to_retire": "Future reintroduction of float and false success based only on helper-symbol disappearance.",
+      "completion": "The checker distinguishes static data from arithmetic and detects all exercised negative patterns; domain migration is auditable.",
+      "stop_or_rollback": "A finite trace or blacklist alone is insufficient proof; unresolved roots keep closure open.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.01",
+      "title": "Derive event lanes and timing semantics",
+      "package": "N05",
+      "dependencies": [
+        "N04.02",
+        "N00.05"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "src/import/battleship_ftanim.c",
+        "src/import/battleship_ftmain.c",
+        "scripts/fighters/test_pose_clock_differential.py"
+      ],
+      "implementation_steps": [
+        "Enumerate wait/frame/speed constructors and every writer/reader, including source sentinels, joint lanes, GObj last-writer publication and script event order.",
+        "Extract real constant, ratio-derived and dynamic speed cases with attach/seek/start-frame/loop/rebound/landing semantics.",
+        "Build source-driven traces with exact event tick/order and discrete status outcomes, not only pose-coordinate comparisons.",
+        "Specify fixed clock/remainder/deadline rules from those cases, including overflow/wrap and invalid speed handling."
+      ],
+      "validation": "T-CLOCK retained Q12 mismatch examples, actual landing/rebound cases, speed transitions, pauses/hitlag and distinct joint lanes.",
+      "work_to_retire": "Unsupported assumptions about one global exact fixed clock.",
+      "completion": "Every admitted speed/event regime has an explicit source-derived behavior contract and planned native representation.",
+      "stop_or_rollback": "Do not remove the existing clock until its semantic replacements pass; a rational clock is not automatically source-equivalent.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.02",
+      "title": "Implement fixed event stepping and deadline corrections",
+      "package": "N05",
+      "dependencies": [
+        "N05.01",
+        "N04.03"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "include/nds/nds_f32_exact.h",
+        "proposed native event metadata/compiler"
+      ],
+      "implementation_steps": [
+        "Implement integer event state and qualified phase/remainder update with a bounded number of source-ordered events per tick.",
+        "Generate deadline/transition metadata for proved finite source regimes; handle dynamic speed changes by the specified re-anchor rule, not a global epsilon.",
+        "Preserve hitlag freezing, multiple events in one tick, loops/end/changed/null states, interruptions and the correct GObj publication lane.",
+        "Compare events against the independent source oracle and isolate each mismatch to source regime and boundary before changing the rule."
+      ],
+      "validation": "T-CLOCK exhaustive admitted finite regimes plus generated dynamic traces; exact event/order/status match, bounded runtime work and no integer overflow.",
+      "work_to_retire": "Per-joint integer IEEE add/sub and repeated source wait arithmetic in qualified regimes.",
+      "completion": "Native stepping passes the admitted semantic corpus and target-cost check; unresolved regimes remain explicitly open.",
+      "stop_or_rollback": "Do not pad every duration by one tick or silently keep binary32 under a new name. Failure requires case-specific redesign.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.03",
+      "title": "Compile compact fixed tracks and constant channels",
+      "package": "N05",
+      "dependencies": [
+        "N02.03",
+        "N04.03",
+        "N05.01"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ftanim_track.c",
+        "src/nds/nds_ft_pose.c",
+        "include/nds/nds_anim_fixed.h",
+        "existing fighter motion generator"
+      ],
+      "implementation_steps": [
+        "Compile static channels, active track maps, interpolation coefficients and interpolation classes using source values and approved quantization.",
+        "Generate bounded indices into resident data; use constant/linear/cubic-specific kernels without scanning inactive track classes.",
+        "Keep event metadata separate from visual samples. Procedural state, live facing/scale and attachments are runtime inputs, not baked as final world coordinates.",
+        "Compare compact coefficient/keys versus selective sampled locals for both memory and integrated CPU cost before choosing by family."
+      ],
+      "validation": "T-POSE constant endpoints, interpolation extrema, per-track error/range proof, malformed spans and bank determinism; no event timing changes.",
+      "work_to_retire": "Repeated source track interpretation, invariant coefficient generation and inactive/constant work beyond the existing masks.",
+      "completion": "A compact resident representation replaces a named track path with measured whole-domain benefit.",
+      "stop_or_rollback": "Do not claim the already-landed live/run masks again; a larger bake that increases mandatory reads is rejected.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.04",
+      "title": "Create topology-owned required-joint closures",
+      "package": "N05",
+      "dependencies": [
+        "N03.02",
+        "N05.03"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "src/import/battleship_ftmain.c",
+        "src/port/renderer_adapter_matrix.c",
+        "gameplay joint/socket consumers"
+      ],
+      "implementation_steps": [
+        "Enumerate gameplay consumers of each joint and their ancestor dependencies, including hurtboxes, attacks, captures, items and procedural attachments.",
+        "Build a bounded dense closure on bind/topology/consumer change and maintain source ordering where it matters.",
+        "Use explicit counts/bitsets sized for the actually admitted hierarchy; a future wide hierarchy requires a generated complete plan, not silently truncated 64-bit masks.",
+        "Keep visual-only work separate while preserving existing logic/event rates and gameplay-active invisible/offscreen joints.",
+        "Dependency closures are per live instance and topology generation. Test four copies of one fighter with different events/attachments and mixed copy/capture relationships; changing one instance must not change another instance's running-joint mask."
+      ],
+      "validation": "T-POSE ancestor closure, hidden active attacks, dynamically enabled heavy-item joint, copy/morph and wide-hierarchy negative fixtures.",
+      "work_to_retire": "Repeated dependency discovery and unnecessary full hierarchy processing for gameplay consumers.",
+      "completion": "Every required socket is current at its consumption tick with no dependence on whether the fighter was drawn.",
+      "stop_or_rollback": "Missing one ancestor or treating visibility as gameplay inactivity blocks the change.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.05",
+      "title": "Make native pose authoritative through the draw pilot",
+      "package": "N05",
+      "dependencies": [
+        "N05.02",
+        "N05.03",
+        "N05.04",
+        "N03.07"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "include/nds/nds_ft_pose.h",
+        "src/port/renderer_adapter_matrix.c",
+        "src/nds/nds_renderer_native_fighter_production.c"
+      ],
+      "implementation_steps": [
+        "Publish native local pose/matrices directly to the bound draw/patch API; delete fixed→DObj-float→renderer-fixed conversions in that chain.",
+        "Distinguish local pose, world and camera-dependent generations, directly reference stable data and avoid per-draw whole-matrix workspace copies.",
+        "For unmigrated gameplay consumers, publish a temporary one-way legacy bridge once at the required logic boundary; name its deletion dependency and measure its cost.",
+        "Check the full pilot move/entry/capture/damage lifecycle and four-instance behavior before expanding the representation."
+      ],
+      "validation": "T-POSE/T-XFORM/T-GEOM complete pilot states; audit shows converted draw never reads legacy float pose; T-MEAS includes temporary bridge cost.",
+      "work_to_retire": "Pose-to-render conversion sandwiches, duplicated visual pose authority and redundant copied transforms.",
+      "completion": "Native pose drives the full pilot render chain with a net integrated improvement; legacy gameplay bridge is explicitly not final closure.",
+      "stop_or_rollback": "A native evaluator with all old publication and rebuild work still running is not a completed pose slice.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.06",
+      "title": "Share local/world transform results correctly",
+      "package": "N05",
+      "dependencies": [
+        "N05.05"
+      ],
+      "source_or_edit_targets": [
+        "src/port/renderer_adapter_matrix.c",
+        "src/nds/nds_ft_pose.c",
+        "gameplay attachment and matrix consumers"
+      ],
+      "implementation_steps": [
+        "Use one native local result per changed joint and one required world/socket result per consumer epoch.",
+        "Compose only required CPU ancestor paths; use generated/bound GX matrix routes for visual-only transforms when that eliminates rather than duplicates CPU work.",
+        "Preserve source special transform classes and dynamic scale/facing/attachment semantics; distinguish affine model work from camera projection.",
+        "Replace whole-tree per-tick invalidation with precise mutation-owned dirty descendants after all writers are accounted for."
+      ],
+      "validation": "T-XFORM CPU socket/GX visual correspondence, camera-only/world-only changes, procedural attachments and negative scales; matrix count/bytes witnesses.",
+      "work_to_retire": "Duplicated CPU/GX hierarchy composition and whole-tree invalidation for unaffected work.",
+      "completion": "Transform counts scale with actual changed/required nodes and no gameplay result waits on GX readback.",
+      "stop_or_rollback": "A faster visual hierarchy with stale gameplay sockets is rejected; keep special cases native rather than forcing generic TRS.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.07",
+      "title": "Expand pose and event conversion across content",
+      "package": "N05",
+      "dependencies": [
+        "N05.06"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "src/import/battleship_ftanim.c",
+        "fighter motion/event banks",
+        "source-derived pose coverage manifest"
+      ],
+      "implementation_steps": [
+        "Convert the current stress roster, duplicated fighter kinds, all remaining fighters, copy variants and non-battle previews by explicit family coverage.",
+        "Include animation end, landing speed, hitlag, simultaneous status changes, entry, KO, respawn, grabs/throws and uncommon procedural tracks.",
+        "Keep the independent source oracle host-side and use source-controller tours for states ordinary CPU behavior does not trigger.",
+        "Update domain helper/bridge inventory and compact bank capacity after each qualified family; do not accumulate permanent per-fighter compatibility engines.",
+        "Qualify clocks, motion variants and sockets for every required fighter, including duplicate instances on different clips and source-legal paired captures/throws across stages. A shared animation bank never shares mutable event cursors."
+      ],
+      "validation": "T-CLOCK/T-POSE complete admitted regime matrix; T-COVER real event/variant engagement; T-RES fit and no mandatory motion reads for claimed locked profiles.",
+      "work_to_retire": "Remaining converted-family source pose/event parsing and representation conversion.",
+      "completion": "All claimed families have semantic/runtime coverage; unimplemented content remains explicitly open.",
+      "stop_or_rollback": "A zero mismatch count over zero comparisons or untriggered state does not close a family.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N05.08",
+      "title": "Remove legacy pose and clock authority",
+      "package": "N05",
+      "dependencies": [
+        "N05.07",
+        "N06.04"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_ft_pose.c",
+        "include/nds/nds_ft_pose.h",
+        "include/nds/nds_f32_exact.h",
+        "src/import/battleship_ftanim.c"
+      ],
+      "implementation_steps": [
+        "Confirm all required gameplay, render, preview and event consumers of the converted scene/domain use native state.",
+        "Remove one-way float publication bridges, old event-clock representations, shadow AObj/DObj state and obsolete parser helpers for those consumers.",
+        "Keep only necessary source compatibility outside the fully converted scope and label it a remaining runtime-float dependency until N09 closure.",
+        "Reclaim retired memory and rerun semantic, resource and whole-frame tests on the final hard-on build."
+      ],
+      "validation": "T-FLOAT domain closure, T-RETIRE reader/caller proof, T-CLOCK and T-LIFE state/cadence coverage; memory availability confirmed at admission.",
+      "work_to_retire": "Permanent duplicate pose/event authority and integer binary32 clock emulation in completed domains.",
+      "completion": "Native pose/event producers and all consumers agree on one representation, with the old bridge physically gone.",
+      "stop_or_rollback": "Do not delete fields while a source-imported callback still consumes their float ABI; move that consumer first.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.01",
+      "title": "Map hot game state and source process order",
+      "package": "N06",
+      "dependencies": [
+        "N04.02",
+        "N00.05"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_ftmain.c",
+        "src/import/battleship_ftcomputer.c",
+        "src/import/battleship_sys_objman.c",
+        "decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+      ],
+      "implementation_steps": [
+        "Enumerate hot fields and all readers/writers across source-imported gameplay, pose, collision, AI, weapons/items and render bindings.",
+        "Trace actual process registration/dispatch order and same-tick mutation visibility, including spawns, deletes, hitlag, state transitions and RNG.",
+        "Define a compact fixed state record and phase-level accessors only for fields in a complete planned chain; pin layout/range and source semantics.",
+        "List temporary adapters and which downstream task removes each; retain the source code as an independent read-only oracle."
+      ],
+      "validation": "T-ORDER source process/observable event traces and T-NUM field-use closure; callback and weak-symbol routes resolved.",
+      "work_to_retire": "Repeated cold-state access and unclear ordering/ABI assumptions; no early wholesale struct replacement.",
+      "completion": "A minimal hot-state schema and exact source-observation schedule are approved before runtime migration.",
+      "stop_or_rollback": "Do not assume all consumers can use one beginning-of-tick snapshot; missing writers block narrowing invalidation.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.02",
+      "title": "Convert a complete movement and map-query slice",
+      "package": "N06",
+      "dependencies": [
+        "N06.01",
+        "N04.03",
+        "N05.02"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_ftmain.c",
+        "port-owned fighter physics/status replacements",
+        "existing stage collision wrappers"
+      ],
+      "implementation_steps": [
+        "Implement fixed input-to-velocity-to-position-to-stage-query-to-state-publication for a representative admitted fighter; include ground and air paths.",
+        "Preserve source acceleration, friction, terminal speed, gravity, jumps, landing, hitlag and status-entry/exit timing with source-derived constants.",
+        "Use explicit one-way adapters at phase boundaries only while unconverted consumers remain; record their cost and avoid conversions inside inner math loops.",
+        "Exercise slopes, one-way platforms, ledges, knockback movement, captures and bounds in short controlled fixtures before full matches."
+      ],
+      "validation": "T-PHYS velocities/trajectories/drift/thresholds and T-COLL map boundaries; exact discrete transitions, bounded continuous errors; overflow-free target corpus.",
+      "work_to_retire": "Float operations and pointer-heavy state traversal in the complete movement/map-query slice.",
+      "completion": "The slice is native from its selected producer to publication and improves total caller cost with bridge cost included.",
+      "stop_or_rollback": "A visual approximation that changes land/ledge timing or a globally saturated overflow result is rejected.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.03",
+      "title": "Compile stage collision metadata and conservative candidates",
+      "package": "N06",
+      "dependencies": [
+        "N06.01",
+        "N04.03",
+        "N02.03"
+      ],
+      "source_or_edit_targets": [
+        "existing native stage generator",
+        "existing stage collision wrappers",
+        "scripts/check-mp-floor-crossing-fixtures.ps1",
+        "scripts/check-mp-topology-fixtures.ps1"
+      ],
+      "implementation_steps": [
+        "Generate native line/adjacency/kind/bounds metadata directly from source stage collision data, preserving line identities and ordering.",
+        "Choose a small conservative candidate structure from measured query counts and memory cost. Keep an exact ordered scan as the host oracle, not a permanent competing runtime engine.",
+        "Implement fixed broad/narrow predicates with proved width/rounding and separate moving-platform generations.",
+        "Test swept movement and near-boundary rejection, including negative coordinates, corners, degenerate/parallel lines and maximum displacement.",
+        "Cover every selectable stage's collision/hazard classes in the catalogue and use the appropriate stage-local transform. Do not assume Dream Land bounds, static platforms or one global moving-platform state."
+      ],
+      "validation": "T-COLL source-equivalent candidate superset and resolved contact; missed-collision negative mutation must fail; existing topology/floor fixtures plus moving hazards.",
+      "work_to_retire": "Repeated static line property calculation and unnecessary narrow queries for rejected geometry.",
+      "completion": "Generated metadata is complete and broad phase never excludes a source-valid contact in admitted domains.",
+      "stop_or_rollback": "Do not adopt a tree/bin structure whose setup/cache cost exceeds the small ordered scan or whose rounding drops contacts.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.04",
+      "title": "Convert interaction consumers and close gameplay pose bridges",
+      "package": "N06",
+      "dependencies": [
+        "N06.02",
+        "N06.03",
+        "N05.06"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_ftmain.c",
+        "port-owned hit/catch/damage/knockback consumers",
+        "gameplay attachment and socket consumers"
+      ],
+      "implementation_steps": [
+        "Convert hit/hurt/catch volumes, grabs/throws, projectile/item attachment and damage/knockback inputs to fixed native pose/game state.",
+        "Preserve directed ownership, teams/self exclusions, stale move behavior, source hit priority, invulnerability, hitlag and status/RNG order.",
+        "Use conservative six-pair broad-phase facts for four fighters where valid, but run directed/stateful resolution in source order and at the source observation phase.",
+        "Remove legacy pose publication for consumers now native and expose remaining non-battle/rare consumers to the retirement register."
+      ],
+      "validation": "T-HIT simultaneous/directed hits, shields, reflects, grabs/releases, invulnerability, throws and stale-move tests; T-ORDER exact event/RNG traces.",
+      "work_to_retire": "Pose-to-game float bridges and repeated broad facts in converted interactions.",
+      "completion": "Gameplay consumers use native sockets/state and the converted domain no longer requires its legacy float pose authority.",
+      "stop_or_rollback": "Shared-pair optimization cannot merge directed outcomes or reuse a snapshot after a stateful hit/status mutation.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.05",
+      "title": "Share AI query facts without changing CPU decisions",
+      "package": "N06",
+      "dependencies": [
+        "N06.04"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_ftcomputer.c",
+        "port-owned native AI query layer",
+        "existing stage floor/target query helpers"
+      ],
+      "implementation_steps": [
+        "Price SCPU exclusively and identify repeated deterministic facts: target position/bounds, source eligibility, floor relationships and hazard visibility.",
+        "Build compact phase/generation-owned facts shared by relevant CPU readers; refresh after any source-visible writer, not merely once per presented frame.",
+        "Convert distances/angles/comparisons through full fixed query chains while preserving selected CPU levels, reaction delays and RNG call count/order.",
+        "Keep source decision rules and callback sequencing; do not use lower-frequency decisions or an ARM7 one-frame-late result as an invisible optimization.",
+        "Use stable slot/instance identities for targets. Test equal-kind opponents, teams, each selectable CPU level and source-ordered target changes. Do not assume level 3, level 9, or four CPUs is automatically the cost leader for every behavior."
+      ],
+      "validation": "T-AI all admitted CPU levels, recovery/attack/target switching, items and teams; T-ORDER exact RNG; positive button/movement/action engagement.",
+      "work_to_retire": "Repeated deterministic AI fact calculation and associated float/conversion chains.",
+      "completion": "Source-controller decisions match the specified discrete behavior and CPU cost is measured separately from its parent bucket.",
+      "stop_or_rollback": "Four active GObjs with idle/no-op AI do not prove CPU engagement. Reject stale-phase shared facts even if average behavior looks similar.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.06",
+      "title": "Replace hot object traversal with bounded active sets",
+      "package": "N06",
+      "dependencies": [
+        "N06.01",
+        "N06.04"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_sys_objman.c",
+        "port-owned fighter/item/weapon/effect active lists",
+        "source process registration shims"
+      ],
+      "implementation_steps": [
+        "Identify repeated hot list walks/pointer chasing and actual active capacities; keep source legal capacity and same-tick insert/remove semantics.",
+        "Use dense handles/indices for phase-specific active sets without moving or duplicating source-visible objects unexpectedly.",
+        "Generate stable dispatch/status mappings where this removes a real interpreter path; share small kernels rather than generating a huge function per move/frame.",
+        "Keep stable iteration/resolution order and protect handle reuse with generations. A callback changing status/process ownership must update the next phase correctly."
+      ],
+      "validation": "T-ORDER spawn/delete during iteration, callback replacement, simultaneous items/effects and handle reuse; T-RES capacity refusal tests.",
+      "work_to_retire": "Measured hot pointer/list discovery and unnecessary generic process overhead.",
+      "completion": "Active-set traversal is smaller/faster with identical ordering/lifetime semantics and no legal content capacity loss.",
+      "stop_or_rollback": "Do not introduce an ECS/framework or swap-delete that changes gameplay processing order just to simplify code.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.07",
+      "title": "Evaluate scheduler flattening only when priced",
+      "package": "N06",
+      "dependencies": [
+        "N06.06",
+        "N06.05"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_sys_objman.c",
+        "source process registration shims",
+        "existing taskman update seam"
+      ],
+      "implementation_steps": [
+        "Use the measured remaining scheduler cost and proven phase trace to decide whether direct typed phases would remove meaningful work.",
+        "If justified, replace only the bounded hot domain with explicit source-ordered loops and bounded deferred operations where the source already defers them.",
+        "Preserve immediate operations when required; do not turn all spawns/deletes into next-tick queues. Keep pause, hitlag, state transition and RNG behavior.",
+        "If not justified, record the rejected mechanism and retain the simpler current dispatch. Scheduler rewrite is not compulsory for fixed-point closure."
+      ],
+      "validation": "T-ORDER exact source process/event trace, recursive/same-tick mutations and mixed actor kinds; whole-frame timing with no omitted callbacks.",
+      "work_to_retire": "Only measured removable scheduling overhead; optional task may close as REJECTED_NOT_NEEDED with evidence.",
+      "completion": "A retained scheduler is faster and mechanically equivalent, or a documented decision avoids an unhelpful rewrite.",
+      "stop_or_rollback": "Any event/order mismatch or negligible removable cost ends this route; do not reengineer all scene management.",
+      "state": "PLANNED",
+      "optional": true,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N06.08",
+      "title": "Expand fixed gameplay to all shipped domains",
+      "package": "N06",
+      "dependencies": [
+        "N06.04",
+        "N06.05",
+        "N06.06"
+      ],
+      "source_or_edit_targets": [
+        "src/import",
+        "port-owned native gameplay modules",
+        "source-derived gameplay coverage manifest",
+        "proposed runtime numeric gate"
+      ],
+      "implementation_steps": [
+        "Convert remaining fighter specials, weapons, items, stage hazards, damage/knockback, cameras and mode-specific gameplay consumers by source-use closure.",
+        "Include non-VS and rare scene/state entry points reachable in shipped builds; distinguish currently unimplemented content from converted accepted content.",
+        "Remove completed-domain legacy structs/bridges/functions and update imports/build membership without editing reference source.",
+        "Run deterministic short semantic fixtures and long natural stress; permitted continuous changes can alter later workload, so also use controlled workload tours for timing attribution.",
+        "Cover every legal ordered fighter pairing within four-way fixtures, all selectable stages, repeated fighter kinds, source-legal team/self exclusions and human-plus-CPU controls. Reuse conservative pair facts but never erase directed hit/grab/reflect ownership."
+      ],
+      "validation": "T-PHYS/T-COLL/T-HIT/T-AI/T-ORDER breadth, T-FLOAT domain audit, T-RES peaks and T-COVER actual content.",
+      "work_to_retire": "Remaining gameplay float chains, old hot-state authority and conversion shims in claimed converted scope.",
+      "completion": "Every shipped gameplay arithmetic root has a native implementation or remains an explicit final-closure blocker.",
+      "stop_or_rollback": "Do not call a domain fixed because its typical state avoids an unmigrated special/cold callback.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.01",
+      "title": "Compile stage invariants and actor partitions",
+      "package": "N07",
+      "dependencies": [
+        "N03.05",
+        "N02.03",
+        "N06.03"
+      ],
+      "source_or_edit_targets": [
+        "src/port/renderer_adapter_stage.c",
+        "src/port/renderer_adapter_matrix.c",
+        "existing native stage generators",
+        "src/nds/nds_renderer_native_common.c"
+      ],
+      "implementation_steps": [
+        "Derive source stage static/moving/decorative/hazard classes and their transform/material/depth dependencies.",
+        "Compile static native runs and bound material/resource handles, preserving source draw ordering and geometry closure.",
+        "Keep dynamic actors and collision data under explicit mutation owners; camera changes update only view/projection/dependent billboards.",
+        "Remove repeated static DObj traversal, world-matrix construction and generic begin/commit setup for the converted stage partition.",
+        "Generate stage-specific bounds and resource/depth partitions for every selectable VS stage. Full fighter-stage combinations consume those records; no stage is disallowed because its native hazards or presentation cost more."
+      ],
+      "validation": "T-STAGE full geometry/hazards/background, T-XFORM camera changes, T-COLL stage identities and T-DEPTH order; measure static/dynamic costs separately.",
+      "work_to_retire": "Per-frame source graph/material work for stage data that did not change.",
+      "completion": "The stage partition executes natively with complete content and a smaller hot preparation path.",
+      "stop_or_rollback": "Do not classify animated hazards or source-translucent groups as static merely to skip their work.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.02",
+      "title": "Replace remaining native actor setup scaffolding",
+      "package": "N07",
+      "dependencies": [
+        "N07.01",
+        "N03.03",
+        "N03.08"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_native_owners.c",
+        "src/port/renderer_adapter_matrix.c",
+        "generated native actor/effect executors"
+      ],
+      "implementation_steps": [
+        "Apply the proven bound-actor contract to admitted bumpers, clouds, barrels and effect owners by their actual transform/material class.",
+        "Generate constant vertices/UVs and native preambles; bind textures and hierarchy once at admission/spawn.",
+        "Keep procedural movement, billboard semantics, material animation and lifetime updates as explicit small inputs.",
+        "Retire generic local traversal/state arrays per converted actor and share only truly identical fixed kernels."
+      ],
+      "validation": "T-BIND spawn/despawn and source actor lifecycle; T-STAGE/T-DEPTH visible moving output; capacity and resource epochs.",
+      "work_to_retire": "Repeated configuration and immutable vertex/material setup for simple native actors.",
+      "completion": "Each converted actor has a documented compact input contract and complete lifecycle proof.",
+      "stop_or_rollback": "Do not replace a missing required actor with an opaque quad or return success without geometry.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.03",
+      "title": "Convert particle simulation and event state",
+      "package": "N07",
+      "dependencies": [
+        "N04.03",
+        "N06.01"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_lbparticle.c",
+        "source particle/emitter definitions",
+        "existing particle asset generators"
+      ],
+      "implementation_steps": [
+        "Map particle/emitter numeric fields, spawn/RNG calls, lifetime, acceleration, collision and event consumers.",
+        "Convert complete particle state/update chains to fixed values with source-derived constants; keep spawn law and random draw order.",
+        "Compile fixed emitter/curve coefficients and constant behavior metadata host-side where source rules permit it.",
+        "Keep existing simulation cadence and legal pool capacity. Decorative presentation policy is separate from emitter/gameplay event state."
+      ],
+      "validation": "T-PARTICLE deterministic emit/spawn/lifetime/RNG traces, extreme velocities and pool pressure; T-NUM error/overflow and T-COVER visible populations.",
+      "work_to_retire": "Particle software float, source numeric decoding and repeated invariant emitter work.",
+      "completion": "Fixed particles preserve required event/state behavior with no reduced live population masquerading as optimization.",
+      "stop_or_rollback": "Offscreen or low-alpha status is not automatic permission to skip RNG or emitter state.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.04",
+      "title": "Build a compact native particle draw batch",
+      "package": "N07",
+      "dependencies": [
+        "N07.03",
+        "N03.08",
+        "N04.04"
+      ],
+      "source_or_edit_targets": [
+        "src/import/battleship_lbparticle.c",
+        "src/nds/nds_renderer_textures_effects.c",
+        "src/nds/nds_renderer_native_common.c"
+      ],
+      "implementation_steps": [
+        "Consume fixed particle state directly, reuse the actual camera basis at its valid generation and prepare compact native quads/instances.",
+        "Batch only compatible texture/material/depth classes without reversing required transparency or source ordering.",
+        "Keep intersecting effects in the appropriate depth-tested native path; use sprite/BG presentation only for proven suitable screen-space effects.",
+        "Count emitted work, patch/copy/flush bytes and CPU time; remove the converted generic per-particle setup path."
+      ],
+      "validation": "T-PARTICLE mixed materials/alpha/lifetime, T-DEPTH ring/shield and overlapping particles, T-GPU capacity/backpressure, T-RES atlas completeness.",
+      "work_to_retire": "Repeated camera basis, generic quad setup and conversion bridges beyond existing caches.",
+      "completion": "Batch preparation is smaller/faster and every required particle/telegraph remains represented correctly.",
+      "stop_or_rollback": "A low particle count or missing depth intersection invalidates the result even if the frame time improves.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.05",
+      "title": "Make UI fixed, value-driven and native",
+      "package": "N07",
+      "dependencies": [
+        "N04.03",
+        "N02.05"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_battle_hud.c",
+        "src/nds/nds_ifcommon_oam.c",
+        "src/nds/nds_menu_shell_css.c",
+        "src/nds/nds_menu_shell_core.c"
+      ],
+      "implementation_steps": [
+        "Retain existing BG/OAM/native surfaces and identify residual generic geometry, float tween/layout and per-frame formatting work.",
+        "Precompute static layout/glyph/native tile descriptors; update digits, selection, health/stock/time and menu surfaces only when values or their animation phase change.",
+        "Convert UI interpolation, preview transforms, scroll and transition controls to fixed/native integer values through their full consumers.",
+        "Keep touch/input response, four-slot HUD, CSS selected poses and options/data/results surfaces complete; share immutable glyph assets without sharing mutable state."
+      ],
+      "validation": "T-UI all screens/options/fast selection/held inputs/four slots and 30 Hz cadence; T-FLOAT non-battle arithmetic; T-RES bank/OBJ/BG transitions.",
+      "work_to_retire": "Repeated unchanged formatting/layout and residual mixed-representation UI preparation, not already-existing 2D optimizations.",
+      "completion": "All claimed UI surfaces are native/fixed with responsive source-consistent presentation.",
+      "stop_or_rollback": "Do not retain a retired software text slab or stale prior-screen image as an optimization fallback.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.06",
+      "title": "Qualify GPU and ordering budgets for the full scene",
+      "package": "N07",
+      "dependencies": [
+        "N07.02",
+        "N07.04",
+        "N07.05",
+        "N03.09"
+      ],
+      "source_or_edit_targets": [
+        "native renderer submission seam",
+        "source-derived stage/owner manifests",
+        "existing graphics capture/analysis scripts"
+      ],
+      "implementation_steps": [
+        "Collect actual geometry/vertex/polygon, matrix command, texture/palette, blend/depth and FIFO wait populations for complete four-way scenes.",
+        "Check the configured original-DS hardware limits and current renderer slot conventions; do not infer increased per-buffer capacity from 30 Hz presentation.",
+        "Test worst overdraw/translucency/particle and hardest stage/fighter/item combinations separately from CPU-only hotspots.",
+        "Apply only approved existing quality settings; any new reduction needs a measured conflict and owner approval outside the transparent optimization verdict.",
+        "Search scene-level GPU/overdraw/matrix/FIFO leaders independently of ARM9 and heap leaders. Exercise four-way effect overlap with stage hazards, legal item children and camera extremes; direct rendering is not proof of sufficient geometry/raster capacity."
+      ],
+      "validation": "T-GPU capacity and backpressure, T-DEPTH correctness, T-COVER full visible work and T-MEAS actual presentation cadence.",
+      "work_to_retire": "Unnecessary graphics commands/overdraw only where equivalent native output is proved.",
+      "completion": "CPU wins do not cause hidden GPU overflow, stalls or content loss; limits and headroom are documented.",
+      "stop_or_rollback": "A CPU-only pass with GPU failure or absent geometry is RED; do not hide it behind fewer emitted primitives.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N07.07",
+      "title": "Retire converted stage/particle/UI compatibility paths",
+      "package": "N07",
+      "dependencies": [
+        "N07.06"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_renderer_textures_effects.c",
+        "src/port/renderer_adapter_stage.c",
+        "src/import/battleship_lbparticle.c",
+        "menu/scene native source membership"
+      ],
+      "implementation_steps": [
+        "Remove completed-domain traversal workspaces, source arithmetic, stale software surfaces and duplicate emission paths.",
+        "Keep remaining required native owners until their source/output coverage closes and identify those dependencies explicitly.",
+        "Return freed RAM/TCM reservations and regenerate the exact scene-resource manifest.",
+        "Run shell/battle/results/CSS and mode-specific transitions on the final hard-on configuration with semantic/audio/visual evidence."
+      ],
+      "validation": "T-RETIRE/T-FLOAT reachability, T-LIFE transition loops, T-RES low-water and T-UI/T-STAGE/T-PARTICLE coverage.",
+      "work_to_retire": "Retired stage, particle and UI compatibility scaffolding and old float consumers.",
+      "completion": "Converted surfaces have one live native implementation and no hidden software composition route.",
+      "stop_or_rollback": "Do not use a broad file deletion to remove an untested required child state.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.01",
+      "title": "Attribute remaining service tails and ownership",
+      "package": "N08",
+      "dependencies": [
+        "N00.03",
+        "N02.01"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_audio_bgm.c",
+        "src/nds/nds_audio_fgm.c",
+        "src/nds/nds_audio_assets.c",
+        "actual SDK/Calico ARM7 service configuration"
+      ],
+      "implementation_steps": [
+        "Identify each service thread/core, storage client, synchronization point and buffer owner in the current build.",
+        "Classify BGM refill, FGM startup, remaining motion demand and other storage events by bytes, event frequency, blocked work and deadlines.",
+        "Price event-window totals instead of medians that discard infrequent refills; separate unused idle from blocking service.",
+        "Choose the next service mechanism only from remaining measured cost, preserving the direct-read optimizations already retained."
+      ],
+      "validation": "T-AUDIO event/underrun/late-cue witness and T-MEAS exclusive service attribution; no double-counting background work.",
+      "work_to_retire": "Unclassified storage clients and repeated ownership guesses; no speed credit yet.",
+      "completion": "All recurring services have a declared owner, budget/deadline and measured interference.",
+      "stop_or_rollback": "Do not claim zero I/O from zero libfat calls or assume ARM7 has spare capacity without measurement.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.02",
+      "title": "Convert audio control and eliminate unnecessary decode work",
+      "package": "N08",
+      "dependencies": [
+        "N08.01",
+        "N04.03",
+        "N04.05"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_audio_bgm.c",
+        "src/nds/nds_audio_fgm.c",
+        "src/nds/nds_audio_assets.c",
+        "existing host SFX/BGM generators"
+      ],
+      "implementation_steps": [
+        "Convert pitch/rate, envelope/volume, pan and event/control arithmetic through fixed/native integer consumers.",
+        "Move invariant source-format conversion or sample preparation to host generators using the current supported playback API/format.",
+        "Keep cue identity, duration, loop/seam behavior, voice priority and audible simultaneous events correct under four-way bursts.",
+        "Remove completed-domain float/libm paths and repeated runtime setup that the native asset/control representation replaces."
+      ],
+      "validation": "T-AUDIO source cue events, seam/finite-track completion, pitch/pan/volume bounds, burst priorities and T-FLOAT audio roots.",
+      "work_to_retire": "Audio-control float and host-convertible runtime decode/setup, not audio content.",
+      "completion": "Native control and assets meet audible/timing contracts without missing cues or added service stalls.",
+      "stop_or_rollback": "Audio quality/rate/channel reductions require approval and cannot be counted as transparent code savings.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.03",
+      "title": "Bound buffers, prefetch and storage scheduling",
+      "package": "N08",
+      "dependencies": [
+        "N08.02",
+        "N02.04"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_audio_bgm.c",
+        "src/nds/nds_audio_fgm.c",
+        "scene admission and storage service seam"
+      ],
+      "implementation_steps": [
+        "Reserve BGM and required cue buffers with explicit lifetime and worst-case service interference.",
+        "Choose resident or deadline-safe one-shot policy from measured latency and legal cue bursts; do not copy the BGM streaming exemption to every cue.",
+        "Prioritize/coalesce declared range requests only where order/cursor/loop semantics permit, and avoid filesystem discovery inside playback starts.",
+        "Prove fallback/error handling does not duplicate playback, reuse a live buffer or silently lose a required cue.",
+        "Service envelopes include legal simultaneous cues/projectiles from repeated and distinct fighters on each stage's music/hazard workload. Keep audio deadline leaders separate from CPU P95 and heap leaders; no required cue is silently dropped to hold timing."
+      ],
+      "validation": "T-AUDIO delayed/short/failed read injection, simultaneous cues, loop boundaries, cancellation and source event order; T-RES reserves and zero undeclared demand.",
+      "work_to_retire": "Unnecessary per-event allocation/discovery and avoidable non-overlapped service tails.",
+      "completion": "Declared services meet deadlines under the hardest complete scene with explicit memory cost.",
+      "stop_or_rollback": "A bigger buffer that causes battle admission OOM or a rare missing sound is not a win.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.04",
+      "title": "Overlap hardware math only under proven ownership",
+      "package": "N08",
+      "dependencies": [
+        "N04.03",
+        "N08.01"
+      ],
+      "source_or_edit_targets": [
+        "include/nds/nds_r2_hwmath_unit.h",
+        "src/import/battleship_gmcamera.c",
+        "actual IRQ/thread math-unit users"
+      ],
+      "implementation_steps": [
+        "Inventory every divide/sqrt register writer in the current linked binary including library, thread and IRQ paths; discard old no-preemption assumptions unless re-proven.",
+        "For a measured remaining independent operation, split start/consume and schedule useful native work between them without allowing another writer to overwrite the result.",
+        "Define ownership/save-restore or bounded critical section at the shared-unit boundary; do not add broad interrupt masking at every call.",
+        "Compare with the already-existing synchronous native helper, including ownership overhead and interrupt/service effects."
+      ],
+      "validation": "T-HWMATH overlapping/cancelled/preempted operations and exact domain results; T-AUDIO IRQ deadline integrity; whole-frame timing.",
+      "work_to_retire": "Only actual exposed wait latency for a qualified math chain.",
+      "completion": "A retained asynchronous schedule improves total cost with correct cross-user ownership, or the synchronous route remains.",
+      "stop_or_rollback": "Do not count hardware math as newly implemented or adopt overlap on a stale register-writer audit.",
+      "state": "PLANNED",
+      "optional": true,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.05",
+      "title": "Select and price one ARM7 candidate",
+      "package": "N08",
+      "dependencies": [
+        "N08.01",
+        "N08.03"
+      ],
+      "source_or_edit_targets": [
+        "actual ARM7 build/service entry points",
+        "existing shared-buffer/IPC APIs",
+        "proposed bounded worker job descriptor"
+      ],
+      "implementation_steps": [
+        "Select one coarse independent job with measured critical-path cost and demonstrable ARM7 service slack, such as preparation of non-immediate service data.",
+        "Compute input/output bytes, copy/cache cost, queue latency, deadline, cancellation and resident-memory budget before writing the worker.",
+        "Prototype an equivalent native CPU control and one bounded worker implementation without displacing SDK audio/input/storage services.",
+        "If no job qualifies, close this optional task as NOT_SELECTED with evidence; do not manufacture an offload requirement."
+      ],
+      "validation": "T-IPC protocol schema/ranges/generations and baseline slack; T-MEAS end-to-end work/deadline evidence.",
+      "work_to_retire": "A named non-overlapped job only if measured benefit exceeds communication/contention costs.",
+      "completion": "One candidate has a defensible protocol and total-time case, or ARM7 offload is explicitly not needed.",
+      "stop_or_rollback": "No same-tick AI/collision offload with new latency; no second ARM7 storage service that duplicates an existing one.",
+      "state": "PLANNED",
+      "optional": true,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.06",
+      "title": "Prove worker coherency, cancellation and net gain",
+      "package": "N08",
+      "dependencies": [
+        "N08.05"
+      ],
+      "source_or_edit_targets": [
+        "bounded worker/IPC implementation if selected",
+        "shared-buffer allocator/publication seam",
+        "actual ARM7 service scheduling"
+      ],
+      "implementation_steps": [
+        "Implement C7/C5-style explicit ownership with completed cache-visible inputs and uniquely owned output buffers outside TCM.",
+        "Handle queue-full, timeout, late completion, scene-generation retirement and cancellation acknowledgement without freeing a possible live writer.",
+        "Inject ordering/delay/failure races and prove services remain responsive; a late result cannot change another scene’s state.",
+        "Measure CPU work, total frame/cadence, deadlines and memory versus the control. Retain only a whole-system winner; otherwise remove the worker/queue."
+      ],
+      "validation": "T-IPC stale reply, same-address reuse, cancellation race, full queue and double publication; T-AUDIO deadlines; serial uncontaminated timing.",
+      "work_to_retire": "Actual critical-path ARM9 work after all worker overheads, or removal of a failed optional prototype.",
+      "completion": "A selected offload is safe and faster end to end; an unselected/failed route leaves no permanent framework.",
+      "stop_or_rollback": "Never report a faster ARM9 bracket while the join, DMA contention or audio underrun moved elsewhere.",
+      "state": "PLANNED",
+      "optional": true,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N08.07",
+      "title": "Close audio/service runtime numerics and reachability",
+      "package": "N08",
+      "dependencies": [
+        "N08.03",
+        "N04.06"
+      ],
+      "source_or_edit_targets": [
+        "src/nds/nds_audio_bgm.c",
+        "src/nds/nds_audio_fgm.c",
+        "actual ARM7/shared runtime sources",
+        "proposed no-float gate"
+      ],
+      "implementation_steps": [
+        "Audit both processor/service build roots and all cold error/transition/control paths for remaining floating arithmetic.",
+        "Remove completed-domain native/legacy duplicate service state and experimental routes not retained.",
+        "Preserve platform startup/shutdown/return-to-loader and established service lifecycle while narrowing the arithmetic/runtime surface.",
+        "Publish declared service classes, deadline evidence and the final fixed-runtime service result with matching build identity."
+      ],
+      "validation": "T-FLOAT both target cores/services, T-AUDIO cue/loop/shutdown and T-LIFE transitions; no unknown arithmetic roots.",
+      "work_to_retire": "Remaining reachable audio/service float and retired worker/control scaffolding.",
+      "completion": "Services satisfy the owner’s runtime-fixed requirement, independently of battle-loop arithmetic.",
+      "stop_or_rollback": "Do not exempt cold audio/control code from the all-runtime endpoint or alter library internals without a reproducible build.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N09.01",
+      "title": "Close the whole-runtime float and retirement ledger",
+      "package": "N09",
+      "dependencies": [
+        "N03.10",
+        "N05.08",
+        "N06.08",
+        "N07.07",
+        "N08.07",
+        "N04.04",
+        "N04.05",
+        "N04.06"
+      ],
+      "source_or_edit_targets": [
+        "proposed runtime numeric gate",
+        "Makefile",
+        "src/import",
+        "src/nds",
+        "src/port",
+        "both target-core linked artifacts"
+      ],
+      "implementation_steps": [
+        "Run the complete source/type/lowering/link/caller audit on all shipped scene/service roots and resolve every temporary numeric allowlist entry.",
+        "Remove remaining duplicate authority, float conversion shims, integer IEEE arithmetic, obsolete graphics recorders and unreachable experimental helpers.",
+        "Keep source data/oracles host-side and source behavior references read-only; verify target object membership prevents their accidental inclusion.",
+        "Reconcile removal at input-section granularity and eliminate cold float formatting/transition/math-library roots as well as hot battle calls.",
+        "Prove retirement across the entire product-required content catalogue, including cold and unimplemented-required consumers. An unfinished legal owner prevents a universal retirement/completeness claim; shipped pilot reachability may be reported separately."
+      ],
+      "validation": "T-FLOAT zero unresolved runtime arithmetic roots; T-RETIRE bridge/caller/data absence; weak/indirect/varargs/custom-IEEE negative fixtures.",
+      "work_to_retire": "All remaining runtime floating arithmetic and completed-domain compatibility dependencies.",
+      "completion": "The owner’s fixed-runtime endpoint is structurally proved across shipped configurations, not inferred from one trace.",
+      "stop_or_rollback": "Any unresolved callback or cold path keeps this task OPEN; do not rename helpers or suppress checker findings.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N09.02",
+      "title": "Pack compact CPU-hot state into DTCM",
+      "package": "N09",
+      "dependencies": [
+        "N09.01",
+        "N02.06",
+        "N01.02"
+      ],
+      "source_or_edit_targets": [
+        "linker/nds_hot_text.ld",
+        "compact native game/pose/binding records",
+        "scripts/check-task20-dtcm-layout.ps1"
+      ],
+      "implementation_steps": [
+        "Rank native mutable records by repeated CPU accesses and measured main-RAM cost per byte. Split cold fields before placement.",
+        "Test same-content single-authority location changes; update one base pointer at initialization rather than branch per access or synchronize two copies.",
+        "Account for alignment, runtime stacks, interrupts, boot and all scene transitions within the qualified ceiling.",
+        "Test combined packing and keep only whole-frame winners. Exclude every DMA/IPC/resource buffer requiring external visibility."
+      ],
+      "validation": "T-TCM no-inaccessible-buffer and stack-canary/low-water tests; T-MEAS individual and combined placement; T-LIFE startup/transitions.",
+      "work_to_retire": "Avoidable data-cache/memory stalls on the final compact CPU working set.",
+      "completion": "The measured DTCM map improves integrated cost within current stack and ownership proof.",
+      "stop_or_rollback": "No ceiling increase without new stack proof; no permanent DTCM/main-RAM state mirror.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N09.03",
+      "title": "Repack ITCM around final kernels",
+      "package": "N09",
+      "dependencies": [
+        "N09.02",
+        "N01.06"
+      ],
+      "source_or_edit_targets": [
+        "linker/nds_hot_text.ld",
+        "include/nds/nds_task37_itcm.h",
+        "native emit/pose/collision kernels",
+        "placement checker scripts"
+      ],
+      "implementation_steps": [
+        "Rebuild the byte/caller/execution census after removing helper families and old renderer state; do not reuse a historical tenant ranking.",
+        "Remove placement from necessary cold code, shrink cold-inside-hot tails where still present and rank current gameplay/pose/emit kernels.",
+        "Test placement-only candidates and combined working sets with full literal/veneer/alias accounting.",
+        "Update placement assertions and record current code bytes by subsystem without treating a predetermined renderer/game split as a performance law.",
+        "Rank resident kernels on a measured suite containing all relevant mechanism/cost leaders, not one roster. Preserve measured legal-case performance in the final packing and invalidate affected timing evidence when linked layout changes."
+      ],
+      "validation": "T-TCM linked/kernel identity, startup/IRQ/interworking and whole-frame profiling in final configuration.",
+      "work_to_retire": "Avoidable instruction fetch stalls and remaining cold code occupying final ITCM.",
+      "completion": "ITCM residents are explicitly justified by current measured benefit and all bytes fit.",
+      "stop_or_rollback": "Do not evict an interrupt/startup/rare-required path as dead because of a short trace.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N09.04",
+      "title": "Tune only remaining measured kernels",
+      "package": "N09",
+      "dependencies": [
+        "N09.03"
+      ],
+      "source_or_edit_targets": [
+        "final native numeric/matrix/packet/active-list kernels",
+        "Makefile per-object compiler settings"
+      ],
+      "implementation_steps": [
+        "Inspect the highest remaining exclusive kernels for redundant loads, spills, unnecessary 64-bit divides, missed constant folding, wide structures and call/veneer overhead.",
+        "Test one causal codegen change at a time: smaller affine form, load reuse, ARM/Thumb choice, optimization level or controlled inlining.",
+        "Write small assembly only when C output leaves a specific measurable gap; define ABI, clobbers, alignment, overflow and caller obligations and retain an independent host reference.",
+        "Remeasure the whole configuration after each retained batch; larger unrolling/code size can defeat cache/ITCM gains."
+      ],
+      "validation": "T-NUM exact/bounded operation corpus, ARM9 codegen/ABI tests, T-MEAS net whole-frame gain and T-TCM fit.",
+      "work_to_retire": "Remaining avoidable native instructions/memory stalls, not source-level complexity for its own sake.",
+      "completion": "Every kept tuning change has a mechanism, tests and integrated evidence.",
+      "stop_or_rollback": "Reject a microbenchmark win with worse total time or code-size pressure; do not use fast-math to fake fixed-point migration.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N09.05",
+      "title": "Remove experimental routes and rebuild shipping shape",
+      "package": "N09",
+      "dependencies": [
+        "N09.04"
+      ],
+      "source_or_edit_targets": [
+        "Makefile",
+        "native runtime configuration headers",
+        "scripts/verify-all.ps1",
+        "generated asset outputs"
+      ],
+      "implementation_steps": [
+        "Remove losing/native A/B routes, route selectors, debug-only witnesses and migration allowlists from the shipping target.",
+        "Regenerate assets from pinned input and build source-normal natural-input smash64ds with no fast logic, scripted walk or demand-exclusion flags.",
+        "Keep matched ROM/ELF/config hashes and rerun integrated relevant verification plus product performance evaluation.",
+        "Compare final hard-on results to qualified experimental results; report placement/instrument differences instead of assuming they match."
+      ],
+      "validation": "T-BUILD reproducible clean-input build, T-FLOAT final roots, T-MEAS final shipping scope and T-COVER natural input.",
+      "work_to_retire": "Temporary dual implementations, experiment knobs and measurement-only dependencies from final runtime.",
+      "completion": "The final binary, not just a routed experimental build, meets its current acceptance gates.",
+      "stop_or_rollback": "A routed A/B success does not permit publishing an unmeasured hard-on ROM.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N09.06",
+      "title": "Publish the final architecture and resource ownership map",
+      "package": "N09",
+      "dependencies": [
+        "N09.05"
+      ],
+      "source_or_edit_targets": [
+        "docs/P2_EXECUTION_BOARD.md",
+        "docs/HANDOFF.md",
+        "docs/PERF_LEDGER.md",
+        "native source/interface comments"
+      ],
+      "implementation_steps": [
+        "Update existing owners with concise final API/units/lifetime and generated-data descriptions; archive obsolete experiment detail rather than retaining contradictory runtime comments.",
+        "Publish exact final RAM/TCM/code/bank/transient budgets and the before/after work-deletion ledger.",
+        "Keep one authoritative queue and short restart pointer; documentation describes actual retained source, not planned but unlanded work.",
+        "Remove stale instructions that pin retired renderer or float-helper dependencies into future builds."
+      ],
+      "validation": "T-DOC links/source/task references and final artifact identities; implementation and comments agree.",
+      "work_to_retire": "Stale policy and restart ambiguity that could reintroduce retired paths.",
+      "completion": "A new agent can identify current owners, constraints and acceptance without reading the full historical campaign.",
+      "stop_or_rollback": "Do not label an unmet performance/content/numeric gate FIXED in the handoff.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.01",
+      "title": "Define universal roster-stage and interaction obligations",
+      "package": "N10",
+      "dependencies": [
+        "N00.05",
+        "N02.01",
+        "N00.06"
+      ],
+      "source_or_edit_targets": [
+        "source-derived fighter/stage/item/scene manifest",
+        "scripts/lib/harness-registry.ps1",
+        "proposed qualification scenario manifest"
+      ],
+      "implementation_steps": [
+        "Use N00.06 to derive the full product-required fighter/stage catalogue, every unordered four-fighter multiset and every ordered four-slot roster; never silently reduce it to enabled or presently accepted content.",
+        "Specify one reproducible source-normal, items-enabled four-CPU full scored battle for EVERY base roster-stage case. Freeze slot assignment, source-legal rules, CPU profile, seed/input procedure, start/stop policy and completeness witnesses before results are known.",
+        "Track runtime slot-permutation, costume/team, CPU-level, control-mode and quality/detail obligations separately from base roster-stage coverage. Resource equivalence, mechanical symmetry and timing equivalence are different proof scopes; an unproved permutation remains a runtime obligation.",
+        "Design directed and four-way state tours for all required mechanisms: copy/morph/capture, duplicate writable state, overlapping projectiles and VFX, moving hazards, item/summon children, camera extremes, audio bursts and late lifecycle states. Source-legal natural tests grade performance; manipulated diagnostic states are separately labelled.",
+        "Define DEV_FAST for local tests, SCREEN for prioritization and RELEASE_EXHAUSTIVE for final base-case and assigned permutation coverage. Pairwise/targeted testing supplements, never replaces, the release base matrix.",
+        "Pin dependency fingerprints and conservative invalidation rules. Produce separate current-content and full-product reports, with missing planned content shown as BLOCKED rather than absent."
+      ],
+      "validation": "T-COVER COV01–COV18; exact required sets and counts reconcile; every base case and assigned permutation/variant obligation has a finite declared procedure, not just a fighter/stage mention.",
+      "work_to_retire": "Sampled interaction coverage being presented as universal roster-stage qualification.",
+      "completion": "The source-derived required sets, exact case universe, full-match procedures, supplemental interactions, slot-proof policy and requalification triggers are frozen and reproducible.",
+      "stop_or_rollback": "A representative sample is useful during development but cannot satisfy RELEASE_EXHAUSTIVE or shrink the full product scope.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.02",
+      "title": "Run controlled and natural four-way performance qualification",
+      "package": "N10",
+      "dependencies": [
+        "N10.01",
+        "N09.05",
+        "N00.04",
+        "N10.07",
+        "N10.08",
+        "N10.09"
+      ],
+      "source_or_edit_targets": [
+        "scripts/verify-p2-four-fighter-stress.ps1",
+        "product-performance evaluator",
+        "final shipping and matching profiling builds"
+      ],
+      "implementation_steps": [
+        "On final hard-on builds, run the RELEASE_EXHAUSTIVE base matrix: a complete scored source-normal battle window for every unordered four-fighter roster on every selectable VS stage, with its actual slot assignment and current-content identity verified inside the guest.",
+        "Discharge every ordered-slot runtime obligation under the explicit proof policy. A functional symmetry certificate does not discharge timing. Run unproved assignments and variants with their declared full-match or focused protocol; there is no default 24-way performance symmetry assumption.",
+        "For each required run, grade work and cadence separately using its entire declared population and collect same-run native output, actual four-way engagement, resource limits, audio deadlines, GPU completion and clock coverage. Use a source clock/time endpoint; do not assume the historical frame 1973 endpoint survives the speedup.",
+        "Execute N10.09 controlled and natural adverse-interaction cases and maintain separate measured CPU, cadence, RAM, VRAM/palette, GPU/overdraw and service leader sets. Fixed level-3 stress remains a regression fixture, not evidence that every legal CPU/control profile is covered.",
+        "Reconcile expected and observed case IDs through N10.08. Persist and report every failed, blocked, stale, infrastructure-invalid or unexecuted obligation. A known legal failure blocks universal qualification even when not one of the originally chosen leaders.",
+        "For RED results, retain the passing work already validated at unchanged identities, report the exact failing case and cause, fix it, and rerun the conservatively affected set. Never drop failed seeds, shorten costly runs or choose only successful retries."
+      ],
+      "validation": "T-MEAS per-case product gates and T-COVER exact-set release reconciliation; zero unexplained missing/stale/blocked cases; explicit honest scope for finite dynamic histories.",
+      "work_to_retire": "No runtime work by itself; this proves or rejects the integrated performance endpoint.",
+      "completion": "Every required base case and assigned ordered/variant/interaction obligation has valid passing evidence, with independent per-case work/cadence gates and no known failing legal configuration. This qualifies the declared finite matrix, not all possible input histories.",
+      "stop_or_rollback": "One legal failing case, unresolved required permutation, unavailable required fighter/stage or missing result keeps universal acceptance OPEN; pooled percentiles cannot override it.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.03",
+      "title": "Qualify lifecycle, memory and service stability",
+      "package": "N10",
+      "dependencies": [
+        "N09.05",
+        "N02.06",
+        "N08.07"
+      ],
+      "source_or_edit_targets": [
+        "shell/lifecycle verification scripts",
+        "final bank/service owners",
+        "source-controlled transition tours"
+      ],
+      "implementation_steps": [
+        "Test CSS→battle→results→CSS, rematch, sudden death, pause, KO/respawn, copy/morph, intro and shipped mode transitions.",
+        "Collect allocation/stack/TCM/graphics/packet/IPC and audio service evidence; test interrupted admission/cancellation and repeated arena address reuse.",
+        "Use long natural soaks for leak and rare deadline behavior only after focused tests pass; keep timing measurements isolated from concurrent correctness runners.",
+        "Confirm no mandatory locked-epoch motion/texture reads and no undeclared service clients appear late in a match.",
+        "Exercise transitions that change roster/stage sets, including four same-kind to four distinct kinds and back, legal costumes/team layouts, and reused instance addresses. Link resource/lifecycle results to configuration keys; a successful allocation for one case cannot stand in for every allocation shape."
+      ],
+      "validation": "T-LIFE/T-RES/T-AUDIO/T-IPC applicable tests, full coverage beyond the stress script’s 60→1 clock window.",
+      "work_to_retire": "No runtime work by itself; validates long-lived ownership and resource closure.",
+      "completion": "No leaks/stale handles/late writers/underruns or unqualified scene gaps remain in the claimed shipped scope.",
+      "stop_or_rollback": "The 1,972-frame battle script does not cover results/rematch; missing lifecycle coverage blocks this task.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.04",
+      "title": "Qualify visual, mechanical and numeric completeness",
+      "package": "N10",
+      "dependencies": [
+        "N09.05",
+        "N10.01",
+        "N10.08",
+        "N03.11"
+      ],
+      "source_or_edit_targets": [
+        "independent geometry/source oracles",
+        "semantic fixture suite",
+        "proposed whole-runtime no-float checker"
+      ],
+      "implementation_steps": [
+        "Run exact discrete gameplay/event/order tests, bounded continuous error reports and native geometry/material/transform tests across the qualification matrix.",
+        "Capture tricky visual states with expected-owner/resource identities and actual pixels; preserve all required content regardless of aggregate error counters.",
+        "Run the no-float audit on every shipped scene/service root, including menus and cold callbacks, with no temporary migration allowance.",
+        "Record unresolved pre-existing content defects separately; they cannot be ignored when claiming full-game completeness.",
+        "Reconcile required content sets with N10.08, including disabled unfinished fighters/stages and required child owners. Use zero omissions and explicit variant/permutation evidence; report sampled dynamic histories honestly rather than claiming exhaustive behavior proof."
+      ],
+      "validation": "T-NUM/T-CLOCK/T-PHYS/T-COLL/T-HIT/T-AI/T-ORDER/T-GEOM/T-DEPTH/T-UI/T-FLOAT.",
+      "work_to_retire": "No runtime work by itself; proves representation and fidelity closure.",
+      "completion": "Claimed shipped scope has complete native mechanics/presentation and fixed runtime without disguised IEEE helpers.",
+      "stop_or_rollback": "A matching sampled state hash alone or zero no-op error counters are insufficient.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.05",
+      "title": "Reproduce the release from declared inputs",
+      "package": "N10",
+      "dependencies": [
+        "N10.02",
+        "N10.03",
+        "N10.04",
+        "N09.06",
+        "N10.08"
+      ],
+      "source_or_edit_targets": [
+        "Makefile",
+        "build.ps1",
+        "scripts/verify-all.ps1",
+        "declared source/generated asset prerequisites"
+      ],
+      "implementation_steps": [
+        "Rebuild the natural-input P2 target from recorded source and declared ignored derived inputs without relying on unrelated dirty files.",
+        "Run generator-staleness, native-only, runtime numerics, ABI/architecture and the widest relevant integration profile; inspect all final verdicts.",
+        "Pin final ROM/ELF/config/generator/emulator/verifier identities and attach timing, content, memory and service coverage.",
+        "Confirm the published target is smash64ds.nds, not a fast-logic/tick-hud/forced-item lab target or the frozen P1 artifact.",
+        "Publish the coverage-ledger digest, catalogue digest and per-case qualification identities with the release. Reuse existing final-binary runs only if the rebuilt ROM/ELF/config and relevant inputs are identical; otherwise mark their obligations stale and rerun the affected set before release."
+      ],
+      "validation": "T-BUILD clean reproducibility and exact final identity; no broken umbrella bypassed as GREEN.",
+      "work_to_retire": "Accidental undeclared dependencies and false publication acceptance.",
+      "completion": "A reproducible release artifact is covered by all required final gates.",
+      "stop_or_rollback": "Compile success or a prior green hash does not qualify a changed ROM.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.06",
+      "title": "Close or report the precise remaining gap",
+      "package": "N10",
+      "dependencies": [
+        "N10.05"
+      ],
+      "source_or_edit_targets": [
+        "docs/P2_EXECUTION_BOARD.md",
+        "docs/HANDOFF.md",
+        "docs/PERF_LEDGER.md",
+        "final campaign evidence"
+      ],
+      "implementation_steps": [
+        "Publish measured before/after performance with the exact baseline comparison scope, per-case gate outcomes, coverage counts, independent resource/cadence/service leaders and all open failures. Do not quote only the best lineup or pool unrelated case rows.",
+        "Close universal four-fighter performance only after the full required base/ordered-obligation ledger is reconciled and all legal known failures are resolved. A scoped current-content checkpoint may be KEEP but is not full-product closure.",
+        "Summarize retired work categories and the final architecture, not lines rewritten or hypothetical summed savings. Preserve unrelated P2 content rows and the one existing execution board.",
+        "On relevant content/code/toolchain/SDK/emulator changes, invalidate affected evidence, rescreen prior leaders and new cases, and reopen the existing P2-2p8 row with exact failing configuration and cause. Broad linked-layout changes conservatively invalidate timing across all cases."
+      ],
+      "validation": "T-DOC and T-COVER final exact-set report agrees with case artifacts; no unsupported all-combination, universal-history or aggregate-speedup claims.",
+      "work_to_retire": "Ambiguous completion claims and duplicated status tracking.",
+      "completion": "The board clearly separates local implementation, current-content coverage, exhaustive declared roster-stage qualification, fixed-runtime closure and any remaining full-game work.",
+      "stop_or_rollback": "No measured pass means no closure; preserve the recoverable checkpoint and next concrete owner instead.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.07",
+      "title": "Implement a resumable exhaustive matrix runner",
+      "package": "N10",
+      "dependencies": [
+        "N10.01",
+        "N00.04"
+      ],
+      "source_or_edit_targets": [
+        "scripts/lib/harness-registry.ps1",
+        "scripts/verify-p2-four-fighter-stress.ps1",
+        "existing coherent scenario/input seams",
+        "proposed host-only matrix orchestration"
+      ],
+      "implementation_steps": [
+        "Consume the immutable required case catalogue and release profile. Reuse existing build/runner/ring capture infrastructure instead of adding another target scheduler or parallel build fleet.",
+        "Add a verified scenario configuration path: configure before admission/GO, then attest the ACTUAL ordered fighter IDs, stage, CPU/control/rules settings and generated/native owners inside the guest. Existing fixed-roster script arguments must not be assumed to accept a new case.",
+        "Support DEV_FAST, SCREEN and RELEASE_EXHAUSTIVE separately. Short probes can prioritize fixes; only valid full scored populations can populate release timing obligations. A fast-logic/forced-item fixture never substitutes for a natural run.",
+        "Measure by declared source-clock/GO-to-Time-Up policy with the established rare-overrun allowance, not a fixed present-count copied from the original slow ROM. Record intro/lifecycle windows separately; validate ring collection for a faster match that produces fewer presents.",
+        "Use unique immutable case/run IDs, files and disposable storage. Save atomic progress records only after child exit, hash verification, output validation and explicit per-case grading. Shard/resume without deleting failures or reusing stale evidence.",
+        "Serialize all timing/visual acceptance and shared builds as VERIFYING.md prescribes. Parallelize host enumeration/solver checks or isolated non-timing correctness only when allowed; never launch thousands of timing emulators concurrently.",
+        "Reattempt an infrastructure-invalid run only after recording and resolving its cause. Retain game failures; new attempts do not erase them. Missing/blocked/stale cases remain visible through to N10.08."
+      ],
+      "validation": "T-COVER runner fixtures: interruption/resume, wrong guest roster, duplicate output, stale hash, failed child, incomplete ring, changed catalogue and exactly-once case reconciliation; T-MEAS valid full-clock population.",
+      "work_to_retire": "Manual sampled roster selection and lost or silently replaced matrix results.",
+      "completion": "The runner can enumerate, stage, attest, collect, resume and grade every required case reproducibly without altering shipping gameplay or conflating short screening with release proof.",
+      "stop_or_rollback": "No runtime case-selector or trustworthy full-window collection means BLOCKED infrastructure, not passing coverage; do not manufacture case support from copied logs.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.08",
+      "title": "Implement exact-set per-case release reconciliation",
+      "package": "N10",
+      "dependencies": [
+        "N10.01",
+        "N00.04"
+      ],
+      "source_or_edit_targets": [
+        "proposed host coverage reconciler",
+        "existing product-performance row evaluator",
+        "templates/coverage-ledger.json",
+        "templates/scenario-result.json"
+      ],
+      "implementation_steps": [
+        "Derive required base, ordered/permutation and variant/interaction obligation sets from catalogue plus qualification policy. Do not take the set of returned results as the expected universe.",
+        "Validate result identities, actual guest configuration, full-window completeness, relevant artifact fingerprints, positive engagement/native output, resources/services and per-run work/cadence verdicts.",
+        "Permit evidence reuse only for an explicit property-scoped certificate or unchanged validated identity. An admission equivalence cannot satisfy timing; no generic pass_all_slots or global average is accepted.",
+        "Report required, measured-valid-pass, measured-fail, blocked, not-run, stale, infrastructure-invalid and properly certified-equivalent obligation sets separately. Missing data is UNKNOWN; a single known legal failure blocks universal PASS.",
+        "Check every required run and configuration separately, then AND their verdicts. Never pool frames across lineups or let one fast duplicate compensate for a slow mixed roster; keep all mandatory seeds and diagnostic scope labels.",
+        "Implement negative fixtures COV01–COV18, especially one missing case, one bad case amid many good ones, same-count substitution, fake permutation proof, cross-ROM reuse and a safe rejected legal match.",
+        "Keep current-content progress separate from full-product completion and explicitly state finite input/history coverage. Reconcile new content or invalidated evidence before updating the one P2 board."
+      ],
+      "validation": "T-COVER COV01–COV18 plus T-MEAS per-case gates; set identities and all independent verdicts must agree with immutable source/result manifests.",
+      "work_to_retire": "False universal acceptance from pooled metrics, missing cases, guessed equivalence or a reduced enabled roster.",
+      "completion": "A strict reconciler emits PASS only for a complete valid declared matrix with no known failing legal configurations; it otherwise reports exact unresolved obligations without claiming universal-history proof.",
+      "stop_or_rollback": "Any fabricated, missing, stale, case-mismatched or unjustifiably reused result is invalid and cannot be rescued by an aggregate green summary.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    },
+    {
+      "id": "N10.09",
+      "title": "Qualify adverse four-way interactions and separate cost leaders",
+      "package": "N10",
+      "dependencies": [
+        "N10.01",
+        "N09.05",
+        "N03.11"
+      ],
+      "source_or_edit_targets": [
+        "existing state-tour/input tools and source event oracles",
+        "stage/item/weapon/CPU/particle/audio owners",
+        "proposed interaction manifest and leader report"
+      ],
+      "implementation_steps": [
+        "Define source-legal controlled tours for interactions not reliably exercised by one natural minute: four simultaneous projectiles/effects, multiple independent Kirby copies, captures/throws and held items, duplicate morph/status changes, and foreground/background depth intersections.",
+        "Cross stage mechanisms with fighter mechanisms: moving-platform attachment and ledge recovery, hazards near blast zones, item/summon bursts, camera zoom extremes, transparent overdraw and audio cue overlaps. Verify the setup itself follows legal capacity and source laws.",
+        "Cover legal CPU levels and control/team variants as separately declared obligations. Four-CPU mode is a stress tool; one-human/three-CPU source-input playback and difficult human-triggered states remain required where applicable.",
+        "Maintain independent leaders for WORK-H P95, cadence/consecutive misses, RAM/transient peaks, texture/palette/view capacity, matrix/geometry/FIFO/overdraw, and audio/storage/IPC deadlines. Never combine independently measured maxima into a claimed real worst-case match.",
+        "Use these cases to diagnose and re-price the integrated runtime, while the exhaustive base sweep remains mandatory. Any source-legal failure discovered outside the initial matrix becomes a regression case and a release blocker.",
+        "Publish which interactions/seeds/windows were executed and which were structurally bounded. Finite source-state tours do not prove all possible gameplay histories; keep that limitation explicit without narrowing the support requirement."
+      ],
+      "validation": "T-COVER mechanism obligations and T-COLL/T-HIT/T-ORDER/T-GPU/T-AUDIO positive simultaneous engagement; distinguish natural performance from diagnostic manipulation.",
+      "work_to_retire": "One blended worst-case benchmark and individual-feature tests standing in for four-way interaction pressure.",
+      "completion": "All declared adverse mechanism cases pass their respective gates, separate measured leaders are reproducible, and no discovered legal interaction failure remains unresolved.",
+      "stop_or_rollback": "Do not turn an illegal forced state into a shipping workload claim or hide a legal expensive state by banning its matchup, items, hazard, CPU level or quality setting.",
+      "state": "PLANNED",
+      "optional": false,
+      "parent": "P2-2p8"
+    }
+  ],
+  "revision": 2,
+  "revision_label": "ALL_LEGAL_FOUR_FIGHTER_LINEUPS_ON_EVERY_SELECTABLE_VS_STAGE",
+  "revision_date": "2026-09-15",
+  "repository_rechecked_commit": "e67e5871ba8c4ae972f4826bfeb89757d3686401",
+  "baseline_note": "Original research/source anchors remain historical at baseline_commit; recheck current board before new runtime work. No new ROM run in revision.",
+  "task_count": 81
+}

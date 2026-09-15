@@ -1,0 +1,84 @@
+ONE VALID TOPOLOGICAL ORDER — not a requirement to serialize independent work
+Current runtime status is owned by docs/P2_EXECUTION_BOARD.md.
+
+N00.01 | Freeze inputs and resolve active policy
+N00.02 | Reproduce work, cadence and resource populations
+N00.03 | Assign exclusive costs and concrete deletion candidates
+N00.04 | Implement a real product-performance verdict
+N00.06 | Generate the legal content catalogue and base case universe
+N00.05 | Freeze semantic and visual regression fixtures
+N01.01 | Produce byte-accurate linked ownership
+N01.02 | Decouple instruction mode from residency
+N01.03 | Separate shipping observation from safety
+N01.04 | Split the first measured cold renderer tails
+N02.01 | Inventory simultaneous and transient resource sets
+N03.01 | Partition preflight into immutable and live checks
+N04.01 | Build the producer-consumer and helper graph
+N04.02 | Freeze units, ranges and numeric ABI
+N03.02 | Implement binding and explicit invalidation
+N03.03 | Prove the contract on one small actor
+N01.05 | Remove dead build variants and create real module boundaries
+N01.06 | Use reclaimed ITCM only for measured winners
+N02.02 | Recover memory from actually retired representations
+N02.03 | Compile compact motion and resource banks
+N02.04 | Implement transactional admission and locked epochs
+N02.05 | Separate CSS, battle and transition residency
+N03.06 | Extend the generator with native packet payloads
+N03.04 | Move a hot fighter to the bound hit path
+N04.03 | Implement and qualify the small primitive set
+N03.05 | Specialize transform and render classes
+N03.07 | Implement small typed patch kernels
+N03.08 | Qualify native packet transport and GX ownership
+N03.11 | Prove duplicate-instance isolation and slot-sensitive behavior
+N03.09 | Expand packets across native owners and special states
+N03.10 | Retire replaced renderer state and price the integrated path
+N05.01 | Derive event lanes and timing semantics
+N05.02 | Implement fixed event stepping and deadline corrections
+N05.03 | Compile compact fixed tracks and constant channels
+N05.04 | Create topology-owned required-joint closures
+N05.05 | Make native pose authoritative through the draw pilot
+N05.06 | Share local/world transform results correctly
+N05.07 | Expand pose and event conversion across content
+N06.01 | Map hot game state and source process order
+N06.02 | Convert a complete movement and map-query slice
+N06.03 | Compile stage collision metadata and conservative candidates
+N06.04 | Convert interaction consumers and close gameplay pose bridges
+N05.08 | Remove legacy pose and clock authority
+N02.07 | Solve exhaustive roster-stage resource feasibility
+N10.01 | Define universal roster-stage and interaction obligations
+N10.07 | Implement a resumable exhaustive matrix runner
+N02.06 | Qualify no-demand-read and bank capacity closure
+N04.04 | Close residual camera, vector and transform chains
+N04.05 | Migrate constants and target asset numerics
+N04.06 | Build a no-float regression gate
+N06.05 | Share AI query facts without changing CPU decisions
+N06.06 | Replace hot object traversal with bounded active sets
+N06.07 | Evaluate scheduler flattening only when priced
+N06.08 | Expand fixed gameplay to all shipped domains
+N07.01 | Compile stage invariants and actor partitions
+N07.02 | Replace remaining native actor setup scaffolding
+N07.03 | Convert particle simulation and event state
+N07.04 | Build a compact native particle draw batch
+N07.05 | Make UI fixed, value-driven and native
+N07.06 | Qualify GPU and ordering budgets for the full scene
+N07.07 | Retire converted stage/particle/UI compatibility paths
+N08.01 | Attribute remaining service tails and ownership
+N08.02 | Convert audio control and eliminate unnecessary decode work
+N08.03 | Bound buffers, prefetch and storage scheduling
+N08.04 | Overlap hardware math only under proven ownership
+N08.05 | Select and price one ARM7 candidate
+N08.06 | Prove worker coherency, cancellation and net gain
+N08.07 | Close audio/service runtime numerics and reachability
+N09.01 | Close the whole-runtime float and retirement ledger
+N09.02 | Pack compact CPU-hot state into DTCM
+N09.03 | Repack ITCM around final kernels
+N09.04 | Tune only remaining measured kernels
+N09.05 | Remove experimental routes and rebuild shipping shape
+N09.06 | Publish the final architecture and resource ownership map
+N10.08 | Implement exact-set per-case release reconciliation
+N10.09 | Qualify adverse four-way interactions and separate cost leaders
+N10.02 | Run controlled and natural four-way performance qualification
+N10.03 | Qualify lifecycle, memory and service stability
+N10.04 | Qualify visual, mechanical and numeric completeness
+N10.05 | Reproduce the release from declared inputs
+N10.06 | Close or report the precise remaining gap

@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "status": "PLANNED",
+  "task_id": null,
+  "mechanism": null,
+  "work_deleted": null,
+  "new_runtime_cost": null,
+  "control_identity": null,
+  "candidate_identity": null,
+  "route_witness": null,
+  "controlled_workload_identity": null,
+  "comparison_classes": {
+    "exact_discrete": [],
+    "bounded_continuous": [],
+    "approval_required": []
+  },
+  "memory_budget": {
+    "persistent_delta_bytes": null,
+    "transient_peak_bytes": null,
+    "tcm_delta_bytes": null
+  },
+  "results": {
+    "paired_frame_delta": null,
+    "whole_match_p50_p95": null,
+    "cadence": null,
+    "guards": null,
+    "shipping_hard_on": null
+  },
+  "decision": null,
+  "remaining_dependencies": [],
+  "revert_commit_or_patch": null,
+  "evidence_paths": [],
+  "scope_revision": 2,
+  "profile": null,
+  "catalogue_hash": null,
+  "base_case_id": null,
+  "ordered_case_id": null,
+  "scenario_key": null,
+  "actual_guest_configuration": null,
+  "qualification_scope": null,
+  "affected_case_ids": [],
+  "invalidated_evidence_ids": []
+}

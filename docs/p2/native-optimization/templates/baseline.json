@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "UNMEASURED",
+  "plan_baseline_commit": "75f7f6b4b4864c82c01872d0fd2771d171005272",
+  "runtime_identity": {
+    "source_commit": null,
+    "dirty_overlay_sha256": null,
+    "rom_sha256": null,
+    "elf_sha256": null,
+    "build_config_sha256": null,
+    "generated_inputs_sha256": null,
+    "compiler_version": null,
+    "libraries_sha256": null,
+    "emulator_sha256": null,
+    "verifier_sha256": null,
+    "jit_disabled_from_boot": null,
+    "runner_slot": null,
+    "storage_identity": null,
+    "input_seed_identity": null
+  },
+  "scenario": {
+    "fighter_kinds": null,
+    "player_types": null,
+    "cpu_levels": null,
+    "stage": null,
+    "item_policy": null,
+    "quality_detail": null,
+    "source_logic_policy": null,
+    "present_cadence": null,
+    "coverage_scope": null
+  },
+  "population": {
+    "identity_frame": 1,
+    "start_frame": 2,
+    "requested_samples": 1972,
+    "actual_samples": null,
+    "clock_start": null,
+    "clock_end": null,
+    "percentile_convention": null,
+    "timer_unit_definition": null,
+    "cycles_per_tick": null
+  },
+  "metrics": {
+    "work_h_p50": null,
+    "work_h_p95": null,
+    "work_h_p99": null,
+    "work_h_max": null,
+    "cadence_histogram_2_3_4_5plus": null,
+    "two_vblank_fraction": null,
+    "maximum_interval": null,
+    "maximum_consecutive_late": null,
+    "heap_low_water_bytes": null
+  },
+  "verdicts": {
+    "identity": null,
+    "coverage": null,
+    "correctness": null,
+    "work_gate": null,
+    "cadence_gate": null,
+    "resource_gate": null,
+    "fixed_runtime": null
+  },
+  "artifact_paths": {
+    "rows": null,
+    "coverage": null,
+    "memory": null,
+    "section_inventory": null,
+    "source_contract": null
+  }
+}

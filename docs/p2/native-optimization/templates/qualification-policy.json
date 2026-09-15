@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "status": "PLANNED",
+  "profile": "RELEASE_EXHAUSTIVE",
+  "catalogue_hash": null,
+  "product_required_fighter_ids": [],
+  "product_required_vs_stage_ids": [],
+  "implemented_fighter_ids": [],
+  "implemented_stage_ids": [],
+  "counts": {
+    "required_base_cases": null,
+    "required_ordered_cases": null,
+    "required_variant_obligations": null,
+    "required_runs": null
+  },
+  "full_source_normal_battle_every_base_case": true,
+  "slot_assignment_policy": "EXPLICIT_PER_CASE",
+  "unknown_slot_timing_equivalence": "RUN_NOT_WAIVE",
+  "work_gate_ticks": 1120380,
+  "minimum_two_vblank_fraction": 0.95,
+  "rare_overrun_allowance": "UNCHANGED_PRODUCT_CONTRACT",
+  "window_policy": null,
+  "cadence_population_policy": null,
+  "required_seed_and_input_policy": null,
+  "cpu_and_control_profiles": [],
+  "item_and_rules_profiles": [],
+  "variant_and_interaction_obligations": [],
+  "accepted_property_scoped_certificates": [],
+  "invalidation_rules": [],
+  "may_claim_all_histories_proven": false
+}

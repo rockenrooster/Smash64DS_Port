@@ -37,6 +37,8 @@ bind-full/overflow/fallback **0/0/0**, and heap low-water **108,096 B**. Full
 Boundary is GREEN. P2-2p8 remains RED against the 1.12M product target and
 >=95% 2-VBlank cadence. Evidence:
 `artifacts/performance/2026-09-15_p2-2p8-prechecked-replay`.
+The adopted static implementation breakdown is `docs/p2/native-optimization/`;
+its task graph is subordinate to the board and does not create another queue.
 
 Stage fix `d8660bc2fd9` narrows the Hyrule/Inishie hazard-count guards to their
 own constructors. Natural shell routes prove Hyrule count 4 and Inishie POW count

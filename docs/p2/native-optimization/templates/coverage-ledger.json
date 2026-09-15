@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "status": "UNMEASURED",
+  "scope": "FULL_PRODUCT",
+  "profile": "RELEASE_EXHAUSTIVE",
+  "catalogue_hash": null,
+  "qualification_policy_hash": null,
+  "release_identity": null,
+  "obligation_sets": {
+    "required": [],
+    "measured_valid_pass": [],
+    "measured_fail": [],
+    "blocked": [],
+    "not_run": [],
+    "stale": [],
+    "infrastructure_invalid": [],
+    "certified_reuse": []
+  },
+  "count_summary": null,
+  "exact_set_digests": null,
+  "known_legal_failures": [],
+  "case_result_manifest": null,
+  "equivalence_certificates": [],
+  "leader_cases": {
+    "work_p95": [],
+    "cadence": [],
+    "ram": [],
+    "vram_palettes_views": [],
+    "gpu": [],
+    "service": []
+  },
+  "overall_verdict": null,
+  "dynamic_history_limits": null,
+  "invalidation_log": []
+}

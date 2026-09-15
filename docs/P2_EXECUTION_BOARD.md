@@ -126,7 +126,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **PACKET HIT PREP CUT KEEP; RED** | Exact precheck reuse P95 **-22,912**, paired median **-28,672**; final **1,654,528/2,385,536**, Boundary GREEN. Evidence `2026-09-15_p2-2p8-prechecked-replay`. Continue whole-frame/SRC/tail cost. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **PACKET HIT PREP CUT KEEP; RED** | Exact precheck reuse P95 **-22,912**, paired median **-28,672**; final **1,654,528/2,385,536**, Boundary GREEN. Plan: `p2/native-optimization/`. Continue whole-frame/SRC/tail cost. |
 
 ## Queue discipline
 
