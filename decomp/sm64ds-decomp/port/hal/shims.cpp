@@ -29,14 +29,17 @@ int Fader::IsAtEnd() { return 0; }
 // hardware upload.
 void FaderBrightness::AdvanceFade() { AdvanceInterp(); }
 
-// Fader::AdvanceInterp calls the 20.12 approach helper by its historical
-// name func_0203ae58 (extern "C", by-pointer). The function has since been
-// identified and renamed to ApproachLinear(int&, int, int) -- the NDS build
-// resolves the old name by address, the host cannot. Bridge, do not edit
-// src/: the fader TU keeps matching bytes, and when its extern is one day
-// modernised this shim dies loudly as a duplicate.
+// Fader::AdvanceInterp deliberately retains the ROM's Itanium spelling as a C
+// symbol. MSVC emits its own decoration for the migrated C++ definition, so the
+// host needs a calling-convention-preserving forwarder between those spellings.
 int ApproachLinear(int &ref, int target, int step);
-extern "C" void func_0203ae58(int *value, int target, int step)
+extern "C" void _Z14ApproachLinearRiii(Fix12i *value, Fix12i target, Fix12i step)
 {
-    ApproachLinear(*value, target, step);
+    (void)ApproachLinear(*value, target, step);
 }
+
+// Memory::operator_delete2 -- referenced from include/Fader.h's inline operator
+// delete, and so from every Fader class here -- is defined in hal/mem_delete2.cpp.
+// It lived here first; smoke_roots and smoke_fs then needed the same definition,
+// and a per-target copy of a definition that is not target-specific is the thing
+// the move avoids.

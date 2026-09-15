@@ -1,13 +1,4 @@
-typedef struct Decimal {
-    unsigned char sign;
-    char unused;
-    short exp;
-    struct {
-        unsigned char length;
-        unsigned char text[32];
-        unsigned char unused;
-    } sig;
-} Decimal;
+#include "Decimal.h"
 
 extern void func_02071644(Decimal *result, int length);
 
@@ -54,7 +45,7 @@ void func_02071364(Decimal *result, const Decimal *x, const Decimal *y)
     result->exp = (short)(x->exp + y->exp);
 
     if (accumulator) {
-        short *exp = (short *)(int)(((long long)(int)((char *)result + 2)));
+        short *exp = (short *)(int)((char *)result + 2);
         *--ip = (unsigned char)accumulator;
         *exp = *exp + 1;
     }

@@ -17,6 +17,7 @@ import collections
 import csv
 import pathlib
 import re
+import struct
 import sys
 from dataclasses import dataclass
 
@@ -24,6 +25,7 @@ from dataclasses import dataclass
 REPO = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = REPO / "build" / "assets" / "files.tsv"
 DEFAULT_HANDLES = REPO / "build" / "assets" / "handles.tsv"
+DEFAULT_NITROFS_DIR = REPO / "build" / "assets"
 DEFAULT_FILE_HEADER = REPO / "build" / "generated" / "NitroFileId.h"
 DEFAULT_HANDLE_HEADER = REPO / "build" / "generated" / "AssetHandle.h"
 DEFAULT_REFERENCES = REPO / "build" / "assets" / "references.tsv"
@@ -187,6 +189,108 @@ def catalogs_from_rom(path: pathlib.Path) -> tuple[list[Asset], list[AssetHandle
     except KeyError as exc:
         raise ValueError("ROM has no ARM9 overlay 0") from exc
     return assets, handles_from_overlay(overlay, assets)
+
+
+# The DS cartridge header's four NitroFS words, at their fixed header offsets.
+# See GBATEK "DS Cartridge Header": 0x40 fnt_offset, 0x44 fnt_size,
+# 0x48 fat_offset, 0x4c fat_size.  The ROM mirrors the header into main RAM at
+# 0x027FFE00 and the game's FS_Init (0x0205d96c) reads the same four words as
+# *(int*)0x027FFE40 / *(int*)0x027FFE48.
+ROM_HEADER_FNT = 0x40
+ROM_HEADER_FAT = 0x48
+# And the overlay half of the same header, at 0x50 arm9_ovt_offset, 0x54
+# arm9_ovt_size, 0x58 arm7_ovt_offset, 0x5c arm7_ovt_size.  The ROM mirrors
+# these two pairs at 0x027FFE50 and 0x027FFE58, which is where
+# src/func_02018c00.c, src/func_0205df40.c and src/func_020424c0.c read them
+# when the overlay table has not been cached in RAM.  Unlike the FNT and FAT
+# pair a ZERO PAIR IS LEGAL and means "this processor has no overlays": SM64DS
+# has 103 ARM9 overlays and no ARM7 overlay at all, so 0x58 really does read
+# 0 + 0 on the cartridge and the ROM's own reader returns 0 for proc 1.
+ROM_HEADER_OVT = 0x50
+
+
+def write_nitrofs_tables(directory: pathlib.Path, rom: pathlib.Path) -> dict:
+    """Copy the ROM's own FNT and FAT out verbatim, with their ROM offsets.
+
+    WHY THIS IS HERE AND NOT RECONSTRUCTED. The port's HAL runs the ROM's own
+    NitroSDK archive registration, and the ROM's own FNT walker then resolves
+    a path by reading these two tables through the archive's read function.
+    The tables have to be the CARTRIDGE'S BYTES: a name table built back out
+    of files.tsv would be a plausible-looking forgery, and the whole point of
+    running the ROM's walker is that nothing between the name and the file id
+    is this port's invention.
+
+    The FAT is also what makes an absolute ROM offset resolvable at all.  Every
+    read the walker asks for is an offset into the cartridge image, and the
+    port does not ship the cartridge; the HAL turns an offset back into a file
+    id by looking it up in this FAT, then serves the bytes from
+    extracted/dsd/files via files.tsv.  Same table the ROM indexes, so the two
+    directions cannot disagree.
+
+    THE OVERLAY HALF is here for the mirror rather than for the walker.  The
+    DS copies the whole cartridge header to 0x027FFE00, and the ROM's overlay
+    reader (src/func_02018c00.c, src/func_0205df40.c) reads the ARM9 pair at
+    0x027FFE50 and the ARM7 pair at 0x027FFE58 whenever the overlay table has
+    not been cached into RAM by src/func_020423dc.c -- which, in single-cart
+    play, it never is.  The port's HAL writes those two pairs into the mirror
+    from these four values, exactly the way it already writes the FNT and FAT
+    pairs, so the ROM's own reader reads the cartridge's own words.
+
+    Output is gitignored build/ like every other catalog product, and like
+    them it needs a regenerate when the ROM changes.
+    """
+    blob = rom.read_bytes()
+    fnt_off, fnt_size, fat_off, fat_size = struct.unpack_from(
+        "<IIII", blob, ROM_HEADER_FNT)
+    ovt9_off, ovt9_size, ovt7_off, ovt7_size = struct.unpack_from(
+        "<IIII", blob, ROM_HEADER_OVT)
+    for name, off, size in (("fnt", fnt_off, fnt_size),
+                            ("fat", fat_off, fat_size)):
+        if size == 0 or off == 0 or off + size > len(blob):
+            raise ValueError(
+                f"ROM header's {name} span ({off:#x}+{size:#x}) is outside the "
+                f"{len(blob):#x}-byte image; this is not a NitroFS cartridge")
+    # The overlay tables take the same bounds check with one difference: an
+    # EMPTY pair is legal and is not a truncated ROM.  A non-empty pair that
+    # runs off the end is, and reading it short would hand the ROM's own
+    # overlay reader a record it would then copy code from.
+    for name, off, size in (("arm9 overlay table", ovt9_off, ovt9_size),
+                            ("arm7 overlay table", ovt7_off, ovt7_size)):
+        if size == 0 and off == 0:
+            continue
+        if size == 0 or off == 0 or off + size > len(blob):
+            raise ValueError(
+                f"ROM header's {name} span ({off:#x}+{size:#x}) is outside the "
+                f"{len(blob):#x}-byte image; this is not a NitroFS cartridge")
+        if size % 32:
+            raise ValueError(
+                f"ROM header's {name} size {size:#x} is not a whole number of "
+                "32-byte OverlayInfo records")
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "nitrofs_fnt.bin").write_bytes(blob[fnt_off:fnt_off + fnt_size])
+    (directory / "nitrofs_fat.bin").write_bytes(blob[fat_off:fat_off + fat_size])
+    # The two overlay tables go out beside them, verbatim and for the same
+    # reason: the day hal/fs_names.cpp's port_nitrofs_read serves the overlay
+    # spans the way it already serves the FNT and the FAT, the ROM's own
+    # src/func_02018c00.c reads its 32-byte OverlayInfo out of the cartridge's
+    # own bytes rather than out of anything this port reconstructed.  An empty
+    # pair writes no file: there is nothing to copy.
+    for name, off, size in (("ovt9", ovt9_off, ovt9_size),
+                            ("ovt7", ovt7_off, ovt7_size)):
+        if size:
+            (directory / f"nitrofs_{name}.bin").write_bytes(
+                blob[off:off + size])
+    meta = {"fnt_offset": fnt_off, "fnt_size": fnt_size,
+            "fat_offset": fat_off, "fat_size": fat_size,
+            "ovt9_offset": ovt9_off, "ovt9_size": ovt9_size,
+            "ovt7_offset": ovt7_off, "ovt7_size": ovt7_size}
+    with (directory / "nitrofs.tsv").open("w", encoding="utf-8",
+                                          newline="") as f:
+        writer = csv.writer(f, delimiter="\t", lineterminator="\n")
+        writer.writerow(("key", "value"))
+        for key, value in meta.items():
+            writer.writerow((key, value))
+    return meta
 
 
 def write_manifest(path: pathlib.Path, assets: list[Asset]) -> None:
@@ -513,7 +617,7 @@ def write_rename_candidates(path: pathlib.Path, rows: list[dict[str, str]]) -> N
 
 def resource_owner_from_source(source: str) -> tuple[str, str] | None:
     """Return (owner, evidence kind) for a named resource consumer source."""
-    actor_match = re.match(r"src/actors/([^/]+)/", source)
+    actor_match = re.match(r"src/(?:game/)?actors/([^/]+)/", source)
     if actor_match:
         return actor_match.group(1), "actor-directory"
 
@@ -548,7 +652,7 @@ def build_layout_candidates(rows: list[dict[str, str]],
 
     output = []
     for source, group in sorted(by_source.items()):
-        if source.startswith("src/actors/"):
+        if source.startswith(("src/actors/", "src/game/actors/")):
             continue
         owner_symbols = sorted(filter(None, {
             anonymous_owner_symbol(row["owner"]) for row in group
@@ -569,7 +673,10 @@ def build_layout_candidates(rows: list[dict[str, str]],
             str(pathlib.PurePosixPath(row["path"]).parent) for row in group
         })
         filename = pathlib.PurePosixPath(source).name
-        suggested = f"src/actors/{actors[0]}/{filename}" if len(actors) == 1 else ""
+        suggested = (
+            f"src/game/actors/{actors[0]}/{filename}"
+            if len(actors) == 1 else ""
+        )
         if len(actors) == 1:
             confidence = (
                 "high" if "actor-directory" in evidence_kinds else "medium"
@@ -625,6 +732,10 @@ def cmd_generate(args) -> None:
         sys.exit(f"error: {exc}")
     write_manifest(args.manifest, assets)
     write_handles(args.handles, handles)
+    try:
+        nitrofs = write_nitrofs_tables(args.nitrofs, rom)
+    except ValueError as exc:
+        sys.exit(f"error: {exc}")
     write_header(args.file_header, assets, value_attr="file_id",
                  prefix="NITRO_FILE_ID", enum_name="NitroFileId",
                  description="Raw NitroFS IDs; these are not game-code asset handles.")
@@ -639,6 +750,79 @@ def cmd_generate(args) -> None:
     print(f"  manifest: {args.manifest}")
     print(f"  handles : {args.handles}")
     print(f"  headers : {args.file_header}, {args.handle_header}")
+    print(f"  nitrofs : {args.nitrofs} "
+          f"(fnt {nitrofs['fnt_size']:,} bytes at {nitrofs['fnt_offset']:#x}, "
+          f"fat {nitrofs['fat_size']:,} bytes at {nitrofs['fat_offset']:#x})")
+
+
+def resolve_queries(queries: list[str], handles: list[AssetHandle],
+                    references: list[dict[str, str]]) -> list[tuple[str, list]]:
+    """Answer handle numbers, path fragments, and owner symbols from the catalog.
+
+    An integer literal is always a runtime handle, never a NitroFS file ID; the
+    two number spaces disagree and guessing between them invents asset names.
+    """
+    by_handle = {entry.handle: entry for entry in handles}
+    results = []
+    for query in queries:
+        value = _integer_literal(query)
+        if value is not None:
+            entry = by_handle.get(value)
+            results.append((query, [entry] if entry else []))
+            continue
+        needle = query.lower()
+        matches = [entry for entry in handles if needle in entry.path.lower()]
+        if not matches:
+            owners = {row["raw_id"] for row in references
+                      if needle in row["owner"].lower() and row["owner"]}
+            matches = [by_handle[handle] for handle in
+                       sorted(_integer_literal(raw) or -1 for raw in owners)
+                       if handle in by_handle]
+        results.append((query, matches))
+    return results
+
+
+def cmd_resolve(args) -> None:
+    if not args.handles.is_file():
+        sys.exit(f"Handle catalog not found: {args.handles}\nRun the generate command first.")
+    handles = read_handles(args.handles)
+    references = []
+    if args.references.is_file():
+        with args.references.open(encoding="utf-8", newline="") as f:
+            references = list(csv.DictReader(f, delimiter="\t"))
+    names = constants_for(handles, value_attr="handle", prefix="ASSET_HANDLE")
+    by_handle_refs = collections.defaultdict(list)
+    for row in references:
+        if row["status"] == "runtime-handle":
+            by_handle_refs[_integer_literal(row["raw_id"])].append(row)
+
+    unresolved = 0
+    for query, matches in resolve_queries(args.query, handles, references):
+        if not matches:
+            value = _integer_literal(query)
+            if value is not None and value >= 0x8000:
+                print(f"{query}: not a runtime handle; values >= 0x8000 bypass the "
+                      f"overlay 0 table and stay encoded-or-unresolved")
+            else:
+                print(f"{query}: no match")
+            unresolved += 1
+            continue
+        for entry in matches[:args.limit]:
+            print(f"{entry.handle} (0x{entry.handle:04x})  {entry.path}")
+            print(f"    kind={entry.kind} size={entry.size:,} "
+                  f"nitro_file_id={entry.file_id} (0x{entry.file_id:04x})")
+            print(f"    {names[entry.handle]}")
+            for row in by_handle_refs.get(entry.handle, [])[:args.limit]:
+                owner = row["owner"] or "-"
+                suggested = row["suggested_owner"]
+                label = f"{owner} -> {suggested}" if suggested else owner
+                print(f"    used by {row['source']}:{row['line']} "
+                      f"{row['callee']}  {label}")
+        if len(matches) > args.limit:
+            print(f"    ... {len(matches) - args.limit:,} more matches "
+                  f"(raise --limit to see them)")
+    if unresolved:
+        sys.exit(1)
 
 
 def cmd_references(args) -> None:
@@ -673,6 +857,8 @@ def main(argv=None) -> None:
     generate.add_argument("--handles", type=pathlib.Path, default=DEFAULT_HANDLES)
     generate.add_argument("--file-header", type=pathlib.Path, default=DEFAULT_FILE_HEADER)
     generate.add_argument("--handle-header", type=pathlib.Path, default=DEFAULT_HANDLE_HEADER)
+    generate.add_argument("--nitrofs", type=pathlib.Path, default=DEFAULT_NITROFS_DIR,
+                          help="directory for the ROM's own FNT/FAT copies")
     generate.set_defaults(func=cmd_generate)
 
     references = commands.add_parser("references", help="resolve literal asset IDs in src/")
@@ -683,6 +869,18 @@ def main(argv=None) -> None:
     references.add_argument("--layouts", type=pathlib.Path,
                             default=DEFAULT_LAYOUT_CANDIDATES)
     references.set_defaults(func=cmd_references)
+
+    resolve = commands.add_parser(
+        "resolve",
+        help="look up runtime handles by number, path fragment, or owner symbol")
+    resolve.add_argument("query", nargs="+",
+                         help="a handle literal (1570, 0x622), a path fragment "
+                              "(kb1_ball), or an owner symbol (data_ov044_02111680)")
+    resolve.add_argument("--handles", type=pathlib.Path, default=DEFAULT_HANDLES)
+    resolve.add_argument("--references", type=pathlib.Path, default=DEFAULT_REFERENCES)
+    resolve.add_argument("--limit", type=int, default=10,
+                         help="maximum matches printed per query (default 10)")
+    resolve.set_defaults(func=cmd_resolve)
 
     args = parser.parse_args(argv)
     args.func(args)

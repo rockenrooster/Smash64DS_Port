@@ -68,7 +68,7 @@ class AssetCatalogTests(unittest.TestCase):
             root = pathlib.Path(tmp)
             src = root / "src"
             init = src / "unnamed" / "ov063" / "__sinit_ov063_test.c"
-            actor = src / "actors" / "MadPiano" / "InitResources.cpp"
+            actor = src / "game" / "actors" / "daPiano_c" / "InitResources.cpp"
             init.parent.mkdir(parents=True)
             actor.parent.mkdir(parents=True)
             init.write_text(
@@ -103,7 +103,7 @@ class AssetCatalogTests(unittest.TestCase):
         self.assertEqual(global_row["suggested_name"], "gPianoModelFile")
         self.assertEqual(global_row["confidence"], "high")
         self.assertEqual(global_row["payload_type"], "BMD_File")
-        self.assertIn("src/actors/MadPiano/InitResources.cpp",
+        self.assertIn("src/game/actors/daPiano_c/InitResources.cpp",
                       global_row["consumer_sources"])
 
         field_row = next(row for row in candidates
@@ -116,7 +116,7 @@ class AssetCatalogTests(unittest.TestCase):
         self.assertEqual(layouts[0]["confidence"], "high")
         self.assertEqual(
             layouts[0]["suggested_path"],
-            "src/actors/MadPiano/__sinit_ov063_test.c",
+            "src/game/actors/daPiano_c/__sinit_ov063_test.c",
         )
 
     def test_candidate_blocks_one_owner_with_multiple_assets(self):
@@ -157,6 +157,115 @@ class AssetCatalogTests(unittest.TestCase):
         self.assertIsNone(
             AC.resource_owner_from_source("src/_ZN7Message11DisplayTextEt.cpp")
         )
+
+    def test_resolve_reads_literals_as_handles_not_file_ids(self):
+        handles = [
+            AC.AssetHandle(1, 0x123, "data/a.bmd", 10),
+            AC.AssetHandle(2, 0x001, "data/b.kcl", 20),
+        ]
+        # 1 is a handle, so it must name a.bmd and never the file_id 1 asset.
+        self.assertEqual(
+            [h.path for _, m in AC.resolve_queries(["1", "0x2"], handles, []) for h in m],
+            ["data/a.bmd", "data/b.kcl"],
+        )
+
+    def test_resolve_matches_path_fragments_and_owner_symbols(self):
+        handles = [AC.AssetHandle(5, 0x9, "data/special_obj/kb1_ball/kb1_ball.bmd", 7)]
+        references = [{
+            "raw_id": "0x0005", "status": "runtime-handle",
+            "owner": "data_ov044_02111680",
+        }]
+        by_fragment = AC.resolve_queries(["kb1_ball"], handles, references)
+        self.assertEqual([h.handle for h in by_fragment[0][1]], [5])
+        by_owner = AC.resolve_queries(["data_ov044_02111680"], handles, references)
+        self.assertEqual([h.handle for h in by_owner[0][1]], [5])
+
+    def test_resolve_reports_no_match_for_encoded_values(self):
+        handles = [AC.AssetHandle(1, 0x123, "data/a.bmd", 10)]
+        self.assertEqual(AC.resolve_queries(["0x9807"], handles, []), [("0x9807", [])])
+
+    @staticmethod
+    def _fake_rom(directory, fnt=(0x100, 0x10), fat=(0x120, 0x20), size=0x200,
+                  ovt9=(0x140, 0x20), ovt7=(0, 0)):
+        """A blob shaped like a cartridge as far as the NitroFS words go.
+
+        Only the header offsets matter here: 0x40 fnt_offset, 0x44 fnt_size,
+        0x48 fat_offset, 0x4c fat_size, and the overlay half at 0x50 arm9 and
+        0x58 arm7. The spans are filled with distinct byte patterns so a copy
+        that reads the wrong offset cannot pass. The arm7 pair defaults to
+        0 + 0, which is what SM64DS's own cartridge carries.
+        """
+        import struct
+        blob = bytearray(size)
+        struct.pack_into("<IIII", blob, AC.ROM_HEADER_FNT,
+                         fnt[0], fnt[1], fat[0], fat[1])
+        struct.pack_into("<IIII", blob, AC.ROM_HEADER_OVT,
+                         ovt9[0], ovt9[1], ovt7[0], ovt7[1])
+        for off, length, first in ((fnt[0], fnt[1], 0x10),
+                                   (fat[0], fat[1], 0x80),
+                                   (ovt9[0], ovt9[1], 0x40)):
+            # only fill what fits; a slice assignment that ran off the end
+            # would GROW the bytearray and quietly repair the very truncation
+            # the refusal test is about
+            fits = max(0, min(length, size - off))
+            blob[off:off + fits] = bytes(range(first, first + fits))
+        path = pathlib.Path(directory) / "fake.nds"
+        path.write_bytes(bytes(blob))
+        return path
+
+    def test_nitrofs_tables_are_copied_verbatim_at_the_header_offsets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rom = self._fake_rom(tmp)
+            out = pathlib.Path(tmp) / "assets"
+            meta = AC.write_nitrofs_tables(out, rom)
+            self.assertEqual(meta, {"fnt_offset": 0x100, "fnt_size": 0x10,
+                                    "fat_offset": 0x120, "fat_size": 0x20,
+                                    "ovt9_offset": 0x140, "ovt9_size": 0x20,
+                                    "ovt7_offset": 0, "ovt7_size": 0})
+            self.assertEqual((out / "nitrofs_fnt.bin").read_bytes(),
+                             bytes(range(0x10, 0x20)))
+            self.assertEqual((out / "nitrofs_fat.bin").read_bytes(),
+                             bytes(range(0x80, 0xa0)))
+            self.assertEqual((out / "nitrofs_ovt9.bin").read_bytes(),
+                             bytes(range(0x40, 0x60)))
+            # An empty arm7 pair writes no file at all -- an empty blob would
+            # read as a table that exists and happens to be zero long.
+            self.assertFalse((out / "nitrofs_ovt7.bin").exists())
+            rows = (out / "nitrofs.tsv").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(rows[0], "key\tvalue")
+            self.assertIn("fat_offset\t288", rows)
+            self.assertIn("ovt9_offset\t320", rows)
+            self.assertIn("ovt7_size\t0", rows)
+
+    def test_nitrofs_span_outside_the_image_is_refused(self):
+        # A span that runs off the end is a wrong-version or truncated ROM.
+        # Copying it short would produce a name table the walker reads past.
+        with tempfile.TemporaryDirectory() as tmp:
+            rom = self._fake_rom(tmp, fat=(0x1f0, 0x40))
+            with self.assertRaises(ValueError) as caught:
+                AC.write_nitrofs_tables(pathlib.Path(tmp) / "assets", rom)
+            self.assertIn("fat", str(caught.exception))
+
+    def test_overlay_table_span_outside_the_image_is_refused(self):
+        # A zero pair is legal (that processor has no overlays); a non-empty
+        # pair that runs off the end is a truncated or wrong-version ROM, and
+        # a short copy would hand the ROM's own overlay reader a record it
+        # would then copy code from.
+        with tempfile.TemporaryDirectory() as tmp:
+            rom = self._fake_rom(tmp, ovt9=(0x1f0, 0x40))
+            with self.assertRaises(ValueError) as caught:
+                AC.write_nitrofs_tables(pathlib.Path(tmp) / "assets", rom)
+            self.assertIn("arm9 overlay table", str(caught.exception))
+
+    def test_overlay_table_size_must_be_whole_records(self):
+        # 32 bytes per OverlayInfo. A size that is not a multiple of it means
+        # the header was read at the wrong offset, and every record after the
+        # first would be shifted.
+        with tempfile.TemporaryDirectory() as tmp:
+            rom = self._fake_rom(tmp, ovt9=(0x140, 0x21))
+            with self.assertRaises(ValueError) as caught:
+                AC.write_nitrofs_tables(pathlib.Path(tmp) / "assets", rom)
+            self.assertIn("32-byte OverlayInfo", str(caught.exception))
 
 
 if __name__ == "__main__":

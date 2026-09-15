@@ -1,8 +1,8 @@
-// Actor-hierarchy vtables (gate 9), per the vtable law (clsn_vtable.cpp):
-// MSVC slot order. include/ActorBase.h declares the dtor LAST, so MSVC and
+// dActor_c-hierarchy vtables (gate 9), per the vtable law (clsn_vtable.cpp):
+// MSVC slot order. include/fBase_c.h declares the dtor LAST, so MSVC and
 // the ROM agree on slots 0..15 and diverge only at the tail -- the header
 // was built for exactly this. Lifecycle slots forward to the class's own
-// overrides where they exist and to the ActorBase/Actor defaults where
+// overrides where they exist and to the fBase_c/dActor_c defaults where
 // they do not; the tail traps.
 //
 // Base-class vtable symbols the ctor chain installs and then overwrites
@@ -10,13 +10,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "ActorBase.h"
+#include "fBase_c.h"
 #include "ArrowSignRight.h"
 
-// The lifecycle definitions are MSVC methods (ArrowSignRight.h/ActorBase.h
-// real classes); InitResources alone is a C-named free function. Every shim
-// calls QUALIFIED -- never virtual.
-extern "C" int _ZN14ArrowSignRight13InitResourcesEv(char *self);
+// The lifecycle definitions are MSVC methods (ArrowSignRight.h/fBase_c.h
+// real classes). Every shim calls QUALIFIED -- never virtual.
+extern "C" int _ZN14ArrowSignRight13InitResourcesEv(char *self)
+{ return ((ArrowSignRight *)self)->ArrowSignRight::InitResources(); }
 
 static int __fastcall sl_init(void *self, void *)
 { return _ZN14ArrowSignRight13InitResourcesEv((char *)self); }
@@ -27,25 +27,25 @@ static int __fastcall sl_behavior(void *self, void *)
 static int __fastcall sl_render(void *self, void *)
 { return ((ArrowSignRight *)self)->ArrowSignRight::Render(); }
 static int __fastcall sl_binit(void *self, void *)
-{ return ((ActorBase *)self)->ActorBase::BeforeInitResources(); }
+{ return ((fBase_c *)self)->fBase_c::BeforeInitResources(); }
 static void __fastcall sl_ainit(void *self, void *, u32 a)
-{ ((ActorBase *)self)->ActorBase::AfterInitResources(a); }
+{ ((fBase_c *)self)->fBase_c::AfterInitResources(a); }
 static int __fastcall sl_bclean(void *self, void *)
-{ return ((ActorBase *)self)->ActorBase::BeforeCleanupResources(); }
+{ return ((fBase_c *)self)->fBase_c::BeforeCleanupResources(); }
 static void __fastcall sl_aclean(void *self, void *, u32 a)
-{ ((ActorBase *)self)->ActorBase::AfterCleanupResources(a); }
+{ ((fBase_c *)self)->fBase_c::AfterCleanupResources(a); }
 static int __fastcall sl_bbeh(void *self, void *)
-{ return ((ActorBase *)self)->ActorBase::BeforeBehavior(); }
+{ return ((fBase_c *)self)->fBase_c::BeforeBehavior(); }
 static void __fastcall sl_abeh(void *self, void *, u32 a)
-{ ((ActorBase *)self)->ActorBase::AfterBehavior(a); }
+{ ((fBase_c *)self)->fBase_c::AfterBehavior(a); }
 static int __fastcall sl_bren(void *self, void *)
-{ return ((ActorBase *)self)->ActorBase::BeforeRender(); }
+{ return ((fBase_c *)self)->fBase_c::BeforeRender(); }
 static void __fastcall sl_aren(void *self, void *, u32 a)
-{ ((ActorBase *)self)->ActorBase::AfterRender(a); }
+{ ((fBase_c *)self)->fBase_c::AfterRender(a); }
 static int __fastcall sl_pdes(void *self, void *)
-{ ((ActorBase *)self)->ActorBase::OnPendingDestroy(); return 0; }
+{ ((fBase_c *)self)->fBase_c::OnPendingDestroy(); return 0; }
 static int __fastcall sl_heap(void *self, void *)
-{ return ((ActorBase *)self)->ActorBase::OnHeapCreated(); }
+{ return ((fBase_c *)self)->fBase_c::OnHeapCreated(); }
 
 #define ATRAP(n) \
     static void __fastcall a_trap##n(void *, void *) { \
@@ -73,25 +73,24 @@ extern "C" void *_ZTV14ArrowSignRight[20] = {
     0, 0,
 };
 
-// Base vtables the ctor chain installs transiently: storage only.
+// ExclamationSwitch still uses a literal ROM-vtable boundary. The dBase_c and
+// dActor_c installs are now compiler-owned by the native constructor sources.
 extern "C" {
 void *_ZTV17ExclamationSwitch[20];
-int data_0208e4b8[20];   /* ActorBase-era vtable-ish install in Actor ctor */
-int data_0208e3a4[20];
 }
 
-// ---- ActorBase::ActorBase() transcription ---------------------------------
-// The ROM ctor is a hand-asm block (src/_ZN9ActorBaseC1Ev.cpp); this is its
+// ---- fBase_c::fBase_c() transcription ---------------------------------
+// The ROM ctor is a hand-asm block (src/_ZN7fBase_cC2Ev.cpp); this is its
 // C transcription, field for field against the disassembly there. The spawn
 // CONTEXT globals it reads (pending actor ID, area byte, the spawn-info
 // pointer table for the two processing-list priorities) are storage here;
-// the smoke seeds them the way func_02010e78/ActorDerived::Spawn would.
+// the smoke seeds them the way func_02010e78/dBase_c::Spawn would.
 extern "C" {
-void _ZN9ActorBase9SceneNodeC1Ev(void *node);
+void _ZN7fBase_c9SceneNodeC1Ev(void *node);
 int func_0203b438(void *a, void *b, void *c);
 int func_02043810(void *p);
 
-int data_02099edc[8];           /* the transient ActorBase vtable install */
+int data_02099edc[8];           /* the transient fBase_c vtable install */
 int data_02099e70[1];           /* next unique actor id */
 int data_020a4b60[1];
 unsigned short data_020a4b54;   /* PENDING ACTOR ID (the spawn context) */
@@ -101,10 +100,10 @@ int data_020a4b6c[8];           /* the scene tree root the ctor links into */
 void *data_020a4bb8_storage[512];
 void **data_020a4bb8 = data_020a4bb8_storage;  /* actorID -> SpawnInfo* */
 
-void *_ZN9ActorBaseC1Ev(char *self)
+void *_ZN7fBase_cC2Ev(char *self)
 {
     *(void **)self = data_02099edc;
-    _ZN9ActorBase9SceneNodeC1Ev(self + 0x14);
+    _ZN7fBase_c9SceneNodeC1Ev(self + 0x14);
     *(void **)(self + 0x24) = self;             /* sceneNode.actor */
     for (int off = 0x28; off <= 0x38; off += 0x10) {
         *(void **)(self + off) = 0;
@@ -152,14 +151,6 @@ void *_ZTV11ShadowModel[8];
 void *data_ov098_0213c380[6];
 } /* extern "C" */
 
-// The extern "C" side of the cxxname bridges (see hal/cxxname_bridge.cpp).
-extern "C" {
-void _ZN13SharedFilePtr7ReleaseEv(void *self);
-void hal_fileptr_release(void *self) { _ZN13SharedFilePtr7ReleaseEv(self); }
-}
-
-
-
 extern "C" {
 /* asm primitive: plain 48-byte block copy (with writeback, unlike the
    FIFO-fixed variant) */
@@ -172,6 +163,12 @@ signed char data_0209b44c_c;
 int data_0209b468[4];      /* actor list head the ctor links into */
 }
 #pragma comment(linker, "/alternatename:?data_0209b44c@@3CA=_data_0209b44c_c")
+#pragma comment(linker, "/alternatename:_data_0209b44c=_data_0209b44c_c")
+
+// The C base constructor stores this address before the derived spawn replaces
+// it with ArrowSignRight's manual host vtable. No base virtual dispatch occurs
+// during that interval, but the storage must exist for the raw relocation.
+extern "C" void *_ZTV10dBgActor_c[32] = {};
 
 extern "C" {
 unsigned char data_0209f2d8_c;   /* mega-char state byte: none */

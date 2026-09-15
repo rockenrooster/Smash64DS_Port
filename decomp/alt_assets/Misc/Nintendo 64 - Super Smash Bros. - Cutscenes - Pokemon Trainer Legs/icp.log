@@ -1,0 +1,219 @@
+Start at Saturday, January 15, 2011    17:31:14
+=========================================
+
+Registration Info : 
+
+Windows Version:
+Home Edition  (Build 7600)
+
+Module Info:
+Company: fCoder Group, Inc.
+Product Name: ImageConverter Plus
+Product Version: 7.1.54.90602
+
+CPU Info:
+Vendor: AuthenticAMD
+Vendor ID: Advanced Micro Devices
+Extended Processor Name: AMD Athlon(tm) Processor LE-1640
+Procesor Clock Frequecy: 2711
+Logical processors per physical: 0
+Stepping code: 2
+MMX support: yes
+MMX+ support: yes
+SSE support: yes
+SSE2 support: yes
+3DNow suppor: yes
+3DNow+ suppor: yes
+AI64 support: no
+Hyperthreading support: no
+L1 cache size: 128
+L2 cache size: 512
+L3 cache size: -1
+
+Monitor info:
+Color depth: 32 Bits per pixel.
+Pixel Width: 1024
+Pixel Height: 768
+Refresh frequency: 60 Hz
+
+Internet Explorer Version: 6.1
+Build Number: 7600
+
+Printers list: 
+Nitro PDF Creator (Reader)
+Microsoft XPS Document Writer
+Fax
+Epson Stylus CX4600 (M)
+
+Default printer: 
+Epson Stylus CX4600 (M)
+
+
+Script settings:
+
+Operations:
+
+Format properties:
+    Extension: png
+    bits per pixel : 32
+    compression level : 5
+    quantization levels : 8
+    dithering : yes
+    use source alpha channel for indexed modes : yes
+
+Save properties:
+    Destination path: {Source path}
+    convert with subfolders : yes
+    restore subfolder structure in target folder : yes
+    open target folder after conversion : yes
+    create log file in target folder : yes
+
+Target file name properties:
+    Name template: {Title}.{Type}
+    what to do, if file exists : auto_rename
+    delete source images : no
+
+Processing files...
+
+=====================================================================
+
+File 1 of 7
+
+RAM free    :     143.9 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\pants.png
+png, 32x64px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1131 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\pants (1).png
+png, 32x64px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1131 bytes
+
+=====================================================================
+
+File 2 of 7
+
+RAM free    :     143.4 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes.png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 2022 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes (1).png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 2022 bytes
+
+=====================================================================
+
+File 3 of 7
+
+RAM free    :     143.4 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_2.png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 2025 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_2 (1).png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 2025 bytes
+
+=====================================================================
+
+File 4 of 7
+
+RAM free    :     143.4 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_3.png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1122 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_3 (1).png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1122 bytes
+
+=====================================================================
+
+File 5 of 7
+
+RAM free    :     143.5 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_4.png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 658 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_4 (1).png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 658 bytes
+
+=====================================================================
+
+File 6 of 7
+
+RAM free    :     143.5 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_5.png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1941 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_5 (1).png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1941 bytes
+
+=====================================================================
+
+File 7 of 7
+
+RAM free    :     143.6 of     894.5 Mb
+Virtual free:    1924.5 of    2047.9 Mb
+Target free disk space :  102170.9 of  131059.7 Mb
+Temp free disk space   :  102170.9 of  131059.7 Mb
+
+Src info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_6.png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1289 bytes
+
+exists : rename :  ok
+Load all pages :  ok
+
+Save :  ok
+
+Dest info : C:\VRML\Jigglypuff\Intro Pikachu\legs\shoes_6 (1).png
+png, 64x32px, 32bpp, 1 page(s), 2.000000x2.000000 dpi, 1289 bytes
+
+Complete at Saturday, January 15, 2011    17:31:14
+=========================================

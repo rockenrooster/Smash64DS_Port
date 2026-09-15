@@ -7,30 +7,51 @@
 # an allocator that survives a fill-pattern torture test on the host is the
 # strongest layout evidence a port can buy per line of test code.
 
-src/_ZN4Heap28CreateExpandingHeapAllocatorEPvjj.c
-src/_ZN22ExpandingHeapAllocatorC1EPvj.c
-src/_ZN13HeapAllocatorC1EjPvPvj.cpp
-src/_ZN22ExpandingHeapAllocator8AllocateEji.c
+src/_ZN4Heap28CreateExpandingHeapAllocatorEPvjj.cpp
+src/_ZN22ExpandingHeapAllocatorC1EPvj.cpp
+src/func_0204df54.cpp
+src/_ZN22ExpandingHeapAllocator8AllocateEji.cpp
 src/_ZN22ExpandingHeapAllocator16AllocateForwardsEjj.cpp
 src/_ZN22ExpandingHeapAllocator17AllocateBackwardsEjj.cpp
-src/_ZN22ExpandingHeapAllocator10DeallocateEPv.c
-src/_ZN22ExpandingHeapAllocator14SizeofInternalEPv.c
+src/_ZN22ExpandingHeapAllocator10DeallocateEPv.cpp
+src/_ZN22ExpandingHeapAllocator14SizeofInternalEPv.cpp
 src/_ZN22ExpandingHeapAllocator10CreateNodeEPN10MemoryNode6TargetEt.cpp
-src/_ZN22ExpandingHeapAllocator12AllocateNodeEP10MemoryNodeS1_Pvjj.cpp
+src/_ZN22ExpandingHeapAllocator12AllocateNodeEP10MemoryNodeS1_Pvjt.cpp
 src/_ZN22ExpandingHeapAllocator8FreeNodeEP10MemoryNodePNS0_6TargetE.cpp
 src/_ZN22ExpandingHeapAllocator8LinkNodeEP10MemoryNodeS1_S1_.cpp
 src/_ZN22ExpandingHeapAllocator10UnlinkNodeEP10MemoryNodeS1_.cpp
-src/_ZN10MemoryNode6TargetC1EP10MemoryNode.cpp
+src/_ZN10MemoryNode6TargetC1EPS_.cpp
 
-# NestedHeapIterator: the HeapAllocator base ctor registers every allocator
+# NestedHeapIterator: the shared HeapAllocator initializer registers every allocator
 # in the global nesting registry, so the iterator family rides along.
-src/_ZN18NestedHeapIteratorC1Ej.c
-src/_ZN18NestedHeapIterator10FindNestedEPv.c
-src/_ZN18NestedHeapIterator19RecursiveFindNestedEPv.c
+src/_ZN18NestedHeapIteratorC1Ej.cpp
+src/_ZN18NestedHeapIterator10FindNestedEPv.cpp
+src/_ZN18NestedHeapIterator19RecursiveFindNestedEPv.cpp
 src/_ZN18NestedHeapIterator7AddLastEP13HeapAllocator.cpp
-src/_ZN18NestedHeapIterator5AddAtEP13HeapAllocatorS1_.c
+src/_ZN18NestedHeapIterator5AddAtEP13HeapAllocatorS1_.cpp
 src/_ZN18NestedHeapIterator4InitEP13HeapAllocator.cpp
 src/_ZN18NestedHeapIterator4NextEP13HeapAllocator.cpp
 src/_ZN18NestedHeapIterator8AddFirstEP13HeapAllocator.cpp
 src/_ZN18NestedHeapIterator8PreviousEP13HeapAllocator.cpp
 src/_ZN18NestedHeapIterator6RemoveEP13HeapAllocator.cpp
+
+# The seven allocator entry points the ExpandingHeap overrides forward to. They
+# arrive with those overrides (slice_gate3a.txt) rather than because gate 2 grew:
+# each V* method is a one-line call into this layer, so a host link that has the
+# override and not its target has half of a pair. They stay HERE because this is
+# the allocator layer's manifest and smoke_heap links it, which is the gate that
+# would catch a break in them first.
+src/_ZN13HeapAllocator7DestroyEv.cpp
+src/_ZN22ExpandingHeapAllocator16InvokeDeallocateEPvPS_j.cpp
+src/_ZN22ExpandingHeapAllocator13DeallocateAllEPFvPvPS_jEj.cpp
+src/_ZN22ExpandingHeapAllocator10ReallocateEPvj.cpp
+src/_ZN22ExpandingHeapAllocator18MaxAllocatableSizeEi.cpp
+src/_ZN22ExpandingHeapAllocator9SetNodeIDEj.cpp
+src/_ZN22ExpandingHeapAllocator9GetNodeIDEv.cpp
+src/_ZN13HeapAllocator6RemoveEv.cpp
+
+# cstd::abs, which ExpandingHeapAllocator::MaxAllocatableSize calls. It was in
+# slice_gate4b.txt and moved here rather than being listed twice: the nine targets
+# that link gate 4b all link gate 2 as well, so two entries would be a duplicate
+# definition, and the layer that needs it first is this one.
+src/_ZN4cstd3absEi.cpp
