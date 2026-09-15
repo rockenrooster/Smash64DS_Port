@@ -133,6 +133,7 @@
       65,
       66,
       128,
+      192,
       224,
       225
     ],
@@ -418,6 +419,13 @@
         "width": 32
       },
       {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 192,
+        "width": 32
+      },
+      {
         "bytes": 256,
         "frames": 1,
         "height": 16,
@@ -436,7 +444,7 @@
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 40960,
-    "bytes": 36352,
+    "bytes": 37376,
     "cell_cap": 64,
     "excluded": [
       {
@@ -469,7 +477,7 @@
       }
     ],
     "frame_cap": 1,
-    "frame_count": 47,
+    "frame_count": 48,
     "held_frames": {
       "25": 2
     },
@@ -2001,6 +2009,26 @@
         "upload_height": 16,
         "upload_width": 16
       }
+    ]
+  },
+  "yoster": {
+    "quad_admitted": [
+      192
+    ],
+    "quad_stride": 192,
+    "script_bank": "gryoster_particle_scb",
+    "script_bank_bytes": 128,
+    "script_bank_sha256": "2a9f66ca8dd67305a2f2ee9465dc51353a9ae3c1a2aa73f6e0e931529e7ed0c8",
+    "script_count": 1,
+    "texture_bank": "gryoster_particle_txb",
+    "texture_bank_sha256": "aeaa818cfdc2588b334e27a757c3cf64517f4771058bfb93e8f5fe52ebed1e53",
+    "texture_count": 1,
+    "texture_rows": [
+      [
+        32,
+        32,
+        1
+      ]
     ]
   }
 }

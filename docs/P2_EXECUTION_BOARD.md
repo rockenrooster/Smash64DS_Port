@@ -1,11 +1,10 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-15 after exact fighter-packet precheck replay.
+Updated: 2026-09-15 after fixed generic particle submission.
 
-**Last integrated Boundary GREEN: `d8660bc2fd9` + owner overlay. Boundary
-is blocked by `decomp/alt_assets/`; acceptance RED (P2-2p8).** Four-CPU
-stress passes with native failures/rejects 0/0 and heap low-water 111,680 B.
+**Last integrated Boundary GREEN: `5bfb784f8ec`; acceptance RED (P2-2p8).**
+Four-CPU native failures/rejects 0/0; heap low-water 112,192 B.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -26,9 +25,9 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    shipping VS shell with human input, no scripted walk, and no fast logic.
    Rebuild it after each verified fix batch. The frozen P1 artifact is not
    rebuilt routinely.
-4. Last recorded published P2 ROM hash (carried forward, not reverified here):
+4. Published P2 ROM after `5bfb784f8ec`, runtime-verified 2026-09-15:
 
-SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
+SHA-256 6BF344EF097A9237A5AD6AADE44E9F1FF601F503250DA80B73957B0B64C9C703
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -48,10 +47,9 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Current shared fix:** P2-2p8 exact packet-precheck replay after I/O/pose/particle cuts.
-Whole-match same-ROM WORK-H P95 **2,422,528 -> 2,399,616**, paired median
-**-28,672** ticks/frame. Final stress **1,654,528/2,385,536**, native fail/reject
-**0/0**, heap **108,096 B**. Full Boundary is GREEN; P2-2p8 remains RED.
+**Current shared fix:** P2-2p8 fixed generic particle submit (`5bfb784f8ec`).
+Final stress WORK-H **1,654,208/2,375,296**, MISC **253,824/481,024**;
+native fail/reject **0/0**, heap **112,192 B**. Full Boundary GREEN; P2-2p8 RED.
 In flight: menu-rules close, 1P next stage, roster proofs.
 Next: remaining P2-2p8 whole-frame/SRC/tail cost, DATA surfaces (P2-7), weapon-pool sizing, remaining
 stage captures/visual acceptance, dead code, remaining audit divergences
@@ -126,7 +124,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **PACKET HIT PREP CUT KEEP; RED** | Exact precheck reuse P95 **-22,912**, paired median **-28,672**; final **1,654,528/2,385,536**, Boundary GREEN. Plan: `p2/native-optimization/`. Continue whole-frame/SRC/tail cost. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **FIXED PARTICLE SUBMIT KEEP; RED** | P95 **-14,080**, MISC P95 **-22,528**; final **1,654,208/2,375,296**, Boundary GREEN. Plan: `p2/native-optimization/`. Continue structural whole-frame cost. |
 
 ## Queue discipline
 

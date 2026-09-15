@@ -8048,3 +8048,35 @@ and VBlank 2/3/4/5+ **103/818/817/235**. ITCM is **32,704/32,768 B**. The full
 Boundary profile is GREEN, including shell/realtime screenshot checks and the
 four-CPU arm. P2-2p8 remains RED to the product target. Evidence:
 `artifacts/performance/2026-09-15_p2-2p8-prechecked-replay`.
+
+## 2026-09-15 — P2-2p8 phase M: fixed generic particle quad submit KEEP
+
+Current soft-float attribution put `ndsRendererSubmitParticleQuad` at the top of
+the caller list. The retained path converts only its render-boundary inputs once
+per quad (Q8 center/size, Q13 camera basis), constructs legs/corners as integers
+and shifts directly to GX v16. Particle simulation, spawn/RNG, transforms,
+alpha/materials, UVs, depth/order and batching are unchanged. The final linked
+submit has no `__aeabi_f*` calls; intermediate fixed versions that introduced
+integer divide helpers were rejected before the KEEP.
+
+A deterministic host differential exercises 100,000 random inputs each for
+basis ranges +/-1 and +/-2: scale selection is identical and emitted-coordinate
+error is at most two v16 units (0.125 world unit). A Q8 extent guard of 64
+(0.25 world unit, range selection only) removes the one under-scale found while
+stress-testing wider +/-4..16 basis inputs; it never biases submitted vertices.
+
+Focused frames 1400..1527 move WORK-H **1,733,120/2,475,328 ->
+1,706,496/2,450,560** and MISC **362,112/582,272 -> 343,872/548,416**.
+Paired MISC improves on 119/128 frames, median **-14,176** ticks/frame.
+
+Final Boundary-produced stress ROM
+`1CC0BC02C673D3C12E1C685E3E692EE2879E402709A6F105C18BA8F2985C4244`
+moves the prior hard-on WORK-H **1,654,528/2,389,376 ->
+1,654,208/2,375,296** and MISC **260,352/503,552 -> 253,824/481,024**.
+The P95 delta is **-14,080**, exactly the documented cross-build significance
+floor; MISC P95 is **-22,528** and improves on 1,678/1,972 paired frames.
+5+ VBlank presents move **235 -> 227**. Native failures/direct rejects,
+pose full/overflow/fallback, graphics heap overflow/no-room and weapon refusals
+are all zero; heap low-water is **112,192 B** and audio direct fallbacks remain
+zero. Full Boundary is GREEN. P2-2p8 remains RED against the product target.
+Evidence: `artifacts/performance/2026-09-15_p2-2p8-particle-fixed-submit`.

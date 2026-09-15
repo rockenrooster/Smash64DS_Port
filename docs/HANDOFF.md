@@ -1,6 +1,6 @@
 # Handoff
 
-Restart pointer refreshed 2026-09-15 after P2-2p8 exact packet-precheck replay.
+Restart pointer refreshed 2026-09-15 after P2-2p8 fixed generic particle submit.
 `P2_EXECUTION_BOARD.md` is the only dynamic queue and owns current blockers,
 artifact identity and decisions.
 
@@ -28,15 +28,15 @@ editing. Preserve unrelated owner work. The 1P next-stage Intro OOM, roster proo
 P2-2p8 performance debt and remaining visual/native gaps stay open exactly as the
 board records them; do not promote dirty diagnostic evidence into acceptance.
 
-P2-2p8's retained checkpoint now consumes the adapter's exact fighter-packet
-precheck before whole-owner preflight. The full same-ROM pair moves WORK-H
-P50/P95 **1,692,352/2,422,528 -> 1,665,088/2,399,616**; paired median is
-**-28,672** ticks/frame and all but two FTR frames improve. Final hard-on stress
-passes at WORK-H **1,654,528/2,385,536**, native failures/rejects **0/0**, pose
-bind-full/overflow/fallback **0/0/0**, and heap low-water **108,096 B**. Full
-Boundary is GREEN. P2-2p8 remains RED against the 1.12M product target and
->=95% 2-VBlank cadence. Evidence:
-`artifacts/performance/2026-09-15_p2-2p8-prechecked-replay`.
+P2-2p8's retained checkpoint `5bfb784f8ec` converts generic particle billboard
+submission to Q8/Q13 integer construction while preserving simulation/RNG and
+native draw semantics. Final Boundary ROM `1CC0BC02...C4244` passes at WORK-H
+**1,654,208/2,375,296**, MISC **253,824/481,024**, native failures/rejects
+**0/0**, pose full/overflow/fallback **0/0/0**, and heap low-water **112,192 B**.
+The prior hard-on P95 was 2,389,376, so the retained delta is **-14,080**; MISC
+P95 is **-22,528** and 5+ VBlank presents fall **235 -> 227**. Full Boundary is
+GREEN. P2-2p8 remains RED against 1.12M and >=95% two-VBlank. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-particle-fixed-submit`.
 The adopted static implementation breakdown is `docs/p2/native-optimization/`;
 its task graph is subordinate to the board and does not create another queue.
 

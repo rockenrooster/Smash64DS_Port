@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 47 individual frames. 5 sheets keep
- * every particle in 5 binds instead of 47.
+ * admitted set is 48 individual frames. 5 sheets keep
+ * every particle in 5 binds instead of 48.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -161,9 +161,9 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
 #define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES 64u
 #define NDS_PARTICLE_QUAD_PALETTE_BYTES 320u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 36352u
-#define NDS_PARTICLE_QUAD_COUNT 42u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 47u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 37376u
+#define NDS_PARTICLE_QUAD_COUNT 43u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 48u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu
 
