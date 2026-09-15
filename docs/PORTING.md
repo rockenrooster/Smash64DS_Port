@@ -23115,3 +23115,135 @@ stick. Walking itself stays reachable through the source's own transitions
 that test stick direction rather than magnitude (for example landing while
 holding left or right enters the walk state). Audits must not report the
 missing magnitude band as a divergence again.
+
+## 2026-09-14 — Link live texgen no longer excludes fighter packet replay
+
+P2-2p8's retained native fighter packet can now replay Link while preserving
+source `G_TEXTURE_GEN` behavior. Capture records the small set of dynamic
+texture-coordinate sites and their exact source inputs; replay refreshes those
+words from the current modelview and LookAt with the same fixed-point texgen
+math as the ordinary owner, then submits the existing packet. Any validation
+failure returns to the ordinary native owner.
+
+The standard four-kind matched A/B removes the old 300 Link packet declines,
+records 260 successful live-texgen patches with zero packet faults, and lowers
+FTR P50/P95 from 643,840/670,528 to 407,232/430,016 ticks. The full one-minute
+stress keeps FTR P50 at 394,304 and lowers WORK-H P50/P95 from
+1,901,568/2,721,408 to 1,670,976/2,539,584 with zero native failures/rejects and
+118,752 B heap low-water. P2-2p8 remains open because only 95 of 1,973 presents
+are 2-VBlank. Permanent evidence is under
+`artifacts/performance/2026-09-14_p2-2p8-link-texgen-packet`.
+
+## 2026-09-14 — BGM live refills use the already-known NitroROM range
+
+P2-2p8 attribution found that the BGM worker's packet refill was still paying a
+filesystem path/cluster walk for data whose file and byte range were already
+known. The DS backend now resolves the selected `nitro:/audio/...` track to one
+Calico NitroROM file id and reads packet/header bytes from the existing logical
+stream offset. Source-visible BGM selection, loop records, packet state and the
+two-buffer playback contract do not change. If a direct read fails, the route is
+disabled and the existing stdio stream is re-seated at the same logical offset
+before continuing.
+
+On the matched 128-frame four-kind profile, the 11 BGM refill frames fall from
+5,091,523 to 4,786,363 cycles/frame and their `get_fat` / `f_lseek` premiums
+drop by 87,607 / 53,676 cycles/frame. The one-minute stress records 335 direct
+reads with zero fallbacks and improves WORK-H P50/P95 from
+1,670,976/2,539,584 to 1,650,688/2,505,280 while preserving zero native
+failures/rejects and the 118,752 B general-heap low-water. Two-VBlank cadence is
+120/1,973, so the overall 30 FPS gate remains open. Evidence is under
+`artifacts/performance/2026-09-14_p2-2p8-bgm-direct`.
+
+## 2026-09-15 — Fighter animation stream keeps its dense directory resident
+
+P2-2p8's BPS1 fighter-animation stream no longer re-reads the same 8-byte dense
+directory row from NitroROM on every clip acquisition. The current pack has
+1,165 rows (9,320 B); the DS reads that immutable bounded directory once when the
+stream opens, then performs only the payload range read. A failed or oversized
+directory uses the old row-read path, and payload validation/parser behavior is
+unchanged.
+
+On the same ROM, frames 1400..1527 replace 504 directory reads with resident
+hits while payload reads/misses/failures stay 504/4/0. WORK-H P95 falls
+2,566,848 -> 2,438,272 and SRC P95 1,145,216 -> 1,083,456. The added static
+directory also made the four-kind raw animation cache decline; its failed fit
+was being recomputed on every store. A generation-scoped latch now records one
+post-setup failure and fast-declines the remaining 1,353 attempts because the
+scene heap can only shrink within that generation.
+
+The final one-minute four-kind stress records directory hits/fallbacks 681/0,
+WORK-H 1,654,464/2,441,408, SRC P95 1,149,952, native failures/rejects 0/0 and
+111,680 B general-heap low-water. The shell-driven two-fighter realtime route
+also passes. P2-2p8 stays open: only 115/1,973 presents are 2-VBlank. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-ftanim-dir`.
+
+## 2026-09-15 — FGM live ranges use the validated NitroROM pack directly
+
+The FGM backend already validates one immutable `fgm_phase_pack_ima.bin` at its
+load fence and every cue entry carries exact sample and envelope offsets. Live
+cue starts no longer seek that same pack through stdio/libfat. The backend
+resolves the pack once to a Calico NitroROM file ID and reads those bounded
+ranges directly; a direct-transfer failure still falls back to the established
+stdio bytes. Cache replacement, envelopes, channel selection and BattleShip's
+source-visible FGM handles do not change.
+
+On one ROM, a temporary measurement route replaces 328 full-match stdio range
+reads with 327 direct reads and zero fallback while preserving 418 supported
+plays and the same two pre-existing read/play failures. WORK-H P95 moves
+2,452,480 -> 2,446,272, SRC P95 1,156,288 -> 1,141,568 and 5+ VBlank presents
+254 -> 246. The temporary route was removed after measurement; the final stress
+requires direct reads to engage with zero stdio/fallback and reports 329/0/0.
+Permanent evidence is under
+`artifacts/performance/2026-09-15_p2-2p8-fgm-direct`.
+
+## 2026-09-15 — Put the hot BPS1 stream near the front of NitroFS
+
+The BPS1 fighter-animation pack now ships under `animation/` beside the existing
+battlepack instead of as the final `zz_stream` NitroFS file. The bytes and clip
+directory are unchanged. This is a performance property of DLDI boots: Calico's
+`argv[0]` NitroROM reader seeks inside the packaged `.nds`, and libfat restarts a
+backward seek's cluster traversal at the ROM file's first cluster. Keeping the
+2.63 MB hot stream near the front shortens that unavoidable walk.
+
+A dual-copy same-ROM proof routed 676 otherwise-identical payload reads between
+the old ~28 MB entry and the early ~2 MB entry. WORK-H P95 fell 2,451,520 ->
+2,351,360, SRC P95 1,161,856 -> 1,066,304, SINT P95 693,376 -> 597,376 and
+5+ VBlank presents 257 -> 214, with reads/misses/failures fixed at 676/5/0.
+Shipping has only the early copy and its guarded stress keeps native failures /
+direct rejects at 0/0 with 112,192 B general-heap low-water. Evidence is under
+`artifacts/performance/2026-09-15_p2-2p8-ftanim-reloc-final`.
+
+## 2026-09-15 — Fighter pose playback walks only live animation tracks
+
+The compact fighter-pose player now keeps a per-joint bit mask of tracks whose
+source AObj16 commands have assigned Step, Linear or Cubic evaluation state.
+Playback and End-tail advancement walk those bits directly instead of scanning
+all ten possible slots and rejecting absent / `kind None` entries. TraI's
+interpolation descriptor remains a valid allocated `kind None` slot and is not
+marked live until a value command gives it evaluable state.
+
+The generic-player oracle completes 190,062 field comparisons with no value or
+pose mismatches. A same-ROM one-minute route A/B keeps authored work identical
+and lowers WORK-H P95 2,370,432 -> 2,353,088; paired WORK-H improves on
+1,526/1,972 frames. The temporary route was removed after measurement. The
+final four-CPU stress records pose binds/full/track-overflow 677/0/0, native
+failures/rejects 0/0 and WORK-H 1,645,760/2,348,160. The standing verifier now
+treats pose-track overflow as a hard failure because a scratch-only overflow
+track cannot be represented in the persistent mask. Evidence is under
+`artifacts/performance/2026-09-15_p2-2p8-pose-track-mask`.
+
+## 2026-09-15 — Fighter pose updates skip completed hierarchy entries
+
+The compact pose engine now keeps a per-pose running-entry mask and stops
+revisiting bound hierarchy joints once their source-visible animation reaches
+NULL. The mask covers 64 walk entries; wider future hierarchies retain a cold
+complete-scan fallback instead of dropping work.
+
+The post-change generic-player oracle records 190,062 bit-exact comparisons
+with zero value or pose mismatches. After separating the historical scan into a
+cold measurement helper, a one-ROM whole-match A/B lowers WORK-H P95
+2,366,528 -> 2,357,120 with identical pose bind/evaluation/step counts. The
+temporary route is removed and the standing four-CPU verifier now requires the
+wide fallback counter to remain zero. Final stress records pose
+bind/full/overflow/fallback 677/0/0/0 and native failures/rejects 0/0. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-pose-joint-mask`.

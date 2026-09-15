@@ -1,0 +1,56 @@
+# 34 — Sector Z: intermittent crash during fighter intro
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** P0: intermittent crash / state corruption.
+**Existing owner:** P2-4n1 + intro/effect owners.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> SectorZ: Crashes sometimes during characer intro.
+
+## Current source findings
+
+The crash is intermittent during intro. Existing notes already refute some older matrix-stack theories and retain several candidates; none is a measured first fault for this owner report.
+
+Source keys: [S02](research/SOURCE_LEDGER.md#s02), [R72](research/SOURCE_LEDGER.md#r72), [R75](research/SOURCE_LEDGER.md#r75), [R83](research/SOURCE_LEDGER.md#r83), [R84](research/SOURCE_LEDGER.md#r84).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+Use the failing ROM identity and intro fighter set to capture the first abort/halt/invalid object. Candidate repairs are: correct source custom-matrix context for an Arwing/laser child; give native intro/reflector tables the lifetime of their actual scene resource owner; or fix a source-permitted allocation failure and the resource budget behind it. Change only the branch supported by the fault address/owner/generation and pre-fault state. Test stage actor plus fighter-intro combinations and post-Results reentry, not just the direct-stage diagnostic.
+
+### Code delivery boundary
+
+No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
+
+Implementation contract and code-oriented integration details: [research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md](research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md).
+
+## Disprove this candidate before stacking patches
+
+Do not disable Arwings, lasers, fighter intros or render rejection to make the scene survive. A NULL guard/fail-closed stop is containment only; a missing required child keeps acceptance open.
+
+## Acceptance for this symptom
+
+Previously failing natural CSS -> SSS -> Sector Z intro sequences complete with visible fighter/props/stage actors and zero aborts, corruption, unsafe matrices or native failures. Test relevant roster combinations, repeated entry/rematch and transition into live hazards. Record seeds, attempts, engaged events and residual uncertainty; a single lucky pass is not closure.
+
+## Required regression scope
+
+All fighter intros, Arwing/laser behavior, Fox reflector, source RNG/selection, object/pool lifetime, other stage actors and frame pacing.
+
+## Coordination
+
+Prioritize crash isolation; missing VFX or geometry remains open even if containment prevents a crash.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

@@ -154,7 +154,15 @@ typedef struct NDSRendererTraversalState
  * tells the header this translation unit provides its own, so the two can
  * never collide here. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+#define NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS ( \
+    NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || \
+    NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || \
+    NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || \
+    NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || \
+    NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || \
+    NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME)
+
+#if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
@@ -3371,7 +3379,46 @@ void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp)
 }
 #endif
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+/* The Mario/Fox-only mirror stress build has no image-backed owner block, but
+ * the production preflight still resolves every selected root through these
+ * two helpers. Keep the base-owner identity available even when that entire
+ * block compiles out; otherwise the documented NDS_P2_FOUR_CPU_ROSTER=0
+ * control fails at compile time before it can validate renderer changes. */
+#if !NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
+static const NDSNativeFighterRuntimeTables *
+ndsRendererNativeFighterTablesForResolvedRoot(
+    const NDSNativeRoot *root,
+    const NDSNativeFighterOwnerRuntime *owner,
+    u32 battle_slot,
+    u32 binding)
+{
+    (void)root;
+    (void)battle_slot;
+    (void)binding;
+    return (owner != NULL) ? owner->tables : NULL;
+}
+
+static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
+    const NDSNativeRoot *root,
+    const NDSNativeFighterOwnerRuntime *owner,
+    u32 battle_slot,
+    u32 binding,
+    u32 *count))[2]
+{
+    (void)root;
+    (void)battle_slot;
+    (void)binding;
+    if (owner == NULL)
+    {
+        *count = 0u;
+        return NULL;
+    }
+    *count = owner->root_light_preamble_count;
+    return owner->root_light_preambles;
+}
+#endif
+
+#if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -4784,6 +4831,12 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
     return TRUE;
 }
 
+static void ndsRendererNativeBuildDenseShadeWords(
+    const NDSNativeDenseVertex *vertices, u32 vertex_count,
+    const NDSNativeRun *runs, u32 run_count,
+    const u16 *run_first_unique, const u8 *run_unique_count,
+    const u16 *run_unique_dense, u32 *dense_words);
+
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY
 /* THE EQUIVALENCE PROOF, RUN ON THE CONSOLE RATHER THAN ARGUED ON PAPER.
  *
@@ -4869,53 +4922,45 @@ static void ndsRendererNativeVerifyPreparedMember(const void *image_member,
                                   (array_), (u32)sizeof(array_));
 #endif
 
-/* P2-3f49: normals are baked, not copied, so the byte compare above cannot
- * cover them: at VERIFY time (fighter creation, before first draw) the bake
- * arrays are still empty. Re-bake from the in-binary dense_vertices -- the
- * bake's own input, already proven equal to the image's by the vertices row
- * -- with the bake's own arithmetic, and compare word for word. */
-static s32 ndsRendererNativeVerifyNormalComponent(s32 source)
-{
-    s32 scaled = (source * 0x1ff) / 127;
-
-    if (scaled > 511) { scaled = 511; }
-    if (scaled < -512) { scaled = -512; }
-    return scaled;
-}
+/* P2-3f49/P2-3f47: dense shade words are baked, not copied, so the byte
+ * compare above cannot cover them. VERIFY rebuilds the exact runtime words,
+ * including the NDO6 unlit vertex-colour overlay, through the same helper the
+ * runtime bake calls. Kirby high is currently the largest generated owner;
+ * fail closed if a future image grows beyond this verification-only scratch. */
+static u32 sNdsNativeOwnerImageVerifyDenseShadeWords[
+    NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT];
 
 static void ndsRendererNativeVerifyDenseNormals(
     const NDSNativeDenseVertex *vertices, u32 vertex_count,
+    const NDSNativeRun *runs, u32 run_count,
+    const u16 *run_first_unique, const u8 *run_unique_count,
+    const u16 *run_unique_dense,
     const u32 *image_normals, u32 image_bytes)
 {
-    u32 i;
-
-    if (image_bytes != vertex_count * (u32)sizeof(u32))
+    if ((vertex_count > NDS_FTR_COUNT(sNdsNativeOwnerImageVerifyDenseShadeWords)) ||
+        (image_bytes != vertex_count * (u32)sizeof(u32)))
     {
         gNdsNativeOwnerImageMismatchCount++;
         return;
     }
-    for (i = 0u; i < vertex_count; i++)
-    {
-        u32 rgba = vertices[i].rgba;
-        s32 nx = ndsRendererNativeVerifyNormalComponent((s32)(s8)(rgba >> 24));
-        s32 ny = ndsRendererNativeVerifyNormalComponent((s32)(s8)(rgba >> 16));
-        s32 nz = ndsRendererNativeVerifyNormalComponent((s32)(s8)(rgba >> 8));
-        u32 expected = ((((u32)nx) & 0x3ffu) |
-                        (((((u32)ny) & 0x3ffu)) << 10) |
-                        (((((u32)nz) & 0x3ffu)) << 20));
-
-        if (expected != image_normals[i])
-        {
-            gNdsNativeOwnerImageMismatchCount++;
-            return;
-        }
-    }
-    gNdsNativeOwnerImageMatchCount++;
+    ndsRendererNativeBuildDenseShadeWords(
+        vertices, vertex_count, runs, run_count,
+        run_first_unique, run_unique_count, run_unique_dense,
+        sNdsNativeOwnerImageVerifyDenseShadeWords);
+    ndsRendererNativeVerifyMember(
+        image_normals, image_bytes,
+        sNdsNativeOwnerImageVerifyDenseShadeWords,
+        vertex_count * (u32)sizeof(u32));
 }
 
 #define NDS_IMG_VERIFY_NORMALS(type_, member_, vertices_)                      \
     ndsRendererNativeVerifyDenseNormals((vertices_),                           \
                                         NDS_FTR_COUNT(vertices_),              \
+                                        img_->runs,                            \
+                                        NDS_FTR_COUNT(img_->runs),            \
+                                        img_->run_first_unique,                \
+                                        img_->run_unique_count,                \
+                                        img_->run_unique_dense,                \
                                         img_->member_,                        \
                                         (u32)sizeof(img_->member_));
 

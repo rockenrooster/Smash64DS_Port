@@ -1,0 +1,56 @@
+# 28 — Zebes acid: preserve soft texture/blend transitions
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Stage hazard material fidelity.
+**Existing owner:** P2-4 Zebes visual acceptance.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> Zebes: Acid plane Color is accurate now but texture blending are all visibly too HARD. Edges are too defined instead of a gradient/smooth transistion.
+
+## Current source findings
+
+The generator already subdivides source root (157,0x9D8) once before replacing per-corner alpha with a triangle average. That improves facets but cannot reproduce continuous source alpha. The source acid geometry is described as planar in retained repo evidence; do not move it into a dome.
+
+Source keys: [R60](research/SOURCE_LEDGER.md#r60), [R88](research/SOURCE_LEDGER.md#r88), [R91](research/SOURCE_LEDGER.md#r91), [HW01](research/SOURCE_LEDGER.md#hw01).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+E01 provides executable offline alpha-isoband clipping for an experiment, rather than repeating the existing midpoint pass. Integrate it only for independently identified SHADE-alpha roots: feed untouched source alpha and original UV/RGB, emit per-polygon alpha runs, preserve plane/depth and bound triangles/vertices/runs. Compare 4/8/16 bands against the current midpoint result and a source capture, retaining the cheapest accepted result. Alternatively bake a source-derived coverage ramp into a suitable native alpha texture only if its UV/material contract can represent the same animation without losing the existing texture.
+
+### Code delivery boundary
+
+[E01 alpha-isoband implementation](experiments/alpha_isobands.py) is executable offline experiment code, with analytic tests. It is **not integrated into the stage producer or linked into a ROM**.
+
+Implementation contract and code-oriented integration details: [experiments/README.md](experiments/README.md).
+
+## Disprove this candidate before stacking patches
+
+E01 is not linked and has not consumed the acid asset. It can exceed DS/packet budgets; quantization, edge sharing, blend mode, polygon IDs, full-alpha depth writes and source-zero handling all require integration proof.
+
+## Acceptance for this symptom
+
+The acid keeps its accepted color and correctly occludes with terrain/fighters while reproducing the source-derived soft transition. Capture several animation/heights and camera distances against cliffs and moving fighters. Gradient profiles and pixels show no hard opaque card boundary; hazards/collision/timing remain unchanged.
+
+## Required regression scope
+
+Zebes lights, stage-actor depth preservation, other translucent materials, acid rise/fall/damage and shared VRAM/cadence.
+
+## Coordination
+
+Separate from light cones: shared alpha machinery does not imply identical source material semantics.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

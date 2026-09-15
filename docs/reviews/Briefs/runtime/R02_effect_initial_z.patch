@@ -1,0 +1,32 @@
+Subject: [CANDIDATE; NOT ROM VERIFIED] Effect-model submissions: inherit source Z-buffer state
+Base-commit: a5c5bc08d8e8661658865216798d600462db948e
+Classification: CONDITIONAL CANDIDATE / sibling audit required
+Owner-issues: 1, 16, 18, 25
+Restore the source default only for effect-model submissions. Individual generated
+geometry clear/set masks remain authoritative. Do not apply to link-14 weapons or
+stage sky/foreground layers. All affected effect callbacks must be audited; this
+patch is not a blanket claim that every reported effect should use real depth.
+
+diff --git a/src/port/reloc_backend_movement.c b/src/port/reloc_backend_movement.c
+--- a/src/port/reloc_backend_movement.c
++++ b/src/port/reloc_backend_movement.c
+@@ -12673,7 +12673,8 @@
+             root,
+             callback_kind,
+             sNdsStageGCDrawAllLoopCurrentCameraGObj,
+-            ndsStageGCDrawAllLoopInitialGeometryMode());
++            ndsStageGCDrawAllLoopInitialGeometryMode() |
++                NDS_RENDERER_GEOM_ZBUFFER);
+         gNdsEffectPhaseTreeTicks += cpuGetTiming() - phase_mark;
+     }
+ #else
+@@ -12681,7 +12682,8 @@
+         root,
+         callback_kind,
+         sNdsStageGCDrawAllLoopCurrentCameraGObj,
+-        ndsStageGCDrawAllLoopInitialGeometryMode());
++        ndsStageGCDrawAllLoopInitialGeometryMode() |
++            NDS_RENDERER_GEOM_ZBUFFER);
+ #endif
+     ndsRendererAdapterEndStageTraversal();
+     triangle_delta =

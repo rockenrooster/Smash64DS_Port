@@ -1,12 +1,11 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-14 after the stage-hazard admission repair and current owner policy refresh.
+Updated: 2026-09-15 after pose running-joint masking.
 
-**Boundary GREEN on the integrated `d8660bc2fd9` + preserved owner overlay;
-acceptance RED (P2-2p8).** ROMs: loop `410D3FC6`, shell `A22D169D`, stress
-`82F3F736`; stress heap 118752 B, libc reserve 40,960 B, weapon pool 10/2/0,
-native failures 0.
+**Last integrated Boundary GREEN: `d8660bc2fd9` + owner overlay. Boundary
+is blocked by `decomp/alt_assets/`; acceptance RED (P2-2p8).** Four-CPU
+stress passes with native failures/rejects 0/0 and heap low-water 111,680 B.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -40,7 +39,7 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 | Phase | State | Gate summary |
 |---|---|---|
 | P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance remains. |
-| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; 27,136 B preview history removed. Whole-match low-water 118752 B; libc reserve 40,960 B and weapon pool 10 (`a8b6bd0`); every stress gate passes. |
+| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory is resident. Whole-match low-water 111,680 B; libc reserve 40,960 B and weapon pool 10; every stress gate passes. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission fixed/proved in `d8660bc2fd9`; natural Hyrule/Inishie counts/output pass. Three VS captures remain. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`: Poke Ball procs, rock member, pool 10; ball/monster witness 09-14). Atlas membership, other kinds/children and interactions remain open. |
@@ -49,14 +48,15 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Current shared fix:** P2-2p8 split-root fighter packet replay is locally
-retained on top of the UV table memo. Matched frames 600..607 cut FTR about 503K
-ticks and restore 1,326 packet hits with 0 faults; the one-minute four-kind stress
-is FTR 640,000/781,056 P50/P95 with zero native failures/rejects. The Boundary
-umbrella is locally blocked before runtime by pre-existing `?? decomp/alt_assets/`;
-its exact four-CPU child supplies the retained runtime/resource evidence. In
-flight: menu-rules close, 1P next stage, roster proofs. Next: remaining P2-2p8
-whole-frame/SRC/tail cost, DATA surfaces (P2-7), weapon-pool sizing, remaining
+**Current shared fix:** P2-2p8 I/O cuts + compact pose masks.
+Running-joint same-ROM A/B cuts WORK-H P95 **2,366,528 -> 2,357,120** with
+identical pose work; final stress WORK-H **1,680,384/2,389,376**, native
+fail/reject 0/0, pose bind/full/overflow/fallback **677/0/0/0**, heap
+**108,096 B**. 103/1,973
+presents are 2-VBlank; P2-2p8 remains RED. Boundary stops on owner
+`decomp/alt_assets/` after generator staleness.
+In flight: menu-rules close, 1P next stage, roster proofs.
+Next: remaining P2-2p8 whole-frame/SRC/tail cost, DATA surfaces (P2-7), weapon-pool sizing, remaining
 stage captures/visual acceptance, dead code, remaining audit divergences
 (BUG_NOTES 2026-09-13 block), P2-3r17, per-target particle outputs.
 **Samus morph-ball:** programs 2/3 never reject; a level-3 CPU never rolls or
@@ -129,7 +129,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **PACKET REPLAY KEEP; fighter renderer under target; overall performance RED** | Split-root packet capture completes the retained replay path: matched 600..607 FTR 1,143,680/1,158,720 -> **638,848/656,256**, packet 0 hits/1,347 records -> **1,326/21 with 0 faults**. Full stress FTR **640,000/781,056**, WORK-H 1,907,200/3,013,056; native failures/rejects 0/0 and resource gates healthy. Evidence `2026-09-14_p2-2p8-split-packet-replay`. Boundary umbrella is locally stopped only by pre-existing `decomp/alt_assets/`; exact four-CPU child completed. Continue on whole-frame/SRC/tail cost, not fighter production. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **I/O + POSE CUTS KEEP; overall RED** | Joint-run mask same-ROM WORK-H P95 **-9,408**; final **1,680,384/2,389,376**, pose fallback/native **0/0**, heap **108,096**. Evidence `2026-09-15_p2-2p8-pose-joint-mask`. Continue whole-frame/SRC/tail cost. |
 
 ## Queue discipline
 

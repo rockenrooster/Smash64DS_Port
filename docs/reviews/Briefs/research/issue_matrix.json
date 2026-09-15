@@ -1,0 +1,601 @@
+[
+  {
+    "issue": 1,
+    "file": "01_Impact_Wave_Depth.md",
+    "title": "01 \u2014 Impact wave: restore fighter occlusion",
+    "runtime_candidates": [
+      "R01",
+      "R02"
+    ],
+    "status": "candidate-code",
+    "findings": "The native owner computes clip coordinates, then discards clip Z in favor of NextProjectedDepth for every triangle. The original display callback selects AA_ZB_XLU_SURF. The exact asset command decode is user-supplied, not independently repeated here. Current projected source-depth and painter-transition helpers were inspected.",
+    "potential_runtime_change": "Apply/review R01: cache SourceDepthToV16(z * PROJECTED_VERTEX, w) for the 18 unique vertices and emit that array per corner. Keep the current XY, UV, material, topology and source order. Independently review R02 so effect models inherit the source G_ZBUFFER state while their own clear/set masks still apply. Check the effective render-mode compare/write contract, not G_ZBUFFER alone. Full-alpha DS depth writes and near clipping are separate requirements; do not force every effect to alpha 30 as a shortcut.",
+    "falsifier": "If the observed ring never engages this native owner, follow its actual owner before attributing the live symptom. A passing ring/native A/B against the old equally broken control is not an N64-reference proof.",
+    "sources": [
+      "S05",
+      "S07",
+      "R76",
+      "R78",
+      "R105"
+    ]
+  },
+  {
+    "issue": 2,
+    "file": "02_Main_Menu_1P_Route.md",
+    "title": "02 \u2014 Main menu: 1P mode selection",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The inspected board reports the 1P shipping gate remains zero while campaign implementation is active. It records a next-stage Intro allocation failure and native failures. This is not evidence that the owner still wants 1P paused.",
+    "potential_runtime_change": "Keep the production gate intact until the campaign candidate is complete. On the dedicated 1P candidate, repair the natural ModeSelect -> 1P menu -> 1P CSS route and resolve the next-Intro working set: retire scene-owned CSS images/registrations before the new arena is populated, retain only explicitly persistent campaign state, and build a source-derived intro asset closure instead of an unbounded full-file duplication where feasible. Generate the campaign/native scene registration and menu capability from the same admitted build configuration. Promote the shipping gate only after complete next-stage, continue and return-path proof; do not substitute an error beep, dead row, forced arena increase or VS redirect.",
+    "falsifier": "An intentionally zero shipping feature flag explains nonselectability but not invisible pixels in a separately enabled campaign build. First record both configurations and distinguish them.",
+    "sources": [
+      "S02",
+      "S04",
+      "R72"
+    ]
+  },
+  {
+    "issue": 3,
+    "file": "03_Campaign_1P_CSS_Invisible.md",
+    "title": "03 \u2014 Campaign: invisible 1P character select",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The named shell ROM is not sufficient to identify its compiled scene/campaign settings. The inspected board preserves active 1P work and warns about incomplete native output; no current natural 1P CSS capture was available here.",
+    "potential_runtime_change": "Patch the 1P scene owner, not VS global state: acquire the native menu kit and the selected fighter preview in the 1P taskman generation; initialize its particles/effects before preview animation; run the same native body/material kernels used by a proven VS preview. Bind the 1P layout, cursor and camera explicitly. On scene reentry invalidate previous owner-image and material bindings before reuse. If the scene is reached but only a clear color appears, replace the retired text/sprite consumer with generated 1P surfaces rather than routing to a compatibility renderer. Distinguish a missing fighter-only pass from missing background/portraits before editing.",
+    "falsifier": "Do not call the entire VS scene startup as a fix: that can reset campaign choice/rules and replace the 1P scene contract. A route witness without pixels leaves this report open.",
+    "sources": [
+      "S02",
+      "S04",
+      "R72",
+      "R102"
+    ]
+  },
+  {
+    "issue": 4,
+    "file": "04_Data_Menu_Blue_Screen.md",
+    "title": "04 \u2014 Data menu: replace the blue-only presentation",
+    "runtime_candidates": [
+      "R05"
+    ],
+    "status": "candidate-code",
+    "findings": "The complete DATA fragment still calls the retired text API. Original mndata.c supplies different two-row and three-row layouts, a 16*8 middle tab, source labels and a background. Options already uses the native surface API.",
+    "potential_runtime_change": "R05 adds DATA surfaces at the end of the generator list, registers them in the menu coverage inventory and replaces DATA text-slot draws with native surface blits. It selects locked/unlocked row tables without changing the Sound Test unlock bit. Successful-blit caching avoids steady-state redraws and retries failed blits without publishing false visibility. Regenerate/stage mn_ui_kit and mn_surfaces together under the normal build configuration; never reuse the old manifest with the new runtime. Also audit any surface preload/classification list in the current checkout. VS Record and Sound Test child screens still need their own native surface/digit consumers; R05 does not close those children.",
+    "falsifier": "If the exact local revision already has native DATA surfaces, rebase or retain that work rather than replacing it. The host mock cannot prove source sprite decoding, VRAM placement, surface bounds or menu cadence.",
+    "sources": [
+      "R97",
+      "R98",
+      "R99",
+      "R100",
+      "R103",
+      "R104",
+      "R92",
+      "R93"
+    ]
+  },
+  {
+    "issue": 5,
+    "file": "05_CSS_Kirby_Selectability.md",
+    "title": "05 \u2014 VS CSS: enable Kirby after proving the native closure",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "Kirby availability is not just a portrait flag. The board records native root/copy-hat work and outstanding natural proofs. CSS shared-pin and arena repairs already landed. A later source review still identifies reset lifetime seams.",
+    "potential_runtime_change": "Use R03 only for the remaining reset-order gaps. Complete Kirby native owner-image residency, hidden-part/root programs and copy-hat ownership before changing the CSS admission mask. Publish a fighter kind only after its FPC1 data, both reachable detail images and preview pose are valid in the same generation. Treat the copy-hat runtime tables as owned by their per-battle-slot image and retire them with their backing range. Once current full-moveset/preview evidence qualifies Kirby, update the existing canonical roster admission owner and associated generated menu cells, not save unlock bits or an independent duplicate mask.",
+    "falsifier": "R03 is defensive and does not make Kirby selectable by itself. A valid CSS idle pose does not qualify Cutter, copied specials or required hat swaps.",
+    "sources": [
+      "S02",
+      "S10",
+      "R71",
+      "R83",
+      "R102"
+    ]
+  },
+  {
+    "issue": 6,
+    "file": "06_CSS_Jigglypuff_Selectability.md",
+    "title": "06 \u2014 VS CSS: Jigglypuff selection and natural native proof",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "Jigglypuff is Purin in the source. The old shared residency diagnosis is not a current proof that its only remaining problem is storage; natural Purin proof is still recorded open.",
+    "potential_runtime_change": "Qualify Purin against the current compact loader and native image ABI, selected/idle preview states and move-specific model/material closure. Use R03 only for the shared reset lifetime gaps. After qualifying the actual runtime fighter capability, wire its canonical shell admission row and generated portrait/cursor mapping together. Preserve the original locked/unlocked save semantics separately from build completeness. Exercise release/reacquire and post-Results return before publishing the roster change.",
+    "falsifier": "Do not enable a roster bit to bypass an unimplemented native body or missing motion; do not regress the existing one-action CSS scheduler or load all twelve fighters eagerly.",
+    "sources": [
+      "S02",
+      "S10",
+      "R102"
+    ]
+  },
+  {
+    "issue": 7,
+    "file": "07_CSS_Ness_Selectability.md",
+    "title": "07 \u2014 VS CSS: Ness selection through the normal shell",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "The board already records native Ness output. That scoped result does not establish CSS admission, all selected poses or complete move closure in this exact build.",
+    "potential_runtime_change": "Keep the existing Ness owner. Resolve the current selected/idle preview program and admitted resource set, then change the canonical roster capability only after its native completeness and resource tests pass. R03 supplies the remaining shared reset-order repair, not a Ness rendering implementation. Verify source-kind -> menu-cell -> compact pack -> native owner mapping, then both detail modes, natural selection and return/reacquire. Use the same capability definition for producer and runtime admission.",
+    "falsifier": "A disabled CSS row with a working Ness battle owner is not evidence to rewrite the battle renderer. Do not conflate build admission with the source game unlock flag.",
+    "sources": [
+      "S02",
+      "S10",
+      "R102"
+    ]
+  },
+  {
+    "issue": 8,
+    "file": "08_CSS_Gates_FPS_Flashing.md",
+    "title": "08 \u2014 VS CSS: gate-opening stalls and flashing",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "The compact-preview action budget is already present. The acquisition still performs blocking work inside that action, so one action per tick does not bound its time. R03 closes reset-order gaps but not gate animation cost.",
+    "potential_runtime_change": "Implement the bounded preview transaction in research/CSS_TRANSACTIONAL_PREVIEW.md. Split payload, relocation, native image load and pose preparation into budgeted phases; publish one complete preview identity only at a safe presentation boundary. Keep the gate animation and already-visible preview drawing while an acquisition is pending. Cache unchanged menu surfaces/matrices and avoid repeated texture uploads after residency. Attribute flashing independently: inspect BG/OBJ/GX bank ownership, generation retirement and publish order; repair the first premature visibility or stale binding rather than hiding gates or reducing simulation arbitrarily.",
+    "falsifier": "If a gate-only resident run still hitches without acquisition, the bottleneck is not the loader. Profile the gate draw and display-bank commit separately. Do not add another action-budget decrement.",
+    "sources": [
+      "S10",
+      "R48",
+      "R102"
+    ]
+  },
+  {
+    "issue": 9,
+    "file": "09_CSS_Yoshi_Preview.md",
+    "title": "09 \u2014 VS CSS: missing Yoshi 3D preview",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "The raw YoshiModel 0x152 shared-pin collision was already repaired. The current reset-order gaps remain a separate candidate; neither fact establishes the cause of the presently invisible Yoshi preview.",
+    "potential_runtime_change": "Use R03 for valid lifetime hardening. Trace Yoshi compact Model registration, native owner image generation/detail, live drawable roots and selected-pose model parts. Correct a mismatched source kind/detail or stale table at that seam; ensure preparation runs inside the correct resettable block and publication occurs only after valid roots and materials exist. If only Selected fails, extend the source-derived preview program/pose closure rather than changing all fighters or importing battle-only assets into every CSS slot. Keep the old disjoint shared-pin guard.",
+    "falsifier": "Repeat release/reacquire and Results->CSS. A missing native owner, wrong selected root and a camera that projects the mesh off-screen require different changes; collect the first differing value.",
+    "sources": [
+      "S10",
+      "R71",
+      "R102"
+    ]
+  },
+  {
+    "issue": 10,
+    "file": "10_CSS_Preview_BGM_Interruptions.md",
+    "title": "10 \u2014 VS CSS: music pauses or restarts on preview changes",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "The current acquire path explicitly brackets preview file loading with ndsAudioBgmSuspendForBlockingLoad/ResumeAfterBlockingLoad. The BGM implementation comment says resume continues rather than restarts; a heard restart still requires identifying a separate sequence-start/seek event.",
+    "potential_runtime_change": "Replace the long blocking acquire with the transaction in CSS_TRANSACTIONAL_PREVIEW.md. Keep the BGM stream/file position and active mixer sequence alive while bounded file reads occur; service BGM outside the filesystem critical section with sufficient prebuffer before each slice. Cancel obsolete preview work without restarting the track. Remove the CSS suspension calls only once worst-case slice latency is below the measured buffered-audio service margin. Audit scene/BGM-start calls on hover: a hover must not imitate scene entry or invoke a stop/start sequence.",
+    "falsifier": "Deleting suspension alone can turn a pause into an underrun or unsafe file reentrancy. Count pauses, actual start/seek calls and underruns separately; a monotonic stream cursor disproves a reset theory, not an audible pause.",
+    "sources": [
+      "R48",
+      "R102",
+      "R107"
+    ]
+  },
+  {
+    "issue": 11,
+    "file": "11_CSS_Preview_Hover_Latency.md",
+    "title": "11 \u2014 VS CSS: delayed preview after cursor hover",
+    "runtime_candidates": [
+      "R03"
+    ],
+    "status": "candidate-code",
+    "findings": "Current CSS misses perform multiple preparation steps in one acquire action. The delay may include explicit dwell, acquisition, pose warming and deferred publication; no measured breakdown from the reported ROM was available.",
+    "potential_runtime_change": "Implement separate request and resident identities with cancellation/coalescing. Serve an already-resident matching preview immediately; on a miss, reserve one available resident block and stage its data in bounded chunks. Warm only source-required idle/selected poses at an admitted loading boundary, not the entire moveset on cursor movement. Publish the newest still-requested fighter only when all resources are valid; release superseded jobs without exposing partial geometry. Reduce a dwell constant only if it is the measured remaining delay after loads are bounded.",
+    "falsifier": "Fast cursor input that repeatedly cancels jobs must not starve the final settled request, leak blocks or display the wrong fighter. Do not claim zero hover I/O simply from a warm-cache tour.",
+    "sources": [
+      "S10",
+      "R48",
+      "R102"
+    ]
+  },
+  {
+    "issue": 12,
+    "file": "12_Yoshi_UpB_Egg_Shells.md",
+    "title": "12 \u2014 Yoshi Up-B: egg and shell presentation closure",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The Yoshi shell fragment, egg weapon and fighter pose are distinct source consumers. The older EggBreak/weak-stub and atlas-size diagnoses must be reconciled with current landed code; no missing-script ID was independently decoded here.",
+    "potential_runtime_change": "Derive the Up-B source move trigger and break/throw children, then extend the existing native weapon/effect producer for every referenced shell/egg root and its material frames. Bind the shell child to the source egg transform, update lifetime through the source callback, and dispatch it on its actual source link. If the trigger and owner engage but the fragment is absent, patch atlas cell selection/alpha or parent-generation lifetime, not the move command. Integrate with the same egg resource closure used by egg lay/entry only where the source actually shares assets.",
+    "falsifier": "Re-enabling a formerly weak function or adding an already-present atlas sheet is not evidence. Positive source spawn plus positive native draw plus visible shell fragments are all required.",
+    "sources": [
+      "S02",
+      "R52",
+      "R61",
+      "R64"
+    ]
+  },
+  {
+    "issue": 13,
+    "file": "13_Yoshi_Grab_Invisible.md",
+    "title": "13 \u2014 Yoshi grab/throw: restore source model-part programs",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Yoshi uses source DL-pair/model-part machinery. The inspected root resolver has explicit variants for several fighters but no equivalent Yoshi variant arm. That is a native coverage lead, not a measured failing root for the reported grab.",
+    "potential_runtime_change": "Add source-derived Yoshi root programs for the complete Catch/Throw hidden-part and tongue/jaw attachment family. Enumerate ordered live bindings after the motion script changes model parts, preserving DL-pair pre/post-load semantics and matrix ancestry. Emit matching high/low owner-image sections, parent bindings, palette/cross-matrix slots and runtime program selection. Select the exact declared program from live source state, then restore canonical roots on release, throw, interruption and damage. Do not make the fighter visible by clearing all hidden flags.",
+    "falsifier": "An unknown model part at one hand/jaw may make whole-owner validation decline; prove the first rejected root/program. A transform-only node must remain in ancestry even when it submits no polygon.",
+    "sources": [
+      "S02",
+      "R52",
+      "R71",
+      "R83"
+    ]
+  },
+  {
+    "issue": 14,
+    "file": "14_Yoshi_NeutralB_Egg_Invisible.md",
+    "title": "14 \u2014 Yoshi neutral-B: body and egg visibility",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The disappearing Yoshi body and invisible captured-target egg are separate observable obligations. The current board records this family as unclosed; no packed egg geometry was available here.",
+    "potential_runtime_change": "Close Yoshi SpecialN/SpecialAirN body root programs using the source hide/show/model-part transitions. Separately implement the native egg/captured-victim owner with source dimensions, tint/material animation, attachment and lifetime. Restore the target body and Yoshi body at their own source release/interruption events. Include failed capture, successful capture, victim escape, ledge/ground transitions and cleanup; do not substitute a generic opaque sphere or force the swallowed fighter visible.",
+    "falsifier": "A body-only program does not fix the egg object; an egg draw does not repair Yoshi body admission. Track each object/generation independently.",
+    "sources": [
+      "S02",
+      "R52",
+      "R71"
+    ]
+  },
+  {
+    "issue": 15,
+    "file": "15_Yoshi_Intro_Egg.md",
+    "title": "15 \u2014 Yoshi intro: visible entry egg and transition",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Entry egg visibility is not implied by a working CSS pose or neutral-B egg. Its source AppearR/AppearL animation, descriptor and breakup are a separate closure.",
+    "potential_runtime_change": "Build a closed native owner for the source entry egg and all appearing/breaking children, with both facing variants and material animation. Connect the source intro spawn callback and live joint transform to the owner lookup/admission table. Warm the required entry data at match entry, before the visible intro begins. Preserve the source handoff from egg to fighter body so they cannot both be hidden in the transition. Coordinate generation with Up-B/egg-lay only for shared source asset roots, not guessed resemblance.",
+    "falsifier": "An intro skip, forced later fighter reveal or native rejection containment does not fix the missing source egg. Test before, during and after breakup on multiple stages.",
+    "sources": [
+      "S02",
+      "R52",
+      "R64"
+    ]
+  },
+  {
+    "issue": 16,
+    "file": "16_Link_Intro_Column_Alpha.md",
+    "title": "16 \u2014 Link intro: translucent column effect",
+    "runtime_candidates": [
+      "R02"
+    ],
+    "status": "candidate-code",
+    "findings": "LinkSpecial2 shows the entry wave/column as CI4 materials with distinct primitive alpha; Spin uses an IA texture. Treating every Link effect as the same IA8 decoder bug is incorrect. Existing alpha-texture conversions must be retained.",
+    "potential_runtime_change": "Trace the live primitive/environment alpha into the entry group, preserve the source combiner alpha equation, and select DS blend mode/texture format from that effective equation. For the CI4 column, keep palette coverage separate from primitive alpha: do not turn all nonzero texels opaque or discard the animated material alpha. R02 is a separately audited candidate for source depth inheritance, not an alpha fix. Add a generated material fixture proving the source column alpha reaches the emitted polygon state; ensure state caching keys include changing alpha.",
+    "falsifier": "If decoded texture alpha is correct but the quad is hard, inspect polygon/combiner state before rebaking. Conversely a wrong palette/coverage plane cannot be fixed by lowering the whole polygon alpha.",
+    "sources": [
+      "R61",
+      "R64",
+      "R65",
+      "R66",
+      "R78"
+    ]
+  },
+  {
+    "issue": 17,
+    "file": "17_Link_NeutralB_Invisible.md",
+    "title": "17 \u2014 Link neutral-B: throw/catch body visibility",
+    "runtime_candidates": [
+      "R04"
+    ],
+    "status": "candidate-code",
+    "findings": "A newly identified conditional defect is present in nds_renderer_assets.c: Link SpecialN foreign boomerang table/preamble routing exists inside the Kirby-image branch but is absent from its #else helpers. The host harness reproduces the old wrong-table return; the patched helpers pass high/low/bounds tests. The reported ROM configuration remains unknown.",
+    "potential_runtime_change": "Apply R04 only when its preimages/configuration match. It copies the existing Link source-owner routing into the disabled-Kirby helpers, including the matching light-preamble source. It does not alter the already-implemented SpecialN program. Independently inspect empty-hand/catch-frame root coverage, source-owner indices and canonical restoration; if the failing ROM already uses the Kirby-enabled arm, R04 does not explain that live failure. Keep Catch and Kirby CopyLink proofs scoped and intact.",
+    "falsifier": "The host fixture uses the exact helper bodies with stand-in tables, not full generated images. Verify foreign epoch indices against the actual boomerang image and exercise natural ground/air throw-return-catch in the build that failed.",
+    "sources": [
+      "R71",
+      "R83",
+      "R84"
+    ]
+  },
+  {
+    "issue": 18,
+    "file": "18_Link_UpB_Effects.md",
+    "title": "18 \u2014 Link Up-B: complete spin-attack effects",
+    "runtime_candidates": [
+      "R02"
+    ],
+    "status": "candidate-code",
+    "findings": "The repository records a partial Link Spin implementation and outstanding natural/source-default qualification. The native entry-effect path already recognizes relevant owners; do not re-add an owner solely because an old board row says missing.",
+    "potential_runtime_change": "Verify grounded Spin body/sword root changes and the air effect-only sibling separately. Bind the source sword/Spin child to its live joint and correct foreign material/image owner; preserve source frame, lifetime and UV animation. Audit the entry-effect group alpha/depth contract and use R02 only after identifying its source geometry-state inheritance. Generate any genuinely missing reachable root sibling into both detail images rather than changing source motion or discarding an unrecognized child.",
+    "falsifier": "A grounded diagnostic pose with triangles does not prove airborne Spin or body restoration. A depth fix does not close missing geometry/material frames.",
+    "sources": [
+      "S02",
+      "R64",
+      "R65",
+      "R66",
+      "R78"
+    ]
+  },
+  {
+    "issue": 19,
+    "file": "19_Pikachu_NeutralB_Alpha.md",
+    "title": "19 \u2014 Pikachu neutral-B: transparent soft-edged electric effect",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The native ground-jolt path has already expanded beyond the old single-root implementation. The effect converter already supports graded IA texture formats and a corrected IA8 byte path; old XOR/swizzle advice is not a fresh fix.",
+    "potential_runtime_change": "Follow airborne projectile -> ground jolt -> each source texture/frame root. Preserve the effective texture coverage alpha in the selected native format, primitive modulation and texture edge wrap/clamp. Fix the exact conversion or runtime state that loses graded coverage; add per-frame texture/coverage fixtures, not a universal white-color key. If effective alpha uses source vertex alpha, route it through the material owner rather than ignoring it. Keep ground-jolt root selection and material-frame changes synchronized.",
+    "falsifier": "An opaque edge can originate in decoded alpha, wrong texel format, wrong sampler or a non-blending material. Distinguish those with decoded coverage and emitted state before choosing a patch.",
+    "sources": [
+      "R61",
+      "R64",
+      "R65"
+    ]
+  },
+  {
+    "issue": 20,
+    "file": "20_Pikachu_DownB_Missing_Crash.md",
+    "title": "20 \u2014 Pikachu down-B: missing Thunder and intermittent crash",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Missing Thunder and intermittent crashes must be separated. The board describes missing EFDesc coverage, but a fault trace is needed to attribute the crash to an owner, transform, resource or source callback.",
+    "potential_runtime_change": "Close Thunder head, trail, strike and self-hit/shock owners from the source constructor chain, including child materials and cleanup. On the crash candidate, capture the first unsafe pointer/program/allocation result before further execution. If a child outlives its parent arena, repair ownership/generation and release order; if the source permits allocation failure, preserve that exact failure behavior while fixing the budget that causes required content loss. Do not suppress Thunder or add a broad NULL-return bandaid as a completed fix. Use human neutral input to trigger ground/air Down-B naturally.",
+    "falsifier": "An unengaged zero native-failure counter does not prove the Thunder children existed. A fail-closed halt is containment, not restored effects or crash closure.",
+    "sources": [
+      "S02",
+      "R64",
+      "R65",
+      "R72"
+    ]
+  },
+  {
+    "issue": 21,
+    "file": "21_Electric_Damage_Effects.md",
+    "title": "21 \u2014 Combat: missing electrical damage presentation",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Victim electric-damage effects are a common damage family, not just Pikachu projectile art. A projectile-only fix will not recover this scope.",
+    "potential_runtime_change": "Enumerate source electric-damage constructors and victim attachment joints, scripts/material frames and lifetime. Ensure the imported real maker is linked, then provide native model/particle owners for every required child. Emit victim-attached transforms from current fighter state rather than attacker position, retaining source spawn cadence and interruption rules. Correct atlas membership or color/alpha only for a positively identified missing script. Share the owner with other electric causes where the source uses the same effect, not by hardcoding Pikachu.",
+    "falsifier": "If the source damage routine never requests the effect for the exercised hit, the first divergence is hit/damage dispatch, not rendering. Verify other electric sources and multiple victim skeletons.",
+    "sources": [
+      "S02",
+      "R61",
+      "R64"
+    ]
+  },
+  {
+    "issue": 22,
+    "file": "22_Pikachu_Strong_SideA.md",
+    "title": "22 \u2014 Pikachu strong side-A: missing attack effect",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "\u201cStrong side A\u201d does not uniquely identify tilt versus smash. Preserve the report and cover both source move branches rather than inventing a status ID.",
+    "potential_runtime_change": "Trace the source side-tilt and side-smash effect commands and identify which produces the reported electrical telegraph. Wire a missing native effect/particle family through the existing generator, exact joint binding and active frame/lifetime. If the maker already fires, repair its material/frame or attachment owner. Keep hitbox timing, RNG and move strength unchanged; do not use extra synthetic damage sparks as the telegraph.",
+    "falsifier": "A hit spark after contact is not proof of the attack VFX before contact. Capture whiff and hit, both facings, and the relevant tilt/smash variants.",
+    "sources": [
+      "S02",
+      "R61",
+      "R64"
+    ]
+  },
+  {
+    "issue": 23,
+    "file": "23_Samus_Shield_Roll_Invisible.md",
+    "title": "23 \u2014 Samus shield roll: prove and repair morph visibility",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Samus MorphUnfold/MorphBall programs 2/3 already exist. Existing source tests enumerate the hidden-all, joint-6 replacement, parallel roll script and restoration family. The board explicitly says level-3 CPU does not exercise roll/Bomb.",
+    "potential_runtime_change": "Do not regenerate duplicate morph programs. First exercise human RollF and RollB and inspect whether the live hidden-part signature selects program 2/3 and the correct 0x8158/0x8708 root in both high/low images. Fix any mismatch at program selection, generated-image inclusion or live joint mapping. Preserve the canonical restoration after rolling/damage and cover cliff-escape siblings already using the same source helpers. If all bindings engage and pixels vanish, trace material/depth and image lifetime instead.",
+    "falsifier": "A CPU-only window with no morph does not justify a new renderer. Imported source presence or zero rejects without a roll is not runtime coverage.",
+    "sources": [
+      "S02",
+      "S11",
+      "R18",
+      "R71"
+    ]
+  },
+  {
+    "issue": 24,
+    "file": "24_Samus_DownB_Invisible.md",
+    "title": "24 \u2014 Samus down-B: morph ball and Bomb visibility",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Samus body morph and the spawned Bomb object are different obligations. Existing body morph programs must be retained; \u201cdown B invisible\u201d does not establish which of them is absent.",
+    "potential_runtime_change": "Use human ground/air Bomb to separate body-program admission from bomb weapon draw. Repair the source-derived morph-program selection or image binding only if it diverges, then close the bomb spawn/motion/material/explosion child owner independently. Keep the source collision, fuse and cleanup; restore Samus\u2019s canonical body on completion and interruptions. Include repeated bombs and resource reuse so fixing the first spawn cannot leave stale texture or child pointers.",
+    "falsifier": "Drawing a bomb while Samus stays hidden, or drawing Samus with no bomb/explosion, is partial only. CPU nonengagement remains insufficient.",
+    "sources": [
+      "S02",
+      "S11",
+      "R18",
+      "R71"
+    ]
+  },
+  {
+    "issue": 25,
+    "file": "25_Samus_Charge_Shot_Gun_Occlusion.md",
+    "title": "25 \u2014 Samus charge/shot: correct overlap with the arm cannon",
+    "runtime_candidates": [
+      "R02"
+    ],
+    "status": "candidate-code",
+    "findings": "The shared item route deliberately re-enables G_ZBUFFER; link-14 weapon display intentionally clears it. The charge effect and detached shot may have different owners and depth contracts. The user\u2019s suggested Z movement is an option to evaluate, not proof of a wrong source attachment.",
+    "potential_runtime_change": "Identify charging orb versus launched shot owner/link and compare source attachment/joint matrix and size. For a source no-Z overlay, preserve that presentation using the existing native painter route after the cannon; for a source-Z model, use actual source-projected depth and correct joint placement. Audit the effect case with R02 separately. Fix mistaken weapon/effect classification or copied transform before introducing any camera-facing bias. A bounded source-derived bias is a last candidate only when exact placement is correct and the DS mapping demonstrably loses intended coverage.",
+    "falsifier": "Do not globally pull all Samus shots toward the camera: that can break stage/fighter occlusion after launch. Test several camera angles, scales, charge sizes and both facings.",
+    "sources": [
+      "R75",
+      "R76",
+      "R78",
+      "R105"
+    ]
+  },
+  {
+    "issue": 26,
+    "file": "26_Captain_Falcon_Scope_Intake.md",
+    "title": "26 \u2014 Captain Falcon: preserve unspecified current report",
+    "runtime_candidates": [],
+    "status": "scope-only",
+    "findings": "The latest owner list contains only the Captain Falcon heading. Older repo bugs mention Punch/Kick, but current inspected native lookup includes Captain effect owners and a DLHEAD1 bridge. No new symptom should be invented.",
+    "potential_runtime_change": "No blind source patch is assigned. As a scoped regression lead, trace natural Punch/Kick through the existing Captain-native group owner and material animation, including the source scale-X display callback. Extend only a demonstrably missing sibling/root or repair a measured transform/material divergence. Preserve the already-landed bridge and source moves. Treat this as unreported scope until an actual symptom or current failing evidence identifies the target.",
+    "falsifier": "An old missing-owner report does not authorize duplicate Captain imports or treating this empty heading as a newly confirmed defect.",
+    "sources": [
+      "S09",
+      "R64",
+      "R75"
+    ]
+  },
+  {
+    "issue": 27,
+    "file": "27_Peachs_Castle_Roof_Texture.md",
+    "title": "27 \u2014 Peach's Castle: restore textures on recovered roof geometry",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The owner explicitly says all foreground roof geometry is now visible. Reopening an earlier geometry-admission defect without checking the repaired packet would mis-target this report.",
+    "potential_runtime_change": "Compare a newly visible untextured roof run with its adjoining correctly tiled run. Follow texture-enable, active tile/load tile, TLUT, source image, material segment, UV origin/scale and inherited state through the packet generator and runtime epoch cache. If a run has no explicit texture command but inherits one in the source, carry that state across the same source boundary in the native packet; if UVs or an external texture owner are omitted, repair producer ownership/relocation. Invalidate cached prepared texture state on every input that changes its meaning. Keep the now-complete roof topology and continuous repeat phase.",
+    "falsifier": "Do not turn texture on for the entire stage or copy a neighboring roof material by visual guess. Inspect the exact source material on the affected triangles; some geometry may intentionally be untextured.",
+    "sources": [
+      "S02",
+      "R90",
+      "R91"
+    ]
+  },
+  {
+    "issue": 28,
+    "file": "28_Zebes_Acid_Soft_Blend.md",
+    "title": "28 \u2014 Zebes acid: preserve soft texture/blend transitions",
+    "runtime_candidates": [],
+    "status": "offline-experiment",
+    "findings": "The generator already subdivides source root (157,0x9D8) once before replacing per-corner alpha with a triangle average. That improves facets but cannot reproduce continuous source alpha. The source acid geometry is described as planar in retained repo evidence; do not move it into a dome.",
+    "potential_runtime_change": "E01 provides executable offline alpha-isoband clipping for an experiment, rather than repeating the existing midpoint pass. Integrate it only for independently identified SHADE-alpha roots: feed untouched source alpha and original UV/RGB, emit per-polygon alpha runs, preserve plane/depth and bound triangles/vertices/runs. Compare 4/8/16 bands against the current midpoint result and a source capture, retaining the cheapest accepted result. Alternatively bake a source-derived coverage ramp into a suitable native alpha texture only if its UV/material contract can represent the same animation without losing the existing texture.",
+    "falsifier": "E01 is not linked and has not consumed the acid asset. It can exceed DS/packet budgets; quantization, edge sharing, blend mode, polygon IDs, full-alpha depth writes and source-zero handling all require integration proof.",
+    "sources": [
+      "R60",
+      "R88",
+      "R91",
+      "HW01"
+    ]
+  },
+  {
+    "issue": 29,
+    "file": "29_Zebes_Ground_Light_Gradient.md",
+    "title": "29 \u2014 Zebes ground lights: taper to transparency",
+    "runtime_candidates": [],
+    "status": "offline-experiment",
+    "findings": "The hard trapezoid can be a lost source vertex-alpha gradient, lost texture alpha or both. The existing stage generator collapses varying vertex alpha to one value per triangle; that mechanism is directly visible, but the exact light root was not independently decoded here.",
+    "potential_runtime_change": "Identify the light roots and alpha equation first. For untextured SHADE-alpha lights, test E01 isobands or a source-derived alpha-ramp texture mapped to the source beam extent; for textured lights, retain the texture coverage and combine it with the varying shade factor rather than replacing one with the other. Keep the bottom bright and the top source-transparent using the original material colors and geometry. Emit native translucent polygons with the correct compare/write policy and no opaque rectangular backing.",
+    "falsifier": "Do not extend the acid root allowlist to guessed light root offsets. If light alpha already resides in texels, additional geometric subdivision is not the first repair.",
+    "sources": [
+      "R88",
+      "R91",
+      "HW01",
+      "HW02"
+    ]
+  },
+  {
+    "issue": 30,
+    "file": "30_Mushroom_Left_Platform_Texture.md",
+    "title": "30 \u2014 Mushroom Kingdom: texture the restored left platform",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The report is the left platform now visible but mostly untextured, not the older \u201cboth platforms missing\u201d report. The recent Inishie stage-admission repair is already banked and is not a texture fix.",
+    "potential_runtime_change": "Classify the reported surface as static map geometry or a scale/platform actor, then compare its packet runs/material owners with the source. Fix missing external texture/TLUT closure, material-segment binding or inherited texture state and preserve tile phase across the left surface. For an actor, keep immutable geometry shared but bind the live actor transform and material generation; do not bake a moving platform into a static background. Rebuild affected packets/textures through their producer without undoing the repaired common stage setup.",
+    "falsifier": "A source-accurate untextured face should remain untextured. Do not paint every visible triangle or duplicate the full map import to fix one actor/material owner.",
+    "sources": [
+      "S02",
+      "S12",
+      "R90",
+      "R91"
+    ]
+  },
+  {
+    "issue": 31,
+    "file": "31_Yoshis_Island_Rotating_Card_Alpha.md",
+    "title": "31 \u2014 Yoshi's Island: transparent rotating texture cards",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Rotating white cards have a coverage problem; white RGB alone does not imply transparency. Current IA conversion fixes must not be overwritten by old swizzle advice.",
+    "potential_runtime_change": "Trace each rotating material frame\u2019s original coverage channel and effective combiner. Preserve graded alpha or source cutout zeroes through palette/texel conversion and runtime blend state, and carry sampler wrap/clamp and frame selection into texture-cache identity. If source I textures use intensity as coverage, bake that alpha equation; if CI uses transparent palette entries, preserve those entries rather than deleting white. Clear atlas gutters or use correct clamping only where source sampling requires it. Keep the source rotation and visible white art.",
+    "falsifier": "A global RGB-white color key destroys legitimate highlights/clouds. A blanket polygon-opacity reduction leaves the entire card visible and is not a coverage fix.",
+    "sources": [
+      "R61",
+      "R64",
+      "R90",
+      "R91",
+      "HW02"
+    ]
+  },
+  {
+    "issue": 32,
+    "file": "32_Yoshis_Island_Heart_Sparkle_Alpha.md",
+    "title": "32 \u2014 Yoshi's Island: remove opaque sparkle quads",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Heart sparkles and rotating cards are separate materials/owners despite a similar hard-quad symptom. Correct clouds are a protected regression reference.",
+    "potential_runtime_change": "Identify the sparkle source frames and script/quad owner. Bake source coverage into an alpha-capable native format and preserve primitive tint/fade and frame timing at draw time. Correct material classification or alpha-channel selection when decoded texels are already graded; correct gutters/UV rectangles when sampling pulls an opaque border. Keep particle size, position, lifetime and source animation; no full-card transparency workaround or substitution with generic sparkles.",
+    "falsifier": "An atlas membership counter proves neither transparent borders nor the right frame. Capture sparkle interiors, zero-coverage corners and overlaps with the heart/background.",
+    "sources": [
+      "R61",
+      "R64",
+      "R90",
+      "R91",
+      "HW02"
+    ]
+  },
+  {
+    "issue": 33,
+    "file": "33_Yoshis_Island_Missing_Platforms_Floor.md",
+    "title": "33 \u2014 Yoshi's Island: restore main platforms and floor/path",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Clouds are largely correct, while the main platforms AND main path/floor are reported missing. No current capture or decoded required-root list for those structural groups was available here. A documented source-approved haze omission is not permission to omit structural geometry.",
+    "potential_runtime_change": "Enumerate the structural roots from the readonly Yoster map and compare them with generated bindings/runs and native submission. Restore any accidentally omitted root or wrong segment mapping at the producer. If emitted triangles are rejected, fix the owning camera/matrix/cull/depth/material-state divergence while retaining source opaque coverage. Keep authored transform-only parents. Add independent expected structural-root/triangle coverage and source camera-view checks, not a test that simply trusts the producer\u2019s own output. Do not restore unrelated approved haze or replace geometry with a wallpaper.",
+    "falsifier": "Collision parity, total stage triangles or \u201cno native failures\u201d cannot show that these particular surfaces reached pixels. Separate absent data from present-but-fully-transparent or off-camera data before choosing a patch.",
+    "sources": [
+      "S02",
+      "S12",
+      "R90",
+      "R91"
+    ]
+  },
+  {
+    "issue": 34,
+    "file": "34_SectorZ_Intro_Crash.md",
+    "title": "34 \u2014 Sector Z: intermittent crash during fighter intro",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The crash is intermittent during intro. Existing notes already refute some older matrix-stack theories and retain several candidates; none is a measured first fault for this owner report.",
+    "potential_runtime_change": "Use the failing ROM identity and intro fighter set to capture the first abort/halt/invalid object. Candidate repairs are: correct source custom-matrix context for an Arwing/laser child; give native intro/reflector tables the lifetime of their actual scene resource owner; or fix a source-permitted allocation failure and the resource budget behind it. Change only the branch supported by the fault address/owner/generation and pre-fault state. Test stage actor plus fighter-intro combinations and post-Results reentry, not just the direct-stage diagnostic.",
+    "falsifier": "Do not disable Arwings, lasers, fighter intros or render rejection to make the scene survive. A NULL guard/fail-closed stop is containment only; a missing required child keeps acceptance open.",
+    "sources": [
+      "S02",
+      "R72",
+      "R75",
+      "R83",
+      "R84"
+    ]
+  },
+  {
+    "issue": 35,
+    "file": "35_Saffron_Door_Cycle.md",
+    "title": "35 \u2014 Saffron City: restore the garage-door state/animation cycle",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "The original imported state machine already owns the cycle. In Open, it calls SetClosedWait only when monster_gobj becomes NULL; SetClosedWait resets waits, position and closing animation. The gate has its own gcPlayAnimAll process. A baked open pose alone is not evidence that runtime animation is frozen.",
+    "potential_runtime_change": "First compare gate_status, monster_gobj, animation frame and the submitted live gate matrix. If state remains Open after the monster should retire, repair the actual source monster-clear/ejection callback connection. If state and animation advance but pixels stay open, repair actor identity/binding and matrix memo invalidation so the native gate consumes that live DObj rather than a static map pose. If no animation advances, repair process/animation ownership, not source timers. Preserve the source timer/proximity opening behavior and collision yakumono slot synchronization.",
+    "falsifier": "Do not implement a new fixed-period door oscillator or forcibly NULL the monster on a render frame. Source closing depends on monster lifecycle, so the two are not interchangeable.",
+    "sources": [
+      "R73",
+      "R106",
+      "R74"
+    ]
+  },
+  {
+    "issue": 36,
+    "file": "36_Saffron_Pokemon_Attack_VFX.md",
+    "title": "36 \u2014 Saffron City: native Pokemon attack effects",
+    "runtime_candidates": [],
+    "status": "conditional-repair-proposal",
+    "findings": "Saffron stage Pok\u00e9mon are item/ground-monster actors, not interchangeable with Pok\u00e9 Ball Pok\u00e9mon. Their bodies, weapons and effects have distinct native owners; a complete body maker mask does not prove attack VFX.",
+    "potential_runtime_change": "Enumerate each source ground-monster attack\u2019s weapon/effect children, including shared dust/explosion families, and generate the required native owners/materials/scripts. Bind children to the source ground-monster transform and actual display callback/link. Preserve spawn, attack and retire callbacks so fixing VFX does not keep the garage door open indefinitely. Share genuinely common native effect implementations with items but retain the stage actor\u2019s source attributes and lifetime. Verify every reachable ground-monster attack, not only Electrode or one body draw.",
+    "falsifier": "Zero missing-body owners cannot qualify weapon/effect children. Do not use generic substitute particles, skip a monster kind, or change the source spawn law to avoid unimplemented effects.",
+    "sources": [
+      "S02",
+      "R73",
+      "R74",
+      "R106",
+      "R64"
+    ]
+  }
+]

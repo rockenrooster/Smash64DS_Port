@@ -3,6 +3,7 @@
  * docs/p2/P2-1c-vram-map.md. */
 
 #include "nds_build_config.h"
+#include <nds/nds_scene_harness.h>
 
 #if NDS_P2_MENU_SHELL
 #include "nds_menu_shell_core.c"

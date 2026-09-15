@@ -21,6 +21,7 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseSlotLive);
 NDS_FT_POSE_COUNTER(gNdsFtPoseSlotLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseTrackOverflow);
 NDS_FT_POSE_COUNTER(gNdsFtPoseAObjLiveMax);
+NDS_FT_POSE_COUNTER(gNdsFtPoseRunMaskFallbacks);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleCompares);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleMismatches);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstJoint);
@@ -261,6 +262,8 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
             pose->pool_used = 0u;
             pose->joint_mask_lo = 0u;
             pose->joint_mask_hi = 0u;
+            pose->run_mask_lo = 0u;
+            pose->run_mask_hi = 0u;
             gNdsFtPoseSlotClaims++;
             ndsFtPosePublishSlotOwnership();
             return pose;
@@ -320,6 +323,8 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     pose->body_evaluated = 1u;
     pose->joint_mask_lo = 0u;
     pose->joint_mask_hi = 0u;
+    pose->run_mask_lo = 0u;
+    pose->run_mask_hi = 0u;
 #if NDS_FT_POSE_ORACLE
     {
         /* The oracle's shadows: one DObj per entry plus the GObj whose
@@ -365,6 +370,8 @@ sb32 ndsFtPoseBindBegin(DObj *walk_root, u32 count)
     pose->pool_used = 0u;
     pose->joint_mask_lo = 0u;
     pose->joint_mask_hi = 0u;
+    pose->run_mask_lo = 0u;
+    pose->run_mask_hi = 0u;
     pose->tick = 0u;
 #if NDS_FT_POSE_ORACLE
     /* lbCommonAddFighterPartsFigatree has just written frame_begin into the
@@ -396,7 +403,7 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
 #if !NDS_FT_POSE_ORACLE
     joint->dobj = dobj;
 #endif
-    joint->active = 0u;
+    joint->eval_mask = 0u;
     joint->last_eval = 0u;
     joint->interpolate = NULL;
     joint->joint_id = (parts != NULL) ? parts->joint_id : 0u;
@@ -440,6 +447,14 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     dobj->anim_frame = anim_frame;
     joint->frame_bits = ndsR2FloatBits(anim_frame);
     joint->wait_bits = 0u;
+    if (entry < 32u)
+    {
+        pose->run_mask_lo |= 1u << entry;
+    }
+    else if (entry < 64u)
+    {
+        pose->run_mask_hi |= 1u << (entry - 32u);
+    }
 #if NDS_FT_POSE_ORACLE
     *joint->dobj = *dobj;
     joint->dobj->parent_gobj = pose->clock_gobj;
@@ -490,6 +505,8 @@ void ndsFtPoseRelease(GObj *gobj)
     pose->pool_used = 0u;
     pose->joint_mask_lo = 0u;
     pose->joint_mask_hi = 0u;
+    pose->run_mask_lo = 0u;
+    pose->run_mask_hi = 0u;
     /* `gobj == NULL` is the NdsFtPose free-slot contract. Keep joints/pool and
      * oracle shadows resident so the next CSS rebuild reuses their arena. */
     pose->gobj = NULL;
@@ -539,7 +556,6 @@ static inline NdsFtPoseTrack *ndsFtPoseTrackFor(NdsFtPose *pose,
     {
         pose->pool_used = slot + 1u;
         joint->slot_of_track[i] = (u8)slot;
-        joint->active = 1u;
         t = &pose->pool[slot];
     }
     t->kind = NDS_FT_POSE_KIND_NONE;
@@ -557,6 +573,19 @@ static inline NdsFtPoseTrack *ndsFtPoseTrackFor(NdsFtPose *pose,
     t->rate_base = 0;
     t->rate_target = 0;
     return t;
+}
+
+/* A source AObj can exist with kind None (TraI's interpolation descriptor is
+ * the important case). The player skips it until a script command assigns a
+ * real Step/Linear/Cubic kind. Mirror that state directly so the hot player
+ * need not re-scan all ten possible track slots on every joint evaluation.
+ * Scratch overflow has no persistent slot and therefore cannot join the mask. */
+static inline void ndsFtPoseTrackEnableEval(NdsFtPoseJoint *joint, u32 i)
+{
+    if (joint->slot_of_track[i] != NDS_FT_POSE_NO_SLOT)
+    {
+        joint->eval_mask |= (u16)(1u << i);
+    }
 }
 
 /* The authored s16 argument as the track stores it: raw for the power-of-two
@@ -602,6 +631,7 @@ static void ndsFtPoseAdvanceTail(NdsFtPose *pose, NdsFtPoseJoint *joint)
 {
     s32 tail_q = pose->speed_q + ndsFtPoseWaitQ(joint);
     u32 held = (pose->tick - (u32)joint->last_eval) & 0xffffu;
+    u32 eval_mask = joint->eval_mask;
     u32 i;
 
     /* The End tick's player adds nothing, so the ticks a held joint missed
@@ -612,20 +642,16 @@ static void ndsFtPoseAdvanceTail(NdsFtPose *pose, NdsFtPoseJoint *joint)
         tail_q += pose->speed_q * (s32)(held - 1u);
     }
 
-    for (i = 0u; i < NDS_FT_POSE_TRACKS; i++)
+    for (i = 0u; eval_mask != 0u; i++, eval_mask >>= 1)
     {
-        u32 slot = joint->slot_of_track[i];
-        NdsFtPoseTrack *t;
+        u32 slot;
 
-        if (slot == NDS_FT_POSE_NO_SLOT)
+        if ((eval_mask & 1u) == 0u)
         {
             continue;
         }
-        t = &pose->pool[slot];
-        if (t->kind != NDS_FT_POSE_KIND_NONE)
-        {
-            t->length += tail_q;
-        }
+        slot = joint->slot_of_track[i];
+        pose->pool[slot].length += tail_q;
     }
 }
 
@@ -712,6 +738,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->rate_base = t->rate_target;
                 t->rate_target = 0;
                 t->kind = NDS_R2_AQ_KIND_CUBIC;
+                ndsFtPoseTrackEnableEval(joint, i);
                 if (payload_u != 0u)
                 {
                     t->length_invert = ndsR2FtAnimRecipQ30(payload_u);
@@ -745,6 +772,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->kind = NDS_R2_AQ_KIND_LINEAR;
+                ndsFtPoseTrackEnableEval(joint, i);
                 if (payload_u != 0u)
                 {
                     /* Two Q12 integers divided, magnitude rounded to nearest,
@@ -790,6 +818,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->rate_base = t->rate_target;
                 t->rate_target = NDS_FT_POSE_TARGET(1);
                 t->kind = NDS_R2_AQ_KIND_CUBIC;
+                ndsFtPoseTrackEnableEval(joint, i);
                 if (payload_u != 0u)
                 {
                     t->length_invert = ndsR2FtAnimRecipQ30(payload_u);
@@ -850,6 +879,7 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
                 t->value_base = t->value_target;
                 t->value_target = NDS_FT_POSE_TARGET(0);
                 t->kind = NDS_R2_AQ_KIND_STEP;
+                ndsFtPoseTrackEnableEval(joint, i);
                 /* Step's `length_invert` is a FRAME COUNT in length's scale. */
                 t->length_invert = (s32)payload_u << NDS_R2_AQ_LF;
                 t->length = len_new;
@@ -957,26 +987,24 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
     const u32 play = ((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0u) ?
         1u : 0u;
     const s32 add_q = (catch_up != 0u) ? pose->speed_q * (s32)catch_up : 0;
+    u32 eval_mask = joint->eval_mask;
     u32 i;
     u32 evals = 0u;
 
     joint->last_eval = (u16)pose->tick;
-    for (i = 0u; i < NDS_FT_POSE_TRACKS; i++)
+    for (i = 0u; eval_mask != 0u; i++, eval_mask >>= 1)
     {
-        u32 slot = joint->slot_of_track[i];
+        u32 slot;
         NdsFtPoseTrack *t;
         f32 value;
         s32 rb_q;
 
-        if (slot == NDS_FT_POSE_NO_SLOT)
+        if ((eval_mask & 1u) == 0u)
         {
             continue;
         }
+        slot = joint->slot_of_track[i];
         t = &pose->pool[slot];
-        if (t->kind == NDS_FT_POSE_KIND_NONE)
-        {
-            continue;
-        }
         t->length += add_q;
         if (play == 0u)
         {
@@ -1175,10 +1203,83 @@ static void ndsFtPoseOracleCompare(NdsFtPose *pose, u32 evaluate_body)
 
 /* ---- the per-fighter update --------------------------------------------- */
 
-static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
+static inline void ndsFtPoseClearRunEntry(NdsFtPose *pose, u32 e)
+{
+    if (e < 32u)
+    {
+        pose->run_mask_lo &= ~(1u << e);
+    }
+    else if (e < 64u)
+    {
+        pose->run_mask_hi &= ~(1u << (e - 32u));
+    }
+}
+
+/* The compact running-entry mask owns 64 walk entries. A future fighter with a
+ * wider source hierarchy must remain correct rather than silently dropping
+ * joints, so keep the old complete scan as a cold fail-open path. The standing
+ * four-kind stress asserts this fallback stays unused on the accepted roster. */
+static void __attribute__((noinline, cold))
+ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
                          u32 evaluate_body, u32 advance)
 {
     u32 e;
+
+    for (e = 0u; e < pose->entry_count; e++)
+    {
+        NdsFtPoseJoint *joint = &pose->joints[e];
+        DObj *dobj = joint->dobj;
+        const Vec3f *scale;
+
+        if (dobj == NULL)
+        {
+            continue;
+        }
+#if NDS_FT_POSE_ORACLE
+        dobj->anim_speed = joint->real->anim_speed;
+        if (NDS_FCMP_EQ_C(joint->real->anim_wait, AOBJ_ANIM_NULL))
+        {
+            dobj->anim_wait = AOBJ_ANIM_NULL;
+        }
+        pose->clock_gobj->flags = pose->gobj->flags;
+#endif
+        if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
+        {
+            ndsFtPoseClearRunEntry(pose, e);
+            continue;
+        }
+        gNdsFtPoseJointTicks++;
+        if (advance != 0u)
+        {
+            ndsFtPoseParse(pose, joint, dobj);
+        }
+        if ((joint->body == 0u) || (evaluate_body != 0u))
+        {
+            scale = (translate_scales != NULL) ?
+                &translate_scales[joint->joint_id] : NULL;
+            gNdsFtPoseJointEvals++;
+            ndsFtPosePlay(pose, joint, dobj, scale);
+            if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
+            {
+                ndsFtPoseClearRunEntry(pose, e);
+            }
+        }
+        else
+        {
+            gNdsFtPoseJointHolds++;
+        }
+    }
+    if (pose->gobj_frame_pending != 0u)
+    {
+        pose->clock_gobj->anim_frame = ndsR2AQStore((s32)pose->gobj_frame_bits);
+    }
+}
+
+static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
+                         u32 evaluate_body, u32 advance)
+{
+    u32 pending_lo;
+    u32 pending_hi;
 
     /* gcSetAnimSpeed writes every DObj of the GObj, so the root's speed is
      * every joint's speed: one conversion per update instead of one per
@@ -1187,11 +1288,39 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
         ((DObj *)pose->clock_gobj->obj)->anim_speed, NDS_R2_AQ_LF);
     pose->speed_bits = ndsR2FloatBits(((DObj *)pose->clock_gobj->obj)->anim_speed);
     pose->gobj_frame_pending = 0u;
-    for (e = 0u; e < pose->entry_count; e++)
+
+    if (pose->entry_count > 64u)
     {
-        NdsFtPoseJoint *joint = &pose->joints[e];
-        DObj *dobj = joint->dobj;
+        gNdsFtPoseRunMaskFallbacks++;
+        ndsFtPoseRunWideFallback(pose, translate_scales, evaluate_body, advance);
+        return;
+    }
+
+    pending_lo = pose->run_mask_lo;
+    pending_hi = pose->run_mask_hi;
+    for (;;)
+    {
+        u32 e;
+        NdsFtPoseJoint *joint;
+        DObj *dobj;
         const Vec3f *scale;
+
+        if (pending_lo != 0u)
+        {
+            e = (u32)__builtin_ctz(pending_lo);
+            pending_lo &= pending_lo - 1u;
+        }
+        else if (pending_hi != 0u)
+        {
+            e = 32u + (u32)__builtin_ctz(pending_hi);
+            pending_hi &= pending_hi - 1u;
+        }
+        else
+        {
+            break;
+        }
+        joint = &pose->joints[e];
+        dobj = joint->dobj;
 
         if (dobj == NULL)
         {
@@ -1211,6 +1340,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
          * parser and the player is guarded by `anim_wait != NULL`. */
         if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
         {
+            ndsFtPoseClearRunEntry(pose, e);
             continue;
         }
         gNdsFtPoseJointTicks++;
@@ -1224,6 +1354,10 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
                 &translate_scales[joint->joint_id] : NULL;
             gNdsFtPoseJointEvals++;
             ndsFtPosePlay(pose, joint, dobj, scale);
+            if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
+            {
+                ndsFtPoseClearRunEntry(pose, e);
+            }
         }
         else
         {
@@ -1294,6 +1428,7 @@ sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
     (void)gNdsFtPoseOracleFirstPoseGot;
     (void)gNdsFtPoseOracleFirstPoseFrame;
     (void)gNdsFtPoseTrackOverflow;
+    (void)gNdsFtPoseRunMaskFallbacks;
     {
         u32 live = ndsR2AObjLiveCount();
 

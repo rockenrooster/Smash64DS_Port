@@ -1,0 +1,64 @@
+Subject: [CODEX TASK BRIEF ONLY] 02_Main_Menu_1P_Route
+This patch installs the researched issue brief, not the engine change.
+Actual source candidates are separate in Briefs/runtime/.
+The same readable Markdown is already included in the ZIP.
+
+diff --git a/Briefs/02_Main_Menu_1P_Route.md b/Briefs/02_Main_Menu_1P_Route.md
+new file mode 100644
+--- /dev/null
++++ b/Briefs/02_Main_Menu_1P_Route.md
+@@ -0,0 +1,54 @@
++# 02 — Main menu: 1P mode selection
++
++**Version:** runtime-candidate research revision, 2026-09-14.
++**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
++**Priority / scope:** Menu/input flow; configuration-sensitive.
++**Existing owner:** P2-6 / P2-7, current campaign owner.
++**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
++
++Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
++assets and current board before changing code. Preserve unrelated edits.
++
++## Owner report (preserved)
++
++> 1P mode not selectable.
++
++## Current source findings
++
++The inspected board reports the 1P shipping gate remains zero while campaign implementation is active. It records a next-stage Intro allocation failure and native failures. This is not evidence that the owner still wants 1P paused.
++
++Source keys: [S02](research/SOURCE_LEDGER.md#s02), [S04](research/SOURCE_LEDGER.md#s04), [R72](research/SOURCE_LEDGER.md#r72).
++These distinguish directly inspected code from repository-recorded proof; none
++is a new ROM run by this package's author.
++
++## Potential runtime fix
++
++Keep the production gate intact until the campaign candidate is complete. On the dedicated 1P candidate, repair the natural ModeSelect -> 1P menu -> 1P CSS route and resolve the next-Intro working set: retire scene-owned CSS images/registrations before the new arena is populated, retain only explicitly persistent campaign state, and build a source-derived intro asset closure instead of an unbounded full-file duplication where feasible. Generate the campaign/native scene registration and menu capability from the same admitted build configuration. Promote the shipping gate only after complete next-stage, continue and return-path proof; do not substitute an error beep, dead row, forced arena increase or VS redirect.
++
++### Code delivery boundary
++
++No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
++
++## Disprove this candidate before stacking patches
++
++An intentionally zero shipping feature flag explains nonselectability but not invisible pixels in a separately enabled campaign build. First record both configurations and distinguish them.
++
++## Acceptance for this symptom
++
++Through real menu input, the enabled configuration reaches the correct 1P menu/CSS and Back returns correctly. A gated shipping configuration matches the current authorized contract, does not crash or falsely report that campaign works, and is not marked FIXED solely because gating was intentional. Capture both configurations and report the remaining release gate.
++
++## Required regression scope
++
++VS Mode, Data, Options, controller navigation, sounds, scene transitions and 30 Hz menu presentation.
++
++## Coordination
++
++Paired with 1P CSS; route acceptance does not close campaign completion.
++
++## Closure
++
++Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
++native-only, cadence and widest-relevant-verifier requirements. Record candidate
++identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
++and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
++owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

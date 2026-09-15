@@ -383,6 +383,39 @@ class CameraTexgenStateTest(unittest.TestCase):
         self.assertIn("use_texgen", window, "texgen gate context")
         self.assertIn("look_at->l[0]", window, "LookAt leg context")
 
+    def test_packet_replay_refreshes_live_texgen(self):
+        patch = function(RENDERER, "ndsFighterPacketPatchTexgen")
+        precheck = function(RENDERER, "ndsRendererFighterPacketPrecheck")
+        replay_start = RENDERER.index("ndsFighterPacketTryReplay(")
+        replay_end = RENDERER.index(
+            "void ndsRendererFighterPacketDmaWait", replay_start
+        )
+        replay = RENDERER[replay_start:replay_end]
+
+        for needle in (
+            "ndsRendererAdapterCurrentLookAt()",
+            "ndsRendererNativePrepareTexgenDirectionQ15",
+            "ndsRendererNativeTexgenCoord",
+            "texgen_sites",
+            "modelview_matrix",
+        ):
+            self.assertIn(needle, patch, f"packet live texgen seam: {needle}")
+        self.assertIn(
+            "ndsFighterPacketPatchTexgen(packet, inputs, input_count)",
+            precheck,
+            "precheck must prove texgen patchability before material prep is skipped",
+        )
+        self.assertIn(
+            "ndsFighterPacketPatchTexgen(packet, inputs, input_count)",
+            replay,
+            "replay must refresh texgen immediately before packet submission",
+        )
+        self.assertNotIn(
+            "owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK",
+            replay,
+            "Link must not be unconditionally declined after live texgen patching",
+        )
+
     def test_extracted_provider_keeps_both_legs(self):
         body = extract_real()
         self.assertIn("reset_look_at", body, "default leg")

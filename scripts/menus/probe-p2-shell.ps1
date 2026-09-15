@@ -24,11 +24,23 @@ param(
     # source unlock bit after startup initialization. All navigation remains
     # ordinary shell input; no scene kind is forced.
     [switch]$DataProof,
+    # Menu-rules proof: ordinary Title -> ModeSelect -> VS Mode navigation,
+    # then route 3 selects VS OPTIONS, dwells, and backs out with B. The first
+    # scene stop also clears the diagnostic save's unlock byte to fresh-cart 0.
+    [switch]$VsOptionsProof,
     # Optional settled top-screen capture while the target is stopped inside
     # ndsPlatformEndFrame. Values name shell screens, not scene kinds.
     [string]$CaptureScreen = '',
     [string]$CapturePath = ''
 )
+
+if ($DataProof -and $VsOptionsProof) {
+    throw '-DataProof and -VsOptionsProof are mutually exclusive.'
+}
+if ($VsOptionsProof -and -not $PSBoundParameters.ContainsKey('Hits')) {
+    # Startup, Title, ModeSelect, VSMode, VSOptions, then VSMode after B.
+    $Hits = 6
+}
 
 # THE VS SHELL'S SHIPPING-CONFIGURATION PROBE, and the phase's cadence
 # instrument. One scripted pass through all six screens and the REAL one-minute
@@ -311,15 +323,19 @@ $emulator = $null
 
 $captureScreenIndex = -1
 if (-not [string]::IsNullOrWhiteSpace($CaptureScreen)) {
-    if (-not $DataProof) {
-        throw '-CaptureScreen is only valid with -DataProof.'
+    if (-not ($DataProof -or $VsOptionsProof)) {
+        throw '-CaptureScreen requires -DataProof or -VsOptionsProof.'
     }
     $captureScreenIndex = switch ($CaptureScreen.ToLowerInvariant()) {
+        'vsoptions'  { if (-not $VsOptionsProof) { throw 'vsoptions capture requires -VsOptionsProof.' }; 5 }
         'data'       { 9 }
         'soundtest'  { 10 }
         'vsrecord'   { 11 }
         'characters' { 12 }
         default { throw "Unknown -CaptureScreen '$CaptureScreen'." }
+    }
+    if (($captureScreenIndex -ne 5) -and -not $DataProof) {
+        throw "Capture screen '$CaptureScreen' requires -DataProof."
     }
     if ([string]::IsNullOrWhiteSpace($CapturePath)) {
         throw '-CapturePath is required with -CaptureScreen.'
@@ -329,7 +345,7 @@ if (-not [string]::IsNullOrWhiteSpace($CaptureScreen)) {
         (Join-Path $root 'artifacts\visibility')).TrimEnd('\') + '\'
     if (-not $captureResolved.StartsWith(
             $visibilityRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-        throw "Data proof captures must stay under '$visibilityRoot'."
+        throw "Shell proof captures must stay under '$visibilityRoot'."
     }
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $captureResolved) |
         Out-Null
@@ -383,7 +399,33 @@ try {
                'set var *$udw = ((*$udw) & ~(255 << $uds)) | (((((unsigned int)gSCManagerBackupData.unlock_mask) | 32) & 255) << $uds)',
                'end' )
         }),
+        $(if ($VsOptionsProof) {
+            @( 'if $n == 1',
+               'set var gNdsMenuShellWalkRoute = 3',
+               'set $udw = (unsigned int *)(((unsigned int)&gSCManagerBackupData.unlock_mask) & ~3)',
+               'set $uds = (((unsigned int)&gSCManagerBackupData.unlock_mask) & 3) * 8',
+               'set var *$udw = (*$udw) & ~(255 << $uds)',
+               'end' )
+        }),
         'printf "MSSCENE %d curr=%u prev=%u enters=%u exits=%u rej=%u unreg=%u mism=%u\n", $n, gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, gNdsSceneManagerArenaMismatchCount',
+        'if gSCManagerSceneData.scene_curr == 22 && gSCManagerBattleState != 0',
+        'printf "MSRULES %d h=%u,%u,%u,%u l=%u,%u,%u,%u t=%u,%u,%u,%u\n", $n, gSCManagerBattleState->players[0].handicap, gSCManagerBattleState->players[1].handicap, gSCManagerBattleState->players[2].handicap, gSCManagerBattleState->players[3].handicap, gSCManagerBattleState->players[0].level, gSCManagerBattleState->players[1].level, gSCManagerBattleState->players[2].level, gSCManagerBattleState->players[3].level, gSCManagerBattleState->players[0].team, gSCManagerBattleState->players[1].team, gSCManagerBattleState->players[2].team, gSCManagerBattleState->players[3].team',
+        'end',
+        # The stop after PlayersVS retains the CSS static state but is past its
+        # init, so this marker proves per-slot arrow eligibility and touch hit
+        # targets without reading an uninitialized CSS entry state. Man=0,
+        # Com=1, HandicapOn=1 in the source enums.
+        'if gSCManagerSceneData.scene_prev == 16',
+        'set $t0 = sCssSelected[0] != 0 && (sCssPkind[0] == 1 || (sCssPkind[0] == 0 && gNdsMatchConfig.handicap_mode == 1))',
+        'set $t1 = sCssSelected[1] != 0 && (sCssPkind[1] == 1 || (sCssPkind[1] == 0 && gNdsMatchConfig.handicap_mode == 1))',
+        'set $t2 = sCssSelected[2] != 0 && (sCssPkind[2] == 1 || (sCssPkind[2] == 0 && gNdsMatchConfig.handicap_mode == 1))',
+        'set $t3 = sCssSelected[3] != 0 && (sCssPkind[3] == 1 || (sCssPkind[3] == 0 && gNdsMatchConfig.handicap_mode == 1))',
+        'set $v0 = sCssPkind[0] == 1 ? sCssLevel[0] : sCssHandicap[0]',
+        'set $v1 = sCssPkind[1] == 1 ? sCssLevel[1] : sCssHandicap[1]',
+        'set $v2 = sCssPkind[2] == 1 ? sCssLevel[2] : sCssHandicap[2]',
+        'set $v3 = sCssPkind[3] == 1 ? sCssLevel[3] : sCssHandicap[3]',
+        'printf "CSSARROW %d s0=%u/%u/%u/%u/%u/%u s1=%u/%u/%u/%u/%u/%u s2=%u/%u/%u/%u/%u/%u s3=%u/%u/%u/%u/%u/%u\n", $n, sCssPkind[0], sCssSelected[0], $v0, ($t0 && $v0 > 1), ($t0 && $v0 < 9), $t0, sCssPkind[1], sCssSelected[1], $v1, ($t1 && $v1 > 1), ($t1 && $v1 < 9), $t1, sCssPkind[2], sCssSelected[2], $v2, ($t2 && $v2 > 1), ($t2 && $v2 < 9), $t2, sCssPkind[3], sCssSelected[3], $v3, ($t3 && $v3 > 1), ($t3 && $v3 < 9), $t3',
+        'end',
         # P2-1h DELETED THE SPLASH and renumbered every screen index down one:
         # title is 0 now, sss is 4, and there are five. `startup` is the
         # frameless boot scene that replaced it -- exactly 1 per run, and the

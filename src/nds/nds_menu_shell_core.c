@@ -226,6 +226,7 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRecallCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssKindToggleCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCostumeCycleCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssLevelChangeCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssHandicapChangeCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssStartCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssStartDeniedCount;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssBackCount;
@@ -236,6 +237,8 @@ NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssCueLastId;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssAnnounceCount;
 /* P2-1N (4): mode-label toggle engagements — the walk and probes read it. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssModeToggleCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRandomCount;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssRandomFallbackCount;
 /* P2-1N (3): frames a slot's doors spent mid-slide -- engagement proof. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssDoorSlideFrames;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellSssCursorSlot;
@@ -481,7 +484,17 @@ static const NdsMenuWalkStep kNdsMenuWalkModeData[] = {
     { (u16)NDS_INPUT_DOWN, 1u },
     { (u16)NDS_INPUT_DOWN, 1u },
     { (u16)NDS_INPUT_A, 1u }
-}; /* P2-6/P2-7 route select, lab only (NDS_P2_MENU_WALK).
+};
+/* Menu-rules proof: VS START is row 0 and VS OPTIONS is source row 3
+ * (mnvsmode.c:1275/:1332-1340), so three DOWN taps and A exercise the same
+ * VS Mode input path a player uses. The existing VS Options walk owns the
+ * dwell and B return once this script enters it. */
+static const NdsMenuWalkStep kNdsMenuWalkVsOptionsProof[] = {
+    { (u16)NDS_INPUT_DOWN, 1u },
+    { (u16)NDS_INPUT_DOWN, 1u },
+    { (u16)NDS_INPUT_DOWN, 1u },
+    { (u16)NDS_INPUT_A, 1u }
+}; /* P2-6/P2-7/menu-rules route select, lab only (NDS_P2_MENU_WALK).
  *
  * 0 (default) is the VS tour this file has always driven. 1 steers
  * Title -> ModeSelect -> 1PMode and arms the source-menu driver below, which
@@ -489,6 +502,8 @@ static const NdsMenuWalkStep kNdsMenuWalkModeData[] = {
  * cannot inject into (mn1pmode, mnplayers1pgame) to the first battle. 2 steers
  * Title -> ModeSelect -> Data and visits Characters, VS Record and Sound Test
  * through their ordinary row/input handlers before returning to ModeSelect.
+ * 3 uses the normal Title and ModeSelect VS path, then enters VS OPTIONS from
+ * source row 3, dwells there via kNdsMenuWalkVsOptions and backs out with B.
  * GDB-writable before the first lap closes (same contract as
  * gNdsMenuShellWalkBudget); 0 in every translation unit where NDS_P2_MENU_WALK
  * is 0, so published and shipping configurations carry no walk code at all. */
@@ -830,6 +845,24 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
         script = kNdsMenuWalkModeData;
         length = (u32)(sizeof(kNdsMenuWalkModeData) /
                        sizeof(kNdsMenuWalkModeData[0]));
+    }
+    else if ((screen == NDS_MENU_SHELL_SCREEN_VSMODE) &&
+             (gNdsMenuShellWalkRoute == 3u))
+    {
+        if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSOptions)
+        {
+            /* The proof is complete after VS Options' own B path returns.
+             * Park here instead of replaying the row walk from a cursor that
+             * the source deliberately restores to OPTIONS. */
+            script = NULL;
+            length = 0u;
+        }
+        else
+        {
+            script = kNdsMenuWalkVsOptionsProof;
+            length = (u32)(sizeof(kNdsMenuWalkVsOptionsProof) /
+                           sizeof(kNdsMenuWalkVsOptionsProof[0]));
+        }
     }
     else if ((screen == NDS_MENU_SHELL_SCREEN_DATA) &&
              (gNdsMenuShellWalkRoute == 2u))

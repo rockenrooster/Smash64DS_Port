@@ -1,0 +1,92 @@
+Toolchain usable: recursive make OK, DEVKITPRO=C:/devkitPro DEVKITARM=C:/devkitPro/devkitARM
+Docs check passed: docs=18, registryEntries=6, AGENTS.md=112 lines.
+Untracked dependency check passed: untracked_source_files=1 committed_refs_clean=YES
+Native owner wiring check passed: owners=39 gaps=0
+00.fpc mario    bytes=11728 sections=2 fixups=149 spans=18 roots=30
+01.fpc fox      bytes=11568 sections=2 fixups=158 spans=19 roots=35
+02.fpc donkey   bytes=18732 sections=3 fixups=365 spans=19 roots=37
+03.fpc samus    bytes=24624 sections=2 fixups=326 spans=21 roots=25
+04.fpc luigi    bytes=13432 sections=2 fixups=172 spans=19 roots=30
+05.fpc link     bytes=34436 sections=2 fixups=244 spans=27 roots=44
+06.fpc yoshi    bytes=19032 sections=2 fixups=260 spans=17 roots=15
+07.fpc captain  bytes=20432 sections=2 fixups=385 spans=18 roots=38
+08.fpc kirby    bytes=19460 sections=2 fixups=229 spans=24 roots=47
+09.fpc pikachu  bytes=21300 sections=2 fixups=250 spans=19 roots=26
+10.fpc purin    bytes=13416 sections=2 fixups=150 spans=18 roots=14
+11.fpc ness     bytes=14548 sections=2 fixups=182 spans=23 roots=39
+size report (bytes per section + total):
+  00.fpc mario    sections=[1904,8288] total=11728
+  01.fpc fox      sections=[1984,7964] total=11568
+  02.fpc donkey   sections=[2032,12560,832] total=18732
+  03.fpc samus    sections=[2400,19236] total=24624
+  04.fpc luigi    sections=[2256,9444] total=13432
+  05.fpc link     sections=[2640,29392] total=34436
+  06.fpc yoshi    sections=[2000,14620] total=19032
+  07.fpc captain  sections=[2000,15008] total=20432
+  08.fpc kirby    sections=[2896,14316] total=19460
+  09.fpc pikachu  sections=[1904,17040] total=21300
+  10.fpc purin    sections=[1984,9888] total=13416
+  11.fpc ness     sections=[2320,10368] total=14548
+result: requested set complete
+Preview shared-pin disjointness: PASS (7 pins, 12 packs)
+native-owner image check: generated files are current
+GENERATOR-CHECK fighter-owner-images: exit=0 seconds=3.70
+verified src\nds\nds_entry_effects.generated.inc: groups=104 triangles=556 textures=59 shield_groups=1 shield_triangles=2 reflector_groups=1 reflector_triangles=6 catch_groups=4 catch_triangles=4 ko_groups=3 ko_triangles=12 reflectbreak_groups=3 reflectbreak_triangles=6 mballrays_groups=8 mballrays_triangles=12 kirby_cutter_groups=10 kirby_cutter_triangles=53 kirby_cutter_weapon_groups=2 kirby_cutter_weapon_triangles=3 samus_grapple_groups=1 samus_grapple_triangles=2
+GENERATOR-CHECK entry-effects: exit=0 seconds=0.86
+fighter production manifest check passed: D:\Stuff\DevFolder\Smash64DS_Port\scripts\fighters\fighter_production_manifest.json
+fighter production make-fragment check passed: D:\Stuff\DevFolder\Smash64DS_Port\scripts\fighters\fighter_production_files.mk
+fighter production runtime-header check passed: D:\Stuff\DevFolder\Smash64DS_Port\include\nds\generated\nds_fighter_production.generated.h
+fighter pickup FileID check passed: src/port/reloc_backend_ftdata_symbols.c (21 rows)
+GENERATOR-CHECK fighter-production-manifest: exit=0 seconds=2.78
+BATTLE_PLAYABLE_STATIC_TEXTURES_OK source_blocks=28 keys=45 outputs=43 residency_bytes=67456 payload_bytes=66690 oracle_pixels=112384
+BATTLE_PLAYABLE_STATIC_TEXTURE_OWNERS pupupu_layer0=12 pupupu_layer1=5 pupupu_layer3=6 fox_late_material=1 whispy_mouth=4 whispy_eyes=2 flowers_back=5 flowers_front=5 dead_explode=9 samus_charge_shot=1
+BATTLE_PLAYABLE_STATIC_TEXTURE_DIGEST payload_sha256=630f8e863d8facbf342da49a2d8184d834e33d005ce976ba527eba9c56e850c9 metadata_sha256=0a8b7d62d2b8dd45559b3b3fe8873eecc05f567f84607d597edbf5cf2e9f0b4e include_sha256=5f3faf1554c3bffbb71f237e7d2b0795e8cbd1efb4c3693594e72ecf0e041abd
+BATTLE_PLAYABLE_STATIC_TEXTURE_QUALIFICATION renderer_integrated=NO runtime_keys_complete=NO device_zero_conversion=UNPROVEN m4_complete=NO
+GENERATOR-CHECK battle-static-textures: exit=0 seconds=0.66
+BATTLE_PLAYABLE_TEXTURE_CENSUS_OK static_blocks=16 dynamic_blocks=25 water_blocks=4 runtime_keys=UNQUALIFIED device_zero_conversion=UNPROVEN sha256=eed79afbc4befa37d0c80ef196250199f246d38111cf3f1bd78f06cc71568537
+GENERATOR-CHECK battle-texture-census: exit=0 seconds=0.32
+renderer parity corpus: rgb=413/mismatch=102, t16=99/mismatch=0/naive=47, sha256=6e8bd93f734339ff
+GENERATOR-CHECK renderer-parity-corpus: exit=0 seconds=1.73
+TASK62-BLOB: OK (c120: 33 groups, 360 verts, sha256=78408b686262)
+GENERATOR-CHECK dreamland-ds-mesh: exit=0 seconds=0.19
+DreamLand: OK
+GENERATOR-CHECK stage-runtime-rows-dreamland: exit=0 seconds=0.29
+mn_ui_kit: generated outputs are current
+GENERATOR-CHECK mn-ui-kit: exit=0 seconds=106.67
+FOX_GUN_BAKE=PASS  every decoded row is present in nds_fox_gun.c
+GENERATOR-CHECK fox-gun-source-tables: exit=0 seconds=0.16
+Mario Light: llFTMarioAnimLightItemPickupFileID -> 0x24c (reloc_animations/FTMarioAnim089); Makefile + always-compiled baseline resolver
+Mario Heavy: llFTMarioAnimHeavyItemPickupFileID -> 0x255 (reloc_animations/FTMarioAnim098); Makefile + always-compiled baseline resolver
+Fox Light: llFTFoxAnimLightItemPickupFileID -> 0x2dd (reloc_animations/FTFoxAnim091); Makefile + always-compiled baseline resolver
+Fox Heavy: llFTFoxAnimHeavyItemPickupFileID -> 0x2e6 (reloc_animations/FTFoxAnim100); Makefile + always-compiled baseline resolver
+Donkey Light: llFTDonkeyAnimLightItemPickupFileID -> 0x37a (reloc_animations/FTDonkeyAnim090); fighter_production_files.mk + generated token/path row
+Donkey Heavy: llFTDonkeyAnimHeavyItemPickupFileID -> 0x383 (reloc_animations/FTDonkeyAnim099); fighter_production_files.mk + generated token/path row
+Captain Light: llFTCaptainAnimLightItemPickupFileID -> 0x641 (reloc_animations/FTCaptainAnim089); fighter_production_files.mk + generated token/path row
+Captain Heavy: llFTCaptainAnimHeavyItemPickupFileID -> 0x64a (reloc_animations/FTCaptainAnim098); fighter_production_files.mk + generated token/path row
+Samus Light: llFTSamusAnimLightItemPickupFileID -> 0x415 (reloc_animations/FTSamusAnim092); fighter_production_files.mk + generated token/path row
+Samus Heavy: llFTSamusAnimHeavyItemPickupFileID -> 0x41e (reloc_animations/FTSamusAnim101); fighter_production_files.mk + generated token/path row
+Link Light: llFTLinkAnimLightItemPickupFileID -> 0x4b5 (reloc_animations/FTLinkAnim090); fighter_production_files.mk + generated token/path row
+Link Heavy: llFTLinkAnimHeavyItemPickupFileID -> 0x4be (reloc_animations/FTLinkAnim099); fighter_production_files.mk + generated token/path row
+Pikachu Light: llFTPikachuAnimLightItemPickupFileID -> 0x7ce (reloc_animations/FTPikachuAnim041); fighter_production_files.mk + generated token/path row
+Pikachu Heavy: llFTPikachuAnimHeavyItemPickupFileID -> 0x7d7 (reloc_animations/FTPikachuAnim050); fighter_production_files.mk + generated token/path row
+Yoshi Light: llFTYoshiAnimLightItemPickupFileID -> 0x76f (reloc_animations/FTYoshiAnim088); fighter_production_files.mk + generated token/path row
+Yoshi Heavy: llFTYoshiAnimHeavyItemPickupFileID -> 0x778 (reloc_animations/FTYoshiAnim097); fighter_production_files.mk + generated token/path row
+Ness Light: llFTNessAnimLightItemPickupFileID -> 0x6d9 (reloc_animations/FTNessAnim089); fighter_production_files.mk + generated token/path row
+Ness Heavy: llFTNessAnimHeavyItemPickupFileID -> 0x6e2 (reloc_animations/FTNessAnim098); fighter_production_files.mk + generated token/path row
+Purin Heavy: llFTPurinAnimHeavyItemPickupFileID -> 0x5e4 (reloc_animations/FTPurinAnim004); fighter_production_files.mk + generated token/path row
+Kirby Light: llFTKirbyAnimLightItemPickupFileID -> 0x54b (reloc_animations/FTKirbyAnim096); fighter_production_files.mk + generated token/path row
+Kirby Heavy: llFTKirbyAnimHeavyItemPickupFileID -> 0x554 (reloc_animations/FTKirbyAnim105); fighter_production_files.mk + generated token/path row
+pickup FileID admission check passed: 21 rows
+GENERATOR-CHECK fighter-admission-pickup-fileids: exit=0 seconds=2.67
+GENERATOR-CHECK GAP admit_fighter --check unsupported targets (19): ness, purin, kirby, gdonkey, mmario, nmario, nfox, ndonkey, nsamus, nluigi, nlink, nyoshi, ncaptain, nkirby, npikachu, npurin, nness, boss, polygons
+GENERATOR-CHECK GAP no --check artifact arm (9): scripts/2d_vfx/generate_task39_effect_census.py, scripts/2d_vfx/generate_task39_hit_sparks.py, scripts/3d_vfx/generate_nds_rebirth_halo.py, scripts/fighters/generate_preview_core_packs.py, scripts/menus/generate_battle_hud.py, scripts/menus/generate_nds_banner_icon.py, scripts/stages/dreamland/generate_pupupu_water_aot.py, scripts/stages/generate_native_wallpapers.py, scripts/stages/register_native_stage_runtime.py
+GENERATOR-CHECK GAP --verify only (3): scripts/generate_ftanim_dense_bank.py, scripts/generate_ftanim_track_pack.py, scripts/generate_battlepack_anim.py
+Generator staleness sweep passed: mode=fast/All seconds=107.35
+WARNING: large file split plan present for: include/nds/nds_startup.h=8920, docs/PORTING.md=23178
+WARNING: generated outputs exist locally; clean before release snapshots if needed: build, smash64ds-battle-playable-hwtri.nds, smash64ds.nds
+ARCHITECTURE FAILURE: decomp/ has working-tree changes, but it is read-only: ?? decomp/alt_assets/
+Exception: D:\Stuff\DevFolder\Smash64DS_Port\scripts\check-architecture.ps1:259
+Line |
+ 259 |      throw "Architecture check failed with $($failures.Count) issue(s) .
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Architecture check failed with 1 issue(s).

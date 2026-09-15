@@ -77,14 +77,6 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "llMNPlayersCommonHandicapTextSprite",
-      "reason": "The HANDICAP twin of the CP LEVEL row. mnPlayersVSMakeHandicapLevel draws one or the other by pkind, and handicap is Off in every configuration this build reaches, so only the CPU arm can run.",
-      "ruling": "P2-1e (board row); handicap belongs to P2-5/P2-7 options work",
-      "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
       "key": "llMNPlayersPortraitsCrossSprite",
       "reason": "NOT DRAWN BY THE SOURCE EITHER. mnPlayersVSPortraitAddCross's only caller is gated on mnPlayersVSCheckFighterCrossed, which is `return FALSE;` -- an unconditional constant (mnplayersvs.c:236). The audit's reachability walk sees the call; the guard is what makes it dead.",
       "ruling": "Source-read fact, mnplayersvs.c:236",

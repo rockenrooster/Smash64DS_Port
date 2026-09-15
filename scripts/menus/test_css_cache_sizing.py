@@ -5,7 +5,7 @@ admitted roster's initial clips (32,624 B) and left Pikachu out (anim-fail
 bit 0x200); its 20,132 B image pair then loaded only on visit 1, and the
 full-allocation ledger showed that plus the 8,704 B optional world cache
 behind the 10,632 B visit-1 variance.  Main now derives the exact distinct
-initial-clip bytes from the already-loaded admitted FTData submotion 0 via
+initial-clip bytes from the admitted roster's source row-0 motion table via
 the same DS stream/raw provider the warm loader uses
 (`ndsR2AnimWarmLoadOne` calls `ndsR2AnimCachePayloadBytes`), aligns between
 clips, and rejects invalid/overflow fail-closed.
@@ -40,10 +40,9 @@ the 8,704 B world cache are separate allocations this sizer never covers.
 Observed fail-closed semantics, kept: ONE invalid/non-fighter/zero-size/
 overflowing clip vetoes the whole setup (returns 0u) rather than skipping
 that kind -- that is the production rejection rule, asserted here so any
-future skip-instead behaviour fails loudly.  Fixture divergence, stated:
-production FTData is 120 B with the submotion pointer at offset 104; the
-host fixture types only the two fields the extracted body touches
-(p_file_main, submotion->motion_desc[0].anim_file_id).
+future skip-instead behaviour fails loudly.  The host fixture types only the
+`anim_file_id` member the extracted setup sizer reads from the current
+`sNdsR2CssInitialMotionDescs` table.
 """
 import re
 import shutil
@@ -62,7 +61,7 @@ MALLOC = (ROOT / "src/import/battleship_sys_malloc.c").read_text(encoding="utf-8
 # test fails loudly if the reservation constants drift.
 ALIGN = 0x10
 FIXED = 32768
-KEEP_FREE = 32768
+KEEP_FREE = 128 * 1024
 
 
 def pin_int(name, expected, which=0):
@@ -72,7 +71,15 @@ def pin_int(name, expected, which=0):
     return expected
 
 
-pin_int("NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE", KEEP_FREE)
+if not re.search(
+        r"#define\s+NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES\s+\(128u\s*\*\s*1024u\)",
+        ASSETS):
+    raise AssertionError("NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES drifted from 128 KiB")
+if not re.search(
+        r"#define\s+NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE\s+"
+        r"NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES",
+        ASSETS):
+    raise AssertionError("NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE lost ledger-reserve alias")
 if not re.search(r"#define\s+NDS_RELOC_ALIGN_BYTES\s+0x10u", ASSETS):
     raise AssertionError("NDS_RELOC_ALIGN_BYTES drifted from 0x10u")
 if "static size_t ndsR2AnimCachePayloadBytes" not in ASSETS:
@@ -145,7 +152,7 @@ enum { FALSE = 0, TRUE = 1 };
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
 #define NDS_RELOC_ALIGN_BYTES 0x10u
-#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 32768u
+#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 131072u
 #define NDS_R2_FTANIM_STREAM 1
 #define NDS_IMPORT_BATTLESHIP_FTMANAGER 1
 
@@ -158,11 +165,8 @@ enum { nFTKindPlayableStart = 0, nFTKindMario = 0, nFTKindFox,
 
 typedef struct SYMallocRegion { u32 id; void *start; void *end; void *ptr; }
     SYMallocRegion;
-/* Fixture FTData: only the two fields the extracted body touches. */
 typedef struct { u32 anim_file_id; } FixtureMotionDesc;
-typedef struct { FixtureMotionDesc motion_desc[1]; } FixtureMotionArray;
-typedef struct FTData { void **p_file_main; FixtureMotionArray *submotion; }
-    FTData;
+typedef FixtureMotionDesc FTMotionDesc;
 
 static u32 gNdsTaskmanHeapGeneration;
 static SYMallocRegion gSYTaskmanGeneralHeap;
@@ -296,21 +300,16 @@ static void *syTaskmanMalloc(size_t size, u32 align)
 
 /* ---- fixture roster ---- */
 
-static FTData sFT[nFTKindEnumCount];
-static FixtureMotionArray sMot[nFTKindEnumCount];
-static void *sMainVal[nFTKindEnumCount];
-static u8 sDummy[nFTKindEnumCount][16];
-static FTData *dFTManagerDataFiles[nFTKindEnumCount];
+static FixtureMotionDesc sMot[nFTKindEnumCount];
+static const FTMotionDesc *sNdsR2CssInitialMotionDescs[nFTKindEnumCount];
 
 static void reset_state(void)
 {
     u32 i;
-    memset(sFT, 0, sizeof(sFT));
     memset(sMot, 0, sizeof(sMot));
-    memset(sMainVal, 0, sizeof(sMainVal));
     for (i = 0u; i < (u32)nFTKindEnumCount; i++)
     {
-        dFTManagerDataFiles[i] = NULL;
+        sNdsR2CssInitialMotionDescs[i] = NULL;
     }
     memset(&gSYTaskmanGeneralHeap, 0, sizeof(gSYTaskmanGeneralHeap));
     gSYTaskmanGeneralHeap.start = sHeapBuf + 64;
@@ -356,11 +355,8 @@ static void set_heap(u32 avail, uintptr_t ptr_offset)
 
 static void kind_load(s32 kind, u32 token)
 {
-    sMot[kind].motion_desc[0].anim_file_id = token;
-    sMainVal[kind] = sDummy[kind];
-    sFT[kind].p_file_main = &sMainVal[kind];
-    sFT[kind].submotion = &sMot[kind];
-    dFTManagerDataFiles[kind] = &sFT[kind];
+    sMot[kind].anim_file_id = token;
+    sNdsR2CssInitialMotionDescs[kind] = &sMot[kind];
 }
 
 static void stream_add(u32 id, u32 size, int ready)
@@ -480,13 +476,13 @@ static void scenario_duplicates_and_unloaded(void)
     kind_load(0, {A[0]}u);
     kind_load(1, {A[0]}u); /* duplicate anim id: sized once */
     kind_load(2, {A[1]}u);
-    /* kind 3: FTData NULL (never admitted). */
+    /* kind 3: no admitted row-0 motion. */
     kind_load(4, {A[2]}u);
-    sFT[4].p_file_main = NULL; /* main never loaded: ignored */
+    sNdsR2CssInitialMotionDescs[4] = NULL;
     kind_load(5, {A[3]}u);
-    sMainVal[5] = NULL; /* *p_file_main NULL: ignored */
+    sNdsR2CssInitialMotionDescs[5] = NULL;
     kind_load(6, {A[4]}u);
-    sFT[6].submotion = NULL; /* no submotion: ignored */
+    sNdsR2CssInitialMotionDescs[6] = NULL;
     /* kinds 7..8: absent. */
     raw_add({A[0]}u, 4000u);
     raw_add({A[1]}u, 4000u);

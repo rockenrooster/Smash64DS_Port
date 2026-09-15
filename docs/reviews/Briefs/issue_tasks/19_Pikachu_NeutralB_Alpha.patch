@@ -1,0 +1,66 @@
+Subject: [CODEX TASK BRIEF ONLY] 19_Pikachu_NeutralB_Alpha
+This patch installs the researched issue brief, not the engine change.
+Actual source candidates are separate in Briefs/runtime/.
+The same readable Markdown is already included in the ZIP.
+
+diff --git a/Briefs/19_Pikachu_NeutralB_Alpha.md b/Briefs/19_Pikachu_NeutralB_Alpha.md
+new file mode 100644
+--- /dev/null
++++ b/Briefs/19_Pikachu_NeutralB_Alpha.md
+@@ -0,0 +1,56 @@
++# 19 — Pikachu neutral-B: transparent soft-edged electric effect
++
++**Version:** runtime-candidate research revision, 2026-09-14.
++**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
++**Priority / scope:** Attack material / readability.
++**Existing owner:** P2-3f53 + particle/material owner.
++**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
++
++Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
++assets and current board before changing code. Preserve unrelated edits.
++
++## Owner report (preserved)
++
++> neutral b attack should have transparency/alpha and no hard edges.
++
++## Current source findings
++
++The native ground-jolt path has already expanded beyond the old single-root implementation. The effect converter already supports graded IA texture formats and a corrected IA8 byte path; old XOR/swizzle advice is not a fresh fix.
++
++Source keys: [R61](research/SOURCE_LEDGER.md#r61), [R64](research/SOURCE_LEDGER.md#r64), [R65](research/SOURCE_LEDGER.md#r65).
++These distinguish directly inspected code from repository-recorded proof; none
++is a new ROM run by this package's author.
++
++## Potential runtime fix
++
++Follow airborne projectile -> ground jolt -> each source texture/frame root. Preserve the effective texture coverage alpha in the selected native format, primitive modulation and texture edge wrap/clamp. Fix the exact conversion or runtime state that loses graded coverage; add per-frame texture/coverage fixtures, not a universal white-color key. If effective alpha uses source vertex alpha, route it through the material owner rather than ignoring it. Keep ground-jolt root selection and material-frame changes synchronized.
++
++### Code delivery boundary
++
++No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
++
++Implementation contract and code-oriented integration details: [research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md](research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md).
++
++## Disprove this candidate before stacking patches
++
++An opaque edge can originate in decoded alpha, wrong texel format, wrong sampler or a non-blending material. Distinguish those with decoded coverage and emitted state before choosing a patch.
++
++## Acceptance for this symptom
++
++Neutral-B has the correct transparent background and source-derived soft coverage without hard opaque card edges. Capture against light/dark scenery and during ground/slope/edge travel, hit and expiration; color, timing and collision remain intact.
++
++## Required regression scope
++
++Pikachu down-B, electrical damage overlays, related atlas cells/materials, projectile overlap and native-only resource budgets.
++
++## Coordination
++
++Can share an alpha producer fix with other effects only after proving the same loss mechanism.
++
++## Closure
++
++Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
++native-only, cadence and widest-relevant-verifier requirements. Record candidate
++identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
++and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
++owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

@@ -47,6 +47,7 @@ Load only relevant source, assets and owner documents, not project history.
   Trace unfamiliar code/assets before deletion. Remove temporary probes at handoff.
 - Corruption, flashes, hangs, nondeterminism and unexplained state differences fail.
   Compilation, stubs, one good frame or zero counters alone do not prove completion.
+- Commit regularly. Push on confirmed progress.
 
 ## Implementation
 Prefer competitive source reuse, native specialization, baking and precomputation.

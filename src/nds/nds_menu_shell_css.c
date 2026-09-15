@@ -264,6 +264,7 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 static u8 sCssPkind[NDS_CSS_SLOTS];
 static u8 sCssFkind[NDS_CSS_SLOTS];
 static u8 sCssLevel[NDS_CSS_SLOTS];
+static u8 sCssHandicap[NDS_CSS_SLOTS];
 static u8 sCssTeam[NDS_CSS_SLOTS];
 static u8 sCssSelected[NDS_CSS_SLOTS]; /* is_fighter_selected */
 static s16 sCssPuckX[NDS_CSS_SLOTS];
@@ -336,10 +337,8 @@ static void ndsMenuShellCssAnnounce(u32 slot)
 
 /* --- Source geometry ----------------------------------------------------- */
 
-/* Runtime harness id for the dev-open gate below. This TU is a fragment of
- * nds_menu_shell.c, which does not pull the generated harness-config header,
- * so the gate reads the id the harness published at boot instead. */
-#include <nds/nds_scene_harness.h>
+/* Runtime harness id for the dev-open gate below comes from the parent
+ * nds_menu_shell.c include set; this fragment must not inject headers mid-TU. */
 
 /* mnPlayersVSCheckFighterLocked, mnplayersvs.c:296-314, over the save mask
  * the source snapshots at init (mnplayersvs.c:4694). Only Luigi, Ness,
@@ -1029,12 +1028,19 @@ static void ndsMenuShellCssDrawArrows(void)
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
         s32 panel = (s32)(i * 69u);
-        u32 level = (u32)sCssLevel[i];
-        u32 live = ((sCssPkind[i] == (u8)nFTPlayerKindCom) &&
-                    (sCssSelected[i] != 0u) && (sCssArrowsShown != FALSE)) ?
+        u32 is_cpu = ((sCssPkind[i] == (u8)nFTPlayerKindCom) &&
+                      (sCssSelected[i] != 0u)) ? TRUE : FALSE;
+        u32 is_human_handicap =
+            ((sCssPkind[i] == (u8)nFTPlayerKindMan) &&
+             (sCssSelected[i] != 0u) &&
+             (gNdsMatchConfig.handicap_mode == (u8)nSCBattleHandicapOn)) ?
             TRUE : FALSE;
+        u32 value = (is_cpu != FALSE) ? (u32)sCssLevel[i] :
+            (u32)sCssHandicap[i];
+        u32 live = (((is_cpu != FALSE) || (is_human_handicap != FALSE)) &&
+                    (sCssArrowsShown != FALSE)) ? TRUE : FALSE;
 
-        if ((live != FALSE) && (level > NDS_CSS_LEVEL_MIN))
+        if ((live != FALSE) && (value > NDS_CSS_LEVEL_MIN))
         {
             ndsUiKitSetSprite(NDS_CSS_SPRITE_ARROWL0 + i,
                               NDS_MN_UI_KIT_IMAGE_CSS_ARROW_L,
@@ -1044,7 +1050,7 @@ static void ndsMenuShellCssDrawArrows(void)
         {
             ndsUiKitHideSprite(NDS_CSS_SPRITE_ARROWL0 + i);
         }
-        if ((live != FALSE) && (level < NDS_CSS_LEVEL_MAX))
+        if ((live != FALSE) && (value < NDS_CSS_LEVEL_MAX))
         {
             ndsUiKitSetSprite(NDS_CSS_SPRITE_ARROWR0 + i,
                               NDS_MN_UI_KIT_IMAGE_CSS_ARROW_R,
@@ -1131,16 +1137,31 @@ static void ndsMenuShellCssPopulate(void)
          * this row; that position was the EMBLEM's row, not the name's, so the
          * substitution was in the wrong place as well as the wrong medium. */
 
-        /* CP LEVEL and its value, mnplayersvs.c:2762/:2790. The source shows
-         * this row when the slot is a selected CPU, or when handicap is on for
-         * the cursor's own human slot -- handicap is Off in every configuration
-         * this build reaches (the descriptor's handicap_mode), so only the CPU
-         * arm can run and only it is drawn. */
-        if ((sCssPkind[i] == (u8)nFTPlayerKindCom) && (sCssSelected[i] != 0u))
+        /* CP LEVEL / HANDICAP and its value, mnplayersvs.c:2700-2799. Auto and
+         * On both show a human handicap row; only On gets editable arrows
+         * (:2792-2798, :2803-2821). CPU level remains editable in every mode. */
+        if (((sCssPkind[i] == (u8)nFTPlayerKindCom) &&
+             (sCssSelected[i] != 0u)) ||
+            ((sCssPkind[i] == (u8)nFTPlayerKindMan) &&
+             (sCssSelected[i] != 0u) &&
+             (gNdsMatchConfig.handicap_mode != (u8)nSCBattleHandicapOff)))
         {
-            ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
-                              NDS_MN_UI_KIT_IMAGE_CP_LEVEL,
-                              NDS_CSS_DS(panel + 34), NDS_CSS_DS(201));
+            u32 value;
+
+            if (sCssPkind[i] == (u8)nFTPlayerKindCom)
+            {
+                ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
+                                  NDS_MN_UI_KIT_IMAGE_CP_LEVEL,
+                                  NDS_CSS_DS(panel + 34), NDS_CSS_DS(201));
+                value = (u32)sCssLevel[i];
+            }
+            else
+            {
+                ndsUiKitSetSprite(NDS_CSS_SPRITE_LEVEL0 + i,
+                                  NDS_MN_UI_KIT_IMAGE_HANDICAP,
+                                  NDS_CSS_DS(panel + 35), NDS_CSS_DS(201));
+                value = (u32)sCssHandicap[i];
+            }
             /* P2-1j (e): the colon between label and value is its own sprite
              * in the source too (llMNCommonColonSprite at `p*69+61`, y 202,
              * white -- mnplayersvs.c:2740), and it was simply absent. */
@@ -1148,7 +1169,7 @@ static void ndsMenuShellCssPopulate(void)
                               NDS_MN_UI_KIT_IMAGE_COLON,
                               NDS_CSS_DS(panel + 61), NDS_CSS_DS(202));
             (void)ndsUiKitSetNumber(NDS_CSS_SPRITE_DIGIT0 + i, 1u,
-                                    (s32)sCssLevel[i],
+                                    (s32)value,
                                     NDS_CSS_DS(panel + 67) +
                                         NDS_UI_KIT_DIGIT_PITCH,
                                     NDS_CSS_DS(200));
@@ -1809,29 +1830,51 @@ static u32 ndsMenuShellCssCheckLevelArrows(void)
     {
         s32 panel = (s32)(slot * 69u);
 
-        if ((sCssPkind[slot] != (u8)nFTPlayerKindCom) ||
-            (sCssSelected[slot] == 0u))
+        u32 is_cpu = (sCssPkind[slot] == (u8)nFTPlayerKindCom) ? TRUE : FALSE;
+        u32 is_human_handicap =
+            ((sCssPkind[slot] == (u8)nFTPlayerKindMan) &&
+             (gNdsMatchConfig.handicap_mode == (u8)nSCBattleHandicapOn)) ?
+            TRUE : FALSE;
+        u8 *value = (is_cpu != FALSE) ? &sCssLevel[slot] :
+            &sCssHandicap[slot];
+
+        if ((sCssSelected[slot] == 0u) ||
+            ((is_cpu == FALSE) && (is_human_handicap == FALSE)))
         {
             continue;
         }
         if (ndsMenuShellCssBoxHit(panel + 68, panel + 90, 197, 216) != FALSE)
         {
-            if (sCssLevel[slot] < 9u)
+            if (*value < 9u)
             {
-                sCssLevel[slot]++;
+                (*value)++;
                 ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
-                gNdsMenuShellCssLevelChangeCount++;
+                if (is_cpu != FALSE)
+                {
+                    gNdsMenuShellCssLevelChangeCount++;
+                }
+                else
+                {
+                    gNdsMenuShellCssHandicapChangeCount++;
+                }
                 ndsMenuShellCssPopulate();
             }
             return TRUE;
         }
         if (ndsMenuShellCssBoxHit(panel + 21, panel + 43, 197, 216) != FALSE)
         {
-            if (sCssLevel[slot] > 1u)
+            if (*value > 1u)
             {
-                sCssLevel[slot]--;
+                (*value)--;
                 ndsMenuShellCssCue(NDS_CSS_FGM_SCROLL2);
-                gNdsMenuShellCssLevelChangeCount++;
+                if (is_cpu != FALSE)
+                {
+                    gNdsMenuShellCssLevelChangeCount++;
+                }
+                else
+                {
+                    gNdsMenuShellCssHandicapChangeCount++;
+                }
                 ndsMenuShellCssPopulate();
             }
             return TRUE;
@@ -1877,7 +1920,19 @@ static void ndsMenuShellCssCommit(void)
 
         slot->fkind = sCssFkind[i];
         slot->pkind = sCssPkind[i];
-        slot->level = sCssLevel[i];
+        if (sCssPkind[i] == (u8)nFTPlayerKindCom)
+        {
+            slot->level = sCssLevel[i];
+        }
+        else
+        {
+            slot->handicap = sCssHandicap[i];
+            /* ndsMatchConfigApply deliberately preserves the live On/Auto
+             * handicap block. Publish this explicit CSS edit there first, just
+             * as mnPlayersVSSetSceneData writes transfer.players[i].handicap. */
+            gSCManagerTransferBattleState.players[i].handicap =
+                sCssHandicap[i];
+        }
         /* mnPlayersVSSetSceneData writes the slot's selected team. The old
          * array-index assignment even produced team id 3 for slot 4, outside
          * the source's Red/Blue/Green enum. */
@@ -1902,6 +1957,73 @@ static void ndsMenuShellCssCommit(void)
     gNdsMatchConfig.is_team_battle = (sCssIsTeamBattle != FALSE) ? 1u : 0u;
     ndsMatchConfigApply(&gNdsMatchConfig);
     gNdsMenuShellCssCommitCount++;
+}
+
+/* Defined by the SSS fragment later in the concatenated nds_menu_shell.c TU.
+ * Keeping one lock/build predicate prevents CSS random selection from
+ * inventing a second idea of which grounds exist in this ROM/save. */
+static u32 ndsMenuShellSssGroundLocked(u32 gkind);
+
+/* mnPlayersVSFuncRun:4497-4508. Stage Select Off enters battle directly and
+ * rolls one source time-RNG ground per retry. The retail source can assume its
+ * whole ground set exists; the DS build cannot, so use the same built/unlocked
+ * predicate and bounded fallback as the SSS random cell. */
+static void ndsMenuShellCssRandomizeStage(void)
+{
+    u32 available = 0u;
+    u32 gkinds_num =
+        (gSCManagerBackupData.unlock_mask & LBBACKUP_UNLOCK_MASK_INISHIE) ?
+        ((u32)nGRKindUnlockEnd + 1u) : ((u32)nGRKindStarterEnd + 1u);
+    u32 gkind;
+    u32 pick = (u32)nGRKindInishie + 1u;
+    u32 tries;
+
+    for (gkind = 0u; gkind <= (u32)nGRKindInishie; gkind++)
+    {
+        if (ndsMenuShellSssGroundLocked(gkind) == FALSE)
+        {
+            available++;
+        }
+    }
+
+    for (tries = 0u; tries < 32u; tries++)
+    {
+        /* mnplayersvs.c:4500 derives the draw range from the Inishie unlock;
+         * :4504 consumes exactly one time-RNG draw per retry. */
+        u32 rolled = (u32)syUtilsRandTimeUCharRange(gkinds_num);
+
+        if ((ndsMenuShellSssGroundLocked(rolled) == FALSE) &&
+            ((available <= 1u) ||
+             (rolled != (u32)gSCManagerSceneData.gkind)))
+        {
+            pick = rolled;
+            break;
+        }
+    }
+    if (pick > (u32)nGRKindInishie)
+    {
+        for (gkind = 0u; gkind <= (u32)nGRKindInishie; gkind++)
+        {
+            if ((ndsMenuShellSssGroundLocked(gkind) == FALSE) &&
+                ((available <= 1u) ||
+                 (gkind != (u32)gSCManagerSceneData.gkind)))
+            {
+                pick = gkind;
+                break;
+            }
+        }
+        if (pick > (u32)nGRKindInishie)
+        {
+            /* Pupupu is always present in NDS_SSS_GROUND_MASK. */
+            pick = (u32)nGRKindPupupu;
+        }
+        gNdsMenuShellCssRandomFallbackCount++;
+    }
+
+    gNdsMatchConfig.gkind = (u8)pick;
+    dSCManagerDefaultSceneData.gkind = (u8)pick;
+    gSCManagerSceneData.gkind = (u8)pick;
+    gNdsMenuShellCssRandomCount++;
 }
 
 /* mnPlayersVSSetIdlePlayerNotAll, mnplayersvs.c:4294. */
@@ -2076,20 +2198,13 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         if (sCssStartWait == 0u)
         {
             ndsMenuShellCssCommit();
-            /* mnPlayersVSFuncRun:4493 -- P2-1f. The source picks the STAGE
-             * SELECT when `gSCManagerTransferBattleState.is_stage_select` is
-             * set and randomises the ground itself when it is not; the
-             * descriptor's `is_stage_select` IS that field (P2-1a applies it
-             * verbatim), so this is the source's own branch on the source's
-             * own bit. P2-1e went straight to the battle because
-             * `nSCKindMaps` had no screen; it has one now.
-             *
-             * THE ELSE ARM IS STILL NOT THE SOURCE'S. The source randomises
-             * over every unlocked ground there, and eight of the nine are
-             * P2-4; until then a no-stage-select match keeps whatever ground
-             * the descriptor already carries, which is the same narrowing
-             * P2-1e recorded and it is unreachable in every configuration
-             * this build ships (the preset sets the bit). */
+            /* mnPlayersVSFuncRun:4493-4508. The source opens Stage Select when
+             * enabled and otherwise rolls a different unlocked ground before
+             * entering battle. */
+            if (gNdsMatchConfig.is_stage_select == FALSE)
+            {
+                ndsMenuShellCssRandomizeStage();
+            }
             ndsMenuShellGoto(
                 (gNdsMatchConfig.is_stage_select != FALSE) ?
                     (u32)nSCKindMaps : (u32)nSCKindVSBattle);
@@ -2359,6 +2474,7 @@ static void ndsMenuShellCssInit(void)
         sCssFkind[i] = cfg->fkind;
         sCssLevel[i] = (cfg->level < 1u) ? 1u : ((cfg->level > 9u) ? 9u :
                                                  cfg->level);
+        sCssHandicap[i] = ndsMatchConfigClampPublishedHandicap(cfg->handicap);
         sCssTeam[i] = (cfg->team <= (u8)nSCBattleTeamIDGreen) ? cfg->team :
             (u8)((i < 2u) ? nSCBattleTeamIDRed : nSCBattleTeamIDBlue);
         /* mnPlayersVSUpdateGate, mnplayersvs.c:4193: a slot with no controller

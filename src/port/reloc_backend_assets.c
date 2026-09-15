@@ -13222,7 +13222,25 @@ static u32 ndsR2AnimCacheMatchFighterBytes(void)
 
 __attribute__((used)) volatile u32 gNdsR2AnimCacheMatchFighterBytes;
 __attribute__((used)) volatile u32 gNdsR2AnimCachePackDroppedForFightersCount;
+__attribute__((used)) volatile u32 gNdsR2AnimCacheArenaReserveFailSkips;
 static u32 sNdsR2AnimCacheSetupGeneration;
+static u32 sNdsR2AnimCacheReserveFailGeneration;
+static sb32 sNdsR2AnimCacheReserveFailLatched;
+
+/* Once a post-setup reservation cannot fit, this scene generation cannot make
+ * it fit later: gSYTaskmanGeneralHeap is a bump allocator and pending fighter
+ * bytes are explicitly reserved in the fit calculation.  Before this latch a
+ * four-kind match that had no cache room repeated the full roster/heap sizing
+ * path on every animation store (1,354 times in the 2026-09-15 P2-2p8 stress).
+ * Keep one observed failure for the verifier, then make later attempts in the
+ * same generation a constant-time decline. */
+static sb32 ndsR2AnimCacheArenaReserveDecline(void)
+{
+    gNdsR2AnimCacheArenaReserveFailCount++;
+    sNdsR2AnimCacheReserveFailGeneration = gNdsTaskmanHeapGeneration;
+    sNdsR2AnimCacheReserveFailLatched = TRUE;
+    return FALSE;
+}
 
 static sb32 ndsR2AnimCacheArenaEnsure(void)
 {
@@ -13245,6 +13263,12 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     }
     if (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration)
     {
+        return FALSE;
+    }
+    if ((sNdsR2AnimCacheReserveFailLatched != FALSE) &&
+        (sNdsR2AnimCacheReserveFailGeneration == gNdsTaskmanHeapGeneration))
+    {
+        gNdsR2AnimCacheArenaReserveFailSkips++;
         return FALSE;
     }
     if (sNdsR2AnimCacheArena != NULL)
@@ -13274,8 +13298,7 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     if ((fighter_bytes > available) ||
         (NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE >= available - fighter_bytes))
     {
-        gNdsR2AnimCacheArenaReserveFailCount++;
-        return FALSE;
+        return ndsR2AnimCacheArenaReserveDecline();
     }
     available -= fighter_bytes + NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE;
 #if NDS_R2_BATTLEPACK
@@ -13306,23 +13329,21 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     }
     if (arena_bytes == 0u)
     {
-        gNdsR2AnimCacheArenaReserveFailCount++;
-        return FALSE;
+        return ndsR2AnimCacheArenaReserveDecline();
     }
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
                             (size_t)arena_bytes + fighter_bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
                             NDS_RELOC_ALIGN_BYTES) == FALSE)
     {
-        gNdsR2AnimCacheArenaReserveFailCount++;
-        return FALSE;
+        return ndsR2AnimCacheArenaReserveDecline();
     }
     block = syTaskmanMalloc((size_t)arena_bytes, NDS_RELOC_ALIGN_BYTES);
     if (block == NULL)
     {
-        gNdsR2AnimCacheArenaReserveFailCount++;
-        return FALSE;
+        return ndsR2AnimCacheArenaReserveDecline();
     }
+    sNdsR2AnimCacheReserveFailLatched = FALSE;
     sNdsR2AnimCacheArena = block;
     sNdsR2AnimCacheArenaBytes = arena_bytes;
     /* RawOnly is what tells the pack loader there is no carved region to stream

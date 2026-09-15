@@ -115,6 +115,10 @@ typedef struct NdsMatchConfig {
 /* The descriptor the battle is currently running. Menus fill it (P2-1e); until
  * then the preset below does. */
 extern NdsMatchConfig gNdsMatchConfig;
+/* Counts invalid per-slot handicap bytes repaired before they can reach the
+ * source handicap table, whose valid published domain is 1..9. */
+extern volatile u32 gNdsMatchConfigHandicapClampCount;
+u8 ndsMatchConfigClampPublishedHandicap(u8 handicap);
 
 /* PRESET: the canonical VS demo match -- Mario versus a level-3 CPU Fox on
  * Dream Land, one-minute Time match, items off. This is what harness mode 163

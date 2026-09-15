@@ -1,0 +1,453 @@
+{
+  "target": "smash64ds-p2-fourcpu-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2-2p8-ftanim-dir-candidate\\smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+  "romSha256": "84E270A8CB952572ED8AF1E1C1321CD44018CEF0833555719A20F14866FE3A50",
+  "melonDS": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\emulators\\melonds\\melonDS.exe",
+  "melonDSSha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715",
+  "melonDSVersion": "1.0",
+  "gitShort": "8f9264ccba4",
+  "gitDirtyPaths": 46,
+  "dldiEnabled": true,
+  "ringDump": true,
+  "samples": 8,
+  "startFrame": 1406,
+  "endFrame": 1413,
+  "buckets": [
+    {
+      "bucket": "ALL",
+      "mean": 2447736,
+      "p50": 2238016,
+      "p95": 2797952,
+      "min": 2235968,
+      "max": 3358400
+    },
+    {
+      "bucket": "FTR",
+      "mean": 407840,
+      "p50": 370176,
+      "p95": 386048,
+      "min": 341120,
+      "max": 693824
+    },
+    {
+      "bucket": "STG",
+      "mean": 353024,
+      "p50": 353024,
+      "p95": 353856,
+      "min": 350144,
+      "max": 356096
+    },
+    {
+      "bucket": "BG",
+      "mean": 0,
+      "p50": 0,
+      "p95": 0,
+      "min": 0,
+      "max": 0
+    },
+    {
+      "bucket": "AUD",
+      "mean": 19304,
+      "p50": 3968,
+      "p95": 6784,
+      "min": 3776,
+      "max": 123776
+    },
+    {
+      "bucket": "HUD",
+      "mean": 120856,
+      "p50": 27456,
+      "p95": 432576,
+      "min": 5440,
+      "max": 434816
+    },
+    {
+      "bucket": "SRC",
+      "mean": 794632,
+      "p50": 721536,
+      "p95": 840576,
+      "min": 521600,
+      "max": 1365312
+    },
+    {
+      "bucket": "MISC",
+      "mean": 389600,
+      "p50": 425472,
+      "p95": 458560,
+      "min": 270144,
+      "max": 462016
+    },
+    {
+      "bucket": "OTHR",
+      "mean": 362480,
+      "p50": 328640,
+      "p95": 441600,
+      "min": 229312,
+      "max": 492096
+    },
+    {
+      "bucket": "WAIT",
+      "mean": 335440,
+      "p50": 301952,
+      "p95": 414976,
+      "min": 202048,
+      "max": 465472
+    },
+    {
+      "bucket": "WORK",
+      "mean": 2112296,
+      "p50": 1935872,
+      "p95": 2595904,
+      "min": 1820992,
+      "max": 2892928
+    },
+    {
+      "bucket": "SHDT",
+      "mean": 286792,
+      "p50": 300608,
+      "p95": 401920,
+      "min": 11328,
+      "max": 415488
+    },
+    {
+      "bucket": "SWRM",
+      "mean": 1208,
+      "p50": 1216,
+      "p95": 1216,
+      "min": 1152,
+      "max": 1280
+    },
+    {
+      "bucket": "GCRA",
+      "mean": 789000,
+      "p50": 715904,
+      "p95": 834752,
+      "min": 516224,
+      "max": 1359808
+    },
+    {
+      "bucket": "SCPU",
+      "mean": 53512,
+      "p50": 45824,
+      "p95": 70656,
+      "min": 43584,
+      "max": 86144
+    },
+    {
+      "bucket": "SCAT",
+      "mean": 1720,
+      "p50": 1728,
+      "p95": 1856,
+      "min": 1472,
+      "max": 1920
+    },
+    {
+      "bucket": "SPRM",
+      "mean": 45176,
+      "p50": 3328,
+      "p95": 6592,
+      "min": 3008,
+      "max": 335040
+    },
+    {
+      "bucket": "SINT",
+      "mean": 176944,
+      "p50": 136832,
+      "p95": 231488,
+      "min": 88384,
+      "max": 323584
+    },
+    {
+      "bucket": "SPHD",
+      "mean": 166512,
+      "p50": 167232,
+      "p95": 174272,
+      "min": 152704,
+      "max": 180096
+    },
+    {
+      "bucket": "SPHC",
+      "mean": 1112,
+      "p50": 1088,
+      "p95": 1216,
+      "min": 1024,
+      "max": 1216
+    },
+    {
+      "bucket": "WORK-H",
+      "mean": 1991440,
+      "p50": 1862464,
+      "p95": 2163328,
+      "min": 1521664,
+      "max": 2865344
+    }
+  ],
+  "bucketNames": [
+    "ALL",
+    "FTR",
+    "STG",
+    "BG",
+    "AUD",
+    "HUD",
+    "SRC",
+    "MISC",
+    "OTHR",
+    "WAIT",
+    "WORK",
+    "SHDT",
+    "SWRM",
+    "GCRA",
+    "SCPU",
+    "SCAT",
+    "SPRM",
+    "SINT",
+    "SPHD",
+    "SPHC"
+  ],
+  "rows": [
+    [
+      1406,
+      2238080,
+      341120,
+      353856,
+      0,
+      3776,
+      434816,
+      521600,
+      272256,
+      310656,
+      281600,
+      1956480,
+      11328,
+      1216,
+      516224,
+      70656,
+      1920,
+      3328,
+      231488,
+      167232,
+      1024
+    ],
+    [
+      1407,
+      2235968,
+      370176,
+      352576,
+      0,
+      3904,
+      5632,
+      791936,
+      270144,
+      441600,
+      414976,
+      1820992,
+      300608,
+      1216,
+      786496,
+      45824,
+      1728,
+      3648,
+      206336,
+      171392,
+      1088
+    ],
+    [
+      1408,
+      3358400,
+      693824,
+      350144,
+      0,
+      3968,
+      27584,
+      1365312,
+      425472,
+      492096,
+      465472,
+      2892928,
+      415488,
+      1152,
+      1359808,
+      46272,
+      1792,
+      335040,
+      323584,
+      180096,
+      1216
+    ],
+    [
+      1409,
+      2238016,
+      386048,
+      353024,
+      0,
+      4160,
+      27776,
+      721536,
+      428800,
+      316672,
+      289664,
+      1948352,
+      330368,
+      1216,
+      715904,
+      46080,
+      1600,
+      6592,
+      88384,
+      152704,
+      1152
+    ],
+    [
+      1410,
+      2237632,
+      372352,
+      356096,
+      0,
+      4096,
+      5568,
+      634816,
+      458560,
+      406144,
+      379712,
+      1857920,
+      221504,
+      1216,
+      629056,
+      86144,
+      1664,
+      3008,
+      130496,
+      156096,
+      1216
+    ],
+    [
+      1411,
+      2238016,
+      357696,
+      353472,
+      0,
+      6784,
+      27456,
+      659328,
+      458560,
+      374720,
+      348096,
+      1889920,
+      231936,
+      1216,
+      653504,
+      43584,
+      1472,
+      3008,
+      135232,
+      168896,
+      1088
+    ],
+    [
+      1412,
+      2237824,
+      364800,
+      353408,
+      0,
+      3968,
+      5440,
+      840576,
+      340992,
+      328640,
+      301952,
+      1935872,
+      381184,
+      1280,
+      834752,
+      44096,
+      1856,
+      3712,
+      163200,
+      174272,
+      1024
+    ],
+    [
+      1413,
+      2797952,
+      376704,
+      351616,
+      0,
+      123776,
+      432576,
+      821952,
+      462016,
+      229312,
+      202048,
+      2595904,
+      401920,
+      1152,
+      816256,
+      45440,
+      1728,
+      3072,
+      136832,
+      161408,
+      1088
+    ]
+  ],
+  "meanAll": 2447736,
+  "meanNamed": 2085256.0,
+  "vbi2": 114,
+  "vbi3": 597,
+  "vbi4": 521,
+  "vbi5plus": 181,
+  "vbiMax": 13,
+  "vbiTotal": 1413,
+  "cadenceViolations": 0,
+  "extras": [
+    {
+      "name": "gNdsRelocAssetFighterStreamDirBytes",
+      "value": 9320
+    },
+    {
+      "name": "gNdsRelocAssetFighterStreamDirHits",
+      "value": 4
+    },
+    {
+      "name": "gNdsRelocAssetFighterStreamDirFallbackReads",
+      "value": 471
+    },
+    {
+      "name": "gNdsRelocAssetFighterStreamDirLoadFailures",
+      "value": 0
+    },
+    {
+      "name": "gNdsRelocAssetFighterStreamReads",
+      "value": 471
+    },
+    {
+      "name": "gNdsRelocAssetFighterStreamMisses",
+      "value": 4
+    },
+    {
+      "name": "gNdsRelocAssetFighterStreamFailures",
+      "value": 0
+    },
+    {
+      "name": "gNdsAudioBgmDirectReadCount",
+      "value": 237
+    },
+    {
+      "name": "gNdsAudioBgmDirectFallbackCount",
+      "value": 0
+    }
+  ],
+  "setGlobals": [
+    {
+      "name": "gNdsRelocAssetFighterStreamDirRoute.route",
+      "requested": 0,
+      "readback": 0,
+      "stuck": true
+    }
+  ],
+  "ringStops": 1,
+  "ringStopSkews": null,
+  "ringStopReads": null,
+  "ringStartRead": null,
+  "capturedUtc": "2026-09-15T04:55:10.6223890Z"
+}

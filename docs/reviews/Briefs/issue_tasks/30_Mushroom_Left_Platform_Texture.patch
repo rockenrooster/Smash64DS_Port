@@ -1,0 +1,66 @@
+Subject: [CODEX TASK BRIEF ONLY] 30_Mushroom_Left_Platform_Texture
+This patch installs the researched issue brief, not the engine change.
+Actual source candidates are separate in Briefs/runtime/.
+The same readable Markdown is already included in the ZIP.
+
+diff --git a/Briefs/30_Mushroom_Left_Platform_Texture.md b/Briefs/30_Mushroom_Left_Platform_Texture.md
+new file mode 100644
+--- /dev/null
++++ b/Briefs/30_Mushroom_Left_Platform_Texture.md
+@@ -0,0 +1,56 @@
++# 30 — Mushroom Kingdom: texture the restored left platform
++
++**Version:** runtime-candidate research revision, 2026-09-14.
++**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
++**Priority / scope:** Stage texture fidelity.
++**Existing owner:** P2-4 Inishie visual acceptance.
++**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
++
++Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
++assets and current board before changing code. Preserve unrelated edits.
++
++## Owner report (preserved)
++
++> Mushroom kingdom: Left side platform is now visible but mostly untextured.
++
++## Current source findings
++
++The report is the left platform now visible but mostly untextured, not the older “both platforms missing” report. The recent Inishie stage-admission repair is already banked and is not a texture fix.
++
++Source keys: [S02](research/SOURCE_LEDGER.md#s02), [S12](research/SOURCE_LEDGER.md#s12), [R90](research/SOURCE_LEDGER.md#r90), [R91](research/SOURCE_LEDGER.md#r91).
++These distinguish directly inspected code from repository-recorded proof; none
++is a new ROM run by this package's author.
++
++## Potential runtime fix
++
++Classify the reported surface as static map geometry or a scale/platform actor, then compare its packet runs/material owners with the source. Fix missing external texture/TLUT closure, material-segment binding or inherited texture state and preserve tile phase across the left surface. For an actor, keep immutable geometry shared but bind the live actor transform and material generation; do not bake a moving platform into a static background. Rebuild affected packets/textures through their producer without undoing the repaired common stage setup.
++
++### Code delivery boundary
++
++No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
++
++Implementation contract and code-oriented integration details: [research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md](research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md).
++
++## Disprove this candidate before stacking patches
++
++A source-accurate untextured face should remain untextured. Do not paint every visible triangle or duplicate the full map import to fix one actor/material owner.
++
++## Acceptance for this symptom
++
++The left-side platform remains fully visible and gains the correct source-derived textures on all intended faces, without flat placeholder faces, UV seams or material bleeding. Collision and motion are unchanged. Positive native texture use and pixels accompany the proof.
++
++## Required regression scope
++
++Right-side/other platforms, Inishie scales/POW/Piranha Plants, restored stage-admission behavior, stage transition residency and gameplay cadence.
++
++## Coordination
++
++Coordinate potential shared UV/material fixes with Castle roof; do not conflate Inishie setup proof with texture proof.
++
++## Closure
++
++Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
++native-only, cadence and widest-relevant-verifier requirements. Record candidate
++identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
++and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
++owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

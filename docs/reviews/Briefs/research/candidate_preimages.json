@@ -1,0 +1,216 @@
+{
+  "base_commit": "a5c5bc08d8e8661658865216798d600462db948e",
+  "candidates": [
+    {
+      "id": "R01_impact_wave_source_depth",
+      "title": "Impact wave: emit cached source-projected Z",
+      "status": "DIRECT CANDIDATE / native runtime",
+      "issues": [
+        1
+      ],
+      "path": "runtime/R01_impact_wave_source_depth.patch",
+      "sources": [
+        "S05",
+        "S06",
+        "R76"
+      ],
+      "notes": "Repairs the observed painter-depth seam without changing XY, UV, topology, colour,\nsource command order, alpha policy, or existing near-plane rejection. Requires\nnatural-path occlusion and performance proof. Does NOT solve the separate full-\nalpha depth-write or clipping questions. Review R02 independently.",
+      "fragments": [
+        {
+          "path": "src/nds/nds_renderer_native_common.c",
+          "line_hint": 1113,
+          "before": "    s32 texture_offset;\n    v16 projected_x[18];\n    v16 projected_y[18];\n    u32 i;\n",
+          "after": "    s32 texture_offset;\n    v16 projected_x[18];\n    v16 projected_y[18];\n    v16 projected_z[18];\n    u32 i;\n"
+        },
+        {
+          "path": "src/nds/nds_renderer_native_common.c",
+          "line_hint": 1156,
+          "before": "        /* ImpactWave reuses the same 18 ring vertices across 48 triangle\n         * corners. The generic projected path perspective-divides X/Y for\n         * every corner, even when that vertex was already emitted by the\n         * previous TRI2. Do the invariant divide once per unique source vertex\n         * here; painter Z remains per-triangle below. This cuts the ring's\n         * X/Y perspective divides from 96 to 36 per draw without changing a\n         * coordinate or the source's submission order. */\n        projected_x[i] = ndsRendererHardwareProjectToV16(\n            (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);\n        projected_y[i] = ndsRendererHardwareProjectToV16(\n            (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);\n        state.vertex_valid_mask |= mask;\n",
+          "after": "        /* The source ring uses Z compare. Cache all three projected\n         * coordinates once per unique vertex; use the same depth mapping as\n         * ndsRendererHardwareClipVertex, not raw clip Z or painter depth.\n         * Eighteen XYZ projections still avoid repeating the divides for all\n         * 48 submitted corners. */\n        projected_x[i] = ndsRendererHardwareProjectToV16(\n            (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);\n        projected_y[i] = ndsRendererHardwareProjectToV16(\n            (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);\n        projected_z[i] = ndsRendererHardwareSourceDepthToV16(\n            (s64)out->z * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);\n        state.vertex_valid_mask |= mask;\n"
+        },
+        {
+          "path": "src/nds/nds_renderer_native_common.c",
+          "line_hint": 1340,
+          "before": "    /* Deliberately omit SOURCE_CLIP_DEPTH/ZBUFFERED: this is source non-Z\n     * geometry and must retain the port's per-triangle painter-depth emulation. */\n    ndsRendererFastPrepareRawSlots(\n        stats, &state, required_mask, use_texture);\n\n    if (poly_alpha != 0u)\n    {\n        ndsRendererLoadHardwareMatrices(NULL, FALSE);\n",
+          "after": "    /* Raw-slot preparation supplies colour and UV only. The closed emitter\n     * below supplies cached source depth explicitly; it must not consume the\n     * per-triangle painter counter. */\n    ndsRendererFastPrepareRawSlots(\n        stats, &state, required_mask, use_texture);\n\n    if (poly_alpha != 0u)\n    {\n        ndsRendererHardwareEnterProjectedForeground();\n        ndsRendererLoadHardwareMatrices(NULL, FALSE);\n"
+        },
+        {
+          "path": "src/nds/nds_renderer_native_common.c",
+          "line_hint": 1356,
+          "before": "            const u8 *tri = &triangle_indices[i * 3u];\n            s32 depth = ndsRendererHardwareNextProjectedDepth();\n            u32 corner;\n\n            for (corner = 0u; corner < 3u; corner++)\n            {\n                u32 index = (u32)tri[corner];\n                v16 out_z = ndsRendererHardwareClampS64ToV16(depth);\n\n                glColor(state.prepared_vertex_colors[index]);\n",
+          "after": "            const u8 *tri = &triangle_indices[i * 3u];\n            u32 corner;\n\n            for (corner = 0u; corner < 3u; corner++)\n            {\n                u32 index = (u32)tri[corner];\n                v16 out_z = projected_z[index];\n\n                glColor(state.prepared_vertex_colors[index]);\n"
+        }
+      ],
+      "sha256": "c518faa3c1241a9e8ebbb98d1aca246c42f63b87e32de4923e0a644e0c8a38cb"
+    },
+    {
+      "id": "R02_effect_initial_z",
+      "title": "Effect-model submissions: inherit source Z-buffer state",
+      "status": "CONDITIONAL CANDIDATE / sibling audit required",
+      "issues": [
+        1,
+        16,
+        18,
+        25
+      ],
+      "path": "runtime/R02_effect_initial_z.patch",
+      "sources": [
+        "R39",
+        "R75",
+        "R78"
+      ],
+      "notes": "Restore the source default only for effect-model submissions. Individual generated\ngeometry clear/set masks remain authoritative. Do not apply to link-14 weapons or\nstage sky/foreground layers. All affected effect callbacks must be audited; this\npatch is not a blanket claim that every reported effect should use real depth.",
+      "fragments": [
+        {
+          "path": "src/port/reloc_backend_movement.c",
+          "line_hint": 12669,
+          "before": "#if NDS_TICK_HUD\n    {\n        u32 phase_mark = cpuGetTiming();\n        ndsRendererAdapterSubmitEffectDObjTree(\n            root,\n            callback_kind,\n            sNdsStageGCDrawAllLoopCurrentCameraGObj,\n            ndsStageGCDrawAllLoopInitialGeometryMode());\n        gNdsEffectPhaseTreeTicks += cpuGetTiming() - phase_mark;\n    }\n#else\n    ndsRendererAdapterSubmitEffectDObjTree(\n        root,\n        callback_kind,\n        sNdsStageGCDrawAllLoopCurrentCameraGObj,\n        ndsStageGCDrawAllLoopInitialGeometryMode());\n#endif\n    ndsRendererAdapterEndStageTraversal();\n    triangle_delta =\n        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;\n",
+          "after": "#if NDS_TICK_HUD\n    {\n        u32 phase_mark = cpuGetTiming();\n        ndsRendererAdapterSubmitEffectDObjTree(\n            root,\n            callback_kind,\n            sNdsStageGCDrawAllLoopCurrentCameraGObj,\n            ndsStageGCDrawAllLoopInitialGeometryMode() |\n                NDS_RENDERER_GEOM_ZBUFFER);\n        gNdsEffectPhaseTreeTicks += cpuGetTiming() - phase_mark;\n    }\n#else\n    ndsRendererAdapterSubmitEffectDObjTree(\n        root,\n        callback_kind,\n        sNdsStageGCDrawAllLoopCurrentCameraGObj,\n        ndsStageGCDrawAllLoopInitialGeometryMode() |\n            NDS_RENDERER_GEOM_ZBUFFER);\n#endif\n    ndsRendererAdapterEndStageTraversal();\n    triangle_delta =\n        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;\n"
+        }
+      ],
+      "sha256": "bc3895cc9f6bae34b2553478d43a4b2f32f92cef4823c649f9b87bc78c55ba82"
+    },
+    {
+      "id": "R03_css_reset_image_lifetime",
+      "title": "CSS: retire native image bindings before every load reset",
+      "status": "DEFENSIVE CANDIDATE / not a complete CSS fix",
+      "issues": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "path": "runtime/R03_css_reset_image_lifetime.patch",
+      "sources": [
+        "R41",
+        "R42",
+        "R48"
+      ],
+      "notes": "Brings the acquire/reset and failed-begin paths into the same lifetime order as\nexisting retire/cancel paths. It does not eliminate blocking I/O, enable the\nroster, repair an invisible preview, or prove the reported symptoms disappear.\nKeep the existing one-action budget and shared 0x152 collision repair intact.",
+      "fragments": [
+        {
+          "path": "src/import/battleship_mnplayersvs.c",
+          "line_hint": 1098,
+          "before": "    data = dFTManagerDataFiles[fkind];\n    gNdsPlayersVSPreviewAcquireLoadCount++;\n    syMallocReset(&block->arena);\n    payload_before = gNdsRelocAssetPayloadReadCount;\n",
+          "after": "    data = dFTManagerDataFiles[fkind];\n    gNdsPlayersVSPreviewAcquireLoadCount++;\n    ndsRendererNativeReleaseOwnerImagesInRange(\n        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);\n    syMallocReset(&block->arena);\n    payload_before = gNdsRelocAssetPayloadReadCount;\n"
+        },
+        {
+          "path": "src/import/battleship_mnplayersvs.c",
+          "line_hint": 1159,
+          "before": "        data = dFTManagerDataFiles[fkind];\n        gNdsPlayersVSPreviewAcquireLoadCount++;\n        syMallocReset(&block->arena);\n        previous = ndsTaskmanSwapMallocRegion(&block->arena);\n",
+          "after": "        data = dFTManagerDataFiles[fkind];\n        gNdsPlayersVSPreviewAcquireLoadCount++;\n        ndsRendererNativeReleaseOwnerImagesInRange(\n            block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);\n        syMallocReset(&block->arena);\n        previous = ndsTaskmanSwapMallocRegion(&block->arena);\n"
+        },
+        {
+          "path": "src/import/battleship_mnplayersvs.c",
+          "line_hint": 1168,
+          "before": "        if (block->load_cursor == NULL)\n        {\n            ndsRelocReleaseHeapRange(block->base,\n                                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);\n            syMallocReset(&block->arena);\n",
+          "after": "        if (block->load_cursor == NULL)\n        {\n            ndsRendererNativeReleaseOwnerImagesInRange(\n                block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);\n            ndsRelocReleaseHeapRange(block->base,\n                                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);\n            syMallocReset(&block->arena);\n"
+        }
+      ],
+      "sha256": "81c9b57f942b9b27886776782a7270f4a2053b455a2bea209007f8af028586a6"
+    },
+    {
+      "id": "R04_link_foreign_tables_without_kirby",
+      "title": "Link SpecialN: preserve foreign-table routing when Kirby images are disabled",
+      "status": "DIRECT CONDITIONAL CANDIDATE / configuration-dependent",
+      "issues": [
+        17
+      ],
+      "path": "runtime/R04_link_foreign_tables_without_kirby.patch",
+      "sources": [
+        "R83",
+        "R84"
+      ],
+      "notes": "The Kirby-enabled branch already routes Link SpecialN source-owner 2 to the\nboomerang tables and light preambles. The alternative branch does not. Mirror\nthat existing routing, including detail selection and refusal of invalid owners.\nThis fixes an independently observable configuration defect; attribution to the\nowner's reported ROM still requires its build configuration and natural frames.\nNo root program, fighter visibility bit, or source move is changed.",
+      "fragments": [
+        {
+          "path": "src/nds/nds_renderer_assets.c",
+          "line_hint": 4274,
+          "before": "static const NDSNativeFighterRuntimeTables *\nndsRendererNativeFighterTablesForResolvedRoot(\n    const NDSNativeRoot *root,\n    const NDSNativeFighterOwnerRuntime *owner,\n    u32 battle_slot,\n    u32 binding)\n{\n    (void)root;\n    (void)battle_slot;\n    (void)binding;\n    return (owner != NULL) ? owner->tables : NULL;\n}\n",
+          "after": "static const NDSNativeFighterRuntimeTables *\nndsRendererNativeFighterTablesForResolvedRoot(\n    const NDSNativeRoot *root,\n    const NDSNativeFighterOwnerRuntime *owner,\n    u32 battle_slot,\n    u32 binding)\n{\n    (void)root;\n    (void)battle_slot;\n    (void)binding;\n    /* Link's mixed-file SpecialN program is independent of Kirby's image\n     * configuration. Keep its foreign roots paired with their own tables. */\n#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)\n    if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||\n        (owner == &sNdsNativeLinkSpecialNLowOwner))\n    {\n        u32 source_owner;\n\n        if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))\n        {\n            return NULL;\n        }\n        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];\n        if (source_owner == 2u)\n        {\n            return (owner == &sNdsNativeLinkSpecialNLowOwner) ?\n                &sNdsNativeLinkBoomerangFighterLowTables :\n                &sNdsNativeLinkBoomerangFighterHighTables;\n        }\n        if (source_owner != 0u)\n        {\n            return NULL;\n        }\n    }\n#endif\n    return (owner != NULL) ? owner->tables : NULL;\n}\n"
+        },
+        {
+          "path": "src/nds/nds_renderer_assets.c",
+          "line_hint": 4289,
+          "before": "static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(\n    const NDSNativeRoot *root,\n    const NDSNativeFighterOwnerRuntime *owner,\n    u32 battle_slot,\n    u32 binding,\n    u32 *count))[2]\n{\n    (void)root;\n    (void)battle_slot;\n    (void)binding;\n    if (owner == NULL)\n    {\n        *count = 0u;\n        return NULL;\n    }\n    *count = owner->root_light_preamble_count;\n    return owner->root_light_preambles;\n}\n",
+          "after": "static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(\n    const NDSNativeRoot *root,\n    const NDSNativeFighterOwnerRuntime *owner,\n    u32 battle_slot,\n    u32 binding,\n    u32 *count))[2]\n{\n    (void)root;\n    (void)battle_slot;\n    (void)binding;\n    /* Match the foreign runtime table selected above. The root's preamble\n     * indices belong to the boomerang image, not Link's body image. */\n#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)\n    if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||\n        (owner == &sNdsNativeLinkSpecialNLowOwner))\n    {\n        u32 source_owner;\n\n        if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))\n        {\n            *count = 0u;\n            return NULL;\n        }\n        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];\n        if (source_owner == 2u)\n        {\n            *count = NDS_FTR_COUNT(sNdsNativeLinkBoomerangRootLightPreambles);\n            return sNdsNativeLinkBoomerangRootLightPreambles;\n        }\n        if (source_owner != 0u)\n        {\n            *count = 0u;\n            return NULL;\n        }\n    }\n#endif\n    if (owner == NULL)\n    {\n        *count = 0u;\n        return NULL;\n    }\n    *count = owner->root_light_preamble_count;\n    return owner->root_light_preambles;\n}\n"
+        }
+      ],
+      "sha256": "97074f5d8390f49b19e77d6d12d03f40d2779d7abe25fa4f72835727ade06316"
+    },
+    {
+      "id": "R05_data_native_surfaces",
+      "title": "DATA: source-art surfaces for locked and unlocked layouts",
+      "status": "IMPLEMENTATION CANDIDATE / producer + runtime; asset regeneration required",
+      "issues": [
+        4
+      ],
+      "path": "runtime/R05_data_native_surfaces.patch",
+      "sources": [
+        "R97",
+        "R98",
+        "R99",
+        "R100",
+        "R103",
+        "R104",
+        "R92",
+        "R93"
+      ],
+      "notes": "Replaces the retired text-slab consumer with the same native surface API as\nOptions. Adds source DATA background and ten row-state surfaces at the END of\nthe generated surface list, preserving prior IDs. Keeps unlock policy and scene\nrouting unchanged. Assets/O2R are unavailable here: regenerate on the prepared\ncheckout and verify dependency/staging, bounds, memory, natural pixels and\ncadence. DATA children (VS Record/Sound Test) remain separate unclosed work.",
+      "fragments": [
+        {
+          "path": "scripts/menus/generate_mn_ui_kit.py",
+          "line_hint": 4205,
+          "before": "def main(argv: list[str] | None = None) -> int:\n",
+          "after": "# Native DATA: source mn/mndata/mndata.c; append after existing surfaces.\n# The source uses a 16*8 middle strip, not Options' 17*8 strip. Two-row and\n# three-row layouts have different positions; unlocking changes layout only.\nDATA_BACKGROUND = (\n    COLLAGE_FULL_BLEED,\n    Placement(\"MNCommon\", \"llMNCommonDecalPaperSprite\", 140, 143, False,\n              (0xA0, 0x78, 0x14)),\n    Placement(\"MNCommon\", \"llMNCommonDecalPaperSprite\", 225, 56, False,\n              (0xA0, 0x78, 0x14)),\n    Placement(\"MNData\", \"llMNDataDataIconDarkSprite\", 10, 10, False,\n              (0x99, 0x99, 0x99)),\n    Placement(\"MNData\", \"\", 225, 143, False,\n              fill=(0xA0, 0x78, 0x14, 0xE6), size=(85, 87)),\n    Placement(\"MNCommon\", \"llMNCommonSmashLogoSprite\", 235, 158, False,\n              (0x00, 0x00, 0x00)),\n    Placement(\"MNData\", \"llMNDataDataTextSprite\", 206, 131, False,\n              (0x00, 0x00, 0x00)),\n)\n\n\ndef data_row_surface(layout: str, row: str, x: int, y: int,\n                     text_dx: int, hi: bool) -> SurfaceSpec:\n    \"\"\"Source tab and label, including background under the dirty rectangle.\"\"\"\n    env, prim = OPTION_TAB_HI if hi else OPTION_TAB_NOT\n    symbol = {\n        \"CHARACTERS\": \"llMNDataCharactersTextSprite\",\n        \"VS_RECORD\": \"llMNDataVSRecordTextSprite\",\n        \"SOUND_TEST\": \"llMNDataSoundTestTextSprite\",\n    }[row]\n    parts = (\n        Placement(\"MNCommon\", \"llMNCommonOptionTabLeftSprite\", x, y,\n                  False, prim, env=env),\n        Placement(\"MNCommon\", \"llMNCommonOptionTabMiddleSprite\", x + 16, y,\n                  False, prim, env=env, tile=(16 * 8, 29), period=(16, None)),\n        Placement(\"MNCommon\", \"llMNCommonOptionTabRightSprite\", x + 144, y,\n                  False, prim, env=env),\n        Placement(\"MNData\", symbol, x + text_dx, y + 4, False,\n                  (0x00, 0x00, 0x00)),\n    )\n    token = f\"DATA_{layout}_{row}\" + (\"_HI\" if hi else \"\")\n    # Options reserves 172 columns for a 17*8 middle. DATA's 16*8 middle\n    # requires eight fewer. Includes the same right cap without truncation.\n    return SurfaceSpec(token, parts, MENU_FIELD, under=DATA_BACKGROUND,\n                       box=(x, y, 164, 29))\n\n\nDATA_SURFACE_SPECS = (\n    SurfaceSpec(\"DATA\", DATA_BACKGROUND, MENU_FIELD),\n    *(data_row_surface(layout, row, x, y, dx, hi)\n      for layout, rows in (\n          (\"LOCKED\", ((\"CHARACTERS\", 113, 57, 26),\n                      (\"VS_RECORD\", 81, 126, 27))),\n          (\"UNLOCKED\", ((\"CHARACTERS\", 133, 42, 26),\n                        (\"VS_RECORD\", 101, 89, 27),\n                        (\"SOUND_TEST\", 69, 136, 26))),\n      )\n      for row, x, y, dx in rows\n      for hi in (False, True)),\n)\n\n\ndef main(argv: list[str] | None = None) -> int:\n"
+        },
+        {
+          "path": "scripts/menus/generate_mn_ui_kit.py",
+          "line_hint": 4300,
+          "before": "    # Native Character Data art is appended last so existing ids stay stable.\n    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)\n                    for spec in CHARACTERS_SURFACE_SPECS)\n    check_title_anim_block(surfaces)\n",
+          "after": "    # Native Character Data art is appended last so existing ids stay stable.\n    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)\n                    for spec in CHARACTERS_SURFACE_SPECS)\n    # Append DATA without renumbering any existing surface.\n    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)\n                    for spec in DATA_SURFACE_SPECS)\n    check_title_anim_block(surfaces)\n"
+        },
+        {
+          "path": "scripts/menus/audit_mn_screen_coverage.py",
+          "line_hint": 520,
+          "before": "    for table in (\"ITEM_SWITCH_SURFACE_SPECS\", \"VS_OPTIONS_SURFACE_SPECS\",\n                  \"OPTION_SURFACE_SPECS\", \"BACKUP_CLEAR_SURFACE_SPECS\",\n                  \"CHARACTERS_SURFACE_SPECS\"):\n        for spec in getattr(module, table, ()):\n            target = out.setdefault(f\"SURFACE_{spec.token}\", set())\n",
+          "after": "    for table in (\"ITEM_SWITCH_SURFACE_SPECS\", \"VS_OPTIONS_SURFACE_SPECS\",\n                  \"OPTION_SURFACE_SPECS\", \"BACKUP_CLEAR_SURFACE_SPECS\",\n                  \"CHARACTERS_SURFACE_SPECS\", \"DATA_SURFACE_SPECS\"):\n        for spec in getattr(module, table, ()):\n            target = out.setdefault(f\"SURFACE_{spec.token}\", set())\n"
+        },
+        {
+          "path": "src/nds/nds_menu_shell_data.c",
+          "line_hint": 33,
+          "before": " * PRESENTATION. The source marks the cursor row with the tab HIGHLIGHT\n * pair (ENV 82/00/28 PRIM FF/00/28) and the rest NOT (ENV 00/00/00 PRIM\n * 82/82/AA) (mnDataSetOptionSpriteColors :131-177). The converted UI kit\n * carries no DATA art yet, so the rows are the kit's own font text in\n * those two primitive colours on the shell's shared blue field, in the\n * VS-menu cascade the other row screens use.\n *\n * TODO(DATA-KIT): bake the DATA sprites and replace the font rows --\n * llMNDataDataTextSprite (header), llMNDataCharactersTextSprite,\n * llMNDataVSRecordTextSprite, llMNDataSoundTestTextSprite (rows),\n * llMNDataDataIconDarkSprite (entry icon),\n * llMNCommonSmashBrosCollageSprite + llMNCommonDecalPaperSprite\n * (backdrop), llMNCommonSmashLogoSprite (emblem) and the\n * llMNCommonOptionTabLeft/Middle/RightSprite tabs -- following the\n * Option screen's row-surface shape (nds_menu_shell_option.c).\n */\n\n#ifndef NDS_MENU_SHELL_SCREEN_DATA\n",
+          "after": " * PRESENTATION. Build-time DATA surfaces retain the source sprites, tab\n * colors, and separate two-row/three-row layouts. The native surface blitter\n * updates the changed row only, using the Options screen's existing owner.\n * No MAIN text slab or compatibility compositor is enabled by this screen.\n */\n\n#ifndef NDS_MENU_SHELL_SCREEN_DATA\n"
+        },
+        {
+          "path": "src/nds/nds_menu_shell_data.c",
+          "line_hint": 64,
+          "before": "/* The source's own tab primitive colours (mnDataSetOptionSpriteColors):\n * HI PRIM FF/00/28, NOT PRIM 82/82/AA. */\n#define NDS_MENU_DATA_RGB_HI 0x00ff0028u\n#define NDS_MENU_DATA_RGB_NOT 0x008282aau\n\n/* The VS-menu cascade this shell's row screens share (core NDS_MENU_VS_*):\n * descending to the left in the source's entry order. */\n#define NDS_MENU_DATA_X0 96\n#define NDS_MENU_DATA_Y0 40\n#define NDS_MENU_DATA_DX (-18)\n#define NDS_MENU_DATA_DY 31\n\nstatic u32 sMenuDataCursor;\nstatic u32 sMenuDataHaveSoundTest;\n\nstatic const char *kMenuDataRowText[NDS_MENU_DATA_ROWS] = {\n    \"CHARACTERS\",\n    \"VS RECORD\",\n    \"SOUND TEST\"\n};\n\n/* The last row the cursor may rest on: the SoundTest row when unlocked,\n * the VSRecord row otherwise (mnDataInitVars :602-613). */\n",
+          "after": "#define NDS_MENU_DATA_SURFACE_NONE 0xffffu\n\nstatic u32 sMenuDataCursor;\nstatic u32 sMenuDataHaveSoundTest;\nstatic u32 sMenuDataPlateReady;\nstatic NdsUiKitSurfaceId sMenuDataRowSurface[NDS_MENU_DATA_ROWS];\n\nstatic const NdsUiKitSurfaceId kNdsMenuDataPlate[] = {\n    NDS_MN_UI_KIT_SURFACE_DATA\n};\nstatic const NdsUiKitSurfaceId kNdsMenuDataLockedRows[2][2] = {\n    {NDS_MN_UI_KIT_SURFACE_DATA_LOCKED_CHARACTERS,\n     NDS_MN_UI_KIT_SURFACE_DATA_LOCKED_CHARACTERS_HI},\n    {NDS_MN_UI_KIT_SURFACE_DATA_LOCKED_VS_RECORD,\n     NDS_MN_UI_KIT_SURFACE_DATA_LOCKED_VS_RECORD_HI}\n};\nstatic const NdsUiKitSurfaceId kNdsMenuDataUnlockedRows[3][2] = {\n    {NDS_MN_UI_KIT_SURFACE_DATA_UNLOCKED_CHARACTERS,\n     NDS_MN_UI_KIT_SURFACE_DATA_UNLOCKED_CHARACTERS_HI},\n    {NDS_MN_UI_KIT_SURFACE_DATA_UNLOCKED_VS_RECORD,\n     NDS_MN_UI_KIT_SURFACE_DATA_UNLOCKED_VS_RECORD_HI},\n    {NDS_MN_UI_KIT_SURFACE_DATA_UNLOCKED_SOUND_TEST,\n     NDS_MN_UI_KIT_SURFACE_DATA_UNLOCKED_SOUND_TEST_HI}\n};\n\n/* The last row the cursor may rest on: the SoundTest row when unlocked,\n * the VSRecord row otherwise (mnDataInitVars :602-613). */\n"
+        },
+        {
+          "path": "src/nds/nds_menu_shell_data.c",
+          "line_hint": 95,
+          "before": "/* One full redraw. Text slots are content-keyed (nds_ui_kit.c), so a call\n * that changed nothing recomposes nothing; refresh runs on populate and\n * on cursor moves only. */\nstatic void ndsMenuShellDataRefresh(void)\n{\n    u32 row;\n\n    ndsUiKitSetText(NDS_MENU_SLOT_HEADER, \"DATA\", NDS_MENU_RGB_HEADER);\n    ndsUiKitMoveText(NDS_MENU_SLOT_HEADER, NDS_MENU_HEADER_X,\n                     NDS_MENU_HEADER_Y);\n    for (row = 0u; row < NDS_MENU_DATA_ROWS; row++)\n    {\n        u32 slot = NDS_MENU_SLOT_ROW0 + row;\n\n        if ((row == NDS_MENU_DATA_SOUND_TEST) &&\n            (sMenuDataHaveSoundTest == FALSE))\n        {\n            ndsUiKitHideText(slot);\n        }\n        else\n        {\n            u32 rgb = (row == sMenuDataCursor) ?\n                NDS_MENU_DATA_RGB_HI : NDS_MENU_DATA_RGB_NOT;\n\n            ndsUiKitSetText(slot, kMenuDataRowText[row], rgb);\n            ndsUiKitMoveText(slot,\n                             NDS_MENU_DATA_X0 + ((s32)row * NDS_MENU_DATA_DX),\n                             NDS_MENU_DATA_Y0 + ((s32)row * NDS_MENU_DATA_DY));\n        }\n    }\n}\n",
+          "after": "/* Same native surface path as Options; no retired MAIN text slots.\n * Cache only successful blits so a failed load cannot claim visible content.\n * Unchanged frames issue no blits. Full-plate work happens at scene entry. */\nstatic void ndsMenuShellDataRefresh(void)\n{\n    u32 row;\n    u32 last = ndsMenuShellDataLast();\n\n    if (sMenuDataPlateReady == FALSE)\n    {\n        if (ndsUiKitBlitSurfaces(kNdsMenuDataPlate, 1u) == FALSE)\n        {\n            return;\n        }\n        sMenuDataPlateReady = TRUE;\n    }\n    for (row = 0u; row <= last; row++)\n    {\n        u32 hi = (row == sMenuDataCursor) ? 1u : 0u;\n        NdsUiKitSurfaceId want = (sMenuDataHaveSoundTest != FALSE) ?\n            kNdsMenuDataUnlockedRows[row][hi] : kNdsMenuDataLockedRows[row][hi];\n\n        if (sMenuDataRowSurface[row] != want)\n        {\n            if (ndsUiKitBlitSurfaces(&want, 1u) == FALSE)\n            {\n                return;\n            }\n            sMenuDataRowSurface[row] = want;\n        }\n    }\n}\n"
+        },
+        {
+          "path": "src/nds/nds_menu_shell_data.c",
+          "line_hint": 137,
+          "before": "static void ndsMenuShellDataLoad(void)\n{\n    if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSRecord)\n",
+          "after": "static void ndsMenuShellDataLoad(void)\n{\n    u32 row;\n\n    sMenuDataPlateReady = FALSE;\n    for (row = 0u; row < NDS_MENU_DATA_ROWS; row++)\n    {\n        sMenuDataRowSurface[row] = NDS_MENU_DATA_SURFACE_NONE;\n    }\n    if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSRecord)\n"
+        },
+        {
+          "path": "src/nds/nds_menu_shell_data.c",
+          "line_hint": 174,
+          "before": "static void ndsMenuShellUpdateData(u32 held, u32 taps)\n{\n    u32 last = ndsMenuShellDataLast();\n\n    if (ndsMenuShellDirection(held, taps, NDS_INPUT_UP) != FALSE)\n",
+          "after": "static void ndsMenuShellUpdateData(u32 held, u32 taps)\n{\n    u32 last = ndsMenuShellDataLast();\n\n    /* Retry an incomplete initial/dirty surface without republishing state. */\n    ndsMenuShellDataRefresh();\n    if (ndsMenuShellDirection(held, taps, NDS_INPUT_UP) != FALSE)\n"
+        }
+      ],
+      "sha256": "aa249f45776f33ad47ec836af47a8005eea2dd890e7f0df3e057eea96cddd386"
+    }
+  ]
+}

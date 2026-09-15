@@ -58,8 +58,33 @@ import os
 import re
 import struct
 import sys
+import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+
+
+_STAGE_FLAG_NAMES = (
+    "NDS_P2_STAGE_YOSTER",
+    "NDS_P2_STAGE_CASTLE",
+    "NDS_P2_STAGE_JUNGLE",
+    "NDS_P2_STAGE_ZEBES",
+    "NDS_P2_STAGE_HYRULE",
+    "NDS_P2_STAGE_YAMABUKI",
+    "NDS_P2_STAGE_INISHIE",
+    "NDS_P2_STAGE_SECTOR",
+)
+
+
+def _prime_check_stage_flags(repo_root: Path) -> None:
+    """Make a bare --check reproduce the shared kit's stamped build variant."""
+    stamp = repo_root / "src" / "nds" / "generated" / "mn_ui_kit.flags.stamp"
+    if not stamp.exists():
+        return
+    values = stamp.read_text(encoding="ascii").strip()
+    if len(values) != len(_STAGE_FLAG_NAMES) or any(ch not in "01" for ch in values):
+        return
+    for name, value in zip(_STAGE_FLAG_NAMES, values):
+        os.environ.setdefault(name, value)
 
 # ---------------------------------------------------------------------------
 # Container
@@ -1684,9 +1709,8 @@ IMAGE_SOURCES = [
     ("MNPlayersCommon", "llMNPlayersCommonHmnLabelSprite", "LABEL_HMN"),
     ("MNPlayersCommon", "llMNPlayersCommonCPLabelSprite", "LABEL_CP"),
     ("MNPlayersCommon", "llMNPlayersCommonNALabelSprite", "LABEL_NA"),
-    # THE CPU-LEVEL LABEL, mnplayersvs.c:2762.  The handicap twin is not baked:
-    # handicap is off in every configuration this build reaches and the row it
-    # would draw belongs to P2-5/P2-7's options work.
+    # THE CPU-LEVEL LABEL, mnplayersvs.c:2723-2730. The handicap twin is
+    # appended after every existing image below so no pre-existing id moves.
     ("MNPlayersCommon", "llMNPlayersCommonCPLevelTextSprite", "CP_LEVEL"),
     # ---- P2-1f, the stage select. ----------------------------------------
     # NO MAP ICON IS AN OBJ ANY MORE.  P2-1L (6) composited the grid into the
@@ -2839,17 +2863,21 @@ SSS_ICON_SYMBOL = (
 # unchanged (Dream Land only) so flag-off ROMs keep their verified kit.
 # P2-4: one contributing tuple per landed stage rather than a conditional
 # that doubles per flag. Dream Land is 6, Yoshi's Island 5, Peach's Castle 0.
-SSS_BUILT_GKIND = (
-    (6,)
-    + ((5,) if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ())
-    + ((0,) if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ())
-    + ((2,) if os.environ.get("NDS_P2_STAGE_JUNGLE") == "1" else ())
-    + ((3,) if os.environ.get("NDS_P2_STAGE_ZEBES") == "1" else ())
-    + ((4,) if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ())
-    + ((7,) if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ())
-    + ((8,) if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ())
-    + ((1,) if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
-)
+def _sss_built_gkind() -> tuple[int, ...]:
+    return (
+        (6,)
+        + ((5,) if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ())
+        + ((0,) if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ())
+        + ((2,) if os.environ.get("NDS_P2_STAGE_JUNGLE") == "1" else ())
+        + ((3,) if os.environ.get("NDS_P2_STAGE_ZEBES") == "1" else ())
+        + ((4,) if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ())
+        + ((7,) if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ())
+        + ((8,) if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ())
+        + ((1,) if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
+    )
+
+
+SSS_BUILT_GKIND = _sss_built_gkind()
 # THE LOCKED CELL IS THE ONE THING HERE THE SOURCE DOES NOT DRAW.
 # `mnMapsMakeIcons` simply SKIPS a locked ground (:534), which on a build with
 # one ground would leave nine empty cells and an invisible grid, so P2-1f put
@@ -2888,7 +2916,8 @@ def sss_icon_parts() -> tuple[Placement, ...]:
     return tuple(parts)
 
 
-SSS_BACKGROUND = (
+def _sss_background() -> tuple[Placement, ...]:
+    return (
     # mnMapsMakeWallpaper, :364, full-bleed per the P2-1k ruling.
     STONE_FULL_BLEED,
     # mnMapsPreviewWallpaperProcDisplay's own fill, :899 -- the dark plate the
@@ -2931,7 +2960,10 @@ SSS_BACKGROUND = (
     Placement("MNMaps", "llMNMapsPlateMiddleSprite", 186, 191, False,
               tile=(76, 20), period=(4, None)),
     Placement("MNMaps", "llMNMapsPlateRightSprite", 262, 191, False),
-)
+    )
+
+
+SSS_BACKGROUND = _sss_background()
 
 # The name+emblem pair is camera 20 -- the frontmost thing on the screen -- and
 # `mnMapsMakeNameAndEmblem` (:818) ejects and re-makes it on every cursor move,
@@ -3016,7 +3048,8 @@ SSS_PREVIEW_WALLPAPER_SCALE = (37, 125)
 # P2-4 Yoster row: StageYoshi container carries llStageYoshiSprite at 0x26c88
 # (same sprite offset as StageDreamLand), baked only when the shell mask admits
 # slot 5 (NDS_P2_STAGE_YOSTER=1 bake, same gate as SSS_BUILT_GKIND above).
-SSS_PREVIEW_WALLPAPER = (
+def _sss_preview_wallpaper() -> tuple[tuple[str, int, str, str], ...]:
+    return (
     # token suffix, gkind, o2r container, wallpaper symbol
     ("DREAM_LAND", 6, "StageDreamLand", "llStageDreamLandSprite"),
 ) + ((("YOSHIS_ISLAND", 5, "StageYoshi", "llStageYoshiSprite"),)
@@ -3064,22 +3097,42 @@ SSS_PREVIEW_WALLPAPER = (
      if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
 
 
+SSS_PREVIEW_WALLPAPER = _sss_preview_wallpaper()
+
+
 def sss_preview(token: str, part: Placement) -> SurfaceSpec:
     return SurfaceSpec(token, (part,), None,
                        under=SSS_BACKGROUND, box=SSS_PREVIEW_BOX)
 
 
-SURFACE_SOURCES.append(SurfaceSpec("SSS_SCREEN", SSS_BACKGROUND, MENU_FIELD))
-for _slot in range(10):
-    SURFACE_SOURCES.append(sss_plaque(_slot))
-for _name, _gkind, _o2r, _symbol in SSS_PREVIEW_WALLPAPER:
-    SURFACE_SOURCES.append(sss_preview(
-        f"SSS_PREVIEW_{_name}",
-        Placement(_o2r, _symbol, 40, 127, False,
-                  scale=SSS_PREVIEW_WALLPAPER_SCALE)))
-SURFACE_SOURCES.append(sss_preview(
-    "SSS_PREVIEW_RANDOM",
-    Placement("MNMaps", "llMNMapsRandomBigSprite", 40, 127, False)))
+def _sss_surface_sources() -> list[SurfaceSpec]:
+    sources = [SurfaceSpec("SSS_SCREEN", SSS_BACKGROUND, MENU_FIELD)]
+    sources.extend(sss_plaque(slot) for slot in range(10))
+    for name, _gkind, o2r, symbol in SSS_PREVIEW_WALLPAPER:
+        sources.append(sss_preview(
+            f"SSS_PREVIEW_{name}",
+            Placement(o2r, symbol, 40, 127, False,
+                      scale=SSS_PREVIEW_WALLPAPER_SCALE)))
+    sources.append(sss_preview(
+        "SSS_PREVIEW_RANDOM",
+        Placement("MNMaps", "llMNMapsRandomBigSprite", 40, 127, False)))
+    return sources
+
+
+_SSS_SURFACE_START = len(SURFACE_SOURCES)
+SURFACE_SOURCES.extend(_sss_surface_sources())
+_SSS_SURFACE_END = len(SURFACE_SOURCES)
+
+
+def _refresh_stage_dependent_sources() -> None:
+    """Rebuild stage-gated globals after main() primes the check environment."""
+    global SSS_BUILT_GKIND, SSS_BACKGROUND, SSS_PREVIEW_WALLPAPER, _SSS_SURFACE_END
+    SSS_BUILT_GKIND = _sss_built_gkind()
+    SSS_BACKGROUND = _sss_background()
+    SSS_PREVIEW_WALLPAPER = _sss_preview_wallpaper()
+    refreshed = _sss_surface_sources()
+    SURFACE_SOURCES[_SSS_SURFACE_START:_SSS_SURFACE_END] = refreshed
+    _SSS_SURFACE_END = _SSS_SURFACE_START + len(refreshed)
 
 
 # ---------------------------------------------------------------------------
@@ -3198,10 +3251,10 @@ ITEM_SWITCH_SURFACE_SPECS = (
 # state surfaces composited `under=` it so a re-blit overwrites the previous
 # state exactly, and one declared `box=` per element so every state of that
 # element shares its rectangle. Positions, tints and the reasoning are the
-# source's own, converted at the kit's 4/5 frame scale, with the item-switch
-# present layout (the configuration this build reaches): handicap y 61,
-# team attack y 90, stage select y 119, damage y 148 (digits y 151),
-# item switch bubble y 177 (mnvsoptions.c:646/:603/:563/:469/:531).
+# source's own, converted at the kit's 4/5 frame scale. The source has two US
+# layouts: with Item Switch, handicap/team/stage/damage are y 61/90/119/148
+# (digits y 151) and Item Switch is y 177; while locked they move to
+# 65/97/129/161 (digits y 164) (mnvsoptions.c:646/:603/:563/:469/:450/:531).
 #
 #   the plate (`VS_OPTIONS`): the collage, the console-icon decal at (10,10)
 #     tinted (0x4A,0x2A,0x23) (:1037-1042), the grey fill rect (79,34)-(310,39)
@@ -3265,10 +3318,17 @@ IMAGE_SOURCES.extend(
     + [("MNCommon", "llMNCommonPercentageSprite", "VS_OPTIONS_PERCENT",
         None, (0x00, 0x00, 0x00))],
 )
+# mnplayersvs.c:2715-2730: exact source HANDICAP label for the CSS human row.
+# Append after every established image family so existing numeric ids stay fixed.
+IMAGE_SOURCES.append(
+    ("MNPlayersCommon", "llMNPlayersCommonHandicapTextSprite", "HANDICAP")
+)
 
 
-def vs_options_handicap(status: str, hi: bool = False) -> SurfaceSpec:
+def vs_options_handicap(status: str, hi: bool = False,
+                        locked: bool = False) -> SurfaceSpec:
     """One handicap row in one value state (ON, AUTO or OFF)."""
+    row_y = 65 if locked else 61
     on_tint = VS_OPTIONS_TINT_ON if status == "ON" else VS_OPTIONS_TINT_DIM
     auto_tint = VS_OPTIONS_TINT_ON if status == "AUTO" else VS_OPTIONS_TINT_DIM
     off_tint = VS_OPTIONS_TINT_ON if status == "OFF" else VS_OPTIONS_TINT_DIM
@@ -3276,31 +3336,32 @@ def vs_options_handicap(status: str, hi: bool = False) -> SurfaceSpec:
     bubble_env = VS_OPTIONS_BUBBLE_HI_ENV if hi else VS_OPTIONS_BUBBLE_ENV
     parts: list[Placement] = [
         Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
-                  114, 61, False, bubble_prim, env=bubble_env),
+                  114, row_y, False, bubble_prim, env=bubble_env),
         Placement("MNVSOptions", "llMNVSOptionsHandicapTextSprite",
-                  121, 63, False, (0x00, 0x00, 0x00)),
+                  121, row_y + 2, False, (0x00, 0x00, 0x00)),
         Placement("MNCommon", "llMNCommonOnTextSprite",
-                  191, 62, False, on_tint),
+                  191, row_y + 1, False, on_tint),
         Placement("MNCommon", "llMNCommonSlashSprite",
-                  216, 62, False, VS_OPTIONS_TINT_DIM),
+                  216, row_y + 1, False, VS_OPTIONS_TINT_DIM),
         Placement("MNCommon", "llMNCommonAutoTextSprite",
-                  221, 63, False, auto_tint),
+                  221, row_y + 2, False, auto_tint),
         Placement("MNCommon", "llMNCommonSlashSprite",
-                  251, 62, False, VS_OPTIONS_TINT_DIM),
+                  251, row_y + 1, False, VS_OPTIONS_TINT_DIM),
         Placement("MNCommon", "llMNCommonOffTextSprite",
-                  257, 62, False, off_tint),
+                  257, row_y + 1, False, off_tint),
     ]
     # mnVSOptionsUnderlineProcDisplay :887-952: red 1 px line under the
     # active handicap value (Off 255/77, On 190/77, Auto 219/77, US branch).
     if hi:
         underline_x, underline_w = {
             "ON": (190, 27), "AUTO": (219, 33), "OFF": (255, 29)}[status]
-        parts.append(Placement("MNVSOptions", "", underline_x, 77, False,
+        parts.append(Placement("MNVSOptions", "", underline_x, row_y + 16, False,
                                fill=VS_OPTIONS_UNDERLINE,
                                size=(underline_w, 1)))
-    token = f"VS_OPTIONS_HANDICAP_{status}" + ("_HI" if hi else "")
+    token = f"VS_OPTIONS_HANDICAP_{status}" + ("_LOCKED" if locked else "") + \
+        ("_HI" if hi else "")
     return SurfaceSpec(token, tuple(parts), MENU_FIELD,
-                       under=VS_OPTIONS_BACKGROUND, box=(114, 61, 176, 19))
+                       under=VS_OPTIONS_BACKGROUND, box=(114, row_y, 176, 19))
 
 
 def vs_options_onoff(token: str, bubble_x: int, bubble_y: int,
@@ -3403,6 +3464,46 @@ VS_OPTIONS_SURFACE_SPECS = (
                      "llMNVSOptionsDamageTextSprite", 116, 149, hi=True),
     vs_options_label("VS_OPTIONS_ITEM_SWITCH_HI", 82, 177,
                      "llMNVSOptionsItemSwitchTextSprite", 128, 179, hi=True),
+)
+
+# Fresh-save / pre-100-battle layout. Keep this separate from the present-row
+# family so runtime chooses a complete source layout from the unlock bit rather
+# than drawing the present geometry with the fifth row merely hidden.
+VS_OPTIONS_LOCKED_SURFACE_SPECS = (
+    vs_options_handicap("ON", locked=True),
+    vs_options_handicap("AUTO", locked=True),
+    vs_options_handicap("OFF", locked=True),
+    vs_options_onoff("VS_OPTIONS_TEAM_ON_LOCKED", 106, 97,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 99,
+                     212, 98, True),
+    vs_options_onoff("VS_OPTIONS_TEAM_OFF_LOCKED", 106, 97,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 99,
+                     212, 98, False),
+    vs_options_onoff("VS_OPTIONS_STAGE_ON_LOCKED", 98, 129,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 130,
+                     208, 130, True),
+    vs_options_onoff("VS_OPTIONS_STAGE_OFF_LOCKED", 98, 129,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 130,
+                     208, 130, False),
+    vs_options_label("VS_OPTIONS_DAMAGE_LABEL_LOCKED", 90, 161,
+                     "llMNVSOptionsDamageTextSprite", 116, 162),
+    vs_options_handicap("ON", hi=True, locked=True),
+    vs_options_handicap("AUTO", hi=True, locked=True),
+    vs_options_handicap("OFF", hi=True, locked=True),
+    vs_options_onoff("VS_OPTIONS_TEAM_ON_LOCKED_HI", 106, 97,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 99,
+                     212, 98, True, hi=True, underline=(213, 27)),
+    vs_options_onoff("VS_OPTIONS_TEAM_OFF_LOCKED_HI", 106, 97,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 99,
+                     212, 98, False, hi=True, underline=(245, 28)),
+    vs_options_onoff("VS_OPTIONS_STAGE_ON_LOCKED_HI", 98, 129,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 130,
+                     208, 130, True, hi=True, underline=(208, 27)),
+    vs_options_onoff("VS_OPTIONS_STAGE_OFF_LOCKED_HI", 98, 129,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 130,
+                     208, 130, False, hi=True, underline=(241, 29)),
+    vs_options_label("VS_OPTIONS_DAMAGE_LABEL_LOCKED_HI", 90, 161,
+                     "llMNVSOptionsDamageTextSprite", 116, 162, hi=True),
 )
 
 
@@ -4199,9 +4300,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--list-images", action="store_true",
                         help="print every candidate sprite in an o2r file")
     parser.add_argument("--o2r-file", default="MNPlayersCommon")
+    parser.add_argument("--check", action="store_true",
+                        help="verify generated outputs are current without rewriting them")
     args = parser.parse_args(argv)
 
     repo_root = args.repo_root.resolve()
+    if args.check:
+        _prime_check_stage_flags(repo_root)
+    _refresh_stage_dependent_sources()
     offsets = load_reloc_offsets(repo_root)
 
     if args.list_images:
@@ -4275,6 +4381,10 @@ def main(argv: list[str] | None = None) -> int:
     # Native Character Data art is appended last so existing ids stay stable.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in CHARACTERS_SURFACE_SPECS)
+    # Locked VS Options rows are newer than every family above; append them
+    # here so no pre-existing surface id is renumbered.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in VS_OPTIONS_LOCKED_SURFACE_SPECS)
     check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)
@@ -4298,6 +4408,32 @@ def main(argv: list[str] | None = None) -> int:
                   f"offset {offset} bytes {size} fnv32 0x{hash32:08x}")
         print(f"pack {len(pack)} bytes fnv32 0x{fnv1a32(pack):08x}")
         print(f"surfaces {len(surface_pack)} bytes")
+        return 0
+
+    if args.check:
+        manifest = repo_root / "src" / "nds" / "generated" / "mn_ui_kit.generated.inc"
+        binary = repo_root / "assets" / "menus" / "mn_ui_kit.bin"
+        surfaces_binary = repo_root / "assets" / "menus" / "mn_surfaces.bin"
+        stale: list[Path] = []
+
+        if (not binary.exists()) or binary.read_bytes() != pack:
+            stale.append(binary)
+        if (not surfaces_binary.exists()) or surfaces_binary.read_bytes() != surface_pack:
+            stale.append(surfaces_binary)
+        with tempfile.TemporaryDirectory(prefix="mn-ui-kit-check-") as temp:
+            expected_manifest = Path(temp) / "mn_ui_kit.generated.inc"
+            emit_manifest(expected_manifest, glyphs, images, image_table, pack,
+                          surfaces, surface_table, surface_pack)
+            if ((not manifest.exists()) or
+                    manifest.read_text(encoding="utf-8") !=
+                    expected_manifest.read_text(encoding="utf-8")):
+                stale.append(manifest)
+
+        if stale:
+            for path in stale:
+                print(f"STALE {path.relative_to(repo_root)}", file=sys.stderr)
+            return 1
+        print("mn_ui_kit: generated outputs are current")
         return 0
 
     write_bytes_if_changed(repo_root / "assets" / "menus" / "mn_ui_kit.bin",

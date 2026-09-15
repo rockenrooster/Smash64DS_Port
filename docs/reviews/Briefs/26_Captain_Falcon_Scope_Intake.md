@@ -1,0 +1,54 @@
+# 26 — Captain Falcon: preserve unspecified current report
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** INTAKE ONLY — no current symptom supplied.
+**Existing owner:** Existing P2-3f53; do not create a new dynamic queue.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> captain falcon
+
+## Current source findings
+
+The latest owner list contains only the Captain Falcon heading. Older repo bugs mention Punch/Kick, but current inspected native lookup includes Captain effect owners and a DLHEAD1 bridge. No new symptom should be invented.
+
+Source keys: [S09](research/SOURCE_LEDGER.md#s09), [R64](research/SOURCE_LEDGER.md#r64), [R75](research/SOURCE_LEDGER.md#r75).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+No blind source patch is assigned. As a scoped regression lead, trace natural Punch/Kick through the existing Captain-native group owner and material animation, including the source scale-X display callback. Extend only a demonstrably missing sibling/root or repair a measured transform/material divergence. Preserve the already-landed bridge and source moves. Treat this as unreported scope until an actual symptom or current failing evidence identifies the target.
+
+### Code delivery boundary
+
+No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
+
+## Disprove this candidate before stacking patches
+
+An old missing-owner report does not authorize duplicate Captain imports or treating this empty heading as a newly confirmed defect.
+
+## Acceptance for this symptom
+
+Intake is complete when the unspecified heading and the two separate repository leads are accurately recorded. It is not bug closure. Any later Punch/Kick fix needs its own ground/air, facing, spawn/update/destroy, pixels, native engagement and natural-move proof under the existing source contract.
+
+## Required regression scope
+
+Do not change Falcon gameplay, accepted effects or source unlock behavior merely to fill this heading.
+
+## Coordination
+
+Not an actionable runtime-fix instruction by itself; see the live board for existing Falcon work.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

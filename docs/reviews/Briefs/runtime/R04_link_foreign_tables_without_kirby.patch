@@ -1,0 +1,78 @@
+Subject: [CANDIDATE; NOT ROM VERIFIED] Link SpecialN: preserve foreign-table routing when Kirby images are disabled
+Base-commit: a5c5bc08d8e8661658865216798d600462db948e
+Classification: DIRECT CONDITIONAL CANDIDATE / configuration-dependent
+Owner-issues: 17
+The Kirby-enabled branch already routes Link SpecialN source-owner 2 to the
+boomerang tables and light preambles. The alternative branch does not. Mirror
+that existing routing, including detail selection and refusal of invalid owners.
+This fixes an independently observable configuration defect; attribution to the
+owner's reported ROM still requires its build configuration and natural frames.
+No root program, fighter visibility bit, or source move is changed.
+
+diff --git a/src/nds/nds_renderer_assets.c b/src/nds/nds_renderer_assets.c
+--- a/src/nds/nds_renderer_assets.c
++++ b/src/nds/nds_renderer_assets.c
+@@ -4281,5 +4281,30 @@
+     (void)root;
+     (void)battle_slot;
+     (void)binding;
++    /* Link's mixed-file SpecialN program is independent of Kirby's image
++     * configuration. Keep its foreign roots paired with their own tables. */
++#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
++    if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
++        (owner == &sNdsNativeLinkSpecialNLowOwner))
++    {
++        u32 source_owner;
++
++        if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))
++        {
++            return NULL;
++        }
++        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];
++        if (source_owner == 2u)
++        {
++            return (owner == &sNdsNativeLinkSpecialNLowOwner) ?
++                &sNdsNativeLinkBoomerangFighterLowTables :
++                &sNdsNativeLinkBoomerangFighterHighTables;
++        }
++        if (source_owner != 0u)
++        {
++            return NULL;
++        }
++    }
++#endif
+     return (owner != NULL) ? owner->tables : NULL;
+ }
+@@ -4296,6 +4321,32 @@
+     (void)root;
+     (void)battle_slot;
+     (void)binding;
++    /* Match the foreign runtime table selected above. The root's preamble
++     * indices belong to the boomerang image, not Link's body image. */
++#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
++    if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
++        (owner == &sNdsNativeLinkSpecialNLowOwner))
++    {
++        u32 source_owner;
++
++        if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))
++        {
++            *count = 0u;
++            return NULL;
++        }
++        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];
++        if (source_owner == 2u)
++        {
++            *count = NDS_FTR_COUNT(sNdsNativeLinkBoomerangRootLightPreambles);
++            return sNdsNativeLinkBoomerangRootLightPreambles;
++        }
++        if (source_owner != 0u)
++        {
++            *count = 0u;
++            return NULL;
++        }
++    }
++#endif
+     if (owner == NULL)
+     {
+         *count = 0u;

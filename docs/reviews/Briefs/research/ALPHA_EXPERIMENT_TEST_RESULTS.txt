@@ -1,0 +1,13 @@
+test_bad_budget_levels_and_vertices (__main__.AlphaTests.test_bad_budget_levels_and_vertices) ... ok
+test_budget_exhaustion_and_invalid_cross_matrix_are_errors (__main__.AlphaTests.test_budget_exhaustion_and_invalid_cross_matrix_are_errors) ... ok
+test_exact_transparency_and_uniform_alpha (__main__.AlphaTests.test_exact_transparency_and_uniform_alpha) ... ok
+test_never_emits_wireframe_and_has_multiple_levels (__main__.AlphaTests.test_never_emits_wireframe_and_has_multiple_levels) ... ok
+test_plane_area_and_winding_preserved (__main__.AlphaTests.test_plane_area_and_winding_preserved) ... ok
+test_reversed_winding_reverses_output_area (__main__.AlphaTests.test_reversed_winding_reverses_output_area) ... ok
+test_shared_edges_have_identical_intersections (__main__.AlphaTests.test_shared_edges_have_identical_intersections) ... ok
+test_uvs_remain_source_affine (__main__.AlphaTests.test_uvs_remain_source_affine) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.006s
+
+OK

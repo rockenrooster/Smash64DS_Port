@@ -1,4 +1,5 @@
 #include <nds.h>
+#include <calico/nds/nitrorom.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -10,6 +11,7 @@
 #include <nds/nds_freeze_diagnostics.h>
 
 #define NDS_AUDIO_FGM_PATH "nitro:/audio/fgm_phase_pack_ima.bin"
+#define NDS_AUDIO_FGM_ROM_PATH "audio/fgm_phase_pack_ima.bin"
 #define NDS_AUDIO_FGM_PACK_HEADER_BYTES 16u
 #define NDS_AUDIO_FGM_PACK_ENTRY_BYTES 32u
 #define NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES 4u
@@ -186,6 +188,9 @@ volatile u32 gNdsAudioFgmChildStartCount;
 volatile u32 gNdsAudioFgmChildStartFailCount;
 volatile u32 gNdsAudioFgmBlockNewStartCalls;
 volatile u32 gNdsAudioFgmBlockedPlayCount;
+__attribute__((used)) volatile u32 gNdsAudioFgmDirectReadCount;
+__attribute__((used)) volatile u32 gNdsAudioFgmDirectFallbackCount;
+__attribute__((used)) volatile u32 gNdsAudioFgmStdioRangeReadCount;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
@@ -195,6 +200,9 @@ static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
 static NDSAudioFgmCacheSlot
     sNdsAudioFgmCacheSlots[NDS_AUDIO_FGM_CACHE_SLOT_COUNT];
 static FILE *sNdsAudioFgmFile;
+static NitroRom *sNdsAudioFgmRom;
+static u16 sNdsAudioFgmRomFileId;
+static u8 sNdsAudioFgmRomReady;
 static u16 sNdsAudioFgmNewStartLimit = 0xffffu;
 static NDSAudioFgmPackEntry
     sNdsAudioFgmEntries[NDS_AUDIO_FGM_ENTRY_COUNT];
@@ -1112,6 +1120,66 @@ static void ndsAudioFgmCacheReset(void)
     }
 }
 
+/* The FGM pack is immutable NitroFS data and every live cue already owns exact
+ * sample/envelope byte ranges.  Avoid paying stdio/libfat seek traversal in the
+ * sound-start frame by resolving the validated pack to one NitroROM file ID.
+ * The stdio stream stays open as a byte-identical correctness fallback. */
+static void ndsAudioFgmDirectRouteReset(void)
+{
+    sNdsAudioFgmRom = NULL;
+    sNdsAudioFgmRomFileId = 0u;
+    sNdsAudioFgmRomReady = FALSE;
+}
+
+static void ndsAudioFgmDirectRouteInit(void)
+{
+    NitroRom *rom = nitroromGetSelf();
+    int file_id;
+
+    ndsAudioFgmDirectRouteReset();
+    if (rom == NULL)
+    {
+        return;
+    }
+    file_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR,
+                                  NDS_AUDIO_FGM_ROM_PATH);
+    if ((file_id < 0) || (file_id >= (s32)NITROROM_ROOT_DIR) ||
+        (nitroromGetFileSize(rom, (u16)file_id) != NDS_AUDIO_FGM_PACK_BYTES))
+    {
+        return;
+    }
+    sNdsAudioFgmRom = rom;
+    sNdsAudioFgmRomFileId = (u16)file_id;
+    sNdsAudioFgmRomReady = TRUE;
+}
+
+static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
+{
+    if ((dst == NULL) || (offset > NDS_AUDIO_FGM_PACK_BYTES) ||
+        (bytes > (NDS_AUDIO_FGM_PACK_BYTES - offset)))
+    {
+        return FALSE;
+    }
+    if (sNdsAudioFgmRomReady != FALSE)
+    {
+        if (nitroromReadFile(sNdsAudioFgmRom, sNdsAudioFgmRomFileId, offset,
+                             dst, bytes) != false)
+        {
+            gNdsAudioFgmDirectReadCount++;
+            return TRUE;
+        }
+        gNdsAudioFgmDirectFallbackCount++;
+    }
+    gNdsAudioFgmStdioRangeReadCount++;
+    if ((sNdsAudioFgmFile == NULL) ||
+        (fseek(sNdsAudioFgmFile, (long)offset, SEEK_SET) != 0) ||
+        (fread(dst, 1u, bytes, sNdsAudioFgmFile) != bytes))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
 {
     s32 best = -1;
@@ -1133,10 +1201,10 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
             best = (s32)i;
         }
     }
-    if ((best < 0) || (sNdsAudioFgmFile == NULL) ||
-        (fseek(sNdsAudioFgmFile, (long)entry->data_offset, SEEK_SET) != 0) ||
-        (fread(sNdsAudioFgmCacheSlots[best].data, 1u, entry->data_bytes,
-               sNdsAudioFgmFile) != entry->data_bytes))
+    if ((best < 0) ||
+        (ndsAudioFgmReadRange(entry->data_offset,
+                              sNdsAudioFgmCacheSlots[best].data,
+                              entry->data_bytes) == FALSE))
     {
         gNdsAudioFgmReadFailCount++;
         return -1;
@@ -1499,6 +1567,7 @@ void ndsAudioFgmDiagnosticsReset(void)
         fclose(sNdsAudioFgmFile);
         sNdsAudioFgmFile = NULL;
     }
+    ndsAudioFgmDirectRouteReset();
     memset(sNdsAudioFgmHandles, 0, sizeof(sNdsAudioFgmHandles));
     memset(sNdsAudioFgmChannelOwners, 0,
            sizeof(sNdsAudioFgmChannelOwners));
@@ -1576,6 +1645,9 @@ void ndsAudioFgmDiagnosticsReset(void)
     gNdsAudioFgmResumeHandleCount = 0u;
     gNdsAudioFgmChildStartCount = 0u;
     gNdsAudioFgmChildStartFailCount = 0u;
+    gNdsAudioFgmDirectReadCount = 0u;
+    gNdsAudioFgmDirectFallbackCount = 0u;
+    gNdsAudioFgmStdioRangeReadCount = 0u;
 }
 
 void ndsAudioFgmLoadFenced(void)
@@ -1694,6 +1766,7 @@ void ndsAudioFgmLoadFenced(void)
     }
 
     sNdsAudioFgmFile = file;
+    ndsAudioFgmDirectRouteInit();
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
                                 sizeof(sNdsAudioFgmEntries);
@@ -2058,10 +2131,10 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         return NULL;
     }
     if ((entry->envelope_count != 0u) &&
-        ((fseek(sNdsAudioFgmFile, (long)entry->envelope_offset, SEEK_SET) != 0) ||
-         (fread(handle->envelope_points, NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES,
-                entry->envelope_count, sNdsAudioFgmFile) !=
-          entry->envelope_count)))
+        (ndsAudioFgmReadRange(
+             entry->envelope_offset, handle->envelope_points,
+             (u32)entry->envelope_count * NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES) ==
+         FALSE))
     {
         gNdsAudioFgmReadFailCount++;
         gNdsAudioFgmPlayFailCount++;

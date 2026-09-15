@@ -10,6 +10,7 @@
 #include <lb/transition.h>
 #include <mn/menu.h>
 #include <nds/nds_controller.h>
+#include <nds/nds_match_config.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
@@ -382,6 +383,21 @@ static void ndsMNVSResultsFuncStartTimed(void)
     if (sNdsMNVSResultsFuncStart != NULL)
     {
         sNdsMNVSResultsFuncStart();
+    }
+    /* mnVSResultsFuncStart updates Auto handicap in the source itself at
+     * mnvsresults.c:3356-3359. Keep the shell descriptor in lockstep with that
+     * transfer state so the returning CSS displays and recommits the adjusted
+     * values instead of its pre-match copy. */
+    if (gSCManagerTransferBattleState.handicap == nSCBattleHandicapAuto)
+    {
+        s32 i;
+
+        for (i = 0; i < (s32)ARRAY_COUNT(gSCManagerTransferBattleState.players);
+             i++)
+        {
+            gNdsMatchConfig.fighters[i].handicap =
+                gSCManagerTransferBattleState.players[i].handicap;
+        }
     }
 #if NDS_R2_PARTICLE_DRAW
     /* BattleShip creates the two source confetti generators at Results tic 120

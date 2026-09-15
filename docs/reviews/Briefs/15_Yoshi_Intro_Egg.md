@@ -1,0 +1,56 @@
+# 15 — Yoshi intro: visible entry egg and transition
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Missing intro presentation.
+**Existing owner:** P2-3f52 / P2-3r5.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> character intro is invisible (egg)
+
+## Current source findings
+
+Entry egg visibility is not implied by a working CSS pose or neutral-B egg. Its source AppearR/AppearL animation, descriptor and breakup are a separate closure.
+
+Source keys: [S02](research/SOURCE_LEDGER.md#s02), [R52](research/SOURCE_LEDGER.md#r52), [R64](research/SOURCE_LEDGER.md#r64).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+Build a closed native owner for the source entry egg and all appearing/breaking children, with both facing variants and material animation. Connect the source intro spawn callback and live joint transform to the owner lookup/admission table. Warm the required entry data at match entry, before the visible intro begins. Preserve the source handoff from egg to fighter body so they cannot both be hidden in the transition. Coordinate generation with Up-B/egg-lay only for shared source asset roots, not guessed resemblance.
+
+### Code delivery boundary
+
+No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
+
+Implementation contract and code-oriented integration details: [research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md](research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md).
+
+## Disprove this candidate before stacking patches
+
+An intro skip, forced later fighter reveal or native rejection containment does not fix the missing source egg. Test before, during and after breakup on multiple stages.
+
+## Acceptance for this symptom
+
+Capture the full intro, not just the final fighter: egg visible at the correct location, correct animation/break/reveal, and Yoshi visible when source requires. Both facings/entry variants, multiplayer positioning and repeat entry pass with no native failures or cadence collapse.
+
+## Required regression scope
+
+Other fighter intros, Yoshi neutral-B/Up-B egg owners, stage depth/alpha, countdown timing and scene memory lifetime.
+
+## Coordination
+
+Coordinate with Yoshi hidden-part programs and entry-effect generator work.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

@@ -261,6 +261,7 @@ extern volatile u32 gNdsMenuShellCssRecallCount;
 extern volatile u32 gNdsMenuShellCssKindToggleCount;
 extern volatile u32 gNdsMenuShellCssCostumeCycleCount;
 extern volatile u32 gNdsMenuShellCssLevelChangeCount;
+extern volatile u32 gNdsMenuShellCssHandicapChangeCount;
 /* START while READY TO FIGHT is up, START while it is not (the source's own
  * MenuDenied refusal), and the frame count the accepted START waits out. */
 extern volatile u32 gNdsMenuShellCssStartCount;
@@ -291,6 +292,8 @@ extern volatile u32 gNdsMenuShellCssCueCount;
 extern volatile u32 gNdsMenuShellCssCueLastId;
 extern volatile u32 gNdsMenuShellCssAnnounceCount;
 extern volatile u32 gNdsMenuShellCssModeToggleCount;
+extern volatile u32 gNdsMenuShellCssRandomCount;
+extern volatile u32 gNdsMenuShellCssRandomFallbackCount;
 extern volatile u32 gNdsMenuShellCssDoorSlideFrames;
 /* Live source-fighter preview proof. Updated after the source process step and
  * before its display callbacks each CSS frame; retained across CSS teardown so

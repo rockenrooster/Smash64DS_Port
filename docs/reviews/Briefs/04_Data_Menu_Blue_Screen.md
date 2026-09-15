@@ -1,0 +1,52 @@
+# 04 — Data menu: replace the blue-only presentation
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Menu flow / missing required presentation.
+**Existing owner:** P2-7 Modes & meta.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> Data goes to solid blue screen.
+
+## Current source findings
+
+The complete DATA fragment still calls the retired text API. Original mndata.c supplies different two-row and three-row layouts, a 16*8 middle tab, source labels and a background. Options already uses the native surface API.
+
+Source keys: [R97](research/SOURCE_LEDGER.md#r97), [R98](research/SOURCE_LEDGER.md#r98), [R99](research/SOURCE_LEDGER.md#r99), [R100](research/SOURCE_LEDGER.md#r100), [R103](research/SOURCE_LEDGER.md#r103), [R104](research/SOURCE_LEDGER.md#r104), [R92](research/SOURCE_LEDGER.md#r92), [R93](research/SOURCE_LEDGER.md#r93).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+R05 adds DATA surfaces at the end of the generator list, registers them in the menu coverage inventory and replaces DATA text-slot draws with native surface blits. It selects locked/unlocked row tables without changing the Sound Test unlock bit. Successful-blit caching avoids steady-state redraws and retries failed blits without publishing false visibility. Regenerate/stage mn_ui_kit and mn_surfaces together under the normal build configuration; never reuse the old manifest with the new runtime. Also audit any surface preload/classification list in the current checkout. VS Record and Sound Test child screens still need their own native surface/digit consumers; R05 does not close those children.
+
+### Executable candidate diffs
+
+[R05_data_native_surfaces.patch](runtime/R05_data_native_surfaces.patch) — **IMPLEMENTATION CANDIDATE / producer + runtime; asset regeneration required**.
+
+Check preimages with `python Briefs/tools/check_candidates.py --repo . --candidate R05`. Applying a patch and passing a host test do not establish natural-path correctness.
+
+## Disprove this candidate before stacking patches
+
+If the exact local revision already has native DATA surfaces, rebase or retain that work rather than replacing it. The host mock cannot prove source sprite decoding, VRAM placement, surface bounds or menu cadence.
+
+## Acceptance for this symptom
+
+DATA title, rows, cursor and selection are visible and source-derived. Characters, VS Record and Sound Test routes show their required presentation, or the report explicitly remains partially open for named children. Sound Test audio controls work where exposed. Return to main menu is correct, native-only enforcement passes and 30 Hz cadence remains stable.
+
+## Required regression scope
+
+Accepted VS Mode and Options/Backup Clear screens, save/record contents (no destructive reset), shared BG/OBJ palette allocation and audio.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

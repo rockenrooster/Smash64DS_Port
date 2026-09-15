@@ -7760,3 +7760,228 @@ because `check-architecture.ps1` rejects pre-existing untracked
 `decomp/alt_assets/`. That read-only owner input was preserved; the exact
 four-CPU Boundary child was run directly instead. Evidence:
 `artifacts/performance/2026-09-14_p2-2p8-split-packet-replay`.
+
+## 2026-09-14 — P2-2p8 phase D: Link live-texgen packet replay KEEP
+
+The split-root packet checkpoint still excluded Link on every draw because
+Link's source owner uses `G_TEXTURE_GEN`: the packet stored the record frame's
+`FIFO_TEX_COORD` words, while the direct owner derives those words from the
+current modelview and LookAt. The retained completion makes those words explicit
+patch sites. Packet capture records bounded run parameters plus packet-word and
+dense-vertex ids; replay runs the same Q15 direction/normal dot product as
+`ndsRendererNativeRebuildProductionRunUv` and replaces only those words before
+DMA. Validation failure invalidates the packet and returns to the ordinary
+native owner.
+
+Matched frames 438..445 use identical build-config SHA-256
+`23314b62fbbeccac413a9d677555eb1233137f84c26d5d9df0177f801f5415f3`.
+Control ROM `71236C5F...B110F`, candidate `5D3C022C...7A061`:
+FTR P50/P95 **643,840/670,528 -> 407,232/430,016** and WORK-H
+**1,786,816/2,414,912 -> 1,544,704/2,190,400**. Packet hits/records move
+856/12 -> 1,141/27; faults stay 0; declines **300 -> 0**; the new live-texgen
+witness reaches 260. This is direct route engagement, not a placement-only
+timing result.
+
+The configuration-exact one-minute stress keeps the result over 1,972 samples.
+Against the immediately preceding Link/Kirby BPS1 checkpoint, FTR P50/P95 moves
+631,552/771,840 -> **394,304/761,728**, WORK-H
+1,901,568/2,721,408 -> **1,670,976/2,539,584**, and ALL P95
+3,358,080 -> **2,798,464**. Native failures/direct rejects, graphics heap
+overflow/no-room, weapon refusals and pose bind-full are all zero; all four
+fighter slots draw; general-heap low-water remains 118,752 B.
+
+The tail improves but the product gate remains RED. VBlank histogram changes
+from 94/265/1,067/547 to **95/775/790/313** for 2/3/4/5+ over 1,973 presents;
+only 4.82% are 2-VBlank versus the required >=95%. The sparse frame-448 probe
+also proves zero fighter/native rejects, zero packet faults/declines and four
+valid packet slots. A software-renderer capture shows Link and the rest of Dream
+Land intact; the automated image-content guard passes. Boundary reaches the
+architecture check and stops on the pre-existing owner `decomp/alt_assets/`
+rule, so the umbrella is reported blocked rather than GREEN. Evidence:
+`artifacts/performance/2026-09-14_p2-2p8-link-texgen-packet` and
+`artifacts/visibility/2026-09-14_p2-2p8-link-texgen-packet.png`.
+
+## 2026-09-14 — P2-2p8 phase E: direct NitroROM BGM refill KEEP
+
+The post-texgen ARM9 census put recurring libfat work on BGM refill frames:
+`ndsAudioBgmReadPacket` ran on 11/128 frames, whose premium over non-refill
+frames was 878,955 cycles/frame. Those frames carried 112,815 cycles/frame of
+`get_fat.isra.0` premium and 69,288 of `f_lseek`. The BGM backend already owns
+one immutable NitroFS file plus exact packet offsets, so the retained change
+resolves that track once through Calico NitroROM and reads the same bounded
+ranges by file id. The logical cursor, packet/loop state and two-buffer playback
+stay unchanged; any direct-read failure disables the route and re-seats the old
+stdio stream at the same cursor.
+
+The matched 128-frame census keeps 11 refill frames and lowers their mean from
+5,091,523 to **4,786,363 cycles/frame**. Refill premium becomes **516,356**
+(-362,599), with `get_fat` premium **25,208** (-87,607) and `f_lseek` premium
+**15,612** (-53,676). A synchronized frames-1400..1407 route check records the
+same 113 BGM refills and zero read/play/packet/seam failures on both ROMs; the
+candidate has 235 direct reads / 0 fallbacks.
+
+The configuration-exact one-minute Donkey/Samus/Link/Kirby stress retains the
+gain over the live-texgen packet checkpoint: SRC P50/P95
+565,056/1,254,976 -> **561,536/1,247,040**, AUD 3,456/139,968 ->
+**3,392/123,712**, and WORK-H 1,670,976/2,539,584 ->
+**1,650,688/2,505,280**. BGM direct reads/fallbacks are **335/0**. Cadence moves
+95/775/790/313 -> **120/803/755/295** for 2/3/4/5+ VBlanks; native
+failures/direct rejects, graphics overflow/no-room, weapon refusals and
+animation-stream failures remain zero, and heap low-water stays 118,752 B.
+P2-2p8 remains RED because only 6.08% of presents are 2-VBlank. Evidence:
+`artifacts/performance/2026-09-14_p2-2p8-bgm-direct`.
+
+The direct Boundary realtime child also passes through the P2 shell and reports
+the natural Pupupu pacing smoke green. The full Boundary front gate passes the
+fast generator-staleness sweep, then stops at `check-architecture.ps1` because
+the owner workspace contains untracked `decomp/alt_assets/`. That read-only
+owner input is preserved; it is not a failure of this BGM slice.
+
+## 2026-09-15 — P2-2p8 phase I: pose live-track mask KEEP
+
+After the I/O cuts, `ndsFtPoseUpdate` / `ndsFtPosePlay` remained two of the
+largest named CPU bodies. The compact pose player still scanned all ten possible
+track slots for every evaluated joint, then rejected absent or `kind None`
+tracks. The retained representation carries a 10-bit `eval_mask` per joint and
+sets a bit only when the source script assigns Step, Linear or Cubic state.
+TraI's interpolation descriptor can keep its source `kind None` slot without
+joining the mask.
+
+The generic-player oracle completes **190,062 field comparisons** with zero
+value or pose mismatches and zero track-pool overflow. On one ROM, frames
+1400..1527 move WORK-H P50/P95 **1,713,728/2,437,824 ->
+1,705,792/2,411,200**, SRC P95 **1,055,040 -> 1,036,224** and SINT P95
+**526,528 -> 520,960**. The arms perform exactly the same 504 binds, 104,345
+joint evaluations, 425,926 track evaluations and 43,745 script steps.
+
+The full 1,972-sample same-ROM pair keeps the cut: WORK-H P50/P95
+**1,641,984/2,370,432 -> 1,641,792/2,353,088**, SRC P95
+**1,067,776 -> 1,062,912** and SINT **601,344 -> 595,584**. Paired WORK-H
+improves on 1,526/1,972 frames (median -3,200 ticks); SRC improves on 1,811 and
+SINT on 1,907. Pose work is again identical: 677 binds, 137,269 joint
+evaluations, 561,141 track evaluations and 58,534 script steps.
+
+The measurement branch was then deleted. Final ROM
+`DF8C031D1B5480A5C2C4560DAFD1C4687F33A338793A213A330903FDA6FC473A`
+passes the standing stress at WORK-H **1,645,760/2,348,160**, with pose
+bind/full/track-overflow **677/0/0**, native failures/direct rejects **0/0** and
+111,680 B heap low-water. The verifier now asserts track overflow is zero.
+P2-2p8 remains RED at 114/1,973 two-VBlank presents. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-pose-track-mask`.
+
+## 2026-09-15 — P2-2p8 phase F: resident BPS1 directory KEEP
+
+Post-BGM tail attribution still put `get_fat` and `f_lseek` on animation/status
+change frames. BPS1 already carried a dense clip directory, but the runtime read
+each 8-byte row from NitroROM before every payload; cache population can ask the
+same row once for size and again for bytes. The current 1,165-row directory is
+only 9,320 B, so the retained path reads it once at stream open and serves later
+lookups from a bounded resident array. Failure or a wider future directory falls
+back to the existing per-row path.
+
+A same-ROM route A/B on frames 1400..1527 replaces 504 row reads with resident
+hits while holding payload reads/misses/failures at 504/4/0. WORK-H P50/P95
+1,716,224/2,566,848 -> **1,700,608/2,438,272**, SRC P95
+1,145,216 -> **1,083,456**, GCRA P95 1,139,584 -> **1,077,760**, and SINT P95
+586,688 -> **559,296**.
+
+The 9.6 KB static bound lowers the four-kind arena enough that its old 5,216 B
+raw animation cache cannot reserve. That exposed 1,354 repeated calls through
+the same impossible post-setup fit calculation. Because the scene heap is
+monotonic within its generation, the final path records the first failure and
+fast-declines later attempts in that generation: **1 failure / 1,353 skips**.
+The final one-minute stress versus the retained BGM checkpoint moves WORK-H
+1,650,688/2,505,280 -> **1,654,464/2,441,408**, SRC P95 1,247,040 ->
+**1,149,952**, GCRA P95 1,241,024 -> **1,139,520** and SINT P95 817,216 ->
+**680,448**. Directory bytes/hits/fallback/failure are **9320/681/0/0**;
+BPS1 payload reads/misses/failures 676/5/0; native failures/rejects 0/0. Heap
+low-water is 111,680 B, 86,080 B above the floor. Cadence is 115/793/818/247
+for 2/3/4/5+ VBlanks, so P2-2p8 remains RED at 5.83% 2-VBlank presents.
+
+The shell-driven two-fighter realtime arm passes on the final source. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-ftanim-dir`.
+
+## 2026-09-15 — P2-2p8 phase H: move BPS1 to the front of NitroFS KEEP
+
+The post-FGM profile showed that BPS1 payload-load frames were still the storage
+tail: 29/128 frames cost +1,193,462 cycles/frame and carried +112,752
+`get_fat` plus +69,227 `f_lseek` cycles/frame. The directory row was already
+resident. The payload itself was physically the final NitroFS file at about
+27.5 MB. On Calico's `argv[0]` DLDI backend, libfat backward seeks restart at
+the `.nds` file's first cluster, making absolute NitroFS placement a live cost.
+
+A same-ROM lab packed identical BPS1 copies at `0x001EA000` under `animation/`
+and `0x01CBC600` under `zz_stream/`; only the payload file id was routed. Over
+frames 1400..1527, WORK-H P95 moved **2,527,744 -> 2,437,120**, SRC P95
+**1,101,952 -> 1,023,808**, SINT P95 **569,856 -> 518,272**, with identical
+504/4/0 reads/misses/failures. Over the whole one-minute match, WORK-H P50/P95
+**1,655,488/2,451,520 -> 1,642,560/2,351,360**, SRC P95
+**1,161,856 -> 1,066,304**, SINT P95 **693,376 -> 597,376** and 5+ VBlank
+**257 -> 214**. Both arms read 676 clips with 5 misses and 0 failures.
+
+Shipping keeps one early copy only; the measurement route and late file are
+removed. Final ROM `73AE16BD...AC90E` packs BPS1 at `0x001EC000`. Guarded stress
+passes with WORK-H **1,695,104/2,414,656**, SRC P95 **1,059,264**, BPS1
+676/5/0, directory 9320/681/0/0, FGM 329/0/0, BGM 337/0, native 0/0 and heap
+low-water 112,192 B. P2-2p8 remains RED. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-ftanim-reloc-final`.
+
+## 2026-09-15 — P2-2p8 phase G: direct NitroROM FGM ranges KEEP
+
+After the BGM and BPS1-directory cuts, the final phase-F ARM9 census still put
+filesystem traversal on six of the seven worst frames. `ndsAudioFgmPlayAtPan`
+was a coherent class: 23/128 frames cost 1,044,225 cycles/frame more than
+controls and carried 89,256 cycles/frame of `get_fat` premium plus 54,675 of
+`f_lseek`. FGM already owns one immutable validated NitroFS pack plus exact
+sample/envelope offsets, so live starts now resolve that pack once to a Calico
+NitroROM file ID and read those exact ranges directly; stdio remains the failure
+fallback.
+
+A temporary 32-byte route cell priced the mechanism on one ROM
+`9094EBC3...2BB3C` and was removed after measurement. Frames 1400..1527 move
+WORK-H P50/P95 **1,708,672/2,488,320 -> 1,707,968/2,432,384** (-55,936 P95),
+SRC P95 **1,129,600 -> 1,110,528**, GCRA **1,123,904 -> 1,104,832** and SINT
+**560,448 -> 545,792**. The control records 230 stdio live-range reads; the
+direct arm records 231 direct / 0 stdio / 0 fallback reads. Both perform 296
+supported plays and retain the same two pre-existing read/play failures.
+
+The full 1,972-sample same-ROM pair keeps the result: WORK-H
+**1,653,568/2,452,480 -> 1,651,264/2,446,272**, SRC P95
+**1,156,288 -> 1,141,568**, GCRA **1,150,592 -> 1,131,840**, and 5+ VBlank
+presents **254 -> 246**. The direct arm services 327 live ranges with zero stdio
+or direct fallback; both arms perform 418 supported plays with the same two
+read/play failures.
+
+The measurement route was then deleted. Final hard-on ROM
+`9F47350F...0EEB8` passes the standing four-CPU stress verifier, which now
+requires FGM direct reads >0, direct fallbacks 0 and stdio range reads 0. The
+final run records FGM **329/0/0**, BGM **333/0**, BPS1 directory **681/0**
+hits/fallbacks, cache reserve **1/1353** fail/skips, native failures/direct
+rejects **0/0**, heap low-water **111,680 B**, and WORK-H P50/P95
+**1,657,472/2,438,912**. Cadence remains RED at 115/798/804/256 for 2/3/4/5+
+VBlanks; only 5.83% of presents are 2-VBlank. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-fgm-direct`.
+
+## 2026-09-15 — P2-2p8 phase J: pose running-joint mask KEEP
+
+After the live-track cut, `ndsFtPoseUpdate` still added about 58.8K cycles/frame
+on all seven worst post-phase-I profile frames. Each compact pose now keeps a
+64-bit mask of hierarchy entries whose source-visible `anim_wait` can still
+run; a wider future hierarchy falls back to a complete cold scan and publishes
+that fallback count.
+
+The generic-player oracle completed **190,062** field comparisons with zero
+value or pose mismatches. A first measurement interleaved both routes in one
+hot loop and was rejected as layout-sensitive; moving the control into a cold
+noinline helper shrank routed `ndsFtPoseUpdate` from 0x1104 to 0x308 bytes. On
+that single ROM (`E9453FF3...6468`), the one-minute WORK-H P50/P95 moves
+**1,631,808/2,366,528 -> 1,631,296/2,357,120**, SRC P95
+**1,066,880 -> 1,063,168** and SINT P95 **605,312 -> 599,936**. Both arms do
+exactly 677 binds, 15,345 updates, 137,269 joint evaluations, 561,141 track
+evaluations and 58,534 script steps, with zero overflow.
+
+The route was removed. Final ROM `B1C037FB...3312A` passes the standing stress
+at WORK-H **1,680,384/2,389,376**, pose bind/full/overflow/wide-fallback
+**677/0/0/0**, native failures/direct rejects **0/0**, and 108,096 B heap
+low-water. P2-2p8 remains RED. Evidence:
+`artifacts/performance/2026-09-15_p2-2p8-pose-joint-mask`.

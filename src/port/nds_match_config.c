@@ -33,6 +33,22 @@
 #include "nds_build_config.h"
 
 NdsMatchConfig gNdsMatchConfig;
+volatile u32 gNdsMatchConfigHandicapClampCount;
+
+u8 ndsMatchConfigClampPublishedHandicap(u8 handicap)
+{
+    if (handicap < 1u)
+    {
+        gNdsMatchConfigHandicapClampCount++;
+        return 1u;
+    }
+    if (handicap > 9u)
+    {
+        gNdsMatchConfigHandicapClampCount++;
+        return 9u;
+    }
+    return handicap;
+}
 
 #if NDS_P2_PROOF_FIGHTER0 >= 0
 /* nFTKindPlayableEnd is inclusive (== nFTKindNess), as mnplayersvs reads it. */
@@ -195,16 +211,17 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->is_team_battle = FALSE;
     cfg->is_team_attack = FALSE;
     cfg->is_stage_select = TRUE;
-    cfg->is_reset_players = FALSE;
+    cfg->is_reset_players = TRUE;
     cfg->item_toggles = ~0u;
 
     for (i = 0; i < NDS_MATCH_FIGHTERS_MAX; i++)
     {
         cfg->fighters[i].fkind = nFTKindNull;
         cfg->fighters[i].pkind = nFTPlayerKindNot;
-        cfg->fighters[i].level = 1;
-        cfg->fighters[i].handicap = 0;
-        cfg->fighters[i].team = 0;
+        cfg->fighters[i].level = 3;
+        cfg->fighters[i].handicap = 9;
+        cfg->fighters[i].team = (i < 2) ?
+            (u8)nSCBattleTeamIDRed : (u8)nSCBattleTeamIDBlue;
         cfg->fighters[i].costume = 0;
         cfg->fighters[i].shade = 0;
         cfg->fighters[i].color = 0;
@@ -218,7 +235,8 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[0].fkind = nFTKindMario;
     cfg->fighters[0].pkind = nFTPlayerKindMan;
     cfg->fighters[0].handicap = 9;
-    cfg->fighters[0].team = 0;
+    /* Base Mario/Fox VS preset: source reset teams are Red,Red,Blue,Blue. */
+    cfg->fighters[0].team = nSCBattleTeamIDRed;
 #if NDS_P2_PROOF_FIGHTER0 >= 0
     /* Focused P2-3 proof only.  Keep this at the descriptor owner instead of
      * teaching scene_harness or the combat runtime about individual roster
@@ -230,7 +248,7 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[1].fkind = nFTKindFox;
     cfg->fighters[1].pkind = nFTPlayerKindMan;
     cfg->fighters[1].handicap = 9;
-    cfg->fighters[1].team = 1;
+    cfg->fighters[1].team = nSCBattleTeamIDRed;
 
 #if NDS_DEV_LIVE_INPUT_PREVIEW
     /* The shipped match: one-minute Time, items off, Fox on the CPU. */
@@ -524,6 +542,11 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
     s32 human = -1;
     u8 pl_count = 0;
     u8 cp_count = 0;
+    u8 preserved_handicap[NDS_MATCH_FIGHTERS_MAX] = { 0 };
+    ub8 preserve_handicap =
+        ((cfg->game_type == NDS_MATCH_NO_GAME_TYPE) &&
+         ((cfg->handicap_mode == (u8)nSCBattleHandicapOn) ||
+          (cfg->handicap_mode == (u8)nSCBattleHandicapAuto))) ? TRUE : FALSE;
     /* BattleShip mnplayersvs.c:4417 derives this from the time-rule bit. */
     ub8 is_single_stockicon =
         (cfg->game_rules & SCBATTLE_GAMERULE_TIME) ? TRUE : FALSE;
@@ -547,10 +570,20 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         }
     }
 
+    if (preserve_handicap != FALSE)
+    {
+        for (i = 0; i < NDS_MATCH_FIGHTERS_MAX; i++)
+        {
+            preserved_handicap[i] =
+                gSCManagerTransferBattleState.players[i].handicap;
+        }
+    }
+
     dSCManagerDefaultSceneData.gkind = cfg->gkind;
     gSCManagerSceneData.gkind = cfg->gkind;
 
     gSCManagerTransferBattleState = dSCManagerDefaultBattleState;
+    gSCManagerTransferBattleState.gkind = cfg->gkind;
 
     /* 1P only (sc1pgame.c:2901). The VS preset leaves the sentinel, so the
      * base copy -- and the trailing snapshot below -- keep yesterday's
@@ -620,13 +653,28 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         player->tag = (slot->pkind == nFTPlayerKindMan) ?
             (u8)i : (u8)GMCOMMON_PLAYERS_MAX;
         player->is_single_stockicon = is_single_stockicon;
-        if (slot->pkind == nFTPlayerKindCom)
+        if (preserve_handicap != FALSE)
         {
-            player->level = slot->level;
+            /* Handicap On/Auto is persistent menu state. In particular,
+             * mnVSResultsUpdateAutoHandicap mutates the transfer block after a
+             * match; rebuilding from dSCManagerDefaultBattleState must not erase
+             * that source-owned adjustment before the next CSS/battle. Preserve
+             * all four slots, including COM, exactly as the source transfer does. */
+            player->handicap =
+                ndsMatchConfigClampPublishedHandicap(preserved_handicap[i]);
         }
         else
         {
-            player->handicap = slot->handicap;
+            /* mnVSOptionsSetAllSettings resets every slot, including COM, when
+             * handicap is Off. Publishing all four here also makes the final
+             * default-state snapshot retain that reset across the next Apply. */
+            player->handicap =
+                ndsMatchConfigClampPublishedHandicap(slot->handicap);
+        }
+
+        if (slot->pkind == nFTPlayerKindCom)
+        {
+            player->level = slot->level;
         }
 
         /* 1P only: the ladder seeds what the VS CSS never touches, exactly

@@ -109,11 +109,10 @@ typedef struct NdsFtPoseJoint
     DObj *real;                         /* the live joint (== dobj outside the
                                          * oracle) */
     void *interpolate;                  /* TraI's SYInterpDesc, when bound */
-    u8 active;                          /* any track created since the bind */
+    u16 eval_mask;                      /* live Step/Linear/Cubic track ids */
     u8 body;                            /* TRUE at/after nFTPartsJointCommonStart:
                                          * held on the 30 Hz off tick */
     u8 joint_id;                        /* fp->joints[] index, scale index */
-    u8 pad;
     u8 slot_of_track[NDS_FT_POSE_TRACKS];   /* track id -> pool index, or
                                              * NO_SLOT */
     u16 last_eval;                      /* pose->tick of the last evaluation:
@@ -137,6 +136,9 @@ typedef struct NdsFtPose
     u32 pool_used;                      /* tracks handed out since the bind */
     u32 joint_mask_lo;                  /* bound fp->joints IDs 0..31 */
     u32 joint_mask_hi;                  /* bound fp->joints IDs 32..63 */
+    u32 run_mask_lo;                    /* bound walk entries 0..31 whose
+                                         * source anim_wait can still run */
+    u32 run_mask_hi;                    /* bound walk entries 32..63 */
     s32 speed_q;                        /* this update's anim_speed, Q12: the
                                          * pose (track length) copy */
     u32 speed_bits;                     /* the same anim_speed, binary32 bits:
@@ -173,6 +175,9 @@ extern volatile u32 gNdsFtPoseSlotLive;
 extern volatile u32 gNdsFtPoseSlotLiveMax;
 extern volatile u32 gNdsFtPoseTrackOverflow;
 extern volatile u32 gNdsFtPoseAObjLiveMax;
+/* Nonzero only if a bound fighter hierarchy exceeds the compact 64-entry
+ * running-joint mask and falls back to the complete historical scan. */
+extern volatile u32 gNdsFtPoseRunMaskFallbacks;
 extern volatile u32 gNdsFtPoseOracleCompares;
 extern volatile u32 gNdsFtPoseOracleMismatches;
 extern volatile u32 gNdsFtPoseOracleFirstJoint;

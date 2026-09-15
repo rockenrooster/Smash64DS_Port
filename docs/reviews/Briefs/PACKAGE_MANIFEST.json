@@ -1,0 +1,488 @@
+{
+  "base_commit": "a5c5bc08d8e8661658865216798d600462db948e",
+  "runtime_patch_count": 5,
+  "issue_brief_count": 36,
+  "actionable_owner_reports": 35,
+  "task_patch_count": 36,
+  "host_test_count": 20,
+  "rom_built": false,
+  "rom_run": false,
+  "whole_checkout_apply_verified": false,
+  "files": [
+    {
+      "path": "01_Impact_Wave_Depth.md",
+      "bytes": 4270,
+      "sha256": "abde4d899e3a2d866f992559cebf17d2f43dfbf6f8d3de1a17981eff54067660"
+    },
+    {
+      "path": "02_Main_Menu_1P_Route.md",
+      "bytes": 3449,
+      "sha256": "2f4a9acb56c8b7a5cde8fae54fff74180a8c8e4d0cb1282b8d74a82e5f67bc4a"
+    },
+    {
+      "path": "03_Campaign_1P_CSS_Invisible.md",
+      "bytes": 3527,
+      "sha256": "50488445744e38030a37de44de673d8236bc23f9b8f1d3811dec8ba5314e950c"
+    },
+    {
+      "path": "04_Data_Menu_Blue_Screen.md",
+      "bytes": 3651,
+      "sha256": "8c80abb8e42c194d7f27a581b42aff352ff55555e0e068b2beb50672c71b4fa0"
+    },
+    {
+      "path": "05_CSS_Kirby_Selectability.md",
+      "bytes": 3428,
+      "sha256": "175bc4b30faa788471bc4888a3b691e64cce32be3422c3286e98b00e9c8b668c"
+    },
+    {
+      "path": "06_CSS_Jigglypuff_Selectability.md",
+      "bytes": 3179,
+      "sha256": "31e2858735b9c849e7e7b37404ac2be3ad041a7c116a523f2c2a66068d738273"
+    },
+    {
+      "path": "07_CSS_Ness_Selectability.md",
+      "bytes": 3167,
+      "sha256": "defd6b0ccfb001826460bd33805f5222b33f9db837af17e236446f1f41f6e8d0"
+    },
+    {
+      "path": "08_CSS_Gates_FPS_Flashing.md",
+      "bytes": 3588,
+      "sha256": "fc0117d83e9f3c040945a97033f7f0e307dc0217422b65e7c32c4538121edd42"
+    },
+    {
+      "path": "09_CSS_Yoshi_Preview.md",
+      "bytes": 3443,
+      "sha256": "6ec87dd7ac1293ad7bcf929c04c78b9cf69ddffc54c5b4ccfadb33f8086bb6a7"
+    },
+    {
+      "path": "10_CSS_Preview_BGM_Interruptions.md",
+      "bytes": 3646,
+      "sha256": "a61f144868873d6c33233b3ac7d877f241e6a7f574e75a273bb382f9af57569d"
+    },
+    {
+      "path": "11_CSS_Preview_Hover_Latency.md",
+      "bytes": 3503,
+      "sha256": "0a1eae159f847107726ed9d856f065310f0a2a80ff80d18a04492eb95fd266dd"
+    },
+    {
+      "path": "12_Yoshi_UpB_Egg_Shells.md",
+      "bytes": 3442,
+      "sha256": "b20525c1f4718ed30535c623502e0ae2b2bf8fad6106fde511d7551e082ddd0e"
+    },
+    {
+      "path": "13_Yoshi_Grab_Invisible.md",
+      "bytes": 3509,
+      "sha256": "a0f8f05b61880c13119fb5c541f26f84aa0969af9161a5127d974d035aa1dee8"
+    },
+    {
+      "path": "14_Yoshi_NeutralB_Egg_Invisible.md",
+      "bytes": 3258,
+      "sha256": "4ed3a1383bf37c156d6d0ba561067baa351bd80a9249344d5fb78c2ba3ce483e"
+    },
+    {
+      "path": "15_Yoshi_Intro_Egg.md",
+      "bytes": 3242,
+      "sha256": "54bd436c701de8540ba4f7b057778eef4b3912e0e1644168f00ac4392deaf4d5"
+    },
+    {
+      "path": "16_Link_Intro_Column_Alpha.md",
+      "bytes": 3593,
+      "sha256": "8e94c8c2f4a0307247ca2b2d1b0e7b66991b4fa702f924b4a7258cde5dfbba18"
+    },
+    {
+      "path": "17_Link_NeutralB_Invisible.md",
+      "bytes": 3426,
+      "sha256": "eaf1571d51c42e0bc3fe818444eed27c60945013477d0bf98dd0d4f2c202f813"
+    },
+    {
+      "path": "18_Link_UpB_Effects.md",
+      "bytes": 3405,
+      "sha256": "5a5a391a9433804cb869d69fbdac44a6f2bea266d9a2552c757ef4a23bc5ec1f"
+    },
+    {
+      "path": "19_Pikachu_NeutralB_Alpha.md",
+      "bytes": 3400,
+      "sha256": "5170cd4b78a5962d008580abbe4504ef6ad5e6e18ab560d701f25710f62c926a"
+    },
+    {
+      "path": "20_Pikachu_DownB_Missing_Crash.md",
+      "bytes": 3583,
+      "sha256": "41114080d81bb9e8a7f1f73d599bce3622c2b389c439195f51e5098d460aed49"
+    },
+    {
+      "path": "21_Electric_Damage_Effects.md",
+      "bytes": 3432,
+      "sha256": "448c13aefb903c30d07db5e02e89767c22cb3ce5ce355409821de83b5a0c2b42"
+    },
+    {
+      "path": "22_Pikachu_Strong_SideA.md",
+      "bytes": 3183,
+      "sha256": "12e16757fb5966caf87e8f50027d702ca946f966101a1f841fa15e7aa4d426e1"
+    },
+    {
+      "path": "23_Samus_Shield_Roll_Invisible.md",
+      "bytes": 3387,
+      "sha256": "c0dd3d38fe5a26c85153c9236bb03911b2ee5f3041fd393df170c6e0edd79bd8"
+    },
+    {
+      "path": "24_Samus_DownB_Invisible.md",
+      "bytes": 3250,
+      "sha256": "88783f09ee63411f0a9c1afea0e55bc969bdaea5760f3c5b4fd1ef95e8546714"
+    },
+    {
+      "path": "25_Samus_Charge_Shot_Gun_Occlusion.md",
+      "bytes": 3760,
+      "sha256": "68e6b4a95191cfa90cb062b20c45ac285bb08777072029c1aa3731490bab8787"
+    },
+    {
+      "path": "26_Captain_Falcon_Scope_Intake.md",
+      "bytes": 3120,
+      "sha256": "80f04ad2bd332fd55918dc0fb3f70221995b03d2cfa02eab85f04f9d6eba471d"
+    },
+    {
+      "path": "27_Peachs_Castle_Roof_Texture.md",
+      "bytes": 3697,
+      "sha256": "e0fca161885f5ccab07ca72ce53f50eec5ebe38beb7ca5232f368073332e95cf"
+    },
+    {
+      "path": "28_Zebes_Acid_Soft_Blend.md",
+      "bytes": 3669,
+      "sha256": "b92587ee261afe6e9b41b6820ad08d13b8dfbeed09ede9e27fc5657064400a0f"
+    },
+    {
+      "path": "29_Zebes_Ground_Light_Gradient.md",
+      "bytes": 3499,
+      "sha256": "4b4fbbf5c01be518be4a5484996fac42d74a436b0d850a8524403601f0620679"
+    },
+    {
+      "path": "30_Mushroom_Left_Platform_Texture.md",
+      "bytes": 3468,
+      "sha256": "b96b83aebaa8d3a4cd28905d45ffe75e0452d4351ab0a986d68db6fb08cb1f5d"
+    },
+    {
+      "path": "31_Yoshis_Island_Rotating_Card_Alpha.md",
+      "bytes": 3500,
+      "sha256": "a07c6efff084a69784b99279bfcf75449cd1a224b9ce2e3ff81de9b346a7e4a4"
+    },
+    {
+      "path": "32_Yoshis_Island_Heart_Sparkle_Alpha.md",
+      "bytes": 3386,
+      "sha256": "e590047eecce12d0c5d1629e85552ac24cbe00ddc254988bb1fecc57104c9109"
+    },
+    {
+      "path": "33_Yoshis_Island_Missing_Platforms_Floor.md",
+      "bytes": 3768,
+      "sha256": "e14ec88ed069741c7a3570a4e97c7c8eed59e49e36eb4b1fb1dcdc932062acb1"
+    },
+    {
+      "path": "34_SectorZ_Intro_Crash.md",
+      "bytes": 3590,
+      "sha256": "cbccd48e9bf1c47b9015eb574bf903cd7ed56196598d858a4d63332c6e6e4fdd"
+    },
+    {
+      "path": "35_Saffron_Door_Cycle.md",
+      "bytes": 3600,
+      "sha256": "9767e64cd5764e3b91c7ba3608648b962f57ba7717acf3f9a106f7b8766d5c65"
+    },
+    {
+      "path": "36_Saffron_Pokemon_Attack_VFX.md",
+      "bytes": 3636,
+      "sha256": "a705a6a7078cb5f7b599645367d421892ae0689b24cefcc2fa7b494436b06bc0"
+    },
+    {
+      "path": "COMMON.md",
+      "bytes": 4390,
+      "sha256": "60875da93c8363fcfc81b761c95793d42fe59d86e529c17f9e1b75f76f00deff"
+    },
+    {
+      "path": "README.md",
+      "bytes": 9809,
+      "sha256": "61b7624ce9723f29c041d74b969a721987ec356c9939044ac6f7da49cbd00dd6"
+    },
+    {
+      "path": "SOURCES.md",
+      "bytes": 7947,
+      "sha256": "d9649a177d07a7d7c0b3799a32b17b3c6846d37baa7c4aaf1921150ae267e6ef"
+    },
+    {
+      "path": "experiments/README.md",
+      "bytes": 4252,
+      "sha256": "6fbf824a4bcd63296477e1b1a1faf1390db23619bf879545152f3f7c102b1304"
+    },
+    {
+      "path": "experiments/alpha_isobands.py",
+      "bytes": 6882,
+      "sha256": "67df688548a77677e6fc247d78af230e0ef0a9d515c7b32cc9df48864a375124"
+    },
+    {
+      "path": "issue_tasks/01_Impact_Wave_Depth.patch",
+      "bytes": 4737,
+      "sha256": "28eb068cf9b79501d213afd38834a28396880a5a8bb6998ce7bac5ed6d3324db"
+    },
+    {
+      "path": "issue_tasks/02_Main_Menu_1P_Route.patch",
+      "bytes": 3916,
+      "sha256": "1a9a568a890f259f07ca1ad23c48995cc5ee0fa120353cd60fdcb5ce95d5fa08"
+    },
+    {
+      "path": "issue_tasks/03_Campaign_1P_CSS_Invisible.patch",
+      "bytes": 4022,
+      "sha256": "efa383ff5f3057640e4513eb895b8db11ed51b1e6205b13505d5198ef597c180"
+    },
+    {
+      "path": "issue_tasks/04_Data_Menu_Blue_Screen.patch",
+      "bytes": 4128,
+      "sha256": "a682f3d0cb57894d503bb34eb0ef54a71fb43ac65d3953be87c8886084f98633"
+    },
+    {
+      "path": "issue_tasks/05_CSS_Kirby_Selectability.patch",
+      "bytes": 3917,
+      "sha256": "1daee5c88a4b59fb28c19865f5d1d2225b516d95ef42c86fb16c9ecbb65df1c9"
+    },
+    {
+      "path": "issue_tasks/06_CSS_Jigglypuff_Selectability.patch",
+      "bytes": 3688,
+      "sha256": "4bdd61b78ffd400125f0757148061da31058490e0b73170505277f2601cc3f6d"
+    },
+    {
+      "path": "issue_tasks/07_CSS_Ness_Selectability.patch",
+      "bytes": 3652,
+      "sha256": "8c1f1bf5ab9a95b17029a77ebc89071f988683935834e35a2f290eca83511c88"
+    },
+    {
+      "path": "issue_tasks/08_CSS_Gates_FPS_Flashing.patch",
+      "bytes": 4075,
+      "sha256": "af78848b976b55f7b22c76652ce34716e4c1ae4a479378eb0319b8d02d808fd8"
+    },
+    {
+      "path": "issue_tasks/09_CSS_Yoshi_Preview.patch",
+      "bytes": 3911,
+      "sha256": "6a64fd63f2e6aed4175b16790396c9ff37944e84f993dfe6891605af9ac089d6"
+    },
+    {
+      "path": "issue_tasks/10_CSS_Preview_BGM_Interruptions.patch",
+      "bytes": 4161,
+      "sha256": "d58882973b3f9ee5e529ffbd1e2b0e6232933d9786b37cc675c350f5411ec9be"
+    },
+    {
+      "path": "issue_tasks/11_CSS_Preview_Hover_Latency.patch",
+      "bytes": 4002,
+      "sha256": "436370844da342bd4a68faab346c7d3fd30fa458fd7fcc35b9fd997ef9caf52c"
+    },
+    {
+      "path": "issue_tasks/12_Yoshi_UpB_Egg_Shells.patch",
+      "bytes": 3919,
+      "sha256": "ce9c2fb40dc68f23650dc09e5b9f11513bfaa952cbe0f6564f11288aca3a6cd8"
+    },
+    {
+      "path": "issue_tasks/13_Yoshi_Grab_Invisible.patch",
+      "bytes": 3986,
+      "sha256": "33dfae3444fd71b556148dfb8a0396df97f0cb5a49fb05797edb7bfb2f7eacb5"
+    },
+    {
+      "path": "issue_tasks/14_Yoshi_NeutralB_Egg_Invisible.patch",
+      "bytes": 3767,
+      "sha256": "b995a3f8c1a03c83d8979f5de11e9710cef6d424a74bbf7ac665d0199b4af334"
+    },
+    {
+      "path": "issue_tasks/15_Yoshi_Intro_Egg.patch",
+      "bytes": 3699,
+      "sha256": "99098c6f36350ef50ab985ab84469fe3f68c6379c3d9c867dfeef46cdf7aa47b"
+    },
+    {
+      "path": "issue_tasks/16_Link_Intro_Column_Alpha.patch",
+      "bytes": 4084,
+      "sha256": "1e482fa6cec4a3a749a445ac7e7fe71fbe678d31af149d1924c4a6dd0b226df3"
+    },
+    {
+      "path": "issue_tasks/17_Link_NeutralB_Invisible.patch",
+      "bytes": 3915,
+      "sha256": "f7058a3f35057cfee0bb2b752748541f4e5e9102fdc5a1532df9dc67db7a098e"
+    },
+    {
+      "path": "issue_tasks/18_Link_UpB_Effects.patch",
+      "bytes": 3868,
+      "sha256": "2db8299a3eda6329ee44231f423c555da5e358fd6db31dab9d32af86de340954"
+    },
+    {
+      "path": "issue_tasks/19_Pikachu_NeutralB_Alpha.patch",
+      "bytes": 3885,
+      "sha256": "6e7aa6054f30456797b2d3a6b2538c2942af99b925150efc2c34b14e2c513846"
+    },
+    {
+      "path": "issue_tasks/20_Pikachu_DownB_Missing_Crash.patch",
+      "bytes": 4088,
+      "sha256": "d289ff3cfac6bc32115fe9a9a9c8b50d4dac42c2eee57017cdd8ee29cb50f371"
+    },
+    {
+      "path": "issue_tasks/21_Electric_Damage_Effects.patch",
+      "bytes": 3921,
+      "sha256": "143808f91fdb69cbbe17faf77ee79c05a9a6b33a77df36b34df735579aac2da4"
+    },
+    {
+      "path": "issue_tasks/22_Pikachu_Strong_SideA.patch",
+      "bytes": 3660,
+      "sha256": "218488b840a4f92cf587be3f1284bbfc05a0ac142b77aa8aea9abeb9f775fd8a"
+    },
+    {
+      "path": "issue_tasks/23_Samus_Shield_Roll_Invisible.patch",
+      "bytes": 3892,
+      "sha256": "a224a6653866b1774aac53e4b87dd1f9371ad1e716a415c08b90ee9105ea87fa"
+    },
+    {
+      "path": "issue_tasks/24_Samus_DownB_Invisible.patch",
+      "bytes": 3731,
+      "sha256": "2c4b191b1230cd060dadc75501c3672e8a932b87f50cfa754cf2db2aad09e2c0"
+    },
+    {
+      "path": "issue_tasks/25_Samus_Charge_Shot_Gun_Occlusion.patch",
+      "bytes": 4283,
+      "sha256": "0f7916aa67f574cc9de72d2eb25e74f36072b85680f1bc70d24e242b78bc4326"
+    },
+    {
+      "path": "issue_tasks/26_Captain_Falcon_Scope_Intake.patch",
+      "bytes": 3623,
+      "sha256": "2f5b838c3dd3be460941b864878f2ec2d9d8d670b846b7b5ecfff37655eedacc"
+    },
+    {
+      "path": "issue_tasks/27_Peachs_Castle_Roof_Texture.patch",
+      "bytes": 4198,
+      "sha256": "d942f10347925308faece1b14fc1f797cde67ff311e861f11cce3ea4cd3ce5c4"
+    },
+    {
+      "path": "issue_tasks/28_Zebes_Acid_Soft_Blend.patch",
+      "bytes": 4150,
+      "sha256": "234bf01e35d382963307c482915188a6a9998ee9d36bf9fa8646199c099ee8ef"
+    },
+    {
+      "path": "issue_tasks/29_Zebes_Ground_Light_Gradient.patch",
+      "bytes": 4004,
+      "sha256": "8ebd93328347e66905d83931b712baaafdb7c1fba6529eef500277bc2189941a"
+    },
+    {
+      "path": "issue_tasks/30_Mushroom_Left_Platform_Texture.patch",
+      "bytes": 3985,
+      "sha256": "df4d0d97ff10a332a2a667a6e9c091ade0719884c42a5e18bc2ed617f17558ef"
+    },
+    {
+      "path": "issue_tasks/31_Yoshis_Island_Rotating_Card_Alpha.patch",
+      "bytes": 4029,
+      "sha256": "8c1235735d9ce5c1edd08bef4e40a37faec1b79c450fae8b862d797ce3f318e2"
+    },
+    {
+      "path": "issue_tasks/32_Yoshis_Island_Heart_Sparkle_Alpha.patch",
+      "bytes": 3915,
+      "sha256": "f6785fb9514f6c6a57316495e910a9cbd723e4316e6eb99df24276a48e934420"
+    },
+    {
+      "path": "issue_tasks/33_Yoshis_Island_Missing_Platforms_Floor.patch",
+      "bytes": 4313,
+      "sha256": "cd738f42f8d23473201ea90ecef6762d211379c735a435fdba814307517efef8"
+    },
+    {
+      "path": "issue_tasks/34_SectorZ_Intro_Crash.patch",
+      "bytes": 4063,
+      "sha256": "d7dda76583cb96060db6830ef8e73dc80b3a1f8107b65af674e0b17cf4049ce4"
+    },
+    {
+      "path": "issue_tasks/35_Saffron_Door_Cycle.patch",
+      "bytes": 4069,
+      "sha256": "67dadc6bd9059de5b62068ea831f4f5be7cc6b52a008175d3de18f9fbb67720d"
+    },
+    {
+      "path": "issue_tasks/36_Saffron_Pokemon_Attack_VFX.patch",
+      "bytes": 4137,
+      "sha256": "a7d9bb39ca293b70fe42b1b2c14a5e21faa3dc9df7a51ae8d5093850f635d070"
+    },
+    {
+      "path": "research/ALPHA_EXPERIMENT_TEST_RESULTS.txt",
+      "bytes": 1022,
+      "sha256": "77c5b111058c091613e9e257b57a2a61843d3c2bb121b15f3a43000e819306b4"
+    },
+    {
+      "path": "research/CSS_TRANSACTIONAL_PREVIEW.md",
+      "bytes": 5182,
+      "sha256": "d2cd9a9f2213268caaaf8f6f5e9d582b41dca4139e48dfaa9df3f20df1a73a54"
+    },
+    {
+      "path": "research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md",
+      "bytes": 5394,
+      "sha256": "abbd9e8e839bd81895f0b98233edf521b7034ff9527f5559330d29a9725df3a2"
+    },
+    {
+      "path": "research/HOST_TEST_RESULTS.txt",
+      "bytes": 1439,
+      "sha256": "e57668613accc282ba10c330115f63bbdf1c81c730086f72f67da0442bd75fb3"
+    },
+    {
+      "path": "research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md",
+      "bytes": 6119,
+      "sha256": "5f997d2f209fda89b0f8ff1946b60751a6a2676638d97ff4faa24166fdb962c4"
+    },
+    {
+      "path": "research/RESEARCH_FINDINGS.md",
+      "bytes": 6668,
+      "sha256": "73aa5b41d3b7ea10aca751028f6dedc2c349ccd1513161863ea7d3bfa8da7f3a"
+    },
+    {
+      "path": "research/SOURCE_LEDGER.md",
+      "bytes": 21622,
+      "sha256": "5e4e32c8a8a7c53e21667249b43111eb5a90b7a8e11a50e672f3a5b82e46fe42"
+    },
+    {
+      "path": "research/VALIDATION.md",
+      "bytes": 3226,
+      "sha256": "ad2e68a294c1eb3ef76c0e3d2e748484b62569c628ab80a18b99c3c99a6d3a99"
+    },
+    {
+      "path": "research/candidate_preimages.json",
+      "bytes": 27506,
+      "sha256": "c2af449905cf9daac059bc6a2a9a7322394558a880775a470227461d50d9143e"
+    },
+    {
+      "path": "research/issue_matrix.json",
+      "bytes": 48301,
+      "sha256": "daf81f68bd09637b1f09beed7afd4f7e2e00db077cb7c88337dc8c3d46f251c6"
+    },
+    {
+      "path": "runtime/R01_impact_wave_source_depth.patch",
+      "bytes": 3234,
+      "sha256": "c518faa3c1241a9e8ebbb98d1aca246c42f63b87e32de4923e0a644e0c8a38cb"
+    },
+    {
+      "path": "runtime/R02_effect_initial_z.patch",
+      "bytes": 1431,
+      "sha256": "bc3895cc9f6bae34b2553478d43a4b2f32f92cef4823c649f9b87bc78c55ba82"
+    },
+    {
+      "path": "runtime/R03_css_reset_image_lifetime.patch",
+      "bytes": 1738,
+      "sha256": "81c9b57f942b9b27886776782a7270f4a2053b455a2bea209007f8af028586a6"
+    },
+    {
+      "path": "runtime/R04_link_foreign_tables_without_kirby.patch",
+      "bytes": 2938,
+      "sha256": "97074f5d8390f49b19e77d6d12d03f40d2779d7abe25fa4f72835727ade06316"
+    },
+    {
+      "path": "runtime/R05_data_native_surfaces.patch",
+      "bytes": 10464,
+      "sha256": "aa249f45776f33ad47ec836af47a8005eea2dd890e7f0df3e057eea96cddd386"
+    },
+    {
+      "path": "tests/test_alpha_isobands.py",
+      "bytes": 3169,
+      "sha256": "8227459be71b9a374f5323ed16f61af7b984036c8e74e44edd1b4c72ca90e140"
+    },
+    {
+      "path": "tests/test_candidates.py",
+      "bytes": 12562,
+      "sha256": "26e70a742ee785392b3db93cb703bd6e8a09256d2c13a879d0261d716f7c31e3"
+    },
+    {
+      "path": "tools/check_candidates.py",
+      "bytes": 4056,
+      "sha256": "bc062639a406e58052dbf2f5738a82ea7c046f7997ab5feb0eef82e271eb6f73"
+    }
+  ]
+}

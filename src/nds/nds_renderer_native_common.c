@@ -1106,6 +1106,7 @@ s32 ndsRendererSubmitNativeImpactWave(
     s32 texture_offset;
     v16 projected_x[18];
     v16 projected_y[18];
+    v16 projected_z[18];
     u32 i;
 
     /* This is deliberately a closed owner, not a general mesh API. Keeping the
@@ -1153,17 +1154,17 @@ s32 ndsRendererSubmitNativeImpactWave(
         {
             return FALSE;
         }
-        /* ImpactWave reuses the same 18 ring vertices across 48 triangle
-         * corners. The generic projected path perspective-divides X/Y for
-         * every corner, even when that vertex was already emitted by the
-         * previous TRI2. Do the invariant divide once per unique source vertex
-         * here; painter Z remains per-triangle below. This cuts the ring's
-         * X/Y perspective divides from 96 to 36 per draw without changing a
-         * coordinate or the source's submission order. */
+        /* The source ring uses Z compare. Cache all three projected
+         * coordinates once per unique vertex; use the same depth mapping as
+         * ndsRendererHardwareClipVertex, not raw clip Z or painter depth.
+         * Eighteen XYZ projections still avoid repeating the divides for all
+         * 48 submitted corners. */
         projected_x[i] = ndsRendererHardwareProjectToV16(
             (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
         projected_y[i] = ndsRendererHardwareProjectToV16(
             (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+        projected_z[i] = ndsRendererHardwareSourceDepthToV16(
+            (s64)out->z * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
         state.vertex_valid_mask |= mask;
         stats->matrix_transform_count++;
         stats->transformed_vertex_count++;
@@ -1337,13 +1338,15 @@ s32 ndsRendererSubmitNativeImpactWave(
               NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
     }
 #endif
-    /* Deliberately omit SOURCE_CLIP_DEPTH/ZBUFFERED: this is source non-Z
-     * geometry and must retain the port's per-triangle painter-depth emulation. */
+    /* Raw-slot preparation supplies colour and UV only. The closed emitter
+     * below supplies cached source depth explicitly; it must not consume the
+     * per-triangle painter counter. */
     ndsRendererFastPrepareRawSlots(
         stats, &state, required_mask, use_texture);
 
     if (poly_alpha != 0u)
     {
+        ndsRendererHardwareEnterProjectedForeground();
         ndsRendererLoadHardwareMatrices(NULL, FALSE);
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, state.texture_prepare_name,
@@ -1354,13 +1357,12 @@ s32 ndsRendererSubmitNativeImpactWave(
         for (i = 0u; i < triangle_count; i++)
         {
             const u8 *tri = &triangle_indices[i * 3u];
-            s32 depth = ndsRendererHardwareNextProjectedDepth();
             u32 corner;
 
             for (corner = 0u; corner < 3u; corner++)
             {
                 u32 index = (u32)tri[corner];
-                v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
+                v16 out_z = projected_z[index];
 
                 glColor(state.prepared_vertex_colors[index]);
                 if (use_texture != FALSE)
@@ -7950,7 +7952,14 @@ ndsRendererNativePrepareProductionRunCore(
      * one shared hook records the final TEXIMAGE_PARAM/POLYGON_ATTR/BEGIN and
      * avoids duplicating the recording branch in scarce fighter ITCM. */
     NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordPrepare(
-        use_texture, state->texture_prepare_poly_fmt));
+        use_texture, state->texture_prepare_poly_fmt,
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) ?
+            TRUE : FALSE,
+        state->texture_prepare_scale_s,
+        state->texture_prepare_scale_t,
+        state->texture_prepare_origin_s,
+        state->texture_prepare_origin_t,
+        state->texture_prepare_offset));
     if ((hierarchy_run != NULL) && (policy->textured != 0u) &&
         (resolved_texture.entry == NULL))
     {
@@ -8480,14 +8489,16 @@ static inline void ndsFighterPacketEmitCornerShade(u32 run_index, u32 dense_id)
 }
 
 static inline void ndsFighterPacketEmitCornerTail(
-    const NDSNativePreparedDenseVertex *prepared, u32 textured)
+    u32 dense_id,
+    const NDSNativePreparedDenseVertex *prepared,
+    u32 textured)
 {
     if (textured != 0u)
     {
         u32 st = (u32)(u16)prepared->s | ((u32)(u16)prepared->t << 16);
 
         ndsRendererHardwareWriteFighterTexCoordWord(st);
-        ndsFighterPacketCmd1(FIFO_TEX_COORD, st);
+        ndsFighterPacketRecordTexCoord(st, dense_id);
     }
     ndsRendererHardwareWriteFighterVertex16Words(
         prepared->gx_xy, prepared->gx_z);
@@ -8525,6 +8536,7 @@ ndsRendererNativeEmitProductionPrimitiveGroupsPacket(
 
             ndsFighterPacketEmitCornerShade(run_index, dense_id);
             ndsFighterPacketEmitCornerTail(
+                dense_id,
                 &sNdsNativeFighterActiveTables->prepared_dense[dense_id],
                 textured);
         }
@@ -8584,6 +8596,7 @@ ndsRendererNativeEmitProductionCrossRunPacket(
         }
         ndsFighterPacketEmitCornerShade(run_index, dense_id);
         ndsFighterPacketEmitCornerTail(
+            dense_id,
             &sNdsNativeFighterActiveTables->prepared_dense[dense_id],
             textured);
     }
@@ -8876,6 +8889,145 @@ static u32 ndsFighterPacketLightWord(s32 x, s32 y, s32 z)
     return NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
 }
 
+#if NDS_P2_LINK
+/* P2-2p8. Patch only the FIFO_TEX_COORD words whose source run used
+ * G_TEXTURE_GEN.  This is the exact math from
+ * ndsRendererNativeRebuildProductionRunUv, evaluated from the packet's frozen
+ * texture-preparation inputs plus this draw's live root modelview and LookAt.
+ *
+ * Sites from one run are contiguous. Link's generated texgen run owns 28
+ * unique dense vertices in both details, so a 32-entry local cache keeps the
+ * unavoidable divide work at the same once-per-source-vertex rate as the
+ * direct owner while all repeated strip corners become table copies. Future
+ * source content that exceeds that proven bound fails this optimization and
+ * takes the ordinary native owner path. */
+static s32 ndsFighterPacketPatchTexgen(
+    NDSFighterPacket *packet,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count)
+{
+    const LookAt *look_at;
+    u32 group_index;
+
+    if (packet->texgen_group_count == 0u)
+    {
+        return TRUE;
+    }
+    if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
+        (packet->texgen_site_count > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
+        (sNdsNativeFighterActiveTables == NULL))
+    {
+        return FALSE;
+    }
+    look_at = ndsRendererAdapterCurrentLookAt();
+    if (look_at == NULL)
+    {
+        return FALSE;
+    }
+    for (group_index = 0u;
+         group_index < (u32)packet->texgen_group_count;
+         group_index++)
+    {
+        const NDSFighterPacketTexgenGroup *group =
+            &packet->texgen_groups[group_index];
+        NDSNativeTexgenDirectionQ15 lookat_x;
+        NDSNativeTexgenDirectionQ15 lookat_y;
+        u16 cached_dense[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
+        u32 cached_word[NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX];
+        u32 cached_count = 0u;
+        u32 first_site = group->first_site;
+        u32 site_end = first_site + group->site_count;
+        u32 site_index;
+
+        if (((u32)group->root >= input_count) ||
+            (inputs[group->root].modelview_matrix == NULL) ||
+            (site_end > (u32)packet->texgen_site_count) ||
+            (site_end > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
+            (ndsRendererNativePrepareTexgenDirectionQ15(
+                 &look_at->l[0], inputs[group->root].modelview_matrix,
+                 &lookat_x) == FALSE) ||
+            (ndsRendererNativePrepareTexgenDirectionQ15(
+                 &look_at->l[1], inputs[group->root].modelview_matrix,
+                 &lookat_y) == FALSE))
+        {
+            return FALSE;
+        }
+        for (site_index = first_site; site_index < site_end; site_index++)
+        {
+            const NDSFighterPacketTexgenSite *site =
+                &packet->texgen_sites[site_index];
+            u32 dense_id = site->dense_id;
+            u32 cache_index;
+            u32 st;
+
+            if ((site->index >= packet->word_count) ||
+                (dense_id >= sNdsNativeFighterActiveTables->dense_count))
+            {
+                return FALSE;
+            }
+            for (cache_index = 0u; cache_index < cached_count; cache_index++)
+            {
+                if ((u32)cached_dense[cache_index] == dense_id)
+                {
+                    break;
+                }
+            }
+            if (cache_index == cached_count)
+            {
+                const NDSNativeDenseVertex *dense;
+                u32 rgba;
+                s32 nx;
+                s32 ny;
+                s32 nz;
+                s32 scaled_s;
+                s32 scaled_t;
+                s16 s;
+                s16 t;
+
+                if (cached_count >= NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX)
+                {
+                    return FALSE;
+                }
+                dense = &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
+                rgba = dense->rgba;
+                nx = (s32)(s8)(rgba >> 24);
+                ny = (s32)(s8)(rgba >> 16);
+                nz = (s32)(s8)(rgba >> 8);
+                scaled_s = ndsRendererNativeTexgenCoord(
+                    nx, ny, nz, &lookat_x, group->scale_s);
+                scaled_t = ndsRendererNativeTexgenCoord(
+                    nx, ny, nz, &lookat_y, group->scale_t);
+                s = (s16)(scaled_s - ((s32)group->origin_s << 2) +
+                          group->offset);
+                t = (s16)(scaled_t - ((s32)group->origin_t << 2) +
+                          group->offset);
+                st = (u32)(u16)s | ((u32)(u16)t << 16);
+                cached_dense[cached_count] = (u16)dense_id;
+                cached_word[cached_count] = st;
+                cached_count++;
+            }
+            else
+            {
+                st = cached_word[cache_index];
+            }
+            packet->words[site->index] = st;
+        }
+    }
+    return TRUE;
+}
+#else
+static s32 ndsFighterPacketPatchTexgen(
+    NDSFighterPacket *packet,
+    const NDSRendererNativeFighterRoot *inputs,
+    u32 input_count)
+{
+    (void)packet;
+    (void)inputs;
+    (void)input_count;
+    return TRUE;
+}
+#endif
+
 static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
 {
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
@@ -9013,6 +9165,7 @@ s32 ndsRendererFighterPacketPrecheck(
     u32 input_count)
 {
     u32 battle_slot = (texture_memo_owner_key >> 9) & 3u;
+    NDSFighterPacket *packet = &sNdsFighterPackets[battle_slot];
     u32 key[NDS_FIGHTER_PACKET_KEY_WORDS];
 
 #if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
@@ -9043,8 +9196,16 @@ s32 ndsRendererFighterPacketPrecheck(
     }
     ndsFighterPacketBuildKey(texture_memo_owner_key, packet_key,
                              inputs, input_count, key);
-    return ndsFighterPacketMatches(&sNdsFighterPackets[battle_slot], key,
-                                   input_count);
+    if (ndsFighterPacketMatches(packet, key, input_count) == FALSE)
+    {
+        return FALSE;
+    }
+    /* A predicted hit lets the adapter skip every material row for this draw,
+     * so it must also prove any live texgen words can be refreshed.  Replay
+     * performs the same patch again immediately before DMA; the duplicate
+     * bounded calculation keeps this precheck exact without leaving transient
+     * "prepatched" state that could survive an unrelated early return. */
+    return ndsFighterPacketPatchTexgen(packet, inputs, input_count);
 }
 
 /* The per-frame path. A hit patches the moving words, flushes, DMAs the
@@ -9093,19 +9254,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         return 0;
     }
 #endif
-#if NDS_P2_LINK
-    /* P2-3f31. Link's G_TEXTURE_GEN coordinates depend on the live current
-     * modelview and LookAt vectors. Packet replay patches matrices, lights and
-     * tint, but its recorded TEX_COORD words are otherwise immutable. Until
-     * texgen coordinates are explicit patch sites, replaying Link would freeze
-     * source-derived UVs from the record frame. Decline before arming a record;
-     * every other owner keeps the existing packet path unchanged. */
-    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
-    {
-        gNdsFighterPacketDeclines++;
-        return 0;
-    }
-#else
+#if !NDS_P2_CAPTAIN
     (void)owner_slot;
 #endif
     if ((input_count == 0u) || (input_count > NDS_FIGHTER_PACKET_ROOT_MAX))
@@ -9119,6 +9268,19 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     {
         u32 *words = packet->words;
 
+        if (ndsFighterPacketPatchTexgen(packet, inputs, input_count) == FALSE)
+        {
+            /* The adapter precheck normally catches this before materials are
+             * skipped.  Direct callers still fail closed here: discard the
+             * stale packet and let the ordinary native owner draw this frame. */
+            packet->valid = 0u;
+            gNdsFighterPacketDeclines++;
+            return 0;
+        }
+        if (packet->texgen_group_count != 0u)
+        {
+            gNdsFighterPacketTexgenPatches++;
+        }
         ndsFighterPacketTouchTextures(packet);
         ndsFighterPacketApplyTint(packet, inputs);
         if (packet->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
@@ -9302,6 +9464,8 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     packet->needs_fence = 0u;
     packet->texture_count = 0u;
     packet->site_count = 0u;
+    packet->texgen_group_count = 0u;
+    packet->texgen_site_count = 0u;
     packet->tint_modulate = inputs[0].config->color_modulate;
     packet->tint_prim_hash = 2166136261u;
     for (i = 0u; i < input_count; i++)
@@ -9321,6 +9485,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     rec->header_valid = 0u;
     rec->fault = 0u;
     rec->current_root = 0u;
+    rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
     /* Self-contained stream: forget every GX tracker so the first root
      * re-issues -- and the packet captures -- its matrix mode, texture and
      * polygon attributes. */

@@ -1,0 +1,17 @@
+test_data_generator_ast_and_mocked_layout (__main__.PatchTests.test_data_generator_ast_and_mocked_layout) ... ok
+test_data_ids_append_after_character_data (__main__.PatchTests.test_data_ids_append_after_character_data) ... ok
+test_data_refresh_native_api_and_retry (__main__.PatchTests.test_data_refresh_native_api_and_retry) ... ok
+test_effect_z_is_scoped_to_both_effect_callers (__main__.PatchTests.test_effect_z_is_scoped_to_both_effect_callers) ... ok
+test_impact_no_painter_counter_in_replacement (__main__.PatchTests.test_impact_no_painter_counter_in_replacement) ... ok
+test_impact_xy_unchanged (__main__.PatchTests.test_impact_xy_unchanged) ... ok
+test_link_baseline_reproduces_wrong_foreign_table (__main__.PatchTests.test_link_baseline_reproduces_wrong_foreign_table) ... ok
+test_link_candidate_routes_high_low_and_bounds (__main__.PatchTests.test_link_candidate_routes_high_low_and_bounds) ... ok
+test_link_disabled_build (__main__.PatchTests.test_link_disabled_build) ... ok
+test_link_programs_absent_build (__main__.PatchTests.test_link_programs_absent_build) ... ok
+test_patch_apply_and_reverse_on_reconstructed_preimages (__main__.PatchTests.test_patch_apply_and_reverse_on_reconstructed_preimages) ... ok
+test_reset_release_precedes_all_three_resets (__main__.PatchTests.test_reset_release_precedes_all_three_resets) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.224s
+
+OK

@@ -48,6 +48,7 @@
 /.zcode/
 /.freebuff/
 /.worktrees/
+/alt_assets/
 # The skill trees are shared project assets and must survive a fresh clone or a
 # new worktree; everything else under these directories is local state. A plain
 # `/.agents/` exclusion cannot be re-included per-path, so exclude the contents.

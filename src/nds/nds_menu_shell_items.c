@@ -158,9 +158,15 @@ static void ndsMenuShellItemsLoad(void)
  * straight into the battle state, as every other screen in this shell does. */
 static void ndsMenuShellItemsSave(void)
 {
-    gNdsMatchConfig.item_appearance_rate = sMenuItemsStatus[0];
-    gNdsMatchConfig.item_toggles =
-        ndsMatchConfigItemTogglesFromRows(&sMenuItemsStatus[1]);
+    u32 toggles = ndsMatchConfigItemTogglesFromRows(&sMenuItemsStatus[1]);
+
+    /* mnVSItemSwitchSetItemToggles (:647-658) returns after clearing the mask
+     * when every item row is Off, so the appearance-rate field is untouched. */
+    if (toggles != 0u)
+    {
+        gNdsMatchConfig.item_appearance_rate = sMenuItemsStatus[0];
+    }
+    gNdsMatchConfig.item_toggles = toggles;
     ndsMatchConfigApply(&gNdsMatchConfig);
 
     gNdsMenuShellItemsCommitCount++;
@@ -241,9 +247,9 @@ static void ndsMenuShellPopulateItems(void)
     ndsMenuShellItemsPlaceCursor();
 }
 
-/* mnvsitemswitch.c:755-836. LEFT and RIGHT differ only on row 0, where they
- * walk the rate in opposite directions and wrap; on every other row both flip
- * the toggle, and the cue is spent only when the state actually changes. */
+/* mnvsitemswitch.c:755-815. Row 0 walks the rate in opposite directions and
+ * wraps. On item rows LEFT only turns Off -> On and RIGHT only On -> Off; a
+ * key that cannot change the value is silent. */
 static void ndsMenuShellItemsAdjust(s32 direction)
 {
     if (sMenuItemsCursor == 0u)
@@ -264,8 +270,32 @@ static void ndsMenuShellItemsAdjust(s32 direction)
         ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
         return;
     }
-    sMenuItemsStatus[sMenuItemsCursor] =
-        (sMenuItemsStatus[sMenuItemsCursor] != 0u) ? 0u : 1u;
+    if ((direction < 0) && (sMenuItemsStatus[sMenuItemsCursor] == 0u))
+    {
+        sMenuItemsStatus[sMenuItemsCursor] = 1u;
+        ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
+    }
+    else if ((direction > 0) && (sMenuItemsStatus[sMenuItemsCursor] != 0u))
+    {
+        sMenuItemsStatus[sMenuItemsCursor] = 0u;
+        ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
+    }
+}
+
+/* mnvsitemswitch.c:817-846. A advances the appearance rate and flips item rows. */
+static void ndsMenuShellItemsConfirm(void)
+{
+    if (sMenuItemsCursor == 0u)
+    {
+        sMenuItemsStatus[0] =
+            (sMenuItemsStatus[0] < (u8)nSCBattleItemSwitchVeryHigh) ?
+            (u8)(sMenuItemsStatus[0] + 1u) : (u8)nSCBattleItemSwitchNone;
+    }
+    else
+    {
+        sMenuItemsStatus[sMenuItemsCursor] =
+            (sMenuItemsStatus[sMenuItemsCursor] != 0u) ? 0u : 1u;
+    }
     ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
 }
 
@@ -305,11 +335,16 @@ static void ndsMenuShellUpdateItems(u32 held, u32 taps)
         ndsMenuShellItemsAdjust(1);
     }
 
-    /* The source leaves on B alone (:696). A and START do nothing here --
-     * there is no row to confirm, because every row is edited in place. */
+    /* Source mnvsitemswitch.c:697 handles B before the A/option button path. */
     if ((taps & NDS_INPUT_B) != 0u)
     {
         ndsMenuShellItemsSave();
         ndsMenuShellGoto((u32)nSCKindVSOptions);
+        return;
+    }
+
+    if ((taps & NDS_INPUT_A) != 0u)
+    {
+        ndsMenuShellItemsConfirm();
     }
 }

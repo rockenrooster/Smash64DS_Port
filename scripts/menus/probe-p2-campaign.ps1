@@ -145,6 +145,10 @@ foreach ($flag in @('NDS_P2_MENU_SHELL',
     $value = if ($m.Success) { $m.Groups[1].Value } else { 'absent' }
     Write-Output ("build config: {0}={1}" -f $flag, $value)
 }
+$secondEntryDiagMatch = [regex]::Match(
+    $configText, '(?m)^#define\s+NDS_R2_SECOND_ENTRY_DIAG\s+(\d+)u?$')
+$secondEntryDiag = $secondEntryDiagMatch.Success -and
+    ($secondEntryDiagMatch.Groups[1].Value -ne '0')
 
 $required = @(
     'ndsSceneManagerEnter',
@@ -227,6 +231,9 @@ if ($TransitionProof) {
         'gNdsCampaignTransitionHeapFreeMin',
         'gNdsCampaignTransitionStartStage',
         'gNdsRendererNativeFailure',
+        'gNdsRendererNativeDirectReject',
+        'ndsRendererRecordNativeFailure',
+        'ndsSyMallocOverflowHalt',
         'sSC1PStageClearScoreTotal',
         'sSC1PStageClear1PGameStage',
         'sSC1PStageClearBonusFlags',
@@ -234,6 +241,16 @@ if ($TransitionProof) {
         'sSC1PStageClearBonusNum',
         'sSC1PStageClearIsAllowProceedNext'
     )
+    if ($secondEntryDiag) {
+        $required += @(
+            'gNdsAllocLedgerUsed',
+            'gNdsAllocLedgerOverflow',
+            'gNdsAllocLedgerTotalBytes',
+            'gNdsAllocLedgerTopLR',
+            'gNdsAllocLedgerTopBytes',
+            'gNdsAllocLedgerTopCount'
+        )
+    }
 }
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -392,6 +409,10 @@ try {
         'set $continue_frames = 0',
         'set $tallyshot = 0',
         'set $tallyfinal = 0',
+        'set $intro_native_printed = 0',
+        'set $tally_native_printed = 0',
+        'set $intro_reject_printed = 0',
+        'set $tally_reject_printed = 0',
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
@@ -482,6 +503,34 @@ try {
         'printf "CPSETUP count=%d stage=%u state=%08x\n", $setupcount, gSCManagerSceneData.spgame_stage, gSCManagerBattleState',
         'continue',
         'end',
+        $(if ($TransitionProof) { 'break *ndsRendererRecordNativeFailure' }),
+        $(if ($TransitionProof) { 'commands' }),
+        $(if ($TransitionProof) { 'silent' }),
+        $(if ($TransitionProof) { 'if ($r1 == 14) && ($intro_native_printed == 0)' }),
+        $(if ($TransitionProof) { 'set $intro_native_printed = 1' }),
+        $(if ($TransitionProof) { 'printf "CPNATIVE-INTRO domain=%u scene=%u identity=%u status=%u root=%u material=%u reason=%u reject_count=%u reject_site=%08x\n", $r0, $r1, $r2, $r3, *(unsigned*)$sp, *(unsigned*)($sp+4), *(unsigned*)($sp+8), gNdsRendererNativeDirectReject.count, gNdsRendererNativeDirectReject.site' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof) { 'if ($r1 == 51) && ($tally_native_printed == 0)' }),
+        $(if ($TransitionProof) { 'set $tally_native_printed = 1' }),
+        $(if ($TransitionProof) { 'printf "CPNATIVE-TALLY domain=%u scene=%u identity=%u status=%u root=%u material=%u reason=%u reject_count=%u reject_site=%08x\n", $r0, $r1, $r2, $r3, *(unsigned*)$sp, *(unsigned*)($sp+4), *(unsigned*)($sp+8), gNdsRendererNativeDirectReject.count, gNdsRendererNativeDirectReject.site' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof) { 'continue' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'break ndsSyMallocOverflowHalt' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'commands' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'silent' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOVERFLOW request=%u free=%u align=%u caller=%08x ledger_used=%u ledger_total=%u ledger_overflow=%u\n", gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsSyMallocOverflowAlignment, gNdsSyMallocOverflowCallerLR, gNdsAllocLedgerUsed, gNdsAllocLedgerTotalBytes, gNdsAllocLedgerOverflow' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=0 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[0], gNdsAllocLedgerTopBytes[0], gNdsAllocLedgerTopCount[0]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=1 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[1], gNdsAllocLedgerTopBytes[1], gNdsAllocLedgerTopCount[1]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=2 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[2], gNdsAllocLedgerTopBytes[2], gNdsAllocLedgerTopCount[2]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=3 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[3], gNdsAllocLedgerTopBytes[3], gNdsAllocLedgerTopCount[3]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=4 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[4], gNdsAllocLedgerTopBytes[4], gNdsAllocLedgerTopCount[4]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=5 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[5], gNdsAllocLedgerTopBytes[5], gNdsAllocLedgerTopCount[5]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=6 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[6], gNdsAllocLedgerTopBytes[6], gNdsAllocLedgerTopCount[6]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'printf "CPOWNER rank=7 lr=%08x bytes=%u count=%u\n", gNdsAllocLedgerTopLR[7], gNdsAllocLedgerTopBytes[7], gNdsAllocLedgerTopCount[7]' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'detach' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'quit' }),
+        $(if ($TransitionProof -and $secondEntryDiag) { 'end' }),
         $(if ($TransitionProof) { 'break sc1PStageClearStartScene' }),
         $(if ($TransitionProof) { 'commands' }),
         $(if ($TransitionProof) { 'silent' }),

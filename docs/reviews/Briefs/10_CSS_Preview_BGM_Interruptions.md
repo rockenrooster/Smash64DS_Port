@@ -1,0 +1,58 @@
+# 10 — VS CSS: music pauses or restarts on preview changes
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Audio continuity / responsiveness.
+**Existing owner:** P2-1 CSS + existing audio owner.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> music pauses/reset when rendering new 3d fighter previews (moving around cursor)
+
+## Current source findings
+
+The current acquire path explicitly brackets preview file loading with ndsAudioBgmSuspendForBlockingLoad/ResumeAfterBlockingLoad. The BGM implementation comment says resume continues rather than restarts; a heard restart still requires identifying a separate sequence-start/seek event.
+
+Source keys: [R48](research/SOURCE_LEDGER.md#r48), [R102](research/SOURCE_LEDGER.md#r102), [R107](research/SOURCE_LEDGER.md#r107).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+Replace the long blocking acquire with the transaction in CSS_TRANSACTIONAL_PREVIEW.md. Keep the BGM stream/file position and active mixer sequence alive while bounded file reads occur; service BGM outside the filesystem critical section with sufficient prebuffer before each slice. Cancel obsolete preview work without restarting the track. Remove the CSS suspension calls only once worst-case slice latency is below the measured buffered-audio service margin. Audit scene/BGM-start calls on hover: a hover must not imitate scene entry or invoke a stop/start sequence.
+
+### Executable candidate diffs
+
+[R03_css_reset_image_lifetime.patch](runtime/R03_css_reset_image_lifetime.patch) — **DEFENSIVE CANDIDATE / not a complete CSS fix**.
+
+Check preimages with `python Briefs/tools/check_candidates.py --repo . --candidate R03`. Applying a patch and passing a host test do not establish natural-path correctness.
+
+Implementation contract and code-oriented integration details: [research/CSS_TRANSACTIONAL_PREVIEW.md](research/CSS_TRANSACTIONAL_PREVIEW.md).
+
+## Disprove this candidate before stacking patches
+
+Deleting suspension alone can turn a pause into an underrun or unsafe file reentrancy. Count pauses, actual start/seek calls and underruns separately; a monotonic stream cursor disproves a reset theory, not an audible pause.
+
+## Acceptance for this symptom
+
+A recorded audio capture and event trace show continuous correct CSS BGM through rapid first-time and warmed hover changes, selection/cancel and re-entry. No unexpected start/stop/reset, audible gaps or underruns; selection sounds still occur once at the right time. Pair audio evidence with preview/cadence proof.
+
+## Required regression scope
+
+Announcer/voice/SFX overlap, scene-specific music transitions, buffer ownership, menu responsiveness and memory reserve.
+
+## Coordination
+
+Share the hover workload with the latency/gate brief, but diagnose audio separately before changing the loader.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

@@ -139,6 +139,7 @@ $memoryGlobals = @(
     'gNdsBattlePackResidentBytes',
     'gNdsR2AnimCacheArenaReservedBytes',
     'gNdsR2AnimCacheArenaReserveFailCount',
+    'gNdsR2AnimCacheArenaReserveFailSkips',
     # P2-3r11. THE POSE POOL IS EXACTLY FULL ON THIS ARM AND NOWHERE ELSE:
     # NDS_FT_POSE_FIGHTERS is 4 and this is the only configuration that creates
     # four fighters, so a fifth bind has no spare slot. A BindFull is not a
@@ -147,6 +148,16 @@ $memoryGlobals = @(
     # asserted below rather than merely reported.
     'gNdsFtPoseBinds',
     'gNdsFtPoseBindFull',
+    # P2-2p8 pose track-mask player. A pool overflow uses one scratch track and
+    # cannot be represented in the persistent eval_mask, so a non-zero value
+    # would invalidate both the optimization and the four-fighter animation
+    # proof rather than merely report capacity pressure.
+    'gNdsFtPoseTrackOverflow',
+    # P2-2p8 pose running-joint mask. The mask is deliberately bounded to 64
+    # walk entries and has a correct cold full-scan fallback for wider future
+    # fighters. This four-kind acceptance roster must stay entirely on the
+    # measured compact route; otherwise its timing no longer prices that route.
+    'gNdsFtPoseRunMaskFallbacks',
     # The acceptance instrument for whatever animation-arena budget this arm is
     # built with. `NDS_R2_ANIM_CACHE_ARENA_BYTES` is smaller on the four-distinct
     # -kind roster because the fighter kinds took the difference (P2-3r11), and a
@@ -167,6 +178,27 @@ $memoryGlobals = @(
     'gNdsRelocAssetFighterStreamReads',
     'gNdsRelocAssetFighterStreamMisses',
     'gNdsRelocAssetFighterStreamFailures',
+    # P2-2p8 BPS1 directory residency. The immutable 8-byte row for each
+    # fighter clip is loaded once with the stream header instead of issuing a
+    # separate NitroROM range read on every live clip acquisition. These prove
+    # the resident directory engaged and the shipping route never fell back to
+    # per-row reads.
+    'gNdsRelocAssetFighterStreamDirBytes',
+    'gNdsRelocAssetFighterStreamDirHits',
+    'gNdsRelocAssetFighterStreamDirFallbackReads',
+    'gNdsRelocAssetFighterStreamDirLoadFailures',
+    # P2-2p8 BGM packet reads. The stream already knows one immutable NitroFS
+    # file and exact byte offsets; live refills must use that resolved file-id
+    # route rather than re-entering libfat's seek/cluster walk. These counters
+    # prove the route engaged during the same one-minute stress and never fell
+    # back to stdio after engagement.
+    'gNdsAudioBgmDirectReadCount',
+    'gNdsAudioBgmDirectFallbackCount',
+    # P2-2p8 FGM live ranges. Samples and envelopes live in one immutable
+    # validated NitroFS pack; starting a cue must not re-enter stdio/libfat.
+    'gNdsAudioFgmDirectReadCount',
+    'gNdsAudioFgmDirectFallbackCount',
+    'gNdsAudioFgmStdioRangeReadCount',
     # P2-2 compact Main/Model residency. The FPC loader replaces the raw
     # per-kind Main+Model allocation on this direct VSBattle arm; these are its
     # own load/failure counters, not inferred from the absence of an OOM.
@@ -469,6 +501,18 @@ if ($extra['gNdsFtPoseBindFull'] -ne 0) {
         'silently drops that fighter to the generic AObj path and the run did ' +
         'not animate four fighters the way the shipped engine does.')
 }
+if ($extra['gNdsFtPoseTrackOverflow'] -ne 0) {
+    throw ("Four-fighter stress overflowed the compact pose track pool: " +
+        "trackOverflow=$($extra['gNdsFtPoseTrackOverflow']). " +
+        'The eval-mask route cannot persist a scratch-only track, so this run ' +
+        'does not prove source-equivalent fighter animation.')
+}
+if ($extra['gNdsFtPoseRunMaskFallbacks'] -ne 0) {
+    throw ("Four-fighter stress used the wide pose-entry fallback: " +
+        "runMaskFallbacks=$($extra['gNdsFtPoseRunMaskFallbacks']). " +
+        'The accepted Donkey/Samus/Link/Kirby roster must fit the 64-entry ' +
+        'running-joint mask so this gate measures the optimized pose path.')
+}
 
 # This custom argmax is exactly Donkey/Samus/Link/Kirby. Each Main has nine
 # source external fixups into its ShieldPose file (DObjDesc + eight sector
@@ -614,8 +658,11 @@ $memory = [PSCustomObject]@{
     battlePackCarveMatchKinds = $extra['gNdsBattlePackCarveMatchKinds']
     animCacheArenaReservedBytes = $extra['gNdsR2AnimCacheArenaReservedBytes']
     animCacheArenaReserveFailCount = $extra['gNdsR2AnimCacheArenaReserveFailCount']
+    animCacheArenaReserveFailSkips = $extra['gNdsR2AnimCacheArenaReserveFailSkips']
     ftPoseBinds = $extra['gNdsFtPoseBinds']
     ftPoseBindFull = $extra['gNdsFtPoseBindFull']
+    ftPoseTrackOverflow = $extra['gNdsFtPoseTrackOverflow']
+    ftPoseRunMaskFallbacks = $extra['gNdsFtPoseRunMaskFallbacks']
     animCacheMisses = $extra['gNdsR2AnimCacheMisses']
     animCacheRejects = $extra['gNdsR2AnimCacheRejects']
     animCacheHits = $extra['gNdsR2AnimCacheHits']
@@ -630,6 +677,15 @@ $memory = [PSCustomObject]@{
     animStreamReads = $extra['gNdsRelocAssetFighterStreamReads']
     animStreamMisses = $extra['gNdsRelocAssetFighterStreamMisses']
     animStreamFailures = $extra['gNdsRelocAssetFighterStreamFailures']
+    animStreamDirBytes = $extra['gNdsRelocAssetFighterStreamDirBytes']
+    animStreamDirHits = $extra['gNdsRelocAssetFighterStreamDirHits']
+    animStreamDirFallbackReads = $extra['gNdsRelocAssetFighterStreamDirFallbackReads']
+    animStreamDirLoadFailures = $extra['gNdsRelocAssetFighterStreamDirLoadFailures']
+    bgmDirectReads = $extra['gNdsAudioBgmDirectReadCount']
+    bgmDirectFallbacks = $extra['gNdsAudioBgmDirectFallbackCount']
+    fgmDirectReads = $extra['gNdsAudioFgmDirectReadCount']
+    fgmDirectFallbacks = $extra['gNdsAudioFgmDirectFallbackCount']
+    fgmStdioRangeReads = $extra['gNdsAudioFgmStdioRangeReadCount']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
@@ -956,6 +1012,7 @@ if ([uint64]$memory.animCacheArenaReservedBytes -ne 0) {
             "reserved=$($memory.animCacheArenaReservedBytes).")
     }
 } elseif (([uint64]$memory.animCacheArenaReserveFailCount -eq 0) -or
+          ([uint64]$memory.animCacheArenaReserveFailSkips -eq 0) -or
           ([uint64]$memory.animCacheHits -ne 0) -or
           ([uint64]$memory.animCacheFills -ne 0) -or
           ([uint64]$memory.animCacheRawRecycles -ne 0) -or
@@ -965,6 +1022,7 @@ if ([uint64]$memory.animCacheArenaReservedBytes -ne 0) {
           ([uint64]$memory.animCacheRejects -ne [uint64]$memory.animCacheMisses)) {
     throw ("Four-fighter zero-reserve animation path was inconsistent: " +
         "reserveFails=$($memory.animCacheArenaReserveFailCount) " +
+        "reserveFailSkips=$($memory.animCacheArenaReserveFailSkips) " +
         "hits=$($memory.animCacheHits) fills=$($memory.animCacheFills) " +
         "wraps=$($memory.animCacheRawRecycles) live=$($memory.animCacheLiveBytes) " +
         "cursor=$($memory.animCacheArenaUsedBytes) misses=$($memory.animCacheMisses) " +
@@ -985,6 +1043,29 @@ if (([uint64]$memory.animStreamDispatch -ne 1) -or
         "cleanly: dispatch=$($memory.animStreamDispatch) " +
         "reads=$($memory.animStreamReads) misses=$($memory.animStreamMisses) " +
         "failures=$($memory.animStreamFailures).")
+}
+if (([uint64]$memory.animStreamDirBytes -eq 0) -or
+    ([uint64]$memory.animStreamDirHits -eq 0) -or
+    ([uint64]$memory.animStreamDirFallbackReads -ne 0) -or
+    ([uint64]$memory.animStreamDirLoadFailures -ne 0)) {
+    throw ("Four-fighter BPS1 resident directory did not engage cleanly: " +
+        "bytes=$($memory.animStreamDirBytes) hits=$($memory.animStreamDirHits) " +
+        "fallbackReads=$($memory.animStreamDirFallbackReads) " +
+        "loadFailures=$($memory.animStreamDirLoadFailures).")
+}
+if (([uint64]$memory.bgmDirectReads -eq 0) -or
+    ([uint64]$memory.bgmDirectFallbacks -ne 0)) {
+    throw ("Four-fighter BGM direct NitroROM refill did not engage cleanly: " +
+        "reads=$($memory.bgmDirectReads) " +
+        "fallbacks=$($memory.bgmDirectFallbacks).")
+}
+if (([uint64]$memory.fgmDirectReads -eq 0) -or
+    ([uint64]$memory.fgmDirectFallbacks -ne 0) -or
+    ([uint64]$memory.fgmStdioRangeReads -ne 0)) {
+    throw ("Four-fighter FGM direct NitroROM range route did not engage cleanly: " +
+        "reads=$($memory.fgmDirectReads) " +
+        "fallbacks=$($memory.fgmDirectFallbacks) " +
+        "stdioReads=$($memory.fgmStdioRangeReads).")
 }
 
 Write-Host ''

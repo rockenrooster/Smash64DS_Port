@@ -907,6 +907,8 @@ volatile u32 gNdsAudioBgmStreamBytesPerSecond;
 volatile u32 gNdsAudioBgmExpectedBytesPerSecond;
 volatile u32 gNdsAudioBgmLoopCount;
 volatile u32 gNdsAudioBgmRefillCount;
+__attribute__((used)) volatile u32 gNdsAudioBgmDirectReadCount;
+__attribute__((used)) volatile u32 gNdsAudioBgmDirectFallbackCount;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 volatile u32 gNdsAudioBgmRefillTicksLast;
 volatile u32 gNdsAudioBgmRefillTicksMax;
@@ -974,6 +976,9 @@ sb32 dSYAudioSoundQuality = 1;
 static u8 sNdsAudioBgmBuffers[NDS_AUDIO_BGM_BUFFER_COUNT]
     [NDS_AUDIO_BGM_PACKET_BYTES] __attribute__((aligned(4)));
 static FILE *sNdsAudioBgmFile;
+static NitroRom *sNdsAudioBgmRom;
+static u16 sNdsAudioBgmRomFileId;
+static u8 sNdsAudioBgmRomReady;
 static const NDSAudioBgmTrack *sNdsAudioBgmTrack;
 static Thread sNdsAudioBgmWorker;
 static Mailbox sNdsAudioBgmMailbox;
@@ -1074,6 +1079,56 @@ static u32 ndsAudioBgmMapPlaybackByte(u64 playback_byte)
         (u32)((playback_byte - sNdsAudioBgmTrack->stream_bytes) % loop_bytes);
 }
 
+/* The stream pack is immutable NitroFS data. The stdio reader below is still
+ * the correctness fallback, but paying libfat's cluster walk on the worker
+ * thread for every packet is a DS-port artifact: the source DMA path reads an
+ * already-known ROM range. Resolve this track's NitroROM file ID once, after
+ * the source-visible track identity is selected, and keep the logical byte
+ * cursor in sNdsAudioBgmOffset. */
+static void ndsAudioBgmDirectRouteReset(void)
+{
+    sNdsAudioBgmRom = NULL;
+    sNdsAudioBgmRomFileId = 0u;
+    sNdsAudioBgmRomReady = FALSE;
+}
+
+static void ndsAudioBgmDirectRouteInit(void)
+{
+    NitroRom *rom;
+    const char *path;
+    int file_id;
+
+    ndsAudioBgmDirectRouteReset();
+    if ((sNdsAudioBgmTrack == NULL) || (sNdsAudioBgmTrack->path == NULL))
+    {
+        gNdsAudioBgmDirectFallbackCount++;
+        return;
+    }
+    path = sNdsAudioBgmTrack->path;
+    if (strncmp(path, "nitro:/", 7u) != 0)
+    {
+        gNdsAudioBgmDirectFallbackCount++;
+        return;
+    }
+    rom = nitroromGetSelf();
+    if (rom == NULL)
+    {
+        gNdsAudioBgmDirectFallbackCount++;
+        return;
+    }
+    file_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path + 7u);
+    if ((file_id < 0) || (file_id >= (s32)NITROROM_ROOT_DIR) ||
+        (nitroromGetFileSize(rom, (u16)file_id) !=
+         sNdsAudioBgmTrack->asset_bytes))
+    {
+        gNdsAudioBgmDirectFallbackCount++;
+        return;
+    }
+    sNdsAudioBgmRom = rom;
+    sNdsAudioBgmRomFileId = (u16)file_id;
+    sNdsAudioBgmRomReady = TRUE;
+}
+
 static void ndsAudioBgmCloseFile(void)
 {
     if (sNdsAudioBgmFile != NULL)
@@ -1081,6 +1136,7 @@ static void ndsAudioBgmCloseFile(void)
         fclose(sNdsAudioBgmFile);
         sNdsAudioBgmFile = NULL;
     }
+    ndsAudioBgmDirectRouteReset();
     gNdsAudioBgmFileOpen = 0u;
 }
 
@@ -1116,6 +1172,35 @@ static s32 ndsAudioBgmOpenFile(void)
 
 static s32 ndsAudioBgmReadExactUnlocked(u8 *dst, u32 bytes)
 {
+    if ((dst == NULL) || (sNdsAudioBgmTrack == NULL) ||
+        (sNdsAudioBgmOffset > sNdsAudioBgmTrack->asset_bytes) ||
+        (bytes > (sNdsAudioBgmTrack->asset_bytes - sNdsAudioBgmOffset)))
+    {
+        gNdsAudioBgmReadFailCount++;
+        return FALSE;
+    }
+    if (sNdsAudioBgmRomReady != FALSE)
+    {
+        if (nitroromReadFile(sNdsAudioBgmRom, sNdsAudioBgmRomFileId,
+                             sNdsAudioBgmOffset, dst, bytes) != false)
+        {
+            sNdsAudioBgmOffset += bytes;
+            gNdsAudioBgmReadBytes += bytes;
+            gNdsAudioBgmDirectReadCount++;
+            return TRUE;
+        }
+        /* Re-seat stdio at the authoritative logical cursor once, then keep
+         * using its established sequential behavior. A failed direct transfer
+         * never changes the live cursor or publishes a partial packet. */
+        gNdsAudioBgmDirectFallbackCount++;
+        sNdsAudioBgmRomReady = FALSE;
+        if ((sNdsAudioBgmFile == NULL) ||
+            (fseek(sNdsAudioBgmFile, (long)sNdsAudioBgmOffset, SEEK_SET) != 0))
+        {
+            gNdsAudioBgmReadFailCount++;
+            return FALSE;
+        }
+    }
     if ((sNdsAudioBgmFile == NULL) ||
         (fread(dst, 1u, bytes, sNdsAudioBgmFile) != bytes))
     {
@@ -1233,8 +1318,9 @@ static s32 ndsAudioBgmReadPacket(u32 buffer)
             sNdsAudioBgmStreamExhausted = 1u;
             return 0;
         }
-        if (fseek(sNdsAudioBgmFile,
-                  (long)sNdsAudioBgmTrack->loop_record, SEEK_SET) != 0)
+        if ((sNdsAudioBgmRomReady == FALSE) &&
+            (fseek(sNdsAudioBgmFile,
+                   (long)sNdsAudioBgmTrack->loop_record, SEEK_SET) != 0))
         {
             gNdsAudioBgmReadFailCount++;
             return -1;
@@ -1774,6 +1860,8 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmExpectedBytesPerSecond = NDS_AUDIO_BGM_BYTES_PER_SECOND;
     gNdsAudioBgmLoopCount = 0u;
     gNdsAudioBgmRefillCount = 0u;
+    gNdsAudioBgmDirectReadCount = 0u;
+    gNdsAudioBgmDirectFallbackCount = 0u;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsAudioBgmRefillTicksLast = 0u;
     gNdsAudioBgmRefillTicksMax = 0u;
@@ -1903,8 +1991,13 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     gNdsAudioBgmResult = NDS_AUDIO_BGM_PASS;
     return;
 #endif
-    if ((ndsAudioBgmOpenFile() == FALSE) ||
-        (ndsAudioBgmReadHeader() == FALSE) ||
+    if (ndsAudioBgmOpenFile() == FALSE)
+    {
+        ndsAudioBgmFailPlayback();
+        return;
+    }
+    ndsAudioBgmDirectRouteInit();
+    if ((ndsAudioBgmReadHeader() == FALSE) ||
         (ndsAudioBgmReadPacket(0u) != 1))
     {
         ndsAudioBgmFailPlayback();

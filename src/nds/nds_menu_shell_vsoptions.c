@@ -36,10 +36,10 @@
  * descriptor, so a return trip shows what the last visit committed
  * (mnVSOptionsInitVars, :1175-1178).
  *
- * THE FIVE ROWS ARE ALWAYS PRESENT. The source hides the ItemSwitch row while
- * the item switch is still locked (sMNVSOptionsIsHaveItemSwitch, :1182-1191);
- * this build has no lock progression, so there is nothing to gate on and the
- * cursor always walks all five.
+ * ITEM SWITCH IS UNLOCK-GATED. mnVSOptionsCheckHaveItemSwitch (:125-132) tests
+ * LBBACKUP_UNLOCK_MASK_ITEMSWITCH, and mnVSOptionsInitVars (:1182-1191) caps
+ * the cursor at Damage until that bit is present. The shell uses the same save
+ * mask and leaves the fifth row undrawn/unreachable while locked.
  *
  * THE CURSOR IS THE SELECTED ROW'S BAKE. The source marks it with the
  * bubble HIGHLIGHT pair plus a red underline (mnVSOptionsSetOptionSpriteColors
@@ -78,6 +78,7 @@
  * DS frame exactly as the VS rules screen's own numbers land. */
 #define NDS_MENU_VSOPTIONS_DAMAGE_RIGHT NDS_MENU_VS_DS(220)
 #define NDS_MENU_VSOPTIONS_DAMAGE_Y NDS_MENU_VS_DS(151)
+#define NDS_MENU_VSOPTIONS_DAMAGE_LOCKED_Y NDS_MENU_VS_DS(164)
 #define NDS_MENU_VSOPTIONS_PERCENT_X NDS_MENU_VS_DS(226)
 
 /* The composed number rides the kit's number slots; the percent takes the
@@ -95,6 +96,7 @@ static u8 sMenuVsOptionsHandicap;
 static u8 sMenuVsOptionsTeam;
 static u8 sMenuVsOptionsStage;
 static u8 sMenuVsOptionsDamage;
+static u8 sMenuVsOptionsHaveItemSwitch;
 /* What is currently ON SCREEN, so a frame that changed nothing blits nothing
  * and a change blits exactly the row that changed. Same discipline as the
  * Item Switch screen's row surfaces. The damage row's cache entry is its
@@ -121,6 +123,7 @@ static const NdsUiKitSurfaceId kNdsMenuVsOptionsPlate[] = {
 static NdsUiKitSurfaceId ndsMenuShellVsOptionsWantSurface(u32 row)
 {
     u32 hi = (row == sMenuVsOptionsCursor) ? 1u : 0u;
+    u32 locked = (sMenuVsOptionsHaveItemSwitch == 0u) ? 1u : 0u;
 
     switch (row)
     {
@@ -128,15 +131,33 @@ static NdsUiKitSurfaceId ndsMenuShellVsOptionsWantSurface(u32 row)
         switch (sMenuVsOptionsHandicap)
         {
         case nSCBattleHandicapOn:
+            if (locked != 0u)
+            {
+                return (hi != 0u) ?
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON_LOCKED_HI :
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON_LOCKED;
+            }
             return (hi != 0u) ?
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON_HI :
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON;
         case nSCBattleHandicapAuto:
+            if (locked != 0u)
+            {
+                return (hi != 0u) ?
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO_LOCKED_HI :
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO_LOCKED;
+            }
             return (hi != 0u) ?
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO_HI :
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO;
         default:
             break;
+        }
+        if (locked != 0u)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_OFF_LOCKED_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_OFF_LOCKED;
         }
         return (hi != 0u) ?
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_OFF_HI :
@@ -144,9 +165,21 @@ static NdsUiKitSurfaceId ndsMenuShellVsOptionsWantSurface(u32 row)
     case NDS_MENU_VSOPTIONS_TEAM:
         if (sMenuVsOptionsTeam != 0u)
         {
+            if (locked != 0u)
+            {
+                return (hi != 0u) ?
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON_LOCKED_HI :
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON_LOCKED;
+            }
             return (hi != 0u) ?
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON_HI :
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON;
+        }
+        if (locked != 0u)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_OFF_LOCKED_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_OFF_LOCKED;
         }
         return (hi != 0u) ?
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_OFF_HI :
@@ -154,14 +187,32 @@ static NdsUiKitSurfaceId ndsMenuShellVsOptionsWantSurface(u32 row)
     case NDS_MENU_VSOPTIONS_STAGE:
         if (sMenuVsOptionsStage != 0u)
         {
+            if (locked != 0u)
+            {
+                return (hi != 0u) ?
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON_LOCKED_HI :
+                    NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON_LOCKED;
+            }
             return (hi != 0u) ?
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON_HI :
                 NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON;
+        }
+        if (locked != 0u)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_OFF_LOCKED_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_OFF_LOCKED;
         }
         return (hi != 0u) ?
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_OFF_HI :
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_OFF;
     case NDS_MENU_VSOPTIONS_DAMAGE:
+        if (locked != 0u)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL_LOCKED_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL_LOCKED;
+        }
         return (hi != 0u) ?
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL_HI :
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL;
@@ -184,6 +235,11 @@ static void ndsMenuShellVsOptionsSyncRows(u32 budget)
          (row < NDS_MENU_VSOPTIONS_ROWS) && (budget != 0u);
          row++)
     {
+        if ((row == NDS_MENU_VSOPTIONS_ITEMSWITCH) &&
+            (sMenuVsOptionsHaveItemSwitch == 0u))
+        {
+            continue;
+        }
         NdsUiKitSurfaceId want = ndsMenuShellVsOptionsWantSurface(row);
 
         if (want != sMenuVsOptionsRowSurface[row])
@@ -206,7 +262,9 @@ static void ndsMenuShellVsOptionsDrawDamage(void)
 {
     u32 value = (u32)sMenuVsOptionsDamage;
     s32 right = (s32)NDS_MENU_VSOPTIONS_DAMAGE_RIGHT;
-    s32 y = (s32)NDS_MENU_VSOPTIONS_DAMAGE_Y;
+    s32 y = (sMenuVsOptionsHaveItemSwitch != 0u) ?
+        (s32)NDS_MENU_VSOPTIONS_DAMAGE_Y :
+        (s32)NDS_MENU_VSOPTIONS_DAMAGE_LOCKED_Y;
 
     (void)ndsUiKitSetSprite(NDS_MENU_VSOPTIONS_DIGIT_SLOT,
                             NDS_MN_UI_KIT_IMAGE_VS_OPTIONS_DIGIT_0 +
@@ -239,8 +297,12 @@ static void ndsMenuShellVsOptionsLoad(void)
 {
     u32 row;
 
+    sMenuVsOptionsHaveItemSwitch =
+        ((gSCManagerBackupData.unlock_mask & LBBACKUP_UNLOCK_MASK_ITEMSWITCH) !=
+         0u) ? 1u : 0u;
     sMenuVsOptionsCursor =
-        (((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSItemSwitch) ?
+        (((sMenuVsOptionsHaveItemSwitch != 0u) &&
+          ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSItemSwitch)) ?
          NDS_MENU_VSOPTIONS_ITEMSWITCH : NDS_MENU_VSOPTIONS_HANDICAP);
     sMenuVsOptionsHandicap = gNdsMatchConfig.handicap_mode;
     sMenuVsOptionsTeam = (gNdsMatchConfig.is_team_attack != FALSE) ? 1u : 0u;
@@ -254,6 +316,22 @@ static void ndsMenuShellVsOptionsLoad(void)
     }
 }
 
+/* mnVSOptionsSetHandicapSettings (:1218-1232). A mode change immediately
+ * normalises every transfer slot: Auto starts at 5, On/Off at the source
+ * default 9. Mirror the values into the descriptor too so Apply's preservation
+ * rule cannot turn an intentional menu edit into a stale carry-over. */
+static void ndsMenuShellVsOptionsSetHandicapSettings(void)
+{
+    u8 handicap = (sMenuVsOptionsHandicap == (u8)nSCBattleHandicapAuto) ? 5u : 9u;
+    u32 i;
+
+    for (i = 0u; i < (u32)NDS_MATCH_FIGHTERS_MAX; i++)
+    {
+        gNdsMatchConfig.fighters[i].handicap = handicap;
+        gSCManagerTransferBattleState.players[i].handicap = handicap;
+    }
+}
+
 /* mnVSOptionsSetAllSettings (:1199-1204), through the descriptor rather than
  * straight into the battle state, as every other screen in this shell does. */
 static void ndsMenuShellVsOptionsSave(void)
@@ -262,6 +340,11 @@ static void ndsMenuShellVsOptionsSave(void)
     gNdsMatchConfig.is_team_attack = sMenuVsOptionsTeam;
     gNdsMatchConfig.is_stage_select = sMenuVsOptionsStage;
     gNdsMatchConfig.damage_ratio = sMenuVsOptionsDamage;
+    /* :1206-1213 repeats the default-9 reset when Off is committed. */
+    if (sMenuVsOptionsHandicap == (u8)nSCBattleHandicapOff)
+    {
+        ndsMenuShellVsOptionsSetHandicapSettings();
+    }
     ndsMatchConfigApply(&gNdsMatchConfig);
 
     gNdsMenuShellVsOptionsCommitCount++;
@@ -293,6 +376,7 @@ static void ndsMenuShellVsOptionsAdjust(s32 direction)
                 sMenuVsOptionsHandicap =
                     (sMenuVsOptionsHandicap == (u8)nSCBattleHandicapOff) ?
                     (u8)nSCBattleHandicapAuto : (u8)nSCBattleHandicapOn;
+                ndsMenuShellVsOptionsSetHandicapSettings();
                 ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
             }
         }
@@ -301,6 +385,7 @@ static void ndsMenuShellVsOptionsAdjust(s32 direction)
             sMenuVsOptionsHandicap =
                 (sMenuVsOptionsHandicap == (u8)nSCBattleHandicapOn) ?
                 (u8)nSCBattleHandicapAuto : (u8)nSCBattleHandicapOff;
+            ndsMenuShellVsOptionsSetHandicapSettings();
             ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
         }
         break;
@@ -372,6 +457,7 @@ static void ndsMenuShellVsOptionsConfirm(void)
         {
             sMenuVsOptionsHandicap = (u8)nSCBattleHandicapAuto;
         }
+        ndsMenuShellVsOptionsSetHandicapSettings();
         break;
     case NDS_MENU_VSOPTIONS_TEAM:
         ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
@@ -389,6 +475,8 @@ static void ndsMenuShellVsOptionsConfirm(void)
 static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
 {
     u32 moved = FALSE;
+    u32 last_row = (sMenuVsOptionsHaveItemSwitch != 0u) ?
+        NDS_MENU_VSOPTIONS_ITEMSWITCH : NDS_MENU_VSOPTIONS_DAMAGE;
 
     ndsMenuShellVsOptionsSyncRows(1u);
 
@@ -396,13 +484,13 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
     {
         sMenuVsOptionsCursor = (sMenuVsOptionsCursor ==
                                 NDS_MENU_VSOPTIONS_HANDICAP) ?
-            (NDS_MENU_VSOPTIONS_ROWS - 1u) : (sMenuVsOptionsCursor - 1u);
+            last_row : (sMenuVsOptionsCursor - 1u);
         moved = TRUE;
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_DOWN) != FALSE)
     {
-        sMenuVsOptionsCursor =
-            (sMenuVsOptionsCursor + 1u) % NDS_MENU_VSOPTIONS_ROWS;
+        sMenuVsOptionsCursor = (sMenuVsOptionsCursor == last_row) ?
+            NDS_MENU_VSOPTIONS_HANDICAP : (sMenuVsOptionsCursor + 1u);
         moved = TRUE;
     }
     if (moved != FALSE)
@@ -424,7 +512,8 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
 
     /* A or START on the ItemSwitch row opens it (:1284-1289). */
     if (((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u) &&
-        (sMenuVsOptionsCursor == NDS_MENU_VSOPTIONS_ITEMSWITCH))
+        (sMenuVsOptionsCursor == NDS_MENU_VSOPTIONS_ITEMSWITCH) &&
+        (sMenuVsOptionsHaveItemSwitch != 0u))
     {
         ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
         ndsMenuShellVsOptionsSave();

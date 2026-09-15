@@ -3337,7 +3337,38 @@ typedef struct NDSFighterPacketTexture
     u32 key_generation;
 } NDSFighterPacketTexture;
 
+/* One source G_TEXTURE_GEN run in a recorded fighter packet.  The GX packet is
+ * static, but these five texture-preparation inputs plus the root's live
+ * modelview and the camera LookAt vectors define the run's S/T words.  Keeping
+ * them here lets replay patch only those FIFO_TEX_COORD parameters instead of
+ * re-running Link's complete owner/state/run preparation every frame. */
+typedef struct NDSFighterPacketTexgenGroup
+{
+    u32 scale_s;
+    u32 scale_t;
+    u32 origin_s;
+    u32 origin_t;
+    s32 offset;
+    u16 first_site;
+    u16 site_count;
+    u8 root;
+    u8 reserved[3];
+} NDSFighterPacketTexgenGroup;
+
+/* Packet word + source dense vertex for one live texgen coordinate. Groups own
+ * contiguous site ranges; the dense id supplies the exact source normal used
+ * by ndsRendererNativeRebuildProductionRunUv. */
+typedef struct NDSFighterPacketTexgenSite
+{
+    u16 index;
+    u16 dense_id;
+} NDSFighterPacketTexgenSite;
+
 #define NDS_FIGHTER_PACKET_SITE_MAX 64u
+#define NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX 8u
+#define NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX 256u
+#define NDS_FIGHTER_PACKET_TEXGEN_DENSE_MAX 32u
+#define NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE 0xffffffffu
 /* Four-distinct-kind Low-detail stress reaches more than 16 unique resident
  * cache identities in one fighter packet. Falling off this array is correct
  * but coarse: it reverts that packet to the global texture-generation fence,
@@ -3362,6 +3393,8 @@ typedef struct NDSFighterPacket
      * then keeps the global texture generation fence in its key. */
     u8 needs_fence;
     u8 texture_count;
+    u8 texgen_group_count;
+    u16 texgen_site_count;
     u32 triangle_count;
     u32 run_count;
     u32 raw_triangles;
@@ -3388,6 +3421,10 @@ typedef struct NDSFighterPacket
     NDSFighterPacketRoot roots[NDS_FIGHTER_PACKET_ROOT_MAX];
     NDSFighterPacketShadeSite sites[NDS_FIGHTER_PACKET_SITE_MAX];
     NDSFighterPacketTexture textures[NDS_FIGHTER_PACKET_TEXTURE_MAX];
+    NDSFighterPacketTexgenGroup
+        texgen_groups[NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX];
+    NDSFighterPacketTexgenSite
+        texgen_sites[NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
 } NDSFighterPacket;
 
 typedef struct NDSFighterPacketRecorder
@@ -3405,6 +3442,8 @@ typedef struct NDSFighterPacketRecorder
     u32 current_root;
     /* A material or state delta rewrote prim_color under the current root. */
     u32 prim_overridden;
+    /* Current run's live texgen descriptor, or NONE for ordinary UVs. */
+    u32 texgen_group;
 } NDSFighterPacketRecorder;
 
 static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
@@ -3418,6 +3457,7 @@ volatile u32 gNdsFighterPacketRecords;
 volatile u32 gNdsFighterPacketFaults;
 volatile u32 gNdsFighterPacketDeclines;
 volatile u32 gNdsFighterPacketWordsMax;
+volatile u32 gNdsFighterPacketTexgenPatches;
 /* Per key word (then root count, then texture residency): how often a valid
  * packet was invalidated by that cause, alone or with others. */
 volatile u32 gNdsFighterPacketMissWord[NDS_FIGHTER_PACKET_KEY_WORDS + 2u];
@@ -3590,8 +3630,46 @@ static void ndsFighterPacketNoteTextureEntry(void);
  * boundary and the first prepare of a record follows a full tracker reset. An
  * untextured run binds libnds's no-texture object, whose TEXIMAGE_PARAM is 0. */
 static void NDS_FIGHTER_PACKET_COLD_CODE
-ndsFighterPacketRecordPrepare(u32 use_texture, u32 poly_fmt)
+ndsFighterPacketRecordPrepare(
+    u32 use_texture,
+    u32 poly_fmt,
+    u32 use_texgen,
+    u32 scale_s,
+    u32 scale_t,
+    u32 origin_s,
+    u32 origin_t,
+    s32 offset)
 {
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    NDSFighterPacket *packet = rec->packet;
+
+    rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
+    if ((use_texture != 0u) && (use_texgen != 0u))
+    {
+        if ((packet == NULL) ||
+            ((u32)packet->texgen_group_count >=
+             NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
+            (rec->current_root >= NDS_FIGHTER_PACKET_ROOT_MAX))
+        {
+            rec->fault = 1u;
+        }
+        else
+        {
+            NDSFighterPacketTexgenGroup *group =
+                &packet->texgen_groups[packet->texgen_group_count];
+
+            group->scale_s = scale_s;
+            group->scale_t = scale_t;
+            group->origin_s = origin_s;
+            group->origin_t = origin_t;
+            group->offset = offset;
+            group->first_site = packet->texgen_site_count;
+            group->site_count = 0u;
+            group->root = (u8)rec->current_root;
+            rec->texgen_group = packet->texgen_group_count;
+            packet->texgen_group_count++;
+        }
+    }
     if (use_texture != 0u)
     {
         ndsFighterPacketRecordBoundTexture();
@@ -3603,6 +3681,36 @@ ndsFighterPacketRecordPrepare(u32 use_texture, u32 poly_fmt)
     }
     ndsFighterPacketCmd1(REG2ID(GFX_POLY_FORMAT), poly_fmt);
     ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
+}
+
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketRecordTexCoord(u32 word, u32 dense_id)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    NDSFighterPacket *packet = rec->packet;
+    u32 i = ndsFighterPacketCmd(FIFO_TEX_COORD, 1u);
+
+    if (rec->fault != 0u)
+    {
+        return;
+    }
+    rec->words[i] = word;
+    if (rec->texgen_group == NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE)
+    {
+        return;
+    }
+    if ((packet == NULL) ||
+        (packet->texgen_site_count >= NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
+        (rec->texgen_group >= (u32)packet->texgen_group_count) ||
+        (i > 0xffffu) || (dense_id > 0xffffu))
+    {
+        rec->fault = 1u;
+        return;
+    }
+    packet->texgen_sites[packet->texgen_site_count].index = (u16)i;
+    packet->texgen_sites[packet->texgen_site_count].dense_id = (u16)dense_id;
+    packet->texgen_groups[rec->texgen_group].site_count++;
+    packet->texgen_site_count++;
 }
 
 /* The shade's DIF_AMB write and the inputs that re-derive it on replay. */

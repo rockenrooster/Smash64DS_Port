@@ -1,0 +1,56 @@
+# 06 — VS CSS: Jigglypuff selection and natural native proof
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Roster/gameplay access.
+**Existing owner:** P2-3f47 + P2-1 CSS.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> Jigglypuff not selectable
+
+## Current source findings
+
+Jigglypuff is Purin in the source. The old shared residency diagnosis is not a current proof that its only remaining problem is storage; natural Purin proof is still recorded open.
+
+Source keys: [S02](research/SOURCE_LEDGER.md#s02), [S10](research/SOURCE_LEDGER.md#s10), [R102](research/SOURCE_LEDGER.md#r102).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+Qualify Purin against the current compact loader and native image ABI, selected/idle preview states and move-specific model/material closure. Use R03 only for the shared reset lifetime gaps. After qualifying the actual runtime fighter capability, wire its canonical shell admission row and generated portrait/cursor mapping together. Preserve the original locked/unlocked save semantics separately from build completeness. Exercise release/reacquire and post-Results return before publishing the roster change.
+
+### Executable candidate diffs
+
+[R03_css_reset_image_lifetime.patch](runtime/R03_css_reset_image_lifetime.patch) — **DEFENSIVE CANDIDATE / not a complete CSS fix**.
+
+Check preimages with `python Briefs/tools/check_candidates.py --repo . --candidate R03`. Applying a patch and passing a host test do not establish natural-path correctness.
+
+## Disprove this candidate before stacking patches
+
+Do not enable a roster bit to bypass an unimplemented native body or missing motion; do not regress the existing one-action CSS scheduler or load all twelve fighters eagerly.
+
+## Acceptance for this symptom
+
+When eligible, Jigglypuff is selectable, has a visible idle/selected preview, starts a playable native match and survives cancel/re-entry/rematch cycles without asset collisions or memory growth. Required state and pixel proof is attached; counter-only or direct-battle evidence does not close CSS selection.
+
+## Required regression scope
+
+Kirby/Ness, source unlock state, four preview slots, high/low owner binding, BGM continuity and the compact-preview pin-disjointness guard.
+
+## Coordination
+
+Same shared roster work as Kirby/Ness; distinct Purin natural proof.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

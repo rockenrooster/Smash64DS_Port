@@ -12674,7 +12674,8 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
             root,
             callback_kind,
             sNdsStageGCDrawAllLoopCurrentCameraGObj,
-            ndsStageGCDrawAllLoopInitialGeometryMode());
+            ndsStageGCDrawAllLoopInitialGeometryMode() |
+                NDS_RENDERER_GEOM_ZBUFFER);
         gNdsEffectPhaseTreeTicks += cpuGetTiming() - phase_mark;
     }
 #else
@@ -12682,7 +12683,8 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         root,
         callback_kind,
         sNdsStageGCDrawAllLoopCurrentCameraGObj,
-        ndsStageGCDrawAllLoopInitialGeometryMode());
+        ndsStageGCDrawAllLoopInitialGeometryMode() |
+            NDS_RENDERER_GEOM_ZBUFFER);
 #endif
     ndsRendererAdapterEndStageTraversal();
     triangle_delta =

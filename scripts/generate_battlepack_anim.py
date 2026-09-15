@@ -65,12 +65,15 @@ DEFAULT_BANK = (ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r"
 MAGIC = b"BPA1"
 VERSION = 1
 
-# reloc_backend_assets.c:3059-3074 -- these four carry AObjEvent32 scripts and
-# are NOT part of an AObj16 pack. Named, never silently skipped.
+# Generated fighter manifests name the entry/effect clips that carry AObjEvent32
+# scripts and are therefore NOT part of an AObj16 pack. Named, never silently
+# skipped.
 AOBJ32_IDS = {
     0x279, 0x27A, 0x309, 0x30A,  # Mario/Fox entry effects
     0x3A4, 0x3A5,                # Donkey entry effects
     0x442, 0x443,                # Samus entry effects
+    0x4DE, 0x4DF,                # Link entry effects
+    0x584, 0x585,                # Kirby DK-staring effects
     0x670, 0x671, 0x672, 0x673,  # Captain entry/Falcon Flyer effects
 }
 
@@ -80,6 +83,9 @@ FOX_FIRST, FOX_LAST = 0x282, 0x31F
 DONKEY_FIRST, DONKEY_LAST = 0x320, 0x3B8
 SAMUS_FIRST, SAMUS_LAST = 0x3B9, 0x44E
 LUIGI_FIRST, LUIGI_LAST = 0x44F, 0x45A
+LINK_FIRST, LINK_LAST = 0x45B, 0x4EA
+KIRBY_FIRST, KIRBY_LAST = 0x4EB, 0x5A4
+KIRBY_COPY_FIRST, KIRBY_COPY_LAST = 0x5DE, 0x5DF
 CAPTAIN_FIRST, CAPTAIN_LAST = 0x5E8, 0x67F
 
 # The item-flavoured clips, PROVEN excludable from the linked battle ELF rather
@@ -94,15 +100,22 @@ FIGHTER_RANGES = {
     "donkey": range(DONKEY_FIRST, DONKEY_LAST + 1),
     "samus": range(SAMUS_FIRST, SAMUS_LAST + 1),
     "luigi": range(LUIGI_FIRST, LUIGI_LAST + 1),
+    "link": range(LINK_FIRST, LINK_LAST + 1),
+    "kirby": tuple(range(KIRBY_FIRST, KIRBY_LAST + 1)) +
+             tuple(range(KIRBY_COPY_FIRST, KIRBY_COPY_LAST + 1)),
     "captain": range(CAPTAIN_FIRST, CAPTAIN_LAST + 1),
 }
 FIGHTER_PREFIXES = {
-    "mario": "FTMarioAnim",
-    "fox": "FTFoxAnim",
-    "donkey": "FTDonkeyAnim",
-    "samus": "FTSamusAnim",
-    "luigi": "FTLuigiAnim",
-    "captain": "FTCaptainAnim",
+    "mario": ("FTMarioAnim",),
+    "fox": ("FTFoxAnim",),
+    "donkey": ("FTDonkeyAnim",),
+    "samus": ("FTSamusAnim",),
+    "luigi": ("FTLuigiAnim",),
+    "link": ("FTLinkAnim",),
+    # Kirby's source motion table contains two live FTKirbyCopyAnim assets;
+    # keeping both stems under one fighter key makes --fighter kirby complete.
+    "kirby": ("FTKirbyAnim", "FTKirbyCopyAnim"),
+    "captain": ("FTCaptainAnim",),
 }
 
 CLIP_DIR = struct.Struct("<HHII")     # asset_id, script_count, byte_off, bytes
@@ -242,8 +255,10 @@ def build(bank: pathlib.Path, dedup=True, exclude=(), fighter=None):
     exclude = frozenset(exclude)
     probe = _load("ftanim_reloc_probe")
     clips, skipped, splines, seen = [], [], [], set()
+    all_prefixes = tuple(prefix for prefixes in FIGHTER_PREFIXES.values()
+                         for prefix in prefixes)
     for path in sorted(bank.iterdir()):
-        if not path.name.startswith(tuple(FIGHTER_PREFIXES.values())):
+        if not path.name.startswith(all_prefixes):
             continue
         if ((fighter is not None) and
                 (not path.name.startswith(FIGHTER_PREFIXES[fighter]))):

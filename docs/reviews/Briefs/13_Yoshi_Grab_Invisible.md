@@ -1,0 +1,56 @@
+# 13 — Yoshi grab/throw: restore source model-part programs
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Fighter visibility / gameplay presentation.
+**Existing owner:** P2-3f52.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> Grab attacks turn yoshi invisible.
+
+## Current source findings
+
+Yoshi uses source DL-pair/model-part machinery. The inspected root resolver has explicit variants for several fighters but no equivalent Yoshi variant arm. That is a native coverage lead, not a measured failing root for the reported grab.
+
+Source keys: [S02](research/SOURCE_LEDGER.md#s02), [R52](research/SOURCE_LEDGER.md#r52), [R71](research/SOURCE_LEDGER.md#r71), [R83](research/SOURCE_LEDGER.md#r83).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+Add source-derived Yoshi root programs for the complete Catch/Throw hidden-part and tongue/jaw attachment family. Enumerate ordered live bindings after the motion script changes model parts, preserving DL-pair pre/post-load semantics and matrix ancestry. Emit matching high/low owner-image sections, parent bindings, palette/cross-matrix slots and runtime program selection. Select the exact declared program from live source state, then restore canonical roots on release, throw, interruption and damage. Do not make the fighter visible by clearing all hidden flags.
+
+### Code delivery boundary
+
+No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
+
+Implementation contract and code-oriented integration details: [research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md](research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md).
+
+## Disprove this candidate before stacking patches
+
+An unknown model part at one hand/jaw may make whole-owner validation decline; prove the first rejected root/program. A transform-only node must remain in ancestry even when it submits no polygon.
+
+## Acceptance for this symptom
+
+Yoshi stays source-correctly visible during successful and missed grabs and both throw directions; tongue/required attachments appear correctly and body visibility restores on every exit. Use natural human-input sequences, source timing/state guards and pixels for high/low and both facings.
+
+## Required regression scope
+
+Yoshi neutral-B capture, entry/egg throw, opponent intended capture visibility, damage interruption, death/respawn and canonical rendering.
+
+## Coordination
+
+Likely shared native-root generator work with other Yoshi states; one root proof does not close all states.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

@@ -521,7 +521,6 @@ u32 ndsK0AfterGoFighter(u32 asset_id)
 
 static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
 {
-    static const char prefix[] = "nitro:/reloc/reloc_animations/";
     static NDSRelocAssetEntry entry;
     static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
     u32 index;
@@ -536,21 +535,23 @@ static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
     index = asset_id - NDS_RELOC_MARIO_ANIM_FIRST;
     if (index == 0u)
     {
-        written = sniprintf(path, sizeof(path), "%sFTMarioAnimWait", prefix);
+        written = sniprintf(path, sizeof(path),
+                           "nitro:/reloc/reloc_animations/FTMarioAnimWait");
     }
     else if (index == 44u)
     {
         written = sniprintf(path, sizeof(path),
-                           "%sFTMarioAnimDownBounceD", prefix);
+                           "nitro:/reloc/reloc_animations/FTMarioAnimDownBounceD");
     }
     else if (index == 46u)
     {
         written = sniprintf(path, sizeof(path),
-                           "%sFTMarioAnimDownStandD", prefix);
+                           "nitro:/reloc/reloc_animations/FTMarioAnimDownStandD");
     }
     else
     {
-        written = sniprintf(path, sizeof(path), "%sFTMarioAnim%03lu", prefix,
+        written = sniprintf(path, sizeof(path),
+                           "nitro:/reloc/reloc_animations/FTMarioAnim%03lu",
                            (unsigned long)index);
     }
     if ((written < 0) || ((size_t)written >= sizeof(path)))
@@ -1172,7 +1173,7 @@ s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst, size_t dst_capaci
 #if NDS_R2_FTANIM_STREAM
 #define NDS_FTANIM_STREAM_MAGIC 0x31535042u /* "BPS1", little endian */
 #define NDS_FTANIM_STREAM_VERSION 1u
-#define NDS_FTANIM_STREAM_PATH "zz_stream/ftanim_stream_pack.bin"
+#define NDS_FTANIM_STREAM_PATH "animation/ftanim_stream_pack.bin"
 
 typedef struct NDSFtAnimStreamHeader
 {
@@ -1192,11 +1193,45 @@ typedef struct NDSFtAnimStreamEntry
     u32 size;
 } NDSFtAnimStreamEntry;
 
+#define NDS_FTANIM_STREAM_DIR_MAX_ENTRIES 1200u
+
+typedef struct NDSFtAnimStreamDirRouteCell
+{
+    u32 route;
+    u32 pad[7];
+} NDSFtAnimStreamDirRouteCell;
+
+_Static_assert(sizeof(NDSFtAnimStreamDirRouteCell) == 32u,
+               "fighter-stream directory route must own one D-cache line");
+
 static NitroRom *sNdsFtAnimStreamRom;
 static NDSFtAnimStreamHeader sNdsFtAnimStreamHeader;
+/* BPS1's current dense directory is 1,165 x 8 B = 9,320 B.  It is immutable
+ * metadata, and every live clip request used to issue a separate NitroROM range
+ * read just to recover these two words before reading the payload.  Warm/cache
+ * acquisition asks once for size and once for bytes, so that path paid the row
+ * read twice.  Keep a measured, bounded resident copy; a future wider pack
+ * simply leaves this disabled and uses the established per-row read below.
+ *
+ * The route cell owns a complete D-cache line because the tick sampler pokes it
+ * for same-ROM A/B.  A bare aligned u32 can share a line with unrelated writes
+ * and get restored by a later writeback (the fighter draw-memo route already
+ * hit that exact failure mode). */
+static NDSFtAnimStreamEntry
+    sNdsFtAnimStreamDir[NDS_FTANIM_STREAM_DIR_MAX_ENTRIES]
+    __attribute__((aligned(32)));
 static u16 sNdsFtAnimStreamFileId;
 static u8 sNdsFtAnimStreamState;
-
+static u16 sNdsFtAnimStreamDirCount;
+static u8 sNdsFtAnimStreamDirReady;
+__attribute__((used, section(".data"), aligned(32)))
+volatile NDSFtAnimStreamDirRouteCell gNdsRelocAssetFighterStreamDirRoute = {
+    1u, { 0u, 0u, 0u, 0u, 0u, 0u, 0u }
+};
+__attribute__((used)) volatile u32 gNdsRelocAssetFighterStreamDirBytes;
+__attribute__((used)) volatile u32 gNdsRelocAssetFighterStreamDirHits;
+__attribute__((used)) volatile u32 gNdsRelocAssetFighterStreamDirFallbackReads;
+__attribute__((used)) volatile u32 gNdsRelocAssetFighterStreamDirLoadFailures;
 static s32 ndsRelocAssetOpenFighterStream(void)
 {
     NDSFtAnimStreamHeader *header = &sNdsFtAnimStreamHeader;
@@ -1247,6 +1282,27 @@ static s32 ndsRelocAssetOpenFighterStream(void)
     }
     sNdsFtAnimStreamRom = rom;
     sNdsFtAnimStreamFileId = (u16)file_id;
+    sNdsFtAnimStreamDirCount = 0u;
+    sNdsFtAnimStreamDirReady = FALSE;
+    gNdsRelocAssetFighterStreamDirBytes = 0u;
+    if (dense_count <= NDS_FTANIM_STREAM_DIR_MAX_ENTRIES)
+    {
+        u32 dir_bytes = dense_count * sizeof(NDSFtAnimStreamEntry);
+
+        if (nitroromReadFile(rom, (u16)file_id, header->dir_off,
+                             sNdsFtAnimStreamDir, dir_bytes) != false)
+        {
+            sNdsFtAnimStreamDirCount = (u16)dense_count;
+            sNdsFtAnimStreamDirReady = TRUE;
+            gNdsRelocAssetFighterStreamDirBytes = dir_bytes;
+        }
+        else
+        {
+            /* Residency is only a performance route.  The validated stream is
+             * still usable through the exact per-row reader below. */
+            gNdsRelocAssetFighterStreamDirLoadFailures++;
+        }
+    }
     sNdsFtAnimStreamState = 1u;
     return TRUE;
 
@@ -1277,15 +1333,27 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
             gNdsRelocAssetFighterStreamMisses++;
             return FALSE;
         }
-        row = header->dir_off +
-              ((asset_id - header->first_id) *
-               sizeof(NDSFtAnimStreamEntry));
-        if (nitroromReadFile(sNdsFtAnimStreamRom,
-                             sNdsFtAnimStreamFileId, row, &entry,
-                             sizeof(entry)) == false)
+        row = asset_id - header->first_id;
+        if ((gNdsRelocAssetFighterStreamDirRoute.route != 0u) &&
+            (sNdsFtAnimStreamDirReady != FALSE) &&
+            (row < sNdsFtAnimStreamDirCount))
         {
-            gNdsRelocAssetFighterStreamFailures++;
-            return FALSE;
+            entry = sNdsFtAnimStreamDir[row];
+            gNdsRelocAssetFighterStreamDirHits++;
+        }
+        else
+        {
+            u32 row_offset = header->dir_off +
+                (row * sizeof(NDSFtAnimStreamEntry));
+
+            if (nitroromReadFile(sNdsFtAnimStreamRom,
+                                 sNdsFtAnimStreamFileId, row_offset, &entry,
+                                 sizeof(entry)) == false)
+            {
+                gNdsRelocAssetFighterStreamFailures++;
+                return FALSE;
+            }
+            gNdsRelocAssetFighterStreamDirFallbackReads++;
         }
         if ((entry.offset < header->data_off) || (entry.size == 0u) ||
             (entry.offset > header->blob_bytes) ||

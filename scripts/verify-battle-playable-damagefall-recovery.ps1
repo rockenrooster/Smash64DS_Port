@@ -182,6 +182,7 @@ $requiredSymbols = @(
     'ftCommonDamageFallSetStatusFromDamage',
     'mpCommonCheckFighterCliff',
     'ftCommonDownBounceSetStatus',
+    'ndsRendererSubmitNativeImpactWave',
     'gGCCommonLinks',
     'gSCManagerSceneData',
     'gSCManagerBattleState',
@@ -214,6 +215,7 @@ $damageInitAddress = $symbolAddresses['ndsBaseFTCommonDamageInitDamageVars']
 $damageFallSetAddress = $symbolAddresses['ftCommonDamageFallSetStatusFromDamage']
 $checkCliffAddress = $symbolAddresses['mpCommonCheckFighterCliff']
 $downBounceAddress = $symbolAddresses['ftCommonDownBounceSetStatus']
+$impactWaveNativeAddress = $symbolAddresses['ndsRendererSubmitNativeImpactWave']
 $timeUpAddress = $symbolAddresses['ifCommonAnnounceTimeUpInitInterface']
 
 $screenshotPath = Resolve-VisibilityOutput $Screenshot
@@ -322,6 +324,7 @@ try {
         'set $cross_adj_calls_before = 0',
         'set $cross_adj_hits_before = 0',
         'set $downbounce_calls = 0',
+        'set $impact_native_hits = 0',
         'set $rejected_direct_count = 0',
         'set $landing_pending = 0',
         'set $completed_frame_checks = 0',
@@ -794,6 +797,7 @@ try {
         'set $landing_sweep_hits_after = gNdsCollisionRuntimeDiagnostics.floor_sweep_hits',
         'set $landing_adj_calls_after = gNdsCollisionRuntimeDiagnostics.floor_adj_calls',
         'set $landing_adj_hits_after = gNdsCollisionRuntimeDiagnostics.floor_adj_direct_hits + gNdsCollisionRuntimeDiagnostics.floor_adjacent_hits',
+        'enable $impact_native_breakpoint',
         'end',
         'end',
         'end',
@@ -801,6 +805,19 @@ try {
         'continue',
         'end',
         'disable $downbounce_breakpoint',
+
+        # Arm this only after the accepted source DownBounce entry. A hit then
+        # proves that the impact wave spawned by that exact recovery reached
+        # the native renderer owner; no cached guest counter is sampled.
+        ('break *0x{0:x8}' -f $impactWaveNativeAddress),
+        'set $impact_native_breakpoint = $bpnum',
+        'commands $impact_native_breakpoint',
+        'silent',
+        'set $impact_native_hits = $impact_native_hits + 1',
+        'disable $impact_native_breakpoint',
+        'continue',
+        'end',
+        'disable $impact_native_breakpoint',
 
         # This breakpoint is disabled until the genuine >=60 up-smash hit.
         # It observes completed frames only; it never drives input. A raw
@@ -861,7 +878,10 @@ try {
         'if (($terminator_scene == 22) && ($terminator_limit == 1) && ($terminator_remain == 0) && ($terminator_passed == 3600))',
         'set $outcome = 3',
         'else',
-        'set $outcome = 4',
+        # The source creates this interface during battle setup too. Ignore
+        # those non-expiry calls and keep driving the natural match; only the
+        # exact one-minute expiry is a valid no-sample terminator.
+        'continue',
         'end',
         'end',
         'continue',
@@ -886,6 +906,7 @@ try {
         'printf "DAMAGEFALL_TRANSITION=%u,%d,%u\n", $transition_calls, $transition_status, $transition_confirmed',
         'printf "DAMAGEFALL_CROSS=%u,%d,%d,%d,%d\n", $cross, $cross_prev_bottom_milli, $cross_curr_bottom_milli, $cross_x_milli, $cross_pos_diff_y_milli',
         'printf "DAMAGEFALL_ROUTE=%u,%u,%u,%u,%u,%u,%u,%u,%d,%#x,%#x,%u,%d\n", $downbounce_calls, $cross_sweep_calls_before, $landing_sweep_calls_after, $cross_sweep_hits_before, $landing_sweep_hits_after, $cross_adj_calls_before, $landing_adj_calls_after, $landing_adj_hits_after - $cross_adj_hits_before, $landing_floor_line, $landing_mask_curr, $landing_mask_stat, $landing_is_coll_end, $landing_bottom_milli',
+        'printf "DAMAGEFALL_IMPACT=%u\n", $impact_native_hits',
         'printf "DAMAGEFALL_FRAMES=%u,%u,%d,%d,%u,%u\n", $completed_frame_checks, $below_floor_completed, $below_floor_bottom_milli, $below_floor_x_milli, $rejected_direct_count, $landing_pending',
         'printf "DAMAGEFALL_TERMINATOR=%u,%u,%u,%u,%u\n", $terminator_scene, $terminator_status, $terminator_limit, $terminator_remain, $terminator_passed',
         'printf "DAMAGEFALL_POST=%u,%d,%d,%d,%d,%#x,%#x,%u,%d\n", $outcome, $ffp->status_id, $ffp->motion_id, $ffp->ga, $ffp->coll_data.floor_line_id, $ffp->coll_data.mask_curr, $ffp->coll_data.mask_stat, $ffp->coll_data.is_coll_end, (int)(($ffp->coll_data.p_translate->y + $ffp->coll_data.map_coll.bottom) * 1000.0)',
@@ -904,6 +925,15 @@ try {
         -ScriptName $scriptName `
         -TimeoutSeconds $TimeoutSeconds).Stdout
 
+    # The capture helper can return just before Windows publishes the new PNG
+    # directory entry. Give that bounded filesystem handoff a moment before
+    # treating a successfully reported capture as missing evidence.
+    $capturePublishDeadline = [DateTime]::UtcNow.AddSeconds(2)
+    while ((-not (Test-Path -LiteralPath $screenshotPath -PathType Leaf)) -and
+           ([DateTime]::UtcNow -lt $capturePublishDeadline)) {
+        Start-Sleep -Milliseconds 100
+    }
+
     $setup = [regex]::Match($gdbStdout, 'DAMAGEFALL_SETUP=([0-9]+),([0-9]+)')
     $harn = [regex]::Match($gdbStdout, 'HARN=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0)')
     $scene = [regex]::Match($gdbStdout, 'SCENE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
@@ -919,6 +949,7 @@ try {
     $transition = [regex]::Match($gdbStdout, 'DAMAGEFALL_TRANSITION=([0-9]+),(-?[0-9]+),([0-9]+)')
     $cross = [regex]::Match($gdbStdout, 'DAMAGEFALL_CROSS=([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
     $route = [regex]::Match($gdbStdout, 'DAMAGEFALL_ROUTE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(-?[0-9]+)')
+    $impact = [regex]::Match($gdbStdout, 'DAMAGEFALL_IMPACT=([0-9]+)')
     $frames = [regex]::Match($gdbStdout, 'DAMAGEFALL_FRAMES=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),([0-9]+),([0-9]+)')
     $terminator = [regex]::Match($gdbStdout, 'DAMAGEFALL_TERMINATOR=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $post = [regex]::Match($gdbStdout, 'DAMAGEFALL_POST=([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(0x[0-9a-fA-F]+|0),(0x[0-9a-fA-F]+|0),([0-9]+),(-?[0-9]+)')
@@ -1011,6 +1042,7 @@ try {
     Assert-Condition ($transition.Success -and $tv[0] -eq 1 -and $tv[1] -ge 51 -and $tv[1] -le 55 -and $tv[2] -eq 1) 'Fox DamageFly did not naturally transition exactly once through source DamageFall status 57.' $gdbStdout
     Assert-Condition ($cross.Success -and $cv[0] -eq 1 -and $cv[1] -ge 0 -and $cv[2] -lt 0 -and $cv[3] -ge -2318000 -and $cv[3] -le 2318000 -and $cv[4] -lt 0) 'Fox DamageFall did not produce a descending main-floor crossing on Pupupu line 3.' $gdbStdout
     Assert-Condition ($route.Success -and $rv[0] -eq 1 -and $rv[8] -eq 3 -and (($rv[9] -band 0x800) -ne 0) -and (($rv[10] -band 0x800) -ne 0) -and $rv[11] -eq 1 -and [Math]::Abs($rv[12]) -le 2) 'Fox DamageFall did not clamp on line 3 and invoke exactly one DownBounce.' $gdbStdout
+    Assert-Condition ($impact.Success -and [int]$impact.Groups[1].Value -ge 1) 'The accepted source DownBounce did not reach the native impact-wave renderer owner.' $gdbStdout
     Assert-Condition (($rv[2] - $rv[1]) -ge 1 -and
         ($rv[4] - $rv[3]) -ge 1) `
         'Source-shaped Fox DamageFall processing did not drive the shared floor sweep to a hit.' $gdbStdout
@@ -1032,7 +1064,7 @@ try {
         $gdbStdout
     Assert-Condition ($memory.Success -and $mv[0] -eq 0x4d4c4544 -and $mv[1] -eq 22 -and $mv[2] -ge 131072) 'DamageFall recovery violated the P1 arena reserve floor.' $gdbStdout
 
-    Write-Output ("battle_playable damage recovery passed: route=DamageFall attacker=Mario move=up-smash attempts={0} victim=Fox kb={1:N2} status={2} floor={3} root_bottom={4} reserve={5} screenshot={6}" -f $uv[2], $knockback, $dv[1], $rv[8], $rv[12], $mv[2], $screenshotPath)
+    Write-Output ("battle_playable damage recovery passed: route=DamageFall attacker=Mario move=up-smash attempts={0} victim=Fox kb={1:N2} status={2} floor={3} root_bottom={4} reserve={5} impactNative={6} screenshot={7}" -f $uv[2], $knockback, $dv[1], $rv[8], $rv[12], $mv[2], [int]$impact.Groups[1].Value, $screenshotPath)
     $verificationPassed = $true
 } catch {
     $failureRecord = $_

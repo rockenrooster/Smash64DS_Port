@@ -1,0 +1,66 @@
+Subject: [CODEX TASK BRIEF ONLY] 21_Electric_Damage_Effects
+This patch installs the researched issue brief, not the engine change.
+Actual source candidates are separate in Briefs/runtime/.
+The same readable Markdown is already included in the ZIP.
+
+diff --git a/Briefs/21_Electric_Damage_Effects.md b/Briefs/21_Electric_Damage_Effects.md
+new file mode 100644
+--- /dev/null
++++ b/Briefs/21_Electric_Damage_Effects.md
+@@ -0,0 +1,56 @@
++# 21 — Combat: missing electrical damage presentation
++
++**Version:** runtime-candidate research revision, 2026-09-14.
++**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
++**Priority / scope:** Cross-fighter damage telegraph / VFX.
++**Existing owner:** Existing common damage effects + P2-3f53.
++**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
++
++Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
++assets and current board before changing code. Preserve unrelated edits.
++
++## Owner report (preserved)
++
++> electric damage effects seem to be missing overall
++
++## Current source findings
++
++Victim electric-damage effects are a common damage family, not just Pikachu projectile art. A projectile-only fix will not recover this scope.
++
++Source keys: [S02](research/SOURCE_LEDGER.md#s02), [R61](research/SOURCE_LEDGER.md#r61), [R64](research/SOURCE_LEDGER.md#r64).
++These distinguish directly inspected code from repository-recorded proof; none
++is a new ROM run by this package's author.
++
++## Potential runtime fix
++
++Enumerate source electric-damage constructors and victim attachment joints, scripts/material frames and lifetime. Ensure the imported real maker is linked, then provide native model/particle owners for every required child. Emit victim-attached transforms from current fighter state rather than attacker position, retaining source spawn cadence and interruption rules. Correct atlas membership or color/alpha only for a positively identified missing script. Share the owner with other electric causes where the source uses the same effect, not by hardcoding Pikachu.
++
++### Code delivery boundary
++
++No preimage-matched target-source diff is supplied for this report: the remaining change depends on an unobserved runtime divergence or unavailable generated asset closure. The implementation above is a concrete conditional repair proposal, not a fabricated completed patch.
++
++Implementation contract and code-oriented integration details: [research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md](research/FIGHTER_ROOT_AND_EFFECT_CLOSURE.md).
++
++## Disprove this candidate before stacking patches
++
++If the source damage routine never requests the effect for the exercised hit, the first divergence is hit/damage dispatch, not rendering. Verify other electric sources and multiple victim skeletons.
++
++## Acceptance for this symptom
++
++Eligible hits visibly produce the correct electric damage presentation on victims of different shapes, facings and detail levels, with proper attachment, lifetime, alpha and cleanup. Non-electric damage stays unchanged. Positive spawn and rendered-pixel evidence identifies which source cases were exercised; any unmeasured remainder stays open.
++
++## Required regression scope
++
++Hitstun/timing, regular damage flashes, multiple victims, shield/no-hit cases, KO/respawn cleanup and particle budgets.
++
++## Coordination
++
++Coordinate with Pikachu Down-B and the shared VFX producer; keep producer coverage explicit.
++
++## Closure
++
++Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
++native-only, cadence and widest-relevant-verifier requirements. Record candidate
++identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
++and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
++owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

@@ -21,7 +21,8 @@ param(
     [ValidateRange(-80,80)][int]$StickY = 0,
     [ValidateRange(-500,500)][int]$Teleport = 0,
     [string]$Condition = '',
-    [string]$Condition2 = ''
+    [string]$Condition2 = '',
+    [switch]$RequireImpactWave
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -132,7 +133,8 @@ try {
         'gNdsFighterDLAllDrawP1HardwareTriangleCount',
         'gNdsFtrRejectCountBySlot','gNdsFtrRejectStatusBySlot',
         'gNdsFtrRejectReasonBySlot','ndsControllerPlaybackSetEnabled',
-        'ndsControllerPlaybackSetConnectedMask','ndsControllerPlaybackSetPad')) {
+        'ndsControllerPlaybackSetConnectedMask','ndsControllerPlaybackSetPad',
+        'ndsRendererSubmitNativeImpactWave')) {
         $symbolArguments += @('-ex',"info address $symbol")
     }
     $symbolOutput = & $gdb @symbolArguments 2>&1
@@ -214,6 +216,15 @@ try {
             'set $sector_basis_hits = $sector_basis_hits + 1',
             'printf "DIAG_SECTOR_BASIS_ENTRY=%u,%p,%p,%p,%p,%p,%p,%d,%d\n", $sector_basis_hits, dobj, dobj->parent_gobj, dobj->aobj, gGRCommonStruct.sector.map_dobjs[11], gSYTaskmanGeneralHeap.start, gSYTaskmanGeneralHeap.ptr, gGRCommonStruct.sector.arwing_laser_count, gGRCommonStruct.sector.arwing_appear_timer',
             'if $sector_basis_hits >= 8','quit','end','continue','end')
+    }
+    $commands += 'set $impact_wave_hits = 0'
+    if ($RequireImpactWave) {
+        # Count execution of the real native owner, not a guest/cached counter.
+        # Keep this opt-in so unrelated action probes do not pay breakpoint
+        # overhead for effects they never intend to exercise.
+        $commands += @(
+            'break ndsRendererSubmitNativeImpactWave','commands','silent',
+            'set $impact_wave_hits = $impact_wave_hits + 1','continue','end')
     }
     if ($Condition -eq '') {
         # Legacy path: fixed present count, no forced input. Unchanged.
@@ -350,6 +361,7 @@ try {
         'printf "DIAG_CAMFRAM3=%f,%f,%f,%f,%f,%f,%f,%f\n", gNdsCameraFighterX[0], gNdsCameraFighterY[0], gNdsCameraFighterX[1], gNdsCameraFighterY[1], gNdsCameraFighterX[2], gNdsCameraFighterY[2], gNdsCameraFighterX[3], gNdsCameraFighterY[3]',
         'printf "DIAG_CAMFRAM4=%f,%f,%f,%f,%f,%f,%f,%f\n", gNdsCameraWorstFighterX[0], gNdsCameraWorstFighterY[0], gNdsCameraWorstFighterX[1], gNdsCameraWorstFighterY[1], gNdsCameraWorstFighterX[2], gNdsCameraWorstFighterY[2], gNdsCameraWorstFighterX[3], gNdsCameraWorstFighterY[3]',
         'printf "DIAG_NATIVE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
+        'printf "DIAG_IMPACTWAVE=%u\n", $impact_wave_hits',
         'printf "DIAG_STAGE_OWNER=%u,%u,%u\n", gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerRejectCount, sNdsRendererAdapterNativeStageWorkspace.dobj_count',
         'printf "DIAG_SECTOR_ARWING_MTX=%u\n", gNdsRendererAdapterSectorArwingMtxCount',
         'printf "DIAG_SECTOR_ARWING_BASIS=%u,%u,%u\n", gNdsSectorArwingBasisDecline, gNdsStageGCDrawAllLoopGroundActorSubmitCount, gNdsStageGCDrawAllLoopGroundActorRejectCount',
@@ -465,6 +477,12 @@ try {
     }
     $result.state = @($state.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     $result.native_failure = @($native.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
+    $impactWave = [regex]::Match($text,'(?m)^DIAG_IMPACTWAVE=([0-9]+)\r?$')
+    if (-not $impactWave.Success) { throw 'Missing native impact-wave witness marker.' }
+    $result.impact_wave_hits = [uint32]$impactWave.Groups[1].Value
+    if ($RequireImpactWave -and $result.impact_wave_hits -eq 0) {
+        throw 'Requested impact wave never reached ndsRendererSubmitNativeImpactWave.'
+    }
     foreach ($marker in @('DIAG_FTDECLINE','DIAG_FTREJECT','DIAG_FTREJECT_SLOT','DIAG_FTROOTS','DIAG_ACTION')) {
         $hit = [regex]::Match($text,'(?m)^' + $marker + '=(.*)\r?$')
         if ($hit.Success) {

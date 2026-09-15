@@ -1,0 +1,58 @@
+# 16 — Link intro: translucent column effect
+
+**Version:** runtime-candidate research revision, 2026-09-14.
+**Inspected base:** `a5c5bc08d8e8661658865216798d600462db948e` (`master`).
+**Priority / scope:** Intro material fidelity / telegraph.
+**Existing owner:** P2-3f33.
+**Status:** OPEN — candidate code/proposals, not a ROM-verified fix.
+
+Read [COMMON.md](COMMON.md). Reconcile the actual working tree, source-derived
+assets and current board before changing code. Preserve unrelated edits.
+
+## Owner report (preserved)
+
+> character intro column VFX should have transparency
+
+## Current source findings
+
+LinkSpecial2 shows the entry wave/column as CI4 materials with distinct primitive alpha; Spin uses an IA texture. Treating every Link effect as the same IA8 decoder bug is incorrect. Existing alpha-texture conversions must be retained.
+
+Source keys: [R61](research/SOURCE_LEDGER.md#r61), [R64](research/SOURCE_LEDGER.md#r64), [R65](research/SOURCE_LEDGER.md#r65), [R66](research/SOURCE_LEDGER.md#r66), [R78](research/SOURCE_LEDGER.md#r78).
+These distinguish directly inspected code from repository-recorded proof; none
+is a new ROM run by this package's author.
+
+## Potential runtime fix
+
+Trace the live primitive/environment alpha into the entry group, preserve the source combiner alpha equation, and select DS blend mode/texture format from that effective equation. For the CI4 column, keep palette coverage separate from primitive alpha: do not turn all nonzero texels opaque or discard the animated material alpha. R02 is a separately audited candidate for source depth inheritance, not an alpha fix. Add a generated material fixture proving the source column alpha reaches the emitted polygon state; ensure state caching keys include changing alpha.
+
+### Executable candidate diffs
+
+[R02_effect_initial_z.patch](runtime/R02_effect_initial_z.patch) — **CONDITIONAL CANDIDATE / sibling audit required**.
+
+Check preimages with `python Briefs/tools/check_candidates.py --repo . --candidate R02`. Applying a patch and passing a host test do not establish natural-path correctness.
+
+Implementation contract and code-oriented integration details: [research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md](research/MATERIAL_DEPTH_AND_STAGE_REPAIRS.md).
+
+## Disprove this candidate before stacking patches
+
+If decoded texture alpha is correct but the quad is hard, inspect polygon/combiner state before rebaking. Conversely a wrong palette/coverage plane cannot be fixed by lowering the whole polygon alpha.
+
+## Acceptance for this symptom
+
+The column is translucent where source requires, with no opaque rectangular card or unintended hard gradient. Link remains visible/occluded at the correct phases; beginning, middle, fade and end are captured from both entry variants. Native draw engagement and zero material/texture rejection are demonstrated.
+
+## Required regression scope
+
+Link sword/spin/boomerang effects, other entry materials, stage background visibility, simultaneous intros and shared alpha texture budgets.
+
+## Coordination
+
+Share material investigation with Pikachu/Zebes/Yoshi Island only where the first divergence is actually common.
+
+## Closure
+
+Apply COMMON.md's natural-path, positive-engagement, source/pixel/audio, resource,
+native-only, cadence and widest-relevant-verifier requirements. Record candidate
+identity and actual coverage in the existing BUG_NOTES owner; preserve BUGS wording
+and unrelated dirty edits. Report any unrun/failed gate and owner acceptance still
+owed. No brief or host-only test closes the runtime bug. Report unverified portions explicitly.

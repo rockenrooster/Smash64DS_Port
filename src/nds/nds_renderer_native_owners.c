@@ -2491,18 +2491,28 @@ static s32 ndsRendererNativeStageTask36EnsureWorld(
     m4x4 world_hardware;
 
     if ((sNdsNativeStageOwnerExecution.task36_segment_active == FALSE) ||
-        (ndsRendererNativeStageTask36BindingIsRigid(binding_index) == FALSE) ||
-        (ndsRendererNativeStageTask36BuildWorld(
-             binding_index, coordinate_shift, &world_hardware) == FALSE))
+        (sNdsNativeStageOwnerExecution.binding_world == NULL) ||
+        (ndsRendererNativeStageTask36BindingIsRigid(binding_index) == FALSE))
     {
         return FALSE;
     }
+    /* The loaded-world key is exact: the rigid binding table is immutable for
+     * this prepared frame and coordinate_shift is the only transform applied
+     * by BuildWorld.  The old order rebuilt/copy-shifted the same 64-byte world
+     * before checking this key, then discarded it on a hit.  Check the key
+     * first so consecutive runs/triangles on the same rigid binding pay no CPU
+     * matrix work at all. */
     if ((sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE) &&
         (sNdsNativeStageOwnerExecution.task36_binding == binding_index) &&
         (sNdsNativeStageOwnerExecution.task36_coordinate_shift ==
          coordinate_shift))
     {
         return TRUE;
+    }
+    if (ndsRendererNativeStageTask36BuildWorld(
+            binding_index, coordinate_shift, &world_hardware) == FALSE)
+    {
+        return FALSE;
     }
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     if (sNdsNativeStageOwnerExecution.task36_local_pushed != FALSE)

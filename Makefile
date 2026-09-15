@@ -3799,6 +3799,9 @@ NDS_FTANIM_STREAM_SOURCES := \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTDonkeyAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTSamusAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTLuigiAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTLinkAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTKirbyAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTKirbyCopyAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim*)
 
 # Slice 1 phase 5's resident figatree pack. ONE fighter, because the taskman
@@ -4229,10 +4232,11 @@ ifeq ($(NDS_P2_DONKEY),1)
 # update/interrupt/physics/map ordering in DS glue.
 CFILES += battleship_donkey.c
 endif
-ifneq ($(filter 1,$(NDS_P2_DONKEY) $(NDS_P2_LINK)),)
-# DK first needed the items-off common throw subset; Link graduates the same TU
-# to BattleShip's full shared item-throw runtime. Keep one owner TU when both
-# fighters are enabled.
+ifneq ($(filter 1,$(NDS_P2_DONKEY) $(NDS_P2_LINK) $(NDS_P2_ITEM_CORE)),)
+# DK first needed the items-off common throw subset. Link or the shared P2 item
+# core graduates the same TU to BattleShip's full item-throw runtime; the TU's
+# own source gate is NDS_P2_LINK || NDS_P2_ITEM_CORE, so keep the build-input
+# admission in sync with that contract even on the Mario/Fox mirror control.
 CFILES += battleship_ftcommon_itemthrow.c
 endif
 ifeq ($(NDS_P2_CAPTAIN),1)
@@ -5309,6 +5313,9 @@ NDS_FTANIM_STREAM_PATTERNS := \
 	reloc_animations/FTLuigiAnim% \
 	reloc_animations/FTDonkeyAnim% \
 	reloc_animations/FTSamusAnim% \
+	reloc_animations/FTLinkAnim% \
+	reloc_animations/FTKirbyAnim% \
+	reloc_animations/FTKirbyCopyAnim% \
 	reloc_animations/FTCaptainAnim%
 NDS_FTANIM_STREAM_AOBJ32_FILES := \
 	reloc_animations/FTMarioAnim134 \
@@ -5319,6 +5326,10 @@ NDS_FTANIM_STREAM_AOBJ32_FILES := \
 	reloc_animations/FTDonkeyAnim133 \
 	reloc_animations/FTSamusAnim137 \
 	reloc_animations/FTSamusAnim138 \
+	reloc_animations/FTLinkAnim131 \
+	reloc_animations/FTLinkAnim132 \
+	reloc_animations/FTKirbyAnim153 \
+	reloc_animations/FTKirbyAnim154 \
 	reloc_animations/FTCaptainAnim136 \
 	reloc_animations/FTCaptainAnim137 \
 	reloc_animations/FTCaptainAnim138 \
@@ -5331,6 +5342,9 @@ NDS_FTANIM_STREAM_SPLINE_FILES := \
 	reloc_animations/FTSamusAnim061
 NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL := $(NDS_MARIOFOX_FIGHTER_RELOC_FILES)
 NDS_P2_FIGHTER_RELOC_FILES_FULL := $(NDS_P2_FIGHTER_RELOC_FILES)
+NDS_FTANIM_STREAM_LOOSE_FILES := $(filter \
+	$(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),\
+	$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL) $(NDS_P2_FIGHTER_RELOC_FILES_FULL))
 NDS_FTANIM_STREAM_REPLACED_RELOC_FILES := $(filter \
 	$(NDS_FTANIM_STREAM_PATTERNS),$(NDS_MARIOFOX_FIGHTER_RELOC_FILES_FULL) \
 	$(NDS_P2_FIGHTER_RELOC_FILES_FULL))
@@ -5706,7 +5720,7 @@ ifeq ($(NDS_R2_FTANIM_DENSE),1)
 NDS_NITROFS_FTANIM_FILES := $(NITROFS_DIR)/animation/ftanim_dense_bank.bin
 endif
 ifeq ($(NDS_R2_FTANIM_STREAM),1)
-NDS_NITROFS_FTANIM_FILES += $(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin
+NDS_NITROFS_FTANIM_FILES += $(NITROFS_DIR)/animation/ftanim_stream_pack.bin
 endif
 
 # Slice 1 phase 5's resident figatree pack. Empty unless a reader is compiled
@@ -6835,7 +6849,7 @@ $(NDS_FTANIM_STREAM_ASSET): \
 	python "$(PROJECT_ROOT)/scripts/generate_battlepack_anim.py" \
 		--stream-out "$@"
 
-$(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin: $(NDS_FTANIM_STREAM_ASSET)
+$(NITROFS_DIR)/animation/ftanim_stream_pack.bin: $(NDS_FTANIM_STREAM_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
@@ -6893,7 +6907,11 @@ prune-streamed-ftanim:
 ifeq ($(NDS_R2_FTANIM_STREAM),1)
 	@rm -f \
 		$(foreach file,$(NDS_FTANIM_STREAM_PRUNE_FILES),$(NITROFS_DIR)/reloc/$(file)) \
-		$(NITROFS_DIR)/animation/ftanim_stream_pack.bin
+		$(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin
+else
+	@rm -f \
+		$(NITROFS_DIR)/animation/ftanim_stream_pack.bin \
+		$(NITROFS_DIR)/zz_stream/ftanim_stream_pack.bin
 endif
 
 # The prune must finish before Make decides whether any retained reloc target

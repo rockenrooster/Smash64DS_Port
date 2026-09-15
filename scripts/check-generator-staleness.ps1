@@ -102,6 +102,7 @@ try {
             [PSCustomObject]@{ Label='renderer-parity-corpus'; Script='scripts/generate_renderer_parity_corpus.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='dreamland-ds-mesh'; Script='scripts/stages/dreamland/generate_dreamland_ds_mesh.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='stage-runtime-rows-dreamland'; Script='scripts/stages/emit_native_stage_runtime_rows.py'; Args=@('--stage', 'dreamland', '--check') },
+            [PSCustomObject]@{ Label='mn-ui-kit'; Script='scripts/menus/generate_mn_ui_kit.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='fox-gun-source-tables'; Script='scripts/fox_gun_bake.py'; Args=@('--check', 'src/nds/nds_fox_gun.c') }
         )
         foreach ($check in $fastChecks) {
@@ -169,7 +170,6 @@ try {
         'scripts/2d_vfx/generate_task39_effect_census.py',
         'scripts/2d_vfx/generate_task39_hit_sparks.py',
         'scripts/menus/generate_battle_hud.py',
-        'scripts/menus/generate_mn_ui_kit.py',
         'scripts/stages/generate_native_wallpapers.py',
         'scripts/menus/generate_nds_banner_icon.py',
         'scripts/stages/dreamland/generate_pupupu_water_aot.py',

@@ -6670,6 +6670,31 @@ def _walk_root_lighting(state, sequence, epochs, root, lit):
     return lit, tuple(positions), tuple(unlit_runs), tuple(lit_runs)
 
 
+NDS_NATIVE_UNLIT_ALPHA_MAX_SPREAD = 8
+
+
+def _collapse_unlit_run_alpha(owner_name: str, detail: str, root_offset: int,
+                              run_index: int, alphas: Counter) -> int:
+    if not alphas:
+        raise ValueError(
+            f"{owner_name} {detail}: root 0x{root_offset:x} unlit run "
+            f"{run_index} has no dense vertices")
+    alpha_min = min(alphas)
+    alpha_max = max(alphas)
+    if alpha_max - alpha_min > NDS_NATIVE_UNLIT_ALPHA_MAX_SPREAD:
+        raise ValueError(
+            f"{owner_name} {detail}: root 0x{root_offset:x} unlit run "
+            f"{run_index} source alpha spread {alpha_min}..{alpha_max} exceeds "
+            f"{NDS_NATIVE_UNLIT_ALPHA_MAX_SPREAD}")
+    alpha8 = alphas.most_common(1)[0][0]
+    alpha5 = (alpha8 * 31 + 127) // 255
+    if alpha5 == 0:
+        raise ValueError(
+            f"{owner_name} {detail}: root 0x{root_offset:x} unlit run "
+            f"{run_index} collapses alpha {alpha8} to POLY_ALPHA(0) wireframe")
+    return alpha5
+
+
 def _bake_unlit_uniform_roots(
         owner_name: str, detail: str, state, sequence, epochs, roots,
         root_indices, light_preambles, light_indices, dense_vertices,
@@ -6721,12 +6746,8 @@ def _bake_unlit_uniform_roots(
                 alphas = Counter(
                     int(dense_vertices[dense_id][7]) & 0xff
                     for dense_id in dense_ids)
-                if not alphas:
-                    raise ValueError(
-                        f"{owner_name} {detail}: unlit run {run_index} has no "
-                        "dense vertices")
-                alpha8 = alphas.most_common(1)[0][0]
-                alpha5 = (alpha8 * 31 + 127) // 255
+                alpha5 = _collapse_unlit_run_alpha(
+                    owner_name, detail, offset, run_index, alphas)
                 metadata = (NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR |
                             (alpha5 << NDS_NATIVE_RUN_ALPHA_SHIFT))
                 if run_metadata[run_index] not in (0, metadata):
