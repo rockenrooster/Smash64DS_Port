@@ -6055,6 +6055,13 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
  * fail; it draws the effects at 1/256 or 256x scale, which is why it is
  * spelled out rather than folded into a literal. */
 #define NDS_RENDERER_PARTICLE_UNIT_SHIFT NDS_RENDERER_HW_WORLD_UNIT_SHIFT
+#define NDS_RENDERER_PARTICLE_COORD_SHIFT 8u
+#define NDS_RENDERER_PARTICLE_BASIS_SHIFT 13u
+/* Q8 conversion truncates center, basis*size and the final leg independently.
+ * Bias the range-only extent by 1/4 world unit so quantization can never make a
+ * near-rail quad select a finer batch scale solely because the fixed estimate
+ * rounded down. The submitted vertices are not biased. */
+#define NDS_RENDERER_PARTICLE_EXTENT_GUARD_Q8 64u
 
 /* Counted, not assumed: Clamp must read 0 on a fixed build. It is the direct
  * measurement of the reported symptom, so a non-zero value means a quad was
@@ -6070,8 +6077,141 @@ static u32 sNdsRendererParticleScaleShift;
  * rather than merely wrong. Saturating here keeps the conversion total. */
 #define NDS_RENDERER_PARTICLE_WORLD_LIMIT 131072.0F
 
-/* No libm call for three magnitudes per quad; the sign bit is the whole job. */
-#define NDS_FABS(v) (((v) < 0.0F) ? -(v) : (v))
+/* ARM946E-S has no FPU. Decode a finite IEEE-754 source value directly into the
+ * requested binary fixed domain so render-only conversion does not call the
+ * libgcc float helpers. This preserves the old C-cast truncation toward zero. */
+static sb32 ndsRendererParticleFloatToFixed(f32 value, u32 fraction_bits,
+                                            s32 *fixed)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } bits;
+    u32 exponent;
+    u32 mantissa;
+    u32 magnitude;
+    u32 limit;
+    u32 sign;
+    s32 shift;
+
+    bits.f = value;
+    sign = bits.u >> 31;
+    exponent = (bits.u >> 23) & 0xFFu;
+    mantissa = bits.u & 0x7FFFFFu;
+    if ((fixed == NULL) || (exponent == 0xFFu))
+    {
+        return FALSE;
+    }
+    if (exponent == 0u)
+    {
+        if (mantissa == 0u)
+        {
+            *fixed = 0;
+            return TRUE;
+        }
+        shift = -126 - 23 + (s32)fraction_bits;
+    }
+    else
+    {
+        mantissa |= 0x800000u;
+        shift = (s32)exponent - 127 - 23 + (s32)fraction_bits;
+    }
+    limit = (sign != 0u) ? 0x80000000u : 0x7FFFFFFFu;
+    if (shift >= 0)
+    {
+        if ((shift >= 32) || (mantissa > (limit >> (u32)shift)))
+        {
+            return FALSE;
+        }
+        magnitude = mantissa << (u32)shift;
+    }
+    else if (shift <= -32)
+    {
+        magnitude = 0u;
+    }
+    else
+    {
+        magnitude = mantissa >> (u32)-shift;
+    }
+    if (sign != 0u)
+    {
+        *fixed = (magnitude == 0x80000000u) ? INT_MIN : -(s32)magnitude;
+    }
+    else
+    {
+        *fixed = (s32)magnitude;
+    }
+    return TRUE;
+}
+
+static u32 ndsRendererParticleAbsQ8(s32 value)
+{
+    return (value < 0) ? (u32)(-(s64)value) : (u32)value;
+}
+
+static s32 ndsRendererParticleTruncShiftS32(s32 value, u32 shift)
+{
+    if (value < 0)
+    {
+        return -(s32)((u32)(-(s64)value) >> shift);
+    }
+    return (s32)((u32)value >> shift);
+}
+
+/* The submitted GX vertex ultimately carries world*16. Q8 center/size retains
+ * sixteen times more fractional precision than that final representation, and
+ * Q13 basis keeps sub-pixel camera-axis error bounded. One signed wide multiply
+ * plus a power-of-two shift replaces the old soft-float multiply/cast chain;
+ * saturation keeps pathological transformed inputs total without a divide. */
+static s32 ndsRendererParticleScaleBasisQ8(s32 basis_q13, s32 size_q8)
+{
+    s64 product = (s64)basis_q13 * (s64)size_q8;
+    u64 magnitude;
+
+    if (product < 0)
+    {
+        magnitude = ((u64)-product) >> NDS_RENDERER_PARTICLE_BASIS_SHIFT;
+        if (magnitude >= 0x80000000u)
+        {
+            return INT_MIN;
+        }
+        return -(s32)magnitude;
+    }
+    magnitude = (u64)product >> NDS_RENDERER_PARTICLE_BASIS_SHIFT;
+    if (magnitude > 0x7fffffffu)
+    {
+        return INT_MAX;
+    }
+    return (s32)magnitude;
+}
+
+/* Q8 world coordinate -> v16 under the same world*16 convention as the old
+ * float helper. Keep the final rail counter/behavior exactly at the vertex
+ * boundary. */
+static inline __attribute__((always_inline)) v16
+ndsRendererParticleQ8ToV16(s32 value_q8, u32 shift)
+{
+    s32 scaled = ndsRendererParticleTruncShiftS32(
+        value_q8, (NDS_RENDERER_PARTICLE_COORD_SHIFT - 4u) + shift);
+
+    if (scaled > 32767) { gNdsParticleWorldClampCount++; return (v16)32767; }
+    if (scaled < -32768) { gNdsParticleWorldClampCount++; return (v16)-32768; }
+    return (v16)scaled;
+}
+
+static u32 ndsRendererParticleScaleShiftForQ8(u32 extent_q8)
+{
+    u32 shift = 0u;
+
+    while ((shift < NDS_RENDERER_PARTICLE_MAX_SCALE_SHIFT) &&
+           ((extent_q8 >>
+             ((NDS_RENDERER_PARTICLE_COORD_SHIFT - 4u) + shift)) > 32767u))
+    {
+        shift++;
+    }
+    return shift;
+}
 
 static s32 ndsRendererParticleWorldFixed(f32 value)
 {
@@ -6315,14 +6455,15 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 atlas_w, u32 atlas_h)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
-    f32 rx;
-    f32 ry;
-    f32 rz;
-    f32 ux;
-    f32 uy;
-    f32 uz;
+    s32 center_q8[3];
+    s32 right_q13[3];
+    s32 up_q13[3];
+    s32 size_q8;
+    s32 right_leg_q8[3];
+    s32 up_leg_q8[3];
     u32 poly_alpha;
     u32 env_palette_name;
+    u32 axis;
 
 #if NDS_R2_WHISPY_NATIVE_AOT
     /* A generic particle is an ordering fence for route 4: all earlier Whispy
@@ -6332,6 +6473,36 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     if ((atlas_name == 0u) || (pos == NULL) || (right == NULL) || (up == NULL))
     {
         return FALSE;
+    }
+    if ((ndsRendererParticleFloatToFixed(
+             pos->x, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[0]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             pos->y, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[1]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             pos->z, NDS_RENDERER_PARTICLE_COORD_SHIFT, &center_q8[2]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             right->x, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &right_q13[0]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             right->y, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &right_q13[1]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             right->z, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &right_q13[2]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             up->x, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &up_q13[0]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             up->y, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &up_q13[1]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             up->z, NDS_RENDERER_PARTICLE_BASIS_SHIFT, &up_q13[2]) == FALSE) ||
+        (ndsRendererParticleFloatToFixed(
+             size, NDS_RENDERER_PARTICLE_COORD_SHIFT, &size_q8) == FALSE))
+    {
+        return FALSE;
+    }
+    for (axis = 0u; axis < 3u; axis++)
+    {
+        right_leg_q8[axis] =
+            ndsRendererParticleScaleBasisQ8(right_q13[axis], size_q8);
+        up_leg_q8[axis] =
+            ndsRendererParticleScaleBasisQ8(up_q13[axis], size_q8);
     }
 #if NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION
     if (sNdsRendererHealSparkleCellValidMask != 0u)
@@ -6512,26 +6683,33 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         gNdsParticleQuadPaletteBreaks++;
     }
 
-    rx = right->x * size;
-    ry = right->y * size;
-    rz = right->z * size;
-    ux = up->x * size;
-    uy = up->y * size;
-    uz = up->z * size;
-
     /* The furthest corner this quad will reach, per axis, without evaluating
      * all four: |centre| + |right leg| + |up leg| bounds every combination of
      * the two signs. If it does not fit the batch's current factor, coarsen the
      * factor now -- before any of this quad's vertices are queued. */
     {
-        f32 ex = NDS_FABS(pos->x) + NDS_FABS(rx) + NDS_FABS(ux);
-        f32 ey = NDS_FABS(pos->y) + NDS_FABS(ry) + NDS_FABS(uy);
-        f32 ez = NDS_FABS(pos->z) + NDS_FABS(rz) + NDS_FABS(uz);
-        f32 extent = (ex > ey) ? ex : ey;
+        u32 ex = ndsRendererParticleAbsQ8(center_q8[0]) +
+                 ndsRendererParticleAbsQ8(right_leg_q8[0]) +
+                 ndsRendererParticleAbsQ8(up_leg_q8[0]);
+        u32 ey = ndsRendererParticleAbsQ8(center_q8[1]) +
+                 ndsRendererParticleAbsQ8(right_leg_q8[1]) +
+                 ndsRendererParticleAbsQ8(up_leg_q8[1]);
+        u32 ez = ndsRendererParticleAbsQ8(center_q8[2]) +
+                 ndsRendererParticleAbsQ8(right_leg_q8[2]) +
+                 ndsRendererParticleAbsQ8(up_leg_q8[2]);
+        u32 extent_q8 = (ex > ey) ? ex : ey;
         u32 needed;
 
-        if (ez > extent) { extent = ez; }
-        needed = ndsRendererParticleScaleShiftFor(extent);
+        if (ez > extent_q8) { extent_q8 = ez; }
+        if (extent_q8 <= (UINT_MAX - NDS_RENDERER_PARTICLE_EXTENT_GUARD_Q8))
+        {
+            extent_q8 += NDS_RENDERER_PARTICLE_EXTENT_GUARD_Q8;
+        }
+        else
+        {
+            extent_q8 = UINT_MAX;
+        }
+        needed = ndsRendererParticleScaleShiftForQ8(extent_q8);
         if (needed > sNdsRendererParticleScaleShift)
         {
             /* Vertices already queued were transformed against the matrix that
@@ -6571,8 +6749,8 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
          * to match the atlas rows. */
         for (corner = 0u; corner < 4u; corner++)
         {
-            f32 sx = ((corner == 0u) || (corner == 3u)) ? -1.0f : 1.0f;
-            f32 sy = (corner < 2u) ? -1.0f : 1.0f;
+            s32 sx = ((corner == 0u) || (corner == 3u)) ? -1 : 1;
+            s32 sy = (corner < 2u) ? -1 : 1;
             u32 texel_s = atlas_x + (((corner == 0u) || (corner == 3u))
                                          ? 0u : atlas_w);
             u32 texel_t = atlas_y + ((corner < 2u) ? atlas_h : 0u);
@@ -6580,12 +6758,15 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
 
             glTexCoord2t16((t16)(texel_s << 4), (t16)(texel_t << 4));
             glVertex3v16(
-                ndsRendererParticleWorldToV16(pos->x + (rx * sx) + (ux * sy),
-                                              shift),
-                ndsRendererParticleWorldToV16(pos->y + (ry * sx) + (uy * sy),
-                                              shift),
-                ndsRendererParticleWorldToV16(pos->z + (rz * sx) + (uz * sy),
-                                              shift));
+                ndsRendererParticleQ8ToV16(
+                    center_q8[0] + right_leg_q8[0] * sx +
+                    up_leg_q8[0] * sy, shift),
+                ndsRendererParticleQ8ToV16(
+                    center_q8[1] + right_leg_q8[1] * sx +
+                    up_leg_q8[1] * sy, shift),
+                ndsRendererParticleQ8ToV16(
+                    center_q8[2] + right_leg_q8[2] * sx +
+                    up_leg_q8[2] * sy, shift));
         }
     }
     else
@@ -6602,12 +6783,12 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
          * Build the 3x3 world grid once using only +/- adds (the expensive
          * right/up * size products above remain once per particle), then emit
          * 2 or 4 atlas-cell quads with the exact triangle-wave UVs. */
-        f32 right_x[3] = { -rx, 0.0F, rx };
-        f32 right_y[3] = { -ry, 0.0F, ry };
-        f32 right_z[3] = { -rz, 0.0F, rz };
-        f32 up_x[3] = { -ux, 0.0F, ux };
-        f32 up_y[3] = { -uy, 0.0F, uy };
-        f32 up_z[3] = { -uz, 0.0F, uz };
+        s32 right_x[3] = { -right_leg_q8[0], 0, right_leg_q8[0] };
+        s32 right_y[3] = { -right_leg_q8[1], 0, right_leg_q8[1] };
+        s32 right_z[3] = { -right_leg_q8[2], 0, right_leg_q8[2] };
+        s32 up_x[3] = { -up_leg_q8[0], 0, up_leg_q8[0] };
+        s32 up_y[3] = { -up_leg_q8[1], 0, up_leg_q8[1] };
+        s32 up_z[3] = { -up_leg_q8[2], 0, up_leg_q8[2] };
         v16 grid_x[3][3];
         v16 grid_y[3][3];
         v16 grid_z[3][3];
@@ -6625,12 +6806,12 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         {
             for (column = 0u; column < 3u; column++)
             {
-                grid_x[row][column] = ndsRendererParticleWorldToV16(
-                    pos->x + right_x[column] + up_x[row], shift);
-                grid_y[row][column] = ndsRendererParticleWorldToV16(
-                    pos->y + right_y[column] + up_y[row], shift);
-                grid_z[row][column] = ndsRendererParticleWorldToV16(
-                    pos->z + right_z[column] + up_z[row], shift);
+                grid_x[row][column] = ndsRendererParticleQ8ToV16(
+                    center_q8[0] + right_x[column] + up_x[row], shift);
+                grid_y[row][column] = ndsRendererParticleQ8ToV16(
+                    center_q8[1] + right_y[column] + up_y[row], shift);
+                grid_z[row][column] = ndsRendererParticleQ8ToV16(
+                    center_q8[2] + right_z[column] + up_z[row], shift);
             }
         }
 
@@ -7081,71 +7262,11 @@ ndsRendererFinishWhispyNativePacket(void)
  * float calls per quad. Decode the finite IEEE-754 value directly and shift
  * its mantissa into the requested binary fixed domain. The result is the same
  * truncation toward zero as a C cast; failure is the generic-fallback seam. */
-static sb32 ndsRendererWhispyFloatToFixed(f32 value,
-                                          u32 fraction_bits,
-                                          s32 *fixed)
+static inline sb32 ndsRendererWhispyFloatToFixed(f32 value,
+                                                  u32 fraction_bits,
+                                                  s32 *fixed)
 {
-    union
-    {
-        f32 f;
-        u32 u;
-    } bits;
-    u32 exponent;
-    u32 mantissa;
-    u32 magnitude;
-    u32 limit;
-    u32 sign;
-    s32 shift;
-
-    bits.f = value;
-    sign = bits.u >> 31;
-    exponent = (bits.u >> 23) & 0xFFu;
-    mantissa = bits.u & 0x7FFFFFu;
-    if ((fixed == NULL) || (exponent == 0xFFu))
-    {
-        return FALSE;
-    }
-    if (exponent == 0u)
-    {
-        if (mantissa == 0u)
-        {
-            *fixed = 0;
-            return TRUE;
-        }
-        shift = -126 - 23 + (s32)fraction_bits;
-    }
-    else
-    {
-        mantissa |= 0x800000u;
-        shift = (s32)exponent - 127 - 23 + (s32)fraction_bits;
-    }
-    limit = (sign != 0u) ? 0x80000000u : 0x7FFFFFFFu;
-    if (shift >= 0)
-    {
-        if ((shift >= 32) ||
-            (mantissa > (limit >> (u32)shift)))
-        {
-            return FALSE;
-        }
-        magnitude = mantissa << (u32)shift;
-    }
-    else if (shift <= -32)
-    {
-        magnitude = 0u;
-    }
-    else
-    {
-        magnitude = mantissa >> (u32)-shift;
-    }
-    if (sign != 0u)
-    {
-        *fixed = (magnitude == 0x80000000u) ? INT_MIN : -(s32)magnitude;
-    }
-    else
-    {
-        *fixed = (s32)magnitude;
-    }
-    return TRUE;
+    return ndsRendererParticleFloatToFixed(value, fraction_bits, fixed);
 }
 
 s32 ndsRendererParticlePositionToQ12(const Vec3f *pos,
