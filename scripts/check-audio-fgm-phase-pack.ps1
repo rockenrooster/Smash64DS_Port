@@ -753,7 +753,8 @@ if ($missingAdmission.Count -gt 0) {
         'ndsAudioFgmIDIsIncluded is fail-closed bookkeeping; a packed cue it ' +
         'never names is ROM nobody can account for.'
 }
-foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
+foreach ($token in @('ndsAudioFgmReadRange(entry->data_offset,',
+    'sNdsAudioFgmCacheSlots[best].data,',
     'sNdsAudioFgmCacheSlots[cache_slot].references++',
     'sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].references--',
     'ndsAudioFgmPauseGame(void)',
@@ -761,6 +762,19 @@ foreach ($token in @('fread(sNdsAudioFgmCacheSlots[best].data',
     'handle->child_handle = child_handle;',
     'child_handle->parent_handle = handle;')) {
     if (-not $runtime.Contains($token)) { throw "Runtime cache lost: $token" }
+}
+# P2-2p8 moved live cache fills from stdio to a resolved NitroROM range while
+# deliberately retaining stdio as the failure fallback. Pin both halves here:
+# the standing stress gate proves the direct arm engages with zero fallback,
+# while this source check prevents a future direct-read failure from turning a
+# valid packed cue into silence.
+foreach ($token in @(
+    'nitroromReadFile(sNdsAudioFgmRom, sNdsAudioFgmRomFileId, offset,',
+    'gNdsAudioFgmDirectReadCount++;',
+    'gNdsAudioFgmDirectFallbackCount++;',
+    'gNdsAudioFgmStdioRangeReadCount++;',
+    'fread(dst, 1u, bytes, sNdsAudioFgmFile) != bytes')) {
+    if (-not $runtime.Contains($token)) { throw "Runtime range-read fallback lost: $token" }
 }
 
 # Counted, not spelled out. This line said "725896-byte pack" and "seven fused
