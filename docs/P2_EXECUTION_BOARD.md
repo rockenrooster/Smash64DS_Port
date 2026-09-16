@@ -47,31 +47,33 @@ WORK-H **1,639,808 / 2,365,120**, FTR **357,312 / 744,640**; native fail/reject
 **0/0**, heap **108,096 B**; Boundary and hard-on build GREEN.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / material-animation stable-zero skip / N04.08 / main. Phase: COMPLETE.
+Focus / batch / IDs / owner: P2-2p8 / N04.09 candidate selection / main. Phase: SELECT.
 **Owner 2026-09-16: four-CPU optimization runs the four-CPU match and nothing
 else** — `p2_fourcpu_stress` alone, no shell loop, realtime arm or extra lab
 builds; conditions in `VERIFYING.md`. Boundary is for integration/publication.
-Completed/rejected: N04.03 round-shift/camera reuse/input refresh, N04.05 4x4
-block copy and N04.08 stable-zero skip KEEP; N04.04 memcpy, N04.06 row4 loads and
-N04.07 three-word row copy REJECTED. Figures in `PERF_LEDGER.md`.
-Profile: post-pose `2026-09-15_p2-2p8-pose-joint-mask/profile-final-current/`.
-N04.08 (closed, published): same-ROM **-8,640** WORK-H P50, canonical re-bank
-**-9,920 / -8,512**, engagement 7,892 in four builds, audit SAFE, Boundary
-GREEN. Detail and the incomplete-lab-ROM finding:
-`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/` + `PERF_LEDGER.md`.
-Rejected without a build: `ndsR2CamDiv64` (top stall/byte in the build) is a
-hardware-divider busy-wait, and ITCM cannot recover divider latency; and any
-`.text.hot` admission, because `linker/nds_hot_text.ld` records that list
-**closed in both directions** after two estimators — including section C/D
-stall — got the sign wrong. C/D are a cost ranking, not a placement prediction.
-Selected N04.09: the **P95 tail is FAT cluster-chain rewalking**. On the 7
-costliest frames `get_fat` runs **1,422.6 calls/frame** against 296.4 on control
-frames and `f_lseek` costs **16,079 cycles/call**; together **~43,300 tk/frame of
-tail premium**, 3x the 14,080 floor, on 6 of 7 tail frames. Mechanism: a forward
-seek rewalks the cluster chain from the start instead of resuming. No fidelity
-risk. Next: confirm the seek caller and chain shape, then cache/resume it.
+Completed/rejected: N04.03, N04.05 and N04.08 KEEP; N04.04, N04.06 and N04.07
+REJECTED. Figures in `PERF_LEDGER.md`.
+N04.08 closed and published: same-ROM **-8,640** WORK-H P50, canonical re-bank
+**-9,920 / -8,512**, engagement 7,892 in four builds, audit SAFE, Boundary GREEN.
+Evidence, plus the stale-NitroFS finding:
+`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
+Rejected without a build, detail in `docs/archive/P2_CLOSED_ROWS.md`: the
+`ndsR2CamDiv64` ITCM admission (a hardware-divider busy-wait; ITCM cannot recover
+divider latency), any `.text.hot` admission (`linker/nds_hot_text.ld` calls that
+list closed in both directions), and N04.09's first premise, the FAT
+cluster-chain rewalk, which a fresh profile shows had already shrunk to 0.34%.
+Profile: `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/` (129 regions, 0
+discontinuities). Non-idle ranking: soft float **6.54%** (fadd 2.67, fmul 2.11,
+fdiv 0.94, F32AddBits 0.83) largest theme; pose **3.95%** largest subsystem;
+`ndsFighterMarioFoxDLAllDrawForSlot` **2.42%** largest single non-leaf symbol;
+memset+memcpy 2.68%. It is a fresh build dir (365 NitroFS files) against the
+canonical baseline's 710: rank symbols with it, do not predict gate deltas.
+Next: attribute the float leaves to their callers
+(`census-softfloat-callers.ps1`, four-CPU target) before sizing a candidate.
 Checks: hard-on `smash64ds` rebuilt/published, `NATIVE_ONLY_PASS` 262 inputs,
 `check-published-roms.ps1` GREEN, hash in rule 4; nothing owed on N04.08.
+Open owner decision: whether to clean-rebuild and re-baseline the canonical
+directory, which moves every banked absolute level (deltas within it stay valid).
 P2-2p8 stays RED at WORK-H P50 1,639,808.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.

@@ -163,3 +163,32 @@ remain retained proofs; nothing here is reopened by the move.
 - Scoped reports stay under `artifacts/visibility/2026-09-11_*`,
   `artifacts/visibility/2026-09-12_*` and
   `artifacts/performance/2026-09-10_pack-skeleton-ceiling/`.
+
+## P2-2p8 candidates rejected without a build (2026-09-16)
+
+Moved off the Execution cursor once decided. Recorded so the same rankings are
+not re-derived into the same dead ends.
+
+- **`ndsR2CamDiv64` — ITCM admission.** The highest stall-per-byte symbol in the
+  whole build: 68 bytes carrying 1,063,060 recoverable non-mem stall, 15,633 per
+  byte, 40% ahead of anything else, and it fits in free ITCM with no eviction.
+  It is also a hardware-divider busy-wait — set `DIVCNT`, write the operands,
+  spin on `BUSY`, read the result. The stall is DS divider latency, not
+  instruction fetch, and ITCM cannot recover it.
+- **Any `.text.hot` admission.** `linker/nds_hot_text.ld` records that Task 94
+  moved a member out and regressed WORK-H P50 by 6,144, and that R2-03 E66
+  admitted the top-ranked candidate by recoverable non-mem stall — the same
+  estimator as census section C — and measured WORK-H P95 +24,448. Two
+  independent estimators got the sign wrong on that curated 8 KiB list, which is
+  why the script calls it closed in both directions. Entry rates agree: the two
+  candidates marked "fit" run 4.0 and 6.0 times a frame over 129 profiled
+  frames, inside the documented inversion trap.
+- **N04.09's first premise, the FAT cluster-chain rewalk.** The 2026-09-15
+  profile showed `get_fat` at 1,422.6 calls/frame on the 7 costliest frames
+  against 296.4 on control frames, and `f_lseek` at 16,079 cycles/call, together
+  about 43,300 tk/frame of tail premium. A fresh profile of the current build
+  (`artifacts/performance/2026-09-16_p2-2p8-n0409-profile/`) has no `f_lseek` at
+  all and `get_fat` at 1,673,918 cycles, 0.34%. The lane had already shrunk.
+  Caught before any code was written: profile the build you are about to change.
+
+Census sections C and D are a cost ranking, never a placement prediction.
