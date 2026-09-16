@@ -194,3 +194,61 @@ reverted; the tree is unchanged.
 
 STG's composition above was therefore obtained from the profile symbol table
 rather than from the instrument, which is cheaper and needed no build.
+
+### The tail has no target, and that is the finding
+
+Excluding every class named above, **989 symbols hold 732,167 tk/fr** and the
+largest single one is 20,349. The top of that tail:
+
+| tk/fr | symbol |
+|---|---|
+| 20,349 | `ndsFTParamsInvalidateSubtree` |
+| 16,442 | `ndsRendererAdapterBuildDObjXObjMatrix` |
+| 12,463 | `battleship_ftMainProcUpdateInterrupt` |
+| 11,937 | `ndsDamageSlashTextureFill` |
+| 11,687 | `ndsFighterDisplayContractSubmit` |
+| 11,103 | `ndsBaseGcRunAll` |
+| 10,438 | `gcCaptureCameraGObj` |
+| 10,039 | `ndsRelocGetFileData` |
+| 9,884 | `ndsRendererAdapterGetFrameCameraMatrices` |
+| 9,722 | `ndsRendererAdapterSourceWorldMulLocal` |
+| 9,212 | `ndsRendererAdapterApplyMvpRecalc` |
+
+There is no symbol in this frame worth 455,296, or 100,000, or even 30,000. The
+gap is not hiding in one place.
+
+**The pattern is the per-DObj matrix pipeline.** `BuildDObjXObjMatrix` 16,442 +
+`SourceWorldMulLocal` 9,722 + `ApplyMvpRecalc` 9,212 +
+`LoadHardwareMatrixPair` 8,984 + `BuildDObjLocalMatrix` 7,754 +
+`MtxLoadN64ToDS20p12` 7,599 + `GetFrameCameraMatrices` 9,884 +
+`MaterialAnimHash` 7,866 is **~77,500 tk/fr spread across eight symbols**, and it
+is driven by object *count*, not by op cost. `gNdsGCDrawsActiveMax` is **203**
+(`taskman_seam_battle_host.c:777`), so the frame runs that pipeline over roughly
+two hundred DObjs.
+
+That reframes the arithmetic-kernel class once more: it is not "float is slow",
+it is "two hundred objects are transformed every frame". Any lever that reduces
+the object count cuts across the kernels, the pipeline symbols and the emit path
+simultaneously — which is the only shape that reaches a 455,296 requirement.
+
+### Culling is absent on the CPU side
+
+`renderer_adapter_stage.c:4906` records that "hardware_triangle_count is a
+POST-CULL count", i.e. the DS hardware clips and discards geometry **after the
+CPU has already paid its transform and submission**. A CPU-side visibility
+rejection before the matrix pipeline would remove the whole per-object cost
+rather than the rasterizer cost. Unsized, and Dream Land is small enough that
+much of it is on screen most of the time, so this needs measurement before it is
+believed — but no CPU cull exists to measure today.
+
+### Two negatives worth recording
+
+- **The stage is not committed twice per present.**
+  `ndsRendererAdapterPrepareNativeStageOwner` runs 0.99 calls/frame and
+  `ndsRendererCommitNativeStageSegment` 7.94, a ratio of 8.02 — eight segments
+  once per present, not four segments in two passes. There is no doubled stage
+  submission to reclaim.
+- **The pose lane is already half-rate.** `reloc_backend_compat_shims.c:3166`
+  records that body joints already run "at 30 Hz under `NDS_FT_POSE_HOLD`", and
+  the pose clock advances per tick with only Play held. The obvious "pose runs
+  twice, half is discarded" saving was taken long ago.
