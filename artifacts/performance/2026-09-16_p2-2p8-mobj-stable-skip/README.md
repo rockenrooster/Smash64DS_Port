@@ -254,11 +254,20 @@ same game.** Its NitroFS holds **365 files / 28,320,664 B** against the canonica
 | `fighters/{yoshi,pikachu}_{high,low}.bin` | 4 | 47,940 |
 | `fighters/shield_pose/09.bin` | 1 | 4,061 |
 
-A fresh build directory does not receive the full payload: the rules that produce
-those files see their shared prerequisites already up to date and do not re-run,
-so the image is silently partial. Nothing fails — the run completed, native
-failures stayed 0/0, and the engagement counter read the right 7,892 — it simply
-measured a smaller game.
+The cause is the opposite of "the fresh build is broken". `NITRO_FILES :=
+$(NITROFS_DIR)` hands the whole build directory to the packer, so a build ships
+every file present in its `nitrofs/`, not the set its own flags produce. The
+Makefile records this for audio (`NDS_AUDIO_OBSOLETE_DERIVED_FILES`: "superseded
+BGM assets can survive an incremental build-directory reuse and are otherwise
+silently repacked by ndstool") and prunes exactly two categories,
+`prune-obsolete-audio` and `prune-streamed-ftanim`. Nothing prunes fighter
+images, CSS previews, shield poses or reloc animations.
+
+So the 345 extra files are **stale leftovers in the long-lived canonical
+directory**, dated 2026-09-11 and 2026-09-13, from builds with different roster
+flags; only 3 files there were written on 2026-09-16. The fresh directory holds
+what the current configuration actually produces. Nothing failed in either run —
+native failures stayed 0/0 and the engagement counter read the right 7,892.
 
 The whole apparent gain was in **STG**: 344,320 against 398,848 at P50, 387,648
 against 442,048 at P95, mean 348,655 against 402,273, a flat ~54,500 ticks of
@@ -270,8 +279,13 @@ everything else moved.
 **Earlier revisions of this file read that difference as an arena-carve lever
 and called it a candidate larger than every N04.0x change. That was wrong and is
 retracted.** The arena and heap figures do differ (1,355,520 vs 1,347,328 B;
-111,680 vs 108,096 B) but they are a consequence of the missing megabyte, not a
-lever. Nothing here is an optimization opportunity.
+111,680 vs 108,096 B) but they track the payload difference, not a lever.
+
+**What is NOT established is that the stale payload causes the STG difference.**
+A file nobody opens costs ROM size and FAT chain length, not stage time. The
+honest claim is that these two ROMs are not comparable, not that staleness costs
+54,500 ticks a frame. Separating the two needs a clean rebuild of the canonical
+directory, which is a deliberate re-baseline, not a side effect of a candidate.
 
 The census and route builds were also private directories, which is why their
 absolute levels sit away from the checkpoint's. It does not touch the same-ROM

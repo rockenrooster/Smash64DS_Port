@@ -151,18 +151,30 @@ and no load frames in the percentiles.
 Two conditions come with it, because the cheaper loop removes the cross-checks
 that used to catch these:
 
-1. **Build into `build-p2-fourcpu-tickhud`, the baseline's own directory.**
-   `make TARGET=... BUILD=<fresh dir>` produces an **incomplete ROM**: the rules
-   for most NitroFS payload see their shared prerequisites already up to date and
-   do not re-run. On 2026-09-16 such a directory shipped **365 of 710 NitroFS
-   files** (missing 328 Kirby reloc animations, all 12 CSS preview FPCs, the
-   Pikachu and Yoshi fighter images, one shield pose — 1,005,221 B) and read
-   WORK-H P50 **1,587,328** against **1,639,808** canonical. Nothing failed:
-   native failures stayed 0/0 and the engagement counter was correct. It measured
-   a smaller game, with the whole difference in **STG** (~54,500 ticks/frame)
-   while GCRA and FTR matched to within 1,500. **Before quoting any cross-build
-   delta, check that the candidate's NitroFS file count and total size match the
-   baseline's.** See `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
+1. **Build into `build-p2-fourcpu-tickhud`, the baseline's own directory, and
+   check the NitroFS payload matches.** `NITRO_FILES := $(NITROFS_DIR)` hands the
+   whole build directory to the packer, so **a build ships every file present in
+   its `nitrofs/`, not the set its own flags produce** — the Makefile says so at
+   the `NDS_AUDIO_OBSOLETE_DERIVED_FILES` comment, and `prune-obsolete-audio` and
+   `prune-streamed-ftanim` are the only prunes that exist. A long-lived build
+   directory therefore accumulates payload from every earlier flag set, and a
+   fresh one carries only what the current flags produce.
+
+   On 2026-09-16 the identical N04.08 source measured WORK-H P50 **1,587,328**
+   from a fresh directory against **1,639,808** from `build-p2-fourcpu-tickhud`,
+   whose `nitrofs/` held 710 files to the fresh one's 365 — 1,005,221 B of Kirby
+   reloc animations, CSS preview FPCs, Pikachu/Yoshi images and a shield pose,
+   dated 2026-09-11 and 2026-09-13, with only 3 files written that day. Nothing
+   failed: native failures stayed 0/0 and the engagement counter was correct.
+   The whole difference sat in **STG** (~54,500 ticks/frame) while GCRA and FTR
+   matched to within 1,500. **Whether the stale payload causes that STG
+   difference is not established** — an unopened file costs ROM size and FAT
+   chain length, not stage time — so treat this as "these two ROMs are not
+   comparable", not as a measured cost of staleness.
+
+   **Before quoting any cross-build delta, check the candidate's NitroFS file
+   count and total size against the baseline's.** See
+   `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
 2. **Carry the candidate's own engagement counter in the run.** Without the
    realtime and shell arms, this measurement is the only thing standing between
    a lever that fires and a lever that silently stopped firing.

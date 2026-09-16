@@ -8295,13 +8295,21 @@ identical N04.08 source built into a private lab directory via
 the lab ROM's NitroFS held **365 files / 28,320,664 B** against the canonical
 **710 files / 29,325,885 B**, missing 328 Kirby reloc animations, all 12 CSS
 preview FPCs, the Pikachu and Yoshi fighter images and one shield pose --
-1,005,221 bytes. A fresh build directory does not receive the full payload
-because the producing rules see their shared prerequisites already up to date.
+1,005,221 bytes dated 2026-09-11 and 2026-09-13, with only 3 files in that
+directory written on 2026-09-16. The direction is the opposite of "the fresh
+build is broken": `NITRO_FILES := $(NITROFS_DIR)` hands the whole build
+directory to the packer, so a build ships every file present in its `nitrofs/`
+rather than the set its own flags produce, and only `prune-obsolete-audio` and
+`prune-streamed-ftanim` prune anything. The long-lived canonical directory has
+been accumulating payload from earlier flag sets.
 Nothing failed; native failures stayed 0/0 and the engagement counter read the
 correct 7,892. It simply measured a smaller game, and the entire difference sat
 in **STG** (344,320 vs 398,848 P50, a flat ~54,500 ticks/frame) while GCRA and
 FTR matched to within 1,500. The arena and heap differences (1,355,520 vs
-1,347,328 B; 111,680 vs 108,096 B) are a consequence of the missing megabyte.
+1,347,328 B; 111,680 vs 108,096 B) track the payload difference. Whether stale
+payload CAUSES the STG difference is not established -- an unopened file costs
+ROM size and FAT chain length, not stage time -- so the claim here is that the
+two ROMs are not comparable, not that staleness costs 54,500 ticks a frame.
 An earlier revision of this row called the arena carve a candidate larger than
 every N04.0x lever; that reading is **retracted**. Check the candidate's NitroFS
 file count and size against the baseline's before quoting a cross-build delta.
