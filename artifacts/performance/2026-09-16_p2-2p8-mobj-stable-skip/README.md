@@ -264,10 +264,27 @@ silently repacked by ndstool") and prunes exactly two categories,
 images, CSS previews, shield poses or reloc animations.
 
 So the 345 extra files are **stale leftovers in the long-lived canonical
-directory**, dated 2026-09-11 and 2026-09-13, from builds with different roster
-flags; only 3 files there were written on 2026-09-16. The fresh directory holds
-what the current configuration actually produces. Nothing failed in either run —
-native failures stayed 0/0 and the engagement counter read the right 7,892.
+directory**, dated 2026-09-11 and 2026-09-13, from builds with different flags;
+only 3 files there were written on 2026-09-16. The fresh directory holds what the
+current configuration actually produces. Nothing failed in either run — native
+failures stayed 0/0 and the engagement counter read the right 7,892.
+
+Three independent confirmations:
+
+- **Two separate fresh builds of this target agree to the byte** — the N04.08
+  candidate directory and the N04.09 profile directory both produced exactly
+  **365 files / 28,320,664 B**. A partial build would not reproduce a byte-exact
+  payload twice.
+- `fighters/preview/` is gated behind `NDS_P2_1P_GAME` / `NDS_P2_MENU_SHELL`
+  (`Makefile:7668`). The four-CPU stress target boots straight into VSBattle and
+  has no menu shell, so a build of it *should* omit those 12 FPCs; their presence
+  in `build-p2-fourcpu-tickhud` is a leftover, not a requirement.
+- The stale files' own timestamps: 2026-09-11 and 2026-09-13, against 3 files
+  written on the day of the comparison.
+
+`builds/build`, the directory that produces the published `smash64ds.nds`, holds
+**955 files / 53.6 MB with the oldest dated 2026-08-01** and 4 written that day,
+so the published artifact is subject to the same accumulation.
 
 The whole apparent gain was in **STG**: 344,320 against 398,848 at P50, 387,648
 against 442,048 at P95, mean 348,655 against 402,273, a flat ~54,500 ticks of
