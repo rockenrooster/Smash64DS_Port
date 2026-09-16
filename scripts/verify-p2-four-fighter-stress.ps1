@@ -264,6 +264,14 @@ $memoryGlobals = @(
     'gNdsFtrPlanBuild',
     'gNdsFtrPlanHit',
     'gNdsFtrPlanVerifyMismatch',
+    # P2-2p8 N04.08. gcPlayAnimAll skips the material player for MObjs already
+    # zero-speed with a positive wait before the parser ran. The skip is
+    # stage-local by construction -- Dream Land's frozen water is the only
+    # zero-speed material animation in the tree -- so a zero here on this gate's
+    # Dream Land match means the lever stopped firing, not that the stage has
+    # nothing to skip. A skip that silently stops firing reads exactly like one
+    # that fires and saves nothing.
+    'gNdsMObjMatAnimStableSkipCount',
     'gNdsFighterDLAllDrawP0HardwareTriangleCount',
     'gNdsFighterDLAllDrawP1HardwareTriangleCount',
     # P2-3r15. THE TWO COUNTERS THAT CAN EXPRESS A ROSTER WIDER THAN TWO NAMES.

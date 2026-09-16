@@ -8239,3 +8239,63 @@ regresses by 1,408 ticks, and there is no code-size gain or stronger causal
 evidence. The candidate is rejected and the N04.05 scalar 4x3 serializer is
 restored. Evidence:
 `artifacts/performance/2026-09-16_p2-2p8-matrix4x3-row3-blockcopy`.
+
+## 2026-09-16 — P2-2p8 N04.08: material-animation stable-zero skip KEEP
+
+`gcPlayAnimAll` now runs an explicit copy of the decomp traversal so it can reach
+between `gcParseMObjMatAnimJoint` and the material player, and skips the player
+for any MObj whose `anim_speed` was `+/-0` with a positive, finite `anim_wait`
+before the parser ran. In that state the parser returns before consuming an
+event, so the player could only add `+/-0` to each AObj length and recompute
+byte-identical outputs. The parser is unchanged and direct `gcPlayMObjMatAnim`
+callers are untouched.
+
+A census measured **7,892 of 14,059** active material-animation calls (56.1%) and
+**47,352 of 60,263** live AObj nodes (78.6%) already in that state, with a
+perfectly uniform `7,892 x (1 Linear + 3 Cubic + 2 Step)` split.
+
+**Same-ROM route A/B** (one binary, both arms on the same traversal, engagement
+**4** control vs **7,892** candidate): WORK-H P50/P95/mean
+**-8,640 / -1,600 / -5,792**, GCRA and SRC P50 **-5,440** and P95 **-8,064**,
+`ALL` quantized-flat. Costs recorded: FTR P95 +1,728, WORK P95 +2,304.
+
+**Canonical re-bank** (`build-p2-fourcpu-tickhud`, versus N04.05): WORK-H
+**1,639,808 / 2,365,120**, mean **1,690,473**, versus **1,649,728 / 2,373,632**,
+mean **1,696,317**: **-9,920 / -8,512 / -5,844**. FTR **357,312 / 744,640**, mean
+**368,806** versus **357,248 / 743,616**, mean **368,779**: **+64 / +1,024 / +27**.
+Native failures/rejects **0/0**, heap low-water **108,096 B** unchanged, arena
+1,347,328 B and alloc failures 85 unchanged, VBlank 2/3/4/5+ **104/845/809/215**,
+max **13**, slips **0**. `gNdsMObjMatAnimStableSkipCount` = **7,892** in a fourth
+independent build.
+
+-9,920 is below the 14,080-tick cross-build floor, which is what sank N04.07.
+The difference is that N04.07 carried a sub-floor movement, a P95 **regression**
+and no attribution, while N04.08 carries a sub-floor movement, a P95
+**improvement**, and a placement-free same-ROM attribution that predicts it to
+within ~1,300 ticks. Route to attribute, re-bank to bank; here the two agree.
+
+Boundary GREEN: `p2_shell_loop` 1 lap, free floor 114,628 B, zero faults;
+`p2_battle_realtime` 212 frames at **26.3 FPS** (25.7 at N04.05); `p2_fourcpu_stress`
+as tabled. A read-only audit of the skip against the decomp player, parser and
+every other writer of the affected fields returned SAFE with three conditions,
+two of which are now recorded in the code at the skip and one of which (NaN
+`anim_wait`) was closed by making the predicate agree exactly with the parser's
+`anim_wait > 0.0F` early return.
+
+**The win is Dream Land's.** Only an explicit speed setter can zero an MObj's
+`anim_speed`, and the single MObj-targeted one in the tree is Dream Land's frozen
+water, whose freeze fingerprint bit-pins the same fields the skipped player would
+rewrite. On a stage with no frozen material animation this fires zero times. Do
+not bank it roster-wide or stage-wide.
+
+**Banked separately: the arena carve.** The identical N04.08 source built into a
+private lab directory read WORK-H P50 **1,587,328** against **1,639,808** from
+the canonical directory — **52,480 ticks apart** — tracking an 8,192-byte arena
+difference (1,355,520 vs 1,347,328) and heap low-water 111,680 vs 108,096 B, with
+the engagement counter reading the same 7,892 in both. Behaviour identical,
+directory different. Two consequences: cross-build figures must come from the
+baseline's own build directory, and the arena carve is an unswept candidate
+larger than every N04.0x lever measured so far.
+
+P2-2p8 remains RED. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip`.

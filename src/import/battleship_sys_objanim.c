@@ -35,15 +35,18 @@ volatile u32 gNdsR2CubicSaturations;
 #define gcPlayDObjAnimJoint ndsBaseGcPlayDObjAnimJoint
 #endif
 
-/* Campaign 01 re-knapsack, 2026-08-17: 80 bytes carrying 1,070 I-cache-fill
- * tk/fr on the gate's own rank-80 frames (13.4 per byte). Same declaration
- * mechanism as gcPlayDObjAnimJoint below; the attribute has to precede the
- * decomp body, so the type it needs is pulled in here rather than waiting for
- * that body's own first include. */
+/* Campaign 01 re-knapsack, 2026-08-17, gave ndsBaseGcPlayAnimAll 80 ITCM bytes
+ * for 1,070 I-cache-fill tk/fr. P2-2p8 N04.08 removed its last call site --
+ * gcPlayAnimAll now runs ndsGcPlayAnimAllStableSkip, which needs to reach
+ * between the parser and the player -- and the linker does not drop it, so the
+ * attribute is gone and the dead decomp body sits in main RAM. That is 80 bytes
+ * back into an ITCM region with 16 free at the measured route build. The type
+ * pull-in stays: the remaining attribute below still has to precede the decomp
+ * body, same declaration mechanism as gcPlayDObjAnimJoint. */
 #include <sys/obj.h>
 extern s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size);
 sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site);
-void ndsBaseGcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
+void ndsBaseGcPlayAnimAll(GObj *gobj);
 /* 732 bytes / 2,950 I-cache-fill tk/fr on the gate's rank-80 frames. It is also
  * the largest single soft-float caller in the build -- 633,842 helper calls over
  * those 80 frames, 7,923 per frame (SHIPPING_REBANK.md softfloat-callers) -- and
@@ -2310,6 +2313,119 @@ static u32 ndsAObjEvent32CollectActiveMObjs(GObj *gobj, MObj **active_mobjs)
     return count;
 }
 
+/* P2-2p8 N04.08. A zero-speed MObj whose anim_wait was already positive before
+ * gcParseMObjMatAnimJoint is stable for this call: the parser still runs, so its
+ * exact float and state effects are preserved, but it returns before consuming
+ * an event, and the material player would then only add +/-0 to each AObj length
+ * and recompute byte-identical outputs. Skipping that player call is therefore
+ * work removal, not a behaviour change.
+ *
+ * TWO INVARIANTS CARRY THAT CLAIM, and breaking either one makes this unsafe:
+ *
+ *   1. gcPlayAnimAll's unconditional ndsAObjEvent32CorrectMObjColors(mobj,
+ *      FALSE) pass below must keep running over every MObj. The player and that
+ *      pass are the only writers of the five colour tracks in the whole tree,
+ *      and the pass re-derives all five from the live AObj chain, so it -- not
+ *      this skip's own reasoning -- is what makes colour safe. Narrowing it
+ *      narrows this.
+ *   2. The ten scalar material tracks (13..22) have no such restore pass, so
+ *      they are safe only while no non-player writer touches a track that also
+ *      carries a live matanim AObj on the same MObj. The gameplay setters that
+ *      do write texture_id_curr/next and palette_id target MObjs with no
+ *      matanim on that track, and the renderer's MOBJ_FLAG_FRAC path is
+ *      idempotent because lfrac keeps the value the last player call wrote.
+ *
+ * Engagement is stage-local, and deliberately so. MObjs start at anim_speed
+ * 1.0f and only an explicit speed setter can zero them; the single MObj-targeted
+ * one in the tree is Dream Land's frozen water (battleship_grpupupu_ground.c),
+ * which bit-pins these exact fields in its freeze fingerprint before zeroing the
+ * speed. So this removes the replay of an animation the port already froze on
+ * purpose, and on a stage with no frozen material animation it fires zero times
+ * and costs one predicate. Do not bank its gate movement as a whole-roster or
+ * whole-stage win.
+ *
+ * Direct gcPlayMObjMatAnim callers are deliberately NOT changed: the argument
+ * depends on the parser->player ordering that only gcPlayAnimAll owns. Reaching
+ * between those two calls is also why this is an explicit copy of the decomp
+ * gcPlayAnimAll traversal rather than a call to it -- the decision point is
+ * inside that loop. The DObj side calls the same player the decomp body would:
+ * the gcPlayDObjAnimJoint -> ndsBaseGcPlayDObjAnimJoint rename at the top of
+ * this file is conditional, so this mirrors its condition exactly.
+ *
+ * A census measured 7,892 of 14,059 active calls (56.1%) and 47,352 of 60,263
+ * live nodes (78.6%) in this state, and a same-ROM A/B against this same
+ * traversal with the skip disabled attributed WORK-H P50 -8,640 and GCRA P50
+ * -5,440 ticks to it. Evidence:
+ * artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/.
+ *
+ * gNdsMObjMatAnimStableSkipCount is permanent engagement proof, not scaffolding.
+ * A skip that silently stops firing -- because a material animation's speed or
+ * wait convention changes -- is otherwise indistinguishable from one that fires
+ * and saves nothing, and this campaign has already shipped that mistake once. */
+volatile u32 gNdsMObjMatAnimStableSkipCount;
+
+static inline sb32 ndsMObjMatAnimWasStableZero(const MObj *mobj)
+{
+    u32 speed_bits;
+    u32 wait_bits;
+
+    if (mobj == NULL)
+    {
+        return FALSE;
+    }
+    /* Exactly the two zero encodings, +0.0f and -0.0f. Any non-zero mantissa
+     * survives the shift, so denormals and NaN speeds are rejected, and
+     * x + (-0.0f) carries the same bit identity as x + (+0.0f). */
+    speed_bits = ndsFcmpBits(mobj->anim_speed);
+
+    /* Positive, finite and non-zero. This has to agree with the parser's own
+     * `anim_wait > 0.0F` early return rather than with NDS_FCMP_GT0, which
+     * orders a positive NaN above zero where the float compare does not: on a
+     * NaN wait the parser would fall through and consume an event while the
+     * skip suppressed the player, which is the one input that can make the two
+     * disagree. +Inf is excluded with it; refusing to skip is always safe.
+     * All three AObj sentinels are strictly negative (AOBJ_ANIM_NULL is
+     * F32_MIN, CHANGED F32_MIN/2, END F32_MIN/3), so this also excludes every
+     * sentinel edge, and the END -> NULL transition can never be skipped. */
+    wait_bits = ndsFcmpBits(mobj->anim_wait);
+
+    return (((speed_bits << 1) == 0u) && ((wait_bits - 1u) < 0x7f7fffffu)) ?
+        TRUE : FALSE;
+}
+
+static void ndsGcPlayAnimAllStableSkip(GObj *gobj)
+{
+    DObj *dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
+
+    while (dobj != NULL)
+    {
+        MObj *mobj;
+
+        gcParseDObjAnimJoint(dobj);
+#if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
+        ndsBaseGcPlayDObjAnimJoint(dobj);
+#else
+        gcPlayDObjAnimJoint(dobj);
+#endif
+
+        for (mobj = dobj->mobj; mobj != NULL; mobj = mobj->next)
+        {
+            sb32 was_stable_zero = ndsMObjMatAnimWasStableZero(mobj);
+
+            gcParseMObjMatAnimJoint(mobj);
+            if (was_stable_zero != FALSE)
+            {
+                gNdsMObjMatAnimStableSkipCount++;
+            }
+            else
+            {
+                ndsBaseGcPlayMObjMatAnim(mobj);
+            }
+        }
+        dobj = gcGetTreeDObjNext(dobj);
+    }
+}
+
 void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
 void gcPlayAnimAll(GObj *gobj)
 {
@@ -2320,7 +2436,7 @@ void gcPlayAnimAll(GObj *gobj)
 
     (void)ndsAObjEvent32CollectActiveMObjs(gobj, active_mobjs);
 
-    ndsBaseGcPlayAnimAll(gobj);
+    ndsGcPlayAnimAllStableSkip(gobj);
 
     for (dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
          dobj != NULL;

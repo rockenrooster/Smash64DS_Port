@@ -3,7 +3,7 @@
 Created: 2026-08-17.
 Updated: 2026-09-16 continuation protocol; recorded runtime evidence unchanged.
 
-**Last integrated Boundary GREEN: N04.05; P2-2p8 acceptance RED.** Figures below.
+**Last integrated Boundary GREEN: N04.08; P2-2p8 acceptance RED.** Figures below.
 
 **The only dynamic queue.** Restart reads `docs/HANDOFF.md` + this file. Plans:
 `docs/P2_PLAN.md` + `docs/p2/`. Closed rows: `docs/archive/P2_CLOSED_ROWS.md`.
@@ -42,40 +42,37 @@ SHA-256 FE4C064BBF3DF2EE9FBB22F4A483AC13B502829779A23E7BACE01E6CE9AFDBB9
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N04.05 packet 4x4 ARM block copy.
-WORK-H **1,649,728 / 2,373,632**, FTR **357,248 / 743,616**; native fail/reject
+**Last qualified checkpoint:** N04.08 material-animation stable-zero skip.
+WORK-H **1,639,808 / 2,365,120**, FTR **357,312 / 744,640**; native fail/reject
 **0/0**, heap **108,096 B**; Boundary and hard-on build GREEN.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / material-animation stable-zero skip / N04.08 / main. Phase: IMPLEMENT (hard-on).
-Identity: N04.05 qualified; ROM `FE4C064B...FDBB9`, ELF `736BCBE6...60426`.
-Completed/rejected: N04.03 round-shift/camera reuse/input refresh and N04.05 4x4
-block copy KEEP; N04.04 memcpy, N04.06 row4 loads and N04.07 three-word row copy
-REJECTED. Rows and figures are in `PERF_LEDGER.md`.
-Profile: post-pose `2026-09-15_p2-2p8-pose-joint-mask/profile-final-current/`;
-older packet/split-modelview rows invalidated by accepted N04.03/N04.05 changes.
-Selected: `ndsBaseGcPlayMObjMatAnim`, the campaign's largest unsolved
-call-elimination candidate (7,923 helper calls/rank-80 frame). Census: **7,892 of
-14,059** active MObj calls (56.1%) and **47,352 of 60,263** live nodes (78.6%)
-were already zero-speed with positive wait before parsing.
-Measured: same-ROM route A/B complete and positive; ROM `4E0880C0...0BCFD`,
-1,972 samples per arm, engagement **4** control vs **7,892** candidate (= census
-total). WORK-H P50/P95/mean **-8,640/-1,600/-5,792**; GCRA and SRC P50 **-5,440**,
-P95 **-8,064**; ALL quantized-flat; costs FTR P95 +1,728, WORK P95 +2,304; native
-0/0, heap 111,680 B, draw-plan 618/6,217/0 and slips 0 identical in both arms.
-Evidence: `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
-Next: read the in-flight safety audit (another writer of the same material fields
-between two `gcPlayAnimAll` calls would make a skip visible), then strip the
-census and route word, make the skip unconditional with a permanent engagement
-counter, and qualify through focused four-CPU verification and full Boundary.
-Direct `gcPlayMObjMatAnim` callers stay unchanged.
-Checks: hard-on Boundary and the final hard-on `smash64ds` build remain owed.
-The routed movement attributes removed work; it does not bank against the
-14,080-tick cross-build floor. N04.05 remains the qualified checkpoint.
+Focus / batch / IDs / owner: P2-2p8 / material-animation stable-zero skip / N04.08 / main. Phase: COMPLETE.
+**Owner 2026-09-16: four-CPU optimization runs the four-CPU match and nothing
+else** — `p2_fourcpu_stress` alone, no shell loop, realtime arm or extra lab
+builds; conditions in `VERIFYING.md`. Boundary is for integration/publication.
+Completed/rejected: N04.03 round-shift/camera reuse/input refresh, N04.05 4x4
+block copy and N04.08 stable-zero skip KEEP; N04.04 memcpy, N04.06 row4 loads and
+N04.07 three-word row copy REJECTED. Figures in `PERF_LEDGER.md`.
+Profile: post-pose `2026-09-15_p2-2p8-pose-joint-mask/profile-final-current/`.
+N04.08: `gcPlayAnimAll` skips the material player for MObjs already zero-speed
+with a positive wait before the parser. Same-ROM route attributed WORK-H P50
+**-8,640**; canonical re-bank **-9,920 / -8,512** P50/P95 vs N04.05 with heap
+108,096 B, native 0/0 and slips 0 unchanged; engagement **7,892** (= census) in
+four independent builds; a read-only audit returned SAFE with its conditions
+recorded at the skip. Boundary GREEN (shell loop free floor 114,628 B; realtime
+212 frames **26.3 FPS**). Win is Dream Land's frozen water only — not roster- or
+stage-wide. Evidence: `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
+Banked beyond the candidate: identical source built into a private lab directory
+read WORK-H P50 **52,480 ticks** away from the canonical directory on an 8,192 B
+arena difference, behaviour provably identical. **The arena carve is an unswept
+candidate larger than every N04.0x lever**, and it is the ranked next one.
+Next: the arena-carve sweep, measured per the owner's four-CPU-only loop.
+Checks: the final hard-on `smash64ds` publish build is owed before the standing
+rule-4 checkpoint hash is replaced. P2-2p8 stays RED at WORK-H P50 1,639,808.
 Falsifier: settled batches reopen only for a recorded invalidator.
-P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 is settled KEEP.
-Job: one read-only safety audit of the N04.08 skip (port vs decomp material
-writers) is in flight; main owns all edits, builds and the focused runner.
+P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
+Job: none; main owns all edits, builds and the focused runner.
 Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
 stay with their owning rows. Owner documentation edits are preserved.
 
