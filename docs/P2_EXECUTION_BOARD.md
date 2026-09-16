@@ -54,32 +54,34 @@ Focus / batch / IDs / owner: P2-2p8 / gap sizing / main. Phase: BLOCKED — owne
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
 Baseline moved 2026-09-16 (owner-approved clean rebuild, -50,432) and 3,103 lines
 of dead code deleted; both banked in `docs/archive/P2_CLOSED_ROWS.md`.
-**Gap:** `1,120,000` is two VBlank intervals. Four-fighter WORK-H P50
-**1,575,296 = 1.41x**, P95 2,311,616 = 2.06x, **92.3% of frames miss the gate**;
-closing it needs **-455,296** at P50. Leaf work is sized wrong — the whole
-fadd+fmul class is 90,169 tk/fr. Sizing: `…/2026-09-16_p2-2p8-gap-sizing/`.
-**Owner 2026-09-16: 30 FPS at four players is REQUIRED** — re-scoping is off the
-table. Structural decomposition found the lane, and it is the one
-`PROJECT_GOAL.md`'s Sacrifice Order already nominates (60 Hz simulation ranks
-4th, *below* stable 30 FPS at 5th). The port presents at 30 but runs the sim
-**twice per present** (`NDS_TASK106_UPDATES_PER_PRESENT 2u`; `gcRunAll` 1.98
-calls/frame vs present 0.99). Priced uncompensated: **WORK-H P50 1,575,168 ->
-1,281,152 (-294,016)**, P95 -509,632, SRC/GCRA halve, STG unmoved, VBlank
-2-interval frames **128 -> 517**. Predicted -289,824, measured -294,016.
-**Closes 64.6% of the gap; 161,152 remains** — covered by the stage lane, whose
-238,254 tk/fr is unprofiled. Evidence:
-`artifacts/performance/2026-09-16_p2-2p8-sim30-ceiling/`.
-Not yet a candidate: uncompensated it plays at half speed, and the harness
-correctly refused the window as whole-match (43.33%, 26s of 60s). The real work
-is compensation — advancing timers, physics and animation two frames per tick —
-and that needs the owner's "substantially the same gameplay experience" call.
-Per-fighter levers are dead: 187,008 tk/fr x4 against a non-fighter floor of
-~827,136 (74% of budget before a fighter exists); source LOD already selects Low
-for 3+ fighters (`scvsbattle.c:188`); draw-plan cache is 91% hit; the N-squared
-collision class totals under 30,000. **Task 103 stage instrument is BROKEN** —
-needs 360 ITCM bytes it lacks, crashes when given them; repair before sizing.
-Float-lane ranking and conv/op economics, if wanted:
-`…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
+**Gap:** `1,120,000` = two VBlank intervals. WORK-H P50 **1,575,296 = 1.41x**,
+P95 2.06x, **92.3% of frames miss**; needs **-455,296** at P50. Leaf work is
+sized wrong (whole fadd+fmul class 90,169). Sizing:
+`…/2026-09-16_p2-2p8-gap-sizing/`.
+**Owner 2026-09-16: 30 FPS at four players is REQUIRED, and NO 30 Hz
+simulation.** The -294,016 sim lever is withdrawn (priced and banked in
+`…/2026-09-16_p2-2p8-sim30-ceiling/`; 60 Hz stays). That is consistent with the
+Sacrifice Order: audio (1), visual (2) and gameplay (3) are all ranked MORE
+expendable than the 60 Hz sim (4), so 1-3 must be exhausted first.
+**Selected lane: the stage.** Over all 1,234 profiled symbols the stage-renderer
+family is **54 symbols / 222,758 tk/fr**, of which **87,927 is raw geometry
+emission** (segment commit 27,835, triangle 18,199, run begin 16,447, vertex
+14,155, matrix load 11,291) re-issued every frame for geometry that does not
+move, plus 15,010 rebuilding a "persistent" world matrix; MP collision is a
+further 49,297. **Caching static stage emission costs nothing from the Sacrifice
+Order** — identical pixels — so exhaust it first. A Task 36 replay exists but is
+small (`Task36EnsureWorld` 6,904).
+Next: determine why static stage geometry is re-emitted per frame and whether the
+Task 36 replay can cover it; size the cacheable fraction of the 87,927.
+Per-fighter levers are dead: 187,008 tk/fr x4 against a ~827,136 non-fighter
+floor; source LOD already selects Low for 3+ fighters (`scvsbattle.c:188`);
+draw-plan cache 91% hit; N-squared collision under 30,000 total.
+**Task 103 stage instrument is BROKEN, confirmed twice.** Two independent ITCM
+evictions — one hot, one cold (`NDS_R2_ANIM_Q_ITCM_ON=0`) — give the identical
+crash in `ndsCameraRecordFrame` (`battleship_gmcamera.c:223`). The taps are the
+fault, not the eviction; it has never been run and is unproven code. Both
+evictions reverted. Also found: **21 ITCM residents never execute, 5,050 B idle**.
+Float-lane ranking: `…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
 Checks: **Boundary GREEN on clean payloads for all three arms** (shell loop free
 floor 114,628 B, realtime 212 frames **26.4 FPS**); both targets build and every
 invariant matches.

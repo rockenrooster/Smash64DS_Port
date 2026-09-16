@@ -135,3 +135,62 @@ It cost two builds and produced nothing:
 
 The eviction was reverted. STG remains unattributed and the instrument needs
 repair before it can answer anything.
+
+---
+
+## Owner ruling 2026-09-16 (second): no 30 Hz simulation
+
+The -294,016 lever is withdrawn. The 60 Hz simulation stays.
+
+That is consistent with the Sacrifice Order rather than in tension with it: audio
+(1), visual (2) and gameplay (3) fidelity are all ranked as **more** expendable
+than the 60 Hz simulation (4). Jumping to 4 skipped 1 through 3. The remaining
+455,296 tk/fr must come from those, and the largest untouched block in category 2
+is the stage.
+
+### The stage lane, sized from the whole profile
+
+The earlier figure came from the top-60 symbols only. Summing **all 1,234 profiled
+symbols**, the stage-renderer family is **54 symbols / 222,758 tk/fr**:
+
+| tk/fr | symbol |
+|---|---|
+| 27,835 | `ndsRendererCommitNativeStageSegment` |
+| 18,199 | `ndsRendererNativeStageEmitNoZTriangle` |
+| 16,447 | `ndsRendererNativeStageBeginRun` |
+| 15,010 | `ndsRendererAdapterBuildPersistentStageWorldMatrix` |
+| 14,155 | `ndsRendererNativeStageEmitNoZVertex` |
+| 11,341 | `ndsStageGCDrawAllLoopRecordCapturedDisplay` |
+| 11,291 | `ndsRendererNativeStageLoadNoZMatrix` |
+| 9,223 | `ndsStageCollisionLoopGeometryReady` |
+| 7,778 | `ndsStageMPSweepFloorLoopSweep` |
+| 7,699 | `ndsRendererAdapterPrepareNativeStageOwner` |
+| 6,904 | `ndsRendererNativeStageTask36EnsureWorld` |
+| 6,876 | `ndsRendererAdapterCommitNativeStageDisplay` |
+
+**Raw geometry emission alone — segment commit, triangle emit, vertex emit,
+matrix load, run begin — is 87,927 tk/fr, re-issued every frame for geometry that
+does not move.** A further 15,010 rebuilds a matrix named "persistent". MP
+collision is a separate 46 symbols / 49,297 tk/fr.
+
+The important property: **caching static stage emission is not a fidelity
+sacrifice at all.** It produces identical pixels. Unlike every other lane on the
+table it costs nothing from the Sacrifice Order, so it should be exhausted first
+on those grounds alone.
+
+### Task 103 is confirmed broken, and it was not my eviction
+
+The instrument was retried with a different ITCM relief: `NDS_R2_ANIM_Q_ITCM_ON=0`
+evicts `ndsR2AnimValueQItcm` (1,076 B), one of the **21 ITCM residents that never
+execute** in this window (5,050 B idle in total — itself worth recording). The
+build links, and the ROM crashes with the **same signature**: `excpt_entry`, in
+`ndsCameraRecordFrame`, `battleship_gmcamera.c:223`.
+
+Two independent ITCM evictions, one hot (`ndsBaseGcPlayMObjMatAnim`) and one cold,
+produce the identical crash. The eviction is not the cause — **the Task 103 taps
+are**. The instrument has never been run (no `artifacts/performance/*task103*`
+exists) and should be treated as unproven code, not as a tool. Both evictions are
+reverted; the tree is unchanged.
+
+STG's composition above was therefore obtained from the profile symbol table
+rather than from the instrument, which is cheaper and needed no build.
