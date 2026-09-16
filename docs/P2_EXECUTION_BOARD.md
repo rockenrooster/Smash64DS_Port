@@ -52,37 +52,37 @@ Focus / batch / IDs / owner: P2-2p8 / gap sizing / main. Phase: BLOCKED — owne
 **Owner 2026-09-16: four-CPU work runs `p2_fourcpu_stress` alone**; conditions in
 `VERIFYING.md`. Boundary is for integration/publication.
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
-**Baseline moved 2026-09-16 (owner-approved).** `NITRO_FILES := $(NITROFS_DIR)`
-ships whatever sits in a build directory; the canonical one held 710 NitroFS
-files against the 365 this config produces. Clean rebuilt, same source: **WORK-H
-P50 -50,432**, P95 -46,912, STG -54,656 — 3.6x the floor, build hygiene not code.
-Anything banked against 1,639,808 describes the stale directory. Evidence:
-`…/2026-09-16_p2-2p8-clean-rebaseline/`. Nothing gates it:
-`check-published-roms.ps1` never looks at NitroFS membership.
-Rejected candidates, N04.08 closure detail: `docs/archive/P2_CLOSED_ROWS.md`.
-**BLOCKER RECORDED 2026-09-16 — the gap is out of reach of leaf levers.**
-`1,120,000` is two VBlank intervals (this run: `ALL` P50 1,678,016 over exactly
-three, so 559,339 each). Four-fighter WORK-H P50 **1,575,296 = 1.41x** the gate,
-P95 **2,311,616 = 2.06x**, and **1,821 of 1,972 frames (92.3%) exceed it**.
-Closing it needs **-455,296** at P50, **-1,191,616** at P95. Against that: the
-ENTIRE fadd+fmul class is 90,169 tk/fr (19.8% of the P50 gap), collision matrices
-~49,900, pose ~63,800, memset+memcpy ~43,300, every N04.0x lever combined
-~20,000. Nothing reaches it. Sizing: `…/2026-09-16_p2-2p8-gap-sizing/`.
-Owner decision needed: (1) a structural lever changing what each ADDITIONAL
-fighter costs — the two-fighter shell is 26.4 FPS on this build while four is
-1.41x over, so cost scales with fighter count; (2) re-scope the four-fighter
-target — whether four-player SSB64 must hold 30 on DS is a scope question whose
-source behaviour this repo has never recorded; (3) accept P2-2p8 RED as tracked
-and let P2-3..P2-7 acceptance proceed. Until then, picking the next-largest leaf
-yields 5-15k against a 455k requirement.
-If (1) or (3) is chosen, the float lane's ranking, rejections and conv/op
-economics are in `…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
-Checks: published `smash64ds` rebuilt clean (660 NitroFS files against 955, ROM
-1,828,864 B smaller); **Boundary GREEN on clean payloads for all three arms**
-(shell loop free floor 114,628 B, realtime 212 frames **26.4 FPS**), so the
-payload change is runtime-proved. Owner-requested deletion removed **3,103
-lines** of forced-flag dead branches, shadowed weak stubs and pure `efManager`
-forwards; both targets build, every invariant matches.
+Baseline moved 2026-09-16 (owner-approved clean rebuild, -50,432) and 3,103 lines
+of dead code deleted; both banked in `docs/archive/P2_CLOSED_ROWS.md`.
+**Gap:** `1,120,000` is two VBlank intervals. Four-fighter WORK-H P50
+**1,575,296 = 1.41x**, P95 2,311,616 = 2.06x, **92.3% of frames miss the gate**;
+closing it needs **-455,296** at P50. Leaf work is sized wrong — the whole
+fadd+fmul class is 90,169 tk/fr. Sizing: `…/2026-09-16_p2-2p8-gap-sizing/`.
+**Owner 2026-09-16: 30 FPS at four players is REQUIRED** — re-scoping is off the
+table. Structural decomposition found the lane, and it is the one
+`PROJECT_GOAL.md`'s Sacrifice Order already nominates (60 Hz simulation ranks
+4th, *below* stable 30 FPS at 5th). The port presents at 30 but runs the sim
+**twice per present** (`NDS_TASK106_UPDATES_PER_PRESENT 2u`; `gcRunAll` 1.98
+calls/frame vs present 0.99). Priced uncompensated: **WORK-H P50 1,575,168 ->
+1,281,152 (-294,016)**, P95 -509,632, SRC/GCRA halve, STG unmoved, VBlank
+2-interval frames **128 -> 517**. Predicted -289,824, measured -294,016.
+**Closes 64.6% of the gap; 161,152 remains** — covered by the stage lane, whose
+238,254 tk/fr is unprofiled. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-sim30-ceiling/`.
+Not yet a candidate: uncompensated it plays at half speed, and the harness
+correctly refused the window as whole-match (43.33%, 26s of 60s). The real work
+is compensation — advancing timers, physics and animation two frames per tick —
+and that needs the owner's "substantially the same gameplay experience" call.
+Per-fighter levers are dead: 187,008 tk/fr x4 against a non-fighter floor of
+~827,136 (74% of budget before a fighter exists); source LOD already selects Low
+for 3+ fighters (`scvsbattle.c:188`); draw-plan cache is 91% hit; the N-squared
+collision class totals under 30,000. **Task 103 stage instrument is BROKEN** —
+needs 360 ITCM bytes it lacks, crashes when given them; repair before sizing.
+Float-lane ranking and conv/op economics, if wanted:
+`…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
+Checks: **Boundary GREEN on clean payloads for all three arms** (shell loop free
+floor 114,628 B, realtime 212 frames **26.4 FPS**); both targets build and every
+invariant matches.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
 Job: none; main owns all edits, builds and the focused runner.

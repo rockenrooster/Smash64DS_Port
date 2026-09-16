@@ -219,3 +219,32 @@ water. On a stage with no frozen material animation it fires zero times.
 Boundary GREEN (shell loop free floor 114,628 B; realtime 212 frames at 26.3 FPS
 against 25.7 at N04.05). Evidence:
 `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
+
+## P2-2p8 build-hygiene batch and dead-code deletion (2026-09-16)
+
+Moved off the cursor once banked.
+
+**Clean rebuild and re-baseline (owner-approved).** `NITRO_FILES :=
+$(NITROFS_DIR)` ships whatever sits in a build directory; the canonical one held
+710 NitroFS files against the 365 the config produces, accumulated from earlier
+flag sets. Clean rebuilt from the same source: WORK-H P50 1,639,808 -> 1,589,376
+(-50,432), P95 -46,912, STG -54,656, `ALL` P50 across a VBlank quantum. 3.6x the
+significance floor and larger than every N04.0x code lever combined — build
+hygiene, not code. The published `smash64ds.nds` carried the same accumulation
+(955 files, oldest 2026-08-01) and lost 1,828,864 bytes with a byte-identical
+ELF. Boundary GREEN on clean payloads for all three arms afterwards; the shell
+arms were stale to 2026-08-18 and 2026-09-04, so every earlier Boundary FPS
+figure was taken on a bloated ROM. Nothing gates this: `check-published-roms.ps1`
+never inspects NitroFS membership. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-clean-rebaseline/`.
+
+**Owner-requested dead-code deletion, 3,103 lines.** 17 `NDS_IMPORT_BATTLESHIP_*`
+flags are `override ... := 1` at Makefile top level, so their `#else` branches are
+unreachable: 1,361 lines from `reloc_backend_ftmain_runtime.c`, 824 from
+`taskman_seam_harness.c`, 569 from `reloc_backend_compat_shims.c`, plus 147 lines
+of weak definitions shadowed by strong ones, 199 lines of pure `efManager`
+forwards with their rename plumbing, and 3 Makefile lines. Kept deliberately:
+`BATTLE_PLAYABLE`/`MPPROCESS_*`/`FT_PUBLIC` are `?=` and reachable; two
+Kirby-copy weak stubs are the only definition in the shipping link; 11
+`efManager*` functions are not forwards. Cumulative measurement WORK-H P50
+-14,208, at the floor and recorded as placement rather than banked as a lever.
