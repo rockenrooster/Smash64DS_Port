@@ -8207,3 +8207,35 @@ FPS**, so P2-2p8 remains RED. Final hard-on ROM
 `736BCBE6EE02901AA5E3252EAB8DF071C6C251F327331FD94B4F2D84CED60426`, config
 `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
 Evidence: `artifacts/performance/2026-09-16_p2-2p8-matrix4x4-blockcopy`.
+
+## 2026-09-16 — P2-2p8 N04.06: four-word 4x3 row loads REJECTED
+
+Four inline `ldmia/stmia` row pairs shrank packet replay another 16 B, but the
+focused 1,972-sample result was mixed: FTR **357,120/741,440**, mean **369,051**
+versus N04.05 **357,248/743,616**, mean **368,779**; WORK-H
+**1,648,320/2,375,424**, mean **1,696,684** versus **1,649,728/2,373,632**,
+mean **1,696,317**. Native failures/rejects stayed **0/0** and heap low-water
+**108,096 B**. No Boundary run; source restored. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-matrix4x3-row4-blockcopy`.
+
+## 2026-09-16 — P2-2p8 N04.07: three-word 4x3 row copy REJECTED
+
+Four explicit `ldmia {r2-r4}` / source `add #4` / `stmia {r2-r4}` sequences
+removed both the scalar row loop and N04.06's unused fourth-column loads while
+preserving the exact 12-word GX payload. Linked `ndsFighterPacketTryReplay`
+remained **0xecc** bytes, equal to qualified N04.05.
+
+Focused and full-Boundary four-CPU stress reproduced FTR
+**356,480/743,488**, mean **368,562**, versus N04.05
+**357,248/743,616**, mean **368,779**: **-768/-128/-217**. WORK-H was
+**1,643,328/2,375,040**, mean **1,693,284**, versus
+**1,649,728/2,373,632**, mean **1,696,317**: **-6,400/+1,408/-3,033**.
+Native failures/rejects stayed **0/0**, heap low-water **108,096 B**, and
+VBlank 2/3/4/5+ was **104/843/813/213**, max **13**, slips **0**.
+
+Full Boundary is GREEN and realtime reports **25.9 FPS**, but the measured
+movements are below the documented **14,080-tick** cross-build floor, WORK-H P95
+regresses by 1,408 ticks, and there is no code-size gain or stronger causal
+evidence. The candidate is rejected and the N04.05 scalar 4x3 serializer is
+restored. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-matrix4x3-row3-blockcopy`.

@@ -52,22 +52,45 @@ WORK-H **1,649,728 / 2,373,632**, FTR **357,248 / 743,616**; native fail/reject
 **0/0**, heap **108,096 B**; Boundary and hard-on build GREEN.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / packet 4x3 row block copy / N04.06 / main. Phase: SELECT.
+Focus / batch / IDs / owner: P2-2p8 / material-animation stable-zero skip / N04.08 / main. Phase: IMPLEMENT (hard-on).
 Identity: N04.05 qualified; ROM `FE4C064B...FDBB9`, ELF `736BCBE6...60426`.
-Completed/rejected: N04.05 4x4 block copy KEEP; N04.04 generic memcpy rejected;
-N04.03 round-shift, camera reuse and packet input refresh KEEP.
-Profile: `2026-09-15_p2-2p8-current-profile/`.
-Selected: the same 6.96M-cycle packet-replay profile still exercises the 4x3 matrix
-serializer. It copies 12 packed output words as four scalar 3-word rows from a
-4-word-stride source. Test fixed 3-word ARM row transfers while preserving that
-source stride and the exact packed destination; leave 4x4/split semantics unchanged.
-Next: implement the isolated 4x3 row-copy codegen experiment; time it only if the
-linked replay path becomes materially smaller/straighter.
-Checks: N04.05 full Boundary GREEN; FTR 357,248/743,616, WORK-H
-1,649,728/2,373,632, native 0/0, heap 108,096 B; realtime about 25.7 FPS.
+Completed/rejected: N04.05 4x4 block copy KEEP; N04.06 row4 loads and N04.04
+generic memcpy rejected; N04.07 three-word row copy rejected; N04.03 round-shift,
+camera reuse and input refresh KEEP. N04.07 full Boundary was GREEN but WORK-H
+P95 regressed 1,408 ticks and every movement stayed below the 14,080-tick
+cross-build floor, so the N04.05 scalar 4x3 serializer is restored.
+Profile: post-pose `2026-09-15_p2-2p8-pose-joint-mask/profile-final-current/`;
+older packet/split-modelview rows invalidated by accepted N04.03/N04.05 changes.
+Selected: the float campaign's largest unsolved call-elimination candidate is
+`ndsBaseGcPlayMObjMatAnim`: 7,923 helper calls/rank-80 frame in the shipping-rebank
+measurement. Current four-CPU census measured 14,059 active MObj calls and 60,263
+live non-None nodes; **7,892 calls (56.1%) / 47,352 nodes (78.6%)** were already
+zero-speed with positive wait before parsing. Kinds within those stable nodes were
+7,892 Linear / 23,676 Cubic / 15,784 Step. Native fail/reject 0/0; heap 111,680 B.
+Measured: the same-ROM route A/B is **complete and positive**
+(`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`). One ROM
+`4E0880C0...0BCFD`, both arms 1,972 samples; both arms run the same explicit
+`gcPlayAnimAll` traversal copy, so only the skipped player call differs. Arms
+proven distinct: skip count **4** control vs **7,892** candidate, the latter
+equal to the census total. WORK-H P50/P95/mean **-8,640 / -1,600 / -5,792**;
+GCRA and SRC P50 both **-5,440**, P95 both **-8,064**; ALL P50/P95 unchanged
+(VBlank-quantized). Recorded costs: FTR P95 +1,728, WORK P95 +2,304. Native
+0/0, heap 111,680 B, draw-plan 618/6,217/0 and slips 0 identical in both arms.
+Next: read the read-only safety audit of the skip (any other writer of the
+material fields between two `gcPlayAnimAll` calls would make a skip visible),
+then strip the census and route word, make the skip unconditional keeping a
+permanent engagement counter, and qualify the hard-on build through focused
+four-CPU verification and full Boundary. Direct `gcPlayMObjMatAnim` callers
+stay unchanged.
+Checks: N04.07 Boundary GREEN; FTR 356,480/743,488, WORK-H
+1,643,328/2,375,040, native 0/0, heap 108,096 B; verdict REJECT. N04.08 census
+1,972 samples; stable-zero ratio above; native 0/0, draw-plan 618/6,217/0.
+N04.08 same-ROM A/B GREEN and engaged; hard-on Boundary and the final hard-on
+`smash64ds` build remain owed. N04.05 remains the qualified checkpoint.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 is settled KEEP.
-Job: none; main owns the next candidate and any focused runner.
+Job: one read-only safety audit of the N04.08 skip (port vs decomp material
+writers) is in flight; main owns all edits, builds and the focused runner.
 Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
 preserved for their owning rows. Unrelated owner documentation edits remain preserved.
 
