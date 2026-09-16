@@ -63,11 +63,14 @@ four independent builds; a read-only audit returned SAFE with its conditions
 recorded at the skip. Boundary GREEN (shell loop free floor 114,628 B; realtime
 212 frames **26.3 FPS**). Win is Dream Land's frozen water only — not roster- or
 stage-wide. Evidence: `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
-Banked beyond the candidate: identical source built into a private lab directory
-read WORK-H P50 **52,480 ticks** away from the canonical directory on an 8,192 B
-arena difference, behaviour provably identical. **The arena carve is an unswept
-candidate larger than every N04.0x lever**, and it is the ranked next one.
-Next: the arena-carve sweep, measured per the owner's four-CPU-only loop.
+Banked beyond the candidate: **`make TARGET=... BUILD=<fresh dir>` ships an
+incomplete ROM** — 365 of 710 NitroFS files here (328 Kirby animations, 12 CSS
+previews, Pikachu/Yoshi images; 1,005,221 B) — and an incomplete ROM measures
+faster. It read WORK-H P50 52,480 below canonical, all of it STG (~54,500
+ticks/frame) while GCRA/FTR matched. Nothing failed and engagement was correct.
+An earlier cursor called this an arena-carve candidate; **retracted**. Match
+NitroFS file count and size to the baseline before quoting a cross-build delta.
+Next: select the next P2-2p8 candidate from the post-pose profile.
 Checks: the final hard-on `smash64ds` publish build is owed before the standing
 rule-4 checkpoint hash is replaced. P2-2p8 stays RED at WORK-H P50 1,639,808.
 Falsifier: settled batches reopen only for a recorded invalidator.

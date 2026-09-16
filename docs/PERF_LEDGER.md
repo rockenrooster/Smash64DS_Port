@@ -8288,14 +8288,23 @@ water, whose freeze fingerprint bit-pins the same fields the skipped player woul
 rewrite. On a stage with no frozen material animation this fires zero times. Do
 not bank it roster-wide or stage-wide.
 
-**Banked separately: the arena carve.** The identical N04.08 source built into a
-private lab directory read WORK-H P50 **1,587,328** against **1,639,808** from
-the canonical directory — **52,480 ticks apart** — tracking an 8,192-byte arena
-difference (1,355,520 vs 1,347,328) and heap low-water 111,680 vs 108,096 B, with
-the engagement counter reading the same 7,892 in both. Behaviour identical,
-directory different. Two consequences: cross-build figures must come from the
-baseline's own build directory, and the arena carve is an unswept candidate
-larger than every N04.0x lever measured so far.
+**Banked separately: a fresh build directory ships an incomplete ROM.** The
+identical N04.08 source built into a private lab directory via
+`make TARGET=... BUILD=<new dir>` read WORK-H P50 **1,587,328** against
+**1,639,808** from the canonical directory. That 52,480-tick gap is not a lever:
+the lab ROM's NitroFS held **365 files / 28,320,664 B** against the canonical
+**710 files / 29,325,885 B**, missing 328 Kirby reloc animations, all 12 CSS
+preview FPCs, the Pikachu and Yoshi fighter images and one shield pose --
+1,005,221 bytes. A fresh build directory does not receive the full payload
+because the producing rules see their shared prerequisites already up to date.
+Nothing failed; native failures stayed 0/0 and the engagement counter read the
+correct 7,892. It simply measured a smaller game, and the entire difference sat
+in **STG** (344,320 vs 398,848 P50, a flat ~54,500 ticks/frame) while GCRA and
+FTR matched to within 1,500. The arena and heap differences (1,355,520 vs
+1,347,328 B; 111,680 vs 108,096 B) are a consequence of the missing megabyte.
+An earlier revision of this row called the arena carve a candidate larger than
+every N04.0x lever; that reading is **retracted**. Check the candidate's NitroFS
+file count and size against the baseline's before quoting a cross-build delta.
 
 P2-2p8 remains RED. Evidence:
 `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip`.

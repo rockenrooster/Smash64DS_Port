@@ -151,13 +151,18 @@ and no load frames in the percentiles.
 Two conditions come with it, because the cheaper loop removes the cross-checks
 that used to catch these:
 
-1. **Build into `build-p2-fourcpu-tickhud`, the baseline's own directory.** On
-   2026-09-16 the identical N04.08 source built into a private lab directory read
-   WORK-H P50 **1,587,328** against **1,639,808** from the canonical directory —
-   **52,480 ticks apart**, tracking an 8,192-byte arena difference, with the
-   engagement counter reading the same 7,892 in both. A cross-build figure
-   against a baseline from another directory is measuring the directory. See
-   `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
+1. **Build into `build-p2-fourcpu-tickhud`, the baseline's own directory.**
+   `make TARGET=... BUILD=<fresh dir>` produces an **incomplete ROM**: the rules
+   for most NitroFS payload see their shared prerequisites already up to date and
+   do not re-run. On 2026-09-16 such a directory shipped **365 of 710 NitroFS
+   files** (missing 328 Kirby reloc animations, all 12 CSS preview FPCs, the
+   Pikachu and Yoshi fighter images, one shield pose — 1,005,221 B) and read
+   WORK-H P50 **1,587,328** against **1,639,808** canonical. Nothing failed:
+   native failures stayed 0/0 and the engagement counter was correct. It measured
+   a smaller game, with the whole difference in **STG** (~54,500 ticks/frame)
+   while GCRA and FTR matched to within 1,500. **Before quoting any cross-build
+   delta, check that the candidate's NitroFS file count and total size match the
+   baseline's.** See `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
 2. **Carry the candidate's own engagement counter in the run.** Without the
    realtime and shell arms, this measurement is the only thing standing between
    a lever that fires and a lever that silently stopped firing.

@@ -239,32 +239,47 @@ Heap low-water **111,680 B**; arena 1,355,520 B; libc high-water 32,928 B,
 top-chunk min 10,280 B against the 40,960 B reserve; weapon pool 10, high-water
 2, refusals 0.
 
-### The build directory is not free — read this before quoting the numbers above
+### The lab directory build was INCOMPLETE — do not quote the numbers above
 
-Those figures come from a private lab directory, `build-p2p8-mobj-stable-skip`.
-The campaign's baselines all come from the canonical `build-p2-fourcpu-tickhud`.
-**Building the same source into a different directory moves the arena carve, and
-the arena carve is worth more than any N04.0x lever measured so far.**
+Those figures come from a private lab directory, `build-p2p8-mobj-stable-skip`,
+created by invoking `make TARGET=... BUILD=...` directly. **That ROM is not the
+same game.** Its NitroFS holds **365 files / 28,320,664 B** against the canonical
+`build-p2-fourcpu-tickhud`'s **710 files / 29,325,885 B** — 345 files and
+1,005,221 bytes missing:
 
-The same N04.08 source, built into both directories on the same day with the
-same harness:
-
-| | `build-p2p8-mobj-stable-skip` | `build-p2-fourcpu-tickhud` |
+| Missing | Files | Bytes |
 |---|---|---|
-| WORK-H P50 | 1,587,328 | 1,639,808 |
-| Arena chosen size | 1,355,520 B | 1,347,328 B |
-| Heap low-water | 111,680 B | 108,096 B |
-| Arena alloc failures | 83 | 85 |
-| Skip engagement | 7,892 | 7,892 |
+| `reloc/reloc_animations/` (Kirby) | 328 | 730,512 |
+| `fighters/preview/*.fpc` | 12 | 222,708 |
+| `fighters/{yoshi,pikachu}_{high,low}.bin` | 4 | 47,940 |
+| `fighters/shield_pose/09.bin` | 1 | 4,061 |
 
-**52,480 ticks of WORK-H P50 between two builds of identical source**, tracking
-an 8,192-byte arena difference. The behaviour is identical — the engagement
-counter is the same integer in both. Any cross-build figure quoted against a
-baseline from a different directory is measuring the directory.
+A fresh build directory does not receive the full payload: the rules that produce
+those files see their shared prerequisites already up to date and do not re-run,
+so the image is silently partial. Nothing fails — the run completed, native
+failures stayed 0/0, and the engagement counter read the right 7,892 — it simply
+measured a smaller game.
+
+The whole apparent gain was in **STG**: 344,320 against 398,848 at P50, 387,648
+against 442,048 at P95, mean 348,655 against 402,273, a flat ~54,500 ticks of
+stage work per frame that moved the `ALL` median across a VBlank quantum (3
+intervals instead of 4). `GCRA` and `FTR` matched between the two builds to
+within 1,500 ticks, which is the tell: the lever landed identically, and
+everything else moved.
+
+**Earlier revisions of this file read that difference as an arena-carve lever
+and called it a candidate larger than every N04.0x change. That was wrong and is
+retracted.** The arena and heap figures do differ (1,355,520 vs 1,347,328 B;
+111,680 vs 108,096 B) but they are a consequence of the missing megabyte, not a
+lever. Nothing here is an optimization opportunity.
 
 The census and route builds were also private directories, which is why their
-absolute levels (heap 111,680 B) sit away from the checkpoint's. It does not
-touch the same-ROM A/B: both of its arms were one binary in one directory.
+absolute levels sit away from the checkpoint's. It does not touch the same-ROM
+A/B: both of its arms were one binary in one directory, so the comparison is
+internally valid regardless of what that binary was missing.
+
+**Check before trusting any cross-build figure:** the candidate's NitroFS file
+count and total size must match the baseline's.
 
 ## Qualification — canonical directory
 
@@ -327,12 +342,12 @@ unchanged, and Boundary GREEN.
 **P2-2p8 remains RED.** WORK-H P50 1,639,808 against a target near 1.12m is not
 moved by this, and the win is Dream Land's, not the roster's or the stage set's.
 
-Two things this run banks beyond the candidate:
+One thing this run banks beyond the candidate:
 
-1. **Measure in the baseline's build directory.** 52,480 WORK-H P50 ticks
-   separated two builds of identical source purely by `BUILD=` path. Every
-   cross-build figure in this campaign is only as good as that match.
-2. **The arena carve is an unswept candidate.** An 8,192-byte arena difference
-   rode 52,480 ticks of WORK-H P50 with behaviour provably identical. That is
-   larger than every N04.0x lever measured so far, and nobody has swept it on
-   purpose.
+**A fresh `BUILD=` directory produces an incomplete ROM, and an incomplete ROM
+measures faster.** `make TARGET=... BUILD=<new dir>` here shipped 365 of 710
+NitroFS files, and the resulting 54,500 ticks/frame of missing stage work read
+as a 52,480-tick WORK-H P50 "win" that survived long enough to be written down
+as an arena-carve candidate. Match the candidate's NitroFS file count and size
+against the baseline's before quoting any cross-build delta, and prefer building
+into the baseline's own directory.
