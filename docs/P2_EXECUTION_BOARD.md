@@ -66,20 +66,19 @@ Rejected candidates and N04.08 closure detail: `docs/archive/P2_CLOSED_ROWS.md`.
 Profile: `…/2026-09-16_p2-2p8-n0409-profile/` (clean payload, 129 regions).
 Float leaves, 29,846 samples: GAMEPLAY frozen 50.9%, UNRESOLVED 28.4%, RENDERER
 20.4%; fadd+fmul **90,169 tk/fr** (`ticks = cycles / 2 regions`).
-Ranked by NAME (the log prints one row per return address, which is why an
-earlier cursor called `guMtxCatF` top; it is 7th): `func_ovl2_800ED490` **18.79%
-/ 16,940 tk/fr**, `gmCollisionSetInvertMatrix` 10.87%, `…FighterPartsWorldPosition`
-10.80%, `…GetWorldPosition` 9.29%, `…TransformMatrixAll` 5.61%,
-`ndsStageMPAdjustFloorLoopWallSweep` 5.07%, `guMtxCatF` 4.74%.
-**That gate is a hardcoded name list** (`census-softfloat-callers.ps1:90-106`),
-not analysis: its `ndsStage` fallback mislabels
-`ndsStageMPAdjustFloorLoopWallSweep` RENDERER where the review marks it
-collision-FROZEN. Re-gate before using it. `guMtxCatF` REJECTED: one live site
-(`renderer_adapter_matrix.c:3980`); the camera sites are dead behind the shipped
-fixed camera, and deleting it entirely is **0.38x the floor**.
-Next, both clearing the floor: `func_ovl2_800ED490` (16,940 tk/fr, 1.2x,
-UNRESOLVED — identify it first) and the kind-48 MVP-recalc lane (~25,600 tk/fr,
-1.8x), where a `.data` route word makes a same-ROM arm cheap.
+Ranking, rejections and the governing economics are in that directory's
+`CANDIDATE_SELECTION.md`. Headline: the **collision matrix family is 55.4% of
+the class, ~49,900 tk/fr, 3.5x the floor** — that is the lane, not any single
+symbol. `func_ovl2_800ED490` (= `ndsR2SimMacBaseCompose`) is its largest caller
+at 16,940 tk/fr but is NOT the first slice: the renderer consumes
+`parts->mtx_translate` from that chain and the fixed-point route there is
+recorded declined once. `guMtxCatF` rejected (0.38x floor). The census's
+RENDERER/GAMEPLAY label is a hardcoded name list, not analysis, and mislabels
+`ndsStageMPAdjustFloorLoopWallSweep`; re-gate before trusting it.
+Next: Campaign 12 (`docs/optimization/review/12_*.md`) Phase 0/1 on the new
+baseline — pick a closed chain with **conv/op < 0.57** (31-42 cycles per f32<->Q
+edge against fmul at 26.5) and no cross-subsystem consumer. `NDS_R2_SIM_MAC_SHADOW`
+(`battleship_gmcollision.c:213`) already provides the same-binary shadow arm.
 Checks: published `smash64ds` rebuilt clean — 660 NitroFS files against 955,
 ROM 1,828,864 B smaller, ELF byte-identical, contract GREEN. **Runtime proof is
 owed on it**; `build-p2-shell-loop` and `build-p2-shell` are unchecked for the
