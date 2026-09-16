@@ -20,9 +20,9 @@ Measurements: `PERF_LEDGER.md`. Chronology: `PORTING.md`. Those are lookup-only.
 3. **Publish law:** P2 publishes only verifier-covered `smash64ds.nds` from the
    shipping VS shell with human input — no scripted walk, no fast logic. Rebuild
    after each verified fix batch; the frozen P1 artifact is not rebuilt routinely.
-4. Qualified hard-on P2 ROM after N04.05, runtime-verified 2026-09-16:
+4. Qualified hard-on P2 ROM after N04.08, runtime-verified 2026-09-16:
 
-SHA-256 FE4C064BBF3DF2EE9FBB22F4A483AC13B502829779A23E7BACE01E6CE9AFDBB9
+SHA-256 E9AF96F8BEA5E2786824B02919DFC89799A70934B0F6F09FD5417ED93F1DFCA6
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -64,15 +64,16 @@ recorded at the skip. Boundary GREEN (shell loop free floor 114,628 B; realtime
 212 frames **26.3 FPS**). Win is Dream Land's frozen water only — not roster- or
 stage-wide. Evidence: `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
 Banked beyond the candidate: **`make TARGET=... BUILD=<fresh dir>` ships an
-incomplete ROM** — 365 of 710 NitroFS files here (328 Kirby animations, 12 CSS
-previews, Pikachu/Yoshi images; 1,005,221 B) — and an incomplete ROM measures
-faster. It read WORK-H P50 52,480 below canonical, all of it STG (~54,500
-ticks/frame) while GCRA/FTR matched. Nothing failed and engagement was correct.
+incomplete ROM** — 365 of 710 NitroFS files here, 1,005,221 B of Kirby
+animations, CSS previews and Pikachu/Yoshi images — and an incomplete ROM
+measures faster: WORK-H P50 52,480 below canonical, all of it STG (~54,500
+ticks/frame), while GCRA/FTR matched. Nothing failed; engagement was correct.
 An earlier cursor called this an arena-carve candidate; **retracted**. Match
 NitroFS file count and size to the baseline before quoting a cross-build delta.
 Next: select the next P2-2p8 candidate from the post-pose profile.
-Checks: the final hard-on `smash64ds` publish build is owed before the standing
-rule-4 checkpoint hash is replaced. P2-2p8 stays RED at WORK-H P50 1,639,808.
+Checks: hard-on `smash64ds` rebuilt/published, `NATIVE_ONLY_PASS` 262 inputs,
+`check-published-roms.ps1` GREEN, hash in rule 4; nothing owed on N04.08.
+P2-2p8 stays RED at WORK-H P50 1,639,808.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
 Job: none; main owns all edits, builds and the focused runner.
