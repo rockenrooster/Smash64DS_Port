@@ -48,40 +48,41 @@ dead-code deletion. WORK-H **1,575,168 / 2,308,032**, FTR **356,032 / 750,144**;
 native **0/0**, heap **111,680 B**; `ALL` P50 at 3 VBlank intervals, slips 0.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / N04.09 candidate selection / main. Phase: SELECT.
-**Owner 2026-09-16: four-CPU optimization runs `p2_fourcpu_stress` and nothing
-else**; conditions in `VERIFYING.md`. Boundary is for integration/publication.
+Focus / batch / IDs / owner: P2-2p8 / gap sizing / main. Phase: BLOCKED — owner decision.
+**Owner 2026-09-16: four-CPU work runs `p2_fourcpu_stress` alone**; conditions in
+`VERIFYING.md`. Boundary is for integration/publication.
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
 **Baseline moved 2026-09-16 (owner-approved).** `NITRO_FILES := $(NITROFS_DIR)`
-ships whatever sits in a build directory; the canonical one had 710 NitroFS files
-against the 365 this config produces. Clean rebuilt, same source: **WORK-H P50
-1,639,808 -> 1,589,376 (-50,432)**, P95 -46,912, STG -54,656, `ALL` P50 across a
-VBlank quantum. 3.6x the floor, larger than every N04.0x code lever combined, and
-build hygiene not code. Anything banked against 1,639,808 describes the stale
-directory. Evidence: `…/2026-09-16_p2-2p8-clean-rebaseline/`. Nothing gates it —
+ships whatever sits in a build directory; the canonical one held 710 NitroFS
+files against the 365 this config produces. Clean rebuilt, same source: **WORK-H
+P50 -50,432**, P95 -46,912, STG -54,656 — 3.6x the floor, build hygiene not code.
+Anything banked against 1,639,808 describes the stale directory. Evidence:
+`…/2026-09-16_p2-2p8-clean-rebaseline/`. Nothing gates it:
 `check-published-roms.ps1` never looks at NitroFS membership.
-Rejected candidates and N04.08 closure detail: `docs/archive/P2_CLOSED_ROWS.md`.
-Profile: `…/2026-09-16_p2-2p8-n0409-profile/` (clean payload, 129 regions).
-Float leaves, 29,846 samples: GAMEPLAY frozen 50.9%, UNRESOLVED 28.4%, RENDERER
-20.4%; fadd+fmul **90,169 tk/fr** (`ticks = cycles / 2 regions`).
-Ranking, rejections and economics: that directory's `CANDIDATE_SELECTION.md`.
-Headline: the **collision matrix family is 55.4% of the class, ~49,900 tk/fr,
-3.5x the floor** — the lane, not any single symbol. `func_ovl2_800ED490` (=
-`ndsR2SimMacBaseCompose`) is its largest caller at 16,940 tk/fr but is NOT the
-first slice: the renderer consumes `parts->mtx_translate` from it and that
-fixed-point route is recorded declined once. `guMtxCatF` rejected (0.38x floor).
-The census's RENDERER/GAMEPLAY label is a name list, not analysis; re-gate it.
-Next: Campaign 12 (`docs/optimization/review/12_*.md`) Phase 0/1 on the new
-baseline — pick a closed chain with **conv/op < 0.57** (31-42 cycles per f32<->Q
-edge against fmul at 26.5) and no cross-subsystem consumer. `NDS_R2_SIM_MAC_SHADOW`
-(`battleship_gmcollision.c:213`) already provides the same-binary shadow arm.
+Rejected candidates, N04.08 closure detail: `docs/archive/P2_CLOSED_ROWS.md`.
+**BLOCKER RECORDED 2026-09-16 — the gap is out of reach of leaf levers.**
+`1,120,000` is two VBlank intervals (this run: `ALL` P50 1,678,016 over exactly
+three, so 559,339 each). Four-fighter WORK-H P50 **1,575,296 = 1.41x** the gate,
+P95 **2,311,616 = 2.06x**, and **1,821 of 1,972 frames (92.3%) exceed it**.
+Closing it needs **-455,296** at P50, **-1,191,616** at P95. Against that: the
+ENTIRE fadd+fmul class is 90,169 tk/fr (19.8% of the P50 gap), collision matrices
+~49,900, pose ~63,800, memset+memcpy ~43,300, every N04.0x lever combined
+~20,000. Nothing reaches it. Sizing: `…/2026-09-16_p2-2p8-gap-sizing/`.
+Owner decision needed: (1) a structural lever changing what each ADDITIONAL
+fighter costs — the two-fighter shell is 26.4 FPS on this build while four is
+1.41x over, so cost scales with fighter count; (2) re-scope the four-fighter
+target — whether four-player SSB64 must hold 30 on DS is a scope question whose
+source behaviour this repo has never recorded; (3) accept P2-2p8 RED as tracked
+and let P2-3..P2-7 acceptance proceed. Until then, picking the next-largest leaf
+yields 5-15k against a 455k requirement.
+If (1) or (3) is chosen, the float lane's ranking, rejections and conv/op
+economics are in `…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
 Checks: published `smash64ds` rebuilt clean (660 NitroFS files against 955, ROM
-1,828,864 B smaller) and **Boundary GREEN on clean payloads for all three arms**
-— shell loop free floor 114,628 B / zero faults, realtime 212 frames **26.4 FPS**
-— so the payload change is runtime-proved. Owner-requested dead-code deletion
-then removed **3,103 lines** (17 forced `NDS_IMPORT_BATTLESHIP_*` dead branches,
-16 shadowed weak stubs, 21 pure `efManager` forwards); both targets build and
-every invariant matches. P2-2p8 stays RED at WORK-H P50 1,575,168.
+1,828,864 B smaller); **Boundary GREEN on clean payloads for all three arms**
+(shell loop free floor 114,628 B, realtime 212 frames **26.4 FPS**), so the
+payload change is runtime-proved. Owner-requested deletion removed **3,103
+lines** of forced-flag dead branches, shadowed weak stubs and pure `efManager`
+forwards; both targets build, every invariant matches.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
 Job: none; main owns all edits, builds and the focused runner.
