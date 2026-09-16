@@ -23,7 +23,7 @@ Measurements: `PERF_LEDGER.md`. Chronology: `PORTING.md`. Those are lookup-only.
 4. Published P2 ROM after N04.08 + the clean rebuild, 2026-09-16. **Runtime proof
    owed** — the payload changed since the last runtime verification:
 
-SHA-256 FE236E096EC0C2790B27C7B7E8E4E249FDAAC7A42C3DFD7D946F0DCA21847EA8
+SHA-256 9B44F9CA0D7169541B65C5F7A59D06C5B909C66AEEAF1B49BC36CFFD0CFACC3F
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -43,9 +43,9 @@ SHA-256 FE236E096EC0C2790B27C7B7E8E4E249FDAAC7A42C3DFD7D946F0DCA21847EA8
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N04.08 + the 2026-09-16 clean rebuild.
-WORK-H **1,589,376 / 2,318,208**, FTR **356,544 / 743,808**; native fail/reject
-**0/0**, heap **111,680 B**; `ALL` P50 at 3 VBlank intervals, max 12, slips 0.
+**Last qualified checkpoint:** N04.08 + the clean rebuild + the 2026-09-16
+dead-code deletion. WORK-H **1,575,168 / 2,308,032**, FTR **356,032 / 750,144**;
+native **0/0**, heap **111,680 B**; `ALL` P50 at 3 VBlank intervals, slips 0.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / N04.09 candidate selection / main. Phase: SELECT.
@@ -53,36 +53,35 @@ Focus / batch / IDs / owner: P2-2p8 / N04.09 candidate selection / main. Phase: 
 else**; conditions in `VERIFYING.md`. Boundary is for integration/publication.
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
 **Baseline moved 2026-09-16 (owner-approved).** `NITRO_FILES := $(NITROFS_DIR)`
-ships whatever sits in a build directory, and the canonical one had accumulated
-710 NitroFS files against the 365 this config produces. Clean rebuilt, same
-source: **WORK-H P50 1,639,808 -> 1,589,376 (-50,432)**, P95 -46,912, STG -54,656,
-`ALL` P50 across a VBlank quantum (4 -> 3, max 13 -> 12). 3.6x the floor, larger
-than every N04.0x code lever combined, and build hygiene not code. Native 0/0,
-draw-plan and skip 7,892 unchanged; heap -> 111,680 B. Anything banked against
-1,639,808 describes the stale directory. Evidence:
-`…/2026-09-16_p2-2p8-clean-rebaseline/`. Nothing gates it —
+ships whatever sits in a build directory; the canonical one had 710 NitroFS files
+against the 365 this config produces. Clean rebuilt, same source: **WORK-H P50
+1,639,808 -> 1,589,376 (-50,432)**, P95 -46,912, STG -54,656, `ALL` P50 across a
+VBlank quantum. 3.6x the floor, larger than every N04.0x code lever combined, and
+build hygiene not code. Anything banked against 1,639,808 describes the stale
+directory. Evidence: `…/2026-09-16_p2-2p8-clean-rebaseline/`. Nothing gates it —
 `check-published-roms.ps1` never looks at NitroFS membership.
 Rejected candidates and N04.08 closure detail: `docs/archive/P2_CLOSED_ROWS.md`.
 Profile: `…/2026-09-16_p2-2p8-n0409-profile/` (clean payload, 129 regions).
 Float leaves, 29,846 samples: GAMEPLAY frozen 50.9%, UNRESOLVED 28.4%, RENDERER
 20.4%; fadd+fmul **90,169 tk/fr** (`ticks = cycles / 2 regions`).
-Ranking, rejections and the governing economics are in that directory's
-`CANDIDATE_SELECTION.md`. Headline: the **collision matrix family is 55.4% of
-the class, ~49,900 tk/fr, 3.5x the floor** — that is the lane, not any single
-symbol. `func_ovl2_800ED490` (= `ndsR2SimMacBaseCompose`) is its largest caller
-at 16,940 tk/fr but is NOT the first slice: the renderer consumes
-`parts->mtx_translate` from that chain and the fixed-point route there is
-recorded declined once. `guMtxCatF` rejected (0.38x floor). The census's
-RENDERER/GAMEPLAY label is a hardcoded name list, not analysis, and mislabels
-`ndsStageMPAdjustFloorLoopWallSweep`; re-gate before trusting it.
+Ranking, rejections and economics: that directory's `CANDIDATE_SELECTION.md`.
+Headline: the **collision matrix family is 55.4% of the class, ~49,900 tk/fr,
+3.5x the floor** — the lane, not any single symbol. `func_ovl2_800ED490` (=
+`ndsR2SimMacBaseCompose`) is its largest caller at 16,940 tk/fr but is NOT the
+first slice: the renderer consumes `parts->mtx_translate` from it and that
+fixed-point route is recorded declined once. `guMtxCatF` rejected (0.38x floor).
+The census's RENDERER/GAMEPLAY label is a name list, not analysis; re-gate it.
 Next: Campaign 12 (`docs/optimization/review/12_*.md`) Phase 0/1 on the new
 baseline — pick a closed chain with **conv/op < 0.57** (31-42 cycles per f32<->Q
 edge against fmul at 26.5) and no cross-subsystem consumer. `NDS_R2_SIM_MAC_SHADOW`
 (`battleship_gmcollision.c:213`) already provides the same-binary shadow arm.
-Checks: published `smash64ds` rebuilt clean — 660 NitroFS files against 955,
-ROM 1,828,864 B smaller, ELF byte-identical, contract GREEN. **Runtime proof is
-owed on it**; `build-p2-shell-loop` and `build-p2-shell` are unchecked for the
-same accumulation. P2-2p8 stays RED at WORK-H P50 1,589,376.
+Checks: published `smash64ds` rebuilt clean (660 NitroFS files against 955, ROM
+1,828,864 B smaller) and **Boundary GREEN on clean payloads for all three arms**
+— shell loop free floor 114,628 B / zero faults, realtime 212 frames **26.4 FPS**
+— so the payload change is runtime-proved. Owner-requested dead-code deletion
+then removed **3,103 lines** (17 forced `NDS_IMPORT_BATTLESHIP_*` dead branches,
+16 shadowed weak stubs, 21 pure `efManager` forwards); both targets build and
+every invariant matches. P2-2p8 stays RED at WORK-H P50 1,575,168.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
 Job: none; main owns all edits, builds and the focused runner.
