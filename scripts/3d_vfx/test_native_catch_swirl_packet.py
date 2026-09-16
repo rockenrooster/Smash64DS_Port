@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "scripts/3d_vfx"))
 
 import generate_battle_playable_texture_census as census
 import generate_nds_entry_effects as gen
+import packet_test_common
 
 EXPECTED_SHA = (
     "bcdcb4c90323f5ddbfc1e24813382f4c7cb974437328bb5b2225ca4b3089a88a"
@@ -41,42 +42,7 @@ def load_all() -> dict[int, census.O2RResource]:
 
 
 def compile_existing(resources: dict[int, census.O2RResource]):
-    mario = gen.Compiler(resources[gen.MARIO.file_id], resources)
-    mario.compile_roots(gen.MARIO_ROOTS, 0)
-    fox = gen.Compiler(resources[gen.FOX.file_id], resources)
-    fox.compile_roots(gen.FOX_ROOTS, len(gen.MARIO_ROOTS))
-    donkey = gen.Compiler(resources[gen.DONKEY.file_id], resources)
-    donkey.compile_roots(gen.DONKEY_ROOTS, len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS))
-    samus = gen.Compiler(resources[gen.SAMUS.file_id], resources)
-    samus.compile_roots(
-        gen.SAMUS_ROOTS,
-        len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS) + len(gen.DONKEY_ROOTS),
-    )
-    captain = gen.Compiler(resources[gen.CAPTAIN.file_id], resources)
-    captain.compile_roots(
-        gen.CAPTAIN_ROOTS,
-        len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS) + len(gen.DONKEY_ROOTS) + len(gen.SAMUS_ROOTS),
-    )
-    link_special2 = gen.Compiler(resources[gen.LINK_SPECIAL2.file_id], resources)
-    link_special2.compile_roots(
-        gen.LINK_SPECIAL2_ROOTS,
-        len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS) + len(gen.DONKEY_ROOTS) +
-        len(gen.SAMUS_ROOTS) + len(gen.CAPTAIN_ROOTS),
-    )
-    link_model = gen.Compiler(resources[gen.LINK_MODEL.file_id], resources)
-    link_model.compile_roots(
-        gen.LINK_MODEL_SPIN_ROOTS,
-        len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS) + len(gen.DONKEY_ROOTS) +
-        len(gen.SAMUS_ROOTS) + len(gen.CAPTAIN_ROOTS) + len(gen.LINK_SPECIAL2_ROOTS),
-    )
-    link_special3 = gen.Compiler(resources[gen.LINK_SPECIAL3.file_id], resources)
-    link_special3.compile_roots(
-        gen.LINK_SPECIAL3_ROOTS,
-        len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS) + len(gen.DONKEY_ROOTS) +
-        len(gen.SAMUS_ROOTS) + len(gen.CAPTAIN_ROOTS) + len(gen.LINK_SPECIAL2_ROOTS) +
-        len(gen.LINK_MODEL_SPIN_ROOTS),
-    )
-    return mario, fox, donkey, samus, captain, link_special2, link_model, link_special3
+    return packet_test_common.compile_existing(gen, census, resources)
 
 
 def expected_i4_texels(resource: census.O2RResource) -> bytes:
