@@ -3,7 +3,7 @@
 Created: 2026-08-17.
 Updated: 2026-09-16 continuation protocol; recorded runtime evidence unchanged.
 
-**Last integrated Boundary GREEN: N03.04 packet-hit refresh on `9fdae1ad10c` overlay; acceptance RED (P2-2p8).**
+**Last integrated Boundary GREEN: N03.04 packet-hit refresh `f2fee059af5`; acceptance RED (P2-2p8).**
 Four-CPU native failures/rejects 0/0; heap low-water 108,096 B.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
@@ -47,27 +47,27 @@ SHA-256 A10E87EF1DFF94C60EB9214CC3AB1F468331E4E55226937AD715276770F5A8C6
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N03.04 packet-hit input refresh on parent `9fdae1ad10c`.
+**Last qualified checkpoint:** N03.04 packet-hit input refresh `f2fee059af5`.
 Stress WORK-H **P50 1,654,720 / P95 2,377,472**; native fail/reject **0/0**,
-heap **108,096 B**. Full Boundary and hard-on native-only build GREEN; checkpoint commit pending.
+heap **108,096 B**. Full Boundary and hard-on native-only build GREEN; pushed to origin.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / packet-hit input refresh / N03.04 / main. Phase: RECORD.
-Identity/receipt: parent HEAD/origin `9fdae1ad10c`; hard-on ROM `A10E87EF...A8C6`,
-ELF `48303E12...9C00`; `2026-09-16_p2-2p8-packet-input-refresh/README.md`.
-Completed/rejected: camera reuse KEEP committed/pushed as `9fdae1ad10c`; pose
-draw/topology rejected; packet live-flush left no retained delta; current profile:
+Focus / batch / IDs / owner: P2-2p8 / next structural batch selection / TBD / main. Phase: SELECT.
+Identity/receipt: HEAD/origin `f2fee059af5`; hard-on ROM `A10E87EF...A8C6`, ELF
+`48303E12...9C00`; `2026-09-16_p2-2p8-packet-input-refresh/README.md`.
+Completed/rejected: camera reuse KEEP `9fdae1ad10c`; pose topology and packet
+draw-hot placement rejected; packet live-flush left no delta; current profile:
 `2026-09-15_p2-2p8-current-profile/`.
-Selected: N03.04 packet hits still pay `BuildNativeProductionInputs` (3,727,033 profile
-cycles). Refresh only fields consumed by packet match/replay; misses retain the full
-producer before record/direct execution.
-Next: commit/push this recorded KEEP, then SELECT the next P2-2p8 batch.
+Rejected: placing packet key/texgen/split-modelview in `.text.hot.draw` fit at
+7,528/8,192 B with unchanged bodies, but focused stress regressed WORK-H to
+1,659,904/2,384,640 (+5,184/+7,168 P50/P95). No Boundary run; placement removed.
+Next: select the next structural P2-2p8 batch from current exclusive evidence.
 Checks/status: Boundary GREEN (shell loop, realtime, four-CPU). Stress 1,972 samples,
 WORK-H P50 1,654,720 / P95 2,377,472 (camera delta -5,504 / -2,816);
 native fail/reject 0/0; heap 108,096 B; camera reuse 5,919. Realtime remains ~25.9 FPS.
-Falsifier: replay mismatch/hit loss, native reject, output/state or cadence regression.
-P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N03.04 verdict KEEP.
-Job: none; Boundary + hard-on build complete.
+Falsifier: settled batches reopen only for a recorded invalidator.
+P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N03.04 is settled KEEP.
+Job: none.
 Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
 preserved for their owning rows. Unrelated owner documentation edits remain preserved.
 

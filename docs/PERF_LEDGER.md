@@ -8128,3 +8128,20 @@ The final hard-on natural-input build passes the native-only link gate. ROM
 config `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
 Realtime still reports about **25.9 FPS**, so P2-2p8 remains RED. Evidence:
 `artifacts/performance/2026-09-16_p2-2p8-packet-input-refresh`.
+
+## 2026-09-16 — P2-2p8 packet-helper draw-hot placement REJECT
+
+The post-N03.04 profile still charged `ndsFighterPacketBuildKey`,
+`ndsFighterPacketPatchTexgen` and `ndsFighterPacketStoreSplitModelview` a combined
+7.71M measured cycles in `.main`. A placement-only follow-up added their exact
+input sections to the already-shipping Task-32 `.text.hot.draw` group. The map
+proved the bodies moved unchanged and the group fit at **7,528 / 8,192 B**.
+
+The 1,972-sample four-CPU stress stayed correctness-clean but lost whole-frame
+time: WORK-H **1,654,720/2,377,472 -> 1,659,904/2,384,640** P50/P95
+(**+5,184/+7,168**). Native failures/direct rejects remained **0/0**, heap
+low-water **108,096 B**, and draw-plan build/hit/mismatch **618/6,217/0**.
+That focused timing loss was the pre-recorded falsifier, so the placement was
+removed without spending a full Boundary run. Candidate ROM/ELF are
+`CAD24D74...5E9C5` / `29862053...6E24C`; config `23314B62...415F3`. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-packet-hot-placement`.
