@@ -43,11 +43,29 @@ static void ndsRendererRecordTransformedTriangle(
 #if NDS_RENDERER_HW_TRIANGLES
 static s32 ndsRendererRoundShiftS32Signed(s32 value, u32 shift)
 {
+    u32 bits;
+    u32 magnitude;
+    u32 rounded;
+
     if (shift == 0u)
     {
         return value;
     }
-    return (s32)ndsRendererRoundShiftS64(value, shift);
+    if (shift >= 32u)
+    {
+        return (s32)ndsRendererRoundShiftS64(value, shift);
+    }
+
+    /* Every target caller currently uses shift 8. Keep the helper generic for
+     * its existing ABI, but stay in the input's natural 32-bit domain: the
+     * largest magnitude is 0x80000000 and the largest legal bias below is
+     * 0x40000000, so unsigned magnitude+bias cannot overflow for shifts 1..31.
+     * This is the same nearest/half-away-from-zero rule as RoundShiftS64,
+     * including INT_MIN, without promoting four fighter row-3 words to s64. */
+    bits = (u32)value;
+    magnitude = ((bits & 0x80000000u) != 0u) ? (0u - bits) : bits;
+    rounded = (magnitude + (1u << (shift - 1u))) >> shift;
+    return ((bits & 0x80000000u) != 0u) ? -(s32)rounded : (s32)rounded;
 }
 
 static s32 ndsRendererNativeStageVertexShift(s16 value, u32 shift)

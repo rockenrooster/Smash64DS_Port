@@ -8145,3 +8145,28 @@ That focused timing loss was the pre-recorded falsifier, so the placement was
 removed without spending a full Boundary run. Candidate ROM/ELF are
 `CAD24D74...5E9C5` / `29862053...6E24C`; config `23314B62...415F3`. Evidence:
 `artifacts/performance/2026-09-16_p2-2p8-packet-hot-placement`.
+
+## 2026-09-16 — P2-2p8 N04.03: exact s32 split-modelview round-shift KEEP
+
+`ndsFighterPacketStoreSplitModelview` was still paying the generic signed 64-bit
+round-shift path for three packet translation values even though every caller uses
+shift 8. The retained helper rounds unsigned 32-bit magnitude and reapplies sign;
+shifts >=32 retain the old generic fallback. A 2,400,022-value differential is
+bit-exact, including `INT_MIN/MAX`, and ARM9 codegen removes the 64-bit helper from
+the split-modelview translation loop.
+
+Focused and full-Boundary four-CPU runs both report FTR **P50 359,936 / P95
+742,656**, versus the N03.04 checkpoint **361,536 / 748,032** (**-1,600 /
+-5,376**). WORK-H is **1,649,728 / 2,378,560**, versus **1,654,720 /
+2,377,472**: P50 **-4,992**, P95 **+1,088**, with mean **1,695,965** versus
+**1,704,369**. Native failures/direct rejects remain **0/0**, heap low-water is
+**108,096 B**, and draw-plan build/hit/mismatch is **618/6,217/0**.
+
+Full Boundary is GREEN: shell loop completes one lap/10 entries with **114,628 B**
+free floor, realtime completes 212 frames with same-ROM/visual checks GREEN, and
+the final four-CPU arm reproduces the focused result. Realtime remains about
+**25.8 FPS**, so P2-2p8 remains RED. Final hard-on ROM
+`AB38C207C6F2C0DC39EF4066A5F92548126B2DD8DA287E550446A612E39B58ED`, ELF
+`5907F9C0B92620601109A0D3236A35C4336F2EA2BB94648C3B92C07227E53EB4`, shipping
+config `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
+Evidence: `artifacts/performance/2026-09-16_p2-2p8-s32-roundshift`.
