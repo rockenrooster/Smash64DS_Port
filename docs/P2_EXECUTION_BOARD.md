@@ -3,8 +3,8 @@
 Created: 2026-08-17.
 Updated: 2026-09-16 continuation protocol; recorded runtime evidence unchanged.
 
-**Last integrated Boundary GREEN: `5bfb784f8ec`; acceptance RED (P2-2p8).**
-Four-CPU native failures/rejects 0/0; heap low-water 112,192 B.
+**Last integrated Boundary GREEN: N03.04 packet-hit refresh on `9fdae1ad10c` overlay; acceptance RED (P2-2p8).**
+Four-CPU native failures/rejects 0/0; heap low-water 108,096 B.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -25,9 +25,9 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    shipping VS shell with human input, no scripted walk, and no fast logic.
    Rebuild it after each verified fix batch. The frozen P1 artifact is not
    rebuilt routinely.
-4. Published P2 ROM after `5bfb784f8ec`, runtime-verified 2026-09-15:
+4. Qualified hard-on P2 ROM after N03.04, runtime-verified 2026-09-16:
 
-SHA-256 6BF344EF097A9237A5AD6AADE44E9F1FF601F503250DA80B73957B0B64C9C703
+SHA-256 A10E87EF1DFF94C60EB9214CC3AB1F468331E4E55226937AD715276770F5A8C6
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -47,24 +47,29 @@ SHA-256 6BF344EF097A9237A5AD6AADE44E9F1FF601F503250DA80B73957B0B64C9C703
 
 ## Current integration checkpoint
 
-**Last recorded qualified checkpoint (not the live candidate):** fixed generic particle submit (`5bfb784f8ec`).
-Recorded stress WORK-H **P50 1,654,208 / P95 2,375,296**, MISC **P50 253,824 / P95 481,024**;
-native fail/reject **0/0**, heap **112,192 B**. Full Boundary GREEN; P2-2p8 RED.
+**Last qualified checkpoint:** N03.04 packet-hit input refresh on parent `9fdae1ad10c`.
+Stress WORK-H **P50 1,654,720 / P95 2,377,472**; native fail/reject **0/0**,
+heap **108,096 B**. Full Boundary and hard-on native-only build GREEN; checkpoint commit pending.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / particle-camera reuse / N04 / main. Phase: RECORD.
-Identity/receipt: HEAD `941f4daab56` + camera overlay; hard-on ROM
-`77A047D1...EEFEBB`, ELF `2A83B39B...CB75A`; see
-`artifacts/performance/2026-09-15_p2-2p8-particle-camera-reuse/README.md`.
-Completed/rejected: camera reuse KEEP; pose draw/topology rejected; packet live-flush
-left no retained delta; current profile: `2026-09-15_p2-2p8-current-profile/`.
-Next: commit/push this coherent KEEP, then SELECT the next P2-2p8 batch.
-Checks/status: particle-bank + Boundary + hard-on native-only build GREEN. Stress WORK-H
-P50 1,660,224 / P95 2,380,288; reuse 5,919; native fail/reject 0/0; heap 108,096 B.
-P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`.
-Job: none; hard-on build + Boundary r5 GREEN. Config hash `BDFE5951...F0E0`.
-Capability limits: none relevant. Review watermark: `Briefs/README.md` inspected
-2026-09-16; visual/menu candidates preserved for their owning rows.
+Focus / batch / IDs / owner: P2-2p8 / packet-hit input refresh / N03.04 / main. Phase: RECORD.
+Identity/receipt: parent HEAD/origin `9fdae1ad10c`; hard-on ROM `A10E87EF...A8C6`,
+ELF `48303E12...9C00`; `2026-09-16_p2-2p8-packet-input-refresh/README.md`.
+Completed/rejected: camera reuse KEEP committed/pushed as `9fdae1ad10c`; pose
+draw/topology rejected; packet live-flush left no retained delta; current profile:
+`2026-09-15_p2-2p8-current-profile/`.
+Selected: N03.04 packet hits still pay `BuildNativeProductionInputs` (3,727,033 profile
+cycles). Refresh only fields consumed by packet match/replay; misses retain the full
+producer before record/direct execution.
+Next: commit/push this recorded KEEP, then SELECT the next P2-2p8 batch.
+Checks/status: Boundary GREEN (shell loop, realtime, four-CPU). Stress 1,972 samples,
+WORK-H P50 1,654,720 / P95 2,377,472 (camera delta -5,504 / -2,816);
+native fail/reject 0/0; heap 108,096 B; camera reuse 5,919. Realtime remains ~25.9 FPS.
+Falsifier: replay mismatch/hit loss, native reject, output/state or cadence regression.
+P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N03.04 verdict KEEP.
+Job: none; Boundary + hard-on build complete.
+Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
+preserved for their owning rows. Unrelated owner documentation edits remain preserved.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below.
 

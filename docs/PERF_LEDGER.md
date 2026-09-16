@@ -8103,3 +8103,28 @@ The final hard-on root build passes the native-only link gate. ROM SHA-256 is
 `2A83B39B92FC32E2516B738299001422FA81F5B4C3549E916E09321015CCB75A`; shipping
 config hash is `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
 Evidence: `artifacts/performance/2026-09-15_p2-2p8-particle-camera-reuse`.
+
+## 2026-09-16 — P2-2p8 N03.04: packet-hit input refresh KEEP
+
+Successful fighter packet hits still ran the complete production-input builder
+before exact packet precheck even though replay consumes only live packet fields.
+The retained adapter refreshes that subset before precheck; any miss still runs
+the existing full producer before record/direct native execution. The previous
+current-profile attribution charged `ndsRendererAdapterBuildNativeProductionInputs`
+3,727,033 cycles.
+
+The focused 1,972-sample four-CPU arm and the later full Boundary run reproduce
+WORK-H **P50 1,654,720 / P95 2,377,472**. Against the preceding camera checkpoint
+that is **-5,504 / -2,816** ticks, a small supporting cross-build movement rather
+than a product-level timing claim. Native failures/direct rejects are **0/0**,
+general-heap low-water is **108,096 B**, draw-plan build/hit/mismatch is
+**618/6,217/0**, and all four fighter slots draw. Full Boundary is GREEN: shell
+loop completes one lap/10 scene entries with zero faults, realtime completes 212
+battle frames, and four-CPU stress repeats the focused result.
+
+The final hard-on natural-input build passes the native-only link gate. ROM
+`A10E87EF1DFF94C60EB9214CC3AB1F468331E4E55226937AD715276770F5A8C6`, ELF
+`48303E124FD03E44F35125AB3D4BB604CA24EB93AB9BD099015D40AEECED9C00`, shipping
+config `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
+Realtime still reports about **25.9 FPS**, so P2-2p8 remains RED. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-packet-input-refresh`.

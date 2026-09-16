@@ -1438,6 +1438,86 @@ ndsRendererAdapterPrimeProductionInputs(
     sNdsRendererAdapterProductionInputsPrimed = TRUE;
 }
 
+/* Packet hits do not execute the production owner. Refresh only the fields
+ * consumed by ndsRendererFighterPacketPrecheck/ndsFighterPacketTryReplay and
+ * leave resolver/material/asset setup to the miss path.  The full producer
+ * below still rebuilds every production field before a record/direct draw, so
+ * this cannot leak a packet-only partial input into ordinary execution. */
+static sb32 ndsRendererAdapterRefreshNativePacketInputs(
+    u32 color_modulate,
+    const NDSFighterDLAllDrawCollection *collection,
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *const *modelviews,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    u32 i;
+
+    if ((collection == NULL) || (modelviews == NULL) || (workspace == NULL) ||
+        (collection->selected_count == 0u) ||
+        (collection->selected_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+    if (sNdsRendererAdapterProductionInputsPrimed == FALSE)
+    {
+        ndsRendererAdapterPrimeProductionInputs(workspace);
+    }
+
+    for (i = 0u; i < collection->selected_count; i++)
+    {
+        NDSRendererConfig *config = &workspace->production_configs[i];
+        NDSRendererNativeFighterRoot *root =
+            &workspace->production_roots[i];
+        const NDSFighterDisplayContractEvent *event =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                &sNdsFighterDisplayReplayEvents[collection->indices[i]] : NULL;
+
+        if (modelviews[i] == NULL)
+        {
+            return FALSE;
+        }
+        config->initial_geometry_mode = (event != NULL) ?
+            sNdsFighterDisplayReplayPreambles[
+                collection->indices[i]].geometry_mode : 0u;
+        config->color_modulate = color_modulate;
+
+        root->root_offset = workspace->root_offsets[i];
+        root->material_count = workspace->material_counts[i];
+        root->modelview_matrix = modelviews[i];
+#if NDS_R2_FIGHTER_HW_MTX
+        root->projection_matrix = projection;
+#else
+        (void)projection;
+#endif
+#if NDS_R2_FIGHTER_GX_COMPOSE
+        root->gx_valid = workspace->gx_valid;
+        if (workspace->gx_valid != 0u)
+        {
+            root->gx_locals = &workspace->gx_locals[
+                workspace->gx_local_first[i]];
+            root->gx_seed = &workspace->gx_seed;
+            root->gx_local_count = workspace->gx_local_count[i];
+            root->gx_parent_slot = workspace->gx_parent_slot[i];
+            root->gx_store_slot = workspace->gx_store_slot[i];
+            root->gx_seed_is_identity = workspace->gx_seed_is_identity;
+        }
+        else
+        {
+            root->gx_locals = NULL;
+            root->gx_seed = NULL;
+            root->gx_local_count = 0u;
+            root->gx_parent_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+            root->gx_store_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+            root->gx_seed_is_identity = 0u;
+        }
+#endif
+        root->preamble = (event != NULL) ?
+            &sNdsFighterDisplayReplayPreambles[collection->indices[i]] :
+            &sNdsRendererAdapterZeroPreamble;
+    }
+    return TRUE;
+}
+
 /* No `noinline` here either, and for the same measured reason as
  * ndsRendererAdapterPrepareNativeOwnerMatrices above. */
 static sb32 ndsRendererAdapterBuildNativeProductionInputs(
@@ -3780,23 +3860,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 ((((u32)fp->costume) |
                   ((u32)fp->shade << 8)) & 0xffffu) << 11;
 #if NDS_R2_FIGHTER_PACKET
-            /* P2-2p4. Ask before preparing: on a replay the production owner
-             * reads none of the material rows, snapshots or validation, which
-             * were 48K ticks a frame across four fighters. The inputs built
-             * here are the ones the execute consumes, so a predicted hit is
-             * exact; a predicted miss simply falls through to the preparation
-             * below and rebuilds the inputs once the rows exist. */
+            /* P2-2p4/N03.04. Ask before preparing. A replay consumes only the
+             * packet-live subset, so refresh that subset here. A predicted miss
+             * falls through to material preparation and the full production
+             * producer below before any record/direct execution. */
             if ((native_owner_hierarchy_mode == FALSE) &&
                 (detailed_output == FALSE) && (no_oracle != FALSE) &&
-                (ndsRendererAdapterBuildNativeProductionInputs(
-                    owner_slot, color_modulate, native_owner_file, &collection,
-                    native_owner_projection, native_owner_modelviews,
-                    &persistent_state,
+                (ndsRendererAdapterRefreshNativePacketInputs(
+                    color_modulate, &collection, native_owner_projection,
+                    native_owner_modelviews,
                     &sNdsRendererAdapterNativeOwnerWorkspace
-#if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
-    NDS_RENDERER_M2_DETAILED_LEDGER
-                    , m2_owner
-#endif
                     ) != FALSE) &&
                 (ndsRendererFighterPacketPrecheck(
                     owner_slot, use_low_detail, native_owner_texture_key,
