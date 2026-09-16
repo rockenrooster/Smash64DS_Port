@@ -192,3 +192,30 @@ not re-derived into the same dead ends.
   Caught before any code was written: profile the build you are about to change.
 
 Census sections C and D are a cost ranking, never a placement prediction.
+
+## P2-2p8 N04.08 closure detail (2026-09-16)
+
+Material-animation stable-zero skip. `gcPlayAnimAll` no longer enters the
+material player for an MObj whose `anim_speed` was `+/-0` with a positive, finite
+`anim_wait` before the parser ran; the parser is unchanged and direct
+`gcPlayMObjMatAnim` callers are untouched.
+
+Same-ROM route A/B attributed **-8,640** WORK-H P50 (GCRA and SRC P50 -5,440,
+P95 -8,064), arms proven distinct by an engagement counter reading 4 against
+7,892. The canonical re-bank against N04.05 read **-9,920 / -8,512 / -5,844** at
+P50/P95/mean with heap, arena, native failures, direct rejects, draw-plan and
+slips unchanged. Both of those comparisons predate the 2026-09-16 clean rebuild
+and are like-for-like within the stale directory.
+
+A read-only audit against the decomp player, the parser and every other writer of
+the affected fields returned SAFE with three conditions; two are recorded in the
+code at the skip, and the third (a NaN `anim_wait`) was closed by making the
+predicate agree exactly with the parser's `anim_wait > 0.0F` early return.
+
+The win is stage-local: only an explicit speed setter can zero an MObj's
+`anim_speed`, and the single MObj-targeted one in the tree is Dream Land's frozen
+water. On a stage with no frozen material animation it fires zero times.
+
+Boundary GREEN (shell loop free floor 114,628 B; realtime 212 frames at 26.3 FPS
+against 25.7 at N04.05). Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
