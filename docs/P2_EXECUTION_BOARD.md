@@ -32,8 +32,8 @@ SHA-256 E9AF96F8BEA5E2786824B02919DFC89799A70934B0F6F09FD5417ED93F1DFCA6
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance remains. |
-| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory is resident. Whole-match low-water 111,680 B; libc reserve 40,960 B and weapon pool 10; scoped correctness/resource guards pass; FPS remains RED. |
+| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance open. |
+| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory resident. Low-water 111,680 B; libc reserve 40,960 B, weapon pool 10; scoped guards pass; FPS RED. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission fixed/proved in `d8660bc2fd9`; natural Hyrule/Inishie counts/output pass. Three VS captures remain. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`: Poke Ball procs, rock member, pool 10; ball/monster witness 09-14). Atlas membership, other kinds/children and interactions remain open. |
@@ -48,32 +48,35 @@ WORK-H **1,639,808 / 2,365,120**, FTR **357,312 / 744,640**; native fail/reject
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / N04.09 candidate selection / main. Phase: SELECT.
-**Owner 2026-09-16: four-CPU optimization runs the four-CPU match and nothing
-else** — `p2_fourcpu_stress` alone, no shell loop, realtime arm or extra lab
-builds; conditions in `VERIFYING.md`. Boundary is for integration/publication.
-Completed/rejected: N04.03, N04.05 and N04.08 KEEP; N04.04, N04.06 and N04.07
-REJECTED. Figures in `PERF_LEDGER.md`.
+**Owner 2026-09-16: four-CPU optimization runs `p2_fourcpu_stress` and nothing
+else**; conditions in `VERIFYING.md`. Boundary is for integration/publication.
+Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
 N04.08 closed and published: same-ROM **-8,640** WORK-H P50, canonical re-bank
 **-9,920 / -8,512**, engagement 7,892 in four builds, audit SAFE, Boundary GREEN.
 Evidence, plus the stale-NitroFS finding:
 `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
-Rejected without a build, detail in `docs/archive/P2_CLOSED_ROWS.md`: the
-`ndsR2CamDiv64` ITCM admission (a hardware-divider busy-wait; ITCM cannot recover
-divider latency), any `.text.hot` admission (`linker/nds_hot_text.ld` calls that
-list closed in both directions), and N04.09's first premise, the FAT
-cluster-chain rewalk, which a fresh profile shows had already shrunk to 0.34%.
-Profile: `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/` (129 regions, 0
-discontinuities). Non-idle ranking: soft float **6.54%** (fadd 2.67, fmul 2.11,
-fdiv 0.94, F32AddBits 0.83) largest theme; pose **3.95%** largest subsystem;
-`ndsFighterMarioFoxDLAllDrawForSlot` **2.42%** largest single non-leaf symbol;
+Three candidates rejected without a build, detail in
+`docs/archive/P2_CLOSED_ROWS.md`: the `ndsR2CamDiv64` ITCM admission, any
+`.text.hot` admission, and N04.09's first premise, the FAT cluster-chain rewalk,
+which the fresh profile shows had already shrunk to 0.34%. Profile the build you
+are about to change; a stale profile invents work.
+Profile: `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/` (129 regions,
+0 discontinuities; census + softfloat-callers committed). Non-idle ranking: soft
+float **6.54%** largest theme, pose **3.95%** largest subsystem,
+`ndsFighterMarioFoxDLAllDrawForSlot` **2.42%** largest single non-leaf symbol,
 memset+memcpy 2.68%. It is a fresh build dir (365 NitroFS files) against the
 canonical baseline's 710: rank symbols with it, do not predict gate deltas.
-Next: attribute the float leaves to their callers
-(`census-softfloat-callers.ps1`, four-CPU target) before sizing a candidate.
+Float leaves attributed, 29,846 samples: **GAMEPLAY state-hash frozen 50.9%**,
+UNRESOLVED 28.4%, **RENDERER fidelity-gated 20.4%**. Top named caller `guMtxCatF`
+**4.74%** and RENDERER-gated, so conversion is permitted; the larger
+`lbCommonSin`/`lbCommonCos` 5.3% is frozen. Four call sites; the lbparticle one
+is already input-cached (N04.03, reuse 5,919).
+Next: a read-only investigation is scoping which `guMtxCatF` site dominates, what
+reads its output, and whether the in-tree 20.12 kernels already cover it.
 Checks: hard-on `smash64ds` rebuilt/published, `NATIVE_ONLY_PASS` 262 inputs,
 `check-published-roms.ps1` GREEN, hash in rule 4; nothing owed on N04.08.
-Open owner decision: whether to clean-rebuild and re-baseline the canonical
-directory, which moves every banked absolute level (deltas within it stay valid).
+Open owner decision: clean-rebuild and re-baseline the canonical directory? It
+moves every banked absolute level; deltas within it stay valid.
 P2-2p8 stays RED at WORK-H P50 1,639,808.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
@@ -104,7 +107,7 @@ pixels/audio or unexercised states stay engineering work, not feel-only review.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-3r17 | Intermittent fighter seams/holes around DK and Mario cap | **UN-DEFERRED 09-13; READY** | N64-to-DS raster coverage mismatch, not missing geometry; production fix is a bounded AOT guard band in the owner generator. Analysis: `docs/BUGS.md`. |
-| P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin (effect-only), ThrowF/ThrowB programs; Neutral-B/Spin need isolated source-default requalification. |
+| P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin, ThrowF/ThrowB; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball source program closure | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source controller input for roll/Bomb and canonical restoration. |
 | P2-3f46 | Yoshi stress arm: the landed argmax moves and the roster arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
@@ -124,9 +127,9 @@ pixels/audio or unexercised states stay engineering work, not feel-only review.
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-5i1 | Item manager and twenty common items | **SOURCE PRESENT; Sword tested-lifetime repair recorded** | Blade/hilt and entry-texture lifetime proof linked above. Remaining kinds, children, states, interactions and full natural-path acceptance stay open. |
+| P2-5i1 | Item manager and twenty common items | **SOURCE PRESENT; Sword lifetime repair recorded** | Remaining kinds, children, states, interactions and full natural-path acceptance stay open. |
 | P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM; draw owners missing** | Dispatch proved (`gNdsItMonsterMakerMask` = `1fff`); a ball opens only when thrown or hit. Saffron monsters' VFX makers (DustLight/DustCollide/MultiExplode) have no native owner. |
-| P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | Native owners exist for 1 of 42 distinct item shapes. `MBallThrown` effect desc is excluded on a false premise (`gITManagerCommonData` links). |
+| P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | Native owners exist for 1 of 42 item shapes. `MBallThrown` effect desc excluded on a false premise. |
 | P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Pickup animation FileIDs resolved 09-09; `itMainCheckShootNoAmmo` weak stub in P2-3f54. |
 | P2-5u1 | Item Switch and VS Options screens | **Entry/row repair committed; acceptance open** | `eafdf226c52`. Switch mask honoured by the spawn law; UI half uncensused. |
 | P2-5x1 | Audio cue coverage | **SOURCE WIRED; ROM acceptance pending** | FGM header pins 573 entries over 47 banks; item TU audit clean (09-03/04). |

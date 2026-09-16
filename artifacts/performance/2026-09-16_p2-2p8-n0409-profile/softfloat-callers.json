@@ -1,0 +1,5717 @@
+{
+  "task": "Helper caller attribution [__aeabi_fadd + __aeabi_fmul]",
+  "helperClass": "__aeabi_fadd + __aeabi_fmul",
+  "target": "smash64ds-p2-fourcpu-tickhud-hwtri",
+  "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-n0409-profile\\smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+  "romSha256": "C339A282284776189C09146B374C101544631F865E8A385C2CAA9006B63EAC4D",
+  "startFrame": 439,
+  "helpers": [
+    "__aeabi_fadd",
+    "__aeabi_fmul"
+  ],
+  "entryAddresses": {
+    "__aeabi_fmul": "01ff82cc",
+    "__aeabi_fadd": "01fff5b4"
+  },
+  "samples": 29846.0,
+  "classTotalTicksPerFrame": null,
+  "rendererShare": 0.20374589559739997,
+  "capturedUtc": "2026-09-16T20:54:29.4023513Z",
+  "byGate": [
+    {
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15182.0
+    },
+    {
+      "Gate": "UNRESOLVED",
+      "Count": 8481.0
+    },
+    {
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 6081.0
+    },
+    {
+      "Gate": "second-order (float calling float)",
+      "Count": 102.0
+    }
+  ],
+  "rows": [
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "guMtxCatF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 708
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "guMtxCatF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 707
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbCommonCos",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 318
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbCommonSin",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 318
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbCommonCos",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 318
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbCommonCos",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 318
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbCommonSin",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 318
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsMPLineExtentSweepRejects",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 228
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetFighterPartsWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 179
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionGetWorldPosition",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 154
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 132
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsStageMPAdjustFloorLoopWallSweep",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 126
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsMPLineExtentSweepRejects",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 118
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 110
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 110
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 110
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800ED490",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 89
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 88
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 66
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 66
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 66
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 66
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorAdd3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 56
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorAdd3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 56
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorAdd3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 56
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EDE5C",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionSetInvertMatrix",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 55
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorDiff3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 50
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorDiff3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 50
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorDiff3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 50
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 44
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 40
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 40
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 40
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 40
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsR2CameraPerspFast20p12",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 38
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsR2CameraPerspFast20p12",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 38
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 36
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsParticleSetCurrentCamera",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 32
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorMag3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 26
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorMag3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 26
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorMag3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 26
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorMag3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 26
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorMag3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 26
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraRecordFrame",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionCheckProjectFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionCheckProjectFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleUpdateStruct.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraRecordFrame",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleUpdateStruct.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "battleship_ftPublicProcUpdate",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionCheckProjectFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "mpCollisionCheckProjectFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleUpdateStruct.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessUpdateMain",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraRecordFrame",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixPerspFastF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionCheckProjectFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 24
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixF2L",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 23
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsMPFCSegmentCrossesKernel",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 22
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsMPFCSegmentCrossesKernel",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 22
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsMPFCSegmentCrossesKernel",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 22
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionGetFCCommonFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 21
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "mpCollisionGetFCCommonFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 21
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionGetFCCommonFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 21
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionGetFCCommonFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 21
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionGetFCCommonFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 21
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionGetFCCommonFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 21
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorScale3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorScale3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorScale3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syVectorNorm3D",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 20
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTraRotRpyRSca",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 19
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "mpCollisionCheckProjectFloor",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 18
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 18
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 18
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 18
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 18
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainUpdateMotionEventsAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainUpdateMotionEventsForwardEffect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftDisplayLightsDrawReflect",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syUtilsArcTan.part.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 15
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRotRpyRF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 14
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleUpdateStruct.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 13
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleUpdateStruct.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 13
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestFloorCollision",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckFloorEdgeCollisionR",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gcParseMObjMatAnimJoint",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckFloorEdgeCollisionR",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gcParseMObjMatAnimJoint",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckFloorEdgeCollisionL",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestFloorCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestFloorCollisionNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestFloorCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestFloorCollisionNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckFloorEdgeCollisionR",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessSetCollProjectFloorID",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestFloorCollision",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestCeilCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckFloorEdgeCollisionL",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestCeilCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestRWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixLookAtF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckTestLWallCollisionAdjNew",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseMPProcessCheckFloorEdgeCollisionL",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 12
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 11
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterApplyMvpRecalc",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 11
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainParseMotionEvent",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCollisionTransformMatrixAll",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 10
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftPhysicsSetGroundVelTransferAir",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftPhysicsSetGroundVelTransferAir",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftPhysicsSetGroundVelTransferAir",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftPhysicsSetGroundVelTransferAir",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftPhysicsSetGroundVelTransferAir",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftPhysicsSetGroundVelTransferAir",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftPhysicsApplyGroundVelFriction",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 9
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsBaseFTDisplayMainProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsIFCommonGetBattleHudDamageState",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsIFCommonGetBattleHudDamageState",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsIFCommonGetBattleHudDamageState",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsIFCommonGetBattleHudDamageState",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsFighterDisplayContractProjectTarget",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ifCommonPlayerDamageProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "lbParticleDrawTextures",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 8
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syUtilsRandFloat",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 7
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EF5D4",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetClampDimensionsMax",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckFindTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_8010C3C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetClampDimensionsMax",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetClampDimensionsMax",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EF5D4",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_800EF5D4",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetAdjustAtAngle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_8010C3C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftPhysicsApplyAirVelXFriction",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_8010C3C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckFindTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckFindTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "efManagerDefaultProcUpdate",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "efManagerDefaultProcUpdate",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetClampDimensionsMax",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftPhysicsApplyAirVelDriftFastFall",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetAdjustAtAngle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl2_8010C5C0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "gmCameraGetClampDimensionsMax",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckFindTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckFindTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraGetAdjustAtAngle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraGetAdjustAtAngle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraUpdateInterests",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "grWallpaperCalcPersp",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsCameraDefaultFuncCameraWitness",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCameraGetAdjustAtAngle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 6
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 5
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionTestRectangle",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "gmCollisionCheckFighterInFighterRange",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsRendererAdapterBuildNativeMaterialSnapshot",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 4
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftPhysicsApplyAirVelFriction",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckEvadeDistance",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftMainProcPhysicsMap",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_cosf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "__kernel_sinf",
+      "Source": "??",
+      "Gate": "second-order (float calling float)",
+      "Count": 3
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRowscaleF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsSObjDrawCachedWallpaperFinal.isra.0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftMainParseMotionEvent",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTra",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRowscaleF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterMarioFoxDLAllDrawForSlot.constprop.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftMainParseMotionEvent",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTra",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsFighterMarioFoxDLAllDrawForSlot.constprop.0",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsSObjDrawCachedWallpaperFinal.isra.0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixRowscaleF",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "syMatrixTra",
+      "Source": "D",
+      "Gate": "RENDERER (fidelity-gated)",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsSObjDrawCachedWallpaperFinal.isra.0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ndsSObjDrawCachedWallpaperFinal.isra.0",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 2
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerSetCommandWaitShort",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerFollowObjectiveAttack.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerFollowObjectiveAttack.part.0",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerGetObjectiveStatus",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "func_ovl3_80138EE4",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerSetCommandWaitShort",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerSetCommandWaitShort",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerSetCommandWaitShort",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ndsBaseFTDisplayMainProcDisplay",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerGetObjectiveStatus",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerGetObjectiveStatus",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerGetObjectiveStatus",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "func_ovl3_80138EE4",
+      "Source": "D",
+      "Gate": "UNRESOLVED",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fadd",
+      "Caller": "ftComputerCheckDetectTarget",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    },
+    {
+      "Helper": "__aeabi_fmul",
+      "Caller": "ftComputerGetObjectiveStatus",
+      "Source": "D",
+      "Gate": "GAMEPLAY (state-hash frozen)",
+      "Count": 1
+    }
+  ]
+}

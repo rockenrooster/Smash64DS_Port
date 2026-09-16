@@ -1,0 +1,34 @@
+Entry addresses:
+  __aeabi_fmul       0x01ff82cc
+  __aeabi_fadd       0x01fff5b4
+Sampling for 90s ...
+note: 143 of 811 return addresses renamed from the symbol table (addr2line named an inlined or removed function)
+
+Helper caller attribution [__aeabi_fadd + __aeabi_fmul] -- 29846 samples from frame 439
+
+  count    share  gate                          caller
+-------  -------  ----------------------------  ------------------------------
+    708    2.4%  RENDERER (fidelity-gated)     guMtxCatF
+    707    2.4%  RENDERER (fidelity-gated)     guMtxCatF
+    318    1.1%  GAMEPLAY (state-hash frozen)  lbCommonCos
+    318    1.1%  GAMEPLAY (state-hash frozen)  lbCommonSin
+    318    1.1%  GAMEPLAY (state-hash frozen)  lbCommonCos
+    318    1.1%  GAMEPLAY (state-hash frozen)  lbCommonCos
+    318    1.1%  GAMEPLAY (state-hash frozen)  lbCommonSin
+    228    0.8%  UNRESOLVED                    ndsMPLineExtentSweepRejects
+
+gate                          samples    share
+----------------------------  -------  -------
+GAMEPLAY (state-hash frozen)    15182   50.9%
+UNRESOLVED                       8481   28.4%
+RENDERER (fidelity-gated)        6081   20.4%
+second-order (float calling float)      102    0.3%
+
+renderer-side share: 20.4% of the __aeabi_fadd + __aeabi_fmul class.
+For absolute ticks multiply by __aeabi_fadd + __aeabi_fmul from a profile of
+THIS build (run-task37-profile-census.ps1). Reference points, each
+valid only for the build that measured it: fadd+fmul was 104,222
+ticks/frame at R2-03 E60, and memset+memcpy 58,700 at E68. Do not
+reuse either after anything graduates.
+
+Wrote builds/p2p8-n0409-softfloat-callers.json
