@@ -55,22 +55,21 @@ Completed/rejected: N04.03 round-shift/camera reuse/input refresh, N04.05 4x4
 block copy and N04.08 stable-zero skip KEEP; N04.04 memcpy, N04.06 row4 loads and
 N04.07 three-word row copy REJECTED. Figures in `PERF_LEDGER.md`.
 Profile: post-pose `2026-09-15_p2-2p8-pose-joint-mask/profile-final-current/`.
-N04.08: `gcPlayAnimAll` skips the material player for MObjs already zero-speed
-with a positive wait before the parser. Same-ROM route attributed WORK-H P50
-**-8,640**; canonical re-bank **-9,920 / -8,512** P50/P95 vs N04.05 with heap
-108,096 B, native 0/0 and slips 0 unchanged; engagement **7,892** (= census) in
-four independent builds; a read-only audit returned SAFE with its conditions
-recorded at the skip. Boundary GREEN (shell loop free floor 114,628 B; realtime
-212 frames **26.3 FPS**). Win is Dream Land's frozen water only — not roster- or
-stage-wide. Evidence: `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
-Banked beyond the candidate: **`make TARGET=... BUILD=<fresh dir>` ships an
-incomplete ROM** — 365 of 710 NitroFS files here, 1,005,221 B of Kirby
-animations, CSS previews and Pikachu/Yoshi images — and an incomplete ROM
-measures faster: WORK-H P50 52,480 below canonical, all of it STG (~54,500
-ticks/frame), while GCRA/FTR matched. Nothing failed; engagement was correct.
-An earlier cursor called this an arena-carve candidate; **retracted**. Match
-NitroFS file count and size to the baseline before quoting a cross-build delta.
-Next: select the next P2-2p8 candidate from the post-pose profile.
+N04.08 (closed, published): same-ROM **-8,640** WORK-H P50, canonical re-bank
+**-9,920 / -8,512**, engagement 7,892 in four builds, audit SAFE, Boundary
+GREEN. Detail and the incomplete-lab-ROM finding:
+`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/` + `PERF_LEDGER.md`.
+Rejected without a build: `ndsR2CamDiv64` (top stall/byte in the build) is a
+hardware-divider busy-wait, and ITCM cannot recover divider latency; and any
+`.text.hot` admission, because `linker/nds_hot_text.ld` records that list
+**closed in both directions** after two estimators — including section C/D
+stall — got the sign wrong. C/D are a cost ranking, not a placement prediction.
+Selected N04.09: the **P95 tail is FAT cluster-chain rewalking**. On the 7
+costliest frames `get_fat` runs **1,422.6 calls/frame** against 296.4 on control
+frames and `f_lseek` costs **16,079 cycles/call**; together **~43,300 tk/frame of
+tail premium**, 3x the 14,080 floor, on 6 of 7 tail frames. Mechanism: a forward
+seek rewalks the cluster chain from the start instead of resuming. No fidelity
+risk. Next: confirm the seek caller and chain shape, then cache/resume it.
 Checks: hard-on `smash64ds` rebuilt/published, `NATIVE_ONLY_PASS` 262 inputs,
 `check-published-roms.ps1` GREEN, hash in rule 4; nothing owed on N04.08.
 P2-2p8 stays RED at WORK-H P50 1,639,808.
