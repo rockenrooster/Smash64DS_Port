@@ -306,7 +306,7 @@ typedef struct NDSNativePreparedDenseVertex
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_NNESS(X)
 #endif
-#if NDS_P2_BOSS
+#if NDS_P2_1P_GAME
 #define NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X) \
     X(NDS_NATIVE_IMAGE_SLOT_BOSS, \
       "nitro:/fighters/boss_high.bin", "nitro:/fighters/boss_low.bin", \

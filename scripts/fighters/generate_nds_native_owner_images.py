@@ -70,6 +70,18 @@ P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
                    "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness", "boss")
 DETAILS = ("high", "low")
 
+# The build flag that decides whether an owner's image exists. It is
+# NDS_P2_<OWNER> for every owner but one: `boss` has no NDS_P2_BOSS -- it ships
+# with the 1P game -- and emitting the mechanical name produced `#if
+# NDS_P2_BOSS`, which -Wundef reports and the preprocessor evaluates as 0, so
+# the boss image silently stopped resolving. Anything not listed here takes the
+# mechanical name.
+IMAGE_OWNER_GUARDS = {"boss": "NDS_P2_1P_GAME"}
+
+
+def _owner_guard(owner_name: str) -> str:
+    return IMAGE_OWNER_GUARDS.get(owner_name, f"NDS_P2_{owner_name.upper()}")
+
 # Image ABI tag: first word of every image, checked by the runtime
 # (`src/nds/nds_renderer_assets.c`) before binding any member. v3 adds
 # scene-resident PreparedDense to v2's 11-bit packed-corner ABI. v4 removes
@@ -439,7 +451,7 @@ def render_header(
         for name in P2_IMAGE_OWNERS
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
-            f"#if NDS_P2_{name.upper()}",
+            f"#if {_owner_guard(name)}",
             f"#define NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
             f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, \\",
             f"      \"nitro:/fighters/{name}_high.bin\", \"nitro:/fighters/{name}_low.bin\", \\",
