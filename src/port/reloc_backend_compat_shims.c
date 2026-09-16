@@ -47,7 +47,6 @@ static sb32 ndsBattlePlayableRuntimeEnabled(void)
 #endif
 }
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 /* Imported BattleShip originals exported by src/import wrappers. */
 sb32 ndsBaseFTCommonCatchCheckInterruptCommon(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttack1CheckInterruptCommon(GObj *fighter_gobj);
@@ -133,7 +132,6 @@ void ndsBaseFTCommonLandingAirSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonLandingFallSpecialSetStatus(GObj *fighter_gobj, sb32 is_allow_interrupt, f32 anim_speed);
 sb32 ndsBaseFTCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj);
 void ndsBaseFTCommonAttackAirProcMap(GObj *fighter_gobj);
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
 sb32 ndsBaseFTCommonAttackS4CheckInterruptCommon(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttackS4CheckInterruptTurn(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttackHi4CheckInterruptCommon(GObj *fighter_gobj);
@@ -145,7 +143,6 @@ sb32 ndsBaseFTCommonAttackLw3CheckInterruptCommon(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttackS4CheckInterruptDash(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj);
 sb32 ndsBaseFTCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj);
-#endif
 void ndsBaseFTCommonCatchPullProcCatch(GObj *fighter_gobj);
 void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj, GObj *capture_gobj);
 void ndsBaseFTCommonThrownSetStatusDamageRelease(GObj *fighter_gobj);
@@ -225,7 +222,6 @@ sb32 ndsBaseFTCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj);
 void ndsBaseFTCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj);
 void ndsBaseFTCommonCliffCommon2UpdateCollData(GObj *fighter_gobj);
 void ndsBaseFTCommonCliffCommon2InitStatusVars(GObj *fighter_gobj);
-#endif
 
 void ndsBaseFTCommonDashProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonDashProcInterrupt(GObj *fighter_gobj);
@@ -1336,22 +1332,15 @@ SYAudioCSPlayerCompat *gSYAudioCSPlayers[1] = {
 
 void syAudioStopBGMAll(void)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmStopAll();
-#endif
     sNdsAudioCSPlayerCompat.state = AL_STOPPED;
 }
 
 void syAudioPlayBGM(s32 player, s32 bgm_id)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmPlay(player, bgm_id);
     sNdsAudioCSPlayerCompat.state =
         (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
-#else
-    (void)player;
-    sNdsAudioCSPlayerCompat.state = AL_STOPPED;
-#endif
     gNdsSCVSBattleStageBGM = (u32)bgm_id;
     gNdsSCVSBattleCompatAudioMask |= 1u << 0;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
@@ -1359,19 +1348,13 @@ void syAudioPlayBGM(s32 player, s32 bgm_id)
 
 void syAudioUpdateBGMState(void)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     sNdsAudioCSPlayerCompat.state =
         (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
-#else
-    sNdsAudioCSPlayerCompat.state = AL_STOPPED;
-#endif
 }
 
 void func_800266A0_272A0(void)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     ndsAudioFgmStopAll();
-#endif
 }
 
 #if !NDS_IMPORT_BATTLESHIP_AUDIO_FGM
@@ -1380,26 +1363,14 @@ static alSoundEffect sNdsStubSoundEffect;
 
 void func_80026738_27338(alSoundEffect *sfx)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     ndsAudioFgmStop(sfx);
-#else
-    if (sfx != NULL)
-    {
-        sfx->sfx_id = 0;
-    }
-#endif
 }
 
 static void *ndsPlayFGMAtPan(u16 fgm_id, u8 pan)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     alSoundEffect *sound_effect;
 
     sound_effect = ndsAudioFgmPlayAtPan(fgm_id, pan);
-#else
-    sNdsStubSoundEffect.sfx_id = fgm_id;
-    sNdsStubSoundEffect.balance = pan;
-#endif
     gNdsSCVSBattleLastFGM = fgm_id;
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
             FALSE) &&
@@ -1427,11 +1398,7 @@ static void *ndsPlayFGMAtPan(u16 fgm_id, u8 pan)
     }
     gNdsSCVSBattleCompatAudioMask |= 1u << 1;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
-#if NDS_IMPORT_BATTLESHIP_AUDIO_FGM
     return sound_effect;
-#else
-    return &sNdsStubSoundEffect;
-#endif
 }
 
 void *func_800269C0_275C0(u16 fgm_id)
@@ -1441,27 +1408,15 @@ void *func_800269C0_275C0(u16 fgm_id)
 
 s32 syAudioCheckBGMPlaying(s32 sngplayer)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     s32 is_playing = ndsAudioBgmCheckPlaying(sngplayer);
-#else
-    (void)sngplayer;
-#endif
     gNdsSCVSBattleCompatAudioMask |= 1u << 2;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     return is_playing;
-#else
-    return FALSE;
-#endif
 }
 
 void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     ndsAudioBgmSetVolume(sngplayer, vol);
-#else
-    (void)sngplayer;
-#endif
     gNdsSCVSBattleLastAudioVolume = vol;
     gNdsSCVSBattleCompatAudioMask |= 1u << 3;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
@@ -2184,7 +2139,6 @@ typedef enum NDSGMHitType
     nNDSGMHitTypeAttack = 3
 } NDSGMHitType;
 
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
 extern void battleship_ftMainSetHitInteractStats(FTStruct *fp,
                                                  u32 attack_group_id,
                                                  GObj *victim_gobj,
@@ -2280,88 +2234,6 @@ void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
                                            ignore_damage_or_hit);
     }
 }
-#else
-sb32 gFTMainIsDamageDetect[FTATTACKCOLL_NUM_MAX];
-sb32 gFTMainIsAttackDetect[FTATTACKCOLL_NUM_MAX];
-
-void ftMainSetHitInteractStats(FTStruct *fp, u32 attack_group_id,
-                               GObj *victim_gobj, s32 attack_type,
-                               u32 victim_group_id,
-                               sb32 ignore_damage_or_hit)
-{
-    u32 i;
-    u32 j;
-
-    if ((fp == NULL) || (victim_gobj == NULL))
-    {
-        return;
-    }
-
-    for (i = 0u; i < FTATTACKCOLL_NUM_MAX; i++)
-    {
-        FTAttackColl *attack_coll = &fp->attack_colls[i];
-
-        if ((attack_coll->attack_state == nGMAttackStateOff) ||
-            (attack_coll->group_id != attack_group_id))
-        {
-            continue;
-        }
-
-        for (j = 0u; j < GMATTACKREC_NUM_MAX; j++)
-        {
-            if (victim_gobj == attack_coll->attack_records[j].victim_gobj)
-            {
-                break;
-            }
-        }
-        if (j == GMATTACKREC_NUM_MAX)
-        {
-            for (j = 0u; j < GMATTACKREC_NUM_MAX; j++)
-            {
-                if (attack_coll->attack_records[j].victim_gobj == NULL)
-                {
-                    break;
-                }
-            }
-            if (j == GMATTACKREC_NUM_MAX)
-            {
-                j = 0u;
-            }
-            attack_coll->attack_records[j].victim_gobj = victim_gobj;
-        }
-
-        switch (attack_type)
-        {
-        case nNDSGMHitTypeDamage:
-            attack_coll->attack_records[j].victim_flags.is_interact_hurt =
-                TRUE;
-            break;
-
-        case nNDSGMHitTypeShield:
-            attack_coll->attack_records[j].victim_flags.is_interact_shield =
-                TRUE;
-            break;
-
-        case nNDSGMHitTypeAttack:
-            attack_coll->attack_records[j].victim_flags.group_id =
-                victim_group_id;
-            break;
-
-        default:
-            break;
-        }
-
-        if (ignore_damage_or_hit == 0)
-        {
-            gFTMainIsDamageDetect[i] = FALSE;
-        }
-        else
-        {
-            gFTMainIsAttackDetect[i] = FALSE;
-        }
-    }
-}
-#endif
 
 void ftParamClearAttackRecordID(FTStruct *fp, s32 attack_id)
 {
@@ -2409,7 +2281,6 @@ void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id)
         gNdsStageMPLiveHitDamageLoopOriginalRehitRefreshIDMask |=
             1u << (u32)attack_id;
     }
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if (((gNdsFighterNaturalMovesetPhase == 9u) ||
          (gNdsFighterNaturalMovesetPhase == 10u)) &&
         (fp->status_id >= nFTCommonStatusAttackAirStart) &&
@@ -2417,7 +2288,6 @@ void ftParamRefreshAttackCollID(GObj *fighter_gobj, s32 attack_id)
     {
         gNdsFighterNaturalMovesetAerialHitboxFrames++;
     }
-#endif
 }
 
 s32 ftParamGetJointID(FTStruct *fp, s32 joint_id)
@@ -3186,16 +3056,13 @@ sb32 battleship_ftAnimEndCheckSetStatus(GObj *fighter_gobj,
 #ifndef NDS_R2_ANIM_PARSER
 #define NDS_R2_ANIM_PARSER 1
 #endif
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 void ndsR2FtAnimParseDObjFigatree(DObj *root_dobj);
 #if NDS_R2_ANIM_CUT_ROUTE
 extern volatile u32 gNdsR2AnimCutRoute;
 #endif
-#endif
 
 void ftAnimParseDObjFigatree(DObj *root_dobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #if NDS_R2_FTANIM_TRACK
     /* Stage 3. One range compare against a static array decides it: a joint
      * bound to precompiled rows carries its own cursor block in
@@ -3222,9 +3089,6 @@ void ftAnimParseDObjFigatree(DObj *root_dobj)
     ndsR2FtAnimParseDObjFigatree(root_dobj);
 #else
     battleship_ftAnimParseDObjFigatree(root_dobj);
-#endif
-#else
-    (void)root_dobj;
 #endif
 }
 
@@ -3534,12 +3398,6 @@ void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
     }
 }
 #endif
-
-__attribute__((weak)) GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    return NULL;
-}
 
 /* Defined beside lbCommonAddFighterPartsFigatree, which owns the shared tree
  * walk and the same pointer resolve. */
@@ -3905,7 +3763,6 @@ void ftHammerSetStatusHammerWait(GObj *fighter_gobj)
 
 sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     /* BattleShip fighter.h defines this exact ordered chain as the common
      * ground interrupt. The imported manager runs it for every live fighter;
      * it must not depend on the old scripted natural-motion proof being active. */
@@ -3930,7 +3787,6 @@ sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
             (ftCommonTurnCheckInterruptCommon(fighter_gobj) != FALSE) ||
             (ftCommonWalkCheckInterruptCommon(fighter_gobj) != FALSE)) ? TRUE :
                                                                          FALSE;
-#endif
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
     {
@@ -4113,9 +3969,7 @@ sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCatchCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopAppealGuardActive != FALSE))
@@ -4141,81 +3995,63 @@ sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonAttackS4CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackS4CheckInterruptCommon(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS4CheckInterruptTurn(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackS4CheckInterruptTurn(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackHi4CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackHi4CheckInterruptCommon(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw4CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackLw4CheckInterruptCommon(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw4CheckInterruptSquat(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackLw4CheckInterruptSquat(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS3CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackS3CheckInterruptCommon(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackHi3CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackHi3CheckInterruptCommon(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw3CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackLw3CheckInterruptCommon(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttack1CheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonAttack1CheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4235,10 +4071,8 @@ sb32 ftCommonAttack1CheckInterruptCommon(GObj *fighter_gobj)
 
 void ftCommonAttack11SetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack11SetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4249,10 +4083,8 @@ void ftCommonAttack11SetStatus(GObj *fighter_gobj)
 
 void ftCommonAttack11ProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack11ProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack11UpdateActive != FALSE))
@@ -4270,10 +4102,8 @@ void ftCommonAttack11ProcUpdate(GObj *fighter_gobj)
 
 void ftCommonAttack11ProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack11ProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack11InterruptActive != FALSE))
@@ -4291,10 +4121,8 @@ void ftCommonAttack11ProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonAttack12SetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack12SetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4305,10 +4133,8 @@ void ftCommonAttack12SetStatus(GObj *fighter_gobj)
 
 void ftCommonAttack12ProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack12ProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4319,10 +4145,8 @@ void ftCommonAttack12ProcUpdate(GObj *fighter_gobj)
 
 void ftCommonAttack12ProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack12ProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4333,9 +4157,7 @@ void ftCommonAttack12ProcInterrupt(GObj *fighter_gobj)
 
 sb32 ftCommonAttack11CheckGoto(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonAttack11CheckGoto(fighter_gobj);
-#endif
 
     (void)fighter_gobj;
     return FALSE;
@@ -4369,9 +4191,7 @@ sb32 ftCommonGetCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonAttack100StartCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4384,10 +4204,8 @@ sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
 
 void ftCommonAttack100StartSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack100StartSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4399,10 +4217,8 @@ void ftCommonAttack100StartSetStatus(GObj *fighter_gobj)
 
 void ftCommonAttack100StartProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack100StartProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4413,10 +4229,8 @@ void ftCommonAttack100StartProcUpdate(GObj *fighter_gobj)
 
 void ftCommonAttack100LoopSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack100LoopSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4428,10 +4242,8 @@ void ftCommonAttack100LoopSetStatus(GObj *fighter_gobj)
 
 void ftCommonAttack100LoopProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack100LoopProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4442,10 +4254,8 @@ void ftCommonAttack100LoopProcUpdate(GObj *fighter_gobj)
 
 void ftCommonAttack100LoopProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack100LoopProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4456,10 +4266,8 @@ void ftCommonAttack100LoopProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonAttack100EndSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttack100EndSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttack1Active != FALSE))
@@ -4470,9 +4278,7 @@ void ftCommonAttack100EndSetStatus(GObj *fighter_gobj)
 
 sb32 ftCommonCatchCheckInterruptAttack11(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCatchCheckInterruptAttack11(fighter_gobj);
-#endif
 
     (void)fighter_gobj;
     return FALSE;
@@ -4522,30 +4328,9 @@ void ftParamUpdate1PGameAttackStats(FTStruct *fp, u16 flags)
     (void)flags;
 }
 
-__attribute__((weak)) GObj *
-efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate, f32 vel,
-                                  f32 add)
-{
-    (void)pos;
-    (void)lr;
-    (void)rotate;
-    (void)vel;
-    (void)add;
-    return NULL;
-}
-
-__attribute__((weak)) GObj *
-efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    return NULL;
-}
-
 sb32 ftCommonGuardOnCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopAppealGuardActive != FALSE))
@@ -4581,9 +4366,7 @@ sb32 ftCommonLightThrowCheckInterruptGuardOn(GObj *fighter_gobj)
 
 sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonEscapeCheckInterruptGuard(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunEscapeActive != FALSE))
@@ -4617,36 +4400,28 @@ sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
 
 sb32 ftCommonGuardCheckInterruptEscape(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonGuardCheckInterruptEscape(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonCatchCheckInterruptGuard(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCatchCheckInterruptGuard(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonGuardPassCheckInterruptGuard(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonGuardPassCheckInterruptGuard(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAppealCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonAppealCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopAppealActive != FALSE))
@@ -4724,9 +4499,7 @@ void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj)
 
 sb32 ftCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonKneeBendCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
@@ -4759,9 +4532,7 @@ sb32 ftCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonDashCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDashCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -4786,37 +4557,29 @@ sb32 ftCommonDashCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonAttackS4CheckInterruptDash(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackS4CheckInterruptDash(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonEscapeCheckInterruptDash(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonEscapeCheckInterruptDash(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonCatchCheckInterruptDashRun(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCatchCheckInterruptDashRun(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 void ftCommonAttackDashSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttackDashSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttackDashActive != FALSE))
@@ -4827,9 +4590,7 @@ void ftCommonAttackDashSetStatus(GObj *fighter_gobj)
 
 sb32 ftCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonAttackDashCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttackDashActive != FALSE))
@@ -4868,10 +4629,8 @@ void ftCommonItemSwingSetStatus(GObj *fighter_gobj, s32 swing_type)
 
 sb32 ftCommonGuardOnCheckInterruptDashRun(GObj *fighter_gobj, f32 frame)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonGuardOnCheckInterruptDashRun(fighter_gobj,
                                                        (s32)frame);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunGuardOnActive != FALSE))
@@ -4892,9 +4651,7 @@ sb32 ftCommonGuardOnCheckInterruptDashRun(GObj *fighter_gobj, f32 frame)
 
 sb32 ftCommonKneeBendCheckInterruptRun(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonKneeBendCheckInterruptRun(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -4911,9 +4668,7 @@ sb32 ftCommonKneeBendCheckInterruptRun(GObj *fighter_gobj)
 
 sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonTurnRunCheckInterruptRun(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunTurnRunActive != FALSE))
@@ -4933,10 +4688,8 @@ sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj)
 
 void ftCommonTurnProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonTurnProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
         ((sNdsStageTurnLoopUpdateActive != FALSE) ||
@@ -4976,10 +4729,8 @@ void ftCommonTurnProcUpdate(GObj *fighter_gobj)
 
 void ftCommonTurnProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonTurnProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if (ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE)
     {
@@ -4989,10 +4740,8 @@ void ftCommonTurnProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonTurnSetStatus(GObj *fighter_gobj, s32 lr_dash)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonTurnSetStatus(fighter_gobj, lr_dash);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
         (sNdsStageTurnLoopSetStatusActive != FALSE))
@@ -5021,10 +4770,8 @@ void ftCommonTurnSetStatus(GObj *fighter_gobj, s32 lr_dash)
 
 void ftCommonTurnSetStatusCenter(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonTurnSetStatusCenter(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
         (sNdsStageTurnLoopSetStatusActive != FALSE))
@@ -5035,10 +4782,8 @@ void ftCommonTurnSetStatusCenter(GObj *fighter_gobj)
 
 void ftCommonTurnSetStatusInvertLR(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonTurnSetStatusInvertLR(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp;
 
@@ -5063,9 +4808,7 @@ void ftCommonTurnSetStatusInvertLR(GObj *fighter_gobj)
 
 sb32 ftCommonTurnCheckInputSuccess(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonTurnCheckInputSuccess(fighter_gobj);
-#endif
 
     if (ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE)
     {
@@ -5088,9 +4831,7 @@ void ftParamSetStickLR(FTStruct *fp)
 
 sb32 ftCommonSquatCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonSquatCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassInputLoopInputActive != FALSE))
@@ -5102,9 +4843,7 @@ sb32 ftCommonSquatCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonPassCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonPassCheckInterruptCommon(fighter_gobj);
-#endif
 
     sb32 result;
 
@@ -5131,9 +4870,7 @@ sb32 ftCommonPassCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonPassCheckInterruptSquat(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonPassCheckInterruptSquat(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassInputLoopInputActive != FALSE))
@@ -5172,9 +4909,7 @@ sb32 ftCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonSquatWaitCheckInterruptLanding(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonSquatWaitCheckInterruptLanding(fighter_gobj);
-#endif
 
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
@@ -5192,9 +4927,7 @@ sb32 ftCommonHammerFallCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonTurnCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
         (sNdsStageTurnLoopSetStatusActive != FALSE))
@@ -5214,10 +4947,8 @@ sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
 
 void ftAnimEndSetWait(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     battleship_ftAnimEndSetWait(fighter_gobj);
     return;
-#endif
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunAttackDashUpdateActive != FALSE))
     {
@@ -5327,10 +5058,8 @@ void ftAnimEndSetWait(GObj *fighter_gobj)
 
 void ftAnimEndSetFall(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     battleship_ftAnimEndSetFall(fighter_gobj);
     return;
-#endif
     if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
         (sNdsFighterJumpAttackAirRefreshActive != FALSE))
     {
@@ -5384,9 +5113,7 @@ static void ndsFTCommonCliffWaitApplyOriginalPostStatus(GObj *fighter_gobj)
 
 sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*))
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return battleship_ftAnimEndCheckSetStatus(fighter_gobj, proc_status);
-#endif
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
         (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
@@ -5570,10 +5297,8 @@ sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*))
 
 void ftCommonDashProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDashProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopUpdateActive != FALSE))
@@ -5589,10 +5314,8 @@ void ftCommonDashProcUpdate(GObj *fighter_gobj)
 
 void ftCommonDashProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDashProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5608,10 +5331,8 @@ void ftCommonDashProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDashProcPhysics(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDashProcPhysics(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopPhysicsActive != FALSE))
@@ -5627,10 +5348,8 @@ void ftCommonDashProcPhysics(GObj *fighter_gobj)
 
 void ftCommonDashProcMap(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDashProcMap(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopMapActive != FALSE))
@@ -5646,10 +5365,8 @@ void ftCommonDashProcMap(GObj *fighter_gobj)
 
 void ftCommonDashSetStatus(GObj *fighter_gobj, u32 flag)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDashSetStatus(fighter_gobj, flag);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5666,9 +5383,7 @@ void ftCommonDashSetStatus(GObj *fighter_gobj, u32 flag)
 
 sb32 ftCommonDashCheckTurn(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDashCheckTurn(fighter_gobj);
-#endif
 
     if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
     {
@@ -5679,10 +5394,8 @@ sb32 ftCommonDashCheckTurn(GObj *fighter_gobj)
 
 void ftCommonRunProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonRunProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5698,10 +5411,8 @@ void ftCommonRunProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonRunSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonRunSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5718,9 +5429,7 @@ void ftCommonRunSetStatus(GObj *fighter_gobj)
 
 sb32 ftCommonRunCheckInterruptDash(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonRunCheckInterruptDash(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5736,10 +5445,8 @@ sb32 ftCommonRunCheckInterruptDash(GObj *fighter_gobj)
 
 void ftCommonRunBrakeProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonRunBrakeProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5755,10 +5462,8 @@ void ftCommonRunBrakeProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonRunBrakeProcPhysics(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonRunBrakeProcPhysics(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopPhysicsActive != FALSE))
@@ -5774,10 +5479,8 @@ void ftCommonRunBrakeProcPhysics(GObj *fighter_gobj)
 
 void ftCommonRunBrakeSetStatus(GObj *fighter_gobj, u32 flag)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonRunBrakeSetStatus(fighter_gobj, flag);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5794,9 +5497,7 @@ void ftCommonRunBrakeSetStatus(GObj *fighter_gobj, u32 flag)
 
 sb32 ftCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonRunBrakeCheckInterruptRun(fighter_gobj);
-#endif
 
     if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
     {
@@ -5807,9 +5508,7 @@ sb32 ftCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj)
 
 sb32 ftCommonRunBrakeCheckInterruptTurnRun(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonRunBrakeCheckInterruptTurnRun(fighter_gobj);
-#endif
 
     if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
     {
@@ -5820,10 +5519,8 @@ sb32 ftCommonRunBrakeCheckInterruptTurnRun(GObj *fighter_gobj)
 
 void ftCommonKneeBendProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonKneeBendProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopUpdateActive != FALSE))
@@ -5841,10 +5538,8 @@ void ftCommonKneeBendProcUpdate(GObj *fighter_gobj)
 
 void ftCommonKneeBendProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonKneeBendProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -5863,10 +5558,8 @@ void ftCommonKneeBendProcInterrupt(GObj *fighter_gobj)
 void ftCommonKneeBendSetStatusParam(GObj *fighter_gobj, s32 status_id,
                                     s32 input_source)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonKneeBendSetStatusParam(fighter_gobj, status_id, input_source);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE) &&
@@ -5887,10 +5580,8 @@ void ftCommonKneeBendSetStatusParam(GObj *fighter_gobj, s32 status_id,
 
 void ftCommonKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonKneeBendSetStatus(fighter_gobj, input_source);
     return;
-#endif
 
     if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
     {
@@ -5900,10 +5591,8 @@ void ftCommonKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
 
 void ftCommonGuardKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonGuardKneeBendSetStatus(fighter_gobj, input_source);
     return;
-#endif
 
     (void)fighter_gobj;
     (void)input_source;
@@ -5915,9 +5604,7 @@ void ftCommonGuardKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
 
 sb32 ftCommonKneeBendCheckButtonTap(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonKneeBendCheckButtonTap(fp);
-#endif
 
     if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
     {
@@ -5928,9 +5615,7 @@ sb32 ftCommonKneeBendCheckButtonTap(FTStruct *fp)
 
 s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonKneeBendGetInputTypeCommon(fp);
-#endif
 
     if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
     {
@@ -5941,9 +5626,7 @@ s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp)
 
 s32 ftCommonKneeBendGetInputTypeRun(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonKneeBendGetInputTypeRun(fp);
-#endif
 
     if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
     {
@@ -5954,9 +5637,7 @@ s32 ftCommonKneeBendGetInputTypeRun(FTStruct *fp)
 
 sb32 ftCommonGuardKneeBendCheckInterruptGuard(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonGuardKneeBendCheckInterruptGuard(fighter_gobj);
-#endif
 
     (void)fighter_gobj;
     if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
@@ -5975,12 +5656,7 @@ sb32 ftCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj)
         gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 2;
         return FALSE;
     }
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonAttackHi4CheckInterruptKneeBend(fighter_gobj);
-#else
-    (void)fighter_gobj;
-    return FALSE;
-#endif
 }
 
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
@@ -6000,10 +5676,8 @@ sb32 ftCommonHammerKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 
 void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonJumpProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -6022,10 +5696,8 @@ void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
 void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
                                     s32 *jump_vel_y, sb32 is_shorthop)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x, jump_vel_y, is_shorthop);
     return;
-#endif
 
     ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x,
                                           jump_vel_y, is_shorthop);
@@ -6076,10 +5748,8 @@ static void ndsFTCommonJumpSyncVelocityAfterStatus(GObj *fighter_gobj)
 
 void ftCommonJumpSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonJumpSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopUpdateActive != FALSE))
@@ -6099,10 +5769,8 @@ void ftCommonJumpSetStatus(GObj *fighter_gobj)
 
 void ftCommonFallProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageInterruptActive != FALSE))
@@ -6133,10 +5801,8 @@ void ftCommonFallProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonFallSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonFallSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
@@ -6216,10 +5882,8 @@ void ftCommonFallSetStatus(GObj *fighter_gobj)
 
 void ftCommonOttottoProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonOttottoProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
@@ -6239,10 +5903,8 @@ void ftCommonOttottoProcUpdate(GObj *fighter_gobj)
 
 void ftCommonOttottoProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonOttottoProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
@@ -6262,10 +5924,8 @@ void ftCommonOttottoProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonOttottoProcMap(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonOttottoProcMap(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
@@ -6285,10 +5945,8 @@ void ftCommonOttottoProcMap(GObj *fighter_gobj)
 
 void ftCommonOttottoWaitSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonOttottoWaitSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
             FALSE) &&
@@ -6307,10 +5965,8 @@ void ftCommonOttottoWaitSetStatus(GObj *fighter_gobj)
 
 void ftCommonOttottoSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonOttottoSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
             FALSE) &&
@@ -6352,10 +6008,8 @@ void ftCommonHammerFallProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonLandingProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonLandingProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
         (sNdsFighterProcessLoopInterruptActive != FALSE))
@@ -6374,10 +6028,8 @@ void ftCommonLandingSetStatusParam(GObj *fighter_gobj, s32 status_id,
                                    sb32 is_allow_interrupt,
                                    f32 anim_speed)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id, is_allow_interrupt, anim_speed);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
         (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE))
@@ -6410,10 +6062,8 @@ void ftCommonLandingSetStatusParam(GObj *fighter_gobj, s32 status_id,
 
 void ftCommonLandingSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonLandingSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
         (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
@@ -6445,10 +6095,8 @@ void ftCommonLandingSetStatus(GObj *fighter_gobj)
 
 void ftCommonLandingAirNullSetStatus(GObj *fighter_gobj, f32 anim_speed)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonLandingAirNullSetStatus(fighter_gobj, anim_speed);
     return;
-#endif
 
     if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
         (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
@@ -6465,10 +6113,8 @@ void ftCommonLandingAirNullSetStatus(GObj *fighter_gobj, f32 anim_speed)
 
 void ftCommonLandingAirSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonLandingAirSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
         (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
@@ -6482,10 +6128,8 @@ void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
                                          sb32 is_allow_interrupt,
                                          f32 anim_speed)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonLandingFallSpecialSetStatus(fighter_gobj, is_allow_interrupt, anim_speed);
     return;
-#endif
 
     (void)fighter_gobj;
     (void)is_allow_interrupt;
@@ -6498,9 +6142,7 @@ void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
 
 sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     sb32 result = ndsBaseFTCommonAttackAirCheckInterruptCommon(fighter_gobj);
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if ((gNdsFighterNaturalMovesetPhase == 9u) ||
         (gNdsFighterNaturalMovesetPhase == 10u))
     {
@@ -6509,64 +6151,13 @@ sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
             gNdsFighterNaturalMovesetAerialFrames++;
         }
     }
-#endif
     return result;
-#else
-    sb32 result;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
-    {
-        sNdsFighterDashRunDamageFallAttackAirCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopDamageFallAttackAirCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopFallAttackAirCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingFallInterruptActive != FALSE))
-    {
-        gNdsFighterLandingDeferredInterruptCheckCount++;
-        gNdsFighterMarioFoxLandingLoopDeferredMask |= 1u << 1;
-        return FALSE;
-    }
-    if (ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE)
-    {
-        gNdsFighterJumpAttackAirCheckCount++;
-        if (sNdsFighterJumpAttackAirActive != FALSE)
-        {
-            result = ndsBaseFTCommonAttackAirCheckInterruptCommon(
-                fighter_gobj);
-            if (result != FALSE)
-            {
-                gNdsFighterJumpAttackAirCheckSuccessCount++;
-            }
-            return result;
-        }
-        gNdsFighterJumpDeferredInterruptCheckCount++;
-        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 4;
-    }
-    return FALSE;
-#endif
 }
 
 void ftCommonAttackAirProcMap(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonAttackAirProcMap(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonAttackAirProcMap(fighter_gobj);
 }
@@ -6607,12 +6198,7 @@ sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
         gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 5;
         return FALSE;
     }
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     return ndsBaseFTCommonJumpAerialCheckInterruptCommon(fighter_gobj);
-#else
-    (void)fighter_gobj;
-    return FALSE;
-#endif
 }
 
 #define NDS_DAMAGE_LOSEGRIP_SELECT 0x1u
@@ -7642,10 +7228,8 @@ void ftCommonLightThrowDecideSetStatus(GObj *fighter_gobj)
 
 void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonCatchPullProcCatch(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
@@ -7665,10 +7249,8 @@ void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 void ftCommonCapturePulledProcCapture(GObj *fighter_gobj,
                                       GObj *capture_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonCapturePulledProcCapture(fighter_gobj, capture_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopCaptureActive != FALSE))
@@ -7764,15 +7346,6 @@ void ftBossCommonUpdateDamageStats(GObj *fighter_gobj)
 }
 #endif
 
-__attribute__((weak)) s32 itMainGetDamageOutput(ITStruct *ip)
-{
-    if (ip == NULL)
-    {
-        return 0;
-    }
-    return (s32)((ip->attack_coll.damage * ip->attack_coll.stale) + 0.999F);
-}
-
 static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
                                          GObj *victim_gobj, s32 attack_type,
                                          u32 group_id, u32 rehit_time)
@@ -7842,19 +7415,6 @@ static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
     default:
         break;
     }
-}
-
-__attribute__((weak)) void itProcessSetHitInteractStats(
-    ITAttackColl *attack_coll, GObj *victim_gobj, s32 attack_type,
-    u32 victim_group_id)
-{
-    if (attack_coll == NULL)
-    {
-        return;
-    }
-    ndsCompatSetHitInteractStats(attack_coll->attack_records, victim_gobj,
-                                 attack_type, victim_group_id,
-                                 ITEM_REHIT_TIME_DEFAULT);
 }
 
 /* BattleShip ftparam.c:93-118: these durations define theme priority.
@@ -7949,10 +7509,8 @@ void ftSetupDropItem(FTStruct *fp)
 
 void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownSetStatusDamageRelease(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
@@ -7972,10 +7530,8 @@ void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj)
 
 void ftCommonThrownUpdateDamageStats(FTStruct *this_fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownUpdateDamageStats(this_fp);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
@@ -7995,10 +7551,8 @@ void ftCommonThrownUpdateDamageStats(FTStruct *this_fp)
 
 void ftCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownSetStatusNoDamageRelease(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
@@ -8138,10 +7692,8 @@ static void ndsFTCommonThrownReleaseFighterLoseGripBounded(
 void ftCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj,
                                          GObj *interact_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownDecideFighterLoseGrip(fighter_gobj, interact_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
@@ -8202,10 +7754,8 @@ void ftCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj,
 
 void ftCommonThrownDecideDeadResult(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownDecideDeadResult(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
@@ -8441,9 +7991,7 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
 
 sb32 ftCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonThrowCheckInterruptCatchWait(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopCatchWaitInterruptActive != FALSE))
@@ -8464,10 +8012,8 @@ void ftCommonThrownReleaseThrownUpdateStats(GObj *fighter_gobj, s32 lr,
                                             s32 script_id,
                                             sb32 is_proc_status)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownReleaseThrownUpdateStats(fighter_gobj, lr, script_id, is_proc_status);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowUpdateActive != FALSE))
@@ -8519,10 +8065,8 @@ void ftDonkeyThrowFWaitSetStatus(GObj *fighter_gobj)
 
 void ftCommonThrownReleaseFighterLoseGrip(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonThrownReleaseFighterLoseGrip(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
@@ -9010,10 +8554,8 @@ static void ndsFTCommonDamageSetPublic(FTStruct *fp, f32 knockback,
 
 void ftCommonDamageSetPublic(FTStruct *fp, f32 knockback, f32 angle)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageSetPublic(fp, knockback, angle);
     return;
-#endif
 
     if (fp == NULL)
     {
@@ -9025,10 +8567,8 @@ void ftCommonDamageSetPublic(FTStruct *fp, f32 knockback, f32 angle)
 
 void ftCommonDamageSetDustEffectInterval(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageSetDustEffectInterval(fp);
     return;
-#endif
 
     if (fp == NULL)
     {
@@ -9045,18 +8585,14 @@ f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback)
 
 s32 ftCommonDamageGetDamageLevel(f32 hitstun)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDamageGetDamageLevel(hitstun);
-#endif
 
     return ndsBaseFTCommonDamageGetDamageLevel(hitstun);
 }
 
 sb32 ftCommonDamageCheckCatchResist(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDamageCheckCatchResist(fp);
-#endif
 
     if (fp == NULL)
     {
@@ -9068,9 +8604,7 @@ sb32 ftCommonDamageCheckCatchResist(FTStruct *fp)
 
 sb32 ftCommonDamageCheckCaptureKeepHold(FTStruct *fp)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDamageCheckCaptureKeepHold(fp);
-#endif
 
     if (fp == NULL)
     {
@@ -9119,9 +8653,7 @@ static sb32 ndsFTCommonDamageCheckElementSetColAnim(GObj *fighter_gobj,
 sb32 ftCommonDamageCheckElementSetColAnim(GObj *fighter_gobj, s32 element,
                                           s32 damage_level)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDamageCheckElementSetColAnim(fighter_gobj, element, damage_level);
-#endif
 
     if (fighter_gobj == NULL)
     {
@@ -9169,10 +8701,8 @@ static void ndsFTCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
 
 void ftCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageCheckMakeScreenFlash(knockback, element);
     return;
-#endif
 
     ndsBaseFTCommonDamageCheckMakeScreenFlash(knockback, element);
 }
@@ -9185,10 +8715,8 @@ void ftCommonDamageInitDamageVars(GObj *fighter_gobj, s32 status_id_replace,
                                   sb32 unk_bool, sb32 is_public)
 {
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_DAMAGE_ENTER);
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageInitDamageVars(fighter_gobj, status_id_replace, damage, knockback, angle_start, damage_lr, damage_index, element, damage_player_num, arg9, unk_bool, is_public);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
     f32 hitstun_tics;
@@ -9480,10 +9008,8 @@ record_throw_release_damage_init:
 
 void ftCommonDamageGotoDamageStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageGotoDamageStatus(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -9552,7 +9078,6 @@ void ftCommonDamageGotoDamageStatus(GObj *fighter_gobj)
                                  TRUE);
 }
 
-#if NDS_IMPORT_BATTLESHIP_FTMAIN
 extern void battleship_ftMainRunUpdateColAnim(GObj *fighter_gobj);
 
 void ftMainRunUpdateColAnim(GObj *fighter_gobj)
@@ -9564,25 +9089,12 @@ void ftMainRunUpdateColAnim(GObj *fighter_gobj)
         sNdsFighterDashRunDamageRunUpdateColAnimCount++;
     }
 }
-#else
-void ftMainRunUpdateColAnim(GObj *fighter_gobj)
-{
-    (void)fighter_gobj;
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        sNdsFighterDashRunDamageRunUpdateColAnimCount++;
-    }
-}
-#endif
 
 void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
                                        s32 element)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageUpdateDamageColAnim(fighter_gobj, knockback, element);
     return;
-#endif
 
     if (fighter_gobj == NULL)
     {
@@ -9595,10 +9107,8 @@ void ftCommonDamageUpdateDamageColAnim(GObj *fighter_gobj, f32 knockback,
 
 void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageSetDamageColAnim(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp;
 
@@ -9618,10 +9128,8 @@ void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj)
 
 void ftCommonDamageUpdateMain(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageUpdateMain(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -9668,10 +9176,8 @@ void ftParamUpdate1PGameDamageStats(FTStruct *fp, s32 damage_player,
 
 void ftCommonFuraSleepSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonFuraSleepSetStatus(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -9685,10 +9191,8 @@ void ftCommonFuraSleepSetStatus(GObj *fighter_gobj)
 
 void ftCommonTwisterSetStatus(GObj *fighter_gobj, GObj *tornado_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonTwisterSetStatus(fighter_gobj, tornado_gobj);
     return;
-#endif
 
     if (ftGetStruct(fighter_gobj) == NULL)
     {
@@ -10011,7 +9515,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
     if (fp != NULL)
     {
         s32 percent_before = fp->percent_damage;
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
         if (((gNdsFighterNaturalMovesetPhase == 13u) ||
              (gNdsFighterNaturalMovesetPhase == 14u)) &&
             (gNdsFighterNaturalMovesetThrowDamageAfter == 0u) &&
@@ -10020,7 +9523,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
             gNdsFighterNaturalMovesetThrowDamageBefore =
                 (u32)percent_before;
         }
-#endif
         fp->percent_damage += damage;
         if (gSCManagerBattleState != NULL)
         {
@@ -10033,7 +9535,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
             gSCManagerBattleState->players[fp->player].stock_damage_all =
                 fp->percent_damage;
         }
-#if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
         if (((gNdsFighterNaturalMovesetPhase == 13u) ||
              (gNdsFighterNaturalMovesetPhase == 14u)) &&
             (damage > 0) &&
@@ -10043,7 +9544,6 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
             gNdsFighterNaturalMovesetThrowDamageAfter =
                 (u32)fp->percent_damage;
         }
-#endif
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
@@ -10651,13 +10151,11 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount++;
         gNdsStageMPCliffWaitDamageLoopDownBounceEffectKind = (u32)effect_id;
     }
-#if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW
     if ((gNdsFighterSpecialsProofPhase == 3u) &&
         (effect_id == nEFKindDustLight))
     {
         gNdsFighterSpecialsMarioLwDustEffectCount++;
     }
-#endif
     /* BattleShip ftparam.c:1812-1854 gives the common full-charge sparkle a
      * fighter-specific hand joint and local X offset before the generic effect
      * position resolver runs. The colanim script intentionally names joint 0;
@@ -10851,61 +10349,6 @@ static f32 ndsVisualDamageScale(s32 size, f32 base, f32 step)
     return base + ((f32)size * step);
 }
 
-__attribute__((weak)) LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
-{
-    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffCatchFloorLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffCatchFloorLoopFlashCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopCliffCatchFlashCount++;
-    }
-    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectImpactWave, pos,
-                                       0.8F, 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *
-efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
-{
-    if ((ndsFighterMarioFoxStageInishieScaleLoopProofEnabled() != FALSE) &&
-        (sNdsStageInishieScaleLoopActive != FALSE))
-    {
-        gNdsStageInishieScaleLoopFallSparkleCount++;
-        gNdsFighterMarioFoxStageInishieScaleLoopDeferredMask |= 1u << 0;
-    }
-    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
-                                       scale, 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *
-efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
-{
-    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectDust, pos,
-                                       0.65F * f_index, 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
-{
-    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectHitFire, pos,
-                                       0.55F, 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
-{
-    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectSparkle, pos,
-                                       0.75F, 1, NULL);
-    return NULL;
-}
-
 __attribute__((weak)) LBParticle *
 efManagerDamageNormalLightMakeEffect(Vec3f *pos, s32 player, s32 size,
                                      sb32 is_static)
@@ -10956,40 +10399,6 @@ efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player, s32 size)
  * The scale left alone at the source-derived value. The owner filed an orange
  * ball on side-A hits; normal-element hits go to ndsTask39HitSparkSpawn under
  * NDS_TASK39_FX_SPRITES, which is where that row has to be answered. */
-__attribute__((weak)) LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos,
-                                                               s32 size)
-{
-    (void)ndsEFManagerMakeVisualEffect(
-        nNDSVisualEffectHitFire, pos,
-        ndsVisualDamageScale(size, 0.60F, 0.03F), 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *
-efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
-{
-    (void)ndsEFManagerMakeVisualEffect(
-        nNDSVisualEffectHitElectric, pos,
-        ndsVisualDamageScale(size, 0.55F, 0.03F), 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
-{
-    (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectCoin, pos,
-                                       0.75F, 1, NULL);
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *efManagerSetOffMakeEffect(Vec3f *pos,
-                                                           s32 size)
-{
-    (void)ndsEFManagerMakeVisualEffect(
-        nNDSVisualEffectImpactWave, pos,
-        ndsVisualDamageScale(size, 0.55F, 0.03F), 1, NULL);
-    return NULL;
-}
-
 /* The real one comes with battleship_ftcommon_hammer.c, which imports
  * fthammer.c whole. */
 #if !NDS_P2_ITEM_CORE
@@ -11150,7 +10559,6 @@ static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #if NDS_R2_BATTLEPACK
     figatree = ndsRelocResolveAuthoritativeForceFile(figatree);
 #endif
@@ -11328,13 +10736,6 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     {
         ndsFtPoseBindEnd(pose_entries);
     }
-#else
-    (void)figatree;
-    if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
-    {
-        root_dobj->parent_gobj->anim_frame = anim_frame;
-    }
-#endif
 }
 
 /* decomp lb/lbcommon.c:785, which this port has never had a body for -- it was
@@ -11665,60 +11066,48 @@ void mpCommonUpdateFighterSlopeContour(GObj *fighter_gobj)
 
 void ftCommonReboundProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonReboundProcUpdate(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonReboundProcUpdate(fighter_gobj);
 }
 
 void ftCommonReboundSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonReboundSetStatus(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonReboundSetStatus(fighter_gobj);
 }
 
 void ftCommonReboundWaitProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonReboundWaitProcUpdate(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonReboundWaitProcUpdate(fighter_gobj);
 }
 
 void ftCommonReboundWaitSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonReboundWaitSetStatus(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonReboundWaitSetStatus(fighter_gobj);
 }
 
 void ftCommonGuardSetOffProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonGuardSetOffProcUpdate(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonGuardSetOffProcUpdate(fighter_gobj);
 }
 
 void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonGuardSetOffSetStatus(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonGuardSetOffSetStatus(fighter_gobj);
 }
@@ -11740,9 +11129,7 @@ alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos)
 
 sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCliffAttackCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
@@ -11811,9 +11198,7 @@ sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonCliffEscapeCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCliffEscapeCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
@@ -11882,9 +11267,7 @@ sb32 ftCommonCliffEscapeCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonCliffClimbOrFallCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
@@ -12026,10 +11409,8 @@ sb32 ftCommonCliffClimbOrFallCheckInterruptCommon(GObj *fighter_gobj)
 
 void ftCommonDamageUpdateDustEffect(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageUpdateDustEffect(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12043,10 +11424,8 @@ void ftCommonDamageUpdateDustEffect(GObj *fighter_gobj)
 
 void ftCommonDamageDecHitStunSetPublic(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageDecHitStunSetPublic(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12060,10 +11439,8 @@ void ftCommonDamageDecHitStunSetPublic(GObj *fighter_gobj)
 
 void ftCommonDamageUpdateCatchResist(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageUpdateCatchResist(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12077,10 +11454,8 @@ void ftCommonDamageUpdateCatchResist(GObj *fighter_gobj)
 
 void ftCommonDamageCommonProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageCommonProcUpdate(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12094,10 +11469,8 @@ void ftCommonDamageCommonProcUpdate(GObj *fighter_gobj)
 
 void ftCommonDamageAirCommonProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageAirCommonProcUpdate(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12111,10 +11484,8 @@ void ftCommonDamageAirCommonProcUpdate(GObj *fighter_gobj)
 
 void ftCommonDamageCheckSetInvincible(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageCheckSetInvincible(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12127,10 +11498,8 @@ void ftCommonDamageCheckSetInvincible(GObj *fighter_gobj)
 
 void ftCommonDamageSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageSetStatus(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp;
 
@@ -12150,10 +11519,8 @@ void ftCommonDamageSetStatus(GObj *fighter_gobj)
 
 void ftCommonDamageCommonProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageCommonProcInterrupt(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12167,10 +11534,8 @@ void ftCommonDamageCommonProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageAirCommonProcInterrupt(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12184,10 +11549,8 @@ void ftCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageFlyRollUpdateModelPitch(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp;
 
@@ -12207,10 +11570,8 @@ void ftCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj)
 
 void ftCommonDamageCommonProcPhysics(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageCommonProcPhysics(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12230,10 +11591,8 @@ void ftCommonDamageCommonProcPhysics(GObj *fighter_gobj)
 
 void ftCommonDamageCommonProcLagUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageCommonProcLagUpdate(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
@@ -12483,9 +11842,7 @@ sb32 mpCommonCheckFighterDamageCollision(GObj *fighter_gobj)
 
 sb32 ftCommonWallDamageCheckGoto(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonWallDamageCheckGoto(fighter_gobj);
-#endif
 
     if ((fighter_gobj == NULL) || (ftGetStruct(fighter_gobj) == NULL))
     {
@@ -12496,10 +11853,8 @@ sb32 ftCommonWallDamageCheckGoto(GObj *fighter_gobj)
 
 void ftCommonDamageAirCommonProcMap(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageAirCommonProcMap(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageMapActive != FALSE))
@@ -12558,10 +11913,8 @@ void ftParamSetTimedHitStatusIntangible(FTStruct *fp, s32 intangible_tics)
 
 void ftCommonDamageFallProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageFallProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
@@ -12591,13 +11944,11 @@ void ftCommonDamageFallProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDamageFallProcMap(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
 #if NDS_P2_SAMUS_TUMBLE_TOUR
     ndsSamusTumbleTourPrepareDamageFallMap(ftGetStruct(fighter_gobj));
 #endif
     ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageMapActive != FALSE))
@@ -12648,20 +11999,16 @@ void ftCommonDamageFallProcMap(GObj *fighter_gobj)
 
 void ftCommonDamageFallClampRumble(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageFallClampRumble(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonDamageFallClampRumble(fighter_gobj);
 }
 
 void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
     return;
-#endif
 
     FTStruct *fp;
     sb32 saved_dash_fall_set_status_from_damage_active;
@@ -12921,7 +12268,6 @@ sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
         }
         return TRUE;
     }
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     {
         FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 
@@ -12933,17 +12279,12 @@ sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
                 fighter_gobj, MAP_PROC_TYPE_CLIFF);
         }
     }
-#else
-    (void)fighter_gobj;
-#endif
     return FALSE;
 }
 
 sb32 ftCommonPassiveStandCheckInterruptDamage(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageMapActive != FALSE))
@@ -13052,9 +12393,7 @@ sb32 ftCommonPassiveStandCheckInterruptDamage(GObj *fighter_gobj)
 
 sb32 ftCommonPassiveCheckInterruptDamage(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageMapActive != FALSE))
@@ -13136,10 +12475,8 @@ sb32 ftCommonPassiveCheckInterruptDamage(GObj *fighter_gobj)
 
 void ftCommonDownBounceSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownBounceSetStatus(fighter_gobj);
     return;
-#endif
 
     if (sNdsStageMPLiveHitStatusLoopDownBounceSetStatusActive != FALSE)
     {
@@ -13227,10 +12564,8 @@ void ftCommonDownBounceSetStatus(GObj *fighter_gobj)
 
 void ftCommonCliffCatchSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonCliffCatchSetStatus(fighter_gobj);
     return;
-#endif
 
     if (sNdsStageMPLiveHitStatusLoopCliffCatchSetStatusActive != FALSE)
     {
@@ -13302,10 +12637,8 @@ void ftCommonCliffCatchSetStatus(GObj *fighter_gobj)
 
 void ftCommonDownWaitProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownWaitProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
             FALSE) &&
@@ -13331,10 +12664,8 @@ void ftCommonDownWaitProcUpdate(GObj *fighter_gobj)
 
 void ftCommonDownWaitProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownWaitProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
@@ -13353,10 +12684,8 @@ void ftCommonDownWaitProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDownWaitSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopDownWaitSetStatusActive != FALSE))
@@ -13384,10 +12713,8 @@ void ftCommonDownWaitSetStatus(GObj *fighter_gobj)
 
 void ftCommonDownBounceProcUpdate(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownBounceProcUpdate(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
             FALSE) &&
@@ -13435,9 +12762,7 @@ void ftCommonDownBounceProcUpdate(GObj *fighter_gobj)
 
 sb32 ftCommonDownBounceCheckUpOrDown(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDownBounceCheckUpOrDown(fighter_gobj);
-#endif
 
     FTStruct *fp;
     f32 rot_x;
@@ -13465,20 +12790,16 @@ sb32 ftCommonDownBounceCheckUpOrDown(GObj *fighter_gobj)
 
 void ftCommonDownBounceUpdateEffects(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
     return;
-#endif
 
     ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
 }
 
 void ftCommonDownStandProcInterrupt(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownStandProcInterrupt(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
@@ -13504,10 +12825,8 @@ void ftCommonDownStandProcInterrupt(GObj *fighter_gobj)
 
 void ftCommonDownStandSetStatus(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE) &&
@@ -13545,10 +12864,8 @@ void ftCommonDownStandSetStatus(GObj *fighter_gobj)
 
 void ftCommonDownAttackSetStatus(GObj *fighter_gobj, s32 status_id)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownAttackSetStatus(fighter_gobj, status_id);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE))
@@ -13576,9 +12893,7 @@ void ftCommonDownAttackSetStatus(GObj *fighter_gobj, s32 status_id)
 
 sb32 ftCommonDownAttackCheckInterruptDownWait(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDownAttackCheckInterruptDownWait(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
@@ -13676,10 +12991,8 @@ sb32 ftCommonDownAttackCheckInterruptDownWait(GObj *fighter_gobj)
 
 void ftCommonDownForwardOrBackSetStatus(GObj *fighter_gobj, s32 status_id)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDownForwardOrBackSetStatus(fighter_gobj, status_id);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
@@ -13723,9 +13036,7 @@ void ftCommonDownForwardOrBackSetStatus(GObj *fighter_gobj, s32 status_id)
 
 sb32 ftCommonDownForwardOrBackCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
@@ -13844,9 +13155,7 @@ sb32 ftCommonDownForwardOrBackCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonDownStandCheckInterruptCommon(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDownStandCheckInterruptCommon(fighter_gobj);
-#endif
 
     if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
         (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
@@ -13904,9 +13213,7 @@ sb32 ftCommonDownStandCheckInterruptCommon(GObj *fighter_gobj)
 
 sb32 ftCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     return ndsBaseFTCommonDownAttackCheckInterruptDownBounce(fighter_gobj);
-#endif
 
     (void)fighter_gobj;
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
@@ -13920,10 +13227,8 @@ sb32 ftCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj)
 
 void ftCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonDamageFallSetStatusFromCliffWait(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
             FALSE) &&
@@ -14214,10 +13519,8 @@ static void ndsFTCommonCliffCommon2UpdateCollDataBridgeLive(GObj *fighter_gobj)
 
 void ftCommonCliffCommon2UpdateCollData(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonCliffCommon2UpdateCollData(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPCliffLiveLoopSetStatusActive != FALSE))
@@ -14255,10 +13558,8 @@ void ftCommonCliffCommon2UpdateCollData(GObj *fighter_gobj)
 
 void ftCommonCliffCommon2InitStatusVars(GObj *fighter_gobj)
 {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsBaseFTCommonCliffCommon2InitStatusVars(fighter_gobj);
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPCliffLiveLoopSetStatusActive != FALSE))
@@ -15050,7 +14351,6 @@ void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     gNdsFighterBattlePlayableMapCallCount++;
     if ((fp != NULL) &&
         (mpProcessUpdateMain(&fp->coll_data,
@@ -15089,7 +14389,6 @@ void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
         }
     }
     return;
-#endif
 
     if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
             FALSE) &&
@@ -15601,14 +14900,12 @@ sb32 mpCommonCheckFighterLanding(GObj *fighter_gobj)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
     if (fp != NULL)
     {
         return mpProcessUpdateMain(&fp->coll_data,
                                    ndsMPCommonRunFighterCliffFloorCeilCollisions,
                                    fighter_gobj, MAP_PROC_TYPE_DEFAULT);
     }
-#endif
 
     if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
         (sNdsFighterJumpAttackAirMapLandingActive != FALSE) &&
@@ -16539,11 +15836,6 @@ __attribute__((weak)) void ftKirbyCopyLinkSpecialNGetSetStatus(GObj *fighter_gob
      * cross-fighter callback, and the weak seam is replaced by Kirby's real
      * source TU when that roster row lands. No live Link-owned boomerang can
      * reach this arm because its parent fkind is Link. */
-    (void)fighter_gobj;
-}
-
-__attribute__((weak)) void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
-{
     (void)fighter_gobj;
 }
 
@@ -18198,9 +17490,7 @@ void mpCollisionSetPlayBGM(void)
         gMPCollisionBGMCurrent = gMPCollisionGroundData->bgm_id;
         gNdsSCVSBattleStageBGM = gMPCollisionGroundData->bgm_id;
         gNdsStagePupupuBGM = gMPCollisionGroundData->bgm_id;
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
         syAudioPlayBGM(0, gMPCollisionBGMDefault);
-#endif
     }
     gNdsSCVSBattleCompatAudioMask |= 1u << 4;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
@@ -18214,12 +17504,6 @@ void gmRumbleMakeActor(void)
 void gmRumbleInitPlayers(void)
 {
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
-}
-
-__attribute__((weak)) void itManagerInitItems(void)
-{
-    gNdsSCVSBattleCompatManagerMask |= 1u << 8;
-    gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
 
 void syDebugSetFuncPrint(void (*function)(void))

@@ -29,13 +29,9 @@ void ndsHarnessFastPresentRequest(void)
  * zero for a generic menu. */
 static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_results)
 {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
     /* tic 120 starts a finite winner sequence; run long enough for the
      * original Results audio thread to observe AL_STOPPED and start BGM 22. */
     const u32 fast_update_max = NDS_AUDIO_BGM_RESULTS_FAST_UPDATE_MAX;
-#else
-    const u32 fast_update_max = 132u;
-#endif
     u32 updates = 0u;
 
     /* Source menus start on a cleared default camera (mnOptionFuncStart).
@@ -80,7 +76,6 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
          * route returns without touching the pads. */
         ndsMenuShellWalkDrive1PSourceMenus();
 #endif
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
         if (is_results != 0u)
         {
             /* P2-2p6 normally evaluates fighter body poses on the final source
@@ -91,9 +86,6 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
              * No Contest result animation. */
             gNdsFtPoseEvalTick = 1u;
         }
-#else
-        (void)is_results;
-#endif
 #if NDS_P2_1P_GAME
         /* Source 1P display scenes also evaluate one pose per presented tick. */
         if ((gNdsSceneManagerCurrKind == nSCKind1PGamePlayers) ||
@@ -106,12 +98,10 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
         ndsAudioBackendUpdate();
         dSYTaskmanUpdateCount++;
         updates++;
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
         if (is_results != 0u)
         {
             ndsMNVSResultsRecordFrame();
         }
-#endif
 
         /* Results owns fade progression in display callbacks; preserve the
          * source one-update/one-draw contract in fast verification too. */
@@ -309,7 +299,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     }
 #endif
 
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
         /* The fighter packets borrow gSYFramebufferSets for the battle; give
@@ -354,7 +343,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         osStopThread(NULL);
         return;
     }
-#endif
 #if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
     /* P2-7 item 9. The imported SOURCE menu scenes from the registry block of
      * the same gate. A source menu has no fighter packets to release, no
@@ -1116,16 +1104,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ((is_battle_playable != 0u) &&
                  (NDS_HARNESS_FAST_LOGIC == 0));
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
             if (is_battle_playable != 0u)
             {
                 ndsStageCollisionLoopPrepareRuntime();
-#if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
                 ndsAudioAssetLoadFenced();
-#endif
             }
             ndsFighterMarioFoxNaturalMotionPrepare();
-#if NDS_IMPORT_BATTLESHIP_IFCOMMON
             if ((is_battle_playable != 0u) &&
                 (use_realtime_presentation == 0u))
             {
@@ -1146,7 +1130,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsSObjPreviewEndFrame();
                 gNdsBattlePlayablePacingDrawCalls++;
             }
-#endif
             if (is_battle_playable == 0u)
             {
                 update_max = NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX;
@@ -1376,7 +1359,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         {
                             continue;
                         }
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
                         if ((is_battle_playable != 0u) &&
                             (use_realtime_presentation == 0u) &&
                             (gNdsAudioBgmElapsedFrames <
@@ -1384,7 +1366,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                         {
                             continue;
                         }
-#endif
                         stop_after_iteration = 1u;
                         break;
                     }
@@ -1612,728 +1593,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
             }
 #endif
-#else
-            u32 live_update_max =
-                (NDS_DEV_LIVE_INPUT_PREVIEW != 0) ?
-                NDS_FIGHTER_LIVE_PREVIEW_DEV_UPDATE_MAX :
-                NDS_FIGHTER_LIVE_PREVIEW_IDLE_UPDATE_MAX;
-
-            ndsFighterMarioFoxSchedulerLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxSchedulerLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            ndsFighterMarioFoxControllerLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterControllerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxControllerLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            ndsFighterMarioFoxPreviewLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterPreviewLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxPreviewLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            ndsFighterMarioFoxGCRunAllLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxGCRunAllLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            if ((NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_GCDRAWALL_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_GCDRAWALL_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_COLLISION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_COLLISION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_FOLLOW_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_FLOOR_EDGE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPROCESS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPUPDATE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSWEEP_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCROSS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPADJUST_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPEDGE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALL_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPSTALE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_TURN_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP))
-            {
-                ndsRunMarioFoxGCRunAllPrerequisiteLoops();
-                ndsFighterMarioFoxStageCollisionLoopPrepare();
-                ndsFighterMarioFoxStageFloorFollowLoopPrepare();
-                ndsFighterMarioFoxStageFloorEdgeLoopPrepare();
-                ndsFighterMarioFoxStageMPProcessFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPUpdateFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPSweepFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCrossFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPAdjustFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPEdgeFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPWallFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPStaleFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPLiveStaleFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPMotionStaleFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffStatusFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffTickFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPFallMapFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPFallLandFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCeilFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCeilStatusFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffCatchFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffWaitFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffAttackFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffAttackActionLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffCommon2LoopPrepare();
-                ndsFighterMarioFoxStageMPCliffEscapeActionLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopPrepare();
-                ndsFighterMarioFoxStageMPCliffClimbFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffClimbActionLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffClimbCommon2LoopPrepare();
-                ndsFighterMarioFoxStageMPCliffClimbFinishLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffWaitDamageLoopPrepare();
-                ndsFighterMarioFoxStageMPPassiveLoopPrepare();
-                ndsFighterMarioFoxStageMPDamageRecoverLoopPrepare();
-                ndsFighterMarioFoxStageMPLiveHitDamageLoopPrepare();
-                ndsFighterMarioFoxStageMPDownWaitLoopPrepare();
-                ndsFighterMarioFoxStageTurnLoopPrepare();
-                ndsFighterMarioFoxStageMPDownRecoverLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffLedgeLoopPrepare();
-                ndsFighterMarioFoxStageMPCliffLiveLoopPrepare();
-                ndsFighterMarioFoxStageMPWallCopyFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPPassFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPPlatformFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPPlatformTickFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPPassInputLoopPrepare();
-                ndsFighterMarioFoxStageMPPlatformPosFloorLoopPrepare();
-                ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopPrepare();
-                ndsFighterMarioFoxStageInishieScaleLoopPrepare();
-                ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
-                ndsFighterMarioFoxGCDrawAllLoopPrepare();
-                for (i = 0u; i < NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX; i++)
-                {
-                    ndsSeamSceneUpdate();
-                    dSYTaskmanUpdateCount++;
-                    gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                    gNdsFighterGCDrawAllLoopTaskmanUpdateCount++;
-                    gNdsSCVSBattleOriginalUpdateCount++;
-                    gNdsSCVSBattleOriginalUpdateResult =
-                        NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                    gNdsSCVSBattleOriginalSetupMask |=
-                        NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                    if (gNdsFighterMarioFoxGCDrawAllLoopResult ==
-                        NDS_FIGHTER_MARIOFOX_GCDRAWALL_LOOP_PASS)
-                    {
-#if (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLHIT_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-    (NDS_DEV_SCENE_HARNESS == \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
-                        ndsFighterMarioFoxStageGCDrawAllLoopFinalize();
-                        ndsFighterMarioFoxStageCollisionLoopFinalize();
-                        ndsFighterMarioFoxStageFloorFollowLoopFinalize();
-                        ndsFighterMarioFoxStageFloorEdgeLoopFinalize();
-                        ndsFighterMarioFoxStageMPProcessFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPSweepFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCrossFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPWallFloorLoopFinalize();
-#endif
-#if (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVESTALE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPMOTIONSTALE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFSTATUS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFTICK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLMAP_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPFALLLAND_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEIL_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCATCH_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFATTACK_ACTION_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCOMMON2_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_ACTION_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFESCAPE_COMMON2_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_ACTION_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_COMMON2_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFCLIMB_FINISH_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFWAIT_DAMAGE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASSIVE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDAMAGE_RECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-    (NDS_DEV_SCENE_HARNESS == \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPLIVEHIT_STATUS_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNWAIT_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_TURN_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_TURN_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPDOWNRECOVER_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLEDGE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPCLIFFLIVE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPWALLCOPY_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_ACTIVE_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_TICK_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPASS_INPUT_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_POS_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_STAGE_INISHIE_SCALE_LOOP) || \
-    (NDS_DEV_SCENE_HARNESS == \
-        NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_STAGE_INISHIE_SCALE_LOOP)
-                        if (gNdsStageMPLiveStaleFloorLoopSelectedCallbackCount ==
-                            0u)
-                        {
-                            continue;
-                        }
-#endif
-                        ndsFighterMarioFoxStageGCDrawAllLoopFinalize();
-                        ndsFighterMarioFoxStageCollisionLoopFinalize();
-                        ndsFighterMarioFoxStageFloorFollowLoopFinalize();
-                        ndsFighterMarioFoxStageFloorEdgeLoopFinalize();
-                        ndsFighterMarioFoxStageMPProcessFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPSweepFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCrossFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPWallFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPStaleFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPLiveStaleFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPMotionStaleFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffStatusFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffTickFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPFallMapFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPFallLandFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCeilFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffCatchFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffWaitFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffClimbFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffClimbActionLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffClimbCommon2LoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffClimbFinishLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffWaitDamageLoopFinalize();
-                        ndsFighterMarioFoxStageMPPassiveLoopFinalize();
-                        ndsFighterMarioFoxStageMPDamageRecoverLoopFinalize();
-                        ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize();
-                        ndsFighterMarioFoxStageMPDownWaitLoopFinalize();
-                        ndsFighterMarioFoxStageTurnLoopFinalize();
-                        ndsFighterMarioFoxStageMPDownRecoverLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffLedgeLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffLiveLoopFinalize();
-                        ndsFighterMarioFoxStageMPWallCopyFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPPassFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPPlatformFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPPlatformTickFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPPassInputLoopFinalize();
-                        ndsFighterMarioFoxStageMPPlatformPosFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopFinalize();
-                        ndsFighterMarioFoxStageInishieScaleLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffAttackFloorLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffAttackActionLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffCommon2LoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffEscapeActionLoopFinalize();
-                        ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopFinalize();
-                        break;
-                    }
-                }
-                ndsFighterMarioFoxStageGCDrawAllLoopFinalize();
-                ndsFighterMarioFoxStageCollisionLoopFinalize();
-                ndsFighterMarioFoxStageFloorFollowLoopFinalize();
-                ndsFighterMarioFoxStageFloorEdgeLoopFinalize();
-                ndsFighterMarioFoxStageMPProcessFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPUpdateFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPSweepFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCrossFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPAdjustFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPEdgeFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPWallFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPStaleFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPLiveStaleFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPMotionStaleFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffStatusFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffTickFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPFallMapFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPFallLandFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCeilFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffCatchFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffWaitFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffClimbFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffClimbActionLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffClimbCommon2LoopFinalize();
-                ndsFighterMarioFoxStageMPCliffClimbFinishLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffWaitDamageLoopFinalize();
-                ndsFighterMarioFoxStageMPPassiveLoopFinalize();
-                ndsFighterMarioFoxStageMPDamageRecoverLoopFinalize();
-                ndsFighterMarioFoxStageMPLiveHitDamageLoopFinalize();
-                ndsFighterMarioFoxStageMPDownWaitLoopFinalize();
-                ndsFighterMarioFoxStageTurnLoopFinalize();
-                ndsFighterMarioFoxStageMPDownRecoverLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffLedgeLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffLiveLoopFinalize();
-                ndsFighterMarioFoxStageMPWallCopyFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPPassFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPPlatformFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPPlatformTickFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPPassInputLoopFinalize();
-                ndsFighterMarioFoxStageMPPlatformPosFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopFinalize();
-                ndsFighterMarioFoxStageInishieScaleLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffAttackFloorLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffAttackActionLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffCommon2LoopFinalize();
-                ndsFighterMarioFoxStageMPCliffEscapeActionLoopFinalize();
-                ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopFinalize();
-            }
-
-            if ((NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_LIVE_PREVIEW) ||
-                (NDS_DEV_SCENE_HARNESS ==
-                    NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_LIVE_PREVIEW))
-            {
-                ndsFighterMarioFoxLivePreviewPrepare();
-                for (i = 0u; i < live_update_max; i++)
-                {
-                    ndsSeamSceneUpdate();
-                    dSYTaskmanUpdateCount++;
-                    gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                    gNdsFighterLivePreviewTaskmanUpdateCount++;
-                    gNdsSCVSBattleOriginalUpdateCount++;
-                    gNdsSCVSBattleOriginalUpdateResult =
-                        NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                    gNdsSCVSBattleOriginalSetupMask |=
-                        NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                    if ((NDS_DEV_LIVE_INPUT_PREVIEW == 0) &&
-                        (gNdsFighterMarioFoxLivePreviewResult ==
-                         NDS_FIGHTER_MARIOFOX_LIVE_PREVIEW_PASS))
-                    {
-                        break;
-                    }
-                }
-            }
-#endif
         }
 #endif /* NDS_R2_PATH -- R2-01 selects src/nds/r2 instead of the loop above */
 #elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_MODEL) || \
@@ -2371,7 +1630,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         {
             u32 i;
 
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
             ndsFighterMarioFoxNaturalMotionPrepare();
             for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
             {
@@ -2391,88 +1649,6 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     break;
                 }
             }
-#else
-            ndsRunMarioFoxProcessPrerequisiteLoop();
-            ndsFighterMarioFoxSchedulerLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterSchedulerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxSchedulerLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_SCHEDULER_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            ndsFighterMarioFoxControllerLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterControllerLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxControllerLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_CONTROLLER_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            ndsFighterMarioFoxPreviewLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterPreviewLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxPreviewLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_PREVIEW_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-
-            ndsFighterMarioFoxGCRunAllLoopPrepare();
-            for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
-            {
-                ndsSeamSceneUpdate();
-                dSYTaskmanUpdateCount++;
-                gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
-                gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateCount++;
-                gNdsSCVSBattleOriginalUpdateResult =
-                    NDS_SCVSBATTLE_ORIGINAL_UPDATE_PASS;
-                gNdsSCVSBattleOriginalSetupMask |=
-                    NDS_SCVSBATTLE_SETUP_TASKMAN_UPDATE_READY;
-
-                if (gNdsFighterMarioFoxGCRunAllLoopResult ==
-                    NDS_FIGHTER_MARIOFOX_GCRUNALL_LOOP_PASS)
-                {
-                    break;
-                }
-            }
-#endif
         }
 #elif (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_BATTLE_MARIOFOX_PREVIEW_LOOP) || \
     (NDS_DEV_SCENE_HARNESS == NDS_DEV_SCENE_HARNESS_MENU_CHAIN_MARIOFOX_PREVIEW_LOOP)
