@@ -3,28 +3,23 @@
 Created: 2026-08-17.
 Updated: 2026-09-16 continuation protocol; recorded runtime evidence unchanged.
 
-**Last integrated Boundary GREEN: N04.05 packet 4x4 ARM block copy; acceptance RED (P2-2p8).**
-Four-CPU native failures/rejects 0/0; heap low-water 108,096 B.
+**Last integrated Boundary GREEN: N04.05; P2-2p8 acceptance RED.** Figures below.
 
-**The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
-Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
-`docs/archive/P2_CLOSED_ROWS.md`; measurements in `PERF_LEDGER.md`; chronology in
-`PORTING.md`. Large documents are lookup-only during ordinary work.
+**The only dynamic queue.** Restart reads `docs/HANDOFF.md` + this file. Plans:
+`docs/P2_PLAN.md` + `docs/p2/`. Closed rows: `docs/archive/P2_CLOSED_ROWS.md`.
+Measurements: `PERF_LEDGER.md`. Chronology: `PORTING.md`. Those are lookup-only.
 
 ## Standing rules
 
-1. **Measurement law:** `docs/VERIFYING.md` owns procedure. Boundary is
-   `p2_shell_loop`, `p2_battle_realtime`, and `p2_fourcpu_stress`.
-   `p2_battle_realtime` is mode 163: shell-driven Mario human vs level-3 Fox,
-   Dream Land, one-minute Time, items off. Gate arms use the one-minute match;
-   long soak length is a separate flag.
+1. **Measurement law:** `docs/VERIFYING.md` owns procedure and each entry's
+   coverage. Boundary = `p2_shell_loop`, `p2_battle_realtime`,
+   `p2_fourcpu_stress`. Gate arms use the one-minute match; soak is a separate flag.
 2. Cadence verdicts use all presented frames; the 1,600-frame gameplay rank-80
    remains candidate-sizing evidence. Measure the configuration that actually
    ships (`nds_build_config.h` is truth).
-3. **Publish law:** P2 publishes only verifier-covered `smash64ds.nds`, from the
-   shipping VS shell with human input, no scripted walk, and no fast logic.
-   Rebuild it after each verified fix batch. The frozen P1 artifact is not
-   rebuilt routinely.
+3. **Publish law:** P2 publishes only verifier-covered `smash64ds.nds` from the
+   shipping VS shell with human input — no scripted walk, no fast logic. Rebuild
+   after each verified fix batch; the frozen P1 artifact is not rebuilt routinely.
 4. Qualified hard-on P2 ROM after N04.05, runtime-verified 2026-09-16:
 
 SHA-256 FE4C064BBF3DF2EE9FBB22F4A483AC13B502829779A23E7BACE01E6CE9AFDBB9
@@ -42,8 +37,8 @@ SHA-256 FE4C064BBF3DF2EE9FBB22F4A483AC13B502829779A23E7BACE01E6CE9AFDBB9
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission fixed/proved in `d8660bc2fd9`; natural Hyrule/Inishie counts/output pass. Three VS captures remain. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`: Poke Ball procs, rock member, pool 10; ball/monster witness 09-14). Atlas membership, other kinds/children and interactions remain open. |
-| P2-6 1P Game | **TALLY REACHED 09-14** | Guest-side playback wins stage 0 and reaches the source StageClear (score 31,940, three bonuses; `a1209354b`). Intro keeps the full-file path. Open: next-stage Intro OOM (144,640 B asked, 120,164 B free), 41,952 native failures by the tally, DL overflow 3,744 B (in flight); shipping flag stays 0. |
-| P2-7 Modes & meta | **Options/Backup Clear accepted; DATA blue screen diagnosed** | Owner (09-06): Options and Backup Clear look good. DATA/VS Record/Sound Test draw only through the retired MAIN text slab (audit 16): bake their surfaces (fix queued). Characters blits a real surface. 1P stays gated. |
+| P2-6 1P Game | **TALLY REACHED 09-14** | Guest playback wins stage 0 and reaches the source StageClear (31,940, three bonuses; `a1209354b`). Intro keeps the full-file path. Open: next-stage Intro OOM (144,640 B asked, 120,164 B free), 41,952 native failures by the tally, DL overflow 3,744 B (in flight); shipping flag stays 0. |
+| P2-7 Modes & meta | **Options/Backup Clear accepted 09-06; DATA blue screen diagnosed** | DATA/VS Record/Sound Test draw only through the retired MAIN text slab (audit 16): bake their surfaces (fix queued). Characters blits a real surface. 1P stays gated. |
 
 ## Current integration checkpoint
 
@@ -54,64 +49,50 @@ WORK-H **1,649,728 / 2,373,632**, FTR **357,248 / 743,616**; native fail/reject
 
 Focus / batch / IDs / owner: P2-2p8 / material-animation stable-zero skip / N04.08 / main. Phase: IMPLEMENT (hard-on).
 Identity: N04.05 qualified; ROM `FE4C064B...FDBB9`, ELF `736BCBE6...60426`.
-Completed/rejected: N04.05 4x4 block copy KEEP; N04.06 row4 loads and N04.04
-generic memcpy rejected; N04.07 three-word row copy rejected; N04.03 round-shift,
-camera reuse and input refresh KEEP. N04.07 full Boundary was GREEN but WORK-H
-P95 regressed 1,408 ticks and every movement stayed below the 14,080-tick
-cross-build floor, so the N04.05 scalar 4x3 serializer is restored.
+Completed/rejected: N04.03 round-shift/camera reuse/input refresh and N04.05 4x4
+block copy KEEP; N04.04 memcpy, N04.06 row4 loads and N04.07 three-word row copy
+REJECTED. Rows and figures are in `PERF_LEDGER.md`.
 Profile: post-pose `2026-09-15_p2-2p8-pose-joint-mask/profile-final-current/`;
 older packet/split-modelview rows invalidated by accepted N04.03/N04.05 changes.
-Selected: the float campaign's largest unsolved call-elimination candidate is
-`ndsBaseGcPlayMObjMatAnim`: 7,923 helper calls/rank-80 frame in the shipping-rebank
-measurement. Current four-CPU census measured 14,059 active MObj calls and 60,263
-live non-None nodes; **7,892 calls (56.1%) / 47,352 nodes (78.6%)** were already
-zero-speed with positive wait before parsing. Kinds within those stable nodes were
-7,892 Linear / 23,676 Cubic / 15,784 Step. Native fail/reject 0/0; heap 111,680 B.
-Measured: the same-ROM route A/B is **complete and positive**
-(`artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`). One ROM
-`4E0880C0...0BCFD`, both arms 1,972 samples; both arms run the same explicit
-`gcPlayAnimAll` traversal copy, so only the skipped player call differs. Arms
-proven distinct: skip count **4** control vs **7,892** candidate, the latter
-equal to the census total. WORK-H P50/P95/mean **-8,640 / -1,600 / -5,792**;
-GCRA and SRC P50 both **-5,440**, P95 both **-8,064**; ALL P50/P95 unchanged
-(VBlank-quantized). Recorded costs: FTR P95 +1,728, WORK P95 +2,304. Native
+Selected: `ndsBaseGcPlayMObjMatAnim`, the campaign's largest unsolved
+call-elimination candidate (7,923 helper calls/rank-80 frame). Census: **7,892 of
+14,059** active MObj calls (56.1%) and **47,352 of 60,263** live nodes (78.6%)
+were already zero-speed with positive wait before parsing.
+Measured: same-ROM route A/B complete and positive; ROM `4E0880C0...0BCFD`,
+1,972 samples per arm, engagement **4** control vs **7,892** candidate (= census
+total). WORK-H P50/P95/mean **-8,640/-1,600/-5,792**; GCRA and SRC P50 **-5,440**,
+P95 **-8,064**; ALL quantized-flat; costs FTR P95 +1,728, WORK P95 +2,304; native
 0/0, heap 111,680 B, draw-plan 618/6,217/0 and slips 0 identical in both arms.
-Next: read the read-only safety audit of the skip (any other writer of the
-material fields between two `gcPlayAnimAll` calls would make a skip visible),
-then strip the census and route word, make the skip unconditional keeping a
-permanent engagement counter, and qualify the hard-on build through focused
-four-CPU verification and full Boundary. Direct `gcPlayMObjMatAnim` callers
-stay unchanged.
-Checks: N04.07 Boundary GREEN; FTR 356,480/743,488, WORK-H
-1,643,328/2,375,040, native 0/0, heap 108,096 B; verdict REJECT. N04.08 census
-1,972 samples; stable-zero ratio above; native 0/0, draw-plan 618/6,217/0.
-N04.08 same-ROM A/B GREEN and engaged; hard-on Boundary and the final hard-on
-`smash64ds` build remain owed. N04.05 remains the qualified checkpoint.
+Evidence: `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip/`.
+Next: read the in-flight safety audit (another writer of the same material fields
+between two `gcPlayAnimAll` calls would make a skip visible), then strip the
+census and route word, make the skip unconditional with a permanent engagement
+counter, and qualify through focused four-CPU verification and full Boundary.
+Direct `gcPlayMObjMatAnim` callers stay unchanged.
+Checks: hard-on Boundary and the final hard-on `smash64ds` build remain owed.
+The routed movement attributes removed work; it does not bank against the
+14,080-tick cross-build floor. N04.05 remains the qualified checkpoint.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 is settled KEEP.
 Job: one read-only safety audit of the N04.08 skip (port vs decomp material
 writers) is in flight; main owns all edits, builds and the focused runner.
 Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
-preserved for their owning rows. Unrelated owner documentation edits remain preserved.
+stay with their owning rows. Owner documentation edits are preserved.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below.
 
 Main owns shared outputs/builds/timing. Preserve other-owner 1P/CSS work.
 Settings remain 30 Hz menus and 1P active; all requirements and coverage stand.
 
-Retained: compact/Link `6c75e56f677` + `2026-09-12_link-native-integration.md`;
-native proofs `f36feff7e21`, `2b60863c492`, `c3f79cf2801`, `35ab1a83dfe`,
-`5389765200f`, `f4437339d28`, `5e09e477b29`; Options/1P `68c0e522d3c`,
-`f33c5aa039f`, preview `87c6be2549b`. Scoped reports stay under
-`artifacts/visibility/2026-09-11_*`, `2026-09-12_*` and
-`artifacts/performance/2026-09-10_pack-skeleton-ceiling/`.
+Retained commits and scoped reports: `docs/archive/P2_CLOSED_ROWS.md`, section
+"Retained P2 proofs (moved off the board 2026-09-16)".
 HIGH stays reachable; stripping it is not authorized. Do not replace the published
 P2 artifact above until the candidate's required gates pass.
 
 ## Queue — acceptance only
 
-Request subjective owner checks only after required measurable proof. Missing
-pixels/audio or unexercised states remain engineering work, not feel-only review.
+Ask for subjective owner checks only after the required measurable proof. Missing
+pixels/audio or unexercised states stay engineering work, not feel-only review.
 
 - P2-1 shell presentation; P2-2 four-way camera, lower HUD, Team feel, Results and Sudden Death.
 - P2-3: Mario/Luigi pipe (`P2-3r1`), Luigi animation (`P2-3r2`), intro visibility (`P2-3r5`), CSS preview rebuild (`P2-3r7`), Falcon/Samus feel.
@@ -124,7 +105,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin (effect-only), ThrowF/ThrowB programs; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball source program closure | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source controller input for roll/Bomb and canonical restoration. |
 | P2-3f46 | Yoshi stress arm: the landed argmax moves and the roster arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
-| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Hidden-part `0x116`, Cutter and CopyLink `0x122..0x127` have reports above. Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
+| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`, `nds_f32_exact.h`); pose values stay Q12. Run `test_pose_clock_differential.py` live set through ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab, egg lay, egg throw, entry egg | **OPEN — no Yoshi root programs** | `OWNER_ROOT_PROGRAMS` has only samus/link; egg weapon, egg-lay and entry egg have no owner. Derive from `247_YoshiMain.c` like Link Catch. |
 | P2-3f53 | EFDesc effects without native owners | **OPEN** | Falcon Punch/Kick, Pikachu Thunder head/trail/shock, Kirby Vulcan Jab, Yoshi shield: `generate_nds_entry_effects.py` roots + lookup + admission + check (Kirby cutter is the example). |
@@ -157,5 +138,5 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 ## Queue discipline
 
 - Keep only red/current/deferred/owner-acceptance summaries; move closed detail out at once; keep rows short enough to decide the next action.
-- After verified progress, update the existing row and permanent evidence; handoff points here. Distinguish local candidates, reproducible commits and accepted scope. Record durable findings from gitignored `builds/` scratch before handoff. Keep owner reports in `BUGS.md` unchanged.
-- Worktree audit: 20 auxiliaries outside `.worktrees/`, 17 dirty/ambiguous. Create none; a separate cleanup cycle must hash-migrate evidence first. Clean candidates: `builds/p2-v4-index-worktree`, `.codex-worktrees/startup-oom-run`, sibling `_s64_itcm_measure`.
+- After verified progress, update the existing row and permanent evidence. Distinguish local candidates, reproducible commits and accepted scope. Bank durable findings out of gitignored `builds/` scratch before handoff; leave owner reports in `BUGS.md` unchanged.
+- Worktree audit: 20 auxiliaries outside `.worktrees/`, 17 dirty/ambiguous. Create none; a cleanup cycle must hash-migrate evidence first. Clean candidates: `builds/p2-v4-index-worktree`, `.codex-worktrees/startup-oom-run`, `_s64_itcm_measure`.

@@ -149,3 +149,17 @@ Moved off `docs/P2_EXECUTION_BOARD.md` because they were closed and the board is
 | --- | --- | --- | --- |
 | P2-4h1 | Stages froze, aborted or dropped their fighters | **CLOSED - all 8 stages boot and play** | Four defects of ONE shape, a hardcoded stage list standing in for "does this stage have valid data": camera bounds, ground-data arms, two gkind gates on collision (fighters fell through), and three wrappers taking the ADDRESS of an offset symbol. All four now test the data. |
 | P2-4h2 | The ground-HAZARD seam | **CLOSED (`cf0c3bad340`)** | `ftMainCheckAddGroundHazard`, `ftMainClearHazard`, `ftMainUpdateDamageStatGround` and a real `ftMainSearchGroundHit` imported from `ft/ftmain.c:1628-1660,3642-3676`. Landed with Planet Zebes; consumed by Mushroom Kingdom's POW block. |
+
+## Retained P2 proofs (moved off the board 2026-09-16)
+
+Moved out of the Execution cursor's neighbourhood to keep
+`docs/P2_EXECUTION_BOARD.md` inside its 12,288-byte active-queue cap. These
+remain retained proofs; nothing here is reopened by the move.
+
+- Compact/Link: `6c75e56f677` plus `2026-09-12_link-native-integration.md`.
+- Native proofs: `f36feff7e21`, `2b60863c492`, `c3f79cf2801`, `35ab1a83dfe`,
+  `5389765200f`, `f4437339d28`, `5e09e477b29`.
+- Options/1P: `68c0e522d3c`, `f33c5aa039f`; preview `87c6be2549b`.
+- Scoped reports stay under `artifacts/visibility/2026-09-11_*`,
+  `artifacts/visibility/2026-09-12_*` and
+  `artifacts/performance/2026-09-10_pack-skeleton-ceiling/`.
