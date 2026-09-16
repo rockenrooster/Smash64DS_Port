@@ -462,6 +462,32 @@ def render_header(
         )
     ] + [
         "",
+        "/* Owners whose image tables are NOT taken from an image in this build,",
+        " * i.e. the ones ndsRendererNativeVerifyOwnerImage walks. Same rows,",
+        " * different guard: the verifier runs exactly where the bind does not. */",
+        "#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROWS(X) \\",
+    ] + [
+        f"    NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_{name.upper()}(X) \\"
+        for name in P2_IMAGE_OWNERS
+        if ((name, "high") in contexts) and ((name, "low") in contexts)
+    ] + [
+        "    /* end */",
+        "",
+    ] + [
+        line
+        for name in P2_IMAGE_OWNERS
+        if ((name, "high") in contexts) and ((name, "low") in contexts)
+        for line in (
+            f"#if {_owner_guard(name)} && !NDS_NATIVE_OWNER_IMAGE_{name.upper()}",
+            f"#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_{name.upper()}(X) \\",
+            f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, {name.upper()}, \\",
+            f"      {_image_type(name, 'high')}, {_image_type(name, 'low')})",
+            "#else",
+            f"#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_{name.upper()}(X)",
+            "#endif",
+        )
+    ] + [
+        "",
     ]
     for (owner_name, detail), context in sorted(contexts.items()):
         members = _member_values(context)
