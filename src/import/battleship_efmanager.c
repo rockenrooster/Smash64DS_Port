@@ -154,33 +154,12 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerDamageNormalLightMakeEffect ndsBaseEFManagerDamageNormalLightMakeEffect
 #define efManagerDamageNormalHeavyMakeEffect ndsBaseEFManagerDamageNormalHeavyMakeEffect
 #define efManagerDamageFireMakeEffect ndsBaseEFManagerDamageFireMakeEffect
-#define efManagerDamageElectricMakeEffect ndsBaseEFManagerDamageElectricMakeEffect
-#define efManagerDamageCoinMakeEffect ndsBaseEFManagerDamageCoinMakeEffect
-#define efManagerDamageSlashMakeEffect ndsBaseEFManagerDamageSlashMakeEffect
-#define efManagerDustExpandSmallMakeEffect ndsBaseEFManagerDustExpandSmallMakeEffect
 #define efManagerFireGrindMakeEffect ndsBaseEFManagerFireGrindMakeEffect
-#define efManagerSparkleWhiteMakeEffect ndsBaseEFManagerSparkleWhiteMakeEffect
-#define efManagerSparkleWhiteScaleMakeEffect ndsBaseEFManagerSparkleWhiteScaleMakeEffect
-#define efManagerDamageSpawnOrbsRandomMakeEffect ndsBaseEFManagerDamageSpawnOrbsRandomMakeEffect
-#define efManagerDamageSpawnSparksRandomMakeEffect ndsBaseEFManagerDamageSpawnSparksRandomMakeEffect
-#define efManagerDamageSpawnMDustRandomMakeEffect ndsBaseEFManagerDamageSpawnMDustRandomMakeEffect
 #define efManagerImpactWaveMakeEffect ndsBaseEFManagerImpactWaveMakeEffect
 #define efManagerQuakeMakeEffect ndsBaseEFManagerQuakeMakeEffect
-#define efManagerSetOffMakeEffect ndsBaseEFManagerSetOffMakeEffect
-#define efManagerShieldMakeEffect ndsBaseEFManagerShieldMakeEffect
-#define efManagerYoshiShieldMakeEffect ndsBaseEFManagerYoshiShieldMakeEffect
-#define efManagerCatchSwirlMakeEffect ndsBaseEFManagerCatchSwirlMakeEffect
-#define efManagerFlashMiddleMakeEffect ndsBaseEFManagerFlashMiddleMakeEffect
-#define efManagerKirbyVulcanJabMakeEffect ndsBaseEFManagerKirbyVulcanJabMakeEffect
-#define efManagerSamusGrappleBeamGlowMakeEffect ndsBaseEFManagerSamusGrappleBeamGlowMakeEffect
 #define efManagerDeadExplodeMakeEffect ndsBaseEFManagerDeadExplodeMakeEffect
 #define efManagerSparkleWhiteDeadMakeEffect ndsBaseEFManagerSparkleWhiteDeadMakeEffect
 #define efManagerRebirthHaloMakeEffect ndsBaseEFManagerRebirthHaloMakeEffect
-#define efManagerStockSnapMakeEffect ndsBaseEFManagerStockSnapMakeEffect
-#define efManagerStockStealStartMakeEffect ndsBaseEFManagerStockStealStartMakeEffect
-#define efManagerStockStealEndMakeEffect ndsBaseEFManagerStockStealEndMakeEffect
-#define efManagerBattleScoreMakeEffect ndsBaseEFManagerBattleScoreMakeEffect
-#define efManagerEggBreakMakeEffect ndsBaseEFManagerEggBreakMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #define efManagerFoxBlasterGlowMakeEffect \
@@ -208,33 +187,12 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerDamageNormalLightMakeEffect
 #undef efManagerDamageNormalHeavyMakeEffect
 #undef efManagerDamageFireMakeEffect
-#undef efManagerDamageElectricMakeEffect
-#undef efManagerDamageCoinMakeEffect
-#undef efManagerDamageSlashMakeEffect
-#undef efManagerDustExpandSmallMakeEffect
 #undef efManagerFireGrindMakeEffect
-#undef efManagerSparkleWhiteMakeEffect
-#undef efManagerSparkleWhiteScaleMakeEffect
-#undef efManagerDamageSpawnOrbsRandomMakeEffect
-#undef efManagerDamageSpawnSparksRandomMakeEffect
-#undef efManagerDamageSpawnMDustRandomMakeEffect
 #undef efManagerImpactWaveMakeEffect
 #undef efManagerQuakeMakeEffect
-#undef efManagerSetOffMakeEffect
-#undef efManagerShieldMakeEffect
-#undef efManagerYoshiShieldMakeEffect
-#undef efManagerCatchSwirlMakeEffect
-#undef efManagerFlashMiddleMakeEffect
-#undef efManagerKirbyVulcanJabMakeEffect
-#undef efManagerSamusGrappleBeamGlowMakeEffect
 #undef efManagerDeadExplodeMakeEffect
 #undef efManagerSparkleWhiteDeadMakeEffect
 #undef efManagerRebirthHaloMakeEffect
-#undef efManagerStockSnapMakeEffect
-#undef efManagerStockStealStartMakeEffect
-#undef efManagerStockStealEndMakeEffect
-#undef efManagerBattleScoreMakeEffect
-#undef efManagerEggBreakMakeEffect
 #undef efManagerFoxReflectorMakeEffect
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #undef efManagerFoxBlasterGlowMakeEffect
@@ -256,39 +214,6 @@ LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
     return ndsBaseEFManagerFoxBlasterGlowMakeEffect(pos);
 }
 #endif
-
-/* ROUTE THE THREE MODEL EFFECTS AT THEIR SOURCE MAKERS, WHICH IS THE HALF THE
- * FLAG NEVER DID.
- *
- * BUGS.md has carried "the Halo is not the correct asset", "still not using the
- * correct asset for Fox's down B" and a shield that "looks cut in half" for
- * several cycles, and every attempt at them so far has been an atlas tweak.
- * They are not sprites: each is an EFDesc whose geometry is a DObj tree with
- * joint animation (dEFManagerShieldEffectDesc -> llFTManagerCommonShieldDObjDesc,
- * dEFManagerRebirthHaloEffectDesc -> llEFCommonEffects3RebirthHaloDObjDesc,
- * dEFManagerFoxReflectorEffectDesc -> llFoxSpecial2ReflectorDObjDesc).
- *
- * The source makers for all three are compiled and sitting right here under
- * their ndsBase* names. What reaches them was a WEAK shim per effect
- * (reloc_backend_compat_shims.c:1728 for the shield,
- * battle_playable_compat_stubs.c:141 for the halo) that calls
- * ndsEFManagerMakeVisualEffect instead -- a procedurally built disc, recorded
- * in its own census as NDS_TASK39_EFFECT_SUBSTITUTE. So the model was never
- * made, let alone drawn, and no cell size or palette could have changed that.
- *
- * Routing alone was not enough, which is why this took cycles 50-59: the
- * renderer refused the models at the admission gate, at the submit guard and at
- * the accepted-kind list, then drew them at the origin, in the ground plane, at
- * 1/9th size and untextured. Those are all fixed and the models draw. The
- * owner priced the result at P95 +36,032 and took it on 2026-08-04, so this is
- * the only route now -- the weak stand-in shims these override are DELETED and
- * there is no second definition left for a strong symbol to beat. Kept as
- * one-line forwards because the decomp bodies compile under their ndsBase*
- * names (the #define/#undef pair above). */
-GObj *efManagerShieldMakeEffect(GObj *fighter_gobj)
-{
-    return ndsBaseEFManagerShieldMakeEffect(fighter_gobj);
-}
 
 #if NDS_R2_REBIRTH_HALO_NATIVE && NDS_R2_REBIRTH_HALO_FULL_OFFLOAD
 /* EFCommonEffects3:0x2B7C is only a looping RotY track.  A live source trace
@@ -2337,18 +2262,6 @@ LBParticle *efManagerDamageFireMakeEffect(Vec3f *pos, s32 size)
     gNdsFighterDamageFireCallCount++;
     return ndsBaseEFManagerDamageFireMakeEffect(pos, size);
 }
-LBParticle *efManagerDamageElectricMakeEffect(Vec3f *pos, s32 size)
-{
-    return ndsBaseEFManagerDamageElectricMakeEffect(pos, size);
-}
-LBParticle *efManagerDamageCoinMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerDamageCoinMakeEffect(pos);
-}
-LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index)
-{
-    return ndsBaseEFManagerDustExpandSmallMakeEffect(pos, f_index);
-}
 LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
 {
 #if NDS_R2_FIREGRIND_NATIVE
@@ -2362,15 +2275,6 @@ LBParticle *efManagerFireGrindMakeEffect(Vec3f *pos)
     return ndsBaseEFManagerFireGrindMakeEffect(pos);
 #endif
 }
-LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerSparkleWhiteMakeEffect(pos);
-}
-LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale)
-{
-    return ndsBaseEFManagerSparkleWhiteScaleMakeEffect(pos, scale);
-}
-
 /* BattleShip ftparam.c:2059-2066 owns this tiny specialization at the fighter
  * layer, but LBParticle is deliberately opaque outside the effect owner on DS.
  * Keep the exact source result (scale 0.7, prim alpha 0xC0) here rather than
@@ -2385,30 +2289,8 @@ LBParticle *ndsEFManagerChargeSparkleMakeEffect(Vec3f *pos)
     }
     return pc;
 }
-LBParticle *efManagerFlashMiddleMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerFlashMiddleMakeEffect(pos);
-}
-LBParticle *efManagerSetOffMakeEffect(Vec3f *pos, s32 size)
-{
-    return ndsBaseEFManagerSetOffMakeEffect(pos, size);
-}
 #endif /* NDS_R2_SOURCE_EFFECTS_PARTICLE */
 
-/* DObj TREE, therefore priced against the nine-DObj margin. All six take
- * efManagerMakeEffectNoForce, so the EFStruct pool bounds them -- but the bound
- * is (pool depth x DObjs per tree), which is what exhausted the heap when all
- * twenty were routed at once.
- *
- * GRADUATED 2026-08-04. The second problem -- "their geometry goes out as
- * source effect DL links, which the battle hardware path does not submit" --
- * was a link-coverage gap in ndsStageGCDrawAllLoopIsEffectDisplay, closed in
- * cycle 50; the impact wave is the one of the six that spawns in P1 and it
- * draws. The weak stand-in shims these used to override are deleted. */
-GObj *efManagerDamageSlashMakeEffect(Vec3f *pos, s32 size, f32 rotate)
-{
-    return ndsBaseEFManagerDamageSlashMakeEffect(pos, size, rotate);
-}
 GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 {
     /* Row 4's arming counter. The wave has never been captured, and without
@@ -2431,84 +2313,4 @@ GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
         gNdsEffectImpactWaveMakeNullCount++;
     }
     return effect_gobj;
-}
-GObj *efManagerCatchSwirlMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerCatchSwirlMakeEffect(pos);
-}
-GObj *efManagerDamageSpawnOrbsRandomMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerDamageSpawnOrbsRandomMakeEffect(pos);
-}
-GObj *efManagerDamageSpawnSparksRandomMakeEffect(Vec3f *pos, s32 lr)
-{
-    return ndsBaseEFManagerDamageSpawnSparksRandomMakeEffect(pos, lr);
-}
-GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
-{
-    return ndsBaseEFManagerDamageSpawnMDustRandomMakeEffect(pos, lr);
-}
-
-/* Yoshi's egg-shaped guard bubble: dEFManagerYoshiShieldEffectDesc draws the
- * Yoshi-model shield DObj (llYoshiModelShieldDObjDesc) with
- * efManagerShieldProcUpdate / efManagerYoshiShieldProcDisplay. Callers are
- * ftcommonguard1.c:389 and ftcommonguard2.c:21, which store the result in
- * fp->status_vars.common.guard.effect_gobj. It was missing because this TU
- * compiled the body only as ndsBaseEFManagerYoshiShieldMakeEffect while a
- * weak NULL-returning stub in reloc_backend_compat_shims.c:3532 won the link,
- * so guarding as Yoshi never produced the bubble. A DObj-tree model effect --
- * no particle-bank script, so the bank reachable set does not gate it. */
-GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
-{
-    return ndsBaseEFManagerYoshiShieldMakeEffect(fighter_gobj);
-}
-
-/* Kirby's Vulcan Jab hit effect: dEFManagerVulcanJabEffectDesc
- * (llKirbySpecial2VulcanJabDObjDesc, file gFTDataKirbySpecial2) with
- * efManagerKirbyVulcanJabProcUpdate. Caller is ftcommonattack100.c:99, which
- * passes the per-hit rotate/vel/add. It was missing for the same reason: the
- * ndsBase body sat uncalled while the weak stub in
- * reloc_backend_compat_shims.c:4500 answered NULL. DObj-tree model effect, no
- * particle-bank script, so the reachable set does not gate it. */
-GObj *efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate, f32 vel, f32 add)
-{
-    return ndsBaseEFManagerKirbyVulcanJabMakeEffect(pos, lr, rotate, vel, add);
-}
-
-/* Samus's grapple-beam glow while holding a caught fighter:
- * dEFManagerSamusGrappleBeamEffectDesc (llSamusSpecial2GrappleBeamDObjDesc,
- * file gFTDataSamusSpecial2), attached to joint 23. Callers are
- * ftcommoncatch1.c:98 (gated on nFTKindSamus / nFTKindNSamus) and
- * ftcommonthrow.c:88. Missing because the weak stub in
- * reloc_backend_compat_shims.c:4512 won the link over the uncalled ndsBase
- * body. DObj-tree model effect, no particle-bank script, so the reachable
- * set does not gate it. */
-GObj *efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj)
-{
-    return ndsBaseEFManagerSamusGrappleBeamGlowMakeEffect(fighter_gobj);
-}
-
-void efManagerStockSnapMakeEffect(f32 pos_x, f32 pos_y)
-{
-    ndsBaseEFManagerStockSnapMakeEffect(pos_x, pos_y);
-}
-
-void efManagerStockStealStartMakeEffect(f32 pos_x, f32 pos_y)
-{
-    ndsBaseEFManagerStockStealStartMakeEffect(pos_x, pos_y);
-}
-
-void efManagerStockStealEndMakeEffect(f32 pos_x, f32 pos_y)
-{
-    ndsBaseEFManagerStockStealEndMakeEffect(pos_x, pos_y);
-}
-
-LBParticle *efManagerBattleScoreMakeEffect(Vec3f *pos, s32 score)
-{
-    return ndsBaseEFManagerBattleScoreMakeEffect(pos, score);
-}
-
-LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos)
-{
-    return ndsBaseEFManagerEggBreakMakeEffect(pos);
 }
