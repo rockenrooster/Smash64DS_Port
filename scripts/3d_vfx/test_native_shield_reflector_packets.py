@@ -33,10 +33,6 @@ def load_all() -> dict[int, census.O2RResource]:
     return {s.file_id: census.load_o2r(ROOT, s) for s in specs}
 
 
-def compile_existing(resources: dict[int, census.O2RResource]):
-    return packet_test_common.compile_existing(gen, census, resources)
-
-
 def synthetic_compiler(words: list[tuple[int, int]]) -> gen.Compiler:
     """Run one synthetic display list through a fresh Compiler.
 
@@ -158,7 +154,7 @@ def main() -> None:
         raise SystemExit(f"reflector roots {gen.REFLECTOR_ROOTS!r} != (0x01B8,)")
 
     resources = load_all()
-    existing = compile_existing(resources)
+    existing = packet_test_common.compile_existing(gen, census, resources)
 
     shield_base = (len(gen.MARIO_ROOTS) + len(gen.FOX_ROOTS) + len(gen.DONKEY_ROOTS) +
                    len(gen.SAMUS_ROOTS) + len(gen.CAPTAIN_ROOTS) +

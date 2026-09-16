@@ -71,6 +71,7 @@ REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "scripts" / "stages"))
 
 import generate_nds_native_stage as sm  # noqa: E402
+import native_asset_census  # noqa: E402
 
 OUT = REPO / "src/nds/generated/nds_native_item_porygon.generated.inc"
 OUT_HEADER = REPO / "include/nds/generated/nds_native_item_porygon.generated.h"
@@ -189,26 +190,6 @@ def check_text_pins() -> None:
                 raise RuntimeError(f"{path} pin missing {token!r}")
 
 
-def census() -> tuple:
-    """Every O2R file in the image, for the root and the DObjDesc."""
-    root = REPO / "decomp/BattleShip-main/BattleShip_o2r"
-    hits = []
-    scanned = 0
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
-        blob = path.read_bytes()
-        if len(blob) < 0x50 or blob[4:8] != b"OLER":
-            continue
-        scanned += 1
-        rel = str(path.relative_to(REPO)).replace("\\", "/")
-        res = sm.load_o2r(REPO, sm.InputSpec(rel, hashlib.sha256(blob).hexdigest()))
-        for slot, ref in res.external.items():
-            if ref.asset_id == ASSET:
-                hits.append((res.file_id, slot, ref.offset))
-    return scanned, tuple(sorted(hits))
-
-
 def decode(run_census: bool = True):
     model = sm.load_o2r(REPO, MODEL_FILE)
     attr = sm.load_o2r(REPO, ATTR_FILE)
@@ -294,7 +275,7 @@ def decode(run_census: bool = True):
     if any(off == ROOT for _, _, off in attr_refs):
         raise RuntimeError("file 264 gained a direct pointer to the root")
     if run_census:
-        scanned, hits = census()
+        scanned, hits = native_asset_census.census(REPO, sm, ASSET)
         want = tuple((ATTR_ASSET, slot, off) for slot, _, off in EXPECTED_ATTR_REFS)
         if hits != want:
             raise RuntimeError(
@@ -485,7 +466,7 @@ def main() -> int:
                     help="print the whole-image referrer sweep and exit")
     args = ap.parse_args()
     if args.census:
-        scanned, hits = census()
+        scanned, hits = native_asset_census.census(REPO, sm, ASSET)
         print(f"scanned {scanned} O2R files")
         for file_id, slot, off in hits:
             print(f"  file {file_id} slot 0x{slot:04x} -> {ASSET}:0x{off:04x}")
