@@ -3578,15 +3578,26 @@ ndsFighterPacketCmd2(u32 opcode, u32 a, u32 b)
 static void ndsFighterPacketStoreMatrix4x4(
     u32 *dst, const NDSRendererMatrix20p12 *m)
 {
-    u32 row;
+    const s32 *src = &m->m[0][0];
 
-    for (row = 0u; row < 4u; row++)
-    {
-        *dst++ = (u32)m->m[row][0];
-        *dst++ = (u32)m->m[row][1];
-        *dst++ = (u32)m->m[row][2];
-        *dst++ = (u32)m->m[row][3];
-    }
+    /* Both ends are naturally word-aligned typed storage and never overlap:
+     * the source is a live renderer matrix and the destination is the packet's
+     * u32 FIFO-word buffer.  Copy the fixed 64-byte payload as four ARM block
+     * transfers so this hot replay patch has no scalar row loop or generic
+     * memcpy call.  r2-r5 are declared clobbers so the compiler preserves any
+     * caller state it keeps live around the inlined copy. */
+    __asm__ volatile(
+        "ldmia %[src]!, {r2-r5}\n\t"
+        "stmia %[dst]!, {r2-r5}\n\t"
+        "ldmia %[src]!, {r2-r5}\n\t"
+        "stmia %[dst]!, {r2-r5}\n\t"
+        "ldmia %[src]!, {r2-r5}\n\t"
+        "stmia %[dst]!, {r2-r5}\n\t"
+        "ldmia %[src]!, {r2-r5}\n\t"
+        "stmia %[dst]!, {r2-r5}\n\t"
+        : [dst] "+r" (dst), [src] "+r" (src)
+        :
+        : "r2", "r3", "r4", "r5", "memory");
 }
 
 static void ndsFighterPacketStoreMatrix4x3(

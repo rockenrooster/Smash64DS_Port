@@ -3,7 +3,7 @@
 Created: 2026-08-17.
 Updated: 2026-09-16 continuation protocol; recorded runtime evidence unchanged.
 
-**Last integrated Boundary GREEN: N04.03 s32 split-modelview round-shift; acceptance RED (P2-2p8).**
+**Last integrated Boundary GREEN: N04.05 packet 4x4 ARM block copy; acceptance RED (P2-2p8).**
 Four-CPU native failures/rejects 0/0; heap low-water 108,096 B.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
@@ -25,9 +25,9 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    shipping VS shell with human input, no scripted walk, and no fast logic.
    Rebuild it after each verified fix batch. The frozen P1 artifact is not
    rebuilt routinely.
-4. Qualified hard-on P2 ROM after N04.03, runtime-verified 2026-09-16:
+4. Qualified hard-on P2 ROM after N04.05, runtime-verified 2026-09-16:
 
-SHA-256 AB38C207C6F2C0DC39EF4066A5F92548126B2DD8DA287E550446A612E39B58ED
+SHA-256 FE4C064BBF3DF2EE9FBB22F4A483AC13B502829779A23E7BACE01E6CE9AFDBB9
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -47,30 +47,26 @@ SHA-256 AB38C207C6F2C0DC39EF4066A5F92548126B2DD8DA287E550446A612E39B58ED
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N04.03 s32 split-modelview round-shift.
-Stress WORK-H **P50 1,649,728 / P95 2,378,560**, FTR **359,936 / 742,656**;
-native fail/reject **0/0**, heap **108,096 B**. Full Boundary and hard-on
-native-only build GREEN; permanent receipt recorded below.
+**Last qualified checkpoint:** N04.05 packet 4x4 ARM block copy.
+WORK-H **1,649,728 / 2,373,632**, FTR **357,248 / 743,616**; native fail/reject
+**0/0**, heap **108,096 B**; Boundary and hard-on build GREEN.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / packet 4x4 copy kernel / N04.04 / main. Phase: SELECT.
-Identity/receipt: qualified N04.03 overlay on HEAD/origin `2f521896c51`; hard-on ROM
-`AB38C207...B58ED`, ELF `5907F9C0...53EB4`;
-`2026-09-16_p2-2p8-s32-roundshift/README.md`.
-Completed/rejected: N04.03 s32 round-shift KEEP; camera reuse and packet input refresh
-KEEP; pose topology and packet draw-hot placement rejected; packet live-flush no delta.
+Focus / batch / IDs / owner: P2-2p8 / packet 4x3 row block copy / N04.06 / main. Phase: SELECT.
+Identity: N04.05 qualified; ROM `FE4C064B...FDBB9`, ELF `736BCBE6...60426`.
+Completed/rejected: N04.05 4x4 block copy KEEP; N04.04 generic memcpy rejected;
+N04.03 round-shift, camera reuse and packet input refresh KEEP.
 Profile: `2026-09-15_p2-2p8-current-profile/`.
-Selected: that profile charges `ndsFighterPacketTryReplay` 6,959,771 cycles. Its
-successful-hit live patch repeatedly copies 64-byte 4x4 matrices with scalar load/store
-loops; per-PC attribution shows this copy loop is active on all 128 profile regions.
-Test whether the existing ITCM `memcpy` kernel gives a smaller/faster exact 64-byte
-4x4 patch without changing 4x3/split semantics.
-Next: make the isolated 4x4-copy codegen experiment; run focused four-CPU only if it
-actually changes the linked hot path, and keep only on a fighter/WORK-H win.
-Checks/status: N04.03 full Boundary GREEN and final hard-on/published-ROM checks GREEN.
-N04.04 has no source edit or runtime result yet.
+Selected: the same 6.96M-cycle packet-replay profile still exercises the 4x3 matrix
+serializer. It copies 12 packed output words as four scalar 3-word rows from a
+4-word-stride source. Test fixed 3-word ARM row transfers while preserving that
+source stride and the exact packed destination; leave 4x4/split semantics unchanged.
+Next: implement the isolated 4x3 row-copy codegen experiment; time it only if the
+linked replay path becomes materially smaller/straighter.
+Checks: N04.05 full Boundary GREEN; FTR 357,248/743,616, WORK-H
+1,649,728/2,373,632, native 0/0, heap 108,096 B; realtime about 25.7 FPS.
 Falsifier: settled batches reopen only for a recorded invalidator.
-P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.03 is settled KEEP.
+P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 is settled KEEP.
 Job: none; main owns the next candidate and any focused runner.
 Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
 preserved for their owning rows. Unrelated owner documentation edits remain preserved.

@@ -8170,3 +8170,40 @@ the final four-CPU arm reproduces the focused result. Realtime remains about
 `5907F9C0B92620601109A0D3236A35C4336F2EA2BB94648C3B92C07227E53EB4`, shipping
 config `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
 Evidence: `artifacts/performance/2026-09-16_p2-2p8-s32-roundshift`.
+
+## 2026-09-16 — P2-2p8 N04.04: generic 64-byte packet memcpy REJECTED
+
+Replacing only the fighter packet 4x4 scalar copy with generic `memcpy` shrank
+`ndsFighterPacketTryReplay` from 0xee4 to 0xe60 bytes and routed each 64-byte
+patch through the existing ITCM Thumb memcpy. Focused four-CPU correctness and
+native-only gates stayed GREEN, but FTR moved from **359,936 / 742,656** to
+**362,496 / 746,112** P50/P95 (**+2,560 / +3,456**) and mean from **371,081**
+to **373,602**. WORK-H moved slightly lower to **1,648,896 / 2,370,176**, but
+the fighter-local regression trips the candidate falsifier. No Boundary run;
+the source change was removed. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-matrix4x4-memcpy`.
+
+## 2026-09-16 — P2-2p8 N04.05: inline 64-byte packet block copy KEEP
+
+After generic `memcpy` regressed the fighter bucket, the exact packet 4x4 copy was
+kept local as four ARM `ldmia/stmia` pairs. Both ends are naturally word-aligned,
+non-overlapping typed storage. The 4x3 and split serializers are unchanged. Linked
+`ndsFighterPacketTryReplay` is **0xecc** bytes versus **0xee4** at N04.03 and the
+4x4 patch sites contain no copy-helper call.
+
+Focused and full-Boundary stress reproduce FTR **357,248 / 743,616** P50/P95 and
+mean **368,779**, versus N04.03 **359,936 / 742,656**, mean **371,081**. That is
+**-2,688 / +960 / -2,302**. WORK-H is **1,649,728 / 2,373,632**, mean
+**1,696,317**, versus **1,649,728 / 2,378,560**, mean **1,695,965**: median
+flat, P95 **-4,928**, mean **+352**. Native failures/direct rejects remain
+**0/0**, heap low-water is **108,096 B**, and draw-plan build/hit/mismatch is
+**618/6,217/0**.
+
+Full Boundary is GREEN: shell loop completes one lap/10 entries with **114,628 B**
+free floor; realtime completes 212 frames with same-ROM/visual checks GREEN; the
+final four-CPU arm reproduces the focused result. Realtime remains about **25.7
+FPS**, so P2-2p8 remains RED. Final hard-on ROM
+`FE4C064BBF3DF2EE9FBB22F4A483AC13B502829779A23E7BACE01E6CE9AFDBB9`, ELF
+`736BCBE6EE02901AA5E3252EAB8DF071C6C251F327331FD94B4F2D84CED60426`, config
+`BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
+Evidence: `artifacts/performance/2026-09-16_p2-2p8-matrix4x4-blockcopy`.
