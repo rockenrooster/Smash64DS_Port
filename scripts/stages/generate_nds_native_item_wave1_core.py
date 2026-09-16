@@ -2168,13 +2168,26 @@ GENERATORS = {
 }
 
 
-def run(slug: str) -> int:
-    if slug not in GENERATORS:
-        raise RuntimeError(f"unknown item generator {slug!r}")
+def run(slug: str | None = None) -> int:
+    """Generate one wave-1 item packet.
+
+    `slug` is optional so the core can be invoked directly with the item as a
+    positional argument -- `generate_nds_native_item_wave1_core.py star --emit`
+    -- instead of through twenty eight-line wrappers that did nothing but call
+    this. A caller that already knows its slug still passes it and the argument
+    is not accepted on the command line, so the old entry points keep working
+    unchanged.
+    """
     ap = argparse.ArgumentParser()
+    if slug is None:
+        ap.add_argument("item", choices=sorted(GENERATORS))
     ap.add_argument("--emit", action="store_true")
     ap.add_argument("--check", action="store_true")
     args = ap.parse_args()
+    if slug is None:
+        slug = args.item
+    if slug not in GENERATORS:
+        raise RuntimeError(f"unknown item generator {slug!r}")
     model = sm.load_o2r(REPO, MODEL_FILE)
     attr = sm.load_o2r(REPO, ATTR_FILE)
     packet, header, check_line = GENERATORS[slug](model, attr)
@@ -2192,3 +2205,7 @@ def run(slug: str) -> int:
                 raise RuntimeError(f"generated artefact stale: {path.relative_to(REPO)}")
         print(check_line)
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())
