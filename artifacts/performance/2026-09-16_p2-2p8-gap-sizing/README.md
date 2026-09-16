@@ -78,3 +78,60 @@ from the run that produced the current checkpoint. Frame counts are direct, not
 modelled. Lane figures come from
 `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/` with ticks computed as
 `cycles / (2 * regions)`.
+
+---
+
+## Owner ruling 2026-09-16: 30 FPS at four players is required
+
+Direction (2) — re-scoping the target — is off the table. The work is direction
+(1), a structural lever sized to 455,296 tk/fr.
+
+### Subsystem attribution of the frame
+
+The top 60 symbols of the clean-payload profile, 301,305,045 cycles over 129
+regions, grouped by what they belong to (`ticks = cycles / (2 * regions)`):
+
+| class | tk/fr | share of top-60 |
+|---|---|---|
+| idle (`armWaitForIrq`) | 272,605 | 23.3% |
+| **arithmetic kernels and math leaves** | **197,474** | 16.9% |
+| **stage and stage-renderer** | **159,837** | 13.7% |
+| fighter draw | 110,343 | 9.4% |
+| pose and animation | 96,792 | 8.3% |
+| `memset` + `memcpy` + `armCopyMem32` + `DynamicArray` | 50,598 | 4.3% |
+| harness instrument (not shipped) | 36,660 | 3.1% |
+| particles | 11,155 | 1.0% |
+| unclassified within the top 60 | 232,385 | 19.9% |
+
+This revises the earlier sizing in one important way. The **`__aeabi_fadd` +
+`__aeabi_fmul` class alone is 90,169 tk/fr**, and that is what the leaf campaign
+was chasing. The **whole arithmetic-kernel class is 197,474** — it also contains
+the fixed-point matrix kernels (`ndsRendererMtxMul20p12`,
+`ndsRendererMtxMulAffine20p12`), the integer divides and the roots. Those are not
+waste: they are already DS-native and already optimized. **They shrink only by
+performing fewer transforms, not cheaper ones.** Arithmetic kernels plus stage is
+357,311 tk/fr, 78% of the gap — so the gap is reachable in principle, but only by
+changing how much work is issued, never by making the existing kernels faster.
+
+### The Task 103 stage-phase instrument is broken — do not spend a build on it
+
+`src/port/reloc_backend_movement.c:13548` records that only 39% of the STG bucket
+was ever attributed and that "the other 238,254 ticks/frame are outside
+`ndsRendererCommitNativeStageSegment` entirely, and no task has ever profiled
+them". `NDS_TASK103_STAGE_RUN_PHASE=1` is the instrument that would partition it
+into Prepare / Traversal / Display / Finish.
+
+It cost two builds and produced nothing:
+
+1. It does not fit. ITCM is 104 bytes free and the four taps need **360 more**;
+   the link fails with "region `itcm' overflowed by 360 bytes". The taps sit
+   inside `NDS_R2_ITCM_PACK2_CODE` functions.
+2. With room made (evicting `ndsBaseGcPlayMObjMatAnim`, 732 B, from ITCM for the
+   lab build only), the ROM **crashes**: `TICKFAULT __excpt_entry pc=01fffd6c
+   lr=020d974a`, in `ndsCameraRecordFrame` (`battleship_gmcamera.c:223`) with
+   `half_w=0, half_h=3280.00806`, a corrupt backtrace and `sp=0x2fffd9e` — both
+   unaligned and outside DTCM. The baseline build of the same source runs 1,972
+   samples clean, so this is the census build, not the game.
+
+The eviction was reverted. STG remains unattributed and the instrument needs
+repair before it can answer anything.
