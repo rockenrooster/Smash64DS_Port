@@ -416,6 +416,40 @@ def render_header(
     ] + [
         f"#define NDS_NATIVE_IMAGE_OWNER_SLOTS {len(P2_IMAGE_OWNERS)}u",
         "",
+        "/* One row per image owner: slot suffix, nitro basename, and the two",
+        " * image struct types whose sizeof() is the byte count. This is the",
+        " * generated identity that ndsRendererNativeOwnerImagePath and",
+        " * ndsRendererNativeOwnerImageBytes used to restate by hand as two",
+        " * per-fighter if-ladders. An X-macro rather than a table so the array",
+        " * lives in exactly one translation unit -- this header is included by",
+        " * both the renderer and the image TU. */",
+        "#define NDS_NATIVE_OWNER_IMAGE_ROWS(X) \\",
+    ] + [
+        line
+        for index, name in enumerate(P2_IMAGE_OWNERS)
+        if ((name, "high") in contexts) and ((name, "low") in contexts)
+        for line in (
+            f"    NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
+        )
+    ] + [
+        "    /* end */",
+        "",
+    ] + [
+        line
+        for name in P2_IMAGE_OWNERS
+        if ((name, "high") in contexts) and ((name, "low") in contexts)
+        for line in (
+            f"#if NDS_P2_{name.upper()}",
+            f"#define NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
+            f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, \\",
+            f"      \"nitro:/fighters/{name}_high.bin\", \"nitro:/fighters/{name}_low.bin\", \\",
+            f"      {_image_type(name, 'high')}, {_image_type(name, 'low')})",
+            "#else",
+            f"#define NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X)",
+            "#endif",
+        )
+    ] + [
+        "",
     ]
     for (owner_name, detail), context in sorted(contexts.items()):
         members = _member_values(context)

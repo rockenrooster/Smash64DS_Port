@@ -97,6 +97,224 @@ typedef struct NDSNativePreparedDenseVertex
 #define NDS_NATIVE_IMAGE_SLOT_BOSS 22u
 #define NDS_NATIVE_IMAGE_OWNER_SLOTS 23u
 
+/* One row per image owner: slot suffix, nitro basename, and the two
+ * image struct types whose sizeof() is the byte count. This is the
+ * generated identity that ndsRendererNativeOwnerImagePath and
+ * ndsRendererNativeOwnerImageBytes used to restate by hand as two
+ * per-fighter if-ladders. An X-macro rather than a table so the array
+ * lives in exactly one translation unit -- this header is included by
+ * both the renderer and the image TU. */
+#define NDS_NATIVE_OWNER_IMAGE_ROWS(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_LUIGI(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_DONKEY(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_CAPTAIN(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_SAMUS(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_LINK(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_PIKACHU(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_YOSHI(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NESS(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_PURIN(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_KIRBY(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_MMARIO(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NMARIO(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NFOX(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NDONKEY(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NSAMUS(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NLINK(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NYOSHI(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NCAPTAIN(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NKIRBY(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NPIKACHU(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NPURIN(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_NNESS(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X) \
+    /* end */
+
+#if NDS_P2_LUIGI
+#define NDS_NATIVE_OWNER_IMAGE_ROW_LUIGI(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_LUIGI, \
+      "nitro:/fighters/luigi_high.bin", "nitro:/fighters/luigi_low.bin", \
+      NDSNativeLuigiHighImage, NDSNativeLuigiLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_LUIGI(X)
+#endif
+#if NDS_P2_DONKEY
+#define NDS_NATIVE_OWNER_IMAGE_ROW_DONKEY(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_DONKEY, \
+      "nitro:/fighters/donkey_high.bin", "nitro:/fighters/donkey_low.bin", \
+      NDSNativeDonkeyHighImage, NDSNativeDonkeyLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_DONKEY(X)
+#endif
+#if NDS_P2_CAPTAIN
+#define NDS_NATIVE_OWNER_IMAGE_ROW_CAPTAIN(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_CAPTAIN, \
+      "nitro:/fighters/captain_high.bin", "nitro:/fighters/captain_low.bin", \
+      NDSNativeCaptainHighImage, NDSNativeCaptainLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_CAPTAIN(X)
+#endif
+#if NDS_P2_SAMUS
+#define NDS_NATIVE_OWNER_IMAGE_ROW_SAMUS(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_SAMUS, \
+      "nitro:/fighters/samus_high.bin", "nitro:/fighters/samus_low.bin", \
+      NDSNativeSamusHighImage, NDSNativeSamusLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_SAMUS(X)
+#endif
+#if NDS_P2_LINK
+#define NDS_NATIVE_OWNER_IMAGE_ROW_LINK(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_LINK, \
+      "nitro:/fighters/link_high.bin", "nitro:/fighters/link_low.bin", \
+      NDSNativeLinkHighImage, NDSNativeLinkLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_LINK(X)
+#endif
+#if NDS_P2_PIKACHU
+#define NDS_NATIVE_OWNER_IMAGE_ROW_PIKACHU(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_PIKACHU, \
+      "nitro:/fighters/pikachu_high.bin", "nitro:/fighters/pikachu_low.bin", \
+      NDSNativePikachuHighImage, NDSNativePikachuLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_PIKACHU(X)
+#endif
+#if NDS_P2_YOSHI
+#define NDS_NATIVE_OWNER_IMAGE_ROW_YOSHI(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_YOSHI, \
+      "nitro:/fighters/yoshi_high.bin", "nitro:/fighters/yoshi_low.bin", \
+      NDSNativeYoshiHighImage, NDSNativeYoshiLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_YOSHI(X)
+#endif
+#if NDS_P2_NESS
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NESS(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NESS, \
+      "nitro:/fighters/ness_high.bin", "nitro:/fighters/ness_low.bin", \
+      NDSNativeNessHighImage, NDSNativeNessLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NESS(X)
+#endif
+#if NDS_P2_PURIN
+#define NDS_NATIVE_OWNER_IMAGE_ROW_PURIN(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_PURIN, \
+      "nitro:/fighters/purin_high.bin", "nitro:/fighters/purin_low.bin", \
+      NDSNativePurinHighImage, NDSNativePurinLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_PURIN(X)
+#endif
+#if NDS_P2_KIRBY
+#define NDS_NATIVE_OWNER_IMAGE_ROW_KIRBY(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_KIRBY, \
+      "nitro:/fighters/kirby_high.bin", "nitro:/fighters/kirby_low.bin", \
+      NDSNativeKirbyHighImage, NDSNativeKirbyLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_KIRBY(X)
+#endif
+#if NDS_P2_MMARIO
+#define NDS_NATIVE_OWNER_IMAGE_ROW_MMARIO(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_MMARIO, \
+      "nitro:/fighters/mmario_high.bin", "nitro:/fighters/mmario_low.bin", \
+      NDSNativeMMarioHighImage, NDSNativeMMarioLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_MMARIO(X)
+#endif
+#if NDS_P2_NMARIO
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NMARIO(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NMARIO, \
+      "nitro:/fighters/nmario_high.bin", "nitro:/fighters/nmario_low.bin", \
+      NDSNativeNMarioHighImage, NDSNativeNMarioLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NMARIO(X)
+#endif
+#if NDS_P2_NFOX
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NFOX(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NFOX, \
+      "nitro:/fighters/nfox_high.bin", "nitro:/fighters/nfox_low.bin", \
+      NDSNativeNFoxHighImage, NDSNativeNFoxLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NFOX(X)
+#endif
+#if NDS_P2_NDONKEY
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NDONKEY(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NDONKEY, \
+      "nitro:/fighters/ndonkey_high.bin", "nitro:/fighters/ndonkey_low.bin", \
+      NDSNativeNDonkeyHighImage, NDSNativeNDonkeyLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NDONKEY(X)
+#endif
+#if NDS_P2_NSAMUS
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NSAMUS(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NSAMUS, \
+      "nitro:/fighters/nsamus_high.bin", "nitro:/fighters/nsamus_low.bin", \
+      NDSNativeNSamusHighImage, NDSNativeNSamusLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NSAMUS(X)
+#endif
+#if NDS_P2_NLINK
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NLINK(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NLINK, \
+      "nitro:/fighters/nlink_high.bin", "nitro:/fighters/nlink_low.bin", \
+      NDSNativeNLinkHighImage, NDSNativeNLinkLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NLINK(X)
+#endif
+#if NDS_P2_NYOSHI
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NYOSHI(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NYOSHI, \
+      "nitro:/fighters/nyoshi_high.bin", "nitro:/fighters/nyoshi_low.bin", \
+      NDSNativeNYoshiHighImage, NDSNativeNYoshiLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NYOSHI(X)
+#endif
+#if NDS_P2_NCAPTAIN
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NCAPTAIN(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, \
+      "nitro:/fighters/ncaptain_high.bin", "nitro:/fighters/ncaptain_low.bin", \
+      NDSNativeNCaptainHighImage, NDSNativeNCaptainLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NCAPTAIN(X)
+#endif
+#if NDS_P2_NKIRBY
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NKIRBY(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NKIRBY, \
+      "nitro:/fighters/nkirby_high.bin", "nitro:/fighters/nkirby_low.bin", \
+      NDSNativeNKirbyHighImage, NDSNativeNKirbyLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NKIRBY(X)
+#endif
+#if NDS_P2_NPIKACHU
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NPIKACHU(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, \
+      "nitro:/fighters/npikachu_high.bin", "nitro:/fighters/npikachu_low.bin", \
+      NDSNativeNPikachuHighImage, NDSNativeNPikachuLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NPIKACHU(X)
+#endif
+#if NDS_P2_NPURIN
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NPURIN(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NPURIN, \
+      "nitro:/fighters/npurin_high.bin", "nitro:/fighters/npurin_low.bin", \
+      NDSNativeNPurinHighImage, NDSNativeNPurinLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NPURIN(X)
+#endif
+#if NDS_P2_NNESS
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NNESS(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_NNESS, \
+      "nitro:/fighters/nness_high.bin", "nitro:/fighters/nness_low.bin", \
+      NDSNativeNNessHighImage, NDSNativeNNessLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_NNESS(X)
+#endif
+#if NDS_P2_BOSS
+#define NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_BOSS, \
+      "nitro:/fighters/boss_high.bin", "nitro:/fighters/boss_low.bin", \
+      NDSNativeBossHighImage, NDSNativeBossLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X)
+#endif
+
 /* Boss high native-owner image. */
 typedef struct NDSNativeBossHighImage
 {
