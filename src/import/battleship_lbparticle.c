@@ -3095,6 +3095,69 @@ volatile u32 gNdsParticleCameraCacheEnabled
  * taken without reading these would not know which of those it measured. */
 volatile u32 gNdsParticleCameraCacheHitCount;
 volatile u32 gNdsParticleCameraCacheMissCount;
+/* Battle's main CObj is exactly one custom 0x4C XObj. The renderer already
+ * builds and caches that CObj's source-equivalent fixed camera matrix for the
+ * same draw frame, so the particle pass can reuse it instead of independently
+ * rebuilding perspective * look-at in binary32. Kept as a positive route
+ * witness: a timing result with this at zero did not measure the optimization. */
+volatile u32 gNdsParticleCameraRendererReuseCount;
+volatile u32 gNdsParticleCameraFixedBasisCount;
+
+#define NDS_PARTICLE_CAMERA_GM_MATRIX_KIND 0x4Cu
+
+static sb32 ndsParticleCameraCanReuseRenderer(const CObj *cobj)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 i;
+    u32 present = 0u;
+
+    if ((cobj == NULL) || (cobj->xobjs_num != 1))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+    {
+        const XObj *xobj = cobj->xobjs[i];
+
+        if (xobj == NULL)
+        {
+            continue;
+        }
+        if (xobj->kind != NDS_PARTICLE_CAMERA_GM_MATRIX_KIND)
+        {
+            return FALSE;
+        }
+        present++;
+    }
+    return (present == 1u) ? TRUE : FALSE;
+#else
+    (void)cobj;
+    return FALSE;
+#endif
+}
+
+/* Transitional N04 bridge for the still-float particle transform consumers.
+ * The renderer publishes a normalized Q20.12 basis. Converting that exact
+ * small integer to f32 and decrementing the IEEE exponent avoids all binary32
+ * camera arithmetic; the remaining Vec3f users are owned by the later
+ * particle-state/transform fixed conversion. |value| is <= 4096 here, so the
+ * integer->float conversion is exact before the power-of-two rescale. */
+static f32 ndsParticleCameraQ12ToF32(s32 value)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } bits;
+
+    if (value == 0)
+    {
+        return 0.0F;
+    }
+    bits.f = (f32)value;
+    bits.u -= (12u << 23);
+    return bits.f;
+}
 
 /* Bitwise-equal is deliberate. These are copied scalars, not computed ones --
  * a hit requires the identical camera, and NaN cannot appear in an eye vector
@@ -3133,6 +3196,7 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
     u32 i;
     u32 row;
     u32 col;
+    u32 renderer_reuse;
     NDSParticleCameraKey key;
 
     if (cobj == NULL)
@@ -3179,6 +3243,7 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
     key.persp_near = cobj->projection.persp.near;
     key.persp_far = cobj->projection.persp.far;
     key.scale = cobj->projection.persp.scale;
+    renderer_reuse = ndsParticleCameraCanReuseRenderer(cobj);
     if ((gNdsParticleCameraCacheEnabled != 0u) && (cobj->xobjs_num != 0))
     {
         u32 way;
@@ -3191,18 +3256,77 @@ static sb32 ndsParticleSetCurrentCamera(Vec3f *right, Vec3f *up)
             {
                 *right = sNdsParticleCameraRight[way];
                 *up = sNdsParticleCameraUp[way];
-                /* Re-issued rather than skipped: the renderer's particle camera
-                 * is shared state and something between two quads may have
-                 * replaced it. Two 64-byte stores against the rebuild this is
-                 * replacing. */
-                ndsRendererSetParticleCamera(
-                    &sNdsParticleCameraProjection[way],
-                    &sNdsParticleCameraModelview[way]);
-                gNdsParticleCameraCacheHitCount++;
-                return TRUE;
+                if (renderer_reuse != FALSE)
+                {
+#if NDS_RENDERER_HW_TRIANGLES
+                    /* Re-issued rather than skipped: the renderer's particle
+                     * camera is shared state and another owner can replace it
+                     * between particle groups. The frame camera cache makes
+                     * this a fixed matrix copy/load on the ordinary battle
+                     * camera, not another source-matrix rebuild. */
+                    if (ndsRendererAdapterSetWorldQuadCamera(
+                            gGCCurrentCamera) != FALSE)
+                    {
+                        gNdsParticleCameraRendererReuseCount++;
+                        gNdsParticleCameraCacheHitCount++;
+                        return TRUE;
+                    }
+#endif
+                    /* A renderer-cache rejection is containment only. Fall
+                     * through and rebuild the original source camera below. */
+                    break;
+                }
+                else
+                {
+                    ndsRendererSetParticleCamera(
+                        &sNdsParticleCameraProjection[way],
+                        &sNdsParticleCameraModelview[way]);
+                    gNdsParticleCameraCacheHitCount++;
+                    return TRUE;
+                }
             }
         }
         gNdsParticleCameraCacheMissCount++;
+    }
+    if (renderer_reuse != FALSE)
+    {
+        s32 right_q12[3];
+        s32 up_q12[3];
+
+        /* The native 0x4C camera builder already normalized these exact axes
+         * before composing look-at * perspective. Consume that Q12 result
+         * instead of paying a second syMatrixLookAtF (three sqrtf plus the
+         * surrounding binary32 vector arithmetic) once per moving camera. */
+#if NDS_RENDERER_HW_TRIANGLES
+        if ((ndsRendererAdapterSetWorldQuadCameraBasisQ12(
+                 gGCCurrentCamera, right_q12, up_q12) != FALSE) &&
+            ((right_q12[0] | right_q12[1] | right_q12[2]) != 0) &&
+            ((up_q12[0] | up_q12[1] | up_q12[2]) != 0))
+        {
+            right->x = ndsParticleCameraQ12ToF32(right_q12[0]);
+            right->y = ndsParticleCameraQ12ToF32(right_q12[1]);
+            right->z = ndsParticleCameraQ12ToF32(right_q12[2]);
+            up->x = ndsParticleCameraQ12ToF32(up_q12[0]);
+            up->y = ndsParticleCameraQ12ToF32(up_q12[1]);
+            up->z = ndsParticleCameraQ12ToF32(up_q12[2]);
+            if (gNdsParticleCameraCacheEnabled != 0u)
+            {
+                u32 way = sNdsParticleCameraNextWay;
+
+                sNdsParticleCameraKey[way] = key;
+                sNdsParticleCameraRight[way] = *right;
+                sNdsParticleCameraUp[way] = *up;
+                sNdsParticleCameraValid[way] = 1u;
+                sNdsParticleCameraNextWay =
+                    (way + 1u) % NDS_PARTICLE_CAMERA_CACHE_WAYS;
+            }
+            gNdsParticleCameraFixedBasisCount++;
+            gNdsParticleCameraRendererReuseCount++;
+            return TRUE;
+        }
+#endif
+        /* Keep every old source-camera route below as the correctness fallback
+         * if this exact battle-camera reuse cannot be established. */
     }
     if (cobj->xobjs_num == 0)
     {

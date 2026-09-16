@@ -23247,3 +23247,19 @@ temporary route is removed and the standing four-CPU verifier now requires the
 wide fallback counter to remain zero. Final stress records pose
 bind/full/overflow/fallback 677/0/0/0 and native failures/rejects 0/0. Evidence:
 `artifacts/performance/2026-09-15_p2-2p8-pose-joint-mask`.
+
+## 2026-09-16 — Reuse the renderer's battle camera for native particles
+
+The battle particle renderer no longer recomputes perspective/look-at work for
+the same camera already prepared by the native renderer. The renderer cache now
+publishes its normalized Q12 billboard basis, and the particle pass consumes that
+basis plus the cached projection/modelview when the source camera is the ordinary
+single-`0x4C` battle camera. Other camera shapes keep the established fallback.
+
+Matched short A/B evidence kept the route; the final integrated Boundary run
+engages it 5,919 times with native failures/direct rejects 0/0 and 108,096 B
+general-heap low-water. Four-CPU WORK-H is 1,660,224/2,380,288 P50/P95 and the
+realtime arm remains below the 30 FPS target, so the optimization is retained
+without closing P2-2p8. The hard-on root ROM is
+`77A047D1F1B1D0EDFB3D6F931B11E35EE677EFE5F6EB722713ABBBABD6EEFEBB`.
+Evidence: `artifacts/performance/2026-09-15_p2-2p8-particle-camera-reuse`.

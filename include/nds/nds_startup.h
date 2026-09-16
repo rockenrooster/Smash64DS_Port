@@ -5528,6 +5528,12 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
  * world-space quad. Used by the Fox blaster lab to avoid rebuilding the
  * BattleShip CObj matrices once per laser. */
 s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj);
+/* Same cached camera seat, plus the source-equivalent normalized billboard
+ * right/up axes in Q20.12. Only cameras whose native builder publishes that
+ * basis return TRUE; callers retain their source path for every other shape. */
+s32 ndsRendererAdapterSetWorldQuadCameraBasisQ12(void *camera_gobj,
+                                                  s32 *right_q12,
+                                                  s32 *up_q12);
 /* Same submit, but it walks the DObj tree (child + sibling chain) the way
  * objdisplay.c's gcDrawDObjTree does. Effect-only on purpose: doing it on the
  * stage entry above cost a whole VBlank on measured frames. */

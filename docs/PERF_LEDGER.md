@@ -8080,3 +8080,26 @@ pose full/overflow/fallback, graphics heap overflow/no-room and weapon refusals
 are all zero; heap low-water is **112,192 B** and audio direct fallbacks remain
 zero. Full Boundary is GREEN. P2-2p8 remains RED against the product target.
 Evidence: `artifacts/performance/2026-09-15_p2-2p8-particle-fixed-submit`.
+
+## 2026-09-16 — P2-2p8 phase N: renderer-owned particle camera reuse KEEP
+
+The battle particle pass was rebuilding the same source camera that the native
+renderer had already prepared for the frame. The retained path reuses the
+renderer-owned projection/modelview and its normalized Q12 billboard basis for
+the ordinary battle camera; every unsupported camera shape retains the existing
+source-equivalent fallback. The temporary same-ROM selectors were removed.
+
+Two 128-frame same-ROM comparisons had already established the local mechanism:
+the fixed comparison favored reuse on **112/128** frames with one tie, WORK-H
+median **-6,464** and mean **-7,078 ticks/frame**. The final integrated Boundary
+run on 2026-09-16 records **5,919** renderer-camera reuses and passes all three
+Boundary arms. Its 1,972-sample four-CPU stress reports WORK-H
+**P50 1,660,224 / P95 2,380,288**, native failures/direct rejects **0/0**, and
+general-heap low-water **108,096 B**. The shell realtime arm still warns at
+**25.8 FPS**, so P2-2p8 remains RED against the product target.
+
+The final hard-on root build passes the native-only link gate. ROM SHA-256 is
+`77A047D1F1B1D0EDFB3D6F931B11E35EE677EFE5F6EB722713ABBBABD6EEFEBB`; ELF is
+`2A83B39B92FC32E2516B738299001422FA81F5B4C3549E916E09321015CCB75A`; shipping
+config hash is `BDFE59516B2F8DBAB0C7A01C60336772475D03D6FD6A968DCBC9F3CAF298F0E0`.
+Evidence: `artifacts/performance/2026-09-15_p2-2p8-particle-camera-reuse`.

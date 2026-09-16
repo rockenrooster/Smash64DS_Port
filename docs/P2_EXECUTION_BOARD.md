@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-15 after fixed generic particle submission.
+Updated: 2026-09-16 continuation protocol; recorded runtime evidence unchanged.
 
 **Last integrated Boundary GREEN: `5bfb784f8ec`; acceptance RED (P2-2p8).**
 Four-CPU native failures/rejects 0/0; heap low-water 112,192 B.
@@ -9,7 +9,7 @@ Four-CPU native failures/rejects 0/0; heap low-water 112,192 B.
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
 `docs/archive/P2_CLOSED_ROWS.md`; measurements in `PERF_LEDGER.md`; chronology in
-`PORTING.md`. Those large documents are lookup-only during ordinary work.
+`PORTING.md`. Large documents are lookup-only during ordinary work.
 
 ## Standing rules
 
@@ -38,7 +38,7 @@ SHA-256 6BF344EF097A9237A5AD6AADE44E9F1FF601F503250DA80B73957B0B64C9C703
 | Phase | State | Gate summary |
 |---|---|---|
 | P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance remains. |
-| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory is resident. Whole-match low-water 111,680 B; libc reserve 40,960 B and weapon pool 10; every stress gate passes. |
+| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory is resident. Whole-match low-water 111,680 B; libc reserve 40,960 B and weapon pool 10; scoped correctness/resource guards pass; FPS remains RED. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission fixed/proved in `d8660bc2fd9`; natural Hyrule/Inishie counts/output pass. Three VS captures remain. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`: Poke Ball procs, rock member, pool 10; ball/monster witness 09-14). Atlas membership, other kinds/children and interactions remain open. |
@@ -47,38 +47,38 @@ SHA-256 6BF344EF097A9237A5AD6AADE44E9F1FF601F503250DA80B73957B0B64C9C703
 
 ## Current integration checkpoint
 
-**Current shared fix:** P2-2p8 fixed generic particle submit (`5bfb784f8ec`).
-Final stress WORK-H **1,654,208/2,375,296**, MISC **253,824/481,024**;
+**Last recorded qualified checkpoint (not the live candidate):** fixed generic particle submit (`5bfb784f8ec`).
+Recorded stress WORK-H **P50 1,654,208 / P95 2,375,296**, MISC **P50 253,824 / P95 481,024**;
 native fail/reject **0/0**, heap **112,192 B**. Full Boundary GREEN; P2-2p8 RED.
-In flight: menu-rules close, 1P next stage, roster proofs.
-Next: remaining P2-2p8 whole-frame/SRC/tail cost, DATA surfaces (P2-7), weapon-pool sizing, remaining
-stage captures/visual acceptance, dead code, remaining audit divergences
-(BUG_NOTES 2026-09-13 block), P2-3r17, per-target particle outputs.
-**Samus morph-ball:** programs 2/3 never reject; a level-3 CPU never rolls or
-Bombs (`ftcomputer.c:801-809,4001-4010`); prove with a Samus-human playback
-tour on the existing state-tour machinery (`0x9C/0x9D/0xE5/0xE6`).
+### Execution cursor
+
+Focus / batch / IDs / owner: P2-2p8 / particle-camera reuse / N04 / main. Phase: RECORD.
+Identity/receipt: HEAD `941f4daab56` + camera overlay; hard-on ROM
+`77A047D1...EEFEBB`, ELF `2A83B39B...CB75A`; see
+`artifacts/performance/2026-09-15_p2-2p8-particle-camera-reuse/README.md`.
+Completed/rejected: camera reuse KEEP; pose draw/topology rejected; packet live-flush
+left no retained delta; current profile: `2026-09-15_p2-2p8-current-profile/`.
+Next: commit/push this coherent KEEP, then SELECT the next P2-2p8 batch.
+Checks/status: particle-bank + Boundary + hard-on native-only build GREEN. Stress WORK-H
+P50 1,660,224 / P95 2,380,288; reuse 5,919; native fail/reject 0/0; heap 108,096 B.
+P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`.
+Job: none; hard-on build + Boundary r5 GREEN. Config hash `BDFE5951...F0E0`.
+Capability limits: none relevant. Review watermark: `Briefs/README.md` inspected
+2026-09-16; visual/menu candidates preserved for their owning rows.
+
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below.
 
-Main owns shared outputs and the serialized build. Keep unrelated dirty changes
-and local 1P/CSS integration. Independent CSS, item, stage and campaign packages
-may advance without waiting for another package's acceptance. Current owner
-settings: 30 Hz menus, 1P active. Required final gates remain unchanged.
+Main owns shared outputs/builds/timing. Preserve other-owner 1P/CSS work.
+Settings remain 30 Hz menus and 1P active; all requirements and coverage stand.
 
-| Unit | Current evidence / boundary |
-|---|---|
-| Compact capacity + Link | Pushed `6c75e56f677`. `artifacts/visibility/2026-09-12_link-native-integration.md` pins isolated whole-match capacity and the Samus rejection; diagnostic captures are labeled. |
-| Retained native proofs | DamageSlash `f36feff7e21`; Sword `2b60863c492`; Cutter `c3f79cf2801`; Donkey `35ab1a83dfe`; Samus Catch `5389765200f`; Link Catch `f4437339d28`; CopyLink `5e09e477b29`. |
-| Options / 1P | Options `68c0e522d3c` / `f33c5aa039f`; compact preview producer `87c6be2549b`. Preserve local loaders/bridge and campaign work; route/preview checks do not close cadence, persistence or campaign acceptance. |
-
-Permanent reports (each pins its own ROM/configuration and proof scope) live
-under `artifacts/visibility/2026-09-11_*` (kirby-root-program-recovery,
-damage-slash-native, sword-native-vram-lifetime, kirby-cutter-native,
-donkey-low-modelpart-binding, samus-catch-native, link-catch-native),
-`artifacts/visibility/2026-09-12_*` (kirby-copylink-native,
-link-native-integration) and
-`artifacts/performance/2026-09-10_pack-skeleton-ceiling/` (BATTLE_CORE_RECOVERY,
-older CEILING). HIGH remains reachable; stripping it is not authorized. Current
-builds do not replace the published P2 hash above until required gates pass.
+Retained: compact/Link `6c75e56f677` + `2026-09-12_link-native-integration.md`;
+native proofs `f36feff7e21`, `2b60863c492`, `c3f79cf2801`, `35ab1a83dfe`,
+`5389765200f`, `f4437339d28`, `5e09e477b29`; Options/1P `68c0e522d3c`,
+`f33c5aa039f`, preview `87c6be2549b`. Scoped reports stay under
+`artifacts/visibility/2026-09-11_*`, `2026-09-12_*` and
+`artifacts/performance/2026-09-10_pack-skeleton-ceiling/`.
+HIGH stays reachable; stripping it is not authorized. Do not replace the published
+P2 artifact above until the candidate's required gates pass.
 
 ## Queue — acceptance only
 
@@ -124,7 +124,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **FIXED PARTICLE SUBMIT KEEP; RED** | P95 **-14,080**, MISC P95 **-22,528**; final **1,654,208/2,375,296**, Boundary GREEN. Plan: `p2/native-optimization/`. Continue structural whole-frame cost. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **STRUCTURAL BATCH FOCUS; RED** | Follow the Execution cursor. Retain applicable evidence; all scoped/integrated gates remain due. No universal PASS from one roster. |
 
 ## Queue discipline
 

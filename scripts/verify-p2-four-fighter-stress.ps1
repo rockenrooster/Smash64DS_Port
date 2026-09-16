@@ -98,6 +98,11 @@ $memoryGlobals = @(
     'gNdsParticleGeneratorsMax',
     'gNdsParticleTransformsMax',
     'gNdsParticleRejectCount',
+    # P2-2p8 fixed camera reuse. The battle particle camera is the source's
+    # single 0x4C CObj, so the hot particle pass must consume the renderer's
+    # already-prepared fixed frame camera rather than rebuild perspective *
+    # look-at independently in binary32. Zero means the candidate did not run.
+    'gNdsParticleCameraRendererReuseCount',
     'gNdsAObjEvent32NormalizedHighWater',
     'gNdsAObjEvent32NormalizeFailCount',
     'gNdsRelocSYInterpDescFixCount',
@@ -473,6 +478,10 @@ if (($extra['gNdsITCommonDataBytes'] -ne 82976) -or
 }
 if ($extra['gNdsRelocSYInterpDescUnresolvedCount'] -ne 0) {
     throw 'Four-CPU animation loading left an unresolved source spline descriptor.'
+}
+if ($extra['gNdsParticleCameraRendererReuseCount'] -eq 0) {
+    throw ('Four-CPU particle draw never reused the renderer frame camera: ' +
+        "reuse=$($extra['gNdsParticleCameraRendererReuseCount']).")
 }
 Write-Output ("Source spline descriptors normalized: " +
     $extra['gNdsRelocSYInterpDescFixCount'])

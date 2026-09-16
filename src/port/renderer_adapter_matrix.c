@@ -1748,6 +1748,9 @@ typedef struct NDSRendererAdapterCameraCacheEntry
     NDSRendererMatrix20p12 modelview;
     u32 projection_valid;
     u32 modelview_valid;
+    s32 billboard_right_q12[3];
+    s32 billboard_up_q12[3];
+    u32 billboard_basis_valid;
 } NDSRendererAdapterCameraCacheEntry;
 
 typedef struct NDSRendererAdapterDObjWorldCacheEntry
@@ -5073,7 +5076,10 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
     NDSRendererMatrix20p12 *projection,
     u32 *projection_valid,
     NDSRendererMatrix20p12 *modelview,
-    u32 *modelview_valid)
+    u32 *modelview_valid,
+    s32 *billboard_right_q12,
+    s32 *billboard_up_q12,
+    u32 *billboard_basis_valid)
 {
     NDSRendererMatrix20p12 incoming;
     XObj *xobj;
@@ -5088,6 +5094,10 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
 
     *projection_valid = FALSE;
     *modelview_valid = FALSE;
+    if (billboard_basis_valid != NULL)
+    {
+        *billboard_basis_valid = FALSE;
+    }
 
     if (cobj == NULL)
     {
@@ -5121,6 +5131,18 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
                 cobj->vec.at.y, cobj->vec.at.z,
                 cobj->vec.up.x, cobj->vec.up.y,
                 cobj->vec.up.z);
+            if ((billboard_right_q12 != NULL) &&
+                (billboard_up_q12 != NULL) &&
+                (billboard_basis_valid != NULL))
+            {
+                billboard_right_q12[0] = lookat.m[0][0];
+                billboard_right_q12[1] = lookat.m[1][0];
+                billboard_right_q12[2] = lookat.m[2][0];
+                billboard_up_q12[0] = lookat.m[0][1];
+                billboard_up_q12[1] = lookat.m[1][1];
+                billboard_up_q12[2] = lookat.m[2][1];
+                *billboard_basis_valid = TRUE;
+            }
             ndsRendererAdapterCameraPerspFast(
                 &persp, &cobj->projection.persp.norm,
                 cobj->projection.persp.fovy,
@@ -5304,15 +5326,25 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
     NDSRendererMatrix20p12 *projection,
     u32 *projection_valid,
     NDSRendererMatrix20p12 *modelview,
-    u32 *modelview_valid)
+    u32 *modelview_valid,
+    s32 *billboard_right_q12,
+    s32 *billboard_up_q12,
+    u32 *billboard_basis_valid)
 {
     u32 frame = gNdsRendererProfileFrameCount;
     u32 i;
+    s32 built_billboard_right_q12[3] = { 0, 0, 0 };
+    s32 built_billboard_up_q12[3] = { 0, 0, 0 };
+    u32 built_billboard_basis_valid = FALSE;
 
     if ((projection == NULL) || (projection_valid == NULL) ||
         (modelview == NULL) || (modelview_valid == NULL))
     {
         return;
+    }
+    if (billboard_basis_valid != NULL)
+    {
+        *billboard_basis_valid = FALSE;
     }
     if (sNdsRendererAdapterCameraCacheFrame != frame)
     {
@@ -5333,6 +5365,17 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
             MTXCOPY(modelview, &entry->modelview);
             *projection_valid = entry->projection_valid;
             *modelview_valid = entry->modelview_valid;
+            if ((billboard_right_q12 != NULL) &&
+                (billboard_up_q12 != NULL) &&
+                (billboard_basis_valid != NULL) &&
+                (entry->billboard_basis_valid != FALSE))
+            {
+                memcpy(billboard_right_q12, entry->billboard_right_q12,
+                       sizeof(entry->billboard_right_q12));
+                memcpy(billboard_up_q12, entry->billboard_up_q12,
+                       sizeof(entry->billboard_up_q12));
+                *billboard_basis_valid = TRUE;
+            }
             return;
         }
     }
@@ -5341,7 +5384,9 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
     gNdsRendererProfileCameraMatrixCacheMissCount++;
 #endif
     ndsRendererAdapterBuildCameraMatrices(
-        cobj, projection, projection_valid, modelview, modelview_valid);
+        cobj, projection, projection_valid, modelview, modelview_valid,
+        built_billboard_right_q12, built_billboard_up_q12,
+        &built_billboard_basis_valid);
     if ((*projection_valid == FALSE) && (*modelview_valid == FALSE))
     {
         ndsRendererAdapterBuildDefaultBattleCameraMatrices(
@@ -5362,12 +5407,28 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
         MTXCOPY(&entry->modelview, modelview);
         entry->projection_valid = *projection_valid;
         entry->modelview_valid = *modelview_valid;
+        memcpy(entry->billboard_right_q12, built_billboard_right_q12,
+               sizeof(entry->billboard_right_q12));
+        memcpy(entry->billboard_up_q12, built_billboard_up_q12,
+               sizeof(entry->billboard_up_q12));
+        entry->billboard_basis_valid = built_billboard_basis_valid;
     }
     else
     {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileCameraMatrixCacheOverflowCount++;
 #endif
+    }
+    if ((billboard_right_q12 != NULL) &&
+        (billboard_up_q12 != NULL) &&
+        (billboard_basis_valid != NULL) &&
+        (built_billboard_basis_valid != FALSE))
+    {
+        memcpy(billboard_right_q12, built_billboard_right_q12,
+               sizeof(built_billboard_right_q12));
+        memcpy(billboard_up_q12, built_billboard_up_q12,
+               sizeof(built_billboard_up_q12));
+        *billboard_basis_valid = TRUE;
     }
 }
 
@@ -5385,7 +5446,8 @@ s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj)
         return FALSE;
     }
     ndsRendererAdapterGetFrameCameraMatrices(
-        cobj, &projection, &projection_valid, &modelview, &modelview_valid);
+        cobj, &projection, &projection_valid, &modelview, &modelview_valid,
+        NULL, NULL, NULL);
     if ((projection_valid == FALSE) && (modelview_valid == FALSE))
     {
         return FALSE;
@@ -5394,6 +5456,42 @@ s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj)
      * projection result. Other camera shapes can retain split projection and
      * modelview matrices. Identity-fill only the absent side, preserving both
      * contracts without composing another matrix on ARM9. */
+    if (projection_valid == FALSE)
+    {
+        ndsRendererAdapterMtxIdentity20p12(&projection);
+    }
+    if (modelview_valid == FALSE)
+    {
+        ndsRendererAdapterMtxIdentity20p12(&modelview);
+    }
+    ndsRendererSetParticleCamera(&projection, &modelview);
+    return TRUE;
+}
+
+s32 ndsRendererAdapterSetWorldQuadCameraBasisQ12(void *camera_gobj,
+                                                  s32 *right_q12,
+                                                  s32 *up_q12)
+{
+    GObj *gobj = camera_gobj;
+    CObj *cobj = (gobj != NULL) ? CObjGetStruct(gobj) : NULL;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u32 projection_valid = FALSE;
+    u32 modelview_valid = FALSE;
+    u32 billboard_basis_valid = FALSE;
+
+    if ((cobj == NULL) || (right_q12 == NULL) || (up_q12 == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterGetFrameCameraMatrices(
+        cobj, &projection, &projection_valid, &modelview, &modelview_valid,
+        right_q12, up_q12, &billboard_basis_valid);
+    if (((projection_valid == FALSE) && (modelview_valid == FALSE)) ||
+        (billboard_basis_valid == FALSE))
+    {
+        return FALSE;
+    }
     if (projection_valid == FALSE)
     {
         ndsRendererAdapterMtxIdentity20p12(&projection);
@@ -5450,12 +5548,14 @@ static void ndsRendererAdapterPrepareInitialMatrices(
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
-        &camera_modelview, &camera_modelview_valid);
+        &camera_modelview, &camera_modelview_valid,
+        NULL, NULL, NULL);
 #else
     ndsRendererAdapterBuildCameraMatrices(cobj, &camera_projection,
                                           &camera_projection_valid,
                                           &camera_modelview,
-                                          &camera_modelview_valid);
+                                          &camera_modelview_valid,
+                                          NULL, NULL, NULL);
 #endif
     if (dobj != NULL)
     {
@@ -5725,7 +5825,8 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
      * costs two 4x4s and no camera work. */
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
-        &camera_modelview, &camera_modelview_valid);
+        &camera_modelview, &camera_modelview_valid,
+        NULL, NULL, NULL);
     if (camera_modelview_valid != FALSE)
     {
         ndsRendererMtxMulAffine20p12(&world, &camera_modelview, &world);
@@ -7051,7 +7152,8 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 #endif
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
-        &camera_modelview, &camera_modelview_valid);
+        &camera_modelview, &camera_modelview_valid,
+        NULL, NULL, NULL);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsTask91MtxCameraTicks += cpuGetTiming() - task91_mtx_mark;
     gNdsTask91MtxCalls++;
@@ -7335,7 +7437,8 @@ ndsRendererAdapterGetHierarchyCameraMatrices(
     }
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, projection, &projection_valid,
-        modelview, &modelview_valid);
+        modelview, &modelview_valid,
+        NULL, NULL, NULL);
     if (projection_valid == FALSE)
     {
         ndsRendererAdapterMtxIdentity20p12(projection);

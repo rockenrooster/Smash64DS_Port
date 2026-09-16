@@ -108,6 +108,10 @@ foreach ($token in @(
     'up->x = look_at_f[0][1]',
     'up->y = look_at_f[1][1]',
     'up->z = look_at_f[2][1]',
+    'renderer_reuse = ndsParticleCameraCanReuseRenderer(cobj);',
+    'ndsRendererAdapterSetWorldQuadCameraBasisQ12(',
+    'gNdsParticleCameraFixedBasisCount++;',
+    'gNdsParticleCameraRendererReuseCount++;',
     'guMtxCatF(look_at_f, projection_f, projection_f)',
     'projection.m[row][col] = (row == col) ? 4096 : 0',
     '(s32)(projection_f[row][col] * 4096.0F)')) {
