@@ -568,20 +568,71 @@ if ($extra['gNdsFtPoseRunMaskFallbacks'] -ne 0) {
         'running-joint mask so this gate measures the optimized pose path.')
 }
 
-# This custom argmax is exactly Donkey/Samus/Link/Kirby. Each Main has nine
+# ShieldPose residency is DERIVED from the kinds this build selected, not pinned
+# to one lineup. It used to assert loads==4, a hardcoded byte sum and fixups==36
+# and throw "did not match the selected Donkey/Samus/Link/Kirby contract", so
+# every other legal roster failed a check it could never pass -- which made the
+# any-roster/any-stage contract in 16_ALL_ROSTERS_ALL_STAGES.md not merely
+# unproven but unmeasurable.
+#
+# The rule is exact and was confirmed on two rosters: each Main carries nine
 # source external fixups into its ShieldPose file (DObjDesc + eight sector
-# tables), and each compact blob is loaded once per taskman generation.
-$shieldPoseResidentWant = 2760 + 2856 + 3042 + 3141
-if (($extra['gNdsShieldPoseLoadCount'] -ne 4) -or
+# tables), each compact blob loads once per taskman generation, and only kinds
+# present in the asset table load at all. Donkey/Samus/Link/Kirby is
+# 2760+2856+3042+3141 = 11,799 with 36 fixups; Captain/Luigi/Donkey/Kirby is
+# 3334+2760+3141 = 9,235 with 27, because Luigi has no ShieldPose asset. Neither
+# do Mario, Fox, Yoshi or Ness: the generated table covers seven kinds, which is
+# a P2-3 content gap this check must report rather than crash on.
+$shieldPoseOrdinalByName = @{
+    'Mario' = 0; 'Fox' = 1; 'Donkey' = 2; 'Samus' = 3; 'Luigi' = 4; 'Link' = 5;
+    'Yoshi' = 6; 'Captain' = 7; 'Kirby' = 8; 'Pikachu' = 9; 'Purin' = 10;
+    'Ness' = 11
+}
+$shieldPoseAssetPath = Join-Path $root 'include/nds/generated/nds_shield_pose_assets.generated.h'
+$shieldPoseBytesByOrdinal = @{}
+foreach ($assetLine in (Get-Content -LiteralPath $shieldPoseAssetPath)) {
+    if ($assetLine -match '^\s*X\(nFTKind(\w+),\s*\d+u,\s*\d+u,\s*(\d+)u') {
+        $kindName = $Matches[1]
+        if (-not $shieldPoseOrdinalByName.ContainsKey($kindName)) {
+            throw "ShieldPose asset table names an unknown fighter kind '$kindName'."
+        }
+        $shieldPoseBytesByOrdinal[$shieldPoseOrdinalByName[$kindName]] = [int]$Matches[2]
+    }
+}
+if ($shieldPoseBytesByOrdinal.Count -eq 0) {
+    throw "ShieldPose asset table parsed zero rows from $shieldPoseAssetPath."
+}
+$shieldPoseCfgPath = Join-Path $root ("builds/{0}/nds_build_config.h" -f $build)
+$shieldPoseRosterKinds = @(0..3 | ForEach-Object {
+    $want = "NDS_P2_FOUR_CPU_KIND{0}" -f $_
+    $found = $null
+    foreach ($cfgLine in (Get-Content -LiteralPath $shieldPoseCfgPath)) {
+        if ($cfgLine -match ('^\s*#define\s+' + [regex]::Escape($want) + '\s+(\d+)')) {
+            $found = [int]$Matches[1]
+            break
+        }
+    }
+    $found })
+$shieldPosePosed = @($shieldPoseRosterKinds |
+    Where-Object { $_ -ne $null -and $shieldPoseBytesByOrdinal.ContainsKey($_) })
+$shieldPoseLoadWant = $shieldPosePosed.Count
+$shieldPoseResidentWant = 0
+foreach ($posedKind in $shieldPosePosed) {
+    $shieldPoseResidentWant += $shieldPoseBytesByOrdinal[$posedKind]
+}
+$shieldPoseFixupWant = 9 * $shieldPoseLoadWant
+$shieldPoseRosterLabel = ($shieldPoseRosterKinds -join '/')
+if (($extra['gNdsShieldPoseLoadCount'] -ne $shieldPoseLoadWant) -or
     ($extra['gNdsShieldPoseResidentBytes'] -ne $shieldPoseResidentWant) -or
-    ($extra['gNdsShieldPoseNativeFixupCount'] -ne 36) -or
+    ($extra['gNdsShieldPoseNativeFixupCount'] -ne $shieldPoseFixupWant) -or
     ($extra['gNdsShieldPoseLoadFailCount'] -ne 0) -or
     ($extra['gNdsShieldPoseNativeFixupRejectCount'] -ne 0) -or
     ($extra['gNdsShieldPoseDecodeFailCount'] -ne 0)) {
-    throw ("Four-CPU ShieldPose native residency did not match the selected " +
-        "Donkey/Samus/Link/Kirby contract: loads=$($extra['gNdsShieldPoseLoadCount']) " +
+    throw ("Four-CPU ShieldPose native residency did not match the kinds this " +
+        "build selected ($shieldPoseRosterLabel): " +
+        "loads=$($extra['gNdsShieldPoseLoadCount'])/$shieldPoseLoadWant " +
         "bytes=$($extra['gNdsShieldPoseResidentBytes'])/$shieldPoseResidentWant " +
-        "fixups=$($extra['gNdsShieldPoseNativeFixupCount'])/36 " +
+        "fixups=$($extra['gNdsShieldPoseNativeFixupCount'])/$shieldPoseFixupWant " +
         "loadFail=$($extra['gNdsShieldPoseLoadFailCount']) " +
         "fixupReject=$($extra['gNdsShieldPoseNativeFixupRejectCount']) " +
         "decodeFail=$($extra['gNdsShieldPoseDecodeFailCount']).")
@@ -869,19 +920,42 @@ if (($memory.itemRateOverride -ne 0) -or ($memory.itemTogglesOverride -ne 0)) {
     throw 'Four-CPU final item overrides must remain zero; see the recorded runtime input values.'
 }
 
-if (([uint64]$memory.damageSlashRootMask -ne 3) -or
-    ([uint64]$memory.damageSlashCandidateStep -ne 5) -or
-    ([uint64]$memory.damageSlashDrawCount -eq 0) -or
-    ([uint64]$memory.damageSlashTriangleDrawCount -eq 0) -or
-    ([uint64]$memory.damageSlashSnapshotFailCount -ne 0) -or
-    ([uint64]$memory.damageSlashSubmitFailCount -ne 0) -or
-    ([uint64]$memory.damageSlashEffectsRejected -ne 0) -or
-    ([uint64]$memory.damageSlashTexturePrepareCount -ne 2) -or
-    ([uint64]$memory.damageSlashTexturePrepareFailCount -ne 0) -or
-    ([uint64]$memory.damageSlashTextureUpdateCount -eq 0) -or
-    ([uint64]$memory.damageSlashTextureBindCount -eq 0) -or
-    ([uint64]$memory.damageSlashBadImageCount -ne 0) -or
-    ([uint64]$memory.damageSlashSubmitStep -ne 9)) {
+# DamageSlash mixes two different claims, and only one of them is a property of
+# the build. COVERAGE -- did the effect occur at all -- depends on whether these
+# four CPUs actually landed the hit that spawns it inside the 1,972-frame
+# window, so a legal roster can legitimately produce zero (Captain/Luigi/Donkey/
+# Kirby measured effects=0 against the canonical roster's 540). CORRECTNESS --
+# did anything fail, reject or decode badly -- must hold on every roster.
+#
+# Splitting them keeps the canonical gate exactly as strict as it was while
+# letting a lab roster run to completion. Collapsing the two, as this check did,
+# is what made the any-roster contract unmeasurable: it reported a roster that
+# simply never landed the hit as a native-path failure.
+$rosterIsCanonical =
+    (($shieldPoseRosterKinds -join ',') -eq '2,3,5,8')
+$damageSlashBroken =
+    (([uint64]$memory.damageSlashSnapshotFailCount -ne 0) -or
+     ([uint64]$memory.damageSlashSubmitFailCount -ne 0) -or
+     ([uint64]$memory.damageSlashEffectsRejected -ne 0) -or
+     ([uint64]$memory.damageSlashTexturePrepareFailCount -ne 0) -or
+     ([uint64]$memory.damageSlashBadImageCount -ne 0))
+$damageSlashUncovered =
+    (([uint64]$memory.damageSlashRootMask -ne 3) -or
+     ([uint64]$memory.damageSlashCandidateStep -ne 5) -or
+     ([uint64]$memory.damageSlashDrawCount -eq 0) -or
+     ([uint64]$memory.damageSlashTriangleDrawCount -eq 0) -or
+     ([uint64]$memory.damageSlashTexturePrepareCount -ne 2) -or
+     ([uint64]$memory.damageSlashTextureUpdateCount -eq 0) -or
+     ([uint64]$memory.damageSlashTextureBindCount -eq 0) -or
+     ([uint64]$memory.damageSlashSubmitStep -ne 9))
+if ($damageSlashUncovered -and -not $rosterIsCanonical -and -not $damageSlashBroken) {
+    Write-Host ("NOTE: DamageSlash was not exercised by this lab roster " +
+        "($shieldPoseRosterLabel) -- draws=$($memory.damageSlashDrawCount) " +
+        "effects=$($memory.damageSlashEffectsSeen). No failure counter is set, " +
+        "so the native path is unproven here rather than broken. The canonical " +
+        "roster still proves it.")
+}
+if ($damageSlashBroken -or ($damageSlashUncovered -and $rosterIsCanonical)) {
     throw ("Four-fighter stress did not prove both native source DamageSlash " +
         "children: roots=$($memory.damageSlashRootMask)/3 " +
         "candidate=$($memory.damageSlashCandidateStep)/5 " +
@@ -904,7 +978,17 @@ if ([uint64]$memory.nativeFailureCount -ne 0) {
     # call; step back into the call instruction so addr2line names the calling
     # function. -O2 merges every reject exit of a function onto one call, so
     # this names the rejecting function, and the state words name the predicate.
-    $directRejectSite = ('0x{0:x}' -f (([uint64]$memory.nativeDirectRejectSite -band -bnot [uint64]1) - 1))
+    # Guarded because a native failure does NOT imply a direct reject: the two
+    # are separate causes, and `site` is 0 whenever nothing took the direct
+    # path. Unguarded, `(0 -band -bnot 1) - 1` is -1 and the `x` specifier
+    # throws "Format specifier was invalid", so the run reported a FORMATTING
+    # error instead of the 7,679 native failures it had just detected -- a gate
+    # that finds the defect and then hides it. Seen on the first lab roster.
+    $directRejectSite = if ([uint64]$memory.nativeDirectRejectSite -ne 0) {
+        ('0x{0:x}' -f (([uint64]$memory.nativeDirectRejectSite -band -bnot [uint64]1) - 1))
+    } else {
+        'none (no direct reject recorded)'
+    }
     $addr2line = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-addr2line.exe'
     $elfPath = Join-Path $root ("builds\{0}\{1}.elf" -f $build, $target)
     if (([uint64]$memory.nativeDirectRejectSite -ne 0) -and (Test-Path -LiteralPath $addr2line) -and (Test-Path -LiteralPath $elfPath)) {
