@@ -10901,6 +10901,12 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeSamusMorphBallBindingParents[0]));
             return sNdsNativeSamusMorphBallBindingParents;
         }
+        if (ndsRendererNativeFighterRootProgram(slot) == 4u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusFSmashBindingParents) /
+                           sizeof(sNdsNativeSamusFSmashBindingParents[0]));
+            return sNdsNativeSamusFSmashBindingParents;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeSamusBindingParents) /
                        sizeof(sNdsNativeSamusBindingParents[0]));
@@ -11194,6 +11200,12 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
             *count = (u32)(sizeof(sNdsNativeSamusMorphBallCrossPaletteSlots) /
                            sizeof(sNdsNativeSamusMorphBallCrossPaletteSlots[0]));
             return sNdsNativeSamusMorphBallCrossPaletteSlots;
+        }
+        if (ndsRendererNativeFighterRootProgram(slot) == 4u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusFSmashCrossPaletteSlots) /
+                           sizeof(sNdsNativeSamusFSmashCrossPaletteSlots[0]));
+            return sNdsNativeSamusFSmashCrossPaletteSlots;
         }
 #endif
         *count = (u32)(sizeof(sNdsNativeSamusCrossPaletteSlots) /

@@ -2341,16 +2341,25 @@ P2_MODEL_PART_ROOT_VARIANTS = {
 # same source DL 0x9140; one resident self-contained RAW bake is sufficient and
 # the complete program reuses it under each live DObj matrix.
 P2_ROOT_PROGRAM_APPENDIX = {
+    # 0x2c20/0x2ce8 are joints 24 and 25 as they draw when nothing replaces
+    # them, which is the forward smash.  Catch reaches the same two joints but
+    # its motion sets 24 to modelpart 1 and hides 25, so neither offset was ever
+    # baked.  Binding 7 is joint 16, both hidden parts' parent, and both bakes
+    # are self-contained RAW programs -- proved by the vertex-cache closure.
     "samus": {
         "high": (
             (8, 0x8d90),
             (9, 0x9140),
             (14, 0x8a70),
+            (7, 0x2c20),
+            (7, 0x2ce8),
         ),
         "low": (
             (8, 0x8d90),
             (9, 0x9140),
             (14, 0x8a70),
+            (7, 0x2c20),
+            (7, 0x2ce8),
         ),
     },
     # Link Catch/CatchPull's 0x1C000000 anim flags install hidden joints 17/18
@@ -2416,21 +2425,78 @@ def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
 # ftParamSetModelPartID does.  SpecialN's mid-throw / catch pose is mixed-file:
 # joint 11 modelpart 1 resolves to LinkBoomerangModel asset 0x146 root 0xF8,
 # while joint 20 modelpart 0 remains LinkModel-owned.
-SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
+# Offset and row count of each Main's FTHiddenPart table, from the reloc file's
+# own header comment and array declaration.  The count bounds mask decoding: a
+# bit past the end of the table must raise, not read the next field as a joint.
 SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
-LINK_CATCH_HIDDENPART_IDS = (3, 4, 5)
+SAMUS_MAIN_HIDDENPART_COUNT = 13
 LINK_MAIN_HIDDENPARTS_OFFSET = 0x00d0
-# Yoshi's grab family carries FTANIM_FLAG_ANIMLOCKS | 0x18000000, whose set bits
-# 28/27 are hidden-part IDs 3 and 4 under the index <-> bit 31-index rule.
-# dYoshiMain_setup_parts is 0xFBFFFFE0, which omits exactly descriptors 5 and 27
-# from the canonical draw -- the same two joints these hidden parts install
-# (root 9 = descriptor 5, root 31 = descriptor 27).  Only descriptor 5 carries a
-# display list, so the live root vector grows from 18 to 19 and no per-binding
-# variant can represent it.  Catch/CatchPull/EggLay* and ThrowF/ThrowB differ
-# only in whether joint 7 is still showing modelpart 0.
-YOSHI_CATCH_HIDDENPART_IDS = (3, 4)
+LINK_MAIN_HIDDENPART_COUNT = 6
 YOSHI_MAIN_HIDDENPARTS_OFFSET = 0x0084
-YOSHI_ROOT_PROGRAM_ROOT_COUNT = 19
+YOSHI_MAIN_HIDDENPART_COUNT = 5
+
+# The anim-desc mask each program's source motions carry, copied verbatim from
+# the third field of their `ftdata.c` rows.  Every FTANIM_FLAG_* value lives in
+# the low half (ftdef.h: SUBMOTION_SCRIPT 0x10 down to ANIMLOCKS 0x1), so the
+# high half is the mask alone, and a set bit at position 31-i makes
+# ftMainSetStatus install `<Fighter>Main.hiddenparts[i]`.
+#
+# These replace three hand-written ID tuples.  Deriving them removes a constant
+# that did not match its source: samus Catch was `range(3, 12)` while
+# 0x1FF80000 is indices 3..**12**.  That was not a live defect, because index 12
+# is joint 25 and the Catch motion hides it with `(25, -1)`, so the vector is 21
+# roots either way -- verified by building both and comparing every emitted
+# field -- but a constant that disagrees with its source is a latent one.
+#
+# Yoshi is the clearest illustration of the mechanism: dYoshiMain_setup_parts
+# 0xFBFFFFE0 omits exactly descriptors 5 and 27, and 0x18000000 installs exactly
+# those two joints (root 9 = descriptor 5, root 31 = descriptor 27).  Only
+# descriptor 5 carries a display list, so the live vector grows 18 -> 19 and no
+# per-binding variant can represent it.
+OWNER_ROOT_PROGRAM_ANIM_MASKS = {
+    ("samus", "Catch"): 0x1ff80000,
+    # All five FSmash motions carry this and issue no model-part command at all,
+    # so their live vector is canonical plus the two drawing hidden parts.
+    ("samus", "FSmash"): 0x00180000,
+    ("link", "Catch"): 0x1c000000,
+    ("yoshi", "Catch"): 0x18000000,
+    ("yoshi", "Throw"): 0x18000000,
+}
+
+# The live root count each program must produce.  A program whose count drifts
+# is a program that will silently stop matching at runtime, so pin it here
+# rather than inside one owner's branch.
+OWNER_ROOT_PROGRAM_ROOT_COUNTS = {
+    ("samus", "Catch"): 21,
+    ("samus", "FSmash"): 16,
+    ("link", "Catch"): 22,
+    ("link", "SpecialN"): 20,
+    ("yoshi", "Catch"): 19,
+    ("yoshi", "Throw"): 19,
+}
+
+
+def _hiddenpart_ids_from_anim_mask(owner_name: str, program_name: str,
+                                   count: int) -> tuple[int, ...]:
+    """Hidden-part IDs one program's anim-desc mask installs, in order.
+
+    Indices 0, 1 and 2 are the TRANSN/XROTN/YROTN joints (kind 3) and never
+    carry a display list, so they cost nothing to include and are not filtered
+    here -- the caller skips any joint setup_parts already selects.
+    """
+    key = (owner_name, program_name)
+    if key not in OWNER_ROOT_PROGRAM_ANIM_MASKS:
+        raise ValueError(
+            f"{owner_name} {program_name}: no source anim-desc mask recorded")
+    mask = OWNER_ROOT_PROGRAM_ANIM_MASKS[key]
+    ids = tuple(sorted(
+        index for index in (31 - bit for bit in range(32) if mask & (1 << bit))
+        if 0 <= index < count))
+    if not ids:
+        raise ValueError(
+            f"{owner_name} {program_name}: mask 0x{mask:08x} installs no "
+            f"hidden part within a table of {count}")
+    return ids
 
 OWNER_ROOT_PROGRAMS = {
     # dSamusMainMotion_Catch (216_SamusMainMotion.c:955-962).  The hidden-part
@@ -2443,6 +2509,12 @@ OWNER_ROOT_PROGRAMS = {
             (17, 0), (18, 0), (19, 0),
             (20, 0), (21, 0), (22, 0),
         )),
+        # dSamusMainMotion_FSmash{,High,MidHigh,MidLow,Low} issue no model-part
+        # command at all -- 216_SamusMainMotion.c:1205-1284 contain none -- so
+        # the whole program is what 0x00180000 installs: drawing hidden parts 11
+        # and 12, joints 24 and 25, which Catch never bakes because its own
+        # motion replaces one and hides the other.
+        ("FSmash", ()),
     ),
     "link": (
         ("Entry", ((20, 0), (11, -1))),
@@ -7475,47 +7547,8 @@ def build_owner_root_programs(
         model_payload = load_o2r_payload(repo_root, owner_name)
         descriptors = _owner_joint_descriptors(
             model_payload, owner_name, detail)[:-1]
-        selected = set(_owner_selected_descriptor_indices(
+        canonical_selected = set(_owner_selected_descriptor_indices(
             owner_name, len(descriptors)))
-
-        # Catch's 0x1FF80000 animation flags enable hidden-part IDs 3..11.
-        # Derive the actual root joints from SamusMain's FTHiddenPart table
-        # rather than copying the observed runtime root vector into the bake.
-        for hiddenpart_id in SAMUS_CATCH_HIDDENPART_IDS:
-            row_offset = SAMUS_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
-            if row_offset + 16 > len(main_payload):
-                raise ValueError("samus Catch hidden-part table is truncated")
-            root_joint_id, _parent_joint_id, _partindex, _joint_kind = \
-                struct.unpack_from(">iiii", main_payload, row_offset)
-            descriptor_index = root_joint_id - 4
-            if descriptor_index < 0 or descriptor_index >= len(descriptors):
-                raise ValueError(
-                    f"samus Catch hidden joint {root_joint_id} is out of range")
-            selected.add(descriptor_index)
-
-        programs = OWNER_ROOT_PROGRAMS[owner_name]
-        if len(programs) != 1 or programs[0][0] != "Catch":
-            raise ValueError("samus Catch root-program source table changed")
-        overrides: dict[int, int | None] = {}
-        for joint_id, modelpart_id in programs[0][1]:
-            descriptor_index = joint_id - 4
-            if descriptor_index < 0 or descriptor_index >= len(descriptors):
-                raise ValueError(
-                    f"samus Catch model-part joint {joint_id} is out of range")
-            overrides[descriptor_index] = _owner_modelpart_display_offset(
-                main_payload, container_offset, joint_id, modelpart_id, detail)
-
-        live_descriptors = _owner_joint_descriptors(
-            model_payload, owner_name, detail, overrides)[:-1]
-        selected_order = tuple(sorted(selected))
-        root_offsets = tuple(
-            live_descriptors[index][1]
-            for index in selected_order
-            if live_descriptors[index][1] is not None
-        )
-        if len(root_offsets) != 21:
-            raise ValueError(
-                f"samus {detail} Catch root count {len(root_offsets)} != 21")
 
         canonical_root_count = int(context["canonical_root_count"])
         roots = context["roots"]
@@ -7523,58 +7556,126 @@ def build_owner_root_programs(
         canonical_offsets = tuple(
             root[0] for root in roots[:canonical_root_count])
         appendix_specs = tuple(context.get("root_program_appendix_specs", ()))
-        expected_new_offsets = {offset for _binding, offset in appendix_specs}
-        new_offsets = set(root_offsets) - set(canonical_offsets)
-        if new_offsets != expected_new_offsets:
-            raise ValueError(
-                f"samus {detail} Catch new roots {sorted(map(hex, new_offsets))} "
-                f"!= appendix {sorted(map(hex, expected_new_offsets))}")
-
+        appendix_offsets = {offset for _binding, offset in appendix_specs}
         # Appendix roots are emitted once and may be reused by multiple live
-        # Catch joints only after the source-cache proof below establishes that
-        # every new root is a self-contained RAW program. In particular the
-        # five 0x9140 chain links share geometry but retain five live matrices.
+        # joints only after the source-cache proof below establishes that every
+        # new root is a self-contained RAW program. In particular the five
+        # 0x9140 chain links share geometry but retain five live matrices.
         root_rows_by_offset = {}
         for row, light_index in zip(roots, light_indices):
             root_rows_by_offset.setdefault(row[0], (row, light_index))
-        missing = [offset for offset in root_offsets
-                   if offset not in root_rows_by_offset]
-        if missing:
+
+        # Catch and FSmash are both complete hidden-part programs and differ
+        # only in which bits their motions carry and whether any model-part
+        # command follows, so they are built by one loop rather than by a second
+        # copy of this derivation.
+        result: list[dict[str, object]] = []
+        covered_appendix: set[int] = set()
+        for program_name, events in OWNER_ROOT_PROGRAMS[owner_name]:
+            # Derive the root joints from SamusMain's FTHiddenPart table rather
+            # than copying an observed runtime root vector into the bake.
+            selected = set(canonical_selected)
+            for hiddenpart_id in _hiddenpart_ids_from_anim_mask(
+                    owner_name, program_name, SAMUS_MAIN_HIDDENPART_COUNT):
+                row_offset = SAMUS_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
+                if row_offset + 16 > len(main_payload):
+                    raise ValueError(
+                        f"samus {program_name} hidden-part table is truncated")
+                root_joint_id, _parent_joint_id, _partindex, _joint_kind = \
+                    struct.unpack_from(">iiii", main_payload, row_offset)
+                descriptor_index = root_joint_id - 4
+                if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                    raise ValueError(
+                        f"samus {program_name} hidden joint {root_joint_id} "
+                        f"is out of range")
+                selected.add(descriptor_index)
+
+            overrides: dict[int, int | None] = {}
+            for joint_id, modelpart_id in events:
+                descriptor_index = joint_id - 4
+                if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                    raise ValueError(
+                        f"samus {program_name} model-part joint {joint_id} is "
+                        f"out of range")
+                # No `in selected` filter: ftMainSetStatus has already created
+                # these hidden joints, so a command on one is not the source
+                # no-op the generic resolver correctly assumes elsewhere.
+                overrides[descriptor_index] = _owner_modelpart_display_offset(
+                    main_payload, container_offset, joint_id, modelpart_id,
+                    detail)
+
+            live_descriptors = _owner_joint_descriptors(
+                model_payload, owner_name, detail, overrides or None)[:-1]
+            selected_order = tuple(sorted(selected))
+            root_offsets = tuple(
+                live_descriptors[index][1]
+                for index in selected_order
+                if live_descriptors[index][1] is not None
+            )
+            expected_count = OWNER_ROOT_PROGRAM_ROOT_COUNTS[
+                (owner_name, program_name)]
+            if len(root_offsets) != expected_count:
+                raise ValueError(
+                    f"samus {detail} {program_name} root count "
+                    f"{len(root_offsets)} != {expected_count}")
+
+            new_offsets = set(root_offsets) - set(canonical_offsets)
+            if not new_offsets <= appendix_offsets:
+                raise ValueError(
+                    f"samus {detail} {program_name} new roots "
+                    f"{sorted(map(hex, new_offsets - appendix_offsets))} are "
+                    f"not in the appendix {sorted(map(hex, appendix_offsets))}")
+            covered_appendix |= new_offsets
+
+            missing = [offset for offset in root_offsets
+                       if offset not in root_rows_by_offset]
+            if missing:
+                raise ValueError(
+                    f"samus {detail} {program_name} roots lack resident bakes "
+                    f"{[hex(offset) for offset in missing]}")
+            program_roots = [root_rows_by_offset[offset][0]
+                             for offset in root_offsets]
+            program_lights = [root_rows_by_offset[offset][1]
+                              for offset in root_offsets]
+            root_joints, root_bindings = _owner_root_program_joint_bindings(
+                context, model_payload, owner_name, detail,
+                live_descriptors, selected_order)
+            cross_slots = _derive_owner_root_program_cross_slots(
+                context, owner_name, detail, program_name, program_roots,
+                root_joints, root_bindings)
+            _assert_owner_root_program_vertex_cache(
+                repo_root, owner_name, detail,
+                root_offsets, new_offsets, cross_slots, canonical_offsets)
+            _verify_program_roots_lit(
+                context, owner_name, detail, program_name, program_roots,
+                program_lights, [context for _ in program_roots])
+            result.append({
+                "name": program_name,
+                "roots": program_roots,
+                "light_indices": program_lights,
+                # Shipping production receives each live selected DObj
+                # directly. Using the root as its own source-tree capture point
+                # is exact and avoids inventing a canonical topology for
+                # dynamically inserted hidden joints; these programs are rare
+                # enough that the extra chain walk is preferable to a guessed
+                # parent schedule.
+                "binding_parents": tuple(INVALID_U8 for _ in root_offsets),
+                "cross_slots": cross_slots,
+                "root_offsets": root_offsets,
+                "root_joints": root_joints,
+                "root_bindings": root_bindings,
+                "verification_contexts": [context for _ in program_roots],
+            })
+
+        # Every appendix row exists for a program, and every program's new roots
+        # come from the appendix. The two halves together are what the old
+        # single-program equality check gave, without forbidding a second
+        # program from needing a different subset.
+        if covered_appendix != appendix_offsets:
             raise ValueError(
-                f"samus {detail} Catch roots lack resident bakes "
-                f"{[hex(offset) for offset in missing]}")
-        program_roots = [root_rows_by_offset[offset][0]
-                         for offset in root_offsets]
-        program_lights = [root_rows_by_offset[offset][1]
-                          for offset in root_offsets]
-        root_joints, root_bindings = _owner_root_program_joint_bindings(
-            context, model_payload, owner_name, detail,
-            live_descriptors, selected_order)
-        cross_slots = _derive_owner_root_program_cross_slots(
-            context, owner_name, detail, "Catch", program_roots,
-            root_joints, root_bindings)
-        _assert_owner_root_program_vertex_cache(
-            repo_root, owner_name, detail,
-            root_offsets, new_offsets, cross_slots)
-        _verify_program_roots_lit(
-            context, owner_name, detail, "Catch", program_roots,
-            program_lights, [context for _ in program_roots])
-        result = [{
-            "name": "Catch",
-            "roots": program_roots,
-            "light_indices": program_lights,
-            # Shipping production receives each live selected DObj directly.
-            # Using the root as its own source-tree capture point is exact and
-            # avoids inventing a canonical topology for dynamically inserted
-            # hidden joints; Catch is rare enough that the extra chain walk is
-            # preferable to a guessed parent schedule.
-            "binding_parents": tuple(INVALID_U8 for _ in root_offsets),
-            "cross_slots": cross_slots,
-            "root_offsets": root_offsets,
-            "root_joints": root_joints,
-            "root_bindings": root_bindings,
-            "verification_contexts": [context for _ in program_roots],
-        }]
+                f"samus {detail}: appendix roots "
+                f"{sorted(map(hex, appendix_offsets - covered_appendix))} are "
+                f"baked but no root program uses them")
         # 216_SamusMainMotion.c helpers 0x0000/0x0044/0x005C hide all
         # ordinary parts and select only joint 6 modelpart 1/2/1. Rolls,
         # cliff escapes and ground/air Bomb all use this same source family.
@@ -7942,7 +8043,8 @@ def build_owner_root_programs(
             _verify_owner_modelpart_resolver(
                 repo_root, owner_name, detail, main_payload, container_offset)
             selected = set(selected)
-            for hiddenpart_id in YOSHI_CATCH_HIDDENPART_IDS:
+            for hiddenpart_id in _hiddenpart_ids_from_anim_mask(
+                    owner_name, program_name, YOSHI_MAIN_HIDDENPART_COUNT):
                 row_offset = YOSHI_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
                 if row_offset + 16 > len(main_payload):
                     raise ValueError("yoshi grab hidden-part table is truncated")
@@ -7973,7 +8075,8 @@ def build_owner_root_programs(
             main_payload, container_offset = _load_owner_root_program_payload(
                 repo_root, owner_name)
             selected = set(selected)
-            for hiddenpart_id in LINK_CATCH_HIDDENPART_IDS:
+            for hiddenpart_id in _hiddenpart_ids_from_anim_mask(
+                    owner_name, program_name, LINK_MAIN_HIDDENPART_COUNT):
                 row_offset = LINK_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
                 if row_offset + 16 > len(main_payload):
                     raise ValueError("link Catch hidden-part table is truncated")
@@ -8039,9 +8142,11 @@ def build_owner_root_programs(
         program_light_indices = [program_rows_by_offset[offset][1]
                                  for offset in root_offsets]
         if owner_name == "link" and program_name == "Catch":
-            if len(root_offsets) != 22:
+            if len(root_offsets) != OWNER_ROOT_PROGRAM_ROOT_COUNTS[
+                    (owner_name, program_name)]:
                 raise ValueError(
-                    f"link {detail} Catch root count {len(root_offsets)} != 22")
+                    f"link {detail} Catch root count {len(root_offsets)} "
+                    f"!= {OWNER_ROOT_PROGRAM_ROOT_COUNTS[(owner_name, program_name)]}")
             appendix_offsets = {
                 offset for _binding, offset in
                 context.get("root_program_appendix_specs", ())
@@ -8074,9 +8179,11 @@ def build_owner_root_programs(
                 raise ValueError(
                     f"link {detail} SpecialN roots {tuple(map(hex, root_offsets))} "
                     f"!= {tuple(map(hex, expected_offsets))}")
-            if len(root_offsets) != 20:
+            if len(root_offsets) != OWNER_ROOT_PROGRAM_ROOT_COUNTS[
+                    (owner_name, program_name)]:
                 raise ValueError(
-                    f"link {detail} SpecialN root count {len(root_offsets)} != 20")
+                    f"link {detail} SpecialN root count {len(root_offsets)} "
+                    f"!= {OWNER_ROOT_PROGRAM_ROOT_COUNTS[(owner_name, program_name)]}")
             # This is a model-part replacement, not a synthetic hierarchy.
             # Production already receives every live DObj matrix, so capture
             # each root from its actual tree node.  Cross-cache matrix slots
@@ -8084,10 +8191,12 @@ def build_owner_root_programs(
             # consumes only its own cache and therefore needs no cross slot.
             parents = tuple(INVALID_U8 for _ in root_offsets)
         elif owner_name == "yoshi":
-            if len(root_offsets) != YOSHI_ROOT_PROGRAM_ROOT_COUNT:
+            if len(root_offsets) != OWNER_ROOT_PROGRAM_ROOT_COUNTS[
+                    (owner_name, program_name)]:
                 raise ValueError(
                     f"yoshi {detail} {program_name} root count "
-                    f"{len(root_offsets)} != {YOSHI_ROOT_PROGRAM_ROOT_COUNT}")
+                    f"{len(root_offsets)} != "
+                    f"{OWNER_ROOT_PROGRAM_ROOT_COUNTS[(owner_name, program_name)]}")
             appendix_offsets = {
                 offset for _binding, offset in
                 context.get("root_program_appendix_specs", ())

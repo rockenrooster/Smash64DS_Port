@@ -1319,6 +1319,20 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeSamusMorphBallLowOwner, &sNdsNativeSamusFighterLowTables,
     sNdsNativeSamusMorphBallRootsLow, sNdsNativeSamusMorphBallCrossPaletteSlotsLow,
     sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+/* The forward smash carries 0x00180000, which installs the same hidden joints
+ * 24 and 25 Catch does -- but it issues no model-part command, so they draw
+ * 0x2c20 and 0x2ce8 instead of Catch's replacement and hide. That is a 16-root
+ * vector against a canonical 14, and neither offset was resident before,
+ * because Catch's motion overrides both joints away. All five FSmash motions
+ * share this one program. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusFSmashHighOwner, &sNdsNativeSamusFighterHighTables,
+    sNdsNativeSamusFSmashRoots, sNdsNativeSamusFSmashCrossPaletteSlots,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusFSmashLowOwner, &sNdsNativeSamusFighterLowTables,
+    sNdsNativeSamusFSmashRootsLow, sNdsNativeSamusFSmashCrossPaletteSlotsLow,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
 #endif
 #endif
 
@@ -5078,6 +5092,11 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         return (use_low_detail != 0u) ?
             &sNdsNativeSamusMorphBallLowOwner : &sNdsNativeSamusMorphBallHighOwner;
     }
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program == 4u))
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeSamusFSmashLowOwner : &sNdsNativeSamusFSmashHighOwner;
+    }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
@@ -5178,7 +5197,11 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
-    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program <= 3u))
+    /* Catch, MorphUnfold, MorphBall, FSmash. Every number this bound rejects
+     * falls through to the reset below and silently becomes canonical, which is
+     * how Kirby's Stone and CopyLink were lost for a month -- so this literal
+     * moves whenever a Samus program is added. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program <= 4u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5241,7 +5264,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
-        program_count = 4u;
+        /* canonical + Catch + MorphUnfold + MorphBall + FSmash. */
+        program_count = 5u;
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)

@@ -44,7 +44,7 @@ Main Menus:
     -shield rolling is invisible. **NOT a root-vector bug: RollF/RollB carry only 0x40000000 (TransN, no DL). Cause is elsewhere.**
     -down B is invisible. **NOT a root-vector bug: Bomb is FTANIM_FLAG_NONE and its morph collapse is already baked as MorphUnfold/MorphBall. Cause is elsewhere.**
     -B charge/shots are not rendering over the samus gun, can move Z depth to be infront of gun so that the gun is occluded when charging.
--Samus **(not reported, found by audit): forward smash may make Samus vanish. Motions 177-181 add drawing hidden parts 11/12 (0x2c20, 0x2ce8) with no bake and no program. Please confirm on hardware.**
+-Samus **(not reported, found by audit): forward smash should make Samus vanish. Now derived rather than suspected — all five FSmash motions carry 0x00180000, which installs drawing hidden parts 11 and 12 (joints 24/25, DLs 0x2c20 and 0x2ce8). The live vector is 16 roots against a canonical 14, and NEITHER offset is resident in either detail, so no owner can match and a declined owner draws nothing. Catch escapes this only because its own motion overrides both joints. A sweep of all 26 fighters found exactly three drawing hidden parts in the game and this was the last uncovered one. FIX IMPLEMENTED — an FSmash root program now carries the 16-root vector, built and linked. Please still confirm on hardware, and note that the useful answer is now the opposite one: if Samus did NOT vanish on forward smash before this, something in the chain is wrong and worth knowing.**
 -captain falcon
 
 -General
