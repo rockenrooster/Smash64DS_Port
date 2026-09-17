@@ -22,6 +22,15 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseSlotLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseTrackOverflow);
 NDS_FT_POSE_COUNTER(gNdsFtPoseAObjLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseRunMaskFallbacks);
+/* P2-2p8 joint lever, animation half. The limit is a runtime variable so both
+ * counters have a compiled writer in every build (--gc-sections drops a global
+ * whose only writer is inside a false `#if`, and `used` does not save it), and
+ * so control and arm are ONE ROM with byte-identical .text. Seeded from
+ * NDS_LAB_POSE_JOINT_CAP; 0 disables the cap. */
+__attribute__((used)) volatile u32 gNdsLabPoseJointCapLimit =
+    NDS_LAB_POSE_JOINT_CAP;
+NDS_FT_POSE_COUNTER(gNdsLabPoseJointCapSkipped);
+NDS_FT_POSE_COUNTER(gNdsLabPoseJointCapEvaluated);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleCompares);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleMismatches);
 NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstJoint);
@@ -1325,6 +1334,31 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
         if (dobj == NULL)
         {
             continue;
+        }
+        /* P2-2p8 joint lever, the arm that does NOT create a NULL. Capping the
+         * skeleton at setup (gNdsLabJointCapLimit) aborts the CPU AI: the first
+         * pruned joint leaves fp->joints[] holding NULL and
+         * ndsBaseFTComputerSetFighterDamageDetectSize dereferences it
+         * (decomp ft/ftcomputer.c:7970). This cap leaves every DObj in place
+         * and only declines to EVALUATE the high pose entries, so the tree,
+         * the collision parts and the AI all still see a full fighter. It
+         * therefore prices the animation half of the joint lever and nothing
+         * else -- the matrix build, the invalidate walk and the draw traversal
+         * still run over all joints, which is why the number it produces is a
+         * floor for the lever and not the lever. Limbs freeze.
+         *
+         * Runtime, not `#if`: the skip counter needs a compiled writer in the
+         * control or --gc-sections drops it, and an always-compiled branch
+         * makes control and arm one ROM with byte-identical .text. 0 = off. */
+        {
+            const u32 pose_cap = gNdsLabPoseJointCapLimit;
+
+            if ((pose_cap != 0u) && (e >= pose_cap))
+            {
+                gNdsLabPoseJointCapSkipped++;
+                continue;
+            }
+            gNdsLabPoseJointCapEvaluated++;
         }
 #if NDS_FT_POSE_ORACLE
         /* The shadow's clock inputs are the live joint's: gcSetAnimSpeed and

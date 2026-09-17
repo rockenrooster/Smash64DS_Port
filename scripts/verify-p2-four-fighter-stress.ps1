@@ -9,6 +9,13 @@ param(
     # compiled with NDS_R2_DRAW_SUPPRESS_MASK). The registry gate never passes
     # this, so the default remains the configuration-exact gate build.
     [string]$Build = 'build-p2-fourcpu-tickhud',
+    # Lab A/B only, forwarded to the sampler: `name=value` pokes applied before
+    # the match. This exists so a lab lever can be a SAME-ROM A/B -- both arms
+    # one binary with byte-identical .text, differing only in a volatile word --
+    # which is the only comparison form this campaign trusts for a small delta.
+    # The registry gate never passes it, so the default stays the gate build
+    # running exactly as shipped. Every poked name is reported with the run.
+    [string[]]$SetGlobals = @(),
     # Calibrated from the first crash-free four-CPU source match: source
     # identity/clock are read exactly at presented frame 1, while the tick-HUD
     # ring's first populated timing sample is frame 2. Frames 2..1973 therefore
@@ -286,6 +293,18 @@ $memoryGlobals = @(
     # either direction unnoticed again. Evidence:
     # artifacts/performance/2026-09-16_p2-2p8-gx-compose-decline/.
     'gNdsR2GxComposeDeclines',
+    # P2-2p8 joint-cap lab arm (NDS_LAB_JOINT_CAP). Both sides, deliberately:
+    # `Kept` links on a cap=0 control too, so a control run proves the setup
+    # walk ran at all, and `Pruned` is the engagement. A cap arm that reads
+    # Pruned=0 has measured the control under a different name -- which is
+    # exactly what the first cap=12 run turned out to be. These are absent from
+    # a build predating the flag, and the sampler tolerates a missing symbol.
+    'gNdsLabJointCapLimit',
+    'gNdsLabJointCapPrunedCount',
+    'gNdsLabJointCapKeptCount',
+    'gNdsLabPoseJointCapLimit',
+    'gNdsLabPoseJointCapSkipped',
+    'gNdsLabPoseJointCapEvaluated',
     'gNdsFighterDLAllDrawP0HardwareTriangleCount',
     'gNdsFighterDLAllDrawP1HardwareTriangleCount',
     # P2-3r15. THE TWO COUNTERS THAT CAN EXPRESS A ROSTER WIDER THAN TWO NAMES.
@@ -363,6 +382,10 @@ $sampleArgs = @{
     RowsCsv = $RowsCsv
 }
 if ($NoBuild) { $sampleArgs.NoBuild = $true }
+if ($SetGlobals.Count -gt 0) {
+    $sampleArgs.SetGlobals = $SetGlobals
+    Write-Host ("Lab arm: " + ($SetGlobals -join ' '))
+}
 
 & (Join-Path $PSScriptRoot 'sample-tick-hud-buckets.ps1') @sampleArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

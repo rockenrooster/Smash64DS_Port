@@ -251,6 +251,27 @@ NDS_DREAMLAND_CARD_CULL_MASK1 ?= 0
 #   2 = instrumented / semantic oracle build of that same path
 NDS_BATTLE_PROFILE ?= 1
 NDS_TASK22_WALLPAPER_RUN_LAB ?= 0
+# P2-2p8 joint-cap lab arm (owner 2026-09-16: test builds of experimental
+# optimizations are allowed). 0 = the shipping skeleton. N > 0 prunes every
+# common-part DObj whose container index is >= N at fighter setup, which is a
+# genuinely smaller skeleton rather than a skipped loop: the pruned node never
+# exists, so its descendants fail their `parent == NULL` test and prune with it,
+# and every downstream per-joint loop -- pose, anim keys, the invalidate walk,
+# matrix build, draw traversal -- never sees it. Lab only: limbs disappear, and
+# a fighter whose attributes name a pruned joint may abort, which is a result
+# (that cap is not implementable) and not a defect in the instrument. Exists to
+# PRICE the joint lever that the gap sizing calls the only per-fighter
+# candidate left. See artifacts/performance/2026-09-16_p2-2p8-joint-cap-ladder/.
+NDS_LAB_JOINT_CAP ?= 0
+# The same lever's animation half, and the arm that is actually runnable.
+# NDS_LAB_JOINT_CAP=1 engages and then ABORTS in the CPU AI: a pruned joint
+# leaves fp->joints[] NULL and ndsBaseFTComputerSetFighterDamageDetectSize
+# dereferences it (decomp ft/ftcomputer.c:7970), which is itself the finding --
+# a smaller skeleton is a per-fighter data re-derivation, not a switch. This cap
+# creates no NULL: every DObj stays, and only pose entries at index >= N decline
+# to evaluate. It prices the animation lane and is therefore a FLOOR for the
+# joint lever, never the lever. 0 = shipping.
+NDS_LAB_POSE_JOINT_CAP ?= 0
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
 # fighter owner and how many of them recompute a value the prepared array
@@ -6428,6 +6449,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK37_PROFILE_PER_FRAME_REGION $(NDS_TASK37_PROFILE_PER_FRAME_REGION)'; \
 		echo '#define NDS_TASK37_PROFILE_RESULTS $(NDS_TASK37_PROFILE_RESULTS)'; \
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
+		echo '#define NDS_LAB_JOINT_CAP $(NDS_LAB_JOINT_CAP)u'; \
+		echo '#define NDS_LAB_POSE_JOINT_CAP $(NDS_LAB_POSE_JOINT_CAP)u'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \

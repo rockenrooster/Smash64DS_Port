@@ -178,6 +178,14 @@ extern volatile u32 gNdsFtPoseAObjLiveMax;
 /* Nonzero only if a bound fighter hierarchy exceeds the compact 64-entry
  * running-joint mask and falls back to the complete historical scan. */
 extern volatile u32 gNdsFtPoseRunMaskFallbacks;
+/* P2-2p8 joint lever, animation half. `Limit` is the runtime cap (0 = off,
+ * seeded from NDS_LAB_POSE_JOINT_CAP and pokeable, so one ROM runs the whole
+ * ladder with byte-identical .text in every arm). `Skipped` is the engagement
+ * and `Evaluated` the both-arms invariant; both always have a compiled writer,
+ * which a counter guarded by `#if` does not, and --gc-sections drops those. */
+extern volatile u32 gNdsLabPoseJointCapLimit;
+extern volatile u32 gNdsLabPoseJointCapSkipped;
+extern volatile u32 gNdsLabPoseJointCapEvaluated;
 extern volatile u32 gNdsFtPoseOracleCompares;
 extern volatile u32 gNdsFtPoseOracleMismatches;
 extern volatile u32 gNdsFtPoseOracleFirstJoint;

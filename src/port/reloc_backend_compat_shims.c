@@ -11000,6 +11000,19 @@ extern void gcDecideDObj3TransformsKind(DObj *dobj, u8 tk1, u8 tk2,
 /* P2-3f50 parts-setup guard telemetry, read by
  * scripts/probe-battle-progress.ps1 -ExtraGlobals. */
 __attribute__((used)) volatile u32 gNdsFTPartsSetupBadIdCount;
+/* P2-2p8 joint-cap lab arm. The limit is a RUNTIME variable, not an `#if`, for
+ * two reasons that both bit on the first attempt. One: a counter written only
+ * inside `#if NDS_LAB_JOINT_CAP` has no compiled writer in the control, so
+ * --gc-sections drops it and the harness refuses the run -- `used` does not
+ * save it, because devkitARM ignores the `retain` attribute. Two: with the
+ * branch always compiled, control and arm are the SAME ROM with byte-identical
+ * .text, so the comparison cannot be contaminated by layout or by the
+ * instrument's own cost, which is the only A/B form this campaign trusts.
+ * 0 disables the cap. Seeded from NDS_LAB_JOINT_CAP so a build can pin it, and
+ * pokeable so one binary runs the whole ladder. */
+__attribute__((used)) volatile u32 gNdsLabJointCapLimit = NDS_LAB_JOINT_CAP;
+__attribute__((used)) volatile u32 gNdsLabJointCapPrunedCount;
+__attribute__((used)) volatile u32 gNdsLabJointCapKeptCount;
 __attribute__((used)) volatile u32 gNdsFTPartsSetupBadId;
 __attribute__((used)) volatile u32 gNdsFTPartsSetupBadStep;
 __attribute__((used)) volatile u32 gNdsFTPartsSetupBadDescId;
@@ -11071,6 +11084,31 @@ void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
                 }
                 gNdsFTPartsSetupBadIdCount++;
                 break;
+            }
+            /* The prune is here and not in a per-joint loop on purpose. Leaving
+             * the DObj uncreated removes it from EVERY consumer at once -- the
+             * pose player, ftParamUpdateAnimKeys, the invalidate walk, the
+             * matrix build and the draw traversal all reach parts through this
+             * tree -- so the arm prices a smaller skeleton rather than one
+             * subsystem declining to look at a skeleton that still exists.
+             * `array_dobjs[id]` stays NULL, so every descendant hits the
+             * `parent == NULL` test below and prunes with its ancestor.
+             *
+             * Known: any nonzero cap this roster can reach ABORTS in the CPU
+             * AI. ndsBaseFTComputerSetFighterDamageDetectSize dereferences the
+             * NULL this leaves in fp->joints[] (decomp ft/ftcomputer.c:7970),
+             * because damage_coll_descs names joints by id. That is the arm's
+             * result, not a fault in it: a smaller skeleton is a per-fighter
+             * data re-derivation. Kept live so the ladder is reproducible. */
+            {
+                const u32 joint_cap = gNdsLabJointCapLimit;
+
+                if ((joint_cap != 0u) && ((u32)id >= joint_cap))
+                {
+                    gNdsLabJointCapPrunedCount++;
+                    goto advance_flags;
+                }
+                gNdsLabJointCapKeptCount++;
             }
             parent = (id != 0) ? array_dobjs[id - 1] : root_dobj;
 
