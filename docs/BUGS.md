@@ -28,9 +28,9 @@ Main Menus:
     -Ness not selectable
 -Yoshi:
     -Up B egg shells are not rendering.
-    -Grab attacks turn yoshi invisible. **Root cause found and baked: joint 7 part 1 had no native root, so the owner declined and the whole fighter stopped drawing. Capture owed.**
-    -B attack turns yoshi invisible and egg is also invisible **Same class, different mechanism: hidden parts from the anim mask, not a model part. Still open.**
-    -character intro is invisible (egg hatching) **Same hidden-part class as B attack. Still open.**
+    -Grab attacks turn yoshi invisible. **PARTIAL: baked joint 7 part 1, but that is NOT sufficient. ThrowF/ThrowB also carry 0x18000000, installing hidden part 4 (joint 9, DL 0x2800), so the vector gains a root and no program matches. Needs a Yoshi root program.**
+    -B attack turns yoshi invisible and egg is also invisible **CONFIRMED same cause as the grab: EggLay motions 202-206 carry 0x18000000, adding drawing hidden part 4 (joint 9, 0x2800). Needs the same Yoshi root program.**
+    -character intro is invisible (egg hatching) **NOT the hidden-part class - I was wrong. Appear1/2 carry only 0x40000000 (index 1, TransN, no DL), so the root vector is unchanged. Cause is elsewhere.**
 -Link:
     -character intro column VFX should have transparency
     -neutral B makes link invisible when throwing and catching the boomerang
@@ -41,9 +41,10 @@ Main Menus:
     -electric damage effects seem to be missing overall
     -strong side a effects not rendering.
 -Samus
-    -shield rolling is invisible.
-    -down B is invisible.
+    -shield rolling is invisible. **NOT a root-vector bug: RollF/RollB carry only 0x40000000 (TransN, no DL). Cause is elsewhere.**
+    -down B is invisible. **NOT a root-vector bug: Bomb is FTANIM_FLAG_NONE and its morph collapse is already baked as MorphUnfold/MorphBall. Cause is elsewhere.**
     -B charge/shots are not rendering over the samus gun, can move Z depth to be infront of gun so that the gun is occluded when charging.
+-Samus **(not reported, found by audit): forward smash may make Samus vanish. Motions 177-181 add drawing hidden parts 11/12 (0x2c20, 0x2ce8) with no bake and no program. Please confirm on hardware.**
 -captain falcon
 
 -General

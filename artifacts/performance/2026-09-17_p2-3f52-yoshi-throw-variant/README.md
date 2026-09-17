@@ -1,4 +1,11 @@
-# Yoshi's grab throw had no native root, so the whole fighter stopped drawing
+# Yoshi's grab throw had no native root -- and that was only half of it
+
+> **CORRECTION, read the section at the bottom.** The model-part root this
+> document bakes is real and needed, but `ThrowF`/`ThrowB` ALSO install a
+> drawing hidden part, which adds a root the vector cannot carry. A per-binding
+> variant can never cover a root-count change, so the throw still does not draw.
+> A Yoshi root program is required. The derivation below stands; the claim that
+> it resolves the symptom does not.
 
 Owner, `docs/BUGS.md`: *"Yoshi: Grab attacks turn yoshi invisible."*
 
@@ -76,16 +83,72 @@ here demonstrates pixels. The static chain says the root will resolve where it
 previously could not; it does not say the model is the right one or that it is
 oriented correctly. **Owed: a capture of Yoshi's forward and back throws.**
 
+## CORRECTION: this fix is necessary but NOT sufficient
+
+The throw does not draw yet, and the reason is a second mechanism this document
+did not check.
+
+`ThrowF` and `ThrowB` are not only model-part swaps. In `ftdata.c`'s Yoshi
+motion table both rows read
+
+```c
+{ &llFTYoshiAnimThrowFFileID, dYoshiMainMotion_ThrowF,
+  FTANIM_FLAG_ANIMLOCKS | 0x18000000 },
+```
+
+— the same `0x18000000` that `Catch` and `CatchPull` carry. Those bits install
+**hidden parts 3 and 4**, and Yoshi's hidden part 4 is
+`{ root 9, parent 7, partindex 1, kind 0 }` (`247_YoshiMain.c:125`), whose joint
+**draws**: descriptor 5 of the high `dYoshiModel_JointTree` is
+`&dYoshiModel_Joint_0x3148_post_post_post[8]`, resolving to
+`dYoshiModel_Joint_0x2800_DisplayList` at **`0x2800`**. The low tree's entry at
+that index is NULL, so `ftMainUpdateHiddenPartID` falls back to the high
+commonpart and the joint draws at **both** details.
+
+**A drawing hidden part ADDS a root**, so the live vector goes from 18 to 19.
+`P2_MODEL_PART_ROOT_VARIANTS` replaces a root at an existing binding and can
+never cover that: `nds_renderer_assets.c` rejects on
+`owner->root_count != root_count` before it ever compares offsets. So
+`(2, 0x7D10)` is real and needed — the throw genuinely does swap joint 7 to part
+1 — but by itself it cannot make the throw draw.
+
+**What is actually required** is a complete ordered root program for Yoshi, and
+two of them:
+
+1. joint 7 canonical + hidden part 4 — `Catch`, `CatchPull`, and the five
+   `EggLay*` motions (202-206), which carry the same `0x18000000`.
+2. joint 7 = `0x7D10` + hidden part 4 — the `ThrowF`/`ThrowB` window between
+   `SetModelPartID(7, 1)` and the restore to `(7, 0)`.
+
+`0x7D10` is already resident, because the owner's roots are canonical plus
+variants plus appendix, so a program can reference the variant this change
+added rather than baking it twice. `0x2800` needs one new appendix row, the
+same offset in both details. The rest is plumbing Yoshi has never had: an owner
+branch in `build_owner_root_programs`, a `program_count` for
+`NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI`, and an
+`NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT` gate.
+
+**This also explains the owner's other two Yoshi reports.** "B attack turns
+yoshi invisible and egg is also invisible" is the same hidden part reached
+through the `EggLay*` motions — the same program fixes both. The
+egg-hatching intro is **not** this class, and the guess in the earlier revision
+of this document that it was is withdrawn: `Appear1`/`Appear2` carry only
+`0x40000000`, which is hidden index 1, TransN, no display list, so the root
+vector is unchanged.
+
+The artifact's original "Not proven: that the throw draws" was right, and this
+is why.
+
 ## Still open in this row
 
 The owner reports three Yoshi invisibility bugs and this addresses one:
 
 | symptom | status |
 |---|---|
-| grab attacks turn Yoshi invisible | **addressed here** — `SetModelPartID(7, 1)` |
-| B attack turns Yoshi invisible, egg invisible | **still open** — no model-part command for it, so it is hidden-part creation from the motion's anim-desc mask, the mechanism Samus Catch and Link Entry use |
-| character intro invisible (egg hatching) | **still open** — same class |
-| Up-B egg shells not rendering | **still open** — an effect, not a root |
+| grab attacks turn Yoshi invisible | **half done** — the model-part root is baked here; the hidden part it also installs still needs a root program |
+| B attack turns Yoshi invisible, egg invisible | **open, cause confirmed** — the same drawing hidden part 4, via `EggLay*` 202-206. One Yoshi program fixes this and the grab together |
+| character intro invisible (egg hatching) | **open, NOT this class** — `Appear1`/`Appear2` carry only `0x40000000`, hidden index 1, no display list. Cause is elsewhere |
+| Up-B egg shells not rendering | **open** — an effect, not a root |
 
 Those three are genuinely `OWNER_ROOT_PROGRAMS` work and the board's original
 framing is right for them.
