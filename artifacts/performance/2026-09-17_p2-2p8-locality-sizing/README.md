@@ -225,6 +225,67 @@ is wrong and the lane dies for one build. `scripts/check-dtcm-residency.py`
 (added `46c7373cdf4`) must pass first, because a linker input-section pattern
 that matches nothing gathers silently and reads exactly like a dead lever.
 
+## 6. One row re-derived independently, and what it changes
+
+The sizing above is delegated. I re-derived **one** symbol end to end from the
+same CSV, to check the pipeline and the load-bearing claim rather than the
+whole table.
+
+First, the dataset is pinned: streaming the whole 285 MB CSV reproduces every
+header figure exactly — **6,048,201 rows, 129 regions, instructions
+148,735,753, total_cycles 487,368,912**. And the profile ELF carries the
+reported addresses to the byte (`sNdsRendererTask36CaptureActive` 0x02201d2c,
+`gMPCollisionGeometry` 0x0224bf4c, `s_highTickCount` 0x0225e838).
+
+For `sNdsRendererTask36CaptureActive` — a **4-byte** static — I found its
+address in **67 distinct literal-pool words**, resolved the 97 PC-relative
+loads that fetch those words, followed each to its dependent dereference, and
+summed stall over both sets:
+
+| group | acc/fr | stall tk/fr | tk/access |
+|---|---:|---:|---:|
+| literal-pool base loads | 419.3 | **1,648.6** | 3.93 |
+| data dereferences | 395.0 | **1,276.0** | 3.23 |
+| **combined** | **814.2** | **2,924.6** | 3.59 |
+
+**The load-bearing claim is confirmed.** A single 4-byte scalar is touched ~800
+times per frame from dozens of call sites. That is K in the hundreds, which is
+exactly the regime the DTCM break-even was never tested against, and it is why
+the falsifier's K≈1 result does not transfer.
+
+**The exact row is not reproduced.** The delegated figures are 963.8 acc/fr and
+1,766 tk/fr; neither of my groups matches that pair. My dereference detection is
+deliberately conservative — it follows at most eight instructions and requires
+`[reg]` or `[reg,#0]` — so my 395 is a lower bound, and the delegated method
+(full backward base-register resolution) would legitimately find more. Treat the
+per-symbol ranking as sound in order and approximate in magnitude until the
+table is re-derived.
+
+### The caveat this surfaced
+
+**The literal-pool base load costs MORE than the dereference it feeds** — 1,648.6
+against 1,276.0 for this symbol — and **DTCM does not touch it.** Moving the
+datum to DTCM changes where the *data* lives; the pool word stays in `.text` and
+is still read through the data cache. For this symbol that leaves 56% of the
+combined cost in place.
+
+This is the same effect as the 67,858 tk/fr "PC-relative literal-pool loads"
+bucket above, seen from one symbol. It means:
+
+1. The 34,444 estimate for the 512 B DTCM arm is plausibly deref-only, but it
+   cannot be assumed to include the pool half, and the arm's *measured* win may
+   land well under it. The build is still the right falsifier; the expectation
+   should be the lower half of the band.
+2. **Packing the hot scalars into one anchored struct is a strictly better lane
+   shape than moving them to DTCM.** One base pool word plus immediate offsets
+   removes the scattered data fills *and* most of the pool loads, and it costs
+   none of the scarce 1,992 DTCM bytes. It needs source edits rather than a
+   linker line, so it is more work — but it attacks both halves, and DTCM
+   attacks one.
+
+Neither is sized here beyond this one row. Recorded so the cheap lane is not
+built in ignorance of the better-shaped one.
+
 ## 4. Verdict
 
 Everything sized here at its ceiling totals **70,804–85,725 tk/fr = 15.1–18.3%**
