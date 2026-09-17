@@ -410,6 +410,29 @@ try {
         # verify-p2-shell-loop.ps1 is that an abort during a walk is nearly
         # always a reloc fixup that did not resolve -- the pointer is left raw
         # and the first dereference aborts.
+        # CATCH THE BAD ARGUMENT AT THE CALL, NOT AT THE FAULT.
+        #
+        # ndsBaseSyTaskmanStartTask faults at +10 on `ldr r3,[r0,#16]` with
+        # r0 = 3 -- a SYTaskmanSetup* that is an integer. By the time
+        # __excpt_entry runs, lr is the faulting PC and the caller's return
+        # address is buried in the faulting frame, unreachable from abort mode.
+        # At function ENTRY it is simply $lr. Condition on an r0 that cannot be
+        # a valid pointer so a healthy run never stops here.
+        'break ndsBaseSyTaskmanStartTask if $r0 < 0x02000000',
+        'commands',
+        'silent',
+        # $sp matters more than r0 here. The caller computes the argument as
+        # `add r4, sp, #4`, so r0 IS sp + 4 -- an r0 of 3 means sp is
+        # 0xFFFFFFFF and the thread is running on a wrecked stack pointer. The
+        # bad pointer is the symptom; the stack is the bug. 0xFFFFFFFF is also
+        # the exact value the P2-1b-1 precedent recorded for a coroutine read
+        # out of rewound arena memory (nds_scene_manager.c:292).
+        'printf "BADSETUP r0=%08x sp=%08x lr=%08x scene=%d\n", $r0, $sp, $lr, (int)gSCManagerSceneData.scene_curr',
+        'info symbol $lr',
+        'backtrace 8',
+        'detach',
+        'quit 1',
+        'end',
         'break __excpt_entry',
         'commands',
         'silent',
