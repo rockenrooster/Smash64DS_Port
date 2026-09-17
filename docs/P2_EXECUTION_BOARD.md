@@ -51,37 +51,33 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
-**NO CLASS REACHES THE GATE, INCLUDING LOCALITY**
-(`…_p2-2p8-gate-decision/`): ceiling **90.6%**, leaving **44,208 OVER**.
-**RESIDUAL: 321,866 UNFOUND**; banked+sized **146,678 = 31.3%**.
-**CLOSED LANES** (detail archived): joint-cap placement, Kirby copy (OWED:
-per-hat look), hidden-part class — 26 owners swept, 3 exist, all covered
-(`…_p2-3f-hidden-part-sweep/`). OWED: captures.
-**DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
-`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap. **OWNER:
-one-line call** on the non-zero exit — it is a window assertion, not
-correctness (detail archived).
-**OWNER 09-17: SRC REOPENED** (was NO-GO), **30 Hz simulation still refused**.
-Docs now committed (`cd270b735dc`). **SIZED** (`…_p2-2p8-ftr-stg-misc-sizing/`):
-no one of FTR/STG/MISC closes the gap even deleted whole (STG 80.1%, FTR 72.8%,
-MISC 49.6%); lanes sum to 124% of ALL so they do NOT add. **SRC DISTRIBUTION**
-(`…_p2-2p8-src-distribution/`): **no big rocks** — 1,108 symbols under 5,000
-carry 571,666, more than the whole gap. Largest class is soft-float 125,369
-(26.1%), **~99.7% behind gameplay or fidelity gates. Closing the gap is a
-POLICY call before it is an optimization.**
-**LEVER SIZED: 8,458 B of entry-effect texels belong to fighters the four-CPU
-build cannot run**, **0 shared** = **2.1 arena pages**
-(`…_p2-2p8-entry-effect-roster-residency/`). Buys arena headroom, NOT ticks.
-**OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`). Yoshi preview FIXED:
-pack `source_bytes` 45,488 vs owner `asset_data_size` 44,256 declined the owner
-(reject 3, before any root); the 1,232 is the pair weld. Same pass caught today's
-Catch/Throw programs publishing un-aliased weld offsets past the asset end —
-fixed, generator now asserts. **WALK REPLACED**: tours every admitted kind, 24
-tics each, presses its own START; `CSSTOUR kind=/drew=` must be EQUAL. The old
-walk covered 4 of 9, which is why Yoshi went unseen.
-**ROSTER: rung 10 = +82,040 B image = −86,016 arena (21 pages) → SIGILL on CSS
-exit; rung 7 control clean.** Rung 8 (Jigglypuff) is only **+9,440 B**;
-bisecting 8/9. Kirby is the expensive member.
+**NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`…_p2-2p8-gate-decision/`):
+ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound** (detail archived).
+**CLOSED LANES** (archived): joint-cap placement, Kirby copy, hidden-part class
+— 26 owners swept, 3 exist, all covered. OWED: per-hat look, captures.
+**DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 B** (`5e109a47d5d`). Largest
+banked win, 9.2% of gap. **OWNER: one-line call** on its non-zero exit.
+**OWNER 09-17: SRC REOPENED**, **30 Hz still refused**. No single lane closes
+the gap even deleted whole, and SRC has no big rocks; ~99.7% of the largest
+class sits behind gameplay/fidelity gates, so **closing it is a POLICY call**
+(`…_p2-2p8-ftr-stg-misc-sizing/`, `…-src-distribution/`, detail archived).
+**LEVER SIZED**: 8,458 B of entry-effect texels = 2.1 arena pages
+(`…_p2-2p8-entry-effect-roster-residency/`). Headroom, NOT ticks.
+**OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`). Yoshi preview: cause
+found (pack 45,488 vs owner 44,256), first fix HUNG the CSS and is reverted;
+needs a pack-format field. Walk REPLACED by a tour of every admitted kind,
+`CSSTOUR kind=/drew=` must be EQUAL. FPS/music/dwell diagnosed, unfixed.
+**ROSTER BISECTED AND SHIPPED AT RUNG 8** (`ded5da71a4b`): Jigglypuff is
+selectable, CSS verified clean twice, +9,440 B = 3 arena pages. Rung 9 breaks
+it and the break is between 8 and 9, so NOT Kirby — **Ness alone** is +32,016 B
+= 8 pages and SIGILLs at CSS exit; Kirby +82,040 B = 21 pages. Ness's content
+is fine (preview drew 3,498). Both need bytes RETURNED, not a fighter fixed.
+**OPEN: Jigglypuff's own preview is blank** — found by the new walk, never
+reportable before because he was never selectable. Not the Yoshi cause.
+**CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done (−216 B).
+**Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay; inlined statics
+leave no ELF symbol, which is why they looked dead. 158 harness constants ARE
+dead but thread through 3 unnamed files. Campaign returns ~576 B vs Ness's 20,480.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
