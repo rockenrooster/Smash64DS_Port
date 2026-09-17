@@ -184,6 +184,47 @@ hazard — and `src/nds/nds_ft_pose.c:169-178` builds a table of
 `(u8)offsetof(DObj, …)` with an unguarded cast that truncates silently past
 offset 255.
 
+## 5. Why the DTCM budget argument inverts for scattered scalars
+
+`…_p2-2p8-dtcm-falsifier/` closes with "can DTCM hold anything that pays? **no**
+— 1,992 usable bytes, and the break-even is ~13 refetches per resident line per
+frame." That break-even is derived in `…_stall-budget/STALL_CLASS_SIZING.md:129`:
+
+> 5,704 bytes is 178 cache lines. DTCM saves one fill per resident line per
+> refetch avoided, so reaching 10% of the gap (49,638 tk/fr = 2,256 fills at 44
+> cycles) needs every one of those 178 lines refetched 12.7 times per frame.
+
+**5,704 bytes is 178 lines only if the bytes are contiguous.** 5,704 / 32 = 178.
+That is the right conversion for the candidate it was written about — a
+flattened parts table — and the wrong one for a 4-byte scalar, which occupies a
+whole line by itself. The measured set here is **1,670 bytes across 207 lines**,
+not the 52 that 32:1 would predict.
+
+The break-even is stated per *line*, which makes it look like a fixed bar. It is
+not: how high a bar your budget can clear depends on how many lines the budget
+buys.
+
+| candidate | DTCM bytes | lines | tk/fr | **per DTCM byte** |
+|---|---:|---:|---:|---:|
+| `sNdsFtPartsFlat`, 4 slots (measured, reverted) | 1,584 | 49 | 10,176 | **6.4** |
+| hot scalars, 512 B arm (sized, unbuilt) | 509 | ~117 | 34,444 | **67.7** |
+
+**10.5× better per byte**, from 7.4× more lines per byte. The scalar arm sits at
+~6.8 refetches per line — *below* the falsifier's 12.7 — and still returns 7.4%
+of the gap, because it buys 7.4× the lines for a third of the budget.
+
+This does not overturn the falsifier's measurement, which stands: moving that
+table bought −10,176, below the 14,080 cross-build significance floor, and
+consuming 80% of a scarce budget for an under-floor result was correctly
+refused. It overturns the generalisation drawn from it.
+
+**Owed before this is banked:** the 34,444 is a delegated per-PC derivation that
+has not been independently re-derived here, and its own falsifier is a build —
+if WORK-H does not fall by ≳28,000 (2× the significance floor) the attribution
+is wrong and the lane dies for one build. `scripts/check-dtcm-residency.py`
+(added `46c7373cdf4`) must pass first, because a linker input-section pattern
+that matches nothing gathers silently and reads exactly like a dead lever.
+
 ## 4. Verdict
 
 Everything sized here at its ceiling totals **70,804–85,725 tk/fr = 15.1–18.3%**
