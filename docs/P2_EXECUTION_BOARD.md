@@ -67,26 +67,19 @@ Checks: Boundary GREEN 3/3 09-17 (arena alignment: 0 ticks, exists so
 residency DERIVED per roster, DamageSlash coverage advisory off-canonical with
 correctness strict, and a format bug fixed that reported *"Format specifier was
 invalid"* INSTEAD of the failures it found. Canonical regression identical.
-**KIRBY'S COPY IS NATIVE-BROKEN FOR 10 OF 11 VICTIMS**
-(`…_roster-variance/KIRBY_COPY_NATIVE_GAP.md`). 7,679 failures decode to Kirby
-joint 6 / modelpart 9 — Captain's copy hat — in `SpecialNCopy`.
-`renderer_adapter_fighter.c:1125-1127` accepts heads **1, 10, 14** only; 10 is
-Link's, so **only Link works**. At PROFILE_LEVEL 0 a rejected root **never
-reaches the screen**. **Canonical passes on LUCK** — it holds Donkey (4) and
-Samus (8), both broken; its CPU Kirby never copied a non-Link victim. Reachable
-by hand on the shipping menu.
-**NOT 20 bakes — the seam assumes a RESIDENT head.** Heads 1/14 are FACES, **0**
-positions absent from the resident table; hat 4 has **91 of 185** absent because
-copy hats are **deferred images** while the body's MODIFY_ST escapes resolve
-into the RESIDENT table. Choice: **(a)** make hats resident (repays the ARM9
-bytes the deferred design saved, x10 x2) or **(b)** resolve escapes into the
-deferred image's table (no residency cost, generalises) — **(b)** is right, is
-seam work on `validate_cross_census=False`, and needs the closure check green
-**and** a visual check per hat.
-DONE: closure check names all 10 victims (spec + test); cross slots DERIVED
-from root count, **regenerating heads 1/14's tuples exactly**;
-`kirby_trio_root_count()` kills a latent 10-vs-9 mis-binding. WORK-H 1,471,552
-is NOT a roster-cost datum — that arm is not drawing.
+**KIRBY COPY FIXED — all 11 victims draw natively** (`ddf18a57a86`,
+`…_p2-3f47-kirby-copy-hats/`). Was: ten of eleven left the native path, and at
+PROFILE_LEVEL 0 a rejected root **never reaches the screen**. Both blockers were
+one fact — a copy hat is a **deferred image** and the seam assumed a resident
+head. MODIFY_ST colour escapes now shade from the escaping row (texcoord-only
+copies; exact, since HW light never binds the alias table), and a hat's program
+is mixed-file like CopyLink. Runtime expands from ONE generated head list, so a
+head cannot be half-wired; a second `9 if head_mp == 1 else 10` copy that would
+have rejected every hat is gone. Closure check GREEN (12 victims, 0 unbaked) and
+proven to fail closed two ways. Kirby image **+28,848 B** high / **+26,104 B**
+low (deferred, not ARM9). `IMPLEMENTED_NOT_ACCEPTED` — owed: four-CPU gate
+(RUNNING) and a visual check per hat. WORK-H 1,471,552 was never a roster-cost
+datum; that arm was not drawing.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`.
 **OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines,
 UNMEASURED). SRC's top candidate sized NO-GO; its premises did not survive that

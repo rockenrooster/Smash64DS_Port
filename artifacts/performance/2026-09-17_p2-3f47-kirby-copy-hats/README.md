@@ -1,0 +1,190 @@
+# Kirby's copy is native for all eleven victims, not one
+
+`2026-09-17_p2-2p8-roster-variance/KIRBY_COPY_NATIVE_GAP.md` established the
+defect: Kirby's swallow-copy left the native path for ten of the eleven
+copyable victims, and at `NDS_RENDERER_PROFILE_LEVEL 0` a rejected root never
+reaches the screen, so the whole fighter vanished for the duration of the copy.
+This is the fix. Commit `ddf18a57a86`.
+
+## What actually blocked it
+
+Both obstacles are consequences of one fact: **a copy hat is a deferred image,
+and the trio seam was written for a resident head.**
+
+### 1. The body's MODIFY_ST colour escapes
+
+The hidden trio body (joint 7) copies the shade of rows the head already
+submitted. `_append_kirby_trio_sections` resolved each escape to a
+value-identical row in the **resident** dense table. For a face head (modelparts
+1 and 14, Kirby's own inhale and boomerang faces) such a row exists. For a
+deferred hat it cannot: the hat's rows are in the hat image.
+
+Measured, both details, by building the faithful program for each head and
+classifying every escape:
+
+| head | body dense rows | escapes leaving the block | resolved in the resident table | unresolved |
+|---|---:|---:|---:|---:|
+| 1 (face) | 46 | 14 | 14 | **0** |
+| 14 (face) | 46 | 14 | 14 | **0** |
+| 4 (Donkey's hat) | 46 | 14 | 0 | **14** |
+
+The interesting part is *how* the failing rows differ from the rows that escape
+to them. Comparing all eight fields of the escaping row against its source:
+
+| head | differing fields |
+|---|---|
+| 1 | `{}` — byte-identical in all eight, 14 of 14 |
+| 14 | `{}` — byte-identical in all eight, 14 of 14 |
+| 4 | `{s,t}` x10, `{t}` x2, `{s}` x2 |
+
+So a face head's "escape" is a plain duplicate row, and a **copy hat's escape is
+a literal MODIFY_ST**: the body re-submits the same vertex at a different
+texcoord. Position, matrix binding, cache slot and the colour/normal word are
+identical in every case.
+
+Those rows therefore shade from themselves. The resolver keeps the resident-twin
+path first (so the two face heads' bytes are unchanged), and falls back to self
+only when the source agrees on every shading input and differs only in `s`/`t`.
+Anything else still raises.
+
+**This is exact in the shipped configuration, because the alias has no reader
+there.** Under `NDS_R2_FIGHTER_HW_LIGHT` the active tables never bind the
+pointer at all —
+
+```c
+/* src/nds/nds_renderer_assets.c */
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_IMG_BIND_COLOR(tables_, img_)                                      \
+    (tables_).dense_color_source = (img_)->dense_color_source;
+#else
+#define NDS_IMG_BIND_COLOR(tables_, img_)
+#endif
+```
+
+— and `builds/build/nds_build_config.h` has `NDS_R2_FIGHTER_HW_LIGHT 1` with
+`NDS_RENDERER_M2_DETAILED_LEDGER 0`. The software shade loop that would
+dereference it (`nds_renderer_native_common.c`, the `#else` arm) is not
+compiled, and `prepared_dense` drops `shaded_rgba` entirely. The GX lights every
+vertex from its own word — which *is* self-shading, and is already what heads 1
+and 14 do on hardware today.
+
+Under a software-lit build the body epoch's own light state would replace the
+head epoch's inherited shade for these rows. That is the one bounded difference;
+it is counted per head as `self_shaded_escapes` (14 high / 12 low per hat, 0 for
+both faces) rather than hidden.
+
+### 2. The program's root vector
+
+Root 0 of a trio program is the head, and `build_owner_root_programs` required a
+**resident appendix bake** for every root:
+
+```
+ValueError: kirby high head3: root 0x52e8 lacks a resident appendix bake
+```
+
+A deferred hat has no resident root. That makes a copy hat's trio program
+**mixed-file, exactly like CopyLink's** — which already had this machinery. Each
+hat program now carries a `SourceOwners` table, and root 0 resolves into the
+per-slot hat image through the same two resolves CopyLink uses
+(`...TablesForResolvedRoot` and `...LightPreamblesForResolvedRoot`).
+
+The hat images were never the missing piece: `ftParamSetModelPartDefaultID`
+(`reloc_backend_compat_shims.c`) already calls
+`ndsRendererNativeEnsureKirbyCopyHat` for **every** modelpart 3..13, both
+details. Ten hats were being loaded into the arena every copy and had nowhere to
+draw from.
+
+## The latent bug found on the way
+
+`build_owner_root_programs` held a **second** copy of the root-count rule:
+
+```python
+expected_count = 9 if head_mp == 1 else 10
+```
+
+Correct only while the table held exactly heads 1 and 14. Every copy hat has
+nine roots (only Link-copy enables joint 18 and reaches ten), so this would have
+rejected the first hat admitted, with a message about root cardinality rather
+than about the head. The first copy of this rule became
+`kirby_trio_root_count()` in `6da2b34e300`; this one was missed because nothing
+connects them textually.
+
+## The runtime is no longer hand-written per head
+
+The seam shipped supporting two heads with the accept set written as three bare
+integer literals in `renderer_adapter_fighter.c`, two owner pairs written out
+longhand in `nds_renderer_assets.c`, and program numbers 1/2/3/4 hard-coded in
+two places. Widening that by hand ten times is how the next head gets
+half-wired.
+
+The generator now emits one list:
+
+```c
+#define NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(X_) \
+    X_(1) X_(14) X_(3) X_(4) X_(5) X_(6) X_(7) X_(8) X_(9) X_(11) X_(12) X_(13)
+
+#define NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT 12u
+```
+
+and the owner pairs, the program-to-owner table, the per-program head guard and
+the adapter's admission predicate (`ndsRendererNativeKirbyTrioHeadSupported`)
+are all expanded from it. Head 10 stays separate because CopyLink is not a trio
+context.
+
+The head guard matters more than it used to: twelve programs now share one root
+cardinality, so "an identical-looking vector under the wrong live head" is no
+longer theoretical. It is keyed per program from the same list.
+
+## Checks
+
+`check_native_owner_geometry_closure.py` now parses the **emitted macro** rather
+than the adapter's literals. Reading `KIRBY_TRIO_CONTEXTS` for both sides would
+have compared the generator against itself; this reads the artifact the compiler
+sees, and fails closed if it is missing.
+
+Proven to fail closed, not merely to print OK:
+
+| perturbation | result |
+|---|---|
+| drop `X_(4)` from the generated list | RED — "the C accept set [1,3,5,...] has drifted from the baked contexts [1,3,4,5,...]" |
+| adapter goes back to its own literal set | RED — "no longer asks ndsRendererNativeKirbyTrioHeadSupported ... update the check rather than deleting it" |
+| restored | GREEN — "12 victims, 0 without a baked hat context" |
+
+## Cost
+
+Kirby's owner image grows. Every other owner image is byte-identical.
+
+| image | before | after | delta |
+|---|---:|---:|---:|
+| `NDSNativeKirbyHighImage` | 40,133 | 68,981 | **+28,848** |
+| `NDSNativeKirbyLowImage` | 31,819 | 57,923 | **+26,104** |
+
+These are deferred images, not ARM9 resident bytes. The largest single
+contributor is state: `state_deltas` goes 134 -> 587 (high) because the appended
+section copies the whole faithful state table per head. That is a deliberate
+simplification in the existing seam, not new; deduplicating it across heads is
+the obvious follow-up if the arena needs the bytes back.
+
+## Linked-ELF verification
+
+`builds/build-p2-fourcpu-tickhud/smash64ds-p2-fourcpu-tickhud-hwtri.elf`
+(`NDS_P2_KIRBY 1`) contains all twelve `sNdsNativeKirbyTrioHead*Roots` and
+`*CrossPaletteSlots`, exactly ten `*SourceOwners` (none for faces 1 and 14), the
+four dispatch arrays and `ndsRendererNativeKirbyTrioHeadSupported`. The default
+`smash64ds.nds` shell build has `NDS_P2_KIRBY 0` and contains none of them,
+which is why the ELF check was done on the stress target.
+
+## Status
+
+`IMPLEMENTED_NOT_ACCEPTED`. Owed: the four-CPU stress gate result, and a visual
+check per hat — the seam runs on the `validate_cross_census=False` path, so a
+wrong cross sequence of the right length passes silently, and only pixels prove
+the body resolved against its own head.
+
+## Not caused by this work
+
+`check_native_owner_weld_consistency.py` (IndexError at line 101) and
+`check_nds_native_owner_hierarchy.py` ("mario: retained packet corner trace
+mismatch") are RED. Both were re-run with the generator restored from HEAD and
+are RED there too. Neither is referenced by the Makefile or by any
+`scripts/*.ps1`, which is how they rotted unnoticed.
