@@ -53,12 +53,11 @@ native 0/0; slips 0.
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
 **PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.**
 `…_p2-2p8-gate-decision/`; sizing `…09-17_p2-2p8-locality-sizing/`.
-**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%** —
-that subtracted ALL data stall. Layout removes only **line fills** = **424,336 =
-90.6%**; a PERFECT cache still leaves **44,208 OVER**.
+**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%**;
+that subtracted ALL data stall. Layout removes only **line fills** =
+**424,336 = 90.6%** — a PERFECT cache still leaves **44,208 OVER**.
 **THE RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`). Banked 43,200 +
-5 sizings (arena 55,669, clears 19,466, pool 11,449, GObj 10,867, align 6,027)
-= **146,678 = 31.3%** of the gap.
+5 sizings = **146,678 = 31.3%** of the gap.
 **CORRECTION:** "fewer joints / fewer transformed objects" is ONE lever —
 `gNdsGCDrawsActiveMax` counts live **DObjs**, and for a fighter a DObj IS a
 joint — and it is **SPENT** (`…_p2-2p8-joint-cap-ladder/`): the skeleton cap
@@ -66,18 +65,15 @@ joint — and it is **SPENT** (`…_p2-2p8-joint-cap-ladder/`): the skeleton cap
 evaluation gave **no WORK-H reduction**. Order 2 alone is 12,144; Order 4 is the
 only class large enough and is **owner-forbidden**. **Owner decision, not
 engineering.** Last untried lane SIZED: the 67,858 literal-pool bucket gives
-**11,449** packed (441 of 645 functions touch ONE symbol); `-fsection-anchors`
-is **inert** under `-fdata-sections`. Placement CLOSED.
+**11,449** packed; `-fsection-anchors` is **inert**. Placement CLOSED.
 Checks: Boundary GREEN 3/3; four-CPU PASSES 09-17.
 **KIRBY COPY FIXED — all 11 victims draw natively, gate GREEN**
 (`…_p2-3f47-kirby-copy-hats/`). Bodies moved into the per-slot **hat images**:
 Kirby resident **+0**, peak **28,848 → 3,071 B**, heap **112,192**, native
-**0/0**. TWO defects, only one was bytes: the other was `SetRootProgram`'s
-stale `program <= 4u`, silently resetting Stone (13) and **CopyLink** (14) to
-canonical — Link's copy would have regressed too; bound now derived. WORK-H
-+58,112 is **placement, not draw** (triangles identical; STG 105% of it).
-Cross-slot VALUES guarded: all ten hats emit head 1's known-good sequence,
-pinned against the emitted inc. OWED: per-hat appearance.
+**0/0**. TWO defects, one was bytes; the other was `SetRootProgram`'s stale
+`program <= 4u`, silently resetting Stone (13) and **CopyLink** (14) to
+canonical — Link's copy would have regressed too. WORK-H +58,112 is
+**placement, not draw**. Cross-slot values pinned. OWED: per-hat appearance.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win** — 3.1x the 14,080 floor,
 9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no source
@@ -85,11 +81,13 @@ change**. Lane was closed on a break-even derived as bytes÷32 — right for a
 contiguous table, wrong for a scalar owning a whole line.
 **Per-PC re-profile CONFIRMS it**: identical 3,364.0 dereference accesses/fr in
 both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row −1.7% — placement
-cannot move one row and not the other. Non-zero exit is a **window** assertion,
-NOT correctness: all 21 ring stops at identical frames with identical
-`PacingLogicFrames` — SAME match — only the first label moves +1; 3 of its 4
-conditions pass. **OWNER: one-line call** to compare `startFrame` against the
-recorded label span. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call only.
+cannot move one row and not the other. It also knocked Calico's `__irq_table`
+off its 32-byte boundary — block appended after `.dtcm`'s ALIGN(32) with only
+ALIGN(4) — caught by `check-task20-dtcm-layout.ps1`, which the four-CPU gate
+does NOT include; fixed, re-measured at **+384 = noise**, gate GREEN. Non-zero
+exit is a **window** assertion, NOT correctness: 21 ring stops at identical
+frames, identical `PacingLogicFrames`, only the first label moves +1. **OWNER:
+one-line call** to compare `startFrame` against the recorded label span.
 **OWNER INPUT 09-16:** `docs/optimization/*` — SRC NO-GO; FTR/STG/MISC UNSIZED
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
@@ -111,11 +109,11 @@ pixels/audio or unexercised states stay engineering work.
 |---|---|---|---|
 | P2-3r17 | Fighter seams/holes around DK and Mario cap | **UN-DEFERRED 09-13; READY** | Raster coverage mismatch, not missing geometry; fix is a bounded AOT guard band in the owner generator. Analysis: `docs/BUGS.md`. |
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin, ThrowF/ThrowB; Neutral-B/Spin need isolated source-default requalification. |
-| P2-3 Samus | Morph-ball source program closure | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source input for roll/Bomb. |
+| P2-3 Samus | Morph-ball closure + **F-SMASH VANISH (new)** | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source input for roll/Bomb. |
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
-| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
+| P2-3f47 | Roster close: Ness, Purin, Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
-| P2-3f52 | Yoshi grab, egg lay/throw, entry egg | **THROW BAKED; egg/intro OPEN** | Throw was ONE unbaked root: joint 7 part 1 = `0x7D10`, binding 2 (measured); variant + resolver linked, capture owed (`…_p2-3f52-yoshi-throw-variant/`). Egg/intro are anim-mask hidden parts. **`check_model_part_mutation_coverage.py` resolves all 184 mutations to a bake** — the class that hid this and Kirby's copy is closed. |
+| P2-3f52 | Yoshi grab + egg lay/throw | **HALF DONE — needs a ROOT PROGRAM** | Model-part root baked (joint 7 part 1 = `0x7D10`) but **NOT sufficient**: `ThrowF`/`ThrowB` also carry `0x18000000`, installing DRAWING hidden part 4 (joint 9, `0x2800`), so the vector goes 18→19 and no variant covers a root-count change. Grab AND B-attack are ONE bug (`EggLay*` 202-206, same bits); one program fixes both. Egg-hatching intro is **NOT** this class (`Appear1/2` = `0x40000000`, no DL). `…_p2-3f52-yoshi-throw-variant/`. |
 | P2-3f53 | EFDesc effects without native owners | **OPEN** | Falcon Punch/Kick, Pikachu Thunder, Kirby Vulcan Jab, Yoshi shield: `generate_nds_entry_effects.py` roots + lookup + admission + check. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 
