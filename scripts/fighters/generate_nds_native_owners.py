@@ -2463,27 +2463,30 @@ KIRBY_TRIO_AUX19_OFFSETS = {"high": 0x35E8, "low": 0x3858}
 KIRBY_TRIO_AUX18_OFFSET = 0x17850
 KIRBY_TRIO_BODY_BINDING = 1
 # (head_mp, body_mp) from 228 motions. Heads 1 and 14 are the inhale and
-# boomerang FACES; 4 is Donkey's COPY HAT and is the first copy hat this seam
-# has ever carried. Before it, Kirby's swallow-copy left the native path for
-# every victim except Link -- and Link goes through KIRBY_COPY_LINK_MODELPART_ID
-# rather than through here, so this table supported zero copy hats.
+# boomerang FACES; every other entry is a victim's COPY HAT. Before the hats
+# were admitted, Kirby's swallow-copy left the native path for every victim
+# except Link -- and Link goes through KIRBY_COPY_LINK_MODELPART_ID rather than
+# through here, so this table supported zero copy hats and ten of the eleven
+# copyable victims rendered nothing.
 # `check_native_owner_geometry_closure.py` fails until every copyable victim's
 # hat appears here.
 #
-# Admitting head 4 was ATTEMPTED and is recorded here because the attempt is the
-# useful part. Its root count and cross slots derive correctly (9 roots in both
-# details, matching head 1 exactly), but the bake then stops on a real per-hat
-# difference the two face heads do not have:
+# A copy hat is a DEFERRED image, and that is the whole difference from a face
+# head. The body's MODIFY_ST copies take their shade from rows the head already
+# submitted; `_append_kirby_trio_sections` resolves each to a value-identical
+# row in the RESIDENT table, which exists for a face and does not exist for a
+# deferred hat. Those escapes are texcoord-only copies of the escaping row
+# itself, so they now shade from that row -- exact in the shipped hardware-lit
+# configuration, which never binds the alias table at all. See the resolver for
+# the full argument; the per-head count is `self_shaded_escapes`.
 #
-#   ValueError: kirby trio head4: color escape dense 116 has no
-#               value-identical main-table row
-#
-# The body's MODIFY_ST copies take their shade from head/canon rows, and each
-# escape must resolve to a main-table row identical in position, UV, cache slot
-# and RGBA (`_append_kirby_trio_sections`). One of Donkey's hat rows has no such
-# twin. That is per-hat geometry work, not a table entry, and it is exactly the
-# class of thing the slot-length check could never have caught.
-KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0))
+# Hat 10 is Link's and is NOT here: it is a mixed-file program reached through
+# KIRBY_COPY_LINK_MODELPART_ID. Hats 2 and 15+ are not copyable victims.
+KIRBY_TRIO_CONTEXTS = (
+    (1, 0), (14, 0),
+    (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
+    (8, 0), (9, 0), (11, 0), (12, 0), (13, 0),
+)
 
 # Physical GX slots for the exact live root order.  Root 0 (head) must remain
 # resident while root 1 (body) executes its MODIFYVTX reads.  After that, the
@@ -2857,22 +2860,54 @@ def _append_kirby_trio_sections(repo_root, detail, context):
             x, y, z, s, t, _binding, cache_slot, rgba = row
             return (x, y, z, s, t, cache_slot, rgba)
 
+        # Shading inputs only. The GX lights a vertex from its colour/normal
+        # word, its matrix binding and its cache slot; the texcoord is not an
+        # input. Two rows equal under this key shade to the same value in the
+        # same light state, whatever their UVs.
+        def dense_shade_key(row):
+            x, y, z, s, t, binding, cache_slot, rgba = row
+            return (x, y, z, binding, cache_slot, rgba)
+
         main_dense_index = {}
         for index, row in enumerate(context["dense_vertices"]):
             main_dense_index.setdefault(dense_color_key(row), index)
         f_colors = faithful["dense_color_sources"]
         colors_new = []
+        self_shaded = 0
         for old_id in range(first_block, dense_end):
             source = f_colors[old_id]
             if first_block <= source < dense_end:
                 colors_new.append(source - first_block + dense_base)
                 continue
             key = dense_color_key(f_dense[source])
-            if key not in main_dense_index:
+            if key in main_dense_index:
+                colors_new.append(main_dense_index[key])
+                continue
+            # A COPY HAT head is a deferred image: its rows are not in the
+            # resident table, so a face head's "find the twin" resolution has
+            # nothing to find. Every such escape seen is a plain MODIFY_ST --
+            # the body re-submits the SAME vertex at a different texcoord --
+            # so the escaping row and its source agree on every shading input
+            # and differ only in s/t. Shade the body row from itself.
+            #
+            # This is exact in the shipped configuration, where the alias has
+            # no reader at all: under NDS_R2_FIGHTER_HW_LIGHT the active
+            # tables never bind dense_color_source (NDS_IMG_BIND_COLOR in
+            # `nds_renderer_assets.c`) and prepared-dense drops shaded_rgba,
+            # so the GX lights every vertex from its own word -- which is
+            # precisely self-shading, and is already what heads 1 and 14 do on
+            # hardware today. Under the software-lit configuration the body
+            # epoch's light state replaces the head epoch's inherited shade
+            # for these rows; that is the one bounded difference, and it is
+            # counted here rather than hidden.
+            if dense_shade_key(f_dense[source]) !=                     dense_shade_key(f_dense[old_id]):
                 raise ValueError(
                     f"kirby trio head{head_mp}: color escape dense {source} "
-                    "has no value-identical main-table row")
-            colors_new.append(main_dense_index[key])
+                    f"has no value-identical main-table row, and dense "
+                    f"{old_id} is not a texcoord-only copy of it "
+                    f"({f_dense[old_id]} vs {f_dense[source]})")
+            colors_new.append(remap_dense(old_id))
+            self_shaded += 1
 
         # Every body corner must land inside the appended block (checked
         # again on the packed words below).
@@ -3062,6 +3097,10 @@ def _append_kirby_trio_sections(repo_root, detail, context):
                                           bounds["body_first_unique"])),
             },
             "bounds": bounds,
+            # Colour escapes this head could not resolve against the resident
+            # table and shades from the body row itself; see the resolver
+            # above. Zero for a face head, nonzero for every copy hat.
+            "self_shaded_escapes": self_shaded,
             "program_offsets": tuple(root[0] for root in faithful["roots"]),
             "program_cross_slots": tuple(faithful["cross_slots"]),
             "verification_context": verification_context,
@@ -5564,6 +5603,41 @@ def render_p2_owner_runtime_program(
             # out, so trio draws keep fail-closing to generic until Main
             # regenerates. High detail only: one definition for both.
             lines += ["#define NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT 1", ""]
+            # The runtime's program table, head guard and admission set are
+            # all built from this one list, so a head admitted here cannot be
+            # half-wired: adding a context emits its owner pair, its program
+            # slot and its accepted joint-6 modelpart together. Hand-written
+            # per-head C is how the seam shipped supporting two heads while
+            # ten copy hats silently drew nothing.
+            lines += [
+                "#define NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(X_) \\",
+                "    " + " ".join(
+                    f"X_({head_mp})" for head_mp in KIRBY_TRIO_SECTION_HEADS),
+                "",
+                "#define NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT "
+                f"{len(KIRBY_TRIO_SECTION_HEADS)}u",
+                "",
+            ]
+            # Per head: the SourceOwners table its root resolve needs, or
+            # NULL for a face head whose whole program is single-file. The
+            # runtime reads these through the list above, so it never has to
+            # know which heads happen to be deferred copy hats.
+            trio_source_owners = {
+                program["name"]: program.get("source_owners")
+                for program in root_programs
+            }
+            for head_mp in KIRBY_TRIO_SECTION_HEADS:
+                owners = trio_source_owners.get(f"TrioHead{head_mp}")
+                symbol = (
+                    f"sNdsNativeKirbyTrioHead{head_mp}SourceOwners"
+                    if owners else "NULL")
+                lines += [
+                    f"#define NDS_NATIVE_KIRBY_TRIO_SOURCE_OWNERS_{head_mp} "
+                    f"{symbol}",
+                    f"#define NDS_NATIVE_KIRBY_TRIO_SOURCE_OWNER_COUNT_"
+                    f"{head_mp} {len(owners) if owners else 0}u",
+                ]
+            lines += [""]
     lines += ["#endif", ""]
     return lines
 
@@ -7173,11 +7247,31 @@ def build_owner_root_programs(
                 raise ValueError(
                     f"kirby {context['detail']} head{head_mp}: root/cross "
                     "cardinality mismatch")
+            # A face head (1, 14) is a resident appendix bake; a COPY HAT is a
+            # deferred image and has no resident root at all, so its program is
+            # mixed-file exactly like CopyLink below -- root 0 comes from the
+            # hat image, everything after it from kirby's own tables.
+            head_offset = kirby_trio_head_offset(
+                str(context["detail"]), head_mp)
+            if head_offset != root_offsets[0]:
+                raise ValueError(
+                    f"kirby {context['detail']} head{head_mp}: program root 0 "
+                    f"0x{root_offsets[0]:x} is not the head 0x{head_offset:x}")
+            hat_context = None
+            if head_offset not in roots_by_offset:
+                hat_context = build_p2_kirby_hat_runtime_context(
+                    repo_root, str(context["detail"]), head_mp)
+                if hat_context["roots"][0][0] != head_offset:
+                    raise ValueError(
+                        f"kirby {context['detail']} head{head_mp}: hat image "
+                        f"root 0x{hat_context['roots'][0][0]:x} is not the "
+                        f"head 0x{head_offset:x}")
             program_roots = []
             program_lights = []
             program_contexts = []
+            program_source_owners = []
             body_seen = 0
-            for root_offset in root_offsets:
+            for root_index, root_offset in enumerate(root_offsets):
                 if root_offset == body_offset:
                     body_seen += 1
                     program_roots.append((
@@ -7187,6 +7281,14 @@ def build_owner_root_programs(
                     ))
                     program_lights.append(body["light_index"])
                     program_contexts.append(entry["verification_context"])
+                    program_source_owners.append("kirby")
+                    continue
+                if hat_context is not None and root_index == 0:
+                    program_roots.append(hat_context["roots"][0])
+                    program_lights.append(
+                        hat_context["light_preamble_indices"][0])
+                    program_contexts.append(hat_context)
+                    program_source_owners.append("kirby_hat")
                     continue
                 resident = roots_by_offset.get(root_offset)
                 if resident is None:
@@ -7196,11 +7298,16 @@ def build_owner_root_programs(
                 program_roots.append(resident[0])
                 program_lights.append(resident[1])
                 program_contexts.append(context)
+                program_source_owners.append("kirby")
             if body_seen != 1:
                 raise ValueError(
                     f"kirby {context['detail']} head{head_mp}: expected one "
                     f"body 0x{body_offset:x}, found {body_seen}")
-            expected_count = 9 if head_mp == 1 else 10
+            # Second copy of the root-count rule; the first is
+            # `kirby_trio_root_count()`. Hand-written as `9 if head_mp == 1
+            # else 10` it was correct only while the table held heads 1 and
+            # 14, and rejected every 9-root copy hat on admission.
+            expected_count = kirby_trio_root_count(head_mp)
             if len(program_roots) != expected_count:
                 raise ValueError(
                     f"kirby {context['detail']} head{head_mp}: "
@@ -7221,6 +7328,11 @@ def build_owner_root_programs(
                 "cross_slots": cross_slots,
                 "root_offsets": root_offsets,
                 "verification_contexts": program_contexts,
+                # Face heads stay single-file and emit no source-owner table,
+                # so their generated bytes are unchanged; a copy hat names the
+                # deferred hat image for root 0.
+                **({"source_owners": tuple(program_source_owners)}
+                   if hat_context is not None else {}),
             })
 
         # Kirby's Link copy is a genuine mixed-file source program.  Its motion

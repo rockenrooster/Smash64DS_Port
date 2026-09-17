@@ -1108,6 +1108,8 @@ static void ndsFighterCollectStripFoxGunSidecar(
  * context-keyed trio resolve reads. Declared locally so no shared header
  * changes for this Kirby-only seam. */
 extern void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp);
+/* The admitted joint-6 heads, from the baked contexts themselves. */
+extern s32 ndsRendererNativeKirbyTrioHeadSupported(u32 head_mp);
 static sb32 ndsFighterKirbyTrioHeadKey(const FTStruct *fp, u32 *head_mp)
 {
     s32 slot;
@@ -1122,9 +1124,12 @@ static sb32 ndsFighterKirbyTrioHeadKey(const FTStruct *fp, u32 *head_mp)
     {
         return FALSE;
     }
-    if ((fp->modelpart_status[slot].modelpart_id_curr == 1) ||
-        (fp->modelpart_status[slot].modelpart_id_curr == 10) ||
-        (fp->modelpart_status[slot].modelpart_id_curr == 14))
+    if (fp->modelpart_status[slot].modelpart_id_curr <= 0)
+    {
+        return FALSE;
+    }
+    if (ndsRendererNativeKirbyTrioHeadSupported(
+            (u32)fp->modelpart_status[slot].modelpart_id_curr) != FALSE)
     {
         *head_mp = (u32)fp->modelpart_status[slot].modelpart_id_curr;
         return TRUE;

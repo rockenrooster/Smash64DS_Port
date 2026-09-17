@@ -2034,24 +2034,50 @@ NDS_FTR_OWNER_RUNTIME(
  * exposes only joint-6 modelpart 2. All geometry/state tables remain the same
  * loaded Kirby owner image; only these tiny root/cross vectors select the live
  * source program. */
-NDS_FTR_OWNER_RUNTIME(
-    sNdsNativeKirbyTrioHead1HighOwner, &sNdsNativeKirbyFighterHighTables,
-    sNdsNativeKirbyTrioHead1Roots, sNdsNativeKirbyTrioHead1CrossPaletteSlots,
-    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
-NDS_FTR_OWNER_RUNTIME(
-    sNdsNativeKirbyTrioHead1LowOwner, &sNdsNativeKirbyFighterLowTables,
-    sNdsNativeKirbyTrioHead1RootsLow,
-    sNdsNativeKirbyTrioHead1CrossPaletteSlotsLow,
-    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
-NDS_FTR_OWNER_RUNTIME(
-    sNdsNativeKirbyTrioHead14HighOwner, &sNdsNativeKirbyFighterHighTables,
-    sNdsNativeKirbyTrioHead14Roots, sNdsNativeKirbyTrioHead14CrossPaletteSlots,
-    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
-NDS_FTR_OWNER_RUNTIME(
-    sNdsNativeKirbyTrioHead14LowOwner, &sNdsNativeKirbyFighterLowTables,
-    sNdsNativeKirbyTrioHead14RootsLow,
-    sNdsNativeKirbyTrioHead14CrossPaletteSlotsLow,
-    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+/* One owner pair per reachable joint-6 head, expanded from the generated
+ * NDS_NATIVE_KIRBY_TRIO_HEAD_LIST so a head admitted in the bake cannot be
+ * left half-wired here. Heads 1 and 14 are Kirby's own faces; the rest are
+ * copy hats, whose root 0 resolves into the per-slot hat image through
+ * their SourceOwners table exactly as CopyLink's does. */
+#define NDS_KIRBY_TRIO_OWNER_PAIR(head_)                                           NDS_FTR_OWNER_RUNTIME(                                                             sNdsNativeKirbyTrioHead##head_##HighOwner,                                     &sNdsNativeKirbyFighterHighTables,                                             sNdsNativeKirbyTrioHead##head_##Roots,                                         sNdsNativeKirbyTrioHead##head_##CrossPaletteSlots,                             sNdsNativeKirbyRootLightPreambles,                                             NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);                                         NDS_FTR_OWNER_RUNTIME(                                                             sNdsNativeKirbyTrioHead##head_##LowOwner,                                      &sNdsNativeKirbyFighterLowTables,                                              sNdsNativeKirbyTrioHead##head_##RootsLow,                                      sNdsNativeKirbyTrioHead##head_##CrossPaletteSlotsLow,                          sNdsNativeKirbyRootLightPreambles,                                             NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_OWNER_PAIR)
+#undef NDS_KIRBY_TRIO_OWNER_PAIR
+
+/* Program p in 1..NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT is trio head
+ * sNdsKirbyTrioProgramHead[p - 1]; the three arrays share one expansion so
+ * their order is the generated order by construction. */
+static const NDSNativeFighterOwnerRuntime *const
+sNdsKirbyTrioHighOwners[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) &sNdsNativeKirbyTrioHead##head_##HighOwner,
+    NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+};
+static const NDSNativeFighterOwnerRuntime *const
+sNdsKirbyTrioLowOwners[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) &sNdsNativeKirbyTrioHead##head_##LowOwner,
+    NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+};
+static const u8 sNdsKirbyTrioProgramHead[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) (u8)(head_),
+    NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+};
+/* Root 0 of a copy hat's program lives in the deferred hat image, so the hat
+ * heads carry a SourceOwners table and the two face heads do not. NULL means
+ * "single-file program"; the resolve below then keeps the owner's tables. */
+static const u8 *const
+sNdsKirbyTrioSourceOwners[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) NDS_NATIVE_KIRBY_TRIO_SOURCE_OWNERS_##head_,
+    NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+};
+static const u8
+sNdsKirbyTrioSourceOwnerCount[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) NDS_NATIVE_KIRBY_TRIO_SOURCE_OWNER_COUNT_##head_,
+    NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+};
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyStoneHighOwner, &sNdsNativeKirbyFighterHighTables,
     sNdsNativeKirbyStoneRoots, sNdsNativeKirbyStoneCrossPaletteSlots,
@@ -3377,6 +3403,27 @@ void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp)
 {
     sNdsKirbyTrioHeadMp = head_mp;
 }
+
+/* Which live joint-6 modelparts have a program to draw. The adapter asks here
+ * rather than carrying its own literal set: heads 1 and 14 were hard-coded
+ * beside head 10 while ten copy hats had no program at all, and a rejected
+ * root draws nothing, so the adapter's set and the baked contexts must be one
+ * fact. Head 10 is CopyLink's mixed-file program, not a trio context. */
+s32 ndsRendererNativeKirbyTrioHeadSupported(u32 head_mp)
+{
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT) &&     defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+    u32 index;
+
+    for (index = 0u; index < NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT; index++)
+    {
+        if ((u32)sNdsKirbyTrioProgramHead[index] == head_mp)
+        {
+            return TRUE;
+        }
+    }
+#endif
+    return (head_mp == 10u) ? TRUE : FALSE;
+}
 #endif
 
 /* The Mario/Fox-only mirror stress build has no image-backed owner block, but
@@ -3783,6 +3830,39 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     return TRUE;
 }
 
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT) &&     defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+/* A trio program whose head is a deferred COPY HAT is mixed-file: its root 0
+ * lives in the per-slot hat image, exactly like CopyLink's. Return that
+ * program's SourceOwners table, or NULL for a face head (whose program is
+ * single-file) and for any owner that is not a trio program at all -- both
+ * fall through to the owner's own tables. */
+static const u8 *ndsKirbyTrioProgramSourceOwners(
+    const NDSNativeFighterOwnerRuntime *owner, u32 *count, u32 *detail)
+{
+    u32 index;
+
+    *count = 0u;
+    for (index = 0u; index < NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT; index++)
+    {
+        if (owner == sNdsKirbyTrioHighOwners[index])
+        {
+            *detail = 0u;
+        }
+        else if (owner == sNdsKirbyTrioLowOwners[index])
+        {
+            *detail = 1u;
+        }
+        else
+        {
+            continue;
+        }
+        *count = (u32)sNdsKirbyTrioSourceOwnerCount[index];
+        return sNdsKirbyTrioSourceOwners[index];
+    }
+    return NULL;
+}
+#endif
+
 static const NDSNativeFighterRuntimeTables *
 ndsRendererNativeFighterTablesForResolvedRoot(
     const NDSNativeRoot *root,
@@ -3834,6 +3914,36 @@ ndsRendererNativeFighterTablesForResolvedRoot(
         if (source_owner != 0u)
         {
             return NULL;
+        }
+    }
+#endif
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT) &&     defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+    {
+        u32 trio_count;
+        u32 trio_detail = 0u;
+        const u8 *trio_owners =
+            ndsKirbyTrioProgramSourceOwners(owner, &trio_count, &trio_detail);
+
+        if (trio_owners != NULL)
+        {
+            if (binding >= trio_count)
+            {
+                return NULL;
+            }
+            if (trio_owners[binding] == 1u)
+            {
+                if (battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS)
+                {
+                    return NULL;
+                }
+                return ((sNdsNativeKirbyHatImages[battle_slot]
+                             [trio_detail].valid != 0u) &&
+                        (sNdsNativeKirbyHatImages[battle_slot]
+                             [trio_detail].heap_generation ==
+                         gNdsTaskmanHeapGeneration)) ?
+                    &sNdsNativeKirbyHatTables[battle_slot][trio_detail] :
+                    NULL;
+            }
         }
     }
 #endif
@@ -3924,6 +4034,40 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
         {
             *count = 0u;
             return NULL;
+        }
+    }
+#endif
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT) &&     defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+    {
+        u32 trio_count;
+        u32 trio_detail = 0u;
+        const u8 *trio_owners =
+            ndsKirbyTrioProgramSourceOwners(owner, &trio_count, &trio_detail);
+
+        if (trio_owners != NULL)
+        {
+            if (binding >= trio_count)
+            {
+                *count = 0u;
+                return NULL;
+            }
+            if (trio_owners[binding] == 1u)
+            {
+                if ((battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS) ||
+                    (sNdsNativeKirbyHatImages[battle_slot]
+                         [trio_detail].valid == 0u) ||
+                    (sNdsNativeKirbyHatImages[battle_slot]
+                         [trio_detail].heap_generation !=
+                     gNdsTaskmanHeapGeneration))
+                {
+                    *count = 0u;
+                    return NULL;
+                }
+                *count = sNdsNativeKirbyHatLightPreambleCounts
+                    [battle_slot][trio_detail];
+                return sNdsNativeKirbyHatLightPreambles
+                    [battle_slot][trio_detail];
+            }
         }
     }
 #endif
@@ -4935,25 +5079,23 @@ ndsRendererNativeFighterOwnerForProgramDetail(
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
-        if (program == 1u)
+        /* 1..NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT are the trio head contexts in
+         * generated order, then Stone, then CopyLink. Program numbers are
+         * this file's own; the generator names its programs. */
+        if ((program >= 1u) &&
+            (program <= NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT))
         {
             return (use_low_detail != 0u) ?
-                &sNdsNativeKirbyTrioHead1LowOwner :
-                &sNdsNativeKirbyTrioHead1HighOwner;
+                sNdsKirbyTrioLowOwners[program - 1u] :
+                sNdsKirbyTrioHighOwners[program - 1u];
         }
-        if (program == 2u)
-        {
-            return (use_low_detail != 0u) ?
-                &sNdsNativeKirbyTrioHead14LowOwner :
-                &sNdsNativeKirbyTrioHead14HighOwner;
-        }
-        if (program == 3u)
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 1u)
         {
             return (use_low_detail != 0u) ?
                 &sNdsNativeKirbyStoneLowOwner :
                 &sNdsNativeKirbyStoneHighOwner;
         }
-        if (program == 4u)
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u)
         {
             return (use_low_detail != 0u) ?
                 &sNdsNativeKirbyCopyLinkLowOwner :
@@ -5055,7 +5197,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
-        program_count = 5u;
+        /* canonical + every trio head + Stone + CopyLink. */
+        program_count = NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u;
     }
 #endif
     for (program = 0u; program < program_count; program++)
@@ -5072,19 +5215,23 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
         if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
         {
-            /* Programs 1/2 are the head-1/head-14 trio contexts, program 3 is
-             * Stone, and program 4 is CopyLink's head-10 mixed-file program.
-             * The trio body bake inherits the preceding head's vertex cache,
-             * so an identical-looking vector under the wrong live head must
-             * never select its sibling bake. */
+            /* Programs 1..N are the trio head contexts, then Stone, then
+             * CopyLink's head-10 mixed-file program. The trio body bake
+             * inherits the preceding head's vertex cache, so an
+             * identical-looking vector under the wrong live head must never
+             * select its sibling bake -- and with twelve heads sharing one
+             * root cardinality that is no longer a theoretical collision. */
 #if defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
-            if (((program == 1u) && (sNdsKirbyTrioHeadMp != 1u)) ||
-                ((program == 2u) && (sNdsKirbyTrioHeadMp != 14u)))
+            if ((program >= 1u) &&
+                (program <= NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT) &&
+                (sNdsKirbyTrioHeadMp !=
+                 (u32)sNdsKirbyTrioProgramHead[program - 1u]))
             {
                 continue;
             }
 #endif
-            if ((program == 4u) && (sNdsKirbyTrioHeadMp != 10u))
+            if ((program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u) &&
+                (sNdsKirbyTrioHeadMp != 10u))
             {
                 continue;
             }

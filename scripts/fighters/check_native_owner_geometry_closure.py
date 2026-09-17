@@ -946,6 +946,9 @@ def winding_closure(owner: str, detail: str, program: dict) -> list[str]:
 KIRBY_COPY_SOURCE = (
     REPO / "decomp/BattleShip-main/decomp/src/relocData/228_KirbyMainMotion.c")
 KIRBY_ACCEPT_SOURCE = REPO / "src/port/renderer_adapter_fighter.c"
+KIRBY_PREDICATE_SOURCE = REPO / "src/nds/nds_renderer_assets.c"
+KIRBY_GENERATED_INC = (
+    REPO / "src/nds/nds_native_fighter_owner.generated.inc")
 
 
 def kirby_copy_closure() -> list[str]:
@@ -964,9 +967,16 @@ def kirby_copy_closure() -> list[str]:
     cross-product: it costs no ROM, no emulator and no match.
 
     Both inputs are PARSED rather than grepped. The hat ids are decomp source
-    data and the accept list is three bare integer literals in C, so no string
-    search connects them -- which is the same trap that produced four wrong
-    "nothing references it" conclusions while this bug was being found.
+    data and the accepted heads are bare integer literals, so no string search
+    connects them -- which is the same trap that produced four wrong "nothing
+    references it" conclusions while this bug was being found.
+
+    The accepted set is read from the GENERATED inc, not from the generator:
+    the adapter defers to ndsRendererNativeKirbyTrioHeadSupported, whose set is
+    NDS_NATIVE_KIRBY_TRIO_HEAD_LIST plus CopyLink's head 10. Reading
+    KIRBY_TRIO_CONTEXTS for both sides would compare it against itself, so this
+    parses the emitted artifact the compiler sees and fails closed when it is
+    missing.
     """
     failures: list[str] = []
 
@@ -979,15 +989,36 @@ def kirby_copy_closure() -> list[str]:
     copy_hats = {kind: int(mp) for kind, mp in rows[:12]}
 
     accept = KIRBY_ACCEPT_SOURCE.read_text(encoding="utf-8", errors="replace")
-    match = re.search(
-        r"modelpart_id_curr == (\d+)\)\s*\|\|\s*"
-        r"\(fp->modelpart_status\[slot\]\.modelpart_id_curr == (\d+)\)\s*\|\|\s*"
-        r"\(fp->modelpart_status\[slot\]\.modelpart_id_curr == (\d+)\)", accept)
-    if match is None:
-        return ["kirby copy: could not parse the head accept set from "
-                "renderer_adapter_fighter.c; if its shape changed, update this "
-                "check rather than deleting it"]
-    accepted = {int(g) for g in match.groups()}
+    if "ndsRendererNativeKirbyTrioHeadSupported" not in accept:
+        return ["kirby copy: renderer_adapter_fighter.c no longer asks "
+                "ndsRendererNativeKirbyTrioHeadSupported which heads are "
+                "admitted; if it went back to its own literal set this check "
+                "cannot see drift -- update the check rather than deleting it"]
+
+    if not KIRBY_GENERATED_INC.exists():
+        return [f"kirby copy: {KIRBY_GENERATED_INC.name} is missing; run "
+                f"generate_nds_native_owners.py before this check"]
+    inc = KIRBY_GENERATED_INC.read_text(encoding="utf-8", errors="replace")
+    head_list = re.search(
+        r"#define NDS_NATIVE_KIRBY_TRIO_HEAD_LIST\(X_\)[^\n]*\n([^\n]*)", inc)
+    if head_list is None:
+        return ["kirby copy: could not parse NDS_NATIVE_KIRBY_TRIO_HEAD_LIST "
+                "from the generated inc; if the emitter's shape changed, "
+                "update this check rather than deleting it"]
+    accepted = {int(value)
+                for value in re.findall(r"X_\((\d+)\)", head_list.group(1))}
+    if not accepted:
+        return ["kirby copy: NDS_NATIVE_KIRBY_TRIO_HEAD_LIST parsed empty"]
+
+    predicate = KIRBY_PREDICATE_SOURCE.read_text(
+        encoding="utf-8", errors="replace")
+    copy_link_head = re.search(
+        r"return \(head_mp == (\d+)u\) \? TRUE : FALSE;", predicate)
+    if copy_link_head is None:
+        return ["kirby copy: could not parse CopyLink's accepted head from "
+                "ndsRendererNativeKirbyTrioHeadSupported; if its shape "
+                "changed, update this check rather than deleting it"]
+    accepted.add(int(copy_link_head.group(1)))
 
     baked = {head for head, _body in native.KIRBY_TRIO_CONTEXTS}
     baked.add(native.KIRBY_COPY_LINK_MODELPART_ID)
