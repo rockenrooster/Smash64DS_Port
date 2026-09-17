@@ -23,18 +23,31 @@ uintptr_t scmanager_BSS_END;
 OSPiHandle *gSYDmaRomPiHandle;
 static OSPiHandle sRomHandle;
 
+/* ACKNOWLEDGE, THEN FINISH -- do not park forever on a queue nobody feeds.
+ *
+ * The source creates this as thread 4 and its body blocks on a private queue.
+ * That queue is a LOCAL on this thread's own stack and is never published, so
+ * no producer exists or can exist; the block was equivalent to returning, but
+ * it cost real resources to express:
+ *
+ *   - the coroutine's stack stayed live. A service thread takes
+ *     NDS_OS_SERVICE_STACK_SIZE, 16,384 bytes, malloc'd at osStartThread
+ *     (libultra_os.c) -- four arena pages held by a thread that does no mixing,
+ *     no sample delivery and no music advancement.
+ *   - ndsOsRunThreads resumed it every frame forever, because a blocked thread
+ *     is WAITING and the pump resumes WAITING as well as RUNNABLE.
+ *
+ * Both halves of the contract survive the change: the ready bit is set and the
+ * acknowledgement is sent before returning, so anything waiting on boot
+ * progress sees exactly what it saw before. Returning ends the coroutine, which
+ * marks the thread STOPPED, drops it out of the pump, and lets its 16 KiB go
+ * back (see the reclaim at both finish sites in libultra_os.c).
+ *
+ * Owner review, docs/optimization/OTHR.md candidate O1, 2026-09-17. */
 static void ndsBootServiceThread(u32 ready_flag)
 {
-    OSMesgQueue queue;
-    OSMesg buffer[1];
-
-    osCreateMesgQueue(&queue, buffer, 1);
     gNdsOriginalBootStage |= ready_flag;
     osSendMesg(&gSYMainThreadingMesgQueue, (OSMesg)1, OS_MESG_NOBLOCK);
-
-    while (TRUE) {
-        osRecvMesg(&queue, NULL, OS_MESG_BLOCK);
-    }
 }
 
 void syAudioThreadMain(void *arg)

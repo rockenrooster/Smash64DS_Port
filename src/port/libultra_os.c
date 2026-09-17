@@ -144,9 +144,32 @@ static void ndsOsThreadEntry(void *arg)
     thread->state = OS_STATE_STOPPED;
 }
 
+__attribute__((used)) volatile u32 gNdsOsServiceThreadReclaimCount;
+
 size_t ndsOsGObjThreadBlockBytes(void)
 {
     return (size_t)NDS_OS_GOBJ_STACK_SIZE + portCoroutineStaticOverhead();
+}
+
+/* Give a finished SERVICE thread's stack back.
+ *
+ * Only service threads, deliberately. Theirs is the heap allocation --
+ * NDS_OS_SERVICE_STACK_SIZE via portCoroutineCreate in osStartThread -- while a
+ * GObj thread's coroutine is portCoroutineCreateStatic over a block BattleShip
+ * owns and recycles through gcEjectGObjStack. Reclaiming those too would be
+ * reaching into the source's own pool lifetime for no bytes.
+ *
+ * portCoroutineDestroy already refuses to free the running coroutine and
+ * already distinguishes the pooled case, so this is safe at both sites where a
+ * thread is marked STOPPED; it is scoped here because it should not be
+ * load-bearing for anything but the boot services. */
+static void ndsOsReclaimFinishedService(OSThread *thread)
+{
+    if ((thread == NULL) || (thread->port_coroutine == NULL)) return;
+    if (thread->id >= NDS_OS_GOBJ_THREAD_ID_MIN) return;
+    portCoroutineDestroy(thread->port_coroutine);
+    thread->port_coroutine = NULL;
+    gNdsOsServiceThreadReclaimCount++;
 }
 
 void osCreateThread(OSThread *thread, OSId id, void (*entry)(void *),
@@ -230,6 +253,7 @@ void osStartThread(OSThread *thread)
 #endif
         if (portCoroutineIsFinished(coroutine)) {
             thread->state = OS_STATE_STOPPED;
+            ndsOsReclaimFinishedService(thread);
         }
     }
 }
@@ -386,6 +410,7 @@ void ndsOsRunThreads(void)
 #endif
         if (portCoroutineIsFinished(coroutine)) {
             thread->state = OS_STATE_STOPPED;
+            ndsOsReclaimFinishedService(thread);
         }
     }
 }
