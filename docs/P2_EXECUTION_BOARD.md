@@ -50,49 +50,48 @@ GREEN all three arms 2026-09-17.** WORK-H **1,588,544 / 2,301,504**, FTR
 native 0/0; slips 0.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
+Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
 **PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.**
 `…_p2-2p8-gate-decision/`; sizing `…09-17_p2-2p8-locality-sizing/`.
-**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%** of
-the gap; that subtracted ALL data stall. Layout removes only **line fills** =
-**424,336 = 90.6%**, so a PERFECT data cache leaves **1,164,208 — 44,208 OVER
-the gate**.
-Sized subset 15-18% (+11.2% VRAM arena); largest item BANKED below.
-`GObj`/`DObj` repack is unblocked: `include/` precedes decomp on `-I` and every
-include uses the angle form, so a shadow header needs no decomp edit (HIGH —
-forks a decomp type). A scalar's literal-pool base load costs MORE than the
-dereference and DTCM does not touch it — packing hot scalars into one anchored
-struct is a better-shaped lane. **OWNER DECISION
-FORCED:** no structural class closes 468,544 — the gate needs Sacrifice Order
-2+3 (fewer joints / fewer transformed objects; `gNdsGCDrawsActiveMax` 203) or
-order 4. Placement stays CLOSED (hazard; arena 1,024 B aligned).
+**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%**; that
+subtracted ALL data stall. Layout removes only **line fills** = **424,336 =
+90.6%** — a PERFECT data cache still leaves **44,208 OVER**. Placement CLOSED.
+**THE RESIDUAL: 333,315 UNFOUND** (`…_p2-2p8-residual-ledger/`). Banked 43,200 +
+all four unbuilt sizings (VRAM arena 55,669, clears 19,466, GObj repack 10,867,
+alignment 6,027) = **135,229 = 28.9%** of the gap.
+**CORRECTION:** this board said the gate needs "fewer joints / fewer transformed
+objects". `gNdsGCDrawsActiveMax` counts live **DObjs**, and for a fighter a DObj
+IS a joint — same lever, two names — and it is **SPENT**
+(`…_p2-2p8-joint-cap-ladder/` 09-16): the skeleton cap **aborts the CPU AI** on a
+NULL joint (`ftcomputer.c:7970`), and deleting **94.7%** of pose evaluation gave
+**no WORK-H reduction**. Order 2 alone is 12,144 (triangles). Order 4 is the only
+untested class large enough and is **owner-forbidden**. **Owner decision, not
+engineering.** Untried: the literal-pool bucket (**67,858**; DTCM cannot touch
+it, an anchored struct can), `-fsection-anchors`.
 Checks: Boundary GREEN 3/3 09-17; four-CPU PASSES 09-17 (hats off).
-Any-roster contract now measurable (`…_roster-variance/`).
 **KIRBY COPY: implemented, GATED OFF, blocked on BYTES** (`ddf18a57a86`,
 `…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN — but the sections
-append to KIRBY's resident image (**+28,848 B**) and the arena cannot absorb it.
-A/B: hats ON = **151 native failures** (witness root 0x18A60 = Kirby **STONE**),
-heap **73,064** vs 111,680, WORK-H **+70,016**; hats OFF = gate PASSES.
+append to KIRBY's resident image (**+28,848 B**) and the arena refuses: hats ON =
+**151 native failures** (witness root 0x18A60 = Kirby **STONE**), heap **73,064**
+vs 111,680, WORK-H **+70,016**; hats OFF = gate PASSES.
 `KIRBY_TRIO_ADMIT_COPY_HATS = False` until the sections move into the per-slot
 **hat images**; sharing the cross-head-identical arrays gives only ~29%.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
-14,080 floor, 9.2% of the gap, P95 −43,072, 3 runs agreeing. Linker script only,
-**no source change**. Lane was closed on a break-even derived as bytes÷32: right
-for a contiguous table, wrong for a scalar owning a whole line — 85.0 tk/fr per
-DTCM byte vs the reverted table's 6.4. Native 0/0, triangles identical.
-**Per-PC re-profile CONFIRMS the lane**: identical 3,364.0 dereference
-accesses/fr in both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row
-−1.7% — placement cannot move one row and not the other. Direct recovery 25,042;
-the other 18,158 reads as eviction relief (inferred). Non-zero exit is a
-**window** assertion, NOT correctness: all 21 ring stops at identical presented
-frames with identical `PacingLogicFrames` — SAME match — only the stitcher's
-first label moves +1; 3 of the assertion's 4 conditions pass.
-**OWNER: one-line call** to compare `startFrame` against the recorded label span.
-1,484 B DTCM left. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call only.
-**OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines).
-SRC's top candidate sized NO-GO; FTR/STG/MISC UNSIZED — size before building.
-Watermark: `Briefs/README.md` 09-16.
+14,080 floor, 9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no
+source change**. Lane was closed on a break-even derived as bytes÷32: right for a
+contiguous table, wrong for a scalar owning a whole line — 85.0 vs 6.4 tk/fr per
+DTCM byte. Native 0/0, triangles identical.
+**Per-PC re-profile CONFIRMS it**: identical 3,364.0 dereference accesses/fr in
+both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row −1.7% — placement
+cannot move one row and not the other. Non-zero exit is a **window** assertion,
+NOT correctness: all 21 ring stops at identical presented frames with identical
+`PacingLogicFrames` — SAME match — only the stitcher's first label moves +1, and
+3 of the assertion's 4 conditions pass. **OWNER: one-line call** to compare
+`startFrame` against the recorded label span. 1,484 B DTCM left.
+`IMPLEMENTED_NOT_ACCEPTED` — owed: that call only.
+**OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` — SRC's top
+candidate sized NO-GO; FTR/STG/MISC UNSIZED. Watermark: `Briefs/README.md`.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns
 shared outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay
