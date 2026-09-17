@@ -302,13 +302,6 @@ $memoryGlobals = @(
     'gNdsLabJointCapLimit',
     'gNdsLabJointCapPrunedCount',
     'gNdsLabJointCapKeptCount',
-    # N05.03. The flattened invalidation cache's hit rate, and whether its
-    # misses are hash conflicts (more slots can help) or cold starts (they
-    # cannot). Reported in every run so the shipped slot count is never again
-    # justified by a premise nobody measured.
-    'gNdsFtPartsFlatHits',
-    'gNdsFtPartsFlatMisses',
-    'gNdsFtPartsFlatConflicts',
     'gNdsLabPoseJointCapLimit',
     'gNdsLabPoseJointCapSkipped',
     'gNdsLabPoseJointCapEvaluated',

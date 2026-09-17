@@ -2787,16 +2787,21 @@ static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFighterParts(
 _Static_assert((NDS_FTPARTS_FLAT_SLOTS & (NDS_FTPARTS_FLAT_SLOTS - 1u)) == 0u,
                "flat fighter-parts cache hash requires a power-of-two slot count");
 
-/* Always compiled, in every arm. A hit/miss pair that exists only in the
- * candidate build cannot show that the control was the control, and
- * --gc-sections drops a global whose only writer is inside a false #if. */
-__attribute__((used)) volatile u32 gNdsFtPartsFlatHits;
-__attribute__((used)) volatile u32 gNdsFtPartsFlatMisses;
-/* A miss whose slot held a DIFFERENT live root is a hash conflict; a miss on an
- * empty or heap-stale slot is a cold start. Separating them says whether more
- * slots can help at all, or whether the keys are simply never reused. */
-__attribute__((used)) volatile u32 gNdsFtPartsFlatConflicts;
+/* The hit/miss/conflict census that measured this table is REMOVED, not
+ * disabled: five volatile counters plus their compares overflowed `.itcm` by 40
+ * bytes at the shipped configuration, and the census had already answered its
+ * question. Findings in
+ * artifacts/performance/2026-09-16_p2-2p8-n0503-flat-cache/. */
+/* Capacity per slot, and the dominant term in this table's size: each entry is
+ * one pointer, so a slot costs 4*MAX + 12 bytes. 96 was chosen with four slots,
+ * where the whole table was 1,584 bytes and the bound did not matter. It does
+ * now. A subtree larger than MAX is NOT a correctness problem -- the lookup
+ * returns NULL and the caller falls back to the unflattened child loop -- but
+ * it silently reinstates the slow path, so gNdsFtPartsFlatOverflows counts it
+ * and gNdsFtPartsFlatCountMax reports the real high-water subtree size. */
+#ifndef NDS_FTPARTS_FLAT_MAX
 #define NDS_FTPARTS_FLAT_MAX 96u
+#endif
 
 typedef struct NDSFtPartsFlatWalk
 {
@@ -2923,16 +2928,7 @@ static const NDSFtPartsFlatWalk *ndsFTParamsFlatWalkFor(DObj *root)
     if ((flat->root == root) &&
         (flat->heap_generation == gNdsTaskmanHeapGeneration))
     {
-        gNdsFtPartsFlatHits++;
         return flat;
-    }
-    gNdsFtPartsFlatMisses++;
-    if ((flat->root != NULL) &&
-        (flat->heap_generation == gNdsTaskmanHeapGeneration))
-    {
-        /* The slot was holding a different root that is still current, so this
-         * miss is a hash conflict rather than a cold start. */
-        gNdsFtPartsFlatConflicts++;
     }
     count = ndsFTParamsFlattenDescendants(
         root, flat->parts, NDS_FTPARTS_FLAT_MAX);

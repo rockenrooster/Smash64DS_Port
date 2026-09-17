@@ -279,6 +279,12 @@ NDS_LAB_POSE_JOINT_CAP ?= 0
 # it costs 396 bytes of .bss per slot and is the whole of the candidate -- the
 # flatten walk it avoids is 59% of a 20,348 tk/fr bucket.
 NDS_FTPARTS_FLAT_SLOTS ?= 4
+# Per-slot capacity for the same table; a slot costs 4*MAX + 12 bytes, so this
+# is what decides whether more slots are affordable at all. 96 is the shipped
+# bound, chosen when there were four slots and the table was 1,584 bytes total.
+# Exceeding it is correct but silently returns to the unflattened walk, which
+# gNdsFtPartsFlatOverflows counts and gNdsFtPartsFlatCountMax bounds.
+NDS_FTPARTS_FLAT_MAX ?= 96
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
 # fighter owner and how many of them recompute a value the prepared array
@@ -6363,6 +6369,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_LAB_JOINT_CAP $(NDS_LAB_JOINT_CAP)u'; \
 		echo '#define NDS_LAB_POSE_JOINT_CAP $(NDS_LAB_POSE_JOINT_CAP)u'; \
 		echo '#define NDS_FTPARTS_FLAT_SLOTS $(NDS_FTPARTS_FLAT_SLOTS)u'; \
+		echo '#define NDS_FTPARTS_FLAT_MAX $(NDS_FTPARTS_FLAT_MAX)u'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
