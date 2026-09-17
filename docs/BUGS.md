@@ -1,6 +1,7 @@
 **Follow Bug fixing workflow contained in `BUG_FIXING_PROCESS.md`.**
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or less) if not fixed yet, always using ** ** to encapsulate agent added text.
 (Investigation details live in `docs/p2/BUG_NOTES.md`; this queue stays lean.)
+**This file is the owner's OPEN-defect list, not a history. Owner, 2026-09-17: "BUGS.md is for my obvious findings, if anything is removed from it, that means it was fixed." So an entry that is GONE was FIXED -- absence is never evidence a symptom was unreal or unreported. Agents annotate in place with ** **; only the owner removes an entry. A board row with no matching entry here is ambiguous, not stale: ask rather than infer.**
 
 treat anything not going through native renderer a failure.
 
