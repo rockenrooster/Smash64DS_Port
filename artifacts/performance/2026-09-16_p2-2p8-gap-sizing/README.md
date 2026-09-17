@@ -362,12 +362,24 @@ Everything not killed, with exact sizes:
    fighter skeleton or mesh — a `PROJECT_GOAL.md` fidelity decision under
    Sacrifice Order 2, not an optimization.
 2. **Cut the 827,136 non-fighter floor.** 42.6% of it is renderer/draw and the
-   stage half is GX-throughput-bound. Note that **46,273 tk/fr of the measured
-   floor is the tick-HUD instrument itself** — `ndsPlatformRenderDebugHud`
-   20,077, `tickGetCount` 16,583, `ndsIFCommonRecordHUDState` 9,613 — which is
-   free in the shipping ROM. That is not a saving to bank, but it does mean the
-   gate is being measured on a configuration ~46,000 ticks heavier than the one
-   that ships, and re-measuring on the shipping config is owed regardless.
+   stage half is GX-throughput-bound.
+
+   **Correction, checked rather than assumed.** A 46,273 tk/fr "instrument in the
+   floor" figure was proposed as `ndsPlatformRenderDebugHud` 20,077 +
+   `tickGetCount` 16,583 + `ndsIFCommonRecordHUDState` 9,613. Two thirds of that
+   does not survive inspection:
+   - `ndsIFCommonRecordHUDState` (9,613) is **not** instrument. It feeds the real
+     shipped lower-screen HUD — `src/nds/nds_battle_hud.c:664` gates drawing on
+     `gNdsIFCommonHUDActivePlayerMask`, `:165-166` hashes its masks for change
+     detection, `:123` reads `gNdsIFCommonHUDP0FighterKind`. It is unguarded and
+     ships. That is game work.
+   - `ndsPlatformRenderDebugHud` (20,077) is instrument, but it lands in the HUD
+     bucket, which WORK-H already excludes.
+
+   What is actually instrument *inside* WORK-H is roughly `tickGetCount` at
+   **16,583 tk/fr**, about 3.6% of the gap. Re-measuring on the shipping config
+   is still worth doing for accuracy, but it is not the ~46,000 correction it
+   looked like.
 3. **Reopen the 30 Hz simulation** (-294,016, owner-withdrawn). Even taken, it is
    0.65x the requirement and still needs ~160,000 more from (1) or (2).
 

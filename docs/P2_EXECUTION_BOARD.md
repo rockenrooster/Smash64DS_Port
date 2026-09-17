@@ -55,16 +55,14 @@ Baseline moved 2026-09-16 (clean rebuild -50,432) and dead code deleted; both in
 `docs/archive/P2_CLOSED_ROWS.md`.
 **Gap:** `1,120,000` = two VBlank intervals; WORK-H P50 1.41x, **92.3% of frames
 miss**; needs **-455,296**.
-**Owner 2026-09-16: 30 FPS at four players REQUIRED, NO 30 Hz simulation.** The
--294,016 sim lever is withdrawn (priced in `…/2026-09-16_p2-2p8-sim30-ceiling/`).
-Per the Sacrifice Order audio (1), visual (2) and gameplay (3) rank MORE
-expendable than the 60 Hz sim (4), so 1-3 must be exhausted first.
+**Owner: 30 FPS at four players REQUIRED, NO 30 Hz sim** (-294,016 withdrawn,
+priced in `…_sim30-ceiling/`). Sacrifice Order ranks audio (1), visual (2),
+gameplay (3) MORE expendable than the 60 Hz sim (4).
 N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement;
-detail in `docs/archive/P2_CLOSED_ROWS.md`. Two corrections: the GX compose bank
-is 0% engaged and engaging it COSTS +22,848 P50 at four fighters, and the sampled
-softfloat census **over-attributes by 3.0x** — the collision family is 25,022 not
-~49,900, `guMtxCatF` is the largest float consumer at 13,485, not seventh. Do not
-size from that census again.
+detail in `docs/archive/P2_CLOSED_ROWS.md`. Two corrections: engaging the 0%-
+engaged GX compose bank COSTS +22,848 P50 at four fighters, and the sampled
+softfloat census **over-attributes 3.0x** — collision family 25,022 not ~49,900,
+`guMtxCatF` largest at 13,485 not seventh. Do not size from that census again.
 **N05.03: 97% over-invalidation.** `ndsFTParamsInvalidateSubtree`
 (`reloc_backend_compat_shims.c:2955`) does **474.5 part-word clears/frame against
 14.3 matrix recomputes** (3.0% utilisation), costing **20,744 tk/fr to protect
@@ -78,10 +76,10 @@ go, ≈ -6,700.
 is 502,955 (31.1%). Everything unkilled sums to **~90,000, 0.20x**. **No
 combination reaches it.** Closing it needs an owner fidelity call: reduced
 per-fighter geometry (187,008 -> 75,424, 2.48x, Sacrifice Order 2) or the
-withdrawn 30 Hz sim (-294,016, itself 0.65x). Owed regardless: **46,273 tk/fr of
-the measured floor is the tick-HUD instrument**, free in the shipping ROM, so the
-gate runs ~46,000 heavier than what ships. Sizing:
-`…/2026-09-16_p2-2p8-gap-sizing/`.
+withdrawn 30 Hz sim (-294,016, itself 0.65x). Sizing: `…/2026-09-16_p2-2p8-gap-sizing/`, which also **corrects** a proposed
+"46,273 of the floor is instrument": `ndsIFCommonRecordHUDState` (9,613) feeds the
+real shipped HUD and `RenderDebugHud` (20,077) is already outside WORK-H, so
+instrument inside WORK-H is ~16,583, 3.6% of the gap.
 Lanes killed with measurement (30 Hz sim, the stage, per-fighter, material
 animation, the broken Task 103 instrument): `docs/archive/P2_CLOSED_ROWS.md`.
 Checks: **Boundary GREEN all three arms** (shell loop free floor 114,628 B,
