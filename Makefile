@@ -2829,10 +2829,32 @@ override NDS_P2_SAMUS := 1
 # instantiate the exact four kinds whose resident set the capacity row judges.
 override NDS_P2_LINK := 1
 override NDS_P2_KIRBY := 1
+# The four kinds are pinned because the capacity row judges this exact set. They
+# are overridable ONLY through NDS_LAB_FOURCPU_KINDS, and only to answer a
+# question the capacity argmax does not: whether the PERFORMANCE gap is
+# roster-dependent. Every tick figure in P2-2p8 is measured on this one roster,
+# while the contract is every legal four-fighter lineup on every selectable VS
+# stage, and this campaign has already seen a bank accepted at -8,096 on
+# Mario+Fox cost +22,848 at four. Capacity argmax is not frame-cost argmax.
+#
+# Format: four space-separated BattleShip fttypes.h ordinals, e.g.
+# `NDS_LAB_FOURCPU_KINDS="7 4 2 8"` for Captain/Luigi/Donkey/Kirby. Only kinds
+# whose NDS_P2_<NAME> admission is 1 above can be instantiated -- this target
+# admits Captain, Donkey, Kirby, Link, Luigi and Samus -- and nds_match_config.c
+# refuses any other. Empty (the default) keeps the pinned capacity roster, so a
+# normal build and the registry gate are byte-unchanged.
+NDS_LAB_FOURCPU_KINDS ?=
+ifeq ($(strip $(NDS_LAB_FOURCPU_KINDS)),)
 override NDS_P2_FOUR_CPU_KIND0 := 2
 override NDS_P2_FOUR_CPU_KIND1 := 3
 override NDS_P2_FOUR_CPU_KIND2 := 5
 override NDS_P2_FOUR_CPU_KIND3 := 8
+else
+override NDS_P2_FOUR_CPU_KIND0 := $(word 1,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_P2_FOUR_CPU_KIND1 := $(word 2,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_P2_FOUR_CPU_KIND2 := $(word 3,$(NDS_LAB_FOURCPU_KINDS))
+override NDS_P2_FOUR_CPU_KIND3 := $(word 4,$(NDS_LAB_FOURCPU_KINDS))
+endif
 endif
 endif
 endif
