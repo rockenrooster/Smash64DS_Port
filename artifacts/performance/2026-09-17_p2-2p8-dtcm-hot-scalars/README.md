@@ -170,6 +170,37 @@ Three further arguments, none sufficient alone:
 load-use interlock floor. That check is immune to placement because it looks at
 the instructions themselves rather than the frame total. **Owed.**
 
+## The placement-immune check, control half
+
+Re-derived here, by my own method rather than the delegated one: for each of the
+112 moved symbols, find every literal-pool word holding its address, resolve the
+PC-relative loads that fetch those words, follow each to its dependent
+dereference, and sum stall over both sets against the banked profile
+(`…_n0409-profile/arm9-profile.csv` + its matching ELF).
+
+**Control (pre-move), 112 symbols, 1,201 pool words, 1,542 base PCs, 1,361
+dereference PCs:**
+
+| | acc/fr | stall tk/fr | tk/access |
+|---|---:|---:|---:|
+| literal-pool base load | 3,534.6 | 19,681.4 | 5.57 |
+| **dereference** | 3,364.0 | **34,120.9** | 10.14 |
+
+The dereference figure is what DTCM can remove, and **34,121 lands within 1% of
+the delegated sizing's 34,444** — two different methods, same profile, agreeing
+independently. That is the placement-immune sizing, and it is measured on the
+instructions themselves rather than on any frame total.
+
+Note the measured WORK-H win (**43,200**) *exceeds* it by 9,079. The natural
+reading is eviction relief: removing 112 lines from a 128-line cache frees
+capacity for everything else, which is also why the win spreads across every
+bucket rather than concentrating where these symbols are read. It is a reading,
+not a measurement, and is not banked as one.
+
+**Owed:** the post-move half of this table. If the lane is real, the dereference
+row must collapse toward the load-use interlock floor while the literal-pool row
+stays roughly where it is — DTCM moves the datum, not the pool word.
+
 ## What was moved, and what was deliberately not
 
 112 symbols, **508 bytes** — 40 into the loaded `.dtcm` (10 initialised
