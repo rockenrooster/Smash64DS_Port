@@ -219,3 +219,54 @@ These are all `__attribute__((used)) volatile u32` already and none is read by
 
 Adding them to `$memoryGlobals` costs nothing and turns "a fighter vanished"
 into "this decline stage, this part".
+
+### Scope, measured rather than estimated
+
+Running the generator's own spec builder settles what each new head actually
+needs. `build_kirby_trio_faithful_specs(canon_roots, 'low', head)`:
+
+| head | result |
+|---|---|
+| 1 (inhale face) | **9 roots**, bindings 0..8 |
+| 14 (boomerang face) | **10 roots**, bindings 0..9 |
+| 10 (Link hat) | `ValueError: unknown head modelpart 10` |
+| 4 (Donkey), 8 (Samus) | `ValueError: unknown head modelpart` |
+
+Two things fall out that change the estimate.
+
+**Link's hat does not go through this path at all.** Head 10 raises like any
+other unknown head; it works through `KIRBY_COPY_LINK_MODELPART_ID` as a
+separate mechanism. So the trio-context path supports exactly **two** heads, both
+of them faces, and **zero** copy hats. Every copy hat is new work, Link included
+in spirit if not in code.
+
+**The root count is structural, not arbitrary.** Kirby's canonical low program
+has **7** roots. `SpecialN` adds hidden joints 7 and 19, giving 9 — head 1. The
+docstring at `:2494-2495` says "Link-copy adds joint 18 too", giving 10 — head
+14. So an ordinary copy hat that adds no further joint should be **9 roots with
+head 1's shape**, and `(17,16,17,16,19,18,31,31,31)` is then a *derivation*
+rather than an extrapolation.
+
+**That still must be verified per hat, not assumed**, because the one guard that
+would catch a wrong slot assignment is switched off on this path:
+
+```python
+# generate_nds_native_owners.py:2570
+build_direct_dense_tables(..., validate_cross_census=False)
+```
+
+So the four per-head sites are narrower than first recorded:
+
+| site | what it needs | risk |
+|---|---|---|
+| `KIRBY_TRIO_CONTEXTS:2465` | one tuple entry | none |
+| `kirby_trio_head_offset:2485` | **only the guard** — the body is already generic (`specs[head_mp - 1][1]`) | none |
+| `kirby_trio_variant_schema:2637` | `list(range(9 if head_mp == 1 else 10))` generalised to the real root count | low |
+| `KIRBY_TRIO_PROGRAM_CROSS_SLOTS:2471` | the slot sequence | **the whole risk** |
+
+**Recommended first move, unchanged but now cheap:** admit Donkey's hat (4)
+alone, let the spec builder report its root count, and if it is 9 use head 1's
+sequence. Then bake, run the canonical four-CPU roster — which contains Donkey,
+so the existing gate exercises the copy — and check it **visually**, because
+`gNdsRendererNativeFailure.count` cannot see wrong-cache corruption. If that
+holds, the remaining nine follow the same procedure one at a time.
