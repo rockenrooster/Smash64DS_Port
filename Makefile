@@ -292,6 +292,12 @@ NDS_FTPARTS_FLAT_MAX ?= 96
 # only, and slow by construction. See artifacts/performance/2026-09-16_p2-2p8-
 # dcache-value/.
 NDS_LAB_NO_DCACHE ?= 0
+# P2-2p8 stall budget, falsifier. 1 makes gSYSinTable non-cacheable through its
+# own MPU region. The table is exactly 4,096 bytes -- the whole data cache --
+# and is indexed randomly, so it both misses constantly and evicts everything
+# else. Measured delta solves for the uncached-word cost that every VRAM
+# candidate in the ranking is quoted against.
+NDS_LAB_UNCACHED_SINTABLE ?= 0
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
 # fighter owner and how many of them recompute a value the prepared array
@@ -6378,6 +6384,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FTPARTS_FLAT_SLOTS $(NDS_FTPARTS_FLAT_SLOTS)u'; \
 		echo '#define NDS_FTPARTS_FLAT_MAX $(NDS_FTPARTS_FLAT_MAX)u'; \
 		echo '#define NDS_LAB_NO_DCACHE $(NDS_LAB_NO_DCACHE)'; \
+		echo '#define NDS_LAB_UNCACHED_SINTABLE $(NDS_LAB_UNCACHED_SINTABLE)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \

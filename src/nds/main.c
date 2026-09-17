@@ -11,6 +11,7 @@
 #include <port/port_probe.h>
 #include <port/coroutine.h>
 #include <sys/controller.h>
+#include <macros.h>
 
 volatile u32 gNdsBootSelfTestResult;
 volatile u32 gNdsFrameCounter;
@@ -47,6 +48,43 @@ ndsLabDisableDataCacheIfRequested(void)
 #endif
 }
 
+/* P2-2p8 stall budget, the cheap falsifier for the whole data-locality class.
+ *
+ * `gSYSinTable` is u16[0x800] = exactly 4,096 bytes, the size of the entire
+ * ARM9 data cache, read through a random `& 0x7FF` index. In a four-way 4 KB
+ * cache it maps four lines onto every set, so it both misses constantly --
+ * measured 4,150 tk/fr over 198 accesses, 20.94 stall cycles each -- and
+ * evicts whatever else wanted those sets.
+ *
+ * Making it non-cacheable in place turns each access into an uncached main-RAM
+ * read and stops the pollution. It needs no call-site edits, no allocator
+ * change and no linker change: one alignment attribute and one MPU region.
+ *
+ * It prices the one uncertain constant in the data-locality ranking. Predicted
+ * saving is 3,358 / 3,160 / 2,962 tk/fr at an uncached word cost of 5 / 6 / 7
+ * cycles -- nearly independent of it -- so the MEASURED delta solves for that
+ * constant directly: Cv = 1 + (4150 - delta) / 198. Every VRAM candidate in the
+ * ranking is quoted against that constant, so this one array calibrates all of
+ * them.
+ *
+ * And it tests the eviction half separately. N05.03 showed a 3,264-byte table
+ * costing +51,520 STG merely by entering the cache. If removing a 4,096-byte
+ * one returns more than its own 4,150 -- watch STG -- that mechanism is real
+ * and every figure in the ranking is a floor.
+ *
+ * Region 3 because ARM946E-S resolves overlapping regions by highest number,
+ * and region 1 already covers main RAM; 2 and 3 are unused by crt0. */
+static void ndsLabUncacheSinTableIfRequested(void)
+{
+#if NDS_LAB_UNCACHED_SINTABLE
+    armMpuSetRegion(3, armMpuDefineRegion((uptr)gSYSinTable, CP15_PU_4K));
+    armMpuSetRegionDataPerm(3, CP15_PU_PERM_RW);
+    armMpuSetRegionWrBufEnable(3, true);
+    armMpuSetRegionDCacheEnable(3, false);
+    DC_FlushRange(gSYSinTable, sizeof(gSYSinTable));
+#endif
+}
+
 void syMainLoop(void);
 
 int main(void)
@@ -55,6 +93,7 @@ int main(void)
     int os_test;
 
     ndsLabDisableDataCacheIfRequested();
+    ndsLabUncacheSinTableIfRequested();
     ndsPlatformInit();
 #if NDS_TASK10_HARDWARE_CALIBRATION
     ndsTask10HardwareCalibrationRun();

@@ -54,30 +54,34 @@ Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SEL
 vs icache 155,651**. The **issue floor alone is 543,509 UNDER the gate**, so no
 arithmetic deletion can close it — the gate asks a **47.7% stall cut**. That is
 why five lanes failed identically, each trading issue for fetch.
-**The STALL class is sized and spent too** (`…_stall-budget/STALL_CLASS_SIZING.md`,
-`…_dtcm-falsifier/`): `FTParts` packing is worth **zero** (hot fields already in
-line 0; the walk is over `DObj`); `DObj` packing is the real 8.1% target and is
-**blocked by pristine `decomp/`**; DTCM placement **works** (-10,176, STG -7,936,
-witnesses identical) but is under the 14,080 floor and unfinishable — usable DTCM
-is **1,992 B not 5,704** (`linker/nds_hot_text.ld:171`), 1,680 short. Reverted.
-**THE DCACHE MEASUREMENT CHANGES THE AXIS** (`…_p2-2p8-dcache-value/`). Running
-the match with the ARM9 data cache OFF: WORK-H P50 1,588,928 -> **2,983,488**.
-**The 4 KB dcache is worth 1,394,560 tk/fr** — more than the gap, more than any
-bucket, more than every optimization attempted. It already captures **71.3%** of
-the available benefit; the residual is exactly the measured data stall,
-**560,739**.
-**WORK-H with perfect data locality = 1,028,189, UNDER the 1,120,000 gate by
-91,811.** So data locality is the **first class whose ceiling (113% of the gap)
-EXCEEDS the requirement** — every other class measured 2.4-18%. It also refutes
-"renderer streaming is compulsory" as a whole-frame claim: compulsory traffic
-would make the cache worth ~550,000, not 1,394,560.
-**Next action: raise data-cache hit rate.** Three barely-used instruments —
-VRAM as scattered-data memory (nonsequential read **5 cycles vs main RAM's 10**,
-128 KiB/bank vs DTCM's 1,992 B free; A/B textures, C/D main BG today), **address-
-ordered traversal** (sequential 32-bit is **2 vs 10** on identical bytes), and
-**MPU regions 2 and 3 are free**. Residual is diffuse (renderer 254,344, diffuse
-158,777, object graph 84,304, pose 53,931), so this needs a broad layout change,
-not one fix. 100% hit rate is NOT achievable — the ceiling is a bound, not a plan.
+**STALL class sized** (`…_stall-budget/`, `…_dtcm-falsifier/`): `FTParts` packing
+is **zero** (hot fields already in line 0; the walk is over `DObj`); `DObj`
+packing is the real 8.1% target, **blocked by pristine `decomp/`**; DTCM works
+(-10,176) but usable DTCM is **1,992 B not 5,704**, 1,680 short. Reverted.
+**THE DCACHE MEASUREMENT CHANGES THE AXIS** (`…_p2-2p8-dcache-value/`). With the
+ARM9 data cache OFF, WORK-H P50 1,588,928 -> **2,983,488**: the 4 KB dcache is
+worth **1,394,560 tk/fr**, more than the gap. It captures **71.3%** of the
+available benefit; the residual is the data stall, **560,739**. **WORK-H with
+perfect data locality = 1,028,189, UNDER the gate by 91,811** — the first class
+whose ceiling (**113%** of the gap) EXCEEDS the requirement; all others were
+2.4-18%. Also refutes "renderer streaming is compulsory" frame-wide: compulsory
+traffic would make the cache worth ~550,000, not 1,394,560.
+**Next action: DELIBERATE DATA PLACEMENT** (`…_p2-2p8-sintable-uncached/`).
+Forcing ONE 4 KB array to a 4 KB boundary — no code, no algorithm, only
+addresses — cost **+49,152 WORK-H (3.1%)**, of which **+46,336 landed in STG**.
+Third sighting of this mechanism and the second at ~50,000 (N05.03: +1,680 B of
+table = **+51,520 STG**; DTCM move = **-7,936**). Direction here was adverse, so
+it is NOT banked — what it establishes is the lever's SIZE, and it needs no
+allocator surgery, decomp edit or fidelity argument.
+Also measured: uncaching that array returned **-6,912 against 3,160 predicted
+from access cost — 2.2x**. Eviction relief is real, so the locality ranking's
+figures are **floors**: top candidate (VRAM arena for GObj/DObj + FTStruct/
+FTParts) is 55,669 = 11.2% of the gap from direct cost ALONE, and those
+structures are far larger than 4 KB and miss far more.
+Ranking (`…_stall-budget/`): only **7.6%** of resolved mem stall indexes a static
+object — 74% needs the ALLOCATION moved. Only the object graph is scatter-shaped
+(50.7% line efficiency); renderer streaming (129%) and collision (177%) already
+get reuse, so uncaching them LOSES. VRAM bank D verified free.
 Checks: **Boundary GREEN all three arms**; both targets build.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
