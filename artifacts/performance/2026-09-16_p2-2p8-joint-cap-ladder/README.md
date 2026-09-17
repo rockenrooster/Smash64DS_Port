@@ -90,6 +90,95 @@ battle-core manifest path is composed differently and becomes
 cap=12 measurement above completed and is valid; only the post-run manifest
 check threw.
 
-## Status
 
-Control (both caps 0) building and running. The pose-cap arm follows.
+---
+
+# RESULTS
+
+## The two runs
+
+Same build directory, same ROM sha `DE80E46BDCF1FD98`, 1,972 samples,
+frames 2..1973, DLDI on. The arm differs from the control only in
+`NDS_LAB_POSE_JOINT_CAP` (0 vs 1).
+
+| bucket P50 | control | pose cap 1 | delta |
+|---|---:|---:|---:|
+| **WORK-H** | **1,588,928** | **1,624,832** | **+35,904** |
+| FTR | 355,712 | 358,784 | +3,072 |
+| STG | 344,768 | 344,448 | -320 |
+| SRC | 555,584 | 577,344 | +21,760 |
+| MISC | 249,472 | 260,608 | +11,136 |
+| OTHR | 281,856 | 263,552 | -18,304 |
+| WAIT | 252,928 | 235,584 | -17,344 |
+| ALL | 1,677,952 | 1,678,144 | +192 |
+
+Engagement, both sides:
+
+| counter | control | pose cap 1 |
+|---|---:|---:|
+| `gNdsLabPoseJointCapLimit` | 0 | 1 |
+| `gNdsLabPoseJointCapEvaluated` | 258,836 | 14,647 |
+| `gNdsLabPoseJointCapSkipped` | 0 | **259,778** |
+
+**94.7% of all pose-entry evaluation was deleted.** The arm engaged exactly as
+designed.
+
+## The number above is NOT a price, and here is the proof
+
+The arms ran different matches.
+
+| divergence witness | control | pose cap 1 |
+|---|---:|---:|
+| `gNdsFighterDLAllDrawP0HardwareTriangleCount` | 349,031 | 345,084 |
+| `gNdsFighterDLAllDrawP1HardwareTriangleCount` | 333,618 | **352,444** |
+| `gNdsGCDrawsActiveMax` | 203 | 193 |
+| source spline descriptors normalized | 1 | 4 |
+
+Freezing the pose changes what the fighters *do*: different positions, different
+AI branches, different hits, different culling. Slot 1 drew **18,826 more**
+triangles over the run, not fewer. So `+35,904` is a different workload and not
+the cost of animation — the same trap that
+[[route-ab-cannot-price-gameplay-change]] records, and it is why the divergence
+witnesses are read before the bucket table and not after.
+
+## What it does establish
+
+The animation lane is the largest single joint-proportional component in the
+gap sizing (`ftMainPlayAnim` inclusive **138,714 tk/fr**, 64% of simulation).
+Deleting **94.7%** of its evaluation produced **no reduction in WORK-H at all** —
+not a smaller win than predicted, not a win at the noise floor, but a frame
+that did not get cheaper under a workload of comparable scale (ALL P50 moved
++192, 0.01%).
+
+Whatever the pose player costs, removing almost all of it does not convert into
+frame time. That is consistent with the rest of this campaign:
+`ndsFtPosePlay` is flat and data-stall bound, and the work it sheds is replaced
+by the work a differently-behaving match creates.
+
+## Verdict on the joint lever
+
+Combined with the two skeleton arms above and the geometry sizing:
+
+| variant | measured outcome |
+|---|---|
+| fewer **triangles** | ceiling **-12,144** (2.4% of the gap); zero CPU work is per-vertex |
+| fewer **joints** (skeleton) | **not implementable as a switch** — aborts the CPU AI on a NULL joint |
+| less **animation** (94.7% of pose evaluation deleted) | **no WORK-H reduction**; arms diverge, so no price is readable |
+
+**The per-fighter geometry and joint lever is spent.** It does not reach the
+gate, and its largest sub-lane does not convert even at the impossible limit.
+
+## Harness defects found, neither affecting the numbers above
+
+1. `-Build` must be a **bare** directory name. A path containing `/` resolves
+   the ROM correctly but composes the battle-core manifest path as
+   `builds\builds\<name>\…` and throws after the match completes.
+2. `-SetGlobals` pokes cost enough gdb time at boot to miss the harness's own
+   `-RingStartRead` frame-1 requirement, so a lab lever cannot currently be run
+   as a true same-ROM A/B through this harness. Pinning the value at build time
+   is the workaround used here, which makes the comparison cross-build against
+   the 14,080-tick floor — `+35,904` clears that floor, which is why the
+   divergence witnesses and not the floor are what disqualify it as a price.
+3. The post-run report throws `Error formatting a string: Format specifier was
+   invalid.` **after** writing every JSON, so the run's data is complete and the
+   exit code is not. Cosmetic, but it makes a good run look like a failed one.
