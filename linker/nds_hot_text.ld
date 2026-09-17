@@ -139,6 +139,30 @@ SECTIONS {
 		*(.dtcm .dtcm.*)
 		*.32.o (.data .data.* .gnu.linkonce.d.*)
 		*.32.o (.data1)
+		/* P2-2p8 hot scalar statics. Sizing:
+		 * artifacts/performance/2026-09-17_p2-2p8-locality-sizing/.
+		 * 4-byte-ish scalars re-read tens to hundreds of times a frame from
+		 * dozens of call sites. Scattered by -fdata-sections they hold 1,670
+		 * bytes across 207 cache lines, so DTCM buys 7.4x more lines per byte
+		 * here than for a contiguous table -- which is why the DTCM falsifier's
+		 * K~1 result does not transfer. One section per line on purpose: a
+		 * wildcard that matches nothing cannot be observed, and
+		 * scripts/check-dtcm-residency.py proves each name below landed.
+		 * Initialised half: these carry a value, so they belong in the LOADED
+		 * .dtcm section. In NOLOAD .dtcm.bss the link succeeds and the
+		 * initialiser is silently dropped. */
+		/* DTCM-RESIDENT HOT SCALARS: BEGIN */
+		*(.data.sNdsRendererRuntimeOwner)
+		*(.data.gNdsRendererFastRunMode)
+		*(.data.gMPCollisionYakumonoDObjs)
+		*(.data.sNdsFighterDisplayReplayEvents)
+		*(.data.sNdsNativeFighterActiveTables)
+		*(.data.gNdsWhispyAOTRoute)
+		*(.data.sNdsNativeFighterActiveOwner)
+		*(.data.gNdsFtrDrawMemoStubRoot)
+		*(.data.dLBParticleCurrentTransformID)
+		*(.data.sNdsNativeStagePacketActive)
+		/* DTCM-RESIDENT HOT SCALARS: END */
 		. = ALIGN(4);
 	} >dtcm AT>lma9 :dtcm = 0xff
 
@@ -153,6 +177,120 @@ SECTIONS {
 		*.32.o (.dynbss)
 		*.32.o (.bss .bss.* .gnu.linkonce.b.*)
 		*.32.o (COMMON)
+		/* P2-2p8 hot scalar statics. Sizing:
+		 * artifacts/performance/2026-09-17_p2-2p8-locality-sizing/.
+		 * 4-byte-ish scalars re-read tens to hundreds of times a frame from
+		 * dozens of call sites. Scattered by -fdata-sections they hold 1,670
+		 * bytes across 207 cache lines, so DTCM buys 7.4x more lines per byte
+		 * here than for a contiguous table -- which is why the DTCM falsifier's
+		 * K~1 result does not transfer. One section per line on purpose: a
+		 * wildcard that matches nothing cannot be observed, and
+		 * scripts/check-dtcm-residency.py proves each name below landed.
+		 * Zero-initialised half; NOLOAD is correct. */
+		/* DTCM-RESIDENT HOT SCALARS: BEGIN */
+		*(.bss.dSYTaskmanFrameCount)
+		*(.bss.sNdsRendererBattleStaticTextureArmed)
+		*(.bss.gNdsMPLineYakumonoHits)
+		*(.bss.gSCManagerBattleState)
+		*(.bss.sNdsRendererTask36CaptureActive)
+		*(.bss.gNdsFighterMarioFoxDLAllDrawCount)
+		*(.bss.sFTDisplayMainSkyFogAlpha)
+		*(.bss.sNdsOpeningRoomCurrentDrawCameraGObj)
+		*(.bss.gNdsStageGCDrawAllLoopPrepared)
+		*(.bss.sNdsRendererHardwareTextureKeyGeneration)
+		*(.bss.gNdsMPVertexF32Hits)
+		*(.bss.sNdsNativeStagePreparedTextureProofValid)
+		*(.bss.gNdsStageGCDrawAllLoopNonStageCaptureCount)
+		*(.bss.gNdsTaskmanHeapGeneration)
+		*(.bss.sNdsRendererAdapterCameraCacheFrame)
+		*(.bss.gGCCurrentCamera)
+		*(.bss.gNdsSceneManagerCurrIsBattle)
+		*(.bss.sNdsRendererFastRunCount)
+		*(.bss.gNdsTickHudStageTicks)
+		*(.bss.gNdsG1SiteCacheRoute)
+		*(.bss.sNdsEffectPacketArmed)
+		*(.bss.gNdsRendererBattleStaticTexturePinnedHitCount)
+		*(.bss.sNdsRendererAdapterStageWorldCache)
+		*(.bss.gNdsSceneHarnessMode)
+		*(.bss.sNdsRendererHardwareBoundTextureName)
+		*(.bss.sNdsRendererParticleAtlasPrepared)
+		*(.bss.sGCRunStatus)
+		*(.bss.gNdsFighterDisplayContractSubmittedCount)
+		*(.bss.gMPCollisionGeometry)
+		*(.bss.dGCCurrentStatus)
+		*(.bss.sNdsStageGCDrawAllLoopHardwareSubmitActive)
+		*(.bss.gLBParticleStructsUsedNum)
+		*(.bss.sNdsRendererHardwareNoOracle)
+		*(.bss.sNdsRendererFastTriangleCount)
+		*(.bss.sNdsRendererHardwareTriangleBatchOpen)
+		*(.bss.gNdsNativeStageNearFanCount)
+		*(.bss.gNdsFighterPacketHits)
+		*(.bss.sNdsRendererHardwareMatrixLoaded)
+		*(.bss.gNdsNativeStageNoZInsideCullCount)
+		*(.bss.sNdsRendererAdapterEffectSubmitActive)
+		*(.bss.sNdsRendererHardwareSourceVertexLoadCount)
+		*(.bss.sNdsFighterPacketDmaPending)
+		*(.bss.sNdsRendererHardwareMatrixMode)
+		*(.bss.gNdsNativeStageRoofSnapSerial)
+		*(.bss.gSYTaskmanDLHeads)
+		*(.bss.gNdsTickHudSrcInterruptTicks)
+		*(.bss.gNdsFighterDLAllDrawSlotTriangleMask)
+		*(.bss.gGCCurrentProcess)
+		*(.bss.gNdsSCVSBattleStageGKind)
+		*(.bss.gNdsFighterDisplayContractSelectedCount)
+		*(.bss.gNdsNativeStageNoZForeignBindingCount)
+		*(.bss.sNdsMPVertexF32Geometry)
+		*(.bss.gNdsStageGCDrawAllLoopHardwareFighterSubmitCount)
+		*(.bss.gGRCommonLayerGObjs)
+		*(.bss.dLBParticleCurrentGeneratorID)
+		*(.bss.gGMCameraGObj)
+		*(.bss.gNdsNativeStageCastleRoofClipArm)
+		*(.bss.sGCAnimsActiveNum)
+		*(.bss.sNdsFighterDisplayCurrentLightCount)
+		*(.bss.sNdsRendererAdapterDisplayProcHeadMark)
+		*(.bss.gNdsTickHudFighterTicks)
+		*(.bss.sSYSchedulerTicCount)
+		*(.bss.gNdsRendererProfileFrameCount)
+		*(.bss.sIFCommonTimerIsStarted)
+		*(.bss.sNdsRelocLoadedFileCount)
+		*(.bss.sNdsRendererAdapterCameraCacheCount)
+		*(.bss.gNdsFtrPreWalkSame)
+		*(.bss.sNdsRendererHardwareNoTextureName)
+		*(.bss.gNdsR2CameraFixedPerspCalls)
+		*(.bss.gNdsFtPoseOracleCompares)
+		*(.bss.sNdsRendererHardwareSubmitted)
+		*(.bss.gNdsFtPoseOraclePoseMismatches)
+		*(.bss.sNdsParticleCameraValid)
+		*(.bss.sNdsMPLineGroupGeometry)
+		*(.bss.gNdsIFCommonHUDLowerTextMode)
+		*(.bss.gNdsFtPoseUpdates)
+		*(.bss.gNdsR2FtAnimRecipHits)
+		*(.bss.gMPCollisionUpdateTic)
+		*(.bss.sNdsR2LightVectorWritten)
+		*(.bss.gNdsTickHudSrcHitDetectTicks)
+		*(.bss.gNdsFtPoseOracleMismatches)
+		*(.bss.gMPCollisionGroundData)
+		*(.bss.D_ovl0_800D6450)
+		*(.bss.gNdsFtPoseOracleFirstPoseField)
+		*(.bss.gNdsIFCommonHUDP2Costume)
+		*(.bss.sGCCommonsMaxNum)
+		*(.bss.sNdsFtrDrawMemoState)
+		*(.bss.gMPCollisionVertexInfo)
+		*(.bss.gSYTaskmanTaskID)
+		*(.bss.sNdsNativeFighterActiveRootLightPreambles)
+		*(.bss.sNdsRendererAdapterEffectOtherModeL)
+		*(.bss.gNdsTickHudSrcPhysicsDefaultTicks)
+		*(.bss.gNdsCameraFrameCount)
+		*(.bss.gNdsBattlePlayablePacingPresentedFrames)
+		*(.bss.sNdsRendererRuntimeTextureCacheEvictCount)
+		*(.bss.gNdsIFCommonHUDRecordCount)
+		*(.bss.sNdsMPLineGroupsReady)
+		*(.bss.gNdsFtPoseRunMaskFallbacks)
+		*(.bss.sFTMainGroundHazardsNum)
+		*(.bss.sNdsRendererHardwareSubmitClassCounts)
+		*(.bss.gMPCollisionLightAngleY)
+		*(.bss.sNdsRendererWhispyBasisValid)
+		/* DTCM-RESIDENT HOT SCALARS: END */
 		. = ALIGN(4);
 	} >dtcm AT>lma9 :dtcm
 

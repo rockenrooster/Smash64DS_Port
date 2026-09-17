@@ -77,7 +77,16 @@ def intended_symbols(ld_path: Path) -> list[tuple[str, str]]:
         raise SystemExit(
             f"check-dtcm-residency: {ld_path.name} opens the hot-scalar block "
             f"but never closes it")
-    body = text.split(BEGIN, 1)[1].split(END, 1)[0]
+    if text.count(BEGIN) != text.count(END):
+        raise SystemExit(
+            f"check-dtcm-residency: {ld_path.name} has {text.count(BEGIN)} "
+            f"BEGIN markers and {text.count(END)} END markers")
+    # There is more than one block on purpose: a `.data` static must land in
+    # the LOADED .dtcm output section, and a `.bss` one in NOLOAD .dtcm.bss.
+    # Putting a `.data` symbol in the NOLOAD section links fine and silently
+    # drops its initialiser, so the two lists cannot be merged.
+    body = "\n".join(chunk.split(END, 1)[0]
+                     for chunk in text.split(BEGIN)[1:])
     out: list[tuple[str, str]] = []
     for raw in body.splitlines():
         line = raw.split("/*", 1)[0].strip()
