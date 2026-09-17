@@ -52,55 +52,52 @@ native 0/0; slips 0.
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
 **PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.** Decision in
-`…_p2-2p8-gate-decision/`; sizing in `…2026-09-17_p2-2p8-locality-sizing/`.
+`…_p2-2p8-gate-decision/`; sizing `…09-17_p2-2p8-locality-sizing/`.
 **CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%** of
 the gap; that subtracted ALL data stall. Layout removes only **line fills** =
-**424,336 = 90.6%**, so a PERFECT data cache leaves WORK-H **1,164,208 — 44,208
-OVER the gate**, across the whole interlock band. Frame still 64.3% stall;
-issue floor still 543,509 under the gate.
-Best sized subset 15-18% (+11.2% VRAM arena ≈ 26-30%). Largest single item:
-**hot scalar statics → DTCM, 34,444-49,365** — 314 statics hold 1,670 B across
-**207 cache lines**; re-opened because the DTCM falsifier tested a walked-once
-table (K≈1) and these are re-read 100-900x/frame. `GObj`/`DObj` repack is
-unblocked too: `include/` precedes decomp on `-I` and every include uses the
-angle form, so a shadow header needs no decomp edit (HIGH — forks a decomp
-type). **OWNER DECISION NOW FORCED:** no structural class can close 468,544, so
-the gate needs Sacrifice Order 2+3 (fewer joints / fewer transformed objects;
-`gNdsGCDrawsActiveMax` 203) or order 4. Placement stays CLOSED (hazard, not
-lever; arena 1,024 B aligned).
+**424,336 = 90.6%**, so a PERFECT data cache leaves **1,164,208 — 44,208 OVER
+the gate**, across the whole interlock band.
+Sized subset 15-18% (+11.2% VRAM arena); largest item now BANKED below.
+`GObj`/`DObj` repack is unblocked: `include/` precedes decomp on `-I` and every
+include uses the angle form, so a shadow header needs no decomp edit (HIGH —
+forks a decomp type). A scalar's literal-pool base load costs MORE than the
+dereference and DTCM does not touch it, so packing hot scalars into one anchored
+struct is a better-shaped lane than moving them. **OWNER DECISION
+FORCED:** no structural class closes 468,544 — the gate needs Sacrifice Order
+2+3 (fewer joints / fewer transformed objects; `gNdsGCDrawsActiveMax` 203) or
+order 4. Placement stays CLOSED (hazard; arena 1,024 B aligned).
 Checks: Boundary GREEN 3/3 09-17; four-CPU gate PASSES 09-17 (hats off).
-**ANY-ROSTER CONTRACT MEASURABLE** (`…_roster-variance/`): ShieldPose residency
-DERIVED per roster, DamageSlash coverage advisory off-canonical with
-correctness strict, and a format bug fixed that reported *"Format specifier was
+Any-roster contract now measurable (`…_roster-variance/`): ShieldPose residency
+DERIVED per roster, and a format bug fixed that reported *"Format specifier was
 invalid"* INSTEAD of the failures it found.
 **KIRBY COPY: implemented, GATED OFF, blocked on BYTES** (`ddf18a57a86`,
-`…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN, ROM links — but
-the sections append to KIRBY's resident image (**+28,848 B** high / +26,104 low)
-and the arena cannot absorb it. Same-target A/B: hats ON = **151 native
-failures** (witness root 0x18A60 = Kirby **STONE**), heap low-water **73,064**
-vs 111,680, WORK-H P50 **+70,016**. Hats OFF = **gate PASSES**, native 0/0,
-heap 111,680, WORK-H 1,580,416. So
-`KIRBY_TRIO_ADMIT_COPY_HATS = False` until the body sections move into the
-per-slot **hat images**, already loaded on demand for exactly the copy that
-needs them. Measured: the 12 sections are byte-identical in triangles/corners/
-unique/spans and differ only in dense rows (14 of 46), state, sequence and
-colour sources — sharing the common arrays recovers only ~29%, so moving them
-is the fix. Kept: self-shade resolver, mixed-file hat programs, generated head
-list, closure check proven to fail closed 2 ways.
-P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`.
+`…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN — but the sections
+append to KIRBY's resident image (**+28,848 B** high) and the arena cannot
+absorb it. A/B: hats ON = **151 native failures** (witness root 0x18A60 = Kirby
+**STONE**), heap **73,064** vs 111,680, WORK-H **+70,016**; hats OFF = gate
+PASSES. `KIRBY_TRIO_ADMIT_COPY_HATS = False` until the sections move into the
+per-slot **hat images**; sharing the cross-head-identical arrays gives only ~29%.
+**DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
+14,080 floor, 9.2% of the gap, P95 −43,072, two runs agreeing to 384. Linker
+script only, **no source change**. The lane was closed on a break-even derived
+as bytes÷32: right for a contiguous table, wrong for a scalar that owns a whole
+line — 85.0 tk/fr per DTCM byte vs the reverted table's 6.4. Placement confound
+answered by SHAPE not size: hazard swings are STG-dominant (104-142% of WORK-H),
+this is STG **29%** spread over SRC/MISC/SINT/FTR. Native 0/0, triangles
+identical; the non-zero exit is a **window** assertion (5 ring seams shift the
+first label 2→3), NOT correctness. 1,484 B DTCM left.
+`IMPLEMENTED_NOT_ACCEPTED` — owed: matched-window gate, per-PC re-profile.
 **OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines,
-UNMEASURED). SRC's top candidate sized NO-GO; its premises did not survive.
-FTR/STG/MISC UNSIZED — size each before building. Review watermark:
-`Briefs/README.md` 09-16; candidates stay with their rows.
+UNMEASURED). SRC's top candidate sized NO-GO. FTR/STG/MISC UNSIZED — size each
+before building. Watermark: `Briefs/README.md` 09-16.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns
 shared outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay
-30 Hz menus and 1P active; all requirements and coverage stand.
-
-Retained commits and scoped reports: `docs/archive/P2_CLOSED_ROWS.md`, section
-"Retained P2 proofs (moved off the board 2026-09-16)".
-HIGH stays reachable; stripping it is not authorized. Do not replace the published
-P2 artifact above until the candidate's required gates pass.
+30 Hz menus and 1P active; all requirements and coverage stand. Retained proofs:
+`docs/archive/P2_CLOSED_ROWS.md`. HIGH stays reachable; stripping it is not
+authorized. Do not replace the published P2 artifact above until the candidate's
+required gates pass.
 
 ## Queue — acceptance only
 

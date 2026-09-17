@@ -30,8 +30,9 @@ is VBlank-quantised; the win is real work removed inside the same quantum.
 
 ## The gate: correctness clean, one bookkeeping assertion
 
-Two independent runs of this binary agree to **384 ticks** (WORK-H P50 1,537,344
-and 1,536,960), so the measurement is reproducible, not a single draw.
+**Three** independent runs of this binary agree: WORK-H P50 **1,537,344**,
+**1,536,960**, **1,537,344**. The measurement is reproducible, not a single
+draw.
 
 Correctness and the divergence witnesses are clean and identical to the control:
 
@@ -61,11 +62,23 @@ iterations and stand". Both runs report the **same five seam rows** (222, 510,
 re-running does not clear it. The effect is that the collector's first labelled
 frame is 3 rather than 2, which the window assertion refuses.
 
+**Matching the window does not fix it, and that is the finding.** Re-running with
+`-StartFrame 3 -Samples 1971` produced `artifact=4..1973` against
+`requested=3..1973` — the collector's first labelled frame is always
+`requested + 1`. The seam rows moved by exactly one with the window (221, 509,
+989, 1373, 1949), so the seams sit at fixed absolute frames and it is the *first
+sample* that is systematically relabelled. Chasing `StartFrame` is a treadmill;
+three runs were spent establishing that.
+
 This is a plausible second-order consequence of the arm rather than a defect:
-frames are cheaper, so the guest reaches the ring-stop points at different
-offsets and labels collide. It is **not** a correctness failure, and it does not
-touch the percentiles — but it does mean the gate cannot be reported GREEN on
-its own terms until the window is matched to what the binary collects.
+frames are cheaper, so the guest presents frames at different offsets relative
+to the ring drain and labels collide. It is **not** a correctness failure and it
+does not touch the percentiles — the harness says so itself. But the assertion
+at `:404-410` requires `sample.startFrame == StartFrame` exactly, and **no
+choice of window satisfies it on this binary**. Accepting this lane therefore
+needs either a harness change (an owner call, since that assertion exists to
+stop timing and identity coming from different matches) or a diagnosis of why
+the first sample is relabelled. Recorded rather than worked around.
 
 ## The confound, and why it does not explain this
 
