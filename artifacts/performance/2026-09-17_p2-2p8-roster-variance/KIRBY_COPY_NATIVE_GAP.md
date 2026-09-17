@@ -149,3 +149,73 @@ it" claims in this session, including one inside the investigation above.
 u32` and none is read by `verify-p2-four-fighter-stress.ps1`. Adding them to
 `$memoryGlobals` costs nothing and would have named this in the first run
 instead of requiring source archaeology.
+
+---
+
+## The fix has a dependency the investigation missed, and it is the risky part
+
+Extending `KIRBY_TRIO_CONTEXTS` is **not** sufficient, and is not a data change.
+Each head also needs an entry in `KIRBY_TRIO_PROGRAM_CROSS_SLOTS`
+(`generate_nds_native_owners.py:2471`), and the generator validates only its
+*length*:
+
+```python
+# generate_nds_native_owners.py:2560
+cross_slots = KIRBY_TRIO_PROGRAM_CROSS_SLOTS[head_mp]
+if len(cross_slots) != len(roots):
+    raise ValueError(...)
+```
+
+The two shipped entries are:
+
+```
+ 1: (17, 16, 17, 16, 19, 18, 31, 31, 31)
+14: (17, 16, 17, 16, 19, 18, 31, 31, 31, 31)
+```
+
+These are **physical GX matrix-palette slots** deciding which roots stay
+resident while root 1 (the body) executes its `MODIFYVTX` reads. The tempting
+inference is that the rule is "(17,16,17,16,19,18) then 31 padding to the root
+count", which would make all ten heads derivable in one line.
+
+**That inference is not safe to act on, and this is where the work stops.**
+
+The length check would pass for a wrong slot *sequence*. A wrong sequence does
+not raise — it resolves the trio body against the wrong head's vertex cache and
+emits corrupted geometry, which is precisely the failure the generator's own
+comment at `:2248-2254` refuses to ship. So the one guard that exists cannot
+catch the one mistake that matters.
+
+Deriving the ten sequences requires each hat's actual weld topology: how many
+canonical two-root welds it has, which roots those are, and which must stay
+resident across the body's reads. That is real per-hat analysis against the
+BattleShip joint-6 model-part DLs, not a pattern extrapolated from a sample of
+two.
+
+**Recommended order for whoever takes this:**
+
+1. Derive the cross-slot sequence for one new hat (Donkey, part 4 — it is in the
+   canonical roster, so the existing gate exercises it once it works).
+2. Bake it, run the four-CPU stress with Kirby and Donkey, confirm
+   `gNdsRendererNativeFailure.count` stays 0 **and** that Kirby's copy is
+   visually correct — the count alone cannot see corruption.
+3. Only then generalise the rule to the remaining nine, with the visual check
+   repeated per hat.
+
+**Definition of done:** `scripts/fighters/check_native_owner_geometry_closure.py`
+goes green. It is RED today by design and names every missing victim, so it is
+both the specification and the regression test.
+
+## Harness additions worth doing alongside
+
+A nonzero `gNdsRendererNativeFailure.count` says a fighter vanished, not why.
+These are all `__attribute__((used)) volatile u32` already and none is read by
+`verify-p2-four-fighter-stress.ps1`:
+
+- `gNdsFtrDeclineStage` — would have read 11 ("live trio body, unknown joint-6
+  part") and named this immediately
+- `gNdsNativeFighterValidateRejectCode` / `...Index`
+- `gNdsNativeKirbyHatFailCount` / `...LoadCount`
+
+Adding them to `$memoryGlobals` costs nothing and turns "a fighter vanished"
+into "this decline stage, this part".
