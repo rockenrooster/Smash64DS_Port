@@ -48,40 +48,40 @@ Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
 740,352**; native **0/0**; realtime **26.4 FPS**; slips 0.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / collision matrix family / N05.02 / main. Phase: SELECT.
+Focus / batch / IDs / owner: P2-2p8 / invalidation over-clear / N05.03 / main. Phase: IMPLEMENT.
 **Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
 Baseline moved 2026-09-16 (clean rebuild -50,432) and dead code deleted; both in
 `docs/archive/P2_CLOSED_ROWS.md`.
-**Gap:** `1,120,000` = two VBlank intervals. WORK-H P50 **1.41x**, P95 2.06x,
-**92.3% of frames miss**; needs **-455,296** at P50. Sizing:
-`…/2026-09-16_p2-2p8-gap-sizing/`.
+**Gap:** `1,120,000` = two VBlank intervals; WORK-H P50 1.41x, **92.3% of frames
+miss**; needs **-455,296**.
 **Owner 2026-09-16: 30 FPS at four players REQUIRED, NO 30 Hz simulation.** The
 -294,016 sim lever is withdrawn (priced in `…/2026-09-16_p2-2p8-sim30-ceiling/`).
 Per the Sacrifice Order audio (1), visual (2) and gameplay (3) rank MORE
 expendable than the 60 Hz sim (4), so 1-3 must be exhausted first.
-**N05.01 matrix-stack lane: SPENT, with a measured surprise.** The mechanism
-already shipped (E17 + Slice 43, owner-accepted, both `1` here) — but it is **0%
-engaged**: `LoadHardwareGxComposedMatrices` 0 calls/frame, `MtxMulAffine20p12`
-73.15 against 1.19 when it worked. Cause: `BuildGxSlotTable`
-(`renderer_adapter_matrix.c:6008`) unions every owner's palette slots and returns
-FALSE on the first `NULL`; `NDS_P2_KIRBY` pushes the owner count past
-Pikachu/Yoshi/Ness/Purin, compiled out and returning `NULL`. Every owner, every
-frame, since the roster grew past Mario+Fox.
-**Repairing it REGRESSES this roster** — engaged (declines 3.91/frame -> 31 per
-300 frames): WORK-H P50 **+22,848**, P95 **+67,456**, FTR P95 **+84,480**, other
-invariants identical. The CPU multiply it deletes is cheaper than the FIFO
-traffic it adds at four fighters; Slice 43's own accounting had the FIFO side
-eating over half the win at two. **The 2026-08-15 -8,096 acceptance does not
-describe a four-fighter roster.** Fix reverted; the accidental decline is the
-faster path. Evidence: `…/2026-09-16_p2-2p8-gx-compose-decline/`.
-Owed: make the decline deliberate (choose CPU knowingly by roster) and assert
-`gNdsR2GxComposeDeclines` in the four-CPU gate — nothing asserts it today.
-Also unsized: `GetFrameCameraMatrices` is 9,884 tk/fr for ONE camera build per
-frame (18.60 calls, two 64-byte MTXCOPYs each); a `const*` is ~6-8k, no fidelity
-surface.
-Next (N05.02): the collision matrix family, ~49,900 tk/fr, the largest untouched
-lane — see `…_n0409-profile/CANDIDATE_SELECTION.md`.
+N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement;
+detail in `docs/archive/P2_CLOSED_ROWS.md`. Two corrections: the GX compose bank
+is 0% engaged and engaging it COSTS +22,848 P50 at four fighters, and the sampled
+softfloat census **over-attributes by 3.0x** — the collision family is 25,022 not
+~49,900, `guMtxCatF` is the largest float consumer at 13,485, not seventh. Do not
+size from that census again.
+**N05.03: 97% over-invalidation.** `ndsFTParamsInvalidateSubtree`
+(`reloc_backend_compat_shims.c:2955`) does **474.5 part-word clears/frame against
+14.3 matrix recomputes** (3.0% utilisation), costing **20,744 tk/fr to protect
+25,022**, at 5.6 cyc/insn — data-stall on scattered `FTParts` writes. Replace the
+O(parts) clear + descendant flatten with an **O(1) generation stamp**:
+**-12,000…-18,000**, no fidelity argument, byte-identical same-ROM A/B proven
+in-repo. Falsifier: if the recompute pulls the same lines anyway only issue slots
+go, ≈ -6,700.
+**THE ARITHMETIC IS CLOSED.** Non-idle work 1,616,382 tk/fr; the gate needs
+**-496,382 = 30.7% of everything executed**, and the profile's whole top twenty
+is 502,955 (31.1%). Everything unkilled sums to **~90,000, 0.20x**. **No
+combination reaches it.** Closing it needs an owner fidelity call: reduced
+per-fighter geometry (187,008 -> 75,424, 2.48x, Sacrifice Order 2) or the
+withdrawn 30 Hz sim (-294,016, itself 0.65x). Owed regardless: **46,273 tk/fr of
+the measured floor is the tick-HUD instrument**, free in the shipping ROM, so the
+gate runs ~46,000 heavier than what ships. Sizing:
+`…/2026-09-16_p2-2p8-gap-sizing/`.
 Lanes killed with measurement (30 Hz sim, the stage, per-fighter, material
 animation, the broken Task 103 instrument): `docs/archive/P2_CLOSED_ROWS.md`.
 Checks: **Boundary GREEN all three arms** (shell loop free floor 114,628 B,

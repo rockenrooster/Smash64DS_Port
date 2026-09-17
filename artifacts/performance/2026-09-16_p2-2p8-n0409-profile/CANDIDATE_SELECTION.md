@@ -85,3 +85,73 @@ cross-subsystem consumer. Infrastructure already exists: `NDS_R2_SIM_MAC_SHADOW`
 
 Do not start from the biggest symbol. Start from the chain with the best
 conv/op that no other subsystem reads.
+
+---
+
+## CORRECTION 2026-09-16: the sampled census over-attributes by 3.0x
+
+**The ranking above is wrong and must not be used for sizing again.** It came
+from `softfloat-callers.txt`, a 29,846-sample return-address census. Replacing it
+with an **exact** count — every `bl`/`blx` site in the linked ELF joined to its
+execution count in `arm9-profile.csv` — changes the answer. The exact method
+captures 409,912 of 409,916 `__aeabi_fmul` entries (99.999%) and reproduces
+`guMtxCatF` at 4.961 calls/frame independently.
+
+Five symbols move by more than 2x in either direction. The two that matter:
+
+| symbol | sampled census | exact | |
+|---|---|---|---|
+| `guMtxCatF` | 4.74%, 4,275 tk/fr, ranked **7th** | **9,599 tk/fr leaf, 13,485 with self, ranked 1st** | 317.5 fmul + 317.5 fadd per frame |
+| `func_ovl2_800ED490` | 18.79%, 16,940 tk/fr, ranked **1st** | **7,108 tk/fr leaf, 9,783 with self** | 2.4x over-attributed |
+
+The collision matrix family's true size is **25,022 tk/fr** (8,367 self + 16,655
+leaf), not the ~49,900 this document claimed.
+
+`guMtxCatF`'s rejection above still stands on its own terms — one live site, and
+its look-at and perspective producers are float, so a Q concat pays ~32 edge
+conversions per call — but its size was understated by 2.6x and it is the largest
+single float consumer in the build, not the seventh.
+
+## The collision lane is spent — it was built, engaged and measured as a cost
+
+`NDS_R2_COLLISION_FIXED` (`Makefile:2065`, 0 in this build) already implements
+the Q chain: `src/port/nds_r2_collision_ring.c` and
+`src/port/nds_r2_collision_fixed.c` transcribe `func_ovl2_800EDBA4` /
+`800EDE00` / `800EDE5C`. It was wired and run —
+`artifacts/performance/2026-08-15_cfx-ring-wiring/RING.md`: *"The ring is wired
+and engaged, no collision decision changed, and the gate did not move"* — at
+WORK-H P50 **+64**, P95 **+896**, rank-80 **+3,648**, zero domain declines.
+
+conv/op was never the binding constraint. The whole-chain form clears the
+exchange rate by 13x (0.043 against the 0.57 break-even), and it still did not
+pay: `…/2026-08-15_cfx-ring-split/SPLIT.md` decomposes it as issue **-1,717
+tk/fr** against icache_fill **+1,854 tk/fr** — *"The arithmetic win is real and
+it is 1.08x cancelled by fetch."* The resident variant sizes at **-6,261**.
+`…/2026-08-15_cfx-narrow-exchange/EXCHANGE.md` closes the consumer half: *"Even
+at an exchange rate of 0.00 -- fixed point free -- the lane's ceiling is 0.47x
+the requirement."*
+
+Do not rebuild it.
+
+## The real finding next door: 97% over-invalidation
+
+`ndsFTParamsInvalidateSubtree` (`src/port/reloc_backend_compat_shims.c:2955`)
+flattens every descendant and clears `unk_dobjtrans_word` on each,
+unconditionally. Measured: **474.5 part-word clears per frame against 14.3 matrix
+recomputes — 3.0% utilisation.** It costs **20,744 tk/fr to protect 25,022** of
+recompute, a ratio of 0.83: the memo barely pays for itself.
+
+20,349 tk/fr of that is `InvalidateSubtree` self time at **5.6 cycles per
+instruction** — data-stall bound on scattered `FTParts` writes, not arithmetic.
+Split: clear loops 56%, descendant flatten 21%, prologue and flat-walk check 23%.
+
+**Candidate: replace the O(parts) clear and descendant flatten with an O(1)
+generation stamp** — a per-fighter counter, validity by stamp compare. Worth
+**-12,000 to -18,000 tk/fr**, needs no fidelity argument, and a same-ROM A/B is
+already proven in this repo: a `volatile u32 __attribute__((used,
+section(".data")))` switch gives byte-identical `.text` in both arms, asserted by
+`scripts/compare-elf-sections.py --max-diff 1`.
+
+Falsifier: if the recompute pulls the same `FTParts` cache lines anyway, only the
+issue slots go — 56% of 20,349 is about **-6,700**, not -18,000. A per-PC
+issue/dcache split on the byte-identical pair settles it in one build.

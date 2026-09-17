@@ -330,3 +330,49 @@ owners, exactly as the stage replays did.
 something per-object that the stack cannot express — the lane collapses to the
 camera load alone and is worth ~10,000. The `MvpRecalc` kind-48 path is where to
 check that first.
+
+---
+
+## The arithmetic, closed (2026-09-16)
+
+Every category has now been measured. Non-idle work is **1,616,382 tk/fr** and
+the gate needs **-496,382 = 30.7% of everything executed**. For scale: the
+**top twenty symbols of the profile together are 502,955 tk/fr (31.1%)**, and the
+largest single symbol in the frame is 45,692 (2.8%). Closing the gap is
+arithmetically equivalent to deleting the entire top twenty.
+
+Everything not killed, with exact sizes:
+
+| lane | tk/fr | note |
+|---|---|---|
+| invalidation over-clear | **12,000-18,000** | unmeasured, the best remaining candidate |
+| `guMtxCatF` | <=13,485 | producers are float; a Q concat pays ~32 conv/call |
+| collision matrix family | 25,022 total, **~0 recoverable** | built, engaged, measured +64 P50 |
+| material animation | ~11,000 | visual-only half |
+| camera matrix copies | ~6,000-8,000 | needs a caller-wide signature change |
+| audio / BGM | ~2,000 | averaged over 104 refills in 1,600 frames |
+| **total** | **~90,000** | **0.20x the requirement** |
+
+**No combination of what remains reaches 455,296.**
+
+### The smallest sets that would
+
+1. **Per-fighter work down 2.48x**, 187,008 -> 75,424, with the non-fighter floor
+   untouched. Nothing on the board has that shape. It means a DS-specific reduced
+   fighter skeleton or mesh — a `PROJECT_GOAL.md` fidelity decision under
+   Sacrifice Order 2, not an optimization.
+2. **Cut the 827,136 non-fighter floor.** 42.6% of it is renderer/draw and the
+   stage half is GX-throughput-bound. Note that **46,273 tk/fr of the measured
+   floor is the tick-HUD instrument itself** — `ndsPlatformRenderDebugHud`
+   20,077, `tickGetCount` 16,583, `ndsIFCommonRecordHUDState` 9,613 — which is
+   free in the shipping ROM. That is not a saving to bank, but it does mean the
+   gate is being measured on a configuration ~46,000 ticks heavier than the one
+   that ships, and re-measuring on the shipping config is owed regardless.
+3. **Reopen the 30 Hz simulation** (-294,016, owner-withdrawn). Even taken, it is
+   0.65x the requirement and still needs ~160,000 more from (1) or (2).
+
+The honest position: **30 FPS at four fighters is not reachable by optimization
+alone from here.** It needs a fidelity decision — reduced per-fighter geometry,
+or the 30 Hz simulation, or both — and those are the owner's calls, not
+engineering ones. Everything engineering can still contribute is the ~90,000
+above, and the invalidation lane is the only part of it above 12,000.

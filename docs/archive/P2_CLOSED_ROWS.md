@@ -276,3 +276,27 @@ Kirby-copy weak stubs are the only definition in the shipping link; 11
 - **Task 103 stage-phase instrument.** Broken: needs 360 ITCM bytes it does not
   have, and crashes identically under two independent evictions (one hot, one
   cold) in `ndsCameraRecordFrame`. Never run, no artifacts, unproven code.
+
+## P2-2p8 N05.01 / N05.02 closed (2026-09-16)
+
+**N05.01, the hardware matrix stack.** The mechanism already shipped as E17 +
+Slice 43 and is owner-accepted, but it is 0% engaged: `BuildGxSlotTable`
+(`renderer_adapter_matrix.c:6008`) unions every owner's cross-run palette slots
+and fails on the first `NULL`, and `NDS_P2_KIRBY` pushes the owner count past
+Pikachu/Yoshi/Ness/Purin, which are compiled out. Repairing it REGRESSES four
+fighters: WORK-H P50 **+22,848**, P95 **+67,456**, FTR P95 **+84,480**. The CPU
+multiply it deletes is cheaper than the FIFO traffic it adds at this roster size,
+which agrees with Slice 43's own accounting (CPU deletion -18,165, net -8,096 at
+two fighters). **The 2026-08-15 acceptance figure does not describe a
+four-fighter roster.** Reverted; `gNdsR2GxComposeDeclines` is now reported in
+every four-CPU run so the choice cannot flip silently. Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-gx-compose-decline/`.
+
+**N05.02, the collision matrix family.** An exact `bl`-site count shows the
+sampled softfloat census over-attributes by **3.0x** — the family is 25,022
+tk/fr, not ~49,900, and `guMtxCatF` is the build's largest float consumer at
+13,485 rather than seventh at 4,275. The Q chain was already built, wired and
+engaged on 2026-08-15 behind `NDS_R2_COLLISION_FIXED` and measured as a cost:
+WORK-H P50 +64, P95 +896, rank-80 +3,648. conv/op cleared the 0.57 break-even by
+13x and icache_fill cancelled it 1.08x anyway. Do not rebuild it. Corrections and
+the exact table: `…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
