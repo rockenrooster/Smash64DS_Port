@@ -164,42 +164,58 @@ Three further arguments, none sufficient alone:
    a uniform shift rather than a tail effect.
 3. `ALL` did not move, so this is not a cadence artifact.
 
-**What would settle it** is a per-PC re-profile: rebuild with
-`NDS_TASK37_PROFILE`, re-run `run-task37-profile-census.ps1`, and read
-`cyc/x` on the moved symbols' own load PCs. Those must collapse toward the
-load-use interlock floor. That check is immune to placement because it looks at
-the instructions themselves rather than the frame total. **Owed.**
+**That check has since been run and it confirms the lane** — see the
+placement-immune section below. The shape argument above is kept because it was
+what justified the build; it is no longer what the result rests on.
 
-## The placement-immune check, control half
+## The placement-immune check — CONFIRMED
 
-Re-derived here, by my own method rather than the delegated one: for each of the
-112 moved symbols, find every literal-pool word holding its address, resolve the
-PC-relative loads that fetch those words, follow each to its dependent
-dereference, and sum stall over both sets against the banked profile
-(`…_n0409-profile/arm9-profile.csv` + its matching ELF).
+The −43,200 was first argued placement-immune by *shape*. This measures it on
+the instructions themselves, which needs no such argument.
 
-**Control (pre-move), 112 symbols, 1,201 pool words, 1,542 base PCs, 1,361
-dereference PCs:**
+Method: for each of the 112 moved symbols, find every literal-pool word holding
+its address, resolve the PC-relative loads that fetch those words, follow each to
+its dependent dereference, and sum stall over both sets — once against the banked
+control profile (`…_n0409-profile/`) and once against a profile build of this
+arm (`profile/arm9-profile.csv`, same census window 438..566). 1,201 pool words,
+1,542 base PCs, 1,361 dereference PCs; all 112 symbols resolved in both ELFs.
 
-| | acc/fr | stall tk/fr | tk/access |
+| | control | DTCM arm | delta |
 |---|---:|---:|---:|
-| literal-pool base load | 3,534.6 | 19,681.4 | 5.57 |
-| **dereference** | 3,364.0 | **34,120.9** | 10.14 |
+| dereference accesses/fr | 3,364.0 | **3,364.0** | **0.0** |
+| **dereference stall tk/fr** | **34,120.9** | **9,078.5** | **−25,042.4 (−73.4%)** |
+| literal-pool base accesses/fr | 3,534.6 | 3,530.4 | −4.2 |
+| literal-pool base stall tk/fr | 19,681.4 | 19,343.9 | −337.5 (−1.7%) |
 
-The dereference figure is what DTCM can remove, and **34,121 lands within 1% of
-the delegated sizing's 34,444** — two different methods, same profile, agreeing
-independently. That is the placement-immune sizing, and it is measured on the
-instructions themselves rather than on any frame total.
+**The dereference access count is identical to the tenth of a frame** — the same
+instructions executed the same number of times — **and their stall fell by
+73.4%.** Placement cannot do that: re-phasing changes which lines collide, not
+the per-instruction cost of the specific loads whose data moved into zero-wait
+memory. The lane is confirmed.
 
-Note the measured WORK-H win (**43,200**) *exceeds* it by 9,079. The natural
-reading is eviction relief: removing 112 lines from a 128-line cache frees
-capacity for everything else, which is also why the win spreads across every
-bucket rather than concentrating where these symbols are read. It is a reading,
-not a measurement, and is not banked as one.
+The literal-pool row is the control within the control: it barely moves (−1.7%),
+exactly as predicted, because DTCM relocates the datum while the pool word stays
+in `.text` and is still read through the data cache. A placement swing would have
+moved both rows; only one moved.
 
-**Owed:** the post-move half of this table. If the lane is real, the dereference
-row must collapse toward the load-use interlock floor while the literal-pool row
-stays roughly where it is — DTCM moves the datum, not the pool word.
+**Two numbers worth keeping:**
+
+- The residual dereference cost is **2.70 tk/access**, not the 1.00 the sizing
+  assumed as a load-use interlock floor. The floor is 2.7× higher than budgeted,
+  which is why the direct recovery is 25,042 rather than the predicted ~32,000.
+- **The measured WORK-H win, 43,200, exceeds the direct recovery of 25,042 by
+  18,158.** The natural reading is eviction relief — removing 112 lines from a
+  128-line cache frees capacity for every other structure, which also explains
+  why the win spreads across STG, SRC, MISC, SINT, FTR and OTHR rather than
+  concentrating where these symbols are read. **That is a reading, not a
+  measurement**, and is not banked as one.
+
+Independent corroboration from the profile headers: whole-program cycles fall
+487,368,912 → 477,285,502 over the same 129 regions, which is **39,083 tk/fr** —
+the same order as the 43,200 the gate measured, from a completely separate
+instrument. (Instruction counts differ by 0.19%, so the two profile builds are
+not bit-identical workloads and this is corroboration rather than a second
+measurement of the same quantity.)
 
 ## What was moved, and what was deliberately not
 
@@ -294,6 +310,9 @@ the generalisation.
 
 ## Status
 
-`IMPLEMENTED_NOT_ACCEPTED`. Owed: the four-CPU gate's correctness/memory verdict
-and divergence witnesses on this exact binary, and the per-PC re-profile that
-separates lever from placement beyond the shape argument above.
+`IMPLEMENTED_NOT_ACCEPTED`. The per-PC re-profile is **done and confirms the
+lane**; correctness and the divergence witnesses are clean on this exact binary.
+What remains is one owner call: the `:405-410` window assertion, diagnosed above
+as comparing a backward-counted derived label against the requested window while
+its other three conditions — and the identical per-stop logic-frame counters —
+already prove both arms ran the same match.

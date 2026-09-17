@@ -80,16 +80,16 @@ heap **73,064** vs 111,680, WORK-H **+70,016**; hats OFF = gate PASSES.
 14,080 floor, 9.2% of the gap, P95 −43,072, 3 runs agreeing. Linker script only,
 **no source change**. Lane was closed on a break-even derived as bytes÷32: right
 for a contiguous table, wrong for a scalar owning a whole line — 85.0 tk/fr per
-DTCM byte vs the reverted table's 6.4. Placement confound answered by SHAPE not
-size: hazard swings are STG-dominant (104-142% of WORK-H), this is STG **29%**
-spread over SRC/MISC/SINT/FTR. Native 0/0, triangles
-identical. Non-zero exit is a **window** assertion, NOT correctness, and it is
-DIAGNOSED: all 21 ring stops sit at identical presented frames with identical
-`PacingLogicFrames` (256…3946) — SAME match — and only the stitcher's first row
-label moves by +1. 3 of the assertion's 4 conditions pass; `startFrame` is a
-backward-counted derived value the sampler itself refuses to pin. **OWNER:
-one-line call** to compare it against the recorded label span. 1,484 B DTCM
-left. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call, per-PC re-profile.
+DTCM byte vs the reverted table's 6.4. Native 0/0, triangles identical.
+**Per-PC re-profile CONFIRMS the lane**: identical 3,364.0 dereference
+accesses/fr in both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row
+−1.7% — placement cannot move one row and not the other. Direct recovery 25,042;
+the other 18,158 reads as eviction relief (inferred). Non-zero exit is a
+**window** assertion, NOT correctness: all 21 ring stops at identical presented
+frames with identical `PacingLogicFrames` — SAME match — only the stitcher's
+first label moves +1; 3 of the assertion's 4 conditions pass.
+**OWNER: one-line call** to compare `startFrame` against the recorded label span.
+1,484 B DTCM left. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call only.
 **OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines).
 SRC's top candidate sized NO-GO; FTR/STG/MISC UNSIZED — size before building.
 Watermark: `Briefs/README.md` 09-16.
