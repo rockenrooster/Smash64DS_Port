@@ -6073,66 +6073,50 @@ NDS_NATIVE_ITEM_HITOKAGE_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_
 NDS_NATIVE_ITEM_FUSHIGIBANA_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_fushigibana.generated.inc
 NDS_NATIVE_ITEM_FUSHIGIBANA_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_fushigibana.generated.h
 NDS_NATIVE_ITEM_FUSHIGIBANA_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_fushigibana.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yamabuki_live_item.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_STAR_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_star.generated.inc
-NDS_NATIVE_ITEM_STAR_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_star.generated.h
-NDS_NATIVE_ITEM_STAR_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_SWORD_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_sword.generated.inc
-NDS_NATIVE_ITEM_SWORD_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_sword.generated.h
-NDS_NATIVE_ITEM_SWORD_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_HAMMER_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_hammer.generated.inc
-NDS_NATIVE_ITEM_HAMMER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_hammer.generated.h
-NDS_NATIVE_ITEM_HAMMER_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_MBALL_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_mball.generated.inc
-NDS_NATIVE_ITEM_MBALL_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_mball.generated.h
-NDS_NATIVE_ITEM_MBALL_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_GSHELL_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_gshell.generated.inc
-NDS_NATIVE_ITEM_GSHELL_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_gshell.generated.h
-NDS_NATIVE_ITEM_GSHELL_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_BAT_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_bat.generated.inc
-NDS_NATIVE_ITEM_BAT_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_bat.generated.h
-NDS_NATIVE_ITEM_BAT_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_BOMBHEI_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_bombhei.generated.inc
-NDS_NATIVE_ITEM_BOMBHEI_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_bombhei.generated.h
-NDS_NATIVE_ITEM_BOMBHEI_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_RSHELL_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_rshell.generated.inc
-NDS_NATIVE_ITEM_RSHELL_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_rshell.generated.h
-NDS_NATIVE_ITEM_RSHELL_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_LGUN_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_lgun.generated.inc
-NDS_NATIVE_ITEM_LGUN_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_lgun.generated.h
-NDS_NATIVE_ITEM_LGUN_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_HARISEN_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_harisen.generated.inc
-NDS_NATIVE_ITEM_HARISEN_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_harisen.generated.h
-NDS_NATIVE_ITEM_HARISEN_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_HEART_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_heart.generated.inc
-NDS_NATIVE_ITEM_HEART_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_heart.generated.h
-NDS_NATIVE_ITEM_HEART_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_STARROD_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_starrod.generated.inc
-NDS_NATIVE_ITEM_STARROD_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_starrod.generated.h
-NDS_NATIVE_ITEM_STARROD_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_FFLOWER_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_fflower.generated.inc
-NDS_NATIVE_ITEM_FFLOWER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_fflower.generated.h
-NDS_NATIVE_ITEM_FFLOWER_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_MSBOMB_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_msbomb.generated.inc
-NDS_NATIVE_ITEM_MSBOMB_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_msbomb.generated.h
-NDS_NATIVE_ITEM_MSBOMB_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_NBUMPER_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_nbumper.generated.inc
-NDS_NATIVE_ITEM_NBUMPER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_nbumper.generated.h
-NDS_NATIVE_ITEM_NBUMPER_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_BOX_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_box.generated.inc
-NDS_NATIVE_ITEM_BOX_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_box.generated.h
-NDS_NATIVE_ITEM_BOX_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_TARU_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_taru.generated.inc
-NDS_NATIVE_ITEM_TARU_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_taru.generated.h
-NDS_NATIVE_ITEM_TARU_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_EGG_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_egg.generated.inc
-NDS_NATIVE_ITEM_EGG_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_egg.generated.h
-NDS_NATIVE_ITEM_EGG_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_IWARK_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_iwark.generated.inc
-NDS_NATIVE_ITEM_IWARK_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_iwark.generated.h
-NDS_NATIVE_ITEM_IWARK_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
-NDS_NATIVE_ITEM_CAPSULE_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_capsule.generated.inc
-NDS_NATIVE_ITEM_CAPSULE_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_capsule.generated.h
-NDS_NATIVE_ITEM_CAPSULE_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
+# The twenty wave-1 native item owners are one producer with the item's slug as
+# its first positional argument, so they were twenty copies of one recipe plus
+# sixty copies of three variable definitions. A copied recipe is a place to
+# forget when the producer's prerequisites change, and a stale copy rebuilds
+# nothing rather than failing, so the drift is silent.
+#
+# Each entry is <slug>/<VAR>. The pair is written out rather than derived with a
+# 26-deep subst chain: it is read far more often than it is edited, and a
+# mis-cased derivation would expand to an EMPTY variable and a rule with no
+# target, not to an error.
+NDS_NATIVE_ITEM_WAVE1 := \
+	bat/BAT \
+	bombhei/BOMBHEI \
+	box/BOX \
+	capsule/CAPSULE \
+	egg/EGG \
+	fflower/FFLOWER \
+	gshell/GSHELL \
+	hammer/HAMMER \
+	harisen/HARISEN \
+	heart/HEART \
+	iwark/IWARK \
+	lgun/LGUN \
+	mball/MBALL \
+	msbomb/MSBOMB \
+	nbumper/NBUMPER \
+	rshell/RSHELL \
+	star/STAR \
+	starrod/STARROD \
+	sword/SWORD \
+	taru/TARU
+NDS_NATIVE_ITEM_WAVE1_PRODUCER := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py
+
+define NDS_NATIVE_ITEM_WAVE1_RULE
+NDS_NATIVE_ITEM_$(2)_PACKET := $$(PROJECT_ROOT)/src/nds/generated/nds_native_item_$(1).generated.inc
+NDS_NATIVE_ITEM_$(2)_HEADER := $$(PROJECT_ROOT)/include/nds/generated/nds_native_item_$(1).generated.h
+NDS_NATIVE_ITEM_$(2)_PREREQ := $$(NDS_NATIVE_ITEM_WAVE1_PRODUCER) $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
+$$(NDS_NATIVE_ITEM_$(2)_PACKET) $$(NDS_NATIVE_ITEM_$(2)_HEADER) &: $$(NDS_NATIVE_ITEM_$(2)_PREREQ)
+	python "$$(NDS_NATIVE_ITEM_WAVE1_PRODUCER)" $(1) --emit
+	@touch $$(NDS_NATIVE_ITEM_$(2)_PACKET) $$(NDS_NATIVE_ITEM_$(2)_HEADER)
+endef
+
+$(foreach p,$(NDS_NATIVE_ITEM_WAVE1),$(eval $(call NDS_NATIVE_ITEM_WAVE1_RULE,$(word 1,$(subst /, ,$(p))),$(word 2,$(subst /, ,$(p))))))
+
 NDS_NATIVE_THUNDERJOLTFX_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunderjolt_effect.generated.inc
 NDS_NATIVE_THUNDERJOLTFX_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h
 NDS_NATIVE_THUNDERJOLTFX_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderjolt_effect.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wppikachu/wppikachuthunderjolt.c
@@ -6255,86 +6239,6 @@ $(NDS_NATIVE_ITEM_HITOKAGE_PACKET) $(NDS_NATIVE_ITEM_HITOKAGE_HEADER) &: $(NDS_N
 $(NDS_NATIVE_ITEM_FUSHIGIBANA_PACKET) $(NDS_NATIVE_ITEM_FUSHIGIBANA_HEADER) &: $(NDS_NATIVE_ITEM_FUSHIGIBANA_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_fushigibana.py" --emit
 	@touch $(NDS_NATIVE_ITEM_FUSHIGIBANA_PACKET) $(NDS_NATIVE_ITEM_FUSHIGIBANA_HEADER)
-
-$(NDS_NATIVE_ITEM_STAR_PACKET) $(NDS_NATIVE_ITEM_STAR_HEADER) &: $(NDS_NATIVE_ITEM_STAR_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" star --emit
-	@touch $(NDS_NATIVE_ITEM_STAR_PACKET) $(NDS_NATIVE_ITEM_STAR_HEADER)
-
-$(NDS_NATIVE_ITEM_SWORD_PACKET) $(NDS_NATIVE_ITEM_SWORD_HEADER) &: $(NDS_NATIVE_ITEM_SWORD_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" sword --emit
-	@touch $(NDS_NATIVE_ITEM_SWORD_PACKET) $(NDS_NATIVE_ITEM_SWORD_HEADER)
-
-$(NDS_NATIVE_ITEM_HAMMER_PACKET) $(NDS_NATIVE_ITEM_HAMMER_HEADER) &: $(NDS_NATIVE_ITEM_HAMMER_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" hammer --emit
-	@touch $(NDS_NATIVE_ITEM_HAMMER_PACKET) $(NDS_NATIVE_ITEM_HAMMER_HEADER)
-
-$(NDS_NATIVE_ITEM_MBALL_PACKET) $(NDS_NATIVE_ITEM_MBALL_HEADER) &: $(NDS_NATIVE_ITEM_MBALL_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" mball --emit
-	@touch $(NDS_NATIVE_ITEM_MBALL_PACKET) $(NDS_NATIVE_ITEM_MBALL_HEADER)
-
-$(NDS_NATIVE_ITEM_GSHELL_PACKET) $(NDS_NATIVE_ITEM_GSHELL_HEADER) &: $(NDS_NATIVE_ITEM_GSHELL_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" gshell --emit
-	@touch $(NDS_NATIVE_ITEM_GSHELL_PACKET) $(NDS_NATIVE_ITEM_GSHELL_HEADER)
-
-$(NDS_NATIVE_ITEM_BAT_PACKET) $(NDS_NATIVE_ITEM_BAT_HEADER) &: $(NDS_NATIVE_ITEM_BAT_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" bat --emit
-	@touch $(NDS_NATIVE_ITEM_BAT_PACKET) $(NDS_NATIVE_ITEM_BAT_HEADER)
-
-$(NDS_NATIVE_ITEM_BOMBHEI_PACKET) $(NDS_NATIVE_ITEM_BOMBHEI_HEADER) &: $(NDS_NATIVE_ITEM_BOMBHEI_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" bombhei --emit
-	@touch $(NDS_NATIVE_ITEM_BOMBHEI_PACKET) $(NDS_NATIVE_ITEM_BOMBHEI_HEADER)
-
-$(NDS_NATIVE_ITEM_RSHELL_PACKET) $(NDS_NATIVE_ITEM_RSHELL_HEADER) &: $(NDS_NATIVE_ITEM_RSHELL_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" rshell --emit
-	@touch $(NDS_NATIVE_ITEM_RSHELL_PACKET) $(NDS_NATIVE_ITEM_RSHELL_HEADER)
-
-$(NDS_NATIVE_ITEM_LGUN_PACKET) $(NDS_NATIVE_ITEM_LGUN_HEADER) &: $(NDS_NATIVE_ITEM_LGUN_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" lgun --emit
-	@touch $(NDS_NATIVE_ITEM_LGUN_PACKET) $(NDS_NATIVE_ITEM_LGUN_HEADER)
-
-$(NDS_NATIVE_ITEM_HARISEN_PACKET) $(NDS_NATIVE_ITEM_HARISEN_HEADER) &: $(NDS_NATIVE_ITEM_HARISEN_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" harisen --emit
-	@touch $(NDS_NATIVE_ITEM_HARISEN_PACKET) $(NDS_NATIVE_ITEM_HARISEN_HEADER)
-
-$(NDS_NATIVE_ITEM_HEART_PACKET) $(NDS_NATIVE_ITEM_HEART_HEADER) &: $(NDS_NATIVE_ITEM_HEART_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" heart --emit
-	@touch $(NDS_NATIVE_ITEM_HEART_PACKET) $(NDS_NATIVE_ITEM_HEART_HEADER)
-
-$(NDS_NATIVE_ITEM_STARROD_PACKET) $(NDS_NATIVE_ITEM_STARROD_HEADER) &: $(NDS_NATIVE_ITEM_STARROD_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" starrod --emit
-	@touch $(NDS_NATIVE_ITEM_STARROD_PACKET) $(NDS_NATIVE_ITEM_STARROD_HEADER)
-
-$(NDS_NATIVE_ITEM_FFLOWER_PACKET) $(NDS_NATIVE_ITEM_FFLOWER_HEADER) &: $(NDS_NATIVE_ITEM_FFLOWER_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" fflower --emit
-	@touch $(NDS_NATIVE_ITEM_FFLOWER_PACKET) $(NDS_NATIVE_ITEM_FFLOWER_HEADER)
-
-$(NDS_NATIVE_ITEM_MSBOMB_PACKET) $(NDS_NATIVE_ITEM_MSBOMB_HEADER) &: $(NDS_NATIVE_ITEM_MSBOMB_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" msbomb --emit
-	@touch $(NDS_NATIVE_ITEM_MSBOMB_PACKET) $(NDS_NATIVE_ITEM_MSBOMB_HEADER)
-
-$(NDS_NATIVE_ITEM_NBUMPER_PACKET) $(NDS_NATIVE_ITEM_NBUMPER_HEADER) &: $(NDS_NATIVE_ITEM_NBUMPER_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" nbumper --emit
-	@touch $(NDS_NATIVE_ITEM_NBUMPER_PACKET) $(NDS_NATIVE_ITEM_NBUMPER_HEADER)
-
-$(NDS_NATIVE_ITEM_BOX_PACKET) $(NDS_NATIVE_ITEM_BOX_HEADER) &: $(NDS_NATIVE_ITEM_BOX_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" box --emit
-	@touch $(NDS_NATIVE_ITEM_BOX_PACKET) $(NDS_NATIVE_ITEM_BOX_HEADER)
-
-$(NDS_NATIVE_ITEM_TARU_PACKET) $(NDS_NATIVE_ITEM_TARU_HEADER) &: $(NDS_NATIVE_ITEM_TARU_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" taru --emit
-	@touch $(NDS_NATIVE_ITEM_TARU_PACKET) $(NDS_NATIVE_ITEM_TARU_HEADER)
-
-$(NDS_NATIVE_ITEM_EGG_PACKET) $(NDS_NATIVE_ITEM_EGG_HEADER) &: $(NDS_NATIVE_ITEM_EGG_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" egg --emit
-	@touch $(NDS_NATIVE_ITEM_EGG_PACKET) $(NDS_NATIVE_ITEM_EGG_HEADER)
-
-$(NDS_NATIVE_ITEM_IWARK_PACKET) $(NDS_NATIVE_ITEM_IWARK_HEADER) &: $(NDS_NATIVE_ITEM_IWARK_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" iwark --emit
-	@touch $(NDS_NATIVE_ITEM_IWARK_PACKET) $(NDS_NATIVE_ITEM_IWARK_HEADER)
-
-$(NDS_NATIVE_ITEM_CAPSULE_PACKET) $(NDS_NATIVE_ITEM_CAPSULE_HEADER) &: $(NDS_NATIVE_ITEM_CAPSULE_PREREQ)
-	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_wave1_core.py" capsule --emit
-	@touch $(NDS_NATIVE_ITEM_CAPSULE_PACKET) $(NDS_NATIVE_ITEM_CAPSULE_HEADER)
 
 $(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER) &: $(NDS_NATIVE_SECTOR_LASER_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_sector_arwing_laser.py" --emit
