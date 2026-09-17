@@ -177,11 +177,19 @@ as that note's own release condition said, and it has been gone since
 |---|---|---:|---:|---:|---:|---|
 | 7 | — | 1,755,092 | — | 1,240,832 | — | clean |
 | **8** | **Jigglypuff** | 1,764,532 | **+9,440** | **1,228,544** | **3** | **clean** |
-| 10 | +Ness +Kirby | 1,837,132 | +82,040 | 1,154,816 | 21 | **SIGILL** |
+| 9 | + Ness | 1,787,108 | +32,016 | 1,208,064 | 8 | **SIGILL** |
+| 10 | + Kirby | 1,837,132 | +82,040 | 1,154,816 | 21 | **SIGILL** |
 
-Three pages for Jigglypuff against twenty-one for Ness-plus-Kirby. The arena
-tracks the image almost exactly in both directions, which is the same mechanism
-the Yoshi egg and Vulcan Jab hit today.
+**The break is between 8 and 9, so it is not Kirby — Ness alone is already too
+much.** He adds 22,576 B over Jigglypuff and five more arena pages, and that is
+enough to bring the wander crash back (`rung9-ness-sigill.txt`).
+
+**Ness's own content is fine.** `CSSTOURTRI` index 11 reads **3,498** at rung 9,
+so his preview drew correctly right up to the exit crash. He is blocked purely
+on resident budget, not on anything wrong with his assets or owner.
+
+The arena tracks the image almost exactly at every rung, which is the same
+mechanism the Yoshi egg and Vulcan Jab hit today.
 
 ### And the tour immediately earned itself
 
