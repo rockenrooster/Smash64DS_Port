@@ -82,9 +82,10 @@ this profile) by caller:
 
 Half of it is `lbCommonSin` / `lbCommonCos` and friends under a **frozen state
 hash** — converting them changes game behaviour. A fifth is renderer work under
-the fidelity doctrine. Only the **28.4% unresolved slice (~25,600 tk/fr, 5.3% of
-the gap)** is not already behind a stated policy gate, and that is the only part
-of the largest class in the frame that is available to ordinary engineering.
+the fidelity doctrine. Only the **28.4% unresolved slice (~25,600 tk/fr)** was not
+*labelled* with a policy gate. **Resolving it (below) shows 91.2% of it is the
+gameplay collision narrow phase**, so the genuinely ungated remainder is
+approximately zero.
 
 ## What this means for the SRC authorization
 
@@ -94,19 +95,56 @@ Stated plainly, because it is the answer to the question that was asked:
    tail, its top candidate is measured NO-GO, and its named "unreached" block is
    a label rather than a mechanism.
 2. **The only class-sized lever left in the whole frame is soft-float**, and
-   **71.3% of it is behind gameplay-behaviour or render-fidelity gates** that are
-   owner policy, not engineering difficulty.
+   after resolving the unresolved slice, **~99.7% of it is behind
+   gameplay-behaviour (76.8%) or render-fidelity (22.9%) gates** that are owner
+   policy, not engineering difficulty.
 3. Therefore **closing 480,960 ticks is a policy decision before it is an
    optimization problem.** The 30 Hz simulation lever the owner has just
    declined was one such policy lever; declining it is legitimate and it removes
    the largest remaining one.
 
+## RESOLVED: the 28.4% "unresolved" slice, and it makes this worse
+
+Done, and it corrects the split above **against** us. The unresolved bucket is
+not diffuse and not ungated — it is 29 callers, and **91.2% of it is gameplay
+and physics**:
+
+| tk/fr | share of slice | caller |
+|---:|---:|---|
+| **16,940** | **66.1%** | `func_ovl2_800ED490` |
+| 2,492 | 9.7% | `func_ovl2_800EDE5C` |
+| 1,045 | 4.1% | `ndsMPLineExtentSweepRejects` |
+| 798 ×3 | 9.4% | `ndsBaseMPProcessUpdateMain`, L/R wall-collision adj |
+| rest | 10.7% | floor-edge collision, camera, HUD, wallpaper persp |
+
+They were "unresolved" only because `func_ovl2_*` carries no source name the
+classifier recognised. **They are the fighter collision narrow phase.**
+`func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs)` is a float 4×4 compose
+reached through `gmCollisionCheckFighterAttackDamageCollide`, and the 7.68x
+recorded beside it in `battleship_gmcollision.c:156` is **not a speedup** — it
+is its spike ratio on the 80 frames that *set P95*.
+
+**Converting it is a gameplay change, and that has already been tried.**
+`NDS_R2_SIM_MAC_SHADOW` exists as a lab-only shadow instrument precisely because
+the replacement route could not be priced safely: *"a route A/B cannot price a
+gameplay change; one on this exact code ended with damage 130/51 against
+33/65"* (`battleship_gmcollision.c:199-203`).
+
+### Revised gate split — the correction
+
+| gate | was reported | **actually** |
+|---|---:|---:|
+| GAMEPLAY (state-hash frozen) | 50.9% / ~45,900 | **76.8% / 69,226 tk/fr** |
+| RENDERER + HUD + camera | 20.4% | ~22.9% |
+| genuinely ungated | ~28.4% | **~0%** |
+
+**The "only part available to ordinary engineering" was an artefact of an
+unlabelled symbol.** Three quarters of the largest class in the frame is behind
+gameplay behaviour, and the remainder is behind render fidelity. This does not
+weaken the conclusion below; it removes the exception to it.
+
 ## What is worth doing next, in order
 
-- **Resolve the 28.4% unresolved soft-float slice** (~25,600 tk/fr). It is the
-  only unclaimed part of the biggest class, and attribution is cheap — the
-  instrument already exists and `ndsMPLineExtentSweepRejects` is already visible
-  in its top callers.
 - Keep the two halves the 09-16 sizing salvaged, both reachable without a
   pose/transform rewrite: the validity/hierarchy walk (**−10,000 to −15,000**,
   and its recorded falsifier is wrong in the favourable direction — the walk is
