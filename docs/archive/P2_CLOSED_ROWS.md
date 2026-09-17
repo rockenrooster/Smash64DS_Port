@@ -428,3 +428,36 @@ substantiated". **That inference was wrong: absence from the bug list meant
 FIXED.** A cleaned-up bug list and a never-reported bug look identical from the
 outside; only the owner can tell them apart, and the board row is not evidence
 either way.
+
+
+## 2026-09-17 — SRC distribution detail, moved off the active board
+
+The board hit its 12,288-byte cap while recording the owner's CSS batch. Per
+its own rule the older, fully-banked block moves here rather than the cap
+moving. Full evidence:
+`artifacts/performance/2026-09-16_p2-2p8-src-distribution/`.
+
+MISC 49.6%); lanes sum to 124% of ALL so they do NOT add. **SRC DISTRIBUTION**
+(`…_p2-2p8-src-distribution/`): **no big rocks** — 1,192 symbols, top 20 = 31.2%,
+only 13 over 20,000; **1,108 symbols under 5,000 carry 571,666 = more than the
+whole gap**. "GObj dispatch 234,325" is a label on a tail; `gcRunGObjProcess` is
+**7,087**. Biggest coherent class anywhere = **soft-float 125,369 = 26.1% of
+gap**, but **50.9% gameplay state-hash frozen + 20.4% fidelity-gated**; only the
+**28.4% unresolved (~25,600)** is free. **Closing the gap is a POLICY call
+before it is an optimization.**
+
+### Closed-lane cursor detail, same 09-17 cap trip
+
+**JOINT-CAP LANE SPENT**: cap **aborts the CPU AI**; deleting **94.7%** of pose
+evaluation gave **no WORK-H reduction**. Placement CLOSED.
+**KIRBY COPY FIXED.** OWED: per-hat look.
+**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 exist, all covered
+(`…_p2-3f-hidden-part-sweep/`). OWED: captures.
+
+### DTCM hot-scalars exit-code detail, same 09-17 cap trip
+
+**DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap. Non-zero
+exit is a **window** assertion, NOT correctness: 21 ring stops at identical
+frames, identical `PacingLogicFrames`, only the first label moves +1. **OWNER:
+one-line call** to compare `startFrame` against the recorded label span.

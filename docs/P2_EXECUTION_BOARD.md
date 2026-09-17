@@ -33,7 +33,7 @@ SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance open. |
+| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Owner's 7 CSS defects, 4 causes: Yoshi preview FIXED; walk now selects ALL fighters; FPS/music/dwell diagnosed, unfixed. |
 | P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory resident. Low-water 111,680 B; libc reserve 40,960 B, weapon pool 10; scoped guards pass; FPS RED. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission proved in `d8660bc2fd9`; natural Hyrule/Inishie pass. Three VS captures remain. |
@@ -54,30 +54,34 @@ Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWN
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY**
 (`…_p2-2p8-gate-decision/`): ceiling **90.6%**, leaving **44,208 OVER**.
 **RESIDUAL: 321,866 UNFOUND**; banked+sized **146,678 = 31.3%**.
-**JOINT-CAP LANE SPENT**: cap **aborts the CPU AI**; deleting **94.7%** of pose
-evaluation gave **no WORK-H reduction**. Placement CLOSED.
-**KIRBY COPY FIXED.** OWED: per-hat look.
-**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 exist, all covered
+**CLOSED LANES** (detail archived): joint-cap placement, Kirby copy (OWED:
+per-hat look), hidden-part class — 26 owners swept, 3 exist, all covered
 (`…_p2-3f-hidden-part-sweep/`). OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
-`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap. Non-zero
-exit is a **window** assertion, NOT correctness: 21 ring stops at identical
-frames, identical `PacingLogicFrames`, only the first label moves +1. **OWNER:
-one-line call** to compare `startFrame` against the recorded label span.
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap. **OWNER:
+one-line call** on the non-zero exit — it is a window assertion, not
+correctness (detail archived).
 **OWNER 09-17: SRC REOPENED** (was NO-GO), **30 Hz simulation still refused**.
 Docs now committed (`cd270b735dc`). **SIZED** (`…_p2-2p8-ftr-stg-misc-sizing/`):
 no one of FTR/STG/MISC closes the gap even deleted whole (STG 80.1%, FTR 72.8%,
 MISC 49.6%); lanes sum to 124% of ALL so they do NOT add. **SRC DISTRIBUTION**
-(`…_p2-2p8-src-distribution/`): **no big rocks** — 1,192 symbols, top 20 = 31.2%,
-only 13 over 20,000; **1,108 symbols under 5,000 carry 571,666 = more than the
-whole gap**. "GObj dispatch 234,325" is a label on a tail; `gcRunGObjProcess` is
-**7,087**. Biggest coherent class anywhere = **soft-float 125,369 = 26.1% of
-gap**, but **50.9% gameplay state-hash frozen + 20.4% fidelity-gated**; only the
-**28.4% unresolved (~25,600)** is free. **Closing the gap is a POLICY call
-before it is an optimization.**
+(`…_p2-2p8-src-distribution/`): **no big rocks** — 1,108 symbols under 5,000
+carry 571,666, more than the whole gap. Largest class is soft-float 125,369
+(26.1%), **~99.7% behind gameplay or fidelity gates. Closing the gap is a
+POLICY call before it is an optimization.**
 **LEVER SIZED: 8,458 B of entry-effect texels belong to fighters the four-CPU
 build cannot run**, **0 shared** = **2.1 arena pages**
 (`…_p2-2p8-entry-effect-roster-residency/`). Buys arena headroom, NOT ticks.
+**OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`). Yoshi preview FIXED:
+pack `source_bytes` 45,488 vs owner `asset_data_size` 44,256 declined the owner
+(reject 3, before any root); the 1,232 is the pair weld. Same pass caught today's
+Catch/Throw programs publishing un-aliased weld offsets past the asset end —
+fixed, generator now asserts. **WALK REPLACED**: tours every admitted kind, 24
+tics each, presses its own START; `CSSTOUR kind=/drew=` must be EQUAL. The old
+walk covered 4 of 9, which is why Yoshi went unseen.
+**ROSTER: rung 10 = +82,040 B image = −86,016 arena (21 pages) → SIGILL on CSS
+exit; rung 7 control clean.** Rung 8 (Jigglypuff) is only **+9,440 B**;
+bisecting 8/9. Kirby is the expensive member.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
