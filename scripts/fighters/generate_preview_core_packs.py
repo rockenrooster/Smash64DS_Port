@@ -159,11 +159,21 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
 
     # Section 1 spans: pointer_map order, verified inside the compact bin.
     model_spans = m["pointer_map"]  # [{old, len, new}] compact-relative
-    model_source_bytes = checks.get("model_payload_bytes")
-    if not model_source_bytes:
-        raise PackError(kind + ": missing model_payload_bytes")
+    # TWO EXTENTS, AND THEY ARE NOT INTERCHANGEABLE. The spans are offsets into
+    # the pair-EXTENDED payload -- Yoshi's welded roots 0xace0/0xae68 sit at and
+    # above the raw end -- so the bound check below must use the extended
+    # length. The header's source_bytes is a different thing: the renderer feeds
+    # it straight to ndsRendererValidateNativeFighterOwner, which compares it to
+    # the owner's asset_data_size before it looks at a root, so it must be the
+    # RAW length the runtime actually loads. Writing the extended length there
+    # rejected Yoshi's CSS preview owner outright (reject code 3) and blanked
+    # him on the character select while in-match Yoshi drew fine.
+    model_span_extent = checks.get("model_payload_bytes")
+    model_source_bytes = checks.get("model_source_bytes", model_span_extent)
+    if not model_span_extent or not model_source_bytes:
+        raise PackError(kind + ": missing model_payload_bytes/model_source_bytes")
     span_total = sum(s["len"] for s in model_spans)
-    if max(s["old"] + s["len"] for s in model_spans) > model_source_bytes:
+    if max(s["old"] + s["len"] for s in model_spans) > model_span_extent:
         raise PackError(kind + ": model span exceeds source extent")
 
     def model_remap(off: int) -> int:
@@ -191,7 +201,7 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
     if missing:
         raise PackError(kind + ": pruned-dl target outside measured roots: %r"
                         % (sorted(missing)[:5],))
-    if any(t >= model_source_bytes for t in need_cells):
+    if any(t >= model_span_extent for t in need_cells):
         raise PackError(kind + ": root cell beyond model source extent")
     cells = sorted(need_cells)
     cell_index = {t: i for i, t in enumerate(cells)}
@@ -333,7 +343,7 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
             emit(slot, NULL)
     for r in m["model_intern"]["retained"]:
         slot = sec1_base + model_remap(r["slot_new"])
-        if not (0 <= r["slot_old"] < model_source_bytes):
+        if not (0 <= r["slot_old"] < model_span_extent):
             raise PackError(kind + ": model slot beyond source extent: %r" % (r,))
         if r.get("target_new") == "sentinel":
             if r.get("reason") == "pruned-dl":
@@ -341,7 +351,7 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
             else:
                 emit(slot, NULL)
         else:
-            if not (0 <= r["target_old"] < model_source_bytes):
+            if not (0 <= r["target_old"] < model_span_extent):
                 raise PackError(kind + ": model target beyond extent: %r" % (r,))
             emit(slot, sec1_base + model_remap(r["target_new"]))
 

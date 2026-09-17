@@ -679,6 +679,11 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
     try:
         payload = gen.load_o2r_payload(REPO, key)
         entry["model_payload_bytes"] = len(payload)
+        # NOT the same number for a pair-mode owner. model_payload_bytes is the
+        # extent the pack's own spans are bounded by (welded DLs included);
+        # model_source_bytes is what the renderer validates a loaded asset
+        # against, and it must equal the owner's asset_data_size exactly.
+        entry["model_source_bytes"] = gen.owner_asset_data_size(payload, key)
         jt_base, jt_n = gen.OWNER_JOINT_TREES[key]
         raw = gen._owner_raw_joint_descriptors(payload, key, "high")
         descs = raw[:-1] if raw and raw[-1][1] is None else raw
@@ -1274,6 +1279,7 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
 
     checks = {
         "model_payload_bytes": len(payload),
+        "model_source_bytes": gen.owner_asset_data_size(payload, key),
         "main_sections_sum": ssum,
         "descs_decoded": len(descs),
         "selected_table_entries": psel["table_full"],

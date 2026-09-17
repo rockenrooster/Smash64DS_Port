@@ -18,15 +18,15 @@ Main Menus:
     -Damage percentage should go up and down faster, like 3x faster.
 
 
--CSS still has some problems:
-    -Low FPS/Flashing during gate openings
+-CSS Bugs still present and need to be fixed:
+    -Low FPS/Flashing during gate openings **MEASURED, CAUSE FOUND, not yet fixed. 159 of 1,651 CSS frames (9.6%) miss 60 Hz and the worst presents at 6.7 FPS (nine VBlanks). The door slide re-reads the WHOLE 7,738 B panel from NitroFS as an underlay, per sliding slot, per tic, for ~21 tics -- and ndsUiKitBlitSurfaces has no cache, so every call is a real file read. nds_ui_kit.h:216 says outright that one NitroFS open costs more than a whole frame; ndsMenuShellCssStepDoors bypasses the per-frame budget its own neighbour ndsMenuShellCssSyncPanels exists to enforce. Needs a cached panel band or a row-ranged blit.**
     -fighter 3d previews not visible for:
-        -Yoshi
-    -music pauses/reset when rendering new 3d fighter previews (moving around cursor)
-    -delay between cursor hover and 3d fighter preview rendering.
-    -Kirby not selectable
-    -Jigglypuff not selectable
-    -Ness not selectable
+        -Yoshi **FIX IMPLEMENTED, please look. Yoshi's CSS preview pack declared source_bytes=45,488 while his native owner expects asset_data_size=44,256. ndsRendererValidateNativeFighterOwner compares that field BEFORE it looks at a single root, so the owner was declined outright (reject code 3) and a declined owner draws nothing. The 1,232 B difference is the welded pair DLs: Yoshi is the only character-select fighter in OWNER_DL_PAIR_MODE, so he is the only one whose two producers disagreed -- the other eleven match exactly. In-match Yoshi was always fine because the battle pack declares the raw length. Now one shared helper answers both ends and a standing check (check_preview_pack_owner_sizes.py) fails if they ever drift again.**
+    -music pauses/reset when rendering new 3d fighter previews (moving around cursor) **MEASURED, CAUSE FOUND, not yet fixed. Eight BGM suspend/resume pairs per CSS visit (suspend=8 resume=8, seammiss=0 error=0 -- balanced, so it pauses rather than dies). The shipping CSS loads a whole fighter closure in ONE frame and fences the music around it; the worst such frame is 4,808,448 ticks = 8.6 frames = 143 ms of silence. A properly sliced loader already exists in this same function but is compiled out -- it sits under #else of NDS_PLAYERS_VS_COMPACT_PREVIEW, so only the oracle/profile build gets it. Slicing the shipping arm removes this and the item below together.**
+    -delay between cursor hover and 3d fighter preview rendering. **MEASURED, CAUSE FOUND, not yet fixed. SAME ROOT as the music item. NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS is 13 (~217 ms) and is deliberately sized so a full-speed sweep across the roster never starts a load -- a sound debounce for a BLOCKING load, which is why deliberate hovering feels slow. Measured 70 tics = 1.17 s of pure waiting in one visit. The loads it gates never amortise either: 10 acquires, ZERO cache hits, 7 loads, 7 retires. Slice the load and the dwell can drop.**
+    -Kirby not selectable **FIX IMPLEMENTED, verification in progress. Same cause for all three below: the shell roster ladder had rungs for eight fighters, Jigglypuff sat on the unreachable rung 8, and Kirby and Ness had no rung at all. Rung 8 was pulled on 2026-09-04 because the character select then read ten full closures at once and hung in libfat; that note's own release condition ("raise this again once the character select stops loading every roster member at once") was met on 2026-09-09 and the ladder was simply never re-raised. Extended to rung 9 (Ness) and 10 (Kirby); the rung-10 ROM builds clean and plays the character select, but the scripted lap then dies in a wandered ARM9 after leaving it, so the shipping default is NOT raised until that is attributed.**
+    -Jigglypuff not selectable **SAME CAUSE AND SAME FIX as Kirby above (rung 8).**
+    -Ness not selectable **SAME CAUSE AND SAME FIX as Kirby above (rung 9).**
 -Yoshi:
     -Up B egg shells are not rendering.
     -Grab attacks turn yoshi invisible. **FIX IMPLEMENTED, not yet seen on screen. Two Yoshi root programs now carry the 19-root vector that drawing hidden part 4 (joint 9, DL 0x2800) forces: Catch, and Throw which also swaps joint 7 to part 1. Built and linked into smash64ds.nds. Please try a forward and a back throw and say whether Yoshi stays visible.**

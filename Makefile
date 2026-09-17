@@ -744,13 +744,15 @@ NDS_P2_SHELL_ROSTER ?= 7
 # a Purin-only build.
 define NDS_P2_SHELL_ROSTER_LADDER
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_LINK := $(if $(filter 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PIKACHU := $(if $(filter 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_YOSHI := $(if $(filter 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PURIN := $(if $(filter 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_LINK := $(if $(filter 5 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PIKACHU := $(if $(filter 6 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_YOSHI := $(if $(filter 7 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PURIN := $(if $(filter 8 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_NESS := $(if $(filter 9 10,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_KIRBY := $(if $(filter 10,$(NDS_P2_SHELL_ROSTER)),1,0)
 endef
 # P2-6, the 1P Game campaign.
 #

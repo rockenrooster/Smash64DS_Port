@@ -1,0 +1,278 @@
+# The owner's seven CSS defects: four causes, and three of them are one screen's load policy
+
+Owner, 2026-09-17, verbatim:
+
+```
+-CSS Bugs still present and need to be fixed:
+    -Low FPS/Flashing during gate openings
+    -fighter 3d previews not visible for:
+        -Yoshi
+    -music pauses/reset when rendering new 3d fighter previews (moving around cursor)
+    -delay between cursor hover and 3d fighter preview rendering.
+    -Kirby not selectable
+    -Jigglypuff not selectable
+    -Ness not selectable
+```
+
+Seven reports, four distinct causes. **Every number below is measured**, from one
+shipping-configuration probe of the character select, not inferred.
+
+## The instrument
+
+`scripts/menus/probe-p2-shell.ps1`, the shipping-cadence shell walk
+(`NDS_HARNESS_FAST_LOGIC=0`, `NDS_RENDERER_PROFILE_LEVEL=0`), stop 5 =
+`PlayersVS`. One CSS visit, **1,651 presented frames**. Ticks are bus cycles, so
+one 60 Hz frame is **558,566**.
+
+## Cause 1 — Kirby / Jigglypuff / Ness are gated by a note whose own release condition was met five days later
+
+`Makefile:716` pins `NDS_P2_SHELL_ROSTER ?= 7`. The ladder beneath it had rungs
+for eight fighters and **no rung for Kirby or Ness at all**; Jigglypuff sat on
+rung 8, unreachable. The comment explaining that is dated 2026-09-04:
+
+> BACK TO 7. Rung 8 (Jigglypuff) makes the character select read ten full
+> fighter closures from NitroFS — 904,656 B against 832,288 at rung 7 — and
+> the Boundary shell lap then hung inside libfat `get_fat` […] **The eager
+> load is the real defect, not Jigglypuff** […] **Raise this again once the
+> character select stops loading every roster member at once.**
+
+That condition was satisfied on **2026-09-09** by `d99a89f8741`, *"Give
+character select four fighter slots instead of the whole roster"*, with
+`435ebf00d6d` and `11014557337` either side of it. CSS entry now takes four
+fixed 80 KiB closure blocks (`NDS_PLAYERS_VS_RESIDENT_BLOCKS`), one 64 KiB
+shared tree, and an animation-cache arena reserved by
+`ndsR2AnimCacheReserveCSSWorkingSet` — which is `ndsR2AnimCacheArenaEnsureSetup`
+and nothing else. **No CSS entry allocation scales with roster size any more.**
+The ladder was simply never re-raised.
+
+Extended to rung 9 (Ness) and rung 10 (Kirby).
+
+## Cause 2 — the shipping CSS has the blocking loader; the sliced one is compiled out
+
+This is the single most consequential finding, and it explains **two** of the
+owner's reports at once.
+
+`NDS_PLAYERS_VS_COMPACT_PREVIEW` is 1 exactly when
+`NDS_RENDERER_HW_TRIANGLES && NDS_RENDERER_PROFILE_LEVEL < 2` — which is the
+shipping shell target. In `ndsMNPlayersVSPreviewAcquireResidentKind`
+(`battleship_mnplayersvs.c`), that arm runs the whole closure in **one frame**:
+
+```c
+ndsAudioBgmSuspendForBlockingLoad();          /* :1094 */
+ftManagerSetupFilesAllKind(fkind);            /* the entire closure */
+... ndsMNPlayersVSPreviewPrepareResidentKind(...);
+ndsAudioBgmResumeAfterBlockingLoad();         /* :1116 */
+```
+
+The `#else` arm — the one that does **not** ship — is fully sliced:
+`ndsRelocExternTreeSliceBegin` / `SliceStep` at
+`NDS_PLAYERS_VS_LOAD_CHUNK_BYTES` (8 KiB) and `..._CHUNK_NODES` (4) per CSS
+tic, with the bind deferred to its own final tic so prepare never rides the
+last payload tic.
+
+**The good loader exists and only the oracle/profile build gets it.**
+
+### What that costs, measured
+
+| | value | in 60 Hz frames |
+|---|---:|---:|
+| worst CSS frame (`MSMAX w3`) | **4,808,448** | **8.61** |
+| of which preview phase (`CSSPHASE preview` max) | **4,799,488** | 8.59 |
+| panel/door sync phase max (`CSSPHASE sync`) | **3,244,224** | 5.81 |
+| update phase max (`CSSPHASE update`) | 2,444,352 | 4.38 |
+
+`preview max / frame max = 99.8%`: **the worst frame on the character select is
+a preview closure load and essentially nothing else.**
+
+### Cadence, from the VBlank histogram
+
+`MSVB3 5 1492 113 35 11 max=9` — 1,492 frames took one VBlank, 113 took two,
+35 took three, 11 took four or more, and the worst took **nine**.
+
+**159 of 1,651 CSS frames (9.6%) miss 60 Hz, and the worst frame presents at
+6.7 FPS.** That is the owner's "Low FPS" as a number.
+
+### The music, as a count
+
+`CSSBGMFENCE 5 suspend=8 resume=8 seammiss=0 error=0`
+
+**Eight suspend/resume pairs in one CSS visit.** They are balanced and nothing
+underran — so the stream never dies, which is why the owner says "pauses"
+rather than "stops". But `ndsAudioBgmSuspendForBlockingLoad` calls
+`ndsAudioBgmKillSound()`, and resume re-reads *two* packets and restarts the
+hardware from the stream cursor. The audible gap is at minimum the load frame
+itself, which the table above puts at up to 8.6 frames = **143 ms**, plus the
+resume. Eight times per visit.
+
+The fence is correct and was added for a real reason (`nds_audio_bgm.c:2181`
+documents the measured alternative: seam misses 1, error stops 1, music gone
+for the rest of the screen). **The defect is the blocking load it is protecting
+against, not the fence.**
+
+### The hover delay, as a count
+
+`NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS` is **13**, and its comment says why: a
+portrait cell is 45 source pixels, the cursor advances 4 px/tic, so a cell can
+be the requested kind for at most 12 consecutive tics at full browsing speed —
+requiring a 13th means **an uninterrupted sweep never starts a load at all**.
+
+That is a sound debounce for a *blocking* load and it is exactly what the owner
+feels. Measured: `CSSRESREL 5 … dwell=9/3/70/6` — 9 requests, 3 skipped,
+**70 tics held**, 6 committed. 70 tics is **1.17 s of deliberate waiting** in
+one visit, before any load begins.
+
+And the loads it gates do not amortise: `CSSRESACT 5 acq=10 hit=0 cached=0
+load=7 finish=7 … retry=3 fail=0` against `CSSRESREL 5 rel=5 retire=7/7
+reuse=3 exit=4`. **Ten acquires, zero cache hits, seven loads, seven retires.**
+Every acquire missed and nothing survived to be reused.
+
+Slicing the compact arm the way the non-compact arm is already sliced addresses
+the load frame, the eight BGM gaps and the reason the dwell has to be 13, all
+from one change.
+
+## Cause 3 — the door slide re-reads the whole panel from NitroFS, per slot, per tic
+
+`ndsMenuShellCssStepDoors` (`nds_menu_shell_css.c:891`) slides `door_offset` by
+2 per tic between 0 and 41, so ~21 tics per gate. On **every mid-slide tic**, for
+**every sliding slot**, it re-blits the slot's entire panel as the underlay and
+then draws both door halves over it:
+
+```c
+blit = sCssPanelSurface[i];
+if (ndsUiKitBlitSurfaces(&blit, 1u) != FALSE) { gNdsMenuShellCssPanelBlitCount++; }
+... ndsUiKitDrawCachedSub(...) x2
+```
+
+`ndsUiKitBlitSurfaces` has **no cache**. `ndsUiKitBlitOneSurface`
+(`nds_ui_kit.c`) opens the surface pack, streams row slices with
+`ndsRelocAssetStreamRead`, FNV-folds every byte to check the hash, and
+`DC_FlushRange`s each slice. Every call is a real NitroFS read.
+
+The size is stated by this file's own neighbour, `ndsMenuShellCssSyncPanels`:
+
+> a panel is **7,738 B of NitroFS** and the character select's own worst frame
+> already sits at **71% of the 60 Hz budget** before one is read, so the screen
+> ENTRY (a load frame) writes all four and everything after it writes one a
+> frame.
+
+`SyncPanels` takes a `budget` argument for exactly this reason. **`StepDoors`
+does not go through it**, so a slide can issue up to four full-panel NitroFS
+reads in a single frame on a screen already at 71% of budget.
+
+Measured: `CSSACT 5 … doors=80` — 80 door-slide frames in this visit — and
+the sync phase's worst frame is **3,244,224 ticks = 5.81 frames**.
+
+The underlay being re-read is **identical every tic** — `sCssPanelSurface[i]`
+does not change during a slide. It is re-read only to repaint pixels the door
+halves trampled on the previous frame.
+
+## Cause 4 — Yoshi's preview: two producers, one number, 1,232 bytes apart
+
+**Found, fixed, and pinned with a check.** This one is arithmetic, not opinion.
+
+`ndsRendererValidateNativeFighterOwner`
+(`nds_renderer_native_fighter_production.c:1171-1176`) opens with
+
+```c
+if ((asset_data_size != expected_asset_data_size) ||
+    (root_count != expected_count))
+{
+    NDS_NATIVE_FIGHTER_VALIDATE_REJECT(3u, …);
+}
+```
+
+— **before the root loop**. For a compact CSS preview the `asset_data_size` it
+is handed is the pack header's section-1 `source_bytes`
+(`ndsRelocNativeSourceSize`, `reloc_preview_pack.c:127-132`, reached from
+`renderer_adapter_fighter.c:3742-3747`). A reject sets
+`native_owner_enabled = FALSE`, and at `NDS_RENDERER_PROFILE_LEVEL 0` a
+declined owner draws **nothing**.
+
+Parsing every built pack's header against the owner's emitted size:
+
+| kind | pack `source_bytes` | owner `asset_data_size` | delta |
+|---|---:|---:|---:|
+| mario / fox / donkey / samus / luigi / link / captain / kirby / pikachu / purin / ness | — | — | **0** |
+| **yoshi** | **45,488** | **44,256** | **+1,232** |
+
+Eleven agree exactly. Yoshi is off by 1,232, and 1,232 is the weld.
+
+### Why only Yoshi
+
+`load_o2r_payload` returns the payload **extended** with synthetic welded DLs
+for a pair-mode owner (`_extend_payload_with_pairs`), and caches the
+pre-extension length as `raw_length`. Yoshi is the only character-select kind
+in `OWNER_DL_PAIR_MODE` — the other three members are 1P/Boss owners with no
+preview pack — so he is the only fighter for whom the two lengths differ at
+all. The owner emitter published `raw_length` (correct: the runtime loads the
+unextended asset from NitroFS). The preview pack recorded
+`len(load_o2r_payload(...))` and wrote **that** into `source_bytes`.
+
+Neither producer's text mentions the other, so no search relates them. This is
+the **third** instance of that shape found today, after Kirby's copy and Yoshi's
+throw.
+
+**In-match Yoshi was never affected** — the battle pack declares 44,256 — which
+is exactly why the defect could sit in the character select unnoticed while
+Yoshi played fine.
+
+### The fix
+
+One shared helper, `owner_asset_data_size(payload, owner_name)`, now answers
+both ends, and the pack writer keeps the two extents apart:
+
+- `model_span_extent` (**extended**) bounds every offset the pack stores —
+  Yoshi's welded roots `0xace0` / `0xae68` sit at and above the raw end, so the
+  span/cell/slot bounds must keep using it.
+- `model_source_bytes` (**raw**) is what goes in the header, because that is
+  what the validator compares.
+
+Regenerating changed **two bytes of one file**: offsets 108 and 109 of
+`06.fpc`, the low half of section 1's `source_bytes`. Every other pack is
+byte-identical and Yoshi's pack is identical from byte 128 on. Nothing else
+moved.
+
+### And a check, because this drift was silent
+
+`scripts/fighters/check_preview_pack_owner_sizes.py` reads each pack's header
+field and each owner's emitted size — including Mario's and Fox's literals,
+parsed out of the validator rather than restated — and fails on any
+disagreement. Proved both ways: it reports the exact defect against the stale
+packs and passes against the regenerated ones. Registered in `verify-all.ps1`
+with `$expectedVerifiers` moved 17 → 18.
+
+### What this run does *not* prove
+
+`CSSFTRKIND 5 mask=23b mario=188/… fox=1652/… luigi=113/… samus=113/…` — the
+scripted walk previews Mario, Fox, Luigi and Samus only, so it never exercised
+Yoshi either way. `CSSPKT 5 … decline=0` says no owner was declined for those
+four, which is consistent but is not evidence about Yoshi.
+
+The size mismatch is measured and is gone. Whether a **second** defect also
+blanks him is untested: Yoshi's pack carries root identity cells only for
+`0x2398, 0x5cf8, 0x7d10, 0x8300…0x9350`, none of them the canonical body roots,
+and that arrangement last passed on the raw path (2026-09-06,
+`YOSHI_COMPARE expected_size=0xace0 size=0xace0`, 18/18 roots) rather than
+through a pack. If Yoshi is still invisible, the witness to read is
+`gNdsNativeFighterValidateRejectCode`: **3 means this fix did not take; 4 with
+observed `0xffffffff` means the runner-up is live.**
+
+## Open: the rung-10 walk ends in SIGILL
+
+The rung-10 ROM builds clean (exit 0, zero `error:`, all ten `NDS_P2_*` flags
+set, `NDS_P2_ITEM_CORE 1`) and reaches the character select, plays it for 1,651
+frames, commits a fighter (`CSSCOMMIT 5 n=1`) and exits it
+(`MSSCENE 5 enters=5 exits=5`). Then:
+
+```
+Program received signal SIGILL, Illegal instruction.
+0x00000b64 in ?? ()
+MSSTOP n=5 pc=00000b64 cpsr=200000b7
+ABORT lr=01fffbc4 spsr=200000b7
+```
+
+`pc` in low memory with no symbol is a wandered CPU, not a faulting
+instruction, so the exception site names nothing. **Attribution is pending the
+rung-7 control run on the same probe** — until that lands it is not known
+whether this is a rung-10 regression or a pre-existing CSS-exit defect the
+roster change merely inherited.

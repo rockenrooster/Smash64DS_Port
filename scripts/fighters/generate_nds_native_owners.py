@@ -1455,6 +1455,29 @@ def _extend_payload_with_pairs(payload: bytes, owner_name: str) -> bytes:
     return bytes(extended)
 
 
+def owner_asset_data_size(payload: bytes, owner_name: str) -> int:
+    """The byte count the renderer validates a loaded model asset against.
+
+    THERE ARE TWO LENGTHS FOR A PAIR-MODE OWNER AND ONLY ONE OF THEM IS THE
+    ASSET'S. `load_o2r_payload` returns the payload EXTENDED with the welded
+    pair DLs, but those DLs are synthetic -- the runtime loads the unextended
+    source asset from NitroFS, so admission has to be bounded by the raw
+    length. Every other owner has no extension and the two lengths are equal,
+    which is exactly why the difference stayed invisible.
+
+    It did not stay invisible for Yoshi, the only CSS-preview kind in
+    OWNER_DL_PAIR_MODE. The owner emitter used the raw length (44,256) and the
+    CSS preview pack used the extended one (45,488, +1,232 of weld), and
+    ndsRendererValidateNativeFighterOwner compares that field BEFORE it looks
+    at a single root -- so Yoshi's preview owner was rejected with reject code
+    3 and, at NDS_RENDERER_PROFILE_LEVEL 0, drew nothing at all. In-match Yoshi
+    was fine because the battle pack declares the raw length.
+
+    So both producers call this, and neither spells the rule out again.
+    """
+    return _PAIR_LAYOUT_CACHE.get(owner_name, {}).get("raw_length", len(payload))
+
+
 def _source_root_commands(payload: bytes, owner_name: str, root_offset: int):
     """One root's command stream, its parent-binding mask and parent root.
 
@@ -6236,7 +6259,7 @@ def build_p2_owner_runtime_context(
         # Runtime bounds are against the decoded O2R payload, not the outer
         # resource container. Keep this source-derived so renderer admission
         # cannot drift onto a hand-copied byte count.
-        "asset_data_size": pair_layout.get("raw_length", len(payload)),
+        "asset_data_size": owner_asset_data_size(payload, owner_name),
         "runtime_root_aliases": runtime_root_aliases,
         "state": state,
         "sequence": sequence,

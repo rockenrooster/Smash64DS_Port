@@ -280,7 +280,10 @@ try {
     # check without moving this literal makes the run FAIL at the accounting
     # gate rather than silently under-report, which is the intended direction
     # and is how this line was found.
-    $expectedVerifiers = 17 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    # 18 later the same day: check_preview_pack_owner_sizes.py, the third
+    # resolver of two ends no grep relates (pack source_bytes vs owner
+    # asset_data_size). Same reason, same day, same symptom.
+    $expectedVerifiers = 18 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
     # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
     # standing-rules/publish-law tokens and the published-ROM SHA-256 line --
@@ -317,6 +320,15 @@ try {
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\check_hidden_part_root_coverage.py') `
+        -Arguments @()
+    # A third pair of ends no grep relates, found the same day by the same
+    # symptom: the CSS preview pack's declared source_bytes against the native
+    # owner's asset_data_size. The validator compares that field before it
+    # looks at a root, so a mismatch declines the owner and the preview draws
+    # nothing. Yoshi is the only CSS kind in OWNER_DL_PAIR_MODE and the pack
+    # was publishing his pair-EXTENDED length, 1,232 B over the owner's.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'fighters\check_preview_pack_owner_sizes.py') `
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\test_preview_shared_pin_disjointness.py') `
