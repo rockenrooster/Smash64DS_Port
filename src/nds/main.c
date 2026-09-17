@@ -8,7 +8,6 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task10_hardware_calibration.h>
 #include <nds/nds_video.h>
-#include <port/port_probe.h>
 #include <port/coroutine.h>
 #include <sys/controller.h>
 #include <macros.h>
@@ -123,7 +122,6 @@ int main(void)
             gNdsOriginalBootStage == NDS_BOOT_EXPECTED ? "PASS" : "PARTIAL");
 #endif
     ndsVideoBootstrapStart();
-    portProbeInit();
 
     while (1)
     {
@@ -143,7 +141,6 @@ int main(void)
             gSYControllerConnectedNum != 0) {
             syControllerUpdateGlobalData();
         }
-        portProbeUpdate();
         /* Only present if the scene loop resumed above did not. A scene that
          * drives its own presentation has already submitted, flushed and waited
          * for VBlank inside its own ndsPlatformEndFrame; repeating it here draws
@@ -159,7 +156,6 @@ int main(void)
 #endif
         {
             ndsPlatformBeginFrame();
-            portProbeRender();
             ndsPlatformRenderDebugHud();
             ndsPlatformEndFrame();
         }
