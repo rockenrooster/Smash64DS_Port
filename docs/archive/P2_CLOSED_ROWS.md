@@ -248,3 +248,31 @@ forwards with their rename plumbing, and 3 Makefile lines. Kept deliberately:
 Kirby-copy weak stubs are the only definition in the shipping link; 11
 `efManager*` functions are not forwards. Cumulative measurement WORK-H P50
 -14,208, at the floor and recorded as placement rather than banked as a lever.
+
+## P2-2p8 lanes killed with measurement (2026-09-16)
+
+- **30 Hz simulation.** Priced at WORK-H P50 -294,016 / P95 -509,632, 64.6% of
+  the gap, with the cadence histogram moving 128/947/706/192 -> 517/1177/247/32.
+  Owner ruled it out; the 60 Hz simulation stays. Evidence:
+  `artifacts/performance/2026-09-16_p2-2p8-sim30-ceiling/`.
+- **The stage lane.** Ceiling ~80,000 tk/fr, realized WORK-H conversion ZERO on
+  three separate attempts. Task 53 removed 187,648 ticks of stage CPU prep:
+  STG -187,648, OTHR +174,720, `ALL` **-128**. Task 55 removed 355 GX words
+  losslessly: STG -4,224, OTHR +7,616, `ALL` +64. Task 54 E0 explains both --
+  "the stage's frame cost is dominated by the geometry engine draining its fixed
+  2,996 words -- GX-throughput-bound, invariant to who issues the stores" -- and
+  FIFO backpressure is an inline CPU stall counted inside WORK-H. Do not reopen
+  without a word-count reduction, which is a painter-depth encoding change and
+  therefore a Sacrifice-Order-2 decision rather than a free cache.
+- **Per-fighter levers.** Per-fighter work is 187,008 tk/fr x4 against a
+  non-fighter floor of ~827,136, which is 74% of the whole budget before a single
+  fighter exists. The source already selects low detail for any 3+ fighter match
+  (`scvsbattle.c:188`), so the 89,008 tk/fr per-fighter draw is already the
+  low-poly number; the draw-plan cache runs 91% hit; the N-squared collision
+  class totals under 30,000 tk/fr.
+- **Material animation.** 35,206 tk/fr total, ~11,000 recoverable by running the
+  visual-only half once per present instead of once per simulation tick. 2.4% of
+  the gap.
+- **Task 103 stage-phase instrument.** Broken: needs 360 ITCM bytes it does not
+  have, and crashes identically under two independent evictions (one hot, one
+  cold) in `ndsCameraRecordFrame`. Never run, no artifacts, unproven code.

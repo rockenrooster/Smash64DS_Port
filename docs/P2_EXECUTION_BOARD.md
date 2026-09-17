@@ -48,7 +48,7 @@ dead-code deletion. WORK-H **1,575,168 / 2,308,032**, FTR **356,032 / 750,144**;
 native **0/0**, heap **111,680 B**; `ALL` P50 at 3 VBlank intervals, slips 0.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / gap sizing / main. Phase: BLOCKED — owner decision.
+Focus / batch / IDs / owner: P2-2p8 / hardware matrix stack / N05.01 / main. Phase: FALSIFY.
 **Owner 2026-09-16: four-CPU work runs `p2_fourcpu_stress` alone**; conditions in
 `VERIFYING.md`. Boundary is for integration/publication.
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
@@ -63,25 +63,23 @@ simulation.** The -294,016 sim lever is withdrawn (priced and banked in
 `…/2026-09-16_p2-2p8-sim30-ceiling/`; 60 Hz stays). That is consistent with the
 Sacrifice Order: audio (1), visual (2) and gameplay (3) are all ranked MORE
 expendable than the 60 Hz sim (4), so 1-3 must be exhausted first.
-**Selected lane: the stage.** Over all 1,234 profiled symbols the stage-renderer
-family is **54 symbols / 222,758 tk/fr**, of which **87,927 is raw geometry
-emission** (segment commit 27,835, triangle 18,199, run begin 16,447, vertex
-14,155, matrix load 11,291) re-issued every frame for geometry that does not
-move, plus 15,010 rebuilding a "persistent" world matrix; MP collision is a
-further 49,297. **Caching static stage emission costs nothing from the Sacrifice
-Order** — identical pixels — so exhaust it first. A Task 36 replay exists but is
-small (`Task36EnsureWorld` 6,904).
-Next: determine why static stage geometry is re-emitted per frame and whether the
-Task 36 replay can cover it; size the cacheable fraction of the 87,927.
-Per-fighter levers are dead: 187,008 tk/fr x4 against a ~827,136 non-fighter
-floor; source LOD already selects Low for 3+ fighters (`scvsbattle.c:188`);
-draw-plan cache 91% hit; N-squared collision under 30,000 total.
-**Task 103 stage instrument is BROKEN, confirmed twice.** Two independent ITCM
-evictions — one hot, one cold (`NDS_R2_ANIM_Q_ITCM_ON=0`) — give the identical
-crash in `ndsCameraRecordFrame` (`battleship_gmcamera.c:223`). The taps are the
-fault, not the eviction; it has never been run and is unproven code. Both
-evictions reverted. Also found: **21 ITCM residents never execute, 5,050 B idle**.
-Float-lane ranking: `…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
+**Selected: the DS hardware matrix stack is unused for objects.**
+`ndsRendererLoadHardwareMatrixPair` (`nds_renderer_textures_effects.c:12148`)
+issues `glLoadMatrix4x4(projection)` + `glLoadMatrix4x4(modelview)` per object
+with a **CPU-computed** modelview. The DS can hold the camera in MODELVIEW and do
+PUSH / MULT4x4(local) / POP per object — and this tree already does exactly that
+for stage rigid bindings (`nds_renderer_assets.c:6720`). GX words are unchanged
+(MULT4x4 and LOAD4x4 are both 16), so it does NOT hit the stage lane's wall; the
+saving is purely the CPU product. **14 symbols / 160,576 tk/fr = 35.3% of the
+gap**, driven by object count (`gNdsGCDrawsActiveMax` 203) and cutting across the
+arithmetic kernels and adapter pipeline at once. Fidelity: hardware MULT4x4
+rounds in 20.12 where the CPU rounds its own product, so equivalent not
+bit-identical — needs the Task 49 GX differ, as the stage replays did.
+Falsifier under test: if a per-object transform is not expressible as one MULT4x4
+under a frame-constant camera (check the kind-47/48 `ApplyMvpRecalc` path), the
+lane collapses to the camera load alone, ~10,000.
+Lanes killed with measurement (30 Hz sim, the stage, per-fighter, material
+animation, the broken Task 103 instrument): `docs/archive/P2_CLOSED_ROWS.md`.
 Checks: **Boundary GREEN on clean payloads for all three arms** (shell loop free
 floor 114,628 B, realtime 212 frames **26.4 FPS**); both targets build and every
 invariant matches.
