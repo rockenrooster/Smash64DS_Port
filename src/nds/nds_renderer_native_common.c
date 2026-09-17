@@ -4923,6 +4923,22 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
             &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST];
         return (root->source_offset == root_offset) ? root : NULL;
     }
+    /* YoshiModel's egg, and one root serves two states. Yoshi's shield
+     * (efmanager.c:490) and his egg-hatching intro (:1375) name the SAME
+     * source DObj setup field, differing only in flags and a matrix row. Both
+     * hide his whole body on purpose -- ftcommonguard1.c:391 /
+     * ftcommonguard2.c:23 and efmanager.c:5441 each call
+     * ftParamHideModelPartAll behind `fkind == nFTKindYoshi` -- so with no
+     * owner here nothing drew at all and he simply disappeared. The ordinary
+     * shield (asset 163) cannot cover him because those call sites are an
+     * if/else on fkind. Appended at the tail like the three above so no
+     * previously accepted generated ordinal moves. */
+    if ((owner_asset_id == 338u) && (root_offset == 0xa860u))
+    {
+        const NDSEntryEffectRoot *root =
+            &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST];
+        return (root->source_offset == root_offset) ? root : NULL;
+    }
     u32 first = (owner_asset_id == 356u) ? 0u :
                 (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_FOX_ROOT_FIRST :
                 (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
