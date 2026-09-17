@@ -2177,6 +2177,131 @@ static void ndsMenuShellCssWalkRestoreGate(void)
     ndsMenuShellCssUpdateStatus();
     ndsMenuShellCssPopulate();
 }
+
+/* THE WALK MUST PUT EVERY ADMITTED FIGHTER ON SCREEN, not just the ones its
+ * wander happens to drop on (owner, 2026-09-17: "the CSS walk should go over
+ * and select ALL fighters").
+ *
+ * The tour used to commit whatever its roster-independent pixel wander landed
+ * on. Measured on the shipping probe that was Mario, Fox, Luigi and Samus --
+ * four of nine admitted kinds (CSSFTRKIND mask=0x23b). Yoshi's preview had been
+ * drawing nothing at all since the character select moved onto compact packs,
+ * and no scripted run could have caught it, because no scripted run ever
+ * selected him. A screen that previews twelve fighters needs a walk that
+ * previews twelve fighters; anything less makes "this one is invisible" an
+ * owner playtest instead of a counter.
+ *
+ * DIRECT ASSIGNMENT, for exactly the reason ndsMenuShellCssWalkRestoreGate
+ * gives above: an A press over a portrait is refused when that cell is locked,
+ * so press counts are roster-dependent and re-tuning them per rung has broken
+ * this walk once already. Assigning the slot never touches the cursor or a
+ * cell, so it cannot be refused and cannot drift with the roster.
+ *
+ * The hold is sized from the two things that stand between a kind change and a
+ * drawn preview: NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS (13) before a closure load
+ * may even begin, then the residency budget of ONE action a tic through
+ * retire/load/prepare (the probe measured retry=3 per acquire). 48 tics clears
+ * both with margin. START is suppressed until the tour finishes so the walk
+ * cannot leave mid-tour, and the existing snapshot still restores Mario/Fox
+ * afterwards -- what the gate commits is unchanged. */
+#define NDS_CSS_WALK_TOUR_HOLD_TICS 48u
+
+/* Canonical declaration is include/nds/nds_startup.h:2401. This file is
+ * textually included by nds_menu_shell.c, which pulls only the shell's own
+ * headers, and the tour is the one thing here that needs to know whether the
+ * renderer drew anything. Declaring it rather than dragging nds_startup.h into
+ * every shell screen. */
+extern volatile u32 gNdsFighterDLAllDrawP0HardwareTriangleCount;
+
+static u8 sCssWalkTourKind;
+static u8 sCssWalkTourFinished;
+static u32 sCssWalkTourHold;
+static u32 sCssWalkTourTriBase;
+
+/* Which kinds the tour parked on, and which of those actually drew. A bit set
+ * in Kind but clear in Drew is a fighter whose preview is invisible, which is
+ * the whole point of the tour. */
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourKindMask;
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourDrewMask;
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourDoneCount;
+__attribute__((used)) volatile u32
+    gNdsMenuShellCssWalkTourTriangles[NDS_CSS_PORTRAITS];
+
+static void ndsMenuShellCssWalkTourSelect(u32 fkind)
+{
+    sCssFkind[(u32)0] = (u8)fkind;
+    sCssSelected[(u32)0] = 1u;
+    ndsMenuShellCssCenterPuck((u32)0, fkind);
+    /* A token in the hand is not a choice yet, and the tour never grabs one. */
+    sCssHeld = -1;
+    ndsMenuShellCssUpdateStatus();
+    ndsMenuShellCssPopulate();
+}
+
+/* TRUE while the tour owns the screen. */
+static u32 ndsMenuShellCssWalkTourStep(void)
+{
+    u32 kind;
+
+    if ((sCssWalkTourFinished != 0u) ||
+        (gNdsMenuShellWalkLoops >= gNdsMenuShellWalkBudget) ||
+        (sCssStartWait != 0u))
+    {
+        return FALSE;
+    }
+    /* Close the previous kind before advancing: the triangle delta over its
+     * hold is the evidence that the kind drew at all. Sampling a delta rather
+     * than the absolute counter keeps this correct whatever else is on screen. */
+    if (sCssWalkTourHold != 0u)
+    {
+        sCssWalkTourHold--;
+        if (sCssWalkTourHold != 0u)
+        {
+            return TRUE;
+        }
+        kind = (u32)sCssWalkTourKind;
+        if (kind < (u32)NDS_CSS_PORTRAITS)
+        {
+            u32 drawn = gNdsFighterDLAllDrawP0HardwareTriangleCount -
+                sCssWalkTourTriBase;
+
+            gNdsMenuShellCssWalkTourTriangles[kind] = drawn;
+            if (drawn != 0u)
+            {
+                gNdsMenuShellCssWalkTourDrewMask |= 1u << kind;
+            }
+        }
+        sCssWalkTourKind++;
+    }
+
+    while (((u32)sCssWalkTourKind < (u32)NDS_CSS_PORTRAITS) &&
+           (ndsMenuShellCssFighterLocked((u32)sCssWalkTourKind) != FALSE))
+    {
+        sCssWalkTourKind++;
+    }
+    if ((u32)sCssWalkTourKind >= (u32)NDS_CSS_PORTRAITS)
+    {
+        sCssWalkTourFinished = 1u;
+        gNdsMenuShellCssWalkTourDoneCount++;
+        return FALSE;
+    }
+
+    kind = (u32)sCssWalkTourKind;
+    gNdsMenuShellCssWalkTourKindMask |= 1u << kind;
+    /* Baseline AFTER the select, so the kind's own first frames are counted. */
+    ndsMenuShellCssWalkTourSelect(kind);
+    sCssWalkTourTriBase = gNdsFighterDLAllDrawP0HardwareTriangleCount;
+    sCssWalkTourHold = (u32)NDS_CSS_WALK_TOUR_HOLD_TICS;
+    return TRUE;
+}
+
+static void ndsMenuShellCssWalkTourReset(void)
+{
+    sCssWalkTourKind = 0u;
+    sCssWalkTourFinished = 0u;
+    sCssWalkTourHold = 0u;
+    sCssWalkTourTriBase = 0u;
+}
 #endif
 #endif
 
@@ -2211,6 +2336,23 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         }
         return;
     }
+
+#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
+#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
+      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
+    /* The roster tour owns the screen while it runs, which also swallows the
+     * walk's START tap -- see the tour's own comment. Everything below is the
+     * player's input path and has nothing to drive. */
+    if (ndsMenuShellCssWalkTourStep() != FALSE)
+    {
+        ndsMenuShellCssMove();
+        gNdsMenuShellCssCursorX = sCssCursorX;
+        gNdsMenuShellCssCursorY = sCssCursorY;
+        gNdsMenuShellCssCursorStatus = sCssStatus;
+        return;
+    }
+#endif
+#endif
 
     /* 1. The cursor. */
     if ((held & NDS_INPUT_RIGHT) != 0u)
@@ -2436,6 +2578,14 @@ static void ndsMenuShellCssInit(void)
 {
     u32 i;
 
+#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
+#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
+      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
+    /* Per entry, not per boot: a second visit tours again, and the masks are
+     * cumulative so a kind that drew on either visit reads as drawn. */
+    ndsMenuShellCssWalkTourReset();
+#endif
+#endif
     sCssCursorX = NDS_CSS_CURSOR_HOME_X;
     sCssCursorY = NDS_CSS_CURSOR_HOME_Y;
     sCssStatus = NDS_CSS_STATUS_POINTER;

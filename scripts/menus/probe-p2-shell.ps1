@@ -463,6 +463,15 @@ try {
         'printf "CSSFTR %d frames=%u draws=%u sel=%x vis=%x exit=%u p0=%f/%d/%d p1=%f/%d/%d renderframe=%u\n", $n, gNdsPlayersVSPreviewFrameCount, gNdsPlayersVSPreviewDrawCount, gNdsPlayersVSPreviewSelectedMask, gNdsPlayersVSPreviewVisibleMask, gNdsPlayersVSPreviewExitCount, gNdsPlayersVSPreviewRotationY[0], gNdsPlayersVSPreviewStatus[0], gNdsPlayersVSPreviewMotion[0], gNdsPlayersVSPreviewRotationY[1], gNdsPlayersVSPreviewStatus[1], gNdsPlayersVSPreviewMotion[1], gNdsRendererProfileFrameCount',
         'printf "CSSFTRFREE %d p0=%u/%f/%d/%d p1=%u/%f/%d/%d\n", $n, gNdsPlayersVSPreviewFreeRotateFrames[0], gNdsPlayersVSPreviewLastFreeRotationY[0], gNdsPlayersVSPreviewLastFreeStatus[0], gNdsPlayersVSPreviewLastFreeMotion[0], gNdsPlayersVSPreviewFreeRotateFrames[1], gNdsPlayersVSPreviewLastFreeRotationY[1], gNdsPlayersVSPreviewLastFreeStatus[1], gNdsPlayersVSPreviewLastFreeMotion[1]',
         'printf "CSSFTRKIND %d mask=%x mario=%u/%d/%d fox=%u/%d/%d luigi=%u/%d/%d samus=%u/%d/%d\n", $n, gNdsPlayersVSPreviewSelectedKindMask, gNdsPlayersVSPreviewSelectedKindFrames[0], gNdsPlayersVSPreviewSelectedKindStatus[0], gNdsPlayersVSPreviewSelectedKindMotion[0], gNdsPlayersVSPreviewSelectedKindFrames[1], gNdsPlayersVSPreviewSelectedKindStatus[1], gNdsPlayersVSPreviewSelectedKindMotion[1], gNdsPlayersVSPreviewSelectedKindFrames[4], gNdsPlayersVSPreviewSelectedKindStatus[4], gNdsPlayersVSPreviewSelectedKindMotion[4], gNdsPlayersVSPreviewSelectedKindFrames[3], gNdsPlayersVSPreviewSelectedKindStatus[3], gNdsPlayersVSPreviewSelectedKindMotion[3]',
+        # THE ROSTER TOUR. `kind` is every admitted fighter the walk parked
+        # slot 0 on; `drew` is those that actually produced triangles. The two
+        # must be EQUAL -- a bit in kind and not in drew is a fighter whose 3D
+        # preview is invisible, which is what Yoshi was for four days with no
+        # scripted run able to notice, because the walk only ever selected the
+        # four kinds its pixel wander happened to land on. `tri` is per kind in
+        # FTKind order so the culprit names itself.
+        'printf "CSSTOUR %d kind=%x drew=%x done=%u\n", $n, gNdsMenuShellCssWalkTourKindMask, gNdsMenuShellCssWalkTourDrewMask, gNdsMenuShellCssWalkTourDoneCount',
+        'printf "CSSTOURTRI %d %u %u %u %u %u %u %u %u %u %u %u %u\n", $n, gNdsMenuShellCssWalkTourTriangles[0], gNdsMenuShellCssWalkTourTriangles[1], gNdsMenuShellCssWalkTourTriangles[2], gNdsMenuShellCssWalkTourTriangles[3], gNdsMenuShellCssWalkTourTriangles[4], gNdsMenuShellCssWalkTourTriangles[5], gNdsMenuShellCssWalkTourTriangles[6], gNdsMenuShellCssWalkTourTriangles[7], gNdsMenuShellCssWalkTourTriangles[8], gNdsMenuShellCssWalkTourTriangles[9], gNdsMenuShellCssWalkTourTriangles[10], gNdsMenuShellCssWalkTourTriangles[11]',
         # CSS preview rebuilds are allowed to be expensive source-object work,
         # but once Battle Select BGM is live they must not touch NitroFS. These
         # are the authoritative relocation read counters plus the P2-3 native

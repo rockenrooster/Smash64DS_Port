@@ -4768,3 +4768,34 @@ only POW. Nine-stage collision parity passes. Natural shell proofs on ROM
 failures; Inishie submits 64 Piranha draws. Full Boundary passes all three arms;
 stress low-water is 118,752 B and weapon pool 10/2/0. Evidence:
 `artifacts/visibility/2026-09-14_stage-hazard-guards.md`.
+
+
+## 2026-09-17 -- BUGS.md entries trimmed to the owner's 100-char rule
+
+The owner's header asks for a **FIXED** prefix or a summary of 100 characters or
+less, with the investigation kept here. These annotations were written before
+that rule and were 137 to 875 characters. Their full text, verbatim:
+
+### **This file is the owner's OPEN-defect list, not a history. Owner, 2026-09-17: "BUGS.md is for my obvious findings, if anything is removed from it, that means it was fixed." So an entry that is GONE was FIXED -- absence is never evidence a symptom was unreal or unreported. Agents annotate in place with
+
+** **; only the owner removes an entry. A board row with no matching entry here is ambiguous, not stale: ask rather than infer.**
+
+### -Grab attacks turn yoshi invisible.
+
+**FIX IMPLEMENTED, not yet seen on screen. Two Yoshi root programs now carry the 19-root vector that drawing hidden part 4 (joint 9, DL 0x2800) forces: Catch, and Throw which also swaps joint 7 to part 1. Built and linked into smash64ds.nds. Please try a forward and a back throw and say whether Yoshi stays visible.**
+
+### -B attack turns yoshi invisible and egg is also invisible
+
+**SAME CAUSE, SAME FIX. EggLay motions 202-206 carry the same 0x18000000, so the Catch program above covers them too. Please try Neutral-B and say whether Yoshi and the egg both draw.**
+
+### -character intro is invisible (egg hatching)
+
+**CAUSE FOUND, fix not yet written. It is not the anim-desc mechanism (Appear1/2 carry only 0x40000000, no DL) - I ruled that out and wrongly stopped there. efManagerYoshiEggEscapeMakeEffect (efmanager.c:5441) calls ftParamHideModelPartAll from C, so Yoshi's whole body is hidden ON PURPOSE and the egg is meant to draw in its place - but dEFManagerYoshiEggEscapeEffectDesc draws from gFTDataYoshiModel and has NO native owner, so nothing draws. Yoshi's SHIELD is the same cause (ftcommonguard1.c:391 / ftcommonguard2.c:23, a separate egg, also unowned), so one YoshiModel effect owner fixes both.**
+
+### -down B is invisible.
+
+**NOT a root-vector bug: Bomb is FTANIM_FLAG_NONE and its morph collapse is already baked as MorphUnfold/MorphBall. Cause is elsewhere.**
+
+### -Samus
+
+**(not reported, found by audit): forward smash should make Samus vanish. Now derived rather than suspected — all five FSmash motions carry 0x00180000, which installs drawing hidden parts 11 and 12 (joints 24/25, DLs 0x2c20 and 0x2ce8). The live vector is 16 roots against a canonical 14, and NEITHER offset is resident in either detail, so no owner can match and a declined owner draws nothing. Catch escapes this only because its own motion overrides both joints. A sweep of all 26 fighters found exactly three drawing hidden parts in the game and this was the last uncovered one. FIX IMPLEMENTED — an FSmash root program now carries the 16-root vector, built and linked. Please still confirm on hardware, and note that the useful answer is now the opposite one: if Samus did NOT vanish on forward smash before this, something in the chain is wrong and worth knowing.**

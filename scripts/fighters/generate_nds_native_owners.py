@@ -5446,8 +5446,36 @@ def render_p2_owner_runtime_program(
     runs = context["runs"]
     epochs = context["epochs"]
     aliases = context["runtime_root_aliases"]
-    roots = [(aliases.get(row[0], row[0]), *row[1:])
-             for row in context["roots"]]
+    asset_data_size = context["asset_data_size"]
+
+    def alias_roots(rows, table_name):
+        """Publish source identities, and refuse to publish an unreachable one.
+
+        A root offset is an index into the asset the runtime LOADS, which is
+        `asset_data_size` bytes long, so an offset at or past that is an address
+        the loader can never produce and the bounds checks in
+        ndsRendererValidateNativeFighterOwner reject. The only way to get one is
+        to publish a pair weld's synthetic offset without aliasing it back --
+        which is exactly what Yoshi's Catch and Throw programs did, shipping
+        0xace0 and 0xae68 against an asset ending at 0xace0. Nothing caught it
+        because the canonical table was aliased and the program tables, added
+        later, were not. Assert rather than alias-and-hope: if a row cannot be
+        resolved to a real source offset, the bake is wrong and should say so.
+        """
+        out = []
+        for row in rows:
+            offset = aliases.get(row[0], row[0])
+            if offset >= asset_data_size:
+                raise ValueError(
+                    f"{owner_name} {detail} {table_name}: root offset "
+                    f"0x{offset:x} is at or past asset_data_size "
+                    f"0x{asset_data_size:x}, so the runtime can never resolve "
+                    "it. A pair weld's synthetic offset needs its "
+                    "runtime_root_aliases entry.")
+            out.append((offset, *row[1:]))
+        return out
+
+    roots = alias_roots(context["roots"], "canonical")
     dense_vertices = context["dense_vertices"]
     gx_positions = context["gx_positions"]
     dense_color_sources = context["dense_color_sources"]
@@ -5727,11 +5755,22 @@ def render_p2_owner_runtime_program(
                             for offset, colour in baked_unlit.items())
                 + " */",
             ]
+        # THE SAME ALIAS THE CANONICAL TABLE GETS, and for the same reason. A
+        # pair weld's synthetic DL lives past the end of the payload the runtime
+        # loads, so publishing its offset as a root identity gives the resolver
+        # an address the asset does not contain -- `asset_data_size` is 0xace0
+        # for Yoshi and the weld sits at 0xace0/0xae68, i.e. at and beyond the
+        # last byte. faf3a7782e8 fixed this for `context["roots"]` above and the
+        # program tables, added later, never picked it up: Yoshi's Catch and
+        # Throw programs both shipped with the synthetic offsets. Keep the
+        # welded programs for the geometry oracles, publish the source
+        # post-list identities the live DObjs and the relocation loader provide.
+        program_root_rows = alias_roots(program_roots, program_name)
         lines += emit_rows(
             "NDSNativeRoot",
             f"sNdsNative{owner_title}{program_name}Roots{suffix}",
             [root_format.format(*row[:7], light_index)
-             for row, light_index in zip(program_roots, program_lights)],
+             for row, light_index in zip(program_root_rows, program_lights)],
         )
         lines += emit_rows(
             "u8",
