@@ -418,6 +418,20 @@ try {
         # address is buried in the faulting frame, unreachable from abort mode.
         # At function ENTRY it is simply $lr. Condition on an r0 that cannot be
         # a valid pointer so a healthy run never stops here.
+        # READ r4 IN FRAME 0, where no unwinding is involved.
+        # A frame-1 read cannot settle this: the callee's own `movs r4, r0`
+        # sets r4 = 3, so a failed unwind reports the SAME value the
+        # question is about. On entry to ndsSceneManagerEnter -- before its
+        # prologue has done anything -- r4 still holds exactly what
+        # syTaskmanStartTask put there. Valid here means the corruption is
+        # inside this callee; already 3 here means it is upstream and the
+        # whole "across the call" framing is wrong.
+        'break ndsSceneManagerEnter',
+        'commands',
+        'silent',
+        'printf "ENTERREGS r0=%08x r4=%08x r8=%08x lr=%08x scene=%d\n", $r0, $r4, $r8, $lr, (int)gSCManagerSceneData.scene_curr',
+        'continue',
+        'end',
         'break ndsBaseSyTaskmanStartTask if $r0 < 0x02000000',
         'commands',
         'silent',
@@ -430,6 +444,17 @@ try {
         'printf "BADSETUP r0=%08x sp=%08x lr=%08x scene=%d\n", $r0, $sp, $lr, (int)gSCManagerSceneData.scene_curr',
         'info symbol $lr',
         'backtrace 8',
+        # MEASURE THE CALLER'S REGISTERS, do not deduce them. Frame 1 is
+        # syTaskmanStartTask, which computes the argument as `movs r0, r4` and
+        # holds r8 live across ndsSceneManagerEnter. That callee SAVES AND
+        # RESTORES r4 (push {r4,r5,r6,r7,lr} / pop {r4,r5,r6,r7,pc}) but writes
+        # r8 with `mov r8, r1` and never saves it -- r8 is callee-saved under
+        # AAPCS, so that is a genuine violation. Whether it is THIS fault is
+        # exactly what these two lines settle, and three confident deductions
+        # about this crash have already been wrong.
+        'frame 1',
+        'info registers r4 r5 r6 r7 r8',
+        'frame 0',
         'detach',
         'quit 1',
         'end',
