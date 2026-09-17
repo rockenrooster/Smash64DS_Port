@@ -53,6 +53,7 @@ Run with no arguments; exits non-zero on any mismatch.
 """
 from __future__ import annotations
 
+import re
 import struct
 import sys
 from collections import defaultdict
@@ -942,8 +943,78 @@ def winding_closure(owner: str, detail: str, program: dict) -> list[str]:
             if bad else [])
 
 
+KIRBY_COPY_SOURCE = (
+    REPO / "decomp/BattleShip-main/decomp/src/relocData/228_KirbyMainMotion.c")
+KIRBY_ACCEPT_SOURCE = REPO / "src/port/renderer_adapter_fighter.c"
+
+
+def kirby_copy_closure() -> list[str]:
+    """Every copyable victim's hat must have a trio-body program baked for it.
+
+    Kirby's SpecialNCopy swaps joint 6 to the victim's hat while the hidden trio
+    body at joint 7 is still live. The body's bake inherits the HEAD's vertex
+    cache, so there is one body program per head -- and a head with no context
+    is refused at renderer_adapter_fighter.c, which at NDS_RENDERER_PROFILE_LEVEL
+    0 means the fighter's parts are never drawn at all.
+
+    That is exactly what shipped: only heads 1, 10 and 14 were baked, 10 being
+    Link's hat, so ten of the eleven copyable kinds left the native path. It took
+    a 20-minute four-CPU match on a non-default roster to notice, and even then
+    the gate could only report "a fighter vanished". This is a table
+    cross-product: it costs no ROM, no emulator and no match.
+
+    Both inputs are PARSED rather than grepped. The hat ids are decomp source
+    data and the accept list is three bare integer literals in C, so no string
+    search connects them -- which is the same trap that produced four wrong
+    "nothing references it" conclusions while this bug was being found.
+    """
+    failures: list[str] = []
+
+    text = KIRBY_COPY_SOURCE.read_text(encoding="utf-8", errors="replace")
+    rows = re.findall(
+        r"\{\s*nFTKind(\w+)\s*,\s*(\d+)\s*,", text)
+    if len(rows) < 12:
+        return [f"kirby copy: parsed {len(rows)} copy rows from "
+                f"{KIRBY_COPY_SOURCE.name}, expected at least 12"]
+    copy_hats = {kind: int(mp) for kind, mp in rows[:12]}
+
+    accept = KIRBY_ACCEPT_SOURCE.read_text(encoding="utf-8", errors="replace")
+    match = re.search(
+        r"modelpart_id_curr == (\d+)\)\s*\|\|\s*"
+        r"\(fp->modelpart_status\[slot\]\.modelpart_id_curr == (\d+)\)\s*\|\|\s*"
+        r"\(fp->modelpart_status\[slot\]\.modelpart_id_curr == (\d+)\)", accept)
+    if match is None:
+        return ["kirby copy: could not parse the head accept set from "
+                "renderer_adapter_fighter.c; if its shape changed, update this "
+                "check rather than deleting it"]
+    accepted = {int(g) for g in match.groups()}
+
+    baked = {head for head, _body in native.KIRBY_TRIO_CONTEXTS}
+    baked.add(native.KIRBY_COPY_LINK_MODELPART_ID)
+
+    if accepted != baked:
+        failures.append(
+            f"kirby copy: the C accept set {sorted(accepted)} has drifted from "
+            f"the baked contexts {sorted(baked)}; widening one without the "
+            f"other resolves the trio body against the wrong head's vertex "
+            f"cache")
+
+    unbaked = sorted(
+        (kind, hat) for kind, hat in copy_hats.items()
+        if hat != 0 and hat not in baked)
+    for kind, hat in unbaked:
+        failures.append(
+            f"kirby copy: swallowing {kind} wears hat modelpart {hat}, which "
+            f"has no trio-body context -- Kirby's parts leave the native path "
+            f"for the whole copy")
+    print(f"  kirby copy closure: {len(copy_hats)} victims, "
+          f"{len(unbaked)} without a baked hat context")
+    return failures
+
+
 def main() -> int:
     failures: list[str] = []
+    failures += kirby_copy_closure()
     for owner in OWNERS:
         for detail in DETAILS:
             print(f"{owner} {detail}:")
