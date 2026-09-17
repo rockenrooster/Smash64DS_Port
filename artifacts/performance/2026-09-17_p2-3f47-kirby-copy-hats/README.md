@@ -249,6 +249,59 @@ proven to fail closed two ways. Flipping the constant to `True` with no other
 change reproduces the RED above; the closure check returns to naming the ten
 victims, which is its designed state until the sections move.
 
+## The fix is validated, and it removes the compromise rather than adding one
+
+The blocker above says the body sections belong in the per-slot hat image
+instead of Kirby's resident one. That was an architectural argument about bytes.
+It is now also a **correctness** argument, and it is measured.
+
+For each head, the faithful program's body block was built and every colour
+escape traced to the dense range of **root 0 — the head itself**:
+
+| head | body dense | head's own dense | escapes | resolving inside the head |
+|---|---|---|---:|---:|
+| 4 (Donkey's hat) | [120, 166) | [0, 120) | 14 | **14** |
+| 8 (Samus's hat) | [138, 184) | [0, 138) | 14 | **14** |
+| 9 (Captain's hat) | [132, 178) | [0, 132) | 14 | **14** |
+| 14 (boomerang face) | [118, 164) | [0, 108) | 14 | **14** |
+| 1 (inhale face) | [70, 116) | [0, 29) | 14 | 0 — reaches canonical rows |
+
+**Every copy hat's escapes resolve entirely within its own head's rows.** So a
+body section carried in the hat image has its colour sources right beside it:
+no cross-image reference, no value-identical-twin search against a resident
+table, and **no self-shade fallback at all**.
+
+That matters beyond the bytes. The shipped resolver's fallback is exact only
+because the hardware-lit configuration never binds `dense_color_source`; under a
+software-lit build it substitutes the body epoch's light state for the head's.
+Moving the sections into the hat image **removes that compromise instead of
+carrying it** — the escape resolves to the row it actually means, in every
+configuration.
+
+Head 1 is the exception and does not matter: it is a resident face whose escapes
+reach canonical rows, and both faces stay exactly where they are today at zero
+growth.
+
+### What the change therefore is
+
+- Faces 1 and 14: unchanged, resident, byte-identical to today.
+- Copy hats: body section appended to the **hat** context in
+  `build_p2_kirby_hat_runtime_context` rather than to the kirby context, with
+  its indices rebased into the hat's local space (`_rebase_dense_word` already
+  enforces that a hat word may not reference a resident dense id, so it fails
+  closed if the rebasing is wrong).
+- The trio program's **body** root joins its head at source owner `kirby_hat`;
+  the canonical roots stay `kirby`. The mixed-file machinery that already
+  carries root 0 carries root 1 unchanged.
+- Kirby's resident image returns to **zero growth**; each hat image grows by one
+  body section (~2.9 KB high) and is loaded only for the copy that needs it.
+- `KIRBY_TRIO_ADMIT_COPY_HATS` flips to `True` and the self-shade fallback
+  becomes dead code for hats — keep it only if a face head ever needs it.
+
+Not started. Recorded because the load-bearing unknown — whether the escapes
+survive the move — is now answered, and answered in the direction that makes the
+work worth doing.
+
 ## Not caused by this work
 
 `check_native_owner_weld_consistency.py` (IndexError at line 101) and

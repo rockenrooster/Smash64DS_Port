@@ -53,51 +53,51 @@ native 0/0; slips 0.
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
 **PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.**
 `…_p2-2p8-gate-decision/`; sizing `…09-17_p2-2p8-locality-sizing/`.
-**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%**; that
-subtracted ALL data stall. Layout removes only **line fills** = **424,336 =
-90.6%** — a PERFECT cache still leaves **44,208 OVER**. Placement CLOSED.
+**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%** —
+that subtracted ALL data stall. Layout removes only **line fills** = **424,336 =
+90.6%**; a PERFECT cache still leaves **44,208 OVER**. Placement CLOSED.
 **THE RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`). Banked 43,200 +
-five unbuilt sizings (arena 55,669, clears 19,466, pool 11,449, GObj 10,867,
-align 6,027) = **146,678 = 31.3%** of the gap.
+five sizings (arena 55,669, clears 19,466, pool 11,449, GObj 10,867, align
+6,027) = **146,678 = 31.3%** of the gap.
 **CORRECTION:** this board said the gate needs "fewer joints / fewer transformed
-objects". `gNdsGCDrawsActiveMax` counts live **DObjs**, and for a fighter a DObj
-IS a joint — one lever, two names — and it is **SPENT**
-(`…_p2-2p8-joint-cap-ladder/` 09-16): the skeleton cap **aborts the CPU AI** on a
-NULL joint (`ftcomputer.c:7970`), and deleting **94.7%** of pose evaluation gave
-**no WORK-H reduction**. Order 2 alone is 12,144. Order 4 is the only untested
-class large enough and is **owner-forbidden**. **Owner decision, not
-engineering.** Last untried lane now SIZED: the 67,858 literal-pool bucket gives
-only **11,449** packed (441 of 645 functions touch ONE symbol), and
-`-fsection-anchors` is **inert** under `-fdata-sections` — proven.
-Checks: Boundary GREEN 3/3; four-CPU PASSES 09-17 (hats off).
-**KIRBY COPY: implemented, GATED OFF, blocked on BYTES** (`ddf18a57a86`,
-`…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN — but the sections
+objects". `gNdsGCDrawsActiveMax` counts live **DObjs** — for a fighter a DObj IS
+a joint, one lever with two names — and it is **SPENT**
+(`…_p2-2p8-joint-cap-ladder/` 09-16): the skeleton cap **aborts the CPU AI**
+(`ftcomputer.c:7970`), and deleting **94.7%** of pose evaluation gave **no
+WORK-H reduction**. Order 2 alone is 12,144; Order 4 is the only class large
+enough and is **owner-forbidden**. **Owner decision, not engineering.** Last
+untried lane SIZED: the 67,858 literal-pool bucket gives only **11,449** packed
+(441 of 645 functions touch ONE symbol); `-fsection-anchors` is **inert** under
+`-fdata-sections`.
+Checks: Boundary GREEN 3/3; four-CPU PASSES (hats off).
+**KIRBY COPY: implemented, GATED OFF on BYTES** (`ddf18a57a86`,
+`…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN — but sections
 append to KIRBY's resident image (**+28,848 B**) and the arena refuses: hats ON =
-**151 native failures** (witness root 0x18A60 = Kirby **STONE**), heap **73,064**
-vs 111,680, WORK-H **+70,016**; hats OFF = gate PASSES.
-`KIRBY_TRIO_ADMIT_COPY_HATS = False` until the sections move into the per-slot
-**hat images**; sharing cross-head-identical arrays gives only ~29%.
+**151 native failures** (root 0x18A60 = Kirby **STONE**), heap **73,064** vs
+111,680, WORK-H **+70,016**; hats OFF = gate PASSES. `ADMIT_COPY_HATS = False`
+until sections move into the per-slot **hat images** — **VALIDATED**: for every
+copy hat all 14 colour escapes resolve inside its OWN head's dense range, so a
+body beside its head needs no cross-image reference AND no self-shade fallback,
+removing the fidelity compromise. Kirby resident growth → ZERO; each hat ~2.9 KB.
+**NEXT ACTION.**
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
 14,080 floor, 9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no
-source change**. Lane was closed on a break-even derived as bytes÷32: right for a
-contiguous table, wrong for a scalar owning a whole line — 85.0 vs 6.4 tk/fr per
-DTCM byte. Native 0/0, triangles identical.
+source change**. Lane was closed on a break-even derived as bytes÷32 — right for
+a contiguous table, wrong for a scalar owning a whole line. Native 0/0.
 **Per-PC re-profile CONFIRMS it**: identical 3,364.0 dereference accesses/fr in
 both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row −1.7% — placement
 cannot move one row and not the other. Non-zero exit is a **window** assertion,
-NOT correctness: all 21 ring stops at identical presented frames with identical
-`PacingLogicFrames` — SAME match — only the stitcher's first label moves +1; 3 of
-its 4 conditions pass. **OWNER: one-line call** to compare `startFrame` against
-the recorded label span. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call only.
-**OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` — SRC NO-GO;
-FTR/STG/MISC UNSIZED. Watermark: `Briefs/README.md`.
+NOT correctness: all 21 ring stops at identical frames with identical
+`PacingLogicFrames` — SAME match — only the first label moves +1; 3 of its 4
+conditions pass. **OWNER: one-line call** to compare `startFrame` against the
+recorded label span. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call only.
+**OWNER INPUT 09-16:** `docs/optimization/*` — SRC NO-GO; FTR/STG/MISC UNSIZED.
 
-Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns
-shared outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay
-30 Hz menus and 1P active. Retained proofs: `docs/archive/P2_CLOSED_ROWS.md`.
-HIGH stays reachable; stripping it is not authorized. Do not replace the
-published P2 artifact until the candidate's gates pass.
+Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
+outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
+menus and 1P active. Retained proofs: `docs/archive/P2_CLOSED_ROWS.md`. HIGH
+stays reachable. Do not replace the published P2 artifact until gates pass.
 
 ## Queue — acceptance only
 
