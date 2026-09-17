@@ -2482,11 +2482,36 @@ KIRBY_TRIO_BODY_BINDING = 1
 #
 # Hat 10 is Link's and is NOT here: it is a mixed-file program reached through
 # KIRBY_COPY_LINK_MODELPART_ID. Hats 2 and 15+ are not copyable victims.
-KIRBY_TRIO_CONTEXTS = (
-    (1, 0), (14, 0),
+# Admitting the ten copy hats is OFF by default, and the reason is bytes, not
+# correctness. Every hat bakes, the closure cross-product goes green, and the
+# four-CPU ROM links -- but Kirby's owner image grows +28,848 B high /
+# +26,104 B low, and the arena cannot absorb it: the 2026-09-17 gate run came
+# back with heap low-water 73,064 against a 111,680 baseline,
+# gNdsTaskmanArenaAllocFailCount=84, gNdsTaskmanArenaChosenSize down 4,096, and
+# 151 native-render failures whose witness is root 0x18A60 -- Kirby's STONE,
+# not a copy hat. Evidence: `artifacts/performance/2026-09-17_p2-3f47-kirby-
+# copy-hats/`.
+#
+# The body sections are appended to KIRBY's resident image, so all twelve ride
+# in memory whenever Kirby plays even though at most one head is ever live.
+# They belong in the per-slot HAT image, which is already loaded on demand for
+# exactly the copy that needs it. Measured, the twelve appended sections are
+# byte-identical in triangles, packed corners, unique-dense and action spans;
+# they differ only in dense_vertices (14 of 46 rows, high), state, sequence and
+# the colour sources. So sharing the common arrays recovers about 29% and is
+# NOT enough on its own -- moving the sections into the hat images is.
+#
+# Flipping this to True with no other change reproduces the RED above. Leave it
+# False until the sections move.
+KIRBY_TRIO_ADMIT_COPY_HATS = False
+
+KIRBY_TRIO_COPY_HAT_CONTEXTS = (
     (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
     (8, 0), (9, 0), (11, 0), (12, 0), (13, 0),
 )
+
+KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0)) + (
+    KIRBY_TRIO_COPY_HAT_CONTEXTS if KIRBY_TRIO_ADMIT_COPY_HATS else ())
 
 # Physical GX slots for the exact live root order.  Root 0 (head) must remain
 # resident while root 1 (body) executes its MODIFYVTX reads.  After that, the

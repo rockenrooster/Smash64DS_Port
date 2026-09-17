@@ -1,10 +1,18 @@
-# Kirby's copy is native for all eleven victims, not one
+# Kirby's ten broken copy victims: the geometry works, the bytes do not
 
 `2026-09-17_p2-2p8-roster-variance/KIRBY_COPY_NATIVE_GAP.md` established the
 defect: Kirby's swallow-copy left the native path for ten of the eleven
 copyable victims, and at `NDS_RENDERER_PROFILE_LEVEL 0` a rejected root never
 reaches the screen, so the whole fighter vanished for the duration of the copy.
-This is the fix. Commit `ddf18a57a86`.
+Commits `ddf18a57a86` (the fix) and the gating that follows it.
+
+> **Read the status section at the bottom first.** Every hat bakes, the closure
+> cross-product goes green and the ROM links — and admitting all ten costs
+> **+70,016 WORK-H P50**, drops heap low-water from 111,680 to **73,064** and
+> produces **151 native-render failures** whose witness is Kirby's *Stone*. The
+> sections are appended to Kirby's resident image when they belong in the
+> per-slot hat images. Admission is `False` until they move. The analysis below
+> stands; only the shipping decision changed.
 
 ## What actually blocked it
 
@@ -174,12 +182,72 @@ four dispatch arrays and `ndsRendererNativeKirbyTrioHeadSupported`. The default
 `smash64ds.nds` shell build has `NDS_P2_KIRBY 0` and contains none of them,
 which is why the ELF check was done on the stress target.
 
-## Status
+## Status: implemented, GATED OFF, blocked on bytes
 
-`IMPLEMENTED_NOT_ACCEPTED`. Owed: the four-CPU stress gate result, and a visual
-check per hat — the seam runs on the `validate_cross_census=False` path, so a
-wrong cross sequence of the right length passes silently, and only pixels prove
-the body resolved against its own head.
+`KIRBY_TRIO_ADMIT_COPY_HATS = False`. Everything above is correct and stays in
+the tree; what does not fit is the **arena**.
+
+### The measurement that decided it
+
+Same target, same build directory, same roster, 1,972 samples each. The only
+difference is the constant.
+
+| | hats OFF | hats ON | delta |
+|---|---:|---:|---:|
+| gate verdict | **PASS** | **FAIL** | |
+| `gNdsRendererNativeFailure.count` | **0** | **151** | +151 |
+| failure witness `root` | — | **0x18A60** | Kirby **Stone** |
+| `gNdsTaskmanGeneralHeapFreeMin` | **111,680** | **73,064** | **−38,616** |
+| `gNdsTaskmanArenaChosenSize` | 1,355,520 | 1,351,424 | −4,096 |
+| WORK-H P50 | **1,580,416** | 1,650,432 | **+70,016** |
+| WORK-H P95 | 2,320,768 | 2,379,264 | +58,496 |
+| STG P50 | 337,472 | 405,568 | +68,096 |
+| ALL P50 | 1,678,016 | 2,237,696 | +559,680 |
+| P0 / P1 hardware triangles | 349,031 / 333,618 | **identical** | **0** |
+
+Hats OFF reproduces the banked baseline exactly — heap low-water 111,680 and
+arena 1,355,520 match the board figure to the byte, native is 0/0, and WORK-H
+1,580,416 sits 8,128 from the 1,588,544 baseline, inside the 14,080 cross-build
+significance floor.
+
+**The triangle counts are identical in both arms.** Nothing new is drawn. The
++70,016 is not the cost of rendering ten copy hats; it is the cost of carrying
+their tables. ALL crossing from 1,678,016 to 2,237,696 is the VBlank quantum
+moving from three intervals to four — a cadence collapse, not a gradual cost.
+
+The failure witness is the giveaway: **Kirby's Stone**, `root 0x18A60`, which
+this change never touches. A copy hat failing would have implicated a hat root.
+Stone failing implicates the resource the whole owner shares.
+
+(`gNdsTaskmanArenaAllocFailCount` is 83 in the passing arm and 84 in the
+failing one, so that counter is **not** the mechanism — it was already nonzero.
+The heap low-water and the arena size are.)
+
+### Why the fix is to move, not to shrink
+
+The body sections are appended to **Kirby's** resident image, so all twelve ride
+in memory whenever Kirby plays, though at most one head is ever live. They
+belong in the per-slot **hat image**, which `ftParamSetModelPartDefaultID`
+already loads on demand for exactly the copy that needs it — that is what the
+deferred design is for.
+
+Sharing the common arrays instead is not enough. Measured across all twelve
+sections, `triangles`, `packed_corners`, `run_unique_dense` and
+`action_dense_spans` are **byte-identical** after rebasing, and only
+`dense_vertices` (14 of 46 rows, high; 12 of 38, low), `state`, `sequence` and
+`dense_color_sources` differ. The identical arrays are about **29%** of the
+per-head bytes; state alone is another ~20% and cannot be shared, because the
+per-head state tables differ in length (31 to 60 rows). Deduplication leaves
+roughly +20 KB on the high image, which the arm above shows is still too much.
+
+### What is kept
+
+The self-shade resolver, the mixed-file hat programs, the generated
+`NDS_NATIVE_KIRBY_TRIO_HEAD_LIST` and everything expanded from it, the second
+root-count fix, and the closure check that now parses the emitted macro and is
+proven to fail closed two ways. Flipping the constant to `True` with no other
+change reproduces the RED above; the closure check returns to naming the ten
+victims, which is its designed state until the sections move.
 
 ## Not caused by this work
 

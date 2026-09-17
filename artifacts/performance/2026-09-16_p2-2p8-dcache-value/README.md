@@ -1,4 +1,58 @@
-# The 4 KB data cache is worth 1,394,560 tk/fr — and data locality is the first lever whose ceiling EXCEEDS the gap
+# The 4 KB data cache is worth 1,394,560 tk/fr — and data locality does NOT clear the gate
+
+> **CORRECTION 2026-09-17, and it is the headline.** This document concluded
+> that perfect data locality lands at **1,028,189**, clearing the gate by
+> 91,811, and that locality's ceiling is **560,739 = 113% of the gap** — the
+> only class whose ceiling exceeded the requirement. **That is wrong, and the
+> error is the subtrahend.**
+>
+> 560,739 is *all data stall*. Layout can only remove **line fills**. The rest
+> of that bucket is not layout-addressable at all: I/O-register/FIFO/DMA waits
+> (**27,311**, this directory's sibling `…_stall-budget/STALL_CLASS_SIZING.md`
+> line 102), store/write-buffer drain (560,739 − load stall 519,006 =
+> **41,733**), icache fetch landing on load PCs (**~29,300**) and load-use
+> interlocks (**18,000–45,000**). `…_stall-budget/RENDERER_STREAMING_SIZING.md`
+> already isolated the fill component when it corrected the traffic figure:
+> load stall 519,006 less those terms, which is why all three rows of its
+> penalty table multiply to the same product —
+>
+> | miss penalty | fills/fr | product |
+> |---|---:|---:|
+> | 40 cyc | 10,608 | 424,320 |
+> | **44 cyc (central)** | **9,644** | **424,336** |
+> | 48 cyc | 8,840 | 424,320 |
+>
+> — because the table was built by dividing one fixed stall figure by the
+> penalty. **That figure, ~424,336, is the layout ceiling.**
+>
+> | | tk/fr |
+> |---|---:|
+> | WORK-H P50 (this document's baseline) | 1,616,382 |
+> | less **every line fill in the frame** | −424,336 |
+> | **WORK-H with a perfect data cache** | **1,192,046** |
+> | gate | 1,120,000 |
+> | **margin** | **OVER by 72,046** |
+>
+> Against the board's pinned-arena baseline (1,588,544, arm D of
+> `…_placement-hazard/`) it is **1,164,208 — over by 44,208**. Taking the
+> interlock term at its high end (45,000) instead of the central value lowers
+> the ceiling to ~396,500 and the margin worsens. **The conclusion is robust
+> across the whole uncertainty band: removing 100% of the frame's data-cache
+> line fills does not reach the gate.**
+>
+> Corrected ceiling: **424,336 = 90.6% of the 468,544 gap** (85.5% of the
+> 496,382 gap this document used). Data locality remains **by a wide margin the
+> largest class in the campaign** and the only one worth spending builds on —
+> it is simply no longer a class that can finish the job alone. Every
+> measurement and every other conclusion below stands; only this ceiling and
+> the "clears the gate" claim are withdrawn.
+>
+> Independently re-derived: the fill count reproduces at **9,880/fr** from
+> load stall 464,772 less stack-based 73,844 less I/O 10,096, ÷44 — within
+> 2.4% of the banked 9,644. The 44-cycle penalty reproduces at **40.3 cyc per
+> 32-byte main-RAM line** from `memset`'s inner loop (885.3 iterations/fr ×
+> 16 B = 442.7 lines against 17,820 tk/fr on its four `str` PCs).
+
 
 One constant, one build, one match. `NDS_LAB_NO_DCACHE=1` clears CP15 c1 bit 2
 after a full clean, disabling the ARM9 data cache for the whole run. Everything

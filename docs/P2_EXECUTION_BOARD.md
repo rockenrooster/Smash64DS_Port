@@ -51,40 +51,47 @@ native 0/0; slips 0.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
-**PERFORMANCE: EVERY CLASS MEASURED, NONE REACHES THE GATE.** Detail archived;
-decision in `…_p2-2p8-gate-decision/`. The frame is **64.3% memory stall**; the
-**issue floor alone is 543,509 UNDER the gate**, so no arithmetic deletion can
-close it. Disabling the dcache costs **+1,394,560**, so perfect data locality
-would give 1,028,189 — under the gate — making locality the **only class whose
-ceiling (113%) exceeds the requirement**; every other is 2.4-18% and the best
-buildable is the VRAM arena at **11.2%**. Placement is CLOSED (hazard, not
-lever; arena now 1,024 B aligned). **Owner decision owed:** data locality
-(structural, no fidelity cost, ~11-21% realised) vs reduced joints (Sacrifice
-Order 2+3) vs the withdrawn 30 Hz sim (order 4).
-Checks: Boundary GREEN 3/3 09-17 (arena alignment: 0 ticks, exists so
-`.data`/`.bss` resizes stop re-phasing the heap).
-**ANY-ROSTER CONTRACT NOW MEASURABLE** (`…_roster-variance/`): ShieldPose
-residency DERIVED per roster, DamageSlash coverage advisory off-canonical with
+**PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.** Decision in
+`…_p2-2p8-gate-decision/`; sizing in `…2026-09-17_p2-2p8-locality-sizing/`.
+**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%** of
+the gap; that subtracted ALL data stall. Layout removes only **line fills** =
+**424,336 = 90.6%**, so a PERFECT data cache leaves WORK-H **1,164,208 — 44,208
+OVER the gate**, across the whole interlock band. Frame still 64.3% stall;
+issue floor still 543,509 under the gate.
+Best sized subset 15-18% (+11.2% VRAM arena ≈ 26-30%). Largest single item:
+**hot scalar statics → DTCM, 34,444-49,365** — 314 statics hold 1,670 B across
+**207 cache lines**; re-opened because the DTCM falsifier tested a walked-once
+table (K≈1) and these are re-read 100-900x/frame. `GObj`/`DObj` repack is
+unblocked too: `include/` precedes decomp on `-I` and every include uses the
+angle form, so a shadow header needs no decomp edit (HIGH — forks a decomp
+type). **OWNER DECISION NOW FORCED:** no structural class can close 468,544, so
+the gate needs Sacrifice Order 2+3 (fewer joints / fewer transformed objects;
+`gNdsGCDrawsActiveMax` 203) or order 4. Placement stays CLOSED (hazard, not
+lever; arena 1,024 B aligned).
+Checks: Boundary GREEN 3/3 09-17; four-CPU gate PASSES 09-17 (hats off).
+**ANY-ROSTER CONTRACT MEASURABLE** (`…_roster-variance/`): ShieldPose residency
+DERIVED per roster, DamageSlash coverage advisory off-canonical with
 correctness strict, and a format bug fixed that reported *"Format specifier was
-invalid"* INSTEAD of the failures it found. Canonical regression identical.
-**KIRBY COPY FIXED — all 11 victims draw natively** (`ddf18a57a86`,
-`…_p2-3f47-kirby-copy-hats/`). Was: ten of eleven left the native path, and at
-PROFILE_LEVEL 0 a rejected root **never reaches the screen**. Both blockers were
-one fact — a copy hat is a **deferred image** and the seam assumed a resident
-head. MODIFY_ST colour escapes now shade from the escaping row (texcoord-only
-copies; exact, since HW light never binds the alias table), and a hat's program
-is mixed-file like CopyLink. Runtime expands from ONE generated head list, so a
-head cannot be half-wired; a second `9 if head_mp == 1 else 10` copy that would
-have rejected every hat is gone. Closure check GREEN (12 victims, 0 unbaked) and
-proven to fail closed two ways. Kirby image **+28,848 B** high / **+26,104 B**
-low (deferred, not ARM9). `IMPLEMENTED_NOT_ACCEPTED` — owed: four-CPU gate
-(RUNNING) and a visual check per hat. WORK-H 1,471,552 was never a roster-cost
-datum; that arm was not drawing.
+invalid"* INSTEAD of the failures it found.
+**KIRBY COPY: implemented, GATED OFF, blocked on BYTES** (`ddf18a57a86`,
+`…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN, ROM links — but
+the sections append to KIRBY's resident image (**+28,848 B** high / +26,104 low)
+and the arena cannot absorb it. Same-target A/B: hats ON = **151 native
+failures** (witness root 0x18A60 = Kirby **STONE**), heap low-water **73,064**
+vs 111,680, WORK-H P50 **+70,016**. Hats OFF = **gate PASSES**, native 0/0,
+heap 111,680, WORK-H 1,580,416. So
+`KIRBY_TRIO_ADMIT_COPY_HATS = False` until the body sections move into the
+per-slot **hat images**, already loaded on demand for exactly the copy that
+needs them. Measured: the 12 sections are byte-identical in triangles/corners/
+unique/spans and differ only in dense rows (14 of 46), state, sequence and
+colour sources — sharing the common arrays recovers only ~29%, so moving them
+is the fix. Kept: self-shade resolver, mixed-file hat programs, generated head
+list, closure check proven to fail closed 2 ways.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`.
 **OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines,
-UNMEASURED). SRC's top candidate sized NO-GO; its premises did not survive that
-step. FTR/STG/MISC UNSIZED — size each before building.
-Review watermark: `Briefs/README.md` 09-16; candidates stay with their rows.
+UNMEASURED). SRC's top candidate sized NO-GO; its premises did not survive.
+FTR/STG/MISC UNSIZED — size each before building. Review watermark:
+`Briefs/README.md` 09-16; candidates stay with their rows.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns
 shared outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay
