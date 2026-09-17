@@ -168,7 +168,10 @@ halves trampled on the previous frame.
 
 ## Cause 4 — Yoshi's preview: two producers, one number, 1,232 bytes apart
 
-**Found, fixed, and pinned with a check.** This one is arithmetic, not opinion.
+**Found and measured; the first fix was WRONG and hung the character select, so
+it is reverted.** The cause below is arithmetic and stands. The remedy did not.
+
+> **Read the correction at the end of this section before acting on it.**
 
 `ndsRendererValidateNativeFighterOwner`
 (`nds_renderer_native_fighter_production.c:1171-1176`) opens with
@@ -240,6 +243,46 @@ parsed out of the validator rather than restated — and fails on any
 disagreement. Proved both ways: it reports the exact defect against the stale
 packs and passes against the regenerated ones. Registered in `verify-all.ps1`
 with `$expectedVerifiers` moved 17 → 18.
+
+### CORRECTION: lowering `source_bytes` hangs the CSS, and it is reverted
+
+`source_bytes` has a **second** runtime consumer I did not check.
+`reloc_preview_pack.c:401` bounds every span's `source_offset` by the same
+field, and its failure path is `ndsPreviewPackLoadHalt` — a `for (;;)` spin,
+**not** an abort. Measured on the built packs:
+
+| pack | `source_bytes` | model spans | max source end | out of range |
+|---|---:|---:|---:|---:|
+| original | 45,488 | 3 | 45,488 | **0** |
+| my "fix" | 44,256 | 3 | 45,488 | **1** |
+
+Yoshi's third model span ends at 45,488, so a 44,256 bound puts it out of range
+and the ROM spins forever. The character select never enters.
+
+**The symptom matched exactly and I misread it twice.** Both probes carrying the
+change reached VS Mode and stopped — `css=0/0`, no crash marker, arena identical
+to the control, timeout. I first blamed CPU contention from running three jobs
+at once. The rung-8 probe then ran alone and stalled identically, which ruled
+that out: the only thing both builds shared and the clean rung-7 control lacked
+was this change.
+
+Reverted; all twelve packs are byte-identical to the pre-change tree, verified
+by compare rather than asserted. **One field cannot be both the span extent and
+the raw asset size.** The span bound is load-bearing, so it keeps the field, and
+the real fix is a pack **format** change — the raw size as its own header word,
+with a version bump — which is not being rushed in behind a hang.
+
+Yoshi's preview is invisible again. That is the right trade: a hung character
+select is far worse than a blank one, and it is the state the owner already
+reported rather than a new one.
+
+`check_preview_pack_owner_sizes.py` keeps its value rather than going
+permanently red: `KNOWN_MISMATCHES` records Yoshi by name with both numbers and
+the reason, so the run prints the live defect and still **fails** on any fighter
+not listed. A second drift cannot hide behind the first one's exception.
+
+**The root-alias fix and the generator assert below are untouched and remain
+correct** — a different defect, not reading this field, each proved both ways.
 
 ### The same investigation found a second, worse defect in today's own fix
 
@@ -338,7 +381,35 @@ through a pack. If Yoshi is still invisible, the witness to read is
 `gNdsNativeFighterValidateRejectCode`: **3 means this fix did not take; 4 with
 observed `0xffffffff` means the runner-up is live.**
 
-## Open: the rung-10 walk ends in SIGILL
+## Kirby/Jigglypuff/Ness: attributed, and it is the same wall as everything else today
+
+**The rung-7 control is clean.** It reaches the character select with no SIGILL
+and no ABORT; its run ended on my own `-Hits 7` timeout waiting for later
+stops, not on a crash. Rung 10 dies there. So the crash is the roster change,
+and the mechanism is the one this campaign has hit three times already:
+
+| | rung 7 | rung 10 | delta |
+|---|---:|---:|---:|
+| `gNdsTaskmanArenaChosenSize` | 1,240,832 | 1,154,816 | **-86,016 = exactly 21 pages** |
+| heap free at the CSS | 378,096 | 279,152 | -98,944 |
+| image `.text` | 1,531,868 | 1,598,380 | +66,512 |
+| image `.data` | 223,224 | 238,752 | +15,528 |
+
+**+82,040 B of image costs 21 arena pages**, and the character-select exit then
+wanders into `SIGILL pc=0x00000b64` -- a low address with no symbol, which is a
+wandered CPU rather than a faulting instruction, so the exception site names
+nothing. Same family as the Yoshi egg and Vulcan Jab; just large enough to
+crash instead of merely reject.
+
+The per-roster entry-effect emitter (8,458 B returnable) is nowhere near
+covering 82 KB, so it is not the lever here.
+
+**But the ladder is cumulative, so rungs 8 and 9 are separate questions.**
+Kirby is the expensive member -- thirteen copy hats plus the copy state
+machines -- and Jigglypuff alone (rung 8) or Jigglypuff plus Ness (rung 9) may
+well fit. Bisecting is now cheap because the walk got faster.
+
+## Superseded: what the rung-10 SIGILL looked like before attribution
 
 The rung-10 ROM builds clean (exit 0, zero `error:`, all ten `NDS_P2_*` flags
 set, `NDS_P2_ITEM_CORE 1`) and reaches the character select, plays it for 1,651

@@ -21,7 +21,7 @@ Main Menus:
 -CSS Bugs still present and need to be fixed:
     -Low FPS/Flashing during gate openings **Door slide re-blits whole panel from NitroFS per slot per tic. 9.6% of frames miss 60Hz.**
     -fighter 3d previews not visible for:
-        -Yoshi **FIXED, please look. Pack said 45,488 vs owner 44,256, so the owner declined and drew nothing.**
+        -Yoshi **Cause found: pack 45,488 vs owner 44,256. First fix hung the CSS, reverted. Needs pack field.**
     -music pauses/reset when rendering new 3d fighter previews (moving around cursor) **8 BGM suspends per visit: the closure loads in ONE frame, 8.6 frames long. Slice it.**
     -delay between cursor hover and 3d fighter preview rendering. **Same cause: the 13-tic dwell debounces a BLOCKING load. 70 tics waited per visit.**
     -Kirby not selectable **Ladder had no rung for Kirby/Ness and rung 8 was held by a stale note. Rungs 9/10 added.**
