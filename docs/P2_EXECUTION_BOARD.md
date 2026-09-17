@@ -63,17 +63,19 @@ alone; ~99.7% of the largest class is gameplay/fidelity gated, so it is a
 **OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`): Yoshi preview cause
 found, fix reverted (hung the CSS; needs a pack-format field). Walk replaced by
 a full-roster tour. FPS/music/dwell diagnosed, unfixed.
-**ROSTER: RUNG 8 SHIPPED** (`ded5da71a4b`). **Rungs 9/10 blocked on a NAMED
-fault** (`f1335058aca`): data abort, `ndsBaseSyTaskmanStartTask+10`,
-`ldr r3,[r0,#16]` with **r0=3**. Backtrace puts it in **mnMapsStartScene**
-(router:850) — the STAGE SELECT, not the CSS. NOT budget/bound/reloc/wander:
-all four refuted by measurement. **RISK: O1 may be implicated** — syMainThread5
-is a service thread and O1 frees finished service coroutine stacks; the named
-fault was measured WITH O1. **NEXT: abort probe on rung 9 WITHOUT O1.** Same
-fault ⇒ pre-existing, O1 stands; different ⇒ O1 comes out.
-**The SIGILL was never the fault** — calico jumps blind through a handler word
-written only when NDS_FREEZE_DIAGNOSTICS is on (0 in shell). Probe now breaks
-on `__excpt_entry`; make check-harness-registry require it here too.
+**ROSTER: RUNG 8 SHIPPED** (`ded5da71a4b`). **Rung 9 is NOT roster-broken** —
+with Ness admitted it plays a COMPLETE LAP (`93fede1b140`): kinds 16 CSS -> 21
+Maps -> 22 VSBattle -> 24 Results -> 16, then aborts on the SECOND pass.
+**NONDETERMINISTIC**: same ELF gave a data abort at Maps (r0=3) in one run and
+an undefined instruction at the CSS in another; breakpoints move it. Corruption
+or a race, not a logic bug — which is why rung 10 fails doing LESS work.
+7 hypotheses dead: budget, wander, table bound, reloc fixup, arena rewind,
+clobbered r4 (r4 measured VALID at every ndsSceneManagerEnter entry), single
+deterministic fault. **NEXT: watchpoint/poison to find the WRITER, or bisect
+Ness's 3 TUs — the trigger is build config, not workload.** Faulting-instruction
+chasing is the wrong tool; each run names a different victim.
+**REAL but unlinked**: ndsSceneManagerEnter does `mov r8, r1` and never saves
+r8 (callee-saved, AAPCS) — fix on its own merits, NOT established as this fault.
 **OPEN: Jigglypuff's preview is blank** (not the Yoshi cause).
 **CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done.
 **Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay. Campaign returns
