@@ -272,6 +272,13 @@ NDS_LAB_JOINT_CAP ?= 0
 # to evaluate. It prices the animation lane and is therefore a FLOOR for the
 # joint lever, never the lever. 0 = shipping.
 NDS_LAB_POSE_JOINT_CAP ?= 0
+# P2-2p8 N05.03. Slots in the flattened fighter-parts invalidation cache
+# (`reloc_backend_compat_shims.c`). Must be a power of two. The shipped value is
+# 4, chosen when the cache was believed to be keyed per fighter root; it is
+# keyed per invalidated JOINT, so four slots cannot hold a steady state. Raising
+# it costs 396 bytes of .bss per slot and is the whole of the candidate -- the
+# flatten walk it avoids is 59% of a 20,348 tk/fr bucket.
+NDS_FTPARTS_FLAT_SLOTS ?= 4
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
 # fighter owner and how many of them recompute a value the prepared array
@@ -6355,6 +6362,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK22_WALLPAPER_RUN_LAB $(NDS_TASK22_WALLPAPER_RUN_LAB)'; \
 		echo '#define NDS_LAB_JOINT_CAP $(NDS_LAB_JOINT_CAP)u'; \
 		echo '#define NDS_LAB_POSE_JOINT_CAP $(NDS_LAB_POSE_JOINT_CAP)u'; \
+		echo '#define NDS_FTPARTS_FLAT_SLOTS $(NDS_FTPARTS_FLAT_SLOTS)u'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \

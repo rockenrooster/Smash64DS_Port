@@ -2767,9 +2767,35 @@ static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFighterParts(
  * tree on transform invalidation, an artificial four-player cost the source
  * does not impose. GMCOMMON_PLAYERS_MAX is four and power-of-two, preserving the
  * cheap pointer hash below while allowing one resident entry per live player. */
+/* P2-2p8: the paragraph above is wrong about what keys this cache, and the
+ * per-PC profile is how that surfaced. `ndsFTParamsInvalidateSubtree` is called
+ * with a JOINT, not with a fighter root -- `ftParamsUpdateFighterPartsTransform`
+ * passes the DObj whose transform changed -- so the number of distinct keys per
+ * frame is the number of invalidated joints, not the number of players. A
+ * four-entry direct-mapped table therefore cannot hold a steady state, and the
+ * profile shows it does not: the three hottest instructions in the function are
+ * the flatten walk's pointer chase (`ldr r3,[r6,#16]` at CPI 42.0,
+ * `ldr r6,[r6,#8]` at 30.7, `ldr r0,[r3,#0]` at 48.6, 184.4 executions a frame
+ * between them), which only run on a MISS, while the clear's store is 4.4.
+ * The walk is 59% of the bucket and the clear is 14%.
+ *
+ * NDS_FTPARTS_FLAT_SLOTS is a build knob so the miss rate and the fix can be
+ * measured on the same instrument. The default preserves the shipped four. */
+#ifndef NDS_FTPARTS_FLAT_SLOTS
 #define NDS_FTPARTS_FLAT_SLOTS GMCOMMON_PLAYERS_MAX
+#endif
 _Static_assert((NDS_FTPARTS_FLAT_SLOTS & (NDS_FTPARTS_FLAT_SLOTS - 1u)) == 0u,
-               "flat fighter-parts cache hash requires a power-of-two player bound");
+               "flat fighter-parts cache hash requires a power-of-two slot count");
+
+/* Always compiled, in every arm. A hit/miss pair that exists only in the
+ * candidate build cannot show that the control was the control, and
+ * --gc-sections drops a global whose only writer is inside a false #if. */
+__attribute__((used)) volatile u32 gNdsFtPartsFlatHits;
+__attribute__((used)) volatile u32 gNdsFtPartsFlatMisses;
+/* A miss whose slot held a DIFFERENT live root is a hash conflict; a miss on an
+ * empty or heap-stale slot is a cold start. Separating them says whether more
+ * slots can help at all, or whether the keys are simply never reused. */
+__attribute__((used)) volatile u32 gNdsFtPartsFlatConflicts;
 #define NDS_FTPARTS_FLAT_MAX 96u
 
 typedef struct NDSFtPartsFlatWalk
@@ -2897,7 +2923,16 @@ static const NDSFtPartsFlatWalk *ndsFTParamsFlatWalkFor(DObj *root)
     if ((flat->root == root) &&
         (flat->heap_generation == gNdsTaskmanHeapGeneration))
     {
+        gNdsFtPartsFlatHits++;
         return flat;
+    }
+    gNdsFtPartsFlatMisses++;
+    if ((flat->root != NULL) &&
+        (flat->heap_generation == gNdsTaskmanHeapGeneration))
+    {
+        /* The slot was holding a different root that is still current, so this
+         * miss is a hash conflict rather than a cold start. */
+        gNdsFtPartsFlatConflicts++;
     }
     count = ndsFTParamsFlattenDescendants(
         root, flat->parts, NDS_FTPARTS_FLAT_MAX);
