@@ -57,27 +57,27 @@ ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound** (detail archive
 — 26 owners swept, 3 exist, all covered. OWED: per-hat look, captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 B** (`5e109a47d5d`). Largest
 banked win, 9.2% of gap. **OWNER: one-line call** on its non-zero exit.
-**OWNER 09-17: SRC REOPENED**, **30 Hz still refused**. No single lane closes
-the gap even deleted whole, and SRC has no big rocks; ~99.7% of the largest
-class sits behind gameplay/fidelity gates, so **closing it is a POLICY call**
-(`…_p2-2p8-ftr-stg-misc-sizing/`, `…-src-distribution/`, detail archived).
-**LEVER SIZED**: 8,458 B of entry-effect texels = 2.1 arena pages
-(`…_p2-2p8-entry-effect-roster-residency/`). Headroom, NOT ticks.
-**OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`). Yoshi preview: cause
-found (pack 45,488 vs owner 44,256), first fix HUNG the CSS and is reverted;
-needs a pack-format field. Walk REPLACED by a tour of every admitted kind,
-`CSSTOUR kind=/drew=` must be EQUAL. FPS/music/dwell diagnosed, unfixed.
-**ROSTER BISECTED AND SHIPPED AT RUNG 8** (`ded5da71a4b`): Jigglypuff is
-selectable, CSS verified clean twice, +9,440 B = 3 arena pages. Rung 9 breaks
-it and the break is between 8 and 9, so NOT Kirby — **Ness alone** is +32,016 B
-= 8 pages and SIGILLs at CSS exit; Kirby +82,040 B = 21 pages. Ness's content
-is fine (preview drew 3,498). Both need bytes RETURNED, not a fighter fixed.
-**OPEN: Jigglypuff's own preview is blank** — found by the new walk, never
-reportable before because he was never selectable. Not the Yoshi cause.
-**CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done (−216 B).
-**Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay; inlined statics
-leave no ELF symbol, which is why they looked dead. 158 harness constants ARE
-dead but thread through 3 unnamed files. Campaign returns ~576 B vs Ness's 20,480.
+**OWNER 09-17: SRC REOPENED**, **30 Hz still refused**. No lane closes the gap
+alone; ~99.7% of the largest class is gameplay/fidelity gated, so it is a
+**POLICY call** (detail archived).
+**OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`): Yoshi preview cause
+found, fix reverted (hung the CSS; needs a pack-format field). Walk replaced by
+a full-roster tour. FPS/music/dwell diagnosed, unfixed.
+**ROSTER: RUNG 8 SHIPPED** (`ded5da71a4b`). **Rungs 9/10 blocked on a NAMED
+fault** (`f1335058aca`): data abort, `ndsBaseSyTaskmanStartTask+10`,
+`ldr r3,[r0,#16]` with **r0=3**. Backtrace puts it in **mnMapsStartScene**
+(router:850) — the STAGE SELECT, not the CSS. NOT budget/bound/reloc/wander:
+all four refuted by measurement. **RISK: O1 may be implicated** — syMainThread5
+is a service thread and O1 frees finished service coroutine stacks; the named
+fault was measured WITH O1. **NEXT: abort probe on rung 9 WITHOUT O1.** Same
+fault ⇒ pre-existing, O1 stands; different ⇒ O1 comes out.
+**The SIGILL was never the fault** — calico jumps blind through a handler word
+written only when NDS_FREEZE_DIAGNOSTICS is on (0 in shell). Probe now breaks
+on `__excpt_entry`; make check-harness-registry require it here too.
+**OPEN: Jigglypuff's preview is blank** (not the Yoshi cause).
+**CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done.
+**Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay. Campaign returns
+~576 B; **O1 boot-service reclaim returns 5 arena pages** (`5f37d2df82c`).
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz

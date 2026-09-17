@@ -506,3 +506,24 @@ correctness (detail archived).
 **CLOSED LANES** (detail archived): joint-cap placement, Kirby copy (OWED:
 per-hat look), hidden-part class — 26 owners swept, 3 exist, all covered
 (`…_p2-3f-hidden-part-sweep/`). OWED: captures.
+
+### 09-17 cursor detail trimmed when the abort diagnosis landed
+
+
+**CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done (−216 B).
+**Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay; inlined statics
+leave no ELF symbol, which is why they looked dead. 158 harness constants ARE
+dead but thread through 3 unnamed files. Campaign returns ~576 B vs Ness's 20,480.
+
+### Lane-sizing cursor detail, trimmed when the roster blocker was boarded
+
+**OWNER 09-17: SRC REOPENED**, **30 Hz still refused**. No single lane closes
+the gap even deleted whole, and SRC has no big rocks; ~99.7% of the largest
+class sits behind gameplay/fidelity gates, so **closing it is a POLICY call**
+(`…_p2-2p8-ftr-stg-misc-sizing/`, `…-src-distribution/`, detail archived).
+**LEVER SIZED**: 8,458 B of entry-effect texels = 2.1 arena pages
+(`…_p2-2p8-entry-effect-roster-residency/`). Headroom, NOT ticks.
+
+### CSS batch cursor detail, second trim
+
+
