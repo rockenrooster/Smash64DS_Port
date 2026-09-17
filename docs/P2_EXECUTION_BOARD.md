@@ -70,16 +70,15 @@ untried lane SIZED: the 67,858 literal-pool bucket gives only **11,449** packed
 (441 of 645 functions touch ONE symbol); `-fsection-anchors` is **inert** under
 `-fdata-sections`.
 Checks: Boundary GREEN 3/3; four-CPU PASSES (hats off).
-**KIRBY COPY: implemented, GATED OFF on BYTES** (`ddf18a57a86`,
-`…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN — but sections
-append to KIRBY's resident image (**+28,848 B**) and the arena refuses: hats ON =
-**151 native failures** (root 0x18A60 = Kirby **STONE**), heap **73,064** vs
-111,680, WORK-H **+70,016**; hats OFF = gate PASSES. `ADMIT_COPY_HATS = False`
-until sections move into the per-slot **hat images** — **VALIDATED**: for every
-copy hat all 14 colour escapes resolve inside its OWN head's dense range, so a
-body beside its head needs no cross-image reference AND no self-shade fallback,
-removing the fidelity compromise. Kirby resident growth → ZERO; each hat ~2.9 KB.
-**NEXT ACTION.**
+**KIRBY COPY FIXED — all 11 victims draw natively, gate GREEN**
+(`…_p2-3f47-kirby-copy-hats/`). Bodies moved into the per-slot **hat images**:
+Kirby resident **+0** (40,133 unchanged), peak for one copying Kirby
+**28,848 → 3,071 B** (9.4x). Heap back to **112,192**, cadence restored, native
+**0/0**, triangles identical. TWO defects, only one was bytes: the other was
+`SetRootProgram`'s stale `program <= 4u`, silently resetting Stone (13) and
+**CopyLink** (14) to canonical — Link's copy would have regressed too; bound now
+derived. WORK-H +58,112 is **placement, not draw** (triangles identical; STG
+105% of it). OWED: a **visual check per hat** (`validate_cross_census=False`).
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
 14,080 floor, 9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no

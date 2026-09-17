@@ -1,4 +1,4 @@
-# Kirby's ten broken copy victims: the geometry works, the bytes do not
+# Kirby's copy is native for all eleven victims
 
 `2026-09-17_p2-2p8-roster-variance/KIRBY_COPY_NATIVE_GAP.md` established the
 defect: Kirby's swallow-copy left the native path for ten of the eleven
@@ -6,13 +6,12 @@ copyable victims, and at `NDS_RENDERER_PROFILE_LEVEL 0` a rejected root never
 reaches the screen, so the whole fighter vanished for the duration of the copy.
 Commits `ddf18a57a86` (the fix) and the gating that follows it.
 
-> **Read the status section at the bottom first.** Every hat bakes, the closure
-> cross-product goes green and the ROM links — and admitting all ten costs
-> **+70,016 WORK-H P50**, drops heap low-water from 111,680 to **73,064** and
-> produces **151 native-render failures** whose witness is Kirby's *Stone*. The
-> sections are appended to Kirby's resident image when they belong in the
-> per-slot hat images. Admission is `False` until they move. The analysis below
-> stands; only the shipping decision changed.
+> **RESOLVED — see the bottom section.** The bodies now live in the per-slot hat
+> images, Kirby's resident image is unchanged to the byte, and the four-CPU gate
+> passes with **0** native failures. Two defects had to be fixed, and only one of
+> them was the bytes: the other was a stale program-number bound that silently
+> reset Stone and CopyLink to canonical. The analysis below is kept as written,
+> including the self-shade fallback it describes, which is now used by nothing.
 
 ## What actually blocked it
 
@@ -341,6 +340,90 @@ Owed after that: the four-CPU gate, and a visual check per hat — the seam stil
 runs on the `validate_cross_census=False` path, where a wrong cross sequence of
 the right length passes silently, so only pixels prove the body resolved against
 its own head.
+
+## RESOLVED 2026-09-17 — the bodies moved, and the gate is GREEN
+
+`KIRBY_TRIO_ADMIT_COPY_HATS = True`. All eleven copyable victims render
+natively. `P2-2 four-CPU standing stress passed its correctness, cadence,
+native-owner, and memory gates.`
+
+| | hats OFF (control) | hats ON, in hat images |
+|---|---:|---:|
+| `gNdsRendererNativeFailure.count` | 0 | **0** |
+| `gNdsTaskmanGeneralHeapFreeMin` | 111,680 | **112,192** |
+| P0 / P1 hardware triangles | 349,031 / 333,618 | **identical** |
+| ALL P50 | 1,677,888 | 1,678,016 |
+| WORK-H P50 | 1,537,344 | 1,595,456 |
+
+### What the bytes did
+
+| | Kirby resident image | peak for one copying Kirby |
+|---|---:|---:|
+| bodies in Kirby's tables (rejected) | +28,848 / +26,104 | 28,848 B, always loaded |
+| **bodies in the hat images** | **+0 / +0** | **3,071 B**, on demand |
+
+Kirby's high image is 40,133 bytes before and after, to the byte. The 22 hat
+images absorb the whole +54,952, at +2,405 to +3,071 each, and only the one hat
+a copy actually needs is ever resident. That is a **9.4x** cut in the peak, and
+it is why the heap low-water came back to 112,192 from 73,064 and the cadence
+collapse (ALL P50 2,237,696) disappeared.
+
+Per hat, the body's tables land exactly where predicted — hat 4 high: dense
+120 → 166 (+46, the body block), epochs 6 → 10, runs 6 → 10, triangles 160 →
+188, corners 480 → 564, actions 15 → 36. `root_offset` stays **1**, so the
+runtime's `NDS_IMG_BIND` still binds only the hat root and no C struct changed.
+
+### The second defect, which was mine and was not memory
+
+The first attempt was rejected with 151 native failures and I attributed them to
+arena pressure. **That was wrong.** Moving the bodies fixed the memory entirely —
+heap 112,192, cadence restored — and the 151 failures persisted unchanged, same
+witness: `root 0x18A60`, Kirby's **Stone**.
+
+The cause was a fourth site that validates a program *number*:
+
+```c
+/* nds_renderer_assets.c, ndsRendererNativeFighterSetRootProgram */
+if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) && (program <= 4u))
+{ sNdsNativeFighterRootPrograms[slot] = (u8)program; return; }
+...
+sNdsNativeFighterRootPrograms[slot] = 0u;   /* silent fallthrough */
+```
+
+Kirby's program count went 5 → 15, making Stone program 13 and CopyLink 14. Both
+exceeded the stale literal, fell through to the reset, and became program 0 —
+canonical — whose seven-root vector matches neither. Stone declined 151 times a
+match. **CopyLink is Link's copy, which had always worked, and it would have
+regressed with it.**
+
+The generated head list was supposed to make a half-wired head impossible, and it
+covers the three sites that build *symbol names*. This one validates a *number*,
+so the X-macro never reached it. The bound is now
+`NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u`, derived from the same constant as
+`program_count`. The deeper hazard — an out-of-range program silently becoming
+canonical, with no counter and no assertion — is filed as its own task.
+
+### The +58,112 is placement, not draw cost
+
+WORK-H P50 rises 1,537,344 → 1,595,456 against the hats-off control. It is not
+the cost of drawing copy hats: **the P0/P1 triangle counts are identical**, and
+the canonical roster's CPU Kirby never copies a non-Link victim, so nothing
+additional is drawn at all. STG accounts for **61,248 of the 58,112 — 105%** —
+which is the placement-hazard signature established in
+`…_p2-2p8-placement-hazard/` (STG 104–142% of the WORK-H swing) and nothing like
+the spread signature of a real work change. The image sizes moved, so `.bss` and
+the arena re-phased.
+
+Not banked as a cost, and not banked as free either: it is a cross-build delta
+inside the ±45,760 placement band, and the only way to price the hats honestly is
+a roster that actually copies.
+
+### Still owed
+
+A **visual check per hat**. The seam runs on the `validate_cross_census=False`
+path, where a wrong cross sequence of the right length passes silently, so only
+pixels prove each body resolved against its own head. The closure check proves
+the cross-product; it cannot prove the pixels.
 
 ## Not caused by this work
 

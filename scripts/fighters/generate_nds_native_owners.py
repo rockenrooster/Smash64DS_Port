@@ -2503,7 +2503,7 @@ KIRBY_TRIO_BODY_BINDING = 1
 #
 # Flipping this to True with no other change reproduces the RED above. Leave it
 # False until the sections move.
-KIRBY_TRIO_ADMIT_COPY_HATS = False
+KIRBY_TRIO_ADMIT_COPY_HATS = True
 
 KIRBY_TRIO_COPY_HAT_CONTEXTS = (
     (3, 0), (4, 0), (5, 0), (6, 0), (7, 0),
@@ -2825,6 +2825,12 @@ def _append_kirby_trio_sections(repo_root, detail, context):
     dense_mask = PACKED_DENSE_ID_LIMIT - 1
     trio = {}
     for head_mp in KIRBY_TRIO_SECTION_HEADS:
+        # Copy hats are DEFERRED images and carry their own body beside their
+        # own head (`_append_kirby_trio_body_to_hat`), so nothing of theirs is
+        # appended to Kirby's resident tables. Only the two FACE heads, which
+        # are resident, reach the code below.
+        if head_mp in KIRBY_COPY_HAT_MODEL_PART_IDS:
+            continue
         faithful = build_kirby_trio_context_program(
             repo_root, detail, head_mp)
         bounds = _kirby_trio_body_bounds(faithful)
@@ -5611,7 +5617,7 @@ def render_p2_owner_runtime_program(
         # live joint-6 modelpart (see NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT in
         # src/nds/nds_renderer_assets.c). Resident like all roots: only the
         # tables they index live in the image.
-        for head_mp in KIRBY_TRIO_SECTION_HEADS:
+        for head_mp in sorted(trio):
             root = trio[head_mp]["root"]
             lines += emit_rows(
                 "NDSNativeRoot",
@@ -6319,6 +6325,203 @@ def _rebase_dense_word(value: int, dense_base: int) -> int:
     return (value & ~(PACKED_DENSE_ID_LIMIT - 1)) | (dense_id - dense_base)
 
 
+def _append_kirby_trio_body_to_hat(repo_root, detail, head_mp, hat):
+    """Append this head's trio BODY section to its own deferred hat image.
+
+    The body used to be appended to Kirby's RESIDENT tables, which put all
+    twelve baked contexts in memory whenever Kirby played although at most one
+    head is ever live: +28,848 bytes high, which the arena refused (see
+    `artifacts/performance/2026-09-17_p2-3f47-kirby-copy-hats/`). The body
+    belongs beside its head, in the per-slot hat image that is already loaded on
+    demand for exactly the copy that needs it.
+
+    It is also the correct place for it. The body's MODIFY_ST colour escapes all
+    resolve inside the HEAD's own dense range -- measured 14 of 14 high and 12 of
+    12 low for every copy hat -- so here they resolve to the row they actually
+    mean, and the resident-table twin search and its self-shade fallback are both
+    unnecessary. Those exist only for the two resident FACE heads.
+
+    Mutates `hat` in place and returns the body's root record in HAT-LOCAL
+    indices, for the trio program to carry at source owner `kirby_hat`.
+    """
+    faithful = build_kirby_trio_context_program(repo_root, detail, head_mp)
+    bounds = _kirby_trio_body_bounds(faithful)
+    broot = faithful["roots"][faithful["body_ordinal"]]
+    dense_mask = PACKED_DENSE_ID_LIMIT - 1
+
+    f_adf = faithful["action_dense_first"]
+    f_vertex = faithful["vertex"]
+    f_dense = faithful["dense_vertices"]
+    body_first_action = bounds["body_first_action"]
+    action_end = bounds["action_end"]
+    first_block = f_adf[body_first_action]
+    last_action = f_vertex[action_end - 1]
+    dense_end = f_adf[action_end - 1] + (
+        last_action[3] if last_action[0] == 0 else 1)
+    for action_index in range(body_first_action, action_end):
+        action = f_vertex[action_index]
+        count = action[3] if action[0] == 0 else 1
+        if f_adf[action_index] + count > dense_end or \
+                f_adf[action_index] < first_block:
+            raise ValueError(
+                f"kirby hat trio head{head_mp}: body action {action_index} "
+                "dense span escapes the body block")
+
+    dense_base = len(hat["dense_vertices"])
+    dense_new = list(f_dense[first_block:dense_end])
+    if dense_base + len(dense_new) >= PACKED_DENSE_ID_LIMIT:
+        raise ValueError(
+            f"kirby hat trio head{head_mp}: appended dense exceeds the "
+            f"{PACKED_DENSE_ID_LIMIT} packed-ID space")
+
+    def remap_dense(old_id):
+        if not (first_block <= old_id < dense_end):
+            raise ValueError(
+                f"kirby hat trio head{head_mp}: dense {old_id} is outside the "
+                f"body block [{first_block}, {dense_end})")
+        return old_id - first_block + dense_base
+
+    # Colour escapes resolve against the HEAD's rows, which are already in this
+    # image -- by VALUE, because the faithful program orders its rows head-first
+    # while the image carries the suffix cut from a canonical+one-hat build.
+    hat_index = {}
+    for index, row in enumerate(hat["dense_vertices"]):
+        hat_index.setdefault(tuple(row), index)
+    f_colors = faithful["dense_color_sources"]
+    colors_new = []
+    for old_id in range(first_block, dense_end):
+        source = f_colors[old_id]
+        if first_block <= source < dense_end:
+            colors_new.append(remap_dense(source))
+            continue
+        key = tuple(f_dense[source])
+        if key not in hat_index:
+            raise ValueError(
+                f"kirby hat trio head{head_mp}: colour escape dense {source} "
+                "is not present in this hat image")
+        colors_new.append(hat_index[key])
+
+    packed_new = [
+        remap_dense(word & dense_mask) | (word & ~dense_mask)
+        for word in faithful["packed_corners"][
+            bounds["body_first_corner"]:bounds["corner_end"]]
+    ]
+    rud_new = [remap_dense(old_id) for old_id in faithful["run_unique_dense"][
+        bounds["body_first_unique"]:bounds["unique_end"]]]
+    spans_new = []
+    for action_index in range(body_first_action, action_end):
+        span = faithful["action_dense_spans"][action_index]
+        first = span & dense_mask
+        count = span >> PACKED_DENSE_ID_BITS
+        if not (first_block <= first and first + count <= dense_end):
+            raise ValueError(
+                f"kirby hat trio head{head_mp}: action {action_index} span "
+                "escapes the body block")
+        spans_new.append(
+            remap_dense(first) | (count << PACKED_DENSE_ID_BITS))
+
+    tri_base = len(hat["triangles"])
+    tris_new = list(faithful["triangles"][
+        bounds["body_first_tri"]:bounds["tri_end"]])
+    run_base = len(hat["runs"])
+    runs_new = [
+        (first - bounds["body_first_tri"] + tri_base, count, submit, mask)
+        for first, count, submit, mask in faithful["runs"][
+            bounds["body_first_run"]:bounds["run_end"]]
+    ]
+    corner_base = len(hat["packed_corners"])
+    rfc_new = [first - bounds["body_first_corner"] + corner_base
+               for first in faithful["run_first_corner"][
+                   bounds["body_first_run"]:bounds["run_end"]]]
+    unique_base = len(hat["run_unique_dense"])
+    rfu_new = [first - bounds["body_first_unique"] + unique_base
+               for first in faithful["run_first_unique"][
+                   bounds["body_first_run"]:bounds["run_end"]]]
+    ruc_new = list(faithful["run_unique_count"][
+        bounds["body_first_run"]:bounds["run_end"]])
+
+    state_base = len(hat["state"])
+    state_new = list(faithful["state"])
+    seq_base = len(hat["sequence"])
+    seq_epoch_new = [word + state_base
+                     for word in faithful["sequence"][:bounds["seq_epoch_end"]]]
+    tail_new = []
+    new_tail_first = 0xffff
+    if broot[5]:
+        if broot[2] == 0xffff:
+            raise ValueError(
+                f"kirby hat trio head{head_mp}: live tail span with no first")
+        new_tail_first = seq_base + len(seq_epoch_new)
+        tail_new = [word + state_base
+                    for word in faithful["sequence"][
+                        broot[2]:broot[2] + broot[5]]]
+
+    vert_base = len(hat["vertex"])
+    vertex_new = list(faithful["vertex"][body_first_action:action_end])
+    epoch_base = len(hat["epochs"])
+    epochs_new = []
+    for epoch in faithful["epochs"][
+            bounds["body_first_epoch"]:bounds["epoch_end"]]:
+        epochs_new.append((
+            epoch[0] + seq_base if epoch[4] else 0xffff,
+            epoch[1] + seq_base if epoch[5] else 0xffff,
+            epoch[2] - body_first_action + vert_base,
+            epoch[3] - bounds["body_first_run"] + run_base,
+            *epoch[4:],
+        ))
+    policies = derive_direct_epoch_policies(
+        faithful["state"], faithful["sequence"], faithful["epochs"],
+        [("kirby", faithful["roots"])])
+    policies_new = list(policies[
+        bounds["body_first_epoch"]:bounds["epoch_end"]])
+
+    pair = faithful["light_table"][broot[7]]
+    table = hat["light_preambles"]
+    if pair in table:
+        light_index = table.index(pair)
+    else:
+        table.append(pair)
+        light_index = len(table) - 1
+
+    hat["state"] = list(hat["state"]) + state_new
+    hat["sequence"] = list(hat["sequence"]) + seq_epoch_new + tail_new
+    hat["vertex"] = list(hat["vertex"]) + vertex_new
+    hat["action_dense_spans"] = list(hat["action_dense_spans"]) + spans_new
+    hat["dense_vertices"] = list(hat["dense_vertices"]) + dense_new
+    hat["gx_positions"] = list(hat["gx_positions"]) + [
+        (row[0] * 16, row[1] * 16, row[2] * 16) for row in dense_new]
+    hat["dense_color_sources"] = list(hat["dense_color_sources"]) + colors_new
+    hat["triangles"] = list(hat["triangles"]) + tris_new
+    hat["runs"] = list(hat["runs"]) + runs_new
+    hat["packed_corners"] = list(hat["packed_corners"]) + packed_new
+    hat["run_first_corner"] = list(hat["run_first_corner"]) + rfc_new
+    hat["run_first_unique"] = list(hat["run_first_unique"]) + rfu_new
+    hat["run_unique_count"] = list(hat["run_unique_count"]) + ruc_new
+    hat["run_unique_dense"] = list(hat["run_unique_dense"]) + rud_new
+    hat["epochs"] = list(hat["epochs"]) + epochs_new
+    hat["direct_epoch_policies"] = \
+        list(hat["direct_epoch_policies"]) + policies_new
+    hat["primitive_streams"] = {
+        mode: build_fighter_primitive_streams(
+            hat["runs"], hat["packed_corners"], hat["run_first_corner"], mode)
+        for mode in (1, 2)
+    }
+    body_root = (broot[0], epoch_base, new_tail_first, broot[3], broot[4],
+                 broot[5], broot[6], light_index)
+    # The body is a real root OF THIS IMAGE, so it joins the image's root
+    # vector. The runtime still binds only root 0 (the hat) through
+    # NDS_IMG_BIND; this entry exists so the image is self-consistent and so
+    # the light/table verifiers can resolve the body against its own context.
+    hat["roots"] = list(hat["roots"]) + [body_root[:7]]
+    hat["light_preamble_indices"] =         list(hat["light_preamble_indices"]) + [light_index]
+    hat["trio_body_root"] = body_root
+    hat["trio_body_head_mp"] = head_mp
+    return body_root
+
+
+_KIRBY_HAT_CONTEXT_CACHE: dict = {}
+
+
 def build_p2_kirby_hat_runtime_context(
         repo_root: Path, detail: str, copy_modelpart_id: int,
         ) -> dict[str, object]:
@@ -6336,6 +6539,13 @@ def build_p2_kirby_hat_runtime_context(
             f"Kirby deferred hat modelpart {copy_modelpart_id} is outside "
             f"{KIRBY_COPY_HAT_MODEL_PART_IDS}"
         )
+    # One object per (detail, hat). Callers share it deliberately: the trio
+    # body is appended into this context exactly once, and the root program
+    # that carries that body must see the same indices the image ships.
+    cache_key = (str(repo_root), detail, copy_modelpart_id)
+    cached = _KIRBY_HAT_CONTEXT_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
     all_specs = P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
     if len(all_specs) < 14:
         raise ValueError("Kirby joint-6 modelpart variant table is incomplete")
@@ -6522,6 +6732,18 @@ def build_p2_kirby_hat_runtime_context(
         "primitive_streams": primitive_streams,
     }
 
+    # A copy hat that is a reachable trio head also carries the hidden trio
+    # BODY, so the pair travels together and Kirby's resident image does not
+    # grow. Faces 1 and 14 are resident and are not hat images at all.
+    if (copy_modelpart_id, 0) in KIRBY_TRIO_CONTEXTS:
+        _append_kirby_trio_body_to_hat(
+            repo_root, detail, copy_modelpart_id, result)
+        state = result["state"]
+        sequence = result["sequence"]
+        vertex = result["vertex"]
+        runs = result["runs"]
+        epochs = result["epochs"]
+
     # Prove every local index the runtime will consume is in the mini image.
     for epoch in epochs:
         for first, count, limit, label in (
@@ -6535,6 +6757,7 @@ def build_p2_kirby_hat_runtime_context(
                 )
     if roots[0][1] + roots[0][4] > len(epochs):
         raise ValueError(f"Kirby {detail} hat {copy_modelpart_id}: epoch span")
+    _KIRBY_HAT_CONTEXT_CACHE[cache_key] = result
     return result
 
 
@@ -7251,7 +7474,7 @@ def build_owner_root_programs(
         return result
     if owner_name == "kirby":
         trio = context.get("kirby_trio_bodies")
-        if not trio:
+        if trio is None:
             return []
         roots_by_offset = {}
         for row, light_index in zip(
@@ -7263,34 +7486,52 @@ def build_owner_root_programs(
             roots_by_offset[row[0]] = (row, light_index)
         programs = []
         for head_mp in KIRBY_TRIO_SECTION_HEADS:
-            entry = trio[head_mp]
-            body = entry["root"]
-            body_offset = body["offset"]
-            root_offsets = tuple(entry["program_offsets"])
-            cross_slots = tuple(entry["program_cross_slots"])
-            if len(root_offsets) != len(cross_slots):
-                raise ValueError(
-                    f"kirby {context['detail']} head{head_mp}: root/cross "
-                    "cardinality mismatch")
-            # A face head (1, 14) is a resident appendix bake; a COPY HAT is a
-            # deferred image and has no resident root at all, so its program is
-            # mixed-file exactly like CopyLink below -- root 0 comes from the
-            # hat image, everything after it from kirby's own tables.
-            head_offset = kirby_trio_head_offset(
-                str(context["detail"]), head_mp)
-            if head_offset != root_offsets[0]:
-                raise ValueError(
-                    f"kirby {context['detail']} head{head_mp}: program root 0 "
-                    f"0x{root_offsets[0]:x} is not the head 0x{head_offset:x}")
+            detail_name = str(context["detail"])
+            # A face head (1, 14) is a resident appendix bake and its body was
+            # appended to Kirby's own tables. A COPY HAT is a deferred image: it
+            # has no resident root, and since 2026-09-17 it carries its body in
+            # that same image, beside the head whose rows the body's colour
+            # escapes resolve against. Both of its first two roots therefore
+            # come from the hat, and only the canonical remainder from kirby.
+            head_offset = kirby_trio_head_offset(detail_name, head_mp)
             hat_context = None
+            entry = trio.get(head_mp)
             if head_offset not in roots_by_offset:
                 hat_context = build_p2_kirby_hat_runtime_context(
-                    repo_root, str(context["detail"]), head_mp)
+                    repo_root, detail_name, head_mp)
                 if hat_context["roots"][0][0] != head_offset:
                     raise ValueError(
-                        f"kirby {context['detail']} head{head_mp}: hat image "
-                        f"root 0x{hat_context['roots'][0][0]:x} is not the "
-                        f"head 0x{head_offset:x}")
+                        f"kirby {detail_name} head{head_mp}: hat image root "
+                        f"0x{hat_context['roots'][0][0]:x} is not the head "
+                        f"0x{head_offset:x}")
+                if "trio_body_root" not in hat_context:
+                    raise ValueError(
+                        f"kirby {detail_name} head{head_mp}: hat image carries "
+                        "no trio body")
+                hat_body = hat_context["trio_body_root"]
+                body_offset = hat_body[0]
+                faithful = build_kirby_trio_context_program(
+                    repo_root, detail_name, head_mp)
+                root_offsets = tuple(root[0] for root in faithful["roots"])
+                cross_slots = tuple(faithful["cross_slots"])
+            else:
+                if entry is None:
+                    raise ValueError(
+                        f"kirby {detail_name} head{head_mp}: resident head "
+                        "with no appended trio body")
+                hat_body = None
+                body = entry["root"]
+                body_offset = body["offset"]
+                root_offsets = tuple(entry["program_offsets"])
+                cross_slots = tuple(entry["program_cross_slots"])
+            if len(root_offsets) != len(cross_slots):
+                raise ValueError(
+                    f"kirby {detail_name} head{head_mp}: root/cross "
+                    "cardinality mismatch")
+            if head_offset != root_offsets[0]:
+                raise ValueError(
+                    f"kirby {detail_name} head{head_mp}: program root 0 "
+                    f"0x{root_offsets[0]:x} is not the head 0x{head_offset:x}")
             program_roots = []
             program_lights = []
             program_contexts = []
@@ -7299,14 +7540,22 @@ def build_owner_root_programs(
             for root_index, root_offset in enumerate(root_offsets):
                 if root_offset == body_offset:
                     body_seen += 1
-                    program_roots.append((
-                        body["offset"], body["first_epoch"], body["tail_first"],
-                        body["source_command_count"], body["epoch_count"],
-                        body["tail_state_count"], body["tail_sync_count"],
-                    ))
-                    program_lights.append(body["light_index"])
-                    program_contexts.append(entry["verification_context"])
-                    program_source_owners.append("kirby")
+                    if hat_body is not None:
+                        # Body lives in the hat image with hat-local indices.
+                        program_roots.append(hat_body[:7])
+                        program_lights.append(hat_body[7])
+                        program_contexts.append(hat_context)
+                        program_source_owners.append("kirby_hat")
+                    else:
+                        program_roots.append((
+                            body["offset"], body["first_epoch"],
+                            body["tail_first"], body["source_command_count"],
+                            body["epoch_count"], body["tail_state_count"],
+                            body["tail_sync_count"],
+                        ))
+                        program_lights.append(body["light_index"])
+                        program_contexts.append(entry["verification_context"])
+                        program_source_owners.append("kirby")
                     continue
                 if hat_context is not None and root_index == 0:
                     program_roots.append(hat_context["roots"][0])

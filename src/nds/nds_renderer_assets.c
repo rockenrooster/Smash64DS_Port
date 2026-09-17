@@ -5152,8 +5152,16 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    /* Derived, not a literal. This was `program <= 4u` while Kirby had four
+     * programs; admitting the ten copy hats made Stone program 13 and CopyLink
+     * 14, and every number past the stale bound fell through to the reset
+     * below and silently became program 0 -- canonical. Stone's one-root vector
+     * then matched nothing and declined 151 times a match, and CopyLink, which
+     * had always worked, would have gone with it. The selection loop, the
+     * owner map and the head guard all key off the generated head list; this
+     * bound is the fourth site and must too. */
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
-        (program <= 4u))
+        (program <= (NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u)))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;

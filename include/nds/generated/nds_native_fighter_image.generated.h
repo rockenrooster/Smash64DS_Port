@@ -9037,64 +9037,64 @@ typedef struct NDSNativeKirbyHat3HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[18];
-    u8 state_sequence[16];
-    NDSNativeVertexAction vertex_actions[17];
-    u8 epoch_direct_policy[6];
-    NDSNativeDenseVertex dense_vertices[112];
-    u32 dense_normals[112];
+    NDSNativeStateDelta state_deltas[49];
+    u8 state_sequence[41];
+    NDSNativeVertexAction vertex_actions[38];
+    u8 epoch_direct_policy[10];
+    NDSNativeDenseVertex dense_vertices[158];
+    u32 dense_normals[158];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[112];
+    NDSNativePreparedDenseVertex prepared_dense[158];
 #endif
-    u16 action_dense_spans[17];
+    u16 action_dense_spans[38];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[112];
+    u16 dense_color_source[158];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[492];
+    u16 packed_corners[576];
 #endif
-    u16 run_first_unique[6];
-    u8 run_unique_count[6];
-    u16 run_unique_dense[134];
-    u16 triangles[164];
-    NDSNativeRun runs[6];
+    u16 run_first_unique[10];
+    u8 run_unique_count[10];
+    u16 run_unique_dense[180];
+    u16 triangles[192];
+    NDSNativeRun runs[10];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[6];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[6];
+    u16 primitive_group_first_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[148];
+    u8 primitive_group_count_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[148];
+    u8 primitive_group_type_m1[158];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[148];
+    u16 primitive_group_first_vertex_m1[158];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[460];
+    u8 primitive_group_vertex_count_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[536];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[6];
+    u16 primitive_group_first_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[6];
+    u8 primitive_group_count_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[41];
+    u8 primitive_group_type_m2[47];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[41];
+    u16 primitive_group_first_vertex_m2[47];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[41];
+    u8 primitive_group_vertex_count_m2[47];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[246];
+    u16 primitive_vertices_m2[314];
 #endif
-    NDSNativeEpoch epochs[6];
+    NDSNativeEpoch epochs[10];
 } NDSNativeKirbyHat3HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_3_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -9107,64 +9107,64 @@ typedef struct NDSNativeKirbyHat3HighImage
 #define NDS_NATIVE_KIRBY_HAT_3_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_3_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_3_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_STATE_DELTAS_COUNT 18u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_STATE_SEQUENCE_COUNT 16u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_VERTEX_ACTIONS_COUNT 17u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_EPOCH_DIRECT_POLICY_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_DENSE_VERTICES_COUNT 112u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_DENSE_NORMALS_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_STATE_DELTAS_COUNT 49u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_STATE_SEQUENCE_COUNT 41u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_VERTEX_ACTIONS_COUNT 38u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_EPOCH_DIRECT_POLICY_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_DENSE_VERTICES_COUNT 158u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_DENSE_NORMALS_COUNT 158u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PREPARED_DENSE_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PREPARED_DENSE_COUNT 158u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_ACTION_DENSE_SPANS_COUNT 17u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_ACTION_DENSE_SPANS_COUNT 38u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_DENSE_COLOR_SOURCE_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_DENSE_COLOR_SOURCE_COUNT 158u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PACKED_CORNERS_COUNT 492u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PACKED_CORNERS_COUNT 576u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUN_FIRST_UNIQUE_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUN_UNIQUE_COUNT_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUN_UNIQUE_DENSE_COUNT 134u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_TRIANGLES_COUNT 164u
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUNS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUN_FIRST_UNIQUE_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUN_UNIQUE_COUNT_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUN_UNIQUE_DENSE_COUNT 180u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_TRIANGLES_COUNT 192u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_RUNS_COUNT 10u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 6u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 148u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 148u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 158u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 148u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 158u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_VERTICES_M1_COUNT 460u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_VERTICES_M1_COUNT 536u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 41u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 47u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 41u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 47u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 41u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 47u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_VERTICES_M2_COUNT 246u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_PRIMITIVE_VERTICES_M2_COUNT 314u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_3_HIGH_EPOCHS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_3_HIGH_EPOCHS_COUNT 10u
 #define NDS_NATIVE_KIRBY_HAT_3_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat3HighImage))
 
 /* Kirby copy modelpart 3, low detail. */
@@ -9181,64 +9181,64 @@ typedef struct NDSNativeKirbyHat3LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[18];
-    u8 state_sequence[16];
-    NDSNativeVertexAction vertex_actions[9];
-    u8 epoch_direct_policy[4];
-    NDSNativeDenseVertex dense_vertices[82];
-    u32 dense_normals[82];
+    NDSNativeStateDelta state_deltas[49];
+    u8 state_sequence[41];
+    NDSNativeVertexAction vertex_actions[29];
+    u8 epoch_direct_policy[8];
+    NDSNativeDenseVertex dense_vertices[120];
+    u32 dense_normals[120];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[82];
+    NDSNativePreparedDenseVertex prepared_dense[120];
 #endif
-    u16 action_dense_spans[9];
+    u16 action_dense_spans[29];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[82];
+    u16 dense_color_source[120];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[330];
+    u16 packed_corners[402];
 #endif
-    u16 run_first_unique[4];
-    u8 run_unique_count[4];
-    u16 run_unique_dense[87];
-    u16 triangles[110];
-    NDSNativeRun runs[4];
+    u16 run_first_unique[8];
+    u8 run_unique_count[8];
+    u16 run_unique_dense[125];
+    u16 triangles[134];
+    NDSNativeRun runs[8];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[4];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[4];
+    u16 primitive_group_first_m1[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[100];
+    u8 primitive_group_count_m1[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[100];
+    u8 primitive_group_type_m1[110];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[100];
+    u16 primitive_group_first_vertex_m1[110];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[310];
+    u8 primitive_group_vertex_count_m1[110];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[382];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[4];
+    u16 primitive_group_first_m2[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[4];
+    u8 primitive_group_count_m2[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[23];
+    u8 primitive_group_type_m2[29];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[23];
+    u16 primitive_group_first_vertex_m2[29];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[23];
+    u8 primitive_group_vertex_count_m2[29];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[156];
+    u16 primitive_vertices_m2[220];
 #endif
-    NDSNativeEpoch epochs[4];
+    NDSNativeEpoch epochs[8];
 } NDSNativeKirbyHat3LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_3_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -9251,64 +9251,64 @@ typedef struct NDSNativeKirbyHat3LowImage
 #define NDS_NATIVE_KIRBY_HAT_3_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_3_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_3_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_STATE_DELTAS_COUNT 18u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_STATE_SEQUENCE_COUNT 16u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_VERTEX_ACTIONS_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_EPOCH_DIRECT_POLICY_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_DENSE_VERTICES_COUNT 82u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_DENSE_NORMALS_COUNT 82u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_STATE_DELTAS_COUNT 49u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_STATE_SEQUENCE_COUNT 41u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_VERTEX_ACTIONS_COUNT 29u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_EPOCH_DIRECT_POLICY_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_DENSE_VERTICES_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_DENSE_NORMALS_COUNT 120u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PREPARED_DENSE_COUNT 82u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PREPARED_DENSE_COUNT 120u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_ACTION_DENSE_SPANS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_ACTION_DENSE_SPANS_COUNT 29u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_DENSE_COLOR_SOURCE_COUNT 82u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_DENSE_COLOR_SOURCE_COUNT 120u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PACKED_CORNERS_COUNT 330u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PACKED_CORNERS_COUNT 402u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUN_FIRST_UNIQUE_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUN_UNIQUE_COUNT_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUN_UNIQUE_DENSE_COUNT 87u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_TRIANGLES_COUNT 110u
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUNS_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUN_FIRST_UNIQUE_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUN_UNIQUE_COUNT_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUN_UNIQUE_DENSE_COUNT 125u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_TRIANGLES_COUNT 134u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_RUNS_COUNT 8u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 4u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 100u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 100u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 110u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 100u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 110u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_VERTICES_M1_COUNT 310u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 110u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_VERTICES_M1_COUNT 382u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 23u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 29u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 23u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 29u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 23u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 29u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_VERTICES_M2_COUNT 156u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_PRIMITIVE_VERTICES_M2_COUNT 220u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_3_LOW_EPOCHS_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_3_LOW_EPOCHS_COUNT 8u
 #define NDS_NATIVE_KIRBY_HAT_3_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat3LowImage))
 
 /* Kirby copy modelpart 4, high detail. */
@@ -9325,64 +9325,64 @@ typedef struct NDSNativeKirbyHat4HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[38];
-    u8 state_sequence[35];
-    NDSNativeVertexAction vertex_actions[15];
-    u8 epoch_direct_policy[6];
-    NDSNativeDenseVertex dense_vertices[120];
-    u32 dense_normals[120];
+    NDSNativeStateDelta state_deltas[80];
+    u8 state_sequence[78];
+    NDSNativeVertexAction vertex_actions[36];
+    u8 epoch_direct_policy[10];
+    NDSNativeDenseVertex dense_vertices[166];
+    u32 dense_normals[166];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[120];
+    NDSNativePreparedDenseVertex prepared_dense[166];
 #endif
-    u16 action_dense_spans[15];
+    u16 action_dense_spans[36];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[120];
+    u16 dense_color_source[166];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[480];
+    u16 packed_corners[564];
 #endif
-    u16 run_first_unique[6];
-    u8 run_unique_count[6];
-    u16 run_unique_dense[145];
-    u16 triangles[160];
-    NDSNativeRun runs[6];
+    u16 run_first_unique[10];
+    u8 run_unique_count[10];
+    u16 run_unique_dense[191];
+    u16 triangles[188];
+    NDSNativeRun runs[10];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[6];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[6];
+    u16 primitive_group_first_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[139];
+    u8 primitive_group_count_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[139];
+    u8 primitive_group_type_m1[149];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[139];
+    u16 primitive_group_first_vertex_m1[149];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[438];
+    u8 primitive_group_vertex_count_m1[149];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[514];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[6];
+    u16 primitive_group_first_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[6];
+    u8 primitive_group_count_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[48];
+    u8 primitive_group_type_m2[54];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[48];
+    u16 primitive_group_first_vertex_m2[54];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[48];
+    u8 primitive_group_vertex_count_m2[54];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[256];
+    u16 primitive_vertices_m2[324];
 #endif
-    NDSNativeEpoch epochs[6];
+    NDSNativeEpoch epochs[10];
 } NDSNativeKirbyHat4HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_4_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -9395,64 +9395,64 @@ typedef struct NDSNativeKirbyHat4HighImage
 #define NDS_NATIVE_KIRBY_HAT_4_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_4_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_4_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_STATE_DELTAS_COUNT 38u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_STATE_SEQUENCE_COUNT 35u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_VERTEX_ACTIONS_COUNT 15u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_EPOCH_DIRECT_POLICY_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_DENSE_VERTICES_COUNT 120u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_DENSE_NORMALS_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_STATE_DELTAS_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_STATE_SEQUENCE_COUNT 78u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_VERTEX_ACTIONS_COUNT 36u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_EPOCH_DIRECT_POLICY_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_DENSE_VERTICES_COUNT 166u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_DENSE_NORMALS_COUNT 166u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PREPARED_DENSE_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PREPARED_DENSE_COUNT 166u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_ACTION_DENSE_SPANS_COUNT 15u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_ACTION_DENSE_SPANS_COUNT 36u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_DENSE_COLOR_SOURCE_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_DENSE_COLOR_SOURCE_COUNT 166u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PACKED_CORNERS_COUNT 480u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PACKED_CORNERS_COUNT 564u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUN_FIRST_UNIQUE_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUN_UNIQUE_COUNT_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUN_UNIQUE_DENSE_COUNT 145u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_TRIANGLES_COUNT 160u
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUNS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUN_FIRST_UNIQUE_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUN_UNIQUE_COUNT_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUN_UNIQUE_DENSE_COUNT 191u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_TRIANGLES_COUNT 188u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_RUNS_COUNT 10u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 6u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 139u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 139u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 149u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 139u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 149u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_VERTICES_M1_COUNT 438u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 149u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_VERTICES_M1_COUNT 514u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 48u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 54u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 48u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 54u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 48u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 54u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_VERTICES_M2_COUNT 256u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_PRIMITIVE_VERTICES_M2_COUNT 324u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_4_HIGH_EPOCHS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_4_HIGH_EPOCHS_COUNT 10u
 #define NDS_NATIVE_KIRBY_HAT_4_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat4HighImage))
 
 /* Kirby copy modelpart 4, low detail. */
@@ -9469,64 +9469,64 @@ typedef struct NDSNativeKirbyHat4LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[38];
-    u8 state_sequence[36];
-    NDSNativeVertexAction vertex_actions[6];
-    u8 epoch_direct_policy[5];
-    NDSNativeDenseVertex dense_vertices[86];
-    u32 dense_normals[86];
+    NDSNativeStateDelta state_deltas[82];
+    u8 state_sequence[80];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[9];
+    NDSNativeDenseVertex dense_vertices[124];
+    u32 dense_normals[124];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[86];
+    NDSNativePreparedDenseVertex prepared_dense[124];
 #endif
-    u16 action_dense_spans[6];
+    u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[86];
+    u16 dense_color_source[124];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[324];
+    u16 packed_corners[396];
 #endif
-    u16 run_first_unique[5];
-    u8 run_unique_count[5];
-    u16 run_unique_dense[87];
-    u16 triangles[108];
-    NDSNativeRun runs[5];
+    u16 run_first_unique[9];
+    u8 run_unique_count[9];
+    u16 run_unique_dense[125];
+    u16 triangles[132];
+    NDSNativeRun runs[9];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[5];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[5];
+    u16 primitive_group_first_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[94];
+    u8 primitive_group_count_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[94];
+    u8 primitive_group_type_m1[104];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[94];
+    u16 primitive_group_first_vertex_m1[104];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[296];
+    u8 primitive_group_vertex_count_m1[104];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[368];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[5];
+    u16 primitive_group_first_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[5];
+    u8 primitive_group_count_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[28];
+    u8 primitive_group_type_m2[34];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[28];
+    u16 primitive_group_first_vertex_m2[34];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[28];
+    u8 primitive_group_vertex_count_m2[34];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[164];
+    u16 primitive_vertices_m2[228];
 #endif
-    NDSNativeEpoch epochs[5];
+    NDSNativeEpoch epochs[9];
 } NDSNativeKirbyHat4LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_4_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -9539,64 +9539,64 @@ typedef struct NDSNativeKirbyHat4LowImage
 #define NDS_NATIVE_KIRBY_HAT_4_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_4_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_4_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_STATE_DELTAS_COUNT 38u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_STATE_SEQUENCE_COUNT 36u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_VERTEX_ACTIONS_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_EPOCH_DIRECT_POLICY_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_DENSE_VERTICES_COUNT 86u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_DENSE_NORMALS_COUNT 86u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_STATE_DELTAS_COUNT 82u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_STATE_SEQUENCE_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_EPOCH_DIRECT_POLICY_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_DENSE_VERTICES_COUNT 124u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_DENSE_NORMALS_COUNT 124u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PREPARED_DENSE_COUNT 86u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PREPARED_DENSE_COUNT 124u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_ACTION_DENSE_SPANS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_DENSE_COLOR_SOURCE_COUNT 86u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_DENSE_COLOR_SOURCE_COUNT 124u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PACKED_CORNERS_COUNT 324u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PACKED_CORNERS_COUNT 396u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUN_FIRST_UNIQUE_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUN_UNIQUE_COUNT_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUN_UNIQUE_DENSE_COUNT 87u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_TRIANGLES_COUNT 108u
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUNS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUN_FIRST_UNIQUE_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUN_UNIQUE_COUNT_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUN_UNIQUE_DENSE_COUNT 125u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_TRIANGLES_COUNT 132u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_RUNS_COUNT 9u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 5u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 104u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 104u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_VERTICES_M1_COUNT 296u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 104u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_VERTICES_M1_COUNT 368u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 28u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 34u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 28u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 34u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 28u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 34u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_VERTICES_M2_COUNT 164u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_PRIMITIVE_VERTICES_M2_COUNT 228u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_4_LOW_EPOCHS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_4_LOW_EPOCHS_COUNT 9u
 #define NDS_NATIVE_KIRBY_HAT_4_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat4LowImage))
 
 /* Kirby copy modelpart 5, high detail. */
@@ -9613,64 +9613,64 @@ typedef struct NDSNativeKirbyHat5HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[39];
-    u8 state_sequence[44];
-    NDSNativeVertexAction vertex_actions[16];
-    u8 epoch_direct_policy[9];
-    NDSNativeDenseVertex dense_vertices[123];
-    u32 dense_normals[123];
+    NDSNativeStateDelta state_deltas[89];
+    u8 state_sequence[97];
+    NDSNativeVertexAction vertex_actions[37];
+    u8 epoch_direct_policy[13];
+    NDSNativeDenseVertex dense_vertices[169];
+    u32 dense_normals[169];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[123];
+    NDSNativePreparedDenseVertex prepared_dense[169];
 #endif
-    u16 action_dense_spans[16];
+    u16 action_dense_spans[37];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[123];
+    u16 dense_color_source[169];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[471];
+    u16 packed_corners[555];
 #endif
-    u16 run_first_unique[9];
-    u8 run_unique_count[9];
-    u16 run_unique_dense[136];
-    u16 triangles[157];
-    NDSNativeRun runs[9];
+    u16 run_first_unique[13];
+    u8 run_unique_count[13];
+    u16 run_unique_dense[182];
+    u16 triangles[185];
+    NDSNativeRun runs[13];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[9];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[9];
+    u16 primitive_group_first_m1[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[143];
+    u8 primitive_group_count_m1[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[143];
+    u8 primitive_group_type_m1[153];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[143];
+    u16 primitive_group_first_vertex_m1[153];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[443];
+    u8 primitive_group_vertex_count_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[519];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[9];
+    u16 primitive_group_first_m2[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[9];
+    u8 primitive_group_count_m2[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[44];
+    u8 primitive_group_type_m2[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[44];
+    u16 primitive_group_first_vertex_m2[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[44];
+    u8 primitive_group_vertex_count_m2[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[245];
+    u16 primitive_vertices_m2[313];
 #endif
-    NDSNativeEpoch epochs[9];
+    NDSNativeEpoch epochs[13];
 } NDSNativeKirbyHat5HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_5_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -9683,64 +9683,64 @@ typedef struct NDSNativeKirbyHat5HighImage
 #define NDS_NATIVE_KIRBY_HAT_5_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_5_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_5_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_STATE_DELTAS_COUNT 39u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_STATE_SEQUENCE_COUNT 44u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_VERTEX_ACTIONS_COUNT 16u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_EPOCH_DIRECT_POLICY_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_DENSE_VERTICES_COUNT 123u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_DENSE_NORMALS_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_STATE_DELTAS_COUNT 89u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_STATE_SEQUENCE_COUNT 97u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_VERTEX_ACTIONS_COUNT 37u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_EPOCH_DIRECT_POLICY_COUNT 13u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_DENSE_VERTICES_COUNT 169u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_DENSE_NORMALS_COUNT 169u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PREPARED_DENSE_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PREPARED_DENSE_COUNT 169u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_ACTION_DENSE_SPANS_COUNT 16u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_ACTION_DENSE_SPANS_COUNT 37u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_DENSE_COLOR_SOURCE_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_DENSE_COLOR_SOURCE_COUNT 169u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PACKED_CORNERS_COUNT 471u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PACKED_CORNERS_COUNT 555u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUN_FIRST_UNIQUE_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUN_UNIQUE_COUNT_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUN_UNIQUE_DENSE_COUNT 136u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_TRIANGLES_COUNT 157u
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUNS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUN_FIRST_UNIQUE_COUNT 13u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUN_UNIQUE_COUNT_COUNT 13u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUN_UNIQUE_DENSE_COUNT 182u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_TRIANGLES_COUNT 185u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_RUNS_COUNT 13u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 143u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 143u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 153u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 143u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 153u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_VERTICES_M1_COUNT 443u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_VERTICES_M1_COUNT 519u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 44u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 44u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 44u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_VERTICES_M2_COUNT 245u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_PRIMITIVE_VERTICES_M2_COUNT 313u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_5_HIGH_EPOCHS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_5_HIGH_EPOCHS_COUNT 13u
 #define NDS_NATIVE_KIRBY_HAT_5_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat5HighImage))
 
 /* Kirby copy modelpart 5, low detail. */
@@ -9757,64 +9757,64 @@ typedef struct NDSNativeKirbyHat5LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[41];
-    u8 state_sequence[46];
-    NDSNativeVertexAction vertex_actions[6];
-    u8 epoch_direct_policy[6];
-    NDSNativeDenseVertex dense_vertices[87];
-    u32 dense_normals[87];
+    NDSNativeStateDelta state_deltas[92];
+    u8 state_sequence[101];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[10];
+    NDSNativeDenseVertex dense_vertices[125];
+    u32 dense_normals[125];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[87];
+    NDSNativePreparedDenseVertex prepared_dense[125];
 #endif
-    u16 action_dense_spans[6];
+    u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[87];
+    u16 dense_color_source[125];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[297];
+    u16 packed_corners[369];
 #endif
-    u16 run_first_unique[6];
-    u8 run_unique_count[6];
-    u16 run_unique_dense[87];
-    u16 triangles[99];
-    NDSNativeRun runs[6];
+    u16 run_first_unique[10];
+    u8 run_unique_count[10];
+    u16 run_unique_dense[125];
+    u16 triangles[123];
+    NDSNativeRun runs[10];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[6];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[6];
+    u16 primitive_group_first_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[94];
+    u8 primitive_group_count_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[94];
+    u8 primitive_group_type_m1[104];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[94];
+    u16 primitive_group_first_vertex_m1[104];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[287];
+    u8 primitive_group_vertex_count_m1[104];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[359];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[6];
+    u16 primitive_group_first_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[6];
+    u8 primitive_group_count_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[24];
+    u8 primitive_group_type_m2[30];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[24];
+    u16 primitive_group_first_vertex_m2[30];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[24];
+    u8 primitive_group_vertex_count_m2[30];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[147];
+    u16 primitive_vertices_m2[211];
 #endif
-    NDSNativeEpoch epochs[6];
+    NDSNativeEpoch epochs[10];
 } NDSNativeKirbyHat5LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_5_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -9827,64 +9827,64 @@ typedef struct NDSNativeKirbyHat5LowImage
 #define NDS_NATIVE_KIRBY_HAT_5_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_5_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_5_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_STATE_DELTAS_COUNT 41u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_STATE_SEQUENCE_COUNT 46u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_VERTEX_ACTIONS_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_EPOCH_DIRECT_POLICY_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_DENSE_VERTICES_COUNT 87u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_DENSE_NORMALS_COUNT 87u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_STATE_DELTAS_COUNT 92u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_STATE_SEQUENCE_COUNT 101u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_EPOCH_DIRECT_POLICY_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_DENSE_VERTICES_COUNT 125u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_DENSE_NORMALS_COUNT 125u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PREPARED_DENSE_COUNT 87u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PREPARED_DENSE_COUNT 125u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_ACTION_DENSE_SPANS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_DENSE_COLOR_SOURCE_COUNT 87u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_DENSE_COLOR_SOURCE_COUNT 125u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PACKED_CORNERS_COUNT 297u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PACKED_CORNERS_COUNT 369u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUN_FIRST_UNIQUE_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUN_UNIQUE_COUNT_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUN_UNIQUE_DENSE_COUNT 87u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_TRIANGLES_COUNT 99u
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUNS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUN_FIRST_UNIQUE_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUN_UNIQUE_COUNT_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUN_UNIQUE_DENSE_COUNT 125u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_TRIANGLES_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_RUNS_COUNT 10u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 6u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 104u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 104u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_VERTICES_M1_COUNT 287u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 104u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_VERTICES_M1_COUNT 359u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 24u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 30u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 24u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 30u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 24u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 30u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_VERTICES_M2_COUNT 147u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_PRIMITIVE_VERTICES_M2_COUNT 211u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_5_LOW_EPOCHS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_5_LOW_EPOCHS_COUNT 10u
 #define NDS_NATIVE_KIRBY_HAT_5_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat5LowImage))
 
 /* Kirby copy modelpart 6, high detail. */
@@ -9901,64 +9901,64 @@ typedef struct NDSNativeKirbyHat6HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[53];
-    u8 state_sequence[59];
-    NDSNativeVertexAction vertex_actions[7];
-    u8 epoch_direct_policy[7];
-    NDSNativeDenseVertex dense_vertices[123];
-    u32 dense_normals[123];
+    NDSNativeStateDelta state_deltas[111];
+    u8 state_sequence[126];
+    NDSNativeVertexAction vertex_actions[28];
+    u8 epoch_direct_policy[11];
+    NDSNativeDenseVertex dense_vertices[169];
+    u32 dense_normals[169];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[123];
+    NDSNativePreparedDenseVertex prepared_dense[169];
 #endif
-    u16 action_dense_spans[7];
+    u16 action_dense_spans[28];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[123];
+    u16 dense_color_source[169];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[495];
+    u16 packed_corners[579];
 #endif
-    u16 run_first_unique[7];
-    u8 run_unique_count[7];
-    u16 run_unique_dense[123];
-    u16 triangles[165];
-    NDSNativeRun runs[7];
+    u16 run_first_unique[11];
+    u8 run_unique_count[11];
+    u16 run_unique_dense[169];
+    u16 triangles[193];
+    NDSNativeRun runs[11];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[7];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[7];
+    u16 primitive_group_first_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[142];
+    u8 primitive_group_count_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[142];
+    u8 primitive_group_type_m1[152];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[142];
+    u16 primitive_group_first_vertex_m1[152];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[449];
+    u8 primitive_group_vertex_count_m1[152];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[525];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[7];
+    u16 primitive_group_first_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[7];
+    u8 primitive_group_count_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[35];
+    u8 primitive_group_type_m2[41];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[35];
+    u16 primitive_group_first_vertex_m2[41];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[35];
+    u8 primitive_group_vertex_count_m2[41];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[235];
+    u16 primitive_vertices_m2[303];
 #endif
-    NDSNativeEpoch epochs[7];
+    NDSNativeEpoch epochs[11];
 } NDSNativeKirbyHat6HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_6_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -9971,64 +9971,64 @@ typedef struct NDSNativeKirbyHat6HighImage
 #define NDS_NATIVE_KIRBY_HAT_6_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_6_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_6_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_STATE_DELTAS_COUNT 53u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_STATE_SEQUENCE_COUNT 59u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_VERTEX_ACTIONS_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_EPOCH_DIRECT_POLICY_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_DENSE_VERTICES_COUNT 123u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_DENSE_NORMALS_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_STATE_DELTAS_COUNT 111u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_STATE_SEQUENCE_COUNT 126u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_VERTEX_ACTIONS_COUNT 28u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_EPOCH_DIRECT_POLICY_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_DENSE_VERTICES_COUNT 169u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_DENSE_NORMALS_COUNT 169u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PREPARED_DENSE_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PREPARED_DENSE_COUNT 169u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_ACTION_DENSE_SPANS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_ACTION_DENSE_SPANS_COUNT 28u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_DENSE_COLOR_SOURCE_COUNT 123u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_DENSE_COLOR_SOURCE_COUNT 169u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PACKED_CORNERS_COUNT 495u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PACKED_CORNERS_COUNT 579u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUN_FIRST_UNIQUE_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUN_UNIQUE_COUNT_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUN_UNIQUE_DENSE_COUNT 123u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_TRIANGLES_COUNT 165u
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUNS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUN_FIRST_UNIQUE_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUN_UNIQUE_COUNT_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUN_UNIQUE_DENSE_COUNT 169u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_TRIANGLES_COUNT 193u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_RUNS_COUNT 11u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 7u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 142u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 142u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 152u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 142u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 152u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_VERTICES_M1_COUNT 449u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 152u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_VERTICES_M1_COUNT 525u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 35u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 41u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 35u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 41u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 35u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 41u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_VERTICES_M2_COUNT 235u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_PRIMITIVE_VERTICES_M2_COUNT 303u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_6_HIGH_EPOCHS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_HIGH_EPOCHS_COUNT 11u
 #define NDS_NATIVE_KIRBY_HAT_6_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat6HighImage))
 
 /* Kirby copy modelpart 6, low detail. */
@@ -10045,64 +10045,64 @@ typedef struct NDSNativeKirbyHat6LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[53];
-    u8 state_sequence[60];
-    NDSNativeVertexAction vertex_actions[7];
-    u8 epoch_direct_policy[7];
-    NDSNativeDenseVertex dense_vertices[88];
-    u32 dense_normals[88];
+    NDSNativeStateDelta state_deltas[112];
+    u8 state_sequence[128];
+    NDSNativeVertexAction vertex_actions[27];
+    u8 epoch_direct_policy[11];
+    NDSNativeDenseVertex dense_vertices[126];
+    u32 dense_normals[126];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[88];
+    NDSNativePreparedDenseVertex prepared_dense[126];
 #endif
-    u16 action_dense_spans[7];
+    u16 action_dense_spans[27];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[88];
+    u16 dense_color_source[126];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[318];
+    u16 packed_corners[390];
 #endif
-    u16 run_first_unique[7];
-    u8 run_unique_count[7];
-    u16 run_unique_dense[88];
-    u16 triangles[106];
-    NDSNativeRun runs[7];
+    u16 run_first_unique[11];
+    u8 run_unique_count[11];
+    u16 run_unique_dense[126];
+    u16 triangles[130];
+    NDSNativeRun runs[11];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[7];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[7];
+    u16 primitive_group_first_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[94];
+    u8 primitive_group_count_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[94];
+    u8 primitive_group_type_m1[104];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[94];
+    u16 primitive_group_first_vertex_m1[104];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[294];
+    u8 primitive_group_vertex_count_m1[104];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[366];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[7];
+    u16 primitive_group_first_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[7];
+    u8 primitive_group_count_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[27];
+    u8 primitive_group_type_m2[33];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[27];
+    u16 primitive_group_first_vertex_m2[33];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[27];
+    u8 primitive_group_vertex_count_m2[33];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[160];
+    u16 primitive_vertices_m2[224];
 #endif
-    NDSNativeEpoch epochs[7];
+    NDSNativeEpoch epochs[11];
 } NDSNativeKirbyHat6LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_6_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -10115,64 +10115,64 @@ typedef struct NDSNativeKirbyHat6LowImage
 #define NDS_NATIVE_KIRBY_HAT_6_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_6_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_6_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_STATE_DELTAS_COUNT 53u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_STATE_SEQUENCE_COUNT 60u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_VERTEX_ACTIONS_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_EPOCH_DIRECT_POLICY_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_DENSE_VERTICES_COUNT 88u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_DENSE_NORMALS_COUNT 88u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_STATE_DELTAS_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_STATE_SEQUENCE_COUNT 128u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_VERTEX_ACTIONS_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_EPOCH_DIRECT_POLICY_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_DENSE_VERTICES_COUNT 126u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_DENSE_NORMALS_COUNT 126u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PREPARED_DENSE_COUNT 88u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PREPARED_DENSE_COUNT 126u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_ACTION_DENSE_SPANS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_ACTION_DENSE_SPANS_COUNT 27u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_DENSE_COLOR_SOURCE_COUNT 88u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_DENSE_COLOR_SOURCE_COUNT 126u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PACKED_CORNERS_COUNT 318u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PACKED_CORNERS_COUNT 390u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUN_FIRST_UNIQUE_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUN_UNIQUE_COUNT_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUN_UNIQUE_DENSE_COUNT 88u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_TRIANGLES_COUNT 106u
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUNS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUN_FIRST_UNIQUE_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUN_UNIQUE_COUNT_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUN_UNIQUE_DENSE_COUNT 126u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_TRIANGLES_COUNT 130u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_RUNS_COUNT 11u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 7u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 104u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 104u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_VERTICES_M1_COUNT 294u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 104u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_VERTICES_M1_COUNT 366u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 33u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 33u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 33u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_VERTICES_M2_COUNT 160u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_PRIMITIVE_VERTICES_M2_COUNT 224u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_6_LOW_EPOCHS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_6_LOW_EPOCHS_COUNT 11u
 #define NDS_NATIVE_KIRBY_HAT_6_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat6LowImage))
 
 /* Kirby copy modelpart 7, high detail. */
@@ -10189,64 +10189,64 @@ typedef struct NDSNativeKirbyHat7HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[25];
-    u8 state_sequence[24];
-    NDSNativeVertexAction vertex_actions[16];
-    u8 epoch_direct_policy[6];
-    NDSNativeDenseVertex dense_vertices[120];
-    u32 dense_normals[120];
+    NDSNativeStateDelta state_deltas[63];
+    u8 state_sequence[57];
+    NDSNativeVertexAction vertex_actions[37];
+    u8 epoch_direct_policy[10];
+    NDSNativeDenseVertex dense_vertices[166];
+    u32 dense_normals[166];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[120];
+    NDSNativePreparedDenseVertex prepared_dense[166];
 #endif
-    u16 action_dense_spans[16];
+    u16 action_dense_spans[37];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[120];
+    u16 dense_color_source[166];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[459];
+    u16 packed_corners[543];
 #endif
-    u16 run_first_unique[6];
-    u8 run_unique_count[6];
-    u16 run_unique_dense[129];
-    u16 triangles[153];
-    NDSNativeRun runs[6];
+    u16 run_first_unique[10];
+    u8 run_unique_count[10];
+    u16 run_unique_dense[175];
+    u16 triangles[181];
+    NDSNativeRun runs[10];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[6];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[6];
+    u16 primitive_group_first_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[137];
+    u8 primitive_group_count_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[137];
+    u8 primitive_group_type_m1[147];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[137];
+    u16 primitive_group_first_vertex_m1[147];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[427];
+    u8 primitive_group_vertex_count_m1[147];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[503];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[6];
+    u16 primitive_group_first_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[6];
+    u8 primitive_group_count_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[33];
+    u8 primitive_group_type_m2[39];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[33];
+    u16 primitive_group_first_vertex_m2[39];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[33];
+    u8 primitive_group_vertex_count_m2[39];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[219];
+    u16 primitive_vertices_m2[287];
 #endif
-    NDSNativeEpoch epochs[6];
+    NDSNativeEpoch epochs[10];
 } NDSNativeKirbyHat7HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_7_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -10259,64 +10259,64 @@ typedef struct NDSNativeKirbyHat7HighImage
 #define NDS_NATIVE_KIRBY_HAT_7_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_7_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_7_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_STATE_DELTAS_COUNT 25u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_STATE_SEQUENCE_COUNT 24u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_VERTEX_ACTIONS_COUNT 16u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_EPOCH_DIRECT_POLICY_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_DENSE_VERTICES_COUNT 120u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_DENSE_NORMALS_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_STATE_DELTAS_COUNT 63u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_STATE_SEQUENCE_COUNT 57u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_VERTEX_ACTIONS_COUNT 37u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_EPOCH_DIRECT_POLICY_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_DENSE_VERTICES_COUNT 166u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_DENSE_NORMALS_COUNT 166u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PREPARED_DENSE_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PREPARED_DENSE_COUNT 166u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_ACTION_DENSE_SPANS_COUNT 16u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_ACTION_DENSE_SPANS_COUNT 37u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_DENSE_COLOR_SOURCE_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_DENSE_COLOR_SOURCE_COUNT 166u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PACKED_CORNERS_COUNT 459u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PACKED_CORNERS_COUNT 543u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUN_FIRST_UNIQUE_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUN_UNIQUE_COUNT_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUN_UNIQUE_DENSE_COUNT 129u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_TRIANGLES_COUNT 153u
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUNS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUN_FIRST_UNIQUE_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUN_UNIQUE_COUNT_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUN_UNIQUE_DENSE_COUNT 175u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_TRIANGLES_COUNT 181u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_RUNS_COUNT 10u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 6u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 137u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 137u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 147u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 137u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 147u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_VERTICES_M1_COUNT 427u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 147u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_VERTICES_M1_COUNT 503u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 33u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 39u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 33u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 39u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 33u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 39u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_VERTICES_M2_COUNT 219u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_PRIMITIVE_VERTICES_M2_COUNT 287u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_7_HIGH_EPOCHS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_7_HIGH_EPOCHS_COUNT 10u
 #define NDS_NATIVE_KIRBY_HAT_7_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat7HighImage))
 
 /* Kirby copy modelpart 7, low detail. */
@@ -10333,64 +10333,64 @@ typedef struct NDSNativeKirbyHat7LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[25];
-    u8 state_sequence[24];
-    NDSNativeVertexAction vertex_actions[11];
-    u8 epoch_direct_policy[5];
-    NDSNativeDenseVertex dense_vertices[88];
-    u32 dense_normals[88];
+    NDSNativeStateDelta state_deltas[63];
+    u8 state_sequence[57];
+    NDSNativeVertexAction vertex_actions[31];
+    u8 epoch_direct_policy[9];
+    NDSNativeDenseVertex dense_vertices[126];
+    u32 dense_normals[126];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[88];
+    NDSNativePreparedDenseVertex prepared_dense[126];
 #endif
-    u16 action_dense_spans[11];
+    u16 action_dense_spans[31];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[88];
+    u16 dense_color_source[126];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[324];
+    u16 packed_corners[396];
 #endif
-    u16 run_first_unique[5];
-    u8 run_unique_count[5];
-    u16 run_unique_dense[88];
-    u16 triangles[108];
-    NDSNativeRun runs[5];
+    u16 run_first_unique[9];
+    u8 run_unique_count[9];
+    u16 run_unique_dense[126];
+    u16 triangles[132];
+    NDSNativeRun runs[9];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[5];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[5];
+    u16 primitive_group_first_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[98];
+    u8 primitive_group_count_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[98];
+    u8 primitive_group_type_m1[108];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[98];
+    u16 primitive_group_first_vertex_m1[108];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[304];
+    u8 primitive_group_vertex_count_m1[108];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[376];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[5];
+    u16 primitive_group_first_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[5];
+    u8 primitive_group_count_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[23];
+    u8 primitive_group_type_m2[29];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[23];
+    u16 primitive_group_first_vertex_m2[29];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[23];
+    u8 primitive_group_vertex_count_m2[29];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[154];
+    u16 primitive_vertices_m2[218];
 #endif
-    NDSNativeEpoch epochs[5];
+    NDSNativeEpoch epochs[9];
 } NDSNativeKirbyHat7LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_7_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -10403,64 +10403,64 @@ typedef struct NDSNativeKirbyHat7LowImage
 #define NDS_NATIVE_KIRBY_HAT_7_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_7_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_7_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_STATE_DELTAS_COUNT 25u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_STATE_SEQUENCE_COUNT 24u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_VERTEX_ACTIONS_COUNT 11u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_EPOCH_DIRECT_POLICY_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_DENSE_VERTICES_COUNT 88u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_DENSE_NORMALS_COUNT 88u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_STATE_DELTAS_COUNT 63u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_STATE_SEQUENCE_COUNT 57u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_VERTEX_ACTIONS_COUNT 31u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_EPOCH_DIRECT_POLICY_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_DENSE_VERTICES_COUNT 126u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_DENSE_NORMALS_COUNT 126u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PREPARED_DENSE_COUNT 88u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PREPARED_DENSE_COUNT 126u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_ACTION_DENSE_SPANS_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_ACTION_DENSE_SPANS_COUNT 31u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_DENSE_COLOR_SOURCE_COUNT 88u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_DENSE_COLOR_SOURCE_COUNT 126u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PACKED_CORNERS_COUNT 324u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PACKED_CORNERS_COUNT 396u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUN_FIRST_UNIQUE_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUN_UNIQUE_COUNT_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUN_UNIQUE_DENSE_COUNT 88u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_TRIANGLES_COUNT 108u
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUNS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUN_FIRST_UNIQUE_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUN_UNIQUE_COUNT_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUN_UNIQUE_DENSE_COUNT 126u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_TRIANGLES_COUNT 132u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_RUNS_COUNT 9u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 5u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 98u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 98u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 108u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 98u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 108u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_VERTICES_M1_COUNT 304u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 108u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_VERTICES_M1_COUNT 376u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 23u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 29u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 23u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 29u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 23u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 29u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_VERTICES_M2_COUNT 154u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_PRIMITIVE_VERTICES_M2_COUNT 218u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_7_LOW_EPOCHS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_7_LOW_EPOCHS_COUNT 9u
 #define NDS_NATIVE_KIRBY_HAT_7_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat7LowImage))
 
 /* Kirby copy modelpart 8, high detail. */
@@ -10477,64 +10477,64 @@ typedef struct NDSNativeKirbyHat8HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[4];
-    NDSNativeStateDelta state_deltas[46];
-    u8 state_sequence[57];
-    NDSNativeVertexAction vertex_actions[10];
-    u8 epoch_direct_policy[9];
-    NDSNativeDenseVertex dense_vertices[138];
-    u32 dense_normals[138];
+    NDSNativeStateDelta state_deltas[105];
+    u8 state_sequence[122];
+    NDSNativeVertexAction vertex_actions[31];
+    u8 epoch_direct_policy[13];
+    NDSNativeDenseVertex dense_vertices[184];
+    u32 dense_normals[184];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[138];
+    NDSNativePreparedDenseVertex prepared_dense[184];
 #endif
-    u16 action_dense_spans[10];
+    u16 action_dense_spans[31];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[138];
+    u16 dense_color_source[184];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[444];
+    u16 packed_corners[528];
 #endif
-    u16 run_first_unique[9];
-    u8 run_unique_count[9];
-    u16 run_unique_dense[144];
-    u16 triangles[148];
-    NDSNativeRun runs[9];
+    u16 run_first_unique[13];
+    u8 run_unique_count[13];
+    u16 run_unique_dense[190];
+    u16 triangles[176];
+    NDSNativeRun runs[13];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[9];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[9];
+    u16 primitive_group_first_m1[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[120];
+    u8 primitive_group_count_m1[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[120];
+    u8 primitive_group_type_m1[130];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[120];
+    u16 primitive_group_first_vertex_m1[130];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[388];
+    u8 primitive_group_vertex_count_m1[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[464];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[9];
+    u16 primitive_group_first_m2[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[9];
+    u8 primitive_group_count_m2[13];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[39];
+    u8 primitive_group_type_m2[45];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[39];
+    u16 primitive_group_first_vertex_m2[45];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[39];
+    u8 primitive_group_vertex_count_m2[45];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[226];
+    u16 primitive_vertices_m2[294];
 #endif
-    NDSNativeEpoch epochs[9];
+    NDSNativeEpoch epochs[13];
 } NDSNativeKirbyHat8HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_8_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -10547,64 +10547,64 @@ typedef struct NDSNativeKirbyHat8HighImage
 #define NDS_NATIVE_KIRBY_HAT_8_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_8_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_8_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_STATE_DELTAS_COUNT 46u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_STATE_SEQUENCE_COUNT 57u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_VERTEX_ACTIONS_COUNT 10u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_EPOCH_DIRECT_POLICY_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_DENSE_VERTICES_COUNT 138u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_DENSE_NORMALS_COUNT 138u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_STATE_DELTAS_COUNT 105u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_STATE_SEQUENCE_COUNT 122u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_VERTEX_ACTIONS_COUNT 31u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_EPOCH_DIRECT_POLICY_COUNT 13u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_DENSE_VERTICES_COUNT 184u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_DENSE_NORMALS_COUNT 184u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PREPARED_DENSE_COUNT 138u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PREPARED_DENSE_COUNT 184u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_ACTION_DENSE_SPANS_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_ACTION_DENSE_SPANS_COUNT 31u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_DENSE_COLOR_SOURCE_COUNT 138u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_DENSE_COLOR_SOURCE_COUNT 184u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PACKED_CORNERS_COUNT 444u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PACKED_CORNERS_COUNT 528u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUN_FIRST_UNIQUE_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUN_UNIQUE_COUNT_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUN_UNIQUE_DENSE_COUNT 144u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_TRIANGLES_COUNT 148u
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUNS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUN_FIRST_UNIQUE_COUNT 13u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUN_UNIQUE_COUNT_COUNT 13u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUN_UNIQUE_DENSE_COUNT 190u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_TRIANGLES_COUNT 176u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_RUNS_COUNT 13u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 130u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 120u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 130u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_VERTICES_M1_COUNT 388u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_VERTICES_M1_COUNT 464u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 13u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 39u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 45u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 39u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 45u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 39u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 45u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_VERTICES_M2_COUNT 226u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_PRIMITIVE_VERTICES_M2_COUNT 294u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_8_HIGH_EPOCHS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_8_HIGH_EPOCHS_COUNT 13u
 #define NDS_NATIVE_KIRBY_HAT_8_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat8HighImage))
 
 /* Kirby copy modelpart 8, low detail. */
@@ -10621,64 +10621,64 @@ typedef struct NDSNativeKirbyHat8LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[4];
-    NDSNativeStateDelta state_deltas[48];
-    u8 state_sequence[59];
-    NDSNativeVertexAction vertex_actions[9];
-    u8 epoch_direct_policy[8];
-    NDSNativeDenseVertex dense_vertices[118];
-    u32 dense_normals[118];
+    NDSNativeStateDelta state_deltas[108];
+    u8 state_sequence[126];
+    NDSNativeVertexAction vertex_actions[29];
+    u8 epoch_direct_policy[12];
+    NDSNativeDenseVertex dense_vertices[156];
+    u32 dense_normals[156];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[118];
+    NDSNativePreparedDenseVertex prepared_dense[156];
 #endif
-    u16 action_dense_spans[9];
+    u16 action_dense_spans[29];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[118];
+    u16 dense_color_source[156];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[396];
+    u16 packed_corners[468];
 #endif
-    u16 run_first_unique[8];
-    u8 run_unique_count[8];
-    u16 run_unique_dense[124];
-    u16 triangles[132];
-    NDSNativeRun runs[8];
+    u16 run_first_unique[12];
+    u8 run_unique_count[12];
+    u16 run_unique_dense[162];
+    u16 triangles[156];
+    NDSNativeRun runs[12];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[8];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[8];
+    u16 primitive_group_first_m1[12];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[112];
+    u8 primitive_group_count_m1[12];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[112];
+    u8 primitive_group_type_m1[122];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[112];
+    u16 primitive_group_first_vertex_m1[122];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[356];
+    u8 primitive_group_vertex_count_m1[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[428];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[8];
+    u16 primitive_group_first_m2[12];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[8];
+    u8 primitive_group_count_m2[12];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[35];
+    u8 primitive_group_type_m2[41];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[35];
+    u16 primitive_group_first_vertex_m2[41];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[35];
+    u8 primitive_group_vertex_count_m2[41];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[202];
+    u16 primitive_vertices_m2[266];
 #endif
-    NDSNativeEpoch epochs[8];
+    NDSNativeEpoch epochs[12];
 } NDSNativeKirbyHat8LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_8_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -10691,64 +10691,64 @@ typedef struct NDSNativeKirbyHat8LowImage
 #define NDS_NATIVE_KIRBY_HAT_8_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_8_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_8_LOW_LIGHT_PREAMBLE_WORDS_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_STATE_DELTAS_COUNT 48u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_STATE_SEQUENCE_COUNT 59u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_VERTEX_ACTIONS_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_EPOCH_DIRECT_POLICY_COUNT 8u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_DENSE_VERTICES_COUNT 118u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_DENSE_NORMALS_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_STATE_DELTAS_COUNT 108u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_STATE_SEQUENCE_COUNT 126u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_VERTEX_ACTIONS_COUNT 29u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_EPOCH_DIRECT_POLICY_COUNT 12u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_DENSE_VERTICES_COUNT 156u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_DENSE_NORMALS_COUNT 156u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PREPARED_DENSE_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PREPARED_DENSE_COUNT 156u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_ACTION_DENSE_SPANS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_ACTION_DENSE_SPANS_COUNT 29u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_DENSE_COLOR_SOURCE_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_DENSE_COLOR_SOURCE_COUNT 156u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PACKED_CORNERS_COUNT 396u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PACKED_CORNERS_COUNT 468u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUN_FIRST_UNIQUE_COUNT 8u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUN_UNIQUE_COUNT_COUNT 8u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUN_UNIQUE_DENSE_COUNT 124u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_TRIANGLES_COUNT 132u
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUNS_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUN_FIRST_UNIQUE_COUNT 12u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUN_UNIQUE_COUNT_COUNT 12u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUN_UNIQUE_DENSE_COUNT 162u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_TRIANGLES_COUNT 156u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_RUNS_COUNT 12u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 8u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 12u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 12u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 122u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 112u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 122u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_VERTICES_M1_COUNT 356u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_VERTICES_M1_COUNT 428u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 12u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 12u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 35u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 41u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 35u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 41u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 35u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 41u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_VERTICES_M2_COUNT 202u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_PRIMITIVE_VERTICES_M2_COUNT 266u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_8_LOW_EPOCHS_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_8_LOW_EPOCHS_COUNT 12u
 #define NDS_NATIVE_KIRBY_HAT_8_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat8LowImage))
 
 /* Kirby copy modelpart 9, high detail. */
@@ -10765,64 +10765,64 @@ typedef struct NDSNativeKirbyHat9HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[48];
-    u8 state_sequence[60];
-    NDSNativeVertexAction vertex_actions[9];
-    u8 epoch_direct_policy[7];
-    NDSNativeDenseVertex dense_vertices[132];
-    u32 dense_normals[132];
+    NDSNativeStateDelta state_deltas[107];
+    u8 state_sequence[129];
+    NDSNativeVertexAction vertex_actions[30];
+    u8 epoch_direct_policy[11];
+    NDSNativeDenseVertex dense_vertices[178];
+    u32 dense_normals[178];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[132];
+    NDSNativePreparedDenseVertex prepared_dense[178];
 #endif
-    u16 action_dense_spans[9];
+    u16 action_dense_spans[30];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[132];
+    u16 dense_color_source[178];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[492];
+    u16 packed_corners[576];
 #endif
-    u16 run_first_unique[7];
-    u8 run_unique_count[7];
-    u16 run_unique_dense[132];
-    u16 triangles[164];
-    NDSNativeRun runs[7];
+    u16 run_first_unique[11];
+    u8 run_unique_count[11];
+    u16 run_unique_dense[178];
+    u16 triangles[192];
+    NDSNativeRun runs[11];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[7];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[7];
+    u16 primitive_group_first_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[140];
+    u8 primitive_group_count_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[140];
+    u8 primitive_group_type_m1[150];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[140];
+    u16 primitive_group_first_vertex_m1[150];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[444];
+    u8 primitive_group_vertex_count_m1[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[520];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[7];
+    u16 primitive_group_first_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[7];
+    u8 primitive_group_count_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[36];
+    u8 primitive_group_type_m2[42];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[36];
+    u16 primitive_group_first_vertex_m2[42];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[36];
+    u8 primitive_group_vertex_count_m2[42];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[236];
+    u16 primitive_vertices_m2[304];
 #endif
-    NDSNativeEpoch epochs[7];
+    NDSNativeEpoch epochs[11];
 } NDSNativeKirbyHat9HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_9_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -10835,64 +10835,64 @@ typedef struct NDSNativeKirbyHat9HighImage
 #define NDS_NATIVE_KIRBY_HAT_9_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_9_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_9_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_STATE_DELTAS_COUNT 48u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_STATE_SEQUENCE_COUNT 60u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_VERTEX_ACTIONS_COUNT 9u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_EPOCH_DIRECT_POLICY_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_DENSE_VERTICES_COUNT 132u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_DENSE_NORMALS_COUNT 132u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_STATE_DELTAS_COUNT 107u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_STATE_SEQUENCE_COUNT 129u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_VERTEX_ACTIONS_COUNT 30u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_EPOCH_DIRECT_POLICY_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_DENSE_VERTICES_COUNT 178u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_DENSE_NORMALS_COUNT 178u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PREPARED_DENSE_COUNT 132u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PREPARED_DENSE_COUNT 178u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_ACTION_DENSE_SPANS_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_ACTION_DENSE_SPANS_COUNT 30u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_DENSE_COLOR_SOURCE_COUNT 132u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_DENSE_COLOR_SOURCE_COUNT 178u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PACKED_CORNERS_COUNT 492u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PACKED_CORNERS_COUNT 576u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUN_FIRST_UNIQUE_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUN_UNIQUE_COUNT_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUN_UNIQUE_DENSE_COUNT 132u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_TRIANGLES_COUNT 164u
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUNS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUN_FIRST_UNIQUE_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUN_UNIQUE_COUNT_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUN_UNIQUE_DENSE_COUNT 178u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_TRIANGLES_COUNT 192u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_RUNS_COUNT 11u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 7u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 150u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 150u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_VERTICES_M1_COUNT 444u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_VERTICES_M1_COUNT 520u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 36u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 42u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 36u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 42u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 36u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 42u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_VERTICES_M2_COUNT 236u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_PRIMITIVE_VERTICES_M2_COUNT 304u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_9_HIGH_EPOCHS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_HIGH_EPOCHS_COUNT 11u
 #define NDS_NATIVE_KIRBY_HAT_9_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat9HighImage))
 
 /* Kirby copy modelpart 9, low detail. */
@@ -10909,64 +10909,64 @@ typedef struct NDSNativeKirbyHat9LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[48];
-    u8 state_sequence[61];
-    NDSNativeVertexAction vertex_actions[11];
-    u8 epoch_direct_policy[7];
-    NDSNativeDenseVertex dense_vertices[102];
-    u32 dense_normals[102];
+    NDSNativeStateDelta state_deltas[108];
+    u8 state_sequence[131];
+    NDSNativeVertexAction vertex_actions[31];
+    u8 epoch_direct_policy[11];
+    NDSNativeDenseVertex dense_vertices[140];
+    u32 dense_normals[140];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[102];
+    NDSNativePreparedDenseVertex prepared_dense[140];
 #endif
-    u16 action_dense_spans[11];
+    u16 action_dense_spans[31];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[102];
+    u16 dense_color_source[140];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[348];
+    u16 packed_corners[420];
 #endif
-    u16 run_first_unique[7];
-    u8 run_unique_count[7];
-    u16 run_unique_dense[102];
-    u16 triangles[116];
-    NDSNativeRun runs[7];
+    u16 run_first_unique[11];
+    u8 run_unique_count[11];
+    u16 run_unique_dense[140];
+    u16 triangles[140];
+    NDSNativeRun runs[11];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[7];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[7];
+    u16 primitive_group_first_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[103];
+    u8 primitive_group_count_m1[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[103];
+    u8 primitive_group_type_m1[113];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[103];
+    u16 primitive_group_first_vertex_m1[113];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[322];
+    u8 primitive_group_vertex_count_m1[113];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[394];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[7];
+    u16 primitive_group_first_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[7];
+    u8 primitive_group_count_m2[11];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[27];
+    u8 primitive_group_type_m2[33];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[27];
+    u16 primitive_group_first_vertex_m2[33];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[27];
+    u8 primitive_group_vertex_count_m2[33];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[170];
+    u16 primitive_vertices_m2[234];
 #endif
-    NDSNativeEpoch epochs[7];
+    NDSNativeEpoch epochs[11];
 } NDSNativeKirbyHat9LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_9_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -10979,64 +10979,64 @@ typedef struct NDSNativeKirbyHat9LowImage
 #define NDS_NATIVE_KIRBY_HAT_9_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_9_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_9_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_STATE_DELTAS_COUNT 48u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_STATE_SEQUENCE_COUNT 61u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_VERTEX_ACTIONS_COUNT 11u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_EPOCH_DIRECT_POLICY_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_DENSE_VERTICES_COUNT 102u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_DENSE_NORMALS_COUNT 102u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_STATE_DELTAS_COUNT 108u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_STATE_SEQUENCE_COUNT 131u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_VERTEX_ACTIONS_COUNT 31u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_EPOCH_DIRECT_POLICY_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_DENSE_VERTICES_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_DENSE_NORMALS_COUNT 140u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PREPARED_DENSE_COUNT 102u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PREPARED_DENSE_COUNT 140u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_ACTION_DENSE_SPANS_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_ACTION_DENSE_SPANS_COUNT 31u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_DENSE_COLOR_SOURCE_COUNT 102u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_DENSE_COLOR_SOURCE_COUNT 140u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PACKED_CORNERS_COUNT 348u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PACKED_CORNERS_COUNT 420u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUN_FIRST_UNIQUE_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUN_UNIQUE_COUNT_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUN_UNIQUE_DENSE_COUNT 102u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_TRIANGLES_COUNT 116u
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUNS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUN_FIRST_UNIQUE_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUN_UNIQUE_COUNT_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUN_UNIQUE_DENSE_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_TRIANGLES_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_RUNS_COUNT 11u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 7u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 103u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 103u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 113u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 103u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 113u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_VERTICES_M1_COUNT 322u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 113u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_VERTICES_M1_COUNT 394u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 11u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 33u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 33u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 33u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_VERTICES_M2_COUNT 170u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_PRIMITIVE_VERTICES_M2_COUNT 234u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_9_LOW_EPOCHS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_9_LOW_EPOCHS_COUNT 11u
 #define NDS_NATIVE_KIRBY_HAT_9_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat9LowImage))
 
 /* Kirby copy modelpart 10, high detail. */
@@ -11341,64 +11341,64 @@ typedef struct NDSNativeKirbyHat11HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[27];
-    u8 state_sequence[31];
-    NDSNativeVertexAction vertex_actions[11];
-    u8 epoch_direct_policy[6];
-    NDSNativeDenseVertex dense_vertices[94];
-    u32 dense_normals[94];
+    NDSNativeStateDelta state_deltas[64];
+    u8 state_sequence[70];
+    NDSNativeVertexAction vertex_actions[32];
+    u8 epoch_direct_policy[10];
+    NDSNativeDenseVertex dense_vertices[140];
+    u32 dense_normals[140];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[94];
+    NDSNativePreparedDenseVertex prepared_dense[140];
 #endif
-    u16 action_dense_spans[11];
+    u16 action_dense_spans[32];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[94];
+    u16 dense_color_source[140];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[372];
+    u16 packed_corners[456];
 #endif
-    u16 run_first_unique[6];
-    u8 run_unique_count[6];
-    u16 run_unique_dense[102];
-    u16 triangles[124];
-    NDSNativeRun runs[6];
+    u16 run_first_unique[10];
+    u8 run_unique_count[10];
+    u16 run_unique_dense[148];
+    u16 triangles[152];
+    NDSNativeRun runs[10];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[6];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[6];
+    u16 primitive_group_first_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[110];
+    u8 primitive_group_count_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[110];
+    u8 primitive_group_type_m1[120];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[110];
+    u16 primitive_group_first_vertex_m1[120];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[344];
+    u8 primitive_group_vertex_count_m1[120];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[420];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[6];
+    u16 primitive_group_first_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[6];
+    u8 primitive_group_count_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[32];
+    u8 primitive_group_type_m2[38];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[32];
+    u16 primitive_group_first_vertex_m2[38];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[32];
+    u8 primitive_group_vertex_count_m2[38];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[188];
+    u16 primitive_vertices_m2[256];
 #endif
-    NDSNativeEpoch epochs[6];
+    NDSNativeEpoch epochs[10];
 } NDSNativeKirbyHat11HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_11_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -11411,64 +11411,64 @@ typedef struct NDSNativeKirbyHat11HighImage
 #define NDS_NATIVE_KIRBY_HAT_11_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_11_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_11_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_STATE_DELTAS_COUNT 27u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_STATE_SEQUENCE_COUNT 31u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_VERTEX_ACTIONS_COUNT 11u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_EPOCH_DIRECT_POLICY_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_DENSE_VERTICES_COUNT 94u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_DENSE_NORMALS_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_STATE_DELTAS_COUNT 64u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_STATE_SEQUENCE_COUNT 70u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_VERTEX_ACTIONS_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_EPOCH_DIRECT_POLICY_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_DENSE_VERTICES_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_DENSE_NORMALS_COUNT 140u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PREPARED_DENSE_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PREPARED_DENSE_COUNT 140u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_ACTION_DENSE_SPANS_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_ACTION_DENSE_SPANS_COUNT 32u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_DENSE_COLOR_SOURCE_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_DENSE_COLOR_SOURCE_COUNT 140u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PACKED_CORNERS_COUNT 372u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PACKED_CORNERS_COUNT 456u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUN_FIRST_UNIQUE_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUN_UNIQUE_COUNT_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUN_UNIQUE_DENSE_COUNT 102u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_TRIANGLES_COUNT 124u
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUNS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUN_FIRST_UNIQUE_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUN_UNIQUE_COUNT_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUN_UNIQUE_DENSE_COUNT 148u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_TRIANGLES_COUNT 152u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_RUNS_COUNT 10u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 6u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 110u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 110u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 120u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 110u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 120u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_VERTICES_M1_COUNT 344u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 120u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_VERTICES_M1_COUNT 420u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 38u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 38u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 38u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_VERTICES_M2_COUNT 188u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_PRIMITIVE_VERTICES_M2_COUNT 256u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_11_HIGH_EPOCHS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_11_HIGH_EPOCHS_COUNT 10u
 #define NDS_NATIVE_KIRBY_HAT_11_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat11HighImage))
 
 /* Kirby copy modelpart 11, low detail. */
@@ -11485,64 +11485,64 @@ typedef struct NDSNativeKirbyHat11LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[27];
-    u8 state_sequence[31];
-    NDSNativeVertexAction vertex_actions[7];
-    u8 epoch_direct_policy[5];
-    NDSNativeDenseVertex dense_vertices[80];
-    u32 dense_normals[80];
+    NDSNativeStateDelta state_deltas[65];
+    u8 state_sequence[70];
+    NDSNativeVertexAction vertex_actions[27];
+    u8 epoch_direct_policy[9];
+    NDSNativeDenseVertex dense_vertices[118];
+    u32 dense_normals[118];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[80];
+    NDSNativePreparedDenseVertex prepared_dense[118];
 #endif
-    u16 action_dense_spans[7];
+    u16 action_dense_spans[27];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[80];
+    u16 dense_color_source[118];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[303];
+    u16 packed_corners[375];
 #endif
-    u16 run_first_unique[5];
-    u8 run_unique_count[5];
-    u16 run_unique_dense[80];
-    u16 triangles[101];
-    NDSNativeRun runs[5];
+    u16 run_first_unique[9];
+    u8 run_unique_count[9];
+    u16 run_unique_dense[118];
+    u16 triangles[125];
+    NDSNativeRun runs[9];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[5];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[5];
+    u16 primitive_group_first_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[96];
+    u8 primitive_group_count_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[96];
+    u8 primitive_group_type_m1[106];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[96];
+    u16 primitive_group_first_vertex_m1[106];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[293];
+    u8 primitive_group_vertex_count_m1[106];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[365];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[5];
+    u16 primitive_group_first_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[5];
+    u8 primitive_group_count_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[21];
+    u8 primitive_group_type_m2[27];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[21];
+    u16 primitive_group_first_vertex_m2[27];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[21];
+    u8 primitive_group_vertex_count_m2[27];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[143];
+    u16 primitive_vertices_m2[207];
 #endif
-    NDSNativeEpoch epochs[5];
+    NDSNativeEpoch epochs[9];
 } NDSNativeKirbyHat11LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_11_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -11555,64 +11555,64 @@ typedef struct NDSNativeKirbyHat11LowImage
 #define NDS_NATIVE_KIRBY_HAT_11_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_11_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_11_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_STATE_DELTAS_COUNT 27u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_STATE_SEQUENCE_COUNT 31u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_VERTEX_ACTIONS_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_EPOCH_DIRECT_POLICY_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_DENSE_VERTICES_COUNT 80u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_DENSE_NORMALS_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_STATE_DELTAS_COUNT 65u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_STATE_SEQUENCE_COUNT 70u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_VERTEX_ACTIONS_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_EPOCH_DIRECT_POLICY_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_DENSE_VERTICES_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_DENSE_NORMALS_COUNT 118u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PREPARED_DENSE_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PREPARED_DENSE_COUNT 118u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_ACTION_DENSE_SPANS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_ACTION_DENSE_SPANS_COUNT 27u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_DENSE_COLOR_SOURCE_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_DENSE_COLOR_SOURCE_COUNT 118u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PACKED_CORNERS_COUNT 303u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PACKED_CORNERS_COUNT 375u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUN_FIRST_UNIQUE_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUN_UNIQUE_COUNT_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUN_UNIQUE_DENSE_COUNT 80u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_TRIANGLES_COUNT 101u
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUNS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUN_FIRST_UNIQUE_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUN_UNIQUE_COUNT_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUN_UNIQUE_DENSE_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_TRIANGLES_COUNT 125u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_RUNS_COUNT 9u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 5u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 96u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 96u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 106u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 96u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 106u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_VERTICES_M1_COUNT 293u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 106u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_VERTICES_M1_COUNT 365u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 21u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 27u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 21u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 27u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 21u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 27u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_VERTICES_M2_COUNT 143u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_PRIMITIVE_VERTICES_M2_COUNT 207u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_11_LOW_EPOCHS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_11_LOW_EPOCHS_COUNT 9u
 #define NDS_NATIVE_KIRBY_HAT_11_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat11LowImage))
 
 /* Kirby copy modelpart 12, high detail. */
@@ -11629,64 +11629,64 @@ typedef struct NDSNativeKirbyHat12HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[28];
-    u8 state_sequence[31];
-    NDSNativeVertexAction vertex_actions[11];
-    u8 epoch_direct_policy[6];
-    NDSNativeDenseVertex dense_vertices[94];
-    u32 dense_normals[94];
+    NDSNativeStateDelta state_deltas[66];
+    u8 state_sequence[70];
+    NDSNativeVertexAction vertex_actions[32];
+    u8 epoch_direct_policy[10];
+    NDSNativeDenseVertex dense_vertices[140];
+    u32 dense_normals[140];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[94];
+    NDSNativePreparedDenseVertex prepared_dense[140];
 #endif
-    u16 action_dense_spans[11];
+    u16 action_dense_spans[32];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[94];
+    u16 dense_color_source[140];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[372];
+    u16 packed_corners[456];
 #endif
-    u16 run_first_unique[6];
-    u8 run_unique_count[6];
-    u16 run_unique_dense[102];
-    u16 triangles[124];
-    NDSNativeRun runs[6];
+    u16 run_first_unique[10];
+    u8 run_unique_count[10];
+    u16 run_unique_dense[148];
+    u16 triangles[152];
+    NDSNativeRun runs[10];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[6];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[6];
+    u16 primitive_group_first_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[110];
+    u8 primitive_group_count_m1[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[110];
+    u8 primitive_group_type_m1[120];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[110];
+    u16 primitive_group_first_vertex_m1[120];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[344];
+    u8 primitive_group_vertex_count_m1[120];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[420];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[6];
+    u16 primitive_group_first_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[6];
+    u8 primitive_group_count_m2[10];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[32];
+    u8 primitive_group_type_m2[38];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[32];
+    u16 primitive_group_first_vertex_m2[38];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[32];
+    u8 primitive_group_vertex_count_m2[38];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[188];
+    u16 primitive_vertices_m2[256];
 #endif
-    NDSNativeEpoch epochs[6];
+    NDSNativeEpoch epochs[10];
 } NDSNativeKirbyHat12HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_12_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -11699,64 +11699,64 @@ typedef struct NDSNativeKirbyHat12HighImage
 #define NDS_NATIVE_KIRBY_HAT_12_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_12_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_12_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_STATE_DELTAS_COUNT 28u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_STATE_SEQUENCE_COUNT 31u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_VERTEX_ACTIONS_COUNT 11u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_EPOCH_DIRECT_POLICY_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_DENSE_VERTICES_COUNT 94u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_DENSE_NORMALS_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_STATE_DELTAS_COUNT 66u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_STATE_SEQUENCE_COUNT 70u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_VERTEX_ACTIONS_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_EPOCH_DIRECT_POLICY_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_DENSE_VERTICES_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_DENSE_NORMALS_COUNT 140u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PREPARED_DENSE_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PREPARED_DENSE_COUNT 140u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_ACTION_DENSE_SPANS_COUNT 11u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_ACTION_DENSE_SPANS_COUNT 32u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_DENSE_COLOR_SOURCE_COUNT 94u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_DENSE_COLOR_SOURCE_COUNT 140u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PACKED_CORNERS_COUNT 372u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PACKED_CORNERS_COUNT 456u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUN_FIRST_UNIQUE_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUN_UNIQUE_COUNT_COUNT 6u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUN_UNIQUE_DENSE_COUNT 102u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_TRIANGLES_COUNT 124u
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUNS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUN_FIRST_UNIQUE_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUN_UNIQUE_COUNT_COUNT 10u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUN_UNIQUE_DENSE_COUNT 148u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_TRIANGLES_COUNT 152u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_RUNS_COUNT 10u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 6u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 110u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 110u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 120u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 110u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 120u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_VERTICES_M1_COUNT 344u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 120u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_VERTICES_M1_COUNT 420u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 10u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 38u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 38u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 32u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 38u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_VERTICES_M2_COUNT 188u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_PRIMITIVE_VERTICES_M2_COUNT 256u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_12_HIGH_EPOCHS_COUNT 6u
+#define NDS_NATIVE_KIRBY_HAT_12_HIGH_EPOCHS_COUNT 10u
 #define NDS_NATIVE_KIRBY_HAT_12_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat12HighImage))
 
 /* Kirby copy modelpart 12, low detail. */
@@ -11773,64 +11773,64 @@ typedef struct NDSNativeKirbyHat12LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[28];
-    u8 state_sequence[31];
-    NDSNativeVertexAction vertex_actions[7];
-    u8 epoch_direct_policy[5];
-    NDSNativeDenseVertex dense_vertices[80];
-    u32 dense_normals[80];
+    NDSNativeStateDelta state_deltas[67];
+    u8 state_sequence[70];
+    NDSNativeVertexAction vertex_actions[27];
+    u8 epoch_direct_policy[9];
+    NDSNativeDenseVertex dense_vertices[118];
+    u32 dense_normals[118];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[80];
+    NDSNativePreparedDenseVertex prepared_dense[118];
 #endif
-    u16 action_dense_spans[7];
+    u16 action_dense_spans[27];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[80];
+    u16 dense_color_source[118];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[303];
+    u16 packed_corners[375];
 #endif
-    u16 run_first_unique[5];
-    u8 run_unique_count[5];
-    u16 run_unique_dense[80];
-    u16 triangles[101];
-    NDSNativeRun runs[5];
+    u16 run_first_unique[9];
+    u8 run_unique_count[9];
+    u16 run_unique_dense[118];
+    u16 triangles[125];
+    NDSNativeRun runs[9];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[5];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[5];
+    u16 primitive_group_first_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[96];
+    u8 primitive_group_count_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[96];
+    u8 primitive_group_type_m1[106];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[96];
+    u16 primitive_group_first_vertex_m1[106];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[293];
+    u8 primitive_group_vertex_count_m1[106];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[365];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[5];
+    u16 primitive_group_first_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[5];
+    u8 primitive_group_count_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[21];
+    u8 primitive_group_type_m2[27];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[21];
+    u16 primitive_group_first_vertex_m2[27];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[21];
+    u8 primitive_group_vertex_count_m2[27];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[143];
+    u16 primitive_vertices_m2[207];
 #endif
-    NDSNativeEpoch epochs[5];
+    NDSNativeEpoch epochs[9];
 } NDSNativeKirbyHat12LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_12_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -11843,64 +11843,64 @@ typedef struct NDSNativeKirbyHat12LowImage
 #define NDS_NATIVE_KIRBY_HAT_12_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_12_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_12_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_STATE_DELTAS_COUNT 28u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_STATE_SEQUENCE_COUNT 31u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_VERTEX_ACTIONS_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_EPOCH_DIRECT_POLICY_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_DENSE_VERTICES_COUNT 80u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_DENSE_NORMALS_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_STATE_DELTAS_COUNT 67u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_STATE_SEQUENCE_COUNT 70u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_VERTEX_ACTIONS_COUNT 27u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_EPOCH_DIRECT_POLICY_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_DENSE_VERTICES_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_DENSE_NORMALS_COUNT 118u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PREPARED_DENSE_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PREPARED_DENSE_COUNT 118u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_ACTION_DENSE_SPANS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_ACTION_DENSE_SPANS_COUNT 27u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_DENSE_COLOR_SOURCE_COUNT 80u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_DENSE_COLOR_SOURCE_COUNT 118u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PACKED_CORNERS_COUNT 303u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PACKED_CORNERS_COUNT 375u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUN_FIRST_UNIQUE_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUN_UNIQUE_COUNT_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUN_UNIQUE_DENSE_COUNT 80u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_TRIANGLES_COUNT 101u
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUNS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUN_FIRST_UNIQUE_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUN_UNIQUE_COUNT_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUN_UNIQUE_DENSE_COUNT 118u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_TRIANGLES_COUNT 125u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_RUNS_COUNT 9u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 5u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 96u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 96u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 106u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 96u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 106u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_VERTICES_M1_COUNT 293u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 106u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_VERTICES_M1_COUNT 365u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 21u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 27u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 21u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 27u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 21u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 27u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_VERTICES_M2_COUNT 143u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_PRIMITIVE_VERTICES_M2_COUNT 207u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_12_LOW_EPOCHS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_12_LOW_EPOCHS_COUNT 9u
 #define NDS_NATIVE_KIRBY_HAT_12_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat12LowImage))
 
 /* Kirby copy modelpart 13, high detail. */
@@ -11917,64 +11917,64 @@ typedef struct NDSNativeKirbyHat13HighImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[32];
-    u8 state_sequence[31];
-    NDSNativeVertexAction vertex_actions[7];
-    u8 epoch_direct_policy[5];
-    NDSNativeDenseVertex dense_vertices[87];
-    u32 dense_normals[87];
+    NDSNativeStateDelta state_deltas[73];
+    u8 state_sequence[70];
+    NDSNativeVertexAction vertex_actions[28];
+    u8 epoch_direct_policy[9];
+    NDSNativeDenseVertex dense_vertices[133];
+    u32 dense_normals[133];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[87];
+    NDSNativePreparedDenseVertex prepared_dense[133];
 #endif
-    u16 action_dense_spans[7];
+    u16 action_dense_spans[28];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[87];
+    u16 dense_color_source[133];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[369];
+    u16 packed_corners[453];
 #endif
-    u16 run_first_unique[5];
-    u8 run_unique_count[5];
-    u16 run_unique_dense[95];
-    u16 triangles[123];
-    NDSNativeRun runs[5];
+    u16 run_first_unique[9];
+    u8 run_unique_count[9];
+    u16 run_unique_dense[141];
+    u16 triangles[151];
+    NDSNativeRun runs[9];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[5];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[5];
+    u16 primitive_group_first_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[111];
+    u8 primitive_group_count_m1[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[111];
+    u8 primitive_group_type_m1[121];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[111];
+    u16 primitive_group_first_vertex_m1[121];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[345];
+    u8 primitive_group_vertex_count_m1[121];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[421];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[5];
+    u16 primitive_group_first_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[5];
+    u8 primitive_group_count_m2[9];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[31];
+    u8 primitive_group_type_m2[37];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[31];
+    u16 primitive_group_first_vertex_m2[37];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[31];
+    u8 primitive_group_vertex_count_m2[37];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[185];
+    u16 primitive_vertices_m2[253];
 #endif
-    NDSNativeEpoch epochs[5];
+    NDSNativeEpoch epochs[9];
 } NDSNativeKirbyHat13HighImage;
 
 #define NDS_NATIVE_KIRBY_HAT_13_HIGH_COPY_MODELPART_ID_COUNT 1u
@@ -11987,64 +11987,64 @@ typedef struct NDSNativeKirbyHat13HighImage
 #define NDS_NATIVE_KIRBY_HAT_13_HIGH_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_13_HIGH_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_13_HIGH_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_STATE_DELTAS_COUNT 32u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_STATE_SEQUENCE_COUNT 31u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_VERTEX_ACTIONS_COUNT 7u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_EPOCH_DIRECT_POLICY_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_DENSE_VERTICES_COUNT 87u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_DENSE_NORMALS_COUNT 87u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_STATE_DELTAS_COUNT 73u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_STATE_SEQUENCE_COUNT 70u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_VERTEX_ACTIONS_COUNT 28u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_EPOCH_DIRECT_POLICY_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_DENSE_VERTICES_COUNT 133u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_DENSE_NORMALS_COUNT 133u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PREPARED_DENSE_COUNT 87u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PREPARED_DENSE_COUNT 133u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_ACTION_DENSE_SPANS_COUNT 7u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_ACTION_DENSE_SPANS_COUNT 28u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_DENSE_COLOR_SOURCE_COUNT 87u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_DENSE_COLOR_SOURCE_COUNT 133u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PACKED_CORNERS_COUNT 369u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PACKED_CORNERS_COUNT 453u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUN_FIRST_UNIQUE_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUN_UNIQUE_COUNT_COUNT 5u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUN_UNIQUE_DENSE_COUNT 95u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_TRIANGLES_COUNT 123u
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUNS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUN_FIRST_UNIQUE_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUN_UNIQUE_COUNT_COUNT 9u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUN_UNIQUE_DENSE_COUNT 141u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_TRIANGLES_COUNT 151u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_RUNS_COUNT 9u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 5u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 111u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 111u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 121u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 111u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 121u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_VERTICES_M1_COUNT 345u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 121u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_VERTICES_M1_COUNT 421u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 9u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 31u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 37u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 31u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 37u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 31u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 37u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_VERTICES_M2_COUNT 185u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_PRIMITIVE_VERTICES_M2_COUNT 253u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_13_HIGH_EPOCHS_COUNT 5u
+#define NDS_NATIVE_KIRBY_HAT_13_HIGH_EPOCHS_COUNT 9u
 #define NDS_NATIVE_KIRBY_HAT_13_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHat13HighImage))
 
 /* Kirby copy modelpart 13, low detail. */
@@ -12061,64 +12061,64 @@ typedef struct NDSNativeKirbyHat13LowImage
     u8 root_tail_sync_count[1];
     u8 root_light_preamble[1];
     u32 light_preamble_words[2];
-    NDSNativeStateDelta state_deltas[32];
-    u8 state_sequence[32];
-    NDSNativeVertexAction vertex_actions[4];
-    u8 epoch_direct_policy[4];
-    NDSNativeDenseVertex dense_vertices[73];
-    u32 dense_normals[73];
+    NDSNativeStateDelta state_deltas[74];
+    u8 state_sequence[72];
+    NDSNativeVertexAction vertex_actions[24];
+    u8 epoch_direct_policy[8];
+    NDSNativeDenseVertex dense_vertices[111];
+    u32 dense_normals[111];
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-    NDSNativePreparedDenseVertex prepared_dense[73];
+    NDSNativePreparedDenseVertex prepared_dense[111];
 #endif
-    u16 action_dense_spans[4];
+    u16 action_dense_spans[24];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[73];
+    u16 dense_color_source[111];
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-    u16 packed_corners[300];
+    u16 packed_corners[372];
 #endif
-    u16 run_first_unique[4];
-    u8 run_unique_count[4];
-    u16 run_unique_dense[73];
-    u16 triangles[100];
-    NDSNativeRun runs[4];
+    u16 run_first_unique[8];
+    u8 run_unique_count[8];
+    u16 run_unique_dense[111];
+    u16 triangles[124];
+    NDSNativeRun runs[8];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[4];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[4];
+    u16 primitive_group_first_m1[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[97];
+    u8 primitive_group_count_m1[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[97];
+    u8 primitive_group_type_m1[107];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[97];
+    u16 primitive_group_first_vertex_m1[107];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[294];
+    u8 primitive_group_vertex_count_m1[107];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[366];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[4];
+    u16 primitive_group_first_m2[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[4];
+    u8 primitive_group_count_m2[8];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[20];
+    u8 primitive_group_type_m2[26];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[20];
+    u16 primitive_group_first_vertex_m2[26];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[20];
+    u8 primitive_group_vertex_count_m2[26];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[140];
+    u16 primitive_vertices_m2[204];
 #endif
-    NDSNativeEpoch epochs[4];
+    NDSNativeEpoch epochs[8];
 } NDSNativeKirbyHat13LowImage;
 
 #define NDS_NATIVE_KIRBY_HAT_13_LOW_COPY_MODELPART_ID_COUNT 1u
@@ -12131,64 +12131,64 @@ typedef struct NDSNativeKirbyHat13LowImage
 #define NDS_NATIVE_KIRBY_HAT_13_LOW_ROOT_TAIL_SYNC_COUNT_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_13_LOW_ROOT_LIGHT_PREAMBLE_COUNT 1u
 #define NDS_NATIVE_KIRBY_HAT_13_LOW_LIGHT_PREAMBLE_WORDS_COUNT 2u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_STATE_DELTAS_COUNT 32u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_STATE_SEQUENCE_COUNT 32u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_VERTEX_ACTIONS_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_EPOCH_DIRECT_POLICY_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_DENSE_VERTICES_COUNT 73u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_DENSE_NORMALS_COUNT 73u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_STATE_DELTAS_COUNT 74u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_STATE_SEQUENCE_COUNT 72u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_VERTEX_ACTIONS_COUNT 24u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_EPOCH_DIRECT_POLICY_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_DENSE_VERTICES_COUNT 111u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_DENSE_NORMALS_COUNT 111u
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PREPARED_DENSE_COUNT 73u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PREPARED_DENSE_COUNT 111u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_ACTION_DENSE_SPANS_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_ACTION_DENSE_SPANS_COUNT 24u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_DENSE_COLOR_SOURCE_COUNT 73u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_DENSE_COLOR_SOURCE_COUNT 111u
 #endif
 #if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PACKED_CORNERS_COUNT 300u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PACKED_CORNERS_COUNT 372u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUN_FIRST_UNIQUE_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUN_UNIQUE_COUNT_COUNT 4u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUN_UNIQUE_DENSE_COUNT 73u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_TRIANGLES_COUNT 100u
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUNS_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUN_FIRST_UNIQUE_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUN_UNIQUE_COUNT_COUNT 8u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUN_UNIQUE_DENSE_COUNT 111u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_TRIANGLES_COUNT 124u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_RUNS_COUNT 8u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 4u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 97u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 97u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 107u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 97u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 107u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_VERTICES_M1_COUNT 294u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 107u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_VERTICES_M1_COUNT 366u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 8u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 20u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 26u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 20u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 26u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 20u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 26u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_VERTICES_M2_COUNT 140u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_PRIMITIVE_VERTICES_M2_COUNT 204u
 #endif
-#define NDS_NATIVE_KIRBY_HAT_13_LOW_EPOCHS_COUNT 4u
+#define NDS_NATIVE_KIRBY_HAT_13_LOW_EPOCHS_COUNT 8u
 #define NDS_NATIVE_KIRBY_HAT_13_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHat13LowImage))
 
 /* One reusable runtime slot must fit any one selected hat image. */
