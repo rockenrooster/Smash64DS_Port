@@ -2811,7 +2811,17 @@ typedef struct NDSFtPartsFlatWalk
     FTParts *parts[NDS_FTPARTS_FLAT_MAX];
 } NDSFtPartsFlatWalk;
 
-static NDSFtPartsFlatWalk sNdsFtPartsFlat[NDS_FTPARTS_FLAT_SLOTS];
+/* P2-2p8 stall class, falsifier arm. The table is in DTCM, which is addressable
+ * zero-wait memory rather than a cache: it cannot evict anything and cannot be
+ * evicted. That is the exact mechanism N05.03 died to -- widening this table to
+ * 16 slots cured its 49.7% miss rate and deleted 15,040 from SRC, but 3,264
+ * bytes is 80% of the 4 KB data cache and the eviction cost STG +51,520.
+ * Moving the table out of cacheable memory makes that failure structurally
+ * impossible, and at the SHIPPED four slots it changes nothing else, so STG is
+ * a clean read on whether this table was the evictor at all. If STG does not
+ * improve, widening cannot pay either and the lane is dead. */
+static NDSFtPartsFlatWalk sNdsFtPartsFlat[NDS_FTPARTS_FLAT_SLOTS]
+    __attribute__((section(".dtcm.bss"), aligned(32)));
 
 /* ftMainSetStatus can materialize/eject/re-parent hidden fighter DObjs without
  * changing either the fighter root pointer or the taskman heap generation. The
