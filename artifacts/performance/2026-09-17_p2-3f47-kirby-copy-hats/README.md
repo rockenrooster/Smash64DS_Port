@@ -298,9 +298,49 @@ growth.
 - `KIRBY_TRIO_ADMIT_COPY_HATS` flips to `True` and the self-shade fallback
   becomes dead code for hats — keep it only if a face head ever needs it.
 
-Not started. Recorded because the load-bearing unknown — whether the escapes
-survive the move — is now answered, and answered in the direction that makes the
-work worth doing.
+Not started. Recorded because both load-bearing unknowns — whether the escapes
+survive the move, and whether they can be named in the hat's index space — are
+now answered, and answered in the direction that makes the work worth doing.
+
+### The row mapping resolves too, for all ten hats
+
+One unknown remained after the escape check: the faithful trio program and the
+hat image order their rows **differently**. In the faithful program the head is
+root 0 and its rows come first; in the hat image the rows are the suffix cut
+from a canonical+one-hat build. So "the escape is inside the head" does not by
+itself mean the escape can be *named* in the hat image's local index space.
+
+Resolved by value: build the hat context, key every one of its dense rows on the
+full eight-field tuple, and look up each escape's source row from the faithful
+program.
+
+| detail | hats | escapes per hat | mapped into the hat image |
+|---|---|---:|---:|
+| high | 3, 4, 5, 6, 7, 8, 9, 11, 12, 13 | 14 | **14 — all ten** |
+| low | same ten | 12 | **12 — all ten** |
+
+Hat dense counts range 87–138 (high) and 73–118 (low); every escape found its
+row in every one. **The mapping is total**, so the body section can be appended
+to the hat context with its colour sources rewritten into hat-local indices, and
+nothing needs a cross-image reference or a fallback.
+
+With this and the escape-range result above, the remaining work is mechanical:
+
+1. `build_p2_kirby_hat_runtime_context` gains a step after the suffix cut —
+   append the faithful body block, remapping its dense/corner/unique/span
+   indices into the hat's local space and its colour escapes through the value
+   map above. `_rebase_dense_word` already refuses a resident reference, so a
+   mis-rebase fails closed rather than shipping a wrong index.
+2. The trio program's **body** root moves to source owner `kirby_hat` beside its
+   head; the canonical roots stay `kirby`. The runtime resolves both through the
+   `SourceOwners` table that already carries root 0.
+3. `KIRBY_TRIO_ADMIT_COPY_HATS` → `True`; Kirby's resident image returns to zero
+   growth; the self-shade fallback becomes dead for hats.
+
+Owed after that: the four-CPU gate, and a visual check per hat — the seam still
+runs on the `validate_cross_census=False` path, where a wrong cross sequence of
+the right length passes silently, so only pixels prove the body resolved against
+its own head.
 
 ## Not caused by this work
 
