@@ -13,7 +13,67 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def logical_make_lines(text: str) -> list[str]:
-    return re.sub(r"\\\r?\n[ \t]*", " ", text).splitlines()
+    return expand_generated_item_rules(
+        re.sub(r"\\\r?\n[ \t]*", " ", text).splitlines())
+
+
+def expand_generated_item_rules(lines: list[str]) -> list[str]:
+    """Materialise the wave-1 items' Make wiring the way `make` does.
+
+    The twenty wave-1 item owners were twenty byte-identical copies of one
+    recipe plus sixty copies of three variable definitions. They are now one
+    `define` instantiated per slug through `$(foreach ...)$(eval $(call ...))`,
+    so `make` still defines every `NDS_NATIVE_ITEM_<OWNER>_{PACKET,HEADER,
+    PREREQ}` and every grouped emit rule -- but none of them appears as literal
+    Makefile text any more, and every check below matches literal text.
+
+    That is how the collapse broke this checker: a grep for the literal
+    variable names found nothing under `scripts/`, because the names here are
+    built at runtime from the owner. Expanding the rule restores exactly the
+    lines `make` generates, so the checks keep their full strength: if the
+    `define` or the slug list goes away, this expands to nothing and the owners
+    fail again, which is the behaviour that caught the collapse in the first
+    place.
+    """
+    slugs: list[tuple[str, str]] = []
+    for line in lines:
+        match = re.match(r"^\s*NDS_NATIVE_ITEM_WAVE1\s*:?=\s*(.*)$", line)
+        if not match:
+            continue
+        for pair in match.group(1).split():
+            slug, sep, owner = pair.partition("/")
+            if sep and slug and owner:
+                slugs.append((slug, owner))
+        break
+    if not slugs:
+        return lines
+
+    body = "\n".join(lines)
+    # Refuse to vouch for a rule whose shape we no longer recognise: a silently
+    # mismatched expansion would hand every owner a pass it had not earned.
+    for needed in (
+        "NDS_NATIVE_ITEM_$(2)_PACKET",
+        "NDS_NATIVE_ITEM_$(2)_HEADER",
+        "NDS_NATIVE_ITEM_$(2)_PREREQ",
+        "$$(NDS_NATIVE_ITEM_$(2)_PACKET) $$(NDS_NATIVE_ITEM_$(2)_HEADER) &:",
+    ):
+        if needed not in body:
+            return lines
+
+    generated: list[str] = []
+    for slug, owner in slugs:
+        prefix = f"NDS_NATIVE_ITEM_{owner}"
+        generated.append(
+            f"{prefix}_PACKET := $(PROJECT_ROOT)/src/nds/generated/"
+            f"nds_native_item_{slug}.generated.inc")
+        generated.append(
+            f"{prefix}_HEADER := $(PROJECT_ROOT)/include/nds/generated/"
+            f"nds_native_item_{slug}.generated.h")
+        generated.append(
+            f"{prefix}_PREREQ := $(NDS_NATIVE_ITEM_WAVE1_PRODUCER)")
+        generated.append(
+            f"$({prefix}_PACKET) $({prefix}_HEADER) &: $({prefix}_PREREQ)")
+    return lines + generated
 
 
 def include_sites(text: str, include_name: str) -> list[tuple[int, tuple[str, ...]]]:
