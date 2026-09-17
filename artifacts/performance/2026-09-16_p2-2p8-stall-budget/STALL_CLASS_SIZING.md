@@ -32,8 +32,11 @@ instruction fetch impossible by construction, and 69.4% of it sits on memory-op
 PCs.**
 
 **Consequence: code layout is worth at most 155,651 and DTCM/data layout is the
-right class.** `.text.hot` and `.text.hot.draw` still have 6,420 free bytes
-combined, so the code-layout lane is not resource-blocked the way ITCM is.
+right class.** The claim published here that `.text.hot`/`.text.hot.draw` have
+6,420 free bytes and are "not resource-blocked" is **WRONG**:
+`linker/nds_hot_text.ld:180-227` records that section as closed in BOTH
+directions, with two independent estimators having got the sign wrong (Task 94
++6,144 P50; R2-03 E66 +24,448 P95).
 
 ## Two premises of my own, refuted
 
@@ -82,7 +85,9 @@ instead of allocating a line.
 
 Those three walks total **23,063 bytes fetched per frame**. Whole-frame data
 traffic, from data stall divided by the measured fill penalty (~44 cycles per
-32-byte line), is **~25,500 line fills = ~816 KB per frame**. The suspected
+32-byte line), is **~9,644 line fills = ~300 KB per frame** (published here
+first as ~25,500 fills / ~816 KB, which was wrong by 2.2-2.7x -- a `/129`
+against `/258` slip, corrected in `RENDERER_STREAMING_SIZING.md`). The suspected
 structures are **2.8% of it**.
 
 Whole-frame data stall by owner:
@@ -108,7 +113,15 @@ and reserved BIOS memory). Current occupants:
 | `sNdsNativeFighterDenseNormals` | 2,452 |
 | `sNdsShieldPoseDObjScratch` | 1,408 |
 | irq table, frame summary, scheduler, controller playback | 318 |
-| **used / free** | **10,308 / 5,704** |
+| **used / free** | **10,308 / 1,992** |
+
+**Correction to the row above:** 5,704 was taken from `dtcm LENGTH = 0x3e80` in
+calico's `ds9.ld`, which is the region and not the budget.
+`linker/nds_hot_text.ld:171` asserts `__dtcm_bss_end <= 0x02ff3000` against the
+boot stack's measured low-water mark, so the ceiling is 12,288 bytes and **1,992
+are free**. Every DTCM figure below that assumes 5,704 is correspondingly
+optimistic, and the recommended 8-slot candidate at 3,168 bytes never fit. See
+`…_p2-2p8-dtcm-falsifier/`.
 
 83% of it is already two dense fighter geometry tables.
 
@@ -176,7 +189,8 @@ dies for one build instead of four.
 
 ## The reframe that matters more than the candidate
 
-The frame moves **~816 KB of data through a 4 KB data cache every frame**, and
+The frame moves **~300 KB of data through a 4 KB data cache every frame** (not
+the ~816 KB first published here), and
 **39.5% of data stall is renderer streaming** — vertex, matrix and packet
 traffic that no 5,704-byte buffer touches. This is a working-set **volume**
 problem, not a working-set **placement** problem, and placement is all DTCM can

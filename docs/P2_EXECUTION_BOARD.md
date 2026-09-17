@@ -62,7 +62,7 @@ witnesses identical) but is under the 14,080 floor and unfinishable — usable D
 is **1,992 B not 5,704** (`linker/nds_hot_text.ld:171`), 1,680 short. Reverted.
 **NOTHING MEASURED REACHES 10% OF THE GAP.** The only unattacked bucket is
 **renderer streaming: 254,344 tk/fr of data stall, 39.5%**. The frame moves
-**~816 KB through a 4 KB dcache** — a working-set VOLUME problem, which neither
+**~300 KB through a 4 KB dcache** — a working-set VOLUME problem, which neither
 placement nor packing can change. Next action: size that, or take the gate to
 the owner.
 **Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).

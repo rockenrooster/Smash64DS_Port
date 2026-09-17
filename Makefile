@@ -285,6 +285,13 @@ NDS_FTPARTS_FLAT_SLOTS ?= 4
 # Exceeding it is correct but silently returns to the unflattened walk, which
 # gNdsFtPartsFlatOverflows counts and gNdsFtPartsFlatCountMax bounds.
 NDS_FTPARTS_FLAT_MAX ?= 96
+# P2-2p8 stall budget. 1 disables the ARM9 data cache for the whole run, so a
+# single match prices what the 4 KB dcache is worth today. This is the cheapest
+# decisive test of whether the frame's data traffic is reusable or compulsory:
+# with the cache off, `frame_off - frame_on` IS the cache's current value. Lab
+# only, and slow by construction. See artifacts/performance/2026-09-16_p2-2p8-
+# dcache-value/.
+NDS_LAB_NO_DCACHE ?= 0
 NDS_RENDERER_SCREEN_SPACE_CENSUS ?= 0
 # Task 90 E0 lab probe. Counts dense-vertex shade iterations in the native
 # fighter owner and how many of them recompute a value the prepared array
@@ -6370,6 +6377,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_LAB_POSE_JOINT_CAP $(NDS_LAB_POSE_JOINT_CAP)u'; \
 		echo '#define NDS_FTPARTS_FLAT_SLOTS $(NDS_FTPARTS_FLAT_SLOTS)u'; \
 		echo '#define NDS_FTPARTS_FLAT_MAX $(NDS_FTPARTS_FLAT_MAX)u'; \
+		echo '#define NDS_LAB_NO_DCACHE $(NDS_LAB_NO_DCACHE)'; \
 		echo '#define NDS_RENDERER_SCREEN_SPACE_CENSUS $(NDS_RENDERER_SCREEN_SPACE_CENSUS)'; \
 		echo '#define NDS_TASK90_SHADE_CENSUS $(NDS_TASK90_SHADE_CENSUS)'; \
 		echo '#define NDS_TASK93_TEXKEY_CENSUS $(NDS_TASK93_TEXKEY_CENSUS)'; \
