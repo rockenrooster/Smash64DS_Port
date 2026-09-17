@@ -48,7 +48,11 @@ Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
 740,352**; native **0/0**; realtime **26.4 FPS**; slips 0.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / invalidation over-clear / N05.03 / main. Phase: IMPLEMENT.
+Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
+**Next action:** every leaf lane is now spent with measurement and the gap is
+unchanged at **-496,382**. Do NOT open another leaf. Either size an FTR/STG/MISC
+candidate from `docs/optimization/` the way SRC's was (its premises did not
+survive), or put the gate itself to the owner.
 **Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT (ledger).
 Baseline moved 2026-09-16 (clean rebuild -50,432); dead code deleted.
@@ -60,14 +64,16 @@ expendable than the 60 Hz sim (4). Owner 2026-09-16: lab test builds allowed.
 N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement.
 Engaging the 0%-engaged GX compose bank COSTS +22,848 P50; the sampled softfloat
 census **over-attributes 3.0x** — never size from it again.
-**N05.03 (cursor): 97% over-invalidation.** `ndsFTParamsInvalidateSubtree`
-(`reloc_backend_compat_shims.c`) does **474.5 part-word clears/frame against 14.3
-recomputes** for **20,348 tk/fr**. Replace the O(parts) clear + flatten with an
-**O(1) generation stamp**. Per-PC the **walk is 59%, the clear 14%** —
-`CANDIDATE_SELECTION.md`'s "clear 56%" is INVERTED, so this deletes pointer-chase
-STALL, not issue, and it is the only live candidate that does. Band
-**-10,000..-15,000** (`…_p2-2p8-src-candidate-sizing/`). Blocker: 23 decomp latch
-sites need an import overlay (`src_gm_gmcollision.patch`), as twelve files use.
+**N05.03 is CLOSED NO-GO** (`…_p2-2p8-n0503-flat-cache/`). Its recorded blocker
+(23 decomp latch sites) was never needed: the flat cache is keyed per **joint**,
+not per fighter root, so its 4 slots miss **49.7%**, and **95.4% of misses are
+hash conflicts**. 16 slots fix it (miss 3.6%, **SRC -15,040**, the predicted
+band) — but the **ARM9 dcache is 4 KB** and 16 slots is 3,264 B = 80% of it, so
+**STG rises +51,520** and WORK-H **+33,984**. At constant memory (8x48) nothing
+changes: the working set is 9-16 roots. Fetch, not arithmetic — the third lane
+lost this way after the collision ring and the GX bank.
+**`.itcm` IS FULL: 104 B free of 32,632.** The census overflowed it twice and was
+removed. Any candidate adding resident code to these paths cannot be placed.
 **THE ARITHMETIC IS CLOSED** for leaf levers: gate needs **-496,382 = 30.7% of
 everything executed**; the profile's top twenty is 502,955. **The per-fighter
 lever is MEASURED and spent** and **SRC's top candidate is SIZED NO-GO** — detail
