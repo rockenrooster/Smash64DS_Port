@@ -57,8 +57,8 @@ its ceiling is **90.6%**; a PERFECT cache still leaves **44,208 OVER**.
 **JOINT-CAP LANE SPENT**: the cap **aborts the CPU AI**, and deleting **94.7%**
 of pose evaluation gave **no WORK-H reduction**. Placement CLOSED.
 **KIRBY COPY FIXED**. OWED: per-hat look.
-**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 exist, all covered, checker
-GREEN (`…_p2-3f-hidden-part-sweep/`). OWED: captures.
+**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 exist, all covered
+(`…_p2-3f-hidden-part-sweep/`). OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap. Non-zero
 exit is a **window** assertion, NOT correctness: 21 ring stops at identical
@@ -77,8 +77,8 @@ gap**, but **50.9% gameplay state-hash frozen + 20.4% fidelity-gated**; only the
 before it is an optimization.**
 **LEVER SIZED: 8,458 B of entry-effect texels belong to fighters the four-CPU
 build cannot run**, **0 shared** = **2.1 arena pages**
-(`…_p2-2p8-entry-effect-roster-residency/`). Unblocks egg + Vulcan Jab +
-Thunder. Emitter must renumber per config. Buys arena headroom, NOT ticks.
+(`…_p2-2p8-entry-effect-roster-residency/`). Emitter must renumber per config.
+Buys arena headroom, NOT ticks.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
@@ -104,7 +104,7 @@ pixels/audio or unexercised states stay engineering work.
 | P2-3f47 | Roster close: Ness, Purin, Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. Intro is **NOT** this class. OWED: captures. `…_p2-3f52-yoshi-root-programs/`. |
-| P2-3f53 | EFDesc effects without native owners | **Falcon done; Yoshi egg BLOCKED on resident budget** | **Yoshi egg** (`0xa860`, one root = invisible intro AND shield) was implemented, built clean, checker GREEN — then Boundary RED: **arena stepped down 4,096 B, AllocFail 84→85, 14 texture-bind rejects**. Reverted (`252a9aa4290`). The four-CPU build is ON a page boundary, so ANY resident growth breaks it. Re-landing needs `#if NDS_P2_YOSHI` conditional emission (all rows are at array tails) or 4 KB returned. **Owner call: that budget is the P2-2p8 wall.** Still ABSENT: **Kirby Vulcan Jab** `0x0B20`, **Pikachu Thunder** down-B. `…_p2-3f53-yoshi-egg-owner/`. |
+| P2-3f53 | EFDesc effects without native owners | **Falcon done; the other three are NOT wiring changes** | **Yoshi egg** (`0xa860`, one root = invisible intro AND shield): implemented, built clean, checker GREEN, then Boundary RED — arena stepped down 4,096 B, AllocFail 84→85, **14 texture-bind rejects**. Reverted (`252a9aa4290`); four-CPU is ON a page edge so ANY resident growth breaks it. **Kirby Vulcan Jab**: attempted and **BLOCKED** — its state root branches to an **RGBA32** texture and the DS has no 32-bit format, so it needs a lossy RGBA32→A1BGR5/A5I3 conversion with a fidelity call, not a `case` (`…_p2-3f53-vulcan-jab-blocker/`). **Pikachu Thunder** down-B unstarted; the row also conflates it with ThunderJolt, which is already owned. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 
 ## Queue — P2-4 engineering
