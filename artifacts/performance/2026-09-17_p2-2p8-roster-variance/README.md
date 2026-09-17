@@ -1,4 +1,14 @@
-# Roster swings the frame by 116,992 — and the contract cannot currently be measured
+# The second roster ever measured fails native rendering 7,679 times
+
+> **CORRECTION, and it is the headline.** This document originally read the
+> alternate roster's 116,992-tick advantage as evidence that roster composition
+> swings frame cost. **It is not.** That arm produces **7,679 native rendering
+> failures** against the canonical roster's **0**, and is missing Luigi's
+> ShieldPose asset. It is cheaper partly because it draws less and partly
+> because it is **broken**. No cost conclusion can be drawn from it. The
+> measurement and the harness findings below stand; the cost interpretation
+> does not.
+
 
 Every tick figure in P2-2p8 is measured on **one** roster (Donkey/Samus/Link/
 Kirby) on **one** stage (Dream Land), while the contract is *every legal
@@ -15,13 +25,12 @@ This tests whether that matters. It does, in two separate ways.
 | Captain/Luigi/Donkey/Kirby | **1,471,552** | 1,677,888 | 357,056 | 342,656 | 555,136 |
 | **delta** | **−116,992** | −64 | +3,776 | −2,944 | +1,216 |
 
-**A legal roster change moves WORK-H by 116,992 ticks — 7.4% of the frame, and
-larger than all but one optimization this campaign has measured.** Yet FTR, STG
-and SRC are all within noise of each other, so the difference is not in the
-named buckets; it is spread through the unnamed remainder.
-
-Gap against the 1,120,000 gate: **468,544** for the pinned roster against
-**351,552** for this one — 25% smaller.
+The 116,992 is real as a *measurement* and meaningless as a *roster cost*: see
+the correction above and the native-failure section below. The alternate arm is
+missing content and failing to render. What is worth noting is that FTR, STG and
+SRC are each within noise of the canonical roster, so whatever that arm is not
+doing does not show up in any named bucket — it is spread through the unnamed
+remainder, which is also where its 7,679 failures live.
 
 ## The first caveat, and it is disqualifying for a clean comparison
 
@@ -37,12 +46,12 @@ Yoshi or Ness.
 
 So part of the 116,992 is simply Luigi having less native content to draw. This
 is a **pre-existing content gap**, not a defect introduced here, and it sits
-squarely inside P2-3's open acceptance. But it means the honest reading of this
-measurement is:
+squarely inside P2-3's open acceptance.
 
-> **The pinned roster is the more expensive of the two, so the 496,382 gap is
-> not optimistic for it — but roster cost varies by at least 117,000, part of
-> which is missing content rather than genuine roster weight.**
+Combined with the 7,679 native failures below, **no roster-cost conclusion
+survives from this pair.** Whether the canonical roster is the most expensive
+legal lineup remains unknown, and answering it needs a roster that is both
+content-complete and rendering natively.
 
 ## The second finding, which is the actionable one
 
@@ -79,12 +88,33 @@ bytes the memory row judges. **Capacity argmax is not frame-cost argmax**, and
 nothing had established which roster is the most expensive in ticks. This still
 does not: two samples of a large space, one of them content-incomplete.
 
+## The native-render failure, which is the real finding
+
+| counter | canonical | Captain/Luigi/Donkey/Kirby |
+|---|---:|---:|
+| `gNdsRendererNativeFailure.count` | **0** | **7,679** |
+| domain / scene / reason | 0 / 0 / 0 | 1 / 22 / 2 |
+
+`AGENTS.md` requires every ROM, including diagnostics, to be native-only with no
+fallback switches and no missing required content. A legal four-fighter lineup
+producing 7,679 native failures is therefore a **P2 correctness gap**, and it is
+worth more than any tick figure in this document.
+
+It went unseen because the gate that detects it could not report it. With
+`nativeFailureCount` nonzero and no direct reject recorded,
+`nativeDirectRejectSite` is 0, `(0 -band -bnot 1) - 1` is -1, and the `x` format
+specifier throws — so the run ended in *"Error formatting a string: Format
+specifier was invalid"* instead of naming 7,679 failures. **A gate that finds
+the defect and then hides it.** Reproduced exactly and guarded.
+
 ## What this does and does not change
 
 **Does not change** the recommendation. 468,544 remains the gap for the measured
 roster, and no implementable class exceeds ~11% of it.
 
-**Does change** the confidence interval around it. A ±117,000 roster term is
-larger than every candidate except the withdrawn 30 Hz simulation, so any future
-claim that a lane "closes the gap" must name its roster — and the full matrix
-must eventually be run, which needs the harness fixed first.
+**Does change** what must happen before any lane is accepted. The full matrix
+has to run, the harness is now capable of running it, and the first roster it
+could reach is **failing native rendering** — so the contract is not merely
+unproven, it is currently **failing** on the one extra sample taken. Any future
+claim that a lane "closes the gap" must name its roster, and a roster that does
+not render natively cannot be used to price anything.
