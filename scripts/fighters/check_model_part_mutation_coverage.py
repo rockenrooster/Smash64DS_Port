@@ -60,7 +60,20 @@ REPO = _paths.REPO_ROOT
 RELOC = REPO / "decomp/BattleShip-main/decomp/src/relocData"
 
 CMD = re.compile(r"ftMotionCommandSetModelPartID\((\d+),\s*(-?\d+)\)")
-ARR = re.compile(r"^ftMotionCommand (d\w+)\[\]")
+# Motion arrays are declared BOTH ways in the reloc data --
+# `ftMotionCommand dLinkMainMotion_Catch[]` but `u32 dLinkMainMotion_CatchPull[]`
+# -- and matching only the first attributes every u32-declared motion's commands
+# to whichever ftMotionCommand-declared motion preceded it. Here that only
+# mislabels a failure message, because the check is per (joint, part, detail)
+# rather than per motion, but a wrong motion name in a report costs real time.
+ARR = re.compile(r"^(?:ftMotionCommand|u32) (d\w+)\[\]")
+# Region arms are deliberately NOT filtered here, unlike in
+# check_hidden_part_root_coverage.py. This check asks only whether a bake
+# exists, so reading the REGION_JP arm as well checks strictly more, and the
+# ROM builds -DREGION_US: the worst case is a false red for a part the US build
+# never installs, never a false green. There is where it matters, because
+# absorbing a JP command into a US motion computes a live root vector no build
+# ever reaches.
 CONTAINER = re.compile(
     r"FTModelPartDesc \*d\w+?Main_modelparts_container\[\d+\] = \{(.*?)\};",
     re.S)

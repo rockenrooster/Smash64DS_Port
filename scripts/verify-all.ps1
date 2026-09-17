@@ -276,7 +276,11 @@ try {
     # check-generator-staleness.ps1 -IncludeSlow.
     # Keep this count synchronized
     # with the unconditional Invoke-VerifyScript calls before the runtime plan.
-    $expectedVerifiers = 15 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    # 17 since 2026-09-17: the two source-to-bake resolvers below. Adding a host
+    # check without moving this literal makes the run FAIL at the accounting
+    # gate rather than silently under-report, which is the intended direction
+    # and is how this line was found.
+    $expectedVerifiers = 17 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
     # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
     # standing-rules/publish-law tokens and the published-ROM SHA-256 line --

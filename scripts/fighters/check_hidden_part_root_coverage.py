@@ -62,7 +62,11 @@ O2R = REPO / "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main"
 FLAG_BITS = 0x0000FFFF
 
 CMD = re.compile(r"ftMotionCommandSetModelPartID\((\d+),\s*(-?\d+)\)")
-ARR = re.compile(r"^ftMotionCommand (d\w+)\[\]")
+# Motion arrays are declared BOTH ways in the reloc data -- 
+# `ftMotionCommand dLinkMainMotion_Catch[]` but `u32 dLinkMainMotion_CatchPull[]`.
+# Matching only the first silently attributes every u32-declared motion's
+# commands to whichever ftMotionCommand-declared motion preceded it.
+ARR = re.compile(r"^(?:ftMotionCommand|u32) (d\w+)\[\]")
 # Samus's Catch keeps its eight model-part writes in a subroutine, not inline,
 # so a checker that reads only the named motion body sees no events at all and
 # computes a 16-root vector for a 21-root program.
@@ -123,6 +127,38 @@ def container_offset(owner: str, path: Path) -> int | None:
     return parsed
 
 
+# The ROM builds -DREGION_US, and the reloc data carries both arms: 215
+# `#if defined(REGION_JP)` and 39 `#if defined(REGION_US)` blocks across the
+# motion files, holding ten real SetModelPartID commands between Link and Kirby.
+# A line-based parser absorbs the JP arm into the US motion and computes a
+# vector no US build ever reaches -- that is exactly how a phantom
+# dLinkMainMotion_Catch finding appeared, from the stray SetModelPartID(21, 0)
+# below its End() in the JP arm. There are no #elif forms and every directive is
+# at column 0, so a simple stack is enough.
+def region_us_lines(text: str):
+    """Yield (line_number, line) for the REGION_US arm only."""
+    stack: list[bool] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith("#if"):
+            if "REGION_JP" in stripped:
+                stack.append(False)
+            else:
+                # REGION_US, and anything else we do not model, stays active.
+                stack.append(True)
+            continue
+        if stripped.startswith("#else"):
+            if stack:
+                stack[-1] = not stack[-1]
+            continue
+        if stripped.startswith("#endif"):
+            if stack:
+                stack.pop()
+            continue
+        if all(stack):
+            yield number, line
+
+
 def motion_events(title: str) -> dict[str, tuple[tuple[int, int], ...]]:
     """`SetModelPartID` commands per motion symbol, subroutines expanded."""
     # Source order is kept across the subroutine boundary, because a later
@@ -132,7 +168,8 @@ def motion_events(title: str) -> dict[str, tuple[tuple[int, int], ...]]:
         if not re.fullmatch(rf"\d+_{title}MainMotion\.c", path.name):
             continue
         current = None
-        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        for _number, line in region_us_lines(
+                path.read_text(encoding="utf-8", errors="replace")):
             head = ARR.match(line)
             if head:
                 current = head.group(1)
@@ -162,7 +199,8 @@ def motion_events(title: str) -> dict[str, tuple[tuple[int, int], ...]]:
 def anim_rows(title: str) -> dict[int, dict[str, set[str]]]:
     """mask -> {motion symbol: {anim names}} for every row naming this fighter."""
     found: dict[int, dict[str, set[str]]] = {}
-    for line in FTDATA.read_text(encoding="utf-8", errors="replace").splitlines():
+    for _number, line in region_us_lines(
+            FTDATA.read_text(encoding="utf-8", errors="replace")):
         match = ROW.search(line)
         if not match:
             continue

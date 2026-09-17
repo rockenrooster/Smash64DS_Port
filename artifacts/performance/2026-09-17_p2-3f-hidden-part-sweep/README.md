@@ -127,6 +127,67 @@ HIDDEN_PART_ROOT_COVERAGE_OK every drawing hidden part a motion installs is carr
 Known limitation, stated rather than hidden: it follows `Subroutine` but not
 `Goto`, so a model-part write reachable only through a jump would be missed.
 
+## A fourth sub-case, swept and found clean — with two lessons
+
+`SetModelPartID(joint, -1)` hides a joint. If that joint canonically draws, the
+root count goes *down*, which no variant can cover either. There are 42 such
+commands in the game: Samus joint 25 (×1), Kirby joint 12 (×2), and Link joints
+11, 19, 20 and 21 (×39). Only two of those joints actually drop a root — Link's
+11 (`0x2630` High, `0x6370` Low) and 19 (`0x2c88`); Samus 25 and Kirby 12 are not
+in `setup_parts`, and Link's 20 and 21 have `dl == NULL` canonically.
+
+**Link is fully covered**, but the first sweep said otherwise — it reported
+seven uncovered vectors, and both reasons it was wrong are worth keeping:
+
+1. **A vector between two adjacent commands is never presented.** Motion
+   commands run to completion until a `Wait`, so emitting one state per command
+   invents states no frame ever sees. `dLinkMainMotion_AttackAirD` does
+   `SetModelPartID(21, 0)` then `SetModelPartID(19, -1)` with nothing between
+   them; the 20-root state in the middle does not exist to the renderer. Emit
+   one state per `Wait` boundary. That alone took seven findings to one.
+2. **A decomp parser must respect `#if defined(REGION_US)` / `REGION_JP`.** The
+   last finding was `dLinkMainMotion_Catch`, whose five model-part writes are
+   all adjacent between `WaitAsync(4)` and `WaitAsync(17)` — so its first
+   presented state is the full 22-root vector, which the `Catch` program
+   matches exactly. The phantom came from the `#if defined(REGION_JP)` arm
+   below `End()`, which carries an extra `SetModelPartID(21, 0)` that a
+   line-based parser absorbs into the US motion.
+
+That second point is a **live defect in `check_hidden_part_root_coverage.py` as
+committed**: it does no region filtering at all. It is GREEN today because none
+of the three flagged masks has a JP arm that changes its vector, which is luck
+rather than design — the JP arms hold ten model-part commands across Link and
+Kirby. The build is `-DREGION_US`, so the checker must parse that arm. Fixing it
+is owed.
+
+## Registering a checker has a second wiring site, and it caught me
+
+Adding the two `Invoke-VerifyScript` calls to `verify-all.ps1`'s host block made
+the next Boundary **fail**:
+
+```
+Exception: verify-all.ps1:456
+Verifier accounting mismatch: {0} passed, {1} expected. Refusing to
+report 'Boundary verification profile passed.'
+```
+
+All three arms had run and passed — four-CPU WORK-H 1,600,960 / 2,320,576,
+native failures 0, slips 0, identical to the run before. The failure was
+entirely the accounting gate: `Invoke-VerifyScript` increments
+`$script:verifiersPassed` on *every* success, host checks included, and
+`$expectedVerifiers` is a literal that must move with them. Its own comment says
+so — *"Keep this count synchronized with the unconditional Invoke-VerifyScript
+calls before the runtime plan"* — and I added two calls without moving `15` to
+`17`.
+
+This is the same shape as the `SetRootProgram` bound that silently reset Kirby's
+Stone and CopyLink to canonical, fixed earlier the same day: **a number that
+validates a set of call sites is itself a call site.** The difference is the
+failure direction, and it is the right one — the count being too high throws and
+refuses to print the pass line, where the Kirby bound being too low silently
+degraded output. A gate that fails loudly when you extend it is a gate doing its
+job.
+
 ## The third mechanism, checked for completeness
 
 A root-count change has one more source: `ftMotionCommandHideModelPartAll`,
