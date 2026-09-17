@@ -43,21 +43,23 @@ SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N04.08 + clean rebuild + the 2026-09-16 cleanup,
-Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
-740,352**; native **0/0**; realtime **26.4 FPS**; slips 0.
+**Last qualified checkpoint:** N04.08 + clean rebuild + the 2026-09-16 cleanup +
+the 3,779-line shim trim + wave-1 collapse + 1,024 B arena alignment. **Boundary
+GREEN all three arms 2026-09-17.** WORK-H **1,588,544 / 2,301,504**, FTR
+**353,280 / 741,376**, STG 345,600; heap low-water 111,680 B; arena 1,355,520 B;
+native 0/0; slips 0.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
-**THE GAP IS STALL, NOT WORK** (`…_stall-budget/`). Non-idle frame 1,616,422 =
-**576,491 issue + 1,039,931 stall (64.3%)**; data 560,739 vs icache 155,651. The
-**issue floor alone is 543,509 UNDER the gate**, so no arithmetic deletion can
-close it — it asks a **47.7% stall cut**. Five lanes failed identically, each
-trading issue for fetch.
-**STALL class sized** (`…_dtcm-falsifier/`): `FTParts` packing is **zero** (hot
+**THE GAP IS STALL, NOT WORK** (`…_stall-budget/`). Non-idle 1,616,422 =
+**576,491 issue + 1,039,931 stall (64.3%)**; data 560,739 vs icache 155,651.
+**Issue floor alone is 543,509 UNDER the gate** — no arithmetic deletion can
+close it; it asks a **47.7% stall cut**. Five lanes failed identically, trading
+issue for fetch.
+**STALL class sized** (`…_dtcm-falsifier/`): `FTParts` packing **zero** (hot
 fields already in line 0; the walk is over `DObj`); `DObj` packing is the real
 8.1% target, **blocked by pristine `decomp/`**; DTCM works (-10,176) but usable
-DTCM is **1,992 B not 5,704**, 1,680 short. Reverted.
+DTCM is **1,992 B not 5,704**. Reverted.
 **THE DCACHE CHANGES THE AXIS** (`…_dcache-value/`). Cache OFF: WORK-H
 1,588,928 -> **2,983,488**, so the 4 KB dcache is worth **1,394,560** — more than
 the gap — and captures **71.3%**; residual = data stall **560,739**. **Perfect
@@ -71,19 +73,19 @@ change**). **Arena now aligned 1,024 B** (`diagnostics_taskman_heap.c`) so
 allocations stop re-phasing when `.data`/`.bss` resize — verified **free**
 (-384) but it fixes only **23%**; STG is unchanged, so the carrier is not the
 heap.
-45,760 > 23,691 was **never a contradiction and there is no scope error**:
-23,691 is stall **ON** statics, 45,760 is stall caused by **MOVING** them, and a
-relocation is paid by what it **EVICTS**. Re-attribution by target address
-**confirms** 23,691 (STG moved-static 20,548); **the locality ranking is intact**
-and the VRAM arena stands at 55,669 / 11.2%. Mechanism reproduces: 1,069 KB
-re-phased, 9,644 fills at 26.2% miss, +2.9 pts = **46,968 predicted**.
+45,760 > 23,691 was **never a contradiction, no scope error**: 23,691 is stall
+**ON** statics, 45,760 is stall caused by **MOVING** them, and a relocation is
+paid by what it **EVICTS**. Re-attribution by target address **confirms** 23,691;
+**the locality ranking is intact**, VRAM arena stands at 55,669 / 11.2%.
+Mechanism reproduces: 1,069 KB re-phased, +2.9 pts = **46,968 predicted**.
 **The SHIPPED layout is the BEST of five arms** — the experiment found a worse
 phase. Banking it needs a blind 1,024-byte search against a 14,080 floor, and a
 per-scene bump allocator makes any phase a fresh draw per stage/roster.
 **DO NOT REOPEN.** Residual risk is variance only: any `.data`/`.bss` size change
 can move WORK-H tens of thousands of ticks; same-ROM route A/B is the only immune
 form.
-Checks: **Boundary GREEN all three arms**; both targets build.
+Checks: **Boundary GREEN all three arms 2026-09-17** (arena alignment qualified;
+it buys 0 ticks and exists so `.data`/`.bss` resizes stop re-phasing the heap).
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
 lines, UNMEASURED). SRC's top candidate sized NO-GO. FTR/STG/MISC UNSIZED — size
