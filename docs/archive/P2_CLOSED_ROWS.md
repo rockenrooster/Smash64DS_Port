@@ -400,3 +400,31 @@ it **EVICTS**; the locality ranking is intact. **Arena now 1,024 B aligned** so
 Residual is **variance risk only**: any static-size change can move WORK-H tens
 of thousands of ticks; same-ROM route A/B is the only immune form.
 
+
+
+## P2-3r17 — Fighter seams/holes around DK and Mario cap — CLOSED, owner-confirmed
+
+**Owner, 2026-09-17: "has been fixed for a while now. I removed it from
+BUGS.md because it was fixed."** The row outlived the defect.
+
+Corroborated independently before the owner said so, which is the useful part
+of the record: `check_native_owner_geometry_closure.py` is GREEN for both
+fighters in both details — mario **376/376** high and **240/240** low, donkey
+**494/494** and **314/314** — with every source triangle reaching the emitted
+primitive stream exactly once, carrying its own source vertex, routed to its own
+joint's GX slot, facing outward, with source winding. So "not missing geometry"
+was true, and the standing check now holds it true.
+
+**Two ways this row misled, both worth remembering.**
+
+Its "Analysis: `docs/BUGS.md`" citation pointed at nothing — the strings
+"guard band" and "3r17" appear nowhere under `docs/` but in the row itself — and
+its proposed fix, "a bounded AOT guard band in the owner generator", would have
+*added geometry* under a RED performance gate. Building it would have been
+manufactured work against a defect that no longer existed.
+
+And the absence of any seam/hole/gap entry in `BUGS.md` was read here as "never
+substantiated". **That inference was wrong: absence from the bug list meant
+FIXED.** A cleaned-up bug list and a never-reported bug look identical from the
+outside; only the owner can tell them apart, and the board row is not evidence
+either way.

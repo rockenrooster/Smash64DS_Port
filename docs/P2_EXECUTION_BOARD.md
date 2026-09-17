@@ -96,7 +96,6 @@ pixels/audio or unexercised states stay engineering work.
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-3r17 | Fighter seams/holes around DK and Mario cap | **NOT READY — cited analysis is missing** | "Analysis: `docs/BUGS.md`" is stale; "guard band" is nowhere in `docs/` but here. "Not missing geometry" IS checked — closure GREEN, mario 376/240, donkey 494/314. OWED: a capture. |
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin, ThrowF/ThrowB; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball closure + **F-smash vanish** | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source input for roll/Bomb. F-smash is now program 4: `0x00180000` installs drawing hidden parts 11/12 (`0x2c20`/`0x2ce8`), 16 roots vs canonical 14, neither offset was resident. Derived, not observed — confirm on hardware. |
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
