@@ -51,12 +51,12 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
-**NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`…_p2-2p8-gate-decision/`):
-its ceiling is **90.6%**; a PERFECT cache still leaves **44,208 OVER**.
-**RESIDUAL: 321,866 UNFOUND**; banked + sized = **146,678 = 31.3%** of gap.
-**JOINT-CAP LANE SPENT**: the cap **aborts the CPU AI**, and deleting **94.7%**
-of pose evaluation gave **no WORK-H reduction**. Placement CLOSED.
-**KIRBY COPY FIXED**. OWED: per-hat look.
+**NO CLASS REACHES THE GATE, INCLUDING LOCALITY**
+(`…_p2-2p8-gate-decision/`): ceiling **90.6%**, leaving **44,208 OVER**.
+**RESIDUAL: 321,866 UNFOUND**; banked+sized **146,678 = 31.3%**.
+**JOINT-CAP LANE SPENT**: cap **aborts the CPU AI**; deleting **94.7%** of pose
+evaluation gave **no WORK-H reduction**. Placement CLOSED.
+**KIRBY COPY FIXED.** OWED: per-hat look.
 **HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 exist, all covered
 (`…_p2-3f-hidden-part-sweep/`). OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
@@ -77,8 +77,7 @@ gap**, but **50.9% gameplay state-hash frozen + 20.4% fidelity-gated**; only the
 before it is an optimization.**
 **LEVER SIZED: 8,458 B of entry-effect texels belong to fighters the four-CPU
 build cannot run**, **0 shared** = **2.1 arena pages**
-(`…_p2-2p8-entry-effect-roster-residency/`). Emitter must renumber per config.
-Buys arena headroom, NOT ticks.
+(`…_p2-2p8-entry-effect-roster-residency/`). Buys arena headroom, NOT ticks.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
@@ -104,7 +103,7 @@ pixels/audio or unexercised states stay engineering work.
 | P2-3f47 | Roster close: Ness, Purin, Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. Intro is **NOT** this class. OWED: captures. `…_p2-3f52-yoshi-root-programs/`. |
-| P2-3f53 | EFDesc effects without native owners | **Falcon done; the other three are NOT wiring changes** | **Yoshi egg** (`0xa860`, one root = invisible intro AND shield): implemented, built clean, checker GREEN, then Boundary RED — arena stepped down 4,096 B, AllocFail 84→85, **14 texture-bind rejects**. Reverted (`252a9aa4290`); four-CPU is ON a page edge so ANY resident growth breaks it. **Kirby Vulcan Jab**: attempted and **BLOCKED** — its state root branches to an **RGBA32** texture and the DS has no 32-bit format, so it needs a lossy RGBA32→A1BGR5/A5I3 conversion with a fidelity call, not a `case` (`…_p2-3f53-vulcan-jab-blocker/`). **Pikachu Thunder** down-B unstarted; the row also conflates it with ThunderJolt, which is already owned. |
+| P2-3f53 | EFDesc effects without native owners | **ALL FOUR RESOLVED: 1 done, 3 blocked, none a wiring change** | **Falcon Punch/Kick DONE** (checked + registered; row was stale). **Yoshi egg** `0xa860` (= invisible intro AND shield): built clean, checker GREEN, Boundary RED — arena −4,096, AllocFail 84→85, 14 texture-bind rejects; reverted `252a9aa4290`. **Kirby Vulcan Jab**: BLOCKED, its state root branches to **RGBA32** and the DS has no 32-bit format — needs a lossy conversion + fidelity call, not a `case`. **Pikachu down-B Thunder**: format CLEAN (IA16/IA8, would compile) but `PikachuModel` is no InputSpec and gate is `NDS_P2_PIKACHU 0`. **2 of 4 blocked on the SAME resident budget; the per-roster emitter is the lever.** `…_p2-3f53-vulcan-jab-blocker/`, `…_p2-3f53-thunder-assessment/`. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 
 ## Queue — P2-4 engineering
