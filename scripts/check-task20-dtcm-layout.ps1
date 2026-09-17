@@ -266,9 +266,14 @@ foreach ($elfPath in $Elf) {
     foreach ($name in $hotScalarNames) {
         $owner = @($owners | Where-Object { $_.Name -eq $name })
         if ($owner.Count -eq 0) {
-            throw ("DTCM hot scalar '$name' is claimed by the linker script " +
-                "but is not in '$resolvedElf'. scripts/check-dtcm-residency.py " +
-                "explains why a gather that matches nothing is silent.")
+            # NOT a failure. Roster and feature gates mean a configuration need
+            # not compile every one of these -- the shell build carries none of
+            # the tick-HUD counters, so 7 of the 112 are simply absent there.
+            # A symbol that does not exist has nothing to gather and adds no
+            # bytes. A MISTYPED input section still leaves its symbol in the
+            # ELF, in .main.bss, where scripts/check-dtcm-residency.py reports
+            # it as stranded, so the guard against a silent gather is unharmed.
+            continue
         }
         if (-not $hotScalarBySection.ContainsKey($owner[0].Section)) {
             throw ("DTCM hot scalar '$name' landed in section " +

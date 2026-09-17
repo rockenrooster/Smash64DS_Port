@@ -143,33 +143,50 @@ def main() -> int:
         return 1
 
     addresses = elf_symbol_addresses(find_nm(), args.elf)
-    missing: list[str] = []
+    absent: list[str] = []
     stranded: list[tuple[str, int]] = []
     resident: list[tuple[str, int]] = []
     for _section, symbol in intended:
         addr = addresses.get(symbol)
         if addr is None:
-            missing.append(symbol)
+            absent.append(symbol)
         elif DTCM_BASE <= addr < DTCM_CEILING:
             resident.append((symbol, addr))
         else:
             stranded.append((symbol, addr))
 
     print(f"  DTCM residency: {len(resident)} of {len(intended)} intended "
-          f"symbols inside [0x{DTCM_BASE:08x}, 0x{DTCM_CEILING:08x})")
+          f"symbols inside [0x{DTCM_BASE:08x}, 0x{DTCM_CEILING:08x}), "
+          f"{len(absent)} not built in this configuration")
     if resident:
         low = min(a for _s, a in resident)
         high = max(a for _s, a in resident)
         print(f"  span 0x{low:08x}..0x{high:08x}")
-    if not missing and not stranded:
+    # STRICT about absence, on purpose, and this is the division of labour with
+    # check-task20-dtcm-layout.ps1.
+    #
+    # A mistyped input section produces a mistyped SYMBOL name too, because the
+    # name is the text after the last dot. If absence were tolerated, that typo
+    # would read as "not built in this configuration" and pass, while the real
+    # static sat in main RAM -- the exact silent failure this checker exists to
+    # catch. So it must run against an ELF that compiles every named symbol,
+    # which is what --elf defaults to.
+    #
+    # The layout check is the tolerant one, because Boundary runs it across
+    # configurations that legitimately lack some of these (the shell build
+    # carries none of the tick-HUD counters, so 7 of the 112 are absent there).
+    # It only needs their BYTES, and a symbol that does not exist adds none.
+    if not stranded and not absent:
         print("DTCM_RESIDENCY_OK every symbol the linker script claims for "
               "DTCM is in DTCM")
         return 0
 
     print("DTCM_RESIDENCY_FAIL")
-    for symbol in missing:
-        print(f"  {symbol}: no such symbol in the ELF -- its input section "
-              f"matched nothing and the gather silently did nothing")
+    for symbol in absent:
+        print(f"  {symbol}: no such symbol in the ELF. Either its input "
+              f"section name is mistyped -- in which case the gather matched "
+              f"nothing and did so silently -- or this build does not compile "
+              f"it, in which case check against one that does.")
     for symbol, addr in stranded:
         print(f"  {symbol}: at 0x{addr:08x}, outside DTCM -- claimed by the "
               f"script but left in main RAM")
