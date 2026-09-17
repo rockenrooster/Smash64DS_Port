@@ -71,14 +71,45 @@ here; it has already killed one lever on this project.)
    and it is already recorded as NO-GO; nothing here reopens it. It is worth
    knowing that it is the only single-lane path.
 
-## Per-candidate evidence (being gathered separately)
+## Per-candidate evidence: FTR's six, against what the repo already measured
 
-Per-candidate sizing is a second pass and is not in this artifact yet. The key
-discipline for it is the project's own:
-a lane that was accepted at a small roster and then contradicted at four
-fighters is **dead until re-derived**, not merely unsized — `An accepted bank
-may not hold at 4x` records GX compose accepted at −8,096 on Mario+Fox and then
-measured at **+22,848 P50 / +67,456 P95 at four fighters**.
+The discipline: a lane accepted at a small roster and then contradicted at four
+fighters is **dead until re-derived**, not merely unsized.
+
+| # | FTR candidate | verdict | evidence |
+|---|---|---|---|
+| 2 | Direct pose-to-packet matrix production | **DEAD** | The repo **built and measured exactly this**. `…/2026-09-15_p2-2p8-pose-draw-pilot/` (N05.05), same ROM, route bit only: **FTR median +14,336, lost all 128 frames**; WORK median +12,864, lost 104/128. It engaged (10,554 native-transform draws) and died on 48,720 misses / 12,861 stale. **FTR.md does not cite it.** Serialization is separately exhausted across four arms N04.04–N04.07, all under the 14,080 floor |
+| 3 | Lossless GX packet compilation | **DEAD** | Task 55 delivered it losslessly — replay buffer 3,916 → 3,561 words, **−9.1%** — and **`ALL` moved +64, flat**. Per-PC says why: *"~28 of the 40.5 cycles are the GX writes… the stall is **per vertex**, not per word"*, which also refutes `VTX_10`. GX compose is the same lane at four fighters: **+22,848 P50 / +67,456 P95** |
+| 1 | Prebound fighter submission | **SIZED, small** | Ceiling **19,300 tk/fr** (`HANDOFF_P1_FINAL.md:12`, corrected down from 34,307), and its two largest sub-deletions are **already banked**: −27,264/−22,912 (prechecked replay) and −5,504/−2,816 (packet input refresh). The residue is precheck cost ≈23.6K. Carries a hard invalidator: *"REFUTED, TWICE OVER — DO NOT BUILD A DObj-TREE-KEYED MEMO"*; the obvious content key read *unchanged* on 49 of the 51 frames the contract actually changed |
+| 5 | Direct-index Link texgen | **SIZED, smallest** | Ceiling is a fraction of **8,053 tk/fr**, and FTR says so itself. Premise verified true verbatim in current code. Inherits the `n0503-flat-cache` hazard, where a lookup-miss repair worked as predicted (SRC −15,040) and was cancelled by dcache eviction (+51,520 STG) — *"fetch, not arithmetic"* |
+| 6 | Versioned lighting/tint | **BELOW FLOOR** | Already half-built: `ndsFighterPacketApplyTint` early-returns on unchanged modulate+hash. What remains is one hash loop and one sqrt + three divides per replay — under the 14,080 cross-build floor on this repo's own precedent |
+| 4 | Root-local variants | **GENUINELY UNSIZED, and discouraging** | The miss population is captured but never correlated with expensive frames. What the captures show: **root-count and texture-residency misses read zero in every four-CPU capture**, and the miss rate is ~2.6% (178 records vs 6,673 hits), so the whole-fighter-rebuild population may be small. Against it stands the hardest constraint on the board — see below |
+
+### Correction to the evidence pass itself
+
+An earlier draft of this section listed `ndsFighterDisplayContractCountFlags` as
+**4,117 tk/fr of free deletion** — a recursive DObj walk whose only outputs are
+two debug counters nothing in Boundary reads. **That is not available.** The
+call site is inside `#if NDS_R2_FTR_CONTRACT_CENSUS`
+(`renderer_adapter_fighter.c:937-939`), and that flag is **0 in both the
+four-CPU gate build and the profile build**
+(`builds/build-p2-fourcpu-tickhud/nds_build_config.h:204`,
+`builds/build-p2p8-n0409-profile/nds_build_config.h:198`). The cost was
+recorded when the census was on; it is already not paid. The repo's own comment
+says so and the draft read past it.
+
+### What candidate 4 collides with
+
+Root programs shipped today, but they are **whole-owner alternate root vectors**
+matched by full-vector scan, so a program switch changes `preamble_hash` and
+`input_count` and invalidates the entire packet — precisely what candidate 4
+says should stop. The fragment-level assembly it asks for does not exist.
+
+And a variant bank is resident growth by construction, which is the one thing
+the four-CPU build cannot absorb: ~1 KB cost 14 native failures and a 4,096-byte
+arena step-down today (`…/2026-09-17_p2-3f53-yoshi-egg-owner/`), and at scale
+**+28,848 B cost WORK-H P50 +70,016 with P0/P1 triangle counts identical**
+(`…/2026-09-17_p2-3f47-kirby-copy-hats/`) — carrying cost, not draw cost.
 
 ## What this artifact does NOT do
 
