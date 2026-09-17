@@ -2462,16 +2462,77 @@ KIRBY_TRIO_BODY_OFFSETS = {"high": 0x40A0, "low": 0x4860}
 KIRBY_TRIO_AUX19_OFFSETS = {"high": 0x35E8, "low": 0x3858}
 KIRBY_TRIO_AUX18_OFFSET = 0x17850
 KIRBY_TRIO_BODY_BINDING = 1
-KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0))  # (head_mp, body_mp) from 228 motions
+# (head_mp, body_mp) from 228 motions. Heads 1 and 14 are the inhale and
+# boomerang FACES; 4 is Donkey's COPY HAT and is the first copy hat this seam
+# has ever carried. Before it, Kirby's swallow-copy left the native path for
+# every victim except Link -- and Link goes through KIRBY_COPY_LINK_MODELPART_ID
+# rather than through here, so this table supported zero copy hats.
+# `check_native_owner_geometry_closure.py` fails until every copyable victim's
+# hat appears here.
+#
+# Admitting head 4 was ATTEMPTED and is recorded here because the attempt is the
+# useful part. Its root count and cross slots derive correctly (9 roots in both
+# details, matching head 1 exactly), but the bake then stops on a real per-hat
+# difference the two face heads do not have:
+#
+#   ValueError: kirby trio head4: color escape dense 116 has no
+#               value-identical main-table row
+#
+# The body's MODIFY_ST copies take their shade from head/canon rows, and each
+# escape must resolve to a main-table row identical in position, UV, cache slot
+# and RGBA (`_append_kirby_trio_sections`). One of Donkey's hat rows has no such
+# twin. That is per-hat geometry work, not a table entry, and it is exactly the
+# class of thing the slot-length check could never have caught.
+KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0))
 
 # Physical GX slots for the exact live root order.  Root 0 (head) must remain
 # resident while root 1 (body) executes its MODIFYVTX reads.  After that, the
 # canonical two-root welds retain their qualified slots (17/16 and 19/18).
 # Standalone auxiliaries and final roots need no stored palette slot.
-KIRBY_TRIO_PROGRAM_CROSS_SLOTS = {
-    1: (17, 16, 17, 16, 19, 18, 31, 31, 31),
-    14: (17, 16, 17, 16, 19, 18, 31, 31, 31, 31),
-}
+# The sequence is a function of the head's ROOT STRUCTURE, not of the head.
+# Kirby's canonical program has 7 roots; SpecialN adds hidden joints 7 and 19,
+# giving 9, and Link-copy adds joint 18 for 10. So slots 0..5 are the head, the
+# body and the two canonical welds, and every later root is a standalone
+# auxiliary needing no stored palette slot.
+#
+# This matters because `build_direct_dense_tables` is called with
+# `validate_cross_census=False` on this path (see `_bake_kirby_specs_program`):
+# a WRONG sequence of the right LENGTH passes silently and resolves the body
+# against the wrong head's vertex cache. The generator's length check is the
+# only automatic guard, so the values are derived from the root count here
+# rather than hand-authored per head, and the closure checker re-proves source,
+# vertex, matrix-routing, facing and winding on every baked context.
+KIRBY_TRIO_CANONICAL_CROSS_PREFIX = (17, 16, 17, 16, 19, 18)
+
+# Kirby's canonical program has 7 roots. SpecialN enables hidden joints 7 and
+# 19, so every trio context has at least 9. Link-copy enables joint 18 as well,
+# which is the ONLY head that reaches 10 -- verified by running the spec builder
+# for heads 1, 14 and 4 (9, 10, 9 roots respectively, in both details).
+#
+# This replaces `9 if head_mp == 1 else 10`, which was correct only while the
+# table held exactly heads 1 and 14: it silently hands TEN bindings to any newly
+# admitted head, and an ordinary copy hat has NINE roots. The first hat added
+# would have been mis-bound with no error, because the count is not cross-
+# checked against the built specs at schema time.
+KIRBY_TRIO_BASE_ROOT_COUNT = 9
+KIRBY_TRIO_EXTRA_JOINT_HEADS = (14,)  # Link-copy also enables joint 18
+
+
+def kirby_trio_root_count(head_mp: int) -> int:
+    """Roots in this head's trio program, from which joints SpecialN enables."""
+    return KIRBY_TRIO_BASE_ROOT_COUNT + (
+        1 if head_mp in KIRBY_TRIO_EXTRA_JOINT_HEADS else 0)
+
+
+def kirby_trio_cross_slots(root_count: int) -> tuple:
+    """Palette slots for a trio program with `root_count` roots."""
+    if root_count < len(KIRBY_TRIO_CANONICAL_CROSS_PREFIX):
+        raise ValueError(
+            f"kirby trio: {root_count} roots is fewer than the "
+            f"{len(KIRBY_TRIO_CANONICAL_CROSS_PREFIX)} welded roots every "
+            f"context must carry")
+    return KIRBY_TRIO_CANONICAL_CROSS_PREFIX + (31,) * (
+        root_count - len(KIRBY_TRIO_CANONICAL_CROSS_PREFIX))
 
 
 def kirby_trio_head_offset(detail: str, head_mp: int) -> int:
@@ -2557,7 +2618,7 @@ def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
         vertex, triangles, runs, epochs, owner_roots, repo_root,
         owner_root_bindings=(tuple(bindings_list),),
         action_bindings=bindings)
-    cross_slots = KIRBY_TRIO_PROGRAM_CROSS_SLOTS[head_mp]
+    cross_slots = kirby_trio_cross_slots(len(roots))
     if len(cross_slots) != len(roots):
         raise ValueError(
             f"kirby trio head{head_mp}: {len(cross_slots)} cross slots for "
@@ -2634,7 +2695,7 @@ def kirby_trio_variant_schema():
             {"detail": detail, "head_mp": head_mp, "body_mp": body_mp,
              "head_offset": kirby_trio_head_offset(detail, head_mp),
              "body_offset": KIRBY_TRIO_BODY_OFFSETS[detail],
-             "bindings": list(range(9 if head_mp == 1 else 10))}
+             "bindings": list(range(kirby_trio_root_count(head_mp)))}
             for detail in ("high", "low")
             for head_mp, body_mp in KIRBY_TRIO_CONTEXTS
         ],
