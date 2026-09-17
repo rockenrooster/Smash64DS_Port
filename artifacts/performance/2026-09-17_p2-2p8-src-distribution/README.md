@@ -1,4 +1,28 @@
-# SRC has no big rocks: 1,108 functions under 5,000 ticks carry more than the gap
+# CORRECTED: this is the WHOLE non-idle frame, not SRC
+
+> **Owner review, `docs/optimization/SRC.md`, 2026-09-17:** *"The later 'SRC
+> distribution' is actually a whole-frame non-idle profile. Its approximately
+> 1.614M ticks cannot be treated as an exclusive SRC decomposition. Some policy
+> percentages in that report also reuse the sampled caller census that another
+> report explicitly corrected."*
+>
+> **Both points are right and they are mine to own.** The method below says so
+> in its own words — a per-PC profile with only `armWaitForIrq` excluded. Take
+> out the idle spin and what remains is every lane at once: FTR, STG, MISC and
+> OTHR are all inside that 1,614,414, so calling it SRC overstates SRC by
+> whatever the other lanes carry. The soft-float gate split also reuses the
+> 29,846-sample caller census that a separate report had already corrected.
+>
+> **What survives.** "No big rocks" holds — it is a true statement about the
+> frame, which is the harder claim anyway, and the 1,108-symbol tail really
+> does exceed the gap. **What does not survive** is the inference drawn from
+> it: *"SRC cannot be closed by picking functions"* was never measured, because
+> SRC was never isolated here. Nor should the per-gate soft-float percentages
+> be quoted until they are recomputed against the corrected census.
+>
+> The original title was "SRC has no big rocks: 1,108 functions under 5,000
+> ticks carry more than the gap." Everything below is unchanged so the error is
+> legible rather than tidied away.
 
 Owner opened SRC on 2026-09-17 ("you can work on SRC, but 30 Hz simulation is
 not desired"), reversing the 09-16 NO-GO. This is the first thing that needed
