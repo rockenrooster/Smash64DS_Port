@@ -190,9 +190,23 @@ job.
 
 ## The third mechanism, checked for completeness
 
+> **CORRECTION, 2026-09-17.** The "seven times in the whole game" below is
+> wrong, and the error is one of scope: it is seven *motion-command* sites. The
+> underlying function `ftParamHideModelPartAll` has **three more callers in C**,
+> which no sweep of `*MainMotion.c` can see — `ftcommonguard2.c:23` and
+> `ftcommonguard1.c:391` (Yoshi's shield) and `efmanager.c:5441`
+> (`efManagerYoshiEggEscapeMakeEffect`, the egg-hatching intro). All three hide
+> Yoshi's whole body and put an `EFDesc` egg in its place, and **neither egg has
+> a native owner**, so Yoshi goes invisible in both states. That is the owner's
+> "character intro is invisible (egg hatching)" report, whose cause I had
+> previously recorded as "elsewhere" after correctly ruling out the anim-desc
+> mechanism and then stopping. The lesson is the general one: a mechanism reached
+> through a motion command is usually also reachable from C, and sweeping the
+> command tables alone understates it.
+
 A root-count change has one more source: `ftMotionCommandHideModelPartAll`,
 which collapses the live vector to whatever a following `SetModelPartID`
-re-enables. It exists **seven times in the whole game** and every one is already
+re-enables. It has seven **motion-command** sites and every one of those is
 carried:
 
 | file | motions | program |

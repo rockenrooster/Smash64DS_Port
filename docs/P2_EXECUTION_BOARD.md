@@ -52,29 +52,26 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
 **PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.**
-`…_p2-2p8-gate-decision/`; sizing `…09-17_p2-2p8-locality-sizing/`.
-**CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%**;
-that subtracted ALL data stall. Layout removes only **line fills** =
+`…_p2-2p8-gate-decision/`; sizing `…_p2-2p8-locality-sizing/`.
+**CORRECTED 09-17:** locality's ceiling was published as **113%**, which
+subtracted ALL data stall. Only **line fills** are layout-removable =
 **424,336 = 90.6%** — a PERFECT cache still leaves **44,208 OVER**.
-**THE RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`). Banked 43,200 +
-5 sizings = **146,678 = 31.3%** of the gap.
+**RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`); banked 43,200 + 5
+sizings = **146,678 = 31.3%** of the gap.
 **CORRECTION:** "fewer joints" is ONE lever (`gNdsGCDrawsActiveMax` counts live
 **DObjs**; for a fighter a DObj IS a joint) and it is **SPENT**
 (`…_p2-2p8-joint-cap-ladder/`): the cap **aborts the CPU AI**
 (`ftcomputer.c:7970`), and deleting **94.7%** of pose evaluation gave **no
 WORK-H reduction**. Order 4 is the only class large enough and is
 **owner-forbidden** — **owner decision, not engineering**. Last lane SIZED: the
-67,858 literal-pool bucket gives **11,449** packed; `-fsection-anchors` is
-**inert**. Placement CLOSED.
+67,858 literal-pool bucket gives **11,449** packed. Placement CLOSED.
 **KIRBY COPY FIXED — all 11 victims draw natively**
-(`…_p2-3f47-kirby-copy-hats/`): bodies into per-slot **hat images**, resident
-**+0**, peak **28,848 → 3,071 B**. Second defect: `SetRootProgram`'s stale
-`program <= 4u`. OWED: per-hat look.
-**HIDDEN-PART CLASS CLOSED**: swept all 26 owners, only **3** drawing hidden
-parts exist. Yoshi grab/egg (2 programs) + Samus F-smash (program 4, derived
-not reported) now covered; `check_hidden_part_root_coverage.py` GREEN, was RED
-on F-smash. `…_p2-3f52-yoshi-root-programs/`, `…_p2-3f-hidden-part-sweep/`.
-OWED: captures.
+(`…_p2-3f47-kirby-copy-hats/`): resident **+0**, peak **28,848 → 3,071 B**.
+Second defect: `SetRootProgram`'s stale `program <= 4u`. OWED: per-hat look.
+**HIDDEN-PART CLASS CLOSED**: all 26 owners swept, only **3** drawing hidden
+parts exist; Yoshi grab (2 programs) + Samus F-smash (program 4, derived not
+reported) now covered, checker GREEN and was RED on F-smash.
+`…_p2-3f-hidden-part-sweep/`. OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win** — 3.1x the floor, 9.2% of
 gap, P95 −43,072, 3 runs. Linker script only, **no source change**.
@@ -103,14 +100,14 @@ pixels/audio or unexercised states stay engineering work.
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-3r17 | Fighter seams/holes around DK and Mario cap | **NOT READY — cited analysis is missing** | "Analysis: `docs/BUGS.md`" is stale; "guard band" appears nowhere in `docs/` but here. "Not missing geometry" IS now checked — closure GREEN, mario 376/240, donkey 494/314, every source triangle in tables. Raster cause unevidenced, and a guard band adds geometry under a RED gate. OWED: a capture first. |
+| P2-3r17 | Fighter seams/holes around DK and Mario cap | **NOT READY — cited analysis is missing** | "Analysis: `docs/BUGS.md`" is stale; "guard band" is nowhere in `docs/` but here. "Not missing geometry" IS checked — closure GREEN, mario 376/240, donkey 494/314. Raster cause unevidenced; a guard band adds geometry under a RED gate. OWED: a capture. |
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin, ThrowF/ThrowB; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball closure + **F-smash vanish** | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source input for roll/Bomb. F-smash is now program 4: `0x00180000` installs drawing hidden parts 11/12 (`0x2c20`/`0x2ce8`), 16 roots vs canonical 14, neither offset was resident. Derived, not observed — confirm on hardware. |
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3f47 | Roster close: Ness, Purin, Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. Intro is **NOT** this class. OWED: captures. `…_p2-3f52-yoshi-root-programs/`. |
-| P2-3f53 | EFDesc effects without native owners | **OPEN** | Falcon Punch/Kick, Pikachu Thunder, Kirby Vulcan Jab, Yoshi shield: `generate_nds_entry_effects.py` roots + lookup + admission + check. |
+| P2-3f53 | EFDesc effects without native owners | **RESCOPED — Falcon half already done** | Falcon Punch/Kick landed + checked + registered. ABSENT: **Yoshi egg** (shield `0xa860` + egg escape, both `gFTDataYoshiModel`) — the invisible intro AND shield, **ONE** fix; **Kirby Vulcan Jab** `0x0B20` (asset 348 routed/admitted, not a `case`); **Pikachu Thunder** down-B (NOT ThunderJolt, which is owned). Each needs DObjDesc→DL→Gfx resolution. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 
 ## Queue — P2-4 engineering

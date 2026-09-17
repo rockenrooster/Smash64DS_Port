@@ -30,7 +30,7 @@ Main Menus:
     -Up B egg shells are not rendering.
     -Grab attacks turn yoshi invisible. **FIX IMPLEMENTED, not yet seen on screen. Two Yoshi root programs now carry the 19-root vector that drawing hidden part 4 (joint 9, DL 0x2800) forces: Catch, and Throw which also swaps joint 7 to part 1. Built and linked into smash64ds.nds. Please try a forward and a back throw and say whether Yoshi stays visible.**
     -B attack turns yoshi invisible and egg is also invisible **SAME CAUSE, SAME FIX. EggLay motions 202-206 carry the same 0x18000000, so the Catch program above covers them too. Please try Neutral-B and say whether Yoshi and the egg both draw.**
-    -character intro is invisible (egg hatching) **NOT the hidden-part class - I was wrong. Appear1/2 carry only 0x40000000 (index 1, TransN, no DL), so the root vector is unchanged. Cause is elsewhere.**
+    -character intro is invisible (egg hatching) **CAUSE FOUND, fix not yet written. It is not the anim-desc mechanism (Appear1/2 carry only 0x40000000, no DL) - I ruled that out and wrongly stopped there. efManagerYoshiEggEscapeMakeEffect (efmanager.c:5441) calls ftParamHideModelPartAll from C, so Yoshi's whole body is hidden ON PURPOSE and the egg is meant to draw in its place - but dEFManagerYoshiEggEscapeEffectDesc draws from gFTDataYoshiModel and has NO native owner, so nothing draws. Yoshi's SHIELD is the same cause (ftcommonguard1.c:391 / ftcommonguard2.c:23, a separate egg, also unowned), so one YoshiModel effect owner fixes both.**
 -Link:
     -character intro column VFX should have transparency
     -neutral B makes link invisible when throwing and catching the boomerang
