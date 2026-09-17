@@ -241,6 +241,87 @@ disagreement. Proved both ways: it reports the exact defect against the stale
 packs and passes against the regenerated ones. Registered in `verify-all.ps1`
 with `$expectedVerifiers` moved 17 → 18.
 
+### The same investigation found a second, worse defect in today's own fix
+
+Chasing *why* Yoshi's owner size was 44,256 led to `faf3a7782e8` (2026-09-06),
+which states its intent plainly:
+
+> The owner bake published the compiler-extended payload size (`0xb1b0`) and the
+> synthetic welded-list offsets as root identities. It now publishes the raw O2R
+> size (`0xace0`) and the source post-list offsets while keeping the welded
+> programs for the geometry oracles.
+
+So the owner deliberately moved to the raw size **and** gained
+`runtime_root_aliases` to map each weld's synthetic offset back to the source
+post-list offset the live DObjs provide. That alias is applied where the
+canonical table is emitted:
+
+```python
+roots = [(aliases.get(row[0], row[0]), *row[1:]) for row in context["roots"]]
+```
+
+**The root-program tables, added later, never picked it up.** Yoshi's Catch and
+Throw programs — written earlier today to fix his invisible grab and B attack —
+published `0xace0` and `0xae68` as root identities against an asset that
+**ends** at `0xace0`. Those are addresses the loader can never produce, and
+`ndsRendererValidateNativeFighterOwner`'s bounds helpers reject them. That fix
+could not have worked, which is consistent with `BUGS.md` still recording it as
+not yet seen on screen.
+
+| table | before | after |
+|---|---|---|
+| `sNdsNativeYoshiCatchRoots` | max `0xae68`, **2 out of bounds** | max `0x3148`, none |
+| `sNdsNativeYoshiThrowRoots` | max `0xae68`, **2 out of bounds** | max `0x7d10`, none |
+| `sNdsNativeYoshiCatchRootsLow` | max `0xb0d0`, **2 out of bounds** | max `0x6738`, none |
+| `sNdsNativeYoshiThrowRootsLow` | max `0xb0d0`, **2 out of bounds** | max `0x7d10`, none |
+| `sNdsNativeYoshiRoots` (canonical) | in bounds | unchanged |
+
+`0xace0 → 0x2248`, `0xae68 → 0x2c50` high; `0xaf70 → 0x5bc8`,
+`0xb0d0 → 0x6308` low. **Eight lines change in a 132,000-line generated file
+and nothing else moves.**
+
+Aliasing quietly would leave the next one to be found the same way, so the
+shared helper **asserts**: a root offset at or past `asset_data_size` is a bake
+error that names itself. Proved both ways — with the alias in place the output
+is byte-identical, so the assert is inert rather than a second change; with the
+alias removed the generator fails with
+
+```
+yoshi high canonical: root offset 0xace0 is at or past asset_data_size 0xace0
+```
+
+## The walk now selects every fighter
+
+Owner, 2026-09-17: *"the CSS walk should go over and select ALL fighters."*
+
+It did not, and that is why both defects above could exist unnoticed. The walk
+committed whatever its roster-independent pixel wander landed on — measured,
+`CSSFTRKIND 5 mask=0x23b`, i.e. Mario, Fox, Luigi and Samus: **four of nine
+admitted kinds**. Yoshi was never among them.
+
+`ndsMenuShellCssWalkTourStep` now parks slot 0 on each admitted kind for 48
+tics, sized from the two things standing between a kind change and a drawn
+preview: the 13-tic dwell before a load may begin, then a residency budget of
+one action per tic through retire/load/prepare (the probe measured `retry=3`
+per acquire). It uses **direct slot assignment** for the reason
+`ndsMenuShellCssWalkRestoreGate` already documents — an A press over a locked
+cell is *refused*, so press counts are roster-dependent and re-tuning them per
+rung broke this walk once already, while assigning the slot never touches a
+cell. START is suppressed until the tour finishes, and the existing snapshot
+still restores Mario/Fox, so what the gate commits is unchanged.
+
+The probe prints two new lines:
+
+```
+CSSTOUR    kind=<mask parked on>  drew=<mask that produced triangles>  done=N
+CSSTOURTRI <per-kind triangle counts, FTKind order>
+```
+
+`kind` and `drew` must be **equal**. A bit in `kind` and not in `drew` is a
+fighter whose 3D preview draws nothing, and `CSSTOURTRI` names which one. This
+is the instrument that was missing: it converts "fighter N's preview is
+invisible" from an owner playtest into a counter.
+
 ### What this run does *not* prove
 
 `CSSFTRKIND 5 mask=23b mario=188/… fox=1652/… luigi=113/… samus=113/…` — the
