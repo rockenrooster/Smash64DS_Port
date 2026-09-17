@@ -49,10 +49,14 @@ Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
-**Next action:** every leaf lane is now spent with measurement and the gap is
-unchanged at **-496,382**. Do NOT open another leaf. Either size an FTR/STG/MISC
-candidate from `docs/optimization/` the way SRC's was (its premises did not
-survive), or put the gate itself to the owner.
+**THE GAP IS STALL, NOT WORK** (`…_p2-2p8-stall-budget/`). Non-idle frame
+1,616,422 = **576,491 issue + 1,039,931 stall (64.3%)**. The **issue floor alone
+is 543,509 UNDER the gate**, so no amount of arithmetic deletion can close it:
+the gate asks for a **47.7% cut in memory stall**. That is why all four lanes
+failed identically — collision ring, GX bank, N05.03 and the sized SRC candidate
+each traded issue for fetch. **ITCM is 99.7% full (104 B); DTCM has 5,704 B free
+and the dcache is only 4 KB.** Next action: size a STALL-class candidate — hot
+state into DTCM, pack `FTParts` hot fields, address-order the walks.
 **Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT (ledger).
 Baseline moved 2026-09-16 (clean rebuild -50,432); dead code deleted.
@@ -64,16 +68,10 @@ expendable than the 60 Hz sim (4). Owner 2026-09-16: lab test builds allowed.
 N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement.
 Engaging the 0%-engaged GX compose bank COSTS +22,848 P50; the sampled softfloat
 census **over-attributes 3.0x** — never size from it again.
-**N05.03 is CLOSED NO-GO** (`…_p2-2p8-n0503-flat-cache/`). Its recorded blocker
-(23 decomp latch sites) was never needed: the flat cache is keyed per **joint**,
-not per fighter root, so its 4 slots miss **49.7%**, and **95.4% of misses are
-hash conflicts**. 16 slots fix it (miss 3.6%, **SRC -15,040**, the predicted
-band) — but the **ARM9 dcache is 4 KB** and 16 slots is 3,264 B = 80% of it, so
-**STG rises +51,520** and WORK-H **+33,984**. At constant memory (8x48) nothing
-changes: the working set is 9-16 roots. Fetch, not arithmetic — the third lane
-lost this way after the collision ring and the GX bank.
-**`.itcm` IS FULL: 104 B free of 32,632.** The census overflowed it twice and was
-removed. Any candidate adding resident code to these paths cannot be placed.
+**N05.03 CLOSED NO-GO** (`…_p2-2p8-n0503-flat-cache/`): the flat cache is keyed
+per **joint**, so 4 slots miss 49.7% with 95.4% hash conflicts; 16 slots fix it
+(**SRC -15,040**) but are 80% of the 4 KB dcache, so **STG +51,520**, WORK-H
++33,984. The 23-site decomp blocker was never needed.
 **THE ARITHMETIC IS CLOSED** for leaf levers: gate needs **-496,382 = 30.7% of
 everything executed**; the profile's top twenty is 502,955. **The per-fighter
 lever is MEASURED and spent** and **SRC's top candidate is SIZED NO-GO** — detail
