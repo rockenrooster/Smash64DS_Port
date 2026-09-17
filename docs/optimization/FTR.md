@@ -1,342 +1,717 @@
-FTR: the redesign I would pursue
+# Smash64DS — FTR optimization re-evaluation
 
-The strongest direction is a prebound native fighter program that receives pose data directly—not another cache wrapped around the existing adapter.
+**Date:** September 17, 2026  
+**Repository:** `rockenrooster/Smash64DS_Port`  
+**Reviewed branch:** `master`  
+**Pinned source:** `db0d088bc61ac3e85f07a349857a1b3ec7eef55b`  
+**Commit timestamp:** September 17, 2026, 13:27:07 UTC / 08:27:07 America/Chicago  
+**Previous review:** `430aca2879e9071dc2b22f944f5c2909c9ce7aa4`  
+**Deliverable:** Research, corrected candidate selection, and implementation/test guidance. No repository edits or new ROM benchmarks.
 
-I found several concrete opportunities in the current code. The important distinction is that fighter geometry is already native and packet replay already exists, but the surrounding work still reconstructs information, validates identities, converts representations, and sometimes rebuilds an entire packet. Those are the remaining architectural targets.
+## Executive decision
 
-I reviewed master at 430aca2. The performance figures below come from the repository’s recorded measurements; I did not build or benchmark a new ROM in this review. My recommendations distinguish confirmed work in the current implementation from savings that still require measurement.
+**Keep the objective of a simpler, prebound native fighter renderer, but substantially narrow the earlier implementation recommendation.** Start with a compact packet-hit representation and right-sized patch metadata, not a wholesale pose rewrite or a large resident variant bank.
 
-The shortlist
-Priority	Candidate	What changes	Main opportunity
-1	Prebound fighter submission	Replace recurring adapter reconstruction and content hashing with a persistent, typed render binding	Lower steady-state CPU work
-2	Direct pose-to-packet matrix production	Produce the renderer’s required matrix representation without repeatedly passing through intermediate objects and formats	Remove conversion, copying, and traversal
-3	Lossless GX packet compilation	Optimize the actual command stream, not merely the code that submits it	Reduce FIFO traffic and geometry-engine work
-4	Root-local variants and invalidation	A changing face, material, or model part updates its own fragment rather than rebuilding the whole fighter packet	Reduce expensive miss frames and P95
-5	Direct-index Link texgen patches	Replace repeated small-cache searches with generated local indices	Concrete, bounded, relatively low-risk CPU reduction
-6	Versioned lighting and tint parameters	Recompute derived values only when their actual inputs change	Smaller supporting reduction
+The most useful newly identified opportunity is concrete: **every one of the four fighter packets reserves 1,248 bytes of texgen group/site metadata, for 4,992 bytes total, regardless of whether that instance uses texgen.** The packet also reserves maximum-sized shade and root tables. Right-sizing these cold tables can return resident memory while a compact hot header improves the organization of the replay path. The amount actually reclaimable depends on the admitted roster and supported states; 4,992 bytes is the existing texgen reservation, not a promised saving. [R8]
 
-Candidates 1–4 form one coherent architecture. Candidates 5–6 are independently testable pieces—not substitutes for that redesign.
+This matters because the latest repository evidence shows a gameplay-arena page boundary so tight that an addition of 204 bytes of effect texels **plus its associated roots/code** caused a 4,096-byte arena reduction and native rejects. Large caches cannot be proposed as though their only cost were their nominal byte size. [R14]
 
-1. What the current evidence actually establishes
+My revised priorities are:
 
-The latest qualified checkpoint recorded in the repository is:
+| Priority | Candidate | Revised disposition |
+|---|---|---|
+| 1 | Compact hot packet-hit state and right-sized cold patch metadata | **Best first engineering slice.** Concrete storage opportunities; CPU savings remain unmeasured. |
+| 2 | Direct-index Link texgen patching | **Keep, as a bounded supporting optimization.** Remove searches without changing UV arithmetic. |
+| 3 | Dirty-range cache cleaning plus versioned light/tint parameters | **Measure as a small integrated replay improvement.** Do not remove cache maintenance or lifecycle barriers. |
+| 4 | Root-local packet variants | **Conditional P95 candidate.** First correlate rebuilds with expensive presented frames; no speculative variant bank. |
+| 5 | Fighter GX execution-work reduction | **Host feasibility first.** Count actual vertex submissions, matrix operations, lighting work, and barriers—not merely packet words. |
+| 6 | Producer-owned pose/matrix output | **Defer the broad rewrite.** Existing adverse pilot evidence must be recovered and distinguished from the proposed replacement. |
 
-Metric	P50	P95
-Whole-frame WORK-H	1,584,128 ticks	2,310,848 ticks
-FTR	356,608 ticks	740,352 ticks
+**There is no newly measured FTR package here that can honestly be declared sufficient for 30 FPS. There is also no valid architectural impossibility proof in the evidence reviewed.** FTR should deliver measured contributions to the combined FTR/SRC/STG/MISC campaign, with 60 Hz simulation and native-only rendering retained. [R2], [R3], [R4]
 
-Against the documented 1,120,000-tick gate, the whole-frame gaps are 464,128 ticks at P50 and 1,190,848 ticks at P95. These are calculations from that checkpoint, not new measurements. The project also explicitly requires four-player 30 FPS without switching simulation to 30 Hz.
+---
 
-Two conclusions follow.
+## 1. Scope and evidence quality
 
-First, FTR needs a substantial reduction, particularly in expensive frames. A sequence of tiny changes is not a sufficient strategy for this gap.
+The branch collection returned only `master`. A subsequent comparison of the pinned commit against `master` returned `identical`, with no intervening commits. Some code-search results advertised another revision; all substantive current-source checks below use the explicit pin rather than those search-result revisions. [R1]
 
-Second, FTR is only part of the solution. Its optimization must contribute to the combined STG/SRC/FTR/MISC effort. We cannot subtract independent bucket percentiles from whole-frame percentiles to predict the result: those percentiles need not describe the same frames.
+Evidence labels used throughout:
 
-I also do not accept the repository’s “optimization is exhausted” conclusion as an architectural proof. Its experiments establish that particular implementations failed or were too small. They do not establish a lower bound for a different representation and execution model. The measured GX-compose regression is valuable evidence; it is not proof that every possible fighter pipeline is exhausted.
+- **Source-confirmed:** a mechanism or allocation is visible in the inspected code.
+- **Repository-measured:** a measurement is reported in a retrieved repository artifact; it was not rerun here.
+- **Reported but primary receipt unavailable:** a later summary names an experiment whose original artifact could not be retrieved.
+- **Derived:** arithmetic or reasoning from stated inputs, not a runtime measurement.
+- **Candidate:** a proposed change that still needs implementation and measurement.
 
-Several obvious suggestions would repeat completed work
+The audit includes the current execution board, the new critique of the prior FTR report, current packet/replay and display-contract code, matrix construction, existing negative experiments, the DTCM experiment, the sampler's percentile implementation, and primary libnds/emulator implementation references. This is a targeted re-evaluation of FTR and its boundaries, not a claim to have inspected every line of the repository.
 
-The current implementation already has asynchronous fighter-packet DMA, zero-copy display-memo hits, replay prechecks that skip material preparation, a prechecked path that bypasses whole-owner preflight, fixed-point pose evaluation, body-pose holding, hardware lighting, and an ARM block-copy matrix helper. Those are not new candidates.
+### Non-negotiable constraints
 
-The current hot path is closer to:
+Four-player stable 30 FPS remains the target. Preserve 60 Hz simulation: the newer owner ruling specifically refuses the otherwise broadly permitted 30 Hz simulation option in `PROJECT_GOAL.md`. Keep required content and source gameplay behavior, retain HIGH detail where required, and do not add a target-side N64 graphics interpreter or generic compatibility-renderer fallback. Unsupported content rejected before drawing is contained failure, not completed content. [R2], [R3]
 
-Existing source/pose state
-    → display-contract / draw-plan handling
-    → native matrix preparation
-    → live material identity
-    → packet input refresh
-    → packet key and residency checks
-    → dynamic matrix / texgen / tint patches
-    → cache flush and asynchronous DMA
+Use the approved accuracy-focused melonDS configuration, with interpreter/JIT-disabled profiling, for ordinary development. No new retail-DS measurement campaign is part of this plan. Source references under `decomp/` remain read-only; adaptations belong in the port/import/generator layers. [R2], [R19]
 
-Packet miss:
-    → additional material preparation / native execution / recording
+---
 
-That means optimizing the native triangle emitter alone can miss the ordinary replay path entirely.
+## 2. What changed since the previous answer
 
-Some remaining costs are directly visible
+### 2.1 The qualified baseline moved
 
-The recorded profile contains 129 regions. Applying its documented cycles / (2 × regions) conversion gives these approximate exclusive CPU-symbol averages:
+The current board identifies `a4eb24c9a85` as its last qualified integration checkpoint, with Boundary green on all three arms on September 17. These are **the board's recorded figures**, not measurements of a ROM built from every subsequent documentation commit. [R3]
 
-Symbol	Ticks per profiled frame
-ndsFighterMarioFoxDLAllDrawForSlot	45,692
-ndsFighterPacketTryReplay	24,370
-ndsFighterPacketStoreSplitModelview	12,040
-ndsFighterDisplayContractSubmit	11,687
-ndsFighterPacketPatchTexgen	8,072
-ndsRendererAdapterMaterialAnimHash	7,866
-ndsFighterPacketBuildKey	7,700
+| Metric | P50 | P95 |
+|---|---:|---:|
+| WORK-H | 1,600,960 | 2,320,576 |
+| FTR | 350,144 | 736,960 |
+| STG | 385,088 | 427,648 |
+| SRC | 543,040 | 1,027,520 |
+| MISC | 238,720 | 464,000 |
 
-These are not guaranteed savings, inclusive subsystem budgets, or a complete accounting of FTR. They do show that substantial CPU work remains around the packet itself.
+Gate: **1,120,000 ticks per presented frame**. Direct differences from the WORK-H distribution are **480,960 at P50** and **1,200,576 at P95**. These quantify the problem; they do not identify which instructions must be removed. [R3], [R4]
 
-2. Candidate 1: prebound fighter submission
-The confirmed problem
+The last qualified checkpoint reports 111,200 bytes of heap low-water and a 1,351,424-byte arena. Those numbers do **not** mean an arbitrary 100 KB renderer cache is available: reserve requirements, allocation order, legal content combinations, alignment, and the arena page boundary still apply. [R3], [R14]
 
-Even after the existing draw-plan and packet optimizations, the adapter still prepares matrices, computes live material identity, refreshes packet inputs, and asks the packet system to validate them. ndsFighterPacketBuildKey then walks roots and hashes properties such as root offsets, render modes, material counts, and hierarchy shape.
+### 2.2 A newer locality experiment is important, but is not a new FTR win to bank
 
-Much of this is information about what the fighter is, not what changed this frame.
+The DTCM hot-scalar artifact reports moving 112 statics totaling 508 bytes. Its own matched comparison is: [R5]
 
-The architecture should separate those two categories.
+| Metric | Its control | Its candidate | Difference |
+|---|---:|---:|---:|
+| WORK-H P50 | 1,580,544 | 1,537,344 | −43,200 |
+| WORK-H P95 | 2,320,768 | 2,277,696 | −43,072 |
+| FTR P50 | 354,432 | 349,184 | −5,248 |
+| ALL P50 | 1,678,016 | 1,677,888 | −128 |
 
-Proposed replacement
+The artifact also records an unresolved sample-window assertion, repeated runs, and instruction-level corroboration. It should therefore be described as a supported measured candidate with its exact verification status—not silently substituted for the separate qualified checkpoint above. [R5]
 
-Create a persistent, per-instance bound fighter render object when the fighter’s render topology is established. Bind directly to:
+Two lessons survive that qualification. Small hot-data changes can influence several subsystems, and a real WORK-H reduction can leave VBlank-quantized ALL unchanged. Neither lesson authorizes adding the 43,200 to another baseline or crediting all of it to FTR. [R5]
 
-The selected native root programs and their matrix producers.
-Material and texture resources.
-Dynamic parameter destinations inside the packet.
-Explicit lifetime and mutation generations.
+### 2.3 Several earlier suggestions need demotion
 
-The ordinary draw becomes conceptually:
+The previous answer correctly recognized that packet replay and prechecked execution already exist, but it still presented a broad bound-renderer/pose/compiler program too readily as the strongest implementation path. It did not sufficiently constrain that program by the remaining cost, memory headroom, and adverse experiments.
 
-Bound fighter program
-    + current pose outputs
-    + changed material parameters
-    + current camera/light parameters
-    → patch existing native packet
-    → submit
+The revised plan therefore separates **a small replacement of the hot replay contract**, **conditional tail work**, and **larger research directions**. They are not equally ready to implement.
 
-This is not “add another cache.” The objective is to remove the old reconstruction path from ordinary draws once the binding is authoritative.
+---
 
-I would implement this with generated typed arrays and small C executors, not a new general-purpose command interpreter and not giant generated functions for every animation.
+## 3. Corrections to the new “all candidates exhausted” sizing report
 
-The essential difference from today’s draw plan
+The September 17 sizing artifact is valuable: it identifies work already banked, quotes negative experiments, and highlights resident-memory costs. However, some of its conclusions exceed the evidence. Do not replace optimism with equally unsupported impossibility claims. [R4]
 
-The existing plan caches useful derivation results, but those results still feed the current adapter. The new object should be the renderer-facing contract itself.
+### 3.1 Separate medians cannot prove overlapping timers
 
-For example, instead of rebuilding production_roots[] sufficiently to prove a packet match, retain the relevant root bindings and update only their dynamic fields. Instead of hashing unchanged static preambles, change a generation when a writer changes that state.
+The report says that bucket percentages totaling 124% of ALL prove the lanes are not disjoint. But these are separately computed percentiles, not per-row totals. Medians are not additive.
 
-The current packet key identifies exactly which dependency classes need to be represented: owner/detail/appearance, generated tables and arena lifetime, root preambles and shape, and texture placement.
+A counterexample with completely disjoint work:
 
-Correctness requirements
+| Frame | A | B | C | Total |
+|---|---:|---:|---:|---:|
+| 1 | 10 | 10 | 0 | 20 |
+| 2 | 10 | 0 | 10 | 20 |
+| 3 | 0 | 10 | 10 | 20 |
+| Median | 10 | 10 | 10 | 20 |
 
-A generation number is only useful when every relevant writer participates. The implementation must cover model-part changes, costume/shade changes, material animation, detail changes, copied Kirby assets, asset replacement, and scene-arena reuse.
+The component medians total 30, or 150% of the total median, with no overlap whatsoever. This is a mathematical counterexample, not game data.
 
-During development, retain the current content-derived checks as a shadow validator. A supposedly unchanged generation that disagrees with the old predicate is a bug—not permission to draw stale state.
+Some project timers really are nested; the ledger explicitly warns against adding nested diagnostic timers. Establish their relationships from the bracket locations and same-row data. The median sum is not evidence either way. [R13], [R19]
 
-Expected benefit: recurring identity reconstruction, repeated input publication, adapter branches, and related cache traffic.
+### 3.2 “Delete FTR's median” is not a valid percentile ceiling
 
-Main uncertainty: how much of the driver’s measured cost remains after the bound path is genuinely independent. Adding generation checks while retaining all the old walks could easily make it slower.
+Likewise, `median(WORK-H) − median(FTR)` is not the median of a frame with its FTR contribution removed.
 
-First implementation target: ordinary packet-hit battle draws through ndsFighterMarioFoxDLAllDrawForSlot, with an explicit proof that the old material-identity and packet-key walks no longer execute on that path.
+For example, let whole-frame work be `[50, 100, 150]` and one exclusive component be `[0, 0, 100]`. Its median is zero, but deleting it changes whole-frame work to `[50, 100, 50]`, reducing the median from 100 to 50.
 
-3. Candidate 2: direct pose-to-packet matrix production
-The confirmed problem
+For a purely arithmetic what-if, the correct operation is:
 
-The code already has a compact pose engine, but it publishes pose values into DObj fields. The renderer subsequently prepares matrices from the object hierarchy and writes matrix words into the packet. There are also distinct matrix paths: ordinary flat composition and a source-precision path needed for cases such as animation locks and qualified source-world rendering.
+```text
+For each valid, aligned frame i:
+    optimistic_work[i] = work[i] − removable_component[i]
+Then calculate percentiles of optimistic_work[].
+```
 
-The current replay then copies or converts each root’s matrices again. ndsFighterPacketStoreSplitModelview alone accounts for about 12,040 exclusive ticks per profiled frame in the recorded window. That figure excludes work performed earlier to produce its input.
+Even that is not a hardware speedup prediction. Removing producer work can expose a later FIFO wait, change cache behavior, or alter overlap. An arithmetic deletion scenario is an informative budget screen only. The actual A/B must measure whole-frame work and cadence.
 
-Proposed replacement
+The sampler already computes WORK-H by subtraction **per sample before percentile calculation**. Apply the same discipline to optimization sizing. [R13]
 
-Give the renderer a compact, indexed pose/matrix interface and produce the final packet-compatible matrix words as the output of matrix preparation.
+### 3.3 Task 55 is not a universal fighter-compiler refutation
 
-The first version should be deliberately narrow:
+Task 55 tested **stage** COLOR/TEX_COORD elision in July. Its recorded packet shrank from 3,916 to 3,561 words, while ALL P50 moved +64 ticks. That is strong negative evidence for expecting word compression alone to deliver a major improvement on that tested workload. [R6]
 
-Keep gameplay-facing source data and all simulation timing unchanged. Replace only the renderer’s consumption path.
+It does not establish that every fighter has the same critical path, or that eliminating expensive matrix/lighting/primitive operations is identical to deleting cheap state writes.
 
-The bound program identifies the required joints, the required intermediate parents, their arithmetic class, and their packet destinations. Matrix evaluation then writes its final result directly into those destinations, subject to the packet’s DMA lifetime.
+There is also a correctness correction the newer summary omits: the Task 55 artifact's **post-STOP owner follow-up reports pulsating colors**, contradicting its earlier “lossless” characterization. The experiment remains rejected for both performance and visual reasons. A future compiler must explicitly test cross-frame state, not copy the original abstract losslessness argument. [R6]
 
-This can remove a combination of:
+### 3.4 The adverse pose pilot needs its actual receipt
 
-Reading scattered object fields to rediscover transform inputs.
-Repeated conversion through renderer-irrelevant representations.
-Publishing arrays of pointers solely for another function to consume.
-Copying finished matrices into a second home.
-Scaling the same final homogeneous row in a later pass.
+The newer sizing artifact reports a `N05.05` pose/draw pilot with FTR median **+14,336**, WORK median **+12,864**, 10,554 native-transform draws, 48,720 misses, and 12,861 stale observations. That is meaningful adverse evidence and must not be ignored. [R4]
 
-The benefit comes from fusing producer and consumer, not merely replacing memcpy.
+However, both the named directory and its `README.md` returned 404 at the reviewed pin. Searches found the claim in the sizing summary, not the original implementation/measurement receipt. Accordingly:
 
-Preserve the difficult paths explicitly
+**Treat that implementation as reported rejected; do not repeat it. Do not claim this audit independently verified that it implemented exactly the proposed producer-to-final-packet replacement.** Miss/stale counts suggest a reuse/validity mechanism, but its exact structure cannot be established from the summary alone.
 
-The source-precision and animation-lock paths are not interchangeable with ordinary TRS composition. The current implementation explicitly handles warm gameplay matrices, locked transforms, accumulated scale, and conversion at the selected binding boundary. A redesign must preserve those semantics rather than forcing all joints through a cheaper but incorrect kernel.
+A future reopening needs the original patch, flags, counters, and paired results, followed by an explicit explanation of what is different. This is a prerequisite for the broad matrix lane, not a reason to spend another build recreating the old experiment.
 
-I would use a few explicit producer classes—for example, ordinary native TRS, source-precision locked transforms, and qualified attachment transforms—with generated bindings to each class.
+### 3.5 A 2.6% draw-level record rate can still matter to P95
 
-There is another trap: the current world-scaled split modelview is not simply an ordinary affine matrix. Its complete homogeneous row is scaled, including the final element. Blindly replacing its 4×4 load with a 4×3 load would change the implicit homogeneous component and can change the image.
+The sizing report quotes **178 records and 6,673 hits**, or 2.598% records per draw. It also reports zero root-count and texture-residency misses in the inspected captures. The original frame-correlated population is not supplied by that summary. [R4]
 
-Similarly, bypassing a Q-to-float-to-angle conversion requires proving that the direct conversion produces the intended result. “Both are fixed point eventually” is not sufficient.
+With four independent draws per frame, a purely illustrative probability of at least one record would be:
 
-Why this is different from the rejected GX-compose experiment
+```text
+p = 178 / (178 + 6673) = 0.0259816
+P(at least one record in four draws) = 1 − (1 − p)^4 = 0.0999459
+```
 
-This proposal keeps composition on ARM9 where appropriate and removes representation traffic around it. It does not add matrix-stack operations to move the hierarchy into GX.
+That is approximately **10% of frames**, not 2.6%. Independence is not established, and frames do not necessarily all have four eligible draws. The calculation is not an estimate of the actual run; it shows why a draw-level rate cannot dismiss a frame-level P95 candidate.
 
-That distinction matters: enabling the existing GX-compose path on the measured four-fighter workload regressed WORK-H by 22,848 P50 and 67,456 P95 ticks.
+A root-program switch with unchanged root count can still alter other key fields. Zero root-count misses is not equivalent to zero program-switch misses. Inspect the actual key construction and correlate all causes with frames. [R7]
 
-Expected benefit: matrix preparation plus serialization, with possible later sharing of qualified attachment results.
+---
 
-Main uncertainty: the remaining conversion and memory costs versus the additional persistent state. This must replace existing storage/work rather than add another full palette beside it.
+## 4. Current runtime: optimize what actually executes
 
-4. Candidate 3: compile a smaller, lossless GX packet
+The current production executor first consumes a successful same-frame precheck and attempts replay **before whole-owner preflight**. That bypass is already implemented. A prechecked replay does not rebuild the full key or re-run texgen; the adapter's precheck already did that work. Do not propose these deletions again. [R7], [R11]
 
-This is the strongest candidate for improving the work being sent to hardware, rather than only reducing ARM9 overhead.
+A representative hit path is:
 
-The confirmed problem
+```text
+Source display-head behavior and display-contract handling
+  → draw-plan/binding handling
+  → matrix production
+  → material identity and live input refresh
+  → packet precheck: key, residency, applicable texgen
+  → consume same-frame precheck
+  → texture-use bookkeeping, tint, matrix/light patches
+  → cache maintenance
+  → asynchronous FIFO DMA
+  → next FIFO writer honors completion/order
+```
 
-The packet recorder emits normal/color information and uses VTX_16 for its vertex tails. Its prepare hook also records explicit run state. Packet replay then sends that recorded stream without a whole-stream optimization pass.
+The display head is not just a renderer query. Current source comments identify off-screen player-arrow HUD behavior, fog/light state, and scale state there. The cached walk already relies on the head's output and on status-generation invalidation; a DObj-tree-only key was refuted. A new bound path must preserve these behaviors. [R9]
 
-A native stream is not necessarily a minimal native stream.
+The packet records geometry and patches dynamic parameters. It already handles hurt-flash tint without re-recording, tracks individual texture identity, and refreshes replayed textures' use timestamps. Those earlier fixes are baseline functionality. [R7], [R8]
 
-Proposed compiler passes
+Finally, “fighter-related” does not mean “inside FTR.” Pose updates and gameplay transform validity can execute under SRC; later waits can be charged outside the submitting fighter. Attribute at the actual execution site and avoid charging an improvement twice.
 
-Exact vertex-command selection. At build time, select a shorter command when it reproduces the exact decoded coordinate sequence: VTX_XY, VTX_XZ, VTX_YZ, or VTX_DIFF; use VTX_10 only when its precision is sufficient without changing coordinates. Otherwise retain VTX_16.
+---
 
-The DS command set supports these alternatives; VTX_16 takes two parameter words, while these alternatives take one. The documented geometry timings also differ slightly.
+## 5. Candidate FTR-R1 — compact replay state and right-sized cold metadata
 
-This does not require removing triangles or reducing model detail.
+**Priority:** first implementation slice.  
+**Evidence:** source-confirmed storage and hot-path structure; performance gain unmeasured.  
+**Main files:** `src/nds/nds_renderer_preamble.c`, `src/nds/nds_renderer_native_common.c`, `src/port/renderer_adapter_fighter.c`.
 
-State-aware command elimination. Remove redundant texture, palette, color, and material writes when the complete relevant state proves them redundant.
+### 5.1 The concrete storage opportunity
 
-Normal-command elimination where semantically valid. A repeated normal word is not sufficient proof. NORMAL computes lighting-dependent color and interacts with matrix and texture-generation state, so the optimizer must track those dependencies.
+`NDSFighterPacket` unconditionally embeds, for each of four instances: [R8]
 
-Projection and matrix-state simplification. Exploit invariance within a compiled program, without adding a per-frame content comparison. Preserve every matrix change that can affect a following vertex or normal.
+| Embedded table | Current capacity | Element size, derived from fixed-width fields | Bytes per packet |
+|---|---:|---:|---:|
+| Texgen groups | 8 | 28 | 224 |
+| Texgen patch sites | 256 | 4 | 1,024 |
+| **Texgen total** | | | **1,248** |
+| Shade patch sites | 64 | 20 | 1,280 |
 
-Packed-header reconstruction. After optimization, rebuild command headers and every dynamic patch offset. A correct geometry stream with stale matrix or tint patch indices is still a broken packet.
+Thus texgen reservation totals **4,992 bytes**, and shade-site reservation totals **5,120 bytes**, before root, texture, and header storage. The fixed-field texgen sizes were checked with a host layout calculation; confirm them with target `sizeof`/static assertions before editing the ABI. [R8]
 
-Important restrictions
+These are allocations to investigate, not quantities that can all be deleted. Four legal texgen-capable fighters still need four independent live parameter sets. A roster with only one such instance would have 3,744 bytes in the other three maximum texgen reservations before accounting for replacement descriptors and allocation overhead. That is an illustrative storage opportunity, not a qualification of any particular roster.
 
-Do not reorder translucent geometry to improve batching. Do not merge primitive boundaries merely because two runs share a texture. Do not assume a matrix restore preserves the current vertex’s relevant interpretation without checking the full command semantics.
+### 5.2 Proposed organization
 
-Also, this is not a new suggestion to “use strips.” The production emitter already has primitive-group support. The proposed work is an optimizer over the resulting stream and its state dependencies.
+Separate a small **hot replay header** from **cold or feature-specific tails**:
 
-The repository previously tried runtime projection-load elision and recorded a roughly 3,008-tick FTR P50 improvement that was rejected as too small. I would not repeat that as a standalone project. Compile-time elimination across the actual packet is a different mechanism and belongs in the broader stream optimizer.
+```text
+Per-instance hot header:
+    packet pointer / length / validity
+    lifetime and program identity
+    exact replay shape
+    pointers or indices to active matrix patches
+    current parameter versions
 
-Expected benefit: fewer packet words, less transfer traffic, less flush traversal from a smaller packet, and potentially fewer geometry operations.
+Cold/optional storage:
+    recorder bookkeeping
+    feature-specific texgen sites
+    shade patch descriptors
+    infrequent diagnostics and miss history
+```
 
-Main uncertainty: how much of the current workload is sensitive to those reductions. A 20% smaller packet is not automatically a 20% faster FTR bucket.
+Only the required tails are resident. Determine their capacities at fighter/scene binding from generated maxima over every reachable state, rather than allocating during a combat draw.
 
-First experiment: optimize captured packet programs on the host, verify the decoded vertex/state sequence, and compare whole-frame timing with the original stream. Keep runtime search and optimization out of the shipping draw path.
+Preserve one contiguous GX stream per fighter initially. This proposal is not a many-fragment DMA architecture.
 
-5. Candidate 4: stop treating a local change as a whole-fighter packet miss
-The confirmed problem
+### 5.3 Two possible allocation strategies
 
-Each battle slot has a resident packet. When its key fails, the current path invalidates that packet, arms recording, and executes the native production path to rebuild it. The miss accounting explicitly distinguishes changes in key words, root count, and texture residency.
+**Strategy A: replace the static maximum arrays with a scene-owned compact pool.** Size it from the admitted instances and all their reachable root programs. Construct it before gameplay; release it with the scene generation. Account for allocation headers and alignment. The net result must return memory, not merely move it.
 
-That creates an architectural opportunity:
+**Strategy B: use verified spare capacity inside each existing packet region.** The code reserves **141,440 bytes**, divided into four **35,360-byte** regions, stopping before an aliased framebuffer tail. Metadata placed there reduces that region's available command capacity; it is safe only after all relevant packet sizes, including CSS HIGH and alternate roots, are bounded. The full 147,840-byte backing framebuffer is not all available. [R8]
 
-A face, texture selection, or one model part should not automatically require reconstructing unrelated geometry and state for the whole fighter.
+Strategy B must not become “try it and fail closed on a large legal fighter.” Insufficient capacity is a failed candidate until required content fits.
 
-The code proves that the mechanism exists. It does not, by itself, prove that this mechanism explains all of the current FTR P95 tail. That must be established by correlating misses with expensive frames.
+### 5.4 CPU-side simplification
 
-Proposed replacement
+Specialize the replay by its already-validated shape. A split-matrix packet can use a compact split-patch loop; a GX-chain packet uses its own loop. Do not scan the large producer structure just to learn the shape again for every root.
 
-Compile the fighter as root-local native variants plus dynamic parameters.
+Initially keep current key checks and all numerical producers unchanged. This isolates representation/locality effects. After that version is proved, delete only reconstructed inputs with no remaining consumer.
 
-Separate changes into three categories:
+A compact header may be a DTCM candidate, but **the 508-byte hot-scalar move is already banked in its own experiment**. Do not move its symbols again or claim their gain again. The reported remaining DTCM headroom of 1,484 bytes is specific to that build and must be rechecked. DMA packet words must remain in DMA-visible storage. [R5], [R8]
 
-Change	Proposed response
-Matrix, light direction, tint, supported UV parameters	Patch parameter words
-Texture/material binding change	Update the affected resource binding and command fields
-Actual root-program or model-part change	Replace the affected compiled fragment
+### 5.5 Promotion and rejection tests
 
-Avoid a whole-fighter template for every possible combination. That creates a combinatorial ROM/RAM problem. Share the unchanged geometry and factor variants by the actual source root or material dependency.
+Promote when target layout proves the intended storage return, legal content remains covered, old hot reads actually disappear, and matched WORK-H improves without a tail/cadence regression.
 
-For initial submission, I would keep one contiguous packet per fighter, assembled into the existing per-slot storage. Do not introduce hundreds of small DMA transfers to obtain fragment sharing.
+Reject or revise when the pool adds allocations during gameplay, worst-case metadata negates the saving, command capacity is reduced below a required state, or pointer indirection outweighs locality benefits. Unused cold arrays are a memory cost; their mere size does not prove they were causing cache misses every frame.
 
-Memory and compatibility boundaries
+**Why this is first:** it addresses an immediate resource constraint and creates a small, measurable base for the rest of the replay work without changing simulation, geometry, or pose math.
 
-The recorded four-fighter checkpoint has only 111,680 bytes of heap low-water. A template bank cannot be justified by saying the ROM can be large; the active data must fit alongside gameplay and required reserves. Replace existing representations where possible, and measure the worst legal roster—not just Mario/Fox.
+---
 
-Also, Captain HIGH is explicitly excluded from FIFO-only replay because its alpha-test state is not represented by those FIFO words. A universal packet redesign must either represent that requirement correctly or retain a separately qualified native execution path. It must not silently force that case into the ordinary replay contract.
+## 6. Candidate FTR-R2 — direct-index Link texgen
 
-Expected benefit: fewer expensive rebuild frames and less work per necessary rebuild.
+**Priority:** implementable supporting slice, preferably sharing R1's compact metadata.  
+**Evidence:** current source confirms the search loop.  
+**Main function:** `ndsFighterPacketPatchTexgen`.
 
-First measurement: for each expensive FTR frame, record which fighter missed, the reason, affected roots, and rebuild cost. That tells us whether root-local variants are a major tail fix or a smaller completeness improvement.
+The function currently visits sites, linearly searches `cached_dense[]`, computes each unique dense vertex's UV once, and copies its word to repeated sites. Its comments establish a 28-unique-vertex bound for Link's generated run in both details. [R7]
 
-6. Candidate 5: replace Link’s texgen cache search with direct indexing
+Build a local-index mapping once:
 
-This is a particularly concrete finding.
+```text
+unique_inputs[local_index] = source dense ID or exact normal inputs
+patch_sites[j] = { packet_word_index, local_index }
+```
 
-What the code does now
+Then evaluate each unique input once and scatter by local index. Preserve first-use order and the exact existing `ndsRendererNativePrepareTexgenDirectionQ15` / `ndsRendererNativeTexgenCoord` arithmetic. Keep group identity, source-table identity, root modelview, LookAt, and texture parameters separate; the same dense ID in two different groups is not automatically the same result. [R7]
 
-ndsFighterPacketPatchTexgen walks patch sites and, for each site, linearly searches cached_dense[] for its dense vertex ID. It computes each unique UV only once, but repeatedly searches for previously computed values.
+For U unique inputs and S sites, the lookup structure changes from up to O(S×U) comparisons to O(U+S) operations. That is an algorithmic reduction, not a tick estimate.
 
-The code documents 28 unique dense vertices for Link’s generated texgen run in both details, with a 32-entry local cache. The recorded profile attributes about 8,072 exclusive ticks per frame to this function.
+The preceding profile attributed roughly 8.1K exclusive ticks/frame to this function. That is neither current standalone savings nor the cost of only its searches. UV evaluation, validation, and packet writes remain. Expect a supporting contribution, not a 30-FPS breakthrough. [R4], [R18]
 
-The replacement
+A proof-oriented implementation can replace each site's dense ID with its local index while keeping a compact unique-input table per active group. Measure the resulting net metadata size; do not create a second maximum-sized 256-site copy.
 
-Generate two arrays:
+**Checks:** compare every patched UV word against the current path over moving cameras, poses, details, material changes, and CSS/battle transitions. The host-only synthetic tests performed for this report verify the indexing transformation, not the source UV formula or target timing.
 
-Unique inputs:
-    local index → source normal / required texgen inputs
+**Stop condition:** the searches disappear but whole-frame work does not improve, or the metadata causes a larger cache/residency regression. Keep the old arithmetic; do not combine a data-layout test with approximate texgen.
 
-Patch sites:
-    packet word index → local index
+---
 
-At runtime, calculate the 28 unique UV words using the existing math, then patch every site by direct index.
+## 7. Candidate FTR-R3 — cache-maintenance scope and parameter versions
 
-This changes the lookup portion from repeated searches to a linear evaluation-and-copy pass. Validation of indices belongs at generation/binding time, with development assertions retained.
+**Priority:** bounded measurement after R1; combine tiny compatible improvements rather than creating a long micro-optimization campaign.
 
-Do not change the UV math in the first implementation. This candidate should isolate data access and lookup removal.
+### 7.1 Clean only the packet ranges that can have changed
 
-Expected benefit: a fraction of the measured 8,072 ticks, not all of it—the actual coordinate calculation remains.
+A successful replay currently patches a subset of the packet, then calls `DC_FlushRange` over the entire word stream. [R7]
 
-Why I would do it: it is specific, bounded, and easy to distinguish from a placebo. It also exercises the exact generated-patch machinery needed by the larger program redesign.
+Build a sorted, merged set of possible dirty cache-line ranges from the patch descriptors at bind/record time. The initial recording still cleans the full packet. Later replays can clean the applicable ranges after all writes, followed by the required write-buffer ordering before DMA.
 
-7. Candidate 6: make lighting and tint genuinely change-driven
+This is a **candidate**, not evidence of wasted full-buffer writeback: a range clean can inspect clean lines without writing their payloads. The benefit depends on line traversal cost, dirty density, and the overhead of multiple calls. The libnds implementation/documentation confirms that CPU-cache visibility must be handled before DMA; skipping the clean entirely is not correct. [R15], [R16]
 
-The replay path currently derives a light word with a square root and three divisions when its recorded light site is active. Tint handling first hashes root primitive colors to determine whether its derived material words need updating.
+Use a generated/static policy when a packet is effectively fully dirty. Do not sort ranges, allocate memory, or run a large dirty-bit scan each frame just to avoid a short clean.
 
-I would make these explicit derived parameters of the bound program.
+Cost model:
 
-For lighting, retain the last exact input direction and resulting normalized word. Reuse it when the input is unchanged; share it across fighters only when the coordinate-space contract and inputs really are identical.
+```text
+net saving ≈ saved cache-line maintenance work
+             − range-dispatch overhead
+             − version/dirty bookkeeping
+             − any lost CPU/GX overlap
+```
 
-For tint, advance a version when primitive color or modulation actually changes. Patch the affected shade sites without first walking and hashing every root merely to rediscover that nothing changed.
+Validate actual memory consumed by DMA after the clean, not just the CPU's cached view. Partial writes, lines containing both static and dynamic words, recording-to-replay transitions, and reused scene storage all need coverage.
 
-This must preserve the distinction between a light’s input direction and the matrix state under which the hardware consumes it.
+### 7.2 Light/tint versions: small, exact supporting work
 
-Expected benefit: smaller than the structural candidates.
+Current code already returns early from tint application when modulation and a root-color hash are unchanged. What remains is the hash walk and light normalization work; those are not a fresh whole-subsystem opportunity. [R7]
 
-Recommendation: fold it into prebound submission. Do not make “cache one normalization” the next sprawling optimization campaign.
+A safe first change is to memoize the exact input light direction and its resulting packed word. It must still be emitted/applied under the correct hardware state. Eliminating the CPU normalization does not eliminate the hardware light command automatically.
 
-8. Where C and ASM should be used
+More aggressive versions require every material/tint writer to participate. A version that fails to change on one source path is a stale-rendering bug. Keep content comparison in development until mutation coverage is established.
 
-Use assembly at a surviving, measured kernel—not as the architecture.
+### 7.3 DMA lifetime is part of the contract
 
-The pose evaluator is already compiled in ARM mode specifically so its SMULL and CLZ operations inline. The packet matrix-copy helper already uses ARM block transfers. A proposal to “rewrite those in ARM” would miss the current implementation.
+There is already asynchronous FIFO DMA. Do not call that a new optimization. The packet cannot be mutated while DMA can still read it, and no other FIFO writer may interleave words with that DMA. [R7], [R8]
 
-The most defensible new assembly target is a fused final matrix producer/serializer: retain intermediate values in registers, apply the required final rounding/scaling, and store directly to packet destinations.
+A compact replay refactor must preserve the precheck's validity from validation through submission. Introducing resource changes, callbacks, or deferred queueing between those points invalidates the current immediate-handoff proof.
 
-Start with a small C implementation and inspect the emitted code. Write assembly only where it removes identified spills, redundant loads, or representation work.
+---
 
-Likewise, avoid generating enormous per-character functions. The current profile shows a 9,752-byte draw driver and an almost-full 32,632-byte ITCM section. Replacing data traffic with an instruction-cache problem would repeat an existing failure mode.
+## 8. Candidate FTR-R4 — root-local variants, only if the tail evidence supports them
 
-9. Work I would not reopen
+**Priority:** conditional.  
+**Objective:** lower expensive packet rebuilds, primarily P95 rather than steady-state P50.
 
-GX hierarchy compose, unchanged: measured slower on the relevant four-fighter workload.
+Whole-owner packets currently invalidate for a changed key. A source root-program switch can therefore require reconstructing unchanged roots. Factoring variants by affected root is a legitimate architectural alternative, but its value must come from the actual rebuild population. [R4], [R7]
 
-Another wrapped float-to-fixed collision conversion: the repository already implemented and measured that route; its arithmetic improvement was canceled by other costs. The corrected evidence also shrinks the previously claimed collision-math opportunity substantially.
+### Required population before implementation
 
-Lowering simulation to 30 Hz: explicitly disallowed by the current owner instruction. Existing body-pose holding is not new savings.
+For each logical presented-frame record, collect each fighter instance's replay/record/direct mode, miss causes, program identity, and relevant costs. Correlate them with **the same frames' WORK-H and FTR**, not a separately sorted top-5% FTR population.
 
-Assuming packet texture use is missing from LRU accounting: the current replay already touches its texture entries; that earlier tail problem has an explicit fix.
+Answer three questions:
 
-The generation-based transform invalidation work is still relevant, but it is already identified on the board—not a new discovery from this review. Its recorded 474.5 clears versus 14.3 recomputes per frame justify investigating the scattered writes. However, replacing the clear requires handling all validity readers, not merely changing the port-side invalidation function. Treat it as adjacent SRC/gameplay work and do not double-count it as a new FTR saving.
+1. What fraction of expensive whole frames contains a record?
+2. How much incremental CPU cost does that record add relative to an equivalent hit?
+3. Which changes could actually be serviced by local replacement?
 
-10. Implementation order and the evidence required
+The reported zero root-count/residency misses makes those two particular explanations less likely in that captured population. It does not remove same-count program switches, changed material identities, intentional direct rendering, or other key changes from consideration. [R4], [R7]
 
-I would execute the work in this order:
+### Proposed mechanism
 
-Step	Deliverable	Decisive evidence
-1	Direct-index texgen plus a host packet inventory/optimizer prototype	Same UV/vertex/state results; actual removed searches and commands
-2	Bound packet-hit submission	Ordinary hits no longer execute the old identity/input-reconstruction path
-3	Root-local variants	Measurably cheaper miss frames and improved tail, without excessive residency
-4	Direct pose-to-packet matrix producers	Old conversion/copy stages disappear; visual and attachment equivalence remain
-5	Targeted C/ASM and placement work	Improvement survives the whole-frame gate, not just a leaf benchmark
+Retain one assembled per-instance packet. Precompute local variants or patch recipes only for the few causes proven to dominate rebuild cost. Share immutable geometry descriptions; keep instance-specific live matrices, tint, and texture placement independent.
 
-The final gate should evaluate the same presented frames, with the same gameplay workload, and report whole-frame timing alongside FTR. Packet hits and misses need separate distributions, followed by the combined distribution that the player actually experiences.
+Do not create a full fighter packet for every combination of animation, face, costume, held object, and root variant. That multiplies storage and invalidation complexity.
 
-Validation must include four-player stress, native failure/rejection counters, resource lifetimes, detail changes, animation locks, hitlag, copied assets, attachments, material animation, and scene reuse. A lower FTR number does not count when the cost moves into STG/MISC or the next FIFO writer. The repository already contains examples where a large bucket improvement barely moved the whole-frame result.
+Rebuild affected slices only at valid command/primitive boundaries, reconstruct packed headers, update patch offsets, and preserve preceding state that later slices inherit. Transparent ordering, matrix-slot lifetimes, and material side effects are part of the slice contract.
 
-Bottom line
+Captain HIGH is explicitly excluded from current FIFO-only replay because its alpha-test behavior includes non-FIFO register state. A new universal packet abstraction must model that case or retain its complete qualified native direct implementation. It cannot simply force replay eligibility. [R7]
 
-There is still identifiable work to remove from FTR. The most promising target is the compatibility and reconstruction machinery surrounding an already-native packet renderer.
+**Stop condition:** records do not substantially overlap the relevant tail, or the memory/copy cost of variants is not repaid. No large resident bank is authorized by this research recommendation.
 
-My recommendation is to build toward:
+---
 
-A bound fighter program, fed by direct pose outputs, with root-local variants and a losslessly optimized GX stream.
+## 9. Candidate FTR-R5 — optimize GX execution work, not the byte count alone
 
-That is materially different from repeating packet DMA, matrix-stack offload, another memo, or another numeric wrapper. It attacks steady-state overhead, packet-miss cost, and hardware command volume together—while preserving the native-only renderer and 60 Hz simulation.
+**Priority:** host-side feasibility and stream census before target implementation.
 
-The evidence supports pursuing those candidates. It does not yet support promising that their combined savings will close the 30 FPS gate. The next useful result is a replacement path that demonstrably deletes work from real four-fighter frames, not another theoretical speedup assigned to an existing function.
+Split the previous broad “lossless packet compilation” proposal into two materially different classes.
+
+### Class A: shorter encodings of the same operations
+
+Examples include exact `VTX_XY`/`VTX_XZ`/`VTX_YZ`/`VTX_DIFF` substitution, and `VTX_10` only for coordinates representable without losing required precision. These may reduce ROM/RAM/transfer size, but all still submit a vertex. The upstream emulator implementation routes these forms through vertex submission; it is supporting implementation evidence, not a replacement for profiling the approved fork. [R17]
+
+**Demote this class as a primary FPS lever.** Task 55 is strong cautionary evidence. Retain it only when storage is valuable or a current fighter-specific measurement proves transfer cost is limiting. [R6]
+
+### Class B: fewer expensive operations at equivalent output
+
+Potentially different mechanisms include fewer actual submitted vertices using already-supported primitive forms, fewer unnecessary `BEGIN` barriers, fewer matrix restores/loads when their state is truly redundant, and safely fewer repeated lighting evaluations.
+
+Primitive grouping already exists in the production path. “Use strips” is not a new task. A proposal must count a remaining opportunity in the **current emitted streams**, explain why the generator did not already exploit it, and preserve source triangle coverage and rendering order. [R7]
+
+Treat the emulator's pipeline behavior as a reason to inspect command order: its code models `BEGIN` as a pipeline-stalling operation and `NORMAL` as a lighting computation. It does not justify assigning universal isolated-command timings to the full stream. [R17]
+
+### Correctness boundaries
+
+A repeated `NORMAL` word is not a redundant lighting result when vector matrices, lights, material state, or relevant texgen state changed. A repeated texture coordinate command may have transformation-state effects. Primitive reuse must preserve the complete transformed vertex attributes, not position alone.
+
+Do not freely reorder transparent triangles, merge non-coplanar triangles into quads under an “exact” label, or use degenerate connectors without proving their hardware consequences. Preserve polygon IDs, winding, clipping behavior, depth rules, and per-primitive attribute latching.
+
+Establish explicit packet entry and exit state across frames and writers. The Task 55 visual follow-up is a direct warning against a state optimizer that is correct only in a freshly reset single-frame test. [R6]
+
+### Promotion criterion
+
+Require a current host inventory proving fewer expensive operations or an identified transfer bottleneck; then require a native target A/B. Track actual vertex submissions, not just `VTX_16` opcode count—a rename to another vertex opcode is not a deleted transform.
+
+No percentage reduction in packet words should be translated directly into a percentage FTR or whole-frame improvement.
+
+---
+
+## 10. Candidate FTR-R6 — producer-owned pose/matrix output, not another reuse cache
+
+**Priority:** deferred architectural research, not the next implementation batch.
+
+The original recommendation was to eliminate representation round trips and redundant matrix serialization. That remains a meaningful design objective, but the later reported adverse pilot is enough to reject an unqualified “start here” instruction. [R4]
+
+### What would make a genuinely different reopening
+
+A new proposal must identify the precise producer, the final consumers, and the old work it deletes. It should produce a render-only output directly in the representation the packet needs, rather than adding a side cache that checks source objects, misses, falls back, and leaves the original pipeline intact.
+
+Before a ROM build, demonstrate that the target producer covers the intended draws without a steady-state miss/stale path. Retrieve and explain the rejected pilot first. A matching idea name or a shared function is not evidence that two implementations are identical, but neither is a different name evidence that they are different.
+
+### Preserve separate correctness domains
+
+Gameplay joint and attachment data cannot be removed because a visual mesh does not draw those joints. The board reports that a joint-cap experiment aborted AI and that a large pose-evaluation deletion did not reduce WORK-H. This rules out a blind cap, not the general possibility of a separate renderer-owned representation. [R3]
+
+Current matrix code has source-precision and animation-lock paths in addition to ordinary native composition. Those consumers and accumulated-scale semantics have to be mapped before bypassing source data. Preserve their arithmetic order initially. [R10]
+
+Do not assume body pose holding is new savings: it is already part of the implementation. Do not reduce the 60 Hz event/control clock or move source event boundaries as a render optimization. [R2], [R3]
+
+### The 4×3 trap
+
+The current split matrix serialization scales the **complete homogeneous row** by the world-unit shift. Consequently its resulting matrix is not necessarily an ordinary affine matrix with a bottom-right element of 1. Replacing its 4×4 load with a 4×3 load can silently restore the wrong implicit homogeneous value. [R10], [R20]
+
+A redesigned projection/matrix convention might permit a different representation, but that is a full derivation and multi-frame equivalence test—not a four-word serialization shortcut.
+
+### ASM decision
+
+The existing 4×4 copy already has an ARM block-transfer implementation, and the recorded copy experiments were small or adverse. Do not schedule another generic “replace loops with ASM” task. [R4], [R8]
+
+Assembly becomes reasonable only for a surviving fused producer/serializer with a demonstrated instruction/spill bottleneck. Keep a portable reference and compare final words, especially negative values, rounding ties, overflow limits, animation locks, and scale changes.
+
+---
+
+## 11. Why the target architecture should stay small
+
+The useful long-term shape is still:
+
+```text
+Source gameplay / event state (60 Hz)
+    + required source display-head behavior
+    ↓
+Bound per-instance native render contract
+    ↓
+Small shape-specific patch/evaluation kernels
+    ↓
+One resident DMA-safe packet per instance
+    ↓
+Ordered native submission
+```
+
+Generation, asset validation, and maximum-capacity derivation should do the general work. Runtime should not rediscover topology, build a broad generic request object, or carry maximum data for unused features merely to share one giant executor.
+
+This is **not** a mandate to replace every current subsystem at once. The safe first step is R1 with existing validity and math, followed by small exact consumers such as R2. Only delete the old route when required content has a complete native replacement. [R2]
+
+The DS references already reviewed provide useful contrasts: the vendored `sm64-nds` keeps compact matrix-stack/animation state, while the inspected `sm64ds-decomp` texture binder writes typed hardware parameters directly. These are design examples, not evidence that their complete architectures or performance transfer to this game. Their cited snapshots are the earlier inspected pin, not newly benchmarked programs. [R21], [R22]
+
+### Cache ownership is an architectural issue
+
+The DTCM result supports keeping truly hot scalar state compact, but not relocating every table. Cache lines read per replay, main-memory packet writes, literal-pool loads, and instruction footprint all compete. A faster arithmetic kernel that expands instruction/data traffic can lose overall. The board's reported layout sensitivity makes a matched-control measurement essential. [R5]
+
+A memory-returning change can enable another candidate without itself saving ticks. Record those as separate outcomes. The 8,458 bytes of entry-effect texels identified as unrelated to the restricted four-CPU build are a separate residency opportunity, not an FTR FPS gain. Removing content needed by another shipped configuration is not an acceptable way to claim it. [R3], [R14]
+
+---
+
+## 12. Implementation sequence with explicit stop conditions
+
+### Batch A — stabilize the measurement population and size storage
+
+Use the current qualified baseline and separately tracked local candidates. Verify the requested window against actual logical sample identity. Do not silence the DTCM candidate's assertion solely because its medians look good; preserve the check's same-match purpose and fix identity bookkeeping explicitly. [R5], [R13]
+
+Inventory actual packet lengths and patch-table high-water by instance, owner, detail, and root program. Include legal duplicate-character lineups, CSS HIGH, copied hats, hidden parts, and scene transitions. Establish target `sizeof` and the exact linker/arena layout.
+
+**Deliverable:** a bounded memory plan for R1 and a frame-aligned replay/record cost population. No new broad profiling framework is required if existing counters can be collected correctly.
+
+### Batch B — compact replay storage
+
+Implement R1 alone with unchanged UV/matrix math and existing validity checks. Capture section sizes, arena size, packet capacity, native failures, and equivalent outputs. Verify that header/tail separation does not create hot allocation or loader work.
+
+**Stop:** legal content no longer fits, capacity is only guessed, or the supposed memory saving becomes a duplicate allocation.
+
+### Batch C — exact replay micro-kernels
+
+Add R2's direct local indices. Then test dirty-range cleaning and exact light/tint memoization as independently attributable toggles or patches. Their combined retained version should get a final normal shipping-config comparison.
+
+**Stop:** cost migrates to another bucket, an instruction/data layout regression exceeds the local win, or a parameter can become stale. A tiny same-ROM improvement may be real; do not misapply an old cross-build threshold as a universal minimum. Conversely, do not promote a cross-build delta merely because it exceeds one historical noise number. [R5], [R13]
+
+### Batch D — select one structural follow-up from evidence
+
+If record events explain the relevant tail, implement a bounded R4 variant mechanism for the dominant cause. If a current command trace instead shows expensive redundant geometry operations, pursue R5. Do not implement both speculative systems merely because they appear in this report.
+
+R6 remains blocked on the primary pilot receipt and an explicit deleted-work design. Do not repeat the rejected GX-compose configuration: its recorded four-fighter regression was +22,848 WORK-H P50 and +67,456 P95. [R12]
+
+### Reopening rule
+
+A previously rejected idea requires a concrete invalidator: changed bottleneck, different workload, corrected non-engagement, a materially different representation, or a fixed confound. “Try harder,” a new task ID, or another narrative is not an invalidator.
+
+---
+
+## 13. Qualification: what counts as a win
+
+For each candidate record the source pin, ROM/ELF identity, generated assets/configuration, emulator identity/settings, workload, and sample-window convention. Use the same admitted content and source time; runtime counters need logical sequence IDs where frame labels can collide. [R3], [R13]
+
+Report WORK-H P50/P95, all-presented cadence, the 2/3/4/5+ VBlank histogram, maximum interval, and per-frame deadline misses. Report FTR and neighboring buckets as attribution, not independent speedup claims. Distinguish reducing actual work from merely moving where an asynchronous wait is charged. [R2], [R3], [R5]
+
+Use host-side source/GX comparison and native-only target validation. Profile-level diagnostic builds do not get an exception to the native-only product rule. Do not put a forbidden compatibility renderer in the ROM to perform the A/B. [R2]
+
+Required correctness cases include:
+
+| Area | Cases that must remain correct |
+|---|---|
+| Source timing | Motion/event boundaries, hitlag, pause, status re-entry, 60 Hz simulation |
+| Topology | Hidden parts, grabs/throws, Samus alternate roots, Kirby donor assets |
+| Appearance | Costume/shade, hurt flash, material animation, fog, alpha/cutout states |
+| Geometry | Root bindings, normal transforms, clipping, winding, transparent order, matrix-slot lifetime |
+| Scenes | CSS HIGH, battle detail policy, Results, rematches, arena reuse |
+| Resources | Texture eviction/re-upload, packet capacity, DMA lifetime, no new draw-time allocation |
+| Completeness | Zero unexpected native failures/direct rejects and no disappearing required content |
+
+Current summary counters sometimes credit recorded logical work on a replay rather than recounting every actual command. If a compiler changes command count, distinguish source-equivalent triangles, actual GX commands, and credited logical statistics. A counter designed for equivalence is not automatically a hardware-throughput counter. [R7], [R8]
+
+The end criterion remains the product gate, not a named optimization being implemented. No single roster/window establishes all landed content's worst case. [R2], [R3]
+
+---
+
+## 14. A small analysis tool for honest budget screening
+
+The following is original host-side analysis code, not a game patch. It uses the sampler's floor-index quantile convention. It analyzes **one** component at a time to avoid accidentally summing nested timers.
+
+`WORK-H − fraction×FTR` is only an optimistic arithmetic scenario, not a predicted speedup or a proof of a physical lower bound. Confirm that the component is included once in work on the same logical row before using the calculation. This script refuses malformed or component-greater-than-work rows rather than hiding them. It does not repair frame labels, timer wraps, or torn records.
+
+```python
+#!/usr/bin/env python3
+"""Screen one frame-aligned optimization budget; never a runtime benchmark."""
+from __future__ import annotations
+
+import argparse
+import csv
+import math
+from pathlib import Path
+from typing import Sequence
+
+
+def quantile(values: Sequence[float], p: float) -> float:
+    if not values:
+        raise ValueError("No samples")
+    ordered = sorted(values)
+    return ordered[math.floor((len(ordered) - 1) * p)]
+
+
+def load_rows(path: Path, work_col: str, lane_col: str) -> tuple[list[float], list[float]]:
+    work: list[float] = []
+    lane: list[float] = []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        fields = set(reader.fieldnames or [])
+        missing = {work_col, lane_col} - fields
+        if missing:
+            raise ValueError(f"Missing columns: {sorted(missing)}")
+        for row_number, row in enumerate(reader, start=2):
+            try:
+                w = float(row[work_col])
+                f = float(row[lane_col])
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid number on CSV line {row_number}") from exc
+            if not (math.isfinite(w) and math.isfinite(f)):
+                raise ValueError(f"Non-finite number on CSV line {row_number}")
+            if w < 0 or f < 0 or f > w:
+                raise ValueError(
+                    f"Invalid component/work relationship on line {row_number}: {f}, {w}. "
+                    "Check timer nesting, row integrity, and measurement scope."
+                )
+            work.append(w)
+            lane.append(f)
+    if not work:
+        raise ValueError("CSV contains no data rows")
+    return work, lane
+
+
+def describe(label: str, values: Sequence[float], gate: float) -> None:
+    misses = sum(v > gate for v in values)
+    print(
+        f"{label:24} mean={sum(values)/len(values):12,.1f} "
+        f"P50={quantile(values,.50):12,.1f} "
+        f"P95={quantile(values,.95):12,.1f} "
+        f"over_gate={misses}/{len(values)} ({100*misses/len(values):.2f}%)"
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("csv", type=Path)
+    parser.add_argument("--work", default="WORK-H")
+    parser.add_argument("--lane", default="FTR")
+    parser.add_argument("--gate", type=float, default=1_120_000)
+    parser.add_argument("--fraction", type=float, default=.50)
+    args = parser.parse_args()
+    if not math.isfinite(args.gate) or args.gate <= 0:
+        parser.error("--gate must be finite and positive")
+    if not math.isfinite(args.fraction) or not 0 <= args.fraction <= 1:
+        parser.error("--fraction must lie in [0, 1]")
+    try:
+        work, lane = load_rows(args.csv, args.work, args.lane)
+    except (OSError, ValueError) as exc:
+        parser.exit(2, f"error: {exc}\n")
+
+    scenario = [w - args.fraction*f for w, f in zip(work, lane)]
+    deletion = [w - f for w, f in zip(work, lane)]
+    describe("Observed work", work, args.gate)
+    describe("Arithmetic partial cut", scenario, args.gate)
+    describe("Arithmetic full deletion", deletion, args.gate)
+
+    # A conditional description on whole-frame tail rows, not a sum of percentiles.
+    threshold = quantile(work, .95)
+    selected = [f for w, f in zip(work, lane) if w >= threshold]
+    print(f"Mean {args.lane} on whole-frame P95-or-worse rows: "
+          f"{sum(selected)/len(selected):,.1f}")
+    print("Arithmetic scenarios only: downstream stalls, cache changes, and "
+          "overlap are not modeled. Do not bank these values as savings.")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Example after saving the code as `analyze_ftr_budget.py`:
+
+```sh
+python analyze_ftr_budget.py matched_rows.csv --lane FTR --fraction 0.50
+```
+
+This script must consume a validated CSV. It is not an alternative to the project's qualification harness.
+
+---
+
+## 15. Work actually performed for this re-evaluation
+
+**Performed:** live branch/pin verification; targeted current-source inspection; retrieval and comparison of current measurements and negative evidence; primary implementation checks for DMA/GX behavior; arithmetic/layout checks; and 2,000 synthetic tests of the texgen dense-ID-to-local-index transformation.
+
+The synthetic tests preserve the exact assigned per-unique-input 32-bit value at every output site. They do **not** validate the game's UV arithmetic, its source assets, target code generation, or rendering.
+
+**Not performed:** target compilation, new ROM execution, approved-fork profiling, captured-frame comparison, live gameplay differential, or new Boundary qualification. No new FPS/tick improvement is claimed.
+
+**Evidence gap:** the pose/draw pilot named by the September 17 sizing summary was not retrievable at its stated repository path. Its reported regression is retained as adverse evidence, with provenance explicitly limited to that summary.
+
+---
+
+## 16. Coding-agent handoff
+
+> Work from the current repository tip, first reconciling it with this report's pinned revision. Preserve 60 Hz simulation, source gameplay, required content, native-only rendering, and qualification gates. Begin with the packet header/cold-tail inventory in FTR-R1; derive capacities over required states before allocating. Do not reimplement existing prechecked replay, asynchronous DMA, tint patching, or texture-use accounting. Keep existing numerical producers and validity checks for the first layout comparison. Add direct-index texgen without changing arithmetic. Measure matched whole-frame work and cadence, not just FTR or packet size. Root-local variants require frame-correlated miss evidence; the broad pose lane requires the original rejected pilot receipt and a materially different deleted-work design. Reuse existing evidence, stop rejected mechanisms, and record qualified improvements separately from memory enablement and unmeasured hypotheses.
+
+## Final assessment
+
+**The revised recommendation is a compact, shape-specific, memory-conscious replay path—not a blanket rewrite and not another cache layered on top.** The 4,992-byte texgen reservation provides a concrete place to start sizing memory return. Direct-index texgen and narrower cache maintenance are plausible exact supporting cuts. Variant and GX-operation work should be selected by the actual expensive-frame population.
+
+The 30-FPS objective is not satisfied by this report. It is a research target with specific remaining implementation candidates and honest tests. The current evidence justifies continuing structural optimization, but not inventing a combined speedup, subtracting unrelated medians, or treating one failed implementation as proof that every equivalent representation is exhausted.
+
+---
+
+## Source register
+
+Repository links use the reviewed commit unless explicitly identified as an earlier inspected reference. The two external implementation references are supporting sources, not substitute measurements of the project's canonical emulator.
+
+| Ref. | Evidence |
+|---|---|
+| R1 | [Branch collection; also compared db0d088 against master][R1] |
+| R2 | [Product, native-rendering, performance and fidelity contract][R2] |
+| R3 | [Current qualified checkpoint, owner decisions, and resource constraints][R3] |
+| R4 | [New critique/sizing of the prior FTR/STG/MISC reports][R4] |
+| R5 | [DTCM candidate, measurements, sample-window failure and corroboration][R5] |
+| R6 | [Task 55 stage elision; includes later owner visual contradiction][R6] |
+| R7 | [Packet key, texgen, precheck, replay, flush, DMA and invalidation; especially around 8674–9590][R7] |
+| R8 | [Packet layouts, capacities, arena, recorder and DMA synchronization; around 3260–3650][R8] |
+| R9 | [Display head, draw-contract memo, invalidation and native adapter][R9] |
+| R10 | [Ordinary/source-precision/animation-lock matrix paths and GX-route selection][R10] |
+| R11 | [Prechecked replay already precedes whole-owner preflight][R11] |
+| R12 | [Previously retrieved four-fighter GX-compose regression; explicitly earlier pin][R12] |
+| R13 | [Per-row WORK-H and floor-index quantiles; around 1180–1320][R13] |
+| R14 | [Vulcan Jab experiment and arena page-edge consequence][R14] |
+| R15 | [Primary libnds glCallList implementation, checked September 17, 2026][R15] |
+| R16 | [Primary libnds DMA/cache documentation, checked September 17, 2026][R16] |
+| R17 | [Primary upstream implementation: vertex forms, NORMAL, BEGIN and pipeline interactions; checked September 17, 2026][R17] |
+| R18 | [Earlier retrieved exclusive-symbol profile; not a current candidate speedup][R18] |
+| R19 | [Measurement history and warning about nested timers][R19] |
+| R20 | [Earlier inspected split-matrix homogeneous-row scaling, around 12100–12580][R20] |
+| R21 | [Earlier inspected vendored DS reference: matrix stack and animation state][R21] |
+| R22 | [Earlier inspected vendored DS reference: typed texture hardware binding][R22] |
+
+
+[R1]: https://api.github.com/repos/rockenrooster/Smash64DS_Port/branches?per_page=100 "Branch collection; also compared db0d088 against master"
+[R2]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/PROJECT_GOAL.md "Product, native-rendering, performance and fidelity contract"
+[R3]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/docs/P2_EXECUTION_BOARD.md "Current qualified checkpoint, owner decisions, and resource constraints"
+[R4]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-17_p2-2p8-ftr-stg-misc-sizing/README.md "New critique/sizing of the prior FTR/STG/MISC reports"
+[R5]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-17_p2-2p8-dtcm-hot-scalars/README.md "DTCM candidate, measurements, sample-window failure and corroboration"
+[R6]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-07-24_task55-stage-geom-e2.md "Task 55 stage elision; includes later owner visual contradiction"
+[R7]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/nds/nds_renderer_native_common.c "Packet key, texgen, precheck, replay, flush, DMA and invalidation; especially around 8674–9590"
+[R8]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/nds/nds_renderer_preamble.c "Packet layouts, capacities, arena, recorder and DMA synchronization; around 3260–3650"
+[R9]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/port/renderer_adapter_fighter.c "Display head, draw-contract memo, invalidation and native adapter"
+[R10]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/port/renderer_adapter_matrix.c "Ordinary/source-precision/animation-lock matrix paths and GX-route selection"
+[R11]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/nds/nds_renderer_native_fighter_production.c "Prechecked replay already precedes whole-owner preflight"
+[R12]: https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/artifacts/performance/2026-09-16_p2-2p8-gx-compose-decline/README.md "Previously retrieved four-fighter GX-compose regression; explicitly earlier pin"
+[R13]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/scripts/sample-tick-hud-buckets.ps1 "Per-row WORK-H and floor-index quantiles; around 1180–1320"
+[R14]: https://github.com/rockenrooster/Smash64DS_Port/commit/db0d088bc61ac3e85f07a349857a1b3ec7eef55b "Vulcan Jab experiment and arena page-edge consequence"
+[R15]: https://github.com/devkitPro/libnds/blob/master/include/nds/arm9/videoGL.h "Primary libnds glCallList implementation, checked September 17, 2026"
+[R16]: https://github.com/devkitPro/libnds/blob/master/include/nds/dma.h "Primary libnds DMA/cache documentation, checked September 17, 2026"
+[R17]: https://raw.githubusercontent.com/melonDS-emu/melonDS/master/src/GPU3D.cpp "Primary upstream implementation: vertex forms, NORMAL, BEGIN and pipeline interactions; checked September 17, 2026"
+[R18]: https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/artifacts/performance/2026-09-16_p2-2p8-n0409-profile/census.txt "Earlier retrieved exclusive-symbol profile; not a current candidate speedup"
+[R19]: https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/docs/PERF_LEDGER.md "Measurement history and warning about nested timers"
+[R20]: https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/nds/nds_renderer_textures_effects.c "Earlier inspected split-matrix homogeneous-row scaling, around 12100–12580"
+[R21]: https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/sm64-nds/src/game/rendering_graph_node.c "Earlier inspected vendored DS reference: matrix stack and animation state"
+[R22]: https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/sm64ds-decomp/src/func_0204af3c.c "Earlier inspected vendored DS reference: typed texture hardware binding"

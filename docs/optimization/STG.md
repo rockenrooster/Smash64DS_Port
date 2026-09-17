@@ -1,405 +1,743 @@
-The strongest STG redesign candidate is to replace the remaining per-run execution machinery with complete, ordered native stage command programs—not merely make the existing vertex submission loop faster.
+Smash64DS STG Optimization — Re-evaluation
 
-The next substantial target is how painter depth is represented: the current native path can reload an entire projection matrix for each triangle just to assign its synthetic depth. There are also narrower opportunities in mutation-driven stage preparation and the per-vertex matrix path used by mixed-binding stage geometry.
+Date: September 17, 2026
+Repository snapshot: rockenrooster/Smash64DS_Port, master, db0d088bc61ac3e85f07a349857a1b3ec7eef55b
+Previous review: snapshot 430aca2879e9071dc2b22f944f5c2909c9ce7aa4
+Deliverable: corrected research and candidate-selection memo, not an implementation or a qualified performance result.
 
-I reviewed the repository at 430aca2879e9071dc2b22f944f5c2909c9ce7aa4, including the stage adapter, native stage executor, replay path, frame accounting, current performance board, and earlier stage experiments. These are source-grounded candidates, not newly measured speedups. I did not build or run a ROM.
+The branch API returned only master when this review began. All current-code references below are pinned to the snapshot above; search-result snippets from other commits were used only for navigation. The last qualified runtime checkpoint and the later measured candidate are identified separately. No repository files, build settings, or verifier assertions were changed. R1 R3
 
-My priority order is:
+Executive decision
 
-Priority	Candidate	Work it would actually remove	Assessment
-1	Complete ordered stage command programs	Per-run CPU setup, repeated state handling, bookkeeping, and submission boundaries	Best first implementation candidate
-2	Mutation-driven compact stage state	Repeated inspection and reconstruction of unchanged stage inputs	Complements #1; do not add another generic cache
-3	Painter-depth grouping with correctness certificates	Redundant per-triangle projection changes; potentially unlocks better batching	Most interesting geometry-side redesign
-4	Direct deformation recipes for mixed-binding geometry	Per-corner CPU projection and matrix-as-a-vertex submission	Strong stage-specific opportunity, especially Inishie strings
-5	Visibility-independent packet storage plus offline mesh lowering	Submission of noncontributing geometry and redundant transformed vertices	Conditional; must avoid earlier failed probe designs
-6	Exact compact vertex encoding	Command-buffer traffic, not necessarily geometry execution time	Low priority; an earlier rejection contains a technical error
+Change the implementation order from the previous answer. Do not start by treating the entire stage as a captured replay stream that merely needs larger DMA batches.
 
-I would implement #1 first, use #2 to simplify its inputs, and investigate #3 as the larger representation change.
+The current stage has three different execution situations: captured command replay, live submission using previously prepared native runs, and rebuilding the prepared representation. Crucially, the ordinary captured-replay mask covers Dream Land segments 5 and 7 only. The other stages do not inherit that mask, and Dream Land's other segments are not automatically replayed. The source explicitly documents earlier failed attempts to replay camera-dependent actors. R6
 
-1. First, the existing evidence does not justify “STG is solved” or “STG is purely GX-bound”
-The current gap is substantial
+My revised recommendation is:
 
-The current execution board’s last qualified retained boundary reports:
+First pilot: reduce the hot working set and repeated work of the live native stage executor. Keep geometry, source ordering, and simulation unchanged. Target concrete reads, writes, scans, and runtime decisions, not an assumed 385K-tick block of removable CPU work.
 
-Metric	Reported work	Gap against 1,120,000 ticks
-WORK-H P50	1,584,128	464,128
-WORK-H P95	2,310,848	1,190,848
+First architectural replacement: compile each stage into compact, ordered native draw records with explicit dynamic inputs. Generate the ordering and representation decisions offline; use small native kernels at runtime. Reuse the existing residency and generation machinery instead of adding another overlapping cache.
 
-Those gaps are approximately 29.3% of median work and 51.5% of P95 work. The board also distinguishes this qualified result from later payload changes still owing runtime proof. These should not be presented as fresh measurements of every change at the pinned commit.
+Then test patchable GX chunks where the first pilot shows they can pay for themselves. Static command structure is reusable; camera-dependent matrix operands and animated materials are not automatically constant.
 
-Consequently, a legitimate STG improvement is useful, but we should not claim that a modest STG optimization alone closes the four-fighter 30 FPS goal.
+Keep painter-depth regrouping and specialized mixed-binding deformation as separate experiments. The deformation case is a credible stage-specific opportunity. General painter-depth regrouping is a difficult correctness problem, not the obvious first optimization.
 
-STG is not simply “time spent drawing stage triangles”
+The strongest new evidence is a repository-reported locality win, not a newly proven stage compiler: moving 508 bytes of scalar state into DTCM reduced the measured arm's WORK-H P50 by 43,200 ticks and P95 by 43,072. That work already exists; it is not additional savings available to this proposal. Its verifier still had a sample-window assertion issue in the reviewed record. R5
 
-The current presentation path charges ndsRendererAdapterPrepareNativeStageOwner() to STG, then accumulates stage traversal and finish work. Preparation includes admission, matrix handling, materials, configuration, and visibility state—not just mesh submission. Conversely, several stage-related actors enter the rejected-stage-classification branch and are charged through MISC.
+No new STG candidate in this memo has a measured tick saving. No evidence here proves that STG alone closes four-player 30 FPS. Equally, the historical failed implementations and arithmetic on marginal percentiles do not prove that all equivalent-result architecture changes are exhausted.
 
-That distinction matters: optimizing an acid/barrel/effect path might improve the game without reducing the bucket called STG.
+1. Requirements and the actual baseline
 
-The historical stage conclusions contradict one another
+The product contract favors the fastest correct DS implementation, permits substantial precomputation and specialization, and requires native-only rendering in all built ROMs. It does not require retaining the N64 rendering architecture. The current execution board specifically retains 60 Hz simulation and records that SRC was reopened on September 17; the older SRC NO-GO in the sizing memo is therefore superseded. This STG review does not propose changing simulation frequency. R2 R3 R4
 
-The July Task 54 analysis interpreted Task 53’s results as a largely fixed GX-throughput floor:
+Use the project's approved accurate melonDS configuration for performance work. Do not substitute upstream melonDS performance numbers or new retail-DS measurement requirements. Upstream source in this memo is corroborating implementation evidence, not the project's performance authority. R2
 
-STG decreased by 187,648 ticks.
-OTHR increased by 174,720 ticks.
-ALL P50 barely changed.
+1.1 Last qualified checkpoint, as reported by the repository
 
-But subsequent experiments weakened that explanation. Task 55 removed redundant command words without the predicted frame improvement. Task 100 then documented that neither word count, triangle count, nor pixel coverage explained the large remaining fixed cost; it specifically identified per-operation/per-run scaffolding as unresolved. Its quarter-resolution experiment changed WORK-H P50 by +256 ticks, not an improvement.
+The September 17 board names a4eb24c9a85 as the last qualified checkpoint. Its first-line N04.08 summary is older than that detailed checkpoint section. The values below are reported results, not measurements executed during this review. R3 R4
 
-My conclusion: the old experiments reject particular implementations and predictions. They do not establish that all remaining stage work is irreducible.
+Metric
 
-There is another measurement issue: ALL results clustered around a presentation interval cannot, by themselves, prove that useful CPU work did not decrease. The decisive evidence must include WORK-H and the presentation-interval distribution, not just an unchanged cadence-quantized median.
+P50 ticks
 
-Also, I would not use the Task 103 phase figures in source comments as established current measurements. The current closeout explicitly describes that instrument as broken and unproven.
+P95 ticks
 
-2. Candidate #1 — Compile complete ordered stage command programs
-The specific remaining inefficiency
+WORK-H
 
-The current replay is not a complete replacement for the stage execution machinery.
+1,600,960
 
-ndsRendererTask36ReplayRun() still:
+2,320,576
 
-Validates the selected replay run.
-Calls ndsRendererNativeStageBeginRun().
-Transfers that run’s command buffer.
-Reconstructs renderer bookkeeping.
-Calls ndsRendererHardwareEndBatch().
+STG
 
-BeginRun() itself still handles texture state, polygon state, alpha-test state, matrix-path decisions, and batch transitions. In the DMA arm, each replay run starts a transfer and immediately waits for completion. Geometry replay exists, but the CPU still drives the surrounding run protocol.
+385,088
 
-This is why “add command caching” is not a new recommendation. The new boundary should be larger.
+427,648
 
-Proposed architecture
+FTR
 
-Compile a complete ordered program for each stage segment that can execute without an intervening external display callback.
+350,144
 
-The program contains the actual required GX commands, including texture/palette parameters, polygon attributes, matrix operations, and geometry. It also contains compact relocation/patch records for genuinely dynamic values.
+736,960
 
-The runtime becomes:
+SRC
 
-Stage load:
-    Validate the generated stage program.
-    Resolve resident texture/palette handles.
-    Resolve dynamic bindings and patch locations.
+543,040
 
-Each presentation:
-    Update changed stage inputs.
-    Patch only affected command fields.
-    Submit ordered segment programs.
-    Publish the segment's final renderer state.
+1,027,520
 
-The first version should preserve the existing geometry and draw order. This is not a global material sort.
+MISC
 
-The critical change is:
+238,720
 
-Run boundaries stop being mandatory CPU function-call boundaries.
+464,000
 
-A segment containing several material runs can still contain several BEGIN/polygon/texture changes in its GX stream. It simply does not need to reconstruct those transitions through the general CPU-side run interface every frame.
+ALL
 
-What this could remove
+1,677,952
 
-The target is the sum of:
+2,798,144
 
-Repeated CPU-side state interpretation.
-Texture-entry metadata touches repeated across runs.
-Repeated batch bookkeeping.
-Multiple DMA setup/completion boundaries.
-Repeated reconstruction of the hardware-state shadow.
+Against the operational 1,120,000-tick comparison threshold, WORK-H is 480,960 ticks over at P50 and 1,200,576 over at P95. These are differences between each whole-work percentile and a constant budget. They are not sums of component percentiles.
 
-This differs from removing redundant COLOR words. It targets CPU execution and memory traffic around the stream, which the historical word-elision experiment did not isolate.
+The approximately 1,120,380-tick physical cadence figure sometimes used elsewhere differs slightly from this operational threshold. Preserve the verifier's stated unit and threshold when comparing artifacts; do not silently mix timer ticks, ARM9 instruction cycles, geometry-engine cycles, and upstream emulator AddCycles() values.
 
-Important implementation constraints
+1.2 Later locality candidate — keep this comparison separate
 
-Preserve display ordering. Fuse only across boundaries with no intervening fighter/effect/interface work.
+The DTCM report compares its own matched control and candidate, not the checkpoint in the preceding table. R5
 
-Do not treat all graphics registers as FIFO commands. Frame-wide render controls and GX-stream state need different treatment. Hoist controls only when their values are proven compatible across the segment.
+Metric
 
-Preserve texture residency. Resolve/pin required resources before submitting the segment. A packet cannot retain stale palette or texture addresses after eviction.
+Matched control
 
-Publish correct exit state. Subsequent owners must see an accurate matrix, texture, polygon, and batch state—or an explicitly invalidated shadow.
+DTCM candidate
 
-Reuse existing packet storage where possible. Do not keep a second permanent copy of the stage’s entire command stream merely to avoid changing the existing representation.
+Delta
 
-The DS has one geometry command path, and FIFO-full CPU writes can stall. Fewer CPU submission boundaries therefore do not automatically imply faster geometry processing; they must produce a measured reduction in total work or better overlap.
+WORK-H P50
 
-How I would qualify it
+1,580,544
 
-The first prototype should retain the same effective GX operations and geometry, changing only their CPU packaging.
+1,537,344
 
-That gives a clean test:
+−43,200
 
-Does removing live per-run setup reduce WORK-H when the rendered work remains equivalent?
+WORK-H P95
 
-If it does, that is a real architectural result. If STG falls but equivalent work appears elsewhere, stop expanding it.
+2,320,768
 
-Priority: highest. It attacks an identifiable live path without first changing stage appearance.
+2,277,696
 
-3. Candidate #2 — Replace remaining stage polling with mutation-driven compact state
-What already exists—and should not be rebuilt
+−43,072
 
-The adapter already has substantial optimization:
+STG P50
 
-Generation-based steady-state admission.
-Cached topology.
-Separate rigid/dynamic binding lists.
-Rigid-world validation with a stride option.
-Specialized matrix preparation.
-Prepared/replayed segment reuse.
+337,472
 
-The current owner preparation also already avoids some initialization work on replay hits. Therefore, “cache static matrices” and “skip all preflight on hits” would largely repeat existing work.
+324,992
 
-What still happens
+−12,480
 
-The live preparation path still calls world validation, matrix preparation, and material preparation; reconstructs resolver/configuration fields; republishes frame pointers; and scans binding flags to build hidden-binding state. Material preparation walks the stage’s material slots and follows their source bindings.
+ALL P50
 
-The next simplification is not another memo around those functions. It is to change who tells the renderer what changed.
+1,678,016
 
-Proposed architecture
+1,677,888
 
-Maintain a compact native stage instance with separate dirty domains:
+−128
 
-Topology/residency changed
-Camera changed
-Binding transform changed
-Material/texture frame changed
-Visibility changed
+Three reported runs reproduce the WORK-H improvement closely. A separate instruction-address analysis reports unchanged access counts for the moved data and approximately 25,042 ticks/frame less dereference stall. The report proposes eviction relief for part of the remaining whole-frame improvement, but correctly labels that mechanism as an interpretation rather than a measured decomposition. R5
 
-Stage animation and stage-actor update seams mark those domains. Presentation consumes the dirty set and clears it after updating the native state.
+The candidate still has 417,344 ticks of P50 work above the threshold. Its sample-window assertion must be resolved without weakening the guarantee that the samples and identity witnesses describe the same match. It should not be described as a fully qualified new shipping baseline simply because its performance result is encouraging.
 
-For example, camera movement should not imply rebuilding stage-local transforms. A flower animation should not imply revisiting every rigid binding. A material frame change should not imply rereading unrelated topology.
+2. Corrections to the previous review
 
-For the command program in candidate #1, the mapping becomes direct:
+2.1 Captured replay is much narrower than the recommendation implied
 
-changed binding -> matrix patch locations
-changed material -> texture/UV/color patch locations
-changed visibility -> execution mask
-changed camera -> camera-dependent patch locations
-Why this is a redesign rather than another cache
+Previous emphasis: make complete ordered stage command programs by eliminating scaffolding around the existing replay path.
 
-The current system often discovers change by inspecting the source representation.
+Correction: the ordinary capture/replay mask is stage-specific and selects only Dream Land segments 5 and 7. The source distinguishes a reused prepared native run table from a replayed GX command stream. Those are not the same optimization. R6
 
-The proposed system receives change notifications from its owners and touches only the native fields affected by those changes. Ideally, it replaces overlapping source-key/cache machinery instead of adding another layer beside it.
+This changes the first question from “how expensive is replay setup?” to:
 
-The difficult part: invalidation completeness
+Which segments and submit classes consume the current stage's time, and how much of that time is live native emission, state preparation, diagnostic traffic, or hardware waiting?
 
-This is safe only when every relevant writer is covered.
+The ordered-program idea survives, but broadening it to camera-dependent segments is a new compiler and dynamic-input problem, not a simple batching change.
 
-That includes stage animation, actor callbacks, hierarchy changes, source visibility flags, scene replacement, and address reuse after a heap reset. Recycled pointers must not resurrect a previous match’s state.
+2.2 Do not replay camera-dependent matrices unchanged
 
-For initial qualification, I would retain a lab-only comparison against the current preparation path and exercise every supported stage’s animation/hazard transitions.
+The source explains why prior actor replay failed: a captured LOAD4x4 containing projection × view × model fixes geometry to the capture camera. Widening the replay mask produced misplaced actor imagery; widening the assumed rigid set also failed. R6
 
-Do not reduce simulation frequency to obtain this saving. The current campaign explicitly retains 60 Hz simulation.
+“Static vertex data” does not mean “static final matrix.” Billboarding, special source matrix kinds, camera recalculation, dynamic ancestors, and projection changes must all be represented explicitly. A new program must patch or regenerate these operands, or use a different proven factorization.
 
-Priority: high, alongside #1. The gain is unmeasured, but the intended runtime is simpler: small dirty sets feeding a small native program.
+2.3 The earlier word-elision implementation was not qualified as lossless
 
-4. Candidate #3 — Stop assigning a distinct projection matrix to every painter triangle
+Task 55 E2 initially called its redundant COLOR/TEX_COORD elision lossless and reported a 3,916-to-3,561-word replay-buffer reduction. Its later owner follow-up records color pulsation during normal play and explicitly contradicts the initial blanket losslessness claim. R10
 
-This is the most interesting geometry-side opportunity I found.
+Correct wording: it is an unaccepted implementation with an observed multi-frame visual problem, plus a disappointing performance result. The report's suggested mechanism is not a proven diagnosis.
 
-The exact source behavior
+A future independently executable fragment must initialize the state its vertices require. Do not let correctness depend on the last color, UV, matrix, or texture state left by an unrelated owner or a previous frame.
 
-ndsRendererNativeStageTask36LoadNoZProjection(projected_z) copies the projection matrix, replaces its Z column using the W column and the requested synthetic depth, loads the complete 4×4 projection, then switches back to modelview.
+2.4 Flat ALL does not establish zero useful work saved
 
-ndsRendererNativeStageEmitNoZTriangle() calls that path for eligible triangles. In other words, a full projection update can exist primarily to encode one triangle’s painter-order depth.
+The later DTCM experiment is a direct counterexample: WORK-H improved substantially while ALL P50 was effectively unchanged. Work can decrease without crossing a VBlank interval boundary. R5
 
-Replay avoids recomputing some of this on the CPU, but replaying an expensive representation does not remove its commands.
+The July experiments remain legitimate negative evidence about their tested implementations. What does not follow is a universal claim that removing CPU work or changing command representation cannot help. Prefer matched WORK-H distributions, cadence histograms, and actual wait attribution over a single cadence-quantized ALL statistic.
 
-Proposed architecture: certified painter-depth groups
+2.5 Marginal percentiles are not subsystem budgets
 
-Instead of automatically allocating a different effective depth to every triangle, generate groups of triangles that can share depth without changing observable occlusion.
+The September 17 sizing memo subtracts STG P50 from WORK-H P50 to describe the result of deleting the stage, and treats lane percentages summing above 100% as evidence of overlap. Neither inference follows from marginal medians alone. R4
 
-The most conservative starting case is:
+For exclusive synthetic frame costs:
 
-Compatible material and transform state.
-Compatible source depth behavior.
-No coverage overlap requiring painter precedence.
-No relevant interaction with another owner inside the group’s depth interval.
+Frame
 
-For those groups, load the painter projection once and emit multiple triangles.
+A
 
-An offline compiler could progressively consider larger groups using conservative overlap/order constraints. The runtime should not build a triangle overlap graph every frame.
+B
 
-Why this is not “turn depth testing off”
+C
 
-A blanket equal-depth conversion is unsafe. The DS distinguishes less-than and equal-depth tests, and polygon attributes take effect at primitive boundaries. Opaque/translucent ordering and polygon IDs introduce additional constraints.
+Total
 
-The proposed compiler must preserve the required ordering relationships. It must not simply give an entire stage one depth.
+1
 
-Also:
+1
 
-Keep real-Z geometry separate.
-Preserve source alpha and texture behavior.
-Preserve external ordering against fighters/effects.
-Preserve the depth allocator’s externally visible progression where later owners depend on it.
-Treat shared-edge/antialiasing behavior conservatively.
-Why this could outperform ordinary command compression
+1
 
-If T triangles currently require individual projection changes but can legally be represented by G groups, the structural saving is:
+0
 
-$$ T-G \quad \text{projection changes} $$
+2
 
-That removes complete matrix operations and associated transitions—not merely a few redundant state words.
+2
 
-It may also permit longer primitive batches and better strip construction within the safe groups.
+1
 
-What would disqualify it
+0
 
-If the apparent groups overlap under ordinary camera movement, interact with foreground effects, or depend on distinct depths for correct translucent composition, they are not eligible.
+1
 
-Priority: medium-to-high research, after #1. I would begin with one certified static stage region, not rewrite all painter-depth behavior at once. It is not automatically lossless merely because the grouping looks correct in one screenshot.
+2
 
-5. Candidate #4 — Direct deformation recipes for mixed-binding geometry
-A particularly expensive current representation
+3
 
-The native owner file contains ndsRendererNativeStageEmitCrossMatrixTriangle() for geometry such as Inishie’s scale strings.
+0
 
-The path transforms each corner with its binding’s matrix, clips the triangle, then uses ndsRendererNativeStageEmitProjectedDepthVertex() to submit each resulting corner.
+1
 
-That vertex helper constructs a matrix whose translation contains the corner’s clip-space coordinates, loads that matrix, and emits a zero-position vertex.
+1
 
-The renderer is using a full matrix load as a way to submit one already-transformed vertex.
+2
 
-The reason is valid: corners can originate from different source DObj matrices. But that does not require this representation for every specialized actor.
+Median
 
-Proposed architecture: generated live endpoint patches
+1
 
-For the string case, derive a native deformation recipe from its actual moving endpoints.
+1
 
-Choose a common coordinate frame, keep its ordinary camera/projection handling, and update the string’s corner positions from the live endpoint transforms. The triangles then use normal vertex submission under that common frame.
+1
 
-The important distinction:
+2
 
-This is not flattening the string into a static mesh. Its endpoint-dependent vertices remain live.
+The component medians sum to 3 although the total median is 2. There is no overlap at all.
 
-For a certified translation-only relationship, the update may reduce to a few scalar coordinate patches. More general relationships can use a small relative transform, still avoiding a clip-space matrix load per emitted corner.
+Similarly, median(W) − median(S) need not equal median(W − S). This is a mathematical issue independent of whether the real counters also contain nested spans.
 
-Why this is attractive
+Therefore, 95,872 ticks remaining after “deleting STG” is an illustrative subtraction, not a rigorous measured ceiling. Proper component sizing uses matched per-frame data with audited ownership; a real counterfactual also includes scheduling and cache effects. This correction does not demonstrate that STG can solve the target. It removes an invalid proof that it cannot.
 
-It can remove all three of the following for the specialized geometry:
+2.6 Do not size current work from old Task 103 comments
 
-General per-corner clip-space transformation.
-CPU clipping where normal hardware clipping is semantically equivalent.
-Per-corner 4×4 matrix submission.
+Current source still carries historical phase totals in comments. The September 16 closeout describes a broken current Task 103 instrumentation attempt. A historically collected result, a current comment, and a currently runnable instrument are separate pieces of evidence. None licenses assigning those old totals to this snapshot's execution. R7 R9
 
-The original gameplay objects, collision, scale movement, and attachment relationships remain authoritative.
+2.7 Visibility separation partly exists already
 
-A secondary option: a small matrix palette
+The current commit loop reads a per-frame hidden-binding mask while prepared runs remain valid. “Separate visibility from prepared geometry” is therefore not entirely new. The remaining opportunity is more specific: an offline execution schedule and optional chunk culling must preserve replay/residency proofs, effective graphics state, and depth progression. R7
 
-Where corners genuinely require different complete transforms, a few stored coordinate matrices and per-corner restores are another candidate. The DS supports indexed matrix store/restore, but this is not a guarantee of lower geometry execution time merely because the command payload is shorter.
+2.8 The VTX_10 range correction stands, but not an FPS prediction
 
-I would prefer the direct endpoint recipe when its assumptions can be proven.
+The prior correction to the old raw-integer range comparison was valid. A ten-bit vertex coordinate has different fractional precision from a sixteen-bit coordinate. For example, raw v16 30272 can be represented exactly by signed ten-bit 473; both describe 7.390625. The decoder expands the ten-bit value by six bits. R11 H1
 
-Priority: strong stage-specific candidate. It does not improve a Dream Land-only benchmark when this path never executes, so its benefit must be reported on the stages that use it.
+That does not prove a meaningful speedup. Exact compact encoding reduces transported data, not necessarily the number of transformed vertices. Keep it an optional compiler lowering, not a major standalone campaign.
 
-6. Candidate #5 — Offline visibility and topology optimization without invalidating replay
-Why earlier geometry experiments are not sufficient
+3. What the live stage path actually does
 
-Task 100 records that an earlier run-culling probe changed the run set and disarmed capture-once replay, producing a regression. That experiment did not cleanly measure the benefit of skipping already-prepared geometry.
+The relevant chain is:
 
-A redesigned stage program should separate:
+presentation
+  prepare native stage owner
+    validate/reuse topology and residency
+    prepare camera/binding matrices
+    prepare live material state
+    assemble frame inputs and hidden-binding mask
+    reuse or rebuild prepared native run tables
 
-What geometry is stored from which stored chunks execute this frame.
+  source display traversal
+    identify native stage segment
+    commit that segment in its required order
+      choose display-head pass when applicable
+      test current visibility
+      record per-run diagnostic snapshot
+      captured replay, when eligible
+        BeginRun -> transfer words -> publish state
+      otherwise live native execution
+        BeginRun
+        per triangle: submit-class dispatch
+        per corner: native source/prepared data lookup and emission
+      record emitted counts and account the run
 
-Proposed architecture
+  finish native stage owner
 
-Keep immutable command chunks keyed by geometry/material identity. Keep visibility in a separate execution mask.
+Sources: renderer_adapter_stage.c and nds_renderer_native_owners.c. R7 R8
 
-At build time, generate conservative bounds and identify geometry that cannot contribute within a supported camera envelope. At runtime, select chunks without rebuilding or invalidating their stored commands.
+Here “live native” means native DS execution over generated data. It is not permission to revive the forbidden N64 graphics interpreter.
 
-Start with large, useful units. Do not replace a cheap draw with hundreds of tiny CPU culling decisions.
+Three concrete findings deserve immediate attention:
 
-For source-transparent or two-sided geometry, visibility proof must include the relevant semantics. Hiding a flower’s back face because a solid wall’s back face was safely culled is not valid.
+Repeated head scans. When a packet supplies binding-head data, the current commit loop scans its run list in four passes for head order {0, 2, 1, 3}. A generated execution-order vector can retain that order while visiting each scheduled run once. Packets without head data already use one pass, so this is not a universal fourfold loop reduction. R7
 
-Combine with actual vertex reuse, not merely shorter encoding
+Unguarded diagnostic traffic. ndsRendererNativeStageBindingHidden() records a multi-field shortfall snapshot for visible runs. ndsRendererNativeStagePublishRunEmission() stores emitted counts and serials for each committed run. These operations are visible outside the Task 103 timing guards in the inspected source. Their linked-build cost and their correctness consumers still need verification; they are not automatically removable just because their names sound diagnostic. R7
 
-After preserving depth/material/transform constraints, the offline compiler can consider triangle strips and equivalent topology lowering.
+Live per-triangle decisions and data gathering. The native loop selects no-Z/cross-matrix/ordinary emission per triangle and gathers source and prepared vertex records for each corner. Stable aspects of these decisions can be generated into smaller schedules and specialized kernels. That is a different target from speeding up a cached DMA transfer. R7
 
-However, the old Dream Land census is an important warning. In its current-order analysis, 202 triangles used 606 vertices, and a greedy strip conversion projected approximately 522 vertices. That was a limited opportunity, not a dramatic mesh-wide reduction. The census also does not establish that position equality alone is sufficient: UV, color, matrix binding, and depth semantics must agree.
+4. Revised candidate ranking
 
-Candidate #3 could change which triangles can legally share a primitive group, but that expanded opportunity must be demonstrated—not assumed.
+The ranking below is for investigation and implementation effort, not a list of promised savings. “Compatible” means designed to preserve the current requirements, subject to validation.
 
-Priority: conditional. Useful when it removes substantial submitted work while leaving existing packets valid. Not a license for arbitrary decimation.
+Rank
 
-7. Candidate #6 — Revisit exact compact vertex encoding, but not as a major FPS promise
+Candidate
 
-I found a concrete technical problem in the old VTX_10 rejection.
+Scope
 
-Task 55 E0 compares raw VTX_16 coordinate integers against a signed ten-bit range and concludes that most stage coordinates are out of range. That comparison ignores the formats’ different fractional precision.
+Evidence strength
 
-The ten-bit vertex format is expanded into the internal coordinate representation with a six-bit shift. For example:
+Main risk
 
-$$ 30272 / 4096 = 473 / 64 = 7.390625 $$
+1
 
-That particular VTX_16 value is exactly representable as a ten-bit coordinate. The relevant question is precision and exact representability, not whether the raw sixteen-bit integer exceeds 511. The emulator’s vertex decoder explicitly performs this expansion.
+Compact hot stage state and lean success-path accounting
 
-A valid implementation
+Live and replayed stage runs
 
-An offline encoder can select a one-word vertex representation only when decoding it reproduces the original coordinate exactly. Otherwise it retains VTX_16.
+Concrete source targets; locality mechanism has measured precedent
 
-It can similarly consider exact axis reuse, without changing vertex order or geometry.
+Moving required failure detection or merely relocating cost
 
-Why this stays low priority
+2
 
-A shorter vertex encoding does not eliminate the vertex transformation. The earlier redundant-word experiment already warns against predicting frame savings proportional to bytes removed.
+Generated ordered live-run schedule and specialized emission kernels
 
-Conclusion: the historical range-based rejection is unsound, but that does not establish a meaningful FPS win. Treat this as a low-risk packet-size optimization to test after the larger architecture work.
+All stage packets, according to their submit classes
 
-8. Where C and assembly actually belong
+Concrete repeated scans/dispatch/data gathers in current source
 
-I would use C for the new execution architecture and generated data for most specialization.
+Cache footprint and compiler/code-size regressions
 
-The first objective should be to make runtime work disappear:
+3
 
-No repeated interpretation of an unchanged run.
-No reconstruction of immutable configuration.
-No polling unchanged stage state when an owner can identify its mutation.
-No full matrix-per-corner representation for a specialized deforming quad.
-No per-triangle depth change where a certified group suffices.
+Patchable, state-complete GX chunks
 
-Assembly is appropriate only after that, for a remaining measured kernel such as sparse command patching or a compact fixed-point transform.
+Selected live or replayed segments
 
-I would not begin with an assembly rewrite of FIFO replay. The hardware can stall the issuer when the FIFO is full, so faster stores are not automatically faster frames. Nor would I move whole stage functions into ITCM without a placement-controlled comparison. The repository already records regressions from seemingly attractive code-placement changes.
+Architecturally plausible; not yet sized
 
-Similarly, I would not repeat the four-fighter hardware-compose experiment. The current board records that enabling that existing mechanism regressed WORK-H P50 by 22,848 ticks and P95 by 67,456 ticks. A narrowly scoped two-endpoint stage recipe is a different proposition from adding matrix-stack traffic across all fighters.
+Dynamic matrices, register ordering, patch/flush cost, memory growth
 
-9. How to turn these into evidence without another repetitive optimization campaign
-Measure the current path without changing its placement
+4
 
-The failed Task 103 instrument is a good reason to put the initial attribution in the approved accurate emulator, rather than inserting another collection of hot ROM-side timers.
+Explicit dirty inputs for remaining stage transforms/materials
 
-Trace the pinned executable’s stage function ranges and submission events using emulated timestamps. Distinguish CPU execution, memory/cache stalls, FIFO stalls, and DMA completion waits. Measure host-side tracing overhead only to ensure it does not alter emulated timing.
+Mutating visual bindings only
 
-Do not infer current cost from the old comments’ phase numbers.
+Useful design; substantial caching already exists
 
-Use one small counterfactual for each candidate
+Incomplete invalidation and redundant bookkeeping
 
-For #1, retain equivalent rendering operations and replace only run-level CPU orchestration.
+5
 
-For #2, compare compact dirty-state output with the existing preparation result.
+Direct endpoint deformation for mixed-binding geometry
 
-For #3, validate one painter-depth group against the full reference path across its camera envelope.
+Particularly Inishie scale strings
 
-For #4, validate the endpoint recipe across the full scale/string motion and clipping range.
+Expensive current representation is identifiable
 
-These tests should answer different questions. They should not be bundled into one rewrite whose result is impossible to attribute.
+Clipping, range, and endpoint-transform equivalence
 
-Keep both performance and correctness gates
+6
 
-The performance result must include WORK-H P50/P95, presentation cadence, and whole-frame bucket movement. Do not add independently calculated bucket percentiles together.
+Painter-depth grouping or a new native depth representation
 
-Correctness needs identical simulation/input state, camera and stage-animation coverage, transparency/depth checks, and proof that the native path engaged. Timing-dependent CPU matches can diverge, so independent screenshots hundreds of frames into two different runs are not a sufficient image comparison.
+Eligible no-Z subsets
 
-Finally, retain the project’s native-only and 60 Hz simulation requirements. A faster fallback renderer or skipped gameplay work is not an acceptable success.
+Real operation to eliminate; correctness is difficult
 
-My recommendation
+Occlusion/transparency changes across cameras
 
-Build an “ordered native stage program” executor first. Make its first version preserve geometry, material order, depth behavior, and external display boundaries. Its purpose is to eliminate the CPU machinery surrounding already-cached geometry.
+7
 
-Then replace its remaining source-graph polling with compact mutation-driven inputs.
+Conservative chunk visibility and exact topology lowering
 
-After that, pursue painter-depth grouping and direct mixed-binding deformation as targeted representation changes. Those are more promising than repeatedly shortening the same FIFO loop, because they can remove operations the present representation requires.
+Demonstrably eligible geometry
 
-The critical distinction is:
+Historical negative evidence limits easy opportunities
 
-Do not optimize STG by making every existing step slightly cheaper. Reduce the number of steps that must exist at presentation time.
+Invalidating caches or silently removing visible content
 
-These candidates have concrete implementation seams and falsifiable tests. Their speedups remain unmeasured, and STG alone is not yet demonstrated to close the 30 FPS gap—but the source does contain architectural opportunities beyond the already-rejected “more caching, faster stores, fewer pixels” approaches.
+8
+
+Exact compact vertex encoding
+
+Eligible emitted coordinates
+
+Representation correction verified on host
+
+Minimal whole-frame benefit
+
+Candidate 1 — Compact hot state and lean success-path accounting
+
+Purpose: reduce scattered data-cache traffic before investing in a large renderer rewrite.
+
+The DTCM result supports investigating small frequently accessed state. It does not mean that every field belongs in DTCM, or that the existing 43,200-tick benefit can be counted twice. The report gives 1,484 bytes below its DTCM assert ceiling after the move; that is a property of its linked arm, not a fresh reservation for another feature. Re-read the actual shipping and profiling maps. R5
+
+A useful first pilot would keep the existing draw algorithms and examine:
+
+The repeatedly read stage cursor, active packet pointers, visibility words, state-shadow fields, and current-run identity.
+
+The per-run diagnostic snapshot and emission publication.
+
+Repeated success-path writes to values that are only needed to explain a later failure.
+
+For diagnostics, preserve the distinction between deciding a run is correct and recording detailed history about why a run failed. A compact current-run record, direct failure-reason propagation, or a first-failure latch may replace broad before/after counter snapshots. But first trace every consumer. Keep native-failure, missing-geometry, rejected-run, and required verifier witnesses intact.
+
+Do not merely guard everything with NDS_TICK_HUD and call the gate faster. Measure the shipping-shaped configuration as well. Eliminating profiler-only work is not the same as accelerating the shipped game.
+
+Budget rule: relocate or replace existing state; do not keep duplicate authoritative representations. Preserve initialized versus zero-initialized storage. DMA source buffers remain separate from CPU-private hot state.
+
+Discriminating test: same effective draw output and simulation state, with lower success-path accesses/stalls and lower WORK-H. A lower STG counter alone is insufficient.
+
+Candidate 2 — Generated ordered live-run schedule and specialized kernels
+
+Purpose: replace the repeated interpretation of a known native layout with an execution-ready layout.
+
+At build/load time, produce the ordered run vector after applying the packet's required head ordering. Attach the invariant submission class, binding, coordinate-packing policy, material handle, and vertex/span offsets to each record.
+
+At presentation time, the runtime should read the run's genuinely dynamic visibility/material/transform inputs and enter the corresponding small native kernel. It should not rediscover four head partitions, recalculate invariant coordinate-shift choices, or repeatedly decode the same submit-class decision for every vertex.
+
+A conceptual interface is:
+
+/* Design sketch; these are proposed interfaces, not existing project APIs. */
+void StagePrepareChangedInputs(StageInstance *stage, const CameraState *camera);
+void StageSubmitOrderedSegment(StageInstance *stage, unsigned segment_id);
+
+Internally, the first implementation needs only a few explicit classes, for example ordinary/range geometry, painter-depth geometry, and mixed-binding deformation. Generate native stage-specific data; keep shared kernels small. A compact native draw record is not an N64 graphics command stream.
+
+For vertex emission, derive whether the existing dense/corner indirection or an execution-ready vertex span is cheaper. Expanded per-corner data can eliminate dependent loads but increase the footprint. Calculate actual bytes from the selected stage before choosing. Do not assume “flattening” always improves locality.
+
+The initial pilot should preserve the current effective hardware work. In particular, it can retain per-triangle painter-depth matrices while removing CPU-side recomputation and general dispatch. That cleanly tests the CPU/data-layout thesis before changing rendering semantics.
+
+Output invariants: source segment boundaries, within-head order, external owner boundaries, alpha behavior, matrix binding, visibility behavior, near-plane behavior, depth progression, and honest submitted-work counters.
+
+Falsifier: the schedule executes fewer CPU decisions but total work does not improve because the new layout displaces hotter data or increases hardware waits. Measure that outcome; do not add a second cache to rescue it by assumption.
+
+Candidate 3 — Patchable, state-complete GX chunks
+
+This is the corrected version of the previous top recommendation.
+
+Compile chunks whose command structure is immutable. Resolve resident texture/palette addresses at setup, and patch the operands that actually change. For camera-dependent geometry, the patch set must include the required camera and binding results. For animated materials, it must include texture-frame/UV/color inputs as applicable.
+
+Begin with one expensive live segment identified by the census, not every stage at once. There are two distinct experiments:
+
+Packaging-only experiment: retain equivalent command operations but reduce CPU run setup and submission boundaries.
+
+Operation-reduction experiment: reduce hardware work through a separately justified depth, topology, or transform representation.
+
+Never conflate them. A smaller buffer does not establish lower geometry work.
+
+A segment cannot be fused across an intervening required owner. Moreover, the current source explicitly notes that its per-head stage ordering does not fully reproduce all cross-owner interleaving in a camera group. Preserve the known boundary and qualify that existing visual issue rather than silently fossilizing it in a new packet. R7
+
+Not every rendering register belongs in the GX stream: glAlphaFunc() and glEnable()/glDisable() address rendering controls rather than behaving like arbitrary packed GX commands. Packet generation must distinguish these from geometry command state. H2
+
+Packet lifecycle requirements: initialize incoming state explicitly; preserve matrix-stack balance; finish before any competing FIFO writer or source-buffer reuse; flush CPU-written cached source ranges correctly; account for alignment, DMA setup, and bus contention. Never assume DMA makes the underlying geometry work disappear. Keep command storage in the established main-RAM DMA buffer domain, separate from CPU-private hot-state placement, and follow the selected library's transfer and coherency contract. The inspected libnds glCallList explicitly flushes its command data and waits for the transfer. R6 H2
+
+Memory rule: keep one selected-stage representation and bounded patch storage. Replace old persistent tables/buffers where possible. Whole-stage double buffering or a bank of every possible visual state is not approved merely because the product contract permits spending RAM.
+
+Falsifier: patching, cache maintenance, or extra resident pages consume the saved preparation work. Stop expansion when the matched full-frame result is neutral or worse.
+
+Candidate 4 — Explicit dirty inputs, but only where work remains
+
+Do not reimplement the already-existing steady admission, topology generation, prepared-run reuse, texture-proof epochs, or rigid/dynamic split. The adapter still prepares frame inputs and the renderer still consumes live changes; optimize the measured residue. R6 R8
+
+Use separate invalidation domains for topology/residency, camera, binding transforms, material animation, and visibility. Camera movement need not invalidate immutable local geometry. A flower's material frame need not invalidate an unrelated static run.
+
+A dirty system must cover every writer, including actor callbacks, animation attachment, flags, hierarchy changes, and scene/heap replacement. Pointer equality alone is not an identity proof after arena reuse. Inherited source nodes with camera-dependent transform kinds must not be labeled static merely because they have no ordinary animation track.
+
+For visual animation, phase advances and emitted events may still be required at 60 Hz even when visible state is sampled less often. Preserve hazard and collision updates. The source assigns layer 1 to the yakumono update path while other layers use ordinary animation; it is not safe to decimate a generic stage-animation call indiscriminately. R13
+
+Falsifier: most expensive preparation already reuses its outputs, or marking/consuming dirty records costs as much as the small remaining check. This is an adjunct to the compact executor, not a new scene-graph framework.
+
+Candidate 5 — Direct endpoint deformation for mixed-binding geometry
+
+The current cross-matrix stage path can transform each corner, clip in software, and then load a matrix containing a corner's clip coordinates before emitting a zero-position vertex. It exists to retain geometry whose corners originate from different binding matrices. That semantic requirement is real; the matrix-per-corner representation is not sacred. R7
+
+For a scale string, derive a native endpoint recipe from the actual source transforms. Express each endpoint in one common coordinate frame, update the small number of affected vertices, and submit the primitive through a normal native transform path.
+
+Start with an actor whose exact transform family is known. Translation-only relationships are much simpler than arbitrary rotation/nonuniform-scale chains. Preserve both endpoint motion, visibility, UVs, attachment positions, and collision behavior. Do not freeze the string into a static mesh.
+
+Use the existing native path as a differential reference where appropriate. Hardware clipping must be shown equivalent for the accepted input range; replacing pre-clipped homogeneous vertices with Cartesian vertices without preserving projection and interpolation is not automatically correct.
+
+This work must be sized on the stage that executes it. It contributes nothing to a Dream Land-only timing window when the actor does not exist.
+
+Falsifier: too few executions to justify the machinery, or the relative-transform/range repair costs more than the current path. A small matrix palette is an alternative to measure, not an assumed faster solution.
+
+Candidate 6 — Painter-depth grouping: retain, but demote
+
+The current no-Z path replaces a matrix's Z column with a value derived from its W column and a synthetic depth. It can do this per triangle. This is a genuine operation-reduction target. R7
+
+However, BattleShip explicitly disables source Z-buffering for layers 0, 2, and 3, while layer 1 uses Z-buffered modes. Turning every stage triangle into ordinary depth-tested geometry is not a representation-only rewrite. R13
+
+A conservative grouping prototype can let compatible triangles share a painter-depth operation when their coverage and all relevant ordering interactions make that safe. This requires more than matching materials or seeing no overlap in one screenshot. Check shared edges, translucent composition, polygon IDs, clipping, external owners, moving cameras, and the depth range left for later submissions.
+
+If T eligible triangles can be represented by G valid groups, the intended structural saving is T−G depth operations. That is an operation count, not a tick estimate. Establish the groups first; then measure.
+
+A more aggressive DS-native depth redesign is allowed as a visual-fidelity experiment under the product's approval process, but is not the first low-risk optimization. Rejecting a failed exact-output certificate does not authorize deleting scenery or silently changing occlusion.
+
+Falsifier: conservative groups collapse to almost one triangle each, or correctness requires expensive per-frame overlap reasoning. Do not build a general runtime graph solver to save a small static stage's draw cost.
+
+Candidate 7 — Visibility and topology: narrow the claim
+
+Task 63 found no never-visible triangles across the fixture sets it tested, only 9.1% constrained reduction under its material/silhouette rules, and a severe metric problem: full-frame coverage overlap could hide a badly damaged fighting surface. Its later culling experiment also disturbed texture/material coherence, making CPU work worse. R12
+
+These results strongly discourage “just simplify Dream Land” as a cheap first move. They do not establish a theorem about every stage or an execution schedule that does not invalidate material preparation.
+
+A justified reopening requires a specific new fact: a correct camera envelope, a new packet/caching boundary, or identified redundant submitted work. Keep visibility independent of packet identity and preserve any state/depth transitions skipped geometry used to provide.
+
+Never relabel deleting a small visible bush as culling invisible work. Compare the changed object/region, not merely a whole-frame mask dominated by the unchanged backdrop.
+
+Candidate 8 — Exact compact vertices
+
+An offline compiler can choose VTX_10 only when all coordinates reproduce the original emitted v16 values exactly; otherwise keep VTX_16. Exact axis-reuse encodings have their own state requirements.
+
+The useful application is a lowering pass in candidate 2 or 3, after real emitted-coordinate and command-size counts exist. It should not trigger a standalone campaign on the strength of the old range-analysis error.
+
+Host arithmetic checks in this review examined all 65,536 signed v16 axis values: 1,024 are exactly representable by the simple signed-ten-bit expansion. That verifies the eligibility arithmetic only; it does not count how many vertices in the current game qualify, validate a packet encoder, or measure performance.
+
+5. A simple target architecture
+
+The runtime should have one selected-stage instance with three conceptual pieces:
+
+Stage immutable program
+    ordered segment/run schedule
+    native geometry payloads
+    material descriptors and residency requirements
+    transform/deformation recipes
+    explicit patch locations where needed
+
+Stage live inputs
+    current camera
+    changing bindings/material phases
+    visibility and actor state
+    scene/residency generations
+
+Small native executor
+    prepare changed inputs
+    execute ordered segment at its existing display boundary
+    retain only necessary renderer state and failure witnesses
+
+The first migration should remove old data/decisions as it adds new ones. A new StageProgram beside an unchanged source graph, all old prepared tables, a full replay owner, and a new double buffer is not the intended design.
+
+C versus assembly: use generated data and small C kernels first. Consider assembly only for a measured remaining kernel. Preserve the compiler/linker map and inspect literal-pool and data dependencies; an apparent instruction reduction can still worsen cache behavior. The native SM64 DS reference uses explicit fixed-point affine matrices, and the carried sm64-nds renderer places small rendering state in DTCM. Those are useful design precedents, not proof that their complete render architectures or performance transfer to Smash. R14 R15
+
+Do not copy the reference interpreter. The source-format renderer in sm64-nds is not compatible with this project's native-only target contract merely because its state placement is informative. R2 R14
+
+Do not enable the old NDS_DREAMLAND_DS_MESH path as a shortcut. Task 63 records that path as known broken and default-off. A new implementation must address its documented provenance/topology problems rather than inheriting its name and assuming the problem was solved. R12
+
+6. Stage-specific scope and regression priorities
+
+Stage/content
+
+Most relevant first question
+
+Required preservation
+
+Dream Land
+
+Which live segments dominate after the existing 5/7 replay and prepared-table reuse?
+
+Camera-dependent scenery, Whispy/flowers, water material behavior, layer ordering
+
+Peach's Castle
+
+Which live submit classes and head schedules are costly?
+
+Roof coverage, winding, clipping, backdrop/foreground order
+
+Mushroom Kingdom / Inishie
+
+Does mixed-binding scale-string emission materially contribute?
+
+Both moving endpoints, scale-platform motion, real depth and clipping
+
+Planet Zebes
+
+How much cost belongs to the stage owner versus actor/effect accounting?
+
+Acid timing, collision/hazard activation, visibility, transparency
+
+Yoshi's Island
+
+What is ordinary stage draw versus separate cloud actor work?
+
+Cloud motion/visibility synchronized with its gameplay state
+
+Other admitted stages
+
+Classify current generated packet and execution route before choosing a kernel
+
+Native coverage, all supported camera/actor states, legal four-fighter matches
+
+This is a testing map, not a claim to have profiled each stage in this review. Several actor paths are accounted outside STG, so improvements must be assigned by the actual timed owner, not by the English name of the object. R7 R8
+
+7. Measurement plan that can discriminate the candidates
+
+7.1 Pin a reproducible executable before changing it
+
+Record source SHA, ROM/ELF hashes, selected stage and roster, build configuration, approved emulator identity/settings, native route engagement, scene/residency generation, and linked section sizes. Use the project's approved profiling configuration unchanged; do not treat results from different emulator timing or JIT settings as interchangeable.
+
+Clean the derived payload and check its membership. The repository previously recorded a large apparent STG improvement from removing stale NitroFS contents with an unchanged ELF; an unclean directory can confound a renderer A/B. R9
+
+The reported 14,080-tick cross-build floor is not a universal confidence interval. The locality report itself discusses larger placement swings. Prefer same-executable route comparisons for compatible native paths and repeated matched controls. A source-level optimization claim should survive a layout-controlled comparison, not merely exceed one historical threshold. R5
+
+7.2 Collect a short route census, not a new giant timer framework
+
+For each segment, record counts for prepared-table rebuild/reuse, captured replay, live emission, ordinary/range/no-Z/cross-matrix triangles, head passes, material updates, and matrix operations.
+
+Count emitted work separately from CPU work. A packet hit can submit many triangles without executing their old CPU preparation loops. Do not credit those skipped loops as actual CPU work merely to satisfy a liveness counter.
+
+Use existing low-impact instrumentation or host-side approved-emulator hooks where available. If additional emulator hooks are required, they are an implementation task, not an available measurement already performed here. Avoid the currently broken Task 103 path until it has an independent build/runtime qualification. R9
+
+7.3 Pilot one mechanism at a time
+
+Recommended sequence:
+
+Pilot A: preserve current geometry and scheduling; replace or relocate a bounded set of hot stage state and audit the per-run diagnostic success path.
+
+Pilot B: preserve hardware work; replace one live segment's general loop with generated ordering and a specialized native kernel.
+
+Pilot C: preserve effective operations; represent that same segment as a patchable chunk and include all patch/flush/submission costs.
+
+Pilot D: only after the previous results identify a geometry-side bottleneck, test a narrowly certified depth/deformation change.
+
+Run focused checks after each pilot. Once a batch is worth integrating, run the project's required focused four-CPU and broader regression coverage for that change. Do not spend a full campaign repeatedly rebuilding an unsized idea whose first counterfactual is already negative.
+
+7.4 Use aligned per-frame data and whole-work outcomes
+
+For audited exclusive CPU spans in frame f, a useful first sizing model is:
+
+estimated_saved[f] = old_target_cpu_work[f]
+                   - new_cpu_work[f]
+                   - added_patch_and_cache_work[f]
+                   - added_synchronization[f]
+
+This is only a sizing model: real replacement execution can change cache behavior and hardware waits elsewhere. The final verdict is the actual matched WORK-H distribution and cadence histogram.
+
+Do not calculate P95(total − component) by subtracting their separately ranked P95 values. Do not add the P50 improvements from unrelated builds. Do not claim bucket overlap from the sum of marginal percentiles alone. Audit timing anchors and nesting directly.
+
+7.5 Correctness must cover time, not one frame
+
+Compare required gameplay state at aligned source ticks, and compare rendering across a sequence of camera, material, visibility, and actor states. Preserve the relevant state-hash rules; pointer addresses must not be mistaken for gameplay divergence when a permitted representation change moves storage.
+
+Exercise camera movement and pause/resume; stage actors; transparent overlaps and shared edges; entry, KO, and scene re-entry; texture lifetime; and worst-memory legal combinations. Check the changed surface independently of the large unchanged backdrop.
+
+For packet work, validate incoming/outgoing graphics state at fragment boundaries, not merely the words inside an isolated capture. Task 55's multi-frame failure and the actor-replay failures are the reasons these tests are required. R6 R10
+
+7.6 Promotion requires all of the following
+
+A candidate must preserve required content and behavior, remain native-only, show route engagement, stay within measured memory constraints, and improve the actual work/cadence objective without a hidden cost transfer. Resolve sample-window provenance before declaring a gate pass. Owner approval remains required for permanent fidelity changes. R2 R3
+
+No new whole-stage budget or percentage-reduction promise is invented in this report. Establish the representative stage distribution first, then allocate the remaining game-wide budget from measured data.
+
+8. What is established, plausible, and not established
+
+Established by inspected source or retained evidence
+
+Current ordinary captured replay is restricted to Dream Land segments 5/7; the live native path is essential. R6 R7
+
+Prepared-run reuse, generation-based admission, texture proofs, and dynamic visibility already exist. R6 R8
+
+Current stage code contains repeated head scans, per-run snapshots/publication, and live per-triangle/per-corner decisions. R7
+
+The repository reports a reproducible DTCM-arm WORK-H improvement with a separate sample-window acceptance issue. R5
+
+Previous replay broadening and word-elision attempts have relevant visual failures, not just neutral timings. R6 R10
+
+Marginal percentile addition/subtraction cannot establish the claimed subsystem ceilings. This was checked with synthetic host cases.
+
+Plausible, but requiring a pilot
+
+Compact live state; a generated ordered native run schedule; specialized emission kernels; state-complete patchable chunks; direct endpoint deformation; narrowly certified painter-depth groups.
+
+Not established
+
+The current exclusive STG CPU/stall partition; a new candidate's savings; an all-stage/all-roster stage budget; a proof that STG alone closes the game-wide target; or a proof that equivalent-result architectural options are exhausted.
+
+Final recommendation
+
+Start with a compact live-stage executor, not a universal replay rewrite. First remove unnecessary hot-state traffic and invariant runtime decisions while keeping rendering operations equivalent. Use that measurement to decide whether patchable chunks or a depth/deformation redesign are worth their additional correctness and memory cost.
+
+The project has demonstrated that a small change in data access can matter more than a large apparent reduction in arithmetic. The next STG architecture should exploit that lesson without simply renaming old caches or counting already-landed wins again.
+
+Appendix A — Host checks performed during this review
+
+These checks executed successfully in the analysis environment. They are mathematical checks, not renderer tests:
+
+Three exclusive synthetic timing components have medians 1/1/1 while total median is 2. This disproves inferring overlap merely from marginal medians summing above the total median.
+
+With W=[100,101,1000] and S=[0,100,0], median(W)-median(S)=101 but median(W-S)=100. This disproves the general residual-percentile subtraction rule.
+
+All 65,536 signed v16 axis values were checked against exact signed-ten-bit expansion. Exactly 1,024 passed; every eligible value round-tripped.
+
+The constant-budget gaps above were recomputed: 480,960 / 1,200,576 for the qualified checkpoint and 417,344 P50 for the DTCM candidate.
+
+No ROM was built, no approved emulator run was executed, no current geometry asset corpus was decoded, and no new visual equivalence or performance result is claimed.
+
+Appendix B — Sources and implementation locations
+
+Repository sources below are pinned to db0d088bc61ac3e85f07a349857a1b3ec7eef55b. Historical documents retain their own dated experiment provenance. External source URLs are implementation references retrieved September 17, 2026, not substitutes for the approved emulator's timing model.
+
+Reference
+
+What was used
+
+R1
+
+Branch selection at review start
+
+R2
+
+Product, native-only, memory, performance, and fidelity rules
+
+R3
+
+September 17 checkpoint, current simulation/SRC decisions, remaining acceptance
+
+R4
+
+Reported checkpoint timing table and the ceiling arguments re-evaluated here
+
+R5
+
+Matched DTCM comparison, repeat runs, access/stall analysis, memory and window caveats
+
+R6
+
+Replay mask, failed actor replay history, prepared-table versus GX replay distinction
+
+R7
+
+ndsRendererCommitNativeStageSegment; ndsRendererNativeStageBindingHidden; ndsRendererNativeStagePublishRunEmission; ndsRendererTask36ReplayRun; ndsRendererNativeStageTask36LoadNoZProjection; cross-matrix/depth-vertex emission
+
+R8
+
+Stage preparation, live frame inputs, segment dispatch and finish
+
+R9
+
+Historical clean-build effects and currently broken phase-instrument warning
+
+R10–R12
+
+Historical command-elision, encoding, and Dream Land simplification experiments, including their negative findings
+
+R13
+
+Original layer depth modes, display links, and animation/collision update distinction
+
+R14–R15
+
+DS-reference hot-state placement and explicit fixed-point affine layout
+
+H1–H2
+
+Vertex encoding, rendering-control versus GX-command distinction, and the inspected command-transfer implementation

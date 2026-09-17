@@ -1,708 +1,611 @@
-# Smash64DS — SRC Optimization Research, Candidates, Prototypes, and Evidence
+# Smash64DS — SRC Optimization Re-evaluation
 
-**Research baseline:** September 16, 2026; `rockenrooster/Smash64DS_Port` at
-`430aca2879e9071dc2b22f944f5c2909c9ce7aa4`.
+**Date:** September 17, 2026.  
+**Repository reviewed:** `rockenrooster/Smash64DS_Port`, `master` at `db0d088bc61ac3e85f07a349857a1b3ec7eef55b`.  
+**Previous report:** `Smash64DS_SRC_Optimization_Complete.md`, source snapshot `430aca2879e9071dc2b22f944f5c2909c9ce7aa4`.
 
-**Scope:** SRC first, with its pose, gameplay, collision, animation-storage, and
-rendering interfaces. Preserve 60 Hz gameplay, native-only rendering, required
-content, all legal four-fighter lineups on all selectable VS stages, and the
-fixed-point runtime endpoint.
+**Scope:** Re-evaluate the SRC research, not the workflow documents. Preserve 60 Hz gameplay, the admitted pose schedule, source-equivalent mechanics, fixed-point runtime as the endpoint, native-only graphics, and every legal four-fighter lineup on every selectable VS stage. This is a replacement assessment of the candidates, not a claim that an optimization has shipped.
 
-This single document consolidates all nine files from the SRC candidate package:
-the full overview, detailed candidates, source/evidence record, C prototypes,
-Python tests, recorded test results, ARM assembly, code-generation report, and
-original checksum manifest. No companion download is required to read the material.
-Original filenames used in commands identify the embedded blocks to save when
-reproducing the standalone experiments.
+**What was done:** Read the original consolidated report and prototype package; compare repository revisions; inspect newer experiment reports and current source; rerun the original host experiments; develop and test an additional exact cubic formulation and a horizontal-floor special case; inspect generated ARM946E-S code. The branch API returned only `master`, and the comparison reports 85 commits beyond the original snapshot. [S01](#s01)
 
-**Evidence status is unchanged:** these are research candidates and standalone
-host experiments, not integrated game optimizations or measured DS speedups.
-Consolidating the material did not rerun the experiments, recheck the repository,
-modify game code or project documentation, build a ROM, or establish 30 FPS.
-
-## Contents
-
-- [Research conclusions and priorities](#conclusions)
-- [I. Full research overview and experiment guide](#research-overview)
-- [II. Complete candidate details](#candidate-details)
-- [III. Evidence, measurements, and source scope](#evidence)
-- [IV. Clickable primary-source reference index](#source-links)
-- [Appendix A. Complete C prototypes](#kernels-c)
-- [Appendix B. Complete Python differential tests](#test-kernels-py)
-- [Appendix C. Recorded host test results](#test-results)
-- [Appendix D. Complete generated ARM946E-S assembly](#arm-assembly)
-- [Appendix E. Recorded code-generation results](#codegen-results)
-- [Appendix F. Original package checksums](#original-checksums)
+**What was not done:** No game source or project operating document was edited, no ROM was built, no emulator or retail DS benchmark was run, no full extracted asset corpus was tested, and nothing was committed or pushed. All new code, tests, results, and assembly needed to reproduce the standalone experiments are embedded below. No companion file is required.
 
 ---
 
-<a id="conclusions"></a>
+## Executive verdict
 
-## Research conclusions and priorities
+**The previous report correctly identified expensive representations, but it ranked a broad pose/transform rewrite too confidently.** The newer evidence supports a more selective attack: remove repeated static map-query preparation, compile compact pose/motion execution, replace overlapping subtree caches with one topology representation, and use exact arithmetic simplifications inside those replacements. Do not start by building a second full pose/collision framework.
 
-**The strongest SRC opportunity is replacing the mixed-representation update
-pipeline, not repeatedly accelerating isolated helpers.** Start with one bound,
-fixed-point pose/transform domain shared by gameplay and rendering; then replace
-map-query layers with a bound native collision context, and compile compact
-resident motion data into the clip representation.
+The important corrections are:
 
-### What is being targeted
+1. **The approximately 74.6K-tick pose figure is not conversion overhead.** A newer source/PC audit prices the examined fixed-to-float publication at approximately 2,814 ticks per profiling region. The remainder is real parsing, evaluation, traversal, and other work. Its removal requires an actual replacement algorithm. [S03](#s03)
+2. **The flat-cache conflict is now measured, not hypothetical.** The four-slot cache misses 49.7% of the time in the reported run. Enlarging it reduces SRC but worsens whole-frame work. Also, the keys are invalidated subroots, not merely the four fighter roots. [S04](#s04)
+3. **The joint-cap experiment is not a valid pose-speed ceiling.** Its own report says the two arms ran different matches. Current source also shows that its `continue` skips parsing and clock advancement as well as evaluation for the capped entries. A changed workload cannot price an equivalent pose implementation. [S07](#s07), [S10](#s10)
+4. **The later “SRC distribution” is actually a whole-frame non-idle profile.** Its approximately 1.614M ticks cannot be treated as an exclusive SRC decomposition. Some policy percentages in that report also reuse the sampled caller census that another report explicitly corrected. [S03](#s03), [S06](#s06), [S09](#s09)
+5. **The host prototypes are useful, but not DS speed evidence.** The original results reproduce. A new exact cubic reduction also passes, yet its standalone ARM code grows slightly. Fewer multiplies are a candidate mechanism, not an automatic win.
 
-| Candidate | Repeated work to remove | Evidence and limitations |
+**Recommended first substantial implementation:** a bound native map-query pilot that retires current layered lookup/preparation work, preserving query semantics and output timing. In parallel research, size the complete compact motion working set and compile a bounded pose program that replaces—not supplements—the existing interpreter state. The larger shared fixed pose/gameplay representation remains an endpoint, but it should be assembled through measured, deleting replacements rather than introduced as an all-at-once prerequisite.
+
+No candidate here is established as sufficient by itself to close the full 30-FPS deficit. That does not disqualify useful contributions, and a depleted list of small experiments does not establish an architectural lower bound.
+
+## Evidence labels used in this report
+
+- **SOURCE:** visible in the inspected source at a named revision; not automatically proved engaged by a particular ROM.
+- **RECORDED:** a repository report or uploaded log records a measurement. Its stated configuration and limitations stay attached; raw data was not independently rerun here.
+- **HOST-TESTED:** executed in this response as a standalone experiment, not in the game.
+- **DERIVED:** arithmetic or reasoning from explicitly stated inputs.
+- **PROPOSED:** a replacement that still needs implementation, source-corpus coverage, and DS measurements.
+
+---
+
+## 1. Updated baseline and what it does—and does not—price
+
+### 1.1 Keep historical, qualified, and experimental results separate
+
+| Evidence population | WORK-H P50 | WORK-H P95 | Status relevant to this review |
+|---|---:|---:|---|
+| Original report's September 16 clean baseline | 1,575,296 | 2,311,616 | Historical; not the current source/ROM. |
+| Current board's “last qualified checkpoint,” `a4eb24c9a85` | 1,600,960 | 2,320,576 | Board reports Boundary green and P2 performance red. |
+| DTCM hot-scalar experiment, its own control | 1,580,544 | 2,320,768 | Separate workload/configuration identity; not interchangeable with the board row. |
+| Same DTCM experiment, candidate | 1,537,344 | 2,277,696 | Reported useful result; report retains qualification/window caveats and a later alignment correction. |
+
+Sources: historical baseline [S02](#s02), current board [S08](#s08), DTCM report [S05](#s05). “Last qualified checkpoint” does not mean the current HEAD has been fully qualified. The board itself has older summary text alongside this newer checkpoint; the row and its scope above are quoted as recorded, not reconciled into an invented new benchmark.
+
+Using the previously documented exact **1,120,380-tick** gate:
+
+- Current board checkpoint P50 deficit: `1,600,960 - 1,120,380 = 480,580` ticks.
+- Current board checkpoint P95 deficit: `2,320,576 - 1,120,380 = 1,200,196` ticks.
+- Required P95 reduction relative to that recorded checkpoint: **51.72%**.
+
+Some newer notes use a rounded 1,120,000-tick number. Their published deficits must not be silently mixed with calculations using 1,120,380. The shipping gate and cadence policy remain authoritative. [S08](#s08), [S19](#s19)
+
+The internal 950K objective remains only a design headroom target. It is neither a measured result nor a replacement acceptance threshold.
+
+### 1.2 SRC attribution remains population-specific
+
+The original report included a dirty-run mean SRC decomposition:
+
+| Exclusive component | Mean ticks |
+|---|---:|
+| SINT minus SCPU | 227,156 |
+| SPHD plus SPHC | 124,236 |
+| GCRA remainder after its named children | 121,588 |
+| SCPU | 69,399 |
+| SHDT | 45,824 |
+| SPRM | 10,591 |
+| SCAT | 3,797 |
+| SRC minus GCRA | 5,746 |
+| **Total SRC** | **608,337** |
+
+This is arithmetic on means from one table, not arithmetic on independent percentiles. The source is uploaded log `e5ad07c6-7313-48a7-822d-8de7f519f471.jsonl`, record 1384, timestamp `2026-09-16T21:09:56.377Z`. It declares `9470ffbee78+dirty(22)`, 1,972 samples, and five timer corrections. Its recorded WORK-H P95 is 2,318,208. None of those numbers is a new current baseline. [U01](#u01)
+
+The GCRA remainder includes real scheduled callbacks. It is not empty bookkeeping. SCPU is nested inside SINT; GCRA is nested inside SRC. Do not double count these buckets.
+
+### 1.3 A necessary correction to the newer distribution argument
+
+The newer file titled “SRC has no big rocks” says its input is the **whole** 129-region PC profile, excluding `armWaitForIrq`, and obtains 1,614,414 ticks across 1,192 symbols. That is a whole-frame distribution, not an SRC-only distribution. Its approximately 571,666-tick sub-5K-symbol tail includes work outside SRC. [S06](#s06)
+
+It also uses the older sampled `softfloat-callers.txt` shares, including 16,940 ticks for `func_ovl2_800ED490`. The N0409 correction reports that this sampled attribution was wrong and gives 7,108 leaf ticks / 9,783 including self for that function in its corrected attribution. The same report moves `guMtxCatF` substantially upward. [S09](#s09)
+
+**Consequences:** use these sources to identify hypotheses and existing experiments, but do not use the sampled percentages as a proven exclusive cost map or as a calculation that closes the optimization search. No rerun of that known-biased sampled attribution is needed merely to repeat its conclusion.
+
+For a new candidate, identify the source phase/call sites it changes and price only their actual executions. Preserve whole-frame WORK-H and cadence as separate outcome measurements.
+
+---
+
+## 2. Re-evaluation of each original candidate
+
+| Original candidate | Revised verdict | What remains justified |
 |---|---|---|
-| Bound fixed pose and shared transforms | Fixed-to-float publication, later conversions, repeated hierarchy discovery, and separate transform preparation | Strong source evidence; the three diagnostic pose bodies total about 74.6K mean ticks, not predicted savings |
-| Direct instance ownership and compact validity | Pointer-hash collisions, re-flattening, and scattered validity-word clearing | Possible hash conflict demonstrated synthetically; actual conflict rate unmeasured; reported invalidation self-time about 20.7K |
-| Compiled/grouped curves | Per-channel reconstruction of identical cubic bases and arguments | Shared-basis arithmetic prototyped; source-corpus grouping remains untested |
-| Resident native motion banks | Action-change payload reads, normalization, and track reconstruction | Payload reads remain in the inspected code; removable current tail cost not established |
-| Bound native map queries | Layered memo probes, source-format reads, duplicate coordinate forms, and invariant slope/normal work | Inspected floor-query self-cost about 20.9K in the diagnostic profile; not the whole physics/map envelope |
-| Demand-driven combat geometry | Detailed transforms and inverse work for interactions conservatively ruled out earlier | Architectural candidate; broad-phase rejection must preserve swept and directed interactions |
-| Compact fixed fighter state and phase-correct AI facts | Cold-field and pointer traffic, repeated derived facts | Preserve source update order, decision timing, selected CPU level, and RNG order |
-| Compact source-ordered process execution | Process metadata traversal and repeated context setup | Secondary opportunity; the unnamed SRC remainder is not free scheduler overhead |
+| One bound fixed pose/transform domain | **Keep as destination; narrow the first implementation.** | Remove concrete parser/traversal/state costs. The selected publication conversion is only about 2.8K ticks, not the entire pose budget. |
+| Direct instance ownership and compact validity | **Revise substantially.** | One per-instance hierarchy must answer arbitrary subroot queries. Four root slots alone are insufficient. Do not repeat cache widening/shrinking. |
+| Shared cubic bases | **Keep, subject to actual grouping and codegen.** | Algebra is exact with identical effective lengths/reciprocals and preserved clamps/order. Source-corpus group frequency is still unknown. |
+| Horner cubic | **Demote to numerical R&D.** | Compact code demonstrated; staged-rounding differences and gameplay relevance remain unqualified. |
+| Resident native motion banks | **Keep as tail-oriented architecture candidate.** | Eliminate payload acquisition/normalization and compile compact execution. Size the complete legal working set first; directory residency is not payload residency. |
+| Bound native map queries | **Promote to first bounded structural pilot.** | Replace multiple cache/format/ready-check layers; specialize exact static cases before changing numerical rules. |
+| Demand-driven combat geometry | **Keep conditional on measured avoided work.** | Conservative rejection before unnecessary transforms, with swept bounds and source phase/order preserved. Current collision matrices are already lazy. |
+| Fixed hot fighter state / shared facts | **Keep, consumer-group by consumer-group.** | Compact phase-local data and invariant facts; no whole-frame stale snapshot or permanent mirrored FTStruct. |
+| Compact scheduler | **Secondary.** | Source-ordered compact execution metadata may help, but the scheduler wrapper is not a 234K-tick opportunity. |
+| DTCM/locality | **Retain successful current work; evaluate new bytes marginally.** | New hot-scalar results show locality is not “exhausted”; do not count already moved scalars as future savings. |
 
-Cost figures above retain the populations and qualifications in [the evidence
-record](#evidence) and [research overview](#research-overview). Candidates overlap;
-these costs and their eventual savings must not be added as independent P95 gains.
-
-### Frame-time reality
-
-The pinned clean-baseline report records WORK-H P95 **2,311,616 ticks**. Against
-**1,120,380 ticks**, the deficit is **1,191,236 ticks**, approximately **51.53%**.
-This is recorded repository evidence, not a reproduced ROM benchmark.
-
-A separate uploaded, explicitly dirty run attributes a mean **608,337 ticks** to
-SRC. Its exclusive breakdown appears in [the evidence section](#evidence), along
-with the raw population and timer-correction warnings. It must not be mixed with
-the clean baseline or treated as a release verdict.
-
-### What the prototypes establish
-
-The shared-basis experiment retained the reconstructed reference's output across
-**200,000 synthetic cases**. It reduces the arithmetic count from `9N` to
-`5 + 4N` wide products only when tracks truly share phase and reciprocal.
-Actual grouping, integration overhead, and DS timing are still open.
-
-The approximate Horner body compiled to **88 bytes**, versus **332 bytes** for the
-standalone current-shape reference under the recorded Clang configuration.
-The wider synthetic error trial reached **447 Q12 units (0.109130859375)**,
-compared with **3 Q12 units** in the modest trial. These are observed maxima over
-finite synthetic tests, not universal mathematical error bounds or permission to
-change gameplay. Preserve the full error qualifications before adopting it.
-
-The validity-range primitive passed every one of **4,753 intervals** in a 96-bit
-domain. Four fabricated 64-byte-spaced addresses produced **400/400 misses** in
-the current four-bucket hashing scheme. Neither result establishes live-game
-correctness or an actual allocation-conflict frequency.
-
-### Recommended implementation boundary
-
-The first substantial replacement should combine fixed pose publication, direct
-per-instance binding, compact validity, and separate bound lists for native pose,
-independent joint programs, and active materials. Preserve unusual live joints
-such as Samus's grapple; do not equate whole-fighter handling with joint ownership.
-Shared cubic bases are the lower-risk first arithmetic experiment within this
-larger change. Horner needs stronger source/range qualification.
-
-Map-query specialization must retire existing memo layers rather than add another
-cache alongside them. Motion residency must cover required legal states, not just
-moves seen in one CPU trace. Source-order-preserving gameplay and scheduler
-specialization follow their actual exclusive cost and dependency requirements.
-
-**SRC alone is not established as sufficient to close the entire deficit.** The
-other buckets and GPU/FIFO scheduling may also need changes. These candidates
-identify concrete remaining work to remove; they are not an integrated 30-FPS claim.
+This ranking is an engineering recommendation from the evidence, not a prediction that the first row implemented will save the most ticks.
 
 ---
 
-<a id="research-overview"></a>
+## 3. First bounded structural candidate: native map-query contexts
 
-## I. Full research overview and experiment guide
+### 3.1 What is still happening
 
-Consolidated from `README.md`; substantive source text retained.
+`reloc_backend_mp_collision.c` already caches vertices, endpoint coordinates, owner IDs, line kinds, and extents. A floor query still combines several of those caches with readiness checks, O2R/vertex-link access, dynamic-owner checks, local-coordinate preparation, interpolation, and normal preparation. The old caches are not proposals to add again. [S11](#s11)
 
-Research date: September 16, 2026 (America/Chicago).
-Repository inspected: `rockenrooster/Smash64DS_Port`, commit
-`430aca2879e9071dc2b22f944f5c2909c9ce7aa4`.
+The actual source still contains:
 
-This is research plus standalone prototypes, not a documentation-policy revision,
-new task queue, integrated patch, ROM build, or claim of DS performance improvement.
-Keep 60 Hz gameplay, all legal four-fighter lineups/stages, native-only rendering,
-required content and fixed-point runtime as the endpoint.
-
-### Findings with the best source support
-
-1. `src/port/reloc_backend_compat_shims.c`, `ndsFTParamsFlatWalkFor`: four
-   direct-mapped buckets selected by `(root >> 4) & 3` are not four guaranteed
-   fighter-resident entries. Address collisions are possible. Bind by live instance
-   and generation; represent subtrees by preorder intervals. Actual collision rate
-   is not measured here.
-2. The same module invalidates dispersed FTParts validity words repeatedly.
-   The repository profile reports 474.5 part-word clears per frame versus 14.3
-   matrix recomputes. Compact validity bitplanes avoid fetching dirty cache lines
-   simply to clear a flag. All direct readers/writers and special transform modes
-   must migrate together; replacing just the invalidator is incorrect.
-3. `src/nds/nds_ft_pose.c`, `ndsFtPosePlay`: fixed arithmetic is followed by
-   fixed-to-binary32 publication into DObj, then consumed by other representations.
-   Replace the complete producer/consumer chain with fixed local pose and bounded
-   CPU socket/world-transform storage. The current collision transform cache is
-   ALREADY lazy; adding another lazy cache is not the proposal.
-4. `ftParamUpdateAnimKeys` calls the pose engine and then scans the indexed joint
-   table for unowned joints and materials. Compile separate execution lists at
-   bind/topology changes. Samus grapple joint 36 and independent material tracks
-   must remain live; pose ownership is per joint, not per fighter.
-5. `include/nds/nds_anim_fixed.h`, `ndsR2AnimEvalQ`: a cubic evaluation contains
-   nine wide products. Tracks with identical length/reciprocal can share the five
-   basis-building products. Alternative precompiled Horner coefficients reduce
-   per-track polynomial work to three products, but change staged rounding and
-   require content/range admission. Do not change animation event clocks with this
-   experiment.
-6. `src/port/reloc_backend_mp_collision.c`: endpoints, owners, kinds, extents and
-   float vertices are ALREADY cached separately. Native bound line/segment records
-   can retire repeated ready checks, layered cache probes, O2R coordinate access
-   and per-hit slope/normal preparation. Do not resell adding those existing caches.
-   Bind independent geometry contexts instead of swapping a global geometry pointer
-   and resetting one cache set around alternate-geometry queries.
-7. `src/nds/nds_reloc_assets.c`, `ndsRelocAssetLoadFighterStreamClip`: the directory
-   is resident, but non-null destinations still cause `nitroromReadFile` payload
-   reads. A compact required motion bank can remove action-change I/O and rebinding
-   tails; blindly enabling the older larger battlepack is not the redesign.
-8. Source object scheduling has both function and thread processes, ordered queues,
-   deferred deletion and same-tick mutation semantics. A compact process schedule
-   must preserve these semantics, not run all six phases fighter-by-fighter.
-   AI already gates some decisions on `input_wait`; no extra decision decimation.
-
-### Cost interpretation
-
-The pinned September 16 gap report records a clean baseline WORK-H P50/P95 of
-1,575,296 / 2,311,616. At the existing exact 1,120,380 gate, the P95 gap is
-1,191,236 ticks (51.5326%). This research did not reproduce that ROM.
-
-[`EVIDENCE.md`](#evidence) carries a different, explicitly dirty uploaded run's mean bucket
-split, used only for identifying SRC subdomains. Do not mix its measurements
-with the clean report or claim independent P95 values add.
-
-The profile `2026-09-16_p2-2p8-n0409-profile` has 129 regions and 487,368,912 ARM9
-cycles. Using that report's cycles/(2*regions) convention, the three pose bodies
-sum to about 74,630 mean ticks/frame; `ndsF32AddBits` is another 15,592 self ticks
-across its callers and `ftParamUpdateAnimKeys` about 12,599 self ticks. These are
-cost envelopes, not savings, and shared callers must be attributed before adding.
-
-The corrected collision-matrix family costs about 25,022 ticks, not the older
-roughly 49.9K claim; its previous fixed-ring implementation was already a
-whole-chain test with low conversion density. A new candidate must remove work
-and memory traffic beyond that failed substitution.
-
-### Prototype files
-
-- [`kernels.c`](#kernels-c): current-shape reference cubic, factored basis, approximate Horner,
-  and bounded 96-joint validity-range clearing.
-- [`test_kernels.py`](#test-kernels-py): deterministic synthetic differential tests and address-hash
-  collision counterexample. Standard Python library plus a C compiler.
-- [`results.json`](#test-results): actual host test output, not DS benchmarks.
-- [`kernels_arm946e.s`](#arm-assembly): Clang 17 ARM946E-S ARM-mode code generation.
-- [`codegen.json`](#codegen-results): actual object symbol sizes for this standalone experiment.
-- [`EVIDENCE.md`](#evidence): provenance, raw uploaded console evidence and source index.
-
-Build and run on a Linux host with Clang and Python:
-
-```sh
-clang -O2 -shared -fPIC kernels.c -o kernels.so
-python test_kernels.py
-clang --target=arm-none-eabi -mcpu=arm946e-s -marm -O2 \
-  -ffreestanding -fno-builtin -ffunction-sections -S kernels.c \
-  -o kernels_arm946e.s
+```c
+return (f32)v1y + (((opx - (f32)v1x) / ((f32)v2x - (f32)v1x)) *
+    ((f32)v2y - (f32)v1y));
 ```
 
-No game assets, SDK libraries, modified repository files or executable binaries
-are distributed in this package. The emitted assembly is inspection material,
-not an ABI-qualified replacement for a game function. Rebuild with the project's
-actual devkitARM toolchain before evaluating placement or timing.
+Its `ndsMPGetFCAngle` already handles horizontal lines cheaply, but for slopes it calculates a ratio, square root, reciprocal, and normalized components. The NULL-angle early return also already exists. Do not credit an optimization with deleting normal work from callers that never request a normal. [S11](#s11)
 
-#### What was actually tested
+### 3.2 An exact horizontal-floor specialization
 
-Factored basis: 200,000 random synthetic evaluations, durations 1..1024 and
-phases -2D..+2D, zero arithmetic mismatches with the reconstructed reference.
-Grouping itself was NOT derived or tested against the game's clip corpus.
+For a selected, valid horizontal segment:
 
-Validity range: all 4,753 intervals in a 96-bit domain, zero bit mismatches.
-This tests the bit primitive, not migration of FTParts flags or live topology.
+- `v1y == v2y`;
+- `v1x != v2x`;
+- local query coordinates and arithmetic are finite;
+- the existing segment-selection and owner-state conditions have already passed.
 
-Horner, modest synthetic domain: 150,000 evaluations, endpoint magnitudes <=8
-units, rates <=0.25 units/frame, duration <=120; maximum difference 3 Q12 units
-(0.000732421875), with 47,258 non-bit-identical outputs.
+Then the interpolated floor height is simply the bound segment height. There is no runtime division or zero-product to evaluate.
 
-Horner, wider synthetic domain: 150,000 evaluations, endpoints <=64 units,
-rates <=8 units/frame, duration <=1024; maximum difference 447 Q12 units
-(0.109130859375), with 145,519 non-bit-identical outputs. This explicitly
-DISQUALIFIES a claim that the modest-domain bound holds globally. Both domains
-had zero failures at the polynomial's t=0/t=1 endpoints. Source-clock timing,
-full source assets, gameplay branch equivalence and extrapolation admission
-remain untested for Horner.
+This preserves the height exactly in the current legacy float expression for the tested finite domain: integer s16 heights convert exactly, the fraction is finite, multiplication by zero produces signed zero, and adding it to the integer-derived height returns that same height under the current rounding convention. Signed-zero cases are included in the experiment. Floor-distance subtraction and all query side effects retain their existing order.
 
-Synthetic address counterexample: four 64-byte-spaced root addresses cause
-400 misses in 400 cyclic accesses to the current four-bucket hash. A direct
-per-instance mapping has four compulsory fills for that fabricated sequence.
-This demonstrates a possible failure mode, not actual game allocation patterns.
+**HOST-TESTED:** 265,616 bitwise comparisons passed, including all 65,536 s16 heights, 200,000 random finite segment/query cases, reversed endpoints, endpoint queries, and signed-zero queries. This tests the height expression only—not pass-through semantics, platform updates, full collision behavior, or DS timing. The code and test are embedded in Appendix D. The analytical equivalence requires the stated preconditions; random tests alone would not establish it for every input.
 
-No host wall-time speed ratio, instruction count, or function-size difference
-is presented as a DS timing result.
+**Important accounting:** the existing horizontal normal branch is already cheap. This candidate does not save a square root there. It removes the remaining horizontal distance arithmetic and, in the structural version, the preparation needed to recover the same segment data repeatedly.
 
-### Shortlist order
+### 3.3 Replacement design
 
-Start with the bound fixed pose/transform domain, including distinct active track
-lists, compact validity and instance ownership. The mask/cache change is its
-small correctness-oriented first slice, not the finish line. In parallel, use the
-actual map-query code to design a bound fixed collision context. Build compact
-motion-bank residency as part of the clip representation, not a separate cache
-framework. Grouped basis is the lower-risk arithmetic experiment; Horner needs
-stronger range/content proof. Compact scheduling and AI fact reuse follow their
-actual exclusive costs and mutation contracts.
+Build or load one context per actual collision geometry. Its immutable records provide:
 
-For every candidate compare the same required visible/semantic workload, whole
-frame WORK-H and actual cadence. A faster child that moves time into another
-bucket or a FIFO wait has not necessarily sped up the frame.
+- Direct line-to-segment spans in source order.
+- Native-endian source coordinates or their admitted fixed representation.
+- Line kind, owner index, flags, adjacency and conservative bounds.
+- Horizontal/vertical/general classification.
+- Precomputed invariant normal/slope information for qualified segment types.
+
+Keep dynamic owner status, translation, velocity and generation outside that immutable record. A query receives a bound context/line handle, rather than rediscovering those identities through multiple global caches.
+
+The same design covers moving platforms: constant local geometry stays constant while the owner state changes. Rotation, deformation or other supported procedural geometry needs its own qualified dynamic update path; do not assume every stage is translation-only.
+
+### 3.4 Keep the implementation small
+
+Do not add a second broad map framework. Convert the known-line floor query and its directly relevant consumers first. Use the existing source-order fixtures and adversarial cases. After the pilot replaces its work, migrate adjacent wall/ceiling/sweep callers using the same context where their contracts actually agree.
+
+Do not duplicate every coordinate and normal in both float and fixed indefinitely. An initial exact-layout pilot may retain the current arithmetic/ABI to isolate lookup removal. Its remaining float boundary must be explicit, and it is not fixed-runtime closure. The fixed migration follows the full relevant query/consumer chain.
+
+The endpoint is a direct native query over admitted records, not a fast path that perpetually maintains five old caches behind it.
+
+### 3.5 Why explicit contexts matter
+
+The current implementation documents global geometry swaps and restores, plus cache invalidation at the setter to avoid mislabelling a cached vertex with another geometry's identity. Explicit contexts avoid resetting one shared cache merely to ask a query about another geometry. [S11](#s11)
+
+A raw geometry pointer is not a lifetime guarantee. Context identity must distinguish destruction/reuse and in-place data mutations. Alternate geometry, scene rewind, stage replacement, hazard state changes and restore paths must all remain valid.
+
+### 3.6 Cheap falsifiers and acceptance
+
+Measure the number of queries by class and the work of the entire pilot path, including context lookup, dynamic-owner loads, descriptor traffic and caller-side preparation. Do not use the full physics/map bucket as the pilot's claimed ceiling.
+
+Reject the design if it adds more descriptor/cache traffic than it removes or changes line selection, crossing decisions, signed distance, flags, collision order, moving-platform velocity transfer or ledge behavior.
+
+Exercise non-monotonic lines, shared endpoints, slopes, epsilon boundaries, floor pass-through, walls/ceilings, active/inactive owners, fast movement, grabs against platforms and alternate geometry. Preserve independent BattleShip-derived expectations; copying the new generator's tables into its checker is not an oracle.
+
+**Cost status:** the original diagnostic profile gave approximately 20.9K self ticks for the floor helper. Its descendants and caller preparation require scope-aware attribution. No aggregate saving for the replacement is measured here. [S12](#s12)
 
 ---
 
-<a id="candidate-details"></a>
+## 4. Pose and motion: compile execution, not a second scene graph
 
-## II. Complete candidate details
+### 4.1 Correct the economic premise
 
-Consolidated from `CANDIDATE_DETAILS.md`; substantive source text retained.
+The newer candidate-sizing artifact prices the examined pose publication at approximately 2,814 ticks. Its approximately 74,630 ticks for three pose bodies include their real work, not just conversion. On that observed roster/window, the floating multiply call sites for translation scaling in the pose player did not execute. That does not show those source branches are unreachable on every legal fighter/clip. [S03](#s03), [S10](#s10)
 
-These are unimplemented game-architecture candidates. See [Evidence](#evidence) for the
-pinned source and [the research overview](#research-overview) for the host-only experiments. Existing measured
-costs describe current work; they are not projected savings.
+A count of zero `__aeabi_f*` calls also does not prove that there are no representation conversions: `ndsR2F32ToFixed` and `ndsR2FixedToF32` are inlined integer bit-manipulation routines. Likewise, the integer IEEE event clock still represents floating-point arithmetic semantically. Treat the measured 2.8K publication cost as a scoped price, not evidence that the entire representation question vanished. [S03](#s03), [S13](#s13)
 
-### 1. Bind one native pose/transform domain
+The report's proposed 70K “ceiling” for the broad replacement is an estimate from an existing profile, not a measured rewritten implementation or a formal lower bound. Conversely, it is sufficient warning not to sell the broad rewrite as an established several-hundred-thousand-tick saving.
 
-Replace the chain `compact fixed track -> DObj float -> separate collision and
-render transform reconstruction` with `bound clip -> fixed local pose -> demanded
-CPU sockets and native draw inputs`. Keep the original update phases; this is a
-representation change, not permission to reorder simulation.
+### 4.2 What the current structures already provide
 
-At bind, resolve dense joint IDs, parent IDs, subtree intervals, static local
-transforms, animation-track output addresses, independently animated materials,
-and exception classes (Ncs scale compensation, animation locks, billboards,
-translation-scaled fighters and dynamic attachments). Track the topology and
-spawn generation independently of the address and fighter kind.
+The current `NdsFtPoseTrack` definition is 24 bytes and the pool capacity is 128 tracks per fighter. A fully allocated track pool therefore occupies 3,072 bytes per instance, or 12,288 for four, before joint records and other state. This is a capacity calculation from the current definition, not an assumption that all four pools are allocated in every scene or all 128 tracks are touched every tick. Some introductory comments still describe earlier sizes; use the struct definition. [S14](#s14)
 
-At a logic tick, process authored events at their source time, evaluate gameplay-
-required joints and their ancestors, and publish required fixed socket/contact
-positions. Visual-only pose follows the already-permitted presentation cadence.
-Drawing consumes the applicable pose version; it does not advance animation.
-World and inverse transforms are resolved only when demanded and invalidated only
-by their actual inputs. The existing collision cache already does lazy evaluation;
-this proposal replaces its scattered metadata and duplicated representation.
+The runtime already has running-joint masks, active-track masks, a held-body path, compact track storage and lazy collision matrix calculation. Reimplementing those features under new names is not progress.
 
-`ftParamUpdateAnimKeys` should consume three disjoint bound lists: native pose,
-remaining independent joint programs, and active material programs. It must not
-scan the whole indexed joint array after finishing the pose array just to rediscover
-which entries are owned. Samus's extra indexed grapple joint and idle joints with
-active materials are explicit correctness fixtures.
+### 4.3 A better replacement boundary
 
-A whole-game FTStruct rewrite is not required before the first experiment.
-Temporarily publish only fields needed by identified old consumers, at defined
-boundaries; never synchronize all old/new fields each frame. Convert those consumers
-and delete the bridge before claiming domain completion.
+Compile source motion into small execution records and retain only truly mutable playback state. Candidate immutable data includes decoded destinations, source constants, branch/control metadata, segment coefficients, and qualified adjacent groups. Mutable data includes clocks, phase, active segment, current state for partial commands, and procedural overrides.
 
-Failure conditions: source event-boundary change, stale capture/throw attachment,
-new same-tick read ordering, required collision pose held to rendering frequency,
-unqualified numeric error, an added permanent double representation, or total
-copy/patch cost erasing the removed work.
+**Do not alias fields merely because two evaluation kinds usually use them separately.** The current header explicitly preserves both `length_invert` and `rate_linear_q` because no-payload commands can retain an old value in one field. It names a Samus Catch case that breaks a union-based simplification. A compiler must model partial writes and value liveness, not just decode the current opcode into a fresh zeroed record. [S14](#s14)
 
-### 2. Collision-free identity plus compact transform validity
+Keep the parser's source event order and last-writer rules. Compile static operand interpretation; do not erase the state machine's actual semantics.
 
-Current code hashes a root pointer into four entries. The declared four-player
-capacity says nothing about hash collisions or alternate roots within a fighter.
-Use the existing live slot plus spawn generation and a binding-owned root/subtree
-identity. Do not force game allocations to particular addresses.
+The inspected SM64DS `ModelAnim::SetAnim` reference uses a same-file fast path to update flags and speed instead of rebuilding an animation binding. That is a useful pattern—bind immutable structure once—but Smash's same-clip seek/reset semantics still have to be derived from its own source. Do not copy the optimization's predicate without its contract. [S28](#s28)
 
-Use one validity bitplane per independently invalidated property: local matrix,
-world matrix, inverse and scale, plus explicit non-Boolean transform-mode semantics.
-Preorder descendants form contiguous half-open ranges. Whole-fighter invalidation
-is a few word stores; subtree invalidation clears a few masked words. For 96 joints,
-four planes occupy 48 bytes per fighter, 192 bytes for four instances. This is only
-the validity state, not matrices, topology metadata or ownership. Real capacities
-must come from complete source-derived hierarchies rather than clipping to 96.
+### 4.4 Replace redundant scans without reordering visible work
 
-Migrate direct readers/writers in collision, CPU bounds, rendering and capture/
-attachment code together. Keeping old validity bytes as a synchronized mirror
-recreates the expensive scattered writes. Preserve root-local versus descendant-
-world invalidation, transform mode 2, Ncs scale flags and procedural mutations.
+`ftParamUpdateAnimKeys` invokes the pose engine and then walks the indexed joint table to cover unowned joints and material programs. Pose ownership is per joint; Samus's out-of-hierarchy grapple is a named exception. [S15](#s15)
 
-The current report's ~20.7K mean invalidation self-time is an envelope. The
-address-collision rate is not measured. The synthetic 400/400 miss example proves
-possibility, not actual runtime impact. A same-work test should count actual
-flat rebuilds, validity stores and matrix recomputes as well as whole-frame ticks.
+A bound program can distinguish native pose work, independent joint programs, and material work without discovering those memberships repeatedly. However, three separate lists must not accidentally change source ordering. Where an interleaving can affect state, use a compact ordered schedule of typed records rather than blindly executing all joints, then all materials.
 
-### 3. Compile curve work; first share exact bases, then test Horner
+Binding/rebinding owns membership changes. A stopped program that can later restart must be reactivated by its actual writer; absence from an active list must not become permanent invisibility.
 
-The current cubic computes a normalized phase, its square/cube, two derivative
-bases and four products with the input values/rates: nine wide products. Identical
-phase/duration groups can compute the first five once, leaving four products per
-channel: `5 + 4N` versus `9N`. Three channels therefore need 17 rather than 27
-wide products; this is an arithmetic count, not an ARM cycle prediction.
+### 4.5 Share transforms only where the semantics match
 
-Group only equal effective length and reciprocal, including catch-up, attach,
-end and reapply semantics. Static generator grouping must be split if runtime
-rate changes or independent clocks invalidate it. Retain direct output order if
-some writes/events are observable. The synthetic prototype preserves staged
-rounding and clamps but not diagnostic saturation-counter frequency; preserve
-that instrumentation deliberately when integrating.
+CPU collision and GX rendering do not necessarily consume identical matrices. Scale compensation, animation locks, billboard/projection behavior, procedural attachments and quantization boundaries can differ. Current collision world/inverse matrices are already lazy. [S16](#s16)
 
-For a source Hermite segment of duration D, compile:
+Share authoritative fixed local values, validated topology and genuinely equivalent products. Derive consumer-specific matrices where required. This is smaller and safer than insisting that every renderer and collision consumer share one matrix representation.
 
-```
-A = 2(v0-v1) + D(r0+r1)
-B = 3(v1-v0) - D(2r0+r1)
-C = D*r0
-D0 = v0
-value(t) = ((A*t+B)*t+C)*t+D0
-```
+A full fixed producer/consumer chain remains desirable for the final runtime; it must retire old float publication, generic state discovery and unused backing storage when its last consumer converts. A permanent full float mirror plus fixed copy fails the proposed architecture's own purpose.
 
-Three multiplies evaluate the polynomial after phase preparation. The prototype
-emits 88 bytes for this body under Clang 17 ARM946E-S/O2, versus 332 bytes for
-its reference cubic; these are NOT game-function sizes or speed measurements.
-The grouping kernel's basis builder plus consumer also totals 332 bytes here;
-its potential benefit is amortization across channels, not magically less code.
+### 4.6 Preserve the admitted simulation and pose schedules
 
-Horner changes rounding. The tested modest synthetic domain differs by at most
-3 Q12 units, but the wider domain reached 447. Validate the actual clip corpus,
-interior extrema, derivatives, continuity, terminal/reapply samples and gameplay
-consumers. If a coefficient or intermediate cannot fit, use a proven wider native
-class or better coefficient scaling, not wraparound, hiding the channel or quietly
-changing a move. Do not apply the modest-domain bound to every fighter.
+Keep the required 60 Hz gameplay and source event timing. The current header documents an already-admitted held-body policy, including its stated hurtbox consequence; this review does not expand, reduce or silently reverse that policy. Do not infer a new permission to freeze joints, reduce CPU decisions or update all gameplay sockets less often. [S14](#s14)
 
-Compile event16 and event32 source programs into native span/control data where
-possible. Remove repeated argument expansion and interval interpretation. Do not
-replace all content with executable per-frame ARM code: code resident in main RAM
-also consumes the small instruction cache. A few tiny kernels plus data are the
-leaner default. Optional forward differences need drift bounds and reseeding when
-speed/segment changes; do not assume repeated rounded additions equal evaluation.
+Event-clock replacement is separate from curve acceleration. An integer rational clock does not automatically reproduce repeatedly rounded IEEE event boundaries. Preserve exact required event outcomes, hitlag/loop/seek/speed-change behavior and publication order with source-derived differential fixtures. No global epsilon and no “Q24 must be enough” assumption.
 
-### 4. Compile required motion residency and status binding
+### 4.7 What would make this candidate worth continuing
 
-BPS1 directory lookup is already resident and direct range I/O already exists.
-Actual payload reads remain on a non-null destination. Eliminate the live payload
-read for required motions by preparing compact per-match banks before GO.
+The pilot must delete a named cost class—decoded-operand work, repeated control discovery, actual track-state bytes/loads, repeated basis arithmetic or redundant consumer preparation—not merely eliminate a few soft-float symbol names.
 
-Share immutable clip/channel/coefficient data across duplicate fighters; retain
-independent cursors and material state. Deduplicate identical channels/streams,
-remove unused source structures from the converted domain, and compile default
-values once. Coverage includes required action branches, hidden limbs, catch/throw,
-entry/death/respawn, copy ability assets, item motions and source-legal siblings.
-A cache of moves observed in one CPU trace is not complete residency.
-
-Do not blindly enable the older battlepack or expand every frame to matrices.
-For illustration four fighters *32 joints*60 samples*48 bytes = 368640 bytes for
-one second. That is larger than the recorded free-heap order of magnitude and
-not a viable default with no memory recovery. Coefficient/key data, static-channel
-elision and shared clips are better first formats.
-
-Status change should select already-bound clip/control records, apply source
-reset masks and update the affected lists/versions. It should not discover
-source layouts, normalize pointers, read files and reconstruct all runtime track
-objects on each transition. Strongest expected benefit is tail reduction; actual
-payload-read/event frequency and blocking time require fresh attribution.
-
-### 5. Bound native map query context, replacing layered memos
-
-Existing endpoints, extents, owner IDs, line kinds and float vertex memos must be
-retired, not duplicated. Their capacities and validity probes still leave multiple
-representations and O2R reads on a successful floor hit. A bound stage context
-holds flat line/segment records, source ordering, adjacent IDs, local bounds,
-source flags, static normal/slope data, and owning moving-platform identity.
-
-Each moving owner separately holds current active state and transform/version.
-Queries subtract its live translation when the source does; local segment data
-then remains invariant. Procedurally changed geometry has its own mutation/version
-path. Alternate geometry queries take an explicit context rather than swapping
-`gMPCollisionGeometry` and resetting a single global memo set.
-
-Provide narrow typed queries for existing-line distance, swept floor crossing,
-wall/ceiling correction and source floor projection. Preserve priority/tie order,
-endpoint conventions, source tolerances, pass-through logic, platform velocities,
-and grab/ledge behavior. A general BVH is not automatically useful for a stage
-with only a few lines; direct compact loops and whole-line rejection may be best.
-
-Compile horizontal/vertical and invariant-segment specializations. Reuse static
-normals instead of normalizing a constant slope per hit. Constant reciprocal math
-must have a proved operand/error range; general dynamic intersections may still
-need a bounded 64-bit hardware divide. Float->fixed->float per query is not closure.
-Start with a complete movement-to-collision-to-result fixed chain.
-
-The uploaded mean SPHD+SPHC envelope is ~124K ticks, but it also contains movement,
-events and socket updates. Do not assign all of it to map queries. The single
-floor-helper PC self-cost in the diagnostic profile is ~20.9K ticks. These are
-different scopes and do not add as independent promised savings.
-
-### 6. Demand-driven combat geometry and conservative rejection
-
-Build current active attack/hurt/catch/shield descriptors when their source
-state changes. Maintain required old/new attack positions at 60 Hz; current-point
-bounds alone can incorrectly reject a swept hit. Start with cheap conservative
-candidate rejection before requesting many joint transforms or inverses.
-
-An affine box's aggregate bounds may be obtained with transformed center and
-absolute-matrix extents; preserve directed rounding/conservatism. Retain the
-source narrow test, interaction direction, hit-group records, shields/reflectors,
-team rules and resolution order. Four fighters have six unordered broad pairs,
-not six interchangeable directional collision outcomes.
-
-The ordinary hit-search mean is ~45.8K in the uploaded run but P95 is bursty.
-This is not by itself the large whole-frame answer. Its leverage increases if it
-prevents matrix/pose work rather than merely accelerating the final comparison.
-Do not advertise the setup-time eight-corner AI bounds routine as a measured
-per-frame hotspot; the inspected call is in fighter creation.
-
-### 7. Fixed hot fighter state and phase-correct fact reuse
-
-Separate co-accessed movement/control/status/eligibility fields from cold fighter
-assets and presentation metadata. Use indexed references to shared immutable
-attributes and native collision/pose bindings. Pick a compact array-of-structures
-or split arrays from actual phase access; neither layout wins universally.
-
-CPU decision routines already skip portions while input_wait is nonzero. Keep
-that timing, selected CPU level and random-call order. Reuse derived facts only
-under versions that include every producer and the relevant source phase.
-Do not freeze a once-per-frame snapshot when later callbacks are meant to see
-mutations from an earlier fighter in the same tick. Ground jostle has list-order
-and directional tie semantics; a symmetric all-pairs formula is not equivalent.
-
-Move a complete native producer/consumer subset rather than changing every f32
-field to a typedef or maintaining two synchronized FTStructs. DTCM admission is
-useful only after hot state has been reduced and existing stack/data reservations
-are honored. GPU/DMA/ARM7 buffers remain outside CPU-local TCM.
-
-### 8. Compact source-ordered scheduling, after work elimination
-
-The existing scheduler runs object callbacks, then priority-ordered processes,
-with paused checks, function/thread distinctions and deferred deletion. Build a
-compact active schedule of typed callback/context records only where it preserves
-those rules. Update schedule ownership at creation/end/pause instead of scanning
-cold metadata to rediscover it on every tick.
-
-Do not replace it with `for(fighter) all_phases(fighter)`; do not swap-remove and
-silently reorder same-priority objects; do not give newly created processes the
-wrong first execution tick. Keep a complete native route for remaining source
-process kinds. Do not rewrite genuine threaded services as if every callback
-were an expensive thread wakeup.
-
-The diagnostic self-time of `ndsBaseGcRunAll` and `gcRunGObjProcess` is about
-11.1K and 7.1K mean ticks respectively. The much larger unnamed SRC remainder
-contains real callbacks and services, NOT ~121K of free scheduler overhead.
-Schedule specialization earns priority only with savings beyond these small
-wrappers, such as reduced context/pointer traffic in a larger fixed gameplay path.
-
-### CPU offload and ARM instructions
-
-Use build-time computation first. Use ARM long-multiply/accumulate for compact
-fixed kernels; keep small cold control code in the ISA that measures best. Do
-not inflate all gameplay functions into ARM/O3 to obtain a few optimized leaves.
-Use hardware divide/sqrt only when operations remain after algebraic removal;
-asynchronous use must not lose the result to another writer or interrupt/thread.
-
-ARM7 offload needs an isolated, bounded input/output job and enough independent
-ARM9 work to hide it without stale gameplay. Immediate collision queries and RNG-
-ordered AI are poor first targets. Required storage/audio services already use
-resources; moving a blocking operation to another CPU does not remove its deadline.
-GX visual transforms do not imply that gameplay can get arbitrary matrices back
-without serialization. Prefer CPU-native collision/socket transforms plus GX work
-that needs no synchronous readback.
-
-### Explicit non-candidates and limits
-
-- Another reduction to 30 Hz gameplay: not permitted.
-- Another body-pose hold flag: that saving is already present.
-- Enabling hardware divide, packet replay or a resident BPS1 directory again:
-  already implemented, not new savings.
-- Reviving the fixed collision ring unchanged: previous whole-chain measurements
-  already exist; low conversion density means a sandwich diagnosis is insufficient.
-- Removing the real lower HUD or subtracting debug HUD twice: invalid.
-- Summing independent P95 savings or treating the old shortlist as an architectural
-  lower bound: invalid.
-- Claiming a prototype's smaller ARM body or synthetic count predicts its DS frame
-  savings: invalid.
-
-The SRC redesign must be measured with the original whole-frame timing intact.
-Changes to FTR/STG/MISC and GPU/FIFO scheduling may also be necessary to meet the
-full goal. This research identifies specific remaining opportunities; it does not
-claim an integrated 30 FPS result or universal source-corpus proof.
+Report code/data bytes removed and introduced; include the actual runtime hot working set, binding frequency and incremental memory peak. A smaller immutable file is useful only if its active execution becomes cheaper or it enables an independently demonstrated residency win.
 
 ---
 
-<a id="evidence"></a>
+## 5. A new exact cubic reduction, and the original prototype audit
 
-## III. Evidence, measurements, and source scope
+### 5.1 The original tests reproduce, but their scope stays limited
 
-Consolidated from `EVIDENCE.md`; substantive source text retained.
+The old standalone tests were rerun in this response. Their JSON results exactly match the supplied package: 200,000 shared-basis cases, all 4,753 intervals in the 96-bit validity test, and both 150,000-case Horner trials. That checks reproducibility, not game integration.
 
-### Uploaded bucket record
+The original shared-basis oracle and candidate are both reconstructed from the same source expression and omit the real saturation counter. Matching those two C implementations is useful but is not independent end-to-end proof. The new tests add an arbitrary-precision Python oracle, explicit clamp accounting, nominal interpolation cases and UBSan execution.
 
-Source: `e5ad07c6-7313-48a7-822d-8de7f519f471.jsonl`, one-based JSONL record
-1384, timestamp `2026-09-16T21:09:56.377Z` (16:09:56 Central).
-This is tool-output evidence, not the agent's private reasoning.
-The source log SHA-256 is `ba5607955a9efb869699ac9043e95e2363225df07f6ae4c77177b469a69d88b1`.
+### 5.2 Exact endpoint-complement identity
 
-The output below declares git `9470ffbee78+dirty(22)` and five timer corrections.
-It is NOT the same binary as the clean baseline in the later repository report.
-The corrections and runtime coverage were not independently requalified here.
-Use this table for approximate workload attribution, not a new acceptance verdict.
+The current cubic computes:
 
 ```text
-WARNING: cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 5 of 1972 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 1,677,952; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
-  frame 137: ALL 6,432,192 -> 2,237,888, 5 bucket(s) corrected
-  frame 517: ALL 5,871,936 -> 1,677,632, 3 bucket(s) corrected
-  frame 854: ALL 6,992,256 -> 2,797,952, 3 bucket(s) corrected
-  frame 1849: ALL 6,992,448 -> 2,798,144, 5 bucket(s) corrected
-  frame 1897: ALL 5,871,808 -> 1,677,504, 4 bucket(s) corrected
-Wrote D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\p2-2-fourcpu-tickhud.csv
-Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1972 frames=2..1973 melonDS=1.0 sha=DE80E46BDCF1FD98 git=9470ffbee78+dirty(22) dldi=ON
-
-bucket p50        p95        spread mean       min        max        %ALLp50
------- ---        ---        ------ ----       ---        ---        -------
-ALL     1,677,952  2,798,144   1.67  1,967,317  1,116,992  6,719,296   100.0
-FTR       356,544    743,808   2.09    368,272     16,960  4,598,336    21.2
-STG       344,192    388,096   1.13    348,631    328,832  1,251,968    20.5
-BG              0          0   0.00          0          0          0     0.0
-AUD         3,456    121,536  35.17     13,843      1,664    259,968     0.2
-HUD        20,224    444,544  21.98     64,132      5,120    726,272     1.2
-SRC       553,984  1,059,712   1.91    608,337    239,552  2,134,272    33.0
-MISC      249,408    479,040   1.92    268,913     75,840  1,945,408    14.9
-OTHR      284,672    562,048   1.97    295,191     28,352    592,960    17.0
-WAIT      254,912    532,288   2.09    266,805        768    560,192    15.2
-WORK    1,639,104  2,430,912   1.48  1,700,513    703,744  6,713,920    97.7
-SHDT       10,240    216,640  21.16     45,824        512    935,744     0.6
-SWRM        1,152      1,216   1.06      1,120        960      1,280     0.1
-GCRA      548,480  1,054,208   1.92    602,591    234,368  2,128,448    32.7
-SCPU       63,424    165,632   2.61     69,399          0    231,104     3.8
-SCAT        1,792      2,624   1.46      3,797      1,024    589,248     0.1
-SPRM        3,136     27,776   8.86     10,591      2,688    791,360     0.2
-SINT      258,688    592,448   2.29    296,555     55,616  1,176,576    15.4
-SPHD      118,144    173,632   1.47    121,748     26,944    913,600     7.0
-SPHC        1,152     16,832  14.61      2,488        832     34,816     0.1
-WORK-H  1,589,376  2,318,208   1.46  1,636,381    697,664  6,379,520    94.7
-
-named=1,672,128 (85.0% of ALL)  VBI 2:128 3:947 4:706 5+:192 max:12 total:1973  slips=0
-Wrote builds/p2p8-clean-baseline-stress.json
+h_base   = 2*t3 - 3*t2 + 65536
+h_target = 3*t2 - 2*t3
 ```
 
-### Exclusive mean SRC arithmetic from that record
+Therefore, **after the source's actual rounded t2/t3 operations**, not merely in real arithmetic:
 
-SRC=608337; GCRA=602591; SINT=296555; SCPU=69399.
+```text
+h_base + h_target = 65536
+```
 
-| Exclusive component | Mean ticks per presented frame |
+The endpoint part of its accumulator can be rewritten exactly:
+
+```text
+vb*h_base + vt*h_target
+    = vb*65536 + (vt-vb)*h_target
+```
+
+The remaining rate terms and final rounding/clamp do not change. This removes one general wide product without replacing the source curve with an approximate polynomial. It is not Horner. [S13](#s13)
+
+`vt-vb` must fit its chosen type. The prototype proves and tests an explicit narrow input domain, and uses multiplication by 65,536 rather than a signed left shift of a possibly negative value. A production generator must validate actual source ranges; it cannot import the test-domain bounds as an asset-admission fact.
+
+### 5.3 Combining it with shared bases
+
+The arithmetic count for N truly co-phased cubic channels becomes:
+
+| Form | General wide products |
 |---|---:|
-| SINT minus SCPU | 227156 |
-| SPHD plus SPHC | 124236 |
-| GCRA minus named children | 121588 |
-| SCPU | 69399 |
-| SHDT | 45824 |
-| SPRM | 10591 |
-| SCAT | 3797 |
-| SRC minus GCRA | 5746 |
-| Total | 608337 |
+| Current separate evaluations | `9N` |
+| Original shared-basis prototype | `5 + 4N` |
+| Shared basis plus exact endpoint complement | `5 + 3N` |
 
-GCRA remainder includes actual remaining scheduled work, not just scheduler
-bookkeeping. These are differences of arithmetic means from one population,
-NOT differences of independent percentiles. The residual is not automatically
-empty, redundant, or all reclaimable.
+For three channels: 27 → 14. For six: 54 → 23. For an isolated channel: 9 → 8.
 
-### Pinned source index
+These are expression-level counts, not cycle forecasts. Addressing, register pressure, branch cost, basis traffic and compiler choices are not free.
 
-All repository paths below were inspected at commit
-`430aca2879e9071dc2b22f944f5c2909c9ce7aa4`; approximate source line ranges
-identify the reviewed portions. Larger files were read selectively around these
-functions, not claimed to have been audited in their entirety.
+Group only equal effective `len` and `inv`, with the correct curve kind and execution conditions. Do not assume every channel on a joint shares time. End processing, no-payload writes, catch-up, independent clock state, scale and TraI can create exceptions. Preserve source write order and active/NOANIM behavior.
 
-- **Profile/report:** `artifacts/performance/2026-09-16_p2-2p8-gap-sizing/README.md` — Use corrections, not superseded sampled helper attribution.
-- **Corrected call attribution:** `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md` — Exact BL/BLX correction and prior fixed-ring experiments.
-- **PC census:** `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/census.txt` — 129 regions; self-costs not promised recoverable cost.
-- **Profile meta:** `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/arm9-profile.meta.txt` — cycles=487368912; regions=129.
-- **Flat invalidation, indexed animation dispatcher:** `src/port/reloc_backend_compat_shims.c` — ndsFTParamsFlatWalkFor, ndsFTParamsInvalidateSubtree, ftParamUpdateAnimKeys; approx2710..3290.
-- **Pose:** `src/nds/nds_ft_pose.c` — Parse, Play, Run, Update, Reapply; approx940..1500.
-- **Curve math:** `include/nds/nds_anim_fixed.h` — Q conventions, converters and ndsR2AnimEvalQ.
-- **Collision:** `src/port/reloc_backend_mp_collision.c` — Existing separate caches340..585; endpoint query1000..1160; floor query1540..1700.
-- **Motion storage:** `src/nds/nds_reloc_assets.c` — ndsRelocAssetLoadFighterStreamClip1170..1395; payload read retained.
-- **Existing resident pack:** `src/nds/nds_battlepack_anim.c` — BPA2 lifetime and pointer dispatch; not BPS1 streaming implementation.
-- **Object import:** `src/import/battleship_sys_objman.c` — Overlay import, existing AObj pool and gcRunAll wrapper.
-- **Scheduler reference:** `decomp/BattleShip-main/decomp/src/sys/objman.c` — gcRunGObjProcess and gcRunAll approx2110..2360.
-- **Simulation reference:** `decomp/BattleShip-main/decomp/src/ft/ftmain.c` — UpdateInterrupt1110..1670; PhysicsMap1810..2075.
-- **CPU reference:** `decomp/BattleShip-main/decomp/src/ft/ftcomputer.c` — ProcessAll and SetFighterDamageDetectSize7720..8060; setup not proved hot.
-- **Collision matrix reference:** `decomp/BattleShip-main/decomp/src/gm/gmcollision.c` — TRS/Ncs, affine composition, inverse and lazy validity0..490.
-- **SM64DS animation reference:** `decomp/sm64ds-decomp/src/_ZN9ModelAnim7SetAnimEP8BCA_Filei5Fix12IiEj.c` — Same-file fast path and compact animation state.
+A compact adjacent-group implementation or compile-time group metadata is preferable to a runtime hash map for finding common bases. The latter could cost more than five multiplies.
 
-### Primary hardware documentation consulted
+### 5.4 New test results
 
-- BlocksDS tutorial, “Optimizing code”: ARM/Thumb tradeoffs, multiply width,
-  cache working sets, 32-byte cache lines and DMA contention.
-- BlocksDS tutorial, “TCM and Cache”: CPU-local TCM and DMA/ARM7 visibility.
-- BlocksDS tutorial, “Using the ARM7”: service ownership and shared-memory cost.
-- libnds `math.h` documentation: hardware divide/sqrt asynchronous interfaces.
+**HOST-TESTED:**
 
-The project's Calico configuration is not identical to the BlocksDS defaults.
-No default library stack layout or ARM7 memory assignment is assumed to be the
-project's actual configuration.
+- 455,644 scalar comparisons against an independent big-integer oracle and the old reconstructed C reference: **zero output mismatches**.
+- This includes 105,644 Cartesian boundary cases, 250,000 broad random cases, and 100,000 nominal interpolation cases.
+- 12,000 shared groups / 72,068 channels: **zero output mismatches** and zero basis-clamp multiplicity mismatches.
+- Separate Clang UBSan run: **500,000 comparisons**, zero mismatches and no sanitizer diagnostics.
+
+The broad suite includes 265,214 output-saturation cases; the extra nominal suite ensures the results are not merely equality after saturation. The test domains, seed, code and exact JSON are included in Appendix C.
+
+**Diagnostic semantics:** if the old evaluator increments a clamp counter separately for each channel, sharing one clamped basis must preserve that multiplicity (or introduce a separately specified diagnostic contract). Equal final values alone do not establish identical diagnostic behavior. No actual game counter integration was tested here.
+
+### 5.5 Code generation prevents an overclaim
+
+Under the same standalone Clang 17 ARM946E-S/ARM/O2 settings:
+
+| Function | Original bytes | New bytes |
+|---|---:|---:|
+| Basis builder | 224 | 232 |
+| Channel evaluator | 108 | 116 |
+| Standalone whole cubic | 332 | 340 |
+| Approximate Horner from original package | 88 | Not changed |
+
+**The exact three-product alternative is slightly larger in this compilation.** The new basis builder also stores a clamp-count witness that the original builder lacks, so those builder sizes do not isolate arithmetic alone. The channel/whole-function listings are likewise prototypes, not an equal-layout ROM comparison. It may still execute fewer or cheaper arithmetic instructions in a qualified use, but these results do not establish that. Inlining and the actual devkitARM register allocation can change the tradeoff again. The ELF symbol sizes and generated assembly are embedded; no DS timing was measured.
+
+Thus this is a good bounded experiment inside the native pose work—not a promised leaner replacement and not the primary campaign all by itself.
+
+### 5.6 Why Horner stays off the primary implementation path
+
+The old Horner tests reproduce a maximum sampled difference of 3 Q12 units in their modest domain and 447 in their wider domain. Those are finite synthetic observations, not maximum errors over all clips.
+
+A Q12 unit is the unit of its channel: translation, rotation and scale do not share a physical interpretation. An untyped “0.109 world units is harmless” argument would be invalid for a rotation or scale channel.
+
+Horner requires actual clip/range tests, internal extrema and derivative checks, propagated joint/socket error analysis, and gameplay event/decision validation where its results are consumed. It also has explicit intermediate-overflow preconditions. No such full-corpus qualification was performed here.
 
 ---
 
-<a id="source-links"></a>
+## 6. Subtree invalidation: a new representation, not another cache-size experiment
 
-## IV. Clickable primary-source reference index
+### 6.1 The previous identity description was incomplete
 
-These links expand the pinned paths and primary hardware references already
-identified by the research. They are not a new repository audit. Source line
-ranges in the preceding evidence record remain approximate; links use the
-immutable inspected commit rather than the moving branch.
+The old report correctly demonstrated that `(root >> 4) & 3` can collide. It suggested binding by live instance and using subtree intervals, but the headline emphasis on four fighter roots was incomplete.
 
-### Repository files
+The newer measurement establishes that **multiple invalidated joints/subroots per fighter** are cache keys. The four-slot scheme records 16,403 hits, 16,237 misses, and 15,490 conflicts in the stated run. [S04](#s04)
 
-- [`artifacts/performance/2026-09-16_p2-2p8-gap-sizing/README.md`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/artifacts/performance/2026-09-16_p2-2p8-gap-sizing/README.md)
-- [`artifacts/performance/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/artifacts/performance/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md)
-- [`artifacts/performance/2026-09-16_p2-2p8-n0409-profile/census.txt`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/artifacts/performance/2026-09-16_p2-2p8-n0409-profile/census.txt)
-- [`artifacts/performance/2026-09-16_p2-2p8-n0409-profile/arm9-profile.meta.txt`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/artifacts/performance/2026-09-16_p2-2p8-n0409-profile/arm9-profile.meta.txt)
-- [`src/port/reloc_backend_compat_shims.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/port/reloc_backend_compat_shims.c)
-- [`src/nds/nds_ft_pose.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/nds/nds_ft_pose.c)
-- [`include/nds/nds_anim_fixed.h`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/include/nds/nds_anim_fixed.h)
-- [`src/port/reloc_backend_mp_collision.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/port/reloc_backend_mp_collision.c)
-- [`src/nds/nds_reloc_assets.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/nds/nds_reloc_assets.c)
-- [`src/nds/nds_battlepack_anim.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/nds/nds_battlepack_anim.c)
-- [`src/import/battleship_sys_objman.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/src/import/battleship_sys_objman.c)
-- [`decomp/BattleShip-main/decomp/src/sys/objman.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/BattleShip-main/decomp/src/sys/objman.c)
-- [`decomp/BattleShip-main/decomp/src/ft/ftmain.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/BattleShip-main/decomp/src/ft/ftmain.c)
-- [`decomp/BattleShip-main/decomp/src/ft/ftcomputer.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c)
-- [`decomp/BattleShip-main/decomp/src/gm/gmcollision.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/BattleShip-main/decomp/src/gm/gmcollision.c)
-- [`decomp/sm64ds-decomp/src/_ZN9ModelAnim7SetAnimEP8BCA_Filei5Fix12IiEj.c`](https://github.com/rockenrooster/Smash64DS_Port/blob/430aca2879e9071dc2b22f944f5c2909c9ce7aa4/decomp/sm64ds-decomp/src/_ZN9ModelAnim7SetAnimEP8BCA_Filei5Fix12IiEj.c)
+A direct four-slot mapping is useful only if each slot owns a complete hierarchy representation capable of answering all subroot queries. Replacing one hash with a player index while retaining one arbitrary cached subtree per slot does not solve the problem.
 
-### Hardware documentation cited in the research
+### 6.2 Preserve the measured negatives
 
-- [BlocksDS: Optimizing code](https://blocksds.skylyrac.net/tutorial/advanced/optimizing_code/)
-- [BlocksDS: TCM and Cache](https://blocksds.skylyrac.net/tutorial/intermediate/tcm_and_cache/)
-- [BlocksDS: Using the ARM7](https://blocksds.skylyrac.net/tutorial/intermediate/using_the_arm7/)
-- [libnds: math.h hardware-math documentation](https://blocksds.skylyrac.net/libnds/math_8h.html)
+| Experiment | Reported result | Meaning for this review |
+|---|---|---|
+| 16 slots × 48 entries | SRC P50 −15,040; STG +51,520; WORK-H +33,984 | Reject that enlarged-table implementation as a frame-time win. |
+| 32 slots × 96 entries | SRC −15,104; WORK-H +40,896 | Reject this larger variant too. |
+| Four-slot table moved to DTCM | WORK-H −10,176, consuming 1,584 bytes | Poor measured use of scarce DTCM relative to later hot scalars. |
+| Four slots shrunk to 48 | WORK-H P50 +1,216; P95 −6,016; no observed arena-page recovery | No bankable speed gain in that test; not a reason to halve required content capacity. |
 
-The prior analysis cites the ARM9's 8 KiB instruction cache and 4 KiB data cache
-as reasons to reduce hot code/data working sets, and CPU-local TCM visibility as
-a constraint on DMA/ARM7 buffer placement. The project's Calico configuration
-must still determine actual memory ownership and service integration.
+Sources [S04](#s04), [S17](#s17). These are different reported comparisons; do not add their deltas.
 
-### Reproducing the embedded experiment
+The reports attribute the enlargement regression to cache effects. That is plausible and relevant, but table size alone does not prove the entire table is live in cache, a direct-map capacity threshold, or a universal minimum-cost representation. Altered linked layout and exact touched lines can also matter. The measured failed configurations remain failed without converting that explanation into a proof that every smaller design fails.
 
-Save the following C and Python blocks as `kernels.c` and `test_kernels.py` in
-the same directory. Use the host-build commands in [the experiment guide](#research-overview).
-They produce a local shared library and a fresh `results.json`. The original
-recorded JSON remains embedded below for comparison. The generated assembly is
-provided in full as inspection material; it is not an ABI-qualified game patch.
+### 6.3 The representation that remains worth considering
+
+Maintain one preorder hierarchy per fighter instance, with a mapping from existing joint IDs to preorder positions and a subtree end index. Every subtree is an interval in the same structure. Do not duplicate descendants in many independently cached lists.
+
+As an illustrative byte-indexed layout for a validated N ≤96, J ≤96:
+
+```text
+preorder_to_joint[N]         <=96 bytes
+joint_to_preorder[J]         <=96 bytes
+subtree_end[N]              <=96 bytes
+                              --------
+array subtotal / instance   <=288 bytes
+four-instance array subtotal <=1,152 bytes
+```
+
+That subtotal excludes owner/generation headers, root lookup, any required map for otherwise unindexed DObjs, alignment and validity state. Do not present 1,152 as the finished allocation. For larger valid hierarchies, widen indices or size the structure from the admitted corpus; a one-roster observation of ≤48 descendants is not a universal bound.
+
+Reuse existing `fp->joints[]` where valid, rather than adding another full pointer array. For migrated callers that already know a joint ID, pass it through. For a DObj-only entry point, account for root-to-index lookup explicitly. A linear scan hidden behind an “O(1) invalidation” claim would be misleading.
+
+This proposal differs from both the enlarged cache and its shrunken variant: it removes repeated overlapping representations and hash-miss flattening. It can initially preserve every current FTParts write and its exact order, avoiding a simultaneous collision-latch rewrite.
+
+### 6.4 Compact validity is a second step
+
+The old illustrative four-plane bitmap occupies 48 bytes per 96-joint fighter, 192 for four, but those are only validity bits. The current source differentiates root-local reset, descendant world invalidation, special transform modes and world/inverse/scale latch semantics. All readers/writers of the migrated latches must agree. [S15](#s15), [S16](#s16)
+
+A mode value is not automatically a Boolean. Preserve modes that must survive a `mode == 1` reset. Preserve root inclusion/exclusion and descendants affected by ancestor or scale-compensation changes.
+
+Do not pay for both bitplanes and old scattered clears forever. The endpoint must replace the authority; the intermediate topology-only step is useful because it can isolate a new mechanism with a smaller behavioral surface.
+
+### 6.5 Required discriminators
+
+Before widening the implementation, measure total descriptor/root-lookup/clear cost and affected outside-SRC work. Verify descendant membership under status changes, hidden-part creation/ejection, grabs, Kirby copy changes, respawn, scene rewind and duplicate fighters with separate generations.
+
+The roughly 20.3K invalidate self-time is the current-profile cost envelope, not a promise to recover it all. A 10–15K local reduction that causes a larger outside regression is not a KEEP. A topology-only result with no net benefit can still inform the subsequent representation migration, but cannot be advertised as a speed win.
 
 ---
 
-<a id="kernels-c"></a>
+## 7. Motion residency and action-change cost
 
-## Appendix A. Complete C prototypes
+**Keep this candidate, but do not price it from an old read count alone.**
 
-Original filename: `kernels.c`.
+The inspected loader has a resident BPS1 directory yet still issues a payload `nitroromReadFile` when a destination is supplied. The September 15 evidence reports 676 payload reads; later bodies/working sets and exact after-GO counts must be checked for the candidate configuration. The loader did not change in the reviewed comparison. [S18](#s18), [S25](#s25), [S01](#s01)
 
-````c
+A resident directory reduces metadata I/O. It does not mean the required motion bytes or decoded execution state are resident.
+
+### Replacement
+
+Compile compact motion data that serves the native player directly. Admit the complete required per-match working set before GO, sharing immutable content across duplicate fighters but keeping independent clocks, materials and patches. Include legal copy/child/item/rare-state closure, not just clips observed in one CPU trace.
+
+Storage load elimination and parser simplification should use one representation where possible. Loading compressed bytes then rebuilding the old expansive parser state on each action can leave much of the tail unchanged.
+
+### Memory proof
+
+Report these separately:
+
+```text
+resident immutable banks
++ per-instance mutable playback state
++ in-flight decompression/binding scratch
++ stage/item/effect/audio obligations
++ transition overlap and stack bounds
+- old storage and state actually retired
+```
+
+Do not sum mutually exclusive complete fighter variants as though all must be expanded simultaneously, but do not omit simultaneously reachable copy/weapon/effect states. A host-side static plan can express valid coexistence. It must remain conservative.
+
+Do not replace the requirement with a bigger gameplay-time LRU or a demand read hidden in a worker. Moving a required blocking operation to another thread does not remove its deadline. BGM is a separately declared service; it is not permission for arbitrary after-GO motion reads. [S20](#s20)
+
+### Measurement
+
+Join action binds, payload reads/bytes, parse/bind cost and spikes using a coherent guest event identity. Measure late and rare states explicitly. Mean I/O per frame does not describe action-change P95, and eliminating a few isolated spikes does not prove cadence closure.
+
+**No current complete-bank byte size or compression ratio was established here.** This candidate advances only with measured asset sizes and lifetime proof, not a promise that all precomputed matrices fit.
+
+---
+
+## 8. Current experimental overhead that should not become permanent
+
+The current fast-mask `ndsFtPoseRun` contains a live read of `gNdsLabPoseJointCapLimit` and a `gNdsLabPoseJointCapEvaluated++` operation for each non-null visited entry even when the cap is zero. These are added experimental operations, separate from the older N0409 profile. [S10](#s10)
+
+A qualified hard-on production configuration should compile out that cap dispatch and its experimental hot-loop observations after the experiment is retired. Keep the cap in an explicitly diagnostic native build when needed. Do not remove actual pose scheduling, validity or source state under the guise of removing telemetry.
+
+If a verifier currently requires those symbols, change its instrumentation capability handling as real implementation work: an unavailable probe is reported unavailable, not fabricated as zero. Positive native engagement must still be proved through appropriate witnesses. The same-ROM experiment should carry symmetrical instrumentation in both arms; the final shipping shape needs its own qualification.
+
+**This is a small hygiene candidate with a source-confirmed repeated operation, not a measured large saving.** Do not spend another extended campaign on it. It can be folded into a coherent SRC implementation batch with an explicit attribution.
+
+There is also an important interpretive correction: because the cap's `continue` is before `ndsFtPoseParse`, it suppresses the excluded entries' parser/clock activity too. The report's “only evaluation” label is narrower than the source behavior. Even without this additional issue, its admitted match divergence already disqualifies the whole-match delta as a pose-cost ceiling. [S07](#s07), [S10](#s10)
+
+---
+
+## 9. Other retained candidates and their actual limits
+
+### 9.1 Conservative combat bounds before detailed transforms
+
+Current collision matrices are lazy. A new broad phase must avoid genuinely unnecessary requests or expensive narrow work, not add a second lazy cache. Bounds must include swept attack motion, radius/extent, current procedural state and any relevant prior position. Preserve source-directed hit/group records, shields, catches, reflect/absorb behavior and phase order. [S16](#s16), [S21](#s21)
+
+The transformed-box absolute-matrix extent identity is useful for new aggregate bounds. However, the eight-corner AI-size routine identified in the original research is called during fighter setup. It is not a demonstrated per-frame opportunity. This remains explicitly demoted as a steady-state claim. [S22](#s22), [S24](#s24)
+
+### 9.2 Fixed gameplay state and phase-valid facts
+
+Convert concrete producer/consumer groups—movement/map state, collision descriptors or AI facts—rather than adding a parallel whole-game state. Preserve RNG call order and which mutations are visible when each callback runs.
+
+The source already gates trait/behavior/objective decision work with `input_wait` while maintaining inputs. Do not invent another decision-rate reduction. List-order tie behavior such as jostling also rules out blindly replacing source-directed processing with symmetric pair updates. [S22](#s22), [S21](#s21)
+
+A changed raw struct hash can be expected when representation changes, but it is not permission to dismiss every difference. Use explicit field correspondence and source-visible discrete outcomes; retain the raw witnesses where comparable. Never turn a failing gameplay test off simply because a fixed-point change is desired.
+
+The authoritative product goal explicitly distinguishes mechanical equivalence from bit-identical arithmetic and permits fixed replacements. A label such as “GAMEPLAY” is not proof that no equivalent faster implementation exists. It identifies a stronger proof obligation. Current owner refusal of 30 Hz simulation remains binding. [S23](#s23), [S08](#s08)
+
+### 9.3 Process scheduling
+
+A compact ordered callback/context schedule is possible, but the actual scheduler self-cost is small relative to the unnamed work it dispatches. `gcRunGObjProcess` is about 7,087 ticks in the cited diagnostic profile, not the 234,325-tick unclassified remainder. [S06](#s06), [S12](#s12)
+
+Preserve priority order, current-object/process state, pause/end/eject behavior and source-defined same-tick insertion/deletion. Four “run every phase for this fighter” loops can change interactions. Replacing the scheduler is secondary to removing work from the callbacks.
+
+### 9.4 DTCM, locality and ARM kernels
+
+The 508-byte hot-scalar relocation is already in the inspected linker and has a recorded −43,200 P50 / −43,072 P95 experiment. Its later report includes per-PC corroboration, an IRQ-alignment repair, and unresolved/contradictory qualification wording. Reuse its measured mechanism; do not claim its old delta for a new candidate or promote its report to universal acceptance. [S05](#s05)
+
+The report's corrected remaining DTCM is approximately 1,460 bytes under the existing 12 KiB data ceiling. That is not a fresh 16 KiB budget. New placement needs current layout, initializers, IRQ alignment, stack and per-scene ownership checks. [S05](#s05)
+
+For any new representation, price the actual touched working set and instructions, not “all table bytes divided by cache size” alone. Main-memory read-only data does not itself occupy instruction cache; generated executable code does. A historical ticks-per-byte slope from one kernel is not a universal charge for every future table or function.
+
+The DS has a 4 KiB data cache and 8 KiB instruction cache; compact working sets and measured ARM/Thumb choices matter. Long multiplies can favor ARM kernels, but larger ARM code is not automatically faster. DMA/ARM7 cannot use ARM9 TCM buffers directly. These constraints support small specialized kernels and compact data, not a blanket compiler-flag conversion. [H01](#h01), [H02](#h02)
+
+### 9.5 Offload order
+
+First offload invariant work to build/load time. Use native GX for suitable visual work without synchronous readback for gameplay. Evaluate remaining divide/root scheduling only where it has safe ownership and independent work to overlap.
+
+ARM7 offload is not the first SRC move: immediate collision and RNG-ordered AI impose synchronization and coherence costs. No one-frame-late gameplay fact, unsafe shared cache line, or hidden busy-wait is an acceptable saving. No new ARM7 implementation was evaluated in this review.
+
+---
+
+## 10. What the newer negative reports do not prove
+
+This section corrects interpretation, not repository workflow.
+
+### A. A changed match is not a ceiling for an equivalent implementation
+
+The joint-cap report explicitly declares different triangles, object counts and behavior. Its +35,904 whole-match P50 is therefore not a price for equivalent pose work. Comparable ALL medians or similar scale do not repair the confound. A faithful faster evaluator could have a very different result. [S07](#s07)
+
+### B. A failed cache size does not reject a different representation
+
+The widened cache's whole-frame regression is real as reported. It does not prove that one shared preorder representation, compact indices, or a complete validity-authority replacement must allocate and touch the same data. Those are new mechanisms with their own costs; they must not reuse the old measured SRC delta as a promised win. [S04](#s04), [S17](#s17)
+
+### C. An old collision-ring failure is not “just conversion overhead”
+
+The original re-evaluation must continue to respect the corrected evidence: the tested collision ring already had favorable conversion density and suffered an instruction-fetch penalty. Do not rerun that same ring or misdescribe why it lost. A new attempt must remove further queries, traversal, state or fetch demand. [S09](#s09)
+
+### D. A scalar relocation can help without proving every locality proposal will help
+
+The hot-scalar experiment is a direct counterexample to the earlier broad claim that no DTCM candidate can pay. It does not guarantee the remaining 1,460 bytes will buy the same savings per byte. Nor do its unchanged counters alone resolve every sampling/window question. [S05](#s05)
+
+### E. No single candidate closing the full deficit is not a valid universal rejection rule
+
+The requested work spans SRC, FTR, STG and MISC. A useful SRC replacement may contribute materially without removing 1.2M P95 ticks by itself. Conversely, summing independent P95 deltas, component suppression experiments or means from other builds cannot prove the combined result.
+
+After integration, re-rank all relevant frame populations and measure cadence again. An optimization can improve work within a VBlank quantum without changing median ALL immediately. It can also simply move a GPU wait to another bucket. Whole-frame work, chronology of waits and the presented-frame result are needed to distinguish those cases.
+
+### F. Raw numeric differences need qualification, not automatic surrender or automatic acceptance
+
+Source-equivalent fixed implementations are explicitly permitted, but changed collisions, move boundaries, RNG sequencing, missing required geometry or altered telegraphs are not made acceptable by calling them approximation. Investigate representation differences at their actual observable consumer. Preserve the product contract rather than either freezing every float bit forever or ignoring gameplay divergence. [S23](#s23)
+
+---
+
+## 11. Implementation priorities and falsifiers
+
+These are candidate boundaries, not a replacement task board.
+
+| Priority | Implement or size | Concrete work removed | First reason to reject or narrow |
+|---|---|---|---|
+| 1 | Bound native floor-query pilot, including horizontal class | Repeated line/owner/format/cache preparation and redundant horizontal distance arithmetic | More descriptor traffic than removed; changed source query result/order; no whole-frame gain. |
+| 2 | Compact pose/motion execution pilot and complete-bank sizing | Repeated operand/control discovery, mutable state and bind/read work | Expanded banks do not fit or parser/state remains duplicated; actual hot curves too sparse for grouped evaluation. |
+| 3 | One per-instance preorder topology replacing overlapping subtree caches | Hash conflicts and re-flattening without enlarged pointer-list storage | Root lookup or pointer indirection cancels the gain; missed hidden/alternate subtree. |
+| Within 2 | Exact endpoint-complement and adjacent shared bases | One multiply/channel, plus redundant common basis calculations | Codegen/load/counter/grouping cost exceeds arithmetic benefit. |
+| Within a batch | Remove retired cap instrumentation from hard-on production | Experimental volatile load/branch/count work | Lost real state or invalid engagement evidence; no sizeable win claimed without measurement. |
+| Subsequent | Fixed map/gameplay consumers and demand-driven combat geometry | Remaining float chains, cold-state traffic, irrelevant narrow queries | Changed source decisions or unsound swept rejection. |
+| Later R&D | Horner, larger fixed representation changes, scheduler/offload | Candidate-dependent | Unqualified source error, clock/order changes or new synchronization cost. |
+
+### Minimum useful pilot output
+
+For each pilot, return the implementation plus:
+
+- Exactly which old hot operations and storage were removed.
+- Code/data/TCM/transient-memory changes, including added lookup or patch costs.
+- Source-derived semantic tests and positive route engagement.
+- A correctly identified matched comparison and the applicable integrated hard-on result.
+- Explicit untested fighters, stages and rare states; these stay obligations, not exclusions.
+
+Do not run an exhaustive roster-stage matrix after each edit, but do not call a pilot universal support. Both duplicate and mixed fighters, legal slot assignments, changed topology and dynamic stage behavior must be covered before the corresponding replacement closes.
+
+### What should not be built again as the next SRC experiment
+
+Do not repeat flat-cache widening/shrinking, the unchanged old collision ring, a blanket pose cap, or a wrapper that translates every individual operation into and out of fixed point. Do not try a new family of huge bind tables merely because the previous small candidates were insufficient.
+
+Do not begin with another global performance “ceiling” built by deleting gameplay. A changed workload is useful for debugging a dependency, not an accepted price for source-equivalent execution.
+
+---
+
+## 12. Bottom line
+
+**The earlier architecture direction remains useful, but the order and claims needed correction.** The best-supported next work is smaller native data and execution that retire repeated discovery: bound map queries, compact motion/pose programs, and one hierarchy representation per instance. Exact curve arithmetic can support that work without changing clocks, but its benefit must survive actual code generation and memory behavior.
+
+The new evidence does not support declaring SRC or optimization generally exhausted. It also does not support promising that the proposed rewrites close 30 FPS. The valid next step is to implement a materially different, bounded mechanism with whole-frame evidence—not replay old failed variants and not treat speculative savings as banked results.
+
+The following appendices preserve the complete standalone code and results. They are research tools, not drop-in shipping patches.
+
+---
+
+## Appendix A — Reproduce the standalone experiments
+
+Save the labeled code blocks to their indicated relative paths in a new **host research directory**, not the game source tree. The commands below describe the Linux GCC/Clang environment used here; they are not devkitARM build or repository-verifier commands.
+
+```sh
+# Reproduce the original package's experiments.
+gcc -O2 -shared -fPIC Smash64DS_SRC_Candidates/kernels.c \
+    -o Smash64DS_SRC_Candidates/kernels.so
+python Smash64DS_SRC_Candidates/test_kernels.py
+
+# New exact cubic and independent Python reference.
+clang -O2 -shared -fPIC exact_cubic3.c -o exact_cubic3.so
+python test_exact_cubic3.py
+
+# Separate undefined-behavior run (requires Clang UBSan runtime).
+clang -std=c11 -O2 -fsanitize=undefined -fno-sanitize-recover=all \
+    sanitize_exact.c -o sanitize_exact
+./sanitize_exact
+
+# Exact horizontal expression special case, preserving ordinary float semantics.
+gcc -O2 -shared -fPIC -fno-fast-math -ffp-contract=off \
+    horizontal.c -o horizontal.so
+python test_horizontal.py
+
+# Standalone ARM946E-S code generation only—not DS execution.
+clang --target=arm-none-eabi -mcpu=arm946e-s -marm -O2 \
+    -ffreestanding -fno-builtin -ffunction-sections \
+    -S exact_cubic3.c -o exact_cubic3_arm.s
+clang --target=arm-none-eabi -mcpu=arm946e-s -marm -O2 \
+    -ffreestanding -fno-builtin -ffunction-sections \
+    -c exact_cubic3.c -o exact_cubic3_arm.o
+readelf -sW exact_cubic3_arm.o
+```
+
+UBSan can detect executed signed-overflow/shift and related undefined operations; a clean run is not a proof for unexecuted inputs. The independent Python reference and the stated arithmetic bounds are separate checks. [H03](#h03)
+
+## Appendix B — Original prototype code, retained for reproducibility
+
+These original kernels are not newly qualified for the game. The approximate Horner retains its explicit admitted-range preconditions. The reference is a reconstruction of the inspected expression, not the game’s linked function.
+
+### B1. Original C kernels
+
+**Save as:** `Smash64DS_SRC_Candidates/kernels.c`
+
+```c
 /* Research prototypes, NOT integrated game code or performance-qualified DS code.
  * Reconstructed reference curve follows nds_anim_fixed.h at 430aca2879e9.
  * Build tools must validate coefficient/range contracts before using a fast path.
@@ -788,17 +691,13 @@ void invalidate_range(u32 bits[3], u32 first, u32 end) {
         first = next;
     }
 }
-````
+```
 
----
+### B2. Original test script
 
-<a id="test-kernels-py"></a>
+**Save as:** `Smash64DS_SRC_Candidates/test_kernels.py`
 
-## Appendix B. Complete Python differential tests
-
-Original filename: `test_kernels.py`.
-
-````python
+```python
 """Host-only synthetic validation; does NOT qualify game assets or DS timing.
 Run after building kernels.so as described in README.md. Standard library only.
 """
@@ -906,19 +805,11 @@ results['pointer_hash_counterexample'] = {'synthetic_root_addresses':[hex(x) for
                                         'indexed_owner_compulsory_misses':4}
 (ROOT/'results.json').write_text(json.dumps(results,indent=2)+'\n')
 print(json.dumps(results,indent=2))
-````
+```
 
----
+### B3. Original results, reproduced unchanged
 
-<a id="test-results"></a>
-
-## Appendix C. Recorded host test results
-
-Original recorded output. No tests were rerun during this consolidation.
-
-Original filename: `results.json`.
-
-````json
+```json
 {
   "scope": "SYNTHETIC_HOST_TESTS_NOT_GAME_OR_DS_PERFORMANCE_PROOF",
   "shared_basis": {
@@ -996,19 +887,578 @@ Original filename: `results.json`.
     "indexed_owner_compulsory_misses": 4
   }
 }
-````
+```
 
----
+## Appendix C — New exact cubic prototype and complete tests
 
-<a id="arm-assembly"></a>
+### C1. Exact endpoint-complement kernel
 
-## Appendix D. Complete generated ARM946E-S assembly
+**Save as:** `exact_cubic3.c`
 
-Original compiler output, preserved verbatim. Function size and instruction selection are not DS frame-time measurements.
+```c
+/* SRC research prototype; not game code or a measured DS speedup.
+ * Algebra follows ndsR2AnimEvalQ at db0d088bc61a.
+ * Requires arithmetic signed right shift (checked below).
+ * Preconditions: |len| <= 2*1024*4096; 0 < inv <= 2^30;
+ * |vb|,|vt|,|rb|,|rt| <= 2^26. These are TEST domains, not corpus admission.
+ * All runtime source ranges still require validation by the asset producer.
+ */
+typedef signed int i32;
+typedef unsigned int u32;
+typedef signed long long i64;
+_Static_assert(sizeof(i32)==4 && sizeof(i64)==8, "widths");
+_Static_assert((-1 >> 1)==-1, "arithmetic right shift required");
+typedef struct { i32 target, rate_base, rate_target; u32 clamp_count; } Basis3;
+static i32 sat(i64 x) {
+    return x > 2147483647LL ? 2147483647 :
+           x < -2147483647LL ? -2147483647 : (i32)x;
+}
+static i32 bounded(i32 x, i32 b) { return x>b?b:x<-b?-b:x; }
+void build_basis3(i32 len, i32 inv, Basis3 *out) {
+    i32 lc=bounded(len, 1024*4096);
+    i32 traw=(i32)(((i64)len*inv+(1LL<<25))>>26);
+    i32 t=bounded(traw, 2*65536);
+    i32 t2=(i32)(((i64)t*t+32768)>>16);
+    i32 t3=(i32)(((i64)t2*t+32768)>>16);
+    out->target=3*t2-2*t3;
+    out->rate_base=(i32)(((i64)lc*(t2-2*t+65536)+2048)>>12);
+    out->rate_target=(i32)(((i64)lc*(t2-t)+2048)>>12);
+    out->clamp_count=(lc!=len)+(t!=traw);
+}
+/* Exact endpoint complement, not Horner. No stage of rounding is removed.
+ * vt-vb fits i32 in the stated domain. A production producer must prove this.
+ */
+i32 evaluate_basis3(const Basis3 *h, i32 vb, i32 vt, i32 rb, i32 rt) {
+    i32 delta=vt-vb;
+    i64 acc=(i64)vb*65536;
+    acc+=(i64)delta*h->target;
+    acc+=(i64)rb*h->rate_base;
+    acc+=(i64)rt*h->rate_target;
+    return sat((acc+32768)>>16);
+}
+i32 evaluate_cubic3(i32 len,i32 inv,i32 vb,i32 vt,i32 rb,i32 rt) {
+    Basis3 h; build_basis3(len,inv,&h);
+    return evaluate_basis3(&h,vb,vt,rb,rt);
+}
+```
 
-Original filename: `kernels_arm946e.s`.
+### C2. Independent oracle and grouping tests
 
-````asm
+**Save as:** `test_exact_cubic3.py`
+
+```python
+"""Independent big-integer oracle + regression tests. No ROM/asset corpus proof."""
+import ctypes as C, json, random, pathlib, itertools
+P=pathlib.Path(__file__).resolve().parent
+lib=C.CDLL(str(P/'exact_cubic3.so'))
+old=C.CDLL(str(P/'Smash64DS_SRC_Candidates/kernels.so'))
+I=C.c_int32
+class Basis3(C.Structure):
+    _fields_=[('target',I),('rate_base',I),('rate_target',I),('clamp_count',C.c_uint32)]
+lib.build_basis3.argtypes=[I,I,C.POINTER(Basis3)]
+lib.build_basis3.restype=None
+lib.evaluate_basis3.argtypes=[C.POINTER(Basis3)]+[I]*4
+lib.evaluate_basis3.restype=I
+old.reference_cubic.argtypes=[I]*6
+old.reference_cubic.restype=I
+
+def oracle(length,inv,vb,vt,rb,rt):
+    clamp=lambda a,b:max(-b,min(b,a))
+    lc=clamp(length,1024*4096)
+    traw=(length*inv+(1<<25))>>26
+    t=clamp(traw,2*65536)
+    t2=(t*t+32768)>>16
+    t3=(t2*t+32768)>>16
+    a=2*t3-3*t2+65536
+    b=3*t2-2*t3
+    c=(lc*(t2-2*t+65536)+2048)>>12
+    d=(lc*(t2-t)+2048)>>12
+    before=(vb*a+vt*b+rb*c+rt*d+32768)>>16
+    return clamp(before,2147483647),int(lc!=length)+int(t!=traw),int(abs(before)>2147483647)
+
+rng=random.Random(0x53435232)
+h=Basis3(); cases=0; saturated=0; clamp_cases=0
+
+def check(length,inv,vals):
+    global cases,saturated,clamp_cases
+    want,clamps,out_sat=oracle(length,inv,*vals)
+    assert old.reference_cubic(length,inv,*vals)==want
+    lib.build_basis3(length,inv,C.byref(h))
+    got=lib.evaluate_basis3(C.byref(h),*vals)
+    assert got==want,(length,inv,vals,want,got)
+    assert h.clamp_count==clamps
+    cases+=1; saturated+=out_sat; clamp_cases+=clamps>0
+
+# Boundary Cartesian product includes output saturation and both signs.
+lengths=[-8388608,-4194305,-4194304,-4096,-1,0,1,4096,4194304,4194305,8388608]
+invs=[1,1048576,357913941,1073741824]
+values=[-67108864,-4096,-1,0,1,4096,67108864]
+for length,inv in itertools.product(lengths,invs):
+    for vals in itertools.product(values,repeat=4): check(length,inv,vals)
+edge_cases=cases
+for _ in range(250000):
+    length=rng.randint(-8388608,8388608)
+    inv=rng.randint(1,1073741824)
+    vals=[rng.randint(-67108864,67108864) for _ in range(4)]
+    check(length,inv,vals)
+
+# Nominal interpolation, without extrapolation/phase clamp or output saturation.
+for _ in range(100000):
+    duration=rng.randint(1,120)
+    length=rng.randint(0,duration*4096)
+    inv=((1<<30)+duration//2)//duration
+    vals=[rng.randint(-32768,32768),rng.randint(-32768,32768),
+          rng.randint(-1024,1024),rng.randint(-1024,1024)]
+    check(length,inv,vals)
+
+# Shared-basis values and diagnostic multiplicity; no cross-joint grouping assumed.
+shared_groups=12000; shared_channels=0
+for _ in range(shared_groups):
+    length=rng.randint(-8388608,8388608); inv=rng.randint(1,1073741824)
+    n=rng.randint(2,10); lib.build_basis3(length,inv,C.byref(h))
+    baseline_clamps=0
+    for _ in range(n):
+        vals=[rng.randint(-67108864,67108864) for _ in range(4)]
+        want,c,_=oracle(length,inv,*vals)
+        assert lib.evaluate_basis3(C.byref(h),*vals)==want
+        baseline_clamps+=c
+    assert n*h.clamp_count==baseline_clamps
+    shared_channels+=n
+results={'scope':'SYNTHETIC_HOST_NOT_GAME_OR_DS_TIMING',
+         'seed':'0x53435232','edge_cases':edge_cases,'random_cases':250000,'nominal_cases':100000,
+         'total_scalar_cases':cases,'output_mismatches':0,
+         'cases_with_phase_or_length_clamp':clamp_cases,
+         'output_saturation_cases':saturated,
+         'shared_groups':shared_groups,'shared_channels':shared_channels,
+         'shared_mismatches':0,'basis_clamp_multiplicity_mismatches':0,
+         'ranges':{'len_q12':[-8388608,8388608],'inv_q30':[1,1073741824],
+                   'each_value_or_rate':[-67108864,67108864]},
+         'source_corpus_tested':False,'DS_timing_tested':False}
+(P/'new_test_results.json').write_text(json.dumps(results,indent=2)+'\n')
+print(json.dumps(results,indent=2))
+```
+
+### C3. Sanitizer driver
+
+**Save as:** `sanitize_exact.c`
+
+```c
+#include <stdio.h>
+#include "exact_cubic3.c"
+#include "Smash64DS_SRC_Candidates/kernels.c"
+static u32 state=0x53524332u;
+static u32 next(void){state^=state<<13;state^=state>>17;state^=state<<5;return state;}
+int main(void){
+    unsigned k; Basis3 h;
+    for(k=0;k<500000;k++){
+        i32 len=(i32)(next()%16777217u)-8388608;
+        i32 inv=(i32)(next()%1073741824u)+1;
+        i32 vb=(i32)(next()%134217729u)-67108864;
+        i32 vt=(i32)(next()%134217729u)-67108864;
+        i32 rb=(i32)(next()%134217729u)-67108864;
+        i32 rt=(i32)(next()%134217729u)-67108864;
+        build_basis3(len,inv,&h);
+        if(evaluate_basis3(&h,vb,vt,rb,rt)!=reference_cubic(len,inv,vb,vt,rb,rt))return 1;
+    }
+    puts("UBSAN_PASS: 500000 cases; no mismatches or sanitizer diagnostics");
+    return 0;
+}
+```
+
+### C4. New exact-cubic result
+
+```json
+{
+  "scope": "SYNTHETIC_HOST_NOT_GAME_OR_DS_TIMING",
+  "seed": "0x53435232",
+  "edge_cases": 105644,
+  "random_cases": 250000,
+  "nominal_cases": 100000,
+  "total_scalar_cases": 455644,
+  "output_mismatches": 0,
+  "cases_with_phase_or_length_clamp": 296231,
+  "output_saturation_cases": 265214,
+  "shared_groups": 12000,
+  "shared_channels": 72068,
+  "shared_mismatches": 0,
+  "basis_clamp_multiplicity_mismatches": 0,
+  "ranges": {
+    "len_q12": [
+      -8388608,
+      8388608
+    ],
+    "inv_q30": [
+      1,
+      1073741824
+    ],
+    "each_value_or_rate": [
+      -67108864,
+      67108864
+    ]
+  },
+  "source_corpus_tested": false,
+  "DS_timing_tested": false
+}
+```
+
+### C5. Sanitizer output
+
+```text
+UBSAN_PASS: 500000 cases; no mismatches or sanitizer diagnostics
+```
+
+## Appendix D — Exact horizontal special-case prototype
+
+The prototype retains the old float ABI solely for bitwise comparison. It is not a final no-float implementation or a whole collision kernel.
+
+### D1. Height-expression reference and bound answer
+
+**Save as:** `horizontal.c`
+
+```c
+/* Research-only reference of ndsMPLineDistanceFC and a bound horizontal answer.
+ * The caller has already selected a finite, valid segment with y1==y2, x1!=x2.
+ * This isolates an exact special case, not the full collision algorithm.
+ * The legacy float ABI here is a test boundary, NOT the final fixed runtime.
+ */
+float floor_reference(float x,int x1,int y1,int x2,int y2){
+    return (float)y1+(((x-(float)x1)/((float)x2-(float)x1))*((float)y2-(float)y1));
+}
+float floor_bound_horizontal(float bound_height){ return bound_height; }
+```
+
+### D2. Numeric tests
+
+**Save as:** `test_horizontal.py`
+
+```python
+import ctypes as C,struct,random,pathlib,json
+P=pathlib.Path(__file__).resolve().parent
+lib=C.CDLL(str(P/'horizontal.so'))
+lib.floor_reference.argtypes=[C.c_float]+[C.c_int]*4
+lib.floor_reference.restype=C.c_float
+lib.floor_bound_horizontal.argtypes=[C.c_float]
+lib.floor_bound_horizontal.restype=C.c_float
+bits=lambda f:struct.pack('<f',f)
+f32=lambda f:C.c_float(f).value
+n=0
+for y in range(-32768,32768):
+    want=lib.floor_reference(f32(0),-32768,y,32767,y)
+    assert bits(want)==bits(lib.floor_bound_horizontal(f32(y)))
+    n+=1
+rng=random.Random(0x464c4f52)
+for _ in range(200000):
+    x1=rng.randint(-32768,32767);x2=rng.randint(-32768,32767)
+    if x2==x1:x2=32767 if x1!=32767 else -32768
+    y=rng.randint(-32768,32767)
+    x=f32(x1+(x2-x1)*rng.random())
+    want=lib.floor_reference(x,x1,y,x2,y)
+    assert bits(want)==bits(lib.floor_bound_horizontal(f32(y)))
+    n+=1
+# Signed-zero query, reversed endpoints, and both boundary endpoints.
+for y in [-32768,-1,0,1,32767]:
+    for x1,x2 in [(-1,1),(1,-1),(-32768,32767),(32767,-32768)]:
+        for x in [-0.0,0.0,float(x1),float(x2)]:
+            assert bits(lib.floor_reference(x,x1,y,x2,y))==bits(f32(y))
+            n+=1
+r={'scope':'HOST_NUMERIC_SPECIAL_CASE_NOT_COLLISION_OR_DS_PROOF','cases':n,
+   'bit_mismatches':0,'all_s16_heights_tested':True,
+   'general_slopes_tested':False,'DS_timing_tested':False,
+   'compiler_flags':'gcc -O2 -shared -fPIC -fno-fast-math -ffp-contract=off'}
+(P/'horizontal_results.json').write_text(json.dumps(r,indent=2)+'\n')
+print(json.dumps(r,indent=2))
+```
+
+### D3. Horizontal result
+
+```json
+{
+  "scope": "HOST_NUMERIC_SPECIAL_CASE_NOT_COLLISION_OR_DS_PROOF",
+  "cases": 265616,
+  "bit_mismatches": 0,
+  "all_s16_heights_tested": true,
+  "general_slopes_tested": false,
+  "DS_timing_tested": false,
+  "compiler_flags": "gcc -O2 -shared -fPIC -fno-fast-math -ffp-contract=off"
+}
+```
+
+## Appendix E — Compiler output
+
+### E1. Exact sizes measured in this response
+
+```json
+{
+  "old": {
+    "reference_cubic": 332,
+    "build_basis": 224,
+    "evaluate_basis": 108,
+    "evaluate_horner": 88,
+    "invalidate_range": 104
+  },
+  "new": {
+    "build_basis3": 232,
+    "evaluate_basis3": 116,
+    "evaluate_cubic3": 340
+  },
+  "compiler": "clang version 17.0.0 (https://github.com/swiftlang/llvm-project.git 10999b6d034fe318f3d56c83bddb6572593a8bb0)",
+  "flags": "--target=arm-none-eabi -mcpu=arm946e-s -marm -O2 -ffreestanding -fno-builtin -ffunction-sections",
+  "timing_measured": false
+}
+```
+
+### E2. Complete newly generated ARM assembly
+
+**Save as:** `exact_cubic3_arm.s`
+
+```asm
+	.text
+	.syntax unified
+	.eabi_attribute	67, "2.09"	@ Tag_conformance
+	.cpu	arm946e-s
+	.eabi_attribute	6, 4	@ Tag_CPU_arch
+	.eabi_attribute	8, 1	@ Tag_ARM_ISA_use
+	.eabi_attribute	9, 1	@ Tag_THUMB_ISA_use
+	.eabi_attribute	34, 0	@ Tag_CPU_unaligned_access
+	.eabi_attribute	17, 1	@ Tag_ABI_PCS_GOT_use
+	.eabi_attribute	20, 1	@ Tag_ABI_FP_denormal
+	.eabi_attribute	21, 0	@ Tag_ABI_FP_exceptions
+	.eabi_attribute	23, 3	@ Tag_ABI_FP_number_model
+	.eabi_attribute	24, 1	@ Tag_ABI_align_needed
+	.eabi_attribute	25, 1	@ Tag_ABI_align_preserved
+	.eabi_attribute	38, 1	@ Tag_ABI_FP_16bit_format
+	.eabi_attribute	18, 4	@ Tag_ABI_PCS_wchar_t
+	.eabi_attribute	26, 2	@ Tag_ABI_enum_size
+	.eabi_attribute	14, 0	@ Tag_ABI_PCS_R9_use
+	.file	"exact_cubic3.c"
+	.section	.text.build_basis3,"ax",%progbits
+	.globl	build_basis3                    @ -- Begin function build_basis3
+	.p2align	2
+	.type	build_basis3,%function
+	.code	32                              @ @build_basis3
+build_basis3:
+	.fnstart
+@ %bb.0:
+	.save	{r4, r5, r6, r7, r11, lr}
+	push	{r4, r5, r6, r7, r11, lr}
+	.setfp	r11, sp, #16
+	add	r11, sp, #16
+	mov	lr, #33554432
+	mov	r3, #0
+	mov	r6, #0
+	mov	r7, #2048
+	mov	r12, #0
+	mov	r5, #2048
+	smlal	lr, r3, r1, r0
+	lsr	r1, lr, #26
+	orr	lr, r1, r3, lsl #6
+	mov	r1, #16646144
+	mov	r3, #1069547520
+	orr	r1, r1, #-16777216
+	cmn	lr, #131072
+	orr	r3, r3, #-1073741824
+	movgt	r1, lr
+	cmp	r1, #131072
+	movge	r1, #131072
+	cmn	r0, #4194304
+	movgt	r3, r0
+	cmp	r3, #4194304
+	movge	r3, #4194304
+	subs	r0, r3, r0
+	movne	r0, #1
+	cmp	r1, lr
+	mov	lr, #0
+	addne	r0, r0, #1
+	str	r0, [r2, #12]
+	mov	r0, #32768
+	smlal	r0, lr, r1, r1
+	lsr	r0, r0, #16
+	orr	r0, r0, lr, lsl #16
+	sub	r4, r0, r1
+	smlal	r7, r6, r4, r3
+	lsr	r4, r7, #12
+	orr	r4, r4, r6, lsl #20
+	asr	r6, r1, #31
+	str	r4, [r2, #8]
+	sub	r4, r0, r1, lsl #1
+	add	r4, r4, #65536
+	smlal	r5, r12, r4, r3
+	lsr	r3, r5, #12
+	orr	r3, r3, r12, lsl #20
+	str	r3, [r2, #4]
+	umull	r3, r7, r0, r1
+	mla	r5, r0, r6, r7
+	lsr	r7, lr, #16
+	add	r0, r0, r0, lsl #1
+	mul	r6, r7, r1
+	adds	r1, r3, #32768
+	adc	r3, r5, r6
+	lsr	r1, r1, #15
+	orr	r1, r1, r3, lsl #17
+	bic	r1, r1, #1
+	sub	r0, r0, r1
+	str	r0, [r2]
+	pop	{r4, r5, r6, r7, r11, pc}
+.Lfunc_end0:
+	.size	build_basis3, .Lfunc_end0-build_basis3
+	.cantunwind
+	.fnend
+                                        @ -- End function
+	.section	.text.evaluate_basis3,"ax",%progbits
+	.globl	evaluate_basis3                 @ -- Begin function evaluate_basis3
+	.p2align	2
+	.type	evaluate_basis3,%function
+	.code	32                              @ @evaluate_basis3
+evaluate_basis3:
+	.fnstart
+@ %bb.0:
+	.save	{r4, r10, r11, lr}
+	push	{r4, r10, r11, lr}
+	.setfp	r11, sp, #8
+	add	r11, sp, #8
+	sub	lr, r2, r1
+	asr	r2, r1, #31
+	mov	r12, #32768
+	lsl	r2, r2, #16
+	orr	r12, r12, r1, lsl #16
+	orr	r1, r2, r1, lsr #16
+	ldm	r0, {r2, r4}
+	ldr	r0, [r0, #8]
+	smlal	r12, r1, r2, lr
+	ldr	r2, [r11, #8]
+	smlal	r12, r1, r4, r3
+	mvn	r3, #0
+	smlal	r12, r1, r0, r2
+	mov	r2, #0
+	lsr	r0, r12, #16
+	orr	r0, r0, r1, lsl #16
+	rsbs	r4, r0, #-2147483647
+	sbcs	r4, r3, r1, asr #16
+	movlt	r2, #1
+	cmp	r2, #0
+	asrne	r3, r1, #16
+	moveq	r0, #-2147483647
+	mvn	r1, #-2147483648
+	subs	r2, r0, r1
+	sbcs	r2, r3, #0
+	movge	r0, r1
+	pop	{r4, r10, r11, pc}
+.Lfunc_end1:
+	.size	evaluate_basis3, .Lfunc_end1-evaluate_basis3
+	.cantunwind
+	.fnend
+                                        @ -- End function
+	.section	.text.evaluate_cubic3,"ax",%progbits
+	.globl	evaluate_cubic3                 @ -- Begin function evaluate_cubic3
+	.p2align	2
+	.type	evaluate_cubic3,%function
+	.code	32                              @ @evaluate_cubic3
+evaluate_cubic3:
+	.fnstart
+@ %bb.0:
+	.save	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
+	push	{r4, r5, r6, r7, r8, r9, r10, r11, lr}
+	.setfp	r11, sp, #28
+	add	r11, sp, #28
+	push	{r3}                            @ 4-byte Spill
+	mov	r5, #33554432
+	mov	r4, #0
+	mov	r7, #1069547520
+	mov	r10, #0
+	mov	r12, r2
+	mov	r3, #32768
+	smlal	r5, r4, r1, r0
+	orr	r7, r7, #-1073741824
+	lsr	r1, r5, #26
+	orr	r5, r1, r4, lsl #6
+	mov	r1, #16646144
+	orr	r1, r1, #-16777216
+	cmn	r5, #131072
+	movgt	r1, r5
+	mov	r5, #32768
+	cmp	r1, #131072
+	movge	r1, #131072
+	cmn	r0, #4194304
+	smlal	r5, r10, r1, r1
+	movgt	r7, r0
+	lsr	r5, r5, #16
+	cmp	r7, #4194304
+	orr	lr, r5, r10, lsl #16
+	movge	r7, #4194304
+	sub	r5, lr, r1, lsl #1
+	lsl	r6, r7, #20
+	add	r5, r5, #65536
+	umull	r9, r0, r6, r5
+	asr	r4, r5, #31
+	mla	r2, r6, r4, r0
+	asr	r0, r7, #31
+	lsl	r0, r0, #20
+	orr	r4, r0, r7, lsr #12
+	ldr	r7, [r11, #8]
+	mul	r0, r4, r5
+	adds	r5, r9, #-2147483648
+	asr	r5, r12, #31
+	adc	r2, r2, r0
+	orr	r0, r3, r12, lsl #16
+	lsl	r5, r5, #16
+	orr	r5, r5, r12, lsr #16
+	smlal	r0, r5, r2, r7
+	sub	r2, lr, r1
+	umull	r9, r7, r6, r2
+	asr	r8, r2, #31
+	mla	r3, r6, r8, r7
+	mul	r6, r4, r2
+	adds	r2, r9, #-2147483648
+	asr	r4, r1, #31
+	adc	r2, r3, r6
+	ldr	r3, [r11, #12]
+	smlal	r0, r5, r2, r3
+	umull	r2, r3, lr, r1
+	mla	r6, lr, r4, r3
+	lsr	r3, r10, #16
+	mul	r4, r3, r1
+	adds	r1, r2, #32768
+	adc	r2, r6, r4
+	lsr	r1, r1, #15
+	orr	r1, r1, r2, lsl #17
+	add	r2, lr, lr, lsl #1
+	bic	r1, r1, #1
+	sub	r1, r2, r1
+	ldr	r2, [sp]                        @ 4-byte Reload
+	sub	r2, r2, r12
+	smlal	r0, r5, r1, r2
+	mvn	r1, #0
+	lsr	r0, r0, #16
+	orr	r0, r0, r5, lsl #16
+	rsbs	r2, r0, #-2147483647
+	sbcs	r2, r1, r5, asr #16
+	mov	r2, #0
+	movlt	r2, #1
+	cmp	r2, #0
+	mvn	r2, #-2147483648
+	moveq	r0, #-2147483647
+	asrne	r1, r5, #16
+	subs	r3, r0, r2
+	sbcs	r1, r1, #0
+	movge	r0, r2
+	sub	sp, r11, #28
+	pop	{r4, r5, r6, r7, r8, r9, r10, r11, pc}
+.Lfunc_end2:
+	.size	evaluate_cubic3, .Lfunc_end2-evaluate_cubic3
+	.cantunwind
+	.fnend
+                                        @ -- End function
+	.ident	"clang version 17.0.0 (https://github.com/swiftlang/llvm-project.git 10999b6d034fe318f3d56c83bddb6572593a8bb0)"
+	.section	".note.GNU-stack","",%progbits
+	.addrsig
+	.eabi_attribute	30, 1	@ Tag_ABI_optimization_goals
+```
+
+### E3. Original recorded ARM assembly
+
+The old C symbol sizes were recompiled and reproduced; the following is the original supplied assembly listing, retained for comparison.
+
+```asm
 	.text
 	.syntax unified
 	.eabi_attribute	67, "2.09"	@ Tag_conformance
@@ -1324,51 +1774,59 @@ invalidate_range:
 	.section	".note.GNU-stack","",%progbits
 	.addrsig
 	.eabi_attribute	30, 1	@ Tag_ABI_optimization_goals
-````
+```
 
----
+## Appendix F — Source index and provenance
 
-<a id="codegen-results"></a>
+Repository links below are pinned to the reviewed HEAD unless identified as a compare URL. They are evidence links, not instructions to treat historical reports as current acceptance. Some historical numeric details are reused from the previous audit; this response did not rerun their ROMs.
 
-## Appendix E. Recorded code-generation results
+- <a id="s01"></a>**[S01] [Repository branch and 85-commit comparison](https://github.com/rockenrooster/Smash64DS_Port/compare/430aca2879e9071dc2b22f944f5c2909c9ce7aa4...db0d088bc61ac3e85f07a349857a1b3ec7eef55b)
+- <a id="s02"></a>**[S02] [Historical clean-baseline gap report](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-16_p2-2p8-gap-sizing/README.md) — `artifacts/performance/2026-09-16_p2-2p8-gap-sizing/README.md`
+- <a id="s03"></a>**[S03] [Newer SRC candidate-sizing assessment](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-16_p2-2p8-src-candidate-sizing/README.md) — `artifacts/performance/2026-09-16_p2-2p8-src-candidate-sizing/README.md`
+- <a id="s04"></a>**[S04] [Actual flat-cache conflict/widening experiment](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-16_p2-2p8-n0503-flat-cache/README.md) — `artifacts/performance/2026-09-16_p2-2p8-n0503-flat-cache/README.md`
+- <a id="s05"></a>**[S05] [Hot-scalar DTCM experiment, correction and status](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-17_p2-2p8-dtcm-hot-scalars/README.md) — `artifacts/performance/2026-09-17_p2-2p8-dtcm-hot-scalars/README.md`
+- <a id="s06"></a>**[S06] [Later whole-frame distribution presented as SRC assessment](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-17_p2-2p8-src-distribution/README.md) — `artifacts/performance/2026-09-17_p2-2p8-src-distribution/README.md`
+- <a id="s07"></a>**[S07] [Joint-cap experiment and explicit divergence evidence](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-16_p2-2p8-joint-cap-ladder/README.md) — `artifacts/performance/2026-09-16_p2-2p8-joint-cap-ladder/README.md`
+- <a id="s08"></a>**[S08] [Current execution-board evidence and remaining gates](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/docs/P2_EXECUTION_BOARD.md) — `docs/P2_EXECUTION_BOARD.md`
+- <a id="s09"></a>**[S09] [N0409 attribution correction and previous collision-ring result](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md) — `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`
+- <a id="s10"></a>**[S10] [Current pose implementation; cap branch before parser](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/nds/nds_ft_pose.c) — `src/nds/nds_ft_pose.c`
+- <a id="s11"></a>**[S11] [Map contexts, memo layers, floor arithmetic and normal preparation](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/port/reloc_backend_mp_collision.c) — `src/port/reloc_backend_mp_collision.c`
+- <a id="s12"></a>**[S12] [Original 129-region diagnostic census](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-16_p2-2p8-n0409-profile/census.txt) — `artifacts/performance/2026-09-16_p2-2p8-n0409-profile/census.txt`
+- <a id="s13"></a>**[S13] [Fixed curve evaluator and integer representation conversions](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/include/nds/nds_anim_fixed.h) — `include/nds/nds_anim_fixed.h`
+- <a id="s14"></a>**[S14] [Current pose structures, partial-write semantics and admitted hold behavior](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/include/nds/nds_ft_pose.h) — `include/nds/nds_ft_pose.h`
+- <a id="s15"></a>**[S15] [Invalidation, subroot cache and joint/material traversal](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/port/reloc_backend_compat_shims.c) — `src/port/reloc_backend_compat_shims.c`
+- <a id="s16"></a>**[S16] [BattleShip collision matrix/latch behavior](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/decomp/BattleShip-main/decomp/src/gm/gmcollision.c) — `decomp/BattleShip-main/decomp/src/gm/gmcollision.c`
+- <a id="s17"></a>**[S17] [Flat-cache shrink experiment and its actual limits](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-17_p2-2p8-flatcache-shrink/README.md) — `artifacts/performance/2026-09-17_p2-2p8-flatcache-shrink/README.md`
+- <a id="s18"></a>**[S18] [Payload loader versus resident directory](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/src/nds/nds_reloc_assets.c) — `src/nds/nds_reloc_assets.c`
+- <a id="s19"></a>**[S19] [Measurement populations and independent cadence acceptance](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/docs/VERIFYING.md) — `docs/VERIFYING.md`
+- <a id="s20"></a>**[S20] [Required motion/texture admission and declared BGM service](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/docs/p2/P2-texture-residency.md) — `docs/p2/P2-texture-residency.md`
+- <a id="s21"></a>**[S21] [BattleShip phase order, attack positions and jostling](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/decomp/BattleShip-main/decomp/src/ft/ftmain.c) — `decomp/BattleShip-main/decomp/src/ft/ftmain.c`
+- <a id="s22"></a>**[S22] [AI update gating and setup-time damage-size function](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/decomp/BattleShip-main/decomp/src/ft/ftcomputer.c) — `decomp/BattleShip-main/decomp/src/ft/ftcomputer.c`
+- <a id="s23"></a>**[S23] [Authoritative equivalence, specialization and native requirements](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/PROJECT_GOAL.md) — `PROJECT_GOAL.md`
+- <a id="s24"></a>**[S24] [Fighter construction calls damage-size setup](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/decomp/BattleShip-main/decomp/src/ft/ftmanager.c) — `decomp/BattleShip-main/decomp/src/ft/ftmanager.c`
+- <a id="s25"></a>**[S25] [Historical 676 payload reads](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/artifacts/performance/2026-09-15_p2-2p8-ftanim-reloc-final/README.md) — `artifacts/performance/2026-09-15_p2-2p8-ftanim-reloc-final/README.md`
+- <a id="s26"></a>**[S26] [Original source ordered scheduler](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/decomp/BattleShip-main/decomp/src/sys/objman.c) — `decomp/BattleShip-main/decomp/src/sys/objman.c`
+- <a id="s27"></a>**[S27] [Current TCM placement](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/linker/nds_hot_text.ld) — `linker/nds_hot_text.ld`
+- <a id="s28"></a>**[S28] [SM64DS same-file SetAnim specialization reference](https://github.com/rockenrooster/Smash64DS_Port/blob/db0d088bc61ac3e85f07a349857a1b3ec7eef55b/decomp/sm64ds-decomp/src/_ZN9ModelAnim7SetAnimEP8BCA_Filei5Fix12IiEj.c) — `decomp/sm64ds-decomp/src/_ZN9ModelAnim7SetAnimEP8BCA_Filei5Fix12IiEj.c`
+- <a id="h01"></a>**[H01] [BlocksDS: optimization and ARM/Thumb/cache tradeoffs](https://blocksds.skylyrac.net/tutorial/advanced/optimizing_code/)
+- <a id="h02"></a>**[H02] [BlocksDS: TCM/cache ownership and coherency](https://blocksds.skylyrac.net/tutorial/intermediate/tcm_and_cache/)
+- <a id="h03"></a>**[H03] [Clang UBSan documentation](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
 
-Original filename: `codegen.json`.
+<a id="u01"></a>**[U01] Uploaded historical SRC table.** `e5ad07c6-7313-48a7-822d-8de7f519f471.jsonl`, record 1384, `2026-09-16T21:09:56.377Z`. The full record is retained in the previous consolidated report. Its raw-log SHA-256 as recorded there is `ba5607955a9efb869699ac9043e95e2363225df07f6ae4c77177b469a69d88b1`. This response re-read the consolidated record but did not independently requalify that dirty ROM or its timer corrections.
 
-````json
-{
-  "compiler": "Clang 17.0.0",
-  "flags": "--target=arm-none-eabi -mcpu=arm946e-s -marm -O2 -ffreestanding -fno-builtin -ffunction-sections",
-  "sizes_bytes": {
-    "reference_cubic": 332,
-    "build_basis": 224,
-    "evaluate_basis": 108,
-    "evaluate_horner": 88,
-    "invalidate_range": 104
-  },
-  "timing_measured": false,
-  "notes": "Standalone reference and candidates, not actual linked game functions; reference counters omitted."
-}
-````
+### Local input identities
 
----
+- `Smash64DS_SRC_Optimization_Complete.md`: SHA-256 `41e0a3cb66440fa0e57e2f75e5f6be761aeaa437d9c4e0ab597ffc9d4843595c`.
+- `Smash64DS_SRC_Candidates.zip`: SHA-256 `a8f25afb5782f1e1a50c04cbdd4960172a29d27c5fe2c1ff06461f5643bac777`.
 
-<a id="original-checksums"></a>
+### Embedded experiment source identities
 
-## Appendix F. Original package checksums
+- `Smash64DS_SRC_Candidates/kernels.c`: SHA-256 `f22f5488fcb088cd1bf8d03a3fa5b0e2ed2d08d83f1dfd0a2291a69898e3f924`.
+- `Smash64DS_SRC_Candidates/test_kernels.py`: SHA-256 `29817f6410c9343c2aba84a2695d1f1f6bc7c781e7491f021a2672e1813e703f`.
+- `exact_cubic3.c`: SHA-256 `9193afafb2729e3ea9bed1e4aaf609a7abc0443e5cbeb146f877c8caacdf59f5`.
+- `test_exact_cubic3.py`: SHA-256 `a7f1b0bcb8e692a7a5a0595f8514605bc165da3ce184a5d19f410523178d3be6`.
+- `sanitize_exact.c`: SHA-256 `16dcbf631ec2cb6a4c005ddb032e5309008d2036ac60a95d4d19c852a5bd7a9c`.
+- `horizontal.c`: SHA-256 `c5ed88f97cc92950a535c6ceab19f3276762419977d90f251b8906a8c9c079aa`.
+- `test_horizontal.py`: SHA-256 `80a374889a618dbf5912f7de02e1c9781560ae1fe0e8afe0522c3b21a2e08a0f`.
 
-These hashes describe the eight original archive members before Markdown consolidation, not the formatted sections or this combined document. All eight were checked against the uploaded archive during consolidation. Original code, assembly, Python, and JSON blocks are embedded verbatim; Markdown headings and internal references are reformatted for a single file.
-
-Original filename: `SHA256SUMS.json`.
-
-````json
-{
-  "results.json": "4f909e7bf267b80e58eef8ebab499eb87dfd1197aa80be0a1ec8ee8a93679bba",
-  "codegen.json": "56d77727e4a4118f6a7aa643f883313ca3917685d6f454f1027c1729b293b207",
-  "EVIDENCE.md": "c06543e0bd92cb0f2ff9fe3eb80e97cd32b2f67e23947571b654e2b31d659aa4",
-  "CANDIDATE_DETAILS.md": "180b2804ace3d78324fa098f9261a5a13b24b417464a037e4ed4178a1d319795",
-  "kernels.c": "f22f5488fcb088cd1bf8d03a3fa5b0e2ed2d08d83f1dfd0a2291a69898e3f924",
-  "kernels_arm946e.s": "4d3cb6fe11a55d741a7f90ffd2b6bd2189b948807551b7ee202c4e06324e06a9",
-  "README.md": "df8ff37e42669eadd06bb6a29427376522fa27d64d8641ba2a043ec17df6e823",
-  "test_kernels.py": "29817f6410c9343c2aba84a2695d1f1f6bc7c781e7491f021a2672e1813e703f"
-}
-````
+**Final status:** revised research and executed standalone host experiments. No game implementation, publication, runtime performance pass, or universal content coverage is asserted.
