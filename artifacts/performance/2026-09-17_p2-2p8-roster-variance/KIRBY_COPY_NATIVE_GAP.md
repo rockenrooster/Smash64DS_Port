@@ -270,3 +270,71 @@ sequence. Then bake, run the canonical four-CPU roster — which contains Donkey
 so the existing gate exercises the copy — and check it **visually**, because
 `gNdsRendererNativeFailure.count` cannot see wrong-cache corruption. If that
 holds, the remaining nine follow the same procedure one at a time.
+
+---
+
+## The fix is not twenty bakes. The trio seam assumes a RESIDENT head, and every copy hat is DEFERRED.
+
+Admitting Donkey's hat (head 4) got as far as the bake and stopped on:
+
+```
+ValueError: kirby trio head4: color escape dense 116 has no
+            value-identical main-table row
+```
+
+Diagnosing that row settles what the remaining work actually is.
+
+`head4 dense116 = (x=21, y=170, z=-36, s=512, t=358, binding=0, cache_slot=1,
+rgba=1749280255)`. Relaxing **any single field** of the match key still finds no
+twin, so this is not a keying mismatch. The resident main table has **zero** rows
+at that position; head 4's own bake has three.
+
+Comparing all three heads against the resident table (`high` detail):
+
+| head | distinct positions | **absent from the resident main table** |
+|---|---:|---:|
+| 1 (inhale face) | 143 | **0** |
+| 14 (boomerang face) | 184 | **0** |
+| **4 (Donkey copy hat)** | 185 | **91** |
+
+**Heads 1 and 14 are faces — ordinary model parts, fully resident. Copy hats are
+deferred images** (`kirby_hat_NN_{high,low}.bin`), and 91 of Donkey's 185
+positions exist only inside its own image.
+
+The trio body's `MODIFY_ST` copies take their shade from head and canon rows and
+resolve each escape into the **resident** table. A deferred hat's geometry is not
+there, and cannot be without making the hat resident — which is precisely what
+the deferred design exists to avoid.
+
+**That is why this seam has only ever carried faces.** It is not an oversight in
+a table; the mechanism has never supported a non-resident head.
+
+### What this means for the work
+
+The earlier plan — "extend `KIRBY_TRIO_CONTEXTS`, add cross slots, twenty bakes"
+— is **wrong about the shape of the job**. The table entries and the slot
+derivation are now done and verified, and they were never the hard part. The
+real choice is:
+
+| option | cost |
+|---|---|
+| **(a) make copy hats resident** for the trio case | pays back exactly the ARM9 resident bytes the deferred hat design was built to save, for 10 hats x 2 details |
+| **(b) resolve colour escapes into the deferred image's own table** | a real change to `_append_kirby_trio_sections`' escape resolution, but no residency cost and it generalises to every hat at once |
+
+**(b) is the right shape** and matches where the hat data already lives, but it
+is renderer-seam work on the path that `validate_cross_census=False` leaves
+unguarded — so it needs the closure checker green *and* a visual check per hat,
+not one or the other.
+
+### What is already banked
+
+- `check_native_owner_geometry_closure.py` fails and names all ten victims: the
+  specification and the regression test.
+- Cross slots derive from the root count and **regenerate heads 1 and 14's
+  original hand-authored tuples exactly**, so no future head can be authored
+  with a wrong sequence that the length check would wave through.
+- `kirby_trio_root_count()` replaces `9 if head_mp == 1 else 10`, which would
+  have silently given every newly admitted head ten bindings when an ordinary
+  copy hat has nine.
+- Head 4's failure is recorded at the table it would be added to, so the next
+  attempt starts here instead of rediscovering it.
