@@ -24,9 +24,9 @@ Main Menus:
         -Yoshi **Cause found: pack 45,488 vs owner 44,256. First fix hung the CSS, reverted. Needs pack field.**
     -music pauses/reset when rendering new 3d fighter previews (moving around cursor) **8 BGM suspends per visit: the closure loads in ONE frame, 8.6 frames long. Slice it.**
     -delay between cursor hover and 3d fighter preview rendering. **Same cause: the 13-tic dwell debounces a BLOCKING load. 70 tics waited per visit.**
-    -Kirby not selectable **Ladder had no rung for Kirby/Ness and rung 8 was held by a stale note. Rungs 9/10 added.**
-    -Jigglypuff not selectable **Same as Kirby, rung 8. Default stays 7 until a rung-10 wander crash is attributed.**
-    -Ness not selectable **Same as Kirby, rung 9.**
+    -Kirby not selectable **Blocked on resident budget: +82,040 B image, 21 arena pages, wander crash on CSS exit.**
+    -Jigglypuff not selectable **FIXED. Shipping roster raised to rung 8; CSS verified clean. His 3D preview is blank though.**
+    -Ness not selectable **Blocked: alone he costs 8 arena pages and crashes the CSS exit. Needs bytes returned.**
 -Yoshi:
     -Up B egg shells are not rendering.
     -Grab attacks turn yoshi invisible. **FIXED, not yet seen on screen. Catch+Throw programs now carry the 19-root vector. Try a throw.**

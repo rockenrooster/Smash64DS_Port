@@ -713,7 +713,23 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # both the run and its retry. The eager load is the real defect, not
 # Jigglypuff: see docs/p2/P2-3-fighter-production.md. Raise this again once
 # the character select stops loading every roster member at once.
-NDS_P2_SHELL_ROSTER ?= 7
+#
+# 2026-09-17: RAISED TO 8. That release condition was met on 2026-09-09 by
+# d99a89f8741, "Give character select four fighter slots instead of the whole
+# roster" -- entry now takes four fixed 80 KiB blocks, a 64 KiB shared tree and
+# an arena reserve, none of which scale with the roster. The ladder was simply
+# never re-raised. Verified rather than assumed: the shipping shell probe
+# enters, plays, commits and exits the character select with no SIGILL and no
+# ABORT (artifacts/verification/2026-09-17_p2-shell_builds/rung8-jigglypuff.txt).
+#
+# JIGGLYPUFF COSTS 3 ARENA PAGES: +9,440 B of image takes the arena from
+# 1,240,832 to 1,228,544. Rungs 9 and 10 do NOT hold, and the break is between 8
+# and 9, so it is not Kirby -- NESS ALONE is +32,016 B and 8 pages and brings
+# back a wandered ARM9 at the character-select exit (rung9-ness-sigill.txt);
+# Kirby takes it to +82,040 B and 21 pages. Ness's own content is fine, his
+# preview drew 3,498 triangles right up to the crash. Both are blocked on
+# resident budget, so the next rung needs bytes RETURNED, not a fighter fixed.
+NDS_P2_SHELL_ROSTER ?= 8
 
 # THE ROSTER LADDER, DEFINED ONCE AND EVALUATED IN ALL THREE SHELL TARGETS.
 #
