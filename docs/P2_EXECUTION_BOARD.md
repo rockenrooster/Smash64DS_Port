@@ -51,39 +51,40 @@ native 0/0; slips 0.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
-**THE GAP IS STALL, NOT WORK** (`…_stall-budget/`). Non-idle 1,616,422 =
-**576,491 issue + 1,039,931 stall (64.3%)**; data 560,739 vs icache 155,651.
-**Issue floor alone is 543,509 UNDER the gate** — no arithmetic deletion can
-close it; it asks a **47.7% stall cut**. Five lanes failed identically, trading
-issue for fetch.
-**STALL class sized** (`…_dtcm-falsifier/`): `FTParts` packing **zero**; `DObj`
-packing is the real 8.1% target, **blocked by pristine `decomp/`**; DTCM works
-(-10,176) but usable DTCM is **1,992 B not 5,704**. Reverted.
-**THE DCACHE CHANGES THE AXIS** (`…_dcache-value/`). Cache OFF: WORK-H
-1,588,928 -> **2,983,488**, so the 4 KB dcache is worth **1,394,560** — more than
-the gap — and captures **71.3%**; residual = data stall **560,739**. **Perfect
-locality = 1,028,189, UNDER the gate by 91,811**: the only class whose ceiling
-(**113%**) exceeds the requirement (others 2.4-18%).
-**PLACEMENT: CLOSED as a lever** (`…_placement-hazard/`; detail archived). One
-4 KB array's address swings WORK-H **+42,240 / STG +44,096**, third sighting and
-second at ~50,000. The shipped layout is the **BEST of five arms** — DO NOT
-REOPEN. `45,760 > 23,691` was **never a contradiction**: one is stall ON
-statics, the other stall caused by MOVING them, and a relocation is paid by what
-it **EVICTS**; the locality ranking is intact. **Arena now 1,024 B aligned** so
-`.data`/`.bss` resizes stop re-phasing the heap (free, -384, fixes 23%).
-Residual is **variance risk only**: any static-size change can move WORK-H tens
-of thousands of ticks; same-ROM route A/B is the only immune form.
+**PERFORMANCE: EVERY CLASS MEASURED, NONE REACHES THE GATE.** Detail archived;
+decision in `…_p2-2p8-gate-decision/`. The frame is **64.3% memory stall**; the
+**issue floor alone is 543,509 UNDER the gate**, so no arithmetic deletion can
+close it. Disabling the dcache costs **+1,394,560**, so perfect data locality
+would give 1,028,189 — under the gate — making locality the **only class whose
+ceiling (113%) exceeds the requirement**; every other is 2.4-18% and the best
+buildable is the VRAM arena at **11.2%**. Placement is CLOSED (hazard, not
+lever; arena now 1,024 B aligned). **Owner decision owed:** data locality
+(structural, no fidelity cost, ~11-21% realised) vs reduced joints (Sacrifice
+Order 2+3) vs the withdrawn 30 Hz sim (order 4).
 Checks: **Boundary GREEN all three arms 2026-09-17** (arena alignment qualified;
 0 ticks, exists so `.data`/`.bss` resizes stop re-phasing the heap).
-**ANY-ROSTER CONTRACT NOW MEASURABLE — AND FAILING** (`…_roster-variance/`).
-Stress gate was pinned to Donkey/Samus/Link/Kirby; ShieldPose residency is now
-DERIVED per roster (exact both: 4/11,799/36, 3/9,235/27), DamageSlash coverage
-advisory off-canonical with correctness strict everywhere, and a format bug
-fixed that reported *"Format specifier was invalid"* INSTEAD of the failures it
-had detected. **Captain/Luigi/Donkey/Kirby = 7,679 native failures vs canonical
-0** (domain 1, scene 22, reason 2) + no Luigi ShieldPose (7 of 12 kinds).
-Native-only is required, so this is a **P2 correctness gap**; its WORK-H
-1,471,552 is NOT a roster-cost datum — that arm draws less and is broken.
+**ANY-ROSTER CONTRACT NOW MEASURABLE** (`…_roster-variance/`): ShieldPose
+residency DERIVED per roster (exact both: 4/11,799/36, 3/9,235/27), DamageSlash
+coverage advisory off-canonical with correctness strict everywhere, and a format
+bug fixed that reported *"Format specifier was invalid"* INSTEAD of the failures
+it had detected. Canonical regression re-verified identical.
+**KIRBY'S COPY IS NATIVE-BROKEN FOR 10 OF 11 VICTIMS**
+(`…_roster-variance/KIRBY_COPY_NATIVE_GAP.md`). The 7,679 failures decode to
+Kirby joint 6 / modelpart 9 LOW — Captain's copy hat — in status
+`SpecialNCopy`. `renderer_adapter_fighter.c:1125-1127` accepts only heads
+**1, 10, 14**; 10 is Link's hat, so **only Link works**. Cause: the trio body's
+bake inherits the head's vertex cache and `KIRBY_TRIO_CONTEXTS` has two entries
+(`generate_nds_native_owners.py:2465`). At PROFILE_LEVEL 0 a rejected root
+**never reaches the screen** — no generic renderer exists — so parts vanish.
+**Canonical passes on LUCK**: it holds Donkey (hat 4) and Samus (hat 8), both
+broken; its CPU Kirby just never copied a non-Link victim. `count=0` describes
+one input trace. Reachable by hand on the shipping menu.
+Fix: bake a trio body per hat (**10 hats x 2 = 20**, not the 3 this roster
+needs), derive the accept set from the table, emit into the deferred hat image
+(zero arena cost). **Do NOT widen the accept set without the bakes** — wrong
+vertex cache = corruption. Catch with a table cross-product in
+`check_native_owner_geometry_closure.py` (seconds, no ROM). Its WORK-H 1,471,552
+is NOT a roster-cost datum — that arm is not drawing.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
 lines, UNMEASURED). SRC's top candidate sized NO-GO. FTR/STG/MISC UNSIZED — size

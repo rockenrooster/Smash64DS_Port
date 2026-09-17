@@ -372,3 +372,31 @@ per-scene bump allocator makes any phase a fresh draw per stage/roster.
 can move WORK-H tens of thousands of ticks; same-ROM route A/B is the only immune
 form.
 
+
+## P2-2p8 performance classes, all measured (2026-09-17)
+
+Board text at archival; full evidence under `artifacts/performance/2026-09-16_*`:
+
+**THE GAP IS STALL, NOT WORK** (`…_stall-budget/`). Non-idle 1,616,422 =
+**576,491 issue + 1,039,931 stall (64.3%)**; data 560,739 vs icache 155,651.
+**Issue floor alone is 543,509 UNDER the gate** — no arithmetic deletion can
+close it; it asks a **47.7% stall cut**. Five lanes failed identically, trading
+issue for fetch.
+**STALL class sized** (`…_dtcm-falsifier/`): `FTParts` packing **zero**; `DObj`
+packing is the real 8.1% target, **blocked by pristine `decomp/`**; DTCM works
+(-10,176) but usable DTCM is **1,992 B not 5,704**. Reverted.
+**THE DCACHE CHANGES THE AXIS** (`…_dcache-value/`). Cache OFF: WORK-H
+1,588,928 -> **2,983,488**, so the 4 KB dcache is worth **1,394,560** — more than
+the gap — and captures **71.3%**; residual = data stall **560,739**. **Perfect
+locality = 1,028,189, UNDER the gate by 91,811**: the only class whose ceiling
+(**113%**) exceeds the requirement (others 2.4-18%).
+**PLACEMENT: CLOSED as a lever** (`…_placement-hazard/`; detail archived). One
+4 KB array's address swings WORK-H **+42,240 / STG +44,096**, third sighting and
+second at ~50,000. The shipped layout is the **BEST of five arms** — DO NOT
+REOPEN. `45,760 > 23,691` was **never a contradiction**: one is stall ON
+statics, the other stall caused by MOVING them, and a relocation is paid by what
+it **EVICTS**; the locality ranking is intact. **Arena now 1,024 B aligned** so
+`.data`/`.bss` resizes stop re-phasing the heap (free, -384, fixes 23%).
+Residual is **variance risk only**: any static-size change can move WORK-H tens
+of thousands of ticks; same-ROM route A/B is the only immune form.
+
