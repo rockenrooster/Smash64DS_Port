@@ -2811,17 +2811,22 @@ typedef struct NDSFtPartsFlatWalk
     FTParts *parts[NDS_FTPARTS_FLAT_MAX];
 } NDSFtPartsFlatWalk;
 
-/* P2-2p8 stall class, falsifier arm. The table is in DTCM, which is addressable
- * zero-wait memory rather than a cache: it cannot evict anything and cannot be
- * evicted. That is the exact mechanism N05.03 died to -- widening this table to
- * 16 slots cured its 49.7% miss rate and deleted 15,040 from SRC, but 3,264
- * bytes is 80% of the 4 KB data cache and the eviction cost STG +51,520.
- * Moving the table out of cacheable memory makes that failure structurally
- * impossible, and at the SHIPPED four slots it changes nothing else, so STG is
- * a clean read on whether this table was the evictor at all. If STG does not
- * improve, widening cannot pay either and the lane is dead. */
-static NDSFtPartsFlatWalk sNdsFtPartsFlat[NDS_FTPARTS_FLAT_SLOTS]
-    __attribute__((section(".dtcm.bss"), aligned(32)));
+/* P2-2p8 stall class: this table was MEASURED in DTCM and is deliberately not
+ * left there. Moving it read WORK-H -10,176, STG -7,936 and SRC -4,992 with
+ * every divergence witness identical, so the direction is right -- DTCM is
+ * addressable zero-wait memory, so unlike the 16-slot main-RAM table that lost
+ * N05.03 it can neither evict the stage nor be evicted. But -10,176 is below
+ * the 14,080-tick cross-build significance floor, and the placement costs 1,584
+ * of the 1,992 usable DTCM bytes this build actually has.
+ *
+ * 1,992, not the 5,704 that `dtcm LENGTH = 0x3e80` implies: linker/nds_hot_text.ld
+ * asserts __dtcm_bss_end <= 0x02ff3000 against the boot stack's measured
+ * low-water mark, so DTCM data has a 12,288-byte ceiling. Widening to 16 slots
+ * needs 1,680 bytes more than remain, so the lane cannot be finished here.
+ * Spending 80% of the remaining budget on an unproven 2% would block every
+ * future DTCM candidate. Evidence:
+ * artifacts/performance/2026-09-16_p2-2p8-dtcm-falsifier/. */
+static NDSFtPartsFlatWalk sNdsFtPartsFlat[NDS_FTPARTS_FLAT_SLOTS];
 
 /* ftMainSetStatus can materialize/eject/re-parent hidden fighter DObjs without
  * changing either the fighter root pointer or the taskman heap generation. The
