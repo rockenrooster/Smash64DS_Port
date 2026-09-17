@@ -1,4 +1,4 @@
-# Kirby's Vulcan Jab is blocked on a texture format the DS does not have
+# Kirby's Vulcan Jab: the format blocker is SOLVED, the arena page is not
 
 **Attempted, blocked, reverted.** P2-3f53's *most self-contained* remaining item
 turns out not to be self-contained, and the reason is specific.
@@ -90,3 +90,67 @@ generator or the runtime.
 
 None of the three is now a wiring change. That is worth stating plainly, because
 the row's summary still implies they are.
+
+
+## RESOLVED: RGBA32 -> A5I3 works. The arena still refuses it.
+
+Owner 2026-09-17: *"A DS Native lossy format is always fine."* So the format
+blocker above is gone, and it was the easy half.
+
+**A5I3 was the right pick and it was measured, not argued.** On this exact
+texture (512 texels, 51 distinct RGB, 64 distinct alpha):
+
+| format | alpha levels | max alpha error | bytes |
+|---|---:|---:|---:|
+| source RGBA32 | 64 used | — | 2,048 |
+| **A5I3** | 32 | **4.1/255** | **512 + 16 palette** |
+| A3I5 | 8 | 18.1/255 | 512 + 16 |
+| RGBA16 | 2 | **125/255** | 1,024 |
+
+A5I3 also keeps the colour, which I initially got wrong: **it is not alpha plus
+intensity.** Its three bits index a real eight-entry 15-bit palette, so with an
+alpha-weighted palette it holds the white core, the orange ramp and the blue
+fringe at **11.0/255** alpha-weighted RMS. A naive frequency-seeded palette
+scores 30.5 because white is 53% of the texels and collapses five of eight
+entries — **the palette builder is the part that needs care, not the format.**
+
+Implemented: `SIZ_32B` defined, `(FMT_RGBA, SIZ_32B)` admitted, an RGBA32 ->
+A5I3 converter with deterministic greedy farthest-point seeding (a generator
+must be byte-reproducible, so no RNG), both roots appended at ordinals 62-63,
+and the runtime lookup and admission wired. It compiled to **2 groups, 14
+triangles**, and the A5I3 payload emitted at **204 bytes**.
+
+One further correction along the way: the I4 root's combine `FCFFFFFF FFFDF2F9`
+is **rgb = PRIMITIVE, alpha = TEXEL0**, which the runtime already names at
+`nds_renderer_preamble.c:1992` for the rebirth halo beam. My hand-rolled
+`SETCOMBINE` decoder read it as `RGB = TEXEL0, ALPHA = 0` and was simply wrong.
+Because the real combine shares CatchSwirl's property — texel RGB is not a
+colour input — the existing white-palette I4 path is already correct for it, so
+the guard could widen to exactly those two combines and still fail loudly on
+anything that does read texel RGB.
+
+### And then the arena refused it
+
+| | control | Vulcan Jab |
+|---|---:|---:|
+| `gNdsTaskmanArenaChosenSize` | 1,351,424 | **1,347,328** (−4,096) |
+| `gNdsTaskmanArenaAllocFailCount` | 84 | **85** |
+| `gNdsRendererNativeFailure.count` | 0 | **25** |
+
+Same mechanism as the Yoshi egg, same reject signature, reverted the same way.
+
+**This sharpens the headroom measurement badly.** Three data points now:
+
+- egg, ~1 KB of packet data → **crossed** a page
+- flat-cache shrink, −768 B returned → did **not** cross back
+- Vulcan Jab, **204 bytes** of texels plus 2 roots, 2 groups, 42 vertices →
+  **crossed**
+
+So the remaining headroom is not "under 1 KB". It is under a couple of hundred
+bytes, and the four-CPU build is sitting essentially **on** the page edge.
+
+**The consequence is general: no new effect owner of any size can land until
+resident budget is returned.** That makes the per-roster emitter
+(`…/2026-09-17_p2-2p8-entry-effect-roster-residency/`, 8,458 B returnable, 0
+shared) a hard prerequisite rather than an optimisation, for the egg, for Vulcan
+Jab and for Pikachu Thunder alike.
