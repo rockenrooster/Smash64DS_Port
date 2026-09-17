@@ -145,11 +145,34 @@ weaken the conclusion below; it removes the exception to it.
 
 ## What is worth doing next, in order
 
-- Keep the two halves the 09-16 sizing salvaged, both reachable without a
-  pose/transform rewrite: the validity/hierarchy walk (**−10,000 to −15,000**,
-  and its recorded falsifier is wrong in the favourable direction — the walk is
-  59% and the clear 14%, so it deletes pointer-chase dcache stalls rather than
-  issue slots) and the FTR-side copy/convert (**≤ −30,000**).
+**CORRECTION — the validity/hierarchy walk is NOT available, and I cited it
+three times as if it were.** The 09-16 SRC candidate sizing recommended it at
+**−10,000 to −15,000**, and I repeated that in this artifact, in two commit
+messages and to the owner. A *second* 09-16 artifact,
+`…/2026-09-16_p2-2p8-n0503-flat-cache/`, had already **measured** it across four
+arms on one instrument with every divergence witness identical:
+
+| arm | SRC P50 | STG P50 | **WORK-H P50** |
+|---|---:|---:|---:|
+| 4 slots (shipped) | 558,656 | 344,960 | 1,595,328 |
+| 16 slots | **−15,040** | **+51,520** | **+33,984** |
+| 32 slots | −15,104 | +55,360 | +40,896 |
+
+The −15,040 is real and lands exactly inside the predicted band. It is then
+**more than cancelled**: the table must reach ≥16 slots to hold its working set,
+16 slots is 3,264 bytes, and that is 80% of the 4 KB ARM9 dcache, so STG — which
+has nothing to do with this cache — pays +51,520. Verdict there: *"the fix
+works, and it cannot be paid for."* The sizing artifact's recommendation was
+superseded by the measurement on the same day, and I propagated the stale half.
+
+**What is actually left, then:**
+
+- The FTR-side copy/convert (**≤ −30,000**), which n0503 does not touch.
+- Shrinking this table rather than growing it. N05.03 reported `Overflows = 0`
+  at `MAX = 48` in two arms, so the shipped `MAX = 96` is headroom nothing
+  reaches: 1,584 → 816 bytes, 39% → 20% of the dcache, no behaviour change and
+  no slot-count change. It moves the dial n0503 proved this lane is sensitive
+  to, in the direction n0503 could not. Being measured now.
 
 ## What this artifact does not claim
 

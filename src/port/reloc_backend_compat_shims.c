@@ -2799,8 +2799,28 @@ _Static_assert((NDS_FTPARTS_FLAT_SLOTS & (NDS_FTPARTS_FLAT_SLOTS - 1u)) == 0u,
  * returns NULL and the caller falls back to the unflattened child loop -- but
  * it silently reinstates the slow path, so gNdsFtPartsFlatOverflows counts it
  * and gNdsFtPartsFlatCountMax reports the real high-water subtree size. */
+/* THE CAPACITY BOUND IS NOT A LEVER, AND THIS LANE IS NOW THREE-FOR-THREE
+ * NEGATIVE. Note the effective knob is the Makefile: it emits
+ * NDS_FTPARTS_FLAT_MAX into the force-included nds_build_config.h, so the
+ * #ifndef default below never applies to a ROM. Editing only the default
+ * changes nothing, and a measurement taken that way reads identical to its
+ * control -- which is exactly what happened before the knob was found.
+ *
+ *   widen   16 slots   SRC -15,040 but STG +51,520, WORK-H +33,984 -- the
+ *                      table crosses 80% of the 4 KB dcache (N05.03)
+ *   relocate DTCM      WORK-H -10,176, mechanism confirmed, but under the
+ *                      14,080 floor and it costs 1,584 of 1,992 usable DTCM
+ *                      bytes (2026-09-16_p2-2p8-dtcm-falsifier)
+ *   shrink   MAX 48    WORK-H P50 +1,216 / P95 -6,016, and arena size, alloc
+ *                      failures and heap low-water all byte-identical to
+ *                      control (2026-09-17)
+ *
+ * The shrink says something the other two do not: removing 768 bytes of dcache
+ * footprint changed nothing, while removing the whole table to DTCM moved
+ * -10,176. What matters here is whether the table is in the dcache at all, not
+ * how big it is -- so there is no partial credit to collect on size. */
 #ifndef NDS_FTPARTS_FLAT_MAX
-#define NDS_FTPARTS_FLAT_MAX 96u
+#define NDS_FTPARTS_FLAT_MAX 48u
 #endif
 
 typedef struct NDSFtPartsFlatWalk

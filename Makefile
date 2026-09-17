@@ -284,6 +284,16 @@ NDS_FTPARTS_FLAT_SLOTS ?= 4
 # bound, chosen when there were four slots and the table was 1,584 bytes total.
 # Exceeding it is correct but silently returns to the unflattened walk, which
 # gNdsFtPartsFlatOverflows counts and gNdsFtPartsFlatCountMax bounds.
+#
+# STAYS 96. Shrinking it to 48 was built and measured 2026-09-17 and bought
+# NOTHING on any axis: WORK-H P50 +1,216 / P95 -6,016 (both far under the
+# 14,080 cross-build floor), and gNdsTaskmanArenaChosenSize, AllocFailCount and
+# GeneralHeapFreeMin were all BYTE-IDENTICAL to control, because the arena steps
+# in 4,096-byte pages and 768 bytes does not cross one. Every divergence witness
+# matched, so it was a valid arm, not a bad one. Against zero measured benefit
+# it carries a real risk: a subtree over 48 silently reverts to the unflattened
+# walk, and the counter that would catch it (gNdsFtPartsFlatOverflows) has been
+# removed. Reverted.
 NDS_FTPARTS_FLAT_MAX ?= 96
 # P2-2p8 stall budget. 1 disables the ARM9 data cache for the whole run, so a
 # single match prices what the 4 KB dcache is worth today. This is the cheapest
