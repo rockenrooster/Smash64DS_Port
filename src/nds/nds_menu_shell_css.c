@@ -2197,14 +2197,20 @@ static void ndsMenuShellCssWalkRestoreGate(void)
  * this walk once already. Assigning the slot never touches the cursor or a
  * cell, so it cannot be refused and cannot drift with the roster.
  *
- * The hold is sized from the two things that stand between a kind change and a
- * drawn preview: NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS (13) before a closure load
- * may even begin, then the residency budget of ONE action a tic through
- * retire/load/prepare (the probe measured retry=3 per acquire). 48 tics clears
- * both with margin. START is suppressed until the tour finishes so the walk
- * cannot leave mid-tour, and the existing snapshot still restores Mario/Fox
- * afterwards -- what the gate commits is unchanged. */
-#define NDS_CSS_WALK_TOUR_HOLD_TICS 48u
+ * THE TOUR IS THE WALK NOW, not a prologue to it (owner, 2026-09-17: "the new
+ * walk should replace the old CSS walk, with a faster pace"). The wander was
+ * 1,651 presented frames to select four kinds; the tour is 24 tics a kind and
+ * then presses its own START, so a nine-fighter rung spends roughly 220 frames
+ * to select all nine. That is both the faster pace and better coverage, and it
+ * makes a per-rung probe cheap enough to bisect the roster with.
+ *
+ * 24 tics is the floor plus margin, not a guess: NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS
+ * is 13 before a closure load may begin, the residency budget then spends ONE
+ * action a tic through retire/load/prepare (measured retry=3 per acquire), and
+ * a few frames after that actually submit triangles. Raise it if CSSTOUR ever
+ * shows a kind bit set with no triangles for a fighter that is known good --
+ * the counter says which, so this number never has to be guessed at again. */
+#define NDS_CSS_WALK_TOUR_HOLD_TICS 24u
 
 /* Canonical declaration is include/nds/nds_startup.h:2401. This file is
  * textually included by nds_menu_shell.c, which pulls only the shell's own
@@ -2224,6 +2230,10 @@ static u32 sCssWalkTourTriBase;
 __attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourKindMask;
 __attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourDrewMask;
 __attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourDoneCount;
+/* Non-zero means the tour finished but the restored gate was not ready, so the
+ * lap fell back to the old input path. That is a defect in the snapshot, not a
+ * tolerable outcome, and it must read 0. */
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkTourNotReadyCount;
 __attribute__((used)) volatile u32
     gNdsMenuShellCssWalkTourTriangles[NDS_CSS_PORTRAITS];
 
@@ -2283,6 +2293,26 @@ static u32 ndsMenuShellCssWalkTourStep(void)
     {
         sCssWalkTourFinished = 1u;
         gNdsMenuShellCssWalkTourDoneCount++;
+        /* Every fighter has been on screen, so the walk is done with this
+         * screen: restore the canonical gate and press its own START rather
+         * than handing back to a wander that exists only to burn tics. The
+         * walk's own START tap was swallowed while the tour held the screen,
+         * so waiting for another one would park here forever. */
+        ndsMenuShellCssWalkRestoreGate();
+        if ((ndsMenuShellCssCheckReady() != FALSE) &&
+            (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
+        {
+            ndsMenuShellCssCue(NDS_CSS_VOICE_CHEER);
+            ndsMenuShellCssIdleSlotsNot();
+            sCssStartWait = (u32)NDS_CSS_START_WAIT;
+            gNdsMenuShellCssStartCount++;
+            ndsMenuShellCssPopulate();
+            return TRUE;
+        }
+        /* Not ready, or too early to arm: fall back to the ordinary input path
+         * rather than stranding the lap. This counts, because a restored gate
+         * that is not ready means the snapshot itself is wrong. */
+        gNdsMenuShellCssWalkTourNotReadyCount++;
         return FALSE;
     }
 

@@ -470,7 +470,7 @@ try {
         # scripted run able to notice, because the walk only ever selected the
         # four kinds its pixel wander happened to land on. `tri` is per kind in
         # FTKind order so the culprit names itself.
-        'printf "CSSTOUR %d kind=%x drew=%x done=%u\n", $n, gNdsMenuShellCssWalkTourKindMask, gNdsMenuShellCssWalkTourDrewMask, gNdsMenuShellCssWalkTourDoneCount',
+        'printf "CSSTOUR %d kind=%x drew=%x done=%u notready=%u\n", $n, gNdsMenuShellCssWalkTourKindMask, gNdsMenuShellCssWalkTourDrewMask, gNdsMenuShellCssWalkTourDoneCount, gNdsMenuShellCssWalkTourNotReadyCount',
         'printf "CSSTOURTRI %d %u %u %u %u %u %u %u %u %u %u %u %u\n", $n, gNdsMenuShellCssWalkTourTriangles[0], gNdsMenuShellCssWalkTourTriangles[1], gNdsMenuShellCssWalkTourTriangles[2], gNdsMenuShellCssWalkTourTriangles[3], gNdsMenuShellCssWalkTourTriangles[4], gNdsMenuShellCssWalkTourTriangles[5], gNdsMenuShellCssWalkTourTriangles[6], gNdsMenuShellCssWalkTourTriangles[7], gNdsMenuShellCssWalkTourTriangles[8], gNdsMenuShellCssWalkTourTriangles[9], gNdsMenuShellCssWalkTourTriangles[10], gNdsMenuShellCssWalkTourTriangles[11]',
         # CSS preview rebuilds are allowed to be expensive source-object work,
         # but once Battle Select BGM is live they must not touch NitroFS. These
