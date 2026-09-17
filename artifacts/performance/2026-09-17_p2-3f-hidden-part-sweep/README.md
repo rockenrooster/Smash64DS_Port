@@ -127,6 +127,27 @@ HIDDEN_PART_ROOT_COVERAGE_OK every drawing hidden part a motion installs is carr
 Known limitation, stated rather than hidden: it follows `Subroutine` but not
 `Goto`, so a model-part write reachable only through a jump would be missed.
 
+## The third mechanism, checked for completeness
+
+A root-count change has one more source: `ftMotionCommandHideModelPartAll`,
+which collapses the live vector to whatever a following `SetModelPartID`
+re-enables. It exists **seven times in the whole game** and every one is already
+carried:
+
+| file | motions | program |
+|---|---|---|
+| `228_KirbyMainMotion.c` | `0x1B3C`, `0x1B6C`, `StoneStartAir` ×2, `0x1B9C`, `StoneGround_0x1BB4` | Kirby Stone, one root `0x18A60` |
+| `216_SamusMainMotion.c` | `dSamusMainMotion_0x0000` | Samus MorphUnfold, one root |
+
+There is no gap, but there is a caveat worth recording before anyone writes a
+checker for this one: **`dSamusMainMotion_0x0044` does not hide anything.** It
+is `SetModelPartID(6, 2)` alone, and its one-root MorphBall vector is only
+correct because `0x0000` already hid everything in an earlier motion. The hide
+persists across the transition. A per-motion checker cannot see that and would
+report MorphBall as a 14-root vector with no program — a false positive. Any
+check of this mechanism has to model the hide's lifetime, which is why the
+coverage check above deliberately stops at the anim-desc mask.
+
 ## A constant that does not match its source
 
 `SAMUS_CATCH_HIDDENPART_IDS` is `range(3, 12)` while the Catch mask

@@ -299,6 +299,21 @@ try {
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-native-owner-wiring.py') `
         -Arguments @()
+    # The two source-to-bake resolvers, and they are here for the reason the
+    # note above already gives. Both exist because a fighter vanished in front
+    # of a human and no check could have caught it: the mutation is an
+    # ftMotionCommand in decomp reloc data, the bake is a (binding, offset)
+    # tuple in the generator, and no string search relates them. Kirby's copy
+    # was broken for ten of eleven victims, Yoshi's grab and B attack made the
+    # whole fighter vanish, and Samus's forward smash would have. The first was
+    # written 2026-09-17 and was invoked by nothing at all until now -- exactly
+    # the shape this block was created to stop. 0.5 s and 1.2 s, no ROM.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'fighters\check_model_part_mutation_coverage.py') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'fighters\check_hidden_part_root_coverage.py') `
+        -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\test_preview_shared_pin_disjointness.py') `
         -Arguments @()
