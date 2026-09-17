@@ -58,28 +58,27 @@ subtracted ALL data stall. Only **line fills** are layout-removable =
 **424,336 = 90.6%** — a PERFECT cache still leaves **44,208 OVER**.
 **RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`); banked + sized =
 **146,678 = 31.3%** of gap.
-**CORRECTION:** "fewer joints" is ONE lever (`gNdsGCDrawsActiveMax` counts live
-**DObjs**; for a fighter a DObj IS a joint) and it is **SPENT**
-(`…_p2-2p8-joint-cap-ladder/`): the cap **aborts the CPU AI**
-(`ftcomputer.c:7970`), and deleting **94.7%** of pose evaluation gave **no
-WORK-H reduction**. Order 4 is the only class large enough and is
-**owner-forbidden** — **owner decision, not engineering**. Last lane SIZED: the
-67,858 literal-pool bucket gives **11,449** packed. Placement CLOSED.
-**KIRBY COPY FIXED** (`…_p2-3f47-kirby-copy-hats/`): all 11 victims draw,
-resident **+0**, peak **28,848 → 3,071 B**. OWED: per-hat look.
-**HIDDEN-PART CLASS CLOSED**: 26 owners swept, only **3** drawing hidden parts
-exist; Yoshi grab (2 programs) + Samus F-smash (program 4) covered, checker
-GREEN. `…_p2-3f-hidden-part-sweep/`. OWED: captures.
+**JOINT-CAP LANE SPENT** (`…_p2-2p8-joint-cap-ladder/`): the cap **aborts the
+CPU AI**, and deleting **94.7%** of pose evaluation gave **no WORK-H
+reduction**. Order 4 is the only class large enough and is **owner-forbidden**.
+Literal-pool bucket sized at **11,449** packed. Placement CLOSED.
+**KIRBY COPY FIXED** (`…_p2-3f47-kirby-copy-hats/`). OWED: per-hat look.
+**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 drawing hidden parts exist,
+all covered, checker GREEN. `…_p2-3f-hidden-part-sweep/`. OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
-`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win** — 3.1x the floor, 9.2% of
-gap, P95 −43,072, 3 runs. Linker script only, **no source change**.
-**Per-PC CONFIRMS it**: identical 3,364.0 accesses/fr both arms, stall
-**34,121 → 9,079 (−73.4%)**. The `ALIGN(4)` that knocked `__irq_table` off its
-boundary is fixed, re-measured **+384 = noise**, gate GREEN. Non-zero
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap, P95
+−43,072, 3 runs, linker script only. Per-PC confirms stall
+**34,121 → 9,079**. Non-zero
 exit is a **window** assertion, NOT correctness: 21 ring stops at identical
 frames, identical `PacingLogicFrames`, only the first label moves +1. **OWNER:
 one-line call** to compare `startFrame` against the recorded label span.
-**OWNER INPUT 09-16:** `docs/optimization/*` — SRC NO-GO; FTR/STG/MISC UNSIZED
+**OWNER INPUT 09-16:** `docs/optimization/*` — SRC NO-GO; FTR/STG/MISC UNSIZED.
+Now committed (`cd270b735dc`); were untracked.
+**NEW LEVER SIZED: 8,458 B of entry-effect texels in the four-CPU build belong
+to fighters it cannot run**, **0 shared** = **2.1 arena pages**
+(`…_p2-2p8-entry-effect-roster-residency/`). Texels-only lower bound. Unblocks
+egg + Vulcan Jab + Thunder. Cost: ranges are mid-table, so the emitter must
+renumber per config. NOT a tick claim — buys arena headroom, effect untested.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
