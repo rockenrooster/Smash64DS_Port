@@ -60,29 +60,24 @@ line 0; the walk is over `DObj`); `DObj` packing is the real 8.1% target and is
 **blocked by pristine `decomp/`**; DTCM placement **works** (-10,176, STG -7,936,
 witnesses identical) but is under the 14,080 floor and unfinishable — usable DTCM
 is **1,992 B not 5,704** (`linker/nds_hot_text.ld:171`), 1,680 short. Reverted.
-**NOTHING MEASURED REACHES 10% OF THE GAP.** The only unattacked bucket is
-**renderer streaming: 254,344 tk/fr of data stall, 39.5%**. The frame moves
-**~300 KB through a 4 KB dcache** — a working-set VOLUME problem, which neither
-placement nor packing can change. Next action: size that, or take the gate to
-the owner.
-**Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).
-Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT (ledger).
-**Gap:** `1,120,000` = two VBlank intervals; WORK-H P50 1.41x, **92.3% of frames
-miss**; needs **-455,296**.
-**Owner: 30 FPS at four players REQUIRED, NO 30 Hz sim** (-294,016 withdrawn).
-Sacrifice Order: audio (1), visual (2), gameplay (3) more expendable than the
-60 Hz sim (4). Owner 2026-09-16: lab test builds allowed.
-N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement.
-Engaging the 0%-engaged GX compose bank COSTS +22,848 P50; the sampled softfloat
-census **over-attributes 3.0x** — never size from it again.
-**N05.03 CLOSED NO-GO** (`…_p2-2p8-n0503-flat-cache/`): the flat cache is keyed
-per **joint**, so 4 slots miss 49.7% (95.4% hash conflicts); 16 slots fix it
-(**SRC -15,040**) but take 80% of the 4 KB dcache, so **STG +51,520**.
-**THE ARITHMETIC IS CLOSED** for leaf levers: gate needs **-496,382 = 30.7% of
-everything executed**; the profile's top twenty is 502,955. **The per-fighter
-lever is MEASURED and spent** and **SRC's top candidate is SIZED NO-GO** — detail
-for both in `docs/archive/P2_CLOSED_ROWS.md`; evidence in
-`…_p2-2p8-joint-cap-ladder/` and `…_p2-2p8-src-candidate-sizing/`.
+**THE DCACHE MEASUREMENT CHANGES THE AXIS** (`…_p2-2p8-dcache-value/`). Running
+the match with the ARM9 data cache OFF: WORK-H P50 1,588,928 -> **2,983,488**.
+**The 4 KB dcache is worth 1,394,560 tk/fr** — more than the gap, more than any
+bucket, more than every optimization attempted. It already captures **71.3%** of
+the available benefit; the residual is exactly the measured data stall,
+**560,739**.
+**WORK-H with perfect data locality = 1,028,189, UNDER the 1,120,000 gate by
+91,811.** So data locality is the **first class whose ceiling (113% of the gap)
+EXCEEDS the requirement** — every other class measured 2.4-18%. It also refutes
+"renderer streaming is compulsory" as a whole-frame claim: compulsory traffic
+would make the cache worth ~550,000, not 1,394,560.
+**Next action: raise data-cache hit rate.** Three barely-used instruments —
+VRAM as scattered-data memory (nonsequential read **5 cycles vs main RAM's 10**,
+128 KiB/bank vs DTCM's 1,992 B free; A/B textures, C/D main BG today), **address-
+ordered traversal** (sequential 32-bit is **2 vs 10** on identical bytes), and
+**MPU regions 2 and 3 are free**. Residual is diffuse (renderer 254,344, diffuse
+158,777, object graph 84,304, pose 53,931), so this needs a broad layout change,
+not one fix. 100% hit rate is NOT achievable — the ceiling is a bound, not a plan.
 Checks: **Boundary GREEN all three arms**; both targets build.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
