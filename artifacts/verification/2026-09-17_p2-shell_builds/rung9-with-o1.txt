@@ -1,0 +1,366 @@
+0x021148ac in get_fat (clst=8911, obj=<optimized out>) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:1180
+Breakpoint 1 at 0x208e610: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 270.
+MSSCENE 1 curr=1 prev=27 enters=1 exits=1 rej=0 unreg=1 mism=0
+MSSHELL 1 screen=4294967295 startup=1 title=0/0 mode=0/0 vs=0/0 css=0/0 sss=0/0
+MSFRAMES 1 f0=0 f1=0 f2=0 f3=0 f4=0
+MSFPSHUD 1 refresh=0
+CSSPHASE 1 samples=0 update=0/0 sync=0/0 preview=0/0
+MSMAX 1 w0=0 w1=0 w2=0 w3=0 w4=0
+MSMAXAT 1 f0=0/c0 f1=0/c0 f2=0/c0 f3=0/c0 f4=0/c0
+MSMAXRES 1 load=0 finish=0 retire=0 dwell=0 payload=0
+MSENTER 1 e0=0 e1=0 e2=0 e3=0 e4=0
+MSWORK0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB0 1 0 0 0 0 max=0
+MSWORK1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB1 1 0 0 0 0 max=0
+MSWORK2 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB2 1 0 0 0 0 max=0
+MSWORK3 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB3 1 0 0 0 0 max=0
+MSWORK4 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB4 1 0 0 0 0 max=0
+MSWORK9 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB9 1 0 0 0 0 max=0
+MSWORK10 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB10 1 0 0 0 0 max=0
+MSWORK11 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB11 1 0 0 0 0 max=0
+MSWORK12 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB12 1 0 0 0 0 max=0
+MSFLOW 1 trans=0 input=0 denied=0 commit=0 rule=0 time=0 stocks=0 walk=0 loops=0
+MSTRANS 1 0000 0000 0000 0000 0000 0000 0000 0000
+MSINPUT 1 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000
+CSSPOS 1 x=0 y=0 status=0
+CSSACT 1 grab=0 drop=0 refuse=0 recall=0 kind=0 mode=0 doors=0 level=0 start=0 denied=0 back=0
+CSSFTR 1 frames=0 draws=0 sel=0 vis=0 exit=0 p0=0.000000/0/0 p1=0.000000/0/0 renderframe=0
+CSSFTRFREE 1 p0=0/0.000000/0/0 p1=0/0.000000/0/0
+CSSFTRKIND 1 mask=0 mario=0/0/0 fox=0/0/0 luigi=0/0/0 samus=0/0/0
+CSSTOUR 1 kind=0 drew=0 done=0 notready=0
+CSSTOURTRI 1 0 0 0 0 0 0 0 0 0 0 0 0
+CSSIO 1 hdr=3 payload=1 ownerload=0 ownerbytes=0 animhit=0 animmiss=0 warm=0/0 arena=0/0 reservefail=0 warmfail=0 reject=0 overflow=0
+CSSRES 1 try=00000000 ready=00000000 main=00000000 sub=00000000 anim=00000000 owner=00000000
+CSSREBUILDIO 1 rebuild=0 payload=0 max=0
+CSSRESACT 1 acq=0 hit=0 cached=0 load=0 finish=0 payload=0 max=0 retry=0 fail=0
+CSSRESREL 1 rel=0 last=0 retire=0/0 reuse=0 exit=0 residual=0 dwell=0/0/0/0
+CSSPKT 1 hit=0 rec=0 fault=0 decline=0 wordsmax=0 m0=0 m1=0 m2=0 m3=0 m4=0 m5=0 roots=0 tex=0
+CSSBGMFENCE 1 suspend=0 resume=0 seammiss=0 error=0
+CSSCOMMIT 1 n=0 s0=000000 s1=000000 s2=000000 s3=000000
+CSSCFG 1 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3
+CSSXFER 1 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3 pl=1 cp=1
+CSSLIVE 1 none
+CSSCUE 1 cues=0 lastid=0 announce=0
+SSSPOS 1 slot=0 gkind=00 enters=0
+SSSACT 1 move=0 blocked=0 confirm=0 back=0 cues=0 lastid=0
+SSSCOMMIT 1 n=0 gkind=00 slot=00 rand=0 fallback=0
+SSSCFG 1 cfg=06 scene=06 default=06 maps=00 stagesel=1
+MSKIT 1 enters=0 rej=0 exits=0 opens=0 bytes=0 hash=00000000 mismatch=0 readfail=0
+MSDRAW 1 compose=0 overflow=0 commit=0 visible=0
+MSSURF 1 open=0 blit=0 bytes=0 hash=00000000 mismatch=0 readfail=0 nolayer=0 cache=0 draw=0 erase=0 ticks=0
+MSANIM 1 arm=0 settle=0 fail=0 pose=0 frames=0 ticks=0 maxticks=0 maxpose=0 bytes=0 draw=0 erase=0
+MSSFX 1 move=0 confirm=0 back=0 value=0 start=0 lastid=0
+MSMISS 1 ring=0 id0=0 c0=0 id1=0 c1=0 id2=0 c2=0 id3=0 c3=0 id4=0 c4=0 id5=0 c5=0 id6=0 c6=0 id7=0 c7=0 id8=0 c8=0 id9=0 c9=0 id10=0 c10=0 id11=0 c11=0 id12=0 c12=0 id13=0 c13=0 id14=0 c14=0 id15=0 c15=0
+MSAUDIOWORK 1 refills=0 streamed=0 bps=0 elapsed=0 loops=0 fgmcalls=0 fgmfail=0 fgmloaded=1
+MSPOSE 1 binds=0 unbinds=0 full=0 claims=0 releases=0 live=0 livemax=0
+MSBGM 1 playing=0 track=0 calls=0 stops=0 looping=0 streambytes=0 modesel=0 pupupu=0 winmario=0 winfox=0 results=0 bsel=0 unsupported=0
+MSARENABASE 1 base=00000000 size=0 mism=0
+MSREMATCH 1 rematch=0 press=0 pad=0000 seen=0000 tap=0000 poll=0
+MSWALK 1 hops=absent
+MSARENA 1 k=27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSHIGH 1 202444,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSFREE 1 1009716,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSSCENE 2 curr=7 prev=1 enters=2 exits=2 rej=0 unreg=1 mism=0
+MSSHELL 2 screen=4294967295 startup=1 title=1/1 mode=0/0 vs=0/0 css=0/0 sss=0/0
+MSFRAMES 2 f0=150 f1=0 f2=0 f3=0 f4=0
+MSFPSHUD 2 refresh=6
+CSSPHASE 2 samples=0 update=0/0 sync=0/0 preview=0/0
+MSMAX 2 w0=654144 w1=0 w2=0 w3=0 w4=0
+MSMAXAT 2 f0=13/c0 f1=0/c0 f2=0/c0 f3=0/c0 f4=0/c0
+MSMAXRES 2 load=0 finish=0 retire=0 dwell=0 payload=0
+MSENTER 2 e0=14399360 e1=0 e2=0 e3=0 e4=0
+MSWORK0 2 103 1 7 1 1 1 2 1 3 3 6 3 7 6 3 2
+MSVB0 2 149 1 0 0 max=2
+MSWORK1 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB1 2 0 0 0 0 max=0
+MSWORK2 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB2 2 0 0 0 0 max=0
+MSWORK3 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB3 2 0 0 0 0 max=0
+MSWORK4 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB4 2 0 0 0 0 max=0
+MSWORK9 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB9 2 0 0 0 0 max=0
+MSWORK10 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB10 2 0 0 0 0 max=0
+MSWORK11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB11 2 0 0 0 0 max=0
+MSWORK12 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB12 2 0 0 0 0 max=0
+MSFLOW 2 trans=1 input=1 denied=0 commit=0 rule=0 time=0 stocks=0 walk=1 loops=0
+MSTRANS 2 0007 0000 0000 0000 0000 0000 0000 0000
+MSINPUT 2 000020 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000
+CSSPOS 2 x=0 y=0 status=0
+CSSACT 2 grab=0 drop=0 refuse=0 recall=0 kind=0 mode=0 doors=0 level=0 start=0 denied=0 back=0
+CSSFTR 2 frames=0 draws=0 sel=0 vis=0 exit=0 p0=0.000000/0/0 p1=0.000000/0/0 renderframe=0
+CSSFTRFREE 2 p0=0/0.000000/0/0 p1=0/0.000000/0/0
+CSSFTRKIND 2 mask=0 mario=0/0/0 fox=0/0/0 luigi=0/0/0 samus=0/0/0
+CSSTOUR 2 kind=0 drew=0 done=0 notready=0
+CSSTOURTRI 2 0 0 0 0 0 0 0 0 0 0 0 0
+CSSIO 2 hdr=7 payload=181 ownerload=0 ownerbytes=0 animhit=0 animmiss=0 warm=0/0 arena=0/0 reservefail=0 warmfail=0 reject=0 overflow=0
+CSSRES 2 try=00000000 ready=00000000 main=00000000 sub=00000000 anim=00000000 owner=00000000
+CSSREBUILDIO 2 rebuild=0 payload=0 max=0
+CSSRESACT 2 acq=0 hit=0 cached=0 load=0 finish=0 payload=0 max=0 retry=0 fail=0
+CSSRESREL 2 rel=0 last=0 retire=0/0 reuse=0 exit=0 residual=0 dwell=0/0/0/0
+CSSPKT 2 hit=0 rec=0 fault=0 decline=0 wordsmax=0 m0=0 m1=0 m2=0 m3=0 m4=0 m5=0 roots=0 tex=0
+CSSBGMFENCE 2 suspend=0 resume=0 seammiss=0 error=0
+CSSCOMMIT 2 n=0 s0=000000 s1=000000 s2=000000 s3=000000
+CSSCFG 2 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3
+CSSXFER 2 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3 pl=1 cp=1
+CSSLIVE 2 none
+CSSCUE 2 cues=0 lastid=0 announce=0
+SSSPOS 2 slot=0 gkind=00 enters=0
+SSSACT 2 move=0 blocked=0 confirm=0 back=0 cues=0 lastid=0
+SSSCOMMIT 2 n=0 gkind=00 slot=00 rand=0 fallback=0
+SSSCFG 2 cfg=06 scene=06 default=06 maps=00 stagesel=1
+MSKIT 2 enters=1 rej=0 exits=1 opens=1 bytes=66496 hash=2482527c mismatch=0 readfail=0
+MSDRAW 2 compose=0 overflow=0 commit=1 visible=0
+MSSURF 2 open=4 blit=1 bytes=304444 hash=a9ebefb2 mismatch=0 readfail=0 nolayer=0 cache=1 draw=3 erase=3 ticks=9522048
+MSANIM 2 arm=1 settle=1 fail=0 pose=51 frames=47 ticks=15425280 maxticks=651968 maxpose=19 bytes=77620 draw=1083433 erase=1051504
+MSSFX 2 move=0 confirm=0 back=0 value=0 start=1 lastid=157
+MSMISS 2 ring=0 id0=0 c0=0 id1=0 c1=0 id2=0 c2=0 id3=0 c3=0 id4=0 c4=0 id5=0 c5=0 id6=0 c6=0 id7=0 c7=0 id8=0 c8=0 id9=0 c9=0 id10=0 c10=0 id11=0 c11=0 id12=0 c12=0 id13=0 c13=0 id14=0 c14=0 id15=0 c15=0
+MSAUDIOWORK 2 refills=0 streamed=0 bps=0 elapsed=0 loops=0 fgmcalls=1 fgmfail=0 fgmloaded=1
+MSPOSE 2 binds=0 unbinds=0 full=0 claims=0 releases=0 live=0 livemax=0
+MSBGM 2 playing=0 track=0 calls=0 stops=2 looping=0 streambytes=0 modesel=0 pupupu=0 winmario=0 winfox=0 results=0 bsel=0 unsupported=0
+MSARENABASE 2 base=022b4c00 size=1212160 mism=0
+MSREMATCH 2 rematch=0 press=0 pad=0000 seen=0000 tap=0000 poll=0
+MSWALK 2 hops=absent
+MSARENA 2 k=27,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSHIGH 2 202444,548720,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSFREE 2 1009716,663440,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSSCENE 3 curr=9 prev=7 enters=3 exits=3 rej=0 unreg=1 mism=0
+MSSHELL 3 screen=4294967295 startup=1 title=1/1 mode=1/1 vs=0/0 css=0/0 sss=0/0
+MSFRAMES 3 f0=150 f1=301 f2=0 f3=0 f4=0
+MSFPSHUD 3 refresh=17
+CSSPHASE 3 samples=0 update=0/0 sync=0/0 preview=0/0
+MSMAX 3 w0=654144 w1=212352 w2=0 w3=0 w4=0
+MSMAXAT 3 f0=13/c0 f1=30/c0 f2=0/c0 f3=0/c0 f4=0/c0
+MSMAXRES 3 load=0 finish=0 retire=0 dwell=0 payload=0
+MSENTER 3 e0=14399360 e1=8243456 e2=0 e3=0 e4=0
+MSWORK0 3 103 1 7 1 1 1 2 1 3 3 6 3 7 6 3 2
+MSVB0 3 149 1 0 0 max=2
+MSWORK1 3 291 1 6 1 0 1 1 0 0 0 0 0 0 0 0 0
+MSVB1 3 301 0 0 0 max=1
+MSWORK2 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB2 3 0 0 0 0 max=0
+MSWORK3 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB3 3 0 0 0 0 max=0
+MSWORK4 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB4 3 0 0 0 0 max=0
+MSWORK9 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB9 3 0 0 0 0 max=0
+MSWORK10 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB10 3 0 0 0 0 max=0
+MSWORK11 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB11 3 0 0 0 0 max=0
+MSWORK12 3 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB12 3 0 0 0 0 max=0
+MSFLOW 3 trans=2 input=3 denied=0 commit=0 rule=0 time=0 stocks=0 walk=3 loops=0
+MSTRANS 3 0007 0109 0000 0000 0000 0000 0000 0000
+MSINPUT 3 000020 010008 010010 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000 000000
+CSSPOS 3 x=0 y=0 status=0
+CSSACT 3 grab=0 drop=0 refuse=0 recall=0 kind=0 mode=0 doors=0 level=0 start=0 denied=0 back=0
+CSSFTR 3 frames=0 draws=0 sel=0 vis=0 exit=0 p0=0.000000/0/0 p1=0.000000/0/0 renderframe=0
+CSSFTRFREE 3 p0=0/0.000000/0/0 p1=0/0.000000/0/0
+CSSFTRKIND 3 mask=0 mario=0/0/0 fox=0/0/0 luigi=0/0/0 samus=0/0/0
+CSSTOUR 3 kind=0 drew=0 done=0 notready=0
+CSSTOURTRI 3 0 0 0 0 0 0 0 0 0 0 0 0
+CSSIO 3 hdr=7 payload=289 ownerload=0 ownerbytes=0 animhit=0 animmiss=0 warm=0/0 arena=0/0 reservefail=0 warmfail=0 reject=0 overflow=0
+CSSRES 3 try=00000000 ready=00000000 main=00000000 sub=00000000 anim=00000000 owner=00000000
+CSSREBUILDIO 3 rebuild=0 payload=0 max=0
+CSSRESACT 3 acq=0 hit=0 cached=0 load=0 finish=0 payload=0 max=0 retry=0 fail=0
+CSSRESREL 3 rel=0 last=0 retire=0/0 reuse=0 exit=0 residual=0 dwell=0/0/0/0
+CSSPKT 3 hit=0 rec=0 fault=0 decline=0 wordsmax=0 m0=0 m1=0 m2=0 m3=0 m4=0 m5=0 roots=0 tex=0
+CSSBGMFENCE 3 suspend=0 resume=0 seammiss=0 error=0
+CSSCOMMIT 3 n=0 s0=000000 s1=000000 s2=000000 s3=000000
+CSSCFG 3 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3
+CSSXFER 3 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3 pl=1 cp=1
+CSSLIVE 3 none
+CSSCUE 3 cues=0 lastid=0 announce=0
+SSSPOS 3 slot=0 gkind=00 enters=0
+SSSACT 3 move=0 blocked=0 confirm=0 back=0 cues=0 lastid=0
+SSSCOMMIT 3 n=0 gkind=00 slot=00 rand=0 fallback=0
+SSSCFG 3 cfg=06 scene=06 default=06 maps=00 stagesel=1
+MSKIT 3 enters=2 rej=0 exits=2 opens=2 bytes=66496 hash=2482527c mismatch=0 readfail=0
+MSDRAW 3 compose=0 overflow=0 commit=3 visible=0
+MSSURF 3 open=5 blit=2 bytes=402748 hash=6e58acfc mismatch=0 readfail=0 nolayer=0 cache=1 draw=3 erase=3 ticks=14541632
+MSANIM 3 arm=1 settle=1 fail=0 pose=51 frames=47 ticks=15425280 maxticks=651968 maxpose=19 bytes=77620 draw=1083433 erase=1051504
+MSSFX 3 move=1 confirm=1 back=0 value=0 start=1 lastid=158
+MSMISS 3 ring=0 id0=0 c0=0 id1=0 c1=0 id2=0 c2=0 id3=0 c3=0 id4=0 c4=0 id5=0 c5=0 id6=0 c6=0 id7=0 c7=0 id8=0 c8=0 id9=0 c9=0 id10=0 c10=0 id11=0 c11=0 id12=0 c12=0 id13=0 c13=0 id14=0 c14=0 id15=0 c15=0
+MSAUDIOWORK 3 refills=7 streamed=229376 bps=44099 elapsed=302 loops=0 fgmcalls=3 fgmfail=0 fgmloaded=1
+MSPOSE 3 binds=0 unbinds=0 full=0 claims=0 releases=0 live=0 livemax=0
+MSBGM 3 playing=1 track=44 calls=1 stops=2 looping=1 streambytes=2868410 modesel=1 pupupu=0 winmario=0 winfox=0 results=0 bsel=0 unsupported=0
+MSARENABASE 3 base=022b4c00 size=1212160 mism=0
+MSREMATCH 3 rematch=0 press=0 pad=0000 seen=0000 tap=0000 poll=0
+MSWALK 3 hops=absent
+MSARENA 3 k=27,1,7,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSHIGH 3 202444,548720,248992,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSFREE 3 1009716,663440,963168,0,0,0,0,0,0,0,0,0,0,0,0,0
+MSSCENE 4 curr=16 prev=9 enters=4 exits=4 rej=0 unreg=1 mism=0
+MSSHELL 4 screen=4294967295 startup=1 title=1/1 mode=1/1 vs=1/1 css=0/0 sss=0/0
+MSFRAMES 4 f0=150 f1=301 f2=1660 f3=0 f4=0
+MSFPSHUD 4 refresh=73
+CSSPHASE 4 samples=0 update=0/0 sync=0/0 preview=0/0
+MSMAX 4 w0=654144 w1=212352 w2=651520 w3=0 w4=0
+MSMAXAT 4 f0=13/c0 f1=30/c0 f2=1509/c0 f3=0/c0 f4=0/c0
+MSMAXRES 4 load=0 finish=0 retire=0 dwell=0 payload=0
+MSENTER 4 e0=14399360 e1=8243456 e2=9513856 e3=0 e4=0
+MSWORK0 4 103 1 7 1 1 1 2 1 3 3 6 3 7 6 3 2
+MSVB0 4 149 1 0 0 max=2
+MSWORK1 4 291 1 6 1 0 1 1 0 0 0 0 0 0 0 0 0
+MSVB1 4 301 0 0 0 max=1
+MSWORK2 4 1592 9 30 2 1 9 1 0 0 0 1 2 1 1 2 9
+MSVB2 4 1651 9 0 0 max=2
+MSWORK3 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB3 4 0 0 0 0 max=0
+MSWORK4 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB4 4 0 0 0 0 max=0
+MSWORK9 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB9 4 0 0 0 0 max=0
+MSWORK10 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB10 4 0 0 0 0 max=0
+MSWORK11 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB11 4 0 0 0 0 max=0
+MSWORK12 4 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB12 4 0 0 0 0 max=0
+MSFLOW 4 trans=3 input=14 denied=0 commit=1 rule=1 time=1 stocks=2 walk=14 loops=0
+MSTRANS 4 0007 0109 0210 0000 0000 0000 0000 0000
+MSINPUT 4 000020 010008 010010 020008 020002 020001 020008 020002 020001 020008 020004 020004 020004 020010 000000 000000
+CSSPOS 4 x=0 y=0 status=0
+CSSACT 4 grab=0 drop=0 refuse=0 recall=0 kind=0 mode=0 doors=0 level=0 start=0 denied=0 back=0
+CSSFTR 4 frames=0 draws=0 sel=0 vis=0 exit=0 p0=0.000000/0/0 p1=0.000000/0/0 renderframe=0
+CSSFTRFREE 4 p0=0/0.000000/0/0 p1=0/0.000000/0/0
+CSSFTRKIND 4 mask=0 mario=0/0/0 fox=0/0/0 luigi=0/0/0 samus=0/0/0
+CSSTOUR 4 kind=0 drew=0 done=0 notready=0
+CSSTOURTRI 4 0 0 0 0 0 0 0 0 0 0 0 0
+CSSIO 4 hdr=11 payload=479 ownerload=0 ownerbytes=0 animhit=0 animmiss=0 warm=0/0 arena=0/0 reservefail=0 warmfail=0 reject=0 overflow=0
+CSSRES 4 try=00000000 ready=00000000 main=00000000 sub=00000000 anim=00000000 owner=00000000
+CSSREBUILDIO 4 rebuild=0 payload=0 max=0
+CSSRESACT 4 acq=0 hit=0 cached=0 load=0 finish=0 payload=0 max=0 retry=0 fail=0
+CSSRESREL 4 rel=0 last=0 retire=0/0 reuse=0 exit=0 residual=0 dwell=0/0/0/0
+CSSPKT 4 hit=0 rec=0 fault=0 decline=0 wordsmax=0 m0=0 m1=0 m2=0 m3=0 m4=0 m5=0 roots=0 tex=0
+CSSBGMFENCE 4 suspend=0 resume=0 seammiss=0 error=0
+CSSCOMMIT 4 n=0 s0=000000 s1=000000 s2=000000 s3=000000
+CSSCFG 4 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3
+CSSXFER 4 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3 pl=1 cp=1
+CSSLIVE 4 none
+CSSCUE 4 cues=0 lastid=0 announce=0
+SSSPOS 4 slot=0 gkind=00 enters=0
+SSSACT 4 move=0 blocked=0 confirm=0 back=0 cues=0 lastid=0
+SSSCOMMIT 4 n=0 gkind=00 slot=00 rand=0 fallback=0
+SSSCFG 4 cfg=06 scene=06 default=06 maps=00 stagesel=1
+MSKIT 4 enters=3 rej=0 exits=3 opens=3 bytes=66496 hash=2482527c mismatch=0 readfail=0
+MSDRAW 4 compose=0 overflow=0 commit=68 visible=0
+MSSURF 4 open=23 blit=23 bytes=624792 hash=cb23ceca mismatch=0 readfail=0 nolayer=0 cache=1 draw=3 erase=3 ticks=29068416
+MSANIM 4 arm=1 settle=1 fail=0 pose=51 frames=47 ticks=15425280 maxticks=651968 maxpose=19 bytes=77620 draw=1083433 erase=1051504
+MSSFX 4 move=7 confirm=2 back=0 value=4 start=1 lastid=158
+MSMISS 4 ring=0 id0=0 c0=0 id1=0 c1=0 id2=0 c2=0 id3=0 c3=0 id4=0 c4=0 id5=0 c5=0 id6=0 c6=0 id7=0 c7=0 id8=0 c8=0 id9=0 c9=0 id10=0 c10=0 id11=0 c11=0 id12=0 c12=0 id13=0 c13=0 id14=0 c14=0 id15=0 c15=0
+MSAUDIOWORK 4 refills=45 streamed=1474560 bps=44099 elapsed=1963 loops=0 fgmcalls=14 fgmfail=0 fgmloaded=1
+MSPOSE 4 binds=0 unbinds=0 full=0 claims=0 releases=0 live=0 livemax=0
+MSBGM 4 playing=1 track=44 calls=1 stops=2 looping=1 streambytes=2868410 modesel=1 pupupu=0 winmario=0 winfox=0 results=0 bsel=0 unsupported=0
+MSARENABASE 4 base=022b4c00 size=1212160 mism=0
+MSREMATCH 4 rematch=0 press=0 pad=0000 seen=0000 tap=0000 poll=0
+MSWALK 4 hops=absent
+MSARENA 4 k=27,1,7,9,0,0,0,0,0,0,0,0,0,0,0,0
+MSHIGH 4 202444,548720,248992,429912,0,0,0,0,0,0,0,0,0,0,0,0
+MSFREE 4 1009716,663440,963168,782248,0,0,0,0,0,0,0,0,0,0,0,0
+MSSCENE 5 curr=21 prev=16 enters=5 exits=5 rej=0 unreg=1 mism=0
+CSSARROW 5 s0=0/1/9/0/0/0 s1=1/1/3/1/1/1 s2=2/0/9/0/0/0 s3=2/0/9/0/0/0
+MSSHELL 5 screen=4294967295 startup=1 title=1/1 mode=1/1 vs=1/1 css=1/1 sss=0/0
+MSFRAMES 5 f0=150 f1=301 f2=1660 f3=294 f4=0
+MSFPSHUD 5 refresh=87
+CSSPHASE 5 samples=295 update=32155840/1533312 sync=26469568/3272960 preview=56874816/4940544
+MSMAX 5 w0=654144 w1=212352 w2=651520 w3=7657664 w4=0
+MSMAXAT 5 f0=13/c0 f1=30/c0 f2=1509/c0 f3=121/c0 f4=0/c0
+MSMAXRES 5 load=1 finish=1 retire=0 dwell=0 payload=2
+MSENTER 5 e0=14399360 e1=8243456 e2=9513856 e3=8633984 e4=0
+MSWORK0 5 103 1 7 1 1 1 2 1 3 3 6 3 7 6 3 2
+MSVB0 5 149 1 0 0 max=2
+MSWORK1 5 291 1 6 1 0 1 1 0 0 0 0 0 0 0 0 0
+MSVB1 5 301 0 0 0 max=1
+MSWORK2 5 1592 9 30 2 1 9 1 0 0 0 1 2 1 1 2 9
+MSVB2 5 1651 9 0 0 max=2
+MSWORK3 5 0 120 5 10 0 56 36 1 0 6 5 1 0 0 2 52
+MSVB3 5 242 32 8 12 max=14
+MSWORK4 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB4 5 0 0 0 0 max=0
+MSWORK9 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB9 5 0 0 0 0 max=0
+MSWORK10 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB10 5 0 0 0 0 max=0
+MSWORK11 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB11 5 0 0 0 0 max=0
+MSWORK12 5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+MSVB12 5 0 0 0 0 max=0
+MSFLOW 5 trans=4 input=19 denied=0 commit=1 rule=1 time=1 stocks=2 walk=20 loops=0
+MSTRANS 5 0007 0109 0210 0315 0000 0000 0000 0000
+MSINPUT 5 030010 030001 030010 020008 020002 020001 020008 020002 020001 020008 020004 020004 020004 020010 030004 030002
+CSSPOS 5 x=40 y=170 status=0
+CSSACT 5 grab=0 drop=0 refuse=0 recall=0 kind=0 mode=0 doors=40 level=0 start=1 denied=0 back=0
+CSSFTR 5 frames=295 draws=148 sel=3 vis=3 exit=1 p0=0.000000/65539/3 p1=0.000000/65540/4 renderframe=295
+CSSFTRFREE 5 p0=0/0.000000/-1/-1 p1=0/0.000000/-1/-1
+CSSFTRKIND 5 mask=eff mario=53/65539/3 fox=318/65540/4 luigi=22/65537/1 samus=23/65540/4
+CSSTOUR 5 kind=eff drew=abf done=1 notready=0
+CSSTOURTRI 5 3840 3366 3498 3542 3520 3718 0 3509 0 3487 0 3498
+CSSIO 5 hdr=40 payload=909 ownerload=18 ownerbytes=253472 animhit=13 animmiss=0 warm=11/50944 arena=50944/50944 reservefail=0 warmfail=0 reject=0 overflow=0
+CSSRES 5 try=00000eff ready=00000000 main=00000000 sub=00000000 anim=00000000 owner=00000000
+CSSREBUILDIO 5 rebuild=13 payload=0 max=0
+CSSRESACT 5 acq=21 hit=1 cached=0 load=12 finish=12 payload=21 max=3 retry=8 fail=0
+CSSRESREL 5 rel=11 last=10 retire=12/12 reuse=8 exit=4 residual=0 dwell=11/0/0/11
+CSSPKT 5 hit=240 rec=12 fault=0 decline=11 wordsmax=4216 m0=0 m1=0 m2=0 m3=1 m4=0 m5=1 roots=0 tex=0
+CSSBGMFENCE 5 suspend=13 resume=13 seammiss=0 error=0
+CSSCOMMIT 5 n=1 s0=000003 s1=010103 s2=1c0203 s3=1c0203
+CSSCFG 5 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3
+CSSXFER 5 s0=0/0/3 s1=1/1/3 s2=28/2/3 s3=28/2/3 pl=1 cp=1
+CSSLIVE 5 none
+CSSCUE 5 cues=2 lastid=618 announce=0
+SSSPOS 5 slot=0 gkind=00 enters=0
+SSSACT 5 move=0 blocked=0 confirm=0 back=0 cues=0 lastid=0
+SSSCOMMIT 5 n=0 gkind=00 slot=00 rand=0 fallback=0
+SSSCFG 5 cfg=06 scene=06 default=06 maps=00 stagesel=1
+MSKIT 5 enters=4 rej=0 exits=4 opens=4 bytes=66496 hash=2482527c mismatch=0 readfail=0
+MSDRAW 5 compose=0 overflow=0 commit=333 visible=0
+MSSURF 5 open=73 blit=110 bytes=1261180 hash=5cb3943c mismatch=0 readfail=0 nolayer=0 cache=2 draw=83 erase=3 ticks=64532160
+MSANIM 5 arm=1 settle=1 fail=0 pose=51 frames=47 ticks=15425280 maxticks=651968 maxpose=19 bytes=77620 draw=1083433 erase=1051504
+MSSFX 5 move=7 confirm=2 back=0 value=4 start=1 lastid=158
+MSMISS 5 ring=0 id0=0 c0=0 id1=0 c1=0 id2=0 c2=0 id3=0 c3=0 id4=0 c4=0 id5=0 c5=0 id6=0 c6=0 id7=0 c7=0 id8=0 c8=0 id9=0 c9=0 id10=0 c10=0 id11=0 c11=0 id12=0 c12=0 id13=0 c13=0 id14=0 c14=0 id15=0 c15=0
+MSAUDIOWORK 5 refills=47 streamed=693888 bps=44099 elapsed=2258 loops=1 fgmcalls=22 fgmfail=0 fgmloaded=1
+MSPOSE 5 binds=26 unbinds=13 full=0 claims=13 releases=13 live=0 livemax=2
+MSBGM 5 playing=1 track=10 calls=2 stops=2 looping=1 streambytes=628352 modesel=1 pupupu=0 winmario=0 winfox=0 results=0 bsel=1 unsupported=0
+MSARENABASE 5 base=022b4c00 size=1212160 mism=0
+MSREMATCH 5 rematch=0 press=0 pad=0000 seen=0000 tap=0000 poll=0
+MSWALK 5 hops=absent
+MSARENA 5 k=27,1,7,9,16,0,0,0,0,0,0,0,0,0,0,0
+MSHIGH 5 202444,548720,248992,429912,873216,0,0,0,0,0,0,0,0,0,0,0
+MSFREE 5 1009716,663440,963168,782248,338944,0,0,0,0,0,0,0,0,0,0,0
+
+Program received signal SIGILL, Illegal instruction.
+0x00000b64 in ?? ()
+MSSTOP n=5 pc=00000b64 cpsr=200000b7
+No symbol matches $pc.
+ABORT lr=01fffb64 spsr=200000b7
+$1 = {150, 301, 1660, 294, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+$2 = {7, 265, 528, 789, 0 <repeats 12 times>}
+$3 = {196624, 196609, 196624, 131080, 131074, 131073, 131080, 131074, 131073, 131080, 131076, 131076, 131076, 131088, 196612, 196610}
+$4 = {7, 2, 0, 4, 1}
+$5 = {3, 65795, 1835523, 1835523}
+$6 = 1
+$7 = 1
+$8 = {{fkind = 0 '\000', pkind = 0 '\000', level = 3 '\003', handicap = 9 '\t', team = 0 '\000', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', stock_count = 0 '\000', is_spgame_enemy = 0 '\000', copy_kind = -1}, {fkind = 1 '\001', pkind = 1 '\001', level = 3 '\003', handicap = 9 '\t', team = 0 '\000', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', stock_count = 0 '\000', is_spgame_enemy = 0 '\000', copy_kind = -1}, {fkind = 28 '\034', pkind = 2 '\002', level = 3 '\003', handicap = 9 '\t', team = 1 '\001', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', stock_count = 0 '\000', is_spgame_enemy = 0 '\000', copy_kind = -1}, {fkind = 28 '\034', pkind = 2 '\002', level = 3 '\003', handicap = 9 '\t', team = 1 '\001', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', stock_count = 0 '\000', is_spgame_enemy = 0 '\000', copy_kind = -1}}
+$9 = 0
+$10 = 0
+$11 = 0
+$12 = 0
+$13 = 6 '\006'
+$14 = 6 '\006'
+$15 = 0 '\000'
+[Inferior 1 (Remote target) detached]
+
