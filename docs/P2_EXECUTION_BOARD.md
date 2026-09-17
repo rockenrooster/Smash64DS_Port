@@ -50,46 +50,46 @@ Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
 
 Focus / batch / IDs / owner: P2-2p8 / invalidation over-clear / N05.03 / main. Phase: IMPLEMENT.
 **Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).
-Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
-Baseline moved 2026-09-16 (clean rebuild -50,432); dead code deleted. Archive:
-`docs/archive/P2_CLOSED_ROWS.md`.
+Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT (ledger).
+Baseline moved 2026-09-16 (clean rebuild -50,432); dead code deleted.
 **Gap:** `1,120,000` = two VBlank intervals; WORK-H P50 1.41x, **92.3% of frames
 miss**; needs **-455,296**.
 **Owner: 30 FPS at four players REQUIRED, NO 30 Hz sim** (-294,016 withdrawn,
-priced in `…_sim30-ceiling/`). Sacrifice Order ranks audio (1), visual (2),
-gameplay (3) MORE expendable than the 60 Hz sim (4).
+`…_sim30-ceiling/`). Sacrifice Order: audio (1), visual (2), gameplay (3) more
+expendable than the 60 Hz sim (4). Owner 2026-09-16: lab test builds allowed.
 N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement.
-Two corrections: engaging the 0%-engaged GX compose bank COSTS +22,848 P50 at
-four fighters, and the sampled softfloat census **over-attributes 3.0x** —
-collision family 25,022 not ~49,900, `guMtxCatF` largest at 13,485 not seventh.
-Never size from that census again.
+Engaging the 0%-engaged GX compose bank COSTS +22,848 P50 at four fighters, and
+the sampled softfloat census **over-attributes 3.0x** — collision family 25,022
+not ~49,900. Never size from that census again.
 **N05.03: 97% over-invalidation.** `ndsFTParamsInvalidateSubtree`
 (`reloc_backend_compat_shims.c:2955`) does **474.5 part-word clears/frame against
 14.3 matrix recomputes** (3.0% utilisation) for **20,348 tk/fr**. Replace the
 O(parts) clear + descendant flatten with an **O(1) generation stamp**; no
-fidelity argument, byte-identical same-ROM A/B proven in-repo. Falsifier MEASURED (`…_stg-history-and-n0503-sizing/`): CPI 5.60 splits
-18% issue / **82% load stall** (hot PCs CPI 41.8/48.2 = the `next` chase), so the
-band is **ceiling -19,700, floor -3,636**; the A/B picks the end. Blocker: 23
-decomp latch sites; `gmcollision.c` is `#include`d verbatim, so this needs an
-import overlay (`src_gm_gmcollision.patch`) like the twelve that exist.
-**THE ARITHMETIC IS CLOSED.** Non-idle work 1,616,382 tk/fr; the gate needs
-**-496,382 = 30.7% of everything executed**, and the profile's whole top twenty
-is 502,955 (31.1%). Everything unkilled sums to **~90,000, 0.20x**. **No
-combination reaches it.** Closing it needs an owner fidelity call: reduced
-per-fighter **JOINTS** (-207,168 at 2.48x, 42%) or the withdrawn 30 Hz
-sim (-294,016, 0.65x); their sum -501,184 is the only combination that clears.
-**Triangles are refuted**: zero CPU work is per-vertex, so deleting every fighter
-triangle caps at -12,144 (2.4%). Joints move hurtbox parts: Sacrifice Order 2+3.
-Sizing: `…_p2-2p8-gap-sizing/`; instrument inside WORK-H is only ~16,583 (3.6%),
-not the 46,273 once proposed.
-Lanes killed with measurement (30 Hz sim, stage, per-fighter, material anim,
-the broken Task 103 instrument): `docs/archive/P2_CLOSED_ROWS.md`.
+fidelity argument, byte-identical same-ROM A/B proven in-repo.
+Falsifier MEASURED (`…_stg-history-and-n0503-sizing/`): CPI 5.60 is 18% issue /
+**82% load stall**, so the band is **ceiling -19,700, floor -3,636**. Blocker: 23
+decomp latch sites need an import overlay.
+**THE ARITHMETIC IS CLOSED** for leaf levers: the gate needs **-496,382 = 30.7%
+of everything executed**; the profile's whole top twenty is 502,955. Everything
+unkilled sums to **~90,000, 0.20x**. **Triangles are refuted** — zero CPU work is
+per-vertex, so deleting every fighter triangle caps at -12,144. Reduced
+**JOINTS** is -207,168 at 2.48x (42%) and **is not a switch**: cap=1 ABORTS the
+CPU AI on a NULL joint (`ftcomputer.c:7970`), so a smaller skeleton re-derives
+hurtboxes per fighter — Sacrifice Order 2+3. Ladder:
+`…_p2-2p8-joint-cap-ladder/`. Lanes killed with measurement:
+`docs/archive/P2_CLOSED_ROWS.md`.
 Checks: **Boundary GREEN all three arms** (free floor 114,628 B, realtime
 **26.4 FPS**); both targets build, invariants match.
-P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
-Job: none; main owns all edits, builds and the focused runner.
-Review watermark: `Briefs/README.md` inspected 2026-09-16; visual/menu candidates
-stay with their rows. Owner documentation edits are preserved.
+P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
+**OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
+lines, at 430aca2879e, source-grounded, explicitly UNMEASURED) plus
+`Smash64DS_Implementation_Plan/`. All four reach the same thesis: replace the
+mixed-representation pipelines with prebound/compiled native programs instead of
+wrapping another cache on the adapters. They corroborate this profile
+independently (invalidate ~20.7K, floor query ~20.9K) and target the two things
+the board has never attacked -- SRC (P50 555,584) and the per-fighter FIXED
+288,133. Size before building; none carries a DS measurement.
+Review watermark: `Briefs/README.md` 2026-09-16; candidates stay with their rows.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns
 shared outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay
