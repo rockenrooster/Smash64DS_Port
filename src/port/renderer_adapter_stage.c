@@ -5226,24 +5226,6 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         owner_asset_id = 346u;
         candidate = TRUE;
     }
-#if NDS_P2_YOSHI
-    /* Yoshi's egg. One source list serves two states that both hide his whole
-     * body on purpose: the shield (efmanager.c:490) and the egg-hatching intro
-     * (:1375) name the same DObj setup field. The ordinary shield arm above
-     * cannot cover him, because ftcommonguard1.c:387-397 and
-     * ftcommonguard2.c:20-26 are an if/else on `fkind == nFTKindYoshi` that
-     * sends him to efManagerYoshiShieldMakeEffect instead. Guarded because
-     * gFTDataYoshiModel lives in ftyoshi.c, which is not built at every roster.
-     * The per-frame env fade from fp->shield_health stays runtime-owned. */
-    if ((candidate == FALSE) && (gFTDataYoshiModel != NULL) &&
-        ((uintptr_t)dl == (uintptr_t)gFTDataYoshiModel + 0xa860u))
-    {
-        base = (const u8 *)gFTDataYoshiModel;
-        root_offset = 0xa860u;
-        owner_asset_id = 338u;
-        candidate = TRUE;
-    }
-#endif
     if ((candidate == FALSE) && (gFTMarioFileSpecial2 != NULL) &&
         ((const u8 *)dl >= (const u8 *)gFTMarioFileSpecial2))
     {

@@ -276,11 +276,11 @@ try {
     # check-generator-staleness.ps1 -IncludeSlow.
     # Keep this count synchronized
     # with the unconditional Invoke-VerifyScript calls before the runtime plan.
-    # 18 since 2026-09-17: the two source-to-bake resolvers plus the Yoshi egg
-    # EFDesc checker. Adding a host check without moving this literal makes
-    # the run FAIL at the accounting gate rather than silently under-report,
-    # which is the intended direction and is how this line was found.
-    $expectedVerifiers = 18 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    # 17 since 2026-09-17: the two source-to-bake resolvers below. Adding a host
+    # check without moving this literal makes the run FAIL at the accounting
+    # gate rather than silently under-report, which is the intended direction
+    # and is how this line was found.
+    $expectedVerifiers = 17 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
     # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
     # standing-rules/publish-law tokens and the published-ROM SHA-256 line --
@@ -317,15 +317,6 @@ try {
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\check_hidden_part_root_coverage.py') `
-        -Arguments @()
-    # Yoshi's egg: ONE source list behind two owner-reported invisibilities,
-    # because the shield EFDesc and the egg-hatching EFDesc name the same DObj
-    # setup field. Both states hide his whole body on purpose, so an unowned
-    # egg means he draws nothing at all. Registered with the count below moved
-    # in the same edit -- that literal is a call site, and forgetting it is
-    # what made a Boundary run fail earlier today.
-    Invoke-VerifyScript `
-        -Script (Join-Path $PSScriptRoot 'check-p2-yoshi-egg-efdesc-native.ps1') `
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\test_preview_shared_pin_disjointness.py') `
