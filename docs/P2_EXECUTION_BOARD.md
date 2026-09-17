@@ -23,7 +23,7 @@ Measurements: `PERF_LEDGER.md`. Chronology: `PORTING.md`. Those are lookup-only.
 4. Published P2 ROM after N04.08 + the clean rebuild, 2026-09-16. **Runtime proof
    owed** — the payload changed since the last runtime verification:
 
-SHA-256 9B44F9CA0D7169541B65C5F7A59D06C5B909C66AEEAF1B49BC36CFFD0CFACC3F
+SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -43,9 +43,9 @@ SHA-256 9B44F9CA0D7169541B65C5F7A59D06C5B909C66AEEAF1B49BC36CFFD0CFACC3F
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N04.08 + the clean rebuild + the 2026-09-16
-dead-code deletion. WORK-H **1,575,168 / 2,308,032**, FTR **356,032 / 750,144**;
-native **0/0**, heap **111,680 B**; `ALL` P50 at 3 VBlank intervals, slips 0.
+**Last qualified checkpoint:** N04.08 + clean rebuild + the 2026-09-16 cleanup,
+Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
+740,352**; native **0/0**; realtime **26.4 FPS**; slips 0.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / hardware matrix stack / N05.01 / main. Phase: FALSIFY.
