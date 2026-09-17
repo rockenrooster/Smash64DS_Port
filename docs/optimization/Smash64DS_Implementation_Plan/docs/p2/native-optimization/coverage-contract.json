@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "status": "PLANNED",
+  "revision": 2,
+  "support": "EVERY_LEGAL_FOUR_FIGHTER_LINEUP_ON_EVERY_SELECTABLE_VS_STAGE",
+  "source_catalogue_required": true,
+  "unfinished_required_content": "BLOCKED_NOT_EXCLUDED",
+  "include_repeated_fighter_kinds": true,
+  "include_legal_slot_assignments": true,
+  "base_definition": "unordered_multiset_of_four_fighters_cross_required_vs_stages",
+  "ordered_definition": "ordered_four_fighter_cartesian_product_cross_required_vs_stages",
+  "example_full_catalogue": {
+    "fighters": 12,
+    "stages": 9,
+    "base_cases": 12285,
+    "ordered_cases": 186624,
+    "is_runtime_coverage": false
+  },
+  "development_profiles": [
+    "DEV_FAST",
+    "SCREEN"
+  ],
+  "release_profile": "RELEASE_EXHAUSTIVE",
+  "release_base_requirement": "FULL_SCORED_SOURCE_NORMAL_BATTLE_EVERY_BASE_CASE",
+  "slot_reuse": "PROPERTY_SCOPED_EXPLICIT_PROOF_OR_EXECUTE",
+  "resource_equivalence_implies_timing_equivalence": false,
+  "performance_aggregation": "PER_REQUIRED_RUN_AND_CASE_THEN_LOGICAL_AND",
+  "missing_evidence": "UNKNOWN_NOT_PASS",
+  "safe_legal_admission_refusal": "FAIL_NOT_PASS",
+  "known_legal_failure_blocks_universal_closure": true,
+  "pairwise_replaces_release_base_matrix": false,
+  "claims_all_possible_input_histories_proven": false,
+  "existing_rare_overrun_allowance_preserved": true,
+  "case_variant_axes": [
+    "slot_mapping",
+    "costumes",
+    "teams",
+    "control_modes",
+    "cpu_levels",
+    "rules_and_items",
+    "detail_quality_rates",
+    "source_legal_dynamic_state"
+  ],
+  "leader_axes": [
+    "work_p95",
+    "cadence_and_consecutive_misses",
+    "resident_and_transient_ram",
+    "vram_palette_views",
+    "geometry_matrix_fifo_overdraw",
+    "audio_storage_ipc_deadlines"
+  ],
+  "required_scope_tasks": [
+    "N00.06",
+    "N02.07",
+    "N03.11",
+    "N10.01",
+    "N10.02",
+    "N10.07",
+    "N10.08",
+    "N10.09"
+  ]
+}

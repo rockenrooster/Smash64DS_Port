@@ -1,0 +1,101 @@
+REVISION 2 STATIC PLANNING VALIDATION
+These checks validate documents, dependency views, templates and enumeration arithmetic only.
+No game code was edited, no ROM was built or run, and no runtime/performance proof is claimed.
+
+$ planning-tools/validate_native_plan.py
+PASS: 18 planning documents; 81 task cards; 11 packages; 50 source entries.
+Dependency graph acyclic; task references/CSV/Markdown links/templates consistent.
+This validates the plan only. No game build, correctness test, or benchmark ran.
+
+EXIT: 0
+
+$ planning-tools/test_validate_native_plan.py
+test_counts_make_no_runtime_claim (__main__.CoverageCountTests.test_counts_make_no_runtime_claim) ... ok
+test_full_catalogue (__main__.CoverageCountTests.test_full_catalogue) ... ok
+test_full_ordered_maps_to_full_base (__main__.CoverageCountTests.test_full_ordered_maps_to_full_base) ... ok
+test_independent_small_enumeration (__main__.CoverageCountTests.test_independent_small_enumeration) ... ok
+test_invalid_counts (__main__.CoverageCountTests.test_invalid_counts) ... ok
+test_multiplicity_independent_counts (__main__.CoverageCountTests.test_multiplicity_independent_counts) ... ok
+test_single_fighter_single_stage (__main__.CoverageCountTests.test_single_fighter_single_stage) ... ok
+test_broken_link (__main__.PlanValidatorTests.test_broken_link) ... ok
+test_cycle (__main__.PlanValidatorTests.test_cycle) ... ok
+test_duplicate_id (__main__.PlanValidatorTests.test_duplicate_id) ... ok
+test_malformed_task (__main__.PlanValidatorTests.test_malformed_task) ... ok
+test_missing_completion (__main__.PlanValidatorTests.test_missing_completion) ... ok
+test_real_plan (__main__.PlanValidatorTests.test_real_plan) ... ok
+test_static_status (__main__.PlanValidatorTests.test_static_status) ... ok
+test_topological_order (__main__.PlanValidatorTests.test_topological_order) ... ok
+test_unknown_dependency (__main__.PlanValidatorTests.test_unknown_dependency) ... ok
+test_unknown_source (__main__.PlanValidatorTests.test_unknown_source) ... ok
+test_count_example_wrong (__main__.RevisionCoverageTests.test_count_example_wrong) ... ok
+test_csv_completion_drift (__main__.RevisionCoverageTests.test_csv_completion_drift) ... ok
+test_dependency_graph_drift (__main__.RevisionCoverageTests.test_dependency_graph_drift) ... ok
+test_duplicate_fighters_required (__main__.RevisionCoverageTests.test_duplicate_fighters_required) ... ok
+test_legal_slots_required (__main__.RevisionCoverageTests.test_legal_slots_required) ... ok
+test_missing_coverage_negative_fixture (__main__.RevisionCoverageTests.test_missing_coverage_negative_fixture) ... ok
+test_missing_evidence_not_pass (__main__.RevisionCoverageTests.test_missing_evidence_not_pass) ... ok
+test_missing_release_dependency (__main__.RevisionCoverageTests.test_missing_release_dependency) ... ok
+test_no_all_history_claim (__main__.RevisionCoverageTests.test_no_all_history_claim) ... ok
+test_pooled_performance_forbidden (__main__.RevisionCoverageTests.test_pooled_performance_forbidden) ... ok
+test_rare_overrun_allowance_preserved (__main__.RevisionCoverageTests.test_rare_overrun_allowance_preserved) ... ok
+test_required_content_cannot_shrink (__main__.RevisionCoverageTests.test_required_content_cannot_shrink) ... ok
+test_resource_proof_not_timing_proof (__main__.RevisionCoverageTests.test_resource_proof_not_timing_proof) ... ok
+test_safe_rejection_not_pass (__main__.RevisionCoverageTests.test_safe_rejection_not_pass) ... ok
+test_sampling_cannot_replace_base_release (__main__.RevisionCoverageTests.test_sampling_cannot_replace_base_release) ... ok
+test_task_card_completion_drift (__main__.RevisionCoverageTests.test_task_card_completion_drift) ... ok
+test_template_cannot_claim_runtime_pass (__main__.RevisionCoverageTests.test_template_cannot_claim_runtime_pass) ... ok
+
+----------------------------------------------------------------------
+Ran 34 tests in 0.403s
+
+OK
+
+EXIT: 0
+
+$ planning-tools/coverage_counts.py --fighters 12 --stages 9
+{
+  "nature": "ENUMERATION_ARITHMETIC_ONLY_NOT_RUNTIME_QUALIFICATION",
+  "fighters": 12,
+  "stages": 9,
+  "slots": 4,
+  "base_cases": 12285,
+  "ordered_cases": 186624,
+  "multiplicity_classes": {
+    "AAAA": {
+      "base_rosters": 12,
+      "orders_per_roster": 1,
+      "base_cases": 108,
+      "ordered_cases": 108
+    },
+    "AAAB": {
+      "base_rosters": 132,
+      "orders_per_roster": 4,
+      "base_cases": 1188,
+      "ordered_cases": 4752
+    },
+    "AABB": {
+      "base_rosters": 66,
+      "orders_per_roster": 6,
+      "base_cases": 594,
+      "ordered_cases": 3564
+    },
+    "AABC": {
+      "base_rosters": 660,
+      "orders_per_roster": 12,
+      "base_cases": 5940,
+      "ordered_cases": 71280
+    },
+    "ABCD": {
+      "base_rosters": 495,
+      "orders_per_roster": 24,
+      "base_cases": 4455,
+      "ordered_cases": 106920
+    }
+  },
+  "excludes": [
+    "costume/team/control/CPU/rule/detail variants",
+    "seeds and input histories"
+  ]
+}
+
+EXIT: 0

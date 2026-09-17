@@ -791,7 +791,7 @@
       "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Samus",
-      "file_bytes": 34904,
+      "file_bytes": 35084,
       "fixups": 605,
       "fkind": 3,
       "foreign_texture_allocation": 0,
@@ -800,10 +800,10 @@
       "foreign_texture_spans": 0,
       "main_asset": 217,
       "model_asset": 320,
-      "model_spans": 60,
-      "model_structural_bytes": 26372,
-      "resident_allocation": 30000,
-      "resident_with_foreign_textures": 30000,
+      "model_spans": 61,
+      "model_structural_bytes": 26540,
+      "resident_allocation": 30180,
+      "resident_with_foreign_textures": 30180,
       "root_cells": 54,
       "texture_images": [
         {
@@ -873,6 +873,14 @@
         {
           "asset": 320,
           "offset": 53992
+        },
+        {
+          "asset": 320,
+          "offset": 54512
+        },
+        {
+          "asset": 320,
+          "offset": 54552
         },
         {
           "asset": 320,
@@ -1094,7 +1102,7 @@
       "external_file_bytes": 102,
       "external_patches": 13,
       "fighter": "Yoshi",
-      "file_bytes": 24344,
+      "file_bytes": 24652,
       "fixups": 437,
       "fkind": 6,
       "foreign_texture_allocation": 0,
@@ -1103,10 +1111,10 @@
       "foreign_texture_spans": 0,
       "main_asset": 247,
       "model_asset": 338,
-      "model_spans": 48,
-      "model_structural_bytes": 17708,
-      "resident_allocation": 20784,
-      "resident_with_foreign_textures": 20784,
+      "model_spans": 49,
+      "model_structural_bytes": 18004,
+      "resident_allocation": 21092,
+      "resident_with_foreign_textures": 21092,
       "root_cells": 53,
       "texture_images": [
         {
@@ -1115,11 +1123,23 @@
         },
         {
           "asset": 338,
+          "offset": 39888
+        },
+        {
+          "asset": 338,
           "offset": 40304
         },
         {
           "asset": 338,
           "offset": 40576
+        },
+        {
+          "asset": 338,
+          "offset": 40648
+        },
+        {
+          "asset": 338,
+          "offset": 40688
         }
       ]
     },

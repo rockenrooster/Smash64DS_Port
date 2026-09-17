@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "status": "UNMEASURED",
+  "profile": null,
+  "case_schema": null,
+  "catalogue_hash": null,
+  "base_case_id": null,
+  "ordered_case_id": null,
+  "scenario_key": null,
+  "workload_hash": null,
+  "run_id": null,
+  "expected_configuration": {
+    "fighter_ids_by_slot": [],
+    "stage_id": null,
+    "costumes": [],
+    "teams": [],
+    "controls": [],
+    "cpu_levels": [],
+    "rules_items": null,
+    "quality_detail_rates": null
+  },
+  "actual_guest_configuration": null,
+  "identity": {
+    "rom_sha256": null,
+    "elf_sha256": null,
+    "config_sha256": null,
+    "source_overlay": null,
+    "generated_inputs": null,
+    "sdk_toolchain": null,
+    "emulator_and_config": null,
+    "storage_save": null,
+    "verifier": null,
+    "instrumentation": null
+  },
+  "window": {
+    "procedure_hash": null,
+    "source_clock_start": null,
+    "source_clock_end": null,
+    "go_seen": null,
+    "time_up_seen": null,
+    "work_sample_count": null,
+    "cadence_present_count": null,
+    "raw_rows_sha256": null,
+    "complete": null
+  },
+  "verdicts": {
+    "identity_population": null,
+    "source_normal_coverage": null,
+    "four_way_engagement": null,
+    "native_output": null,
+    "resources_locked_epoch": null,
+    "gpu_and_service": null,
+    "work_gate": null,
+    "cadence_gate": null
+  },
+  "metrics": {
+    "work_p50": null,
+    "work_p95": null,
+    "work_p99": null,
+    "work_max": null,
+    "vblank_2_3_4_5plus": null,
+    "max_interval": null,
+    "consecutive_late_max": null,
+    "heap_low_water": null,
+    "transient_peak": null
+  },
+  "artifacts": [],
+  "failure_cause": null,
+  "supersedes_run_id": null,
+  "supersession_reason": null
+}

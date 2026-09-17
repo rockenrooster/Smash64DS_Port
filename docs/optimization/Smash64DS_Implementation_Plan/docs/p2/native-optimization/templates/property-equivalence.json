@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "status": "PLANNED",
+  "certificate_id": null,
+  "property": null,
+  "representative_case_ids": [],
+  "covered_case_ids": [],
+  "slot_mapping": null,
+  "assumptions": [],
+  "proof_and_independent_validation_artifacts": [],
+  "dependency_fingerprints": null,
+  "invalidation_rules": [],
+  "resource_proof_is_not_timing_proof": true,
+  "approved_scope": null,
+  "verdict": null
+}

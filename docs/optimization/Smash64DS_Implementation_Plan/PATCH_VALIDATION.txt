@@ -1,0 +1,8 @@
+LOCAL PATCH APPLICATION CHECKS ONLY
+No real repository branch changed and nothing pushed to GitHub.
+
+FRESH: git apply --check and application PASS; installed files byte-identical to v2; 34 static planning tests PASS.
+FRESH: duplicate application rejected as expected.
+UPGRADE: git apply --check and application PASS; installed files byte-identical to v2; 34 static planning tests PASS.
+UPGRADE: duplicate application rejected as expected.
+UPGRADE: substantive owner-edited v1 context rejected by git apply --check; no files overwritten.

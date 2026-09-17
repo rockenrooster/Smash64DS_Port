@@ -1,3 +1,10 @@
+> **Reference, not an execution checklist.** Continue the execution cursor in
+> `docs/P2_EXECUTION_BOARD.md`; the canonical implementation specification is
+> `docs/p2/native-optimization/`. This research and the imported
+> `Smash64DS_Implementation_Plan/` package do not assign current work. Historical
+> measurements/next steps below remain historical; do not reinstall the package,
+> reselect a completed experiment or reread it on every goal continuation.
+
 The next major effort should be a smaller DS-native runtime—not another layer of renderer caches
 
 The source supports a substantial simplification campaign. The important distinction is that native rendering does not necessarily mean native preparation. A path can submit exclusively to the DS geometry engine while still spending too much CPU time rebuilding source-style state, translating representations, checking immutable properties, and preparing data that should already be ready.
