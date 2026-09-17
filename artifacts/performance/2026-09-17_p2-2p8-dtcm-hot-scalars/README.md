@@ -308,6 +308,56 @@ scalar that occupies a whole line by itself.
 right: −10,176 was under the floor and cost 80% of the budget. What was wrong was
 the generalisation.
 
+## CORRECTION: this lane knocked Calico's IRQ table off its 32-byte boundary
+
+Found by running the **Boundary** profile to qualify an unrelated change.
+`check-task20-dtcm-layout.ps1` threw on the shell ELF, and the cause was not the
+model needing to learn about the hot scalars — it was real.
+
+`.dtcm` ends `ALIGN(32)` so Calico's `__irq_table` keeps its 32-byte boundary
+whatever the data-driven fighter tables weigh, because **`.dtcm`'s total size is
+what positions `.dtcm.bss`**, and ShieldPose and the IRQ table sit after it. The
+hot-scalar data block was appended **after** that realignment with only
+`ALIGN(4)`. At 40 bytes it took `.dtcm` from `0x2220` to `0x2248` — no longer a
+multiple of 32 — and put `__irq_table` at `0x02ff27c8`, **8 bytes off**.
+
+| | before fix | after fix |
+|---|---|---|
+| `.dtcm` size | `0x2248` (not 32-aligned) | **`0x2260` = 275 x 32** |
+| `__irq_table` | `0x02ff27c8`, `mod 32 = 8` | **`0x02ff27e0`, `mod 32 = 0`** |
+| layout check | **THROWS** | **passes**, 121 owners, 5,172-byte stack gap |
+
+The block now ends `ALIGN(32)`. DTCM residency is still 112 of 112, and free DTCM
+is 1,460 bytes rather than 1,484 — the alignment padding costs 24.
+
+### The measurement survives, and that was checked rather than assumed
+
+The banked −43,200 was taken on the **misaligned** binary, so it had to be
+re-run. The alignment change isolates cleanly, because two arms differ in
+nothing else:
+
+| build | WORK-H P50 |
+|---|---:|
+| DTCM + copy hats, IRQ **misaligned** | 1,595,456 |
+| DTCM + copy hats, IRQ **aligned** | 1,595,840 |
+
+**+384 — inside noise**, and far under the 14,080 significance floor. The
+alignment fix costs nothing measurable, so the −43,200 stands. The aligned
+build passes the four-CPU gate outright: native failures **0**, heap low-water
+**112,192**, P0/P1 triangles **349,031 / 333,618** unchanged.
+
+### Why this is worth recording beyond the fix
+
+`check-dtcm-residency.py`, which I wrote for this lane, proves every symbol
+**landed in DTCM**. It cannot see that the section's *size* moved something
+else. Two different properties, two different checks, and only the pre-existing
+one could catch this — which is the argument for pinning the Calico boundaries
+and not just the sizes.
+
+It also means the lane was committed and reported as banked while a standing
+gate was red, because I had run the four-CPU gate and the closure check but not
+Boundary. The four-CPU gate does not include the DTCM layout check.
+
 ## Status
 
 `IMPLEMENTED_NOT_ACCEPTED`. The per-PC re-profile is **done and confirms the
