@@ -51,53 +51,54 @@ native 0/0; slips 0.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
-**PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.** Decision in
+**PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.**
 `…_p2-2p8-gate-decision/`; sizing `…09-17_p2-2p8-locality-sizing/`.
 **CORRECTED 09-17:** locality's ceiling was published as 560,739 = **113%** of
 the gap; that subtracted ALL data stall. Layout removes only **line fills** =
 **424,336 = 90.6%**, so a PERFECT data cache leaves **1,164,208 — 44,208 OVER
-the gate**, across the whole interlock band.
-Sized subset 15-18% (+11.2% VRAM arena); largest item now BANKED below.
+the gate**.
+Sized subset 15-18% (+11.2% VRAM arena); largest item BANKED below.
 `GObj`/`DObj` repack is unblocked: `include/` precedes decomp on `-I` and every
 include uses the angle form, so a shadow header needs no decomp edit (HIGH —
 forks a decomp type). A scalar's literal-pool base load costs MORE than the
-dereference and DTCM does not touch it, so packing hot scalars into one anchored
-struct is a better-shaped lane than moving them. **OWNER DECISION
+dereference and DTCM does not touch it — packing hot scalars into one anchored
+struct is a better-shaped lane. **OWNER DECISION
 FORCED:** no structural class closes 468,544 — the gate needs Sacrifice Order
 2+3 (fewer joints / fewer transformed objects; `gNdsGCDrawsActiveMax` 203) or
 order 4. Placement stays CLOSED (hazard; arena 1,024 B aligned).
-Checks: Boundary GREEN 3/3 09-17; four-CPU gate PASSES 09-17 (hats off).
-Any-roster contract now measurable (`…_roster-variance/`): ShieldPose residency
-DERIVED per roster, and a format bug fixed that reported *"Format specifier was
-invalid"* INSTEAD of the failures it found.
+Checks: Boundary GREEN 3/3 09-17; four-CPU PASSES 09-17 (hats off).
+Any-roster contract now measurable (`…_roster-variance/`).
 **KIRBY COPY: implemented, GATED OFF, blocked on BYTES** (`ddf18a57a86`,
 `…_p2-3f47-kirby-copy-hats/`). All 10 hats bake, closure GREEN — but the sections
-append to KIRBY's resident image (**+28,848 B** high) and the arena cannot
-absorb it. A/B: hats ON = **151 native failures** (witness root 0x18A60 = Kirby
-**STONE**), heap **73,064** vs 111,680, WORK-H **+70,016**; hats OFF = gate
-PASSES. `KIRBY_TRIO_ADMIT_COPY_HATS = False` until the sections move into the
-per-slot **hat images**; sharing the cross-head-identical arrays gives only ~29%.
+append to KIRBY's resident image (**+28,848 B**) and the arena cannot absorb it.
+A/B: hats ON = **151 native failures** (witness root 0x18A60 = Kirby **STONE**),
+heap **73,064** vs 111,680, WORK-H **+70,016**; hats OFF = gate PASSES.
+`KIRBY_TRIO_ADMIT_COPY_HATS = False` until the sections move into the per-slot
+**hat images**; sharing the cross-head-identical arrays gives only ~29%.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
-14,080 floor, 9.2% of the gap, P95 −43,072, two runs agreeing to 384. Linker
-script only, **no source change**. The lane was closed on a break-even derived
-as bytes÷32: right for a contiguous table, wrong for a scalar that owns a whole
-line — 85.0 tk/fr per DTCM byte vs the reverted table's 6.4. Placement confound
-answered by SHAPE not size: hazard swings are STG-dominant (104-142% of WORK-H),
-this is STG **29%** spread over SRC/MISC/SINT/FTR. Native 0/0, triangles
-identical; the non-zero exit is a **window** assertion (5 ring seams shift the
-first label 2→3), NOT correctness. 1,484 B DTCM left.
-`IMPLEMENTED_NOT_ACCEPTED` — owed: matched-window gate, per-PC re-profile.
-**OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines,
-UNMEASURED). SRC's top candidate sized NO-GO. FTR/STG/MISC UNSIZED — size each
-before building. Watermark: `Briefs/README.md` 09-16.
+14,080 floor, 9.2% of the gap, P95 −43,072, 3 runs agreeing. Linker script only,
+**no source change**. Lane was closed on a break-even derived as bytes÷32: right
+for a contiguous table, wrong for a scalar owning a whole line — 85.0 tk/fr per
+DTCM byte vs the reverted table's 6.4. Placement confound answered by SHAPE not
+size: hazard swings are STG-dominant (104-142% of WORK-H), this is STG **29%**
+spread over SRC/MISC/SINT/FTR. Native 0/0, triangles
+identical. Non-zero exit is a **window** assertion, NOT correctness, and it is
+DIAGNOSED: all 21 ring stops sit at identical presented frames with identical
+`PacingLogicFrames` (256…3946) — SAME match — and only the stitcher's first row
+label moves by +1. 3 of the assertion's 4 conditions pass; `startFrame` is a
+backward-counted derived value the sampler itself refuses to pin. **OWNER:
+one-line call** to compare it against the recorded label span. 1,484 B DTCM
+left. `IMPLEMENTED_NOT_ACCEPTED` — owed: that call, per-PC re-profile.
+**OWNER INPUT 09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503 lines).
+SRC's top candidate sized NO-GO; FTR/STG/MISC UNSIZED — size before building.
+Watermark: `Briefs/README.md` 09-16.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns
 shared outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay
-30 Hz menus and 1P active; all requirements and coverage stand. Retained proofs:
-`docs/archive/P2_CLOSED_ROWS.md`. HIGH stays reachable; stripping it is not
-authorized. Do not replace the published P2 artifact above until the candidate's
-required gates pass.
+30 Hz menus and 1P active. Retained proofs: `docs/archive/P2_CLOSED_ROWS.md`.
+HIGH stays reachable; stripping it is not authorized. Do not replace the
+published P2 artifact until the candidate's gates pass.
 
 ## Queue — acceptance only
 

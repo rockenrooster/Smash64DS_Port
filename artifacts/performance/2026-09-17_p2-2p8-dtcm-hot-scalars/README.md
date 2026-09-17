@@ -80,6 +80,49 @@ needs either a harness change (an owner call, since that assertion exists to
 stop timing and identity coming from different matches) or a diagnosis of why
 the first sample is relabelled. Recorded rather than worked around.
 
+### Diagnosed: the guest is identical, only the first row's LABEL moves
+
+The sampler labels rows by counting **backward** from the presented-frame counter
+read at each ring stop (`sample-tick-hud-buckets.ps1:1044-1052`): the first row of
+stop *k* is `frame − delta + 1`. `startFrame` in the artifact is then simply
+`$frames[0]`, the first row's label (`:1447`). So `startFrame` is a *derived*
+quantity, not the window that was requested — and the sampler's own comment says
+it deliberately refuses to assert the skew that feeds it is zero.
+
+Comparing the two artifacts' ring reads directly:
+
+| | control | DTCM arm |
+|---|---|---|
+| ring stops | 21 | 21 |
+| stop presented frames | 128, 224, … 1952, 1973 | **identical** |
+| `gNdsBattlePlayablePacingLogicFrames` at each stop | 256, 448, … 3904, 3946 | **identical, all 21** |
+| `ringStartRead.frame` | 1 | 1 |
+| last stop frame | 1973 | 1973 |
+| stop 0 `fromFrame` | 2 | 3 |
+| first row label (`startFrame`) | 2 | **4** |
+| label span vs rows | 1,972 = 1,972 | 1,970 vs **1,971** |
+
+**The guest ran the same match.** Every logic-frame counter matches at every one
+of the 21 stops, and the stops fall on the same presented frames. Three of the
+four conditions in the `:405-410` assertion pass in every run — `endFrame`,
+coverage start and coverage end all match. Only `startFrame == StartFrame` fails,
+and it fails by exactly one, because the stitcher's first row carries
+`fromFrame + 1`.
+
+So the property that assertion exists to protect — that timing and identity come
+from one match — is **demonstrably intact**, and is independently witnessed by
+the correctness table above (native 0, identical triangles, identical
+pose-cap evaluations).
+
+**What this costs and what it needs.** The assertion conflates "the window I
+requested" with "the first label the stitcher produced". A minimal fix is to
+keep the three conditions that pin the match and compare the first label against
+the recorded label span rather than against `StartFrame` — the excess-rows count
+is already derivable from the artifact (`samples − (endFrame − startFrame + 1)`,
+0 for the control and 1 here). That is a change to a gate assertion, so it is an
+owner call, not something to take unilaterally; but it is now a one-line decision
+with the cause pinned rather than an open question.
+
 ## The confound, and why it does not explain this
 
 Moving 508 bytes out of `.main.bss` re-phases `.bss`, and
