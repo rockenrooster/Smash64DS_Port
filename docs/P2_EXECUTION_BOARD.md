@@ -43,11 +43,11 @@ SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** N04.08 + clean rebuild + the 2026-09-16 cleanup +
-the 3,779-line shim trim + wave-1 collapse + 1,024 B arena alignment. **Boundary
-GREEN all three arms 2026-09-17.** WORK-H **1,588,544 / 2,301,504**, FTR
-**353,280 / 741,376**, STG 345,600; heap low-water 111,680 B; arena 1,355,520 B;
-native 0/0; slips 0.
+**Last qualified checkpoint:** `a4eb24c9a85` -- Yoshi + Samus root programs,
+both resolvers registered, accounting literal fixed. **Boundary GREEN all three
+arms 2026-09-17.** WORK-H **1,600,960 / 2,320,576**, FTR **350,144 / 736,960**,
+STG 385,088; heap low-water 111,200 B; arena 1,351,424 B; native 0/0; slips 0.
+The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
@@ -66,10 +66,10 @@ WORK-H reduction**. Order 4 is the only class large enough and is
 **owner-forbidden** — **owner decision, not engineering**. Last lane SIZED: the
 67,858 literal-pool bucket gives **11,449** packed; `-fsection-anchors` is
 **inert**. Placement CLOSED.
-**KIRBY COPY FIXED — all 11 victims draw natively, gate GREEN**
-(`…_p2-3f47-kirby-copy-hats/`). Bodies moved into per-slot **hat images**:
-resident **+0**, peak **28,848 → 3,071 B**. Second defect was `SetRootProgram`'s
-stale `program <= 4u` resetting Stone/CopyLink to canonical. OWED: per-hat look.
+**KIRBY COPY FIXED — all 11 victims draw natively**
+(`…_p2-3f47-kirby-copy-hats/`): bodies into per-slot **hat images**, resident
+**+0**, peak **28,848 → 3,071 B**. Second defect: `SetRootProgram`'s stale
+`program <= 4u`. OWED: per-hat look.
 **HIDDEN-PART CLASS CLOSED**: swept all 26 owners, only **3** drawing hidden
 parts exist. Yoshi grab/egg (2 programs) + Samus F-smash (program 4, derived
 not reported) now covered; `check_hidden_part_root_coverage.py` GREEN, was RED
