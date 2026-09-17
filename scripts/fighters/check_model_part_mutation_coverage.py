@@ -58,8 +58,82 @@ import generate_nds_native_owners as native  # noqa: E402
 
 REPO = _paths.REPO_ROOT
 RELOC = REPO / "decomp/BattleShip-main/decomp/src/relocData"
+SCSUBSYS = REPO / "decomp/BattleShip-main/decomp/src/sc/scsubsys"
+# The CSS clips declare their arrays `s32 D_ovl1_XXXXXXXX[]`, not with the
+# reloc data's ftMotionCommand/u32 spelling, so ARR above cannot name them.
+CSS_ARR = re.compile(r"^\s*(?:static\s+)?[su]32\s+(\w+)\[\]")
+# ONLY THE ROWS THE CHARACTER SELECT CAN ACTUALLY PLAY. Scanning every array
+# in the file over-reports, and provably so: Mario's only flagged clip is
+# D_ovl1_80390E70 = llFTMarioAnimClapsFileID, submotion row 5, and Mario
+# demonstrably draws on the character select (CSSTOURTRI mario=3840). The
+# screen plays row 0 (nFTDemoStatusNull) and ONE Win row that
+# mnPlayersVSGetStatusSelected picks per fighter -- rows 1..4 -- so rows 5 and
+# up are reachable only from elsewhere and are not this checker's business.
+SUBMOTION_TABLE = re.compile(
+    r"FTMotionDesc dFT\w+SubMotionDescs\[\]\s*=\s*\{(.*?)\n\};", re.S)
+CSS_REACHABLE_ROWS = 5
+SUBMOTION_FIELDS_PER_ROW = 3
+
+
+def css_reachable_clips(text: str) -> set[str]:
+    """Clip symbols for submotion rows 0..4, the only rows the CSS plays.
+
+    PARSE POSITIONALLY. A row is three comma-separated fields and the clip is
+    the second, but it is frequently a literal rather than a symbol -- Mario's
+    row 3 is `&llFTMarioAnimSelectedFileID, 0x80000000, 0x00000000`. Matching
+    only `&anim, &clip` pairs SKIPS such rows and silently shifts every later
+    one up, which pulled Mario's row-5 Claps clip into the reachable set and
+    reported him as broken while he visibly draws (CSSTOURTRI mario=3840).
+    """
+    table = SUBMOTION_TABLE.search(text)
+    if table is None:
+        return set()
+    fields = [f.strip() for f in table.group(1).split(",")]
+    clips = set()
+    for row in range(CSS_REACHABLE_ROWS):
+        index = row * SUBMOTION_FIELDS_PER_ROW + 1
+        if index >= len(fields):
+            break
+        clip = fields[index]
+        if clip.startswith("&"):
+            clips.add(clip[1:])
+    return clips
 
 CMD = re.compile(r"ftMotionCommandSetModelPartID\((\d+),\s*(-?\d+)\)")
+# THE MACRO IS NOT THE ONLY SPELLING, and the other one is where the character
+# select lives. `sc/scsubsys/scsubsysdata*.c` writes its demo and Win clips as
+# RAW HEX -- Link has fifteen, Fox seven, Luigi and Ness three, Donkey and Mario
+# two, Samus one -- and `CMD` above cannot see a single one of them. This
+# checker and its hidden-part sibling both globbed only `*MainMotion.c` and both
+# ran GREEN while the character select mutated model parts through a path
+# neither parsed. Link draws there only because his in-match `Entry` program
+# happens to carry the same (20, 0) / (11, -1) pair his demo clip needs.
+#
+# Decoded against the real bitfield, `FTMotionEventSetModelPartID` in
+# decomp/.../src/ft/fttypes.h:455 -- `opcode:6, joint_id:7 SIGNED,
+# modelpart_id:19 SIGNED`, packed MSB-first:
+#
+#   0xA0A00000 -> opcode 40, joint 20, part  0
+#   0xA05FFFFF -> opcode 40, joint 11, part -1
+#
+# Opcode 43 (0xAC...) is a different command, SetTexturePartID, and it writes
+# only `mobj->texture_id_curr`. It does NOT change the root vector, so it must
+# not be swept up here -- that misread cost a whole Jigglypuff investigation.
+RAW_HEX = re.compile(r"0[xX]([0-9a-fA-F]{8})")
+MOTION_EVENT_SET_MODELPART_ID = 40
+
+
+def decode_raw_modelpart(word: int):
+    """(joint, part) when `word` is a raw SetModelPartID command, else None."""
+    if (word >> 26) & 0x3F != MOTION_EVENT_SET_MODELPART_ID:
+        return None
+    joint = (word >> 19) & 0x7F
+    if joint & 0x40:
+        joint -= 0x80
+    part = word & 0x7FFFF
+    if part & 0x40000:
+        part -= 0x80000
+    return joint, part
 # Motion arrays are declared BOTH ways in the reloc data --
 # `ftMotionCommand dLinkMainMotion_Catch[]` but `u32 dLinkMainMotion_CatchPull[]`
 # -- and matching only the first attributes every u32-declared motion's commands
@@ -141,6 +215,30 @@ def main() -> int:
                 # hidden-part mask rather than a model-part id.
                 if 0 < int(part) < 64:
                     mutations.append((current, int(joint), int(part)))
+        # AND THE CHARACTER SELECT'S OWN CLIPS. They live in a different tree
+        # and in raw hex, so neither the glob above nor CMD can reach them --
+        # which is exactly how this checker ran GREEN while the CSS mutated
+        # model parts unchecked. Same coverage rule, same failure message.
+        css_path = SCSUBSYS / ("scsubsysdata%s.c" % owner)
+        if css_path.is_file():
+            css_text = css_path.read_text(encoding="utf-8", errors="replace")
+            reachable = css_reachable_clips(css_text)
+            css_current = "?"
+            for line in css_text.splitlines():
+                css_match = CSS_ARR.match(line)
+                if css_match:
+                    css_current = css_match.group(1)
+                    continue
+                for word in RAW_HEX.findall(line):
+                    decoded = decode_raw_modelpart(int(word, 16))
+                    if decoded is None:
+                        continue
+                    joint, part = decoded
+                    # Same rule as the macro arm: part 0 restores canonical and
+                    # a negative is a hidden-part mask, not a model-part id.
+                    if 0 < part < 64 and css_current in reachable:
+                        mutations.append(("css %s" % css_current, joint, part))
+
         if not mutations:
             continue
         checked_fighters.append(owner)
