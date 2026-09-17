@@ -722,14 +722,29 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # enters, plays, commits and exits the character select with no SIGILL and no
 # ABORT (artifacts/verification/2026-09-17_p2-shell_builds/rung8-jigglypuff.txt).
 #
-# JIGGLYPUFF COSTS 3 ARENA PAGES: +9,440 B of image takes the arena from
-# 1,240,832 to 1,228,544. Rungs 9 and 10 do NOT hold, and the break is between 8
-# and 9, so it is not Kirby -- NESS ALONE is +32,016 B and 8 pages and brings
-# back a wandered ARM9 at the character-select exit (rung9-ness-sigill.txt);
-# Kirby takes it to +82,040 B and 21 pages. Ness's own content is fine, his
-# preview drew 3,498 triangles right up to the crash. Both are blocked on
-# resident budget, so the next rung needs bytes RETURNED, not a fighter fixed.
-NDS_P2_SHELL_ROSTER ?= 8
+# 2026-09-17 LATER: RAISED TO 10. The rungs 9/10 verdict above was WRONG, and
+# wrong in a way worth recording so it is not re-derived. It rested on two
+# errors: reading scene kind 21 as the character select when 21 is Maps (16 is
+# the CSS), and a resident-budget theory that the O1 experiment then refuted by
+# returning 20,480 bytes and changing nothing.
+#
+# Measured with the shell probe's abort breakpoint, all three rungs play a
+# COMPLETE LAP -- 16 CSS -> 21 Maps -> 22 VSBattle -> 24 Results -> 16 -- and
+# all three then hit the SAME post-lap abort on the second pass:
+#
+#   rung 8  (already shipping)  SHELLABORT lr=00504340 sp=02fffd9f mode=3 scene=16
+#   rung 9  (+ Ness)            SHELLABORT lr=00504340 sp=02fffd9f mode=3 scene=16
+#   rung 10 (+ Kirby)           SHELLABORT lr=00504340 sp=02fffd9f mode=3 scene=16
+#
+# Byte-identical. The abort is PRE-EXISTING and independent of the roster, so
+# rungs 9 and 10 are no worse than the rung that already ships. It is
+# nondeterministic -- an earlier run of the same rung-9 ELF gave a data abort at
+# Maps instead -- so it is corruption or a race, tracked separately. Admitting
+# fighters neither causes nor worsens it.
+#
+# Costs, still true and still worth knowing: Jigglypuff +9,440 B (3 arena
+# pages), Ness +22,576 B, Kirby a further 13 pages. None of it blocks anything.
+NDS_P2_SHELL_ROSTER ?= 10
 
 # THE ROSTER LADDER, DEFINED ONCE AND EVALUATED IN ALL THREE SHELL TARGETS.
 #

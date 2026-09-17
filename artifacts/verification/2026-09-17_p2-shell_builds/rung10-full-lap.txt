@@ -1,0 +1,18 @@
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=1
+build config: NDS_R2_SCENE_LOOP_WALK=0
+build config: NDS_HARNESS_FAST_LOGIC=0
+build config: NDS_DEV_SCENE_HARNESS=absent
+build config: NDS_RENDERER_PROFILE_LEVEL=0
+build config: NDS_TICK_HUD=0
+build config: NDS_DEBUG_HUD=0
+build config: NDS_R204_FPSHUD_SHADOW=0
+probe capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-09-17_p2-shell_builds\build-p2-shell-r10.txt
+Exception: D:\Stuff\DevFolder\Smash64DS_Port\scripts\lib\gdb-markers.ps1:369
+Line |
+ 369 |          throw ("GDB marker capture failed with exit $exitCode after " …
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | GDB marker capture failed with exit 1 after 104.1s. 0x0211feb8 in
+     | f_lseek (fp=0x229f02c, ofs=1801216) at
+     | /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:4408 Breakpoint 1 at 0x2092554: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 270. Breakpoint 2 at 0x2094298: file D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell-r10/battleship_overlay/src/sys/taskman.c, line 269. Breakpoint 3 at 0x1fffb9c: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71. Breakpoint 4 at 0x2092554: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 270. ENTERREGS r0=022c1800 r4=022a8c30 r8=0217e540 lr=02094561 scene=1 ENTERREGS r0=022c1800 r4=022a8cb4 r8=0217e540 lr=02094561 scene=7 ENTERREGS r0=022c1800 r4=022a8c30 r8=0217e540 lr=02094561 scene=9 ENTERREGS r0=022c1800 r4=022a8cbc r8=0217e540 lr=02094561 scene=16 ENTERREGS r0=022c1800 r4=022a8cbc r8=0217e540 lr=02094561 scene=21 ENTERREGS r0=022c1800 r4=022a8cbc r8=0217e540 lr=02094561 scene=16 ENTERREGS r0=022c1800 r4=022a8cbc r8=0217e540 lr=02094561 scene=21 ENTERREGS r0=022c1800 r4=022a8ca4 r8=0217e540 lr=02094561 scene=22 ENTERREGS r0=022c1800 r4=022a8cb4 r8=0217e540 lr=02094561 scene=24 ENTERREGS r0=022c1800 r4=022a8cbc r8=0217e540 lr=02094561 scene=16 SHELLABORT lr=00504340 sp=02fffd9f mode=3 scene=16 No symbol matches $lr. SHELLABORTREG r0=022ec2f0 r1=00000000 r2=02ff2934 r3=00504340 r4=022ec2f0 r5=02ff28e4 r6=0227c7e8 r7=0228c8dc SHELLABORTFIX fail=0 asset=0 dep=0 firstlr=00000000 lastlr=00000000 [Inferior 1 (Remote target) detached]  warning: 4408 /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c: No such file or directory warning: could not convert '$n' from the host encoding (CP1252) to UTF-32. This normally should not happen, please file a bug report.

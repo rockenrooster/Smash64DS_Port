@@ -1,0 +1,20 @@
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=1
+build config: NDS_R2_SCENE_LOOP_WALK=0
+build config: NDS_HARNESS_FAST_LOGIC=0
+build config: NDS_DEV_SCENE_HARNESS=absent
+build config: NDS_RENDERER_PROFILE_LEVEL=0
+build config: NDS_TICK_HUD=0
+build config: NDS_DEBUG_HUD=0
+build config: NDS_R204_FPSHUD_SHADOW=0
+probe capture: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verification\2026-09-17_p2-shell_builds\build-p2-shell-r10.txt
+Exception: D:\Stuff\DevFolder\Smash64DS_Port\scripts\lib\gdb-markers.ps1:369
+Line |
+ 369 |          throw ("GDB marker capture failed with exit $exitCode after " …
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | GDB marker capture failed with exit 1 after 101.8s. 0x0211cb12 in fread
+     | () Breakpoint 1 at 0x208dcbc: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line
+     | 270. Breakpoint 2 at 0x208fa00: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-shell-r10/battleship_overlay/src/sys/taskman.c, line 269. Breakpoint 3 at 0x1fffb3c: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71. Breakpoint 4 at 0x208dcbc: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 270. ENTERREGS r0=022af000 r4=02296550 r8=0216f198 lr=0208fcc9 scene=1 ENTERREGS r0=022af000 r4=022965d4 r8=0216f198 lr=0208fcc9 scene=7 ENTERREGS r0=022af000 r4=02296550 r8=0216f198 lr=0208fcc9 scene=9 ENTERREGS r0=022af000 r4=022965dc r8=0216f198 lr=0208fcc9 scene=16 ENTERREGS r0=022af000 r4=022965dc r8=0216f198 lr=0208fcc9 scene=21 ENTERREGS r0=022af000 r4=022965dc r8=0216f198 lr=0208fcc9 scene=16 ENTERREGS r0=022af000 r4=022965dc r8=0216f198 lr=0208fcc9 scene=21 ENTERREGS r0=022af000 r4=022965c4 r8=0216f198 lr=0208fcc9 scene=22 ENTERREGS r0=022af000 r4=022965d4 r8=0216f198 lr=0208fcc9 scene=24 ENTERREGS r0=022af000 r4=022965dc r8=0216f198 lr=0208fcc9 scene=16 SHELLABORT lr=00504340 sp=02fffd9f mode=3 scene=16 No symbol matches $lr. SHELLABORTREG r0=022d9af0 r1=00000000 r2=02ff2934 r3=00504340 r4=022d9af0 r5=02ff28e4 r6=0226a178 r7=0227a214 SHELLABORTFIX fail=0 asset=0 dep=0 firstlr=00000000 lastlr=00000000 [Inferior 1 (Remote target) detached]  warning: could not convert '$n' from the host encoding (CP1252) to UTF-32. This normally should not happen, please file a bug report.
