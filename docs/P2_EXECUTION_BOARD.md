@@ -66,7 +66,7 @@ evaluation gave **no WORK-H reduction**. Order 2 alone is 12,144; Order 4 is the
 only class large enough and is **owner-forbidden**. **Owner decision, not
 engineering.** Last untried lane SIZED: the 67,858 literal-pool bucket gives
 **11,449** packed; `-fsection-anchors` is **inert**. Placement CLOSED.
-Checks: Boundary GREEN 3/3; four-CPU PASSES 09-17.
+Checks: **Boundary GREEN 09-17**, 0 exceptions, all 3 arms.
 **KIRBY COPY FIXED — all 11 victims draw natively, gate GREEN**
 (`…_p2-3f47-kirby-copy-hats/`). Bodies moved into the per-slot **hat images**:
 Kirby resident **+0**, peak **28,848 → 3,071 B**, heap **112,192**, native
