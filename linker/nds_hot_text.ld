@@ -163,7 +163,16 @@ SECTIONS {
 		*(.data.dLBParticleCurrentTransformID)
 		*(.data.sNdsNativeStagePacketActive)
 		/* DTCM-RESIDENT HOT SCALARS: END */
-		. = ALIGN(4);
+		/* 32, not 4. The ALIGN(32) after .dtcm.fighter above exists so that
+		 * Calico's __irq_table keeps its 32-byte boundary whatever the
+		 * data-driven fighter tables weigh -- but anything appended AFTER it
+		 * undoes that, because .dtcm's total size is what positions
+		 * .dtcm.bss and therefore ShieldPose and __irq_table. The hot-scalar
+		 * block is 40 bytes, so with ALIGN(4) it left __irq_table at
+		 * 0x02ff27c8, which is 8 bytes off a 32-byte boundary.
+		 * scripts/check-task20-dtcm-layout.ps1 catches exactly this; it is
+		 * why that check pins the Calico boundaries and not just the sizes. */
+		. = ALIGN(32);
 	} >dtcm AT>lma9 :dtcm = 0xff
 
 	/* Load information for DTCM */
