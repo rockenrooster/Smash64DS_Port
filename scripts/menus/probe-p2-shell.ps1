@@ -387,6 +387,44 @@ try {
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
         'set $n = 0',
+        # STOP AT THE ABORT, NOT AT WHAT CALICO DOES AFTERWARDS.
+        #
+        # Without this, an ARM9 abort in a roster rung is undiagnosable and
+        # looks like a wandered CPU. calico's __excpt_entry disables the MPU,
+        # loads a user handler from a fixed word and jumps to it blind; that
+        # word is only ever written by setExceptionHandler() in
+        # nds_freeze_diagnostics.c, which is gated on NDS_FREEZE_DIAGNOSTICS --
+        # 0 in every shell profile. So the jump lands in junk and melonDS
+        # reports SIGILL at a constant bogus pc. Rungs 9 and 10 both reported
+        # pc=0x00000B64 despite different ITCM layouts, which is what proved it
+        # a stale vector rather than a wander: `pc`, `cpsr` and `spsr` at that
+        # point describe calico, not the fault.
+        #
+        # Here the banked lr IS the faulting PC (already adjusted, -8 data /
+        # -4 prefetch), $sp & 3 is 2 for a data abort and 3 for undefined, and
+        # r0-r7 still hold the faulting context. Four other harnesses already
+        # do this and check-harness-registry.ps1 even REQUIRES it of the shell
+        # loop verifier; this probe was simply outside that rule.
+        #
+        # gNdsRelocExternalFixupFail* is printed because the house rule in
+        # verify-p2-shell-loop.ps1 is that an abort during a walk is nearly
+        # always a reloc fixup that did not resolve -- the pointer is left raw
+        # and the first dereference aborts.
+        'break __excpt_entry',
+        'commands',
+        'silent',
+        # $sp is a POINTER here, so it must be cast before the mask. gdb answers
+        # a bare ($sp & 3) with "Argument to arithmetic operation not a number
+        # or boolean" and aborts the entire command file -- which loses the very
+        # fault this block exists to capture, and looks like the run simply
+        # ended. Cost one probe cycle to learn.
+        'printf "SHELLABORT lr=%08x sp=%08x mode=%u scene=%d\n", $lr, $sp, ((unsigned long)$sp & 3), (int)gSCManagerSceneData.scene_curr',
+        'info symbol $lr',
+        'printf "SHELLABORTREG r0=%08x r1=%08x r2=%08x r3=%08x r4=%08x r5=%08x r6=%08x r7=%08x\n", $r0,$r1,$r2,$r3,$r4,$r5,$r6,$r7',
+        'printf "SHELLABORTFIX fail=%u asset=%x dep=%x firstlr=%08x lastlr=%08x\n", gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstDep, gNdsRelocExternalFixupFailFirstLR, gNdsRelocExternalFixupFailLastLR',
+        'detach',
+        'quit 1',
+        'end',
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
