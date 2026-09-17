@@ -72,13 +72,14 @@ untried lane SIZED: the 67,858 literal-pool bucket gives only **11,449** packed
 Checks: Boundary GREEN 3/3; four-CPU PASSES (hats off).
 **KIRBY COPY FIXED — all 11 victims draw natively, gate GREEN**
 (`…_p2-3f47-kirby-copy-hats/`). Bodies moved into the per-slot **hat images**:
-Kirby resident **+0** (40,133 unchanged), peak for one copying Kirby
-**28,848 → 3,071 B** (9.4x). Heap back to **112,192**, cadence restored, native
-**0/0**, triangles identical. TWO defects, only one was bytes: the other was
+Kirby resident **+0**, peak for one copying Kirby **28,848 → 3,071 B** (9.4x).
+Heap back to **112,192**, cadence restored, native **0/0**. TWO defects, only one was bytes: the other was
 `SetRootProgram`'s stale `program <= 4u`, silently resetting Stone (13) and
 **CopyLink** (14) to canonical — Link's copy would have regressed too; bound now
 derived. WORK-H +58,112 is **placement, not draw** (triangles identical; STG
-105% of it). OWED: a **visual check per hat** (`validate_cross_census=False`).
+105% of it). Cross-slot VALUES now guarded: all ten hats emit head 1's
+known-good sequence byte-identically, pinned against the emitted inc, fails
+closed. OWED: per-hat **appearance** only.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
 `…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
 14,080 floor, 9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no
