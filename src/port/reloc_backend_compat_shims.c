@@ -3976,197 +3976,92 @@ sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
 sb32 ftCommonCatchCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCatchCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopAppealGuardActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopAppealGuardCatchCheckCount++;
-        return ndsBaseFTCommonCatchCheckInterruptCommon(fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsStageMPPassiveLoopCatchCheckCount++;
-        result = ndsBaseFTCommonCatchCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsStageMPPassiveLoopCatchSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS4CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackS4CheckInterruptCommon(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS4CheckInterruptTurn(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackS4CheckInterruptTurn(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackHi4CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackHi4CheckInterruptCommon(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw4CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackLw4CheckInterruptCommon(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw4CheckInterruptSquat(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackLw4CheckInterruptSquat(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS3CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackS3CheckInterruptCommon(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackHi3CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackHi3CheckInterruptCommon(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackLw3CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackLw3CheckInterruptCommon(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttack1CheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttack1CheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterDashRunAttack1CheckCallCount++;
-        result = ndsBaseFTCommonAttack1CheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterDashRunAttack1CheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 void ftCommonAttack11SetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack11SetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack11SetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonAttack11ProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack11ProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack11UpdateActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp != NULL) && (fp->player < 2))
-        {
-            gNdsFighterDashRunAttack11TickMask |=
-                1u << ((fp->player * 4u) + 0u);
-        }
-        ndsBaseFTCommonAttack11ProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonAttack11ProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack11ProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack11InterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp != NULL) && (fp->player < 2))
-        {
-            gNdsFighterDashRunAttack11TickMask |=
-                1u << ((fp->player * 4u) + 1u);
-        }
-        ndsBaseFTCommonAttack11ProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonAttack12SetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack12SetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack12SetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonAttack12ProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack12ProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack12ProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonAttack12ProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack12ProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack12ProcInterrupt(fighter_gobj);
-    }
 }
 
 sb32 ftCommonAttack11CheckGoto(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttack11CheckGoto(fighter_gobj);
-
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 /* The real ones come with battleship_ftcommon_itemuse.c, which imports
@@ -4198,96 +4093,47 @@ sb32 ftCommonGetCheckInterruptCommon(GObj *fighter_gobj)
 sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttack100StartCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        gNdsFighterDashRunAttack100StartCheckCallCount++;
-        return ndsBaseFTCommonAttack100StartCheckInterruptCommon(fighter_gobj);
-    }
-    return FALSE;
 }
 
 void ftCommonAttack100StartSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100StartSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        gNdsFighterDashRunAttack100StartSetStatusCount++;
-        ndsBaseFTCommonAttack100StartSetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonAttack100StartProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100StartProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack100StartProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonAttack100LoopSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100LoopSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        gNdsFighterDashRunAttack100LoopSetStatusCount++;
-        ndsBaseFTCommonAttack100LoopSetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonAttack100LoopProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100LoopProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack100LoopProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonAttack100LoopProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100LoopProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack100LoopProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonAttack100EndSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttack100EndSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttack1Active != FALSE))
-    {
-        ndsBaseFTCommonAttack100EndSetStatus(fighter_gobj);
-    }
 }
 
 sb32 ftCommonCatchCheckInterruptAttack11(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCatchCheckInterruptAttack11(fighter_gobj);
-
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 u16 ftParamGetMotionCount(void);
@@ -4356,30 +4202,6 @@ efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj)
 sb32 ftCommonGuardOnCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopAppealGuardActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsStageMPPassiveLoopAppealGuardCheckCount++;
-        result = ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
-        return result;
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunGuardOnActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterDashRunGuardCheckCallCount++;
-        result = ndsBaseFTCommonGuardOnCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterDashRunGuardCheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 #if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
@@ -4392,21 +4214,6 @@ sb32 ftCommonLightThrowCheckInterruptGuardOn(GObj *fighter_gobj)
 sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonEscapeCheckInterruptGuard(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunEscapeActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterDashRunEscapeCheckCallCount++;
-        result = ndsBaseFTCommonEscapeCheckInterruptGuard(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterDashRunEscapeCheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 #if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
@@ -4426,34 +4233,21 @@ sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
 sb32 ftCommonGuardCheckInterruptEscape(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonGuardCheckInterruptEscape(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonCatchCheckInterruptGuard(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCatchCheckInterruptGuard(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonGuardPassCheckInterruptGuard(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonGuardPassCheckInterruptGuard(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAppealCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAppealCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopAppealActive != FALSE))
-    {
-        return ndsBaseFTCommonAppealCheckInterruptCommon(fighter_gobj);
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 void ftKirbySpecialNLoseCopy(GObj *fighter_gobj);
@@ -4525,112 +4319,37 @@ void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj)
 sb32 ftCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonKneeBendCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
-    {
-        (void)fighter_gobj;
-        gNdsStageMPDownWaitLoopDownStandKneeBendCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        return ndsBaseFTCommonKneeBendCheckInterruptCommon(fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpWaitProbeActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterJumpOriginalKneeBendCheckCallCount++;
-        result = ndsBaseFTCommonKneeBendCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterJumpOriginalKneeBendCheckSuccessCount++;
-            gNdsFighterJumpKneeBendSetStatusCallCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonDashCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDashCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        return ndsBaseFTCommonDashCheckInterruptCommon(fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunWaitInterruptActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterDashRunOriginalDashCheckCallCount++;
-        result = ndsBaseFTCommonDashCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterDashRunOriginalDashCheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonAttackS4CheckInterruptDash(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackS4CheckInterruptDash(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonEscapeCheckInterruptDash(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonEscapeCheckInterruptDash(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonCatchCheckInterruptDashRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCatchCheckInterruptDashRun(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 void ftCommonAttackDashSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttackDashSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttackDashActive != FALSE))
-    {
-        ndsBaseFTCommonAttackDashSetStatus(fighter_gobj);
-    }
 }
 
 sb32 ftCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonAttackDashCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttackDashActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterDashRunAttackDashCheckCallCount++;
-        result = ndsBaseFTCommonAttackDashCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterDashRunAttackDashCheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 /* The real one comes with battleship_ftcommon_itemthrow.c, which is now gated
@@ -4677,169 +4396,46 @@ sb32 ftCommonGuardOnCheckInterruptDashRun(GObj *fighter_gobj, f32 frame)
 sb32 ftCommonKneeBendCheckInterruptRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonKneeBendCheckInterruptRun(fighter_gobj);
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        return ndsBaseFTCommonKneeBendCheckInterruptRun(fighter_gobj);
-    }
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterJumpDeferredInterruptCheckCount++;
-        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 1;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonTurnRunCheckInterruptRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonTurnRunCheckInterruptRun(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunTurnRunActive != FALSE))
-    {
-        sb32 result;
-
-        gNdsFighterDashRunTurnRunCheckCallCount++;
-        result = ndsBaseFTCommonTurnRunCheckInterruptRun(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsFighterDashRunTurnRunCheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 void ftCommonTurnProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonTurnProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
-        ((sNdsStageTurnLoopUpdateActive != FALSE) ||
-         (sNdsStageTurnLoopFinalUpdateActive != FALSE)))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
-            (fighter_gobj == NULL))
-        {
-            gNdsStageTurnLoopUnsafeCount++;
-            return;
-        }
-        if (sNdsStageTurnLoopFinalUpdateActive != FALSE)
-        {
-            gNdsStageTurnLoopFinalUpdateTickCount++;
-        }
-        else
-        {
-            gNdsStageTurnLoopUpdateTickCount++;
-        }
-        if (fp->motion_vars.flags.flag1 != 0)
-        {
-            fp->motion_vars.flags.flag1 = 0;
-            fp->status_vars.common.turn.is_allow_turn_direction = TRUE;
-            fp->status_vars.common.turn.is_disable_sa_interrupts = TRUE;
-            fp->lr = -fp->lr;
-            fp->physics.vel_ground.x = -fp->physics.vel_ground.x;
-        }
-        if (fighter_gobj->anim_frame <= 0.0F)
-        {
-            ftCommonWaitSetStatus(fighter_gobj);
-        }
-        return;
-    }
 }
 
 void ftCommonTurnProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonTurnProcInterrupt(fighter_gobj);
     return;
-
-    if (ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonTurnProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonTurnSetStatus(GObj *fighter_gobj, s32 lr_dash)
 {
     ndsBaseFTCommonTurnSetStatus(fighter_gobj, lr_dash);
     return;
-
-    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
-        (sNdsStageTurnLoopSetStatusActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageTurnLoopUnsafeCount++;
-            return;
-        }
-        ndsBaseFTCommonTurnSetStatus(fighter_gobj, lr_dash);
-        fp->motion_vars.flags.flag1 = 0;
-        fp->status_vars.common.turn.is_allow_turn_direction = FALSE;
-        fp->status_vars.common.turn.is_disable_sa_interrupts = FALSE;
-        fp->status_vars.common.turn.button_mask = 0u;
-        fp->status_vars.common.turn.lr_dash = lr_dash;
-        fp->status_vars.common.turn.attacks4_buffer =
-            (lr_dash != 0) ? 0 : 256;
-        fp->status_vars.common.turn.lr_turn = -fp->lr;
-        return;
-    }
-    (void)fighter_gobj;
-    (void)lr_dash;
 }
 
 void ftCommonTurnSetStatusCenter(GObj *fighter_gobj)
 {
     ndsBaseFTCommonTurnSetStatusCenter(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
-        (sNdsStageTurnLoopSetStatusActive != FALSE))
-    {
-        ndsBaseFTCommonTurnSetStatusCenter(fighter_gobj);
-    }
 }
 
 void ftCommonTurnSetStatusInvertLR(GObj *fighter_gobj)
 {
     ndsBaseFTCommonTurnSetStatusInvertLR(fighter_gobj);
     return;
-
-    FTStruct *fp;
-
-    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
-        (sNdsStageTurnLoopSetStatusActive != FALSE))
-    {
-        ndsBaseFTCommonTurnSetStatusInvertLR(fighter_gobj);
-        return;
-    }
-
-    fp = ftGetStruct(fighter_gobj);
-
-    if (fp != NULL)
-    {
-        fp->lr = -fp->lr;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        gNdsFighterDashRunUnexpectedStatusCount++;
-    }
 }
 
 sb32 ftCommonTurnCheckInputSuccess(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonTurnCheckInputSuccess(fighter_gobj);
-
-    if (ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonTurnCheckInputSuccess(fighter_gobj);
-    }
-    return FALSE;
 }
 
 void ftParamSetStickLR(FTStruct *fp)
@@ -4857,52 +4453,16 @@ void ftParamSetStickLR(FTStruct *fp)
 sb32 ftCommonSquatCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonSquatCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassInputLoopInputActive != FALSE))
-    {
-        return ndsBaseFTCommonSquatCheckInterruptCommon(fighter_gobj);
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonPassCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonPassCheckInterruptCommon(fighter_gobj);
-
-    sb32 result;
-
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
-    {
-        (void)fighter_gobj;
-        gNdsStageMPDownWaitLoopDownStandPassCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassInputLoopInputActive != FALSE))
-    {
-        gNdsStageMPPassInputLoopCheckCallCount++;
-        result = ndsBaseFTCommonPassCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            gNdsStageMPPassInputLoopCheckSuccessCount++;
-        }
-        return result;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 sb32 ftCommonPassCheckInterruptSquat(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonPassCheckInterruptSquat(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPPassInputLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassInputLoopInputActive != FALSE))
-    {
-        return ndsBaseFTCommonPassCheckInterruptSquat(fighter_gobj);
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 /* Mushroom Kingdom warp-pipe enter path: the source test lives in
@@ -4935,8 +4495,6 @@ sb32 ftCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj)
 sb32 ftCommonSquatWaitCheckInterruptLanding(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonSquatWaitCheckInterruptLanding(fighter_gobj);
-
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
@@ -4953,163 +4511,18 @@ sb32 ftCommonHammerFallCheckInterruptCommon(GObj *fighter_gobj)
 sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonTurnCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageTurnLoopProofEnabled() != FALSE) &&
-        (sNdsStageTurnLoopSetStatusActive != FALSE))
-    {
-        gNdsStageTurnLoopCheckCallCount++;
-        if (ftCommonTurnCheckInputSuccess(fighter_gobj) != FALSE)
-        {
-            ftCommonTurnSetStatus(fighter_gobj, 0);
-            gNdsStageTurnLoopCheckSuccessCount++;
-            gNdsStageTurnLoopSetStatusCount++;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
 void ftAnimEndSetWait(GObj *fighter_gobj)
 {
     battleship_ftAnimEndSetWait(fighter_gobj);
     return;
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunAttackDashUpdateActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
-
-        if (slot < 2u)
-        {
-            gNdsFighterDashRunAttackDashTickMask |= 1u << (slot * 3u);
-        }
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopAttackUpdateActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopAttackUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopRollForwardUpdateActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopRollForwardUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopRollBackUpdateActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopRollBackUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownStandUpdateActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopDownStandUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopPassiveStandBActive != FALSE))
-    {
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopPassiveStandUpdateActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopPassiveStandUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopPassiveUpdateActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopPassiveUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchUpdateActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCatchUpdateTickCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopPassiveStandUpdateActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopPassiveStandUpdateTickCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopPassiveUpdateActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopPassiveUpdateTickCount++;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopRunBrakeEndActive != FALSE))
-    {
-        gNdsFighterProcessLoopRunBrakeEndCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopLandingEndActive != FALSE))
-    {
-        gNdsFighterProcessLoopLandingEndCount++;
-        (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingEndActive != FALSE))
-    {
-        gNdsFighterLandingEndCallCount++;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpRunBrakeEndActive != FALSE))
-    {
-        gNdsFighterJumpRunBrakeEndCallCount++;
-    }
-    (void)ftAnimEndCheckSetStatus(fighter_gobj, ftCommonWaitSetStatus);
 }
 
 void ftAnimEndSetFall(GObj *fighter_gobj)
 {
     battleship_ftAnimEndSetFall(fighter_gobj);
     return;
-    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
-        (sNdsFighterJumpAttackAirRefreshActive != FALSE))
-    {
-        (void)fighter_gobj;
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopJumpAnimEndActive != FALSE))
-    {
-        gNdsFighterProcessLoopJumpAnimEndCount++;
-        ftCommonFallSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingJumpAnimEndActive != FALSE))
-    {
-        gNdsFighterLandingJumpAnimEndCallCount++;
-        ftCommonFallSetStatus(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterJumpFallDeferredCount++;
-        gNdsFighterMarioFoxJumpLoopDeferredMask |= 1u << 7;
-    }
 }
 
 static void ndsFTCommonCliffClimbQuick2SetStatusBounded(GObj *fighter_gobj)
@@ -5139,445 +4552,98 @@ static void ndsFTCommonCliffWaitApplyOriginalPostStatus(GObj *fighter_gobj)
 sb32 ftAnimEndCheckSetStatus(GObj *fighter_gobj, void (*proc_status)(GObj*))
 {
     return battleship_ftAnimEndCheckSetStatus(fighter_gobj, proc_status);
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopOttottoAnimEndCheckCount++;
-        if ((proc_status == ftCommonOttottoWaitSetStatus) ||
-            (proc_status == ndsBaseFTCommonOttottoWaitSetStatus))
-        {
-            return FALSE;
-        }
-    }
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopWaitUpdateActive != FALSE) &&
-        (proc_status == ftCommonCliffWaitSetStatus))
-    {
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 3;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            sNdsStageMPCliffLiveLoopSetStatusActive = TRUE;
-            proc_status(fighter_gobj);
-            ndsFTCommonCliffWaitApplyOriginalPostStatus(fighter_gobj);
-            sNdsStageMPCliffLiveLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopQuick1UpdateActive != FALSE) &&
-        (proc_status == ftCommonCliffClimbQuick2SetStatus))
-    {
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 4;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            sNdsStageMPCliffLiveLoopSetStatusActive = TRUE;
-            ndsFTCommonCliffClimbQuick2SetStatusBounded(fighter_gobj);
-            sNdsStageMPCliffLiveLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopCommon2UpdateActive != FALSE) &&
-        (proc_status == mpCommonSetFighterWaitOrFall))
-    {
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 5;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            sNdsStageMPCliffLiveLoopSetStatusActive = TRUE;
-            proc_status(fighter_gobj);
-            sNdsStageMPCliffLiveLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitFloorLoopUpdateActive != FALSE) &&
-        (proc_status == ftCommonCliffWaitSetStatus))
-    {
-        gNdsStageMPCliffWaitFloorLoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            gNdsStageMPCliffWaitFloorLoopAnimEndSetStatusCount++;
-            gNdsStageMPCliffWaitFloorLoopCliffWaitSetStatusCount++;
-            sNdsStageMPCliffWaitFloorLoopSetStatusActive = TRUE;
-            proc_status(fighter_gobj);
-            ndsFTCommonCliffWaitApplyOriginalPostStatus(fighter_gobj);
-            sNdsStageMPCliffWaitFloorLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackActionLoopAnimEndActive != FALSE) &&
-        (proc_status == ftCommonCliffAttackQuick2SetStatus))
-    {
-        gNdsStageMPCliffAttackActionLoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            sNdsStageMPCliffAttackActionLoopSetStatusActive = TRUE;
-            proc_status(fighter_gobj);
-            sNdsStageMPCliffAttackActionLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbActionLoopAnimEndActive != FALSE) &&
-        (proc_status == ftCommonCliffClimbQuick2SetStatus))
-    {
-        gNdsStageMPCliffClimbActionLoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            sNdsStageMPCliffClimbActionLoopSetStatusActive = TRUE;
-            ndsFTCommonCliffClimbQuick2SetStatusBounded(fighter_gobj);
-            sNdsStageMPCliffClimbActionLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopAnimEndActive != FALSE) &&
-        (proc_status == ftCommonCliffEscapeQuick2SetStatus))
-    {
-        gNdsStageMPCliffEscapeActionLoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            sNdsStageMPCliffEscapeActionLoopSetStatusActive = TRUE;
-            proc_status(fighter_gobj);
-            sNdsStageMPCliffEscapeActionLoopSetStatusActive = FALSE;
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffCommon2LoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffCommon2LoopUpdateActive != FALSE) &&
-        (proc_status == mpCommonSetFighterWaitOrFall))
-    {
-        gNdsStageMPCliffCommon2LoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            gNdsStageMPCliffCommon2LoopWaitOrFallCallCount++;
-            proc_status(fighter_gobj);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbCommon2LoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbCommon2LoopUpdateActive != FALSE) &&
-        (proc_status == mpCommonSetFighterWaitOrFall))
-    {
-        gNdsStageMPCliffClimbCommon2LoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            gNdsStageMPCliffClimbCommon2LoopWaitOrFallCallCount++;
-            proc_status(fighter_gobj);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbFinishLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFinishLoopUpdateActive != FALSE) &&
-        (proc_status == mpCommonSetFighterWaitOrFall))
-    {
-        gNdsStageMPCliffClimbFinishLoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            gNdsStageMPCliffClimbFinishLoopWaitOrFallCallCount++;
-            proc_status(fighter_gobj);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeCommon2LoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeCommon2LoopUpdateActive != FALSE) &&
-        (proc_status == mpCommonSetFighterWaitOrFall))
-    {
-        gNdsStageMPCliffEscapeCommon2LoopAnimEndCheckCount++;
-        if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F))
-        {
-            gNdsStageMPCliffEscapeCommon2LoopWaitOrFallCallCount++;
-            proc_status(fighter_gobj);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((fighter_gobj != NULL) && (fighter_gobj->anim_frame <= 0.0F) &&
-        (proc_status != NULL))
-    {
-        proc_status(fighter_gobj);
-        return TRUE;
-    }
-    return FALSE;
 }
 
 void ftCommonDashProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDashProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopUpdateActive != FALSE))
-    {
-        ndsBaseFTCommonDashProcUpdate(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonDashProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonDashProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDashProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonDashProcInterrupt(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonDashProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonDashProcPhysics(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDashProcPhysics(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopPhysicsActive != FALSE))
-    {
-        ndsBaseFTCommonDashProcPhysics(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonDashProcPhysics(fighter_gobj);
-    }
 }
 
 void ftCommonDashProcMap(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDashProcMap(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopMapActive != FALSE))
-    {
-        ndsBaseFTCommonDashProcMap(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonDashProcMap(fighter_gobj);
-    }
 }
 
 void ftCommonDashSetStatus(GObj *fighter_gobj, u32 flag)
 {
     ndsBaseFTCommonDashSetStatus(fighter_gobj, flag);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonDashSetStatus(fighter_gobj, flag);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        gNdsFighterDashRunDashSetStatusCount++;
-        ndsBaseFTCommonDashSetStatus(fighter_gobj, flag);
-    }
 }
 
 sb32 ftCommonDashCheckTurn(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDashCheckTurn(fighter_gobj);
-
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonDashCheckTurn(fighter_gobj);
-    }
-    return FALSE;
 }
 
 void ftCommonRunProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonRunProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonRunProcInterrupt(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonRunProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonRunSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonRunSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonRunSetStatus(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        gNdsFighterDashRunRunSetStatusCount++;
-        ndsBaseFTCommonRunSetStatus(fighter_gobj);
-    }
 }
 
 sb32 ftCommonRunCheckInterruptDash(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonRunCheckInterruptDash(fighter_gobj);
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        return ndsBaseFTCommonRunCheckInterruptDash(fighter_gobj);
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonRunCheckInterruptDash(fighter_gobj);
-    }
-    return FALSE;
 }
 
 void ftCommonRunBrakeProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonRunBrakeProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonRunBrakeProcInterrupt(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonRunBrakeProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonRunBrakeProcPhysics(GObj *fighter_gobj)
 {
     ndsBaseFTCommonRunBrakeProcPhysics(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopPhysicsActive != FALSE))
-    {
-        ndsBaseFTCommonRunBrakeProcPhysics(fighter_gobj);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonRunBrakeProcPhysics(fighter_gobj);
-    }
 }
 
 void ftCommonRunBrakeSetStatus(GObj *fighter_gobj, u32 flag)
 {
     ndsBaseFTCommonRunBrakeSetStatus(fighter_gobj, flag);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonRunBrakeSetStatus(fighter_gobj, flag);
-        return;
-    }
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        gNdsFighterDashRunRunBrakeSetStatusCount++;
-        ndsBaseFTCommonRunBrakeSetStatus(fighter_gobj, flag);
-    }
 }
 
 sb32 ftCommonRunBrakeCheckInterruptRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonRunBrakeCheckInterruptRun(fighter_gobj);
-
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonRunBrakeCheckInterruptRun(fighter_gobj);
-    }
-    return FALSE;
 }
 
 sb32 ftCommonRunBrakeCheckInterruptTurnRun(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonRunBrakeCheckInterruptTurnRun(fighter_gobj);
-
-    if (ndsFighterMarioFoxDashRunProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonRunBrakeCheckInterruptTurnRun(fighter_gobj);
-    }
-    return FALSE;
 }
 
 void ftCommonKneeBendProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonKneeBendProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopUpdateActive != FALSE))
-    {
-        ndsBaseFTCommonKneeBendProcUpdate(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpKneeBendUpdateActive != FALSE))
-    {
-        gNdsFighterJumpKneeBendUpdateCallCount++;
-        ndsBaseFTCommonKneeBendProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonKneeBendProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonKneeBendProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonKneeBendProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpKneeBendInterruptActive != FALSE))
-    {
-        gNdsFighterJumpKneeBendInterruptCallCount++;
-        ndsBaseFTCommonKneeBendProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonKneeBendSetStatusParam(GObj *fighter_gobj, s32 status_id,
@@ -5585,91 +4651,38 @@ void ftCommonKneeBendSetStatusParam(GObj *fighter_gobj, s32 status_id,
 {
     ndsBaseFTCommonKneeBendSetStatusParam(fighter_gobj, status_id, input_source);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE) &&
-        (status_id == nFTCommonStatusKneeBend))
-    {
-        ndsBaseFTCommonKneeBendSetStatusParam(fighter_gobj, status_id,
-                                              input_source);
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (status_id == nFTCommonStatusKneeBend))
-    {
-        gNdsFighterJumpKneeBendSetStatusCallCount++;
-        ndsBaseFTCommonKneeBendSetStatusParam(fighter_gobj, status_id,
-                                              input_source);
-    }
 }
 
 void ftCommonKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
 {
     ndsBaseFTCommonKneeBendSetStatus(fighter_gobj, input_source);
     return;
-
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        ndsBaseFTCommonKneeBendSetStatus(fighter_gobj, input_source);
-    }
 }
 
 void ftCommonGuardKneeBendSetStatus(GObj *fighter_gobj, s32 input_source)
 {
     ndsBaseFTCommonGuardKneeBendSetStatus(fighter_gobj, input_source);
     return;
-
-    (void)fighter_gobj;
-    (void)input_source;
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterJumpDeniedStatusCount++;
-    }
 }
 
 sb32 ftCommonKneeBendCheckButtonTap(FTStruct *fp)
 {
     return ndsBaseFTCommonKneeBendCheckButtonTap(fp);
-
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonKneeBendCheckButtonTap(fp);
-    }
-    return FALSE;
 }
 
 s32 ftCommonKneeBendGetInputTypeCommon(FTStruct *fp)
 {
     return ndsBaseFTCommonKneeBendGetInputTypeCommon(fp);
-
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonKneeBendGetInputTypeCommon(fp);
-    }
-    return FTCOMMON_KNEEBEND_INPUT_TYPE_NONE;
 }
 
 s32 ftCommonKneeBendGetInputTypeRun(FTStruct *fp)
 {
     return ndsBaseFTCommonKneeBendGetInputTypeRun(fp);
-
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        return ndsBaseFTCommonKneeBendGetInputTypeRun(fp);
-    }
-    return FTCOMMON_KNEEBEND_INPUT_TYPE_NONE;
 }
 
 sb32 ftCommonGuardKneeBendCheckInterruptGuard(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonGuardKneeBendCheckInterruptGuard(fighter_gobj);
-
-    (void)fighter_gobj;
-    if (ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterJumpDeferredInterruptCheckCount++;
-    }
-    return FALSE;
 }
 
 sb32 ftCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj)
@@ -5703,19 +4716,6 @@ void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonJumpProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonJumpProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpAirInterruptActive != FALSE))
-    {
-        gNdsFighterJumpAirInterruptCallCount++;
-        ndsBaseFTCommonJumpProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
@@ -5723,9 +4723,6 @@ void ftCommonJumpGetJumpForceButton(s32 stick_range_x, s32 *jump_vel_x,
 {
     ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x, jump_vel_y, is_shorthop);
     return;
-
-    ndsBaseFTCommonJumpGetJumpForceButton(stick_range_x, jump_vel_x,
-                                          jump_vel_y, is_shorthop);
 }
 
 static void ndsFTCommonJumpSyncVelocityAfterStatus(GObj *fighter_gobj)
@@ -5775,237 +4772,48 @@ void ftCommonJumpSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonJumpSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopUpdateActive != FALSE))
-    {
-        ndsBaseFTCommonJumpSetStatus(fighter_gobj);
-        ndsFTCommonJumpSyncVelocityAfterStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpSetStatusActive != FALSE))
-    {
-        gNdsFighterJumpSetStatusCallCount++;
-        ndsBaseFTCommonJumpSetStatus(fighter_gobj);
-        ndsFTCommonJumpSyncVelocityAfterStatus(fighter_gobj);
-    }
 }
 
 void ftCommonFallProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageInterruptActive != FALSE))
-    {
-        sNdsFighterDashRunDamageCommonFallInterruptCount++;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopFallInterruptCallCount++;
-        ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingFallInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonFallProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonFallSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonFallSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
-    {
-        ndsBaseFTCommonFallSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 9;
-        ndsBaseFTCommonFallSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffStatusFloorLoopFallSetStatusCallCount++;
-        ndsBaseFTCommonFallSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        gNdsStageMPCliffClimbFloorLoopFallStatusSetCount++;
-        if ((fp == NULL) || (fp->attr == NULL) ||
-            (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-            return;
-        }
-        if (fp->attr->jumps_max <= fp->jumps_used)
-        {
-            fp->attr->jumps_max = fp->jumps_used + 1;
-        }
-        if (fp->ga == nMPKineticsGround)
-        {
-            mpCommonSetFighterAir(fp);
-        }
-        ftMainSetStatus(fighter_gobj, nFTCommonStatusFall, 0.0F, 1.0F,
-                        FTSTATUS_PRESERVE_FASTFALL);
-        ftPhysicsClampAirVelXMax(fp);
-        fp->is_special_interrupt = TRUE;
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopJumpAnimEndActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp != NULL) && (fp->attr != NULL) &&
-            (fp->attr->jumps_max <= fp->jumps_used))
-        {
-            fp->attr->jumps_max = fp->jumps_used + 1;
-        }
-        ndsBaseFTCommonFallSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingJumpAnimEndActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp != NULL) && (fp->attr != NULL) &&
-            (fp->attr->jumps_max <= fp->jumps_used))
-        {
-            fp->attr->jumps_max = fp->jumps_used + 1;
-        }
-        gNdsFighterLandingFallSetStatusCallCount++;
-        ndsBaseFTCommonFallSetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonOttottoProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonOttottoProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopOttottoUpdateCallCount++;
-        ndsBaseFTCommonOttottoProcUpdate(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
-    {
-        ndsBaseFTCommonOttottoProcUpdate(fighter_gobj);
-    }
 }
 
 void ftCommonOttottoProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonOttottoProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopOttottoInterruptCallCount++;
-        ndsBaseFTCommonOttottoProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
-    {
-        ndsBaseFTCommonOttottoProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonOttottoProcMap(GObj *fighter_gobj)
 {
     ndsBaseFTCommonOttottoProcMap(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffTickFloorLoopOttottoMapCallCount++;
-        ndsBaseFTCommonOttottoProcMap(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
-    {
-        ndsBaseFTCommonOttottoProcMap(fighter_gobj);
-    }
 }
 
 void ftCommonOttottoWaitSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonOttottoWaitSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffTickFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffTickFloorLoopStatusActive != FALSE))
-    {
-        (void)fighter_gobj;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
-    {
-        ndsBaseFTCommonOttottoWaitSetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonOttottoSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonOttottoSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffStatusFloorLoopStatusActive != FALSE))
-    {
-        gNdsStageMPCliffStatusFloorLoopOttottoSetStatusCallCount++;
-        ndsBaseFTCommonOttottoSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPUpdateFloorLoopProofEnabled() != FALSE) &&
-        (gNdsStageMPUpdateFloorLoopPrepared != 0u))
-    {
-        gNdsStageMPUpdateFloorLoopOttottoDeniedCount++;
-    }
 }
 
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
@@ -6035,18 +4843,6 @@ void ftCommonLandingProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonLandingProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonLandingProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingProcInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonLandingProcInterrupt(fighter_gobj);
-    }
 }
 
 void ftCommonLandingSetStatusParam(GObj *fighter_gobj, s32 status_id,
@@ -6055,98 +4851,24 @@ void ftCommonLandingSetStatusParam(GObj *fighter_gobj, s32 status_id,
 {
     ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id, is_allow_interrupt, anim_speed);
     return;
-
-    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPFallLandFloorLoopLandingParamCallCount++;
-        ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id,
-                                             is_allow_interrupt, anim_speed);
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopMapActive != FALSE))
-    {
-        ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id,
-                                             is_allow_interrupt, anim_speed);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingSetStatusActive != FALSE))
-    {
-        gNdsFighterLandingSetStatusCallCount++;
-        ndsBaseFTCommonLandingSetStatusParam(fighter_gobj, status_id,
-                                             is_allow_interrupt, anim_speed);
-        return;
-    }
-    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterLandingDeniedStatusCount++;
-    }
 }
 
 void ftCommonLandingSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonLandingSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
-        (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
-    {
-        gNdsFighterJumpAttackAirMapLandingMask |= 1u << 8u;
-        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPFallLandFloorLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPFallLandFloorLoopLandingSetStatusCallCount++;
-        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopMapActive != FALSE))
-    {
-        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingSetStatusActive != FALSE))
-    {
-        gNdsFighterLandingSetStatusCallCount++;
-        ndsBaseFTCommonLandingSetStatus(fighter_gobj);
-    }
 }
 
 void ftCommonLandingAirNullSetStatus(GObj *fighter_gobj, f32 anim_speed)
 {
     ndsBaseFTCommonLandingAirNullSetStatus(fighter_gobj, anim_speed);
     return;
-
-    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
-        (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
-    {
-        gNdsFighterJumpAttackAirMapLandingMask |= (1u << 1u) | (1u << 5u);
-        ndsBaseFTCommonLandingAirNullSetStatus(fighter_gobj, anim_speed);
-        return;
-    }
-    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterLandingDeniedStatusCount++;
-    }
 }
 
 void ftCommonLandingAirSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonLandingAirSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxJumpAttackAirProofEnabled() != FALSE) &&
-        (sNdsFighterJumpAttackAirMapLandingActive != FALSE))
-    {
-        gNdsFighterJumpAttackAirMapLandingMask |= 1u << 1u;
-    }
-    ndsBaseFTCommonLandingAirSetStatus(fighter_gobj);
 }
 
 void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
@@ -6155,14 +4877,6 @@ void ftCommonLandingFallSpecialSetStatus(GObj *fighter_gobj,
 {
     ndsBaseFTCommonLandingFallSpecialSetStatus(fighter_gobj, is_allow_interrupt, anim_speed);
     return;
-
-    (void)fighter_gobj;
-    (void)is_allow_interrupt;
-    (void)anim_speed;
-    if (ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE)
-    {
-        gNdsFighterLandingDeniedStatusCount++;
-    }
 }
 
 sb32 ftCommonAttackAirCheckInterruptCommon(GObj *fighter_gobj)
@@ -6183,8 +4897,6 @@ void ftCommonAttackAirProcMap(GObj *fighter_gobj)
 {
     ndsBaseFTCommonAttackAirProcMap(fighter_gobj);
     return;
-
-    ndsBaseFTCommonAttackAirProcMap(fighter_gobj);
 }
 
 sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
@@ -7255,20 +5967,6 @@ void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 {
     ndsBaseFTCommonCatchPullProcCatch(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchPullActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCatchPullProcCatchCount++;
-        ndsBaseFTCommonCatchPullProcCatch(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCatchPullDeferredCount++;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonCapturePulledProcCapture(GObj *fighter_gobj,
@@ -7276,21 +5974,6 @@ void ftCommonCapturePulledProcCapture(GObj *fighter_gobj,
 {
     ndsBaseFTCommonCapturePulledProcCapture(fighter_gobj, capture_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCaptureActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCaptureProcCaptureCount++;
-        ndsBaseFTCommonCapturePulledProcCapture(fighter_gobj, capture_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCapturePulledDeferredCount++;
-    }
-    (void)fighter_gobj;
-    (void)capture_gobj;
 }
 
 static void ndsStageMPPassiveLoopCaptureProcDamage(GObj *fighter_gobj)
@@ -7558,63 +6241,18 @@ void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj)
 {
     ndsBaseFTCommonThrownSetStatusDamageRelease(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        ndsBaseFTCommonThrownSetStatusDamageRelease(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowReleaseStatusDamageReleaseCount++;
-        ndsBaseFTCommonThrownSetStatusDamageRelease(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonThrownUpdateDamageStats(FTStruct *this_fp)
 {
     ndsBaseFTCommonThrownUpdateDamageStats(this_fp);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        ndsBaseFTCommonThrownUpdateDamageStats(this_fp);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowReleaseStatusUpdateDamageStatsCount++;
-        ndsBaseFTCommonThrownUpdateDamageStats(this_fp);
-        return;
-    }
-    (void)this_fp;
 }
 
 void ftCommonThrownSetStatusNoDamageRelease(GObj *fighter_gobj)
 {
     ndsBaseFTCommonThrownSetStatusNoDamageRelease(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        ndsBaseFTCommonThrownSetStatusNoDamageRelease(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowReleaseStatusActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowReleaseStatusNoDamageReleaseCount++;
-        ndsBaseFTCommonThrownSetStatusNoDamageRelease(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 static sb32 ndsFTCommonThrownLoseGripCanCallOriginal(GObj *fighter_gobj)
@@ -7741,77 +6379,12 @@ void ftCommonThrownDecideFighterLoseGrip(GObj *fighter_gobj,
 {
     ndsBaseFTCommonThrownDecideFighterLoseGrip(fighter_gobj, interact_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        FTStruct *this_fp = ftGetStruct(fighter_gobj);
-        FTStruct *interact_fp = ftGetStruct(interact_gobj);
-        GObj *release_gobj = ((this_fp != NULL) &&
-            (this_fp->is_catch_or_capture != FALSE)) ?
-            fighter_gobj : interact_gobj;
-
-        if ((this_fp != NULL) && (interact_fp != NULL) &&
-            (ndsFTCommonThrownLoseGripCanCallOriginal(release_gobj) != FALSE))
-        {
-            ndsFTCommonThrownLoseGripRecordOriginal(release_gobj);
-            ndsBaseFTCommonThrownDecideFighterLoseGrip(fighter_gobj,
-                                                       interact_gobj);
-        }
-        else if (this_fp != NULL)
-        {
-            if (this_fp->is_catch_or_capture != FALSE)
-            {
-                ndsFTCommonThrownReleaseFighterLoseGripBounded(
-                    fighter_gobj, interact_gobj);
-            }
-            else
-            {
-                ndsFTCommonThrownReleaseFighterLoseGripBounded(
-                    interact_gobj, fighter_gobj);
-            }
-        }
-        if (interact_fp != NULL)
-        {
-            interact_fp->capture_gobj = NULL;
-        }
-        if (this_fp != NULL)
-        {
-            this_fp->catch_gobj = NULL;
-        }
-        if (((interact_fp == NULL) || (interact_fp->capture_gobj == NULL)) &&
-            ((this_fp == NULL) || (this_fp->catch_gobj == NULL)))
-        {
-            gNdsFighterDashRunDamageLoseGripLinkClearCount++;
-            gNdsFighterDashRunDamageLoseGripMask |=
-                NDS_DAMAGE_LOSEGRIP_LINK_CLEAR;
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
-    {
-        ndsBaseFTCommonThrownDecideFighterLoseGrip(fighter_gobj,
-                                                   interact_gobj);
-        return;
-    }
-    (void)fighter_gobj;
-    (void)interact_gobj;
 }
 
 void ftCommonThrownDecideDeadResult(GObj *fighter_gobj)
 {
     ndsBaseFTCommonThrownDecideDeadResult(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowDeadResultCallCount++;
-        ndsBaseFTCommonThrownDecideDeadResult(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftParamSetHitStatusAll(GObj *fighter_gobj, s32 hitstatus)
@@ -8039,20 +6612,6 @@ void ftParamSetModelPartDetailAll(GObj *fighter_gobj, u8 detail)
 sb32 ftCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonThrowCheckInterruptCatchWait(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopCatchWaitInterruptActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopCatchWaitThrowCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowCheckCount++;
-        return ndsBaseFTCommonThrowCheckInterruptCatchWait(fighter_gobj);
-    }
-    return FALSE;
 }
 
 void ftCommonThrownReleaseThrownUpdateStats(GObj *fighter_gobj, s32 lr,
@@ -8061,30 +6620,6 @@ void ftCommonThrownReleaseThrownUpdateStats(GObj *fighter_gobj, s32 lr,
 {
     ndsBaseFTCommonThrownReleaseThrownUpdateStats(fighter_gobj, lr, script_id, is_proc_status);
     return;
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowUpdateActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowUpdateReleaseCount++;
-        gNdsStageMPPassiveLoopThrowUpdateReleaseScriptID = script_id;
-        gNdsStageMPPassiveLoopThrowUpdateReleaseLR = lr;
-        ndsBaseFTCommonThrownReleaseThrownUpdateStats(
-            fighter_gobj, lr, script_id, is_proc_status);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowReleaseUpdateStatsCount++;
-        gNdsStageMPPassiveLoopThrowReleaseScriptID = script_id;
-        ndsBaseFTCommonThrownReleaseThrownUpdateStats(
-            fighter_gobj, lr, script_id, is_proc_status);
-        return;
-    }
-    (void)fighter_gobj;
-    (void)lr;
-    (void)script_id;
-    (void)is_proc_status;
 }
 
 void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
@@ -8114,29 +6649,6 @@ void ftCommonThrownReleaseFighterLoseGrip(GObj *fighter_gobj)
 {
     ndsBaseFTCommonThrownReleaseFighterLoseGrip(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        if (ndsFTCommonThrownLoseGripCanCallOriginal(fighter_gobj) != FALSE)
-        {
-            ndsFTCommonThrownLoseGripRecordOriginal(fighter_gobj);
-            ndsBaseFTCommonThrownReleaseFighterLoseGrip(fighter_gobj);
-        }
-        else
-        {
-            ndsFTCommonThrownReleaseFighterLoseGripBounded(fighter_gobj,
-                                                          NULL);
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowDeadResultActive != FALSE))
-    {
-        ndsBaseFTCommonThrownReleaseFighterLoseGrip(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 /* BattleShip dFTCommonDataHandicapTable from ft/ftcommondata.c:4-78.
@@ -8603,26 +7115,12 @@ void ftCommonDamageSetPublic(FTStruct *fp, f32 knockback, f32 angle)
 {
     ndsBaseFTCommonDamageSetPublic(fp, knockback, angle);
     return;
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageSetPublic(fp, knockback, angle);
 }
 
 void ftCommonDamageSetDustEffectInterval(FTStruct *fp)
 {
     ndsBaseFTCommonDamageSetDustEffectInterval(fp);
     return;
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageSetDustEffectInterval(fp);
 }
 
 f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback)
@@ -8633,31 +7131,15 @@ f32 ftCommonDamageGetKnockbackAngle(s32 angle_i, sb32 ga, f32 knockback)
 s32 ftCommonDamageGetDamageLevel(f32 hitstun)
 {
     return ndsBaseFTCommonDamageGetDamageLevel(hitstun);
-
-    return ndsBaseFTCommonDamageGetDamageLevel(hitstun);
 }
 
 sb32 ftCommonDamageCheckCatchResist(FTStruct *fp)
 {
     return ndsBaseFTCommonDamageCheckCatchResist(fp);
-
-    if (fp == NULL)
-    {
-        return FALSE;
-    }
-
-    return ndsBaseFTCommonDamageCheckCatchResist(fp);
 }
 
 sb32 ftCommonDamageCheckCaptureKeepHold(FTStruct *fp)
 {
-    return ndsBaseFTCommonDamageCheckCaptureKeepHold(fp);
-
-    if (fp == NULL)
-    {
-        return FALSE;
-    }
-
     return ndsBaseFTCommonDamageCheckCaptureKeepHold(fp);
 }
 
@@ -8701,14 +7183,6 @@ sb32 ftCommonDamageCheckElementSetColAnim(GObj *fighter_gobj, s32 element,
                                           s32 damage_level)
 {
     return ndsBaseFTCommonDamageCheckElementSetColAnim(fighter_gobj, element, damage_level);
-
-    if (fighter_gobj == NULL)
-    {
-        return FALSE;
-    }
-
-    return ndsBaseFTCommonDamageCheckElementSetColAnim(fighter_gobj, element,
-                                                       damage_level);
 }
 
 void ifScreenFlashSetColAnimID(s32 colanim_id, s32 colanim_duration)
@@ -8750,8 +7224,6 @@ void ftCommonDamageCheckMakeScreenFlash(f32 knockback, s32 element)
 {
     ndsBaseFTCommonDamageCheckMakeScreenFlash(knockback, element);
     return;
-
-    ndsBaseFTCommonDamageCheckMakeScreenFlash(knockback, element);
 }
 
 void ftCommonDamageInitDamageVars(GObj *fighter_gobj, s32 status_id_replace,
@@ -8764,365 +7236,12 @@ void ftCommonDamageInitDamageVars(GObj *fighter_gobj, s32 status_id_replace,
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_DAMAGE_ENTER);
     ndsBaseFTCommonDamageInitDamageVars(fighter_gobj, status_id_replace, damage, knockback, angle_start, damage_lr, damage_index, element, damage_player_num, arg9, unk_bool, is_public);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-    f32 hitstun_tics;
-    s32 damage_level;
-    s32 status_id_set;
-    s32 status_id_var;
-    s32 damage_index_safe;
-    f32 angle_end;
-    f32 vel_x;
-    f32 vel_y;
-    Vec3f vel_damage;
-    f32 angle_diff;
-
-    if (fp != NULL)
-    {
-        if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-            (sNdsFighterDashRunDamageStatusSetupActive != FALSE) &&
-            (sNdsFighterDashRunDamageOriginalInitActive != FALSE))
-        {
-            GObj *attacker_gobj =
-                ndsFighterGetPlayerNumGObj(damage_player_num);
-            FTStruct *attacker_fp =
-                (attacker_gobj != NULL) ? ftGetStruct(attacker_gobj) : NULL;
-            s32 attacker_attack_count =
-                (attacker_fp != NULL) ? attacker_fp->attack_count : 0;
-            u32 colanim_count =
-                sNdsFighterDashRunDamageSetupColAnimCount;
-            s32 colanim_id = sNdsFighterDashRunDamageColAnimLastID;
-            s32 colanim_duration =
-                sNdsFighterDashRunDamageColAnimLastDuration;
-            s32 skeleton_colanim_level =
-                sNdsFighterDashRunDamageSkeletonColAnimLastLevel;
-            u32 screen_flash_count =
-                sNdsFighterDashRunDamageSetupScreenFlashCount;
-
-            fp->damage_queue = damage;
-            fp->damage_knockback = knockback;
-            fp->damage_player = damage_player_num;
-            fp->damage_player_num = damage_player_num;
-            fp->damage_angle = angle_start;
-            fp->damage_lr = damage_lr;
-            fp->damage_index = damage_index;
-            fp->damage_element = element;
-            fp->hit_lr = damage_lr;
-            sNdsFighterDashRunDamageOriginalInitCount++;
-            ndsBaseFTCommonDamageInitDamageVars(
-                fighter_gobj, status_id_replace, damage, knockback,
-                angle_start, damage_lr, damage_index, element,
-                damage_player_num, arg9, unk_bool, is_public);
-            if ((attacker_fp != NULL) &&
-                (attacker_fp->attack_count == (attacker_attack_count + 1)) &&
-                (attacker_fp->attack_knockback == knockback))
-            {
-                sNdsFighterDashRunDamageSetupAttackerCount++;
-            }
-            if ((damage != 0) &&
-                (sNdsFighterDashRunDamageSetupColAnimCount ==
-                    colanim_count) &&
-                ((sNdsFighterDashRunDamageColAnimLastID != colanim_id) ||
-                 (sNdsFighterDashRunDamageColAnimLastDuration !=
-                    colanim_duration) ||
-                 (sNdsFighterDashRunDamageSkeletonColAnimLastLevel !=
-                    skeleton_colanim_level)))
-            {
-                sNdsFighterDashRunDamageSetupColAnimCount++;
-            }
-            if ((knockback > FTCOMMON_DAMAGE_KNOCKBACK_VERYHIGH) &&
-                (sNdsFighterDashRunDamageSetupScreenFlashCount ==
-                    screen_flash_count))
-            {
-                ndsFTCommonDamageCheckMakeScreenFlash(knockback, element);
-            }
-            goto record_throw_release_damage_init;
-        }
-        angle_end = ndsFTCommonDamageGetKnockbackAngle(
-            angle_start, fp->ga, knockback);
-        vel_x = __cosf(angle_end) * knockback;
-        vel_y = __sinf(angle_end) * knockback;
-        hitstun_tics = ftParamGetHitStun(knockback);
-        if (hitstun_tics == 0.0F)
-        {
-            hitstun_tics = 1.0F;
-        }
-        damage_level = ndsFTCommonDamageGetDamageLevel(hitstun_tics);
-        if (status_id_replace != -1)
-        {
-            damage_level = 3;
-        }
-        damage_index_safe = damage_index;
-        if (damage_index_safe < 0)
-        {
-            damage_index_safe = 0;
-        }
-        if (damage_index_safe >= 3)
-        {
-            damage_index_safe = 2;
-        }
-        status_id_set =
-            ndsFTCommonDamageSelectStatus(damage_level, damage_index_safe,
-                                          fp->ga == nMPKineticsAir);
-        status_id_var = status_id_set;
-        fp->damage_queue = damage;
-        fp->damage_knockback = knockback;
-        fp->damage_player = damage_player_num;
-        fp->damage_player_num = damage_player_num;
-        fp->hit_lr = damage_lr;
-        fp->lr = damage_lr;
-        fp->status_vars.common.damage.hitstun_tics = (s32)hitstun_tics;
-        fp->status_vars.common.damage.public_knockback = knockback;
-        fp->status_vars.common.damage.is_knockback_over =
-            (knockback >= 65000.0F) ? TRUE : FALSE;
-        fp->physics.vel_air.x = 0.0F;
-        fp->physics.vel_air.y = 0.0F;
-        fp->physics.vel_air.z = 0.0F;
-        fp->physics.vel_ground.x = 0.0F;
-        if (fp->ga == nMPKineticsAir)
-        {
-            fp->physics.vel_damage_air.x = -vel_x * fp->lr;
-            fp->physics.vel_damage_air.y = vel_y;
-            fp->physics.vel_damage_air.z = 0.0F;
-            fp->physics.vel_damage_ground = 0.0F;
-        }
-        else
-        {
-            vel_damage.x = -vel_x * fp->lr;
-            vel_damage.y = vel_y;
-            vel_damage.z = 0.0F;
-            angle_diff =
-                ndsVectorAngleDiff3D(&fp->coll_data.floor_angle, &vel_damage);
-            if (angle_diff < F_CST_DTOR32(90.0F))
-            {
-                status_id_set = ndsFTCommonDamageSelectStatus(
-                    damage_level, damage_index_safe, FALSE);
-                status_id_var = status_id_set;
-                mpCommonSetFighterAir(fp);
-                fp->physics.vel_damage_air = vel_damage;
-                fp->physics.vel_damage_ground = 0.0F;
-            }
-            else if (damage_level == 3)
-            {
-                status_id_set = ndsFTCommonDamageSelectStatus(
-                    damage_level, damage_index_safe, FALSE);
-                status_id_var = status_id_set;
-                mpCommonSetFighterAir(fp);
-                fp->physics.vel_damage_air.x = vel_damage.x;
-                fp->physics.vel_damage_air.y =
-                    (angle_diff > F_CST_DTOR32(100.0F)) ?
-                        (-vel_damage.y * 0.8F) : vel_damage.y;
-                fp->physics.vel_damage_air.z = 0.0F;
-                fp->physics.vel_damage_ground = 0.0F;
-                if (angle_diff > F_CST_DTOR32(100.0F))
-                {
-                    ftParamMakeEffect(fighter_gobj, nEFKindImpactWave,
-                                      nFTPartsJointTopN, NULL, NULL,
-                                      fp->lr, 0, 0);
-                    ftParamMakeEffect(fighter_gobj, nEFKindQuakeMag0,
-                                      nFTPartsJointTopN, NULL, NULL,
-                                      fp->lr, 0, 0);
-                }
-            }
-            else
-            {
-                fp->physics.vel_damage_ground = -vel_x * fp->lr;
-                fp->physics.vel_damage_air.x =
-                    fp->coll_data.floor_angle.y *
-                    fp->physics.vel_damage_ground;
-                fp->physics.vel_damage_air.y =
-                    -fp->coll_data.floor_angle.x *
-                    fp->physics.vel_damage_ground;
-                fp->physics.vel_damage_air.z = 0.0F;
-            }
-        }
-        if ((damage_level == 3) && (fp->ga == nMPKineticsAir))
-        {
-            if ((angle_end > FTCOMMON_DAMAGE_FIGHTER_FLYTOP_ANGLE_LOW) &&
-                (angle_end < FTCOMMON_DAMAGE_FIGHTER_FLYTOP_ANGLE_HIGH))
-            {
-                status_id_var = status_id_set = nFTCommonStatusDamageFlyTop;
-            }
-            else if ((fp->percent_damage >=
-                        FTCOMMON_DAMAGE_FIGHTER_FLYROLL_DAMAGE_MIN) &&
-                     (syUtilsRandFloat() <
-                        FTCOMMON_DAMAGE_FIGHTER_FLYROLL_RANDOM_CHANCE))
-            {
-                status_id_var = status_id_set = nFTCommonStatusDamageFlyRoll;
-            }
-        }
-        if (status_id_replace != -1)
-        {
-            status_id_set = status_id_replace;
-        }
-        if ((element == nGMHitElementElectric) &&
-            ndsFTCommonDamageIsStatus(status_id_set))
-        {
-            status_id_var = status_id_set;
-            status_id_set = (damage_level == 3) ?
-                nFTCommonStatusDamageE2 : nFTCommonStatusDamageE1;
-        }
-        fp->status_vars.common.damage.status_id = status_id_set;
-        fp->damage_knockback_stack = knockback;
-        fp->tap_stick_x = FTINPUT_STICKBUFFER_TICS_MAX;
-        fp->tap_stick_y = FTINPUT_STICKBUFFER_TICS_MAX;
-        fp->tics_since_last_z = FTINPUT_ZTRIGLAST_TICS_MAX;
-        ndsFTCommonDamageSetPublic(fp, knockback, angle_end);
-        if (damage != 0)
-        {
-            (void)ndsFTCommonDamageCheckElementSetColAnim(
-                fighter_gobj, element, damage_level);
-        }
-        ndsFTCommonDamageCheckMakeScreenFlash(knockback, element);
-
-        if ((damage_level == 3) && (is_public != FALSE))
-        {
-            ftKirbySpecialNDamageCheckLoseCopy(fighter_gobj);
-        }
-
-        if (sNdsFighterDashRunDamageStatusSetupActive != FALSE)
-        {
-            ftMainSetStatus(fighter_gobj, status_id_set, 0.0F, 1.0F,
-                            FTSTATUS_PRESERVE_DAMAGEPLAYER);
-            ftMainPlayAnimEventsAll(fighter_gobj);
-            fp->is_hitstun = TRUE;
-            fp->proc_lagupdate = ftCommonDamageCommonProcLagUpdate;
-        }
-        if ((status_id_set == nFTCommonStatusDamageE1) ||
-            (status_id_set == nFTCommonStatusDamageE2))
-        {
-            fp->proc_passive = ftCommonDamageSetStatus;
-            fp->status_vars.common.damage.status_id = status_id_var;
-        }
-        else
-        {
-            fp->proc_passive = ftCommonDamageCheckSetInvincible;
-        }
-        if ((damage_level == 3) || (arg9 != FALSE))
-        {
-            ftParamMakeRumble(fp, 2, 0);
-        }
-        ndsFTCommonDamageSetDustEffectInterval(fp);
-        if (fp->status_vars.common.damage.dust_effect_int != 0)
-        {
-            fp->status_vars.common.damage.dust_effect_int = 1;
-        }
-        if ((fp->attr != NULL) &&
-            ((((hitstun_tics >= 80.0F) &&
-               (fp->attr->damage_sfx != nSYAudioFGMVoiceEnd))) ||
-             (unk_bool != FALSE)))
-        {
-            (void)func_800269C0_275C0(fp->attr->damage_sfx);
-        }
-        if ((damage_level == 3) &&
-            (knockback >= FTCOMMON_DAMAGE_FIGHTER_PLAYERTAG_KNOCKBACK_MIN))
-        {
-            ftParamSetPlayerTagWait(
-                fighter_gobj, FTCOMMON_DAMAGE_FIGHTER_PLAYERTAG_HIDE_FRAMES);
-        }
-        fp->status_vars.common.damage.coll_mask_curr = 0;
-        {
-            GObj *attacker_gobj =
-                ndsFighterGetPlayerNumGObj(damage_player_num);
-            if (attacker_gobj != NULL)
-            {
-                FTStruct *attacker_fp = ftGetStruct(attacker_gobj);
-                if (attacker_fp != NULL)
-                {
-                    attacker_fp->attack_count++;
-                    attacker_fp->attack_knockback = knockback;
-                    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-                        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-                    {
-                        sNdsFighterDashRunDamageSetupAttackerCount++;
-                    }
-                }
-            }
-        }
-    }
-record_throw_release_damage_init:
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopThrowReleaseDamageInitCount++;
-        gNdsStageMPPassiveLoopThrowReleaseDamageInitDamage = (u32)damage;
-        gNdsStageMPPassiveLoopThrowReleaseKnockbackMilli =
-            ndsFloatToMilliSigned(knockback);
-        gNdsStageMPPassiveLoopThrowReleaseLR = damage_lr;
-        (void)angle_start;
-    }
 }
 
 void ftCommonDamageGotoDamageStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageGotoDamageStatus(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageStatusSetupActive != FALSE))
-    {
-        sNdsFighterDashRunDamageOriginalGotoCount++;
-        ndsBaseFTCommonDamageGotoDamageStatus(fighter_gobj);
-        if (fp->proc_update == ndsBaseFTCommonDamageCommonProcUpdate)
-        {
-            fp->proc_update = ftCommonDamageCommonProcUpdate;
-        }
-        else if (fp->proc_update == ndsBaseFTCommonDamageAirCommonProcUpdate)
-        {
-            fp->proc_update = ftCommonDamageAirCommonProcUpdate;
-        }
-        if (fp->proc_interrupt == ndsBaseFTCommonDamageCommonProcInterrupt)
-        {
-            fp->proc_interrupt = ftCommonDamageCommonProcInterrupt;
-        }
-        else if (fp->proc_interrupt ==
-                 ndsBaseFTCommonDamageAirCommonProcInterrupt)
-        {
-            fp->proc_interrupt = ftCommonDamageAirCommonProcInterrupt;
-        }
-        if (fp->proc_physics == ndsBaseFTCommonDamageCommonProcPhysics)
-        {
-            fp->proc_physics = ftCommonDamageCommonProcPhysics;
-        }
-        if (fp->proc_lagupdate == ndsBaseFTCommonDamageCommonProcLagUpdate)
-        {
-            fp->proc_lagupdate = ftCommonDamageCommonProcLagUpdate;
-        }
-        if (fp->proc_map == ndsBaseFTCommonDamageAirCommonProcMap)
-        {
-            fp->proc_map = ftCommonDamageAirCommonProcMap;
-        }
-        if (fp->proc_passive == ndsBaseFTCommonDamageCheckSetInvincible)
-        {
-            fp->proc_passive = ftCommonDamageCheckSetInvincible;
-        }
-        else if (fp->proc_passive == ndsBaseFTCommonDamageSetStatus)
-        {
-            fp->proc_passive = ftCommonDamageSetStatus;
-        }
-        return;
-    }
-    if (fp->is_cliff_hold != FALSE)
-    {
-        fp->cliffcatch_wait = FTCOMMON_CLIFF_CATCH_WAIT;
-    }
-    if (fp->damage_element == nGMHitElementSleep)
-    {
-        ftCommonFuraSleepSetStatus(fighter_gobj);
-        return;
-    }
-    ftCommonDamageInitDamageVars(fighter_gobj, -1, fp->damage_queue,
-                                 fp->damage_knockback, fp->damage_angle,
-                                 fp->damage_lr, fp->damage_index,
-                                 fp->damage_element,
-                                 fp->damage_player_num, FALSE, FALSE,
-                                 TRUE);
 }
 
 extern void battleship_ftMainRunUpdateColAnim(GObj *fighter_gobj);
@@ -9156,36 +7275,12 @@ void ftCommonDamageSetDamageColAnim(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageSetDamageColAnim(fighter_gobj);
     return;
-
-    FTStruct *fp;
-
-    if (fighter_gobj == NULL)
-    {
-        return;
-    }
-
-    fp = ftGetStruct(fighter_gobj);
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageSetDamageColAnim(fighter_gobj);
 }
 
 void ftCommonDamageUpdateMain(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageUpdateMain(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageUpdateMain(fighter_gobj);
 }
 
 void ftParamUpdate1PGameDamageStats(FTStruct *fp, s32 damage_player,
@@ -9225,27 +7320,12 @@ void ftCommonFuraSleepSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonFuraSleepSetStatus(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonFuraSleepSetStatus(fighter_gobj);
 }
 
 void ftCommonTwisterSetStatus(GObj *fighter_gobj, GObj *tornado_gobj)
 {
     ndsBaseFTCommonTwisterSetStatus(fighter_gobj, tornado_gobj);
     return;
-
-    if (ftGetStruct(fighter_gobj) == NULL)
-    {
-        return;
-    }
-    ndsBaseFTCommonTwisterSetStatus(fighter_gobj, tornado_gobj);
 }
 
 void ftCommonTaruCannProcPhysics(GObj *fighter_gobj)
@@ -11242,48 +9322,36 @@ void ftCommonReboundProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonReboundProcUpdate(fighter_gobj);
     return;
-
-    ndsBaseFTCommonReboundProcUpdate(fighter_gobj);
 }
 
 void ftCommonReboundSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonReboundSetStatus(fighter_gobj);
     return;
-
-    ndsBaseFTCommonReboundSetStatus(fighter_gobj);
 }
 
 void ftCommonReboundWaitProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonReboundWaitProcUpdate(fighter_gobj);
     return;
-
-    ndsBaseFTCommonReboundWaitProcUpdate(fighter_gobj);
 }
 
 void ftCommonReboundWaitSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonReboundWaitSetStatus(fighter_gobj);
     return;
-
-    ndsBaseFTCommonReboundWaitSetStatus(fighter_gobj);
 }
 
 void ftCommonGuardSetOffProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonGuardSetOffProcUpdate(fighter_gobj);
     return;
-
-    ndsBaseFTCommonGuardSetOffProcUpdate(fighter_gobj);
 }
 
 void ftCommonGuardSetOffSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonGuardSetOffSetStatus(fighter_gobj);
     return;
-
-    ndsBaseFTCommonGuardSetOffSetStatus(fighter_gobj);
 }
 
 alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos)
@@ -11304,478 +9372,88 @@ alSoundEffect *lbCommonMakePositionFGM(u16 fgm, f32 pos)
 sb32 ftCommonCliffAttackCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCliffAttackCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
-    {
-        (void)fighter_gobj;
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 0;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffEscapeActionLoopAttackCheckCount++;
-        return ndsBaseFTCommonCliffAttackCheckInterruptCommon(fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp;
-        sb32 result;
-
-        gNdsStageMPCliffAttackFloorLoopAttackCheckCount++;
-        result = ndsBaseFTCommonCliffAttackCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            fp = ftGetStruct(fighter_gobj);
-            if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-            {
-                gNdsStageMPCliffAttackFloorLoopUnsafeCount++;
-            }
-            else
-            {
-                fp->status_vars.common.cliffmotion.status_id =
-                    (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
-                    nFTCommonCliffKindAttackQuick :
-                    nFTCommonCliffKindAttackSlow;
-                fp->status_vars.common.cliffmotion.cliff_id =
-                    fp->coll_data.cliff_id;
-            }
-        }
-        return result;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffClimbFloorLoopAttackCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopAttackCheckCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitFloorLoopAttackCheckCount++;
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 sb32 ftCommonCliffEscapeCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCliffEscapeCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
-    {
-        (void)fighter_gobj;
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 1;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp;
-        sb32 result;
-
-        gNdsStageMPCliffEscapeActionLoopEscapeCheckCount++;
-        result = ndsBaseFTCommonCliffEscapeCheckInterruptCommon(fighter_gobj);
-        if (result != FALSE)
-        {
-            fp = ftGetStruct(fighter_gobj);
-            if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-            {
-                gNdsStageMPCliffEscapeActionLoopUnsafeCount++;
-            }
-            else
-            {
-                fp->status_vars.common.cliffmotion.status_id =
-                    (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
-                    nFTCommonCliffKindEscapeQuick :
-                    nFTCommonCliffKindEscapeSlow;
-                fp->status_vars.common.cliffmotion.cliff_id =
-                    fp->coll_data.cliff_id;
-            }
-        }
-        return result;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffAttackFloorLoopEscapeCheckCount++;
-        return ndsBaseFTCommonCliffEscapeCheckInterruptCommon(fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffClimbFloorLoopEscapeCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopEscapeCheckCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitFloorLoopEscapeCheckCount++;
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 sb32 ftCommonCliffClimbOrFallCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        f32 angle;
-
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 2;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffLiveLoopUnsafeCount++;
-            return FALSE;
-        }
-        if ((ABS(fp->input.pl.stick_range.x) <
-                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN) &&
-            (ABS(fp->input.pl.stick_range.y) <
-                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN))
-        {
-            fp->status_vars.common.cliffwait.is_allow_interrupt = TRUE;
-            return FALSE;
-        }
-        if (fp->status_vars.common.cliffwait.is_allow_interrupt == FALSE)
-        {
-            return FALSE;
-        }
-
-        angle = ftParamGetStickAngleRads(fp);
-        if ((angle > F_CST_DTOR32(50.0F)) ||
-            ((angle > F_CST_DTOR32(-50.0F)) &&
-             ((fp->input.pl.stick_range.x * fp->lr) >= 0)))
-        {
-            ftCommonCliffQuickOrSlowSetStatus(fighter_gobj, 0);
-            fp->status_vars.common.cliffmotion.status_id =
-                (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
-                nFTCommonCliffKindClimbQuick : nFTCommonCliffKindClimbSlow;
-            fp->status_vars.common.cliffmotion.cliff_id =
-                fp->coll_data.cliff_id;
-            fp->is_cliff_hold = TRUE;
-            fp->proc_damage = ftCommonCliffCommonProcDamage;
-            return TRUE;
-        }
-
-        fp->cliffcatch_wait = FTCOMMON_CLIFF_CATCH_WAIT;
-        ftCommonCliffCommonProcDamage(fighter_gobj);
-        ftCommonFallSetStatus(fighter_gobj);
-        return TRUE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffEscapeActionLoopClimbOrFallCheckCount++;
-        return ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(
-            fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffAttackFloorLoopClimbOrFallCheckCount++;
-        return ndsBaseFTCommonCliffClimbOrFallCheckInterruptCommon(
-            fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        f32 angle;
-
-        gNdsStageMPCliffClimbFloorLoopClimbOrFallCheckCount++;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-            return FALSE;
-        }
-        if ((ABS(fp->input.pl.stick_range.x) <
-                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN) &&
-            (ABS(fp->input.pl.stick_range.y) <
-                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN))
-        {
-            fp->status_vars.common.cliffwait.is_allow_interrupt = TRUE;
-            return FALSE;
-        }
-        if (fp->status_vars.common.cliffwait.is_allow_interrupt == FALSE)
-        {
-            return FALSE;
-        }
-
-        angle = ftParamGetStickAngleRads(fp);
-        if ((angle > F_CST_DTOR32(50.0F)) ||
-            ((angle > F_CST_DTOR32(-50.0F)) &&
-             ((fp->input.pl.stick_range.x * fp->lr) >= 0)))
-        {
-            ftCommonCliffQuickOrSlowSetStatus(fighter_gobj, 0);
-            fp->status_vars.common.cliffmotion.status_id =
-                (fp->percent_damage < FTCOMMON_CLIFF_DAMAGE_HIGH) ?
-                nFTCommonCliffKindClimbQuick : nFTCommonCliffKindClimbSlow;
-            fp->status_vars.common.cliffmotion.cliff_id =
-                fp->coll_data.cliff_id;
-            return TRUE;
-        }
-
-        fp->cliffcatch_wait = FTCOMMON_CLIFF_CATCH_WAIT;
-        ftCommonCliffCommonProcDamage(fighter_gobj);
-        ftCommonFallSetStatus(fighter_gobj);
-        return TRUE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopClimbOrFallCheckCount++;
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        gNdsStageMPCliffWaitFloorLoopClimbOrFallCheckCount++;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffWaitFloorLoopUnsafeCount++;
-            return FALSE;
-        }
-        if ((ABS(fp->input.pl.stick_range.x) <
-                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN) &&
-            (ABS(fp->input.pl.stick_range.y) <
-                FTCOMMON_CLIFF_MOTION_STICK_RANGE_MIN))
-        {
-            fp->status_vars.common.cliffwait.is_allow_interrupt = TRUE;
-        }
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 void ftCommonDamageUpdateDustEffect(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageUpdateDustEffect(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageUpdateDustEffect(fighter_gobj);
 }
 
 void ftCommonDamageDecHitStunSetPublic(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageDecHitStunSetPublic(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageDecHitStunSetPublic(fighter_gobj);
 }
 
 void ftCommonDamageUpdateCatchResist(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageUpdateCatchResist(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageUpdateCatchResist(fighter_gobj);
 }
 
 void ftCommonDamageCommonProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageCommonProcUpdate(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if ((fp == NULL) || (fighter_gobj == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageCommonProcUpdate(fighter_gobj);
 }
 
 void ftCommonDamageAirCommonProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageAirCommonProcUpdate(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if ((fp == NULL) || (fighter_gobj == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageAirCommonProcUpdate(fighter_gobj);
 }
 
 void ftCommonDamageCheckSetInvincible(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageCheckSetInvincible(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if ((fp == NULL) || (fighter_gobj == NULL))
-    {
-        return;
-    }
-    ndsBaseFTCommonDamageCheckSetInvincible(fighter_gobj);
 }
 
 void ftCommonDamageSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageSetStatus(fighter_gobj);
     return;
-
-    FTStruct *fp;
-
-    if (fighter_gobj == NULL)
-    {
-        return;
-    }
-
-    fp = ftGetStruct(fighter_gobj);
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageSetStatus(fighter_gobj);
 }
 
 void ftCommonDamageCommonProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageCommonProcInterrupt(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if ((fp == NULL) || (fighter_gobj == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageCommonProcInterrupt(fighter_gobj);
 }
 
 void ftCommonDamageAirCommonProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageAirCommonProcInterrupt(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if ((fp == NULL) || (fighter_gobj == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageAirCommonProcInterrupt(fighter_gobj);
 }
 
 void ftCommonDamageFlyRollUpdateModelPitch(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageFlyRollUpdateModelPitch(fighter_gobj);
     return;
-
-    FTStruct *fp;
-
-    if (fighter_gobj == NULL)
-    {
-        return;
-    }
-
-    fp = ftGetStruct(fighter_gobj);
-    if ((fp == NULL) || (fp->joints[4] == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageFlyRollUpdateModelPitch(fighter_gobj);
 }
 
 void ftCommonDamageCommonProcPhysics(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageCommonProcPhysics(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if (fp == NULL)
-    {
-        return;
-    }
-
-    if ((fp->status_id == nFTCommonStatusDamageFlyRoll) &&
-        (fp->joints[4] == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageCommonProcPhysics(fighter_gobj);
 }
 
 void ftCommonDamageCommonProcLagUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageCommonProcLagUpdate(fighter_gobj);
     return;
-
-    FTStruct *fp = ftGetStruct(fighter_gobj);
-
-    if ((fp == NULL) || (DObjGetStruct(fighter_gobj) == NULL))
-    {
-        return;
-    }
-
-    ndsBaseFTCommonDamageCommonProcLagUpdate(fighter_gobj);
 }
 
 static void ndsFTMainProcUpdateHitlagLifecycleSlice(GObj *fighter_gobj)
@@ -12017,29 +9695,12 @@ sb32 mpCommonCheckFighterDamageCollision(GObj *fighter_gobj)
 sb32 ftCommonWallDamageCheckGoto(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonWallDamageCheckGoto(fighter_gobj);
-
-    if ((fighter_gobj == NULL) || (ftGetStruct(fighter_gobj) == NULL))
-    {
-        return FALSE;
-    }
-    return ndsBaseFTCommonWallDamageCheckGoto(fighter_gobj);
 }
 
 void ftCommonDamageAirCommonProcMap(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageAirCommonProcMap(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageMapActive != FALSE))
-    {
-        sNdsFighterDashRunDamageAirMapCount++;
-    }
-    if ((fighter_gobj == NULL) || (ftGetStruct(fighter_gobj) == NULL))
-    {
-        return;
-    }
-    ndsBaseFTCommonDamageAirCommonProcMap(fighter_gobj);
 }
 
 f32 ftParamGetHitStun(f32 knockback)
@@ -12089,31 +9750,6 @@ void ftCommonDamageFallProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageFallProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
-    {
-        sNdsFighterDashRunDamageFallSourceInterruptCount++;
-        ndsBaseFTCommonDamageFallProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageInterruptActive != FALSE))
-    {
-        // ponytail: count the handoff; full DamageFall interrupt has its own proof.
-        sNdsFighterDashRunDamageFallInterruptCount++;
-        (void)fighter_gobj;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopDamageFallInterruptTickCount++;
-        ndsBaseFTCommonDamageFallProcInterrupt(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDamageFallProcMap(GObj *fighter_gobj)
@@ -12123,145 +9759,18 @@ void ftCommonDamageFallProcMap(GObj *fighter_gobj)
 #endif
     ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageMapActive != FALSE))
-    {
-        // ponytail: prove the safe no-collision map tick; collision branches are later.
-        sNdsFighterDashRunDamageFallMapCount++;
-        ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        gNdsStageMPCliffWaitDamageLoopDamageFallMapTickCount++;
-        if (sNdsStageMPCliffWaitDamageLoopMapCollisionMode == 2u)
-        {
-            if (mpCommonCheckFighterCliff(fighter_gobj) != FALSE)
-            {
-                if ((fp != NULL) &&
-                    ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u))
-                {
-                    ftCommonCliffCatchSetStatus(fighter_gobj);
-                }
-                else if ((ftCommonPassiveStandCheckInterruptDamage(
-                              fighter_gobj) == FALSE) &&
-                         (ftCommonPassiveCheckInterruptDamage(
-                              fighter_gobj) == FALSE))
-                {
-                    ftCommonDownBounceSetStatus(fighter_gobj);
-                }
-            }
-            return;
-        }
-        ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
-    {
-        gNdsStageMPPassiveLoopDamageFallMapCallCount++;
-        ndsBaseFTCommonDamageFallProcMap(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDamageFallClampRumble(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageFallClampRumble(fighter_gobj);
     return;
-
-    ndsBaseFTCommonDamageFallClampRumble(fighter_gobj);
 }
 
 void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
     return;
-
-    FTStruct *fp;
-    sb32 saved_dash_fall_set_status_from_damage_active;
-    sb32 saved_passive_wall_fall_set_status_from_damage_active;
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageExpiryActive != FALSE) &&
-        (sNdsStageMPPassiveLoopWallDamageActive == FALSE))
-    {
-        fp = ftGetStruct(fighter_gobj);
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            return;
-        }
-
-        sNdsFighterDashRunDamageFallFTMainSetStatusCount = 0u;
-        sNdsFighterDashRunDamageFallClampRumbleCount = 0u;
-        saved_dash_fall_set_status_from_damage_active =
-            sNdsFighterDashRunDamageFallSetStatusFromDamageActive;
-        sNdsFighterDashRunDamageFallSetStatusFromDamageActive = TRUE;
-        ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
-        sNdsFighterDashRunDamageFallSetStatusFromDamageActive =
-            saved_dash_fall_set_status_from_damage_active;
-
-        fp = ftGetStruct(fighter_gobj);
-        if ((fp != NULL) &&
-            (fp->status_id == nFTCommonStatusDamageFall) &&
-            (fp->motion_id == nFTCommonMotionDamageFall) &&
-            (fp->ga == nMPKineticsAir) &&
-            (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
-            (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
-            (fp->proc_map == ftCommonDamageFallProcMap) &&
-            (sNdsFighterDashRunDamageFallFTMainSetStatusCount == 1u) &&
-            (sNdsFighterDashRunDamageFallClampRumbleCount == 1u))
-        {
-            sNdsFighterDashRunDamageFallSetStatusCount++;
-        }
-        return;
-    }
-
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopWallDamageActive != FALSE))
-    {
-        fp = ftGetStruct(fighter_gobj);
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPPassiveLoopUnsafeCount++;
-            return;
-        }
-
-        sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount = 0u;
-        sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount = 0u;
-        saved_passive_wall_fall_set_status_from_damage_active =
-            sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive;
-        sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive = TRUE;
-        ndsBaseFTCommonDamageFallSetStatusFromDamage(fighter_gobj);
-        sNdsStageMPPassiveLoopWallDamageFallSetStatusFromDamageActive =
-            saved_passive_wall_fall_set_status_from_damage_active;
-
-        fp = ftGetStruct(fighter_gobj);
-        if ((fp != NULL) &&
-            (fp->status_id == nFTCommonStatusDamageFall) &&
-            (fp->motion_id == nFTCommonMotionDamageFall) &&
-            (fp->ga == nMPKineticsAir)
-#if !NDS_IMPORT_BATTLESHIP_FTMAIN
-            &&
-            (fp->proc_interrupt == ftCommonDamageFallProcInterrupt) &&
-            (fp->proc_physics == ftPhysicsApplyAirVelDriftFastFall) &&
-            (fp->proc_map == ftCommonDamageFallProcMap) &&
-            (sNdsStageMPPassiveLoopWallDamageFallFTMainSetStatusCount == 1u) &&
-            (sNdsStageMPPassiveLoopWallDamageFallClampRumbleCount == 1u)
-#endif
-            )
-        {
-            gNdsStageMPPassiveLoopWallDamageDamageFallCallCount++;
-        }
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 /* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
@@ -12459,1008 +9968,108 @@ sb32 mpCommonCheckFighterCliff(GObj *fighter_gobj)
 sb32 ftCommonPassiveStandCheckInterruptDamage(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageMapActive != FALSE))
-    {
-        sNdsFighterDashRunDamageFallPassiveStandCheckCount++;
-        if ((sNdsFighterDashRunDamageFallMapCollisionMode == 6u) ||
-            (sNdsFighterDashRunDamageFallMapCollisionMode == 7u))
-        {
-            return ndsBaseFTCommonPassiveStandCheckInterruptDamage(
-                fighter_gobj);
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        s32 status_id;
-
-        gNdsStageMPCliffWaitDamageLoopDamageFallPassiveStandCheckCount++;
-        if ((fp == NULL) ||
-            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX) ||
-            (ABS(fp->input.pl.stick_range.x) <
-                FTCOMMON_PASSIVE_F_OR_B_RANGE))
-        {
-            return FALSE;
-        }
-        if ((fp->input.pl.stick_range.x * fp->lr) >= 0)
-        {
-            status_id = nFTCommonStatusPassiveStandF;
-        }
-        else
-        {
-            status_id = nFTCommonStatusPassiveStandB;
-        }
-        if (ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj) !=
-            FALSE)
-        {
-            return TRUE;
-        }
-        fp = ftGetStruct(fighter_gobj);
-        if (fp == NULL)
-        {
-            return FALSE;
-        }
-        if (fp->ga == nMPKineticsAir)
-        {
-            mpCommonSetFighterGround(fp);
-        }
-        ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
-                        FTSTATUS_PRESERVE_NONE);
-        ftParamVelDamageTransferGround(fp);
-        return TRUE;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        ((sNdsStageMPPassiveLoopPassiveStandSetStatusActive != FALSE) ||
-         (sNdsStageMPPassiveLoopBranchProbeActive != FALSE) ||
-         (sNdsStageMPPassiveLoopPassiveStandBActive != FALSE)))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        s32 status_id;
-
-        if ((fp == NULL) ||
-            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX) ||
-            (ABS(fp->input.pl.stick_range.x) <
-                FTCOMMON_PASSIVE_F_OR_B_RANGE))
-        {
-            return FALSE;
-        }
-        if ((fp->input.pl.stick_range.x * fp->lr) >= 0)
-        {
-            status_id = nFTCommonStatusPassiveStandF;
-        }
-        else
-        {
-            status_id = nFTCommonStatusPassiveStandB;
-        }
-        if (ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj) !=
-            FALSE)
-        {
-            return TRUE;
-        }
-        fp = ftGetStruct(fighter_gobj);
-        if (fp == NULL)
-        {
-            return FALSE;
-        }
-        if (fp->ga == nMPKineticsAir)
-        {
-            mpCommonSetFighterGround(fp);
-        }
-        ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
-                        FTSTATUS_PRESERVE_NONE);
-        ftParamVelDamageTransferGround(fp);
-        return TRUE;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
-    {
-        return ndsBaseFTCommonPassiveStandCheckInterruptDamage(fighter_gobj);
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 sb32 ftCommonPassiveCheckInterruptDamage(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
-
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageMapActive != FALSE))
-    {
-        sNdsFighterDashRunDamageFallPassiveCheckCount++;
-        if (sNdsFighterDashRunDamageFallMapCollisionMode == 7u)
-        {
-            return ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        gNdsStageMPCliffWaitDamageLoopDamageFallPassiveCheckCount++;
-        if ((fp == NULL) ||
-            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX))
-        {
-            return FALSE;
-        }
-        if (ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj) != FALSE)
-        {
-            return TRUE;
-        }
-        fp = ftGetStruct(fighter_gobj);
-        if (fp == NULL)
-        {
-            return FALSE;
-        }
-        if (fp->ga == nMPKineticsAir)
-        {
-            mpCommonSetFighterGround(fp);
-        }
-        ftMainSetStatus(fighter_gobj, nFTCommonStatusPassive, 0.0F, 1.0F,
-                        FTSTATUS_PRESERVE_NONE);
-        ftParamVelDamageTransferGround(fp);
-        return TRUE;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        ((sNdsStageMPPassiveLoopPassiveSetStatusActive != FALSE) ||
-         (sNdsStageMPPassiveLoopBranchProbeActive != FALSE)))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp == NULL) ||
-            (fp->tics_since_last_z >= FTCOMMON_PASSIVE_BUFFER_TICS_MAX))
-        {
-            return FALSE;
-        }
-        if (ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj) != FALSE)
-        {
-            return TRUE;
-        }
-        fp = ftGetStruct(fighter_gobj);
-        if (fp == NULL)
-        {
-            return FALSE;
-        }
-        if (fp->ga == nMPKineticsAir)
-        {
-            mpCommonSetFighterGround(fp);
-        }
-        ftMainSetStatus(fighter_gobj, nFTCommonStatusPassive, 0.0F, 1.0F,
-                        FTSTATUS_PRESERVE_NONE);
-        ftParamVelDamageTransferGround(fp);
-        return TRUE;
-    }
-    if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPPassiveLoopDamageFallMapActive != FALSE))
-    {
-        return ndsBaseFTCommonPassiveCheckInterruptDamage(fighter_gobj);
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 void ftCommonDownBounceSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownBounceSetStatus(fighter_gobj);
     return;
-
-    if (sNdsStageMPLiveHitStatusLoopDownBounceSetStatusActive != FALSE)
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
-            (fp->joints[nFTPartsJointCommonStart] == NULL))
-        {
-            return;
-        }
-        ndsBaseFTCommonDownBounceSetStatus(fighter_gobj);
-        sNdsFighterDashRunDamageFallDownBounceSetStatusCount++;
-        return;
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageMapActive != FALSE))
-    {
-        // ponytail: branch proof only; full DownBounce status already has coverage.
-        sNdsFighterDashRunDamageFallDownBounceSetStatusCount++;
-        (void)fighter_gobj;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDamageFallMapActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        u32 main_set_status_before;
-        u32 ground_set_before;
-        u32 effect_before;
-        u32 sfx_before;
-        u32 rumble_before;
-        u32 vel_transfer_before;
-        s32 status_id;
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
-            (fp->joints[nFTPartsJointCommonStart] == NULL))
-        {
-            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
-            return;
-        }
-
-        main_set_status_before =
-            gNdsStageMPCliffWaitDamageLoopDownBounceMainSetStatusCount;
-        ground_set_before =
-            gNdsStageMPCliffWaitDamageLoopDownBounceGroundSetCount;
-        effect_before = gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount;
-        sfx_before = gNdsStageMPCliffWaitDamageLoopDownBounceSFXCount;
-        rumble_before = gNdsStageMPCliffWaitDamageLoopDownBounceRumbleCount;
-        vel_transfer_before =
-            gNdsStageMPCliffWaitDamageLoopDownBounceVelTransferCount;
-        sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive = TRUE;
-        if (fp->ga == nMPKineticsAir)
-        {
-            mpCommonSetFighterGround(fp);
-        }
-        status_id = (ftCommonDownBounceCheckUpOrDown(fighter_gobj) !=
-            FALSE) ? nFTCommonStatusDownBounceD : nFTCommonStatusDownBounceU;
-        ftMainSetStatus(fighter_gobj, status_id, 0.0F, 1.0F,
-                        FTSTATUS_PRESERVE_PLAYERTAG);
-        ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
-        fp->status_vars.common.downbounce.attack_buffer = 0;
-        fp->damage_mul = 0.5F;
-        ftParamVelDamageTransferGround(fp);
-        sNdsStageMPCliffWaitDamageLoopDownBounceSetStatusActive = FALSE;
-        if ((gNdsStageMPCliffWaitDamageLoopDownBounceMainSetStatusCount ==
-                (main_set_status_before + 1u)) &&
-            (gNdsStageMPCliffWaitDamageLoopDownBounceGroundSetCount ==
-                (ground_set_before + 1u)) &&
-            (gNdsStageMPCliffWaitDamageLoopDownBounceEffectCount ==
-                (effect_before + 1u)) &&
-            (gNdsStageMPCliffWaitDamageLoopDownBounceSFXCount ==
-                (sfx_before + 1u)) &&
-            (gNdsStageMPCliffWaitDamageLoopDownBounceRumbleCount ==
-                (rumble_before + 1u)) &&
-            (gNdsStageMPCliffWaitDamageLoopDownBounceVelTransferCount ==
-                (vel_transfer_before + 1u)))
-        {
-            gNdsStageMPCliffWaitDamageLoopDamageFallDownBounceSetStatusCount++;
-        }
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonCliffCatchSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonCliffCatchSetStatus(fighter_gobj);
     return;
-
-    if (sNdsStageMPLiveHitStatusLoopCliffCatchSetStatusActive != FALSE)
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        DObj *root = (fighter_gobj != NULL) ? DObjGetStruct(fighter_gobj) :
-            NULL;
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
-            (fp->joints[nFTPartsJointTopN] == NULL))
-        {
-            return;
-        }
-        if (fp->joints[nFTPartsJointTransN] == NULL)
-        {
-            if (root == NULL)
-            {
-                return;
-            }
-            fp->joints[nFTPartsJointTransN] = root;
-        }
-        ndsBaseFTCommonCliffCatchSetStatus(fighter_gobj);
-        sNdsFighterDashRunDamageFallCliffCatchSetStatusCount++;
-        return;
-    }
-    if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
-        (sNdsFighterDashRunDamageMapActive != FALSE))
-    {
-        // ponytail: branch proof only; full CliffCatch status already has coverage.
-        sNdsFighterDashRunDamageFallCliffCatchSetStatusCount++;
-        (void)fighter_gobj;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopCliffCatchSetStatusActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        Vec3f pos = { 0.0F, 0.0F, 0.0F };
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
-            return;
-        }
-
-        mpCommonSetFighterGround(fp);
-        ftMainSetStatus(fighter_gobj, nFTCommonStatusCliffCatch, 0.0F,
-                        1.0F, FTSTATUS_PRESERVE_NONE);
-        ftMainPlayAnimEventsAll(fighter_gobj);
-        mpCommonSetFighterAir(fp);
-        ftPhysicsStopVelAll(fighter_gobj);
-        fp->coll_data.floor_line_id = -1;
-        fp->is_cliff_hold = TRUE;
-        fp->proc_damage = ftCommonCliffCommonProcDamage;
-        if (fp->lr == +1)
-        {
-            mpCollisionGetFloorEdgeL(fp->coll_data.cliff_id, &pos);
-        }
-        else
-        {
-            mpCollisionGetFloorEdgeR(fp->coll_data.cliff_id, &pos);
-        }
-        (void)efManagerFlashMiddleMakeEffect(&pos);
-        ftParamSetCaptureImmuneMask(fp, FTCATCHKIND_MASK_TARUCANN);
-        return;
-    }
-    ndsBaseFTCommonCliffCatchSetStatus(fighter_gobj);
 }
 
 void ftCommonDownWaitProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownWaitProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDownWaitUpdateActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
-            return;
-        }
-        gNdsStageMPCliffWaitDamageLoopDownWaitUpdateTickCount++;
-        fp->status_vars.common.downwait.stand_wait--;
-        if (fp->status_vars.common.downwait.stand_wait == 0)
-        {
-            ftCommonDownStandSetStatus(fighter_gobj);
-        }
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDownWaitProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownWaitProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonDownWaitProcInterrupt(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
-    {
-        ndsBaseFTCommonDownWaitProcInterrupt(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDownWaitSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownWaitSetStatusActive != FALSE))
-    {
-        gNdsStageMPDownRecoverLoopDownWaitSetStatusCount++;
-        ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownWaitSetStatusActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopDownWaitSetStatusCount++;
-        ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive != FALSE))
-    {
-        ndsBaseFTCommonDownWaitSetStatus(fighter_gobj);
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDownBounceProcUpdate(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownBounceProcUpdate(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDownBounceUpdateActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE) ||
-            (fighter_gobj == NULL))
-        {
-            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
-            return;
-        }
-        gNdsStageMPCliffWaitDamageLoopDownBounceUpdateTickCount++;
-        if (fp->status_vars.common.downbounce.attack_buffer != 0)
-        {
-            fp->status_vars.common.downbounce.attack_buffer--;
-        }
-        if ((fp->input.pl.button_tap &
-             (fp->input.button_mask_a | fp->input.button_mask_b)) != 0u)
-        {
-            fp->status_vars.common.downbounce.attack_buffer =
-                FTCOMMON_DOWNBOUNCE_ATTACK_BUFFER;
-        }
-        if (fighter_gobj->anim_frame <= 0.0F)
-        {
-            if (ftCommonDownAttackCheckInterruptDownBounce(fighter_gobj) !=
-                FALSE)
-            {
-                return;
-            }
-            if (ftCommonDownForwardOrBackCheckInterruptCommon(
-                    fighter_gobj) != FALSE)
-            {
-                return;
-            }
-            sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive = TRUE;
-            ftCommonDownWaitSetStatus(fighter_gobj);
-            sNdsStageMPCliffWaitDamageLoopDownWaitSetStatusActive = FALSE;
-        }
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 sb32 ftCommonDownBounceCheckUpOrDown(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDownBounceCheckUpOrDown(fighter_gobj);
-
-    FTStruct *fp;
-    f32 rot_x;
-
-    if (fighter_gobj == NULL)
-    {
-        return FALSE;
-    }
-
-    fp = ftGetStruct(fighter_gobj);
-    if ((fp == NULL) || (fp->joints[nFTPartsJointCommonStart] == NULL))
-    {
-        return FALSE;
-    }
-
-    rot_x = fp->joints[nFTPartsJointCommonStart]->rotate.vec.f.x;
-    rot_x /= F_CST_DTOR32(360.0F);
-    rot_x -= (s32)rot_x;
-    if ((rot_x < -0.5F) || ((rot_x > 0.0F) && (rot_x < 0.5F)))
-    {
-        return TRUE;
-    }
-    return FALSE;
 }
 
 void ftCommonDownBounceUpdateEffects(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
     return;
-
-    ndsBaseFTCommonDownBounceUpdateEffects(fighter_gobj);
 }
 
 void ftCommonDownStandProcInterrupt(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownStandProcInterrupt(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownStandInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        gNdsStageMPDownWaitLoopDownStandInterruptTickCount++;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPDownWaitLoopUnsafeCount++;
-            return;
-        }
-        if ((fp->motion_vars.flags.flag1 != 0) &&
-            (ftCommonKneeBendCheckInterruptCommon(fighter_gobj) == FALSE) &&
-            (ftCommonPassCheckInterruptCommon(fighter_gobj) == FALSE))
-        {
-            (void)ftCommonDokanStartCheckInterruptCommon(fighter_gobj);
-        }
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDownStandSetStatus(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownStandProbeActive != FALSE))
-    {
-        gNdsStageMPDownRecoverLoopDownStandSetStatusCount++;
-        ndsStageMPDownRecoverLoopAppendDownStandOrder(4u);
-        sNdsStageMPDownRecoverLoopDownStandSetStatusActive = TRUE;
-        ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
-        sNdsStageMPDownRecoverLoopDownStandSetStatusActive = FALSE;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopDownStandSetStatusCount++;
-        ndsStageMPDownWaitLoopAppendSourceOrder(4u);
-        sNdsStageMPDownWaitLoopDownStandSetStatusActive = TRUE;
-        ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
-        sNdsStageMPDownWaitLoopDownStandSetStatusActive = FALSE;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDownWaitUpdateActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopDownWaitStandSetStatusCount++;
-        sNdsStageMPCliffWaitDamageLoopDownStandSetStatusActive = TRUE;
-        ndsBaseFTCommonDownStandSetStatus(fighter_gobj);
-        sNdsStageMPCliffWaitDamageLoopDownStandSetStatusActive = FALSE;
-        return;
-    }
-    (void)fighter_gobj;
 }
 
 void ftCommonDownAttackSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     ndsBaseFTCommonDownAttackSetStatus(fighter_gobj, status_id);
     return;
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE))
-    {
-        gNdsStageMPDownRecoverLoopAttackSetStatusCount++;
-        ndsStageMPDownRecoverLoopAppendAttackOrder(2u);
-        sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = TRUE;
-        ndsBaseFTCommonDownAttackSetStatus(fighter_gobj, status_id);
-        sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = FALSE;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopAttackProbeActive != FALSE))
-    {
-        gNdsStageMPDownWaitLoopAttackSetStatusCount++;
-        ndsStageMPDownWaitLoopAppendAttackOrder(2u);
-        sNdsStageMPDownWaitLoopDownAttackSetStatusActive = TRUE;
-        ndsBaseFTCommonDownAttackSetStatus(fighter_gobj, status_id);
-        sNdsStageMPDownWaitLoopDownAttackSetStatusActive = FALSE;
-        return;
-    }
-    (void)fighter_gobj;
-    (void)status_id;
 }
 
 sb32 ftCommonDownAttackCheckInterruptDownWait(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDownAttackCheckInterruptDownWait(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
-    {
-        if (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE)
-        {
-            FTStruct *fp = ftGetStruct(fighter_gobj);
-            sb32 will_set_status =
-                ((fp != NULL) &&
-                 ((fp->input.pl.button_tap &
-                   (fp->input.button_mask_a | fp->input.button_mask_b)) !=
-                    0u)) ? TRUE : FALSE;
-            sb32 result;
-
-            gNdsStageMPDownRecoverLoopAttackCheckCount++;
-            ndsStageMPDownRecoverLoopAppendAttackOrder(1u);
-            if (will_set_status != FALSE)
-            {
-                gNdsStageMPDownRecoverLoopAttackSetStatusCount++;
-                ndsStageMPDownRecoverLoopAppendAttackOrder(2u);
-                sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = TRUE;
-            }
-            result = ndsBaseFTCommonDownAttackCheckInterruptDownWait(
-                fighter_gobj);
-            sNdsStageMPDownRecoverLoopDownAttackSetStatusActive = FALSE;
-            return result;
-        }
-        if ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
-            (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE))
-        {
-            gNdsStageMPDownRecoverLoopRollAttackCheckCount++;
-            if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
-            {
-                ndsStageMPDownRecoverLoopAppendRollForwardOrder(1u);
-            }
-            else
-            {
-                ndsStageMPDownRecoverLoopAppendRollBackOrder(1u);
-            }
-            return ndsBaseFTCommonDownAttackCheckInterruptDownWait(
-                fighter_gobj);
-        }
-        gNdsStageMPDownRecoverLoopDownStandAttackCheckCount++;
-        ndsStageMPDownRecoverLoopAppendDownStandOrder(1u);
-        return ndsBaseFTCommonDownAttackCheckInterruptDownWait(fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
-    {
-        if (sNdsStageMPDownWaitLoopAttackProbeActive != FALSE)
-        {
-            FTStruct *fp = ftGetStruct(fighter_gobj);
-            sb32 will_set_status =
-                ((fp != NULL) &&
-                 ((fp->input.pl.button_tap &
-                   (fp->input.button_mask_a | fp->input.button_mask_b)) !=
-                    0u)) ? TRUE : FALSE;
-            sb32 result;
-
-            gNdsStageMPDownWaitLoopAttackCheckCount++;
-            ndsStageMPDownWaitLoopAppendAttackOrder(1u);
-            if (will_set_status != FALSE)
-            {
-                gNdsStageMPDownWaitLoopAttackSetStatusCount++;
-                ndsStageMPDownWaitLoopAppendAttackOrder(2u);
-                sNdsStageMPDownWaitLoopDownAttackSetStatusActive = TRUE;
-            }
-            result = ndsBaseFTCommonDownAttackCheckInterruptDownWait(
-                fighter_gobj);
-            sNdsStageMPDownWaitLoopDownAttackSetStatusActive = FALSE;
-            return result;
-        }
-        if ((sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
-            (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE))
-        {
-            gNdsStageMPDownWaitLoopRollAttackCheckCount++;
-            if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
-            {
-                ndsStageMPDownWaitLoopAppendRollForwardOrder(1u);
-            }
-            else
-            {
-                ndsStageMPDownWaitLoopAppendRollBackOrder(1u);
-            }
-            return ndsBaseFTCommonDownAttackCheckInterruptDownWait(
-                fighter_gobj);
-        }
-        gNdsStageMPDownWaitLoopDownAttackCheckCount++;
-        ndsStageMPDownWaitLoopAppendSourceOrder(1u);
-        return ndsBaseFTCommonDownAttackCheckInterruptDownWait(fighter_gobj);
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 void ftCommonDownForwardOrBackSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     ndsBaseFTCommonDownForwardOrBackSetStatus(fighter_gobj, status_id);
     return;
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
-         (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE)))
-    {
-        gNdsStageMPDownRecoverLoopRollSetStatusCount++;
-        if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
-        {
-            ndsStageMPDownRecoverLoopAppendRollForwardOrder(3u);
-        }
-        else
-        {
-            ndsStageMPDownRecoverLoopAppendRollBackOrder(3u);
-        }
-        sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive = TRUE;
-        ndsBaseFTCommonDownForwardOrBackSetStatus(fighter_gobj, status_id);
-        sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive = FALSE;
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        ((sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
-         (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE)))
-    {
-        gNdsStageMPDownWaitLoopRollSetStatusCount++;
-        if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
-        {
-            ndsStageMPDownWaitLoopAppendRollForwardOrder(3u);
-        }
-        else
-        {
-            ndsStageMPDownWaitLoopAppendRollBackOrder(3u);
-        }
-        sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = TRUE;
-        ndsBaseFTCommonDownForwardOrBackSetStatus(fighter_gobj, status_id);
-        sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = FALSE;
-        return;
-    }
-    (void)fighter_gobj;
-    (void)status_id;
 }
 
 sb32 ftCommonDownForwardOrBackCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
-    {
-        if ((sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
-            (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE))
-        {
-            FTStruct *fp = ftGetStruct(fighter_gobj);
-            sb32 will_set_status =
-                ((fp != NULL) &&
-                 (ABS(fp->input.pl.stick_range.x) >=
-                    FTCOMMON_DOWN_FORWARD_BACK_RANGE_MIN) &&
-                 (ftParamGetStickAngleRads(fp) < F_CST_DTOR32(50.0F))) ?
-                    TRUE : FALSE;
-            sb32 result;
-
-            gNdsStageMPDownRecoverLoopRollForwardBackCheckCount++;
-            if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
-            {
-                ndsStageMPDownRecoverLoopAppendRollForwardOrder(2u);
-            }
-            else
-            {
-                ndsStageMPDownRecoverLoopAppendRollBackOrder(2u);
-            }
-            if (will_set_status != FALSE)
-            {
-                gNdsStageMPDownRecoverLoopRollSetStatusCount++;
-                if (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE)
-                {
-                    ndsStageMPDownRecoverLoopAppendRollForwardOrder(3u);
-                }
-                else
-                {
-                    ndsStageMPDownRecoverLoopAppendRollBackOrder(3u);
-                }
-                sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive =
-                    TRUE;
-            }
-            result = ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
-                fighter_gobj);
-            sNdsStageMPDownRecoverLoopDownForwardBackSetStatusActive = FALSE;
-            return result;
-        }
-        if (sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE)
-        {
-            gNdsStageMPDownRecoverLoopUnsafeCount++;
-            return FALSE;
-        }
-        gNdsStageMPDownRecoverLoopDownStandForwardBackCheckCount++;
-        ndsStageMPDownRecoverLoopAppendDownStandOrder(2u);
-        return ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
-            fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
-    {
-        if ((sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
-            (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE))
-        {
-            FTStruct *fp = ftGetStruct(fighter_gobj);
-            sb32 will_set_status =
-                ((fp != NULL) &&
-                 (ABS(fp->input.pl.stick_range.x) >=
-                    FTCOMMON_DOWN_FORWARD_BACK_RANGE_MIN) &&
-                 (ftParamGetStickAngleRads(fp) < F_CST_DTOR32(50.0F))) ?
-                    TRUE : FALSE;
-            sb32 result;
-
-            gNdsStageMPDownWaitLoopRollForwardBackCheckCount++;
-            if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
-            {
-                ndsStageMPDownWaitLoopAppendRollForwardOrder(2u);
-            }
-            else
-            {
-                ndsStageMPDownWaitLoopAppendRollBackOrder(2u);
-            }
-            if (will_set_status != FALSE)
-            {
-                gNdsStageMPDownWaitLoopRollSetStatusCount++;
-                if (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE)
-                {
-                    ndsStageMPDownWaitLoopAppendRollForwardOrder(3u);
-                }
-                else
-                {
-                    ndsStageMPDownWaitLoopAppendRollBackOrder(3u);
-                }
-                sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = TRUE;
-            }
-            result = ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
-                fighter_gobj);
-            sNdsStageMPDownWaitLoopDownForwardBackSetStatusActive = FALSE;
-            return result;
-        }
-        if (sNdsStageMPDownWaitLoopAttackProbeActive != FALSE)
-        {
-            gNdsStageMPDownWaitLoopUnsafeCount++;
-            return FALSE;
-        }
-        gNdsStageMPDownWaitLoopForwardBackCheckCount++;
-        ndsStageMPDownWaitLoopAppendSourceOrder(2u);
-        return ndsBaseFTCommonDownForwardOrBackCheckInterruptCommon(
-            fighter_gobj);
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDownBounceUpdateActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopDownBounceForwardBackCheckCount++;
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 sb32 ftCommonDownStandCheckInterruptCommon(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDownStandCheckInterruptCommon(fighter_gobj);
-
-    if ((ndsFighterMarioFoxStageMPDownRecoverLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownRecoverLoopDownWaitInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((sNdsStageMPDownRecoverLoopAttackProbeActive != FALSE) ||
-            (sNdsStageMPDownRecoverLoopRollForwardProbeActive != FALSE) ||
-            (sNdsStageMPDownRecoverLoopRollBackProbeActive != FALSE))
-        {
-            gNdsStageMPDownRecoverLoopUnsafeCount++;
-            return FALSE;
-        }
-        gNdsStageMPDownRecoverLoopDownStandCheckCount++;
-        ndsStageMPDownRecoverLoopAppendDownStandOrder(3u);
-        if ((fp != NULL) &&
-            (((fp->input.pl.stick_range.y >=
-                FTCOMMON_DOWNWAIT_STAND_STICK_RANGE_MIN) &&
-              (ftParamGetStickAngleRads(fp) >= F_CST_DTOR32(50.0F))) ||
-             (fp->input.pl.button_tap & fp->input.button_mask_z)))
-        {
-            ftCommonDownStandSetStatus(fighter_gobj);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPDownWaitLoopDownWaitInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-
-        if ((sNdsStageMPDownWaitLoopAttackProbeActive != FALSE) ||
-            (sNdsStageMPDownWaitLoopRollForwardProbeActive != FALSE) ||
-            (sNdsStageMPDownWaitLoopRollBackProbeActive != FALSE))
-        {
-            gNdsStageMPDownWaitLoopUnsafeCount++;
-            return FALSE;
-        }
-        gNdsStageMPDownWaitLoopDownStandCheckCount++;
-        ndsStageMPDownWaitLoopAppendSourceOrder(3u);
-        if ((fp != NULL) &&
-            (((fp->input.pl.stick_range.y >=
-                FTCOMMON_DOWNWAIT_STAND_STICK_RANGE_MIN) &&
-              (ftParamGetStickAngleRads(fp) >= F_CST_DTOR32(50.0F))) ||
-             (fp->input.pl.button_tap & fp->input.button_mask_z)))
-        {
-            ftCommonDownStandSetStatus(fighter_gobj);
-            return TRUE;
-        }
-        return FALSE;
-    }
-    (void)fighter_gobj;
-    return FALSE;
 }
 
 sb32 ftCommonDownAttackCheckInterruptDownBounce(GObj *fighter_gobj)
 {
     return ndsBaseFTCommonDownAttackCheckInterruptDownBounce(fighter_gobj);
-
-    (void)fighter_gobj;
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopDownBounceUpdateActive != FALSE))
-    {
-        gNdsStageMPCliffWaitDamageLoopDownBounceAttackCheckCount++;
-    }
-    return FALSE;
 }
 
 void ftCommonDamageFallSetStatusFromCliffWait(GObj *fighter_gobj)
 {
     ndsBaseFTCommonDamageFallSetStatusFromCliffWait(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffWaitDamageLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitDamageLoopInterruptActive != FALSE))
-    {
-        FTStruct *fp = ftGetStruct(fighter_gobj);
-        u32 set_status_before;
-        u32 clamp_rumble_before;
-
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffWaitDamageLoopUnsafeCount++;
-            return;
-        }
-        set_status_before = gNdsStageMPCliffWaitDamageLoopSetStatusCount;
-        clamp_rumble_before = gNdsStageMPCliffWaitDamageLoopClampRumbleCount;
-        sNdsStageMPCliffWaitDamageLoopSetStatusActive = TRUE;
-        ndsBaseFTCommonDamageFallSetStatusFromCliffWait(fighter_gobj);
-        sNdsStageMPCliffWaitDamageLoopSetStatusActive = FALSE;
-        fp = ftGetStruct(fighter_gobj);
-        if (fp != NULL)
-        {
-            fp->tics_since_last_z = FTINPUT_ZTRIGLAST_TICS_MAX;
-        }
-        if ((gNdsStageMPCliffWaitDamageLoopSetStatusCount ==
-                (set_status_before + 1u)) &&
-            (gNdsStageMPCliffWaitDamageLoopClampRumbleCount ==
-                (clamp_rumble_before + 1u)))
-        {
-            gNdsStageMPCliffWaitDamageLoopDamageFallCallCount++;
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffEscapeActionLoopDamageFallCallCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffAttackFloorLoopDamageFallCallCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffClimbFloorLoopDamageFallCallCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffWaitFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffWaitFloorLoopInterruptActive != FALSE))
-    {
-        gNdsStageMPCliffWaitFloorLoopDamageFallCallCount++;
-    }
-    ftCommonFallSetStatus(fighter_gobj);
 }
 
 static void ndsStageMPCliffActionCommon2RecordUnsafe(void)
@@ -13695,70 +10304,12 @@ void ftCommonCliffCommon2UpdateCollData(GObj *fighter_gobj)
 {
     ndsBaseFTCommonCliffCommon2UpdateCollData(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 7;
-        ndsFTCommonCliffCommon2UpdateCollDataBridgeLive(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffEscapeActionLoopCommon2UpdateCollCount++;
-        ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackActionLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffAttackActionLoopCommon2UpdateCollCount++;
-        ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbActionLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffClimbActionLoopCommon2UpdateCollCount++;
-        ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
-        return;
-    }
-    ndsFTCommonCliffCommon2UpdateCollDataBridge(fighter_gobj);
 }
 
 void ftCommonCliffCommon2InitStatusVars(GObj *fighter_gobj)
 {
     ndsBaseFTCommonCliffCommon2InitStatusVars(fighter_gobj);
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffLiveLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPCliffLiveLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffLiveLoopCallbackSourceMask |= 1u << 8;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffEscapeActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffEscapeActionLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffEscapeActionLoopCommon2InitVarsCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffAttackActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffAttackActionLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffAttackActionLoopCommon2InitVarsCount++;
-    }
-    if ((ndsFighterMarioFoxStageMPCliffClimbActionLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbActionLoopSetStatusActive != FALSE))
-    {
-        gNdsStageMPCliffClimbActionLoopCommon2InitVarsCount++;
-    }
-    ndsBaseFTCommonCliffCommon2InitStatusVars(fighter_gobj);
 }
 
 void ftPhysicsApplyGroundVelFriction(GObj *fighter_gobj)
@@ -14563,336 +11114,6 @@ void mpCommonProcFighterCliffFloorCeil(GObj *fighter_gobj)
         }
     }
     return;
-
-    if ((ndsFighterMarioFoxStageMPCliffClimbFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffClimbFloorLoopRecatchMapActive != FALSE))
-    {
-        gNdsStageMPCliffClimbFloorLoopRecatchMapCallbackCount++;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-            return;
-        }
-
-        gNdsStageMPCliffClimbFloorLoopRecatchCheckCeilHeavyCliffCount++;
-        {
-            MPCollData mp_coll;
-
-            if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
-            {
-                gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-                return;
-            }
-            if (mpProcessUpdateMain(&mp_coll,
-                ndsStageMPCliffClimbFloorLoopRecatchSpecialCollisions,
-                fighter_gobj,
-                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) != FALSE)
-            {
-                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
-                if ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u)
-                {
-                    gNdsStageMPCliffClimbFloorLoopRecatchCliffCatchSetStatusCount++;
-                    sNdsStageMPCliffClimbFloorLoopRecatchSetStatusActive =
-                        TRUE;
-                    ftCommonCliffCatchSetStatus(fighter_gobj);
-                    sNdsStageMPCliffClimbFloorLoopRecatchSetStatusActive =
-                        FALSE;
-                }
-                else
-                {
-                    gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-                }
-            }
-            else
-            {
-                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
-                gNdsStageMPCliffClimbFloorLoopUnsafeCount++;
-            }
-        }
-        return;
-    }
-
-    if ((ndsFighterMarioFoxStageMPCliffCatchFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCliffCatchFloorLoopMapActive != FALSE))
-    {
-        gNdsStageMPCliffCatchFloorLoopMapCallbackCount++;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
-            return;
-        }
-
-        gNdsStageMPCliffCatchFloorLoopCheckCeilHeavyCliffCount++;
-        {
-            MPCollData mp_coll;
-
-            if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
-            {
-                gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
-                return;
-            }
-            if (mpProcessUpdateMain(&mp_coll,
-                ndsStageMPCliffCatchFloorLoopSpecialCollisions,
-                fighter_gobj,
-                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) != FALSE)
-            {
-                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
-                if ((fp->coll_data.mask_stat & MAP_FLAG_CLIFF_MASK) != 0u)
-                {
-                    gNdsStageMPCliffCatchFloorLoopCliffCatchSetStatusCount++;
-                    sNdsStageMPCliffCatchFloorLoopSetStatusActive = TRUE;
-                    ftCommonCliffCatchSetStatus(fighter_gobj);
-                    sNdsStageMPCliffCatchFloorLoopSetStatusActive = FALSE;
-                }
-                else
-                {
-                    gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
-                }
-            }
-            else
-            {
-                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
-                if ((sNdsStageMPCliffCatchFloorLoopOccupancyActive == FALSE) ||
-                    (gNdsStageMPCliffCatchFloorLoopOccupancyBlockCount == 0u))
-                {
-                    gNdsStageMPCliffCatchFloorLoopUnsafeCount++;
-                }
-            }
-        }
-        return;
-    }
-
-    if ((ndsFighterMarioFoxStageMPCeilStatusFloorLoopProofEnabled() !=
-            FALSE) &&
-        (sNdsStageMPCeilStatusFloorLoopMapActive != FALSE))
-    {
-        gNdsStageMPCeilStatusFloorLoopMapCallbackCount++;
-        if ((fp == NULL) || (ndsFighterStructIsPoolPointer(fp) == FALSE))
-        {
-            gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
-            return;
-        }
-
-        gNdsStageMPCeilStatusFloorLoopCheckCeilHeavyCliffCount++;
-        {
-            MPCollData mp_coll;
-
-            if (ndsStageMPUpdateFloorLoopBuildCollData(fp, &mp_coll) == FALSE)
-            {
-                gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
-                return;
-            }
-            if (mpProcessUpdateMain(&mp_coll,
-                ndsStageMPCeilStatusFloorLoopSpecialCollisions,
-                fighter_gobj,
-                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF) != FALSE)
-            {
-                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
-                if ((fp->coll_data.mask_curr & MAP_FLAG_CEILHEAVY) != 0u)
-                {
-                    gNdsStageMPCeilStatusFloorLoopStopCeilSetStatusCount++;
-                    sNdsStageMPCeilStatusFloorLoopSetStatusActive = TRUE;
-                    ftCommonStopCeilSetStatus(fighter_gobj);
-                    sNdsStageMPCeilStatusFloorLoopSetStatusActive = FALSE;
-                }
-                else
-                {
-                    gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
-                }
-            }
-            else
-            {
-                ndsStageMPProcessFloorLoopCopyBack(fp, &mp_coll);
-                gNdsStageMPCeilStatusFloorLoopUnsafeCount++;
-            }
-        }
-        return;
-    }
-
-    if ((ndsFighterMarioFoxStageMPFallLandFloorLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPFallLandFloorLoopMapActive != FALSE))
-    {
-        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
-        f32 floor_y = 0.0F;
-
-        gNdsStageMPFallLandFloorLoopMapCallbackCount++;
-        if ((fp == NULL) || (root == NULL) ||
-            (fp->coll_data.floor_line_id < 0) ||
-            (ndsStageFloorEdgeLoopFloorYAtX(fp->coll_data.floor_line_id,
-                                            root->translate.vec.f.x,
-                                            &floor_y) == FALSE))
-        {
-            gNdsStageMPFallLandFloorLoopUnsafeCount++;
-            return;
-        }
-        if ((root->translate.vec.f.y <= floor_y) &&
-            (fp->physics.vel_air.y <= 0.0F) &&
-            (fp->ga == nMPKineticsAir))
-        {
-            MPCollData coll;
-
-            memset(&coll, 0, sizeof(coll));
-            coll.p_translate = &root->translate.vec.f;
-            coll.p_lr = (fp->coll_data.p_lr != NULL) ? fp->coll_data.p_lr :
-                &fp->lr;
-            coll.pos_prev = fp->coll_data.pos_prev;
-            coll.map_coll = fp->coll_data.map_coll;
-            coll.p_map_coll = &coll.map_coll;
-            coll.cliffcatch_coll = fp->coll_data.cliffcatch_coll;
-            coll.mask_curr = (u16)fp->coll_data.mask_curr;
-            coll.mask_stat = (u16)fp->coll_data.mask_stat;
-            coll.update_tic = (u16)fp->coll_data.update_tic;
-            coll.ewall_line_id = -1;
-            coll.is_coll_end = fp->coll_data.is_coll_end;
-            coll.floor_line_id = fp->coll_data.floor_line_id;
-            coll.floor_dist = floor_y;
-            coll.floor_flags = fp->coll_data.floor_flags;
-            coll.floor_angle = fp->coll_data.floor_angle;
-            coll.ceil_line_id = -1;
-            coll.lwall_line_id = -1;
-            coll.rwall_line_id = -1;
-            coll.cliff_id = -1;
-            coll.ignore_line_id = fp->coll_data.ignore_line_id;
-            coll.mask_stat &= (u16)~MAP_FLAG_FLOOR;
-            coll.mask_curr &= (u16)~MAP_FLAG_FLOOR;
-            fp->coll_data.p_translate = &root->translate.vec.f;
-            if (fp->coll_data.p_map_coll == NULL)
-            {
-                fp->coll_data.p_map_coll = &fp->coll_data.map_coll;
-            }
-            fp->coll_data.floor_dist = floor_y;
-            fp->coll_data.mask_stat &= (u16)~MAP_FLAG_FLOOR;
-            fp->coll_data.mask_curr &= (u16)~MAP_FLAG_FLOOR;
-            gNdsStageMPFallLandFloorLoopMapFloorCollisionCount++;
-            mpProcessSetLandingFloor(&coll);
-            fp->coll_data.mask_curr = coll.mask_curr;
-            fp->coll_data.mask_stat = coll.mask_stat;
-            fp->coll_data.is_coll_end = coll.is_coll_end;
-            fp->coll_data.floor_line_id = coll.floor_line_id;
-            fp->coll_data.floor_dist = coll.floor_dist;
-            fp->coll_data.floor_flags = coll.floor_flags;
-            fp->coll_data.floor_angle = coll.floor_angle;
-            if ((fp->coll_data.mask_stat & MAP_FLAG_FLOOR) == 0u)
-            {
-                gNdsStageMPFallLandFloorLoopUnsafeCount++;
-                return;
-            }
-            fp->coll_data.mask_stat &= (u16)~MAP_FLAG_FLOOREDGE;
-            fp->coll_data.is_coll_end = FALSE;
-            fp->is_fastfall = FALSE;
-            gNdsStageMPFallLandFloorLoopWaitOrLandingCount++;
-            sNdsStageMPFallLandFloorLoopSetStatusActive = TRUE;
-            ftCommonLandingSetStatus(fighter_gobj);
-            sNdsStageMPFallLandFloorLoopSetStatusActive = FALSE;
-        }
-        else
-        {
-            gNdsStageMPFallLandFloorLoopUnsafeCount++;
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxStageMPFallMapFloorLoopProofEnabled() != FALSE) &&
-        (sNdsStageMPFallMapFloorLoopMapActive != FALSE))
-    {
-        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
-        f32 floor_y = 0.0F;
-
-        gNdsStageMPFallMapFloorLoopMapCallbackCount++;
-        if ((fp == NULL) || (root == NULL))
-        {
-            gNdsStageMPFallMapFloorLoopUnsafeCount++;
-            return;
-        }
-        if ((fp->coll_data.floor_line_id >= 0) &&
-            (ndsStageFloorEdgeLoopFloorYAtX(fp->coll_data.floor_line_id,
-                                            root->translate.vec.f.x,
-                                            &floor_y) != FALSE) &&
-            (root->translate.vec.f.y > floor_y) &&
-            (fp->ga == nMPKineticsAir))
-        {
-            gNdsStageMPFallMapFloorLoopMapNoCollisionCount++;
-        }
-        else
-        {
-            gNdsStageMPFallMapFloorLoopUnsafeCount++;
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxProcessLoopProofEnabled() != FALSE) &&
-        (sNdsFighterProcessLoopMapActive != FALSE))
-    {
-        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
-        f32 floor_y = (fp != NULL) ? fp->coll_data.floor_dist : 0.0F;
-
-        if ((fp != NULL) && (root != NULL) &&
-            (root->translate.vec.f.y <= floor_y) &&
-            (fp->physics.vel_air.y <= 0.0F))
-        {
-            root->translate.vec.f.y = floor_y;
-            fp->is_fastfall = FALSE;
-            gNdsFighterProcessLoopFallDetectCount++;
-            sNdsFighterProcessLoopMapActive = TRUE;
-            ftCommonLandingSetStatus(fighter_gobj);
-            sNdsFighterProcessLoopMapActive = TRUE;
-            gNdsFighterProcessLoopLandingDetectCount++;
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxLandingLoopProofEnabled() != FALSE) &&
-        (sNdsFighterLandingFallMapActive != FALSE))
-    {
-        DObj *root = (fp != NULL) ? fp->joints[nFTPartsJointTopN] : NULL;
-        f32 floor_y = (fp != NULL) ? fp->coll_data.floor_dist : 0.0F;
-        u32 slot = ((fp != NULL) && (fp->player < 2)) ? fp->player : 2u;
-
-        if (slot == 0u)
-        {
-            gNdsFighterLandingP0FallMapCount++;
-        }
-        else if (slot == 1u)
-        {
-            gNdsFighterLandingP1FallMapCount++;
-        }
-        if ((fp != NULL) && (root != NULL) &&
-            (root->translate.vec.f.y <= floor_y) &&
-            (fp->physics.vel_air.y <= 0.0F))
-        {
-            if (slot == 0u)
-            {
-                gNdsFighterLandingP0VelYBeforeLandingMilli =
-                    ndsFloatToMilliSigned(fp->physics.vel_air.y);
-            }
-            else if (slot == 1u)
-            {
-                gNdsFighterLandingP1VelYBeforeLandingMilli =
-                    ndsFloatToMilliSigned(fp->physics.vel_air.y);
-            }
-            root->translate.vec.f.y = floor_y;
-            fp->is_fastfall = FALSE;
-            gNdsFighterLandingFloorDetectCount++;
-            gNdsFighterLandingFloorClampCount++;
-            sNdsFighterLandingSetStatusActive = TRUE;
-            ftCommonLandingSetStatus(fighter_gobj);
-            sNdsFighterLandingSetStatusActive = FALSE;
-        }
-        else
-        {
-            gNdsFighterLandingAirNoCollisionCount++;
-        }
-        return;
-    }
-    if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
-        (sNdsFighterJumpAirMapActive != FALSE))
-    {
-        gNdsFighterJumpAirMapCallCount++;
-        if ((fp != NULL) && (fp->ga != nMPKineticsAir))
-        {
-            gNdsFighterJumpLandingDeniedCount++;
-        }
-        return;
-    }
 }
 
 void mpCommonSetFighterFallOnGroundBreak(GObj *fighter_gobj)
