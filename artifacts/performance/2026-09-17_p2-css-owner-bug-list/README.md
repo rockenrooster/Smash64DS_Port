@@ -284,6 +284,46 @@ not listed. A second drift cannot hide behind the first one's exception.
 **The root-alias fix and the generator assert below are untouched and remain
 correct** — a different defect, not reading this field, each proved both ways.
 
+### The two ways to actually fix it, both sized, neither attempted
+
+I stopped here rather than trying a third variant of a change that has already
+hung the character select once. Both designs below are measured, not sketched.
+
+**Design A — give the pack its own raw-size field.** The header has a spare
+`u32 reserved` at offset 28 (and `reserved_tail[2]`), so the field costs no ABI
+change and the 64-byte static assert still holds. `ndsRelocNativeSourceSize`
+returns it for the model section; `source_bytes` keeps meaning the span extent.
+
+Its real cost is the version bump it forces, and that reaches **eight sites**:
+the header, **two** producers (`generate_preview_core_packs.py` and
+`generate_battle_core_packs.py` — the battle packs share this format), the
+loader's version and reserved-must-be-zero checks, three format-parsing tests,
+and my own checker. **And a version bump invalidates every pack in every stale
+build directory**, where a mismatch takes the same `ndsPreviewPackLoadHalt`
+spin — so it would hang exactly like my reverted change until each directory is
+regenerated. That is the trap worth naming, not the eight edits.
+
+**Design B — stop the pack carrying the weld.** Tempting, and my first read of
+it was wrong. There is no separate welded span to drop; Yoshi's model has three
+spans and the weld is the **tail of the third**:
+
+```
+span 0: source     0..3,724   -> data     0..3,724
+span 1: source 13,216..16,432 -> data 3,724..6,940
+span 2: source 37,928..45,488 -> data 6,940..14,500   <- raw ends at 44,256
+```
+
+So this means **truncating span 2** by 1,232 bytes, which moves the section's
+root cells (`roots_offset` 14,500, `root_count` 15, immediately after the span
+data) and changes `data_bytes`. That is a layout change to the compact map's
+output, not a field edit, and it needs proof that nothing in 44,256..45,488 is
+still referenced before the bytes are dropped.
+
+**Design A is the better one** — it fixes the class rather than one fighter,
+since any future pair-mode owner has the same disagreement — provided the stale
+build-directory hazard is handled by regenerating rather than discovered by a
+ROM that spins.
+
 ### The same investigation found a second, worse defect in today's own fix
 
 Chasing *why* Yoshi's owner size was 44,256 led to `faf3a7782e8` (2026-09-06),
