@@ -1,4 +1,4 @@
-# What is left: every measured class, and the 333,315 nobody has found
+# What is left: every measured class, and the 321,866 nobody has found
 
 The gate needs **−468,544 tk/fr** from WORK-H P50 1,588,544. This is the whole
 campaign in one table, so the owner's decision is made against the ledger rather
@@ -20,8 +20,9 @@ joints" are the same lever wearing two names.
 | redundant pre-overwrite clears | 19,466 | 4.2% | sized, unbuilt; needs a redundancy proof per site |
 | `GObj`/`DObj` field repack | 10,867 | 2.3% | mechanism unblocked (shadow header needs no decomp edit); HIGH risk |
 | buffer 32-byte alignment | 6,027 | 1.3% | sized, unbuilt; alignment not yet established |
-| **total if every one lands** | **135,229** | **28.9%** | |
-| **RESIDUAL STILL UNFOUND** | **333,315** | **71.1%** | |
+| literal-pool packing | 11,449 | 2.4% | sized below; invasive source change |
+| **total if every one lands** | **146,678** | **31.3%** | |
+| **RESIDUAL STILL UNFOUND** | **321,866** | **68.7%** | |
 
 Every figure above its own sizing document; only the first is measured on
 hardware.
@@ -65,8 +66,8 @@ sub-lane inside it does not convert even at the impossible limit.
 ## What this means for the decision
 
 **Every structural class is now either banked, sized-and-small, or closed.** The
-best case — banking the one measured win and landing all four unbuilt sizings —
-is **135,229**, which is 28.9% of the gap and leaves **333,315 unfound**.
+best case — banking the one measured win and landing all five unbuilt sizings —
+is **146,678**, which is 31.3% of the gap and leaves **321,866 unfound**.
 
 Two independent bounds say that residual is not hiding in layout:
 
@@ -94,12 +95,66 @@ the classes large enough to contain it are each either refuted or ruled out.
 
 Recorded so the ledger is not mistaken for an exhaustive search:
 
-- **Packing the hot scalars into one anchored struct** rather than moving them.
-  A scalar's literal-pool base load costs *more* than the dereference it feeds
-  (19,681 against 34,121 across the 112 moved symbols) and DTCM does not touch
-  it. The whole PC-relative literal-pool bucket is **67,858 tk/fr** and has never
-  been attacked. Unsized, and it does not consume the DTCM budget.
-- **`-fsection-anchors`**, which composes with the above. Unsized.
+- ~~Packing the hot scalars into one struct~~ and ~~`-fsection-anchors`~~ — both
+  **now sized, see the section below**. Anchors are inert; packing is worth
+  11,449 on the measured set.
 - Reducing the number of **non-fighter** DObjs (stage, effects, items) inside the
   203 peak — the fighter share is the joint lever, but the remainder has not
   been broken out.
+
+## The literal-pool lane, sized — it is not the rescue either
+
+This was the last item on the "not tried" list, and the biggest: PC-relative
+literal-pool loads are **67,858 tk/fr**, larger than any remaining candidate,
+and on ARM946E-S they are data-side reads of `.text` that allocate D-cache lines
+holding code. Two proposals existed for it. Both are now settled.
+
+### `-fsection-anchors` is inert in this build
+
+Measured directly, eight independent 4-byte statics read in one function, then
+the same eight packed into one struct, at the shipping flags:
+
+| arm | 8 separate statics | packed struct |
+|---|---:|---:|
+| shipping (`-fdata-sections`) | **8** pool loads | **1** |
+| `-fdata-sections -fsection-anchors` | **8** — no effect | 1 |
+| `-fsection-anchors` without `-fdata-sections` | **1** | 1 |
+
+**Section anchors do nothing while `-fdata-sections` is on**, because each static
+is alone in its own section and there is nothing to anchor it to. Dropping
+`-fdata-sections` would enable them, but that is the granularity the DTCM lane
+and `--gc-sections` both depend on. The flag proposal is dead; the *packing*
+proposal is what carries the mechanism, and it needs no codegen flag at all.
+
+### Packing is real, and worth 11,449 on the measured set
+
+Today each base load fetches its own pool word, so there is one pool load per
+(function, symbol) pair. Packed, a function touching *k* symbols needs one pool
+load for the struct base plus *k* immediate-offset loads. So the ceiling is
+exactly the base loads that collapse into a shared base.
+
+Measured across the 112 DTCM symbols against the banked profile:
+
+| | value |
+|---|---:|
+| pool words holding their addresses | 1,201 |
+| base-load PCs | 1,542 |
+| **distinct functions touching the set** | **645** |
+| base-load stall | 19,681.4 tk/fr |
+| packed: base loads 1,542 → 645 | **−58.2%** |
+| **ceiling** | **11,449 tk/fr — 2.4% of the gap** |
+
+**The shape of the distribution is why it is not larger.** Of the 645 functions,
+**441 touch exactly one** of the 112 symbols; 97 touch two, 42 touch three, and
+only 34 touch five or more. A function that reads one static still needs one
+pool load whether that static is packed or not, so two thirds of the call sites
+are unreachable by this lever by construction.
+
+Scaling the same 58.2% to the whole 67,858 bucket gives an absolute upper bound
+of ~39,000 — and that assumes the same clustering holds program-wide *and* that
+every unrelated static in the binary can be packed together, which is a very
+large invasive source change for a bound that still does not reach the gate.
+
+**Verdict: real, 2.4% on the clean subset, ~8% program-wide at an unrealistic
+limit. It joins the ledger as another sub-10% candidate rather than changing
+its conclusion.** The residual stands.
