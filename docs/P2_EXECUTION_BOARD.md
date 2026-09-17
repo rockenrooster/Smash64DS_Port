@@ -48,41 +48,44 @@ Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
 740,352**; native **0/0**; realtime **26.4 FPS**; slips 0.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / hardware matrix stack / N05.01 / main. Phase: FALSIFY.
-**Owner 2026-09-16: four-CPU work runs `p2_fourcpu_stress` alone**; conditions in
-`VERIFYING.md`. Boundary is for integration/publication.
+Focus / batch / IDs / owner: P2-2p8 / collision matrix family / N05.02 / main. Phase: SELECT.
+**Owner: four-CPU work runs `p2_fourcpu_stress` alone** (`VERIFYING.md`).
 Completed: N04.03/N04.05/N04.08 KEEP; N04.04/N04.06/N04.07 REJECT. See ledger.
-Baseline moved 2026-09-16 (owner-approved clean rebuild, -50,432) and 3,103 lines
-of dead code deleted; both banked in `docs/archive/P2_CLOSED_ROWS.md`.
-**Gap:** `1,120,000` = two VBlank intervals. WORK-H P50 **1,575,296 = 1.41x**,
-P95 2.06x, **92.3% of frames miss**; needs **-455,296** at P50. Leaf work is
-sized wrong (whole fadd+fmul class 90,169). Sizing:
+Baseline moved 2026-09-16 (clean rebuild -50,432) and dead code deleted; both in
+`docs/archive/P2_CLOSED_ROWS.md`.
+**Gap:** `1,120,000` = two VBlank intervals. WORK-H P50 **1.41x**, P95 2.06x,
+**92.3% of frames miss**; needs **-455,296** at P50. Sizing:
 `…/2026-09-16_p2-2p8-gap-sizing/`.
-**Owner 2026-09-16: 30 FPS at four players is REQUIRED, and NO 30 Hz
-simulation.** The -294,016 sim lever is withdrawn (priced and banked in
-`…/2026-09-16_p2-2p8-sim30-ceiling/`; 60 Hz stays). That is consistent with the
-Sacrifice Order: audio (1), visual (2) and gameplay (3) are all ranked MORE
+**Owner 2026-09-16: 30 FPS at four players REQUIRED, NO 30 Hz simulation.** The
+-294,016 sim lever is withdrawn (priced in `…/2026-09-16_p2-2p8-sim30-ceiling/`).
+Per the Sacrifice Order audio (1), visual (2) and gameplay (3) rank MORE
 expendable than the 60 Hz sim (4), so 1-3 must be exhausted first.
-**Selected: the DS hardware matrix stack is unused for objects.**
-`ndsRendererLoadHardwareMatrixPair` (`nds_renderer_textures_effects.c:12148`)
-issues `glLoadMatrix4x4(projection)` + `glLoadMatrix4x4(modelview)` per object
-with a **CPU-computed** modelview. The DS can hold the camera in MODELVIEW and do
-PUSH / MULT4x4(local) / POP per object — and this tree already does exactly that
-for stage rigid bindings (`nds_renderer_assets.c:6720`). GX words are unchanged
-(MULT4x4 and LOAD4x4 are both 16), so it does NOT hit the stage lane's wall; the
-saving is purely the CPU product. **14 symbols / 160,576 tk/fr = 35.3% of the
-gap**, driven by object count (`gNdsGCDrawsActiveMax` 203) and cutting across the
-arithmetic kernels and adapter pipeline at once. Fidelity: hardware MULT4x4
-rounds in 20.12 where the CPU rounds its own product, so equivalent not
-bit-identical — needs the Task 49 GX differ, as the stage replays did.
-Falsifier under test: if a per-object transform is not expressible as one MULT4x4
-under a frame-constant camera (check the kind-47/48 `ApplyMvpRecalc` path), the
-lane collapses to the camera load alone, ~10,000.
+**N05.01 matrix-stack lane: SPENT, with a measured surprise.** The mechanism
+already shipped (E17 + Slice 43, owner-accepted, both `1` here) — but it is **0%
+engaged**: `LoadHardwareGxComposedMatrices` 0 calls/frame, `MtxMulAffine20p12`
+73.15 against 1.19 when it worked. Cause: `BuildGxSlotTable`
+(`renderer_adapter_matrix.c:6008`) unions every owner's palette slots and returns
+FALSE on the first `NULL`; `NDS_P2_KIRBY` pushes the owner count past
+Pikachu/Yoshi/Ness/Purin, compiled out and returning `NULL`. Every owner, every
+frame, since the roster grew past Mario+Fox.
+**Repairing it REGRESSES this roster** — engaged (declines 3.91/frame -> 31 per
+300 frames): WORK-H P50 **+22,848**, P95 **+67,456**, FTR P95 **+84,480**, other
+invariants identical. The CPU multiply it deletes is cheaper than the FIFO
+traffic it adds at four fighters; Slice 43's own accounting had the FIFO side
+eating over half the win at two. **The 2026-08-15 -8,096 acceptance does not
+describe a four-fighter roster.** Fix reverted; the accidental decline is the
+faster path. Evidence: `…/2026-09-16_p2-2p8-gx-compose-decline/`.
+Owed: make the decline deliberate (choose CPU knowingly by roster) and assert
+`gNdsR2GxComposeDeclines` in the four-CPU gate — nothing asserts it today.
+Also unsized: `GetFrameCameraMatrices` is 9,884 tk/fr for ONE camera build per
+frame (18.60 calls, two 64-byte MTXCOPYs each); a `const*` is ~6-8k, no fidelity
+surface.
+Next (N05.02): the collision matrix family, ~49,900 tk/fr, the largest untouched
+lane — see `…_n0409-profile/CANDIDATE_SELECTION.md`.
 Lanes killed with measurement (30 Hz sim, the stage, per-fighter, material
 animation, the broken Task 103 instrument): `docs/archive/P2_CLOSED_ROWS.md`.
-Checks: **Boundary GREEN on clean payloads for all three arms** (shell loop free
-floor 114,628 B, realtime 212 frames **26.4 FPS**); both targets build and every
-invariant matches.
+Checks: **Boundary GREEN all three arms** (shell loop free floor 114,628 B,
+realtime **26.4 FPS**); both targets build, invariants match.
 Falsifier: settled batches reopen only for a recorded invalidator.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`; N04.05 and N04.08 settled KEEP.
 Job: none; main owns all edits, builds and the focused runner.
