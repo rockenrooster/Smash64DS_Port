@@ -63,27 +63,26 @@ DTCM is **1,992 B not 5,704**, 1,680 short. Reverted.
 the gap — and captures **71.3%**; residual = data stall **560,739**. **Perfect
 locality = 1,028,189, UNDER the gate by 91,811**: the only class whose ceiling
 (**113%**) exceeds the requirement (others 2.4-18%).
-**PLACEMENT IS A HAZARD, NOT A LEVER** (`…_p2-2p8-placement-hazard/`). Moving ONE
-4 KB array — no code, only addresses — swings WORK-H **+42,240 / STG +44,096**.
-Third sighting, second at ~50,000 (N05.03 +1,680 B = **+51,520 STG**; the
-09-16 clean rebuild = **-50,432 with NO source change**). Not tunable: all 32
-sets are oversubscribed **4-8x uniformly**, traffic is **78x** the cache, and the
-arena is a per-scene bump allocator — a phase tuned on one stage/roster is a
-fresh draw for every other, against the any-roster contract.
-**Arena now aligned 1,024 B** (`diagnostics_taskman_heap.c`), the cache-set
-period, so allocations no longer re-phase when `.data`/`.bss` changes size.
-Verified **free**: D-A = **-384**, heap low-water unchanged. But it fixes only
-**23%** — WORK-H swing 42,240 -> 32,320 while **STG is UNCHANGED (44,096 ->
-45,760)**. The dominant term is NOT heap-mediated.
-**OPEN CONTRADICTION:** named statics in the whole STG subtree total **23,691**,
-which cannot produce a 45,760 swing. Likely scope error — that budget counts
-loads whose BASE REGISTER resolved to a static, so static data reached through a
-pointer is invisible to it. Re-attribute by TARGET ADDRESS RANGE, not base
-provenance.
-**STANDING RISK:** until then, any edit changing `.data`/`.bss` size can move
-WORK-H tens of thousands of ticks with no code change. Cross-build arms differing
-by a `#if` that alters a static's size are NOT controlled; the 14,080 floor
-understates them. Same-ROM route A/B is the only immune form.
+**PLACEMENT: CLOSED as a lever, kept as a variance risk**
+(`…_placement-hazard/`). Moving ONE 4 KB array — no code, only addresses — swings
+WORK-H **+42,240 / STG +44,096**; third sighting, second at ~50,000 (N05.03
++1,680 B = **+51,520 STG**; the 09-16 clean rebuild = **-50,432 with NO source
+change**). **Arena now aligned 1,024 B** (`diagnostics_taskman_heap.c`) so
+allocations stop re-phasing when `.data`/`.bss` resize — verified **free**
+(-384) but it fixes only **23%**; STG is unchanged, so the carrier is not the
+heap.
+45,760 > 23,691 was **never a contradiction and there is no scope error**:
+23,691 is stall **ON** statics, 45,760 is stall caused by **MOVING** them, and a
+relocation is paid by what it **EVICTS**. Re-attribution by target address
+**confirms** 23,691 (STG moved-static 20,548); **the locality ranking is intact**
+and the VRAM arena stands at 55,669 / 11.2%. Mechanism reproduces: 1,069 KB
+re-phased, 9,644 fills at 26.2% miss, +2.9 pts = **46,968 predicted**.
+**The SHIPPED layout is the BEST of five arms** — the experiment found a worse
+phase. Banking it needs a blind 1,024-byte search against a 14,080 floor, and a
+per-scene bump allocator makes any phase a fresh draw per stage/roster.
+**DO NOT REOPEN.** Residual risk is variance only: any `.data`/`.bss` size change
+can move WORK-H tens of thousands of ticks; same-ROM route A/B is the only immune
+form.
 Checks: **Boundary GREEN all three arms**; both targets build.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503

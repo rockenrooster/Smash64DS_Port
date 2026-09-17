@@ -1,4 +1,12 @@
-# The placement hazard is real, the proposed mechanism is refuted, and the fix covers a quarter of it
+# The placement hazard: real, closed as a lever, and my "contradiction" was not one
+
+> **READ THE RESOLUTION AT THE BOTTOM FIRST.** The analysis in this first half
+> reaches a conclusion that the re-attribution below **refutes**: it treats
+> 45,760 > 23,691 as a contradiction requiring a scope error in the attribution.
+> It is not a contradiction — the two figures measure different quantities — and
+> there is no scope error. The first half is kept because the four-arm
+> measurement in it is sound and load-bearing; its *interpretation* is not.
+
 
 Moving one 4 KB array swings the frame ~49,152 ticks with no code change. The
 proposed explanation was that this is **heap-mediated**: shifting `.data`/`.bss`
@@ -87,3 +95,98 @@ its base was computed. If static-resident data reached through pointers is a
 large share of the STG residual, the 23,691 ceiling lifts and static layout
 becomes a real subject. If it does not, then something outside both models is
 producing a 45,760 swing and neither the heap nor the statics explain it.
+
+---
+
+# RESOLVED: there was no contradiction, and the lane is closed
+
+The section above called 45,760 > 23,691 a contradiction and proposed a scope
+error in the attribution. **Both were wrong, and the re-attribution proves it.**
+
+Redoing the attribution by **target address range** rather than base-register
+provenance — independently reproducing the 644,328 denominator to 1 tk/fr, and
+`gSYSinTable` 3,152 and `sNdsRendererHardwareTextureCache` 2,131 exactly —
+**confirms** the original figure: STG resolved moved-static is **20,548 tk/fr**.
+It did not lift it. And every named data object in the top 20 is reached by
+**base register**, not through a pointer, so the suspected indirect-reach class
+barely exists.
+
+## Why it was never a contradiction
+
+The two numbers are not the same quantity:
+
+| | |
+|---|---|
+| **23,691** | stall **on** statics |
+| **45,760** | stall **caused by moving** statics |
+
+In a set-associative cache, **the cost of relocating X is paid by whatever X
+evicts**, not by accesses to X. There is no arithmetic requirement that the
+second be less than or equal to the first, so a static-**access** budget can
+never bound a conflict-miss swing. The error was in kind, not in scope, and no
+re-scoping could have fixed it.
+
+Everything I said downstream of that mistake is withdrawn: **the data-locality
+ranking does not inherit an error**, and the VRAM-arena candidate stands as
+sized at 55,669 tk/fr / 11.2%.
+
+## The mechanism reproduces quantitatively
+
+| step | value |
+|---|---|
+| shift | 0x117C = 4,476 B; mod 1,024 = **380** (11.875-line set rotation); mod 32 = **28** (line boundaries move *inside* every object) |
+| re-phased | 1,069 KB of `.main.rw`+`.main.bss` |
+| traffic | 9,644 fills/fr at a 26.2% miss rate = 36,809 accesses/fr |
+| **+2.9 points** | 1,067 extra fills x 44 cyc = **46,968 ticks** |
+| observed | 45,760 / 46,336 / 49,152 |
+
+"Nothing collided with anything nameable" is the correct reading. The carrier is
+diffuse re-phasing of a working set **78x oversubscribed** against a 4 KB cache,
+and **78.2% of STG's unresolved stall sits in functions that name no moved
+static at all**.
+
+## Why the lane is closed as a performance lever
+
+**The shipped layout is already the best of the five arms measured** (A and D,
+STG 344,768 and 345,600). The experiment found a *worse* phase, not a better
+one. Banking the 45,760 would require finding a phase better than current —
+a blind search over a 1,024-byte space against a 14,080-tick noise floor, with
+no evidence a better phase exists and no nameable conflict to aim at.
+
+It also cannot generalise: the taskman arena is a per-scene bump allocator, so a
+phase tuned on Dream Land with one roster is a fresh draw for every other
+combination, against the any-roster/any-stage contract.
+
+## What survives
+
+Only **variance control**, which is what the 1,024-byte arena alignment already
+buys: 0 ticks, and every future cross-build A/B means something. The remaining
+share is the diffuse static phase, and the falsifier for pinning it is recorded
+below — but it is expected to fail, and if it does this lane should be closed
+for good rather than reopened.
+
+**Falsifier (one build, one arm pair):** group the four hot address-materialised
+moved statics — `sNdsNativeStageOwnerExecution` (7,360 B),
+`sNdsRendererTask36ReplayOwner` (24,256), `sNdsFighterPackets` (14,192),
+`sNdsRendererHardwareTextureCache` (5,456) = **51,264 B** — at a 1,024-byte
+aligned group in the linker script, then re-run the `gSYSinTable` alignment arm.
+If the STG swing collapses, hot-static phase was the carrier. **If it survives,
+the carrier is the diffuse 1,069 KB and no implementable static-side lever
+exists.**
+
+## One hole, stated
+
+The 42,593 ceiling assumes a function only touches statics whose addresses it
+materialises. That fails for `memset`/`memcpy`/`armCopyMem32`, which receive
+pointers — 249/290/1 unknown call sites against 13/4/0 known, carrying 34,386
+tk/fr of unresolved stall. If much of that is static-destined the STG ceiling
+rises. Closing it needs a runtime witness, not static analysis.
+
+## Incidental: a stdlib module was shadowed in the scratchpad
+
+`grp.py` in the session scratchpad shadowed the standard library's `grp`, which
+`shutil` and `tarfile` import. Any script importing numpy from that directory
+silently ran an unrelated fighter-draw analysis and printed its report — which
+is the stray output that contaminated several command results earlier in this
+session. Renamed. Worth knowing: a scratchpad file named after a stdlib module
+corrupts every later tool that runs there.
