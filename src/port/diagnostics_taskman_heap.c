@@ -25,6 +25,14 @@ extern NDSNewlibMallinfo mallinfo(void);
 #define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0xA000u
 #define NDS_TASKMAN_LIBC_RUNTIME_MARGIN 0x1000u
 
+/* Slack requested from `calloc` so the arena base can be rounded UP to the
+ * cache-set period without running past the block. It must be at least the
+ * alignment, which is 1,024 -- see the long note at the rounding site: this
+ * pins every arena allocation's cache set and line phase so that a `.data` or
+ * `.bss` size change cannot re-phase the whole heap and move WORK-H by tens of
+ * thousands of ticks with no code change. */
+#define NDS_TASKMAN_ARENA_ALIGN_SLACK 0x400u
+
 /* Bytes the sub-page refinement below recovered above the last 4 KiB page
  * that fit (0 when the page boundary was already the ceiling). Read by the
  * four-fighter stress arm beside the chosen size and the page fail count. */
@@ -111,7 +119,7 @@ static u8 *ndsTaskmanArenaBytes(void)
              arena_size >= 0x40000u;
              arena_size -= 0x1000u)
         {
-            sNdsTaskmanArenaAlloc = calloc(1, arena_size + 0x10u);
+            sNdsTaskmanArenaAlloc = calloc(1, arena_size + NDS_TASKMAN_ARENA_ALIGN_SLACK);
             if (sNdsTaskmanArenaAlloc != NULL)
             {
                 /* Page granularity still leaves up to 4,095 B of the top chunk
@@ -130,7 +138,7 @@ static u8 *ndsTaskmanArenaBytes(void)
                          extra -= 0x100u)
                     {
                         sNdsTaskmanArenaAlloc =
-                            calloc(1, arena_size + extra + 0x10u);
+                            calloc(1, arena_size + extra + NDS_TASKMAN_ARENA_ALIGN_SLACK);
                         if (sNdsTaskmanArenaAlloc != NULL)
                         {
                             gNdsTaskmanArenaRefineBytes = (u32)extra;
@@ -141,7 +149,7 @@ static u8 *ndsTaskmanArenaBytes(void)
                     if (sNdsTaskmanArenaAlloc == NULL)
                     {
                         sNdsTaskmanArenaAlloc =
-                            calloc(1, arena_size + 0x10u);
+                            calloc(1, arena_size + NDS_TASKMAN_ARENA_ALIGN_SLACK);
                     }
                 }
                 if (sNdsTaskmanArenaAlloc == NULL)
@@ -152,14 +160,47 @@ static u8 *ndsTaskmanArenaBytes(void)
                 size_t persistent_size = arena_size -
                     NDS_TASKMAN_LIBC_RUNTIME_RESERVE;
                 void *resized = realloc(
-                    sNdsTaskmanArenaAlloc, persistent_size + 0x10u);
+                    sNdsTaskmanArenaAlloc, persistent_size + NDS_TASKMAN_ARENA_ALIGN_SLACK);
 
                 if (resized != NULL)
                 {
                     sNdsTaskmanArenaAlloc = resized;
                     uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
+
+                    /* 1,024 and not 16, and this is a MEASUREMENT fix rather
+                     * than a performance one. The ARM9 data cache is 4 KB,
+                     * 4-way, 32-byte lines, so a line's set is (addr>>5)&31 and
+                     * the set pattern of everything in this arena repeats every
+                     * 1,024 bytes. At 16-byte alignment the arena base tracks
+                     * `__end__`, which moves whenever `.data` or `.bss` changes
+                     * size -- so ANY edit that grows a static re-phases every
+                     * GObj, DObj, FTStruct, stage buffer and texture entry
+                     * against all 32 sets at once, and moves every 32-byte line
+                     * boundary inside them.
+                     *
+                     * That is not hypothetical. Forcing one 4 KB sine table to
+                     * a 4 KB boundary shifted 1,066 KB of `.data`+`.bss` by
+                     * 0x117C and cost +49,152 WORK-H P50, +46,336 of it in STG
+                     * -- a 2.9-point perturbation of a 26.2% miss rate on a
+                     * working set 78x the cache, with nothing colliding with
+                     * anything nameable. The 2026-09-16 clean rebuild moved
+                     * WORK-H -50,432 with no source change at all, which is the
+                     * same mechanism.
+                     *
+                     * Aligning here makes each allocation's set index and line
+                     * phase depend only on its offset WITHIN the arena, so they
+                     * are invariant to every `.text`/`.data`/`.bss` size change.
+                     * It buys no speed; it makes cross-build A/Bs mean
+                     * something. Without it the campaign's 14,080-tick
+                     * significance floor understates the real variance of a
+                     * static-size-changing edit by about 3.5x.
+                     *
+                     * Cost is at most 1,023 bytes against a 24,404-byte heap
+                     * low-water, and the slack requested above is raised to
+                     * match. Evidence:
+                     * artifacts/performance/2026-09-16_p2-2p8-placement-hazard/. */
                     sNdsTaskmanArenaBytes =
-                        (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
+                        (u8 *)((addr + 0x3ffu) & ~(uintptr_t)0x3ffu);
                     gNdsTaskmanArenaChosenSize = (u32)persistent_size;
                     ndsTaskmanLibcResetAfterShrink();
                     break;

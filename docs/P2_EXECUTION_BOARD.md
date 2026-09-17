@@ -49,39 +49,41 @@ Boundary GREEN all three arms. WORK-H **1,584,128 / 2,310,848**, FTR **356,608 /
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: SELECT.
-**THE GAP IS STALL, NOT WORK** (`…_p2-2p8-stall-budget/`). Non-idle frame
-1,616,422 = **576,491 issue + 1,039,931 stall (64.3%)**; stall is **data 560,739
-vs icache 155,651**. The **issue floor alone is 543,509 UNDER the gate**, so no
-arithmetic deletion can close it — the gate asks a **47.7% stall cut**. That is
-why five lanes failed identically, each trading issue for fetch.
-**STALL class sized** (`…_stall-budget/`, `…_dtcm-falsifier/`): `FTParts` packing
-is **zero** (hot fields already in line 0; the walk is over `DObj`); `DObj`
-packing is the real 8.1% target, **blocked by pristine `decomp/`**; DTCM works
-(-10,176) but usable DTCM is **1,992 B not 5,704**, 1,680 short. Reverted.
-**THE DCACHE MEASUREMENT CHANGES THE AXIS** (`…_p2-2p8-dcache-value/`). With the
-ARM9 data cache OFF, WORK-H P50 1,588,928 -> **2,983,488**: the 4 KB dcache is
-worth **1,394,560 tk/fr**, more than the gap. It captures **71.3%** of the
-available benefit; the residual is the data stall, **560,739**. **WORK-H with
-perfect data locality = 1,028,189, UNDER the gate by 91,811** — the first class
-whose ceiling (**113%** of the gap) EXCEEDS the requirement; all others were
-2.4-18%. Also refutes "renderer streaming is compulsory" frame-wide: compulsory
-traffic would make the cache worth ~550,000, not 1,394,560.
-**Next action: DELIBERATE DATA PLACEMENT** (`…_p2-2p8-sintable-uncached/`).
-Forcing ONE 4 KB array to a 4 KB boundary — no code, no algorithm, only
-addresses — cost **+49,152 WORK-H (3.1%)**, of which **+46,336 landed in STG**.
-Third sighting of this mechanism and the second at ~50,000 (N05.03: +1,680 B of
-table = **+51,520 STG**; DTCM move = **-7,936**). Direction here was adverse, so
-it is NOT banked — what it establishes is the lever's SIZE, and it needs no
-allocator surgery, decomp edit or fidelity argument.
-Also measured: uncaching that array returned **-6,912 against 3,160 predicted
-from access cost — 2.2x**. Eviction relief is real, so the locality ranking's
-figures are **floors**: top candidate (VRAM arena for GObj/DObj + FTStruct/
-FTParts) is 55,669 = 11.2% of the gap from direct cost ALONE, and those
-structures are far larger than 4 KB and miss far more.
-Ranking (`…_stall-budget/`): only **7.6%** of resolved mem stall indexes a static
-object — 74% needs the ALLOCATION moved. Only the object graph is scatter-shaped
-(50.7% line efficiency); renderer streaming (129%) and collision (177%) already
-get reuse, so uncaching them LOSES. VRAM bank D verified free.
+**THE GAP IS STALL, NOT WORK** (`…_stall-budget/`). Non-idle frame 1,616,422 =
+**576,491 issue + 1,039,931 stall (64.3%)**; data 560,739 vs icache 155,651. The
+**issue floor alone is 543,509 UNDER the gate**, so no arithmetic deletion can
+close it — it asks a **47.7% stall cut**. Five lanes failed identically, each
+trading issue for fetch.
+**STALL class sized** (`…_dtcm-falsifier/`): `FTParts` packing is **zero** (hot
+fields already in line 0; the walk is over `DObj`); `DObj` packing is the real
+8.1% target, **blocked by pristine `decomp/`**; DTCM works (-10,176) but usable
+DTCM is **1,992 B not 5,704**, 1,680 short. Reverted.
+**THE DCACHE CHANGES THE AXIS** (`…_dcache-value/`). Cache OFF: WORK-H
+1,588,928 -> **2,983,488**, so the 4 KB dcache is worth **1,394,560** — more than
+the gap — and captures **71.3%**; residual = data stall **560,739**. **Perfect
+locality = 1,028,189, UNDER the gate by 91,811**: the only class whose ceiling
+(**113%**) exceeds the requirement (others 2.4-18%).
+**PLACEMENT IS A HAZARD, NOT A LEVER** (`…_p2-2p8-placement-hazard/`). Moving ONE
+4 KB array — no code, only addresses — swings WORK-H **+42,240 / STG +44,096**.
+Third sighting, second at ~50,000 (N05.03 +1,680 B = **+51,520 STG**; the
+09-16 clean rebuild = **-50,432 with NO source change**). Not tunable: all 32
+sets are oversubscribed **4-8x uniformly**, traffic is **78x** the cache, and the
+arena is a per-scene bump allocator — a phase tuned on one stage/roster is a
+fresh draw for every other, against the any-roster contract.
+**Arena now aligned 1,024 B** (`diagnostics_taskman_heap.c`), the cache-set
+period, so allocations no longer re-phase when `.data`/`.bss` changes size.
+Verified **free**: D-A = **-384**, heap low-water unchanged. But it fixes only
+**23%** — WORK-H swing 42,240 -> 32,320 while **STG is UNCHANGED (44,096 ->
+45,760)**. The dominant term is NOT heap-mediated.
+**OPEN CONTRADICTION:** named statics in the whole STG subtree total **23,691**,
+which cannot produce a 45,760 swing. Likely scope error — that budget counts
+loads whose BASE REGISTER resolved to a static, so static data reached through a
+pointer is invisible to it. Re-attribute by TARGET ADDRESS RANGE, not base
+provenance.
+**STANDING RISK:** until then, any edit changing `.data`/`.bss` size can move
+WORK-H tens of thousands of ticks with no code change. Cross-build arms differing
+by a `#if` that alters a static's size are NOT controlled; the 14,080 floor
+understates them. Same-ROM route A/B is the only immune form.
 Checks: **Boundary GREEN all three arms**; both targets build.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
