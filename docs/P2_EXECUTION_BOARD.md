@@ -67,7 +67,7 @@ Checks: **Boundary GREEN all three arms 2026-09-17** (arena alignment qualified;
 residency DERIVED per roster (exact both: 4/11,799/36, 3/9,235/27), DamageSlash
 coverage advisory off-canonical with correctness strict everywhere, and a format
 bug fixed that reported *"Format specifier was invalid"* INSTEAD of the failures
-it had detected. Canonical regression re-verified identical.
+it detected. Canonical regression identical.
 **KIRBY'S COPY IS NATIVE-BROKEN FOR 10 OF 11 VICTIMS**
 (`…_roster-variance/KIRBY_COPY_NATIVE_GAP.md`). The 7,679 failures decode to
 Kirby joint 6 / modelpart 9 LOW — Captain's copy hat — in status
@@ -75,7 +75,7 @@ Kirby joint 6 / modelpart 9 LOW — Captain's copy hat — in status
 **1, 10, 14**; 10 is Link's hat, so **only Link works**. Cause: the trio body's
 bake inherits the head's vertex cache and `KIRBY_TRIO_CONTEXTS` has two entries
 (`generate_nds_native_owners.py:2465`). At PROFILE_LEVEL 0 a rejected root
-**never reaches the screen** — no generic renderer exists — so parts vanish.
+**never reaches the screen** — no generic renderer exists.
 **Canonical passes on LUCK**: it holds Donkey (hat 4) and Samus (hat 8), both
 broken; its CPU Kirby just never copied a non-Link victim. `count=0` describes
 one input trace. Reachable by hand on the shipping menu.
