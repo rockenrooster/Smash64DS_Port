@@ -1043,9 +1043,88 @@ def kirby_copy_closure() -> list[str]:
     return failures
 
 
+def kirby_trio_cross_slot_closure() -> list[str]:
+    """Every trio program's GX palette sequence must be the known-good one.
+
+    `build_direct_dense_tables` runs with `validate_cross_census=False` on the
+    trio path, because its two census assertions are pinned to the CANONICAL
+    program and a trio context legitimately differs. Everything else in that
+    function still runs -- range and "no slot" checks -- so what the disabled
+    census leaves unguarded is exactly the VALUES: a wrong sequence of the right
+    length packs cleanly and resolves the body against the wrong vertex cache.
+
+    That is guardable without pixels. `kirby_trio_cross_slots()` is a pure
+    function of the ROOT COUNT, so every 9-root program -- head 1 and all ten
+    copy hats -- must emit the identical sequence, and head 1's is the original
+    hand-authored tuple that has shipped and worked since the seam existed. A
+    10-root program (Link-copy's head 14) must be that same tuple plus one
+    standalone-auxiliary slot.
+
+    So this asserts three things against the EMITTED artifact, not against the
+    generator's own constant:
+      * every sequence starts with the six welded-root slots;
+      * every entry after them is the standalone-auxiliary slot;
+      * every 9-root sequence is byte-identical to head 1's.
+
+    A head admitted with a mis-derived sequence fails here instead of drawing a
+    body against another head's cache.
+    """
+    failures: list[str] = []
+    if not KIRBY_GENERATED_INC.exists():
+        return [f"kirby trio cross: {KIRBY_GENERATED_INC.name} is missing; run "
+                f"generate_nds_native_owners.py before this check"]
+    inc = KIRBY_GENERATED_INC.read_text(encoding="utf-8", errors="replace")
+    pattern = re.compile(
+        r"static const u8 sNdsNativeKirbyTrioHead(\d+)CrossPaletteSlots"
+        r"(Low)?\[\d+\] =\s*\{(.*?)\};", re.S)
+    rows: dict[tuple[int, str], tuple[int, ...]] = {}
+    for match in pattern.finditer(inc):
+        head = int(match.group(1))
+        detail = "low" if match.group(2) else "high"
+        rows[(head, detail)] = tuple(
+            int(value) for value in re.findall(r"(\d+)u", match.group(3)))
+    if not rows:
+        return ["kirby trio cross: no CrossPaletteSlots tables in the "
+                "generated inc; if the emitter's shape changed, update this "
+                "check rather than deleting it"]
+
+    welded = native.KIRBY_TRIO_CANONICAL_CROSS_PREFIX
+    auxiliary = native.PACKED_GX_SLOT_CURRENT
+    for detail in ("high", "low"):
+        reference = rows.get((1, detail))
+        if reference is None:
+            failures.append(
+                f"kirby trio cross: head 1 {detail} has no sequence to "
+                f"compare the others against")
+            continue
+        for (head, row_detail), slots in sorted(rows.items()):
+            if row_detail != detail:
+                continue
+            if slots[:len(welded)] != welded:
+                failures.append(
+                    f"kirby trio cross: head {head} {detail} starts "
+                    f"{slots[:len(welded)]}, not the welded roots {welded} -- "
+                    f"the body would resolve against the wrong vertex cache")
+            tail = slots[len(welded):]
+            bad = [value for value in tail if value != auxiliary]
+            if bad:
+                failures.append(
+                    f"kirby trio cross: head {head} {detail} has non-auxiliary "
+                    f"slots {bad} past the welded roots")
+            if len(slots) == len(reference) and slots != reference:
+                failures.append(
+                    f"kirby trio cross: head {head} {detail} {slots} differs "
+                    f"from head 1's {reference} at the same root count")
+    counts = sorted({len(v) for v in rows.values()})
+    print(f"  kirby trio cross-slot closure: {len(rows)} programs, "
+          f"root counts {counts}, welded prefix {welded} on all")
+    return failures
+
+
 def main() -> int:
     failures: list[str] = []
     failures += kirby_copy_closure()
+    failures += kirby_trio_cross_slot_closure()
     for owner in OWNERS:
         for detail in DETAILS:
             print(f"{owner} {detail}:")

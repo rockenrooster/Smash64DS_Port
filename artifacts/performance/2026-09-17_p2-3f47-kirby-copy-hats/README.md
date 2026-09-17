@@ -418,6 +418,51 @@ Not banked as a cost, and not banked as free either: it is a cross-build delta
 inside the ±45,760 placement band, and the only way to price the hats honestly is
 a roster that actually copies.
 
+### The cross-slot risk is now guarded statically, which narrows what pixels must prove
+
+The "still owed" visual check was carrying two different risks, and only one of
+them actually needs pixels.
+
+`validate_cross_census=False` on the trio path disables exactly two assertions,
+both pinned to the CANONICAL program: the observed cross-binding set, and the GX
+restore count. Everything else in `build_direct_dense_tables` still runs, so what
+the disabled census leaves unguarded is the **values** of `cross_slots` — and a
+wrong sequence of the right length packs cleanly and resolves the body against
+the wrong vertex cache.
+
+That turns out to be guardable without a screenshot. `kirby_trio_cross_slots()`
+is a pure function of the ROOT COUNT, so every 9-root program emits the same
+sequence — and head 1's is the original hand-authored tuple that has shipped and
+worked since the seam existed. Verified against the emitted artifact:
+
+| detail | 9-root programs | sequence |
+|---|---|---|
+| high | head 1 and all ten hats | `(17, 16, 17, 16, 19, 18, 31, 31, 31)` — **byte-identical** |
+| high | head 14 (10 roots) | the same tuple plus one `31` |
+| low | same | same |
+
+There is only **one** 9-root sequence in the build and it is the known-good one.
+
+`kirby_trio_cross_slot_closure()` in
+`scripts/fighters/check_native_owner_geometry_closure.py` now asserts this
+against the **emitted inc** rather than the generator's own constant: every
+sequence starts with the six welded-root slots, every entry past them is the
+standalone-auxiliary slot, and every 9-root sequence matches head 1's. Proven to
+fail closed, not merely to print OK:
+
+| perturbation | result |
+|---|---|
+| swap head 4's first two welded slots | RED — "starts (16, 17, …), not the welded roots … the body would resolve against the wrong vertex cache" |
+| give head 8 a stray `19u` in the tail | RED — "non-auxiliary slots [19] past the welded roots" |
+| restored | GREEN — 24 programs, root counts [9, 10] |
+
+**What pixels still have to prove** is therefore narrower than "does the seam
+work": the seam's slot arrangement is shared with a shipping program and is now
+pinned. What remains is per-hat appearance — that each victim's hat is the right
+model, oriented and shaded as the source draws it. That is a real check and it
+is still owed; it is no longer the only thing standing between this and a
+correct seam.
+
 ### Still owed
 
 A **visual check per hat**. The seam runs on the `validate_cross_census=False`
