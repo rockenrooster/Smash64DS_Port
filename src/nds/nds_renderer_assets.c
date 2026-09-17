@@ -5407,6 +5407,22 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeNessRootVariants);
     }
 #endif
+#if NDS_P2_YOSHI
+    /* Yoshi's grab throws. dYoshiMainMotion_ThrowF/_ThrowB set joint 7 to
+     * model part 1 and restore 0 on release, and they are Yoshi's only
+     * model-part mutations. Without the row this resolves to nothing, the
+     * owner declines, and at NDS_RENDERER_PROFILE_LEVEL 0 the whole fighter
+     * stops drawing for the length of the throw -- the owner's "Grab attacks
+     * turn yoshi invisible". Unknown Yoshi offsets still fail closed. */
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI)
+    {
+        variants = (use_low_detail != 0u) ?
+            sNdsNativeYoshiRootVariantsLow : sNdsNativeYoshiRootVariants;
+        variant_count = (use_low_detail != 0u) ?
+            NDS_FTR_COUNT(sNdsNativeYoshiRootVariantsLow) :
+            NDS_FTR_COUNT(sNdsNativeYoshiRootVariants);
+    }
+#endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {

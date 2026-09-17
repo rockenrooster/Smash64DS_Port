@@ -59,32 +59,30 @@ that subtracted ALL data stall. Layout removes only **line fills** = **424,336 =
 **THE RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`). Banked 43,200 +
 five sizings (arena 55,669, clears 19,466, pool 11,449, GObj 10,867, align
 6,027) = **146,678 = 31.3%** of the gap.
-**CORRECTION:** this board said the gate needs "fewer joints / fewer transformed
-objects". `gNdsGCDrawsActiveMax` counts live **DObjs** — for a fighter a DObj IS
-a joint, one lever with two names — and it is **SPENT**
-(`…_p2-2p8-joint-cap-ladder/` 09-16): the skeleton cap **aborts the CPU AI**
-(`ftcomputer.c:7970`), and deleting **94.7%** of pose evaluation gave **no
-WORK-H reduction**. Order 2 alone is 12,144; Order 4 is the only class large
-enough and is **owner-forbidden**. **Owner decision, not engineering.** Last
-untried lane SIZED: the 67,858 literal-pool bucket gives only **11,449** packed
-(441 of 645 functions touch ONE symbol); `-fsection-anchors` is **inert** under
-`-fdata-sections`.
+**CORRECTION:** "fewer joints / fewer transformed objects" is ONE lever —
+`gNdsGCDrawsActiveMax` counts live **DObjs**, and for a fighter a DObj IS a
+joint — and it is **SPENT** (`…_p2-2p8-joint-cap-ladder/`): the skeleton cap
+**aborts the CPU AI** (`ftcomputer.c:7970`), and deleting **94.7%** of pose
+evaluation gave **no WORK-H reduction**. Order 2 alone is 12,144; Order 4 is the
+only class large enough and is **owner-forbidden**. **Owner decision, not
+engineering.** Last untried lane SIZED: the 67,858 literal-pool bucket gives
+**11,449** packed (441 of 645 functions touch ONE symbol); `-fsection-anchors`
+is **inert** under `-fdata-sections`.
 Checks: Boundary GREEN 3/3; four-CPU PASSES (hats off).
 **KIRBY COPY FIXED — all 11 victims draw natively, gate GREEN**
 (`…_p2-3f47-kirby-copy-hats/`). Bodies moved into the per-slot **hat images**:
-Kirby resident **+0**, peak for one copying Kirby **28,848 → 3,071 B** (9.4x).
-Heap back to **112,192**, cadence restored, native **0/0**. TWO defects, only one was bytes: the other was
-`SetRootProgram`'s stale `program <= 4u`, silently resetting Stone (13) and
-**CopyLink** (14) to canonical — Link's copy would have regressed too; bound now
-derived. WORK-H +58,112 is **placement, not draw** (triangles identical; STG
-105% of it). Cross-slot VALUES now guarded: all ten hats emit head 1's
-known-good sequence byte-identically, pinned against the emitted inc, fails
-closed. OWED: per-hat **appearance** only.
+Kirby resident **+0**, peak **28,848 → 3,071 B** (9.4x), heap **112,192**,
+native **0/0**. TWO defects, only one was bytes: the other was `SetRootProgram`'s
+stale `program <= 4u`, silently resetting Stone (13) and **CopyLink** (14) to
+canonical — Link's copy would have regressed too; bound now derived. WORK-H
++58,112 is **placement, not draw** (triangles identical; STG 105% of it).
+Cross-slot VALUES guarded: all ten hats emit head 1's known-good sequence
+byte-identically, pinned against the emitted inc. OWED: per-hat appearance.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
-`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win of the campaign** — 3.1x the
-14,080 floor, 9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no
-source change**. Lane was closed on a break-even derived as bytes÷32 — right for
-a contiguous table, wrong for a scalar owning a whole line. Native 0/0.
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win** — 3.1x the 14,080 floor,
+9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no source
+change**. Lane was closed on a break-even derived as bytes÷32 — right for a
+contiguous table, wrong for a scalar owning a whole line.
 **Per-PC re-profile CONFIRMS it**: identical 3,364.0 dereference accesses/fr in
 both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row −1.7% — placement
 cannot move one row and not the other. Non-zero exit is a **window** assertion,
@@ -117,7 +115,7 @@ pixels/audio or unexercised states stay engineering work.
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
-| P2-3f52 | Yoshi grab, egg lay/throw, entry egg | **OPEN — no Yoshi root programs** | `OWNER_ROOT_PROGRAMS` has only samus/link. Derive from `247_YoshiMain.c` like Link Catch. |
+| P2-3f52 | Yoshi grab, egg lay/throw, entry egg | **THROW BAKED; egg/intro OPEN** | Throw was ONE unbaked root, not a program: `ThrowF`/`ThrowB` set joint 7 part 1 = `0x7D10`, binding 2 (measured). Variant + resolver linked, closure GREEN; capture owed (`…_p2-3f52-yoshi-throw-variant/`). Egg/intro are anim-mask hidden parts. |
 | P2-3f53 | EFDesc effects without native owners | **OPEN** | Falcon Punch/Kick, Pikachu Thunder, Kirby Vulcan Jab, Yoshi shield: `generate_nds_entry_effects.py` roots + lookup + admission + check. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 

@@ -2175,6 +2175,33 @@ P2_MODEL_PART_ROOT_VARIANTS = {
     #   * ThrowF/ThrowB and the entry-end motion family select modelpart 2 on
     #     joints 10 and 16 (same source file:909-910,942-943,1348-1399).
     # Binding ordinals are the canonical roots for those joints: 3, 4 and 7.
+    # Yoshi's grab throws. dYoshiMainMotion_ThrowF and _ThrowB
+    # (246_YoshiMainMotion.c:965, 988) both run SetModelPartID(7, 1) and
+    # restore (7, 0) on release; they are the ONLY model-part mutations Yoshi
+    # has anywhere in that file. dYoshiMain_modelparts_container[3] is its sole
+    # non-NULL entry (247_YoshiMain.c:137), and container index + 4 is the
+    # source joint, so index 3 is joint 7 exactly as the motion names. The
+    # descriptor dYoshiMain_modelparts_desc_0x0D4 is modelparts[part][detail]:
+    # rows 0/1 are modelpart 0 at 0x2398/0x5CF8 -- confirmed to be canonical
+    # binding 2 in BOTH details by building the owner context and matching the
+    # offset -- and rows 2/3 are modelpart 1, which is
+    # dYoshiModel_gap_0x6E70_sub_0xEA0 at 0x7D10 for both details, the two rows
+    # naming the same display list.
+    #
+    # Without this row the throw presents a root vector containing an unbaked
+    # root, the owner declines, and at NDS_RENDERER_PROFILE_LEVEL 0 the whole
+    # fighter stops drawing -- which is the owner's "Grab attacks turn yoshi
+    # invisible" in docs/BUGS.md. Only one root changes and the rest of the
+    # tree stays canonical, so this is a per-binding variant, not a root
+    # program.
+    "yoshi": {
+        "high": (
+            (2, 0x7D10),
+        ),
+        "low": (
+            (2, 0x7D10),
+        ),
+    },
     "ness": {
         "high": (
             (3, 0x6000),  # joint 10 modelpart 2
