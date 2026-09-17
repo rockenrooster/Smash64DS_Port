@@ -74,17 +74,15 @@ Kirby resident **+0**, peak **28,848 → 3,071 B**, heap **112,192**, native
 `program <= 4u`, silently resetting Stone (13) and **CopyLink** (14) to
 canonical — Link's copy would have regressed too. WORK-H +58,112 is
 **placement, not draw**. Cross-slot values pinned. OWED: per-hat appearance.
+**YOSHI GRAB/EGG: TWO ROOT PROGRAMS LAND** (`…_p2-3f52-yoshi-root-programs/`),
+built+linked clean. Same class as Kirby's copy. OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
-`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win** — 3.1x the 14,080 floor,
-9.2% of gap, P95 −43,072, 3 runs agreeing. Linker script only, **no source
-change**. Lane was closed on a break-even derived as bytes÷32 — right for a
-contiguous table, wrong for a scalar owning a whole line.
-**Per-PC re-profile CONFIRMS it**: identical 3,364.0 dereference accesses/fr in
-both arms, stall **34,121 → 9,079 (−73.4%)**, literal-pool row −1.7% — placement
-cannot move one row and not the other. It also knocked Calico's `__irq_table`
-off its 32-byte boundary — block appended after `.dtcm`'s ALIGN(32) with only
-ALIGN(4) — caught by `check-task20-dtcm-layout.ps1`, which the four-CPU gate
-does NOT include; fixed, re-measured at **+384 = noise**, gate GREEN. Non-zero
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win** — 3.1x the floor, 9.2% of
+gap, P95 −43,072, 3 runs. Linker script only, **no source change**.
+**Per-PC re-profile CONFIRMS it**: identical 3,364.0 accesses/fr in both arms,
+stall **34,121 → 9,079 (−73.4%)** — placement cannot move one row and not the
+other. The `ALIGN(4)` that knocked `__irq_table` off its 32-byte boundary is
+fixed and re-measured at **+384 = noise**, gate GREEN. Non-zero
 exit is a **window** assertion, NOT correctness: 21 ring stops at identical
 frames, identical `PacingLogicFrames`, only the first label moves +1. **OWNER:
 one-line call** to compare `startFrame` against the recorded label span.
@@ -113,7 +111,7 @@ pixels/audio or unexercised states stay engineering work.
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3f47 | Roster close: Ness, Purin, Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
-| P2-3f52 | Yoshi grab + egg lay/throw | **HALF DONE — needs a ROOT PROGRAM** | Model-part root baked (joint 7 part 1 = `0x7D10`) but **NOT sufficient**: `ThrowF`/`ThrowB` also carry `0x18000000`, installing DRAWING hidden part 4 (joint 9, `0x2800`), so the vector goes 18→19 and no variant covers a root-count change. Grab AND B-attack are ONE bug (`EggLay*` 202-206, same bits); one program fixes both. Egg-hatching intro is **NOT** this class (`Appear1/2` = `0x40000000`, no DL). `…_p2-3f52-yoshi-throw-variant/`. |
+| P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector drawing hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. `setup_parts` `0xFBFFFFE0` omits exactly the 2 joints the mask installs. The program cache rule fails on Yoshi's CANONICAL vector too, so it is now derived from it; regen moved 654 lines, **all Yoshi**. Build+link clean, 14 symbols in the ELF. OWED: throw/egg-lay captures. Intro is **NOT** this class. `…_p2-3f52-yoshi-root-programs/`. |
 | P2-3f53 | EFDesc effects without native owners | **OPEN** | Falcon Punch/Kick, Pikachu Thunder, Kirby Vulcan Jab, Yoshi shield: `generate_nds_entry_effects.py` roots + lookup + admission + check. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 

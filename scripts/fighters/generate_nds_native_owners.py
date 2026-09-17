@@ -2360,6 +2360,16 @@ P2_ROOT_PROGRAM_APPENDIX = {
         "high": ((10, 0x7ea8), (11, 0x7f98)),
         "low":  ((10, 0x7ea8), (11, 0x7f98)),
     },
+    # Yoshi hidden part 4 is { root 9, parent 7, partindex 1, kind 0 }.  Joint 9
+    # is descriptor 5, which setup_parts omits, so 0x2800 has no canonical bake.
+    # The Low JointTree leaves descriptor 5 NULL, so BattleShip's Low fallback
+    # selects the High display list and the offset is the same in both details.
+    # Its binding is joint 7's canonical binding 2 -- the parent the hidden
+    # joint hangs from, which is the source of its matrix/cache provenance.
+    "yoshi": {
+        "high": ((2, 0x2800),),
+        "low":  ((2, 0x2800),),
+    },
 }
 
 # Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
@@ -2410,6 +2420,17 @@ SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
 SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
 LINK_CATCH_HIDDENPART_IDS = (3, 4, 5)
 LINK_MAIN_HIDDENPARTS_OFFSET = 0x00d0
+# Yoshi's grab family carries FTANIM_FLAG_ANIMLOCKS | 0x18000000, whose set bits
+# 28/27 are hidden-part IDs 3 and 4 under the index <-> bit 31-index rule.
+# dYoshiMain_setup_parts is 0xFBFFFFE0, which omits exactly descriptors 5 and 27
+# from the canonical draw -- the same two joints these hidden parts install
+# (root 9 = descriptor 5, root 31 = descriptor 27).  Only descriptor 5 carries a
+# display list, so the live root vector grows from 18 to 19 and no per-binding
+# variant can represent it.  Catch/CatchPull/EggLay* and ThrowF/ThrowB differ
+# only in whether joint 7 is still showing modelpart 0.
+YOSHI_CATCH_HIDDENPART_IDS = (3, 4)
+YOSHI_MAIN_HIDDENPARTS_OFFSET = 0x0084
+YOSHI_ROOT_PROGRAM_ROOT_COUNT = 19
 
 OWNER_ROOT_PROGRAMS = {
     # dSamusMainMotion_Catch (216_SamusMainMotion.c:955-962).  The hidden-part
@@ -2433,6 +2454,15 @@ OWNER_ROOT_PROGRAMS = {
         # creation itself is sourced from the motion's 0x1C000000 anim flags.
         ("Catch", ((21, 0), (19, -1), (16, 0), (17, 0), (18, 0))),
     ),
+    # 246_YoshiMainMotion.c's only model-part commands are ThrowF :965/:975 and
+    # ThrowB :988/:998, both SetModelPartID(7, 1) followed by a restore to
+    # (7, 0).  Catch/CatchPull and EggLay 202-206 install the same hidden parts
+    # without touching joint 7, so the two programs differ in exactly that one
+    # binding and share the hidden-part derivation below.
+    "yoshi": (
+        ("Catch", ()),
+        ("Throw", ((7, 1),)),
+    ),
 }
 
 OWNER_ROOT_PROGRAM_SOURCES = {
@@ -2447,6 +2477,12 @@ OWNER_ROOT_PROGRAM_SOURCES = {
              "/reloc_fighters_main/LinkMain"),
         0x00e1,
         0x0388,
+    ),
+    "yoshi": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/YoshiMain"),
+        0x00f7,
+        0x0124,
     ),
 }
 
@@ -3483,6 +3519,17 @@ def _verify_owner_modelpart_resolver(
         if tuple(matches) != expected:
             raise ValueError(
                 f"link modelpart-0 falsifier set {tuple(matches)} != {expected}"
+            )
+    if owner_name == "yoshi":
+        # YoshiMain's container has a single non-NULL row, so this falsifier is
+        # one pair -- but it is the pair that matters: descriptor 3 is joint 7,
+        # and its modelpart 0 must be the very display list the JointTree names
+        # in each detail, or the Main payload does not belong to this model.
+        expected = ((3, 0x2398),) if detail == "high" else ((3, 0x5cf8),)
+        if tuple(matches) != expected:
+            raise ValueError(
+                f"yoshi {detail} modelpart-0 falsifier set {tuple(matches)} "
+                f"!= {expected}"
             )
 
 
@@ -5638,6 +5685,10 @@ def render_p2_owner_runtime_program(
         # marker and the alternate arrays, so runtime code compiles the program
         # selector out and Link retains its existing fail-closed behavior.
         lines += ["#define NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT 1", ""]
+    if owner_name == "yoshi" and detail == "high" and root_programs:
+        # Yoshi's grab family installs hidden part 4, so the live vector is 19
+        # roots against a canonical 18 and only a complete program can carry it.
+        lines += ["#define NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT 1", ""]
     trio = context.get("kirby_trio_bodies")
     if owner_name == "kirby" and trio:
         # One resident root per reachable head, selected at runtime by the
@@ -6788,10 +6839,61 @@ def build_p2_kirby_hat_runtime_context(
     return result
 
 
+_CANONICAL_CACHE_READ_CACHE: dict[tuple[str, str], dict[int, set[int]]] = {}
+
+
+def _owner_canonical_cache_reads(
+        repo_root: Path, owner_name: str, detail: str,
+        canonical_offsets: tuple[int, ...]) -> dict[int, set[int]]:
+    """Which other canonical roots each canonical root restores cache from.
+
+    The own/previous rule enforced below is sufficient but not necessary. A
+    source model may legitimately restore vertex cache from a distant root, and
+    the canonical owner already ships that through its display-keyed cross-slot
+    map rather than through adjacency -- Yoshi's hip root 0xae68 (0xb0d0 Low)
+    reads root 0 from ten bindings back, in the canonical vector, before any
+    program exists. Deriving the allowance from that vector keeps the rule
+    source-true instead of encoding an adjacency assumption that two owners
+    happened to satisfy.
+
+    Offsets absent from the canonical vector -- every variant and appendix
+    bake -- get no allowance at all, so a newly added root is judged exactly as
+    strictly as before.
+    """
+    cache_key = (owner_name, detail)
+    cached = _CANONICAL_CACHE_READ_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    specs = tuple((root_offset, binding)
+                  for binding, root_offset in enumerate(canonical_offsets))
+    data = _build_source_export_for_owners(
+        repo_root, (owner_name,), detail,
+        root_specs_by_owner={owner_name: specs})
+    (_dense_vertices, _dense_color_sources, _dense_owners, _dense_corners,
+     _action_dense_first, _run_first_corner, _run_owners, run_root_bindings,
+     run_binding_sets) = build_dense_geometry(
+        unpack_many("<BBBBIhh", data["vertex"]),
+        [item[0] for item in unpack_many("<H", data["triangles"])],
+        unpack_many("<HBBI", data["runs"]),
+        unpack_many("<HHHHBBBBBBBB", data["epochs"]),
+        ((owner_name, unpack_many("<IHHHBBBB2x", data[f"{owner_name}_roots"])),),
+        repo_root,
+        owner_root_bindings=(tuple(range(len(canonical_offsets))),),
+        action_bindings=dict(
+            unpack_many("<HH", data.get("vertex_bindings", b""))))
+    reads: dict[int, set[int]] = {}
+    for binding, binding_set in zip(run_root_bindings, run_binding_sets):
+        entry = reads.setdefault(canonical_offsets[binding], set())
+        entry.update(canonical_offsets[other] for other in binding_set)
+    _CANONICAL_CACHE_READ_CACHE[cache_key] = reads
+    return reads
+
+
 def _assert_owner_root_program_vertex_cache(
         repo_root: Path, owner_name: str, detail: str,
         root_offsets: tuple[int, ...], new_offsets: set[int],
-        cross_slots: tuple[int, ...]) -> None:
+        cross_slots: tuple[int, ...],
+        canonical_offsets: tuple[int, ...] | None = None) -> None:
     """Require each program root to consume only its own/previous cache loads."""
     specs = tuple((root_offset, binding)
                   for binding, root_offset in enumerate(root_offsets))
@@ -6811,11 +6913,21 @@ def _assert_owner_root_program_vertex_cache(
         vertex, triangles, runs, epochs, ((owner_name, roots),), repo_root,
         owner_root_bindings=(tuple(range(len(root_offsets))),),
         action_bindings=action_bindings)
+    canonical_reads = (
+        {} if canonical_offsets is None else
+        _owner_canonical_cache_reads(
+            repo_root, owner_name, detail, canonical_offsets))
     for run_index, (binding, binding_set) in enumerate(
             zip(run_root_bindings, run_binding_sets)):
         allowed = {binding}
         if binding != 0:
             allowed.add(binding - 1)
+        # A read the canonical vector already performs between these same two
+        # source roots is not a reordering hazard; it is the model's own
+        # topology, and the cross-slot packer below still has to place it.
+        source_reads = canonical_reads.get(root_offsets[binding], ())
+        allowed.update(other for other in range(len(root_offsets))
+                       if root_offsets[other] in source_reads)
         if not set(binding_set).issubset(allowed):
             raise ValueError(
                 f"{owner_name} {detail} program root {binding} run {run_index}: "
@@ -7820,6 +7932,37 @@ def build_owner_root_programs(
             payload, owner_name, detail, overrides)[:-1]
         selected = _owner_selected_descriptor_indices(
             owner_name, len(descriptors))
+        if owner_name == "yoshi":
+            # Both Yoshi programs are entered through the same 0x18000000
+            # anim-desc mask, so the hidden-part derivation is unconditional
+            # here rather than keyed to one program name. ftMainSetStatus has
+            # already installed joints 9 and 31 before any motion command runs.
+            main_payload, container_offset = _load_owner_root_program_payload(
+                repo_root, owner_name)
+            _verify_owner_modelpart_resolver(
+                repo_root, owner_name, detail, main_payload, container_offset)
+            selected = set(selected)
+            for hiddenpart_id in YOSHI_CATCH_HIDDENPART_IDS:
+                row_offset = YOSHI_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
+                if row_offset + 16 > len(main_payload):
+                    raise ValueError("yoshi grab hidden-part table is truncated")
+                root_joint_id, _parent_joint_id, _partindex, _joint_kind = \
+                    struct.unpack_from(">iiii", main_payload, row_offset)
+                descriptor_index = root_joint_id - 4
+                if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                    raise ValueError(
+                        f"yoshi grab hidden joint {root_joint_id} is out of range")
+                # setup_parts omits exactly these two descriptors. If a future
+                # payload ever selects one canonically the root count stops
+                # changing and neither program is needed, so say so loudly
+                # instead of silently emitting a duplicate of canonical.
+                if descriptor_index in selected:
+                    raise ValueError(
+                        f"yoshi hidden joint {root_joint_id} is already in "
+                        f"setup_parts; the hidden-part table and the canonical "
+                        f"selection disagree")
+                selected.add(descriptor_index)
+            selected = sorted(selected)
         if owner_name == "link" and program_name == "Catch":
             # Link's Catch/CatchPull motion descriptors carry 0x1C000000, which
             # ftMainSetStatus decodes as hidden-part IDs 3..5. Read LinkMain's
@@ -7940,6 +8083,40 @@ def build_owner_root_programs(
             # remain source-static for LinkModel roots; the standalone donor
             # consumes only its own cache and therefore needs no cross slot.
             parents = tuple(INVALID_U8 for _ in root_offsets)
+        elif owner_name == "yoshi":
+            if len(root_offsets) != YOSHI_ROOT_PROGRAM_ROOT_COUNT:
+                raise ValueError(
+                    f"yoshi {detail} {program_name} root count "
+                    f"{len(root_offsets)} != {YOSHI_ROOT_PROGRAM_ROOT_COUNT}")
+            appendix_offsets = {
+                offset for _binding, offset in
+                context.get("root_program_appendix_specs", ())
+            }
+            variant_offsets = {
+                offset for _binding, offset in context.get("variant_specs", ())
+            }
+            hidden_offsets = (set(root_offsets) - canonical_offset_set
+                              - variant_offsets)
+            if hidden_offsets != appendix_offsets:
+                raise ValueError(
+                    f"yoshi {detail} {program_name} hidden roots "
+                    f"{sorted(map(hex, hidden_offsets))} != appendix "
+                    f"{sorted(map(hex, appendix_offsets))}")
+            # The two programs are only worth emitting separately if they
+            # actually differ, and the difference is exactly joint 7's binding.
+            # Assert it from the emitted vector so a resolver change that
+            # collapsed them into one could not pass unnoticed.
+            live_variants = variant_offsets & set(root_offsets)
+            expected_variants = variant_offsets if program_name == "Throw" else set()
+            if live_variants != expected_variants:
+                raise ValueError(
+                    f"yoshi {detail} {program_name} carries variant roots "
+                    f"{sorted(map(hex, live_variants))} != "
+                    f"{sorted(map(hex, expected_variants))}")
+            # Hidden joint 9 is inserted by ftMainSetStatus, not by the
+            # canonical setup_parts walk, so there is no source parent schedule
+            # to publish. Production receives each live DObj matrix directly.
+            parents = tuple(INVALID_U8 for _ in root_offsets)
         else:
             topology = decode_joint_topology(
                 payload, owner_name, program_roots, detail, overrides)
@@ -7964,7 +8141,8 @@ def build_owner_root_programs(
         new_offsets = set(root_offsets) - canonical_offset_set
         if not (owner_name == "link" and program_name == "SpecialN"):
             _assert_owner_root_program_vertex_cache(
-                repo_root, owner_name, detail, root_offsets, new_offsets, cross)
+                repo_root, owner_name, detail, root_offsets, new_offsets, cross,
+                canonical_offsets)
         _verify_program_roots_lit(
             context, owner_name, detail, program_name, program_roots,
             program_light_indices, root_contexts)

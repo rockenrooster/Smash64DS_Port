@@ -28,8 +28,8 @@ Main Menus:
     -Ness not selectable
 -Yoshi:
     -Up B egg shells are not rendering.
-    -Grab attacks turn yoshi invisible. **PARTIAL: baked joint 7 part 1, but that is NOT sufficient. ThrowF/ThrowB also carry 0x18000000, installing hidden part 4 (joint 9, DL 0x2800), so the vector gains a root and no program matches. Needs a Yoshi root program.**
-    -B attack turns yoshi invisible and egg is also invisible **CONFIRMED same cause as the grab: EggLay motions 202-206 carry 0x18000000, adding drawing hidden part 4 (joint 9, 0x2800). Needs the same Yoshi root program.**
+    -Grab attacks turn yoshi invisible. **FIX IMPLEMENTED, not yet seen on screen. Two Yoshi root programs now carry the 19-root vector that drawing hidden part 4 (joint 9, DL 0x2800) forces: Catch, and Throw which also swaps joint 7 to part 1. Built and linked into smash64ds.nds. Please try a forward and a back throw and say whether Yoshi stays visible.**
+    -B attack turns yoshi invisible and egg is also invisible **SAME CAUSE, SAME FIX. EggLay motions 202-206 carry the same 0x18000000, so the Catch program above covers them too. Please try Neutral-B and say whether Yoshi and the egg both draw.**
     -character intro is invisible (egg hatching) **NOT the hidden-part class - I was wrong. Appear1/2 carry only 0x40000000 (index 1, TransN, no DL), so the root vector is unchanged. Cause is elsewhere.**
 -Link:
     -character intro column VFX should have transparency

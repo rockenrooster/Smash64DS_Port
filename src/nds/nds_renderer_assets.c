@@ -1730,6 +1730,30 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeYoshiLowOwner, &sNdsNativeYoshiFighterLowTables,
     sNdsNativeYoshiRootsLow, sNdsNativeYoshiCrossPaletteSlotsLow,
     sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+/* The grab family's 0x18000000 anim-desc mask installs hidden part 4, whose
+ * joint 9 draws 0x2800 in both details. That ADDS a root, so the live vector
+ * is 19 against a canonical 18 and no per-binding variant can represent it --
+ * the resolver rejects on root_count before it ever compares offsets. Catch
+ * keeps joint 7 canonical (Catch/CatchPull and EggLay 202-206); Throw is the
+ * same vector with joint 7 on model part 1, for the ThrowF/ThrowB window. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeYoshiCatchHighOwner, &sNdsNativeYoshiFighterHighTables,
+    sNdsNativeYoshiCatchRoots, sNdsNativeYoshiCatchCrossPaletteSlots,
+    sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeYoshiCatchLowOwner, &sNdsNativeYoshiFighterLowTables,
+    sNdsNativeYoshiCatchRootsLow, sNdsNativeYoshiCatchCrossPaletteSlotsLow,
+    sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeYoshiThrowHighOwner, &sNdsNativeYoshiFighterHighTables,
+    sNdsNativeYoshiThrowRoots, sNdsNativeYoshiThrowCrossPaletteSlots,
+    sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeYoshiThrowLowOwner, &sNdsNativeYoshiFighterLowTables,
+    sNdsNativeYoshiThrowRootsLow, sNdsNativeYoshiThrowCrossPaletteSlotsLow,
+    sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_NESS
@@ -5103,9 +5127,25 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
+#if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI)
+    {
+        if (program == 1u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeYoshiCatchLowOwner : &sNdsNativeYoshiCatchHighOwner;
+        }
+        if (program == 2u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeYoshiThrowLowOwner : &sNdsNativeYoshiThrowHighOwner;
+        }
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -5167,9 +5207,17 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
+#if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI) && (program <= 2u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
@@ -5207,6 +5255,13 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     {
         /* canonical + every trio head + Stone + CopyLink. */
         program_count = NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u;
+    }
+#endif
+#if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI)
+    {
+        /* canonical + Catch + Throw. */
+        program_count = 3u;
     }
 #endif
     for (program = 0u; program < program_count; program++)

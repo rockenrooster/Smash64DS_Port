@@ -6,6 +6,10 @@
 > variant can never cover a root-count change, so the throw still does not draw.
 > A Yoshi root program is required. The derivation below stands; the claim that
 > it resolves the symptom does not.
+>
+> **RESOLVED by `2026-09-17_p2-3f52-yoshi-root-programs/`**, which implements the
+> two programs this correction specifies. The variant baked here is still needed
+> — the Throw program references it rather than baking `0x7D10` twice.
 
 Owner, `docs/BUGS.md`: *"Yoshi: Grab attacks turn yoshi invisible."*
 

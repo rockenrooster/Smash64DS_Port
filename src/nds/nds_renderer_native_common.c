@@ -10947,6 +10947,21 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_YOSHI
     if (slot == 8u)
     {
+#if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+        u32 program = ndsRendererNativeFighterRootProgram(slot);
+        if (program == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeYoshiCatchBindingParents) /
+                           sizeof(sNdsNativeYoshiCatchBindingParents[0]));
+            return sNdsNativeYoshiCatchBindingParents;
+        }
+        if (program == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeYoshiThrowBindingParents) /
+                           sizeof(sNdsNativeYoshiThrowBindingParents[0]));
+            return sNdsNativeYoshiThrowBindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeYoshiBindingParents) /
                        sizeof(sNdsNativeYoshiBindingParents[0]));
         return sNdsNativeYoshiBindingParents;
@@ -11226,6 +11241,21 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_YOSHI
     if (slot == 8u)
     {
+#if defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
+        u32 program = ndsRendererNativeFighterRootProgram(slot);
+        if (program == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeYoshiCatchCrossPaletteSlots) /
+                           sizeof(sNdsNativeYoshiCatchCrossPaletteSlots[0]));
+            return sNdsNativeYoshiCatchCrossPaletteSlots;
+        }
+        if (program == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeYoshiThrowCrossPaletteSlots) /
+                           sizeof(sNdsNativeYoshiThrowCrossPaletteSlots[0]));
+            return sNdsNativeYoshiThrowCrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeYoshiCrossPaletteSlots) /
                        sizeof(sNdsNativeYoshiCrossPaletteSlots[0]));
         return sNdsNativeYoshiCrossPaletteSlots;
