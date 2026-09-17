@@ -28,9 +28,9 @@ Main Menus:
     -Ness not selectable
 -Yoshi:
     -Up B egg shells are not rendering.
-    -Grab attacks turn yoshi invisible.
-    -B attack turns yoshi invisible and egg is also invisible 
-    -character intro is invisible (egg hatching)
+    -Grab attacks turn yoshi invisible. **Root cause found and baked: joint 7 part 1 had no native root, so the owner declined and the whole fighter stopped drawing. Capture owed.**
+    -B attack turns yoshi invisible and egg is also invisible **Same class, different mechanism: hidden parts from the anim mask, not a model part. Still open.**
+    -character intro is invisible (egg hatching) **Same hidden-part class as B attack. Still open.**
 -Link:
     -character intro column VFX should have transparency
     -neutral B makes link invisible when throwing and catching the boomerang
