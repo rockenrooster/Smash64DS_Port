@@ -58,37 +58,28 @@ miss**; needs **-455,296**.
 `…_sim30-ceiling/`). Sacrifice Order: audio (1), visual (2), gameplay (3) more
 expendable than the 60 Hz sim (4). Owner 2026-09-16: lab test builds allowed.
 N05.01 (matrix stack) and N05.02 (collision family) are SPENT with measurement.
-Engaging the 0%-engaged GX compose bank COSTS +22,848 P50 at four fighters, and
-the sampled softfloat census **over-attributes 3.0x** — collision family 25,022
-not ~49,900. Never size from that census again.
-**N05.03: 97% over-invalidation.** `ndsFTParamsInvalidateSubtree`
-(`reloc_backend_compat_shims.c:2955`) does **474.5 part-word clears/frame against
-14.3 matrix recomputes** (3.0% utilisation) for **20,348 tk/fr**. Replace the
-O(parts) clear + descendant flatten with an **O(1) generation stamp**; no
-fidelity argument, byte-identical same-ROM A/B proven in-repo.
-Falsifier MEASURED (`…_stg-history-and-n0503-sizing/`): CPI 5.60 is 18% issue /
-**82% load stall**, so the band is **ceiling -19,700, floor -3,636**. Blocker: 23
-decomp latch sites need an import overlay.
-**THE ARITHMETIC IS CLOSED** for leaf levers: the gate needs **-496,382 = 30.7%
-of everything executed**; the profile's whole top twenty is 502,955. Everything
-unkilled sums to **~90,000, 0.20x**. **Triangles are refuted** — zero CPU work is
-per-vertex, so deleting every fighter triangle caps at -12,144. Reduced
-**JOINTS** is -207,168 at 2.48x (42%) and **is not a switch**: cap=1 ABORTS the
-CPU AI on a NULL joint (`ftcomputer.c:7970`), so a smaller skeleton re-derives
-hurtboxes per fighter — Sacrifice Order 2+3. Ladder:
-`…_p2-2p8-joint-cap-ladder/`. Lanes killed with measurement:
-`docs/archive/P2_CLOSED_ROWS.md`.
+Engaging the 0%-engaged GX compose bank COSTS +22,848 P50; the sampled softfloat
+census **over-attributes 3.0x** — never size from it again.
+**N05.03 (cursor): 97% over-invalidation.** `ndsFTParamsInvalidateSubtree`
+(`reloc_backend_compat_shims.c`) does **474.5 part-word clears/frame against 14.3
+recomputes** for **20,348 tk/fr**. Replace the O(parts) clear + flatten with an
+**O(1) generation stamp**. Per-PC the **walk is 59%, the clear 14%** —
+`CANDIDATE_SELECTION.md`'s "clear 56%" is INVERTED, so this deletes pointer-chase
+STALL, not issue, and it is the only live candidate that does. Band
+**-10,000..-15,000** (`…_p2-2p8-src-candidate-sizing/`). Blocker: 23 decomp latch
+sites need an import overlay (`src_gm_gmcollision.patch`), as twelve files use.
+**THE ARITHMETIC IS CLOSED** for leaf levers: gate needs **-496,382 = 30.7% of
+everything executed**; the profile's top twenty is 502,955. **The per-fighter
+lever is MEASURED and spent** and **SRC's top candidate is SIZED NO-GO** — detail
+for both in `docs/archive/P2_CLOSED_ROWS.md`; evidence in
+`…_p2-2p8-joint-cap-ladder/` and `…_p2-2p8-src-candidate-sizing/`.
 Checks: **Boundary GREEN all three arms** (free floor 114,628 B, realtime
 **26.4 FPS**); both targets build, invariants match.
 P2-2p8 remains RED / `IMPLEMENTED_NOT_ACCEPTED`. Main owns all edits/builds.
 **OWNER INPUT 2026-09-16:** `docs/optimization/{FTR,STG,SRC,MISC}.md` (2,503
-lines, at 430aca2879e, source-grounded, explicitly UNMEASURED) plus
-`Smash64DS_Implementation_Plan/`. All four reach the same thesis: replace the
-mixed-representation pipelines with prebound/compiled native programs instead of
-wrapping another cache on the adapters. They corroborate this profile
-independently (invalidate ~20.7K, floor query ~20.9K) and target the two things
-the board has never attacked -- SRC (P50 555,584) and the per-fighter FIXED
-288,133. Size before building; none carries a DS measurement.
+lines, source-grounded, UNMEASURED). SRC's top candidate is sized NO-GO above.
+FTR/STG/MISC candidates are UNSIZED — size each against the profile before any
+build; SRC.md's premises did not survive that step.
 Review watermark: `Briefs/README.md` 2026-09-16; candidates stay with their rows.
 
 Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below. Main owns

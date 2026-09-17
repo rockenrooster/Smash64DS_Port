@@ -300,3 +300,49 @@ engaged on 2026-08-15 behind `NDS_R2_COLLISION_FIXED` and measured as a cost:
 WORK-H P50 +64, P95 +896, rank-80 +3,648. conv/op cleared the 0.57 break-even by
 13x and icache_fill cancelled it 1.08x anyway. Do not rebuild it. Corrections and
 the exact table: `…/2026-09-16_p2-2p8-n0409-profile/CANDIDATE_SELECTION.md`.
+
+## The per-fighter lever, measured and spent (2026-09-16)
+
+Owner allowed lab test builds ("less joints etc"). Evidence:
+`artifacts/performance/2026-09-16_p2-2p8-joint-cap-ladder/`.
+
+| variant | measured outcome |
+|---|---|
+| fewer **triangles** | ceiling **-12,144** (2.4% of the gap). No CPU work in the fighter path is per-vertex — geometry is a pre-baked GX stream DMA'd to the FIFO, so only DMA words shorten. Peak fighter packet 2,685-3,036 words over six runs. |
+| fewer **joints** (smaller skeleton) | **not implementable as a switch.** `NDS_LAB_JOINT_CAP=1` engaged and aborted: `ndsBaseFTComputerSetFighterDamageDetectSize` dereferences the NULL left in `fp->joints[]` (decomp `ft/ftcomputer.c:7970`) because `damage_coll_descs` names joints by id. A smaller skeleton re-derives the hurtbox table, `effect_joint_ids`, foot ids and every animation binding **per fighter** — Sacrifice Order 2 **and** 3. Cap 12 pruned nothing (triangle counters byte-identical), so the common-part container holds <= 12 nodes. |
+| less **animation** | `NDS_LAB_POSE_JOINT_CAP=1` deleted **94.7%** of pose evaluation (259,778 skipped vs 14,647). WORK-H P50 1,588,928 -> 1,624,832. **No reduction.** The arms diverge — slot 1 drew 352,444 triangles against 333,618, i.e. 18,826 MORE — so no price is readable, but no win appeared either, under a workload of comparable scale (ALL P50 +192, 0.01%). |
+
+Model said joint-proportional work was 347,132 tk/fr and a 2.48x cut worth
+-207,168. The largest sub-lane in that model (`ftMainPlayAnim`, 138,714) does
+not convert at all.
+
+## SRC's top candidate, sized NO-GO before building (2026-09-16)
+
+`docs/optimization/SRC.md` candidate 1, a bound fixed pose/transform domain.
+Evidence: `artifacts/performance/2026-09-16_p2-2p8-src-candidate-sizing/`.
+
+Ceiling **-70,000 = 14.1%** of the gap; mid -25,000; floor -4,000. Three
+premises are absent from the profile:
+
+- **"fixed-to-float publication"** is **2,814 tk/fr**. `ndsR2FixedToF32`/
+  `ndsR2F32ToFixed` are `static inline` integer bit kernels, and the pose engine
+  issues **zero** float operations — all four `bl __aeabi_fmul` sites inside
+  `ndsFtPosePlay` execute 0 times.
+- **"later conversions"** on the render side are **zero**; the whole fighter
+  matrix path is already Q20.12 with no soft-float calls. `MtxCellS16p16`
+  (11,178) is a split-precision `Mtx` unpack, not a conversion.
+- **"separate transform preparation"** IS the collision family (25,022), i.e.
+  `NDS_R2_COLLISION_FIXED` — built, wired, engaged, measured **+64 WORK-H P50**.
+
+Total deletable conversion on both seams: **13,992**. `ndsF32AddBits` (15,592)
+is frozen — the IEEE-exact clock wired under the owner's same-behaviour
+instruction, bit-proven over 1.12 billion operations.
+
+It also has the collision lane's shape: 8-16 KB of bind tables and executors is
+**+3,900 to +7,800 tk/fr** of icache fill at the measured 0.4871 tk/fr per
+`.main` byte, against at most 57,034 issue slots on work that is **63% stall**;
+`.itcm` has 104 bytes free of 32,632, so placement relief is unavailable.
+
+Two halves are worth keeping and need neither the rewrite nor bind tables: the
+validity/hierarchy walk (N05.03, -10,000..-15,000) and the FTR-side
+copy/convert/traverse (<= -30,000 of 53,122).
