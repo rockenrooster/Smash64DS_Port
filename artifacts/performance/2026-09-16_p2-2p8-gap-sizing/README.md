@@ -252,3 +252,81 @@ believed — but no CPU cull exists to measure today.
   records that body joints already run "at 30 Hz under `NDS_FT_POSE_HOLD`", and
   the pose clock advances per tick with only Play held. The obvious "pose runs
   twice, half is discarded" saving was taken long ago.
+
+---
+
+## Owner ruling (third): 30 FPS at four players is required AND no 30 Hz simulation
+
+Both of the two largest levers found so far are therefore unavailable or dead:
+the 30 Hz simulation is ruled out, and the stage lane is GX-throughput-bound with
+a realized WORK-H conversion measured at zero three times (Tasks 53/54/55 —
+Task 53 removed 187,648 ticks of stage CPU prep and `ALL` moved **-128**, because
+FIFO backpressure is an inline stall that lands in OTHR, inside WORK-H).
+
+Levers checked and too small, each measured on this build:
+
+| lane | tk/fr | share of the 455,296 gap |
+|---|---|---|
+| material animation (visual-only, could run per present) | 35,206 total, ~11,000 recoverable | 2.4% |
+| stage cache/replay ceiling | ~80,000 | 17.6%, realized ~0 |
+| N-squared collision across 4 fighters | <30,000 | 6.6% |
+| per-fighter LOD | 0 | already engaged at 3+ fighters |
+
+### The structural candidate: the DS matrix stack is not being used
+
+`ndsRendererLoadHardwareMatrixPair` (`nds_renderer_textures_effects.c:12148`)
+issues, per object:
+
+```c
+ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(projection));
+ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+glLoadMatrix4x4(ndsRendererMtx20p12AsM4x4(modelview));
+```
+
+That `modelview` is a **CPU-computed product**. The DS has a hardware matrix
+stack that can do the hierarchy multiply itself — load the camera once, then
+`PUSH` / `MULT4x4(local)` / draw / `POP` per object — and **this codebase already
+does exactly that on the stage's rigid bindings**: "a rigid binding's captured
+stream is PUSH + MULT4x4 of a constant world under the camera the segment
+bracket loads live each frame" (`nds_renderer_assets.c:6720`).
+
+GX word traffic is unchanged — `MULT4x4` and `LOAD4x4` are both 16 words — so
+this does **not** hit the stage lane's throughput wall. The entire saving is CPU:
+the matrix product the GPU would compute instead.
+
+Sized on this build, the CPU matrix-composition pipeline is **14 symbols /
+160,576 tk/fr = 35.3% of the gap**:
+
+| tk/fr | symbol |
+|---|---|
+| 25,410 | `ndsRendererMtxMulAffine20p12` |
+| 17,595 | `ndsRendererMtxMul20p12` |
+| 16,442 | `ndsRendererAdapterBuildDObjXObjMatrix` |
+| 15,010 | `ndsRendererAdapterBuildPersistentStageWorldMatrix` |
+| 12,469 | `ndsRendererAdapterBuildFighterTraRotRpyDirect20p12` |
+| 11,178 | `ndsRendererMtxCellS16p16` |
+| 9,884 | `ndsRendererAdapterGetFrameCameraMatrices` |
+| 9,722 | `ndsRendererAdapterSourceWorldMulLocal` |
+| 9,212 | `ndsRendererAdapterApplyMvpRecalc` |
+| 8,984 | `ndsRendererLoadHardwareMatrixPair` |
+| 7,754 | `ndsRendererAdapterBuildDObjLocalMatrix` |
+| 7,599 | `ndsRendererMtxLoadN64ToDS20p12` |
+
+Not all of it converts — the camera matrices are built once, and some products
+feed collision rather than the GX. But this is the first lane found whose *shape*
+matches the requirement: it is driven by object count (`gNdsGCDrawsActiveMax` =
+203), it cuts across the arithmetic kernels and the adapter pipeline at once, and
+it is not throughput-bound.
+
+**Fidelity note, stated up front:** hardware `MULT4x4` rounds in 20.12 at each
+stage where the CPU currently rounds its own product. Output is equivalent, not
+bit-identical, so this is a render-fidelity question under the existing doctrine
+rather than a free cache — and it needs the Task 49 GX differ on the affected
+owners, exactly as the stage replays did.
+
+**Falsifier:** if the per-object local transforms are not expressible as a single
+`MULT4x4` under a frame-constant camera — i.e. if `ApplyMvpRecalc` is folding
+something per-object that the stack cannot express — the lane collapses to the
+camera load alone and is worth ~10,000. The `MvpRecalc` kind-48 path is where to
+check that first.
