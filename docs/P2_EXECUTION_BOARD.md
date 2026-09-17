@@ -51,34 +51,34 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
-**PERFORMANCE: NO CLASS REACHES THE GATE — INCLUDING LOCALITY.**
-`…_p2-2p8-gate-decision/`; sizing `…_p2-2p8-locality-sizing/`.
-**CORRECTED 09-17:** locality's ceiling was published as **113%**, which
-subtracted ALL data stall. Only **line fills** are layout-removable =
-**424,336 = 90.6%** — a PERFECT cache still leaves **44,208 OVER**.
-**RESIDUAL: 321,866 UNFOUND** (`…_p2-2p8-residual-ledger/`); banked + sized =
-**146,678 = 31.3%** of gap.
-**JOINT-CAP LANE SPENT** (`…_p2-2p8-joint-cap-ladder/`): the cap **aborts the
-CPU AI**, and deleting **94.7%** of pose evaluation gave **no WORK-H
-reduction**. Order 4 is the only class large enough and is **owner-forbidden**.
-Literal-pool bucket sized at **11,449** packed. Placement CLOSED.
-**KIRBY COPY FIXED** (`…_p2-3f47-kirby-copy-hats/`). OWED: per-hat look.
-**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 drawing hidden parts exist,
-all covered, checker GREEN. `…_p2-3f-hidden-part-sweep/`. OWED: captures.
+**NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`…_p2-2p8-gate-decision/`):
+its ceiling is **90.6%**; a PERFECT cache still leaves **44,208 OVER**.
+**RESIDUAL: 321,866 UNFOUND**; banked + sized = **146,678 = 31.3%** of gap.
+**JOINT-CAP LANE SPENT**: the cap **aborts the CPU AI**, and deleting **94.7%**
+of pose evaluation gave **no WORK-H reduction**. Placement CLOSED.
+**KIRBY COPY FIXED**. OWED: per-hat look.
+**HIDDEN-PART CLASS CLOSED**: 26 owners swept, 3 exist, all covered, checker
+GREEN (`…_p2-3f-hidden-part-sweep/`). OWED: captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 BYTES** (`5e109a47d5d`,
-`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap, P95
-−43,072, 3 runs, linker script only. Per-PC confirms stall
-**34,121 → 9,079**. Non-zero
+`…_p2-2p8-dtcm-hot-scalars/`). **Largest banked win**, 9.2% of gap. Non-zero
 exit is a **window** assertion, NOT correctness: 21 ring stops at identical
 frames, identical `PacingLogicFrames`, only the first label moves +1. **OWNER:
 one-line call** to compare `startFrame` against the recorded label span.
-**OWNER INPUT 09-16:** `docs/optimization/*` — SRC NO-GO; FTR/STG/MISC UNSIZED.
-Now committed (`cd270b735dc`); were untracked.
-**NEW LEVER SIZED: 8,458 B of entry-effect texels in the four-CPU build belong
-to fighters it cannot run**, **0 shared** = **2.1 arena pages**
-(`…_p2-2p8-entry-effect-roster-residency/`). Texels-only lower bound. Unblocks
-egg + Vulcan Jab + Thunder. Cost: ranges are mid-table, so the emitter must
-renumber per config. NOT a tick claim — buys arena headroom, effect untested.
+**OWNER 09-17: SRC REOPENED** (was NO-GO), **30 Hz simulation still refused**.
+Docs now committed (`cd270b735dc`). **SIZED** (`…_p2-2p8-ftr-stg-misc-sizing/`):
+no one of FTR/STG/MISC closes the gap even deleted whole (STG 80.1%, FTR 72.8%,
+MISC 49.6%); lanes sum to 124% of ALL so they do NOT add. **SRC DISTRIBUTION**
+(`…_p2-2p8-src-distribution/`): **no big rocks** — 1,192 symbols, top 20 = 31.2%,
+only 13 over 20,000; **1,108 symbols under 5,000 carry 571,666 = more than the
+whole gap**. "GObj dispatch 234,325" is a label on a tail; `gcRunGObjProcess` is
+**7,087**. Biggest coherent class anywhere = **soft-float 125,369 = 26.1% of
+gap**, but **50.9% gameplay state-hash frozen + 20.4% fidelity-gated**; only the
+**28.4% unresolved (~25,600)** is free. **Closing the gap is a POLICY call
+before it is an optimization.**
+**LEVER SIZED: 8,458 B of entry-effect texels belong to fighters the four-CPU
+build cannot run**, **0 shared** = **2.1 arena pages**
+(`…_p2-2p8-entry-effect-roster-residency/`). Unblocks egg + Vulcan Jab +
+Thunder. Emitter must renumber per config. Buys arena headroom, NOT ticks.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
 outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
