@@ -166,6 +166,43 @@ The underlay being re-read is **identical every tic** — `sCssPanelSurface[i]`
 does not change during a slide. It is re-read only to repaint pixels the door
 halves trampled on the previous frame.
 
+## The roster, bisected: Jigglypuff is in, and the walk found a second blank preview
+
+**Rung 8 passes.** The character select enters, plays, commits and exits with no
+SIGILL and no ABORT — the 2026-09-04 hang really was the eager loader, exactly
+as that note's own release condition said, and it has been gone since
+2026-09-09.
+
+| rung | adds | image (.text+.data) | vs rung 7 | arena | pages lost | CSS |
+|---|---|---:|---:|---:|---:|---|
+| 7 | — | 1,755,092 | — | 1,240,832 | — | clean |
+| **8** | **Jigglypuff** | 1,764,532 | **+9,440** | **1,228,544** | **3** | **clean** |
+| 10 | +Ness +Kirby | 1,837,132 | +82,040 | 1,154,816 | 21 | **SIGILL** |
+
+Three pages for Jigglypuff against twenty-one for Ness-plus-Kirby. The arena
+tracks the image almost exactly in both directions, which is the same mechanism
+the Yoshi egg and Vulcan Jab hit today.
+
+### And the tour immediately earned itself
+
+```
+CSSTOUR    5 kind=6ff drew=2bf done=1 notready=0
+CSSTOURTRI 5 3840 3366 3498 3542 3520 3718 0 3509 0 3487 0 0
+             mario fox donkey samus luigi link YOSHI captain kirby pikachu PURIN ness
+```
+
+`kind` bit 10 is set and `drew` bit 10 is clear: **Jigglypuff is selectable and
+his 3D preview draws nothing.** Zero triangles against 3,366–3,840 for every
+fighter that works.
+
+**Nobody could have reported this.** He has never been selectable, so no
+playtest could reach him and no scripted run visited him. One probe with the new
+tour found it.
+
+It is **not** Yoshi's cause — `check_preview_pack_owner_sizes.py` confirms
+Purin's pack and owner agree exactly at 32,224, and Yoshi remains the only
+recorded mismatch. A separate trace is open.
+
 ## Cause 4 — Yoshi's preview: two producers, one number, 1,232 bytes apart
 
 **Found and measured; the first fix was WRONG and hung the character select, so
