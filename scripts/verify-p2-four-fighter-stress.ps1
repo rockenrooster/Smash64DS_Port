@@ -272,6 +272,20 @@ $memoryGlobals = @(
     # nothing to skip. A skip that silently stops firing reads exactly like one
     # that fires and saves nothing.
     'gNdsMObjMatAnimStableSkipCount',
+    # N05.01. GX hierarchy matrix compose (E17 + Slice 43, owner-accepted) is
+    # compiled ON but declines for every owner on every frame of a sparse
+    # roster: BuildGxSlotTable unions every owner's cross-run palette slots and
+    # fails on the first NULL, and NDS_P2_KIRBY puts the owner count past
+    # Pikachu/Yoshi/Ness/Purin, which are compiled out. That went unnoticed from
+    # the Mario+Fox era to now because nothing ever read this counter.
+    #
+    # It is NOT asserted to zero, because engaging it was MEASURED at four
+    # fighters as WORK-H P50 +22,848 / P95 +67,456 -- the CPU multiply it
+    # deletes is cheaper than the FIFO traffic it adds at this roster size. The
+    # counter is here so the choice is visible in every run and cannot flip in
+    # either direction unnoticed again. Evidence:
+    # artifacts/performance/2026-09-16_p2-2p8-gx-compose-decline/.
+    'gNdsR2GxComposeDeclines',
     'gNdsFighterDLAllDrawP0HardwareTriangleCount',
     'gNdsFighterDLAllDrawP1HardwareTriangleCount',
     # P2-3r15. THE TWO COUNTERS THAT CAN EXPRESS A ROSTER WIDER THAN TWO NAMES.
