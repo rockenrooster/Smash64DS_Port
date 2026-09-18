@@ -132,7 +132,7 @@ typedef int32_t s32;
 #endif
 #define ARRAY_COUNT(a) ((int)(sizeof(a) / sizeof((a)[0])))
 #define NDS_PREVIEW_PACK_MAGIC 0x31435046u
-#define NDS_PREVIEW_PACK_VERSION 1u
+#define NDS_PREVIEW_PACK_VERSION 2u
 #define NDS_PREVIEW_PACK_MAX_SECTIONS 4u
 #define NDS_PREVIEW_PACK_NULL 0xffffffffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
@@ -140,7 +140,7 @@ typedef int32_t s32;
 typedef struct NDSPreviewPackHeader {
     u32 magic, version, file_bytes, fkind, section_count, fixup_count,
         span_count, reserved, data_bytes, data_hash, fixup_hash, span_hash,
-        main_asset_id, model_asset_id, reserved_tail0, reserved_tail1;
+        main_asset_id, model_asset_id, model_source_bytes, reserved_tail;
 } NDSPreviewPackHeader;
 typedef struct NDSPreviewPackSection {
     u32 asset_id, data_offset, data_bytes, source_bytes, first_span,
@@ -165,6 +165,7 @@ typedef struct NDSRelocLoadedFile {
 } NDSRelocLoadedFile;
 typedef struct NDSPreviewResident {
     u32 generation;
+    u32 model_source_bytes;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
 } NDSPreviewResident;
@@ -298,6 +299,7 @@ int main(void)
                12 * nsp);
         memset(&lf, 0, sizeof(lf));
         sNdsPreviewResidents[0].generation = sNdsRelocSceneGeneration;
+        sNdsPreviewResidents[0].model_source_bytes = h.model_source_bytes;
         sNdsPreviewResidents[0].sections = malloc(sizeof(s));
         memcpy(sNdsPreviewResidents[0].sections, s, sizeof(s));
         sNdsPreviewResidents[0].spans = sp;

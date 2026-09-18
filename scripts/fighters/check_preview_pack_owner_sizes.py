@@ -1,34 +1,21 @@
 #!/usr/bin/env python3
-"""A CSS preview pack's declared source size must equal its native owner's.
+"""A CSS preview pack's raw Model size must equal its native owner's.
 
 WHY THIS EXISTS. `ndsRendererValidateNativeFighterOwner`
 (src/nds/nds_renderer_native_fighter_production.c) compares the loaded asset's
 size against the owner's `asset_data_size` and rejects with code 3 **before it
-looks at a single root**. For a compact CSS preview the size it is handed is
-the pack header's section-1 `source_bytes`
-(`ndsRelocNativeSourceSize`, src/port/reloc_preview_pack.c). So two producers
-that never mention each other have to agree on one number:
+looks at a single root**. FPC2 carries that raw Model byte size in
+`NDSPreviewPackHeader.model_source_bytes`; section-1 `source_bytes` remains the
+larger span extent used by the compact loader. So two producers that never
+mention each other have to agree on one number:
 
   * `generate_nds_native_owners.py` emits `NDS_NATIVE_<X>_MODEL_DATA_SIZE`
-  * `generate_preview_core_packs.py` writes `source_bytes` into the pack
+  * `generate_preview_core_packs.py` writes `model_source_bytes` into the pack
 
-They disagree for exactly one fighter. Yoshi is the only CSS-preview kind in
-`OWNER_DL_PAIR_MODE`, so he is the only one whose `load_o2r_payload` result is
-longer than the asset the runtime loads -- `_extend_payload_with_pairs` appends
-1,232 bytes of welded DL. The owner publishes the raw 44,256; the pack publishes
-the extended 45,488; the validator rejects; and at `NDS_RENDERER_PROFILE_LEVEL 0`
-a declined owner draws nothing, so Yoshi's 3D preview is absent from the
-character select. In-match Yoshi is fine because the battle pack declares the
-raw length. Owner-reported 2026-09-17.
-
-IT IS NOT FIXED BY LOWERING `source_bytes`, AND THAT WAS TRIED. The same field
-has a second consumer: `reloc_preview_pack.c:401` bounds every span's
-`source_offset` by it, and a failure calls `ndsPreviewPackLoadHalt`, a `for(;;)`
-spin rather than an abort. Yoshi's third model span ends at 45,488, so a 44,256
-bound hangs the character select before it can even enter. One field cannot be
-both the span extent and the raw asset size; the pack has to carry the raw size
-as its own field. Until it does, KNOWN_MISMATCHES records the live defect by
-name so this check still fails on anything new.
+Yoshi is the only CSS-preview kind in `OWNER_DL_PAIR_MODE`, so his span extent
+is 45,488 while the runtime source asset is 44,256. FPC2 must preserve both
+numbers: lowering the span extent hangs the loader; validating against the
+extended extent rejects the native owner.
 
 Nothing in either producer's text refers to the other, so no grep relates them.
 This check does.
@@ -55,11 +42,9 @@ PACK_HEADER = REPO / "include/nds/nds_preview_pack.h"
 KINDS = ["mario", "fox", "donkey", "samus", "luigi", "link",
          "yoshi", "captain", "kirby", "pikachu", "purin", "ness"]
 
-# Known live defects, recorded rather than hidden. A kind listed here still
-# prints, still explains itself and still shows its delta -- it just does not
-# fail the build, because the fix is a pack-format change and not a number
-# edit. Anything NOT listed here fails, which is the whole point: a second
-# fighter drifting must not be absorbed by the first one's exception.
+# Version-1 packs in old build directories predate the dedicated raw-size word.
+# Keep their one known Yoshi mismatch recognizable so stale evidence does not
+# make the checker unusable while every newly generated v2 pack must agree.
 KNOWN_MISMATCHES = {
     "yoshi": (45488, 44256,
               "pair weld; source_bytes must stay the span extent or "
@@ -134,17 +119,19 @@ def find_pack_dirs(explicit: str | None) -> list[Path]:
     return found
 
 
-def pack_source_bytes(path: Path, hdr_fields, sec_fields) -> int:
+def pack_source_bytes(path: Path, hdr_fields, sec_fields) -> tuple[int, int]:
     blob = path.read_bytes()
     hdr_len, sec_len = sizeof(hdr_fields), sizeof(sec_fields)
     need = hdr_len + 2 * sec_len
     if len(blob) < need:
         sys.exit("%s: shorter than a header plus two sections" % path)
-    # Section 1 is the model section by the pack's own validator
-    # (ndsPreviewValidateSections requires sections[1].asset_id ==
-    # header.model_asset_id).
+    version = struct.unpack_from("<I", blob, field_offset(hdr_fields, "version"))[0]
+    if version >= 2:
+        off = field_offset(hdr_fields, "model_source_bytes")
+        return version, struct.unpack_from("<I", blob, off)[0]
+    # Legacy FPC1 used section-1 source_bytes for both meanings.
     off = hdr_len + sec_len + field_offset(sec_fields, "source_bytes")
-    return struct.unpack_from("<I", blob, off)[0]
+    return version, struct.unpack_from("<I", blob, off)[0]
 
 
 def main() -> int:
@@ -179,10 +166,10 @@ def main() -> int:
             p = d / ("%02d.fpc" % index)
             if not p.is_file():
                 continue
-            got = pack_source_bytes(p, hdr_fields, sec_fields)
+            version, got = pack_source_bytes(p, hdr_fields, sec_fields)
             want = expected[kind]
             checked += 1
-            known = KNOWN_MISMATCHES.get(kind)
+            known = KNOWN_MISMATCHES.get(kind) if version == 1 else None
             if (got != want) and known and (got, want) == known[:2]:
                 knowns += 1
                 print("KNOWN %s: pack %d vs owner %d (%+d) -- %s"
@@ -190,7 +177,7 @@ def main() -> int:
                 continue
             if got != want:
                 failures += 1
-                print("FAIL %s: %s declares source_bytes=%d (0x%x) but the "
+                print("FAIL %s: %s declares model source size=%d (0x%x) but the "
                       "native owner expects asset_data_size=%d (0x%x), "
                       "delta %+d -- ndsRendererValidateNativeFighterOwner "
                       "rejects with code 3 and the preview draws nothing"
@@ -206,7 +193,7 @@ def main() -> int:
               "scripts/fighters/generate_nds_native_owners.py.")
         return 1
 
-    print("verified preview pack source_bytes against native owner "
+    print("verified preview pack raw Model size against native owner "
           "asset_data_size: %d pack(s) across %d director%s, no NEW drift "
           "(%d known, recorded above)"
           % (checked, len(dirs), "y" if len(dirs) == 1 else "ies", knowns))

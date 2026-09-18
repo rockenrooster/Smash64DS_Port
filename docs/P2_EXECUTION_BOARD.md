@@ -33,7 +33,7 @@ SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Owner's 7 CSS defects, 4 causes: Yoshi preview FIXED; walk now selects ALL fighters; FPS/music/dwell diagnosed, unfixed. |
+| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Final roster tour is 12/12 native (`kind=fff drew=fff`, every triangle bucket nonzero); FPS/music/dwell remain open. |
 | P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory resident. Low-water 111,680 B; libc reserve 40,960 B, weapon pool 10; scoped guards pass; FPS RED. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission proved in `d8660bc2fd9`; natural Hyrule/Inishie pass. Three VS captures remain. |
@@ -60,23 +60,14 @@ banked win, 9.2% of gap. **OWNER: one-line call** on its non-zero exit.
 **OWNER 09-17: SRC REOPENED**, **30 Hz still refused**. No lane closes the gap
 alone; ~99.7% of the largest class is gameplay/fidelity gated, so it is a
 **POLICY call** (detail archived).
-**OWNER 09-17 CSS BATCH** (`…_p2-css-owner-bug-list/`): Yoshi preview cause
-found, fix reverted (hung the CSS; needs a pack-format field). Walk replaced by
-a full-roster tour. FPS/music/dwell diagnosed, unfixed.
-**ROSTER: RUNG 8 SHIPPED** (`ded5da71a4b`). **Rung 9 is NOT roster-broken** —
-with Ness admitted it plays a COMPLETE LAP (`93fede1b140`): kinds 16 CSS -> 21
-Maps -> 22 VSBattle -> 24 Results -> 16, then aborts on the SECOND pass.
-**NONDETERMINISTIC**: same ELF gave a data abort at Maps (r0=3) in one run and
-an undefined instruction at the CSS in another; breakpoints move it. Corruption
-or a race, not a logic bug — which is why rung 10 fails doing LESS work.
-7 hypotheses dead: budget, wander, table bound, reloc fixup, arena rewind,
-clobbered r4 (r4 measured VALID at every ndsSceneManagerEnter entry), single
-deterministic fault. **NEXT: watchpoint/poison to find the WRITER, or bisect
-Ness's 3 TUs — the trigger is build config, not workload.** Faulting-instruction
-chasing is the wrong tool; each run names a different victim.
-**REAL but unlinked**: ndsSceneManagerEnter does `mov r8, r1` and never saves
-r8 (callee-saved, AAPCS) — fix on its own merits, NOT established as this fault.
-**OPEN: Jigglypuff's preview is blank** (not the Yoshi cause).
+**OWNER 09-17 ROSTER CLOSED (P2-3f47).** FPC2 separates raw Model bytes from
+retained span extent and keeps Yoshi's source DL-pair table. Fresh shipping shell:
+native-only 269 inputs, `CSSTOUR kind=fff drew=fff done=1 notready=0`, every one
+of 12 triangle buckets nonzero. Kirby natural Inhale->CopyLink loads both hat
+details and draws the boomerang with zero failure/reject deltas; Purin natural
+Wait->SpecialN adds 319 native triangles with the same clean counters. Audit-14
+image-off NORMAL controls give Ness/Purin/Kirby **40 matches, 2 loads, 0 mismatch/
+fail/native** each; alpha-zero guard passes. Detail moved to the closed-row archive.
 **CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done.
 **Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay. Campaign returns
 ~576 B; **O1 boot-service reclaim returns 5 arena pages** (`5f37d2df82c`).
@@ -101,7 +92,6 @@ pixels/audio or unexercised states stay engineering work.
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin, ThrowF/ThrowB; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball closure + **F-smash vanish** | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source input for roll/Bomb. F-smash is now program 4: `0x00180000` installs drawing hidden parts 11/12 (`0x2c20`/`0x2ce8`), 16 roots vs canonical 14, neither offset was resident. Derived, not observed — confirm on hardware. |
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
-| P2-3f47 | Roster close: Ness, Purin, Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. Intro is **NOT** this class. OWED: captures. `…_p2-3f52-yoshi-root-programs/`. |
 | P2-3f53 | EFDesc effects without native owners | **ALL FOUR RESOLVED: 1 done, 3 blocked, none a wiring change** | **Falcon Punch/Kick DONE** (checked + registered; row was stale). **Yoshi egg** `0xa860` (= invisible intro AND shield): built clean, checker GREEN, Boundary RED — arena −4,096, AllocFail 84→85, 14 texture-bind rejects; reverted `252a9aa4290`. **Kirby Vulcan Jab**: BLOCKED, its state root branches to **RGBA32** and the DS has no 32-bit format — needs a lossy conversion + fidelity call, not a `case`. **Pikachu down-B Thunder**: format CLEAN (IA16/IA8, would compile) but `PikachuModel` is no InputSpec and gate is `NDS_P2_PIKACHU 0`. **2 of 4 blocked on the SAME resident budget; the per-roster emitter is the lever.** `…_p2-3f53-vulcan-jab-blocker/`, `…_p2-3f53-thunder-assessment/`. |

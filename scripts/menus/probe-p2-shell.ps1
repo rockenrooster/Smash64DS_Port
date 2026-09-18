@@ -425,13 +425,10 @@ try {
         # prologue has done anything -- r4 still holds exactly what
         # syTaskmanStartTask put there. Valid here means the corruption is
         # inside this callee; already 3 here means it is upstream and the
-        # whole "across the call" framing is wrong.
-        'break ndsSceneManagerEnter',
-        'commands',
-        'silent',
-        'printf "ENTERREGS r0=%08x r4=%08x r8=%08x lr=%08x scene=%d\n", $r0, $r4, $r8, $lr, (int)gSCManagerSceneData.scene_curr',
-        'continue',
-        'end',
+        # whole "across the call" framing is wrong. Record these registers on
+        # the real scene-entry breakpoint below; a second breakpoint at the
+        # same address consumes the stop before the shipping counter block can
+        # increment $n, which also defeats -Hits.
         'break ndsBaseSyTaskmanStartTask if $r0 < 0x02000000',
         'commands',
         'silent',
@@ -476,6 +473,7 @@ try {
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
+        'printf "ENTERREGS r0=%08x r4=%08x r8=%08x lr=%08x scene=%d\n", $r0, $r4, $r8, $lr, (int)gSCManagerSceneData.scene_curr',
         'set $n = $n + 1',
         $(if ($DataProof) {
             @( 'if $n == 1',

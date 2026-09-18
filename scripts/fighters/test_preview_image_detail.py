@@ -66,6 +66,9 @@ GENERATED_H = (
     ROOT / "include" / "nds" / "generated" /
     "nds_native_fighter_image.generated.h").read_text(encoding="utf-8")
 MAKEFILE = (ROOT / "Makefile").read_text(encoding="utf-8")
+RENDERER_NATIVE_COMMON = (
+    ROOT / "src" / "nds" / "nds_renderer_native_common.c").read_text(
+        encoding="utf-8")
 INTRO_C = (ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "sc" /
            "sc1pmode" / "sc1pintro.c").read_text(encoding="utf-8")
 CSS_C = (ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "mn" /
@@ -437,6 +440,22 @@ class PreviewImageDetailTests(unittest.TestCase):
         self.assertIn("nensure=0 nverify=0", self.out_off)
         pin(r"NDS_NATIVE_OWNER_IMAGE_VERIFY\s*\?=\s*0", MAKEFILE,
             "verify Makefile default")
+
+    def test_normal_controls_have_distinct_dense_normal_scratch(self):
+        """Image-off VERIFY builds must not redeclare generated owner normals."""
+        for owner in ("Luigi", "Donkey", "Captain", "Samus", "Link",
+                      "Pikachu", "Yoshi", "Ness", "Purin", "Kirby"):
+            with self.subTest(owner=owner):
+                self.assertIn(f"sNdsNative{owner}FighterDenseNormalsBake[",
+                              RENDERER_NATIVE_COMMON)
+                self.assertIn(f"sNdsNative{owner}FighterDenseNormalsBakeLow[",
+                              RENDERER_NATIVE_COMMON)
+                self.assertNotRegex(
+                    RENDERER_NATIVE_COMMON,
+                    rf"static\s+u32\s+sNdsNative{owner}FighterDenseNormals\s*\[")
+                self.assertNotRegex(
+                    RENDERER_NATIVE_COMMON,
+                    rf"static\s+u32\s+sNdsNative{owner}FighterDenseNormalsLow\s*\[")
 
 
 if __name__ == "__main__":

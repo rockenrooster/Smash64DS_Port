@@ -250,6 +250,15 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[1].handicap = 9;
     cfg->fighters[1].team = nSCBattleTeamIDRed;
 
+#if NDS_P2_KIRBY_COPYLINK_PROOF
+    /* P2-3f47 acceptance fixture only. Both slots stay ordinary human fighters;
+     * the proof harness sends input only to player 0, leaving Link stationary
+     * so Inhale/CopyLink is deterministic. It does not assign status, motion or
+     * copy_kind; BattleShip owns the complete catch/eat/copy transition. */
+    cfg->fighters[0].fkind = nFTKindKirby;
+    cfg->fighters[1].fkind = nFTKindLink;
+#endif
+
 #if NDS_DEV_LIVE_INPUT_PREVIEW
     /* The shipped match: one-minute Time, items off, Fox on the CPU. */
     cfg->game_rules = SCBATTLE_GAMERULE_TIME;
@@ -257,6 +266,9 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->item_toggles = 0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchNone;
     cfg->fighters[1].pkind = nFTPlayerKindCom;
+#if NDS_P2_KIRBY_COPYLINK_PROOF
+    cfg->fighters[1].pkind = nFTPlayerKindMan;
+#endif
 #if NDS_DEMO_FOX_CPU_LADDER
     /* The demo ladder owns Fox's level: 1 at boot, +1 per Mario win, wrapping
      * 9 -> 1 (owner, 2026-08-17). `ndsMNVSResultsSetLoadScene` advances it just

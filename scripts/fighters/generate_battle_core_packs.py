@@ -652,7 +652,7 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
         64 + 32 * len(sections) + len(data) + len(fixup_bytes) + len(span_bytes),
         fkind, len(sections), len(fixups), len(spans_out), 0,
         len(data), fpc.fnv1a32(bytes(data)), fpc.fnv1a32(fixup_bytes),
-        fpc.fnv1a32(span_bytes), main_id, model_id, 0, 0)
+        fpc.fnv1a32(span_bytes), main_id, model_id, len(model), 0)
     blob = (header +
             b"".join(struct.pack(fpc.SECTION_FMT, *row) for row in sections) +
             bytes(data) + fixup_bytes + span_bytes)

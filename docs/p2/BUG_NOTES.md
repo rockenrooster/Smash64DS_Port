@@ -4799,3 +4799,40 @@ that rule and were 137 to 875 characters. Their full text, verbatim:
 ### -Samus
 
 **(not reported, found by audit): forward smash should make Samus vanish. Now derived rather than suspected — all five FSmash motions carry 0x00180000, which installs drawing hidden parts 11 and 12 (joints 24/25, DLs 0x2c20 and 0x2ce8). The live vector is 16 roots against a canonical 14, and NEITHER offset is resident in either detail, so no owner can match and a declined owner draws nothing. Catch escapes this only because its own motion overrides both joints. A sweep of all 26 fighters found exactly three drawing hidden parts in the game and this was the last uncovered one. FIX IMPLEMENTED — an FSmash root program now carries the 16-root vector, built and linked. Please still confirm on hardware, and note that the useful answer is now the opposite one: if Samus did NOT vanish on forward smash before this, something in the chain is wrong and worth knowing.**
+
+## 2026-09-17 — P2-3f47 final roster closure
+
+Yoshi's zero-triangle CSS preview was a compact-pack producer defect, not a
+renderer/lifecycle defect. `dYoshiModel_JointTree` stores `DObjDesc.dl` as
+`Gfx **` pair-table pointers; the compact metadata had classified the pair table
+as native-draw-owned and nulled every descriptor edge. FPC2 now records raw Model
+bytes separately from retained span extent, and the metadata retains the source
+pair-table span. This preserves owner-size validation without losing the table.
+Fresh shipping-shell proof is native-only (269 link inputs) and reports
+`CSSTOUR kind=fff drew=fff done=1 notready=0`; triangle buckets are
+`3840 3366 3498 3542 3520 3718 3520 3509 2816 3487 3509 3498`.
+
+Kirby's final proof uses only window-targeted ordinary controller input. It walks
+and jumps to Link, Inhales naturally, commits CopyLink, loads modelpart 10 in both
+High and Low detail, enters copied Link SpecialN, makes the boomerang and draws its
+native root. Final witness: `copy=5 high=1 low=1 programSets=28 boom=1
+root27delta=1 hatLoads=2 hatFails=0 nativeFailDelta=0 fighterRejectDelta=0
+validate_latch=0`. Evidence:
+`artifacts/visibility/2026-09-17_p2-kirby-copylink-owner-final.txt`.
+
+Purin's final proof likewise uses one ordinary B input after source entry/countdown.
+Appear2 resolves without fallback; SpecialN is entered from source Wait (`pre_status=10`,
+control enabled) with 65,714 idle triangles already submitted, then adds 319 native
+triangles in status 230. Native/reject/image/validator deltas are all zero. Evidence:
+`artifacts/visibility/2026-09-17_p2-purin-owner-final.txt`.
+
+Audit-14 was run correctly with `NDS_NATIVE_OWNER_IMAGE=0` and
+`NDS_NATIVE_OWNER_IMAGE_VERIFY=1`, so canonical NORMAL arrays remain compiled while
+the NitroFS image is loaded and compared. It first exposed a real control-arm bug:
+mutable dense-normal bake scratch reused generated const-table symbol names. NORMAL
+scratch is now distinctly suffixed `Bake` for the ten playable image-backed owners,
+and the host regression pins that invariant. Live image-off controls for Ness,
+Purin and Kirby each report **40 member matches, 2 image loads, 0 mismatch, 0 load
+failure, 0 native failure, 0 validator reject**. Evidence:
+`artifacts/visibility/2026-09-17_p2-audit14-{ness,purin,kirby}.txt`. The alpha-zero
+transparency guard also passes (`scripts/3d_vfx/test_native_entry_transparency.py`).

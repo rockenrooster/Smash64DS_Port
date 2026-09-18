@@ -17,6 +17,7 @@ _Static_assert(sizeof(NDSBattleForeignImageRow) == 16u, "foreign image row ABI")
 
 typedef struct NDSPreviewResident {
     u32 generation;
+    u32 model_source_bytes;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
@@ -126,8 +127,13 @@ static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
 
 static u32 ndsRelocNativeSourceSize(const NDSRelocLoadedFile *loaded)
 {
-    const NDSPreviewPackSection *section = ndsPreviewSection(loaded, NULL);
+    const NDSPreviewResident *resident;
+    const NDSPreviewPackSection *section = ndsPreviewSection(loaded, &resident);
     if ((section == NULL) && (loaded->reserved[0] != 0u)) { return 0u; }
+    if ((section != NULL) && (loaded->reserved[1] == 1u))
+    {
+        return resident->model_source_bytes;
+    }
     return (section != NULL) ? section->source_bytes : loaded->data_size;
 }
 
@@ -337,11 +343,15 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
         (header.main_asset_id != ndsRelocAssetIDForToken((u32)fighter->file_main_id)) ||
         (header.model_asset_id != ndsRelocAssetIDForToken((u32)fighter->file_model_id)) ||
         (header.file_bytes != (u32)file_size) || (expected_size != (u32)file_size) ||
-        (header.reserved | header.reserved_tail[0] | header.reserved_tail[1]) ||
+        (header.model_source_bytes == 0u) || (header.reserved | header.reserved_tail) ||
         (header.data_bytes & 3u) ||
         (sNdsRelocLoadedFileCount + header.section_count > NDS_RELOC_LOADED_FILE_CAPACITY) ||
         (fread(sections, sizeof(sections[0]), header.section_count, file) != header.section_count) ||
         !ndsPreviewValidateSections(&header, sections))
+    {
+        ndsPreviewPackLoadHalt(4u, fkind);
+    }
+    if (header.model_source_bytes > sections[1].source_bytes)
     {
         ndsPreviewPackLoadHalt(4u, fkind);
     }
@@ -376,6 +386,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     }
     if (hash != header.fixup_hash) { ndsPreviewPackLoadHalt(6u, fkind); }
     resident = &sNdsPreviewResidents[fkind];
+    resident->model_source_bytes = header.model_source_bytes;
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     resident->foreign_images = NULL;
     resident->foreign_count = 0u;

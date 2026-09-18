@@ -8,7 +8,7 @@
  * below are little endian; section bytes retain the O2R big-endian words.
  * File order: header, sections, data, fixups, spans. */
 #define NDS_PREVIEW_PACK_MAGIC 0x31435046u /* FPC1 */
-#define NDS_PREVIEW_PACK_VERSION 1u
+#define NDS_PREVIEW_PACK_VERSION 2u
 #define NDS_PREVIEW_PACK_MAX_SECTIONS 4u
 #define NDS_PREVIEW_PACK_NULL 0xffffffffu
 
@@ -27,7 +27,11 @@ typedef struct NDSPreviewPackHeader {
     u32 span_hash;
     u32 main_asset_id;
     u32 model_asset_id;
-    u32 reserved_tail[2];
+    /* Runtime owner validation needs the source Model file's raw byte size.
+     * source_bytes in section 1 remains the span extent, which can be larger
+     * when the offline compiler appends synthetic welded display lists. */
+    u32 model_source_bytes;
+    u32 reserved_tail;
 } NDSPreviewPackHeader;
 
 /* Section 0 is Main, section 1 Model; remaining sections preserve separately

@@ -5,6 +5,12 @@ board's own header rule. Rows are archived VERBATIM: the evidence a row
 closed on is the row's text, and a summary here would be a second copy of
 the truth that could drift from it. The board keeps only what is next.
 
+## 2026-09-17 — final playable roster closure
+
+| ID | Slice | Status | Evidence |
+|---|---|---|---|
+| P2-3f47 | Roster close: Ness, Purin, Kirby | **CLOSED — 12-fighter shell, natural proofs and audit-14 green** | FPC2 separates raw Model bytes from retained span extent and retains Yoshi's source DL-pair table. Fresh shipping shell is native-only (269 inputs) and reports `CSSTOUR kind=fff drew=fff done=1 notready=0`, with all 12 triangle buckets nonzero. Kirby natural Inhale→CopyLink loads High+Low Link hats and draws the copied boomerang (`nativeFailDelta=0`, `fighterRejectDelta=0`). Purin natural Wait→SpecialN adds 319 native triangles with zero native/reject/image/validator deltas. Image-off NORMAL verifier controls for Ness/Purin/Kirby each report 40 member matches, 2 loads, 0 mismatch/fail/native; the alpha-zero transparency guard passes. Evidence: `artifacts/verification/2026-09-17_p2-shell-roster-final2.txt`, `artifacts/visibility/2026-09-17_p2-kirby-copylink-owner-final.txt`, `artifacts/visibility/2026-09-17_p2-purin-owner-final.txt`, and `artifacts/visibility/2026-09-17_p2-audit14-{ness,purin,kirby}.txt`. |
+
 ## 2026-09-12 — ITCommonData residency observation
 
 | ID | Slice | Status | Evidence |
@@ -525,5 +531,4 @@ class sits behind gameplay/fidelity gates, so **closing it is a POLICY call**
 (`…_p2-2p8-entry-effect-roster-residency/`). Headroom, NOT ticks.
 
 ### CSS batch cursor detail, second trim
-
 

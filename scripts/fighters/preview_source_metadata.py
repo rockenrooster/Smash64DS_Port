@@ -688,6 +688,35 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
         raw = gen._owner_raw_joint_descriptors(payload, key, "high")
         descs = raw[:-1] if raw and raw[-1][1] is None else raw
         sel = gen._owner_selected_descriptor_indices(key, len(descs))
+        pair_span = None
+        if key in gen.OWNER_DL_PAIR_MODE:
+            # Case-1 fighter parts do not point at a Gfx root. DObjDesc.dl is
+            # a pointer to the source's two-word { pre, post } table, which the
+            # source renderer later reads as dobj->dls. Keep that tiny table in
+            # the preview pack so fighter construction does not turn every
+            # pair-mode DObj into dl/dls == NULL. The post pointers themselves
+            # still resolve through the pack's existing pruned-DL root cells;
+            # pre-only vertex-load welds stay native-owner-owned.
+            pair_offsets = []
+            for descriptor_index in range(jt_n - 1):
+                desc_off = jt_base + descriptor_index * gen.DOBJ_DESC_SIZE
+                _depth, reloc_pointer = struct.unpack_from(">II", payload,
+                                                           desc_off)
+                if reloc_pointer != 0:
+                    pair_offsets.append((reloc_pointer & 0xffff) * 4)
+            pair_offsets = sorted(set(pair_offsets))
+            if pair_offsets:
+                pair_start = pair_offsets[0]
+                pair_end = pair_offsets[-1] + 8
+                if pair_offsets != list(range(pair_start, pair_end, 8)):
+                    raise ValueError(
+                        "%s DL-pair table is not one contiguous 8-byte array"
+                        % key)
+                if pair_end > gen.owner_asset_data_size(payload, key):
+                    raise ValueError(
+                        "%s DL-pair table exceeds the runtime model asset" % key)
+                pair_span = [pair_start, pair_end]
+                entry["dl_pair_span"] = pair_span
         entry.update(jt_base=jt_base, jt_count=jt_n, jt_bytes=jt_n * 44,
                      descs_decoded=len(descs), selected_displays=len(sel))
     except Exception as e:  # noqa: BLE001
@@ -1305,7 +1334,8 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
     if idle_data is None or len(idle_data) != mf0["asset"]["data_bytes"]:
         bad("idle OLER data mismatch")
         return entry, None, local_fail
-    model_spans = spans_a + [[high_jt, low_mobj]] + spans_c
+    model_spans = spans_a + ([pair_span] if pair_span is not None else []) + \
+        [[high_jt, low_mobj]] + spans_c
     sections = [{"name": n, "src": "Main-image", "old": o, "len": ln,
                  "new": o, "mode": "identity"}
                 for n, o, ln in entry["main_sections_full"]]
@@ -2404,6 +2434,7 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
                    "low_apost": low_apost},
          "spans_a": entry["spans_a"], "span_b": entry["span_b"],
          "spans_c": entry["spans_c"],
+         "dl_pair_span": entry.get("dl_pair_span"),
          "mobj": {"arrays": entry["mobj_arrays"],
                   "array_bytes": entry["mobj_array_bytes"],
                   "subs": entry["mobj_subs"],

@@ -124,7 +124,7 @@ class CorePackTest(unittest.TestCase):
             (magic, version, fbytes, fkind, nsec, nfix, nspan, _, dbytes,
              *_rest) = d["header"]
             self.assertEqual(magic, gen.MAGIC, kind)
-            self.assertEqual(version, 1, kind)
+            self.assertEqual(version, gen.VERSION, kind)
             self.assertEqual(fbytes, len(blob), kind)
             self.assertEqual(fkind, gen.KIND_ORDER.index(kind), kind)
             self.assertEqual(dbytes, len(d["data"]), kind)
@@ -147,6 +147,7 @@ class CorePackTest(unittest.TestCase):
             main_len = m["section_boundaries"]["main"][1]
             self.assertEqual(secs[0][3], main_len, kind)  # source extent
             self.assertEqual(secs[1][3], m["checks"]["model_payload_bytes"], kind)
+            self.assertEqual(d["header"][14], m["checks"]["model_source_bytes"], kind)
             self.assertEqual(secs[0][2], main_len, kind)  # compact identity
             span_total = sum(s["len"] for s in m["pointer_map"])
             self.assertEqual(secs[1][2], span_total + 8 * secs[1][7], kind)
@@ -217,6 +218,40 @@ class CorePackTest(unittest.TestCase):
                 self.assertIn(root, d["roots"], (kind, i))
             # No shared sentinel: every cell carries its own original offset.
             self.assertEqual(mrcnt, len(d["roots"]), kind)
+
+    def test_yoshi_keeps_source_dl_pair_table(self):
+        """Case-1 DObjDesc pointers must survive compact preview packing."""
+        kind = "yoshi"
+        m = self.maps[kind]
+        d = gen.decode_pack(self.packs[kind])
+        pair = m.get("dl_pair_span")
+        self.assertIsNotNone(pair)
+        pair_start, pair_end = pair
+        self.assertEqual(pair_end - pair_start, 19 * 8)
+
+        # Every non-NULL HIGH JointTree display pointer targets one pair entry.
+        # Those descriptor fixups must point into retained Model data rather
+        # than the NULL sentinel that produced the invisible CSS Yoshi.
+        pair_rows = [r for r in m["model_intern"]["retained"]
+                     if pair_start <= r.get("target_old", -1) < pair_end]
+        self.assertEqual(len(pair_rows), 19)
+        self.assertTrue(all(r.get("target_new") != "sentinel"
+                            for r in pair_rows))
+        fixups = dict(d["fixups"])
+        sec1 = d["sections"][1][1]
+        model_spans = m["pointer_map"]
+
+        def model_rel(off):
+            base = 0
+            for span in model_spans:
+                if span["new"] <= off < span["new"] + span["len"]:
+                    return base + (off - span["new"])
+                base += span["len"]
+            self.fail("Yoshi pair-table slot is outside compact Model spans")
+
+        for r in pair_rows:
+            slot = sec1 + model_rel(r["slot_new"])
+            self.assertNotEqual(fixups[slot], gen.NULL)
 
     def test_span_table_maps_sources(self):
         for kind, blob in self.packs.items():

@@ -41,7 +41,7 @@ import struct
 import sys
 
 MAGIC = 0x31435046  # FPC1
-VERSION = 1
+VERSION = 2
 NULL = 0xFFFFFFFF
 MAX_SECTIONS = 4
 ENDDL = 0xDF000000
@@ -159,26 +159,16 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
 
     # Section 1 spans: pointer_map order, verified inside the compact bin.
     model_spans = m["pointer_map"]  # [{old, len, new}] compact-relative
-    # source_bytes IS THE SPAN EXTENT AND NOTHING ELSE. Two runtime consumers
-    # read this one field and they do not want the same number:
-    #
-    #   reloc_preview_pack.c:401 bounds every span's source_offset by it, and a
-    #     failure calls ndsPreviewPackLoadHalt -- a for(;;) spin, not an abort.
-    #   reloc_preview_pack.c:131 hands it to ndsRendererValidateNativeFighterOwner
-    #     as the loaded asset's size, which wants the RAW O2R length.
-    #
-    # For a pair-mode owner those differ by the weld, and writing the raw length
-    # here to satisfy the second consumer put one of Yoshi's three model spans
-    # (source end 45,488) outside a 44,256 bound: the character select then HUNG
-    # in that spin loop and never entered. The span bound is load-bearing and
-    # non-negotiable, so this field stays the extent. Making the owner side
-    # agree needs the pack to carry the raw size as its OWN field; until it
-    # does, Yoshi's preview owner is declined on size and draws nothing. See
-    # artifacts/performance/2026-09-17_p2-css-owner-bug-list/.
+    # Section source_bytes is the source span extent. Pair-mode owners can append
+    # offline welded lists beyond the raw runtime asset; FPC2 carries that raw
+    # Model size independently in the header for native-owner validation.
     model_span_extent = checks.get("model_payload_bytes")
     model_source_bytes = model_span_extent
+    model_raw_source_bytes = checks.get("model_source_bytes")
     if not model_span_extent:
         raise PackError(kind + ": missing model_payload_bytes")
+    if not model_raw_source_bytes or model_raw_source_bytes > model_span_extent:
+        raise PackError(kind + ": invalid model_source_bytes")
     span_total = sum(s["len"] for s in model_spans)
     if max(s["old"] + s["len"] for s in model_spans) > model_span_extent:
         raise PackError(kind + ": model span exceeds source extent")
@@ -408,7 +398,7 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
         64 + 32 * len(sections) + data_len + len(fixup_bytes) + len(span_bytes),
         fkind, len(sections), len(fixups), len(spans), 0,
         data_len, fnv1a32(bytes(data)), fnv1a32(fixup_bytes),
-        fnv1a32(span_bytes), main_fid, model_fid, 0, 0)
+        fnv1a32(span_bytes), main_fid, model_fid, model_raw_source_bytes, 0)
     blob = (header
             + b"".join(struct.pack(SECTION_FMT, *s) for s in sections)
             + bytes(data) + fixup_bytes + span_bytes)
@@ -435,13 +425,17 @@ def decode_pack(blob: bytes) -> dict:
     if len(blob) < 64:
         raise PackError("short header")
     h = struct.unpack(HEADER_FMT, blob[:64])
-    (magic, version, file_bytes, fkind, nsec, nfix, nspan, _,
+    (magic, version, file_bytes, fkind, nsec, nfix, nspan, reserved,
      data_bytes, data_hash, fixup_hash, span_hash,
-     main_id, model_id, _, _) = h
+     main_id, model_id, model_source_bytes, reserved_tail) = h
     if magic != MAGIC:
         raise PackError("bad magic %08x" % magic)
     if version != VERSION:
         raise PackError("bad version %d" % version)
+    if reserved or reserved_tail:
+        raise PackError("reserved header word is nonzero")
+    if model_source_bytes == 0:
+        raise PackError("zero model source size")
     if file_bytes != len(blob):
         raise PackError("file_bytes %d != actual %d" % (file_bytes, len(blob)))
     if nsec > MAX_SECTIONS or nsec < 2:
@@ -479,6 +473,8 @@ def decode_pack(blob: bytes) -> dict:
                 raise PackError("model roots overrun section")
         elif rcnt or roff:
             raise PackError("roots on non-model section %d" % i)
+    if model_source_bytes > secs[1][3]:
+        raise PackError("model source size exceeds model span extent")
     # Section bodies must not overlap.
     ranges = sorted((doff, doff + dbytes) for _, doff, dbytes, *_ in secs)
     for (a0, a1), (b0, b1) in zip(ranges, ranges[1:]):
