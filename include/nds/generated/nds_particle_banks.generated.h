@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 48 individual frames. 5 sheets keep
- * every particle in 5 binds instead of 48.
+ * admitted set is 49 individual frames. 5 sheets keep
+ * every particle in 5 binds instead of 49.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -161,9 +161,9 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
 #define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES 64u
 #define NDS_PARTICLE_QUAD_PALETTE_BYTES 320u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 37376u
-#define NDS_PARTICLE_QUAD_COUNT 43u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 48u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 38400u
+#define NDS_PARTICLE_QUAD_COUNT 44u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 49u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_COUNT 256u
 #define NDS_PARTICLE_QUAD_FIRST_ROW_NONE 0xffu
 
@@ -265,6 +265,21 @@ extern u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES];
 extern const u32 gNdsPupupuScriptBankBytes;
 extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
 extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
+
+/* ------------------------------------------------------------------------
+ * Ness's fighter particle bank (particles_unk1). PK Fire's source pillar item
+ * starts script 0, whose bytecode closes over scripts 1..3. Before this bank
+ * was native-owned it registered empty and the source particle constructor
+ * failed closed, leaving the hitbox without the visible pillar. */
+#define NDS_NESS_SCRIPT_COUNT 4u
+#define NDS_NESS_SCRIPT_BANK_BYTES 512u
+#define NDS_NESS_TEXTURE_COUNT 2u
+#define NDS_PARTICLE_QUAD_NESS_STRIDE 160u
+
+extern u8 gNdsNessScriptBank[NDS_NESS_SCRIPT_BANK_BYTES];
+extern const u32 gNdsNessScriptOffsets[NDS_NESS_SCRIPT_COUNT];
+/* width, height, source frame count for each source texture. */
+extern const u8 gNdsNessTextureDims[NDS_NESS_TEXTURE_COUNT * 3];
 
 /* ------------------------------------------------------------------------
  * The item bank (decomp it/itmanager.c:109-150). Lizardon's, Hitokage's and

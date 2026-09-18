@@ -1148,6 +1148,23 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llPurinSpecial2FileID);
     }
 #endif
+#if NDS_P2_NESS
+    if (file_head == &gFTNessFileModel)
+    {
+        /* PK Thunder's wave/trail/reflected-trail descriptors all own
+         * NessModel.  Without this span the resolver can defer them while the
+         * slot is NULL, but can never recover them after FTManager loads the
+         * model; efManagerMakeEffect then returns a bare GObj with no DObj and
+         * the source maker dereferences it immediately. */
+        return ndsRelocGetLoadedFileSize(&llNessModelFileID);
+    }
+    if (file_head == &gFTNessFileSpecial2)
+    {
+        /* PSI Magnet's source descriptor owns NessSpecial2 and needs the same
+         * deferred-residency recovery contract. */
+        return ndsRelocGetLoadedFileSize(&llNessSpecial2FileID);
+    }
+#endif
 #if NDS_P2_KIRBY
     if (file_head == &gFTDataKirbySpecial2)
     {

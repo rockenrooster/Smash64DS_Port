@@ -544,9 +544,13 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # ladder at 8x8 and keeps both source frames (128 texels); texture 8 stays
     # 16x16 (256). Their exact 384-texel total fills the existing Yoster/item
     # residual without displacing any prior admitted texture: 32,768/32,768.
-    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 37376 } else { 36352 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 48 } else { 47 })) -or
-    (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 43 } else { 42 })) -or
+    # 2026-09-18: Ness's particles_unk1 bank adds exactly two source-sized
+    # 32x32 atlas cells (keys 160/161). The current one-frame cap therefore
+    # adds 2,048 bytes, two admitted rows and two packed frames to BOTH bakes;
+    # it displaces none of the standing deferred textures below.
+    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 39424 } else { 38400 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 50 } else { 49 })) -or
+    (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 45 } else { 44 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
     # items-off milestone, and they are held out BY NAME because the sheet now
@@ -572,6 +576,21 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
         "$(@($report.quads.admitted).Count) admitted, excluded [" +
         ($actualExcluded -join ',') + "] where NDS_P2_STAGE_YOSTER=" +
         "$yosterFlag expects [" + ($expectedExcluded -join ',') + '].')
+}
+$ness = $report.ness
+$nessCells = @($report.quads.admitted_cells | Where-Object {
+        ([int64]$_.texture -eq 160) -or ([int64]$_.texture -eq 161)
+    })
+if (($null -eq $ness) -or
+    ([int64]$ness.script_bank_bytes -ne 512) -or
+    ([int64]$ness.script_count -ne 4) -or
+    ([int64]$ness.texture_count -ne 2) -or
+    ([int64]$ness.quad_stride -ne 160) -or
+    ($nessCells.Count -ne 2) -or
+    (($nessCells | Where-Object { [int64]$_.bytes -ne 1024 }).Count -ne 0)) {
+    throw ('Ness PK Fire particle bank changed: scripts=' +
+        "$($ness.script_count) textures=$($ness.texture_count) stride=" +
+        "$($ness.quad_stride) cells=$($nessCells.Count).")
 }
 if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
     throw 'Particle quad atlas holds more texels than it has.'

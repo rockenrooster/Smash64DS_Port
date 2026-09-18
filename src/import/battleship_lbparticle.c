@@ -390,6 +390,10 @@ sb32 ndsParticleSpawnFoxBlasterGlowAOT(const Vec3f *pos)
 volatile u32 gNdsParticlePoolStructsWanted;
 volatile u32 gNdsParticlePoolGeneratorsWanted;
 volatile u32 gNdsParticlePoolTransformsWanted;
+#if NDS_P2_NESS
+extern volatile u32 gNdsParticleBankNessID;
+extern volatile u32 gNdsParticleNessScriptsPacked;
+#endif
 
 #if NDS_R2_WHISPY_NATIVE_AOT
 static void ndsWhispyAOTStructFuncRun(GObj *gobj);
@@ -424,6 +428,10 @@ void efParticleInitAll(void)
 
     lbParticleAllocTransforms((s32)transforms, sizeof(LBTransform));
     sEFParticleBanksNum = 0;
+#if NDS_P2_NESS
+    gNdsParticleBankNessID = 0xffu;
+    gNdsParticleNessScriptsPacked = 0u;
+#endif
 #if NDS_P2_STAGE_HYRULE
     gNdsParticleBankHyruleID = 0xffu;
     gNdsHyruleScriptsPacked = 0u;
@@ -451,6 +459,12 @@ extern uintptr_t lEFCommonParticleScriptBankLo;
 /* Dream Land's own bank marker. Declared in include/reloc_data.h and defined in
  * src/port/diagnostics.c as intptr_t; only its address is ever used. */
 extern intptr_t lGRPupupuParticleScriptBankLo;
+#if NDS_P2_NESS
+/* Ness's FTData row names the particles_unk1 source bank by the segment-symbol
+ * address (ftdata.c:6929-6933).  Unlike stage/item banks there is no reloc_data
+ * alias for this bank, so preserve that exact identity here. */
+extern s32 particles_unk1_scb_ROM_START;
+#endif
 #if NDS_P2_STAGE_HYRULE
 extern intptr_t lGRHyruleParticleScriptBankLo;
 #endif
@@ -1554,6 +1568,13 @@ volatile u32 gNdsParticleBankPupupuID = 0xffu;
 /* How many of Dream Land's five scripts survived normalization. 0 means the
  * bank registered empty and Whispy is back to silent leaves. */
 volatile u32 gNdsParticlePupupuScriptsPacked;
+#if NDS_P2_NESS
+/* PK Fire's pillar is script 0 of Ness's particles_unk1 bank.  Keep a distinct
+ * sentinel/count so a live proof can distinguish "Ness loaded" from the
+ * generic other-bank slot, whose id is intentionally reusable after reset. */
+volatile u32 gNdsParticleBankNessID = 0xffu;
+volatile u32 gNdsParticleNessScriptsPacked;
+#endif
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster. 0 means the vapor bank registered empty and the cloud
  * evaporate effect is silent; the gameplay (timers, collision, sink) is the
@@ -2264,6 +2285,94 @@ static sb32 ndsParticleLoadPupupuBank(s32 bank_id)
     return (packed != 0u) ? TRUE : FALSE;
 }
 
+#if NDS_P2_NESS
+/* Ness's fighter bank: four source scripts / two source textures.  PK Fire's
+ * pillar starts script 0, and the source bytecode closes over scripts 1..3.
+ * scripts/generate_nds_particle_banks.py independently pins that closure and
+ * the two texture-bank hashes; this loader only publishes those baked bytes to
+ * BattleShip's own interpreter, exactly like the Pupupu/item loaders above. */
+static sb32 ndsParticleLoadNessBank(s32 bank_id)
+{
+    static sb32 sNdsNessBankNormalized = FALSE;
+    LBScript **scripts;
+    LBTexture **textures;
+    sb32 swap;
+    u32 id;
+    u32 packed = 0u;
+
+    if ((NDS_NESS_SCRIPT_COUNT != 4u) || (NDS_NESS_TEXTURE_COUNT != 2u))
+    {
+        return FALSE;
+    }
+    scripts = syTaskmanMalloc(sizeof(*scripts) * NDS_NESS_SCRIPT_COUNT, 0x4);
+    textures = syTaskmanMalloc(sizeof(*textures) * NDS_NESS_TEXTURE_COUNT, 0x4);
+    if ((scripts == NULL) || (textures == NULL))
+    {
+        return FALSE;
+    }
+
+    for (id = 0u; id < NDS_NESS_TEXTURE_COUNT; id++)
+    {
+        NDSParticleInertTexture *entry = syTaskmanMalloc(sizeof(*entry), 0x4);
+        u32 base = id * 3u;
+
+        if ((entry == NULL) || (gNdsNessTextureDims[base] == 0u) ||
+            (gNdsNessTextureDims[base + 1u] == 0u) ||
+            (gNdsNessTextureDims[base + 2u] == 0u))
+        {
+            return FALSE;
+        }
+        *entry = sNdsParticleInertTexture;
+        entry->header.width = (s32)gNdsNessTextureDims[base];
+        entry->header.height = (s32)gNdsNessTextureDims[base + 1u];
+        entry->header.count = gNdsNessTextureDims[base + 2u];
+        textures[id] = (LBTexture *)entry;
+    }
+
+    /* gNdsNessScriptBank is linked mutable storage.  Normalize it only on its
+     * first registration; efParticleInitAll can reset bank numbering without
+     * restoring those source-endian bytes. */
+    swap = (sNdsNessBankNormalized == FALSE) ? TRUE : FALSE;
+    sNdsNessBankNormalized = TRUE;
+    for (id = 0u; id < NDS_NESS_SCRIPT_COUNT; id++)
+    {
+        u32 offset = gNdsNessScriptOffsets[id];
+        u32 limit = (id + 1u < NDS_NESS_SCRIPT_COUNT) ?
+            gNdsNessScriptOffsets[id + 1u] : NDS_NESS_SCRIPT_BANK_BYTES;
+        u32 commands = 0u;
+        u32 operands = 0u;
+        u8 *header;
+
+        scripts[id] = (LBScript *)&sNdsParticleInertScript;
+        if ((offset > limit) || (limit > NDS_NESS_SCRIPT_BANK_BYTES) ||
+            ((offset & 3u) != 0u) ||
+            ((limit - offset) < sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        header = &gNdsNessScriptBank[offset];
+        ndsParticleNormalizeHeader(header, swap);
+        if ((ndsParticleNormalizeBytecode(
+                 header + sizeof(LBScriptHeader),
+                 limit - offset - (u32)sizeof(LBScriptHeader),
+                 &commands, &operands, swap) == FALSE) ||
+            (((LBScript *)header)->texture_id >= NDS_NESS_TEXTURE_COUNT))
+        {
+            continue;
+        }
+        scripts[id] = (LBScript *)header;
+        packed++;
+    }
+
+    sLBParticleScriptBanksNum[bank_id] = NDS_NESS_SCRIPT_COUNT;
+    sLBParticleTextureBanksNum[bank_id] = NDS_NESS_TEXTURE_COUNT;
+    sLBParticleScriptBanks[bank_id] = scripts;
+    sLBParticleTextureBanks[bank_id] = textures;
+    gNdsParticleNessScriptsPacked = packed;
+    return (packed == NDS_NESS_SCRIPT_COUNT) ? TRUE : FALSE;
+}
+#endif
+
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster Island's cloud-vapor bank. Same shape as ndsParticleLoadPupupuBank
  * above and deliberately a separate function for the same reason: the two differ
@@ -2582,6 +2691,24 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         gNdsPupupuGroundSetupMask |= 1u << 9;
         gNdsPupupuGroundParticleBankID = (u32)bank_id;
     }
+#if NDS_P2_NESS
+    else if (scripts_lo == (uintptr_t)&particles_unk1_scb_ROM_START)
+    {
+        /* Ness's FTData row points directly at the source ROM segment marker.
+         * Register by that identity so Dream Land's generic "other" arm can
+         * never alias PK Fire onto the stage bank just because both are live. */
+        if (ndsParticleLoadNessBank(bank_id) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+            gNdsParticleRejectCount++;
+        }
+        else
+        {
+            gNdsParticleBankNessID = (u32)bank_id;
+        }
+        gNdsParticleBankOtherID = (u32)bank_id;
+    }
+#endif
 #if NDS_P2_STAGE_YOSTER
     else if (scripts_lo == (uintptr_t)&lGRYosterParticleScriptBankLo)
     {
@@ -4210,6 +4337,18 @@ void lbParticleDrawTextures(GObj *gobj)
                         gNdsParticleQuadStrideCount++;
                     }
                 }
+#if NDS_P2_NESS
+                /* Ness source textures 0/1 are their own bank, not EFCommon
+                 * textures 0/1.  The generator reserves 160/161 for them; use
+                 * the same immutable source-bank identity test as Pupupu. */
+                if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+                    (sEFParticleScriptBanks[slot] ==
+                     (uintptr_t)&particles_unk1_scb_ROM_START))
+                {
+                    id += NDS_PARTICLE_QUAD_NESS_STRIDE;
+                    gNdsParticleQuadStrideCount++;
+                }
+#endif
 #if NDS_P2_ITEM_CORE
                 /* Item textures 0/1 are not common textures 0/1: without the
                  * stride they hit the common rows and the aliasing this bank

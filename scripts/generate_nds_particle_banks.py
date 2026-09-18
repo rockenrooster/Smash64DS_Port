@@ -93,6 +93,25 @@ PUPUPU_MEASURED_LIVE_SCRIPTS = frozenset((0, 1))
 # of which any measured match has drawn.
 PUPUPU_MEASURED_LIVE_TEXTURES = frozenset((0, 1, 2))
 
+# Ness's fighter-owned particle bank.  PK Fire's projectile becomes the source
+# pillar item in itnesspkfire.c, and that item starts script 0 from THIS bank.
+# Until this bank is packed, efParticleGetLoadBankID registers it empty and the
+# source `lbParticleMakeScriptID(gFTNessParticleBankID, 0)` fails closed: the
+# hitbox lives, but the entire PK Fire pillar is invisible.  The source bank is
+# tiny (four scripts / two 32x32 textures); script 0 closes over scripts 1..3,
+# so packing the whole bank is both cheaper and safer than maintaining another
+# reachability list.
+NESS_SCRIPT_BANK = ("particles_unk1_scb",
+                    "9342234bab53af6a2bd391bcaf54414bb122f4f8409af7df7b7760f7e3a6de9c")
+NESS_TEXTURE_BANK = ("particles_unk1_txb",
+                     "54f8a23aeb74c41d23dd06b1aa530393b9e95030c76ca8f36a418222d6d4a945")
+# u8 key space shared with the other banks: common <64, Pupupu 64, source
+# assets 128, Ness 160, Yoster 192, item 224.  160/161 were unused and leave
+# room on both sides for future source-asset growth without remapping anything.
+NESS_QUAD_TEXTURE_STRIDE = 160
+NESS_MEASURED_LIVE_SCRIPTS = frozenset((0, 1, 2, 3))
+NESS_MEASURED_LIVE_TEXTURES = frozenset((0, 1))
+
 # P2-4 Yoster Island's own bank: the cloud vapor. gryoster.c's
 # grYosterCloudVaporMakeEffect names script 0 of this bank
 # (decomp gr/grcommon/gryoster.c, grYosterCloudVaporMakeEffect), and the bank
@@ -2229,6 +2248,66 @@ def build_pupupu_bank(repo_root: Path,
     }
 
 
+def build_ness_bank(repo_root: Path,
+                    frames_by_texture: dict[int, list[list]]) -> dict:
+    """Ness's PK Fire particle bank, packed whole.
+
+    The source bank has four scripts and two textures. Script 0 creates 1, 2
+    and 3, so the whole four-script closure is live whenever the PK Fire item
+    lands.  Both textures are therefore mandatory atlas candidates.  Runtime
+    frame decimation is still owned by build_quad_sheet; source script/frame
+    state remains untouched and nearest-earlier selection applies exactly as it
+    does to the common bank.
+    """
+    script_payload = load_o2r_blob(repo_root, *NESS_SCRIPT_BANK)
+    texture_payload = load_o2r_blob(repo_root, *NESS_TEXTURE_BANK)
+    scripts = parse_script_bank(script_payload)
+    textures = parse_texture_bank(texture_payload)
+
+    if (len(scripts) != 4 or len(textures) != 2 or
+            spawned_scripts(scripts[0], len(scripts)) != {1, 2, 3}):
+        raise SystemExit("Ness PK Fire particle closure changed")
+
+    wanted = sorted({script["texture_id"] for script in scripts})
+    if wanted != [0, 1]:
+        raise SystemExit(f"Ness PK Fire particle textures changed: {wanted}")
+
+    quad_candidates = []
+    for texture in textures:
+        if texture["frames"] <= 0:
+            raise SystemExit(
+                f"Ness particle texture {texture['id']} has no source frames")
+        frames = [decode_texture_frame(texture_payload, texture, frame)
+                  for frame in range(texture["frames"])]
+        key = NESS_QUAD_TEXTURE_STRIDE + texture["id"]
+        frames_by_texture[key] = frames
+        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
+        frame_list = quad_frame_list(texture["frames"])
+        quad_candidates.append({
+            "texture": key,
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": texture["width"],
+            "source_height": texture["height"],
+            "frames": texture["frames"],
+            "frame_list": frame_list,
+            "packed_frames": len(frame_list),
+            "bytes": cell_w * cell_h * len(frame_list),
+            "live": texture["id"] in NESS_MEASURED_LIVE_TEXTURES,
+        })
+
+    return {
+        "script_payload": script_payload,
+        "offsets": [script["offset"] for script in scripts],
+        "scripts": scripts,
+        "textures": textures,
+        "texture_rows": [(texture["width"], texture["height"],
+                          texture["frames"]) for texture in textures],
+        "quad_candidates": quad_candidates,
+        "wanted": wanted,
+    }
+
+
 def build_yoster_bank(repo_root: Path,
                       frames_by_texture: dict[int, list[list]]) -> dict:
     """Yoster Island's own particle bank, packed whole.
@@ -3059,6 +3138,7 @@ def build_pack(repo_root: Path) -> dict:
                             + 8)                      # exported scalars
     linked = len(script_payload) + table_bytes_resident
     pupupu = build_pupupu_bank(repo_root, frames_by_texture)
+    ness = build_ness_bank(repo_root, frames_by_texture)
     # Yoster rows are env-gated (see YOSTER_BAKE_ENABLED): the default pack is
     # the verified Dream Land one, byte for byte.
     yoster = (build_yoster_bank(repo_root, frames_by_texture)
@@ -3074,11 +3154,13 @@ def build_pack(repo_root: Path) -> dict:
     item = build_item_bank(repo_root, frames_by_texture)
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
                              pupupu["quad_candidates"] + yoster_candidates +
+                             ness["quad_candidates"] +
                              item["quad_candidates"] + source_quads)
     shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
     fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
         "pupupu": pupupu,
+        "ness": ness,
         "yoster": yoster,
         "yoster_enabled": YOSTER_BAKE_ENABLED,
         "item": item,
@@ -3424,6 +3506,21 @@ extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
 extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
 
 /* ------------------------------------------------------------------------
+ * Ness's fighter particle bank (particles_unk1). PK Fire's source pillar item
+ * starts script 0, whose bytecode closes over scripts 1..3. Before this bank
+ * was native-owned it registered empty and the source particle constructor
+ * failed closed, leaving the hitbox without the visible pillar. */
+#define NDS_NESS_SCRIPT_COUNT {len(pack["ness"]["scripts"])}u
+#define NDS_NESS_SCRIPT_BANK_BYTES {len(pack["ness"]["script_payload"])}u
+#define NDS_NESS_TEXTURE_COUNT {len(pack["ness"]["textures"])}u
+#define NDS_PARTICLE_QUAD_NESS_STRIDE {NESS_QUAD_TEXTURE_STRIDE}u
+
+extern u8 gNdsNessScriptBank[NDS_NESS_SCRIPT_BANK_BYTES];
+extern const u32 gNdsNessScriptOffsets[NDS_NESS_SCRIPT_COUNT];
+/* width, height, source frame count for each source texture. */
+extern const u8 gNdsNessTextureDims[NDS_NESS_TEXTURE_COUNT * 3];
+
+/* ------------------------------------------------------------------------
  * The item bank (decomp it/itmanager.c:109-150). Lizardon's, Hitokage's and
  * the F-Flower's flame (script 0) and smoke (script 2); script 1 has no
  * maker. Same big-endian-in-place contract as the banks above, and non-const
@@ -3545,6 +3642,15 @@ def render_inc(pack: dict) -> str:
     pupupu_texture_rows = "\n".join(
         f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
         for index, row in enumerate(pack["pupupu"]["texture_rows"])
+    )
+    ness_offset_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:08x}u"
+                           for value in pack["ness"]["offsets"][index:index + 6]) + ","
+        for index in range(0, len(pack["ness"]["offsets"]), 6)
+    )
+    ness_texture_rows = "\n".join(
+        f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
+        for index, row in enumerate(pack["ness"]["texture_rows"])
     )
     item_offset_rows = "\n".join(
         "    " + ", ".join(f"0x{value:08x}u"
@@ -3721,6 +3827,21 @@ u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES]
 {_hex_rows(pack["pupupu"]["script_payload"])}
 }};
 
+/* Ness's PK Fire particle bank. Same mutable, normalize-once source-bytecode
+ * contract as the banks above; quad rows live at 160 + source texture id. */
+const u32 gNdsNessScriptOffsets[NDS_NESS_SCRIPT_COUNT] = {{
+{ness_offset_rows}
+}};
+
+const u8 gNdsNessTextureDims[NDS_NESS_TEXTURE_COUNT * 3] = {{
+{ness_texture_rows}
+}};
+
+u8 gNdsNessScriptBank[NDS_NESS_SCRIPT_BANK_BYTES]
+    __attribute__((aligned(4))) = {{
+{_hex_rows(pack["ness"]["script_payload"])}
+}};
+
 /* The item bank. Same big-endian-in-place contract as the banks above, and
  * non-const for the same reason. Quad rows for this bank live in
  * gNdsParticleQuadFrames at 224 + texture id (see ITEM_QUAD_TEXTURE_STRIDE).
@@ -3841,6 +3962,17 @@ def render_report(pack: dict) -> dict:
                           "width": row["width"], "height": row["height"],
                           "frames": row["frames"]}
                          for row in pack["quads"]["excluded"]],
+        },
+        "ness": {
+            "script_bank": NESS_SCRIPT_BANK[0],
+            "script_bank_sha256": NESS_SCRIPT_BANK[1],
+            "texture_bank": NESS_TEXTURE_BANK[0],
+            "texture_bank_sha256": NESS_TEXTURE_BANK[1],
+            "script_bank_bytes": len(pack["ness"]["script_payload"]),
+            "script_count": len(pack["ness"]["scripts"]),
+            "texture_count": len(pack["ness"]["textures"]),
+            "texture_rows": pack["ness"]["texture_rows"],
+            "quad_stride": NESS_QUAD_TEXTURE_STRIDE,
         },
         "whispy_native": {
             "asset_bytes": len(pack["whispy_native"]["payload"]),

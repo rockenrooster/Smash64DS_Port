@@ -203,4 +203,14 @@ void ftNessAppearEndSetStatus(GObj *fighter_gobj)
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftness/ftnessspecialn.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftness/ftnessspecialhi.c"
+
+/* BattleShip's generated reloc symbols are linker symbols on N64: taking
+ * `&ll...` yields the file-relative offset itself.  In this port the symbol is
+ * represented by a C `uintptr_t`, so taking its address would instead produce
+ * the RAM address of that variable and PSI Magnet would install a wild
+ * `special_coll` pointer as soon as it reaches Hold.  Recreate the source ABI
+ * for this one textual include without changing the decomp source. */
+#define llNessMainMotionLwAbsorbFTSpecialColl \
+    (*((uintptr_t *)(uintptr_t)0x16D4u))
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftness/ftnessspeciallw.c"
+#undef llNessMainMotionLwAbsorbFTSpecialColl

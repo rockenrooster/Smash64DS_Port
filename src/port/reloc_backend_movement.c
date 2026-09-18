@@ -51,6 +51,20 @@ extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
 
+/* Focused Ness regression driver.  It exists only in the bounded fast-logic
+ * proof when the ordinary proof descriptor selects Ness for human slot 0.
+ * The driver supplies controller input only; BattleShip still owns every
+ * status transition, article/effect spawn, collision and lifetime. */
+#if NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && NDS_HARNESS_FAST_LOGIC
+#define NDS_P2_NESS_SPECIAL_TOUR 1
+#include <nds/nds_particle_runtime.h>
+extern volatile u32 gNdsFtrRejectCountBySlot[];
+extern volatile u32 gNdsParticleSubmitOkCount;
+extern volatile u32 gNdsParticleSubmitFailCount;
+#else
+#define NDS_P2_NESS_SPECIAL_TOUR 0
+#endif
+
 extern void ndsIFCommonRecordHUDState(void);
 
 
@@ -4504,6 +4518,68 @@ volatile u32 gNdsLinkSpecialTourSpinObserved;
 volatile u32 gNdsLinkSpecialTourSpinDrawObserved;
 volatile u32 gNdsLinkSpecialTourDone;
 #endif
+#if NDS_P2_NESS_SPECIAL_TOUR
+enum NDSNessSpecialTourStep
+{
+    nNDSNessSpecialTourAwaitWait = 0,
+    nNDSNessSpecialTourAwaitPKFireStatus,
+    nNDSNessSpecialTourAwaitPKFireWeapon,
+    nNDSNessSpecialTourAwaitPKFireReturn,
+    nNDSNessSpecialTourAwaitUpWait,
+    nNDSNessSpecialTourAwaitUpStart,
+    nNDSNessSpecialTourAwaitUpHold,
+    nNDSNessSpecialTourAwaitUpReturn,
+    nNDSNessSpecialTourAwaitDownWait,
+    nNDSNessSpecialTourAwaitDownStart,
+    nNDSNessSpecialTourAwaitDownHold,
+    nNDSNessSpecialTourAwaitDownReturn,
+    nNDSNessSpecialTourDone
+};
+
+static u32 sNdsNessSpecialTourStep;
+static u32 sNdsNessSpecialTourFrames;
+static u32 sNdsNessSpecialTourWeaponSubmitBase;
+static u32 sNdsNessSpecialTourWeaponVisibleBase;
+static u32 sNdsNessSpecialTourWeaponTriangleBase;
+static u32 sNdsNessSpecialTourItemSubmitBase;
+static u32 sNdsNessSpecialTourItemVisibleBase;
+static u32 sNdsNessSpecialTourItemTriangleBase;
+static u32 sNdsNessSpecialTourParticleSubmitBase;
+static u32 sNdsNessSpecialTourParticleFailBase;
+static u32 sNdsNessSpecialTourFighterRejectBase;
+static u32 sNdsNessSpecialTourWeaponRejectBase;
+static u32 sNdsNessSpecialTourItemRejectBase;
+static u32 sNdsNessSpecialTourEffectRejectBase;
+
+volatile u32 gNdsNessSpecialTourPhase;
+volatile u32 gNdsNessSpecialTourFrames;
+volatile u32 gNdsNessSpecialTourInputCount;
+volatile u32 gNdsNessSpecialTourStatusMask;
+volatile u32 gNdsNessSpecialTourPKFireWeaponObserved;
+volatile u32 gNdsNessSpecialTourPKFireItemObserved;
+volatile u32 gNdsNessSpecialTourPKFireWeaponMObjObserved;
+volatile u32 gNdsNessSpecialTourPKFireWeaponDrawObserved;
+volatile u32 gNdsNessSpecialTourPKFireItemDrawObserved;
+volatile u32 gNdsNessSpecialTourPKFireParticleObserved;
+volatile u32 gNdsNessSpecialTourPKFireParticleDrawObserved;
+volatile u32 gNdsNessSpecialTourPKThunderHeadObserved;
+volatile u32 gNdsNessSpecialTourPKThunderTrailObserved;
+volatile u32 gNdsNessSpecialTourPKThunderHeadMObjObserved;
+volatile u32 gNdsNessSpecialTourPKThunderTrailMObjObserved;
+volatile u32 gNdsNessSpecialTourPsychicMagnetObserved;
+volatile u32 gNdsNessSpecialTourPsychicMagnetCollOffset;
+volatile u32 gNdsNessSpecialTourEffectAttachObserved;
+volatile u32 gNdsNessSpecialTourWeaponRefusalBase;
+volatile u32 gNdsNessSpecialTourWeaponRefusalDelta;
+volatile u32 gNdsNessSpecialTourWeaponHighWater;
+volatile u32 gNdsNessSpecialTourNativeFailureBase;
+volatile u32 gNdsNessSpecialTourNativeFailureDelta;
+volatile u32 gNdsNessSpecialTourFighterRejectDelta;
+volatile u32 gNdsNessSpecialTourWeaponRejectDelta;
+volatile u32 gNdsNessSpecialTourItemRejectDelta;
+volatile u32 gNdsNessSpecialTourEffectRejectDelta;
+volatile u32 gNdsNessSpecialTourDone;
+#endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
@@ -5767,6 +5843,20 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         return;
     }
 #endif
+#if NDS_P2_NESS_SPECIAL_TOUR
+    /* This tour proves specials, not Ness's entry.  His custom Appear ladder
+     * can run before the match-start common Entry reset, so Appear itself is
+     * not a stable ownership boundary.  Leave the whole entry sequence on the
+     * normal taskman and arm only after BattleShip naturally reaches Wait. */
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->game_status != nSCBattleGameStatusGo) ||
+        (p0->fkind != nFTKindNess) ||
+        (p0->status_id != nFTCommonStatusWait) ||
+        (p0->is_control_disable != FALSE))
+    {
+        return;
+    }
+#endif
 
     bzero(sNdsFighterNaturalMotionStates,
           sizeof(sNdsFighterNaturalMotionStates));
@@ -5954,6 +6044,50 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsLinkSpecialTourSpinObserved = 0u;
     gNdsLinkSpecialTourSpinDrawObserved = 0u;
     gNdsLinkSpecialTourDone = 0u;
+#endif
+#if NDS_P2_NESS_SPECIAL_TOUR
+    sNdsNessSpecialTourStep = nNDSNessSpecialTourAwaitWait;
+    sNdsNessSpecialTourFrames = 0u;
+    sNdsNessSpecialTourWeaponSubmitBase = gNdsWeaponRendererSubmitCount;
+    sNdsNessSpecialTourWeaponVisibleBase = gNdsWeaponRendererVisibleDrawCount;
+    sNdsNessSpecialTourWeaponTriangleBase = gNdsWeaponRendererTriangleCount;
+    sNdsNessSpecialTourItemSubmitBase = gNdsItemRendererSubmitCount;
+    sNdsNessSpecialTourItemVisibleBase = gNdsItemRendererVisibleDrawCount;
+    sNdsNessSpecialTourItemTriangleBase = gNdsItemRendererTriangleCount;
+    sNdsNessSpecialTourParticleSubmitBase = gNdsParticleSubmitOkCount;
+    sNdsNessSpecialTourParticleFailBase = gNdsParticleSubmitFailCount;
+    gNdsNessSpecialTourPhase = nNDSNessSpecialTourAwaitWait;
+    gNdsNessSpecialTourFrames = 0u;
+    gNdsNessSpecialTourInputCount = 0u;
+    gNdsNessSpecialTourStatusMask = 0u;
+    gNdsNessSpecialTourPKFireWeaponObserved = 0u;
+    gNdsNessSpecialTourPKFireItemObserved = 0u;
+    gNdsNessSpecialTourPKFireWeaponMObjObserved = 0u;
+    gNdsNessSpecialTourPKFireWeaponDrawObserved = 0u;
+    gNdsNessSpecialTourPKFireItemDrawObserved = 0u;
+    gNdsNessSpecialTourPKFireParticleObserved = 0u;
+    gNdsNessSpecialTourPKFireParticleDrawObserved = 0u;
+    gNdsNessSpecialTourPKThunderHeadObserved = 0u;
+    gNdsNessSpecialTourPKThunderTrailObserved = 0u;
+    gNdsNessSpecialTourPKThunderHeadMObjObserved = 0u;
+    gNdsNessSpecialTourPKThunderTrailMObjObserved = 0u;
+    gNdsNessSpecialTourPsychicMagnetObserved = 0u;
+    gNdsNessSpecialTourPsychicMagnetCollOffset = 0u;
+    gNdsNessSpecialTourEffectAttachObserved = 0u;
+    gNdsNessSpecialTourWeaponRefusalBase = gNdsWeaponPoolRefusalCount;
+    gNdsNessSpecialTourWeaponRefusalDelta = 0u;
+    gNdsNessSpecialTourWeaponHighWater = gNdsWeaponPoolLiveHighWater;
+    gNdsNessSpecialTourNativeFailureBase = gNdsRendererNativeFailure.count;
+    gNdsNessSpecialTourNativeFailureDelta = 0u;
+    sNdsNessSpecialTourFighterRejectBase = gNdsFtrRejectCountBySlot[0];
+    sNdsNessSpecialTourWeaponRejectBase = gNdsWeaponRendererRejectedDrawCount;
+    sNdsNessSpecialTourItemRejectBase = gNdsItemRendererRejectedDrawCount;
+    sNdsNessSpecialTourEffectRejectBase = gNdsEffectRendererRejectedDrawCount;
+    gNdsNessSpecialTourFighterRejectDelta = 0u;
+    gNdsNessSpecialTourWeaponRejectDelta = 0u;
+    gNdsNessSpecialTourItemRejectDelta = 0u;
+    gNdsNessSpecialTourEffectRejectDelta = 0u;
+    gNdsNessSpecialTourDone = 0u;
 #endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
@@ -10803,6 +10937,420 @@ static sb32 ndsLinkSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
 }
 #endif
 
+#if NDS_P2_NESS_SPECIAL_TOUR
+extern void osWritebackDCacheAll(void);
+extern void *gFTNessFileMainMotion;
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+extern void ndsHarnessFastPresentRequest(void);
+#endif
+
+__attribute__((noinline, used))
+void ndsNessSpecialTourProofStop(void)
+{
+    __asm__ volatile ("" ::: "memory");
+}
+
+static void ndsNessSpecialTourSetStep(u32 step)
+{
+    sNdsNessSpecialTourStep = step;
+    sNdsNessSpecialTourFrames = 0u;
+    gNdsNessSpecialTourPhase = step;
+}
+
+static void ndsNessSpecialTourObserveStatus(const FTStruct *ness)
+{
+    if (ness == NULL)
+    {
+        return;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialN) ||
+        (ness->status_id == nFTNessStatusSpecialAirN))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 0;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialHiStart) ||
+        (ness->status_id == nFTNessStatusSpecialAirHiStart))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 1;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialHiHold) ||
+        (ness->status_id == nFTNessStatusSpecialAirHiHold))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 2;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialHiEnd) ||
+        (ness->status_id == nFTNessStatusSpecialAirHiEnd))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 3;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialLwStart) ||
+        (ness->status_id == nFTNessStatusSpecialAirLwStart))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 4;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialLwHold) ||
+        (ness->status_id == nFTNessStatusSpecialAirLwHold))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 5;
+    }
+    if ((ness->status_id == nFTNessStatusSpecialLwEnd) ||
+        (ness->status_id == nFTNessStatusSpecialAirLwEnd))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 6;
+    }
+}
+
+static void ndsNessSpecialTourObserveArticles(void)
+{
+    GObj *gobj;
+
+    gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
+    while (gobj != NULL)
+    {
+        WPStruct *wp = wpGetStruct(gobj);
+
+        if (wp != NULL)
+        {
+            DObj *dobj = DObjGetStruct(gobj);
+
+            if (wp->kind == nWPKindPKFire)
+            {
+                gNdsNessSpecialTourPKFireWeaponObserved = 1u;
+                if ((dobj != NULL) && (dobj->mobj != NULL))
+                {
+                    gNdsNessSpecialTourPKFireWeaponMObjObserved = 1u;
+                }
+            }
+            else if (wp->kind == nWPKindPKThunderHead)
+            {
+                gNdsNessSpecialTourPKThunderHeadObserved = 1u;
+                if ((dobj != NULL) && (dobj->mobj != NULL))
+                {
+                    gNdsNessSpecialTourPKThunderHeadMObjObserved = 1u;
+                }
+            }
+            else if (wp->kind == nWPKindPKThunderTrail)
+            {
+                gNdsNessSpecialTourPKThunderTrailObserved = 1u;
+                if ((dobj != NULL) && (dobj->mobj != NULL))
+                {
+                    gNdsNessSpecialTourPKThunderTrailMObjObserved = 1u;
+                }
+            }
+        }
+        gobj = gobj->link_next;
+    }
+
+    gobj = gGCCommonLinks[nGCCommonLinkIDItem];
+    while (gobj != NULL)
+    {
+        ITStruct *ip = itGetStruct(gobj);
+
+        if ((ip != NULL) && (ip->kind == nITKindNessPKFire))
+        {
+            gNdsNessSpecialTourPKFireItemObserved = 1u;
+            if (ip->item_vars.pkfire.xf != NULL)
+            {
+                /* itNessPKFireMakeItem owns the pillar visual through Ness's
+                 * particle-bank script 0. A live transform proves that exact
+                 * source script survived allocation/registration and remains
+                 * attached to this item, rather than merely its hitbox living. */
+                gNdsNessSpecialTourPKFireParticleObserved = 1u;
+            }
+        }
+        gobj = gobj->link_next;
+    }
+
+    if ((sNdsNessSpecialTourStep <= nNDSNessSpecialTourAwaitPKFireReturn) &&
+        (gNdsNessSpecialTourPKFireWeaponObserved != 0u) &&
+        (gNdsWeaponRendererSubmitCount > sNdsNessSpecialTourWeaponSubmitBase) &&
+        (gNdsWeaponRendererVisibleDrawCount >
+            sNdsNessSpecialTourWeaponVisibleBase) &&
+        (gNdsWeaponRendererTriangleCount >
+            sNdsNessSpecialTourWeaponTriangleBase))
+    {
+        gNdsNessSpecialTourPKFireWeaponDrawObserved = 1u;
+    }
+    if ((sNdsNessSpecialTourStep <= nNDSNessSpecialTourAwaitPKFireReturn) &&
+        (gNdsNessSpecialTourPKFireItemObserved != 0u) &&
+        (gNdsItemRendererSubmitCount > sNdsNessSpecialTourItemSubmitBase) &&
+        (gNdsItemRendererVisibleDrawCount > sNdsNessSpecialTourItemVisibleBase) &&
+        (gNdsItemRendererTriangleCount > sNdsNessSpecialTourItemTriangleBase))
+    {
+        gNdsNessSpecialTourPKFireItemDrawObserved = 1u;
+    }
+    if ((sNdsNessSpecialTourStep <= nNDSNessSpecialTourAwaitPKFireReturn) &&
+        (gNdsNessSpecialTourPKFireItemObserved != 0u) &&
+        (gNdsNessSpecialTourPKFireParticleObserved != 0u) &&
+        (gNdsParticleSubmitOkCount > sNdsNessSpecialTourParticleSubmitBase) &&
+        (gNdsParticleSubmitFailCount == sNdsNessSpecialTourParticleFailBase))
+    {
+        gNdsNessSpecialTourPKFireParticleDrawObserved = 1u;
+    }
+}
+
+static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
+                                         s8 stick_x[2], s8 stick_y[2])
+{
+    FTStruct *ness = fp[0];
+    u32 phase_limit = 360u;
+
+    (void)stick_x;
+    if ((ness == NULL) || (ness->fkind != nFTKindNess))
+    {
+        return TRUE;
+    }
+
+    ndsNessSpecialTourObserveStatus(ness);
+    ndsNessSpecialTourObserveArticles();
+    gNdsNessSpecialTourPhase = sNdsNessSpecialTourStep;
+    gNdsNessSpecialTourFrames = ++sNdsNessSpecialTourFrames;
+    gNdsNessSpecialTourWeaponRefusalDelta =
+        gNdsWeaponPoolRefusalCount - gNdsNessSpecialTourWeaponRefusalBase;
+    gNdsNessSpecialTourWeaponHighWater = gNdsWeaponPoolLiveHighWater;
+    gNdsNessSpecialTourNativeFailureDelta =
+        gNdsRendererNativeFailure.count - gNdsNessSpecialTourNativeFailureBase;
+    gNdsNessSpecialTourFighterRejectDelta =
+        gNdsFtrRejectCountBySlot[0] - sNdsNessSpecialTourFighterRejectBase;
+    gNdsNessSpecialTourWeaponRejectDelta =
+        gNdsWeaponRendererRejectedDrawCount - sNdsNessSpecialTourWeaponRejectBase;
+    gNdsNessSpecialTourItemRejectDelta =
+        gNdsItemRendererRejectedDrawCount - sNdsNessSpecialTourItemRejectBase;
+    gNdsNessSpecialTourEffectRejectDelta =
+        gNdsEffectRendererRejectedDrawCount - sNdsNessSpecialTourEffectRejectBase;
+
+    if ((sNdsNessSpecialTourStep == nNDSNessSpecialTourAwaitUpHold) ||
+        (sNdsNessSpecialTourStep == nNDSNessSpecialTourAwaitUpReturn))
+    {
+        phase_limit = 720u;
+    }
+    if ((sNdsNessSpecialTourStep != nNDSNessSpecialTourDone) &&
+        (sNdsNessSpecialTourFrames > phase_limit))
+    {
+        osWritebackDCacheAll();
+        ndsNessSpecialTourProofStop();
+        return TRUE;
+    }
+
+    switch (sNdsNessSpecialTourStep)
+    {
+    case nNDSNessSpecialTourAwaitWait:
+        if ((fp[1] != NULL) &&
+            (ness->ga == nMPKineticsGround) &&
+            (fp[1]->ga == nMPKineticsGround) &&
+            (ness->is_control_disable == FALSE))
+        {
+            f32 dx = ndsFighterNaturalCombatPosX(fp[1]) -
+                ndsFighterNaturalCombatPosX(ness);
+            f32 y0 = ness->coll_data.p_translate->y;
+            f32 y1 = fp[1]->coll_data.p_translate->y;
+            f32 dy = y0 - y1;
+            f32 adx = (dx < 0.0F) ? -dx : dx;
+            u32 high_slot;
+
+            if (dy < 0.0F)
+            {
+                dy = -dy;
+            }
+
+            /* The direct-battle spawn can leave the two fighters grounded on
+             * different Dream Land platforms (observed Ness y=0, Fox y=904).
+             * PK Fire then quite correctly passes hundreds of world units
+             * below the target, so a horizontal-only approach cannot prove the
+             * hit-owned pillar. Drop whichever fighter is on the pass-through
+             * platform with the source's ordinary Down tap before closing X.
+             * No position, collision, or fighter state is written here. */
+            if (dy > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
+            {
+                high_slot = (y0 > y1) ? 0u : 1u;
+                if ((fp[high_slot]->status_id == nFTCommonStatusWait) &&
+                    ((fp[high_slot]->coll_data.floor_flags &
+                      MAP_VERTEX_COLL_PASS) != 0))
+                {
+                    stick_y[high_slot] = -80;
+                }
+                break;
+            }
+
+            /* PK Fire's source spark travels only for WPPKFIRE_LIFETIME and
+             * the pillar exists only on fighter hit. Walk naturally into a
+             * conservative hit window before pressing B; no position, damage,
+             * collision, or status is injected by the proof. */
+            if (adx > 600.0F)
+            {
+                stick_x[0] = (dx >= 0.0F) ? 80 : -80;
+                break;
+            }
+            if ((ness->status_id == nFTCommonStatusWait) &&
+                ((dx * ness->lr) < 0.0F))
+            {
+                stick_x[0] = (dx >= 0.0F) ? 40 : -40;
+                break;
+            }
+            if (ness->status_id != nFTCommonStatusWait)
+            {
+                break;
+            }
+            /* Baseline at the FIRST source special input, not at battle
+             * controller initialization.  Entry/countdown presentation can
+             * legitimately exercise unrelated owners before Ness is allowed
+             * to move; charging those failures to this tour made the special
+             * delta nonzero even when no post-input reject occurred. */
+            gNdsNessSpecialTourWeaponRefusalBase = gNdsWeaponPoolRefusalCount;
+            gNdsNessSpecialTourNativeFailureBase =
+                gNdsRendererNativeFailure.count;
+            sNdsNessSpecialTourFighterRejectBase = gNdsFtrRejectCountBySlot[0];
+            sNdsNessSpecialTourWeaponRejectBase =
+                gNdsWeaponRendererRejectedDrawCount;
+            sNdsNessSpecialTourEffectRejectBase =
+                gNdsEffectRendererRejectedDrawCount;
+            sNdsNessSpecialTourItemRejectBase =
+                gNdsItemRendererRejectedDrawCount;
+            sNdsNessSpecialTourParticleSubmitBase = gNdsParticleSubmitOkCount;
+            sNdsNessSpecialTourParticleFailBase = gNdsParticleSubmitFailCount;
+            button[0] = B_BUTTON;
+            gNdsNessSpecialTourInputCount++;
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitPKFireStatus);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitPKFireStatus:
+        if ((gNdsNessSpecialTourStatusMask & (1u << 0)) != 0u)
+        {
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitPKFireWeapon);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitPKFireWeapon:
+        /* A close-range source hit can create the pillar item and eject the
+         * spark weapon inside the same fast-logic update, before this observer
+         * gets another list walk. Treat either surviving source object as the
+         * hand-off witness; the pillar/particle checks below remain mandatory. */
+        if ((gNdsNessSpecialTourPKFireWeaponObserved != 0u) ||
+            (gNdsNessSpecialTourPKFireItemObserved != 0u))
+        {
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitPKFireReturn);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitPKFireReturn:
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+        if ((sNdsNessSpecialTourFrames <= 12u) &&
+            ((gNdsNessSpecialTourPKFireWeaponObserved != 0u) ||
+             (gNdsNessSpecialTourPKFireItemObserved != 0u)))
+        {
+            ndsHarnessFastPresentRequest();
+        }
+#endif
+        if ((ness->status_id == nFTCommonStatusWait) &&
+            (gNdsNessSpecialTourPKFireItemObserved != 0u) &&
+            (gNdsNessSpecialTourPKFireParticleDrawObserved != 0u))
+        {
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitUpWait);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitUpWait:
+        if ((ness->status_id == nFTCommonStatusWait) &&
+            (ness->ga == nMPKineticsGround))
+        {
+            button[0] = B_BUTTON;
+            stick_y[0] = 80;
+            gNdsNessSpecialTourInputCount++;
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitUpStart);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitUpStart:
+        if ((gNdsNessSpecialTourStatusMask & (1u << 1)) != 0u)
+        {
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitUpHold);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitUpHold:
+        if ((gNdsNessSpecialTourStatusMask & (1u << 2)) != 0u)
+        {
+            if (ness->status_vars.ness.specialhi.pkthunder_gobj != NULL)
+            {
+                gNdsNessSpecialTourPKThunderHeadObserved = 1u;
+            }
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitUpReturn);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitUpReturn:
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+        if ((sNdsNessSpecialTourFrames <= 12u) &&
+            (gNdsNessSpecialTourPKThunderHeadObserved != 0u))
+        {
+            ndsHarnessFastPresentRequest();
+        }
+#endif
+        if ((ness->status_id == nFTCommonStatusWait) &&
+            ((gNdsNessSpecialTourStatusMask & (1u << 2)) != 0u))
+        {
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitDownWait);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitDownWait:
+        if ((ness->status_id == nFTCommonStatusWait) &&
+            (ness->ga == nMPKineticsGround))
+        {
+            button[0] = B_BUTTON;
+            stick_y[0] = -80;
+            gNdsNessSpecialTourInputCount++;
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitDownStart);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitDownStart:
+        if ((gNdsNessSpecialTourStatusMask & (1u << 4)) != 0u)
+        {
+            button[0] = B_BUTTON;
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitDownHold);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitDownHold:
+        button[0] = B_BUTTON;
+        if ((gNdsNessSpecialTourStatusMask & (1u << 5)) != 0u)
+        {
+            uintptr_t base = (uintptr_t)gFTNessFileMainMotion;
+            uintptr_t coll = (uintptr_t)ness->special_coll;
+
+            gNdsNessSpecialTourPsychicMagnetObserved =
+                (ness->is_absorb != FALSE) ? 1u : 0u;
+            gNdsNessSpecialTourEffectAttachObserved =
+                (ness->is_effect_attach != FALSE) ? 1u : 0u;
+            if ((base != 0u) && (coll >= base))
+            {
+                gNdsNessSpecialTourPsychicMagnetCollOffset =
+                    (u32)(coll - base);
+            }
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitDownReturn);
+        }
+        break;
+    case nNDSNessSpecialTourAwaitDownReturn:
+        /* Release B. Source release_lag owns the minimum hold duration and the
+         * Start/Hold/End transitions remain untouched. */
+        if ((ness->status_id == nFTCommonStatusWait) &&
+            ((gNdsNessSpecialTourStatusMask & (1u << 6)) != 0u))
+        {
+            gNdsNessSpecialTourDone = 1u;
+            ndsNessSpecialTourSetStep(nNDSNessSpecialTourDone);
+            osWritebackDCacheAll();
+            ndsNessSpecialTourProofStop();
+        }
+        break;
+    case nNDSNessSpecialTourDone:
+    default:
+        break;
+    }
+    return TRUE;
+}
+#endif
+
 static sb32 ndsFighterNaturalCombatRecoverTeeter(FTStruct *fp[2], s8 stick[2])
 {
     u32 i;
@@ -10840,6 +11388,17 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
     button[0] = button[1] = 0u;
     stick[0] = stick[1] = 0;
     stick_y[0] = stick_y[1] = 0;
+
+#if NDS_P2_NESS_SPECIAL_TOUR
+    if (ndsNessSpecialTourApplyInput(fp, button, stick, stick_y) != FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
 
 #if NDS_P2_LINK_BOMB_TOUR
     if (ndsLinkBombTourApplyInput(fp, button, stick, stick_y) != FALSE)
