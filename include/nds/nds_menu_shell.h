@@ -130,6 +130,13 @@ void ndsMenuShellRunStageSelect(void);
 void ndsMenuShellRunItemSwitch(void);
 void ndsMenuShellRunVsOptions(void);
 
+/* P2-6. Native presentation sink for BattleShip's source 1P Mode menu.
+ * `mn1pmode.c` remains the sole behaviour owner; its draw seam publishes only
+ * the already-evaluated current option and whether A/START has selected it.
+ * Values are MN1PModeOptions (0..3). */
+void ndsMenuShellOnePlayerModePresent(u32 option, u32 is_selected);
+void ndsMenuShellOnePlayerModeExit(void);
+
 /* P2-6. Native presentation sink for the imported source 1P character-select
  * scene. BattleShip remains the ONLY behaviour owner: mnplayers1pgame.c moves
  * its cursor/puck, chooses fighters, edits time/difficulty/stock, changes

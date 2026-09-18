@@ -17,6 +17,7 @@ param(
     [ValidateRange(1, 600)][int]$BattlePresents = 8,
     [string]$Artifact = '',
     [string]$Screenshot = '',
+    [string]$ModeScreenshot = '',
     [string]$CssScreenshot = '',
     [string]$GoScreenshot = '',
     [string]$IntroScreenshot = '',
@@ -87,6 +88,10 @@ if ([string]::IsNullOrWhiteSpace($Screenshot)) {
 if ([string]::IsNullOrWhiteSpace($GoScreenshot)) {
     $GoScreenshot = Join-Path $root ('artifacts\\visibility\\' +
         (Get-Date -Format 'yyyy-MM-dd') + '_1p-go.png')
+}
+if ([string]::IsNullOrWhiteSpace($ModeScreenshot)) {
+    $ModeScreenshot = Join-Path $root ('artifacts\\\\visibility\\\\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_1p-mode.png')
 }
 if ([string]::IsNullOrWhiteSpace($CssScreenshot)) {
     $CssScreenshot = Join-Path $root ('artifacts\\visibility\\' +
@@ -214,6 +219,15 @@ $required = @(
     'sControllerPlaybackEnabled',
     'sControllerPlaybackConnectedMask',
     'sControllerPlaybackPads',
+    # Imported source 1P Mode state + native presentation witnesses.
+    'sMN1PModeOption',
+    'gNdsOnePlayerModeNativeEnterCount',
+    'gNdsOnePlayerModeNativePresentCount',
+    'gNdsOnePlayerModeNativeBaseBlitCount',
+    'gNdsOnePlayerModeNativeSurfaceFailCount',
+    'gNdsOnePlayerModeNativeLastOption',
+    'gNdsOnePlayerModeNativeLastSelected',
+    'gNdsOnePlayerModeNativeVisibleMask',
     # Imported source-CSS state is read for evidence only.
     'sMNPlayers1PGameLevelValue',
     'sMNPlayers1PGameStockValue',
@@ -395,6 +409,8 @@ try {
         'set $css_tick = 0',
         'set $css_native_base = 0',
         'set $mode_tick = 0',
+        'set $mode_shot = 0',
+        'set $mode_native_base = 0',
         'set $backdone = 0',
         'set $base_diff = 0',
         'set $base_stock = 0',
@@ -439,6 +455,9 @@ try {
         'end',
         'set $n = $n + 1'
     ) + $stopLines + @(
+        'if gSCManagerSceneData.scene_curr == 8',
+        'set $mode_native_base = gNdsRendererNativeFailure.count',
+        'end',
         'if gSCManagerSceneData.scene_curr == 17',
         'set $css_native_base = gNdsRendererNativeFailure.count',
         'set $cssvisits = $cssvisits + 1',
@@ -671,6 +690,15 @@ try {
         'set $frame_bp = $bpnum',
         'commands',
         'silent',
+        # The first source 1P Mode visit is driven by the built walk and lasts
+        # twelve source tics before A. Capture after several native presents,
+        # while the source still owns option 0 in ordinary Highlight state.
+        'if (gNdsSceneManagerCurrKind == 8) && ($mode_shot == 0) && (gNdsOnePlayerModeNativePresentCount >= 4)',
+        'set $mode_shot = 1',
+        'printf "CPMODEVIS source=%u enter=%u present=%u base=%u fail=%u mask=%x option=%u selected=%u native=%u native_delta=%u\n", sMN1PModeOption, gNdsOnePlayerModeNativeEnterCount, gNdsOnePlayerModeNativePresentCount, gNdsOnePlayerModeNativeBaseBlitCount, gNdsOnePlayerModeNativeSurfaceFailCount, gNdsOnePlayerModeNativeVisibleMask, gNdsOnePlayerModeNativeLastOption, gNdsOnePlayerModeNativeLastSelected, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$mode_native_base',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+         '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $ModeScreenshot + '"'),
+        'end',
         # After the built walk reaches source 1P CSS, drive only the existing
         # DTCM playback pad. Source menu code still performs every state change.
         'if $manual != 0',
@@ -1076,6 +1104,29 @@ $shot = ($text -match '(?m)^CPFRAME')
 $routeText = $scenes -join ','
 $routeOk = ($routeText -match '1,7,8,17,8,17,14,52')
 
+$modeVis = [regex]::Match($text,
+    '(?m)^CPMODEVIS source=(\d+) enter=(\d+) present=(\d+) base=(\d+) fail=(\d+) mask=([0-9a-fA-F]+) option=(\d+) selected=(\d+) native=(\d+) native_delta=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$modeShotOk = (Test-Path -LiteralPath $ModeScreenshot -PathType Leaf)
+$modeNativeOk = ($modeVis.Success -and
+    ([uint32]$modeVis.Groups[2].Value -ge 1u) -and
+    ([uint32]$modeVis.Groups[3].Value -ge 4u) -and
+    ([uint32]$modeVis.Groups[4].Value -ge 1u) -and
+    ([uint32]$modeVis.Groups[5].Value -eq 0u) -and
+    ([Convert]::ToUInt32($modeVis.Groups[6].Value, 16) -ne 0u) -and
+    ($modeVis.Groups[1].Value -eq $modeVis.Groups[7].Value) -and
+    ($modeVis.Groups[7].Value -eq '0') -and
+    ($modeVis.Groups[8].Value -eq '0') -and
+    ([uint32]$modeVis.Groups[10].Value -eq 0u) -and $modeShotOk)
+if ($modeVis.Success) {
+    Write-Output ('1P Mode native: source={0} entries={1} presents={2} base={3} fail={4} mask=0x{5} option={6} selected={7} native={8} native_delta={9}' -f
+        $modeVis.Groups[1].Value, $modeVis.Groups[2].Value,
+        $modeVis.Groups[3].Value, $modeVis.Groups[4].Value,
+        $modeVis.Groups[5].Value, $modeVis.Groups[6].Value,
+        $modeVis.Groups[7].Value, $modeVis.Groups[8].Value,
+        $modeVis.Groups[9].Value, $modeVis.Groups[10].Value)
+}
+
 $input = [regex]::Match($text,
     '(?m)^CPINPUT saw_css_a=(\d+) back=(\d+) cssvisits=(\d+) introaudio=(\d+) intro_bgm_calls=(\d+) intro_bgm_id=(-?\d+) intro_fgm_calls=(\d+) intro_fgm_last=(-?\d+)\s*$',
     [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
@@ -1192,7 +1243,8 @@ $goShotOk = (Test-Path -LiteralPath $GoScreenshot -PathType Leaf)
 $battleShotOk = (Test-Path -LiteralPath $Screenshot -PathType Leaf)
 
 if ($sawBattle -and $shot -and $saw1PMode -and $saw1PCss -and $routeOk -and
-    $inputOk -and $menuChanged -and $cssNativeOk -and $marioCommitted -and $battleContentOk -and
+    $modeNativeOk -and $inputOk -and $menuChanged -and $cssNativeOk -and
+    $marioCommitted -and $battleContentOk -and
     $stateOk -and $framesOk -and $heapOk -and $introAudioOk -and
     $introShotOk -and $goShotOk -and $battleShotOk) {
     Write-Output ('VERDICT: PASS 1P-Mario-vs-Link-Hyrule source-route GO-frames=' +
@@ -1214,6 +1266,8 @@ if (-not $saw1PMode) {
         '(src/nds/nds_menu_shell_core.c) through the playback pads; ' +
         'CPCTL published=0 means the edge never published, otherwise the ' +
         'scene_prev/InitVars option state refused it.')
+} elseif (-not $modeNativeOk) {
+    Write-Output ('seam: native 1P Mode presentation/capture failed; inspect CPMODEVIS and ' + $ModeScreenshot)
 } elseif (-not $menuChanged) {
     Write-Output 'seam: source 1P CSS input did not preserve difficulty/stock/costume changes; inspect CPCSSBASE/CPCSSMUT.'
 } elseif (-not $cssNativeOk) {

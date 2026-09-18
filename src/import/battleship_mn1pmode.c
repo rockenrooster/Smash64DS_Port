@@ -29,6 +29,8 @@
  *   src/port/title_backend.c:412 NDS_SCENE_STUB.
  */
 
+#include "nds_build_config.h"
+
 #if NDS_P2_1P_GAME
 
 #include <stdint.h>
@@ -36,6 +38,9 @@
 #include <PR/ultratypes.h>
 #include <gm/gmsound.h>
 #include <mn/menu.h>
+#if NDS_P2_MENU_SHELL
+#include <nds/nds_menu_shell.h>
+#endif
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -50,13 +55,34 @@
 #define mn1PModeStartScene ndsBaseMN1PModeStartScene
 void ndsBaseMN1PModeStartScene(void);
 
+static void ndsMN1PModeDraw(void);
+
+#define gcDrawAll ndsMN1PModeDraw
 #include "../../decomp/BattleShip-main/decomp/src/mn/mn1pmode/mn1pmode.c"
+#undef gcDrawAll
 
 #undef mn1PModeStartScene
+
+static void ndsMN1PModeDraw(void)
+{
+#if NDS_P2_MENU_SHELL
+    /* The source owns state and transitions; the DS owns presentation.  This
+     * menu has no 3D/display-time gameplay work, so do not run the retired N64
+     * sprite/RDP draw path just to discover that it cannot reach the panel. */
+    ndsMenuShellOnePlayerModePresent(
+        (u32)sMN1PModeOption,
+        (sMN1PModeIsProceedScene != FALSE) ? TRUE : FALSE);
+#else
+    gcDrawAll();
+#endif
+}
 
 void mn1PModeStartScene(void)
 {
     ndsBaseMN1PModeStartScene();
+#if NDS_P2_MENU_SHELL
+    ndsMenuShellOnePlayerModeExit();
+#endif
 }
 
 #endif /* NDS_P2_1P_GAME */

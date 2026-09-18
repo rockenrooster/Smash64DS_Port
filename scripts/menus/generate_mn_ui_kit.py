@@ -2107,6 +2107,112 @@ SURFACE_SOURCES = [
 
 
 # ---------------------------------------------------------------------------
+# P2-6 -- source 1P Mode menu, DS-native presentation.
+# ---------------------------------------------------------------------------
+#
+# `mn1pmode.c` remains the ONLY behaviour owner.  This is the four-row menu
+# reached from the main menu's 1P MODE entry: 1P GAME, TRAINING MODE,
+# BONUS 1 PRACTICE and BONUS 2 PRACTICE.  The source menu already owns cursor
+# movement/repeat, wrap, B-back, A/START selection, player assignment and every
+# scene transition.  These surfaces reproduce only its RDP/SObj presentation.
+#
+# The backdrop is the same MNCommon collage/decal construction used by the VS
+# rules screen, with the 1P-specific controller art and labels from MN1P.
+# mn1PModeMakeDecals (:531) builds the collage, two amber paper decals and the
+# dark controller at link 0; mn1PModeMakeLabels (:463) then draws the matching
+# translucent corner fill, SMASH logo, 1P label and GAME MODE label at link 1.
+# The two paper pieces and fill touch the source viewport's bottom/right edges,
+# so they carry the same full-panel bleed rule already derived for VS_BACKGROUND.
+ONEP_MODE_BACKGROUND = (
+    COLLAGE_FULL_BLEED,
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 140, 143, False,
+              (0xA0, 0x78, 0x14), bleed=("bottom",)),
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 225, 56, False,
+              (0xA0, 0x78, 0x14), bleed=("right",)),
+    Placement("MN1P", "llMN1PControllerIconDarkSprite", 10, 10, False,
+              (0x99, 0x99, 0x99)),
+    Placement("MNCommon", "", 225, 143, False,
+              fill=(0xA0, 0x78, 0x14, 0xE6), size=(86, 88),
+              bleed=("right", "bottom")),
+    Placement("MNCommon", "llMNCommonSmashLogoSprite", 235, 158, False,
+              (0x00, 0x00, 0x00)),
+    Placement("MN1P", "llMN1P1PTextSprite", 161, 194, False,
+              (0x00, 0x00, 0x00)),
+    Placement("MNCommon", "llMNCommonGameModeTextSprite", 188, 88, False,
+              (0x00, 0x00, 0x00)),
+)
+
+# mn1PModeSetOptionSpriteColors (:74) uses the exact same IA lerp convention as
+# the VS menu.  Remember the source's SYColorRGBPair names are inverted at the
+# RDP assignment site: pair.prim -> SObj envcolor, pair.env -> sprite RGB.
+ONEP_MODE_TAB_NOT = ((0x00, 0x00, 0x00), (0x82, 0x82, 0xAA))
+ONEP_MODE_TAB_HI = ((0x82, 0x00, 0x28), (0xFF, 0x00, 0x28))
+ONEP_MODE_TAB_SELECTED = ((0x00, 0x00, 0x00), (0xFF, 0xFF, 0xFF))
+
+# token, x, y, common-three-piece?, text symbol, text x/y, declared state box.
+# Positions/sizes are mn1PModeMake{1PGame,TrainingMode,Bonus1,Bonus2} (:139-257).
+ONEP_MODE_OPTIONS = (
+    ("GAME", 124, 42, True, "llMN1P1PGameTextSprite", 161, 46,
+     (124, 42, 160, 29)),
+    ("TRAINING", 99, 84, True, "llMN1PTrainingModeTextSprite", 107, 87,
+     (99, 84, 160, 29)),
+    ("BONUS1", 78, 126, False, "llMN1PBonus1PracticeTextSprite", 97, 127,
+     (78, 126, 160, 19)),
+    ("BONUS2", 67, 148, False, "llMN1PBonus2PracticeTextSprite", 86, 149,
+     (67, 148, 160, 19)),
+)
+
+
+def onep_mode_option_parts(option, state) -> tuple[Placement, ...]:
+    _token, x, y, common_tab, text_symbol, text_x, text_y, _box = option
+    env, prim = state
+    parts: list[Placement] = []
+    if common_tab:
+        # mn1PModeMakeOptionTab passes lrs=16, so the middle's authored 16-px
+        # RDP period repeats over 16*8 = 128 source pixels between 16-px caps.
+        parts.extend((
+            Placement("MNCommon", "llMNCommonOptionTabLeftSprite", x, y, False,
+                      prim, env=env),
+            Placement("MNCommon", "llMNCommonOptionTabMiddleSprite", x + 16, y,
+                      False, prim, env=env,
+                      tile=(16 * 8, 29), period=(16, None)),
+            Placement("MNCommon", "llMNCommonOptionTabRightSprite",
+                      x + 16 + (16 * 8), y, False, prim, env=env),
+        ))
+    else:
+        # The two BONUS rows use one authored 160x19 IA8 tab instead of the
+        # three-piece common tab (source comment at mn1pmode.c:107).
+        parts.append(Placement("MN1P", "llMN1POptionTabSprite", x, y, False,
+                               prim, env=env))
+    parts.append(Placement("MN1P", text_symbol, text_x, text_y, False,
+                           (0x00, 0x00, 0x00)))
+    return tuple(parts)
+
+
+# The resting plate has every row in source NOT colours; the runtime blits one
+# bounded HI patch for the source's current option.  Repeating input therefore
+# costs only two small state reads (old NOT + new HI), never a full-screen read.
+ONEP_MODE_SCREEN_PARTS = ONEP_MODE_BACKGROUND + tuple(
+    part
+    for option in ONEP_MODE_OPTIONS
+    for part in onep_mode_option_parts(option, ONEP_MODE_TAB_NOT)
+)
+SURFACE_SOURCES.append(SurfaceSpec(
+    "ONEP_MODE_SCREEN", ONEP_MODE_SCREEN_PARTS, MENU_FIELD))
+
+for _option in ONEP_MODE_OPTIONS:
+    _token, _x, _y, _common, _text, _tx, _ty, _box = _option
+    for _state_token, _state in (
+            ("NOT", ONEP_MODE_TAB_NOT),
+            ("HI", ONEP_MODE_TAB_HI),
+            ("SELECTED", ONEP_MODE_TAB_SELECTED)):
+        SURFACE_SOURCES.append(SurfaceSpec(
+            f"ONEP_MODE_{_token}_{_state_token}",
+            onep_mode_option_parts(_option, _state), MENU_FIELD,
+            under=ONEP_MODE_SCREEN_PARTS, box=_box))
+
+
+# ---------------------------------------------------------------------------
 # P2-1j -- the VS rules screen, owner finding (b): the source's OWN buttons.
 # ---------------------------------------------------------------------------
 #
