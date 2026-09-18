@@ -130,6 +130,28 @@ void ndsMenuShellRunStageSelect(void);
 void ndsMenuShellRunItemSwitch(void);
 void ndsMenuShellRunVsOptions(void);
 
+/* P2-6. Native presentation sink for the imported source 1P character-select
+ * scene. BattleShip remains the ONLY behaviour owner: mnplayers1pgame.c moves
+ * its cursor/puck, chooses fighters, edits time/difficulty/stock, changes
+ * costume and commits campaign state. Its draw seam publishes that already-
+ * evaluated state here so the DS can present the source art through the same
+ * generated UI kit as VS CSS instead of the retired N64 SObj compositor.
+ * Coordinates are in the source's 320x240 frame. */
+void ndsMenuShellOnePlayerCssPresent(s32 cursor_x, s32 cursor_y,
+                                     u32 cursor_status,
+                                     s32 puck_x, s32 puck_y,
+                                     u32 puck_visible,
+                                     s32 fkind, u32 time_setting,
+                                     u32 difficulty, u32 stock,
+                                     u32 fighter_mask, u32 ready_visible,
+                                     u32 total_tics);
+/* TRUE only while the native 1P CSS presenter owns the source scene's 2D
+ * output. The source object graph still runs because it owns menu behaviour;
+ * this is the narrow hand-off that prevents those already-represented SObjs
+ * and fill words from being diagnosed as missing native programs. */
+u32 ndsMenuShellOnePlayerCssOwnsSource2D(void);
+void ndsMenuShellOnePlayerCssExit(void);
+
 /* The shell's 2D CSS owns source fighter previews through a deliberately
  * bounded PlayersVS subset; these are implemented by the imported source TU.
  * P2-2 restores the source's full four-slot preview capacity while keeping the

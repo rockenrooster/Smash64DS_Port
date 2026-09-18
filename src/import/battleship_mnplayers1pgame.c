@@ -58,6 +58,8 @@
  *   bridge deletion above vs battleship_sc1pgame_runtime.c:105.
  */
 
+#include "nds_build_config.h"
+
 #if NDS_P2_1P_GAME
 
 #include <stdint.h>
@@ -68,6 +70,9 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_platform.h>
+#if NDS_P2_MENU_SHELL
+#include <nds/nds_menu_shell.h>
+#endif
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -142,6 +147,34 @@ static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj)
 static void ndsMNPlayers1PGameDraw(void)
 {
     GObj *fighter = sMNPlayers1PGameSlot.player;
+
+#if NDS_P2_MENU_SHELL
+    GObj *cursor = sMNPlayers1PGameSlot.cursor;
+    GObj *puck = sMNPlayers1PGameSlot.puck;
+    SObj *cursor_sobj = (cursor != NULL) ? SObjGetStruct(cursor) : NULL;
+    SObj *puck_sobj = (puck != NULL) ? SObjGetStruct(puck) : NULL;
+
+    if ((cursor_sobj != NULL) && (puck_sobj != NULL))
+    {
+        u32 ready_visible =
+            ((sMNPlayers1PGameSlot.is_fighter_selected != FALSE) &&
+             (sMNPlayers1PGameReadyBlinkWait < 30)) ? TRUE : FALSE;
+
+        ndsMenuShellOnePlayerCssPresent(
+            (s32)cursor_sobj->pos.x, (s32)cursor_sobj->pos.y,
+            (u32)sMNPlayers1PGameSlot.cursor_status,
+            (s32)puck_sobj->pos.x, (s32)puck_sobj->pos.y,
+            ((puck->flags & GOBJ_FLAG_HIDDEN) == 0u) ? TRUE : FALSE,
+            (s32)sMNPlayers1PGameSlot.fkind,
+            (u32)sMNPlayers1PGameTimeSetting,
+            (u32)sMNPlayers1PGameLevelValue,
+            (u32)sMNPlayers1PGameStockValue,
+            (u32)sMNPlayers1PGameFighterMask,
+            ready_visible,
+            (u32)sMNPlayers1PGameTotalTimeTics);
+    }
+#endif
+
     ndsPlatformSet3DLayerEnabled((fighter != NULL) &&
         ((fighter->flags & GOBJ_FLAG_HIDDEN) == 0u));
     ndsPlatformSet3DViewportSource(10, 10, 310, 230);
@@ -158,6 +191,9 @@ void mnPlayers1PGameStartScene(void)
      * when non-NULL. Reentry would eject the torn-down GObj, so null it. */
     sMNPlayers1PGameTimeGObj = NULL;
     ndsBaseMNPlayers1PGameStartScene();
+#if NDS_P2_MENU_SHELL
+    ndsMenuShellOnePlayerCssExit();
+#endif
     ndsFighterManagerRegisterDisplayFighter(NULL, (u32)sMNPlayers1PGameManPlayer);
 }
 

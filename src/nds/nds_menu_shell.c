@@ -7,6 +7,7 @@
 
 #if NDS_P2_MENU_SHELL
 #include "nds_menu_shell_core.c"
+#include "nds_menu_shell_onep.c"
 #include "nds_menu_shell_mode_vs.c"
 #include "nds_menu_shell_css.c"
 #include "nds_menu_shell_sss.c"

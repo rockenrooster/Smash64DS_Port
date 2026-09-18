@@ -17,6 +17,7 @@ param(
     [ValidateRange(1, 600)][int]$BattlePresents = 8,
     [string]$Artifact = '',
     [string]$Screenshot = '',
+    [string]$CssScreenshot = '',
     [string]$GoScreenshot = '',
     [string]$IntroScreenshot = '',
     [switch]$TransitionProof,
@@ -86,6 +87,10 @@ if ([string]::IsNullOrWhiteSpace($Screenshot)) {
 if ([string]::IsNullOrWhiteSpace($GoScreenshot)) {
     $GoScreenshot = Join-Path $root ('artifacts\\visibility\\' +
         (Get-Date -Format 'yyyy-MM-dd') + '_1p-go.png')
+}
+if ([string]::IsNullOrWhiteSpace($CssScreenshot)) {
+    $CssScreenshot = Join-Path $root ('artifacts\\visibility\\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_1p-css.png')
 }
 if ($TransitionProof -and [string]::IsNullOrWhiteSpace($TallyScreenshot)) {
     $TallyScreenshot = Join-Path $root ('artifacts\\visibility\\' +
@@ -175,6 +180,7 @@ $required = @(
     'gNdsPreviewPackDataBytes',
     'gNdsPreviewPackFailure',
     'gNdsPreviewPackFailureKind',
+    'gNdsRendererNativeFailure',
     'gNdsBattleCoreExternPatchCount',
     'gNdsBattleCoreExternLoadCount',
     'gNdsBattleCoreForeignImageBytes',
@@ -211,7 +217,16 @@ $required = @(
     # Imported source-CSS state is read for evidence only.
     'sMNPlayers1PGameLevelValue',
     'sMNPlayers1PGameStockValue',
-    'sMNPlayers1PGameSlot'
+    'sMNPlayers1PGameSlot',
+    'gNdsOnePlayerCssNativeEnterCount',
+    'gNdsOnePlayerCssNativePresentCount',
+    'gNdsOnePlayerCssNativeBaseBlitCount',
+    'gNdsOnePlayerCssNativeSurfaceFailCount',
+    'gNdsOnePlayerCssNativeLastFkind',
+    'gNdsOnePlayerCssNativeLastDifficulty',
+    'gNdsOnePlayerCssNativeLastStock',
+    'gNdsOnePlayerCssNativeLastTime',
+    'gNdsOnePlayerCssNativeVisibleMask'
 )
 if ($TransitionProof) {
     $required += @(
@@ -378,6 +393,7 @@ try {
         'set $manual = 0',
         'set $cssvisits = 0',
         'set $css_tick = 0',
+        'set $css_native_base = 0',
         'set $mode_tick = 0',
         'set $backdone = 0',
         'set $base_diff = 0',
@@ -424,6 +440,7 @@ try {
         'set $n = $n + 1'
     ) + $stopLines + @(
         'if gSCManagerSceneData.scene_curr == 17',
+        'set $css_native_base = gNdsRendererNativeFailure.count',
         'set $cssvisits = $cssvisits + 1',
         'set $css_tick = 0',
         'if $cssvisits == 1',
@@ -711,6 +728,9 @@ try {
         'if ($css_tick == 160) && ($css_mut_printed == 0)',
         'set $css_mut_printed = 1',
         'printf "CPCSSMUT base_diff=%u diff=%u base_stock=%u stock=%u base_costume=%u fkind=%d costume=%u selected=%u back=%u\n", $base_diff, sMNPlayers1PGameLevelValue, $base_stock, sMNPlayers1PGameStockValue, $base_costume, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, sMNPlayers1PGameSlot.is_fighter_selected, $backdone',
+        'printf "CPCSSVIS enter=%u present=%u base=%u fail=%u mask=%x fkind=%u diff=%u stock=%u time=%u native=%u native_delta=%u\n", gNdsOnePlayerCssNativeEnterCount, gNdsOnePlayerCssNativePresentCount, gNdsOnePlayerCssNativeBaseBlitCount, gNdsOnePlayerCssNativeSurfaceFailCount, gNdsOnePlayerCssNativeVisibleMask, gNdsOnePlayerCssNativeLastFkind, gNdsOnePlayerCssNativeLastDifficulty, gNdsOnePlayerCssNativeLastStock, gNdsOnePlayerCssNativeLastTime, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$css_native_base',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+         '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $CssScreenshot + '"'),
         'end',
         'if ($css_tick == 180) || ($css_tick == 181)',
         'set variable sControllerPlaybackPads[0].button = 0x1000',
@@ -744,6 +764,9 @@ try {
         'if ($css_tick == 135) && ($css_mut_printed == 0)',
         'set $css_mut_printed = 1',
         'printf "CPCSSMUT base_diff=%u diff=%u base_stock=%u stock=%u base_costume=%u fkind=%d costume=%u selected=%u back=%u\n", $base_diff, sMNPlayers1PGameLevelValue, $base_stock, sMNPlayers1PGameStockValue, $base_costume, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, sMNPlayers1PGameSlot.is_fighter_selected, $backdone',
+        'printf "CPCSSVIS enter=%u present=%u base=%u fail=%u mask=%x fkind=%u diff=%u stock=%u time=%u native=%u native_delta=%u\n", gNdsOnePlayerCssNativeEnterCount, gNdsOnePlayerCssNativePresentCount, gNdsOnePlayerCssNativeBaseBlitCount, gNdsOnePlayerCssNativeSurfaceFailCount, gNdsOnePlayerCssNativeVisibleMask, gNdsOnePlayerCssNativeLastFkind, gNdsOnePlayerCssNativeLastDifficulty, gNdsOnePlayerCssNativeLastStock, gNdsOnePlayerCssNativeLastTime, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$css_native_base',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+         '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $CssScreenshot + '"'),
         'end',
         'if ($css_tick == 160) || ($css_tick == 161)',
         'set variable sControllerPlaybackPads[0].button = 0x1000',
@@ -1075,6 +1098,30 @@ if ($mut.Success) {
         $mut.Groups[6].Value, $mut.Groups[9].Value)
 }
 
+$cssVis = [regex]::Match($text,
+    '(?m)^CPCSSVIS enter=(\d+) present=(\d+) base=(\d+) fail=(\d+) mask=([0-9a-fA-F]+) fkind=(\d+) diff=(\d+) stock=(\d+) time=(\d+) native=(\d+) native_delta=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$cssShotOk = (Test-Path -LiteralPath $CssScreenshot -PathType Leaf)
+$cssNativeOk = ($cssVis.Success -and
+    ([uint32]$cssVis.Groups[1].Value -ge 2u) -and
+    ([uint32]$cssVis.Groups[2].Value -gt 0u) -and
+    ([uint32]$cssVis.Groups[3].Value -ge 2u) -and
+    ([uint32]$cssVis.Groups[4].Value -eq 0u) -and
+    ([Convert]::ToUInt32($cssVis.Groups[5].Value, 16) -ne 0u) -and
+    ($cssVis.Groups[6].Value -eq '0') -and
+    ($cssVis.Groups[7].Value -eq $mut.Groups[2].Value) -and
+    ($cssVis.Groups[8].Value -eq $mut.Groups[4].Value) -and
+    ([uint32]$cssVis.Groups[11].Value -eq 0u) -and $cssShotOk)
+if ($cssVis.Success) {
+    Write-Output ('1P CSS native: entries={0} presents={1} base={2} fail={3} mask=0x{4} fkind={5} diff={6} stock={7} time={8} native={9} native_delta={10}' -f
+        $cssVis.Groups[1].Value, $cssVis.Groups[2].Value,
+        $cssVis.Groups[3].Value, $cssVis.Groups[4].Value,
+        $cssVis.Groups[5].Value, $cssVis.Groups[6].Value,
+        $cssVis.Groups[7].Value, $cssVis.Groups[8].Value,
+        $cssVis.Groups[9].Value, $cssVis.Groups[10].Value,
+        $cssVis.Groups[11].Value)
+}
+
 # The 1P-owned select state names the fighter and menu state actually committed.
 $css1p = [regex]::Match($text,
     '(?m)^CP1P \d+ player=(\d+) fkind=(\d+) costume=(\d+) diff=(\d+) stocks=(\d+) stage=(\d+).*$',
@@ -1145,7 +1192,7 @@ $goShotOk = (Test-Path -LiteralPath $GoScreenshot -PathType Leaf)
 $battleShotOk = (Test-Path -LiteralPath $Screenshot -PathType Leaf)
 
 if ($sawBattle -and $shot -and $saw1PMode -and $saw1PCss -and $routeOk -and
-    $inputOk -and $menuChanged -and $marioCommitted -and $battleContentOk -and
+    $inputOk -and $menuChanged -and $cssNativeOk -and $marioCommitted -and $battleContentOk -and
     $stateOk -and $framesOk -and $heapOk -and $introAudioOk -and
     $introShotOk -and $goShotOk -and $battleShotOk) {
     Write-Output ('VERDICT: PASS 1P-Mario-vs-Link-Hyrule source-route GO-frames=' +
@@ -1169,6 +1216,8 @@ if (-not $saw1PMode) {
         'scene_prev/InitVars option state refused it.')
 } elseif (-not $menuChanged) {
     Write-Output 'seam: source 1P CSS input did not preserve difficulty/stock/costume changes; inspect CPCSSBASE/CPCSSMUT.'
+} elseif (-not $cssNativeOk) {
+    Write-Output ('seam: native 1P CSS presentation/capture failed; inspect CPCSSVIS and ' + $CssScreenshot)
 } elseif (-not $marioCommitted) {
     Write-Output 'seam: source 1P CSS did not commit Mario plus the changed menu state; inspect CP1P/CPCSSMUT.'
 } elseif (-not $introAudioOk) {

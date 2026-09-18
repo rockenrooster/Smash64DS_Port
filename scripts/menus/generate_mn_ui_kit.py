@@ -2403,6 +2403,148 @@ def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]
 SURFACE_SOURCES.append(
     SurfaceSpec("CSS_SCREEN", css_screen_parts(), MENU_FIELD))
 
+# ---------------------------------------------------------------------------
+# P2-6 -- source 1P character select, DS-native presentation.
+# ---------------------------------------------------------------------------
+#
+# `mnplayers1pgame.c` owns the behaviour of this scene.  Its portrait grid is
+# the same MNPlayersPortraits artwork as VS CSS, but its lower panel and right
+# settings column are different source assets.  The imported scene still owns
+# cursor hit tests, fighter selection, difficulty, stock, costume, START/B and
+# campaign state; these surfaces are only its native DS presentation sink.
+#
+# Do NOT reuse css_screen_parts() here: that helper deliberately adds the
+# project's "in progress" scrim/question-mark treatment to VS portraits.  1P's
+# source scene has no such state.  It shows the real portrait for every
+# unlocked fighter and uses the four retail locked stacks separately.
+def onep_css_screen_parts() -> tuple[Placement, ...]:
+    parts: list[Placement] = [STONE_FULL_BLEED]
+    for portrait in range(12):
+        x, y = css_portrait_pos(portrait)
+        fkind = CSS_PORTRAIT_FKIND[portrait]
+        parts.append(Placement(
+            "MNPlayersPortraits", "llMNPlayersPortraitsPortraitFireBgSprite",
+            x, y, False))
+        parts.append(Placement(
+            "MNPlayersPortraits", CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
+
+    # mnPlayers1PGameMakeGate (:880): the 1P-specific 82x91 red card at
+    # (25,127), then the black 1P tag at (33,132).  The card's authored LUT is
+    # byte-for-byte the GateMan1P LUT the source assigns at runtime, so no
+    # cross-file palette override is required by this single-controller path.
+    parts.extend((
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeRedCardSprite",
+                  25, 127, False),
+        Placement("MNPlayersCommon", "llMNPlayersCommon1PTextSprite",
+                  33, 132, False, (0x00, 0x00, 0x00)),
+
+        # mnPlayers1PGameMakeLabels (:1350).  These are static for the life of
+        # the scene; time, difficulty and stock themselves are separate states
+        # below so changing one does not re-read this full-screen surface.
+        Placement("MNPlayers1PMode", "llMNPlayers1PMode1PlayerGameTextSprite",
+                  27, 24, False, (0xE3, 0xAC, 0x04)),
+        Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
+                  244, 23, False),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeOptionTextSprite",
+                  180, 129, False, (0xAF, 0xB1, 0xCC),
+                  env=(0x00, 0x00, 0x00)),
+        # The source draws this 192x32 I4 strip over a 184x64 rectangle with
+        # maskt=5.  The DS bake repeats the 32-row authored period for the
+        # second half; the source MIRROR bit affects only that border texture,
+        # not any control or hit-test geometry.
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeOptionOutlineSprite",
+                  128, 141, False, (0x57, 0x60, 0x88),
+                  tile=(184, 64), period=(None, 32)),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeLevelColonTextSprite",
+                  145, 159, False, (0xC5, 0xB6, 0xA7)),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeStockColonTextSprite",
+                  144, 179, False, (0xC5, 0xB6, 0xA7)),
+        # mnPlayers1PGameLabelsProcDisplay (:1058): separator fill before the
+        # label sprites.  gDPFillRectangle's endpoint is the source viewport
+        # edge; clipping the 163x5 source rectangle at the DS panel is exact.
+        Placement("MNPlayers1PMode", "", 157, 136, False,
+                  fill=(0x57, 0x60, 0x88, 0xFF), size=(163, 5)),
+    ))
+    return tuple(parts)
+
+
+SURFACE_SOURCES.append(SurfaceSpec(
+    "ONEP_CSS_SCREEN", onep_css_screen_parts(), MENU_FIELD))
+
+# The source time selector has exactly two reachable values: 5 and INFINITE
+# (`mnPlayers1PGameGet{Next,Prev}TimeValue`, :3300).  Bake the two complete
+# states from its own dark digit/Infinity sprites so runtime switching is one
+# small opaque restore rather than OBJ approximation.
+ONEP_TIME_BOX = (140, 22, 90, 16)
+for _token, _symbol, _x, _y in (
+        ("5", "llMNPlayersCommon5DarkSprite", 196, 23),
+        ("INF", "llMNPlayersCommonInfinityDarkSprite", 194, 24)):
+    SURFACE_SOURCES.append(SurfaceSpec(
+        f"ONEP_TIME_{_token}",
+        (Placement("MNPlayersCommon", "llMNPlayersCommonTimeSelectorSprite",
+                   140, 22, False),
+         Placement("MNPlayersCommon", _symbol, _x, _y, False,
+                   (0xFF, 0xFF, 0xFF), env=(0x32, 0x1C, 0x0E))),
+        None, under=onep_css_screen_parts(), box=ONEP_TIME_BOX))
+
+# mnPlayers1PGameMakeLevel (:1192): source spelling, position and colour for
+# all five difficulty states.  Arrows remain live OBJ images in the presenter.
+ONEP_LEVEL_BOX = (190, 155, 90, 20)
+ONEP_LEVEL_STATES = (
+    ("VERY_EASY", "llMNPlayersDifficultyVeryEasyTextSprite", 204,
+     (0x41, 0x6F, 0xE4)),
+    ("EASY", "llMNPlayersDifficultyEasyTextSprite", 219,
+     (0x8D, 0xBB, 0x5A)),
+    ("NORMAL", "llMNPlayersDifficultyNormalTextSprite", 209,
+     (0xE4, 0xBE, 0x41)),
+    ("HARD", "llMNPlayersDifficultyHardTextSprite", 219,
+     (0xE4, 0x78, 0x41)),
+    ("VERY_HARD", "llMNPlayersDifficultyVeryHardTextSprite", 205,
+     (0xE4, 0x41, 0x41)),
+)
+for _token, _symbol, _x, _rgb in ONEP_LEVEL_STATES:
+    SURFACE_SOURCES.append(SurfaceSpec(
+        f"ONEP_LEVEL_{_token}",
+        (Placement("MNPlayersDifficulty", _symbol, _x, 159, False, _rgb),),
+        None, under=onep_css_screen_parts(), box=ONEP_LEVEL_BOX))
+
+# The single source gate occupies a fixed lower-left box.  Its card and 1P tag
+# live in ONEP_CSS_SCREEN; these state surfaces restore that base then add the
+# source series emblem/name for the currently hovered/selected fighter.
+ONEP_GATE_BOX = (25, 127, 90, 92)
+ONEP_FIGHTER_TOKEN = (
+    "MARIO", "FOX", "DONKEY", "SAMUS", "LUIGI", "LINK",
+    "YOSHI", "CAPTAIN", "KIRBY", "PIKACHU", "PURIN", "NESS",
+)
+ONEP_EMBLEM_SYMBOL = (
+    "llFTEmblemSpritesMarioSprite", "llFTEmblemSpritesFoxSprite",
+    "llFTEmblemSpritesDonkeySprite", "llFTEmblemSpritesMetroidSprite",
+    "llFTEmblemSpritesMarioSprite", "llFTEmblemSpritesZeldaSprite",
+    "llFTEmblemSpritesYoshiSprite", "llFTEmblemSpritesFZeroSprite",
+    "llFTEmblemSpritesKirbySprite", "llFTEmblemSpritesPMonstersSprite",
+    "llFTEmblemSpritesPMonstersSprite", "llFTEmblemSpritesMotherSprite",
+)
+ONEP_NAME_SYMBOL = (
+    "llMNPlayersCommonMarioTextSprite", "llMNPlayersCommonFoxTextSprite",
+    "llMNPlayersCommonDKTextSprite", "llMNPlayersCommonSamusTextSprite",
+    "llMNPlayersCommonLuigiTextSprite", "llMNPlayersCommonLinkTextSprite",
+    "llMNPlayersCommonYoshiTextSprite",
+    "llMNPlayersCommonCaptainFalconTextSprite",
+    "llMNPlayersCommonKirbyTextSprite", "llMNPlayersCommonPikachuTextSprite",
+    "llMNPlayersCommonJigglypuffTextSprite", "llMNPlayersCommonNessTextSprite",
+)
+SURFACE_SOURCES.append(SurfaceSpec(
+    "ONEP_GATE_EMPTY", (), None, under=onep_css_screen_parts(),
+    box=ONEP_GATE_BOX))
+for _fkind, _token in enumerate(ONEP_FIGHTER_TOKEN):
+    SURFACE_SOURCES.append(SurfaceSpec(
+        f"ONEP_GATE_{_token}",
+        (Placement("FTEmblemSprites", ONEP_EMBLEM_SYMBOL[_fkind],
+                   35, 144, False, (0x00, 0x00, 0x00)),
+         Placement("MNPlayersCommon", ONEP_NAME_SYMBOL[_fkind],
+                   33, 202, False)),
+        None, under=onep_css_screen_parts(), box=ONEP_GATE_BOX))
+
 # The SAVE-locked cell, once per lockable fighter rather than once per plate
 # copy.  mnPlayersVSCheckFighterLocked gates exactly Luigi, Ness, Captain and
 # Purin on the save mask (:296-314) -- every other fkind takes the
@@ -2667,6 +2809,17 @@ SURFACE_SOURCES.append(SurfaceSpec(
     None, under=css_screen_parts(), box=CSS_READY_BOX))
 SURFACE_SOURCES.append(SurfaceSpec(
     "CSS_READY_OFF", (), None, under=css_screen_parts(), box=CSS_READY_BOX))
+
+# 1P uses the same READY banner/text sprites and 40/30 visibility rule as the
+# VS CSS (`mnPlayers1PGameMakeReady`, :3152).  Give it its own restore base so
+# toggling the banner never paints VS-only portrait treatment into the 1P
+# screen underneath.
+SURFACE_SOURCES.append(SurfaceSpec(
+    "ONEP_READY_ON", CSS_READY_PARTS, None,
+    under=onep_css_screen_parts(), box=CSS_READY_BOX))
+SURFACE_SOURCES.append(SurfaceSpec(
+    "ONEP_READY_OFF", (), None,
+    under=onep_css_screen_parts(), box=CSS_READY_BOX))
 
 # The band GObj above is display link 38 through mnPlayersVSMakeReadyCamera
 # (priority 10), whereas PRESS/START below it is display link 28 through the
