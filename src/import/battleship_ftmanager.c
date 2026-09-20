@@ -275,7 +275,7 @@ void ftManagerSetupFilesAllKind(s32 fkind)
         FTData *data = dFTManagerDataFiles[fkind];
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((preview == 2) &&
-            (gNdsSceneManagerCurrIsBattle != 0u))
+            (ndsRelocUseBattleCoreFighterData() != FALSE))
         {
             /* FPC1 publishes Main before the source's separately resident
              * MainMotion/special/article dependencies exist.  Recreate the

@@ -77,6 +77,8 @@ _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
 
 #if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
+/* Results uses the same full-motion fighter data, not the idle-preview pack. */
+u32 ndsRelocUseBattleCoreFighterData(void);
 /* Only native production's original-offset image references use this seam;
  * ordinary relocated MObj pointers already address the compact bytes. */
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset);

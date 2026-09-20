@@ -4,6 +4,16 @@
 #include <nds/nds_scene_manager.h>
 #include <stdio.h>
 
+u32 ndsRelocUseBattleCoreFighterData(void)
+{
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    return (gNdsSceneManagerCurrIsBattle != 0u) ||
+           (gSCManagerSceneData.scene_curr == nSCKindVSResults);
+#else
+    return FALSE;
+#endif
+}
+
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 typedef struct NDSBattleForeignImageRow {
     u16 asset_id;
@@ -192,7 +202,7 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
     if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-        && (gNdsSceneManagerCurrIsBattle == 0u)
+        && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
        )
     {
@@ -337,7 +347,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
          (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-         && (gNdsSceneManagerCurrIsBattle == 0u)
+         && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
         ) ||
         ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return FALSE; }
@@ -349,7 +359,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-    if (gNdsSceneManagerCurrIsBattle != 0u)
+    if (ndsRelocUseBattleCoreFighterData() != FALSE)
     {
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
@@ -550,7 +560,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     u32 i;
 
     if (((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
-        (gNdsSceneManagerCurrIsBattle == 0u))
+        (ndsRelocUseBattleCoreFighterData() == FALSE))
     {
         return FALSE;
     }

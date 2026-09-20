@@ -99,6 +99,7 @@ def extract_real():
         "fileoff": function(SRC, "ndsPreviewFileOffset"),
         "sourcesize": function(SRC, "ndsRelocNativeSourceSize"),
         "rootoff": function(SRC, "ndsRelocNativeRootOffset"),
+        "battle_scene": function(SRC, "ndsRelocUseBattleCoreFighterData"),
         "assetaddr": function(SRC, "ndsRelocNativeAssetAddress"),
     }
     if "16777619u" not in out["hash"]:
@@ -173,9 +174,11 @@ typedef struct NDSPreviewResident {
 static NDSPreviewResident sNdsPreviewResidents[12];
 static u32 sNdsRelocSceneGeneration = 7u;
 /* Stub scene gate values (test only; production uses the real scene enum). */
-enum { nSCKind1PGamePlayers = 0xA5u, nSCKindPlayersVS = 0xA6u,
+enum { nSCKind1PGamePlayers = 0xA5u, nSCKindPlayersVS = 0xA6u, nSCKindVSResults = 0xA7u,
        nSCKindOther = 0x00u };
 static struct { u8 scene_curr; u8 scene_prev; } gSCManagerSceneData;
+#define NDS_P2_COMPACT_BATTLE_FIGHTERS 1
+static u32 gNdsSceneManagerCurrIsBattle;
 
 /* Portable native-32 read (stub seam; production adds an aligned fast path). */
 static u32 ndsRelocReadNative32(const void *addr)
@@ -408,10 +411,20 @@ int main(void)
               (const void *)(sec0 + 100u), "VS preview main maps");
         CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) == NULL,
               "VS preview overrun NULL");
-        /* Other scenes never remap. */
+        /* Results needs the full battle pack and its compact address mapping. */
+        gSCManagerSceneData.scene_curr = (u8)nSCKindVSResults;
+        CHECK(ndsRelocUseBattleCoreFighterData(), "Results uses battle core");
+        CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) == NULL,
+              "Results compact overrun NULL");
+        /* Unrelated scenes never remap, unless their battle role is active. */
         gSCManagerSceneData.scene_curr = (u8)nSCKindOther;
+        CHECK(!ndsRelocUseBattleCoreFighterData(), "other scene is not battle core");
         CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) ==
               (const void *)(sec0 + 1904u), "non-1P identity");
+        gNdsSceneManagerCurrIsBattle = 1u;
+        CHECK(ndsRelocUseBattleCoreFighterData(), "battle uses battle core");
+        CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) == NULL, "battle compact overrun NULL");
+        gNdsSceneManagerCurrIsBattle = 0u;
         gSCManagerSceneData.scene_curr = (u8)nSCKind1PGamePlayers;
         free(sec0); free(b);
     }
@@ -474,6 +487,7 @@ def build_source():
         real["fileoff"],
         real["sourcesize"],
         real["rootoff"],
+        real["battle_scene"],
         real["assetaddr"],
         HOST_MAIN,
     ])

@@ -76,21 +76,14 @@ try {
         -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort `
         -Arm7Port $context.Arm7Port `
         -Persistent:([bool]$context.PersistentConfig) -MuteAudio
-    # WindowStyle: visible-by-design -- the window IS the instrument here. A
-    # hidden melonDS has no MainWindowHandle, so the capture below would throw
-    # (or, worse, write a blank surface) while the emulation ran perfectly.
+    # Start hidden; the shared capture helper locates the owned window at the stop.
     $emulator = Start-Process -FilePath $context.MelonDSPath -ArgumentList $rom `
         -WorkingDirectory (Split-Path -Parent $context.MelonDSPath) `
         -RedirectStandardOutput (Join-Path $temp 'capture-results.melonds.out') `
         -RedirectStandardError (Join-Path $temp 'capture-results.melonds.err') `
-        -PassThru
+        -WindowStyle Hidden -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
     $emulator.WaitForInputIdle(20000) | Out-Null
-    $emulator.Refresh()
-    $window = $emulator.MainWindowHandle
-    if ($window -eq [IntPtr]::Zero) {
-        throw 'melonDS opened no main window, so nothing can be captured.'
-    }
 
     Write-Host ("capture: {0} [{1}] at Results tic {2}" -f `
         [System.IO.Path]::GetFileName($rom), $Build, $Tic)
@@ -111,10 +104,16 @@ try {
         'set pagination off', 'set confirm off', 'set remotetimeout 60',
         "target remote 127.0.0.1:$($context.GdbPort)"
     ) + $modeCommands + @(
+        'break ndsSyMallocOverflowHalt', 'commands', 'silent',
+        'printf "RESULTS-OOM request=%u free=%u arena=%u\n", gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsTaskmanArenaChosenSize',
+        'bt', 'quit 2', 'end',
         # ndsPlatformEndFrame closes the presented frame, so halting here leaves
         # the completed picture for this tic on the screen.
-        "tbreak ndsPlatformEndFrame if sMNVSResultsTotalTimeTics == $Tic",
+        "tbreak ndsPlatformEndFrame if (gSCManagerSceneData.scene_curr == nSCKindVSResults) && (sMNVSResultsTotalTimeTics == $Tic)",
         'continue',
+        'printf "RESULTS-CHECK fighters=%u pack=%u extern=%u native=%u free=%u\n", gNdsVSResultsFighterCount, gNdsPreviewPackFailure, gNdsBattleCoreExternFailure, gNdsRendererNativeFailure.count, gNdsTaskmanGeneralHeapFreeMin',
+        'if (gNdsVSResultsFighterCount == 0) || gNdsPreviewPackFailure || gNdsBattleCoreExternFailure || gNdsRendererNativeFailure.count',
+        'quit 2', 'end',
         # Print what was actually reached. A capture that silently stopped
         # somewhere else would otherwise look like a successful pair.
         'printf "REACHED-TIC=%d\n", sMNVSResultsTotalTimeTics',
@@ -149,60 +148,9 @@ try {
         throw "Halted at Results tic $reached, not the requested $Tic."
     }
 
-    # FOREGROUND FIRST. Save-MelonDSWindowCapture reads the DESKTOP REGION the
-    # window occupies, not the window's own back buffer, so whatever is stacked
-    # on top of melonDS is what lands in the file. Measured 2026-07-30: the
-    # first version of this script omitted the call and captured the owner's
-    # browser for both arms -- two screenshots of an unrelated web page that
-    # diffed at 67.7% and looked exactly like a catastrophic visual regression.
-    # Every other capture harness in this repo foregrounds before shooting
-    # (`capture-melonds.ps1:444`, `:462`); this one has to as well.
-    #
-    # Safe to do here precisely because the core is halted at the breakpoint:
-    # bringing the window forward cannot advance the emulation, so the picture
-    # still belongs to the requested tic. The settle delay is for the compositor
-    # to finish raising the window, not for the guest.
-    # READ THE WINDOW, NOT THE DESKTOP. The default capture path calls
-    # CopyFromScreen, which copies whatever pixels occupy the window's screen
-    # rectangle and does not throw when something is stacked on top. Measured
-    # 2026-07-30, twice: this script wrote two "matched-tic" pairs that were
-    # actually screenshots of the owner's browser, because Windows had refused
-    # to raise melonDS. They diffed at 67.7% of pixels with a max channel delta
-    # of 255 and read exactly like a catastrophic visual regression in the
-    # change under test. Nothing flagged it; only opening the image did.
-    #
-    # PrintWindow asks the window to render itself, so occlusion is irrelevant,
-    # no foreground raise is needed, and this cannot photograph the operator's
-    # desktop by mistake. That last property is the important one: a capture
-    # harness must never be able to write somebody's screen into artifacts/.
-    [void](New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Output))
-    [void](Save-MelonDSWindowCapture -WindowHandle $window -Path $Output `
-        -PreferPrintWindow)
-
-    # PrintWindow's failure mode is a blank surface on GPU-composited windows,
-    # not an error, so prove the file has a picture in it before calling it
-    # evidence. Measured from the FILE, not from a second window read: the
-    # helper's sampler takes its own CopyFromScreen bitmap, which would put the
-    # desktop back into the one check meant to catch a bad capture.
-    $written = [System.Drawing.Bitmap]::FromFile((Resolve-Path $Output).Path)
-    try {
-        $seen = New-Object 'System.Collections.Generic.HashSet[int]'
-        for ($y = 0; $y -lt $written.Height; $y += 16) {
-            for ($x = 0; $x -lt $written.Width; $x += 16) {
-                [void]$seen.Add($written.GetPixel($x, $y).ToArgb())
-            }
-        }
-        $colors = $seen.Count
-    } finally {
-        $written.Dispose()
-    }
-    if ($colors -lt 8) {
-        Remove-Item -LiteralPath $Output -Force -ErrorAction SilentlyContinue
-        throw ("PrintWindow returned a near-uniform surface ($colors distinct " +
-               "colours), which means it captured nothing. Deleted $Output " +
-               "rather than leave a blank file that looks like a result.")
-    }
-    Write-Host "captured Results tic $reached ($colors distinct colours) -> $Output"
+    & (Join-Path $root 'scripts/capture-running-melonds-window.ps1') `
+        -EmulatorProcessId $emulator.Id -Output $Output
+    Write-Host "captured Results tic $reached -> $Output"
 
     if (-not $gdbProcess.HasExited) { Stop-Process -Id $gdbProcess.Id -Force }
 }
