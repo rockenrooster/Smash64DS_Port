@@ -68,6 +68,12 @@ def _owner(objects, offset: int):
     return min(hits, key=lambda row: row.size)
 
 
+def _is_geometry(row) -> bool:
+    # Gfx* arrays are live structural pointer tables (Yoshi's pre/post pairs),
+    # not display-list commands. Only the pointed-to geometry becomes cells.
+    return row.pointer_depth == 0 and row.type_name in ("Gfx", "Vtx")
+
+
 def _merge_spans(rows):
     spans = []
     for start, end in sorted((row.offset, row.offset + row.size) for row in rows):
@@ -126,7 +132,7 @@ def _gfx_texture_closure(pf, model_id: int, roots, files=None):
         payload = source_file.source["payload"]
         pointers = source_file.source["pointers"]
         row = _owner(source_file.objects, root)
-        if row is None or row.type_name != "Gfx":
+        if row is None or row.type_name != "Gfx" or row.pointer_depth != 0:
             raise BattlePackError("texture closure root %#x is not Gfx" % root)
         identity = (source_id, row.offset, row.size)
         if identity in visited:
@@ -149,7 +155,7 @@ def _gfx_texture_closure(pf, model_id: int, roots, files=None):
             if target_row is None:
                 raise BattlePackError("Gfx target %#x has no typed owner" % target)
             if opcode == 0xDE:
-                if target_row.type_name != "Gfx":
+                if target_row.type_name != "Gfx" or target_row.pointer_depth != 0:
                     raise BattlePackError("G_DL target is not a source Gfx list")
                 queue.append((dep, target))
                 continue
@@ -260,7 +266,7 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
             raise BattlePackError(
                 "%s Main->Model target 0x%x has no parsed owner" %
                 (fighter, edge["target_old"]))
-        if row.type_name not in ("Gfx", "Vtx"):
+        if not _is_geometry(row):
             seeds.append(edge["target_old"])
 
     queue = collections.deque()
@@ -295,7 +301,7 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
                 raise BattlePackError(
                     "%s %s target 0x%x has no parsed owner" %
                     (fighter, label, target[1]))
-            if target_row.type_name in ("Gfx", "Vtx"):
+            if _is_geometry(target_row):
                 raise BattlePackError(
                     "%s %s dispatch points directly at %s %s" %
                     (fighter, label, target_row.type_name, target_row.symbol))
@@ -365,7 +371,7 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
                 raise BattlePackError(
                     "%s runtime dispatch target 0x%x has no parsed owner" %
                     (fighter, target[1]))
-            if target_row.type_name in ("Gfx", "Vtx"):
+            if _is_geometry(target_row):
                 raise BattlePackError(
                     "%s runtime dispatch 0x%x points directly at %s %s" %
                     (fighter, cursor, target_row.type_name, target_row.symbol))
@@ -383,7 +389,7 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
         key = (row.offset, row.symbol)
         if key in kept:
             continue
-        if row.type_name in ("Gfx", "Vtx"):
+        if _is_geometry(row):
             raise BattlePackError("%s structural seed resolved to %s %s" %
                                   (fighter, row.type_name, row.symbol))
         kept[key] = row
@@ -400,7 +406,7 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
                 raise BattlePackError(
                     "%s Model target 0x%x from %s has no parsed owner" %
                     (fighter, target_offset, row.symbol))
-            if target_row.type_name in ("Gfx", "Vtx"):
+            if _is_geometry(target_row):
                 geometry_targets.add(target_offset)
                 continue
             queue.append(target_row)
@@ -453,7 +459,7 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
     # A retained structural span must never swallow a geometry row.  Geometry
     # is replaced by native root identity cells, not copied accidentally.
     for row in pf.objects:
-        if row.type_name not in ("Gfx", "Vtx"):
+        if not _is_geometry(row):
             continue
         if any(start < row.offset + row.size and row.offset < end
                for start, end in spans):
@@ -500,9 +506,9 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
             raise BattlePackError(
                 "%s Main Model target 0x%x has no parsed owner" %
                 (fighter, target))
-        if row.type_name == "Gfx":
+        if _is_geometry(row) and row.type_name == "Gfx":
             root_targets.add(target)
-        elif row.type_name == "Vtx":
+        elif _is_geometry(row) and row.type_name == "Vtx":
             raise BattlePackError(
                 "%s Main points directly at Vtx 0x%x (%s)" %
                 (fighter, target, row.symbol))
@@ -616,7 +622,7 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
             raise BattlePackError(
                 "%s retained Model target 0x%x has no owner" %
                 (fighter, source_target))
-        if row.type_name != "Gfx":
+        if row.type_name != "Gfx" or row.pointer_depth != 0:
             raise BattlePackError(
                 "%s retained Model slot 0x%x targets pruned %s %s" %
                 (fighter, slot, row.type_name, row.symbol))

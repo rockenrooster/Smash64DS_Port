@@ -23,6 +23,8 @@ param(
     [string]$Condition = '',
     [string]$Condition2 = '',
     [switch]$RequireImpactWave,
+    [switch]$FighterModelDiagnostics,
+    [switch]$YoshiEffectDiagnostics,
     [switch]$StartupFailureDiagnostics,
     [ValidateRange(0,1048576)][int]$StartupMallocAtLeast = 0
 )
@@ -162,6 +164,26 @@ try {
     # charset on auto; the marker run itself decides transport success.
     $commands = @('set pagination off','set print repeats 0','set confirm off','set remotetimeout 30',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort))
+    if ($YoshiEffectDiagnostics) {
+        $commands += 'set $fttick = 0'
+        # Source-location witnesses after the hardware triangle increment.
+        # They work in normal builds without enabling the old proof-only tour.
+        foreach ($effect in @('entryegg','egg','egglay')) {
+            $source = Join-Path $root "src/nds/nds_native_yoshi_$effect.exec.inc"
+            $lines = @(Get-Content -LiteralPath $source)
+            $line = @(for ($i=0; $i -lt $lines.Count; $i++) {
+                if ($lines[$i] -match 'stats->hardware_vertex_count \+=') { $i + 1 }
+            })
+            if ($line.Count -ne 1) { throw "Ambiguous Yoshi $effect post-triangle witness." }
+            $commands += @(('set $yoshi_' + $effect + '_draws = 0'),
+                ('set $yoshi_' + $effect + '_frame = -1'),
+                ('break nds_native_yoshi_' + $effect + '.exec.inc:' + $line[0]),
+                'commands','silent',
+                ('set $yoshi_' + $effect + '_draws = $yoshi_' + $effect + '_draws + 1'),
+                ('set $yoshi_' + $effect + '_frame = $fttick + 1'),
+                'continue','end')
+        }
+    }
     $startupState = @(
             'printf "DIAG_STARTUP_PACK=%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%#x\n", gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, gNdsBattleCoreExternFailure, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstDep, gNdsRelocExternalFixupFailIndex, gNdsRelocExternalFixupFailSlot',
             'printf "DIAG_STARTUP_HEAP=%u,%u,%u,%#x,%u,%u\n", gNdsSyMallocOverflowCount, gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsSyMallocOverflowCallerLR, gNdsTaskmanArenaChosenSize, gNdsTaskmanGeneralHeapFreeMin',
@@ -270,8 +292,16 @@ try {
         # `tbreak` deletes itself. A bare GDB `delete` here used to remove the
         # pack/OOM/exception diagnostics before battle setup actually ran.
         $commands += @('tbreak scVSBattleStartBattle','continue')
+        if ($Presents -gt 1) {
+            $commands += @('tbreak ndsBattlePlayableFrameCompleteMarker',
+                ('ignore $bpnum ' + ($Presents - 2)), 'continue',
+                'set $p0tri_prev = gNdsFighterDLAllDrawP0HardwareTriangleCount',
+                'set $p1tri_prev = gNdsFighterDLAllDrawP1HardwareTriangleCount')
+        } else {
+            $commands += @('set $p0tri_prev = 0', 'set $p1tri_prev = 0')
+        }
         $commands += @('tbreak ndsBattlePlayableFrameCompleteMarker',
-            ('ignore $bpnum ' + ($Presents - 1)), 'continue')
+            'continue')
     } else {
         # Action path: force controller playback at battle start, then pump
         # inputs every frame and stop on the fighter's own state, not a frame
@@ -368,7 +398,7 @@ try {
                     'end','end')
             }
             default {
-                $commands += @('diag_pad 0 0 0 0')
+                $commands += @('diag_pad 0 0 ' + $StickX + ' ' + $StickY)
             }
         }
         # A condition hit is read on the frame-complete marker. Delta the
@@ -405,7 +435,27 @@ try {
             'printf "DIAG_SHIELD_POSE=%u,%u,%u\n", gNdsShieldPoseLoadCount, gNdsShieldPoseLoadFailCount, gNdsShieldPoseResidentBytes',
             'echo DIAG_ENTRY_ROOT_DRAWS=', 'output gNdsEntryEffectNativeRootDraws', 'echo \n')
     }
+    if ($FighterModelDiagnostics) {
+        $commands += @(
+            'set $model_fp = (FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p',
+            'printf "DIAG_MODEL=%d,%d,%d,%d,%u,%#x,%#x,%u\n", $model_fp->fkind, $model_fp->status_id, $model_fp->motion_id, $model_fp->detail_curr, $model_fp->is_invisible, *$model_fp->data->p_file_main, *$model_fp->data->p_file_model, gNdsTaskmanHeapGeneration',
+            'echo DIAG_ROOT_PROGRAMS=', 'output/u sNdsNativeFighterRootPrograms', 'echo \n',
+            'echo DIAG_OWNER_IMAGES=', 'output sNdsNativeOwnerImage', 'echo \n',
+            'set $joint_i = 0',
+            'while $joint_i < sizeof($model_fp->joints)/sizeof($model_fp->joints[0])',
+            'set $joint = $model_fp->joints[$joint_i]',
+            'if ($joint != 0) && ($joint->dl != 0)',
+            'printf "DIAG_JOINT=%u,%#x,%#x,%u\n", $joint_i, $joint, $joint->dl, ((FTParts*)$joint->user_data.p)->flags',
+            'if ((unsigned)$joint->dl >= 0x02000000) && ((unsigned)$joint->dl < 0x02400000)',
+            'x/2wx $joint->dl',
+            'end','end',
+            'set $joint_i = $joint_i + 1','end')
+    }
+    if ($YoshiEffectDiagnostics) {
+        $commands += @('printf "DIAG_YOSHI_EFFECTS=%u,%u,%u,%u\n", $yoshi_entryegg_draws, $yoshi_egg_draws, $yoshi_egglay_draws, sNdsNativeFighterRootPrograms[8]')
+    }
     $commands += @(
+        'printf "DIAG_DRAW=%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0HardwareTriangleCount-$p0tri_prev, gNdsFighterDLAllDrawP1HardwareTriangleCount-$p1tri_prev, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_invisible, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->is_invisible',
         'printf "DIAG_STATE=%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->gkind, gSCManagerBattleState->time_passed, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
         'printf "DIAG_CAMFRAM=%f,%f,%f,%f,%u\n", gNdsCameraFrameCenterX, gNdsCameraFrameCenterY, gNdsCameraFrameHalfW, gNdsCameraFrameHalfH, gNdsCameraFrameCount',
         'printf "DIAG_CAMFRAM2=%u,%u,%#x,%#x,%u,%u,%#x,%#x,%f,%f,%f,%f,%f,%f,%f\n", gNdsCameraFramePlayers, gNdsCameraOffCount, gNdsCameraFrameLiveMask, gNdsCameraFrameOffMask, gNdsCameraWorstFrame, gNdsCameraWorstPlayer, gNdsCameraWorstMask, gNdsCameraWorstLiveMask, gNdsCameraWorstMargin, gNdsCameraWorstX, gNdsCameraWorstY, gNdsCameraWorstCenterX, gNdsCameraWorstCenterY, gNdsCameraWorstHalfW, gNdsCameraWorstHalfH',
@@ -528,6 +578,9 @@ try {
     }
     $result.state = @($state.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     $result.native_failure = @($native.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
+    $draw = [regex]::Match($text, '(?m)^DIAG_DRAW=([0-9,]+)\r?$')
+    if (-not $draw.Success) { throw 'Missing per-fighter output witness.' }
+    $result.fighter_draw = @($draw.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     if ($StartupFailureDiagnostics) {
         foreach ($marker in @('pack', 'heap', 'stage', 'resource', 'go')) {
             $hit = [regex]::Match($text, '(?m)^DIAG_STARTUP_' + $marker.ToUpperInvariant() + '=(.*)\r?$')
@@ -596,7 +649,10 @@ try {
         if ($Fighter2Kind -ne 255 -and $result.fighter_state[1] -ne $Fighter2Kind) { throw 'Probe committed the wrong player-2 fighter.' }
         # Zero recorded failures AND zero drawn triangles is a successful empty
         # draw, which is exactly what the native-only contract forbids.
-        if (($result.owner_triangles | Measure-Object -Sum).Sum -eq 0) { throw 'No native owner emitted triangles on the sampled frame.' }
+        if (($result.fighter_draw[0] -eq 0 -and $result.fighter_draw[2] -eq 0) -or
+            ($result.fighter_draw[1] -eq 0 -and $result.fighter_draw[3] -eq 0)) {
+            throw 'A source-visible fighter emitted no native triangles on the sampled frame.'
+        }
     }
     if (-not $NoCapture -and -not (Test-Path -LiteralPath $result.capture)) { throw 'Screenshot was not produced.' }
     if ((Get-FileHash -LiteralPath $Rom).Hash -ne $result.rom_sha256 -or

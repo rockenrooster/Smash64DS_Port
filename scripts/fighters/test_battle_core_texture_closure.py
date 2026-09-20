@@ -6,6 +6,50 @@ import pytest
 import generate_battle_core_packs as battle
 
 
+def test_yoshi_battle_keeps_pair_tables_and_relocates_their_display_roots(tmp_path):
+    """Source case-1 DObjs read Gfx* pairs, not an ENDDL identity cell."""
+    import struct
+    battle.generate(tmp_path, ["yoshi"])
+    packed = battle.fpc.decode_pack((tmp_path / "06.fpc").read_bytes())
+    model = packed["sections"][1]
+    spans = packed["spans"][model[4]:model[4] + model[5]]
+    fixups = dict(packed["fixups"])
+    types = battle.est.TypeTable()
+    types.load_dirs(battle.est.HEADER_DIRS)
+    index, _ = battle.est.index_closure("Yoshi", types)
+    source = next(f for f in index.files if f.file_id == model[0])
+
+    def address(offset):
+        matches = [s for s in spans if s[0] <= offset < s[0] + s[2]]
+        assert len(matches) == 1, f"missing structural pair/descriptor span {offset:#x}"
+        old, new, _size = matches[0]
+        return model[1] + new + offset - old
+
+    checked = 0
+    for tree in source.objects:
+        if tree.type_name != "DObjDesc":
+            continue
+        for slot in range(tree.offset + 4, tree.offset + tree.size, 44):
+            target = source.source["pointers"].get(slot)
+            if target is None or target[0] != model[0]:
+                continue
+            pair = battle._owner(source.objects, target[1])
+            if pair.type_name != "Gfx" or pair.pointer_depth != 1:
+                continue
+            assert fixups[address(slot)] == address(target[1])
+            for pair_slot in (target[1], target[1] + 4):
+                display = source.source["pointers"].get(pair_slot)
+                if display is None:
+                    assert struct.unpack_from(">I", packed["data"], address(pair_slot))[0] == 0
+                else:
+                    assert display[0] == model[0]
+                    cell = fixups[address(pair_slot)]
+                    assert struct.unpack_from(">II", packed["data"], cell) == (
+                        battle.fpc.ENDDL, display[1])
+            checked += 1
+    assert checked >= 19  # HIGH's 19 pairs plus any LOW/variant pair users.
+
+
 def row(offset, size, kind, pointers=0):
     return SimpleNamespace(offset=offset, size=size, type_name=kind,
                            pointer_depth=pointers, symbol=f"{kind}_{offset:x}")

@@ -8331,3 +8331,17 @@ coverage, and preceded the final shared EF deferral repair. Final focused
 checks were rerun; owner acceptance and full qualification remain open.
 Per-case identities, output/engagement, counts and exact limits:
 `artifacts/performance/2026-09-19_crash-startup.md`.
+
+## 2026-09-19 — Yoshi battle pointer-table repair (capacity/output only)
+
+Candidate `4AF1224F…A0559D44`, unchanged ELF `7204FDF4…18A1E`: the battle
+producer retains structural Gfx-pointer arrays. Yoshi Wait/Run emits 320 native
+triangles; natural Up-B visibly draws the existing egg; Samus EscapeF draws an
+80-triangle morph ball. Observed failures/rejects are zero. Ten of twelve packs
+are byte-identical; resident allocation grows 312 bytes for Yoshi, 144 for Samus.
+Yoshi Wait free minimum 14,908 bytes / arena 921,088; no capacity acceptance claim.
+Boundary shell loop passed (free floor 118,796); realtime failed the existing
+CPU-level fixture, expected 2 / observed 3. Four-CPU stress, ticks, WORK-H P50/P95,
+whole-match FPS and cadence are unmeasured. IMPLEMENTED_NOT_ACCEPTED; remaining
+action/detail/lifecycle and owner proof is due. Accepted root ROM is unchanged.
+Receipt: `artifacts/performance/2026-09-19_yoshi-battle-pairs.md`.
