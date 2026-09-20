@@ -453,3 +453,15 @@ he can only copy electricity from a Pikachu or Ness already in the match.
 
 `probe-native-render-scene.ps1`: `side_smash` now forwards `-StickY`, giving
 natural up/down smash pumps.
+
+Roster electric flash, runtime proof: natural Thunder on **Samus** engages the
+source no-skeleton family (colanim id 16-19, colour 1 active) during damage
+status 50; Samus draws 322 triangles, `DIAG_NATIVE` all zero, and the pair that
+could not start before the arena reclaim now runs (arena 945,664, minimum free
+5,136 B -- still far under the 25 KiB latch). `2026-09-20-electric-common-samus`.
+
+Normal r6 candidate: `builds/remaining-bugs-playtest-r6/smash64ds.nds`, SHA256
+`3CA8891E087BD42C7F7E17EB96B8EF8C2DB078973C1BADEDEC89E9D7543D32F2`; ELF
+`052FDE657B5B65B652BF192B301B8322ED7A854D9EF5D25AD130BDA26F45B52D`. Native-only
+316 link inputs, boot/title PASS, static image 2,961,740 B. Supersedes r4/r5.
+The accepted root ROM is unchanged. No full-list, lifecycle or performance claim.
