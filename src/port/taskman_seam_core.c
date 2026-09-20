@@ -41,88 +41,123 @@ extern void ndsSObjPreviewBeginFrame(void);
 extern void ndsSObjPreviewEndFrame(void);
 #endif
 
+/* Preserve store order while sharing the repeated cold counter-reset code.
+ * The source's 25 KiB effect reserve competes with this ~34 KiB initializer.
+ * Aligned integer-word addresses carry tags: 0 -> zero, 1 -> all-ones, 2 -> one.
+ * may_alias covers both the platform uint32_t and BattleShip u32 spellings. */
+typedef u32 NDSDiagnosticWord __attribute__((may_alias));
+#define NDS_DIAG_WORD(name, tag) ((uintptr_t)&(name) + (tag) + 0u * sizeof(char[ \
+    (sizeof(name) == 4 && __builtin_classify_type(name) == 1 && \
+     __alignof__(name) >= 4) ? 1 : -1]))
+static void __attribute__((noinline, noclone)) ndsResetDiagnosticWords(
+    const uintptr_t *words, u32 count)
+{
+    u32 i;
+    for (i = 0u; i < count; i++)
+    {
+        uintptr_t word = words[i];
+        u32 value = (word & 1u) ? 0xffffffffu : (u32)((word & 2u) >> 1);
+        *(volatile NDSDiagnosticWord *)(word & ~(uintptr_t)3u) = value;
+    }
+}
+
 void ndsResetStartupDiagnostics(void)
 {
     gNdsSceneBoundaryResult = 0;
     gNdsSceneBoundaryKind = 0;
-    gNdsStartupTaskmanResult = 0;
-    gNdsStartupTaskmanSceneKind = 0;
-    gNdsStartupTaskmanDL0Size = 0;
-    gNdsStartupTaskmanDL1Size = 0;
-    gNdsStartupTaskmanControllerSet = 0;
-    gNdsStartupFuncStartResult = 0;
-    gNdsStartupSkipAllowWait = 0;
-    gNdsStartupProceedOpening = 0;
-    gNdsStartupGObjCreateCount = 0;
-    gNdsStartupCameraCreateCount = 0;
-    gNdsStartupRelocInitCount = 0;
-    gNdsStartupSpriteCreateCount = 0;
-    gNdsStartupFadeCreateCount = 0;
-    gNdsStartupWallpaperParentValid = 0;
-    gNdsStartupLogoPosX = 0;
-    gNdsStartupLogoPosY = 0;
-    gNdsStartupLogoFastcopyCleared = 0;
-    gNdsStartupLogoRelocResult = 0;
-    gNdsStartupLogoRelocSize = 0;
-    gNdsStartupLogoRelocWordSwapCount = 0;
-    gNdsStartupLogoRelocPointerFixupCount = 0;
-    gNdsStartupLogoDrawResult = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStartupTaskmanResult, 0u),
+            NDS_DIAG_WORD(gNdsStartupTaskmanSceneKind, 0u),
+            NDS_DIAG_WORD(gNdsStartupTaskmanDL0Size, 0u),
+            NDS_DIAG_WORD(gNdsStartupTaskmanDL1Size, 0u),
+            NDS_DIAG_WORD(gNdsStartupTaskmanControllerSet, 0u),
+            NDS_DIAG_WORD(gNdsStartupFuncStartResult, 0u),
+            NDS_DIAG_WORD(gNdsStartupSkipAllowWait, 0u),
+            NDS_DIAG_WORD(gNdsStartupProceedOpening, 0u),
+            NDS_DIAG_WORD(gNdsStartupGObjCreateCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupCameraCreateCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupRelocInitCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupSpriteCreateCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupFadeCreateCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupWallpaperParentValid, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoPosX, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoPosY, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoFastcopyCleared, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoRelocResult, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoRelocSize, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoRelocWordSwapCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoRelocPointerFixupCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawResult, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStartupLogoDrawBlocker = NDS_STARTUP_LOGO_BLOCKER_NONE;
-    gNdsStartupLogoDrawCallbackCount = 0;
-    gNdsStartupLogoDrawUpdateCount = 0;
-    gNdsStartupLogoDrawWidth = 0;
-    gNdsStartupLogoDrawHeight = 0;
-    gNdsStartupLogoDrawFormat = 0xffffffffu;
-    gNdsStartupLogoDrawSize = 0xffffffffu;
-    gNdsStartupLogoDrawBitmaps = 0;
-    gNdsStartupLogoDrawPixels = 0;
-    gNdsStartupLogoDrawGObjID = 0xffffffffu;
-    gNdsStartupLogoDrawGObjObjKind = 0xffffffffu;
-    gNdsStartupLogoDrawSObjAttr = 0xffffffffu;
-    gNdsStartupLogoDrawTexshuf = 0;
-    gNdsStartupLogoDrawTexshufSamples = 0;
-    gNdsStartupLogoDrawVisibleSObjCount = 0;
-    gNdsStartupActorFuncSet = 0;
-    gNdsStartupWallpaperProcessKind = 0xffffffffu;
-    gNdsStartupWallpaperProcessPriority = 0xffffffffu;
-    gNdsStartupWallpaperDisplaySet = 0;
-    gNdsStartupWallpaperCameraMaskLow = 0;
-    gNdsStartupDefaultCameraColor = 0;
-    gNdsTaskmanBridgeResult = 0;
-    gNdsTaskmanContexts = 0;
-    gNdsTaskmanTaskGfxNum = 0;
-    gNdsTaskmanGraphicsHeapSize = 0;
-    gNdsTaskmanRdpKind = 0;
-    gNdsTaskmanRdpBufferSize = 0;
-    gNdsTaskmanMallocCount = 0;
-    gNdsStartupTaskmanMallocCount = 0;
-    gNdsTaskmanGeneralHeapUsed = 0;
-    gNdsTaskmanDLContextsValid = 0;
-    gNdsTaskmanControllerAutoRead = 0;
-    gNdsTaskmanSceneUpdateSet = 0;
-    gNdsTaskmanSceneDrawSet = 0;
-    gNdsTaskmanLightsSet = 0;
-    gNdsTaskmanLoopReached = 0;
-    gNdsTaskmanBoundedUpdateCount = 0;
-    gNdsTaskmanPostUpdateSkip = 0;
-    gNdsTaskmanGObjThreadSleeps = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStartupLogoDrawCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawWidth, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawHeight, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawFormat, 1u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawSize, 1u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawBitmaps, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawPixels, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawGObjID, 1u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawGObjObjKind, 1u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawSObjAttr, 1u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawTexshuf, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawTexshufSamples, 0u),
+            NDS_DIAG_WORD(gNdsStartupLogoDrawVisibleSObjCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupActorFuncSet, 0u),
+            NDS_DIAG_WORD(gNdsStartupWallpaperProcessKind, 1u),
+            NDS_DIAG_WORD(gNdsStartupWallpaperProcessPriority, 1u),
+            NDS_DIAG_WORD(gNdsStartupWallpaperDisplaySet, 0u),
+            NDS_DIAG_WORD(gNdsStartupWallpaperCameraMaskLow, 0u),
+            NDS_DIAG_WORD(gNdsStartupDefaultCameraColor, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanBridgeResult, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanContexts, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanTaskGfxNum, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanGraphicsHeapSize, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanRdpKind, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanRdpBufferSize, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanMallocCount, 0u),
+            NDS_DIAG_WORD(gNdsStartupTaskmanMallocCount, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanGeneralHeapUsed, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanDLContextsValid, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanControllerAutoRead, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanSceneUpdateSet, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanSceneDrawSet, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanLightsSet, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanLoopReached, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanBoundedUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateSkip, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanGObjThreadSleeps, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsOsGObjThreadProvisionCount = 0;
     gNdsOsGObjThreadProvisionFailCount = 0;
     gNdsOsThreadHeapCreateCount = 0;
     gNdsOsStartThreadNoEntryCount = 0;
     gNdsOsStartThreadCreateFailCount = 0;
-    gNdsTaskmanPostUpdateLogoPosX = 0;
-    gNdsTaskmanPostUpdateLogoPosY = 0;
-    gNdsTaskmanPostUpdateOpening = 0;
-    gNdsTaskmanPostUpdateSceneKind = 0;
-    gNdsTaskmanPostUpdateScenePrev = 0;
-    gNdsTaskmanPostUpdateStatus = 0;
-    gNdsTaskmanPostUpdateGObjCount = 0;
-    gNdsTaskmanPostUpdateFadeCount = 0;
-    gNdsTaskmanCleanupResult = 0;
-    gNdsTaskmanCleanupQueuesEmpty = 0;
-    gNdsTaskmanCleanupMode = 0;
-    gNdsTaskmanReturnCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateLogoPosX, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateLogoPosY, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateOpening, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateSceneKind, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateScenePrev, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateStatus, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateGObjCount, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanPostUpdateFadeCount, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanCleanupResult, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanCleanupQueuesEmpty, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanCleanupMode, 0u),
+            NDS_DIAG_WORD(gNdsTaskmanReturnCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsMemoryLedgerResult = 0;
     gNdsMemoryLedgerScene = 0;
     gNdsMemoryLedgerGeneration = 0;
@@ -237,85 +272,90 @@ void ndsResetStartupDiagnostics(void)
     gNdsOpeningMovieActionPreviewLastFormat = 0;
     gNdsOpeningMovieActionPreviewLastSize = 0;
     gNdsOpeningMovieTitleResult = 0;
-    gNdsTitleRelocResult = 0;
-    gNdsTitlePreviewResult = 0;
-    gNdsTitleDrawResult = 0;
-    gNdsTitleSpriteNormalizeCount = 0;
-    gNdsTitleSpriteNormalizeFailCount = 0;
-    gNdsTitleFireSpriteNormalizeCount = 0;
-    gNdsTitleFireSpriteNormalizeFailCount = 0;
-    gNdsTitleDrawVisibleSObjCount = 0;
-    gNdsTitleDrawRenderableSObjCount = 0;
-    gNdsTitleDrawSObjCount = 0;
-    gNdsTitleDrawPixels = 0;
-    gNdsTitleDrawLastWidth = 0;
-    gNdsTitleDrawLastHeight = 0;
-    gNdsTitleDrawLastFormat = 0;
-    gNdsTitleDrawLastSize = 0;
-    gNdsTitleOriginalStartResult = 0;
-    gNdsTitleOriginalFuncStartResult = 0;
-    gNdsTitleOriginalSetupMask = 0;
-    gNdsTitleOriginalLoadedFileCount = 0;
-    gNdsTitleOriginalGObjCount = 0;
-    gNdsTitleOriginalCameraCount = 0;
-    gNdsTitleOriginalMainGObjID = 0;
-    gNdsTitleOriginalTransitionGObjID = 0;
-    gNdsTitleOriginalDeferredMask = 0;
-    gNdsTitleOriginalLogoFireResult = 0;
-    gNdsTitleOriginalLogoFireMask = 0;
-    gNdsTitleOriginalLogoFireGObjDelta = 0;
-    gNdsTitleOriginalLogoFireLinkID = 0;
-    gNdsTitleOriginalLogoFireDLLinkID = 0;
-    gNdsTitleOriginalLogoFireCameraMaskLo = 0;
-    gNdsTitleOriginalLogoFireParticleBank = 0;
-    gNdsTitleOriginalFireResult = 0;
-    gNdsTitleOriginalFireMask = 0;
-    gNdsTitleOriginalFireGObjDelta = 0;
-    gNdsTitleOriginalFireSObjDelta = 0;
-    gNdsTitleOriginalFireGObjFlags = 0;
-    gNdsTitleOriginalFireSObjCount = 0;
-    gNdsTitleOriginalFireFrames = 0;
-    gNdsTitleOriginalFireAlpha = 0;
-    gNdsTitleOriginalUpdateResult = 0;
-    gNdsTitleOriginalUpdateCount = 0;
-    gNdsTitleOriginalLayout = 0;
-    gNdsTitleOriginalTransitionTics = 0;
-    gNdsTitleOriginalStartActorProcess = 0;
-    gNdsTitleOriginalProceedScene = 0;
-    gNdsTitleOriginalProceedWait = 0;
-    gNdsVSModeOriginalStartResult = 0;
-    gNdsVSModeOriginalFuncStartResult = 0;
-    gNdsVSModeOriginalRelocResult = 0;
-    gNdsVSModeOriginalSetupResult = 0;
-    gNdsVSModeOriginalSetupMask = 0;
-    gNdsVSModeOriginalLoadedFileCount = 0;
-    gNdsVSModeOriginalGObjCount = 0;
-    gNdsVSModeOriginalCameraCount = 0;
-    gNdsVSModeOriginalSObjCount = 0;
-    gNdsVSModeOriginalMainGObjID = 0;
-    gNdsVSModeOriginalCursorIndex = 0;
-    gNdsVSModeOriginalRule = 0;
-    gNdsVSModeOriginalTime = 0;
-    gNdsVSModeOriginalStock = 0;
-    gNdsVSModeOriginalButtonMask = 0;
-    gNdsVSModeOriginalDeferredMask = 0;
-    gNdsVSModeStartTransitionResult = 0;
-    gNdsVSModeStartTransitionMask = 0;
-    gNdsVSModeStartTransitionUpdateCount = 0;
-    gNdsVSModeStartTransitionInputMask = 0;
-    gNdsVSModeStartTransitionScenePrevBefore = 0;
-    gNdsVSModeStartTransitionSceneCurrBefore = 0;
-    gNdsVSModeStartTransitionScenePrevAfterTap = 0;
-    gNdsVSModeStartTransitionSceneCurrAfterTap = 0;
-    gNdsVSModeStartTransitionScenePrevFinal = 0;
-    gNdsVSModeStartTransitionSceneCurrFinal = 0;
-    gNdsVSModeStartTransitionExitInterrupt = 0;
-    gNdsVSModeStartTransitionTaskmanStatus = 0;
-    gNdsVSModeStartTransitionSavedRule = 0;
-    gNdsVSModeStartTransitionSavedTime = 0;
-    gNdsVSModeStartTransitionSavedStock = 0;
-    gNdsVSModeStartTransitionButtonMaskAfter = 0;
-    gNdsVSModeStartTransitionCleanupCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsTitleRelocResult, 0u),
+            NDS_DIAG_WORD(gNdsTitlePreviewResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleSpriteNormalizeCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleSpriteNormalizeFailCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleFireSpriteNormalizeCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleFireSpriteNormalizeFailCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawVisibleSObjCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawRenderableSObjCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawSObjCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawPixels, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawLastWidth, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawLastHeight, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawLastFormat, 0u),
+            NDS_DIAG_WORD(gNdsTitleDrawLastSize, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalStartResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFuncStartResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalSetupMask, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLoadedFileCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalGObjCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalCameraCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalMainGObjID, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalTransitionGObjID, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalDeferredMask, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireMask, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireLinkID, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireDLLinkID, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireCameraMaskLo, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLogoFireParticleBank, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireMask, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireSObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireGObjFlags, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireSObjCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireFrames, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalFireAlpha, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalUpdateResult, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalLayout, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalTransitionTics, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalStartActorProcess, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalProceedScene, 0u),
+            NDS_DIAG_WORD(gNdsTitleOriginalProceedWait, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalStartResult, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalFuncStartResult, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalRelocResult, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalSetupResult, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalSetupMask, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalLoadedFileCount, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalGObjCount, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalCameraCount, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalSObjCount, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalMainGObjID, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalCursorIndex, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalRule, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalTime, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalStock, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalButtonMask, 0u),
+            NDS_DIAG_WORD(gNdsVSModeOriginalDeferredMask, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionResult, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionInputMask, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionScenePrevBefore, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionSceneCurrBefore, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionScenePrevAfterTap, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionSceneCurrAfterTap, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionScenePrevFinal, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionSceneCurrFinal, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionExitInterrupt, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionTaskmanStatus, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionSavedRule, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionSavedTime, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionSavedStock, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionButtonMaskAfter, 0u),
+            NDS_DIAG_WORD(gNdsVSModeStartTransitionCleanupCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsPlayersVSOriginalStartResult = 0;
     gNdsPlayersVSOriginalFuncStartResult = 0;
     gNdsPlayersVSOriginalRelocResult = 0;
@@ -438,36 +478,41 @@ void ndsResetStartupDiagnostics(void)
     gNdsSCVSBattleCompatSpawnMask = 0;
     gNdsSCVSBattleLastAudioVolume = 0;
     gNdsSCVSBattleLastFGM = 0;
-    gNdsStagePupupuRelocResult = 0;
-    gNdsStagePupupuRelocAssetMask = 0;
-    gNdsStagePupupuRelocDependencyMask = 0;
-    gNdsStagePupupuExternalFixupCount = 0;
-    gNdsStagePupupuExternalFixupFailCount = 0;
-    gNdsStagePupupuInternalFixupCount = 0;
-    gNdsStagePupupuMapHeaderOffset = 0;
-    gNdsStagePupupuGroundDataPtrReady = 0;
-    gNdsStagePupupuWallpaperPtrReady = 0;
-    gNdsStagePupupuGeometryPtrReady = 0;
-    gNdsStagePupupuMapNodesPtrReady = 0;
-    gNdsStagePupupuLightAngleXBits = 0;
-    gNdsStagePupupuLightAngleYBits = 0;
-    gNdsStagePupupuBGM = 0;
-    gNdsStagePupupuMapObjSourceCount = 0;
-    gNdsStagePupupuMapObjDecodedMask = 0;
-    gNdsStagePupupuMapObjDuplicateMask = 0;
-    gNdsStagePupupuMapObjUnalignedReadCount = 0;
-    gNdsStagePupupuMapObjSourceIndices[0] = 0xffffffffu;
-    gNdsStagePupupuMapObjSourceIndices[1] = 0xffffffffu;
-    gNdsStagePupupuMapObjSourceIndices[2] = 0xffffffffu;
-    gNdsStagePupupuMapObjSourceIndices[3] = 0xffffffffu;
-    gNdsStagePupupuMapObjXs[0] = 0;
-    gNdsStagePupupuMapObjXs[1] = 0;
-    gNdsStagePupupuMapObjXs[2] = 0;
-    gNdsStagePupupuMapObjXs[3] = 0;
-    gNdsStagePupupuMapObjYs[0] = 0;
-    gNdsStagePupupuMapObjYs[1] = 0;
-    gNdsStagePupupuMapObjYs[2] = 0;
-    gNdsStagePupupuMapObjYs[3] = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStagePupupuRelocResult, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuRelocAssetMask, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuRelocDependencyMask, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuExternalFixupCount, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuExternalFixupFailCount, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuInternalFixupCount, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapHeaderOffset, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuGroundDataPtrReady, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuWallpaperPtrReady, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuGeometryPtrReady, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapNodesPtrReady, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuLightAngleXBits, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuLightAngleYBits, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuBGM, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjSourceCount, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjDecodedMask, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjDuplicateMask, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjUnalignedReadCount, 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjSourceIndices[0], 1u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjSourceIndices[1], 1u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjSourceIndices[2], 1u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjSourceIndices[3], 1u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjXs[0], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjXs[1], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjXs[2], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjXs[3], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjYs[0], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjYs[1], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjYs[2], 0u),
+            NDS_DIAG_WORD(gNdsStagePupupuMapObjYs[3], 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxRelocResult = 0;
     gNdsFighterMarioFoxRelocAssetMask = 0;
     gNdsFighterMarioFoxRelocDependencyMask = 0;
@@ -647,30 +692,35 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterSpecialsFoxHiWaitFrames = 0;
     gNdsFighterSpecialsFoxHiRootYMilli = 0;
 #if NDS_P2_DONKEY
-    gNdsFighterDonkeySpecialsSlot = 0;
-    gNdsFighterDonkeySpecialsNChargePressFrames = 0;
-    gNdsFighterDonkeySpecialsNStartFrames = 0;
-    gNdsFighterDonkeySpecialsNLoopFrames = 0;
-    gNdsFighterDonkeySpecialsNStorePressFrames = 0;
-    gNdsFighterDonkeySpecialsNStoredChargeMax = 0;
-    gNdsFighterDonkeySpecialsNStoredWaitFrames = 0;
-    gNdsFighterDonkeySpecialsNResumePressFrames = 0;
-    gNdsFighterDonkeySpecialsNReleaseTapFrames = 0;
-    gNdsFighterDonkeySpecialsNEndFrames = 0;
-    gNdsFighterDonkeySpecialsNReleaseChargeMax = 0;
-    gNdsFighterDonkeySpecialsNPassiveResetFrames = 0;
-    gNdsFighterDonkeySpecialsNReleaseWaitFrames = 0;
-    gNdsFighterDonkeySpecialsHiPressFrames = 0;
-    gNdsFighterDonkeySpecialsHiFrames = 0;
-    gNdsFighterDonkeySpecialsHiGroundGAFrames = 0;
-    gNdsFighterDonkeySpecialsHiWaitFrames = 0;
-    gNdsFighterDonkeySpecialsLwPressFrames = 0;
-    gNdsFighterDonkeySpecialsLwStartFrames = 0;
-    gNdsFighterDonkeySpecialsLwLoopFrames = 0;
-    gNdsFighterDonkeySpecialsLwRepeatPressFrames = 0;
-    gNdsFighterDonkeySpecialsLwLoopFlagFrames = 0;
-    gNdsFighterDonkeySpecialsLwEndFrames = 0;
-    gNdsFighterDonkeySpecialsLwWaitFrames = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsSlot, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNChargePressFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNStartFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNLoopFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNStorePressFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNStoredChargeMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNStoredWaitFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNResumePressFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNReleaseTapFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNEndFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNReleaseChargeMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNPassiveResetFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsNReleaseWaitFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsHiPressFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsHiFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsHiGroundGAFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsHiWaitFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwPressFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwStartFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwLoopFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwRepeatPressFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwLoopFlagFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwEndFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterDonkeySpecialsLwWaitFrames, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
 #endif
 #if NDS_P2_SAMUS
     gNdsFighterSamusSpecialsSlot = 0;
@@ -712,41 +762,46 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterNaturalMovesetVictimStatus = 0;
     gNdsFighterNaturalMovesetVictimMotion = 0;
     gNdsFighterNaturalMovesetVictimGA = 0;
-    gNdsFighterNaturalMovesetVictimRootYMilli = 0;
-    gNdsFighterBattlePlayableResult = 0;
-    gNdsFighterBattlePlayableMask = 0;
-    gNdsFighterBattlePlayableVictimSlot = 0;
-    gNdsFighterBattlePlayableVictimStockStart = 0;
-    gNdsFighterBattlePlayableVictimStockFinal = 0;
-    gNdsFighterBattlePlayableBattleStockStart = 0;
-    gNdsFighterBattlePlayableBattleStockFinal = 0;
-    gNdsFighterBattlePlayableFallsStart = 0;
-    gNdsFighterBattlePlayableFallsFinal = 0;
-    gNdsFighterBattlePlayableDeadFrames = 0;
-    gNdsFighterBattlePlayableRebirthDownFrames = 0;
-    gNdsFighterBattlePlayableRebirthStandFrames = 0;
-    gNdsFighterBattlePlayableRebirthWaitFrames = 0;
-    gNdsFighterBattlePlayableFallAfterRebirthFrames = 0;
-    gNdsFighterBattlePlayableWaitAfterRebirthFrames = 0;
-    gNdsFighterBattlePlayableFinalStatus = 0;
-    gNdsFighterBattlePlayableFinalGA = 0;
-    gNdsFighterBattlePlayableFinalFloor = 0;
-    gNdsFighterBattlePlayableFinalIsRebirth = 0;
-    gNdsFighterBattlePlayableFinalIsGhost = 0;
-    gNdsFighterBattlePlayableFinalCameraMode = 0;
-    gNdsFighterBattlePlayableKOStickFrames = 0;
-    gNdsFighterBattlePlayableMapCallCount = 0;
-    gNdsFighterBattlePlayableMapHitCount = 0;
-    gNdsFighterBattlePlayableMapFloorHitCount = 0;
-    gNdsFighterBattlePlayableMapCliffHitCount = 0;
-    gNdsFighterBattlePlayableMapCeilHitCount = 0;
-    gNdsFighterBattlePlayableMapLastMaskStat = 0;
-    gNdsFighterBattlePlayableMapLastMaskCurr = 0;
-    gNdsFighterBattlePlayableFinalXMilli = 0;
-    gNdsFighterBattlePlayableFinalYMilli = 0;
-    gNdsFighterBattlePlayableFinalVelXMilli = 0;
-    gNdsFighterBattlePlayableFinalVelYMilli = 0;
-    gNdsFighterBattlePlayableFinalFloorDistMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterNaturalMovesetVictimRootYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableResult, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableVictimSlot, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableVictimStockStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableVictimStockFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableBattleStockStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableBattleStockFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFallsStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFallsFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableDeadFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableRebirthDownFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableRebirthStandFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableRebirthWaitFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFallAfterRebirthFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableWaitAfterRebirthFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalStatus, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalGA, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalFloor, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalIsRebirth, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalIsGhost, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalCameraMode, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableKOStickFrames, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapHitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapFloorHitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapCliffHitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapCeilHitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapLastMaskStat, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableMapLastMaskCurr, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalVelXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalVelYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterBattlePlayableFinalFloorDistMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFTComputerSetupCount = 0;
     gNdsFTComputerDamageDetectCount = 0;
     gNdsFTComputerProcessCount = 0;
@@ -768,40 +823,45 @@ void ndsResetStartupDiagnostics(void)
     gNdsFTComputerFinalInputKind = 0;
     gNdsFTComputerMarioDamageMax = 0;
     gNdsFTComputerFloorLineCount = 0;
-    gNdsFTComputerStartXMilli = 0;
-    gNdsFTComputerMinXMilli = 0;
-    gNdsFTComputerMaxXMilli = 0;
-    gNdsFTComputerFinalXMilli = 0;
-    gNdsBattlePlayablePacingResult = 0;
-    gNdsBattlePlayablePacingMode = 0;
-    gNdsBattlePlayablePacingLogicFrames = 0;
-    gNdsBattlePlayablePacingPresentedFrames = 0;
-    gNdsBattlePlayablePacingDrawCalls = 0;
-    gNdsBattlePlayablePacingTimerTicks = 0;
-    gNdsBattlePlayablePacingPresentFpsX10 = 0;
-    gNdsBattlePlayablePacingLogicFpsX10 = 0;
-    gNdsBattlePlayablePacingVBlankStart = 0;
-    gNdsBattlePlayablePacingVBlanks = 0;
-    gNdsBattlePlayablePacingRestartRequested = 0;
-    gNdsBattlePlayablePacingPresentIntervalMin = 0;
-    gNdsBattlePlayablePacingPresentIntervalMax = 0;
-    gNdsBattlePlayablePacingPresentIntervalBucket[0] = 0;
-    gNdsBattlePlayablePacingPresentIntervalBucket[1] = 0;
-    gNdsBattlePlayablePacingPresentIntervalBucket[2] = 0;
-    gNdsBattlePlayablePacingPresentIntervalBucket[3] = 0;
-    gNdsBattlePlayablePacingPresentIntervalBucket[4] = 0;
-    gNdsBattlePlayablePacingPresentIntervalBucket[5] = 0;
-    gNdsBattlePlayablePacingCadenceViolationCount = 0;
-    gNdsBattlePlayablePacingPhasePresentCount[0] = 0;
-    gNdsBattlePlayablePacingPhasePresentCount[1] = 0;
-    gNdsBattlePlayablePacingPhasePresentCount[2] = 0;
-    gNdsBattlePlayablePacingPhasePresentCount[3] = 0;
-    gNdsBattlePlayablePacingPhasePresentCount[4] = 0;
-    gNdsBattlePlayablePacingPhaseSlipCount[0] = 0;
-    gNdsBattlePlayablePacingPhaseSlipCount[1] = 0;
-    gNdsBattlePlayablePacingPhaseSlipCount[2] = 0;
-    gNdsBattlePlayablePacingPhaseSlipCount[3] = 0;
-    gNdsBattlePlayablePacingPhaseSlipCount[4] = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFTComputerStartXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFTComputerMinXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFTComputerMaxXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFTComputerFinalXMilli, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingResult, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingMode, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingLogicFrames, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentedFrames, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingDrawCalls, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingTimerTicks, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentFpsX10, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingLogicFpsX10, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingVBlankStart, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingVBlanks, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingRestartRequested, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalMin, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalMax, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalBucket[0], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalBucket[1], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalBucket[2], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalBucket[3], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalBucket[4], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPresentIntervalBucket[5], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingCadenceViolationCount, 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhasePresentCount[0], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhasePresentCount[1], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhasePresentCount[2], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhasePresentCount[3], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhasePresentCount[4], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhaseSlipCount[0], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhaseSlipCount[1], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhaseSlipCount[2], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhaseSlipCount[3], 0u),
+            NDS_DIAG_WORD(gNdsBattlePlayablePacingPhaseSlipCount[4], 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
 #if (NDS_HARNESS_FAST_LOGIC == 0) && \
     (NDS_RENDERER_HW_TRIANGLES != 0) && \
     (NDS_DEV_LIVE_INPUT_PREVIEW != 0)
@@ -965,28 +1025,33 @@ void ndsResetStartupDiagnostics(void)
     gNdsRendererProfileMatrixPosTestMatrixWordSamples = 0;
     gNdsRendererProfileMatrixPosTestDropped = 0;
     gNdsRendererProfileMatrixScaleWorld = 0;
-    gNdsRendererProfileProjectionM00 = 0;
-    gNdsRendererProfileProjectionM11 = 0;
-    gNdsRendererProfileProjectionM22 = 0;
-    gNdsRendererProfileProjectionM32 = 0;
-    gNdsRendererProfileModelviewM00 = 0;
-    gNdsRendererProfileModelviewM11 = 0;
-    gNdsRendererProfileModelviewM22 = 0;
-    gNdsRendererProfileModelviewM30 = 0;
-    gNdsRendererProfileModelviewM31 = 0;
-    gNdsRendererProfileModelviewM32 = 0;
-    gNdsRendererProfileRawVertexMinX = 0;
-    gNdsRendererProfileRawVertexMaxX = 0;
-    gNdsRendererProfileRawVertexMinY = 0;
-    gNdsRendererProfileRawVertexMaxY = 0;
-    gNdsRendererProfileRawVertexMinZ = 0;
-    gNdsRendererProfileRawVertexMaxZ = 0;
-    gNdsRendererProfileHWVertexMinX = 0;
-    gNdsRendererProfileHWVertexMaxX = 0;
-    gNdsRendererProfileHWVertexMinY = 0;
-    gNdsRendererProfileHWVertexMaxY = 0;
-    gNdsRendererProfileHWVertexMinZ = 0;
-    gNdsRendererProfileHWVertexMaxZ = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsRendererProfileProjectionM00, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileProjectionM11, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileProjectionM22, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileProjectionM32, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileModelviewM00, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileModelviewM11, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileModelviewM22, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileModelviewM30, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileModelviewM31, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileModelviewM32, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileRawVertexMinX, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileRawVertexMaxX, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileRawVertexMinY, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileRawVertexMaxY, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileRawVertexMinZ, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileRawVertexMaxZ, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileHWVertexMinX, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileHWVertexMaxX, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileHWVertexMinY, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileHWVertexMaxY, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileHWVertexMinZ, 0u),
+            NDS_DIAG_WORD(gNdsRendererProfileHWVertexMaxZ, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsRendererProfileHWVertexSaturateCount = 0;
     gNdsRendererDepthStageSamples = 0;
     gNdsRendererDepthStageMin = 0;
@@ -1190,14 +1255,19 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterInitP1RootTranslateYBits = 0;
     gNdsFighterInitP0RootScaleXBits = 0;
     gNdsFighterInitP1RootScaleXBits = 0;
-    gNdsFighterInitDamageCollMask = 0;
-    gNdsFighterInitDamageCollNormalMask = 0;
-    gNdsFighterInitDamageCollJointMask = 0;
-    gNdsFighterInitDamageCollHalfSizeMask = 0;
-    gNdsFighterInitDamageCollPartsMask = 0;
-    gNdsFighterInitDamageCollMatrixMask = 0;
-    gNdsFighterInitDamageCollScaleMask = 0;
-    gNdsFighterInitP0DamageCollCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollNormalMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollJointMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollHalfSizeMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollPartsMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollMatrixMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitDamageCollScaleMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterInitP0DamageCollCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterInitP1DamageCollCount = 0;
     gNdsFighterInitP0DamageCollJoint0 = 0xffffffffu;
     gNdsFighterInitP1DamageCollJoint0 = 0xffffffffu;
@@ -1367,457 +1437,492 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterMarioFoxDisplayMask = 0;
     gNdsFighterMarioFoxDisplayDeferredMask = 0;
     gNdsFighterMarioFoxDisplayCallbackCount = 0;
-    gNdsFighterDisplayP0DObjCount = 0;
-    gNdsFighterDisplayP1DObjCount = 0;
-    gNdsFighterDisplayP0MObjCount = 0;
-    gNdsFighterDisplayP1MObjCount = 0;
-    gNdsFighterDisplayP0AObjCount = 0;
-    gNdsFighterDisplayP1AObjCount = 0;
-    gNdsFighterDisplayP0DLReadyCount = 0;
-    gNdsFighterDisplayP1DLReadyCount = 0;
-    gNdsFighterDisplayP0PartsPtrCount = 0;
-    gNdsFighterDisplayP1PartsPtrCount = 0;
-    gNdsFighterDisplayP0StatusAfter = 0xffffffffu;
-    gNdsFighterDisplayP1StatusAfter = 0xffffffffu;
-    gNdsFighterDisplayP0MotionAfter = 0xffffffffu;
-    gNdsFighterDisplayP1MotionAfter = 0xffffffffu;
-    gNdsFighterDisplayP0GAAfter = 0xffffffffu;
-    gNdsFighterDisplayP1GAAfter = 0xffffffffu;
-    gNdsFighterDisplayP0RootXBeforeBits = 0;
-    gNdsFighterDisplayP1RootXBeforeBits = 0;
-    gNdsFighterDisplayP0RootXAfterBits = 0;
-    gNdsFighterDisplayP1RootXAfterBits = 0;
-    gNdsFighterDisplayGObjDelta = 0;
-    gNdsFighterDisplayDrawCallCount = 0;
-    gNdsFighterDisplayMatrixCallCount = 0;
-    gNdsFighterDisplayGameplayUpdateCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDisplayP0DObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1DObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0MObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1MObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0AObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1AObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0DLReadyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1DLReadyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0PartsPtrCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1PartsPtrCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP0RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayP1RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayGameplayUpdateCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxDLScanResult = 0;
     gNdsFighterMarioFoxDLScanSafeResult = 0;
     gNdsFighterMarioFoxDLScanMask = 0;
     gNdsFighterMarioFoxDLScanDeferredMask = 0;
     gNdsFighterMarioFoxDLScanCount = 0;
-    gNdsFighterDLScanP0FirstDL = 0;
-    gNdsFighterDLScanP1FirstDL = 0;
-    gNdsFighterDLScanP0AssetID = 0xffffffffu;
-    gNdsFighterDLScanP1AssetID = 0xffffffffu;
-    gNdsFighterDLScanP0Offset = 0;
-    gNdsFighterDLScanP1Offset = 0;
-    gNdsFighterDLScanP0DObjIndex = 0xffffffffu;
-    gNdsFighterDLScanP1DObjIndex = 0xffffffffu;
-    gNdsFighterDLScanP0Blocker = 0;
-    gNdsFighterDLScanP1Blocker = 0;
-    gNdsFighterDLScanP0CommandCount = 0;
-    gNdsFighterDLScanP1CommandCount = 0;
-    gNdsFighterDLScanP0FirstOpcode = 0;
-    gNdsFighterDLScanP1FirstOpcode = 0;
-    gNdsFighterDLScanP0UnsupportedOpcode = 0;
-    gNdsFighterDLScanP1UnsupportedOpcode = 0;
-    gNdsFighterDLScanP0UnsupportedCommandCount = 0;
-    gNdsFighterDLScanP1UnsupportedCommandCount = 0;
-    gNdsFighterDLScanP0VertexCommandCount = 0;
-    gNdsFighterDLScanP1VertexCommandCount = 0;
-    gNdsFighterDLScanP0TriangleCommandCount = 0;
-    gNdsFighterDLScanP1TriangleCommandCount = 0;
-    gNdsFighterDLScanP0VertexCount = 0;
-    gNdsFighterDLScanP1VertexCount = 0;
-    gNdsFighterDLScanP0TriangleCount = 0;
-    gNdsFighterDLScanP1TriangleCount = 0;
-    gNdsFighterDLScanP0EndCommandCount = 0;
-    gNdsFighterDLScanP1EndCommandCount = 0;
-    gNdsFighterDLScanP0BranchCommandCount = 0;
-    gNdsFighterDLScanP1BranchCommandCount = 0;
-    gNdsFighterDLScanP0SegmentResolveCount = 0;
-    gNdsFighterDLScanP1SegmentResolveCount = 0;
-    gNdsFighterDLScanP0TextureMask = 0;
-    gNdsFighterDLScanP1TextureMask = 0;
-    gNdsFighterDLScanP0OtherModeCommandCount = 0;
-    gNdsFighterDLScanP1OtherModeCommandCount = 0;
-    gNdsFighterDLScanP0CullCommandCount = 0;
-    gNdsFighterDLScanP1CullCommandCount = 0;
-    gNdsFighterDLScanP0StateCommandCount = 0;
-    gNdsFighterDLScanP1StateCommandCount = 0;
-    gNdsFighterDLScanP0SkipCommandCount = 0;
-    gNdsFighterDLScanP1SkipCommandCount = 0;
-    gNdsFighterDLScanP0RenderCommandCount = 0;
-    gNdsFighterDLScanP1RenderCommandCount = 0;
-    gNdsFighterDLScanP0MaxDepthSeen = 0;
-    gNdsFighterDLScanP1MaxDepthSeen = 0;
-    gNdsFighterDLScanP0StatusAfter = 0xffffffffu;
-    gNdsFighterDLScanP1StatusAfter = 0xffffffffu;
-    gNdsFighterDLScanP0MotionAfter = 0xffffffffu;
-    gNdsFighterDLScanP1MotionAfter = 0xffffffffu;
-    gNdsFighterDLScanP0GAAfter = 0xffffffffu;
-    gNdsFighterDLScanP1GAAfter = 0xffffffffu;
-    gNdsFighterDLScanP0RootXBeforeBits = 0;
-    gNdsFighterDLScanP0RootXAfterBits = 0;
-    gNdsFighterDLScanP1RootXBeforeBits = 0;
-    gNdsFighterDLScanP1RootXAfterBits = 0;
-    gNdsFighterDLScanGObjDelta = 0;
-    gNdsFighterDLScanDrawCallCount = 0;
-    gNdsFighterDLScanMatrixCallCount = 0;
-    gNdsFighterDLScanGameplayUpdateCount = 0;
-    gNdsFighterDLScanRangeRejectCount = 0;
-    gNdsFighterDLScanBranchResolveCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDLScanP0FirstDL, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1FirstDL, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0AssetID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1AssetID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0Offset, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1Offset, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0DObjIndex, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1DObjIndex, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0Blocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1Blocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0VertexCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1VertexCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0TriangleCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1TriangleCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0VertexCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1VertexCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0EndCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1EndCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0BranchCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1BranchCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0SegmentResolveCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1SegmentResolveCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0TextureMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1TextureMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0OtherModeCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1OtherModeCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0CullCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1CullCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0StateCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1StateCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0SkipCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1SkipCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0RenderCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1RenderCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0MaxDepthSeen, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1MaxDepthSeen, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP0RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanP1RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanRangeRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLScanBranchResolveCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxDLExecResult = 0;
     gNdsFighterMarioFoxDLExecSafeResult = 0;
     gNdsFighterMarioFoxDLExecMask = 0;
     gNdsFighterMarioFoxDLExecDeferredMask = 0;
     gNdsFighterMarioFoxDLExecCount = 0;
-    gNdsFighterDLExecP0Blocker = 0;
-    gNdsFighterDLExecP1Blocker = 0;
-    gNdsFighterDLExecP0CommandCount = 0;
-    gNdsFighterDLExecP1CommandCount = 0;
-    gNdsFighterDLExecP0FirstOpcode = 0;
-    gNdsFighterDLExecP1FirstOpcode = 0;
-    gNdsFighterDLExecP0UnsupportedOpcode = 0;
-    gNdsFighterDLExecP1UnsupportedOpcode = 0;
-    gNdsFighterDLExecP0UnsupportedCommandCount = 0;
-    gNdsFighterDLExecP1UnsupportedCommandCount = 0;
-    gNdsFighterDLExecP0VertexCommandCount = 0;
-    gNdsFighterDLExecP1VertexCommandCount = 0;
-    gNdsFighterDLExecP0VertexDecodedCount = 0;
-    gNdsFighterDLExecP1VertexDecodedCount = 0;
-    gNdsFighterDLExecP0VertexValidMask = 0;
-    gNdsFighterDLExecP1VertexValidMask = 0;
-    gNdsFighterDLExecP0TriangleCommandCount = 0;
-    gNdsFighterDLExecP1TriangleCommandCount = 0;
-    gNdsFighterDLExecP0TriangleCount = 0;
-    gNdsFighterDLExecP1TriangleCount = 0;
-    gNdsFighterDLExecP0TriangleValidCount = 0;
-    gNdsFighterDLExecP1TriangleValidCount = 0;
-    gNdsFighterDLExecP0MinX = 0;
-    gNdsFighterDLExecP0MaxX = 0;
-    gNdsFighterDLExecP0MinY = 0;
-    gNdsFighterDLExecP0MaxY = 0;
-    gNdsFighterDLExecP0MinZ = 0;
-    gNdsFighterDLExecP0MaxZ = 0;
-    gNdsFighterDLExecP1MinX = 0;
-    gNdsFighterDLExecP1MaxX = 0;
-    gNdsFighterDLExecP1MinY = 0;
-    gNdsFighterDLExecP1MaxY = 0;
-    gNdsFighterDLExecP1MinZ = 0;
-    gNdsFighterDLExecP1MaxZ = 0;
-    gNdsFighterDLExecP0ColorChecksum = 0;
-    gNdsFighterDLExecP1ColorChecksum = 0;
-    gNdsFighterDLExecP0OtherModeCommandCount = 0;
-    gNdsFighterDLExecP1OtherModeCommandCount = 0;
-    gNdsFighterDLExecP0CullCommandCount = 0;
-    gNdsFighterDLExecP1CullCommandCount = 0;
-    gNdsFighterDLExecP0StateCommandCount = 0;
-    gNdsFighterDLExecP1StateCommandCount = 0;
-    gNdsFighterDLExecP0SkipCommandCount = 0;
-    gNdsFighterDLExecP1SkipCommandCount = 0;
-    gNdsFighterDLExecP0RenderCommandCount = 0;
-    gNdsFighterDLExecP1RenderCommandCount = 0;
-    gNdsFighterDLExecP0BranchCommandCount = 0;
-    gNdsFighterDLExecP1BranchCommandCount = 0;
-    gNdsFighterDLExecP0SegmentResolveCount = 0;
-    gNdsFighterDLExecP1SegmentResolveCount = 0;
-    gNdsFighterDLExecP0TextureMask = 0;
-    gNdsFighterDLExecP1TextureMask = 0;
-    gNdsFighterDLExecP0StatusAfter = 0xffffffffu;
-    gNdsFighterDLExecP1StatusAfter = 0xffffffffu;
-    gNdsFighterDLExecP0MotionAfter = 0xffffffffu;
-    gNdsFighterDLExecP1MotionAfter = 0xffffffffu;
-    gNdsFighterDLExecP0GAAfter = 0xffffffffu;
-    gNdsFighterDLExecP1GAAfter = 0xffffffffu;
-    gNdsFighterDLExecP0RootXBeforeBits = 0;
-    gNdsFighterDLExecP0RootXAfterBits = 0;
-    gNdsFighterDLExecP1RootXBeforeBits = 0;
-    gNdsFighterDLExecP1RootXAfterBits = 0;
-    gNdsFighterDLExecGObjDelta = 0;
-    gNdsFighterDLExecDrawCallCount = 0;
-    gNdsFighterDLExecMatrixCallCount = 0;
-    gNdsFighterDLExecGameplayUpdateCount = 0;
-    gNdsFighterDLExecRangeRejectCount = 0;
-    gNdsFighterDLExecVertexRangeRejectCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDLExecP0Blocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1Blocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0VertexCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1VertexCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0VertexValidMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1VertexValidMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0TriangleCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1TriangleCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MinZ, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MaxZ, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MinZ, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MaxZ, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0OtherModeCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1OtherModeCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0CullCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1CullCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0StateCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1StateCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0SkipCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1SkipCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0RenderCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1RenderCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0BranchCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1BranchCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0SegmentResolveCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1SegmentResolveCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0TextureMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1TextureMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP0RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecP1RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecRangeRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLExecVertexRangeRejectCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxDLDrawResult = 0;
     gNdsFighterMarioFoxDLDrawSafeResult = 0;
     gNdsFighterMarioFoxDLDrawMask = 0;
     gNdsFighterMarioFoxDLDrawDeferredMask = 0;
     gNdsFighterMarioFoxDLDrawCount = 0;
-    gNdsFighterDLDrawPreviewWidth = 0;
-    gNdsFighterDLDrawPreviewHeight = 0;
-    gNdsFighterDLDrawPreviewPitch = 0;
-    gNdsFighterDLDrawPreviewReady = 0;
-    gNdsFighterDLDrawPreviewCommitBefore = 0;
-    gNdsFighterDLDrawPreviewCommitAfter = 0;
-    gNdsFighterDLDrawPreviewCommitDelta = 0;
-    gNdsFighterDLDrawP0Blocker = 0;
-    gNdsFighterDLDrawP1Blocker = 0;
-    gNdsFighterDLDrawP0CommandCount = 0;
-    gNdsFighterDLDrawP1CommandCount = 0;
-    gNdsFighterDLDrawP0FirstOpcode = 0;
-    gNdsFighterDLDrawP1FirstOpcode = 0;
-    gNdsFighterDLDrawP0UnsupportedOpcode = 0;
-    gNdsFighterDLDrawP1UnsupportedOpcode = 0;
-    gNdsFighterDLDrawP0UnsupportedCommandCount = 0;
-    gNdsFighterDLDrawP1UnsupportedCommandCount = 0;
-    gNdsFighterDLDrawP0VertexDecodedCount = 0;
-    gNdsFighterDLDrawP1VertexDecodedCount = 0;
-    gNdsFighterDLDrawP0TriangleCount = 0;
-    gNdsFighterDLDrawP1TriangleCount = 0;
-    gNdsFighterDLDrawP0TriangleValidCount = 0;
-    gNdsFighterDLDrawP1TriangleValidCount = 0;
-    gNdsFighterDLDrawP0TriangleDrawnCount = 0;
-    gNdsFighterDLDrawP1TriangleDrawnCount = 0;
-    gNdsFighterDLDrawP0RealTriangleDrawnCount = 0;
-    gNdsFighterDLDrawP1RealTriangleDrawnCount = 0;
-    gNdsFighterDLDrawP0MarkerTriangleDrawnCount = 0;
-    gNdsFighterDLDrawP1MarkerTriangleDrawnCount = 0;
-    gNdsFighterDLDrawP0PixelCount = 0;
-    gNdsFighterDLDrawP1PixelCount = 0;
-    gNdsFighterDLDrawTotalPixelCount = 0;
-    gNdsFighterDLDrawP0Axis = 0xffffffffu;
-    gNdsFighterDLDrawP1Axis = 0xffffffffu;
-    gNdsFighterDLDrawP0Area = 0;
-    gNdsFighterDLDrawP1Area = 0;
-    gNdsFighterDLDrawP0MinA = 0;
-    gNdsFighterDLDrawP0MaxA = 0;
-    gNdsFighterDLDrawP0MinB = 0;
-    gNdsFighterDLDrawP0MaxB = 0;
-    gNdsFighterDLDrawP1MinA = 0;
-    gNdsFighterDLDrawP1MaxA = 0;
-    gNdsFighterDLDrawP1MinB = 0;
-    gNdsFighterDLDrawP1MaxB = 0;
-    gNdsFighterDLDrawP0ScreenMinX = 0;
-    gNdsFighterDLDrawP0ScreenMaxX = 0;
-    gNdsFighterDLDrawP0ScreenMinY = 0;
-    gNdsFighterDLDrawP0ScreenMaxY = 0;
-    gNdsFighterDLDrawP1ScreenMinX = 0;
-    gNdsFighterDLDrawP1ScreenMaxX = 0;
-    gNdsFighterDLDrawP1ScreenMinY = 0;
-    gNdsFighterDLDrawP1ScreenMaxY = 0;
-    gNdsFighterDLDrawP0ColorChecksum = 0;
-    gNdsFighterDLDrawP1ColorChecksum = 0;
-    gNdsFighterDLDrawP0StatusAfter = 0xffffffffu;
-    gNdsFighterDLDrawP1StatusAfter = 0xffffffffu;
-    gNdsFighterDLDrawP0MotionAfter = 0xffffffffu;
-    gNdsFighterDLDrawP1MotionAfter = 0xffffffffu;
-    gNdsFighterDLDrawP0GAAfter = 0xffffffffu;
-    gNdsFighterDLDrawP1GAAfter = 0xffffffffu;
-    gNdsFighterDLDrawP0RootXBeforeBits = 0;
-    gNdsFighterDLDrawP0RootXAfterBits = 0;
-    gNdsFighterDLDrawP1RootXBeforeBits = 0;
-    gNdsFighterDLDrawP1RootXAfterBits = 0;
-    gNdsFighterDLDrawGObjDelta = 0;
-    gNdsFighterDLDrawDrawCallCount = 0;
-    gNdsFighterDLDrawMatrixCallCount = 0;
-    gNdsFighterDLDrawGameplayUpdateCount = 0;
-    gNdsFighterDLDrawRangeRejectCount = 0;
-    gNdsFighterDLDrawVertexRangeRejectCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewWidth, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewHeight, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewPitch, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewReady, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewCommitBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewCommitAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawPreviewCommitDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0Blocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1Blocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0TriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1TriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0RealTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1RealTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0MarkerTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1MarkerTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawTotalPixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0Axis, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1Axis, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0Area, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1Area, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0MinA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0MaxA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0MinB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0MaxB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1MinA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1MaxA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1MinB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1MaxB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0ScreenMinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0ScreenMaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0ScreenMinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0ScreenMaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1ScreenMinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1ScreenMaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1ScreenMinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1ScreenMaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP0RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawP1RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawRangeRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLDrawVertexRangeRejectCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxDLMultiDrawResult = 0;
     gNdsFighterMarioFoxDLMultiDrawSafeResult = 0;
     gNdsFighterMarioFoxDLMultiDrawMask = 0;
     gNdsFighterMarioFoxDLMultiDrawDeferredMask = 0;
     gNdsFighterMarioFoxDLMultiDrawCount = 0;
-    gNdsFighterDLMultiDrawPreviewWidth = 0;
-    gNdsFighterDLMultiDrawPreviewHeight = 0;
-    gNdsFighterDLMultiDrawPreviewPitch = 0;
-    gNdsFighterDLMultiDrawPreviewReady = 0;
-    gNdsFighterDLMultiDrawPreviewCommitBefore = 0;
-    gNdsFighterDLMultiDrawPreviewCommitAfter = 0;
-    gNdsFighterDLMultiDrawPreviewCommitDelta = 0;
-    gNdsFighterDLMultiDrawP0CandidateCount = 0;
-    gNdsFighterDLMultiDrawP1CandidateCount = 0;
-    gNdsFighterDLMultiDrawP0SelectedCount = 0;
-    gNdsFighterDLMultiDrawP1SelectedCount = 0;
-    gNdsFighterDLMultiDrawP0AttemptCount = 0;
-    gNdsFighterDLMultiDrawP1AttemptCount = 0;
-    gNdsFighterDLMultiDrawP0CleanCount = 0;
-    gNdsFighterDLMultiDrawP1CleanCount = 0;
-    gNdsFighterDLMultiDrawP0DrawnDObjCount = 0;
-    gNdsFighterDLMultiDrawP1DrawnDObjCount = 0;
-    gNdsFighterDLMultiDrawP0FailedCount = 0;
-    gNdsFighterDLMultiDrawP1FailedCount = 0;
-    gNdsFighterDLMultiDrawP0SelectedIndexMask = 0;
-    gNdsFighterDLMultiDrawP1SelectedIndexMask = 0;
-    gNdsFighterDLMultiDrawP0FirstBlocker = 0;
-    gNdsFighterDLMultiDrawP1FirstBlocker = 0;
-    gNdsFighterDLMultiDrawP0BlockerMask = 0;
-    gNdsFighterDLMultiDrawP1BlockerMask = 0;
-    gNdsFighterDLMultiDrawP0CommandCount = 0;
-    gNdsFighterDLMultiDrawP1CommandCount = 0;
-    gNdsFighterDLMultiDrawP0FirstOpcode = 0;
-    gNdsFighterDLMultiDrawP1FirstOpcode = 0;
-    gNdsFighterDLMultiDrawP0UnsupportedOpcode = 0;
-    gNdsFighterDLMultiDrawP1UnsupportedOpcode = 0;
-    gNdsFighterDLMultiDrawP0UnsupportedCommandCount = 0;
-    gNdsFighterDLMultiDrawP1UnsupportedCommandCount = 0;
-    gNdsFighterDLMultiDrawP0VertexDecodedCount = 0;
-    gNdsFighterDLMultiDrawP1VertexDecodedCount = 0;
-    gNdsFighterDLMultiDrawP0TriangleCount = 0;
-    gNdsFighterDLMultiDrawP1TriangleCount = 0;
-    gNdsFighterDLMultiDrawP0TriangleValidCount = 0;
-    gNdsFighterDLMultiDrawP1TriangleValidCount = 0;
-    gNdsFighterDLMultiDrawP0TriangleDrawnCount = 0;
-    gNdsFighterDLMultiDrawP1TriangleDrawnCount = 0;
-    gNdsFighterDLMultiDrawP0RealTriangleDrawnCount = 0;
-    gNdsFighterDLMultiDrawP1RealTriangleDrawnCount = 0;
-    gNdsFighterDLMultiDrawP0MarkerTriangleDrawnCount = 0;
-    gNdsFighterDLMultiDrawP1MarkerTriangleDrawnCount = 0;
-    gNdsFighterDLMultiDrawP0PixelCount = 0;
-    gNdsFighterDLMultiDrawP1PixelCount = 0;
-    gNdsFighterDLMultiDrawTotalPixelCount = 0;
-    gNdsFighterDLMultiDrawP0Axis = 0xffffffffu;
-    gNdsFighterDLMultiDrawP1Axis = 0xffffffffu;
-    gNdsFighterDLMultiDrawP0Area = 0;
-    gNdsFighterDLMultiDrawP1Area = 0;
-    gNdsFighterDLMultiDrawP0MinA = 0;
-    gNdsFighterDLMultiDrawP0MaxA = 0;
-    gNdsFighterDLMultiDrawP0MinB = 0;
-    gNdsFighterDLMultiDrawP0MaxB = 0;
-    gNdsFighterDLMultiDrawP1MinA = 0;
-    gNdsFighterDLMultiDrawP1MaxA = 0;
-    gNdsFighterDLMultiDrawP1MinB = 0;
-    gNdsFighterDLMultiDrawP1MaxB = 0;
-    gNdsFighterDLMultiDrawP0ScreenMinX = 0;
-    gNdsFighterDLMultiDrawP0ScreenMaxX = 0;
-    gNdsFighterDLMultiDrawP0ScreenMinY = 0;
-    gNdsFighterDLMultiDrawP0ScreenMaxY = 0;
-    gNdsFighterDLMultiDrawP1ScreenMinX = 0;
-    gNdsFighterDLMultiDrawP1ScreenMaxX = 0;
-    gNdsFighterDLMultiDrawP1ScreenMinY = 0;
-    gNdsFighterDLMultiDrawP1ScreenMaxY = 0;
-    gNdsFighterDLMultiDrawP0ColorChecksum = 0;
-    gNdsFighterDLMultiDrawP1ColorChecksum = 0;
-    gNdsFighterDLMultiDrawP0StatusAfter = 0xffffffffu;
-    gNdsFighterDLMultiDrawP1StatusAfter = 0xffffffffu;
-    gNdsFighterDLMultiDrawP0MotionAfter = 0xffffffffu;
-    gNdsFighterDLMultiDrawP1MotionAfter = 0xffffffffu;
-    gNdsFighterDLMultiDrawP0GAAfter = 0xffffffffu;
-    gNdsFighterDLMultiDrawP1GAAfter = 0xffffffffu;
-    gNdsFighterDLMultiDrawP0RootXBeforeBits = 0;
-    gNdsFighterDLMultiDrawP0RootXAfterBits = 0;
-    gNdsFighterDLMultiDrawP1RootXBeforeBits = 0;
-    gNdsFighterDLMultiDrawP1RootXAfterBits = 0;
-    gNdsFighterDLMultiDrawGObjDelta = 0;
-    gNdsFighterDLMultiDrawDrawCallCount = 0;
-    gNdsFighterDLMultiDrawMatrixCallCount = 0;
-    gNdsFighterDLMultiDrawGameplayUpdateCount = 0;
-    gNdsFighterDLMultiDrawRangeRejectCount = 0;
-    gNdsFighterDLMultiDrawVertexRangeRejectCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewWidth, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewHeight, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewPitch, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewReady, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewCommitBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewCommitAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawPreviewCommitDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0SelectedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1SelectedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0AttemptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1AttemptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0CleanCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1CleanCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0FailedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1FailedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0SelectedIndexMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1SelectedIndexMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0FirstBlocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1FirstBlocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0BlockerMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1BlockerMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0TriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1TriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0RealTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1RealTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0MarkerTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1MarkerTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawTotalPixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0Axis, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1Axis, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0Area, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1Area, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0MinA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0MaxA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0MinB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0MaxB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1MinA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1MaxA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1MinB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1MaxB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0ScreenMinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0ScreenMaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0ScreenMinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0ScreenMaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1ScreenMinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1ScreenMaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1ScreenMinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1ScreenMaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP0RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawP1RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawRangeRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLMultiDrawVertexRangeRejectCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxDLAllDrawResult = 0;
     gNdsFighterMarioFoxDLAllDrawSafeResult = 0;
     gNdsFighterMarioFoxDLAllDrawMask = 0;
     gNdsFighterMarioFoxDLAllDrawDeferredMask = 0;
     gNdsFighterMarioFoxDLAllDrawCount = 0;
-    gNdsFighterDLAllDrawDisplayCallbackCount = 0;
-    gNdsFighterDLAllDrawP0DisplayCallbackCount = 0;
-    gNdsFighterDLAllDrawP1DisplayCallbackCount = 0;
-    gNdsFighterDLAllDrawPreviewWidth = 0;
-    gNdsFighterDLAllDrawPreviewHeight = 0;
-    gNdsFighterDLAllDrawPreviewPitch = 0;
-    gNdsFighterDLAllDrawPreviewReady = 0;
-    gNdsFighterDLAllDrawPreviewCommitBefore = 0;
-    gNdsFighterDLAllDrawPreviewCommitAfter = 0;
-    gNdsFighterDLAllDrawPreviewCommitDelta = 0;
-    gNdsFighterDLAllDrawP0CandidateCount = 0;
-    gNdsFighterDLAllDrawP1CandidateCount = 0;
-    gNdsFighterDLAllDrawP0SelectedCount = 0;
-    gNdsFighterDLAllDrawP1SelectedCount = 0;
-    gNdsFighterDLAllDrawCandidateHighWater = 0;
-    gNdsFighterDLAllDrawSelectedHighWater = 0;
-    gNdsFighterDLAllDrawTruncateCount = 0;
-    gNdsFighterDLAllDrawSelectedOverflowCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawDisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0DisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1DisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewWidth, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewHeight, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewPitch, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewReady, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewCommitBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewCommitAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawPreviewCommitDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0SelectedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1SelectedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawCandidateHighWater, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawSelectedHighWater, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawTruncateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawSelectedOverflowCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFTManagerFigatreeSlotKindCount = 0;
     gNdsFTManagerFigatreeSlotKindBytes = 0;
     gNdsFTManagerFigatreeSlotKindMin = 0;
-    gNdsFighterDLAllDrawP0AttemptCount = 0;
-    gNdsFighterDLAllDrawP1AttemptCount = 0;
-    gNdsFighterDLAllDrawP0CleanCount = 0;
-    gNdsFighterDLAllDrawP1CleanCount = 0;
-    gNdsFighterDLAllDrawP0DrawnDObjCount = 0;
-    gNdsFighterDLAllDrawP1DrawnDObjCount = 0;
-    gNdsFighterDLAllDrawP0FailedCount = 0;
-    gNdsFighterDLAllDrawP1FailedCount = 0;
-    gNdsFighterDLAllDrawP0SelectedIndexMask = 0;
-    gNdsFighterDLAllDrawP1SelectedIndexMask = 0;
-    gNdsFighterDLAllDrawP0FirstBlocker = 0;
-    gNdsFighterDLAllDrawP1FirstBlocker = 0;
-    gNdsFighterDLAllDrawP0BlockerMask = 0;
-    gNdsFighterDLAllDrawP1BlockerMask = 0;
-    gNdsFighterDLAllDrawP0CommandCount = 0;
-    gNdsFighterDLAllDrawP1CommandCount = 0;
-    gNdsFighterDLAllDrawP0FirstOpcode = 0;
-    gNdsFighterDLAllDrawP1FirstOpcode = 0;
-    gNdsFighterDLAllDrawP0UnsupportedOpcode = 0;
-    gNdsFighterDLAllDrawP1UnsupportedOpcode = 0;
-    gNdsFighterDLAllDrawP0UnsupportedCommandCount = 0;
-    gNdsFighterDLAllDrawP1UnsupportedCommandCount = 0;
-    gNdsFighterDLAllDrawP0VertexDecodedCount = 0;
-    gNdsFighterDLAllDrawP1VertexDecodedCount = 0;
-    gNdsFighterDLAllDrawP0MatrixMvpRecalcCount = 0;
-    gNdsFighterDLAllDrawP1MatrixMvpRecalcCount = 0;
-    gNdsFighterDLAllDrawP0MatrixMoveWordCount = 0;
-    gNdsFighterDLAllDrawP1MatrixMoveWordCount = 0;
-    gNdsFighterDLAllDrawP0HardwareTriangleCount = 0;
-    gNdsFighterDLAllDrawSlotTriangleMask = 0;
-    gNdsFighterDLAllDrawP1HardwareTriangleCount = 0;
-    gNdsFighterDLAllDrawP0HardwareOracleTriangleCount = 0;
-    gNdsFighterDLAllDrawP1HardwareOracleTriangleCount = 0;
-    gNdsFighterDLAllDrawP0HardwareOracleRejectCount = 0;
-    gNdsFighterDLAllDrawP1HardwareOracleRejectCount = 0;
-    gNdsFighterDLAllDrawP0HardwareMatrixSeedCount = 0;
-    gNdsFighterDLAllDrawP1HardwareMatrixSeedCount = 0;
-    gNdsFighterDLAllDrawHardwareTextureBindCount = 0;
-    gNdsFighterDLAllDrawHardwareTextureUploadCount = 0;
-    gNdsFighterDLAllDrawHardwareTextureReadyCount = 0;
-    gNdsFighterDLAllDrawHardwareTextureRejectCount = 0;
-    gNdsFighterDLAllDrawHardwareTextureFormatMask = 0;
-    gNdsFighterDLAllDrawHardwareTextureMaxWidth = 0;
-    gNdsFighterDLAllDrawHardwareTextureMaxHeight = 0;
-    gNdsFighterDLAllDrawP0TriangleCount = 0;
-    gNdsFighterDLAllDrawP1TriangleCount = 0;
-    gNdsFighterDLAllDrawP0TriangleValidCount = 0;
-    gNdsFighterDLAllDrawP1TriangleValidCount = 0;
-    gNdsFighterDLAllDrawP0TriangleDrawnCount = 0;
-    gNdsFighterDLAllDrawP1TriangleDrawnCount = 0;
-    gNdsFighterDLAllDrawP0RealTriangleDrawnCount = 0;
-    gNdsFighterDLAllDrawP1RealTriangleDrawnCount = 0;
-    gNdsFighterDLAllDrawP0MarkerTriangleDrawnCount = 0;
-    gNdsFighterDLAllDrawP1MarkerTriangleDrawnCount = 0;
-    gNdsFighterDLAllDrawP0PixelCount = 0;
-    gNdsFighterDLAllDrawP1PixelCount = 0;
-    gNdsFighterDLAllDrawTotalPixelCount = 0;
-    gNdsFighterDLAllDrawP0Axis = 0xffffffffu;
-    gNdsFighterDLAllDrawP1Axis = 0xffffffffu;
-    gNdsFighterDLAllDrawP0Area = 0;
-    gNdsFighterDLAllDrawP1Area = 0;
-    gNdsFighterDLAllDrawP0MinA = 0;
-    gNdsFighterDLAllDrawP0MaxA = 0;
-    gNdsFighterDLAllDrawP0MinB = 0;
-    gNdsFighterDLAllDrawP0MaxB = 0;
-    gNdsFighterDLAllDrawP1MinA = 0;
-    gNdsFighterDLAllDrawP1MaxA = 0;
-    gNdsFighterDLAllDrawP1MinB = 0;
-    gNdsFighterDLAllDrawP1MaxB = 0;
-    gNdsFighterDLAllDrawP0ScreenMinX = 0;
-    gNdsFighterDLAllDrawP0ScreenMaxX = 0;
-    gNdsFighterDLAllDrawP0ScreenMinY = 0;
-    gNdsFighterDLAllDrawP0ScreenMaxY = 0;
-    gNdsFighterDLAllDrawP1ScreenMinX = 0;
-    gNdsFighterDLAllDrawP1ScreenMaxX = 0;
-    gNdsFighterDLAllDrawP1ScreenMinY = 0;
-    gNdsFighterDLAllDrawP1ScreenMaxY = 0;
-    gNdsFighterDLAllDrawP0ColorChecksum = 0;
-    gNdsFighterDLAllDrawP1ColorChecksum = 0;
-    gNdsFighterDLAllDrawP0StatusAfter = 0xffffffffu;
-    gNdsFighterDLAllDrawP1StatusAfter = 0xffffffffu;
-    gNdsFighterDLAllDrawP0MotionAfter = 0xffffffffu;
-    gNdsFighterDLAllDrawP1MotionAfter = 0xffffffffu;
-    gNdsFighterDLAllDrawP0GAAfter = 0xffffffffu;
-    gNdsFighterDLAllDrawP1GAAfter = 0xffffffffu;
-    gNdsFighterDLAllDrawP0RootXBeforeBits = 0;
-    gNdsFighterDLAllDrawP0RootXAfterBits = 0;
-    gNdsFighterDLAllDrawP1RootXBeforeBits = 0;
-    gNdsFighterDLAllDrawP1RootXAfterBits = 0;
-    gNdsFighterDLAllDrawGObjDelta = 0;
-    gNdsFighterDLAllDrawDrawCallCount = 0;
-    gNdsFighterDLAllDrawMatrixCallCount = 0;
-    gNdsFighterDLAllDrawGameplayUpdateCount = 0;
-    gNdsFighterDLAllDrawRangeRejectCount = 0;
-    gNdsFighterDLAllDrawVertexRangeRejectCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0AttemptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1AttemptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0CleanCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1CleanCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0FailedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1FailedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0SelectedIndexMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1SelectedIndexMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0FirstBlocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1FirstBlocker, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0BlockerMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1BlockerMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1CommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1FirstOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1UnsupportedOpcode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1UnsupportedCommandCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1VertexDecodedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MatrixMvpRecalcCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MatrixMvpRecalcCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MatrixMoveWordCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MatrixMoveWordCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0HardwareTriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawSlotTriangleMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1HardwareTriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0HardwareOracleTriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1HardwareOracleTriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0HardwareOracleRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1HardwareOracleRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0HardwareMatrixSeedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1HardwareMatrixSeedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureBindCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureUploadCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureReadyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureFormatMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureMaxWidth, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawHardwareTextureMaxHeight, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1TriangleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1TriangleValidCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0TriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1TriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0RealTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1RealTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MarkerTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MarkerTriangleDrawnCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawTotalPixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0Axis, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1Axis, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0Area, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1Area, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MinA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MaxA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MinB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MaxB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MinA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MaxA, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MinB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MaxB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0ScreenMinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0ScreenMaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0ScreenMinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0ScreenMaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1ScreenMinX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1ScreenMaxX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1ScreenMinY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1ScreenMaxY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1StatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1MotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1GAAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP0RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1RootXBeforeBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawP1RootXAfterBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawRangeRejectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDLAllDrawVertexRangeRejectCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxWalkInputResult = 0;
     gNdsFighterMarioFoxWalkSafeResult = 0;
     gNdsFighterMarioFoxWalkInputMask = 0;
@@ -1855,14 +1960,19 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterWalkCallbackReadyCount = 0;
     gNdsFighterWalkLoopInterruptCallCount = 0;
     gNdsFighterWalkDeferredInterruptCheckCount = 0;
-    gNdsFighterWalkP0GroundVelBeforeMilli = 0;
-    gNdsFighterWalkP1GroundVelBeforeMilli = 0;
-    gNdsFighterWalkP0GroundVelAfterMilli = 0;
-    gNdsFighterWalkP1GroundVelAfterMilli = 0;
-    gNdsFighterWalkP0AirVelXMilli = 0;
-    gNdsFighterWalkP1AirVelXMilli = 0;
-    gNdsFighterWalkP0AirVelYMilli = 0;
-    gNdsFighterWalkP1AirVelYMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterWalkP0GroundVelBeforeMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP1GroundVelBeforeMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP0GroundVelAfterMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP1GroundVelAfterMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP0AirVelXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP1AirVelXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP0AirVelYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkP1AirVelYMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterWalkGroundVelAbsStickCount = 0;
     gNdsFighterWalkGroundVelTransferAirCount = 0;
     gNdsFighterWalkPhysicsCallbackCount = 0;
@@ -1952,16 +2062,21 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterWalkLoopP1HeldRootDeltaXMilli = 0;
     gNdsFighterWalkLoopP0RootDirectionOK = 0;
     gNdsFighterWalkLoopP1RootDirectionOK = 0;
-    gNdsFighterWalkLoopP0GroundVelStartMilli = 0;
-    gNdsFighterWalkLoopP1GroundVelStartMilli = 0;
-    gNdsFighterWalkLoopP0GroundVelAfterHeldMilli = 0;
-    gNdsFighterWalkLoopP1GroundVelAfterHeldMilli = 0;
-    gNdsFighterWalkLoopP0GroundVelAfterSettleMilli = 0;
-    gNdsFighterWalkLoopP1GroundVelAfterSettleMilli = 0;
-    gNdsFighterWalkLoopP0AirVelXAfterHeldMilli = 0;
-    gNdsFighterWalkLoopP1AirVelXAfterHeldMilli = 0;
-    gNdsFighterWalkLoopP0AirVelYAfterHeldMilli = 0;
-    gNdsFighterWalkLoopP1AirVelYAfterHeldMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP0GroundVelStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP1GroundVelStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP0GroundVelAfterHeldMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP1GroundVelAfterHeldMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP0GroundVelAfterSettleMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP1GroundVelAfterSettleMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP0AirVelXAfterHeldMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP1AirVelXAfterHeldMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP0AirVelYAfterHeldMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterWalkLoopP1AirVelYAfterHeldMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterWalkLoopGroundVelAbsStickCount = 0;
     gNdsFighterWalkLoopGroundVelTransferAirCount = 0;
     gNdsFighterWalkLoopWaitReturnCheckCount = 0;
@@ -1987,206 +2102,216 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterMarioFoxDashRunMask = 0;
     gNdsFighterMarioFoxDashRunDeferredMask = 0;
     gNdsFighterMarioFoxDashRunCount = 0;
-    gNdsFighterDashRunWaitInterruptCallCount = 0;
-    gNdsFighterDashRunGroundCheckCallCount = 0;
-    gNdsFighterDashRunOriginalDashCheckCallCount = 0;
-    gNdsFighterDashRunOriginalDashCheckSuccessCount = 0;
-    gNdsFighterDashRunAttack1CheckCallCount = 0;
-    gNdsFighterDashRunAttack1CheckSuccessCount = 0;
-    gNdsFighterDashRunAttack100StartCheckCallCount = 0;
-    gNdsFighterDashRunAttackDashCheckCallCount = 0;
-    gNdsFighterDashRunAttackDashCheckSuccessCount = 0;
-    gNdsFighterDashRunDashSetStatusCount = 0;
-    gNdsFighterDashRunRunSetStatusCount = 0;
-    gNdsFighterDashRunRunBrakeSetStatusCount = 0;
-    gNdsFighterDashRunAttack11SetStatusCount = 0;
-    gNdsFighterDashRunAttack12SetStatusCount = 0;
-    gNdsFighterDashRunAttack13SetStatusCount = 0;
-    gNdsFighterDashRunAttack100StartSetStatusCount = 0;
-    gNdsFighterDashRunAttack100LoopSetStatusCount = 0;
-    gNdsFighterDashRunAttackDashSetStatusCount = 0;
-    gNdsFighterDashRunDashInterruptCount = 0;
-    gNdsFighterDashRunRunInterruptCount = 0;
-    gNdsFighterDashRunRunBrakeInterruptCount = 0;
-    gNdsFighterDashRunDashPhysicsCount = 0;
-    gNdsFighterDashRunRunPhysicsCount = 0;
-    gNdsFighterDashRunRunBrakePhysicsCount = 0;
-    gNdsFighterDashRunDashMapCount = 0;
-    gNdsFighterDashRunRunMapCount = 0;
-    gNdsFighterDashRunRunBrakeMapCount = 0;
-    gNdsFighterDashRunSafeFloorCount = 0;
-    gNdsFighterDashRunFallBreakSafeCount = 0;
-    gNdsFighterDashRunDeferredInterruptCount = 0;
-    gNdsFighterDashRunFtMainDashStatusCount = 0;
-    gNdsFighterDashRunFtMainRunStatusCount = 0;
-    gNdsFighterDashRunFtMainRunBrakeStatusCount = 0;
-    gNdsFighterDashRunFtMainAttack11StatusCount = 0;
-    gNdsFighterDashRunFtMainAttack12StatusCount = 0;
-    gNdsFighterDashRunFtMainAttack13StatusCount = 0;
-    gNdsFighterDashRunFtMainAttack100StartStatusCount = 0;
-    gNdsFighterDashRunFtMainAttack100LoopStatusCount = 0;
-    gNdsFighterDashRunFtMainAttackDashStatusCount = 0;
-    gNdsFighterDashRunAnimEventsCallCount = 0;
-    gNdsFighterDashRunGroundVelFrictionCount = 0;
-    gNdsFighterDashRunGroundVelTransferAirCount = 0;
-    gNdsFighterDashRunP0StatusDash = 0xffffffffu;
-    gNdsFighterDashRunP1StatusDash = 0xffffffffu;
-    gNdsFighterDashRunP0MotionDash = 0xffffffffu;
-    gNdsFighterDashRunP1MotionDash = 0xffffffffu;
-    gNdsFighterDashRunP0StatusRun = 0xffffffffu;
-    gNdsFighterDashRunP1StatusRun = 0xffffffffu;
-    gNdsFighterDashRunP0MotionRun = 0xffffffffu;
-    gNdsFighterDashRunP1MotionRun = 0xffffffffu;
-    gNdsFighterDashRunP0StatusRunBrake = 0xffffffffu;
-    gNdsFighterDashRunP1StatusRunBrake = 0xffffffffu;
-    gNdsFighterDashRunP0MotionRunBrake = 0xffffffffu;
-    gNdsFighterDashRunP1MotionRunBrake = 0xffffffffu;
-    gNdsFighterDashRunP0StatusAttack11 = 0xffffffffu;
-    gNdsFighterDashRunP1StatusAttack11 = 0xffffffffu;
-    gNdsFighterDashRunP0MotionAttack11 = 0xffffffffu;
-    gNdsFighterDashRunP1MotionAttack11 = 0xffffffffu;
-    gNdsFighterDashRunP0StatusAttack12 = 0xffffffffu;
-    gNdsFighterDashRunP1StatusAttack12 = 0xffffffffu;
-    gNdsFighterDashRunP0MotionAttack12 = 0xffffffffu;
-    gNdsFighterDashRunP1MotionAttack12 = 0xffffffffu;
-    gNdsFighterDashRunP0StatusAttack13 = 0xffffffffu;
-    gNdsFighterDashRunP1StatusAttack13 = 0xffffffffu;
-    gNdsFighterDashRunP0MotionAttack13 = 0xffffffffu;
-    gNdsFighterDashRunP1MotionAttack13 = 0xffffffffu;
-    gNdsFighterDashRunP0StatusAttack100Start = 0xffffffffu;
-    gNdsFighterDashRunP1StatusAttack100Start = 0xffffffffu;
-    gNdsFighterDashRunP0MotionAttack100Start = 0xffffffffu;
-    gNdsFighterDashRunP1MotionAttack100Start = 0xffffffffu;
-    gNdsFighterDashRunP1StatusAttack100Loop = 0xffffffffu;
-    gNdsFighterDashRunP1MotionAttack100Loop = 0xffffffffu;
-    gNdsFighterDashRunP0StatusAttackDash = 0xffffffffu;
-    gNdsFighterDashRunP1StatusAttackDash = 0xffffffffu;
-    gNdsFighterDashRunP0MotionAttackDash = 0xffffffffu;
-    gNdsFighterDashRunP1MotionAttackDash = 0xffffffffu;
-    gNdsFighterDashRunAttack11CallbackMask = 0;
-    gNdsFighterDashRunAttack11TickMask = 0;
-    gNdsFighterDashRunAttack11WaitProcMask = 0;
-    gNdsFighterDashRunAttack12CallbackMask = 0;
-    gNdsFighterDashRunAttack12GotoMask = 0;
-    gNdsFighterDashRunAttack13CallbackMask = 0;
-    gNdsFighterDashRunAttack13GotoMask = 0;
-    gNdsFighterDashRunAttack100StartCallbackMask = 0;
-    gNdsFighterDashRunAttack100StartGotoMask = 0;
-    gNdsFighterDashRunAttack100LoopCallbackMask = 0;
-    gNdsFighterDashRunAttack100LoopGotoMask = 0;
-    gNdsFighterDashRunAttack100LoopTickMask = 0;
-    gNdsFighterDashRunAttackAnimEventsMask = 0;
-    gNdsFighterDashRunAttackEventMask = 0;
-    gNdsFighterDashRunAttackEventScriptMask = 0;
-    gNdsFighterDashRunAttackEventNoHitMask = 0;
-    gNdsFighterDashRunAttackEventCommandMask = 0;
-    gNdsFighterDashRunAttackEventParseCount = 0;
-    gNdsFighterDashRunAttackEventLastPlayer = 0xffffffffu;
-    gNdsFighterDashRunAttackEventLastStatus = 0xffffffffu;
-    gNdsFighterDashRunAttackEventLastState = 0xffffffffu;
-    gNdsFighterDashRunAttackEventLastAttackID = 0xffffffffu;
-    gNdsFighterDashRunAttackEventLastGroupID = 0xffffffffu;
-    gNdsFighterDashRunAttackEventLastJointID = 0xffffffffu;
-    gNdsFighterDashRunAttackEventLastDamage = 0;
-    gNdsFighterDashRunAttackEventLastSize = 0;
-    gNdsFighterDashRunAttackEventLastOffsetX = 0;
-    gNdsFighterDashRunAttackEventLastOffsetY = 0;
-    gNdsFighterDashRunAttackEventLastOffsetZ = 0;
-    gNdsFighterDashRunAttackEventLastAngle = 0;
-    gNdsFighterDashRunAttackEventLastKBG = 0;
-    gNdsFighterDashRunAttackEventLastKBW = 0;
-    gNdsFighterDashRunAttackEventLastBKB = 0;
-    gNdsFighterDashRunAttackEventLastShield = 0;
-    gNdsFighterDashRunAttackEventLastFlags = 0;
-    gNdsFighterDashRunAttackEventPositionMask = 0;
-    gNdsFighterDashRunAttackEventPositionState = 0xffffffffu;
-    gNdsFighterDashRunAttackEventPositionAttackID = 0xffffffffu;
-    gNdsFighterDashRunAttackEventPositionJointID = 0xffffffffu;
-    gNdsFighterDashRunAttackEventPositionX = 0;
-    gNdsFighterDashRunAttackEventPositionY = 0;
-    gNdsFighterDashRunAttackEventPositionZ = 0;
-    gNdsFighterDashRunAttackEventPositionMatrixFlag = 0;
-    gNdsFighterDashRunAttackEventPositionMatrixValue = 0;
-    gNdsFighterDashRunDamageStatusMask = 0;
-    gNdsFighterDashRunDamageStatusLevel = 0xffffffffu;
-    gNdsFighterDashRunDamageStatusIndex = 0xffffffffu;
-    gNdsFighterDashRunDamageStatusGround = 0xffffffffu;
-    gNdsFighterDashRunDamageStatusAir = 0xffffffffu;
-    gNdsFighterDashRunDamageStatusElectric = 0xffffffffu;
-    gNdsFighterDashRunDamageSetupMask = 0;
-    gNdsFighterDashRunDamageSetupStatusBefore = 0xffffffffu;
-    gNdsFighterDashRunDamageSetupStatusAfter = 0xffffffffu;
-    gNdsFighterDashRunDamageSetupMotionAfter = 0xffffffffu;
-    gNdsFighterDashRunDamageSetupGAAfter = 0xffffffffu;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDashRunWaitInterruptCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGroundCheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunOriginalDashCheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunOriginalDashCheckSuccessCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack1CheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack1CheckSuccessCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100StartCheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackDashCheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackDashCheckSuccessCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDashSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunBrakeSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack11SetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack12SetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack13SetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100StartSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100LoopSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackDashSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDashInterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunInterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunBrakeInterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDashPhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunPhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunBrakePhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDashMapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunMapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRunBrakeMapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunSafeFloorCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFallBreakSafeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDeferredInterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainDashStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainRunStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainRunBrakeStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainAttack11StatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainAttack12StatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainAttack13StatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainAttack100StartStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainAttack100LoopStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainAttackDashStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAnimEventsCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGroundVelFrictionCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGroundVelTransferAirCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusRun, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusRun, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionRun, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionRun, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusRunBrake, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusRunBrake, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionRunBrake, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionRunBrake, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusAttack11, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusAttack11, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionAttack11, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionAttack11, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusAttack12, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusAttack12, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionAttack12, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionAttack12, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusAttack13, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusAttack13, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionAttack13, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionAttack13, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusAttack100Start, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusAttack100Start, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionAttack100Start, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionAttack100Start, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusAttack100Loop, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionAttack100Loop, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusAttackDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusAttackDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionAttackDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionAttackDash, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack11CallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack11TickMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack11WaitProcMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack12CallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack12GotoMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack13CallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack13GotoMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100StartCallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100StartGotoMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100LoopCallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100LoopGotoMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttack100LoopTickMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackAnimEventsMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventScriptMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventNoHitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventCommandMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventParseCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastPlayer, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastStatus, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastState, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastAttackID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastGroupID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastJointID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastDamage, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastSize, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastOffsetX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastOffsetY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastOffsetZ, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastAngle, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastKBG, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastKBW, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastBKB, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastShield, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventLastFlags, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionState, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionAttackID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionJointID, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionY, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionZ, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionMatrixFlag, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackEventPositionMatrixValue, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageStatusMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageStatusLevel, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageStatusIndex, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageStatusGround, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageStatusAir, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageStatusElectric, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupStatusBefore, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupStatusAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupMotionAfter, 1u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupGAAfter, 1u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterDashRunDamageSetupHitstunBefore = -1;
     gNdsFighterDashRunDamageSetupHitstunAfter = -1;
-    gNdsFighterDashRunDamageSetupVelGroundMilli = 0;
-    gNdsFighterDashRunDamageSetupVelAirXMilli = 0;
-    gNdsFighterDashRunDamageSetupVelAirYMilli = 0;
-    gNdsFighterDashRunDamageSetupVelPhysicsMilli = 0;
-    gNdsFighterDashRunGuardCheckCallCount = 0;
-    gNdsFighterDashRunGuardCheckSuccessCount = 0;
-    gNdsFighterDashRunGuardSetStatusCount = 0;
-    gNdsFighterDashRunFtMainGuardOnStatusCount = 0;
-    gNdsFighterDashRunGuardSetOffSetStatusCount = 0;
-    gNdsFighterDashRunFtMainGuardSetOffStatusCount = 0;
-    gNdsFighterDashRunGuardAnimEventsMask = 0;
-    gNdsFighterDashRunGuardEffectCount = 0;
-    gNdsFighterDashRunGuardFGMCount = 0;
-    gNdsFighterDashRunGuardLastFGM = 0;
-    gNdsFighterDashRunP0StatusGuardOn = 0;
-    gNdsFighterDashRunP1StatusGuardOn = 0;
-    gNdsFighterDashRunP0MotionGuardOn = 0;
-    gNdsFighterDashRunP1MotionGuardOn = 0;
-    gNdsFighterDashRunGuardCallbackMask = 0;
-    gNdsFighterDashRunGuardStateMask = 0;
-    gNdsFighterDashRunGuardSetOffMask = 0;
-    gNdsFighterDashRunGuardSetOffCallbackMask = 0;
-    gNdsFighterDashRunGuardSetOffFramesMilli = 0;
-    gNdsFighterDashRunGuardSetOffVelMilli = 0;
-    gNdsFighterDashRunEscapeCheckCallCount = 0;
-    gNdsFighterDashRunEscapeCheckSuccessCount = 0;
-    gNdsFighterDashRunEscapeSetStatusCount = 0;
-    gNdsFighterDashRunFtMainEscapeStatusCount = 0;
-    gNdsFighterDashRunEscapeCallbackMask = 0;
-    gNdsFighterDashRunEscapeStateMask = 0;
-    gNdsFighterDashRunEscapeTickMask = 0;
-    gNdsFighterDashRunEscapeInterruptCount = 0;
-    gNdsFighterDashRunEscapePhysicsCount = 0;
-    gNdsFighterDashRunEscapeMapCount = 0;
-    gNdsFighterDashRunP0StatusEscape = 0;
-    gNdsFighterDashRunP1StatusEscape = 0;
-    gNdsFighterDashRunP0MotionEscape = 0;
-    gNdsFighterDashRunP1MotionEscape = 0;
-    gNdsFighterDashRunP0EscapeItemThrowBuffer = 0;
-    gNdsFighterDashRunP1EscapeItemThrowBuffer = 0;
-    gNdsFighterDashRunAttackDashCallbackMask = 0;
-    gNdsFighterDashRunAttackDashTickMask = 0;
-    gNdsFighterDashRunAttackDashRunProcMask = 0;
-    gNdsFighterDashRunP0TapStickXAfterDash = 0;
-    gNdsFighterDashRunP1TapStickXAfterDash = 0;
-    gNdsFighterDashRunP0LR = 0;
-    gNdsFighterDashRunP1LR = 0;
-    gNdsFighterDashRunP0StickX = 0;
-    gNdsFighterDashRunP1StickX = 0;
-    gNdsFighterDashRunP0RootDeltaXMilli = 0;
-    gNdsFighterDashRunP1RootDeltaXMilli = 0;
-    gNdsFighterDashRunP0GroundVelRunMilli = 0;
-    gNdsFighterDashRunP1GroundVelRunMilli = 0;
-    gNdsFighterDashRunP0GroundVelBrakeMilli = 0;
-    gNdsFighterDashRunP1GroundVelBrakeMilli = 0;
-    gNdsFighterDashRunP0RootDirectionOK = 0;
-    gNdsFighterDashRunP1RootDirectionOK = 0;
-    gNdsFighterDashRunRootYDriftCount = 0;
-    gNdsFighterDashRunGADriftCount = 0;
-    gNdsFighterDashRunGObjDelta = 0;
-    gNdsFighterDashRunDeniedStatusCount = 0;
-    gNdsFighterDashRunUnexpectedStatusCount = 0;
-    gNdsFighterDashRunProcessAttachCount = 0;
-    gNdsFighterDashRunDisplayProbeCount = 0;
-    gNdsFighterDashRunGameplayUpdateCount = 0;
-    gNdsFighterDashRunDrawCallCount = 0;
-    gNdsFighterDashRunMatrixCallCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupVelGroundMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupVelAirXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupVelAirYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDamageSetupVelPhysicsMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardCheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardCheckSuccessCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainGuardOnStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardSetOffSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainGuardSetOffStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardAnimEventsMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardEffectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardFGMCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardLastFGM, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusGuardOn, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusGuardOn, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionGuardOn, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionGuardOn, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardCallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardStateMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardSetOffMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardSetOffCallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardSetOffFramesMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGuardSetOffVelMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeCheckCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeCheckSuccessCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunFtMainEscapeStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeCallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeStateMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeTickMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeInterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapePhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunEscapeMapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StatusEscape, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StatusEscape, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0MotionEscape, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1MotionEscape, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0EscapeItemThrowBuffer, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1EscapeItemThrowBuffer, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackDashCallbackMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackDashTickMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunAttackDashRunProcMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0TapStickXAfterDash, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1TapStickXAfterDash, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0LR, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1LR, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0StickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1StickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0GroundVelRunMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1GroundVelRunMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0GroundVelBrakeMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1GroundVelBrakeMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP0RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunP1RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunRootYDriftCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGADriftCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDeniedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunUnexpectedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDisplayProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDashRunMatrixCallCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxJumpLoopResult = 0;
     gNdsFighterMarioFoxJumpLoopSafeResult = 0;
     gNdsFighterMarioFoxJumpLoopMask = 0;
@@ -2284,14 +2409,19 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterJumpP1RootDirectionOK = 0;
     gNdsFighterJumpP0RootRiseOK = 0;
     gNdsFighterJumpP1RootRiseOK = 0;
-    gNdsFighterJumpP0VelXInitialMilli = 0;
-    gNdsFighterJumpP1VelXInitialMilli = 0;
-    gNdsFighterJumpP0VelYInitialMilli = 0;
-    gNdsFighterJumpP1VelYInitialMilli = 0;
-    gNdsFighterJumpP0VelXAfterMilli = 0;
-    gNdsFighterJumpP1VelXAfterMilli = 0;
-    gNdsFighterJumpP0VelYAfterMilli = 0;
-    gNdsFighterJumpP1VelYAfterMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterJumpP0VelXInitialMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP1VelXInitialMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP0VelYInitialMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP1VelYInitialMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP0VelXAfterMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP1VelXAfterMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP0VelYAfterMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterJumpP1VelYAfterMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterJumpGObjDelta = 0;
     gNdsFighterMarioFoxLandingLoopResult = 0;
     gNdsFighterMarioFoxLandingLoopSafeResult = 0;
@@ -2369,26 +2499,36 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterLandingP1MotionWait = 0xffffffffu;
     gNdsFighterLandingP0GAWait = 0xffffffffu;
     gNdsFighterLandingP1GAWait = 0xffffffffu;
-    gNdsFighterLandingP0FloorYMilli = 0;
-    gNdsFighterLandingP1FloorYMilli = 0;
-    gNdsFighterLandingP0RootYFallStartMilli = 0;
-    gNdsFighterLandingP1RootYFallStartMilli = 0;
-    gNdsFighterLandingP0RootYFinalMilli = 0;
-    gNdsFighterLandingP1RootYFinalMilli = 0;
-    gNdsFighterLandingP0RootDeltaXMilli = 0;
-    gNdsFighterLandingP1RootDeltaXMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterLandingP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP0RootYFallStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1RootYFallStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1RootDeltaXMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterLandingP0RootDirectionOK = 0;
     gNdsFighterLandingP1RootDirectionOK = 0;
     gNdsFighterLandingP0RootFloorOK = 0;
     gNdsFighterLandingP1RootFloorOK = 0;
-    gNdsFighterLandingP0VelYFallStartMilli = 0;
-    gNdsFighterLandingP1VelYFallStartMilli = 0;
-    gNdsFighterLandingP0VelYBeforeLandingMilli = 0;
-    gNdsFighterLandingP1VelYBeforeLandingMilli = 0;
-    gNdsFighterLandingP0GroundVelAfterLandingMilli = 0;
-    gNdsFighterLandingP1GroundVelAfterLandingMilli = 0;
-    gNdsFighterLandingP0GroundVelAfterWaitMilli = 0;
-    gNdsFighterLandingP1GroundVelAfterWaitMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterLandingP0VelYFallStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1VelYFallStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP0VelYBeforeLandingMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1VelYBeforeLandingMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP0GroundVelAfterLandingMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1GroundVelAfterLandingMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP0GroundVelAfterWaitMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterLandingP1GroundVelAfterWaitMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterLandingGravityCallCount = 0;
     gNdsFighterLandingAirDriftCallCount = 0;
     gNdsFighterLandingAirFrictionCallCount = 0;
@@ -2454,28 +2594,38 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterProcessLoopP1MotionFinal = 0xffffffffu;
     gNdsFighterProcessLoopP0GAFinal = 0xffffffffu;
     gNdsFighterProcessLoopP1GAFinal = 0xffffffffu;
-    gNdsFighterProcessLoopP0FloorYMilli = 0;
-    gNdsFighterProcessLoopP1FloorYMilli = 0;
-    gNdsFighterProcessLoopP0RootXStartMilli = 0;
-    gNdsFighterProcessLoopP1RootXStartMilli = 0;
-    gNdsFighterProcessLoopP0RootXFinalMilli = 0;
-    gNdsFighterProcessLoopP1RootXFinalMilli = 0;
-    gNdsFighterProcessLoopP0RootDeltaXMilli = 0;
-    gNdsFighterProcessLoopP1RootDeltaXMilli = 0;
-    gNdsFighterProcessLoopP0RootYFinalMilli = 0;
-    gNdsFighterProcessLoopP1RootYFinalMilli = 0;
-    gNdsFighterProcessLoopP0RootRiseMilli = 0;
-    gNdsFighterProcessLoopP1RootRiseMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1RootRiseMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterProcessLoopP0RootDirectionOK = 0;
     gNdsFighterProcessLoopP1RootDirectionOK = 0;
     gNdsFighterProcessLoopP0FloorOK = 0;
     gNdsFighterProcessLoopP1FloorOK = 0;
-    gNdsFighterProcessLoopP0GroundVelFinalMilli = 0;
-    gNdsFighterProcessLoopP1GroundVelFinalMilli = 0;
-    gNdsFighterProcessLoopP0AirVelXFinalMilli = 0;
-    gNdsFighterProcessLoopP1AirVelXFinalMilli = 0;
-    gNdsFighterProcessLoopP0AirVelYFinalMilli = 0;
-    gNdsFighterProcessLoopP1AirVelYFinalMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0GroundVelFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1GroundVelFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0AirVelXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1AirVelXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP0AirVelYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterProcessLoopP1AirVelYFinalMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterProcessLoopFallDetectCount = 0;
     gNdsFighterProcessLoopLandingDetectCount = 0;
     gNdsFighterProcessLoopSetGroundCount = 0;
@@ -2561,28 +2711,38 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterSchedulerLoopP1MotionFinal = 0xffffffffu;
     gNdsFighterSchedulerLoopP0GAFinal = 0xffffffffu;
     gNdsFighterSchedulerLoopP1GAFinal = 0xffffffffu;
-    gNdsFighterSchedulerLoopP0FloorYMilli = 0;
-    gNdsFighterSchedulerLoopP1FloorYMilli = 0;
-    gNdsFighterSchedulerLoopP0RootXStartMilli = 0;
-    gNdsFighterSchedulerLoopP1RootXStartMilli = 0;
-    gNdsFighterSchedulerLoopP0RootXFinalMilli = 0;
-    gNdsFighterSchedulerLoopP1RootXFinalMilli = 0;
-    gNdsFighterSchedulerLoopP0RootDeltaXMilli = 0;
-    gNdsFighterSchedulerLoopP1RootDeltaXMilli = 0;
-    gNdsFighterSchedulerLoopP0RootYFinalMilli = 0;
-    gNdsFighterSchedulerLoopP1RootYFinalMilli = 0;
-    gNdsFighterSchedulerLoopP0RootRiseMilli = 0;
-    gNdsFighterSchedulerLoopP1RootRiseMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1RootRiseMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterSchedulerLoopP0RootDirectionOK = 0;
     gNdsFighterSchedulerLoopP1RootDirectionOK = 0;
     gNdsFighterSchedulerLoopP0FloorOK = 0;
     gNdsFighterSchedulerLoopP1FloorOK = 0;
-    gNdsFighterSchedulerLoopP0GroundVelFinalMilli = 0;
-    gNdsFighterSchedulerLoopP1GroundVelFinalMilli = 0;
-    gNdsFighterSchedulerLoopP0AirVelXFinalMilli = 0;
-    gNdsFighterSchedulerLoopP1AirVelXFinalMilli = 0;
-    gNdsFighterSchedulerLoopP0AirVelYFinalMilli = 0;
-    gNdsFighterSchedulerLoopP1AirVelYFinalMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0GroundVelFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1GroundVelFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0AirVelXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1AirVelXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP0AirVelYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterSchedulerLoopP1AirVelYFinalMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterSchedulerLoopP0UpdateCount = 0;
     gNdsFighterSchedulerLoopP1UpdateCount = 0;
     gNdsFighterSchedulerLoopP0InterruptCount = 0;
@@ -2617,134 +2777,139 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterMarioFoxControllerLoopMask = 0;
     gNdsFighterMarioFoxControllerLoopDeferredMask = 0;
     gNdsFighterMarioFoxControllerLoopCount = 0;
-    gNdsFighterControllerLoopPrepared = 0;
-    gNdsFighterControllerLoopFrameMax = 0;
-    gNdsFighterControllerLoopUpdateMax = 0;
-    gNdsFighterControllerLoopTaskmanUpdateCount = 0;
-    gNdsFighterControllerLoopVSBattleUpdateCount = 0;
-    gNdsFighterControllerLoopBaseVSBattleUpdateCount = 0;
-    gNdsFighterControllerLoopSchedulerUpdateCount = 0;
-    gNdsFighterControllerLoopSYReadCount = 0;
-    gNdsFighterControllerLoopSYUpdateCount = 0;
-    gNdsFighterControllerLoopGObjCountBefore = 0;
-    gNdsFighterControllerLoopGObjCountAfter = 0;
-    gNdsFighterControllerLoopGObjDelta = 0;
-    gNdsFighterControllerLoopP0ProcessAttachCount = 0;
-    gNdsFighterControllerLoopP1ProcessAttachCount = 0;
-    gNdsFighterControllerLoopProcessAttachEscapeCount = 0;
-    gNdsFighterControllerLoopP0GObjProcessRunCount = 0;
-    gNdsFighterControllerLoopP1GObjProcessRunCount = 0;
-    gNdsFighterControllerLoopP0ProcCallbackCount = 0;
-    gNdsFighterControllerLoopP1ProcCallbackCount = 0;
-    gNdsFighterControllerLoopP0PlaybackApplyCount = 0;
-    gNdsFighterControllerLoopP1PlaybackApplyCount = 0;
-    gNdsFighterControllerLoopP0ControllerToFTInputCount = 0;
-    gNdsFighterControllerLoopP1ControllerToFTInputCount = 0;
-    gNdsFighterControllerLoopP0DirectFTInputWriteCount = 0;
-    gNdsFighterControllerLoopP1DirectFTInputWriteCount = 0;
-    gNdsFighterControllerLoopP0ButtonTapMask = 0;
-    gNdsFighterControllerLoopP1ButtonTapMask = 0;
-    gNdsFighterControllerLoopP0ButtonHoldMask = 0;
-    gNdsFighterControllerLoopP1ButtonHoldMask = 0;
-    gNdsFighterControllerLoopP0ButtonReleaseMask = 0;
-    gNdsFighterControllerLoopP1ButtonReleaseMask = 0;
-    gNdsFighterControllerLoopP0LastStickX = 0;
-    gNdsFighterControllerLoopP1LastStickX = 0;
-    gNdsFighterControllerLoopP0LastStickY = 0;
-    gNdsFighterControllerLoopP1LastStickY = 0;
-    gNdsFighterControllerLoopP0TapStickXMin = 0xffffffffu;
-    gNdsFighterControllerLoopP1TapStickXMin = 0xffffffffu;
-    gNdsFighterControllerLoopP0TapStickYMin = 0xffffffffu;
-    gNdsFighterControllerLoopP1TapStickYMin = 0xffffffffu;
-    gNdsFighterControllerLoopP0DashTapEligibleCount = 0;
-    gNdsFighterControllerLoopP1DashTapEligibleCount = 0;
-    gNdsFighterControllerLoopP0JumpButtonTapCount = 0;
-    gNdsFighterControllerLoopP1JumpButtonTapCount = 0;
-    gNdsFighterControllerLoopP0FrameCount = 0;
-    gNdsFighterControllerLoopP1FrameCount = 0;
-    gNdsFighterControllerLoopP0Completed = 0;
-    gNdsFighterControllerLoopP1Completed = 0;
-    gNdsFighterControllerLoopP0StatusVisitMask = 0;
-    gNdsFighterControllerLoopP1StatusVisitMask = 0;
-    gNdsFighterControllerLoopP0TransitionMask = 0;
-    gNdsFighterControllerLoopP1TransitionMask = 0;
-    gNdsFighterControllerLoopP0WaitVisitCount = 0;
-    gNdsFighterControllerLoopP1WaitVisitCount = 0;
-    gNdsFighterControllerLoopP0WalkVisitCount = 0;
-    gNdsFighterControllerLoopP1WalkVisitCount = 0;
-    gNdsFighterControllerLoopP0DashVisitCount = 0;
-    gNdsFighterControllerLoopP1DashVisitCount = 0;
-    gNdsFighterControllerLoopP0RunVisitCount = 0;
-    gNdsFighterControllerLoopP1RunVisitCount = 0;
-    gNdsFighterControllerLoopP0RunBrakeVisitCount = 0;
-    gNdsFighterControllerLoopP1RunBrakeVisitCount = 0;
-    gNdsFighterControllerLoopP0KneeBendVisitCount = 0;
-    gNdsFighterControllerLoopP1KneeBendVisitCount = 0;
-    gNdsFighterControllerLoopP0JumpVisitCount = 0;
-    gNdsFighterControllerLoopP1JumpVisitCount = 0;
-    gNdsFighterControllerLoopP0FallVisitCount = 0;
-    gNdsFighterControllerLoopP1FallVisitCount = 0;
-    gNdsFighterControllerLoopP0LandingVisitCount = 0;
-    gNdsFighterControllerLoopP1LandingVisitCount = 0;
-    gNdsFighterControllerLoopP0StatusStart = 0xffffffffu;
-    gNdsFighterControllerLoopP1StatusStart = 0xffffffffu;
-    gNdsFighterControllerLoopP0MotionStart = 0xffffffffu;
-    gNdsFighterControllerLoopP1MotionStart = 0xffffffffu;
-    gNdsFighterControllerLoopP0StatusFinal = 0xffffffffu;
-    gNdsFighterControllerLoopP1StatusFinal = 0xffffffffu;
-    gNdsFighterControllerLoopP0MotionFinal = 0xffffffffu;
-    gNdsFighterControllerLoopP1MotionFinal = 0xffffffffu;
-    gNdsFighterControllerLoopP0GAFinal = 0xffffffffu;
-    gNdsFighterControllerLoopP1GAFinal = 0xffffffffu;
-    gNdsFighterControllerLoopP0FloorYMilli = 0;
-    gNdsFighterControllerLoopP1FloorYMilli = 0;
-    gNdsFighterControllerLoopP0RootXStartMilli = 0;
-    gNdsFighterControllerLoopP1RootXStartMilli = 0;
-    gNdsFighterControllerLoopP0RootXFinalMilli = 0;
-    gNdsFighterControllerLoopP1RootXFinalMilli = 0;
-    gNdsFighterControllerLoopP0RootDeltaXMilli = 0;
-    gNdsFighterControllerLoopP1RootDeltaXMilli = 0;
-    gNdsFighterControllerLoopP0RootYFinalMilli = 0;
-    gNdsFighterControllerLoopP1RootYFinalMilli = 0;
-    gNdsFighterControllerLoopP0RootRiseMilli = 0;
-    gNdsFighterControllerLoopP1RootRiseMilli = 0;
-    gNdsFighterControllerLoopP0RootDirectionOK = 0;
-    gNdsFighterControllerLoopP1RootDirectionOK = 0;
-    gNdsFighterControllerLoopP0FloorOK = 0;
-    gNdsFighterControllerLoopP1FloorOK = 0;
-    gNdsFighterControllerLoopP0GroundVelFinalMilli = 0;
-    gNdsFighterControllerLoopP1GroundVelFinalMilli = 0;
-    gNdsFighterControllerLoopP0AirVelXFinalMilli = 0;
-    gNdsFighterControllerLoopP1AirVelXFinalMilli = 0;
-    gNdsFighterControllerLoopP0AirVelYFinalMilli = 0;
-    gNdsFighterControllerLoopP1AirVelYFinalMilli = 0;
-    gNdsFighterControllerLoopP0UpdateCount = 0;
-    gNdsFighterControllerLoopP1UpdateCount = 0;
-    gNdsFighterControllerLoopP0InterruptCount = 0;
-    gNdsFighterControllerLoopP1InterruptCount = 0;
-    gNdsFighterControllerLoopP0PhysicsCount = 0;
-    gNdsFighterControllerLoopP1PhysicsCount = 0;
-    gNdsFighterControllerLoopP0IntegrateCount = 0;
-    gNdsFighterControllerLoopP1IntegrateCount = 0;
-    gNdsFighterControllerLoopP0MapCount = 0;
-    gNdsFighterControllerLoopP1MapCount = 0;
-    gNdsFighterControllerLoopFallDetectCount = 0;
-    gNdsFighterControllerLoopLandingDetectCount = 0;
-    gNdsFighterControllerLoopSetGroundCount = 0;
-    gNdsFighterControllerLoopSetAirCount = 0;
-    gNdsFighterControllerLoopWaitSetStatusCount = 0;
-    gNdsFighterControllerLoopRunBrakeEndCount = 0;
-    gNdsFighterControllerLoopJumpAnimEndCount = 0;
-    gNdsFighterControllerLoopLandingEndCount = 0;
-    gNdsFighterControllerLoopDeferredInterruptCheckCount = 0;
-    gNdsFighterControllerLoopUnexpectedStatusCount = 0;
-    gNdsFighterControllerLoopDeniedStatusCount = 0;
-    gNdsFighterControllerLoopDisplayProbeCount = 0;
-    gNdsFighterControllerLoopGameplayUpdateCount = 0;
-    gNdsFighterControllerLoopDrawCallCount = 0;
-    gNdsFighterControllerLoopMatrixCallCount = 0;
-    gNdsFighterControllerLoopRootYDriftCount = 0;
-    gNdsFighterControllerLoopGADriftCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterControllerLoopPrepared, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopFrameMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopUpdateMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopTaskmanUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopVSBattleUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopBaseVSBattleUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopSchedulerUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopSYReadCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopSYUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopGObjCountBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopGObjCountAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0ProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1ProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopProcessAttachEscapeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0GObjProcessRunCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1GObjProcessRunCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0ProcCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1ProcCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0PlaybackApplyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1PlaybackApplyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0ControllerToFTInputCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1ControllerToFTInputCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0DirectFTInputWriteCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1DirectFTInputWriteCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0ButtonTapMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1ButtonTapMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0ButtonHoldMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1ButtonHoldMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0ButtonReleaseMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1ButtonReleaseMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0LastStickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1LastStickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0LastStickY, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1LastStickY, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0TapStickXMin, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1TapStickXMin, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0TapStickYMin, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1TapStickYMin, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0DashTapEligibleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1DashTapEligibleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0JumpButtonTapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1JumpButtonTapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0FrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1FrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0Completed, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1Completed, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0StatusVisitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1StatusVisitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0TransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1TransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0WaitVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1WaitVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0WalkVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1WalkVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0DashVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1DashVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RunVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RunVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RunBrakeVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RunBrakeVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0KneeBendVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1KneeBendVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0JumpVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1JumpVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0FallVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1FallVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0LandingVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1LandingVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0StatusStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1StatusStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0MotionStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1MotionStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0StatusFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1StatusFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0MotionFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1MotionFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0GAFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1GAFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0GroundVelFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1GroundVelFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0AirVelXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1AirVelXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0AirVelYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1AirVelYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0UpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1UpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0InterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1InterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0PhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1PhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0IntegrateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1IntegrateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP0MapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopP1MapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopFallDetectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopLandingDetectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopSetGroundCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopSetAirCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopWaitSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopRunBrakeEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopJumpAnimEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopLandingEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopDeferredInterruptCheckCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopUnexpectedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopDeniedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopDisplayProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopRootYDriftCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterControllerLoopGADriftCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxPreviewLoopResult = 0;
     gNdsFighterMarioFoxPreviewLoopSafeResult = 0;
     gNdsFighterMarioFoxPreviewLoopMask = 0;
@@ -2805,16 +2970,21 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterPreviewLoopP1MotionFinal = 0xffffffffu;
     gNdsFighterPreviewLoopP0GAFinal = 0xffffffffu;
     gNdsFighterPreviewLoopP1GAFinal = 0xffffffffu;
-    gNdsFighterPreviewLoopP0RootXStartMilli = 0;
-    gNdsFighterPreviewLoopP1RootXStartMilli = 0;
-    gNdsFighterPreviewLoopP0RootDeltaXMilli = 0;
-    gNdsFighterPreviewLoopP1RootDeltaXMilli = 0;
-    gNdsFighterPreviewLoopP0RootRiseMilli = 0;
-    gNdsFighterPreviewLoopP1RootRiseMilli = 0;
-    gNdsFighterPreviewLoopP0RootYFinalMilli = 0;
-    gNdsFighterPreviewLoopP1RootYFinalMilli = 0;
-    gNdsFighterPreviewLoopP0FloorYMilli = 0;
-    gNdsFighterPreviewLoopP1FloorYMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1FloorYMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterPreviewLoopP0RootDirectionOK = 0;
     gNdsFighterPreviewLoopP1RootDirectionOK = 0;
     gNdsFighterPreviewLoopP0FloorOK = 0;
@@ -2847,14 +3017,19 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterPreviewLoopTotalPixelCount = 0;
     gNdsFighterPreviewLoopP0ColorChecksum = 0;
     gNdsFighterPreviewLoopP1ColorChecksum = 0;
-    gNdsFighterPreviewLoopP0ScreenXStart = 0;
-    gNdsFighterPreviewLoopP1ScreenXStart = 0;
-    gNdsFighterPreviewLoopP0ScreenXFinal = 0;
-    gNdsFighterPreviewLoopP1ScreenXFinal = 0;
-    gNdsFighterPreviewLoopP0ScreenXDelta = 0;
-    gNdsFighterPreviewLoopP1ScreenXDelta = 0;
-    gNdsFighterPreviewLoopP0ScreenYFloor = 0;
-    gNdsFighterPreviewLoopP1ScreenYFloor = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0ScreenXStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1ScreenXStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0ScreenXFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1ScreenXFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0ScreenXDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1ScreenXDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP0ScreenYFloor, 0u),
+            NDS_DIAG_WORD(gNdsFighterPreviewLoopP1ScreenYFloor, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterPreviewLoopP0ScreenYMin = 0x7fffffff;
     gNdsFighterPreviewLoopP1ScreenYMin = 0x7fffffff;
     gNdsFighterPreviewLoopP0ScreenRise = 0;
@@ -2881,311 +3056,331 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterMarioFoxGCRunAllLoopMask = 0;
     gNdsFighterMarioFoxGCRunAllLoopDeferredMask = 0;
     gNdsFighterMarioFoxGCRunAllLoopCount = 0;
-    gNdsFighterGCRunAllLoopPrepared = 0;
-    gNdsFighterGCRunAllLoopFrameMax = 0;
-    gNdsFighterGCRunAllLoopUpdateMax = 0;
-    gNdsFighterGCRunAllLoopTaskmanUpdateCount = 0;
-    gNdsFighterGCRunAllLoopVSBattleUpdateCount = 0;
-    gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount = 0;
-    gNdsFighterGCRunAllLoopRunAllCount = 0;
-    gNdsFighterGCRunAllLoopSYReadCount = 0;
-    gNdsFighterGCRunAllLoopSYUpdateCount = 0;
-    gNdsFighterGCRunAllLoopGObjCountBefore = 0;
-    gNdsFighterGCRunAllLoopGObjCountAfter = 0;
-    gNdsFighterGCRunAllLoopGObjDelta = 0;
-    gNdsFighterGCRunAllLoopOldProcessPauseCount = 0;
-    gNdsFighterGCRunAllLoopNonTargetGObjVisitCount = 0;
-    gNdsFighterGCRunAllLoopNonTargetProcessPauseCount = 0;
-    gNdsFighterGCRunAllLoopTargetProcessPreserveCount = 0;
-    gNdsFighterGCRunAllLoopP0ProcessAttachCount = 0;
-    gNdsFighterGCRunAllLoopP1ProcessAttachCount = 0;
-    gNdsFighterGCRunAllLoopProcessAttachEscapeCount = 0;
-    gNdsFighterGCRunAllLoopP0GObjProcessRunCount = 0;
-    gNdsFighterGCRunAllLoopP1GObjProcessRunCount = 0;
-    gNdsFighterGCRunAllLoopP0ProcCallbackCount = 0;
-    gNdsFighterGCRunAllLoopP1ProcCallbackCount = 0;
-    gNdsFighterGCRunAllLoopP0PlaybackApplyCount = 0;
-    gNdsFighterGCRunAllLoopP1PlaybackApplyCount = 0;
-    gNdsFighterGCRunAllLoopP0ControllerToFTInputCount = 0;
-    gNdsFighterGCRunAllLoopP1ControllerToFTInputCount = 0;
-    gNdsFighterGCRunAllLoopP0DirectFTInputWriteCount = 0;
-    gNdsFighterGCRunAllLoopP1DirectFTInputWriteCount = 0;
-    gNdsFighterGCRunAllLoopP0ButtonTapMask = 0;
-    gNdsFighterGCRunAllLoopP1ButtonTapMask = 0;
-    gNdsFighterGCRunAllLoopP0ButtonHoldMask = 0;
-    gNdsFighterGCRunAllLoopP1ButtonHoldMask = 0;
-    gNdsFighterGCRunAllLoopP0LastStickX = 0;
-    gNdsFighterGCRunAllLoopP1LastStickX = 0;
-    gNdsFighterGCRunAllLoopP0LastStickY = 0;
-    gNdsFighterGCRunAllLoopP1LastStickY = 0;
-    gNdsFighterGCRunAllLoopP0DashTapEligibleCount = 0;
-    gNdsFighterGCRunAllLoopP1DashTapEligibleCount = 0;
-    gNdsFighterGCRunAllLoopP0JumpButtonTapCount = 0;
-    gNdsFighterGCRunAllLoopP1JumpButtonTapCount = 0;
-    gNdsFighterGCRunAllLoopP0FrameCount = 0;
-    gNdsFighterGCRunAllLoopP1FrameCount = 0;
-    gNdsFighterGCRunAllLoopP0Completed = 0;
-    gNdsFighterGCRunAllLoopP1Completed = 0;
-    gNdsFighterGCRunAllLoopP0StatusVisitMask = 0;
-    gNdsFighterGCRunAllLoopP1StatusVisitMask = 0;
-    gNdsFighterGCRunAllLoopP0TransitionMask = 0;
-    gNdsFighterGCRunAllLoopP1TransitionMask = 0;
-    gNdsFighterGCRunAllLoopP0WaitVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1WaitVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0WalkVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1WalkVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0DashVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1DashVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0RunVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1RunVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0RunBrakeVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1RunBrakeVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0KneeBendVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1KneeBendVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0JumpVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1JumpVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0FallVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1FallVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0LandingVisitCount = 0;
-    gNdsFighterGCRunAllLoopP1LandingVisitCount = 0;
-    gNdsFighterGCRunAllLoopP0StatusStart = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP1StatusStart = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP0MotionStart = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP1MotionStart = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP0StatusFinal = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP1StatusFinal = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP0MotionFinal = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP1MotionFinal = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP0GAFinal = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP1GAFinal = 0xffffffffu;
-    gNdsFighterGCRunAllLoopP0RootXStartMilli = 0;
-    gNdsFighterGCRunAllLoopP1RootXStartMilli = 0;
-    gNdsFighterGCRunAllLoopP0RootDeltaXMilli = 0;
-    gNdsFighterGCRunAllLoopP1RootDeltaXMilli = 0;
-    gNdsFighterGCRunAllLoopP0RootRiseMilli = 0;
-    gNdsFighterGCRunAllLoopP1RootRiseMilli = 0;
-    gNdsFighterGCRunAllLoopP0RootYFinalMilli = 0;
-    gNdsFighterGCRunAllLoopP1RootYFinalMilli = 0;
-    gNdsFighterGCRunAllLoopP0FloorYMilli = 0;
-    gNdsFighterGCRunAllLoopP1FloorYMilli = 0;
-    gNdsFighterGCRunAllLoopP0RootDirectionOK = 0;
-    gNdsFighterGCRunAllLoopP1RootDirectionOK = 0;
-    gNdsFighterGCRunAllLoopP0FloorOK = 0;
-    gNdsFighterGCRunAllLoopP1FloorOK = 0;
-    gNdsFighterGCRunAllLoopP0InterruptCount = 0;
-    gNdsFighterGCRunAllLoopP1InterruptCount = 0;
-    gNdsFighterGCRunAllLoopP0PhysicsCount = 0;
-    gNdsFighterGCRunAllLoopP1PhysicsCount = 0;
-    gNdsFighterGCRunAllLoopP0IntegrateCount = 0;
-    gNdsFighterGCRunAllLoopP1IntegrateCount = 0;
-    gNdsFighterGCRunAllLoopP0MapCount = 0;
-    gNdsFighterGCRunAllLoopP1MapCount = 0;
-    gNdsFighterGCRunAllLoopPreviewWidth = 0;
-    gNdsFighterGCRunAllLoopPreviewHeight = 0;
-    gNdsFighterGCRunAllLoopPreviewPitch = 0;
-    gNdsFighterGCRunAllLoopPreviewReady = 0;
-    gNdsFighterGCRunAllLoopPreviewCommitBefore = 0;
-    gNdsFighterGCRunAllLoopPreviewCommitAfter = 0;
-    gNdsFighterGCRunAllLoopPreviewCommitDelta = 0;
-    gNdsFighterGCRunAllLoopDrawFrameCount = 0;
-    gNdsFighterGCRunAllLoopDisplayCallbackCount = 0;
-    gNdsFighterGCRunAllLoopP0DisplayCallbackCount = 0;
-    gNdsFighterGCRunAllLoopP1DisplayCallbackCount = 0;
-    gNdsFighterGCRunAllLoopP0CandidateCount = 0;
-    gNdsFighterGCRunAllLoopP1CandidateCount = 0;
-    gNdsFighterGCRunAllLoopP0DrawnDObjCount = 0;
-    gNdsFighterGCRunAllLoopP1DrawnDObjCount = 0;
-    gNdsFighterGCRunAllLoopP0PixelCount = 0;
-    gNdsFighterGCRunAllLoopP1PixelCount = 0;
-    gNdsFighterGCRunAllLoopTotalPixelCount = 0;
-    gNdsFighterGCRunAllLoopP0ColorChecksum = 0;
-    gNdsFighterGCRunAllLoopP1ColorChecksum = 0;
-    gNdsFighterGCRunAllLoopP0ScreenXStart = 0;
-    gNdsFighterGCRunAllLoopP1ScreenXStart = 0;
-    gNdsFighterGCRunAllLoopP0ScreenXFinal = 0;
-    gNdsFighterGCRunAllLoopP1ScreenXFinal = 0;
-    gNdsFighterGCRunAllLoopP0ScreenXDelta = 0;
-    gNdsFighterGCRunAllLoopP1ScreenXDelta = 0;
-    gNdsFighterGCRunAllLoopP0ScreenYFloor = 0;
-    gNdsFighterGCRunAllLoopP1ScreenYFloor = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPrepared, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopFrameMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopUpdateMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopTaskmanUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopVSBattleUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopBaseVSBattleUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopRunAllCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopSYReadCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopSYUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopGObjCountBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopGObjCountAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopOldProcessPauseCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopNonTargetGObjVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopNonTargetProcessPauseCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopTargetProcessPreserveCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopProcessAttachEscapeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0GObjProcessRunCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1GObjProcessRunCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ProcCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ProcCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0PlaybackApplyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1PlaybackApplyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ControllerToFTInputCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ControllerToFTInputCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0DirectFTInputWriteCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1DirectFTInputWriteCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ButtonTapMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ButtonTapMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ButtonHoldMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ButtonHoldMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0LastStickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1LastStickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0LastStickY, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1LastStickY, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0DashTapEligibleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1DashTapEligibleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0JumpButtonTapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1JumpButtonTapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0FrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1FrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0Completed, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1Completed, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0StatusVisitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1StatusVisitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0TransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1TransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0WaitVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1WaitVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0WalkVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1WalkVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0DashVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1DashVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RunVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RunVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RunBrakeVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RunBrakeVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0KneeBendVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1KneeBendVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0JumpVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1JumpVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0FallVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1FallVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0LandingVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1LandingVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0StatusStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1StatusStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0MotionStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1MotionStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0StatusFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1StatusFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0MotionFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1MotionFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0GAFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1GAFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0InterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1InterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0PhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1PhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0IntegrateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1IntegrateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0MapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1MapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewWidth, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewHeight, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewPitch, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewReady, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewCommitBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewCommitAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopPreviewCommitDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopDrawFrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopDisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0DisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1DisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopTotalPixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ScreenXStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ScreenXStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ScreenXFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ScreenXFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ScreenXDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ScreenXDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ScreenYFloor, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ScreenYFloor, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterGCRunAllLoopP0ScreenYMin = 0x7fffffff;
     gNdsFighterGCRunAllLoopP1ScreenYMin = 0x7fffffff;
-    gNdsFighterGCRunAllLoopP0ScreenRise = 0;
-    gNdsFighterGCRunAllLoopP1ScreenRise = 0;
-    gNdsFighterGCRunAllLoopFallDetectCount = 0;
-    gNdsFighterGCRunAllLoopLandingDetectCount = 0;
-    gNdsFighterGCRunAllLoopSetGroundCount = 0;
-    gNdsFighterGCRunAllLoopSetAirCount = 0;
-    gNdsFighterGCRunAllLoopWaitSetStatusCount = 0;
-    gNdsFighterGCRunAllLoopRunBrakeEndCount = 0;
-    gNdsFighterGCRunAllLoopJumpAnimEndCount = 0;
-    gNdsFighterGCRunAllLoopLandingEndCount = 0;
-    gNdsFighterGCRunAllLoopDeferredInterruptCheckCount = 0;
-    gNdsFighterGCRunAllLoopUnexpectedStatusCount = 0;
-    gNdsFighterGCRunAllLoopDeniedStatusCount = 0;
-    gNdsFighterGCRunAllLoopDisplayProbeCount = 0;
-    gNdsFighterGCRunAllLoopGameplayUpdateCount = 0;
-    gNdsFighterGCRunAllLoopDrawCallCount = 0;
-    gNdsFighterGCRunAllLoopMatrixCallCount = 0;
-    gNdsFighterGCRunAllLoopRootYDriftCount = 0;
-    gNdsFighterGCRunAllLoopGADriftCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP0ScreenRise, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopP1ScreenRise, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopFallDetectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopLandingDetectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopSetGroundCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopSetAirCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopWaitSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopRunBrakeEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopJumpAnimEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopLandingEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopDeferredInterruptCheckCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopUnexpectedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopDeniedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopDisplayProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopRootYDriftCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCRunAllLoopGADriftCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxGCDrawAllLoopResult = 0;
     gNdsFighterMarioFoxGCDrawAllLoopSafeResult = 0;
     gNdsFighterMarioFoxGCDrawAllLoopMask = 0;
     gNdsFighterMarioFoxGCDrawAllLoopDeferredMask = 0;
     gNdsFighterMarioFoxGCDrawAllLoopCount = 0;
-    gNdsFighterGCDrawAllLoopPrepared = 0;
-    gNdsFighterGCDrawAllLoopFrameMax = 0;
-    gNdsFighterGCDrawAllLoopUpdateMax = 0;
-    gNdsFighterGCDrawAllLoopTaskmanUpdateCount = 0;
-    gNdsFighterGCDrawAllLoopVSBattleUpdateCount = 0;
-    gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount = 0;
-    gNdsFighterGCDrawAllLoopDrawAllCount = 0;
-    gNdsFighterGCDrawAllLoopCameraCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopCapturedDisplayCount = 0;
-    gNdsFighterGCDrawAllLoopNonTargetDisplayCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopRunAllCount = 0;
-    gNdsFighterGCDrawAllLoopSYReadCount = 0;
-    gNdsFighterGCDrawAllLoopSYUpdateCount = 0;
-    gNdsFighterGCDrawAllLoopGObjCountBefore = 0;
-    gNdsFighterGCDrawAllLoopGObjCountAfter = 0;
-    gNdsFighterGCDrawAllLoopGObjDelta = 0;
-    gNdsFighterGCDrawAllLoopOldProcessPauseCount = 0;
-    gNdsFighterGCDrawAllLoopNonTargetGObjVisitCount = 0;
-    gNdsFighterGCDrawAllLoopNonTargetProcessPauseCount = 0;
-    gNdsFighterGCDrawAllLoopTargetProcessPreserveCount = 0;
-    gNdsFighterGCDrawAllLoopP0ProcessAttachCount = 0;
-    gNdsFighterGCDrawAllLoopP1ProcessAttachCount = 0;
-    gNdsFighterGCDrawAllLoopProcessAttachEscapeCount = 0;
-    gNdsFighterGCDrawAllLoopP0GObjProcessRunCount = 0;
-    gNdsFighterGCDrawAllLoopP1GObjProcessRunCount = 0;
-    gNdsFighterGCDrawAllLoopP0ProcCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopP1ProcCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopP0PlaybackApplyCount = 0;
-    gNdsFighterGCDrawAllLoopP1PlaybackApplyCount = 0;
-    gNdsFighterGCDrawAllLoopP0ControllerToFTInputCount = 0;
-    gNdsFighterGCDrawAllLoopP1ControllerToFTInputCount = 0;
-    gNdsFighterGCDrawAllLoopP0DirectFTInputWriteCount = 0;
-    gNdsFighterGCDrawAllLoopP1DirectFTInputWriteCount = 0;
-    gNdsFighterGCDrawAllLoopP0ButtonTapMask = 0;
-    gNdsFighterGCDrawAllLoopP1ButtonTapMask = 0;
-    gNdsFighterGCDrawAllLoopP0ButtonHoldMask = 0;
-    gNdsFighterGCDrawAllLoopP1ButtonHoldMask = 0;
-    gNdsFighterGCDrawAllLoopP0LastStickX = 0;
-    gNdsFighterGCDrawAllLoopP1LastStickX = 0;
-    gNdsFighterGCDrawAllLoopP0LastStickY = 0;
-    gNdsFighterGCDrawAllLoopP1LastStickY = 0;
-    gNdsFighterGCDrawAllLoopP0DashTapEligibleCount = 0;
-    gNdsFighterGCDrawAllLoopP1DashTapEligibleCount = 0;
-    gNdsFighterGCDrawAllLoopP0JumpButtonTapCount = 0;
-    gNdsFighterGCDrawAllLoopP1JumpButtonTapCount = 0;
-    gNdsFighterGCDrawAllLoopP0FrameCount = 0;
-    gNdsFighterGCDrawAllLoopP1FrameCount = 0;
-    gNdsFighterGCDrawAllLoopP0Completed = 0;
-    gNdsFighterGCDrawAllLoopP1Completed = 0;
-    gNdsFighterGCDrawAllLoopP0StatusVisitMask = 0;
-    gNdsFighterGCDrawAllLoopP1StatusVisitMask = 0;
-    gNdsFighterGCDrawAllLoopP0TransitionMask = 0;
-    gNdsFighterGCDrawAllLoopP1TransitionMask = 0;
-    gNdsFighterGCDrawAllLoopP0WaitVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1WaitVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0WalkVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1WalkVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0DashVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1DashVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0RunVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1RunVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0RunBrakeVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1RunBrakeVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0KneeBendVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1KneeBendVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0JumpVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1JumpVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0FallVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1FallVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0LandingVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP1LandingVisitCount = 0;
-    gNdsFighterGCDrawAllLoopP0StatusStart = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP1StatusStart = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP0MotionStart = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP1MotionStart = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP0StatusFinal = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP1StatusFinal = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP0MotionFinal = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP1MotionFinal = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP0GAFinal = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP1GAFinal = 0xffffffffu;
-    gNdsFighterGCDrawAllLoopP0RootXStartMilli = 0;
-    gNdsFighterGCDrawAllLoopP1RootXStartMilli = 0;
-    gNdsFighterGCDrawAllLoopP0RootDeltaXMilli = 0;
-    gNdsFighterGCDrawAllLoopP1RootDeltaXMilli = 0;
-    gNdsFighterGCDrawAllLoopP0RootRiseMilli = 0;
-    gNdsFighterGCDrawAllLoopP1RootRiseMilli = 0;
-    gNdsFighterGCDrawAllLoopP0RootYFinalMilli = 0;
-    gNdsFighterGCDrawAllLoopP1RootYFinalMilli = 0;
-    gNdsFighterGCDrawAllLoopP0FloorYMilli = 0;
-    gNdsFighterGCDrawAllLoopP1FloorYMilli = 0;
-    gNdsFighterGCDrawAllLoopP0RootDirectionOK = 0;
-    gNdsFighterGCDrawAllLoopP1RootDirectionOK = 0;
-    gNdsFighterGCDrawAllLoopP0FloorOK = 0;
-    gNdsFighterGCDrawAllLoopP1FloorOK = 0;
-    gNdsFighterGCDrawAllLoopP0InterruptCount = 0;
-    gNdsFighterGCDrawAllLoopP1InterruptCount = 0;
-    gNdsFighterGCDrawAllLoopP0PhysicsCount = 0;
-    gNdsFighterGCDrawAllLoopP1PhysicsCount = 0;
-    gNdsFighterGCDrawAllLoopP0IntegrateCount = 0;
-    gNdsFighterGCDrawAllLoopP1IntegrateCount = 0;
-    gNdsFighterGCDrawAllLoopP0MapCount = 0;
-    gNdsFighterGCDrawAllLoopP1MapCount = 0;
-    gNdsFighterGCDrawAllLoopPreviewWidth = 0;
-    gNdsFighterGCDrawAllLoopPreviewHeight = 0;
-    gNdsFighterGCDrawAllLoopPreviewPitch = 0;
-    gNdsFighterGCDrawAllLoopPreviewReady = 0;
-    gNdsFighterGCDrawAllLoopPreviewCommitBefore = 0;
-    gNdsFighterGCDrawAllLoopPreviewCommitAfter = 0;
-    gNdsFighterGCDrawAllLoopPreviewCommitDelta = 0;
-    gNdsFighterGCDrawAllLoopDrawFrameCount = 0;
-    gNdsFighterGCDrawAllLoopDisplayCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopP0DisplayCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopP1DisplayCallbackCount = 0;
-    gNdsFighterGCDrawAllLoopP0CandidateCount = 0;
-    gNdsFighterGCDrawAllLoopP1CandidateCount = 0;
-    gNdsFighterGCDrawAllLoopP0DrawnDObjCount = 0;
-    gNdsFighterGCDrawAllLoopP1DrawnDObjCount = 0;
-    gNdsFighterGCDrawAllLoopP0PixelCount = 0;
-    gNdsFighterGCDrawAllLoopP1PixelCount = 0;
-    gNdsFighterGCDrawAllLoopTotalPixelCount = 0;
-    gNdsFighterGCDrawAllLoopP0ColorChecksum = 0;
-    gNdsFighterGCDrawAllLoopP1ColorChecksum = 0;
-    gNdsFighterGCDrawAllLoopP0ScreenXStart = 0;
-    gNdsFighterGCDrawAllLoopP1ScreenXStart = 0;
-    gNdsFighterGCDrawAllLoopP0ScreenXFinal = 0;
-    gNdsFighterGCDrawAllLoopP1ScreenXFinal = 0;
-    gNdsFighterGCDrawAllLoopP0ScreenXDelta = 0;
-    gNdsFighterGCDrawAllLoopP1ScreenXDelta = 0;
-    gNdsFighterGCDrawAllLoopP0ScreenYFloor = 0;
-    gNdsFighterGCDrawAllLoopP1ScreenYFloor = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPrepared, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopFrameMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopUpdateMax, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopTaskmanUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopVSBattleUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopBaseVSBattleUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDrawAllCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopCameraCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopCapturedDisplayCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopNonTargetDisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopRunAllCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopSYReadCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopSYUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopGObjCountBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopGObjCountAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopGObjDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopOldProcessPauseCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopNonTargetGObjVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopNonTargetProcessPauseCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopTargetProcessPreserveCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ProcessAttachCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopProcessAttachEscapeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0GObjProcessRunCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1GObjProcessRunCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ProcCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ProcCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0PlaybackApplyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1PlaybackApplyCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ControllerToFTInputCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ControllerToFTInputCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0DirectFTInputWriteCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1DirectFTInputWriteCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ButtonTapMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ButtonTapMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ButtonHoldMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ButtonHoldMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0LastStickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1LastStickX, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0LastStickY, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1LastStickY, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0DashTapEligibleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1DashTapEligibleCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0JumpButtonTapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1JumpButtonTapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0FrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1FrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0Completed, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1Completed, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0StatusVisitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1StatusVisitMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0TransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1TransitionMask, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0WaitVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1WaitVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0WalkVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1WalkVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0DashVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1DashVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RunVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RunVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RunBrakeVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RunBrakeVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0KneeBendVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1KneeBendVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0JumpVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1JumpVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0FallVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1FallVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0LandingVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1LandingVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0StatusStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1StatusStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0MotionStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1MotionStart, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0StatusFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1StatusFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0MotionFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1MotionFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0GAFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1GAFinal, 1u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RootXStartMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RootDeltaXMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RootRiseMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1RootDirectionOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0InterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1InterruptCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0PhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1PhysicsCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0IntegrateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1IntegrateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0MapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1MapCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewWidth, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewHeight, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewPitch, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewReady, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewCommitBefore, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewCommitAfter, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopPreviewCommitDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDrawFrameCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0DisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1DisplayCallbackCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1CandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1DrawnDObjCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1PixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopTotalPixelCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ColorChecksum, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ScreenXStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ScreenXStart, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ScreenXFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ScreenXFinal, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ScreenXDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ScreenXDelta, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ScreenYFloor, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ScreenYFloor, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterGCDrawAllLoopP0ScreenYMin = 0x7fffffff;
     gNdsFighterGCDrawAllLoopP1ScreenYMin = 0x7fffffff;
-    gNdsFighterGCDrawAllLoopP0ScreenRise = 0;
-    gNdsFighterGCDrawAllLoopP1ScreenRise = 0;
-    gNdsFighterGCDrawAllLoopFallDetectCount = 0;
-    gNdsFighterGCDrawAllLoopLandingDetectCount = 0;
-    gNdsFighterGCDrawAllLoopSetGroundCount = 0;
-    gNdsFighterGCDrawAllLoopSetAirCount = 0;
-    gNdsFighterGCDrawAllLoopWaitSetStatusCount = 0;
-    gNdsFighterGCDrawAllLoopRunBrakeEndCount = 0;
-    gNdsFighterGCDrawAllLoopJumpAnimEndCount = 0;
-    gNdsFighterGCDrawAllLoopLandingEndCount = 0;
-    gNdsFighterGCDrawAllLoopDeferredInterruptCheckCount = 0;
-    gNdsFighterGCDrawAllLoopUnexpectedStatusCount = 0;
-    gNdsFighterGCDrawAllLoopDeniedStatusCount = 0;
-    gNdsFighterGCDrawAllLoopDisplayProbeCount = 0;
-    gNdsFighterGCDrawAllLoopGameplayUpdateCount = 0;
-    gNdsFighterGCDrawAllLoopDrawCallCount = 0;
-    gNdsFighterGCDrawAllLoopMatrixCallCount = 0;
-    gNdsFighterGCDrawAllLoopRootYDriftCount = 0;
-    gNdsFighterGCDrawAllLoopGADriftCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP0ScreenRise, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopP1ScreenRise, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopFallDetectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopLandingDetectCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopSetGroundCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopSetAirCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopWaitSetStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopRunBrakeEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopJumpAnimEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopLandingEndCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDeferredInterruptCheckCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopUnexpectedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDeniedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDisplayProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopGameplayUpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopDrawCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopMatrixCallCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopRootYDriftCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterGCDrawAllLoopGADriftCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxStageGCDrawAllLoopResult = 0;
     gNdsFighterMarioFoxStageGCDrawAllLoopSafeResult = 0;
     gNdsFighterMarioFoxStageGCDrawAllLoopMask = 0;
@@ -3230,19 +3425,24 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageGCDrawAllLoopHardwareTextureMaxHeight = 0;
     gNdsStageGCDrawAllLoopHardwareFighterSubmitCount = 0;
     gNdsStageGCDrawAllLoopHardwareFighterTriangleCount = 0;
-    gNdsFighterDisplayContractSelectedCount = 0;
-    gNdsFighterDisplayContractHiddenCount = 0;
-    gNdsFighterDisplayContractNoTextureCount = 0;
-    gNdsFighterDisplayContractSubmittedCount = 0;
-    gNdsFighterDisplayContractGeometryMode = 0;
-    gNdsFighterDisplayContractCycleType = 0;
-    gNdsFighterDisplayContractRenderMode = 0;
-    gNdsFighterDisplayContractLightCount = 0;
-    gNdsFighterDisplayContractLightDirectionCount = 0;
-    gNdsFighterDisplayContractBoundsPassCount = 0;
-    gNdsFighterDisplayContractBoundsFailCount = 0;
-    gNdsFighterDisplayContractBoundsXBits = 0;
-    gNdsFighterDisplayContractBoundsYBits = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsFighterDisplayContractSelectedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractHiddenCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractNoTextureCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractSubmittedCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractGeometryMode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractCycleType, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractRenderMode, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractLightCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractLightDirectionCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractBoundsPassCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractBoundsFailCount, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractBoundsXBits, 0u),
+            NDS_DIAG_WORD(gNdsFighterDisplayContractBoundsYBits, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount = 0;
     gNdsStageGCDrawAllLoopHardwareCarryCaptureCount = 0;
     gNdsStageGCDrawAllLoopHardwareCarryTextureSeedCount = 0;
@@ -3296,22 +3496,27 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageCollisionLoopP1FloorDistMilli = 0;
     gNdsStageCollisionLoopP0FloorFlags = 0;
     gNdsStageCollisionLoopP1FloorFlags = 0;
-    gNdsStageCollisionLoopP0FloorAngleX1000 = 0;
-    gNdsStageCollisionLoopP0FloorAngleY1000 = 0;
-    gNdsStageCollisionLoopP1FloorAngleX1000 = 0;
-    gNdsStageCollisionLoopP1FloorAngleY1000 = 0;
-    gNdsStageCollisionLoopP0EdgeLX = 0;
-    gNdsStageCollisionLoopP0EdgeLY = 0;
-    gNdsStageCollisionLoopP0EdgeRX = 0;
-    gNdsStageCollisionLoopP0EdgeRY = 0;
-    gNdsStageCollisionLoopP1EdgeLX = 0;
-    gNdsStageCollisionLoopP1EdgeLY = 0;
-    gNdsStageCollisionLoopP1EdgeRX = 0;
-    gNdsStageCollisionLoopP1EdgeRY = 0;
-    gNdsStageCollisionLoopP0RootYFinalMilli = 0;
-    gNdsStageCollisionLoopP1RootYFinalMilli = 0;
-    gNdsStageCollisionLoopP0FloorYMilli = 0;
-    gNdsStageCollisionLoopP1FloorYMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0FloorAngleX1000, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0FloorAngleY1000, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1FloorAngleX1000, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1FloorAngleY1000, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0EdgeLX, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0EdgeLY, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0EdgeRX, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0EdgeRY, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1EdgeLX, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1EdgeLY, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1EdgeRX, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1EdgeRY, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageCollisionLoopP1FloorYMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageCollisionLoopP0FloorOK = 0;
     gNdsStageCollisionLoopP1FloorOK = 0;
     gNdsStageCollisionLoopGObjDelta = 0;
@@ -3349,21 +3554,26 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageFloorFollowLoopP1FloorKind = 0xffffffffu;
     gNdsStageFloorFollowLoopP0FloorLineIsFloor = 0;
     gNdsStageFloorFollowLoopP1FloorLineIsFloor = 0;
-    gNdsStageFloorFollowLoopP0InitialRootXMilli = 0;
-    gNdsStageFloorFollowLoopP1InitialRootXMilli = 0;
-    gNdsStageFloorFollowLoopP0FinalRootXMilli = 0;
-    gNdsStageFloorFollowLoopP1FinalRootXMilli = 0;
-    gNdsStageFloorFollowLoopP0RootXDeltaMilli = 0;
-    gNdsStageFloorFollowLoopP1RootXDeltaMilli = 0;
-    gNdsStageFloorFollowLoopP0FinalRootYMilli = 0;
-    gNdsStageFloorFollowLoopP1FinalRootYMilli = 0;
-    gNdsStageFloorFollowLoopP0FloorYMilli = 0;
-    gNdsStageFloorFollowLoopP1FloorYMilli = 0;
-    gNdsStageFloorFollowLoopP0FinalDriftMilli = 0;
-    gNdsStageFloorFollowLoopP1FinalDriftMilli = 0;
-    gNdsStageFloorFollowLoopP0MaxDriftMilli = 0;
-    gNdsStageFloorFollowLoopP1MaxDriftMilli = 0;
-    gNdsStageFloorFollowLoopMaxDriftMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0InitialRootXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1InitialRootXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0FinalRootXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1FinalRootXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0RootXDeltaMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1RootXDeltaMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0FinalRootYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1FinalRootYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1FloorYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0FinalDriftMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1FinalDriftMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP0MaxDriftMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopP1MaxDriftMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorFollowLoopMaxDriftMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageFloorFollowLoopP0FloorOK = 0;
     gNdsStageFloorFollowLoopP1FloorOK = 0;
     gNdsStageFloorFollowLoopP0FloorVisitMask = 0;
@@ -3382,15 +3592,20 @@ void ndsResetStartupDiagnostics(void)
     gNdsStageFloorEdgeLoopSelectedLineID = -1;
     gNdsStageFloorEdgeLoopSelectedLineKind = 0xffffffffu;
     gNdsStageFloorEdgeLoopSelectedVertexCount = 0;
-    gNdsStageFloorEdgeLoopLeftXMilli = 0;
-    gNdsStageFloorEdgeLoopRightXMilli = 0;
-    gNdsStageFloorEdgeLoopWidthMilli = 0;
-    gNdsStageFloorEdgeLoopP0StartDistMilli = 0;
-    gNdsStageFloorEdgeLoopP1StartDistMilli = 0;
-    gNdsStageFloorEdgeLoopP0FinalDistMilli = 0;
-    gNdsStageFloorEdgeLoopP1FinalDistMilli = 0;
-    gNdsStageFloorEdgeLoopP0DeltaDistMilli = 0;
-    gNdsStageFloorEdgeLoopP1DeltaDistMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopLeftXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopRightXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopWidthMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopP0StartDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopP1StartDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopP0FinalDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopP1FinalDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopP0DeltaDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageFloorEdgeLoopP1DeltaDistMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageFloorEdgeLoopP0MinDistMilli = 0x7fffffff;
     gNdsStageFloorEdgeLoopP1MinDistMilli = 0x7fffffff;
     gNdsStageFloorEdgeLoopP0ApproachOK = 0;
@@ -3431,158 +3646,183 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterMarioFoxStageMPProcessFloorLoopMask = 0;
     gNdsFighterMarioFoxStageMPProcessFloorLoopDeferredMask = 0;
     gNdsFighterMarioFoxStageMPProcessFloorLoopCount = 0;
-    gNdsStageMPProcessFloorLoopPrepared = 0;
-    gNdsStageMPProcessFloorLoopBaseFloorEdgeSeen = 0;
-    gNdsStageMPProcessFloorLoopAdapterBuildCount = 0;
-    gNdsStageMPProcessFloorLoopAdapterCopyBackCount = 0;
-    gNdsStageMPProcessFloorLoopAdapterFallbackLRCount = 0;
-    gNdsStageMPProcessFloorLoopProjectFloorIDCallCount = 0;
-    gNdsStageMPProcessFloorLoopProjectFloorIDHitCount = 0;
-    gNdsStageMPProcessFloorLoopProjectFloorIDMissCount = 0;
-    gNdsStageMPProcessFloorLoopTestNewCallCount = 0;
-    gNdsStageMPProcessFloorLoopTestNewHitCount = 0;
-    gNdsStageMPProcessFloorLoopTestNewMissCount = 0;
-    gNdsStageMPProcessFloorLoopTestNewEdgeBranchCount = 0;
-    gNdsStageMPProcessFloorLoopTestNewSetProjectCount = 0;
-    gNdsStageMPProcessFloorLoopSetLandingFloorCallCount = 0;
-    gNdsStageMPProcessFloorLoopSetCollideFloorCallCount = 0;
-    gNdsStageMPProcessFloorLoopFCCommonPositiveDistCount = 0;
-    gNdsStageMPProcessFloorLoopFCCommonNegativeDistCount = 0;
-    gNdsStageMPProcessFloorLoopFCCommonZeroDistCount = 0;
-    gNdsStageMPProcessFloorLoopP0UpdateCount = 0;
-    gNdsStageMPProcessFloorLoopP1UpdateCount = 0;
-    gNdsStageMPProcessFloorLoopP0HitCount = 0;
-    gNdsStageMPProcessFloorLoopP1HitCount = 0;
-    gNdsStageMPProcessFloorLoopP0MissCount = 0;
-    gNdsStageMPProcessFloorLoopP1MissCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopPrepared, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopBaseFloorEdgeSeen, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopAdapterBuildCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopAdapterCopyBackCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopAdapterFallbackLRCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopProjectFloorIDCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopProjectFloorIDHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopProjectFloorIDMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopTestNewCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopTestNewHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopTestNewMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopTestNewEdgeBranchCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopTestNewSetProjectCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopSetLandingFloorCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopSetCollideFloorCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopFCCommonPositiveDistCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopFCCommonNegativeDistCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopFCCommonZeroDistCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0UpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1UpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0HitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1HitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0MissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1MissCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageMPProcessFloorLoopP0FinalLineID = -1;
     gNdsStageMPProcessFloorLoopP1FinalLineID = -1;
-    gNdsStageMPProcessFloorLoopP0FinalLineIsFloor = 0;
-    gNdsStageMPProcessFloorLoopP1FinalLineIsFloor = 0;
-    gNdsStageMPProcessFloorLoopP0FinalMaskStat = 0;
-    gNdsStageMPProcessFloorLoopP1FinalMaskStat = 0;
-    gNdsStageMPProcessFloorLoopP0FinalDistMilli = 0;
-    gNdsStageMPProcessFloorLoopP1FinalDistMilli = 0;
-    gNdsStageMPProcessFloorLoopP0RootYMilli = 0;
-    gNdsStageMPProcessFloorLoopP1RootYMilli = 0;
-    gNdsStageMPProcessFloorLoopInsideProbeCount = 0;
-    gNdsStageMPProcessFloorLoopInsideProbeHitCount = 0;
-    gNdsStageMPProcessFloorLoopOutsideProbeCount = 0;
-    gNdsStageMPProcessFloorLoopOutsideProbeMissCount = 0;
-    gNdsStageMPProcessFloorLoopBelowFloorProbeCount = 0;
-    gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount = 0;
-    gNdsStageMPProcessFloorLoopNoFinalRecenterCount = 0;
-    gNdsStageMPProcessFloorLoopUnexpectedSceneCount = 0;
-    gNdsStageMPProcessFloorLoopUnexpectedStatusCount = 0;
-    gNdsStageMPProcessFloorLoopUnsafeCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0FinalLineIsFloor, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1FinalLineIsFloor, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0FinalMaskStat, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1FinalMaskStat, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0FinalDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1FinalDistMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP0RootYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopP1RootYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopInsideProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopInsideProbeHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopOutsideProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopOutsideProbeMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopBelowFloorProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopBelowFloorPositiveDistCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopNoFinalRecenterCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopUnexpectedSceneCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopUnexpectedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPProcessFloorLoopUnsafeCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxStageMPUpdateFloorLoopResult = 0;
     gNdsFighterMarioFoxStageMPUpdateFloorLoopSafeResult = 0;
     gNdsFighterMarioFoxStageMPUpdateFloorLoopMask = 0;
     gNdsFighterMarioFoxStageMPUpdateFloorLoopDeferredMask = 0;
     gNdsFighterMarioFoxStageMPUpdateFloorLoopCount = 0;
-    gNdsStageMPUpdateFloorLoopPrepared = 0;
-    gNdsStageMPUpdateFloorLoopBaseMPProcessSeen = 0;
-    gNdsStageMPUpdateFloorLoopAdapterBuildCount = 0;
-    gNdsStageMPUpdateFloorLoopAdapterCopyBackCount = 0;
-    gNdsStageMPUpdateFloorLoopAdapterFallbackLRCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainCallCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainReturnTrueCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainReturnFalseCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainStepCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainMaxStepCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainSplitCount = 0;
-    gNdsStageMPUpdateFloorLoopUpdateMainCapCount = 0;
-    gNdsStageMPUpdateFloorLoopTranslateResetCount = 0;
-    gNdsStageMPUpdateFloorLoopProcCollCallCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsCallCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsFloorHitCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsCliffEdgeBranchCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsStopEdgeBranchCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsDefaultEndCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsWallDeferredCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsCeilDeferredCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsFloorEdgeAdjustDeferredCount = 0;
-    gNdsStageMPUpdateFloorLoopAllCollisionsSecondFloorTestDeferredCount = 0;
-    gNdsStageMPUpdateFloorLoopCheckFloorCallCount = 0;
-    gNdsStageMPUpdateFloorLoopCheckCliffEdgeCallCount = 0;
-    gNdsStageMPUpdateFloorLoopCheckFloorHitCount = 0;
-    gNdsStageMPUpdateFloorLoopCheckCliffEdgeHitCount = 0;
-    gNdsStageMPUpdateFloorLoopCheckFloorMissCount = 0;
-    gNdsStageMPUpdateFloorLoopCheckCliffEdgeMissCount = 0;
-    gNdsStageMPUpdateFloorLoopInsideProbeCount = 0;
-    gNdsStageMPUpdateFloorLoopInsideProbeHitCount = 0;
-    gNdsStageMPUpdateFloorLoopOutsideProbeCount = 0;
-    gNdsStageMPUpdateFloorLoopOutsideProbeMissCount = 0;
-    gNdsStageMPUpdateFloorLoopBelowFloorProbeCount = 0;
-    gNdsStageMPUpdateFloorLoopBelowFloorHitCount = 0;
-    gNdsStageMPUpdateFloorLoopSplitProbeCount = 0;
-    gNdsStageMPUpdateFloorLoopSplitProbeStepCount = 0;
-    gNdsStageMPUpdateFloorLoopP0UpdateCount = 0;
-    gNdsStageMPUpdateFloorLoopP1UpdateCount = 0;
-    gNdsStageMPUpdateFloorLoopP0HitCount = 0;
-    gNdsStageMPUpdateFloorLoopP1HitCount = 0;
-    gNdsStageMPUpdateFloorLoopP0MissCount = 0;
-    gNdsStageMPUpdateFloorLoopP1MissCount = 0;
-    gNdsStageMPUpdateFloorLoopP0PosDiffXMilli = 0;
-    gNdsStageMPUpdateFloorLoopP1PosDiffXMilli = 0;
-    gNdsStageMPUpdateFloorLoopP0PosDiffYMilli = 0;
-    gNdsStageMPUpdateFloorLoopP1PosDiffYMilli = 0;
-    gNdsStageMPUpdateFloorLoopP0RootXBeforeMilli = 0;
-    gNdsStageMPUpdateFloorLoopP1RootXBeforeMilli = 0;
-    gNdsStageMPUpdateFloorLoopP0RootXFinalMilli = 0;
-    gNdsStageMPUpdateFloorLoopP1RootXFinalMilli = 0;
-    gNdsStageMPUpdateFloorLoopP0RootYFinalMilli = 0;
-    gNdsStageMPUpdateFloorLoopP1RootYFinalMilli = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopPrepared, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopBaseMPProcessSeen, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAdapterBuildCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAdapterCopyBackCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAdapterFallbackLRCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainReturnTrueCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainReturnFalseCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainStepCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainMaxStepCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainSplitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUpdateMainCapCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopTranslateResetCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopProcCollCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsFloorHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsFloorMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsCliffEdgeBranchCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsStopEdgeBranchCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsDefaultEndCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsWallDeferredCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsCeilDeferredCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsFloorEdgeAdjustDeferredCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopAllCollisionsSecondFloorTestDeferredCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopCheckFloorCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopCheckCliffEdgeCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopCheckFloorHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopCheckCliffEdgeHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopCheckFloorMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopCheckCliffEdgeMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopInsideProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopInsideProbeHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopOutsideProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopOutsideProbeMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopBelowFloorProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopBelowFloorHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopSplitProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopSplitProbeStepCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0UpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1UpdateCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0HitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1HitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0MissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1MissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0PosDiffXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1PosDiffXMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0PosDiffYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1PosDiffYMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0RootXBeforeMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1RootXBeforeMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1RootXFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0RootYFinalMilli, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1RootYFinalMilli, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageMPUpdateFloorLoopP0FinalLineID = -1;
     gNdsStageMPUpdateFloorLoopP1FinalLineID = -1;
-    gNdsStageMPUpdateFloorLoopP0FinalLineIsFloor = 0;
-    gNdsStageMPUpdateFloorLoopP1FinalLineIsFloor = 0;
-    gNdsStageMPUpdateFloorLoopP0FinalMaskStat = 0;
-    gNdsStageMPUpdateFloorLoopP1FinalMaskStat = 0;
-    gNdsStageMPUpdateFloorLoopP0FloorOK = 0;
-    gNdsStageMPUpdateFloorLoopP1FloorOK = 0;
-    gNdsStageMPUpdateFloorLoopNoFinalRecenterCount = 0;
-    gNdsStageMPUpdateFloorLoopFallDeniedCount = 0;
-    gNdsStageMPUpdateFloorLoopOttottoDeniedCount = 0;
-    gNdsStageMPUpdateFloorLoopUnexpectedSceneCount = 0;
-    gNdsStageMPUpdateFloorLoopUnexpectedStatusCount = 0;
-    gNdsStageMPUpdateFloorLoopUnsafeCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0FinalLineIsFloor, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1FinalLineIsFloor, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0FinalMaskStat, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1FinalMaskStat, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP0FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopP1FloorOK, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopNoFinalRecenterCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopFallDeniedCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopOttottoDeniedCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUnexpectedSceneCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUnexpectedStatusCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPUpdateFloorLoopUnsafeCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsFighterMarioFoxStageMPSweepFloorLoopResult = 0;
     gNdsFighterMarioFoxStageMPSweepFloorLoopSafeResult = 0;
     gNdsFighterMarioFoxStageMPSweepFloorLoopMask = 0;
     gNdsFighterMarioFoxStageMPSweepFloorLoopDeferredMask = 0;
     gNdsFighterMarioFoxStageMPSweepFloorLoopCount = 0;
-    gNdsStageMPSweepFloorLoopPrepared = 0;
-    gNdsStageMPSweepFloorLoopBaseMPUpdateSeen = 0;
-    gNdsStageMPSweepFloorLoopCheckFloorCallCount = 0;
-    gNdsStageMPSweepFloorLoopCheckFloorHitCount = 0;
-    gNdsStageMPSweepFloorLoopCheckFloorMissCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepSameCallCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepSameHitCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepSameMissCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepDiffCallCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepDiffHitCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepDiffMissCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepVisitCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepCandidateCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepRejectSameLineCount = 0;
-    gNdsStageMPSweepFloorLoopLineSweepAcceptNewLineCount = 0;
-    gNdsStageMPSweepFloorLoopSecondFloorCallCount = 0;
-    gNdsStageMPSweepFloorLoopSecondFloorHitCount = 0;
-    gNdsStageMPSweepFloorLoopSecondFloorMissCount = 0;
-    gNdsStageMPSweepFloorLoopLandingFloorCallCount = 0;
-    gNdsStageMPSweepFloorLoopFloorEdgeAdjustCallCount = 0;
-    gNdsStageMPSweepFloorLoopFloorEdgeAdjustDeferredCount = 0;
-    gNdsStageMPSweepFloorLoopMaskCurrFloorCount = 0;
-    gNdsStageMPSweepFloorLoopMaskStatFloorEdgeClearCount = 0;
-    gNdsStageMPSweepFloorLoopIsCollEndClearCount = 0;
-    gNdsStageMPSweepFloorLoopSameLineProbeCount = 0;
-    gNdsStageMPSweepFloorLoopSameLineProbeHitCount = 0;
-    gNdsStageMPSweepFloorLoopDiffLineProbeCount = 0;
-    gNdsStageMPSweepFloorLoopDiffLineProbeHitCount = 0;
-    gNdsStageMPSweepFloorLoopNoHitProbeCount = 0;
-    gNdsStageMPSweepFloorLoopNoHitProbeMissCount = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopPrepared, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopBaseMPUpdateSeen, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopCheckFloorCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopCheckFloorHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopCheckFloorMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepSameCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepSameHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepSameMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepDiffCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepDiffHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepDiffMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepVisitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepCandidateCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepRejectSameLineCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLineSweepAcceptNewLineCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopSecondFloorCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopSecondFloorHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopSecondFloorMissCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopLandingFloorCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopFloorEdgeAdjustCallCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopFloorEdgeAdjustDeferredCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopMaskCurrFloorCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopMaskStatFloorEdgeClearCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopIsCollEndClearCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopSameLineProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopSameLineProbeHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopDiffLineProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopDiffLineProbeHitCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopNoHitProbeCount, 0u),
+            NDS_DIAG_WORD(gNdsStageMPSweepFloorLoopNoHitProbeMissCount, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsStageMPSweepFloorLoopProbeLineID = -1;
     gNdsStageMPSweepFloorLoopAltLineID = -1;
     gNdsStageMPSweepFloorLoopP0FinalLineID = -1;
@@ -3705,21 +3945,26 @@ void ndsResetStartupDiagnostics(void)
     gNdsOpeningRoomDrawFirstCameraViewportTransX = 0;
     gNdsOpeningRoomDrawFirstCameraViewportTransY = 0;
     gNdsRdpDefaultViewportSetCount = 0;
-    gNdsRdpDefaultViewportScaleX = 0;
-    gNdsRdpDefaultViewportScaleY = 0;
-    gNdsRdpDefaultViewportTransX = 0;
-    gNdsRdpDefaultViewportTransY = 0;
-    gNdsRdpDefaultViewportScaleZ = 0;
-    gNdsRdpDefaultViewportTransZ = 0;
-    gNdsOpeningRoomDrawFirstCameraNear100 = 0;
-    gNdsOpeningRoomDrawFirstCameraFar100 = 0;
-    gNdsOpeningRoomDrawFirstCameraFovY100 = 0;
-    gNdsOpeningRoomDrawFirstCameraEyeX100 = 0;
-    gNdsOpeningRoomDrawFirstCameraEyeY100 = 0;
-    gNdsOpeningRoomDrawFirstCameraEyeZ100 = 0;
-    gNdsOpeningRoomDrawFirstCameraAtX100 = 0;
-    gNdsOpeningRoomDrawFirstCameraAtY100 = 0;
-    gNdsOpeningRoomDrawFirstCameraAtZ100 = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsRdpDefaultViewportScaleX, 0u),
+            NDS_DIAG_WORD(gNdsRdpDefaultViewportScaleY, 0u),
+            NDS_DIAG_WORD(gNdsRdpDefaultViewportTransX, 0u),
+            NDS_DIAG_WORD(gNdsRdpDefaultViewportTransY, 0u),
+            NDS_DIAG_WORD(gNdsRdpDefaultViewportScaleZ, 0u),
+            NDS_DIAG_WORD(gNdsRdpDefaultViewportTransZ, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraNear100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraFar100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraFovY100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraEyeX100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraEyeY100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraEyeZ100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraAtX100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraAtY100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawFirstCameraAtZ100, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsOpeningRoomDrawFirstObjectDLLink = 0xffffffffu;
     gNdsOpeningRoomDrawFirstObjectID = 0xffffffffu;
     gNdsOpeningRoomDrawFirstObjectKind = 0xffffffffu;
@@ -3790,14 +4035,19 @@ void ndsResetStartupDiagnostics(void)
     gNdsOpeningRoomDrawMaterialBranchFirstGeneratedCommands = 0;
     gNdsOpeningRoomDrawMaterialBranchFirstTextureScaleS = 0;
     gNdsOpeningRoomDrawMaterialBranchFirstTextureScaleT = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstTileUls = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstTileUlt = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstTileLrs = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstTileLrt = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstScrollUls = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstScrollUlt = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstScrollLrs = 0;
-    gNdsOpeningRoomDrawMaterialBranchFirstScrollLrt = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstTileUls, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstTileUlt, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstTileLrs, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstTileLrt, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstScrollUls, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstScrollUlt, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstScrollLrs, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDrawMaterialBranchFirstScrollLrt, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsOpeningRoomDrawMaterialBranchFirstLoadBlockTexels = 0;
     gNdsOpeningRoomDrawMaterialBranchFirstLoadBlockDxt = 0;
     gNdsOpeningRoomDrawMaterialEmitResult = 0;
@@ -3846,19 +4096,24 @@ void ndsResetStartupDiagnostics(void)
     gNdsOpeningRoomDLPreviewTransformMask = 0;
     gNdsOpeningRoomDLPreviewXObjCount = 0;
     gNdsOpeningRoomDLPreviewFirstXObjKind = 0xffffffffu;
-    gNdsOpeningRoomDLPreviewTranslateX100 = 0;
-    gNdsOpeningRoomDLPreviewTranslateY100 = 0;
-    gNdsOpeningRoomDLPreviewTranslateZ100 = 0;
-    gNdsOpeningRoomDLPreviewRotateX100 = 0;
-    gNdsOpeningRoomDLPreviewRotateY100 = 0;
-    gNdsOpeningRoomDLPreviewRotateZ100 = 0;
-    gNdsOpeningRoomDLPreviewScaleX100 = 0;
-    gNdsOpeningRoomDLPreviewScaleY100 = 0;
-    gNdsOpeningRoomDLPreviewScaleZ100 = 0;
-    gNdsOpeningRoomDLPreviewMinX = 0;
-    gNdsOpeningRoomDLPreviewMaxX = 0;
-    gNdsOpeningRoomDLPreviewMinY = 0;
-    gNdsOpeningRoomDLPreviewMaxY = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewTranslateX100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewTranslateY100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewTranslateZ100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewRotateX100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewRotateY100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewRotateZ100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewScaleX100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewScaleY100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewScaleZ100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewMinX, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewMaxX, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewMinY, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewMaxY, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsOpeningRoomDLPreviewProjectionMask = 0;
     gNdsOpeningRoomDLPreviewProjectionMode =
         NDS_OPENING_ROOM_DL_PREVIEW_PROJECTION_MODE_NONE;
@@ -3866,12 +4121,17 @@ void ndsResetStartupDiagnostics(void)
         NDS_OPENING_ROOM_DL_PREVIEW_PROJECTION_BLOCKER_NONE;
     gNdsOpeningRoomDLPreviewProjectedVertexCount = 0;
     gNdsOpeningRoomDLPreviewProjectedTriangleCount = 0;
-    gNdsOpeningRoomDLPreviewProjectedMinX = 0;
-    gNdsOpeningRoomDLPreviewProjectedMaxX = 0;
-    gNdsOpeningRoomDLPreviewProjectedMinY = 0;
-    gNdsOpeningRoomDLPreviewProjectedMaxY = 0;
-    gNdsOpeningRoomDLPreviewProjectedMinDepth100 = 0;
-    gNdsOpeningRoomDLPreviewProjectedMaxDepth100 = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewProjectedMinX, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewProjectedMaxX, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewProjectedMinY, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewProjectedMaxY, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewProjectedMinDepth100, 0u),
+            NDS_DIAG_WORD(gNdsOpeningRoomDLPreviewProjectedMaxDepth100, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     gNdsOpeningRoomDLPreviewFallbackAxis =
         NDS_OPENING_ROOM_DL_PREVIEW_FALLBACK_AXIS_XY;
     gNdsOpeningRoomDLPreviewFallbackArea = 0;
@@ -4257,72 +4517,82 @@ void ndsResetStartupDiagnostics(void)
     ndsPlatformClearOriginalSpritePreview();
     sNdsRelocInitCount = 0;
     gNdsLBFadeCreateCount = 0;
-    sNdsOpeningRoomPencilsCountsCaptured = 0;
-    sNdsOpeningRoomPencilsGObjsBefore = 0;
-    sNdsOpeningRoomPencilsDObjsBefore = 0;
-    sNdsOpeningRoomPencilsXObjsBefore = 0;
-    sNdsOpeningRoomPencilsAObjsBefore = 0;
-    sNdsOpeningRoomCloseUpOverlayCountsCaptured = 0;
-    sNdsOpeningRoomCloseUpOverlayGObjsBefore = 0;
-    sNdsOpeningRoomOutsideCountsCaptured = 0;
-    sNdsOpeningRoomOutsideGObjsBefore = 0;
-    sNdsOpeningRoomOutsideDObjsBefore = 0;
-    sNdsOpeningRoomOutsideXObjsBefore = 0;
-    sNdsOpeningRoomHazeCountsCaptured = 0;
-    sNdsOpeningRoomHazeGObjsBefore = 0;
-    sNdsOpeningRoomHazeDObjsBefore = 0;
-    sNdsOpeningRoomHazeXObjsBefore = 0;
-    sNdsOpeningRoomSunlightCountsCaptured = 0;
-    sNdsOpeningRoomSunlightGObjsBefore = 0;
-    sNdsOpeningRoomSunlightDObjsBefore = 0;
-    sNdsOpeningRoomSunlightXObjsBefore = 0;
-    sNdsOpeningRoomDeskCountsCaptured = 0;
-    sNdsOpeningRoomDeskGObjsBefore = 0;
-    sNdsOpeningRoomDeskDObjsBefore = 0;
-    sNdsOpeningRoomDeskXObjsBefore = 0;
-    sNdsOpeningRoomSpotlightCountsCaptured = 0;
-    sNdsOpeningRoomSpotlightGObjsBefore = 0;
-    sNdsOpeningRoomSpotlightDObjsBefore = 0;
-    sNdsOpeningRoomSpotlightXObjsBefore = 0;
-    sNdsOpeningRoomSpotlightMObjsBefore = 0;
-    sNdsOpeningRoomSpotlightAObjsBefore = 0;
-    sNdsOpeningRoomBossShadowCountsCaptured = 0;
-    sNdsOpeningRoomBossShadowGObjsBefore = 0;
-    sNdsOpeningRoomBossShadowDObjsBefore = 0;
-    sNdsOpeningRoomBossShadowXObjsBefore = 0;
-    sNdsOpeningRoomBossShadowAObjsBefore = 0;
-    sNdsOpeningRoomScene1CameraCountsCaptured = 0;
-    sNdsOpeningRoomScene1CameraGObjsBefore = 0;
-    sNdsOpeningRoomScene1CameraCObjsBefore = 0;
-    sNdsOpeningRoomScene1CameraXObjsBefore = 0;
-    sNdsOpeningRoomScene1CameraAObjsBefore = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(sNdsOpeningRoomPencilsCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomPencilsGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomPencilsDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomPencilsXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomPencilsAObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomCloseUpOverlayCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomCloseUpOverlayGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomOutsideCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomOutsideGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomOutsideDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomOutsideXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomHazeCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomHazeGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomHazeDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomHazeXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSunlightCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSunlightGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSunlightDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSunlightXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomDeskCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomDeskGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomDeskDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomDeskXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSpotlightCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSpotlightGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSpotlightDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSpotlightXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSpotlightMObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomSpotlightAObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomBossShadowCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomBossShadowGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomBossShadowDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomBossShadowXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomBossShadowAObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene1CameraCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene1CameraGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene1CameraCObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene1CameraXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene1CameraAObjsBefore, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
     sNdsOpeningRoomScene2EjectMainCameraGObj = NULL;
     sNdsOpeningRoomScene2EjectFighterCameraGObj = NULL;
-    sNdsOpeningRoomScene2CameraEjectCaptured = 0;
-    sNdsOpeningRoomScene2CameraCountsCaptured = 0;
-    sNdsOpeningRoomScene2CameraGObjsBefore = 0;
-    sNdsOpeningRoomScene2CameraCObjsBefore = 0;
-    sNdsOpeningRoomScene2CameraXObjsBefore = 0;
-    sNdsOpeningRoomScene2CameraAObjsBefore = 0;
-    sNdsOpeningRoomCloseUpOverlayCameraCountsCaptured = 0;
-    sNdsOpeningRoomCloseUpOverlayCameraGObjsBefore = 0;
-    sNdsOpeningRoomCloseUpOverlayCameraCObjsBefore = 0;
-    sNdsOpeningRoomCloseUpOverlayCameraXObjsBefore = 0;
-    sNdsOpeningRoomWallpaperCameraCountsCaptured = 0;
-    sNdsOpeningRoomWallpaperCameraGObjsBefore = 0;
-    sNdsOpeningRoomWallpaperCameraCObjsBefore = 0;
-    sNdsOpeningRoomWallpaperCameraXObjsBefore = 0;
-    sNdsOpeningRoomLogoCameraCountsCaptured = 0;
-    sNdsOpeningRoomLogoCameraGObjsBefore = 0;
-    sNdsOpeningRoomLogoCameraCObjsBefore = 0;
-    sNdsOpeningRoomLogoCameraXObjsBefore = 0;
-    sNdsOpeningRoomLogoCameraAObjsBefore = 0;
-    sNdsOpeningRoomLogoCountsCaptured = 0;
-    sNdsOpeningRoomLogoGObjsBefore = 0;
-    sNdsOpeningRoomLogoDObjsBefore = 0;
-    sNdsOpeningRoomLogoXObjsBefore = 0;
-    sNdsOpeningRoomLogoMObjsBefore = 0;
-    sNdsOpeningRoomLogoAObjsBefore = 0;
+    {
+        static const uintptr_t words[] = {
+            NDS_DIAG_WORD(sNdsOpeningRoomScene2CameraEjectCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene2CameraCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene2CameraGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene2CameraCObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene2CameraXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomScene2CameraAObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomCloseUpOverlayCameraCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomCloseUpOverlayCameraGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomCloseUpOverlayCameraCObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomCloseUpOverlayCameraXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomWallpaperCameraCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomWallpaperCameraGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomWallpaperCameraCObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomWallpaperCameraXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoCameraCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoCameraGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoCameraCObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoCameraXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoCameraAObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoCountsCaptured, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoGObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoDObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoXObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoMObjsBefore, 0u),
+            NDS_DIAG_WORD(sNdsOpeningRoomLogoAObjsBefore, 0u),
+        };
+        ndsResetDiagnosticWords(words, (u32)(sizeof(words) / sizeof(words[0])));
+    }
 }
 
 extern void ndsMNVSModeRunStartTransitionProbe(void);
