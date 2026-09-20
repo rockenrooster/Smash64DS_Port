@@ -22,7 +22,9 @@ param(
     [ValidateRange(-500,500)][int]$Teleport = 0,
     [string]$Condition = '',
     [string]$Condition2 = '',
-    [switch]$RequireImpactWave
+    [switch]$RequireImpactWave,
+    [switch]$StartupFailureDiagnostics,
+    [ValidateRange(0,1048576)][int]$StartupMallocAtLeast = 0
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -159,7 +161,44 @@ try {
     # the command file fail on line 1 before it can connect. Keep GDB's host
     # charset on auto; the marker run itself decides transport success.
     $commands = @('set pagination off','set print repeats 0','set confirm off','set remotetimeout 30',
-        ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
+        ("target remote 127.0.0.1:{0}" -f $context.GdbPort))
+    $startupState = @(
+            'printf "DIAG_STARTUP_PACK=%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%#x\n", gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, gNdsBattleCoreExternFailure, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstDep, gNdsRelocExternalFixupFailIndex, gNdsRelocExternalFixupFailSlot',
+            'printf "DIAG_STARTUP_HEAP=%u,%u,%u,%#x,%u,%u\n", gNdsSyMallocOverflowCount, gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsSyMallocOverflowCallerLR, gNdsTaskmanArenaChosenSize, gNdsTaskmanGeneralHeapFreeMin',
+            'printf "DIAG_STARTUP_STAGE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsNativeStageBlobReadFailCount, gNdsNativeStageBlobHashMismatchCount, gNdsNativeStagePrepareRunFailStep, gNdsNativeStagePrepareRunFailRun, gNdsNativeStageValidateFullFailStep, gNdsNativeStageValidateFullFailIndex, gNdsNativeStagePacketUnresolvedCount, gNdsNativeStagePacketUnresolvedKind',
+            'printf "DIAG_STARTUP_RESOURCE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTaskmanLibcTopChunkMin, gNdsTaskmanLibcRuntimeHighWater, gNdsFtPoseTrackOverflow, gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2], gNdsEntryEffectNativeFallbackCount, gNdsRendererStageOwnerRejectCount',
+            'printf "DIAG_ENTRY_DESC=%#x,%#x,%#x,%u,%u,%u,%u\n", gFTDataFoxSpecial3, dEFManagerFoxEntryArwingEffectDesc.proc_display, dEFManagerFoxEntryArwingEffectDesc.o_dobjsetup, sNdsEFDeferredCount, gNdsEFDescDisabledCount, gNdsEFDescDeferRecoverCount, gNdsTaskmanHeapGeneration',
+            'set $entry_i = 0',
+            'while $entry_i < sNdsEFDeferredCount',
+            'if sNdsEFDeferredDescs[$entry_i] == &dEFManagerFoxEntryArwingEffectDesc',
+            'printf "DIAG_ENTRY_DEFERRED=%u,%#x\n", $entry_i, sNdsEFDeferredProcs[$entry_i]',
+            'end',
+            'set $entry_i = $entry_i + 1',
+            'end',
+            'set $entry_i = 0',
+            'while $entry_i < sNdsRelocLoadedFileCount',
+            'if sNdsRelocLoadedFiles[$entry_i].asset_id == 161',
+            'printf "DIAG_ENTRY_FILE=%#x,%u,%u,%u\n", sNdsRelocLoadedFiles[$entry_i].data, sNdsRelocLoadedFiles[$entry_i].data_size, sNdsRelocLoadedFiles[$entry_i].owner_scene, sNdsRelocLoadedFiles[$entry_i].owner_generation',
+            'end',
+            'set $entry_i = $entry_i + 1',
+            'end'
+    )
+    if ($StartupFailureDiagnostics) {
+        foreach ($halt in @('ndsPreviewPackLoadHalt', 'ndsBattleCoreExternHalt',
+                            'ndsSyMallocOverflowHalt', '__excpt_entry')) {
+            $commands += @(('break ' + $halt), 'commands', 'silent',
+                ('printf "DIAG_STARTUP_FAILURE=' + $halt + ',r0:%#x,r1:%#x,pc:%#x,lr:%#x\n", $r0, $r1, $pc, $lr')) +
+                $startupState + @('info registers', 'bt 24', 'quit 2', 'end')
+        }
+    }
+    if ($StartupMallocAtLeast -ne 0) {
+        $commands += @(
+            ('break syMallocSet if (gSCManagerSceneData.scene_curr == 22) && (bp == &gSYTaskmanGeneralHeap) && (size >= ' + $StartupMallocAtLeast + ')'),
+            'commands','silent',
+            'printf "DIAG_STARTUP_ALLOC=size:%u,free:%u,lr:%#x\n", (unsigned)size, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, $lr',
+            'bt 4','continue','end')
+    }
+    $commands += @(
         'break ndsSceneManagerEnter','commands','silent',
         'printf "DIAG_WALK_SCENE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsMenuShellWalkSteps, gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
         'set variable gNdsMenuShellWalkBudget = 1',
@@ -228,8 +267,10 @@ try {
     }
     if ($Condition -eq '') {
         # Legacy path: fixed present count, no forced input. Unchanged.
-        $commands += @('tbreak scVSBattleStartBattle','continue','delete',
-            'tbreak ndsBattlePlayableFrameCompleteMarker',
+        # `tbreak` deletes itself. A bare GDB `delete` here used to remove the
+        # pack/OOM/exception diagnostics before battle setup actually ran.
+        $commands += @('tbreak scVSBattleStartBattle','continue')
+        $commands += @('tbreak ndsBattlePlayableFrameCompleteMarker',
             ('ignore $bpnum ' + ($Presents - 1)), 'continue')
     } else {
         # Action path: force controller playback at battle start, then pump
@@ -241,17 +282,23 @@ try {
         if ($Condition.Contains("`n") -or $Condition2.Contains("`n")) { throw 'Conditions must be single lines.' }
         if ($Condition2 -ne '' -and $Condition -eq '') { throw 'Condition2 requires Condition.' }
         $commands += @('set $fttick = 0','set $ftphase = 0',
-            'tbreak scVSBattleStartBattle','commands','silent',
-            'call ndsControllerPlaybackSetEnabled(1)',
-            'call ndsControllerPlaybackSetConnectedMask(1)',
-            'call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
-            'call ndsControllerPlaybackSetPad(1, 0, 0, 0)',
+            # DTCM input writes, as in probe-p2-campaign. Inferior function
+            # calls can stop inside the ARM/Thumb GDB call trampoline.
+            'define diag_pad',
+            'set variable sControllerPlaybackPads[$arg0].button = $arg1',
+            'set variable sControllerPlaybackPads[$arg0].stick_x = $arg2',
+            'set variable sControllerPlaybackPads[$arg0].stick_y = $arg3',
+            'end',
+            'tbreak scVSBattleStartBattle','continue',
+            'tbreak ndsBattlePlayableFrameCompleteMarker','continue',
+            'set variable sControllerPlaybackEnabled = 1',
+            'set variable sControllerPlaybackConnectedMask = 1',
+            'diag_pad 0 0 0 0',
             'set $p0tri_prev = gNdsFighterDLAllDrawP0HardwareTriangleCount',
             'set $p1tri_prev = gNdsFighterDLAllDrawP1HardwareTriangleCount',
             'set $p0rej_prev = gNdsFtrRejectCountBySlot[0]',
             'set $p1rej_prev = gNdsFtrRejectCountBySlot[1]',
             'set $native_prev = gNdsRendererNativeFailure.count',
-            'end','continue','delete',
             'break ndsBattlePlayableFrameCompleteMarker',
             'commands','silent',
             'set $fttick = $fttick + 1')
@@ -264,10 +311,9 @@ try {
                 # the attacker until acquisition: p_translate is the fighter
                 # world position (map.h:34) of Vec3f x,y,z (ssb_types.h:10).
                 $commands += @('if (($fttick % 30) < 2)',
-                    'call ndsControllerPlaybackSetPad(0, 0xA000, 0, 0)',
-                    'call ndsControllerPlaybackSetPad(1, 0, 0, 0)')
+                    'diag_pad 0 0xA000 0 0')
                 $commands += @('else',
-                    'call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
+                    'diag_pad 0 0x2000 0 0',
                     'end')
                 if ($Teleport -ne 0) {
                     # Pin the target in front of the attacker. The shell can
@@ -281,10 +327,9 @@ try {
                 # a static hold taps once and Entry eats it). Stick held
                 # during the pulse selects the variant (down for down-B).
                 $commands += @('if (($fttick % 40) < 2)',
-                    ('call ndsControllerPlaybackSetPad(0, 0x4000, ' + $StickX + ', ' + $StickY + ')'),
-                    'call ndsControllerPlaybackSetPad(1, 0, 0, 0)')
+                    ('diag_pad 0 0x4000 ' + $StickX + ' ' + $StickY))
                 $commands += @('else',
-                    'call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
+                    'diag_pad 0 0 0 0',
                     'end')
                 if ($Teleport -ne 0) {
                     $commands += @(('set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->x = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->x + (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->lr * ' + $Teleport + ')'),
@@ -296,9 +341,9 @@ try {
                 # input so that same weapon can return and trigger SpecialNGet.
                 $commands += @('if $ftphase == 0',
                     'if (($fttick % 40) < 2)',
-                    'call ndsControllerPlaybackSetPad(0, 0x4000, 0, 0)',
-                    'else','call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
-                    'end','else','call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
+                    'diag_pad 0 0x4000 0 0',
+                    'else','diag_pad 0 0 0 0',
+                    'end','else','diag_pad 0 0 0 0',
                     'end')
             }
             'shieldflick' {
@@ -306,9 +351,9 @@ try {
                 # needs a stick edge during guard, which a static full-deflect
                 # never provides.
                 $commands += @('if (($fttick % 20) < 10)',
-                    ('call ndsControllerPlaybackSetPad(0, 0x2000, ' + $StickX + ', 0)'),
+                    ('diag_pad 0 0x2000 ' + $StickX + ' 0'),
                     'else',
-                    'call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
+                    'diag_pad 0 0x2000 0 0',
                     'end')
             }
             'shieldroll' {
@@ -316,14 +361,14 @@ try {
                 # edge. This proves the escape came from shield rather than a
                 # coincident dash/catch path.
                 $commands += @('if $ftphase == 0',
-                    'call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
+                    'diag_pad 0 0x2000 0 0',
                     'else','if (($fttick % 20) < 2)',
-                    ('call ndsControllerPlaybackSetPad(0, 0x2000, ' + $StickX + ', 0)'),
-                    'else','call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
+                    ('diag_pad 0 0x2000 ' + $StickX + ' 0'),
+                    'else','diag_pad 0 0x2000 0 0',
                     'end','end')
             }
             default {
-                $commands += @('call ndsControllerPlaybackSetPad(0, 0, 0, 0)')
+                $commands += @('diag_pad 0 0 0 0')
             }
         }
         # A condition hit is read on the frame-complete marker. Delta the
@@ -353,6 +398,12 @@ try {
             $commands += $baseline
             $commands += @('continue','end','end','end','continue')
         }
+    }
+    if ($StartupFailureDiagnostics) {
+        $commands += $startupState + @(
+            'printf "DIAG_STARTUP_GO=%u,%u,%u,%u\n", gNdsK0BattleInGo, gSCManagerBattleState->time_passed, gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount',
+            'printf "DIAG_SHIELD_POSE=%u,%u,%u\n", gNdsShieldPoseLoadCount, gNdsShieldPoseLoadFailCount, gNdsShieldPoseResidentBytes',
+            'echo DIAG_ENTRY_ROOT_DRAWS=', 'output gNdsEntryEffectNativeRootDraws', 'echo \n')
     }
     $commands += @(
         'printf "DIAG_STATE=%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->gkind, gSCManagerBattleState->time_passed, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
@@ -477,6 +528,20 @@ try {
     }
     $result.state = @($state.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     $result.native_failure = @($native.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
+    if ($StartupFailureDiagnostics) {
+        foreach ($marker in @('pack', 'heap', 'stage', 'resource', 'go')) {
+            $hit = [regex]::Match($text, '(?m)^DIAG_STARTUP_' + $marker.ToUpperInvariant() + '=(.*)\r?$')
+            if (-not $hit.Success) { throw "Missing startup $marker witness." }
+            $result['startup_' + $marker] = @($hit.Groups[1].Value.Trim().Split(',') |
+                ForEach-Object { if ($_ -match '^0x') { [Convert]::ToUInt32($_.Substring(2),16) } else { [uint32]$_ } })
+        }
+        if ($result.startup_pack[0] -ne 0 -or $result.startup_pack[2] -ne 0 -or
+            $result.startup_pack[5] -ne 0 -or $result.startup_heap[0] -ne 0 -or
+            @($result.startup_stage[0..6] | Where-Object { $_ -ne 0 }).Count -ne 0 -or
+            @($result.startup_resource[2..7] | Where-Object { $_ -ne 0 }).Count -ne 0) {
+            throw 'Startup resource or native failure counter is nonzero.'
+        }
+    }
     $impactWave = [regex]::Match($text,'(?m)^DIAG_IMPACTWAVE=([0-9]+)\r?$')
     if (-not $impactWave.Success) { throw 'Missing native impact-wave witness marker.' }
     $result.impact_wave_hits = [uint32]$impactWave.Groups[1].Value

@@ -3207,6 +3207,12 @@ override NDS_SHIP_TELEMETRY := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Runtime 2 is the accepted published battle path. Keep the free-play/root
+# shell on the same path as the published battle and realtime proof targets;
+# otherwise menu-launched matches silently fall back to the retired R1 loop.
+ifneq ($(NDS_R2_LAB_R1_PATH),1)
+override NDS_R2_PATH := 1
+endif
 override NDS_R2_FIGHTER_HW_MTX := 1
 override NDS_R2_FIGHTER_GX_COMPOSE := 1
 override NDS_R2_STAGE_VALIDATE_STRIDE := 8
@@ -3238,6 +3244,16 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
+# The published owner ROM is the all-content build. Keep the 1P campaign
+# inseparable from the free-play shell so `make` cannot publish a VS-complete
+# ROM that silently omits 1P Game, its campaign-only opponents, bonus boards,
+# Final Destination/Master Hand, stage-clear/continue scenes, or campaign BGM.
+override NDS_P2_1P_GAME := 1
+# The all-content shell must use the source-exact compact battle packs. Raw
+# Main/Model residency exhausts the taskman arena after Ness before Fox's
+# 116,752-byte Main allocation; the compact path is the existing full-roster
+# battle representation and preserves the same fighter content.
+override NDS_P2_COMPACT_BATTLE_FIGHTERS := 1
 # The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
 $(eval $(NDS_P2_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
@@ -6086,9 +6102,12 @@ NDS_NATIVE_CHARGESHOT_PREREQ := \
 NDS_SHIELD_POSE_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_shield_pose_assets.generated.h
 NDS_SHIELD_POSE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/archive/NDS_SHIELD_POSE_ASSETS.generated.json
 NDS_SHIELD_POSE_SOURCE_DIR := $(PROJECT_ROOT)/assets/fighters/shield_pose
-NDS_SHIELD_POSE_ALL_IDS := 02 03 05 07 08 09 10
+NDS_SHIELD_POSE_ALL_IDS := 01 02 03 05 07 08 09 10 11
 NDS_SHIELD_POSE_SOURCE_FILES := $(foreach id,$(NDS_SHIELD_POSE_ALL_IDS),$(NDS_SHIELD_POSE_SOURCE_DIR)/$(id).bin)
 NDS_SHIELD_POSE_IDS :=
+ifneq ($(filter 1,$(NDS_P2_COMPACT_BATTLE_FIGHTERS) $(NDS_P2_DONKEY) $(NDS_P2_SAMUS) $(NDS_P2_LINK) $(NDS_P2_KIRBY) $(NDS_P2_CAPTAIN) $(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_NESS)),)
+NDS_SHIELD_POSE_IDS += 01
+endif
 ifeq ($(NDS_P2_DONKEY),1)
 NDS_SHIELD_POSE_IDS += 02
 endif
@@ -6110,6 +6129,9 @@ endif
 ifeq ($(NDS_P2_PURIN),1)
 NDS_SHIELD_POSE_IDS += 10
 endif
+ifeq ($(NDS_P2_NESS),1)
+NDS_SHIELD_POSE_IDS += 11
+endif
 NDS_NITROFS_SHIELD_POSE_FILES := $(foreach id,$(NDS_SHIELD_POSE_IDS),$(NITROFS_DIR)/fighters/shield_pose/$(id).bin)
 NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_shield_pose_pack.py \
@@ -6118,6 +6140,8 @@ NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/scripts/fighters/fighter_production_manifest.json \
 	$(PROJECT_ROOT)/decomp/BattleShip-main/decomp/src/sys/objtypes.h \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftdata.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatafox.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdataness.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatadonkey.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatasamus.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatalink.c \
@@ -6126,6 +6150,8 @@ NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatacaptain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatapikachu.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/213_DonkeyMain.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/209_FoxMain.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/239_NessMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/217_SamusMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/225_LinkMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/229_KirbyMain.c \
@@ -6133,6 +6159,8 @@ NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/236_CaptainMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/243_PikachuMain.c \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/DonkeyMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/FoxMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/NessMain \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/SamusMain \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/LinkMain \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/KirbyMain \
@@ -6140,6 +6168,8 @@ NDS_SHIELD_POSE_PREREQ := \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/CaptainMain \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/PikachuMain \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/DonkeyShieldPose \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/FoxShieldPose \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/NessShieldPose \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/SamusShieldPose \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/LinkShieldPose \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/KirbyShieldPose \

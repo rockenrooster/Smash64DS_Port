@@ -86,6 +86,8 @@ static sb32 ndsIFCommonFastIterationIsEnabled(void);
 static u32 ndsIFCommonGetTicCount(void);
 static void ndsIFCommonSetTicCount(u32 tics);
 static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
+static GObjProcess *ndsIFCommonAddGObjProcess(
+    GObj *gobj, void (*proc)(GObj *), u8 kind, u32 priority);
 
 /* NOT INSTRUMENTED HERE, and the reason is worth keeping: the announcement
  * question ("does the source announce GAME SET / TIME UP and the port fail to
@@ -111,7 +113,9 @@ static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 #define sySchedulerGetTicCount ndsIFCommonGetTicCount
 #define sySchedulerSetTicCount ndsIFCommonSetTicCount
 #define lbCommonMakeSObjForGObj ndsIFCommonMakeSObjForGObj
+#define gcAddGObjProcess ndsIFCommonAddGObjProcess
 #include "../../decomp/BattleShip-main/decomp/src/if/ifcommon.c"
+#undef gcAddGObjProcess
 #undef lbCommonMakeSObjForGObj
 #undef sySchedulerSetTicCount
 #undef sySchedulerGetTicCount
@@ -119,6 +123,31 @@ static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 #undef ifCommonBattleUpdateInterfaceAll
 #undef ifCommonEntryAllMakeInterface
 #undef ifCommonItemArrowSetAttr
+
+static void ndsIFCommonAnnounceProcUpdate(GObj *interface_gobj)
+{
+    if (interface_gobj->user_data.s != 0)
+    {
+        interface_gobj->user_data.s--;
+        return;
+    }
+    gcEjectGObj(interface_gobj);
+}
+
+static GObjProcess *ndsIFCommonAddGObjProcess(
+    GObj *gobj, void (*proc)(GObj *), u8 kind, u32 priority)
+{
+    if ((proc == ifCommonAnnounceThread) &&
+        (kind == nGCProcessKindThread))
+    {
+        /* The source thread only sleeps 60 ticks and ejects this GObj. Keep
+         * that lifetime without allocating a 4,208-byte coroutine stack. */
+        gobj->user_data.s = 60;
+        proc = ndsIFCommonAnnounceProcUpdate;
+        kind = nGCProcessKindFunc;
+    }
+    return gcAddGObjProcess(gobj, proc, kind, priority);
+}
 
 static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite)
 {
@@ -175,14 +204,98 @@ static void ndsIFCommonSetTicCount(u32 tics)
     }
 }
 
-/* BattleShip implements this one-shot delay as a GObj thread whose entire
- * body is: sleep 90 updates, create the countdown/focus actors, eject itself.
- * A DS GObj thread needs a 4,208-byte static coroutine block, which is pure
- * backend state and made the four-fighter scene fail before frame 1. Preserve
- * the source's 90 yields with a normal function process instead. The counter
- * lives in the otherwise-unused user_data of this private interface actor; the
- * extra zero-valued update matches gcSleepCurrentGObjThread(), whose first
- * call yields before it decrements the requested sleep count. */
+enum
+{
+    nNDSIFCommonEntryPhaseAllWait = 0,
+    nNDSIFCommonEntryPhaseFocusInitialWait,
+    nNDSIFCommonEntryPhaseFocusPlayerCountWait,
+    nNDSIFCommonEntryPhaseFocusFighter,
+    nNDSIFCommonEntryPhaseFocusZoomWait,
+    nNDSIFCommonEntryPhaseFocusNextWait,
+    nNDSIFCommonEntryPhaseFocusDefaultWait
+};
+
+typedef struct NDSIFCommonEntryFocusState
+{
+    u32 phase;
+    s32 id;
+    s32 sleep_tics;
+    GObj *fighter_gobj;
+} NDSIFCommonEntryFocusState;
+
+static NDSIFCommonEntryFocusState sNdsIFCommonEntryFocusState;
+
+/* BattleShip freezes GObj growth at the exact live count as soon as the
+ * general heap drops below 25 KiB (ifcommon.c:3156-3163). That is a useful
+ * N64 OOM brake, but on the DS it can make an already-resident source move
+ * fail deterministically: the full-content Yoshi proof reached 48/48 live
+ * GObjs with 2,048 bytes free, then SpecialHi's source event called
+ * wpYoshiEggThrowMakeWeapon and gcMakeGObjSPAfter returned NULL even though
+ * the weapon pool itself had room. Do not remove the brake. Preserve its
+ * entry/countdown decision exactly, then once the source reaches GO extend the
+ * already-latched limit by a small, fixed number of gameplay actors and leave
+ * it fixed. Opening those slots during entry is wrong: countdown/interface
+ * actors can consume the reserve before a weapon ever exists while the heap is
+ * at its tightest.
+ *
+ * Eight is deliberately a live-object bound, not an allocation budget. A
+ * GObj ejected after the latch returns to objman's free list and does not
+ * consume another slot. Four-fighter stress has historically stayed above
+ * the 25 KiB latch; this reserve is for the memory-tight two-player/full-
+ * content case where ordinary source weapons/effects still have to exist. */
+#define NDS_IFCOMMON_GOBJ_LATCH_RESERVE 8
+static sb32 sNdsIFCommonGObjLatchReserveApplied;
+volatile u32 gNdsIFCommonGObjLatchReserveApplyCount;
+volatile u32 gNdsIFCommonGObjLatchBase;
+volatile u32 gNdsIFCommonGObjLatchLimit;
+
+static void ndsIFCommonPreserveGObjRuntimeReserve(void)
+{
+    s16 max_num = gcGetMaxNumGObj();
+
+    if (max_num < 0)
+    {
+        sNdsIFCommonGObjLatchReserveApplied = FALSE;
+        return;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->game_status != nSCBattleGameStatusGo))
+    {
+        /* Source owns entry capacity. The eight-slot reserve is exclusively
+         * post-entry gameplay headroom for transient weapons/effects. */
+        return;
+    }
+    if (sNdsIFCommonGObjLatchReserveApplied == FALSE)
+    {
+        s32 limit = (s32)max_num + NDS_IFCOMMON_GOBJ_LATCH_RESERVE;
+
+        gNdsIFCommonGObjLatchBase = (u32)(u16)max_num;
+        gcSetMaxNumGObj(limit);
+        gNdsIFCommonGObjLatchLimit = (u32)limit;
+        gNdsIFCommonGObjLatchReserveApplyCount++;
+        sNdsIFCommonGObjLatchReserveApplied = TRUE;
+    }
+}
+
+/* BattleShip implements entry startup with TWO GObj threads. EntryAll sleeps
+ * 90 updates, creates Countdown plus EntryFocus, then ejects itself. EntryFocus
+ * sleeps according to dIFCommonEntryFocusSleepTics and walks the live fighter
+ * list, calling ftCommonAppearSetStatus one fighter at a time (and doing the
+ * source camera zoom choreography for focus id 2).
+ *
+ * A DS GObj thread needs a 4,208-byte static coroutine block. The first thread
+ * was already collapsed into this function process because that backend-only
+ * stack made four-fighter startup fail before frame 1; leaving the SECOND
+ * EntryFocus thread intact simply moved the same failure 90 updates later. In
+ * the full-content Yoshi run gcMakeGObjSPAfter returned NULL there and source
+ * line ifcommon.c:2305 dereferenced it.
+ *
+ * Keep one already-allocated interface actor and express both source threads as
+ * this tiny explicit state machine. `user_data.s` remains the sleep counter.
+ * Setting it to N and returning models gcSleepCurrentGObjThread(N): the current
+ * update yields immediately, N subsequent updates decrement, and execution
+ * resumes on the following update. No fighter status, camera operation, random
+ * focus id, or source delay is skipped. */
 static void ndsIFCommonEntryAllProcUpdate(GObj *interface_gobj)
 {
     if (interface_gobj->user_data.s != 0)
@@ -191,9 +304,105 @@ static void ndsIFCommonEntryAllProcUpdate(GObj *interface_gobj)
         return;
     }
 
-    ifCommonCountdownMakeInterface();
-    ifCommonEntryFocusMakeInterface(syUtilsRandIntRange(3));
-    gcEjectGObj(NULL);
+    for (;;)
+    {
+        switch (sNdsIFCommonEntryFocusState.phase)
+        {
+        case nNDSIFCommonEntryPhaseAllWait:
+            ifCommonCountdownMakeInterface();
+            sNdsIFCommonEntryFocusState.id = syUtilsRandIntRange(3);
+            sNdsIFCommonEntryFocusState.sleep_tics =
+                dIFCommonEntryFocusSleepTics[sNdsIFCommonEntryFocusState.id];
+            if (sNdsIFCommonEntryFocusState.id == 1)
+            {
+                interface_gobj->user_data.s = 90;
+                sNdsIFCommonEntryFocusState.phase =
+                    nNDSIFCommonEntryPhaseFocusInitialWait;
+                return;
+            }
+            sNdsIFCommonEntryFocusState.phase =
+                nNDSIFCommonEntryPhaseFocusInitialWait;
+            break;
+
+        case nNDSIFCommonEntryPhaseFocusInitialWait:
+            if ((gSCManagerBattleState->pl_count +
+                 gSCManagerBattleState->cp_count) < 3)
+            {
+                interface_gobj->user_data.s =
+                    sNdsIFCommonEntryFocusState.sleep_tics;
+                sNdsIFCommonEntryFocusState.phase =
+                    nNDSIFCommonEntryPhaseFocusPlayerCountWait;
+                return;
+            }
+            sNdsIFCommonEntryFocusState.phase =
+                nNDSIFCommonEntryPhaseFocusPlayerCountWait;
+            break;
+
+        case nNDSIFCommonEntryPhaseFocusPlayerCountWait:
+            sNdsIFCommonEntryFocusState.fighter_gobj =
+                gGCCommonLinks[nGCCommonLinkIDFighter];
+            sNdsIFCommonEntryFocusState.phase =
+                nNDSIFCommonEntryPhaseFocusFighter;
+            break;
+
+        case nNDSIFCommonEntryPhaseFocusFighter:
+            if (sNdsIFCommonEntryFocusState.fighter_gobj == NULL)
+            {
+                if (sNdsIFCommonEntryFocusState.id == 2)
+                {
+                    interface_gobj->user_data.s = 30;
+                    sNdsIFCommonEntryFocusState.phase =
+                        nNDSIFCommonEntryPhaseFocusDefaultWait;
+                    return;
+                }
+                gcEjectGObj(NULL);
+                return;
+            }
+            ftCommonAppearSetStatus(
+                sNdsIFCommonEntryFocusState.fighter_gobj);
+            if (sNdsIFCommonEntryFocusState.id == 2)
+            {
+                interface_gobj->user_data.s = 30;
+                sNdsIFCommonEntryFocusState.phase =
+                    nNDSIFCommonEntryPhaseFocusZoomWait;
+                return;
+            }
+            interface_gobj->user_data.s =
+                sNdsIFCommonEntryFocusState.sleep_tics;
+            sNdsIFCommonEntryFocusState.phase =
+                nNDSIFCommonEntryPhaseFocusNextWait;
+            return;
+
+        case nNDSIFCommonEntryPhaseFocusZoomWait:
+            gmCameraSetStatusPlayerZoom(
+                sNdsIFCommonEntryFocusState.fighter_gobj,
+                0.0F, 0.0F,
+                ftGetStruct(sNdsIFCommonEntryFocusState.fighter_gobj)
+                    ->attr->closeup_camera_zoom,
+                0.1F, 28.0F);
+            interface_gobj->user_data.s =
+                sNdsIFCommonEntryFocusState.sleep_tics - 30;
+            sNdsIFCommonEntryFocusState.phase =
+                nNDSIFCommonEntryPhaseFocusNextWait;
+            return;
+
+        case nNDSIFCommonEntryPhaseFocusNextWait:
+            sNdsIFCommonEntryFocusState.fighter_gobj =
+                sNdsIFCommonEntryFocusState.fighter_gobj->link_next;
+            sNdsIFCommonEntryFocusState.phase =
+                nNDSIFCommonEntryPhaseFocusFighter;
+            break;
+
+        case nNDSIFCommonEntryPhaseFocusDefaultWait:
+            gmCameraSetStatusDefault();
+            gcEjectGObj(NULL);
+            return;
+
+        default:
+            gcEjectGObj(NULL);
+            return;
+        }
+    }
 }
 
 void ifCommonEntryAllMakeInterface(void)
@@ -208,6 +417,17 @@ void ifCommonEntryAllMakeInterface(void)
             nGCCommonKindInterface, NULL, nGCCommonLinkIDInterfaceActor,
             GOBJ_PRIORITY_DEFAULT);
 
+        if (interface_gobj == NULL)
+        {
+            /* Fail closed instead of reproducing the source's NULL dereference
+             * under a DS-only arena exhaustion. The caller cannot schedule the
+             * source entry sequence without its private actor. */
+            return;
+        }
+        sNdsIFCommonEntryFocusState.phase = nNDSIFCommonEntryPhaseAllWait;
+        sNdsIFCommonEntryFocusState.id = 0;
+        sNdsIFCommonEntryFocusState.sleep_tics = 0;
+        sNdsIFCommonEntryFocusState.fighter_gobj = NULL;
         gcAddGObjProcess(interface_gobj, ndsIFCommonEntryAllProcUpdate,
                          nGCProcessKindFunc, 5);
         interface_gobj->user_data.s = 90;
@@ -218,6 +438,10 @@ void ifCommonEntryAllMakeInterface(void)
 void ifCommonBattleUpdateInterfaceAll(void)
 {
     ndsIFCommonBattleUpdateInterfaceAllOriginal();
+
+    /* The source call above owns the 25 KiB latch decision. Adapt only the
+     * limit it just selected; never bypass the heap threshold itself. */
+    ndsIFCommonPreserveGObjRuntimeReserve();
 
     if (ndsIFCommonFastIterationIsEnabled() != FALSE)
     {

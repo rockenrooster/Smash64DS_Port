@@ -4491,6 +4491,7 @@ static void ndsRendererAdapterRestoreNativeOwnerMaterialTextureIds(
 static sb32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererAdapterValidateNativeOwnerCached(
     u32 slot,
+    u32 battle_slot,
     u32 use_low_detail,
     const NDSRelocLoadedFile *owner_file,
     u32 root_count,
@@ -4519,6 +4520,7 @@ ndsRendererAdapterValidateNativeOwnerCached(
          (cache->owner_generation == owner_file->owner_generation) &&
          (cache->data_size == owner_file->data_size) &&
          (cache->root_count == root_count) &&
+         (cache->battle_slot == battle_slot) &&
          (cache->use_low_detail == use_low_detail)) ? TRUE : FALSE;
     if (identity_matches != FALSE)
     {
@@ -4548,7 +4550,7 @@ ndsRendererAdapterValidateNativeOwnerCached(
 #endif
     cache->valid = FALSE;
     if (ndsRendererValidateNativeFighterOwner(
-            slot, 0xffffffffu, use_low_detail,
+            slot, battle_slot, use_low_detail,
             ndsRelocNativeSourceSize(owner_file), root_count,
             root_offsets, material_counts) == FALSE)
     {
@@ -4559,6 +4561,7 @@ ndsRendererAdapterValidateNativeOwnerCached(
     cache->owner_generation = owner_file->owner_generation;
     cache->data_size = owner_file->data_size;
     cache->root_count = root_count;
+    cache->battle_slot = battle_slot;
     cache->use_low_detail = use_low_detail;
     for (i = 0u; i < root_count; i++)
     {

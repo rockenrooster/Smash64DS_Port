@@ -54,12 +54,12 @@
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
 /* Mario/Fox top out at four MObjs on one selected model root. Luigi root 4
- * carries six: the source-derived AOT program reaches material_slot 5, and the
- * live BattleShip MObj chain independently counts six nodes. This is renderer
- * capacity, not a Mario/Fox semantic, so size the generic native-owner
- * workspace for the largest admitted source root rather than forcing a valid
- * fighter through the generic display-list interpreter. */
-#define NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX 6u
+ * carried six when this bound was introduced. Purin's Win2/CSS body root in
+ * asset 0x14a carries nine live MObjs, so the complete
+ * shipping roster needs nine. This is renderer capacity, not a fighter
+ * semantic: size the native-owner workspace for the largest admitted source
+ * root rather than rejecting valid native geometry. */
+#define NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX 9u
 #define NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT 4u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT 256u
@@ -1727,6 +1727,7 @@ typedef struct NDSRendererAdapterNativeOwnerValidationCache
     u32 owner_generation;
     u32 data_size;
     u32 root_count;
+    u32 battle_slot;
     u32 use_low_detail;
     u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];

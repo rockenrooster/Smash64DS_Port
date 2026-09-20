@@ -886,6 +886,28 @@ static u32 ndsMenuFillSinkSceneGated(void);
 static void ndsMenuFillSinkEndFrame(void);
 static u32 ndsMenuFillSinkDrawSObj(SObj *sobj);
 
+#if NDS_P2_MENU_SHELL && NDS_P2_1P_GAME
+extern u32 ndsMenuShellOnePlayerCssOwnsSource2D(void);
+
+/* BattleShip's 1P character-select object graph is still authoritative for
+ * input, selection, difficulty/stock, costume and scene transitions. Its 2D
+ * SObjs are represented AOT by nds_menu_shell_onep.c, though, so once that
+ * native owner is active they are not an unimplemented graphics path. Keep
+ * this scene-specific and owner-latched: every other source menu continues to
+ * fail loudly until it has its own native presentation owner. */
+static u32 ndsMenuFillSinkOnePlayerNativeOwner(void)
+{
+    return (((u32)gSCManagerSceneData.scene_curr ==
+             (u32)nSCKind1PGamePlayers) &&
+            (ndsMenuShellOnePlayerCssOwnsSource2D() != FALSE)) ? TRUE : FALSE;
+}
+#else
+static u32 ndsMenuFillSinkOnePlayerNativeOwner(void)
+{
+    return FALSE;
+}
+#endif
+
 void ndsSObjPreviewEndFrame(void)
 {
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
@@ -1209,6 +1231,14 @@ static u32 ndsMenuFillSinkSceneGated(void)
  * Do not interpret the words or report a successful empty composition. */
 static void ndsMenuFillSinkEndFrame(void)
 {
+    if (ndsMenuFillSinkOnePlayerNativeOwner() != FALSE)
+    {
+        /* The 1P label callback's source fill rectangle is part of the native
+         * ONEP_CSS_SCREEN bake. Consume the words at this explicit owner seam
+         * instead of reporting the retired generic menu renderer as missing. */
+        sNdsMenuFillDrainMark = gSYTaskmanDLHeads[0];
+        return;
+    }
     if ((ndsMenuFillSinkSceneGated() != FALSE) &&
         (sNdsMenuFillDrainMark != gSYTaskmanDLHeads[0]))
     {
@@ -1229,6 +1259,10 @@ static u32 ndsMenuFillSinkDrawSObj(SObj *sobj)
     if ((ndsMenuFillSinkSceneGated() == FALSE) || (sobj == NULL))
     {
         return FALSE;
+    }
+    if (ndsMenuFillSinkOnePlayerNativeOwner() != FALSE)
+    {
+        return TRUE;
     }
     if ((sobj->sprite.attr & SP_HIDDEN) == 0u)
     {

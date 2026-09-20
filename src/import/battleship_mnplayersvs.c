@@ -104,10 +104,8 @@ static sb32 sNdsPlayersVSPreviewRulesReady;
 #define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (64u * 1024u)
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 1
-#define NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES (80u * 1024u)
 #else
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 0
-#define NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES (156u * 1024u)
 #endif
 #define NDS_PLAYERS_VS_RESIDENT_BLOCKS GMCOMMON_PLAYERS_MAX
 #define NDS_PLAYERS_VS_LOAD_CHUNK_BYTES (8u * 1024u)
@@ -697,7 +695,7 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
     gNdsPlayersVSPreviewDwellCommitCount = 0u;
 }
 
-static void ndsMNPlayersVSPreviewClearFighterFiles(s32 fkind)
+void ndsMNPlayersClearPreviewFighterFiles(s32 fkind)
 {
     FTData *data;
 
@@ -825,7 +823,7 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
     }
     fkind = block->loading_fkind;
     ndsRelocExternTreeSliceCancel(block->load_cursor);
-    ndsMNPlayersVSPreviewClearFighterFiles(fkind);
+    ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
@@ -955,7 +953,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     }
     fkind = block->fkind;
     gNdsPlayersVSPreviewReleaseRetireBeginCount++;
-    ndsMNPlayersVSPreviewClearFighterFiles(fkind);
+    ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
@@ -1122,7 +1120,7 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
     }
     if (prepared == FALSE)
     {
-        ndsMNPlayersVSPreviewClearFighterFiles(fkind);
+        ndsMNPlayersClearPreviewFighterFiles(fkind);
         ndsRelocReleasePreviewFighter(fkind);
         ndsRendererNativeReleaseOwnerImagesInRange(
             block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);

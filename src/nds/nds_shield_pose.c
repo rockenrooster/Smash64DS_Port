@@ -26,8 +26,8 @@ __attribute__((used)) volatile u32 gNdsShieldPoseLoadCount;
 __attribute__((used)) volatile u32 gNdsShieldPoseLoadFailCount;
 __attribute__((used)) volatile u32 gNdsShieldPoseResidentBytes;
 
-#if NDS_P2_DONKEY || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_KIRBY || \
-    NDS_P2_CAPTAIN || NDS_P2_PIKACHU || NDS_P2_PURIN
+#if NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_DONKEY || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_KIRBY || \
+    NDS_P2_CAPTAIN || NDS_P2_PIKACHU || NDS_P2_PURIN || NDS_P2_NESS
 
 #include <nds/generated/nds_shield_pose_assets.generated.h>
 

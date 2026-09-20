@@ -127,69 +127,6 @@
       "target_offset": 1008
     },
     {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1860,
-      "target_offset": 288
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1864,
-      "target_offset": 1568
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1868,
-      "target_offset": 2768
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1872,
-      "target_offset": 3984
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1876,
-      "target_offset": 5184
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1880,
-      "target_offset": 6400
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1884,
-      "target_offset": 7600
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1888,
-      "target_offset": 8816
-    },
-    {
-      "dep_asset": 314,
-      "fkind": 1,
-      "main_asset": 209,
-      "slot": 1892,
-      "target_offset": 10000
-    },
-    {
       "dep_asset": 212,
       "fkind": 2,
       "main_asset": 213,
@@ -566,69 +503,6 @@
       "main_asset": 239,
       "slot": 8,
       "target_offset": 0
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2196,
-      "target_offset": 0
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2200,
-      "target_offset": 1280
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2204,
-      "target_offset": 2592
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2208,
-      "target_offset": 3920
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2212,
-      "target_offset": 5264
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2216,
-      "target_offset": 6656
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2220,
-      "target_offset": 8144
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2224,
-      "target_offset": 9568
-    },
-    {
-      "dep_asset": 337,
-      "fkind": 11,
-      "main_asset": 239,
-      "slot": 2228,
-      "target_offset": 11168
     }
   ],
   "fighters": [
@@ -666,8 +540,8 @@
       ]
     },
     {
-      "external_file_bytes": 114,
-      "external_patches": 15,
+      "external_file_bytes": 60,
+      "external_patches": 6,
       "fighter": "Fox",
       "file_bytes": 16520,
       "fixups": 246,
@@ -1500,8 +1374,8 @@
       ]
     },
     {
-      "external_file_bytes": 96,
-      "external_patches": 12,
+      "external_file_bytes": 42,
+      "external_patches": 3,
       "fighter": "Ness",
       "file_bytes": 25128,
       "fixups": 292,

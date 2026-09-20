@@ -222,6 +222,7 @@ def owner_tokens(stem: str) -> set[str]:
 
 def no_program_guard_variable(stem: str, adapter: str) -> str | None:
     aliases = {
+        "item_egg": "item_egg_native_handled",
         "pikachu_thunderground": "thunder_ground_native_handled",
         "pikachu_thunderjolt": "thunder_jolt_native_handled",
         "pikachu_thunderjolt_effect": "thunder_fx_native_handled",
@@ -229,8 +230,8 @@ def no_program_guard_variable(stem: str, adapter: str) -> str | None:
         "sector_arwing_laser": "sector_laser_native_handled",
         "yamabuki_marumine": "marumine_native_handled",
     }
-    if stem in aliases and re.search(rf"\b{re.escape(aliases[stem])}\b", adapter):
-        return aliases[stem]
+    if stem in aliases:
+        return aliases[stem] if re.search(rf"\b{re.escape(aliases[stem])}\b", adapter) else None
     variables = sorted(
         set(
             re.findall(

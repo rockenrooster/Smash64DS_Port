@@ -8576,6 +8576,48 @@ static NDSRelocLoadedFile *ndsRelocEnsureLoadedAsset(u32 asset_id)
     return loaded;
 }
 
+static s32 ndsRelocNativeEntryOwnsDependency(u32 owner_asset, u32 dep_asset)
+{
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    return ((gNdsSceneManagerCurrIsBattle != 0u) &&
+            (owner_asset == NDS_RELOC_ASSET_FOX_SPECIAL3) &&
+            (dep_asset == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109)) ? TRUE : FALSE;
+#else
+    (void)owner_asset;
+    (void)dep_asset;
+    return FALSE;
+#endif
+}
+
+static s32 ndsRelocResolveNativeEntryExternalFixup(
+    u32 owner_asset, u32 dep_asset, u32 slot_offset, u32 target_offset,
+    void **resolved)
+{
+    if (ndsRelocNativeEntryOwnsDependency(owner_asset, dep_asset) == FALSE)
+    {
+        return 0;
+    }
+    /* The three SETTIMG pointers all name bank 109's texture at 0x19f8.
+     * The native Arwing packet already contains its converted pixels. Keep
+     * FoxSpecial3's live DObjDesc/AnimJoint, but do not load the 47,120-byte
+     * bank solely for these baked texture references. NULL makes accidental
+     * raw consumption fail closed; native submission uses its baked slots. */
+    if (target_offset != 0x19f8u)
+    {
+        return -1;
+    }
+    switch (slot_offset)
+    {
+    case 0x2974u:
+    case 0x2ab4u:
+    case 0x2b64u:
+        *resolved = NULL;
+        return 1;
+    default:
+        return -1;
+    }
+}
+
 static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
 {
     u16 reloc_extern;
@@ -8648,8 +8690,15 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
          * loading a raw ShieldPose file that the native guard path never reads.
          * A recognized pair with an unknown target is a contract failure, not
          * permission to mix compact handles and raw Event32 pointers. */
-        native_dep_result = ndsShieldPoseResolveExternalFixup(
-            loaded->asset_id, dep_asset_id, (u32)target_offset, &native_dep);
+        native_dep_result = ndsRelocResolveNativeEntryExternalFixup(
+            loaded->asset_id, dep_asset_id, (u32)slot_offset,
+            (u32)target_offset, &native_dep);
+        if (native_dep_result == 0)
+        {
+            native_dep_result = ndsShieldPoseResolveExternalFixup(
+                loaded->asset_id, dep_asset_id, (u32)target_offset,
+                &native_dep);
+        }
         if (native_dep_result != 0)
         {
             if (native_dep_result < 0)
@@ -11162,6 +11211,10 @@ static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
     {
         u32 dep_asset_id = ndsRelocAssetIDForToken(extern_ids[i]);
 
+        if (ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) != FALSE)
+        {
+            continue;
+        }
         total = (size_t)NDS_RELOC_ALIGN(total);
         total += ndsRelocExternTreeAllocSize(dep_asset_id, seen, seen_count);
     }
@@ -11473,6 +11526,11 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     for (i = 0; i < loaded->extern_count; i++)
     {
         u32 dep_asset_id = ndsRelocAssetIDForToken(loaded->extern_file_ids[i]);
+
+        if (ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) != FALSE)
+        {
+            continue;
+        }
 
         /* AN UNRESOLVED DEPENDENCY IS THE COMMON FAILURE AND IT USED TO BE
          * ANONYMOUS. ndsRelocLoadExternTreeAsset returns NULL for an INVALID

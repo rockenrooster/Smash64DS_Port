@@ -375,7 +375,7 @@ void ndsFTManagerRestoreKirbyPreviewMainMotion(void)
 #endif
 }
 
-GObj *ftManagerMakeFighter(FTDesc *desc)
+void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
 {
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* P2-3r4. A P2-3 fighter's generated geometry lives in a NitroFS image, so
@@ -385,9 +385,8 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
      * the draw path would be a NitroFS read inside a frame -- the exact stall
      * that cost the BGM its seam on the character select.
      *
-     * Both detail levels are ensured together because the match decides between
-     * them by fighter count, and a 3rd fighter arriving must not be the thing
-     * that first touches the disk. */
+     * Low-detail battles also prepare the high-detail KO/pause view. Other
+     * display scenes retain both unless their source fixes a single detail. */
     if (desc != NULL)
     {
         u32 image_slot = NDS_NATIVE_IMAGE_OWNER_SLOTS;
@@ -547,14 +546,18 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS)
         {
             u32 first_detail = 0u;
-            u32 last_detail = 1u;
+            /* A high-detail VS fighter never selects low detail. AutoDemo
+             * explicitly switches both ways, so it still prepares both. */
+            u32 last_detail =
+                ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+                 (desc->detail == nFTPartsDetailHigh)) ? 0u : 1u;
             u32 detail;
 
 #if NDS_P2_1P_GAME
             /* These source display scenes keep each actor's chosen detail.
              * CSS uses HIGH; the intro explicitly chooses LOW for some team
              * opponents. Neither update changes detail, so load only the
-             * requested image. Battle still prepares both before GO. */
+             * requested image. */
             if (((gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
                  (gSCManagerSceneData.scene_curr == nSCKind1PIntro)) &&
                 (desc->pkind == nFTPlayerKindDemo))
@@ -572,7 +575,14 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             }
         }
     }
+#else
+    (void)desc;
 #endif
+}
+
+GObj *ftManagerMakeFighter(FTDesc *desc)
+{
+    ndsFTManagerEnsureOwnerImages(desc);
     if ((desc != NULL) && (desc->figatree_heap != NULL) &&
         (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&
         (dFTManagerDataFiles[desc->fkind] != NULL))
@@ -589,7 +599,8 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
     }
 #if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
     if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
-        (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+        ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers)) &&
         (gFTDataKirbyMainMotion == NULL))
     {
         sNdsFTManagerKirbyPreviewMainMotionSaved = gFTDataKirbyMainMotion;

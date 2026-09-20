@@ -152,6 +152,39 @@ static u32 ndsRelocNativeRootOffset(const NDSRelocLoadedFile *loaded, const Gfx 
     return ndsRelocReadNative32((const u8 *)dl + 4u);
 }
 
+const void *ndsRelocNativeRootAddress(const void *base, u32 root_offset)
+{
+    NDSRelocLoadedFile *loaded;
+    const NDSPreviewPackSection *section;
+    u32 i;
+
+    if (base == NULL)
+    {
+        return NULL;
+    }
+    loaded = ndsRelocFindLoadedFileByData((void *)base);
+    if ((loaded == NULL) || (loaded->reserved[0] == 0u))
+    {
+        return (const u8 *)base + root_offset;
+    }
+    section = ndsPreviewSection(loaded, NULL);
+    if (section == NULL)
+    {
+        return NULL;
+    }
+    for (i = 0u; i < section->root_count; i++)
+    {
+        const u8 *cell = (const u8 *)base + section->roots_offset + (i * 8u);
+
+        if ((ndsRelocReadNative32(cell) == 0xdf000000u) &&
+            (ndsRelocReadNative32(cell + 4u) == root_offset))
+        {
+            return cell;
+        }
+    }
+    return NULL;
+}
+
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
 {
     NDSRelocLoadedFile *loaded;

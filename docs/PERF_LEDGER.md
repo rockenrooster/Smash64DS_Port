@@ -8316,3 +8316,18 @@ file count and size against the baseline's before quoting a cross-build delta.
 
 P2-2p8 remains RED. Evidence:
 `artifacts/performance/2026-09-16_p2-2p8-mobj-stable-skip`.
+
+## 2026-09-19 — Crash-startup capacity candidate (not performance acceptance)
+
+Diagnostic `F4AC5B10…D7334E6`, full campaign/roster, compact fighters, fast logic
+0: two 12-kind 1P hover sweeps and exit pass; free minimum 307,992 B. Six
+Ness/Fox, Mario/Fox and Fox/Mario starts on Dream Land/Sector Z reach GO with
+zero native/pack/OOM/stage failures. Arena 921,088 B; Ness/Sector Z has 2,756 B
+free at GO and only 2,020 B while shielding. Resource margin remains RED.
+Normal candidate `00E87777…53BFBCE` is native-only and passes boot/title.
+No WORK-H P50/P95, whole-match FPS or cadence claim: Latest stopped at the
+CSS CPU-level fixture (expected 2, observed 3), before four-CPU/performance
+coverage, and preceded the final shared EF deferral repair. Final focused
+checks were rerun; owner acceptance and full qualification remain open.
+Per-case identities, output/engagement, counts and exact limits:
+`artifacts/performance/2026-09-19_crash-startup.md`.

@@ -3600,7 +3600,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             if ((native_owner_enabled != FALSE) &&
                 ((native_owner_file == NULL) ||
                  (ndsRendererAdapterValidateNativeOwnerCached(
-                       owner_slot, use_low_detail, native_owner_file,
+                       owner_slot, slot, use_low_detail, native_owner_file,
                        collection.selected_count,
                        native_owner_root_offsets,
                        native_owner_material_counts) == FALSE)))

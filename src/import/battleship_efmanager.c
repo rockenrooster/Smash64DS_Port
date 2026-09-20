@@ -11,6 +11,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_firegrind.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_preview_pack.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task39_effect_census.h>
@@ -161,6 +162,26 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerSparkleWhiteDeadMakeEffect ndsBaseEFManagerSparkleWhiteDeadMakeEffect
 #define efManagerRebirthHaloMakeEffect ndsBaseEFManagerRebirthHaloMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
+#if NDS_P2_YOSHI
+#define efManagerYoshiShieldMakeEffect \
+    ndsBaseEFManagerYoshiShieldMakeEffect
+#define efManagerYoshiEntryEggMakeEffect \
+    ndsBaseEFManagerYoshiEntryEggMakeEffect
+#define efManagerYoshiEggLayMakeEffect \
+    ndsBaseEFManagerYoshiEggLayMakeEffect
+#define efManagerYoshiEggEscapeMakeEffect \
+    ndsBaseEFManagerYoshiEggEscapeMakeEffect
+#endif
+#if NDS_P2_NESS
+#define efManagerNessPKThunderTrailMakeEffect \
+    ndsBaseEFManagerNessPKThunderTrailMakeEffect
+#define efManagerNessPKReflectTrailMakeEffect \
+    ndsBaseEFManagerNessPKReflectTrailMakeEffect
+#define efManagerNessPKThunderWaveMakeEffect \
+    ndsBaseEFManagerNessPKThunderWaveMakeEffect
+#define efManagerNessPKFlashMakeEffect \
+    ndsBaseEFManagerNessPKFlashMakeEffect
+#endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #define efManagerFoxBlasterGlowMakeEffect \
     ndsBaseEFManagerFoxBlasterGlowMakeEffect
@@ -194,6 +215,18 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerSparkleWhiteDeadMakeEffect
 #undef efManagerRebirthHaloMakeEffect
 #undef efManagerFoxReflectorMakeEffect
+#if NDS_P2_YOSHI
+#undef efManagerYoshiShieldMakeEffect
+#undef efManagerYoshiEntryEggMakeEffect
+#undef efManagerYoshiEggLayMakeEffect
+#undef efManagerYoshiEggEscapeMakeEffect
+#endif
+#if NDS_P2_NESS
+#undef efManagerNessPKThunderTrailMakeEffect
+#undef efManagerNessPKReflectTrailMakeEffect
+#undef efManagerNessPKThunderWaveMakeEffect
+#undef efManagerNessPKFlashMakeEffect
+#endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
 #undef efManagerFoxBlasterGlowMakeEffect
 #endif
@@ -1190,6 +1223,81 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     return 0u;
 }
 
+/* EFDesc offsets are SOURCE-file offsets. Compact fighter packs keep only the
+ * spans that battle actually consumes, so `base + source_offset` is not valid
+ * for them. Translate through the same source->packed map used by the reloc
+ * backend, then validate the resulting relative address against the live
+ * packed file. For ordinary files ndsRelocNativeAssetAddress is identity, so
+ * this remains the old bounds check. Zero is the source's "no field" token. */
+static sb32 ndsEFManagerMapFileOffset(void *base, size_t span,
+                                      intptr_t source_offset,
+                                      intptr_t *mapped_offset)
+{
+    uintptr_t relative;
+
+    if (mapped_offset == NULL)
+    {
+        return FALSE;
+    }
+    if (source_offset == 0)
+    {
+        *mapped_offset = 0;
+        return TRUE;
+    }
+    if ((base == NULL) || (source_offset < 0) ||
+        ((uintptr_t)source_offset > 0xffffffffu))
+    {
+        return FALSE;
+    }
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    {
+        const void *mapped = ndsRelocNativeAssetAddress(
+            base, (u32)(uintptr_t)source_offset);
+
+        if (mapped == NULL)
+        {
+            return FALSE;
+        }
+        relative = (uintptr_t)mapped - (uintptr_t)base;
+    }
+#else
+    relative = (uintptr_t)source_offset;
+#endif
+    if (relative >= span)
+    {
+        return FALSE;
+    }
+    *mapped_offset = (intptr_t)relative;
+    return TRUE;
+}
+
+static sb32 ndsEFManagerMapDescOffsets(const EFDesc *desc, EFDesc *mapped)
+{
+    size_t span;
+    void *base;
+
+    if ((desc == NULL) || (mapped == NULL) || (desc->file_head == NULL))
+    {
+        return FALSE;
+    }
+    base = *desc->file_head;
+    span = ndsEFManagerFileSpan(desc->file_head);
+    if ((base == NULL) || (span == 0u))
+    {
+        return FALSE;
+    }
+    *mapped = *desc;
+    return
+        ndsEFManagerMapFileOffset(base, span, desc->o_dobjsetup,
+                                  &mapped->o_dobjsetup) &&
+        ndsEFManagerMapFileOffset(base, span, desc->o_mobjsub,
+                                  &mapped->o_mobjsub) &&
+        ndsEFManagerMapFileOffset(base, span, desc->o_anim_joint,
+                                  &mapped->o_anim_joint) &&
+        ndsEFManagerMapFileOffset(base, span, desc->o_matanim_joint,
+                                  &mapped->o_matanim_joint);
+}
+
 /* Resolving the offsets is necessary but not sufficient: a correct offset into
  * a file this port never shipped is still a walk over unrelated heap.
  * lbRelocGetExternHeapFile returns the raw uninitialised malloc when an asset
@@ -1301,7 +1409,6 @@ static size_t ndsEFManagerFileSpan(void **file_head)
 #if NDS_P2_PIKACHU
 /* Pikachu's three fighter-file descs carry &llPikachu* linker symbols in their
  * offset fields exactly like DK's barrel, so they take the same resolve. The
- * Master Ball rays his entry spawns on flag1 live in EFCommonEffects3. The
  * thrown ball itself is shared item-common data and is resolved above.
  * dEFManagerPikachuUnkEffectDesc remains intentionally unresolved in this
  * package: the current DS configuration has no reachable path to its maker, so
@@ -1309,10 +1416,24 @@ static size_t ndsEFManagerFileSpan(void **file_head)
 #define NDS_EF_ROSTER_DESCS_PIKACHU(X) \
     X(dEFManagerThunderJoltEffectDesc) \
     X(dEFManagerPikachuThunderTrailEffectDesc) \
-    X(dEFManagerPikachuThunderShockEffectDesc) \
-    X(dEFManagerMBallRaysEffectDesc)
+    X(dEFManagerPikachuThunderShockEffectDesc)
 #else
 #define NDS_EF_ROSTER_DESCS_PIKACHU(X)
+#endif
+
+/* Shared Master-Ball entry rays. BattleShip's common entry path reaches this
+ * descriptor for BOTH Pikachu and Purin. Its four &llEFCommonEffects3... fields
+ * are linker-symbol addresses in the decomp and must be converted to source
+ * byte offsets before efManagerMakeEffect adds them to gEFManagerFiles[2].
+ * Leaving the desc under Pikachu alone made a Purin-only build hand a RAM
+ * address to gcSetupCustomDObjs, which then allocated 136-byte DObjs until the
+ * scene heap exhausted. Keep one shared row so Pikachu+Purin never double-count
+ * the resolver/deferral capacity either. */
+#if NDS_P2_PIKACHU || NDS_P2_PURIN
+#define NDS_EF_ROSTER_DESCS_MBALL_RAYS(X) \
+    X(dEFManagerMBallRaysEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_MBALL_RAYS(X)
 #endif
 #if NDS_P2_YOSHI
 /* The source shield wrapper also creates an EFDesc tree. Resolve its model
@@ -1381,6 +1502,7 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
     NDS_EF_ROSTER_DESCS_LINK(X) \
     NDS_EF_ROSTER_DESCS_PIKACHU(X) \
+    NDS_EF_ROSTER_DESCS_MBALL_RAYS(X) \
     NDS_EF_ROSTER_DESCS_YOSHI(X) \
     NDS_EF_ROSTER_DESCS_PURIN(X) \
     NDS_EF_ROSTER_DESCS_NESS(X) \
@@ -1449,25 +1571,23 @@ void ndsEFManagerRetryDeferredDescs(void)
     for (i = 0u; i < sNdsEFDeferredCount; i++)
     {
         EFDesc *desc = sNdsEFDeferredDescs[i];
-        size_t span;
+        EFDesc mapped;
 
         if (desc == NULL)
         {
             continue;
         }
-        span = ndsEFManagerFileSpan(desc->file_head);
-        if ((span == 0u) || (*desc->file_head == NULL))
+        /* Do not clear the retry slot until the SOURCE offsets can actually be
+         * represented by the current file image. With compact fighter packs,
+         * comparing those source offsets directly to packed data_size falsely
+         * rejected NessModel and permanently left PK Thunder's proc_display
+         * NULL after the fighter loaded. The next source maker then received a
+         * bare GObj and dereferenced a NULL DObj. */
+        if (ndsEFManagerMapDescOffsets(desc, &mapped) == FALSE)
         {
             continue;
         }
         sNdsEFDeferredDescs[i] = NULL;
-        if (((size_t)desc->o_dobjsetup >= span) ||
-            ((size_t)desc->o_mobjsub >= span) ||
-            ((size_t)desc->o_anim_joint >= span) ||
-            ((size_t)desc->o_matanim_joint >= span))
-        {
-            continue;
-        }
         desc->proc_display = sNdsEFDeferredProcs[i];
         gNdsEFDescDeferRecoverCount++;
     }
@@ -1476,6 +1596,7 @@ void ndsEFManagerRetryDeferredDescs(void)
 static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 {
     size_t span;
+    EFDesc mapped;
 
     desc->o_dobjsetup     = ndsEFManagerResolveOffset(desc->o_dobjsetup);
     desc->o_mobjsub       = ndsEFManagerResolveOffset(desc->o_mobjsub);
@@ -1523,16 +1644,191 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     }
 
     if ((*desc->file_head == NULL) ||
-        ((size_t)desc->o_dobjsetup >= span) ||
-        ((size_t)desc->o_mobjsub >= span) ||
-        ((size_t)desc->o_anim_joint >= span) ||
-        ((size_t)desc->o_matanim_joint >= span))
+        (ndsEFManagerMapDescOffsets(desc, &mapped) == FALSE))
     {
+        /* Backend residency can precede publication of the FTData slot, and
+         * a preview image may not contain battle-only spans. Preserve the
+         * callback for the same validated retry used by a missing file. */
+        ndsEFManagerDeferDesc(desc);
         desc->proc_display = NULL;
         gNdsEFDescDisabledCount++;
         gNdsEFDescDisabledLast = (u32)(uintptr_t)desc;
     }
 }
+
+#if NDS_P2_NESS || NDS_P2_YOSHI
+typedef struct NDSMappedEFDescOffsets
+{
+    intptr_t dobjsetup;
+    intptr_t mobjsub;
+    intptr_t anim_joint;
+    intptr_t matanim_joint;
+} NDSMappedEFDescOffsets;
+
+/* Source efManagerMakeEffect performs raw `file + offset` arithmetic. Compact
+ * battle files deliberately move retained source spans, so feed the source
+ * maker packed-relative offsets only for its synchronous construction window.
+ * Restoring immediately keeps the global EFDesc source-exact and makes the
+ * mapping safe across scene generations and preview-vs-battle pack layouts. */
+static sb32 ndsEFManagerBeginMappedDesc(EFDesc *desc,
+                                        NDSMappedEFDescOffsets *saved)
+{
+    EFDesc mapped;
+
+    if ((desc == NULL) || (saved == NULL))
+    {
+        return FALSE;
+    }
+    ndsEFManagerRetryDeferredDescs();
+    if ((desc->proc_display == NULL) ||
+        (ndsEFManagerMapDescOffsets(desc, &mapped) == FALSE))
+    {
+        return FALSE;
+    }
+    saved->dobjsetup = desc->o_dobjsetup;
+    saved->mobjsub = desc->o_mobjsub;
+    saved->anim_joint = desc->o_anim_joint;
+    saved->matanim_joint = desc->o_matanim_joint;
+    desc->o_dobjsetup = mapped.o_dobjsetup;
+    desc->o_mobjsub = mapped.o_mobjsub;
+    desc->o_anim_joint = mapped.o_anim_joint;
+    desc->o_matanim_joint = mapped.o_matanim_joint;
+    return TRUE;
+}
+
+static void ndsEFManagerEndMappedDesc(EFDesc *desc,
+                                      const NDSMappedEFDescOffsets *saved)
+{
+    desc->o_dobjsetup = saved->dobjsetup;
+    desc->o_mobjsub = saved->mobjsub;
+    desc->o_anim_joint = saved->anim_joint;
+    desc->o_matanim_joint = saved->matanim_joint;
+}
+#endif
+
+#if NDS_P2_NESS
+GObj *efManagerNessPKThunderTrailMakeEffect(GObj *fighter_gobj)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerNessPKThunderTrailEffectDesc,
+                                    &saved) == FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerNessPKThunderTrailMakeEffect(fighter_gobj);
+    ndsEFManagerEndMappedDesc(&dEFManagerNessPKThunderTrailEffectDesc, &saved);
+    return effect_gobj;
+}
+
+GObj *efManagerNessPKReflectTrailMakeEffect(GObj *weapon_gobj)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerNessPKReflectTrailEffectDesc,
+                                    &saved) == FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerNessPKReflectTrailMakeEffect(weapon_gobj);
+    ndsEFManagerEndMappedDesc(&dEFManagerNessPKReflectTrailEffectDesc, &saved);
+    return effect_gobj;
+}
+
+GObj *efManagerNessPKThunderWaveMakeEffect(GObj *fighter_gobj)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerNessPKThunderWaveEffectDesc,
+                                    &saved) == FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerNessPKThunderWaveMakeEffect(fighter_gobj);
+    ndsEFManagerEndMappedDesc(&dEFManagerNessPKThunderWaveEffectDesc, &saved);
+    return effect_gobj;
+}
+
+GObj *efManagerNessPKFlashMakeEffect(Vec3f *pos)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerNessPKFlashEffectDesc, &saved) ==
+        FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerNessPKFlashMakeEffect(pos);
+    ndsEFManagerEndMappedDesc(&dEFManagerNessPKFlashEffectDesc, &saved);
+    return effect_gobj;
+}
+#endif
+
+#if NDS_P2_YOSHI
+GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerYoshiShieldEffectDesc, &saved) ==
+        FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerYoshiShieldMakeEffect(fighter_gobj);
+    ndsEFManagerEndMappedDesc(&dEFManagerYoshiShieldEffectDesc, &saved);
+    return effect_gobj;
+}
+
+GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerYoshiEntryEggEffectDesc, &saved) ==
+        FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerYoshiEntryEggMakeEffect(pos);
+    ndsEFManagerEndMappedDesc(&dEFManagerYoshiEntryEggEffectDesc, &saved);
+    return effect_gobj;
+}
+
+GObj *efManagerYoshiEggLayMakeEffect(GObj *fighter_gobj)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerYoshiEggLayEffectDesc, &saved) ==
+        FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerYoshiEggLayMakeEffect(fighter_gobj);
+    ndsEFManagerEndMappedDesc(&dEFManagerYoshiEggLayEffectDesc, &saved);
+    return effect_gobj;
+}
+
+GObj *efManagerYoshiEggEscapeMakeEffect(GObj *fighter_gobj)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect_gobj;
+
+    if (ndsEFManagerBeginMappedDesc(&dEFManagerYoshiEggEscapeEffectDesc,
+                                    &saved) == FALSE)
+    {
+        return NULL;
+    }
+    effect_gobj = ndsBaseEFManagerYoshiEggEscapeMakeEffect(fighter_gobj);
+    ndsEFManagerEndMappedDesc(&dEFManagerYoshiEggEscapeEffectDesc, &saved);
+    return effect_gobj;
+}
+#endif
 
 /* The EFDescs reachable in the P1 milestone -- Mario, Fox and the shared
  * combat effects. Listed rather than swept, because they are separate globals

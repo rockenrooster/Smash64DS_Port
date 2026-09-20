@@ -4172,6 +4172,8 @@ void ftManagerSetupFilesAllKind(s32 fkind);
 void ftManagerSetupFilesPlayablesAll(void);
 void *ftManagerAllocFigatreeHeapKind(s32 fkind);
 GObj *ftManagerMakeFighter(FTDesc *desc);
+void ndsFTManagerEnsureOwnerImages(FTDesc *desc);
+void ndsFTManagerRestoreKirbyPreviewMainMotion(void);
 void ftManagerDestroyFighter(GObj *fighter_gobj);
 void ftPublicMakeActor(void);
 void ftParamInitGame(void);

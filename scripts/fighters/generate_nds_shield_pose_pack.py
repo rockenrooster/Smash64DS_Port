@@ -76,6 +76,10 @@ class Spec:
 
 
 SPECS = (
+    Spec("Fox", 209, 314, 0x0120,
+         (0x0620, 0x0AD0, 0x0F90, 0x1440, 0x1900, 0x1DB0, 0x2270, 0x2710)),
+    Spec("Ness", 239, 337, 0x0000,
+         (0x0500, 0x0A20, 0x0F50, 0x1490, 0x1A00, 0x1FD0, 0x2560, 0x2BA0)),
     Spec("Donkey", 213, 318, 0x0110,
          (0x05E0, 0x0A00, 0x0E30, 0x1260, 0x1690, 0x1AB0, 0x1ED0, 0x22E0)),
     Spec("Samus", 217, 322, 0x00F0,
@@ -973,7 +977,8 @@ def build_assets(write=False):
             # replace the ordinal path below after the generated row lookup.
             spec = next(s for s in SPECS if s.name.lower() == stem)
             fkind_by_name = {
-                "Donkey": 2, "Samus": 3, "Link": 5, "Captain": 7,
+                "Fox": 1, "Donkey": 2, "Samus": 3, "Link": 5, "Captain": 7,
+                "Ness": 11,
                 "Kirby": 8, "Pikachu": 9, "Purin": 10,
             }
             path = ASSET_DIR / ("%02d.bin" % fkind_by_name[spec.name])
@@ -984,7 +989,8 @@ def build_assets(write=False):
         for stem, blob in blobs.items():
             spec = next(s for s in SPECS if s.name.lower() == stem)
             fkind_by_name = {
-                "Donkey": 2, "Samus": 3, "Link": 5, "Captain": 7,
+                "Fox": 1, "Donkey": 2, "Samus": 3, "Link": 5, "Captain": 7,
+                "Ness": 11,
                 "Kirby": 8, "Pikachu": 9, "Purin": 10,
             }
             path = ASSET_DIR / ("%02d.bin" % fkind_by_name[spec.name])

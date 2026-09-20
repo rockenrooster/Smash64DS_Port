@@ -22,7 +22,16 @@ extern NDSNewlibMallinfo mallinfo(void);
  * was NOT a 12 KiB-reserve arm. The diagnostic below now measures top-chunk
  * depletion, including fragmentation; the stress verifier requires its
  * measured high-water plus one 4 KiB allocator page to fit this reserve. */
+#if NDS_P2_MENU_SHELL && NDS_P2_1P_GAME
+/* The all-content shell needs the three overlapping VSBattle entry-thread
+ * stacks.  Recent full-match/four-CPU measurements peak at 32,960 bytes of
+ * libc top-chunk depletion; 0x9100 leaves 4,160 bytes above that peak, still
+ * exceeding the mandatory one-page allocator margin below, and returns 3,840
+ * bytes to BattleShip's taskman arena. */
+#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x9100u
+#else
 #define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0xA000u
+#endif
 #define NDS_TASKMAN_LIBC_RUNTIME_MARGIN 0x1000u
 
 /* Slack requested from `calloc` so the arena base can be rounded UP to the

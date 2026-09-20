@@ -4,6 +4,7 @@
  * free-list/object-pool bookkeeping used by startup scene setup. */
 
 #include <sys/controller.h>
+#include <sc/scene.h>
 
 #include <nds/nds_controller.h>
 
@@ -114,8 +115,10 @@ extern void ndsBaseGcSetupObjman(GCSetup *setup);
  * keeps 87 spare and returns 4,608 B of the engine's 13,696 B to the heap.
  * Undersizing still degrades to the per-AObj fallback, never a failure. */
 #define NDS_R2_AOBJ_POOL_COUNT 384
+#define NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT 224
 #else
 #define NDS_R2_AOBJ_POOL_COUNT 512
+#define NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT NDS_R2_AOBJ_POOL_COUNT
 #endif
 
 u32 gNdsR2AObjPoolCount;
@@ -131,6 +134,30 @@ void gcSetupObjman(GCSetup *setup)
 {
     GCSetup ds_setup = *setup;
     size_t needed = ndsOsGObjThreadBlockBytes();
+    u32 aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
+
+#if NDS_FT_POSE
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (gSCManagerBattleState != NULL))
+    {
+        u32 players = 0u;
+        u32 i;
+
+        for (i = 0u; i < ARRAY_COUNT(gSCManagerBattleState->players); i++)
+        {
+            if (gSCManagerBattleState->players[i].pkind != nFTPlayerKindNot)
+            {
+                players++;
+            }
+        }
+        if (players <= 2u)
+        {
+            /* Two-player pose proofs peak at 199 live AObjs. Keep 25 spare
+             * pooled entries; any later excess uses the source fallback. */
+            aobj_pool_count = NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT;
+        }
+    }
+#endif
 
     if (ds_setup.gobjthreadstack_size < needed)
     {
@@ -144,15 +171,15 @@ void gcSetupObjman(GCSetup *setup)
          * scenes, so a block cached across one would dangle -- this mirrors how
          * the stack pool is handled rather than holding a static pointer. */
         AObj *block = syTaskmanMalloc(
-            sizeof(AObj) * (size_t)NDS_R2_AOBJ_POOL_COUNT, 0x4);
+            sizeof(AObj) * (size_t)aobj_pool_count, 0x4);
 
         if (block != NULL)
         {
             ds_setup.aobjs = block;
-            ds_setup.aobjs_num = NDS_R2_AOBJ_POOL_COUNT;
-            gNdsR2AObjPoolCount = NDS_R2_AOBJ_POOL_COUNT;
+            ds_setup.aobjs_num = aobj_pool_count;
+            gNdsR2AObjPoolCount = aobj_pool_count;
             gNdsR2AObjPoolBytes =
-                (u32)(sizeof(AObj) * (size_t)NDS_R2_AOBJ_POOL_COUNT);
+                (u32)(sizeof(AObj) * (size_t)aobj_pool_count);
         }
         else
         {

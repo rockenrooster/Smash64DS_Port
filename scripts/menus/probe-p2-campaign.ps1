@@ -22,6 +22,7 @@ param(
     [string]$GoScreenshot = '',
     [string]$IntroScreenshot = '',
     [switch]$TransitionProof,
+    [switch]$FullRosterHover,
     [string]$TallyScreenshot = '',
     [string]$ContinueScreenshot = ''
 )
@@ -41,7 +42,9 @@ param(
 # existing DTCM controller-playback pad: B returns once to 1PMode, A re-enters,
 # ordinary stick/A input changes difficulty and stock and selects Mario, a
 # source R-C tap changes Mario's costume, and START commits the source menu.
-# This changes controller input only. No scene_curr, battle descriptor, menu
+# The FullRosterHover variant seeds an all-unlocked default for a fresh,
+# isolated diagnostic save, then sweeps both rows twice and exits a live preview.
+# Otherwise this changes controller input only. No scene_curr, battle descriptor, menu
 # state, save field, fighter state or campaign state is written by GDB.
 # The source menu handlers remain the only code that commits those changes.
 #
@@ -445,6 +448,25 @@ try {
         'set $tally_native_printed = 0',
         'set $intro_reject_printed = 0',
         'set $tally_reject_printed = 0',
+        $(if ($FullRosterHover) {
+            'set $hover_mask = 0'
+            'set $hover_draw1 = 0'
+            'set $hover_draw2 = 0'
+            'set $hover_min = 0xffffffff'
+            'set $hover_last = -2'
+            'set $hover_done = 0'
+            # Seed the fresh diagnostic save before the default backup is first
+            # read. No live cached menu state or production save is changed.
+            'tbreak lbBackupIsSramValid'
+            'commands'
+            'silent'
+            'set $maskword = (unsigned int *)(((unsigned int)&dSCManagerDefaultBackupData.fighter_mask) & ~3)'
+            'set $maskshift = (((unsigned int)&dSCManagerDefaultBackupData.fighter_mask) & 3) * 8'
+            'set variable *$maskword = (*$maskword & ~(65535 << $maskshift)) | (4095 << $maskshift)'
+            'printf "CPHOVER_FIXTURE all_unlocked=1\n"'
+            'continue'
+            'end'
+        }),
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
@@ -457,6 +479,13 @@ try {
     ) + $stopLines + @(
         'if gSCManagerSceneData.scene_curr == 8',
         'set $mode_native_base = gNdsRendererNativeFailure.count',
+        $(if ($FullRosterHover) {
+            'if $hover_done != 0'
+            'printf "CPHOVER_EXIT resident_kind=%d main=%#x model=%#x\n", sNdsPlayers1PGamePreviewFkind, *dFTManagerDataFiles[11]->p_file_main, *dFTManagerDataFiles[11]->p_file_model'
+            'detach'
+            'quit'
+            'end'
+        }),
         'end',
         'if gSCManagerSceneData.scene_curr == 17',
         'set $css_native_base = gNdsRendererNativeFailure.count',
@@ -707,12 +736,41 @@ try {
         'set variable sControllerPlaybackPads[0].stick_y = 0',
         'if gNdsSceneManagerCurrKind == 17',
         'set $css_tick = $css_tick + 1',
+        $(if ($FullRosterHover) {
+            'if $css_tick > 2'
+            'set $hover_free = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr'
+            'if $hover_free < $hover_min'
+            'set $hover_min = $hover_free'
+            'end'
+            'if (sMNPlayers1PGameSlot.fkind >= 0) && (sMNPlayers1PGameSlot.fkind <= 11) && (sMNPlayers1PGameSlot.player != 0)'
+            'set $hover_mask = $hover_mask | (1 << sMNPlayers1PGameSlot.fkind)'
+            'if ($hover_last == sMNPlayers1PGameSlot.fkind) && (gNdsFighterDLAllDrawP0HardwareTriangleCount > 0)'
+            'if ($css_tick >= 130) && ($css_tick <= 294)'
+            'set $hover_draw1 = $hover_draw1 | (1 << $hover_last)'
+            'end'
+            'if ($css_tick >= 310) && ($css_tick <= 484)'
+            'set $hover_draw2 = $hover_draw2 | (1 << $hover_last)'
+            'end'
+            'end'
+            'end'
+            'if sMNPlayers1PGameSlot.fkind != $hover_last'
+            'set $hover_last = sMNPlayers1PGameSlot.fkind'
+            'printf "CPHOVERK tick=%d kind=%d triangles=%u free=%u\n", $css_tick, $hover_last, gNdsFighterDLAllDrawP0HardwareTriangleCount, $hover_free'
+            'end'
+            'end'
+        }),
         'if $cssvisits == 1',
         'if $css_tick == 2',
         'set $base_diff = sMNPlayers1PGameLevelValue',
         'set $base_stock = sMNPlayers1PGameStockValue',
         'set $base_costume = sMNPlayers1PGameSlot.costume',
         'set $use_right = (($base_diff < 4) && ($base_stock < 4))',
+        $(if ($FullRosterHover) {
+            'if ($use_right == 0) || (sMNPlayers1PGameFighterMask != 4095)'
+            'printf "CPHOVER_INVALID_FIXTURE fresh_default_save_required=1\n"'
+            'quit 2'
+            'end'
+        }),
         'printf "CPCSSBASE visit=1 diff=%u stock=%u fkind=%d costume=%u use_right=%u\n", $base_diff, $base_stock, sMNPlayers1PGameSlot.fkind, $base_costume, $use_right',
         'end',
         # One ordinary B cancellation after the source 10-tic entry gate.
@@ -747,22 +805,57 @@ try {
         'if ($css_tick >= 97) && ($css_tick <= 109)',
         'set variable sControllerPlaybackPads[0].stick_x = -80',
         'end',
-        'if ($css_tick == 112) || ($css_tick == 113)',
-        'set variable sControllerPlaybackPads[0].button = 0x8000',
-        'end',
-        'if ($css_tick == 150) || ($css_tick == 151)',
-        'set variable sControllerPlaybackPads[0].button = 0x0001',
-        'end',
-        'if ($css_tick == 160) && ($css_mut_printed == 0)',
-        'set $css_mut_printed = 1',
-        'printf "CPCSSMUT base_diff=%u diff=%u base_stock=%u stock=%u base_costume=%u fkind=%d costume=%u selected=%u back=%u\n", $base_diff, sMNPlayers1PGameLevelValue, $base_stock, sMNPlayers1PGameStockValue, $base_costume, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, sMNPlayers1PGameSlot.is_fighter_selected, $backdone',
-        'printf "CPCSSVIS enter=%u present=%u base=%u fail=%u mask=%x fkind=%u diff=%u stock=%u time=%u native=%u native_delta=%u\n", gNdsOnePlayerCssNativeEnterCount, gNdsOnePlayerCssNativePresentCount, gNdsOnePlayerCssNativeBaseBlitCount, gNdsOnePlayerCssNativeSurfaceFailCount, gNdsOnePlayerCssNativeVisibleMask, gNdsOnePlayerCssNativeLastFkind, gNdsOnePlayerCssNativeLastDifficulty, gNdsOnePlayerCssNativeLastStock, gNdsOnePlayerCssNativeLastTime, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$css_native_base',
-        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
-         '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $CssScreenshot + '"'),
-        'end',
-        'if ($css_tick == 180) || ($css_tick == 181)',
-        'set variable sControllerPlaybackPads[0].button = 0x1000',
-        'end',
+        $(if ($FullRosterHover) {
+            'if ($css_tick >= 112) && ($css_tick <= 128)'
+            'set variable sControllerPlaybackPads[0].stick_x = -80'
+            'end'
+            'if ($css_tick >= 130) && ($css_tick <= 204)'
+            'set variable sControllerPlaybackPads[0].stick_x = 80'
+            'end'
+            'if ($css_tick >= 207) && ($css_tick <= 217)'
+            'set variable sControllerPlaybackPads[0].stick_y = -80'
+            'end'
+            'if ($css_tick >= 220) && ($css_tick <= 294)'
+            'set variable sControllerPlaybackPads[0].stick_x = -80'
+            'end'
+            'if ($css_tick >= 297) && ($css_tick <= 307)'
+            'set variable sControllerPlaybackPads[0].stick_y = 80'
+            'end'
+            'if ($css_tick >= 310) && ($css_tick <= 384)'
+            'set variable sControllerPlaybackPads[0].stick_x = 80'
+            'end'
+            'if ($css_tick >= 387) && ($css_tick <= 397)'
+            'set variable sControllerPlaybackPads[0].stick_y = -80'
+            'end'
+            'if ($css_tick >= 400) && ($css_tick <= 466)'
+            'set variable sControllerPlaybackPads[0].stick_x = -80'
+            'end'
+            'if $css_tick == 484'
+            'printf "CPHOVER mask=%x loads=%u bytes=%u failure=%u kind=%u overflow=%u free=%u min=%u native_delta=%u\n", $hover_mask, gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, gNdsSyMallocOverflowCount, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, $hover_min, gNdsRendererNativeFailure.count-$css_native_base'
+            'printf "CPHOVER_DRAW lap1=%x lap2=%x rejects=%u arena=%u\n", $hover_draw1, $hover_draw2, gNdsFtrRejectCountBySlot[0], gNdsTaskmanArenaChosenSize'
+            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture + '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $CssScreenshot + '"')
+            'set $hover_done = 1'
+            'end'
+            'if ($css_tick == 485) || ($css_tick == 486)'
+            'set variable sControllerPlaybackPads[0].button = 0x4000'
+            'end'
+        } else {
+            'if ($css_tick == 112) || ($css_tick == 113)'
+            'set variable sControllerPlaybackPads[0].button = 0x8000'
+            'end'
+            'if ($css_tick == 150) || ($css_tick == 151)'
+            'set variable sControllerPlaybackPads[0].button = 0x0001'
+            'end'
+            'if ($css_tick == 160) && ($css_mut_printed == 0)'
+            'set $css_mut_printed = 1'
+            'printf "CPCSSMUT base_diff=%u diff=%u base_stock=%u stock=%u base_costume=%u fkind=%d costume=%u selected=%u back=%u\n", $base_diff, sMNPlayers1PGameLevelValue, $base_stock, sMNPlayers1PGameStockValue, $base_costume, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, sMNPlayers1PGameSlot.is_fighter_selected, $backdone'
+            'printf "CPCSSVIS enter=%u present=%u base=%u fail=%u mask=%x fkind=%u diff=%u stock=%u time=%u native=%u native_delta=%u\n", gNdsOnePlayerCssNativeEnterCount, gNdsOnePlayerCssNativePresentCount, gNdsOnePlayerCssNativeBaseBlitCount, gNdsOnePlayerCssNativeSurfaceFailCount, gNdsOnePlayerCssNativeVisibleMask, gNdsOnePlayerCssNativeLastFkind, gNdsOnePlayerCssNativeLastDifficulty, gNdsOnePlayerCssNativeLastStock, gNdsOnePlayerCssNativeLastTime, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$css_native_base'
+            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture + '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $CssScreenshot + '"')
+            'end'
+            'if ($css_tick == 180) || ($css_tick == 181)'
+            'set variable sControllerPlaybackPads[0].button = 0x1000'
+            'end'
+        }),
         'else',
         'if ($css_tick >= 5) && ($css_tick <= 34)',
         'set variable sControllerPlaybackPads[0].stick_x = 80',
@@ -996,6 +1089,7 @@ $terminalMode = if ($terminal.Success) {
     [Convert]::ToUInt32($terminal.Groups[1].Value, 16) -band 0x1f
 } else { 0 }
 if (($text -match '(?m)^0x(?!fffffffc)[0-9a-fA-F]+ in \?\? \(\)') -or
+    ($text -match 'Program received signal SIG(?:ILL|SEGV|BUS)') -or
     ($terminalMode -in @(0x17, 0x1b))) {
     $failReasons += 'cpu-abort-signature'
 }
@@ -1040,6 +1134,32 @@ if ($failReasons.Count -gt 0) {
 $scenes = @([regex]::Matches($text, '(?m)^CPLINE \d+ curr=(\d+) prev=(\d+).*$') |
     ForEach-Object { [int]$_.Groups[1].Value })
 Write-Output ('route scenes: ' + ($scenes -join ' -> '))
+
+if ($FullRosterHover) {
+    $draw = [regex]::Match($text, '(?m)^CPHOVER_DRAW lap1=fff lap2=fff rejects=0 arena=\d+\s*$')
+    $retired = [regex]::Match($text, '(?m)^CPHOVER_EXIT resident_kind=28 main=0 model=0\s*$')
+    $hover = [regex]::Match($text,
+        '(?m)^CPHOVER mask=([0-9a-fA-F]+) loads=(\d+) bytes=(\d+) failure=(\d+) kind=(\d+) overflow=(\d+) free=(\d+) min=(\d+) native_delta=(\d+)\s*$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    if ($hover.Success) {
+        Write-Output ('1P hover: mask=0x{0} loads={1} bytes={2} free={3} min={4}' -f
+            $hover.Groups[1].Value, $hover.Groups[2].Value,
+            $hover.Groups[3].Value, $hover.Groups[7].Value,
+            $hover.Groups[8].Value)
+    }
+    if ($hover.Success -and $draw.Success -and $retired.Success -and
+        ([Convert]::ToUInt32($hover.Groups[1].Value, 16) -eq 0xfffu) -and
+        ([uint32]$hover.Groups[4].Value -eq 0u) -and
+        ([uint32]$hover.Groups[6].Value -eq 0u) -and
+        ([uint32]$hover.Groups[7].Value -gt 0u) -and
+        ([uint32]$hover.Groups[9].Value -eq 0u)) {
+        Write-Output 'VERDICT: PASS 1P CSS full-roster hover walk.'
+        exit 0
+    }
+    Write-Output 'VERDICT: BLOCKED 1P CSS full-roster hover walk incomplete.'
+    if ($timedOut) { Write-Output 'note: hover run ended at its timeout ceiling.' }
+    exit 2
+}
 
 if ($TransitionProof) {
     $winRoute = [regex]::Match($text, '(?m)^CPWINROUTE .+$',

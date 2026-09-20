@@ -70,6 +70,10 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_preview_pack.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_renderer.h>
+#include <nds/nds_startup.h>
 #if NDS_P2_MENU_SHELL
 #include <nds/nds_menu_shell.h>
 #endif
@@ -112,24 +116,82 @@ extern void ndsFighterManagerRegisterDisplayFighter(GObj *gobj, u32 slot);
 extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc);
 static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj);
+static void ndsMNPlayers1PGameSkipPreload(s32 fkind);
 static void ndsMNPlayers1PGameDraw(void);
 
-/* Keep the source's selection, rotation and costume logic. These three
+/* Keep the source's selection, rotation and costume logic. These
  * backend boundaries give its single preview the same instance lifetime and
  * material invalidation as the VS character-select bridge. */
 #define ftManagerMakeFighter ndsMNPlayers1PGameMakeFighter
 #define ftManagerDestroyFighter ndsMNPlayers1PGameDestroyFighter
+#define ftManagerSetupFilesAllKind ndsMNPlayers1PGameSkipPreload
 #define gcDrawAll ndsMNPlayers1PGameDraw
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayers1pgame.c"
 #undef gcDrawAll
+#undef ftManagerSetupFilesAllKind
 #undef ftManagerDestroyFighter
 #undef ftManagerMakeFighter
 
 #undef mnPlayers1PGameStartScene
 
+static SYMallocRegion sNdsPlayers1PGamePreviewArena;
+static void *sNdsPlayers1PGamePreviewBase;
+static u32 sNdsPlayers1PGamePreviewGeneration;
+static s32 sNdsPlayers1PGamePreviewFkind = nFTKindNull;
+
+static void ndsMNPlayers1PGameSkipPreload(s32 fkind)
+{
+    (void)fkind;
+}
+
+static void ndsMNPlayers1PGameInitPreviewArena(void)
+{
+    if ((sNdsPlayers1PGamePreviewGeneration != gNdsTaskmanHeapGeneration) ||
+        (sNdsPlayers1PGamePreviewBase == NULL))
+    {
+        sNdsPlayers1PGamePreviewBase =
+            syTaskmanMalloc(NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES, 0x10u);
+        syMallocInit(&sNdsPlayers1PGamePreviewArena, 0x31504353u,
+                     sNdsPlayers1PGamePreviewBase,
+                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+        sNdsPlayers1PGamePreviewGeneration = gNdsTaskmanHeapGeneration;
+        sNdsPlayers1PGamePreviewFkind = nFTKindNull;
+    }
+}
+
+static void ndsMNPlayers1PGameRetirePreview(void)
+{
+    s32 fkind = sNdsPlayers1PGamePreviewFkind;
+
+    if ((sNdsPlayers1PGamePreviewBase == NULL) ||
+        (fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    {
+        return;
+    }
+    ndsFTManagerRestoreKirbyPreviewMainMotion();
+    ndsMNPlayersClearPreviewFighterFiles(fkind);
+    ndsRendererNativeReleaseOwnerImagesInRange(
+        sNdsPlayers1PGamePreviewBase, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    ndsRelocReleasePreviewFighter(fkind);
+    ndsRelocReleaseHeapRange(sNdsPlayers1PGamePreviewBase,
+                             NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    syMallocReset(&sNdsPlayers1PGamePreviewArena);
+    sNdsPlayers1PGamePreviewFkind = nFTKindNull;
+}
+
 static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc)
 {
     GObj *gobj;
+    SYMallocRegion *previous;
+
+    ndsMNPlayers1PGameInitPreviewArena();
+    previous = ndsTaskmanSwapMallocRegion(&sNdsPlayers1PGamePreviewArena);
+    ftManagerSetupFilesAllKind(desc->fkind);
+    ndsFTManagerEnsureOwnerImages(desc);
+    sNdsPlayers1PGamePreviewFkind = desc->fkind;
+    /* GObj/DObj/pose free lists survive preview retirement. Only file and
+     * owner-image storage belongs in the resettable block. */
+    ndsTaskmanSwapMallocRegion(previous);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsFighterRendererInvalidateMaterialCachesForSlot((u32)desc->player);
 #endif
@@ -142,6 +204,7 @@ static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj)
 {
     ndsFighterManagerRegisterDisplayFighter(NULL, (u32)ftGetStruct(gobj)->nds_slot);
     ftManagerDestroyFighter(gobj);
+    ndsMNPlayers1PGameRetirePreview();
 }
 
 static void ndsMNPlayers1PGameDraw(void)
@@ -195,6 +258,7 @@ void mnPlayers1PGameStartScene(void)
     ndsMenuShellOnePlayerCssExit();
 #endif
     ndsFighterManagerRegisterDisplayFighter(NULL, (u32)sMNPlayers1PGameManPlayer);
+    ndsMNPlayers1PGameRetirePreview();
 }
 
 #endif /* NDS_P2_1P_GAME */
