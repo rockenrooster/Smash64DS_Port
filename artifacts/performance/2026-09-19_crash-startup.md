@@ -2,6 +2,13 @@
 
 Status: IMPLEMENTED_NOT_ACCEPTED. All three owner reports remain open.
 
+Owner update, 2026-09-19: "all fixed. Thanks." The owner removed the three
+crash reports from BUGS.md and accepted their observed repairs on the delivered
+candidate. Do not re-add them. The historical measurement/qualification limits
+below remain recorded; this acceptance does not turn the wider Latest or
+performance gates green. Sector Z's separately listed intermittent intro row
+belongs to the subsequent remaining-bugs brief.
+
 The additional Fox/Mario startup exception is repaired and retested below.
 This remains a candidate, not a qualified release: low heap margin, the wider
 verifier's CPU-level fixture mismatch and owner acceptance remain unresolved.

@@ -16,6 +16,14 @@ param(
     [ValidateRange(1, 120)][int]$HoldFrames = 6,
     # WHICH COUNTER SAYS "A SHIELD IS ON SCREEN THIS FRAME".
     #
+    # gNdsShieldQuadDrawCount is the default since 2026-09-18: the
+    # NDS_R2_SHIELD_QUAD route (Makefile default-on) overrides the shield
+    # desc's proc_display, so the shield never reaches the link-15 effect
+    # submit and gNdsEffectRendererLink15DrawCount no longer moves for it.
+    # gNdsShieldQuadFallbackCount moving INSTEAD means the quad was refused and
+    # the tree fallback carries the picture -- arming on the draw counter alone
+    # would then shoot a tree-drawn shield while the cheap route is dead.
+    #
     # gNdsTask39FxShieldDrawCount is GONE (2026-08-04): it belonged to
     # ndsEFManagerShieldProcDisplay, the procedural stand-in, and that stand-in
     # was deleted when the source model became the tracked default. Watching it
@@ -24,16 +32,17 @@ param(
     # increments reports "no shield was drawn" about a ROM that draws one.
     #
     # gNdsEffectRendererSourceModelAdmitCount counts every source admit and is
-    # dominated by the impact wave, so arming on it shot an empty frame at 343.
-    # Link 15 is the shield and the reflector (the wave and rebirth halo are
-    # link 10) and is the default for that reason; KOBurst arms a respawn, and
-    # DeferRecover arms the reflector once its late-loading file has actually
-    # restored the desc.
-    [ValidateSet('gNdsEffectRendererLink15DrawCount',
+    # dominated by the impact wave. Link 15 carries the reflector (and the
+    # shield only while the quad route is off or refused); the wave and rebirth
+    # halo are link 10. KOBurst arms a respawn, and DeferRecover arms the
+    # reflector once its late-loading file has actually restored the desc.
+    [ValidateSet('gNdsShieldQuadDrawCount',
+                 'gNdsShieldQuadFallbackCount',
+                 'gNdsEffectRendererLink15DrawCount',
                  'gNdsEffectRendererSourceModelAdmitCount',
                  'gNdsKOBurstAttemptCount',
                  'gNdsEFDescDeferRecoverCount')]
-    [string]$DrawCounter = 'gNdsEffectRendererLink15DrawCount'
+    [string]$DrawCounter = 'gNdsShieldQuadDrawCount'
 )
 
 # ONE SCREENSHOT OF THE SHIELD, ON THE FRAME THE SHIELD IS ACTUALLY UP.
@@ -85,6 +94,11 @@ $emulator = $null
 $required = @(
     'ndsBattlePlayableFrameCompleteMarker',
     $DrawCounter,
+    # The quad engagement pair: present whenever NDS_R2_SHIELD_QUAD builds,
+    # absent on a flag-off ELF -- which is exactly the build this probe must
+    # refuse rather than silently arm on the dead tree counter.
+    'gNdsShieldQuadDrawCount',
+    'gNdsShieldQuadFallbackCount',
     'gNdsVisualEffectKindMask',
     'gNdsBattlePlayablePacingPresentedFrames'
 )
@@ -177,9 +191,9 @@ try {
         'continue',
 
         ('printf "SHIELDPROBE counter=' + $DrawCounter +
-            ' frames=%d shots=%d shot_frame=%d best_run=%d draws=%u kindmask=%u\n"' +
+            ' frames=%d shots=%d shot_frame=%d best_run=%d draws=%u kindmask=%u quaddraw=%u quadfallback=%u\n"' +
             ', $frames, $shots, $shot_frame, $best_run, ' + $DrawCounter +
-            ', gNdsVisualEffectKindMask'),
+            ', gNdsVisualEffectKindMask, gNdsShieldQuadDrawCount, gNdsShieldQuadFallbackCount'),
         # THE EXISTENCE CHAIN, in one line, because "the shield is not on screen"
         # has five distinct causes and the arming counter above only separates
         # the first. admit -> dobjdraw -> submit -> tris is the order; the first

@@ -1,0 +1,14 @@
+/* Ness PK Fire native weapon constants (generated).
+ * Do not hand-edit; regenerate with generate_nds_native_ness_pkfire.py. */
+#ifndef NDS_NATIVE_NESS_PKFIRE_GENERATED_H
+#define NDS_NATIVE_NESS_PKFIRE_GENERATED_H
+
+#define NDS_NATIVE_NESS_PKFIRE_ASSET 336u
+#define NDS_NATIVE_NESS_PKFIRE_ROOT 0x0168u
+#define NDS_NATIVE_NESS_PKFIRE_DL_BYTES 120u
+#define NDS_NATIVE_NESS_PKFIRE_GROUP_COUNT 2u
+#define NDS_NATIVE_NESS_PKFIRE_VERTEX_COUNT 6u
+#define NDS_NATIVE_NESS_PKFIRE_TRIANGLE_COUNT 2u
+#define NDS_NATIVE_NESS_PKFIRE_MATERIAL_EFFECTS 0x0000000cu
+
+#endif

@@ -479,9 +479,64 @@ def main(argv: list[str] | None = None) -> int:
     row_code = ROW_PREAMBLE + rows + ROW_MAIN
     handicap_code = (HANDICAP_PREAMBLE + handicap_set + handicap_confirm +
                      handicap_save + HANDICAP_MAIN)
+    damage_code = (HANDICAP_PREAMBLE + r'''
+typedef int32_t s32;
+#define NDS_MENU_VSOPTIONS_DAMAGE 3u
+#define NDS_MENU_VSOPTIONS_DAMAGE_MIN 50u
+#define NDS_MENU_VSOPTIONS_DAMAGE_MAX 200u
+void ndsMenuShellVsOptionsDrawDamage(void) {}
+''' + handicap_set + function(options, "ndsMenuShellVsOptionsAdjust") + r'''
+int main(void) {
+    sMenuVsOptionsCursor = NDS_MENU_VSOPTIONS_DAMAGE;
+    for (int value = 50; value <= 200; ++value) {
+        for (int step = -3; step <= 3; ++step) {
+            if (step == 0 || step == -2 || step == 2) continue;
+            sMenuVsOptionsDamage = value;
+            ndsMenuShellVsOptionsAdjust(step);
+            assert(sMenuVsOptionsDamage == 50 + (value - 50 + step + 151) % 151);
+        }
+    }
+    sMenuVsOptionsCursor = NDS_MENU_VSOPTIONS_HANDICAP;
+    sMenuVsOptionsHandicap = nSCBattleHandicapOff;
+    ndsMenuShellVsOptionsAdjust(-3);
+    assert(sMenuVsOptionsHandicap == nSCBattleHandicapAuto);
+    puts("damage tap/held/wrap assertions passed"); return 0;
+}
+''')
+    assert "sMenuVsOptionsHaveItemSwitch = 1u;" in function(options, "ndsMenuShellVsOptionsLoad")
+    update_options = function(options, "ndsMenuShellUpdateVsOptions")
+    assert "(taps & NDS_INPUT_LEFT) ? -1 : -3" in update_options
+    assert "(taps & NDS_INPUT_RIGHT) ? 1 : 3" in update_options
     apply_code = APPLY_PREAMBLE + clamp_handicap + apply_match + APPLY_MAIN
     items_code = ITEMS_PREAMBLE + items_adjust + items_confirm + items_save + ITEMS_MAIN
     css_random_code = CSS_RANDOM_PREAMBLE + css_random + CSS_RANDOM_MAIN
+    tour_code = r'''
+#include <assert.h>
+typedef unsigned u32;
+#define TRUE 1u
+#define FALSE 0u
+#define NDS_CSS_PORTRAITS 12u
+#define NDS_CSS_WALK_TOUR_HOLD_TICS 24u
+u32 sCssWalkTourFinished, gNdsMenuShellWalkLoops, sCssStartWait;
+u32 gNdsMenuShellWalkBudget = 1, sCssWalkTourKind = 12, sCssWalkTourHold;
+u32 gNdsFighterDLAllDrawP0HardwareTriangleCount, sCssWalkTourTriBase;
+u32 gNdsMenuShellCssWalkTourTriangles[12], gNdsMenuShellCssWalkTourDrewMask;
+u32 gNdsMenuShellCssWalkTourDoneCount, gNdsMenuShellCssWalkTourKindMask;
+u32 sMenuWalkCursor = 30, sMenuWalkTimer = 39, sMenuWalkHold = 1, sMenuWalkHeld = 32;
+u32 restored;
+void ndsMenuShellCssWalkRestoreGate(void) { ++restored; }
+void ndsMenuShellCssWalkTourSelect(u32 kind) { (void)kind; assert(0); }
+u32 ndsMenuShellCssFighterLocked(u32 kind) { (void)kind; return 0; }
+''' + function(css, "ndsMenuShellCssWalkTourStep") + r'''
+int main(void) {
+    assert(ndsMenuShellCssWalkTourStep() == TRUE);
+    assert(restored == 1 && sCssWalkTourFinished && gNdsMenuShellCssWalkTourDoneCount == 1);
+    assert(sMenuWalkCursor == 0 && sMenuWalkTimer == 0 && sMenuWalkHold == 0 && sMenuWalkHeld == 0);
+    assert(sCssStartWait == 0); /* Ordinary controller input must still start the match. */
+    assert(ndsMenuShellCssWalkTourStep() == FALSE && restored == 1);
+    return 0;
+}
+'''
     results: list[tuple[str, bool]] = []
     with tempfile.TemporaryDirectory(prefix="smash-menu-test-") as temp:
         path = Path(temp)
@@ -490,9 +545,11 @@ def main(argv: list[str] | None = None) -> int:
             ("shell-off-stubs", entry, ["-DNDS_P2_MENU_SHELL=0", "-DNDS_P2_1P_GAME=0"], [None]),
             ("row-budget", row_code, [], list(range(8))),
             ("handicap-rules", handicap_code, [], [None]),
+            ("damage-repeat-policy", damage_code, [], [None]),
             ("match-apply-clamp", apply_code, [], [None]),
             ("item-rules", items_code, [], [None]),
             ("css-random-ground", css_random_code, [], [None]),
+            ("css-tour-resumes-input", tour_code, [], [None]),
         ):
             c_file, executable = path / f"{label}.c", path / (label + (".exe" if os.name == "nt" else ""))
             c_file.write_text(code, encoding="utf-8")

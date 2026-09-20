@@ -889,17 +889,40 @@ static u32 ndsMenuShellCssGateState(u32 slot)
  * slid positions, clipped to the gate box exactly as the source's frame art
  * masks the pocketed part. Terminal frames land the baked gate, so steady
  * state costs nothing. */
+/* ONE NITROFS OPEN A FRAME, NOT ONE PER SLIDING SLOT.
+ *
+ * This walked the slots and called ndsUiKitBlitSurfaces(&blit, 1u) inside the
+ * loop. That function takes a LIST precisely because it opens the surface pack
+ * once and then streams every id in it (ndsUiKitBlitSurfacesLayer), so calling
+ * it per slot paid a separate ndsRelocAssetStreamOpen/Close for each one. At
+ * character-select entry all four gates slide at once, so a single frame paid
+ * FOUR opens -- on a screen whose own header states that one NitroFS open costs
+ * more than a whole frame's budget (nds_ui_kit.h), and whose worst frame was
+ * already at 71% of budget before any of this (ndsMenuShellCssSyncPanels).
+ *
+ * Collect first, blit once, then draw the doors. Identical bytes read and
+ * identical pixels; the slide just stops paying for the pack four times.
+ *
+ * This does NOT fix the underlying waste -- the mid-slide underlay is the SAME
+ * 7,738-byte surface re-read every tic purely to repaint what the doors
+ * trampled, and removing that needs somewhere to cache a panel band or a
+ * foreground layer for the halves. The owner reported "Low FPS/Flashing during
+ * gate openings"; this removes three quarters of the file opens behind it. */
 static void ndsMenuShellCssStepDoors(void)
 {
+    NdsUiKitSurfaceId blits[NDS_CSS_SLOTS];
+    u32 blit_slot[NDS_CSS_SLOTS];
+    u8 blit_is_terminal[NDS_CSS_SLOTS];
+    u8 sliding[NDS_CSS_SLOTS];
+    u32 blit_count = 0u;
     u32 i;
 
     for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
     {
-        s32 start = (s32)(i * 69u);
         u32 target = (sCssPkind[i] == (u8)nFTPlayerKindNot) ? 41u : 0u;
         u32 offset = (u32)sCssDoorOffset[i];
-        NdsUiKitSurfaceId blit;
 
+        sliding[i] = 0u;
         if (offset == target)
         {
             continue;
@@ -918,20 +941,48 @@ static void ndsMenuShellCssStepDoors(void)
             offset = (offset >= 2u) ? (offset - 2u) : 0u;
         }
         sCssDoorOffset[i] = (u8)offset;
+        blit_slot[blit_count] = i;
         if ((offset == 41u) || (offset == 0u))
         {
-            blit = ndsMenuShellCssGateSurface(i);
-            if (ndsUiKitBlitSurfaces(&blit, 1u) != FALSE)
-            {
-                sCssPanelSurface[i] = blit;
-                gNdsMenuShellCssPanelBlitCount++;
-            }
-            continue;
+            /* Terminal frame: the baked gate lands and the doors are done. */
+            blits[blit_count] = ndsMenuShellCssGateSurface(i);
+            blit_is_terminal[blit_count] = 1u;
         }
-        blit = sCssPanelSurface[i];
-        if (ndsUiKitBlitSurfaces(&blit, 1u) != FALSE)
+        else
         {
-            gNdsMenuShellCssPanelBlitCount++;
+            /* Mid-slide: the slot's current card is the underlay the halves
+             * are drawn over. */
+            blits[blit_count] = sCssPanelSurface[i];
+            blit_is_terminal[blit_count] = 0u;
+            sliding[i] = 1u;
+        }
+        blit_count++;
+    }
+
+    if (blit_count == 0u)
+    {
+        return;
+    }
+    if (ndsUiKitBlitSurfaces(blits, blit_count) != FALSE)
+    {
+        for (i = 0u; i < blit_count; i++)
+        {
+            if (blit_is_terminal[i] != 0u)
+            {
+                sCssPanelSurface[blit_slot[i]] = blits[i];
+            }
+        }
+        gNdsMenuShellCssPanelBlitCount += blit_count;
+    }
+
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        s32 start = (s32)(i * 69u);
+        u32 offset = (u32)sCssDoorOffset[i];
+
+        if (sliding[i] == 0u)
+        {
+            continue;
         }
         {
             /* THE BAKE'S OWN ROUNDING, not NDS_CSS_DS: frame_pos rounds half
@@ -2293,27 +2344,17 @@ static u32 ndsMenuShellCssWalkTourStep(void)
     {
         sCssWalkTourFinished = 1u;
         gNdsMenuShellCssWalkTourDoneCount++;
-        /* Every fighter has been on screen, so the walk is done with this
-         * screen: restore the canonical gate and press its own START rather
-         * than handing back to a wander that exists only to burn tics. The
-         * walk's own START tap was swallowed while the tour held the screen,
-         * so waiting for another one would park here forever. */
+        /* The roster tour consumed the walk's input while it owned the
+         * screen. Replay that input from the unchanged initial cursor after
+         * restoring the pair: its CPU-arrow leg proves that CSS, not the
+         * preset, commits the requested level. Jumping straight to START
+         * silently skipped that leg and left Fox at the preset's level 3. */
         ndsMenuShellCssWalkRestoreGate();
-        if ((ndsMenuShellCssCheckReady() != FALSE) &&
-            (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
-        {
-            ndsMenuShellCssCue(NDS_CSS_VOICE_CHEER);
-            ndsMenuShellCssIdleSlotsNot();
-            sCssStartWait = (u32)NDS_CSS_START_WAIT;
-            gNdsMenuShellCssStartCount++;
-            ndsMenuShellCssPopulate();
-            return TRUE;
-        }
-        /* Not ready, or too early to arm: fall back to the ordinary input path
-         * rather than stranding the lap. This counts, because a restored gate
-         * that is not ready means the snapshot itself is wrong. */
-        gNdsMenuShellCssWalkTourNotReadyCount++;
-        return FALSE;
+        sMenuWalkCursor = 0u;
+        sMenuWalkTimer = 0u;
+        sMenuWalkHold = 0u;
+        sMenuWalkHeld = 0u;
+        return TRUE;
     }
 
     kind = (u32)sCssWalkTourKind;

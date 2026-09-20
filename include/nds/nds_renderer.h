@@ -1492,6 +1492,44 @@ s32 ndsRendererSubmitNativePikachuThunderJoltEffect(
     const void *actor_base, u32 actor_bytes,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Ness PK Fire: NessSpecial1's WPAttributes point across files at
+ * NessSpecial3 root 0x0168.  The root is two source triangles with two live
+ * LIGHT1|LIGHT2 material slots; behavior/collision remain BattleShip-owned. */
+s32 ndsRendererSubmitNativeNessPKFire(
+    const NDSRendererNativeMaterial *materials, u32 material_count,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Ness PK Thunder: NessMain's head/trail WPAttributes resolve into NessModel
+ * roots 0x7BD0 / 0x8A98. Both are live-textured two-triangle quads; trail_id
+ * selects the source display callback's prim/env colour. */
+s32 ndsRendererSubmitNativeNessPKThunder(
+    u32 root_index, const NDSRendererNativeMaterial *material,
+    u32 trail_color_index, const NDSRendererConfig *config,
+    NDSRendererStats *stats);
+/* YoshiModel root 0xA860: the fixed CI4 egg quad shared by Up-B EggThrow,
+ * Yoshi shield, and the entry/escape egg.  The compact fighter pack keeps only
+ * the root identity cell, so immutable palette/image/geometry are all AOT
+ * native data; only the DObj transform and callback-owned ENV colour are live. */
+s32 ndsRendererSubmitNativeYoshiEgg(
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+/* YoshiSpecial3 root 0x0870: the animated victim egg created by Neutral-B
+ * Egg Lay. Geometry/material are fixed; source DObj animation stays live. */
+s32 ndsRendererSubmitNativeYoshiEggLay(
+    const void *palette, const void *image,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+s32 ndsRendererSubmitNativePurinSing(
+    u32 root_index, const NDSRendererNativeMaterial *material,
+    const void *image, const NDSRendererConfig *config, NDSRendererStats *stats);
+s32 ndsRendererPrepareNativeKirbyVulcan(void);
+s32 ndsRendererSubmitNativePikachuThunder(u32 root, u32 role,
+    const NDSRendererNativeMaterial *material, const void *palette, const void *image,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+s32 ndsRendererSubmitNativeKirbyVulcan(u32 root,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+/* YoshiSpecial2 root 0x0530: animated match-entry egg. The source MObj keeps
+ * its live texture-id/tile animation; fixed palette/geometry are AOT. */
+s32 ndsRendererSubmitNativeYoshiEntryEgg(
+    const void *palette, const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* The Maxim Tomato, file 86 root 0x09c0: one textured quad, thirty words, no
  * segment-0xE call anywhere in the list and a NULL MObj, so it owns its whole
  * material and BAKES.  It is the first of twenty-two bake-everything item
@@ -1556,6 +1594,7 @@ extern volatile u32 gNdsMBallRaysMaterialRejectCount;
  * image for the current scene (call from fighter CREATION, never a draw);
  * Verify compares it against the arrays while both still exist. */
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
+s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail);
 /* CSS preview blocks can back owner images. Once the last fighter using such
  * a block is gone, invalidate image slots in the range before it is rewound. */
 void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size);

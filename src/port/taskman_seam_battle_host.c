@@ -11,6 +11,34 @@ extern void ndsFighterMarioFoxGCRunAllLoopPrepare(void);
 extern void ndsFighterMarioFoxLivePreviewPrepare(void);
 extern u32 ndsSceneMipCacheHoldLogic(void);
 
+#if NDS_P2_YOSHI_BUG_PROOF
+/* Proof-only liveness observer.  The Yoshi controller tour lives in the
+ * natural-motion driver, while this file owns the R2 source-update cadence.
+ * If some outer lifetime gate stops feeding that driver, its per-phase timeout
+ * cannot fire.  This observer changes no gameplay state; it snapshots the
+ * relevant ownership words after a bounded number of real source updates and
+ * enters the same no-op proof-stop anchor used by the tour itself. */
+#define NDS_YOSHI_BUG_HOST_WATCHDOG_UPDATES 60u
+#define NDS_YOSHI_BUG_HOST_WATCHDOG_TOTAL_UPDATES 600u
+#define NDS_YOSHI_BUG_HOST_WATCHDOG_GO_UPDATES 15u
+extern volatile u32 gNdsYoshiBugTourPhase;
+extern volatile u32 gNdsYoshiBugTourFrames;
+extern volatile u32 gNdsYoshiBugTourDone;
+extern volatile u32 gNdsYoshiBugTourStallPhase;
+extern void ndsYoshiBugTourProofStop(void);
+extern void osWritebackDCacheAll(void);
+static u32 sNdsYoshiBugHostWatchdogLastPhase;
+static u32 sNdsYoshiBugHostWatchdogLastFrames;
+volatile u32 gNdsYoshiBugHostWatchdogUpdates;
+volatile u32 gNdsYoshiBugHostWatchdogTotalUpdates;
+volatile u32 gNdsYoshiBugHostWatchdogGoUpdates;
+volatile u32 gNdsYoshiBugHostWatchdogFired;
+volatile u32 gNdsYoshiBugHostWatchdogPhase;
+volatile u32 gNdsYoshiBugHostWatchdogNaturalResult;
+volatile u32 gNdsYoshiBugHostWatchdogPrepared;
+volatile u32 gNdsYoshiBugHostWatchdogUpdateEnabled;
+#endif
+
 #define NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX 180u
 #define NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX 200u
 #define NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX 220u
@@ -1099,6 +1127,18 @@ static u32 sNdsR2ProfileAudioUpdateTicks;
 
 void ndsR2HostBattlePrepare(void)
 {
+#if NDS_P2_YOSHI_BUG_PROOF
+    gNdsYoshiBugHostWatchdogUpdates = 0u;
+    gNdsYoshiBugHostWatchdogTotalUpdates = 0u;
+    gNdsYoshiBugHostWatchdogGoUpdates = 0u;
+    gNdsYoshiBugHostWatchdogFired = 0u;
+    gNdsYoshiBugHostWatchdogPhase = 0xffffffffu;
+    gNdsYoshiBugHostWatchdogNaturalResult = 0u;
+    gNdsYoshiBugHostWatchdogPrepared = 0u;
+    gNdsYoshiBugHostWatchdogUpdateEnabled = 0u;
+    sNdsYoshiBugHostWatchdogLastPhase = 0xffffffffu;
+    sNdsYoshiBugHostWatchdogLastFrames = 0xffffffffu;
+#endif
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     ndsStageCollisionLoopPrepareRuntime();
 #if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
@@ -1422,16 +1462,68 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * them on the others. The Runtime 1 loop publishes the same word. */
     gNdsFtPoseEvalTick =
         ((update_index + 1u) >= ndsR2HostBattleUpdatesPerPresent()) ? 1u : 0u;
-#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
+#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR || \
+    NDS_P2_NESS_VFX_PROOF || NDS_P2_YOSHI_BUG_PROOF
     /* Mode 163 enters the Runtime-2 owner before BattleShip has necessarily
      * published both fighter GObjs. The initial prepare is therefore allowed
      * to decline. Retry the same idempotent prepare at the R2 update seam until
      * the real fighters exist; once prepared it is a branch-only no-op. This
-     * mirrors Runtime 1's Link action-proof path and does not create or force
-     * any Link special/item state. */
+     * mirrors Runtime 1's action-proof path and does not create or force any
+     * special/item state. Ness's dedicated realtime VFX proof additionally
+     * waits for source Wait before prepare can arm. */
     ndsFighterMarioFoxNaturalMotionPrepare();
 #endif
     ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);
+#if NDS_P2_YOSHI_BUG_PROOF
+    gNdsYoshiBugHostWatchdogTotalUpdates++;
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
+    {
+        gNdsYoshiBugHostWatchdogGoUpdates++;
+    }
+    /* Entry/Appear can consume hundreds of R2 source updates before the tour
+     * is allowed to arm at source Wait. Once armed, this is a LIVENESS watch,
+     * not a duration watch: a valid Yoshi phase can naturally last much longer
+     * than 60 source updates (and the tour has its own 720-update behavioral
+     * timeout). Reset whenever either the phase or its frame counter advances;
+     * only an outer ownership failure leaves both words frozen. */
+    if (gNdsFighterNaturalMotionPrepared != 0u)
+    {
+        if ((gNdsYoshiBugTourPhase != sNdsYoshiBugHostWatchdogLastPhase) ||
+            (gNdsYoshiBugTourFrames != sNdsYoshiBugHostWatchdogLastFrames))
+        {
+            sNdsYoshiBugHostWatchdogLastPhase = gNdsYoshiBugTourPhase;
+            sNdsYoshiBugHostWatchdogLastFrames = gNdsYoshiBugTourFrames;
+            gNdsYoshiBugHostWatchdogUpdates = 0u;
+        }
+        else
+        {
+            gNdsYoshiBugHostWatchdogUpdates++;
+        }
+    }
+    if ((((gNdsFighterNaturalMotionPrepared != 0u) &&
+          (gNdsYoshiBugHostWatchdogUpdates >=
+              NDS_YOSHI_BUG_HOST_WATCHDOG_UPDATES)) ||
+         ((gNdsFighterNaturalMotionPrepared == 0u) &&
+          (((gNdsYoshiBugHostWatchdogGoUpdates >=
+                 NDS_YOSHI_BUG_HOST_WATCHDOG_GO_UPDATES)) ||
+            (gNdsYoshiBugHostWatchdogTotalUpdates >=
+                 NDS_YOSHI_BUG_HOST_WATCHDOG_TOTAL_UPDATES)))) &&
+        (gNdsYoshiBugTourDone == 0u) &&
+        (gNdsYoshiBugHostWatchdogFired == 0u))
+    {
+        gNdsYoshiBugHostWatchdogFired = 1u;
+        gNdsYoshiBugHostWatchdogPhase = gNdsYoshiBugTourPhase;
+        gNdsYoshiBugHostWatchdogNaturalResult =
+            gNdsFighterNaturalMotionResult;
+        gNdsYoshiBugHostWatchdogPrepared =
+            gNdsFighterNaturalMotionPrepared;
+        gNdsYoshiBugHostWatchdogUpdateEnabled =
+            (u32)ndsFighterMarioFoxNaturalMotionUpdateEnabled();
+        osWritebackDCacheAll();
+        ndsYoshiBugTourProofStop();
+    }
+#endif
 #if NDS_R2_POSITION_PROBE
     if ((gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->players[0].fighter_gobj != NULL))
@@ -1457,6 +1549,18 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
         (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
     {
         /* Keep all prepare-once countdown atlases resident. */
+#if NDS_P2_KIRBY
+        {
+            u32 player;
+            for (player = 0u; player < GMCOMMON_PLAYERS_MAX; player++)
+                if (gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot &&
+                    gSCManagerBattleState->players[player].fkind == nFTKindKirby &&
+                    !ndsRendererPrepareNativeKirbyVulcan())
+                    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_FIGHTER,
+                        gSCManagerSceneData.scene_curr, nFTKindKirby, 0u, 348u, 0u,
+                        NDS_NATIVE_FAILURE_BAD_ASSET);
+        }
+#endif
         ndsRendererHardwareArmBattleStaticTextures();
     }
     /* BattleShip syTaskmanRunTask checks LoadScene immediately after

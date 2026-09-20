@@ -162,6 +162,10 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #define efManagerSparkleWhiteDeadMakeEffect ndsBaseEFManagerSparkleWhiteDeadMakeEffect
 #define efManagerRebirthHaloMakeEffect ndsBaseEFManagerRebirthHaloMakeEffect
 #define efManagerFoxReflectorMakeEffect ndsBaseEFManagerFoxReflectorMakeEffect
+#if NDS_P2_PIKACHU
+#define efManagerPikachuThunderTrailMakeEffect ndsBaseEFManagerPikachuThunderTrailMakeEffect
+#define efManagerPikachuThunderShockMakeEffect ndsBaseEFManagerPikachuThunderShockMakeEffect
+#endif
 #if NDS_P2_YOSHI
 #define efManagerYoshiShieldMakeEffect \
     ndsBaseEFManagerYoshiShieldMakeEffect
@@ -215,6 +219,10 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef efManagerSparkleWhiteDeadMakeEffect
 #undef efManagerRebirthHaloMakeEffect
 #undef efManagerFoxReflectorMakeEffect
+#if NDS_P2_PIKACHU
+#undef efManagerPikachuThunderTrailMakeEffect
+#undef efManagerPikachuThunderShockMakeEffect
+#endif
 #if NDS_P2_YOSHI
 #undef efManagerYoshiShieldMakeEffect
 #undef efManagerYoshiEntryEggMakeEffect
@@ -1656,7 +1664,7 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     }
 }
 
-#if NDS_P2_NESS || NDS_P2_YOSHI
+#if NDS_P2_NESS || NDS_P2_YOSHI || NDS_P2_PIKACHU
 typedef struct NDSMappedEFDescOffsets
 {
     intptr_t dobjsetup;
@@ -1703,6 +1711,28 @@ static void ndsEFManagerEndMappedDesc(EFDesc *desc,
     desc->o_mobjsub = saved->mobjsub;
     desc->o_anim_joint = saved->anim_joint;
     desc->o_matanim_joint = saved->matanim_joint;
+}
+#endif
+
+#if NDS_P2_PIKACHU
+GObj *efManagerPikachuThunderTrailMakeEffect(Vec3f *pos, s32 lifetime, s32 texture_index)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect;
+    if (!ndsEFManagerBeginMappedDesc(&dEFManagerPikachuThunderTrailEffectDesc, &saved)) return NULL;
+    effect = ndsBaseEFManagerPikachuThunderTrailMakeEffect(pos, lifetime, texture_index);
+    ndsEFManagerEndMappedDesc(&dEFManagerPikachuThunderTrailEffectDesc, &saved);
+    return effect;
+}
+
+GObj *efManagerPikachuThunderShockMakeEffect(GObj *fighter_gobj, Vec3f *pos, s32 frame)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect;
+    if (!ndsEFManagerBeginMappedDesc(&dEFManagerPikachuThunderShockEffectDesc, &saved)) return NULL;
+    effect = ndsBaseEFManagerPikachuThunderShockMakeEffect(fighter_gobj, pos, frame);
+    ndsEFManagerEndMappedDesc(&dEFManagerPikachuThunderShockEffectDesc, &saved);
+    return effect;
 }
 #endif
 
@@ -1903,6 +1933,15 @@ static void ndsEFManagerResolveAllDescOffsets(void)
      * resolution so a late CaptainSpecial3 load remembers/restores it. */
     dEFManagerCaptainFalconPunchEffectDesc.proc_display = gcDrawDObjDLHead1;
 #endif
+#if NDS_P2_YOSHI
+    /* Yoshi's Special2 entry egg is a transform-only root plus one drawable
+     * child. Its source callback, lbCommonDObjScaleXProcDisplay, is a deliberate
+     * no-op in the port because other users own DS-specific seams. Route this
+     * one descriptor through the existing native tree-submit callback so the
+     * animated child reaches the asset-354 owner without changing its source
+     * DObj/MObj/AnimJoint state. */
+    dEFManagerYoshiEntryEggEffectDesc.proc_display = gcDrawDObjTreeForGObj;
+#endif
 
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
@@ -1994,11 +2033,16 @@ static void ndsEFManagerBoundEffectPool(void)
  * around him. There is no draw-on-top flag to reach for (see the depth_bias
  * note on ndsParticleDrawSourceAssetQuad), so it is pulled forward instead.
  *
- * 150 is chosen against the thing it has to clear, not tuned: the fighter's
- * body is a few tens of units deep either side of that joint, and the bubble's
- * own full-health radius is 280, so 150 clears the torso while staying well
- * inside the bubble's own extent -- it cannot detach and float. The owner
- * judges it; this is presentation, not mechanics. */
+ * 150 is the FLOOR, chosen against the thing it has to clear, not tuned: the
+ * fighter's body is a few tens of units deep either side of that joint, and
+ * the bubble's own full-health radius is 280, so 150 clears the torso while
+ * staying well inside the bubble's own extent -- it cannot detach and float.
+ * Above the floor the bias is HALF THE LIVE BUBBLE RADIUS
+ * (0.5 * guard_scale * 30, see the call site): the bubble always encloses its
+ * fighter, so half its radius clears any body it contains while staying
+ * inside the bubble, and bigger fighters travel with bigger bubbles -- DK's
+ * guard_scale pulls his shield farther forward than Fox's without a per-fight
+ * table. The owner judges it; this is presentation, not mechanics. */
 #define NDS_R2_SHIELD_QUAD_DEPTH_BIAS 150.0F
 /* BGR555, NOT 0xRRGGBB. ndsRendererSubmitParticleQuad takes the DS's own vertex
  * colour packing -- red bits 0-4, green 5-9, blue 10-14. This function first
@@ -2122,6 +2166,8 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
     {
         Vec3f world_pos;
         f32 guard_scale;
+        f32 half_bubble;
+        f32 depth_bias;
 
         func_ovl2_800EDBA4(attach);
         world_pos.x = parts->mtx_translate[3][0];
@@ -2131,6 +2177,14 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
             sqrtf((parts->mtx_translate[0][0] * parts->mtx_translate[0][0]) +
                   (parts->mtx_translate[0][1] * parts->mtx_translate[0][1]) +
                   (parts->mtx_translate[0][2] * parts->mtx_translate[0][2]));
+        /* DK moves farther than Fox by construction, not by a table: the same
+         * guard_scale that sizes the bubble also sizes this bias, because the
+         * bubble always encloses the fighter it shields. The floor keeps the
+         * previously chosen 150 wherever the half-bubble is smaller (Fox at
+         * full health computes 140, small fighters less). */
+        half_bubble = 0.5F * guard_scale * NDS_R2_SHIELD_QUAD_SIZE;
+        depth_bias = (half_bubble > NDS_R2_SHIELD_QUAD_DEPTH_BIAS)
+            ? half_bubble : NDS_R2_SHIELD_QUAD_DEPTH_BIAS;
         /* WHITE vertex colour on purpose: the palette carries the player's
          * colour now, and the polygon stays in modulation mode, so anything
          * other than white would tint the ramp a second time. */
@@ -2143,7 +2197,7 @@ static void ndsEFManagerShieldQuadProcDisplay(GObj *effect_gobj)
                  &world_pos, guard_scale * NDS_R2_SHIELD_QUAD_SIZE,
                  NDS_R2_BGR555(0xff, 0xff, 0xff),
                  NDS_R2_SHIELD_QUAD_ALPHA,
-                 NDS_R2_SHIELD_QUAD_DEPTH_BIAS,
+                 depth_bias,
                  0.0F, FALSE) != FALSE))
         {
             gNdsShieldQuadDrawCount++;

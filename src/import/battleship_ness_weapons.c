@@ -15,6 +15,10 @@
 #include <wp/weapon.h>
 #include "battleship_ness_common.h"
 
+#ifndef NDS_P2_NESS_VFX_PROOF
+#define NDS_P2_NESS_VFX_PROOF 0
+#endif
+
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
@@ -64,5 +68,30 @@ GObj *itNessPKFireMakeItem(GObj *weapon_gobj, Vec3f *pos, Vec3f *vel);
  * wpManagerGetGroupID (the source comments on it); the port ABI declares the
  * real prototype, so the call is routed through the declared form. */
 #define wpManagerGetGroupID(...) (wpManagerGetGroupID)()
+#if NDS_P2_NESS_VFX_PROOF
+GObj *ndsBaseWpNessPKThunderTrailMakeWeapon(
+    GObj *head_gobj, Vec3f *pos, s32 trail_id);
+#define wpNessPKThunderTrailMakeWeapon ndsBaseWpNessPKThunderTrailMakeWeapon
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpness/wpnesspkthunder.c"
+#if NDS_P2_NESS_VFX_PROOF
+#undef wpNessPKThunderTrailMakeWeapon
+void ndsHarnessFastPresentRequest(void);
+
+/* Proof-only presentation seam: the fast harness can otherwise create and
+ * retire a source trail between display passes.  Request exactly one present
+ * when BattleShip creates a real trail segment; gameplay state, lifetime,
+ * steering, collision and the weapon object itself remain source-owned. */
+GObj *wpNessPKThunderTrailMakeWeapon(GObj *head_gobj, Vec3f *pos, s32 trail_id)
+{
+    GObj *trail_gobj =
+        ndsBaseWpNessPKThunderTrailMakeWeapon(head_gobj, pos, trail_id);
+
+    if (trail_gobj != NULL)
+    {
+        ndsHarnessFastPresentRequest();
+    }
+    return trail_gobj;
+}
+#endif
 #undef wpManagerGetGroupID

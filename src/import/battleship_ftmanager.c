@@ -27,9 +27,7 @@
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_shield_pose.h>
 #include <nds/generated/nds_fighter_production.generated.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 #include <nds/generated/nds_native_fighter_image.generated.h>
-#endif
 
 #ifndef _LIBRARY_H_
 #define _LIBRARY_H_
@@ -375,8 +373,56 @@ void ndsFTManagerRestoreKirbyPreviewMainMotion(void)
 #endif
 }
 
+/* The ~7 KB electric body is only worth its arena when someone in the match
+ * can land an electric hit. Any other electric source falls back to the
+ * source's no-skeleton flash (ndsFTManagerSkeletonReady below), never to a
+ * rejected draw. */
+static sb32 ndsFTManagerMatchHasElectricAttacker(void)
+{
+    s32 player;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return FALSE;
+    }
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        s32 fkind = gSCManagerBattleState->players[player].fkind;
+
+        if ((gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot) &&
+            ((fkind == nFTKindPikachu) || (fkind == nFTKindNPikachu) ||
+             (fkind == nFTKindNess) || (fkind == nFTKindNNess) ||
+             (fkind == nFTKindKirby) || (fkind == nFTKindNKirby)))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+sb32 ndsFTManagerSkeletonReady(s32 fkind)
+{
+    if (fkind == nFTKindMario)
+        return ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1, 0u);
+    if (fkind == nFTKindFox)
+        return ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1, 0u);
+    return FALSE;
+}
+
 void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
 {
+    /* Electric bodies share one image across HIGH/LOW; load at construction,
+     * never when a hit first selects the alternate skeleton. Results
+     * fighters cannot be hit, and that scene has no arena room to spare. */
+    if (desc != NULL && desc->pkind != nFTPlayerKindDemo &&
+        gSCManagerSceneData.scene_curr != nSCKindVSResults &&
+        ndsFTManagerMatchHasElectricAttacker() != FALSE)
+    {
+        if (desc->fkind == nFTKindMario)
+            (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1, 0u);
+        if (desc->fkind == nFTKindFox)
+            (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1, 0u);
+    }
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* P2-3r4. A P2-3 fighter's generated geometry lives in a NitroFS image, so
      * it has to be resident before anything can draw this fighter. HERE is the
@@ -546,10 +592,11 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
         if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS)
         {
             u32 first_detail = 0u;
-            /* A high-detail VS fighter never selects low detail. AutoDemo
-             * explicitly switches both ways, so it still prepares both. */
+            /* High-detail VS and Results fighters never select low detail.
+             * AutoDemo switches both ways, so it still prepares both. */
             u32 last_detail =
-                ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+                (((gSCManagerSceneData.scene_curr == nSCKindVSBattle) ||
+                  (gSCManagerSceneData.scene_curr == nSCKindVSResults)) &&
                  (desc->detail == nFTPartsDetailHigh)) ? 0u : 1u;
             u32 detail;
 

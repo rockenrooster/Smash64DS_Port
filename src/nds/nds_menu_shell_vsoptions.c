@@ -36,10 +36,9 @@
  * descriptor, so a return trip shows what the last visit committed
  * (mnVSOptionsInitVars, :1175-1178).
  *
- * ITEM SWITCH IS UNLOCK-GATED. mnVSOptionsCheckHaveItemSwitch (:125-132) tests
- * LBBACKUP_UNLOCK_MASK_ITEMSWITCH, and mnVSOptionsInitVars (:1182-1191) caps
- * the cursor at Damage until that bit is present. The shell uses the same save
- * mask and leaves the fifth row undrawn/unreachable while locked.
+ * Owner policy: Item Switch is available immediately, without modifying the
+ * source save/unlock progression. Damage taps stay precise; held repeats move
+ * three percentage points instead of one, using the same wrapping bounds.
  *
  * THE CURSOR IS THE SELECTED ROW'S BAKE. The source marks it with the
  * bubble HIGHLIGHT pair plus a red underline (mnVSOptionsSetOptionSpriteColors
@@ -297,9 +296,7 @@ static void ndsMenuShellVsOptionsLoad(void)
 {
     u32 row;
 
-    sMenuVsOptionsHaveItemSwitch =
-        ((gSCManagerBackupData.unlock_mask & LBBACKUP_UNLOCK_MASK_ITEMSWITCH) !=
-         0u) ? 1u : 0u;
+    sMenuVsOptionsHaveItemSwitch = 1u;
     sMenuVsOptionsCursor =
         (((sMenuVsOptionsHaveItemSwitch != 0u) &&
           ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSItemSwitch)) ?
@@ -414,23 +411,16 @@ static void ndsMenuShellVsOptionsAdjust(s32 direction)
         }
         break;
     case NDS_MENU_VSOPTIONS_DAMAGE:
-        if (direction < 0)
-        {
-            sMenuVsOptionsDamage =
-                (sMenuVsOptionsDamage == (u8)NDS_MENU_VSOPTIONS_DAMAGE_MIN) ?
-                (u8)NDS_MENU_VSOPTIONS_DAMAGE_MAX :
-                (u8)(sMenuVsOptionsDamage - 1u);
-        }
-        else
-        {
-            sMenuVsOptionsDamage =
-                (sMenuVsOptionsDamage == (u8)NDS_MENU_VSOPTIONS_DAMAGE_MAX) ?
-                (u8)NDS_MENU_VSOPTIONS_DAMAGE_MIN :
-                (u8)(sMenuVsOptionsDamage + 1u);
-        }
+    {
+        s32 value = (s32)sMenuVsOptionsDamage + direction;
+        s32 range = NDS_MENU_VSOPTIONS_DAMAGE_MAX - NDS_MENU_VSOPTIONS_DAMAGE_MIN + 1;
+        if (value < (s32)NDS_MENU_VSOPTIONS_DAMAGE_MIN) value += range;
+        if (value > (s32)NDS_MENU_VSOPTIONS_DAMAGE_MAX) value -= range;
+        sMenuVsOptionsDamage = (u8)value;
         ndsUiKitSfx(NDS_UI_KIT_SFX_VALUE);
         ndsMenuShellVsOptionsDrawDamage();
         break;
+    }
     default:
         break;
     }
@@ -503,11 +493,11 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
     {
-        ndsMenuShellVsOptionsAdjust(-1);
+        ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_LEFT) ? -1 : -3);
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_RIGHT) != FALSE)
     {
-        ndsMenuShellVsOptionsAdjust(1);
+        ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_RIGHT) ? 1 : 3);
     }
 
     /* A or START on the ItemSwitch row opens it (:1284-1289). */

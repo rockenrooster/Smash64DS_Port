@@ -154,13 +154,8 @@ typedef struct NDSRendererTraversalState
  * tells the header this translation unit provides its own, so the two can
  * never collide here. */
 #include <nds/nds_native_fighter_tables.h>
-#define NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS ( \
-    NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || \
-    NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || \
-    NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || \
-    NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || \
-    NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || \
-    NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME)
+/* Mario/Fox electric bodies also use scene-resident images. */
+#define NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS 1
 
 #if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
 /* The arena the image buffers come from; the renderer does not otherwise
@@ -217,9 +212,7 @@ typedef struct NDSNativeRoot
 
 /* Image members embed PreparedDense, so its complete type must precede this
  * header. Standalone image TUs use the generator's matching definition. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 #include <nds/generated/nds_native_fighter_image.generated.h>
-#endif
 
 /* Passive fighter model parts replace one live DObj display list while
  * keeping that joint's matrix binding.  Generated variants therefore carry
@@ -2132,6 +2125,16 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyCopyLinkLowOwner, &sNdsNativeKirbyFighterLowTables,
     sNdsNativeKirbyCopyLinkRootsLow, sNdsNativeKirbyCopyLinkCrossPaletteSlotsLow,
     sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyCopyTransitionHighOwner, &sNdsNativeKirbyFighterHighTables,
+    sNdsNativeKirbyCopyTransitionRoots,
+    sNdsNativeKirbyCopyTransitionCrossPaletteSlots,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyCopyTransitionLowOwner, &sNdsNativeKirbyFighterLowTables,
+    sNdsNativeKirbyCopyTransitionRootsLow,
+    sNdsNativeKirbyCopyTransitionCrossPaletteSlotsLow,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
 #endif
 #endif
 
@@ -3897,6 +3900,13 @@ static const u8 *ndsKirbyTrioProgramSourceOwners(
         *count = (u32)sNdsKirbyTrioSourceOwnerCount[index];
         return sNdsKirbyTrioSourceOwners[index];
     }
+    if ((owner == &sNdsNativeKirbyCopyTransitionHighOwner) ||
+        (owner == &sNdsNativeKirbyCopyTransitionLowOwner))
+    {
+        *detail = (owner == &sNdsNativeKirbyCopyTransitionLowOwner) ? 1u : 0u;
+        *count = NDS_FTR_COUNT(sNdsNativeKirbyCopyTransitionSourceOwners);
+        return sNdsNativeKirbyCopyTransitionSourceOwners;
+    }
     return NULL;
 }
 #endif
@@ -4194,9 +4204,25 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
 
 /* Bind every owner whose tables this build takes from an image. Called once
  * per successful load, with the buffer this scene's arena generation owns. */
+static const u8 sNdsSkeletonBindingParents[32] = { [0 ... 31] = 0xffu };
+static const u8 sNdsSkeletonCrossSlots[32] = { [0 ... 31] = 31u };
+#include "generated/nds_native_skeletons.generated.inc"
+
 static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                                             const void *base)
 {
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1)
+    {
+        NDS_IMG_BIND(sNdsMario1SkeletonTables, NDSNativeMario_Skeleton1HighImage,
+                     base, NDS_NATIVE_IMAGE_MARIO_SKELETON1_HIGH);
+        return;
+    }
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1)
+    {
+        NDS_IMG_BIND(sNdsFox1SkeletonTables, NDSNativeFox_Skeleton1HighImage,
+                     base, NDS_NATIVE_IMAGE_FOX_SKELETON1_HIGH);
+        return;
+    }
 #if NDS_NATIVE_OWNER_IMAGE_LUIGI
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_LUIGI)
     {
@@ -4618,6 +4644,16 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
 
 /* Load one owner image for this scene, or report that it is already resident.
  * Called from fighter creation; never from a draw. */
+/* TRUE only while this scene's heap still holds the bound image. */
+s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail)
+{
+    return ((owner_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS) &&
+            (use_low_detail < NDS_NATIVE_IMAGE_DETAILS) &&
+            (sNdsNativeOwnerImage[owner_slot][use_low_detail].base != NULL) &&
+            (sNdsNativeOwnerImage[owner_slot][use_low_detail].heap_generation ==
+                 gNdsTaskmanHeapGeneration)) ? TRUE : FALSE;
+}
+
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
 {
     NdsRelocAssetStream stream;
@@ -4847,7 +4883,7 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
 
 void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+#if NDS_NATIVE_HAS_IMAGE_BACKED_FIGHTER_OWNERS
     uintptr_t start;
     uintptr_t end;
     u32 owner_slot;
@@ -5071,6 +5107,10 @@ static const NDSNativeFighterOwnerRuntime *
 ndsRendererNativeFighterOwnerForProgramDetail(
     u32 slot, u32 use_low_detail, u32 program)
 {
+    if (program == NDS_NATIVE_SKELETON_PROGRAM)
+    {
+        return ndsNativeSkeletonOwner(slot, 1u);
+    }
     if (program == 0u)
     {
         return ndsRendererNativeFighterCanonicalOwnerForDetail(
@@ -5123,8 +5163,9 @@ ndsRendererNativeFighterOwnerForProgramDetail(
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
         /* 1..NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT are the trio head contexts in
-         * generated order, then Stone, then CopyLink. Program numbers are
-         * this file's own; the generator names its programs. */
+         * generated order, then Stone, CopyLink, and the seven-root copy
+         * transition. Program numbers are this file's own; the generator names
+         * its programs. */
         if ((program >= 1u) &&
             (program <= NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT))
         {
@@ -5143,6 +5184,12 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             return (use_low_detail != 0u) ?
                 &sNdsNativeKirbyCopyLinkLowOwner :
                 &sNdsNativeKirbyCopyLinkHighOwner;
+        }
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeKirbyCopyTransitionLowOwner :
+                &sNdsNativeKirbyCopyTransitionHighOwner;
         }
     }
 #endif
@@ -5196,6 +5243,11 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     {
         return;
     }
+    if (program == NDS_NATIVE_SKELETON_PROGRAM && ndsNativeSkeletonOwner(slot, 1u) != NULL)
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     /* Catch, MorphUnfold, MorphBall, FSmash. Every number this bound rejects
      * falls through to the reset below and silently becomes canonical, which is
@@ -5224,7 +5276,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
      * owner map and the head guard all key off the generated head list; this
      * bound is the fourth site and must too. */
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
-        (program <= (NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u)))
+        (program <= (NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u)))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5261,6 +5313,19 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     {
         return 0xffu;
     }
+    {
+        const NDSNativeFighterOwnerRuntime *skeleton = ndsNativeSkeletonOwner(slot, 1u);
+        if (skeleton != NULL && root_count == skeleton->root_count)
+        {
+            u32 i;
+            if (programs_tried != NULL) { (*programs_tried)++; }
+            for (i = 0u; i < root_count; i++)
+            {
+                if (root_offsets[i] != skeleton->roots[i].root_offset) { break; }
+            }
+            if (i == root_count) { return NDS_NATIVE_SKELETON_PROGRAM; }
+        }
+    }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
@@ -5277,8 +5342,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
-        /* canonical + every trio head + Stone + CopyLink. */
-        program_count = NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u;
+        /* canonical + every trio head + Stone + CopyLink + CopyTransition. */
+        program_count = NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 4u;
     }
 #endif
 #if NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)
@@ -5302,8 +5367,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
         if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
         {
-            /* Programs 1..N are the trio head contexts, then Stone, then
-             * CopyLink's head-10 mixed-file program. The trio body bake
+            /* Programs 1..N are the trio head contexts, then Stone, CopyLink,
+             * and the head-10 copy transition. The trio body bake
              * inherits the preceding head's vertex cache, so an
              * identical-looking vector under the wrong live head must never
              * select its sibling bake -- and with twelve heads sharing one
@@ -5317,7 +5382,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
                 continue;
             }
 #endif
-            if ((program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u) &&
+            if (((program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u) ||
+                 (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u)) &&
                 (sNdsKirbyTrioHeadMp != 10u))
             {
                 continue;
@@ -5382,12 +5448,16 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
         kirby_hat_root = &sNdsNativeKirbyHatRoots
             [battle_slot][use_low_detail];
     }
-    /* CopyLink program 4's binding 0 is generated from the deferred copy-hat
-     * mini image.  Prefer the scene-resident modelpart-10 root before the
-     * program owner's same-offset certificate so its local table indices and
-     * light-preamble indices stay paired with the image that supplied them. */
+    /* CopyLink and the copy-transition program both take binding 0 from the
+     * deferred copy-hat mini image. Prefer the scene-resident modelpart-10 root
+     * before the program owner's same-offset certificate so its local table
+     * indices and light-preamble indices stay paired with that image. */
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
-        (ndsRendererNativeFighterRootProgram(slot) == 4u) &&
+        (((ndsRendererNativeFighterRootProgram(slot) ==
+           NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u)) ||
+         ((ndsRendererNativeFighterRootProgram(slot) ==
+           NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u))) &&
         (binding == 0u) &&
         (kirby_hat_slot != NULL) && (kirby_hat_root != NULL) &&
         (kirby_hat_slot->valid != 0u) &&
@@ -5398,6 +5468,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     {
         return kirby_hat_root;
     }
+#endif
 #endif
     if (owner->roots[binding].root_offset == root_offset)
     {

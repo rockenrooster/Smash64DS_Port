@@ -725,6 +725,29 @@ static u32 sNdsGMColScriptsFighterDamageElectricSkeletonFly[] = {
     NDS_GM_COL_ELECTRIC_SKELETON_BODY(5, 11)
 };
 
+/* gmcolscripts.c:225-263, the source's own family for bodies without an
+ * electric skeleton (dFTParamSkeletonColAnimIDs 0x10). */
+#define NDS_GM_COL_ELECTRIC_COMMON_BODY(common_count) \
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(common_count), \
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindShockSmall, 0, 0, 0, 0, 0, 0, 0), \
+    NDS_GM_COL_COMMAND_SUBROUTINE( \
+        sNdsGMColScriptsFighterDamageElectricCommonSub), \
+    NDS_GM_COL_COMMAND_LOOP_END(), \
+    NDS_GM_COL_COMMAND_END()
+
+static u32 sNdsGMColScriptsFighterDamageElectricCommonWeak[] = {
+    NDS_GM_COL_ELECTRIC_COMMON_BODY(4)
+};
+static u32 sNdsGMColScriptsFighterDamageElectricCommonMid[] = {
+    NDS_GM_COL_ELECTRIC_COMMON_BODY(8)
+};
+static u32 sNdsGMColScriptsFighterDamageElectricCommonStrong[] = {
+    NDS_GM_COL_ELECTRIC_COMMON_BODY(12)
+};
+static u32 sNdsGMColScriptsFighterDamageElectricCommonFly[] = {
+    NDS_GM_COL_ELECTRIC_COMMON_BODY(16)
+};
+
 /* Current-roster damage/status scripts from gmcolscripts.c:500-684.  These
  * were still absent after the generic hit-status restore, so the imported
  * source motion/status code requested the right IDs and the DS descriptor
@@ -1177,6 +1200,14 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
         { sNdsGMColScriptsFighterDamageFireStrong, 100, FALSE },
     [nGMColAnimFighterDamageFireStart + 3] =
         { sNdsGMColScriptsFighterDamageFireFly, 100, FALSE },
+    [nGMColAnimFighterDamageElectricCommonStart + 0] =
+        { sNdsGMColScriptsFighterDamageElectricCommonWeak, 100, FALSE },
+    [nGMColAnimFighterDamageElectricCommonStart + 1] =
+        { sNdsGMColScriptsFighterDamageElectricCommonMid, 100, FALSE },
+    [nGMColAnimFighterDamageElectricCommonStart + 2] =
+        { sNdsGMColScriptsFighterDamageElectricCommonStrong, 100, FALSE },
+    [nGMColAnimFighterDamageElectricCommonStart + 3] =
+        { sNdsGMColScriptsFighterDamageElectricCommonFly, 100, FALSE },
     [nGMColAnimFighterDamageElectricSkeletonStart + 0] =
         { sNdsGMColScriptsFighterDamageElectricSkeletonWeak, 100, FALSE },
     [nGMColAnimFighterDamageElectricSkeletonStart + 1] =
@@ -2009,16 +2040,25 @@ sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
         sNdsFighterDashRunDamageSkeletonColAnimLastLevel = damage_level;
     }
     /* BattleShip ftparam.c:1326-1330 maps each fighter kind to its electric
-     * skeleton family. dFTParamSkeletonColAnimIDs[] is 0x14 for both Mario and
-     * Fox, i.e. nGMColAnimFighterDamageElectricSkeletonStart. P2-2 currently
-     * owns only those two fighter kinds, so keep the mapping bounded to the
-     * supported roster instead of inventing tables for unloaded characters. */
-    if ((fp != NULL) && (damage_level >= 0) && (damage_level < 4) &&
-        ((fp->fkind == nFTKindMario) || (fp->fkind == nFTKindFox)))
+     * family. dFTParamSkeletonColAnimIDs[] is 0x14 for both Mario and Fox,
+     * i.e. nGMColAnimFighterDamageElectricSkeletonStart, and those two own a
+     * native electric body. Every other fighter runs the source's own
+     * no-skeleton family (0x10, the Common scripts) so the flash and the
+     * ShockSmall sparks are never dropped. OWED: native electric bodies for
+     * the rest of the roster (0x14/0x18/0x1C); each costs ~7 KB of arena. */
+    if ((fp != NULL) && (damage_level >= 0) && (damage_level < 4))
     {
+        extern sb32 ndsFTManagerSkeletonReady(s32 fkind);
+
+        /* The body image is resident only when the match has an electric
+         * attacker; an unexpected source still gets the flash, never a
+         * rejected fighter draw. */
         result = ftParamCheckSetFighterColAnimID(
             fighter_gobj,
-            nGMColAnimFighterDamageElectricSkeletonStart + damage_level, 0);
+            ((ndsFTManagerSkeletonReady(fp->fkind) != FALSE) ?
+                 nGMColAnimFighterDamageElectricSkeletonStart :
+                 nGMColAnimFighterDamageElectricCommonStart) + damage_level,
+            0);
     }
     if (result != FALSE)
     {
@@ -8517,6 +8557,23 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         effect_gobj = ndsEFManagerMakeVisualEffect(
             nNDSVisualEffectDust, &pos, 0.8F, lr, NULL);
         break;
+#if NDS_P2_YOSHI
+    case nEFKindYoshiEggEscape:
+        {
+            FTStruct *fp = (fighter_gobj != NULL) ?
+                ftGetStruct(fighter_gobj) : NULL;
+
+            /* BattleShip ftparam.c:2100-2105. RollF/RollB request the egg that
+             * deliberately replaces Yoshi's hidden body. Keep the source
+             * maker as the owner; the compat switch previously dropped this
+             * kind entirely, which let the linker collect the constructor. */
+            if ((fp != NULL) && (fp->fkind == nFTKindYoshi))
+            {
+                (void)efManagerYoshiEggEscapeMakeEffect(fighter_gobj);
+            }
+        }
+        break;
+#endif
     case nEFKindQuakeMag0:
         return efManagerQuakeMakeEffect(0);
     case nEFKindQuakeMag1:

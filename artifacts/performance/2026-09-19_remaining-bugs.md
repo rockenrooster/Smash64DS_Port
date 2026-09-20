@@ -298,3 +298,123 @@ Native-only build and boot/title checks pass. This replaces r3 for playtesting
 and includes the corrected HUD DMA upload, Vulcan and Pikachu side-smash owners.
 Down-B is explicitly not closed: a hit can still stop on the missing electric
 fighter program. No full-list, roster/lifecycle or performance acceptance claim.
+
+## 2026-09-20 — electric-body native program integration
+
+Source-derived Mario/Fox skeleton vectors now compile through the existing
+fighter IR and compiler-layout NitroFS images, loaded at fighter construction.
+Canonical exports are unchanged; exact root/count validation stays enabled.
+The same skeleton image serves both detail levels. Mario costs 7,436 scene
+bytes and Fox 6,740; unused fighters do not load those images. Program 0xfe
+uses the live selected DObjs, independent matrix bindings and image-baked
+normal/color words. Scene release clears its bound table aliases as usual.
+Two focused tests pass: source/vector/geometry checks and execution of the
+actual C selector, including both details, every wrong-root mutation, wrong
+count, canonical restoration and invalid owner/program cases. Native-only
+diagnostic build passes (315 actual link inputs); target proof is in flight
+under `builds/remaining-bugs-electric-probe.log`, runner 8.
+
+This is not the whole electric-effect repair: `ftParamCheckSetSkeletonColAnimID`
+still admits only Mario/Fox. Source `ftparam.c` maps the remaining playables
+to the common, balloon or Samus script family; those scripts/native bodies
+must be restored together. Samus's skeleton uses two pre-matrix vertex-load
+lists (0xacc0/0xad10), unlike its canonical body. Do not drop those loads or
+reinterpret their unlit colors as normals. The current producer refuses that
+unsupported pair rather than publishing incorrect geometry. Other source
+skeleton vectors have been derived, not yet integrated or runtime verified.
+
+## 2026-09-20 (cont.) — electric body closed, Results arena, arena census
+
+Codex ran out of quota mid-batch; the same serial integration continues here.
+Thunder's live-material mask fix (0x0200 head/trail, 0x1600 Shock) was already
+regenerated; it is now built and engaged (roles 1|2, zero native failures).
+
+**Electric-body reject, first divergence named.** Fox's alternate program
+selected (0xfe) and aborted in its second epoch. Witness at the abort:
+`texture_image == 0`, tile never set. The skeleton DLs carry their own
+G_SETTIMG into shared asset **299** (palette 0x8/0x60, CI4 0x18/0x78); the
+compact battle pack only closed textures over the canonical programs, so the
+foreign-image resolver returned NULL and texture preflight rejected the whole
+fighter. `generate_battle_core_packs._native_texture_roots` now also walks the
+skeleton contexts; Mario/Fox `.ext` grow 96->320 / 60->284 B (224 B of foreign
+texels each), `.fpc` unchanged. `native_skeletons.py` is a declared prereq of
+the pack rule. Natural Thunder hit on Fox: program 254 draws 175 triangles,
+`DIAG_DIRECT_REJECT` count 0, `DIAG_NATIVE` all zero, transport ok
+(`2026-09-20-fox-electric-r6`, capture `artifacts/visibility/2026-09-20-fox-electric-r6.png`).
+
+**Electric flash for the rest of the roster.** `ftParamCheckSetSkeletonColAnimID`
+admitted Mario/Fox only, so every other fighter got no colour animation and no
+ShockSmall sparks at all. Added the source's own no-skeleton family
+(gmcolscripts.c:225-263, ids 0x10-0x13, what the source gives Master Hand /
+Metal / Polygon bodies) and route every fighter without a resident electric
+body to it. OWED and recorded in the code: native electric bodies for the other
+ten fighters (0x14/0x18/0x1C families; Samus needs pre-matrix vertex loads),
+each ~7 KB of arena. Runtime proof on a non-Mario/Fox victim is still owed --
+see the arena section for why the Samus probe could not start.
+
+**VS Results halt (Pikachu/Fox: 136 B wanted, 88 free).** Two causes removed:
+(1) Results fighters no longer load electric-body images (they cannot be hit);
+(2) the source transition photo -- a 132,000 B copy of `gSYFramebufferSets`,
+which on DS only ever holds scmanager's uniform clear -- now aliases that
+storage instead of allocating (`battleship_lbtransition.c`, static-asserted
+extent, 4-aligned self copy of a uniform buffer, identical bytes sampled).
+Pikachu/Fox now sits in Results to the probe ceiling with no malloc halt
+(`2026-09-20-results-r11`). Results capture for this roster is owed.
+
+**Electric bodies are now loaded only when the match can use them** (any
+Pikachu/Ness/Kirby incl. polygon kinds); `ndsFTManagerSkeletonReady` makes any
+unexpected electric source fall back to the flash family rather than a rejected
+draw. Mario/Fox matches get 14,176 B of arena back.
+
+### Arena census -- THE SHARED CAUSE BEHIND "MISSING / INTERMITTENT VFX"
+
+Measured on the shipping-configuration shell ROM (arena 925,184 B):
+
+| case | free at GO | result |
+|---|---|---|
+| Mario/Fox Dream Land (earlier today) | 61,124 | fine |
+| Pikachu/Fox Dream Land | 7,556 (min 3,184) | `gcSetMaxNumGObj(48)` then `(56)` at time 0 |
+| Pikachu/Samus Dream Land | -- | **malloc halt in scVSBattleStartBattle (136 wanted, 80 free)** |
+| Mario/Fox Saffron, before electric-body gating | -- | **malloc halt (108 wanted, 76 free)** |
+| Mario/Fox Saffron, after | min 2,844 | starts; GObj cap latched |
+
+`ifCommonSetMaxNumGObj` is the source's own rule: below 25 KiB free it caps the
+GObj count at the current active count for the rest of the match, and every
+`efManagerMakeEffectNoForce` maker then returns NULL whenever the scene is at
+the cap. That is a complete, source-faithful explanation for effects that are
+missing or intermittent on heavier rosters (electric sparks, impact wave,
+Kirby/Yoshi sub-effects, Pokemon attack VFX) with zero native rejects, and it
+is roster- and stage-dependent exactly as the owner reports. The anim cache is
+not the consumer: it already declines (reserved 0, fail 1).
+
+Startup allocations >= 6 KB (Mario/Fox Dream Land): common interface files
+**208,672** (of which IFCommonGameStatus is 152,288, ~133 KB of it RGBA32
+countdown/GO and GAME SET/TIME UP letters), stage **202,816**,
+ITCommonData+Object **82,976** + 14,784, EFCommonEffects **94,704**, fighter
+pool 45,200, per fighter ~14.5 KB pack + 7-30 KB owner image. Static image is
+2.98 MB of 4 MB. Largest BSS: FGM cache 237,568, framebuffer/fighter-packet
+arena 147,840.
+
+Recommended lever, not started: a build-time DS repack of IFCommonGameStatus
+(RGBA32 -> the 16-bit form the DS uploader already reduces it to) with remapped
+`ll*` offsets, worth ~66 KB in every battle. Until the arena grows, heavy
+rosters will keep dropping effects and some pairs cannot start a match.
+
+### Saffron gate -- reproduce-first result
+
+Gate logic cycles as source: open from tic 1, monster at 1095, closed at 1220
+(gate_wait 1000), reopening ~2220. The two door DObjs animate (open z=330 /
+y=-30, closed z~0 / y=390) and the captures differ: the green shutter is absent
+at tic 648 and present at tic 1608 (`artifacts/visibility/2026-09-20-saffron-gate-{open,closed}.png`).
+The closed door shows a diagonal split consistent with coplanar z-fighting
+against the wall; that is the remaining defect, not a baked pose.
+
+### Not closed in this batch
+
+Thunder's role-4 effect trail and Ness's PK Thunder tail effect (root 0x8f98)
+both draw through `gcDrawDObjDLLinksForGObj`, a callback kind the effect
+admission (`ndsStageGCDrawAllLoopEffectKindAccepted`) refuses, so they are
+counted as rejected draws and never reach an owner. Admitting the kind needs
+the Ness 0x8f98 fixed-image owner in the same change or it converts a silent
+gap into a NO_PROGRAM failure. Thunder's four live images still upload after
+the GO texture fence (4 fallback uploads per match).

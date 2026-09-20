@@ -99,5 +99,29 @@ sb32 wpYoshiStarProcReflector(GObj *weapon_gobj);
 GObj *wpYoshiStarMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 lr);
 GObj *wpYoshiStarMakeStars(GObj *fighter_gobj, Vec3f *pos);
 
+#if NDS_P2_YOSHI_BUG_PROOF && NDS_HARNESS_FAST_LOGIC
+GObj *ndsBaseWpYoshiEggThrowMakeWeapon(GObj *fighter_gobj, Vec3f *pos);
+#define wpYoshiEggThrowMakeWeapon ndsBaseWpYoshiEggThrowMakeWeapon
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpyoshi/wpyoshieggthrow.c"
+#if NDS_P2_YOSHI_BUG_PROOF && NDS_HARNESS_FAST_LOGIC
+#undef wpYoshiEggThrowMakeWeapon
+void ndsHarnessFastPresentRequest(void);
+
+/* Proof-only presentation seam. Fast logic can execute the source frame-4
+ * EggThrow spawn and its later release between hardware display passes. Ask
+ * the harness for one present only when BattleShip successfully creates the
+ * real weapon; all gameplay state, lifetime, motion events and collision stay
+ * source-owned. Realtime/shipping builds compile the source maker unchanged. */
+GObj *wpYoshiEggThrowMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+{
+    GObj *egg_gobj = ndsBaseWpYoshiEggThrowMakeWeapon(fighter_gobj, pos);
+
+    if (egg_gobj != NULL)
+    {
+        ndsHarnessFastPresentRequest();
+    }
+    return egg_gobj;
+}
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpyoshi/wpyoshistar.c"

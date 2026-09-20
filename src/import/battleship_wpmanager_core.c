@@ -6,6 +6,8 @@
 #include <gr/ground.h>
 #include <it/item.h>
 #include <mp/map.h>
+#include <nds/generated/nds_native_yoshi_egg.generated.h>
+#include <nds/nds_preview_pack.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -277,6 +279,13 @@ void mpCommonRunWeaponCollisionDefault(
 __attribute__((used)) volatile u32 gNdsWeaponPoolRefusalCount;
 __attribute__((used)) volatile u32 gNdsWeaponPoolLiveHighWater;
 static u32 sNdsWeaponPoolLiveCount;
+#if NDS_P2_YOSHI_BUG_PROOF
+volatile u32 gNdsYoshiEggCtorCount;
+volatile u32 gNdsYoshiEggCtorRawData;
+volatile u32 gNdsYoshiEggCtorMappedData;
+volatile u32 gNdsYoshiEggCtorModelBase;
+volatile u32 gNdsYoshiEggCtorLiveDL;
+#endif
 
 static void ndsWpManagerRecordLiveAlloc(void)
 {
@@ -329,6 +338,7 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
     WPStruct *owner_wp;
     ITStruct *ip;
     FTStruct *fp;
+    void *weapon_data;
     s32 unused[7];
 
     wp = wpManagerGetNextStructAlloc();
@@ -349,6 +359,35 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
     attr = lbRelocGetFileData(WPAttributes*, *wp_desc->p_weapon,
                               wp_desc->o_attributes);
     ndsRelocEnsureWeaponAttributesNormalized(attr);
+    weapon_data = attr->data;
+#if NDS_P2_YOSHI
+    /* YoshiMain's EggThrow WPAttributes has one cross-file data edge:
+     * YoshiModel source root 0xA860. FPC2 compact packs preserve that source
+     * root as a relocated identity cell, so the raw external pointer stored in
+     * the resident WPAttributes is not a valid live DL address. Resolve the
+     * source offset at the constructor boundary before the generic weapon path
+     * copies it into DObj::dl. Do not mutate attr->data: the source descriptor
+     * remains authoritative and another scene/load generation can map the same
+     * source offset differently.
+     *
+     * EggThrow is the only weapon kind using this edge; all other weapons keep
+     * the generic attr->data path byte-for-byte. */
+    if ((wp_desc->kind == nWPKindEggThrow) && (gFTDataYoshiModel != NULL))
+    {
+        const void *mapped_egg_root = ndsRelocNativeRootAddress(
+            gFTDataYoshiModel, NDS_NATIVE_YOSHI_EGG_ROOT);
+
+#if NDS_P2_YOSHI_BUG_PROOF
+        gNdsYoshiEggCtorRawData = (u32)(uintptr_t)attr->data;
+        gNdsYoshiEggCtorMappedData = (u32)(uintptr_t)mapped_egg_root;
+        gNdsYoshiEggCtorModelBase = (u32)(uintptr_t)gFTDataYoshiModel;
+#endif
+        if (mapped_egg_root != NULL)
+        {
+            weapon_data = (void *)mapped_egg_root;
+        }
+    }
+#endif
     weapon_gobj->user_data.p = wp;
     wp->weapon_gobj = weapon_gobj;
     wp->kind = wp_desc->kind;
@@ -475,7 +514,7 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
 
     if (wp_desc->flags & WEAPON_FLAG_DOBJDESC)
     {
-        gcSetupCustomDObjs(weapon_gobj, attr->data, NULL,
+        gcSetupCustomDObjs(weapon_gobj, weapon_data, NULL,
                            wp_desc->transform_types.tk1,
                            wp_desc->transform_types.tk2,
                            wp_desc->transform_types.tk3);
@@ -485,7 +524,7 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
     else
     {
         lbCommonInitDObj3Transforms(
-            gcAddDObjForGObj(weapon_gobj, attr->data),
+            gcAddDObjForGObj(weapon_gobj, weapon_data),
             wp_desc->transform_types.tk1,
             wp_desc->transform_types.tk2,
             wp_desc->transform_types.tk3);
@@ -493,6 +532,14 @@ GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
             wpDisplayDObjDLLinks : wpDisplayDLHead1;
     }
     gcAddGObjDisplay(weapon_gobj, proc_display, 14, GOBJ_PRIORITY_DEFAULT, ~0);
+#if NDS_P2_YOSHI_BUG_PROOF
+    if (wp_desc->kind == nWPKindEggThrow)
+    {
+        gNdsYoshiEggCtorLiveDL =
+            (u32)(uintptr_t)DObjGetStruct(weapon_gobj)->dl;
+        gNdsYoshiEggCtorCount++;
+    }
+#endif
 
     if (attr->p_mobjsubs != NULL)
     {

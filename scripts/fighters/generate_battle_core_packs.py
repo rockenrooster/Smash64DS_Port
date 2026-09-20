@@ -190,18 +190,36 @@ def _foreign_texture_bank(images, files, model_id):
     return records, bytes(data)
 
 
+_SKELETON_CONTEXTS = None
+
+
+def _skeleton_contexts():
+    global _SKELETON_CONTEXTS
+    if _SKELETON_CONTEXTS is None:
+        import native_skeletons
+        _SKELETON_CONTEXTS = native_skeletons.contexts(ROOT)
+    return _SKELETON_CONTEXTS
+
+
 def _native_texture_roots(fighter: str, model_id: int):
     """Use the admitted native programs, including both detail/hat variants."""
     owner = fighter.lower()
     roots = set()
     images = set()
+    programs = []
     for detail in ("high", "low"):
         if owner in ("mario", "fox"):
             context = native.build_owner_source_context(ROOT, detail)
-            rows = context[owner + "_roots"]
+            programs.append((detail, context, context[owner + "_roots"]))
         else:
             context = native.build_p2_owner_runtime_context(ROOT, owner, detail)
-            rows = context["roots"]
+            programs.append((detail, context, context["roots"]))
+    # Electric bodies set their own G_SETTIMG; without these spans the compact
+    # Model resolves a null image and the whole fighter draw rejects.
+    for (name, detail), context in _skeleton_contexts().items():
+        if detail == "high" and name.startswith(owner + "_skeleton"):
+            programs.append((None, context, context["roots"]))
+    for detail, context, rows in programs:
         aliases = context.get("runtime_root_aliases", {})
         roots.update(aliases.get(row[0], row[0]) for row in rows)
         for root in rows:
@@ -216,7 +234,7 @@ def _native_texture_roots(fighter: str, model_id: int):
                 if delta[2] == 6:
                     asset = delta[3] - 1 if len(delta) > 3 and delta[3] else model_id
                     images.add((asset, delta[1]))
-        if owner == "kirby":
+        if owner == "kirby" and detail is not None:
             # Deferred copy-hat images are emitted separately from the body.
             # Their source roots come from the same native variant contract.
             variants = native.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]

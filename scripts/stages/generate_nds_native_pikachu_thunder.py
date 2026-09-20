@@ -18,6 +18,10 @@ PACKET = REPO / "src/nds/generated/nds_native_pikachu_thunder.generated.inc"
 
 def generate():
     files = [sm.load_o2r(REPO, spec) for spec in SPECS]
+    # Thunder supplies only its changing image; Shock also supplies tile/scale.
+    # MObjSub.flags at +0x30, independently pinned to the source structs.
+    assert struct.unpack_from('>H', files[0].payload, 0x9438 + 0x30)[0] == 0x0001
+    assert struct.unpack_from('>H', files[1].payload, 0x13b8 + 0x30)[0] == 0x00a1
     out = ['/* Source-pinned Thunder quads; live source MObj animation remains authoritative. */',
            '#include <nds/generated/nds_native_pikachu_thunder.generated.h>']
     calls = {0xFC: 'SetCombine', 0xF5: 'SetTile', 0xF2: 'SetTileSize',
@@ -80,7 +84,8 @@ def generate():
 #define NDS_NATIVE_PIKACHU_THUNDER_ROOT 0x94f8u
 #define NDS_NATIVE_PIKACHU_SHOCK_ROOT0 0x14b8u
 #define NDS_NATIVE_PIKACHU_SHOCK_ROOT1 0x1598u
-#define NDS_NATIVE_PIKACHU_THUNDER_MATERIAL 0x1600u
+#define NDS_NATIVE_PIKACHU_THUNDER_MATERIAL 0x0200u
+#define NDS_NATIVE_PIKACHU_SHOCK_MATERIAL 0x1600u
 #define NDS_NATIVE_PIKACHU_SHOCK_PALETTE 0x968u
 #define NDS_NATIVE_PIKACHU_SHOCK_IMAGE 0x11a0u
 #endif

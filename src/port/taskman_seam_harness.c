@@ -12,6 +12,36 @@ void ndsHarnessFastPresentRequest(void)
 #endif
 }
 
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+/* Consume a renderer-coupled proof request at the call site's CURRENT source
+ * state.  Most requests are raised by the natural controller tours while they
+ * are observing a short-lived source status.  Waiting until the outer fast
+ * harness regains control is too late: ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate
+ * still has a gcRunAll() to execute, and Yoshi SpecialN Catch can naturally
+ * return to Wait during that update.  Drawing here changes no gameplay state;
+ * it is the same ordinary hardware-frame submit the outer consumer already
+ * owns, merely before the next source update instead of after it. */
+u32 ndsHarnessFastPresentConsumeRequestedNow(void)
+{
+    if (sNdsHarnessFastPresentRequested == 0u)
+    {
+        return FALSE;
+    }
+    sNdsHarnessFastPresentRequested = 0u;
+    gNdsHarnessFastPresentConsumeCount++;
+    /* This is a real renderer presentation even though fast verification does
+     * not advance gameplay here.  Fighter contract submission is intentionally
+     * one-shot per gNdsRendererProfileFrameCount; without a fresh identity the
+     * requested transient-state draw is rejected as a duplicate of the prior
+     * proof frame before BattleShip's display walk is captured at all. */
+    gNdsRendererProfileFrameCount++;
+    ndsSObjPreviewBeginFrame();
+    ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+    ndsSObjPreviewEndFrame();
+    return TRUE;
+}
+#endif
+
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS || NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 /* P2-7 item 9. The generic source-MENU pump, factored out of the imported VS
  * Results loop below so every imported SOURCE menu runs the same contract:
@@ -1257,13 +1287,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     gNdsFtPoseEvalTick =
                         ((update_in_iteration + 1u) >= updates_this_iteration) ?
                             1u : 0u;
-#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
+#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR || \
+    (NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && \
+     NDS_HARNESS_FAST_LOGIC)
                     /* The first prepare attempt for mode-163 happens before
                      * BattleShip has published either fighter GObj.  Most
                      * legacy proof arms tolerate that because they do not
                      * require guest controller playback immediately; Link's
-                     * action proofs do.  Reuse the idempotent prepare on
-                     * each proof tick until the real fighters are live. */
+                     * action proofs and the focused Ness-special tour do.
+                     * Reuse the idempotent prepare on each proof tick until
+                     * the required source-owned input boundary is live. */
                     ndsFighterMarioFoxNaturalMotionPrepare();
 #endif
                     ndsRunMarioFoxProofUpdate(
@@ -1299,6 +1332,18 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                          * Their compact allocation preserves pre-GO source-
                          * frame headroom; transition deletion only mutates a
                          * live binding after preparation has finished. */
+#if NDS_P2_KIRBY
+                        {
+                            u32 player;
+                            for (player = 0u; player < GMCOMMON_PLAYERS_MAX; player++)
+                                if (gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot &&
+                                    gSCManagerBattleState->players[player].fkind == nFTKindKirby &&
+                                    !ndsRendererPrepareNativeKirbyVulcan())
+                                    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_FIGHTER,
+                                        gSCManagerSceneData.scene_curr, nFTKindKirby, 0u, 348u, 0u,
+                                        NDS_NATIVE_FAILURE_BAD_ASSET);
+                        }
+#endif
                         ndsRendererHardwareArmBattleStaticTextures();
                     }
                     /* BattleShip syTaskmanRunTask checks LoadScene immediately
@@ -1379,24 +1424,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     (use_realtime_presentation == 0u) &&
                     (sNdsHarnessFastPresentRequested != 0u))
                 {
-                    /* Renderer-coupled verification needs the same state
-                     * visibility as a BattleShip presentation, but not the
-                     * fast harness paying that draw on every source tick. The
-                     * request is consumed once and the ordinary hardware owner
-                     * performs the draw; gameplay state remains untouched. */
-                    sNdsHarnessFastPresentRequested = 0u;
-                    gNdsHarnessFastPresentConsumeCount++;
-                    /* Same preview-frame bracket as the two fast-logic
-                     * draws below: this is also a battle draw taken with
-                     * use_realtime_presentation == 0, so without it every
-                     * visible SObj would reach ndsDrawSObjPreview, which
-                     * only records a failure. Compiled out of both shell
-                     * ROMs today (NDS_HARNESS_FAST_PRESENT_ON_REQUEST is
-                     * 0), so this is the same defect kept from returning,
-                     * not a fix for a live failure. */
-                    ndsSObjPreviewBeginFrame();
-                    ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
-                    ndsSObjPreviewEndFrame();
+                    /* Same proof-only consumer as the pre-gcRunAll path.  A
+                     * request raised later in the source update still needs a
+                     * distinct renderer frame identity and the same SObj
+                     * preview bracket. */
+                    (void)ndsHarnessFastPresentConsumeRequestedNow();
                 }
 #endif
                 if (use_realtime_presentation != 0u)

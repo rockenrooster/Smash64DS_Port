@@ -4672,7 +4672,7 @@ def pack_fifo_vertex16(x: int, y: int, z: int, context: str) -> tuple[int, int]:
 
 def build_ds_coverage_gx_positions(
         owner_roots, epochs, runs, dense_vertices, packed_corners,
-        run_first_corner, detail: str) -> list[tuple[int, int, int]]:
+        run_first_corner, detail: str, *, canonical=True) -> list[tuple[int, int, int]]:
     """Return hardware-only 12.4 positions with bounded internal seam guards.
 
     The canonical dense vertices stay source-exact for geometry/oracle checks.
@@ -4715,6 +4715,11 @@ def build_ds_coverage_gx_positions(
 
     for owner_name, roots in owner_roots:
         rules = DS_COVERAGE_GUARD_SURFACES.get((owner_name, detail), ())
+        if not canonical:
+            # Independent alternate programs need guards only for surfaces
+            # actually in that program; the canonical census remains strict.
+            offsets = {root[0] for root in roots}
+            rules = tuple(rule for rule in rules if rule[0] in offsets)
         if not rules:
             continue
         matched_rules = set()
@@ -6415,9 +6420,24 @@ def build_p2_single_root_runtime_context(
     the fighter owner's arrays: compile the donor resource independently and let
     the runtime choose this table set for that exact binding.
     """
+    return build_p2_root_set_runtime_context(repo_root, owner_name, detail, (root_offset,))
+
+
+def build_p2_root_set_runtime_context(
+        repo_root: Path, owner_name: str, detail: str, root_offsets,
+        ) -> dict[str, object]:
+    """Compile a complete source-selected root set with independent bindings.
+
+    Used for donor roots and color-animation skeletons. Live DObjs supply the
+    transforms; no canonical-body topology is guessed for an alternate vector.
+    """
+    root_offsets = tuple(root_offsets)
+    bindings = tuple(range(len(root_offsets)))
+    if not root_offsets:
+        raise ValueError(f"{owner_name}: empty native root set")
     data = _build_source_export_for_owners(
         repo_root, (owner_name,), detail,
-        root_specs_by_owner={owner_name: ((root_offset, 0),)},
+        root_specs_by_owner={owner_name: tuple(zip(root_offsets, bindings))},
     )
     state = unpack_many(STATE_DELTA_FORMAT, data["state"])
     sequence = list(data["sequence"])
@@ -6428,9 +6448,8 @@ def build_p2_single_root_runtime_context(
     runs = unpack_many("<HBBI", data["runs"])
     epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
     roots = unpack_many("<IHHHBBBB2x", data[f"{owner_name}_roots"])
-    if len(roots) != 1 or roots[0][0] != root_offset:
-        raise ValueError(
-            f"{owner_name} donor root 0x{root_offset:x}: unexpected root set")
+    if tuple(root[0] for root in roots) != root_offsets:
+        raise ValueError(f"{owner_name}: unexpected source root set")
     payload = load_o2r_payload(repo_root, owner_name)
     owner_preambles_state, owner_preambles, prefix_light_count, intra_light_count = \
         decode_epoch_light_color_state(payload, owner_name, roots, epochs)
@@ -6459,12 +6478,12 @@ def build_p2_single_root_runtime_context(
      action_dense_first, run_first_corner, run_owners, run_root_bindings,
      run_binding_sets) = build_dense_geometry(
         vertex, triangles, runs, epochs, owner_roots, repo_root,
-        owner_root_bindings=((0,),), action_bindings=vertex_bindings)
+        owner_root_bindings=(bindings,), action_bindings=vertex_bindings)
     (action_dense_spans, packed_corners, run_first_unique,
      run_unique_count, run_unique_dense) = build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
         action_dense_first, run_first_corner, run_owners,
-        run_root_bindings, run_binding_sets, [[INVALID_U8]],
+        run_root_bindings, run_binding_sets, [[INVALID_U8] * len(roots)],
         detail, (owner_name,), validate_cross_census=False)
     primitive_streams = {
         mode: build_fighter_primitive_streams(
@@ -6473,7 +6492,7 @@ def build_p2_single_root_runtime_context(
     }
     gx_positions = build_ds_coverage_gx_positions(
         owner_roots, epochs, runs, dense_vertices, packed_corners,
-        run_first_corner, detail)
+        run_first_corner, detail, canonical=False)
     # A donor root is drawn inside another owner's program with this table
     # set selected for it, so it is subject to the same production policy:
     # Link's boomerang (LinkBoomerangModel 0xf8, SpecialN) draws unlit in one
@@ -6491,7 +6510,7 @@ def build_p2_single_root_runtime_context(
     return {
         "owner_name": owner_name,
         "detail": detail,
-        "asset_data_size": len(payload),
+        "asset_data_size": owner_asset_data_size(payload, owner_name),
         "runtime_root_aliases": {},
         "unlit_uniform_roots": unlit_uniform_roots,
         "unlit_vertex_alpha_deltas": unlit_vertex_alpha_deltas,
@@ -6503,10 +6522,12 @@ def build_p2_single_root_runtime_context(
         "runs": runs,
         "epochs": epochs,
         "roots": roots,
-        "canonical_root_count": 1,
-        "root_bindings": [0],
+        "canonical_root_count": len(roots),
+        "root_bindings": list(bindings),
         "variant_specs": [],
-        "topology": ([0], [INVALID_U8], [0], [INVALID_U8], (1, 0, 0, 0)),
+        "topology": (list(bindings), [INVALID_U8] * len(roots),
+                     list(bindings), [INVALID_U8] * len(roots),
+                     (len(roots), 0, 0, 0)),
         "direct_epoch_policies": direct_epoch_policies,
         "light_preambles": light_preambles,
         "light_preamble_indices": light_indices,
@@ -7992,6 +8013,62 @@ def build_owner_root_programs(
             "verification_contexts": copy_link_contexts,
         }
 
+        # The copy COMMIT animation installs the victim's joint-6 hat before
+        # Kirby enters the copied Neutral-B status.  At that point no boomerang
+        # hidden part exists yet, so the live source vector is the same
+        # hat+Kirby body as CopyLink with only the foreign 0xF8 donor omitted.
+        # This is a complete program, not a per-root exception: root 0 still
+        # resolves through the deferred per-slot hat image and the remaining
+        # six roots stay in KirbyModel.
+        copy_transition_roots = [
+            hat["roots"][0],
+            *context["roots"][1:canonical_count],
+        ]
+        copy_transition_lights = [
+            hat["light_preamble_indices"][0],
+            *context["light_preamble_indices"][1:canonical_count],
+        ]
+        copy_transition_contexts = [
+            hat,
+            *(context for _ in range(1, canonical_count)),
+        ]
+        copy_transition_offsets = tuple(
+            root[0] for root in copy_transition_roots)
+        expected_copy_transition = (
+            P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
+                KIRBY_COPY_LINK_MODELPART_ID - 1][1],
+            *(root[0] for root in context["roots"][1:canonical_count]),
+        )
+        if copy_transition_offsets != expected_copy_transition:
+            raise ValueError(
+                f"kirby {context['detail']} CopyTransition roots "
+                f"{copy_transition_offsets} != {expected_copy_transition}")
+        copy_transition_cross = (
+            PACKED_GX_SLOT_CURRENT,
+            *context["topology"][3][1:canonical_count],
+        )
+        _assert_owner_root_program_cross_slot_uniqueness(
+            "kirby", str(context["detail"]), "CopyTransition",
+            copy_transition_cross)
+        _verify_program_roots_lit(
+            context, "kirby", str(context["detail"]), "CopyTransition",
+            copy_transition_roots, copy_transition_lights,
+            copy_transition_contexts)
+        copy_transition_program = {
+            "name": "CopyTransition",
+            "roots": copy_transition_roots,
+            "light_indices": copy_transition_lights,
+            "binding_parents": tuple(
+                INVALID_U8 for _ in copy_transition_roots),
+            "cross_slots": copy_transition_cross,
+            "root_offsets": copy_transition_offsets,
+            "source_owners": (
+                "kirby_hat",
+                *("kirby" for _ in range(1, canonical_count)),
+            ),
+            "verification_contexts": copy_transition_contexts,
+        }
+
         # Stone is not a per-root exception. BattleShip hides every ordinary
         # model part, then enables joint 6 / modelpart 2, so the complete live
         # display program is exactly one root. The modelpart appendix already
@@ -8035,6 +8112,7 @@ def build_owner_root_programs(
             "verification_contexts": [context],
         })
         programs.append(copy_link_program)
+        programs.append(copy_transition_program)
         return programs
     if owner_name not in OWNER_ROOT_PROGRAMS:
         return []

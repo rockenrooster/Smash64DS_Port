@@ -36,6 +36,8 @@ typedef struct NDSBattleHudDamageState {
  * published by battleship_ifcommon.c with source-derived AOT artwork. */
 void ndsBattleHudRender(void);
 void ndsBattleHudClear(void);
+/* Per-present output of the source score particles; no score/timer authority. */
+u32 ndsBattleHudSubmitScoreParticle(u32 frame, f32 source_x, f32 source_y, f32 size);
 
 /* Implemented by the imported BattleShip ifCommon translation unit.  Returns
  * FALSE when the source slot does not exist; otherwise `out` is one coherent

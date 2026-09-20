@@ -16,17 +16,20 @@ param(
     [Parameter(Mandatory)][string]$Elf,
     [Parameter(Mandatory)][string]$OutputDirectory,
     [switch]$NoCapture,
-    [ValidateSet('none','grab','special','linkboomerang','shieldflick','shieldroll')][string]$Pump = 'none',
+    [ValidateSet('none','grab','special','jab','side_smash','linkboomerang','shieldflick','shieldroll')][string]$Pump = 'none',
     [ValidateRange(-80,80)][int]$StickX = 0,
     [ValidateRange(-80,80)][int]$StickY = 0,
     [ValidateRange(-500,500)][int]$Teleport = 0,
     [string]$Condition = '',
     [string]$Condition2 = '',
     [switch]$RequireImpactWave,
+    [switch]$RequireScoreAlert,
     [switch]$FighterModelDiagnostics,
     [switch]$YoshiEffectDiagnostics,
     [switch]$StartupFailureDiagnostics,
-    [ValidateRange(0,1048576)][int]$StartupMallocAtLeast = 0
+    [ValidateRange(0,1048576)][int]$StartupMallocAtLeast = 0,
+    # Raw GDB lines appended after the connection; one-off first-divergence witnesses.
+    [string[]]$ExtraGdbCommands = @()
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -164,27 +167,75 @@ try {
     # charset on auto; the marker run itself decides transport success.
     $commands = @('set pagination off','set print repeats 0','set confirm off','set remotetimeout 30',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort))
+    $commands += $ExtraGdbCommands
+    $result.extra_gdb_commands = $ExtraGdbCommands.Count
     if ($YoshiEffectDiagnostics) {
         $commands += 'set $fttick = 0'
+        $effectSource = @(Get-Content (Join-Path $root 'src/import/battleship_efmanager.c'))
+        $entryStart = @(for ($i=0; $i -lt $effectSource.Count; $i++) {
+            if ($effectSource[$i] -match '^GObj \*efManagerYoshiEntryEggMakeEffect\(') { $i }
+        })
+        $entryReturn = @(for ($i=$entryStart[0]; $i -lt $entryStart[0]+20; $i++) {
+            if ($effectSource[$i] -match 'ndsEFManagerEndMappedDesc') { $i+1 }
+        })
+        if ($entryReturn.Count -ne 1) { throw 'Missing Yoshi entry constructor witness.' }
+        $commands += @(('break battleship_efmanager.c:' + $entryReturn[0]), 'commands', 'silent', 'up',
+            'printf "DIAG_YOSHI_ENTRY_OBJECT=%#x\n", effect_gobj',
+            'if effect_gobj != 0',
+            'printf "DIAG_YOSHI_ENTRY_OBJECT_STATE=%u,%u,%u,%f\n", effect_gobj->id, effect_gobj->dl_link_id, effect_gobj->flags, effect_gobj->anim_frame',
+            'set $entry_root = (DObj*)effect_gobj->obj',
+            'printf "DIAG_YOSHI_ENTRY_TREE=%#x,%#x,%#x,%u\n", $entry_root, $entry_root->dl, $entry_root->child, $entry_root->flags',
+            'if $entry_root->child != 0',
+            'printf "DIAG_YOSHI_ENTRY_CHILD=%#x,%#x,%u,%f\n", $entry_root->child->dl, $entry_root->child->mobj, $entry_root->child->flags, $entry_root->child->anim_wait',
+            'end', 'end', 'down', 'continue', 'end')
+        $commands += @('set $yoshi_entry_make = 0', 'set $yoshi_entry_base = 0',
+            'set $yoshi_entry_stage = 0', 'set $yoshi_entry_native = 0',
+            'break efManagerYoshiEntryEggMakeEffect', 'commands', 'silent',
+            'set $yoshi_entry_make = $yoshi_entry_make + 1',
+            'printf "DIAG_YOSHI_ENTRY_FILE=%#x\n", gFTDataYoshiSpecial2',
+            'printf "DIAG_YOSHI_ENTRY_GOBJ_POOL=%d,%u\n", sGCCommonsMaxNum, sGCCommonsActiveNum',
+            'echo DIAG_YOSHI_ENTRY_DESC=', 'output dEFManagerYoshiEntryEggEffectDesc', 'echo \n',
+            'continue', 'end',
+            'break ndsBaseEFManagerYoshiEntryEggMakeEffect', 'commands', 'silent',
+            'set $yoshi_entry_base = $yoshi_entry_base + 1', 'continue', 'end',
+            'break ndsRendererAdapterSubmitStageDL if (unsigned)dl == (unsigned)gFTDataYoshiSpecial2 + 0x530',
+            'commands', 'silent',
+            'if $yoshi_entry_stage == 0',
+            'printf "DIAG_YOSHI_ENTRY_ROOT=%#x,%u,%#x\n", dl, dobj->parent_gobj->id, dobj->mobj',
+            'if dobj->mobj != 0', 'echo DIAG_YOSHI_ENTRY_MOBJ=', 'output *dobj->mobj', 'echo \n', 'end',
+            'x/25xw dl', 'end',
+            'set $yoshi_entry_stage = $yoshi_entry_stage + 1', 'continue', 'end',
+            'break ndsRendererSubmitNativeYoshiEntryEgg', 'commands', 'silent',
+            'set $yoshi_entry_native = $yoshi_entry_native + 1', 'continue', 'end')
         # Source-location witnesses after the hardware triangle increment.
         # They work in normal builds without enabling the old proof-only tour.
         foreach ($effect in @('entryegg','egg','egglay')) {
             $source = Join-Path $root "src/nds/nds_native_yoshi_$effect.exec.inc"
             $lines = @(Get-Content -LiteralPath $source)
             $line = @(for ($i=0; $i -lt $lines.Count; $i++) {
-                if ($lines[$i] -match 'stats->hardware_vertex_count \+=') { $i + 1 }
+                if ($lines[$i] -match 'stats->hardware_vertex_count \+=|if \(drawn < 0\)') { $i + 1 }
             })
             if ($line.Count -ne 1) { throw "Ambiguous Yoshi $effect post-triangle witness." }
             $commands += @(('set $yoshi_' + $effect + '_draws = 0'),
                 ('set $yoshi_' + $effect + '_frame = -1'),
                 ('break nds_native_yoshi_' + $effect + '.exec.inc:' + $line[0]),
-                'commands','silent',
+                'commands','silent')
+            $sharedQuad = $lines[$line[0] - 1] -match 'drawn < 0'
+            if ($sharedQuad) { $commands += 'if drawn > 0' }
+            $commands += @(
                 ('set $yoshi_' + $effect + '_draws = $yoshi_' + $effect + '_draws + 1'),
-                ('set $yoshi_' + $effect + '_frame = $fttick + 1'),
-                'continue','end')
+                ('set $yoshi_' + $effect + '_frame = $fttick + 1'))
+            if ($sharedQuad) { $commands += 'end' }
+            $commands += @('continue','end')
         }
     }
     $startupState = @(
+            'printf "DIAG_STARTUP_FIGHTER_VALIDATION=%u,%u,%u,%u\n", gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected, gNdsNativeFighterValidateRejectCount, gNdsFtrDeclineSelected',
+            'echo DIAG_STARTUP_FIGHTER_ROOTS=', 'output gNdsNativeFighterValidateRejectOffsets', 'echo \n',
+            'printf "DIAG_STARTUP_FIGHTER_OWNER=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsFtrDeclineStage, gNdsFtrDeclineOwner, gNdsFtrRejectStatusBySlot[0], gNdsFtrRejectReasonBySlot[0], gNdsFtrRejectStatusBySlot[1], gNdsFtrRejectReasonBySlot[1], gNdsNativeOwnerImageFailCount, gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectRoot',
+            'if (gSCManagerSceneData.scene_curr == 22) && (gSCManagerBattleState->players[1].fighter_gobj != 0)',
+            'printf "DIAG_STARTUP_FIGHTER1=%d,%d,%d,%d\n", ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->fkind, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->status_id, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->motion_id, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->detail_curr',
+            'end',
             'printf "DIAG_STARTUP_PACK=%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%#x\n", gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, gNdsBattleCoreExternFailure, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstDep, gNdsRelocExternalFixupFailIndex, gNdsRelocExternalFixupFailSlot',
             'printf "DIAG_STARTUP_HEAP=%u,%u,%u,%#x,%u,%u\n", gNdsSyMallocOverflowCount, gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsSyMallocOverflowCallerLR, gNdsTaskmanArenaChosenSize, gNdsTaskmanGeneralHeapFreeMin',
             'printf "DIAG_STARTUP_STAGE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsNativeStageBlobReadFailCount, gNdsNativeStageBlobHashMismatchCount, gNdsNativeStagePrepareRunFailStep, gNdsNativeStagePrepareRunFailRun, gNdsNativeStageValidateFullFailStep, gNdsNativeStageValidateFullFailIndex, gNdsNativeStagePacketUnresolvedCount, gNdsNativeStagePacketUnresolvedKind',
@@ -333,6 +384,17 @@ try {
             'commands','silent',
             'set $fttick = $fttick + 1')
         switch ($Pump) {
+            'side_smash' {
+                $commands += @('if (gSCManagerBattleState->time_passed >= 140) && (($fttick % 60) < 2)',
+                    ('diag_pad 0 0x8000 ' + $StickX + ' 0'),
+                    'else', 'diag_pad 0 0 0 0', 'end')
+            }
+            'jab' {
+                # Start after GO has cleared so the first short-lived burst
+                # can be captured unobscured, not from a stale draw counter.
+                $commands += @('if (gSCManagerBattleState->time_passed >= 140) && (($fttick % 6) < 2)',
+                    'diag_pad 0 0x8000 0 0', 'else', 'diag_pad 0 0 0 0', 'end')
+            }
             'grab' {
                 # Z held always (shield); A tapped 2 of every 30 frames. Grab
                 # from common ground needs Z hold + A tap
@@ -436,6 +498,10 @@ try {
             'echo DIAG_ENTRY_ROOT_DRAWS=', 'output gNdsEntryEffectNativeRootDraws', 'echo \n')
     }
     if ($FighterModelDiagnostics) {
+        $commands += @('echo DIAG_DIRECT_REJECT=', 'output gNdsRendererNativeDirectReject', 'echo \n')
+        if ($Fighter1Kind -eq 9 -or $Fighter2Kind -eq 9) {
+            $commands += @('printf "DIAG_PIKACHU_THUNDER=%u,%u,%u,%u\n", gNdsPikachuThunderNativeRoleMask, gNdsPikachuThunderNativeDraws[0], gNdsPikachuThunderNativeDraws[1], gNdsPikachuThunderNativeDraws[2]')
+        }
         $commands += @(
             'set $model_fp = (FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p',
             'printf "DIAG_MODEL=%d,%d,%d,%d,%u,%#x,%#x,%u\n", $model_fp->fkind, $model_fp->status_id, $model_fp->motion_id, $model_fp->detail_curr, $model_fp->is_invisible, *$model_fp->data->p_file_main, *$model_fp->data->p_file_model, gNdsTaskmanHeapGeneration',
@@ -452,7 +518,11 @@ try {
             'set $joint_i = $joint_i + 1','end')
     }
     if ($YoshiEffectDiagnostics) {
+        $commands += 'printf "DIAG_YOSHI_ENTRY_MAKERS=%u,%u,%u,%u\n", $yoshi_entry_make, $yoshi_entry_base, $yoshi_entry_stage, $yoshi_entry_native'
         $commands += @('printf "DIAG_YOSHI_EFFECTS=%u,%u,%u,%u\n", $yoshi_entryegg_draws, $yoshi_egg_draws, $yoshi_egglay_draws, sNdsNativeFighterRootPrograms[8]')
+    }
+    if ($RequireScoreAlert) {
+        $commands += 'printf "DIAG_SCORE_ALERT=%u,%u,%u,%u\n", gNdsBattleHudScoreSubmitCount, gNdsBattleHudScoreDrawCount, gNdsBattleHudScoreFrameMask, sNdsBattleHudScoreCount'
     }
     $commands += @(
         'printf "DIAG_DRAW=%u,%u,%u,%u\n", gNdsFighterDLAllDrawP0HardwareTriangleCount-$p0tri_prev, gNdsFighterDLAllDrawP1HardwareTriangleCount-$p1tri_prev, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_invisible, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->is_invisible',
@@ -649,8 +719,11 @@ try {
         if ($Fighter2Kind -ne 255 -and $result.fighter_state[1] -ne $Fighter2Kind) { throw 'Probe committed the wrong player-2 fighter.' }
         # Zero recorded failures AND zero drawn triangles is a successful empty
         # draw, which is exactly what the native-only contract forbids.
-        if (($result.fighter_draw[0] -eq 0 -and $result.fighter_draw[2] -eq 0) -or
-            ($result.fighter_draw[1] -eq 0 -and $result.fighter_draw[3] -eq 0)) {
+        # Entry animations may hide model parts independently of is_invisible;
+        # their effect witness is authoritative before the source GO clock runs.
+        if ($result.state[2] -gt 0 -and
+            (($result.fighter_draw[0] -eq 0 -and $result.fighter_draw[2] -eq 0) -or
+             ($result.fighter_draw[1] -eq 0 -and $result.fighter_draw[3] -eq 0))) {
             throw 'A source-visible fighter emitted no native triangles on the sampled frame.'
         }
     }
@@ -659,6 +732,33 @@ try {
         (Get-FileHash -LiteralPath $Elf).Hash -ne $result.elf_sha256) { throw 'ROM or ELF changed during diagnosis.' }
     $result.transport = 'ok'
     $actionFailure = @($actionPhases | Where-Object outcome -ne 'submitted_drawn').Count -ne 0
+    if ($RequireScoreAlert) {
+        $scores = [regex]::Match($text, '(?m)^DIAG_SCORE_ALERT=([0-9,]+)\r?$')
+        if (-not $scores.Success) { throw 'Missing bottom-screen score witness.' }
+        $result.score_alert = @($scores.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
+        if ($result.score_alert[1] -eq 0 -or $result.score_alert[2] -ne 3 -or $result.score_alert[3] -eq 0) {
+            throw 'Both source score images must actually draw, with a live alert at capture.'
+        }
+        # A KO legitimately hides its fighter. Only rejection/native faults
+        # fail the body-phase record when the requested output is the score.
+        $actionFailure = @($actionPhases | Where-Object {
+            $_.attacker_rejects_this_frame -ne 0 -or $_.victim_rejects_this_frame -ne 0 -or
+            $_.native_failures_this_frame -ne 0
+        }).Count -ne 0
+    }
+    if ($YoshiEffectDiagnostics) {
+        $effects = [regex]::Match($text, '(?m)^DIAG_YOSHI_EFFECTS=([0-9,]+)\r?$')
+        if (-not $effects.Success) { throw 'Missing Yoshi effect output witness.' }
+        $result.yoshi_effect_draws = @($effects.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
+        if ($result.state[2] -eq 0 -and $result.yoshi_effect_draws[0] -gt 0) {
+            # The source entry egg replaces the body before GO. Require its
+            # actual native output, retaining every per-frame rejection check.
+            $actionFailure = @($actionPhases | Where-Object {
+                $_.attacker_rejects_this_frame -ne 0 -or $_.victim_rejects_this_frame -ne 0 -or
+                $_.native_failures_this_frame -ne 0
+            }).Count -ne 0
+        }
+    }
     $result.native = if ($result.native_failure[0] -eq 0 -and -not $actionFailure) { 'pass' } else { 'fail' }
     $exitCode = if ($result.native -eq 'pass') { 0 } else { 2 }
 } catch {

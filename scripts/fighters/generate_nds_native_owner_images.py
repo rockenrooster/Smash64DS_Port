@@ -56,6 +56,7 @@ sys.path.insert(0, str(_HERE))
 
 import generate_nds_native_owners as owners  # noqa: E402
 import _paths  # noqa: E402
+import native_skeletons as skeletons  # noqa: E402
 from native_owner_image_arrays import NATIVE_OWNER_IMAGE_ARRAYS  # noqa: E402
 
 
@@ -69,6 +70,7 @@ def _owner_title(owner_name: str) -> str:
 P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
                    "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness", "boss")
 DETAILS = ("high", "low")
+IMAGE_OWNERS = P2_IMAGE_OWNERS + skeletons.IMAGE_OWNERS
 
 # The build flag that decides whether an owner's image exists. It is
 # NDS_P2_<OWNER> for every owner but one: `boss` has no NDS_P2_BOSS -- it ships
@@ -80,6 +82,10 @@ IMAGE_OWNER_GUARDS = {"boss": "NDS_P2_1P_GAME"}
 
 
 def _owner_guard(owner_name: str) -> str:
+    if "_skeleton" in owner_name:
+        owner_name = owner_name.split("_skeleton")[0]
+        if owner_name in ("mario", "fox"):
+            return "1"
     return IMAGE_OWNER_GUARDS.get(owner_name, f"NDS_P2_{owner_name.upper()}")
 
 # Image ABI tag: first word of every image, checked by the runtime
@@ -424,9 +430,9 @@ def render_header(
         " * owner numbering: only P2-3 owners have images. */",
     ] + [
         f"#define NDS_NATIVE_IMAGE_SLOT_{name.upper()} {index}u"
-        for index, name in enumerate(P2_IMAGE_OWNERS)
+        for index, name in enumerate(IMAGE_OWNERS)
     ] + [
-        f"#define NDS_NATIVE_IMAGE_OWNER_SLOTS {len(P2_IMAGE_OWNERS)}u",
+        f"#define NDS_NATIVE_IMAGE_OWNER_SLOTS {len(IMAGE_OWNERS)}u",
         "",
         "/* One row per image owner: slot suffix, nitro basename, and the two",
         " * image struct types whose sizeof() is the byte count. This is the",
@@ -438,7 +444,7 @@ def render_header(
         "#define NDS_NATIVE_OWNER_IMAGE_ROWS(X) \\",
     ] + [
         line
-        for index, name in enumerate(P2_IMAGE_OWNERS)
+        for index, name in enumerate(IMAGE_OWNERS)
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
             f"    NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
@@ -448,7 +454,7 @@ def render_header(
         "",
     ] + [
         line
-        for name in P2_IMAGE_OWNERS
+        for name in IMAGE_OWNERS
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
             f"#if {_owner_guard(name)}",
@@ -742,6 +748,8 @@ def main() -> int:
                 owners.build_p2_owner_runtime_context(
                     repo_root, owner_name, detail))
     hat_contexts: dict[tuple[int, str], dict[str, object]] = {}
+    skeleton_contexts = skeletons.contexts(repo_root)
+    contexts.update(skeleton_contexts)
     for modelpart_id in owners.KIRBY_COPY_HAT_MODEL_PART_IDS:
         for detail in DETAILS:
             hat_contexts[(modelpart_id, detail)] = (
@@ -767,6 +775,8 @@ def main() -> int:
             + repr(sorted(set(NATIVE_OWNER_IMAGE_ARRAYS) - described)))
 
     products: dict[Path, str] = {
+        repo_root / "src/nds/generated/nds_native_skeletons.generated.inc":
+            skeletons.render_runtime(skeleton_contexts),
         repo_root / "include" / "nds" / "generated"
         / "nds_native_fighter_image.generated.h": render_header(
             contexts, hat_contexts),

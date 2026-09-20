@@ -50,12 +50,19 @@ extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #ifndef NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
+#ifndef NDS_P2_NESS_VFX_PROOF
+#define NDS_P2_NESS_VFX_PROOF 0
+#endif
+#ifndef NDS_P2_YOSHI_BUG_PROOF
+#define NDS_P2_YOSHI_BUG_PROOF 0
+#endif
 
 /* Focused Ness regression driver.  It exists only in the bounded fast-logic
  * proof when the ordinary proof descriptor selects Ness for human slot 0.
  * The driver supplies controller input only; BattleShip still owns every
  * status transition, article/effect spawn, collision and lifetime. */
-#if NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && NDS_HARNESS_FAST_LOGIC
+#if NDS_P2_NESS && (NDS_P2_PROOF_FIGHTER0 == 11) && \
+    (NDS_HARNESS_FAST_LOGIC || NDS_P2_NESS_VFX_PROOF)
 #define NDS_P2_NESS_SPECIAL_TOUR 1
 #include <nds/nds_particle_runtime.h>
 extern volatile u32 gNdsFtrRejectCountBySlot[];
@@ -63,6 +70,14 @@ extern volatile u32 gNdsParticleSubmitOkCount;
 extern volatile u32 gNdsParticleSubmitFailCount;
 #else
 #define NDS_P2_NESS_SPECIAL_TOUR 0
+#endif
+#if NDS_P2_YOSHI && (NDS_P2_PROOF_FIGHTER0 == 6) && NDS_P2_YOSHI_BUG_PROOF
+#define NDS_P2_YOSHI_BUG_TOUR 1
+extern u32 ndsRendererNativeFighterRootProgram(u32 slot);
+extern volatile u32 gNdsFighterDLAllDrawP0HardwareTriangleCount;
+extern volatile u32 gNdsFtrRejectCountBySlot[];
+#else
+#define NDS_P2_YOSHI_BUG_TOUR 0
 #endif
 
 extern void ndsIFCommonRecordHUDState(void);
@@ -4566,6 +4581,7 @@ volatile u32 gNdsNessSpecialTourPKThunderHeadObserved;
 volatile u32 gNdsNessSpecialTourPKThunderTrailObserved;
 volatile u32 gNdsNessSpecialTourPKThunderHeadMObjObserved;
 volatile u32 gNdsNessSpecialTourPKThunderTrailMObjObserved;
+volatile u32 gNdsNessSpecialTourPKThunderJibakuObserved;
 volatile u32 gNdsNessSpecialTourPsychicMagnetObserved;
 volatile u32 gNdsNessSpecialTourPsychicMagnetCollOffset;
 volatile u32 gNdsNessSpecialTourEffectAttachObserved;
@@ -4579,6 +4595,67 @@ volatile u32 gNdsNessSpecialTourWeaponRejectDelta;
 volatile u32 gNdsNessSpecialTourItemRejectDelta;
 volatile u32 gNdsNessSpecialTourEffectRejectDelta;
 volatile u32 gNdsNessSpecialTourDone;
+#endif
+
+#if NDS_P2_YOSHI_BUG_TOUR
+enum NDSYoshiBugTourStep
+{
+    nNDSYoshiBugTourAwaitUpWait = 0,
+    nNDSYoshiBugTourAwaitUpStart,
+    nNDSYoshiBugTourAwaitUpEgg,
+    nNDSYoshiBugTourAwaitUpReturn,
+    nNDSYoshiBugTourApproachNeutral,
+    nNDSYoshiBugTourAwaitNeutralStart,
+    nNDSYoshiBugTourAwaitNeutralCatch,
+    nNDSYoshiBugTourAwaitNeutralReturn,
+    nNDSYoshiBugTourApproachGrab,
+    nNDSYoshiBugTourAwaitCatchWait,
+    nNDSYoshiBugTourAwaitCatchDraw,
+    nNDSYoshiBugTourPressThrow,
+    nNDSYoshiBugTourAwaitThrowStart,
+    nNDSYoshiBugTourAwaitThrowDraw,
+    nNDSYoshiBugTourAwaitThrowReturn,
+    nNDSYoshiBugTourDone
+};
+
+static u32 sNdsYoshiBugTourStep;
+static u32 sNdsYoshiBugTourFrames;
+static u32 sNdsYoshiBugTourNeutralTriangleBase;
+static u32 sNdsYoshiBugTourCatchTriangleBase;
+static u32 sNdsYoshiBugTourThrowTriangleBase;
+static u32 sNdsYoshiBugTourNativeFailureBase;
+static u32 sNdsYoshiBugTourFighterRejectBase;
+static u32 sNdsYoshiBugTourWeaponRejectBase;
+static u32 sNdsYoshiBugTourEffectRejectBase;
+volatile u32 gNdsYoshiBugTourPhase;
+volatile u32 gNdsYoshiBugTourFrames;
+volatile u32 gNdsYoshiBugTourInputCount;
+volatile u32 gNdsYoshiBugTourFixtureCount;
+volatile u32 gNdsYoshiBugTourUpStatusObserved;
+volatile u32 gNdsYoshiBugTourEggThrowObserved;
+volatile u32 gNdsYoshiBugTourNeutralStatusObserved;
+volatile u32 gNdsYoshiBugTourNeutralCatchObserved;
+volatile u32 gNdsYoshiBugTourNeutralAnimDesc;
+volatile u32 gNdsYoshiBugTourNeutralJoint31;
+volatile u32 gNdsYoshiBugTourNeutralJoint31DL;
+volatile u32 gNdsYoshiBugTourNeutralJoint9;
+volatile u32 gNdsYoshiBugTourNeutralJoint9DL;
+volatile u32 gNdsYoshiBugTourNeutralProgramObserved;
+volatile u32 gNdsYoshiBugTourNeutralDrawObserved;
+volatile u32 gNdsYoshiBugTourCatchWaitObserved;
+volatile u32 gNdsYoshiBugTourCatchProgramObserved;
+volatile u32 gNdsYoshiBugTourCatchDrawObserved;
+volatile u32 gNdsYoshiBugTourThrowStatusObserved;
+volatile u32 gNdsYoshiBugTourThrowProgramObserved;
+volatile u32 gNdsYoshiBugTourThrowDrawObserved;
+volatile u32 gNdsYoshiBugTourThrowReturnObserved;
+volatile u32 gNdsYoshiBugTourNativeFailureDelta;
+volatile u32 gNdsYoshiBugTourFighterRejectDelta;
+volatile u32 gNdsYoshiBugTourWeaponRejectDelta;
+volatile u32 gNdsYoshiBugTourEffectRejectDelta;
+volatile u32 gNdsYoshiBugTourRetryCount;
+volatile u32 gNdsYoshiBugTourStallPhase;
+volatile u32 gNdsYoshiBugTourDone;
 #endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
@@ -4641,6 +4718,13 @@ static sb32 ndsFighterNaturalSpecialsProofEnabled(void)
 
 static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
 {
+#if NDS_P2_NESS_SPECIAL_TOUR || NDS_P2_YOSHI_BUG_TOUR
+    /* The Ness regression also has a realtime-through-menus arm.  Once that
+     * shell reaches the real VSBattle scene, use the same controller-playback
+     * driver instead of the live-pad updater so the source taskman cadence and
+     * per-frame presentation remain unchanged while the input is reproducible. */
+    return TRUE;
+#else
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER && NDS_MARIOFOX_DASH_RUN_HARNESS
     return TRUE;
 #else
@@ -4650,6 +4734,7 @@ static sb32 ndsFighterMarioFoxNaturalMotionProofEnabled(void)
     }
     return (ndsFighterMarioFoxGCRunAllLoopProofEnabled() != FALSE) ? TRUE :
                                                                     FALSE;
+#endif
 #endif
 }
 
@@ -5857,6 +5942,31 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         return;
     }
 #endif
+#if NDS_P2_YOSHI_BUG_TOUR
+    /* Realtime Yoshi proof must not arm during Entry/Appear. Fast iteration is
+     * different by design: ifCommonEntryAllMakeInterface skips the visible
+     * entry/countdown threads and publishes GO immediately, so the fighter
+     * remains in common Entry forever unless the focused verifier completes
+     * the same source entry branch explicitly below. */
+#if NDS_HARNESS_FAST_LOGIC
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->game_status != nSCBattleGameStatusGo) ||
+        (p0->fkind != nFTKindYoshi) ||
+        (p0->is_control_disable != FALSE))
+    {
+        return;
+    }
+#else
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->game_status != nSCBattleGameStatusGo) ||
+        (p0->fkind != nFTKindYoshi) ||
+        (p0->status_id != nFTCommonStatusWait) ||
+        (p0->is_control_disable != FALSE))
+    {
+        return;
+    }
+#endif
+#endif
 
     bzero(sNdsFighterNaturalMotionStates,
           sizeof(sNdsFighterNaturalMotionStates));
@@ -6046,7 +6156,17 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsLinkSpecialTourDone = 0u;
 #endif
 #if NDS_P2_NESS_SPECIAL_TOUR
+#if NDS_P2_NESS_VFX_PROOF
+    /* The dedicated Up-B VFX proof needs only the real Up-B controller path.
+     * Starting with PK Fire can consume the whole realtime verifier window
+     * while the fighters naturally align for a hit, without adding any
+     * coverage for PK Thunder presentation.  Begin at the ordinary Up-B
+     * approach phase; all status/article creation and rendering remain source
+     * owned. */
+    sNdsNessSpecialTourStep = nNDSNessSpecialTourAwaitUpWait;
+#else
     sNdsNessSpecialTourStep = nNDSNessSpecialTourAwaitWait;
+#endif
     sNdsNessSpecialTourFrames = 0u;
     sNdsNessSpecialTourWeaponSubmitBase = gNdsWeaponRendererSubmitCount;
     sNdsNessSpecialTourWeaponVisibleBase = gNdsWeaponRendererVisibleDrawCount;
@@ -6056,7 +6176,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNessSpecialTourItemTriangleBase = gNdsItemRendererTriangleCount;
     sNdsNessSpecialTourParticleSubmitBase = gNdsParticleSubmitOkCount;
     sNdsNessSpecialTourParticleFailBase = gNdsParticleSubmitFailCount;
-    gNdsNessSpecialTourPhase = nNDSNessSpecialTourAwaitWait;
+    gNdsNessSpecialTourPhase = sNdsNessSpecialTourStep;
     gNdsNessSpecialTourFrames = 0u;
     gNdsNessSpecialTourInputCount = 0u;
     gNdsNessSpecialTourStatusMask = 0u;
@@ -6071,6 +6191,7 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsNessSpecialTourPKThunderTrailObserved = 0u;
     gNdsNessSpecialTourPKThunderHeadMObjObserved = 0u;
     gNdsNessSpecialTourPKThunderTrailMObjObserved = 0u;
+    gNdsNessSpecialTourPKThunderJibakuObserved = 0u;
     gNdsNessSpecialTourPsychicMagnetObserved = 0u;
     gNdsNessSpecialTourPsychicMagnetCollOffset = 0u;
     gNdsNessSpecialTourEffectAttachObserved = 0u;
@@ -6088,6 +6209,46 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsNessSpecialTourItemRejectDelta = 0u;
     gNdsNessSpecialTourEffectRejectDelta = 0u;
     gNdsNessSpecialTourDone = 0u;
+#endif
+#if NDS_P2_YOSHI_BUG_TOUR
+    sNdsYoshiBugTourStep = nNDSYoshiBugTourAwaitUpWait;
+    sNdsYoshiBugTourFrames = 0u;
+    sNdsYoshiBugTourNeutralTriangleBase = 0u;
+    sNdsYoshiBugTourCatchTriangleBase = 0u;
+    sNdsYoshiBugTourThrowTriangleBase = 0u;
+    sNdsYoshiBugTourNativeFailureBase = gNdsRendererNativeFailure.count;
+    sNdsYoshiBugTourFighterRejectBase = gNdsFtrRejectCountBySlot[0];
+    sNdsYoshiBugTourWeaponRejectBase = gNdsWeaponRendererRejectedDrawCount;
+    sNdsYoshiBugTourEffectRejectBase = gNdsEffectRendererRejectedDrawCount;
+    gNdsYoshiBugTourPhase = nNDSYoshiBugTourAwaitUpWait;
+    gNdsYoshiBugTourFrames = 0u;
+    gNdsYoshiBugTourInputCount = 0u;
+    gNdsYoshiBugTourFixtureCount = 0u;
+    gNdsYoshiBugTourUpStatusObserved = 0u;
+    gNdsYoshiBugTourEggThrowObserved = 0u;
+    gNdsYoshiBugTourNeutralStatusObserved = 0u;
+    gNdsYoshiBugTourNeutralCatchObserved = 0u;
+    gNdsYoshiBugTourNeutralAnimDesc = 0u;
+    gNdsYoshiBugTourNeutralJoint31 = 0u;
+    gNdsYoshiBugTourNeutralJoint31DL = 0u;
+    gNdsYoshiBugTourNeutralJoint9 = 0u;
+    gNdsYoshiBugTourNeutralJoint9DL = 0u;
+    gNdsYoshiBugTourNeutralProgramObserved = 0u;
+    gNdsYoshiBugTourNeutralDrawObserved = 0u;
+    gNdsYoshiBugTourCatchWaitObserved = 0u;
+    gNdsYoshiBugTourCatchProgramObserved = 0u;
+    gNdsYoshiBugTourCatchDrawObserved = 0u;
+    gNdsYoshiBugTourThrowStatusObserved = 0u;
+    gNdsYoshiBugTourThrowProgramObserved = 0u;
+    gNdsYoshiBugTourThrowDrawObserved = 0u;
+    gNdsYoshiBugTourThrowReturnObserved = 0u;
+    gNdsYoshiBugTourNativeFailureDelta = 0u;
+    gNdsYoshiBugTourFighterRejectDelta = 0u;
+    gNdsYoshiBugTourWeaponRejectDelta = 0u;
+    gNdsYoshiBugTourEffectRejectDelta = 0u;
+    gNdsYoshiBugTourRetryCount = 0u;
+    gNdsYoshiBugTourStallPhase = 0xffffffffu;
+    gNdsYoshiBugTourDone = 0u;
 #endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
@@ -6214,6 +6375,47 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
             ftParamUnlockPlayerControl(link_gobj);
             gNdsLinkBombTourFixtureCount++;
         }
+    }
+#endif
+#if NDS_P2_YOSHI_BUG_TOUR && NDS_HARNESS_FAST_LOGIC
+    /* Fast iteration intentionally omits the visible entry/countdown threads.
+     * Complete only their already-selected, non-Boss entry result so the
+     * focused action proof starts from the same grounded source Wait state as a
+     * normal match. This is the same bounded fixture used by the Link Bomb
+     * verifier above; no Yoshi special/catch/throw state is injected.
+     *
+     * Do both fighters because Neutral-B and common Catch require the opponent
+     * to be in ordinary grounded Wait as well. */
+    {
+        u32 fixture_slot;
+
+        for (fixture_slot = 0u; fixture_slot < 2u; fixture_slot++)
+        {
+            FTStruct *fixture_fp = fp[fixture_slot];
+            GObj *fixture_gobj = ndsFighterManagerLiveGObj(fixture_slot);
+
+            if ((fixture_fp != NULL) && (fixture_gobj != NULL))
+            {
+                DObjGetStruct(fixture_gobj)->translate.vec.f =
+                    fixture_fp->entry_pos;
+                fixture_fp->coll_data.floor_line_id =
+                    fixture_fp->status_vars.common.entry.floor_line_id;
+                ftCommonWaitSetStatus(fixture_gobj);
+                ftParamUnlockPlayerControl(fixture_gobj);
+            }
+        }
+        /* Fast iteration bypasses the source Entry thread that normally copies
+         * each spawn's facing into status_vars.common.entry.lr. The field is
+         * therefore not authoritative here (measured Yoshi=NaN, Fox=0), and
+         * copying it made the approach/facing test impossible. Face the two
+         * already-source-positioned fighters toward each other, exactly the
+         * invariant the normal entry handoff establishes before GO. */
+        if ((fp[0] != NULL) && (fp[1] != NULL))
+        {
+            fp[0]->lr = (fp[1]->entry_pos.x >= fp[0]->entry_pos.x) ? 1.0F : -1.0F;
+            fp[1]->lr = -fp[0]->lr;
+        }
+        gNdsYoshiBugTourFixtureCount++;
     }
 #endif
     gNdsFighterNaturalMotionGObjCountBefore = (u32)gcGetGObjsActiveNum();
@@ -10983,6 +11185,12 @@ static void ndsNessSpecialTourObserveStatus(const FTStruct *ness)
     {
         gNdsNessSpecialTourStatusMask |= 1u << 3;
     }
+    if ((ness->status_id == nFTNessStatusSpecialHiJibaku) ||
+        (ness->status_id == nFTNessStatusSpecialAirHiJibaku))
+    {
+        gNdsNessSpecialTourStatusMask |= 1u << 7;
+        gNdsNessSpecialTourPKThunderJibakuObserved = 1u;
+    }
     if ((ness->status_id == nFTNessStatusSpecialLwStart) ||
         (ness->status_id == nFTNessStatusSpecialAirLwStart))
     {
@@ -11088,7 +11296,395 @@ static void ndsNessSpecialTourObserveArticles(void)
         gNdsNessSpecialTourPKFireParticleDrawObserved = 1u;
     }
 }
+#endif /* NDS_P2_NESS_SPECIAL_TOUR */
 
+#if NDS_P2_YOSHI_BUG_TOUR
+extern void osWritebackDCacheAll(void);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+extern void ndsHarnessFastPresentRequest(void);
+#endif
+
+__attribute__((noinline, used))
+void ndsYoshiBugTourProofStop(void)
+{
+    __asm__ volatile ("" ::: "memory");
+}
+
+static void ndsYoshiBugTourSetStep(u32 step)
+{
+    sNdsYoshiBugTourStep = step;
+    sNdsYoshiBugTourFrames = 0u;
+    gNdsYoshiBugTourPhase = step;
+}
+
+static sb32 ndsYoshiBugTourEggThrowLive(void)
+{
+    GObj *gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
+
+    while (gobj != NULL)
+    {
+        WPStruct *wp = wpGetStruct(gobj);
+
+        if ((wp != NULL) && (wp->kind == nWPKindEggThrow))
+        {
+            return TRUE;
+        }
+        gobj = gobj->link_next;
+    }
+    return FALSE;
+}
+
+static sb32 ndsYoshiBugTourApplyInput(FTStruct *fp[2], u16 button[2],
+                                      s8 stick_x[2], s8 stick_y[2])
+{
+    FTStruct *yoshi = fp[0];
+    FTStruct *other = fp[1];
+    f32 dx;
+    f32 adx;
+    f32 dy;
+    u32 high_slot;
+
+    if ((yoshi == NULL) || (yoshi->fkind != nFTKindYoshi))
+    {
+        return TRUE;
+    }
+
+    gNdsYoshiBugTourFrames = ++sNdsYoshiBugTourFrames;
+    gNdsYoshiBugTourNativeFailureDelta =
+        gNdsRendererNativeFailure.count - sNdsYoshiBugTourNativeFailureBase;
+    gNdsYoshiBugTourFighterRejectDelta =
+        gNdsFtrRejectCountBySlot[0] - sNdsYoshiBugTourFighterRejectBase;
+    gNdsYoshiBugTourWeaponRejectDelta =
+        gNdsWeaponRendererRejectedDrawCount - sNdsYoshiBugTourWeaponRejectBase;
+    gNdsYoshiBugTourEffectRejectDelta =
+        gNdsEffectRendererRejectedDrawCount - sNdsYoshiBugTourEffectRejectBase;
+    if ((sNdsYoshiBugTourStep != nNDSYoshiBugTourDone) &&
+        (sNdsYoshiBugTourFrames > 720u))
+    {
+        /* A failed natural attempt is evidence, not permission to write
+         * fighter state. Restart only the controller phase when it is safe. */
+        if ((sNdsYoshiBugTourStep == nNDSYoshiBugTourAwaitNeutralStart) ||
+            (sNdsYoshiBugTourStep == nNDSYoshiBugTourAwaitNeutralCatch))
+        {
+            gNdsYoshiBugTourRetryCount++;
+            if (gNdsYoshiBugTourRetryCount >= 6u)
+            {
+                gNdsYoshiBugTourStallPhase = sNdsYoshiBugTourStep;
+                osWritebackDCacheAll();
+                ndsYoshiBugTourProofStop();
+                return TRUE;
+            }
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourApproachNeutral);
+        }
+        else
+        {
+            gNdsYoshiBugTourStallPhase = sNdsYoshiBugTourStep;
+            osWritebackDCacheAll();
+            ndsYoshiBugTourProofStop();
+            return TRUE;
+        }
+    }
+
+    switch (sNdsYoshiBugTourStep)
+    {
+    case nNDSYoshiBugTourAwaitUpWait:
+        if ((yoshi->status_id == nFTCommonStatusWait) &&
+            (yoshi->ga == nMPKineticsGround) &&
+            (yoshi->is_control_disable == FALSE))
+        {
+            button[0] = B_BUTTON;
+            stick_y[0] = 80;
+            gNdsYoshiBugTourInputCount++;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitUpStart);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitUpStart:
+        if ((yoshi->status_id == nFTYoshiStatusSpecialHi) ||
+            (yoshi->status_id == nFTYoshiStatusSpecialAirHi))
+        {
+            gNdsYoshiBugTourUpStatusObserved = 1u;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitUpEgg);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitUpEgg:
+        if (ndsYoshiBugTourEggThrowLive() != FALSE)
+        {
+            gNdsYoshiBugTourEggThrowObserved = 1u;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitUpReturn);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitUpReturn:
+        if ((yoshi->status_id == nFTCommonStatusWait) &&
+            (yoshi->ga == nMPKineticsGround))
+        {
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourApproachNeutral);
+        }
+        break;
+
+    case nNDSYoshiBugTourApproachNeutral:
+        if ((other == NULL) || (yoshi->is_control_disable != FALSE))
+        {
+            break;
+        }
+        dx = ndsFighterNaturalCombatPosX(other) -
+            ndsFighterNaturalCombatPosX(yoshi);
+        adx = (dx < 0.0F) ? -dx : dx;
+        dy = yoshi->coll_data.p_translate->y - other->coll_data.p_translate->y;
+        if (dy < 0.0F)
+        {
+            dy = -dy;
+        }
+        if (dy > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
+        {
+            high_slot = (yoshi->coll_data.p_translate->y >
+                         other->coll_data.p_translate->y) ? 0u : 1u;
+            if ((fp[high_slot] != NULL) &&
+                (fp[high_slot]->status_id == nFTCommonStatusWait) &&
+                ((fp[high_slot]->coll_data.floor_flags & MAP_VERTEX_COLL_PASS) != 0))
+            {
+                stick_y[high_slot] = -80;
+            }
+            break;
+        }
+        if (adx > 280.0F)
+        {
+            /* Proof positioning needs only ~35 source units from the standard
+             * Yoshi/Fox spawn pair. Stay below the dash tap threshold so this
+             * setup remains an ordinary Walk -> Wait handoff; a 70-stick dash
+             * can outrun the opponent and strand the fast verifier in Dash
+             * before Neutral-B is ever pressed. */
+            stick_x[0] = (dx >= 0.0F) ? 40 : -40;
+            break;
+        }
+        if (yoshi->status_id != nFTCommonStatusWait)
+        {
+            break;
+        }
+        if ((dx * yoshi->lr) < 0.0F)
+        {
+            stick_x[0] = (dx >= 0.0F) ? 40 : -40;
+            break;
+        }
+        button[0] = B_BUTTON;
+        gNdsYoshiBugTourInputCount++;
+        ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitNeutralStart);
+        break;
+
+    case nNDSYoshiBugTourAwaitNeutralStart:
+        if ((yoshi->status_id == nFTYoshiStatusSpecialN) ||
+            (yoshi->status_id == nFTYoshiStatusSpecialAirN))
+        {
+            gNdsYoshiBugTourNeutralStatusObserved = 1u;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitNeutralCatch);
+        }
+        else if ((yoshi->status_id == nFTCommonStatusWait) &&
+                 (sNdsYoshiBugTourFrames > 90u))
+        {
+            gNdsYoshiBugTourRetryCount++;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourApproachNeutral);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitNeutralCatch:
+        if ((yoshi->status_id == nFTYoshiStatusSpecialNCatch) ||
+            (yoshi->status_id == nFTYoshiStatusSpecialAirNCatch))
+        {
+            gNdsYoshiBugTourNeutralCatchObserved = 1u;
+            gNdsYoshiBugTourNeutralAnimDesc = yoshi->anim_desc.word;
+            gNdsYoshiBugTourNeutralJoint31 =
+                (u32)(uintptr_t)yoshi->joints[31];
+            gNdsYoshiBugTourNeutralJoint31DL =
+                (yoshi->joints[31] != NULL) ?
+                    (u32)(uintptr_t)yoshi->joints[31]->dl : 0u;
+            gNdsYoshiBugTourNeutralJoint9 =
+                (u32)(uintptr_t)yoshi->joints[9];
+            gNdsYoshiBugTourNeutralJoint9DL =
+                (yoshi->joints[9] != NULL) ?
+                    (u32)(uintptr_t)yoshi->joints[9]->dl : 0u;
+            if (ndsRendererNativeFighterRootProgram(8u) == 1u)
+            {
+                gNdsYoshiBugTourNeutralProgramObserved = 1u;
+            }
+            sNdsYoshiBugTourNeutralTriangleBase =
+                gNdsFighterDLAllDrawP0HardwareTriangleCount;
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitNeutralReturn);
+        }
+        else if ((yoshi->status_id == nFTCommonStatusWait) &&
+                 (sNdsYoshiBugTourFrames > 120u))
+        {
+            gNdsYoshiBugTourRetryCount++;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourApproachNeutral);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitNeutralReturn:
+        if (ndsRendererNativeFighterRootProgram(8u) == 1u)
+        {
+            gNdsYoshiBugTourNeutralProgramObserved = 1u;
+        }
+        if ((gNdsYoshiBugTourNeutralProgramObserved != 0u) &&
+            (gNdsFighterDLAllDrawP0HardwareTriangleCount >
+             sNdsYoshiBugTourNeutralTriangleBase))
+        {
+            gNdsYoshiBugTourNeutralDrawObserved = 1u;
+        }
+        if ((yoshi->status_id == nFTCommonStatusWait) &&
+            (gNdsYoshiBugTourNeutralCatchObserved != 0u) &&
+            (gNdsYoshiBugTourNeutralProgramObserved != 0u) &&
+            (gNdsYoshiBugTourNeutralDrawObserved != 0u))
+        {
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourApproachGrab);
+        }
+        break;
+
+    case nNDSYoshiBugTourApproachGrab:
+        if ((other == NULL) || (yoshi->is_control_disable != FALSE) ||
+            (yoshi->status_id != nFTCommonStatusWait) ||
+            (other->status_id != nFTCommonStatusWait) ||
+            (yoshi->ga != nMPKineticsGround) ||
+            (other->ga != nMPKineticsGround))
+        {
+            break;
+        }
+        dx = ndsFighterNaturalCombatPosX(other) -
+            ndsFighterNaturalCombatPosX(yoshi);
+        adx = (dx < 0.0F) ? -dx : dx;
+        dy = yoshi->coll_data.p_translate->y - other->coll_data.p_translate->y;
+        if (dy < 0.0F)
+        {
+            dy = -dy;
+        }
+        if (dy > NDS_FIGHTER_NATURAL_COMBAT_APPROACH_FLOOR_Y_RANGE)
+        {
+            high_slot = (yoshi->coll_data.p_translate->y >
+                         other->coll_data.p_translate->y) ? 0u : 1u;
+            if ((fp[high_slot] != NULL) &&
+                ((fp[high_slot]->coll_data.floor_flags & MAP_VERTEX_COLL_PASS) != 0))
+            {
+                stick_y[high_slot] = -80;
+            }
+            break;
+        }
+        if (adx > 260.0F)
+        {
+            stick_x[0] = (dx >= 0.0F) ? 40 : -40;
+            break;
+        }
+        if ((dx * yoshi->lr) < 0.0F)
+        {
+            stick_x[0] = (dx >= 0.0F) ? 40 : -40;
+            break;
+        }
+        button[0] = Z_TRIG | A_BUTTON;
+        gNdsYoshiBugTourInputCount++;
+        ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitCatchWait);
+        break;
+
+    case nNDSYoshiBugTourAwaitCatchWait:
+        if (yoshi->status_id == nFTCommonStatusCatchWait)
+        {
+            gNdsYoshiBugTourCatchWaitObserved = 1u;
+            if (ndsRendererNativeFighterRootProgram(8u) == 1u)
+            {
+                gNdsYoshiBugTourCatchProgramObserved = 1u;
+            }
+            sNdsYoshiBugTourCatchTriangleBase =
+                gNdsFighterDLAllDrawP0HardwareTriangleCount;
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitCatchDraw);
+        }
+        else if ((yoshi->status_id == nFTCommonStatusWait) &&
+                 (sNdsYoshiBugTourFrames > 120u))
+        {
+            gNdsYoshiBugTourRetryCount++;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourApproachGrab);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitCatchDraw:
+        if (ndsRendererNativeFighterRootProgram(8u) == 1u)
+        {
+            gNdsYoshiBugTourCatchProgramObserved = 1u;
+        }
+        if ((gNdsYoshiBugTourCatchProgramObserved != 0u) &&
+            (gNdsFighterDLAllDrawP0HardwareTriangleCount >
+             sNdsYoshiBugTourCatchTriangleBase))
+        {
+            gNdsYoshiBugTourCatchDrawObserved = 1u;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourPressThrow);
+        }
+        break;
+
+    case nNDSYoshiBugTourPressThrow:
+        if (yoshi->status_id == nFTCommonStatusCatchWait)
+        {
+            button[0] = A_BUTTON;
+            gNdsYoshiBugTourInputCount++;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitThrowStart);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitThrowStart:
+        if ((yoshi->status_id == nFTCommonStatusThrowF) ||
+            (yoshi->status_id == nFTCommonStatusThrowB))
+        {
+            gNdsYoshiBugTourThrowStatusObserved = 1u;
+            if (ndsRendererNativeFighterRootProgram(8u) == 2u)
+            {
+                gNdsYoshiBugTourThrowProgramObserved = 1u;
+            }
+            sNdsYoshiBugTourThrowTriangleBase =
+                gNdsFighterDLAllDrawP0HardwareTriangleCount;
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitThrowDraw);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitThrowDraw:
+        if (ndsRendererNativeFighterRootProgram(8u) == 2u)
+        {
+            gNdsYoshiBugTourThrowProgramObserved = 1u;
+        }
+        if ((gNdsYoshiBugTourThrowProgramObserved != 0u) &&
+            (gNdsFighterDLAllDrawP0HardwareTriangleCount >
+             sNdsYoshiBugTourThrowTriangleBase))
+        {
+            gNdsYoshiBugTourThrowDrawObserved = 1u;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourAwaitThrowReturn);
+        }
+        break;
+
+    case nNDSYoshiBugTourAwaitThrowReturn:
+        if ((yoshi->status_id == nFTCommonStatusWait) &&
+            (yoshi->catch_gobj == NULL))
+        {
+            gNdsYoshiBugTourThrowReturnObserved = 1u;
+            gNdsYoshiBugTourDone = 1u;
+            ndsYoshiBugTourSetStep(nNDSYoshiBugTourDone);
+            osWritebackDCacheAll();
+            ndsYoshiBugTourProofStop();
+        }
+        break;
+
+    case nNDSYoshiBugTourDone:
+    default:
+        break;
+    }
+    return TRUE;
+}
+#endif
+
+#if NDS_P2_NESS_SPECIAL_TOUR
 static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
                                          s8 stick_x[2], s8 stick_y[2])
 {
@@ -11250,8 +11846,27 @@ static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
         }
         break;
     case nNDSNessSpecialTourAwaitUpWait:
+        if ((fp[1] != NULL) &&
+            (ness->ga == nMPKineticsGround) &&
+            (fp[1]->ga == nMPKineticsGround))
+        {
+            f32 dx = ndsFighterNaturalCombatPosX(fp[1]) -
+                ndsFighterNaturalCombatPosX(ness);
+            f32 adx = (dx < 0.0F) ? -dx : dx;
+
+            if (adx < 1600.0F)
+            {
+                stick_x[1] = (dx >= 0.0F) ? 80 : -80;
+                break;
+            }
+        }
         if ((ness->status_id == nFTCommonStatusWait) &&
             (ness->ga == nMPKineticsGround))
+        {
+            button[0] = U_CBUTTONS;
+        }
+        else if ((ness->ga == nMPKineticsAir) &&
+                 (sNdsNessSpecialTourFrames >= 18u))
         {
             button[0] = B_BUTTON;
             stick_y[0] = 80;
@@ -11286,8 +11901,33 @@ static sb32 ndsNessSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
             ndsHarnessFastPresentRequest();
         }
 #endif
+        /* The old proof only waited for PK Thunder to expire.  That never
+         * exercised Up-B's defining self-hit / PK Thunder 2 transition, so a
+         * crash in Jibaku could pass the verifier.  Steer the live source
+         * weapon toward Ness using only the ordinary analog input.  BattleShip
+         * still owns turning, collision, the Collide flag and every status
+         * transition. */
+#if !NDS_P2_NESS_VFX_PROOF
+        if (((ness->status_id == nFTNessStatusSpecialHiHold) ||
+             (ness->status_id == nFTNessStatusSpecialAirHiHold)) &&
+            (ness->status_vars.ness.specialhi.pkthunder_gobj != NULL))
+        {
+            WPStruct *wp = wpGetStruct(
+                ness->status_vars.ness.specialhi.pkthunder_gobj);
+
+            /* Keep the ordinary stick 90 degrees clockwise from the live
+             * source velocity.  PK Thunder therefore stays on its native
+             * six-degree-per-tick turn cap until the loop returns through
+             * Ness after the 30-frame self-hit delay. */
+            if (wp != NULL)
+            {
+                stick_x[0] = (s8)(wp->physics.vel_air.y * (80.0F / 60.0F));
+                stick_y[0] = (s8)(-wp->physics.vel_air.x * (80.0F / 60.0F));
+            }
+        }
+#endif
         if ((ness->status_id == nFTCommonStatusWait) &&
-            ((gNdsNessSpecialTourStatusMask & (1u << 2)) != 0u))
+            (gNdsNessSpecialTourPKThunderJibakuObserved != 0u))
         {
             ndsNessSpecialTourSetStep(nNDSNessSpecialTourAwaitDownWait);
         }
@@ -11374,7 +12014,8 @@ static sb32 ndsFighterNaturalCombatRecoverTeeter(FTStruct *fp[2], s8 stick[2])
 
 static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 {
-#if NDS_DEV_LIVE_INPUT_PREVIEW
+#if NDS_DEV_LIVE_INPUT_PREVIEW && !NDS_P2_NESS_SPECIAL_TOUR && \
+    !NDS_P2_YOSHI_BUG_TOUR
     (void)fp;
     return;
 #else
@@ -11391,6 +12032,17 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
 #if NDS_P2_NESS_SPECIAL_TOUR
     if (ndsNessSpecialTourApplyInput(fp, button, stick, stick_y) != FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
+
+#if NDS_P2_YOSHI_BUG_TOUR
+    if (ndsYoshiBugTourApplyInput(fp, button, stick, stick_y) != FALSE)
     {
         for (i = 0u; i < 2u; i++)
         {
@@ -11776,9 +12428,25 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
 s32 ndsFighterMarioFoxNaturalMotionUpdateEnabled(void)
 {
+#if NDS_P2_YOSHI_BUG_TOUR
+    /* The generic battle-playable proof may satisfy its own PASS mask while
+     * the Yoshi regression tour is still between source moves.  Treating that
+     * generic result as ownership of this dedicated controller tour silently
+     * stops all later Yoshi input: the full-ROM run got through Up-B once the
+     * GObj latch was fixed, then sat forever because this gate returned FALSE.
+     * Keep the ordinary proof/prepared predicates, but let the Yoshi tour own
+     * its lifetime until its natural Done transition or explicit stall anchor.
+     * Both terminal paths call ndsYoshiBugTourProofStop() synchronously, so no
+     * extra gameplay update is manufactured after completion. */
+    return ((ndsFighterMarioFoxNaturalMotionProofEnabled() != FALSE) &&
+            (gNdsFighterNaturalMotionPrepared != 0u) &&
+            (gNdsYoshiBugTourDone == 0u) &&
+            (gNdsYoshiBugTourStallPhase == 0xffffffffu)) ? TRUE : FALSE;
+#else
     return ((ndsFighterMarioFoxNaturalMotionProofEnabled() != FALSE) &&
             (gNdsFighterNaturalMotionPrepared != 0u) &&
             (gNdsFighterNaturalMotionResult == 0u)) ? TRUE : FALSE;
+#endif
 }
 
 void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
@@ -11802,6 +12470,17 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
         (sNdsNaturalCombatPhase == nNDSNaturalCombatPhaseWalk) ? 1u : 0u;
 
     ndsFighterNaturalCombatApplyInput(fp);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+    {
+        extern u32 ndsHarnessFastPresentConsumeRequestedNow(void);
+
+        /* A proof request raised while observing a transient source status
+         * belongs to that status. Consume it before gcRunAll advances the
+         * fighter again; the outer fast harness remains the fallback for
+         * requests raised later in the source update. */
+        (void)ndsHarnessFastPresentConsumeRequestedNow();
+    }
+#endif
     ndsControllerPlaybackCommitFrame();
     syControllerReadDeviceData();
     syControllerUpdateGlobalData();
@@ -12785,7 +13464,8 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     root = DObjGetStruct(weapon_gobj);
     if ((root == NULL) || ((root->dv == NULL) && (root->child == NULL)) ||
         (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
-        ((callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) &&
+        ((callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS) &&
+         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) &&
          (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) &&
          (callback_kind !=
              NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS)))
@@ -14726,6 +15406,16 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
 void ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+    /* The legacy fast proof called this once, so its internal submit-count
+     * latch doubled as a whole-run one-shot. Renderer-coupled proofs now make
+     * several explicit presentation requests while preserving source logic.
+     * Each public call is a distinct rendered frame; re-arm only this frame
+     * latch here so the next requested presentation is not discarded because
+     * an earlier frame happened to submit a weapon/effect/item. */
+    sNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount = 0u;
+#endif
     ndsFighterMarioFoxStageGCDrawAllLoopPrepare();
     ndsStageGCDrawAllLoopSubmitHardwareFrame();
 #endif

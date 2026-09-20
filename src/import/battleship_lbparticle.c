@@ -4133,6 +4133,8 @@ static const NDSParticleQuadFrame *sNdsFireGrindFrameRow;
 static u32 sNdsFireGrindLastUpdateFrame;
 #endif
 
+#include <nds/nds_battle_hud.h>
+
 void lbParticleDrawTextures(GObj *gobj)
 {
     Vec3f right;
@@ -4278,6 +4280,24 @@ void lbParticleDrawTextures(GObj *gobj)
             }
             visible++;
             id = pc->texture_id;
+            /* Source score particles live on GENLINK(2), i.e. alloc link 3.
+             * Their coordinates are source-screen quarter pixels. Preserve
+             * the existing bytecode's position, frame, shrink and lifetime;
+             * only route these exact images to the lower hardware HUD. */
+            if ((link == 3u) && (id == 32u) &&
+                ((u32)(pc->bank_id & 7u) < (u32)sEFParticleBanksNum) &&
+                (sEFParticleScriptBanks[pc->bank_id & 7u] == (uintptr_t)&lEFCommonParticleScriptBankLo))
+            {
+                f32 x = pc->pos.x, y = pc->pos.y;
+                if (pc->xf != NULL)
+                {
+                    x = x * pc->xf->scale.x + pc->xf->translate.x;
+                    y = y * pc->xf->scale.y + pc->xf->translate.y;
+                }
+                if (ndsBattleHudSubmitScoreParticle(pc->frame_id, x * 0.25F, y * 0.25F, pc->size))
+                    emitted++;
+                continue;
+            }
             if (id >= NDS_PARTICLE_TEXTURE_USE_IDS)
             {
                 continue;

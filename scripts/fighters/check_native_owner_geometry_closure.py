@@ -326,7 +326,11 @@ def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
         raise ValueError(
             f"kirby trio: unreachable context head_mp={head_mp}")
     context = native.build_p2_owner_runtime_context(REPO, "kirby", detail)
-    entry = context["kirby_trio_bodies"][head_mp]
+    entry = context.get("kirby_trio_bodies", {}).get(head_mp)
+    if entry is None:
+        raise ValueError(
+            f"kirby trio: head {head_mp} body lives in its deferred hat image, "
+            "not Kirby's resident body appendix")
     fields = entry["root"]
     body_root = (
         fields["offset"], fields["first_epoch"], fields["tail_first"],

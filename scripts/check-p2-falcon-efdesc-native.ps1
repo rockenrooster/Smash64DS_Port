@@ -118,10 +118,24 @@ foreach ($token in @(
     'if (file_head == &gITManagerCommonData)',
     'return ndsRelocGetLoadedFileSize(&llITCommonDataFileID);',
     'X(dEFManagerMBallThrownEffectDesc)',
+    '#if NDS_P2_PIKACHU || NDS_P2_PURIN',
+    '#define NDS_EF_ROSTER_DESCS_MBALL_RAYS(X)',
+    'NDS_EF_ROSTER_DESCS_MBALL_RAYS(X)',
+    'X(dEFManagerMBallRaysEffectDesc)',
     'dEFManagerPikachuUnkEffectDesc remains intentionally unresolved'
 )) {
     Assert-FalconEFDescNative $managerSource.Contains($token) `
         "EFDesc resolver contract is missing: $token"
+}
+$entrySource = Get-Content -LiteralPath (Join-Path $root `
+    'src\\import\\battleship_ftcommon_entry.c') -Raw
+foreach ($token in @(
+    'if (fp->fkind == nFTKindPikachu)',
+    'if (fp->fkind == nFTKindPurin)',
+    'efManagerMBallRaysMakeEffect(&fp->entry_pos);'
+)) {
+    Assert-FalconEFDescNative $entrySource.Contains($token) `
+        "Master-Ball rays source-reachability contract is missing: $token"
 }
 # The port's shared lbCommonDObjScaleXProcDisplay is a deliberate no-op (weapon
 # and effect users own their own seam), so the single-DObj Punch descriptor

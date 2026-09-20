@@ -1,11 +1,15 @@
 #include <nds/arm9/sprite.h>
 #include <nds/arm9/video.h>
+#include <nds/arm9/cache.h>
 #include <nds/dma.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <ft/fighter.h>
 #include <nds/nds_battle_hud.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_renderer.h>
+#include <nds/nds_reloc_assets.h>
 
 #include "generated/battle_hud.generated.inc"
 
@@ -65,6 +69,16 @@ static u16 *sNdsBattleHudTimerGfx[NDS_BATTLE_HUD_TIMER_GLYPHS];
 static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
 static u16 *sNdsBattleHudPortraitGfx[NDS_BATTLE_HUD_PORTRAITS];
 static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
+static u16 *sNdsBattleHudScoreGfx[NDS_BATTLE_HUD_SCORE_FRAMES];
+#define NDS_BATTLE_HUD_SCORE_MAX 16u
+typedef struct { s16 x, y, scale; u16 frame; } NDSBattleHudScore;
+static NDSBattleHudScore sNdsBattleHudScores[NDS_BATTLE_HUD_SCORE_MAX];
+static u32 sNdsBattleHudScoreFrame = 0xffffffffu;
+static u32 sNdsBattleHudScoreCount;
+extern volatile u32 gNdsFrameCounter;
+volatile u32 gNdsBattleHudScoreSubmitCount;
+volatile u32 gNdsBattleHudScoreDrawCount;
+volatile u32 gNdsBattleHudScoreFrameMask;
 /* Which baked portrait palette each player's slot currently holds; 0xff is
  * "none", so the first draw after prepare/clear always uploads. */
 static u8 sNdsBattleHudPortraitPaletteOwner[NDS_BATTLE_HUD_PLAYERS];
@@ -204,13 +218,21 @@ static u32 ndsBattleHudFingerprint(
     return hash;
 }
 
-static u16 *ndsBattleHudAlloc(SpriteSize size, const u8 *source, u32 bytes)
+static u16 *ndsBattleHudAlloc(FILE *file, SpriteSize size, u32 bytes)
 {
+    u32 buffer[128];
+    u32 copied = 0u;
     u16 *gfx = oamAllocateGfx(&oamSub, size, SpriteColorFormat_16Color);
-
-    if (gfx != NULL)
+    if ((gfx == NULL) || ((bytes & 3u) != 0u)) return NULL;
+    while (copied < bytes)
     {
-        dmaCopy(source, gfx, bytes);
+        u32 chunk = bytes - copied;
+        if (chunk > sizeof(buffer)) chunk = sizeof(buffer);
+        if (fread(buffer, 1u, chunk, file) != chunk) return NULL;
+        /* fread dirties CPU cache; DMA must see these bytes before reuse. */
+        DC_FlushRange(buffer, chunk);
+        dmaCopy(buffer, (u8 *)gfx + copied, chunk);
+        copied += chunk;
     }
     return gfx;
 }
@@ -218,11 +240,18 @@ static u16 *ndsBattleHudAlloc(SpriteSize size, const u8 *source, u32 bytes)
 static u32 ndsBattleHudPrepare(void)
 {
     u32 i;
+    u32 header[2];
+    FILE *file;
 
     if (sNdsBattleHudPrepared != FALSE)
     {
         return TRUE;
     }
+    ndsFsLock();
+    file = fopen("nitro:/menus/battle_hud.bin", "rb");
+    if ((file == NULL) || (fread(header, sizeof(header), 1u, file) != 1u) ||
+        (header[0] != 0x31444842u) || (header[1] != NDS_BATTLE_HUD_BLOB_BYTES))
+        goto failed;
 
     /* Bank H remains the sub BG console.  Bank I is the battle HUD's one and
      * only sub-OBJ tenant.  Reinitializing here is intentional: menu scenes may
@@ -233,38 +262,48 @@ static u32 ndsBattleHudPrepare(void)
     for (i = 0u; i < NDS_BATTLE_HUD_DAMAGE_GLYPHS; i++)
     {
         sNdsBattleHudDamageGfx[i] = ndsBattleHudAlloc(
-            SpriteSize_32x32, kNdsBattleHudDamageGfx[i],
+            file, SpriteSize_32x32,
             NDS_BATTLE_HUD_DAMAGE_GFX_BYTES);
-        if (sNdsBattleHudDamageGfx[i] == NULL) return FALSE;
+        if (sNdsBattleHudDamageGfx[i] == NULL) goto failed;
     }
     for (i = 0u; i < NDS_BATTLE_HUD_TIMER_GLYPHS; i++)
     {
         sNdsBattleHudTimerGfx[i] = ndsBattleHudAlloc(
-            SpriteSize_16x16, kNdsBattleHudTimerGfx[i],
+            file, SpriteSize_16x16,
             NDS_BATTLE_HUD_TIMER_GFX_BYTES);
-        if (sNdsBattleHudTimerGfx[i] == NULL) return FALSE;
+        if (sNdsBattleHudTimerGfx[i] == NULL) goto failed;
     }
     for (i = 0u; i < NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS; i++)
     {
         sNdsBattleHudStockDigitGfx[i] = ndsBattleHudAlloc(
-            SpriteSize_16x16, kNdsBattleHudStockDigitGfx[i],
+            file, SpriteSize_16x16,
             NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES);
-        if (sNdsBattleHudStockDigitGfx[i] == NULL) return FALSE;
+        if (sNdsBattleHudStockDigitGfx[i] == NULL) goto failed;
     }
     for (i = 0u; i < NDS_BATTLE_HUD_PORTRAITS; i++)
     {
         sNdsBattleHudPortraitGfx[i] = ndsBattleHudAlloc(
-            SpriteSize_16x16, kNdsBattleHudPortraitGfx[i],
+            file, SpriteSize_16x16,
             NDS_BATTLE_HUD_PORTRAIT_GFX_BYTES);
-        if (sNdsBattleHudPortraitGfx[i] == NULL) return FALSE;
+        if (sNdsBattleHudPortraitGfx[i] == NULL) goto failed;
     }
     for (i = 0u; i < NDS_BATTLE_HUD_STOCK_OWNERS; i++)
     {
         sNdsBattleHudStockGfx[i] = ndsBattleHudAlloc(
-            SpriteSize_8x8, kNdsBattleHudStockGfx[i],
+            file, SpriteSize_8x8,
             NDS_BATTLE_HUD_STOCK_GFX_BYTES);
-        if (sNdsBattleHudStockGfx[i] == NULL) return FALSE;
+        if (sNdsBattleHudStockGfx[i] == NULL) goto failed;
     }
+    for (i = 0u; i < NDS_BATTLE_HUD_SCORE_FRAMES; i++)
+    {
+        sNdsBattleHudScoreGfx[i] = ndsBattleHudAlloc(file, SpriteSize_64x32,
+            NDS_BATTLE_HUD_SCORE_GFX_BYTES);
+        if (sNdsBattleHudScoreGfx[i] == NULL) goto failed;
+        dmaCopy(kNdsBattleHudScorePalette[i], &SPRITE_PALETTE_SUB[(13u + i) * 16u], 32u);
+    }
+    if (fgetc(file) != EOF || ferror(file)) goto failed;
+    fclose(file);
+    ndsFsUnlock();
 
     /* DS palette RAM drops byte writes.  Keep this hardware-visible copy on
      * the same 16/32-bit-safe DMA path as OBJ graphics instead of relying on
@@ -280,6 +319,12 @@ static u32 ndsBattleHudPrepare(void)
     sNdsBattleHudPrepared = TRUE;
     gNdsBattleHudPrepareCount++;
     return TRUE;
+failed:
+    if (file != NULL) fclose(file);
+    ndsFsUnlock();
+    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, 0u,
+        0x31444842u, 0u, 0u, 0u, NDS_NATIVE_FAILURE_BAD_ASSET);
+    return FALSE;
 }
 
 static void ndsBattleHudDamagePalette(
@@ -407,6 +452,50 @@ static s32 ndsBattleHudSourceCoord(f32 source)
 
     return (scaled >= 0.0F) ? (s32)(scaled + 0.5F) :
                               (s32)(scaled - 0.5F);
+}
+
+u32 ndsBattleHudSubmitScoreParticle(u32 frame, f32 source_x, f32 source_y, f32 size)
+{
+    NDSBattleHudScore *score;
+    if (sNdsBattleHudScoreFrame != gNdsFrameCounter)
+    {
+        sNdsBattleHudScoreFrame = gNdsFrameCounter;
+        sNdsBattleHudScoreCount = 0u;
+    }
+    if (frame >= NDS_BATTLE_HUD_SCORE_FRAMES || sNdsBattleHudScoreCount >= NDS_BATTLE_HUD_SCORE_MAX)
+    {
+        ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, 0u, 32u,
+            frame, sNdsBattleHudScoreCount, 0u, NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
+        return FALSE;
+    }
+    score = &sNdsBattleHudScores[sNdsBattleHudScoreCount++];
+    score->frame = (u16)frame;
+    score->x = (s16)ndsBattleHudSourceCoord(source_x);
+    score->y = (s16)ndsBattleHudSourceCoord(source_y);
+    score->scale = (s16)(size * 2.0F); /* Source header size 128 -> Q8 scale 256. */
+    gNdsBattleHudScoreSubmitCount++;
+    return TRUE;
+}
+
+static void ndsBattleHudDrawScores(u32 *next_id)
+{
+    u32 i;
+    for (i = 0u; i < sNdsBattleHudScoreCount; i++)
+    {
+        const NDSBattleHudScore *score = &sNdsBattleHudScores[i];
+        s32 inverse, magnitude = (score->scale < 0) ? -score->scale : score->scale;
+        sb32 doubled = (magnitude > 256);
+        if (magnitude < 2 || *next_id >= NDS_BATTLE_HUD_MAX_OAM) continue;
+        inverse = 65536 / score->scale;
+        oamRotateScale(&oamSub, (int)(4u + i), 0, inverse, inverse);
+        oamSet(&oamSub, (int)*next_id, score->x - (doubled ? 64 : 32),
+            score->y - (doubled ? 32 : 16), 0, 13 + score->frame,
+            SpriteSize_64x32, SpriteColorFormat_16Color, sNdsBattleHudScoreGfx[score->frame],
+            (int)(4u + i), doubled, false, false, false, false);
+        (*next_id)++;
+        gNdsBattleHudScoreDrawCount++;
+        gNdsBattleHudScoreFrameMask |= 1u << score->frame;
+    }
 }
 
 static void ndsBattleHudSetDamageOam(
@@ -679,6 +768,14 @@ void ndsBattleHudRender(void)
         }
     }
     hash = ndsBattleHudFingerprint(damage_state);
+    if (sNdsBattleHudScoreFrame != gNdsFrameCounter) sNdsBattleHudScoreCount = 0u;
+    hash = ndsBattleHudMix(hash, sNdsBattleHudScoreCount);
+    for (player = 0u; player < sNdsBattleHudScoreCount; player++)
+    {
+        const NDSBattleHudScore *score = &sNdsBattleHudScores[player];
+        hash = ndsBattleHudMix(hash, (u16)score->x | ((u32)(u16)score->y << 16));
+        hash = ndsBattleHudMix(hash, (u16)score->scale | ((u32)score->frame << 16));
+    }
     if (hash == sNdsBattleHudStateHash)
     {
         return;
@@ -706,6 +803,7 @@ void ndsBattleHudRender(void)
         ndsBattleHudDrawStock(player, fkind, &next_id);
         ndsBattleHudDrawDamage(player, &damage_state[player], &next_id);
     }
+    ndsBattleHudDrawScores(&next_id);
     oamUpdate(&oamSub);
     gNdsBattleHudOamCount = next_id;
     gNdsBattleHudActiveMask = gNdsIFCommonHUDActivePlayerMask;
@@ -721,6 +819,8 @@ void ndsBattleHudClear(void)
     /* Force a fresh Bank-I ownership/allocator lifetime on the next battle.
      * This is what makes a future sub-engine menu owner safe too. */
     sNdsBattleHudPrepared = FALSE;
+    sNdsBattleHudScoreCount = 0u;
+    sNdsBattleHudScoreFrame = 0xffffffffu;
     sNdsBattleHudStateHash = 0xffffffffu;
     memset(sNdsBattleHudPortraitPaletteOwner, 0xff,
            sizeof(sNdsBattleHudPortraitPaletteOwner));

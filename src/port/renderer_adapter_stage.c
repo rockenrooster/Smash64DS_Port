@@ -36,7 +36,16 @@
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h>
+#include <nds/generated/nds_native_ness_pkfire.generated.h>
+#include <nds/generated/nds_native_ness_pkthunder.generated.h>
+#include <nds/generated/nds_native_yoshi_egg.generated.h>
+#include <nds/generated/nds_native_yoshi_egglay.generated.h>
+#include <nds/generated/nds_native_purin_sing.generated.h>
+#include <nds/generated/nds_native_kirby_vulcan.generated.h>
+#include <nds/generated/nds_native_pikachu_thunder.generated.h>
+#include <nds/generated/nds_native_yoshi_entryegg.generated.h>
 #include <nds/generated/nds_native_damage_slash.generated.h>
+#include <nds/nds_preview_pack.h>
 #include <nds/nds_native_wallpaper.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -5933,6 +5942,60 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
 #endif
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+static sb32 ndsRendererAdapterPikachuThunder(NDSRelocLoadedFile *loaded,
+    DObj *dobj, const Gfx *dl, const NDSRendererConfig *config, NDSRendererStats *stats)
+{
+    NDSRendererNativeMaterial material;
+    NDSRendererConfig local = *config;
+    NDSRendererMatrix20p12 identity;
+    const void *palette = NULL, *image = NULL;
+    u32 offset = ndsRelocNativeRootOffset(loaded, dl), root, role;
+    if (dobj->parent_gobj == NULL) return FALSE;
+    if (loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_MODEL && offset == NDS_NATIVE_PIKACHU_THUNDER_ROOT)
+    {
+        root = 0u;
+        if (dobj->parent_gobj->id == nGCCommonKindWeapon)
+        {
+            WPStruct *wp = wpGetStruct(dobj->parent_gobj);
+            if (wp == NULL) return FALSE;
+            if (wp->kind == nWPKindThunderHead) role = 1u;
+            else if (wp->kind == nWPKindThunderTrail) role = 2u;
+            else return FALSE;
+        }
+        else if (dobj->parent_gobj->id == nGCCommonKindEffect) role = 4u;
+        else return FALSE;
+    }
+    else if (loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_SPECIAL &&
+             dobj->parent_gobj->id == nGCCommonKindEffect)
+    {
+        if (offset == NDS_NATIVE_PIKACHU_SHOCK_ROOT0) root = 1u;
+        else if (offset == NDS_NATIVE_PIKACHU_SHOCK_ROOT1) root = 2u;
+        else return FALSE;
+        role = 8u;
+    }
+    else return FALSE;
+    if (root == 1u)
+    {
+        if (dobj->mobj != NULL || loaded->data_size < 0x13a0u) return FALSE;
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        palette = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_PIKACHU_SHOCK_PALETTE);
+        image = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_PIKACHU_SHOCK_IMAGE);
+#else
+        palette = (u8 *)loaded->data + NDS_NATIVE_PIKACHU_SHOCK_PALETTE;
+        image = (u8 *)loaded->data + NDS_NATIVE_PIKACHU_SHOCK_IMAGE;
+#endif
+    }
+    else if (dobj->mobj == NULL || dobj->mobj->next != NULL ||
+             !ndsRendererAdapterBuildNativeMaterialSnapshot(dobj->mobj, &material, FALSE, NULL, NULL)) return FALSE;
+    ndsRendererAdapterMtxIdentity20p12(&identity);
+    if (local.initial_projection == NULL) local.initial_projection = &identity;
+    if (local.initial_modelview == NULL) local.initial_modelview = &identity;
+    return ndsRendererSubmitNativePikachuThunder(root, role,
+        (root == 1u) ? NULL : &material, palette, image, &local, stats);
+}
+#endif
+
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              GObj *camera_gobj,
                                              u32 initial_geometry_mode)
@@ -5991,6 +6054,42 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 damage_slash_native_candidate = FALSE;
     sb32 damage_slash_native_handled = FALSE;
     sb32 damage_slash_native_settled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+    NDSRendererNativeMaterial ness_pkfire_materials[2];
+    sb32 ness_pkfire_native_candidate = FALSE;
+    sb32 ness_pkfire_native_handled = FALSE;
+    NDSRendererNativeMaterial ness_pkthunder_material;
+    u32 ness_pkthunder_root_index = 0u;
+    u32 ness_pkthunder_trail_color = 0u;
+    sb32 ness_pkthunder_native_candidate = FALSE;
+    sb32 ness_pkthunder_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+    NDSRendererNativeMaterial purin_sing_material;
+    const void *purin_sing_image = NULL;
+    u32 purin_sing_root_index = 0u;
+    sb32 purin_sing_native_candidate = FALSE;
+    sb32 purin_sing_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+    sb32 kirby_vulcan_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+    sb32 pikachu_thunder_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+    NDSRendererNativeMaterial yoshi_entryegg_material;
+    const void *yoshi_entryegg_palette = NULL;
+    sb32 yoshi_entryegg_native_candidate = FALSE;
+    sb32 yoshi_entryegg_native_handled = FALSE;
+    sb32 yoshi_egg_is_weapon = FALSE;
+    sb32 yoshi_egg_native_candidate = FALSE;
+    sb32 yoshi_egg_native_handled = FALSE;
+    const void *yoshi_egglay_palette = NULL;
+    const void *yoshi_egglay_image = NULL;
+    sb32 yoshi_egglay_native_candidate = FALSE;
+    sb32 yoshi_egglay_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
@@ -6643,6 +6742,260 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
+#if NDS_P2_NESS
+    /* Ness PK Fire's WPAttributes live in NessSpecial1, but their `data`
+     * pointer resolves to NessSpecial3 root 0x0168.  That root selects exactly
+     * two live MObjs (segment-E slots 0 then 1), each LIGHT1|LIGHT2 only.
+     * Preserve the source weapon/state machine and admit only that exact
+     * cross-file root/material contract to the generated two-triangle owner. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_NESS_PKFIRE_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_NESS_PKFIRE_ROOT) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindWeapon))
+    {
+        WPStruct *pkfire_wp = wpGetStruct(dobj->parent_gobj);
+        MObj *mobj = dobj->mobj;
+        u32 i;
+
+        if ((pkfire_wp != NULL) && (pkfire_wp->kind == nWPKindPKFire))
+        {
+            for (i = 0u; i < NDS_NATIVE_NESS_PKFIRE_GROUP_COUNT; i++)
+            {
+                if ((mobj == NULL) ||
+                    (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                         mobj, &ness_pkfire_materials[i], FALSE,
+                         NULL, NULL) == FALSE) ||
+                    (ness_pkfire_materials[i].effects !=
+                         NDS_NATIVE_NESS_PKFIRE_MATERIAL_EFFECTS))
+                {
+                    break;
+                }
+                mobj = mobj->next;
+            }
+            if ((i == NDS_NATIVE_NESS_PKFIRE_GROUP_COUNT) && (mobj == NULL) &&
+                (loaded->data_size >= (NDS_NATIVE_NESS_PKFIRE_ROOT +
+                                       NDS_NATIVE_NESS_PKFIRE_DL_BYTES)))
+            {
+                ness_pkfire_native_candidate = TRUE;
+            }
+        }
+    }
+    /* PK Thunder's head and trail are NessModel-owned weapons.  Both are
+     * immutable two-triangle quads with one live CURRENT_IMAGE MObj; the
+     * trail's proc_display supplies prim/env from its live trail_id.  Claim
+     * only the exact source asset/root/kind tuples, leaving BattleShip in
+     * charge of steering, collision, texture-id animation and transforms. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_NESS_PKTHUNDER_ASSET) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindWeapon) &&
+        (dobj->mobj != NULL) && (dobj->mobj->next == NULL))
+    {
+        WPStruct *pkthunder_wp = wpGetStruct(dobj->parent_gobj);
+        u32 root_offset = ndsRelocNativeRootOffset(loaded, dl);
+        sb32 root_match = FALSE;
+
+        if ((pkthunder_wp != NULL) &&
+            (pkthunder_wp->kind == nWPKindPKThunderHead) &&
+            (root_offset == NDS_NATIVE_NESS_PKTHUNDER_HEAD_ROOT))
+        {
+            ness_pkthunder_root_index =
+                NDS_NATIVE_NESS_PKTHUNDER_HEAD_INDEX;
+            root_match = TRUE;
+        }
+        else if ((pkthunder_wp != NULL) &&
+                 (pkthunder_wp->kind == nWPKindPKThunderTrail) &&
+                 (root_offset == NDS_NATIVE_NESS_PKTHUNDER_TRAIL_ROOT) &&
+                 ((u32)pkthunder_wp->weapon_vars.pkthunder_trail.trail_id <
+                  NDS_NATIVE_NESS_PKTHUNDER_TRAIL_COLOR_COUNT))
+        {
+            ness_pkthunder_root_index =
+                NDS_NATIVE_NESS_PKTHUNDER_TRAIL_INDEX;
+            ness_pkthunder_trail_color =
+                (u32)pkthunder_wp->weapon_vars.pkthunder_trail.trail_id;
+            root_match = TRUE;
+        }
+        if ((root_match != FALSE) &&
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &ness_pkthunder_material, FALSE,
+                 NULL, NULL) != FALSE) &&
+            (ness_pkthunder_material.effects ==
+                 NDS_NATIVE_NESS_PKTHUNDER_MATERIAL_EFFECTS))
+        {
+            ness_pkthunder_native_candidate = TRUE;
+        }
+    }
+    /* The attached Up-B wave is the third NessModel root in the same packet.
+     * It is an Effect GObj rather than a Weapon, but has the identical closed
+     * CURRENT_IMAGE material contract. */
+    if ((ness_pkthunder_native_candidate == FALSE) &&
+        (loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_NESS_PKTHUNDER_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) ==
+             NDS_NATIVE_NESS_PKTHUNDER_WAVE_ROOT) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj != NULL) && (dobj->mobj->next == NULL) &&
+        (ndsRendererAdapterBuildNativeMaterialSnapshot(
+             dobj->mobj, &ness_pkthunder_material, FALSE,
+             NULL, NULL) != FALSE) &&
+        (ness_pkthunder_material.effects ==
+             NDS_NATIVE_NESS_PKTHUNDER_MATERIAL_EFFECTS))
+    {
+        ness_pkthunder_root_index = NDS_NATIVE_NESS_PKTHUNDER_WAVE_INDEX;
+        ness_pkthunder_native_candidate = TRUE;
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+    if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_PURIN_SING_ASSET) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj != NULL) && (dobj->mobj->next == NULL))
+    {
+        static const u32 roots[4] = { NDS_NATIVE_PURIN_SING_ROOT_0,
+            NDS_NATIVE_PURIN_SING_ROOT_1, NDS_NATIVE_PURIN_SING_ROOT_2,
+            NDS_NATIVE_PURIN_SING_ROOT_3 };
+        static const u32 images[4] = { NDS_NATIVE_PURIN_SING_IMAGE_0,
+            NDS_NATIVE_PURIN_SING_IMAGE_1, NDS_NATIVE_PURIN_SING_IMAGE_2,
+            NDS_NATIVE_PURIN_SING_IMAGE_3 };
+        u32 root = ndsRelocNativeRootOffset(loaded, dl);
+        u32 i;
+        for (i = 0u; i < 4u; i++)
+        {
+            if ((root == roots[i]) &&
+                (ndsRendererAdapterBuildNativeMaterialSnapshot(dobj->mobj,
+                    &purin_sing_material, FALSE, NULL, NULL) != FALSE) &&
+                (purin_sing_material.effects == NDS_NATIVE_PURIN_SING_MATERIAL_EFFECTS))
+            {
+                purin_sing_root_index = i;
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+                purin_sing_image = ndsRelocNativeAssetAddress(loaded->data, images[i]);
+#else
+                purin_sing_image = (const u8 *)loaded->data + images[i];
+#endif
+                purin_sing_native_candidate = (purin_sing_image != NULL);
+                break;
+            }
+        }
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+    /* Yoshi's match intro is YoshiSpecial2 root 0x0530, not the YoshiModel
+     * shield/escape egg. It has one live segment-E MObj whose MatAnimJoint
+     * switches between the two source shell images. Keep that MObj live and
+     * bake only the immutable DL/geometry. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_YOSHI_ENTRYEGG_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) ==
+             NDS_NATIVE_YOSHI_ENTRYEGG_ROOT) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj != NULL) && (dobj->mobj->next == NULL))
+    {
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || \
+    NDS_P2_COMPACT_BATTLE_FIGHTERS
+        const void *expected_palette = ndsRelocNativeAssetAddress(
+            loaded->data, NDS_NATIVE_YOSHI_ENTRYEGG_PALETTE_OFFSET);
+        const void *expected_vertex = ndsRelocNativeAssetAddress(
+            loaded->data, NDS_NATIVE_YOSHI_ENTRYEGG_VERTEX_OFFSET);
+#else
+        const void *expected_palette = (const u8 *)loaded->data +
+            NDS_NATIVE_YOSHI_ENTRYEGG_PALETTE_OFFSET;
+        const void *expected_vertex = (const u8 *)loaded->data +
+            NDS_NATIVE_YOSHI_ENTRYEGG_VERTEX_OFFSET;
+#endif
+        if ((expected_palette != NULL) && (expected_vertex != NULL) &&
+            (dl[9].words.w0 == NDS_NATIVE_YOSHI_ENTRYEGG_PALETTE_W0) &&
+            (dl[9].words.w1 == (u32)(uintptr_t)expected_palette) &&
+            (dl[13].words.w0 == 0xde000000u) &&
+            (dl[13].words.w1 == 0x0e000000u) &&
+            (dl[17].words.w0 == NDS_NATIVE_YOSHI_ENTRYEGG_VERTEX_W0) &&
+            (dl[17].words.w1 == (u32)(uintptr_t)expected_vertex) &&
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &yoshi_entryegg_material, FALSE,
+                 NULL, NULL) != FALSE) &&
+            (yoshi_entryegg_material.effects ==
+                 NDS_NATIVE_YOSHI_ENTRYEGG_MATERIAL_EFFECTS))
+        {
+            yoshi_entryegg_palette = expected_palette;
+            yoshi_entryegg_native_candidate = TRUE;
+        }
+    }
+    /* YoshiModel 0xA860 is one shared, self-contained egg quad. YoshiMain's
+     * EggThrow WPAttributes point here and both Yoshi egg EFDesc users point
+     * here directly.
+     *
+     * The production compact battle pack intentionally PRUNES this root's
+     * palette/image/vertex spans and replaces its Gfx program with one
+     * ENDDL+source-offset identity cell.  ndsRelocNativeRootOffset() is the
+     * compact-pack-aware proof of source identity.  The SHA-pinned generated
+     * owner bakes the immutable palette, texels, state and geometry, so reading
+     * dl[10]/dl[16]/dl[21] here would inspect beyond the compact root cell and
+     * can never be a valid admission test.  Keep only live semantic identity:
+     * exact source asset/root plus the source GObj kind / EggThrow WP kind. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_YOSHI_EGG_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_YOSHI_EGG_ROOT) &&
+        (dobj->parent_gobj != NULL) && (dobj->mobj == NULL))
+    {
+        if (dobj->parent_gobj->id == nGCCommonKindWeapon)
+        {
+            WPStruct *egg_wp = wpGetStruct(dobj->parent_gobj);
+
+            if ((egg_wp != NULL) && (egg_wp->kind == nWPKindEggThrow))
+            {
+                yoshi_egg_is_weapon = TRUE;
+                yoshi_egg_native_candidate = TRUE;
+            }
+        }
+        else if (dobj->parent_gobj->id == nGCCommonKindEffect)
+        {
+            yoshi_egg_native_candidate = TRUE;
+        }
+    }
+    /* Neutral-B's victim egg is a separate YoshiSpecial3 effect. Its DObjDesc
+     * child points at the fixed root 0x0870. Validate the live relocated
+     * palette/image/vertex pointers so this also remains correct if the file is
+     * compact-packed. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_YOSHI_EGGLAY_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_YOSHI_EGGLAY_ROOT) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) && (dobj->mobj == NULL))
+    {
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || \
+    NDS_P2_COMPACT_BATTLE_FIGHTERS
+        const void *expected_palette = ndsRelocNativeAssetAddress(
+            loaded->data, NDS_NATIVE_YOSHI_EGGLAY_PALETTE_OFFSET);
+        const void *expected_image = ndsRelocNativeAssetAddress(
+            loaded->data, NDS_NATIVE_YOSHI_EGGLAY_IMAGE_OFFSET);
+        const void *expected_vertex = ndsRelocNativeAssetAddress(
+            loaded->data, NDS_NATIVE_YOSHI_EGGLAY_VERTEX_OFFSET);
+#else
+        const void *expected_palette = (const u8 *)loaded->data +
+            NDS_NATIVE_YOSHI_EGGLAY_PALETTE_OFFSET;
+        const void *expected_image = (const u8 *)loaded->data +
+            NDS_NATIVE_YOSHI_EGGLAY_IMAGE_OFFSET;
+        const void *expected_vertex = (const u8 *)loaded->data +
+            NDS_NATIVE_YOSHI_EGGLAY_VERTEX_OFFSET;
+#endif
+
+        if ((expected_palette != NULL) && (expected_image != NULL) &&
+            (expected_vertex != NULL) &&
+            (dl[11].words.w0 == NDS_NATIVE_YOSHI_EGGLAY_PALETTE_W0) &&
+            (dl[17].words.w0 == NDS_NATIVE_YOSHI_EGGLAY_IMAGE_W0) &&
+            (dl[21].words.w0 == NDS_NATIVE_YOSHI_EGGLAY_VERTEX_W0) &&
+            (dl[11].words.w1 == (u32)(uintptr_t)expected_palette) &&
+            (dl[17].words.w1 == (u32)(uintptr_t)expected_image) &&
+            (dl[21].words.w1 == (u32)(uintptr_t)expected_vertex))
+        {
+            yoshi_egglay_palette = expected_palette;
+            yoshi_egglay_image = expected_image;
+            yoshi_egglay_native_candidate = TRUE;
+        }
+    }
+#endif
     /* Samus Charge Shot, file 321 root 0x270.  Every pointer the program
      * carries is internal to file 321 and it has no MObj, so the admission is
      * asset, root, a Weapon GObj and a NULL MObj -- and that tuple is enough:
@@ -9223,6 +9576,15 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
     else
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+    if (ness_pkfire_native_candidate != FALSE)
+    {
+        /* The owner already captured the two live LIGHT1|LIGHT2 materials as
+         * typed snapshots.  Building a segment-E Gfx stream here would
+         * reintroduce the generic command path and duplicate those updates. */
+    }
+    else
+#endif
 #if NDS_R2_IMPACT_WAVE_NATIVE
     if ((sNdsRendererAdapterImpactWaveNativeActive != FALSE) &&
         (dobj->mobj != NULL) &&
@@ -9498,6 +9860,159 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
+ #if NDS_P2_NESS
+    if (ness_pkfire_native_candidate != FALSE)
+    {
+        NDSRendererConfig pkfire_config = config;
+        NDSRendererMatrix20p12 pkfire_identity;
+
+        if ((pkfire_config.initial_projection == NULL) &&
+            (pkfire_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&pkfire_identity);
+            pkfire_config.initial_projection = &pkfire_identity;
+        }
+        else if ((pkfire_config.initial_modelview == NULL) &&
+                 (pkfire_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&pkfire_identity);
+            pkfire_config.initial_modelview = &pkfire_identity;
+        }
+        ness_pkfire_native_handled = ndsRendererSubmitNativeNessPKFire(
+            ness_pkfire_materials, NDS_NATIVE_NESS_PKFIRE_GROUP_COUNT,
+            &pkfire_config, render_stats);
+    }
+    if (ness_pkthunder_native_candidate != FALSE)
+    {
+        NDSRendererConfig pkthunder_config = config;
+        NDSRendererMatrix20p12 pkthunder_identity;
+
+        if ((pkthunder_config.initial_projection == NULL) &&
+            (pkthunder_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&pkthunder_identity);
+            pkthunder_config.initial_projection = &pkthunder_identity;
+        }
+        else if ((pkthunder_config.initial_modelview == NULL) &&
+                 (pkthunder_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&pkthunder_identity);
+            pkthunder_config.initial_modelview = &pkthunder_identity;
+        }
+        ness_pkthunder_native_handled =
+            ndsRendererSubmitNativeNessPKThunder(
+                ness_pkthunder_root_index, &ness_pkthunder_material,
+                ness_pkthunder_trail_color, &pkthunder_config, render_stats);
+    }
+ #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+    if (purin_sing_native_candidate != FALSE)
+    {
+        NDSRendererConfig sing_config = config;
+        NDSRendererMatrix20p12 identity;
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        if (sing_config.initial_projection == NULL) sing_config.initial_projection = &identity;
+        if (sing_config.initial_modelview == NULL) sing_config.initial_modelview = &identity;
+        purin_sing_native_handled = ndsRendererSubmitNativePurinSing(
+            purin_sing_root_index, &purin_sing_material, purin_sing_image,
+            &sing_config, render_stats);
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+    if (loaded != NULL && (loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_MODEL ||
+                          loaded->asset_id == NDS_NATIVE_PIKACHU_THUNDER_SPECIAL))
+        pikachu_thunder_native_handled = ndsRendererAdapterPikachuThunder(
+            loaded, dobj, dl, &config, render_stats);
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+    if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_KIRBY_VULCAN_ASSET) &&
+        (dobj->parent_gobj != NULL) && (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj == NULL))
+    {
+        u32 root = ndsRelocNativeRootOffset(loaded, dl);
+        if (root == NDS_NATIVE_KIRBY_VULCAN_ROOT0 || root == NDS_NATIVE_KIRBY_VULCAN_ROOT1)
+        {
+            NDSRendererConfig vulcan_config = config;
+            NDSRendererMatrix20p12 identity;
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            if (vulcan_config.initial_projection == NULL) vulcan_config.initial_projection = &identity;
+            if (vulcan_config.initial_modelview == NULL) vulcan_config.initial_modelview = &identity;
+            kirby_vulcan_native_handled = ndsRendererSubmitNativeKirbyVulcan(
+                (root == NDS_NATIVE_KIRBY_VULCAN_ROOT0) ? 0u : 1u, &vulcan_config, render_stats);
+        }
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+    if (yoshi_entryegg_native_candidate != FALSE)
+    {
+        NDSRendererConfig entryegg_config = config;
+        NDSRendererMatrix20p12 entryegg_identity;
+
+        if ((entryegg_config.initial_projection == NULL) &&
+            (entryegg_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&entryegg_identity);
+            entryegg_config.initial_projection = &entryegg_identity;
+        }
+        else if ((entryegg_config.initial_modelview == NULL) &&
+                 (entryegg_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&entryegg_identity);
+            entryegg_config.initial_modelview = &entryegg_identity;
+        }
+        yoshi_entryegg_native_handled = ndsRendererSubmitNativeYoshiEntryEgg(
+            yoshi_entryegg_palette, &yoshi_entryegg_material,
+            &entryegg_config, render_stats);
+    }
+    if (yoshi_egg_native_candidate != FALSE)
+    {
+        NDSRendererConfig egg_config = config;
+        NDSRendererMatrix20p12 egg_identity;
+
+        if ((egg_config.initial_projection == NULL) &&
+            (egg_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&egg_identity);
+            egg_config.initial_projection = &egg_identity;
+        }
+        else if ((egg_config.initial_modelview == NULL) &&
+                 (egg_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&egg_identity);
+            egg_config.initial_modelview = &egg_identity;
+        }
+        if (yoshi_egg_is_weapon != FALSE)
+        {
+            /* wpYoshiEggThrowProcDisplay writes EnvColor(0,0,0,0) immediately
+             * before wpDisplayDLHead1. Effects arrive with their callback ENV
+             * already captured into render_stats. */
+            render_stats->env_color = 0u;
+        }
+        yoshi_egg_native_handled = ndsRendererSubmitNativeYoshiEgg(
+            &egg_config, render_stats);
+    }
+    if (yoshi_egglay_native_candidate != FALSE)
+    {
+        NDSRendererConfig egglay_config = config;
+        NDSRendererMatrix20p12 egglay_identity;
+
+        if ((egglay_config.initial_projection == NULL) &&
+            (egglay_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&egglay_identity);
+            egglay_config.initial_projection = &egglay_identity;
+        }
+        else if ((egglay_config.initial_modelview == NULL) &&
+                 (egglay_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&egglay_identity);
+            egglay_config.initial_modelview = &egglay_identity;
+        }
+        yoshi_egglay_native_handled = ndsRendererSubmitNativeYoshiEggLay(
+            yoshi_egglay_palette, yoshi_egglay_image,
+            &egglay_config, render_stats);
+    }
+#endif
     if (charge_shot_native_candidate != FALSE)
     {
         NDSRendererConfig charge_shot_config = config;
@@ -10623,6 +11138,24 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (thunder_fx_native_handled == FALSE) &&
         (damage_slash_native_settled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+        (ness_pkfire_native_handled == FALSE) &&
+        (ness_pkthunder_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+        (yoshi_entryegg_native_handled == FALSE) &&
+        (yoshi_egg_native_handled == FALSE) &&
+        (yoshi_egglay_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+        (purin_sing_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+        (kirby_vulcan_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+        (pikachu_thunder_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
@@ -10704,6 +11237,24 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
         (damage_slash_native_settled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+        (ness_pkfire_native_handled == FALSE) &&
+        (ness_pkthunder_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+        (yoshi_entryegg_native_handled == FALSE) &&
+        (yoshi_egg_native_handled == FALSE) &&
+        (yoshi_egglay_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+        (purin_sing_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+        (kirby_vulcan_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+        (pikachu_thunder_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -10791,6 +11342,24 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (thunder_ground_native_handled == FALSE)
         && (thunder_fx_native_handled == FALSE)
         && (damage_slash_native_settled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+        && (ness_pkfire_native_handled == FALSE)
+        && (ness_pkthunder_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
+        && (yoshi_entryegg_native_handled == FALSE)
+        && (yoshi_egg_native_handled == FALSE)
+        && (yoshi_egglay_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PURIN
+        && (purin_sing_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
+        && (kirby_vulcan_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
+        && (pikachu_thunder_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)
