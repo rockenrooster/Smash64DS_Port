@@ -418,3 +418,38 @@ counted as rejected draws and never reach an owner. Admitting the kind needs
 the Ness 0x8f98 fixed-image owner in the same change or it converts a silent
 gap into a NO_PROGRAM failure. Thunder's four live images still upload after
 the GO texture fence (4 fallback uploads per match).
+
+## 2026-09-20 (cont. 2) — reproduce-first sweep, Samus Bomb owner, arena +20 KB
+
+Natural-input witnesses on the shell ROM (status id, body triangles on the
+sampled frame, native failures), each with a GO-free capture:
+
+| row | result |
+|---|---|
+| Samus shield roll | EscapeB 157, program 2, **80 tris**, 0 failures; morph ball visible (`2026-09-20-samus-roll.png`). Not reproduced. |
+| Samus Down-B body | status 230, program 3, 80 tris; ball visible. |
+| Samus Down-B **bomb** | **CONFIRMED GAP**: 98 `NO_PROGRAM` failures at SamusModel root `0xE0D8`. The weapon had no native owner, so "Down-B is invisible" was the bomb, not the body. |
+| Link Neutral-B throw / catch | 230 and 231, **338 tris** in both, 0 rejects; Link visible (`2026-09-20-link-boomerang.png`, `-link-catch`). Not reproduced on the ground states. |
+| Kirby up smash / down smash / grab | 207 / 208 / 166 entered, 256 tris each, down smash connects (victim 52), 0 failures (`2026-09-20-kirby-{upsmash,downsmash,grab}.png`). Not reproduced. |
+
+**Samus Bomb native owner.** `generate_nds_native_samus_bomb.py` pins SamusModel
+(SHA-pinned, asset 320) root 0xE0D8: one four-vertex billboard, fixed CI4 16x16
+texels at 0xDF88, and an MObjSub whose flags are exactly `MOBJ_FLAG_PALETTE`,
+so the live material is one palette image (effects 0x0001) and the list keeps
+its own LOADTLUT, tile and alpha-compare state. The source palette swap (the
+bomb's flash) stays authoritative. The compact Samus pack retains the texel row
+through `WEAPON_TEXTURE_ROOTS` (+116 B). After: `gNdsSamusBombNativeDraws >= 20`,
+`DIAG_NATIVE` all zero, bomb visible at Samus's feet (`2026-09-20-samus-bomb.png`).
+
+**Arena +20,480 B.** Menu translation units (`battleship_mn*`, the DS menu
+shell, the UI kit) never execute inside a battle frame; they now build `-Os`,
+the same code generation the -Os harness ROMs already qualify. Static image
+2,984,948 -> 2,964,844 B; arena 925,184 -> **945,664**. Kirby/Mario Dream Land,
+which halted in malloc at battle start (136 wanted, 112 free), now starts with
+19,932 B minimum free. Still under the 25 KiB latch, so effects on that pair
+remain capped; the GameStatus repack is still the lever that clears it.
+Kirby is no longer treated as an electric attacker for electric-body loading:
+he can only copy electricity from a Pikachu or Ness already in the match.
+
+`probe-native-render-scene.ps1`: `side_smash` now forwards `-StickY`, giving
+natural up/down smash pumps.

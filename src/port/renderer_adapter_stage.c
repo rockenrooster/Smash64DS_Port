@@ -43,6 +43,7 @@
 #include <nds/generated/nds_native_purin_sing.generated.h>
 #include <nds/generated/nds_native_kirby_vulcan.generated.h>
 #include <nds/generated/nds_native_pikachu_thunder.generated.h>
+#include <nds/generated/nds_native_samus_bomb.generated.h>
 #include <nds/generated/nds_native_yoshi_entryegg.generated.h>
 #include <nds/generated/nds_native_damage_slash.generated.h>
 #include <nds/nds_preview_pack.h>
@@ -6078,6 +6079,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
     sb32 pikachu_thunder_native_handled = FALSE;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+    sb32 samus_bomb_native_handled = FALSE;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
     NDSRendererNativeMaterial yoshi_entryegg_material;
     const void *yoshi_entryegg_palette = NULL;
@@ -9924,6 +9928,31 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         pikachu_thunder_native_handled = ndsRendererAdapterPikachuThunder(
             loaded, dobj, dl, &config, render_stats);
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+    /* Samus Bomb: one SamusModel billboard. The live MObj only swaps the
+     * palette; texels, LOADTLUT and tile state are the source list's own. */
+    if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_SAMUS_BOMB_ASSET) &&
+        (dobj->parent_gobj != NULL) && (dobj->parent_gobj->id == nGCCommonKindWeapon) &&
+        (dobj->mobj != NULL) && (dobj->mobj->next == NULL) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_SAMUS_BOMB_ROOT))
+    {
+        NDSRendererNativeMaterial bomb_material;
+        NDSRendererConfig bomb_config = config;
+        NDSRendererMatrix20p12 identity;
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        const void *bomb_image = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_SAMUS_BOMB_IMAGE);
+#else
+        const void *bomb_image = (loaded->data_size >= NDS_NATIVE_SAMUS_BOMB_IMAGE_END) ?
+            (const void *)((u8 *)loaded->data + NDS_NATIVE_SAMUS_BOMB_IMAGE) : NULL;
+#endif
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        if (bomb_config.initial_projection == NULL) bomb_config.initial_projection = &identity;
+        if (bomb_config.initial_modelview == NULL) bomb_config.initial_modelview = &identity;
+        if (ndsRendererAdapterBuildNativeMaterialSnapshot(dobj->mobj, &bomb_material, FALSE, NULL, NULL) != FALSE)
+            samus_bomb_native_handled = ndsRendererSubmitNativeSamusBomb(
+                &bomb_material, bomb_image, &bomb_config, render_stats);
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_KIRBY
     if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_KIRBY_VULCAN_ASSET) &&
         (dobj->parent_gobj != NULL) && (dobj->parent_gobj->id == nGCCommonKindEffect) &&
@@ -11156,6 +11185,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
         (pikachu_thunder_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+        (samus_bomb_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
@@ -11255,6 +11287,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
         (pikachu_thunder_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+        (samus_bomb_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -11360,6 +11395,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_PIKACHU
         && (pikachu_thunder_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
+        && (samus_bomb_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)

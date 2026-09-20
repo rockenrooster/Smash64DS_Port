@@ -8,6 +8,10 @@
 #include "generated/nds_native_pikachu_thunder.generated.inc"
 #include "nds_native_pikachu_thunder.exec.inc"
 #endif
+#if NDS_P2_SAMUS
+#include "generated/nds_native_samus_bomb.generated.inc"
+#include "nds_native_samus_bomb.exec.inc"
+#endif
 #if NDS_P2_KIRBY
 #include "generated/nds_native_kirby_vulcan.generated.inc"
 #include "nds_native_kirby_vulcan.exec.inc"

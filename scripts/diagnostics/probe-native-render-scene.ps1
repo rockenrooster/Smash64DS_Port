@@ -386,7 +386,8 @@ try {
         switch ($Pump) {
             'side_smash' {
                 $commands += @('if (gSCManagerBattleState->time_passed >= 140) && (($fttick % 60) < 2)',
-                    ('diag_pad 0 0x8000 ' + $StickX + ' 0'),
+                    # StickY selects the up/down smash; the default 0 keeps side.
+                    ('diag_pad 0 0x8000 ' + $StickX + ' ' + $StickY),
                     'else', 'diag_pad 0 0 0 0', 'end')
             }
             'jab' {

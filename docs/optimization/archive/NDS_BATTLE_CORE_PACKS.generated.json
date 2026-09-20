@@ -507,22 +507,22 @@
   ],
   "fighters": [
     {
-      "external_file_bytes": 96,
+      "external_file_bytes": 320,
       "external_patches": 12,
       "fighter": "Mario",
       "file_bytes": 16392,
       "fixups": 232,
       "fkind": 0,
-      "foreign_texture_allocation": 0,
-      "foreign_texture_bytes": 0,
-      "foreign_texture_map_bytes": 0,
-      "foreign_texture_spans": 0,
+      "foreign_texture_allocation": 224,
+      "foreign_texture_bytes": 160,
+      "foreign_texture_map_bytes": 64,
+      "foreign_texture_spans": 4,
       "main_asset": 203,
       "model_asset": 296,
       "model_spans": 21,
       "model_structural_bytes": 11904,
       "resident_allocation": 14472,
-      "resident_with_foreign_textures": 14472,
+      "resident_with_foreign_textures": 14696,
       "root_cells": 42,
       "texture_images": [
         {
@@ -536,28 +536,60 @@
         {
           "asset": 296,
           "offset": 28528
+        },
+        {
+          "asset": 299,
+          "offset": 8
+        },
+        {
+          "asset": 299,
+          "offset": 24
+        },
+        {
+          "asset": 299,
+          "offset": 96
+        },
+        {
+          "asset": 299,
+          "offset": 120
         }
       ]
     },
     {
-      "external_file_bytes": 60,
+      "external_file_bytes": 284,
       "external_patches": 6,
       "fighter": "Fox",
       "file_bytes": 16520,
       "fixups": 246,
       "fkind": 1,
-      "foreign_texture_allocation": 0,
-      "foreign_texture_bytes": 0,
-      "foreign_texture_map_bytes": 0,
-      "foreign_texture_spans": 0,
+      "foreign_texture_allocation": 224,
+      "foreign_texture_bytes": 160,
+      "foreign_texture_map_bytes": 64,
+      "foreign_texture_spans": 4,
       "main_asset": 209,
       "model_asset": 313,
       "model_spans": 21,
       "model_structural_bytes": 11768,
       "resident_allocation": 14488,
-      "resident_with_foreign_textures": 14488,
+      "resident_with_foreign_textures": 14712,
       "root_cells": 51,
       "texture_images": [
+        {
+          "asset": 299,
+          "offset": 8
+        },
+        {
+          "asset": 299,
+          "offset": 24
+        },
+        {
+          "asset": 299,
+          "offset": 96
+        },
+        {
+          "asset": 299,
+          "offset": 120
+        },
         {
           "asset": 313,
           "offset": 29400
@@ -665,7 +697,7 @@
       "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Samus",
-      "file_bytes": 35356,
+      "file_bytes": 35472,
       "fixups": 621,
       "fkind": 3,
       "foreign_texture_allocation": 0,
@@ -674,10 +706,10 @@
       "foreign_texture_spans": 0,
       "main_asset": 217,
       "model_asset": 320,
-      "model_spans": 62,
-      "model_structural_bytes": 26672,
-      "resident_allocation": 30324,
-      "resident_with_foreign_textures": 30324,
+      "model_spans": 61,
+      "model_structural_bytes": 26800,
+      "resident_allocation": 30440,
+      "resident_with_foreign_textures": 30440,
       "root_cells": 54,
       "texture_images": [
         {
@@ -787,6 +819,10 @@
         {
           "asset": 320,
           "offset": 56800
+        },
+        {
+          "asset": 320,
+          "offset": 57224
         }
       ]
     },

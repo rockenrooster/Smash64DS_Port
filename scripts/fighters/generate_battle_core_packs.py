@@ -190,6 +190,10 @@ def _foreign_texture_bank(images, files, model_id):
     return records, bytes(data)
 
 
+# Model-owned weapon lists whose own G_SETTIMG names Model texels. They are
+# not fighter programs, so nothing else would keep those image rows resident.
+WEAPON_TEXTURE_ROOTS = {"samus": (0xE0D8,)}  # Bomb: CI4 0xDF88
+
 _SKELETON_CONTEXTS = None
 
 
@@ -219,6 +223,7 @@ def _native_texture_roots(fighter: str, model_id: int):
     for (name, detail), context in _skeleton_contexts().items():
         if detail == "high" and name.startswith(owner + "_skeleton"):
             programs.append((None, context, context["roots"]))
+    roots.update(WEAPON_TEXTURE_ROOTS.get(owner, ()))
     for detail, context, rows in programs:
         aliases = context.get("runtime_root_aliases", {})
         roots.update(aliases.get(row[0], row[0]) for row in rows)

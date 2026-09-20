@@ -390,9 +390,10 @@ static sb32 ndsFTManagerMatchHasElectricAttacker(void)
         s32 fkind = gSCManagerBattleState->players[player].fkind;
 
         if ((gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot) &&
+            /* Kirby is not listed: he can only copy electricity from a
+             * Pikachu or Ness who is already in this match. */
             ((fkind == nFTKindPikachu) || (fkind == nFTKindNPikachu) ||
-             (fkind == nFTKindNess) || (fkind == nFTKindNNess) ||
-             (fkind == nFTKindKirby) || (fkind == nFTKindNKirby)))
+             (fkind == nFTKindNess) || (fkind == nFTKindNNess)))
         {
             return TRUE;
         }
