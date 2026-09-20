@@ -209,3 +209,92 @@ Matching ELF: `378C4D1E27384D1BC562219489EDD2D4C0B5DF05DBBFBF5B3D56AA84AA1B661A`
 This adds compact Results fighters and native lower-screen score alerts to the
 previous candidate. The old accepted root ROM remains unchanged; full list and
 final integrated qualification are still open. No jobs left running.
+
+## 2026-09-20 — Kirby Vulcan native owner candidate
+
+The source maker is strong and retained. New source-pinned AOT code handles
+the two Vulcan roots: 12 source triangles plus the two-triangle intensity card.
+The RGBA32 texture is partitioned into four disjoint eight-color A5I3 banks.
+Each pixel belongs to at most one bank; decoded RGB5 and five-bit alpha exactly
+match the source quantized to DS precision, with no extra blending between banks.
+This preserves all 30 RGB5 colors and the alpha ramp; it is not an opaque card.
+The source I4 second root uses white primitive RGB and intensity-derived alpha.
+Geometry, source effect motion, facing and six-tic lifetime are unchanged.
+
+Texture preparation is placed before the battle texture fence for Kirby slots,
+on both loop owners. Generator/source checks and two palette/geometry tests
+pass; native-only build passes. Natural jab input reaches both native roots
+without rejection. The first delayed capture used cumulative counters and
+missed the six-tic effect lifetime; a fresh-input capture after the GO overlay
+was repeated. Both roots engage but the initial pictures did not clearly show
+the six-tic effect. Source link 15 uses efDisplayCLDProcDisplay's no-Z layer;
+the adapter's generic effect seed forcibly adds Z. The Vulcan owner now applies
+that source layer rule and the existing native projected-depth path, without
+changing the other effect owners. A fresh two-draw capture is running on the
+new native-only build. The source-layer capture passes with both roots engaged
+and a visible burst/glow: `artifacts/visibility/2026-09-20-kirby-vulcan-layer.png`.
+Owner fidelity check and cost qualification remain open; the color mesh takes
+four disjoint palette passes (48 triangles), plus the two-triangle glow.
+No opaque fallback, arbitrary position offset or replacement spark was used.
+
+Next: Pikachu head/trail share Model asset 341 root 0x94f8 and a live four-image
+MObj; source ThunderShock is Special2 asset 347 roots 0x14b8/0x1598 (fixed CI4
+and live IA8). The existing trail effect maker still does raw Model base+offset
+construction, unlike the mapped Yoshi/Ness wrappers; compact-file construction
+must be checked alongside the absent native owner. The before probe reproduced
+NO_PROGRAM at root 0x94f8 during status 225, with two recorded native failures.
+
+New producer/executor handles the three roots with source-pinned vertices,
+triangles, state and live MObj images. The source's side-smash routine directly
+calls ThunderShock; that is the reported side-A effect, not a guess based on
+the old descriptor comment. Added mapped-descriptor wrappers for the existing
+trail and shock makers; their motion/lifetime and source state remain intact.
+Generator and three combined Vulcan/Thunder tests pass; native-only build passes.
+The natural Down-B probe is running and requires separate head, weapon-trail,
+and effect-trail engagement. The bolt path gets past the previous NO_PROGRAM,
+then a hit exposes a separate fighter-native failure: Fox status 52 / motion 45,
+detail High, validator code 3, 16 selected roots against 18 expected. Exact roots:
+`6240 6320 6a20 6910 6b10 66b0 6a20 6910 6c10 6d30 6de0 6e90 6d30 6de0 6e90 7020`.
+This is neither Fox's canonical high nor low vector. The source
+`ftDisplayMainDrawAll` selects alternate `attr->skeleton[colanim.skeleton_id]`
+display lists for electric color animation; the current native owner compiler
+has no corresponding alternate program. Keep the reject gate. The owning follow-up
+is source-derived skeleton programs for affected roster siblings, not a Fox-only
+count bypass or hiding the effect. Side-smash independently passes and captures
+visible sparks: `2026-09-20-pikachu-side-smash.png`, status 204, both Shock roots
+engaged, no rejection. Down-B/electric-body coverage and final qualification stay open.
+
+That capture also exposed a HUD streaming defect: bytes were correct but the
+stack scratch buffer was dirty in ARM9 cache when DMA read it. Added the missing
+DC_FlushRange before each bounded DMA copy. A source-executing upload test uses
+separate CPU/DMA views and checks each chunk, truncation and alignment. Three
+HUD producer/queue/upload tests pass. Fresh runtime pixel proof is running;
+the r3 playtest artifact predates this cache-coherence repair and is superseded
+once the next normal candidate is built. Do not treat r3's garbled glyphs as art.
+Runtime pixel proof now passes: `2026-09-20-hud-dma-verified.png` shows clean
+unchanged 0% digits and portraits, with zero native failures. Normal r4 is building.
+
+Electric-skeleton continuation pointers: source `ftDisplayMainDrawSkeleton` in
+`decomp/BattleShip-main/decomp/src/ft/ftdisplaymain.c` consumes
+`attr->skeleton[colanim.skeleton_id]` by live joint id. The current source-driven
+collector already selects those alternate DLs; native programs are missing.
+Reuse `build_owner_root_programs` / `build_p2_owner_runtime_context` in
+`scripts/fighters/generate_nds_native_owners.py`, with matching selection,
+program bounds and owner-table dispatch in `src/nds/nds_renderer_assets.c`.
+Mario/Fox retain a separate historical base pipeline: do not change its frozen
+canonical roots to fit a damage pose. Derive the affected sibling programs from
+the source tables, not the single captured Fox vector. No bypass of count/root
+validation or suppression of electric damage is permitted.
+Fox's source contract is explicit in `209_FoxMain.c`: `FTSkeleton[27]` at
+Main+0x388, selected by skeleton-id 1; Main+0x460 has gate joint 12, the skeleton
+pointer and a NULL sentinel. This is the authoritative derivation seed, not a
+hand-authored copy of the runtime vector. NPikachu/NFox polygon variants with
+NULL skeleton pointers should remain canonical rather than gaining invented data.
+
+Normal r4 candidate: `builds/remaining-bugs-playtest-r4/smash64ds.nds`, SHA256
+`A06E9D9ACFF0E6F0608BF9D549877A98FD340C310720FD9817294CD1A3713658`;
+ELF `090FDD515B32C09A771B5F734C06CEB3D84466E9DAA8F819C3BB14D3C175F0DB`.
+Native-only build and boot/title checks pass. This replaces r3 for playtesting
+and includes the corrected HUD DMA upload, Vulcan and Pikachu side-smash owners.
+Down-B is explicitly not closed: a hit can still stop on the missing electric
+fighter program. No full-list, roster/lifecycle or performance acceptance claim.
