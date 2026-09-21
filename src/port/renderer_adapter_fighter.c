@@ -2267,6 +2267,11 @@ static sb32 ndsFighterDrawPlanHit(u32 slot, u32 use_low_detail)
  * 3 material count, 4 validate, 5 animlock, 13 Link foreign model-part DL,
  * 14 alternate owner program fenced from hierarchy mode. */
 __attribute__((used)) volatile u32 gNdsFtrDeclineStage;
+/* Stage 2's eight clauses, and the file identities they compared. */
+__attribute__((used)) volatile u32 gNdsFtrDeclineDisplayListClause;
+__attribute__((used)) volatile u32 gNdsFtrDeclineDisplayListAsset;
+__attribute__((used)) volatile u32 gNdsFtrDeclineDisplayListExpected;
+__attribute__((used)) volatile u32 gNdsFtrDeclineDisplayListOwnerAsset;
 __attribute__((used)) volatile u32 gNdsFtrDeclineOwner;
 __attribute__((used)) volatile u32 gNdsFtrDeclineSelected;
 __attribute__((used)) volatile u32 gNdsFtrDeclineIndex;
@@ -3699,6 +3704,32 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             {
                 native_owner_enabled = FALSE;
                 gNdsFtrDeclineStage = 2u; /* display list outside its loaded file */
+                /* WHICH of the eight clauses, and against what.
+                 *
+                 * Stage 2 is one code for eight different refusals, and the
+                 * locals are all register-allocated away, so a debugger at the
+                 * halt in the 1P build can read the stage and nothing else --
+                 * which is exactly where Kirby's copy hats land (2026-09-21).
+                 * These four words cost one store on a path that is already
+                 * abandoning the frame's native owner. */
+                gNdsFtrDeclineDisplayListClause =
+                    (native_dl == NULL) ? 1u :
+                    (loaded == NULL) ? 2u :
+                    (loaded->data == NULL) ? 3u :
+                    (ndsFighterNativeLoadedFileAllowed(
+                         owner_slot, expected_asset_id, loaded,
+                         native_dl) == FALSE) ? 4u :
+                    ((native_owner_file != NULL) &&
+                     (loaded != native_owner_file)) ? 5u :
+                    ((native_owner_file == NULL) &&
+                     (foreign_donor != FALSE)) ? 6u :
+                    (loaded->data_size < sizeof(*native_dl)) ? 7u : 8u;
+                gNdsFtrDeclineDisplayListAsset =
+                    (loaded != NULL) ? loaded->asset_id : 0xffffffffu;
+                gNdsFtrDeclineDisplayListExpected = expected_asset_id;
+                gNdsFtrDeclineDisplayListOwnerAsset =
+                    (native_owner_file != NULL) ?
+                        native_owner_file->asset_id : 0xffffffffu;
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                     nNDSTickHudNativeOwnerFallbackDisplayList);

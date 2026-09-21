@@ -255,11 +255,41 @@ const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
     return (const u8 *)foreign->data + mapped;
 }
 
+/* THE RENDERER'S DECLINE WITNESS, REPUBLISHED WHERE IT SURVIVES THE LINK.
+ *
+ * Reason 20 is "a packed preview reached the draw with no native owner", so
+ * the renderer's own decline words are the entire explanation -- and they are
+ * write-only diagnostics, which `--gc-sections` discards even with
+ * `__attribute__((used))`: `used` keeps a symbol inside its object, not its
+ * section through the link. On 2026-09-21 that made gdb resolve four freshly
+ * added witness names to one stale word. Reading them here is what keeps them:
+ * the read comes from surviving code, so the linker keeps the sections, and
+ * the copy lands in an array this terminal function writes. */
+extern volatile u32 gNdsFtrDeclineStage;
+extern volatile u32 gNdsFtrDeclineDisplayListClause;
+extern volatile u32 gNdsFtrDeclineDisplayListAsset;
+extern volatile u32 gNdsFtrDeclineDisplayListExpected;
+extern volatile u32 gNdsFtrDeclineDisplayListOwnerAsset;
+__attribute__((used)) volatile u32 gNdsPreviewPackHaltDecline[5];
+
 static __attribute__((noinline, noreturn)) void ndsPreviewPackLoadHalt(u32 reason, u32 kind)
 {
     gNdsPreviewPackFailure = reason;
     gNdsPreviewPackFailureKind = kind;
     gNdsRelocAssetFormatFailCount++;
+    gNdsPreviewPackHaltDecline[0] = gNdsFtrDeclineStage;
+    gNdsPreviewPackHaltDecline[1] = gNdsFtrDeclineDisplayListClause;
+    gNdsPreviewPackHaltDecline[2] = gNdsFtrDeclineDisplayListAsset;
+    gNdsPreviewPackHaltDecline[3] = gNdsFtrDeclineDisplayListExpected;
+    gNdsPreviewPackHaltDecline[4] = gNdsFtrDeclineDisplayListOwnerAsset;
+    /* Everything a debugger wants at this halt was written in the frames just
+     * before it and is still sitting dirty in the data cache; the spin below
+     * never writes again, so those lines are never evicted and every witness
+     * reads back as whatever was last in that line. That is how the renderer's
+     * stage-2 decline witness came back as four copies of one stale word
+     * (2026-09-21). The halt is terminal -- flushing once here costs nothing
+     * and makes every counter that explains it readable. */
+    DC_FlushAll();
     for (;;) { __asm__ volatile("nop"); }
 }
 

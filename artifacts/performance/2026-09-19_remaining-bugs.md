@@ -946,14 +946,33 @@ Driving the real inputs -- hold B to inhale, then stick down in status 261
 Fox: `passive_vars.kirby.copy_id` goes 8 -> 1 through statuses 269 -> 273 -> 277.
 
 Immediately after, the 1P-game diagnostic ROM **halts**:
-`ndsPreviewPackLoadHalt(20, 8)` from `renderer_adapter_fighter.c:4208`, the
-deliberate "a packed preview has no interpreter fallback" trap. The reason is
-`gNdsFtrDeclineStage == 2` -- "display list outside its loaded file" -- and the
-offending file's `asset_id` is **0x148, Kirby's own model**. So this is not a
-missing hat model and not an unknown trio head (`kirby_trio_unknown` would set
-stage 11): it is the native-owner file/DL admission at
-`renderer_adapter_fighter.c:3687-3698` refusing a DL that is inside the
-expected asset. Shipping builds have no halt, so the hat simply fails to draw.
+`ndsPreviewPackLoadHalt(20, 8)` from `renderer_adapter_fighter.c`, the
+deliberate "a packed preview has no interpreter fallback" trap. So the hat is
+reached, the copy is correct, and the *draw* is what refuses it; shipping
+builds have no halt, so there the hat simply fails to draw.
+
+**CORRECTION, same day.** An earlier revision of this section named
+`gNdsFtrDeclineStage == 2` ("display list outside its loaded file") as the
+cause. That was wrong and the mistake is worth keeping: **the stage global is
+sticky.** Ten sites assign it and none ever clears it, so the value read at a
+halt is the last decline of the whole run, not this draw's. A clause witness
+added beside the stage-2 assignment reads 0 at the halt -- that block never
+executed on the halting frame -- while the stage still read 2 from some earlier
+draw. The declining site is therefore *not yet pinned*: several of the other
+places that clear `native_owner_enabled` record no stage at all.
+
+Two things came out of chasing it, and both are kept:
+
+- `ndsPreviewPackLoadHalt` now does `DC_FlushAll()` before it spins. Everything
+  that explains a halt was written in the frames just before it and is still
+  dirty in the data cache; the spin never writes again, so those lines are
+  never evicted and a debugger reads whatever the line last held.
+- The halt republishes the renderer's decline words into an array it writes
+  itself. `--gc-sections` discards write-only diagnostics **even with
+  `__attribute__((used))`** -- `used` keeps a symbol inside its object, not its
+  section through the link -- which is why four freshly added witness globals
+  were absent from the ELF and gdb resolved their names to one stale word.
+  Reading them from surviving code is what keeps them.
 
 Noted while reading that seam: `KIRBY_TRIO_ADMIT_COPY_HATS` is **True** in
 `generate_nds_native_owners.py` and the in-tree generated inc carries all
