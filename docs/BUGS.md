@@ -18,6 +18,7 @@ Main Menus:
     -delay between cursor hover and 3d fighter preview rendering. **Same cause: the 13-tic dwell debounces a BLOCKING load. 70 tics waited per visit.**
 
 -Yoshi:
+    -Yoshi's guard/shield (egg) is invisible 
 -Link:
     -slash damage VFX playing at incorrect locations.
 -Pikachu
