@@ -3611,6 +3611,38 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
  * Spin effect is the important case) is deliberately retained. */
 volatile u32 gNdsEntryEffectStartupTextureReleaseCount;
 volatile u32 gNdsEntryEffectStartupTextureReleaseBytes;
+/* "Startup only" is the generator's claim about the ENTRY ROOT LIST, and one
+ * stage breaks it: Sector Z's Arwing is a ground object that draws Fox's entry
+ * Arwing list for the whole match. Its nineteen textures were retired at GO
+ * with the rest, so the fly-by arrived to texture name 0 and the owner refused
+ * it every frame (REJECTED_PROGRAM root 0x1FA0, 2,584 in 900 frames). The
+ * caller says when that stage is live; nothing else keeps its textures. */
+volatile u32 gNdsEntryEffectKeepFoxArwingTextures;
+
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+static s32 ndsRendererEntryTextureIsFoxArwing(u32 texture_slot)
+{
+    u32 root_index;
+
+    for (root_index = NDS_ENTRY_EFFECT_FOX_ROOT_FIRST;
+         root_index < NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST; root_index++)
+    {
+        const NDSEntryEffectRoot *root = &sNdsEntryEffectRoots[root_index];
+        u32 g;
+
+        for (g = 0u; g < (u32)root->group_count; g++)
+        {
+            if (sNdsEntryEffectGroups[(u32)root->first_group + g].texture_slot ==
+                texture_slot)
+            {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+#endif
 
 void ndsRendererHardwareReleaseEntryStartupTextures(void)
 {
@@ -3625,6 +3657,11 @@ void ndsRendererHardwareReleaseEntryStartupTextures(void)
 
         if ((sNdsEntryEffectTextureStartupOnly[i] == 0u) ||
             (sNdsRendererEntryEffectTextureName[i] == 0u))
+        {
+            continue;
+        }
+        if ((gNdsEntryEffectKeepFoxArwingTextures != 0u) &&
+            (ndsRendererEntryTextureIsFoxArwing(i) != FALSE))
         {
             continue;
         }

@@ -744,3 +744,33 @@ appended to the Kirby family so earlier ordinals hold, and the adapter admits
 Playtest r10: `builds/remaining-bugs-playtest-r10/smash64ds.nds`, SHA-256
 `37D0163A88ECC022267274CA4AE85691EB5DC9BA88675024AAABB5873ADBBA1D`, boot
 `P2_RUNTIME_OK`. Supersedes r9.
+
+## 2026-09-21 -- Sector Z: the intro "crash" was the arena, and the Arwing lost its textures at GO
+
+**Intro crashes.** Four pairs through intro + 240 frames on Sector Z, no crash.
+Free at GO WITH the pool borrow above: Ness/Mario 41,724 B, Kirby/Fox 24,012 B,
+Pikachu/Samus 7,324 B, Link/Yoshi 4,036 B. Every one of those was 30-50 KB lower
+before it, i.e. negative for the heavy pairs: the "crashes sometimes during
+character intro" is the malloc-overflow halt, and which pair decides "sometimes".
+Sector Z is still the tightest stage; Link/Yoshi runs on the 8 KiB effect floor
+(20 refusals by t=600). Objman node counts there: 105 DObj / 117 XObj / 191 AObj /
+42 GObj, so the borrowed pools already cover it -- what is left is files.
+
+**The fly-by Arwing was refused every frame** (`REJECTED_PROGRAM`, ground object,
+root 0x1FA0: 2,584 in 900 frames with Fox, 119 by t=600 without). Sector Z's
+Arwing is a GROUND object drawing Fox's entry Arwing list (grsector.c loads
+FoxSpecial3, with or without Fox in the match) and is rendered by Fox's entry
+owner. That owner's nineteen textures are generator-marked "startup only" and
+retired at GO -- true of the entry ROOT LIST, false for this stage -- so the
+fly-by arrived to texture name 0. (Witness: `prep=64`, slots 2/10/20 == 0 at
+t=600.) `battleship_scvsbattle.c` now tells the release when Sector Z is live and
+the release keeps the Fox-root texture slots there; every other stage retires
+them as before. After: `DIAG_NATIVE` all zero and entry fallbacks 0 through
+t>900, Mario/Fox and Ness/Mario. The failure record named asset 97 because
+`ndsRelocFindLoadedFileContaining` matched a stale record first -- misattribution,
+not the cause; an Effect-only restriction on the candidate was tried first and
+reverted once that was clear.
+
+Playtest r11: `builds/remaining-bugs-playtest-r11/smash64ds.nds`, SHA-256
+`0A4C449217AD9FDBE1BD91583B4EF7BF4046D409FC270E82312604279868A1A0`, boot
+`P2_RUNTIME_OK`. Supersedes r10.

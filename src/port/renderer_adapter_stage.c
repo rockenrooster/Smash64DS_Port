@@ -5282,6 +5282,11 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
     }
 #endif
+    /* Not only Fox's entry: Sector Z's own Arwing is a GROUND object drawing
+     * the very same FoxSpecial3 list (GRSectorMap pulls file 161 in as an
+     * external dependency, with or without Fox in the match), so this owner is
+     * its renderer too. See the texture-lifetime note in
+     * battleship_scvsbattle.c. */
     if ((candidate == FALSE) && (gFTDataFoxSpecial3 != NULL) &&
         ((const u8 *)dl >= (const u8 *)gFTDataFoxSpecial3))
     {

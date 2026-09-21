@@ -387,6 +387,15 @@ void scVSBattleFuncUpdate(void)
         (gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
     {
+        {
+            /* Sector Z's fly-by draws Fox's entry Arwing list all match long
+             * (grsector.c loads FoxSpecial3 for it), so there its textures are
+             * not a startup lifetime. */
+            extern volatile u32 gNdsEntryEffectKeepFoxArwingTextures;
+
+            gNdsEntryEffectKeepFoxArwingTextures =
+                (gSCManagerBattleState->gkind == nGRKindSector) ? 1u : 0u;
+        }
         ndsRendererHardwareReleaseEntryStartupTextures();
         sNdsSCVSBattleEntryStartupTexturesRetired = TRUE;
     }
