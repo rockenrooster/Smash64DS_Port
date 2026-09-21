@@ -896,3 +896,70 @@ Castle and Hyrule show no spurious wall stops.
 Playtest r13: `builds/remaining-bugs-playtest-r13/smash64ds.nds`, SHA-256
 `DEBECA4A218332F0EB2CF8996C830A75551321FE89870B368F05BEC1E0F05559`, boot
 `P2_RUNTIME_OK`. Supersedes r12.
+
+## 2026-09-21 (cont.) -- three rows narrowed, no code change
+
+### Ness PK Thunder self-hit: forced, and it does not crash
+
+Scripted circular steering never self-hit in ~1,800 frames, so the earlier
+"not reproduced" was weak evidence. The source test is purely positional
+(`ftnessspecialhi.c:60`): `|dx| < FTNESS_PKTHUNDER_COLLIDE_X` and
+`|(ness.y + 150) - bolt.y| < FTNESS_PKTHUNDER_COLLIDE_Y` with
+`pkjibaku_delay == 0`. Putting the bolt on Ness and clearing the delay reaches
+exactly the state a real self-hit reaches.
+
+Two forced self-hits (`ftNessSpecialHiJibakuSetStatus` breakpoint count 2) over
+350 frames: status runs 228 (hold) -> Jibaku -> 68 -> 70 -> 80 -> 10, i.e. the
+blast fires and Ness takes his own knockback, then recovers. No halt, no data
+abort, `native=pass` throughout. The row is not reproducible even when the
+self-hit is made deterministic.
+
+### Saffron gate: the hazard logic cycles; the gate model does not move
+
+Traced `gGRCommonStruct.yamabuki` for 1,900 frames. The state machine is
+correct and matches `gryamabuki.c`:
+
+| frame | status | gate_wait | monster_wait | monster | collision x |
+|---|---|---|---|---|---|
+| 100-300 | Sleep | 1 | 0 | no | 960 |
+| 400-1400 | Wait | 0 | 1087 -> 87 | no | **1600** (open) |
+| 1500-1600 | Open | 0 | 0 | yes | 960 |
+| 1700-1900 | Wait | 1000 -> 705 | 1080 -> 880 | - | **960** (closed) |
+
+`gMPCollisionYakumonoDObjs->dobjs[3]` follows the collision position exactly,
+so the hazard's *collision* opens and closes on schedule. What does not move is
+the drawing: the gate GObj's root DObj and its first child read (0, 0) at every
+sample, and camera-matched captures at frame 1450 (open) and 1760 (closed) show
+the same hub opening with no panel across it. The packet does carry the gate --
+segment 3, bindings 17-20, 15 runs, a box about 432 x 860 in local coordinates.
+
+So "the door is always open" is a rendering/animation gap, not a hazard-logic
+bug; the earlier "gate cycles, not reproduced" note was measuring the logic and
+was right about the logic. Next: find why the open/close AnimJoint's effect
+never reaches the gate binding's world matrix (`anim_frame` is non-zero only in
+the single open-entry window near frame 400).
+
+### Kirby's Fox hat: the copy succeeds and the draw refuses the result
+
+Driving the real inputs -- hold B to inhale, then stick down in status 261
+(`SpecialNCatch`), which is what `ftkirbyspecialn.c:368` reads -- Kirby copies
+Fox: `passive_vars.kirby.copy_id` goes 8 -> 1 through statuses 269 -> 273 -> 277.
+
+Immediately after, the 1P-game diagnostic ROM **halts**:
+`ndsPreviewPackLoadHalt(20, 8)` from `renderer_adapter_fighter.c:4208`, the
+deliberate "a packed preview has no interpreter fallback" trap. The reason is
+`gNdsFtrDeclineStage == 2` -- "display list outside its loaded file" -- and the
+offending file's `asset_id` is **0x148, Kirby's own model**. So this is not a
+missing hat model and not an unknown trio head (`kirby_trio_unknown` would set
+stage 11): it is the native-owner file/DL admission at
+`renderer_adapter_fighter.c:3687-3698` refusing a DL that is inside the
+expected asset. Shipping builds have no halt, so the hat simply fails to draw.
+
+Noted while reading that seam: `KIRBY_TRIO_ADMIT_COPY_HATS` is **True** in
+`generate_nds_native_owners.py` and the in-tree generated inc carries all
+twelve heads (`NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT 12u`, list
+`1 14 3 4 5 6 7 8 9 11 12 13`). Its own comment says to leave it False until the
+body sections move into the per-slot hat images, because admitting them costs
+Kirby's owner image +28,848 B high / +26,104 B low and the 2026-09-17 gate run
+came back with heap low-water 73,064 against 111,680 and 151 native-render
+failures. That cost is therefore currently shipping and is an owner call.
