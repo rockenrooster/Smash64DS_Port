@@ -28,6 +28,18 @@ volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
 #if NDS_P2_PIKACHU
 GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 #endif
+#if (NDS_P2_PIKACHU || NDS_P2_PURIN) && NDS_P2_ITEM_CORE
+/* The thrown Poke Ball, through the efmanager seam's checked wrapper.
+ *
+ * Not efManagerMBallThrownMakeEffect directly: its first act dereferences
+ * gITManagerCommonData through lbRelocGetFileData, and the port may legally
+ * have no such file -- itManagerSetupItems refuses the load when it cannot be
+ * sized or will not fit the general heap. Restoring the omitted call raw
+ * turned a missing effect into a data abort on the first Pikachu entry
+ * (2026-09-21). The wrapper owns that residency test because the offset
+ * symbols it has to resolve are file-static to that translation unit. */
+GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr);
+#endif
 #if NDS_P2_YOSHI
 GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
 #endif
@@ -312,13 +324,27 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     else if (fp->fkind == nFTKindPikachu)
     {
         /* BattleShip ftcommonentry.c:22,226-229. Pikachu owns his Appear pair
-         * and the source throws a Master Ball (efManagerMBallThrownMakeEffect)
-         * whose descriptor draws from ITCommonData. That item-manager file is
-         * not linked by this ROM yet (P2-5 owns it), so the ball is the one
-         * recorded entry delta; the rays it opens with still spawn from the
-         * script's flag1 above. */
+         * and the source throws a Master Ball whose descriptor draws from
+         * ITCommonData.
+         *
+         * That file IS linked now -- gITManagerCommonData is a real resident
+         * owner and the roster resolver carries dEFManagerMBallThrownEffectDesc
+         * (battleship_efmanager.c) -- so the old "not linked by this ROM yet"
+         * note is stale and the omission was the whole of the owner's
+         * "Pokeball Spawn Intro not playing VFX" (2026-09-21). The maker had
+         * no caller at all, which is why the linker had collected it.
+         *
+         * Pass the ENTRY facing, not fp->lr: entry setup can clear the live
+         * facing field while status_vars.common.entry.lr keeps the direction
+         * the source reads here, and lr picks which of the ball's two anim
+         * joints the descriptor binds. The rays are a separate source trigger
+         * driven by the script's flag1 above; neither proves the other. */
         status_id = (entry_id == 0) ? nFTPikachuStatusAppearR :
                                       nFTPikachuStatusAppearL;
+#if NDS_P2_ITEM_CORE
+        (void)ndsEFManagerMBallThrownMakeEffectChecked(
+            &fp->entry_pos, fp->status_vars.common.entry.lr);
+#endif
     }
 #endif
 #if NDS_P2_YOSHI
@@ -341,8 +367,14 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
 #if NDS_P2_PURIN
     else if (fp->fkind == nFTKindPurin)
     {
-        /* BattleShip ftcommonentry.c:23,226-229. Jigglypuff shares Pikachu's Master Ball entry: the ball itself (efManagerMBallThrownMakeEffect) draws from ITCommonData, not linked until P2-5, so it is the same recorded delta; the rays still spawn from the script's flag1. */
+        /* BattleShip ftcommonentry.c:23,226-229. Jigglypuff shares Pikachu's
+         * Master Ball entry -- the same source case label covers both kinds --
+         * so it takes the same restored call and the same entry facing. */
         status_id = (entry_id == 0) ? nFTPurinStatusAppearR : nFTPurinStatusAppearL;
+#if NDS_P2_ITEM_CORE
+        (void)ndsEFManagerMBallThrownMakeEffectChecked(
+            &fp->entry_pos, fp->status_vars.common.entry.lr);
+#endif
     }
 #endif
 #if NDS_P2_KIRBY

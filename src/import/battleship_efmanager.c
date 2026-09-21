@@ -2699,3 +2699,51 @@ GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
     }
     return effect_gobj;
 }
+
+#if NDS_P2_ITEM_CORE
+volatile u32 gNdsEntryMBallThrownCalls;
+volatile u32 gNdsEntryMBallThrownUnresolved;
+
+/* THE THROWN POKE BALL, ASKED FOR ONLY WHEN ITS FILE IS ACTUALLY THERE.
+ *
+ * Pikachu's and Jigglypuff's source entry throws a Master Ball
+ * (ftcommonentry.c:226-229). The port omitted that call for a long time behind
+ * a note saying item-common data was not linked; it IS linked now, and the
+ * omission was the whole of the owner's "Pokeball Spawn Intro not playing VFX"
+ * (2026-09-21). But restoring the call raw crashes on the first entry, because
+ * the source maker opens with
+ *
+ *     p_file = lbRelocGetFileData(void**, gITManagerCommonData, &llITCommon...);
+ *     file   = *p_file - (intptr_t)&llITCommonDataMBallThrownDObjDesc;
+ *
+ * and dereferences the result unconditionally. On the console that file is
+ * always resident. Here `itManagerSetupItems` legitimately leaves
+ * gITManagerCommonData NULL when the file cannot be sized or will not fit the
+ * general heap (battleship_item_link_core.c deliberately skips rather than
+ * corrupt the heap), and the port's ndsRelocGetFileData returns NULL for an
+ * unresolvable symbol instead of a wild address -- so `*p_file` faults.
+ *
+ * The test lives here rather than at the caller because the offsets it has to
+ * resolve, including llITCommonDataMBallThrownFileHead, are file-static to
+ * this translation unit: a copy in another TU would be a different address and
+ * would fail the pointer-keyed symbol lookup for the wrong reason.
+ *
+ * A refusal is counted, not swallowed. An entry with no ball because its file
+ * is absent is an asset-residency failure with a name; it must not read as a
+ * silently skipped effect. */
+GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr)
+{
+    if ((pos == NULL) || (gITManagerCommonData == NULL) ||
+        (ndsRelocGetFileData(gITManagerCommonData,
+                             &llITCommonDataMBallThrownFileHead) == NULL) ||
+        (ndsRelocGetFileData(gITManagerCommonData,
+                             &llITCommonDataMBallThrownDObjDesc) == NULL))
+    {
+        gNdsEntryMBallThrownUnresolved++;
+        return NULL;
+    }
+    gNdsEntryMBallThrownCalls++;
+    return efManagerMBallThrownMakeEffect(pos, lr);
+}
+#endif
+

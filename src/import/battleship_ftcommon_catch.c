@@ -120,7 +120,24 @@ void ndsBaseFTCommonCapturePulledProcCapture(GObj *fighter_gobj,
 #define ftCommonThrowSetStatus ndsBaseFTCommonThrowSetStatus
 #define ftCommonThrowCheckInterruptCatchWait \
     ndsBaseFTCommonThrowCheckInterruptCatchWait
-#define nFTKirbyStatusThrowF nFTCommonStatusThrowF
+/* NO ALIAS HERE (owner, 2026-09-21: "Grab attack Up/down slam ... victim
+ * teleports to another location").
+ *
+ * `ftCommonThrowSetStatus` picks Kirby's own forward-throw status and puts him
+ * airborne for the rising/falling slam:
+ *
+ *     if ((this_fp->fkind == nFTKindKirby) || (... nFTKindNKirby))
+ *     { status_id = nFTKirbyStatusThrowF; mpCommonSetFighterAir(this_fp); }
+ *     else status_id = nFTCommonStatusThrowF;
+ *
+ * Defining the Kirby enumerator to the common one erased exactly half of that:
+ * Kirby still went airborne, but took the GROUND throw's status, and with it
+ * the common motion and callback family instead of his ThrowF/ThrowFFall/
+ * ThrowFLanding procedures -- which are what carry the victim through the
+ * rise and the slam. The real enumerator is unconditional in the port's ABI
+ * mirror (include/ft/fighter.h, beside nFTKirbyStatusThrowFFall and
+ * ...Landing) and the surrounding source already uses nFTCommonStatusThrowF
+ * from the same enum, so the branch needs no substitution at all. */
 
 void ndsBaseFTCommonThrownProcUpdate(GObj *fighter_gobj);
 void ndsBaseFTCommonThrownProcPhysics(GObj *fighter_gobj);
@@ -146,7 +163,6 @@ sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 #undef ftCommonThrowProcUpdate
 #undef ftCommonThrowSetStatus
 #undef ftCommonThrowCheckInterruptCatchWait
-#undef nFTKirbyStatusThrowF
 
 #if NDS_P2_DONKEY
 /*

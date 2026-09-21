@@ -169,6 +169,28 @@ static void ndsMenuShellPopulateData(void)
     ndsMenuShellDataRefresh();
 }
 
+/* WHICH DATA DESTINATIONS MAY BE ENTERED (owner, 2026-09-21).
+ *
+ * The owner deferred Characters and VS Record -- the destinations, not the
+ * DATA plate, its rows, or Sound Test. So the guard is activation-only: the
+ * rows still draw, the cursor still moves over them exactly as the source
+ * moves it, and only the transition is refused. Skipping focus or baking a
+ * disabled look would be a navigation redesign the report does not ask for,
+ * and an all-disabled menu must never trap the cursor in a search for an
+ * enabled row.
+ *
+ * Checked on every activation rather than once at entry, because the cursor
+ * can be restored from `scene_prev` on the way back from Sound Test: a stale
+ * index must not enter a deferred screen just because its scene is still
+ * registered. `ndsSceneManagerFind` answering non-NULL is a statement about
+ * registration, never about policy -- do not unregister the scenes instead,
+ * which would also break the return path. */
+static s32 ndsMenuShellDataKindActivatable(u32 want_kind)
+{
+    return ((want_kind == (u32)nSCKindCharacters) ||
+            (want_kind == (u32)nSCKindVSRecord)) ? FALSE : TRUE;
+}
+
 static void ndsMenuShellUpdateData(u32 held, u32 taps)
 {
     u32 last = ndsMenuShellDataLast();
@@ -203,7 +225,10 @@ static void ndsMenuShellUpdateData(u32 held, u32 taps)
         {
             want_kind = (u32)nSCKindSoundTest;
         }
-        if (ndsSceneManagerFind(want_kind) != NULL)
+        /* Before the confirmation cue, the BGM stop and the scene request --
+         * a deferred row must make no sound of success and no transition. */
+        if ((ndsMenuShellDataKindActivatable(want_kind) != FALSE) &&
+            (ndsSceneManagerFind(want_kind) != NULL))
         {
             ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
             ndsMenuShellGoto(want_kind);

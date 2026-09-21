@@ -361,6 +361,28 @@ static void ndsMenuShellPopulateVsOptions(void)
 /* LEFT and RIGHT on the row under the cursor. Handicap walks its three states
  * in opposite directions and stops at the far end; team and stage turn one
  * way each; damage walks 50..200 and wraps both ends. */
+/* HOW FAR ONE HELD REPEAT MOVES, PER ROW (owner, 2026-09-21: Damage 5x not 3x).
+ *
+ * Only Damage reads the magnitude at all -- Handicap, Team and Stage are
+ * two- or three-state rows whose adjuster branches on the SIGN alone, and
+ * ItemSwitch has its own screen. So raising the step is a Damage-row decision,
+ * not a change to the shared menu repeat rate: the repeat cadence, the single
+ * tap (+-1) and every other row behave exactly as before.
+ *
+ * The domain is the inclusive 50..200, 151 values, and the adjuster WRAPS by
+ * adding or subtracting that size after crossing a bound -- it does not clamp.
+ * At five that still lands inside the domain from either end: 198 + 5 = 203
+ * wraps to 52, and 52 - 5 = 47 wraps to 198. */
+#define NDS_MENU_VSOPTIONS_DAMAGE_HELD_STEP 5
+#define NDS_MENU_VSOPTIONS_DEFAULT_HELD_STEP 3
+
+static s32 ndsMenuShellVsOptionsHeldStep(void)
+{
+    return (sMenuVsOptionsCursor == NDS_MENU_VSOPTIONS_DAMAGE) ?
+        NDS_MENU_VSOPTIONS_DAMAGE_HELD_STEP :
+        NDS_MENU_VSOPTIONS_DEFAULT_HELD_STEP;
+}
+
 static void ndsMenuShellVsOptionsAdjust(s32 direction)
 {
     switch (sMenuVsOptionsCursor)
@@ -493,11 +515,13 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
     {
-        ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_LEFT) ? -1 : -3);
+        ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_LEFT) ?
+                                    -1 : -ndsMenuShellVsOptionsHeldStep());
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_RIGHT) != FALSE)
     {
-        ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_RIGHT) ? 1 : 3);
+        ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_RIGHT) ?
+                                    1 : ndsMenuShellVsOptionsHeldStep());
     }
 
     /* A or START on the ItemSwitch row opens it (:1284-1289). */
