@@ -332,7 +332,7 @@ try {
     Remove-Item -LiteralPath $stdout,$stderr,$gdbOut,$gdbErr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $context.MelonDSPath -ArgumentList $rom `
         -WorkingDirectory $melonDir -RedirectStandardOutput $stdout `
-        -RedirectStandardError $stderr -PassThru
+        -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
     $window = Get-MelonWindow -Process $emulator -Deadline $deadline

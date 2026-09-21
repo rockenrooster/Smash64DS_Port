@@ -468,7 +468,7 @@ try {
         -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $context.MelonDSPath -ArgumentList $rom `
         -WorkingDirectory $melonDir -RedirectStandardOutput $stdout `
-        -RedirectStandardError $stderr -WindowStyle Minimized -PassThru
+        -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
     # Let the realtime battle create both fighters before attaching. GDB is an

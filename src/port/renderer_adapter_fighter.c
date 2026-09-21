@@ -1034,6 +1034,50 @@ static void ndsFighterCollectAllDObjsWithDL(
  * this helper declines and the existing asset gate falls back rather than
  * silently hiding new content. */
 #define NDS_FOX_GUN_SOURCE_ASSET_ID 0x13bu
+
+/* Fox is not the only fighter that holds this source part.
+ *
+ * Kirby's Fox copy selects the SAME descriptor on the SAME joint:
+ * dKirbyMain_modelparts_container[13] is dKirbyMain_modelparts_desc_0x3C4,
+ * whose two rows are both dFoxUnknown_DL, and container index 13 is joint
+ * 13 + nFTPartsJointCommonStart = 17 -- Fox's hold joint exactly. (The same
+ * arithmetic puts Kirby's CopyLink boomerang descriptor, container index 8,
+ * on the hidden joint 12 its hidden-part row inserts.)
+ *
+ * Until 2026-09-21 the strip below was pinned to nFTKindFox, so Kirby's
+ * copied blaster reached ndsFighterDrawPlanResolve as a foreign root, failed
+ * the asset gate at stage 2 clause 4 -- measured: owner 11, expected 0x148,
+ * offending 0x13b root 0x3F0, index 5 of 8 -- and a packed fighter that
+ * declines is ndsPreviewPackLoadHalt(20). That halt on the firing frame is
+ * what "firing the pistol crashes" was. With the root stripped the live
+ * vector is the seven roots the existing CopyTransition program already
+ * covers, and the sidecar draws the pistol from the same baked file-315 mesh
+ * Fox uses.
+ *
+ * Kirby must actually be holding Fox's copy: passive_vars.kirby.copy_id is
+ * the victim kind ftKirbySpecialN stored, and the source reads the same field
+ * to pick the copy hat. A Kirby carrying anybody else's copy cannot reach
+ * this descriptor, so the modelpart check alone would be a weaker pin. */
+static sb32 ndsFighterHoldsFoxGunSource(const FTStruct *fp)
+{
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    if (fp->fkind == nFTKindFox)
+    {
+        return TRUE;
+    }
+#if NDS_P2_KIRBY
+    if ((fp->fkind == nFTKindKirby) &&
+        (fp->passive_vars.kirby.copy_id == (s32)nFTKindFox))
+    {
+        return TRUE;
+    }
+#endif
+    return FALSE;
+}
+
 static void ndsFighterCollectStripFoxGunSidecar(
     const FTStruct *fp, NDSFighterDLAllDrawCollection *collection)
 {
@@ -1042,7 +1086,7 @@ static void ndsFighterCollectStripFoxGunSidecar(
     u32 write_index = 0u;
 
     if ((fp == NULL) || (collection == NULL) ||
-        (fp->fkind != nFTKindFox) ||
+        (ndsFighterHoldsFoxGunSource(fp) == FALSE) ||
         ((u32)NDS_FOX_GUN_HOLD_JOINT >= ARRAY_COUNT(fp->joints)) ||
         (fp->modelpart_status[NDS_FOX_GUN_HOLD_JOINT -
                               nFTPartsJointCommonStart].modelpart_id_curr < 0))
@@ -2278,6 +2322,12 @@ __attribute__((used)) volatile u32 gNdsFtrDeclineIndex;
 __attribute__((used)) volatile u32 gNdsFtrDeclineAssetId;
 __attribute__((used)) volatile u32 gNdsFtrDeclineDetail;
 __attribute__((used)) volatile u32 gNdsFtrRootProgramsTried;
+/* The live (asset, root offset) vector the plan resolver last examined. */
+__attribute__((used)) volatile u32 gNdsFtrPlanVectorCount;
+__attribute__((used)) volatile u32 gNdsFtrPlanVectorAsset[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+__attribute__((used)) volatile u32 gNdsFtrPlanVectorOffset[
+    NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 
 static sb32 ndsFighterNativeLoadedFileAllowed(
     u32 owner_slot, u32 expected_asset_id,
@@ -2346,6 +2396,32 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
         gNdsFtrDeclineSelected = collection->selected_count;
         return nNDSFighterDrawPlanSelected;
     }
+    /* The whole live vector, not just the entry that refused.
+     *
+     * A mixed-file program is defined by (asset, root offset) for EVERY
+     * selected DObj: the one offending entry names the donor but not the
+     * position the donor occupies, and the resolver returns at the first
+     * refusal, so the workspace holds nothing past it. Kirby's copied-Fox
+     * furniture needs that vector to be baked (2026-09-21). */
+    for (i = 0u; i < collection->selected_count; i++)
+    {
+        const NDSFighterDisplayContractEvent *witness_event =
+            (sNdsFighterDisplayContractPlayback != FALSE) ?
+                &sNdsFighterDisplayReplayEvents[collection->indices[i]] : NULL;
+        const Gfx *witness_dl =
+            (witness_event != NULL) ? witness_event->dl :
+                                      collection->dobjs[i]->dl;
+        NDSRelocLoadedFile *witness_file =
+            ndsRelocFindLoadedFileContaining(witness_dl, sizeof(*witness_dl));
+
+        gNdsFtrPlanVectorAsset[i] =
+            (witness_file != NULL) ? witness_file->asset_id : 0xffffffffu;
+        gNdsFtrPlanVectorOffset[i] =
+            ((witness_file != NULL) && (witness_file->data != NULL)) ?
+                ndsRelocNativeRootOffset(witness_file, witness_dl) :
+                0xffffffffu;
+    }
+    gNdsFtrPlanVectorCount = collection->selected_count;
     for (i = 0u; i < collection->selected_count; i++)
     {
         const NDSFighterDisplayContractEvent *event =
@@ -2385,6 +2461,29 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
                 ((owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) &&
                  (loaded != NULL) &&
                  (loaded->asset_id != expected_asset_id)) ? 13u : 2u;
+            /* WHICH of the eight clauses, and against what.
+             *
+             * The identical test below in ndsFighterMarioFoxDLAllDrawForSlot
+             * already records this, but THIS resolver is the copy that runs
+             * first and returns, so a debugger at the 1P halt read stage 2
+             * with clause 0 and no asset ids -- the witness was on the
+             * unreachable twin (2026-09-21, Kirby's copy hats). Both copies
+             * must publish it or the record names the wrong refusal. */
+            gNdsFtrDeclineDisplayListClause =
+                (native_dl == NULL) ? 1u :
+                (loaded == NULL) ? 2u :
+                (loaded->data == NULL) ? 3u :
+                (ndsFighterNativeLoadedFileAllowed(
+                     owner_slot, expected_asset_id, loaded,
+                     native_dl) == FALSE) ? 4u :
+                ((owner_file != NULL) && (loaded != owner_file)) ? 5u :
+                ((owner_file == NULL) && (foreign_donor != FALSE)) ? 6u :
+                (loaded->data_size < sizeof(*native_dl)) ? 7u : 8u;
+            gNdsFtrDeclineDisplayListAsset =
+                (loaded != NULL) ? loaded->asset_id : 0xffffffffu;
+            gNdsFtrDeclineDisplayListExpected = expected_asset_id;
+            gNdsFtrDeclineDisplayListOwnerAsset =
+                (owner_file != NULL) ? owner_file->asset_id : 0xffffffffu;
             gNdsFtrDeclineSelected = collection->selected_count;
             gNdsFtrDeclineIndex = i;
             gNdsFtrDeclineAssetId =
