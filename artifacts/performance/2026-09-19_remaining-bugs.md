@@ -1039,3 +1039,45 @@ Playtest r14: `builds/remaining-bugs-playtest-r14/smash64ds.nds`, SHA-256
 `A451F3A62291F8CF835C855B88B9EB928888AA5F1122F0ED20AE5FD7E62A1EF7`, boot
 `P2_RUNTIME_OK`. Supersedes r13. **Audio changed, so this one is worth a
 listen: 203 and the other eight re-pinned cues.**
+
+### r14 shipped silent, and why the boot check did not notice
+
+Owner: "the latest r14 rom you just broke all audio in that ROM build."
+
+Regenerating the pack moved it from 6,969,332 to 6,968,728 bytes.
+`nds_audio_fgm.c:1147` compares the NitroFS file size against
+`NDS_AUDIO_FGM_PACK_BYTES` in `include/nds/nds_audio_fgm.h` and **rejects the
+entire pack** on any mismatch -- by design, fail-closed. Nothing regenerates
+that header, so r14 shipped a new pack against the old constant and booted with
+no FGM audio at all.
+
+Measured, not inferred: the r14 ELF contains the little-endian word 6,969,332
+and not 6,968,728; the rebuilt ROM contains 6,968,728 and not 6,969,332.
+
+| ROM | header expects | pack shipped | audio |
+|---|---|---|---|
+| r13 | 6,969,332 | 6,969,332 (old) | works |
+| r14 | 6,969,332 | **6,968,728** | **silent** |
+| r15 | 6,968,728 | 6,968,728 | works |
+
+After the re-pin, on the rebuilt diagnostic ROM: `gNdsAudioFgmLoaded=1`,
+`gNdsAudioFgmOpenFailCount=0`, `gNdsAudioFgmFormatFailCount=0`,
+`gNdsAudioFgmPlayCalls=64`, `gNdsAudioFgmMissRingCount=0`.
+
+**`P2_RUNTIME_OK` did not catch it and could not.** It proves the ROM boots; it
+reports `pack=66496`, which is a different pack entirely. A boot check is not a
+feature check.
+
+`scripts/check-audio-fgm-phase-pack.ps1` *is* the right check -- it says "the
+ROM boots SILENT" in its own comments and names two earlier instances of this
+class (2026-08-02 size/hash drift, 2026-08-24 entry-count drift). I regenerated
+the pack without running it. It passes now, with these pins updated and the
+reason recorded beside each: pack identity, the 44/66 encode SNRs (both
+improved), the five cross-target PCM hashes, and the 249/235 exact-render
+hashes. All content-only: entry count 573, cache budget, extents, fork sets and
+voice orders are unmoved.
+
+Playtest r15: `builds/remaining-bugs-playtest-r15/smash64ds.nds`, SHA-256
+`C975C9570B10B03A0F1CDBF47817C32D055D08DF08B5BE126CFFA6C7BFDCD146`, boot
+`P2_RUNTIME_OK`, FGM pack loaded. Supersedes r14, which should be discarded.
+
