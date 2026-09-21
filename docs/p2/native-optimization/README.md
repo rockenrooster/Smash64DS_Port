@@ -2,15 +2,38 @@
 
 **Plan date:** September 15, 2026. **Revision 2:** all legal four-fighter lineups on every selectable VS stage. **Original research baseline:** `75f7f6b4b4864c82c01872d0fd2771d171005272`. **Repository rechecked for this revision:** `e67e5871ba8c4ae972f4826bfeb89757d3686401` on `master`. Old measurements remain historical; implementation must rebase against the current board.
 
-This is an implementation specification, not an implemented optimization or a new benchmark. All task states begin **PLANNED**. Proposed paths, APIs, formats and test IDs are explicitly new work; existing anchors refer to the pinned repository. No ROM was built and no GitHub branch was modified while preparing this package.
+This is an implementation specification, not an implemented optimization or a new benchmark. The **PLANNED** fields are static specification metadata, not live execution state. Proposed paths, APIs, formats and test IDs are explicitly new work; existing anchors refer to the pinned repository. No ROM was built and no GitHub branch was modified while preparing this package.
+
+## Current execution amendment
+
+The owner requested lower workflow overhead and larger runtime changes on
+September 15. The implementation scope and 81-card dependency/coverage graph are
+unchanged. Reviewed workflow baseline: `941f4daab5611e9d86f835a6e4bd8ec61e0156df`.
+Current status/metrics still come from the board, not this static plan.
 
 ## Start and authority
 
-Read [00_MASTER.md](00_MASTER.md), then the assigned package, relevant contracts in [01_CONTRACTS.md](01_CONTRACTS.md), and its tests in [14_VALIDATION.md](14_VALIDATION.md). Do not reread the whole research report on every restart.
+Continue the **Execution cursor** in `docs/P2_EXECUTION_BOARD.md`. In an intact
+context do not repeat startup or completed phases. After context loss use
+`docs/HANDOFF.md` and the linked receipt once, then read only the contracts required
+by Next. [13_AGENT_EXECUTION.md](13_AGENT_EXECUTION.md) defines continuation;
+[00_MASTER.md](00_MASTER.md) defines scope, not a per-turn checklist.
 
-`PROJECT_GOAL.md` remains the product authority. `docs/VERIFYING.md` remains the execution procedure. `docs/P2_EXECUTION_BOARD.md` remains the **only live queue**. Register this campaign beneath existing **P2-2p8**, not as a second competing milestone. The task graph here is a static implementation breakdown; record current status only in the existing board/evidence, or generate a view from it. Do not manually maintain two status ledgers.
+`PROJECT_GOAL.md` owns product acceptance, `docs/VERIFYING.md` test/build/publication,
+and the board the only live queue. This specification belongs to existing P2-2p8,
+not a second milestone. The board's focus may change as P2 advances. Record current
+work/evidence there; never infer that implemented work is undone from static metadata.
 
-The owner's requested endpoint is a smaller, fixed-point DS runtime, substantially lower CPU time, native rendering in every ROM, and stable 30 FPS for **every legal four-fighter lineup on every selectable VS stage**, including repeated fighters and legal slot assignments. Runtime includes menus, audio control, transitions and rare game states, not just the measured battle loop. ROM-derived source assets, source data and reference code remain read-only; build tools may use floating point. Integer code that emulates binary32 arithmetic is not fixed point.
+The fixed-point DS runtime, native rendering in every ROM, substantially lower CPU
+cost and stable 30 FPS for **every legal four-fighter lineup on every selectable
+VS stage**, including repetitions and legal slots, remain required. Runtime includes
+menus, audio control, transitions and rare states. Host tools may use floating point;
+integer binary32 emulation is not the fixed-point endpoint. References stay read-only.
+
+This directory is canonical. The nested delivery package under
+`docs/optimization/Smash64DS_Implementation_Plan/` is a legacy imported copy, not
+another active plan/queue. Preserve it as reference; do not reinstall or update its
+static statuses during ordinary work.
 
 ## Documents
 
@@ -37,12 +60,16 @@ The owner's requested endpoint is a smaller, fixed-point DS runtime, substantial
 | `tasks.json`, `tasks.csv` | Static dependency graph and implementation register |
 | `templates/` | Unmeasured baseline, experiment and admission templates |
 
-## Install without overwriting active work
+## Revising an adopted plan
 
-These files are additive under `docs/p2/native-optimization/`; the supporting plan validator is under `planning-tools/`. For a first install, copy into a clean review branch or apply `INSTALL_ADDITIVE.patch` after `git apply --check`. For an exact original-v1 installation, use `UPGRADE_FROM_V1.patch` instead, after its own `git apply --check`. Do not apply both. Refuse collisions or hand-edited v1 context mismatches rather than overwrite active work; review/merge changes when necessary. Inspect `git status --short` first. The package does not edit `decomp/`, existing generated outputs, existing P2 plans, or the root ROM.
+This plan is already adopted in the reviewed repository. Do not apply the original
+additive installer again or reset all task statuses. The static PLANNED fields in
+`tasks.json` are not the live board; use mapped current implementation/evidence.
+The workflow update modifies existing documents and four task implementation steps,
+not the task graph or universal release contract. Preserve unrelated owner edits;
+review a patch against its pinned base and reject conflicts instead of overwriting.
 
-Add a link from the existing P2-2p8 board row and one pointer from the handoff when adopting the campaign. Keep the original research document as supporting analysis, not as a second execution queue.
-
-The standalone `CHANGES_v2.md` at the package root summarizes revisions. The current repository already carries earlier research under `docs/optimization/`; preserve it as historical analysis and link this campaign from the existing board on adoption. No existing repository plans or research files are overwritten.
-
-A standalone combined Markdown edition is also provided for reading. Edit the split source documents and regenerate the combined view; do not maintain both by hand.
+Edit split source documents and synchronize any task text also represented in
+`tasks.json`/`tasks.csv`. Combined editions are derived reading copies, not another
+source of instructions. Supporting research under `docs/optimization/` stays
+lookup-only; `13_AGENT_EXECUTION.md` and `docs/VERIFYING.md` own the workflow.

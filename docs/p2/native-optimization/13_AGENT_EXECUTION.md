@@ -1,98 +1,165 @@
 # Agent execution and integration contract
 
-## 1. The unit of work
+This document governs P2-2p8 execution, not product requirements. `AGENTS.md`
+owns entry routing, `docs/VERIFYING.md` testing/publication, and
+`docs/P2_EXECUTION_BOARD.md` the only live queue. A goal describes the destination;
+it does not start the whole workflow again on each turn.
 
-Use one task ID from `tasks.json` under existing P2-2p8. Read the current board and handoff, the task card, its named source, shared contracts and relevant test sections. Do not restart implemented optimizations or reread every historical campaign on every run. Source files/functions are pinned anchors; re-resolve after rebasing.
+## 1. Preserve the endpoint; persist the next action
 
-Each assigned task must have a specific behavior/operation to remove. “Optimize the renderer” is not a task. A task is also not complete when it only adds infrastructure that every future agent must maintain. Enabling work must name its immediate consumer and eventual deletion of the old path.
+Every legal four-fighter lineup on every selectable VS stage, fixed-point runtime
+including removal of integer IEEE emulation, native-only output in every ROM,
+source-equivalent mechanics/content, resource safety and 30 Hz menus remain required.
+Keep current fidelity/rates unless an existing explicit permission applies; any
+new compromise needs the contract's approval. No missing output, disabled required
+content, safe refusal of a legal match or correctness-only PASS closes performance.
+Original DS limits and the existing work/cadence gates are unchanged. Rare overruns
+remain allowed as the product contract defines them.
 
-## 2. Source ownership and concurrency
+The task graph is a dependency/coverage map, not one build or full verifier per card.
+The board's current focus chooses work within P2. Static PLANNED fields, research
+chronology, a repeated goal and an uncommitted candidate do not reset progress.
 
-| Lane | Owns | May work in parallel with | Must serialize |
-|---|---|---|---|
-| Integrator | Shared ABI, linker, Makefile, generated outputs, current baseline and board | Read-only review/host fixture authoring | Every shared generated-output update and target build |
-| Renderer | Bound descriptors, native packet/actor emitters and renderer state | Disjoint numeric fixtures, gameplay source analysis | Other edits to included renderer fragments/shared statics |
-| Numeric/pose | Numeric kernels, event clocks, native pose contracts | Disjoint generator test authoring | Shared numeric header, pose consumer ABI changes |
-| Gameplay | Physics/collision/AI/phase-owned query state | Disjoint stage/UI work | Shared FTStruct/consumer migration and scheduler changes |
-| Content/services | Stage/VFX/UI or audio/offload, one claimed source slice | Independent host tests | Resource manifest/bank handoff and service ownership |
-| Reviewer | Independent source/geometry/numeric/correctness proof | All disjoint source implementation | Final acceptance writes and timing runs |
+## 2. One execution cursor in the existing board
 
-Do not force a fixed number of agents when their edit sets overlap. Additional helpers can inspect or write disjoint host fixtures, not repeatedly touch the same giant translation unit. The project procedure allows isolated correctness runners but requires one build at a time and no concurrent timing/exact visual acceptance. Preserve that policy. [S03]
-
-The current board reports many pre-existing dirty auxiliary worktrees. Inspect existing workspace ownership before creating another. Never use `git reset --hard`, `git clean`, broad deletion of `decomp/`/`artifacts/`, or replacement of owner inputs to make a check green.
-
-## 3. Task handoff template
-
-```text
-Task: Nxx.yy — exact title
-Parent: P2-2p8
-Baseline: commit + intended dirty overlay + ROM/ELF/config/asset hashes
-Dependencies: IDs and accepted evidence paths
-Allowed edits: concrete files/symbols and one owner for shared interfaces
-Work to remove: repeated operations + current measured/bounded cost
-New runtime cost: patches/copies/service/memory introduced
-Contracts: numeric class, mutation owners, event order, lifetimes
-Tests: relevant fixture IDs + existing or task-created invocation
-Limits: original-DS RAM/TCM/transient resources; no required content loss
-First falsifier: cheapest test that would invalidate the mechanism
-Finish: code + producers + outputs + tests + final hard-on evidence
-Stop: exact correctness/performance/resource condition causing revert
-Status return: KEEP / REVERT / BLOCKED_WITH_SPECIFIC_CAUSE
-```
-
-The task-specific cards already fill most of these fields. Add current hashes and measured costs; do not invent projected savings or report task metadata as runtime evidence.
-
-## 4. Per-task execution loop
-
-Read current implementation and identify already-landed parts. Run the cheapest relevant source/host check. Freeze inputs and coordinate the edit boundary. Implement the smallest complete vertical slice and its negative tests. Build once through the integrator. Run a focused source-controlled target case with positive engagement. Decide KEEP/REVERT; for a kept batch collect the widest relevant integrated proof, then rebuild/qualify the final hard-on shipping shape when due. Retire the losing route and update the existing board row/evidence.
-
-Do not perform a long unchanging suite after every line edit. Do not skip required integrated/final coverage merely because a host test passed. Use the documented eight-frame synchronized comparison for early iteration; long-run P95 and cadence require whole-match evidence. Respect the documented cross-build noise/significance handling rather than forcing tiny deltas into a victory. [S03]
-
-If a checker fails because of an existing owner overlay or infrastructure issue, preserve it and report the exact blocker plus focused evidence. Do not mark the umbrella green, waive native/content checks, delete the owner's input, or repeatedly rebuild until a noisy run passes.
-
-## 5. Commands and build discipline
-
-The pinned procedure uses PowerShell 7 and configured devkitPro/devkitARM. Verify script parameter blocks before copying historical commands. Existing startup commands:
-
-```powershell
-git status --short
-.\scripts\verify-all.ps1 -Profile Boundary -List
-```
-
-On a prepared host, the P2 build entry is `make TARGET=smash64ds`. For an unprepared host, `build.ps1 -Rom <owner-provided baserom path>` is the documented acquisition/extraction entry, with prerequisites checked first. This package does not contain or supply a copyrighted game ROM or generated ROM assets.
-
-Never pass `-j`, override `-Jobs`, or change `MAKEFLAGS`; the existing Makefile owns build parallelism. Shared generated files make parallel builds unsafe even in separate BUILD directories. Do not use a custom BUILD with a publish target as though it could not overwrite the root ROM. Lab targets and matching per-build ROM/ELF pairs are for experiments. [S03]
-
-Boundary is three named runtime entries; Latest adds the normal runtime entry. Choose the widest relevant profile for a batch instead of stacking every profile. A green Boundary does not rebuild the root shipping ROM automatically. `-NoBuild` requires validated matching artifacts. Do not change the established profiles to hide a slow product result; N00.04 adds explicit performance evaluation.
-
-Use repo-local accurate melonDS and JIT-disabled interpreter from boot; keep the owner's manual instance untouched. Timing runs are serialized. Disposable per-run save/DLDI/storage paths and coherent guest observation/publication are part of the identity, not optional bookkeeping.
-
-## 6. Progress and evidence format
-
-Keep the dynamic board concise. A kept work item can read:
+Keep a compact replace-in-place block under **Current integration checkpoint**.
+Link one existing batch evidence receipt for detailed facts; do not create another
+queue, mandatory report per edit or duplicate status table in HANDOFF.md.
 
 ```text
-N03.04 KEEP — replay-hit immutable preflight retired; native/state guards pass.
-Evidence: <path>; ROM <hash>; WORK-H/cadence <measured values>.
-Remaining: <specific unconverted family or final acceptance gap>.
+Focus / batch / existing task IDs / owner:
+Phase: SELECT | IMPLEMENT | CHECK | VERIFY | RECORD | BLOCKED
+Identity/receipt: scoped diff or commit + candidate artifacts/config when applicable
+Completed/rejected: action IDs + result/receipt; not merely "already done"
+Next: one exact unfinished edit, command, result collection or decision
+Checks owed / temporary routes / acceptance status:
+Job: none | command + origin/handle namespace + log + inputs + observed state
+Capability limits: failed feature + evidence + condition for a legitimate retry
+Owner/review watermark: last inspected changed inputs + recorded dispositions
 ```
 
-Do not use **FIXED** without required coverage. A report should distinguish source presence, host checks, target engagement, integrated correctness, product performance, resource closure and published artifact. Store detailed source reasoning and logs under the existing evidence owners; do not paste them into every code comment and board row.
+Initialize a missing cursor once from the newest applicable local work and evidence;
+use RECONCILE_ONCE only during that migration. Replace it with an actual phase before
+new implementation or measurement. Unknown fields stay unknown, never invented.
+Preserve a newer cursor when adopting document revisions.
 
-## 7. Safely adopting or revising this plan
+Update at a phase transition, before yielding a long-running command, and before
+handoff/context loss. Do not rewrite it after every read. Recording completed work
+must not depend on a successful Git commit: a permitted on-disk receipt and scoped
+diff can preserve an unaccepted candidate. If the board is not writable, report the
+exact pending cursor update and permitted receipt path; do not bypass restrictions.
 
-The package is additive and was not pushed to GitHub. Review the proposed shared interfaces and first task at the active branch before committing the plan. If a newer commit already implements a task, link its equivalent evidence and move to its remaining obligation rather than reimplementing it.
+## 3. Continue the phase, not the opening checklist
 
-Update static dependencies when a real ownership requirement changes. Do not create a new parallel campaign simply because task IDs are inconvenient. Keep the plan validator/combined view generated from one source set; the existing P2 board remains the live queue.
+| Situation | Next action |
+|---|---|
+| Same intact context, no relevant change | Execute Next; no repeated full startup, plan read or task selection |
+| New/lost context | Read cursor + receipt; check relevant inputs/owned job once, then continue the recorded phase |
+| Incomplete job still running | Use its supported original continuation; do not start another copy |
+| Job finished | Collect/validate its output and record outcome; do not rerun to recreate the conversation |
+| New owner edit or changed brief | Preserve it, inspect the relevant delta, record disposition and affected invalidations |
+| Local result already KEEP/REVERT | Continue its unfinished integration/acceptance action or the next batch; do not reopen the experiment without new evidence |
+| Capability unavailable | Record the limitation and retry condition; continue permitted work without that capability |
+| Batch closed or specifically blocked | Record outcome/blocker, then SELECT the next eligible work under the owner's focus |
 
-## 8. Matrix execution without slowing every iteration
+A turn ending, stale narrative summary or broad performance RED is not by itself
+an invalidator. Changed source/layout/assets/config, a broken receipt or contradictory
+observations can invalidate specific proof. `VERIFYING.md` controls that validity;
+there is no exemption from new final timing after an executable/layout change.
 
-Use **DEV_FAST** for a local discriminating edit, **SCREEN** to prioritize measured mechanisms/leaders, and **RELEASE_EXHAUSTIVE** to qualify the declared full roster-stage universe. A local KEEP is not full-product PASS. Do not run the full matrix after every small edit and do not use DEV_FAST/SCREEN as release evidence.
+For an action already recorded complete with matching inputs, return its receipt
+and advance. A repeat requires a named invalidator, missing coverage or conflicting
+result. The action identity is batch + phase + relevant inputs + operation/arguments;
+use existing hashes/receipts rather than implementing another cache or scheduler.
 
-Case enumeration, resource solving and result reconciliation are host tools; reuse the existing runner, ring collector and single build ownership. No parallel shared builds or concurrent timing acceptance. Sharding is a resumable work partition, not permission for simultaneous emulator timing.
+## 4. Select once; implement a coherent reduction
 
-Use the required source catalogue as the queue input, not successful output folders. Persist failed/blocked/stale/not-run cases and actual guest roster/stage/slot attestations. A resumed job consumes only compatible completed evidence; a fresh result never silently erases an earlier reproducible game failure.
+At SELECT, use applicable exclusive attribution to name a substantial repeated
+operation and its complete native replacement. Assign actual edit boundaries,
+input/range/lifetime prerequisites, replacement copy/patch/service costs, a cheap
+falsifier and required final coverage. Do not add nested buckets or independent
+P95 gains, infer cycles saved from code size, or promise an unmeasured gain.
 
-On handoff report cases required, valid passing, failing, blocked, not run, stale and infrastructure-invalid; list any property-scoped reuse separately. Report separate cost leaders and the next concrete failing legal case. Existing P2_EXECUTION_BOARD.md stays the only live status queue; machine-generated coverage is evidence, not a second manually maintained board.
+Then stay with that batch through a recorded decision. Do not repeatedly hunt for
+"the largest remaining cost" while its implementation or valid measurement is
+unfinished. Re-profile only to resolve a decision-changing gap, stale attribution
+or a contradictory observation. Cheap small wins can accompany the batch; they
+must not take over the main lane. No numerical savings quota forces unsafe scope.
 
-Implementation commands for new runner/catalogue/reconciler tasks are proposed until those tools exist. This revision includes a host-only planning count helper and stricter planning tests, not a working ROM scenario driver or game acceptance engine.
+Combine enabling numeric/binding/generator changes with an immediate consumer and
+retirement of the old repeated work in that domain. Preserve unconverted required
+paths and real dependency proof. No permanent old/new authority mirrors or broad
+unchecked rewrite. The 81 task cards retain all completion/coverage obligations;
+a global inventory need not finish before independently safe scoped implementation.
+
+## 5. Optional delegation with persistent failure handling
+
+One integrator owns shared interfaces, included renderer fragments, generators,
+linker, build inputs and authoritative timing. Delegate only disjoint concrete edits
+and tests when useful and permitted; zero helpers is valid. Do not spend each turn
+discovering/spawning helpers just because an old goal mentioned parallelism.
+
+If availability is unknown, confirm one useful helper initializes before launching
+a group. After a shared initialization/transport error, record it as unavailable
+for that environment and continue serially. Retry only after an observable relevant
+change and a successful bounded initialization check; a new chat or another tool
+listing alone is not evidence of repair. Do not inject purported trusted environment
+metadata into task text to bypass a missing-environment error.
+
+Give workers files/symbols, contracts, patch output and focused tests, not duplicate
+broad scouting prompts. Never reassign live overlapping work. Preserve safe workspace
+ownership; no forced worktree creation, cleanup, reset or deletion of owner inputs.
+Shared generators/builds and authoritative timing remain serialized; disjoint work
+must neither change frozen measurement inputs nor introduce material host contention.
+
+## 6. Check and qualify without losing state
+
+CHECK uses applicable source/host/negative fixtures and one discriminating target
+check where needed. Require engagement and relevant output. Record the scoped verdict
+and outstanding requirements immediately. A rejected theory stays rejected until a
+new causal observation changes it; preserved evidence is not a ban on a genuinely
+different implementation with an explicit mechanism.
+
+VERIFY freezes the integrated candidate and uses the widest relevant existing
+profile. Collect compatible whole-match work/cadence, memory, native and output
+proof together; add required rare-state/lifecycle/configuration coverage not included.
+No fixed eight-frame/128-frame/full-match/full-profile ladder per edit. Extend a
+probe for noise, missing event coverage or contradictory evidence, not a fresh turn.
+Remove experiment routes and qualify the final hard-on shape before acceptance.
+
+RECORD stores KEEP/REVERT/BLOCKED_WITH_SPECIFIC_CAUSE or IMPLEMENTED_NOT_ACCEPTED
+with exact scope, remaining checks and next action. A neutral enabling change names
+its consumer. A combined-batch speedup is not a speedup proved for every member.
+Commit/push coherent progress when allowed; an access failure leaves publication
+pending, not the implementation undone. Never bypass a denied action. Preserve
+qualified artifacts and do not substitute a candidate for an accepted release.
+
+## 7. Owner changes, reviews and imported plan copies
+
+Preserve owner edits; adopt applicable changes intentionally, not wholesale. On
+first recovery inspect relevant existing changes/briefs; afterwards use changed
+identities and the intake watermark. Record brief path/version and disposition
+(applied, already satisfied, not applicable, deferred with reason, or blocked)
+in the existing receipt. A changed brief can invalidate that disposition.
+Neither an unchanged briefs folder nor a static PLANNED list is a new assignment.
+
+`docs/p2/native-optimization/` is the canonical implementation specification.
+`docs/optimization/` contains supporting research and an imported package copy;
+those are lookup material, not another active execution/status owner. Read a named
+source or archived failure when needed; do not reinstall or synchronize legacy
+package copies as routine implementation work.
+
+## 8. Reporting and release closure
+
+Report the delta: operation removed, relevant test result or blocker, and Next.
+Do not replay the opening plan, history or a stack of prior commentary. For a
+measurement report label P50/P95, units, population and ROM/ELF/config; include
+required cadence/resource/native/numeric results and actual coverage. Missing
+outputs or uncertain identity remain unknown, not PASS.
+
+DEV_FAST, SCREEN and RELEASE_EXHAUSTIVE remain coverage scopes, not invented
+registry switches. All requirements in `16_ALL_ROSTERS_ALL_STAGES.md` remain:
+exact case sets, no pooled P95, independent duplicates, permutations/variants,
+resource/semantic/visual/audio proof, compatible evidence and visible failed,
+blocked, stale and unrun cases. Scoped progress is not universal completion.
+A deadline or desire to reduce repetition changes execution priority, not verdicts.

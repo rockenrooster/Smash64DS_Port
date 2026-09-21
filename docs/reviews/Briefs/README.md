@@ -5,6 +5,17 @@ source candidate patches**, **one executable offline gradient experiment**, and
 **36 updated issue documents** (35 reports plus the empty Captain Falcon heading).
 All target fixes remain unaccepted until the required ROM and owner proof.
 
+## Intake without repeating settled work
+
+Use the board's active batch and the linked receipt's review watermark. On first
+intake inspect relevant briefs and existing source; then process only new/changed
+brief identities or a newly applicable requirement. Record brief path/hash and
+disposition (applied, already satisfied, not applicable, deferred or blocked) with
+source/evidence. Do not reapply a shared patch per linked issue or per goal turn.
+Changed source/brief evidence can reopen applicability; an unchanged folder cannot.
+Owner edits are preserved, not automatically accepted or overwritten. Keep full
+runtime/owner acceptance requirements below; intake disposition is not a game PASS.
+
 ## Start here
 
 [Research findings and stale diagnoses corrected](research/RESEARCH_FINDINGS.md)

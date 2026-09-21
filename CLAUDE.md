@@ -1,33 +1,28 @@
 # CLAUDE.md
 
-Context limit: you have unlimited context
-Subagents switch = see AGENTS.md
 @AGENTS.md
-READ AGENTS.md
-## Where the rest of the truth lives
 
-Read these before starting, not after being surprised by them:
+## Shared authority and current execution
+`AGENTS.md` owns routing and the continuation protocol. In an intact context,
+continue the board's **Execution cursor** without rerunning startup or reloading
+unchanged skills. A new/lost context reads the cursor and linked receipt once.
+`PROJECT_GOAL.md` owns scope, fidelity, performance and approval;
+`docs/VERIFYING.md` owns test/build/publication procedure. The board selects the
+current focus within P2; a standing goal does not freeze that focus forever.
 
-- `PROJECT_GOAL.md` — the product contract. Mechanical equivalence is required;
-  bit-exactness is not. Carries the performance gate and the sacrifice order
-  (audio fidelity, then visual fidelity, then 60 Hz simulation, then gameplay
-  fidelity) that decides what may be traded for frame rate.
-- `docs/P2_EXECUTION_BOARD.md` — the only dynamic queue (`docs/P2_PLAN.md` +
-  `docs/p2/` hold the P2 plans; the P1 board is archived in `docs/archive/`).
-  `docs/HANDOFF.md` — the restart surface, and nothing else.
-- `docs/VERIFYING.md` — which verifier covers which runtime, why stacking them
-  is wasted time, and how a performance task is run, measured, and judged; the
-  board's standing-rules section carries the measurement law. (The owner
-  archived `TASK_STANDING_RULES.md` and the other closed optimization docs to
-  `docs/optimization/archive/` on 2026-08-05.)
+Coherent candidates may be `IMPLEMENTED_NOT_ACCEPTED`; preserve their exact state
+and tests owed without publishing or claiming acceptance. Record commit/push or
+helper availability failures separately from implementation progress. Do not
+retry a denied action indirectly or re-delegate through a known-broken transport.
+P2-2p8 details live in `docs/p2/native-optimization/13_AGENT_EXECUTION.md`.
 
 ## Claude Code specifics
 
 These are about this tool, so they are not in `AGENTS.md`:
 
 - The number of tokens used to edit files is best minimized, all else being equal. Therefore, when it will not affect the end result, try to surgically edit a file rather than rewrite the entire thing.
-- **You can push to the github repo periodically on confirmed progress
-- ** Committing locally is ordinary work;
+- Commit coherent progress using explicit paths and truthful validation status.
+  Push confirmed progress under the current task's rules; acceptance is separate.
 - The owner's given name must not appear in tracked files. Scan before pushing.
 - End commit messages with a `Co-Authored-By` trailer crediting the model that
   actually authored the change — e.g.
@@ -92,13 +87,20 @@ These are about this tool, so they are not in `AGENTS.md`:
   `Start-Process` so they inherit a hidden console.
 - **Builds are parallel by default; never pass `-j` and never clear
   `MAKEFLAGS`.** The Makefile sets `MAKEFLAGS += -j$(NDS_JOBS)` from `nproc`.
-  Until 2026-07-29 nothing anywhere set `-j`, so every build in the campaign ran
-  single-threaded — about thirteen minutes for a full tickhud rebuild on a
-  32-thread machine — and one probe made it worse by exporting `MAKEFLAGS=""`
-  before invoking `make`. Do not reintroduce either. One build at a time is
-  still correct: the asset generators write into shared paths such as
+  Do not export an empty `MAKEFLAGS`. One build at a time remains required:
+  the asset generators write into shared paths such as
   `include/nds/generated/`, outside `$(BUILD)`, so concurrent makes with
   different flags corrupt each other regardless of `-j`. `make NDS_JOBS=1` is
   the escape hatch if a generator's prerequisites ever turn out to be
   under-declared — that failure races into a subtly wrong binary rather than an
   error, so it would surface here as an unexplained measurement.
+
+## Command continuation
+
+Use the returned handle with its originating continuation API. An outer execution
+cell ID, a shell `session_id` and an OS PID are not interchangeable. If a tool
+reports a missing cell, inspect the original response and actual process/log once;
+do not retry the wrong handle or launch duplicate work. Capture output and exit
+status from launch, preserve the exact invocation in the batch handoff, and use
+supported waits rather than repeated tiny process/log polls. Never paste Bash
+heredocs into PowerShell or silently downgrade a command to PowerShell 5.1.

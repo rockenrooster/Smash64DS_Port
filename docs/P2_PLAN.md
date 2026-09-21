@@ -27,8 +27,9 @@ when serialized; actual shared writers and resource dependencies govern safety.
 
 ## Outcome packages
 
-Read `HANDOFF.md` and the board; select the highest-impact ready, unowned
-package under its existing phase/unit and ID. Finish a bounded source-defined
+Continue the board's **Execution cursor**. Select the highest-impact ready,
+unowned package under its existing phase/unit and ID only after the active batch
+has a recorded outcome, a specific blocker, or owner reprioritization. Finish a bounded source-defined
 feature, including its children and reachable sibling states, or a measured
 shared-blocker outcome—not an isolated failing display-list root. Reuse existing
 implementations and valid proofs; do not restart P2 or reopen closed work without
@@ -40,6 +41,25 @@ owners can express.
 `VERIFYING.md` owns stable builds, batch verification and reproducible checkpoints.
 Current owner directions remain binding: all-ROM native-only rendering,
 source-equivalent behavior, and 30 Hz menus.
+
+## Performance-push scheduling (owner direction, 2026-09-15)
+
+The active P2-2p8 assignment is to cut workflow overhead and remove larger
+categories of runtime work without changing game requirements. The board's persisted focus and execution cursor choose
+the current batch and next unfinished action; `p2/native-optimization/13_AGENT_EXECUTION.md` owns its
+execution and `VERIFYING.md` its testing. Static phase order does not require the
+performance agent to reopen every P2 feature or reread historical reviews.
+
+Group dependent task cards into bounded producer-to-consumer implementations.
+Preserve real safety/interface prerequisites; valid existing evidence may satisfy
+them. Completing every global inventory or release test is not a prerequisite to
+editing an independently bounded slice. Keep prerequisite acceptance explicit.
+Other-owner work stays intact; only direct blockers interrupt this assignment.
+
+Focused slice checks feed one frozen integrated-batch qualification, not a full
+profile per task card. Candidate commits do not close rows or qualify a release.
+The any-four-fighters/any-stage contract and the full release matrix in
+`p2/native-optimization/16_ALL_ROSTERS_ALL_STAGES.md` remain mandatory.
 
 ## Standing laws (apply to every phase)
 

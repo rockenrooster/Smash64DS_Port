@@ -4836,3 +4836,196 @@ Purin and Kirby each report **40 member matches, 2 image loads, 0 mismatch, 0 lo
 failure, 0 native failure, 0 validator reject**. Evidence:
 `artifacts/visibility/2026-09-17_p2-audit14-{ness,purin,kirby}.txt`. The alpha-zero
 transparency guard also passes (`scripts/3d_vfx/test_native_entry_transparency.py`).
+
+## Shield VFX renders behind fighters -- quad route enabled, scale-tracked depth bias (2026-09-18)
+
+Bug: **Shield VFX should always cover/be in front of fighters** (BUGS.md General).
+
+- Root cause: banking commit 32bdb17c618 added `| NDS_RENDERER_GEOM_ZBUFFER` to
+  the link-15/18 effect submit (`ndsStageGCDrawAllLoopSubmitEffectDObj`,
+  reloc_backend_movement.c:12677). The shield model is a flat quad (corners
+  +-30/z=0, FTManagerCommon 163 root 0x0248) whose DL never clears G_ZBUFFER, so
+  the merged geometry mode keeps Z and the translucent quad depth-competes with
+  the fighter's nearer opaque front body: it draws behind the fighter. Before
+  that commit the submitter's base mode stripped Z and the packet took the
+  CPU-projected painter foreground path, which covered correctly but is the
+  cost class the owner rejected (36k p95, quoted at
+  battleship_efmanager.c:1656).
+- Fix: enable `NDS_R2_SHIELD_QUAD` (Makefile default 0 -> 1). The existing
+  `ndsEFManagerShieldQuadProcDisplay` draws the bubble as one particle-class
+  camera-facing quad (`ndsParticleDrawOwnTextureQuad`), reads position and
+  guard_scale from the YRotN joint world matrix (health + `attr->shield_size`),
+  and pulls it toward the eye by `ndsParticleBiasTowardEye`. Depth bias is now
+  scale-tracked: `max(150, 0.5 * guard_scale * 30)` -- DK's larger
+  `attr->shield_size` moves his bubble farther without a per-fighter table, and
+  the floor keeps the previously chosen 150 for standard fighters (Fox full
+  health computes 140). Tree draw remains the fallback
+  (gNdsShieldQuadFallbackCount).
+- The probe's arming counter moved to `gNdsShieldQuadDrawCount` with the pair
+  in the symbol precheck, because the quad route bypasses the link-15 submit
+  and the old counter would arm on a reflector instead.
+- Candidate: TARGET=smash64ds-battle-playable-tickhud-hwtri,
+  BUILD=build-r2-bothcpu. Relevant dirty paths carried by the tree: Makefile
+  (Kirby copylink proof flag), battleship_efmanager.c (Pikachu/Purin MBallRays
+  desc sharing), preview-pack scripts, menu shell sources.
+- Owed: melonDS capture of a grown shield over its fighter (probe-shield-vfx
+  arming on the quad counter), DK vs a standard fighter capture, engagement
+  pair reading Draw up / Fallback 0, tick comparison against the tree-route
+  build, and owner visual acceptance. Owner: pending.
+
+## Ness Up-B crash/freeze -- real-input closure (2026-09-18)
+
+- Pre-fix reproduction used real host `VK_UP + S` input in the full-content
+  compact direct verifier ROM. Attempt 1 completed; attempt 2 entered source
+  Up-B/Hold and raised an ARM exception in
+  `efManagerNessPKThunderWaveMakeEffect`.
+- Root cause: NessModel `EFDesc` fields are source-file offsets, while compact
+  fighter packs relocate retained spans. Deferred effect recovery compared the
+  source offsets directly with packed `data_size`, cleared the retry slot, and
+  left `proc_display == NULL`. The source maker then received a bare effect
+  `GObj` and dereferenced its missing `DObj`.
+- Fix: map source offsets through `ndsRelocNativeAssetAddress()` before bounds
+  validation; keep deferred descriptors pending until that mapping succeeds;
+  and temporarily map PK Thunder trail, reflected trail, wave, and PK Flash
+  descriptor offsets only for their synchronous source construction window,
+  restoring the source offsets immediately afterward.
+- Real-input qualification ROM:
+  `builds/build-p2-ness-upb-full-real2/smash64ds-battle-playable-proof-hwtri.nds`,
+  SHA-256 `D1D96D0FB9DE4B07F6081C56235AA01447667E1287EC73783FD6B74ACAADB8B6`.
+  It is realtime (`NDS_HARNESS_FAST_LOGIC=0`), full-content/1P, compact-fighter,
+  live-input, with all eight VS stages admitted.
+- One repeated real-input session completed **8/8** Up-B presses with
+  `UPB_FINAL starts=8 holds=8 jibaku=0 completed=8` and no ARM exception,
+  emulator exit, or freeze/stall. Evidence:
+  `artifacts/verification/2026-09-18_ness-upb-full-real2-input.txt`.
+- Five independent real-input self-hit sessions used a real jump, real Up+B,
+  and real D-pad PK Thunder steering. Every run entered Jibaku, observed live
+  Jibaku updates, and recovered: `starts=1 holds=1 jibaku=1 completed=1` for
+  runs 1-5. Evidence:
+  `artifacts/verification/2026-09-18_ness-upb-full-real2-selfhit-run{1..5}.txt`.
+- Published root ROM at qualification time:
+  `smash64ds.nds`, 66,443,264 bytes, SHA-256
+  `E6F6E11D68C4F0A46D166335B439DF585FB6CBF6382CBA0C9CC10550BDBD0241`.
+  The shell uses the same compact-fighter representation. The optional
+  Title->VS->CSS host-navigation probe was not used for closure because Windows
+  foreground policy blocked its key injector before battle; that was a host
+  harness failure, not a game fault, and no additional foreground takeover is
+  required for this closure.
+
+## Ness Up-B VFX -- native draw closure (2026-09-18)
+
+- The crash fix did not prove presentation. A dedicated renderer probe showed
+  the source PK Thunder head/trail objects were alive while the native weapon
+  renderer emitted **0 triangles** and rejected 15 draws. The attached PK
+  Thunder Wave was therefore tested separately as well; object existence is
+  not accepted as visual proof.
+- BattleShip's exact NessModel presentation roots are:
+  - head: asset 335 root `0x7BD0`, one 4-vertex / 2-triangle textured quad;
+  - trail: asset 335 root `0x8A98`, one 4-vertex / 2-triangle textured quad;
+  - attached Wave: asset 335 root `0x9948`, one 4-vertex / 2-triangle textured
+    quad.
+  Head/trail keep their source DObj transforms and live texture animation; the
+  trail also keeps `wpDisplayPKThunderProcDisplay`'s live `trail_id` prim/env
+  colours. Wave keeps its source MObj/MatAnim texture selection.
+- Root cause: the ROM is native-only. These retained N64 display-list roots had
+  no exact DS-native owner, so the source GObjs reached the adapter but could
+  not legally fall through to a compatibility renderer. The trail additionally
+  uses the source `DOBJ_DLLINKS` callback, which the weapon admission guard had
+  not accepted.
+- Fix: `generate_nds_native_ness_pkthunder.py` SHA-pins NessModel's O2R and
+  generates exact AOT geometry/state for all three roots. The DS executor owns
+  only immutable geometry/RSP-RDP state while the existing source MObj and DObj
+  state remain live. `DOBJ_DLLINKS` is admitted for source weapons. No N64
+  interpreter, software compositor or fallback renderer was added.
+- Generator check:
+  `NESS_PKTHUNDER_NATIVE_OK asset=335 roots=0x7bd0,0x8a98,0x9948 tris=6`.
+- Decisive realtime proof ROM:
+  `builds/build-p2-ness-vfx-realtime/smash64ds-battle-playable-proof-hwtri.nds`,
+  SHA-256 `A270383AE89402A20374EC7A28F30C5CA5A7622C7E55781CFC6DBD9FD9484DDC`.
+  It runs with `NDS_HARNESS_FAST_LOGIC=0`; melonDS remained hidden and this
+  verifier did not take foreground focus.
+- Per-root post-triangle proof passed:
+  `headnative=1 trailnative=1 wavenative=1`. Aggregate hardware evidence in the
+  same Hold window was `wsubmit=2 wvisible=2 wtri=4 wtexreject=0 wreject=0`
+  for head+trail and `esubmit=1 etri=2 eready=1 etexreject=0 ereject=0` for
+  Wave. The proof counters increment only after each native root actually adds
+  hardware triangles. Evidence:
+  `artifacts/verification/2026-09-18_ness-upb-vfx-realtime.txt`.
+- Normal non-VFX-proof regression also passed after the change:
+  `artifacts/verification/2026-09-18_ness-specials-after-upb-vfx.txt`, ROM
+  SHA-256 `31707D809E643995A82AD15FB5A0A2D2D284992897DD5D4896C4AAEEB839F484`.
+  Neutral-B, grounded Up-B and grounded Down-B all completed; its safety line
+  reports zero weapon-render and zero effect-render rejects.
+
+## Owner crash/stability batch — 2026-09-19
+
+- Bugs (all OPEN): "1P CSS crashes on hovering over characters";
+  "Cannot enter a match as Ness (crashes after SSS)";
+  "Match crashes before GO! or after SSS on some stages ()."
+- Candidate: IMPLEMENTED_NOT_ACCEPTED. Owner input ROM SHA-256
+  `52110122320F59D6EA6235DC9BFE9C526263B0055208A399335CC357C8B00657`.
+- Root causes: all-kind preview residency in 1P; shared startup OOM (Fox
+  figatree requested 4,896 bytes with 1,408 free on Ness/Sector Z); duplicated
+  raw Fox entry texture bank on Dream Land followed by extern-load refusal.
+  No first failure implicated Ness gameplay or stage-native blob validation.
+- Fix: one VS-sized resettable 1P preview block, with object free lists kept
+  outside it and full retirement on replacement/exit; reuse Kirby's existing
+  VS copy-table preparation; omit unused low-detail VS owner images; reuse
+  native Arwing textures and compact source-derived Fox/Ness ShieldPose;
+  replace GO's sleeping thread with the same-duration function process.
+- Additional first failure: Fox/Mario Sector Z aborted in the Arwing factory
+  with NULL DObj, all pack/OOM/stage counters zero. The known-file/empty-slot
+  effect-descriptor branch disabled its callback without saving it for retry.
+  The shared resolver now queues that case; no fighter-specific NULL bypass.
+- Proof: final diagnostic `F4AC5B10...D7334E6`, native-only 315 link inputs.
+  Two 12-kind hover sweeps draw all fighters and exit cleanly (307,992 bytes
+  minimum free). Ness/Fox and Mario/Fox both reach GO on Dream Land and Sector
+  Z, plus Fox/Mario on both. Arwing's eight roots each draw 60 times. Pack,
+  overflow, stage and native failure/reject/fallback counts are zero. Both new
+  compact shield poses reach Guard (153) with native output and no failure.
+  Requested pack tests plus source-executing checks: 32 tests + 10 subtests.
+- Normal candidate `00E87777...53BFBCE`: build/native-only (316 inputs) and
+  boot/title PASS, natural input and fast logic 0. Full hash/config in receipt.
+- Remaining: owner verification, resource/performance and final Latest gates.
+  Latest passed static/startup/loop before the final EF repair, then failed a
+  CSS CPU-level fixture (expected 2, observed 3); stress/performance unrun.
+  Final focused probes and normal build/boot pass after EF repair. Ness/Sector
+  Z has only 2,756 bytes free at GO and 2,020 while shielding; no full-match
+  stability or product acceptance claim. Combined FPC2 checkpoint
+  `aac91275fbf` is IMPLEMENTED_NOT_ACCEPTED; unrelated staging is preserved.
+- Full identities, root-cause chain, counters, changed files, test commands and
+  coverage limits: `artifacts/performance/2026-09-19_crash-startup.md`.
+
+- Owner acceptance, 2026-09-19: "all fixed. Thanks." The owner removed the
+  three crash-batch reports from BUGS.md; retain that closure. Remaining
+  resource/performance qualification is not retroactively claimed green.
+  The new remaining-bugs brief explicitly preserves Sector Z's separate
+  intermittent-intro report for reproduction before any further change.
+
+## Remaining-bugs batch: Yoshi battle pointer tables — 2026-09-19
+
+The new owner brief reprioritizes existing candidates before missing owners.
+Yoshi's plain Wait invisibility reproduced on full-content diagnostic
+`F4AC5B10...D7334E6`: source visibility 1, but zero fighter triangles. The
+other fighter/stage made the old scene-level probe report a false PASS.
+The current battle producer incorrectly classified Gfx-pointer arrays as
+graphics commands, replacing Yoshi's source pre/post table at 0x3308 with an
+ENDDL identity cell. Case-1 drawing read that cell's second word as a pointer.
+
+The producer now distinguishes structural pointer arrays from Gfx/Vtx payloads.
+Source-derived regression fails before and passes after; 28 tests + 10 subtests
+pass. Ten battle packs remain byte-identical; Yoshi and Samus change. Native
+candidate `4AF1224F...A0559D44` draws Yoshi in Wait/Run (320 triangles), visibly
+draws his existing Up-B egg owner, and draws Samus's morph-ball roll (80 triangles).
+All observed native/pack/OOM failures and slot rejects are zero. The ELF is
+unchanged: this is a producer/data fix, not a visibility override.
+
+Boundary: static/source checks and shell loop passed; realtime stopped at the
+unchanged CPU-level fixture (expected 2, observed 3). Stress/performance unrun.
+Accepted root ROM remains unchanged. Candidate is IMPLEMENTED_NOT_ACCEPTED.
+Scoped checkpoint `bd645a1b03e` is pushed; all nine unrelated staged paths are
+unchanged. The owner authorized future verified stale-lock recovery without
+another approval question; the recovered lock is archived, not deleted.
+Remaining: complete Yoshi action/detail/entry coverage, wider qualification and
+owner acceptance. Other diagnosis rows remain open; no blanket full-moveset
+claim. Receipt: `artifacts/performance/2026-09-19_yoshi-battle-pairs.md`.

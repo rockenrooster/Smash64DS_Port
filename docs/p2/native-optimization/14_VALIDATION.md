@@ -14,6 +14,32 @@
 
 Use the least expensive layer capable of falsifying a change, then collect the widest relevant integrated evidence for a kept batch. Never replace an independent semantic oracle with the candidate's own generator output. [S03, S19]
 
+### Scheduling and receipt reuse
+
+This catalogue defines proof obligations, not an instruction to run every fixture
+on every edit. Map the changed producer/consumer, numeric class, mutation/lifetime
+and reachable sibling states to relevant tests before the batch. Execute cheap
+negative/semantic checks while implementing; use the existing discriminating target
+comparison or collect one when needed. Collect compatible whole-match work,
+cadence, memory, native engagement and pixels/audio in the integrated run.
+
+`../../VERIFYING.md` defines invalidators and final hard-on qualification. A session
+restart or unrelated documentation edit alone is not a reason to repeat a matched
+proof. A changed executable layout requires new timing; changed pose/material or
+resource lifetime requires its affected proof. Preserve complete raw failures.
+No result may be reused under a different case or relabeled as a fresh invocation.
+
+For a reused receipt identify its property, source/test/asset/artifact identities,
+window/case and actual invalidators. For an extension identify the missing case,
+unobserved event or conflicting result. These fit the existing batch evidence;
+do not build a new mandatory proof database before runtime implementation.
+
+`DEV_FAST`, `SCREEN` and `RELEASE_EXHAUSTIVE` below are coverage scopes, not new
+`verify-all.ps1 -Profile` names or implemented runner switches. Registry profiles
+stay Boundary/Latest. The full release base/ordered/variant obligations are
+unchanged; short screens and local KEEP cannot satisfy them. Candidate commits
+are not acceptance, and no fast lineup can compensate for a failing legal lineup.
+
 ## 2. Detailed fixture catalog
 
 ### T-MEAS — Measurement and product gate

@@ -1,6 +1,6 @@
 # Master implementation plan
 
-**Revision 2 — all legal four-fighter lineups on every selectable VS stage.**
+**Revision 2 scope retained — September 15 execution amendment: larger coherent implementations and less repeated workflow.**
 
 ## 1. Required result
 
@@ -68,6 +68,15 @@ Numeric formats and scene budgets become approved contracts after the baseline/r
 
 ## 5. Delivery waves and critical path
 
+**Execution amendment:** the waves below describe dependencies and closure, not
+serial administration. Use `13_AGENT_EXECUTION.md` to assign a coherent batch
+across adjacent task IDs. Read the current board once and reuse applicable baseline,
+source/host and candidate evidence. Do not restart completed N00 work, collect every
+inventory before editing a scoped path, or run a full profile for each task card.
+A real interface, numeric-range or lifetime prerequisite still must be established
+before a consumer relies on it. Global catalogue completion and release enumeration
+remain required for closure, not for every local implementation experiment.
+
 | Wave | Packages | Observable exit |
 |---|---|---|
 | A: establish truth | N00 baseline/gate; N04 numeric inventory; bounded N01 layout cleanup | Reproduced baseline, precise gate, native interfaces and range obligations |
@@ -78,22 +87,30 @@ Numeric formats and scene budgets become approved contracts after the baseline/r
 
 Package dependencies are encoded per task in `tasks.json`. Optional ARM7 work is not a prerequisite for an otherwise passing runtime. Interface design, independent host tests and independent source edits may overlap. Shared generators/builds and timing acceptance may not.
 
-## 6. First implementation commits
+## 6. Advance the active batch
 
-These are coherent commit boundaries, not a forced chronology when dependencies change:
+The board's **Execution cursor** supplies the active batch, phase, receipt and
+exact next action. Continue there; this section is not an ordered restart checklist.
+`13_AGENT_EXECUTION.md` defines continuation and capability-failure handling.
 
-1. Adopt the plan and pin baseline identity, source configuration, units and case IDs; do not include runtime changes.
-2. Add an explicit product-performance evaluation on existing captured rows; preserve the four-fighter correctness verifier's diagnostic role. Include deliberately failing fixtures.
-3. Inventory numeric producers/consumers and exact input-section ownership. Record old bridge consumers and which immutable checks remain on a replay hit.
-4. Split only the first measured cold binding/setup tail from an ITCM kernel; retain ISA/optimization settings so placement and codegen can be understood separately.
-5. Introduce the smallest bound-draw contract and one simple actor conversion with lifetime tests. This proves the interface, not the campaign speedup.
-6. Apply binding separation to the current hot fighter path and measure preflight/replay-hit CPU work before any roster-wide expansion.
-7. Extend the existing generator with native packet payloads and typed patch metadata; prove geometry/state equivalence independently before replacing live replay recording.
-8. Land range-checked fixed primitives and event-clock differential fixtures, then a complete pose-to-native-draw pilot. Temporary gameplay bridges remain explicitly open.
-9. Recover memory by removing retired state and validate the required scene bank; eliminate admitted mandatory motion demand reads rather than creating a larger streaming cache.
-10. Convert fixed movement/collision consumers and remove the pilot's gameplay bridge. Reproduce four-way engaged stress and re-price the remaining gap.
+Select a substantial repeated operation only when the active batch has a recorded
+outcome, a specific blocker, or an owner priority change. Use applicable attribution
+and source proof; fill only decision-changing gaps. Do not automatically resume a
+historical camera, pose or packet experiment named in an earlier research report.
+Its recorded scoped result survives a new context and a pending commit.
 
-Do not spend ten commits only collecting reports. After the bounded baseline and contract work, the next kept runtime commit must remove a named repeated operation/path.
+Implement the complete bounded producer-to-consumer change, including its immediate
+consumer and old-path retirement. Existing task IDs, safety/range/lifetime prerequisites,
+focused tests, integrated hard-on qualification and all final coverage remain due.
+No mandatory short-probe/full-match/full-profile ladder per small edit; extend only
+for missing coverage, invalid inputs, noise or conflicting evidence. Record each
+phase outcome before handoff and advance Next instead of reselecting the same work.
+
+Large means a supported operation boundary, not a guaranteed tick saving or an
+unchecked multi-system rewrite. Preserve useful cheap wins without repeatedly
+qualifying them on the main lane. Reuse current attribution until a relevant change
+makes it inadequate to decide the next implementation; no routine global reprofile.
+The 81-card dependency/coverage map and its completion criteria are unchanged.
 
 ## 7. Decision and stop rules
 
@@ -118,3 +135,8 @@ A verifier-covered natural-input `smash64ds.nds`; a source-derived catalogue and
 Closure distinguishes scoped current-content progress from full-product qualification. An open required native owner or legal failed/unexecuted/stale case remains a blocker to universal closure. Maintain independent CPU, cadence, memory, VRAM, GPU and audio-service leaders. New content or linked-layout changes invalidate the corresponding evidence; a new observed leader is not a replacement for the declared coverage set. Never claim the full game is performance-complete from Dream Land and one four-kind roster alone.
 
 **Repository refresh:** this revision rechecked `master` at `e67e5871ba8c4ae972f4826bfeb89757d3686401` and the unchanged product gate. Existing numerical evidence above remains pinned to its earlier ROM. Particle-index work and optimization-reference moves landed after that original snapshot; rebase the implementation baseline and inspect the current board rather than replaying old completed work. [S35, S36, S37]
+
+**Workflow source refresh:** reviewed at `941f4daab5611e9d86f835a6e4bd8ec61e0156df`.
+The amendment changes execution only. Section 1's universal scope, section 8's
+permission boundaries and section 9's closure deliverables are unchanged. Current
+metrics belong to the board; section 2 remains historical pinned research evidence.

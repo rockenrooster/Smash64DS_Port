@@ -1040,6 +1040,37 @@ NDS_NATIVE_OWNER_IMAGE_BOSS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P
 # NDS_P2_LUIGI=1 NDS_P2_PROOF_FIGHTER0=4, and later fighters reuse this same
 # descriptor seam behind their own production flags.
 NDS_P2_PROOF_FIGHTER0 ?= -1
+# Ness Up-B VFX-only proof.  This keeps the normal Ness source-special tour's
+# immediate PK Thunder self-hit steering unchanged; when enabled, the proof
+# controller lets PK Thunder fly naturally so head, spawned trail and attached
+# Wave can each receive presented frames before the verifier exits.
+NDS_P2_NESS_VFX_PROOF ?= 0
+ifneq ($(filter 0 1,$(NDS_P2_NESS_VFX_PROOF)),$(NDS_P2_NESS_VFX_PROOF))
+$(error NDS_P2_NESS_VFX_PROOF must be 0 or 1)
+endif
+ifeq ($(NDS_P2_NESS_VFX_PROOF),1)
+ifneq ($(NDS_P2_NESS),1)
+$(error NDS_P2_NESS_VFX_PROOF=1 requires NDS_P2_NESS=1)
+endif
+ifneq ($(NDS_P2_PROOF_FIGHTER0),11)
+$(error NDS_P2_NESS_VFX_PROOF=1 requires NDS_P2_PROOF_FIGHTER0=11)
+endif
+endif
+# Yoshi BUGS.md visual proof.  This is a controller-only verifier arm: the
+# source game still owns SpecialHi / SpecialN statuses, EggThrow, EggLay,
+# collision, animation, lifetimes and renderer submission.
+NDS_P2_YOSHI_BUG_PROOF ?= 0
+ifneq ($(filter 0 1,$(NDS_P2_YOSHI_BUG_PROOF)),$(NDS_P2_YOSHI_BUG_PROOF))
+$(error NDS_P2_YOSHI_BUG_PROOF must be 0 or 1)
+endif
+ifeq ($(NDS_P2_YOSHI_BUG_PROOF),1)
+ifneq ($(NDS_P2_YOSHI),1)
+$(error NDS_P2_YOSHI_BUG_PROOF=1 requires NDS_P2_YOSHI=1)
+endif
+ifneq ($(NDS_P2_PROOF_FIGHTER0),6)
+$(error NDS_P2_YOSHI_BUG_PROOF=1 requires NDS_P2_PROOF_FIGHTER0=6)
+endif
+endif
 # P2-3f47 final Kirby runtime proof. The ordinary focused selector above only
 # changes player 0; Kirby's copy-hat acceptance specifically needs Link as the
 # opponent so real controller input can drive Inhale -> CopyLink. Keep this
@@ -1791,15 +1822,16 @@ NDS_R2_PARTICLE_RUNTIME ?= 1
 # is a measured hard bound, not a budget (generate_nds_particle_banks.py).
 NDS_R2_PARTICLE_DRAW ?= 1
 # Draw the shield as one camera-facing quad instead of interpreting its source
-# model's display list. EXPERIMENT, OFF BY DEFAULT -- see the block comment in
-# battleship_efmanager.c. Owner observed 2026-08-06 that the N64 shield is
+# model's display list. ON BY DEFAULT since 2026-09-18 -- see the block comment
+# in battleship_efmanager.c. Owner observed 2026-08-06 that the N64 shield is
 # always camera facing, and the source asset's drawing node is a 21-command DL
 # over four vertices, so both routes draw the same textured quad and only the
-# submit differs. The model route stays default because the owner bought it
-# deliberately on 2026-08-04 ("36k p95 is worth it for correctness"); this flag
-# exists to re-measure that price on the whole-match instrument, since the 36k
-# came off a 128-frame window.
-NDS_R2_SHIELD_QUAD ?= 0
+# submit differs. The model route lost the owner's coverage on 2026-09-15
+# (banking 32bdb17c618 forced NDS_RENDERER_GEOM_ZBUFFER on the link-15 effect
+# submit, so the flat quad depth-competes with the fighter and draws behind
+# it), and its 36k p95 was never re-bought; the quad route covers the fighter
+# by depth bias at particle-draw cost. The tree draw stays as the fallback.
+NDS_R2_SHIELD_QUAD ?= 1
 # Draw Mario's fireball as one camera-facing quad instead of interpreting its
 # source model's display list. Owner-playtested and accepted 2026-08-07; ON BY
 # DEFAULT. See the block comment in reloc_backend_movement.c.
@@ -4051,8 +4083,9 @@ NDS_NATIVE_WALLPAPER_ASSETS := $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(PR
 # P2-2/P2-3. The lower battle HUD is AOT-only: source IFCommon digits and each
 # admitted fighter's portrait/stock icon are baked straight into tiled 4bpp
 # sub-OBJ cells.
-# There is deliberately no NitroFS payload or runtime decoder for this asset.
+# Graphics upload once from NitroFS; metrics/palettes remain resident.
 NDS_BATTLE_HUD_INC := $(PROJECT_ROOT)/src/nds/generated/battle_hud.generated.inc
+NDS_BATTLE_HUD_ASSET := $(PROJECT_ROOT)/assets/menus/battle_hud.bin
 # Match-entry presentation.  Mario's pipe and Fox's Arwing keep BattleShip's
 # live DObj animation but consume an AOT DS-native mesh/texture packet.  Unlike
 # a review-only manifest this include is compiled directly by nds_renderer.c,
@@ -5995,7 +6028,7 @@ NDS_NATIVE_IMAGE_SRC_DIR := $(PROJECT_ROOT)/src/nds/generated
 NDS_NATIVE_IMAGE_GENERATOR := 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owner_images.py
 NDS_NATIVE_IMAGE_HEADER := 	$(PROJECT_ROOT)/include/nds/generated/nds_native_fighter_image.generated.h
 export NDS_NITROFS_NATIVE_IMAGE_FILES :=
-NDS_NATIVE_IMAGE_OWNERS :=
+NDS_NATIVE_IMAGE_OWNERS := mario_skeleton1 fox_skeleton1
 NDS_NATIVE_KIRBY_HAT_IDS := 03 04 05 06 07 08 09 10 11 12 13
 NDS_NATIVE_KIRBY_HAT_STEMS :=
 ifeq ($(NDS_P2_LUIGI),1)
@@ -6195,6 +6228,48 @@ NDS_NATIVE_LINK_BOMB_PREREQ := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/lb/lbcommon.c
 NDS_NATIVE_THUNDERGROUND_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunderground.generated.inc
 NDS_NATIVE_THUNDERGROUND_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunderground.generated.h
+NDS_NATIVE_NESS_PKFIRE_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_ness_pkfire.generated.inc
+NDS_NATIVE_NESS_PKFIRE_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_ness_pkfire.generated.h
+NDS_NATIVE_NESS_PKFIRE_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pkfire.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wpness/wpnesspkfire.c
+NDS_NATIVE_NESS_PKTHUNDER_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_ness_pkthunder.generated.inc
+NDS_NATIVE_NESS_PKTHUNDER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_ness_pkthunder.generated.h
+NDS_NATIVE_NESS_PKTHUNDER_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pkthunder.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/NessModel
+NDS_NATIVE_YOSHI_EGG_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_yoshi_egg.generated.inc
+NDS_NATIVE_YOSHI_EGG_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_yoshi_egg.generated.h
+NDS_NATIVE_YOSHI_EGG_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_egg.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiModel
+NDS_NATIVE_YOSHI_EGGLAY_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_yoshi_egglay.generated.inc
+NDS_NATIVE_PURIN_SING_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_purin_sing.generated.inc
+NDS_NATIVE_PURIN_SING_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_purin_sing.generated.h
+NDS_NATIVE_KIRBY_VULCAN_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_kirby_vulcan.generated.inc
+NDS_NATIVE_KIRBY_VULCAN_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_kirby_vulcan.generated.h
+NDS_NATIVE_PIKACHU_THUNDER_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunder.generated.inc
+NDS_NATIVE_PIKACHU_THUNDER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunder.generated.h
+NDS_NATIVE_SAMUS_BOMB_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_samus_bomb.generated.inc
+NDS_NATIVE_SAMUS_BOMB_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_samus_bomb.generated.h
+NDS_NATIVE_NESS_PKTAIL_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_ness_pktail.generated.inc
+NDS_NATIVE_NESS_PKTAIL_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_ness_pktail.generated.h
+NDS_NATIVE_PURIN_SING_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_purin_sing.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/PurinSpecial2
+NDS_NATIVE_YOSHI_EGGLAY_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_yoshi_egglay.generated.h
+NDS_NATIVE_YOSHI_EGGLAY_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_egglay.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiSpecial3
+NDS_NATIVE_YOSHI_ENTRYEGG_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_yoshi_entryegg.generated.inc
+NDS_NATIVE_YOSHI_ENTRYEGG_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_yoshi_entryegg.generated.h
+NDS_NATIVE_YOSHI_ENTRYEGG_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_entryegg.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiSpecial2
 NDS_NATIVE_THUNDERGROUND_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderground.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wppikachu/wppikachuthunder.c
 NDS_NATIVE_ITEM_TOMATO_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_tomato.generated.inc
 NDS_NATIVE_ITEM_TOMATO_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_tomato.generated.h
@@ -6346,6 +6421,44 @@ $(NDS_NATIVE_THUNDERJOLT_PACKET) $(NDS_NATIVE_THUNDERJOLT_HEADER) &: $(NDS_NATIV
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderjolt.py" --emit
 	@touch $(NDS_NATIVE_THUNDERJOLT_PACKET) $(NDS_NATIVE_THUNDERJOLT_HEADER)
 
+$(NDS_NATIVE_NESS_PKFIRE_PACKET) $(NDS_NATIVE_NESS_PKFIRE_HEADER) &: $(NDS_NATIVE_NESS_PKFIRE_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pkfire.py" --emit
+	@touch $(NDS_NATIVE_NESS_PKFIRE_PACKET) $(NDS_NATIVE_NESS_PKFIRE_HEADER)
+
+$(NDS_NATIVE_NESS_PKTHUNDER_PACKET) $(NDS_NATIVE_NESS_PKTHUNDER_HEADER) &: $(NDS_NATIVE_NESS_PKTHUNDER_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pkthunder.py" --emit
+	@touch $(NDS_NATIVE_NESS_PKTHUNDER_PACKET) $(NDS_NATIVE_NESS_PKTHUNDER_HEADER)
+
+$(NDS_NATIVE_YOSHI_EGG_PACKET) $(NDS_NATIVE_YOSHI_EGG_HEADER) &: $(NDS_NATIVE_YOSHI_EGG_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_egg.py" --emit
+	@touch $(NDS_NATIVE_YOSHI_EGG_PACKET) $(NDS_NATIVE_YOSHI_EGG_HEADER)
+
+$(NDS_NATIVE_YOSHI_EGGLAY_PACKET) $(NDS_NATIVE_YOSHI_EGGLAY_HEADER) &: $(NDS_NATIVE_YOSHI_EGGLAY_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_egglay.py" --emit
+	@touch $(NDS_NATIVE_YOSHI_EGGLAY_PACKET) $(NDS_NATIVE_YOSHI_EGGLAY_HEADER)
+
+$(NDS_NATIVE_PURIN_SING_PACKET) $(NDS_NATIVE_PURIN_SING_HEADER) &: $(NDS_NATIVE_PURIN_SING_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_purin_sing.py" --emit
+	@touch $(NDS_NATIVE_PURIN_SING_PACKET) $(NDS_NATIVE_PURIN_SING_HEADER)
+
+$(NDS_NATIVE_KIRBY_VULCAN_PACKET) $(NDS_NATIVE_KIRBY_VULCAN_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_kirby_vulcan.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/KirbySpecial2
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_kirby_vulcan.py" --emit
+	@touch $(NDS_NATIVE_KIRBY_VULCAN_PACKET) $(NDS_NATIVE_KIRBY_VULCAN_HEADER)
+
+$(NDS_NATIVE_PIKACHU_THUNDER_PACKET) $(NDS_NATIVE_PIKACHU_THUNDER_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunder.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/PikachuModel $(BATTLESHIP_O2R)/reloc_fighters_main/PikachuSpecial2
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunder.py" --emit
+	@touch $(NDS_NATIVE_PIKACHU_THUNDER_PACKET) $(NDS_NATIVE_PIKACHU_THUNDER_HEADER)
+$(NDS_NATIVE_SAMUS_BOMB_PACKET) $(NDS_NATIVE_SAMUS_BOMB_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_samus_bomb.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/SamusModel
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_samus_bomb.py" --emit
+	@touch $(NDS_NATIVE_SAMUS_BOMB_PACKET) $(NDS_NATIVE_SAMUS_BOMB_HEADER)
+$(NDS_NATIVE_NESS_PKTAIL_PACKET) $(NDS_NATIVE_NESS_PKTAIL_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pktail.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/NessModel
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pktail.py" --emit
+	@touch $(NDS_NATIVE_NESS_PKTAIL_PACKET) $(NDS_NATIVE_NESS_PKTAIL_HEADER)
+
+$(NDS_NATIVE_YOSHI_ENTRYEGG_PACKET) $(NDS_NATIVE_YOSHI_ENTRYEGG_HEADER) &: $(NDS_NATIVE_YOSHI_ENTRYEGG_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_entryegg.py" --emit
+	@touch $(NDS_NATIVE_YOSHI_ENTRYEGG_PACKET) $(NDS_NATIVE_YOSHI_ENTRYEGG_HEADER)
+
 $(NDS_NATIVE_THUNDERGROUND_PACKET) $(NDS_NATIVE_THUNDERGROUND_HEADER) &: $(NDS_NATIVE_THUNDERGROUND_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderground.py" --emit
 	@touch $(NDS_NATIVE_THUNDERGROUND_PACKET) $(NDS_NATIVE_THUNDERGROUND_HEADER)
@@ -6408,10 +6521,12 @@ NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
 	$(NDS_NATIVE_IMAGE_GENERATOR) \
 	$(NDS_NATIVE_OWNERS_GENERATOR) \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
+	$(PROJECT_ROOT)/scripts/fighters/native_skeletons.py \
 	$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
-NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss
+NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss mario_skeleton1 fox_skeleton1
 NDS_NATIVE_IMAGE_ALL_SRCS := $(foreach owner,$(NDS_NATIVE_IMAGE_ALL_OWNERS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_low.image.c)
 NDS_NATIVE_IMAGE_ALL_SRCS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_low.image.c)
+NDS_NATIVE_IMAGE_ALL_SRCS += $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_skeletons.generated.inc
 
 $(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS) &: $(NDS_NATIVE_IMAGE_GENERATOR_DEPS)
 	python "$(NDS_NATIVE_IMAGE_GENERATOR)"
@@ -6602,6 +6717,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_GDONKEY $(NDS_NATIVE_OWNER_IMAGE_GDONKEY)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_BOSS $(NDS_NATIVE_OWNER_IMAGE_BOSS)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
+		echo '#define NDS_P2_NESS_VFX_PROOF $(NDS_P2_NESS_VFX_PROOF)'; \
+		echo '#define NDS_P2_YOSHI_BUG_PROOF $(NDS_P2_YOSHI_BUG_PROOF)'; \
 		echo '#define NDS_P2_KIRBY_COPYLINK_PROOF $(NDS_P2_KIRBY_COPYLINK_PROOF)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_TUMBLE_TOUR $(NDS_P2_SAMUS_TUMBLE_TOUR)'; \
@@ -7102,6 +7219,26 @@ battleship_ftmanager.o battleship_mnplayersvs.o: $(NDS_NATIVE_IMAGE_HEADER)
 nds_renderer.o: $(NDS_NATIVE_ITEM_CAPSULE_PACKET) $(NDS_NATIVE_ITEM_CAPSULE_HEADER)
 scene_backend.o: $(NDS_NATIVE_ITEM_CAPSULE_HEADER)
 scene_backend.o: $(NDS_NATIVE_ACTOR_TARU_HEADER)
+nds_renderer.o: $(NDS_NATIVE_NESS_PKFIRE_PACKET) $(NDS_NATIVE_NESS_PKFIRE_HEADER)
+scene_backend.o: $(NDS_NATIVE_NESS_PKFIRE_HEADER)
+nds_renderer.o: $(NDS_NATIVE_NESS_PKTHUNDER_PACKET) $(NDS_NATIVE_NESS_PKTHUNDER_HEADER)
+scene_backend.o: $(NDS_NATIVE_NESS_PKTHUNDER_HEADER)
+nds_renderer.o: $(NDS_NATIVE_YOSHI_EGG_PACKET) $(NDS_NATIVE_YOSHI_EGG_HEADER)
+scene_backend.o: $(NDS_NATIVE_YOSHI_EGG_HEADER)
+nds_renderer.o: $(NDS_NATIVE_YOSHI_EGGLAY_PACKET) $(NDS_NATIVE_YOSHI_EGGLAY_HEADER)
+nds_renderer.o: $(NDS_NATIVE_PURIN_SING_PACKET) $(NDS_NATIVE_PURIN_SING_HEADER)
+nds_renderer.o: $(NDS_NATIVE_KIRBY_VULCAN_PACKET) $(NDS_NATIVE_KIRBY_VULCAN_HEADER)
+scene_backend.o: $(NDS_NATIVE_KIRBY_VULCAN_HEADER)
+nds_renderer.o: $(NDS_NATIVE_PIKACHU_THUNDER_PACKET) $(NDS_NATIVE_PIKACHU_THUNDER_HEADER)
+scene_backend.o: $(NDS_NATIVE_PIKACHU_THUNDER_HEADER)
+nds_renderer.o: $(NDS_NATIVE_SAMUS_BOMB_PACKET) $(NDS_NATIVE_SAMUS_BOMB_HEADER)
+scene_backend.o: $(NDS_NATIVE_SAMUS_BOMB_HEADER)
+nds_renderer.o: $(NDS_NATIVE_NESS_PKTAIL_PACKET) $(NDS_NATIVE_NESS_PKTAIL_HEADER)
+scene_backend.o: $(NDS_NATIVE_NESS_PKTAIL_HEADER)
+scene_backend.o: $(NDS_NATIVE_PURIN_SING_HEADER)
+scene_backend.o: $(NDS_NATIVE_YOSHI_EGGLAY_HEADER)
+nds_renderer.o: $(NDS_NATIVE_YOSHI_ENTRYEGG_PACKET) $(NDS_NATIVE_YOSHI_ENTRYEGG_HEADER)
+scene_backend.o: $(NDS_NATIVE_YOSHI_ENTRYEGG_HEADER)
 # The outer build exports NDS_NITROFS_RELOC_FILES so the recursive inner make
 # receives the exact ROM prerequisite inventory.  P2-3's staged fighter banks
 # make that one variable roughly 72 KiB; together with the normal build
@@ -7192,6 +7329,19 @@ endif
 # battleship_*.o. Type/return/implicit-declaration/bounds/uninitialized stay on
 # everywhere, including here.
 battleship_%.o: CFLAGS += -Wno-missing-braces -Wno-unused-parameter
+# ARENA. Every text byte comes out of the one heap the battle arena is carved
+# from, and the battle arena is what decides whether heavier rosters start a
+# match at all and whether the source's 25 KiB GObj latch drops their effects
+# (artifacts/performance/2026-09-19_remaining-bugs.md, arena census). Menu
+# translation units never execute inside a battle frame, so size-optimizing
+# them costs no battle tick. The -Os harness ROMs already prove this code
+# generation end to end.
+battleship_mn%.o nds_menu_shell.o nds_ui_kit.o: CFLAGS += -Os
+# Same rule for the other scenes that never host a battle frame: the opening
+# movies, staff roll, how-to-play, and the 1P intro / stage-clear / challenger
+# screens. sc1pgame, training, bonus stages and the auto demo ARE battles and
+# keep -O2.
+battleship_mv%.o battleship_scstaffroll.o battleship_scexplain.o battleship_sc1pintro.o battleship_sc1pstageclear.o battleship_sc1pchallenger.o: CFLAGS += -Os
 # The measured renderer is cache-resident on retail hardware and wins in ARM
 # state despite melonDS's main-RAM fetch model.
 #
@@ -7785,6 +7935,7 @@ NDS_BATTLE_CORE_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/preview_source_metadata.py \
 	$(PROJECT_ROOT)/scripts/fighters/estimate_fighter_pack.py \
 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py \
+	$(PROJECT_ROOT)/scripts/fighters/native_skeletons.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
 	$(PROJECT_ROOT)/scripts/fighters/fighter_production_manifest.json \
@@ -7848,8 +7999,10 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the
 # dependency edge so an o2r refresh cannot silently leave a stale C include.
-$(NDS_BATTLE_HUD_INC): \
+$(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
+		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
+		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(PROJECT_ROOT)/include/reloc_data.h \
 		$(BATTLESHIP_O2R)/reloc_interface/IFCommonPlayerDamage \
@@ -7860,7 +8013,13 @@ $(NDS_BATTLE_HUD_INC): \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LuigiModel
 	python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
-	@touch $(NDS_BATTLE_HUD_INC)
+	@touch $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET)
+
+$(NITROFS_DIR)/menus/battle_hud.bin: $(NDS_BATTLE_HUD_ASSET)
+	@mkdir -p $(dir $@)
+	cp $< $@
+
+$(OUTPUT).nds: $(NITROFS_DIR)/menus/battle_hud.bin
 
 # Source-entry AOT packet.  The generator imports the same display-list/texture
 # decoders as the static battle bake and SHA-pins all three source containers;

@@ -2,6 +2,21 @@
 
 One fact, one owner. `PROJECT_GOAL.md` owns product/fidelity/milestone acceptance. Current implementation state, blockers, artifact identity and next action live in `P2_EXECUTION_BOARD.md`. Static plans describe required outcomes and dependencies, not duplicate live completion counts.
 
+## Continuation reading path
+
+The goal points to the destination; the **Execution cursor** in
+`P2_EXECUTION_BOARD.md` points to the next unfinished action. Use it directly in
+an intact context. After context loss, read `HANDOFF.md`, the cursor and its receipt
+once; inspect only relevant changes before continuing that phase. Read applicable
+contracts/skills before relying on them, not all linked history on every turn.
+
+For P2-2p8 the canonical implementation specification is `p2/native-optimization/`.
+The nested package at `optimization/Smash64DS_Implementation_Plan/` is an imported
+reference copy, not a second workflow or status source. Never use its PLANNED
+metadata to reopen a settled action. Research under `optimization/` is lookup-only.
+`reviews/Briefs/` is reviewed by changed identity and relevance; record disposition
+in the existing batch receipt rather than reapplying unchanged patches.
+
 ## Active routing
 
 | Document | Responsibility |
@@ -20,7 +35,7 @@ One fact, one owner. `PROJECT_GOAL.md` owns product/fidelity/milestone acceptanc
 | `KNOWN_ISSUES.md` | Durable unresolved gaps |
 | `BACKLOG.md` | Owner-deferred minor bugs |
 | `OPTIMIZE_LIST.md` | Owner specialization/baking/offload wish list, not permission to override current priorities |
-| `optimization/README.md` + `optimization/Smash64DS_Native_Optimization_Plan.md` | Active native-runtime performance direction and bounded P2-2p8 work packages; older optimization notes live under `optimization/archive/` |
+| `optimization/README.md` + `optimization/Smash64DS_Native_Optimization_Plan.md` | Supporting research and historical evidence; implementation uses `p2/native-optimization/`, scheduling uses its `13_AGENT_EXECUTION.md` and the board |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments, lookup-only during ordinary work |
 | `PORTING.md` | Append-only chronology, lookup-only |
 | `DIAGNOSTIC_REFERENCE.md` | Diagnostic marker definitions and manual lookup |
@@ -53,4 +68,5 @@ Keep existing `archive/P2_CLOSED_ROWS.md`, archived P1 execution/Runtime2 plans 
 
 Prefer focused changes to the owning active document, preserving source pins and valid proof. Status/owner/next action go to the board; current source requirements go to the unit; detailed evidence goes to its existing owner. A source-present/compiled/runtime-verified/accepted distinction must survive every summary.
 
-Protected `AGENTS.md`/`CLAUDE.md` and the product contract are not replaced by this documentation bundle. Follow their current owner permissions and explicit newer directions. Any remaining conflict in protected text is reported, not silently edited. New top-level documents require explicit need and an entry here; further splitting should normally use sections inside existing owners.
+The September 15 owner-requested workflow revision aligns the root agent files,
+Opus overlays and their canonical skill. It does not change `PROJECT_GOAL.md`. Follow their current owner permissions and explicit newer directions. Any remaining conflict in protected text is reported, not silently edited. New top-level documents require explicit need and an entry here; further splitting should normally use sections inside existing owners.

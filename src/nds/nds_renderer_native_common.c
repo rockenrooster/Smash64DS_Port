@@ -4250,6 +4250,12 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
     sNdsNativeFighterActiveRootLightPreambles = owner->root_light_preambles;
     sNdsNativeFighterActiveRootLightPreambleCount =
         owner->root_light_preamble_count;
+    if (ndsRendererNativeFighterRootProgram(slot) == NDS_NATIVE_SKELETON_PROGRAM)
+    {
+        sNdsNativeFighterActiveDenseNormals = (u32 *)owner->tables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt = &sNdsNativeImageDenseNormalsReady;
+        return owner->tables->dense_normals != NULL;
+    }
 #if NDS_P2_LUIGI
     if (slot == 2u)
     {
@@ -5171,6 +5177,157 @@ static u32 ndsRendererEntryKoPalette(u32 part, u32 primitive, u32 environment)
     return 0u;
 }
 
+/* THE RAMP COMBINER, FOR EVERY ENTRY-EFFECT GROUP THAT USES IT.
+ *
+ * Two combine rows here -- 0xfc30fe61/0x55fef379 and 0xfc309661/0x552eff7f --
+ * have the same colour half: (PRIM - ENV) * TEXEL0 + ENV. They differ only in
+ * alpha (TEXEL0, or TEXEL0 * PRIM). Their textures are IA planes baked A5I3
+ * over one shared eight-step GREY palette, and modulate can only multiply that
+ * grey by a single colour, so the ENV end of the ramp was lost everywhere:
+ * Link's Spin Attack (ENV 0xd00c03 on the effect, nine oranges 0xff4200..
+ * 0xff7500 on the weapon) drew white, and so did Fox's, Captain's and Samus's
+ * glows and the Poke Ball rays. KO stars and the shield already solved this
+ * for themselves with per-colour palettes; this is the general form.
+ *
+ * A palette-only GL name holds ENV->PRIM blended through the texture's own
+ * grey steps and is attached with glAssignColorTable, exactly like the KO
+ * palettes -- no image copy, 16 or 64 bytes of palette RAM per entry. The
+ * polygon is then white. Prim is live on several owners (a PRIM-only MObj), so
+ * entries are keyed on the colours and replaced round-robin; names die with
+ * glResetTextures and are only trusted inside the generation that made them.
+ *
+ * A slot is eligible only if EVERY group that samples it is a ramp group, so
+ * an assigned palette can never leak into a modulate draw of the same image. */
+#define NDS_ENTRY_RAMP_PALETTES 12u
+typedef struct NDSEntryRampPalette
+{
+    const u16 *source;
+    u32 name;
+    u32 generation;
+    u32 prim;
+    u32 env;
+} NDSEntryRampPalette;
+static NDSEntryRampPalette sNdsEntryRampPalettes[NDS_ENTRY_RAMP_PALETTES];
+static u32 sNdsEntryRampPaletteNext;
+static u16 sNdsEntryRampPaletteScratch[32] __attribute__((aligned(32)));
+static u8 sNdsEntryRampSlotState[NDS_ENTRY_EFFECT_TEXTURE_COUNT]; /* 0 unknown, 1 yes, 2 no */
+__attribute__((used)) volatile u32 gNdsEntryRampPaletteBakes;
+/* One root's resolved material, selectable from gdb: alpha, prim, env,
+ * othermode_l as the draw saw them. Stack copies read stale on this emulator. */
+__attribute__((used)) volatile u32 gNdsEntryEffectWitnessRoot = 0x0698u;
+__attribute__((used)) volatile u32 gNdsEntryEffectWitness[4];
+__attribute__((used)) volatile u32 gNdsEntryRampPaletteDraws;
+
+static s32 ndsRendererEntryRampCombine(const NDSEntryEffectPairState *combine)
+{
+    return (((combine->a == 0xfc30fe61u) && (combine->b == 0x55fef379u)) ||
+            ((combine->a == 0xfc309661u) && (combine->b == 0x552eff7fu))) ? TRUE : FALSE;
+}
+
+static s32 ndsRendererEntryRampSlotEligible(u32 texture_slot)
+{
+    u32 i;
+
+    if (texture_slot >= NDS_ENTRY_EFFECT_TEXTURE_COUNT)
+    {
+        return FALSE;
+    }
+    if (sNdsEntryRampSlotState[texture_slot] == 0u)
+    {
+        const NDSEntryEffectTexture *texture = &sNdsEntryEffectTextures[texture_slot];
+        u32 state = 1u;
+
+        if ((texture->palette == NULL) ||
+            !(((texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A5I3) &&
+               (texture->palette_entries == 8u)) ||
+              ((texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A3I5) &&
+               (texture->palette_entries == 32u))))
+        {
+            state = 2u;
+        }
+        for (i = 0u; (i < NDS_ENTRY_EFFECT_GROUP_COUNT) && (state == 1u); i++)
+        {
+            const NDSEntryEffectGroup *group = &sNdsEntryEffectGroups[i];
+
+            if ((group->texture_slot == texture_slot) &&
+                ((group->combine_state >= NDS_ENTRY_EFFECT_COMBINE_STATE_COUNT) ||
+                 (ndsRendererEntryRampCombine(
+                      &sNdsEntryEffectCombineStates[group->combine_state]) == FALSE)))
+            {
+                state = 2u;
+            }
+        }
+        sNdsEntryRampSlotState[texture_slot] = (u8)state;
+    }
+    return (sNdsEntryRampSlotState[texture_slot] == 1u) ? TRUE : FALSE;
+}
+
+/* Returns a palette-only GL name, or 0. May change the bound texture. */
+static u32 ndsRendererEntryRampPalette(const NDSEntryEffectTexture *texture,
+                                       u32 primitive, u32 environment)
+{
+    u32 generation = gNdsRendererSceneTextureVramResetCount + 1u;
+    NDSEntryRampPalette *entry;
+    int palette_width = 0;
+    int name;
+    u32 i;
+
+    primitive &= 0xffffff00u;
+    environment &= 0xffffff00u;
+    for (i = 0u; i < NDS_ENTRY_RAMP_PALETTES; i++)
+    {
+        entry = &sNdsEntryRampPalettes[i];
+        if ((entry->name != 0u) && (entry->generation == generation) &&
+            (entry->source == texture->palette) &&
+            (entry->prim == primitive) && (entry->env == environment))
+        {
+            return entry->name;
+        }
+    }
+    entry = &sNdsEntryRampPalettes[sNdsEntryRampPaletteNext];
+    sNdsEntryRampPaletteNext++;
+    if (sNdsEntryRampPaletteNext >= NDS_ENTRY_RAMP_PALETTES)
+    {
+        sNdsEntryRampPaletteNext = 0u;
+    }
+    if (entry->generation != generation)
+    {
+        entry->name = 0u; /* the name died with the scene reset */
+    }
+    for (i = 0u; i < texture->palette_entries; i++)
+    {
+        sNdsEntryRampPaletteScratch[i] = ndsRendererHardwareBlendPrimEnvTexel0(
+            texture->palette[i], primitive | 0xffu, environment | 0xffu);
+    }
+    name = (int)entry->name;
+    ndsRendererHardwareEndBatch();
+    if ((name == 0) && (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0))
+    {
+        return 0u;
+    }
+    ndsRendererHardwareBindTextureState((u32)name);
+    sNdsRendererHardwareBoundTextureName = (u32)name;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    glColorTableEXT(GL_TEXTURE_2D, 0, (int)texture->palette_entries, 0, 0,
+                    sNdsEntryRampPaletteScratch);
+    glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
+                                &palette_width);
+    if (palette_width != (int)texture->palette_entries)
+    {
+        ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+        sNdsRendererHardwareBoundTextureName = 0u;
+        entry->name = 0u;
+        return 0u;
+    }
+    entry->name = (u32)name;
+    entry->generation = generation;
+    entry->source = texture->palette;
+    entry->prim = primitive;
+    entry->env = environment;
+    gNdsEntryRampPaletteBakes++;
+    return entry->name;
+}
+
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,
@@ -5592,6 +5749,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 use_texture =
             (group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) ? TRUE : FALSE;
         u32 texture_name = 0u;
+        u32 ramp_palette = 0u;
         u32 material_color;
         s32 use_material_color;
         s32 use_vertex_color;
@@ -5691,6 +5849,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
             continue;
         }
         lit = ndsRendererHardwareLitShadeCombine(stats);
+        if (root_offset == gNdsEntryEffectWitnessRoot)
+        {
+            gNdsEntryEffectWitness[0] = polygon_alpha;
+            gNdsEntryEffectWitness[1] = stats->prim_color;
+            gNdsEntryEffectWitness[2] = stats->env_color;
+            gNdsEntryEffectWitness[3] = stats->othermode_l;
+        }
         if (lit != FALSE)
         {
             ndsRendererHardwarePrepareLitDirection(
@@ -5745,7 +5910,21 @@ s32 ndsRendererSubmitNativeEntryEffect(
             tile.maskt = group->maskt;
             params = ndsRendererHardwareTextureParams(
                 stats, &tile, texture->width, texture->height);
+            /* Before the bind: baking a palette binds its own name. The KO
+             * stars and the shield keep the palettes they already own. */
+            if ((ko_part >= 3u) && (owner_asset_id != 163u) &&
+                (ndsRendererEntryRampCombine(combine_state) != FALSE) &&
+                (ndsRendererEntryRampSlotEligible(group->texture_slot) != FALSE))
+            {
+                ramp_palette = ndsRendererEntryRampPalette(
+                    texture, stats->prim_color, stats->env_color);
+            }
             ndsRendererHardwareBindTextureName(stats, texture_name);
+            if (ramp_palette != 0u)
+            {
+                glAssignColorTable(GL_TEXTURE_2D, (int)ramp_palette);
+                gNdsEntryRampPaletteDraws++;
+            }
             if (ko_part < 3u)
             {
                 /* Palette addresses are immutable throughout queued draws.
@@ -5846,7 +6025,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
                     use_material_color, use_vertex_color,
                     vertex_color, TRUE, 0u);
             }
-            glColor(packed_color);
+            /* The ramp palette already holds the whole colour combiner. */
+            glColor((ramp_palette != 0u) ? 0x7fffu : packed_color);
             if (use_texture != FALSE)
             {
                 /* Already converted from N64 s10.5 + tile/scale state to the
@@ -10843,6 +11023,11 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
     {
         return NULL;
     }
+    if (ndsRendererNativeFighterRootProgram(slot) == NDS_NATIVE_SKELETON_PROGRAM)
+    {
+        *count = ndsNativeSkeletonOwner(slot, 1u)->root_count;
+        return sNdsSkeletonBindingParents;
+    }
     if (slot == 0u)
     {
         *count = (u32)(sizeof(sNdsNativeMarioBindingParents) /
@@ -10936,6 +11121,12 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeLinkSpecialNBindingParents[0]));
             return sNdsNativeLinkSpecialNBindingParents;
         }
+        if (program == 4u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkClapsBindingParents) /
+                           sizeof(sNdsNativeLinkClapsBindingParents[0]));
+            return sNdsNativeLinkClapsBindingParents;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkBindingParents) /
                        sizeof(sNdsNativeLinkBindingParents[0]));
@@ -10994,29 +11185,41 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
     {
 #if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
         u32 program = ndsRendererNativeFighterRootProgram(slot);
-        if (program == 1u)
+        static const u8 *const trio_parents[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) sNdsNativeKirbyTrioHead##head_##BindingParents,
+            NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+        };
+        static const u8 trio_parent_counts[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) \
+            (u8)(sizeof(sNdsNativeKirbyTrioHead##head_##BindingParents) / \
+                 sizeof(sNdsNativeKirbyTrioHead##head_##BindingParents[0])),
+            NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+        };
+
+        if ((program >= 1u) && (program <= NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT))
         {
-            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead1BindingParents) /
-                           sizeof(sNdsNativeKirbyTrioHead1BindingParents[0]));
-            return sNdsNativeKirbyTrioHead1BindingParents;
+            *count = (u32)trio_parent_counts[program - 1u];
+            return trio_parents[program - 1u];
         }
-        if (program == 2u)
-        {
-            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead14BindingParents) /
-                           sizeof(sNdsNativeKirbyTrioHead14BindingParents[0]));
-            return sNdsNativeKirbyTrioHead14BindingParents;
-        }
-        if (program == 3u)
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 1u)
         {
             *count = (u32)(sizeof(sNdsNativeKirbyStoneBindingParents) /
                            sizeof(sNdsNativeKirbyStoneBindingParents[0]));
             return sNdsNativeKirbyStoneBindingParents;
         }
-        if (program == 4u)
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u)
         {
             *count = (u32)(sizeof(sNdsNativeKirbyCopyLinkBindingParents) /
                            sizeof(sNdsNativeKirbyCopyLinkBindingParents[0]));
             return sNdsNativeKirbyCopyLinkBindingParents;
+        }
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyCopyTransitionBindingParents) /
+                           sizeof(sNdsNativeKirbyCopyTransitionBindingParents[0]));
+            return sNdsNativeKirbyCopyTransitionBindingParents;
         }
 #endif
         *count = (u32)(sizeof(sNdsNativeKirbyBindingParents) /
@@ -11143,6 +11346,11 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
     {
         return NULL;
     }
+    if (ndsRendererNativeFighterRootProgram(slot) == NDS_NATIVE_SKELETON_PROGRAM)
+    {
+        *count = ndsNativeSkeletonOwner(slot, 1u)->root_count;
+        return sNdsSkeletonCrossSlots;
+    }
     if (slot == 0u)
     {
         *count = (u32)(sizeof(sNdsNativeMarioCrossPaletteSlots) /
@@ -11236,6 +11444,12 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                            sizeof(sNdsNativeLinkSpecialNCrossPaletteSlots[0]));
             return sNdsNativeLinkSpecialNCrossPaletteSlots;
         }
+        if (program == 4u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkClapsCrossPaletteSlots) /
+                           sizeof(sNdsNativeLinkClapsCrossPaletteSlots[0]));
+            return sNdsNativeLinkClapsCrossPaletteSlots;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /
                        sizeof(sNdsNativeLinkCrossPaletteSlots[0]));
@@ -11294,29 +11508,41 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
     {
 #if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
         u32 program = ndsRendererNativeFighterRootProgram(slot);
-        if (program == 1u)
+        static const u8 *const trio_cross[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) sNdsNativeKirbyTrioHead##head_##CrossPaletteSlots,
+            NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+        };
+        static const u8 trio_cross_counts[NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT] = {
+#define NDS_KIRBY_TRIO_X(head_) \
+            (u8)(sizeof(sNdsNativeKirbyTrioHead##head_##CrossPaletteSlots) / \
+                 sizeof(sNdsNativeKirbyTrioHead##head_##CrossPaletteSlots[0])),
+            NDS_NATIVE_KIRBY_TRIO_HEAD_LIST(NDS_KIRBY_TRIO_X)
+#undef NDS_KIRBY_TRIO_X
+        };
+
+        if ((program >= 1u) && (program <= NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT))
         {
-            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead1CrossPaletteSlots) /
-                           sizeof(sNdsNativeKirbyTrioHead1CrossPaletteSlots[0]));
-            return sNdsNativeKirbyTrioHead1CrossPaletteSlots;
+            *count = (u32)trio_cross_counts[program - 1u];
+            return trio_cross[program - 1u];
         }
-        if (program == 2u)
-        {
-            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead14CrossPaletteSlots) /
-                           sizeof(sNdsNativeKirbyTrioHead14CrossPaletteSlots[0]));
-            return sNdsNativeKirbyTrioHead14CrossPaletteSlots;
-        }
-        if (program == 3u)
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 1u)
         {
             *count = (u32)(sizeof(sNdsNativeKirbyStoneCrossPaletteSlots) /
                            sizeof(sNdsNativeKirbyStoneCrossPaletteSlots[0]));
             return sNdsNativeKirbyStoneCrossPaletteSlots;
         }
-        if (program == 4u)
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 2u)
         {
             *count = (u32)(sizeof(sNdsNativeKirbyCopyLinkCrossPaletteSlots) /
                            sizeof(sNdsNativeKirbyCopyLinkCrossPaletteSlots[0]));
             return sNdsNativeKirbyCopyLinkCrossPaletteSlots;
+        }
+        if (program == NDS_NATIVE_KIRBY_TRIO_HEAD_COUNT + 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyCopyTransitionCrossPaletteSlots) /
+                           sizeof(sNdsNativeKirbyCopyTransitionCrossPaletteSlots[0]));
+            return sNdsNativeKirbyCopyTransitionCrossPaletteSlots;
         }
 #endif
         *count = (u32)(sizeof(sNdsNativeKirbyCrossPaletteSlots) /

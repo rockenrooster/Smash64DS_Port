@@ -8,6 +8,21 @@ The pinned linker groups `*.32.o` text/rodata into ITCM and data/BSS into DTCM. 
 
 **Explicit rule:** retain exception vectors, startup/load metadata, ARM/Thumb interworking and ABI-required system code. Do not exchange correctness for a prettier ITCM total.
 
+## Build iteration for these tasks
+
+`../../VERIFYING.md` owns producer/configuration and incremental-build procedure.
+Keep baseline artifacts, reuse a matching warm BUILD directory, and serialize
+shared producers. A target name does not prove effective stage flags. Prepare
+matching producer data/stamps before switching lab/shipping consumers; repair a
+reproduced dependency/order defect instead of repeating full fresh shell builds.
+No generated-file hand edits, missing-stage workaround or weakened stale check.
+
+N01 is not a separate campaign of compiler permutations. Apply its needed kernel
+split/module/producer fix with the selected runtime consumer. An ITCM space saving
+is enabling capacity until the complete retained batch has a measured CPU result.
+Relevant system/boot/IRQ/interworking tests remain due; reused semantic proof cannot
+excuse new linked-layout timing. Final full-runtime repacking stays in N09.
+
 ### N01.01 — Produce byte-accurate linked ownership
 
 **Depends on:** N00.02
@@ -133,4 +148,3 @@ The pinned linker groups `*.32.o` text/rodata into ITCM and data/BSS into DTCM. 
 **Done:** New residents improve measured whole-frame behavior and fit the actual byte/stack budget.
 
 **Stop/revert:** A prediction based only on stall density is not acceptance; revert a combined pack that loses.
-

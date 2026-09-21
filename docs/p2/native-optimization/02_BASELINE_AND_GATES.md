@@ -2,6 +2,11 @@
 
 > **Revision 2 coverage:** The fixed current four-kind run is the initial regression/attribution anchor only. N00.06 defines the full required roster-stage universe early; N00.04 grades each scenario independently. Exhaustive runs belong to release qualification, not every edit. See [16_ALL_ROSTERS_ALL_STAGES.md](16_ALL_ROSTERS_ALL_STAGES.md).
 
+Execution uses `13_AGENT_EXECUTION.md`: N00 outcomes may already be satisfied by
+mapped valid evidence. These cards are not mandatory rework at each restart or a
+reason to postpone an independently safe runtime slice until every global report
+exists. Preserve actual safety prerequisites and explicit acceptance debt.
+
 This is bounded enabling work. Reuse existing scripts and identities; do not build a second profiler or spend the campaign repeatedly re-establishing the same baseline. Sources [S01–S05, S18].
 
 ### N00.01 — Freeze inputs and resolve active policy
@@ -13,7 +18,7 @@ This is bounded enabling work. Reuse existing scripts and identities; do not bui
 **Implementation sequence**
 
 1. Confirm the working branch/commit and compare with the pinned snapshot. Record relevant dirty overlays without modifying unrelated files; inspect the latest board checkpoint rather than selecting the oldest green artifact.
-2. Record source, generated assets, compiler/linker/library versions, ROM/ELF/config hashes, emulator hash/config, save/DLDI state, seed/input and runner identity in the baseline manifest.
+2. Reuse the matching baseline manifest and verify its source/generated assets, compiler/linker/library, ROM/ELF/config, emulator, save/DLDI, seed/input and runner identity. Fill missing or invalidated fields once; do not create a new manifest merely for a restarted context.
 3. Classify exact, bounded-error and approval-required changes using C8. Resolve obsolete bit-exact-only experiment comments against the current product goal; preserve required discrete mechanics.
 4. List baseline known bugs and missing native owners by scenario. Do not use missing output to claim a completed full-content performance result.
 5. Adopt the owner clarification: every legal four-fighter lineup, repeated kinds included, on every selectable VS stage is in scope. Record full product-required and currently implemented content sets separately; a disabled unfinished fighter remains a product gap.
@@ -35,7 +40,7 @@ This is bounded enabling work. Reuse existing scripts and identities; do not bui
 
 **Implementation sequence**
 
-1. Run the current source-normal four-kind stress with existing defaults: frame-1 identity and frames 2–1973 for 1,972 populated timing samples. Use unique output paths and the existing ring collector.
+1. Reuse valid matching source-normal baseline rows and same-run coverage/resource evidence first. Reproduce only for a named identity/population invalidator or missing proof. When a run is needed, use the current verified defaults and ring collector; the historical defaults are frame-1 identity and 1,972 samples at frames 2–1973, not an invariant source-minute after cadence changes. Use unique outputs.
 2. Collect runtime roster/mask, gameplay clock, item override defaults, positive native output, pool/heap/resource witnesses and timing in the same run.
 3. Calculate WORK-H from each row, verify accounting identities, and report P50/P95/P99/max, FPS, 2/3/4/5+ VBlank counts and consecutive late presents. Keep cold transition/lifecycle windows separate and test them separately.
 4. Run the natural two-fighter regression using the required integrated profile when appropriate. Preserve current quality/audio/configuration; do not disable features for the baseline.
@@ -56,8 +61,8 @@ This is bounded enabling work. Reuse existing scripts and identities; do not bui
 
 **Implementation sequence**
 
-1. Build one exclusive owner table from existing buckets and per-PC/caller data. Separate SRC/GCRA/SINT/SCPU nesting, intended idle, blocked service, GX backpressure and instrumentation.
-2. Price successful packet replay preflight, packet miss/recording, static stage preparation, pose evaluation/publication, software float plus conversion callers, memory copying and filesystem events.
+1. Reuse or derive one bounded exclusive owner table from applicable buckets and per-PC/caller data. Refresh only stale/missing attribution needed to choose the next complete work-removal slice. Separate SRC/GCRA/SINT/SCPU nesting, intended idle, blocked service, GX backpressure and instrumentation.
+2. Inspect landed packet-precheck and fixed-particle checkpoints before pricing remaining replay/miss/record work, static stage preparation, pose/transform/publication, soft-float/conversions, copies and filesystem events. Do not redo a retired mechanism or assume an old profile describes the current path.
 3. For each high-value candidate record exact repeated work, frequency, immutable/dynamic inputs, native replacement cost, memory cost and the test that proves it was removed.
 4. Rank against both the P95-tail and cheapest-late-frame populations, then choose structural tasks that can plausibly address the measured deficit. Treat diagnostic work suppression only as an unqualified upper bound.
 
@@ -113,4 +118,3 @@ This is bounded enabling work. Reuse existing scripts and identities; do not bui
 **Done:** Known tricky states have reproducible triggers and defined outcomes, independent of the implementation being replaced.
 
 **Stop/revert:** An untriggered CPU move is not evidence; use source-controller playback or a clearly labeled deterministic state fixture.
-

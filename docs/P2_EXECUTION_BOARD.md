@@ -50,11 +50,30 @@ STG 385,088; heap low-water 111,200 B; arena 1,351,424 B; native 0/0; slips 0.
 The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
-Focus / batch / IDs / owner: P2-2p8 / lane selection / N05.04 / main. Phase: OWNER.
+Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
+Brief: `docs/p2/BUGS_REMAINING_DIAGNOSIS_2026-09-19.md`; existing work first.
+Owner accepted/removed the three crash reports; do not re-add. Checkpoint `aac91275fbf`.
+Owner ROM `00E87777…53BFBCE` untouched; lab baseline kept in builds/.
+Receipt: `artifacts/performance/2026-09-19_remaining-bugs.md`; interim playtest built.
+DONE 09-20/21 (receipt cont. 1-8 + stage rows): Thunder/PK Thunder, Jolt abort,
+**Results freezes (Link Claps, Luigi Win2)**, slot residency, entry ramp palettes,
+Link beam, Charge Shot, Egg Lay, CSS abort, arena freeze, 2P/3P pools + figatree
+heaps, Kirby star, Sector Z. **ARENA (<25 KiB) IS THE VFX CAUSE.**
+STAGES 09-21 (`663d2e3fd9d`): Yoshi's Island platforms (hw-compose projection
+unscaled -> near-clip), cards/sparkles (graded A5I3 arm), Mushroom Kingdom
+ledge (clamped window > max upload -> one period), **Castle board
+clip-through + ramps** (grounded path skipped mpcommon's wall tests; the
+sweep was an approximation -- now the source's).
+09-21b (`afa114b693f`): Ness self-hit FORCED, no crash; Saffron gate logic cycles,
+MODEL never moves; Kirby flurry draws; Fox hat copies then declines stage 2.
+Witness per-draw; halts flush. Next: gate anim, hat clause, Kirby colour/FGM
+203/Up-B, CSS load. Owed: Boundary/Latest.
+UNCOMMITTED: my hunks in staged Makefile/native_common/board. r13
+`builds/remaining-bugs-playtest-r13/` `DEBECA4A…`, P2_RUNTIME_OK. Roof/Zebes deferred.
+P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`…_p2-2p8-gate-decision/`):
-ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound** (detail archived).
-**CLOSED LANES** (archived): joint-cap placement, Kirby copy, hidden-part class
-— 26 owners swept, 3 exist, all covered. OWED: per-hat look, captures.
+ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES
+archived (joint-cap, Kirby copy, hidden-part); OWED: per-hat look, captures.
 **DTCM HOT SCALARS: −43,200 WORK-H P50 FOR 508 B** (`5e109a47d5d`). Largest
 banked win, 9.2% of gap. **OWNER: one-line call** on its non-zero exit.
 **OWNER 09-17: SRC REOPENED**, **30 Hz still refused**. No lane closes the gap
@@ -68,14 +87,12 @@ details and draws the boomerang with zero failure/reject deltas; Purin natural
 Wait->SpecialN adds 319 native triangles with the same clean counters. Audit-14
 image-off NORMAL controls give Ness/Purin/Kirby **40 matches, 2 loads, 0 mismatch/
 fail/native** each; alpha-zero guard passes. Detail moved to the closed-row archive.
-**CLEANUP AUDIT** (`…_p2-cleanup-audit-verification/`): port_probe done.
-**Proof-fleet item REFUTED** — 20 of 43 fns are live gameplay. Campaign returns
-~576 B; **O1 boot-service reclaim returns 5 arena pages** (`5f37d2df82c`).
+**CLEANUP AUDIT** done; proof-fleet REFUTED (20/43); O1 reclaim 5 pages.
 
 Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
-outputs/builds/timing; preserve other-owner 1P/CSS work. Settings stay 30 Hz
-menus and 1P active. Retained proofs: `docs/archive/P2_CLOSED_ROWS.md`. Do not
-replace the published P2 artifact until gates pass.
+outputs/builds/timing; preserve other-owner 1P/CSS work. Retained proofs:
+`docs/archive/P2_CLOSED_ROWS.md`. Do not replace the published artifact until
+gates pass.
 
 ## Queue — acceptance only
 
@@ -94,7 +111,7 @@ pixels/audio or unexercised states stay engineering work.
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. Intro is **NOT** this class. OWED: captures. `…_p2-3f52-yoshi-root-programs/`. |
-| P2-3f53 | EFDesc effects without native owners | **ALL FOUR RESOLVED: 1 done, 3 blocked, none a wiring change** | **Falcon Punch/Kick DONE** (checked + registered; row was stale). **Yoshi egg** `0xa860` (= invisible intro AND shield): built clean, checker GREEN, Boundary RED — arena −4,096, AllocFail 84→85, 14 texture-bind rejects; reverted `252a9aa4290`. **Kirby Vulcan Jab**: BLOCKED, its state root branches to **RGBA32** and the DS has no 32-bit format — needs a lossy conversion + fidelity call, not a `case`. **Pikachu down-B Thunder**: format CLEAN (IA16/IA8, would compile) but `PikachuModel` is no InputSpec and gate is `NDS_P2_PIKACHU 0`. **2 of 4 blocked on the SAME resident budget; the per-roster emitter is the lever.** `…_p2-3f53-vulcan-jab-blocker/`, `…_p2-3f53-thunder-assessment/`. |
+| P2-3f53 | EFDesc effects without native owners | **ALL FOUR RESOLVED: 1 done, 3 blocked, none a wiring change** | **Falcon Punch/Kick DONE** (row was stale). **Yoshi egg** `0xa860` (= invisible intro AND shield) built clean but Boundary RED (arena −4,096, 14 texture-bind rejects); reverted `252a9aa4290`. **Kirby Vulcan Jab** BLOCKED: its state root branches to RGBA32, needs a lossy conversion + fidelity call. **Pikachu down-B Thunder** format CLEAN but `PikachuModel` is no InputSpec, gate `NDS_P2_PIKACHU 0`. **2 of 4 blocked on the SAME resident budget.** `…_p2-3f53-vulcan-jab-blocker/`. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 
 ## Queue — P2-4 engineering

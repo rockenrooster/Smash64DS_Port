@@ -20,7 +20,7 @@
       ],
       "implementation_steps": [
         "Confirm the working branch/commit and compare with the pinned snapshot. Record relevant dirty overlays without modifying unrelated files; inspect the latest board checkpoint rather than selecting the oldest green artifact.",
-        "Record source, generated assets, compiler/linker/library versions, ROM/ELF/config hashes, emulator hash/config, save/DLDI state, seed/input and runner identity in the baseline manifest.",
+        "Reuse the matching baseline manifest and verify its source/generated assets, compiler/linker/library, ROM/ELF/config, emulator, save/DLDI, seed/input and runner identity. Fill missing or invalidated fields once; do not create a new manifest merely for a restarted context.",
         "Classify exact, bounded-error and approval-required changes using C8. Resolve obsolete bit-exact-only experiment comments against the current product goal; preserve required discrete mechanics.",
         "List baseline known bugs and missing native owners by scenario. Do not use missing output to claim a completed full-content performance result.",
         "Adopt the owner clarification: every legal four-fighter lineup, repeated kinds included, on every selectable VS stage is in scope. Record full product-required and currently implemented content sets separately; a disabled unfinished fighter remains a product gap.",
@@ -47,7 +47,7 @@
         "scripts/census-tick-hud-p95-set.py"
       ],
       "implementation_steps": [
-        "Run the current source-normal four-kind stress with existing defaults: frame-1 identity and frames 2–1973 for 1,972 populated timing samples. Use unique output paths and the existing ring collector.",
+        "Reuse valid matching source-normal baseline rows and same-run coverage/resource evidence first. Reproduce only for a named identity/population invalidator or missing proof. When a run is needed, use the current verified defaults and ring collector; the historical defaults are frame-1 identity and 1,972 samples at frames 2–1973, not an invariant source-minute after cadence changes. Use unique outputs.",
         "Collect runtime roster/mask, gameplay clock, item override defaults, positive native output, pool/heap/resource witnesses and timing in the same run.",
         "Calculate WORK-H from each row, verify accounting identities, and report P50/P95/P99/max, FPS, 2/3/4/5+ VBlank counts and consecutive late presents. Keep cold transition/lifecycle windows separate and test them separately.",
         "Run the natural two-fighter regression using the required integrated profile when appropriate. Preserve current quality/audio/configuration; do not disable features for the baseline."
@@ -74,8 +74,8 @@
         "src/port/renderer_adapter_matrix.c"
       ],
       "implementation_steps": [
-        "Build one exclusive owner table from existing buckets and per-PC/caller data. Separate SRC/GCRA/SINT/SCPU nesting, intended idle, blocked service, GX backpressure and instrumentation.",
-        "Price successful packet replay preflight, packet miss/recording, static stage preparation, pose evaluation/publication, software float plus conversion callers, memory copying and filesystem events.",
+        "Reuse or derive one bounded exclusive owner table from applicable buckets and per-PC/caller data. Refresh only stale/missing attribution needed to choose the next complete work-removal slice. Separate SRC/GCRA/SINT/SCPU nesting, intended idle, blocked service, GX backpressure and instrumentation.",
+        "Inspect landed packet-precheck and fixed-particle checkpoints before pricing remaining replay/miss/record work, static stage preparation, pose/transform/publication, soft-float/conversions, copies and filesystem events. Do not redo a retired mechanism or assume an old profile describes the current path.",
         "For each high-value candidate record exact repeated work, frequency, immutable/dynamic inputs, native replacement cost, memory cost and the test that proves it was removed.",
         "Rank against both the P95-tail and cheapest-late-frame populations, then choose structural tasks that can plausibly address the measured deficit. Treat diagnostic work suppression only as an unqualified upper bound."
       ],

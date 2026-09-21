@@ -58,6 +58,23 @@ Request required subjective acceptance after measurable checks pass, with captur
 
 Distinguish implemented candidate, independently verified portion and accepted fix. Main owns remaining integration/verification even when a worker only implements. A shared blocker leaves dependent acceptance open, not independent correct work. Commit reproducible progress per `VERIFYING.md`; preserve explicit deferrals.
 
+## Candidate checkpoints versus bug closure
+
+A coherent implementation may be committed as `IMPLEMENTED_NOT_ACCEPTED` with
+its completed focused checks and exact remaining proof. The integrator owns the
+full batch verification; workers do not each run the umbrella. A context boundary
+must not discard work or invent acceptance. Known corruption stops unsafe tests;
+keep accepted artifacts isolated. `FIXED` still requires every condition above.
+
+Repeat a previously completed proof only for a named invalidator, missing required
+coverage or contradictory result. A changed linked layout invalidates timing even
+when a scoped source-semantic proof remains usable. Resolve recurring command or
+generator-preflight defects once at their owner; do not loop unchanged rebuilds.
+
+During the owner-directed P2-2p8 push, repair bugs that directly block the batch or
+its mandatory checks. Record unrelated findings without reassigning the performance
+lane; existing other-owner work and all unclosed product obligations remain intact.
+
 ## Priority and reporting
 
 Follow explicit owner priorities. Otherwise: freezes/crashes/corruption/nondeterminism/data loss → gameplay/input/collision/state/timing/flow → telegraphs/VFX/SFX/camera/HUD/results → cosmetic/acoustic mismatch → tooling defects invalidating that evidence. Prefer shared root causes within each class. Non-native rendering is always a failure, never an accepted compromise.
