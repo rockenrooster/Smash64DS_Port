@@ -104,8 +104,8 @@
 /* Full source cue set, including both forked tails of PublicPrologue/TitleWait.
  * Their complete schedules fit the 60 KiB slot at 12/8 kHz respectively;
  * other long voices use 16 kHz. Every cue passes the acoustic/cache checker. */
-#define NDS_AUDIO_FGM_PACK_BYTES 6969332u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x1e9afe37u
+#define NDS_AUDIO_FGM_PACK_BYTES 6968728u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x63e22da5u
 #define NDS_AUDIO_FGM_CACHE_BYTES 237568u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

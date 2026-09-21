@@ -286,7 +286,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # bytes; his FuraSleep 596 (six notes over 968 ticks) is rendered as a
     # 16 kHz body (44,532 bytes) so it fits the 60 KiB slot at all -- the
     # cache does not move.
-    ([int64]$metadata.resident_bytes -ne 6969332) -or
+    ([int64]$metadata.resident_bytes -ne 6968728) -or
     ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -334,7 +334,7 @@ if (([int]$metadata.format_version -ne 4) -or
     #    16 kHz so the 968-tick snore fits a cache slot).
     # -> 0x934c0fc8 on 2026-09-06: 44/66 render at 64 kHz, doubling their
     #    retained-sample proofs in the selector table (P2_CONTENT audit repin).
-    ($metadata.mapping_sha256_lo -ne '0x1e9afe37') -or
+    ($metadata.mapping_sha256_lo -ne '0x63e22da5') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -403,8 +403,15 @@ if (([int]$metadata.format_version -ne 4) -or
     # 6874344 -> 6877748 bytes, mapping 0x39ad8f2d -> 0x934c0fc8.
     # Full 150/463 fork schedules add 91,584 ROM bytes at 12/8 kHz,
     # fitting the unchanged cache; 106 fused programs now omit no fork voices.
+    # 2026-09-21: the AOT bake gained the resampler's own pitch ceiling
+    # (n_env.c:1489 clips rs_ratio at MAX_RATIO 1.99996, PR/abi.h:280-281),
+    # which no cue had before. Nine cues sustained rates the console cannot
+    # play -- Kirby's inhale 203 held 95,892 Hz against a 63,998 Hz ceiling --
+    # so their payloads and seven retained-sample extents changed; every cue
+    # under +1200 cents is bit-identical. 6969332 -> 6968728 bytes, mapping
+    # 0x1e9afe37 -> 0x63e22da5. Entry count and the cache are unmoved.
     ($metadata.pack_sha256 -ne
-        '91f14d1960c117b1d631d7c90f3d7683946d877674665e37db1939f8f94c7e9a')) {
+        '52514d45dea6f27ec74750b83c2cbb8a971ef46ddd2b9cf03b85a4e7c0571cef')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -491,9 +498,14 @@ foreach ($id in @(154,40,38,37,34,32,31)) {
 # floor: 44/66 play at 64 kHz at full volume (same law as Pikachu 226-229),
 # while 321 keeps its 16 kHz slot body at full volume and now clears the floor
 # on the greedy first pass after the scale-12 source-PCM repair (exact SNRs drift-fail).
+# 2026-09-21: 44 and 66 are two of the nine cues the resampler pitch ceiling
+# touches, so their encodes moved -- both UPWARD (23.670 -> 24.299 and
+# 18.044 -> 18.196), because a rate the console can actually play resamples
+# with less error than the uncapped one. 321 never exceeded the ceiling and is
+# unchanged.
 $encodePins = @{
-    44  = @{ rate = 64000; volume = 127; snr = 23.670; second = $false }
-    66  = @{ rate = 64000; volume = 127; snr = 18.044; second = $false }
+    44  = @{ rate = 64000; volume = 127; snr = 24.299; second = $false }
+    66  = @{ rate = 64000; volume = 127; snr = 18.196; second = $false }
     321 = @{ rate = 16000; volume = 127; snr = 14.591; second = $false }
 }
 foreach ($id in $encodePins.Keys) {
@@ -593,12 +605,22 @@ if (([int]$fgm85.ds_frequency_hz -ne 32000) -or
 # Escape/UnkGrind4/SamusJumpAerial/CharacterUnkZip10; target36 rewrites
 # modulator-1 offset in SamusUnkCharge. These are PCM hashes before IMA encoding,
 # so this gate is about source sequencer semantics rather than codec bytes.
+# 2026-09-21: all five moved when the bake gained the resampler pitch ceiling.
+# The cross-target logic these hashes guard is untouched -- the ceiling is one
+# clip on the final cents-to-rate step, downstream of every modulator target --
+# but 85 is the very cue whose first note asked for 90,510 Hz, so its rendered
+# PCM could not have stayed the same. Prior pins:
+#   11  c1405a6a9b1538f53abccd4b7c6d13d16cfae78a7c9139f72305810b3de4147c
+#   85  9634dc51a4e585abd4f9860aa43fbecdc833ef69d1d071aba44c4e3298c45b51
+#   92  a22d1068dd0328e1b7ccfd38bd9f467928ea6899ba9bdc52f0f9273a71263616
+#   251 02e4e4107151a69619eb17bd9f47af53f41d0ab16dcd4e7e1b4f5da6baef30d4
+#   639 b4081a1480bb03e9a0c1739777bebe112176d67c01bd7188962dc1016fa8532a
 $crossModPcm = @{
-    11  = 'c1405a6a9b1538f53abccd4b7c6d13d16cfae78a7c9139f72305810b3de4147c'
-    85  = '9634dc51a4e585abd4f9860aa43fbecdc833ef69d1d071aba44c4e3298c45b51'
-    92  = 'a22d1068dd0328e1b7ccfd38bd9f467928ea6899ba9bdc52f0f9273a71263616'
-    251 = '02e4e4107151a69619eb17bd9f47af53f41d0ab16dcd4e7e1b4f5da6baef30d4'
-    639 = 'b4081a1480bb03e9a0c1739777bebe112176d67c01bd7188962dc1016fa8532a'
+    11  = '7b0ba4d26a43ce31be5163c2dce7ffe59bf2a61c2f6ee84002a1c55018821184'
+    85  = '00a3733b82b0431a4cd0386365ba2092102a00f46df1098adbfc79b840c86574'
+    92  = 'ba98537310602256107f2fe5e6309ab10b5e322f99721151b2aad043ed73ac53'
+    251 = 'f0077ce02d9c28f7a3542e2fa3bc4a9322ef145f460592d845caa8582310cc50'
+    639 = 'b1d30ded0ac745be18db5e81b7da448170eb90f5617958082d9ce9ef6038ddc9'
 }
 foreach ($id in $crossModPcm.Keys) {
     $entry = $metadata.entries | Where-Object { [int]$_.id -eq [int]$id }
@@ -621,8 +643,12 @@ if (($null -eq $fgm249) -or
     ((@($fgm249.root_fork_programs) -join ',') -ne '683') -or
     (@($fgm249.omitted_fork_programs).Count -ne 0) -or
     ((@($fgm249.acoustic_oracle.voice_program_ids) -join ',') -ne '249,683') -or
+    # 2026-09-21 pitch ceiling: content only. Strategy, 32 kHz rate, 43,240
+    # samples, 21,624 IMA bytes, fork 683 and the 249,683 voice order are all
+    # unchanged; the prior hash was
+    # ce5695bd782346e162346433c421a54bb90f69de17dafd31350f5fdd40f7424f.
     ($fgm249.acoustic_oracle.aot_rendered_pcm_sha256 -ne
-        'ce5695bd782346e162346433c421a54bb90f69de17dafd31350f5fdd40f7424f')) {
+        'f605b044c731d8ca8cd71338996bf14c15c54a3fde47117522854a7d17051646')) {
     throw 'FGM 249 Samus SpecialHi lost its exact root+fork source-program render.'
 }
 # Samus full-charge release is a bounded one-shot, not a sequencer loop. The
@@ -638,12 +664,15 @@ if (($null -eq $fgm235) -or
     ([int]$fgm235.ds_frequency_hz -ne 32000) -or
     ([int]$fgm235.ds_sample_count -ne 115184) -or
     ([int]$fgm235.ima_adpcm_bytes -ne 57596) -or
+    # 2026-09-21 pitch ceiling: content only, extents unmoved. Prior IMA hash
+    # daeeecfb09369d3ee399c495bf0fda7da52f254b221a9850ea4c37d7e96d839d.
     ($fgm235.ima_adpcm_sha256 -ne
-        'daeeecfb09369d3ee399c495bf0fda7da52f254b221a9850ea4c37d7e96d839d') -or
+        '92098e348e373322c313496ae4a79b7be7faca17cda278d2296d428321fbb7f4') -or
     (@($fgm235.root_fork_programs).Count -ne 0) -or
     (@($fgm235.omitted_fork_programs).Count -ne 0) -or
+    # Prior PCM hash e1377a9e14b018d1acdb98015093a704d8550ffb8cbbda18a52336ebef4fdf55.
     ($fgm235.acoustic_oracle.aot_rendered_pcm_sha256 -ne
-        'e1377a9e14b018d1acdb98015093a704d8550ffb8cbbda18a52336ebef4fdf55') -or
+        '6cd892c84feb92fb34010fec223c238b6b1a16694c28c5f512fa56067401c8db') -or
     ([int]$fgm235.acoustic_oracle.duration_ticks -ne 626) -or
     ($fgm235.acoustic_oracle.source_custom_fx_dry_only -ne $true)) {
     throw 'FGM 235 Samus ShootF lost its complete bounded source-program render.'
