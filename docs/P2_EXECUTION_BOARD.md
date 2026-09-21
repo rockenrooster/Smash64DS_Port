@@ -51,25 +51,23 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
-Brief: `docs/p2/BUGS_REMAINING_DIAGNOSIS_2026-09-19.md`; existing work first.
-Owner accepted/removed the three crash reports; do not re-add. Checkpoint `aac91275fbf`.
-Owner ROM `00E87777…53BFBCE` untouched; lab baseline kept in builds/.
-Receipt: `artifacts/performance/2026-09-19_remaining-bugs.md`; interim playtest built.
-DONE 09-20/21 (receipt cont. 1-8 + stage rows): Thunder/PK Thunder, Jolt abort,
-**Results freezes (Link Claps, Luigi Win2)**, slot residency, entry ramp palettes,
-Link beam, Charge Shot, Egg Lay, CSS abort, arena freeze, 2P/3P pools + figatree
-heaps, Kirby star, Sector Z. **ARENA (<25 KiB) IS THE VFX CAUSE.**
-STAGES 09-21 (`663d2e3fd9d`): Yoshi's Island platforms (hw-compose projection
-unscaled -> near-clip), cards/sparkles (graded A5I3 arm), Mushroom Kingdom
-ledge (clamped window > max upload -> one period), **Castle board
-clip-through + ramps** (grounded path skipped mpcommon's wall tests; the
-sweep was an approximation -- now the source's).
-09-21b (`afa114b693f`): Ness self-hit FORCED, no crash; Saffron gate logic cycles,
-MODEL never moves; Kirby flurry draws; Fox hat copies then declines stage 2.
-Witness per-draw; halts flush. Next: gate anim, hat clause, Kirby colour/FGM
-203/Up-B, CSS load. Owed: Boundary/Latest.
-UNCOMMITTED: my hunks in staged Makefile/native_common/board. r13
-`builds/remaining-bugs-playtest-r13/` `DEBECA4A…`, P2_RUNTIME_OK. Roof/Zebes deferred.
+Owner accepted/removed the three crash reports; do not re-add.
+Receipt: `artifacts/performance/2026-09-19_remaining-bugs.md` -- it holds 09-19/21
+cont. 1-8 and the stage rows (`663d2e3fd9d`). **ARENA (<25 KiB) IS THE VFX CAUSE.**
+09-21c, brief now `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`.
+LANDED (`2bf791ecad8`): K05 (copied-blaster halt: file-315 root stripped, as Fox's
+already was), S02 (damage proc had NO wall/ceiling branch), P02 (ThunderAmp took
+the generic spark; script 0x74 now packed), K04 (both Kirby stars were #define NULL),
+Kirby muzzle flash off / pistol kept. r21 `builds/remaining-bugs-playtest-r21/`
+`A9324F32…`, P2_RUNTIME_OK, audio+particle pins exact.
+PARTIAL P03: producer chain fixed (3 defects, see [[ll-symbol-address-is-the-offset]]);
+effect reaches the renderer and DECLINES -- no native bake for the ball. Next: its roots.
+NEXT, none seam-sized: M03/M04 resumable CSS loader; L01/K03/P01 effect placement;
+P04/K02/J01 material audit; R01/R02/R03/K06 Results matrix + demo-script model-part
+census; S04 gate anim -> native packet; owner's new Yoshi shield-egg row.
+Unverified by me, owner's to accept: S02's ramp case (no scripted launch reached a
+ramp), P02's burst (thunder head destroyed before self-hit), K04's lose-copy sibling.
+Owed: Boundary/Latest. Roof/Zebes deferred.
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`…_p2-2p8-gate-decision/`):
 ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES
