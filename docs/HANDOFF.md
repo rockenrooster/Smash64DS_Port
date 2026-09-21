@@ -31,3 +31,26 @@ Keep unavailable helpers and denied Git operations recorded with their retry
 condition; use permitted serial implementation instead of repeating setup.
 Preserve owner edits and qualified artifacts. A documentation change does not
 repair a transport failure, authorize denied access or establish a game PASS.
+
+## Standing lesson from 2026-09-21
+
+Two rows in that session were "fixed" against the wrong object, because the
+symptom was matched instead of the producer. The owner reported a pistol-shot
+effect; the model was removed (wrong), then the blaster glow was suppressed at
+its muzzle and then at all seven of its callbacks with a measured zero spawn
+count (also wrong -- the flash survived). Each attempt was cheap to build and
+expensive to disprove, because disproving it costs an owner playtest.
+
+Before changing a producer, name it from the running build. For an effect that
+is the kind dispatcher and the colour-animation entry under the exact status,
+not the maker whose name matches the words in the report. The counters exist;
+a probe that enumerates is worth more than two that confirm a guess.
+
+The same session also found three dead effects sharing one cause, recorded in
+the receipt: BattleShip's `ll*` reloc symbols are linker-absolute, so the
+symbol's ADDRESS is the offset. A `static uintptr_t` satisfies the compiler and
+makes every derived base garbage; the registry keys on `&sym`, so a static can
+never resolve; and a descriptor whose offsets address a different file is
+span-rejected and deferred with `proc_display` cleared, after which its maker
+returns a GObj with a NULL DObj and faults. Check those three before concluding
+an effect is a rendering problem.

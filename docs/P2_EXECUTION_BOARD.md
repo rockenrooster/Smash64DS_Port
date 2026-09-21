@@ -51,23 +51,25 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
+Brief `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`; receipt
+`artifacts/performance/2026-09-19_remaining-bugs.md` holds every finding below.
 Owner accepted/removed the three crash reports; do not re-add.
-Receipt: `artifacts/performance/2026-09-19_remaining-bugs.md` -- it holds 09-19/21
-cont. 1-8 and the stage rows (`663d2e3fd9d`). **ARENA (<25 KiB) IS THE VFX CAUSE.**
-09-21c, brief now `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`.
-LANDED (`2bf791ecad8`): K05 (copied-blaster halt: file-315 root stripped, as Fox's
-already was), S02 (damage proc had NO wall/ceiling branch), P02 (ThunderAmp took
-the generic spark; script 0x74 now packed), K04 (both Kirby stars were #define NULL),
-Kirby muzzle flash off / pistol kept. r21 `builds/remaining-bugs-playtest-r21/`
-`A9324F32…`, P2_RUNTIME_OK, audio+particle pins exact.
-PARTIAL P03: producer chain fixed (3 defects, see [[ll-symbol-address-is-the-offset]]);
-effect reaches the renderer and DECLINES -- no native bake for the ball. Next: its roots.
-NEXT, none seam-sized: M03/M04 resumable CSS loader; L01/K03/P01 effect placement;
-P04/K02/J01 material audit; R01/R02/R03/K06 Results matrix + demo-script model-part
-census; S04 gate anim -> native packet; owner's new Yoshi shield-egg row.
-Unverified by me, owner's to accept: S02's ramp case (no scripted launch reached a
-ramp), P02's burst (thunder head destroyed before self-hit), K04's lose-copy sibling.
-Owed: Boundary/Latest. Roof/Zebes deferred.
+LANDED (`8669308b56e`): K05 blaster halt, S02 damage proc had no wall/ceiling branch,
+P02 ThunderAmp took the generic spark, K04 both Kirby stars were #define NULL.
+r22 `builds/remaining-bugs-playtest-r22/` `71561552…`, P2_RUNTIME_OK.
+PARTIAL P03: producer chain fixed; the effect reaches the renderer and DECLINES --
+no native bake.
+NEXT (findings in the receipt): M03/M04, L01/K03/P01, P04/K02/J01, R01-R03/K06,
+S04, Yoshi egg. None seam-sized.
+OWNER r22: Castle ramps FIXED; shield intermittent, NOT my regression. OPEN: the
+flash over Kirby firing the copied blaster is neither the pistol model nor
+efManagerFoxBlasterGlowMakeEffect -- r22 suppresses all seven of its callbacks (0
+spawns) and it survived. Enumerate ftParamMakeEffect kinds and the colanim entry in
+status 235/236; do not guess a third maker.
+HEAP: ifCommonSetMaxNumGObj latches the GObj cap under 25,600 free, permanently.
+Kirby measures 23,096-23,204 vs Mario/Fox 95,068; ~2,500 bytes clears it, and that
+is the likely cause of both the intermittent shield and the invisible spit-out star.
+Unverified: P02 burst, K04 lose-copy. Owed: Boundary/Latest. Roof/Zebes deferred.
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`…_p2-2p8-gate-decision/`):
 ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES

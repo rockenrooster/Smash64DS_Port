@@ -18,21 +18,21 @@ Main Menus:
     -delay between cursor hover and 3d fighter preview rendering. **Same cause: the 13-tic dwell debounces a BLOCKING load. 70 tics waited per visit.**
 
 -Yoshi:
-    -Yoshi's guard/shield (egg) is invisible 
+    -Yoshi's guard/shield (egg) is invisible **Owner: intermittent. Heap latch under 25,600 free caps GObjs mid-match.**
 -Link:
     -slash damage VFX playing at incorrect locations.
 -Pikachu
-    -neutral b attack VFX that walks terrain still has hard edges.
-    -down B effect doesn't render all related VFX, missing blue exp on pikachu.
-    -Pokeball Spawn Intro not playing VFX.
+    -neutral b attack VFX that walks terrain still has hard edges. **TLUT is a luminance ramp with 1-bit alpha: intensity IS the coverage.**
+    -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
+    -Pokeball Spawn Intro not playing VFX. **3 producer defects fixed; effect builds, renderer declines it: no native bake.**
     -face color is slightly different from body color. (lighting difference???)
 -Samus
 -Kirby
-    -Grab attack Up/down slam doesn't work correctly, victim teleports to another location (world origin???). 
+    -Grab attack Up/down slam doesn't work correctly, victim teleports to another location (world origin???). **Kirby's own ThrowF status restored; it was aliased to the common one.**
     -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...)
     -Neutral A punch flurry VFX not drawing at correct locations.
-    -Kirby neutral B , then A attack to spit out fighter, Star VFX is invisible.
-    -Kirby fox hat not working correctly. Fox hat visible but, pistol shot crashes.
+    -Kirby neutral B , then A attack to spit out fighter, Star VFX is invisible. **Both star makers were #define NULL; restored. Constructs OK, likely GObj-starved.**
+    -Kirby fox hat not working correctly. Fox hat visible but, pistol shot crashes. **Crash was a halt on a declined draw; fixed. NEW: a flash over Kirby, cause unknown.**
     -Kirby has a wierd pose on results screen.
 -Jigglypuff
     -face color is slightly different from body color. (lighting difference???)
@@ -45,7 +45,6 @@ Main Menus:
 Stages:
 -peaches castle: 
     -Foreground castle roof renders ALL geometry now but the texture is missing on the now visible geometry. A continuous tiled roof surface is almost achieved. **Owner Deferred**
-    -blue upper side ramps collisions not working properly when fighter is in a knocked back falling state. Still not fixed
 -Zebes: Acid plane Color is accurate now but texture blending are all visibly too HARD. Edges are too defined instead of a gradient/smooth transistion. Stage lights on the ground floor have a flat/hard transparency (hard upsidown trapezoid shape) instead of looking like a real light source with a gradient that tapers to fully transparent towards the top. **Owner Deferred**
 -Yoshi's Island: 
 -SectorZ:
