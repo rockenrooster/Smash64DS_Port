@@ -2345,64 +2345,238 @@ s32 mpCollisionGetEdgeRightDLineID(s32 line_id)
     return ndsMPGetTopologyEdgeLineID(line_id, FALSE);
 }
 
-static sb32 ndsStageMPSegmentIntersection2D(const Vec3f *a0,
-                                            const Vec3f *a1,
-                                            const Vec3f *b0,
-                                            const Vec3f *b1,
-                                            f32 *out_t,
-                                            f32 *out_u,
-                                            f32 *out_x,
-                                            f32 *out_y)
+/* THE WALL SWEEP IS THE SOURCE'S, NOT AN APPROXIMATION OF IT.
+ *
+ * Until 2026-09-21 this was a generic two-sided segment intersection against
+ * each wall's first and last vertex. Four things the source does were missing,
+ * and each one is a playable defect on Peach's Castle (BUGS.md, stage rows):
+ *
+ *   - the "Same" tests ignored the yakumono translation, so a wall that lives
+ *     on a positioned DObj -- the Castle's two blue side ramps are yakumono 3
+ *     and 4 -- was tested at its LOCAL coordinates. mpProcessUpdateMain only
+ *     runs the "Diff" form on the first of its sub-steps, so a fighter in
+ *     knockback (more than 250 units a tic, several sub-steps) flew through
+ *     the ramps on every sub-step after the first;
+ *   - a slanted wall reported the normal of a vertical one, (+-1, 0);
+ *   - a wall was hit from either side, where the source only tests the side
+ *     the wall faces (an LWall when moving right, an RWall when moving left);
+ *   - a start point exactly ON the wall missed, because a 0..1 parameter test
+ *     has no tolerance and the source's flat test has 0.001.
+ *
+ * Transcribed from mpcollision.c: mpCollisionCheckLRSurfaceFlat (2078),
+ * mpCollisionCheck{L,R}WallSurfaceTilt (2296 / 1790), mpCollisionGetLRAngle
+ * (1755) and the four line sweeps (2138 / 2422 / 1597 / 1916). The one liberty
+ * is the range reject: coll_pos_{prev,next} are s16, and for an integer c and a
+ * real v, c < v iff c < ceil(v) and c > v iff c > floor(v), so the two bounds
+ * are rounded once a group and the per-line test is an integer compare rather
+ * than two soft-float ones. */
+static sb32 __attribute__((noinline))
+ndsMPCheckLRSurfaceFlat(s32 v1x, s32 v1y, s32 v2y, f32 vpdist_x, f32 vpdist_y,
+                        f32 vtdist_x, f32 vtdist_y, f32 *hit_x, f32 *hit_y)
 {
-    f32 rx;
-    f32 ry;
-    f32 sx;
-    f32 sy;
-    f32 qpx;
-    f32 qpy;
-    f32 denom;
-    f32 t;
-    f32 u;
+    f32 ddist_x = vpdist_x - vtdist_x;
+    f32 vddist_x = (f32)v1x - vpdist_x;
+    f32 ddist_y;
+    f32 cross_y;
+    s32 vnear;
+    s32 vfar;
 
-    if ((a0 == NULL) || (a1 == NULL) || (b0 == NULL) || (b1 == NULL))
+    if (ddist_x > 0.0F)
+    {
+        if ((((f32)v1x - 0.001F) > vpdist_x) || (vtdist_x >= (f32)v1x))
+        {
+            return FALSE;
+        }
+    }
+    else if ((((f32)v1x + 0.001F) < vpdist_x) || (vtdist_x <= (f32)v1x))
     {
         return FALSE;
     }
-    rx = a1->x - a0->x;
-    ry = a1->y - a0->y;
-    sx = b1->x - b0->x;
-    sy = b1->y - b0->y;
-    denom = (rx * sy) - (ry * sx);
-    if (fabsf(denom) < 0.0001F)
+    ddist_y = vpdist_y - vtdist_y;
+    if ((v2y - v1y) < 0)
+    {
+        vnear = v2y;
+        vfar = v1y;
+    }
+    else
+    {
+        vfar = v2y;
+        vnear = v1y;
+    }
+    if (ddist_y > 0.0F)
+    {
+        if (((f32)vfar < vtdist_y) || (vpdist_y < (f32)vnear))
+        {
+            return FALSE;
+        }
+    }
+    else if (((f32)vfar < vpdist_y) || (vtdist_y < (f32)vnear))
     {
         return FALSE;
     }
-    qpx = b0->x - a0->x;
-    qpy = b0->y - a0->y;
-    t = ((qpx * sy) - (qpy * sx)) / denom;
-    u = ((qpx * ry) - (qpy * rx)) / denom;
-    if ((t < 0.0F) || (t > 1.0F) || (u < 0.0F) || (u > 1.0F))
+    cross_y = ((vddist_x / ddist_x) * ddist_y) + vpdist_y;
+    if ((cross_y < (f32)vnear) || (cross_y > (f32)vfar))
     {
         return FALSE;
     }
-    if (out_t != NULL)
-    {
-        *out_t = t;
-    }
-    if (out_u != NULL)
-    {
-        *out_u = u;
-    }
-    if (out_x != NULL)
-    {
-        *out_x = a0->x + (rx * t);
-    }
-    if (out_y != NULL)
-    {
-        *out_y = a0->y + (ry * t);
-    }
+    *hit_x = (f32)v1x;
+    *hit_y = cross_y;
     return TRUE;
 }
+
+/* lr: -1 LWall, +1 RWall. The two source functions differ only in which side
+ * of the line counts as "through it". */
+static sb32 __attribute__((noinline))
+ndsMPCheckWallSurfaceTilt(s32 v1x, s32 v1y, s32 v2x, s32 v2y, f32 d1x, f32 d1y,
+                          f32 d2x, f32 d2y, s32 lr, f32 *dfx, f32 *dfy)
+{
+    s32 vdist_x = v2x - v1x;
+    s32 vdist_y = v2y - v1y;
+    f32 ddist_x = d1x - d2x;
+    f32 ddist_y;
+    s32 vnearx;
+    s32 vfarx;
+    s32 vneary;
+    s32 vfary;
+    f32 end_side;
+    f32 start_x;
+    f32 start_side;
+    f32 vddist_x;
+    f32 vddist_y;
+    f32 numer;
+    f32 scale;
+    f32 vddiv;
+    f32 vddistdiv;
+    f32 vdscale;
+
+    if (vdist_x < 0)
+    {
+        vnearx = v2x;
+        vfarx = v1x;
+    }
+    else
+    {
+        vfarx = v2x;
+        vnearx = v1x;
+    }
+    if (ddist_x > 0.0F)
+    {
+        if ((((f32)vfarx + 0.001F) < d2x) || (d1x < ((f32)vnearx - 0.001F)))
+        {
+            return FALSE;
+        }
+    }
+    else if ((((f32)vfarx + 0.001F) < d1x) || (d2x < ((f32)vnearx - 0.001F)))
+    {
+        return FALSE;
+    }
+    ddist_y = d1y - d2y;
+    if (vdist_y < 0)
+    {
+        vneary = v2y;
+        vfary = v1y;
+    }
+    else
+    {
+        vfary = v2y;
+        vneary = v1y;
+    }
+    if (ddist_y > 0.0F)
+    {
+        if (((f32)vfary < d2y) || (d1y < (f32)vneary))
+        {
+            return FALSE;
+        }
+    }
+    else if (((f32)vfary < d1y) || (d2y < (f32)vneary))
+    {
+        return FALSE;
+    }
+    end_side = d2x - ((f32)v1x +
+        (((d2y - (f32)v1y) / (f32)(v2y - v1y)) * (f32)vdist_x));
+    if ((lr < 0) ? (end_side < 0.001F) : (end_side > -0.001F))
+    {
+        return FALSE;
+    }
+    start_x = (f32)v1x + (((d1y - (f32)v1y) / (f32)vdist_y) * (f32)vdist_x);
+    start_side = d1x - start_x;
+    if ((lr < 0) ? (start_side > -0.001F) : (start_side < 0.001F))
+    {
+        if (((lr < 0) ? (start_side < 0.001F) : (start_side > -0.001F)) &&
+            (d1y <= (f32)vfary) && ((f32)vneary <= d1y))
+        {
+            *dfx = start_x;
+            *dfy = d1y;
+            return TRUE;
+        }
+        return FALSE;
+    }
+    vddist_x = (f32)v1x - d1x;
+    vddist_y = (f32)v1y - d1y;
+    numer = (ddist_y * vddist_x) - (ddist_x * vddist_y);
+    scale = ((f32)vdist_y * ddist_x) - ((f32)vdist_x * ddist_y);
+    vddiv = numer / scale;
+    if (vddiv < 0.0F)
+    {
+        if (vddiv < -0.001F)
+        {
+            return FALSE;
+        }
+        numer = 0.0F;
+    }
+    else if (vddiv > 1.0F)
+    {
+        if (vddiv > 1.001F)
+        {
+            return FALSE;
+        }
+        numer = scale;
+    }
+    vddistdiv = (((f32)vdist_x * vddist_y) - ((f32)vdist_y * vddist_x)) / scale;
+    if ((vddistdiv < -0.001F) || (vddistdiv > 1.001F))
+    {
+        return FALSE;
+    }
+    vdscale = 1.0F / scale;
+    *dfx = (f32)v1x + ((numer * (f32)vdist_x) * vdscale);
+    *dfy = (f32)v1y + ((numer * (f32)vdist_y) * vdscale);
+    return TRUE;
+}
+
+static void ndsMPGetLRAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x, s32 v2y,
+                            s32 lr)
+{
+    f32 py;
+    f32 inv_len;
+
+    angle->z = 0.0F;
+    if ((v2x == v1x) || (v2y == v1y))
+    {
+        if (v2x != v1x)
+        {
+            gNdsStageCollisionLoopDivisionGuardCount++;
+        }
+        angle->x = (f32)lr;
+        angle->y = 0.0F;
+        return;
+    }
+    py = -((f32)(v2x - v1x) / (f32)(v2y - v1y));
+    inv_len = 1.0F / sqrtf((py * py) + 1.0F);
+    if (lr < 0)
+    {
+        angle->x = -inv_len;
+        angle->y = -py * inv_len;
+    }
+    else
+    {
+        angle->x = inv_len;
+        angle->y = py * inv_len;
+    }
+}
+
+volatile u32 gNdsMPWallSweepCalls;
+volatile u32 gNdsMPWallSweepSegmentTests;
+volatile u32 gNdsMPWallSweepHits;
 
 /* ud: +1 floor (crossed downward), -1 ceiling (crossed upward). */
 static sb32 ndsMPFCSegmentCrosses(const Vec3f *position,
@@ -2424,7 +2598,7 @@ static sb32 ndsMPFCSegmentCrosses(const Vec3f *position,
         TRUE : FALSE;
 }
 
-static sb32 NDS_R2_ITCM_PACK2_CODE
+static sb32
 ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                                                Vec3f *translate,
                                                Vec3f *ga_last,
@@ -2436,23 +2610,37 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
     MPLineInfo *line_info;
+    MPVertexLinks *links;
+    MPVertexArray *ids;
+    MPVertexPosContainer *verts;
     u32 yakumono_count;
     u32 i;
-    f32 best_t = 3.402823466e+38F;
-    s32 best_line = -1;
-    Vec3f best_pos = { 0.0F, 0.0F, 0.0F };
+    s32 lr = (line_kind == nMPLineKindLWall) ? -1 : +1;
+    f32 line_project_pos = 3.402823466e+38F;
+    sb32 found = FALSE;
 
     if ((position == NULL) || (translate == NULL) ||
-        (line_kind >= nMPLineKindEnumCount) ||
-        (ndsStageCollisionLoopGeometryReady() == FALSE))
+        ((line_kind != nMPLineKindLWall) && (line_kind != nMPLineKindRWall)) ||
+        (ndsStageCollisionLoopGeometryReady() == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL))
     {
         return FALSE;
     }
-    if (position->x == translate->x)
+    if ((sNdsMPTopologyGeometry != geometry) ||
+        (gMPCollisionVertexInfo == NULL))
     {
-        return FALSE;
+        ndsMPCollisionEnsureLineGroups();
+        if ((sNdsMPTopologyGeometry != geometry) ||
+            (gMPCollisionVertexInfo == NULL))
+        {
+            return FALSE;
+        }
     }
+    gNdsMPWallSweepCalls++;
     line_info = geometry->line_info;
+    links = geometry->vertex_links;
+    ids = geometry->vertex_id;
+    verts = geometry->vertex_data;
     yakumono_count = ndsMPGeometryYakumonoCount(geometry);
     if (yakumono_count > 64u)
     {
@@ -2463,10 +2651,22 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
         NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
         s32 first = (s32)ndsMPLineInfoGroupID(info, line_kind);
         s32 count = (s32)ndsMPLineInfoLineCount(info, line_kind);
-        s32 end;
+        u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        DObj *yakumono_dobj;
+        f32 vedge_x = 0.0F;
+        f32 vedge_y = 0.0F;
+        f32 dynamic_x = 0.0F;
+        f32 vpdist_x = position->x;
+        f32 vpdist_y = position->y;
+        f32 vtdist_x = translate->x;
+        f32 vtdist_y = translate->y;
+        f32 vdist1;
+        f32 vdist2;
+        s32 range_lo;
+        s32 range_hi;
         s32 line_id;
 
-        if (count <= 0)
+        if ((count <= 0) || (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
         {
             continue;
         }
@@ -2474,86 +2674,178 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
         {
             count = 4096;
         }
-        end = first + count;
-        for (line_id = first; line_id < end; line_id++)
+        yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+        if ((yakumono_dobj == NULL) ||
+            (yakumono_dobj->user_data.s >= nMPYakumonoStatusOff))
         {
-            Vec3f a;
-            Vec3f b;
-            Vec3f sweep_position;
-            Vec3f sweep_translate;
-            f32 vedge_x = 0.0F;
-            f32 vedge_y = 0.0F;
-            u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
-            DObj *yakumono_dobj = NULL;
-            f32 t;
-            f32 u;
-            f32 hit_x;
-            f32 hit_y;
+            continue;
+        }
+        if ((yakumono_dobj->anim_joint.event32 != NULL) ||
+            (yakumono_dobj->user_data.s != nMPYakumonoStatusNone))
+        {
+            vedge_x = yakumono_dobj->translate.vec.f.x;
+            vedge_y = yakumono_dobj->translate.vec.f.y;
+            vpdist_x -= vedge_x;
+            vpdist_y -= vedge_y;
+            vtdist_x -= vedge_x;
+            vtdist_y -= vedge_y;
+            if ((is_diff != FALSE) && (gMPCollisionSpeeds != NULL))
+            {
+                dynamic_x = gMPCollisionSpeeds[yakumono_id].x;
+                vpdist_x += dynamic_x;
+                vpdist_y += gMPCollisionSpeeds[yakumono_id].y;
+            }
+        }
+        if (vpdist_x < vtdist_x)
+        {
+            vdist1 = vpdist_x - 0.001F;
+            vdist2 = vtdist_x + 0.001F;
+        }
+        else
+        {
+            vdist1 = vtdist_x - 0.001F;
+            vdist2 = vpdist_x + 0.001F;
+        }
+        range_lo = (s32)vdist1;
+        if ((f32)range_lo < vdist1)
+        {
+            range_lo++;
+        }
+        range_hi = (s32)vdist2;
+        if ((f32)range_hi > vdist2)
+        {
+            range_hi--;
+        }
+        for (line_id = first; line_id < (first + count); line_id++)
+        {
+            const MPVertexInfo *vinfo;
+            u32 vertex_first;
+            u32 vertex_count;
+            u32 vertex;
+            s32 vpos_x;
+            s32 vpos_y;
 
-            sweep_position = *position;
-            sweep_translate = *translate;
-            if ((is_diff != FALSE) &&
-                (gMPCollisionYakumonoDObjs != NULL) &&
-                (gMPCollisionSpeeds != NULL) &&
-                (yakumono_id < NDS_MP_YAKUMONO_DOBJ_SLOTS))
+            if (line_id >= gMPCollisionLinesNum)
             {
-                yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+                break;
             }
-            if ((yakumono_dobj != NULL) &&
-                (yakumono_dobj->user_data.s < nMPYakumonoStatusOff) &&
-                ((yakumono_dobj->anim_joint.event32 != NULL) ||
-                 (yakumono_dobj->user_data.s != nMPYakumonoStatusNone)))
+            vinfo = &gMPCollisionVertexInfo->vertex_info[line_id];
+            /* Lines are ordered by x within a group -- ascending for LWalls,
+             * descending for RWalls -- so the far-side miss ends the group. */
+            if (lr < 0)
             {
-                vedge_x = yakumono_dobj->translate.vec.f.x;
-                vedge_y = yakumono_dobj->translate.vec.f.y;
-                sweep_position.x =
-                    (position->x - vedge_x) + gMPCollisionSpeeds[yakumono_id].x;
-                sweep_position.y =
-                    (position->y - vedge_y) + gMPCollisionSpeeds[yakumono_id].y;
-                sweep_translate.x = translate->x - vedge_x;
-                sweep_translate.y = translate->y - vedge_y;
+                if ((s32)vinfo->coll_pos_next < range_lo)
+                {
+                    continue;
+                }
+                if ((s32)vinfo->coll_pos_prev > range_hi)
+                {
+                    break;
+                }
             }
-            if ((ndsMPFindLineEndpoints(line_id, &a, &b, NULL, NULL) ==
-                    FALSE) ||
-                (ndsStageMPSegmentIntersection2D(&sweep_position,
-                    &sweep_translate, &a, &b, &t, &u, &hit_x, &hit_y) ==
-                    FALSE))
+            else
             {
+                if ((s32)vinfo->coll_pos_prev > range_hi)
+                {
+                    continue;
+                }
+                if ((s32)vinfo->coll_pos_next < range_lo)
+                {
+                    break;
+                }
+            }
+            vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
+            vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
+            if ((vertex_count < 2u) || (vertex_count > 128u))
+            {
+                gNdsStageCollisionLoopBadVertexCount++;
                 continue;
             }
-            if (t < best_t)
+            vpos_x = ndsMPVertexX(verts, ndsMPVertexID(ids, vertex_first));
+            vpos_y = ndsMPVertexY(verts, ndsMPVertexID(ids, vertex_first));
+            for (vertex = vertex_first;
+                 vertex < (vertex_first + vertex_count - 1u); vertex++)
             {
-                best_t = t;
-                best_line = line_id;
-                best_pos.x = hit_x + vedge_x;
-                best_pos.y = hit_y + vedge_y;
-                best_pos.z = 0.0F;
+                s32 prev_x = vpos_x;
+                s32 prev_y = vpos_y;
+                u32 next_id = ndsMPVertexID(ids, vertex + 1u);
+                f32 hit_x;
+                f32 hit_y;
+                f32 project;
+                sb32 flat;
+
+                vpos_x = ndsMPVertexX(verts, next_id);
+                vpos_y = ndsMPVertexY(verts, next_id);
+                flat = (prev_x == vpos_x) ? TRUE : FALSE;
+                gNdsMPWallSweepSegmentTests++;
+                if (flat != FALSE)
+                {
+                    if (((lr < 0) ? (vtdist_x > vpdist_x) :
+                                    (vtdist_x < vpdist_x)) == FALSE)
+                    {
+                        continue;
+                    }
+                    if (ndsMPCheckLRSurfaceFlat(prev_x, prev_y, vpos_y,
+                            vpdist_x, vpdist_y, vtdist_x, vtdist_y,
+                            &hit_x, &hit_y) == FALSE)
+                    {
+                        continue;
+                    }
+                }
+                else if (ndsMPCheckWallSurfaceTilt(prev_x, prev_y, vpos_x,
+                             vpos_y, vpdist_x, vpdist_y, vtdist_x, vtdist_y,
+                             lr, &hit_x, &hit_y) == FALSE)
+                {
+                    continue;
+                }
+                project = hit_x - (vpdist_x - dynamic_x);
+                if (project < 0.0F)
+                {
+                    project = -project;
+                }
+                if (line_project_pos <= project)
+                {
+                    continue;
+                }
+                if (ga_last != NULL)
+                {
+                    ga_last->x = hit_x + vedge_x;
+                    ga_last->y = hit_y + vedge_y;
+                    ga_last->z = 0.0F;
+                }
+                if (stand_line_id != NULL)
+                {
+                    *stand_line_id = line_id;
+                }
+                if (angle != NULL)
+                {
+                    if (flat != FALSE)
+                    {
+                        angle->x = (f32)lr;
+                        angle->y = 0.0F;
+                        angle->z = 0.0F;
+                    }
+                    else
+                    {
+                        ndsMPGetLRAngle(angle, prev_x, prev_y, vpos_x, vpos_y,
+                                        lr);
+                    }
+                }
+                if (stand_coll_flags != NULL)
+                {
+                    *stand_coll_flags = ndsMPVertexFlags(
+                        verts, ndsMPVertexID(ids, vertex));
+                }
+                line_project_pos = project;
+                found = TRUE;
             }
         }
     }
-    if (best_line < 0)
+    if (found != FALSE)
     {
-        return FALSE;
+        gNdsMPWallSweepHits++;
     }
-    if (ga_last != NULL)
-    {
-        *ga_last = best_pos;
-    }
-    if (stand_line_id != NULL)
-    {
-        *stand_line_id = best_line;
-    }
-    if (stand_coll_flags != NULL)
-    {
-        *stand_coll_flags = 0u;
-    }
-    if (angle != NULL)
-    {
-        angle->x = (line_kind == nMPLineKindLWall) ? -1.0F : 1.0F;
-        angle->y = 0.0F;
-        angle->z = 0.0F;
-    }
-    return TRUE;
+    return found;
 }
 
 sb32 mpCollisionCheckLWallLineCollisionSame(Vec3f *position,
@@ -2644,39 +2936,114 @@ sb32 mpCollisionCheckRWallLineCollisionDiff(Vec3f *position,
                                               nMPLineKindRWall, TRUE);
 }
 
+/* mpcollision.c:315 mpCollisionGetLRCommon. The earlier form interpolated
+ * between a wall's first and last vertex and always answered (+-1, 0); a
+ * multi-segment wall and a slanted one both need the segment that spans the
+ * object's y, and the source's 0.001 tolerance at the two ends. */
 static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
                                  f32 *dist, u32 *flags, Vec3f *angle,
                                  u32 line_kind)
 {
-    Vec3f a;
-    Vec3f b;
+    MPGeometryData *geometry = gMPCollisionGeometry;
     Vec3f object_local;
-    f32 min_y;
-    f32 max_y;
+    u32 vertex_first;
+    u32 vertex_count;
+    u32 vertex;
+    u32 segment;
+    s32 v1x;
+    s32 v1y;
+    s32 v2x;
+    s32 v2y;
+    f32 vnear;
+    f32 vfar;
+    f32 object_y;
     f32 wall_x;
 
     if ((object_pos == NULL) ||
         (ndsMPGetLineKindForLineID(line_id) != (s32)line_kind) ||
-        (ndsMPFindLineEndpoints(line_id, &a, &b, flags, NULL) == FALSE) ||
         (ndsMPLinePositionWorldToLocal(line_id, object_pos, &object_local) ==
          FALSE))
     {
         return FALSE;
     }
-    min_y = (a.y < b.y) ? a.y : b.y;
-    max_y = (a.y > b.y) ? a.y : b.y;
-    if ((object_local.y < min_y) || (object_local.y > max_y))
+    vertex_first = ndsMPVertexLinkFirst(geometry->vertex_links, (u32)line_id);
+    vertex_count = ndsMPVertexLinkCount(geometry->vertex_links, (u32)line_id);
+    if ((vertex_count < 2u) || (vertex_count > 128u))
     {
+        gNdsStageCollisionLoopBadVertexCount++;
         return FALSE;
     }
-    if (fabsf(b.y - a.y) > 0.01F)
+    v1y = ndsMPVertexY(geometry->vertex_data,
+                       ndsMPVertexID(geometry->vertex_id, vertex_first));
+    v2y = ndsMPVertexY(geometry->vertex_data,
+                       ndsMPVertexID(geometry->vertex_id,
+                                     vertex_first + vertex_count - 1u));
+    if (v2y < v1y)
     {
-        wall_x = a.x + (((object_local.y - a.y) / (b.y - a.y)) *
-            (b.x - a.x));
+        vfar = (f32)v1y;
+        vnear = (f32)v2y;
     }
     else
     {
-        wall_x = (a.x + b.x) * 0.5F;
+        vfar = (f32)v2y;
+        vnear = (f32)v1y;
+    }
+    object_y = object_local.y;
+    if ((object_y <= (vnear - 0.001F)) || ((vfar + 0.001F) <= object_y))
+    {
+        return FALSE;
+    }
+    if (object_y <= vnear)
+    {
+        object_y = vnear;
+    }
+    else if (vfar <= object_y)
+    {
+        object_y = vfar;
+    }
+    segment = vertex_first;
+    if (vertex_count != 2u)
+    {
+        for (vertex = vertex_first;
+             vertex < (vertex_first + vertex_count - 1u); vertex++)
+        {
+            s32 y1 = ndsMPVertexY(geometry->vertex_data,
+                                  ndsMPVertexID(geometry->vertex_id, vertex));
+            s32 y2 = ndsMPVertexY(geometry->vertex_data,
+                                  ndsMPVertexID(geometry->vertex_id,
+                                                vertex + 1u));
+
+            segment = vertex;
+            if ((((f32)y1 <= object_y) && (object_y <= (f32)y2)) ||
+                (((f32)y2 <= object_y) && (object_y <= (f32)y1)))
+            {
+                break;
+            }
+        }
+    }
+    v1x = ndsMPVertexX(geometry->vertex_data,
+                       ndsMPVertexID(geometry->vertex_id, segment));
+    v1y = ndsMPVertexY(geometry->vertex_data,
+                       ndsMPVertexID(geometry->vertex_id, segment));
+    v2x = ndsMPVertexX(geometry->vertex_data,
+                       ndsMPVertexID(geometry->vertex_id, segment + 1u));
+    v2y = ndsMPVertexY(geometry->vertex_data,
+                       ndsMPVertexID(geometry->vertex_id, segment + 1u));
+    if (flags != NULL)
+    {
+        *flags = ndsMPVertexFlags(geometry->vertex_data,
+                                  ndsMPVertexID(geometry->vertex_id, segment));
+    }
+    if (v2y == v1y)
+    {
+        gNdsStageCollisionLoopDivisionGuardCount++;
+        wall_x = ((f32)v1x + (f32)v2x) * 0.5F;
+    }
+    else
+    {
+        /* mpCollisionGetLineDistanceLR */
+        wall_x = (f32)v1x + (((object_y - (f32)v1y) /
+            ((f32)v2y - (f32)v1y)) * ((f32)v2x - (f32)v1x));
     }
     if (dist != NULL)
     {
@@ -2684,9 +3051,8 @@ static sb32 ndsMPGetLRCommonWall(s32 line_id, Vec3f *object_pos,
     }
     if (angle != NULL)
     {
-        angle->x = (line_kind == nMPLineKindLWall) ? -1.0F : 1.0F;
-        angle->y = 0.0F;
-        angle->z = 0.0F;
+        ndsMPGetLRAngle(angle, v1x, v1y, v2x, v2y,
+                        (line_kind == nMPLineKindLWall) ? -1 : +1);
     }
     return TRUE;
 }
@@ -6584,6 +6950,26 @@ static sb32 ndsMPCommonRunFighterFloorEdgeLive(
         return FALSE;
     }
     floor_line_id = coll_data->floor_line_id;
+    /* mpcommon.c:162 opens with these two wall tests, and this function ran
+     * without them while the wall sweep was still an approximation. They are
+     * what stops a floor from carrying a fighter into a wall: Peach's Castle's
+     * sliding board took a fighter standing still on its right half straight
+     * through the tower (x 1320 -> 538 over 220 tics, 2026-09-21), because
+     * once the board's end slid under them the floor-edge adjust had no floor
+     * left to put them back on and nothing else looked at the wall. With the
+     * tests restored the wall holds them, the floor test then misses, and the
+     * stop-edge arm refuses the snap because a wall is in the way -- the
+     * source's sequence, and the fighter drops off the board's end. */
+    if (mpProcessCheckTestLWallCollision(coll_data) != FALSE)
+    {
+        mpProcessRunLWallCollision(coll_data);
+        coll_data->is_coll_end = TRUE;
+    }
+    if (mpProcessCheckTestRWallCollision(coll_data) != FALSE)
+    {
+        mpProcessRunRWallCollision(coll_data);
+        coll_data->is_coll_end = TRUE;
+    }
     if (mpProcessCheckTestFloorCollisionNew(coll_data) != FALSE)
     {
         if ((coll_data->mask_stat & MAP_FLAG_FLOOR) != 0u)

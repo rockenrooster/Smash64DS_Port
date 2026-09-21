@@ -10707,6 +10707,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 texel1_alpha_from_texel1 = FALSE;
     s32 use_texel1 = FALSE;
     s32 alpha_ignores_texels = FALSE;
+    s32 graded_coverage = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -10939,6 +10940,40 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     if (materialize_t != FALSE)
     {
         height = render_tile->height;
+    }
+    /* A CLAMPED WINDOW TOO WIDE TO MATERIALISE STILL REPEATS INSIDE ITSELF.
+     *
+     * The RDP clamps a coordinate to the tile window first and masks it second,
+     * so inside the window a clamped tile repeats every 1 << mask texels.
+     * Materialising writes that repetition into a window-sized upload, which
+     * only works up to the largest upload; past it the tile kept its load
+     * stride with a clamping sampler, and every coordinate beyond the first
+     * stride drew one edge texel. Mushroom Kingdom's upper-left ledge is a
+     * 144x16 window over an 8-texel period (SETTILE masks 3, G_TX_CLAMP): it
+     * drew as a flat tan slab (BUGS.md, stage row).
+     *
+     * Upload exactly one period instead. ndsRendererHardwareTextureParams
+     * already turns "upload == period, window > period" into a repeating
+     * sampler, so the only thing given up is the clamp OUTSIDE the window,
+     * which geometry mapped inside its own window never samples. Eight is the
+     * smallest DS texture edge, so a shorter period stays on the old path. */
+    if ((materialize_s == FALSE) &&
+        ((render_tile->cms & NDS_RENDERER_TX_CLAMP) != 0u) &&
+        (render_tile->masks >= 3u) && (render_tile->masks < 31u) &&
+        (render_tile->width > NDS_RENDERER_HW_TEXTURE_MAX_WIDTH) &&
+        ((1u << render_tile->masks) <= source_extent_width))
+    {
+        width = 1u << render_tile->masks;
+        gNdsRendererClampedWindowPeriodUploadCount++;
+    }
+    if ((materialize_t == FALSE) &&
+        ((render_tile->cmt & NDS_RENDERER_TX_CLAMP) != 0u) &&
+        (render_tile->maskt >= 3u) && (render_tile->maskt < 31u) &&
+        (render_tile->height > NDS_RENDERER_HW_TEXTURE_MAX_HEIGHT) &&
+        ((1u << render_tile->maskt) <= source_extent_height))
+    {
+        height = 1u << render_tile->maskt;
+        gNdsRendererClampedWindowPeriodUploadCount++;
     }
 
     upload_width = ndsRendererHardwareTextureNextPow2(width);
@@ -11615,6 +11650,33 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         use_texel1_ci4_direct = TRUE;
     }
 
+    /* A BLENDPE SURFACE OVER AN I TILE KEEPS ITS COVERAGE LEVELS.
+     *
+     * (PRIM - ENV) * TEXEL0 + ENV with alpha (0,0,0,TEXEL0) over an I tile is a
+     * coverage image: colour is the endpoint lerp AT that coverage and alpha IS
+     * that coverage. ndsRendererHardwareConvertI sets the alpha bit on every
+     * texel, and the RGB5A1 bake below kept it, so such a surface drew as its
+     * whole rectangle at the ENV colour: Yoshi's Island's two rotating cards
+     * were opaque white cards around the cloud shape, and the heart's sparkles
+     * were solid spikes on their ENV blue (BUGS.md, stage row).
+     *
+     * One byte a texel as GL_RGB8_A5 holds five alpha bits and three palette
+     * bits, exactly as the dedicated rebirth-beam name does, but as an ordinary
+     * cache entry: the entry already carries a resident type per upload (PAL16
+     * below), so a prepared stage run binds it like any other name. The loop
+     * leaves the raw 5-bit coverage in the scratch word so the clamp padding
+     * replicates it unchanged, and the pack after it folds the words to bytes
+     * in place. PRIM and ENV are in the key already (modes 1 and 2 bake them),
+     * so two cards over one image keep one entry each. */
+    graded_coverage =
+        ((use_texel1 == FALSE) && (fraction_entry == NULL) &&
+         (upload_buffer == sNdsRendererHardwareTextureScratch) &&
+         (alpha_ignores_texels == FALSE) &&
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) &&
+         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+         ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
+          (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
+
     /* Only the power-of-two rectangle handed to libnds is observable.  The
      * shared scratch arena is sized for the worst 128x128 texture, but smaller
      * animated uploads must not pay to clear the unused tail every frame. */
@@ -11702,6 +11764,12 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                                 (color1 & 0x8000u));
                         }
                     }
+                    else if (graded_coverage != FALSE)
+                    {
+                        /* The I conversion wrote intensity >> 3 into every
+                         * lane; one lane is the 5-bit coverage. */
+                        color = (u16)(color & 0x1fu);
+                    }
                     else if (prim_env_blend_mode ==
                              NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA)
                     {
@@ -11764,7 +11832,40 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
      * battles: BattleShip correctly selects Low fighter detail there, and the
      * fourth owner's late material must not fail merely because earlier dynamic
      * images consumed texture VRAM as 16bpp direct colour. */
-    if ((use_texel1 == FALSE) &&
+    if (graded_coverage != FALSE)
+    {
+        u8 *packed = (u8 *)sNdsRendererHardwareTextureScratch;
+        u32 texel_count = upload_width * upload_height;
+        u32 i;
+
+        /* alpha5 in bits 3-7, palette index in bits 0-2. Byte i lands at or
+         * below word i's own bytes, so the forward pass never overwrites a
+         * word it has not read. */
+        for (i = 0u; i < texel_count; i++)
+        {
+            u32 coverage = sNdsRendererHardwareTextureScratch[i] & 0x1fu;
+
+            packed[i] = (u8)((coverage << 3) | (coverage >> 2));
+        }
+        /* Each palette step is the endpoint lerp at the midpoint of the
+         * coverage band it serves, through the same helper the RGB5A1 bake
+         * uses, so the colours agree with every other BLENDPE surface. */
+        for (i = 0u; i < 8u; i++)
+        {
+            u32 v = (i << 2) + 2u;
+            u16 texel0 = (u16)(0x8000u | v | (v << 5) | (v << 10));
+
+            resident_palette[i] =
+                (u16)(ndsRendererHardwareBlendPrimEnvTexel0(
+                          texel0, stats->prim_color,
+                          stats->env_color) & 0x7fffu);
+        }
+        resident_palette_entries = 8u;
+        resident_texture_type = GL_RGB8_A5;
+        resident_upload_bytes = texel_count;
+        gNdsRendererGradedCoverageUploadCount++;
+    }
+    else if ((use_texel1 == FALSE) &&
         (upload_buffer == sNdsRendererHardwareTextureScratch))
     {
         resident_palette_entries = ndsRendererHardwarePackResolvedPal16(

@@ -801,3 +801,98 @@ lever for those.
 Playtest r12: `builds/remaining-bugs-playtest-r12/smash64ds.nds`, SHA-256
 `D867AF160ACAC680CCD805130D4788CE6A804918A1B753BB169E1B44B454B60B`, boot
 `P2_RUNTIME_OK`. Supersedes r11.
+
+## 2026-09-21 (cont.) -- the stage rows
+
+### Yoshi's Island: the platforms were behind the camera, not missing
+
+Every one of binding 15's 77 triangles emitted (`gNdsNativeStageRoofSnapEmitted`
+equals `...Given` for all 58 runs, hidden mask 0, shortfall 0) and none of them
+appeared. The binding is rigid, so it draws through the Task 36 hardware-compose
+bracket: `BeginSegment` loads the camera projection, `EnsureWorld` pushes the
+world matrix, and the vertices are submitted in hardware units.
+
+`BeginSegment` was loading the projection unscaled. The world and camera
+translations it sits on top of are divided by `NDS_RENDERER_HW_WORLD_UNIT_SHIFT`
+(source / 256) with the homogeneous 1 left alone, so the position reaching the
+projection is (camera-space / 256, 1) and its constant row has to be in the same
+unit. It was not, so clip z came out far outside -w..w and the geometry engine
+near-clipped the polygons. The no-Z runs never saw it -- `LoadNoZProjection`
+replaces the z column and m32 with it -- and until this stage no rigid binding
+drew with source depth, which is why four other stages were unaffected. Fix:
+divide the projection's row 3 the same way `ndsRendererBuildRawHardwareMatrix`
+already divides the CPU-composed one. The three plank platforms, the book pages
+and the floor path all draw.
+
+### Yoshi's Island: the cards and the heart sparkles kept their coverage
+
+Both are a BLENDPE combine -- `(PRIM - ENV) * TEXEL0 + ENV` with alpha
+`(0,0,0,TEXEL0)` -- over an I4 tile, which is a coverage image: the colour is
+the endpoint lerp AT that coverage and the alpha IS that coverage. The RGB5A1
+bake kept `ndsRendererHardwareConvertI`'s unconditional alpha bit, so the whole
+rectangle drew opaque at the ENV colour: white card backgrounds around the cloud
+shape, solid spikes for the sparkles.
+
+The generic texture path now has a graded-coverage arm for exactly that semantic
+class (mode `SOURCE_ALPHA`, format I, 4b or 8b, no TEXEL1, not a refresh): the
+pixel loop leaves the raw 5-bit coverage in the scratch word, and after clamp
+padding the words fold to `GL_RGB8_A5` bytes with an 8-entry palette holding the
+lerp at each band's midpoint. An ordinary cache entry, keyed as before -- PRIM
+and ENV are already in the key -- not a dedicated name.
+`gNdsRendererGradedCoverageUploadCount` = 3 on Yoshi's Island, 0 on Dream Land.
+
+### Mushroom Kingdom: a clamped window wider than the largest upload
+
+The upper-left ledge is a 144x16 `G_TX_CLAMP` window over an 8-texel mask period
+(run 32, binding 14). The RDP clamps to the window first and masks second, so
+inside the window the tile repeats every `1 << mask` texels; materialising writes
+that repetition into a window-sized upload, which only works up to 128. Past it
+the tile kept its load stride with a clamping sampler and every coordinate beyond
+the first stride drew one edge texel -- a flat tan slab.
+
+Such an axis now uploads exactly one period instead.
+`ndsRendererHardwareTextureParams` already turns "upload == period, window >
+period" into a repeating sampler, so the only thing given up is the clamp
+OUTSIDE the window, which geometry mapped inside its own window never samples.
+`gNdsRendererClampedWindowPeriodUploadCount` = 53 on Mushroom Kingdom, 17 on
+Dream Land, 16 on Peach's Castle; all three stages re-captured and correct.
+
+### Peach's Castle: the board carried a fighter through the tower
+
+Reproduced exactly. An idle fighter placed on the right half of the sliding
+bottom board rode from x = 1320 to x = 538 over 220 tics -- straight through the
+tower base -- while `gNdsRendererM3PostArmFailureCount`-style wall counters
+stayed zero, because neither `mpProcessRunLWallCollisionAdjNew` nor its right
+twin was ever called. Two causes, both now fixed against `mp/mpcommon.c` and
+`mp/mpcollision.c`:
+
+1. `mpCommonRunFighterAllCollisions`' live arm opened at the floor test.
+   `mpcommon.c:162` opens with `CheckTestLWallCollision` / `RunLWallCollision`
+   and the right pair; without them a floor can carry a fighter into a wall and
+   nothing else looks at it. Restored in source order.
+2. The wall sweep behind all four `mpCollisionCheck{L,R}WallLineCollision*`
+   entry points was a generic two-sided segment intersection against each wall's
+   first and last vertex. It ignored the yakumono translation on the "Same"
+   form (so a wall on a positioned DObj -- the Castle's blue side ramps are
+   yakumono 3 and 4 -- was tested at LOCAL coordinates, and `mpProcessUpdateMain`
+   only runs the "Diff" form on its first sub-step, so a knocked-back fighter
+   flew through them on every later sub-step), reported (+-1, 0) for a slanted
+   wall, hit a wall from either side, and had no tolerance for a start point
+   exactly on the wall. It is now the source's: `CheckLRSurfaceFlat`,
+   `Check{L,R}WallSurfaceTilt`, `GetLRAngle` and the per-vertex-pair scan with
+   the group range reject, transcribed. `mpCollisionGetLRCommon` likewise picks
+   the segment spanning the object's y and returns that segment's normal.
+
+The one liberty: `coll_pos_{prev,next}` are s16, and for integer c and real v,
+c < v iff c < ceil(v), so the range bounds round once per group and the per-line
+test is an integer compare rather than two soft-float ones.
+
+After: the board carries the fighter to x = 1320, the wall holds them there, and
+when the board's end slides out from under them they drop -- the source's
+sequence. `check_mp_line_extent_reject_exact.py` PASS (111,961 extent rejects and
+68,993 sweep rejects replayed segment by segment, 0 missed hits). Walk sweeps on
+Castle and Hyrule show no spurious wall stops.
+
+Playtest r13: `builds/remaining-bugs-playtest-r13/smash64ds.nds`, SHA-256
+`DEBECA4A218332F0EB2CF8996C830A75551321FE89870B368F05BEC1E0F05559`, boot
+`P2_RUNTIME_OK`. Supersedes r12.

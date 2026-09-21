@@ -3110,6 +3110,12 @@ static u32 sNdsRendererHardwarePrimRgbTexel0AlphaPrim;
 static u32 sNdsRendererHardwarePrimAlphaTexel0Mode;
 static u32 sNdsRendererHardwarePrimAlphaTexel0Env;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaPrepareCount;
+/* Cache entries uploaded as GL_RGB8_A5 because their combine is a BLENDPE lerp
+ * with source alpha over an I tile (the generic path's graded-coverage arm). */
+__attribute__((used)) volatile u32 gNdsRendererGradedCoverageUploadCount;
+/* Axes uploaded as one mask period because their clamped tile window is wider
+ * than the largest upload and so could not be materialised. */
+__attribute__((used)) volatile u32 gNdsRendererClampedWindowPeriodUploadCount;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaBindCount;
 #if NDS_R2_IMPACT_WAVE_NATIVE
 #define NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT 5u

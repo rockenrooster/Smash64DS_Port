@@ -2464,6 +2464,26 @@ static s32 ndsRendererNativeStageTask36BeginSegment(void)
     ndsRendererHardwareEndBatch();
     ndsRendererCopyMtx20p12ToM4x4(
         sNdsNativeStageOwnerExecution.projection, &projection_hardware);
+    /* The world and camera translations below are loaded in hardware units
+     * (source / 256) with the homogeneous 1 left alone, so the position the
+     * projection receives is (camera-space / 256, 1). Its own constant row has
+     * to be in the same unit or clip z = z/256 * m22 + m32 lands far outside
+     * -w..w and the geometry engine near-clips the whole polygon. The no-Z
+     * runs never noticed -- LoadNoZProjection replaces the z column, and m32
+     * with it -- and until Yoshi's Island no rigid binding drew with source
+     * depth: its layer 1 (binding 15: the three platforms and the book's
+     * pages, 77 triangles) emitted every triangle and showed none. This is
+     * the same division ndsRendererBuildRawHardwareMatrix applies to the
+     * CPU-composed row 3. */
+    {
+        u32 col;
+
+        for (col = 12u; col < 16u; col++)
+        {
+            projection_hardware.m[col] = ndsRendererRoundShiftS32Signed(
+                projection_hardware.m[col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+        }
+    }
     ndsRendererNativeBuildHierarchyHardwareAffine(
         sNdsNativeStageOwnerExecution.camera_modelview, &camera_hardware);
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
