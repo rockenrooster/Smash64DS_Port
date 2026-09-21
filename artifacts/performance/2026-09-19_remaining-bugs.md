@@ -973,6 +973,18 @@ Two things came out of chasing it, and both are kept:
   section through the link -- which is why four freshly added witness globals
   were absent from the ELF and gdb resolved their names to one stale word.
   Reading them from surviving code is what keeps them.
+- The witness now starts each draw empty, which is what a status global needs
+  to mean anything at a stop.
+
+**And with that reset in place the site IS pinned**, which the sticky read
+could not establish either way: on the halting frame the Fox-hat draw reads
+`gNdsFtrDeclineStage == 2` with `gNdsFtrDeclineOwner == 11` (Kirby) and
+`gNdsFtrDeclineSelected == 8` -- so it does decline at "display list outside
+its loaded file", in the eligibility pass, before the draw pass reaches the
+no-fallback trap. Which of that test's eight clauses is still open: the clause
+word reads stale through gdb because the halt's `DC_FlushAll` runs after a
+breakpoint placed at the halt's entry. Fixing that ordering, or flushing the
+four words at the decline itself, is the next step.
 
 Noted while reading that seam: `KIRBY_TRIO_ADMIT_COPY_HATS` is **True** in
 `generate_nds_native_owners.py` and the in-tree generated inc carries all

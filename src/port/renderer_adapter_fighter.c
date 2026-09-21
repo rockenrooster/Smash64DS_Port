@@ -3207,6 +3207,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * publishes its stored program; a miss publishes only after resolving the
      * exact observed root vector. */
     ndsRendererNativeFighterSetRootProgram(owner_slot, 0u);
+    /* The decline witness starts each draw empty for the same reason. Ten
+     * sites assign it and none used to clear it, so what a debugger read at a
+     * stop was the last decline of the whole RUN -- which is how a stale 2
+     * came to be recorded as the cause of Kirby's copy-hat halt on
+     * 2026-09-21, on a frame where that block never executed. A reader now
+     * sees this draw's decline, or zero because this draw did not decline. */
+    gNdsFtrDeclineStage = 0u;
+    gNdsFtrDeclineDisplayListClause = 0u;
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner = &gNdsRendererProfileOwners[(u32)owner_id];
