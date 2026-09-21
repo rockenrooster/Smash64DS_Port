@@ -780,9 +780,45 @@ u32 ndsUiKitSetNumber(u32 slot, u32 slots_available, s32 value, s32 right_x,
  * for the same hardware reason: VRAM drops 8-bit writes and `fread` is a byte
  * path, so every byte lands in main RAM first. */
 
-static u8 sNdsUiKitSurfaceCache[NDS_MN_UI_KIT_SURFACE_CACHE_BYTES]
-    __attribute__((aligned(4)));
+/* ARENA, NOT .bss. This was a 9,768-byte static, and the binary's size comes
+ * straight out of the taskman arena, one for one: every battle paid for a
+ * buffer only the title's PRESS START blink and the CSS door strip ever use,
+ * on a machine where Kirby/Mario starts a match with 19.9 KB free. Both
+ * callers cache at scene entry, so the block comes out of THAT scene's arena
+ * and dies with it; the heap generation says whether it is still ours. A
+ * refusal leaves nothing cached and every consumer already checks for that. */
+/* Declared here rather than through <sys/taskman.h>: that header and the
+ * decomp copy it shadows both reach this file and collide on SYMallocRegion. */
+struct SYMallocRegion;
+extern struct SYMallocRegion gSYTaskmanGeneralHeap;
+extern volatile u32 gNdsTaskmanHeapGeneration;
+void *syTaskmanMalloc(size_t size, u32 alignment);
+s32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
+                        u32 alignment);
+static u8 *sNdsUiKitSurfaceCache;
+static u32 sNdsUiKitSurfaceCacheGeneration;
 static u32 sNdsUiKitSurfaceCached = 0xffffffffu;
+
+static u8 *ndsUiKitSurfaceCacheBlock(s32 allocate)
+{
+    if ((sNdsUiKitSurfaceCache != NULL) &&
+        (sNdsUiKitSurfaceCacheGeneration == gNdsTaskmanHeapGeneration))
+    {
+        return sNdsUiKitSurfaceCache;
+    }
+    sNdsUiKitSurfaceCache = NULL;
+    sNdsUiKitSurfaceCached = 0xffffffffu;
+    if ((allocate == FALSE) ||
+        (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                             NDS_MN_UI_KIT_SURFACE_CACHE_BYTES, 4u) == FALSE))
+    {
+        return NULL;
+    }
+    sNdsUiKitSurfaceCache =
+        syTaskmanMalloc(NDS_MN_UI_KIT_SURFACE_CACHE_BYTES, 4u);
+    sNdsUiKitSurfaceCacheGeneration = gNdsTaskmanHeapGeneration;
+    return sNdsUiKitSurfaceCache;
+}
 
 _Static_assert(NDS_MN_UI_KIT_SURFACE_MAX_ROW_BYTES <= NDS_UI_KIT_STAGING_BYTES,
                "one surface row must fit the staging buffer");
@@ -1160,12 +1196,13 @@ s32 ndsUiKitCacheSurface(u32 surface)
     u32 hash = 0x811C9DC5u;
 
     sNdsUiKitSurfaceCached = 0xffffffffu;
-    if (surface >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    if ((surface >= NDS_MN_UI_KIT_SURFACE_COUNT) ||
+        (ndsUiKitSurfaceCacheBlock(TRUE) == NULL))
     {
         return FALSE;
     }
     metric = &kNdsUiKitSurfaceMetrics[surface];
-    if (metric->bytes > (u32)sizeof(sNdsUiKitSurfaceCache))
+    if (metric->bytes > NDS_MN_UI_KIT_SURFACE_CACHE_BYTES)
     {
         /* The manifest sizes this buffer from the bake's own `cacheable` set,
          * so reaching here means a caller asked to cache a surface the bake
@@ -1211,7 +1248,8 @@ static void ndsUiKitToggleCachedSurface(u16 field_texel, s32 draw)
     u16 *layer;
     u32 row;
 
-    if (sNdsUiKitSurfaceCached >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    if ((ndsUiKitSurfaceCacheBlock(FALSE) == NULL) ||
+        (sNdsUiKitSurfaceCached >= NDS_MN_UI_KIT_SURFACE_COUNT))
     {
         return;
     }
@@ -1289,7 +1327,8 @@ s32 ndsUiKitDrawCachedSub(u32 src_x, u32 src_w, s32 dest_x, s32 dest_y,
     u16 *layer;
     u32 row;
 
-    if (sNdsUiKitSurfaceCached >= NDS_MN_UI_KIT_SURFACE_COUNT)
+    if ((ndsUiKitSurfaceCacheBlock(FALSE) == NULL) ||
+        (sNdsUiKitSurfaceCached >= NDS_MN_UI_KIT_SURFACE_COUNT))
     {
         return FALSE;
     }

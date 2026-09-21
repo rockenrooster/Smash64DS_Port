@@ -671,3 +671,34 @@ dwell stays at 13 tics until that load stops monopolising a frame.
 Playtest r8: `builds/remaining-bugs-playtest-r8/smash64ds.nds`, SHA-256
 `B89506697CD98F13DF052AB630DA52B256080C2E589750786DDCDE9EE5F55D4B`, boot `P2_RUNTIME_OK`; r7 was
 `E58E469FA407582EE40F56DCA6CCC9592973876D585938179DDDE3C016710E6F` and lacks the two CSS changes above.
+
+## 2026-09-20 (cont. 7) -- an exhausted arena froze the match; the last 8 KiB are not for cosmetics
+
+**REPRODUCED: Kirby/Mario on Dream Land froze on a hit spark.** `MALLOCOVF
+req=136 head=56` under `efManagerMakeEffect(dEFManagerDamageFlyOrbsEffectDesc)
+-> gcAddChildForDObj -> gcGetDObjSetNextAlloc`, i.e. `ndsSyMallocOverflowHalt`.
+That pair starts with 19.9 KB free, already under the source's 25 KiB GObj-cap
+latch -- but the latch caps GObjs, not bytes: every pool behind a GObj (DObj 136
+B a node, MObj, AObj, XObj) still grows on demand and never shrinks, so a long
+match keeps creeping until the next 136-byte node does not fit.
+
+`gcMakeGObjSPAfter` is interposed (same rename seam as gcSetupObjman): below
+8 KiB free, a GObj of kind EFFECT is refused with NULL -- what the source itself
+returns when the GObj cap or the effect pool is spent, so every maker already
+handles it. Fighters, weapons, items and the interface are untouched. After, same
+pair, same inputs: no halt through t=3,000+; free settles at 2,008 B with 428
+effects refused (`gNdsGcEffectArenaFloorRefusals`), Kirby's Mario copy still
+draws natively (268 tris). This converts a freeze into missing cosmetics. It does
+not return a byte: the arena lever is still the fix for the VFX family.
+
+**+9,768 B for every battle.** `sNdsUiKitSurfaceCache` was a static used only by
+the title's PRESS START blink and the CSS door strip. Both cache at scene entry,
+so the block now comes from that scene's arena, generation-checked. Walk check:
+2 caches, 80 underlay blits, 0 declines / hash mismatches / read failures.
+
+Kirby's inhale loop requests FGM **203** (`ftParamPlayLoopSFX`); the pitch check
+against the pack entry is still owed.
+
+Playtest r9: `builds/remaining-bugs-playtest-r9/smash64ds.nds`, SHA-256
+`A936EC064070AABEBC5054EB8C5BE3FDBE9E6786B59153B89ED4ADA641C90657`, boot
+`P2_RUNTIME_OK`. Supersedes r8 (`B8950669...`) and r7.

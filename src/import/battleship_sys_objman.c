@@ -22,6 +22,7 @@
 
 #define gcRunAll ndsBaseGcRunAll
 #define gcSetupObjman ndsBaseGcSetupObjman
+#define gcMakeGObjSPAfter ndsBaseGcMakeGObjSPAfter
 /* Campaign 01 re-knapsack, 2026-08-17. 120 bytes carrying 2,513 I-cache-fill
  * tk/fr on the gate's own rank-80 frames -- 20.9 per byte, the densest
  * placeable candidate on the v4-c238 census. The attribute rides a declaration
@@ -36,8 +37,44 @@ void ndsBaseGcRunAll(void) NDS_R2_ITCM_PACK2_CODE;
 #include <battleship_overlay/src/sys/objman.c>
 #undef gcRunAll
 #undef gcSetupObjman
+#undef gcMakeGObjSPAfter
 
 extern void ndsBaseGcSetupObjman(GCSetup *setup);
+
+/* AN EXHAUSTED ARENA IS A FROZEN GAME, SO THE LAST FEW KILOBYTES ARE NOT FOR
+ * COSMETICS.
+ *
+ * The source protects itself once, at GO: ifCommonSetMaxNumGObj latches the
+ * GObj count when less than 25 KiB is free. That caps GObjs, not bytes. Every
+ * pool behind a GObj -- DObj (136 B a node), MObj, AObj, XObj -- still grows
+ * from the same arena on demand and never shrinks, so a long match on a heavy
+ * pair keeps creeping. Measured 2026-09-20, Kirby/Mario on Dream Land: 19.9 KB
+ * free at GO, then `MALLOCOVF req=136 head=56` under
+ * efManagerMakeEffect(dEFManagerDamageFlyOrbsEffectDesc) -> gcAddChildForDObj,
+ * which is ndsSyMallocOverflowHalt: the match freezes on a hit spark.
+ *
+ * Every effect maker already handles a NULL GObj -- it is what the source
+ * returns when the GObj cap or the effect-struct pool is spent -- so below the
+ * floor an EFFECT GObj is refused exactly that way. Fighters, weapons, items
+ * and the interface are untouched: they are gameplay, and they are why the
+ * floor exists. 8 KiB covers the largest effect tree (DeadExplode builds
+ * about twenty DObjs) with room left for the allocation that is not an
+ * effect. Counted, because a refused effect is a missing effect. */
+#define NDS_GC_EFFECT_ARENA_FLOOR_BYTES 8192u
+volatile u32 gNdsGcEffectArenaFloorRefusals;
+
+GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
+{
+    if ((id == nGCCommonKindEffect) &&
+        (gSYTaskmanGeneralHeap.ptr != NULL) &&
+        (((uintptr_t)gSYTaskmanGeneralHeap.end -
+          (uintptr_t)gSYTaskmanGeneralHeap.ptr) < NDS_GC_EFFECT_ARENA_FLOOR_BYTES))
+    {
+        gNdsGcEffectArenaFloorRefusals++;
+        return NULL;
+    }
+    return ndsBaseGcMakeGObjSPAfter(id, func_run, link, priority);
+}
 
 /* Size the GObj thread stack pool for a DS coroutine, once, for every scene.
  *
