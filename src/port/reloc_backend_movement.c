@@ -13770,6 +13770,14 @@ static sb32 ndsStageGCDrawAllLoopEffectKindAccepted(u32 callback_kind)
     {
         return TRUE;
     }
+    /* efManagerPikachuThunderTrailProcDisplay and
+     * efManagerNessPKThunderTrailProcDisplay (efmanager.c:4496, :5018) draw
+     * their one DObj through gcDrawDObjDLLinksForGObj. Refusing the kind
+     * dropped both bolt tails as counted-but-silent rejected draws. */
+    if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLLINKS)
+    {
+        return TRUE;
+    }
     return FALSE;
 }
 

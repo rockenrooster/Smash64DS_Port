@@ -44,6 +44,7 @@
 #include <nds/generated/nds_native_kirby_vulcan.generated.h>
 #include <nds/generated/nds_native_pikachu_thunder.generated.h>
 #include <nds/generated/nds_native_samus_bomb.generated.h>
+#include <nds/generated/nds_native_ness_pktail.generated.h>
 #include <nds/generated/nds_native_yoshi_entryegg.generated.h>
 #include <nds/generated/nds_native_damage_slash.generated.h>
 #include <nds/nds_preview_pack.h>
@@ -1171,6 +1172,15 @@ static u32 sNdsRendererAdapterEffectEnvColor;
  * being rebuilt per span, which is what the RDP does. */
 static u32 sNdsRendererAdapterEffectOtherModeL;
 static u32 sNdsRendererAdapterEffectOtherModeValid;
+/* Whether THIS display proc wrote a render mode, and which DL head the list
+ * being submitted belongs to. The folded value above is one number for every
+ * head and outlives the proc that wrote it, which is right for an effect that
+ * sets its own mode and wrong for one that sets none: Link's entry beam sits in
+ * DObjDLLink list 1, its generic gcDrawDObjTreeDLLinksForGObj proc emits no
+ * mode at all, and it inherited whatever opaque mode the previous effect left
+ * -- a 36%-alpha column drew solid. */
+static u32 sNdsRendererAdapterEffectOtherModeThisProc;
+static u32 sNdsRendererAdapterEffectSubmitHead;
 static u32 sNdsRendererAdapterItemColorMask[NDS_RENDERER_STAGE_DL_HEADS];
 static u32 sNdsRendererAdapterItemPrimColor[NDS_RENDERER_STAGE_DL_HEADS];
 static u32 sNdsRendererAdapterItemEnvColor[NDS_RENDERER_STAGE_DL_HEADS];
@@ -1198,6 +1208,7 @@ static void ndsRendererAdapterFoldDisplayProcOtherModeL(u32 w0, u32 w1)
     sNdsRendererAdapterEffectOtherModeL =
         (sNdsRendererAdapterEffectOtherModeL & ~mask) | (w1 & mask);
     sNdsRendererAdapterEffectOtherModeValid = 1u;
+    sNdsRendererAdapterEffectOtherModeThisProc = 1u;
 }
 
 static void ndsRendererAdapterFoldItemOtherMode(u32 *value, u32 *valid,
@@ -1288,6 +1299,7 @@ void ndsRendererAdapterCaptureDisplayProcColors(void)
     u32 head;
 
     sNdsRendererAdapterEffectColorMask = 0u;
+    sNdsRendererAdapterEffectOtherModeThisProc = 0u;
     for (head = 0u; head < NDS_RENDERER_STAGE_DL_HEADS; head++)
     {
         const Gfx *cursor = sNdsRendererAdapterDisplayProcHeadMark[head];
@@ -5898,6 +5910,14 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         {
             stats.othermode_l = sNdsRendererAdapterEffectOtherModeL;
         }
+        /* A list-1 draw whose proc set no mode inherits the battle camera's
+         * own XLU head (gmcamera.c:1055 writes G_RM_AA_ZB_XLU_SURF into
+         * gSYTaskmanDLHeads[1] before every layer), not the last effect's. */
+        if ((sNdsRendererAdapterEffectOtherModeThisProc == 0u) &&
+            (sNdsRendererAdapterEffectSubmitHead == 1u))
+        {
+            stats.othermode_l = G_RM_AA_ZB_XLU_SURF | G_RM_AA_ZB_XLU_SURF2;
+        }
     }
     config.max_depth = 4u;
     config.max_commands = 1u;
@@ -6081,6 +6101,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
     sb32 samus_bomb_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+    sb32 ness_pktail_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_YOSHI
     NDSRendererNativeMaterial yoshi_entryegg_material;
@@ -9928,6 +9951,29 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         pikachu_thunder_native_handled = ndsRendererAdapterPikachuThunder(
             loaded, dobj, dl, &config, render_stats);
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+    /* The last PK Thunder trail segment is an EFFECT, not a weapon
+     * (efManagerNessPKThunderTrailMakeEffect): its own list at 0x8F98 with a
+     * fixed image and fixed prim/env, drawn through gcDrawDObjDLLinksForGObj. */
+    if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_NESS_PKTAIL_ASSET) &&
+        (dobj->parent_gobj != NULL) && (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_NESS_PKTAIL_ROOT))
+    {
+        NDSRendererConfig tail_config = config;
+        NDSRendererMatrix20p12 identity;
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        const void *tail_image = ndsRelocNativeAssetAddress(loaded->data, NDS_NATIVE_NESS_PKTAIL_IMAGE);
+#else
+        const void *tail_image = (loaded->data_size >= NDS_NATIVE_NESS_PKTAIL_IMAGE_END) ?
+            (const void *)((u8 *)loaded->data + NDS_NATIVE_NESS_PKTAIL_IMAGE) : NULL;
+#endif
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        if (tail_config.initial_projection == NULL) tail_config.initial_projection = &identity;
+        if (tail_config.initial_modelview == NULL) tail_config.initial_modelview = &identity;
+        ness_pktail_native_handled = ndsRendererSubmitNativeNessPKTail(
+            tail_image, &tail_config, render_stats);
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
     /* Samus Bomb: one SamusModel billboard. The live MObj only swaps the
      * palette; texels, LOADTLUT and tile state are the source list's own. */
@@ -11188,6 +11234,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
         (samus_bomb_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+        (ness_pktail_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
@@ -11290,6 +11339,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
         (samus_bomb_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+        (ness_pktail_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -11398,6 +11450,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_SAMUS
         && (samus_bomb_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
+        && (ness_pktail_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)
@@ -11929,6 +11984,8 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
                     (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) ?
                         1u : 0u;
             }
+            sNdsRendererAdapterEffectSubmitHead =
+                (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) ? 1u : 0u;
             ndsRendererAdapterSubmitStageDL(dobj, dobj->dl, camera_gobj,
                                             initial_geometry_mode);
         }
@@ -11956,6 +12013,7 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
                     sNdsRendererAdapterItemSubmitHead =
                         (u32)dl_link->list_id;
                 }
+                sNdsRendererAdapterEffectSubmitHead = (u32)dl_link->list_id;
                 ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl,
                                                 camera_gobj,
                                                 initial_geometry_mode);

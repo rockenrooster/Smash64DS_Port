@@ -77,8 +77,8 @@ sb32 ndsRendererSubmitNativePikachuThunderJolt(
 
     ndsRendererInitTraversalState(&state, config, stats, NULL, NULL, 0u);
     ndsNativeThunderJoltSetup(stats, tlut, image);
-    drawn = ndsRendererNativeTexturedQuad(vertices, sNdsNativeThunderJoltTriIndices,
-        config, stats, &state);
+    drawn = ndsRendererNativeTexturedQuadCi4(vertices, sNdsNativeThunderJoltTriIndices,
+        image, tlut, config, stats, &state);
     if (drawn < 0)
     {
         gNdsThunderJoltSubmitStep = 3u;

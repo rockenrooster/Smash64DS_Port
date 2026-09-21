@@ -208,9 +208,11 @@ static void ndsMenuShellPopulate(u32 screen)
         ndsMenuShellPopulateCharacters();
         break;
     case NDS_MENU_SHELL_SCREEN_SOUNDTEST:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuDataPlate, 1u);
         ndsMenuShellPopulateSoundTest();
         break;
     case NDS_MENU_SHELL_SCREEN_VSRECORD:
+        (void)ndsUiKitBlitSurfaces(kNdsMenuDataPlate, 1u);
         ndsMenuShellPopulateVsRecord();
         break;
     case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
@@ -383,7 +385,15 @@ static void ndsMenuShellRun(u32 screen)
      * kit is inactive, so the screen still reads input and still reaches its
      * successor -- it just draws nothing. A refusal that also re-routed the
      * player would turn one visible defect into two invisible ones. */
-    (void)ndsUiKitEnter(NDS_UI_KIT_ENGINE_MAIN);
+    /* Sound Test and VS Record are still composed from kit font text, and
+     * only the SUB engine keeps a text slab (the MAIN slab was reclaimed at
+     * P2-1 closeout). On MAIN every ndsUiKitSetText refused and both screens
+     * were a bare blue field; on SUB their rows are readable on the lower
+     * screen under the baked DATA plate. OWED (P2-7): their source art. */
+    (void)ndsUiKitEnter(
+        ((screen == NDS_MENU_SHELL_SCREEN_SOUNDTEST) ||
+         (screen == NDS_MENU_SHELL_SCREEN_VSRECORD)) ?
+            NDS_UI_KIT_ENGINE_SUB : NDS_UI_KIT_ENGINE_MAIN);
     ndsMenuShellHideRows();
     /* THE BACKDROP IS SET BEFORE THE ART, not after. A backdrop surface is
      * composited over its screen's own field at bake time, so the two have to

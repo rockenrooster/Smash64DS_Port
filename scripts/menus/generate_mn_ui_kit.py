@@ -3810,17 +3810,22 @@ OPTION_BACKGROUND = (
 )
 
 
-def option_tabs(x: int, y: int, state) -> list[Placement]:
-    """One 168x29 tab plate at (x, y) in a tab colour state."""
+def option_tabs(x: int, y: int, state, lrs: int = 17,
+                overlap: int = 0) -> list[Placement]:
+    """One tab plate at (x, y) in a tab colour state; `lrs` middle cells.
+
+    `overlap` extends the middle UNDER the right cap, which is drawn after
+    it: the 320->256 resample can otherwise round a one-pixel gap between
+    the two (Data's x=133 row), showing the backdrop through the tab."""
     env, prim = state
     return [
         Placement("MNCommon", "llMNCommonOptionTabLeftSprite", x, y, False,
                   prim, env=env),
         Placement("MNCommon", "llMNCommonOptionTabMiddleSprite", x + 16, y,
                   False, prim, env=env,
-                  tile=(17 * 8, 29), period=(16, None)),
+                  tile=(lrs * 8 + overlap, 29), period=(16, None)),
         Placement("MNCommon", "llMNCommonOptionTabRightSprite",
-                  x + 16 + (17 * 8), y, False, prim, env=env),
+                  x + 16 + (lrs * 8), y, False, prim, env=env),
     ]
 
 
@@ -3874,6 +3879,62 @@ OPTION_SURFACE_SPECS = (
                       "llMNOptionScreenAdjustTextSprite", 103, 92, True),
     option_simple_row("OPTION_BACKUP_CLEAR_HI", 69, 136,
                       "llMNOptionBackupClearTextSprite", 86, 140, True),
+)
+
+
+# ---------------------------------------------------------------------------
+# Native Data screen (mn/mndata/mndata.c).
+# ---------------------------------------------------------------------------
+#
+# Same construction as Option: the collage at (10,10), two decal papers
+# tinted (0xA0,0x78,0x14) at (140,143)/(225,56), the Data icon dark at
+# (10,10) tinted grey 0x99 (mnDataMakeDecals :435), the smash logo at
+# (235,158) and the DATA label at (206,131), both black (mnDataMakeLabels
+# :400). Tabs are mnDataMakeOptionTab with lrs 16 (16 + 128 + right cap),
+# in the Option HI/NOT pairs (mnDataSetOptionSpriteColors :131), text black.
+# The source has TWO row layouts, chosen by the Sound Test unlock bit
+# (mnDataMakeCharacters :223, mnDataMakeVSRecord :263): with it, rows sit at
+# (133,42)/(101,89)/(69,136); without it, two rows at (113,57)/(81,126).
+DATA_BACKGROUND = (
+    COLLAGE_FULL_BLEED,
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 140, 143, False,
+              (0xA0, 0x78, 0x14)),
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 225, 56, False,
+              (0xA0, 0x78, 0x14)),
+    Placement("MNData", "llMNDataDataIconDarkSprite",
+              10, 10, False, (0x99, 0x99, 0x99)),
+    Placement("MNCommon", "llMNCommonSmashLogoSprite", 235, 158, False,
+              (0x00, 0x00, 0x00)),
+    Placement("MNData", "llMNDataDataTextSprite", 206, 131, False,
+              (0x00, 0x00, 0x00)),
+)
+
+
+def data_row(token: str, x: int, y: int, symbol: str,
+             text_x: int, text_y: int, hi: bool) -> SurfaceSpec:
+    """One Data row: lrs-16 tabs + its label text."""
+    state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
+    parts: list[Placement] = option_tabs(x, y, state, 16, overlap=2)
+    parts.append(Placement("MNData", symbol, text_x, text_y, False,
+                           (0x00, 0x00, 0x00)))
+    return SurfaceSpec(token + ("_HI" if hi else ""), tuple(parts), MENU_FIELD,
+                       under=DATA_BACKGROUND, box=(x, y, 164, 29))
+
+
+DATA_ROWS = (
+    ("DATA_CHARACTERS", 133, 42, "llMNDataCharactersTextSprite", 159, 46),
+    ("DATA_VS_RECORD", 101, 89, "llMNDataVSRecordTextSprite", 128, 93),
+    ("DATA_SOUND_TEST", 69, 136, "llMNDataSoundTestTextSprite", 95, 140),
+    ("DATA_CHARACTERS_NOSOUND", 113, 57, "llMNDataCharactersTextSprite",
+     139, 61),
+    ("DATA_VS_RECORD_NOSOUND", 81, 126, "llMNDataVSRecordTextSprite",
+     108, 130),
+)
+
+# Appended after every older family in main() so no existing id moves.
+DATA_SURFACE_SPECS = (
+    SurfaceSpec("DATA", DATA_BACKGROUND, MENU_FIELD),
+    *(data_row(*row, hi) for hi in (False, True) for row in DATA_ROWS),
 )
 
 
@@ -4644,6 +4705,9 @@ def main(argv: list[str] | None = None) -> int:
     # here so no pre-existing surface id is renumbered.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in VS_OPTIONS_LOCKED_SURFACE_SPECS)
+    # Native Data art is the newest family; appended last for the same reason.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in DATA_SURFACE_SPECS)
     check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)

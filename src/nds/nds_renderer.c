@@ -8,6 +8,10 @@
 #include "generated/nds_native_pikachu_thunder.generated.inc"
 #include "nds_native_pikachu_thunder.exec.inc"
 #endif
+#if NDS_P2_NESS
+#include "generated/nds_native_ness_pktail.generated.inc"
+#include "nds_native_ness_pktail.exec.inc"
+#endif
 #if NDS_P2_SAMUS
 #include "generated/nds_native_samus_bomb.generated.inc"
 #include "nds_native_samus_bomb.exec.inc"

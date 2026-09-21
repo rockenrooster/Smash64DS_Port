@@ -165,6 +165,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #if NDS_P2_PIKACHU
 #define efManagerPikachuThunderTrailMakeEffect ndsBaseEFManagerPikachuThunderTrailMakeEffect
 #define efManagerPikachuThunderShockMakeEffect ndsBaseEFManagerPikachuThunderShockMakeEffect
+#define efManagerPikachuThunderJoltMakeEffect ndsBaseEFManagerPikachuThunderJoltMakeEffect
 #endif
 #if NDS_P2_YOSHI
 #define efManagerYoshiShieldMakeEffect \
@@ -222,6 +223,7 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #if NDS_P2_PIKACHU
 #undef efManagerPikachuThunderTrailMakeEffect
 #undef efManagerPikachuThunderShockMakeEffect
+#undef efManagerPikachuThunderJoltMakeEffect
 #endif
 #if NDS_P2_YOSHI
 #undef efManagerYoshiShieldMakeEffect
@@ -1732,6 +1734,22 @@ GObj *efManagerPikachuThunderShockMakeEffect(GObj *fighter_gobj, Vec3f *pos, s32
     if (!ndsEFManagerBeginMappedDesc(&dEFManagerPikachuThunderShockEffectDesc, &saved)) return NULL;
     effect = ndsBaseEFManagerPikachuThunderShockMakeEffect(fighter_gobj, pos, frame);
     ndsEFManagerEndMappedDesc(&dEFManagerPikachuThunderShockEffectDesc, &saved);
+    return effect;
+}
+
+/* The source maker writes DObjGetStruct(effect)->translate with no NULL test
+ * (efmanager.c:4544). PikachuSpecial3 is not resident when efManagerInitEffects
+ * sweeps, so the desc is deferred, and a deferred desc yields a bare GObj: the
+ * first grounded Thunder Jolt was a data abort at 0x1c. Nothing retried the
+ * desc on this path; the wrapper is that retry, and a desc that still cannot be
+ * backed answers NULL, which the source caller already ignores. */
+GObj *efManagerPikachuThunderJoltMakeEffect(Vec3f *pos, f32 rotate)
+{
+    NDSMappedEFDescOffsets saved;
+    GObj *effect;
+    if (!ndsEFManagerBeginMappedDesc(&dEFManagerThunderJoltEffectDesc, &saved)) return NULL;
+    effect = ndsBaseEFManagerPikachuThunderJoltMakeEffect(pos, rotate);
+    ndsEFManagerEndMappedDesc(&dEFManagerThunderJoltEffectDesc, &saved);
     return effect;
 }
 #endif

@@ -3,37 +3,6 @@
 
 volatile u32 gNdsPurinSingNativeDraws[4];
 
-/* Match the live guard renderer's max(150, half live radius) camera bias.
- * View-space eye is the origin; only translation changes, never source pose,
- * material animation or lifetime. Use the existing DS integer math units. */
-static void ndsNativePurinSingGuardDepth(NDSRendererMatrix20p12 *view, s32 radius)
-{
-    s32 position[3];
-    u64 distance_squared = 0u;
-    u32 scale = 0u, distance, bias, axis, i;
-    for (i = 0u; i < 3u; i++)
-    {
-        position[i] = view->m[3][i] >> 12;
-        distance_squared += (u64)((s64)position[i] * position[i]);
-    }
-    distance = ndsR2HwMathSqrt64(distance_squared);
-    if (distance <= 1u) return;
-    for (axis = 0u; axis < 2u; axis++)
-    {
-        u64 length_squared = 0u;
-        u32 length;
-        for (i = 0u; i < 3u; i++)
-            length_squared += (u64)((s64)view->m[axis][i] * view->m[axis][i]);
-        length = ndsR2HwMathSqrt64(length_squared);
-        if (length > scale) scale = length;
-    }
-    bias = (u32)(((u64)scale * (u32)radius) >> 13);
-    if (bias < 150u) bias = 150u;
-    for (i = 0u; i < 3u; i++)
-        view->m[3][i] -= (s32)ndsR2HwMathDiv64(
-            (s64)position[i] * bias * 4096, (s32)distance);
-}
-
 sb32 ndsRendererSubmitNativePurinSing(
     u32 root_index, const NDSRendererNativeMaterial *material,
     const void *image, const NDSRendererConfig *config,
@@ -72,7 +41,7 @@ sb32 ndsRendererSubmitNativePurinSing(
     ndsNativePurinSingSetup(root_index, image, material, stats, &state);
     front_config = *config;
     front_view = *config->initial_modelview;
-    ndsNativePurinSingGuardDepth(&front_view,
+    ndsRendererNativeQuadGuardDepth(&front_view,
         (vertices[0].x < 0) ? -vertices[0].x : vertices[0].x);
     front_config.initial_modelview = &front_view;
 

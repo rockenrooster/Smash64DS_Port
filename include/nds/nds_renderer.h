@@ -1523,6 +1523,8 @@ s32 ndsRendererPrepareNativeKirbyVulcan(void);
 s32 ndsRendererSubmitNativePikachuThunder(u32 root, u32 role,
     const NDSRendererNativeMaterial *material, const void *palette, const void *image,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+s32 ndsRendererSubmitNativeNessPKTail(const void *image,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererSubmitNativeSamusBomb(const NDSRendererNativeMaterial *material,
     const void *image, const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererSubmitNativeKirbyVulcan(u32 root,

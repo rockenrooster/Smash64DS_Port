@@ -21,6 +21,8 @@ sb32 ndsRendererSubmitNativeSamusChargeShot(
     const void *palette;
     const void *image;
     NDSRendererTraversalState state;
+    NDSRendererConfig front_config;
+    NDSRendererMatrix20p12 front_view;
     s32 drawn;
     NDSRendererInputVertex vertices[NDS_NATIVE_CHARGESHOT_VERTEX_COUNT];
     u32 i;
@@ -65,8 +67,17 @@ sb32 ndsRendererSubmitNativeSamusChargeShot(
      * laser this one does NOT inherit the blender from the weapon pass -- it
      * sets it and restores it, exactly as the source list does. */
     ndsNativeChargeShotSetup(stats, palette, image);
+    /* Owner ruling (BUGS.md, Samus): the ball is a billboard centred on the
+     * muzzle, so the arm cannon cut it in half. Bring it toward the eye by the
+     * guard bias -- translation only -- so the ball occludes the cannon while
+     * it charges. Source pose, scale, material and lifetime are untouched. */
+    front_config = *config;
+    front_view = *config->initial_modelview;
+    ndsRendererNativeQuadGuardDepth(&front_view,
+        (vertices[0].x < 0) ? -vertices[0].x : vertices[0].x);
+    front_config.initial_modelview = &front_view;
     drawn = ndsRendererNativeTexturedQuad(vertices, sNdsNativeChargeShotTriIndices,
-        config, stats, &state);
+        &front_config, stats, &state);
     if (drawn < 0)
     {
         gNdsChargeShotSubmitStep = 3u;

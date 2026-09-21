@@ -1538,6 +1538,15 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLinkCatchLowOwner, &sNdsNativeLinkFighterLowTables,
     sNdsNativeLinkCatchRootsLow, sNdsNativeLinkCatchCrossPaletteSlotsLow,
     sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+/* VS Results, the loser's pose: Entry's roots with the shield on the back. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkClapsHighOwner, &sNdsNativeLinkFighterHighTables,
+    sNdsNativeLinkClapsRoots, sNdsNativeLinkClapsCrossPaletteSlots,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkClapsLowOwner, &sNdsNativeLinkFighterLowTables,
+    sNdsNativeLinkClapsRootsLow, sNdsNativeLinkClapsCrossPaletteSlotsLow,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
 #endif
 #endif
 
@@ -5157,6 +5166,11 @@ ndsRendererNativeFighterOwnerForProgramDetail(
                 &sNdsNativeLinkSpecialNLowOwner :
                 &sNdsNativeLinkSpecialNHighOwner;
         }
+        if (program == 4u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeLinkClapsLowOwner : &sNdsNativeLinkClapsHighOwner;
+        }
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -5260,7 +5274,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
-    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) && (program <= 3u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) && (program <= 4u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5336,7 +5350,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
-        program_count = 4u;
+        /* canonical + Entry + Catch + SpecialN + Claps. */
+        program_count = 5u;
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -5517,6 +5532,18 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeFoxRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeFoxRootVariants);
     }
+#if NDS_P2_LUIGI
+    /* Luigi's Results Win2 pose sets model part 1 on both hand joints, exactly
+     * as Mario's Lose pose does above (scsubsysdataluigi.c D_ovl1_803917A0). */
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LUIGI)
+    {
+        variants = (use_low_detail != 0u) ?
+            sNdsNativeLuigiRootVariantsLow : sNdsNativeLuigiRootVariants;
+        variant_count = (use_low_detail != 0u) ?
+            NDS_FTR_COUNT(sNdsNativeLuigiRootVariantsLow) :
+            NDS_FTR_COUNT(sNdsNativeLuigiRootVariants);
+    }
+#endif
 #if NDS_P2_DONKEY
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
     {

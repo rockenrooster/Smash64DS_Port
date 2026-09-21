@@ -192,7 +192,8 @@ def _foreign_texture_bank(images, files, model_id):
 
 # Model-owned weapon lists whose own G_SETTIMG names Model texels. They are
 # not fighter programs, so nothing else would keep those image rows resident.
-WEAPON_TEXTURE_ROOTS = {"samus": (0xE0D8,)}  # Bomb: CI4 0xDF88
+WEAPON_TEXTURE_ROOTS = {"samus": (0xE0D8,),  # Bomb: CI4 0xDF88
+                        "ness": (0x8F98,)}   # PK Thunder tail effect: IA8 0x8B58
 
 _SKELETON_CONTEXTS = None
 

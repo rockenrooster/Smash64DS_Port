@@ -56,8 +56,8 @@ sb32 ndsRendererSubmitNativeNessPKThunder(
         stats->env_color = sNdsNativeNessPKThunderTrailEnv[trail_color_index];
     }
 
-    drawn = ndsRendererNativeTexturedQuad(vertices, sNdsNativeNessPKThunderTriangles,
-        config, stats, &state);
+    drawn = ndsRendererNativeTexturedQuadIa8(vertices, sNdsNativeNessPKThunderTriangles,
+        (const u8 *)(uintptr_t)material->current_image, config, stats, &state);
     if (drawn < 0) return FALSE;
 #if NDS_P2_NESS_VFX_PROOF
     if (drawn > 0) gNdsNessPKThunderNativeProofDraw[root_index]++;

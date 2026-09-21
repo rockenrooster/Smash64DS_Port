@@ -4026,6 +4026,40 @@ static void ndsRendererAdapterApplyMvpRecalc(
              * lr +/-3 drawables reach this arm with the same threading the
              * kind72 drawables use, so the slot dispatches the live kind. */
             float ef_ground_kind46_rows[3][4];
+            const DObj *scale_ancestor;
+
+            /* gGCScaleX is a TREE accumulator in the source: every
+             * scale-bearing matrix kind an ancestor owns multiplies it
+             * (objdisplay.c:590/627/664/670) before this billboard reads it.
+             * The port resets it per DObj and only the joint attach raised
+             * it, so a billboard under scaled parents drew at the wrong size:
+             * Yoshi's Egg Lay root carries the captive's effect_size
+             * (efManagerYoshiEggLayMakeEffect) and its child a
+             * TraRotRpyRSca, and the egg came out far too small. */
+            for (scale_ancestor = dobj->parent;
+                 (scale_ancestor != NULL) &&
+                 (scale_ancestor != DOBJ_PARENT_NULL);
+                 scale_ancestor = scale_ancestor->parent)
+            {
+                u32 xobj_index;
+
+                for (xobj_index = 0u;
+                     xobj_index < (u32)scale_ancestor->xobjs_num;
+                     xobj_index++)
+                {
+                    const XObj *xobj = scale_ancestor->xobjs[xobj_index];
+
+                    if ((xobj != NULL) &&
+                        ((xobj->kind == nGCMatrixKindTraRotRSca) ||
+                         (xobj->kind == nGCMatrixKindTraRotRpyRSca) ||
+                         (xobj->kind == nGCMatrixKindTraRotPyrRSca) ||
+                         (xobj->kind == nGCMatrixKindSca)))
+                    {
+                        sNdsRendererAdapterMvpRecalcScaleX *=
+                            scale_ancestor->scale.vec.f.x;
+                    }
+                }
+            }
 
             ndsRendererAdapterEfGroundKind46Rows(perspective_f,
                 dobj->rotate.vec.f.z,

@@ -15091,6 +15091,33 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
                                       sNdsRelocStatusBufferCount,
                                       asset_id);
     }
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    if ((file == NULL) && (asset_id != NDS_RELOC_ASSET_INVALID))
+    {
+        /* A compact fighter pack makes Main and Model resident WITHOUT a
+         * status node. scVSBattleStartBattle then runs the source's
+         * ftManagerSetupFilesPlayablesAll, whose ftManagerSetupFilesKind
+         * re-queries every Model here (ftmanager.c:312) -- and the miss wiped
+         * the slot the pack loader had just published. Every Model-backed
+         * EFDesc (Pikachu's Thunder trail, Yoshi's egg escape, Ness's PK
+         * Thunder family) then saw a NULL file head and made no effect at
+         * all. Still lookup-only: only a record THIS scene already made
+         * resident answers, so an unselected fighter stays NULL.
+         *
+         * Not only pack records. PikachuSpecial3 (asset 342) is a full file
+         * that arrives as Special1's external dependency, resident with no
+         * node either, so gFTDataPikachuSpecial3 read NULL all match and the
+         * grounded Thunder Jolt's effect desc could never be backed. */
+        NDSRelocLoadedFile *packed = ndsRelocFindLoadedFileByAsset(asset_id);
+
+        if ((packed != NULL) && (packed->data != NULL) &&
+            (packed->owner_generation == sNdsRelocSceneGeneration) &&
+            (packed->owner_scene == (u32)gSCManagerSceneData.scene_curr))
+        {
+            file = packed->data;
+        }
+    }
+#endif
     if (file != NULL)
     {
         ndsFighterManagerRecordStatusToken(token, file);

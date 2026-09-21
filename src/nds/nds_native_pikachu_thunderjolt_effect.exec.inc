@@ -85,8 +85,8 @@ sb32 ndsRendererSubmitNativePikachuThunderJoltEffect(
     ndsNativeThunderJoltFxSetup(stats, tlut);
     ndsRendererNativeApplyMaterial(material, stats, &state);
     ndsNativeThunderJoltFxLoadBlock(stats);
-    drawn = ndsRendererNativeTexturedQuad(vertices, sNdsNativeThunderJoltFxTriIndices,
-        config, stats, &state);
+    drawn = ndsRendererNativeTexturedQuadCi4(vertices, sNdsNativeThunderJoltFxTriIndices,
+        (const void *)(uintptr_t)material->current_image, tlut, config, stats, &state);
     if (drawn < 0)
     {
         gNdsThunderJoltFxSubmitStep = 3u;

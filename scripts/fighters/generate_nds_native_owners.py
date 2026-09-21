@@ -2149,6 +2149,25 @@ BASE_MODEL_PART_ROOT_VARIANTS = {
 # they need a topology-owner solution rather than pretending to be a variant of
 # a canonical binding.
 P2_MODEL_PART_ROOT_VARIANTS = {
+    # Luigi is Mario's skeleton with Mario's two model-part joints, and his VS
+    # Results Win2 pose (scsubsysdataluigi.c D_ovl1_803917A0) sets both:
+    # SetModelPartID(16, 1) and (10, 1). 221_LuigiMain.c modelparts_desc_0x05C
+    # is joint 10 -- modelparts[1] = LuigiModel gap 0x4E8C + 0xA84 high,
+    # + 0xD14 low -- and modelparts_desc_0x0AC is joint 16, + 0x534 / + 0x7C4.
+    # No motion in 220_LuigiMainMotion.c installs a model part, which is why
+    # the mutation-coverage check never saw these; without the rows one Luigi
+    # win in three declined at validate code 4, and a packed fighter that
+    # declines is halt 20 on the Results screen.
+    "luigi": {
+        "high": (
+            (3, 0x5910),  # joint 10 model-part 1
+            (7, 0x53c0),  # joint 16 model-part 1
+        ),
+        "low": (
+            (3, 0x5ba0),  # joint 10 model-part 1
+            (7, 0x5650),  # joint 16 model-part 1
+        ),
+    },
     "donkey": {
         "high": (
             (4, 0x7f38),
@@ -2548,6 +2567,15 @@ OWNER_ROOT_PROGRAMS = {
         # CatchPull repeats the exact same five model-part writes. Hidden-part
         # creation itself is sourced from the motion's 0x1C000000 anim flags.
         ("Catch", ((21, 0), (19, -1), (16, 0), (17, 0), (18, 0))),
+        # VS Results, the loser: scsubsysdatalink.c D_ovl1_80391978 is four raw
+        # SetModelPartID words -- 0xA0A00000 (20, 0), 0xA05FFFFF (11, -1),
+        # 0xA0A80000 (21, 0), 0xA09FFFFF (19, -1). The sword is sheathed as in
+        # Entry, and the shield leaves the hand joint for the back joint, which
+        # is a child of the torso: the same nineteen roots as Entry with the
+        # shield one place later in the walk. No program matched, the owner
+        # declined, and a packed fighter that declines is halt 20 -- Link
+        # losing a match froze the Results screen.
+        ("Claps", ((20, 0), (11, -1), (21, 0), (19, -1))),
     ),
     # 246_YoshiMainMotion.c's only model-part commands are ThrowF :965/:975 and
     # ThrowB :988/:998, both SetModelPartID(7, 1) followed by a restore to

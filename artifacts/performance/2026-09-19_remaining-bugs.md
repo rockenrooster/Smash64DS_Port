@@ -465,3 +465,169 @@ Normal r6 candidate: `builds/remaining-bugs-playtest-r6/smash64ds.nds`, SHA256
 `052FDE657B5B65B652BF192B301B8322ED7A854D9EF5D25AD130BDA26F45B52D`. Native-only
 316 link inputs, boot/title PASS, static image 2,961,740 B. Supersedes r4/r5.
 The accepted root ROM is unchanged. No full-list, lifecycle or performance claim.
+
+## 2026-09-20 (cont. 3) — Data menu, Model-backed effects, graded IA8 quads
+
+**Data menu (REPRODUCED, fixed).** Natural Title -> Mode Select -> DATA on the
+shell ROM: scene 58 entered, `rej=0`, top screen a bare blue field. First
+failure: `ndsUiKitSetText` refuses on the MAIN engine, whose text slab was
+reclaimed at P2-1 closeout, and the Data screen was still composed of font rows.
+`generate_mn_ui_kit.py` now bakes the source screen (mndata.c): collage, decal
+papers, Data icon, smash logo, DATA label, and both of the source's row layouts
+(with / without Sound Test) in the tab HIGHLIGHT / NOT pairs; the DS screen
+blits them exactly like the Option screen. The 320->256 resample rounded a one
+pixel gap between the lrs-16 middle and the right cap at x=133; the middle now
+extends under the cap, which is drawn after it. Capture after:
+`artifacts/visibility/2026-09-20-data-menu.png` (Characters highlighted, VS
+Record, Sound Test). Sound Test and VS Record are still font screens, so they
+enter the kit on the SUB engine (which keeps its text slab) under the DATA plate
+instead of being blank; their source art stays owed to P2-7.
+
+**Every Model-backed EFDesc was dead in compact battles.** Witness: Thunder's
+trail maker returned NULL with `*desc->file_head == 0`. `gFTDataPikachuModel` is
+published by the pack loader, survives both `ftManagerMakeFighter` calls, and is
+zero by `ifCommonBattleSetGameStatusWait`: the source's
+`ftManagerSetupFilesPlayablesAll` re-queries every Model through
+`lbRelocGetStatusBufferFile` (ftmanager.c:312), a compact pack has no status
+node, and the miss overwrote the slot. `lbRelocGetStatusBufferFile` now answers
+for a record this scene's pack loader already made resident (still lookup-only;
+an unselected fighter stays NULL). That revives six descriptors: Pikachu Thunder
+trail, Yoshi shield and egg escape, and Ness PK Thunder trail / reflected trail /
+wave. After: `gNdsPikachuThunderNativeRoleMask == 7`, `DIAG_NATIVE` all zero.
+
+**Effect DLLINKS admission + Ness tail owner.** Both bolt tails draw through
+`gcDrawDObjDLLinksForGObj`, a kind the effect admission refused. It is admitted,
+and Ness's tail effect (NessModel root 0x8F98: fixed IA8 0x8B58, fixed prim/env,
+no material) has its own SHA-pinned packet; the compact Ness pack retains the
+texels (+1,036 B).
+
+**Thunder was invisible with every draw counted.** The generic cache uploads
+RGB555 + ONE alpha bit. Thunder's IA8 image is a four-texel core inside a twelve
+texel alpha ramp, so the threshold left a sub-pixel hairline (texture entry:
+32x32, TEXIMAGE format 7). IA8 quad owners now bind a dedicated A3I5 copy
+(4-bit intensity exact in a 32-step grey palette, eight coverage levels, half
+the VRAM), built once per image per scene-texture generation with the generic
+cache as fallback. Thunder roots 0/2, PK Thunder and the PK tail opt in; the
+kernel's source-executing host test covers build, reuse, rebuild after a scene
+reset and the fallback. Runtime pixel proof follows the build in progress.
+
+**Yoshi Egg Lay size.** `gGCScaleX` is a tree accumulator in the source (every
+scale-bearing ancestor multiplies it before a kind-46 billboard reads it); the
+port reset it per DObj and only the joint attach raised it. Egg Lay's root
+carries the captive's `effect_size` and its child a TraRotRpyRSca, so the egg
+drew far too small. The kind-46 arm now folds in the scale-bearing ancestors.
+Runtime proof owed.
+
+**Arena.** Cold non-battle scenes (movies, staff roll, how-to-play, 1P intro /
+stage clear / challenger) also build `-Os`; arena 945,664 -> **949,760**.
+Pikachu/Fox sat at 26,396 B minimum free before the revived effects and 22,848 B
+with them -- the latch is still within reach of that pair. Sizing the VS fighter
+pools by participating slots (22,600 B in a two-player match) was tried and
+REVERTED: about fifty port sites index the FTStruct pool as a fixed four-slot
+array, so a shorter pool reads past its end.
+
+## 2026-09-20 (cont. 4) — Thunder proven, two crashes, two Results freezes
+
+**Thunder is visible.** Two defects were stacked behind "every draw counted".
+(1) The graded A3I5 copy fixed coverage but not colour: every IA8 quad owner
+uses the one combiner `(PRIM - ENV) * TEXEL0 + ENV`, which DS modulate cannot
+express, so a grey palette drew the bolt's yellow fringe as grey. The palette IS
+that ramp now -- ENV at index 0 to PRIM at 31, white polygon colour -- keyed per
+entry on the live prim/env so a material colour change re-uploads 32 entries,
+never the image. (2) The fill read the image raw. Fighter and effect files are
+O2R word-swapped in memory (logical byte i at i ^ 3), so every four-texel group
+was mirrored: the FIFTH instance of the byte-lane family. Both fills and the
+TLUT reader take the lane from the config that names the file's layout, and the
+host test pins it with a swapped fixture. Captures:
+`artifacts/visibility/2026-09-20-thunder-ramp.png` (segments pinned in camera)
+and `2026-09-20-thunder-natural.png` (unpinned: a yellow-white column from the
+top of the screen to Pikachu). PK Thunder and its tail:
+`2026-09-20-pkthunder-ramp.png`, the opaque white rectangle is gone.
+
+Two instrument notes that cost captures. The frame shown at a gdb stop is about
+three updates old (2:1 frame skip plus the GX swap), so a bolt captured the
+moment its head reaches the fighter is still above the camera -- capture late in
+the trail's life (`$cnt <= 2`). And Thunder's head stops at the first platform
+above Pikachu (y=1950 under Dream Land's): source `wpMapTestAllCheckCollEnd`,
+not a defect.
+
+**Thunder Jolt crashed the game (REPRODUCED, fixed).** Data abort at 0x1c in
+`efManagerPikachuThunderJoltMakeEffect`: the source writes
+`DObjGetStruct(effect)->translate` with no NULL test (efmanager.c:4544), the
+desc was deferred, and a deferred desc yields a bare GObj. The maker now goes
+through the same mapped-desc wrapper as Thunder's trail and shock, so an
+unbackable desc answers NULL. It was unbackable for a second reason:
+`gFTDataPikachuSpecial3` read NULL all match. Asset 342 is a full file that
+arrives as Special1's external dependency -- resident, this scene, no status
+node -- and the batch-5 residency rule only answered for pack records. It now
+answers for any record this scene made resident (still lookup-only). The Jolt
+family's CI4 quads also take the graded path: the source draws them
+`G_RM_AA_TEX_EDGE` with bilinear filtering, so its one-bit alpha reaches the
+screen as a one-texel coverage ramp; an opaque texel beside a clear one drops to
+5/7 and the clear one takes that neighbour's colour at 2/7.
+
+**Link losing a match froze the Results screen (REPRODUCED, fixed).**
+`ndsPreviewPackLoadHalt(20, Link)` in scene 24. The loser's Claps pose
+(scsubsysdatalink.c `D_ovl1_80391978`) is four raw SetModelPartID words:
+(20,0) (11,-1) (21,0) (19,-1) -- the sword sheathed as in Entry and the shield
+moved from the hand joint to the back joint, a child of the torso. Same
+nineteen roots as Entry, shield one place later in the walk, so no program
+matched. The live tree was read out at the halt and the generator derives the
+same order and binding parents `(255,0,1,2,3,1,5,6,1,1,1,10,11,0,13,14,0,16,17)`
+from the four events alone. Link program 4 "Claps"; four runtime sites (owner
+runtime, program lookup, program bound, program count) plus the binding-parent
+and cross-slot lookups.
+
+**Luigi had the same hole.** His Win2 pose sets model part 1 on both hand
+joints, exactly as Mario's Lose pose does; Mario, Fox and Donkey have variant
+rows, Luigi had none, so one Luigi win in three would decline and halt. Rows
+added from 221_LuigiMain.c (joint 10: 0x5910 / 0x5BA0, joint 16: 0x53C0 /
+0x5650).
+
+`check_model_part_mutation_coverage.py` passed throughout: it reads the main
+motion files, and both holes are in `scsubsysdata*.c`. A census of those files
+finds model-part events for Donkey, Fox, Link, Luigi, Mario, Ness and Samus;
+Link's Claps2 and Pose scripts (1P scenes) are still uncovered.
+
+## 2026-09-20 (cont. 5) — proofs on the batch-11 diagnostic ROM
+
+Every row is a natural-path probe (menu walk, real inputs) on
+`builds/build-crash-diagnostic/smash64ds-p2-shell-hwtri.nds`, `DIAG_NATIVE` all
+zero, captures under `artifacts/visibility/`.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Link loses, VS Results | 240 Results frames, `link_program=4`, decline 0, reject 0, no halt | `2026-09-20-link-results.gdb.txt` `RESULTS_OK` |
+| Luigi wins, VS Results | 240 frames, decline 0, reject 0 (which Win pose the RNG chose is not observed) | `2026-09-20-luigi-results.gdb.txt` |
+| Link entry beam | translucent, Link visible inside; witness alpha 31 -> 9, othermode `0x552079` -> `0x5049d9` | `2026-09-20-link-intro-b11.png` |
+| Link Spin Attack colour | ramp palettes engage: 10 bakes, 134 draws in one spin | `2026-09-20-link-spin-b11.png` |
+| Thunder Jolt | no abort across repeated jolts; ground effect maker reached; CI4 edge ramp | `2026-09-20-jolt-after.png` |
+| Yoshi Egg Lay | victim egg is fighter-sized | `2026-09-20-yoshi-egglay-b11.png` |
+| Yoshi egg throw burst | shell shards draw, particle atlas miss masks 0/0 | `2026-09-20-yoshi-eggexplode2-b11.png` |
+| Pikachu forward smash | shock roots draw (>= 6 in one smash) | `2026-09-20-pikachu-fsmash-b11.png` |
+| Samus Charge Shot | ball is in front of the arm cannon | `2026-09-20-samus-charge-b11.png` |
+
+**Entry-effect ramp palettes.** Two combine rows in the entry-effect tables share
+the colour half `(PRIM - ENV) * TEXEL0 + ENV` and draw IA planes baked A5I3 over
+one shared grey palette; modulate can only multiply that grey by one colour, so
+the ENV end was lost: Link's Spin Attack (ENV 0xd00c03 on the effect, nine
+oranges on the weapon), Fox's, Captain's and Samus's glows, the Poke Ball rays.
+A palette-only GL name now holds ENV->PRIM through the texture's own grey steps
+and is attached with glAssignColorTable (the KO stars' mechanism); twelve entries
+keyed on the live colours, replaced round-robin, generation-scoped. A slot is
+eligible only if every group that samples it is a ramp group.
+
+**The entry beam was solid because of an inherited render mode**, not a texture:
+`sNdsRendererAdapterEffectOtherModeL` is one value folded from every DL head and
+it outlives the proc that wrote it. The beam is DObjDLLink list 1 and its generic
+`gcDrawDObjTreeDLLinksForGObj` proc emits no mode, so it took the previous
+effect's opaque one. A list-1 draw whose proc set no mode now inherits the battle
+camera's XLU head (gmcamera.c:1055). Narrow on purpose: entry effects only.
+
+**Charge Shot depth** is an owner ruling (BUGS.md): the billboard is centred on
+the muzzle, so the cannon cut it in half. It takes the guard bias toward the eye
+that Sing's rings already used; the helper moved beside the shared quad kernel
+so there is one copy, and its host test follows it.
+
+Not proven here: Kirby's Fox hat (the pump cannot press Down after an inhale),
+Ness Up-B self-hit, Sector Z repeated intros.

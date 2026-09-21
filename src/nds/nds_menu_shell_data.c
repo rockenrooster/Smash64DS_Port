@@ -30,21 +30,12 @@
  * WHAT IT COMMITS is nothing: this screen writes no save field, so a
  * return trip restores the cursor from scene_prev alone.
  *
- * PRESENTATION. The source marks the cursor row with the tab HIGHLIGHT
- * pair (ENV 82/00/28 PRIM FF/00/28) and the rest NOT (ENV 00/00/00 PRIM
- * 82/82/AA) (mnDataSetOptionSpriteColors :131-177). The converted UI kit
- * carries no DATA art yet, so the rows are the kit's own font text in
- * those two primitive colours on the shell's shared blue field, in the
- * VS-menu cascade the other row screens use.
- *
- * TODO(DATA-KIT): bake the DATA sprites and replace the font rows --
- * llMNDataDataTextSprite (header), llMNDataCharactersTextSprite,
- * llMNDataVSRecordTextSprite, llMNDataSoundTestTextSprite (rows),
- * llMNDataDataIconDarkSprite (entry icon),
- * llMNCommonSmashBrosCollageSprite + llMNCommonDecalPaperSprite
- * (backdrop), llMNCommonSmashLogoSprite (emblem) and the
- * llMNCommonOptionTabLeft/Middle/RightSprite tabs -- following the
- * Option screen's row-surface shape (nds_menu_shell_option.c).
+ * PRESENTATION. The baked DATA plate (collage, decal papers, Data icon,
+ * smash logo, DATA label) plus one baked surface per row in the source's
+ * tab HIGHLIGHT / NOT pairs, in whichever of the source's two row layouts
+ * the Sound Test unlock bit selects (generate_mn_ui_kit.py DATA_*). The
+ * MAIN engine carries no text slab, which is why the former font rows drew
+ * nothing and the screen was a bare blue field.
  */
 
 #ifndef NDS_MENU_SHELL_SCREEN_DATA
@@ -58,25 +49,20 @@
 #define NDS_MENU_DATA_VS_RECORD 1u
 #define NDS_MENU_DATA_SOUND_TEST 2u
 
-/* The source's own tab primitive colours (mnDataSetOptionSpriteColors):
- * HI PRIM FF/00/28, NOT PRIM 82/82/AA. */
-#define NDS_MENU_DATA_RGB_HI 0x00ff0028u
-#define NDS_MENU_DATA_RGB_NOT 0x008282aau
-
-/* The VS-menu cascade this shell's row screens share (core NDS_MENU_VS_*):
- * descending to the left in the source's entry order. */
-#define NDS_MENU_DATA_X0 96
-#define NDS_MENU_DATA_Y0 40
-#define NDS_MENU_DATA_DX (-18)
-#define NDS_MENU_DATA_DY 31
+#ifndef NDS_MENU_VS_SURFACE_NONE
+#define NDS_MENU_VS_SURFACE_NONE 0xffffu
+#endif
 
 static u32 sMenuDataCursor;
 static u32 sMenuDataHaveSoundTest;
+/* What is currently ON SCREEN, so a still screen blits nothing and a cursor
+ * move blits exactly the two rows that changed (Option-screen discipline). */
+static NdsUiKitSurfaceId sMenuDataRowSurface[NDS_MENU_DATA_ROWS];
 
-static const char *kMenuDataRowText[NDS_MENU_DATA_ROWS] = {
-    "CHARACTERS",
-    "VS RECORD",
-    "SOUND TEST"
+__attribute__((used)) volatile u32 gNdsMenuShellDataBlitCount;
+
+static const NdsUiKitSurfaceId kNdsMenuDataPlate[] = {
+    NDS_MN_UI_KIT_SURFACE_DATA
 };
 
 /* The last row the cursor may rest on: the SoundTest row when unlocked,
@@ -87,34 +73,56 @@ static u32 ndsMenuShellDataLast(void)
         NDS_MENU_DATA_SOUND_TEST : NDS_MENU_DATA_VS_RECORD;
 }
 
-/* One full redraw. Text slots are content-keyed (nds_ui_kit.c), so a call
- * that changed nothing recomposes nothing; refresh runs on populate and
- * on cursor moves only. */
+/* The source has two row layouts, picked by the Sound Test unlock bit
+ * (mnDataMakeCharacters :223, mnDataMakeVSRecord :263); each is baked in the
+ * tab HIGHLIGHT and NOT pairs (mnDataSetOptionSpriteColors :131-177). */
+static NdsUiKitSurfaceId ndsMenuShellDataWantSurface(u32 row)
+{
+    u32 hi = (row == sMenuDataCursor) ? 1u : 0u;
+
+    if (sMenuDataHaveSoundTest == FALSE)
+    {
+        if (row == NDS_MENU_DATA_CHARACTERS)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_DATA_CHARACTERS_NOSOUND_HI :
+                NDS_MN_UI_KIT_SURFACE_DATA_CHARACTERS_NOSOUND;
+        }
+        return (hi != 0u) ?
+            NDS_MN_UI_KIT_SURFACE_DATA_VS_RECORD_NOSOUND_HI :
+            NDS_MN_UI_KIT_SURFACE_DATA_VS_RECORD_NOSOUND;
+    }
+    switch (row)
+    {
+    case NDS_MENU_DATA_CHARACTERS:
+        return (hi != 0u) ? NDS_MN_UI_KIT_SURFACE_DATA_CHARACTERS_HI :
+                            NDS_MN_UI_KIT_SURFACE_DATA_CHARACTERS;
+    case NDS_MENU_DATA_VS_RECORD:
+        return (hi != 0u) ? NDS_MN_UI_KIT_SURFACE_DATA_VS_RECORD_HI :
+                            NDS_MN_UI_KIT_SURFACE_DATA_VS_RECORD;
+    default:
+        break;
+    }
+    return (hi != 0u) ? NDS_MN_UI_KIT_SURFACE_DATA_SOUND_TEST_HI :
+                        NDS_MN_UI_KIT_SURFACE_DATA_SOUND_TEST;
+}
+
 static void ndsMenuShellDataRefresh(void)
 {
     u32 row;
 
-    ndsUiKitSetText(NDS_MENU_SLOT_HEADER, "DATA", NDS_MENU_RGB_HEADER);
-    ndsUiKitMoveText(NDS_MENU_SLOT_HEADER, NDS_MENU_HEADER_X,
-                     NDS_MENU_HEADER_Y);
-    for (row = 0u; row < NDS_MENU_DATA_ROWS; row++)
+    for (row = 0u; row <= ndsMenuShellDataLast(); row++)
     {
-        u32 slot = NDS_MENU_SLOT_ROW0 + row;
+        NdsUiKitSurfaceId want = ndsMenuShellDataWantSurface(row);
 
-        if ((row == NDS_MENU_DATA_SOUND_TEST) &&
-            (sMenuDataHaveSoundTest == FALSE))
+        if (want != sMenuDataRowSurface[row])
         {
-            ndsUiKitHideText(slot);
-        }
-        else
-        {
-            u32 rgb = (row == sMenuDataCursor) ?
-                NDS_MENU_DATA_RGB_HI : NDS_MENU_DATA_RGB_NOT;
-
-            ndsUiKitSetText(slot, kMenuDataRowText[row], rgb);
-            ndsUiKitMoveText(slot,
-                             NDS_MENU_DATA_X0 + ((s32)row * NDS_MENU_DATA_DX),
-                             NDS_MENU_DATA_Y0 + ((s32)row * NDS_MENU_DATA_DY));
+            if (ndsUiKitBlitSurfaces(&want, 1u) == FALSE)
+            {
+                return;
+            }
+            sMenuDataRowSurface[row] = want;
+            gNdsMenuShellDataBlitCount++;
         }
     }
 }
@@ -145,10 +153,19 @@ static void ndsMenuShellDataLoad(void)
     {
         sMenuDataCursor = NDS_MENU_DATA_CHARACTERS;
     }
+    {
+        u32 row;
+
+        for (row = 0u; row < NDS_MENU_DATA_ROWS; row++)
+        {
+            sMenuDataRowSurface[row] = NDS_MENU_VS_SURFACE_NONE;
+        }
+    }
 }
 
 static void ndsMenuShellPopulateData(void)
 {
+    (void)ndsUiKitBlitSurfaces(kNdsMenuDataPlate, 1u);
     ndsMenuShellDataRefresh();
 }
 

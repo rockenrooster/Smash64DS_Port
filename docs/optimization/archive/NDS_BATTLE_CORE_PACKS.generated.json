@@ -1413,7 +1413,7 @@
       "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Ness",
-      "file_bytes": 25128,
+      "file_bytes": 26164,
       "fixups": 292,
       "fkind": 11,
       "foreign_texture_allocation": 0,
@@ -1422,12 +1422,16 @@
       "foreign_texture_spans": 0,
       "main_asset": 239,
       "model_asset": 335,
-      "model_spans": 24,
-      "model_structural_bytes": 19628,
-      "resident_allocation": 22728,
-      "resident_with_foreign_textures": 22728,
+      "model_spans": 25,
+      "model_structural_bytes": 20652,
+      "resident_allocation": 23764,
+      "resident_with_foreign_textures": 23764,
       "root_cells": 52,
       "texture_images": [
+        {
+          "asset": 335,
+          "offset": 35672
+        },
         {
           "asset": 335,
           "offset": 43808

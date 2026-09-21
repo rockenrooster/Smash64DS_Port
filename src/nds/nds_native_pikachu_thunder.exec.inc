@@ -34,7 +34,10 @@ s32 ndsRendererSubmitNativePikachuThunder(u32 root, u32 role,
     case 1u: ndsThunderSetup1(stats, &state, material, palette, image); break;
     default: ndsThunderSetup2(stats, &state, material, palette, image); break;
     }
-    drawn = ndsRendererNativeTexturedQuad(vertices, indices[root], config, stats, &state);
+    /* Roots 0 and 2 are live IA8 glows; root 1 is the fixed CI4 spark. */
+    drawn = ndsRendererNativeTexturedQuadIa8(vertices, indices[root],
+        (root == 1u) ? NULL : (const u8 *)(uintptr_t)material->current_image,
+        config, stats, &state);
     if (drawn < 0) return FALSE;
     if (drawn > 0)
     {
