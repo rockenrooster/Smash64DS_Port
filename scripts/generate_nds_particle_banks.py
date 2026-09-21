@@ -788,6 +788,16 @@ P1_EXTRA_SEAMS = frozenset((
     "efManagerStockStealEndMakeEffect",
     "efManagerBattleScoreMakeEffect",
     "efManagerEggBreakMakeEffect",
+    # Pikachu's Thunder self-hit burst, script 0x74 (efmanager.c). The source
+    # Hit motion script dPikachuMainMotion_GettingThundered_0x1668 issues
+    # nEFKindThunderAmp when the descending head reaches Pikachu, and ftParam
+    # maps that kind to this maker. The port answered the kind with the generic
+    # HitElectric sprite instead, so the maker had no caller, the seam
+    # derivation never saw it, and 0x74 stayed UNREACHABLE -- BUGS.md "Down-B
+    # blue self-hit explosion missing". Routing the kind to its source maker
+    # (reloc_backend_compat_shims.c) is only half of it; per the rule above,
+    # the route is not finished until this list knows about it.
+    "efManagerThunderAmpMakeEffect",
 ))
 
 # efmanager.c routes these three public makers through

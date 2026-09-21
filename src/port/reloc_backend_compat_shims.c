@@ -8208,6 +8208,25 @@ static sb32 ndsFTParamMakeSourceEffect(s32 effect_id, s32 lr, Vec3f *pos,
     case nEFKindImpactWave:
         *effect = efManagerImpactWaveMakeEffect(pos, 4, 0.0F);
         return TRUE;
+#if NDS_P2_PIKACHU
+    /* Pikachu's Thunder self-hit burst. efdef.h names the kind outright --
+     * "Pikachu's Thunder self-hit" -- and the source Hit motion script
+     * dPikachuMainMotion_GettingThundered_0x1668 issues it when the descending
+     * head reaches Pikachu. ftparam.c answers it with this maker, which starts
+     * bank script 0x74.
+     *
+     * The substitute switch below used to swallow it into the generic
+     * HitElectric sprite shared with ShockSmall and Psionic, which is the whole
+     * of BUGS.md "Down-B blue self-hit explosion missing": the burst was not
+     * absent, it was replaced by a small generic spark. With no caller the
+     * maker was also dropped by --gc-sections, and the particle-bank seam
+     * derivation -- which reads efmanager.c for reachable makers -- never
+     * seeded 0x74, so the script was UNREACHABLE as well. Both halves are
+     * needed; generate_nds_particle_banks.py carries the other. */
+    case nEFKindThunderAmp:
+        *effect = efManagerThunderAmpMakeEffect(pos);
+        return TRUE;
+#endif
     case nEFKindDustHeavy:
         *effect = efManagerDustHeavyMakeEffect(pos, lr);
         return TRUE;
@@ -8477,6 +8496,10 @@ void *ftParamMakeEffect(GObj *fighter_gobj, s32 effect_id, s32 joint_id,
         break;
     case nEFKindShockSmall:
     case nEFKindPsionic:
+    /* ThunderAmp takes its real maker above at
+     * NDS_R2_SOURCE_EFFECTS_PARTICLE=1 and never reaches here. Kept for the
+     * same reason the Flame kinds are: the flag is switchable to 0 for
+     * attribution A/Bs, and that arm has no other route to a self-hit burst. */
     case nEFKindThunderAmp:
         effect_gobj = ndsEFManagerMakeVisualEffect(
             nNDSVisualEffectHitElectric, &pos, 0.7F, lr, NULL);
