@@ -9616,7 +9616,11 @@ static void ndsFTMainProcPhysicsLagUpdateSlice(GObj *fighter_gobj)
 }
 
 
-static sb32 ndsMPCommonProcFighterDamageFloorOnly(MPCollData *coll_data,
+/* Defined further down this same translation unit, and the damage proc below
+ * is the first caller. */
+f32 lbCommonMag2D(Vec3f *vec);
+
+static sb32 ndsMPCommonProcFighterDamage(MPCollData *coll_data,
                                                   GObj *fighter_gobj,
                                                   u32 flags)
 {
@@ -9640,12 +9644,94 @@ static sb32 ndsMPCommonProcFighterDamageFloorOnly(MPCollData *coll_data,
     }
     root_y_before = coll_data->p_translate->y;
 
-    /* This is the exact floor portion of BattleShip mpCommonProcFighterDamage.
-     * Its wall and ceiling branches remain deferred until the O2R side runners
-     * publish source-faithful line IDs, angles, and clamps. */
-    coll_data->mask_unk &= (u16)~(MAP_FLAG_LWALL | MAP_FLAG_RWALL);
-    coll_data->mask_stat &= (u16)~(MAP_FLAG_LWALL | MAP_FLAG_RWALL |
-                                   MAP_FLAG_CEIL);
+    /* BattleShip mpCommonProcFighterDamage (mpcommon.c:725) in source order:
+     * left wall, right wall, ceiling, then floor.
+     *
+     * The wall and ceiling branches used to be deferred here "until the O2R
+     * side runners publish source-faithful line IDs, angles, and clamps", and
+     * this function actively CLEARED LWALL/RWALL/CEIL out of mask_stat. A
+     * fighter in any damage status therefore had no wall or ceiling collision
+     * at all -- it flew through them -- which is what Castle's blue upper side
+     * ramps failing "during knockback/falling" is (BUGS.md S02, owner: still
+     * not fixed after the walking-case repairs). The side runners those
+     * branches waited on now exist: the AdjNew wall tests, the tilted-surface
+     * and LR-angle helpers and the faithful wall sweep all landed with the
+     * 2026-09-21 wall-pass work, so the deferral has no remaining cause.
+     *
+     * Each branch is the source's, including its two-armed bookkeeping: a
+     * contact only ENDS the sub-step loop when this is a newly struck surface
+     * (not already in coll_mask_prev), the displacement is over 30 units and
+     * the approach angle exceeds 110 degrees -- otherwise the surface is
+     * recorded in coll_mask_ignore and the knockback continues through the
+     * remaining sub-steps. Dropping either arm turns a grazing contact into a
+     * full stop, or a real wall slam into a pass-through. */
+    if (mpProcessCheckTestLWallCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunLWallCollisionAdjNew(coll_data);
+
+        if (((fp->status_vars.common.damage.coll_mask_prev &
+              MAP_FLAG_LWALL) == 0u) &&
+            (lbCommonMag2D(&coll_data->pos_diff) > 30.0F) &&
+            (syVectorAngleDiff3D(&coll_data->pos_diff,
+                                 &coll_data->lwall_angle) >
+             F_CLC_DTOR32(110.0F)))
+        {
+            fp->status_vars.common.damage.coll_mask_curr |= MAP_FLAG_LWALL;
+            is_collide = TRUE;
+            coll_data->is_coll_end = TRUE;
+            gNdsCollisionRuntimeDiagnostics.damage_wall_hits++;
+        }
+        else if ((coll_data->mask_prev & MAP_FLAG_LWALL) == 0u)
+        {
+            fp->status_vars.common.damage.coll_mask_ignore |= MAP_FLAG_LWALL;
+        }
+    }
+    if (mpProcessCheckTestRWallCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunRWallCollisionAdjNew(coll_data);
+
+        if (((fp->status_vars.common.damage.coll_mask_prev &
+              MAP_FLAG_RWALL) == 0u) &&
+            (lbCommonMag2D(&coll_data->pos_diff) > 30.0F) &&
+            (syVectorAngleDiff3D(&coll_data->pos_diff,
+                                 &coll_data->rwall_angle) >
+             F_CLC_DTOR32(110.0F)))
+        {
+            fp->status_vars.common.damage.coll_mask_curr |= MAP_FLAG_RWALL;
+            is_collide = TRUE;
+            coll_data->is_coll_end = TRUE;
+            gNdsCollisionRuntimeDiagnostics.damage_wall_hits++;
+        }
+        else if ((coll_data->mask_prev & MAP_FLAG_RWALL) == 0u)
+        {
+            fp->status_vars.common.damage.coll_mask_ignore |= MAP_FLAG_RWALL;
+        }
+    }
+    if (mpProcessCheckTestCeilCollisionAdjNew(coll_data) != FALSE)
+    {
+        mpProcessRunCeilCollisionAdjNew(coll_data);
+
+        if ((coll_data->mask_stat & MAP_FLAG_CEIL) != 0u)
+        {
+            mpProcessRunCeilEdgeAdjust(coll_data);
+        }
+        if (((fp->status_vars.common.damage.coll_mask_prev &
+              MAP_FLAG_CEIL) == 0u) &&
+            (lbCommonMag2D(&coll_data->pos_diff) > 30.0F) &&
+            (syVectorAngleDiff3D(&coll_data->pos_diff,
+                                 &coll_data->ceil_angle) >
+             F_CLC_DTOR32(110.0F)))
+        {
+            fp->status_vars.common.damage.coll_mask_curr |= MAP_FLAG_CEIL;
+            is_collide = TRUE;
+            coll_data->is_coll_end = TRUE;
+            gNdsCollisionRuntimeDiagnostics.damage_ceil_hits++;
+        }
+        else if ((coll_data->mask_prev & MAP_FLAG_CEIL) == 0u)
+        {
+            fp->status_vars.common.damage.coll_mask_ignore |= MAP_FLAG_CEIL;
+        }
+    }
     gNdsCollisionRuntimeDiagnostics.damage_floor_tests++;
     if (mpProcessRunFloorCollisionAdjNewNULL(coll_data) != FALSE)
     {
@@ -9804,7 +9890,7 @@ sb32 mpCommonCheckFighterDamageCollision(GObj *fighter_gobj)
         fp->status_vars.common.damage.coll_mask_curr = 0u;
         fp->status_vars.common.damage.coll_mask_ignore = 0u;
         result = mpProcessUpdateMain(&fp->coll_data,
-                                     ndsMPCommonProcFighterDamageFloorOnly,
+                                     ndsMPCommonProcFighterDamage,
                                      fighter_gobj, MAP_PROC_TYPE_DEFAULT);
         if (result != FALSE)
         {

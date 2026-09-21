@@ -3951,6 +3951,12 @@ typedef struct NDSCollisionRuntimeDiagnostics {
     u32 damage_proc_calls;
     u32 damage_floor_tests;
     u32 damage_floor_hits;
+    /* Knockback wall/ceiling contacts that ended the sub-step loop. Both read
+     * zero for as long as those branches were deferred out of the damage
+     * proc; a non-zero count is the only evidence that a knocked-back fighter
+     * is being stopped by geometry rather than flying through it. */
+    u32 damage_wall_hits;
+    u32 damage_ceil_hits;
     u32 damage_floor_landings;
     u32 damage_floor_edge_deferred;
     u32 damage_results;
