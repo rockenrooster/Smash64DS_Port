@@ -111,6 +111,60 @@ static sb32 ndsFoxBlasterProcReflectorBore(GObj *weapon_gobj)
     return result;
 }
 
+/* Kirby-owned blasters run every glow-raising callback with the suppression
+ * flag up. The source procs are otherwise untouched -- physics, damage,
+ * reflection and lifetime are all still BattleShip's; only the DS stand-in for
+ * EFCommon script 0x62 declines. Fox's weapons never take these wrappers. */
+static sb32 (*sNdsFoxBlasterKirbyProcMap)(GObj *);
+static sb32 (*sNdsFoxBlasterKirbyProcHop)(GObj *);
+/* Both are defined further down this file, after the source include. */
+static sb32 ndsFoxBlasterProcHitCounted(GObj *weapon_gobj);
+static sb32 ndsFoxBlasterProcReflectorBore(GObj *weapon_gobj);
+
+static sb32 ndsFoxBlasterProcHitKirbyNoGlow(GObj *weapon_gobj)
+{
+    sb32 result;
+
+    gNdsFoxBlasterSuppressMuzzleGlow = TRUE;
+    result = ndsFoxBlasterProcHitCounted(weapon_gobj);
+    gNdsFoxBlasterSuppressMuzzleGlow = FALSE;
+    return result;
+}
+
+static sb32 ndsFoxBlasterProcMapKirbyNoGlow(GObj *weapon_gobj)
+{
+    sb32 result;
+
+    gNdsFoxBlasterSuppressMuzzleGlow = TRUE;
+    result = (sNdsFoxBlasterKirbyProcMap != NULL) ?
+        sNdsFoxBlasterKirbyProcMap(weapon_gobj) :
+        wpFoxBlasterProcMap(weapon_gobj);
+    gNdsFoxBlasterSuppressMuzzleGlow = FALSE;
+    return result;
+}
+
+static sb32 ndsFoxBlasterProcHopKirbyNoGlow(GObj *weapon_gobj)
+{
+    sb32 result;
+
+    gNdsFoxBlasterSuppressMuzzleGlow = TRUE;
+    result = (sNdsFoxBlasterKirbyProcHop != NULL) ?
+        sNdsFoxBlasterKirbyProcHop(weapon_gobj) :
+        wpFoxBlasterProcHop(weapon_gobj);
+    gNdsFoxBlasterSuppressMuzzleGlow = FALSE;
+    return result;
+}
+
+static sb32 ndsFoxBlasterProcReflectorKirbyNoGlow(GObj *weapon_gobj)
+{
+    sb32 result;
+
+    gNdsFoxBlasterSuppressMuzzleGlow = TRUE;
+    result = ndsFoxBlasterProcReflectorBore(weapon_gobj);
+    gNdsFoxBlasterSuppressMuzzleGlow = FALSE;
+    return result;
+}
+
 /* wpManager selects func_ovl3_80167618 for this descriptor, whose source
  * callback eventually reaches lbCommonDObjScaleXProcDisplay. The port's
  * shared compatibility definition of that function is deliberately a no-op:
@@ -276,21 +330,21 @@ static sb32 ndsFoxBlasterProcHitCounted(GObj *weapon_gobj)
 GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
 {
     GObj *weapon_gobj;
+    sb32 shooter_is_kirby;
 
     gNdsFighterProjectileProofSpawnCallCount++;
 #if NDS_R2_POSITION_PROBE
     ndsFoxBlasterProbeSpawn(fighter_gobj, pos);
 #endif
-    /* Scoped to this one constructor call, so the impact glows the weapon
-     * makes later -- out at the bolt, not on the shooter -- are untouched. */
     {
         FTStruct *shooter =
             (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 
-        gNdsFoxBlasterSuppressMuzzleGlow =
+        shooter_is_kirby =
             ((shooter != NULL) && (shooter->fkind == nFTKindKirby)) ?
                 TRUE : FALSE;
     }
+    gNdsFoxBlasterSuppressMuzzleGlow = shooter_is_kirby;
     weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
     gNdsFoxBlasterSuppressMuzzleGlow = FALSE;
     if (weapon_gobj != NULL)
@@ -314,6 +368,31 @@ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
         wp->proc_reflector = ndsFoxBlasterProcReflectorBore;
         wp->proc_hit = ndsFoxBlasterProcHitCounted;
         weapon_gobj->proc_display = ndsFoxBlasterProcDisplay;
+        /* OWNER 2026-09-21, second pass: Kirby's copied blaster must show no
+         * glow AT ALL, not just no muzzle flash.
+         *
+         * Suppressing only the muzzle left the three IMPACT calls live, and on
+         * Kirby those land on him too: the bore offset is Fox's, Kirby is much
+         * shorter, and the bolt reaches a surface almost immediately, so the
+         * hit/map/hop glow fires at point-blank range and reads as a white and
+         * gold flash over his body. Mark the WEAPON rather than the shooter,
+         * because these callbacks run long after the constructor returned and
+         * have no fighter argument of their own. */
+        if ((shooter_is_kirby != FALSE) && (wp->proc_map != NULL))
+        {
+            sNdsFoxBlasterKirbyProcMap = wp->proc_map;
+            wp->proc_map = ndsFoxBlasterProcMapKirbyNoGlow;
+        }
+        if (shooter_is_kirby != FALSE)
+        {
+            sNdsFoxBlasterKirbyProcHop = wp->proc_hop;
+            wp->proc_hit = ndsFoxBlasterProcHitKirbyNoGlow;
+            wp->proc_shield = ndsFoxBlasterProcHitKirbyNoGlow;
+            wp->proc_setoff = ndsFoxBlasterProcHitKirbyNoGlow;
+            wp->proc_absorb = ndsFoxBlasterProcHitKirbyNoGlow;
+            wp->proc_hop = ndsFoxBlasterProcHopKirbyNoGlow;
+            wp->proc_reflector = ndsFoxBlasterProcReflectorKirbyNoGlow;
+        }
         gNdsFighterProjectileProofSpawnSuccessCount++;
         /* One weapon is provably live right now; the once-per-update list
          * sampler can miss a same-update lifetime entirely (see the hit
