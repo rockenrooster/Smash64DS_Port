@@ -994,3 +994,48 @@ body sections move into the per-slot hat images, because admitting them costs
 Kirby's owner image +28,848 B high / +26,104 B low and the 2026-09-17 gate run
 came back with heap low-water 73,064 against 111,680 and 151 native-render
 failures. That cost is therefore currently shipping and is an owner call.
+
+## 2026-09-21 (cont.) -- FGM 203: the bake had no resampler pitch ceiling
+
+Owner: "FGM 203 pitch is too high; the stable end pitch should be much lower."
+
+The cue is Kirby's inhale vacuum, a loop-prefix render. Its UCD sweeps notes 12,
+13, 14, 16, 17, 19 and then loops note 20 (+700 cents) forever, and its
+articulation (98) spawns modulator 40 -- shape 6, **target 12**, i.e. the
+`unk2C` pitch envelope -- a one-shot ramp with amplitude 1900 and offset -500
+that reaches the target's own +1200 clamp about a hundred ticks in and stays
+there. Sustained total: **+1900 cents, ratio 2.9966**.
+
+The console cannot do that. `n_env.c:1489` clips every non-unity voice with
+`if (e->rs_ratio > MAX_RATIO) e->rs_ratio = MAX_RATIO;` and then quantises to
+1/UNITY_PITCH; `PR/abi.h:280-281` gives those as `1.99996F` -- "within .03
+cents of +1 octave" -- and `0x8000`. **A source wave can never play faster than
+one octave above its recorded rate**, whatever the cents add up to. The AOT
+bake had no such ceiling.
+
+So 203 sustained a playback rate of 95,892 Hz where the console sustains
+**63,998 Hz** -- a fifth sharp, and it never came back down. That is the report.
+
+`source_pitch_ratio(cents)` now applies the clip and the quantisation, and the
+three sites that turned cents into a rate go through it.
+
+**Independent corroboration, already written down in this repo.**
+`nds_audio_fgm.c` explains why one cue takes the full-program AOT path: "whose
+first note asks for 90,510 Hz -- past the u16 `frequency` field above". No N64
+voice can ask for 90,510 Hz. Three cue-audit rows (189, 190, 219) carried a
+`source_rate_above_u16` blocker for the same reason; with the ceiling in place
+no rate exceeds u16 and the blocker is gone, so those rows lose it and the
+attack-cue audit hash is re-pinned.
+
+Re-derived pins: `ATTACK_CUE_AUDIT_SHA256`, `PUBLIC_WIN_SAMPLE_COUNT`
+(69,369 -> 69,363) and the retained-sample proofs for 127, 432, 486, 603, 604,
+605 and 608. Every other cue is bit-identical -- the ceiling only binds above
++1200 cents. `scripts/sfx` 48 passed; the one failure
+(`test_fgm_metadata_residency`) is pre-existing and untouched by this change:
+it compiles an extracted C snippet that calls `ndsAudioFgmDirectRouteInit`
+without a declaration.
+
+Playtest r14: `builds/remaining-bugs-playtest-r14/smash64ds.nds`, SHA-256
+`A451F3A62291F8CF835C855B88B9EB928888AA5F1122F0ED20AE5FD7E62A1EF7`, boot
+`P2_RUNTIME_OK`. Supersedes r13. **Audio changed, so this one is worth a
+listen: 203 and the other eight re-pinned cues.**

@@ -39,6 +39,32 @@ PACK_ENTRY = struct.Struct("<HHIIIHHBBHIHH")
 PACK_ENVELOPE_POINT = struct.Struct("<HBB")
 FGM_TIMER_MICROSECONDS = 5750
 FGM_OUTPUT_RATE = 32000
+
+#: THE RESAMPLER'S OWN PITCH CEILING, WHICH THE BAKE HAS TO SHARE.
+#:
+#: `n_env.c:1489` clips every non-unity voice with
+#: `if (e->rs_ratio > MAX_RATIO) e->rs_ratio = MAX_RATIO;` and then quantises
+#: what is left to 1/UNITY_PITCH; `PR/abi.h:280-281` gives those as 0x8000 and
+#: 1.99996F, "within .03 cents of +1 octave". So the hardware can never play a
+#: source wave faster than one octave above its recorded rate, whatever the
+#: cents add up to.
+#:
+#: The AOT bake had no ceiling, and cues do exceed it. Kirby's inhale (FGM 203)
+#: is the one the owner heard: its articulation spawns a shape-6 one-shot pitch
+#: ramp (modulator 40, target 12, amplitude 1900, offset -500) that pins at the
+#: +1200 clamp about a hundred ticks in, and its UCD loop then holds note 20
+#: (+700 cents) forever -- +1900 cents, a ratio of 2.9966, where the console
+#: sustains 1.99996. Nearly a fifth sharp, and it never comes back down.
+MAX_RATIO = 1.99996
+UNITY_PITCH = 0x8000
+
+
+def source_pitch_ratio(cents: float) -> float:
+    """The playback ratio the console's resampler would actually use."""
+    ratio = 2.0 ** (cents / 1200.0)
+    if ratio > MAX_RATIO:
+        ratio = MAX_RATIO
+    return int(ratio * UNITY_PITCH) / UNITY_PITCH
 # A ROM budget on a NitroFS payload, and nothing else -- the runtime never holds
 # the pack. nds_audio_fgm.c reads a 1,808-byte header into .bss and streams each
 # cue into the fixed 200 KiB slot cache below, so pack growth costs ROM, which
@@ -93,7 +119,7 @@ PUBLIC_NO_CONTEST_ID = 624
 LOOPED_FANFARE_AOT_IDS = frozenset((
     PUBLIC_EXCITED_ID, PUBLIC_WIN_ID, PUBLIC_NO_CONTEST_ID))
 PUBLIC_EXCITED_SAMPLE_COUNT = 104204
-PUBLIC_WIN_SAMPLE_COUNT = 69369
+PUBLIC_WIN_SAMPLE_COUNT = 69363
 # 624 is the third reachable cue on articulation 460 / sound 320. Its source
 # note is pitch 10 for 1200 ticks, so the same source-derived length law used by
 # 621/626 gives ceil(1200 * 5750 us * 13454 Hz) = 92,833 samples.
@@ -1242,8 +1268,13 @@ FULL_PROGRAM_AOT_IDS = frozenset((
 
 ATTACK_ACTION_AUDIT_SHA256 = (
     "ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601")
+#: Re-pinned 2026-09-21 with the resampler pitch ceiling (source_pitch_ratio).
+#: Every note rate in this audit is now what the console would actually play,
+#: so three cues lost their `source_rate_above_u16` blocker: that blocker only
+#: ever described the uncapped bake asking for rates -- up to 90,510 Hz -- that
+#: no N64 voice can produce and the runtime's u16 cannot hold.
 ATTACK_CUE_AUDIT_SHA256 = (
-    "98d07597bcd9273dd0314dccb539c2bd7bde7adb8e9e3c647bf70e717f51226d")
+    "4707c7827ba62fab8ecdc6d282dc64316da335178df51300a7257a7c3e0547ba")
 ATTACK_DIRECT_CALL_COUNTS = {
     19: 4,
     41: 17,
@@ -1334,7 +1365,6 @@ ATTACK_CUE_AUDIT = (
             "2f6e924d16e5107e8557234d5c9806ba5ff99d86d9d0dd5b671ad7d5dfe7156d",
         "blockers": (
             "ucd_t5_pitch_schedule",
-            "source_rate_above_u16",
             "ucd_volume_schedule",
             "source_custom_fx_bus",
         ),
@@ -1346,7 +1376,6 @@ ATTACK_CUE_AUDIT = (
             "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
         "blockers": (
             "ucd_pitch_schedule",
-            "source_rate_above_u16",
             "source_custom_fx_bus",
         ),
     },
@@ -1386,7 +1415,6 @@ ATTACK_CUE_AUDIT = (
             "84a6c9a138201870077c8f6d2461040e94494e28082790285687d58a9b27df40",
         "blockers": (
             "ucd_pitch_schedule",
-            "source_rate_above_u16",
             "source_custom_fx_bus",
         ),
     },
@@ -1561,7 +1589,7 @@ SELECTED = (
         "wave_length": 13824,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 19294,
+        "expected_retained_samples": 19293,
     },
     # And the two the miss ring caught only after the five above stopped
     # appearing in it: the countdown announces FIVE and FOUR before the three
@@ -2122,7 +2150,7 @@ SELECTED = (
         "wave_length": 8524,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 13556,
+        "expected_retained_samples": 13555,
         "root_fork_programs": (),
         "root_program_sha256":
             "64b6d773fa65de93b0254fc29bd4ec68c5eacf65bd3bd97910881840323377d5",
@@ -3849,7 +3877,7 @@ SELECTED += (
         "wave_length": 3870,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 6880,
+        "expected_retained_samples": 5678,
         "root_fork_programs": (),
         "root_program_sha256":
             "ff68f1bdc2917b4536fa3048f20476dfbbdf7f3c7074e9e9d1ac7797c3babbc0",
@@ -4396,7 +4424,7 @@ SELECTED += (
         "wave_length": 18918,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 29613,
+        "expected_retained_samples": 29611,
         "root_program_sha256":
             "f8465bca110ef46023a8e3682e8974ab74c2c83854fc9352ab5be36b32a1b0d1",
         "articulation_program_sha256":
@@ -5278,7 +5306,7 @@ SELECTED += (
         "wave_length": 17470,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 29613,
+        "expected_retained_samples": 29611,
         "root_fork_programs": (),
         "root_program_sha256":
             "688d03802bd41516278349c5c99f5bc2528b66e4694d075a548c053f2959b9bd",
@@ -6018,7 +6046,7 @@ SELECTED += (
         "wave_length": 19234,
         "loop_start": 0,
         "loop_end": 0,
-        "expected_retained_samples": 30538,
+        "expected_retained_samples": 30536,
         "root_fork_programs": (),
         "root_program_sha256":
             "2927538536aa7ea8801aeead6e933b4899b90b2dffa7ea8db08bdc5bd04c22c8",
@@ -7804,9 +7832,9 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
         target = source_quadratic_target(active_root_volume, state["volume"])
         if note["release_tick"] == tick:
             target = 0
-        frequency = round(FGM_OUTPUT_RATE * (2.0 ** (
-            (state["pitch"] + note["pitch_code"] * 100 - 1300 +
-             note["pitch_offset_cents"]) / 1200.0)))
+        frequency = round(FGM_OUTPUT_RATE * source_pitch_ratio(
+            state["pitch"] + note["pitch_code"] * 100 - 1300 +
+            note["pitch_offset_cents"]))
         for sample_in_tick in range(samples_per_tick):
             if loop is not None:
                 loop_start = int(loop["start"])
@@ -7921,8 +7949,8 @@ def first_sounding_pitch_code(selector: dict) -> int:
 def note_frequency_hz(articulation_pitch_cents: int,
                       pitch_code: int) -> int:
     note_pitch_cents = pitch_code * 100 - 1300
-    return round(FGM_OUTPUT_RATE * (2.0 ** (
-        (articulation_pitch_cents + note_pitch_cents) / 1200.0)))
+    return round(FGM_OUTPUT_RATE * source_pitch_ratio(
+        articulation_pitch_cents + note_pitch_cents))
 
 
 def render_source_loop(pcm: list[int], loop_start: int, loop_end: int,
@@ -8810,8 +8838,8 @@ def build_attack_cue_audit(ucd: dict, articulations: dict,
                 pitch_code = int(row[1])
                 note_cents = pitch_code * 100 - 1300 + t5
                 net_cents = articulation_pitch + note_cents
-                frequency = round(FGM_OUTPUT_RATE * (2.0 ** (
-                    net_cents / 1200.0)))
+                frequency = round(FGM_OUTPUT_RATE *
+                                  source_pitch_ratio(net_cents))
                 notes.append({
                     "start_tick": tick,
                     "duration_ticks": duration,
