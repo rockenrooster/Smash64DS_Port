@@ -237,6 +237,12 @@ void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height);
  * surface counters on any failure. */
 s32 ndsUiKitBlitFireAtlas(void);
 s32 ndsUiKitCacheSurface(u32 surface);
+/* A caller-owned resident copy of one surface: one verified NitroFS read, then
+ * any number of blits from main RAM. The CSS door slide repaints the same
+ * static card under two moving halves for twenty tics; streaming it each tic
+ * was an open + 7.8 KB read + hash + flush per sliding slot per tic. */
+s32 ndsUiKitLoadSurfaceCopy(u32 surface, u8 *buffer, u32 capacity);
+s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer);
 void ndsUiKitDrawCachedSurface(void);
 /* P2-1N (3): draw a keyed sub-rectangle of the cached surface at an arbitrary
  * destination, clipped horizontally to [clip_x0, clip_x1) and to the layer.

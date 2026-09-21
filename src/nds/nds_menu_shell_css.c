@@ -908,6 +908,84 @@ static u32 ndsMenuShellCssGateState(u32 slot)
  * trampled, and removing that needs somewhere to cache a panel band or a
  * foreground layer for the halves. The owner reported "Low FPS/Flashing during
  * gate openings"; this removes three quarters of the file opens behind it. */
+/* THE CARD UNDER A SLIDING DOOR IS STATIC, SO IT IS READ ONCE.
+ *
+ * Mid-slide, every tic repaints the slot's card and then the two door halves
+ * over it. The card came from NitroFS each time -- an open, a 7,844-byte read,
+ * a hash and a flush per sliding slot per tic, twenty tics a slide, which is
+ * the measured multi-frame sync spike behind "low FPS / flashing during gate
+ * openings" (9.6% of CSS frames missed 60 Hz). Each slot now keeps a resident
+ * copy for the length of its slide: one verified read on the first mid-slide
+ * tic, DMA rows from main RAM after. The terminal frame still takes the baked
+ * gate from the pack, once.
+ *
+ * ARENA, NOT .bss: four cards are 31,376 bytes and a static buffer would cost
+ * every scene, battle included. The block comes out of this scene's arena and
+ * dies with it; the heap generation says whether the pointer is still ours.
+ * A refusal (no room, bad read) falls back to the streamed blit unchanged.
+ *
+ * RESERVED AT SCENE LOAD, NEVER MID-SCENE. The preview slice loader rewinds
+ * the arena cursor to its own mark when a load is cancelled, on the stated
+ * invariant that its payload is the newest allocation. A lazy allocation on
+ * the first slide broke that: re-entering the CSS from Results slides the
+ * doors while the previous fighters' previews are still loading, the cancel
+ * rewound under this block, and the next card copy landed in a preview pack
+ * -- a wandering-PC abort a few frames later. */
+#define NDS_CSS_UNDERLAY_BYTES 7844u
+extern volatile u32 gNdsTaskmanHeapGeneration;
+sb32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
+                         u32 alignment);
+static u8 *sCssUnderlayBlock;
+static u32 sCssUnderlayGeneration;
+static u32 sCssUnderlaySurface[NDS_CSS_SLOTS];
+volatile u32 gNdsMenuShellCssUnderlayBlitCount;
+volatile u32 gNdsMenuShellCssUnderlayDeclineCount;
+
+static void ndsMenuShellCssUnderlayReserve(void)
+{
+    u32 i;
+
+    sCssUnderlayBlock = NULL;
+    for (i = 0u; i < (u32)NDS_CSS_SLOTS; i++)
+    {
+        sCssUnderlaySurface[i] = 0xffffffffu;
+    }
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                            NDS_CSS_UNDERLAY_BYTES * (u32)NDS_CSS_SLOTS,
+                            4u) == FALSE)
+    {
+        gNdsMenuShellCssUnderlayDeclineCount++;
+        return;
+    }
+    sCssUnderlayBlock = syTaskmanMalloc(
+        NDS_CSS_UNDERLAY_BYTES * (u32)NDS_CSS_SLOTS, 4u);
+    sCssUnderlayGeneration = gNdsTaskmanHeapGeneration;
+}
+
+static u8 *ndsMenuShellCssUnderlay(u32 slot, u32 surface)
+{
+    u8 *buffer;
+
+    if ((sCssUnderlayBlock == NULL) ||
+        (sCssUnderlayGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return NULL;
+    }
+    buffer = sCssUnderlayBlock + (slot * NDS_CSS_UNDERLAY_BYTES);
+    if (sCssUnderlaySurface[slot] != surface)
+    {
+        sCssUnderlaySurface[slot] = 0xffffffffu;
+        if (ndsUiKitLoadSurfaceCopy(surface, buffer,
+                                    NDS_CSS_UNDERLAY_BYTES) == FALSE)
+        {
+            gNdsMenuShellCssUnderlayDeclineCount++;
+            return NULL;
+        }
+        sCssUnderlaySurface[slot] = surface;
+    }
+    return buffer;
+}
+
 static void ndsMenuShellCssStepDoors(void)
 {
     NdsUiKitSurfaceId blits[NDS_CSS_SLOTS];
@@ -951,19 +1029,26 @@ static void ndsMenuShellCssStepDoors(void)
         else
         {
             /* Mid-slide: the slot's current card is the underlay the halves
-             * are drawn over. */
+             * are drawn over -- from the resident copy when there is one. */
+            const u8 *underlay = ndsMenuShellCssUnderlay(i, sCssPanelSurface[i]);
+
+            sliding[i] = 1u;
+            if ((underlay != NULL) &&
+                (ndsUiKitBlitSurfaceCopy(sCssPanelSurface[i], underlay) != FALSE))
+            {
+                gNdsMenuShellCssUnderlayBlitCount++;
+                continue;
+            }
             blits[blit_count] = sCssPanelSurface[i];
             blit_is_terminal[blit_count] = 0u;
-            sliding[i] = 1u;
         }
         blit_count++;
     }
 
-    if (blit_count == 0u)
-    {
-        return;
-    }
-    if (ndsUiKitBlitSurfaces(blits, blit_count) != FALSE)
+    /* No early return on an empty list: a slot whose card came from its
+     * resident copy still owes its two door halves below. */
+    if ((blit_count != 0u) &&
+        (ndsUiKitBlitSurfaces(blits, blit_count) != FALSE))
     {
         for (i = 0u; i < blit_count; i++)
         {
@@ -2741,6 +2826,7 @@ static void ndsMenuShellCssInit(void)
         sCssDoorOffset[i] = 41u;
     }
     (void)ndsUiKitCacheSurface((u32)NDS_MN_UI_KIT_SURFACE_CSS_DOORS);
+    ndsMenuShellCssUnderlayReserve();
 }
 
 static void ndsMenuShellCssSyncPreviews(void)

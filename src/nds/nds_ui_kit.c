@@ -1079,6 +1079,80 @@ s32 ndsUiKitBlitFireAtlas(void)
     return TRUE;
 }
 
+volatile u32 gNdsUiKitSurfaceCopyLoadCount;
+volatile u32 gNdsUiKitSurfaceCopyBlitCount;
+
+s32 ndsUiKitLoadSurfaceCopy(u32 surface, u8 *buffer, u32 capacity)
+{
+    NdsRelocAssetStream stream;
+    const NdsUiKitSurfaceMetric *metric;
+
+    if ((surface >= NDS_MN_UI_KIT_SURFACE_COUNT) || (buffer == NULL))
+    {
+        return FALSE;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[surface];
+    if ((metric->bytes == 0u) || (metric->bytes > capacity))
+    {
+        return FALSE;
+    }
+    if (ndsRelocAssetStreamOpen(&stream, NDS_UI_KIT_SURFACE_PATH) == FALSE)
+    {
+        gNdsUiKitSurfaceReadFailCount++;
+        return FALSE;
+    }
+    gNdsUiKitSurfaceOpenCount++;
+    if (ndsRelocAssetStreamRead(&stream, metric->offset, buffer,
+                                metric->bytes) == FALSE)
+    {
+        ndsRelocAssetStreamClose(&stream);
+        gNdsUiKitSurfaceReadFailCount++;
+        return FALSE;
+    }
+    ndsRelocAssetStreamClose(&stream);
+    if (ndsUiKitHashFold(0x811C9DC5u, buffer, metric->bytes) != metric->fnv32)
+    {
+        gNdsUiKitSurfaceHashMismatchCount++;
+        return FALSE;
+    }
+    /* The rows leave by DMA, which reads main RAM, not the data cache. */
+    DC_FlushRange(buffer, metric->bytes);
+    gNdsUiKitSurfaceCopyLoadCount++;
+    return TRUE;
+}
+
+s32 ndsUiKitBlitSurfaceCopy(u32 surface, const u8 *buffer)
+{
+    const NdsUiKitSurfaceMetric *metric;
+    u32 pitch = 0u;
+    u32 layer_w = 0u;
+    u32 layer_h = 0u;
+    u32 row_bytes;
+    u32 row;
+    u16 *layer;
+
+    if ((surface >= NDS_MN_UI_KIT_SURFACE_COUNT) || (buffer == NULL))
+    {
+        return FALSE;
+    }
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(FALSE, &pitch, &layer_w,
+                                                     &layer_h, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsUiKitSurfaceNoLayerCount++;
+        return FALSE;
+    }
+    metric = &kNdsUiKitSurfaceMetrics[surface];
+    row_bytes = (u32)metric->width * sizeof(u16);
+    for (row = 0u; row < (u32)metric->height; row++)
+    {
+        ndsUiKitSurfaceRow((const u16 *)(buffer + (row * row_bytes)), layer,
+                           pitch, layer_w, layer_h, metric, (s32)row);
+    }
+    gNdsUiKitSurfaceCopyBlitCount++;
+    return TRUE;
+}
+
 s32 ndsUiKitCacheSurface(u32 surface)
 {
     NdsRelocAssetStream stream;

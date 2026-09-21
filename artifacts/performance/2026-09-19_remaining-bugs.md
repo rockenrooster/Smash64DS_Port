@@ -631,3 +631,43 @@ so there is one copy, and its host test follows it.
 
 Not proven here: Kirby's Fox hat (the pump cannot press Down after an inhale),
 Ness Up-B self-hit, Sector Z repeated intros.
+
+## 2026-09-20 (cont. 6) -- the CSS aborted ~20 s after a VS match; gate-slide underlay
+
+**CSS re-entry after Results crashed (REPRODUCED, fixed).** Found because a probe
+whose battle condition never fired ran on: battle -> Results -> CSS, then a
+wandering-PC abort (`lr=0x504340`, user LR `gcRunGObj+18`) about 1,300 CSS frames
+in. `gGCCommonLinks[0]` was a legitimate GObj whose memory had been overwritten
+with display-list words (`0xE2001E01`, lbCommonStartSprite's alpha-compare, where
+its process list belonged). Cause: the VS CSS preview loop calls `gcDrawAll()`
+directly, and unlike every source scene draw (taskman.c:1093-1100) it never
+rewound the graphics heap or the four DL heads. The preview camera's capture proc
+emits ~17 Gfx words a draw, nothing on DS executes or rewinds them, and the heads
+climbed the arena: 174,832 bytes to the first live GObj / ~650 draws = the
+observed twenty-odd seconds. Entered from VS Mode the same leak ran into memory
+nothing owned, which is how it hid through every earlier run; entered from
+Results the scene's DL buffers sit at the arena's start, under everything.
+`syTaskmanResetGraphicsHeap(); func_80004AB0();` now precede that draw. After:
+the same path idles in the re-entered CSS past the probe's 280 s window, no
+abort. A/B before the fix: identical abort with the underlay below both enabled
+and forced off, so it was not the new code.
+
+**Gate-slide underlay is resident.** Mid-slide, every tic repainted the slot's
+static card from NitroFS (open + 7,844-byte read + hash + flush per sliding slot
+per tic, twenty tics a slide) before drawing the two door halves -- the measured
+multi-frame sync spike behind "low FPS / flashing during gate openings". Each
+slot keeps a verified RAM copy for the length of its slide
+(`ndsUiKitLoadSurfaceCopy` / `ndsUiKitBlitSurfaceCopy`): one read on the first
+mid-slide tic, DMA rows after; the terminal frame still takes the baked gate from
+the pack. 31,376 B from the CSS scene's own arena (never .bss), reserved at scene
+load -- the preview slice loader rewinds the arena cursor on cancel and assumes
+its payload is the newest allocation, so a mid-scene allocation is not safe.
+Walk counters: 80 card blits from RAM, 4 loads, 0 declines, 0 hash mismatches.
+A new VBlank histogram for the gate phase is still owed.
+
+Not done: the resumable compact preview load (BGM pauses, hover delay). The
+dwell stays at 13 tics until that load stops monopolising a frame.
+
+Playtest r8: `builds/remaining-bugs-playtest-r8/smash64ds.nds`, SHA-256
+`B89506697CD98F13DF052AB630DA52B256080C2E589750786DDCDE9EE5F55D4B`, boot `P2_RUNTIME_OK`; r7 was
+`E58E469FA407582EE40F56DCA6CCC9592973876D585938179DDDE3C016710E6F` and lacks the two CSS changes above.

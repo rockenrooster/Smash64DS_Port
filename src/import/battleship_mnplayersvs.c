@@ -2027,6 +2027,16 @@ void ndsMNPlayersVSPreviewFrame(void)
          * 300x220 window to 320x240 equivalent, which moved the outer 1P/4P
          * previews away from their source panel centres. */
         ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+        /* taskman.c:1093-1100 rewinds the graphics heap and the four DL heads
+         * before EVERY source scene draw; this loop drew without doing either.
+         * The preview camera's own capture proc emits about seventeen Gfx
+         * words a draw, nothing on DS executes or rewinds them, and the heads
+         * walked up the arena until they reached live GObjs: after a VS match
+         * the CSS aborted about twenty seconds in (gGCCommonLinks[0] held DL
+         * words -- 0xE2001E01 where a process list belonged). From VS Mode the
+         * same leak ran into memory nothing owned, which is why it hid. */
+        syTaskmanResetGraphicsHeap();
+        func_80004AB0();
         gcDrawAll();
         ndsPlatformReset3DViewport();
         gNdsPlayersVSPreviewDrawCount++;
