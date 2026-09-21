@@ -4004,6 +4004,13 @@ extern volatile u32 gNdsFighterProjectileProofSpecialMotion;
 extern volatile u32 gNdsFighterProjectileProofAccessoryFrames;
 extern volatile u32 gNdsFighterProjectileProofFlag0Frames;
 extern volatile u32 gNdsFighterProjectileProofSpawnCallCount;
+/* Set only around wpFoxBlasterMakeWeapon's source constructor, and only
+ * when the shooter is Kirby: his joint 17 puts the muzzle flash on his own
+ * body. Read by BOTH definitions of efManagerFoxBlasterGlowMakeEffect --
+ * the weak one in battleship_fox_blaster.c and the AOT override in
+ * battleship_efmanager.c, which is the one that links at
+ * NDS_R2_FOX_BLASTER_GLOW_AOT=1. Impact glows are outside the window. */
+extern sb32 gNdsFoxBlasterSuppressMuzzleGlow;
 extern volatile u32 gNdsFighterDamageFireCallCount;
 extern volatile u32 gNdsFighterEffectKindMask0;
 extern volatile u32 gNdsFighterEffectKindMask1;

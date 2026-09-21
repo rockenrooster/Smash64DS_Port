@@ -250,6 +250,13 @@ uintptr_t lEFCommonParticleTextureBankHi;
  * LBParticle and the original renderer as the correctness fallback. */
 LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
 {
+    /* Owner 2026-09-21: Kirby's copied blaster fires without a muzzle
+     * flash. The flag is set only around the source constructor, so the
+     * map/hit/hop glows this same maker serves are untouched. */
+    if (gNdsFoxBlasterSuppressMuzzleGlow != FALSE)
+    {
+        return NULL;
+    }
     if (ndsParticleSpawnFoxBlasterGlowAOT(pos) != FALSE)
     {
         return NULL;

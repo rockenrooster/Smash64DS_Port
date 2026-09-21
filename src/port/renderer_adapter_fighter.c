@@ -1059,10 +1059,11 @@ static void ndsFighterCollectAllDObjsWithDL(
  * to pick the copy hat. A Kirby carrying anybody else's copy cannot reach
  * this descriptor, so the modelpart check alone would be a weaker pin.
  *
- * Kirby strips but does NOT draw (owner, 2026-09-21): Fox's mesh at Fox's
- * proportions read as an oversized prop on Kirby's skeleton, so the sidecar
- * submit in renderer_adapter_matrix.c stays Fox-only. Keeping the strip is not
- * optional -- it is the halt fix, not the presentation. */
+ * Keeping the strip is not optional -- it is the halt fix, not the
+ * presentation. The DRAW was briefly withdrawn for Kirby on 2026-09-21 and is
+ * restored: the owner's "get rid of the pistol shot VFX" meant the muzzle
+ * flash landing on Kirby's body, which is suppressed in
+ * battleship_fox_blaster.c, not the weapon model, which is source-correct. */
 static sb32 ndsFighterHoldsFoxGunSource(const FTStruct *fp)
 {
     if (fp == NULL)

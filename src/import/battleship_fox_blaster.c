@@ -46,9 +46,28 @@ sb32 wpFoxBlasterProcReflector(GObj *weapon_gobj);
 void ftFoxSpecialNSetStatus(GObj *fighter_gobj);
 void ftFoxSpecialAirNSetStatus(GObj *fighter_gobj);
 
+/* OWNER 2026-09-21: no muzzle flash on Kirby's copied blaster.
+ *
+ * The source calls this maker in three places -- once at the muzzle inside
+ * wpFoxBlasterMakeWeapon, and again from ProcHit/ProcMap/ProcHop when the bolt
+ * lands. On Fox the muzzle call lands out at the gun barrel and reads as a
+ * muzzle flash. On Kirby the same position comes off HIS joint 17, which sits
+ * on his body, so the flash reads as Kirby himself flashing every time he
+ * fires. The owner asked for that gone and pointed at Fox as the reference.
+ *
+ * Only the muzzle call is suppressed, and only for Kirby. The impact glows
+ * happen at the projectile, nowhere near the shooter, and are the same on both
+ * fighters. If the placement is ever corrected rather than removed, delete the
+ * flag and this comment together -- the maker itself is unchanged. */
+sb32 gNdsFoxBlasterSuppressMuzzleGlow;
+
 /* Keep the source impact event while using the bounded untextured DS shape. */
 __attribute__((weak)) LBParticle *efManagerFoxBlasterGlowMakeEffect(Vec3f *pos)
 {
+    if (gNdsFoxBlasterSuppressMuzzleGlow != FALSE)
+    {
+        return NULL;
+    }
     (void)ndsEFManagerMakeVisualEffect(nNDSVisualEffectHitElectric, pos,
                                        0.55F, 1, NULL);
     return NULL;
@@ -262,7 +281,18 @@ GObj *wpFoxBlasterMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
 #if NDS_R2_POSITION_PROBE
     ndsFoxBlasterProbeSpawn(fighter_gobj, pos);
 #endif
+    /* Scoped to this one constructor call, so the impact glows the weapon
+     * makes later -- out at the bolt, not on the shooter -- are untouched. */
+    {
+        FTStruct *shooter =
+            (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+        gNdsFoxBlasterSuppressMuzzleGlow =
+            ((shooter != NULL) && (shooter->fkind == nFTKindKirby)) ?
+                TRUE : FALSE;
+    }
     weapon_gobj = battleship_wpFoxBlasterMakeWeapon(fighter_gobj, pos);
+    gNdsFoxBlasterSuppressMuzzleGlow = FALSE;
     if (weapon_gobj != NULL)
     {
         WPStruct *wp = (WPStruct *)weapon_gobj->user_data.p;
