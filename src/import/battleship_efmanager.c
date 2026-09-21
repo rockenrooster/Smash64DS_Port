@@ -1615,6 +1615,28 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 
     if (desc->proc_display == NULL) { return; }
 
+#if NDS_P2_ITEM_CORE
+    /* The thrown Poke Ball offsets do not belong to the file its initializer
+     * names, so they cannot be span-checked against it.
+     *
+     * 251_ITCommonData.c declares every one of them
+     * `extern u8 dITCommonObject_MBall_Item_*`: they address ITCommonObject
+     * (file 86). The maker reads the fixed-up pointer at ITCommonData+0x6E4,
+     * subtracts 0x9430 from it to recover ITCommonObject's base, and points
+     * file_head at that derived base for the duration of one construction.
+     * Checking 0x9430..0x9810 against ITCommonData's own 3,392 bytes therefore
+     * rejects on principle -- and a rejected desc is deferred with its
+     * proc_display cleared, which is why the effect produced a GObj with a
+     * NULL DObj and faulted on the first Pikachu entry (2026-09-21, P03).
+     *
+     * ndsEFManagerMBallThrownMakeEffectChecked owns the residency question for
+     * this one descriptor instead, testing the two pointers the maker actually
+     * dereferences. */
+    if (desc == &dEFManagerMBallThrownEffectDesc)
+    {
+        return;
+    }
+#endif
     span = ndsEFManagerFileSpan(desc->file_head);
     if (span == 0u)
     {
@@ -2703,6 +2725,13 @@ GObj *efManagerImpactWaveMakeEffect(Vec3f *pos, s32 index, f32 rotate)
 #if NDS_P2_ITEM_CORE
 volatile u32 gNdsEntryMBallThrownCalls;
 volatile u32 gNdsEntryMBallThrownUnresolved;
+/* Which clause refused, and what the resolver was looking at when it did.
+ * "Unresolved" on its own cannot tell an absent file from a present file whose
+ * offsets do not resolve, and those are different repairs. */
+volatile u32 gNdsEntryMBallThrownRefusalMask;
+volatile u32 gNdsEntryMBallThrownFileSize;
+volatile u32 gNdsEntryMBallThrownHeadPtr;
+volatile u32 gNdsEntryMBallThrownDescPtr;
 
 /* THE THROWN POKE BALL, ASKED FOR ONLY WHEN ITS FILE IS ACTUALLY THERE.
  *
@@ -2723,22 +2752,57 @@ volatile u32 gNdsEntryMBallThrownUnresolved;
  * corrupt the heap), and the port's ndsRelocGetFileData returns NULL for an
  * unresolvable symbol instead of a wild address -- so `*p_file` faults.
  *
- * The test lives here rather than at the caller because the offsets it has to
- * resolve, including llITCommonDataMBallThrownFileHead, are file-static to
- * this translation unit: a copy in another TU would be a different address and
- * would fail the pointer-keyed symbol lookup for the wrong reason.
+ * The offsets it resolves used to be file-static to this translation unit,
+ * which meant they could never resolve at all: ndsRelocGetFileData keys its
+ * registry on the symbol's ADDRESS, and a static is a different address in
+ * every translation unit that sees it. They are now extern rows in
+ * NDS_IT_COMMON_DATA_RELOC_SYMBOLS (include/reloc_data.h), registered against
+ * asset 0xfb, so this check reports real residency instead of always failing.
  *
  * A refusal is counted, not swallowed. An entry with no ball because its file
  * is absent is an asset-residency failure with a name; it must not read as a
  * silently skipped effect. */
 GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr)
 {
-    if ((pos == NULL) || (gITManagerCommonData == NULL) ||
-        (ndsRelocGetFileData(gITManagerCommonData,
-                             &llITCommonDataMBallThrownFileHead) == NULL) ||
-        (ndsRelocGetFileData(gITManagerCommonData,
-                             &llITCommonDataMBallThrownDObjDesc) == NULL))
+    /* The maker's own two dereferences, tested in its order: the head must
+     * resolve inside ITCommonData, and the external pointer stored there must
+     * have been fixed up to ITCommonObject. Anything else it touches is an
+     * offset into the file that pointer names, so those cannot be checked
+     * here without repeating the subtraction the maker does. */
+    void **p_file;
+    void *object_base = NULL;
+    u32 mask = 0u;
+
+    p_file = (gITManagerCommonData != NULL) ?
+        lbRelocGetFileData(void **, gITManagerCommonData,
+                           &llITCommonDataMBallThrownFileHead) : NULL;
+    if (p_file != NULL)
     {
+        object_base = *p_file;
+    }
+    gNdsEntryMBallThrownFileSize =
+        (u32)ndsRelocGetLoadedFileSize(&llITCommonDataFileID);
+    gNdsEntryMBallThrownHeadPtr = (u32)(uintptr_t)p_file;
+    gNdsEntryMBallThrownDescPtr = (u32)(uintptr_t)object_base;
+    if (pos == NULL)
+    {
+        mask |= 1u;
+    }
+    if (gITManagerCommonData == NULL)
+    {
+        mask |= 2u;
+    }
+    if (p_file == NULL)
+    {
+        mask |= 4u;
+    }
+    if (object_base == NULL)
+    {
+        mask |= 8u;
+    }
+    if (mask != 0u)
+    {
+        gNdsEntryMBallThrownRefusalMask |= mask;
         gNdsEntryMBallThrownUnresolved++;
         return NULL;
     }

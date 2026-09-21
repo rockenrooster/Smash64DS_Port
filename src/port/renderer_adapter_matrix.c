@@ -5749,15 +5749,23 @@ static sb32 ndsRendererAdapterBuildFoxGunJointMtx(
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
 
-    /* Kirby's Fox copy selects dFoxUnknown_DL on this same joint 17 through
-     * dKirbyMain_modelparts_desc_0x3C4, so the overlay that owns that source
-     * part on DS owns it for both fighters. The collection strip in
-     * renderer_adapter_fighter.c keys off the same two kinds; the two must
-     * agree or one path draws a pistol the other still submitted. */
+    /* Fox only, by owner decision (2026-09-21).
+     *
+     * Kirby's Fox copy selects dFoxUnknown_DL on this same joint 17 through
+     * dKirbyMain_modelparts_desc_0x3C4, so the source does put a pistol in his
+     * hand and this overlay can follow it -- it was briefly wired to do so.
+     * On Kirby it looked wrong: the bake is Fox's mesh at Fox's proportions
+     * and Kirby's joint 17 is a different skeleton, so the gun read as an
+     * oversized prop rather than a held weapon. The owner asked for it gone.
+     *
+     * The collection strip in renderer_adapter_fighter.c deliberately still
+     * covers Kirby. That strip is what keeps the foreign file-315 root out of
+     * the native-owner asset gate, and without it the copied blaster's firing
+     * frame declines and halts the ROM. Removing the DRAW is a presentation
+     * choice; removing the strip would put the crash back. Fox keeps both,
+     * which is what "Fox's pistol model is missing" was fixed to do. */
     if ((fp == NULL) || (out == NULL) ||
-        ((fp->fkind != nFTKindFox) &&
-         !((fp->fkind == nFTKindKirby) &&
-           (fp->passive_vars.kirby.copy_id == (s32)nFTKindFox))) ||
+        (fp->fkind != nFTKindFox) ||
         ((u32)NDS_FOX_GUN_HOLD_JOINT >= ARRAY_COUNT(fp->joints)) ||
         (ndsRendererAdapterFoxGunGameplayOwner(fp) == FALSE))
     {

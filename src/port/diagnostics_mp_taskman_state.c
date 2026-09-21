@@ -244,6 +244,15 @@ NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL)
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DEFINE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DEFINE_TRANSITION_RELOC_SYMBOL
 
+/* The Poke Ball throw effect's ITCommonData closure. Defined unconditionally,
+ * like every other row above: these are plain offsets, and the item core's
+ * absence is a residency question the resolver already answers by finding no
+ * loaded file. */
+#define NDS_DEFINE_IT_COMMON_DATA_RELOC_SYMBOL(asset, name, value) \
+    uintptr_t name = value;
+NDS_IT_COMMON_DATA_RELOC_SYMBOLS(NDS_DEFINE_IT_COMMON_DATA_RELOC_SYMBOL)
+#undef NDS_DEFINE_IT_COMMON_DATA_RELOC_SYMBOL
+
 /* llNNessModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
 extern uintptr_t llNNessModelFileID;
 

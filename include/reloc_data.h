@@ -565,6 +565,35 @@ NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_MN_COMMON_EXTRA_RELOC_SYMBOL)
 NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOL)
 #undef NDS_DECLARE_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOL
 
+/* ITCommonData (reloc file 0xfb, reloc_items).
+ *
+ * `llITCommonDataFileID` is already carried above as a file-id-only row. The
+ * offsets below are the Poke Ball throw effect's closure -- the one the
+ * fighter-entry seam needs, and the only part of this file any non-item path
+ * resolves. They lived as file-static `uintptr_t`s inside
+ * `src/import/battleship_efmanager_symbols.h`, which made them unresolvable on
+ * principle: `ndsRelocGetFileData` keys the registry on the symbol's ADDRESS,
+ * and a static definition is a different address in every translation unit
+ * that sees it, so no row could ever match (2026-09-21, P03). They are extern
+ * here for the same reason every other resolvable offset is.
+ *
+ * ONLY the file head belongs here. The other six MBallThrown offsets are NOT
+ * ITCommonData offsets at all: 251_ITCommonData.c declares them
+ * `extern u8 dITCommonObject_MBall_Item_*`, so they address ITCommonObject
+ * (file 86). The source maker reads the fixed-up pointer at this 0x6E4 head,
+ * subtracts the DObjDesc offset from it to recover ITCommonObject's base, and
+ * uses the rest as plain offsets into that file. Registering them against
+ * asset 0xfb would be asking a 3,392-byte file for offset 0x9430 and reading
+ * the resulting NULL as "the effect is missing". They live with the import as
+ * address-as-offset defines instead. */
+#define NDS_IT_COMMON_DATA_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_IT_COMMON_DATA, llITCommonDataMBallThrownFileHead, 0x6e4u)
+
+#define NDS_DECLARE_IT_COMMON_DATA_RELOC_SYMBOL(asset, name, value) \
+    extern uintptr_t name;
+NDS_IT_COMMON_DATA_RELOC_SYMBOLS(NDS_DECLARE_IT_COMMON_DATA_RELOC_SYMBOL)
+#undef NDS_DECLARE_IT_COMMON_DATA_RELOC_SYMBOL
+
 /* Bonus2Common (reloc file 0x88, reloc_bonus): staged by scripts/menus/stage_reloc_file.py. */
 extern uintptr_t llBonus2CommonFileID;
 

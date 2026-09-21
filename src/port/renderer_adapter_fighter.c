@@ -1057,7 +1057,12 @@ static void ndsFighterCollectAllDObjsWithDL(
  * Kirby must actually be holding Fox's copy: passive_vars.kirby.copy_id is
  * the victim kind ftKirbySpecialN stored, and the source reads the same field
  * to pick the copy hat. A Kirby carrying anybody else's copy cannot reach
- * this descriptor, so the modelpart check alone would be a weaker pin. */
+ * this descriptor, so the modelpart check alone would be a weaker pin.
+ *
+ * Kirby strips but does NOT draw (owner, 2026-09-21): Fox's mesh at Fox's
+ * proportions read as an oversized prop on Kirby's skeleton, so the sidecar
+ * submit in renderer_adapter_matrix.c stays Fox-only. Keeping the strip is not
+ * optional -- it is the halt fix, not the presentation. */
 static sb32 ndsFighterHoldsFoxGunSource(const FTStruct *fp)
 {
     if (fp == NULL)

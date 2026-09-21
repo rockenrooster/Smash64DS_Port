@@ -87,13 +87,27 @@ static uintptr_t llFoxSpecial3_2E74_AnimJoint = 0x2E74u;
 static uintptr_t llFoxSpecial3EntryArwingDObjDesc = 0x2C30u;
 static uintptr_t llFTManagerCommonShieldDObjDesc = 0x300u;
 static uintptr_t llITCommonDataKirbyStarDObjDesc = 0x5458u;
-static uintptr_t llITCommonDataMBallThrownDObjDesc = 0x9430u;
-static uintptr_t llITCommonDataMBallThrownFileHead = 0x6E4u;
-static uintptr_t llITCommonDataMBallThrownLAnimJoint = 0x95E0u;
-static uintptr_t llITCommonDataMBallThrownLMatAnimJoint = 0x9740u;
-static uintptr_t llITCommonDataMBallThrownMObjSub = 0x9120u;
-static uintptr_t llITCommonDataMBallThrownRAnimJoint = 0x9690u;
-static uintptr_t llITCommonDataMBallThrownRMatAnimJoint = 0x9810u;
+/* The Poke Ball throw effect's offsets, which are NOT ITCommonData offsets
+ * despite the name: 251_ITCommonData.c declares each one
+ * `extern u8 dITCommonObject_MBall_Item_*`, so they address ITCommonObject
+ * (file 86). The source maker uses them the N64 way -- as linker-absolute
+ * symbols whose ADDRESS is the offset -- both to recover ITCommonObject's base
+ * from the fixed-up pointer at ITCommonData+0x6E4 and to fill the effect
+ * descriptor. A `static uintptr_t` cannot serve that: `&sym` would be a RAM
+ * address, so the derived base and every descriptor offset were garbage. The
+ * address-as-offset form used elsewhere in the imports
+ * (battleship_item_map_core.c:70, battleship_sc1pgame_runtime.c:95) makes
+ * `&sym` the offset itself, which is what the source means (2026-09-21, P03).
+ *
+ * llITCommonDataMBallThrownFileHead is deliberately NOT one of these: it is
+ * passed to lbRelocGetFileData, whose registry keys on the symbol's address,
+ * so it stays a real extern row in NDS_IT_COMMON_DATA_RELOC_SYMBOLS. */
+#define llITCommonDataMBallThrownMObjSub (*(uintptr_t *)(uintptr_t)0x9120u)
+#define llITCommonDataMBallThrownDObjDesc (*(uintptr_t *)(uintptr_t)0x9430u)
+#define llITCommonDataMBallThrownLAnimJoint (*(uintptr_t *)(uintptr_t)0x95E0u)
+#define llITCommonDataMBallThrownRAnimJoint (*(uintptr_t *)(uintptr_t)0x9690u)
+#define llITCommonDataMBallThrownLMatAnimJoint (*(uintptr_t *)(uintptr_t)0x9740u)
+#define llITCommonDataMBallThrownRMatAnimJoint (*(uintptr_t *)(uintptr_t)0x9810u)
 static uintptr_t llITCommonDataStarRodWeaponAttributes = 0x4D4u;
 static uintptr_t llKirbySpecial2CutterDownAnimJoint = 0x24D0u;
 static uintptr_t llKirbySpecial2CutterDownDObjDesc = 0x2390u;
