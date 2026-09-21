@@ -1636,6 +1636,17 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     {
         return;
     }
+#if NDS_P2_KIRBY
+    /* Kirby's spit-out and lose-copy stars are the same construction: both
+     * read the fixed-up pointer at ITCommonData+0x4D4, subtract 0x5458 to
+     * recover ITCommonObject's base, and offset into THAT file. Same reason,
+     * same exemption; ndsEFManagerKirbyStar*Checked below own their residency. */
+    if ((desc == &dEFManagerCaptureKirbyStarEffectDesc) ||
+        (desc == &dEFManagerLoseKirbyStarEffectDesc))
+    {
+        return;
+    }
+#endif
 #endif
     span = ndsEFManagerFileSpan(desc->file_head);
     if (span == 0u)
@@ -2809,5 +2820,75 @@ GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr)
     gNdsEntryMBallThrownCalls++;
     return efManagerMBallThrownMakeEffect(pos, lr);
 }
+
+#if NDS_P2_KIRBY
+/* KIRBY'S SPIT-OUT AND LOSE-COPY STARS, AS A BOUNDED FAMILY.
+ *
+ * battleship_kirby_common.h macro-replaced both source calls with NULL:
+ *
+ *     #define efManagerCaptureKirbyStarMakeEffect(fighter_gobj) ((GObj *)NULL)
+ *     #define efManagerLoseKirbyStarMakeEffect(fighter_gobj) ((void)0)
+ *
+ * The note above them said ITCommonData was "a file the port does not pack or
+ * load yet". It is packed and loaded now -- the same residency the Poke Ball
+ * above needed -- so the suppression outlived its reason. The capture-star
+ * state deliberately HIDES the ordinary fighter and expects the star in its
+ * place, which is why a live gameplay object read as simply invisible
+ * (BUGS.md "Inhale then spit-out star is invisible").
+ *
+ * Both makers dereference two pointers unconditionally, exactly like the Poke
+ * Ball's, so both get the same checked entry rather than the raw call: the
+ * source assumes a console where that file is always resident, and here
+ * itManagerSetupItems may legitimately decline it. A refusal is COUNTED. An
+ * absent star because its file is missing is an asset-residency failure with a
+ * name, not a silently skipped effect, and per the handoff a low-memory
+ * refusal remains a failed acceptance condition rather than a pass.
+ *
+ * The two are restored together and counted separately: a spit capture is not
+ * proof of the lose-copy sibling, and the handoff asks for each on its own. */
+volatile u32 gNdsKirbyStarCaptureCalls;
+volatile u32 gNdsKirbyStarCaptureUnresolved;
+volatile u32 gNdsKirbyStarLoseCalls;
+volatile u32 gNdsKirbyStarLoseUnresolved;
+
+static sb32 ndsEFManagerKirbyStarFileReady(void)
+{
+    void **p_addr;
+
+    if (gITManagerCommonData == NULL)
+    {
+        return FALSE;
+    }
+    p_addr = lbRelocGetFileData(void **, gITManagerCommonData,
+                                &llITCommonDataStarRodWeaponAttributes);
+    if ((p_addr == NULL) || (*p_addr == NULL))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+GObj *ndsEFManagerCaptureKirbyStarMakeEffectChecked(GObj *fighter_gobj)
+{
+    if ((fighter_gobj == NULL) || (ndsEFManagerKirbyStarFileReady() == FALSE))
+    {
+        gNdsKirbyStarCaptureUnresolved++;
+        return NULL;
+    }
+    gNdsKirbyStarCaptureCalls++;
+    return efManagerCaptureKirbyStarMakeEffect(fighter_gobj);
+}
+
+void ndsEFManagerLoseKirbyStarMakeEffectChecked(GObj *fighter_gobj)
+{
+    if ((fighter_gobj == NULL) || (ndsEFManagerKirbyStarFileReady() == FALSE))
+    {
+        gNdsKirbyStarLoseUnresolved++;
+        return;
+    }
+    gNdsKirbyStarLoseCalls++;
+    (void)efManagerLoseKirbyStarMakeEffect(fighter_gobj);
+}
+#endif
 #endif
 

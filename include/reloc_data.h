@@ -587,6 +587,16 @@ NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_MN_PLAYERS_GAME_MODES_
  * the resulting NULL as "the effect is missing". They live with the import as
  * address-as-offset defines instead. */
 #define NDS_IT_COMMON_DATA_RELOC_SYMBOLS(X) \
+    NDS_IT_COMMON_DATA_OWNED_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_IT_COMMON_DATA, llITCommonDataStarRodWeaponAttributes, 0x4d4u)
+
+/* Split because the two rows have different owners. The Star Rod attributes
+ * symbol is already DEFINED by src/import/battleship_item_starrod.c beside its
+ * item/smash siblings, so this header may only declare it; defining it again
+ * from the shared block below is a duplicate-definition link error. Kirby's
+ * capture/lose star reads it as the head of its own effect closure, which is
+ * why it needs a registry row it never had. */
+#define NDS_IT_COMMON_DATA_OWNED_RELOC_SYMBOLS(X) \
     X(NDS_RELOC_ASSET_IT_COMMON_DATA, llITCommonDataMBallThrownFileHead, 0x6e4u)
 
 #define NDS_DECLARE_IT_COMMON_DATA_RELOC_SYMBOL(asset, name, value) \

@@ -86,7 +86,6 @@ static uintptr_t llFoxSpecial2ReflectorStartAnimJoint = 0x340u;
 static uintptr_t llFoxSpecial3_2E74_AnimJoint = 0x2E74u;
 static uintptr_t llFoxSpecial3EntryArwingDObjDesc = 0x2C30u;
 static uintptr_t llFTManagerCommonShieldDObjDesc = 0x300u;
-static uintptr_t llITCommonDataKirbyStarDObjDesc = 0x5458u;
 /* The Poke Ball throw effect's offsets, which are NOT ITCommonData offsets
  * despite the name: 251_ITCommonData.c declares each one
  * `extern u8 dITCommonObject_MBall_Item_*`, so they address ITCommonObject
@@ -108,7 +107,15 @@ static uintptr_t llITCommonDataKirbyStarDObjDesc = 0x5458u;
 #define llITCommonDataMBallThrownRAnimJoint (*(uintptr_t *)(uintptr_t)0x9690u)
 #define llITCommonDataMBallThrownLMatAnimJoint (*(uintptr_t *)(uintptr_t)0x9740u)
 #define llITCommonDataMBallThrownRMatAnimJoint (*(uintptr_t *)(uintptr_t)0x9810u)
-static uintptr_t llITCommonDataStarRodWeaponAttributes = 0x4D4u;
+
+/* Kirby's capture/lose star takes the same shape as the Poke Ball above:
+ * both makers read the fixed-up pointer at ITCommonData+0x4D4
+ * (llITCommonDataStarRodWeaponAttributes, a real registered symbol) and
+ * subtract 0x5458 from it to recover ITCommonObject's base, then use that
+ * same 0x5458 as the descriptor's DObjDesc offset into the derived file.
+ * So the subtrahend is an address-as-offset constant, not a resolvable
+ * ITCommonData symbol. */
+#define llITCommonDataKirbyStarDObjDesc (*(uintptr_t *)(uintptr_t)0x5458u)
 static uintptr_t llKirbySpecial2CutterDownAnimJoint = 0x24D0u;
 static uintptr_t llKirbySpecial2CutterDownDObjDesc = 0x2390u;
 static uintptr_t llKirbySpecial2CutterDrawDObjDesc = 0x2888u;
