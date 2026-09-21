@@ -161,6 +161,12 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
 u32 gNdsR2AObjPoolCount;
 u32 gNdsR2AObjPoolBytes;
 u32 gNdsR2AObjPoolDeclines;
+u32 gNdsR2AObjPoolBorrowedSlot = 0xffffffffu;
+u32 gNdsR2DObjPoolBorrowedCount;
+
+/* Weak: the accessor exists only when fighter packets are compiled in. */
+void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
+    __attribute__((weak));
 
 u32 ndsR2AObjLiveCount(void)
 {
@@ -207,8 +213,84 @@ void gcSetupObjman(GCSetup *setup)
         /* Re-carved every setup, deliberately. The arena is reset between
          * scenes, so a block cached across one would dangle -- this mirrors how
          * the stack pool is handled rather than holding a static pointer. */
-        AObj *block = syTaskmanMalloc(
-            sizeof(AObj) * (size_t)aobj_pool_count, 0x4);
+        AObj *block = NULL;
+
+        /* A VS match with an empty port has a whole fighter-packet region idle
+         * in static storage for exactly this scene's lifetime. Put the pool
+         * there -- at full size, since it is free -- and keep its 8-14 KB in
+         * the arena, where Kirby/Mario starts a match under the 25 KiB GObj
+         * latch. No idle port, no packets compiled in, or any other scene:
+         * the arena path below, unchanged. */
+        gNdsR2AObjPoolBorrowedSlot = 0xffffffffu;
+        if ((ndsRendererFighterPacketIdleRegion != NULL) &&
+            (gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+            (gSCManagerBattleState != NULL))
+        {
+            u32 slot;
+
+            /* The DObj pool rides along. Every scene passes dobjs_num == 0, so
+             * each DObj is a separate 136-byte arena allocation that is never
+             * returned; gcSetupObjman already knows how to thread a
+             * preallocated array (objman.c:2368). A second idle port gives it a
+             * whole region (260 nodes, a two-player match's fighters and then
+             * some); with only one, it takes what the AObj pool left. DObjs are
+             * never range-checked against the arena -- MObjs are
+             * (renderer_adapter_stage.c), so they stay where they were. */
+            u8 *dobj_block = NULL;
+            u32 dobj_bytes = 0u;
+
+            gNdsR2DObjPoolBorrowedCount = 0u;
+            for (slot = 0u; slot < ARRAY_COUNT(gSCManagerBattleState->players); slot++)
+            {
+                u32 bytes = 0u;
+                u8 *region;
+
+                if (gSCManagerBattleState->players[slot].pkind != nFTPlayerKindNot)
+                {
+                    continue;
+                }
+                region = ndsRendererFighterPacketIdleRegion(slot, &bytes);
+                if (region == NULL)
+                {
+                    continue;
+                }
+                if (block == NULL)
+                {
+                    size_t pool_bytes =
+                        sizeof(AObj) * (size_t)NDS_R2_AOBJ_POOL_COUNT;
+
+                    if (bytes < pool_bytes)
+                    {
+                        continue;
+                    }
+                    block = (AObj *)(void *)region;
+                    aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
+                    gNdsR2AObjPoolBorrowedSlot = slot;
+                    dobj_block = region + pool_bytes;
+                    dobj_bytes = bytes - (u32)pool_bytes;
+                }
+                else
+                {
+                    dobj_block = region;
+                    dobj_bytes = bytes;
+                    break;
+                }
+            }
+            if ((dobj_block != NULL) && (ds_setup.dobjs_num == 0) &&
+                (ds_setup.dobj_size >= sizeof(DObj)) &&
+                ((ds_setup.dobj_size & 3u) == 0u) &&
+                ((dobj_bytes / ds_setup.dobj_size) >= 2u))
+            {
+                ds_setup.dobjs = (DObj *)(void *)dobj_block;
+                ds_setup.dobjs_num = (s32)(dobj_bytes / ds_setup.dobj_size);
+                gNdsR2DObjPoolBorrowedCount = (u32)ds_setup.dobjs_num;
+            }
+        }
+        if (block == NULL)
+        {
+            block = syTaskmanMalloc(
+                sizeof(AObj) * (size_t)aobj_pool_count, 0x4);
+        }
 
         if (block != NULL)
         {

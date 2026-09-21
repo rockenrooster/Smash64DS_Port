@@ -5404,6 +5404,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         case 0x2270u:
         case 0x22d0u:
         case 0x2330u:
+        case 0x1cf8u: /* EntryStar: the warp star of Kirby's intro */
             owner_asset_id = 348u;
             candidate = TRUE;
             break;

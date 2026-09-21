@@ -3292,6 +3292,25 @@ _Static_assert((NDS_FIGHTER_PACKET_ARENA_WORDS %
                "fighter packet arena must divide evenly by player slot");
 #define NDS_FIGHTER_PACKET_ROOT_MAX NDS_NATIVE_FIGHTER_ROOT_MAX
 #define NDS_FIGHTER_PACKET_LOCAL_MAX 8u
+
+/* AN ABSENT PLAYER'S REGION IS 35,360 IDLE BYTES FOR THE WHOLE MATCH. The arena
+ * is four fixed, equal regions keyed by source-player slot, and a packet only
+ * ever writes its own. Hand an idle one to a battle-lifetime pool instead of
+ * charging the taskman arena for it; the Results entry's Release rewrites the
+ * buffer after that scene's arena (and everything in it) is already dead. */
+void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
+{
+    extern u16 gSYFramebufferSets[1][231][320];
+    u32 region_words = NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (bytes == NULL))
+    {
+        return NULL;
+    }
+    *bytes = region_words * (u32)sizeof(u32);
+    return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
+           (battle_slot * region_words);
+}
 #define NDS_FIGHTER_PACKET_INDEX_NONE 0xffffu
 #define NDS_FIGHTER_PACKET_KEY_WORDS 6u
 

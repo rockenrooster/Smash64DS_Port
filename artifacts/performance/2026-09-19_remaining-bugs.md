@@ -702,3 +702,45 @@ against the pack entry is still owed.
 Playtest r9: `builds/remaining-bugs-playtest-r9/smash64ds.nds`, SHA-256
 `A936EC064070AABEBC5054EB8C5BE3FDBE9E6786B59153B89ED4ADA641C90657`, boot
 `P2_RUNTIME_OK`. Supersedes r8 (`B8950669...`) and r7.
+
+## 2026-09-20 (cont. 8) -- the arena lever that was within reach: idle fighter-packet regions
+
+The fighter-packet arena is 141,440 static bytes in four fixed regions keyed by
+source-player slot, and a packet only ever writes its own. A VS match with an
+empty port therefore has 35,360 idle bytes per absent player for exactly the
+battle's lifetime. `gcSetupObjman` (already interposed) now carves two
+battle-lifetime pools from them instead of the taskman arena:
+
+- the AObj pool, at its full 384 entries since it is free (13,824 B), and
+- a DObj pool. Every scene passes `dobjs_num == 0`, so each DObj was a separate
+  136-byte arena allocation that is never returned; the source already threads a
+  preallocated array (objman.c:2368). A second idle port gives it a whole region
+  (260 nodes); with one, it takes what the AObj pool left (158).
+
+DObjs are never range-checked against the arena. MObjs are
+(renderer_adapter_stage.c), so they stay in it. No idle port, no packets
+compiled in, or any scene but VS battle: the arena path, unchanged.
+
+| Pair (Dream Land unless noted) | free at GO before | after |
+|---|---|---|
+| Kirby / Mario | 19.9 KB (froze mid-match) | **51,708 B**, 33,408 B at t=900, 0 refusals |
+| Pikachu / Samus | 5,136 B (halted at start) | **41,012 B**, 35,656 B at t=900 |
+| Mario / Fox, Saffron | 2,844 B | **37,612 B** |
+
+All three now start above the source's 25 KiB GObj-cap latch, which is the shared
+cause recorded above for the intermittent impact wave, missing electric sparks,
+Saffron's Pokemon effects and Kirby's Up-B effects. Four-player matches gain
+nothing from this and still rely on the 8 KiB effect floor.
+
+**Kirby's entry star had no native program.** Once KirbySpecial2's slot stopped
+reading NULL the effect existed, and drew `NO_PROGRAM` (identity effect/asset 348,
+root 0x1CF8). It is the one RGBA32 list among the entry effects: the generator
+gains an RGBA32 lane (top five bits, alpha at the half point; an O2R payload
+swaps lanes inside a 32-bit word, so a 32-bit texel reads in order), the root is
+appended to the Kirby family so earlier ordinals hold, and the adapter admits
+0x1CF8. After: `DIAG_NATIVE` all zero through Kirby's intro
+(`artifacts/visibility/2026-09-20-kirby-intro-b19.png`).
+
+Playtest r10: `builds/remaining-bugs-playtest-r10/smash64ds.nds`, SHA-256
+`37D0163A88ECC022267274CA4AE85691EB5DC9BA88675024AAABB5873ADBBA1D`, boot
+`P2_RUNTIME_OK`. Supersedes r9.

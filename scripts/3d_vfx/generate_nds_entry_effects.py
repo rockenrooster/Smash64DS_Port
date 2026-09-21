@@ -268,7 +268,13 @@ KIRBY_CUTTER_ROOTS = (
     0x27A0,                         # Draw
     0x0C70, 0x0CE0,                # Trail
     0x11B0, 0x1218, 0x1280,        # Up
-    0x2210, 0x2270, 0x22D0, 0x2330 # Down
+    0x2210, 0x2270, 0x22D0, 0x2330, # Down
+    # Kirby's entry: the warp star he rides in (dEFManagerKirbyEntryStarEffectDesc,
+    # EntryStar DObjDesc 0x1DA8 -> this one list). Same shape as the cutter
+    # roots -- no MObj, no MatAnimJoint, a source AnimJoint -- and appended last
+    # so every earlier root ordinal stays where it was. Once KirbySpecial2's
+    # slot stopped reading NULL the effect existed, and drew NO_PROGRAM.
+    0x1CF8,
 )
 # Final Cutter's travelling weapon is a separate BattleShip owner from the ten
 # KirbySpecial2 effect roots above. dWPKirbyCutterWeaponDesc resolves its
@@ -494,6 +500,8 @@ def source_mobjsub_texture_offsets(
 
 
 def entry_source_bytes(fmt: int, size: int, texels: int) -> int:
+    if fmt == FMT_RGBA and size == static.SIZ_32B:
+        return texels * 4 if texels >= 0 else 0
     # static.source_bytes has no I lane; I4 packs two texels per byte exactly
     # like CI4. Nibble-packed sources read direct (no O2R lane xor); only
     # byte-granular IA sources xor. Keep the shared helper for the lanes it
@@ -523,10 +531,11 @@ def resolve_geometry_any(state: static.DisplayState):
         (FMT_IA, SIZ_8B),
         (FMT_IA, SIZ_16B),
         (FMT_RGBA, SIZ_16B),
+        (FMT_RGBA, static.SIZ_32B),
         (FMT_I, SIZ_4B),
     ):
         raise SystemExit(
-            f"entry texture format escaped CI4/IA8/IA16/RGBA16/I4: {fmt}/{size}")
+            f"entry texture format escaped CI4/IA8/IA16/RGBA16/RGBA32/I4: {fmt}/{size}")
 
     loaded_bytes = load.load_texels * (4 if size == static.SIZ_32B else 2)
     width = tile.width
@@ -699,6 +708,30 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
             raise SystemExit("entry CI4 texture stopped fitting PAL16")
         palette = tuple(palette) + (0,) * (16 - len(palette))
         return Texture(key, TEX_PAL16, packed, palette)
+
+    if fmt == FMT_RGBA and size == static.SIZ_32B:
+        # Kirby's entry star is the one RGBA32 list here. An O2R payload swaps
+        # lanes INSIDE a 32-bit word, and a 32-bit texel is exactly one word,
+        # so it reads in logical order. DS has no 8888 format: RGB keeps its top
+        # five bits and alpha becomes the one RGBA5551 bit at the half point,
+        # the same threshold the source's alpha compare uses for this list.
+        canonical = bytearray(upload_width * upload_height * 2)
+        for y in range(height):
+            for x in range(width):
+                sx, sy, source_width, _w, _h = source_coords(state, x, y)
+                physical = load.image.offset + (sy * source_width + sx) * 4
+                if physical + 4 > len(image.payload):
+                    raise SystemExit("entry RGBA32 texel escaped source asset")
+                r, g, b, a = image.payload[physical:physical + 4]
+                ds = (0x8000 | (r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10)) if a >= 0x80 else 0
+                struct.pack_into("<H", canonical, (y * upload_width + x) * 2, ds)
+        ds_format, packed, palette = static.repack_paletted(bytes(canonical))
+        if ds_format == static.DS_FORMAT_PAL16:
+            palette = tuple(palette) + (0,) * (16 - len(palette))
+            return Texture(key, TEX_PAL16, packed, palette)
+        if ds_format == static.DS_FORMAT_RGBA:
+            return Texture(key, TEX_RGBA, packed, ())
+        raise SystemExit("entry RGBA32 texture converted to an unsupported DS format")
 
     if fmt == FMT_RGBA:
         # O2R preserves byte order within each source halfword but swaps the two
