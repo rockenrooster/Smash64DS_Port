@@ -164,6 +164,38 @@ u32 gNdsR2AObjPoolDeclines;
 u32 gNdsR2AObjPoolBorrowedSlot = 0xffffffffu;
 u32 gNdsR2DObjPoolBorrowedCount;
 
+/* What the pools left of an idle region, as a bump allocator for other
+ * battle-lifetime blocks (the figatree heaps are the first user). Re-seeded by
+ * every gcSetupObjman, so nothing handed out can outlive the scene that asked,
+ * and empty everywhere but a VS battle with two idle ports. */
+static u8 *sNdsBattleIdleScratch;
+static u32 sNdsBattleIdleScratchBytes;
+u32 gNdsBattleIdleScratchServedBytes;
+
+void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment)
+{
+    uintptr_t base = (uintptr_t)sNdsBattleIdleScratch;
+    uintptr_t aligned;
+    u32 pad;
+
+    if ((sNdsBattleIdleScratch == NULL) || (size == 0u) || (alignment == 0u) ||
+        ((alignment & (alignment - 1u)) != 0u))
+    {
+        return NULL;
+    }
+    aligned = (base + (alignment - 1u)) & ~(uintptr_t)(alignment - 1u);
+    pad = (u32)(aligned - base);
+    if ((pad > sNdsBattleIdleScratchBytes) ||
+        (size > (size_t)(sNdsBattleIdleScratchBytes - pad)))
+    {
+        return NULL;
+    }
+    sNdsBattleIdleScratch = (u8 *)(aligned + size);
+    sNdsBattleIdleScratchBytes -= pad + (u32)size;
+    gNdsBattleIdleScratchServedBytes += (u32)size;
+    return (void *)aligned;
+}
+
 /* Weak: the accessor exists only when fighter packets are compiled in. */
 void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
     __attribute__((weak));
@@ -177,6 +209,10 @@ void gcSetupObjman(GCSetup *setup)
 {
     GCSetup ds_setup = *setup;
     size_t needed = ndsOsGObjThreadBlockBytes();
+
+    sNdsBattleIdleScratch = NULL;
+    sNdsBattleIdleScratchBytes = 0u;
+    gNdsBattleIdleScratchServedBytes = 0u;
     u32 aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
 
 #if NDS_FT_POSE
@@ -271,6 +307,11 @@ void gcSetupObjman(GCSetup *setup)
                 }
                 else
                 {
+                    /* Two idle ports: the DObj pool takes the second region
+                     * whole, and what the AObj pool left of the first becomes
+                     * the scratch above instead of going unused. */
+                    sNdsBattleIdleScratch = dobj_block;
+                    sNdsBattleIdleScratchBytes = dobj_bytes;
                     dobj_block = region;
                     dobj_bytes = bytes;
                     break;

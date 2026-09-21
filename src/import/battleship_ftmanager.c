@@ -41,6 +41,7 @@
 #define ftManagerSetupFilesAllKind ndsBaseFTManagerSetupFilesAllKind
 #define ftManagerMakeFighter ndsBaseFTManagerMakeFighter
 #define ftManagerDestroyFighter ndsBaseFTManagerDestroyFighter
+#define ftManagerAllocFigatreeHeapKind ndsBaseFTManagerAllocFigatreeHeapKind
 
 void ndsBaseFTManagerSetupFileSize(void);
 void ndsBaseFTManagerSetupFilesAllKind(s32 fkind);
@@ -53,6 +54,25 @@ void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
 #undef ftManagerSetupFilesAllKind
 #undef ftManagerMakeFighter
 #undef ftManagerDestroyFighter
+#undef ftManagerAllocFigatreeHeapKind
+
+/* A fighter's figatree heap is sized by its largest animation file (Pikachu
+ * 10,752 B, Yoshi 9,360, Link 7,328) and lives exactly as long as the battle.
+ * In a two-player VS match the objman seam has idle fighter-packet storage left
+ * over; take the heap from there and leave the arena its bytes. Anything that
+ * does not fit, and every other scene, is the source allocation unchanged. The
+ * animation loaders take the heap as an address and register their own
+ * loaded-file range over it, so nothing asks whether it is inside the arena. */
+void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment);
+void *ndsBaseFTManagerAllocFigatreeHeapKind(s32 fkind);
+
+void *ftManagerAllocFigatreeHeapKind(s32 fkind)
+{
+    FTData *data = dFTManagerDataFiles[fkind];
+    void *heap = ndsBattleIdleScratchAlloc(data->file_anim_size, 0x10u);
+
+    return (heap != NULL) ? heap : ndsBaseFTManagerAllocFigatreeHeapKind(fkind);
+}
 
 static const FTFileSize sNdsFTManagerSourceFileSizes[nFTKindEnumCount] =
 {

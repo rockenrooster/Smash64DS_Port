@@ -774,3 +774,30 @@ reverted once that was clear.
 Playtest r11: `builds/remaining-bugs-playtest-r11/smash64ds.nds`, SHA-256
 `0A4C449217AD9FDBE1BD91583B4EF7BF4046D409FC270E82312604279868A1A0`, boot
 `P2_RUNTIME_OK`. Supersedes r10.
+
+## 2026-09-21 (cont.) -- figatree heaps ride in the idle storage too
+
+With two idle ports the DObj pool takes the second region whole, which left
+21,536 B of the first unused after the AObj pool. It is now a bump allocator
+(`ndsBattleIdleScratchAlloc`, re-seeded by every `gcSetupObjman`) and
+`ftManagerAllocFigatreeHeapKind` is interposed to draw from it: a fighter's
+figatree heap is sized by its largest animation file (Pikachu 10,752 B, Yoshi
+9,360, Kirby 7,808, Link 7,328, Samus 6,640, Mario 6,224, Fox 4,896) and lives
+exactly as long as the battle. The animation loaders take the heap as an address
+and register their own loaded-file range over it; nothing asks whether it is
+inside the arena. `gNdsRelocForceFighterAnimFallbackCount` stayed 0 in every run.
+
+| Pair / stage | free at GO, start of session | r11 | r12 |
+|---|---|---|---|
+| Link / Yoshi, Sector Z | < 0 (halt) | 4,036 B | **20,724 B**, 0 refusals |
+| Pikachu / Samus, Dream Land | 5,136 B (halt at start) | 41,012 B | **58,404 B** |
+| Mario / Fox, Saffron | 2,844 B | 37,612 B | **62,884 B** |
+
+All `native=pass`, `DIAG_NATIVE` zero, both fighters drawing. Three- and
+four-player matches get less (one idle region) or nothing; IFCommonGameStatus
+(~130 KB of letter pixels that are only read at GO and at match end) is still the
+lever for those.
+
+Playtest r12: `builds/remaining-bugs-playtest-r12/smash64ds.nds`, SHA-256
+`D867AF160ACAC680CCD805130D4788CE6A804918A1B753BB169E1B44B454B60B`, boot
+`P2_RUNTIME_OK`. Supersedes r11.
