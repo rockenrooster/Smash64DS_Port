@@ -6372,3 +6372,44 @@ runtime prims, against the cap's 8/31.
 owner was playing; acceptance is the owner's. Face-vs-body in a hurt flash
 now lerps toward flash x prim, the same approximation the textured face
 already had (flash x texel).
+
+## Castle roof: a wrapping tile uploaded wider than its period (2026-09-22, r50)
+
+**Owner, r45:** the foreground roof "geometry in question is now invisible".
+
+**Source.** `StageCastleFile2` DL 0x1698 draws the steep tower roof from a CI4
+render tile at line 1 (sixteen texels a TMEM row) with `cms = G_TX_WRAP`,
+`masks = 3`, over an 80x80 window, after a LoadBlock of eight 16-texel rows.
+`Tex_0x0748` holds the greyscale tile in texels 0-7 of each row and index 0 in
+texels 8-15; `Lut_0x02B0[0]` is 0xFFFE, alpha 0. The RDP masks s every eight
+texels, so the second half of each row is never sampled.
+
+**Port.** `ndsRendererHardwareResolveOrBindTexture` could not fit the 80x80
+window in the 64-byte load, fell back to the TMEM line, and uploaded 16 texels
+wide. Clamped axes already had two rules that reduce an upload to the mask
+period; a wrapping axis had none, so the DS repeated every sixteen texels and
+drew the index-0 half. With texel alpha forced opaque (before r40) that half was
+a near-white field -- "the texture is missing"; once r40 honoured texel alpha it
+went transparent -- "now invisible". r40 exposed the defect; this is its cause.
+
+**Fix.** `ndsRendererHardwareTextureWrapPeriodExtent`: a `G_TX_WRAP` axis whose
+extent is wider than 1 << mask (mask >= 3) uploads one period; the repeating
+sampler then wraps where the RDP does, and a mirrored axis keeps the same period
+with the DS flip bit. Applied to the primary and TEXEL1 paths (they must agree
+or the pair rejects) and mirrored in
+`scripts/generate_battle_playable_static_textures.py`, whose `--check` is
+byte-identical: no Dream Land key reaches the rule. Engagement counter
+`gNdsRendererWrapPeriodUploadCount`.
+
+**Measured without a window.** New instrument: the DS display-capture unit.
+gdb maps VRAM bank D to LCDC (0x04000243 = 0x80), arms
+`DISPCAPCNT = 0x81330000` (3D only, 256x192, bank D), runs three frames and dumps
+0x06860000; `cap2png.py` converts it. Nothing is shown or focused, so it can run
+while the owner plays. Walk ROMs r49 `4a3480efbc46ec4c` and r50
+`48b7078e0009ff7a` (one source difference), Fox vs Kirby, 240 frames after
+battle setup: r49 draws the roof as strips with transparent gaps, r50 as a
+continuous tiled roof; 991 pixels differ, all inside the roof's box; the rest of
+the frame is byte-identical. The rule engaged 3 times on Castle and 0 times on
+every other stage, and stages 1-8 captured at the same frame are byte-identical
+between r49 and r50 (0 differing pixels each).
+Evidence: `artifacts/visibility/2026-09-22_castle-roof-wrap/`.

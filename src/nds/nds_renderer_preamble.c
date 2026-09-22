@@ -3116,6 +3116,9 @@ __attribute__((used)) volatile u32 gNdsRendererGradedCoverageUploadCount;
 /* Axes uploaded as one mask period because their clamped tile window is wider
  * than the largest upload and so could not be materialised. */
 __attribute__((used)) volatile u32 gNdsRendererClampedWindowPeriodUploadCount;
+/* Axes uploaded as one mask period because they wrap (G_TX_WRAP) and the
+ * extent the load or window gave them is wider than that period. */
+__attribute__((used)) volatile u32 gNdsRendererWrapPeriodUploadCount;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaBindCount;
 #if NDS_R2_IMPACT_WAVE_NATIVE
 #define NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT 5u

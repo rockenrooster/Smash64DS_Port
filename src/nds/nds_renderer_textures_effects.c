@@ -4484,6 +4484,33 @@ static s32 ndsRendererHardwareTextureMaterializesMaskedClamp(
             (source_extent <= tile_extent)) ? TRUE : FALSE;
 }
 
+/* A WRAPPING AXIS IS SAMPLED ONE MASK PERIOD WIDE, WHATEVER WAS LOADED.
+ *
+ * With G_TX_WRAP the RDP masks the coordinate and never clamps it, so only
+ * the first 1 << mask texels of each TMEM line or column are ever read. The
+ * extent the callers derive comes from the tile window or, when the window
+ * outruns the load, from the TMEM line stride, and either can be wider than
+ * that period. Peach's Castle's steep roof (StageCastleFile2 DL 0x1698) is a
+ * CI4 tile at line 1 -- sixteen texels a row -- with masks 3 over an 80-texel
+ * window: texels 8-15 of every row are index 0, whose LUT entry has alpha 0.
+ * Uploading the whole line made the DS repeat every sixteen and sample that
+ * padding, which read as a near-white field while texel alpha was forced
+ * opaque and as a transparent roof once it was honoured (r40).
+ *
+ * Upload one period and the repeating sampler wraps where the RDP does. A
+ * mirrored axis is the same period with GL_TEXTURE_FLIP. Eight is the smallest
+ * DS texture edge, so shorter periods keep the old path. */
+static u32 ndsRendererHardwareTextureWrapPeriodExtent(
+    u32 mode, u32 mask, u32 extent)
+{
+    if (((mode & NDS_RENDERER_TX_CLAMP) == 0u) &&
+        (mask >= 3u) && (mask < 31u) && ((1u << mask) < extent))
+    {
+        return 1u << mask;
+    }
+    return extent;
+}
+
 static u32 ndsRendererHardwareTextureMaskedAddress(
     u32 coord, u32 mode, u32 mask)
 {
@@ -9843,6 +9870,10 @@ static s32 ndsRendererHardwarePrepareTexel1Source(
     {
         height = tile->height;
     }
+    width = ndsRendererHardwareTextureWrapPeriodExtent(
+        tile->cms, tile->masks, width);
+    height = ndsRendererHardwareTextureWrapPeriodExtent(
+        tile->cmt, tile->maskt, height);
     if ((width != primary_width) || (height != primary_height))
     {
         ndsRendererProfileRecordTexel1RejectReason(
@@ -11400,6 +11431,19 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     {
         height = 1u << render_tile->maskt;
         gNdsRendererClampedWindowPeriodUploadCount++;
+    }
+    {
+        u32 wrap_width = ndsRendererHardwareTextureWrapPeriodExtent(
+            render_tile->cms, render_tile->masks, width);
+        u32 wrap_height = ndsRendererHardwareTextureWrapPeriodExtent(
+            render_tile->cmt, render_tile->maskt, height);
+
+        if ((wrap_width != width) || (wrap_height != height))
+        {
+            gNdsRendererWrapPeriodUploadCount++;
+        }
+        width = wrap_width;
+        height = wrap_height;
     }
 
     upload_width = ndsRendererHardwareTextureNextPow2(width);

@@ -402,6 +402,14 @@ def materializes_masked_clamp(
     )
 
 
+def wrap_period_extent(mode: int, mask: int, extent: int) -> int:
+    """ndsRendererHardwareTextureWrapPeriodExtent: a G_TX_WRAP axis is sampled
+    one mask period wide, whatever the load or window gave it."""
+    if not (mode & TX_CLAMP) and 3 <= mask < 31 and (1 << mask) < extent:
+        return 1 << mask
+    return extent
+
+
 def masked_address(coord: int, mode: int, mask: int) -> int:
     extent = 1 << mask
     period = coord >> mask
@@ -613,6 +621,8 @@ def resolve_key_geometry(
         width = tile.width
     if materialize_t:
         height = tile.height
+    width = wrap_period_extent(tile.cms, tile.masks, width)
+    height = wrap_period_extent(tile.cmt, tile.maskt, height)
     upload_width = next_pow2(width)
     upload_height = next_pow2(height)
     if (
