@@ -47,7 +47,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="3fe9704671177dc0192f7e87569d2970778b22fdb0fe2b182b6a9bd1a02c34c7",
+    include_sha="589eb0ddff695b91960ebfcaaad5a9ade8c3491dc41da00b8023efd9bd17b90c",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",
@@ -60,31 +60,28 @@ DESCRIPTOR = StageDescriptor(
         "source_vertices": 317,
         "modify_vertex_commands": 0,
         "triangle_commands": 82,
-        # Acid root 0x9D8 subdivides once at edge midpoints, 7 tris -> 28,
-        # so the stage rises 151 -> 172 and its runs 60 -> 72.  Every added
-        # vertex is an exact average of two source vertices, so the acid
-        # plane stays planar and no new geometry is invented.
-        # 2026-09-22: light-cone root 0x5870 joins it, 5 tris -> 20, taking the
-        # stage to 187 and its runs to 82.  Same exact-midpoint property.
-        "triangles": 187,
-        "runs": 82,
+        # Every source triangle, none subdivided: 144 layer-1 + the acid's 7.
+        # 2026-09-22: the acid's and the lamp body's midpoint splits are gone
+        # -- 187 -> 151 triangles, 82 -> 56 runs.
+        "triangles": 151,
+        "runs": 56,
         "texture_epochs": 42,
         "material_events": 19,
-        # 92 -> 107: the light cone's 15 new triangles all submit in the same
-        # class its 5 originals did.
-        "submit_classes": (107, 0, 80),
+        "submit_classes": (92, 0, 59),
         "state_events": 282,
         "state_deltas": 142,
         "sync_events": 173,
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        # 317 source + 165 = 482 dense. The subdivision adds three midpoints
-        # per subdivided source triangle and, because each of the 28 acid
-        # triangles now carries its own averaged alpha, more per-triangle
-        # clones than the 7 originals needed. 2026-09-22: the light cone's
-        # 5 -> 20 split adds the remaining 51 over the acid's 114.
-        "alpha_clone_vertices": 165,
+        # 317 source + 39 = 356 dense: 18 carry the acid's single alpha onto
+        # its six triangles with a zero-alpha corner, 12 the lamp body's
+        # averaged alphas, 9 the three beams' corners onto the ramp.
+        "alpha_clone_vertices": 39,
+        # The three stage-light beams, one triangle each (alpha_ramp_roots).
+        "alpha_ramp_triangles": 3,
+        # The acid's seven source triangles at one alpha (alpha_uniform_roots).
+        "alpha_uniform_triangles": 7,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -180,21 +177,28 @@ DESCRIPTOR = StageDescriptor(
         (2, "acid", "stage_actors", 0xB08, 3, 12,
          "gcDrawDObjTreeDLLinksForGObj", True),
     ),
-    # (105, 0x5870) added 2026-09-22: the ground-floor light cone. The DS has
-    # per-vertex colour but no per-vertex alpha, so the packet generator
-    # averages each triangle's three source alphas into one POLY_ALPHA. This
-    # cone's source vertex alphas ramp 42 -> 255 and its five triangles emitted
-    # exactly THREE distinct alphas, {136, 207, 255} -- the owner's "flat/hard
-    # transparency (hard upsidown trapezoid shape)" is three flat bands where
-    # the source has a gradient. One level of midpoint subdivision takes it to
-    # 20 triangles and four times the alpha resolution for +15 triangles on a
-    # 172-triangle stage.
+    # The DS has per-vertex colour but only per-POLYGON alpha, so the generator
+    # averages each triangle's source alphas into one POLY_ALPHA, and every
+    # facet edge where two averages differ is a hard line. Subdividing only
+    # made more of them (r37; owner: "i don't think more triangles is the
+    # answer").
     #
-    # The acid stays at one level deliberately. Two levels would take it 28 ->
-    # 112 and the stage past 340 triangles, and Zebes already runs near the
-    # cadence gate -- that is a Boundary WORK-H P50/P95 measurement, not a
-    # correctness question, and it is not owed by this row's first repair.
-    alpha_subdivide_roots=((157, 0x9D8), (105, 0x5870)),
+    # The stage lights' beams. Each of the three lamp groups owns one head-1
+    # (XLU) DLLink -- 0x57A8 (its triangle is in 0x5840), 0x58B8, 0x58F0 --
+    # drawing ONE triangle, combine G_CC_SHADE, whose two top corners carry
+    # alpha 0 and whose bottom tip carries 160. On N64 that fades to nothing
+    # at the top; averaged it is one flat alpha-53 sheet, and the lamp body in
+    # front of the lower half leaves the hard upside-down trapezoid the owner
+    # reported. A ramp root keeps the triangle and carries its alpha as texel
+    # alpha instead. (0x5870, which r37 subdivided as "the cone", is group A's
+    # lamp BODY: textured, opaque at the top, never the tapering light.)
+    alpha_ramp_roots=((105, 0x57A8), (105, 0x58B8), (105, 0x58F0)),
+    # The acid: one polygon alpha, its source's own peak (220, the whole front
+    # region), across its seven source triangles. The owner asked for exactly
+    # this -- "opaque or one single transparency". Its source fade to 0 at the
+    # far rim cannot ride the acid's texture (tiled, animated, and a DS polygon
+    # samples one texture), so the rim now ends at 220 instead of fading.
+    alpha_uniform_roots=((157, 0x9D8),),
     # (asset_id, binding_root, mobj_offset, segment_index): one row per
     # MObjSub of the eight material DObjs, in binding then segment order.
     # Segment 8*i matches gcDrawMObjForDObj's branch slot for MObj i.
@@ -224,12 +228,9 @@ DESCRIPTOR = StageDescriptor(
     material_command_partition=(3,) * 18 + (10,),
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
-        # Owner 1's run count rises 55 -> 65 with the light cone's split; the
-        # acid segment that follows it starts ten runs later for the same
-        # reason, and its own count is unchanged.
-        (1, 6, 0, 25, 0, 65),
-        # The acid segment carries 17 runs, not 5, once root 0x9D8 subdivides.
-        (2, 12, 25, 1, 65, 17),
+        (1, 6, 0, 25, 0, 55),
+        # One run: the acid's seven triangles share one alpha and one class.
+        (2, 12, 25, 1, 55, 1),
     ),
     callback_partition=(
         ("layer1", "grDisplayLayer1SecProcDisplay", 6),

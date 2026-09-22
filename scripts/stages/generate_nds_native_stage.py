@@ -170,6 +170,20 @@ TASK36_REPLAY_TRIANGLE_COMMANDS = 16
 TASK36_REPLAY_TRIANGLE_PARAMS = 48
 
 RUN_FLAG_PROJECTED_CROSS_MATRIX = 1 << 0
+# A run whose source triangles carried a per-VERTEX alpha gradient on an
+# untextured material (a descriptor's alpha_ramp_roots). POLYGON_ATTR alpha is
+# one value per polygon, so averaging the corners drew such a triangle as one
+# flat sheet, and subdividing only makes more flat sheets; the DS interpolates
+# TEXEL alpha per pixel. The runtime binds one 8x32 A5I3 ramp for these runs
+# (white, row r = alpha r of 31), every corner's T says where its source alpha
+# sits on that ramp, and the run's polygon alpha is the triangle's peak. Mirror:
+# NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP, src/nds/nds_renderer_native_owners.c.
+RUN_FLAG_VERTEX_ALPHA_RAMP = 1 << 1
+ALPHA_RAMP_TEXELS = 32
+# S10.5 texel units, as every packet ST is: the mid column of the 8-wide ramp,
+# and the T of a corner that carries the triangle's peak alpha.
+ALPHA_RAMP_S = 4 << 5
+ALPHA_RAMP_T_PEAK = ALPHA_RAMP_TEXELS << 5
 
 MOBJ_FLAG_ALPHA = 1 << 0
 MOBJ_FLAG_SPLIT = 1 << 1
@@ -501,7 +515,7 @@ SOURCE_CLOSURE_POLICIES = (
                 frame.rigid_binding_mask
                 policy.combine_w0 policy.combine_w1 policy.geometry_mode
                 policy.othermode_h policy.othermode_l
-                run.first_corner run.state_policy run.submit_class
+                run.first_corner run.flags run.state_policy run.submit_class
                 run.texture_epoch
                 run.triangle_count
                 """,
@@ -2281,6 +2295,26 @@ def combine_alpha_reads_shade(state: "SourceState") -> bool:
     return False
 
 
+def combine_reads_texel(state: "SourceState") -> bool:
+    """TRUE when any combiner input of either cycle can select a texel.
+
+    Deliberately wider than the runtime's use-texture test: a run that is
+    handed the alpha ramp must have no texture of its own to lose, and a DS
+    polygon samples exactly one.
+    """
+    w0 = state.combine_w0
+    w1 = state.combine_w1
+    color_ab = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF,
+                (w0 >> 5) & 0xF, (w1 >> 24) & 0xF)
+    # c also reaches TEXEL0_ALPHA (8) and TEXEL1_ALPHA (9).
+    color_c = ((w0 >> 15) & 0x1F, w0 & 0x1F)
+    small = ((w1 >> 15) & 7, (w0 >> 12) & 7, (w0 >> 9) & 7,
+             (w1 >> 12) & 7, (w1 >> 9) & 7, (w1 >> 6) & 7,
+             (w1 >> 21) & 7, (w1 >> 18) & 7, (w1 >> 3) & 7, w1 & 7)
+    return (any(mux in (1, 2) for mux in color_ab + small)
+            or any(mux in (1, 2, 8, 9) for mux in color_c))
+
+
 def apply_othermode(current: int, op: int, w0: int, w1: int) -> int:
     if op == OP_RDPSETOTHERMODE:
         return w1
@@ -2614,6 +2648,60 @@ def _append_alpha_midpoint(
     return index
 
 
+def _alpha_ramp_corners(
+    vertices: list[DenseVertex],
+    dense_indices: Sequence[int],
+    corner_alphas: Sequence[int],
+    peak: int,
+) -> list[int]:
+    """Clone one triangle's corners onto the runtime's alpha ramp.
+
+    The source alpha is linear across the triangle, so ``T = peak_T * a / peak``
+    at the corners is linear across it too and the ramp texel under any pixel
+    holds that pixel's source alpha as a fraction of the peak; the run's
+    POLY_ALPHA supplies the peak. Position, colour and matrix binding are the
+    source corner's own, so nothing but ST and the alpha byte moves.
+    """
+    clone_indices = []
+    for dense_index, alpha in zip(dense_indices, corner_alphas):
+        source = vertices[dense_index]
+        clone_indices.append(len(vertices))
+        vertices.append(
+            DenseVertex(
+                source.x,
+                source.y,
+                source.z,
+                ALPHA_RAMP_S,
+                (ALPHA_RAMP_T_PEAK * alpha + peak // 2) // peak,
+                source.matrix_binding,
+                source.cache_slot,
+                (source.rgba & 0xFFFFFF00) | peak,
+            )
+        )
+    return clone_indices
+
+
+def _root_peak_source_alpha(
+    resource: O2RResource, events: Sequence[CommandEvent]
+) -> int:
+    """Largest raw alpha byte any VTX command of one binding loads."""
+    peak = 0
+    for event in events:
+        if event.op != OP_VTX:
+            continue
+        ref = resource.pointer_at(event.source_offset + 4)
+        if ref is None or ref.asset_id != resource.file_id:
+            raise falsify(
+                f"asset {resource.file_id}: unresolved VTX at "
+                f"0x{event.source_offset:x}")
+        count = (event.w0 >> 12) & 0xFF
+        if ref.offset + count * 16 > len(resource.payload):
+            raise falsify(f"asset {resource.file_id}: VTX source truncated")
+        for index in range(count):
+            peak = max(peak, resource.payload[ref.offset + index * 16 + 15])
+    return peak
+
+
 def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     desc = _resolve_stage(stage)
     owners = _owner_specs_from_descriptor(desc)
@@ -2737,6 +2825,23 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             raise falsify(
                 "alpha_subdivide_roots row must be (file_id, root) or "
                 "(file_id, root, levels)")
+    # (file_id, root) rows. A ramp root carries each graded triangle's source
+    # alpha as texel alpha (RUN_FLAG_VERTEX_ALPHA_RAMP); a uniform root submits
+    # every triangle at the peak alpha its source vertices carry, one polygon
+    # alpha for the whole surface, so no facet edge can show. Both replace the
+    # per-triangle average, so neither may share a root with a subdivision.
+    alpha_ramp_roots = {tuple(row) for row in desc.alpha_ramp_roots}
+    alpha_uniform_roots = {tuple(row) for row in desc.alpha_uniform_roots}
+    for name, rows in (("alpha_ramp_roots", alpha_ramp_roots),
+                       ("alpha_uniform_roots", alpha_uniform_roots)):
+        if any(len(row) != 2 for row in rows):
+            raise falsify(f"{name} row must be (file_id, root)")
+    if (alpha_ramp_roots & alpha_uniform_roots
+            or (alpha_ramp_roots | alpha_uniform_roots)
+            & set(alpha_subdivide_roots)):
+        raise falsify("an alpha root is listed under two alpha treatments")
+    alpha_ramp_triangles = 0
+    alpha_uniform_triangles = 0
     matched_omissions = set()
     for owner in owners:
         resource = resources[owner.resource_name]
@@ -2806,6 +2911,15 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                 if binding_materials
                 else INVALID_U8
             )
+            uniform_alpha = None
+            if (resource.file_id, root) in alpha_uniform_roots:
+                uniform_alpha = _root_peak_source_alpha(resource, events)
+                if uniform_alpha < 8:
+                    raise falsify(
+                        f"binding {binding_index}: uniform alpha "
+                        f"{uniform_alpha} submits POLY_ALPHA 0 (wireframe)"
+                    )
+            ramp_root = (resource.file_id, root) in alpha_ramp_roots
             first_vertex = len(vertices)
             binding_first_run = len(runs)
             first_epoch = len(epochs)
@@ -3004,6 +3118,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             "classes": set(),
                             "flags": 0,
                             "alpha": None,
+                            "ramp": None,
                             "state_span": StateSpan(
                                 pending_state_first,
                                 len(state_sequence) - pending_state_first,
@@ -3081,15 +3196,40 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                         f"material; POLY_ALPHA 0 is wireframe"
                                     )
                                 tri_alphas = [0xFF, 0xFF, 0xFF]
-                            tri_alpha = (
-                                tri_alphas[0] + tri_alphas[1] + tri_alphas[2] + 1
-                            ) // 3
+                            ramp = False
+                            if uniform_alpha is not None:
+                                # One polygon alpha for the whole surface: the
+                                # facets cannot disagree, so no edge between
+                                # them can show (Zebes' acid, owner 2026-09-22).
+                                tri_alpha = uniform_alpha
+                                alpha_uniform_triangles += 1
+                            elif ramp_root and len(set(tri_alphas)) > 1:
+                                if (not combine_alpha_reads_shade(state)
+                                        or combine_reads_texel(state)):
+                                    raise falsify(
+                                        f"binding {binding_index}: an alpha ramp "
+                                        f"needs an untextured shade-alpha material"
+                                    )
+                                tri_alpha = max(tri_alphas)
+                                ramp = True
+                                alpha_ramp_triangles += 1
+                            else:
+                                tri_alpha = (
+                                    tri_alphas[0] + tri_alphas[1]
+                                    + tri_alphas[2] + 1
+                                ) // 3
                             if 0 < tri_alpha < 8:
                                 raise falsify(
                                     f"binding {binding_index}: triangle alpha "
                                     f"{tri_alpha} submits POLY_ALPHA 0 (wireframe)"
                                 )
-                            if (
+                            if ramp:
+                                # Always cloned: the ramp ST belongs to this run
+                                # alone, and a dense vertex is prepared once.
+                                dense_indices = _alpha_ramp_corners(
+                                    vertices, dense_indices, tri_alphas,
+                                    tri_alpha)
+                            elif (
                                 tri_alphas[0] != tri_alpha
                                 or tri_alphas[1] != tri_alpha
                                 or tri_alphas[2] != tri_alpha
@@ -3115,6 +3255,11 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 vertices[dense_index].matrix_binding != binding_index
                                 for dense_index in dense_indices
                             )
+                            if ramp and cross_matrix:
+                                raise falsify(
+                                    f"binding {binding_index}: an alpha ramp run "
+                                    f"cannot also be cross-matrix"
+                                )
                             source_z = (
                                 (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
                                 or (state.othermode_l & OTHERMODE_Z_CMP) != 0
@@ -3149,6 +3294,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 and (
                                     submit_class not in classes
                                     or current_run["alpha"] != tri_alpha
+                                    or current_run["ramp"] != ramp
                                 )
                             ):
                                 # P2-4n1 step 4: Yoster's layer-1 list interleaves
@@ -3162,7 +3308,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 # Alpha split: the runtime submits one polygon
                                 # alpha per run (native_owners.c run_alpha), so a
                                 # run also splits when this triangle's
-                                # representative alpha differs from the run's.
+                                # representative alpha differs from the run's,
+                                # and when it enters or leaves the alpha ramp.
                                 finish_run()
                                 current_run = {
                                     "first_corner": len(corners),
@@ -3171,6 +3318,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     "classes": set(),
                                     "flags": 0,
                                     "alpha": None,
+                                    "ramp": None,
                                     "state_span": StateSpan(
                                         pending_state_first,
                                         len(state_sequence) - pending_state_first,
@@ -3182,6 +3330,12 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 classes = current_run["classes"]
                             classes.add(submit_class)
                             current_run["alpha"] = tri_alpha
+                            current_run["ramp"] = ramp
+                            if ramp:
+                                current_run["flags"] = (
+                                    int(current_run["flags"])
+                                    | RUN_FLAG_VERTEX_ALPHA_RAMP
+                                )
                             if cross_matrix:
                                 current_run["flags"] = (
                                     int(current_run["flags"])
@@ -3273,6 +3427,18 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         raise falsify(
             f"MODIFYVTX commands {modify_vertex_total} != "
             f"{desc.expected_counts['modify_vertex_commands']}"
+        )
+    # Engagement, both treatments: a listed root that stops matching (or a
+    # triangle that stops being graded) must fail here, not ship flat.
+    alpha_treatments = (alpha_ramp_triangles, alpha_uniform_triangles)
+    expected_alpha_treatments = (
+        int(desc.expected_counts.get("alpha_ramp_triangles", 0)),
+        int(desc.expected_counts.get("alpha_uniform_triangles", 0)),
+    )
+    if alpha_treatments != expected_alpha_treatments:
+        raise falsify(
+            f"alpha ramp/uniform triangles {alpha_treatments} != "
+            f"{expected_alpha_treatments}"
         )
     validate_packet(packet, desc)
     return packet
@@ -3392,6 +3558,7 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
     cross_matrix_triangles = 0
     cross_matrix_foreign_corners = 0
     raw_cross_matrix_triangles = 0
+    alpha_ramp_triangles = 0
     for binding_index, binding in enumerate(packet.bindings):
         if binding.first_run + binding.run_count > len(packet.runs):
             raise falsify(f"binding {binding_index}: run span is out of range")
@@ -3430,7 +3597,9 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
                     if run.submit_class == SUBMIT_RAW_CURRENT:
                         raw_cross_matrix_triangles += 1
 
-            unknown_flags = run.flags & ~RUN_FLAG_PROJECTED_CROSS_MATRIX
+            unknown_flags = run.flags & ~(
+                RUN_FLAG_PROJECTED_CROSS_MATRIX | RUN_FLAG_VERTEX_ALPHA_RAMP
+            )
             if unknown_flags:
                 raise falsify(
                     f"binding {binding_index}: run has unknown flags 0x{unknown_flags:02x}"
@@ -3442,6 +3611,20 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
                 raise falsify(
                     f"binding {binding_index}: cross-matrix run flag disagrees with vertices"
                 )
+            if run.flags & RUN_FLAG_VERTEX_ALPHA_RAMP:
+                if marked_cross_matrix:
+                    raise falsify(
+                        f"binding {binding_index}: alpha ramp run is cross-matrix"
+                    )
+                if any(
+                    packet.vertices[dense_index].s != ALPHA_RAMP_S
+                    or not 0 <= packet.vertices[dense_index].t <= ALPHA_RAMP_T_PEAK
+                    for dense_index in run_corners
+                ):
+                    raise falsify(
+                        f"binding {binding_index}: alpha ramp corner is off the ramp"
+                    )
+                alpha_ramp_triangles += run.triangle_count
             if marked_cross_matrix:
                 if run.submit_class not in (
                     SUBMIT_PROJECTED_NO_Z,
@@ -3473,6 +3656,11 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
         raise falsify(
             f"cross-matrix counts {cross_matrix_counts} != "
             f"{expected_cross_matrix_counts}"
+        )
+    if alpha_ramp_triangles != int(ec.get("alpha_ramp_triangles", 0)):
+        raise falsify(
+            f"alpha ramp triangles {alpha_ramp_triangles} != "
+            f"{int(ec.get('alpha_ramp_triangles', 0))}"
         )
     if any(epoch.policy_index >= len(packet.policies) for epoch in packet.epochs):
         raise falsify("texture epoch has no compiled state policy")

@@ -47,6 +47,9 @@ BASELINE_COUNTS = {
     "submit_classes": (92, 0, 52), "state_events": 251, "state_deltas": 123,
     "sync_events": 165, "cross_runs": 0, "cross_tris": 0,
     "cross_corners": 0, "alpha_clone_vertices": 21,
+    # The three light beams are layer-1 drawables, so they ramp in both arms;
+    # the acid's uniform root has no owner to match here.
+    "alpha_ramp_triangles": 3, "alpha_uniform_triangles": 0,
 }
 
 

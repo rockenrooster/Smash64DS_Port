@@ -979,6 +979,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "run.flags",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "run.state_policy",
           "classification": "immutable_generation"
         },

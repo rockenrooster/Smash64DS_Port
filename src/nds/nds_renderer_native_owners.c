@@ -713,6 +713,14 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
 }
 #endif
 
+/* A run whose source corners carry a per-VERTEX alpha gradient on an
+ * untextured material; it samples the alpha ramp that
+ * ndsRendererNativeStageAlphaRampResolve owns. Mirror of
+ * RUN_FLAG_VERTEX_ALPHA_RAMP in scripts/stages/generate_nds_native_stage.py,
+ * defined here rather than in the generated includes so no other packet's
+ * pinned include moves. */
+#define NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP (1u << 1)
+
 /* Which check of ndsRendererNativeStageValidateTopologyFull declined last
  * (1-based, in source order; 0 = passed or never run). Every decline is one
  * store on the fail path, nothing on the pass path. Stage admission reports
@@ -922,7 +930,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             (run->texture_epoch >= NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) ||
             (run->state_policy >= NDS_NATIVE_STAGE_STATE_POLICY_COUNT) ||
             ((run->flags &
-              ~NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u) ||
+              ~(NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX |
+                NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP)) != 0u) ||
             ((u32)run->first_corner + corner_count >
              NDS_NATIVE_STAGE_CORNER_COUNT))
         {
@@ -1428,6 +1437,114 @@ __attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipResult[108];
 __attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipFlags[27];
 static u32 sNdsNativeStageFilterPhaseHeapGeneration = UINT_MAX;
 
+/* THE DS CANNOT INTERPOLATE POLYGON ALPHA; IT DOES INTERPOLATE TEXEL ALPHA.
+ *
+ * POLYGON_ATTR carries one alpha per polygon, so an N64 per-vertex alpha
+ * gradient on an untextured surface reached the screen as the generator's
+ * per-triangle average. Zebes' three stage-light beams fade from alpha 160 at
+ * the lamp to 0 along their top edge; averaged, each was one flat alpha-53
+ * sheet with a hard top edge, and subdividing only turns one flat band into
+ * several.
+ *
+ * A run flagged ALPHA_RAMP samples this texture instead: 8x32 A5I3, white,
+ * row r holding alpha r of 31. The generator puts each corner's source alpha
+ * on T (32 texels x alpha / peak) and the peak in the run's polygon alpha, so
+ * modulate draws peak x the source's own linear interpolant, to 5-bit steps.
+ * 256 bytes of texture VRAM and one 8-entry palette, made once per texture
+ * VRAM generation.
+ *
+ * The name is a dedicated one, not a cache slot, so the cache's teardown never
+ * reaches it; glResetTextures at scene entry invalidates it, and the VRAM reset
+ * count is what moves when that happens. A stale name is forgotten, never
+ * deleted -- libnds may already have re-issued the number. The entry record
+ * exists only so the prepared-run texture proof (ready, name, key_generation)
+ * reads this texture exactly as it reads a cache hit. */
+#define NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH 8u
+#define NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT 32u
+/* gSPTexture 1.0: TexCoord turns the packet's S10.5 into DS 12.4 unchanged. */
+#define NDS_NATIVE_STAGE_ALPHA_RAMP_SCALE 0x10000u
+
+static NDSRendererHardwareTextureCacheEntry sNdsNativeStageAlphaRampEntry;
+static u32 sNdsNativeStageAlphaRampVramReset;
+/* Tile origin 0/0: ramp T is authored in texels, against no source tile. */
+static const NDSRendererTileState sNdsNativeStageAlphaRampTile;
+/* Engagement: ramp uploads, and ramp runs prepared. */
+__attribute__((used)) volatile u32 gNdsNativeStageAlphaRampUploadCount;
+__attribute__((used)) volatile u32 gNdsNativeStageAlphaRampRunCount;
+
+static s32 ndsRendererNativeStageAlphaRampFill(
+    u8 *pixels, u32 bytes, void *user_data)
+{
+    u32 i;
+
+    (void)user_data;
+    if ((pixels == NULL) ||
+        (bytes != (NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH *
+                   NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT)))
+    {
+        return FALSE;
+    }
+    /* A5I3: alpha in bits 3-7, palette index 0 (white) in bits 0-2. */
+    for (i = 0u; i < bytes; i++)
+    {
+        pixels[i] = (u8)((i / NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH) << 3);
+    }
+    return TRUE;
+}
+
+static s32 __attribute__((noinline, cold))
+ndsRendererNativeStageAlphaRampResolve(
+    NDSRendererHardwareResolvedTexture *resolved)
+{
+    static const u16 white[8] = {
+        0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu,
+        0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu
+    };
+    NDSRendererHardwareTextureCacheEntry *entry =
+        &sNdsNativeStageAlphaRampEntry;
+
+    if ((entry->ready == 0u) ||
+        (sNdsNativeStageAlphaRampVramReset !=
+         gNdsRendererSceneTextureVramResetCount))
+    {
+        u32 name = 0u;
+
+        memset(entry, 0, sizeof(*entry));
+        if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+                NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH,
+                NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT, white,
+                ndsRendererNativeStageAlphaRampFill, NULL, &name) == FALSE)
+        {
+            return FALSE;
+        }
+        /* The prepare leaves the ramp bound, so the merge reads the ramp's own
+         * format word: texcoord texgen, no repeat, so T past the ramp clamps.
+         * A new identity is a key-generation event, exactly as a re-key is. */
+        entry->name = (int)name;
+        entry->params =
+            ndsRendererHardwareMergeTextureParams((u32)TEXGEN_TEXCOORD);
+        sNdsRendererHardwareTextureKeyGeneration++;
+        if (sNdsRendererHardwareTextureKeyGeneration == 0u)
+        {
+            sNdsRendererHardwareTextureKeyGeneration++;
+        }
+        entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
+        entry->profile_width = (u16)NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH;
+        entry->profile_height = (u16)NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT;
+        entry->ready = TRUE;
+        sNdsNativeStageAlphaRampVramReset =
+            gNdsRendererSceneTextureVramResetCount;
+        gNdsNativeStageAlphaRampUploadCount++;
+    }
+    resolved->entry = entry;
+    resolved->name = (u32)entry->name;
+    resolved->params = entry->params;
+    resolved->format = NDS_RENDERER_HW_TEXTURE_FMT_IA;
+    resolved->width = NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH;
+    resolved->height = NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT;
+    return TRUE;
+}
+
 static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run);
 
 static s32 ndsRendererNativeStagePrepareRun(
@@ -1547,7 +1664,31 @@ static s32 ndsRendererNativeStagePrepareRun(
 #if NDS_R2_STAGE_ROUTE_PROBE
     gNdsR2StageTextureProbeRun = run_index;
 #endif
-    if ((use_texture != FALSE) &&
+    if ((run->flags & NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP) != 0u)
+    {
+        /* The source material samples no texel (the generator refuses a ramp
+         * on one that does), so the ramp is this run's only texture and each
+         * corner's T is its source alpha: see
+         * ndsRendererNativeStageAlphaRampResolve. */
+        if ((use_texture != FALSE) ||
+            (ndsRendererNativeStageAlphaRampResolve(&resolved) == FALSE))
+        {
+#if NDS_R2_STAGE_ROUTE_PROBE
+            gNdsR2StageTextureProbeRun = 0xffffffffu;
+#endif
+            gNdsNativeStagePrepareRunFailStep = 7u;
+            gNdsNativeStagePrepareRunFailRun = run_index;
+            return FALSE;
+        }
+        use_texture = TRUE;
+        implicit_texture_on = FALSE;
+        texture_scale_s = NDS_NATIVE_STAGE_ALPHA_RAMP_SCALE;
+        texture_scale_t = NDS_NATIVE_STAGE_ALPHA_RAMP_SCALE;
+        render_tile = &sNdsNativeStageAlphaRampTile;
+        texture_offset = 0;
+        gNdsNativeStageAlphaRampRunCount++;
+    }
+    else if ((use_texture != FALSE) &&
         (ndsRendererHardwareResolveStageSourceFrameTexture(
              stats, frame->config, state, &resolved) == FALSE) &&
         /* Dream Land's textures are pinned by the P1 static set, so its

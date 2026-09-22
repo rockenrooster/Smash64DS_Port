@@ -48,6 +48,14 @@ class StageDescriptor:
     # subdivision before the DS per-polygon alpha collapse. Rows are
     # (asset_id, binding_root). Empty keeps existing packets byte-identical.
     alpha_subdivide_roots: tuple = ()
+    # (asset_id, binding_root) rows. A ramp root draws each graded triangle of
+    # an untextured shade-alpha material through the runtime's texel-alpha
+    # ramp (generate_nds_native_stage.RUN_FLAG_VERTEX_ALPHA_RAMP); a uniform
+    # root submits every triangle at its source vertices' peak alpha. Empty
+    # keeps existing packets byte-identical; expected_counts pins engagement
+    # as alpha_ramp_triangles / alpha_uniform_triangles.
+    alpha_ramp_roots: tuple = ()
+    alpha_uniform_roots: tuple = ()
     material_sources: tuple = ()
     material_command_partition: tuple = ()
     segment_partition: tuple = ()
