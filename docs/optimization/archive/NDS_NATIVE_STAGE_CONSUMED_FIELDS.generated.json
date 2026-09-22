@@ -2259,6 +2259,10 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "dobj.xobjs_num",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "rotate.a",
           "classification": "live_camera_independent"
         },

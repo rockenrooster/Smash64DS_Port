@@ -857,7 +857,8 @@ SOURCE_CLOSURE_POLICIES = (
             dobj.rotate.a dobj.rotate.vec.f.x dobj.rotate.vec.f.y
             dobj.rotate.vec.f.z dobj.scale.vec.f.x dobj.scale.vec.f.y
             dobj.scale.vec.f.z dobj.translate.vec.f.x
-            dobj.translate.vec.f.y dobj.translate.vec.f.z rotate.a
+            dobj.translate.vec.f.y dobj.translate.vec.f.z dobj.xobjs_num
+            rotate.a
             rotate.vec.f.x rotate.vec.f.y rotate.vec.f.z scale.vec.f.x
             scale.vec.f.y scale.vec.f.z translate.vec.f.x translate.vec.f.y
             translate.vec.f.z xobj.kind xobj.mtx

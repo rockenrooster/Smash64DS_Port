@@ -5433,3 +5433,104 @@ objects, never a fault.
 The rule this breaks is one this repo already carries: an agent's own earlier
 bold text in an owner file is not an owner report. Read the owner's sentence
 and stop at its full stop.
+
+## 2026-09-22 -- Four red static checkers: three repaired, one characterised
+
+Ran all 21 python checkers. Seventeen were green, four red, and none of the
+four came from this batch -- two reproduce identically at the pre-session
+commit `acbeb9f6e8a`, and two have inputs this batch never touched. Three are
+now fixed and the suite is **20 of 21**.
+
+### 1. `check-native-owner-wiring.py` -- 10 gaps, all wiring or heuristic
+
+Eight gaps were four owners writing their grouped emit rule's prerequisites
+INLINE instead of through a named `_PREREQ` variable: `kirby_vulcan`,
+`ness_pktail`, `pikachu_thunder`, `samus_bomb`. `make` honours either form, but
+this checker reads the variable, so an inline list looks like no list at all.
+Hoisted all four. **The rebuilt ROM is byte-identical** (`18CF0CD3...036C`
+before and after), which is the proof that the hoist is inert.
+
+The last two gaps said "missing NO_PROGRAM guard term ... breaks at runtime"
+for `pikachu_thunder` and `samus_bomb`. **Both guards were present, in all
+three arms.** The matcher strips the fighter name as generic (`owner_tokens`),
+which is right for `pikachu_thunderjolt` -> `thunder_jolt_native_handled` but
+is exactly the token that disambiguates the owners that KEEP it:
+`pikachu_thunder` reduces to `{thunder}` and ties four ways against
+thunder_fx, thunder_ground, thunder_jolt and itself; `samus_bomb` reduces to
+`{bomb}` and ties with link_bomb. A tie returns None, which reports as a
+missing guard. Added an exact-name preference, `_native_settled` before
+`_native_handled` -- the second ordering matters, because DamageSlash has both
+and must be guarded on the settled one, and taking handled first reported
+damage_slash as missing its guard from all three arms.
+
+Verified no collateral: resolved the guard variable for all 52 stems before
+and after, and the only changes are the two that were None.
+
+**A limit this checker still has, found by mutation and now documented in the
+file rather than left silent:** delete `samus_bomb_native_handled` outright and
+the checker still passes, because token scoring finds `link_bomb_native_handled`
+as the only remaining `{bomb}` candidate and borrows it. That cannot be closed
+by requiring a subset match, because `pikachu_thunderjolt` is legitimately
+guarded by a variable sharing none of its tokens. Closing it means renaming
+variables to match their stems, which is a source change.
+
+### 2. `check_native_owner_weld_consistency.py` -- it had never run
+
+`IndexError: list index out of range`. The Mario/Fox branch built
+`root_bindings = list(range(len(roots)))`, assuming one binding per root.
+**Mario has sixteen roots and fourteen bindings** -- its real map is
+`(0..13, 3, 7)`, two roots re-binding to earlier joints -- so it indexed
+`binding_joints[14]` and `[15]` on a 14-entry list and died before testing
+anything. A crashing checker proves less than a failing one.
+
+The correct map is in the same context object under `owner_root_bindings`,
+which the P2 branch already reads by another name. Now green, and reporting
+real content for the first time: `NATIVE_OWNER_WELD_CANDIDATES_OK groups=2`.
+
+### 3. `check_nds_native_stage.py` -- a manifest one commit behind
+
+`M3_STAGE_FALSIFIER: reloc_backend_renderer_dl.c:
+ndsRendererAdapterBuildDObjXObjMatrix: unclassified reads ['dobj.xobjs_num']`.
+
+`76b3c1c6366` (2026-09-21, "Damage repeat to twenty a second, and scope the
+0x45 matrix fix") added `if (dobj->xobjs_num > 1)` at
+`renderer_adapter_matrix.c:3333`, inside that closure (3151-3519), with a
+documented rationale. The consumed-field manifest was not updated with it, so
+this checker has been red since -- hiding everything else it audits.
+
+Classified `dobj.xobjs_num` as `FIELD_CLASS_LIVE`, the same class as every
+other `dobj.*` field in that entry and as the sibling `cobj.xobjs_num`. The
+read is live per draw and camera-independent, so that is the truthful class,
+not the convenient one. Regenerating then tripped a SECOND pin --
+`docs/optimization/archive/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`,
+114,336 -> 114,449 bytes. Both had to move; see
+[[a-number-bound-is-a-fourth-wiring-site]].
+
+### 4. `check_nds_native_owner_hierarchy.py` -- NOT fixed, but now exact
+
+`ValueError: mario: retained packet corner trace mismatch`. This compares the
+retained FIFO packet's decoded corner stream against the direct draw's. They
+disagree, which is **structurally the same packet-versus-direct divergence
+class as this batch's shade-clamp fix**.
+
+Measured rather than described:
+
+- **35 of 960 corners diverge (3.6%)**, indices 337..410.
+- Every one is in **root 4, epoch 6** -- a single part.
+- Eleven dense ids: 86, 89, 91, 92, 93, 95, 97, 98, 99, 102, 103.
+- `xy` deltas: +65537 x14, +65535 x9, -65535 x9, -65537 x3. Packed as two
+  16-bit fields, that is **x off by exactly +/-1 and y off by exactly +/-1**.
+- `z_word` deltas: +1 x11, -1 x24. **z off by exactly +/-1.**
+
+Every affected vertex is one unit out on each axis, in varying directions.
+That is the signature of a ROUNDING RULE differing between the two encoders,
+not of wrong geometry.
+
+**Deliberately not fixed tonight, and the reasons are not scheduling.** Mario's
+export is frozen byte-identical by the P2-3 bootstrap contract; the difference
+is one unit in a 16-bit coordinate, so sub-pixel; it is pre-existing; it is in
+no owner row; and the rounding rule is on a path shared by every owner, which
+is precisely the "repair validated against one user of a shared path" failure
+this codebase keeps warning about. The next sitting should find which of the
+two encoders rounds and which truncates, for root 4 epoch 6 of Mario high,
+and change the one that disagrees with the source.

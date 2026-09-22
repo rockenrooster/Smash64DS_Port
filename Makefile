@@ -6494,17 +6494,37 @@ $(NDS_NATIVE_PURIN_SING_PACKET) $(NDS_NATIVE_PURIN_SING_HEADER) &: $(NDS_NATIVE_
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_purin_sing.py" --emit
 	@touch $(NDS_NATIVE_PURIN_SING_PACKET) $(NDS_NATIVE_PURIN_SING_HEADER)
 
-$(NDS_NATIVE_KIRBY_VULCAN_PACKET) $(NDS_NATIVE_KIRBY_VULCAN_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_kirby_vulcan.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/KirbySpecial2
+# Prerequisites through a named _PREREQ, like every other native owner.
+# These four wrote theirs inline, which make honours but check-native-owner-wiring.py
+# cannot audit -- it reads the variable, so an inline list looks like no list at
+# all and the owner reads as unwired. Same prerequisites, same rule, named.
+NDS_NATIVE_KIRBY_VULCAN_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_kirby_vulcan.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/KirbySpecial2
+$(NDS_NATIVE_KIRBY_VULCAN_PACKET) $(NDS_NATIVE_KIRBY_VULCAN_HEADER) &: $(NDS_NATIVE_KIRBY_VULCAN_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_kirby_vulcan.py" --emit
 	@touch $(NDS_NATIVE_KIRBY_VULCAN_PACKET) $(NDS_NATIVE_KIRBY_VULCAN_HEADER)
 
-$(NDS_NATIVE_PIKACHU_THUNDER_PACKET) $(NDS_NATIVE_PIKACHU_THUNDER_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunder.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/PikachuModel $(BATTLESHIP_O2R)/reloc_fighters_main/PikachuSpecial2
+# Prerequisites through a named _PREREQ, like every other native owner.
+# These four wrote theirs inline, which make honours but check-native-owner-wiring.py
+# cannot audit -- it reads the variable, so an inline list looks like no list at
+# all and the owner reads as unwired. Same prerequisites, same rule, named.
+NDS_NATIVE_PIKACHU_THUNDER_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunder.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/PikachuModel $(BATTLESHIP_O2R)/reloc_fighters_main/PikachuSpecial2
+$(NDS_NATIVE_PIKACHU_THUNDER_PACKET) $(NDS_NATIVE_PIKACHU_THUNDER_HEADER) &: $(NDS_NATIVE_PIKACHU_THUNDER_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunder.py" --emit
 	@touch $(NDS_NATIVE_PIKACHU_THUNDER_PACKET) $(NDS_NATIVE_PIKACHU_THUNDER_HEADER)
-$(NDS_NATIVE_SAMUS_BOMB_PACKET) $(NDS_NATIVE_SAMUS_BOMB_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_samus_bomb.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/SamusModel
+# Prerequisites through a named _PREREQ, like every other native owner.
+# These four wrote theirs inline, which make honours but check-native-owner-wiring.py
+# cannot audit -- it reads the variable, so an inline list looks like no list at
+# all and the owner reads as unwired. Same prerequisites, same rule, named.
+NDS_NATIVE_SAMUS_BOMB_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_samus_bomb.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/SamusModel
+$(NDS_NATIVE_SAMUS_BOMB_PACKET) $(NDS_NATIVE_SAMUS_BOMB_HEADER) &: $(NDS_NATIVE_SAMUS_BOMB_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_samus_bomb.py" --emit
 	@touch $(NDS_NATIVE_SAMUS_BOMB_PACKET) $(NDS_NATIVE_SAMUS_BOMB_HEADER)
-$(NDS_NATIVE_NESS_PKTAIL_PACKET) $(NDS_NATIVE_NESS_PKTAIL_HEADER) &: $(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pktail.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/NessModel
+# Prerequisites through a named _PREREQ, like every other native owner.
+# These four wrote theirs inline, which make honours but check-native-owner-wiring.py
+# cannot audit -- it reads the variable, so an inline list looks like no list at
+# all and the owner reads as unwired. Same prerequisites, same rule, named.
+NDS_NATIVE_NESS_PKTAIL_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pktail.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/NessModel
+$(NDS_NATIVE_NESS_PKTAIL_PACKET) $(NDS_NATIVE_NESS_PKTAIL_HEADER) &: $(NDS_NATIVE_NESS_PKTAIL_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pktail.py" --emit
 	@touch $(NDS_NATIVE_NESS_PKTAIL_PACKET) $(NDS_NATIVE_NESS_PKTAIL_HEADER)
 

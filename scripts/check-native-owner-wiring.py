@@ -239,6 +239,48 @@ def no_program_guard_variable(stem: str, adapter: str) -> str | None:
             )
         )
     )
+    # AN EXACT NAME IS UNAMBIGUOUS BY CONSTRUCTION, SO TRY IT FIRST.
+    #
+    # The token scoring below strips the fighter name as "generic" -- see
+    # owner_tokens -- which is right for owners whose adapter variable drops it
+    # (stem `pikachu_thunderjolt` is guarded by `thunder_jolt_native_handled`).
+    # But it is exactly the token that disambiguates the owners that KEEP it:
+    # `pikachu_thunder` reduces to {thunder}, which then ties four ways against
+    # thunder_fx, thunder_ground, thunder_jolt and pikachu_thunder itself, and a
+    # tie returns None. `samus_bomb` reduces to {bomb} and ties with link_bomb.
+    #
+    # Both of those owners were reported as "missing NO_PROGRAM guard term ...
+    # breaks at runtime" while their guards were in fact present in ALL THREE
+    # arms. That is a false positive holding a whole checker red, which hides
+    # every real regression it would otherwise catch.
+    # KNOWN LIMIT OF THE FALLBACK BELOW, measured by mutation rather than
+    # assumed: delete `samus_bomb_native_handled` from the adapter outright and
+    # this function does NOT fail. Token scoring finds `link_bomb_native_handled`
+    # as the only remaining {bomb} candidate, resolves to it, and samus_bomb
+    # passes on another owner's guard. The exact-name preference below does not
+    # introduce that and does not widen it -- the fallback has always allowed it.
+    #
+    # It cannot be closed by requiring the candidate's tokens to be a subset of
+    # the stem's: stem `pikachu_thunderjolt` is legitimately guarded by
+    # `thunder_jolt_native_handled`, whose `thunder` and `jolt` are in neither
+    # token set. The variable names and the exec.inc stems simply do not agree
+    # across owners. Closing it means renaming the variables to match their
+    # stems, which is a source change, not a checker change.
+    #
+    # What IS caught, and what this checker should be trusted for: a guard
+    # missing from ONE of the three arms, a missing Makefile PREREQ variable,
+    # and a grouped emit rule that lost its prerequisite. All three are RED
+    # under mutation.
+
+    # `_native_settled` first, for the same reason settled_bonus exists below:
+    # it is the stronger terminal state, and an owner that has both (DamageSlash)
+    # must be guarded on the settled one. Taking `_native_handled` here instead
+    # reported damage_slash as missing its guard from all three arms.
+    for suffix in ("_native_settled", "_native_handled"):
+        candidate = stem + suffix
+        if candidate in variables:
+            return candidate
+
     wanted = owner_tokens(stem)
     if not wanted:
         return None

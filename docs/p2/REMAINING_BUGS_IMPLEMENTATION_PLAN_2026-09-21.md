@@ -57,6 +57,32 @@ for anyone.
 Neither is wired into `verify-all`; fighter checkers here are run by hand and
 `expectedVerifiers` is a fragile literal. Run both after any owner regeneration.
 
+### Static checkers: 20 of 21 green, up from 17
+
+All four that were red were pre-existing, not from this batch. Three are now
+fixed:
+
+- `check-native-owner-wiring.py` — four owners wrote their emit-rule
+  prerequisites inline instead of through a `_PREREQ` variable, and the
+  matcher could not name `pikachu_thunder`'s and `samus_bomb`'s guards because
+  it strips the fighter name and they then tie. **Both guards were in fact
+  present in all three arms.** The rebuilt ROM is byte-identical, which proves
+  the Makefile hoist is inert.
+- `check_native_owner_weld_consistency.py` — had **never run**. It assumed one
+  binding per root; Mario has 16 roots and 14 bindings, so it died with
+  IndexError before testing anything. Now green and reporting real content.
+- `check_nds_native_stage.py` — a consumed-field manifest one commit behind
+  `76b3c1c6366` (yesterday's 0x45 matrix fix started reading
+  `dobj.xobjs_num`). Red since then, hiding everything else it audits.
+
+**Still red, deliberately:** `check_nds_native_owner_hierarchy.py`, Mario's
+retained packet versus direct draw. Now exact rather than vague: **35 of 960
+corners, all in root 4 epoch 6, eleven vertices, each axis off by exactly ±1
+unit.** That is a rounding-rule difference between two encoders, on a path
+shared by every owner, against a Mario export that is frozen byte-identical by
+contract. Sub-pixel, pre-existing, in no row of yours. Characterised in
+`docs/p2/BUG_NOTES.md` rather than changed the night before a playtest.
+
 ### One correction to section 5 below
 
 `NDS_R2_LIGHT_VECTOR_MATRIX` and `NDS_R2_LIGHT_VECTOR_STRETCH_FIX` stay default

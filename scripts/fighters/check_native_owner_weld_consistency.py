@@ -89,7 +89,19 @@ def binding_metadata(owner: str, detail: str):
         owner_index = names.index(owner)
         roots = dict(context["owner_roots"])[owner]
         topology = context["owner_topologies"][owner_index]
-        root_bindings = list(range(len(roots)))
+        # READ THE BINDING MAP, DO NOT INVENT IT.
+        #
+        # This was `list(range(len(roots)))`, which assumes every root has its
+        # own binding. Mario has SIXTEEN roots and FOURTEEN bindings -- its map
+        # is (0..13, 3, 7), because two roots re-bind to earlier joints. The
+        # fabricated 0..15 then indexed `binding_joints[14]` and
+        # `binding_joints[15]` on a 14-entry list, and the whole checker died
+        # with IndexError before testing anything. A crashing checker proves
+        # less than a failing one: this file has been inert.
+        #
+        # The real map is right there in the same context, under the key the
+        # P2 branch below already reads by another name.
+        root_bindings = list(context["owner_root_bindings"][owner_index])
     else:
         context = native.build_p2_owner_runtime_context(REPO, owner, detail)
         roots = context["roots"]
