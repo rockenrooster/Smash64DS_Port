@@ -7,7 +7,12 @@ treat anything not going through native renderer a failure.
 
 **Every newly built ROM, including diagnostics, must exclude non-native renderer implementations. Runtime defaults and zero observed fallbacks are insufficient.**
 
-**AGENT 09-22, RETRACTED ALARM: I warned that this batch's 8,192-byte arena cost might stop Pikachu/Fox starting. That was wrong, and the correction is measured. Walking the SHIPPING build into a real VS match with Pikachu committed reads free-min 48,216 and the GObj latch never fires -- the 7,556 figure I reasoned from is a stale census. r32 starts fine. Play it, not r26.**
+**AGENT STATUS 2026-09-22 07:10 -- play `builds/remaining-bugs-playtest-r36/smash64ds.nds`, sha256 `1CECBEF5...3BA1`.**
+
+**19 defect rows in this file. 16 fixed and awaiting your playtest, 2 owner-deferred (Peach's roof, Zebes acid), 1 open.**
+The one open row is Pikachu -> Fox frozen, below: its mechanism is refuted by measurement (`is_ghost` 0, status changing, hurtbox Normal) but I cannot reproduce your symptom, so I have left it OPEN rather than claim it. The CSS hover-delay row is owner-lowered, and now carries per-fighter numbers it did not have before. Lines that look bare -- `VS options`, `Yoshi:`, `Link:`, `Samus`, `Captain falcon`, `Ness`, `SectorZ`, `Yoshi's Island:`, `CSS Bugs still present...` -- are your section headings, not unfixed defects.
+
+**Retracted alarm, kept because it was wrong and published:** I warned that this batch's 8,192-byte arena cost might stop Pikachu/Fox starting. Measured, that was wrong -- the shipping build reads free-min 48,216 with Pikachu committed and the GObj latch never fires; the 7,556 figure I reasoned from was a stale census.**
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
