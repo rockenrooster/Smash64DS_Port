@@ -52,6 +52,38 @@ for anyone.
 - **Poke Ball rays** — root-caused to a commented-out call, not rendering. See
   the table above and `docs/p2/BUG_NOTES.md`.
 
+### If Fox freezes in the morning, this is what would settle it
+
+I have measured Fox alive and hittable three separate ways in a fresh VS match
+(status changing, all hurtboxes Normal, `is_ghost` 0), in your configuration —
+human Pikachu vs a level-2 CPU Fox. So whatever you are hitting differs from
+that in some way I have not guessed. Five things, in the order that would
+narrow it fastest:
+
+1. **Does it happen on the very first match after boot, or only later?** If
+   only later, it is state carried across matches, and that is a completely
+   different search from a creation-time failure.
+2. **Which stage?** Every measurement I have is Dream Land, because that is
+   what the harness preset seeds. If it is stage-specific that is the single
+   most useful fact.
+3. **Is Fox a CPU or a second human slot?** A human slot with no controller
+   stands still legitimately — but it should still be hittable, so if yours is
+   a human slot AND unhittable that is a different defect from the one I
+   looked for.
+4. **Time or Stock, and what limit?** My samples cover the opening of a
+   one-minute Time match. A freeze that begins later, or after a KO and
+   respawn, is outside everything I have run.
+5. **Does Fox animate at all — idle breathing, turning — or is it a statue?**
+   Animating-but-unresponsive and completely static are different failures.
+   Your "cannot be hit" suggests the latter; my instruments say neither is
+   happening in a fresh match.
+
+The clue I still cannot use is your best one: **"sudden death works."** Sudden
+death re-creates the fighters, so it points at creation-time state — and every
+sample I can take begins after creation has already succeeded. If you can tell
+me whether the first match after a fresh boot is affected, that alone decides
+whether creation is the place to look.
+
 ### Previously open, retained for the record
 
 | Row | State |
