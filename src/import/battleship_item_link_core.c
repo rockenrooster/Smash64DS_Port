@@ -233,6 +233,11 @@ NdsITAppearActor gITManagerAppearActor;
 /* P2-5i1 ordinary counters in the existing gNdsGBumperMakeCount style: appear
  * actors the spawn law built, and items the spawn law actually spawned. */
 __attribute__((used)) volatile u32 gNdsItemAppearActorMakeCount;
+/* Non-zero means gcMakeGObjSPAfter refused the item-appear actor, which on
+ * this port means the GObj cap had latched. Before the guard below this was
+ * invisible: the process was attached to gGCCurrentCommon instead and the
+ * caller discarded the NULL. Read it beside gNdsIFCommonGObjLatchBase. */
+__attribute__((used)) volatile u32 gNdsItemAppearActorRefusedCount;
 /* HARNESS ITEM OVERRIDES, and why they are u32 rather than the u8 the battle
  * state actually holds.
  *
@@ -1702,6 +1707,36 @@ GObj *itManagerMakeAppearActor(void)
                 }
                 gobj = gcMakeGObjSPAfter(nGCCommonKindItem, NULL, nGCCommonLinkIDItemActor, GOBJ_PRIORITY_DEFAULT); /* :591 */
 
+                /* A REFUSED GObj MUST NOT BORROW ANOTHER OBJECT'S PROCESS
+                 * LIST. The source does not test this, and on N64 it never
+                 * had to. Here `ifCommonSetMaxNumGObj` freezes the GObj cap
+                 * the moment the general heap drops under 25,600 bytes, after
+                 * which gcMakeGObjSPAfter returns NULL -- and
+                 * gcAddGObjProcess substitutes `gGCCurrentCommon` for a NULL
+                 * gobj (objman.c:785-788). So the unguarded call does not
+                 * fault; it silently attaches itManagerAppearActorProcUpdate
+                 * to whatever object happens to be current, which then runs
+                 * that process for the rest of that object's life and cannot
+                 * be ejected with an item actor that was never created.
+                 *
+                 * Found by a sweep of the Saffron build set looking for a
+                 * latch-to-crash chain. This is the only port-authored maker
+                 * result on that path used without a test. It is NOT the
+                 * Saffron crash -- nothing shows it firing, and every other
+                 * consumer on that path is NULL-safe -- but a foreign process
+                 * list is corruption whose effect surfaces far from its cause,
+                 * which is exactly the kind this project does not ship.
+                 *
+                 * Declining costs the caller nothing it was not already
+                 * prepared for: grcommonsetup.c:33 discards the return, and
+                 * the :562, :570 and :629 paths above already return NULL. The
+                 * mapobjs allocation above is scene-arena and is reclaimed by
+                 * the scene's own rewind. */
+                if (gobj == NULL)
+                {
+                    gNdsItemAppearActorRefusedCount++;
+                    return NULL;
+                }
                 gcAddGObjProcess(gobj, itManagerAppearActorProcUpdate, nGCProcessKindFunc, 3); /* :593 */
 
                 item_valid_toggles = ndsItemToggles();
