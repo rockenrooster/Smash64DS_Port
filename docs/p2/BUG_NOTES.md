@@ -5606,3 +5606,57 @@ into admission, material, alpha and palettes, all of which were fine.
 Treat every deferral comment as a dated claim. Verify its premise against the
 tree before accepting it, and never write one without a condition that can be
 re-tested.
+
+## 2026-09-22 -- the tick-HUD battle target does not link, and it is the same guard class
+
+Tried to settle the last open row's final lead by reading the fighter
+collision phase. `gNdsCfxFighterDamagePhaseCalls` / `Hits`
+(`battleship_gmcollision.c:174-183`) count every fighter-attack-versus-damage
+evaluation and every one that connects, which is the only direct instrument
+for "cannot be hit". They live inside `#if NDS_TICK_HUD`.
+
+**Two attempts, two different lessons.**
+
+1. `make TARGET=smash64ds-p2-shell-loop-hwtri NDS_TICK_HUD=1` built fine and
+   produced an ELF **without the counters**. Every menu-shell target carries
+   `override NDS_TICK_HUD := 0` (`Makefile:3147`), so the flag was silently
+   discarded. Checking `nm` for the symbols before attaching caught it; a probe
+   would have printed `0/0` and looked like a damning result.
+2. `make TARGET=smash64ds-battle-playable-tickhud-hwtri` does set
+   `NDS_TICK_HUD 1` -- and **fails to link**:
+
+       ld.exe: scene_backend.o:(.rodata.sNdsKnownAssetSymbols+0x748):
+       undefined reference to `llITCommonDataStarRodWeaponAttributes'
+
+**Root cause, and it is the fifth instance of one class tonight.** Consumer
+wider than provider:
+
+- Provider: `src/import/battleship_item_starrod.c:49` defines the symbol, and
+  that TU is compiled only under `ifeq ($(NDS_P2_ITEM_CORE),1)`
+  (`Makefile:4451`).
+- Consumer: `include/reloc_data.h:591` names it in an X-macro row that
+  `scene_backend.c` expands into `sNdsKnownAssetSymbols`, **unguarded**.
+
+The tick-HUD target has `NDS_P2_ITEM_CORE 0`, so the table still references a
+symbol nothing defines. Audited the rest: of 834 asset-symbol rows, this is
+the only one whose definition lives in an item-gated TU.
+
+**Two fixes, and the safer one is not the obvious one.**
+
+- *Obvious:* wrap the row in `#if NDS_P2_ITEM_CORE`. **Do not do this without
+  checking every include site.** `reloc_data.h` is widely included, an
+  undefined macro in `#if` is silently `0`, and that exact trap already cost
+  this batch once -- `#if NDS_PREVIEW_PACK_PRESENT` became `#if 0` in a TU that
+  did not include the defining header, and the definition vanished instead of
+  appearing.
+- *Safer:* move the definition into an always-compiled TU --
+  `src/port/reloc_backend_ftdata_symbols.c` already exists for exactly this --
+  and leave an extern in the item TU, which still uses it at `:193`. No
+  preprocessor condition anywhere, so no include site can get it wrong.
+
+**Deliberately not done tonight.** The shipping ROM is built, verified and
+snapshotted for the owner's morning playtest; relocating a linker symbol
+between translation units hours beforehand, to unblock a lead that was already
+withdrawn on its own evidence, is the wrong trade. The break is pre-existing,
+affects a lab instrument rather than the published ROM, and the fix above is a
+single sitting whenever the tick-HUD target is next wanted.
