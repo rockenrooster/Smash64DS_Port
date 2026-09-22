@@ -1189,6 +1189,80 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
         if any(s <= o < e for s, e in spans_c):
             bad("Vtx %s inside final Span C", _n)
 
+    # Span T: the texels and TLUTs the pruned lists load. Every measured list
+    # becomes a native root cell, but the native owner's IMAGE state still
+    # names these source offsets and the runtime maps each one through this
+    # pack's spans (ndsRelocNativeAssetAddress). Span C only starts at the
+    # first MObj image-table target, so an image a list loads from EARLIER in
+    # the Model was dropped: Link's boots (TLUT 0xB4B8, texels 0xB4E0) mapped
+    # to NULL and the CSS drew them untextured gray, with no reject. Keep each
+    # load's exact extent; G_SETTIMG alone moves no bytes.
+    try:
+        o2r_path, o2r_id, o2r_sha = gen.P2_O2R_ASSETS[key]
+        image_resource = gen.stage_manifest.load_o2r(
+            REPO, gen.stage_manifest.InputSpec(str(o2r_path), o2r_sha,
+                                               o2r_id))
+    except Exception as e:  # noqa: BLE001
+        bad("texture closure: O2R relocations unavailable: %s", e)
+        image_resource = None
+    tex_loads = {}
+
+    def tex_load(off, nbytes):
+        tex_loads[off] = max(tex_loads.get(off, 0), nbytes)
+
+    raw_end = entry["model_source_bytes"]
+    pending = sorted(dl_spans, reverse=True)
+    walked = set()
+    while image_resource is not None and pending:
+        pc = pending.pop()
+        if pc in walked:
+            continue
+        walked.add(pc)
+        timg = None
+        while pc + 8 <= raw_end:
+            w0, w1 = u32be(payload, pc), u32be(payload, pc + 4)
+            op = w0 >> 24
+            if op == 0xDF:  # G_ENDDL
+                break
+            if op in (0xDE, 0xFD):  # G_DL, G_SETTIMG
+                ref = image_resource.pointer_at(pc + 4)
+                own = ref is not None and ref.asset_id == model_a["id"]
+                if op == 0xDE:
+                    # Material callbacks are segment words, not relocations.
+                    if own:
+                        pending.append(ref.offset)
+                    if own and ((w0 >> 16) & 0xFF) == 1:  # G_DL_NOPUSH
+                        break
+                else:
+                    # A foreign image resolves through its own asset, never
+                    # this Model's spans.
+                    timg = ((ref.offset, (w0 >> 19) & 3, (w0 & 0xFFF) + 1)
+                            if own else None)
+            elif timg is not None and op == 0xF0:  # G_LOADTLUT
+                tex_load(timg[0], (((w1 >> 14) & 0x3FF) + 1) * 2)
+            elif timg is not None and op == 0xF3:  # G_LOADBLOCK
+                texels = ((w1 >> 12) & 0xFFF) + 1
+                tex_load(timg[0], (texels * (4 << timg[1]) + 7) // 8)
+            elif timg is not None and op == 0xF4:  # G_LOADTILE
+                rows = ((w1 & 0xFFF) >> 2) + 1
+                tex_load(timg[0], rows * ((timg[2] * (4 << timg[1]) + 7) // 8))
+            pc += 8
+    kept_now = spans_a + [[high_jt, low_mobj]] + spans_c + \
+        ([pair_span] if pair_span is not None else [])
+    spans_t = subtract(
+        merge_spans([[o, (o + n + 7) & ~7] for o, n in tex_loads.items()]),
+        [(s, e - s) for s, e in kept_now])
+    for s, e in spans_t:
+        if e > raw_end:
+            bad("texture load [%s,%s) escapes the Model", hex(s), hex(e))
+        for d, ds in dl_cuts + vtx_cuts:
+            if d < e and s < d + ds:
+                bad("texture load [%s,%s) overlaps geometry at %s",
+                    hex(s), hex(e), hex(d))
+    entry["texture_loads"] = len(tex_loads)
+    entry["spans_t"] = [[hex(s), hex(e)] for s, e in spans_t]
+    entry["span_t_bytes"] = sum(e - s for s, e in spans_t)
+
     # Tail files outside core (e.g. Donkey DkIcon 319): resolve via O2R
     # headers, embed exact data bytes when dependency-free.
     tail_fids = set()
@@ -1335,7 +1409,7 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
         bad("idle OLER data mismatch")
         return entry, None, local_fail
     model_spans = spans_a + ([pair_span] if pair_span is not None else []) + \
-        [[high_jt, low_mobj]] + spans_c
+        [[high_jt, low_mobj]] + spans_c + spans_t
     sections = [{"name": n, "src": "Main-image", "old": o, "len": ln,
                  "new": o, "mode": "identity"}
                 for n, o, ln in entry["main_sections_full"]]

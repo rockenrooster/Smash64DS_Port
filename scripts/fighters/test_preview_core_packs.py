@@ -284,6 +284,55 @@ class CorePackTest(unittest.TestCase):
                     self.assertTrue(any(lo <= off < hi for lo, hi in covered),
                                     (kind, off))
 
+    def test_native_texture_loads_are_retained(self):
+        """Every Model image a HIGH native program loads maps into a span.
+
+        The runtime resolves each IMAGE offset through these spans, and a miss
+        is a silent NULL: before Span T, Link's CSS boots (TLUT 0xB4B8, texels
+        0xB4E0) drew untextured gray with no reject. The oracle is the native
+        owner compiler's own state stream, not the display-list scan that
+        builds Span T, so the two decoders check each other.
+        """
+        import pathlib
+        import generate_nds_native_owners as native
+        root = pathlib.Path(SCRIPT_DIR).resolve().parents[1]
+        shared = native.build_owner_source_context(root, "high")
+        for kind, blob in self.packs.items():
+            if kind in ("mario", "fox"):
+                ctx, rows = shared, shared[kind + "_roots"]
+            else:
+                ctx = native.build_p2_owner_runtime_context(root, kind, "high")
+                rows = ctx["roots"]
+            d = gen.decode_pack(blob)
+            secs = d["sections"]
+            spans = d["spans"][secs[1][4]:secs[1][4] + secs[1][5]]
+            loads = set()
+            for row in rows:
+                sequence = []
+                for epoch in ctx["epochs"][row[1]:row[1] + row[4]]:
+                    sequence.extend(ctx["sequence"][epoch[0]:epoch[0] + epoch[4]])
+                    sequence.extend(ctx["sequence"][epoch[1]:epoch[1] + epoch[5]])
+                if row[5]:
+                    sequence.extend(ctx["sequence"][row[2]:row[2] + row[5]])
+                image = None
+                for index in sequence:
+                    w0, w1, effect, asset_plus_one = ctx["state"][index][:4]
+                    if effect == 6:  # IMAGE; a foreign asset never uses these spans
+                        image = None if asset_plus_one else (w1, (w0 >> 19) & 3)
+                    elif image is not None and effect == 8:  # LOAD_TLUT
+                        loads.add((image[0], (((w1 >> 14) & 0x3FF) + 1) * 2))
+                    elif image is not None and effect == 9:  # LOAD_BLOCK
+                        texels = ((w1 >> 12) & 0xFFF) + 1
+                        loads.add((image[0],
+                                   (texels * (4 << image[1]) + 7) // 8))
+            self.assertTrue(loads, kind)
+            for offset, size in sorted(loads):
+                self.assertTrue(
+                    any(src <= offset and offset + size <= src + ln
+                        for src, _rel, ln in spans),
+                    "%s image 0x%x+%d is outside the pack's Model spans"
+                    % (kind, offset, size))
+
     def test_source_body_ranges_match_compact_inputs(self):
         for kind, blob in self.packs.items():
             with open(os.path.join(self.src_dir, kind + "_compact.bin"), "rb") as f:
