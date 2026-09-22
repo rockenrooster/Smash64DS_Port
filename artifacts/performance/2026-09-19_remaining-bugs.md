@@ -1499,3 +1499,34 @@ against the r22-era 41,684: build the `p2-shell-hwtri` sibling and re-run
 `scratchpad/heap_trace.ps1`. The shipping ROM cannot be probed -- `boot_check`
 fails identically on r22, which the owner played, so that harness only drives
 the shell ROM. Do not remove anything from r23 before that number exists.
+
+### The 0x45 matrix repair touches three more effects than L01's report said
+
+L01's fix gave `renderer_adapter_matrix.c` a case for custom matrix kind `0x45`
+(`lbCommonRotScaFuncMatrix`), which previously fell to the translate-bearing
+fallback. The report justified it on DamageSlash, whose ROOT carries
+`{0x28, 0x45, 0x00}` -- `0x28` supplies the translation and `0x45` must not
+supply it a second time. That reasoning is sound and unchanged.
+
+But `0x45` appears six times in `efmanager.c`, and **three of them are the MAIN
+transform of a CHILD DObj with no translate-bearing partner**:
+
+    dEFManagerStarRodSparkEffectDesc      struct 2 = { 0x45, Null, 0x00 }
+    dEFManagerDamageFlySparksEffectDesc   struct 2 = { 0x45, Null, 0x00 }
+    dEFManagerHaveStructEffectDesc        struct 2 = { 0x45, Null, 0x00 }
+
+Those children previously received `dobj->translate` from the fallback and now
+receive none. By the source the new behaviour is correct -- `lbCommonRotScaFuncMatrix`
+writes a zero translation row, so a child whose only XObj is `0x45` genuinely
+has no translation of its own and sits at its parent's origin. But it IS a
+behaviour change to three effects beyond the one the row was about, and sparks
+are common enough to be noticed.
+
+**Not the reported regression, almost certainly** -- three effects is not
+"hardly any effects play" -- but it belongs in the candidate list and it must be
+looked at in the same capture, not assumed correct because the argument is
+tidy. If the sparks now stack on their parent's origin instead of spreading,
+this is why.
+
+Deliberately NOT reverted: the source argument is concrete and reverting on a
+guess is the failure mode this session kept hitting. Decide it with the capture.
