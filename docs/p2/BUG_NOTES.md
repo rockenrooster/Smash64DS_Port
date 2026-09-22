@@ -6029,3 +6029,46 @@ So the reading was real and the conclusion would have been wrong. That would
 have been the fourth wrong claim on this row in one day, and the only thing
 that stopped it was checking who reads the field before deciding what its value
 means. Two arrays named `binding_world` in two structs is a trap worth naming.
+
+### The second frozen array, and why it is also not the bug
+
+Probe 9 caught a real transition by breaking on `grYamabukiGateSetClosedWait`
+instead of guessing frame counts:
+
+    A  GATEZ=330.000000 GATEY=-30.000002   OWNERW17=[288489484 288555020 167772218]
+    B  GATEZ= -0.000001 GATEY=390.000000   OWNERW17=[288489484 288555020 167772218]
+    C  GATEZ= -0.000001 GATEY=390.000000   OWNERW17=[288489484 288555020 167772218]
+
+The joints traverse the full range and the owner's `binding_world[17]` is
+byte-identical throughout. `workspace->frame.binding_world =
+workspace->binding_world` (`renderer_adapter_stage.c:3800`) hands the owner the
+CAPTURE-TIME array, which nothing rewrites per frame -- so that reading is real,
+and it is the second time today that an array named `binding_world` has looked
+like the answer.
+
+**It is not read for this stage.** `ndsRendererNativeStageTask36EnsureWorld`
+(`nds_renderer_native_owners.c:2508-2516`) returns FALSE unless
+`ndsRendererNativeStageTask36BindingIsRigid(binding_index)`, and Saffron's blob
+header carries `rigid_binding_mask = 0` -- measured, not assumed. No binding on
+this stage is rigid, so the Task 36 world path never runs here and the frozen
+array is never consulted. The live path is `binding_composed[]`.
+
+**And `binding_composed` moving proves nothing by itself**, which is the trap
+that would have caught the next reading: it is the modelview-projection
+product, so it changes every frame from CAMERA motion alone. Probe 9's
+`COMPOSED17z` 14155596 -> 12915674 -> 12673681 is consistent with a tracked
+joint and equally consistent with a frozen one under a moving camera.
+
+Probe 10 therefore samples binding 17 against binding 1 -- a static layer DObj
+composed against the SAME camera in the same frame -- and reports the
+difference. The camera cancels. If the gate's joint is tracked, `(17 - 1)` must
+change between the open pose and the closed one; if it is constant, the gate's
+geometry is not following its DObj. That is the discriminator this row has
+needed all day.
+
+**Three arrays, two of them decoys.** `workspace->binding_world` (capture-time
+snapshot, read only by an M3_PHASE0_PROFILE memcmp and by a Task 36 path gated
+on rigid bindings), `sNdsNativeStageOwnerExecution.binding_world` (a POINTER to
+the same array), and `binding_composed` (the live one). Two of the three froze
+on cue and neither was the defect. Read the consumer and its gate before
+deciding what a value means.
