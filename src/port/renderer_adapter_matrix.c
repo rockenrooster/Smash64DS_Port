@@ -273,6 +273,10 @@ volatile u32 gNdsRendererAdapterSectorArwingMtxCount __attribute__((used));
 /* Engagement proof for the kind-0x45 case above: a repair that leaves this at
  * zero did not run. */
 volatile u32 gNdsRendererAdapterCustom45AppliedCount __attribute__((used));
+/* 0x45 as the SOLE transform on a DObj: kept on the pre-L01 fallback on
+ * purpose. Non-zero means the three spark-family children are still taking
+ * dobj->translate, i.e. this repair did not touch them. */
+volatile u32 gNdsRendererAdapterCustom45SoloCount __attribute__((used));
 volatile u32 gNdsSectorArwingBasisDecline __attribute__((used));
 
 #if NDS_P2_STAGE_SECTOR
@@ -3305,22 +3309,43 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         ndsRendererAdapterBuildBillboardMtx(dobj, xobj->kind, &mtx);
         break;
     case NDS_RENDERER_ADAPTER_ROT_SCA_MTX_KIND:
-        /* lbCommonRotScaFuncMatrix: rotate + row scale, ZERO translation. The
-         * translation belongs to the sibling XObj on the same DObj (kind 0x28
-         * for every source user of this kind); taking it here as well applies
-         * the effect's world position twice. See the kind define above.
+        /* lbCommonRotScaFuncMatrix: rotate + row scale, ZERO translation.
+         *
+         * SCOPED TO THE CASE THE EVIDENCE COVERS. L01 is DamageSlash, whose
+         * ROOT carries {0x28, 0x45}: 0x28 already puts the world contact in
+         * row 3, so taking the translation here as well applies it twice --
+         * an error of R_bb*t that grows with distance from the origin and
+         * swings with the camera, which is exactly the reported symptom.
+         *
+         * But 0x45 is ALSO the main transform of a CHILD DObj with no
+         * translate-bearing sibling in three other descriptors --
+         * StarRodSpark, DamageFlySparks and HaveStruct. Those children took
+         * dobj->translate from the old fallback. Dropping it there is
+         * defensible from the source, and it is also a behaviour change to
+         * three effects this row never examined, on a build where the owner
+         * reports effects going missing. So do not make it here: when 0x45 is
+         * the only transform on the DObj, keep exactly what shipped before.
+         * The narrow fix needs no such gamble.
          *
          * Not added to the DObj-world cache-key ineligibility lists: unlike
          * kinds 33-40 and the attach kinds, this one is a pure function of the
          * DObj's own rotate/scale, which the key already covers. */
-        syMatrixTraRotRpyRSca(&mtx, 0.0F, 0.0F, 0.0F,
-                              dobj->rotate.vec.f.x,
-                              dobj->rotate.vec.f.y,
-                              dobj->rotate.vec.f.z,
-                              dobj->scale.vec.f.x,
-                              dobj->scale.vec.f.y,
-                              dobj->scale.vec.f.z);
-        gNdsRendererAdapterCustom45AppliedCount++;
+        if (dobj->xobjs_num > 1)
+        {
+            syMatrixTraRotRpyRSca(&mtx, 0.0F, 0.0F, 0.0F,
+                                  dobj->rotate.vec.f.x,
+                                  dobj->rotate.vec.f.y,
+                                  dobj->rotate.vec.f.z,
+                                  dobj->scale.vec.f.x,
+                                  dobj->scale.vec.f.y,
+                                  dobj->scale.vec.f.z);
+            gNdsRendererAdapterCustom45AppliedCount++;
+        }
+        else
+        {
+            ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+            gNdsRendererAdapterCustom45SoloCount++;
+        }
         break;
     case nGCMatrixKindRecalcRotPyrR:
     case nGCMatrixKindRecalcRotRpyR:

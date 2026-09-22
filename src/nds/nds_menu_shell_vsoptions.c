@@ -37,8 +37,8 @@
  * (mnVSOptionsInitVars, :1175-1178).
  *
  * Owner policy: Item Switch is available immediately, without modifying the
- * source save/unlock progression. Damage taps stay precise; held repeats move
- * three percentage points instead of one, using the same wrapping bounds.
+ * source save/unlock progression. Damage moves ONE percentage point per step,
+ * tap or held; the speed is the row-local repeat cadence below, not the step.
  *
  * THE CURSOR IS THE SELECTED ROW'S BAKE. The source marks it with the
  * bubble HIGHLIGHT pair plus a red underline (mnVSOptionsSetOptionSpriteColors
@@ -380,14 +380,14 @@ static void ndsMenuShellPopulateVsOptions(void)
  *
  * The magnitude therefore goes back to ONE and the CADENCE carries the speed.
  * The shared menu repeat is NDS_MENU_REPEAT_WAIT = 12 source updates, about
- * five a second; ten a second is one step every six. That rate belongs to this
+ * five a second; twenty a second is one step every three. That rate belongs to this
  * row alone: NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS drives a row-local counter
  * and `sMenuChangeWait` is left untouched, so row movement and every other
  * screen keep the cadence they had. The first repeat still waits the full
  * shared delay, so a single tap stays a single step. */
 #define NDS_MENU_VSOPTIONS_DAMAGE_HELD_STEP 1
 #define NDS_MENU_VSOPTIONS_DEFAULT_HELD_STEP 3
-#define NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS 6
+#define NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS 3
 #define NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_DELAY 12
 
 static u8 sMenuVsOptionsDamageRepeatWait;

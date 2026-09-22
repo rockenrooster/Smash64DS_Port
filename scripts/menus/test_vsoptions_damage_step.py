@@ -176,7 +176,7 @@ class VsOptionsDamageStepTests(unittest.TestCase):
         self.assertEqual(table[(maximum, 1)], minimum)
         self.assertEqual(table[(minimum, -1)], maximum)
 
-    def test_damage_repeats_about_ten_a_second(self):
+    def test_damage_repeats_about_twenty_a_second(self):
         """Speed is cadence, not magnitude, and it is row-local."""
         tics = int(_define(
             self.text,
@@ -184,7 +184,7 @@ class VsOptionsDamageStepTests(unittest.TestCase):
         delay = int(_define(
             self.text,
             'NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_DELAY').rstrip('uU'))
-        self.assertEqual(tics, 6, '60 Hz / 6 updates is ten steps a second')
+        self.assertEqual(tics, 3, '60 Hz / 3 updates is twenty steps a second')
         self.assertGreater(delay, tics,
                            'a single tap must not immediately auto-repeat')
         # The row-local path must not touch the shared counter, or every other
