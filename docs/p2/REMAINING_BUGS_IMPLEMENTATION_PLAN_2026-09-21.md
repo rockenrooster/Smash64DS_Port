@@ -12,6 +12,58 @@ Nothing here is an acceptance claim. The owner playtests in the morning.
 
 ---
 
+## 0. STATUS AT 2026-09-22 04:30 — read this first
+
+Root `smash64ds.nds` is **r34**, sha256 `B4995F98...73FE`, built clean
+(`make TARGET=smash64ds`, exit 0). r32 was `594EB9BA...`. Everything below is
+pushed; nothing is an acceptance claim.
+
+### Fixed and awaiting your playtest
+
+| Row | What it actually was |
+|---|---|
+| Results poses, No Contest (R02/R03/K06) | 11 demo-anim arms had a token route and no path row, so the load failed silently |
+| Pikachu neutral-B air jolt | the ground repair left reclaimable VRAM at 0, so the air upload had nothing to evict |
+| Kirby spit-out star | `lbCommonDObjScaleXProcDisplay` is an empty function in the port |
+| Yoshi shield egg | reinstated; it had been reverted for cost, not correctness |
+| **Face/body colour — Pikachu, Kirby, Jigglypuff** | the packet REPLAY path re-derived the shade word without the clamp the live draw applies |
+| **Ness character select** | **a real hang in the shipping ROM.** A stale header truncated Ness's owner image by 18 entries |
+| Kirby copy arena | the low-detail hat is unreachable below 3 fighters; skipping it returns 7,636 B |
+
+**Two of those deserve a second look from you because I had them wrong
+earlier in this document.** The face/body row: your own note said holding
+neutral B fixes it, and a static arithmetic error cannot be cured by a button.
+That ruled out the light-vector stretch this plan spends section 5 on. The Ness
+row: I wrote "not proven reachable by a human" — wrong, the halt's three guards
+are all 1 in the shipping config with the walk off, so hovering Ness hung it
+for anyone.
+
+### Still open, and what would actually help
+
+| Row | State |
+|---|---|
+| Pikachu → Fox frozen | **My refutation was unsound and is withdrawn.** It rested on two scalar counters that are not per-slot, and neither covers collision or physics anyway. Your "sudden death works" is the strongest clue in the queue — it points at creation-time state, not fighter data. |
+| Poké Ball rays | They construct and submit (`req=2 null=0 cand=100`). That is not a drawn pixel. Needs your stage and mode. |
+| Saffron + Kirby crash | Unreproduced across two matches, and now also **unmechanised**: the GObj cap latch cannot crash this port, because every maker consumer substitutes `gGCCurrentCommon` on NULL. If you hit it again, the one thing that would help most is whether Kirby had **swallowed** someone first. |
+
+### New guards, both mutation-tested RED
+
+- `scripts/check-r2-shade-twin.py` — the two shade derivations must stay identical.
+- `scripts/fighters/check_native_owner_image_spans.py` — 1,140 root spans across
+  104 owners; catches the Ness class before it ships.
+
+Neither is wired into `verify-all`; fighter checkers here are run by hand and
+`expectedVerifiers` is a fragile literal. Run both after any owner regeneration.
+
+### One correction to section 5 below
+
+`NDS_R2_LIGHT_VECTOR_MATRIX` and `NDS_R2_LIGHT_VECTOR_STRETCH_FIX` stay default
+**0**. The stretch is real (row_norm 4695–4911 against a rigid 4096, determinant
+positive) but it was never the reported defect. Section 5 is kept for the
+measurement, not as a live lever.
+
+---
+
 ## 1. The finding that reorders this plan
 
 Two independent root causes account for most of the remaining queue, and
