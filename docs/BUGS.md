@@ -35,8 +35,8 @@ Main Menus:
 -Captain falcon
 -Ness
 -General
-    -All Fighters are not doing correct poses/animations on results screen **142 submotion payloads were in no NitroFS list. 47/47 cells route now.**
-    -No contest results screen, all fighters should be doing the clapping animations. **Kind was always correct; the Claps figatree could not load.**
+    -All Fighters are not doing correct poses/animations on results screen **No change in r25. All 35 files ARE staged and 47/47 route statically, so the failure is DOWNSTREAM: runtime load or AObj16 normalization.**
+    -No contest results screen, all fighters should be doing the clapping animations. **No change in r25. Same downstream failure as the poses row -- not the No Contest kind, which is correct.**
 Stages:
 -peaches castle: 
     -Foreground castle roof renders ALL geometry now but the texture is missing on the now visible geometry. A continuous tiled roof surface is almost achieved. **Owner Deferred**

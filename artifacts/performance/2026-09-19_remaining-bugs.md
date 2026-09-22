@@ -1770,3 +1770,39 @@ So the repair shape is the one just proven on the ball, and it is now cheap:
 **And this time do the sibling census FIRST** -- the ball's admission arm broke
 the rays sitting behind it on the same path. Enumerate every effect submitted
 from asset 86 before adding a second arm to it.
+
+### R02/R03: packing was necessary and NOT sufficient. The failure is downstream.
+
+Owner on r25: no change to the Results poses or the No Contest claps.
+
+What is now PROVEN and must not be re-derived:
+  * the 35 submotion payloads ARE in the built NitroFS --
+    `builds/build/nitrofs/reloc/reloc_submotions/` contains exactly 35 files, so
+    the Makefile staging works;
+  * all 47 reachable (fighter, outcome) cells route statically, and
+    `check_results_demo_motion_closure.py` is green including its self-test;
+  * the Ness Win3 root is baked and the model-part census is green.
+
+So the token-to-asset mapping and the payloads both exist. **Static routing is
+not a runtime load**, and that is the gap.
+
+**The blocking instrument was identified and never built.** `ftMainSetStatus`
+calls `lbRelocGetForceExternHeapFile` and then assigns `fp->figatree`
+UNCONDITIONALLY, discarding the return value; on failure
+`lbRelocGetExternHeapFile` returns the heap untouched. The two existing counters
+`gNdsRelocForceFighterAnimResolveCount` and `...FallbackCount` both live INSIDE
+the `ndsRelocIsFighterAnimID` arm, so a token that fails there increments
+NEITHER. A third counter on the INVALID return is what distinguishes the two
+remaining halves, and without it this row cannot move:
+
+  1. the demo token still does not resolve at runtime -- add the counter and it
+     reads non-zero;
+  2. it resolves and loads, but the payload does not survive the AObj16 header
+     normalizer that `ndsRelocIsFighterAnimID` admission turns on. Submotion
+     payloads were never previously normalized by this port, and nobody has
+     checked that their container matches `reloc_animations/`. Compare a
+     submotion header against a battle animation header before assuming.
+
+Do that counter FIRST. It is a handful of lines and it splits the remaining
+question exactly in half; everything else here is guessing between two
+possibilities that look identical on screen.
