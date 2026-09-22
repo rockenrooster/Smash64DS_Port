@@ -115,17 +115,13 @@ Two ROMs built, both `NATIVE_ONLY_PASS` with 316 link inputs:
 | **r31** | `86A0AE715A431F7642910DCF58F8BA00B5224AC9C66BDC22184DB5812554D366` | r30 plus the stretch classification kept readable with the repair off |
 
 **Playtest r31.** r28's hash reproduced byte-identically across a rebuild, so the
-build is deterministic. No runtime proof: nothing here is observed on screen, and none could be taken
-tonight — **both emulator harnesses proved untrustworthy in this session.**
-`probe-battle-progress.ps1` ignores `-Build` for the `smash64ds` target and
-always measures the project-root ROM, so a run intended as a control against r26
-silently re-measured the current build and produced identical registers for what
-should have been two different binaries. `verify-nogba-smoke.ps1` reported
-"verification passed: 3 capture(s)" while all three PNGs were the Windows
-desktop wallpaper; `capture-melonds.ps1` has the same blind spot. Details in
-`docs/p2/BUG_NOTES.md`. Do not read the `presented=0 / allocfail=187 /
-__excpt_entry` output of the failed probe as a crash report — the same output
-appeared for a ROM the owner had already played.
+build is deterministic. **Runtime evidence WAS taken** — see §7. Two repo harnesses could not produce
+it (`probe-battle-progress.ps1` ignores `-Build` for this target;
+`verify-nogba-smoke.ps1` passes on desktop wallpaper — both recorded in
+`docs/p2/BUG_NOTES.md`), but a direct `arm-none-eabi-gdb -batch` attach against a
+purpose-built Pikachu-vs-Fox ROM worked and answered three rows. Do not read the
+failed probe's `presented=0 / allocfail=187 / __excpt_entry` output as a crash
+report — the same output came back for a ROM the owner had already played.
 
 `check-native-owner-wiring.py` caught a real gap in the K04 work after r28 was
 built: `item_kirbystar` was missing from all three NO_PROGRAM guard arms in
@@ -566,3 +562,60 @@ The lever was blocked on a count nobody had taken, so r30 adds it.
 names the detail, so this is a use, not a load. **`[1]` staying zero across a
 natural two-player copy match is the proof the deferral is safe; any non-zero
 reading refutes the lever.** Read it beside `gNdsTaskmanGeneralHeapFreeMin`.
+
+---
+
+## 7. The runtime read, 2026-09-21 night
+
+Probe: `TARGET=smash64ds-battle-playable-hwtri BUILD=build-pika-fox-probe
+NDS_P2_PIKACHU=1 NDS_P2_PROOF_FIGHTER0=9` — Pikachu in slot 0 against the
+canonical Fox in slot 1, the owner's exact pairing. Live match confirmed:
+`scene_curr` 24 (VSBattle), 2,043 presented frames, guest alive with 79.5 s of
+CPU. Full numbers in `artifacts/performance/2026-09-19_remaining-bugs.md`.
+
+### Face/body — mechanism CONFIRMED live, and the repair is the wrong shape
+
+| witness | lr | row_norm | det_20p12 | stretch_20p12 |
+|---|---|---|---|---|
+| 0 | +1 | 4907, 4911, 4908 | **+7051** | 4908 |
+| 1 | +1 | 4696, 4701, 4695 | **+6180** | 4696 |
+
+A rigid chain reads 4096. These read 4695–4911, so the hardware light is
+mis-normalised by **15–20%** — the precondition the hypothesis needed is met,
+and the determinant is positive, so it was never a mirror.
+
+**But the repair addresses the minority case.** Of 95 light writes,
+`StretchApplied` 2 and `StretchDeclined` **87**. The dominant case is the chain
+*shrinking* the light, which the current branch deliberately declines rather
+than wrapping a unit-bounded vector. Enabling
+`NDS_R2_LIGHT_VECTOR_STRETCH_FIX` would correct ~2% of the error. **Do not ship
+it as this row's fix.** The shrink case needs the diffuse *colour* scaled — a
+different lever, with the same packet-twin obligation (§4.8).
+
+### Frozen Fox — the Appear-overrun chain is REFUTED
+
+`AppearOverrunFighter` 0, `AnimResolve` 247, `AnimFallback` **0** across 2,043
+frames of the reported roster. The Appear path definitely ran (`RaysRequest` is
+1, and that request comes from the Appear update), so this is not a status that
+was never entered. Steps 1–3 of the reconstruction join step 4 as dead.
+
+What this probe cannot see is the shell's own CSS → VS path, which is where the
+owner meets the bug. That is the next place to look, not the figatree.
+
+### P03 rays — construction refusal is REFUTED
+
+`RaysRequest` **1**, `RaysNull` **0**: constructed successfully, not
+GObj-starved, and the `ifCommonSetMaxNumGObj` latch is not what removes them.
+The live lead is now the fifth arm — made and submitted but invisible, because
+MBallRays' PRIM ramp reaches alpha 0 at source tick 50 while its rotation runs
+to 130, and a 0-alpha group is skipped. Read `gNdsEntryEffectWitness[0..3]` with
+`gNdsEntryEffectWitnessRoot = 0x0440`.
+
+Also measured, retiring a standing worry: the Poké Ball costs **596 bytes**
+against 145,948 free. Its construction is not an arena event.
+
+### Tonight's reclaim paths are dormant, not wrong
+
+`GradedQuadTextureRecycles` 0, `GradedQuadTextureFails` 0,
+`ThunderGroundCoverageReclaim` 0 — nothing in this match exhausted either pool,
+and the air-jolt regression did not reproduce in this configuration.

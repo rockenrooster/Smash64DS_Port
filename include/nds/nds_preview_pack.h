@@ -75,7 +75,22 @@ _Static_assert(sizeof(NDSPreviewPackSection) == 32, "preview section ABI");
 _Static_assert(sizeof(NDSPreviewPackFixup) == 8, "preview fixup ABI");
 _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
 
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+/* A CONFIGURATION THAT COULD NOT BUILD, and the guard mismatch is the whole of
+ * it. The VS CSS compiles its compact preview transaction under
+ * NDS_PLAYERS_VS_COMPACT_PREVIEW (battleship_mnplayersvs.c:105-108), which is
+ * `NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)` -- a RENDERER
+ * condition. The API it calls was declared only behind the four ROSTER flags
+ * below. Any build that turns hardware triangles on without a roster flag --
+ * which is exactly what the battle-playable-hwtri lab target does -- therefore
+ * compiled ndsRelocPreviewFighterLoadStep and the NDS_PREVIEW_PACK_STEP_*
+ * enum as implicit declarations and failed to compile.
+ *
+ * Widening the guard only ADDS prototypes and an enum to configurations that
+ * previously lacked them; it changes no definition and no call. Keep this
+ * condition identical to NDS_PLAYERS_VS_COMPACT_PREVIEW's -- if that moves,
+ * this must move with it, or the same break comes back in a different
+ * configuration. */
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER ||     NDS_P2_COMPACT_BATTLE_FIGHTERS ||     (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
 
 /* Resumable form of the same compact load, for the character-select preview

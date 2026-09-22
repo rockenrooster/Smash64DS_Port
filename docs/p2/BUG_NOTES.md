@@ -5097,3 +5097,28 @@ them needs a session that can actually see the emulator. Do not read the
 `presented=0 / allocfail=187 / __excpt_entry` numbers from the failed probe as a
 crash report for any ROM — that capture failed, and the same output appeared for
 a ROM the owner had already played successfully.
+
+### A lab build costs TWO default rebuilds, not one, 2026-09-21 night
+
+Sharper than the standing "a lab build stales the default generated assets".
+Measured by hash, in order, all `NATIVE_ONLY_PASS` with 316 link inputs:
+
+| build | flags | `smash64ds.nds` SHA-256 |
+|---|---|---|
+| 1 | default | `86A0AE71...` |
+| 2 | `TARGET=smash64ds-battle-playable-hwtri BUILD=build-pika-fox-probe NDS_P2_PIKACHU=1 NDS_P2_PROOF_FIGHTER0=9` | (lab) |
+| 3 | default | **`B0DFBF29...`** |
+| 4 | default | `86A0AE71...` |
+| 5 | default | `86A0AE71...` |
+
+**The first default rebuild after a lab build still ships lab-flavoured shared
+assets.** The generators rewrite the shared paths during that build, but the
+objects compiled in it were already fed the stale ones; only the next build
+picks the regenerated assets up. So build 3 is a hybrid that links clean, passes
+the native-only gate and is wrong.
+
+**How to apply:** after any build with non-default flags, run the default build
+**twice** and require the two hashes to match before publishing. A single
+rebuild that "looks fine" is exactly the artifact this repository has been
+burned by before -- it is a different binary from the one the source describes,
+and nothing in the build output says so. Related: [[measure-the-config-you-ship]].

@@ -56,30 +56,31 @@ Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
 summary.** Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`
 
 **PLAYTEST r31** `builds/remaining-bugs-playtest-r31/`
-`86A0AE715A431F7642910DCF58F8BA00B5224AC9C66BDC22184DB5812554D366`,
-NATIVE_ONLY_PASS 316 inputs. **No runtime evidence exists for it**: neither
-emulator harness can be trusted in this session (see BUG_NOTES 09-21 night), so
-if r31 fails to boot, fall back to r26 and say so.
+`86A0AE715A431F76...`, NATIVE_ONLY_PASS 316 inputs, and it BOOTS -- verified by
+gdb attach (scene 60, guest alive). A Pikachu-vs-Fox probe ROM then answered
+three rows; see plan section 7.
 OWNER ACCEPTED (removed from BUGS.md): Kirby pistol flash, CSS music, grab slam,
 effects regression, GROUND Thunder Jolt, Damage cadence, Results badge, winner
 emblem, Link slash, Kirby jab flurry (r26).
 
 FIXED 09-21 night, **none observed on screen**: R02/R03/K06 (the demo rows'
-PATH field was never consumed, so every pose failed `ndsRelocAssetGetPath` and
-bound the stale figatree silently); P01 AIR jolt (reclaimable VRAM had gone
-6,144 -> 0; reclaim hook added last in the evict sweep); K04 spit-star
-(`lbCommonDObjScaleXProcDisplay` is an EMPTY port function); Yoshi egg owner
-reinstated; plus two amplifiers in the graded-quad table and the name tracker.
+PATH field was never consumed, so every pose failed `ndsRelocAssetGetPath`);
+P01 AIR jolt (reclaimable VRAM had gone 6,144 -> 0; reclaim hook added last in
+the evict sweep); K04 spit-star (`lbCommonDObjScaleXProcDisplay` is an EMPTY
+port function); Yoshi egg owner reinstated; plus two amplifiers in the
+graded-quad table and the bound-name tracker.
 
-REFUTED: face/body is **not** a mirror (facing is `rotate.y = lr * 90deg`,
-det +1); rays are asset **85** and `0x44` cannot double-translate; an arena
-overflow **hangs** (`malloc.c:30`), so one frozen fighter is not exhaustion.
+REFUTED: face/body is not a mirror (det measured **+7051**); rays are asset
+**85** and `0x44` cannot double-translate; an arena overflow **hangs**
+(`malloc.c:30`), so one frozen fighter is not exhaustion.
 
-OPEN -- all need the r31 runtime read, not source reading. Globals per row
-are in plan section 4: face/body witness (repair OFF, the packet twin would
-flicker); `gNdsFTCommonAppearOverrunFighter` for frozen Fox;
-`gNdsEntryMBallRaysRequestCount` vs `...NullCount` for the rays; arena hang
-first for Saffron/Kirby; `gNdsItemKirbyStarFromEffectCount` for K04.
+OPEN, after the 09-21 runtime read (plan section 7): face/body mechanism is
+CONFIRMED (chains not rigid, light off by 15-20%) but 87 of 95 writes SHRINK,
+so the current repair fixes ~2% -- the fix must scale diffuse COLOUR. Frozen Fox
+Appear-overrun REFUTED (AnimFallback 0 over 2,043 frames); look at the CSS->VS
+path the direct-battle probe skips. Rays construction REFUTED (Request 1,
+Null 0); read `gNdsEntryEffectWitness` with root `0x0440` for the alpha-0 arm.
+Saffron/Kirby and K04 still unread.
 
 **THE ARENA IS THE NEXT LEVER**, blocking three rows: Pikachu/Fox has 7,556 B
 free at GO, Pikachu/Samus malloc-hangs, Saffron runs at 2,844. Sizing and

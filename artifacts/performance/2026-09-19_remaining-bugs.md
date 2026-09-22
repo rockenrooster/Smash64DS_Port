@@ -1806,3 +1806,86 @@ remaining halves, and without it this row cannot move:
 Do that counter FIRST. It is a handful of lines and it splits the remaining
 question exactly in half; everything else here is guessing between two
 possibilities that look identical on screen.
+
+## 2026-09-21 night -- the first runtime read of this cycle, and it moves three rows
+
+Direct-battle probe ROM: `TARGET=smash64ds-battle-playable-hwtri`
+`BUILD=build-pika-fox-probe NDS_P2_PIKACHU=1 NDS_P2_PROOF_FIGHTER0=9`, which is
+**Pikachu in slot 0 against the canonical Fox in slot 1** -- the owner's exact
+reported pairing. NATIVE_ONLY_PASS, 230 link inputs. melonDS slot 6, GDB stub,
+75 s settle. Live match confirmed: `scene_curr` 24 (VSBattle), 2,043 presented
+frames.
+
+**Read the harness caveat first:** an earlier attempt through
+`probe-battle-progress.ps1` failed and printed `presented=0 / allocfail=187 /
+__excpt_entry`. That was a failed capture, not a crash -- see BUG_NOTES. The
+values below come from a direct `arm-none-eabi-gdb -batch` attach that reported
+the guest alive with 79.5 s of CPU time, which is the reading to trust.
+
+### Face/body P04/K02/J01 -- THE MECHANISM IS LIVE, and the repair is the wrong shape
+
+| witness | facing lr | row_norm | det_20p12 | stretch_20p12 | idle_ok |
+|---|---|---|---|---|---|
+| 0 | +1 | 4907, 4911, 4908 | 7051 | 4908 | 1 |
+| 1 | +1 | 4696, 4701, 4695 | 6180 | 4696 | 1 |
+
+Counters over the match: `LightVectorWrites` 95, `WitnessWrites` 95,
+`StretchApplied` **2**, `StretchDeclined` **87**, `IdleTimeouts` 0.
+
+Three conclusions, and the third is the one that matters.
+
+1. **The chains are not rigid.** A rigid chain reads `row_norm` 4096; these read
+   4695-4911, so `|M L| / |L|` is 1.15-1.20. The hardware light path normalises
+   before the modelview and the software oracle after, so the diffuse level is
+   wrong by **15 to 20 percent** on these draws. The precondition the whole
+   hypothesis needed is met.
+2. **The determinant reading stays refuted, in hardware.** `det_20p12` is +7051
+   and +6180 -- positive, as a 90-degree rotation must be. No mirror.
+3. **The repair as written addresses the MINORITY case.** Only 2 of 95 writes
+   stretched; **87 SHRANK**, and the shrink branch deliberately declines rather
+   than wrapping a unit-bounded light vector. Six writes were inside the
+   deadband. So turning `NDS_R2_LIGHT_VECTOR_STRETCH_FIX` on would correct about
+   2% of the error and leave 92% of it untouched. **Do not ship it as the fix
+   for this row.** The dominant case needs the diffuse COLOUR scaled instead,
+   which is the different lever agent C's own comment names -- and it has the
+   same packet-twin obligation.
+
+### Frozen Fox -- the Appear-overrun chain is REFUTED
+
+`AppearOverrunFighter` 0, `AppearOverrunAnimFrame` 0, `AppearOverrunAnimFallback`
+0, `AnimResolve` **247**, `AnimFallback` **0**, `FallbackLastAsset` 0.
+
+No fighter overran Appear and not one animation force-load fell back, over 2,043
+presented frames of exactly the reported roster. The Appear path definitely ran
+-- `RaysRequest` is 1, and that request is raised from the Appear update -- so
+this is not a case of the status never being entered.
+
+So steps 1-3 of the reconstruction are dead alongside step 4. The freeze is not
+a stale figatree and not an Appear that never terminates. What this probe cannot
+see is the shell's own CSS -> VS path, which is where the owner meets it; the
+next candidate is something the direct-battle target skips.
+
+### P03 rays -- construction refusal is REFUTED
+
+`RaysRequest` **1**, `RaysNull` **0**. The rays were requested once and
+constructed successfully. They are not GObj-starved and the
+`ifCommonSetMaxNumGObj` latch is not what removes them.
+
+That leaves the fifth arm as the live lead: made and submitted but invisible.
+MBallRays' PRIM ramp reaches alpha 0 at source tick 50 while its rotation runs
+to 130, and a 0-alpha group is skipped -- so if the MatAnim is not advancing,
+alpha is 0 from frame 0. Read `gNdsEntryEffectWitness[0..3]` with
+`gNdsEntryEffectWitnessRoot = 0x0440` next.
+
+Also measured, and it retires a standing worry: the Poké Ball costs
+`MBallArenaCost` **596 bytes**, against `MBallArenaBefore` 145,948. Its
+construction is not an arena event.
+
+### The night's new reclaim paths are inert here
+
+`GradedQuadTextureRecycles` 0, `GradedQuadTextureFails` 0,
+`ThunderGroundCoverageReclaim` 0. Nothing in this match exhausted either pool,
+so both repairs are dormant rather than wrong -- and the air-jolt regression did
+not reproduce in this configuration. `gNdsNativeKirbyHatTableHits` is absent
+from this ELF because Kirby is not admitted in it; that counter needs a
+Kirby-bearing build.
