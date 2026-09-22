@@ -6528,6 +6528,49 @@ static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2MaterialColor15(
 
 volatile u32 gNdsR2ShadeClampAppliedCount;
 
+/* OWNER 2026-09-21: Kirby's face and body are still two colours, and HOLDING
+ * NEUTRAL B fixes it. A static arithmetic error cannot be cured by holding a
+ * button, so the clamp fold below is not the reported defect -- something a
+ * status change clears is stale cached state. The owner's question is the one
+ * to answer: is the FACE unlit, or the BODY?
+ *
+ * A breakpoint cannot answer it. This decision is made once per material epoch
+ * per fighter per frame in ITCM, and attaching gdb there wanders the CPU to
+ * 0xfffffffc within a minute (measured). So record it instead: a ring of the
+ * last 16 epochs, read once from a cheap breakpoint, then run twice -- with and
+ * without B held -- and diff.
+ *
+ * `lit` is the geometry-engine lighting decision, `unlit_vertex` is the E48/E49
+ * raw-vertex-colour override, `material` is the colour the fold was given, and
+ * `shade` is the diffuse|ambient<<16 actually written. Two adjacent runs
+ * disagreeing on `lit` or `unlit_vertex` look exactly like two materials and
+ * are immune to any diffuse/ambient correction. */
+#define NDS_R2_SHADE_WITNESS_SLOTS 16u
+typedef struct NDSR2ShadeWitness
+{
+    u32 material;
+    u32 shade;
+    u8 lit;
+    u8 unlit_vertex;
+    u8 use_material;
+    u8 pad;
+} NDSR2ShadeWitness;
+volatile NDSR2ShadeWitness gNdsR2ShadeWitness[NDS_R2_SHADE_WITNESS_SLOTS];
+volatile u32 gNdsR2ShadeWitnessWrites;
+
+static void ndsRendererR2RecordShadeWitness(u32 lit, u32 unlit_vertex,
+                                            u32 use_material, u32 material)
+{
+    u32 slot = gNdsR2ShadeWitnessWrites % NDS_R2_SHADE_WITNESS_SLOTS;
+
+    gNdsR2ShadeWitness[slot].material = material;
+    gNdsR2ShadeWitness[slot].shade = 0u;
+    gNdsR2ShadeWitness[slot].lit = (u8)(lit != 0u);
+    gNdsR2ShadeWitness[slot].unlit_vertex = (u8)(unlit_vertex != 0u);
+    gNdsR2ShadeWitness[slot].use_material = (u8)(use_material != 0u);
+    gNdsR2ShadeWitnessWrites++;
+}
+
 /* CLAMP ORDER. The N64 clamps the shade sum to eight bits and modulates by the
  * primitive colour AFTERWARDS -- sys/objdisplay.c's material plus the RDP
  * combiner give pixel = clamp8(light2 + light1 * dot) * prim / 255. The DS
@@ -6868,6 +6911,14 @@ ndsRendererNativeShadeProductionActions(
     if (use_material != 0u) { gNdsR2ShadeMaterialEpochs++; }
     ndsRendererR2E16aLightCensus(stats, material_color, state->color_modulate);
 #endif
+    ndsRendererR2RecordShadeWitness(
+        epoch_lit,
+#if NDS_R2_UNLIT_VERTEX_EPOCH
+        sNdsR2EpochUnlitVertexColor,
+#else
+        0u,
+#endif
+        use_material, material_color);
 #if NDS_R2_FIGHTER_HW_LIGHT
     /* R2-03 E16. The per-dense-vertex shading below becomes one register write:
      * the engine evaluates the dot product per vertex from GFX_NORMAL.
@@ -6907,6 +6958,9 @@ ndsRendererNativeShadeProductionActions(
             diffuse, ambient, material_color, use_material,
             state->color_modulate);
 
+        gNdsR2ShadeWitness[(gNdsR2ShadeWitnessWrites - 1u) %
+                           NDS_R2_SHADE_WITNESS_SLOTS].shade =
+            diffuse | (ambient << 16);
         ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
         NDS_FIGHTER_PACKET_HOOK(
             ndsFighterPacketRecordDiffuseAmbient(

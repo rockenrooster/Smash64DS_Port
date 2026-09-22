@@ -1590,3 +1590,43 @@ Worth keeping, because the process is the transferable part:
 about every descriptor that reaches the same switch arm. Before landing one,
 enumerate the other users of that arm and ask whether the evidence covers them.
 Here it did not, six of them existed, and three were live.
+
+### ANSWERED: neither is unlit. They take different MATERIAL paths.
+
+The witness store works. Kirby, r24 shell, 16 epochs sampled in one frame:
+
+    i=0  lit=1 unlitv=0 usemat=1 mat=0xffffffff shade=0x25295ad6
+    i=6  lit=1 unlitv=0 usemat=0 mat=0          shade=0x25297fff
+    i=8  lit=1 unlitv=0 usemat=1 mat=0xeeeeaaff shade=0x19083eb5
+    i=11 lit=1 unlitv=0 usemat=0 mat=0          shade=0x25297fff
+
+**Every epoch is lit and none takes the raw-vertex-colour override**, so the
+owner's either/or -- is the face unlit or the body -- has a third answer: both
+are lit, and they differ on `use_material`.
+
+Decode the two with the same ambient. Ambient `0x2529` is (9,9,9).
+  * `usemat=0` epochs write diffuse `0x7fff` = (31,31,31).
+  * `usemat=1` with a white prim writes `0x5ad6` = (22,22,22).
+
+22 is exactly prim minus ambient, so this is the r23 clamp engaging, and it is
+engaging correctly: at full light both land on 9+22 = 31. **But the RAMPS
+differ.** At half light the `usemat=0` run gives 9+15 and the `usemat=1` run
+gives 9+11. Two runs on one fighter, same light state, shaded on different
+curves -- which is what "the face and body are two distinct colours" looks like.
+
+So the clamp is not wrong arithmetic; it is **applied to only one of two paths
+that must agree**. Before r23 both wrote 31 and matched by accident, because a
+white prim folds to no change. The repair made the material path correct and
+left the no-material path on the old curve.
+
+Why holding neutral B fixes it follows: Inhale changes Kirby's model parts, so
+the seam between a `usemat=1` run and a `usemat=0` run stops falling across the
+visible face/body boundary.
+
+**Next step, and it is now a small decision, not an investigation:** the source
+has no divergence here -- with no material there is no prim multiply on either
+side -- so the two port paths must be brought onto one curve. Either apply the
+same saturation discipline to the no-material path, or establish that the
+no-material epochs on this fighter should have carried a material at all, which
+the `mat=0` reads make worth checking first. Do not revert the clamp: it is the
+path that now matches the source.
