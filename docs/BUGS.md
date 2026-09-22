@@ -29,16 +29,16 @@ Main Menus:
 -Samus
 -Kirby
     -Grab attack Up/down slam doesn't work correctly, victim teleports to another location (world origin???). **Kirby's own ThrowF status restored; it was aliased to the common one.**
-    -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **You were right: face correct, body wrong. Same clamp-order fold.**
+    -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **STILL BAD in r23. Holding neutral B fixes it -- a status change clears it, so it is stale cached state, not the clamp fold.**
     -Neutral A punch flurry VFX not drawing at correct locations. **Effect table read from a .bss address: all five maker args were garbage.**
     -Kirby neutral B , then A attack to spit out fighter, Star VFX is invisible. **Makers restored. NOT GObj-starved after all: ~10 slots free post-latch. Renderer side unexamined.**
-    -Kirby fox hat not working correctly. Fox hat visible but, pistol shot crashes. **Crash fixed. Flash was BattleShip's own laser colour animation, suppressed for Fox only. Now for Kirby too.**
     -Kirby has a wierd pose on results screen. **It was EggLay: no Results animation was packed, so every fighter held row 0.**
 -Jigglypuff
     -face color is slightly different from body color. (lighting difference???)
 -Captain falcon
 -Ness
 -General
+    -**r23 REGRESSION (owner): hardly any effects play. Binary grew 5,432 B; heap measurement owed before any repair.**
     -Results screen not showing 1st place emblem **Emblem dead at dispatch: native display refuses non-battle scenes. Badge path not localized.**
     -All Fighters are not doing correct poses/animations on results screen **142 submotion payloads were in no NitroFS list. 47/47 cells route now.**
     -No contest results screen, all fighters should be doing the clapping animations. **Kind was always correct; the Claps figatree could not load.**

@@ -1400,3 +1400,102 @@ instead of failing; it is now a declared `#error` dependency.
 
 Instrumented so the next run can answer "did BOTH halves arrive":
 `gNdsEntryMBallThrownRootMask` bit 0 = `0x9250`, bit 1 = `0x9340`, expect 3.
+
+### The lazy-low-detail lever is REFUTED, and the heap row is smaller than it looked
+
+The receipt proposed deferring the low-detail copy-hat load on the theory that a
+two-player match never selects it, which would have freed 7,636 bytes and
+cleared the floor outright. It does not hold.
+
+`renderer_adapter_fighter.c:3302` -- `use_low_detail = (fp->detail_curr ==
+nFTPartsDetailLow)`. Detail is BattleShip's own per-fighter state, not a
+match-configuration constant, so the low hat can be demanded on any frame. That
+is exactly the hazard the existing comment at `reloc_backend_compat_shims.c:12507`
+names: a synchronous NitroFS beat failing mid-frame, with no clean way to reject
+an already-granted copy. Deferring the load trades a permanent 7.6 KB for an
+unbounded mid-match stall and a failure with nowhere to go. Do not do it.
+
+Nor is there roster headroom: the board records the shipping roster closed at
+12/12, so scoping the hat union to the built roster saves nothing.
+
+**And the residual may not matter.** `ndsIFCommonPreserveGObjRuntimeReserve`
+raises the cap by eight once the latch has fired, and it is correctly ordered
+for a mid-match latch -- the trace shows `applied=1` from n=720. Live settles at
+46 against a cap near 54, so roughly ten slots stay free for the rest of the
+match. No missing-VFX symptom has been tied to exhausting them.
+
+So the honest state of this row: the latch is real, permanent after a copy, and
+now 916 bytes further from the floor than it was. The remaining 1,480 bytes have
+**no demonstrated consequence**, and the two obvious ways to reclaim them are
+refuted. Anyone reopening this needs a measurement showing an allocation
+actually refused -- `gcMakeGObjSPAfter` returning NULL with the cap reached --
+not a headroom figure. Until then this is understood, not outstanding.
+
+## Owner playtest of r23
+
+**K05 flash: ACCEPTED.** Removed from BUGS.md. The colour-animation diagnosis
+was right; the two earlier guesses were not.
+
+### Kirby face/body is STILL wrong, and holding neutral B fixes it
+
+That clue reframes the row. The clamp-order fold is real arithmetic -- the
+capped diffuse reproduces the source exactly at full light for all three
+fighters -- but it is evidently **not what the owner is looking at**, because a
+static arithmetic error cannot be cured by holding a button.
+
+Neutral B is Inhale. What holding it changes:
+  * a status transition, so `ftMainSetStatus` invalidates the flat-transform
+    walk and the renderer status caches;
+  * Kirby's model parts change, so a different epoch set is submitted.
+
+Something a status change clears is **stale cached state**, not a formula. The
+materials audit ruled packet replay out on the grounds that
+`ndsFighterPacketApplyTint` re-derives prim-from-root and
+`ndsRendererAdapterMaterialAnimHash` keys on `primcolor..light2color`. That
+argument shows the hash NOTICES a colour change; it does not show the hash
+distinguishes two runs that need different LIGHT state under the same colours,
+and it says nothing about the per-epoch lit/unlit decision.
+
+**The owner's own question is the right one and it is answerable directly: is
+the face unlit, or the body?** `sNdsR2EpochUnlitVertexColor` decides per epoch
+whether a run is lit by the geometry engine or emitted as raw vertex colour
+(R2-03 E48/E49, `nds_renderer_native_common.c`). Two adjacent runs disagreeing
+on that would look exactly like two materials, and would be immune to any
+diffuse/ambient correction -- which is what the owner reports.
+
+**Next step, and do not skip it for a third guess at the formula:** break at the
+epoch prepare for Kirby's face and body roots in one natural frame and print,
+per epoch, `epoch_lit`, `sNdsR2EpochUnlitVertexColor`, the resolved
+diffuse/ambient, and the material epoch/replay key. Then repeat while neutral B
+is held and diff the two. The field that changes between them is the bug. If
+`epoch_lit` differs between face and body, the clamp work is irrelevant to this
+row and should be judged on its own merits.
+
+### r23: hardly any effects play (owner). Regression, cause NOT yet established.
+
+Measured so far, and deliberately nothing more:
+
+    r22  text 1,769,940  data 263,112  bss 931,040
+    r23  text 1,774,700  data 263,112  bss 931,712   (+4,760 text, +672 bss)
+
+5,432 bytes off the arena. On its own that should not matter in the Kirby/Fox
+pair, which measured 41,684 free before the copy -- but the record already notes
+pairs sitting at ~7.5 KB free, and there the same 5,432 lowers the live count at
+which `ifCommonSetMaxNumGObj` freezes the cap, which caps effects for the rest
+of the match. That is a mechanism, not a finding.
+
+Three candidates checked and REFUTED, so nobody re-checks them:
+  * the Poke Ball admission does NOT collide across files -- the guard requires
+    `loaded->asset_id == NDS_NATIVE_ITEM_MBALL_ASSET` before matching either
+    root, so no foreign effect can be routed into the MBall owner;
+  * `ndsNativeThunderGroundReleaseCoverageTextures` is null-safe on an unused
+    slot and matches the sibling release loops around it;
+  * the newly resolvable Results submotions can raise the figatree heap, but the
+    largest submotion is 11,872 B against a battle animation maximum of 13,952,
+    so the roster maximum moves little if at all.
+
+**The measurement that decides it** is the free-space curve on an r23 shell ROM
+against the r22-era 41,684: build the `p2-shell-hwtri` sibling and re-run
+`scratchpad/heap_trace.ps1`. The shipping ROM cannot be probed -- `boot_check`
+fails identically on r22, which the owner played, so that harness only drives
+the shell ROM. Do not remove anything from r23 before that number exists.
