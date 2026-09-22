@@ -8905,6 +8905,23 @@ ndsRendererNativePrepareProductionRunCore(
             ndsRendererR2BeginTintBatch(
                 stats, tint, state->texture_prepare_poly_fmt,
                 state->matrix_generation);
+            /* THE BIND HAS TO BE DECLARED, OR IT STEALS THE NEXT RUN'S TEXTURE.
+             *
+             * ndsRendererHardwareBindTexture runs ONLY inside the
+             * `texture_prepare_valid == 0` branch of the prepare
+             * (nds_renderer_native_common.c:482). A run whose prepare is
+             * REUSED therefore never re-binds -- it trusts that the texture
+             * the tracker names is still the one on the hardware. Binding the
+             * tint tile behind the tracker's back breaks exactly that trust,
+             * and the next textured run to reuse its prepare draws with a
+             * solid-colour 8x8 tile instead of its own texture.
+             *
+             * That is the r37/r42 regression: EVERY fighter after a tinted one
+             * in the draw order, not just the three that can reach this
+             * branch. The owner saw it on all of them, and the ladder named it
+             * on r42. Invalidating the prepare costs one full re-prepare per
+             * tinted run and restores the tracker's invariant. */
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
         }
         else
         {
