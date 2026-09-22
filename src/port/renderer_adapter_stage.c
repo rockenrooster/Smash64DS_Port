@@ -11478,6 +11478,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_egg_native_handled == FALSE) &&
         (item_iwark_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
+        (item_kirbystar_native_handled == FALSE) &&
 #endif
         (visual_effect_native_settled == FALSE) &&
         (impact_wave_native_candidate != FALSE))
@@ -11585,6 +11586,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_egg_native_handled == FALSE) &&
         (item_iwark_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
+        (item_kirbystar_native_handled == FALSE) &&
 #endif
         /* Unconditional: this owner has no build flag, so it must be excluded
          * from BOTH the impact-wave ON arm here and the OFF arm below. */
@@ -11695,6 +11697,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (item_egg_native_handled == FALSE)
         && (item_iwark_native_handled == FALSE)
         && (item_tomato_native_handled == FALSE)
+        && (item_kirbystar_native_handled == FALSE)
 #endif
         && (visual_effect_native_settled == FALSE)
        )

@@ -110,9 +110,19 @@ Two ROMs built, both `NATIVE_ONLY_PASS` with 316 link inputs:
 |---|---|---|
 | r27 | `E077AF60D9E60F75F7C81748D6DE76C10576ED08C570B1DAA812F42B9E998A96` | Results paths, P01, K04, witnesses |
 | r28 | `7A2D46B4F47DAC53111C80AAA0A2544EBF614E93A4537474F3DDAB455BC28E0D` | r27 plus the Yoshi egg owner |
+| **r29** | `DAB94410BAADDFA0050FBC20134DD55E061E894850BCC2A0A7970F76A99EDA8D` | r28 plus the Kirby-star NO_PROGRAM arms |
 
-**Playtest r28.** Its hash reproduced byte-identically across a rebuild, so the
+**Playtest r29.** r28's hash reproduced byte-identically across a rebuild, so the
 build is deterministic. No runtime proof: nothing here is observed on screen.
+
+`check-native-owner-wiring.py` caught a real gap in the K04 work after r28 was
+built: `item_kirbystar` was missing from all three NO_PROGRAM guard arms in
+`renderer_adapter_stage.c`, so the star's display list would have published a
+native failure even on the frames its own executor handled — the exact symptom
+K04 was about. Fixed and rebuilt as r29. The checker's four remaining failures
+(`kirby_vulcan`, `ness_pktail`, `pikachu_thunder`, `samus_bomb`, all missing
+Makefile PREREQ variables) are pre-existing: `git log -S` shows those variables
+never existed.
 
 ---
 
