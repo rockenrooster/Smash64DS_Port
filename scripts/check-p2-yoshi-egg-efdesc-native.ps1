@@ -143,6 +143,86 @@ Assert-YoshiEggNative ($admissionText -match
     '#if NDS_P2_YOSHI[\s\S]{0,1400}gFTDataYoshiModel \+ 0xa860u') `
     'Yoshi egg admission arm is no longer inside its NDS_P2_YOSHI guard.'
 
+# THE ESCAPE EGG DREW AND NEVER TURNED (2026-09-22), and nothing above could
+# see it: every assertion so far is about the egg's pixels, and the turn lives
+# in its XObj list. A custom matrix kind (>= 66) runs sGCMatrixFuncList
+# (objdisplay.c:1157-1170); one the port's XObj builder has no case for falls
+# to `default:` and a TRS fallback without a word. 0x4A, func_ovl0_800CB2F0,
+# which copies joint 5's pitch into the egg's roll for the kind-46 billboard,
+# was exactly that. So the kinds are read from the SOURCE descs, not pinned:
+# each custom one needs a builder case, and a place on the stage-world cache's
+# ineligible list, because every custom kind these descs use reads a live
+# fighter joint that the cache key does not cover.
+$efmanager = Join-Path $root 'decomp\BattleShip-main\decomp\src\ef\efmanager.c'
+$matrix = Join-Path $root 'src\port\renderer_adapter_matrix.c'
+$efText = Get-Content -LiteralPath $efmanager -Raw
+$matrixText = Get-Content -LiteralPath $matrix -Raw
+
+$defines = @{}
+foreach ($m in [regex]::Matches($matrixText,
+        '#define (NDS_RENDERER_ADAPTER_\w+) (0x[0-9A-Fa-f]+|\d+)u')) {
+    $defines[$m.Groups[1].Value] = [Convert]::ToInt32($m.Groups[2].Value,
+        $(if ($m.Groups[2].Value.StartsWith('0x')) { 16 } else { 10 }))
+}
+$builder = [regex]::Match($matrixText,
+    'static sb32 ndsRendererAdapterBuildDObjXObjMatrix\([\s\S]*?\n\}\n')
+Assert-YoshiEggNative $builder.Success `
+    'renderer_adapter_matrix.c lost ndsRendererAdapterBuildDObjXObjMatrix.'
+$keyCapture = [regex]::Match($matrixText,
+    'static sb32 ndsRendererAdapterCaptureStageWorldSourceKey\([\s\S]*?\n\}\n')
+Assert-YoshiEggNative $keyCapture.Success `
+    'renderer_adapter_matrix.c lost ndsRendererAdapterCaptureStageWorldSourceKey.'
+
+$customKinds = @()
+foreach ($desc in @('dEFManagerYoshiShieldEffectDesc',
+                    'dEFManagerYoshiEggEscapeEffectDesc')) {
+    $block = [regex]::Match($efText, "EFDesc $desc =\s*\{[\s\S]*?\n\};")
+    Assert-YoshiEggNative $block.Success "efmanager.c lost $desc."
+    $row = [regex]::Match($block.Value,
+        'transformation struct 1\s*\{\s*(\w+),[^\n]*\n\s*(\w+),[^\n]*\n\s*(\w+)')
+    Assert-YoshiEggNative $row.Success "$desc has no readable transform struct 1."
+    foreach ($token in @($row.Groups[1].Value, $row.Groups[2].Value,
+                         $row.Groups[3].Value)) {
+        Assert-YoshiEggNative ($token -match '^(0x[0-9A-Fa-f]+|\d+)$') `
+            "$desc transform kind '$token' is not a literal; teach this check."
+        $kind = [Convert]::ToInt32($token,
+            $(if ($token.StartsWith('0x')) { 16 } else { 10 }))
+        if ($kind -lt 66) { continue }
+        $names = @($defines.Keys | Where-Object { $defines[$_] -eq $kind })
+        $cased = @($names | Where-Object {
+            $builder.Value -match ('case ' + $_ + ':') })
+        Assert-YoshiEggNative ($cased.Count -gt 0) `
+            (("$desc uses custom matrix kind 0x{0:x} and the port's XObj " +
+              "builder has no case for it: it falls to the TRS fallback.") -f $kind)
+        $keyed = @($names | Where-Object {
+            $keyCapture.Value -match ('\(xobj->kind == ' + $_ + '\)') })
+        Assert-YoshiEggNative ($keyed.Count -gt 0) `
+            (("Custom matrix kind 0x{0:x} ($desc) reads a live fighter joint " +
+              'but is missing from the stage-world cache ineligible list.') -f $kind)
+        $customKinds += ('0x{0:x}' -f $kind)
+    }
+}
+$customKinds = @($customKinds | Select-Object -Unique)
+
+# 0x4A is a WRITE, not a matrix: source returns 1, so gcPrepDObjMatrix emits no
+# gSPMatrix, and its whole effect is lbcommon.c:2018-2019. The case must
+# contribute no local transform, and the copy must keep the source's sign rule.
+$pitchNames = @($defines.Keys | Where-Object { $defines[$_] -eq 0x4A })
+Assert-YoshiEggNative ($pitchNames.Count -eq 1) `
+    'Expected exactly one NDS_RENDERER_ADAPTER_* define for custom kind 0x4A.'
+$pitchCase = [regex]::Match($builder.Value,
+    ('case ' + $pitchNames[0] + ':([\s\S]*?)\n\s*(?:case |default:)'))
+Assert-YoshiEggNative ($pitchCase.Success -and
+    ($pitchCase.Groups[1].Value -match 'return FALSE;') -and
+    ($pitchCase.Groups[1].Value -notmatch '\bbreak;')) `
+    'The 0x4A builder case must return FALSE: source emits no matrix for it.'
+$flatMatrix = $matrixText -replace '\s+', ''
+Assert-YoshiEggNative ($flatMatrix.Contains(
+    'dobj->rotate.vec.f.z=(parts->mtx_translate[0][2]>0.0F)?' +
+    'attach->rotate.vec.f.x:-attach->rotate.vec.f.x;')) `
+    'The 0x4A pitch-to-roll copy no longer matches lbcommon.c:2018-2019.'
+
 Write-Output ("P2_YOSHI_EGG_EFDESC_NATIVE_OK root=0xa860 asset=338 " +
     "ordinal=$eggFirst/$rootCount group=$eggGroup triangles=$eggTriangles " +
-    "shield_and_egg_escape_share_one_root")
+    "shield_and_egg_escape_share_one_root " +
+    "custom_kinds_handled=$($customKinds -join ',')")

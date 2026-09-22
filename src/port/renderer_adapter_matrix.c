@@ -263,16 +263,53 @@ static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
  * StarRodSpark, DamageFlySparks and FireSpark additionally give 0x45 to every
  * NON-root node on its own (efmanager.c:246, 276, 396), where the fallback was
  * adding each child's DObjDesc translate to a subtree the source leaves
- * untranslated. Custom kinds 0x44, 0x49, 0x4A and 0x51 are still unhandled and
+ * untranslated. Custom kinds 0x44, 0x49 and 0x51 are still unhandled and
  * still take that fallback; they carry other rows' effects (MBallThrown,
- * MBallRays, DamageFlyMDust, FireSpark's root, YoshiEggEscape, itmain's hold)
- * and are deliberately not touched here. */
+ * MBallRays, DamageFlyMDust, FireSpark's root, itmain's hold) and are
+ * deliberately not touched here. 0x4A is handled below. */
 #define NDS_RENDERER_ADAPTER_ROT_SCA_MTX_KIND 0x45u
+/* dLBCommonFuncMatrixList pair 8 (kind 0x4A, decimal 74) is func_ovl0_800CB2F0
+ * (lbcommon.c:2011-2022), and it BUILDS NO MATRIX. It returns 1, and
+ * gcPrepDObjMatrix `continue`s past the gSPMatrix of a custom proc that does
+ * (objdisplay.c:1167-1170). Its whole effect is one write to the DObj's OWN
+ * rotate.z, which the kind-46 billboard after it in the XObj list reads:
+ *
+ *     attach = dobj->user_data.p;
+ *     func_ovl2_800EDBA4(attach);
+ *     dobj->rotate.z = (ftGetParts(attach)->mtx_translate[0][2] > 0.0F) ?
+ *                      attach->rotate.x : -attach->rotate.x;
+ *
+ * Its one source user is dEFManagerYoshiEggEscapeEffectDesc, { 0x50, 0x4A,
+ * 0x2E } (efmanager.c:1375-1402): 0x50 puts the egg on fp->joints[5]
+ * (efManagerYoshiEggEscapeMakeEffect, efmanager.c:5453), 0x4A hands that
+ * joint's pitch to the egg as screen-plane roll, and kind 46
+ * (objdisplay.c:960-1004) turns the camera-facing quad by it. joints[5] is
+ * Yoshi's body, the first drawn YoshiModel JointTree entry, and RollF/RollB
+ * (FTYoshiAnim059/060) sweep its rotate.x by +4pi/-4pi, so the source egg
+ * turns twice per roll. [0][2] is the Z of the joint's world X axis, i.e. his
+ * facing, so the turn reads as rolling forward on either side.
+ *
+ * Without this case the kind fell to `default:`, whose TRS fallback added a
+ * spare 1.5 scale that kind 46 then overwrote and never wrote rotate.z: the
+ * escape egg drew in the right place at the right size and never turned
+ * (owner, docs/BUGS.md, Yoshi). */
+#define NDS_RENDERER_ADAPTER_JOINT_PITCH_TO_ROLL_KIND 0x4Au
 
 volatile u32 gNdsRendererAdapterSectorArwingMtxCount __attribute__((used));
 /* Engagement proof for the kind-0x45 case above: a repair that leaves this at
  * zero did not run. */
 volatile u32 gNdsRendererAdapterCustom45AppliedCount __attribute__((used));
+/* Kind 0x4A witness, one cache line; only Yoshi's escape egg carries 0x4A.
+ *   [0] engagement: the joint's pitch was copied into a DObj's roll.
+ *   [1] the proof: a kind-46 MVP rewrite consumed a NON-ZERO roll that 0x4A
+ *       wrote in the same prepare, i.e. an escape egg drawn turned.
+ *   [2] f32 bits of the last roll consumed; it must sweep during a roll.
+ * Cleaned to RAM on every write: the cache-accurate melonDS fork's gdb stub
+ * reads RAM, not a dirty dcache line, and a hot counter read through it can
+ * sit at 0 while the CPU's copy counts. Egg draws only, so the clean is free. */
+volatile u32 gNdsRendererAdapterCustom4AWitness[3]
+    __attribute__((used, aligned(32)));
+static const DObj *sNdsRendererAdapterCustom4ARollDObj;
 /* 0x45 as the SOLE transform on a DObj: kept on the pre-L01 fallback on
  * purpose. Non-zero means the three spark-family children are still taking
  * dobj->translate, i.e. this repair did not touch them. */
@@ -2907,6 +2944,38 @@ static sb32 ndsRendererAdapterBuildJointAttachTraMtx(DObj *dobj, Mtx *out)
     return TRUE;
 }
 
+/* Matrix kind 0x4A, func_ovl0_800CB2F0: no matrix, one write. The source
+ * contract is at NDS_RENDERER_ADAPTER_JOINT_PITCH_TO_ROLL_KIND. The guards are
+ * the 0x4F builder's for the same reason: func_ovl2_800EDBA4 dereferences
+ * ftGetStruct(attach->parent_gobj) and the FTParts of every joint up to the
+ * root without testing them. A declined guard writes nothing, where source
+ * would fault. noinline: one effect's path stays out of the shared XObj switch,
+ * and out of ITCM should that switch ever inline into its ITCM caller. */
+static void __attribute__((noinline))
+ndsRendererAdapterCopyJointPitchToRoll(DObj *dobj)
+{
+    DObj *attach = (DObj *)dobj->user_data.p;
+    FTParts *parts;
+
+    if ((attach == NULL) || (attach == DOBJ_PARENT_NULL) ||
+        (attach->parent_gobj == NULL))
+    {
+        return;
+    }
+    parts = ftGetParts(attach);
+    if (parts == NULL)
+    {
+        return;
+    }
+    func_ovl2_800EDBA4(attach);
+    dobj->rotate.vec.f.z = (parts->mtx_translate[0][2] > 0.0F) ?
+        attach->rotate.vec.f.x : -attach->rotate.vec.f.x;
+    sNdsRendererAdapterCustom4ARollDObj = dobj;
+    gNdsRendererAdapterCustom4AWitness[0]++;
+    DC_FlushRange((const void *)(uintptr_t)gNdsRendererAdapterCustom4AWitness,
+                  sizeof(gNdsRendererAdapterCustom4AWitness));
+}
+
 /* BattleShip lbcommon.c:1477-1604 (func_ovl0_800C9A38) + :1619-1634
  * (func_ovl0_800C9F70), specialized only at the final output boundary for the
  * DS renderer.  This is the 0x52 matrix installed on a held item's root by
@@ -3379,6 +3448,12 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
         }
         break;
+    case NDS_RENDERER_ADAPTER_JOINT_PITCH_TO_ROLL_KIND:
+        /* Source returns 1: no gSPMatrix, so no local transform either. The
+         * roll it writes is consumed by the kind-46 recalc after the world
+         * build, in the same ndsRendererAdapterPrepareInitialMatrices. */
+        ndsRendererAdapterCopyJointPitchToRoll(dobj);
+        return FALSE;
     case NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND:
         if (ndsRendererAdapterBuildItemAttachMtx(dobj, &mtx) == FALSE)
         {
@@ -4149,6 +4224,22 @@ static void ndsRendererAdapterApplyMvpRecalc(
                 dobj->rotate.vec.f.z,
                 dobj->scale.vec.f.x, dobj->scale.vec.f.y,
                 &sNdsRendererAdapterMvpRecalcScaleX, ef_ground_kind46_rows);
+            if (dobj == sNdsRendererAdapterCustom4ARollDObj)
+            {
+                /* These rows just consumed the roll kind 0x4A wrote during
+                 * this prepare's world build. Bits, not a float compare. */
+                u32 roll_bits = ndsFloatBits(dobj->rotate.vec.f.z);
+
+                sNdsRendererAdapterCustom4ARollDObj = NULL;
+                gNdsRendererAdapterCustom4AWitness[2] = roll_bits;
+                if ((roll_bits & 0x7fffffffu) != 0u)
+                {
+                    gNdsRendererAdapterCustom4AWitness[1]++;
+                }
+                DC_FlushRange(
+                    (const void *)(uintptr_t)gNdsRendererAdapterCustom4AWitness,
+                    sizeof(gNdsRendererAdapterCustom4AWitness));
+            }
             for (row = 0u; row < 3u; row++)
             {
                 for (col = 0u; col < 4u; col++)
@@ -4652,12 +4743,15 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
          * live TraI AObjs and its x translation also reads arwing_target_x,
          * neither of which is represented in this key. Any future custom kind
          * that reads live state outside the DObj TRS belongs here in the same
-         * commit that teaches the builder about it. */
+         * commit that teaches the builder about it. 0x4A reads the bound
+         * joint's pitch and world matrix, and writes this DObj's own rotate.z
+         * after the key is captured. */
         if ((xobj->kind == 1u) ||
             ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_PITCH_TO_ROLL_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND))
         {
