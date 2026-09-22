@@ -5,7 +5,14 @@ AI Agent should mark fixed items with **FIXED** prefix or a 100 char summary (or
 
 treat anything not going through native renderer a failure.
 
-**r37 built for playtest: builds/remaining-bugs-playtest-r37/smash64ds.nds, sha256 37bf335e8546ece0... Ten rows implemented, none accepted. One NOT repaired and said so: Saffron's door, which now carries the witness that decides it. Full plan and evidence in docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md.**
+**r37 REGRESSED: every fighter lost body parts. Cause not attributed, so the fix is a ladder, not a guess. Play these in order and stop at the first bad one; each differs from the previous by ONE change.**
+
+**r39 `3a9fbd621dd5dd1f` clean baseline -- both r37 fighter-renderer changes removed. Expect r36 fighters plus: Yoshi's egg, Pikachu's burst, the VFX-by-roster fix, faster CSS previews, Link's texture release, Zebes lights+acid.**
+**r40 `6421958af77d6bbe` + Castle roof alpha, narrowed and pinned by scripts/check-alpha-mux-blast-radius.py.**
+**r41 `64dcefb9ed67768b` + texture-part repair (the one-eye row).**
+**r42 `d53782a9b52596d9` + face/body colour (Pikachu/Kirby/Jigglypuff). If this one breaks fighters it should break exactly those three.**
+
+**Plan and evidence: docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md**
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
@@ -37,10 +44,10 @@ Main Menus:
     -regression in r36 VFX sometimes do not play depending on fighter combination. **r37: 8 dedicated glow textures could not hold a 4-fighter frame; now 16.**
 Stages:
 -peaches castle: 
-    -Foreground castle roof renders ALL geometry now but the texture is missing on the now visible geometry. A continuous tiled roof surface is almost achieved. **NOT FIXED in R36 ** **r37: runtime forced its texel alpha opaque, painting the roof with TMEM padding.**
+    -Foreground castle roof renders ALL geometry now but the texture is missing on the now visible geometry. A continuous tiled roof surface is almost achieved. **NOT FIXED in R36 ** **r40: a cycle's alpha is (A-B)*C+D and only C/D were tested; MODULATEIA puts the texel in A.**
 -Zebes: Acid plane Color is accurate now but texture blending are all visibly too HARD. Edges are too defined instead of a gradient/smooth transistion. Stage lights on the ground floor have a flat/hard transparency (hard upsidown trapezoid shape) instead of looking like a real light source with a gradient that tapers to fully transparent towards the top. **NOT FIXED in R36 ** **r37: the light cone emitted 3 flat alpha bands; subdivided to 20 triangles. Acid unchanged.**
 -Yoshi's Island: 
 -SectorZ:
--Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **r37 NOT REPAIRED: the r36 change had no reader at all. Frame 0 of the CLOSE script is the open pose.**
+-Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **NOT REPAIRED. Measured on hardware: the gate's joints and state machine DO cycle open/closed correctly. The row is the door's geometry, not its motion.**
 
 Audio:
