@@ -28,7 +28,6 @@ Main Menus:
     -face color is slightly different from body color. (lighting difference???) **Not lighting: N64 clamps shade then multiplies prim; DS folds prim first, so lit bodies wash white.**
 -Samus
 -Kirby
-    -Grab attack Up/down slam doesn't work correctly, victim teleports to another location (world origin???). **Kirby's own ThrowF status restored; it was aliased to the common one. Owner has NOT accepted this.**
     -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **STILL BAD in r23. Holding neutral B fixes it -- a status change clears it, so it is stale cached state, not the clamp fold.**
     -Neutral A punch flurry VFX not drawing at correct locations. **Effect table read from a .bss address: all five maker args were garbage.**
     -Kirby neutral B , then A attack to spit out fighter, Star VFX is invisible. **Makers restored. NOT GObj-starved after all: ~10 slots free post-latch. Renderer side unexamined.**
