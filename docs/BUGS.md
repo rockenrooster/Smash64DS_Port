@@ -5,12 +5,9 @@ AI Agent should mark fixed items with **FIXED** prefix or a 100 char summary (or
 
 treat anything not going through native renderer a failure.
 
-**r37 REGRESSED: every fighter lost body parts. Cause not attributed, so the fix is a ladder, not a guess. Play these in order and stop at the first bad one; each differs from the previous by ONE change.**
+**LADDER RESULT: r39/r40/r41 good, r42 regressed. The cause is the face/body tint route -- it bound a texture behind the prepare tracker's back, so the next textured run reusing its prepare drew with the wrong texture. Every fighter after a tinted one, not just the three.**
 
-**r39 `3a9fbd621dd5dd1f` clean baseline -- both r37 fighter-renderer changes removed. Expect r36 fighters plus: Yoshi's egg, Pikachu's burst, the VFX-by-roster fix, faster CSS previews, Link's texture release, Zebes lights+acid.**
-**r40 `6421958af77d6bbe` + Castle roof alpha, narrowed and pinned by scripts/check-alpha-mux-blast-radius.py.**
-**r41 `64dcefb9ed67768b` + texture-part repair (the one-eye row).**
-**r42 `d53782a9b52596d9` + face/body colour (Pikachu/Kirby/Jigglypuff). If this one breaks fighters it should break exactly those three.**
+**PLAY r43 `587c853bcd7439f2` -- it is r42 plus the one-line repair. If it is clean, every row below is in except Saffron's door.**
 
 **Plan and evidence: docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md**
 

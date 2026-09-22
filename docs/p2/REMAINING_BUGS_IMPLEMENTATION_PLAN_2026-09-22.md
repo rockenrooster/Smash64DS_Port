@@ -18,58 +18,61 @@ re-derive. Do not close a row on a claim you did not re-measure.
 
 ## Status
 
-**r37 REGRESSED and the cause is NOT attributed.** The owner reports every
-fighter missing body parts. My first explanation -- that the alpha-mux widening
-flipped four fighter policy families -- was decoded with `TEXEL0 = 0` when it is
-1 and `COMBINED` is 0, and is withdrawn.
-`scripts/check-alpha-mux-blast-radius.py` now decodes the constants from
-`nds_renderer_preamble.c` and the families from the generated owner table, and
-reports that **all six answer identically under every candidate predicate**. So
-that change could not have touched a fighter, and r38 did not fix anything.
+**THE LADDER RAN, AND IT NAMED THE REGRESSION.** The owner played r39, r40 and
+r41 clean and reported r42 brings back "every fighter missing body parts". r42
+adds exactly one thing over r41: the face/body tint route.
 
-Rather than guess a third time, the three r37 changes that can reach fighter
-geometry were pulled and are returned one per ROM:
+| ROM | sha256 | adds | owner |
+|---|---|---|---|
+| r39 | `3a9fbd621dd5dd1f` | clean baseline | good |
+| r40 | `6421958af77d6bbe` | Castle roof alpha, narrowed | good |
+| r41 | `64dcefb9ed67768b` | texture-part mirror repair | good |
+| r42 | `d53782a9b52596d9` | face/body tint route | **REGRESSED** |
+| r43 | `587c853bcd7439f2` | r42 + the repair below | pending |
 
-| ROM | sha256 | adds |
+**The mechanism, and the exact shape of my error.** I argued through three
+messages that the tint route could only reach Pikachu, Kirby and Jigglypuff,
+because `ndsRendererR2FighterTintTexture` returns 0 for a white prim. That is
+true of who ENTERS the branch and false of who is AFFECTED by it.
+
+`ndsRendererHardwareBindTexture` runs ONLY inside the
+`texture_prepare_valid == 0` branch of the prepare
+(`nds_renderer_native_common.c:482`). A run whose prepare is REUSED never
+re-binds -- it trusts that the texture the tracker names is still the one on
+the hardware. `ndsRendererR2BeginTintBatch` bound the solid-prim tile behind
+that tracker's back, so the next textured run to reuse its prepare drew with an
+8x8 solid-colour tile instead of its own texture. That is every fighter after a
+tinted one in the draw order.
+
+The repair is one line at the call site: invalidate the texture prepare after a
+tint bind. It costs one re-prepare per tinted run and restores the tracker's
+invariant instead of working around it.
+
+**Row state after r43:**
+
+| Row | Seam | In |
 |---|---|---|
-| r39 | `3a9fbd621dd5dd1f` | clean baseline; both r37 fighter-renderer changes out |
-| r40 | `6421958af77d6bbe` | Castle roof alpha, narrowed and pinned |
-| r41 | `64dcefb9ed67768b` | texture-part mirror repair (the one-eye row) |
-| r42 | `d53782a9b52596d9` | face/body tint route |
+| G1 VFX play or not by fighter combination | graded-quad texture table | r39 |
+| Y1 Yoshi's guard egg invisible | EFDesc offset mapper | r39 |
+| P2 Pikachu down-B blue burst missing | particle quad sheet admission | r39 |
+| C1 CSS hover-to-preview delay | preview service byte budget | r39 |
+| C6 Link turns gray | retired preview's texture entries | r39 |
+| S2 Zebes lights and acid | per-triangle alpha averaging | r39 |
+| S1 Castle roof texture missing | per-cycle alpha test | r40 |
+| C2/C5 one eye closed | texture-part status mirror | r41 |
+| P1/K1/J1/C3/C4/C5 face colour != body colour | fighter shade fold | r43 |
+| S3 Saffron door always open | see below | **open** |
 
-Play in order, stop at the first bad one, and the change that broke fighters is
-named without any further reasoning from me. r42 carries its own asymmetry as a
-test: only Pikachu, Kirby and Jigglypuff can reach the tint route, so if it is
-the culprit it should break exactly those three.
-
-| Row | Seam | State |
-|---|---|---|
-| G1 VFX play or not by fighter combination | graded-quad texture table | in r39 |
-| Y1 Yoshi's guard egg invisible | EFDesc offset mapper | in r39 |
-| P2 Pikachu down-B blue burst missing | particle quad sheet admission | in r39 |
-| C1 CSS hover-to-preview delay | preview service byte budget | in r39 |
-| C6 Link turns gray | retired preview's texture entries | in r39 |
-| S2 Zebes lights and acid | per-triangle alpha averaging | in r39 |
-| S1 Castle roof texture missing | per-cycle alpha test | in r40 |
-| C2/C5 one eye closed | texture-part status mirror | in r41 |
-| P1/K1/J1/C3/C4/C5 face colour != body colour | fighter shade fold | in r42 |
-| S3 Saffron door always open | NOT the gate's motion; see below | **NOT repaired** |
-
-Nothing is owner-accepted. Static checkers green across the ladder:
-`check-r2-shade-twin` (5 claims, CLAIM 5 mutation-verified),
-`check-alpha-mux-blast-radius`, `check_fighter_face_body_material`,
-`check-nds-particle-banks`, `check_nds_native_stage`,
-`test_css_preview_transaction` 8/8, `test_yamabuki_gate_animation` 11/11,
-`check-native-owner-wiring`, `check_native_owner_image_spans`,
-`check-decomp-pristine`, `check-melonds-policy`.
-
-**What this batch got wrong, since the corrections matter more than the fixes.**
-Three claims were published and withdrawn in one day: the Saffron authored pose,
-the Saffron "installed but never advanced", and the fighter-regression cause.
-The first two were refuted by one emulator run that could have been done first;
-the third by constants that were in the source the whole time. The lasting
-output is `check-alpha-mux-blast-radius.py`, which would have stopped both the
-r37 change and the wrong explanation that followed it.
+**What this batch got wrong, since it outweighs what it got right.** Five claims
+were published and withdrawn in one day: the Saffron authored pose, the Saffron
+"installed but never advanced", the fighter-regression cause, the tint route's
+blast radius, and a frozen matrix that turned out to be a diagnostic snapshot.
+Four were killed by evidence already in the tree or one emulator run. The
+lasting outputs are the falsifiers -- `check-alpha-mux-blast-radius.py`,
+`check-r2-shade-twin.py` CLAIM 5 -- and three instrument lessons in BUG_NOTES:
+decode constants from source, reach for the flag rather than the lab target
+that carries it, and read who consumes a field before deciding what its value
+means.
 
 ### S3 Saffron, the one row with no repair
 
