@@ -2413,6 +2413,10 @@
           "classification": "live_camera_dependent"
         },
         {
+          "access": "dobj.parent",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "dobj.rotate.vec.f.x",
           "classification": "live_camera_independent"
         },
@@ -2443,6 +2447,26 @@
         {
           "access": "modelview.m",
           "classification": "live_camera_dependent"
+        },
+        {
+          "access": "scale_ancestor.parent",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "scale_ancestor.scale.vec.f.x",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "scale_ancestor.xobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "scale_ancestor.xobjs_num",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "xobj.kind",
+          "classification": "immutable_generation"
         }
       ],
       "path": "src/port/reloc_backend_renderer_dl.c"

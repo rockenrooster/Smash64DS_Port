@@ -906,6 +906,22 @@ SOURCE_CLOSURE_POLICIES = (
                 dobj.scale.vec.f.y dobj.xobjs dobj.xobjs_num
                 """,
             ),
+            # The parent-scale walk this closure performs -- the same one
+            # ndsRendererAdapterMvpParentScaleX classifies under the name
+            # `cursor`. It reached this closure without its reads being
+            # classified here, so the falsifier had been failing every stage
+            # whose owner include was rebuilt; it only stayed quiet while that
+            # generated file was up to date. Same classes as the sibling:
+            # topology is immutable, the scale value is live. `xobj.kind` is
+            # immutable, matching its classification in the camera closure.
+            **_classified(
+                FIELD_CLASS_IMMUTABLE,
+                """
+                dobj.parent scale_ancestor.parent scale_ancestor.xobjs
+                scale_ancestor.xobjs_num xobj.kind
+                """,
+            ),
+            **_classified(FIELD_CLASS_LIVE, "scale_ancestor.scale.vec.f.x"),
         },
     },
     {
