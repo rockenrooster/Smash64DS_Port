@@ -2703,3 +2703,57 @@ The available counters are global rather than per slot
 (`gNdsFighterPacketHits` / `Records` / `Declines` / `Faults` / `MissWord`),
 which is the same granularity trap that made my first refutation of this row
 unsound. If this lead is taken up, make them per slot first.
+
+## 2026-09-22 08:05 -- whole-match Fox coverage, and one anomaly worth chasing
+
+Every previous Fox reading stopped by ~560 presented frames, about nine
+seconds. The preset is a ONE-MINUTE Time match, so I had only ever tested the
+opening. Sixteen samples across five complete match loops, out to pres=1942:
+
+    L01 pres=1862 P0 st=10 tics=340 | P1 st=12  tics=49  hs=1,1,1 gh=0
+    L02 pres=118  P0 st=10 tics=147 | P1 st=29  tics=1   hs=1,1,1 gh=0
+    L03 pres=419  P0 st=10 tics=38  | P1 st=225 tics=4   hs=1,1,1 gh=0
+    L04 pres=720  P0 st=2  tics=181 | P1 st=10  tics=7   hs=1,1,1 gh=0
+    L05 TORN DOWN pres=757
+    L06 pres=136  P0 st=10 tics=0   | P1 st=223 tics=0   hs=1,1,1 gh=1
+    L07 pres=437  P0 st=10 tics=485 | P1 st=10  tics=23  hs=1,1,1 gh=0
+    L08 pres=738  P0 st=10 tics=0   | P1 st=12  tics=44  hs=1,1,1 gh=0
+    L09 pres=1039 P0 st=10 tics=371 | P1 st=12  tics=104 hs=1,1,1 gh=0
+    L10 pres=1340 P0 st=10 tics=117 | P1 st=12  tics=15  hs=1,1,1 gh=0
+    L11 pres=1641 P0 st=10 tics=719 | P1 st=232 tics=22  hs=1,1,1 gh=0
+    L12 pres=1942 P0 st=57 tics=11  | P1 st=12  tics=28  hs=1,1,1 gh=0
+    L13 TORN DOWN pres=2043
+    L14 pres=72   P0 st=5  tics=0   | P1 st=5   tics=0   hs=1,1,1 gh=1
+    L15 pres=373  P0 st=10 tics=357 | P1 st=10  tics=21  hs=1,1,1 gh=0
+    L16 pres=674  P0 st=52 tics=5   | P1 st=208 tics=10  hs=1,1,1 gh=0
+    END loops=5 latch=0/0 anim=1136/0 appearOverrun=0
+
+Fox stays alive and hittable for whole matches, not just their openings: its
+status keeps changing (12, 29, 225, 10, 223, 12, 12, 232, 12, 5, 10, 208), all
+hurtboxes read Normal at every sample, and `is_ghost` is 0 except at L06 and
+L14 where both fighters read 1 -- that is the entry/Appear state at a match
+start, transient and correct.
+
+**The anomaly: `damage` is 0 for BOTH fighters at ALL SIXTEEN samples across
+five complete matches**, while Fox runs character-specific attack statuses
+(225, 223, 232, 208). Nothing ever connects, in either direction.
+
+That is the first reading all session that resembles the owner's "cannot be
+hit". It is NOT yet a finding, for two reasons worth stating before anyone
+builds on it:
+
+- P0 is a human slot the walk never gives input to, so P0 never attacks. Only
+  Fox's attacks could land, and a level-2 CPU may simply not close.
+- The obvious instrument is guarded out. `gNdsCfxFighterDamagePhaseCalls` and
+  `gNdsCfxFighterDamagePhaseHits` (`battleship_gmcollision.c:174-183`) sit
+  inside `#if NDS_TICK_HUD`, which is **0** in both the walk build and the
+  shipping build -- the symbols are not even in the ELF. A probe reading them
+  would have returned 0/0 and meant nothing. Checked before interpreting
+  rather than after.
+
+The follow-up now running reads the thing that actually discriminates: the two
+fighters' world positions each sample. If they are always far apart, zero
+damage is fully explained and there is no anomaly. If they are repeatedly
+adjacent while Fox attacks and damage never moves, that is a real lead on
+"cannot be hit" -- and the next step would be a build with `NDS_TICK_HUD=1` to
+read the collision phase directly.
