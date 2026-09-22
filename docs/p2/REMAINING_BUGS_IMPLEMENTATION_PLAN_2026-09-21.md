@@ -147,31 +147,145 @@ behind `fp->fkind == nFTKindYoshi`, and the root at `0xa860` is an immutable
 texture-bind rejects**.
 
 Fourteen rejects from a two-triangle quad is the anomaly, not the egg's
-geometry. Plan: reinstate the owner, then read the bind rejects — the candidates
-are material state requesting a non-resident image, and the insertion disturbing
-a shared bind cache. Do not re-litigate the owner. The generator
-(`scripts/3d_vfx/generate_nds_entry_effects.py`) is adjacent to agent B's entry
-work, so sequence this after B lands.
+geometry. Read further tonight, and it names a likely mechanism and a better
+repair.
 
-### 4.5 P01 — AIR Thunder Jolt regression — **agent A**
-Ground jolt accepted; the air jolt regressed through a shared-resource
-interaction, not a direct edit. Candidates in order: allocation/eviction order
-against the three pinned A5I3 names, then the bind hand-off at
-`nds_native_pikachu_thunderground.exec.inc:102`. Keep the ground repair.
+The reverted generator hunk added `YOSHI_MODEL` (asset 338) as a new
+`census.InputSpec` and compiled root `0xA860` through the ordinary entry-effect
+`Compiler`, which **bakes the root's texture into the shared entry-effect image
+bank**. Every other entry-effect owner is an effect asset (356, 161, 355, 346);
+this one is a *fighter model* file. The recorded arena cost of exactly −4,096 is
+one page of bank growth, and 14 bind rejects against intact geometry is the
+signature of a root whose triangles were admitted while its texture was not —
+the shape already recorded here as "a full atlas may be packer waste", where a
+reported "no room" turned out to be 5,248 free texels.
+
+So the preferred repair is **not** to grow the bank. Yoshi's egg can only appear
+while Yoshi is in the match, which is exactly when YoshiModel's own texture set
+is already resident — so bind the root through the existing foreign image bank
+mechanism (`scripts/fighters/test_native_foreign_image_bank.py` shows it is
+supported) instead of baking a second copy. That costs zero arena and removes
+the atlas pressure that produced the rejects. Measure bank occupancy before and
+after to confirm, and keep the original analysis: the owner was correct, the
+revert was about cost.
+
+The generator (`scripts/3d_vfx/generate_nds_entry_effects.py`) and both renderer
+files the reverted commit touched (`nds_renderer_native_common.c`,
+`renderer_adapter_stage.c`) are held by agents B and C, so sequence this after
+they land.
+
+### 4.5 P01 — AIR Thunder Jolt regression — **root cause found and fixed**
+It is allocation, and the ground repair was priced in the wrong unit. That
+repair moved three images off `sNdsRendererHardwareTextureCache` and onto
+dedicated GL names in `sNdsNativeThunderGroundCoverage[]`. Total bytes went
+6,144 to 3,120, a *negative* 3,024 — but **reclaimable** bytes went 6,144 to 0,
+because `ndsRendererHardwareEvictTexture` is the only reclaim either upload-retry
+loop has and it sweeps the cache array alone. The air jolt's single 4,096-byte
+A3I5 upload (its render tile is 64x64, from `SetTileSize(..., 0x000fc0fcu)`)
+then had nothing to evict, fell to the 1-bit-alpha path, and on a hard refusal
+was not drawn at all (`gNdsThunderJoltSubmitStep = 3`, no fallback route).
+
+The bind hand-off candidate is **refuted**: `ndsRendererHardwareBindTextureName`
+does update the current name on both arms, the graded quad re-binds
+unconditionally, and admission is disjoint (air needs `dobj->mobj == NULL` plus
+root `0x0270`, ground needs `dobj->mobj != NULL` plus one of six roots).
+
+Fixed by giving the coverage slots a reclaim hook that
+`ndsRendererHardwareEvictTexture` calls **last**, after the ordinary cache
+sweep — so the normal victim order is unchanged and dedicated names are
+surrendered only when nothing else can be. The ground repair is untouched.
+`gNdsThunderGroundCoverageReclaimCount` is the discriminator: non-zero proves a
+sibling could not find room; zero across a match with a refused air upload
+falsifies this root cause outright.
+
+**The census is itself a finding.** A dozen owners now hold dedicated,
+unreclaimable GL names on a 256 KB pool — the IFCommon cloud names, the graded
+quad table, entry-effect/shield/KO palettes, Hyrule, impact wave, rebirth halo,
+the particle atlas, Whispy, the Fox blaster glow and gun. The ground jolt was
+merely the newest. The same repair shape applies to each, and until it does, any
+starved sibling fails the same way.
+
+Two amplifiers were found in the same pass and are fixed here.
+
+### 4.5a Graded quad table — eight slots, twelve owners, no recycling
+`ndsRendererNativeBindGraded` freed a slot only when `generation` changed, i.e.
+at a whole-scene texture reset. Several owners pass a live
+`material->current_image`, so their image pointer changes *within* a scene: the
+old entry then matched nothing (stale `image`) and could never be chosen as free
+(non-zero `name`), so its VRAM leaked and the 8-slot table filled permanently.
+After that every graded request in the match returned FALSE and its owner fell
+to the 1-bit-alpha path or was not drawn. Twelve owners share the table:
+Fushigibana, GLucky, Hitokage, Porygon, Ness PK tail, Thunder Jolt, Purin Sing,
+Ness PK Thunder, Pikachu Thunder, Thunder Jolt FX, Samus Bomb and Samus Charge
+Shot. This is a strong candidate for the owner reports of effects not playing,
+independent of P01.
+
+Fixed by stamping each slot with its bind frame and, **only in the branch that
+previously always failed**, reclaiming the least-recently-bound slot not bound
+this frame — the same rule the engine's own evictor applies. Nothing that works
+today can be made worse: the only paths whose behaviour changes were already
+returning FALSE. The victim's name is no longer zeroed before the upload, so
+`PrepareIFCommonA3I5Atlas` releases it and the VRAM actually comes back.
+`gNdsGradedQuadTextureRecycles` separates "recycled, drew" from "gave up".
+
+### 4.5b A refused upload left the bound-texture tracker lying
+On the give-up path of `ndsRendererHardwarePrepareIFCommonAtlas` the hardware
+was bound to a texture the function had just deleted, while
+`sNdsRendererHardwareBoundTextureName` still claimed the caller's previous name.
+`ndsRendererHardwareBindTextureName` elides a rebind when the requested name
+equals the tracker, so the next consumer to ask for that previous name would
+draw through the deleted texture. Both the tracker and the active-entry pointer
+are now cleared on that path. This is live for every generic-bind consumer after
+any refused dedicated upload, not only this row.
 
 ### 4.6 P02 — Down-B blue self-hit explosion — **narrowed, verify on playtest**
 Producer identified exactly: `dPikachuMainMotion_GettingThundered_0x1668` emits
 `nEFKindThunderAmp`, `ftParam` maps it to `efManagerThunderAmpMakeEffect`, whose
 constructor starts particle script `0x74`. The real maker is routed and `0x74`
-is packed. Owed: confirm actual script-0x74 engagement and pixels, not Thunder
-role-mask coverage; and that a stage-intercepted Thunder does not read as a
-missing self-hit. If it is still absent, check allocation refusal first — §1.2.
+is packed. **Verified statically tonight:** the maker is routed at
+`reloc_backend_compat_shims.c:8226`, script `0x74` resolves to particle bank
+offset `0x2948`, `check-nds-particle-banks.ps1` passes, and
+`generate_nds_particle_banks.py:3108-3111` already errors when a reachable
+script's texture is unpacked — so the producer side is closed and no routing
+work is owed. If the burst is still absent on playtest it is an allocation
+refusal, not a missing producer: go to §1.2, not to the effect. Still confirm a
+stage-intercepted Thunder does not read as a missing self-hit.
 
-### 4.7 P03 — Poké Ball spawn rays — **agent B**
-Ball visible and accepted; rays regressed behind the same admission. Suspects:
-the new effect-layer arm leaving item state; descriptor kind `0x44` still on the
-translate-bearing fallback beside the `0x45` arm just changed; entry-seam
-ordering. Agent B now owns `renderer_adapter_matrix.c` for the `0x44` case.
+### 4.7 P03 — Poké Ball spawn rays — **all three suspects refuted; instrumented**
+First, a premise correction: **the rays are not asset 86.** They are
+EFCommonEffects3 = **asset 85, roots `0x0440` and `0x0518`**. The ball is asset
+86. Different files, different adapter paths.
+
+- *The effect-layer arm leaves item state* — refuted. The MBall commit is purely
+  additive and writes none of the inherited effect state the rays consume.
+  Decisively, the rays are handled inside
+  `ndsRendererAdapterTryNativeEntryEffect`, called at
+  `renderer_adapter_stage.c:6273`, which returns before the MBall block at
+  `:8228`. The ball's arm cannot run before the rays' arm for the same DL.
+- *Custom matrix kind `0x44`* — refuted, and the earlier commit note that
+  flagged it was wrong. `sGCMatrixFuncList` entries are **pairs**, so `0x44` is
+  pair 2 = `func_ovl0_800CA024`, a Translate-Scale matrix that already carries
+  `dobj->translate` — not `lbCommonRotScaFuncMatrix`, which is pair 3 = `0x45`.
+  It differs from the fallback only by a rotation term, and in all four `0x44`
+  users the secondary kind is `nGCMatrixKindNull`, so `0x44` **cannot**
+  double-translate by construction.
+- *Entry-seam ordering* — refuted. The seam edit widened a prototype guard and
+  turned an `#if` into an `#error`; it did not move, gate or reorder the rays
+  call.
+
+Leading cause, not yet proven: **construction-time refusal.** The rays
+descriptor has no `EFFECT_FLAG_USERDATA`, so it takes no EFStruct and the
+source's five-free reserve does not protect it; it needs only
+`gcMakeGObjSPAfter`, which the `ifCommonSetMaxNumGObj` latch caps once the arena
+drops under 25,600. `efManagerMBallRaysMakeEffect` then returns NULL silently and
+nothing recorded it — section 1.2 again. Now counted by
+`gNdsEntryMBallRaysRequestCount` against `gNdsEntryMBallRaysNullCount`.
+
+A second arm must be excluded before blaming allocation: MBallRays' PRIM ramp
+reaches alpha 0 at source tick 50 while its rotation runs to 130, and a 0-alpha
+group is skipped. If the MatAnim is not playing, alpha is 0 from frame 0 and the
+rays draw invisibly with candidate > 0 and reject 0. Read
+`gNdsEntryEffectWitness[0..3]` with `gNdsEntryEffectWitnessRoot = 0x0440`.
 
 ### 4.8 P04 / K02 / J01 — face vs body colour — **agent C**
 Residue is facing-dependent: fixed facing left, wrong facing right, and correct
@@ -200,12 +314,46 @@ Not in the brief. Reconstructed chain:
    entry-focus phase calling each fighter's `ftCommonAppearSetStatus` in
    sequence.
 
-If confirmed this is the fourth instance of one shape: a newly admitted owner
-leaving state the next consumer assumed it had. Required next: prove whether the
-Poké Ball construction and the Appear figatree force-load share an allocation
-path and an ordering, then read
-`gNdsRelocForceFighterAnimFallbackCount` / `...FallbackLastAsset`. Do not stub
-the effect; the ball is accepted.
+**Step 4 was investigated and is REFUTED on mechanism.** The Appear figatree
+force load does not draw from the same allocator as the Poké Ball: its
+destination `fp->figatree_heap` is a caller-owned pre-allocated buffer, the anim
+cache has its own arena and is forbidden from calling `syTaskmanMalloc`, and a
+resident pack hit allocates nothing. More decisively, the one arena they could
+share does not fail by returning NULL — `malloc.c:30` is `while (TRUE);`, so an
+overflow **hangs the console**. A single frozen fighter while the rest of the
+match keeps running is therefore not general-heap exhaustion.
+
+(That same fact re-reads the Saffron/Kirby report in §4.14: an arena overflow
+there would present as a hang, which is exactly what "crashes" describes.)
+
+The *ordering* in step 4 does hold — the entry-focus phase walks
+`gGCCommonLinks[nGCCommonLinkIDFighter]` one fighter at a time, so the ball is
+constructed before any later fighter's entry, though only if Pikachu precedes
+Fox in player-slot order. And the ball does permanently cost DObj/MObj/AObj pool
+growth out of `gSYTaskmanGeneralHeap`, which lowers the arena every later entry
+sees and can tighten the `gcSetMaxNumGObj` latch. That is a real coupling to
+GObj-starved *effects* such as the rays, not to the figatree load.
+
+So steps 1-3 stand and step 4 does not. The freeze is still most likely a
+fighter stuck in Appear; what is now open is *why* its animation never
+terminates. An event-local witness was added at
+`battleship_ftcommon_entry.c:283-320` — it latches once, never rewrites, and
+touches no source state:
+
+| global | meaning |
+|---|---|
+| `gNdsFTCommonAppearOverrunFighter` | 0 = never fired, else `fkind + 1`; written last, so non-zero guarantees the whole record |
+| `gNdsFTCommonAppearOverrunAnimFrame` | raw `f32` bits of `anim_frame` at the boundary |
+| `gNdsFTCommonAppearOverrunAnimFallback` | snapshot of `gNdsRelocForceFighterAnimFallbackCount` |
+| `gNdsFTCommonAppearOverrunArena` | free arena at the boundary |
+| `gNdsEntryMBallThrownArenaBefore` / `...Cost` | what the Poké Ball actually costs |
+
+Reading: `Fallback > 0` with `gNdsRelocForceFighterAnimFallbackLastAsset` naming
+a Fox Appear animation means the figatree fell back and the fighter can never
+reach `anim_frame <= 0` — that is the freeze. `Fallback == 0` with a non-zero
+`OverrunFighter` means the animation loaded and the stall is elsewhere, which
+refutes step 3 too. Do not stub or defer the Poké Ball: it is source-faithful in
+`ftCommonAppearSetStatus` and the owner accepted it.
 
 ### 4.10 K03 — Kirby jab flurry at wrong positions — **fixed, awaiting playtest**
 `ftcommonattack100.c:91` read Kirby's rapid-jab effect table as
@@ -219,15 +367,38 @@ a renderer placement bug. Fixed in `5947945361f` with the address-as-offset form
 8/8, two arms RED before the commit by design. This is the fifth recurrence of
 the `ll*` trap.
 
-### 4.11 K04 — Kirby spit-out star invisible — **agent B**
-Makers restored (constructs), not GObj-starved (~10 free slots after the latch),
-renderer side never examined. Twin of the Poké Ball:
-`llITCommonDataKirbyStarDObjDesc` addresses ITCommonObject (file 86), the same
-asset as `dEFManagerMBallThrownEffectDesc`; the star's roots have no bake and no
-admission arm, so they reach the submit path, nothing claims them, and the
-result publishes `NO_PROGRAM` — which reads as missing geometry. Repair shape is
-the one proven on the ball. Census asset 86 first. Pair with LoseKirbyStar; keep
-the entry warp star separate.
+### 4.11 K04 — Kirby spit-out star invisible — **root cause found and fixed**
+The renderer was never the first failure. `lbCommonDObjScaleXProcDisplay` — the
+`proc_display` of **both** star descriptors — is **an empty function in the
+port** (`src/import/battleship_wpmanager_core.c:138-141`), so the restored makers
+built the effect and nothing ever handed its tree to the renderer. Falcon Punch
+and Yoshi's entry egg hit this identical wall and were repaired the same way.
+
+Two naming traps resolved on the way. `llITCommonDataKirbyStarDObjDesc = 0x5458`
+is an offset into **file 86**, not file 251; and what is there is **not a
+DObjDesc** — it is `dITCommonObject_StarRod_Weapon_data[22]`, a 22-command
+display list. Both star descriptors clear EFDesc flag `0x4`, so
+`efManagerMakeEffect` passes `addr + o_dobjsetup` to `gcAddChildForDObj` as a
+display list. The Poké Ball sets `0x4` and really does name a DObjDesc, which is
+why the twin framing held for the asset but not for the shape.
+
+A whole-image referrer census found exactly three pointers reaching `0x5458`, so
+**one bake serves four source owners**: the Star Rod's two weapon swings and both
+of Kirby's stars. The Star Rod's swings were invisible for the same reason.
+
+Landed: root `0x5458` baked through the wave1 generator (4 verts, 2 triangles,
+no material, no `0xDE`), a native executor, an admission arm gated on
+`asset_id == 86 && root == 0x5458` that admits from the weapon *and* effect
+layers, and both descriptors routed to `gcDrawDObjDLHead1` — head 1, not the
+head-0 tree callback, because source `lbCommonDrawDObjScaleX` submits through
+`gSYTaskmanDLHeads[1]` and the source's own `DObjDLLink` selects list 1.
+Artefacts regenerated; `kirbystar --check` GREEN, `mball --check` and
+`star --check` still GREEN.
+
+Asset-86 census: 22 native consumers, and `0x5458` collides with no existing
+root. Owed: trigger spit-out and lose-copy **separately**;
+`gNdsItemKirbyStarFromEffectCount > 0` is the only counter that proves K04
+rather than the Star Rod.
 
 ### 4.12 S01 — Peach's Castle roof texture — **owner deferred**
 Geometry renders; texture continuity is the remaining dimension. A run can emit
@@ -311,10 +482,26 @@ Kirby copy's permanent 18,480 absorbed. That is the difference between "some
 pairs cannot start a match" and headroom.
 
 Risk, and why it was not done tonight: it rewrites the most visible HUD asset,
-and the `ll*` offset class has already caused five recorded failures in this
-repository. It needs its own change, its own falsifier (decode the repacked file
-and assert every symbol still lands on a valid sprite header), and a visual
-check. Do not fold it into a bug batch.
+the `ll*` offset class has already caused five recorded failures here, and it
+cuts across the grain of the port's asset architecture.
+`scripts/menus/stage_reloc_file.py` derives all five offset surfaces —
+`include/reloc_data.h`, `diagnostics_mp_taskman_state.c`,
+`reloc_backend_assets.c`, `nds_reloc_assets.c` and the Makefile — from
+`decomp/BattleShip-main/include/reloc_data.us.h`, which is read-only source of
+truth. A repack makes one asset's offsets diverge from that authority, so the
+repacker has to become a recognised producer for this file rather than a one-off
+script. It needs its own change, its own falsifier (decode the repacked file and
+assert every symbol still lands on a valid sprite header with a valid bitmap
+pointer), and a visual check of READY/GO, GAME SET, TIME UP and the stock lamps.
+Do not fold it into a bug batch.
+
+Rejected alternatives, recorded so they are not re-derived. An offset-preserving
+shrink does not exist: headers are interleaved with texels and the *used* data
+is at the tail. Zeroing the texels saves nothing, because the loader allocates
+the file's length. Biasing the file base pointer to load only a suffix fails,
+because the "GO!" sprites at `0x4D78`, `0xA730` and `0xC370` are dereferenced and
+`ndsIFCommonMakeSObjForGObj` still passes every letter sprite to
+`lbCommonMakeSObjForGObj`.
 
 ### 6.2 Custom matrix kinds still on the translate-bearing fallback
 

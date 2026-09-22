@@ -39,12 +39,16 @@ typedef struct NDSGradedQuadTexture
     u32 generation;
     u32 prim; /* RGB the palette was built for */
     u32 env;
+    u32 frame; /* sNdsRendererHardwareFrameSerial + 1 at the last bind */
 } NDSGradedQuadTexture;
 static NDSGradedQuadTexture sNdsGradedQuadTextures[NDS_GRADED_QUAD_TEXTURES];
 static u16 sNdsGradedQuadPalette[32];
 volatile u32 gNdsGradedQuadTextureBuilds;
 volatile u32 gNdsGradedQuadTextureFails;
 volatile u32 gNdsGradedQuadPaletteUpdates;
+/* Non-zero means the table filled and a slot had to be taken back. Reading it
+ * beside gNdsGradedQuadTextureFails separates "recycled, drew" from "gave up". */
+volatile u32 gNdsGradedQuadTextureRecycles;
 
 static void ndsGradedQuadRamp(u32 prim, u32 env)
 {
@@ -201,6 +205,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
             ndsRendererHardwareBindTextureState((int)entry->name);
             sNdsRendererHardwareBoundTextureName = entry->name;
             sNdsRendererHardwareActiveTextureEntry = NULL;
+            entry->frame = sNdsRendererHardwareFrameSerial + 1u;
             if ((entry->prim != prim) || (entry->env != env))
             {
                 ndsGradedQuadRamp(prim, env);
@@ -218,12 +223,54 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
     }
     if (slot == NDS_GRADED_QUAD_TEXTURES)
     {
-        gNdsGradedQuadTextureFails++;
-        return FALSE;
+        /* EIGHT SLOTS, TWELVE OWNERS, AND NOTHING EVER GAVE ONE BACK.
+         *
+         * Until now a slot was freed only when `generation` changed, i.e. at a
+         * whole-scene texture reset. But several owners pass a LIVE
+         * `material->current_image` -- the Thunder Jolt family and Ness's PK
+         * tail among them -- so their image pointer changes WITHIN a scene.
+         * The old entry then matched nothing (its `image` is stale) and could
+         * never be chosen as a free slot (its `name` is non-zero), so its VRAM
+         * leaked and the table filled permanently. From that point every
+         * graded request in the match returned FALSE and the owner fell to the
+         * 1-bit-alpha path the helper exists to avoid, or was not drawn at all.
+         *
+         * Take the least-recently-bound resident slot instead -- never one
+         * bound this frame, the same rule ndsRendererHardwareEvictTexture
+         * applies to its own entries. This branch previously always failed, so
+         * nothing that works today can be made worse: the only paths that
+         * change behaviour are ones that were already returning FALSE. The old
+         * name is NOT zeroed below, so PrepareIFCommonA3I5Atlas releases it and
+         * the VRAM actually comes back. */
+        u32 oldest_frame = 0u;
+        u32 this_frame = sNdsRendererHardwareFrameSerial + 1u;
+
+        for (i = 0u; i < NDS_GRADED_QUAD_TEXTURES; i++)
+        {
+            NDSGradedQuadTexture *entry = &sNdsGradedQuadTextures[i];
+            u32 age;
+
+            if ((entry->name == 0u) || (entry->frame == this_frame))
+            {
+                continue;
+            }
+            age = this_frame - entry->frame;
+            if (age >= oldest_frame)
+            {
+                oldest_frame = age;
+                slot = i;
+            }
+        }
+        if (slot == NDS_GRADED_QUAD_TEXTURES)
+        {
+            gNdsGradedQuadTextureFails++;
+            return FALSE;
+        }
+        sNdsGradedQuadTextures[slot].image = NULL;
+        gNdsGradedQuadTextureRecycles++;
     }
     if (fill->tlut != NULL) ndsGradedQuadTlutPalette(fill);
     else ndsGradedQuadRamp(prim, env);
-    sNdsGradedQuadTextures[slot].name = 0u;
     if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
             width, height, sNdsGradedQuadPalette,
             (fill->tlut != NULL) ? ndsGradedQuadCi4Fill : ndsGradedQuadIa8Fill,
@@ -239,6 +286,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
     sNdsGradedQuadTextures[slot].generation = generation;
     sNdsGradedQuadTextures[slot].prim = prim;
     sNdsGradedQuadTextures[slot].env = env;
+    sNdsGradedQuadTextures[slot].frame = sNdsRendererHardwareFrameSerial + 1u;
     gNdsGradedQuadTextureBuilds++;
     return TRUE;
 }

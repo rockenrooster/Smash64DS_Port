@@ -2794,6 +2794,11 @@ ndsRendererHardwareReleaseTexture(
     return entry;
 }
 
+/* P01. The ground Thunder Jolt's three A5I3 coverage names are dedicated GL
+ * names, not cache entries, so the sweep below cannot reach them. Defined in
+ * src/nds/nds_native_pikachu_thunderground_coverage.inc. */
+s32 ndsNativeThunderGroundReleaseOneCoverageTexture(void);
+
 static s32 ndsRendererHardwareEvictTexture(
     const NDSRendererHardwareTextureCacheEntry *exclude)
 {
@@ -2820,7 +2825,19 @@ static s32 ndsRendererHardwareEvictTexture(
             return TRUE;
         }
     }
-    return FALSE;
+    /* P01, and it is the AIR Thunder Jolt regression. Dedicated names come
+     * LAST, so the ordinary cache stays the preferred victim and normal
+     * operation is unchanged; these are surrendered only when nothing else
+     * can be.
+     *
+     * The ground-jolt repair moved three images off this cache and onto their
+     * own names. It was priced in total bytes -- 6,144 to 3,120, a NEGATIVE
+     * 3,024 -- and that was the wrong unit. Reclaimable bytes went from 6,144
+     * to ZERO, because this sweep is the only reclaim either upload-retry loop
+     * has, and it walks sNdsRendererHardwareTextureCache alone. The air jolt's
+     * single 4,096-byte A3I5 upload (its render tile is 64x64) then had
+     * nothing to evict and fell to the hard-alpha path or failed outright. */
+    return ndsNativeThunderGroundReleaseOneCoverageTexture();
 }
 
 static NDSRendererHardwareTextureCacheEntry *
@@ -3325,6 +3342,18 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
             (ndsRendererHardwareEvictTexture(NULL) == FALSE) ||
             (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0))
         {
+            /* A REFUSED UPLOAD MUST NOT LEAVE THE TRACKER LYING. We bound a
+             * name above with ndsRendererHardwareBindTextureState, which is a
+             * raw glBindTexture and does not touch
+             * sNdsRendererHardwareBoundTextureName -- and we have just deleted
+             * that name. So on this path the hardware is bound to a dead
+             * texture while the tracker still claims the caller's previous
+             * name, and ndsRendererHardwareBindTextureName ELIDES a rebind
+             * when the requested name equals the tracker. The next consumer to
+             * ask for that previous name would then draw through the deleted
+             * one. Zero both so the next bind is always issued. */
+            sNdsRendererHardwareBoundTextureName = 0u;
+            sNdsRendererHardwareActiveTextureEntry = NULL;
             return FALSE;
         }
         ndsRendererHardwareBindTextureState(name);

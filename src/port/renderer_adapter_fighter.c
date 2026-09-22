@@ -867,6 +867,31 @@ static void ndsFtrDrawMemoFinish(void)
     sNdsFtrDrawMemoState = 0u;
 }
 
+/* K02/P04/J01 facing witness (r25, 2026-09-21).
+ *
+ * The owner's report is facing-dependent: Kirby's face/body seam is gone facing
+ * LEFT, present facing RIGHT, and gone facing RIGHT inside the ledge-balance
+ * pose. No material, palette or clamp state can do that, so every shade sample
+ * the renderer records has to carry the facing that produced it or two samples
+ * cannot be compared at all.
+ *
+ * `fp->lr` is the source's own facing field, -1 left / 0 centre / +1 right.
+ * NOTE for whoever reads this next: it is NOT a mirror. ftmain.c:4477 turns it
+ * into `joints[nFTPartsJointTopN]->rotate.vec.f.y = fp->lr * 90 degrees`, a
+ * pure rotation, and no lr-driven negative scale exists in decomp/ or
+ * src/import/. A facing change is a 180 degree Y rotation of the whole model
+ * and nothing else.
+ *
+ * Deliberately EVENT-LOCAL: both values are overwritten by every captured
+ * fighter and never accumulated, so a fighter that stopped drawing cannot leave
+ * a stale facing behind for the next reader. `Writes` is a delta counter, not a
+ * flag. Defined here, in the only translation unit that has an FTStruct, and
+ * unconditionally so the renderer-side externs resolve in every configuration
+ * including NDS_R2_FIGHTER_HW_LIGHT=0 builds. */
+volatile s32 gNdsR2FighterFacingLr;
+volatile u32 gNdsR2FighterFacingSlot;
+volatile u32 gNdsR2FighterFacingWrites;
+
 static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
 {
     extern void ndsBaseFTDisplayMainProcDisplay(GObj *fighter_gobj);
@@ -940,6 +965,12 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFtrDrawMemoFp = fp;
     sNdsFtrDrawMemoGObj = fighter_gobj;
     sNdsFtrDrawMemoHit = 0u;
+    /* See the definitions above: the renderer's shade and light-matrix
+     * witnesses are unreadable without the facing that produced them. */
+    gNdsR2FighterFacingLr = (fp != NULL) ? fp->lr : 0;
+    gNdsR2FighterFacingSlot =
+        (fp != NULL) ? (u32)fp->nds_slot : 0xffffffffu;
+    gNdsR2FighterFacingWrites++;
     /* Do not memoise the source entry-camera walk.  Mario/Fox Appear motions
      * deliberately mutate DOBJ_FLAG_HIDDEN inside the same status as their
      * entry animation advances.  The old memo saw the first source-hidden pose

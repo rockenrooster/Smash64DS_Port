@@ -48,6 +48,18 @@
  * the owner used before, so the worst case is the shipping hard edge rather
  * than a dropped segment.  `gNdsThunderGroundCoverageFallbackCount` and
  * `gNdsThunderGroundCoverageRejectStep` say when and why.
+ *
+ * RESIDENT, NOT PINNED.  The paragraph above priced this trade in BYTES and
+ * that was the wrong unit.  These three names are not texture-cache entries,
+ * so `ndsRendererHardwareEvictTexture` -- the only reclaim path
+ * `ndsRendererHardwarePrepareIFCommonAtlas` has when `glTexImage2D` refuses --
+ * cannot see them.  Before this owner existed the same three images WERE cache
+ * entries, so a starved sibling could evict them; afterwards the same bytes sit
+ * where nothing can reach them.  The net total went negative and the
+ * RECLAIMABLE total went to zero, and the second number is the one a sibling
+ * upload spends.  `ndsNativeThunderGroundReleaseOneCoverageTexture` below
+ * closes that: it hands one name back on demand, and the next ground draw
+ * re-converts it as an ordinary miss.
  */
 #ifndef NDS_NATIVE_PIKACHU_THUNDERGROUND_COVERAGE_H
 #define NDS_NATIVE_PIKACHU_THUNDERGROUND_COVERAGE_H
@@ -77,6 +89,33 @@
  * name exists. */
 void ndsNativeThunderGroundReleaseCoverageTextures(void);
 
+/* On-demand reclaim for a STARVED SIBLING, not a scene teardown.  Releases the
+ * least recently bound resident coverage name -- never one bound in the
+ * current frame -- and returns TRUE when a name was actually given back, so
+ * the caller can retry the upload that failed.  FALSE means this owner holds
+ * nothing it may give up.
+ *
+ * INTEGRATOR WIRING (one shared edit, src/nds/nds_renderer_textures_effects.c):
+ * move/duplicate this prototype above `ndsRendererHardwareEvictTexture`
+ * (~line 2795) and make that function's failure return try this owner last:
+ *
+ *     static s32 ndsRendererHardwareEvictTexture(...)
+ *     {
+ *         ...existing dynamic-slot sweep, unchanged...
+ *         return ndsNativeThunderGroundReleaseOneCoverageTexture();
+ *     }
+ *
+ * Last, not first: the ordinary cache stays the preferred victim, so normal
+ * operation is bit-identical and these names are only surrendered when nothing
+ * else can be.  Both call sites of the evictor -- the dedicated-name upload
+ * retry in `ndsRendererHardwarePrepareIFCommonAtlas` and the generic cache
+ * retry in `ndsRendererHardwareResolveOrBindTexture` -- then reach it.
+ *
+ * Re-entrancy: this owner's own prepare also drives that retry loop, but the
+ * slot it is filling has already had its name released and zeroed by then, and
+ * a zero-name slot is skipped here. */
+s32 ndsNativeThunderGroundReleaseOneCoverageTexture(void);
+
 extern volatile u32 gNdsThunderGroundCoveragePrepareCount;
 extern volatile u32 gNdsThunderGroundCoverageBindCount;
 extern volatile u32 gNdsThunderGroundCoverageHitCount;
@@ -84,5 +123,11 @@ extern volatile u32 gNdsThunderGroundCoverageFallbackCount;
 extern volatile u32 gNdsThunderGroundCoverageRejectStep;
 extern volatile u32 gNdsThunderGroundCoverageImageMask;
 extern volatile u32 gNdsThunderGroundCoverageVramBytes;
+/* Residency, which the image mask deliberately does not track: the mask stays
+ * sticky so acceptance can still read "all three images were reached" after a
+ * reclaim, while these two say what is held right now and how often a sibling
+ * had to take one back. */
+extern volatile u32 gNdsThunderGroundCoverageResidentSlots;
+extern volatile u32 gNdsThunderGroundCoverageReclaimCount;
 
 #endif

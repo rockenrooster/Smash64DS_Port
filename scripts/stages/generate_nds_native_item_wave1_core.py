@@ -2144,8 +2144,122 @@ def _capsule(model, attr):
     return "\n".join(lines), header, check
 
 
+KIRBYSTAR_OPS = (
+    0xE7, 0xD9, 0xE2, 0xFC, 0xFA, 0xFB, 0xF9, 0xF5,
+    0xF5, 0xD7, 0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01,
+    0x06, 0xE7, 0xE7, 0xD9, 0xE2, 0xDF,
+)
+
+
+def _kirbystar(model, attr):
+    """ITCommonObject+0x5458 -- one DL, FOUR source owners.
+
+    K04. This root is `dITCommonObject_StarRod_Weapon_data`, and the reloc
+    symbol that names it, `llITCommonDataKirbyStarDObjDesc` (reloc_data.us.h
+    :3790 = 0x5458), is MISNAMED in two ways at once: it is an offset into
+    ITCommonObject (86), not ITCommonData (251), and what sits there is a
+    22-command display list, NOT a DObjDesc array. Both readings are load
+    bearing, so both are asserted below.
+
+    The name survives because the arithmetic is still exact.
+    efManagerCaptureKirbyStarMakeEffect (efmanager.c:5879) and
+    efManagerLoseKirbyStarMakeEffect (:5957) read the fixed-up pointer at
+    ITCommonData+0x4D4 and subtract 0x5458 to recover ITCommonObject's base --
+    the same trick efManagerMBallThrownMakeEffect plays with 0x9430. But their
+    descriptors clear EFDesc flag 0x4, so efManagerMakeEffect (:1992-2003)
+    takes the `else` arm and hands `addr + o_dobjsetup` to gcAddChildForDObj as
+    a DISPLAY LIST rather than to lbCommonSetupTreeDObjs as a DObjDesc. The
+    Poke Ball sets 0x4 and really does name a DObjDesc; the star does not.
+
+    A whole-image referrer census over both files finds exactly three pointers
+    reaching 0x5458 and no others:
+      * ITCommonData+0x4D4  dITCommonData_StarRod_WeaponAttributes.data
+      * ITCommonData+0x508  dITCommonData_StarRodSmash_WeaponAttributes.data
+      * ITCommonObject+0x550C  the DObjDLLink pair at 0x5508, {1, 0x5458}
+    so ONE bake serves the Star Rod's two weapon swings and both of Kirby's
+    stars, and the source's own DL link selects list 1 -- the XLU head, which
+    is why both effect descriptors are routed to gcDrawDObjDLHead1 rather than
+    the head-0 tree callback (battleship_efmanager.c:2035-2036).
+
+    No 0xDE and no MObjSub on any of the four owners, so the whole material
+    state is fixed and bakes; there is no live-material arm to contract.
+    """
+    root = 0x5458
+    raw = _words(model, root, 22)
+    _expect_ops(raw, KIRBYSTAR_OPS, "Kirby star / StarRod weapon")
+    _expect_de(raw, (), "Kirby star / StarRod weapon")
+    # The subtrahend both makers use. If this moves, the derived file base is
+    # wrong and the effect indexes into the wrong file, not merely the wrong
+    # offset -- so it is the first thing checked.
+    _expect_ptr(attr, 0x4D4, root, "StarRod WPAttributes.data")
+    _expect_ptr(attr, 0x508, root, "StarRodSmash WPAttributes.data")
+    for slot, label in ((0x4D8, "p_mobjsubs"), (0x4DC, "anim_joints"),
+                        (0x4E0, "p_matanim_joints")):
+        _expect_null(attr, slot, f"StarRod WPAttributes.{label}")
+    # The DObjDLLink pair immediately after the DL: {1, root}, {4, NULL}.
+    # Its selector is the source's own statement that this DL belongs to
+    # display-list head 1.
+    if struct.unpack_from(">I", model.payload, 0x5508)[0] != 1:
+        raise RuntimeError("Kirby star DObjDLLink selector changed")
+    _expect_ptr(model, 0x550C, root, "Kirby star DObjDLLink root")
+    if ((struct.unpack_from(">I", model.payload, 0x5510)[0] != 4) or
+            (model.pointer_at(0x5514) is not None)):
+        raise RuntimeError("Kirby star DObjDLLink terminator changed")
+    for slot, off, label in (
+        (root + 11 * 8 + 4, 0x4C18, "Kirby star image"),
+        (root + 15 * 8 + 4, 0x5418, "Kirby star vertices"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts = _decode_verts(model, 0x5418, 4)
+    tris = _decode_tris(raw, ((16, 0x06),))
+    packet_bytes = len(verts) * 14 + len(tris) * 6
+    header = _header("kirbystar", "KIRBYSTAR", (
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_ROOT 0x{root:04x}u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_FILE_END 0x{root + len(raw) * 8:04x}u",
+        "#define NDS_NATIVE_ITEM_KIRBYSTAR_IMAGE_OFFSET 0x4c18u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_IMAGE_W0 0x{raw[11][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_KIRBYSTAR_VERTEX_OFFSET 0x5418u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_VERTEX_COUNT {len(verts)}u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_TRIANGLE_COUNT {len(tris)}u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_CORNER_COUNT {len(tris) * 3}u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_KIRBYSTAR_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Kirby capture/lose star and Star Rod weapon packet, generated from",
+        " * file 86 root 0x5458. No 0xDE and no MObjSub on any of the four",
+        " * source owners, so the material phase bakes whole. There is no TLUT",
+        " * load here: the single SETTIMG at word 11 is the texture image and",
+        " * the LOADBLOCK at word 13 is the only load. */",
+        "#include <nds/generated/nds_native_item_kirbystar.generated.h>", "",
+        _arrays("KirbyStar", verts, tris),
+        "static void ndsNativeItemKirbyStarSetup(NDSRendererStats *stats, const void *image)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[1][0]:08x}u) | 0x{raw[1][1]:08x}u;",
+        _othermode(raw, 2),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[3][0]:08x}u, 0x{raw[3][1]:08x}u);",
+        f"    stats->prim_color = 0x{raw[4][1]:08x}u;",
+        f"    stats->env_color = 0x{raw[5][1]:08x}u;",
+        f"    stats->blend_color = 0x{raw[6][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (7, 8)),
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[9][0]:08x}u, 0x{raw[9][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[10][0]:08x}u, 0x{raw[10][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[13][0]:08x}u, 0x{raw[13][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemKirbyStarFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[19][0]:08x}u) | 0x{raw[19][1]:08x}u;",
+        _othermode(raw, 20),
+        "}", "",
+    ]
+    check = ("ITEM_KIRBYSTAR_NATIVE_OK root=0x5458 verts=4 tris=2 "
+             "material=none de=none owners=4")
+    return "\n".join(lines), header, check
+
+
 GENERATORS = {
     "star": _star,
+    "kirbystar": _kirbystar,
     "sword": _sword,
     "hammer": _hammer,
     "mball": _mball,

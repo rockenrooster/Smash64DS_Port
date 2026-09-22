@@ -6448,6 +6448,248 @@ static inline u16 ndsRendererR2DenseVertexColor15(u32 dense_id)
  * different bugs. */
 u32 gNdsR2LightVectorWrites;
 
+/* ---------------------------------------------------------------------------
+ * K02/P04/J01. The facing-dependent shade seam, and what actually varies.
+ *
+ * REFUTED 2026-09-21 -- the standing "negative-determinant modelview" reading.
+ * A fighter's facing is NOT a mirror. ftmain.c:4477 writes
+ * `fp->joints[nFTPartsJointTopN]->rotate.vec.f.y = fp->lr * 90 degrees`, a pure
+ * rotation, and no `lr`-driven negative scale exists anywhere in decomp/ or
+ * src/import/. Both facings therefore hand the geometry engine a
+ * POSITIVE-determinant vector matrix, so no normal is turned inward by it and
+ * no diffuse term collapses for that reason. The witness below measures the
+ * determinant in hardware anyway, because a source read is not an oracle for
+ * what the engine holds.
+ *
+ * What IS facing-dependent is the only facing-dependent quantity left in this
+ * pipeline: the per-vertex diffuse LEVEL, i.e. the light/normal dot. Write both
+ * paths out for the same matrix M (the 3x3 the engine applies to GFX_NORMAL)
+ * and the same source light L:
+ *
+ *   software  ndsRendererHardwarePrepareLitDirection + LitDiffuseNumer
+ *             level = dot(N, M L) / |M L|     -- L renormalised AFTER transform
+ *   hardware  this function + the engine
+ *             level = dot(N, M L) / |L|       -- L normalised BEFORE it, and the
+ *                                                engine renormalises nothing
+ *
+ *       =>    level_hw / level_sw  =  |M L| / |L|
+ *
+ * (The two agree on the dot itself: the engine forms dot(Lstored, N x M), and
+ * dot(u, N x M) == dot(N, M u) identically, which is exactly what
+ * PrepareLitDirection's `t_i = sum_j m[i][j] L_j` computes. The sign flip is
+ * the DS's max(0, -L.N) convention, already handled by the negation below.)
+ *
+ * That ratio is 1 exactly when the 3x3 is orthonormal -- the assumption the
+ * comment below states as settled fact ("the joint modelviews are rigid"). It
+ * is not generally true here: renderer_adapter_matrix.c:2684 builds a joint
+ * local through syMatrixTraRotRpyRSca whenever a DObj scale is not 1.0, and
+ * renderer_adapter_matrix.c:2820 records the SOURCE itself measuring joint
+ * world row-0 lengths up to 9.33. With an ANISOTROPIC scale in the chain the
+ * ratio depends on where L points in the model frame, and the facing rotation
+ * is precisely what moves L in that frame. An ISOTROPIC scale above 1 is
+ * facing-dependent too, by saturation: the set of normals whose level clips at
+ * 1.0 rotates with the fighter.
+ *
+ * Either shape reads as a FACE/BODY seam rather than a uniform brightness
+ * change, because ndsRendererR2ClampDiffuseToMaterial caps the use_material run
+ * at prim - ambient while the no-material / white-prim run still climbs to 31.
+ * The two runs saturate at different levels, so an error in the LEVEL surfaces
+ * as a boundary between them -- which is why the clamp repair fixed one facing
+ * and not the other without the clamp itself being wrong.
+ *
+ * So measure the ratio instead of guessing it. The DS publishes the live vector
+ * matrix at MATRIX_READ_VECTOR (nine 20.12 words, coherent only while GXSTAT
+ * bit 27 reports the geometry engine idle) and that is the exact 3x3 every
+ * GFX_NORMAL is multiplied by. */
+#ifndef NDS_R2_LIGHT_VECTOR_MATRIX
+/* 1 = sample the live vector matrix at the light-vector write and publish the
+ *     witness. Costs one bounded FIFO-drain wait plus nine register reads per
+ *     owner execute (2/frame; E16a measured one light write per execute).
+ * 0 = r25 arithmetic and r25 cost exactly: no read, no drain, no witness. */
+#define NDS_R2_LIGHT_VECTOR_MATRIX 1
+#endif
+#ifndef NDS_R2_LIGHT_VECTOR_STRETCH_FIX
+/* THE REPAIR, split from the witness so the measurement can be taken without
+ * it. 1 divides the stored light by |M L| instead of |L|, which is the exact
+ * software normalisation moved to the only place the hardware path can express
+ * it. Algebraically IDENTICAL to 0 whenever the 3x3 is orthonormal, because
+ * |M L| is then (1 << FRAC) * |L| -- a rigid chain is unchanged bit for bit,
+ * so this cannot regress a fighter whose chain was already rigid. Requires
+ * NDS_R2_LIGHT_VECTOR_MATRIX; fails closed to the r25 divisor whenever the
+ * sample is unusable.
+ *
+ * DEFAULT 0 UNTIL THE PACKET TWIN IS RECONCILED, and that is an integration
+ * decision, not a doubt about the analysis. ndsFighterPacketLightWord (:9530)
+ * patches the light word of a REPLAYED packet and cannot take this correction:
+ * it runs outside the draw with no joint matrix loaded, and the divisor |M L|
+ * is a function of the pose, so neither a stored value nor a sample taken at
+ * patch time is the matrix the live write used. With the repair on and the
+ * packet path live -- which it is in the shipping profile -- a fighter whose
+ * chain actually stretches would shade correctly on prepared frames and as r25
+ * on replayed ones. Most frames replay, so the visible result is a FLICKER
+ * between two shades: a new defect, and a louder one than the steady seam
+ * under repair.
+ *
+ * The witness above stays ON and is the point of this build. One playtest
+ * reading row_norm, det_20p12 and stretch_20p12 facing left, facing right and
+ * in ledge-balance decides whether this mechanism is even live. If row_norm is
+ * 4096 on both facings the mechanism is dead and the residual is elsewhere; if
+ * the stretch differs with facing, land the repair together with a twin that
+ * agrees, not before it. Turning this on alone would ship an unproven repair
+ * with a known divergence. */
+#define NDS_R2_LIGHT_VECTOR_STRETCH_FIX 0
+#endif
+
+/* Published per captured fighter by src/port/renderer_adapter_fighter.c, which
+ * defines them unconditionally so these externs resolve in every build. The
+ * renderer has no FTStruct, and no shade sample can be read at all without
+ * knowing which facing produced it -- that is the whole point of r25. */
+extern volatile s32 gNdsR2FighterFacingLr;
+extern volatile u32 gNdsR2FighterFacingSlot;
+
+#if NDS_R2_LIGHT_VECTOR_MATRIX
+/* GXSTAT bit 27 is the geometry-engine busy flag. The matrix read ports are
+ * only coherent while it is clear, and an unbounded spin inside the draw is a
+ * hang, so the wait is bounded and a missed sample degrades to the r25
+ * arithmetic rather than to a wrong light. */
+#define NDS_R2_LIGHT_MATRIX_BUSY_BIT (1u << 27)
+/* ~16k volatile MMIO polls. The FIFO drains in far less than that even full,
+ * and the cap is what keeps a pathological never-idle engine to a few
+ * milliseconds instead of a multi-frame hang. */
+#define NDS_R2_LIGHT_MATRIX_IDLE_SPINS 0x4000u
+#define NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS 4u
+
+typedef struct NDSR2LightMatrixWitness
+{
+    s32 vector_matrix[9];   /* MATRIX_READ_VECTOR, 20.12, row major m[i][j]   */
+    s32 light_dir[3];       /* stats->light_dir_*, source units               */
+    s32 row_norm[3];        /* |row i| in 20.12; 4096 == rigid                */
+    s32 det_20p12;          /* det(3x3) in 20.12; +4096 == plain rotation     */
+    s32 light_len;          /* |L| in 20.12 * source units                    */
+    s32 stretched_len;      /* |M L| in 20.12 * source units                  */
+    s32 stretch_20p12;      /* |M L| / |L| in 20.12; 4096 == no correction    */
+    s32 facing_lr;          /* fp->lr at capture: -1 left, 0 centre, +1 right */
+    u32 facing_slot;        /* fp->nds_slot                                   */
+    u32 idle_ok;            /* 0 = engine never idled; the words are stale    */
+} NDSR2LightMatrixWitness;
+
+/* EVENT-LOCAL, not a latch. One slot per fighter owner slot, every field
+ * overwritten on every owner execute that writes a light vector, so a value
+ * cannot survive the fighter that produced it. The three counters exist only
+ * to prove the sample is live -- read them as deltas, never as flags. This
+ * repo has been burned by sticky diagnostic latches often enough that the rule
+ * is worth restating in the code.
+ *
+ * COVERAGE, because a counter that only counts what it saw is how a green run
+ * gets over-read: a REPLAYED fighter submits the recorded packet and never
+ * enters ndsRendererR2WriteLightVector, so it contributes no sample at all.
+ * Compare gNdsR2LightMatrixWitnessWrites against gNdsR2LightVectorWrites (they
+ * should track) and both against the number of fighters actually drawing
+ * before concluding anything from a slot that did not move. */
+volatile NDSR2LightMatrixWitness
+    gNdsR2LightMatrixWitness[NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS];
+volatile u32 gNdsR2LightMatrixWitnessWrites;
+volatile u32 gNdsR2LightMatrixIdleTimeouts;
+volatile u32 gNdsR2LightMatrixStretchApplied;
+/* |M L| < |L|: the chain SHRINKS the light. The hardware diffuse is then
+ * darker than the source's and no unit-bounded light vector can undo it, so
+ * the repair declines rather than wrapping the packed components. A non-zero
+ * delta here is the evidence that the remaining error needs the diffuse COLOUR
+ * scaled instead, which is a different lever and a different task card. */
+volatile u32 gNdsR2LightMatrixStretchDeclined;
+
+/* Returns |M L| in 20.12 * source units, or 0 when the sample is unusable --
+ * which is the caller's signal to keep the r25 divisor. noinline and outside
+ * .itcm.native_fighter for the same reason as its caller: the region is full. */
+static s32 __attribute__((noinline)) ndsRendererR2SampleVectorMatrix(
+    s32 lx, s32 ly, s32 lz, s32 light_len_q12)
+{
+    volatile NDSR2LightMatrixWitness *witness;
+    s32 m[9];
+    s64 t[3];
+    s64 length_squared;
+    s64 det;
+    u32 slot;
+    u32 spins = 0u;
+    u32 idle = 1u;
+    u32 i;
+    s32 stretched = 0;
+
+    while (((u32)GFX_STATUS & NDS_R2_LIGHT_MATRIX_BUSY_BIT) != 0u)
+    {
+        spins++;
+        if (spins >= NDS_R2_LIGHT_MATRIX_IDLE_SPINS)
+        {
+            idle = 0u;
+            gNdsR2LightMatrixIdleTimeouts++;
+            break;
+        }
+    }
+    for (i = 0u; i < 9u; i++)
+    {
+        m[i] = (s32)MATRIX_READ_VECTOR[i];
+    }
+    /* Byte for byte ndsRendererHardwarePrepareLitDirection's transform, so the
+     * witness and the software oracle cannot drift on what "transformed" means:
+     *     t_i = sum_j m[i][j] * L_j  */
+    for (i = 0u; i < 3u; i++)
+    {
+        t[i] = ((s64)m[(i * 3u) + 0u] * lx) +
+               ((s64)m[(i * 3u) + 1u] * ly) +
+               ((s64)m[(i * 3u) + 2u] * lz);
+    }
+    length_squared = (t[0] * t[0]) + (t[1] * t[1]) + (t[2] * t[2]);
+    if (length_squared > 0)
+    {
+        stretched = (s32)ndsR2HwMathSqrt64((u64)length_squared);
+    }
+
+    slot = gNdsR2FighterFacingSlot;
+    if (slot >= NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS)
+    {
+        slot = NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS - 1u;
+    }
+    witness = &gNdsR2LightMatrixWitness[slot];
+    for (i = 0u; i < 9u; i++)
+    {
+        witness->vector_matrix[i] = m[i];
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        s64 row_squared =
+            ((s64)m[(i * 3u) + 0u] * m[(i * 3u) + 0u]) +
+            ((s64)m[(i * 3u) + 1u] * m[(i * 3u) + 1u]) +
+            ((s64)m[(i * 3u) + 2u] * m[(i * 3u) + 2u]);
+
+        witness->row_norm[i] = (row_squared > 0) ?
+            (s32)ndsR2HwMathSqrt64((u64)row_squared) : 0;
+    }
+    det = ((s64)m[0] * (((s64)m[4] * m[8]) - ((s64)m[5] * m[7]))) -
+          ((s64)m[1] * (((s64)m[3] * m[8]) - ((s64)m[5] * m[6]))) +
+          ((s64)m[2] * (((s64)m[3] * m[7]) - ((s64)m[4] * m[6])));
+    /* Three 20.12 factors make the raw determinant 20.36; shift back to 20.12
+     * so +4096 reads as "plain rotation" and any negative value settles the
+     * mirror claim on hardware. */
+    witness->det_20p12 = (s32)(det >> (2 * NDS_RENDERER_DS_MTX_FRAC_BITS));
+    witness->light_dir[0] = lx;
+    witness->light_dir[1] = ly;
+    witness->light_dir[2] = lz;
+    witness->light_len = light_len_q12;
+    witness->stretched_len = stretched;
+    /* Both operands are already 20.12, so one more FRAC in the numerator puts
+     * the ratio itself in 20.12: 4096 reads as "no correction needed". */
+    witness->stretch_20p12 = (light_len_q12 > 0) ?
+        (s32)ndsR2HwMathDiv64((s64)stretched << NDS_RENDERER_DS_MTX_FRAC_BITS,
+                              light_len_q12) : 0;
+    witness->facing_lr = gNdsR2FighterFacingLr;
+    witness->facing_slot = gNdsR2FighterFacingSlot;
+    witness->idle_ok = idle;
+    gNdsR2LightMatrixWitnessWrites++;
+
+    return (idle != 0u) ? stretched : 0;
+}
+#endif /* NDS_R2_LIGHT_VECTOR_MATRIX */
+
 /* GFX_LIGHT_VECTOR stores the vector transformed by the vector matrix at write
  * time, so it has to be written under an identity vector matrix. The owner
  * preamble looked like the place for that -- it already loads identity before
@@ -6462,10 +6704,15 @@ u32 gNdsR2LightVectorWrites;
  * once per execute and the bracket is not on any hot path.
  *
  * The vector is normalised because the hardware normalises nothing: the software
- * path rescales the transformed light to length 127 before the dot, and the
- * joint modelviews are rigid, so normalising before the transform is the same
+ * path rescales the transformed light to length 127 before the dot, and IF the
+ * joint modelviews are rigid, normalising before the transform is the same
  * thing. It is negated because the hardware's diffuse term is max(0, -L.N)
  * where the software clamps a positive L.N.
+ *
+ * That "if" used to read as settled fact. It is the K02/P04/J01 assumption --
+ * see the block above NDS_R2_LIGHT_VECTOR_MATRIX: normalising before the
+ * transform and after it differ by exactly |M L| / |L|, and this function now
+ * measures that factor rather than asserting it is 1.
  *
  * Deliberately outside .itcm.native_fighter and noinline -- the shade function
  * is ITCM-resident and full, and the region overflowed once already this task. */
@@ -6479,25 +6726,99 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     s32 nx = 0;
     s32 ny = 0;
     s32 nz = 0;
+    s32 light_len = (length_squared > 0) ?
+        (s32)ndsR2HwMathSqrt64((u64)length_squared) : 0;
+#if NDS_R2_LIGHT_VECTOR_MATRIX
+    s32 stretched_len;
+    /* |L| in 20.12, NOT `light_len << FRAC`.
+     *
+     * check-r2-light-stretch.py caught this: ndsR2HwMathSqrt64 truncates, and
+     * the shipped light is about 100 units long, so `light_len` is up to ~1%
+     * short of |L| -- r25 has been storing a light vector ~1% longer than unit
+     * ever since, harmlessly. Comparing the 20.12 |M L| against that truncated
+     * value would read a rigid chain as a 1% stretch and "correct" every
+     * fighter in the game by two LSB. sqrt(n << 24) == sqrt(n) << 12, so this
+     * costs one more hardware sqrt and removes the whole class. */
+    s32 light_len_q12 = (length_squared > 0) ?
+        (s32)ndsR2HwMathSqrt64((u64)length_squared <<
+                               (2 * NDS_RENDERER_DS_MTX_FRAC_BITS)) : 0;
+#endif
 
+    /* Moved ahead of the arithmetic: the vector-matrix sample below needs the
+     * primitive closed before it waits on the geometry engine, and ending the
+     * batch earlier changes nothing else -- no FIFO word between here and the
+     * bracket depends on a batch being open. */
+    ndsRendererHardwareEndBatch();
+#if NDS_R2_LIGHT_VECTOR_MATRIX
+    /* Before the identity bracket on purpose: the sample must be the LIVE
+     * root/joint vector matrix this execute's normals will be multiplied by,
+     * not the identity the light vector is written under. */
+    stretched_len = ndsRendererR2SampleVectorMatrix(x, y, z, light_len_q12);
+#if !NDS_R2_LIGHT_VECTOR_STRETCH_FIX
+    /* Witness-only build: the sample is published, the divisor is not changed. */
+    (void)stretched_len;
+#endif
+#endif
     /* The DS hardware square-root and division units, not sqrtf. Partly because
      * this runs twice a frame and they are free here, and partly because
      * check-gbi-decode-fixtures asserts the renderer holds exactly one sqrtf
      * site, isolated inside ndsRendererHardwarePrepareLitDirection -- a second
      * one is how the software light normalization creeps back in. */
-    if (length_squared > 0)
+    if (light_len > 0)
     {
-        u32 length = ndsR2HwMathSqrt64((u64)length_squared);
+        u32 length = (u32)light_len;
+        s64 numerator_scale = 511;
 
+#if NDS_R2_LIGHT_VECTOR_MATRIX && NDS_R2_LIGHT_VECTOR_STRETCH_FIX
+        /* Divide by |M L| instead of |L| -- the software path's normalisation
+         * point, expressed where the hardware path can hold it. The extra
+         * 1 << FRAC in the numerator cancels the 20.12 the matrix carries, so
+         * an orthonormal 3x3 reduces this to `-x * 511 / |L|` exactly.
+         *
+         * ONLY WHEN THE CHAIN STRETCHES, never when it shrinks. The stored
+         * vector is 10-bit signed and NDS_R2_NORMAL_PACK masks rather than
+         * saturates, so a component past 511 does not clip, it WRAPS -- and a
+         * wrapped component is a light pointing somewhere else entirely, which
+         * is a far louder defect than the one under repair. |M L| >= |L| can
+         * only shrink the stored vector, so it is unconditionally safe; the
+         * shrinking case (an under-bright hardware diffuse) cannot be
+         * expressed by a unit-bounded light vector at all and is counted here
+         * for the witness rather than approximated.
+         *
+         * AND ONLY OUTSIDE A DEADBAND. A rigid chain is the overwhelmingly
+         * common case and must come out of this function bit for bit as r25
+         * left it -- this path is reached by every lit fighter in the game and
+         * a two-LSB drift on all of them is exactly the "repair validated
+         * against one user of a shared path" failure. The 1/32 band is chosen
+         * to clear the 20.12 matrix rounding with room to spare while still
+         * catching any stretch large enough to move a visible shade. */
+        if ((light_len_q12 > 0) &&
+            (stretched_len >
+             (light_len_q12 + (light_len_q12 >> 5))))
+        {
+            length = (u32)stretched_len;
+            numerator_scale =
+                (s64)511 << NDS_RENDERER_DS_MTX_FRAC_BITS;
+            gNdsR2LightMatrixStretchApplied++;
+        }
+        else if ((light_len_q12 > 0) && (stretched_len > 0) &&
+                 (stretched_len <
+                  (light_len_q12 - (light_len_q12 >> 5))))
+        {
+            gNdsR2LightMatrixStretchDeclined++;
+        }
+#endif
         if (length != 0u)
         {
-            nx = (s32)ndsR2HwMathDiv64(-(s64)x * 511, (s32)length);
-            ny = (s32)ndsR2HwMathDiv64(-(s64)y * 511, (s32)length);
-            nz = (s32)ndsR2HwMathDiv64(-(s64)z * 511, (s32)length);
+            nx = (s32)ndsR2HwMathDiv64(-(s64)x * numerator_scale,
+                                       (s32)length);
+            ny = (s32)ndsR2HwMathDiv64(-(s64)y * numerator_scale,
+                                       (s32)length);
+            nz = (s32)ndsR2HwMathDiv64(-(s64)z * numerator_scale,
+                                       (s32)length);
         }
     }
 
-    ndsRendererHardwareEndBatch();
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
@@ -6553,7 +6874,13 @@ typedef struct NDSR2ShadeWitness
     u8 lit;
     u8 unlit_vertex;
     u8 use_material;
-    u8 pad;
+    /* r25 addition. The owner's report is FACING-dependent -- fixed left, wrong
+     * right, fixed right in ledge-balance -- so a shade sample that does not
+     * carry its facing cannot be compared against another one. `fp->lr` verbatim
+     * from the source (-1 left, 0 centre, +1 right), narrowed to the byte the
+     * struct already wasted on padding, so the ring costs no extra bytes.
+     * Overwritten every epoch: event-local, never a latch. */
+    s8 facing_lr;
 } NDSR2ShadeWitness;
 volatile NDSR2ShadeWitness gNdsR2ShadeWitness[NDS_R2_SHADE_WITNESS_SLOTS];
 volatile u32 gNdsR2ShadeWitnessWrites;
@@ -6568,6 +6895,7 @@ static void ndsRendererR2RecordShadeWitness(u32 lit, u32 unlit_vertex,
     gNdsR2ShadeWitness[slot].lit = (u8)(lit != 0u);
     gNdsR2ShadeWitness[slot].unlit_vertex = (u8)(unlit_vertex != 0u);
     gNdsR2ShadeWitness[slot].use_material = (u8)(use_material != 0u);
+    gNdsR2ShadeWitness[slot].facing_lr = (s8)gNdsR2FighterFacingLr;
     gNdsR2ShadeWitnessWrites++;
 }
 
@@ -9198,7 +9526,27 @@ static void ndsFighterPacketApplyTint(
     packet->tint_prim_hash = prim_hash;
 }
 
-/* ndsRendererR2WriteLightVector's normalisation, same hardware units. */
+/* ndsRendererR2WriteLightVector's normalisation, same hardware units.
+ *
+ * TWIN, AND IT IS A CHECK OWED. A replayed frame submits this word instead of
+ * the live one, so the two formulas must agree or the same fighter shades
+ * differently depending on whether its draw was prepared or replayed --
+ * precisely the fresh-versus-replay comparison the P04/K02/J01 audit asks for.
+ *
+ * NDS_R2_LIGHT_VECTOR_STRETCH_FIX divides the LIVE word by |M L| instead of
+ * |L| when the vector matrix stretches past a 1/32 deadband. This function
+ * cannot: it patches words into a recorded packet outside the draw, with no
+ * vector matrix to read and no un-stale value to read it from -- and a cached
+ * last-frame stretch would be exactly the sticky latch this task was told not
+ * to add. So it deliberately stays on the r25 arithmetic.
+ *
+ * That is SAFE ONLY WHILE THE REPAIR NEVER FIRES, which on a rigid chain it
+ * provably never does (scripts/check-r2-light-stretch.py CLAIM 2: the repaired
+ * word is bit-identical there). The condition is therefore countable rather
+ * than assumed: if a run shows gNdsR2LightMatrixStretchApplied advancing at
+ * all, the mechanism is real, this twin is wrong for that fighter, and it must
+ * be reconciled before acceptance -- do not read a green screenshot as proof
+ * while that counter is non-zero. */
 static u32 ndsFighterPacketLightWord(s32 x, s32 y, s32 z)
 {
     s64 length_squared = ((s64)x * x) + ((s64)y * y) + ((s64)z * z);

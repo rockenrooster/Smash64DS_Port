@@ -91,6 +91,8 @@
 #include "nds_native_item_hammer.exec.inc"
 #include "generated/nds_native_item_mball.generated.inc"
 #include "nds_native_item_mball.exec.inc"
+#include "generated/nds_native_item_kirbystar.generated.inc"
+#include "nds_native_item_kirbystar.exec.inc"
 #include "generated/nds_native_item_gshell.generated.inc"
 #include "nds_native_item_gshell.exec.inc"
 #include "generated/nds_native_item_rshell.generated.inc"

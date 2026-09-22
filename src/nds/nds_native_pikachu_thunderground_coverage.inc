@@ -22,12 +22,24 @@ volatile u32 gNdsThunderGroundCoverageRejectStep;
  * coverage from it. */
 volatile u32 gNdsThunderGroundCoverageImageMask;
 volatile u32 gNdsThunderGroundCoverageVramBytes;
+/* Names resident RIGHT NOW, which is what the VRAM figure above is a function
+ * of. Kept beside it because the byte total alone cannot distinguish "never
+ * converted" from "converted and handed back". */
+volatile u32 gNdsThunderGroundCoverageResidentSlots;
+/* Times a SIBLING upload took one of these names back because it could not
+ * find room. Non-zero is the proof that this owner's residency was starving
+ * another surface -- read it beside the air Jolt's own bind counters. */
+volatile u32 gNdsThunderGroundCoverageReclaimCount;
 
 typedef struct NDSNativeThunderGroundCoverageSlot
 {
     u32 name;   /* GL texture name; 0 when the slot is empty */
     u32 image;  /* relocated source address this name was converted from */
     u32 key;    /* everything else the conversion depends on */
+    /* sNdsRendererHardwareFrameSerial + 1 at the last bind, in the SAME
+     * convention the generic cache stamps into last_used_frame, so the reclaim
+     * below can apply the identical "not this frame" rule. */
+    u32 frame;
 } NDSNativeThunderGroundCoverageSlot;
 
 static NDSNativeThunderGroundCoverageSlot
@@ -104,6 +116,27 @@ static u32 ndsNativeThunderGroundCoverageKey(
     return key;
 }
 
+/* What this owner is actually holding right now, not what it may hold: VRAM is
+ * the scarce resource, so every path that adds or drops a name republishes the
+ * live sum through here rather than keeping its own count. */
+static void ndsNativeThunderGroundCoverageAccountVram(void)
+{
+    u32 index;
+    u32 bytes = 0u;
+    u32 resident = 0u;
+
+    for (index = 0u; index < NDS_NATIVE_THUNDERGROUND_COVERAGE_SLOTS; index++)
+    {
+        if (sNdsNativeThunderGroundCoverage[index].name != 0u)
+        {
+            bytes += NDS_NATIVE_THUNDERGROUND_COVERAGE_UPLOAD_BYTES;
+            resident++;
+        }
+    }
+    gNdsThunderGroundCoverageVramBytes = bytes;
+    gNdsThunderGroundCoverageResidentSlots = resident;
+}
+
 static void ndsNativeThunderGroundCoverageForgetAfterReset(void)
 {
     u32 slot;
@@ -118,12 +151,13 @@ static void ndsNativeThunderGroundCoverageForgetAfterReset(void)
         sNdsNativeThunderGroundCoverage[slot].name = 0u;
         sNdsNativeThunderGroundCoverage[slot].image = 0u;
         sNdsNativeThunderGroundCoverage[slot].key = 0u;
+        sNdsNativeThunderGroundCoverage[slot].frame = 0u;
     }
     sNdsNativeThunderGroundCoverageNext = 0u;
     sNdsNativeThunderGroundCoverageReset =
         gNdsRendererSceneTextureVramResetCount;
     gNdsThunderGroundCoverageImageMask = 0u;
-    gNdsThunderGroundCoverageVramBytes = 0u;
+    ndsNativeThunderGroundCoverageAccountVram();
 }
 
 /* Released explicitly at scene teardown once the integrator wires this into
@@ -143,12 +177,77 @@ void ndsNativeThunderGroundReleaseCoverageTextures(void)
         sNdsNativeThunderGroundCoverage[slot].name = 0u;
         sNdsNativeThunderGroundCoverage[slot].image = 0u;
         sNdsNativeThunderGroundCoverage[slot].key = 0u;
+        sNdsNativeThunderGroundCoverage[slot].frame = 0u;
     }
     sNdsNativeThunderGroundCoverageNext = 0u;
     sNdsNativeThunderGroundCoverageReset =
         gNdsRendererSceneTextureVramResetCount;
     gNdsThunderGroundCoverageImageMask = 0u;
-    gNdsThunderGroundCoverageVramBytes = 0u;
+    ndsNativeThunderGroundCoverageAccountVram();
+}
+
+/* HAND ONE NAME BACK WHEN A SIBLING CANNOT FIND ROOM.
+ *
+ * These three names are not texture-cache entries, so
+ * `ndsRendererHardwareEvictTexture` -- the ONLY reclaim path
+ * `ndsRendererHardwarePrepareIFCommonAtlas` has when `glTexImage2D` refuses --
+ * cannot see them. Before P01 these three images were ordinary cache entries
+ * and a starved sibling could evict them; after P01 the same bytes are parked
+ * where nothing can reach them. That asymmetry, not the byte total, is what a
+ * sibling upload pays for: the net figure went NEGATIVE and the reclaimable
+ * figure went to zero.
+ *
+ * This restores the reclaimability without giving up the soft edge: a released
+ * name is simply re-converted on the next ground draw, which is the ordinary
+ * 1,024-texel miss the design already accepts. Returns TRUE when a name was
+ * actually given back, so the caller can retry its upload.
+ *
+ * The victim is the least recently bound resident slot, and a slot bound in
+ * the current frame is never taken -- the same rule
+ * `ndsRendererHardwareEvictTexture` applies to its own entries, and for the
+ * same reason: the segment that bound it has not drawn yet.
+ *
+ * `gNdsThunderGroundCoverageImageMask` is deliberately NOT cleared here. It
+ * records which images were ever REACHED this scene, which is the acceptance
+ * signal; residency is `gNdsThunderGroundCoverageResidentSlots`. */
+s32 ndsNativeThunderGroundReleaseOneCoverageTexture(void)
+{
+    NDSNativeThunderGroundCoverageSlot *victim = NULL;
+    u32 now = sNdsRendererHardwareFrameSerial + 1u;
+    u32 victim_age = 0u;
+    u32 index;
+
+    for (index = 0u; index < NDS_NATIVE_THUNDERGROUND_COVERAGE_SLOTS; index++)
+    {
+        NDSNativeThunderGroundCoverageSlot *slot =
+            &sNdsNativeThunderGroundCoverage[index];
+        u32 age;
+
+        if ((slot->name == 0u) || (slot->frame == now))
+        {
+            continue;
+        }
+        /* Unsigned throughout, so a free-running serial that laps still orders
+         * correctly and nothing depends on a signed overflow. */
+        age = now - slot->frame;
+        if ((victim == NULL) || (age > victim_age))
+        {
+            victim = slot;
+            victim_age = age;
+        }
+    }
+    if (victim == NULL)
+    {
+        return FALSE;
+    }
+    ndsRendererHardwareReleaseIFCommonCloudAtlas(&victim->name);
+    victim->name = 0u;
+    victim->image = 0u;
+    victim->key = 0u;
+    victim->frame = 0u;
+    gNdsThunderGroundCoverageReclaimCount++;
+    ndsNativeThunderGroundCoverageAccountVram();
+    return TRUE;
 }
 
 /* TRUE when the segment now has a soft-alpha texture bound. FALSE means the
@@ -240,6 +339,7 @@ static s32 ndsNativeThunderGroundBindCoverageTexture(
         slot = &sNdsNativeThunderGroundCoverage[index];
         if ((slot->name != 0u) && (slot->image == image) && (slot->key == key))
         {
+            slot->frame = sNdsRendererHardwareFrameSerial + 1u;
             ndsRendererHardwareBindTextureName(stats, slot->name);
             ndsRendererHardwareApplyTextureParams(
                 ndsRendererHardwareMergeTextureParams((u32)TEXGEN_TEXCOORD));
@@ -300,12 +400,17 @@ static s32 ndsNativeThunderGroundBindCoverageTexture(
         slot->name = 0u;
         slot->image = 0u;
         slot->key = 0u;
+        slot->frame = 0u;
+        /* The prepare already released this slot's previous name on its way in,
+         * so the live sum changed even though nothing was gained. */
+        ndsNativeThunderGroundCoverageAccountVram();
         gNdsThunderGroundCoverageRejectStep =
             NDS_THUNDERGROUND_COVERAGE_REJECT_UPLOAD;
         return FALSE;
     }
     slot->image = image;
     slot->key = key;
+    slot->frame = sNdsRendererHardwareFrameSerial + 1u;
     ndsRendererHardwareApplyTextureParams(
         ndsRendererHardwareMergeTextureParams((u32)TEXGEN_TEXCOORD));
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -316,17 +421,7 @@ static s32 ndsNativeThunderGroundBindCoverageTexture(
     gNdsThunderGroundCoveragePrepareCount++;
     gNdsThunderGroundCoverageBindCount++;
     gNdsThunderGroundCoverageImageMask |= 1u << index;
-    /* What this owner is actually holding right now, not what it may hold:
-     * VRAM is the scarce resource, so report the live sum. */
-    gNdsThunderGroundCoverageVramBytes = 0u;
-    for (index = 0u; index < NDS_NATIVE_THUNDERGROUND_COVERAGE_SLOTS; index++)
-    {
-        if (sNdsNativeThunderGroundCoverage[index].name != 0u)
-        {
-            gNdsThunderGroundCoverageVramBytes +=
-                NDS_NATIVE_THUNDERGROUND_COVERAGE_UPLOAD_BYTES;
-        }
-    }
+    ndsNativeThunderGroundCoverageAccountVram();
     return TRUE;
 }
 

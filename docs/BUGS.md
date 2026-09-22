@@ -19,16 +19,16 @@ Main Menus:
     -Yoshi's guard/shield (egg) is invisible **Latch cause found: Kirby's copy-hat load, not general pressure. Egg bake still owed.**
 -Link:
 -Pikachu
-    -neutral b attack VFX that walks terrain still has hard edges. **GROUND fixed (owner). AIR jolt REGRESSED in r24: shares asset 342; suspect VRAM/bind interaction with the new A5I3 names.**
+    -neutral b attack VFX that walks terrain still has hard edges. **AIR REGRESSION FIXED: the ground repair moved 3 images onto dedicated GL names, which the only eviction sweep cannot reach. Reclaimable VRAM went 6,144 -> 0, so the air jolt's 4,096 B upload had nothing to evict. Reclaim hook added.**
     -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
-    -Pokeball Spawn Intro not playing VFX. **Ball now VISIBLE (owner). The opening RAYS regressed -- third case of a newly-admitted owner leaving state the next effect assumes it owns.**
+    -Pokeball Spawn Intro not playing VFX. **Ball VISIBLE (owner). RAYS: all three suspects refuted -- rays are asset 85 not 86, kind 0x44 cannot double-translate, entry seam untouched. Leading cause is construction-time GObj refusal; instrumented.**
     -face color is slightly different from body color. (lighting difference???) **Not lighting: N64 clamps shade then multiplies prim; DS folds prim first, so lit bodies wash white.**
     -when I choose pikachu, in match, fox opponent is frozen and cannot be hit. Sudden death works funnily enough though. **Frozen+unhittable is the Appear signature (is_ghost=TRUE, no input); sudden death takes the Entry path, which needs no Appear animation. Pikachu/Fox has 7,556 B free at GO.**
 -Samus
 -Kirby
     -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **r25: fixed facing LEFT, wrong facing RIGHT, fixed in ledge-balance. Facing-dependent = the normal transform under a mirrored modelview.**
     -Neutral A punch flurry VFX not drawing at correct locations. **Now FIXED IN R26**
-    -Kirby neutral B , then A attack to spit out fighter, Star projectile VFX is invisible. **Makers restored, constructs fine, NOT GObj-starved. Same class as the Poke Ball: an ITCommonObject effect with no admitted native bake.**
+    -Kirby neutral B , then A attack to spit out fighter, Star projectile VFX is invisible. **ROOT CAUSE FIXED: lbCommonDObjScaleXProcDisplay is an EMPTY function in the port, so the tree never reached the renderer. Root 0x5458 baked + admitted + routed to DLHead1. Also repairs the Star Rod's two swings.**
     -Kirby has a wierd pose on results screen. **Packing was half. The demo rows' NitroFS path field was generated and never consumed, so the load failed silently. Paths registered.**
 -Jigglypuff
     -face color is slightly different from body color. (lighting difference???)

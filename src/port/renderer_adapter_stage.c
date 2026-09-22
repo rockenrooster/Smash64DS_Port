@@ -16,6 +16,7 @@
 #include <nds/generated/nds_native_item_sword.generated.h>
 #include <nds/generated/nds_native_item_hammer.generated.h>
 #include <nds/generated/nds_native_item_mball.generated.h>
+#include <nds/generated/nds_native_item_kirbystar.generated.h>
 #include <nds/generated/nds_native_item_gshell.generated.h>
 #include <nds/generated/nds_native_item_rshell.generated.h>
 #include <nds/generated/nds_native_item_bat.generated.h>
@@ -148,6 +149,13 @@ extern volatile u32 gNdsItemMBallSnapshotFailCount;
 extern volatile u32 gNdsEntryMBallThrownRootMask;
 extern volatile u32 gNdsEntryMBallThrownDrawCount;
 extern volatile u32 gNdsEntryMBallThrownSubmitFailCount;
+/* K04. ITCommonObject+0x5458, shared by the Star Rod's two weapon swings and
+ * both of Kirby's stars; defined beside that closure in
+ * src/import/battleship_efmanager.c. */
+extern volatile u32 gNdsItemKirbyStarCandidateStep;
+extern volatile u32 gNdsItemKirbyStarDrawCount;
+extern volatile u32 gNdsItemKirbyStarSubmitFailCount;
+extern volatile u32 gNdsItemKirbyStarFromEffectCount;
 extern volatile u32 gNdsItemGShellKind;
 extern volatile u32 gNdsItemGShellForeignKindCount;
 extern volatile u32 gNdsItemGShellCandidateStep;
@@ -262,6 +270,10 @@ sb32 ndsRendererSubmitNativeItemHammer(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsRendererSubmitNativeItemMBall(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemKirbyStar(
+    const void *file_base_ptr, u32 file_bytes,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsRendererSubmitNativeItemGShell(
@@ -6179,6 +6191,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 item_mball_native_candidate = FALSE;
     sb32 item_mball_native_handled = FALSE;
     sb32 item_mball_from_effect = FALSE;
+    sb32 item_kirbystar_native_candidate = FALSE;
+    sb32 item_kirbystar_native_handled = FALSE;
     NDSRendererNativeMaterial item_gshell_material;
     sb32 item_gshell_native_candidate = FALSE;
     sb32 item_gshell_native_handled = FALSE;
@@ -8323,6 +8337,78 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             if (mball_step > gNdsItemMBallCandidateStep)
             {
                 gNdsItemMBallCandidateStep = mball_step;
+            }
+        }
+    }
+
+    {
+        u32 root = (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) : 0u;
+
+        if ((loaded != NULL) &&
+            (loaded->asset_id == NDS_NATIVE_ITEM_KIRBYSTAR_ASSET) &&
+            (root == NDS_NATIVE_ITEM_KIRBYSTAR_ROOT))
+        {
+            u32 kirbystar_step = 1u;
+            /* FOUR SOURCE OWNERS, ONE ROOT, ONE BAKE -- AND NO KIND
+             * DISCRIMINATOR IS NEEDED.
+             *
+             * ITCommonObject+0x5458 is dITCommonObject_StarRod_Weapon_data. A
+             * whole-image referrer census over ITCommonData and ITCommonObject
+             * finds exactly three pointers reaching it and none from any other
+             * file: WPAttributes.data at ITCommonData+0x4D4 (StarRod) and
+             * +0x508 (StarRodSmash), and the DObjDLLink pair at
+             * ITCommonObject+0x550C. Kirby's two stars reach the same DL by
+             * subtracting 0x5458 from that first pointer to recover the file
+             * base -- the Poke Ball's trick at 0x9430, one file over. All four
+             * draw the identical fixed quad with identical fixed material
+             * state, so exact asset plus exact root IS the whole admission
+             * test and the arm does not have to tell them apart.
+             *
+             * Admit from the WEAPON layer and the EFFECT layer. Requiring an
+             * ITEM GObj was the entirety of the Poke Ball's remaining P03
+             * failure (see the MBall arm above); this root has no item owner
+             * at all, so the same clause would have refused every one of its
+             * four users. itGetStruct is deliberately never called here.
+             *
+             * Counted separately: FromEffectCount isolates Kirby's two stars
+             * from the Star Rod's swings, because a single draw count on a
+             * shared root cannot say which owner drew and K04 is only proven
+             * by the effect half. */
+            const sb32 kirbystar_is_effect =
+                ((sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+                 (dobj->parent_gobj != NULL) &&
+                 (dobj->parent_gobj->id == nGCCommonKindEffect)) ?
+                    TRUE : FALSE;
+
+            if ((dobj->parent_gobj != NULL) && (loaded->data != NULL) &&
+                (loaded->data_size >= NDS_NATIVE_ITEM_KIRBYSTAR_FILE_END))
+            {
+                const u8 *base = (const u8 *)loaded->data;
+
+                kirbystar_step = 2u;
+                /* No 0xDE and no MObjSub on any of the four owners, so a live
+                 * MObj here means the source shape changed and the bake is
+                 * stale. Refuse loudly rather than draw frozen material. */
+                if ((dobj->mobj == NULL) &&
+                    (dl[11].words.w0 == NDS_NATIVE_ITEM_KIRBYSTAR_IMAGE_W0) &&
+                    (dl[11].words.w1 ==
+                         (u32)(uintptr_t)(base +
+                             NDS_NATIVE_ITEM_KIRBYSTAR_IMAGE_OFFSET)) &&
+                    (dl[15].words.w1 ==
+                         (u32)(uintptr_t)(base +
+                             NDS_NATIVE_ITEM_KIRBYSTAR_VERTEX_OFFSET)))
+                {
+                    kirbystar_step = 9u;
+                    item_kirbystar_native_candidate = TRUE;
+                    if (kirbystar_is_effect != FALSE)
+                    {
+                        gNdsItemKirbyStarFromEffectCount++;
+                    }
+                }
+            }
+            if (kirbystar_step > gNdsItemKirbyStarCandidateStep)
+            {
+                gNdsItemKirbyStarCandidateStep = kirbystar_step;
             }
         }
     }
@@ -10713,6 +10799,36 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             {
                 gNdsEntryMBallThrownSubmitFailCount++;
             }
+        }
+    }
+
+    if (item_kirbystar_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_kirbystar_native_handled = ndsRendererSubmitNativeItemKirbyStar(
+            loaded->data, loaded->data_size, NULL, &item_config,
+            render_stats);
+        if (item_kirbystar_native_handled != FALSE)
+        {
+            gNdsItemKirbyStarDrawCount++;
+        }
+        else
+        {
+            gNdsItemKirbyStarSubmitFailCount++;
         }
     }
 

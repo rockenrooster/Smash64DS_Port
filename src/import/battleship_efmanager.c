@@ -2000,6 +2000,41 @@ static void ndsEFManagerResolveAllDescOffsets(void)
      * DObj/MObj/AnimJoint state. */
     dEFManagerYoshiEntryEggEffectDesc.proc_display = gcDrawDObjTreeForGObj;
 #endif
+#if NDS_P2_KIRBY
+    /* K04. THE SPIT-OUT AND LOSE-COPY STARS WERE NEVER SUBMITTED AT ALL.
+     *
+     * Both descriptors (efmanager.c:1588, :1618) carry proc_display
+     * lbCommonDObjScaleXProcDisplay, and the port's shared definition of that
+     * symbol is an empty body -- battleship_wpmanager_core.c:138-141 -- because
+     * its weapon and effect users each own a DS seam instead. Falcon Punch
+     * (:1992 above) and Yoshi's entry egg (:2001) already hit this exact wall
+     * and were repaired the same way. Restoring the two makers in
+     * battleship_kirby_common.h therefore made the effect CONSTRUCT and tick
+     * and still draw nothing: the DObj tree existed, and no callback ever
+     * handed it to the renderer.
+     *
+     * gcDrawDObjDLHead1, not gcDrawDObjTreeForGObj. Their source callback
+     * reduces to lbCommonDrawDObjScaleX (lbcommon.c:2025-2052), which resets
+     * gGCScaleX, walks the tree and submits every drawable node through
+     * DISPLAY-LIST HEAD 1 -- the XLU head. gcDrawDObjTreeForGObj is head 0.
+     * The port's effect submit is what performs the tree walk
+     * (ndsRendererAdapterSubmitEffectDObjTree), and it accepts DLHEAD1
+     * (reloc_backend_movement.c:13762), so the head-1 callback both recurses
+     * into the one drawable child and keeps the source's translucent layer.
+     * Neither descriptor sets the 0x4 tree flag, so efManagerMakeEffect builds
+     * exactly a transform-only root plus one child whose dl is
+     * ITCommonObject+0x5458 -- a tree by the submit gate's own rule
+     * ("a root with a child is a tree", :13827).
+     *
+     * This routing is necessary and NOT sufficient: file 86 root 0x5458 still
+     * has no native owner, so until the bake and its admission arm land the
+     * star reaches the submit path and publishes NO_PROGRAM -- the Poke Ball's
+     * exact 2026-09-21 failure, which reads like missing geometry and is not.
+     * Set before deferred-desc resolution so a late ITCommonObject load
+     * remembers and restores it, as the two rows above do. */
+    dEFManagerCaptureKirbyStarEffectDesc.proc_display = gcDrawDObjDLHead1;
+    dEFManagerLoseKirbyStarEffectDesc.proc_display = gcDrawDObjDLHead1;
+#endif
 
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)
@@ -2767,6 +2802,22 @@ volatile u32 gNdsEntryMBallThrownDescPtr;
 volatile u32 gNdsEntryMBallThrownRootMask __attribute__((used));
 volatile u32 gNdsEntryMBallThrownDrawCount __attribute__((used));
 volatile u32 gNdsEntryMBallThrownSubmitFailCount __attribute__((used));
+/* K04. THE SAME THREE QUESTIONS FOR KIRBY'S STAR, AND ITS ROOT IS SHARED.
+ *
+ * ITCommonObject+0x5458 is reached by four source owners -- both Star Rod
+ * weapon swings and both of Kirby's stars -- so a draw counter alone cannot
+ * say WHO drew. CandidateStep is the admission ladder (see the arm in
+ * renderer_adapter_stage.c), FromEffectCount counts only the two effect
+ * owners, and SubmitStep/Alpha are the executor's own witnesses. Defined here
+ * rather than in the renderer preamble for the same reason the ball's are:
+ * this file owns the Kirby star closure, and defining them unconditionally
+ * lets a probe read a real zero instead of a missing symbol. */
+volatile u32 gNdsItemKirbyStarCandidateStep __attribute__((used));
+volatile u32 gNdsItemKirbyStarDrawCount __attribute__((used));
+volatile u32 gNdsItemKirbyStarSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemKirbyStarFromEffectCount __attribute__((used));
+volatile u32 gNdsItemKirbyStarSubmitStep __attribute__((used));
+volatile u32 gNdsItemKirbyStarAlpha __attribute__((used));
 
 /* THE THROWN POKE BALL, ASKED FOR ONLY WHEN ITS FILE IS ACTUALLY THERE.
  *

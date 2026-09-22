@@ -1,9 +1,66 @@
 #include <ef/effect.h>
 #include <ft/fighter.h>
+#include <sc/scene.h>
+#include <nds/nds_startup.h>
+#include <sys/taskman.h>
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
+
+/* ENTRY WITNESSES. Two questions this file could not answer on 2026-09-21.
+ *
+ * 1. THE MASTER-BALL RAYS ARE MADE HERE AND REFUSE SILENTLY.
+ *    efManagerMBallRaysMakeEffect returns NULL and nothing records it: the
+ *    desc has no EFFECT_FLAG_USERDATA, so it takes no EFStruct, but
+ *    efManagerMakeEffect still needs a GObj from gcMakeGObjSPAfter, and the
+ *    ifCommonSetMaxNumGObj latch caps that pool the moment the arena drops
+ *    under 25,600. "The rays did not draw" and "the rays were never built"
+ *    are different defects with the same appearance, and the renderer's
+ *    gNdsMBallRaysCandidateCount only answers the first. Request minus Null
+ *    is what the renderer should then see.
+ *
+ * 2. A FIGHTER THAT NEVER LEAVES APPEAR IS FROZEN AND UNHITTABLE.
+ *    ftCommonAppearInitStatusVars sets is_ghost, and Appear reads no input, so
+ *    a fighter stuck here looks exactly like the owner's "opponent is frozen
+ *    and cannot be hit". The only exit is anim_frame <= 0 below, which needs
+ *    the Appear figatree to have actually force-loaded; lbRelocGetForceExternHeapFile
+ *    hands the raw heap back on failure (reloc_backend_assets.c:15261) and
+ *    ftMainSetStatus keeps the stale pointer, so the failure is silent.
+ *
+ *    EVENT-LOCAL, NOT CUMULATIVE. One record, armed once, describing the FIRST
+ *    fighter to overrun Appear -- a running total cannot name a boundary. Read
+ *    gNdsFTCommonAppearOverrunFighter for the kind and
+ *    gNdsRelocForceFighterAnim{Resolve,Fallback}Count for whether that
+ *    fighter's animation resolved. */
+volatile u32 gNdsEntryMBallRaysRequestCount __attribute__((used));
+volatile u32 gNdsEntryMBallRaysNullCount __attribute__((used));
+/* Arena free at the instant the Poke Ball is constructed, and the delta that
+ * construction cost. gcGetDObjSetNextAlloc grows the DObj pool out of
+ * gSYTaskmanGeneralHeap and never gives it back, so this is what the ball
+ * permanently charges every later entry in the same match. */
+volatile u32 gNdsEntryMBallThrownArenaBefore __attribute__((used));
+volatile u32 gNdsEntryMBallThrownArenaCost __attribute__((used));
+/* First Appear overrun only. 0 = never fired. */
+volatile u32 gNdsFTCommonAppearOverrunFighter __attribute__((used));
+volatile u32 gNdsFTCommonAppearOverrunUpdates __attribute__((used));
+volatile u32 gNdsFTCommonAppearOverrunAnimFrame __attribute__((used));
+volatile u32 gNdsFTCommonAppearOverrunAnimFallback __attribute__((used));
+volatile u32 gNdsFTCommonAppearOverrunArena __attribute__((used));
+
+/* Well past the longest source Appear animation and past
+ * NDS_FTCOMMON_ENTRY_WAIT, so a slow entry cannot trip it. */
+#define NDS_FTCOMMON_APPEAR_OVERRUN_UPDATES 240u
+
+static u32 sNdsFTCommonAppearPostGoUpdates;
+
+static u32 ndsFTCommonEntryArenaFree(void)
+{
+    uintptr_t end = (uintptr_t)gSYTaskmanGeneralHeap.end;
+    uintptr_t ptr = (uintptr_t)gSYTaskmanGeneralHeap.ptr;
+
+    return (end >= ptr) ? (u32)(end - ptr) : 0u;
+}
 
 /* BattleShip ftcommon.h:20. The broad decomp header is intentionally not part
  * of the port ABI mirror, so keep the one source constant this bounded import
@@ -68,6 +125,28 @@ GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 #error "Pikachu/Purin entry requires ITCommonObject: set NDS_P2_ITEM_CORE (Makefile:888 derives it from these two kinds), or add ITCommonData/ITCommonObject and this one constructor to the configuration. Do not delete the effect."
 #endif
 GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr);
+
+/* WHAT THE BALL CHARGES THE REST OF THE ENTRY.
+ *
+ * Pikachu and Jigglypuff are the only fighters whose entry constructs an item
+ * effect, and the entry-focus thread (battleship_ifcommon.c:364) calls
+ * ftCommonAppearSetStatus for one fighter at a time -- so whatever this costs
+ * is already spent when the NEXT fighter's entry runs. The EFStruct comes from
+ * a pre-allocated pool and the GObj from the capped GObj pool, but the DObj,
+ * MObj and AObj trees grow out of gSYTaskmanGeneralHeap and are never given
+ * back (objman.c:692), so a permanent arena charge is the one cost that can
+ * outlive this call. Measure it rather than argue about it. */
+static void ndsFTCommonEntryMakeMBallThrown(FTStruct *fp)
+{
+    u32 before = ndsFTCommonEntryArenaFree();
+    u32 after;
+
+    gNdsEntryMBallThrownArenaBefore = before;
+    (void)ndsEFManagerMBallThrownMakeEffectChecked(
+        &fp->entry_pos, fp->status_vars.common.entry.lr);
+    after = ndsFTCommonEntryArenaFree();
+    gNdsEntryMBallThrownArenaCost = (before >= after) ? (before - after) : 0u;
+}
 #endif
 #if NDS_P2_YOSHI
 GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
@@ -153,7 +232,11 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
          * EFCommonEffects3 desc this build resolves for him. */
         if (fp->fkind == nFTKindPikachu)
         {
-            efManagerMBallRaysMakeEffect(&fp->entry_pos);
+            gNdsEntryMBallRaysRequestCount++;
+            if (efManagerMBallRaysMakeEffect(&fp->entry_pos) == NULL)
+            {
+                gNdsEntryMBallRaysNullCount++;
+            }
         }
 #endif
 #if NDS_P2_PURIN
@@ -161,7 +244,11 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
          * same flag when her Master Ball opens. */
         if (fp->fkind == nFTKindPurin)
         {
-            efManagerMBallRaysMakeEffect(&fp->entry_pos);
+            gNdsEntryMBallRaysRequestCount++;
+            if (efManagerMBallRaysMakeEffect(&fp->entry_pos) == NULL)
+            {
+                gNdsEntryMBallRaysNullCount++;
+            }
         }
 #endif
         /* Source ftCommonAppearUpdateEffects (ftcommonentry.c:91) with its one
@@ -184,6 +271,52 @@ void ftCommonAppearProcUpdate(GObj *fighter_gobj)
     FTStruct *fp = ftGetStruct(fighter_gobj);
 
     ndsFTCommonAppearUpdateEffectsNoMBall(fighter_gobj);
+
+    /* THE FIRST FIGHTER THAT DOES NOT LEAVE APPEAR, NAMED ONCE.
+     *
+     * The exit below is the only one, and it needs a live Appear animation.
+     * If that figatree force-load fell back, anim_frame never reaches 0, the
+     * fighter keeps is_ghost from ftCommonAppearInitStatusVars, and the match
+     * shows a frozen opponent nothing can hit while sudden death -- which uses
+     * ftCommonEntryNullProcUpdate's plain entry_wait countdown and needs no
+     * animation -- behaves normally. That asymmetry is the whole signature.
+     *
+     * Event-local: the record latches on the first overrun and is never
+     * rewritten, so it names a boundary rather than accumulating. Costs one
+     * compare per Appear update on the non-overrun path. */
+    if (gNdsFTCommonAppearOverrunFighter == 0u)
+    {
+        /* Counts Appear updates that happen AFTER the match has started. A
+         * healthy entry runs every Appear to completion before GO, so this
+         * stays at zero; the threshold only exists so an ordinary one- or
+         * two-frame overlap at the GO boundary cannot latch. The counter is
+         * this file's own -- nothing here writes source state, and in
+         * particular status_vars.common.entry.entry_wait belongs to
+         * ftCommonEntryNullProcUpdate's countdown and is not touched. */
+        if ((gSCManagerBattleState == NULL) ||
+            (gSCManagerBattleState->game_status != nSCBattleGameStatusGo))
+        {
+            sNdsFTCommonAppearPostGoUpdates = 0u;
+        }
+        else if (sNdsFTCommonAppearPostGoUpdates <
+                     NDS_FTCOMMON_APPEAR_OVERRUN_UPDATES)
+        {
+            sNdsFTCommonAppearPostGoUpdates++;
+        }
+        else
+        {
+            gNdsFTCommonAppearOverrunUpdates = sNdsFTCommonAppearPostGoUpdates;
+            gNdsFTCommonAppearOverrunAnimFrame =
+                *(const u32 *)&fighter_gobj->anim_frame;
+            gNdsFTCommonAppearOverrunAnimFallback =
+                gNdsRelocForceFighterAnimFallbackCount;
+            gNdsFTCommonAppearOverrunArena = ndsFTCommonEntryArenaFree();
+            /* Written LAST and non-zero, so a reader that sees a kind has the
+             * whole record. +1 keeps kind 0 (Mario) distinguishable from
+             * "never fired". */
+            gNdsFTCommonAppearOverrunFighter = (u32)fp->fkind + 1u;
+        }
+    }
 
     /* Source-faithful end check. The figatree bind/play seam now publishes the
      * first live Appear frame before this callback runs (measured Mario: 1.0 on
@@ -376,8 +509,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * into that path because both are called "spawn". */
         status_id = (entry_id == 0) ? nFTPikachuStatusAppearR :
                                       nFTPikachuStatusAppearL;
-        (void)ndsEFManagerMBallThrownMakeEffectChecked(
-            &fp->entry_pos, fp->status_vars.common.entry.lr);
+        ndsFTCommonEntryMakeMBallThrown(fp);
     }
 #endif
 #if NDS_P2_YOSHI
@@ -404,8 +536,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * Master Ball entry -- the same source case label covers both kinds --
          * so it takes the same restored call and the same entry facing. */
         status_id = (entry_id == 0) ? nFTPurinStatusAppearR : nFTPurinStatusAppearL;
-        (void)ndsEFManagerMBallThrownMakeEffectChecked(
-            &fp->entry_pos, fp->status_vars.common.entry.lr);
+        ndsFTCommonEntryMakeMBallThrown(fp);
     }
 #endif
 #if NDS_P2_KIRBY
