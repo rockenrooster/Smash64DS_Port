@@ -1150,7 +1150,35 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
             {
                 gNdsPlayersVSPreviewServiceByteMax = step_bytes;
             }
-        } while ((drain != FALSE) && (step == NDS_PREVIEW_PACK_STEP_IN_PROGRESS));
+            if (drain == FALSE)
+            {
+                /* SPEND THE AGGREGATE BUDGET, WHICH IS WHAT IT IS FOR.
+                 *
+                 * The loop's continuation used to be gated on `drain`, which
+                 * is entry-only, so a browsing cursor got exactly ONE
+                 * NDS_PLAYERS_VS_LOAD_STEP_BYTES unit per CSS update and left
+                 * three quarters of sNdsPlayersVSPreviewServiceByteBudget
+                 * unspent every tic. That is the owner's hover delay: the
+                 * aggregate span is a property of the UPDATE, not of a unit.
+                 *
+                 * Each unit is still capped at NDS_PLAYERS_VS_LOAD_STEP_BYTES,
+                 * so the audio-gap bound that constant exists to enforce is
+                 * unchanged; only the number of units inside one update moves.
+                 * A unit that moved nothing cannot extend the loop, because
+                 * such a step can only be followed by DONE. */
+                u32 remaining =
+                    (sNdsPlayersVSPreviewServiceByteBudget > unit_bytes) ?
+                        (sNdsPlayersVSPreviewServiceByteBudget - unit_bytes) :
+                        0u;
+
+                budget = (remaining > NDS_PLAYERS_VS_LOAD_STEP_BYTES) ?
+                    (u32)NDS_PLAYERS_VS_LOAD_STEP_BYTES : remaining;
+                if (budget == 0u)
+                {
+                    break;
+                }
+            }
+        } while (step == NDS_PREVIEW_PACK_STEP_IN_PROGRESS);
         ndsTaskmanSwapMallocRegion(previous);
         if (drain == FALSE)
         {
