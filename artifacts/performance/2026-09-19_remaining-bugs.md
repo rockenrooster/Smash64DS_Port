@@ -2403,3 +2403,43 @@ were settled by input invariance instead of by reproduction. The worktree was
 removed after the run.
 
 **These four remain owed and are not claimed as passing.**
+
+---
+
+## 2026-09-22 05:40 -- the Ness character-select fix, verified at runtime
+
+Static evidence was already exact (header 177 -> 195, `ness_high.bin` 16,240 ->
+17,088, all 1,140 root spans passing), but none of it had run. Built the
+supported walk target `smash64ds-p2-shell-loop-hwtri` into
+`builds/build-ness-walk/` -- **not** the published ROM, which keeps its own
+TARGET name -- and drove the real character select with
+`gNdsMenuShellCssWalkTargetKind = 11` (Ness).
+
+    N1 pres=0 loops=6   validate code=0 slot=0 root=0 obs=0 exp=0 cnt=0 | packFail=0 kind=0
+    N2 pres=0 loops=9   validate code=0 slot=0 cnt=0                    | packFail=0 kind=0
+    N3 pres=0 loops=13  validate code=0 slot=0 cnt=0                    | packFail=0 kind=0
+    N4 pres=0 loops=18  validate code=0 slot=0 cnt=0                    | packFail=0 kind=0
+    END stepCount=4724 commit=187 cancel=99
+
+**Reading it.** `ndsPreviewPackLoadHalt` writes its reason into
+`gNdsPreviewPackFailure` and calls `DC_FlushAll()` BEFORE entering its
+`for (;;)`. `packFail` is 0 at every sample, so the halt never fired -- for any
+fighter, not just Ness. `gNdsNativeFighterValidateRejectCode` is 0, where it
+previously read 6. And `gNdsMenuShellWalkLoops` advances 6 -> 9 -> 13 -> 18,
+so the shell completed eighteen whole menu loops; a `for (;;)` would have
+frozen that number. 4,724 resumable load steps and 187 committed preview packs
+say the previews were loading in volume, not being skipped.
+
+`pres=0` is expected: this is a menu walk that never enters a battle, and that
+counter is battle-only. `freemin` reads its uninitialised sentinel for the same
+reason.
+
+**What this run does not by itself show** is that Ness specifically was
+hovered. That is covered by the 2026-09-21 reading on the non-fatal build --
+`PREVIEWHALT count=56 kindMask=0x800`, bit 11 and only bit 11 -- which proves
+the walk does reach Ness's preview in this harness family. The corroborating
+`gNdsMenuShellCssWalkTourKindMask` / `TourDrewMask` read is in the next run.
+
+The published ROM was untouched throughout: `smash64ds.nds` still hashes
+`18cf0cd3aac388fd83bd80838c927d88059a2623df7f022c0b478541d6f9036c`, identical
+to `builds/remaining-bugs-playtest-r35/`.
