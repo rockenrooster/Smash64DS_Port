@@ -834,6 +834,41 @@ static s32 ndsRendererCombineSecondOutputUsesAlpha(u32 w1, u32 source)
             (((w1 >> 0) & 0x07u) == source)) ? TRUE : FALSE;
 }
 
+/* SLOTS A AND B ARE PART OF THE ALPHA OUTPUT TOO.
+ *
+ * gbi.h:511-512 defines G_CC_MODULATEIA alpha as (TEXEL0 - 0) * SHADE + 0, and
+ * :3088-3102 packs alpha A/B separately from C/D. The C/D-only reading above
+ * therefore answers "texel ignored" for the single most common SSB64 alpha
+ * combine, where TEXEL0 sits in slot A. The colour twin
+ * ndsRendererCombineUsesColor already tests all eight of its slots; this is
+ * that same completeness for alpha.
+ *
+ * 2026-09-09 identified exactly this hole (BUG_NOTES "the port's C/D-only test
+ * read 'texel modulates' as 'texel ignored' for MODULATEIA") and repaired it in
+ * HOST GENERATOR CODE ONLY -- that note says so in as many words. The runtime
+ * converter kept the hole, and a blob stage such as Peach's Castle goes through
+ * the runtime converter, not the Dream-Land-only static corpus. This closes the
+ * runtime half.
+ *
+ * Used ONLY by the alpha_ignores_texels predicate, which decides whether to
+ * throw an uploaded texture's alpha away, so the broader
+ * ndsRendererHardwareAlpha / AlphaUsesVertex behaviour is untouched. It does
+ * not model the 2-cycle COMBINED chaining that ndsRendererHardwareOutputUsesAlpha
+ * does, which makes the substitution conservative in one direction only: it can
+ * report a texel present where the wrapper reported it absent, i.e. it can only
+ * PRESERVE texel alpha more often, never destroy it more often. */
+static s32 ndsRendererCombineUsesAlphaAnySlot(u32 w0, u32 w1, u32 source)
+{
+    return ((((w0 >> 12) & 0x07u) == source) ||   /* Aa0 */
+            (((w1 >> 12) & 0x07u) == source) ||   /* Ab0 */
+            (((w0 >>  9) & 0x07u) == source) ||   /* Ac0 */
+            (((w1 >>  9) & 0x07u) == source) ||   /* Ad0 */
+            (((w1 >> 21) & 0x07u) == source) ||   /* Aa1 */
+            (((w1 >>  3) & 0x07u) == source) ||   /* Ab1 */
+            (((w1 >> 18) & 0x07u) == source) ||   /* Ac1 */
+            (((w1 >>  0) & 0x07u) == source)) ? TRUE : FALSE;   /* Ad1 */
+}
+
 static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
                                               u32 source)
 {
@@ -11147,22 +11182,39 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         }
     }
     /* N64 RGBA/CI/IA can carry useful colour behind alpha zero.  Preserve it
-     * when the effective C/D alpha result does not read either texture and the
-     * N64 alpha compare is disabled.  MODULATEIA puts TEXEL0 in alpha slot A,
-     * so a full combiner-dependency test would incorrectly erase that hidden
-     * colour again on opaque surfaces.  Conversely, forcing DS texel alpha
-     * opaque while alpha compare is active fills source cutouts.  Keep the
-     * optimized TEXEL0/TEXEL1 composite path unchanged; its output alpha is
-     * part of the composite contract and is already keyed by the combine
-     * words. */
+     * when the effective alpha result does not read either texture and the
+     * N64 alpha compare is disabled.  Forcing DS texel alpha opaque while
+     * alpha compare is active fills source cutouts.  Keep the optimized
+     * TEXEL0/TEXEL1 composite path unchanged; its output alpha is part of the
+     * composite contract and is already keyed by the combine words.
+     *
+     * THE SENTENCE THAT USED TO BE HERE WAS THE BUG. It read: "MODULATEIA puts
+     * TEXEL0 in alpha slot A, so a full combiner-dependency test would
+     * incorrectly erase that hidden colour again on opaque surfaces." The
+     * first clause is true and the conclusion does not follow from it. A
+     * combine that names TEXEL0 in ANY alpha slot consumes texel alpha, and
+     * throwing it away is not "preserving hidden colour", it is uploading
+     * texels the N64 never samples as opaque content. On the Castle's steep
+     * roof those are TMEM row padding at palette index 0, whose LUT entry is
+     * 0xFFFE -- alpha 0, RGB (248,248,248) -- so forcing them opaque paints
+     * the roof with a solid near-white field. That is the owner's "renders ALL
+     * geometry now but the texture is missing on the now visible geometry",
+     * and the same texels drawn transparent were the earlier "separated strips
+     * with gaps". One classification, both reports.
+     *
+     * Restoring texel alpha does NOT re-hide the roof: the masked 8x8 period
+     * contains only indices 12-15, all alpha 1, so every REACHABLE texel stays
+     * opaque and only the unreachable padding goes back to transparent. */
     alpha_ignores_texels =
         ((use_texel1 == FALSE) &&
          (stats != NULL) &&
          ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) == 0u) &&
-         (ndsRendererHardwareOutputUsesAlpha(
-              stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
-         (ndsRendererHardwareOutputUsesAlpha(
-              stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE)) ? TRUE : FALSE;
+         (ndsRendererCombineUsesAlphaAnySlot(
+              stats->texture_combine_w0, stats->texture_combine_w1,
+              NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
+         (ndsRendererCombineUsesAlphaAnySlot(
+              stats->texture_combine_w0, stats->texture_combine_w1,
+              NDS_RENDERER_ACMUX_TEXEL1) == FALSE)) ? TRUE : FALSE;
 
     memset(&key, 0, sizeof(key));
     key.image = primary_image;
