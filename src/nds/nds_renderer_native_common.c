@@ -11243,6 +11243,18 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_NESS
     if (slot == 9u)
     {
+#if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+        /* Unlike Link's and Yoshi's dynamically inserted hidden parts, Ness's
+         * joint 17 is an ordinary JointTree node that merely gains a display
+         * list, so the generator publishes a real source parent schedule for
+         * the Win3 vector rather than an all-255 live capture. */
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeNessWin3BindingParents) /
+                           sizeof(sNdsNativeNessWin3BindingParents[0]));
+            return sNdsNativeNessWin3BindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeNessBindingParents) /
                        sizeof(sNdsNativeNessBindingParents[0]));
         return sNdsNativeNessBindingParents;
@@ -11566,6 +11578,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_NESS
     if (slot == 9u)
     {
+#if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeNessWin3CrossPaletteSlots) /
+                           sizeof(sNdsNativeNessWin3CrossPaletteSlots[0]));
+            return sNdsNativeNessWin3CrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeNessCrossPaletteSlots) /
                        sizeof(sNdsNativeNessCrossPaletteSlots[0]));
         return sNdsNativeNessCrossPaletteSlots;

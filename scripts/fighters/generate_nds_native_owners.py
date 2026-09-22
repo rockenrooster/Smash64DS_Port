@@ -2421,6 +2421,34 @@ P2_ROOT_PROGRAM_APPENDIX = {
         "high": ((2, 0x2800),),
         "low":  ((2, 0x2800),),
     },
+    # Ness's VS Results Win3 pose. scsubsysdataness.c D_ovl1_8039272C opens with
+    # the raw word 0xA0880001 -- opcode 40, joint 17, model part 1 -- and never
+    # restores it; the clip is dFTNessSubMotionDescs rows 3 AND 4, so the demo
+    # statuses that reach it are Win3 (mnVSResultsGetStatusWin) and Win4 (CSS
+    # only, and mnPlayersVSGetStatusSelected gives Ness row 2, which is why the
+    # character select never showed this).
+    #
+    # THIS IS A TOPOLOGY CHANGE, NOT A PER-BINDING VARIANT. Container index 13
+    # is joint 17 and dNessMain_modelparts_desc_0x204 rows 2/3 (part 1, both
+    # details) are dNessModel_gap_0x553C_sub_0x1854 at 0x6d90. setup_parts
+    # 0xFFFFFFC0 SELECTS descriptor 13, but its JointTree entry carries no
+    # display list in either detail -- (depth 7, None) -- so the live DObj
+    # exists and draws nothing until the clip writes a DL into it. The live
+    # drawable vector therefore grows 14 -> 15 and every binding from joint 20
+    # onward shifts by one, which no `(binding, offset)` variant row can
+    # express: the resolver rejects on root_count before it compares offsets.
+    # Baked here and reachable ONLY through OWNER_ROOT_PROGRAMS["ness"] "Win3".
+    #
+    # Binding 7 is joint 16 (descriptor 12), joint 17's depth-6 parent and the
+    # source of its matrix/cache provenance -- the same rule as Samus's 0x2c20
+    # and Yoshi's 0x2800 above. The two details name the same display list
+    # because desc_0x204 does; 0x6d90 is a self-contained RAW program (its own
+    # G_RDPPIPESYNC/light/combine preamble, two G_VTX loads of 7 and 11, no
+    # G_MODIFYVTX and no G_DL), proved by the vertex-cache closure.
+    "ness": {
+        "high": ((7, 0x6d90),),
+        "low":  ((7, 0x6d90),),
+    },
 }
 
 # Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
@@ -2515,6 +2543,10 @@ OWNER_ROOT_PROGRAM_ROOT_COUNTS = {
     ("link", "SpecialN"): 20,
     ("yoshi", "Catch"): 19,
     ("yoshi", "Throw"): 19,
+    # Ness canonical draws 14 roots in both details; Win3 lights descriptor 13
+    # (joint 17), which setup_parts already selected but the JointTree left
+    # without a display list, so the live vector is 15.
+    ("ness", "Win3"): 15,
 }
 
 
@@ -2586,6 +2618,23 @@ OWNER_ROOT_PROGRAMS = {
         ("Catch", ()),
         ("Throw", ((7, 1),)),
     ),
+    # VS Results, the winner's third pose. scsubsysdataness.c D_ovl1_8039272C
+    # is one raw SetModelPartID word, 0xA0880001 = (17, 1), followed only by
+    # 0xAC00000x SetTexturePartID commands, which write mobj->texture_id_curr
+    # and never touch the root vector. There is no restoring (17, 0) and no
+    # second model-part word anywhere in the clip, so this ONE event is the
+    # whole program. 238_NessMainMotion.c's model-part writes are all
+    # replacements of already-drawable joints and stay in
+    # P2_MODEL_PART_ROOT_VARIANTS; this is Ness's only topology change.
+    #
+    # Derived from the demo scripts, not from a captured root count: the other
+    # four Results-reachable Ness clips (D_ovl1_80392694 row 0, 803926C8 row 1,
+    # 80392720 row 2, 80392750 row 5) carry no opcode-40 word at all, and
+    # D_ovl1_80392754's (16, 2) / (10, 2) pair belongs to row 13, the trophy
+    # pose no shipping scene reaches.
+    "ness": (
+        ("Win3", ((17, 1),)),
+    ),
 }
 
 OWNER_ROOT_PROGRAM_SOURCES = {
@@ -2606,6 +2655,14 @@ OWNER_ROOT_PROGRAM_SOURCES = {
              "/reloc_fighters_main/YoshiMain"),
         0x00f7,
         0x0124,
+    ),
+    # 239_NessMain.c: `/* @ 0x027C, 108 bytes: FTAttributes.modelparts_container
+    # target */`, 27 rows, and the O2R resource's own file ID is 0xEF = 239.
+    "ness": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NessMain"),
+        0x00ef,
+        0x027c,
     ),
 }
 
@@ -3652,6 +3709,20 @@ def _verify_owner_modelpart_resolver(
         if tuple(matches) != expected:
             raise ValueError(
                 f"yoshi {detail} modelpart-0 falsifier set {tuple(matches)} "
+                f"!= {expected}"
+            )
+    if owner_name == "ness":
+        # NessMain's container has five non-NULL rows, but only three of them
+        # are falsifiable: descriptors 13 (joint 17) and 26 (joint 30) carry a
+        # descriptor with NO JointTree display list, which is exactly why the
+        # Win3 program exists. The three that can be compared must each agree
+        # with the JointTree, or the Main payload does not belong to this model.
+        expected = (((6, 0x1af8), (8, 0x1b88), (12, 0x20e8))
+                    if detail == "high"
+                    else ((6, 0x4470), (8, 0x44e8), (12, 0x4a70)))
+        if tuple(matches) != expected:
+            raise ValueError(
+                f"ness {detail} modelpart-0 falsifier set {tuple(matches)} "
                 f"!= {expected}"
             )
 
@@ -5856,6 +5927,14 @@ def render_p2_owner_runtime_program(
         # Yoshi's grab family installs hidden part 4, so the live vector is 19
         # roots against a canonical 18 and only a complete program can carry it.
         lines += ["#define NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT 1", ""]
+    if owner_name == "ness" and detail == "high" and root_programs:
+        # Ness's VS Results Win3 clip lights joint 17, a selected-but-blank
+        # JointTree descriptor, so the live vector is 15 roots against a
+        # canonical 14. Same transition-safe contract as the four above: a
+        # build against a stale generated inc lacks both this marker and the
+        # Win3 arrays, so the selector compiles out and Ness keeps its current
+        # fail-closed behaviour instead of failing to link.
+        lines += ["#define NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT 1", ""]
     trio = context.get("kirby_trio_bodies")
     if owner_name == "kirby" and trio:
         # One resident root per reachable head, selected at runtime by the
@@ -8309,6 +8388,43 @@ def build_owner_root_programs(
                          for offset in root_offsets]
         program_light_indices = [program_rows_by_offset[offset][1]
                                  for offset in root_offsets]
+        if owner_name == "ness":
+            # Same three pins Link's Catch and Yoshi's grab carry, kept here
+            # rather than in the parents branch below because Ness's joint 17
+            # is an ORDINARY setup_parts descriptor that merely gains a display
+            # list. It has a real JointTree depth and a real source parent, so
+            # its binding_parents schedule is derived by decode_joint_topology
+            # in the generic `else` arm -- there is no dynamically inserted
+            # DObj here to force the INVALID_U8 capture the other owners need.
+            if len(root_offsets) != OWNER_ROOT_PROGRAM_ROOT_COUNTS[
+                    (owner_name, program_name)]:
+                raise ValueError(
+                    f"ness {detail} {program_name} root count "
+                    f"{len(root_offsets)} != "
+                    f"{OWNER_ROOT_PROGRAM_ROOT_COUNTS[(owner_name, program_name)]}")
+            appendix_offsets = {
+                offset for _binding, offset in
+                context.get("root_program_appendix_specs", ())
+            }
+            variant_offsets = {
+                offset for _binding, offset in context.get("variant_specs", ())
+            }
+            new_program_offsets = (set(root_offsets) - canonical_offset_set
+                                   - variant_offsets)
+            if new_program_offsets != appendix_offsets:
+                raise ValueError(
+                    f"ness {detail} {program_name} new roots "
+                    f"{sorted(map(hex, new_program_offsets))} != appendix "
+                    f"{sorted(map(hex, appendix_offsets))}")
+            # PROVE THE PROGRAM DIFFERS. A resolver change that quietly turned
+            # the (17, 1) write back into a source no-op would emit a second
+            # copy of the canonical vector, which matches canonical first at
+            # runtime and is therefore invisible -- the exact failure mode the
+            # equal-root-count Link Claps repair was written for.
+            if root_offsets == canonical_offsets:
+                raise ValueError(
+                    f"ness {detail} {program_name} reproduces the canonical "
+                    "root vector; the model-part event resolved to a no-op")
         if owner_name == "link" and program_name == "Catch":
             if len(root_offsets) != OWNER_ROOT_PROGRAM_ROOT_COUNTS[
                     (owner_name, program_name)]:

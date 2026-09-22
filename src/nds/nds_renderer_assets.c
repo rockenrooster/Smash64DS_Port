@@ -1869,6 +1869,26 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNessLowOwner, &sNdsNativeNessFighterLowTables,
     sNdsNativeNessRootsLow, sNdsNativeNessCrossPaletteSlotsLow,
     sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+/* VS Results, the winner's third pose. scsubsysdataness.c D_ovl1_8039272C is
+ * dFTNessSubMotionDescs rows 3 and 4, and its first word is the raw
+ * 0xA0880001 -- SetModelPartID(17, 1), never restored. dNessMain_setup_parts
+ * 0xFFFFFFC0 SELECTS descriptor 13, but the JointTree gives joint 17 no
+ * display list in either detail, so the write ADDS a root instead of
+ * replacing one: the live vector is 15 against a canonical 14 and the
+ * resolver rejects on root_count before it ever compares offsets. No
+ * per-binding variant can carry it. Without this program the owner declines,
+ * and a packed fighter that declines is halt 20 -- the same freeze Link's
+ * Claps pose caused when he lost a match. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessWin3HighOwner, &sNdsNativeNessFighterHighTables,
+    sNdsNativeNessWin3Roots, sNdsNativeNessWin3CrossPaletteSlots,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessWin3LowOwner, &sNdsNativeNessFighterLowTables,
+    sNdsNativeNessWin3RootsLow, sNdsNativeNessWin3CrossPaletteSlotsLow,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_PURIN
@@ -5256,10 +5276,21 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
+#if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
+    {
+        if (program == 1u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeNessWin3LowOwner : &sNdsNativeNessWin3HighOwner;
+        }
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -5337,10 +5368,22 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
+#if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+    /* canonical + Win3. Every number this bound rejects falls through to the
+     * reset below and silently becomes canonical, which is how Kirby's Stone
+     * was lost for a month -- so this literal moves whenever a Ness program is
+     * added. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS) && (program <= 1u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
@@ -5400,6 +5443,13 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     {
         /* canonical + Catch + Throw. */
         program_count = 3u;
+    }
+#endif
+#if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
+    {
+        /* canonical + Win3. */
+        program_count = 2u;
     }
 #endif
     for (program = 0u; program < program_count; program++)
