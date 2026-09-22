@@ -19,8 +19,16 @@ times over:
   2. it CREATED textures mid-frame, and PrepareIFCommonAtlas calls
      ndsRendererHardwareEvictTexture(NULL) on an upload failure -- which takes
      entries out of the GENERIC cache that other fighters' textures live in;
-  3. it nulled sNdsRendererHardwareActiveTextureEntry, the generic cache's own
-     bookkeeping for what is currently active.
+  3. it wrote the texture trackers by hand.  r42 bound with a raw
+     glBindTexture and set the bound-name tracker itself; r43 added a null of
+     sNdsRendererHardwareActiveTextureEntry.  The null turned out to be
+     REQUIRED, not a violation: the cache's binds elide on `ActiveTextureEntry
+     != entry`, so a foreign bind that leaves the pointer naming the previous
+     entry makes the next run wanting that entry skip its bind and draw with
+     the foreign texels.  What was wrong was doing it ad hoc from inside the
+     walk.  The impact-wave, rebirth-halo and entry-effect owners perform that
+     bind-plus-null pair beside each of their own binds; a fighter-walk route
+     that needs one must add it as a named seam below, with that reason.
 
 Nothing in the tree caught any of it.  check-r2-shade-twin proved the two shade
 derivations agreed; check-alpha-mux-blast-radius proved no fighter family
@@ -88,6 +96,16 @@ FORBIDDEN = (
      "what else is mid-flight on it"),
     ("glTexImage2D", "raw upload; see PrepareIFCommonAtlas"),
     ("glGenTextures", "raw name allocation inside the walk"),
+    # BARE binds. Both move the hardware without keeping
+    # sNdsRendererHardwareActiveTextureEntry honest, and the cache's own binds
+    # elide against that pointer -- so the next run wanting the previously
+    # active entry skips its bind and samples whatever was bound here. The
+    # cache binds its own entries through the SEAMS below; anything else needs
+    # a seam of its own that also nulls the active entry.
+    ("ndsRendererHardwareBindTextureName",
+     "a bare name bind leaves the cache's active entry stale"),
+    ("ndsRendererHardwareBindTextureState",
+     "a raw glBindTexture updates neither tracker"),
     # WRITE-only. The packet recorder READS this pointer to note which entry a
     # bind used, which is observation and is fine; assigning it is the generic
     # cache's own bookkeeping and is not the walk's to do. A mention check

@@ -8077,6 +8077,57 @@ static NDSNativeFighterRunUvInputs
     sNdsNativeFighterRunUvInputs[NDS_R2_RUN_MEMO_MAX]
                                       [NDS_R2_RUN_UVMEMO_WAYS];
 static u8 sNdsNativeFighterRunUvVictim[NDS_R2_RUN_MEMO_MAX];
+/* Rows dropped because the image they described was bound or unbound. A CSS
+ * browse that revisits fighters must move this; a match must not, except at a
+ * Kirby copy. */
+volatile u32 gNdsNativeFighterRunUvForgotten;
+
+/* THE MEMO VOUCHES FOR BYTES IN A RELOADABLE IMAGE, SO A RELOAD MUST FORGET IT.
+ *
+ * `prepared_dense` -- where ndsRendererNativeRebuildProductionRunUv writes the
+ * s/t this memo vouches for -- lives INSIDE the owner image
+ * (ndsRendererNativeBindOwnerImage: "Image RAM owns mutable prepared-dense
+ * scratch"), and generate_nds_native_owner_images.py ships it with positions
+ * only, so every freshly loaded image carries s = t = 0. The memo's key is the
+ * tables STRUCT -- static, one per owner and detail -- plus
+ * gNdsTaskmanHeapGeneration. A CSS preview released and loaded again (hover
+ * away from a fighter and back) changes neither: same struct, same arena
+ * generation, same texture metrics. The first draw after the reload therefore
+ * hit this memo, skipped the rebuild, and sampled every textured vertex of the
+ * run at texel (0,0) -- Link gray, an eye with no pupil, a face the wrong
+ * colour, and more of it the longer the CSS was browsed, because each revisit
+ * adds a fighter and the 4-way rows age out one run at a time (which is how ONE
+ * eye goes blank while the other survives). A Kirby copy hat reloaded into its
+ * fixed per-slot struct mid-battle has the same hole.
+ *
+ * NDS_IMG_BIND calls this on every bind and unbind. Clearing `tables` returns
+ * the row to the free pool ReserveMiss already prefers, and a NULL row can
+ * never match a live lookup, so the next draw of that owner rebuilds. Cold:
+ * 67 x 4 compares per image load, never per frame. */
+static void ndsRendererNativeForgetFighterRunUvTables(const void *tables)
+{
+    u32 run_index;
+    u32 way;
+
+    if (tables == NULL)
+    {
+        return;
+    }
+    for (run_index = 0u; run_index < NDS_R2_RUN_MEMO_MAX; run_index++)
+    {
+        for (way = 0u; way < NDS_R2_RUN_UVMEMO_WAYS; way++)
+        {
+            NDSNativeFighterRunUvInputs *uv =
+                &sNdsNativeFighterRunUvInputs[run_index][way];
+
+            if ((const void *)uv->tables == tables)
+            {
+                uv->tables = NULL;
+                gNdsNativeFighterRunUvForgotten++;
+            }
+        }
+    }
+}
 
 static inline __attribute__((always_inline))
 NDSNativeFighterRunUvInputs *ndsRendererNativeFighterRunUvLookup(

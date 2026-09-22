@@ -3698,10 +3698,25 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
     (tables_).packed_corner_count = 0u;
 #endif
 
+/* Every bind and unbind of a tables struct replaces the image bytes its
+ * prepared_dense points at, so the per-run UV memo keyed on that struct must
+ * forget it; see ndsRendererNativeForgetFighterRunUvTables for the CSS face,
+ * eye and gray-Link failures this closes. Defined beside the memo in
+ * nds_renderer_native_common.c, later in this same unity translation unit, and
+ * only where that memo exists. */
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static void ndsRendererNativeForgetFighterRunUvTables(const void *tables);
+#define NDS_IMG_FORGET_RUN_UV(tables_)                                         \
+    ndsRendererNativeForgetFighterRunUvTables((const void *)&(tables_))
+#else
+#define NDS_IMG_FORGET_RUN_UV(tables_) ((void)0)
+#endif
+
 #define NDS_IMG_BIND(tables_, type_, base_, prefix_)                            \
     do                                                                         \
     {                                                                          \
         const type_ *img_ = (const type_ *)(base_);                            \
+        NDS_IMG_FORGET_RUN_UV(tables_);                                        \
         if (img_ == NULL)                                                      \
         {                                                                      \
             memset(&(tables_), 0, sizeof(tables_));                            \

@@ -6213,3 +6213,52 @@ open" with everything else correct.
 it demonstrably transforms and submits. What remains unverified is whether its
 PIXELS are visible: material, texture, alpha, depth or occlusion. That is the
 only class left, and it is the one class counters cannot reach from here.
+
+## CSS revisits drew with zeroed UVs: a memo that outlived its image (2026-09-22, r45)
+
+**Owner, r44:** "over time the roster gradually gets worse in missing colors
+textures, faces etc." plus Yoshi and Jigglypuff with one eye closed. r44 was a
+tint-route candidate and is withdrawn; this cause is independent of it and
+predates r36.
+
+**Mechanism.** `prepared_dense`, the per-dense-vertex scratch that
+`ndsRendererNativeRebuildProductionRunUv` writes s/t into, lives inside the
+owner image (`NDS_IMG_BIND`: "Image RAM owns mutable prepared-dense scratch"),
+and `generate_nds_native_owner_images.py` emits it with `.gx_xy`/`.gx_z` only,
+so a freshly loaded image carries s = t = 0 everywhere. The per-run UV memo
+`sNdsNativeFighterRunUvInputs` skips that rebuild when its row matches the
+tables STRUCT (static, one per owner and detail), `gNdsTaskmanHeapGeneration`
+and the texture metrics. A CSS preview that is released and loaded again
+changes none of the three -- the arena generation only moves on a general-heap
+init/reset -- so the first draw after a revisit hit the memo and drew every
+textured vertex of the run at texel (0,0). The memo's own comment covered
+eviction ("can never authorize a stale skip") and scene restarts (the heap
+generation), not a reload inside one generation.
+
+**Measured, not argued.** Same ROM input on r41 and r45 (hidden melonDS, gdb
+feed: Link, Yoshi, Pikachu, then carry the token back over Yoshi; breakpoints
+count `ndsRendererNativeFighterRunUvReserveMiss` and
+`ndsRendererNativeRebuildProductionRunUv.isra.0` and log every image
+load/release):
+
+    Yoshi first load  (tick 144)   r41 +6 miss +6 rebuild   r45 +6 / +6
+    Yoshi REVISIT     (tick 311)   r41  0 miss  0 rebuild   r45 +6 / +6
+    gNdsNativeFighterRunUvForgotten (r45): 6 after Yoshi's release, 25 after
+    Pikachu's (= its 19 runs) -- exact per-image row counts.
+
+Load/release sequence and tick timing identical between the arms; the only
+difference is the rebuild. Evidence and the probe:
+`artifacts/visibility/2026-09-22_css-uv-revisit/`.
+
+**Fix.** `NDS_IMG_BIND` now calls `ndsRendererNativeForgetFighterRunUvTables`
+on every bind and unbind, clearing the rows keyed to that struct: cold, 67 x 4
+compares per image load. Kirby copy hats bind into a fixed per-slot struct
+through the same macro, so a copy change mid-battle had the same hole and is
+covered by the same line.
+
+**What it explains and what it does not.** A blank eye (one eye's run can keep
+its 4-way row while the other's ages out), gray Link, wrong face texture, and
+"worse the longer you browse". It does NOT explain r44's contorted Pikachu or
+Jigglypuff missing limbs; those were on the fighters r44 forced to draw live
+every frame (the tint faulted their packets), and are unattributed until the
+owner says whether r41 shows them.
