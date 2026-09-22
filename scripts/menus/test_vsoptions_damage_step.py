@@ -154,7 +154,10 @@ class VsOptionsDamageStepTests(unittest.TestCase):
     def test_taps_move_one_and_held_moves_the_owner_step(self):
         minimum, maximum, held, rows = self._run()
         size = maximum - minimum + 1
-        self.assertEqual(held, 5, 'owner asked for a 5x held Damage repeat')
+        # OWNER, second pass: five per repeat still felt bad. One at a time,
+        # repeating fast, is the request -- so the MAGNITUDE is one and the
+        # speed lives in the row-local cadence asserted below.
+        self.assertEqual(held, 1, 'owner asked for a 1-step Damage repeat')
         moved = {}
         for start, direction, result in rows:
             moved[(start, direction)] = (result - start) % size
@@ -165,11 +168,37 @@ class VsOptionsDamageStepTests(unittest.TestCase):
             self.assertEqual(moved[(start, -held)], size - held)
 
     def test_the_owner_named_boundary_cases(self):
-        _minimum, _maximum, held, rows = self._run()
+        minimum, maximum, _held, rows = self._run()
         table = {(start, direction): result
                  for start, direction, result in rows}
-        self.assertEqual(table[(198, held)], 52)
-        self.assertEqual(table[(52, -held)], 198)
+        # The wrap law itself, at the only two places it can be observed with
+        # a step of one.
+        self.assertEqual(table[(maximum, 1)], minimum)
+        self.assertEqual(table[(minimum, -1)], maximum)
+
+    def test_damage_repeats_about_ten_a_second(self):
+        """Speed is cadence, not magnitude, and it is row-local."""
+        tics = int(_define(
+            self.text,
+            'NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS').rstrip('uU'))
+        delay = int(_define(
+            self.text,
+            'NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_DELAY').rstrip('uU'))
+        self.assertEqual(tics, 6, '60 Hz / 6 updates is ten steps a second')
+        self.assertGreater(delay, tics,
+                           'a single tap must not immediately auto-repeat')
+        # The row-local path must not touch the shared counter, or every other
+        # screen inherits this rate.
+        start = self.text.index('ndsMenuShellVsOptionsDamageDirection(u32')
+        end = self.text.index('ndsMenuShellVsOptionsDirection(u32', start)
+        self.assertNotIn('sMenuChangeWait', self.text[start:end])
+        dispatch = self.text[end:self.text.index(chr(10) + chr(125), end)]
+        self.assertIn('NDS_MENU_VSOPTIONS_DAMAGE', dispatch)
+        self.assertIn('ndsMenuShellDirection', dispatch)
+        # The adjust call sites must go through the dispatcher, or Damage
+        # silently falls back to the shared cadence.
+        self.assertEqual(
+            self.text.count('ndsMenuShellVsOptionsDirection(held, taps'), 2)
 
     def test_only_the_damage_row_takes_the_larger_step(self):
         """Handicap/Team/Stage branch on the SIGN, so the step is row-local."""

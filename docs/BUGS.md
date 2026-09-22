@@ -12,7 +12,7 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 Main Menus:
 -Make "Characters" and "VS Record" not selectable, "Characters" and "VS Record" work is Owner deferred.
 -VS options
-    -make Damage percentage 5x instead of 3x.
+    -Changing Damage percentage still feels bad to use. maybe have it be 1 at a time but change at like 10 per sec?
 -CSS Bugs still present and need to be fixed:
     -music pauses/reset when rendering new 3d fighter previews (moving around cursor) **8 BGM suspends per visit: the closure loads in ONE frame, 8.6 frames long. Slice it.**
     -delay between cursor hover and 3d fighter preview rendering. **Same cause: the 13-tic dwell debounces a BLOCKING load. 70 tics waited per visit.**

@@ -373,14 +373,64 @@ static void ndsMenuShellPopulateVsOptions(void)
  * adding or subtracting that size after crossing a bound -- it does not clamp.
  * At five that still lands inside the domain from either end: 198 + 5 = 203
  * wraps to 52, and 52 - 5 = 47 wraps to 198. */
-#define NDS_MENU_VSOPTIONS_DAMAGE_HELD_STEP 5
+/* OWNER, 2026-09-21 second pass: five per repeat still felt bad to use. The
+ * request is one at a time, repeating at about ten a second -- so the row moves
+ * through its 151 values smoothly instead of in jumps, and stopping on an exact
+ * number no longer needs a lucky release.
+ *
+ * The magnitude therefore goes back to ONE and the CADENCE carries the speed.
+ * The shared menu repeat is NDS_MENU_REPEAT_WAIT = 12 source updates, about
+ * five a second; ten a second is one step every six. That rate belongs to this
+ * row alone: NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS drives a row-local counter
+ * and `sMenuChangeWait` is left untouched, so row movement and every other
+ * screen keep the cadence they had. The first repeat still waits the full
+ * shared delay, so a single tap stays a single step. */
+#define NDS_MENU_VSOPTIONS_DAMAGE_HELD_STEP 1
 #define NDS_MENU_VSOPTIONS_DEFAULT_HELD_STEP 3
+#define NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS 6
+#define NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_DELAY 12
+
+static u8 sMenuVsOptionsDamageRepeatWait;
 
 static s32 ndsMenuShellVsOptionsHeldStep(void)
 {
     return (sMenuVsOptionsCursor == NDS_MENU_VSOPTIONS_DAMAGE) ?
         NDS_MENU_VSOPTIONS_DAMAGE_HELD_STEP :
         NDS_MENU_VSOPTIONS_DEFAULT_HELD_STEP;
+}
+
+/* Damage's own auto-repeat. Only the direction actually held decrements, and a
+ * fresh tap re-arms the long delay, so this cannot free-run or double-step when
+ * both directions are tested in one update. */
+static u32 ndsMenuShellVsOptionsDamageDirection(u32 held, u32 taps, u32 mask)
+{
+    if ((taps & mask) != 0u)
+    {
+        sMenuVsOptionsDamageRepeatWait =
+            (u8)NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_DELAY;
+        return TRUE;
+    }
+    if ((held & mask) == 0u)
+    {
+        return FALSE;
+    }
+    if (sMenuVsOptionsDamageRepeatWait != 0u)
+    {
+        sMenuVsOptionsDamageRepeatWait--;
+        return FALSE;
+    }
+    sMenuVsOptionsDamageRepeatWait = (u8)NDS_MENU_VSOPTIONS_DAMAGE_REPEAT_TICS;
+    return TRUE;
+}
+
+/* Damage takes the row-local cadence; every other row keeps the shared one. */
+static u32 ndsMenuShellVsOptionsDirection(u32 held, u32 taps, u32 mask)
+{
+    if (sMenuVsOptionsCursor == NDS_MENU_VSOPTIONS_DAMAGE)
+    {
+        return ndsMenuShellVsOptionsDamageDirection(held, taps, mask);
+    }
+    return ndsMenuShellDirection(held, taps, mask);
 }
 
 static void ndsMenuShellVsOptionsAdjust(s32 direction)
@@ -513,12 +563,12 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
         ndsMenuShellVsOptionsSyncRows(NDS_MENU_VSOPTIONS_ROWS);
         ndsUiKitSfx(NDS_UI_KIT_SFX_MOVE);
     }
-    else if (ndsMenuShellDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
+    else if (ndsMenuShellVsOptionsDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
     {
         ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_LEFT) ?
                                     -1 : -ndsMenuShellVsOptionsHeldStep());
     }
-    else if (ndsMenuShellDirection(held, taps, NDS_INPUT_RIGHT) != FALSE)
+    else if (ndsMenuShellVsOptionsDirection(held, taps, NDS_INPUT_RIGHT) != FALSE)
     {
         ndsMenuShellVsOptionsAdjust((taps & NDS_INPUT_RIGHT) ?
                                     1 : ndsMenuShellVsOptionsHeldStep());
