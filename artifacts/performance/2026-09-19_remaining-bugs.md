@@ -2623,3 +2623,50 @@ confirm the Ness preview-pack path stays clean through the attract loop too.
 
 This is a boot smoke test, not an acceptance run: no battle was played and no
 timing was measured.
+
+## 2026-09-22 07:35 -- frozen Fox: the second half of the symptom, measured
+
+Every earlier reading addressed "frozen". None addressed "cannot be hit", which
+is a separate subsystem -- collision, not animation or physics. `FTDamageColl`
+carries `hitstatus`, and `include/ft/fighter.h:2136` gives its values:
+`nGMHitStatusNone = 0`, `Normal = 1`, `Invincible = 2`, `Intangible = 3`. A
+fighter that cannot be hit reads 0, 2 or 3 there.
+
+Eight samples inside one match, human Pikachu (slot 0) versus CPU Fox (slot 1),
+reading `damage_colls[0..5].hitstatus` and `is_damage_coll_modify` for both:
+
+    H01 pres=114 P0 st=10  hs=1,1,1,1,1,1 mod=0 | P1 st=28  hs=1,1,1,1,1,1 mod=0
+    H02 pres=165 P0 st=10  hs=1,1,1,1,1,1 mod=0 | P1 st=33  hs=1,1,1,1,1,1 mod=0
+    H03 pres=216 P0 st=10  hs=1,1,1,1,1,1 mod=0 | P1 st=10  hs=1,1,1,1,1,1 mod=0
+    H04 pres=267 P0 st=69  hs=1,1,1,1,1,1 mod=0 | P1 st=12  hs=1,1,1,1,1,1 mod=0
+    H05 pres=318 P0 st=69  hs=1,1,1,1,1,1 mod=0 | P1 st=225 hs=1,1,1,1,1,1 mod=0
+    H06 pres=369 P0 st=37  hs=1,1,1,1,1,1 mod=0 | P1 st=225 hs=1,1,1,1,1,1 mod=0
+    H07 pres=420 P0 st=10  hs=1,1,1,1,1,1 mod=0 | P1 st=225 hs=1,1,1,1,1,1 mod=0
+    H08 pres=471 P0 st=85  hs=1,1,1,1,1,1 mod=0 | P1 st=10  hs=1,1,1,1,1,1 mod=0
+    END pres=471 loops=3 latch=0/0
+
+**Every hurtbox on both fighters is Normal at every sample**, and Fox's status
+changes seven times across the eight (28, 33, 10, 12, 225, 225, 225, 10).
+
+So both halves of the reported symptom are now refuted by direct measurement
+rather than by absence of evidence:
+
+| half of the symptom | instrument | reading |
+|---|---|---|
+| "frozen" | `status_id` + `status_total_tics`, per slot | changes 7 of 8 samples, tics reset each time |
+| "cannot be hit" | `damage_colls[].hitstatus`, per slot | Normal (1) on all six, all samples |
+| the mechanism that would cause both | `is_ghost` | 0 at every sample |
+
+**The row stays OPEN anyway, and that is deliberate.** Three independent
+measurements failing to reproduce a symptom is not the same as fixing it, and
+this file already carries one refutation of this row that I had to withdraw
+for exactly that overreach. What is now true is narrower and worth stating
+precisely: in a fresh VS match on Dream Land, human Pikachu against a level-2
+CPU Fox, Fox is neither frozen nor unhittable, and the stuck-in-Appear
+mechanism is not present.
+
+What would move it: the stage, the stock/time setting, and whether it happens
+from the first second or only after some event. Sudden death re-creating the
+fighters is still the strongest clue in the report and still points at
+creation-time state, which none of these samples can see because they all
+start after creation succeeded.
