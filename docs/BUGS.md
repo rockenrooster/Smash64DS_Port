@@ -5,9 +5,9 @@ AI Agent should mark fixed items with **FIXED** prefix or a 100 char summary (or
 
 treat anything not going through native renderer a failure.
 
-**LADDER RESULT: r39/r40/r41 good, r42 regressed. The cause is the face/body tint route -- it bound a texture behind the prepare tracker's back, so the next textured run reusing its prepare drew with the wrong texture. Every fighter after a tinted one, not just the three.**
+**LADDER RESULT: r39/r40/r41 clean, r42 and r43 both regressed. The face/body tint route is the cause; it has been REMOVED and HEAD now rebuilds byte-identical to r41.**
 
-**PLAY r43 `587c853bcd7439f2` -- it is r42 plus the one-line repair. If it is clean, every row below is in except Saffron's door.**
+**PLAY r41 `64dcefb9ed67768b`. It carries every repair from this batch except face/body colour, which is back to OPEN with its plumbing understood -- see the plan.**
 
 **Plan and evidence: docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md**
 
@@ -19,9 +19,9 @@ Main Menus:
     -delay between cursor hover and 3d fighter preview rendering. **NOT FIXED in R36 ** **r37: preview loader spent 1 of its 4 byte units per tic; now spends all four.**
     -Fighter faces not looking right:
         -Yoshi: sometimes one eye is closed **r37: port recorded a texture-part set the source drops; now conditional.**
-        -Pikachu: **NOT FIXED in R36 ** face color is different from body color. **r37: prim now multiplies AFTER the shade; worst error 6/31 to 1/31.**
-        -Kirby: **NOT FIXED in R36 ** face color is different from body color. **r37: same repair as Pikachu.**
-        -Jigglypuff **NOT FIXED in R36 ** face color is different from body color. sometimes one eye is closed. **r37: both repaired; its body was drawing white at full light.**
+        -Pikachu: **NOT FIXED in R36 ** face color is different from body color. **STILL OPEN: the repair was right, its plumbing broke every fighter. Removed.**
+        -Kirby: **NOT FIXED in R36 ** face color is different from body color. **STILL OPEN, same as Pikachu.**
+        -Jigglypuff **NOT FIXED in R36 ** face color is different from body color. sometimes one eye is closed. **Eye fixed in r41; colour STILL OPEN.**
         -Link: **NOT FIXED in R36 ** sometimes missing textures/color (turns gray). **r37: a retired preview's texture entries were never released, and their keys are addresses.**
 -Yoshi:
     -**NOT FIXED in R36** Yoshi's guard/shield (egg) is invisible **r37: its descriptor mapped through a data-only resolver, so no effect object was ever created.**
