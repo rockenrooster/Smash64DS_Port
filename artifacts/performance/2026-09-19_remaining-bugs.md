@@ -2443,3 +2443,38 @@ the walk does reach Ness's preview in this harness family. The corroborating
 The published ROM was untouched throughout: `smash64ds.nds` still hashes
 `18cf0cd3aac388fd83bd80838c927d88059a2623df7f022c0b478541d6f9036c`, identical
 to `builds/remaining-bugs-playtest-r35/`.
+
+## 2026-09-22 06:00 -- Ness confirmed per fighter, and the tour prices the hover-delay row
+
+Second run on the same walk ROM, reading the CSS tour's own coverage masks.
+`ndsMenuShellCssWalkTourStep` parks on each kind for
+`NDS_CSS_WALK_TOUR_HOLD_TICS = 24`, baselines the P0 hardware triangle count,
+and sets a bit in `DrewMask` only if that kind's preview added triangles. The
+declaring comment states the intent: *"A bit set in Kind but clear in Drew is a
+fighter whose preview is invisible, which is the whole point of the tour."*
+
+    CSSTOUR kindMask=0x00000fff drewMask=0x00000c13
+    PREVIEW loads=147 packFail=0 failKind=0 commit=147 cancel=74 validateCode=0
+    END loops=13
+
+**Ness is confirmed at the fighter level.** `kindMask` 0xFFF is bits 0..11, so
+the tour parked on all twelve fighters including Ness (bit 11). `drewMask`
+0xC13 is bits 0, 1, 4, 10 and 11 -- Mario, Fox, Luigi, Purin and **Ness**. So
+Ness's preview was selected, loaded and DREW, with zero pack failures and a
+validator reject code of 0. Before the fix that same preview reached
+`ndsPreviewPackLoadHalt(20)`. That closes the Ness row at runtime, per
+fighter, not just "nothing hung".
+
+**And the same masks price the owner's deferred hover-delay row.** Seven kinds
+are in `kindMask` but not `drewMask`: Donkey (2), Samus (3), Link (5), Yoshi
+(6), Captain (7), Kirby (8) and Pikachu (9). Read that carefully -- it is NOT
+seven invisible previews. The tour holds only 24 tics and the loader is
+resumable, and this run cancelled 74 transactions against 147 commits, so a
+clear bit here means *this preview did not finish inside 24 tics*, which is
+the hover-delay row ("delay between cursor hover and 3d fighter preview
+rendering", owner-deferred) measured per fighter for the first time. Five
+fighters make the 24-tic window and seven do not, and the seven are named.
+
+That is a lead for that row rather than a defect in this one. Whoever takes it
+should raise `NDS_CSS_WALK_TOUR_HOLD_TICS` and re-read the masks: the dwell at
+which each of the seven starts drawing IS its load time in tics.
