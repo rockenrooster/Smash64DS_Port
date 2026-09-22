@@ -5998,3 +5998,34 @@ target with the feature you need is not the same as the shipping target with
 the feature added. `NDS_P2_MENU_WALK` is a parameter of the ordinary build; the
 walk TARGET carries thirteen other overrides. Reach for the flag, not the
 target.
+
+### The frozen matrix I nearly published, and why it was not one
+
+Probe 7, shipping config, three samples across an open-to-closed transition:
+
+    BIND=21 DOBJ=24
+    GATEC1=36200364 BD17=36200364 BD18=36200500 BD19=36200636 BD20=36200772
+    GATEZ=330.000000  W17z=1204882
+    GATEZ=330.000000  W17z=1204882
+    GATEZ=-0.000001   W17z=1204882
+
+Binding 17's DObj IS the gate's first child (`BD17 == GATEC1`), the DObj
+animates through its full range, and `binding_world[17]` never moves. That
+reads exactly like a frozen matrix on the moving joint, which is the shape this
+row has been looking for all day.
+
+**It is not the draw path.** `workspace->binding_world[]` has exactly one
+consumer, and it is inside `#if NDS_RENDERER_M3_PHASE0_PROFILE`
+(`renderer_adapter_stage.c:3160-3168`), where it is the capture-time snapshot
+that a diagnostic memcmp compares against a freshly built matrix to DISCOVER
+which bindings are dynamic. Being stale is its job. The per-frame matrix is
+`binding_composed[]`, written by
+`ndsRendererAdapterPrepareNativeStageBindingMatrix` from the live DObj through
+`ndsRendererAdapterPrepareInitialMatrices`, and the owner consumes
+`sNdsNativeStageOwnerExecution.binding_world[]`, which is a different array in
+a different struct that happens to share the name.
+
+So the reading was real and the conclusion would have been wrong. That would
+have been the fourth wrong claim on this row in one day, and the only thing
+that stopped it was checking who reads the field before deciding what its value
+means. Two arrays named `binding_world` in two structs is a trap worth naming.
