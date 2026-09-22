@@ -5180,3 +5180,47 @@ concrete: a copy loads two eager hat details of about 8,556 bytes each, so
 free-min should fall from the measured 32,504 to roughly 14,000 and cross the
 25,600 `ifCommonSetMaxNumGObj` floor -- the first measurement tonight that
 would.
+
+### The Kirby-copy harness builds again: three guards, one condition
+
+`NDS_P2_KIRBY_COPYLINK_PROOF` now links. The condition
+`NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER ||
+NDS_P2_COMPACT_BATTLE_FIGHTERS` appears at **three** sites that must agree, and
+only widening all three fixes it:
+
+1. `include/nds/nds_preview_pack.h` -- the declarations.
+2. `reloc_backend_assets.c` -- `#include "reloc_preview_pack.c"`, the DEFINITION.
+3. `reloc_backend_assets.c` (earlier) -- forward declarations whose `#else` arm
+   defines `ndsRelocNativeSourceSize` as a **macro**.
+
+Site 3 is the trap. Widen 1 and 2 without it and the real function compiles
+while the macro is still defined, so the function's own definition becomes a
+macro expansion: `reloc_preview_pack.c:138: expected identifier or '(' before
+'const'`. The error points at the definition and says nothing about the macro.
+
+All three now read `... || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES &&
+(NDS_RENDERER_PROFILE_LEVEL < 2))`, because two callers arrive from outside the
+roster flags: the VS CSS compact preview transaction (renderer condition) and
+`wpManagerMakeWeapon`'s Yoshi egg root mapping (`NDS_P2_YOSHI`).
+
+**A named macro was tried first and is the wrong tool here.** `#define
+NDS_PREVIEW_PACK_PRESENT (...)` in the header, referenced at the other two
+sites, fails because `reloc_backend_assets.c` does not include that header at
+the guard, and an undefined macro in `#if` is silently `0` -- so the definition
+vanished instead of appearing. That is a quieter version of the original bug.
+Spelled-out conditions with a comment naming the other two sites is the lesser
+evil until a checker exists.
+
+**Inert where it already worked:** the shipping config satisfies the old
+condition, and two default rebuilds reproduce r32's hash `594EB9BA...` exactly.
+
+Also needed, and worth knowing before trying this: `NDS_P2_DONKEY=1 requires
+NDS_P2_LUIGI=1 so native-owner slots stay dense` (Makefile:809), so the copy
+proof wants the full roster rather than Kirby plus Link.
+
+**Still short of driving a copy.** The proof ROM boots Kirby vs Link and runs --
+6,903 presented frames, free-min 130,100, latch never fired -- but
+`gNdsNativeKirbyHatTableHits` stays 0,0 and only 8 animations resolve, so the
+fighters are idle: the descriptor sets the roster, and the inhale needs the
+controller playback that `probe-kirby-copylink-owner.ps1` sets up. Adapting
+that probe is the next step, and it is now unblocked.

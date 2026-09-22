@@ -916,7 +916,14 @@ typedef struct NDSRelocLoadedFile {
     u8 reserved[3];
 } NDSRelocLoadedFile;
 
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+/* THIRD SITE OF THE SAME CONDITION, and it must move with the other two: the
+ * declarations in nds_preview_pack.h and the `#include "reloc_preview_pack.c"`
+ * below. The `#else` arm here defines ndsRelocNativeSourceSize as a MACRO, so a
+ * configuration that compiles the real function while leaving this narrow
+ * turns that function's own definition into a macro expansion and fails with
+ * "expected identifier or '(' before 'const'" inside reloc_preview_pack.c --
+ * which is how this third site was found. */
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
 static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
                                u32 source_offset, u32 size, u32 *out_offset);
 static u32 ndsRelocNativeSourceSize(const NDSRelocLoadedFile *loaded);
@@ -15681,7 +15688,15 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
     return (u8 *)file + offset;
 }
 
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+/* KEEP THIS IDENTICAL TO THE DECLARATION GUARD in nds_preview_pack.h.
+ * Two callers arrive from outside the roster flags: the VS CSS compact
+ * preview transaction (a RENDERER condition) and wpManagerMakeWeapon's
+ * Yoshi egg root mapping under NDS_P2_YOSHI. The second is what stopped
+ * NDS_P2_KIRBY_COPYLINK_PROOF -- the only scripted Kirby inhale in the
+ * tree -- from linking. Spelled out rather than hidden behind a macro:
+ * this file does not include that header here, and an undefined macro in
+ * an #if is silently 0, which is a quieter version of the same bug. */
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
 #include "reloc_preview_pack.c"
 #else
 const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,

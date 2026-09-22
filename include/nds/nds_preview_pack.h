@@ -90,7 +90,7 @@ _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
  * condition identical to NDS_PLAYERS_VS_COMPACT_PREVIEW's -- if that moves,
  * this must move with it, or the same break comes back in a different
  * configuration. */
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER ||     NDS_P2_COMPACT_BATTLE_FIGHTERS ||     (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
 
 /* Resumable form of the same compact load, for the character-select preview
