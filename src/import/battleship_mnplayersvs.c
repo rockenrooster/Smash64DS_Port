@@ -110,11 +110,41 @@ static sb32 sNdsPlayersVSPreviewRulesReady;
 #define NDS_PLAYERS_VS_RESIDENT_BLOCKS GMCOMMON_PLAYERS_MAX
 #define NDS_PLAYERS_VS_LOAD_CHUNK_BYTES (8u * 1024u)
 #define NDS_PLAYERS_VS_LOAD_CHUNK_NODES 4u
-/* A portrait cell is 45 source pixels wide and the live cursor advances four
- * pixels per CSS tic. At full-speed browsing one cell can therefore remain the
- * requested kind for at most 12 consecutive tics. Requiring a 13th means an
- * uninterrupted pass across the roster never starts a fighter closure load. */
-#define NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS 13u
+/* M03. ONE aggregate read/decode span per CSS update, shared by all four
+ * slots -- not a budget each. The compact transaction spends it in units of
+ * NDS_PLAYERS_VS_LOAD_STEP_BYTES, so no single work unit inside the loader can
+ * hold the main thread (and therefore the filesystem mutex the BGM refill
+ * needs) for longer than one such unit. The shell loop's own per-frame
+ * ndsAudioBgmUpdate is what services the stream between units; the preview
+ * path no longer suspends the track at all.
+ *
+ * Sizing: the largest shipped preview pack is Link's at 32,032 data bytes, so
+ * 8 KiB per update finishes its read in four updates while leaving the frame's
+ * own work room. Both values are deliberately named so a measurement can move
+ * the aggregate without changing the unit that bounds the audio gap. */
+#define NDS_PLAYERS_VS_PREVIEW_SERVICE_BYTES (8u * 1024u)
+#define NDS_PLAYERS_VS_LOAD_STEP_BYTES (2u * 1024u)
+/* M04. The 13-tic dwell existed only to stop a full-speed roster pass from
+ * starting a BLOCKING closure it would immediately regret: a 45-pixel portrait
+ * cell at 4 pixels per tic is at most 12 consecutive tics of one kind. With the
+ * load sliced and cancellable, an abandoned request now costs at most the units
+ * already spent, so stabilization only has to reject genuine cursor transit.
+ * Two stable updates is the candidate value to measure; a kind that is already
+ * resident pays one, because reusing a warm block moves no bytes at all. */
+#define NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS 2u
+#define NDS_PLAYERS_VS_PREVIEW_DWELL_WARM_TICKS 1u
+
+/* Stages of the compact transaction AFTER its pack has been read, decoded and
+ * relocated. Each is one aggregate action, so two of them never land on the
+ * same update. READY is not a stage: it is the commit the caller performs. */
+enum {
+    NDS_PLAYERS_VS_PREPARE_COMMIT = 0, /* owner boundary: publish + capacity */
+    NDS_PLAYERS_VS_PREPARE_ANIM_IDLE,
+    NDS_PLAYERS_VS_PREPARE_ANIM_SELECTED,
+    NDS_PLAYERS_VS_PREPARE_OWNER_HIGH,
+    NDS_PLAYERS_VS_PREPARE_OWNER_LOW,
+    NDS_PLAYERS_VS_PREPARE_READY
+};
 
 typedef enum NDSPlayersVSResidentAcquireResult {
     nNDSPlayersVSResidentAcquireFail = 0,
@@ -143,6 +173,12 @@ typedef struct NDSPlayersVSResidentBlock {
     s32 loading_fkind;
     sb32 load_tree_done;
     sb32 cancel_requested;
+    /* Transaction identity. `load_stage` walks the post-closure preparation
+     * one action at a time; `load_generation` is the taskman resource
+     * generation the transaction was opened against, so a completion that
+     * outlived a scene rewind is rejected instead of published. */
+    u32 load_stage;
+    u32 load_generation;
 } NDSPlayersVSResidentBlock;
 
 typedef struct NDSPlayersVSPreviewPending {
@@ -150,7 +186,16 @@ typedef struct NDSPlayersVSPreviewPending {
     u32 stable_tics;
     sb32 seen_request;
     sb32 acquire_pending;
+    /* M04 measures selection-change -> first correct visible preview, which is
+     * stabilization plus load and must be reported per warm/cold class. Count
+     * the source updates the request waited and which class it started in. */
+    u32 request_updates;
+    sb32 request_warm;
 } NDSPlayersVSPreviewPending;
+
+/* Upper bounds, in source updates, of buckets 0..6; bucket 7 is everything
+ * above. A capture reads the two rows and computes P50/P95 directly. */
+#define NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS 8u
 
 static const u32 sNdsPlayersVSSharedResidentAssetIDs[] = {
     0x0c9u, 0x129u, 0x12au, 0x12bu,
@@ -176,6 +221,14 @@ static NDSPlayersVSPreviewPending
  * syncs. After the entry sync, permit at most one physical residency action
  * (one zero-ref retirement OR one closure load) across all four slots. */
 static u32 sNdsPlayersVSPreviewResidencyActionBudget;
+/* The aggregate read/decode span the whole screen may still spend this update.
+ * Stepping an in-flight closure spends bytes; structural actions (begin,
+ * retire, cancel, one preparation stage) spend the action budget above. */
+static u32 sNdsPlayersVSPreviewServiceByteBudget;
+/* Entry construction runs before CSS BGM starts and is a declared load frame,
+ * so the four initial previews may still be driven to completion there. Every
+ * live browsing update afterwards is bounded. */
+static sb32 sNdsPlayersVSPreviewEntryDrain;
 static sb32 sNdsPlayersVSPreviewEntrySyncPending;
 /* A completed closure transaction can discover a deterministic resource
  * failure (required animation/data/owner image). Repeating the same full load
@@ -238,6 +291,23 @@ volatile u32 gNdsPlayersVSPreviewDwellRequestCount;
 volatile u32 gNdsPlayersVSPreviewDwellSkipCount;
 volatile u32 gNdsPlayersVSPreviewDwellHoldTicCount;
 volatile u32 gNdsPlayersVSPreviewDwellCommitCount;
+/* M03/M04 transaction telemetry. ServiceStepCount is how many bounded units
+ * the screen ran; ServiceByteMax is the largest span any single unit moved and
+ * is the number that bounds the audio gap. StaleCommitRejectCount must stay at
+ * zero unless a scene rewind raced a completion. WarmCommitCount separates a
+ * cache reuse from a cold load in the latency measurement. */
+volatile u32 gNdsPlayersVSPreviewServiceStepCount;
+volatile u32 gNdsPlayersVSPreviewServiceByteMax;
+volatile u32 gNdsPlayersVSPreviewServiceUpdateByteMax;
+volatile u32 gNdsPlayersVSPreviewStaleCommitRejectCount;
+volatile u32 gNdsPlayersVSPreviewWarmCommitCount;
+volatile u32 gNdsPlayersVSPreviewPrepareStageCount;
+volatile u32 gNdsPlayersVSPreviewLatencyWarmBuckets
+    [NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS];
+volatile u32 gNdsPlayersVSPreviewLatencyColdBuckets
+    [NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS];
+volatile u32 gNdsPlayersVSPreviewLatencyWarmMax;
+volatile u32 gNdsPlayersVSPreviewLatencyColdMax;
 static u32 sNdsPlayersVSPreviewDrawPhase;
 volatile u32 gNdsPlayersVSPreviewFrameCount;
 volatile u32 gNdsPlayersVSPreviewDrawCount;
@@ -294,6 +364,72 @@ static void ndsMNPlayersVSPreviewMarkPermanentFailure(s32 fkind)
     }
 }
 
+/* fkind -> generated native owner-image slot. Mario and Fox draw from their
+ * compiled-in tables and own no loadable image, so they answer FALSE and the
+ * two owner stages become no-ops for them -- the same outcome the per-kind
+ * ladder this replaces produced by falling through to its tail. */
+static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
+{
+#define NDS_CSS_OWNER_IMAGE_SLOT(kind_, slot_)                                 \
+    if (fkind == (kind_))                                                      \
+    {                                                                          \
+        *out_slot = (slot_);                                                   \
+        return TRUE;                                                           \
+    }
+#if NDS_P2_LUIGI
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindLuigi, NDS_NATIVE_IMAGE_SLOT_LUIGI)
+#endif
+#if NDS_P2_DONKEY
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindDonkey, NDS_NATIVE_IMAGE_SLOT_DONKEY)
+#endif
+#if NDS_P2_CAPTAIN
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindCaptain, NDS_NATIVE_IMAGE_SLOT_CAPTAIN)
+#endif
+#if NDS_P2_SAMUS
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindSamus, NDS_NATIVE_IMAGE_SLOT_SAMUS)
+#endif
+#if NDS_P2_LINK
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindLink, NDS_NATIVE_IMAGE_SLOT_LINK)
+#endif
+#if NDS_P2_PIKACHU
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindPikachu, NDS_NATIVE_IMAGE_SLOT_PIKACHU)
+#endif
+#if NDS_P2_YOSHI
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindYoshi, NDS_NATIVE_IMAGE_SLOT_YOSHI)
+#endif
+#if NDS_P2_NESS
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindNess, NDS_NATIVE_IMAGE_SLOT_NESS)
+#endif
+#if NDS_P2_PURIN
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindPurin, NDS_NATIVE_IMAGE_SLOT_PURIN)
+#endif
+#if NDS_P2_KIRBY
+    NDS_CSS_OWNER_IMAGE_SLOT(nFTKindKirby, NDS_NATIVE_IMAGE_SLOT_KIRBY)
+#endif
+#undef NDS_CSS_OWNER_IMAGE_SLOT
+    (void)out_slot;
+    return FALSE;
+}
+
+/* One owner image is one preparation stage: it is the largest single read the
+ * transaction still makes (30,160 bytes for Kirby's high-detail image), so the
+ * two details never share an update. */
+static sb32 ndsMNPlayersVSPreviewEnsureOwnerImage(s32 fkind, u32 detail)
+{
+    u32 slot;
+
+    if (ndsMNPlayersVSPreviewOwnerImageSlot(fkind, &slot) == FALSE)
+    {
+        return TRUE;
+    }
+    if (ndsRendererNativeEnsureOwnerImage(slot, detail) == FALSE)
+    {
+        gNdsPlayersVSPreviewResidentOwnerFailMask |= 1u << fkind;
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static sb32 ndsMNPlayersVSPreviewPreloadAnimFile(
     const void *file_id, SYMallocRegion *anim_region)
 {
@@ -310,8 +446,11 @@ static sb32 ndsMNPlayersVSPreviewPreloadAnimFile(
     return loaded;
 }
 
-static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(
-    s32 fkind, SYMallocRegion *anim_region)
+/* One preparation stage. Every stage is independently resumable: it reads only
+ * FTData and the caches, and either succeeds outright or records its own
+ * failure mask, so a transaction may yield between any two of them. */
+static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
+    s32 fkind, SYMallocRegion *anim_region, u32 stage)
 {
     FTData *data;
     const void *initial_anim_file;
@@ -333,6 +472,19 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(
         gNdsPlayersVSPreviewResidentMainFailMask |= kind_bit;
         return FALSE;
     }
+    if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_HIGH)
+    {
+        return ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 0u);
+    }
+    if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_LOW)
+    {
+        if (ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 1u) == FALSE)
+        {
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
 
     /* ftManagerMakeFighter gives demo fighters nFTDemoStatusNull before the CSS
      * applies its Selected status. BattleShip maps that to Opening2/submotion 0.
@@ -345,14 +497,18 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(
         gNdsPlayersVSPreviewResidentSubmotionFailMask |= kind_bit;
         return FALSE;
     }
-    initial_anim_file = (const void *)(uintptr_t)
-        data->submotion->motion_desc[0].anim_file_id;
-    if ((initial_anim_file == NULL) ||
-        (ndsMNPlayersVSPreviewPreloadAnimFile(initial_anim_file, anim_region) ==
-         FALSE))
+    if (stage == NDS_PLAYERS_VS_PREPARE_ANIM_IDLE)
     {
-        gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
-        return FALSE;
+        initial_anim_file = (const void *)(uintptr_t)
+            data->submotion->motion_desc[0].anim_file_id;
+        if ((initial_anim_file == NULL) ||
+            (ndsMNPlayersVSPreviewPreloadAnimFile(initial_anim_file,
+                                                  anim_region) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
+            return FALSE;
+        }
+        return TRUE;
     }
     /* mnPlayersVSGetStatusSelected chooses the demo pose scSubsysFighterSetStatus
      * applies once the puck lands (mnplayersvs.c:1553-1593): Win1..Win4 select
@@ -393,159 +549,29 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(
         }
     }
 
-#if NDS_P2_LUIGI
-    if (fkind == nFTKindLuigi)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_LUIGI, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_LUIGI, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_DONKEY
-    if (fkind == nFTKindDonkey)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_DONKEY, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_DONKEY, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_CAPTAIN
-    if (fkind == nFTKindCaptain)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_CAPTAIN, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_CAPTAIN, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_SAMUS
-    if (fkind == nFTKindSamus)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_SAMUS, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_SAMUS, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_LINK
-    if (fkind == nFTKindLink)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_LINK, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_LINK, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_PIKACHU
-    if (fkind == nFTKindPikachu)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_PIKACHU, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_PIKACHU, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_YOSHI
-    if (fkind == nFTKindYoshi)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_YOSHI, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_YOSHI, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_NESS
-    if (fkind == nFTKindNess)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_NESS, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_NESS, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_PURIN
-    if (fkind == nFTKindPurin)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_PURIN, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_PURIN, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-#if NDS_P2_KIRBY
-    if (fkind == nFTKindKirby)
-    {
-        if ((ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_KIRBY, 0u) == FALSE) ||
-            (ndsRendererNativeEnsureOwnerImage(
-                 NDS_NATIVE_IMAGE_SLOT_KIRBY, 1u) == FALSE))
-        {
-            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
-            return FALSE;
-        }
-        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
-        return TRUE;
-    }
-#endif
-    gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }
+
+#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
+/* The source/oracle profiles still want the whole preparation in one call; the
+ * stages are the same stages and run in the same order. */
+static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(
+    s32 fkind, SYMallocRegion *anim_region)
+{
+    u32 stage;
+
+    for (stage = NDS_PLAYERS_VS_PREPARE_ANIM_IDLE;
+         stage < NDS_PLAYERS_VS_PREPARE_READY; stage++)
+    {
+        if (ndsMNPlayersVSPreviewPrepareResidentStage(fkind, anim_region,
+                                                       stage) == FALSE)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+#endif
 
 #if NDS_PLAYERS_VS_COMPACT_PREVIEW
 static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
@@ -662,6 +688,8 @@ static sb32 ndsMNPlayersVSPreviewOwnerImagesFit(
 
 static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 {
+    u32 i;
+
     gNdsPlayersVSPreviewResidentPrepareMask = 0u;
     gNdsPlayersVSPreviewResidentReadyMask = 0u;
     gNdsPlayersVSPreviewResidentMainFailMask = 0u;
@@ -693,6 +721,19 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
     gNdsPlayersVSPreviewDwellSkipCount = 0u;
     gNdsPlayersVSPreviewDwellHoldTicCount = 0u;
     gNdsPlayersVSPreviewDwellCommitCount = 0u;
+    gNdsPlayersVSPreviewServiceStepCount = 0u;
+    gNdsPlayersVSPreviewServiceByteMax = 0u;
+    gNdsPlayersVSPreviewServiceUpdateByteMax = 0u;
+    gNdsPlayersVSPreviewStaleCommitRejectCount = 0u;
+    gNdsPlayersVSPreviewWarmCommitCount = 0u;
+    gNdsPlayersVSPreviewPrepareStageCount = 0u;
+    gNdsPlayersVSPreviewLatencyWarmMax = 0u;
+    gNdsPlayersVSPreviewLatencyColdMax = 0u;
+    for (i = 0u; i < NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS; i++)
+    {
+        gNdsPlayersVSPreviewLatencyWarmBuckets[i] = 0u;
+        gNdsPlayersVSPreviewLatencyColdBuckets[i] = 0u;
+    }
 }
 
 void ndsMNPlayersClearPreviewFighterFiles(s32 fkind)
@@ -771,6 +812,9 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
         sNdsPlayersVSResidentBlocks[i].loading_fkind = nFTKindNull;
         sNdsPlayersVSResidentBlocks[i].load_tree_done = FALSE;
         sNdsPlayersVSResidentBlocks[i].cancel_requested = FALSE;
+        sNdsPlayersVSResidentBlocks[i].load_stage =
+            NDS_PLAYERS_VS_PREPARE_COMMIT;
+        sNdsPlayersVSResidentBlocks[i].load_generation = 0u;
     }
 
     previous = ndsTaskmanSwapMallocRegion(&sNdsPlayersVSSharedResidentArena);
@@ -810,6 +854,8 @@ static void ndsMNPlayersVSPreviewResetResidentLoadState(
     block->loading_fkind = nFTKindNull;
     block->load_tree_done = FALSE;
     block->cancel_requested = FALSE;
+    block->load_stage = NDS_PLAYERS_VS_PREPARE_COMMIT;
+    block->load_generation = 0u;
 }
 
 static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
@@ -822,7 +868,17 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
         return FALSE;
     }
     fkind = block->loading_fkind;
+    /* Drop the transaction's own state FIRST: the compact form owns an open
+     * file handle and a staged completion, and both must be gone before the
+     * arena underneath them is reset. The raw-tree form owns only its cursor.
+     * Everything after this line -- temporary registrations, native owner
+     * staging, the heap range and the block arena -- is released identically
+     * for a cancelled load and a retired one. */
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    ndsRelocPreviewFighterLoadCancel(block->load_cursor, fkind);
+#else
     ndsRelocExternTreeSliceCancel(block->load_cursor);
+#endif
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
@@ -973,20 +1029,257 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     return TRUE;
 }
 
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+/* Release everything a partially built transaction owns. This is the same
+ * sequence the successful path never runs and the cancel path always runs; it
+ * is written out here rather than shared with CancelResidentLoad because that
+ * helper is keyed on `load_cursor`, which COMMIT has already consumed. */
+static void ndsMNPlayersVSPreviewAbandonCompactLoad(
+    NDSPlayersVSResidentBlock *block, s32 fkind)
+{
+    ndsMNPlayersClearPreviewFighterFiles(fkind);
+    ndsRelocReleasePreviewFighter(fkind);
+    ndsRendererNativeReleaseOwnerImagesInRange(
+        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    syMallocReset(&block->arena);
+    ndsMNPlayersVSPreviewResetResidentLoadState(block);
+}
+
+/* The compact transaction: REQUEST -> READ/DECODE/RELOCATE -> COMMIT ->
+ * PREPARE -> READY.
+ *
+ * Every return point has already restored the caller's malloc region, and
+ * nothing this builds is reachable as an authoritative global fighter-file
+ * pointer until COMMIT runs ftManagerSetupFilesAllKind, which publishes the
+ * whole closure at the source's own owner boundary. The BGM fence the
+ * single-call form wrapped around all of this is gone: no unit below can hold
+ * the main thread -- and therefore the filesystem mutex a stream refill needs
+ * -- for longer than one bounded span. */
+static NDSPlayersVSResidentAcquireResult
+ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
+                                        s32 fkind)
+{
+    FTData *data;
+    SYMallocRegion *previous;
+    u32 payload_before;
+    u32 payload_delta;
+    u32 step_bytes;
+    u32 unit_bytes = 0u;
+    u32 budget;
+    s32 step;
+    sb32 drain = sNdsPlayersVSPreviewEntryDrain;
+    sb32 ok;
+
+    if (block->load_cursor == NULL)
+    {
+        /* REQUEST. Opening the transaction reads the pack header and section
+         * table -- under 200 bytes -- and moves no payload. A cursor that is
+         * abandoned on the next update therefore costs nothing but the open. */
+        if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+        sNdsPlayersVSPreviewResidencyActionBudget--;
+        data = dFTManagerDataFiles[fkind];
+        gNdsPlayersVSPreviewAcquireLoadCount++;
+        syMallocReset(&block->arena);
+        previous = ndsTaskmanSwapMallocRegion(&block->arena);
+        block->load_cursor = (data != NULL) ?
+            ndsRelocPreviewFighterLoadBegin(fkind) : NULL;
+        ndsTaskmanSwapMallocRegion(previous);
+        if (block->load_cursor == NULL)
+        {
+            ndsRelocReleaseHeapRange(block->base,
+                                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+            syMallocReset(&block->arena);
+            ndsMNPlayersVSPreviewResetResidentLoadState(block);
+            ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
+            gNdsPlayersVSPreviewAcquireFailCount++;
+            gNdsPlayersVSPreviewAcquireLoadFinishCount++;
+            return nNDSPlayersVSResidentAcquireFail;
+        }
+        block->loading_fkind = fkind;
+        block->load_root = NULL;
+        block->load_tree_done = FALSE;
+        block->cancel_requested = FALSE;
+        block->load_stage = NDS_PLAYERS_VS_PREPARE_COMMIT;
+        block->load_generation = gNdsTaskmanHeapGeneration;
+        gNdsPlayersVSPreviewAcquireRetryCount++;
+        return nNDSPlayersVSResidentAcquireRetry;
+    }
+
+    if (block->load_generation != gNdsTaskmanHeapGeneration)
+    {
+        /* A scene rewind ran under an in-flight transaction: its arena and
+         * every pointer it built belong to the previous generation, so this
+         * completion is stale and must never reach a slot. */
+        gNdsPlayersVSPreviewStaleCommitRejectCount++;
+        (void)ndsMNPlayersVSPreviewCancelResidentLoad(block);
+        gNdsPlayersVSPreviewAcquireFailCount++;
+        return nNDSPlayersVSResidentAcquireFail;
+    }
+
+    if (block->load_tree_done == FALSE)
+    {
+        budget = NDS_PLAYERS_VS_LOAD_STEP_BYTES;
+        if (drain == FALSE)
+        {
+            if (sNdsPlayersVSPreviewServiceByteBudget == 0u)
+            {
+                gNdsPlayersVSPreviewAcquireRetryCount++;
+                return nNDSPlayersVSResidentAcquireRetry;
+            }
+            if (budget > sNdsPlayersVSPreviewServiceByteBudget)
+            {
+                budget = sNdsPlayersVSPreviewServiceByteBudget;
+            }
+        }
+        payload_before = gNdsRelocAssetPayloadReadCount;
+        previous = ndsTaskmanSwapMallocRegion(&block->arena);
+        do
+        {
+            step_bytes = 0u;
+            step = ndsRelocPreviewFighterLoadStep(block->load_cursor,
+                                                  (drain != FALSE) ? 0u : budget,
+                                                  &step_bytes);
+            gNdsPlayersVSPreviewServiceStepCount++;
+            unit_bytes += step_bytes;
+            if (step_bytes > gNdsPlayersVSPreviewServiceByteMax)
+            {
+                gNdsPlayersVSPreviewServiceByteMax = step_bytes;
+            }
+        } while ((drain != FALSE) && (step == NDS_PREVIEW_PACK_STEP_IN_PROGRESS));
+        ndsTaskmanSwapMallocRegion(previous);
+        if (drain == FALSE)
+        {
+            sNdsPlayersVSPreviewServiceByteBudget =
+                (sNdsPlayersVSPreviewServiceByteBudget > unit_bytes) ?
+                    (sNdsPlayersVSPreviewServiceByteBudget - unit_bytes) : 0u;
+        }
+        payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
+        gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
+        if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
+        {
+            gNdsPlayersVSPreviewAcquirePayloadReadMax = payload_delta;
+        }
+        gNdsPlayersVSPreviewAcquireTreePayloadByteCount += unit_bytes;
+        if (unit_bytes > gNdsPlayersVSPreviewAcquireTreePayloadByteMax)
+        {
+            gNdsPlayersVSPreviewAcquireTreePayloadByteMax = unit_bytes;
+        }
+        if (step == NDS_PREVIEW_PACK_STEP_FAIL)
+        {
+            (void)ndsMNPlayersVSPreviewCancelResidentLoad(block);
+            ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
+            gNdsPlayersVSPreviewAcquireFailCount++;
+            return nNDSPlayersVSResidentAcquireFail;
+        }
+        if (step != NDS_PREVIEW_PACK_STEP_DONE)
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+        block->load_tree_done = TRUE;
+        if (drain == FALSE)
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+    }
+
+    while (block->load_stage != NDS_PLAYERS_VS_PREPARE_READY)
+    {
+        if ((drain == FALSE) &&
+            (sNdsPlayersVSPreviewResidencyActionBudget == 0u))
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+        if (drain == FALSE)
+        {
+            sNdsPlayersVSPreviewResidencyActionBudget--;
+        }
+        gNdsPlayersVSPreviewPrepareStageCount++;
+        payload_before = gNdsRelocAssetPayloadReadCount;
+        previous = ndsTaskmanSwapMallocRegion(&block->arena);
+        if (block->load_stage == NDS_PLAYERS_VS_PREPARE_COMMIT)
+        {
+            /* The owner boundary, run exactly once and never in a loop: the
+             * staged closure is published here, the particle bank is created
+             * by the source's own guarded path, and the block is proven to
+             * still have room for both native owner images. */
+            data = dFTManagerDataFiles[fkind];
+            if (data != NULL)
+            {
+                ftManagerSetupFilesAllKind(fkind);
+            }
+            ok = ((data != NULL) && (data->p_file_main != NULL) &&
+                  (*data->p_file_main != NULL) &&
+                  (data->p_file_model != NULL) &&
+                  (*data->p_file_model != NULL)) ? TRUE : FALSE;
+            if ((ok != FALSE) &&
+                (ndsMNPlayersVSPreviewOwnerImagesFit(block, fkind) == FALSE))
+            {
+                gNdsPlayersVSPreviewResidentCapacityFailCount++;
+                ok = FALSE;
+            }
+        }
+        else
+        {
+            ok = ndsMNPlayersVSPreviewPrepareResidentStage(fkind, previous,
+                                                            block->load_stage);
+        }
+        ndsTaskmanSwapMallocRegion(previous);
+        payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
+        gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
+        if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
+        {
+            gNdsPlayersVSPreviewAcquirePayloadReadMax = payload_delta;
+        }
+        if (ok == FALSE)
+        {
+            ndsMNPlayersVSPreviewAbandonCompactLoad(block, fkind);
+            ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
+            gNdsPlayersVSPreviewAcquireFailCount++;
+            gNdsPlayersVSPreviewAcquireLoadFinishCount++;
+            return nNDSPlayersVSResidentAcquireFail;
+        }
+        block->load_stage++;
+        if ((drain == FALSE) &&
+            (block->load_stage != NDS_PLAYERS_VS_PREPARE_READY))
+        {
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+    }
+
+    /* READY. Asset closure, native owner, textures, first pose and reference
+     * ownership are all in place before the block names its kind, so no slot
+     * can ever draw a half-relocated preview. */
+    block->fkind = fkind;
+    block->refs = 1u;
+    ndsMNPlayersVSPreviewResetResidentLoadState(block);
+    gNdsPlayersVSPreviewAcquireLoadFinishCount++;
+    return nNDSPlayersVSResidentAcquireReady;
+}
+#endif
+
 static NDSPlayersVSResidentAcquireResult
 ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
 {
     NDSPlayersVSResidentBlock *block = NULL;
     NDSPlayersVSResidentBlock *victim = NULL;
+#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
     FTData *data;
     SYMallocRegion *previous;
     u32 payload_before;
     u32 payload_delta;
-#if !NDS_PLAYERS_VS_COMPACT_PREVIEW
     u32 payload_bytes = 0u;
     s32 slice_result;
-#endif
     sb32 prepared;
+#endif
     u32 i;
 
     if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd) ||
@@ -1016,6 +1309,9 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
                 gNdsPlayersVSPreviewAcquireCachedHitCount++;
             }
             candidate->refs++;
+            /* M04's warm case: a ready block is reused in this same update,
+             * with no byte moved and no action spent. */
+            gNdsPlayersVSPreviewWarmCommitCount++;
             return nNDSPlayersVSResidentAcquireReady;
         }
         if (candidate->load_cursor != NULL)
@@ -1072,6 +1368,14 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         gNdsPlayersVSPreviewAcquireRetryCount++;
         return nNDSPlayersVSResidentAcquireRetry;
     }
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+    /* Native CSS only needs Main/Model plus the row-0/Selected animations that
+     * the preparation stages warm explicitly. Keep the compact pack and its
+     * owner-image pair in this resettable block; the animation cache has its
+     * own pre-reserved arena. Retirement invalidates those image bindings before
+     * the block is reused, so browsing history cannot accumulate arena bytes. */
+    return ndsMNPlayersVSPreviewServiceCompactLoad(block, fkind);
+#else
     if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
     {
         gNdsPlayersVSPreviewAcquireRetryCount++;
@@ -1079,66 +1383,6 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
     }
 
     sNdsPlayersVSPreviewResidencyActionBudget--;
-#if NDS_PLAYERS_VS_COMPACT_PREVIEW
-    /* Native CSS only needs Main/Model plus the row-0/Selected animations that
-     * PrepareResidentKind warms explicitly. Keep the compact pack and its
-     * owner-image pair in this resettable block; the animation cache has its
-     * own pre-reserved arena. Retirement invalidates those image bindings before
-     * the block is reused, so browsing history cannot accumulate arena bytes. */
-    data = dFTManagerDataFiles[fkind];
-    gNdsPlayersVSPreviewAcquireLoadCount++;
-    syMallocReset(&block->arena);
-    payload_before = gNdsRelocAssetPayloadReadCount;
-    ndsAudioBgmSuspendForBlockingLoad();
-    previous = ndsTaskmanSwapMallocRegion(&block->arena);
-    if (data != NULL)
-    {
-        ftManagerSetupFilesAllKind(fkind);
-    }
-    prepared = ((data != NULL) && (data->p_file_main != NULL) &&
-                (*data->p_file_main != NULL) && (data->p_file_model != NULL) &&
-                (*data->p_file_model != NULL)) ? TRUE : FALSE;
-    if (prepared != FALSE)
-    {
-        if (ndsMNPlayersVSPreviewOwnerImagesFit(block, fkind) == FALSE)
-        {
-            gNdsPlayersVSPreviewResidentCapacityFailCount++;
-            prepared = FALSE;
-        }
-        else
-        {
-            prepared = ndsMNPlayersVSPreviewPrepareResidentKind(fkind, previous);
-        }
-    }
-    ndsTaskmanSwapMallocRegion(previous);
-    ndsAudioBgmResumeAfterBlockingLoad();
-    payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
-    gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
-    if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
-    {
-        gNdsPlayersVSPreviewAcquirePayloadReadMax = payload_delta;
-    }
-    if (prepared == FALSE)
-    {
-        ndsMNPlayersClearPreviewFighterFiles(fkind);
-        ndsRelocReleasePreviewFighter(fkind);
-        ndsRendererNativeReleaseOwnerImagesInRange(
-            block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-        ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-        syMallocReset(&block->arena);
-        ndsMNPlayersVSPreviewResetResidentLoadState(block);
-        ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
-        gNdsPlayersVSPreviewAcquireFailCount++;
-        gNdsPlayersVSPreviewAcquireLoadFinishCount++;
-        return nNDSPlayersVSResidentAcquireFail;
-    }
-
-    block->fkind = fkind;
-    block->refs = 1u;
-    ndsMNPlayersVSPreviewResetResidentLoadState(block);
-    gNdsPlayersVSPreviewAcquireLoadFinishCount++;
-    return nNDSPlayersVSResidentAcquireReady;
-#else
     if (block->load_cursor == NULL)
     {
         /* Starting a miss is deliberately a cursor-only action. The first
@@ -1248,6 +1492,69 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
     gNdsPlayersVSPreviewAcquireLoadFinishCount++;
     return nNDSPlayersVSResidentAcquireReady;
 #endif
+}
+
+/* M04: "warm" means this kind commits without moving a byte -- a block already
+ * holds its closure, referenced or merely cached. A warm request must not pay
+ * the cold-load stabilization interval, because there is no cold load to
+ * protect the screen from. */
+static sb32 ndsMNPlayersVSPreviewKindIsWarm(s32 fkind)
+{
+    u32 i;
+
+    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
+    {
+        if (sNdsPlayersVSResidentBlocks[i].fkind == fkind)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* Close one request's latency measurement. Bucket bounds are update counts, so
+ * a capture reads the two rows and computes warm/cold P50/P95 without needing
+ * a per-event stream. */
+static void ndsMNPlayersVSPreviewRecordLatency(
+    NDSPlayersVSPreviewPending *pending)
+{
+    static const u32 bounds[NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS - 1u] = {
+        1u, 2u, 3u, 4u, 6u, 8u, 12u
+    };
+    volatile u32 *row;
+    u32 i;
+
+    if (pending->request_warm != FALSE)
+    {
+        row = gNdsPlayersVSPreviewLatencyWarmBuckets;
+        if (pending->request_updates > gNdsPlayersVSPreviewLatencyWarmMax)
+        {
+            gNdsPlayersVSPreviewLatencyWarmMax = pending->request_updates;
+        }
+    }
+    else
+    {
+        row = gNdsPlayersVSPreviewLatencyColdBuckets;
+        if (pending->request_updates > gNdsPlayersVSPreviewLatencyColdMax)
+        {
+            gNdsPlayersVSPreviewLatencyColdMax = pending->request_updates;
+        }
+    }
+    for (i = 0u; i < (NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS - 1u); i++)
+    {
+        if (pending->request_updates <= bounds[i])
+        {
+            row[i]++;
+            pending->request_updates = 0u;
+            return;
+        }
+    }
+    row[NDS_PLAYERS_VS_PREVIEW_LATENCY_BUCKETS - 1u]++;
+    pending->request_updates = 0u;
 }
 
 static sb32 ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
@@ -1405,8 +1712,12 @@ void ndsMNPlayersVSPreviewInit(void)
         sNdsPlayersVSPreviewPending[i].stable_tics = 0u;
         sNdsPlayersVSPreviewPending[i].seen_request = FALSE;
         sNdsPlayersVSPreviewPending[i].acquire_pending = FALSE;
+        sNdsPlayersVSPreviewPending[i].request_updates = 0u;
+        sNdsPlayersVSPreviewPending[i].request_warm = FALSE;
     }
     sNdsPlayersVSPreviewResidencyActionBudget = 0u;
+    sNdsPlayersVSPreviewServiceByteBudget = 0u;
+    sNdsPlayersVSPreviewEntryDrain = FALSE;
     sNdsPlayersVSPreviewEntrySyncPending = TRUE;
     /* The native shell seeds the actual rule/team values immediately after its
      * descriptor is loaded.  Start from a deterministic neutral state so a
@@ -1445,12 +1756,28 @@ void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
          * resident there. Every live CSS tic after it gets one action. */
         sNdsPlayersVSPreviewResidencyActionBudget =
             NDS_PLAYERS_VS_RESIDENT_BLOCKS;
+        sNdsPlayersVSPreviewEntryDrain = TRUE;
         sNdsPlayersVSPreviewEntrySyncPending = FALSE;
     }
     else
     {
         sNdsPlayersVSPreviewResidencyActionBudget = 1u;
+        sNdsPlayersVSPreviewEntryDrain = FALSE;
     }
+    if ((NDS_PLAYERS_VS_PREVIEW_SERVICE_BYTES -
+         sNdsPlayersVSPreviewServiceByteBudget) >
+        gNdsPlayersVSPreviewServiceUpdateByteMax)
+    {
+        gNdsPlayersVSPreviewServiceUpdateByteMax =
+            NDS_PLAYERS_VS_PREVIEW_SERVICE_BYTES -
+            sNdsPlayersVSPreviewServiceByteBudget;
+    }
+    /* ONE aggregate span budget for the whole screen, refreshed here and then
+     * spent by whichever slots have work. Four slots do not get four budgets:
+     * the point of the bound is the wall-clock length of one update, and that
+     * is a property of the screen, not of a slot. */
+    sNdsPlayersVSPreviewServiceByteBudget =
+        NDS_PLAYERS_VS_PREVIEW_SERVICE_BYTES;
     ndsMNPlayersVSPreviewServiceLoadCancel();
     new_team_battle = (is_team_battle != FALSE) ? TRUE : FALSE;
     mode_changed = ((sNdsPlayersVSPreviewRulesReady != FALSE) &&
@@ -1565,6 +1892,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     NDSPlayersVSResidentAcquireResult acquire_result;
     sb32 initial_request = FALSE;
     sb32 update_fighter;
+    u32 dwell;
 
     /* BattleShip's PlayersVS state is four independent player slots. P2-2's
      * renderer now separates that INSTANCE slot from the generated Mario/Fox
@@ -1626,6 +1954,17 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     old_selected = sMNPlayersVSSlots[slot].is_fighter_selected;
     fighter_gobj = sMNPlayersVSSlots[slot].player;
     pending = &sNdsPlayersVSPreviewPending[slot];
+    /* M04's clock. It starts on the update the requested kind stops matching
+     * what the slot is showing -- input stabilization included, because that is
+     * part of what the player waits through -- and stops at the commit below. */
+    if (fkind != old_fkind)
+    {
+        if (pending->request_updates == 0u)
+        {
+            pending->request_warm = ndsMNPlayersVSPreviewKindIsWarm(fkind);
+        }
+        pending->request_updates++;
+    }
 
     /* After one completed deterministic failure the panel is deliberately
      * empty and the failure masks/counter remain visible. Keep that same
@@ -1640,6 +1979,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         pending->fkind = fkind;
         pending->stable_tics = 0u;
         pending->acquire_pending = FALSE;
+        pending->request_updates = 0u;
         sMNPlayersVSSlots[slot].pkind = pkind;
         sMNPlayersVSSlots[slot].fkind = nFTKindNull;
         sMNPlayersVSSlots[slot].is_selected = FALSE;
@@ -1681,6 +2021,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                 sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
                 return;
             }
+            ndsMNPlayersVSPreviewRecordLatency(pending);
             ndsMNPlayersVSPreviewRebuildChangedKind(slot, pkind, fkind,
                                                      is_selected);
             return;
@@ -1702,6 +2043,12 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         if ((pending->stable_tics != 0u) && (pending->fkind != fkind))
         {
             gNdsPlayersVSPreviewDwellSkipCount++;
+        }
+        if (pending->request_updates != 0u)
+        {
+            /* The cursor came back to what is already on screen: that IS the
+             * request, resolved without a load. */
+            ndsMNPlayersVSPreviewRecordLatency(pending);
         }
         pending->fkind = fkind;
         pending->stable_tics = 0u;
@@ -1752,14 +2099,20 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         return;
     }
 
-    /* Interactive kind changes dwell before they own residency. With the
-     * current 45-pixel cells / 4-pixel cursor step, 13 stable requests is the
-     * first value that guarantees a full-speed pass cannot load an intermediate
-     * portrait. A completed selection and closing an NA slot are explicit user
-     * decisions, so they may commit sooner; even then the acquire is staged to
-     * a later tic. During this dwell the previous 3D fighter keeps rendering. */
+    /* Interactive kind changes stabilize before they own residency. The old
+     * 13-tic value was sized so a full-speed roster pass could never START the
+     * blocking closure; now that the closure is sliced and cancellable, an
+     * abandoned request costs only the units already spent, so stabilization
+     * only has to reject genuine cursor transit. A kind that is already
+     * resident costs nothing to show and takes the shorter warm interval.
+     * A completed selection and closing an NA slot are explicit user decisions
+     * and may commit sooner; even then the acquire is staged to a later tic.
+     * During this interval the previous 3D fighter keeps rendering. */
     if (initial_request == FALSE)
     {
+        dwell = (ndsMNPlayersVSPreviewKindIsWarm(fkind) != FALSE) ?
+            NDS_PLAYERS_VS_PREVIEW_DWELL_WARM_TICKS :
+            NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS;
         if (pending->fkind != fkind)
         {
             if (pending->stable_tics != 0u)
@@ -1770,11 +2123,11 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
             pending->stable_tics = 1u;
             gNdsPlayersVSPreviewDwellRequestCount++;
         }
-        else if (pending->stable_tics < NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS)
+        else if (pending->stable_tics < dwell)
         {
             pending->stable_tics++;
         }
-        if ((pending->stable_tics < NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS) &&
+        if ((pending->stable_tics < dwell) &&
             (is_selected == FALSE) && (pkind != nFTPlayerKindNot))
         {
             gNdsPlayersVSPreviewDwellHoldTicCount++;
@@ -1822,6 +2175,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     if (fkind == nFTKindNull)
     {
         pending->acquire_pending = FALSE;
+        /* An emptied slot has no preview to wait for, so it is not a latency
+         * sample; dropping it keeps the warm/cold rows honest. */
+        pending->request_updates = 0u;
         return;
     }
 
@@ -1833,6 +2189,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
         if (acquire_result == nNDSPlayersVSResidentAcquireReady)
         {
+            ndsMNPlayersVSPreviewRecordLatency(pending);
             ndsMNPlayersVSPreviewRebuildChangedKind(slot, pkind, fkind,
                                                      is_selected);
             return;

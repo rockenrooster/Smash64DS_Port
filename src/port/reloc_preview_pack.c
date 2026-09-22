@@ -345,16 +345,87 @@ static s32 ndsPreviewSectionContains(const NDSPreviewPackSection *sections,
 void ndsFsLock(void);
 void ndsFsUnlock(void);
 
-static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
+/* --- M03: one compact loader, driven either to completion or one span at a
+ * time -------------------------------------------------------------------
+ *
+ * The phases below are exactly the phases the single-call loader always ran;
+ * only their driver changed. READ now hashes and byte-lane-normalizes each
+ * chunk as it arrives instead of making three separate passes over the whole
+ * payload, and FIXUP reads its 8-byte records in batches instead of one fread
+ * per record (up to 385 of them for Captain).
+ *
+ * Nothing here publishes: a completed transaction sits in NDS_FPC_STATE_STAGED
+ * until ndsRelocLoadPreviewFighter is called for that kind at the source's own
+ * ftManagerSetupFilesAllKind boundary. */
+enum {
+    NDS_FPC_STATE_FREE = 0,
+    NDS_FPC_STATE_READ,
+    NDS_FPC_STATE_FIXUP,
+    NDS_FPC_STATE_SPANS,
+    NDS_FPC_STATE_REGISTER,
+    NDS_FPC_STATE_STAGED
+};
+
+/* Four character-select blocks can each hold one in-flight transaction; the
+ * fifth covers a synchronous 1P/battle load overlapping them. Static so a
+ * caller's syMallocReset can never leave a live handle dangling in a reset
+ * arena, and small enough (five 64-byte rows) not to matter against the
+ * scene heap floor. */
+#define NDS_FPC_LOAD_SLOTS 5u
+
+typedef struct NDSPreviewPackLoad {
+    FILE *file;
+    u8 *data;
+    NDSPreviewPackSection *sections;
+    NDSPreviewPackSpan *spans;
+    u32 allocation;
+    u32 data_bytes;
+    u32 fixup_count;
+    u32 span_count;
+    u32 data_hash;
+    u32 fixup_hash;
+    u32 span_hash;
+    u32 model_source_bytes;
+    u32 cursor;
+    u32 hash;
+    u32 generation;
+    s16 fkind;
+    u8 section_count;
+    u8 is_battle_pack;
+    u8 state;
+} NDSPreviewPackLoad;
+
+static NDSPreviewPackLoad sNdsPreviewPackLoads[NDS_FPC_LOAD_SLOTS];
+volatile u32 gNdsPreviewPackStepCount;
+volatile u32 gNdsPreviewPackStepByteMax;
+volatile u32 gNdsPreviewPackStageCommitCount;
+volatile u32 gNdsPreviewPackStageCancelCount;
+
+static void ndsPreviewPackLoadRelease(NDSPreviewPackLoad *load)
 {
+    if (load->file != NULL)
+    {
+        ndsFsLock();
+        fclose(load->file);
+        ndsFsUnlock();
+        load->file = NULL;
+    }
+}
+
+static void ndsPreviewPackLoadFree(NDSPreviewPackLoad *load)
+{
+    ndsPreviewPackLoadRelease(load);
+    load->state = NDS_FPC_STATE_FREE;
+    load->data = NULL;
+    load->fkind = -1;
+}
+
+void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
+{
+    NDSPreviewPackLoad *load = NULL;
     NDSPreviewPackHeader header;
     NDSPreviewPackSection sections[NDS_PREVIEW_PACK_MAX_SECTIONS];
-    NDSRelocLoadedFile *records[NDS_PREVIEW_PACK_MAX_SECTIONS];
-    NDSPreviewResident *resident;
-    NDSPreviewPackFixup pair;
-    NDSPreviewPackSpan *spans;
     FTData *fighter;
-    NDSRelocAssetHeader reloc_header;
     FILE *file;
     char preview_path[] = "nitro:/fighters/preview/00.fpc";
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
@@ -363,16 +434,13 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     char *path = preview_path;
     u32 digit_at = sizeof("nitro:/fighters/preview/") - 1u;
     s32 is_battle_pack = FALSE;
-    u8 *data;
-    u32 i;
-    u32 hash;
-    u32 allocation;
     long file_size;
     u64 expected_size;
+    u32 i;
 
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
     /* The source/oracle renderer still consumes full Gfx/Vtx programs. */
-    return FALSE;
+    return NULL;
 #endif
     if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
          (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
@@ -380,11 +448,46 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
          && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
         ) ||
-        ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return FALSE; }
+        ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return NULL; }
     fighter = dFTManagerDataFiles[fkind];
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
         (fighter->p_file_model == NULL)) { ndsPreviewPackLoadHalt(1u, fkind); }
-    if (*fighter->p_file_main != NULL) { return TRUE; }
+
+    /* One kind is loaded once. A second request for a kind already in flight
+     * resumes that transaction rather than opening a rival one against the
+     * same asset ids -- which REGISTER would halt on (reason 9). Scan for that
+     * before claiming a free row; a stale-generation row is not a match. */
+    for (i = 0u; i < NDS_FPC_LOAD_SLOTS; i++)
+    {
+        if ((sNdsPreviewPackLoads[i].state != NDS_FPC_STATE_FREE) &&
+            (sNdsPreviewPackLoads[i].fkind == (s16)fkind))
+        {
+            if (sNdsPreviewPackLoads[i].generation == sNdsRelocSceneGeneration)
+            {
+                return &sNdsPreviewPackLoads[i];
+            }
+            ndsPreviewPackLoadFree(&sNdsPreviewPackLoads[i]);
+        }
+    }
+    for (i = 0u; i < NDS_FPC_LOAD_SLOTS; i++)
+    {
+        if (sNdsPreviewPackLoads[i].state == NDS_FPC_STATE_FREE)
+        {
+            load = &sNdsPreviewPackLoads[i];
+            break;
+        }
+    }
+    if (load == NULL) { return NULL; }
+    memset(load, 0, sizeof(*load));
+    load->fkind = (s16)fkind;
+    load->generation = sNdsRelocSceneGeneration;
+    if (*fighter->p_file_main != NULL)
+    {
+        /* Already resident. Stage an empty transaction so the owner boundary
+         * still consumes exactly one handle and answers 1, as before. */
+        load->state = NDS_FPC_STATE_STAGED;
+        return load;
+    }
 
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
@@ -398,8 +501,9 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
 #endif
     path[digit_at] = '0' + (u32)fkind / 10u;
     path[digit_at + 1u] = '0' + (u32)fkind % 10u;
+    ndsFsLock();
     file = fopen(path, "rb");
-    if (file == NULL) { ndsPreviewPackLoadHalt(2u, fkind); }
+    if (file == NULL) { ndsFsUnlock(); ndsPreviewPackLoadHalt(2u, fkind); }
     if (fseek(file, 0, SEEK_END) != 0) { ndsPreviewPackLoadHalt(3u, fkind); }
     file_size = ftell(file);
     if ((file_size < (long)sizeof(header)) || (fseek(file, 0, SEEK_SET) != 0) ||
@@ -408,8 +512,8 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
         ndsPreviewPackLoadHalt(3u, fkind);
     }
     expected_size = sizeof(header) + (u64)header.section_count * sizeof(sections[0]) +
-        header.data_bytes + (u64)header.fixup_count * sizeof(pair) +
-        (u64)header.span_count * sizeof(*spans);
+        header.data_bytes + (u64)header.fixup_count * sizeof(NDSPreviewPackFixup) +
+        (u64)header.span_count * sizeof(NDSPreviewPackSpan);
     if ((header.magic != NDS_PREVIEW_PACK_MAGIC) ||
         (header.version != NDS_PREVIEW_PACK_VERSION) || (header.fkind != (u32)fkind) ||
         (header.section_count < 2u) || (header.section_count > ARRAY_COUNT(sections)) ||
@@ -430,108 +534,354 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     }
     /* Metadata is smaller than its bytes on disk; the file-size equality above
      * proves this addition cannot overflow the positive signed file length. */
-    allocation = header.data_bytes + header.section_count * sizeof(sections[0]) +
-        header.span_count * sizeof(*spans);
-    data = syTaskmanMalloc(allocation, 16u);
-    if (fread(data, 1u, header.data_bytes, file) != header.data_bytes ||
-        ndsPreviewHash(data, header.data_bytes, 2166136261u) != header.data_hash)
+    load->allocation = header.data_bytes +
+        header.section_count * sizeof(sections[0]) +
+        header.span_count * sizeof(NDSPreviewPackSpan);
+    load->data = syTaskmanMalloc(load->allocation, 16u);
+    if (load->data == NULL) { ndsPreviewPackLoadHalt(5u, fkind); }
+    ndsFsUnlock();
+    load->file = file;
+    load->data_bytes = header.data_bytes;
+    load->fixup_count = header.fixup_count;
+    load->span_count = header.span_count;
+    load->data_hash = header.data_hash;
+    load->fixup_hash = header.fixup_hash;
+    load->span_hash = header.span_hash;
+    load->model_source_bytes = header.model_source_bytes;
+    load->section_count = (u8)header.section_count;
+    load->is_battle_pack = (u8)((is_battle_pack != FALSE) ? 1u : 0u);
+    load->sections = (NDSPreviewPackSection *)(load->data + header.data_bytes);
+    memcpy(load->sections, sections, header.section_count * sizeof(sections[0]));
+    load->spans = (NDSPreviewPackSpan *)(load->sections + header.section_count);
+    load->cursor = 0u;
+    load->hash = 2166136261u;
+    load->state = NDS_FPC_STATE_READ;
+    return load;
+}
+
+void ndsRelocPreviewFighterLoadCancel(void *handle, s32 fkind)
+{
+    NDSPreviewPackLoad *load = handle;
+
+    if ((load == NULL) || (load->state == NDS_FPC_STATE_FREE) ||
+        (load->fkind != (s16)fkind))
     {
-        ndsPreviewPackLoadHalt(5u, fkind);
+        return;
     }
-    for (i = 0u; i < header.data_bytes; i += 4u)
+    gNdsPreviewPackStageCancelCount++;
+    /* The data allocation belongs to the caller's resettable arena, and the
+     * loaded-file records (if REGISTER already ran) belong to the caller's
+     * ndsRelocReleasePreviewFighter. Only the file handle and the staging are
+     * ours to drop. */
+    ndsPreviewPackLoadFree(load);
+}
+
+s32 ndsRelocPreviewFighterLoadIsStaged(s32 fkind)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_FPC_LOAD_SLOTS; i++)
     {
-        ndsRelocWriteNative32(data + i, ndsRelocReadBe32(data + i));
-    }
-    hash = 2166136261u;
-    for (i = 0u; i < header.fixup_count; i++)
-    {
-        if (fread(&pair, 1u, sizeof(pair), file) != sizeof(pair) ||
-            (pair.slot_offset & 3u) ||
-            !ndsPreviewSectionContains(sections, header.section_count, pair.slot_offset, 4u) ||
-            ((pair.target_offset != NDS_PREVIEW_PACK_NULL) &&
-             !ndsPreviewSectionContains(sections, header.section_count, pair.target_offset, 1u)))
+        if ((sNdsPreviewPackLoads[i].state == NDS_FPC_STATE_STAGED) &&
+            (sNdsPreviewPackLoads[i].fkind == (s16)fkind) &&
+            (sNdsPreviewPackLoads[i].generation == sNdsRelocSceneGeneration))
         {
-            ndsPreviewPackLoadHalt(6u, fkind);
+            return TRUE;
         }
-        hash = ndsPreviewHash(&pair, sizeof(pair), hash);
-        ndsRelocWriteNativePointer(data + pair.slot_offset,
-            (pair.target_offset == NDS_PREVIEW_PACK_NULL) ? NULL : data + pair.target_offset);
     }
-    if (hash != header.fixup_hash) { ndsPreviewPackLoadHalt(6u, fkind); }
-    resident = &sNdsPreviewResidents[fkind];
-    resident->model_source_bytes = header.model_source_bytes;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-    resident->foreign_images = NULL;
-    resident->foreign_count = 0u;
-#endif
-    resident->sections = (NDSPreviewPackSection *)(data + header.data_bytes);
-    memcpy(resident->sections, sections, header.section_count * sizeof(sections[0]));
-    spans = (NDSPreviewPackSpan *)(resident->sections + header.section_count);
-    if ((fread(spans, sizeof(*spans), header.span_count, file) != header.span_count) ||
-        (ndsPreviewHash(spans, header.span_count * sizeof(*spans), 2166136261u) != header.span_hash))
+    return FALSE;
+}
+
+/* One bounded unit of the transaction. `byte_budget` is the largest read/decode
+ * span this call may move; 0 means "no bound", which is what the synchronous
+ * 1P/battle entry point uses. */
+s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes)
+{
+    NDSPreviewPackLoad *load = handle;
+    NDSPreviewPackFixup batch[32];
+    NDSPreviewResident *resident;
+    NDSRelocAssetHeader reloc_header;
+    NDSRelocLoadedFile *records[NDS_PREVIEW_PACK_MAX_SECTIONS];
+    s32 fkind;
+    u32 moved = 0u;
+    u32 chunk;
+    u32 i;
+
+    if (out_bytes != NULL) { *out_bytes = 0u; }
+    if (load == NULL) { return NDS_PREVIEW_PACK_STEP_FAIL; }
+    fkind = load->fkind;
+    if (load->state == NDS_FPC_STATE_STAGED)
     {
-        ndsPreviewPackLoadHalt(7u, fkind);
+        return NDS_PREVIEW_PACK_STEP_DONE;
     }
-    fclose(file);
-    resident->spans = spans;
-    resident->generation = sNdsRelocSceneGeneration;
-    for (i = 0u; i < header.section_count; i++)
+    if ((load->state == NDS_FPC_STATE_FREE) ||
+        (load->generation != sNdsRelocSceneGeneration))
     {
-        const NDSPreviewPackSection *s = &sections[i];
-        u32 j;
-        for (j = 0u; j < s->span_count; j++)
+        return NDS_PREVIEW_PACK_STEP_FAIL;
+    }
+    gNdsPreviewPackStepCount++;
+
+    switch (load->state)
+    {
+    case NDS_FPC_STATE_READ:
+        /* Read, hash and byte-lane normalize one chunk. The hash must see the
+         * raw big-endian bytes, so it runs before the swap on the same chunk
+         * rather than as a second pass over the whole payload. */
+        chunk = load->data_bytes - load->cursor;
+        if ((byte_budget != 0u) && (chunk > byte_budget))
         {
-            const NDSPreviewPackSpan *span = &spans[s->first_span + j];
-            if (!ndsPreviewRange(span->source_offset, span->data_bytes, s->source_bytes) ||
-                !ndsPreviewRange(span->data_offset, span->data_bytes, s->data_bytes))
+            chunk = byte_budget & ~3u;
+            if (chunk == 0u) { chunk = 4u; }
+        }
+        ndsFsLock();
+        if (fread(load->data + load->cursor, 1u, chunk, load->file) != chunk)
+        {
+            ndsFsUnlock();
+            ndsPreviewPackLoadHalt(5u, (u32)fkind);
+        }
+        ndsFsUnlock();
+        load->hash = ndsPreviewHash(load->data + load->cursor, chunk, load->hash);
+        for (i = 0u; i < chunk; i += 4u)
+        {
+            u8 *word = load->data + load->cursor + i;
+
+            ndsRelocWriteNative32(word, ndsRelocReadBe32(word));
+        }
+        load->cursor += chunk;
+        moved = chunk;
+        if (load->cursor == load->data_bytes)
+        {
+            if (load->hash != load->data_hash)
             {
-                ndsPreviewPackLoadHalt(8u, fkind);
+                ndsPreviewPackLoadHalt(5u, (u32)fkind);
+            }
+            load->cursor = 0u;
+            load->hash = 2166136261u;
+            load->state = NDS_FPC_STATE_FIXUP;
+        }
+        break;
+
+    case NDS_FPC_STATE_FIXUP:
+        chunk = load->fixup_count - load->cursor;
+        if (chunk > ARRAY_COUNT(batch)) { chunk = ARRAY_COUNT(batch); }
+        if ((byte_budget != 0u) && (chunk * sizeof(batch[0]) > byte_budget))
+        {
+            chunk = byte_budget / sizeof(batch[0]);
+            if (chunk == 0u) { chunk = 1u; }
+        }
+        ndsFsLock();
+        if (fread(batch, sizeof(batch[0]), chunk, load->file) != chunk)
+        {
+            ndsFsUnlock();
+            ndsPreviewPackLoadHalt(6u, (u32)fkind);
+        }
+        ndsFsUnlock();
+        for (i = 0u; i < chunk; i++)
+        {
+            const NDSPreviewPackFixup *pair = &batch[i];
+
+            if ((pair->slot_offset & 3u) ||
+                !ndsPreviewSectionContains(load->sections, load->section_count,
+                                           pair->slot_offset, 4u) ||
+                ((pair->target_offset != NDS_PREVIEW_PACK_NULL) &&
+                 !ndsPreviewSectionContains(load->sections, load->section_count,
+                                            pair->target_offset, 1u)))
+            {
+                ndsPreviewPackLoadHalt(6u, (u32)fkind);
+            }
+            load->hash = ndsPreviewHash(pair, sizeof(*pair), load->hash);
+            ndsRelocWriteNativePointer(load->data + pair->slot_offset,
+                (pair->target_offset == NDS_PREVIEW_PACK_NULL) ?
+                    NULL : load->data + pair->target_offset);
+        }
+        load->cursor += chunk;
+        moved = chunk * sizeof(batch[0]);
+        if (load->cursor == load->fixup_count)
+        {
+            if (load->hash != load->fixup_hash)
+            {
+                ndsPreviewPackLoadHalt(6u, (u32)fkind);
+            }
+            load->state = NDS_FPC_STATE_SPANS;
+        }
+        break;
+
+    case NDS_FPC_STATE_SPANS:
+        /* At most 27 rows in the shipped packs: one unbounded unit of 324 B. */
+        ndsFsLock();
+        if (fread(load->spans, sizeof(load->spans[0]), load->span_count,
+                  load->file) != load->span_count)
+        {
+            ndsFsUnlock();
+            ndsPreviewPackLoadHalt(7u, (u32)fkind);
+        }
+        ndsFsUnlock();
+        if (ndsPreviewHash(load->spans,
+                           load->span_count * sizeof(load->spans[0]),
+                           2166136261u) != load->span_hash)
+        {
+            ndsPreviewPackLoadHalt(7u, (u32)fkind);
+        }
+        ndsPreviewPackLoadRelease(load);
+        moved = load->span_count * sizeof(load->spans[0]);
+        load->state = NDS_FPC_STATE_REGISTER;
+        break;
+
+    case NDS_FPC_STATE_REGISTER:
+        /* Publishing the resident record is what makes the compact span map
+         * readable, so it happens here and not one step earlier: a transaction
+         * cancelled before REGISTER leaves no resident and no loaded-file row
+         * behind at all. */
+        resident = &sNdsPreviewResidents[fkind];
+        resident->model_source_bytes = load->model_source_bytes;
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        resident->foreign_images = NULL;
+        resident->foreign_count = 0u;
+#endif
+        resident->sections = load->sections;
+        resident->spans = load->spans;
+        resident->generation = sNdsRelocSceneGeneration;
+        for (i = 0u; i < load->section_count; i++)
+        {
+            const NDSPreviewPackSection *s = &load->sections[i];
+            u32 j;
+
+            for (j = 0u; j < s->span_count; j++)
+            {
+                const NDSPreviewPackSpan *span = &load->spans[s->first_span + j];
+
+                if (!ndsPreviewRange(span->source_offset, span->data_bytes,
+                                     s->source_bytes) ||
+                    !ndsPreviewRange(span->data_offset, span->data_bytes,
+                                     s->data_bytes))
+                {
+                    ndsPreviewPackLoadHalt(8u, (u32)fkind);
+                }
+            }
+            if (ndsRelocFindLoadedFileByAsset(s->asset_id) != NULL)
+            {
+                ndsPreviewPackLoadHalt(9u, (u32)fkind);
+            }
+            memset(&reloc_header, 0, sizeof(reloc_header));
+            reloc_header.file_id = s->asset_id;
+            reloc_header.data_size = s->data_bytes;
+            reloc_header.reloc_intern_offset = reloc_header.reloc_extern_offset = 0xffffu;
+            records[i] = ndsRelocRegisterLoadedFile(s->asset_id, 0u,
+                                                    load->data + s->data_offset,
+                                                    &reloc_header);
+            if (records[i] == NULL) { ndsPreviewPackLoadHalt(10u, (u32)fkind); }
+            records[i]->internal_fixups_applied = TRUE;
+            records[i]->external_fixups_applied = TRUE;
+            records[i]->reserved[0] = (u8)(fkind + 1);
+            records[i]->reserved[1] = (u8)i;
+        }
+        if (ndsRelocNormalizeFighterAttributesFile(records[0]) == FALSE)
+        {
+            ndsPreviewPackLoadHalt(11u, (u32)fkind);
+        }
+        for (i = 0u; i < load->section_count; i++)
+        {
+            if (ndsRelocNormalizeBattleInterfaceSprites(records[i]) == FALSE)
+            {
+                ndsPreviewPackLoadHalt(12u, (u32)fkind);
             }
         }
-        if (ndsRelocFindLoadedFileByAsset(s->asset_id) != NULL)
-        {
-            ndsPreviewPackLoadHalt(9u, fkind);
-        }
-        memset(&reloc_header, 0, sizeof(reloc_header));
-        reloc_header.file_id = s->asset_id;
-        reloc_header.data_size = s->data_bytes;
-        reloc_header.reloc_intern_offset = reloc_header.reloc_extern_offset = 0xffffu;
-        records[i] = ndsRelocRegisterLoadedFile(s->asset_id, 0u, data + s->data_offset, &reloc_header);
-        if (records[i] == NULL) { ndsPreviewPackLoadHalt(10u, fkind); }
-        records[i]->internal_fixups_applied = records[i]->external_fixups_applied = TRUE;
-        records[i]->reserved[0] = (u8)(fkind + 1);
-        records[i]->reserved[1] = (u8)i;
-    }
-    if (ndsRelocNormalizeFighterAttributesFile(records[0]) == FALSE)
-    {
-        ndsPreviewPackLoadHalt(11u, fkind);
-    }
-    for (i = 0u; i < header.section_count; i++)
-    {
-        if (ndsRelocNormalizeBattleInterfaceSprites(records[i]) == FALSE)
-        {
-            ndsPreviewPackLoadHalt(12u, fkind);
-        }
-    }
-    /* Main is byte-for-byte source-sized in FPC1, but generic preview packing
-     * deliberately NULLs dependencies outside the compact sections.  For the
-     * migrated P2-2 fighters those nine ShieldPose externs are not optional:
-     * the native guard package replaces them.  Repoint the generated source
-     * slots only after all generic normalization is complete so no later
-     * byte-lane pass can reinterpret a native pointer. */
+        /* Main is byte-for-byte source-sized in FPC1, but generic preview
+         * packing deliberately NULLs dependencies outside the compact sections.
+         * For the migrated P2-2 fighters those nine ShieldPose externs are not
+         * optional: the native guard package replaces them. Repoint the
+         * generated source slots only after all generic normalization is
+         * complete so no later byte-lane pass can reinterpret a native
+         * pointer. */
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-    if (is_battle_pack &&
-        (ndsShieldPosePatchCompactMain(
-            fkind, records[0]->data, records[0]->data_size) < 0))
-    {
-        ndsPreviewPackLoadHalt(13u, fkind);
-    }
+        if ((load->is_battle_pack != 0u) &&
+            (ndsShieldPosePatchCompactMain(
+                fkind, records[0]->data, records[0]->data_size) < 0))
+        {
+            ndsPreviewPackLoadHalt(13u, (u32)fkind);
+        }
 #endif
-    *fighter->p_file_main = records[0]->data;
-    *fighter->p_file_model = records[1]->data;
+        load->state = NDS_FPC_STATE_STAGED;
+        break;
+
+    default:
+        return NDS_PREVIEW_PACK_STEP_FAIL;
+    }
+
+    if (out_bytes != NULL) { *out_bytes = moved; }
+    if (moved > gNdsPreviewPackStepByteMax)
+    {
+        gNdsPreviewPackStepByteMax = moved;
+    }
+    return (load->state == NDS_FPC_STATE_STAGED) ?
+        NDS_PREVIEW_PACK_STEP_DONE : NDS_PREVIEW_PACK_STEP_IN_PROGRESS;
+}
+
+/* The owner boundary. `*p_file_main` becomes non-NULL exactly here, with the
+ * whole closure already relocated, registered and normalized. */
+static s32 ndsPreviewPackLoadPublish(NDSPreviewPackLoad *load)
+{
+    FTData *fighter = dFTManagerDataFiles[load->fkind];
+    s32 fkind = load->fkind;
+    u32 allocation = load->allocation;
+    u8 *data = load->data;
+
+    if (data == NULL)
+    {
+        /* The "already resident" staging. */
+        ndsPreviewPackLoadFree(load);
+        return TRUE;
+    }
+    if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
+        (fighter->p_file_model == NULL))
+    {
+        ndsPreviewPackLoadHalt(1u, (u32)fkind);
+    }
+    *fighter->p_file_main =
+        (u8 *)data + load->sections[0].data_offset;
+    *fighter->p_file_model =
+        (u8 *)data + load->sections[1].data_offset;
+    ndsPreviewPackLoadFree(load);
+    gNdsPreviewPackStageCommitCount++;
     gNdsPreviewPackLoadCount++;
     gNdsPreviewPackDataBytes += allocation;
     return 2; /* Newly loaded, so the source particle bank must be initialized. */
+}
+
+static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
+{
+    NDSPreviewPackLoad *load;
+    s32 step;
+    u32 i;
+
+    /* A character-select transaction already advanced this kind one bounded
+     * span per update; consume it instead of reloading the pack. A staging
+     * from a previous scene generation is not a completion for this one: drop
+     * it and load normally rather than publishing into a rewound arena. */
+    for (i = 0u; i < NDS_FPC_LOAD_SLOTS; i++)
+    {
+        if ((sNdsPreviewPackLoads[i].state == NDS_FPC_STATE_STAGED) &&
+            (sNdsPreviewPackLoads[i].fkind == (s16)fkind))
+        {
+            if (sNdsPreviewPackLoads[i].generation == sNdsRelocSceneGeneration)
+            {
+                return ndsPreviewPackLoadPublish(&sNdsPreviewPackLoads[i]);
+            }
+            ndsPreviewPackLoadFree(&sNdsPreviewPackLoads[i]);
+        }
+    }
+    load = ndsRelocPreviewFighterLoadBegin(fkind);
+    if (load == NULL) { return FALSE; }
+    do
+    {
+        step = ndsRelocPreviewFighterLoadStep(load, 0u, NULL);
+    } while (step == NDS_PREVIEW_PACK_STEP_IN_PROGRESS);
+    if (step != NDS_PREVIEW_PACK_STEP_DONE)
+    {
+        ndsRelocPreviewFighterLoadCancel(load, fkind);
+        return FALSE;
+    }
+    return ndsPreviewPackLoadPublish(load);
 }
 
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
@@ -718,6 +1068,19 @@ void ndsRelocReleasePreviewFighter(s32 fkind)
     {
         return;
     }
+    /* Every retire and cancel path in the character-select transaction reaches
+     * here, so this is the one place that cannot be skipped: a handle whose
+     * data allocation is about to be reset must not stay staged, or the next
+     * acquire of this kind would publish into a freed arena. */
+    for (i = 0u; i < NDS_FPC_LOAD_SLOTS; i++)
+    {
+        if ((sNdsPreviewPackLoads[i].state != NDS_FPC_STATE_FREE) &&
+            (sNdsPreviewPackLoads[i].fkind == (s16)fkind))
+        {
+            ndsPreviewPackLoadFree(&sNdsPreviewPackLoads[i]);
+        }
+    }
+    i = 0u;
     owner = (u8)(fkind + 1);
     while (i < sNdsRelocLoadedFileCount)
     {

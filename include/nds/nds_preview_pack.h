@@ -77,6 +77,42 @@ _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
 
 #if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
+
+/* Resumable form of the same compact load, for the character-select preview
+ * transaction. M03: the one-call form moved the whole pack (up to 32,032 data
+ * bytes plus 385 fixup records) between a BGM suspend and its resume, so every
+ * hover that missed the four-block cache silenced the menu track for the whole
+ * closure. Begin/Step/Cancel run the identical phases under a caller-supplied
+ * per-step span budget, so the CSS can advance one bounded unit per update and
+ * the stream keeps being serviced by the shell loop's own ndsAudioBgmUpdate.
+ *
+ * Nothing is published to FTData until the owner boundary: a completed
+ * transaction is STAGED, and the next ftManagerSetupFilesAllKind ->
+ * ndsRelocLoadPreviewFighter for that kind consumes it in O(1) and returns 2
+ * exactly as the synchronous path does. A cancelled transaction closes its file
+ * handle and drops its staging without ever touching p_file_main.
+ *
+ * The handle is allocated from the malloc region current at Begin, which is the
+ * caller's resettable block arena; Cancel releases the file handle and the
+ * staging, and the caller's syMallocReset reclaims the bytes. */
+enum {
+    NDS_PREVIEW_PACK_STEP_FAIL = 0,
+    NDS_PREVIEW_PACK_STEP_IN_PROGRESS = 1,
+    NDS_PREVIEW_PACK_STEP_DONE = 2
+};
+void *ndsRelocPreviewFighterLoadBegin(s32 fkind);
+s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget,
+                                   u32 *out_bytes);
+/* `fkind` is checked against the handle so a stale pointer to a pool row that
+ * has since been recycled cannot retire another kind's transaction. */
+void ndsRelocPreviewFighterLoadCancel(void *handle, s32 fkind);
+/* TRUE once Step has returned DONE and the kind's pack is waiting for its
+ * owner-boundary publication. */
+s32 ndsRelocPreviewFighterLoadIsStaged(s32 fkind);
+extern volatile u32 gNdsPreviewPackStepCount;
+extern volatile u32 gNdsPreviewPackStepByteMax;
+extern volatile u32 gNdsPreviewPackStageCommitCount;
+extern volatile u32 gNdsPreviewPackStageCancelCount;
 /* Results uses the same full-motion fighter data, not the idle-preview pack. */
 u32 ndsRelocUseBattleCoreFighterData(void);
 /* Only native production's original-offset image references use this seam;

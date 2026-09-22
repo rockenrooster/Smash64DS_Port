@@ -2829,6 +2829,48 @@ static void ndsMenuShellCssInit(void)
     ndsMenuShellCssUnderlayReserve();
 }
 
+/* --- M03/M04 loader witnesses --------------------------------------------
+ *
+ * These counters are written in battleship_mnplayersvs.c and reloc_preview_pack.c
+ * and read nowhere else, and `--gc-sections` discards a section nothing reads
+ * even when the symbol is `used`: that is how four freshly added witnesses all
+ * resolved to one stale word on 2026-09-21. The copy below comes from surviving
+ * per-frame code, so the linker keeps their sections, and the array it lands in
+ * is itself a single place a capture can read the whole transaction from.
+ *
+ * Row meaning:
+ *   0 loader steps run          1 largest single step span, bytes
+ *   2 largest one-update span   3 stale completions rejected
+ *   4 warm commits              5 preparation stages run
+ *   6 pack steps                7 largest pack step span, bytes
+ *   8 pack publications         9 pack transactions cancelled */
+extern volatile u32 gNdsPlayersVSPreviewServiceStepCount;
+extern volatile u32 gNdsPlayersVSPreviewServiceByteMax;
+extern volatile u32 gNdsPlayersVSPreviewServiceUpdateByteMax;
+extern volatile u32 gNdsPlayersVSPreviewStaleCommitRejectCount;
+extern volatile u32 gNdsPlayersVSPreviewWarmCommitCount;
+extern volatile u32 gNdsPlayersVSPreviewPrepareStageCount;
+extern volatile u32 gNdsPreviewPackStepCount;
+extern volatile u32 gNdsPreviewPackStepByteMax;
+extern volatile u32 gNdsPreviewPackStageCommitCount;
+extern volatile u32 gNdsPreviewPackStageCancelCount;
+__attribute__((used)) volatile u32 gNdsMenuShellCssLoaderWitness[10];
+
+static void ndsMenuShellCssPublishLoaderWitness(void)
+{
+    gNdsMenuShellCssLoaderWitness[0] = gNdsPlayersVSPreviewServiceStepCount;
+    gNdsMenuShellCssLoaderWitness[1] = gNdsPlayersVSPreviewServiceByteMax;
+    gNdsMenuShellCssLoaderWitness[2] = gNdsPlayersVSPreviewServiceUpdateByteMax;
+    gNdsMenuShellCssLoaderWitness[3] =
+        gNdsPlayersVSPreviewStaleCommitRejectCount;
+    gNdsMenuShellCssLoaderWitness[4] = gNdsPlayersVSPreviewWarmCommitCount;
+    gNdsMenuShellCssLoaderWitness[5] = gNdsPlayersVSPreviewPrepareStageCount;
+    gNdsMenuShellCssLoaderWitness[6] = gNdsPreviewPackStepCount;
+    gNdsMenuShellCssLoaderWitness[7] = gNdsPreviewPackStepByteMax;
+    gNdsMenuShellCssLoaderWitness[8] = gNdsPreviewPackStageCommitCount;
+    gNdsMenuShellCssLoaderWitness[9] = gNdsPreviewPackStageCancelCount;
+}
+
 static void ndsMenuShellCssSyncPreviews(void)
 {
     u32 slot;
@@ -2849,6 +2891,7 @@ static void ndsMenuShellCssSyncPreviews(void)
                                   (s32)sCssFkind[slot],
                                   (sCssSelected[slot] != 0u) ? TRUE : FALSE);
     }
+    ndsMenuShellCssPublishLoaderWitness();
 }
 
 /* Screen ENTRY, on a load frame: the only place all four panels are written at
