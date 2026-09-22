@@ -14,9 +14,10 @@ Nothing here is an acceptance claim. The owner playtests in the morning.
 
 ## 0. STATUS AT 2026-09-22 04:30 — read this first
 
-Root `smash64ds.nds` is **r34**, sha256 `B4995F98...73FE`, built clean
-(`make TARGET=smash64ds`, exit 0). r32 was `594EB9BA...`. Everything below is
-pushed; nothing is an acceptance claim.
+Root `smash64ds.nds` is **r35**, sha256 `18CF0CD3...036C`, built clean
+(`make TARGET=smash64ds`, exit 0). r32 was `594EB9BA...`. A copy is at
+`builds/remaining-bugs-playtest-r35/`. Everything below is pushed; nothing is
+an acceptance claim.
 
 ### Fixed and awaiting your playtest
 
@@ -29,6 +30,7 @@ pushed; nothing is an acceptance claim.
 | **Face/body colour — Pikachu, Kirby, Jigglypuff** | the packet REPLAY path re-derived the shade word without the clamp the live draw applies |
 | **Ness character select** | **a real hang in the shipping ROM.** A stale header truncated Ness's owner image by 18 entries |
 | Kirby copy arena | the low-detail hat is unreachable below 3 fighters; skipping it returns 7,636 B |
+| Item-appear actor | a refused GObj was attaching its process to `gGCCurrentCommon` instead; hardening only, nothing shows it firing |
 
 **Two of those deserve a second look from you because I had them wrong
 earlier in this document.** The face/body row: your own note said holding
