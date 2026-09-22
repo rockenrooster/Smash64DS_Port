@@ -111,10 +111,21 @@ Two ROMs built, both `NATIVE_ONLY_PASS` with 316 link inputs:
 | r27 | `E077AF60D9E60F75F7C81748D6DE76C10576ED08C570B1DAA812F42B9E998A96` | Results paths, P01, K04, witnesses |
 | r28 | `7A2D46B4F47DAC53111C80AAA0A2544EBF614E93A4537474F3DDAB455BC28E0D` | r27 plus the Yoshi egg owner |
 | r29 | `DAB94410BAADDFA0050FBC20134DD55E061E894850BCC2A0A7970F76A99EDA8D` | r28 plus the Kirby-star NO_PROGRAM arms |
-| **r30** | `9E7F5EF91D86790A4E22CE3811288C256970E0664EBA612438F5207BFB4AFB00` | r29 plus the Kirby low-detail hat counter |
+| r30 | `9E7F5EF91D86790A4E22CE3811288C256970E0664EBA612438F5207BFB4AFB00` | r29 plus the Kirby low-detail hat counter |
+| **r31** | `86A0AE715A431F7642910DCF58F8BA00B5224AC9C66BDC22184DB5812554D366` | r30 plus the stretch classification kept readable with the repair off |
 
-**Playtest r30.** r28's hash reproduced byte-identically across a rebuild, so the
-build is deterministic. No runtime proof: nothing here is observed on screen.
+**Playtest r31.** r28's hash reproduced byte-identically across a rebuild, so the
+build is deterministic. No runtime proof: nothing here is observed on screen, and none could be taken
+tonight — **both emulator harnesses proved untrustworthy in this session.**
+`probe-battle-progress.ps1` ignores `-Build` for the `smash64ds` target and
+always measures the project-root ROM, so a run intended as a control against r26
+silently re-measured the current build and produced identical registers for what
+should have been two different binaries. `verify-nogba-smoke.ps1` reported
+"verification passed: 3 capture(s)" while all three PNGs were the Windows
+desktop wallpaper; `capture-melonds.ps1` has the same blind spot. Details in
+`docs/p2/BUG_NOTES.md`. Do not read the `presented=0 / allocfail=187 /
+__excpt_entry` output of the failed probe as a crash report — the same output
+appeared for a ROM the owner had already played.
 
 `check-native-owner-wiring.py` caught a real gap in the K04 work after r28 was
 built: `item_kirbystar` was missing from all three NO_PROGRAM guard arms in

@@ -6606,13 +6606,13 @@ volatile NDSR2LightMatrixWitness
     gNdsR2LightMatrixWitness[NDS_R2_LIGHT_MATRIX_WITNESS_SLOTS];
 volatile u32 gNdsR2LightMatrixWitnessWrites;
 volatile u32 gNdsR2LightMatrixIdleTimeouts;
-volatile u32 gNdsR2LightMatrixStretchApplied;
+__attribute__((used)) volatile u32 gNdsR2LightMatrixStretchApplied;
 /* |M L| < |L|: the chain SHRINKS the light. The hardware diffuse is then
  * darker than the source's and no unit-bounded light vector can undo it, so
  * the repair declines rather than wrapping the packed components. A non-zero
  * delta here is the evidence that the remaining error needs the diffuse COLOUR
  * scaled instead, which is a different lever and a different task card. */
-volatile u32 gNdsR2LightMatrixStretchDeclined;
+__attribute__((used)) volatile u32 gNdsR2LightMatrixStretchDeclined;
 
 /* Returns |M L| in 20.12 * source units, or 0 when the sample is unusable --
  * which is the caller's signal to keep the r25 divisor. noinline and outside
@@ -6770,10 +6770,8 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
      * root/joint vector matrix this execute's normals will be multiplied by,
      * not the identity the light vector is written under. */
     stretched_len = ndsRendererR2SampleVectorMatrix(x, y, z, light_len_q12);
-#if !NDS_R2_LIGHT_VECTOR_STRETCH_FIX
-    /* Witness-only build: the sample is published, the divisor is not changed. */
-    (void)stretched_len;
-#endif
+    /* Witness-only build still CLASSIFIES the sample below -- Applied and
+     * Declined are the measurement -- and only the divisor is left alone. */
 #endif
     /* The DS hardware square-root and division units, not sqrtf. Partly because
      * this runs twice a frame and they are free here, and partly because
@@ -6785,7 +6783,7 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
         u32 length = (u32)light_len;
         s64 numerator_scale = 511;
 
-#if NDS_R2_LIGHT_VECTOR_MATRIX && NDS_R2_LIGHT_VECTOR_STRETCH_FIX
+#if NDS_R2_LIGHT_VECTOR_MATRIX
         /* Divide by |M L| instead of |L| -- the software path's normalisation
          * point, expressed where the hardware path can hold it. The extra
          * 1 << FRAC in the numerator cancels the 20.12 the matrix carries, so
@@ -6812,10 +6810,22 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
             (stretched_len >
              (light_len_q12 + (light_len_q12 >> 5))))
         {
+            /* COUNT UNDER THE WITNESS, DIVIDE ONLY UNDER THE REPAIR.
+             *
+             * The classification is the measurement this build exists to
+             * take: a non-zero Applied says the chain really does stretch and
+             * the mechanism is live, which is the fact that decides whether
+             * the repair is worth reconciling with the packet twin. Counting
+             * it only when the repair is enabled made the question
+             * unanswerable without shipping the answer -- and left both
+             * counters unwritten, which is how --gc-sections collected them
+             * out of the r30 ELF entirely. */
+            gNdsR2LightMatrixStretchApplied++;
+#if NDS_R2_LIGHT_VECTOR_STRETCH_FIX
             length = (u32)stretched_len;
             numerator_scale =
                 (s64)511 << NDS_RENDERER_DS_MTX_FRAC_BITS;
-            gNdsR2LightMatrixStretchApplied++;
+#endif
         }
         else if ((light_len_q12 > 0) && (stretched_len > 0) &&
                  (stretched_len <

@@ -5066,3 +5066,34 @@ a Translate-Scale that already carries `dobj->translate` and cannot
 double-translate; and `malloc.c:30` is `while (TRUE);`, so an arena overflow
 hangs the console rather than returning NULL -- which means a single frozen
 fighter in a running match is never heap exhaustion.
+
+### Two verification harnesses that cannot be trusted here, 2026-09-21 night
+
+Found while trying to read the r31 witnesses without waiting for a playtest.
+Neither is a code defect in the ROM; both silently produce confident nonsense,
+so record them before they cost another session.
+
+**`probe-battle-progress.ps1` ignores `-Build` for the `smash64ds` target.**
+`Resolve-Smash64DSBuildOutput -Target smash64ds -Build <anything>` returns the
+project-root `smash64ds.nds` every time — verified against `build`,
+`remaining-bugs-playtest-r26` and `remaining-bugs-playtest-r31`, all three
+resolving to the same path. A run intended as a control against an older ROM
+therefore re-measured the current root ROM and produced byte-identical registers
+and counters, which briefly read as "two different binaries crash identically".
+The only tell was that identity. To compare ROMs, swap the root file (with a
+guaranteed restore) or teach the resolver the published build directories.
+
+**`verify-nogba-smoke.ps1` passes on desktop wallpaper.** In this session it
+reported "verification passed: 3 capture(s)" while all three PNGs were the
+Windows wallpaper: the window-capture path does not bring the emulator window
+forward, and the script asserts only that captures were written, never that they
+contain an emulator. `capture-melonds.ps1` has the same blind spot — it logged
+"Captured live melonDS window" for a wallpaper frame. So a historical green from
+either script is evidence that the harness ran, not that the ROM booted.
+
+**Consequence for this cycle:** no runtime evidence could be taken here, in
+either emulator. The r31 witnesses are compiled in and readable, but reading
+them needs a session that can actually see the emulator. Do not read the
+`presented=0 / allocfail=187 / __excpt_entry` numbers from the failed probe as a
+crash report for any ROM — that capture failed, and the same output appeared for
+a ROM the owner had already played successfully.
