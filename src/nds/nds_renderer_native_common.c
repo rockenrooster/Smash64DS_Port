@@ -6525,6 +6525,76 @@ static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2MaterialColor15(
     return ndsRendererHardwareModulatePackedColor(
         RGB15(r, g, b), color_modulate);
 }
+
+volatile u32 gNdsR2ShadeClampAppliedCount;
+
+/* CLAMP ORDER. The N64 clamps the shade sum to eight bits and modulates by the
+ * primitive colour AFTERWARDS -- sys/objdisplay.c's material plus the RDP
+ * combiner give pixel = clamp8(light2 + light1 * dot) * prim / 255. The DS
+ * geometry engine has no inner clamp; it saturates once, at the end, after the
+ * material fold. So folding prim into diffuse and ambient computes
+ * clamp5(light2 * prim/255 + light1 * prim/255 * dot), and wherever the source
+ * sum would have saturated the port overshoots and washes toward white instead
+ * of settling on prim.
+ *
+ * That is BUGS.md's "face color is slightly different from body color" for
+ * Pikachu, Kirby and Jigglypuff, all three at once. The TEXTURED face runs take
+ * their tint from the palette through the DS texture modulate, which IS a
+ * post-shade multiply, so they are unaffected; only the untextured tinted body
+ * diverges. Measured across three fighters and both details, 32 to 132 of each
+ * few hundred channel samples diverge, worst at high dot. The owner's reading --
+ * that Kirby's pink face looks more correct than his body -- is the right way
+ * round: the face is correct and the body is not.
+ *
+ * The engine cannot express the inner clamp, so hold the one point that is
+ * unambiguous: a fully lit vertex must land on prim, never on white. Capping
+ * diffuse at prim - ambient does exactly that, per channel, and leaves the
+ * unlit end untouched. The mid-tone ramp then reaches prim at dot = 1 instead
+ * of at the source's earlier saturation point. This is a deliberate fidelity
+ * trade under PROJECT_GOAL's render-side policy: not pixel-exact, and a
+ * strictly smaller error than losing the tint.
+ *
+ * Only the prim-folded case is touched. With use_material clear the source has
+ * no prim multiply either, so that path already agrees and is left alone. */
+static inline u32 ndsRendererR2ClampDiffuseChannel(
+    u32 diffuse, u32 ambient, u32 prim, u32 shift)
+{
+    u32 d = (diffuse >> shift) & 0x1fu;
+    u32 a = (ambient >> shift) & 0x1fu;
+    u32 p = (prim >> shift) & 0x1fu;
+    u32 headroom = (p > a) ? (p - a) : 0u;
+
+    return (d > headroom) ? headroom : d;
+}
+
+static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2ClampDiffuseToMaterial(
+    u32 diffuse, u32 ambient, u32 material_color, u32 use_material,
+    u32 color_modulate)
+{
+    u32 prim;
+    u32 r;
+    u32 g;
+    u32 b;
+    u16 capped;
+
+    if (use_material == 0u)
+    {
+        return (u16)diffuse;
+    }
+    /* Full white light through the same fold IS the modulated prim colour, so
+     * the cap comes from the identical arithmetic, not a second copy of it. */
+    prim = ndsRendererR2MaterialColor15(0xffffffffu, material_color,
+                                        use_material, color_modulate);
+    r = ndsRendererR2ClampDiffuseChannel(diffuse, ambient, prim, 0u);
+    g = ndsRendererR2ClampDiffuseChannel(diffuse, ambient, prim, 5u);
+    b = ndsRendererR2ClampDiffuseChannel(diffuse, ambient, prim, 10u);
+    capped = (u16)RGB15(r, g, b);
+    if (capped != (u16)diffuse)
+    {
+        gNdsR2ShadeClampAppliedCount++;
+    }
+    return capped;
+}
 #endif
 
 #if NDS_R2_FIGHTER_EPOCH_STATE_PROOF
@@ -6829,6 +6899,12 @@ ndsRendererNativeShadeProductionActions(
             state->color_modulate);
         ambient = ndsRendererR2MaterialColor15(
             stats->light_color_2, material_color, use_material,
+            state->color_modulate);
+        /* See ndsRendererR2ClampDiffuseToMaterial: the source clamps the shade
+         * sum before modulating by prim, and the geometry engine cannot, so
+         * hold the fully lit vertex on prim instead of letting it wash out. */
+        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+            diffuse, ambient, material_color, use_material,
             state->color_modulate);
 
         ndsRendererHardwareWriteDiffuseAmbient(diffuse | (ambient << 16));
