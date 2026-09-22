@@ -19,4 +19,32 @@
 #define NDS_NATIVE_THUNDERGROUND_ROOT5 0x1790u
 #define NDS_NATIVE_THUNDERGROUND_ROOT5_BYTES 152u
 
+/* The live half: three 32x32 IA8 images selected through the MObj's
+ * sprite table.  Four bits of intensity pick the colour, four bits of
+ * alpha ARE the coverage, and the runtime uploads them as GL_RGB8_A5 so
+ * that second nibble survives.  Counts below are over all three images. */
+#define NDS_NATIVE_THUNDERGROUND_IMAGE_COUNT 3u
+#define NDS_NATIVE_THUNDERGROUND_IMAGE0_OFFSET 0x0408u
+#define NDS_NATIVE_THUNDERGROUND_IMAGE1_OFFSET 0x0810u
+#define NDS_NATIVE_THUNDERGROUND_IMAGE2_OFFSET 0x0c18u
+#define NDS_NATIVE_THUNDERGROUND_IMAGE_WIDTH 32u
+#define NDS_NATIVE_THUNDERGROUND_IMAGE_HEIGHT 32u
+#define NDS_NATIVE_THUNDERGROUND_IMAGE_BYTES 1024u
+#define NDS_NATIVE_THUNDERGROUND_TILE_FMT 3u
+#define NDS_NATIVE_THUNDERGROUND_TILE_SIZ 1u
+#define NDS_NATIVE_THUNDERGROUND_TILE_MASK 5u
+#define NDS_NATIVE_THUNDERGROUND_TILE_CLAMP 2u
+#define NDS_NATIVE_THUNDERGROUND_PRIM 0xffffffffu
+#define NDS_NATIVE_THUNDERGROUND_ENV 0x0059ffffu
+#define NDS_NATIVE_THUNDERGROUND_COVERAGE_PALETTE_ENTRIES 8u
+#define NDS_NATIVE_THUNDERGROUND_COVERAGE_LEVELS 16u
+#define NDS_NATIVE_THUNDERGROUND_COVERAGE_CLASS 0x0a501001u
+/* One byte a texel, so the upload is the texel count. */
+#define NDS_NATIVE_THUNDERGROUND_COVERAGE_UPLOAD_BYTES 1024u
+/* Texels strictly between transparent and opaque, and the population
+ * they were counted over.  A 1-bit upload forces every one of these to
+ * full opacity, which is the defect this owner exists to remove. */
+#define NDS_NATIVE_THUNDERGROUND_COVERAGE_PARTIAL_TEXELS 2225u
+#define NDS_NATIVE_THUNDERGROUND_COVERAGE_TOTAL_TEXELS 3072u
+
 #endif

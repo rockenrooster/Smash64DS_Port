@@ -7,8 +7,11 @@
  * The live half is the CURRENT IMAGE and nothing else. A reconnaissance
  * witness read a material effects word of 0x200 --
  * NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE alone -- across all six roots,
- * and the source picks it with `mobj->texture_id_curr`
- * (wppikachuthunder.c:172 and :196, over the four textures at wpvars.h:50).
+ * and the source picks it with `mobj->texture_id_curr` over the THREE-entry
+ * sprite table each of the six MObjSubs carries. (Not four, and not the
+ * wpvars.h:50 table: WPPIKACHUTHUNDER_TEXTURES_NUM belongs to Pikachu's
+ * Thunder HEAD, a different weapon with a different DObjDesc. The generator
+ * pins the three, including the one genuinely NULL entry at MObjSub 2 slot 1.)
  * So the segment-0xE call is translated through the shared typed material
  * path exactly as the Mushroom Kingdom Pakkun does, never as a segment-E Gfx
  * stream, and every other word of the program is baked.
@@ -16,8 +19,18 @@
  * The caller passes the root index, not the root offset: the generator already
  * flattened each root's three corners out of the source vertex cache in DRAW
  * order, which is why root 0x15c0's two G_VTX loads need no special case
- * here. */
+ * here.
+ *
+ * THE EDGE IS STORED ALPHA. These roots carry no G_LOADTLUT: the image is
+ * 32x32 IA8 and its alpha nibble is the coverage the combiner passes straight
+ * through. The generic bind resolves that into RGB5A1 and packs it to PAL16 --
+ * one alpha bit -- which promotes 2,225 of 3,072 partially covered texels to
+ * fully opaque and draws the hard rim. The dedicated owner included below
+ * uploads the same texels as GL_RGB8_A5 instead; if it declines for any reason
+ * the generic bind still runs, so this is never worse than it was. */
 #if NDS_RENDERER_HW_TRIANGLES
+
+#include "nds_native_pikachu_thunderground_coverage.inc"
 
 sb32 ndsRendererSubmitNativePikachuThunderGround(
     u32 root_index, const NDSRendererNativeMaterial *material,
@@ -82,10 +95,19 @@ sb32 ndsRendererSubmitNativePikachuThunderGround(
     ndsRendererNativeApplyMaterial(material, stats, &state);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    /* Soft coverage first, generic bind as the fallback -- not as a renderer
+     * fallback, which this ROM forbids, but as the SAME owner's previous
+     * texture representation when VRAM or the source contract refuses the
+     * better one. A refusal is counted, never silent. */
+    if (ndsNativeThunderGroundBindCoverageTexture(stats, config, material) ==
+        FALSE)
     {
-        gNdsThunderGroundSubmitStep = 3u;
-        return FALSE;
+        gNdsThunderGroundCoverageFallbackCount++;
+        if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+        {
+            gNdsThunderGroundSubmitStep = 3u;
+            return FALSE;
+        }
     }
 
     material_color = ndsRendererHardwareColorSource(stats);

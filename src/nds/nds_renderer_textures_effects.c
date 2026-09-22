@@ -2878,6 +2878,13 @@ static void ndsRendererHardwareResetFoxGunTextureState(void);
 static void ndsRendererHardwareReleaseFoxGunTexture(void);
 #endif
 
+/* The ground Thunder Jolt's three A5I3 coverage names are not cache entries, so
+ * the loops below do not reach them -- and glResetTextures runs immediately
+ * after this in ndsRendererHardwareResetSceneTextureVram. Defined in
+ * src/nds/nds_native_pikachu_thunderground_coverage.inc, which is pulled into
+ * this translation unit further down nds_renderer.c. */
+void ndsNativeThunderGroundReleaseCoverageTextures(void);
+
 void ndsRendererHardwareDiscardTextureCache(void)
 {
     if ((sNdsRendererBattleStaticTexturePrepared != 0u) ||
@@ -2946,6 +2953,7 @@ void ndsRendererHardwareDiscardTextureCache(void)
         sNdsRendererRebirthHaloTextureName[i] = 0u;
     }
 #endif
+    ndsNativeThunderGroundReleaseCoverageTextures();
     for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
     {
         ndsRendererHardwareReleaseIFCommonCloudAtlas(
