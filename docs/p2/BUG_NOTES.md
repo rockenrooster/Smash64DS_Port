@@ -5698,3 +5698,42 @@ most satisfying story.
 
 None of these is a claim. The whole point of the ranking is that if Fox does
 behave on r36, checking them in this order costs least.
+
+## 2026-09-22 -- the tree did not build from clean for a day, and nobody noticed
+
+Trying to build a baseline ROM at `0a52111ad0e` -- the commit where the owner
+wrote the frozen-Fox row -- to test whether that row is already fixed. The
+build fails before compiling anything:
+
+    M3_NATIVE_STAGE_GENERATION_FAIL: M3_STAGE_FALSIFIER:
+    src/port/reloc_backend_renderer_dl.c:ndsRendererAdapterBuildDObjXObjMatrix:
+    unclassified reads ['dobj.xobjs_num']
+
+**That is the same defect I fixed at HEAD tonight, and its reach is larger than
+it looked.** `76b3c1c6366` (2026-09-21, the 0x45 matrix scope fix) added
+`if (dobj->xobjs_num > 1)` inside that closure and did not add the field to the
+consumed-field manifest. From that commit until tonight's fix, **any build that
+had to regenerate `nds_native_stage_owner.generated.inc` failed**. Existing
+working trees kept building only because the generated `.inc` was already
+present and newer than its prerequisites, so the generator never ran.
+
+So this was not merely "a checker was red". A fresh clone, a new worktree, or
+anyone who cleaned their build directory could not build the project for about
+a day, and the incremental builds that hid it are exactly the ones every active
+developer was running.
+
+Confirmed the gap is specific rather than my worktree's doing:
+`dobj.xobjs_num` IS present in other closures' field lists (lines 872, 906 of
+the generator at that commit) and absent only from the
+`ndsRendererAdapterBuildDObjXObjMatrix` entry.
+
+For the baseline experiment the worktree gets that one manifest entry
+back-ported. It is behaviour-neutral -- applying the identical change at HEAD
+left `smash64ds.nds` byte-identical -- so the resulting ROM is the baseline's
+behaviour, not a hybrid. Stated because a baseline that quietly carries a fix
+is not a baseline.
+
+**Worth adding to the build gates:** nothing catches this class except an
+actual clean build. `check_nds_native_stage.py` does catch it, but it was red
+for other reasons and therefore not being read -- see the checker notes above.
+A periodic build from a fresh worktree would have caught it in a day.
