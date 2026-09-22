@@ -12,14 +12,12 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 Main Menus:
 -Make "Characters" and "VS Record" not selectable, "Characters" and "VS Record" work is Owner deferred.
 -VS options
-    -Changing Damage percentage still feels bad to use. maybe have it be 1 at a time but change at like 10 per sec? **Done: 1 per step, repeat every 6 updates (~10/sec), row-local cadence.**
 -CSS Bugs still present and need to be fixed:
     -delay between cursor hover and 3d fighter preview rendering. **Owner: lower priority now. Dwell is 2 cold / 1 warm; residual is a 30,160 B owner-image read.**
 
 -Yoshi:
     -Yoshi's guard/shield (egg) is invisible **Latch cause found: Kirby's copy-hat load, not general pressure. Egg bake still owed.**
 -Link:
-    -slash damage VFX playing at incorrect locations. **Root XObj kind 0x45 took a translate-bearing fallback: world contact applied twice.**
 -Pikachu
     -neutral b attack VFX that walks terrain still has hard edges. **GROUND fixed (owner). AIR jolt REGRESSED in r24: shares asset 342; suspect VRAM/bind interaction with the new A5I3 names.**
     -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
@@ -37,7 +35,6 @@ Main Menus:
 -Captain falcon
 -Ness
 -General
-    -Results screen not showing 1st place emblem **Emblem dead at dispatch: native display refuses non-battle scenes. Badge path not localized.**
     -All Fighters are not doing correct poses/animations on results screen **142 submotion payloads were in no NitroFS list. 47/47 cells route now.**
     -No contest results screen, all fighters should be doing the clapping animations. **Kind was always correct; the Claps figatree could not load.**
 Stages:
