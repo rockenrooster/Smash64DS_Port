@@ -58,9 +58,28 @@ ASSIGN = re.compile(r"\bdiffuse\s*=\s*" + CLAMP + r"\s*\(")
 # The two fighter derivations this file is allowed to contain.  Adding a third
 # is a deliberate act; see CLAIM 2.
 EXPECTED_SITES = (
-    "ndsRendererNativeShadeProductionActions",
+    "ndsRendererR2ResolveEpochShade",
     "ndsFighterPacketApplyTint",
 )
+
+# Sites that compose the word out of a resolver's RETURN rather than deriving
+# it.  ndsRendererNativeShadeProductionActions used to derive it inline; the
+# 2026-09-22 tint route moved the derivation into
+# ndsRendererR2ResolveEpochShade so the bodies could leave the fighter ITCM
+# section, and what is left here is `diffuse = shade & 0xffff` plus the
+# recompose.  It is not a third derivation and must not be treated as one --
+# but it is also not an exemption to be handed out freely, which is why it is
+# named rather than pattern-matched.
+DELEGATING_SITES = (
+    "ndsRendererNativeShadeProductionActions",
+)
+
+# The live resolver may skip the clamp, but only on the branch that installs a
+# solid-prim tile instead -- and that branch MUST refuse the packet, because
+# the replay has no tile and would shade the same run from the fold.  This is
+# the invariant that keeps the twin honest now that the two paths can legally
+# differ: they can only differ on frames the packet will not be used for.
+TINT_BRANCH_GUARD = "sNdsFighterPacketRecorder.fault"
 
 # Derivations that compose a DIF_AMB word WITHOUT the fighter fold, and are
 # therefore outside CLAIM 1.  The discriminator is the material function, not
@@ -206,6 +225,11 @@ def main(argv):
         if not COMPOSE.search(text):
             continue
         if FIGHTER_FOLD not in text:
+            if name in DELEGATING_SITES:
+                if verbose:
+                    print("delegates to the resolver: %s line %d"
+                          % (name, first_line))
+                continue
             if name not in KNOWN_UNFOLDED_SITES:
                 failures.append(
                     "CLAIM 2: %s (line %d) composes a DIF_AMB word without "
@@ -287,12 +311,42 @@ def main(argv):
             "CLAIM 4: %d of the 2 fighter derivations call %s; both must"
             % (len(roles_by_site), CLAMP))
 
+    # ---- CLAIM 5: the live resolver's unclamped branch refuses the packet ---
+    #
+    # The resolver is allowed to skip the clamp, but only where it installs a
+    # solid-prim tile instead, and the replay has no tile.  So that branch has
+    # to make the packet unusable, or a fighter would alternate between two
+    # colours as frames were recorded and replayed.  Without this claim, CLAIM
+    # 1 could be satisfied by a clamp the live path never actually reaches.
+    resolver = None
+    for name, first_line, body in functions:
+        if name == "ndsRendererR2ResolveEpochShade":
+            resolver = (first_line, "\n".join(body))
+            break
+    if resolver is None:
+        failures.append(
+            "CLAIM 5: ndsRendererR2ResolveEpochShade is not defined in %s. "
+            "The live derivation moved or was renamed; re-read it before "
+            "editing this checker" % SOURCE)
+    else:
+        first_line, text = resolver
+        if TINT_BRANCH_GUARD not in text:
+            failures.append(
+                "CLAIM 5: ndsRendererR2ResolveEpochShade (line %d) can return "
+                "an unclamped word without faulting the packet (`%s` absent). "
+                "A replayed frame has no prim tile, so it would shade the "
+                "same run from the fold and the fighter would change colour "
+                "between recorded and live frames"
+                % (first_line, TINT_BRANCH_GUARD))
+        elif verbose:
+            print("tint branch faults the packet: line %d" % first_line)
+
     if failures:
         for failure in failures:
             print("FAIL:", failure)
         print("%d failure(s)" % len(failures))
         return 1
-    print("check-r2-shade-twin: OK (4 claims)")
+    print("check-r2-shade-twin: OK (5 claims)")
     return 0
 
 
