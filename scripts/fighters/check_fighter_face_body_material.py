@@ -413,8 +413,13 @@ def n64_pixel5(light1: int, light2: int, prim: int, dot: float):
     return tuple(out)
 
 
-def ds_pixel5(light1: int, light2: int, prim: int, dot: float):
-    """clamp5(folded_ambient + folded_diffuse*dot); the geometry engine."""
+def ds_pixel5_folded(light1: int, light2: int, prim: int, dot: float):
+    """clamp5(folded_ambient + folded_diffuse*dot); the geometry engine.
+
+    This is what the port did while the primitive colour was folded into the
+    material, and it is kept because it is the shape of the defect: each
+    channel saturates at 31 on its own, so a tinted prim washes toward white.
+    """
     out = []
     for shift in (24, 16, 8):
         diffuse5 = scale_material_channel5((light1 >> shift) & 0xFF,
@@ -423,6 +428,40 @@ def ds_pixel5(light1: int, light2: int, prim: int, dot: float):
                                            (prim >> shift) & 0xFF)
         out.append(clamp5(int(ambient5 + diffuse5 * dot)))
     return tuple(out)
+
+
+def ds_pixel5_tinted(light1: int, light2: int, prim: int, dot: float):
+    """The tint route: shade the RAW light, then modulate by a solid texel.
+
+    `ndsRendererR2ResolveEpochShade` writes RGB5(light) into diffuse/ambient
+    for a tinted, unmodulated epoch and `ndsRendererR2BeginTintBatch` binds an
+    8x8 tile whose every texel is prim, so the pipeline evaluates
+    clamp31(RGB5(l2) + RGB5(l1)*dot) * prim -- the source's own order of
+    operations, with the clamp BEFORE the multiply.
+    """
+    out = []
+    for shift in (24, 16, 8):
+        diffuse5 = ((light1 >> shift) & 0xFF) >> 3
+        ambient5 = ((light2 >> shift) & 0xFF) >> 3
+        shade5 = clamp5(int(ambient5 + diffuse5 * dot))
+        texel5 = ((prim >> shift) & 0xFF) >> 3
+        # The DS modulate is (vertex * texel) at 5 bits per side, rounded.
+        out.append(((shade5 * texel5) + 15) // 31)
+    return tuple(out)
+
+
+def ds_pixel5(light1: int, light2: int, prim: int, dot: float):
+    """What the port draws today, per epoch.
+
+    A white prim is the identity fold and keeps the folded path; anything else
+    takes the tint route. The census below therefore reports the SHIPPED
+    arithmetic, not a historical one -- a falsifier that models a path the
+    producer no longer takes is worse than no falsifier, and this file was
+    exactly that between 2026-09-21 and 2026-09-22.
+    """
+    if ((prim >> 8) & 0x00FFFFFF) == 0x00FFFFFF:
+        return ds_pixel5_folded(light1, light2, prim, dot)
+    return ds_pixel5_tinted(light1, light2, prim, dot)
 
 
 def fold_census(resolved, verbose: bool, label: str):
@@ -574,10 +613,11 @@ def main() -> int:
     for key in sorted(FOLD_DIVERGENCE_CENSUS):
         diverging, total = FOLD_DIVERGENCE_CENSUS[key]
         seeded = len(SEED_DEPENDENT_EPOCHS.get(key, ()))
-        print(f"  {key[0]} {key[1]}: shade fold {diverging}/{total} channel "
-              "samples diverge (DS clamps the prim-folded sum; the N64 clamps "
-              f"the shade and modulates after); {seeded} epoch(s) depend on "
-              "the adapter light seed")
+        print(f"  {key[0]} {key[1]}: shade {diverging}/{total} channel "
+              "samples diverge by 1/31 (both sides now clamp before the "
+              "multiply; the residual is the DS quantizing light and texel to "
+              f"5 bits where the N64 multiplies at 8); {seeded} epoch(s) "
+              "depend on the adapter light seed")
     return 0
 
 
