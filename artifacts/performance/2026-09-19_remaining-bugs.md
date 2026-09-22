@@ -2795,3 +2795,41 @@ which count every fighter-attack-versus-damage-collision evaluation and every
 one that connects. Calls>0 with Hits==0 over a match would be a genuine
 collision failure; Calls==0 would mean the phase never runs. Both builds in use
 tonight have `NDS_TICK_HUD 0`, so those symbols are not in either ELF.
+
+## 2026-09-22 09:10 -- r36 confirmed reproducible, and my second retracted alarm
+
+Noticed the two shared particle-bank generated files dirty after the lab
+builds, rebuilt the default to restore them, and got a DIFFERENT ROM:
+`73F9D5CF...` where r36 is `1CECBEF5...`, with `git status` empty. I read that
+as "r36 was built from lab-contaminated assets" and said so.
+
+**That was wrong, and the correction is measured.** Cleared the gitignored
+generated tree (`src/nds/generated/`, restoring the one TRACKED file in it,
+`nds_native_damage_slash.generated.inc`) plus `builds/build`, and built twice:
+
+    pass 1  MAKE EXIT 0  ROM 1cecbef5...3ba1
+    pass 2  MAKE EXIT 0  ROM 1cecbef5...3ba1   DIRTY 0
+
+**From a fully regenerated tree the build is deterministic and produces
+exactly r36.** So r36 is correct and reproducible; `73F9D5CF` was the one-off
+-- an INCREMENTAL build over the mixed lab-flavoured artifacts -- not the
+other way round. 21 of 21 checkers green on the regenerated tree, and the
+published snapshot still matches the root ROM byte for byte.
+
+**What IS real from the episode**, and worth keeping:
+
+- Mixing lab-flag builds with shipping builds leaves the gitignored generated
+  tree inconsistent, and `make` cannot detect it because it compares mtimes
+  and never sees that FLAGS changed. An incremental build over that state can
+  produce a ROM that a clean build does not reproduce.
+- The guard is cheap: after any non-default-flag build, rebuild the default
+  and require the hash to be unchanged. If it is not, clear the generated tree
+  and build twice before trusting either result.
+
+**And the pattern is worth naming, because this is the second time tonight.**
+The batch opened with an arena alarm -- "this may stop Pikachu/Fox starting"
+-- built on a stale census figure, retracted after one measurement. It closes
+with a reproducibility alarm built on one incremental build, retracted after
+two clean ones. Both times the alarm was raised on a single observation and
+published before the cheap confirming measurement was taken. The confirming
+measurement cost about twenty minutes each time.
