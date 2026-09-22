@@ -12519,10 +12519,48 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
         }
         else
         {
+            /* LOAD THE LOW HAT ONLY WHEN THIS FIGHTER CAN EVER SELECT IT.
+             *
+             * Both details used to load here unconditionally, about 8,556
+             * bytes each, and measured on 2026-09-21 (Kirby vs Fox, Dream
+             * Land) that took the general heap from 41,684 free to 23,204 --
+             * past the 25,600 at which ifCommonSetMaxNumGObj freezes the GObj
+             * cap for the rest of the match. From there no further effect
+             * object can be created, which is the shape of the intermittent
+             * missing VFX. The low image is 7,636 of those bytes.
+             *
+             * Whether the low hat is reachable at all is decided once, at
+             * fighter creation: scvsbattle.c / sc1pgame.c / sc1ptrainingmode.c
+             * / scexplain.c all set `desc.detail` to High when
+             * `pl_count + cp_count < 3` and Low otherwise, and ftmanager.c:704
+             * copies it into BOTH detail_curr and detail_base. Every later
+             * writer of detail_curr in a match raises it to High -- the pause
+             * camera (ifcommon.c), the dead-up-fall (ftcommondead.c),
+             * sc1pgame -- and the two restore paths, ftmain.c:4412 and the
+             * pause's saved value, put back detail_base. So a fighter whose
+             * base detail is High can never present the low hat, and loading
+             * it buys nothing.
+             *
+             * detail_curr is tested beside detail_base rather than instead of
+             * it because scautodemo.c drives detail directly on its own
+             * fighters; the union is a superset of what can be reached, which
+             * is the safe side of this predicate.
+             *
+             * THIS DOES NOT BY ITSELF CLEAR THE LATCH EVERYWHERE. On Dream
+             * Land it does: 23,204 + 7,636 = 30,840, over the floor. On
+             * Saffron City, whose measured free-min with Kirby present is
+             * 32,504, a copy still lands near 21,700 and the cap still
+             * freezes. A null-safe maker caller is the fix for that, not this
+             * lever. */
+            u32 hat_low_reachable =
+                ((fp->detail_base == nFTPartsDetailLow) ||
+                 (fp->detail_curr == nFTPartsDetailLow)) ? 1u : 0u;
+
             if ((ndsRendererNativeEnsureKirbyCopyHat(
                      (u32)fp->nds_slot, (u32)modelpart_id, 0u) == FALSE) ||
-                (ndsRendererNativeEnsureKirbyCopyHat(
-                     (u32)fp->nds_slot, (u32)modelpart_id, 1u) == FALSE))
+                ((hat_low_reachable != 0u) &&
+                 (ndsRendererNativeEnsureKirbyCopyHat(
+                      (u32)fp->nds_slot, (u32)modelpart_id, 1u) == FALSE)))
             {
                 fp->passive_vars.kirby.copy_id = nFTKindKirby;
                 modelpart_id = 0;

@@ -9561,6 +9561,33 @@ static void ndsFighterPacketApplyTint(
         ambient = ndsRendererR2MaterialColor15(
             site->light_color_2, material_color, site->use_material,
             modulate);
+        /* THE SAME CLAMP THE PRODUCTION PATH APPLIES (:7347), AND ITS ABSENCE
+         * HERE WAS P04/K02/J01.
+         *
+         * The word this function overwrites was recorded CLAMPED --
+         * ndsFighterPacketRecordDiffuseAmbient tees the post-clamp value. This
+         * re-derive rebuilt it from the frozen inputs and stopped one call
+         * short, so the first tint move (damage flash, invincibility blink,
+         * team colour) replaced a clamped word with an unclamped one and then
+         * latched it: the early-out above keeps the new prim hash, so nothing
+         * re-derives it again until the packet is re-recorded.
+         *
+         * That is the shape of the owner's report exactly. The clamp only bites
+         * a TINTED prim -- it returns `diffuse` untouched for use_material == 0
+         * and for a white prim -- so the only fighters that can show it are the
+         * three it was written for: Pikachu 0xFFD933, Kirby 0x00FF5A and Purin
+         * 0xFFCDD8, which are the three face/body rows. A part whose run is
+         * untinted kept its value while the tinted run beside it jumped, which
+         * reads as two colours on one model. And holding neutral B cured it
+         * because a status change re-records the packet, restoring the clamped
+         * word -- a static arithmetic error could not be cured by a button, but
+         * a latched cache entry is cured by exactly that.
+         *
+         * Nothing else needs to change: a rigid clamp of the recorded inputs is
+         * what the live draw would have written for this prim, so prepared and
+         * replayed frames now derive the identical word instead of two. */
+        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+            diffuse, ambient, material_color, site->use_material, modulate);
         packet->words[site->index] = diffuse | (ambient << 16);
     }
     packet->tint_modulate = modulate;

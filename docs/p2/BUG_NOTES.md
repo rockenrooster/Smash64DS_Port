@@ -5224,3 +5224,90 @@ proof wants the full roster rather than Kirby plus Link.
 fighters are idle: the descriptor sets the roster, and the inhale needs the
 controller playback that `probe-kirby-copylink-owner.ps1` sets up. Adapting
 that probe is the next step, and it is now unblocked.
+
+## 2026-09-22 -- P04/K02/J01 closed on a missing clamp, not on the light stretch
+
+**The owner's own sentence was the evidence, and I had been reasoning past it.**
+"Kirby's face and body are still two colours, and HOLDING NEUTRAL B fixes it."
+A static arithmetic error -- which the light-vector stretch is -- cannot be
+cured by holding a button. Something a status change clears is stale cached
+state, and this renderer has exactly one cache of shade words: the fighter
+packet.
+
+**The divergence.** `ndsRendererR2ClampDiffuseToMaterial` had exactly ONE call
+site, `ndsRendererNativeShadeProductionActions` (nds_renderer_native_common.c
+:7347). The replay path's re-derive, `ndsFighterPacketApplyTint`, called
+`ndsRendererR2MaterialColor15` twice for diffuse and ambient and composed the
+word without it. A packet is RECORDED holding the post-clamp value, so the two
+agreed until something moved the tint; the first damage flash, invincibility
+blink or team colour re-derived the word UNCLAMPED, and the function's own
+early-out then stored the new prim hash, so nothing derived it again until the
+packet was re-recorded. Sticky, and cleared by any status change. That is the
+button.
+
+**Why exactly these three fighters.** The clamp returns `diffuse` untouched for
+`use_material == 0` and for a white prim. The only materials it can move are
+tinted prims, and the clamp's own comment names them: Pikachu 0xFFD933, Kirby
+0x00FF5A, Purin 0xFFCDD8. Those are the three face/body rows in BUGS.md and
+there is no fourth. An untinted run held its colour while the tinted run beside
+it jumped, which is a seam on one model.
+
+**Repair.** One call added to the re-derive, with the same five arguments the
+live draw passes. Prepared and replayed frames now derive the identical word.
+
+**Locked.** `scripts/check-r2-shade-twin.py` (new, source-only, runs nothing).
+Four claims: every function composing a DIF_AMB word through the fighter fold
+assigns `diffuse` from the clamp first; the derivation sites are exactly the two
+known ones; the clamp keeps both of its exemptions; and the two sites pass the
+same argument roles, pinned per position so a wrong quantity passed at BOTH
+sites still fails. Mutation-tested RED on four mutations (clamp removed from the
+replay; each exemption removed; a wrong quantity substituted), green before and
+after.
+
+**A third DIF_AMB site exists and was deliberately left alone.**
+`ndsRendererSubmitNativeRebirthHalo` (:2595) composes the same word through its
+own fold, `ndsRendererRebirthHaloMaterialColor15`, and does not clamp. It is the
+SAME CLASS of omission. It is not one of the reported rows, it is the respawn
+platform rather than a fighter part, and its look cannot be verified in this
+session, so changing it would be an unrequested visual change made blind. The
+checker records it as an explicit exemption keyed on the material function
+rather than on the name, so it cannot be forgotten and a genuinely new fighter
+site cannot inherit the exemption. **If the halo is ever brought under the
+fighter fold, it must clamp with the others.**
+
+**What this retires.** `NDS_R2_LIGHT_VECTOR_MATRIX` and
+`NDS_R2_LIGHT_VECTOR_STRETCH_FIX` both stay default 0. The stretch measurement
+was real -- row_norm 4695-4911 against a rigid 4096, determinant POSITIVE so
+never a mirror -- but it was never the reported defect, and its repair is still
+blocked on the packet twin it cannot reconcile. Leave both off; do not spend
+another cycle on the shrink case on account of these rows.
+
+## 2026-09-22 -- Kirby's low-detail copy hat is unreachable below 3 fighters
+
+Both hat details loaded eagerly at the copy
+(`reloc_backend_compat_shims.c`), about 8,556 bytes each, taking the Dream Land
+general heap from 41,684 free to 23,204 -- under the 25,600 at which
+`ifCommonSetMaxNumGObj` freezes the GObj cap for the rest of the match. The
+lever to defer the low image was identified on 09-21 and blocked on a count
+nobody could take, because the CSS walk cannot drive an inhale.
+
+**It did not need the count.** The reachability is decidable from source.
+`scvsbattle.c`, `sc1pgame.c`, `sc1ptrainingmode.c` and `scexplain.c` all set
+`desc.detail = (pl_count + cp_count) < 3 ? High : Low`, and `ftmanager.c:704`
+copies it into both `detail_curr` and `detail_base`. Every later writer of
+`detail_curr` in a match RAISES it -- the pause camera (`ifcommon.c`), the
+dead-up-fall (`ftcommondead.c`), `sc1pgame.c` -- and both restore paths
+(`ftmain.c:4412` and the pause's saved value) put back `detail_base`. So a
+fighter whose base detail is High can never present the low hat. `detail_curr`
+is tested beside `detail_base` because `scautodemo.c` drives detail directly;
+the union is a superset of what is reachable.
+
+Returns 7,636 bytes. A wrong predicate is now countable rather than silent:
+`gNdsNativeKirbyHatTableMisses[detail]` increments when a draw asks for a
+detail's root and the image is not resident.
+
+**It does NOT clear Saffron, and the arithmetic should be stated rather than
+implied.** Dream Land: 23,204 + 7,636 = 30,840, over the floor. Saffron City,
+measured free-min 32,504 with Kirby present: a copy still lands near 21,700,
+still under 25,600, so the cap still freezes and a maker can still return NULL.
+The Saffron crash needs a null-safe caller, not this lever.

@@ -1623,6 +1623,13 @@ extern volatile u32 gNdsNativeKirbyHatSuppressedCount;
 extern volatile u32 gNdsNativeKirbyHatLoadCount;
 extern volatile u32 gNdsNativeKirbyHatFailCount;
 extern volatile u32 gNdsNativeKirbyHatBytes;
+/* Indexed [0] high, [1] low. Hits are draw-time root matches that found the
+ * image resident; Misses are root matches that did not, which is the only
+ * signal that the copy site's low-detail deferral was wrong -- the hat just
+ * stops drawing otherwise. Declared under the same condition that defines
+ * them in nds_renderer_assets.c. */
+extern volatile u32 gNdsNativeKirbyHatTableHits[2];
+extern volatile u32 gNdsNativeKirbyHatTableMisses[2];
 #endif
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);

@@ -3612,6 +3612,10 @@ __attribute__((used)) volatile u32 gNdsNativeKirbyHatFailCount;
  * across a natural two-player copy match is what makes deferring the
  * low-detail load safe, and it is worth 7,636 bytes of general heap. */
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatTableHits[2];
+/* Same index. The draw asked for this detail's root and the image was not
+ * resident, so the hat did not draw. [1] is the low-detail deferral's refutation
+ * counter; see the read site. */
+__attribute__((used)) volatile u32 gNdsNativeKirbyHatTableMisses[2];
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatBytes;
 #endif
 
@@ -4001,9 +4005,28 @@ ndsRendererNativeFighterTablesForResolvedRoot(
             NDSNativeKirbyHatImageSlot *hat =
                 &sNdsNativeKirbyHatImages[battle_slot][detail];
 
-            if ((root == &sNdsNativeKirbyHatRoots[battle_slot][detail]) &&
-                (hat->valid != 0u) &&
-                (hat->heap_generation == gNdsTaskmanHeapGeneration))
+            if (root != &sNdsNativeKirbyHatRoots[battle_slot][detail])
+            {
+                continue;
+            }
+            if ((hat->valid == 0u) ||
+                (hat->heap_generation != gNdsTaskmanHeapGeneration))
+            {
+                /* THE ROOT NAMED THIS DETAIL AND THE IMAGE IS NOT RESIDENT.
+                 *
+                 * Before the low-detail deferral this meant a failed load or a
+                 * heap generation change, and falling through was right. It
+                 * now also covers a wrong predicate: the copy site
+                 * (reloc_backend_compat_shims.c) skips the low image when the
+                 * fighter's base detail is High, on the argument that nothing
+                 * can then select Low. If that argument is ever wrong the hat
+                 * stops drawing, which is SILENT -- so count it here. A
+                 * non-zero [1] is the deferral refuted, and it is what to read
+                 * beside gNdsNativeKirbyHatTableHits rather than a
+                 * screenshot. */
+                gNdsNativeKirbyHatTableMisses[detail]++;
+                continue;
+            }
             {
                 /* THE COUNTER THAT PRICES THE LOW-DETAIL HAT LEVER.
                  *
