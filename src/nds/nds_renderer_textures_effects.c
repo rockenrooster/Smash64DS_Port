@@ -834,6 +834,45 @@ static s32 ndsRendererCombineSecondOutputUsesAlpha(u32 w1, u32 source)
             (((w1 >> 0) & 0x07u) == source)) ? TRUE : FALSE;
 }
 
+/* A CYCLE'S ALPHA OUTPUT IS (A - B) * C + D, SO A AND B COUNT TOO.
+ *
+ * ndsRendererCombineUsesAlpha and its second-cycle twin read only C and D.
+ * That is right for the questions their other callers ask -- "is the texel the
+ * multiplier" -- and wrong for this one, which is "does the OUTPUT depend on
+ * `source`". gbi.h:3088-3102 packs alpha A/B separately from C/D, and
+ * G_CC_MODULATEIA's alpha is (TEXEL0 - 0) * SHADE + 0: the texel is in slot A,
+ * it plainly reaches the output, and a C/D-only reading calls it absent.
+ *
+ * That is the Castle roof. Its texels upload with alpha forced opaque, and on
+ * that surface the discarded alpha was the only thing masking TMEM row padding
+ * the N64 never samples, so the roof is painted with its own padding.
+ *
+ * SCOPED, AND THE SCOPE IS THE POINT. r37 answered this by replacing the whole
+ * predicate with a raw scan of all eight slots, which threw away the 2-cycle
+ * COMBINED chaining below -- and then I defended it with a table decoded using
+ * the wrong ACMUX constants. The chaining stays; only the per-cycle test is
+ * completed. scripts/check-alpha-mux-blast-radius.py decodes the constants
+ * from nds_renderer_preamble.c and every fighter policy family from the
+ * generated owner table, and fails if any candidate predicate moves a fighter
+ * family's answer. All six are unmoved by this one; G_CC_MODULATEIA is the
+ * only combine it separates. */
+static s32 ndsRendererCombineFirstOutputUsesAlphaFull(u32 w0, u32 w1,
+                                                      u32 source)
+{
+    return ((((w0 >> 12) & 0x07u) == source) ||   /* Aa0 */
+            (((w1 >> 12) & 0x07u) == source) ||   /* Ab0 */
+            (((w0 >>  9) & 0x07u) == source) ||   /* Ac0 */
+            (((w1 >>  9) & 0x07u) == source)) ? TRUE : FALSE;  /* Ad0 */
+}
+
+static s32 ndsRendererCombineSecondOutputUsesAlphaFull(u32 w1, u32 source)
+{
+    return ((((w1 >> 21) & 0x07u) == source) ||   /* Aa1 */
+            (((w1 >>  3) & 0x07u) == source) ||   /* Ab1 */
+            (((w1 >> 18) & 0x07u) == source) ||   /* Ac1 */
+            (((w1 >>  0) & 0x07u) == source)) ? TRUE : FALSE;  /* Ad1 */
+}
+
 static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
                                               u32 source)
 {
@@ -848,16 +887,16 @@ static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
     w1 = stats->texture_combine_w1;
     if (ndsRendererHardwareUseSecondCycle(stats) == FALSE)
     {
-        return ndsRendererCombineUsesAlpha(w0, w1, source);
+        return ndsRendererCombineFirstOutputUsesAlphaFull(w0, w1, source);
     }
-    if (ndsRendererCombineSecondOutputUsesAlpha(w1, source) != FALSE)
+    if (ndsRendererCombineSecondOutputUsesAlphaFull(w1, source) != FALSE)
     {
         return TRUE;
     }
-    if (ndsRendererCombineSecondOutputUsesAlpha(
+    if (ndsRendererCombineSecondOutputUsesAlphaFull(
             w1, NDS_RENDERER_ACMUX_COMBINED) != FALSE)
     {
-        return ndsRendererCombineUsesAlpha(w0, w1, source);
+        return ndsRendererCombineFirstOutputUsesAlphaFull(w0, w1, source);
     }
     return FALSE;
 }
