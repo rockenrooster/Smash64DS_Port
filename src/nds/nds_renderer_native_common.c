@@ -6521,8 +6521,23 @@ u32 gNdsR2LightVectorWrites;
 /* 1 = sample the live vector matrix at the light-vector write and publish the
  *     witness. Costs one bounded FIFO-drain wait plus nine register reads per
  *     owner execute (2/frame; E16a measured one light write per execute).
- * 0 = r25 arithmetic and r25 cost exactly: no read, no drain, no witness. */
-#define NDS_R2_LIGHT_VECTOR_MATRIX 1
+ * 0 = r25 arithmetic and r25 cost exactly: no read, no drain, no witness.
+ *
+ * DEFAULT 0, AND THE REASON IS THE ARENA, NOT THE ANALYSIS. This witness has
+ * already done its job: read on 2026-09-21 against a live Pikachu-vs-Fox match
+ * it returned row_norm 4907 (a rigid chain reads 4096), det_20p12 +7048 and 92
+ * of 100 writes SHRINKING -- which confirmed the mechanism, refuted the
+ * negative-determinant reading in hardware, and showed the stretch repair
+ * addresses the minority case. None of that needs re-taking.
+ *
+ * What it costs is measured too: the whole 09-21 batch moved the shipping
+ * arena from 941,568 to 933,376, and the tightest recorded roster
+ * (Pikachu/Fox) had only 7,556 bytes free at GO. Instrumentation that eats the
+ * headroom of the very rows it is instrumenting is a bad trade -- and
+ * `malloc.c:30` is `while (TRUE);`, so overrunning that arena hangs the console
+ * rather than declining. Turn this back on in a lab build when the follow-up
+ * repair needs re-measuring; do not ship it on. */
+#define NDS_R2_LIGHT_VECTOR_MATRIX 0
 #endif
 #ifndef NDS_R2_LIGHT_VECTOR_STRETCH_FIX
 /* THE REPAIR, split from the witness so the measurement can be taken without

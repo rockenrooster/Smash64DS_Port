@@ -2003,3 +2003,59 @@ drop a cue.
 So the arena reclaim is available, quantified, and carries a real audio
 downside in every form measured here. It is the owner's call, and the numbers
 above are what it should be made on.
+
+
+### THE REGRESSION I CAUSED: this batch cost 8,192 bytes of arena
+
+Measured, not inferred. Same gdb attach, same slot, both ROMs booted to the
+attract screen where `gNdsTaskmanArenaChosenSize` is already final:
+
+| ROM | arena | linked total |
+|---|---|---|
+| r26 (owner played it) | **941,568** | 2,971,404 |
+| r31 (this batch) | **933,376** | 2,979,124 |
+
+**-8,192 bytes, exactly two arena pages.** The recorded Pikachu/Fox free at GO
+is **7,556**. So this batch plausibly took the owner's own reported roster from
+"latched but running" to nothing left -- and `malloc.c:30` is `while (TRUE);`,
+so that presents as a hang, not a decline. Instrumentation and fixes aimed at
+effects-missing rows had eaten the headroom of the very rows they were for.
+
+A symbol-size diff names where it went, and most of it is the repairs
+themselves rather than waste:
+
+| symbol | delta | what |
+|---|---|---|
+| `ndsRendererSubmitNativeItemKirbyStar` | +872 | K04 fix |
+| `sNdsEntryEffectTexels62` | +775 | Yoshi egg texture |
+| `ndsRendererAdapterSubmitStageDL` | +468 | K04 admission arm |
+| `sNdsRelocAssets` | +420 | 35 Results path rows |
+| `ndsNativeThunderGroundReleaseOneCoverageTexture` | +252 | P01 fix |
+| `ndsRendererNativeTexturedQuadGraded` | +184 | graded recycle |
+| `ftCommonAppearProcUpdate` | +120 | Appear-overrun witness |
+
+Plus about 1.9 KB of `.rodata` path strings that carry no symbol.
+
+**Reclaimed: the face/body witness, defaulted off.**
+`NDS_R2_LIGHT_VECTOR_MATRIX` now defaults to 0, returning **1,496 bytes**. The
+witness has already done its job -- it produced `row_norm` 4907, `det` +7048 and
+92 of 100 writes shrinking, which is what confirmed the mechanism and showed the
+stretch repair to be the wrong shape. None of that needs re-taking, and
+instrumentation should not sit in the ROM eating the headroom of the rows it
+instruments. Turn it back on in a lab build when the follow-up repair needs
+measuring.
+
+**A reclaim that FAILED, recorded so it is not retried.** The 35 demo path rows
+looked like ~1.9 KB of duplicated `"nitro:/reloc/reloc_submotions/"` prefix, so
+they were rewritten as a basename table composed at lookup, mirroring
+`ndsRelocAssetP2FighterAnimEntry`. It saved **eight bytes**. Pointer arithmetic
+into a string literal -- `(path_) + sizeof(DIR) - 1` -- does not shrink the
+literal; the whole string is still emitted and only the pointer moves. Saving
+those bytes means emitting basenames from the generator, which is a producer
+change. Reverted, along with the checker edit it forced.
+
+r32: `594EB9BA8C24A2A66BBF82B3D68B599EB7DED12C07A601EC9D6A0FE32253D95A`,
+NATIVE_ONLY_PASS 316 inputs, hash stable across two builds, linked total
+2,977,628 -- still **+6,224** over r26. The remaining excess is the four
+repairs, and buying it back means either giving one of them up or taking the
+audio-cache decision.

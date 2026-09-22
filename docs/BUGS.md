@@ -7,6 +7,8 @@ treat anything not going through native renderer a failure.
 
 **Every newly built ROM, including diagnostics, must exclude non-native renderer implementations. Runtime defaults and zero observed fallbacks are insufficient.**
 
+**AGENT WARNING 09-22: this batch cost 8,192 bytes of battle arena (r26 941,568 -> r31 933,376), measured. Pikachu/Fox had only 7,556 free at GO, and an arena overrun HANGS rather than declining. r32 gives 1,496 back. If Pikachu/Fox will not start on r32, that is why -- r26 is the fallback.**
+
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
 Main Menus:
