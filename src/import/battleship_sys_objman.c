@@ -157,6 +157,11 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
 #define NDS_R2_AOBJ_POOL_COUNT 512
 #define NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT NDS_R2_AOBJ_POOL_COUNT
 #endif
+/* Two-player DObj pool when the idle ports merge (see gcSetupObjman). The
+ * measured Fox-vs-Kirby peak is 93 live DObjs with and without the GObj latch
+ * engaged; 144 keeps 51 spare, and any excess takes the source's per-DObj
+ * arena fallback. */
+#define NDS_R2_DOBJ_POOL_TWO_PLAYER_COUNT 144u
 
 u32 gNdsR2AObjPoolCount;
 u32 gNdsR2AObjPoolBytes;
@@ -171,6 +176,8 @@ u32 gNdsR2DObjPoolBorrowedCount;
 static u8 *sNdsBattleIdleScratch;
 static u32 sNdsBattleIdleScratchBytes;
 u32 gNdsBattleIdleScratchServedBytes;
+/* 1 when two adjacent idle port regions were carved as one block. */
+volatile u32 gNdsBattleIdleRegionsMerged;
 
 void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment)
 {
@@ -274,8 +281,14 @@ void gcSetupObjman(GCSetup *setup)
              * (renderer_adapter_stage.c), so they stay where they were. */
             u8 *dobj_block = NULL;
             u32 dobj_bytes = 0u;
+            u8 *first_region = NULL;
+            u32 first_bytes = 0u;
+            /* NDS_R2_AOBJ_POOL_TWO_PLAYER_COUNT when two or fewer players,
+             * per the pose-engine block above; the full count otherwise. */
+            u32 sized_aobj_count = aobj_pool_count;
 
             gNdsR2DObjPoolBorrowedCount = 0u;
+            gNdsBattleIdleRegionsMerged = 0u;
             for (slot = 0u; slot < ARRAY_COUNT(gSCManagerBattleState->players); slot++)
             {
                 u32 bytes = 0u;
@@ -304,9 +317,59 @@ void gcSetupObjman(GCSetup *setup)
                     gNdsR2AObjPoolBorrowedSlot = slot;
                     dobj_block = region + pool_bytes;
                     dobj_bytes = bytes - (u32)pool_bytes;
+                    first_region = region;
+                    first_bytes = bytes;
                 }
                 else
                 {
+                    /* TWO ADJACENT IDLE PORTS ARE ONE 70,720-BYTE BLOCK, AND
+                     * THE POOLS NEED LESS THAN HALF OF IT.
+                     *
+                     * Measured 2026-09-22, Fox vs Kirby on the walk ROM,
+                     * sampled every 30 frames through the whole match: live
+                     * DObjs peaked at 93 on Peach's Castle (83 KB free, no
+                     * GObj latch) and 92 on Zebes; live AObjs at 176 and 183.
+                     * The layout above gave those 260 DObjs and 384 AObjs --
+                     * 38 KB of static storage no object ever used -- while the
+                     * taskman arena the same match draws everything else from
+                     * ran out: Kongo Jungle froze at load asking for Kirby's
+                     * 30,160-byte owner image with 25,904 left.
+                     *
+                     * So when the two regions touch (ports 3 and 4 idle, the
+                     * ordinary two-player case), carve them as one: the AObj
+                     * pool at its two-player count, the DObj pool at
+                     * NDS_R2_DOBJ_POOL_TWO_PLAYER_COUNT, and everything after
+                     * that as the battle scratch, where owner images and copy
+                     * hats now go before they touch the arena. Either pool
+                     * running dry still takes the source's own per-object
+                     * arena fallback, never a failure. Non-adjacent idle ports
+                     * and three-player matches keep the layout below. */
+                    if ((first_region != NULL) &&
+                        ((first_region + first_bytes) == region) &&
+                        (sized_aobj_count < NDS_R2_AOBJ_POOL_COUNT) &&
+                        (ds_setup.dobjs_num == 0) &&
+                        (ds_setup.dobj_size >= sizeof(DObj)) &&
+                        ((ds_setup.dobj_size & 3u) == 0u))
+                    {
+                        u32 total = first_bytes + bytes;
+                        u32 aobj_bytes =
+                            (u32)(sizeof(AObj) * (size_t)sized_aobj_count);
+                        u32 dobj_pool_bytes =
+                            (u32)NDS_R2_DOBJ_POOL_TWO_PLAYER_COUNT *
+                            (u32)ds_setup.dobj_size;
+
+                        if ((aobj_bytes + dobj_pool_bytes) < total)
+                        {
+                            aobj_pool_count = sized_aobj_count;
+                            dobj_block = first_region + aobj_bytes;
+                            dobj_bytes = dobj_pool_bytes;
+                            sNdsBattleIdleScratch = dobj_block + dobj_bytes;
+                            sNdsBattleIdleScratchBytes =
+                                total - aobj_bytes - dobj_pool_bytes;
+                            gNdsBattleIdleRegionsMerged = 1u;
+                            break;
+                        }
+                    }
                     /* Two idle ports: the DObj pool takes the second region
                      * whole, and what the AObj pool left of the first becomes
                      * the scratch above instead of going unused. */

@@ -6262,3 +6262,70 @@ its 4-way row while the other's ages out), gray Link, wrong face texture, and
 Jigglypuff missing limbs; those were on the fighters r44 forced to draw live
 every frame (the tint faulted their packets), and are unattributed until the
 owner says whether r41 shows them.
+
+## "Some maps crash (Kirby and Fox)": the battle heap, measured (2026-09-22, r46-r48)
+
+**Owner, r45:** "some maps crash, (tested with kirby and fox)", and earlier
+"is it a memory heap issue?". It was.
+
+**Instrument.** Walk ROM (`NDS_P2_MENU_WALK=20`, otherwise the shipping
+config), gdb pokes `gNdsMenuShellCssWalkTargetKind{,2}` = Fox, Kirby and
+`gNdsMenuShellSssWalkTargetGkind` per stage; breakpoints on
+`ndsSyMallocOverflowHalt`, `__excpt_entry`, `ndsBattleCoreExternHalt`; free
+general heap sampled every 600 frames; a ledger variant logs every arena
+allocation >= 1 KB with its real caller (break at `*syTaskmanMalloc`, `$lr`).
+Probes and logs: `artifacts/visibility/2026-09-22_battle-heap/`.
+
+**r45, Fox (P1) vs CPU Kirby (P2):** Castle, Hyrule, Dream Land, Mushroom
+Kingdom run (28-70 KB free). Sector Z loads into 7,748 B. Jungle and Zebes
+halt at load on Kirby's 30,160-byte owner image (21,808 / 26,480 B left);
+Yoshi's Island and Saffron exhaust the heap outright (136 B asked, 24 left;
+72 asked, 40 left). The overflow wrapper halts in a spin, which is the freeze
+the owner saw.
+
+**Where it goes (Jungle ledger, r46):** ground file 225,392; battle common
+files 208,672; items 82,976 + 14,784; effect files 52,736 + 28,352 + 13,616;
+fighter packs 35,272 (Kirby) + 14,488 (Fox); fighter pools 33,152 + 12,048;
+AObj event32 ledger 20,992; stage blob 14,516; then Kirby's 30,160 image,
+which did not fit. Kirby's image is the largest fighter image by 41% (next:
+Donkey high, 21,340): dense_vertices 8,676 + prepared_dense 7,230 + normals
+2,892 + primitives 2,422 over a 723-vertex model -- no dead member to strip.
+
+**Three changes, each measured:**
+
+1. **Zebes acid back to one subdivision level (r46).** My r37 level-2 acid
+   raised the largest stage's run count, and every stage's static workspace is
+   sized by that maximum (`sNdsRendererTask36ReplayOwner` +1,984,
+   `sNdsNativeStageOwnerExecution` +1,568, roof-snap arrays +588): `.main.bss`
+   grew 4,736 B on EVERY stage, and the arena is a best-fit libc allocation,
+   so it came straight out of the battle heap. Zebes' own blob grew 15,518 ->
+   22,558. The level-2 commit's own message named this fallback. After the
+   revert `.main.bss` is 930,768 (r36: 930,256) and the Zebes blob 16,546; the
+   light cone keeps its subdivision.
+2. **VS fighter pools sized to the players present (r47).**
+   `ftManagerAllocFighter(..., GMCOMMON_PLAYERS_MAX)` allocated FTStruct and
+   FTParts for four fighters in every VS match: 22,600 B of free list nobody
+   pops in 2P (11,300 in 3P). The shipping imported-manager build never indexes
+   either pool by player; a wrapper passes the live player count in VS battle.
+3. **Idle ports carved as one block; images and copy hats there first;
+   largest image first (r48).** In 2P the two idle fighter-packet regions are
+   adjacent (70,720 B). Measured live peaks in 2P, sampled every 30 frames
+   through a whole match: 93 DObjs (Castle, heap healthy) and 92 (Zebes,
+   latched) of a 260-node pool; 176 and 183 AObjs of 384. The regions now hold
+   the AObj pool at its existing two-player count (224), a 144-node DObj pool,
+   and a 43,072-byte scratch; owner images and Kirby copy hats allocate there
+   before the arena, and ftManagerAllocFighter preloads every player's images
+   through the same ensure call construction uses, in descending size, so the
+   30,160-byte image is the one the scratch holds. Either pool running dry
+   takes the source's per-object arena fallback.
+
+**r48, Fox vs Kirby, battle-time free heap:** see the table in the plan's
+status block. Witnesses: `gNdsBattleIdleRegionsMerged` 1,
+`gNdsNativeOwnerImageScratchBytes` 30,160, scratch served 42,864 (image +
+both figatree heaps), 204 B left.
+
+**Not solved:** four-player matches have no idle port, so none of 2-3 applies
+there; a heavy four-fighter roster on a big stage is still unmeasured and at
+risk. The real remaining lever is the source files loaded whole (ground file
+225 KB, common files 209 KB, items 83 KB, effects 95 KB), where compact packs
+like the fighters' would prune the N64 geometry the native blobs replace.

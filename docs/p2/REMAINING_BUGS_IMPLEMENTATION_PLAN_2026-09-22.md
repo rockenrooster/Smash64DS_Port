@@ -16,6 +16,39 @@ re-derive. Do not close a row on a claim you did not re-measure.
 
 ---
 
+## AUTHORITATIVE STATUS (2026-09-22, late) -- read this first
+
+Everything under "## Status" further down is the r39-r43 ladder record. Its
+instructions are HISTORICAL: r43 is not pending (it regressed), and on-demand
+tint creation is withdrawn. Keep it for evidence; do not execute it.
+
+| ROM | sha256 | adds over previous | result |
+|---|---|---|---|
+| r42 / r43 / r44 | `d53782a9` / `587c853b` / `03ce0acd` | three face/body tint-route variants | all regressed; route removed |
+| r45 | `36afbc1cd172e755` | r41 + CSS UV-memo fix | owner: some maps crash (Kirby + Fox) |
+| r46 | `7fcf916364edcb2f` | + Zebes acid back to one subdivision level | superseded before play |
+| r48 | `5d9140165a69fc72` | + VS fighter pools sized to players; idle ports carved as one block; owner images and copy hats in that scratch, largest first | **play this** |
+
+**Measured, not argued** (walk ROM, Fox P1 vs CPU Kirby P2, free general
+heap during the match; probes in `artifacts/visibility/2026-09-22_battle-heap/`):
+Jungle, Zebes, Yoshi's Island and Saffron froze at load on r45; on r48 they run
+at 25.7 / 36 / 40 / 35 KB. Sector Z 7.7 -> 62 KB, Dream Land 28 -> 84 KB.
+Mechanism and ledger: `BUG_NOTES.md`, "the battle heap, measured".
+
+**Rows and where they stand (owner acceptance pending on all):**
+
+| Row | State |
+|---|---|
+| CSS eyes / Link gray / faces worse over time | r45: a revisited fighter drew with zeroed UVs (memo outlived its image); emulator r41 0 vs r45 6 rebuilds |
+| Some maps crash (Kirby + Fox) | r48: heap, see above. Four-player matches unmeasured (no idle ports there) |
+| VFX missing by fighter combination | r37 graded table 16 + r48 heap: the GObj latch at 25,600 B free is now cleared on every 2P stage measured |
+| r44 Pikachu contorted / Jigglypuff missing limbs | unattributed; candidate: `ndsRelocEnsureLoadedAsset` declines loads under heap pressure (`gNdsRelocHeapDeclineCount`) |
+| Face colour != body (6 rows) | OPEN. Shipped path is the diffuse cap, worst 8/31 (census now models it); tint route needs owned preparation + replay support |
+| Zebes acid / light gradients | light cone subdivided; acid back at one level for heap |
+| Saffron door | OPEN; transform chain verified, pixels not |
+
+---
+
 ## Status
 
 **THE LADDER RAN, AND IT NAMED THE REGRESSION.** The owner played r39, r40 and

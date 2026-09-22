@@ -3564,6 +3564,12 @@ static NDSNativeOwnerImageSlot
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageFailCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageBytes;
+/* Of gNdsNativeOwnerImageBytes, how many came from the battle scratch in idle
+ * fighter-packet ports rather than the taskman arena. */
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageScratchBytes;
+/* battleship_sys_objman.c: bump allocator over idle fighter-packet ports,
+ * non-NULL only inside a VS battle that has them. */
+void *ndsBattleIdleScratchAlloc(size_t size, u32 alignment);
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageMatchCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageMismatchCount;
 
@@ -3640,6 +3646,11 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
 #undef NDS_NATIVE_OWNER_IMAGE_BYTES_ROW
     (void)use_low_detail;
     return 0u;
+}
+
+u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail)
+{
+    return ndsRendererNativeOwnerImageBytes(owner_slot, use_low_detail);
 }
 
 /* --- P2-3r4: binding an owner's tables to its loaded image ----------------
@@ -3911,7 +3922,15 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     if ((slot->base == NULL) ||
         (slot->heap_generation != gNdsTaskmanHeapGeneration))
     {
-        slot->base = syTaskmanMalloc(max_bytes, 0x10u);
+        /* Scratch first, for the reason ndsRendererNativeEnsureOwnerImage
+         * gives: a copy hat is battle-lifetime, and the 8,552 bytes a swallow
+         * asks for mid-match are exactly what Sector Z and Zebes did not have
+         * left in the arena. */
+        slot->base = ndsBattleIdleScratchAlloc(max_bytes, 0x10u);
+        if (slot->base == NULL)
+        {
+            slot->base = syTaskmanMalloc(max_bytes, 0x10u);
+        }
         if (slot->base == NULL)
         {
             slot->valid = 0u;
@@ -4803,7 +4822,22 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
     {
         return FALSE;
     }
-    buffer = syTaskmanMalloc(bytes, 0x10u);
+    /* Battle-lifetime, like the figatree heaps: in a two-player VS match the
+     * idle fighter-packet ports carry a scratch block the taskman arena never
+     * sees (gcSetupObjman), so an image that fits there leaves the arena its
+     * bytes. Kirby's high image alone is 30,160 of them, which is what froze
+     * Kongo Jungle at load. The scratch is empty in every other scene and
+     * re-seeded with the arena at each battle entry, and the slot's
+     * heap_generation retires the image on exactly that boundary. */
+    buffer = ndsBattleIdleScratchAlloc(bytes, 0x10u);
+    if (buffer != NULL)
+    {
+        gNdsNativeOwnerImageScratchBytes += bytes;
+    }
+    else
+    {
+        buffer = syTaskmanMalloc(bytes, 0x10u);
+    }
     if (buffer == NULL)
     {
         gNdsNativeOwnerImageFailCount++;

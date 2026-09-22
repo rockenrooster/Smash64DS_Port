@@ -1599,6 +1599,8 @@ extern volatile u32 gNdsMBallRaysMaterialRejectCount;
  * Verify compares it against the arrays while both still exist. */
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
 s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail);
+/* Bytes Ensure would allocate for that image, or 0 if this build has none. */
+u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail);
 /* CSS preview blocks can back owner images. Once the last fighter using such
  * a block is gone, invalidate image slots in the range before it is rewound. */
 void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size);

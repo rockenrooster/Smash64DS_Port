@@ -42,11 +42,13 @@
 #define ftManagerMakeFighter ndsBaseFTManagerMakeFighter
 #define ftManagerDestroyFighter ndsBaseFTManagerDestroyFighter
 #define ftManagerAllocFigatreeHeapKind ndsBaseFTManagerAllocFigatreeHeapKind
+#define ftManagerAllocFighter ndsBaseFTManagerAllocFighter
 
 void ndsBaseFTManagerSetupFileSize(void);
 void ndsBaseFTManagerSetupFilesAllKind(s32 fkind);
 GObj *ndsBaseFTManagerMakeFighter(FTDesc *desc);
 void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
+void ndsBaseFTManagerAllocFighter(u32 data_flags, s32 allocs_num);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
 
@@ -55,6 +57,72 @@ void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
 #undef ftManagerMakeFighter
 #undef ftManagerDestroyFighter
 #undef ftManagerAllocFigatreeHeapKind
+#undef ftManagerAllocFighter
+
+/* SIZE THE FIGHTER POOLS BY THE FIGHTERS THIS BATTLE CAN HOLD.
+ *
+ * scVSBattleStartBattle and scVSBattleStartSuddenDeath both call
+ * ftManagerAllocFighter(..., GMCOMMON_PLAYERS_MAX): one FTStruct (3,012 B)
+ * and one FTPARTS_JOINT_NUM_MAX run of FTParts (8,288 B) for each of FOUR
+ * fighters, whatever the CSS chose. In a two-player match half of that --
+ * 22,600 bytes of the taskman arena -- is a free list nothing ever pops:
+ * VS battle creates fighters only for players whose pkind is not
+ * nFTPlayerKindNot, and a Sudden Death field is a subset of those players.
+ * Both pools are free lists popped in order (ftmanager.c), and the shipping
+ * imported-manager build never indexes them by player slot -- the live-GObj
+ * registry in reloc_backend_fighter_model.c answers "which struct is player
+ * N" -- so a shorter list changes capacity only, never which struct a fighter
+ * gets or what it contains.
+ *
+ * Measured 2026-09-22, Fox vs Kirby, walk ROM with a heap ledger: Kongo
+ * Jungle had 25,904 bytes left when Kirby's 30,160-byte owner image asked,
+ * and syMallocSet's overflow halt froze the match at load. Zebes, Yoshi's
+ * Island and Saffron froze the same way, and Sector Z loaded into 7,748 bytes
+ * -- under the 25,600-byte ifCommonSetMaxNumGObj latch from the first frame,
+ * and too little for the 8,552-byte copy hat Kirby loads when he swallows.
+ *
+ * Every other scene, and a battle whose state is not yet readable, keeps the
+ * source count. A three-player match gets 11,300 bytes back; four, none. */
+volatile u32 gNdsFTManagerPoolSlotsTrimmed;
+
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void);
+#endif
+
+void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
+{
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (gSCManagerBattleState != NULL) &&
+        (allocs_num == GMCOMMON_PLAYERS_MAX))
+    {
+        s32 players = 0;
+        s32 player;
+
+        for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+        {
+            if (gSCManagerBattleState->players[player].pkind !=
+                nFTPlayerKindNot)
+            {
+                players++;
+            }
+        }
+        if ((players > 0) && (players < allocs_num))
+        {
+            gNdsFTManagerPoolSlotsTrimmed = (u32)(allocs_num - players);
+            allocs_num = players;
+        }
+    }
+    ndsBaseFTManagerAllocFighter(data_flags, allocs_num);
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+    /* Both VS entries (battle and Sudden Death) come through here before
+     * their player loop allocates a figatree heap or makes a fighter. */
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (gSCManagerBattleState != NULL))
+    {
+        ndsFTManagerPreloadVSOwnerImagesLargestFirst();
+    }
+#endif
+}
 
 /* A fighter's figatree heap is sized by its largest animation file (Pikachu
  * 10,752 B, Yoshi 9,360, Link 7,328) and lives exactly as long as the battle.
@@ -430,6 +498,170 @@ sb32 ndsFTManagerSkeletonReady(s32 fkind)
     return FALSE;
 }
 
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+/* THE ONE MAPPING FROM FIGHTER KIND TO NATIVE OWNER-IMAGE SLOT. Shared by the
+ * construction-time ensure below and the VS preload in ftManagerAllocFighter,
+ * which orders the loads by size; two copies of this chain would drift. */
+static u32 ndsFTManagerImageSlotForKind(s32 fkind)
+{
+    u32 image_slot = NDS_NATIVE_IMAGE_OWNER_SLOTS;
+
+#if NDS_P2_LUIGI
+    if (fkind == nFTKindLuigi)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_LUIGI;
+    }
+#endif
+#if NDS_P2_DONKEY
+    if (fkind == nFTKindDonkey)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_DONKEY;
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    if (fkind == nFTKindCaptain)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_CAPTAIN;
+    }
+#endif
+#if NDS_P2_SAMUS
+    if (fkind == nFTKindSamus)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_SAMUS;
+    }
+#endif
+#if NDS_P2_LINK
+    if (fkind == nFTKindLink)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_LINK;
+    }
+#endif
+#if NDS_P2_PIKACHU
+    if (fkind == nFTKindPikachu)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_PIKACHU;
+    }
+#endif
+#if NDS_P2_YOSHI
+    if (fkind == nFTKindYoshi)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_YOSHI;
+    }
+#endif
+#if NDS_P2_NESS
+    if (fkind == nFTKindNess)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NESS;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (fkind == nFTKindPurin)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_PURIN;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (fkind == nFTKindKirby)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_KIRBY;
+    }
+#endif
+#if NDS_P2_MMARIO
+    if (fkind == nFTKindMMario)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_MMARIO;
+    }
+#endif
+#if NDS_P2_NMARIO
+    if (fkind == nFTKindNMario)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
+    }
+#endif
+#if NDS_P2_NFOX
+    if (fkind == nFTKindNFox)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NFOX;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (fkind == nFTKindNDonkey)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NDONKEY;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (fkind == nFTKindNSamus)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NSAMUS;
+    }
+#endif
+#if NDS_P2_NLINK
+    if (fkind == nFTKindNLink)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NLINK;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (fkind == nFTKindNYoshi)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NYOSHI;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (fkind == nFTKindNCaptain)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NCAPTAIN;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (fkind == nFTKindNKirby)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NKIRBY;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (fkind == nFTKindNPikachu)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NPIKACHU;
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (fkind == nFTKindNPurin)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NPURIN;
+    }
+#endif
+#if NDS_P2_NNESS
+    if (fkind == nFTKindNNess)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NNESS;
+    }
+#endif
+#if NDS_P2_1P_GAME
+    if (fkind == nFTKindBoss)
+    {
+        image_slot = NDS_NATIVE_IMAGE_SLOT_BOSS;
+    }
+#endif
+#if NDS_P2_NLUIGI
+    if (fkind == nFTKindNLuigi)
+    {
+        /* Reuses the NMario image packet. */
+        image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
+    }
+#endif
+#if NDS_P2_GDONKEY
+    if (fkind == nFTKindGDonkey)
+    {
+        /* Reuses the Donkey image packet. */
+        image_slot = NDS_NATIVE_IMAGE_SLOT_DONKEY;
+    }
+#endif
+    return image_slot;
+}
+#endif
+
 void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
 {
     /* Electric bodies share one image across HIGH/LOW; load at construction,
@@ -456,160 +688,8 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
      * display scenes retain both unless their source fixes a single detail. */
     if (desc != NULL)
     {
-        u32 image_slot = NDS_NATIVE_IMAGE_OWNER_SLOTS;
+        u32 image_slot = ndsFTManagerImageSlotForKind(desc->fkind);
 
-#if NDS_P2_LUIGI
-        if (desc->fkind == nFTKindLuigi)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_LUIGI;
-        }
-#endif
-#if NDS_P2_DONKEY
-        if (desc->fkind == nFTKindDonkey)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_DONKEY;
-        }
-#endif
-#if NDS_P2_CAPTAIN
-        if (desc->fkind == nFTKindCaptain)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_CAPTAIN;
-        }
-#endif
-#if NDS_P2_SAMUS
-        if (desc->fkind == nFTKindSamus)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_SAMUS;
-        }
-#endif
-#if NDS_P2_LINK
-        if (desc->fkind == nFTKindLink)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_LINK;
-        }
-#endif
-#if NDS_P2_PIKACHU
-        if (desc->fkind == nFTKindPikachu)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_PIKACHU;
-        }
-#endif
-#if NDS_P2_YOSHI
-        if (desc->fkind == nFTKindYoshi)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_YOSHI;
-        }
-#endif
-#if NDS_P2_NESS
-        if (desc->fkind == nFTKindNess)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NESS;
-        }
-#endif
-#if NDS_P2_PURIN
-        if (desc->fkind == nFTKindPurin)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_PURIN;
-        }
-#endif
-#if NDS_P2_KIRBY
-        if (desc->fkind == nFTKindKirby)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_KIRBY;
-        }
-#endif
-#if NDS_P2_MMARIO
-        if (desc->fkind == nFTKindMMario)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_MMARIO;
-        }
-#endif
-#if NDS_P2_NMARIO
-        if (desc->fkind == nFTKindNMario)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
-        }
-#endif
-#if NDS_P2_NFOX
-        if (desc->fkind == nFTKindNFox)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NFOX;
-        }
-#endif
-#if NDS_P2_NDONKEY
-        if (desc->fkind == nFTKindNDonkey)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NDONKEY;
-        }
-#endif
-#if NDS_P2_NSAMUS
-        if (desc->fkind == nFTKindNSamus)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NSAMUS;
-        }
-#endif
-#if NDS_P2_NLINK
-        if (desc->fkind == nFTKindNLink)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NLINK;
-        }
-#endif
-#if NDS_P2_NYOSHI
-        if (desc->fkind == nFTKindNYoshi)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NYOSHI;
-        }
-#endif
-#if NDS_P2_NCAPTAIN
-        if (desc->fkind == nFTKindNCaptain)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NCAPTAIN;
-        }
-#endif
-#if NDS_P2_NKIRBY
-        if (desc->fkind == nFTKindNKirby)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NKIRBY;
-        }
-#endif
-#if NDS_P2_NPIKACHU
-        if (desc->fkind == nFTKindNPikachu)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NPIKACHU;
-        }
-#endif
-#if NDS_P2_NPURIN
-        if (desc->fkind == nFTKindNPurin)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NPURIN;
-        }
-#endif
-#if NDS_P2_NNESS
-        if (desc->fkind == nFTKindNNess)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NNESS;
-        }
-#endif
-#if NDS_P2_1P_GAME
-        if (desc->fkind == nFTKindBoss)
-        {
-            image_slot = NDS_NATIVE_IMAGE_SLOT_BOSS;
-        }
-#endif
-#if NDS_P2_NLUIGI
-        if (desc->fkind == nFTKindNLuigi)
-        {
-            /* Reuses the NMario image packet. */
-            image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
-        }
-#endif
-#if NDS_P2_GDONKEY
-        if (desc->fkind == nFTKindGDonkey)
-        {
-            /* Reuses the Donkey image packet. */
-            image_slot = NDS_NATIVE_IMAGE_SLOT_DONKEY;
-        }
-#endif
         if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS)
         {
             u32 first_detail = 0u;
@@ -647,6 +727,73 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
     (void)desc;
 #endif
 }
+
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+/* LOAD THE BIGGEST OWNER IMAGE FIRST, SO IT IS THE ONE THE SCRATCH HOLDS.
+ *
+ * The battle scratch in idle fighter-packet ports is a bump allocator, and the
+ * source makes fighters in port order: in Fox (P1) vs Kirby (P2), Fox's 15,336
+ * byte image took the scratch and Kirby's 30,160 went to the taskman arena --
+ * the allocation that froze Kongo Jungle at load. This runs from
+ * ftManagerAllocFighter, before any figatree heap or fighter exists, and
+ * ensures every player's images through the SAME ndsFTManagerEnsureOwnerImages
+ * construction will call (same kinds, details and electric skeletons), only in
+ * descending size. Construction then finds them resident. Nothing is loaded
+ * that construction would not have loaded; only the order changes. */
+static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
+{
+    s32 order[GMCOMMON_PLAYERS_MAX];
+    u32 bytes[GMCOMMON_PLAYERS_MAX];
+    s32 count = 0;
+    s32 player;
+    s32 i;
+    sb32 high = ((gSCManagerBattleState->pl_count +
+                  gSCManagerBattleState->cp_count) < 3) ? TRUE : FALSE;
+
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        u32 slot;
+
+        if (gSCManagerBattleState->players[player].pkind == nFTPlayerKindNot)
+        {
+            continue;
+        }
+        slot = ndsFTManagerImageSlotForKind(
+            gSCManagerBattleState->players[player].fkind);
+        order[count] = player;
+        bytes[count] = (slot < NDS_NATIVE_IMAGE_OWNER_SLOTS) ?
+            (ndsRendererNativeOwnerImageSize(slot, 0u) +
+             ((high != FALSE) ? 0u : ndsRendererNativeOwnerImageSize(slot, 1u))) :
+            0u;
+        count++;
+    }
+    /* Insertion sort, descending; equal sizes keep port order. */
+    for (i = 1; i < count; i++)
+    {
+        s32 moving_player = order[i];
+        u32 moving_bytes = bytes[i];
+        s32 j = i;
+
+        while ((j > 0) && (bytes[j - 1] < moving_bytes))
+        {
+            order[j] = order[j - 1];
+            bytes[j] = bytes[j - 1];
+            j--;
+        }
+        order[j] = moving_player;
+        bytes[j] = moving_bytes;
+    }
+    for (i = 0; i < count; i++)
+    {
+        FTDesc desc = dFTManagerDefaultFighterDesc;
+
+        desc.fkind = gSCManagerBattleState->players[order[i]].fkind;
+        desc.pkind = gSCManagerBattleState->players[order[i]].pkind;
+        desc.detail = (high != FALSE) ? nFTPartsDetailHigh : nFTPartsDetailLow;
+        ndsFTManagerEnsureOwnerImages(&desc);
+    }
+}
+#endif
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
