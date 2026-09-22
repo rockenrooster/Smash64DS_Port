@@ -544,6 +544,24 @@ because the "GO!" sprites at `0x4D78`, `0xA730` and `0xC370` are dereferenced an
 `ndsIFCommonMakeSObjForGObj` still passes every letter sprite to
 `lbCommonMakeSObjForGObj`.
 
+### 6.0 THE ARENA CENSUS IS STALE — read this before using any figure below
+
+Measured 2026-09-22 by walking the shipping build into real matches. Every
+number the arena reasoning in 6.1/6.1b was built on has moved, and not slightly:
+
+| roster / stage | census 09-20 | measured 09-22 | latch |
+|---|---|---|---|
+| Mario/Fox Dream Land | 61,124 | **85,708** | never fired |
+| Pikachu/Fox | 7,556 | **48,216** | never fired |
+| Saffron, Kirby | 2,844 | **32,504** | never fired |
+
+`ifCommonSetMaxNumGObj` fired in none of them. **The arena is not the blocker
+for the rays, the frozen Fox, or Saffron+Kirby**, and every row routed there on
+the strength of the census has to be explained some other way. Sections 6.1 and
+6.1b below remain accurate about SIZES — the FGM cache really is 237,568 bytes
+and really is right-sized — but their premise that ~18 KB must be found is
+withdrawn.
+
 ### 6.1b The arena, measured — and it needs far less than the big lever
 
 Three rows point here, so the deficit was measured rather than estimated.

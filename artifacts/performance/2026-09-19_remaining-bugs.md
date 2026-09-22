@@ -2195,3 +2195,44 @@ Probe plumbing kept, flag-gated and provably inert: with
 `NDS_PREVIEW_HALT_NONFATAL=0` the default build reproduces r32's hash
 `594EB9BA...` byte for byte, and the counters, the witness arrays and the
 externs are all declared only under the flag.
+
+### Kirby on Saffron, and the arena census is stale across every roster measured
+
+Walked the shipping build with `gNdsMenuShellCssWalkTargetKind = 8` (Kirby) and
+`gNdsMenuShellSssWalkTargetGkind = 9` (Yamabuki). Note 9, not 7: the first
+attempt used 7 from a comment index in a port-side array instead of the source
+enum in `grdef.h`, which is the stale-citation mistake this file already
+records. `nGRKindPupupu` is 8 and `nGRKindYamabuki` is 9.
+
+    POST   scene=22  presented=11  loops=3
+    ARENA  freemin=32,504  allocfail=188
+    GOBJ   latchBase=0  latchLimit=0  applied=0
+    KIRBYHAT hits=0,0     KSTAR step=0 fromEffect=0
+    ANIM   resolve=731  fallback=0
+
+**No crash and no hang.** The run completed and every counter read back.
+
+**The arena census is now stale on all three rosters it was used to reason
+about**, and the differences are not small:
+
+| roster / stage | census 09-20 | measured 09-22 |
+|---|---|---|
+| Mario/Fox Dream Land | 61,124 | **85,708** |
+| Pikachu/Fox | 7,556 | **48,216** |
+| Saffron (Mario/Fox then) / Kirby now | 2,844 | **32,504** |
+
+The `ifCommonSetMaxNumGObj` latch fired in none of them. So the arena is not the
+blocker for the rays, the frozen Fox, or Saffron -- every row that was routed
+there on the strength of those numbers has to come back and be explained some
+other way.
+
+**What this run does NOT test: the copy.** `KIRBYHAT hits=0,0` says the copy hat
+was never drawn, so the walk never inhaled anything -- it has no input script
+for a special. And `presented=11` says the battle had only just begun, while the
+Saffron gate cycle runs to roughly tic 1,220 for the close and 2,220 for the
+reopen. So the owner's "UPDATE crashes with Kirby" -- which reads as the gate's
+open/close update -- was not reached on either axis.
+
+Closing it needs a Saffron battle held past tic 1,220 with a real Kirby copy
+performed. The walk cannot do the second part; that wants either a scripted
+special or the owner reproducing it once while the counters are readable.

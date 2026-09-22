@@ -46,6 +46,6 @@ Stages:
 -Zebes: Acid plane Color is accurate now but texture blending are all visibly too HARD. Edges are too defined instead of a gradient/smooth transistion. Stage lights on the ground floor have a flat/hard transparency (hard upsidown trapezoid shape) instead of looking like a real light source with a gradient that tapers to fully transparent towards the top. **Owner Deferred**
 -Yoshi's Island: 
 -SectorZ:
--Saffron city: the pokemon garage door hazard is always open for some reason. It should close and open periodically. **Gate replayed a baked constant world matrix, frozen CLOSED; the always-open look is layer geometry. Bindings now live. UPDATE crashes with Kirby**
+-Saffron city: the pokemon garage door hazard is always open for some reason. It should close and open periodically. **Gate replayed a baked constant world matrix, frozen CLOSED; the always-open look is layer geometry. Bindings now live. CRASH NOT REPRODUCED: walked Kirby onto Saffron, no crash, free-min 32,504, latch never fired -- but the walk never inhaled (hat hits 0,0) and the battle ended before the gate's ~tic 1,220 close. Needs a held Saffron match with a real copy.**
 
 Audio:

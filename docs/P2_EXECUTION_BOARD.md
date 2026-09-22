@@ -57,10 +57,8 @@ summary.** Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-
 
 **PLAYTEST r32** `builds/remaining-bugs-playtest-r32/` `594EB9BA8C24A2A6...`,
 NATIVE_ONLY_PASS 316, hash stable twice, boots (gdb attach).
-**ARENA ALARM RETRACTED.** The SHIPPING build walked into a VS match with
-Pikachu reads free-min **48,216**, latch never fired, rays `req=2 null=0
-cand=100`, `AnimFallback 0` over 658 resolves. The 7,556 census was stale.
-**Play r32.**
+**ARENA ALARM RETRACTED** (see the stale-census line below). Rays read
+`req=2 null=0 cand=100` and `AnimFallback 0` over 658 resolves. **Play r32.**
 OWNER ACCEPTED (removed from BUGS.md): pistol flash, CSS music, grab slam,
 effects regression, GROUND jolt, Damage cadence, Results badge, winner emblem,
 Link slash, Kirby jab flurry (r26).
@@ -79,11 +77,13 @@ Frozen Fox and the rays are now refuted in the SHIPPING build through the real
 CSS->VS path, memory included, so both need the owner's exact repro.
 Saffron/Kirby unread.
 
-**THE ARENA IS NOT THE BLOCKER IT LOOKED LIKE**: measured 48,216 free with
-Pikachu, latch never fires. The FGM cache is 237,568 B but RIGHT-SIZED (2,592 B
-slack). **NEW, and worse than any open row: hovering Ness on the CSS hits
-`ndsPreviewPackLoadHalt(20)`, a `for(;;)`.** Pre-existing; 56 declines, kind 11
-only. `NDS_PREVIEW_HALT_NONFATAL=1` is the probe escape.
+**THE ARENA CENSUS IS STALE AND THE ARENA IS NOT THE BLOCKER.** Measured
+09-22 by walking the shipping build: Mario/Fox 61,124 -> **85,708**,
+Pikachu/Fox 7,556 -> **48,216**, Saffron+Kirby 2,844 -> **32,504**, latch never
+fired in any. Rows routed there must be re-explained. **NEW, worse than any
+open row: hovering Ness on the CSS hits `ndsPreviewPackLoadHalt(20)`, a
+`for(;;)` -- validator clause 6, root 0, offset 5,792, 82 commands.**
+Pre-existing. `NDS_PREVIEW_HALT_NONFATAL=1` is the probe escape.
 Owed: Boundary/Latest. Roof/Zebes deferred.
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):
