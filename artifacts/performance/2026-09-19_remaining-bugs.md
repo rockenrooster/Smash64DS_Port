@@ -2059,3 +2059,46 @@ NATIVE_ONLY_PASS 316 inputs, hash stable across two builds, linked total
 2,977,628 -- still **+6,224** over r26. The remaining excess is the four
 repairs, and buying it back means either giving one of them up or taking the
 audio-cache decision.
+
+### A HANG ON THE CSS, found by the walk: hovering Ness halts the ROM
+
+Built the shipping configuration with `NDS_P2_MENU_WALK=20` -- the shell's own
+self-navigation, which drives Title -> Mode -> VS -> CSS with real input -- to
+reach a battle and read the arena in the configuration that actually ships. It
+never got to the battle. It stopped at scene 16 (CSS) in
+`ndsPreviewPackLoadHalt`, which is `for (;;) { nop; }`.
+
+    HALT reason=20 kind=11        <- kind 11 is NESS
+    DECLINE stage=4 clause=0 asset=0 expected=0 ownerAsset=0
+    ARENA chosen=929280 allocfail=188
+
+Reason 20 is `renderer_adapter_fighter.c:4383`: a packed CSS preview reached the
+draw path with `native_owner_enabled == FALSE`. That halt is deliberate -- the
+comment beside it says a native admission failure is "a visible failure to fix
+at its owning seam, never an empty replacement display list" -- and it is
+guarded by `NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && PROFILE_LEVEL < 2`,
+all true in the shipping build. The walk flag changes input, not the render
+path.
+
+**It is PRE-EXISTING, not from this batch.** `git diff e802e336bc2..HEAD` over
+`renderer_adapter_fighter.c` is +31 lines and touches `native_owner_enabled`
+nowhere; the only change there is the facing globals.
+
+**What is proven:** in the shipping configuration, a CSS preview of Ness can
+reach the draw path without a native owner and spin the console forever.
+**What is not:** that a human hovering Ness hits it. The walk wanders the CSS
+quickly and can hover a portrait while a previous preview transaction is still
+in flight; ordinary play may never produce that ordering. The owner has played
+this CSS repeatedly without reporting a hang, which is evidence for the
+ordering mattering.
+
+`stage=4` with clause/asset/expected/ownerAsset all zero says the decline came
+from a path that does not populate those witnesses, so the next step is to give
+stage 4 its own clause ids rather than to guess. Worth doing before the next
+CSS row: a `for(;;)` on a screen the player uses is worse than anything left in
+BUGS.md.
+
+Also confirmed in the same run, and it is the first runtime evidence that the
+Results repair works: `DEMOPATH unresolved=0 loadfail=0 ok=6` with
+`ANIM resolve=6 fallback=0`. Six extern-heap loads resolved and none fell back,
+where before this batch the path table had no rows at all.
