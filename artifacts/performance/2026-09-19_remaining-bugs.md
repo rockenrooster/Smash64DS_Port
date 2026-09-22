@@ -1557,3 +1557,36 @@ question -- is the face unlit or the body -- instead of inferring it. Do this
 before touching the material formula again. The clamp-order cap that shipped in
 r23/r24 is arithmetically correct at full light and is NOT the reported defect;
 judge it on its own merits, separately.
+
+### CONFIRMED: the effects regression was the 0x45 matrix change, not the heap
+
+Owner on r24: fixed. So the cause was the L01 repair applying to DObjs whose
+ONLY transform is kind `0x45` -- `dEFManagerStarRodSparkEffectDesc`,
+`dEFManagerDamageFlySparksEffectDesc` and `dEFManagerHaveStructEffectDesc`, all
+of which carry it as the main transform of a CHILD with no translate-bearing
+sibling. Those children had been taking `dobj->translate` from the fallback;
+zeroing it collapsed them onto their parent's origin, which reads on screen as
+the effect simply not playing.
+
+Worth keeping, because the process is the transferable part:
+
+  * The owner's own attribution -- "effect heap must be gone" -- was wrong, and
+    so was my first instinct. **The measurement is what killed it**: the r24
+    shell ROM holds 79,172 bytes free across 720 sampled updates with the GObj
+    cap never latching. Had I acted on the heap theory I would have spent the
+    session reclaiming bytes that were never the problem.
+  * Four candidates were refuted cheaply and in writing before any code moved --
+    the Poke Ball admission (guarded on asset id), the texture release
+    (null-safe), the figatree maximum (11,872 against 13,952), the particle
+    pack (all pins intact). Each refutation cost one command.
+  * The repair was **scoping, not reverting**. L01's evidence covered exactly
+    one shape: a root carrying `{0x28, 0x45}`, where `0x28` already supplies the
+    world contact. Restricting the zero-translation form to DObjs with more than
+    one transform keeps that fix and leaves every unexamined case exactly as it
+    shipped. `gNdsRendererAdapterCustom45SoloCount` makes the untouched path
+    visible.
+
+**Standing lesson:** a renderer repair justified on one descriptor is a claim
+about every descriptor that reaches the same switch arm. Before landing one,
+enumerate the other users of that arm and ask whether the evidence covers them.
+Here it did not, six of them existed, and three were live.

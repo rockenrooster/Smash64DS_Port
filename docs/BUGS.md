@@ -25,6 +25,7 @@ Main Menus:
     -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
     -Pokeball Spawn Intro not playing VFX. **Bake existed. The gate wanted an item GObj; the entry ball is an effect. Admitted.**
     -face color is slightly different from body color. (lighting difference???) **Not lighting: N64 clamps shade then multiplies prim; DS folds prim first, so lit bodies wash white.**
+    -when I choose pikachu, in match, fox opponent is frozen and cannot be hit. Sudden death works funnily enough though.
 -Samus
 -Kirby
     -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **STILL BAD in r23. Holding neutral B fixes it -- a status change clears it, so it is stale cached state, not the clamp fold.**
@@ -36,7 +37,6 @@ Main Menus:
 -Captain falcon
 -Ness
 -General
-    -**r23 REGRESSION (owner): hardly any effects play. Binary grew 5,432 B; heap measurement owed before any repair.**
     -Results screen not showing 1st place emblem **Emblem dead at dispatch: native display refuses non-battle scenes. Badge path not localized.**
     -All Fighters are not doing correct poses/animations on results screen **142 submotion payloads were in no NitroFS list. 47/47 cells route now.**
     -No contest results screen, all fighters should be doing the clapping animations. **Kind was always correct; the Claps figatree could not load.**
