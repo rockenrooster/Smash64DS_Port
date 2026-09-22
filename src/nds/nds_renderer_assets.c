@@ -3608,6 +3608,10 @@ static u32
 
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatFailCount;
+/* [0] high-detail hat draws, [1] low. See the read site below: [1] == 0
+ * across a natural two-player copy match is what makes deferring the
+ * low-detail load safe, and it is worth 7,636 bytes of general heap. */
+__attribute__((used)) volatile u32 gNdsNativeKirbyHatTableHits[2];
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatBytes;
 #endif
 
@@ -4001,6 +4005,25 @@ ndsRendererNativeFighterTablesForResolvedRoot(
                 (hat->valid != 0u) &&
                 (hat->heap_generation == gNdsTaskmanHeapGeneration))
             {
+                /* THE COUNTER THAT PRICES THE LOW-DETAIL HAT LEVER.
+                 *
+                 * Both hat details load eagerly at the copy
+                 * (reloc_backend_compat_shims.c:12522-12525), about 8,556
+                 * bytes each, and the general heap never recovers: measured
+                 * 41,684 free before the copy, 23,204 after, against the
+                 * 25,600 floor where ifCommonSetMaxNumGObj freezes the GObj
+                 * cap for the rest of the match. Deferring the low image would
+                 * return 7,636 bytes and clear that floor outright -- but only
+                 * if nothing ever draws it.
+                 *
+                 * This is the draw-time selection: the renderer asked for a
+                 * specific root and the root names the detail. So
+                 * [1] staying ZERO across a natural two-player copy match is
+                 * the proof that the low image is dead weight and the deferral
+                 * is safe; any non-zero reading refutes the lever outright.
+                 * Do not guess this one -- it was explicitly left unmeasured
+                 * rather than assumed. */
+                gNdsNativeKirbyHatTableHits[detail]++;
                 return &sNdsNativeKirbyHatTables[battle_slot][detail];
             }
         }

@@ -55,8 +55,8 @@ Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
 `docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-21.md`. Read it, not a
 summary.** Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`
 
-**PLAYTEST r29** `builds/remaining-bugs-playtest-r29/`
-`DAB94410BAADDFA0050FBC20134DD55E061E894850BCC2A0A7970F76A99EDA8D`,
+**PLAYTEST r30** `builds/remaining-bugs-playtest-r30/`
+`9E7F5EF91D86790A4E22CE3811288C256970E0664EBA612438F5207BFB4AFB00`,
 NATIVE_ONLY_PASS 316 inputs.
 OWNER ACCEPTED (removed from BUGS.md): Kirby pistol flash, CSS music, grab slam,
 effects regression, GROUND Thunder Jolt, Damage cadence, Results badge, winner
@@ -75,7 +75,7 @@ REFUTED, do not re-derive: face/body is **not** a mirror (facing is
 double-translate; an arena overflow **hangs** (`malloc.c:30` is `while (TRUE);`)
 so one frozen fighter is not heap exhaustion.
 
-OPEN -- all need the r29 runtime read, not source reading. Globals per row
+OPEN -- all need the r30 runtime read, not source reading. Globals per row
 are in plan section 4: face/body witness (repair OFF, the packet twin would
 flicker); `gNdsFTCommonAppearOverrunFighter` for frozen Fox;
 `gNdsEntryMBallRaysRequestCount` vs `...NullCount` for the rays; arena hang

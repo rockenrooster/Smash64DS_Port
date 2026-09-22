@@ -110,9 +110,10 @@ Two ROMs built, both `NATIVE_ONLY_PASS` with 316 link inputs:
 |---|---|---|
 | r27 | `E077AF60D9E60F75F7C81748D6DE76C10576ED08C570B1DAA812F42B9E998A96` | Results paths, P01, K04, witnesses |
 | r28 | `7A2D46B4F47DAC53111C80AAA0A2544EBF614E93A4537474F3DDAB455BC28E0D` | r27 plus the Yoshi egg owner |
-| **r29** | `DAB94410BAADDFA0050FBC20134DD55E061E894850BCC2A0A7970F76A99EDA8D` | r28 plus the Kirby-star NO_PROGRAM arms |
+| r29 | `DAB94410BAADDFA0050FBC20134DD55E061E894850BCC2A0A7970F76A99EDA8D` | r28 plus the Kirby-star NO_PROGRAM arms |
+| **r30** | `9E7F5EF91D86790A4E22CE3811288C256970E0664EBA612438F5207BFB4AFB00` | r29 plus the Kirby low-detail hat counter |
 
-**Playtest r29.** r28's hash reproduced byte-identically across a rebuild, so the
+**Playtest r30.** r28's hash reproduced byte-identically across a rebuild, so the
 build is deterministic. No runtime proof: nothing here is observed on screen.
 
 `check-native-owner-wiring.py` caught a real gap in the K04 work after r28 was
@@ -542,9 +543,15 @@ because the "GO!" sprites at `0x4D78`, `0xA730` and `0xC370` are dereferenced an
 Each needs its own census before a case is added; adding one changes behaviour
 for every descriptor using that kind.
 
-### 6.3 Kirby copy-hat low-detail deferral
+### 6.3 Kirby copy-hat low-detail deferral — **now measurable**
 
 The low-detail hat image (7,636 bytes) loads eagerly at copy time for every
-Kirby. Deferring it clears the floor outright (23,204 + 7,636 = 30,840). Before
-doing it, count binds of `sNdsNativeKirbyHatImages[slot][1]` in a natural
-two-player copy match — if it is bound, the lever is wrong. Do not guess this one.
+Kirby. Deferring it clears the floor outright (23,204 + 7,636 = 30,840), which
+would by itself lift a Kirby match back over the 25,600 GObj latch.
+
+The lever was blocked on a count nobody had taken, so r30 adds it.
+`gNdsNativeKirbyHatTableHits[2]` increments at the draw-time root match in
+`nds_renderer_assets.c` — the renderer asks for a specific root and the root
+names the detail, so this is a use, not a load. **`[1]` staying zero across a
+natural two-player copy match is the proof the deferral is safe; any non-zero
+reading refutes the lever.** Read it beside `gNdsTaskmanGeneralHeapFreeMin`.
