@@ -2236,3 +2236,48 @@ open/close update -- was not reached on either axis.
 Closing it needs a Saffron battle held past tic 1,220 with a real Kirby copy
 performed. The walk cannot do the second part; that wants either a scripted
 special or the owner reproducing it once while the counters are readable.
+
+### Saffron gate cycles with Kirby present, and does not crash
+
+Held the walk on Saffron with Kirby committed and sampled across the gate's own
+state machine. The gate transitions and the ROM keeps running:
+
+| sample | presented | free-min | gate_status | gate_wait |
+|---|---|---|---|---|
+| T1 | 572 | 32,504 | 0 | 869 |
+| T2 | 816 | 32,504 | 0 | 263 |
+| T3 | **2,043** | 32,496 | **200** | 746 |
+| T4 | 1,402 | 32,160 | **8** | 1,684 |
+
+Closing counters: `hat=0,0  anim=1585/0  latch=0/0  allocfail=188`.
+
+`gate_wait` counting 869 -> 263 is the source's own timer, and `gate_status`
+moving 0 -> 200 -> 8 across the samples is the transition itself -- the "UPDATE"
+the owner's row names -- observed in **three distinct states**. T4's lower
+presented count is a second match (the counter resets per battle), so this held
+across more than one Saffron entry. Free-min moved 344 bytes over the whole run,
+the `ifCommonSetMaxNumGObj` latch never fired, and 1,585 animation resolves
+produced zero fallbacks.
+
+**So the gate update alone does not crash with Kirby on the stage.** What is
+still untested is the copy: `gNdsNativeKirbyHatTableHits` stayed 0,0 throughout,
+because the walk has no input script for a special and never inhales. The
+recorded copy cost is two eager hat details of about 8,556 bytes each, so a copy
+would move free-min from 32,504 to roughly 14,000 -- still positive, but under
+the 25,600 latch floor, which is exactly where the owner's other Kirby symptoms
+live.
+
+Closing this row therefore needs one thing the walk cannot produce: a real
+inhale on Saffron. Either script a special into the walk, or have the owner do
+it once while the counters are readable.
+
+### Ness halt, narrowed one step further
+
+`ness_high.bin` is **16,240 bytes**, and root 0's span is
+`5,792 + 82 * 8 = 6,448`. So the asset-span arm of clause 6 has room, and the
+failure is more likely `ndsRendererNativeArraySpanFits(first_epoch, epoch_count,
+epoch_count)` or `ndsRendererValidateNativeStateSpan(tail_state_*)`. Note the
+validator is passed `ndsRelocNativeSourceSize(native_owner_file)` rather than
+the file length, so confirm which number it actually sees before acting.
+Splitting clause 6 into three sub-codes is a handful of lines and would name the
+arm outright on the next run.
