@@ -3770,6 +3770,244 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
 #endif
 }
 
+/* Edge of a fighter tint tile, in texels. Outside the guard below because the
+ * native owner's tint batch reads it to aim its single texcoord. */
+#define NDS_R2_FIGHTER_TINT_DIM 8u
+
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+/* A SOLID TEXEL, SO A TINTED BODY CAN MULTIPLY AFTER IT SHADES.
+ *
+ * Fighters draw PRIM x SHADE (then x ENV, which is the stage light colour and
+ * white) for an untextured body and TEXEL0 x SHADE for a textured face, and the
+ * N64 clamps SHADE to eight bits BEFORE either multiply. The DS geometry engine
+ * saturates once, per channel, after the material fold, so a folded prim can
+ * only approximate clamp8(l2 + l1*dot) * prim: the shipped diffuse cap reaches
+ * prim at dot = 1 where the source sits on prim from dot ~0.5, so a lit body
+ * reads darker than the face beside it. Measured on the walk ROM, Kirby
+ * (runtime prim 0xFFA4B8): the capped body writes diffuse (12,10,12) / ambient
+ * (19,10,11) and draws (25,15,17) at half light against the source's
+ * (31,20,23), while the face at the same light draws its full texel. That is
+ * the owner's face/body seam.
+ *
+ * The DS has exactly one post-shade multiply, the texture. So an untextured
+ * body whose prim is not white draws textured with an 8x8 tile whose every
+ * texel is prim, over the RAW light colours, and the pipeline evaluates
+ * clamp31(RGB5(l2) + RGB5(l1)*dot) * prim -- the source's order.
+ *
+ * WHICH COLOURS: whatever the fighters actually carry at runtime. A costume is
+ * a material animation that overwrites the MObjSub prim (Kirby's static prim is
+ * green; he draws pink, and yellow in his second costume), and copy hats bring
+ * their own. So there is no table to bake: the draw walk LOOKS UP the colour
+ * and, on a miss, only queues it and draws the capped fold for that frame; the
+ * renderer's frame boundary (ndsRendererHardwareConsumeSubmittedFrame, after
+ * the batch closes and before the bind trackers reset) creates queued tiles.
+ * Nothing is ever created, evicted or bound from inside a draw walk -- the
+ * three routes withdrawn as r42, r43 and r44 all created or bound tiles there.
+ * A colour whose upload fails is not retried until the next VRAM reset. */
+#define NDS_R2_FIGHTER_TINT_SLOTS 16u
+#define NDS_R2_FIGHTER_TINT_QUEUE 8u
+#define NDS_R2_FIGHTER_TINT_BYTES \
+    ((NDS_R2_FIGHTER_TINT_DIM * NDS_R2_FIGHTER_TINT_DIM) / 2u)
+
+typedef struct NDSR2FighterTint
+{
+    u32 rgb;       /* 24-bit RRGGBB this tile carries */
+    u32 name;
+    u32 last_used; /* sNdsRendererHardwareFrameSerial of the last hit */
+} NDSR2FighterTint;
+
+static NDSR2FighterTint sNdsR2FighterTints[NDS_R2_FIGHTER_TINT_SLOTS];
+static u32 sNdsR2FighterTintCount;
+static u32 sNdsR2FighterTintQueue[NDS_R2_FIGHTER_TINT_QUEUE];
+static u32 sNdsR2FighterTintQueueCount;
+static u32 sNdsR2FighterTintFailed[NDS_R2_FIGHTER_TINT_QUEUE];
+static u32 sNdsR2FighterTintFailedCount;
+/* Names die with glResetTextures; the set is stamped with the VRAM reset
+ * generation it was built in and forgotten (not deleted) when that moves. */
+static u32 sNdsR2FighterTintGeneration;
+volatile u32 gNdsR2FighterTintBuilds;
+volatile u32 gNdsR2FighterTintHits;
+volatile u32 gNdsR2FighterTintMisses;
+volatile u32 gNdsR2FighterTintFails;
+volatile u32 gNdsR2FighterTintQueueFull;
+volatile u32 gNdsR2FighterTintTableFull;
+volatile u32 gNdsR2FighterTintEvictions;
+/* Bumped whenever a tile is created or deleted, and mixed into every fighter
+ * packet key (ndsFighterPacketBuildKey). A packet recorded before its colour's
+ * tile existed carries fold words, and one recorded while a tile existed binds
+ * it by name; either is wrong the moment the set changes, so the set's
+ * generation is part of what a packet is valid for. Measured on r49's first
+ * cut: the first battle frame recorded before the tile was built and replayed
+ * the capped fold for the rest of the match. */
+volatile u32 gNdsR2FighterTintSetGeneration;
+
+static s32 ndsR2FighterTintFill(u8 *pixels, u32 bytes, void *user_data)
+{
+    (void)user_data;
+    if ((pixels == NULL) || (bytes < NDS_R2_FIGHTER_TINT_BYTES))
+    {
+        return FALSE;
+    }
+    /* 0x11: both 4-bit texels of the byte select palette index 1 (index 0 is
+     * transparent under PrepareIFCommonPal16Atlas's colour-0 rule). */
+    memset(pixels, 0x11, (size_t)bytes);
+    return TRUE;
+}
+
+static void ndsR2FighterTintSyncGeneration(void)
+{
+    u32 generation = gNdsRendererSceneTextureVramResetCount + 1u;
+
+    if (sNdsR2FighterTintGeneration != generation)
+    {
+        sNdsR2FighterTintCount = 0u;
+        sNdsR2FighterTintQueueCount = 0u;
+        sNdsR2FighterTintFailedCount = 0u;
+        sNdsR2FighterTintGeneration = generation;
+        gNdsR2FighterTintSetGeneration++;
+    }
+}
+
+/* The GL name of a resident tile whose every texel is `material_color`, or 0.
+ * Callable from the fighter draw walk: it allocates, uploads, evicts and binds
+ * nothing. A miss is queued for the frame boundary. */
+static u32 ndsRendererR2FighterTintLookup(u32 material_color)
+{
+    u32 rgb = (material_color >> 8) & 0x00ffffffu;
+    u32 i;
+
+    ndsR2FighterTintSyncGeneration();
+    for (i = 0u; i < sNdsR2FighterTintCount; i++)
+    {
+        if (sNdsR2FighterTints[i].rgb == rgb)
+        {
+            gNdsR2FighterTintHits++;
+            sNdsR2FighterTints[i].last_used = sNdsRendererHardwareFrameSerial;
+            return sNdsR2FighterTints[i].name;
+        }
+    }
+    gNdsR2FighterTintMisses++;
+    for (i = 0u; i < sNdsR2FighterTintFailedCount; i++)
+    {
+        if (sNdsR2FighterTintFailed[i] == rgb)
+        {
+            return 0u;
+        }
+    }
+    for (i = 0u; i < sNdsR2FighterTintQueueCount; i++)
+    {
+        if (sNdsR2FighterTintQueue[i] == rgb)
+        {
+            return 0u;
+        }
+    }
+    if (sNdsR2FighterTintQueueCount < NDS_R2_FIGHTER_TINT_QUEUE)
+    {
+        sNdsR2FighterTintQueue[sNdsR2FighterTintQueueCount++] = rgb;
+    }
+    else
+    {
+        gNdsR2FighterTintQueueFull++;
+    }
+    return 0u;
+}
+
+/* Frame boundary only: create the tiles the last frame asked for. */
+static void ndsRendererHardwareServiceFighterTintTiles(void)
+{
+    ndsR2FighterTintSyncGeneration();
+    while (sNdsR2FighterTintQueueCount != 0u)
+    {
+        u32 rgb = sNdsR2FighterTintQueue[--sNdsR2FighterTintQueueCount];
+        u16 palette[16];
+        u32 name = 0u;
+        u32 i;
+        s32 resident = FALSE;
+
+        for (i = 0u; i < sNdsR2FighterTintCount; i++)
+        {
+            if (sNdsR2FighterTints[i].rgb == rgb)
+            {
+                resident = TRUE;
+                break;
+            }
+        }
+        if (resident != FALSE)
+        {
+            continue;
+        }
+        if (sNdsR2FighterTintCount >= NDS_R2_FIGHTER_TINT_SLOTS)
+        {
+            /* Evict the least recently used tile the frame just drawn did not
+             * touch: the character select cycles through far more colours than
+             * it shows at once, and a table that only fills would leave every
+             * later preview on the fold. Deleting here is safe -- no walk is
+             * running -- and the set generation below retires any packet that
+             * recorded a bind of it. */
+            u32 victim = NDS_R2_FIGHTER_TINT_SLOTS;
+
+            /* Two frames, not one: the previous frame's polygon list may still
+             * be rasterising while this one is submitted, and the tile created
+             * just below could land in the block a deleted one freed. */
+            for (i = 0u; i < sNdsR2FighterTintCount; i++)
+            {
+                if (((u32)(sNdsRendererHardwareFrameSerial -
+                           sNdsR2FighterTints[i].last_used) >= 2u) &&
+                    ((victim == NDS_R2_FIGHTER_TINT_SLOTS) ||
+                     ((s32)(sNdsR2FighterTints[i].last_used -
+                            sNdsR2FighterTints[victim].last_used) < 0)))
+                {
+                    victim = i;
+                }
+            }
+            if (victim == NDS_R2_FIGHTER_TINT_SLOTS)
+            {
+                gNdsR2FighterTintTableFull++;
+                continue;
+            }
+            ndsRendererHardwareReleaseIFCommonCloudAtlas(
+                &sNdsR2FighterTints[victim].name);
+            sNdsR2FighterTints[victim] =
+                sNdsR2FighterTints[sNdsR2FighterTintCount - 1u];
+            sNdsR2FighterTintCount--;
+            gNdsR2FighterTintEvictions++;
+            gNdsR2FighterTintSetGeneration++;
+        }
+        memset(palette, 0, sizeof(palette));
+        palette[1] = (u16)RGB15(((rgb >> 16) & 0xffu) >> 3,
+                                ((rgb >> 8) & 0xffu) >> 3,
+                                (rgb & 0xffu) >> 3);
+        if (ndsRendererHardwarePrepareIFCommonPal16Atlas(
+                NDS_R2_FIGHTER_TINT_DIM, NDS_R2_FIGHTER_TINT_DIM, palette,
+                ndsR2FighterTintFill, NULL, &name) == FALSE)
+        {
+            gNdsR2FighterTintFails++;
+            if (sNdsR2FighterTintFailedCount < NDS_R2_FIGHTER_TINT_QUEUE)
+            {
+                sNdsR2FighterTintFailed[sNdsR2FighterTintFailedCount++] = rgb;
+            }
+            continue;
+        }
+        sNdsR2FighterTints[sNdsR2FighterTintCount].rgb = rgb;
+        sNdsR2FighterTints[sNdsR2FighterTintCount].name = name;
+        sNdsR2FighterTints[sNdsR2FighterTintCount].last_used =
+            sNdsRendererHardwareFrameSerial;
+        sNdsR2FighterTintCount++;
+        gNdsR2FighterTintBuilds++;
+        gNdsR2FighterTintSetGeneration++;
+    }
+}
+#else
+volatile u32 gNdsR2FighterTintSetGeneration;
+
+static u32 ndsRendererR2FighterTintLookup(u32 material_color)
+{
+    (void)material_color;
+    return 0u;
+}
+#endif
+
 /* Fighter entry props are required only while VSBattle presents the source
  * match intro.  Their converted texture names are direct GL residents rather
  * than cache entries, so ordinary LRU eviction can never reclaim them after
@@ -4702,6 +4940,27 @@ static void NDS_TASK82_ITCM_CODE ndsRendererHardwareBindTextureName(
         }
     }
 #endif
+}
+
+/* Bind a GL name the texture cache does not own -- a fighter tint tile --
+ * without leaving the cache's bookkeeping stale.
+ *
+ * The cache elides a bind when sNdsRendererHardwareActiveTextureEntry already
+ * equals the entry it wants (ResolveResidentTexture, the stage-site plan, the
+ * run-texture memo). A bare ndsRendererHardwareBindTextureName for a foreign
+ * name moves the bound-name tracker but not that pointer, so the next run
+ * asking for the previously active entry would skip its bind and its params
+ * and sample the foreign texels. The impact-wave, rebirth-halo and entry
+ * effect owners clear the pointer inline beside each of their binds; this is
+ * that pair, named, so check-fighter-draw-global-texture-state.py can admit it
+ * as a seam of the fighter walk. The params shadow needs nothing:
+ * BindTextureState invalidates it. */
+static inline void ndsRendererHardwareBindForeignTextureName(
+    NDSRendererStats *stats,
+    u32 texture_name)
+{
+    ndsRendererHardwareBindTextureName(stats, texture_name);
+    sNdsRendererHardwareActiveTextureEntry = NULL;
 }
 
 static void ndsRendererHardwareReleaseBattleStaticTextureEntries(void)

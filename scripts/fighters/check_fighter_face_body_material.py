@@ -401,54 +401,163 @@ def scale_material_channel5(shaded: int, material: int) -> int:
     return (numerator + 1 + (numerator >> 8)) >> 11
 
 
-def n64_pixel5(light1: int, light2: int, prim: int, dot: float):
-    """clamp8(ambient + diffuse*dot) * prim / 255, then quantized to RGB5."""
+def epoch_uses_material(ctx, epoch_index: int) -> bool:
+    """The generated policy family's USE_MATERIAL bit for this epoch.
+
+    It gates both halves of the port's arithmetic: the prim fold in
+    ndsRendererR2MaterialChannel and the diffuse cap in
+    ndsRendererR2ClampDiffuseToMaterial.  A textured, non-material epoch
+    (family 0) multiplies by its texel instead, which this census does not
+    model, so for those only the shade itself is compared.
+    """
+    policy = ctx["direct_epoch_policies"][epoch_index]
+    family = policy & ~G.DIRECT_POLICY_CULL_NONE
+    return "MATERIAL" in G.DIRECT_POLICY_FAMILIES[family][2]
+
+
+def n64_pixel5(light1: int, light2: int, prim: int, dot: float,
+               use_material: bool = True):
+    """clamp8(ambient + diffuse*dot) [* prim / 255], quantized to RGB5."""
     out = []
     for shift in (24, 16, 8):
         diffuse = (light1 >> shift) & 0xFF
         ambient = (light2 >> shift) & 0xFF
-        material = (prim >> shift) & 0xFF
         shade = clamp8(int(ambient + diffuse * dot))
-        out.append((((shade * material) + 127) // 255) >> 3)
+        if use_material:
+            material = (prim >> shift) & 0xFF
+            shade = ((shade * material) + 127) // 255
+        out.append(shade >> 3)
     return tuple(out)
 
 
-def ds_pixel5(light1: int, light2: int, prim: int, dot: float):
-    """clamp5(folded_ambient + folded_diffuse*dot); the geometry engine."""
+def ds_pixel5_uncapped(light1: int, light2: int, prim: int, dot: float,
+                       use_material: bool = True):
+    """HISTORICAL: the prim fold before the diffuse cap existed.
+
+    clamp5(folded_ambient + folded_diffuse*dot).  Until 2026-09-22 this was the
+    census's only DS model and it was reported as "the port" long after the
+    cap shipped -- at dot 0.5 on Purin's body it said (31,24,26) while the
+    shipped code draws (23,18,20) against a source of (31,25,27).  Kept as a
+    labelled baseline because it is the shape of the original defect: each
+    channel saturates at 31 on its own and a tinted prim washes toward white.
+    """
     out = []
     for shift in (24, 16, 8):
-        diffuse5 = scale_material_channel5((light1 >> shift) & 0xFF,
-                                           (prim >> shift) & 0xFF)
-        ambient5 = scale_material_channel5((light2 >> shift) & 0xFF,
-                                           (prim >> shift) & 0xFF)
+        light1_c = (light1 >> shift) & 0xFF
+        light2_c = (light2 >> shift) & 0xFF
+        if use_material:
+            diffuse5 = scale_material_channel5(light1_c, (prim >> shift) & 0xFF)
+            ambient5 = scale_material_channel5(light2_c, (prim >> shift) & 0xFF)
+        else:
+            diffuse5 = light1_c >> 3
+            ambient5 = light2_c >> 3
         out.append(clamp5(int(ambient5 + diffuse5 * dot)))
     return tuple(out)
 
 
-def fold_census(resolved, verbose: bool, label: str):
+def ds_modulate5(texel5: int, vertex5: int) -> int:
+    """The DS texture modulation, per GBATEK: both sides widened to six bits
+    (x*2 + (x > 0)), ((T+1)*(V+1)-1)/64, then back to the five-bit buffer."""
+    tex6 = texel5 * 2 + (1 if texel5 > 0 else 0)
+    vtx6 = vertex5 * 2 + (1 if vertex5 > 0 else 0)
+    return (((tex6 + 1) * (vtx6 + 1) - 1) // 64) >> 1
+
+
+def ds_pixel5_tinted(light1: int, light2: int, prim: int, dot: float,
+                     use_material: bool = True):
+    """The tint route: shade the RAW light, then modulate by a solid prim tile.
+
+    ndsRendererR2ResolveEpochShade writes RGB5(light) into diffuse/ambient for
+    an untextured material epoch with a non-white prim whose tile is resident,
+    and the run binds an 8x8 tile whose every texel is RGB5(prim):
+    clamp31(RGB5(l2) + RGB5(l1)*dot) * prim -- the source's clamp-then-multiply
+    order.  The residual is five-bit quantization of light and texel.
+    """
+    out = []
+    for shift in (24, 16, 8):
+        diffuse5 = ((light1 >> shift) & 0xFF) >> 3
+        ambient5 = ((light2 >> shift) & 0xFF) >> 3
+        shade5 = clamp5(int(ambient5 + diffuse5 * dot))
+        texel5 = ((prim >> shift) & 0xFF) >> 3
+        out.append(ds_modulate5(texel5, shade5))
+    return tuple(out)
+
+
+def ds_pixel5(light1: int, light2: int, prim: int, dot: float,
+              use_material: bool = True):
+    """What SHIPS once a colour's tile is resident: the tint route for an
+    untextured material epoch with a non-white prim, the fold otherwise (where
+    the fold is exact or the cap never engages)."""
+    white = ((prim >> 8) & 0x00FFFFFF) == 0x00FFFFFF
+    if use_material and not white:
+        return ds_pixel5_tinted(light1, light2, prim, dot, use_material)
+    return ds_pixel5_capped(light1, light2, prim, dot, use_material)
+
+
+def ds_pixel5_capped(light1: int, light2: int, prim: int, dot: float,
+                     use_material: bool = True):
+    """The capped fold -- what a tinted epoch draws on the frame before its
+    tile exists, and what shipped before the tint route, at identity colour
+    modulation.
+
+    ndsRendererR2MaterialChannel folds prim into each light only when the
+    policy uses material (else the channel is light >> 3), and
+    ndsRendererR2ClampDiffuseToMaterial then caps each diffuse channel to the
+    headroom prim5 - ambient5, where prim5 is the same fold of full white
+    light -- skipped for a white prim, which is the identity fold.  The hurt
+    flash (colour modulate) is a second multiply this census does not model.
+    """
+    white = ((prim >> 8) & 0x00FFFFFF) == 0x00FFFFFF
+    out = []
+    for shift in (24, 16, 8):
+        light1_c = (light1 >> shift) & 0xFF
+        light2_c = (light2 >> shift) & 0xFF
+        if use_material:
+            prim_c = (prim >> shift) & 0xFF
+            diffuse5 = scale_material_channel5(light1_c, prim_c)
+            ambient5 = scale_material_channel5(light2_c, prim_c)
+            if not white:
+                prim5 = scale_material_channel5(0xFF, prim_c)
+                diffuse5 = min(diffuse5, max(0, prim5 - ambient5))
+        else:
+            diffuse5 = light1_c >> 3
+            ambient5 = light2_c >> 3
+        out.append(clamp5(int(ambient5 + diffuse5 * dot)))
+    return tuple(out)
+
+
+def fold_census(resolved, ctx, verbose: bool, label: str, model=None):
+    """Diverging (epoch, dot, channel) samples between source and `model`.
+
+    Returns (diverging, total, worst_delta)."""
+    model = ds_pixel5 if model is None else model
     diverging = 0
     total = 0
     worst = None
     for key in sorted(resolved):
         light1, light2, prim, _env = resolved[key]
-        if light1 is None or light2 is None or prim is None:
+        use_material = epoch_uses_material(ctx, key[1])
+        if light1 is None or light2 is None:
             continue
+        if use_material and prim is None:
+            continue
+        prim_value = 0 if prim is None else prim
         for dot in DOT_SAMPLES:
-            expect = n64_pixel5(light1, light2, prim, dot)
-            actual = ds_pixel5(light1, light2, prim, dot)
+            expect = n64_pixel5(light1, light2, prim_value, dot, use_material)
+            actual = model(light1, light2, prim_value, dot, use_material)
             for index in range(3):
                 total += 1
                 delta = abs(expect[index] - actual[index])
                 if delta != 0:
                     diverging += 1
                     if worst is None or delta > worst[0]:
-                        worst = (delta, key, dot, prim, expect, actual)
+                        worst = (delta, key, dot, prim_value, expect, actual)
     if verbose and worst is not None:
-        delta, key, dot, prim, expect, actual = worst
-        print(f"    {label} widest fold divergence: root {key[0]} epoch "
-              f"{key[1]} dot={dot} prim=0x{prim:08x} source RGB5 {expect} vs "
-              f"port RGB5 {actual} (delta {delta})")
-    return diverging, total
+        delta, key, dot, prim_value, expect, actual = worst
+        print(f"    {label} widest divergence ({model.__name__}): root "
+              f"{key[0]} epoch {key[1]} dot={dot} prim=0x{prim_value:08x} "
+              f"source RGB5 {expect} vs port RGB5 {actual} (delta {delta})")
+    return diverging, total, (0 if worst is None else worst[0])
 
 
 def check_owner(owner: str, detail: str, verbose: bool, mutate: bool) -> int:
@@ -504,8 +613,15 @@ def check_owner(owner: str, detail: str, verbose: bool, mutate: bool) -> int:
               f"{roots} draw before this model installs any light colour; "
               "they shade from the adapter's material-light seed")
 
-    diverging, total = fold_census(expected, verbose, f"{owner} {detail}")
-    FOLD_DIVERGENCE_CENSUS[(owner, detail)] = (diverging, total)
+    diverging, total, worst = fold_census(
+        expected, ctx, verbose, f"{owner} {detail}")
+    fallback, _total, fallback_worst = fold_census(
+        expected, ctx, verbose, f"{owner} {detail}", ds_pixel5_capped)
+    historical, _total, historical_worst = fold_census(
+        expected, ctx, verbose, f"{owner} {detail}", ds_pixel5_uncapped)
+    FOLD_DIVERGENCE_CENSUS[(owner, detail)] = (
+        diverging, total, worst, fallback, fallback_worst,
+        historical, historical_worst)
 
     if verbose:
         lights = sorted({(v[0], v[1]) for v in expected.values()})
@@ -515,8 +631,9 @@ def check_owner(owner: str, detail: str, verbose: bool, mutate: bool) -> int:
         print(f"    distinct (light1, light2): " + ", ".join(
             f"({_hex(a)},{_hex(b)})" for a, b in lights))
         print(f"    distinct prim: " + ", ".join(_hex(p) for p in prims))
-        print(f"    shade fold: {diverging}/{total} channel samples diverge "
-              f"between the source and the DS material fold")
+        print(f"    shipped shade: {diverging}/{total} channel samples "
+              f"diverge from the source, widest {worst}/31 (no-tile fold "
+              f"widest {fallback_worst}/31)")
     return len(expected)
 
 
@@ -572,12 +689,14 @@ def main() -> int:
           "epochs resolve identically in the source command stream and the "
           "generated port tables")
     for key in sorted(FOLD_DIVERGENCE_CENSUS):
-        diverging, total = FOLD_DIVERGENCE_CENSUS[key]
+        (diverging, total, worst, fallback, fallback_worst, historical,
+         historical_worst) = FOLD_DIVERGENCE_CENSUS[key]
         seeded = len(SEED_DEPENDENT_EPOCHS.get(key, ()))
-        print(f"  {key[0]} {key[1]}: shade fold {diverging}/{total} channel "
-              "samples diverge (DS clamps the prim-folded sum; the N64 clamps "
-              f"the shade and modulates after); {seeded} epoch(s) depend on "
-              "the adapter light seed")
+        print(f"  {key[0]} {key[1]}: SHIPPED (tint route) {diverging}/{total} "
+              f"channel samples diverge, widest {worst}/31; no-tile fold "
+              f"{fallback}/{total}, widest {fallback_worst}/31; historical "
+              f"uncapped {historical}/{total}, widest {historical_worst}/31; "
+              f"{seeded} epoch(s) depend on the adapter light seed")
     return 0
 
 

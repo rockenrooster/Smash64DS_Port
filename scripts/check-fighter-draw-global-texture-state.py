@@ -144,6 +144,11 @@ SEAMS = (
     # performed, and replays them. It IS the tracker, not a caller past it.
     "ndsRendererR2RunTextureMemoApply",
     "ndsRendererR2RunTextureMemoFill",
+    # A GL name the cache does not own (a fighter tint tile), bound so both
+    # trackers stay coherent: the bound-name tracker through BindTextureName,
+    # and the active entry nulled so no cache bind can elide against it. The
+    # tile itself is created at the frame boundary, never from the walk.
+    "ndsRendererHardwareBindForeignTextureName",
 )
 
 # name -> the one symbol it may reach, for cases a seam cannot express.

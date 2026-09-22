@@ -6329,3 +6329,46 @@ there; a heavy four-fighter roster on a big stage is still unmeasured and at
 risk. The real remaining lever is the source files loaded whole (ground file
 225 KB, common files 209 KB, items 83 KB, effects 95 KB), where compact packs
 like the fighters' would prune the N64 geometry the native blobs replace.
+
+## Face/body colour: the tint route, fourth attempt, and why it differs (2026-09-22, r49)
+
+**Runtime facts first (walk ROM, shade witness ring, Kirby vs Kirby):** the
+body epochs fold prim `0xFFA4B8` (pink, costume 0) and `0xFFEF00` (yellow, the
+second costume); the face epoch folds nothing. Kirby's STATIC MObjSub prim is
+green (`0x00FF5A`) -- the costume material animation overwrites it at runtime,
+so every baked colour table (r42-r44 used one) was wrong for Kirby by
+construction. Fighters draw PRIM x SHADE (body) and TEXEL0 x SHADE (face),
+then x ENV in cycle 2 -- ENV is `gMPCollisionLightColor`, initialised white and
+never changed -- so the only split is the shade clamp order. The capped fold
+wrote diffuse (12,10,12) / ambient (19,10,11) and draws (25,15,17) at half
+light where the source draws (31,20,23) and the face its full texel: the seam.
+
+**What changed against r42-r44:**
+
+- Colours come from what the draw walk actually sees; a miss is queued and the
+  tile is created at the renderer frame boundary
+  (`ndsRendererHardwareConsumeSubmittedFrame`, batch closed, before the tracker
+  reset). Nothing is created, evicted or bound from inside a draw walk. LRU
+  eviction of tiles unused for two frames keeps the character select from
+  filling the table.
+- Bound through `ndsRendererHardwareBindForeignTextureName` (bind + null the
+  cache's active entry) before the packet's prepare hook, so the packet records
+  the tile as the run's texture; tinted shade sites are recorded as raw light
+  with a flag, the replay re-derives them, and a prim change under a tinted
+  packet re-records it instead of replaying a stale tile.
+- `gNdsR2FighterTintSetGeneration` is mixed into every packet key. The first
+  cut of r49 missed this and the witness showed why: a packet recorded on the
+  first battle frame, before the tile existed, replayed the fold forever.
+
+**Measured (walk ROM, same deterministic input):** Kirby vs Kirby on Castle,
+triangles submitted 556,800 on both r48 and r49, native rejects 0 on both;
+Pikachu vs Purin on Dream Land 832,249 vs 831,613 (a fighter-frame of pacing
+at the sample), rejects 0. Tint: 0 upload failures, 0 table-full, 976 / 3,250
+hits; packet replays 5,764 vs 5,835 (r48). Census with the GBATEK modulation
+formula: tint route worst 1/31 on the static epochs and 2/31 across the
+runtime prims, against the cap's 8/31.
+
+**Not verified here:** pixels. The window capture foregrounds melonDS and the
+owner was playing; acceptance is the owner's. Face-vs-body in a hurt flash
+now lerps toward flash x prim, the same approximation the textured face
+already had (flash x texel).

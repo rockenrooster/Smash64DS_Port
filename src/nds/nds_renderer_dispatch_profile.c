@@ -753,6 +753,13 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererHardwareMatrixSignature = 0u;
 #endif
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+    /* Tint tiles the frame just asked for are created HERE: the frame's batch
+     * is closed and no draw walk is running, and the tracker reset right below
+     * cleans up after the upload's own bind. See
+     * ndsRendererR2FighterTintLookup for why never inside a walk. */
+    ndsRendererHardwareServiceFighterTintTiles();
+#endif
     sNdsRendererHardwareBoundTextureName = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);

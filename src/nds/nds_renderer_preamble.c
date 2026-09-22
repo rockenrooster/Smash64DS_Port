@@ -3481,6 +3481,8 @@ volatile u32 gNdsFighterPacketHits;
 volatile u32 gNdsFighterPacketRecords;
 volatile u32 gNdsFighterPacketFaults;
 volatile u32 gNdsFighterPacketDeclines;
+/* Packets discarded because a tinted site's prim changed under replay. */
+volatile u32 gNdsFighterPacketTintRerecords;
 volatile u32 gNdsFighterPacketWordsMax;
 volatile u32 gNdsFighterPacketTexgenPatches;
 /* Per key word (then root count, then texture residency): how often a valid
@@ -3753,7 +3755,7 @@ ndsFighterPacketRecordTexCoord(u32 word, u32 dense_id)
 static void NDS_FIGHTER_PACKET_COLD_CODE
 ndsFighterPacketRecordDiffuseAmbient(
     u32 word, u32 light_color_1, u32 light_color_2,
-    u32 material_color, u32 use_material)
+    u32 material_color, u32 use_material, u32 tinted)
 {
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
     u32 i = ndsFighterPacketCmd(REG2ID(GFX_DIFFUSE_AMBIENT), 1u);
@@ -3775,6 +3777,9 @@ ndsFighterPacketRecordDiffuseAmbient(
     site->use_material = (use_material != 0u) ? 1u : 0u;
     site->prim_from_root =
         ((use_material != 0u) && (rec->prim_overridden == 0u)) ? 1u : 0u;
+    /* reserved[0]: this site's colour is a tint tile in the recorded bind,
+     * not a fold -- see ndsFighterPacketApplyTint. */
+    site->reserved[0] = (tinted != 0u) ? 1u : 0u;
     site->light_color_1 = light_color_1;
     site->light_color_2 = light_color_2;
     site->material_color = material_color;

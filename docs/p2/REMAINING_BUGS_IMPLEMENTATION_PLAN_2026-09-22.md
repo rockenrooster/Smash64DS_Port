@@ -27,7 +27,8 @@ tint creation is withdrawn. Keep it for evidence; do not execute it.
 | r42 / r43 / r44 | `d53782a9` / `587c853b` / `03ce0acd` | three face/body tint-route variants | all regressed; route removed |
 | r45 | `36afbc1cd172e755` | r41 + CSS UV-memo fix | owner: some maps crash (Kirby + Fox) |
 | r46 | `7fcf916364edcb2f` | + Zebes acid back to one subdivision level | superseded before play |
-| r48 | `5d9140165a69fc72` | + VS fighter pools sized to players; idle ports carved as one block; owner images and copy hats in that scratch, largest first | **play this** |
+| r48 | `5d9140165a69fc72` | + VS fighter pools sized to players; idle ports carved as one block; owner images and copy hats in that scratch, largest first | owner: all stages OK |
+| r49 | `be35d42ce0861a3e` | + face/body tint route: tile per LIVE prim, created at the frame boundary, recorded and replayed by the fighter packet | **play this** |
 
 **Measured, not argued** (walk ROM, Fox P1 vs CPU Kirby P2, free general
 heap during the match; probes in `artifacts/visibility/2026-09-22_battle-heap/`):
@@ -43,7 +44,7 @@ Mechanism and ledger: `BUG_NOTES.md`, "the battle heap, measured".
 | Some maps crash (Kirby + Fox) | r48: heap, see above. Four-player matches unmeasured (no idle ports there) |
 | VFX missing by fighter combination | r37 graded table 16 + r48 heap: the GObj latch at 25,600 B free is now cleared on every 2P stage measured |
 | r44 Pikachu contorted / Jigglypuff missing limbs | unattributed; candidate: `ndsRelocEnsureLoadedAsset` declines loads under heap pressure (`gNdsRelocHeapDeclineCount`) |
-| Face colour != body (6 rows) | OPEN. Shipped path is the diffuse cap, worst 8/31 (census now models it); tint route needs owned preparation + replay support |
+| Face colour != body (6 rows) | r49: tint route (worst 1-2/31 vs the cap's 8/31); walk ROM: 0 rejects, triangle totals match r48, replay intact |
 | Zebes acid / light gradients | light cone subdivided; acid back at one level for heap |
 | Saffron door | OPEN; transform chain verified, pixels not |
 

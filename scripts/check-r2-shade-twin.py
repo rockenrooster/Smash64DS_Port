@@ -58,9 +58,31 @@ ASSIGN = re.compile(r"\bdiffuse\s*=\s*" + CLAMP + r"\s*\(")
 # The two fighter derivations this file is allowed to contain.  Adding a third
 # is a deliberate act; see CLAIM 2.
 EXPECTED_SITES = (
-    "ndsRendererNativeShadeProductionActions",
+    "ndsRendererR2ResolveEpochShade",
     "ndsFighterPacketApplyTint",
 )
+
+# Sites that compose the word out of a resolver's RETURN rather than deriving
+# it.  ndsRendererNativeShadeProductionActions used to derive it inline; the
+# tint route moved the derivation into ndsRendererR2ResolveEpochShade so its
+# body could leave the fighter ITCM section, and what is left here is
+# `diffuse = shade & 0xffff` plus the recompose.  Not a third derivation --
+# but named rather than pattern-matched, because an exemption should be a
+# decision.
+DELEGATING_SITES = (
+    "ndsRendererNativeShadeProductionActions",
+)
+
+# CLAIM 5, the tint route's replay contract.  The live resolver may skip the
+# clamp only where it hands the colour to a tint tile, and a replayed packet
+# carries that tile in its recorded bind, not in the shade word.  So (a) the
+# producer must record a tinted site as the raw light it wrote (material 0,
+# use_material 0) and flag it, and (b) the replay must refuse to re-derive a
+# flagged site under a changed prim -- the tile would be stale.  Each marker
+# is the literal text that does it, so moving or deleting that line fails here.
+TINT_RESOLVER_MARKER = "ndsRendererR2FighterTintLookup"
+TINT_RECORD_MARKER = "(tinted != 0u) ? 0u : material_color"
+TINT_REPLAY_MARKER = "reserved[0]"
 
 # Derivations that compose a DIF_AMB word WITHOUT the fighter fold, and are
 # therefore outside CLAIM 1.  The discriminator is the material function, not
@@ -206,6 +228,11 @@ def main(argv):
         if not COMPOSE.search(text):
             continue
         if FIGHTER_FOLD not in text:
+            if name in DELEGATING_SITES:
+                if verbose:
+                    print("delegates to the resolver: %s line %d"
+                          % (name, first_line))
+                continue
             if name not in KNOWN_UNFOLDED_SITES:
                 failures.append(
                     "CLAIM 2: %s (line %d) composes a DIF_AMB word without "
@@ -287,12 +314,42 @@ def main(argv):
             "CLAIM 4: %d of the 2 fighter derivations call %s; both must"
             % (len(roles_by_site), CLAMP))
 
+    # ---- CLAIM 5: the tint route's replay contract -------------------------
+    bodies = {name: "\n".join(body) for name, _, body in functions}
+    resolver = bodies.get("ndsRendererR2ResolveEpochShade")
+    producer = bodies.get("ndsRendererNativeShadeProductionActions")
+    replay = bodies.get("ndsFighterPacketApplyTint")
+    if resolver is None or producer is None or replay is None:
+        failures.append(
+            "CLAIM 5: resolver, producer or replay function not found in %s; "
+            "the tint route moved -- re-read it before editing this checker"
+            % SOURCE)
+    else:
+        if TINT_RESOLVER_MARKER not in resolver:
+            failures.append(
+                "CLAIM 5: ndsRendererR2ResolveEpochShade no longer consults %s; "
+                "the unclamped branch has lost the only thing that licenses it"
+                % TINT_RESOLVER_MARKER)
+        if TINT_RECORD_MARKER not in producer:
+            failures.append(
+                "CLAIM 5: the producer no longer records a tinted site as raw "
+                "light (`%s`); a replay would re-fold prim into a word the tile "
+                "already multiplies, and the fighter would change colour "
+                "between recorded and live frames" % TINT_RECORD_MARKER)
+        if TINT_REPLAY_MARKER not in replay:
+            failures.append(
+                "CLAIM 5: ndsFighterPacketApplyTint no longer checks the tinted "
+                "flag (`%s`) before re-deriving under a changed prim; it would "
+                "replay a stale tile" % TINT_REPLAY_MARKER)
+        elif verbose:
+            print("tint replay contract: resolver, record and replay all hold")
+
     if failures:
         for failure in failures:
             print("FAIL:", failure)
         print("%d failure(s)" % len(failures))
         return 1
-    print("check-r2-shade-twin: OK (4 claims)")
+    print("check-r2-shade-twin: OK (5 claims)")
     return 0
 
 
