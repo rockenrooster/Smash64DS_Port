@@ -13,6 +13,11 @@
 #include <nds/nds_renderer.h>
 #endif
 #include <sc/scene.h>
+/* R01-B: the Results winner-emblem series roots, generated from the source
+ * selection tables by scripts/menus/generate_nds_native_vs_emblem.py. */
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+#include <nds/generated/nds_native_vs_emblem.generated.h>
+#endif
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 /* YOSTER-CLOUDS: route beside IsTaruCann. */
 #if NDS_P2_STAGE_YOSTER
@@ -14931,6 +14936,154 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #endif
     return FALSE;
 }
+
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+/* R01-B. THE RESULTS WINNER-SERIES EMBLEM OWNER.
+ *
+ * `mnVSResultsMakeEmblem` (decomp mnvsresults.c:615) registers the emblem's
+ * DObj tree with `gcAddGObjDisplay(gobj, gcDrawDObjTreeForGObj, 33, ...)`.
+ * On this target that display callback reaches NO geometry, at three
+ * independent points, every one of them a battle gate:
+ *
+ *   1. `ndsStageGCDrawAllLoopRecordCapturedDisplay` (:14829) returns FALSE on
+ *      `gNdsSceneManagerCurrIsBattle == 0`, and `nSCKindVSResults` carries no
+ *      NDS_SCENE_FLAG_BATTLE (nds_scene_manager.c:42), so the display is
+ *      never claimed and the source proc runs instead.
+ *   2. That source proc is the port's `gcDrawDObjTreeForGObj`
+ *      (opening_movie_backend.c:1804), whose whole body is two recorders.
+ *      The first, `ndsStageGCDrawAllLoopRecordDObjDraw`, hits the SAME
+ *      IsBattle gate below (:14954) and only bumps UnexpectedSceneCount.
+ *   3. The second, `ndsOpeningRoomRecordDObjDraw`
+ *      (opening_movie_backend.c:1521), returns unless the scene is
+ *      nSCKindOpeningRoom.
+ *
+ * So the emblem had no path at all -- not a missing program, a missing
+ * route. The Results FIGHTERS draw only because they take a different one:
+ * `ftDisplayMainProcDisplay` is port-owned and calls
+ * `ndsFighterDisplayContractSubmit` directly, with its own owner bracket and
+ * no IsBattle gate (reloc_backend_fighter_display_seam.c:86).
+ *
+ * WHY AN OWNER AND NOT A WIDER GATE. Opening the IsBattle guard for
+ * nSCKindVSResults would admit EVERY Results DObj-tree GObj into the battle
+ * stage loop -- the transition camera's tree, the wallpaper, whatever a later
+ * row adds -- and then run each one through ClassifyGObj, the weapon/item/
+ * effect captures and `ndsRendererAdapterCommitNativeStageDisplay`, all of
+ * which are battle-stage machinery keyed to `sNdsStageGCDrawAllLoopNativeStage
+ * Armed` and `sNdsStageGCDrawAllLoopHardwareSubmitActive` that this scene
+ * never arms. It would also charge that per-GObj work to a scene already
+ * outside its cadence budget. This owner claims exactly one GObj, by pointer
+ * identity, and costs one compare per captured Results display otherwise.
+ *
+ * The tree walk mirrors `ndsStageGCDrawAllLoopScanDObjs` (:14688) but reads
+ * the camera from the capture site instead of the battle loop's static, which
+ * this scene never writes. */
+volatile u32 gNdsVSResultsEmblemCaptureCount;
+volatile u32 gNdsVSResultsEmblemSubmitCount;
+volatile u32 gNdsVSResultsEmblemRejectCount;
+volatile u32 gNdsVSResultsEmblemTriangleCount;
+
+extern void *ndsVSResultsEmblemGObj(void);
+
+sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
+                                           void *display_gobj,
+                                           s32 link_id)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    GObj *display = display_gobj;
+    GObj *owned;
+    DObj *stack[16];
+    u32 stack_count = 0u;
+    u32 scanned = 0u;
+    u32 triangle_before;
+    DObj *root;
+
+    if ((display == NULL) || (camera_gobj == NULL) ||
+        (gSCManagerSceneData.scene_curr != nSCKindVSResults) ||
+        ((u32)link_id != NDS_NATIVE_VS_EMBLEM_RESULTS_DL_LINK))
+    {
+        return FALSE;
+    }
+    /* Pointer identity, published by the port's own wrapper around the
+     * source's `mnVSResultsEmblemProcUpdate` (battleship_mnvsresults.c), and
+     * cleared at scene entry. id/link alone would be a guess: the source is
+     * free to put another GObj on link 33, and a stale pointer across a
+     * Results re-entry is exactly the class of bug that crashed this scene
+     * once already (see mnVSResultsStartScene's fighter-GObj clear). */
+    owned = (GObj *)ndsVSResultsEmblemGObj();
+    if ((owned == NULL) || (display != owned) ||
+        (display->id != NDS_NATIVE_VS_EMBLEM_RESULTS_GOBJ_ID))
+    {
+        return FALSE;
+    }
+    gNdsVSResultsEmblemCaptureCount++;
+    root = DObjGetStruct(display);
+    if ((root == NULL) || ((root->dv == NULL) && (root->child == NULL)))
+    {
+        gNdsVSResultsEmblemRejectCount++;
+        return FALSE;
+    }
+
+    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+    ndsRendererAdapterBeginStageTraversal();
+    /* The emblem is a foreground menu object on its own camera; it must not
+     * be depth-sorted against the Results fighters, which draw on a different
+     * link from a different camera. Same handling the ground actors take. */
+    sNdsStageGCDrawAllLoopActorKeepsZBuffer = TRUE;
+    stack[stack_count++] = root;
+    while ((stack_count != 0u) && (scanned < ARRAY_COUNT(stack)))
+    {
+        DObj *dobj = stack[--stack_count];
+
+        if (dobj == NULL)
+        {
+            continue;
+        }
+        scanned++;
+        if (dobj->dv != NULL)
+        {
+            ndsRendererAdapterSubmitStageDObj(
+                dobj,
+                NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
+                camera_gobj,
+                ndsStageGCDrawAllLoopInitialGeometryMode());
+        }
+        if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
+        {
+            stack[stack_count++] = dobj->sib_next;
+        }
+        if ((dobj->child != NULL) && (stack_count < ARRAY_COUNT(stack)))
+        {
+            stack[stack_count++] = dobj->child;
+        }
+    }
+    sNdsStageGCDrawAllLoopActorKeepsZBuffer = FALSE;
+    ndsRendererAdapterEndStageTraversal();
+
+    gNdsVSResultsEmblemTriangleCount =
+        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    if (gNdsVSResultsEmblemTriangleCount == 0u)
+    {
+        /* A recognised emblem that scanned its whole tree and emitted nothing
+         * is a successful empty draw, which the native-only contract forbids.
+         * Report it and hand the GObj back rather than claiming a draw that
+         * put no pixels on the screen. */
+        gNdsVSResultsEmblemRejectCount++;
+        ndsRendererRecordNativeFailure(
+            NDS_NATIVE_FAILURE_STAGE, (u32)gSCManagerSceneData.scene_curr,
+            (u32)display->dl_link_id, 0u, (u32)(uintptr_t)display, 0u,
+            NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
+        return FALSE;
+    }
+    gNdsVSResultsEmblemSubmitCount++;
+    return TRUE;
+#else
+    (void)camera_gobj;
+    (void)display_gobj;
+    (void)link_id;
+    return FALSE;
+#endif
+}
+#endif /* NDS_IMPORT_BATTLESHIP_VS_RESULTS */
 
 void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 {

@@ -135,6 +135,17 @@ volatile u32 gNdsResultsOamEmitCount;
 volatile u32 gNdsResultsOamCommitCount;
 volatile u32 gNdsResultsOamRollbackCount;
 volatile u32 gNdsResultsOamVramBytes;
+/* R01-A evidence pair.  Every counter above reads healthy whether or not a
+ * bitmap sprite is actually visible -- the badge was prepared, baked, emitted
+ * and given an OAM slot while being written fully transparent, so nothing
+ * here could distinguish "missing" from "fine".  These two split that:
+ * `BmpEmit` counts OBJs emitted in `SpriteColorFormat_Bmp`, and
+ * `BmpZeroAlpha` counts the subset written with alpha 0, which libnds
+ * defines as invisible.  A Results screen with BmpEmit > 0 and
+ * BmpZeroAlpha == 0 is the after-state; BmpZeroAlpha == BmpEmit was the
+ * before-state.  Both are plain observation and add one compare per OBJ. */
+volatile u32 gNdsResultsOamBmpEmitCount;
+volatile u32 gNdsResultsOamBmpZeroAlphaCount;
 
 volatile u32 gNdsResultsOamFailureInactive;
 volatile u32 gNdsResultsOamFailureUnsupportedFormat;
@@ -1071,6 +1082,8 @@ static void ndsResultsRollbackOam(s32 cursor_before, u32 emit_before)
     gNdsResultsOamRollbackCount++;
 }
 
+static u32 ndsResultsBitmapAlpha(u32 alpha);
+
 static s32 ndsResultsEmitSObj(const SObj *sobj)
 {
     NDSResultsOamSource source;
@@ -1078,6 +1091,7 @@ static s32 ndsResultsEmitSObj(const SObj *sobj)
     u32 final_width;
     u32 final_height;
     s32 palette_bank;
+    u32 bitmap_alpha;
     s32 screen_x;
     s32 screen_y;
     u32 tile;
@@ -1093,6 +1107,30 @@ static s32 ndsResultsEmitSObj(const SObj *sobj)
     {
         return 0;
     }
+    /* R01-A.  THE ONE OAM FIELD WHOSE MEANING DEPENDS ON THE COLOUR FORMAT.
+     *
+     * `oamSet`'s fifth argument is the palette bank for 4bpp/8bpp sprites but
+     * the ALPHA for a bitmap sprite, and libnds states the consequence
+     * outright (libnds nds/arm9/sprite.h:391): a bitmap sprite must specify a
+     * value greater than zero to display.  `ndsResultsPaletteForSObj` returns
+     * 0 for exactly the two formats `ndsResultsBakeCell` routes to
+     * `SpriteColorFormat_Bmp` (RGBA and CI, :978-981), because for a paletted
+     * sprite bank 0 is a legitimate answer.  Passing that same 0 through as an
+     * alpha emitted every bitmap sprite fully transparent.
+     *
+     * That is why the Results first-place badge was missing.
+     * `llMNVSResultsWinnerSprite` (Results asset offset 0xe2a0) is RGBA/16b,
+     * so it is the ONLY SObj in the place-row chain that bakes to `Bmp` --
+     * the PlaceText head and every damage digit are IA8 and land on the
+     * 16-colour path where bank 0 is correct.  So the badge alone vanished
+     * while the rest of the row drew, with every counter on this path
+     * reading healthy: it was prepared, baked, emitted and given an OAM slot.
+     *
+     * The two sibling native OAM owners already do this correctly and are the
+     * contrast proof: `nds_ifcommon_oam.c:2633-2637` selects between the
+     * bitmap alpha and 0 on the same `color_format` test, and this file's own
+     * tint plane passes `(int)alpha` at :1425.  Only this emit omitted it. */
+    bitmap_alpha = ndsResultsBitmapAlpha((u32)sobj->sprite.alpha);
     screen_x = ndsResultsMapSourceCoord(ndsResultsRoundFloat(sobj->pos.x),
                                         NDS_RESULTS_SRC_ORIGIN_X,
                                         NDS_RESULTS_SCALE_X_Q16);
@@ -1110,9 +1148,20 @@ static s32 ndsResultsEmitSObj(const SObj *sobj)
             return 0;
         }
         oamSet(&oamMain, sNdsResultsNextOamId, screen_x + plan.x[tile],
-               screen_y, 0, palette_bank, cell->size,
+               screen_y, 0,
+               (cell->color_format == SpriteColorFormat_Bmp) ?
+                   (int)bitmap_alpha : palette_bank,
+               cell->size,
                (SpriteColorFormat)cell->color_format, cell->gfx, -1,
                false, false, false, false, false);
+        if (cell->color_format == SpriteColorFormat_Bmp)
+        {
+            gNdsResultsOamBmpEmitCount++;
+            if (bitmap_alpha == 0u)
+            {
+                gNdsResultsOamBmpZeroAlphaCount++;
+            }
+        }
         sNdsResultsNextOamId--;
         gNdsResultsOamEmitCount++;
     }

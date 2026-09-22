@@ -159,6 +159,20 @@ void ndsMNVSResultsSetLoadScene(void);
     ndsBaseMNVSResultsBarProcDisplay(gobj)
 #define mnVSResultsLabelProcDisplay(gobj) \
     ndsBaseMNVSResultsLabelProcDisplay(gobj)
+/* R01-B. Same function-like-macro seam as the display procs above, and for
+ * the same reason: the DEFINITION in the included source carries parentheses
+ * so it is renamed, while the reference at mnvsresults.c:669 --
+ * `gcAddGObjProcess(gobj, mnVSResultsEmblemProcUpdate, ...)` -- has none, so
+ * it does not expand and binds to the port wrapper defined below.
+ *
+ * This is the only seam that yields the emblem GObj by pointer. The GObj is
+ * built inside `mnVSResultsMakeEmblem`, which is called once
+ * (mnvsresults.c:3377) and returns nothing, and both its name and its call
+ * site would expand together under any macro, so it cannot be wrapped this
+ * way. Its movement updater can, and the updater is handed the very GObj the
+ * maker created. */
+#define mnVSResultsEmblemProcUpdate(gobj) \
+    ndsBaseMNVSResultsEmblemProcUpdate(gobj)
 
 void ndsBaseMNVSResultsStartScene(void);
 
@@ -173,6 +187,39 @@ void ndsBaseMNVSResultsStartScene(void);
 #undef mnVSResultsWallpaperTint2ProcDisplay
 #undef mnVSResultsBarProcDisplay
 #undef mnVSResultsLabelProcDisplay
+#undef mnVSResultsEmblemProcUpdate
+
+/* R01-B. The emblem GObj's identity, published for
+ * `ndsResultsEmblemRecordCapturedDisplay` (reloc_backend_movement.c).
+ *
+ * Nothing about the emblem's motion or scale is touched here: the source
+ * updater runs first and unchanged, and it remains the sole owner of the
+ * `sMNVSResultsTotalTimeTics >= 40` scale-down and rise (mnvsresults.c
+ * :583-612). All this adds is a pointer the renderer can compare against, so
+ * the owner claims one known GObj instead of guessing from id and DL link.
+ *
+ * LIFETIME. The GObj lives in the taskman arena, which is rewound between
+ * scenes, so this pointer must never outlive the scene that made it. It is
+ * cleared in `mnVSResultsStartScene` below, before the source rebuilds the
+ * scene -- the same rule that clearing `sMNVSResultsFighterGObjs` there
+ * exists to enforce, after a stale entry from the previous Results crashed
+ * the second entry (2026-07-31). A Results screen that creates no emblem at
+ * all -- No Contest, which skips `mnVSResultsMakeEmblem` entirely
+ * (mnvsresults.c:3375-3378) -- therefore leaves this NULL and the owner
+ * declines, which is the source's own decision preserved rather than a
+ * winner invented for it. */
+static GObj *sNdsVSResultsEmblemGObj;
+
+void *ndsVSResultsEmblemGObj(void)
+{
+    return sNdsVSResultsEmblemGObj;
+}
+
+void mnVSResultsEmblemProcUpdate(GObj *gobj)
+{
+    sNdsVSResultsEmblemGObj = gobj;
+    ndsBaseMNVSResultsEmblemProcUpdate(gobj);
+}
 
 void mnVSResultsTintProcDisplay(GObj *gobj)
 {
@@ -712,6 +759,11 @@ void mnVSResultsStartScene(void)
         ndsFighterManagerRegisterDisplayFighter(NULL, i);
     }
     memset(sMNVSResultsFighterGObjs, 0, sizeof(sMNVSResultsFighterGObjs));
+    /* R01-B, and the same law as the line above: the previous entry's emblem
+     * GObj lived in an arena this scene is about to reuse, so the pointer is
+     * dropped here rather than trusted because it still looks like one. The
+     * source republishes it on the new emblem's first update. */
+    sNdsVSResultsEmblemGObj = NULL;
     gNdsVSResultsStartCount++;
     ndsResultsOamEnter();
     ndsBaseMNVSResultsStartScene();

@@ -1628,6 +1628,12 @@ static void ndsOpeningRoomRenderSelectedDLPreview(void)
         NDS_NATIVE_FAILURE_NO_PROGRAM);
 }
 
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+extern sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
+                                                  void *display_gobj,
+                                                  s32 link_id);
+#endif
+
 void __attribute__((section(".itcm")))
 gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
 {
@@ -1667,6 +1673,26 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     native_stage_handled =
                         ndsStageGCDrawAllLoopRecordCapturedDisplay(
                             camera_gobj, current_gobj, link_id);
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+                    /* R01-B. The Results winner-series emblem, on the same
+                     * handled/not-handled contract as the stage interception
+                     * above. It has to be a SECOND interception rather than a
+                     * relaxation of the first: that one's opening guard is
+                     * `gNdsSceneManagerCurrIsBattle == 0`, and widening it for
+                     * this scene would admit every Results DObj-tree GObj into
+                     * the battle stage loop, not just the emblem.
+                     *
+                     * Here is also the only place the emblem's camera is in
+                     * hand. The battle loop publishes it through
+                     * `sNdsStageGCDrawAllLoopCurrentCameraGObj`, which nothing
+                     * in Results ever writes. */
+                    if (native_stage_handled == FALSE)
+                    {
+                        native_stage_handled =
+                            ndsResultsEmblemRecordCapturedDisplay(
+                                camera_gobj, current_gobj, link_id);
+                    }
+#endif
                     ndsOpeningRoomRecordCapturedDisplay(camera_gobj,
                                                         current_gobj,
                                                         link_id);
