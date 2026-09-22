@@ -1933,3 +1933,34 @@ arena of the shipping roster. They rule out a mechanism *given memory*; they do
 not rule out the same symptom appearing when memory is gone. The witnesses are
 compiled into r31 precisely so the shipping configuration can answer that
 without another lab build.
+
+### The arena, measured on both sides -- and the deficit is 18,044 bytes
+
+| configuration | arena | free (min) | GObj latch |
+|---|---|---|---|
+| shipping shell, Pikachu/Fox (recorded earlier) | 933,376 | **7,556** | fired |
+| full-roster direct battle (measured tonight) | 1,220,352 | **121,192** | never fired |
+
+Full-roster direct battle = `smash64ds-battle-playable-hwtri` with every P2
+fighter, stage and `NDS_P2_ITEM_CORE`, `NDS_P2_PROOF_FIGHTER0=9`, and WITHOUT
+the menu shell / 1P / UI kit. 264 link inputs, 2,043 presented frames, scene 24.
+Rays `req=1 null=0 cand=50 reject=0`; `AppearOverrun 0`, `AnimFallback 0`;
+`LIGHT writes=100 applied=2 declined=92`, `W0 rn=4907 det=7048 stretch=4908`.
+
+The face/body numbers reproduce exactly across both probe configurations, which
+makes that finding robust: ~92% of light writes shrink, the determinant is
+positive, and `row_norm` sits near 4907 rather than 4096.
+
+**The arena cannot be reproduced in a direct-battle probe**: that target is
+286,976 bytes larger precisely because it omits the menu shell, and the latch
+never fires there. So the rays and frozen-Fox refutations above are bounded to
+the roomy case, as already noted.
+
+`nm --size-sort` on the shipping ELF names the reclaim candidates:
+`sNdsAudioFgmCache` **237,568** (8 slots: 1x60 + 2x40 + 1x28 + 4x16 KiB, pinned
+by a `_Static_assert`), then `gSYFramebufferSets` 147,840 (already reused as
+idle packet storage), then nothing above 33 KB. The deficit to clear the 25,600
+floor is **18,044**, so trimming both MEDIUM slots from 40 to 28 KiB (-24,576,
+no slot lost, the 60 KiB LARGE slot still covers any cue) is sufficient on its
+own. Left unimplemented deliberately: it trades audio-cache residency against
+effects appearing while audio rows are open, which is the owner's call.

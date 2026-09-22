@@ -5122,3 +5122,23 @@ the native-only gate and is wrong.
 rebuild that "looks fine" is exactly the artifact this repository has been
 burned by before -- it is a different binary from the one the source describes,
 and nothing in the build output says so. Related: [[measure-the-config-you-ship]].
+
+### A third guard mismatch, same family, 2026-09-21 night
+
+`battleship_wpmanager_core.c:377` calls `ndsRelocNativeRootAddress` under
+`#if NDS_P2_YOSHI`, but that function is provided only under
+`NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS`. A build with
+Yoshi admitted and neither of those fails to link with an undefined reference.
+Pre-existing (`git log -S` puts the call site in `b90b9586790`), and not
+reachable from the shipping ROM, which carries the menu shell.
+
+That is the **third** consumer-wider-than-provider break found in one session,
+after the preview-pack API and its own renderer-versus-roster guard. The pattern
+is worth a checker rather than three more hand-fixes: for each `#if`-guarded
+declaration, assert that every call site's guard implies the declaration's.
+`check_build_flag_census.py` already parses the flag surface and is the natural
+home.
+
+Worked around in the probe with `NDS_P2_COMPACT_BATTLE_FIGHTERS=1` rather than
+changing shipping source, because choosing which guard is authoritative here
+changes behaviour in configurations nobody measured.

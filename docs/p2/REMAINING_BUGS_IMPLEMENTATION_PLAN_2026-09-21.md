@@ -544,6 +544,59 @@ because the "GO!" sprites at `0x4D78`, `0xA730` and `0xC370` are dereferenced an
 `ndsIFCommonMakeSObjForGObj` still passes every letter sprite to
 `lbCommonMakeSObjForGObj`.
 
+### 6.1b The arena, measured — and it needs far less than the big lever
+
+Three rows point here, so the deficit was measured rather than estimated.
+
+| configuration | arena | free (min) | GObj latch |
+|---|---|---|---|
+| shipping shell, Pikachu/Fox (recorded) | 933,376 | **7,556** | fired |
+| full-roster direct battle (measured 09-21) | 1,220,352 | **121,192** | never fired |
+
+The direct-battle target is 286,976 bytes *larger* because it does not link the
+menu shell, the 1P game or the UI kit — and BSS and linked image come out of the
+arena one for one. That is why the arena story cannot be reproduced in a
+direct-battle probe at all: remove the menus and the problem disappears.
+
+**The floor is 25,600 and the shipping figure is 7,556, so the whole deficit is
+`+18,044 bytes`.** Every lever below is larger than that, which reframes this
+from "find 130 KB" to "find eighteen".
+
+**The largest single reclaimable item is not the HUD asset — it is the audio
+sample cache.** `arm-none-eabi-nm --size-sort` on the shipping ELF puts
+`sNdsAudioFgmCache` at **237,568 bytes** of BSS, a quarter of the arena, ahead of
+`gSYFramebufferSets` at 147,840 (already reused for idle packet storage). Its
+layout is eight slots pinned by a `_Static_assert`:
+
+    1 x LARGE   60 KiB
+    2 x MEDIUM  40 KiB
+    1 x COMPACT 28 KiB
+    4 x SMALL   16 KiB   = 232 KiB
+
+Candidate trims, all of which clear the 18,044-byte deficit:
+
+| change | reclaims | structural cost |
+|---|---|---|
+| both MEDIUM 40 -> 28 KiB | 24,576 | none — 8 slots kept, 60 KiB slot still covers any cue |
+| drop two SMALL slots | 32,768 | slot count 8 -> 6 |
+| COMPACT 28 -> 16 KiB plus one SMALL dropped | 28,672 | slot count 8 -> 7 |
+
+The first is the least invasive: no slot disappears and no cue loses its only
+home, because the LARGE slot still covers anything up to 60 KiB. What changes is
+how many mid-sized cues stay resident at once.
+
+**This is an owner decision, not an engineering one, and that is why it is not
+implemented here.** It trades audio-cache residency for effects appearing, while
+the owner has open audio rows (FGM 203, BGM garble) — exactly the kind of
+cross-domain tradeoff that should not be made unilaterally at the far end of a
+session. The arithmetic above makes it a one-constant change plus its
+`_Static_assert`, so it is a minutes-long edit once the direction is chosen.
+
+Before flipping it, confirm what a cache miss costs: `gNdsAudioFgmMissRing*`
+already tracks misses, so the question "does an over-large cue fail to play or
+merely re-read" is answerable from the existing instrument rather than by
+listening.
+
 ### 6.2 Custom matrix kinds still on the translate-bearing fallback
 
 `0x44`, `0x49`, `0x4A`, `0x51`. `0x44` is `dEFManagerMBallThrownEffectDesc`.
