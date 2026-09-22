@@ -45,6 +45,6 @@ Stages:
 -Zebes: Acid plane Color is accurate now but texture blending are all visibly too HARD. Edges are too defined instead of a gradient/smooth transistion. Stage lights on the ground floor have a flat/hard transparency (hard upsidown trapezoid shape) instead of looking like a real light source with a gradient that tapers to fully transparent towards the top. **NOT FIXED in R36 ** **r37: the light cone emitted 3 flat alpha bands; subdivided to 20 triangles. Acid unchanged.**
 -Yoshi's Island: 
 -SectorZ:
--Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **NO DEFECT FOUND after 10 probes. Joints cycle, bindings point at the gate's own DObjs, world cache revalidates each frame. Does it ever close over a full minute?**
+-Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **Transform chain VERIFIED by injection: the door's matrix tracks its joint, geometry submits, timing matches source. Only pixels unverified. Does it ever close over a full minute?**
 
 Audio:
