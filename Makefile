@@ -1438,6 +1438,15 @@ NDS_BOOT_DIAG_TEXT ?= 1
 # between steps so each screen is both measurable and capturable. Zero means no
 # injection at all and the shell is driven only by the player.
 NDS_P2_MENU_WALK ?= 0
+# PROBE BUILDS ONLY. 1 makes the reason-20 preview halt count instead of
+# spinning forever, so the shell walk can cross a CSS where one fighter's
+# preview has no native owner (measured 2026-09-22: kind 11, Ness). Never 1 in
+# anything published -- that halt is deliberate, and a silent decline is
+# precisely the failure it exists to expose.
+NDS_PREVIEW_HALT_NONFATAL ?= 0
+ifneq ($(filter 0 1,$(NDS_PREVIEW_HALT_NONFATAL)),$(NDS_PREVIEW_HALT_NONFATAL))
+$(error NDS_PREVIEW_HALT_NONFATAL must be 0 or 1)
+endif
 # Runtime 2 (docs/Smash64DS_Runtime2_SwitchPlan.md). The whole family defaults
 # to 0 and the published ROMs stay pure Runtime 1 until the switch (plan S5).
 #
@@ -6894,6 +6903,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET $(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE $(NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_VS_RESULTS $(NDS_IMPORT_BATTLESHIP_VS_RESULTS)'; \
+		echo '#define NDS_PREVIEW_HALT_NONFATAL $(NDS_PREVIEW_HALT_NONFATAL)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_IFCOMMON $(NDS_IMPORT_BATTLESHIP_IFCOMMON)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER $(NDS_IMPORT_BATTLESHIP_WEAPON_MANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL $(NDS_IMPORT_BATTLESHIP_MARIO_FIREBALL)'; \

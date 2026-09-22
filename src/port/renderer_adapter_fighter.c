@@ -888,6 +888,15 @@ static void ndsFtrDrawMemoFinish(void)
  * flag. Defined here, in the only translation unit that has an FTStruct, and
  * unconditionally so the renderer-side externs resolve in every configuration
  * including NDS_R2_FIGHTER_HW_LIGHT=0 builds. */
+#if NDS_PREVIEW_HALT_NONFATAL
+/* Probe-only, see NDS_PREVIEW_HALT_NONFATAL at the reason-20 site. Declared
+ * under the flag so a shipping build carries neither the counters nor the
+ * `used` attribute that would keep them; the default build must come out
+ * byte-identical to one without this change at all. */
+__attribute__((used)) volatile u32 gNdsPreviewHaltNonFatalCount;
+__attribute__((used)) volatile u32 gNdsPreviewHaltNonFatalKindMask;
+#endif
+
 volatile s32 gNdsR2FighterFacingLr;
 volatile u32 gNdsR2FighterFacingSlot;
 volatile u32 gNdsR2FighterFacingWrites;
@@ -4380,7 +4389,25 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if ((loaded != NULL) && (loaded->reserved[0] != 0u) &&
             (native_owner_enabled == FALSE))
         {
+#if NDS_PREVIEW_HALT_NONFATAL
+            /* PROBE BUILDS ONLY, and it exists because this halt is a
+             * `for (;;)`. The shell walk cannot cross the CSS while any one
+             * fighter trips it -- measured 2026-09-22, kind 11 (Ness) -- so
+             * every shipping-configuration measurement that needs a battle is
+             * blocked behind a single fighter's preview. Counting instead of
+             * spinning lets the walk finish and names every kind that trips
+             * it, rather than the first.
+             *
+             * Never ship this on: the halt is deliberate, and the comment
+             * below is the reason. A silent decline here is a preview drawn
+             * with no native owner, which is the failure the halt exists to
+             * make visible. */
+            gNdsPreviewHaltNonFatalCount++;
+            gNdsPreviewHaltNonFatalKindMask |=
+                (1u << ((loaded->reserved[0] - 1u) & 31u));
+#else
             ndsPreviewPackLoadHalt(20u, loaded->reserved[0] - 1u);
+#endif
         }
 #endif
 

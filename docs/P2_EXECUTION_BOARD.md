@@ -57,34 +57,33 @@ summary.** Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-
 
 **PLAYTEST r32** `builds/remaining-bugs-playtest-r32/` `594EB9BA8C24A2A6...`,
 NATIVE_ONLY_PASS 316, hash stable twice, boots (gdb attach).
-**THIS BATCH COST 8,192 B OF ARENA** (r26 941,568 -> r31 933,376) against a
-recorded Pikachu/Fox free-at-GO of 7,556. r32 returns 1,496 (face/body
-witness off); still +6,224 over r26, all of it the four repairs.
-**If r32 hangs on Pikachu/Fox, this is why; r26 is the fallback.**
+**ARENA ALARM RETRACTED.** The SHIPPING build walked into a VS match with
+Pikachu reads free-min **48,216**, latch never fired, rays `req=2 null=0
+cand=100`, `AnimFallback 0` over 658 resolves. The 7,556 census was stale.
+**Play r32.**
 OWNER ACCEPTED (removed from BUGS.md): pistol flash, CSS music, grab slam,
 effects regression, GROUND jolt, Damage cadence, Results badge, winner emblem,
 Link slash, Kirby jab flurry (r26).
 
-FIXED 09-21 night, **none observed on screen**: R02/R03/K06 (the demo rows'
-PATH field was never consumed); P01 AIR jolt (reclaimable VRAM had gone
-6,144 -> 0); K04 spit-star (`lbCommonDObjScaleXProcDisplay` is EMPTY in the
-port); Yoshi egg reinstated; two amplifiers in the graded-quad table and the
-bound-name tracker.
+FIXED 09-21/22: R02/R03/K06 (the demo rows' PATH field was never consumed;
+runtime now reads `DEMOPATH ok=38 fallback=0`); P01 AIR jolt (reclaimable VRAM
+had gone 6,144 -> 0); K04 spit-star (`lbCommonDObjScaleXProcDisplay` is EMPTY
+in the port); Yoshi egg reinstated; two amplifiers in the graded-quad table.
 
 REFUTED: face/body is not a mirror (det **+7051**); rays are asset **85** and
 `0x44` cannot double-translate; an arena overflow **hangs** (`malloc.c:30`).
 
-OPEN, after the 09-21 runtime read -- **full detail in plan section 7, read
-that**. Face/body mechanism CONFIRMED but the repair is the wrong shape (92% of
-writes SHRINK; the fix must scale diffuse COLOUR). Frozen-Fox Appear-overrun
-and the rays' renderer path both REFUTED in a live match -- but with ~20x the
-shipping arena, so they rule out a mechanism given memory, not the symptom
-without it. Saffron/Kirby and K04 unread.
+OPEN -- **detail in plan section 7**. Face/body mechanism CONFIRMED, repair is
+the wrong shape (92% of writes SHRINK; the fix must scale diffuse COLOUR).
+Frozen Fox and the rays are now refuted in the SHIPPING build through the real
+CSS->VS path, memory included, so both need the owner's exact repro.
+Saffron/Kirby unread.
 
-**THE ARENA IS THE NEXT LEVER** and this batch made it worse (see above).
-Pikachu/Fox 7,556 free at GO, Pikachu/Samus malloc-hangs, Saffron 2,844. The
-FGM cache is 237,568 B but RIGHT-SIZED -- only 2,592 B of slack, so any cut
-loses cues. Sizing and the refuted options: plan 6.1/6.1b.
+**THE ARENA IS NOT THE BLOCKER IT LOOKED LIKE**: measured 48,216 free with
+Pikachu, latch never fires. The FGM cache is 237,568 B but RIGHT-SIZED (2,592 B
+slack). **NEW, and worse than any open row: hovering Ness on the CSS hits
+`ndsPreviewPackLoadHalt(20)`, a `for(;;)`.** Pre-existing; 56 declines, kind 11
+only. `NDS_PREVIEW_HALT_NONFATAL=1` is the probe escape.
 Owed: Boundary/Latest. Roof/Zebes deferred.
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):

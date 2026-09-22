@@ -5117,8 +5117,13 @@ objects compiled in it were already fed the stale ones; only the next build
 picks the regenerated assets up. So build 3 is a hybrid that links clean, passes
 the native-only gate and is wrong.
 
-**How to apply:** after any build with non-default flags, run the default build
-**twice** and require the two hashes to match before publishing. A single
+**Refined 09-22:** it is not lab builds as such -- a walk build differing only
+by `NDS_P2_MENU_WALK` was followed by ONE default build that reproduced the
+previous hash exactly. The trigger is a flag change that feeds a GENERATOR
+(the pika-fox probe changed the roster flags, so the fighter generators re-ran
+with different inputs). **How to apply:** after any build whose flags reach a
+generator, run the default build **twice** and require the two hashes to match
+before publishing. A single
 rebuild that "looks fine" is exactly the artifact this repository has been
 burned by before -- it is a different binary from the one the source describes,
 and nothing in the build output says so. Related: [[measure-the-config-you-ship]].

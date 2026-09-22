@@ -2102,3 +2102,49 @@ Also confirmed in the same run, and it is the first runtime evidence that the
 Results repair works: `DEMOPATH unresolved=0 loadfail=0 ok=6` with
 `ANIM resolve=6 fallback=0`. Six extern-heap loads resolved and none fell back,
 where before this batch the path table had no rows at all.
+
+## 2026-09-22 -- the shipping configuration, walked into a real match. I was wrong about the arena.
+
+`NDS_P2_MENU_WALK=20` drives the shell's own navigation (Title -> Mode -> VS ->
+CSS -> stage -> battle) with real input, so it reaches a VS match in the
+configuration that actually ships. The Ness preview halt blocked it, so a
+probe-only `NDS_PREVIEW_HALT_NONFATAL=1` counts that decline instead of
+spinning. `gNdsMenuShellCssWalkTargetKind` is writable, so the walk was pushed
+onto Pikachu mid-run and the heap low-water reset before the measured lap.
+
+**Pikachu committed, shipping build, real shell path:**
+
+    ARENA  chosen=929280  freemin=48,216  allocfail=188
+    GOBJ   latchBase=0  latchLimit=0  reserveApplied=0
+    RAYS   req=2  null=0  cand=100
+    APPEAR overrun=0   ANIM resolve=658  fallback=0
+    PREVIEWHALT count=56  kindMask=0x800   (bit 11 = Ness, and only Ness)
+
+**RETRACTION. The arena alarm earlier in this file is wrong.** It reasoned from
+the 2026-09-20 census figure of 7,556 free at GO for Pikachu/Fox and concluded
+that this batch's 8,192-byte image growth might stop that roster starting. The
+real number in the shipping build is **48,216**, the `ifCommonSetMaxNumGObj`
+latch **never fires**, and the growth is about a sixth of the headroom rather
+than more than all of it. Mario/Fox on the same walk reads 85,708 against the
+census's 61,124, so the arena has IMPROVED since that census and the figure I
+built on was stale. r32 starts. The "fall back to r26" advice is withdrawn.
+
+The lesson is one this file already carries and I repeated anyway: **re-derive a
+recorded premise before building on it.** A two-day-old memory figure was used
+to justify an urgent warning, a reclaim hunt, a failed optimisation and a
+default flip, and one measurement dissolved all of it.
+
+**P03 rays are not arena-starved either.** `req=2 null=0 cand=100` in the
+shipping configuration: constructed both times, submitted a hundred times. That
+was the last surviving hypothesis for the row, so every cause tested is now
+eliminated -- admission, material, matrix kind `0x44`, entry ordering, alpha,
+and allocation. Either the repairs in this batch changed it, or the owner's
+scenario differs from the walk's (stage, mode, or the second entry).
+
+**The frozen-Fox chain is refuted through the real CSS -> VS path too**, which
+is what the direct-battle probe could not reach: `AppearOverrun 0` and
+`AnimFallback 0` across **658** animation resolves with Pikachu committed.
+
+**Still true and still worth fixing:** the Ness preview halt. 56 declines across
+the run, `kindMask` bit 11 only, so it is exactly one fighter and it is
+reproducible on demand.
