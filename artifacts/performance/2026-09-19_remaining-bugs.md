@@ -1701,3 +1701,44 @@ negative-determinant modelview -- not to touch the colour fold again.
 
 Do NOT adjust the clamp or the white-prim exemption for this. Those are
 facing-independent and the owner reports the left-facing case correct.
+
+## THREE REGRESSIONS, ONE SHAPE. This is the finding of the session.
+
+Owner across r24/r25:
+  * the matrix repair fixed Link's slash and broke three spark effects;
+  * the ground-jolt converter fixed the terrain jolt and broke the AIR jolt;
+  * the Poke Ball admission made the ball visible and broke the opening RAYS.
+
+Each repair was correct for the consumer it was written for, was justified from
+the source, carried a mutation-tested check, and was reviewed. Every one of them
+still broke a sibling, and **not one was caught by any check** -- all three came
+back from the owner playing the ROM.
+
+The shape is identical in all three: a change to a SHARED path was validated
+against ONE of its users.
+
+  * kind 0x45 is a switch arm six descriptors reach; the evidence covered one.
+  * the jolt texture converter changed allocation order and bind state on a path
+    the air owner also uses; the evidence covered the ground owner.
+  * the MBall admission added an effect-layer arm to the item submit path; the
+    evidence covered the ball, and the rays are submitted right behind it.
+
+**The rule, and it is cheap:** before landing a change to a shared switch arm,
+adapter path, cache or allocator, ENUMERATE its other users and say in the
+commit what happens to each. One grep for the arm's other cases; one sentence
+per user. All three of these would have been caught by that grep -- the 0x45
+census took one command and found six users after the fact.
+
+The corollary for the checks: a mutation test proves the repair does what it
+claims for ITS case. It says nothing about the siblings. A shared-path change
+needs a sibling census, not a stronger unit test.
+
+**Rays, specifically, for whoever picks it up:** the ball draws and the rays do
+not, and the rays are an INDEPENDENT flag in the entry updater -- neither proves
+the other, which the brief said explicitly. Suspects in order: (1) the new
+effect-layer arm in `renderer_adapter_stage.c` leaves item material/config state
+applied that the rays inherit; (2) `dEFManagerMBallRaysEffectDesc` uses custom
+matrix kind 0x44, which still takes the translate-bearing fallback and sits next
+to the 0x45 arm just changed; (3) the entry-seam edits in
+`battleship_ftcommon_entry.c` -- the widened rays prototype and the `#error`
+dependency -- altered the order the two effects are made in.

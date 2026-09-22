@@ -21,14 +21,14 @@ Main Menus:
 -Pikachu
     -neutral b attack VFX that walks terrain still has hard edges. **GROUND fixed (owner). AIR jolt REGRESSED in r24: shares asset 342; suspect VRAM/bind interaction with the new A5I3 names.**
     -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
-    -Pokeball Spawn Intro not playing VFX. **Bake existed. The gate wanted an item GObj; the entry ball is an effect. Admitted.**
+    -Pokeball Spawn Intro not playing VFX. **Ball now VISIBLE (owner). The opening RAYS regressed -- third case of a newly-admitted owner leaving state the next effect assumes it owns.**
     -face color is slightly different from body color. (lighting difference???) **Not lighting: N64 clamps shade then multiplies prim; DS folds prim first, so lit bodies wash white.**
     -when I choose pikachu, in match, fox opponent is frozen and cannot be hit. Sudden death works funnily enough though.
 -Samus
 -Kirby
     -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **r25: fixed facing LEFT, wrong facing RIGHT, fixed in ledge-balance. Facing-dependent = the normal transform under a mirrored modelview.**
     -Neutral A punch flurry VFX not drawing at correct locations. **Effect table read from a .bss address: all five maker args were garbage.**
-    -Kirby neutral B , then A attack to spit out fighter, Star VFX is invisible. **Makers restored. NOT GObj-starved after all: ~10 slots free post-latch. Renderer side unexamined.**
+    -Kirby neutral B , then A attack to spit out fighter, Star projectile VFX is invisible. **Makers restored. NOT GObj-starved after all: ~10 slots free post-latch. Renderer side unexamined.**
     -Kirby has a wierd pose on results screen. **It was EggLay: no Results animation was packed, so every fighter held row 0.**
 -Jigglypuff
     -face color is slightly different from body color. (lighting difference???)
