@@ -28,7 +28,9 @@ tint creation is withdrawn. Keep it for evidence; do not execute it.
 | r45 | `36afbc1cd172e755` | r41 + CSS UV-memo fix | owner: some maps crash (Kirby + Fox) |
 | r46 | `7fcf916364edcb2f` | + Zebes acid back to one subdivision level | superseded before play |
 | r48 | `5d9140165a69fc72` | + VS fighter pools sized to players; idle ports carved as one block; owner images and copy hats in that scratch, largest first | owner: all stages OK |
-| r49 | `be35d42ce0861a3e` | + face/body tint route: tile per LIVE prim, created at the frame boundary, recorded and replayed by the fighter packet | **play this** |
+| r49 | `be35d42ce0861a3e` | + face/body tint route: tile per LIVE prim, created at the frame boundary, recorded and replayed by the fighter packet | owner: face/body rows removed (fixed) |
+| r50 | walk `48b7078e0009ff7a` | + Castle roof: a G_TX_WRAP tile uploads one mask period | display capture: roof continuous; stages 1-8 pixel-identical |
+| r51 | `020ec39a3ccb1757` | + Yoshi roll egg (matrix kind 0x4A), Mushroom Kingdom BGM on IMA, Zebes beams/acid, texture parts through the byte lane | **play this** |
 
 **Measured, not argued** (walk ROM, Fox P1 vs CPU Kirby P2, free general
 heap during the match; probes in `artifacts/visibility/2026-09-22_battle-heap/`):
@@ -36,17 +38,21 @@ Jungle, Zebes, Yoshi's Island and Saffron froze at load on r45; on r48 they run
 at 25.7 / 36 / 40 / 35 KB. Sector Z 7.7 -> 62 KB, Dream Land 28 -> 84 KB.
 Mechanism and ledger: `BUG_NOTES.md`, "the battle heap, measured".
 
-**Rows and where they stand (owner acceptance pending on all):**
+**Rows and where they stand (owner acceptance pending on all; r51 rows first):**
 
 | Row | State |
 |---|---|
-| CSS eyes / Link gray / faces worse over time | r45: a revisited fighter drew with zeroed UVs (memo outlived its image); emulator r41 0 vs r45 6 rebuilds |
+| Yoshi / Jigglypuff one eye closed | r51: texture-part container read off the wrong byte lane, part 1 wrote part 0's MObj; CSS trace in sync. Owner r51: eye opens; 'both closed' being traced (CSS and battle traces show normal blinks) |
+| Castle roof invisible | r50: wrap tile uploaded 16 wide, N64 masks at 8; capture shows the continuous roof |
+| Yoshi roll egg does not turn | r51 (agent): matrix kind 0x4A copies joint 5 pitch into the egg's roll; checker OK; not yet seen on screen |
+| Zebes acid / light gradients | r51 (agent): beams sample an 8x32 alpha ramp (T = source alpha), acid one alpha on 7 tris; 187->151 triangles; not yet accepted |
+| Mushroom Kingdom BGM IMA | r51 (agent): Viterbi IMA encode 27.2/27.3 dB, PCM16 path removed; checker OK; listen owed |
+| Link gray pants/ankle (CSS) | r45: a revisited fighter drew with zeroed UVs (memo outlived its image); emulator r41 0 vs r45 6 rebuilds |
 | Some maps crash (Kirby + Fox) | r48: heap, see above. Four-player matches unmeasured (no idle ports there) |
 | VFX missing by fighter combination | r37 graded table 16 + r48 heap: the GObj latch at 25,600 B free is now cleared on every 2P stage measured |
 | r44 Pikachu contorted / Jigglypuff missing limbs | unattributed; candidate: `ndsRelocEnsureLoadedAsset` declines loads under heap pressure (`gNdsRelocHeapDeclineCount`) |
 | Face colour != body (6 rows) | r49: tint route (worst 1-2/31 vs the cap's 8/31); walk ROM: 0 rejects, triangle totals match r48, replay intact |
-| Zebes acid / light gradients | light cone subdivided; acid back at one level for heap |
-| Saffron door | OPEN; transform chain verified, pixels not |
+| Saffron door | OPEN; transform chain verified, pixels not (r51 display capture never framed the door) |
 
 ---
 
