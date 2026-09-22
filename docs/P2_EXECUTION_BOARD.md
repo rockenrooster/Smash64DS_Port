@@ -50,41 +50,23 @@ STG 385,088; heap low-water 111,200 B; arena 1,351,424 B; native 0/0; slips 0.
 The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
-Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
-**Every row's diagnosis and next step is in
-`docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-21.md`. Read it, not a
-summary.** Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`
+Focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
+09-22 -- next focus is the owner's call.** Every `docs/BUGS.md` row the owner
+opened is either removed by the owner (fixed through r54) or owner-DEFERRED:
+C1 CSS hover-to-preview delay (profile + resume plan: `p2/BUG_NOTES.md` "C1")
+and S3 Saffron door. Only a descriptionless "-VS options" line remains.
+Status table: `docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md`.
 
-**PLAYTEST r32** `builds/remaining-bugs-playtest-r32/` `594EB9BA8C24A2A6...`,
-NATIVE_ONLY_PASS 316, hash stable twice, boots (gdb attach).
-**ARENA ALARM RETRACTED** (see the stale-census line below). Rays read
-`req=2 null=0 cand=100` and `AnimFallback 0` over 658 resolves. **Play r32.**
-OWNER ACCEPTED (removed from BUGS.md): pistol flash, CSS music, grab slam,
-effects regression, GROUND jolt, Damage cadence, Results badge, winner emblem,
-Link slash, Kirby jab flurry (r26).
+**ROOT ROM = r54** `C8FC02AA2DF0BB6E` (copy in
+`builds/remaining-bugs-playtest-r54/`), pushed through `2a144b426d0`.
+Owner-closed this sweep: castle roof (wrap period), eyes (texture-part byte
+lane + run-memo fence), Zebes, Yoshi egg roll, MK BGM, Dream Land (r40
+revert), Link's CSS boots (preview pack Span T, `538862570e7`).
 
-FIXED 09-21/22: R02/R03/K06 (the demo rows' PATH field was never consumed;
-runtime now reads `DEMOPATH ok=38 fallback=0`); P01 AIR jolt (reclaimable VRAM
-had gone 6,144 -> 0); K04 spit-star (`lbCommonDObjScaleXProcDisplay` is EMPTY
-in the port); Yoshi egg reinstated; two amplifiers in the graded-quad table.
-
-REFUTED: face/body is not a mirror (det **+7051**); rays are asset **85** and
-`0x44` cannot double-translate; an arena overflow **hangs** (`malloc.c:30`).
-
-OPEN -- **detail in plan section 7**. Face/body mechanism CONFIRMED, repair is
-the wrong shape (92% of writes SHRINK; the fix must scale diffuse COLOUR).
-Frozen Fox and the rays are now refuted in the SHIPPING build through the real
-CSS->VS path, memory included, so both need the owner's exact repro.
-Saffron/Kirby unread.
-
-**THE ARENA CENSUS IS STALE AND THE ARENA IS NOT THE BLOCKER.** Measured
-09-22 by walking the shipping build: Mario/Fox 61,124 -> **85,708**,
-Pikachu/Fox 7,556 -> **48,216**, Saffron+Kirby 2,844 -> **32,504**, latch never
-fired in any. Rows routed there must be re-explained. **NEW, worse than any
-open row: hovering Ness on the CSS hits `ndsPreviewPackLoadHalt(20)`, a
-`for(;;)` -- validator clause 6, root 0, offset 5,792, 82 commands.**
-Pre-existing. `NDS_PREVIEW_HALT_NONFATAL=1` is the probe escape.
-Owed: Boundary/Latest. Roof/Zebes deferred.
+**Owed:** Boundary/Latest never run on this tree; the r52 memo fence and r54
+pack growth (Link +1,336 B, Kirby +1,368 B inside the fixed 80 KiB CSS block)
+are proven by probes and host tests only. `test_preview_pack_loader.py` fails
+at collection on a pre-existing pin drift (task chip offered).
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):
 ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES

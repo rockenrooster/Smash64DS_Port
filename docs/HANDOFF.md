@@ -58,3 +58,9 @@ address-as-offset define; descriptors addressing another file need a span-check
 exemption. Recurred four times.
 
 **Falsifiers must follow the producer**, never a copy of its old number.
+
+**A compact pack must keep what its lists LOAD, not only what its structs
+point at.** Link's CSS boots drew gray for weeks: the preview pack kept Model
+bytes from the first MObj image onward, a display-list TLUT before that mapped
+to NULL, and a NULL native image draws untextured with zero rejects (2026-09-22,
+`p2/BUG_NOTES.md` "C6"). `test_native_texture_loads_are_retained` guards it.

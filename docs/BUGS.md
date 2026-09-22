@@ -13,7 +13,6 @@ Main Menus:
 -VS options
 -CSS Bugs still present and need to be fixed:
     -delay between cursor hover and 3d fighter preview rendering. **NOT FIXED in R36 ** **r37: preview loader spent 1 of its 4 byte units per tic; now spends all four.** **DEFERRED by owner 9/22; per-step profile and plan in BUG_NOTES "C1".**
-    -Fighter faces not looking right:
 -Yoshi:
 -Link:
 -Pikachu
