@@ -1768,6 +1768,10 @@ s32 ndsRendererFighterPacketPrecheck(
     u32 packet_key,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count);
+/* Drops the run texture memo rows of the player slot in `owner_key` bits 10:9
+ * when `material_identity` (the adapter's live MObj identity word) differs
+ * from the one the rows were filled under. A no-op with the memo off. */
+void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity);
 /* `packet_key` is the adapter's identity word for everything the fighter
  * packet's static words depend on outside the renderer (live material keys and
  * the colour modulate); the renderer mixes in its own fences. */

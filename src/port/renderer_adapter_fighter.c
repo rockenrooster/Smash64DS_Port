@@ -4063,6 +4063,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 ((slot & 3u) << 9) |
                 ((((u32)fp->costume) |
                   ((u32)fp->shade << 8)) & 0xffffu) << 11;
+            /* A blink, damage face, palette or colour change re-keys some
+             * run's texture; the run texture memo must hear about it before
+             * this draw consults it. */
+            ndsRendererR2RunTextureMemoFence(
+                native_owner_texture_key, sNdsFighterPacketMaterialIdentity);
 #if NDS_R2_FIGHTER_PACKET
             /* P2-2p4/N03.04. Ask before preparing. A replay consumes only the
              * packet-live subset, so refresh that subset here. A predicted miss

@@ -6526,3 +6526,38 @@ eye MObjs take 4, 5, 4, 0 in the same tick through every blink and settle on 0
 (memo compared against the full resolver every draw) ran the CSS and 1,800
 battle frames with Yoshi and Jigglypuff: 0 disagreements. A material-identity
 fence written for it was removed unshipped.
+
+## CSS eyes shut on r51: the run-texture memo outlived a blink (2026-09-22, r52)
+
+**Owner, r51:** "all characters with eyes are either half shut or fully shut in
+css" (Mario, Luigi, Kirby, Ness, Yoshi, Pikachu, Jigglypuff). r51 was the first
+ROM in which texture parts reached their materials at all (byte-lane section
+above), so this was the first time eye images changed under the renderer.
+
+**Measured.** Jigglypuff selected in the CSS on r51: both eye MObjs read id 0
+(open) from tick 383 to 960, while every display capture from tick 400 on shows
+both eyes shut. The preview's first drawn frame (tick 239) was mid-blink (id 4).
+
+**Cause.** The fighter run-texture memo (`NDS_R2_FIGHTER_RUN_MEMO=1`) replays the
+cache entry a run bound when its row was filled and validates only the owner key
+and the entry's residency -- never the image the run's material now names. E5's
+premise ("every memoised field invariant in run_index over a canonical match")
+held while expressions never reached a material. With blinks live, each eye run
+kept the image it had on the frame its row was filled; a CSS preview is first
+drawn mid-blink more often than not.
+
+**Fix.** `ndsRendererR2RunTextureMemoFence`: the adapter hands the renderer
+`sNdsFighterPacketMaterialIdentity` (every selected MObj's texture ids, palette
+id, fraction and colours -- already the packet key's material half) with the
+owner key; when it moves for a player slot, that slot's 67 memo rows are
+dropped and the next draw refills them from the full resolver. One full resolve
+per material change, not per frame. `gNdsR2TexMemoFenceCount` counts drops.
+
+**Measured on r52** (`c86e0d44210545c0`): same probe, eyes open from tick 280
+with the scripted blinks in between (`artifacts/visibility/2026-09-22_css-eyes/`).
+Owner: "r52 fixes the eyes".
+
+**The level-2 verify arm did not catch it.** It ran on r49, where only part 0
+of Yoshi's and Jigglypuff's eyes ever changed, and reported 0 disagreements over
+the CSS and 1,800 battle frames. Why it saw no eye run change is not
+established; the r51/r52 captures, not the arm, are the evidence here.

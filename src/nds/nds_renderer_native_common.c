@@ -7849,6 +7849,9 @@ volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoMissCount;
 volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFillCount;
 volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoStaleCount;
 volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoVerifyFail;
+/* Player-slot memo columns dropped because the fighter's material identity
+ * moved (ndsRendererR2RunTextureMemoFence). */
+volatile u32 NDS_R2_TEXMEMO_COUNTER gNdsR2TexMemoFenceCount;
 
 #if NDS_R2_FIGHTER_RUN_MEMO
 /* E12. E5 proved every field below is invariant in run_index over a whole
@@ -7920,6 +7923,42 @@ static inline NDSR2RunTextureMemo *ndsRendererR2RunTextureMemoFor(
     u32 run_index, u32 owner_key)
 {
     return &sNdsR2RunTextureMemo[run_index][(owner_key >> 9) & 3u];
+}
+
+/* THE MEMO IS FENCED ON THE FIGHTER'S LIVE MATERIAL STATE.
+ *
+ * E5 found every memoised field invariant in run_index over its canonical
+ * match. That held only while texture parts never reached a material: until
+ * r51 the texture-part container was read off the wrong byte lane, so most
+ * fighters' expressions went nowhere. With blinks and damage faces live, an
+ * eye run's image changes while its owner key, cache entry and generation do
+ * not, and the memo kept binding whatever the run showed when it was filled.
+ * A CSS preview is first drawn mid-blink more often than not, so on r51 every
+ * fighter with eyes sat half or fully shut in the CSS (owner), while the MObjs
+ * read id 0 (traced).
+ *
+ * The adapter already folds every selected MObj's texture ids, palette id,
+ * fraction and colours into sNdsFighterPacketMaterialIdentity for the packet
+ * key. When that word moves for a player slot, the slot's rows are dropped and
+ * the next draw refills them from the full resolver: one full resolve per
+ * material change, not per frame. */
+static u32 sNdsR2RunTextureMemoIdentity[NDS_R2_RUN_TEXMEMO_PLAYER_COUNT];
+
+void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity)
+{
+    u32 slot = (owner_key >> 9) & 3u;
+    u32 run_index;
+
+    if (sNdsR2RunTextureMemoIdentity[slot] == material_identity)
+    {
+        return;
+    }
+    sNdsR2RunTextureMemoIdentity[slot] = material_identity;
+    for (run_index = 0u; run_index < NDS_R2_RUN_MEMO_MAX; run_index++)
+    {
+        sNdsR2RunTextureMemo[run_index][slot].valid = 0u;
+    }
+    gNdsR2TexMemoFenceCount++;
 }
 
 /* The cheap tail of the resolver's cache-hit path, replayed from the memo. */
@@ -8124,6 +8163,12 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
     }
 }
 #endif
+#else
+void ndsRendererR2RunTextureMemoFence(u32 owner_key, u32 material_identity)
+{
+    (void)owner_key;
+    (void)material_identity;
+}
 #endif
 
 /* Cycle 110, Requirement 3: the prepared dense UVs are IMMUTABLE fighter state,
