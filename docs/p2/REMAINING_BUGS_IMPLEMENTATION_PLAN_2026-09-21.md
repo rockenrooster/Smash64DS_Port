@@ -14,10 +14,10 @@ Nothing here is an acceptance claim. The owner playtests in the morning.
 
 ## 0. STATUS AT 2026-09-22 04:30 — read this first
 
-Root `smash64ds.nds` is **r35**, sha256 `18CF0CD3...036C`, built clean
+Root `smash64ds.nds` is **r36**, sha256 `1CECBEF5...3BA1`, built clean
 (`make TARGET=smash64ds`, exit 0). r32 was `594EB9BA...`. A copy is at
-`builds/remaining-bugs-playtest-r35/`. Everything below is pushed; nothing is
-an acceptance claim.
+`builds/remaining-bugs-playtest-r36/`. All 21 python static checkers are
+green. Everything below is pushed; nothing is an acceptance claim.
 
 ### Fixed and awaiting your playtest
 
@@ -30,6 +30,7 @@ an acceptance claim.
 | **Face/body colour — Pikachu, Kirby, Jigglypuff** | the packet REPLAY path re-derived the shade word without the clamp the live draw applies |
 | **Ness character select** | **a real hang in the shipping ROM.** A stale header truncated Ness's owner image by 18 entries |
 | Kirby copy arena | the low-detail hat is unreachable below 3 fighters; skipping it returns 7,636 B |
+| **Poke Ball spawn VFX** | never a render fault -- the item ball's ray call was commented out behind a note whose stated blocker had since been fixed |
 | Item-appear actor | a refused GObj was attaching its process to `gGCCurrentCommon` instead; hardening only, nothing shows it firing |
 
 **Two of those deserve a second look from you because I had them wrong
@@ -40,7 +41,18 @@ row: I wrote "not proven reachable by a human" — wrong, the halt's three guard
 are all 1 in the shipping config with the walk off, so hovering Ness hung it
 for anyone.
 
-### Still open, and what would actually help
+### Both rows I had parked on you are now closed
+
+- **Fox frozen** — I measured `pkind` instead of assuming: the walk's match IS
+  your setup (P0 Pikachu human level 3, P1 Fox CPU level 2). Fox changed status
+  six times across eight in-match samples, and `is_ghost` read 0 for both at
+  every sample — which refutes the stuck-in-Appear mechanism, the only thing
+  that makes a fighter both frozen and unhittable, rather than merely failing
+  to see the symptom.
+- **Poke Ball rays** — root-caused to a commented-out call, not rendering. See
+  the table above and `docs/p2/BUG_NOTES.md`.
+
+### Previously open, retained for the record
 
 | Row | State |
 |---|---|
