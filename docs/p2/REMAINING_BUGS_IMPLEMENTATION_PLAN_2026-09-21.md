@@ -12,12 +12,22 @@ Nothing here is an acceptance claim. The owner playtests in the morning.
 
 ---
 
-## 0. STATUS AT 2026-09-22 04:30 — read this first
+## 0. STATUS AT 2026-09-22 09:20 — read this first
 
-Root `smash64ds.nds` is **r36**, sha256 `1CECBEF5...3BA1`, built clean
-(`make TARGET=smash64ds`, exit 0). r32 was `594EB9BA...`. A copy is at
-`builds/remaining-bugs-playtest-r36/`. All 21 python static checkers are
-green. Everything below is pushed; nothing is an acceptance claim.
+Root `smash64ds.nds` is **r36**, sha256 `1CECBEF5...3BA1`. A copy is at
+`builds/remaining-bugs-playtest-r36/`. r32 was `594EB9BA...`.
+
+**Reproducibility established, after I got this wrong once.** Two builds from a
+fully regenerated tree (`src/nds/generated/` and `builds/build` cleared, the
+one tracked file in there restored) both produce `1CECBEF5...3BA1` with a
+clean tree. Earlier I saw a different hash from an *incremental* build over
+mixed lab-flag artifacts and published that as "the shipped ROM was built from
+contaminated assets" — wrong, retracted, and the retraction is measured. All
+21 python static checkers are green on that regenerated tree, and a 120 s
+unattended boot reaches the attract loop with zero malloc overflow, zero
+objman panic and zero preview-pack failure.
+
+Everything below is pushed; nothing here is an acceptance claim.
 
 ### Fixed and awaiting your playtest
 
@@ -51,6 +61,20 @@ for anyone.
   to see the symptom.
 - **Poke Ball rays** — root-caused to a commented-out call, not rendering. See
   the table above and `docs/p2/BUG_NOTES.md`.
+
+### One thing about the Fox row worth knowing before you test it
+
+You wrote that row on **2026-09-21**, and **18 commits to `src/` have landed
+since** — including this batch's packet shade clamp, the Ness owner image, the
+Kirby low-detail hat deferral, the item-appear actor guard and the restored
+Poké Ball rays call. So the behaviour you described was observed on a
+pre-r36 build, and several of those commits touch fighter rendering and arena
+occupancy.
+
+That is not a claim the row is fixed. It is a reason to re-test it
+deliberately rather than assume it persists: if Fox behaves on r36, the row may
+have been carried off by one of the eighteen, and the question becomes which.
+If it still freezes on r36, the five questions below are what narrow it.
 
 ### If Fox freezes in the morning, this is what would settle it
 
