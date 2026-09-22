@@ -2281,3 +2281,57 @@ validator is passed `ndsRelocNativeSourceSize(native_owner_file)` rather than
 the file length, so confirm which number it actually sees before acting.
 Splitting clause 6 into three sub-codes is a handful of lines and would name the
 arm outright on the next run.
+
+---
+
+## 2026-09-22 04:40 -- per-slot read of the frozen-Fox row, and a retraction
+
+**The earlier refutation of this row was unsound and is withdrawn.** It rested
+on `AppearOverrun 0` and `AnimFallback 0` across 658 resolves. Both counters
+are single `volatile u32` (`src/port/diagnostics_state.c:187-188`), **not
+per-slot**, so 658 resolves is equally consistent with all 658 being Pikachu's
+and Fox never animating once. And neither counter addresses the reported
+symptom: "cannot be hit" is collision and "frozen" is the physics proc.
+`gNdsFTCommonAppearOverrunFighter` is narrower still -- `src/import/
+battleship_ftcommon_entry.c` arms it ONCE, for the FIRST fighter only, and only
+after 240 updates in Appear specifically.
+
+**Re-measured per slot.** Walk build, `gNdsMenuShellCssWalkTargetKind = 9`
+(Pikachu), reading each fighter's own FTStruct through
+`gSCManagerBattleState->players[i].fighter_gobj->user_data.p`:
+
+    T1  pres=252   P0 kind=9 st=69 mo=-2 tics=27  | P1 kind=1 st=18 mo=12 tics=3
+    T2  (poisoned -- see below)
+    T3  pres=~900  P0 kind=9 st=10 mo=4  tics=147 | P1 kind=1 st=12 mo=6  tics=20
+    T4  pres=1469  P0 kind=9 st=10 mo=4  tics=375 | P1 kind=1 st=12 mo=6  tics=14
+    END latch=0/0  anim=1009/0  freemin=48,432  allocfail=188
+
+The pairing is the owner's exact one: kind 9 is Pikachu in slot 0, kind 1 is
+Fox in slot 1. Status 18 is `nFTCommonStatusTurn`, 12 is `WalkMiddle`, 10 is
+`Wait`, 69 is `DownWaitD`.
+
+**Fox is alive.** It turns in the first match and walks in the second, and its
+`status_total_tics` goes 20 then 14 -- it does not accumulate, so Fox
+re-entered the status in between. Pikachu meanwhile sits in `Wait` with tics
+advancing 147 to 375, which is an idle CPU, not a stuck one.
+
+**What this does NOT cover, stated plainly.** The walk drives two CPUs. The
+owner plays slot 0 as a human. A Fox on a HUMAN slot with no second controller
+would stand still legitimately -- though it would still be hittable, and the
+owner's is not. The row needs Fox's player type and level.
+
+**Method note for the next run: the walk loops through whole matches, so a
+sample 600 frames later can land in a different match or between two.** T2 read
+`kind=-572662310`, `st=-286331154` -- 0xDD/0xEE freed-memory poison.
+`gSCManagerBattleState->players[i].fighter_gobj` is NOT cleared on teardown, so
+a stale pointer reads poison rather than NULL. Guard every sample on
+`0 <= fkind <= 11` before believing it.
+
+**Separately, a counter this file reported half of.** The Poke Ball rays row
+was closed on `req=2 null=0 cand=100`. The rays have TWO renderer-side
+counters: `gNdsMBallRaysCandidateCount` (`renderer_adapter_stage.c:5760`)
+counts REACHING the material check, and `gNdsMBallRaysMaterialRejectCount`
+(`:5791`, `:5802`) counts FAILING it -- which returns FALSE and bumps
+`gNdsEntryEffectNativeFallbackCount`, a non-native fallback. Both key off root
+offsets 0x0440 and 0x0518, exactly `MBALLRAYS_ROOTS`. A hundred candidates with
+the reject counter unread says nothing about whether a ray drew.
