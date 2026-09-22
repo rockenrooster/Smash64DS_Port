@@ -1483,9 +1483,22 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYamabuki = {
      * (matrix kinds 48/46), read off the generated DObj table, PLUS bindings
      * a runtime joint animation moves. Both halves mean "compose this
      * binding's world live"; the only reader is the Task 51 baked-world
-     * opt-out. 0xE0000 is Saffron's gate (S04): grYamabukiGateAddAnimOpen/
-     * Close move DObjs 20-22, so bindings 17-19 must never replay the
-     * authored pose. Keep equal to generator.blob_live_world_mask(). */
+     * opt-out.
+     *
+     * THAT READER IS COMPILED OUT OF EVERY DEFAULT BUILD.
+     * ndsRendererNativeStageTask51EnsureWorld and its single call site both sit
+     * inside `#if NDS_TASK51_STAGE_NATIVE`, and Makefile:232 defaults that to
+     * 0 -- r36's own nds_build_config.h:20 has it at 0. So this mask has no
+     * consumer in the shipped ROM and every non-rigid binding already composes
+     * live each frame. Widening it from 0x4894 to 0xE4894 on 2026-09-21 to fix
+     * Saffron's frozen gate was therefore a no-op, which is exactly why r36
+     * looked identical to r35 for that row. The value stays because it is the
+     * correct derivation and blob_live_world_mask() computes it from the real
+     * payload -- but do not close a gate-motion row on it again.
+     *
+     * 0xE0000 is Saffron's gate (S04): grYamabukiGateAddAnimOpen/Close move
+     * DObjs 20-22, so bindings 17-19 must never replay the authored pose.
+     * Keep equal to generator.blob_live_world_mask(). */
     0ULL,
     0xE4894ULL,
     0u,

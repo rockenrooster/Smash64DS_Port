@@ -2587,6 +2587,12 @@ void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
     }
 }
 
+/* Witnesses for the silent-refusal arm below. `used` and volatile so
+ * --gc-sections keeps them and a debugger reads them without a consumer. */
+__attribute__((used)) volatile u32 gNdsGcAddAnimJointAllRefusedCount;
+__attribute__((used)) volatile u32 gNdsGcAddAnimJointAllRefusedLastGObj;
+__attribute__((used)) volatile u32 gNdsGcAddAnimJointAllRefusedLastTable;
+
 void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
                        f32 anim_frame)
 {
@@ -2602,6 +2608,27 @@ void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
         (ndsAObjEvent32NormalizeDObjTable(gobj, anim_joints) != FALSE))
     {
         ndsBaseGcAddAnimJointAll(gobj, anim_joints, anim_frame);
+    }
+    else if (gobj != NULL)
+    {
+        /* A REFUSED INSTALL IS INVISIBLE, AND SOMETHING IS LIVING IN IT.
+         *
+         * When the normalizer refuses any one entry of the table this wrapper
+         * silently installs NOTHING, and the caller has no way to tell that
+         * from a successful install. The object then keeps whatever pose it
+         * already held, forever, while everything around it -- its state
+         * machine, its collision, its sound -- carries on normally. That is
+         * indistinguishable, on screen, from an object that is simply frozen.
+         *
+         * Saffron's gate is the open case. gNdsAObjEvent32NormalizeFailCount
+         * already counts the inner refusal, but it is global and pools every
+         * caller in the scene, so it cannot say whether the gate's own
+         * open/close install was the one that failed. `Last` is overwritten
+         * rather than latched on purpose: the question is what refused most
+         * recently, not what refused first. */
+        gNdsGcAddAnimJointAllRefusedCount++;
+        gNdsGcAddAnimJointAllRefusedLastGObj = (u32)(uintptr_t)gobj;
+        gNdsGcAddAnimJointAllRefusedLastTable = (u32)(uintptr_t)anim_joints;
     }
 #if NDS_R2_LOADFRAME_TIMING
     {

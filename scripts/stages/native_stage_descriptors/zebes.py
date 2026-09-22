@@ -47,7 +47,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="265059357e2e0b707223c4e0a37e40ec79e0d258bdb69d605426efe882084c1d",
+    include_sha="3fe9704671177dc0192f7e87569d2970778b22fdb0fe2b182b6a9bd1a02c34c7",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",
@@ -64,22 +64,27 @@ DESCRIPTOR = StageDescriptor(
         # so the stage rises 151 -> 172 and its runs 60 -> 72.  Every added
         # vertex is an exact average of two source vertices, so the acid
         # plane stays planar and no new geometry is invented.
-        "triangles": 172,
-        "runs": 72,
+        # 2026-09-22: light-cone root 0x5870 joins it, 5 tris -> 20, taking the
+        # stage to 187 and its runs to 82.  Same exact-midpoint property.
+        "triangles": 187,
+        "runs": 82,
         "texture_epochs": 42,
         "material_events": 19,
-        "submit_classes": (92, 0, 80),
+        # 92 -> 107: the light cone's 15 new triangles all submit in the same
+        # class its 5 originals did.
+        "submit_classes": (107, 0, 80),
         "state_events": 282,
         "state_deltas": 142,
         "sync_events": 173,
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        # 317 source + 114 = 431 dense. The subdivision adds three midpoints
+        # 317 source + 165 = 482 dense. The subdivision adds three midpoints
         # per subdivided source triangle and, because each of the 28 acid
         # triangles now carries its own averaged alpha, more per-triangle
-        # clones than the 7 originals needed.
-        "alpha_clone_vertices": 114,
+        # clones than the 7 originals needed. 2026-09-22: the light cone's
+        # 5 -> 20 split adds the remaining 51 over the acid's 114.
+        "alpha_clone_vertices": 165,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -175,7 +180,21 @@ DESCRIPTOR = StageDescriptor(
         (2, "acid", "stage_actors", 0xB08, 3, 12,
          "gcDrawDObjTreeDLLinksForGObj", True),
     ),
-    alpha_subdivide_roots=((157, 0x9D8),),
+    # (105, 0x5870) added 2026-09-22: the ground-floor light cone. The DS has
+    # per-vertex colour but no per-vertex alpha, so the packet generator
+    # averages each triangle's three source alphas into one POLY_ALPHA. This
+    # cone's source vertex alphas ramp 42 -> 255 and its five triangles emitted
+    # exactly THREE distinct alphas, {136, 207, 255} -- the owner's "flat/hard
+    # transparency (hard upsidown trapezoid shape)" is three flat bands where
+    # the source has a gradient. One level of midpoint subdivision takes it to
+    # 20 triangles and four times the alpha resolution for +15 triangles on a
+    # 172-triangle stage.
+    #
+    # The acid stays at one level deliberately. Two levels would take it 28 ->
+    # 112 and the stage past 340 triangles, and Zebes already runs near the
+    # cadence gate -- that is a Boundary WORK-H P50/P95 measurement, not a
+    # correctness question, and it is not owed by this row's first repair.
+    alpha_subdivide_roots=((157, 0x9D8), (105, 0x5870)),
     # (asset_id, binding_root, mobj_offset, segment_index): one row per
     # MObjSub of the eight material DObjs, in binding then segment order.
     # Segment 8*i matches gcDrawMObjForDObj's branch slot for MObj i.
@@ -205,9 +224,12 @@ DESCRIPTOR = StageDescriptor(
     material_command_partition=(3,) * 18 + (10,),
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
-        (1, 6, 0, 25, 0, 55),
+        # Owner 1's run count rises 55 -> 65 with the light cone's split; the
+        # acid segment that follows it starts ten runs later for the same
+        # reason, and its own count is unchanged.
+        (1, 6, 0, 25, 0, 65),
         # The acid segment carries 17 runs, not 5, once root 0x9D8 subdivides.
-        (2, 12, 25, 1, 55, 17),
+        (2, 12, 25, 1, 65, 17),
     ),
     callback_partition=(
         ("layer1", "grDisplayLayer1SecProcDisplay", 6),

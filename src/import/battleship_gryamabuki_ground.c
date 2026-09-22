@@ -11,13 +11,24 @@
  * and the Pokemon are ITEMS, spawned through itManagerMakeItemSetupCommon with
  * ITEM_FLAG_PARENT_GROUND (gryamabuki.c:101). Both already exist here.
  *
- * WHAT IS ABSENT AND WHY IT IS SAFE. The ground-monster item kinds have no
- * maker in the port yet, so the spawner's call returns NULL. The source guards
- * on exactly that: grYamabukiGateUpdateOpen (gryamabuki.c:177-179) treats a
- * NULL monster as the cue to close the gate again. So the gate opens, finds
- * nothing to follow, and closes -- which is the source's own behaviour for an
- * empty spawn, not a port-specific fallback. The Pokemon appear when their
- * item kinds land in P2-5.
+ * THE PARAGRAPH THAT USED TO BE HERE IS STALE (corrected 2026-09-22). It said
+ * the ground-monster item kinds had no maker, so the spawner returned NULL and
+ * grYamabukiGateUpdateOpen (gryamabuki.c:177-179) closed the gate again on an
+ * empty spawn. All five Pokemon TUs exist now -- battleship_item_fushigibana.c,
+ * _glucky.c, _hitokage.c, _marumine.c and _porygon.c -- and each calls
+ * grYamabukiGateSetClosedWait(). So the NULL-monster shortcut is no longer the
+ * path this build takes, and reasoning about the gate from that sentence sends
+ * you to the wrong state.
+ *
+ * OPEN ROW, 2026-09-22: the owner reports the gate permanently OPEN. Two facts
+ * that a reader here needs. First, the authored pose is the OPEN one --
+ * grYamabukiMakeGate ends with grYamabukiGateAddAnimClose(), and an object that
+ * must be told to close at setup was authored open; the stage descriptor's
+ * claim that the authored pose is CLOSED is wrong and a previous closure was
+ * built on it. Second, frame 0.0 of the close script is also the open pose, so
+ * an animation that is installed but never advanced looks identical to one that
+ * was never installed. Separate them with gNdsGcAddAnimJointAllRefusedCount
+ * (battleship_sys_objanim.c) and gGRCommonStruct.yamabuki.gate_status.
  */
 #if NDS_P2_STAGE_YAMABUKI
 
