@@ -5952,3 +5952,49 @@ record. **The row is about the gate's GEOMETRY not being drawn, not its
 motion.** A door that is never rendered leaves a permanent hole, and a hole is
 what "always open" looks like. Next: whether the native stage owner emits
 bindings 17-19 at all.
+
+## 2026-09-22 -- Saffron in the SHIPPING config, and the instrument that was lying
+
+**The shell-walk lab target cannot answer this row, and three probes were spent
+learning that.** On `smash64ds-p2-shell-loop-hwtri` the adapter workspace reads
+`binding_count = 0` with `gNdsRendererAdapterStageTopologyFailStep = 0` -- not a
+decline, a capture that never runs, because that target overrides a dozen flags
+including `NDS_DEV_SCENE_HARNESS` and `NDS_HARNESS_FAST_LOGIC`. Every
+conclusion drawn from `binding_count` or `gNdsYamabukiGroundSeenCount` on that
+target is about the harness, not about the game.
+
+**The right instrument is the SHIPPING target plus the one walk flag**, not the
+lab target that happens to have a walk:
+
+    make TARGET=smash64ds BUILD=build-walk-ship NDS_P2_MENU_WALK=20
+
+That is the shipped configuration with exactly one macro changed, and it
+answers immediately:
+
+    BLOB_GKIND=7  BLOB_LOADS=1  BLOB_BYTES=18369  HASHMISS=0  READFAIL=0
+    TOPO_FAILSTEP=0  FAILINDEX=0  COLLECTMASK=0x0
+    BINDCOUNT=21
+
+**The native stage owner accepts Saffron with all twenty-one bindings**, which
+includes the gate's four (17-20), the blob loads at its full 18,369 bytes, and
+nothing declines. Combined with the earlier measurement that the gate's joints
+traverse the full open and closed poses on a real cycle, every precondition for
+the door to render AND move is present and measured:
+
+  - the gate GObj exists (`gate_gobj` non-zero at setup)
+  - its joints animate (330/-30/-330 open, 0/390/0 closed, both observed)
+  - the state machine cycles Wait -> Open -> Wait with a real Pokemon spawned
+  - the packet carries segment 4: bindings 17-20, 15 runs
+  - the adapter collects 21 bindings with no topology failure
+  - Task 51's baked-matrix opt-out is compiled out, so 17-19 compose LIVE
+
+What is NOT yet read is the last link: whether
+`workspace->binding_world[17..19]` actually tracks those DObjs, or whether the
+bindings point somewhere else. That is one probe away and is the only remaining
+question on this row.
+
+**Record the instrument lesson, because it cost more than the row.** A lab
+target with the feature you need is not the same as the shipping target with
+the feature added. `NDS_P2_MENU_WALK` is a parameter of the ordinary build; the
+walk TARGET carries thirteen other overrides. Reach for the flag, not the
+target.
