@@ -5737,3 +5737,112 @@ is not a baseline.
 actual clean build. `check_nds_native_stage.py` does catch it, but it was red
 for other reasons and therefore not being read -- see the checker notes above.
 A periodic build from a fresh worktree would have caught it in a day.
+
+## 2026-09-22 -- P04/K02/J01 again: the clamp is the right diagnosis with the wrong shape
+
+**The owner played r36, which contains the clamp, and the seam is still there.**
+`8c7dab82134` (09-22 04:07) added `ndsRendererR2ClampDiffuseToMaterial` to the
+replay re-derive; r36 was linked at 06:35 from `260b754be00`. The clamp is
+compiled in: its guard nest at `nds_renderer_native_common.c:6982` is
+`NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2) &&
+NDS_R2_FIGHTER_HW_LIGHT`, and r36's `nds_build_config.h` has all three live.
+So this is not a fix that failed to ship. It shipped and it is the wrong curve.
+
+### What the two runs actually are
+
+`scripts/fighters/check_fighter_face_body_material.py` resolves every epoch of
+the three models, and `ctx["direct_epoch_policies"]` says which policy family
+each one draws under. The families are in
+`src/nds/nds_native_fighter_owner.generated.inc:500`:
+
+    family 0: USE_VERTEX | USE_TEXTURE, textured = 1     <- the FACE runs
+    family 1: USE_MATERIAL | USE_VERTEX, textured = 0    <- the BODY runs
+
+Purin epochs 0,1,2 and Kirby epoch 0 are family 0 and resolve `prim = inherit`,
+which is consistent: a family-0 epoch has `use_material == 0`, so the port never
+folds a prim into them at all and the inherited value is not read. **The
+checker's docstring claim that Purin's face "inherits whatever the display list
+before the fighter left" is true of the source command stream and irrelevant to
+the port.** It is not the defect. Every remaining epoch on all three models is
+family 1 with a single tinted prim: Pikachu 0xFFD933, Purin 0xFFCDD8, Kirby
+0x00FF5A and 0x00B300.
+
+### The two paths, written out
+
+Face (family 0, textured, no material):
+
+    DS  : clamp31( RGB5(l2) + RGB5(l1)*d ) then TEXTURE MODULATE by the texel
+    N64 : clamp8 ( l2 + l1*d ) / 8        then the RDP multiplies by the texel
+
+These agree. The texture modulate is a post-shade multiply, so the face gets
+the source's inner clamp for free. With l1 = 0xFFFFFF and l2 = 0x808080 the
+face saturates at d = 0.484 and is at full texel brightness for the whole rest
+of the range.
+
+Body (family 1, untextured, prim folded into the material):
+
+    N64          : prim * min(1, (l2 + l1*d)/255)      saturates at d = 0.498
+    port, no clamp: clamp31( prim*l2/255 + prim*l1/255 * d )
+    port, clamped : prim*l2/255 + (prim - prim*l2/255) * d      reaches prim at d = 1
+
+The unclamped form is **exact for d <= 0.498** and overshoots past it, per
+channel, because each channel saturates at 31 rather than at its own prim
+value. For Purin that is catastrophic and measured: `--verbose` prints
+`purin high root 0 epoch 3 dot=1.0 prim=0xffcdd8ff source RGB5 (31,25,27) vs
+port RGB5 (31,31,31)`. **A pink body drawn pure white.** Pikachu's (31,27,6)
+goes to (31,31,11) -- a paler yellow. That was r35 and earlier.
+
+The clamped form preserves hue exactly -- it is the same ramp with the light
+reduced from l1 to 255 - l2 so it can never saturate -- and is therefore the
+best single hue-preserving ramp available. But it reaches prim only at d = 1,
+where the source has been sitting on prim since d = 0.498. At d = 0.5 the body
+draws at 75.1% of prim while the face beside it is at 100% of its texel. **That
+is r36: a body uniformly dimmer than the face over the entire lit half.** The
+seam did not go away, it changed sign.
+
+### Why no choice of diffuse/ambient can fix this
+
+We need `out(d) = prim * min(1, s(d))`. The geometry engine computes
+`clamp31(A + D*d)` and clamps at 31 per channel, not at prim per channel. The
+channels of a tinted prim reach 31 at different `d`, so they cannot saturate
+together, and holding them below 31 is exactly the clamped ramp that arrives
+late. Both failures are the same fact: **the DS has no inner clamp, and the
+source's clamp happens before the prim multiply.**
+
+Checked and rejected as ways to get the inner clamp back:
+
+- **Toon shading.** `toon[i] = prim * i / 31` with the index carried in red is
+  arithmetically exact. TOON_TABLE is a *rendering* engine register, latched
+  once per frame, so a frame containing Pikachu and Kirby cannot have two.
+- **A second light.** The engine sums lights and saturates once at the end;
+  there is no per-light clamp to borrow.
+- **Emission / light colour split.** Every one of these is another factor in
+  the same product; none of them introduces a clamp between prim and the sum.
+
+### The fix: give the body the same post-shade multiply the face already has
+
+Bind a solid-colour texel and modulate by it, exactly as a family-0 run does:
+
+    diffuse = RGB5(light1), ambient = RGB5(light2)      (no prim fold)
+    texture = one texel whose colour is prim, POLY mode = modulation
+
+which evaluates to `clamp31(RGB5(l2) + RGB5(l1)*d) * prim` -- the source's own
+order of operations, and the identical arithmetic the face runs already prove
+correct on hardware.
+
+Cost is one TEXIMAGE bind plus **one** `GFX_TEX_COORD` per run, not per vertex:
+the DS texcoord register is sticky and every texel of the tile is the same
+colour, so the untextured vertex loop stays untextured. Roughly two extra FIFO
+words against ~53 runs a frame per fighter. `ndsRendererHardwareBeginTriangleBatch`
+(`nds_renderer_native_common.c:559-573`) is the single choke point that already
+takes `use_texture` and a texture name, and
+`ndsRendererHardwarePrepareIFCommonPal16Atlas` is the existing 4bpp procedural
+texture helper (`nds_renderer_textures_effects.c:3523` uses it for impact waves).
+
+Two conditions fall back to today's clamped ramp, each with a counter:
+`color_modulate` not identity (the hurt flash is a second post-shade multiply
+the texel cannot also carry), and a prim with no palette slot.
+
+**Falsifier owed.** `check_fighter_face_body_material.py`'s fold census models
+the port *without* the clamp -- it still reports the r35 numbers -- so it is a
+stale falsifier and must be re-derived from the producer, not patched to agree.
