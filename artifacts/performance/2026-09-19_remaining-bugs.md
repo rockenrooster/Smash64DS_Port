@@ -2335,3 +2335,71 @@ counts REACHING the material check, and `gNdsMBallRaysMaterialRejectCount`
 `gNdsEntryEffectNativeFallbackCount`, a non-native fallback. Both key off root
 offsets 0x0440 and 0x0518, exactly `MBALLRAYS_ROOTS`. A hundred candidates with
 the reject counter unread says nothing about whether a ray drew.
+
+## 2026-09-22 05:05 -- frozen Fox settled for this configuration, rays counter read, and four RED checkers that are not mine
+
+### Frozen Fox: twelve within-match samples, and Fox is acting
+
+The previous read was one sample per match. This one samples every 41 frames
+inside a single match, guarded on `0 <= fkind <= 11` so a torn-down match
+cannot be mistaken for data:
+
+    T01 pres=122 P0 k=9 st=10  mo=4   tics=155 | P1 k=1 st=29  mo=23  tics=9
+    T02 pres=163 P0 k=9 st=10  mo=4   tics=237 | P1 k=1 st=28  mo=22  tics=1
+    T03 pres=204 P0 k=9 st=10  mo=4   tics=319 | P1 k=1 st=10  mo=4   tics=5
+    T04 pres=245 P0 k=9 st=69  mo=-2  tics=13  | P1 k=1 st=10  mo=4   tics=9
+    T05 pres=286 P0 k=9 st=69  mo=-2  tics=95  | P1 k=1 st=12  mo=6   tics=60
+    T06 pres=327 P0 k=9 st=69  mo=-2  tics=177 | P1 k=1 st=225 mo=200 tics=2
+    T07 pres=368 P0 k=9 st=37  mo=31  tics=5   | P1 k=1 st=225 mo=200 tics=33
+    T08 pres=409 P0 k=9 st=10  mo=4   tics=18  | P1 k=1 st=10  mo=4   tics=9
+    T09 pres=450 P0 k=9 st=10  mo=4   tics=20  | P1 k=1 st=225 mo=200 tics=19
+    T10 pres=491 P0 k=9 st=85  mo=73  tics=45  | P1 k=1 st=12  mo=6   tics=10
+    T11 pres=532 P0 k=9 st=85  mo=73  tics=127 | P1 k=1 st=18  mo=12  tics=3
+    T12 pres=573 P0 k=9 st=85  mo=73  tics=209 | P1 k=1 st=12  mo=6   tics=74
+    END pres=573 loops=3 freemin=48,432 latch=0/0 anim=828/0 appearOverrun=0
+
+Fox (kind 1, slot 1) changes status NINE times across twelve samples, with
+`status_total_tics` resetting at each change: 29, 28, 10, 10, 12, 225, 225, 10,
+225, 12, 18, 12. It waits, walks, turns and runs a character-specific 225.
+Pikachu (kind 9, slot 0) is also live, 10 -> 69 -> 37 -> 10 -> 85.
+
+**Fox is not frozen in a CPU-vs-CPU Pikachu-vs-Fox match on this build.** That
+is a properly scoped refutation, unlike the earlier one. What it still does not
+cover is the owner's configuration, where slot 0 is a human.
+
+### The rays counter this file previously reported half of
+
+    RAYS req=1 null=0 cand=50 reject=0 efFallback=0
+
+A Poke Ball was requested and constructed, reached the material check fifty
+times, and was rejected ZERO times, with zero entry-effect native fallbacks.
+So the rays are built, admitted, material-accepted and submitted natively.
+Whatever the owner sees is downstream of submission or in a scenario this walk
+does not reach.
+
+### Four python checkers are RED at HEAD, and none of them is from this batch
+
+Ran all 21. Green: audio-ordinals, decomp-header-mirror, dtcm-residency,
+sin-table-dedup, r2-light-stretch, r2-shade-twin, untracked-dependencies,
+hidden-part-root-coverage, model-part-mutation-coverage,
+native-owner-geometry-closure, native-owner-image-spans,
+native-owner-source-matrix-precision, nds-native-owner-packet,
+preview-pack-owner-sizes, results-demo-motion-closure, collision-parity.
+
+RED, with provenance established rather than assumed:
+
+| checker | failure | why it is not from this batch |
+|---|---|---|
+| `check-native-owner-wiring.py` | `owners=50 failed_owners=4 gaps=10` -- kirby_vulcan, ness_pktail, pikachu_thunder, samus_bomb lack Makefile PREREQ variables and grouped emit rules | Reproduces **identically** at the pre-session commit `acbeb9f6e8a`. `git log -S` shows all four PREREQ variable names have **never** appeared in this repository. |
+| `check_nds_native_stage.py` | `M3_STAGE_FALSIFIER: reloc_backend_renderer_dl.c:ndsRendererAdapterBuildDObjXObjMatrix: unclassified reads ['dobj.xobjs_num']` | Reproduces **identically** at `acbeb9f6e8a`. That file was not touched in this batch. |
+| `check_nds_native_owner_hierarchy.py` | `ValueError: mario: retained packet corner trace mismatch` | Inputs are the owner IR and the decomp O2R data. The owner IR's mtime is 2026-09-21 21:35, before this session; the only generated file this batch changed is the image header, whose diff is 56 lines and Ness-only. The failure names Mario. |
+| `check_native_owner_weld_consistency.py` | `IndexError: list index out of range` at `binding_joints[binding]` | Same two inputs, same reasoning. This one is a script crash rather than a data assertion. |
+
+Method note: a plain `git worktree` at the pre-session commit cannot run the
+last two, because `src/nds/nds_native_fighter_owner.generated.inc` is
+**untracked** and `decomp/` is gitignored. Junctioning `decomp/` and copying
+`src/nds/generated/` still leaves the owner IR absent, which is why those two
+were settled by input invariance instead of by reproduction. The worktree was
+removed after the run.
+
+**These four remain owed and are not claimed as passing.**
