@@ -53,35 +53,39 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
 Brief `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`; receipt
 `artifacts/performance/2026-09-19_remaining-bugs.md` holds every finding.
-r23 `builds/remaining-bugs-playtest-r23/` `F5527AD9...`, NATIVE_ONLY_PASS 316 inputs.
-**r23 IS UNBOOTED.** boot_check fails on it AND identically on r22, which the owner
-played -- the probe is built for the shell ROM, not a shipping one. No boot
-evidence either way; build a p2-shell-hwtri sibling to get some.
-LANDED 09-21 (10 commits, `8d9f198`..`3dacb57`), all owner-verification owed:
-K05 flash = BattleShip's own laser colanim, suppressed for Fox only, now Kirby.
-P03 Poke Ball = bake existed, gate wanted an item GObj, entry ball is an effect.
-S04 gate = replayed a baked constant world matrix, frozen CLOSED.
-P01 ground jolt = IA8 not CI4; 2,225/3,072 partial alphas forced opaque; A5I3, -3,024 B.
-L01 = root XObj kind 0x45 took a translate-bearing fallback, contact applied twice.
-K03 = effect table read from a .bss address; all five maker args garbage.
-P04/K02/J01 = clamp-order fold; owner right, face correct and body wrong. FIDELITY
-TRADE, wants an eyeball -- it changes every lit fighter.
-R02/R03/K06 = 142 submotion payloads in no NitroFS list; 11 -> 47 of 47 cells route.
-Kirby copy-hat slots sized per detail: -916 B, gap was 2,396, so NOT cleared alone.
-RED ON PURPOSE: check_results_demo_motion_closure and the model-part census, both on
-Ness Win3 -- SetModelPartID(17,1) adds root 0x6d90 with no bake. Needs a full ness
-root program. verify-all's census step fails with them; no exception was added.
-NEXT: Ness Win3 bake; R01 (emblem dead at dispatch, badge not localized); Yoshi egg
-(14 texture-bind rejects from a 2-triangle quad is the anomaly); the remaining 1,480
-bytes of heap; custom matrix kinds 0x44/0x49/0x4A/0x51 still take the translate
-fallback, and 0x44 is the Poke Ball just admitted.
-Owed: Boundary/Latest, and timing for 172 KiB of new NitroFS. Roof/Zebes deferred.
+r25 `builds/remaining-bugs-playtest-r25/` `461910F8...`, NATIVE_ONLY_PASS 316 inputs.
+OWNER ACCEPTED (removed from BUGS.md): Kirby pistol flash, CSS music, grab slam,
+effects regression, GROUND Thunder Jolt, Damage cadence, Results badge, winner
+emblem, Link slash.
+**THREE REGRESSIONS, ONE SHAPE** (matrix -> 3 spark effects; ground jolt -> AIR
+jolt; Poke Ball -> RAYS). Each correct for its own consumer, each with a green
+mutation test, none caught by CI. Rule in HANDOFF: census a shared path's other
+users before landing; scope, do not revert.
+OPEN, in order:
+1. Kirby face/body facing RIGHT (left + ledge-balance fixed). Facing is a mirror,
+   so that modelview has negative determinant and normals flip while the light
+   vector is written under identity. One build: add `lr` + determinant sign to the
+   shade witness. Do NOT touch the clamp or white-prim exemption.
+2. R02/R03 Results poses + claps: NO change on r25. 35 payloads ARE staged, 47/47
+   route, so the failure is downstream. Build the counter on
+   `lbRelocGetExternHeapFile`'s INVALID return FIRST -- it splits 'token
+   unresolved' from 'loaded but AObj16 normalization rejects it'.
+3. AIR Thunder Jolt regression: shares asset 342. Suspects: eviction order vs the
+   3 pinned A5I3 names, then the bind hand-off at `thunderground.exec.inc:102`.
+4. Poke Ball RAYS regression: ball visible, rays gone. Suspects: the new
+   effect-layer arm leaving item state; kind `0x44` still on the translate
+   fallback; entry-seam ordering.
+5. K04 spit-star: the Poke Ball's twin -- ITCommonObject effect, no bake, no
+   admission arm. Shape proven on the ball; census asset 86 first.
+6. M04 hover delay (owner deprioritised): residual is one 30,160 B owner-image read.
+Unverified in r25: Saffron gate, Kirby jab flurry, Ness Win3, Kirby Results pose.
+Owed: Boundary/Latest, timing for +172 KiB NitroFS. Roof/Zebes deferred.
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):
 ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES
 archived; OWED: per-hat look, captures.
-**DTCM HOT SCALARS: -43,200 WORK-H P50 FOR 508 B** (`5e109a47d5d`). Largest
-banked win, 9.2% of gap. **OWNER: one-line call** on its non-zero exit.
+**DTCM HOT SCALARS: -43,200 WORK-H P50 FOR 508 B** (`5e109a47d5d`); 9.2% of gap.
+**OWNER: one-line call** on its non-zero exit.
 **OWNER 09-17: SRC REOPENED**, **30 Hz still refused**; ~99.7% of the largest
 class is gameplay/fidelity gated, so it is a **POLICY call** (detail archived).
 **OWNER 09-17 ROSTER CLOSED (P2-3f47).** Detail in the closed-row archive.
