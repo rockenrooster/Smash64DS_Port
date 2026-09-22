@@ -230,8 +230,49 @@ static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
 /* dLBCommonFuncMatrixList pair 17 (kind 0x53) is Sector's US-region Arwing
  * matrix callback, grSectorArwingLaser3DFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND 0x53u
+/* dLBCommonFuncMatrixList pair 3 (kind 0x45, decimal 69) is
+ * lbCommonRotScaFuncMatrix (lbcommon.c:1686), which calls lbCommonMatrixRotSca
+ * with the DObj's rotate/scale and writes a ZERO translation row. It is an
+ * ordinary local affine -- it returns 0, emits no DL and rewrites no MVP -- so
+ * it must NOT join ndsRendererAdapterIsMvpRecalcKind.
+ *
+ * Its element arithmetic is syMatrixTraRotRpyRSca's (matrix.c:1086-1141) term
+ * for term, on the same gSYSinTable index and the same 256x row scales, with
+ * tx/ty/tz forced to 0: lbcommon.c:678-713 writes COMBINE_INTEGRAL(0, 0) into
+ * m[1][2] and COMBINE_INTEGRAL(0, 0x10000) into m[1][3], which is exactly what
+ * matrix.c:1133-1140 produces for tx=ty=tz=0 (FTOFIX32(1.0F) == 0x10000).
+ *
+ * Do NOT confuse this with enum nGCMatrixKind45, which is DECIMAL 45 and is
+ * handled by ndsRendererAdapterBuildRecalcLocalMtx; the 0x47/0x50 comments
+ * above record the same trap.
+ *
+ * Without this case the kind fell through to `default:` and
+ * ndsRendererAdapterBuildDObjFallbackMtx, which is TraRotRpyRSca WITH the
+ * DObj's translation. dEFManagerDamageSlashEffectDesc's root carries
+ * { 0x28, 0x45 } (efmanager.c:89-91) and efManagerDamageSlashMakeEffect writes
+ * the WORLD-SPACE collision contact into that same root's translate
+ * (efmanager.c:2500), so the contact was applied twice: once by the kind-0x28
+ * camera billboard's translation row and again by the fallback. The displacement
+ * is the billboard basis times the contact vector, so it grows with distance
+ * from the world origin and swings with the camera -- Link's slash damage
+ * effect drawing away from the hit.
+ *
+ * The other source users of 0x45 split into two shapes, both repaired by the
+ * same case: ShockSmall and StarRodSpark repeat DamageSlash's { 0x28, 0x45 }
+ * ROOT (efmanager.c:119-120, 239-240), so they double-translated identically;
+ * StarRodSpark, DamageFlySparks and FireSpark additionally give 0x45 to every
+ * NON-root node on its own (efmanager.c:246, 276, 396), where the fallback was
+ * adding each child's DObjDesc translate to a subtree the source leaves
+ * untranslated. Custom kinds 0x44, 0x49, 0x4A and 0x51 are still unhandled and
+ * still take that fallback; they carry other rows' effects (MBallThrown,
+ * MBallRays, DamageFlyMDust, FireSpark's root, YoshiEggEscape, itmain's hold)
+ * and are deliberately not touched here. */
+#define NDS_RENDERER_ADAPTER_ROT_SCA_MTX_KIND 0x45u
 
 volatile u32 gNdsRendererAdapterSectorArwingMtxCount __attribute__((used));
+/* Engagement proof for the kind-0x45 case above: a repair that leaves this at
+ * zero did not run. */
+volatile u32 gNdsRendererAdapterCustom45AppliedCount __attribute__((used));
 volatile u32 gNdsSectorArwingBasisDecline __attribute__((used));
 
 #if NDS_P2_STAGE_SECTOR
@@ -3262,6 +3303,24 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     case 39:
     case 40:
         ndsRendererAdapterBuildBillboardMtx(dobj, xobj->kind, &mtx);
+        break;
+    case NDS_RENDERER_ADAPTER_ROT_SCA_MTX_KIND:
+        /* lbCommonRotScaFuncMatrix: rotate + row scale, ZERO translation. The
+         * translation belongs to the sibling XObj on the same DObj (kind 0x28
+         * for every source user of this kind); taking it here as well applies
+         * the effect's world position twice. See the kind define above.
+         *
+         * Not added to the DObj-world cache-key ineligibility lists: unlike
+         * kinds 33-40 and the attach kinds, this one is a pure function of the
+         * DObj's own rotate/scale, which the key already covers. */
+        syMatrixTraRotRpyRSca(&mtx, 0.0F, 0.0F, 0.0F,
+                              dobj->rotate.vec.f.x,
+                              dobj->rotate.vec.f.y,
+                              dobj->rotate.vec.f.z,
+                              dobj->scale.vec.f.x,
+                              dobj->scale.vec.f.y,
+                              dobj->scale.vec.f.z);
+        gNdsRendererAdapterCustom45AppliedCount++;
         break;
     case nGCMatrixKindRecalcRotPyrR:
     case nGCMatrixKindRecalcRotRpyR:
