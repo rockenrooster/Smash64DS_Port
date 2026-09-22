@@ -5548,3 +5548,61 @@ precisely and then reached for the most generic explanation available
 ("rounding") instead of asking what in this codebase deliberately moves a
 vertex by one unit. The answer was one grep away, and the checker was already
 printing its count.
+
+## 2026-09-22 -- three deferral notes, all outlived by their reasons
+
+The Poke Ball spawn-VFX row turned out to be a commented-out call, not a
+render fault, and chasing its note found two more of the same shape. Recording
+all three together because the pattern is the finding.
+
+**1. Poke Ball rays -- FIXED.** `itMBallOpenInitVars`
+(`battleship_item_mball.c`) had the maker commented out behind a note saying
+`dEFManagerMBallRaysEffectDesc` is named *"in exactly one place -- inside
+NDS_EF_ROSTER_DESCS_PIKACHU -- so with Pikachu off the desc does not exist and
+the maker cannot be linked"*. The desc has since been moved into its own
+shared row `NDS_EF_ROSTER_DESCS_MBALL_RAYS` (`battleship_efmanager.c:1448`)
+gated `NDS_P2_PIKACHU || NDS_P2_PURIN`, both are 1 in the shipping config, and
+`nm` finds desc and maker already linked. The decomp makes the call
+(`it/itcommon/itmball.c:400`); the port had two of that function's three sites,
+and the two it had are the ones that keep the rays following the ball -- dead
+code NULL-checking a field nothing assigned. Restored.
+
+**2. `itMainSetAppearSpin` and `efManagerItemSpawnSwirlMakeEffect` -- ALREADY
+LIVE, and the notes claiming otherwise were wrong.** The spin is defined at
+`battleship_item_link_core.c:1868` and called from `:1550` and
+`battleship_item_map_core.c:98`. The swirl has a weak Task39-census stub at
+`battleship_item_link_core.c:111`, but the strong decomp definition arrives
+through `battleship_efmanager.c:210` and wins -- `addr2line` on the linked
+symbol lands in `decomp/.../ef/efmanager.c:6179`, not the stub. Both
+`battleship_item_mball.c` and `battleship_item_kamex.c:78` still described
+these as deferred.
+
+**3. Blastoise's hydro spawn sparks -- READY TO TAKE, not taken.**
+`battleship_item_kamex.c:229` defers
+`efManagerDamageSpawnSparksMakeEffect(&pos, ip->lr)`, and its note says *"the
+plain maker this source calls (decomp ef/efmanager.c:3493) and its effect desc
+are not ported ... When the efmanager import lands the plain sparks maker,
+restore the call verbatim."* Both halves of that blocker are gone:
+
+- `dEFManagerDamageSpawnSparksEffectDesc` IS in the shipped ELF (0x021dd670).
+- `efManagerDamageSpawnSparksMakeEffect` IS compiled --
+  `nm builds/build/battleship_efmanager.o` shows it as `T`. It is missing from
+  the final ELF only because `--gc-sections` drops it for having no caller.
+
+So restoring the call gives it a caller, gc keeps it, and the desc is already
+resolved. **Deliberately not done here:** Blastoise's muzzle flash is not a
+row in `docs/BUGS.md`, it changes a visual the owner has not reported, and it
+cannot be verified before the morning playtest. One line, with the evidence
+above, whenever it is wanted.
+
+**The pattern, which is the point.** A `-- deferred; see the note` comment
+reads as current rationale forever. Each of these three stated a concrete,
+checkable blocker, and in all three cases the blocker had been removed by
+later work that never revisited the comment. Two consequences: a feature stays
+switched off long after it would work, and the row it causes looks like a
+defect in whatever subsystem the symptom appears in -- this one sent effort
+into admission, material, alpha and palettes, all of which were fine.
+
+Treat every deferral comment as a dated claim. Verify its premise against the
+tree before accepting it, and never write one without a condition that can be
+re-tested.

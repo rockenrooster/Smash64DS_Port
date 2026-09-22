@@ -68,10 +68,18 @@ extern void gcPlayAnimAll(GObj *gobj);
  * (:436, :550) NULL-check the field, so a full effect pool still degrades to
  * the source's own empty-pool path.
  *
- * The sibling deferrals for itMainSetAppearSpin and
- * efManagerItemSpawnSwirlMakeEffect are NOT covered by this and remain open --
- * check their stated reasons against the tree before assuming they still
- * hold, because this one did not. */
+ * The two siblings this note used to list as deferred alongside it are ALSO
+ * already live, checked rather than assumed: `itMainSetAppearSpin` is defined
+ * at battleship_item_link_core.c:1868 and called from :1550 and
+ * battleship_item_map_core.c:98; `efManagerItemSpawnSwirlMakeEffect` has a
+ * weak Task39-census stub at battleship_item_link_core.c:111, but the strong
+ * decomp definition comes in through battleship_efmanager.c:210 and wins --
+ * `addr2line` on the linked symbol lands in
+ * decomp/.../ef/efmanager.c:6179, not the stub.
+ *
+ * So every deferral this note ever named has since been satisfied, and the
+ * note was the last thing keeping one of them switched off. Do not restore a
+ * deferral comment here without a date and a condition that can be re-tested. */
 extern GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 
 /* decomp itmball.h:8-29 verbatim. The port publishes no per-kind item procs,
