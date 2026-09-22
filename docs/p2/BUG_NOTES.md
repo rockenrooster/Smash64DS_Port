@@ -5887,3 +5887,68 @@ report for ThunderAmp, a byte compare of the shipped blob for Saffron, and the
 state-machine arithmetic for the CSS budget. Ten checkers are green. None of
 that is a pixel. The owner's playtest is the first runtime observation this
 batch will get.
+
+## 2026-09-22 -- two corrections, both to claims I made today
+
+### 1. The fighter-regression cause I published was decoded with the wrong constants
+
+The owner played r37 and reported every fighter missing body parts. I reverted
+`d97f7f3b2e1` (the runtime alpha-mux widening) and wrote a commit message
+asserting that four of the six fighter policy families flipped from "ignores
+texel alpha" to "consumes it".
+
+**That table was produced with TEXEL0 = 0 and TEXEL1 = 1. The real constants
+are `NDS_RENDERER_ACMUX_TEXEL0 1u` and `TEXEL1 2u`
+(nds_renderer_preamble.c:1981-1988), with COMBINED = 0.** I read every
+`Aa1 = COMBINED` as `Aa1 = TEXEL0`. Re-decoded correctly:
+
+    fam0 face/textured   Ad0=TEXEL0   C/D sees it   -> unchanged
+    fam1 body/material   no texel in any alpha slot -> unchanged
+    fam2                 no texel                   -> unchanged
+    fam3                 no texel                   -> unchanged
+    fam4 textured        Ad0=TEXEL0   C/D sees it   -> unchanged
+    fam5                 no texel                   -> unchanged
+    G_CC_MODULATEIA      Aa0/Aa1=TEXEL0             -> FLIPPED
+
+**No fighter policy family flips.** The published explanation is withdrawn.
+
+The revert stands on the weaker but still sufficient ground that it is the only
+repository-wide change in r37 that alters which texels are transparent, and the
+symptom is surfaces disappearing. But `alpha_ignores_texels` is evaluated on the
+LIVE combine at texture-conversion time, not on these generated families, so
+the families never bore on it either way -- which is the second error: the
+evidence I reached for could not have answered the question even had I decoded
+it correctly. The cause is NOT established, and the next step is an A/B, not
+another table.
+
+### 2. Saffron's gate animation works. Measured, over a full cycle.
+
+Forced the stage-select walk at Yamabuki by poking
+`gNdsMenuShellSssWalkTargetGkind = 7` on the shell-walk target, then sampled
+`gGRCommonStruct.yamabuki` and the gate's own child DObj translates every 400
+`grYamabukiGateProcUpdate` calls:
+
+    st=1 gw=0   mw=1092 mob=0         z=115.02  y=243.61   <- mid-open
+    st=1 gw=0   mw=891  mob=0         z=330.00  y=-30.00   <- OPEN
+    st=2 gw=0   mw=552  mob=37420192  z=330.00  y=-30.00   <- monster spawned
+    st=1 gw=818 mw=1765 mob=37420192  z=-0.00   y=390.00   <- CLOSED
+    st=1 gw=217 mw=1164 mob=37420192  z=-0.00   y=390.00
+    st=1 gw=0   mw=763  mob=37420192  z=330.00  y=-30.00   <- OPEN again
+
+The joints traverse the full open pose (TraZ 330 / TraY -30) and the full closed
+pose (0 / 390) and back, the state machine cycles Wait -> Open -> Wait, and the
+Pokemon item is really created (`monster_gobj` non-zero). **The door opens and
+closes periodically, which is what the owner is asking for.**
+
+So every mechanical hypothesis this row has carried is now refuted, including
+both of mine from this morning: the joints ARE advanced, the authored pose is
+NOT what a frozen gate would show, and the animation install is never refused
+(`gNdsGcAddAnimJointAllRefusedCount` 0, `NormalizeFailCount` 0).
+
+What is left is the one thing the first probe found and I then argued past:
+`gNdsYamabukiGroundSeenCount == 0`. `ndsStageGCDrawAllLoopIsYamabukiGate` is
+never reached, which matches the 2026-09-07 `ground_actor submit=0 reject=0`
+record. **The row is about the gate's GEOMETRY not being drawn, not its
+motion.** A door that is never rendered leaves a permanent hole, and a hole is
+what "always open" looks like. Next: whether the native stage owner emits
+bindings 17-19 at all.
