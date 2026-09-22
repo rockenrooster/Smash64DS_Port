@@ -22,19 +22,14 @@ Main Menus:
     -Yoshi's guard/shield (egg) is invisible **FIXED**
 -Link:
 -Pikachu
-    -neutral b attack VFX that walks terrain still has hard edges. **FIXED**
-    -down B effect doesn't render all related VFX, missing blue exp on pikachu. **FIXED**
-    -Pokeball Spawn Intro not playing VFX. **FIXED: the item ball's ray call was commented out; not a render fault.**
-    -face color is slightly different from body color. (lighting difference???) **FIXED: packet replay re-derived the shade word without the clamp.**
-    -when I choose pikachu, in match, fox opponent is frozen and cannot be hit. Sudden death works funnily enough though. **OPEN. Alive + hittable over 5 matches here; can't reproduce. Need stage, settings, does it animate?**
+    -**NOT FIXED in R36 ** face color is different from body color. 
+    -**NOT FIXED in R36 ** down B effect doesn't render all related VFX, missing blue exp on pikachu. 
+    
 -Samus
 -Kirby
-    -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **FIXED with the Pikachu face/body row.**
-    -Neutral A punch flurry VFX not drawing at correct locations. **FIXED in r26**
-    -Kirby neutral B , then A attack to spit out fighter, Star projectile VFX is invisible. **FIXED**
-    -Kirby has a wierd pose on results screen. **FIXED**
+    -**NOT FIXED in R36 ** face color is different from body color. 
 -Jigglypuff
-    -face color is slightly different from body color. (lighting difference???) **FIXED with the Pikachu face/body row.**
+    -**NOT FIXED in R36 ** face color is different from body color. 
 -Captain falcon
 -Ness
     **FIXED: hovering Ness at the CSS hung the ROM; a stale header truncated its owner image.**
