@@ -2538,3 +2538,63 @@ Note `rate=0 toggles=0` -- items are OFF in this preset, yet a ray request
 still occurred, so these rays come from the fighter-entry path rather than an
 item spawn. A Poke Ball ITEM scenario is therefore still unexercised here, and
 that is the remaining difference from the owner's report.
+
+## 2026-09-22 06:50 -- the Poke Ball rays row: a commented-out call behind a stale reason
+
+The render path was already proven (`root41=25 root42=25` from the fighter
+ENTRY trigger). The item trigger was not, so I built
+`NDS_HARNESS_ITEMS_ON=1` to force the preset's items on and measured again:
+
+    ITEMS rate=5 toggles=0xffffffff   (VeryHigh, every item enabled)
+    I01..I06  RAYS req=0 null=0 cand=0 rej=0 | RAYDRAW r41=0 r42=0 aSkip=0
+              actor make=12..18 refused=0 | latch=0/0
+    BALL arenaBefore=0 arenaCost=0
+    END efFallback=0 totalEfDraw=0 anim=8783/0
+
+The flag worked and the item system ran -- `gNdsItemAppearActorMakeCount`
+climbed 12 to 18 with `gNdsItemAppearActorRefusedCount` 0, the counter added
+earlier this session. **But `pres=0`: this walk target loops menus and never
+enters a battle, so no ball ever spawned.** `req=0` is consistent with the
+finding below and does not isolate it. Not claimed as an A/B.
+
+**The root cause is in the source, and it is plain.**
+`src/import/battleship_item_mball.c` carried, inside `itMBallOpenInitVars`:
+
+    /* efManagerMBallRaysMakeEffect(&dobj->translate.vec.f) -- deferred; see
+     * the note above the status-desc table. */
+    ip->item_vars.mball.effect_gobj = NULL;
+
+The note it points at says the desc is named "in exactly one place --
+battleship_efmanager.c:1493, inside NDS_EF_ROSTER_DESCS_PIKACHU -- so with
+Pikachu off the desc does not exist and the maker cannot be linked".
+
+**That stopped being true.** The desc now has its own shared row,
+`NDS_EF_ROSTER_DESCS_MBALL_RAYS` (`battleship_efmanager.c:1448`), gated
+`NDS_P2_PIKACHU || NDS_P2_PURIN` and deliberately kept single so the two never
+double-count the resolver capacity. Both flags are 1 in the shipping config,
+and `nm smash64ds.elf` finds BOTH `dEFManagerMBallRaysEffectDesc` and
+`efManagerMBallRaysMakeEffect` already linked. Nothing was missing but the
+call.
+
+**Source parity, which is this project's oracle:**
+`decomp/.../it/itcommon/itmball.c:400` is exactly
+`ip->item_vars.mball.effect_gobj = efManagerMBallRaysMakeEffect(&dobj->translate.vec.f);`
+and its three sites 343 / 400 / 451 map onto the port's 436 / (restored) / 550.
+The port had two of the three. The two it had are the ones that keep the rays
+following the ball, and they are dead code today because they NULL-check a
+field nothing ever assigns.
+
+Restored under `#if NDS_P2_PIKACHU || NDS_P2_PURIN` -- the same condition that
+admits the desc -- so a build with neither fighter keeps today's behaviour
+exactly. The maker returns NULL on a full effect pool, which is the source's
+own empty-pool path and what both consumers already expect. No release path is
+added because the source has none either; effects retire themselves.
+
+**Honest limit:** this is proven by source parity and linked symbols, not by a
+runtime before/after, because the menu-loop walk never spawns a ball. The
+owner's playtest is the runtime check.
+
+**And a standing warning the stale note earns:** the same file defers
+`itMainSetAppearSpin` and `efManagerItemSpawnSwirlMakeEffect` for reasons of
+the same vintage. Those are NOT covered here. Check their stated reasons
+against the tree before assuming they still hold -- this one did not.

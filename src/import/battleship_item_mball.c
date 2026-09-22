@@ -51,22 +51,28 @@ extern void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
                                    f32 anim_frame);
 extern void gcPlayAnimAll(GObj *gobj);
 
-/* efManagerMBallRaysMakeEffect (decomp ef/efmanager.h:124) is DEFERRED, not
- * merely undeclared. It builds its effect from dEFManagerMBallRaysEffectDesc,
- * and this port names that desc in exactly one place --
- * battleship_efmanager.c:1493, inside NDS_EF_ROSTER_DESCS_PIKACHU -- so with
- * Pikachu off the desc does not exist and the maker cannot be linked, let
- * alone called. The rays are the ball's opening flash and nothing else reads
- * them: every consumer of item_vars.mball.effect_gobj here (:423, :535) already
- * NULL-checks it, because the source's own maker returns NULL on a full effect
- * pool. Leaving the field NULL is therefore the source's own empty-pool path,
- * not a new one.
+/* efManagerMBallRaysMakeEffect (decomp ef/efmanager.h:124) WAS deferred here,
+ * on the grounds that this port named dEFManagerMBallRaysEffectDesc in exactly
+ * one place -- inside NDS_EF_ROSTER_DESCS_PIKACHU -- so with Pikachu off the
+ * desc did not exist and the maker could not be linked.
  *
- * Same deferral the item core already takes for itMainSetAppearSpin and
- * efManagerItemSpawnSwirlMakeEffect. When a landed fighter or the item core
- * owns EFCommonEffects3's rays desc, move that row out of the Pikachu list
- * into one gated on either owner -- a duplicate row would resolve the desc's
- * offsets twice. */
+ * THAT NOTE OUTLIVED ITS FACT, and kept the ball's opening flash switched off
+ * after the reason for switching it off had gone. The desc now has its own
+ * shared row, NDS_EF_ROSTER_DESCS_MBALL_RAYS (battleship_efmanager.c:1448),
+ * gated on NDS_P2_PIKACHU || NDS_P2_PURIN and deliberately kept single so the
+ * two never double-count the resolver capacity. Both flags are 1 in the
+ * shipping configuration and both symbols are already in smash64ds.elf.
+ *
+ * The call is restored below under that same condition. The rays are the
+ * ball's opening flash; the two sites that keep them following the ball
+ * (:436, :550) NULL-check the field, so a full effect pool still degrades to
+ * the source's own empty-pool path.
+ *
+ * The sibling deferrals for itMainSetAppearSpin and
+ * efManagerItemSpawnSwirlMakeEffect are NOT covered by this and remain open --
+ * check their stated reasons against the tree before assuming they still
+ * hold, because this one did not. */
+extern GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 
 /* decomp itmball.h:8-29 verbatim. The port publishes no per-kind item procs,
  * so the source header's declarations travel with this TU, exactly as the
@@ -492,9 +498,33 @@ void itMBallOpenInitVars(GObj *item_gobj)
             ftParamMakeRumble(fp, 8, 20);
         }
     }
-    /* efManagerMBallRaysMakeEffect(&dobj->translate.vec.f) -- deferred; see
-     * the note above the status-desc table. */
+    /* THE BALL'S OPENING FLASH, UN-DEFERRED. This was commented out, and the
+     * reason given above the status-desc table had gone stale: it said the
+     * rays desc is named "in exactly one place -- inside
+     * NDS_EF_ROSTER_DESCS_PIKACHU -- so with Pikachu off the desc does not
+     * exist and the maker cannot be linked". It has since been moved into its
+     * own shared row, NDS_EF_ROSTER_DESCS_MBALL_RAYS
+     * (battleship_efmanager.c:1448), gated on NDS_P2_PIKACHU || NDS_P2_PURIN
+     * precisely so a Purin-only build resolves it too. Both are 1 in the
+     * shipping configuration, and `nm smash64ds.elf` finds both
+     * dEFManagerMBallRaysEffectDesc and efManagerMBallRaysMakeEffect already
+     * linked. Nothing was missing but this call.
+     *
+     * That is the owner's row: the ball is visible and its spawn VFX is not.
+     * The two sites that keep the rays following the ball (:436, :550) are
+     * dead today for the same reason -- they NULL-check a field nothing ever
+     * assigns.
+     *
+     * Guarded on the same condition that admits the desc, so a build with
+     * neither fighter keeps exactly today's behaviour. The maker returns NULL
+     * on a full effect pool, which is the source's own empty-pool path and is
+     * what both consumers already expect. */
+#if NDS_P2_PIKACHU || NDS_P2_PURIN
+    ip->item_vars.mball.effect_gobj =
+        efManagerMBallRaysMakeEffect(&dobj->translate.vec.f);
+#else
     ip->item_vars.mball.effect_gobj = NULL;
+#endif
 
     itMBallOpenClearAnim(item_gobj);
 
