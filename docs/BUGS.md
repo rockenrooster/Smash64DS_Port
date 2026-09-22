@@ -21,7 +21,7 @@ Main Menus:
 -Pikachu
     -neutral b attack VFX that walks terrain still has hard edges. **AIR REGRESSION FIXED: the ground repair moved 3 images onto dedicated GL names, which the only eviction sweep cannot reach. Reclaimable VRAM went 6,144 -> 0, so the air jolt's 4,096 B upload had nothing to evict. Reclaim hook added.**
     -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
-    -Pokeball Spawn Intro not playing VFX. **Ball VISIBLE (owner). RAYS: four causes now refuted -- asset 85 not 86, 0x44 cannot double-translate, entry seam untouched, and at runtime RaysRequest=1 RaysNull=0 so construction SUCCEEDS. Live lead: made but drawn at alpha 0 (PRIM ramp hits 0 at tick 50).**
+    -Pokeball Spawn Intro not playing VFX. **Ball VISIBLE (owner). RAYS DRAW CORRECTLY in a roomy config: 20 submissions at non-zero alpha, 0 material rejects. Every renderer cause refuted. Remaining difference is ARENA -- probe had 145,948 B free, shipping Pikachu/Fox has 7,556 at GO with the GObj latch fired.**
     -face color is slightly different from body color. (lighting difference???) **Not lighting: N64 clamps shade then multiplies prim; DS folds prim first, so lit bodies wash white.**
     -when I choose pikachu, in match, fox opponent is frozen and cannot be hit. Sudden death works funnily enough though. **Appear-overrun REFUTED at runtime: a live Pikachu-vs-Fox match ran 2,043 frames with AppearOverrun 0 and AnimFallback 0 over 247 resolves. Not a stale figatree. Next suspect is the CSS->VS path the direct-battle probe skips.**
 -Samus

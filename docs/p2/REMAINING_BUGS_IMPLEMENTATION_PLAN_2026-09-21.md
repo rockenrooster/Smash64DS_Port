@@ -602,17 +602,42 @@ was never entered. Steps 1–3 of the reconstruction join step 4 as dead.
 What this probe cannot see is the shell's own CSS → VS path, which is where the
 owner meets the bug. That is the next place to look, not the figatree.
 
-### P03 rays — construction refusal is REFUTED
+### P03 rays — they DRAW here, so the row moves to the arena
 
-`RaysRequest` **1**, `RaysNull` **0**: constructed successfully, not
-GObj-starved, and the `ifCommonSetMaxNumGObj` latch is not what removes them.
-The live lead is now the fifth arm — made and submitted but invisible, because
-MBallRays' PRIM ramp reaches alpha 0 at source tick 50 while its rotation runs
-to 130, and a 0-alpha group is skipped. Read `gNdsEntryEffectWitness[0..3]` with
-`gNdsEntryEffectWitnessRoot = 0x0440`.
+`RaysRequest` 1, `RaysNull` 0, and a six-stop sample inside one gdb session:
 
-Also measured, retiring a standing worry: the Poké Ball costs **596 bytes**
-against 145,948 free. Its construction is not an arena event.
+| vblank | candidates | alpha skips |
+|---|---|---|
+| 83 | 0 | 0 |
+| 104 | **20** | **0** |
+| 125 | 50 | 20 |
+| 187 | 50 | 60 |
+
+Twenty submissions with **zero** alpha skips and zero material rejects before
+the skips start, and the candidate count freezes at 50 — which is the source's
+own fade (PRIM ramp hits alpha 0 at tick 50, rotation runs to 130). So the rays
+are admitted, materially correct, and visible in this configuration.
+
+That refutes the last renderer-side cause. **Every one is now eliminated:**
+admission, material state, matrix kind `0x44`, entry-seam ordering, alpha.
+
+What differs is the configuration. This probe runs Pikachu alone with **145,948
+bytes free**; the shipping shell measures **7,556 at GO** for Pikachu/Fox with
+the `ifCommonSetMaxNumGObj` latch fired, and `efManagerMBallRaysMakeEffect`
+takes no EFStruct so the five-free reserve does not protect it. The row belongs
+to §1.2 now. `RaysNull > 0` on the owner's r31 run confirms it; `RaysNull == 0`
+sends it back here.
+
+Also measured, retiring a standing worry: the Poké Ball costs **596 bytes**.
+Its construction is not an arena event.
+
+### Scope limit on both refutations above
+
+The frozen-Fox and rays reads were taken with roughly twenty times the shipping
+roster's free arena. They rule out those mechanisms **given memory**; they do
+not rule out the same symptoms once memory is gone. That is why the witnesses
+ship in r31 — so the shipping configuration can answer it without another lab
+build.
 
 ### Tonight's reclaim paths are dormant, not wrong
 

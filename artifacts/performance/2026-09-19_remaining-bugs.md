@@ -1889,3 +1889,47 @@ so both repairs are dormant rather than wrong -- and the air-jolt regression did
 not reproduce in this configuration. `gNdsNativeKirbyHatTableHits` is absent
 from this ELF because Kirby is not admitted in it; that counter needs a
 Kirby-bearing build.
+
+### P03 rays, second read: they DRAW here, and that relocates the row
+
+Same probe ROM, witness armed at boot, six stops in one gdb session (the stub
+refuses a second attach, so all sampling has to happen inside one):
+
+| stop | vblank | `MBallRaysCandidate` | `EntryEffectNativeAlphaSkip` |
+|---|---|---|---|
+| T1 | 83 | 0 | 0 |
+| T2 | 104 | **20** | **0** |
+| T3 | 125 | 50 | 20 |
+| T4 | 146 | 50 | 41 |
+| T5 | 187 | 50 | 60 |
+| T6 | 388 | 50 | 60 |
+
+`MBallRaysMaterialReject` stayed 0 throughout.
+
+**Between T1 and T2 the rays were submitted twenty times with zero alpha
+skips.** They were admitted, their material contract passed, and they drew.
+Only afterwards do the skips climb, and the candidate count freezes at 50 --
+which is the source's own behaviour: the PRIM ramp reaches alpha 0 at tick 50
+while the rotation runs to 130, so the tail is *supposed* to be skipped. The
+extra skips past T3 belong to other entry effects; that counter is shared.
+
+So the alpha-0 arm is refuted too, and with it every renderer-side cause for
+this row: admission, material state, matrix kind `0x44`, entry-seam ordering and
+now alpha. In this configuration the Poké Ball rays are correct.
+
+**What that leaves is the configuration itself.** This probe runs
+`NDS_P2_PIKACHU` alone in a direct-battle target with **145,948 bytes free**;
+the owner meets the bug in the shipping shell, where the measured Pikachu/Fox
+figure is **7,556 free at GO** with the `ifCommonSetMaxNumGObj` latch fired.
+`efManagerMBallRaysMakeEffect` takes no EFStruct, so the source's five-free
+reserve does not protect it -- it needs only `gcMakeGObjSPAfter`, which the
+latch caps. The row therefore moves from the renderer to the arena, and
+`gNdsEntryMBallRaysRequestCount` against `...NullCount` on the owner's r31 run
+settles it: Null > 0 is allocation, Null == 0 sends it back here.
+
+**Scope note, and it applies to the frozen-Fox read above too.** Both
+refutations were taken in a configuration with roughly twenty times the free
+arena of the shipping roster. They rule out a mechanism *given memory*; they do
+not rule out the same symptom appearing when memory is gone. The witnesses are
+compiled into r31 precisely so the shipping configuration can answer that
+without another lab build.
