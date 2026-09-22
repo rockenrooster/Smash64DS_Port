@@ -6624,6 +6624,27 @@ static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2ClampDiffuseToMaterial(
     {
         return (u16)diffuse;
     }
+    /* A WHITE PRIM IS THE IDENTITY FOLD, SO IT MUST NOT BE CAPPED.
+     *
+     * With prim = 0xffffff the source's material path is
+     * clamp8(light2 + light1 * dot) * 255/255 -- literally the no-material
+     * path. The two agree in the source, and they agreed in the port too,
+     * because folding white changes nothing. Capping diffuse at prim - ambient
+     * broke that agreement: measured on Kirby, a no-material epoch wrote
+     * diffuse (31,31,31) while a white-prim epoch beside it wrote (22,22,22)
+     * against the same (9,9,9) ambient. Both reach 31 at full light, but they
+     * climb on different curves, and that seam between two runs on one fighter
+     * is the owner's "face and body are two distinct colours". Holding neutral
+     * B appeared to cure it only because changing model parts moves the seam
+     * off that boundary.
+     *
+     * So cap only where the fold actually darkens. The tinted case the cap was
+     * written for -- Pikachu 0xFFD933, Kirby 0x00FF5A, Purin 0xFFCDD8 -- is
+     * unaffected and still lands on prim at full light. */
+    if (((material_color >> 8) & 0x00ffffffu) == 0x00ffffffu)
+    {
+        return (u16)diffuse;
+    }
     /* Full white light through the same fold IS the modulated prim colour, so
      * the cap comes from the identical arithmetic, not a second copy of it. */
     prim = ndsRendererR2MaterialColor15(0xffffffffu, material_color,
