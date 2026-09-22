@@ -1530,3 +1530,30 @@ this is why.
 
 Deliberately NOT reverted: the source argument is concrete and reverting on a
 guess is the failure mode this session kept hitting. Decide it with the capture.
+
+### The face/body probe cannot be a breakpoint. It needs an in-ROM witness.
+
+Ran it on the r24 shell ROM. It dies: `0xfffffffc in ?? ()` after 43.8 s, the
+CPU-wander signature.
+
+Two reasons, both structural, so do not retry this shape:
+  * `ndsRendererHardwareWriteDiffuseAmbient` resolves into ITCM (`0x1ffafc0`,
+    2 locations) and fires once per material epoch per fighter per frame.
+    Attaching gdb commands there is far too hot for this harness -- the same
+    class of failure as the 37-breakpoint fan-out already recorded.
+  * In this build `ifCommonSetMaxNumGObj` resolved to **address 0** with 3
+    locations, so the frame-tick breakpoint was planted at 0 and corrupted
+    execution on its own. (The heap trace on this same ROM survived only
+    because it got its lines out before dying.)
+
+**The right instrument is a witness store**, which is this repo's own standing
+lesson: a small fixed array written by the shade pass -- for each of Kirby's
+epochs, `epoch_lit`, `sNdsR2EpochUnlitVertexColor`, and the packed
+diffuse/ambient -- plus a generation counter, read ONCE at a breakpoint that is
+already cheap. Then run twice, with and without neutral B held, and diff.
+
+Costs one small source addition and one build; it answers the owner's exact
+question -- is the face unlit or the body -- instead of inferring it. Do this
+before touching the material formula again. The clamp-order cap that shipped in
+r23/r24 is arithmetically correct at full light and is NOT the reported defect;
+judge it on its own merits, separately.
