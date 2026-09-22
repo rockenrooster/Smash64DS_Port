@@ -1742,3 +1742,31 @@ matrix kind 0x44, which still takes the translate-bearing fallback and sits next
 to the 0x45 arm just changed; (3) the entry-seam edits in
 `battleship_ftcommon_entry.c` -- the widened rays prototype and the `#error`
 dependency -- altered the order the two effects are made in.
+
+### K04 spit-star: same class as the Poke Ball, and now a known shape
+
+Owner on r25: still invisible. Three things are already settled and should not
+be re-derived:
+  * both makers were `#define ... NULL` and are restored, so it CONSTRUCTS;
+  * it is NOT GObj-starved -- the reserve leaves ~10 free slots after the
+    mid-match latch, measured;
+  * the renderer side was never examined.
+
+It is the Poke Ball's twin. `llITCommonDataKirbyStarDObjDesc` addresses
+**ITCommonObject (file 86)** -- the same asset as `dEFManagerMBallThrownEffectDesc`,
+whose descriptor sits at `0x9430` with drawable roots `0x9250` and `0x9340`.
+The ball was invisible for exactly one reason: its roots reached the submit path
+and nothing claimed them, which publishes `NO_PROGRAM` and reads like missing
+geometry. The star's roots are different offsets in that same file and have no
+bake and no admission arm at all.
+
+So the repair shape is the one just proven on the ball, and it is now cheap:
+  1. decode the star's roots from the descriptor at its ITCommonObject offset,
+     the same way `generate_nds_native_item_wave1_core.py` pins the ball's
+     `0x9250`/`0x9340` from `ITAttributes.data`;
+  2. bake them from source geometry through a generator;
+  3. admit them, guarded on `loaded->asset_id` exactly as the ball's arm is.
+
+**And this time do the sibling census FIRST** -- the ball's admission arm broke
+the rays sitting behind it on the same path. Enumerate every effect submitted
+from asset 86 before adding a second arm to it.
