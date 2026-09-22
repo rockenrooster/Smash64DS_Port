@@ -5791,10 +5791,13 @@ NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_yamabuki_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 2 \
-#          --format pcm16 --output assets/audio/bgm_inishie_pcm16.raw
+#          --output assets/audio/bgm_inishie_ima.bin
+# The renderer picks its step-index Viterbi encoder for sequences 2 and 3 by
+# itself (TRELLIS_IMA_SEQUENCES); no flag. 2026-09-22: IMA again after the
+# PCM16 stream of 2026-09-07, on the owner's "ALL BGM should be IMA-ADPCM".
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
-	audio/bgm_inishie_pcm16.raw
+	audio/bgm_inishie_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 5 \
 #          --output assets/audio/bgm_jungle_ima.bin
@@ -5817,13 +5820,13 @@ NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_sector_ima.bin
 endif
 # Mushroom Kingdom's <=30-second source swap uses sequence 3
-# (nSYAudioBGMInishieHurry). Keep it PCM16 like sequence 2; both reuse the
-# existing PCM16 stream ring with no additional DS RAM. Reproduce with:
-#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 3 --format pcm16 \
-#          --output assets/audio/bgm_inishie_hurry_pcm16.raw
+# (nSYAudioBGMInishieHurry), Viterbi-encoded IMA like sequence 2 through the
+# same 16,392-byte ring as every track. Reproduce with:
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 3 \
+#          --output assets/audio/bgm_inishie_hurry_ima.bin
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
-	audio/bgm_inishie_hurry_pcm16.raw
+	audio/bgm_inishie_hurry_ima.bin
 endif
 # 2026-09-05: reproduce each with
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
@@ -5863,12 +5866,14 @@ endif
 endif
 
 # Superseded BGM assets can survive an incremental build-directory reuse and
-# are otherwise silently repacked by ndstool.
+# are otherwise silently repacked by ndstool. The two Mushroom Kingdom PCM16
+# streams (5,598,330 B) were retired 2026-09-22 for the IMA pair above.
 export NDS_AUDIO_OBSOLETE_DERIVED_FILES := \
 	audio/bgm_pupupu_pcm16.raw \
 	audio/bgm_win_mario_pcm16.raw \
 	audio/bgm_win_fox_pcm16.raw \
-	audio/bgm_inishie_hurry_ima.bin \
+	audio/bgm_inishie_pcm16.raw \
+	audio/bgm_inishie_hurry_pcm16.raw \
 	audio/bgm_results_pcm16.raw
 ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_FGM),1)
 NDS_AUDIO_DERIVED_FILES += \
@@ -7594,9 +7599,6 @@ ifeq ($(NDS_P2_STAGE_INISHIE),1)
 $(NITROFS_DIR)/audio/bgm_inishie_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
-$(NITROFS_DIR)/audio/bgm_inishie_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_inishie_pcm16.raw
-	@mkdir -p $(dir $@)
-	@cp $< $@
 endif
 
 ifeq ($(NDS_P2_STAGE_JUNGLE),1)
@@ -7641,7 +7643,7 @@ $(NITROFS_DIR)/audio/bgm_win_zelda_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win
 	@mkdir -p $(dir $@)
 	@cp $< $@
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
-$(NITROFS_DIR)/audio/bgm_inishie_hurry_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_inishie_hurry_pcm16.raw
+$(NITROFS_DIR)/audio/bgm_inishie_hurry_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_hurry_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif

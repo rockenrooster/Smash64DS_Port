@@ -77,6 +77,30 @@ IMA_STEP_TABLE = (
     11487, 12635, 13899, 15289, 16818, 18500, 20350, 22385, 24623,
     27086, 29794, 32767,
 )
+# Mushroom Kingdom (sequence 2) and its <=30-second Hurry swap (sequence 3)
+# are the two tracks the greedy nibble choice in ima_encode_sample cannot
+# follow. Their voices hold flat plateaus (the greedy step index sits at its
+# floor for 41% / 26% of samples) and then jump by up to ~6,000 in one sample,
+# so every edge pays several samples of slope overload while the step climbs
+# back: 2.95% / 3.81% of the samples carry 74% / 76% of the codec error, and
+# greedy IMA measures 20.34 / 20.27 dB SNR against 25-29 dB for the other
+# stage tracks (the render fixes of b6d95d3bd25 and 88114d23828 lifted them
+# only from 18.6 / 18.98 dB). These two sequences are searched instead by
+# trellis_ima_encode_packet, which raises the step ahead of an edge: 27.19 /
+# 27.28 dB. The container layout, byte count and runtime path stay those of
+# every other IMA track. Every other sequence keeps the greedy encoder, so its
+# payload and pins do not move.
+SEQ_INDEX_INISHIE = 2
+SEQ_INDEX_INISHIE_HURRY = 3
+TRELLIS_IMA_SEQUENCES = frozenset((SEQ_INDEX_INISHIE, SEQ_INDEX_INISHIE_HURRY))
+IMA_ENCODER_GREEDY = "greedy"
+IMA_ENCODER_TRELLIS = "viterbi-step-index"
+# The DS SPU clamps its ADPCM predictor to +/-0x7FFF (GBATEK "DS Sound"), one
+# short of the greedy encoder's -0x8000 floor. The trellis scores every path
+# with the decode the hardware runs, and the reported error comes from that
+# decode of the emitted nibbles.
+DS_IMA_PREDICTOR_MIN = -0x7FFF
+DS_IMA_PREDICTOR_MAX = 0x7FFF
 
 
 def load_module(path: Path, name: str):
@@ -952,10 +976,112 @@ def ima_encode_sample(sample: int, predictor: int,
     return code, predictor, index
 
 
+def ds_ima_decode_packet(codes, predictor: int, index: int) -> list[int]:
+    """Decode one packet's nibbles the way the DS SPU does (GBATEK)."""
+    decoded = []
+    for code in codes:
+        step = IMA_STEP_TABLE[index]
+        diff = step >> 3
+        if code & 1:
+            diff += step >> 2
+        if code & 2:
+            diff += step >> 1
+        if code & 4:
+            diff += step
+        predictor = predictor - diff if code & 8 else predictor + diff
+        predictor = max(DS_IMA_PREDICTOR_MIN, min(DS_IMA_PREDICTOR_MAX, predictor))
+        index = max(0, min(88, index + IMA_INDEX_TABLE[code]))
+        decoded.append(predictor)
+    return decoded
+
+
+_TRELLIS_TABLES = None
+
+
+def _trellis_tables():
+    """Decoder deltas per (step index, code), and for every destination step
+    index the flat source transitions (index * 16 + code) that land on it,
+    padded with a sentinel that points at an impossible cost."""
+    global _TRELLIS_TABLES
+    if _TRELLIS_TABLES is None:
+        import numpy as np  # only the two trellis sequences need numpy
+
+        index_count = len(IMA_STEP_TABLE)
+        diff = np.zeros((index_count, 16), dtype=np.int64)
+        arrivals = [[] for _ in range(index_count)]
+        for index, step in enumerate(IMA_STEP_TABLE):
+            for code in range(16):
+                delta = step >> 3
+                if code & 1:
+                    delta += step >> 2
+                if code & 2:
+                    delta += step >> 1
+                if code & 4:
+                    delta += step
+                diff[index, code] = -delta if code & 8 else delta
+                target = max(0, min(88, index + IMA_INDEX_TABLE[code]))
+                arrivals[target].append(index * 16 + code)
+        sentinel = index_count * 16
+        width = max(len(sources) for sources in arrivals)
+        gather = np.full((index_count, width), sentinel, dtype=np.int64)
+        for target, sources in enumerate(arrivals):
+            gather[target, :len(sources)] = sources
+        _TRELLIS_TABLES = (np, diff, gather, sentinel)
+    return _TRELLIS_TABLES
+
+
+def trellis_ima_encode_packet(samples: list[int],
+                              start_predictor: int) -> tuple[list[int], int, int]:
+    """Lowest squared-error nibble sequence for one DS IMA-ADPCM packet.
+
+    A Viterbi search over the 89 step indices, one survivor per index: the
+    path that reaches an index with the least accumulated squared error keeps
+    it. Unlike the greedy choice, a path may spend a few samples raising its
+    step before an edge. Each packet header stores its own start predictor and
+    index, so every index starts at start_predictor with zero cost and the
+    winning path names the header index. Costs are exact int64 sums and ties
+    take the first minimum, so every host emits the same bytes.
+
+    Returns (codes, start_index, squared_error).
+    """
+    np, diff, gather, sentinel = _trellis_tables()
+    count = len(samples)
+    rows = np.arange(gather.shape[0])
+    cost = np.zeros(gather.shape[0], dtype=np.int64)
+    predictor = np.full(gather.shape[0], start_predictor, dtype=np.int64)
+    back = np.empty((count, gather.shape[0]), dtype=np.int16)
+    candidate_cost = np.empty(sentinel + 1, dtype=np.int64)
+    candidate_cost[sentinel] = np.int64(1) << 62
+    candidate_predictor = np.zeros(sentinel + 1, dtype=np.int64)
+    for position, sample in enumerate(samples):
+        stepped = predictor[:, None] + diff
+        np.clip(stepped, DS_IMA_PREDICTOR_MIN, DS_IMA_PREDICTOR_MAX, out=stepped)
+        error = sample - stepped
+        candidate_cost[:sentinel] = (cost[:, None] + error * error).ravel()
+        candidate_predictor[:sentinel] = stepped.ravel()
+        arriving = candidate_cost[gather]
+        choice = arriving.argmin(axis=1)
+        winner = gather[rows, choice]
+        cost = arriving[rows, choice]
+        predictor = candidate_predictor[winner]
+        back[position] = winner
+    state = int(cost.argmin())
+    squared_error = int(cost[state])
+    codes = [0] * count
+    for position in range(count - 1, -1, -1):
+        winner = int(back[position, state])
+        codes[position] = winner & 15
+        state = winner >> 4
+    return codes, state, squared_error
+
+
 def build_ima_packets(pcm: bytes, loop_start_byte: int,
-                      looping: bool) -> tuple[bytes, dict]:
+                      looping: bool,
+                      encoder: str = IMA_ENCODER_GREEDY) -> tuple[bytes, dict]:
     if len(pcm) == 0 or len(pcm) & 1 or loop_start_byte & 1:
         raise ValueError("PCM and loop offsets must contain whole samples")
+    if encoder not in (IMA_ENCODER_GREEDY, IMA_ENCODER_TRELLIS):
+        raise ValueError(f"unknown IMA encoder {encoder!r}")
     samples = list(struct.unpack(f"<{len(pcm) // 2}h", pcm))
     loop_start_sample = loop_start_byte // 2
     if looping and not 0 < loop_start_sample < len(samples):
@@ -980,17 +1106,36 @@ def build_ima_packets(pcm: bytes, loop_start_byte: int,
     source_energy = 0
     max_error = 0
     for start, end in boundaries:
-        packet_predictor = predictor
-        packet_index = index
-        codes = []
-        for sample in samples[start:end]:
-            code, predictor, index = ima_encode_sample(
-                sample, predictor, index)
-            codes.append(code)
-            error = sample - predictor
-            squared_error += error * error
-            source_energy += sample * sample
-            max_error = max(max_error, abs(error))
+        if encoder == IMA_ENCODER_TRELLIS:
+            # The header is this packet's whole decoder state, so the search
+            # starts from the true previous sample and picks the index itself.
+            packet_predictor = samples[start - 1] if start else samples[0]
+            codes, packet_index, packet_error = trellis_ima_encode_packet(
+                samples[start:end], packet_predictor)
+            decoded_error = 0
+            for sample, value in zip(
+                    samples[start:end],
+                    ds_ima_decode_packet(codes, packet_predictor, packet_index)):
+                error = sample - value
+                decoded_error += error * error
+                source_energy += sample * sample
+                max_error = max(max_error, abs(error))
+            if decoded_error != packet_error:
+                raise AssertionError(
+                    "trellis cost disagrees with the DS decode of its nibbles")
+            squared_error += decoded_error
+        else:
+            packet_predictor = predictor
+            packet_index = index
+            codes = []
+            for sample in samples[start:end]:
+                code, predictor, index = ima_encode_sample(
+                    sample, predictor, index)
+                codes.append(code)
+                error = sample - predictor
+                squared_error += error * error
+                source_energy += sample * sample
+                max_error = max(max_error, abs(error))
         while len(codes) & 7:
             codes.append(0)
         payload = bytearray(struct.pack(
@@ -1025,6 +1170,7 @@ def build_ima_packets(pcm: bytes, loop_start_byte: int,
         "packet_count": len(records),
         "loop_packet_index": loop_packet_index,
         "loop_record_offset": loop_record_offset,
+        "ima_encoder": encoder,
         "ima_rms_error": rms_error,
         "ima_snr_db": snr_db,
         "ima_max_error": max_error,
@@ -1118,7 +1264,9 @@ def main() -> int:
     source_pcm_digest = hashlib.sha256(pcm).hexdigest()
     if args.format == "ima-packets":
         payload, format_metadata = build_ima_packets(
-            pcm, loop["loop_start_byte"], loop["looping"])
+            pcm, loop["loop_start_byte"], loop["looping"],
+            IMA_ENCODER_TRELLIS if args.sequence_index in TRELLIS_IMA_SEQUENCES
+            else IMA_ENCODER_GREEDY)
         format_name = "Nintendo DS IMA-ADPCM packet stream"
     else:
         payload = pcm

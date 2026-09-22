@@ -6413,3 +6413,76 @@ the frame is byte-identical. The rule engaged 3 times on Castle and 0 times on
 every other stage, and stages 1-8 captured at the same frame are byte-identical
 between r49 and r50 (0 differing pixels each).
 Evidence: `artifacts/visibility/2026-09-22_castle-roof-wrap/`.
+
+## Mushroom Kingdom BGM back on IMA-ADPCM: the encoder was the defect, not the codec (2026-09-22)
+
+Bug: "Mushroom Kingdom: ALL BGM should be IMA-ADPCM" (`docs/BUGS.md`, Audio).
+Candidate: branch `agent/bgm-ima` on `2a5bf793c20`, assets rendered offline.
+Trigger: any Mushroom Kingdom match (sequence 2); a timed match reaching
+`time_remain <= I_SEC_TO_TICS(30)` swaps to sequence 3 (`if/ifcommon.c:2498-2506`).
+Expected: both tracks stream as IMA packets through the shared 16,392-byte ring
+like the other 45; same loop points, same Hurry swap.
+
+**Why they were PCM16.** Sequence 2 moved on 2026-09-07 (`958ea787074`) because
+greedy IMA measured 18.6 dB against 25-29 dB for the other stage tracks;
+sequence 3 followed on 2026-09-09 (`b6d95d3bd25`, 18.98 dB). The later render
+fixes (band-limited mix in `b6d95d3bd25`, scale-12 decode and tempo map in
+`88114d23828`) lifted greedy only to **20.34 / 20.27 dB** on the source PCM
+the two PCM16 assets carry today, so the reason survived them.
+
+**Where the error is.** On that PCM the greedy step index sits at its floor
+(index 0) for 41% / 26% of samples: plateaus and silent gaps. Edges then jump
+up to ~6,000 in one sample (99.9th percentile ~3,800), and the step needs
+several samples to catch up. 2.95% / 3.81% of samples, all in slope overload,
+carry 74% / 76% of the error energy; max error 8,205 / 8,162. The 2026-09-06
+beam probe (width 16, horizon 6) gained +0.2 dB. It kept the paths with the
+least recent error, which likely discards any path that raises its step
+before an edge.
+
+**Fix.** `render-audio-bgm.py` encodes sequences 2 and 3
+(`TRELLIS_IMA_SEQUENCES`) with a Viterbi search over the 89 step indices, one
+survivor per index, scored by the DS SPU decode (GBATEK clamp +/-0x7FFF). Each
+packet header carries its own state, so every packet starts from the true
+previous sample with its start index chosen by the search. Container, byte
+count, packet layout and loop packet/record are the greedy ones; every other
+sequence keeps the greedy encoder. Runtime: both rows are IMA rows again. The
+PCM16 arm, the per-row format field, the chunk constants and
+`gNdsAudioBgmPcm16UnderrunCount` are gone; no other track used them. The
+Makefile stages both `_ima.bin` files and prunes both PCM16 raws from reused
+NitroFS trees.
+
+**Proof (offline).**
+
+    Track          greedy SNR / max    Viterbi SNR / max    bytes      sha256
+    Inishie (2)    20.34 dB / 8,205    27.19 dB / 1,525     981,212    1fa1c8ba...f7d1ed1e
+    Hurry (3)      20.27 dB / 8,162    27.28 dB / 1,757     420,548    a2ab007b...ab5240c5
+
+- The source PCM is byte-identical to the PCM16 assets (`a1493cee...8698ce72`,
+  `17162f69...e2bdff1e`), so only the codec changed.
+- An independent parser and decoder reproduce both SNRs from the files. The
+  worst packet-seam jump error is 655 / 484, inside the codec error.
+- Dream Land re-rendered through the edited script is byte-identical
+  (`3a996368...efc11f7d`). Greedy on sequence 2's PCM reproduces the old
+  `bgm_inishie_ima.bin` (`2a920500...fc792691`).
+- `scripts/sfx/test_bgm_ima_trellis.py`: 7 tests pass. The search cost equals
+  the decode error, and on a pulse train it scores 16.71 dB against greedy's
+  6.96.
+- `check-audio-bgm-derived-assets.ps1` passes; ten mutants fail it: both stale
+  assets, the old runtime, the old header, a live file in the prune list, a
+  missing staging rule, an unpruned raw, a raw row path, a corrupt packet, and
+  a packet count only the container census can see.
+- ROM: NitroFS drops 4,196,570 B (5,598,330 PCM16 -> 1,401,760 IMA). RAM: the
+  same ring; the table loses 4 B per row and the PCM16 arms are gone. Refills:
+  16,384-sample packets instead of 4,098, so the seam deadline is ~743 ms
+  rather than ~186 ms. The shortest packets are the loop-split tails (Inishie
+  1,721 samples, Hurry 1,414).
+
+`build.ps1` step 5 had been stopping since `958ea787074`: the Inishie row named
+`NDS_AUDIO_BGM_PATH_INISHIE_PCM16`, which its `_ima.bin` path map cannot
+resolve. With both rows on `_ima.bin` paths it resolves 47 of 47 rows.
+
+Evidence: WAVs of the DS decode (Viterbi and greedy) and the PCM16 source in
+the worktree, `artifacts/audio/2026-09-22_inishie_bgm_ima/` (gitignored).
+Owner: pending (listen on Mushroom Kingdom, including the <=30 s swap).
+Remaining: integrator build of the default and battle ROMs. Natural-path
+counters over a full loop wrap (~89 s) and the Hurry swap. Owner listen.

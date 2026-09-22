@@ -88,6 +88,48 @@ function Get-U32([byte[]]$Data, [int]$Offset) {
     return [BitConverter]::ToUInt32($Data, $Offset)
 }
 
+# The BGA1 header and packet census the runtime's ndsAudioBgmReadHeader and
+# ndsAudioBgmReadPacket enforce, for any track object carrying Name,
+# SourceBytes, LoopSample, Packets, LoopPacket, LoopRecord and Looping.
+function Assert-BgmContainer($Track, [byte[]]$Data) {
+    $magic = [Text.Encoding]::ASCII.GetString($Data, 0, 4)
+    if ($magic -ne 'BGA1' -or (Get-U16 $Data 4) -ne 1 -or
+        (Get-U16 $Data 6) -ne 40 -or (Get-U32 $Data 8) -ne 22050 -or
+        (Get-U32 $Data 12) -ne ($Track.SourceBytes / 2) -or
+        (Get-U32 $Data 16) -ne $Track.LoopSample -or
+        (Get-U32 $Data 20) -ne 16384 -or
+        (Get-U32 $Data 24) -ne $Track.Packets -or
+        (Get-U32 $Data 28) -ne $Track.LoopPacket -or
+        (Get-U32 $Data 32) -ne $Track.LoopRecord -or
+        (((Get-U32 $Data 36) -band 1) -ne [int]$Track.Looping)) {
+        throw "$($Track.Name) container header changed or is malformed."
+    }
+
+    [int64]$sampleTotal = 0
+    $offset = 40
+    for ($packet = 0; $packet -lt $Track.Packets; $packet++) {
+        if ($packet -eq $Track.LoopPacket -and $offset -ne $Track.LoopRecord) {
+            throw "$($Track.Name) loop record does not point at its loop packet."
+        }
+        $samples = Get-U32 $Data $offset
+        $payloadBytes = Get-U32 $Data ($offset + 4)
+        $expectedPayload = 4 + ([int][Math]::Ceiling($samples / 8.0) * 4)
+        $payloadOffset = $offset + 8
+        if ($samples -lt 1 -or $samples -gt 16384 -or
+            $payloadBytes -ne $expectedPayload -or $payloadBytes -gt 8196 -or
+            ($payloadBytes -band 3) -ne 0 -or
+            ($payloadOffset + $payloadBytes) -gt $Data.Length -or
+            $Data[$payloadOffset + 2] -gt 88 -or $Data[$payloadOffset + 3] -ne 0) {
+            throw "$($Track.Name) packet $packet is malformed."
+        }
+        $sampleTotal += $samples
+        $offset = $payloadOffset + $payloadBytes
+    }
+    if ($sampleTotal -ne ($Track.SourceBytes / 2) -or $offset -ne $Data.Length) {
+        throw "$($Track.Name) packet census does not exactly cover its source stream/container."
+    }
+}
+
 [int64]$compressedTotal = 0
 foreach ($track in $tracks) {
     $asset = Join-Path $Root "assets/audio/$($track.File)"
@@ -130,42 +172,7 @@ foreach ($track in $tracks) {
         throw 'Pupupu pitch-bend witness changed: expected 3 applied events, max 4 cents.'
     }
 
-    $magic = [Text.Encoding]::ASCII.GetString($data, 0, 4)
-    if ($magic -ne 'BGA1' -or (Get-U16 $data 4) -ne 1 -or
-        (Get-U16 $data 6) -ne 40 -or (Get-U32 $data 8) -ne 22050 -or
-        (Get-U32 $data 12) -ne ($track.SourceBytes / 2) -or
-        (Get-U32 $data 16) -ne $track.LoopSample -or
-        (Get-U32 $data 20) -ne 16384 -or
-        (Get-U32 $data 24) -ne $track.Packets -or
-        (Get-U32 $data 28) -ne $track.LoopPacket -or
-        (Get-U32 $data 32) -ne $track.LoopRecord -or
-        (((Get-U32 $data 36) -band 1) -ne [int]$track.Looping)) {
-        throw "$($track.Name) container header changed or is malformed."
-    }
-
-    [int64]$sampleTotal = 0
-    $offset = 40
-    for ($packet = 0; $packet -lt $track.Packets; $packet++) {
-        if ($packet -eq $track.LoopPacket -and $offset -ne $track.LoopRecord) {
-            throw "$($track.Name) loop record does not point at its loop packet."
-        }
-        $samples = Get-U32 $data $offset
-        $payloadBytes = Get-U32 $data ($offset + 4)
-        $expectedPayload = 4 + ([int][Math]::Ceiling($samples / 8.0) * 4)
-        $payloadOffset = $offset + 8
-        if ($samples -lt 1 -or $samples -gt 16384 -or
-            $payloadBytes -ne $expectedPayload -or $payloadBytes -gt 8196 -or
-            ($payloadBytes -band 3) -ne 0 -or
-            ($payloadOffset + $payloadBytes) -gt $data.Length -or
-            $data[$payloadOffset + 2] -gt 88 -or $data[$payloadOffset + 3] -ne 0) {
-            throw "$($track.Name) packet $packet is malformed."
-        }
-        $sampleTotal += $samples
-        $offset = $payloadOffset + $payloadBytes
-    }
-    if ($sampleTotal -ne ($track.SourceBytes / 2) -or $offset -ne $data.Length) {
-        throw "$($track.Name) packet census does not exactly cover its source stream/container."
-    }
+    Assert-BgmContainer $track $data
     $compressedTotal += $data.Length
 }
 
@@ -183,7 +190,11 @@ $required = @(
     'NDS_AUDIO_BGM_PUPUPU_ASSET_SHA256_LO 0xefc11f7du',
     'NDS_AUDIO_BGM_ZEBES_STREAM_SHA256_LO 0xebaae72du',
     'NDS_AUDIO_BGM_ZEBES_ASSET_SHA256_LO 0x62b6ab33u',
-    'NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0xfc792691u',
+    'NDS_AUDIO_BGM_INISHIE_ASSET_BYTES 981212u',
+    'NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0xf7d1ed1eu',
+    'NDS_AUDIO_BGM_INISHIE_PACKET_COUNT 121u',
+    'NDS_AUDIO_BGM_INISHIE_LOOP_PACKET 4u',
+    'NDS_AUDIO_BGM_INISHIE_LOOP_RECORD 28672u',
     'NDS_AUDIO_BGM_SECTOR_STREAM_SHA256_LO 0x0aa83296u',
     'NDS_AUDIO_BGM_SECTOR_ASSET_SHA256_LO 0x31aea1e4u',
     'NDS_AUDIO_BGM_JUNGLE_STREAM_SHA256_LO 0xcaf359e8u',
@@ -199,20 +210,12 @@ $required = @(
     'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 396588u',
     'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 718212u',
     'NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 157372u',
-    'NDS_AUDIO_BGM_FORMAT_PCM16 1u',
-    'NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES 4098u',
-    'NDS_AUDIO_BGM_PCM16_CHUNK_BYTES 8196u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES 3918852u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_SHA256_LO 0x8698ce72u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT 479u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET 14u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u',
     'NDS_AUDIO_BGM_YOSTER_ASSET_SHA256_LO 0x3b9e9569u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 1679478u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0xe2bdff1eu',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 206u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 33u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 267626u'
+    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 420548u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0xab5240c5u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 53u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 9u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 67056u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
@@ -226,8 +229,17 @@ if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
     $runtime -match '#define NDS_AUDIO_BGM_TIMER [23]u') {
     throw 'BGM seam scheduling must not overwrite Calico cpuGetTiming timers 2/3.'
 }
-if (-not $runtime.Contains('gNdsAudioBgmPcm16UnderrunCount')) {
-    throw 'BGM PCM16 refill witness counter is missing.'
+# Owner, docs/BUGS.md Audio: "ALL BGM should be IMA-ADPCM". The PCM16 stream
+# arm that carried Mushroom Kingdom from 2026-09-07 was retired 2026-09-22;
+# no track may name a raw asset or prepare a PCM16 hardware channel again.
+if ($runtime -match 'nitro:/audio/bgm_\w+\.raw' -or $runtime.Contains('SoundFmt_Pcm16')) {
+    throw 'A BGM track streams raw PCM; every BGM track must be an IMA-ADPCM packet stream.'
+}
+if ($runtime -notmatch '\{\s*nSYAudioBGMInishie,\s*NDS_AUDIO_BGM_PATH_INISHIE,' -or
+    -not $runtime.Contains('#define NDS_AUDIO_BGM_PATH_INISHIE "nitro:/audio/bgm_inishie_ima.bin"') -or
+    $runtime -notmatch '\{\s*nSYAudioBGMInishieHurry,\s*NDS_AUDIO_BGM_PATH_INISHIE_HURRY,' -or
+    -not $runtime.Contains('#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY "nitro:/audio/bgm_inishie_hurry_ima.bin"')) {
+    throw 'Mushroom Kingdom runtime rows do not stream the IMA pair.'
 }
 
 # 2026-09-09 stage census: pitch bend is source sequence state, not a global
@@ -236,7 +248,8 @@ if (-not $runtime.Contains('gNdsAudioBgmPcm16UnderrunCount')) {
 $stageRenderWitnesses = @(
     [PSCustomObject]@{ Name='Pupupu'; File='bgm_pupupu_ima.bin'; Sequence=0; Bytes=711920; Sha='3a9963687cd2a6dad8e0cc07c880b7f02a97076ce17847c4d6bf5869efc11f7d'; SourceSha='f80c025e0b106ca7f18604a6555967cf31d0f463d24240f7ce689c05120556b9'; Mix=22050; Master='127'; Bend=3; MaxCents=4 },
     [PSCustomObject]@{ Name='Zebes'; File='bgm_zebes_ima.bin'; Sequence=1; Bytes=617580; Sha='cfa8010b4105c7cb36b12913125ca879edd70c287b14b1831f39d29262b6ab33'; SourceSha='1c650f0f1ea8c7e312320f45a05e9dbda8b1102c53a92ea9127b7e10ebaae72d'; Mix=32000; Master='101'; Bend=0; MaxCents=0 },
-    [PSCustomObject]@{ Name='Inishie'; File='bgm_inishie_ima.bin'; Sequence=2; Bytes=981212; Sha='2a9205003d42b5d9a20a36edd1495e6bd249bfe355f7030629ac1f4efc792691'; SourceSha='a1493ceef989f161971cd1bbb3840e1319a5e30c7e6d69f38fa42d458698ce72'; Mix=32000; Master='99'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Inishie'; File='bgm_inishie_ima.bin'; Sequence=2; Bytes=981212; Sha='1fa1c8bacc154361e05fc5d1d93da43dfb526b0bba982aa52fc8e495f7d1ed1e'; SourceSha='a1493ceef989f161971cd1bbb3840e1319a5e30c7e6d69f38fa42d458698ce72'; Mix=32000; Master='99'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Inishie Hurry'; File='bgm_inishie_hurry_ima.bin'; Sequence=3; Bytes=420548; Sha='a2ab007b4373acf6eeda5185aa8a3709e38c2c36c975939d7684640eab5240c5'; SourceSha='17162f6924a5e318115e47ec071847ef0611571af72ead90958373d4e2bdff1e'; Mix=32000; Master='99'; Bend=0; MaxCents=0 },
     [PSCustomObject]@{ Name='Sector'; File='bgm_sector_ima.bin'; Sequence=4; Bytes=1237984; Sha='b87d9391dced3e7a8729bd2fc3e91f53479fd48968dc87e8b5690cc031aea1e4'; SourceSha='718c470bad451d5b1cee6b2e3386bd365a9781214b18facf2462507c0aa83296'; Mix=32000; Master='97'; Bend=0; MaxCents=0 },
     [PSCustomObject]@{ Name='Jungle'; File='bgm_jungle_ima.bin'; Sequence=5; Bytes=3470676; Sha='16874880f744c36dd92af32d4cf64f16d7211371ddfd5b0129c918953b6a7877'; SourceSha='5a78a64bf44fdef6943600c97ffe5da37e38433f90ef4522c5e7c7e8caf359e8'; Mix=32000; Master='112'; Bend=89; MaxCents=99 },
     [PSCustomObject]@{ Name='Castle'; File='bgm_castle_ima.bin'; Sequence=6; Bytes=931400; Sha='414d84e0a9ae6c49ad99d7ec318cdfd7afb8ea55a3aabf40ddff3b5d8bcb2489'; SourceSha='9c4f2d0cd2b0e3a87f9223c8e3e0fb7b65237fe6c9f1e6dfdb9e123bffcf78b8'; Mix=32000; Master='106'; Bend=5; MaxCents=14 },
@@ -273,40 +286,65 @@ foreach ($stage in $stageRenderWitnesses) {
     }
 }
 
-# Inishie PCM16 raw asset (sequence 2, Mushroom Kingdom): rendered offline with
+# Mushroom Kingdom, sequences 2 and 3 (owner, docs/BUGS.md Audio: "ALL BGM
+# should be IMA-ADPCM"): IMA packet streams again since 2026-09-22, after the
+# PCM16 streams of 2026-09-07/09. render-audio-bgm.py encodes exactly these
+# two with its step-index Viterbi search (TRELLIS_IMA_SEQUENCES):
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 2 `
-#          --format pcm16 --output assets/audio/bgm_inishie_pcm16.raw
-# Conditional until the asset lands: header pins above always apply; file
-# bytes/format below apply once rendered.
-$pcm16Asset = Join-Path $Root 'assets/audio/bgm_inishie_pcm16.raw'
-$pcm16MetadataPath = [IO.Path]::ChangeExtension($pcm16Asset, '.json')
-if ((Test-Path -LiteralPath $pcm16Asset -PathType Leaf) -and
-    (Test-Path -LiteralPath $pcm16MetadataPath -PathType Leaf)) {
-    $pcm16Data = [IO.File]::ReadAllBytes($pcm16Asset)
-    $pcm16Sha = (Get-FileHash -LiteralPath $pcm16Asset -Algorithm SHA256).Hash.ToLowerInvariant()
-    $pcm16Metadata = Get-Content -LiteralPath $pcm16MetadataPath -Raw | ConvertFrom-Json
-    if ($pcm16Data.Length -ne 3918852 -or
-        $pcm16Sha -ne 'a1493ceef989f161971cd1bbb3840e1319a5e30c7e6d69f38fa42d458698ce72' -or
-        $pcm16Metadata.sequence_index -ne 2 -or
-        $pcm16Metadata.bytes -ne 3918852 -or
-        $pcm16Metadata.source_pcm_bytes -ne 3918852 -or
-        $pcm16Metadata.sha256 -ne $pcm16Sha -or
-        $pcm16Metadata.source_pcm_sha256 -ne $pcm16Sha -or
-        $pcm16Metadata.sample_rate -ne 22050 -or
-        $pcm16Metadata.mix_sample_rate -ne 32000 -or
-        $pcm16Metadata.format -ne 'signed PCM16LE mono raw' -or
-        $pcm16Metadata.loop_start_byte -ne 114322) {
-        throw 'Inishie PCM16 payload changed: bytes/format/sequence/loop mismatch.'
+#          --output assets/audio/bgm_inishie_ima.bin
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 3 `
+#          --output assets/audio/bgm_inishie_hurry_ima.bin
+# Their source PCM is byte-identical to the retired PCM16 assets, so only the
+# codec moved. Stage-gated, so conditional on the asset like Yoster below;
+# the header pins above always apply. Each pins the payload, the container
+# census the runtime header check enforces and the codec evidence (greedy
+# measured 20.34 / 20.27 dB on the same PCM).
+$inishieTracks = @(
+    [PSCustomObject]@{
+        Name = 'Inishie'; File = 'bgm_inishie_ima.bin'; Sequence = 2
+        Bytes = 981212; Sha256 = '1fa1c8bacc154361e05fc5d1d93da43dfb526b0bba982aa52fc8e495f7d1ed1e'
+        SourceBytes = 3918852; SourceSha256 = 'a1493ceef989f161971cd1bbb3840e1319a5e30c7e6d69f38fa42d458698ce72'
+        Packets = 121; Looping = $true; LoopSample = 57161; LoopPacket = 4; LoopRecord = 28672
+        SnrDb = 27.18556943369464; MaxError = 1525
+    },
+    [PSCustomObject]@{
+        Name = 'Inishie Hurry'; File = 'bgm_inishie_hurry_ima.bin'; Sequence = 3
+        Bytes = 420548; Sha256 = 'a2ab007b4373acf6eeda5185aa8a3709e38c2c36c975939d7684640eab5240c5'
+        SourceBytes = 1679478; SourceSha256 = '17162f6924a5e318115e47ec071847ef0611571af72ead90958373d4e2bdff1e'
+        Packets = 53; Looping = $true; LoopSample = 133813; LoopPacket = 9; LoopRecord = 67056
+        SnrDb = 27.284038610851375; MaxError = 1757
     }
-    if ($pcm16Metadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm.py' -or
-        $pcm16Metadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 2 + B1_sounds1_ctl/tbl' -or
-        $pcm16Metadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
-        $pcm16Metadata.master_volume_controller -ne 21 -or
-        @($pcm16Metadata.master_volume_values).Count -ne 1 -or
-        [int]@($pcm16Metadata.master_volume_values)[0] -ne 99 -or
-        $pcm16Metadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass') {
-        throw 'Inishie PCM16 source/tool provenance changed.'
+)
+foreach ($track in $inishieTracks) {
+    $asset = Join-Path $Root "assets/audio/$($track.File)"
+    $metadataPath = [IO.Path]::ChangeExtension($asset, '.json')
+    if (-not (Test-Path -LiteralPath $asset -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
+        continue
     }
+    $data = [IO.File]::ReadAllBytes($asset)
+    $sha = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+    $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
+    if ($data.Length -ne $track.Bytes -or $sha -ne $track.Sha256 -or
+        $metadata.sequence_index -ne $track.Sequence -or
+        $metadata.bytes -ne $track.Bytes -or $metadata.sha256 -ne $track.Sha256 -or
+        $metadata.source_pcm_bytes -ne $track.SourceBytes -or
+        $metadata.source_pcm_sha256 -ne $track.SourceSha256 -or
+        $metadata.format -ne 'Nintendo DS IMA-ADPCM packet stream' -or
+        $metadata.packet_count -ne $track.Packets -or
+        -not [bool]$metadata.looping -or
+        $metadata.loop_start_byte -ne ($track.LoopSample * 2) -or
+        $metadata.loop_packet_index -ne $track.LoopPacket -or
+        $metadata.loop_record_offset -ne $track.LoopRecord -or
+        $metadata.ima_encoder -ne 'viterbi-step-index' -or
+        $metadata.ima_max_error -ne $track.MaxError -or
+        [Math]::Abs([double]$metadata.ima_snr_db - $track.SnrDb) -gt 1e-9) {
+        throw "$($track.Name) IMA payload/container/codec evidence changed."
+    }
+    if ($metadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass') {
+        throw "$($track.Name) resampling provenance changed."
+    }
+    Assert-BgmContainer $track $data
 }
 
 # The two stage tracks repaired on 2026-09-09 are checked against their exact
@@ -336,40 +374,22 @@ if ((Test-Path -LiteralPath $yosterAsset -PathType Leaf) -and
     }
 }
 
-$hurryAsset = Join-Path $Root 'assets/audio/bgm_inishie_hurry_pcm16.raw'
-$hurryMetadataPath = [IO.Path]::ChangeExtension($hurryAsset, '.json')
-if ((Test-Path -LiteralPath $hurryAsset -PathType Leaf) -and
-    (Test-Path -LiteralPath $hurryMetadataPath -PathType Leaf)) {
-    $hurrySha = (Get-FileHash -LiteralPath $hurryAsset -Algorithm SHA256).Hash.ToLowerInvariant()
-    $hurryMetadata = Get-Content -LiteralPath $hurryMetadataPath -Raw | ConvertFrom-Json
-    if ((Get-Item -LiteralPath $hurryAsset).Length -ne 1679478 -or
-        $hurrySha -ne '17162f6924a5e318115e47ec071847ef0611571af72ead90958373d4e2bdff1e' -or
-        $hurryMetadata.sequence_index -ne 3 -or
-        $hurryMetadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 3 + B1_sounds1_ctl/tbl' -or
-        $hurryMetadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
-        $hurryMetadata.format -ne 'signed PCM16LE mono raw' -or
-        $hurryMetadata.sha256 -ne $hurrySha -or
-        $hurryMetadata.source_pcm_sha256 -ne $hurrySha -or
-        $hurryMetadata.loop_start_byte -ne 267626 -or
-        $hurryMetadata.mix_sample_rate -ne 32000 -or
-        $hurryMetadata.master_volume_controller -ne 21 -or
-        @($hurryMetadata.master_volume_values).Count -ne 1 -or
-        [int]@($hurryMetadata.master_volume_values)[0] -ne 99 -or
-        $hurryMetadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass') {
-        throw 'Inishie Hurry PCM16 payload/master-volume evidence changed.'
-    }
-    if ($runtime -notmatch '(?s)nSYAudioBGMInishieHurry.*?NDS_AUDIO_BGM_FORMAT_PCM16' -or
-        -not $runtime.Contains('nitro:/audio/bgm_inishie_hurry_pcm16.raw')) {
-        throw 'Inishie Hurry runtime row is not the PCM16 stream.'
-    }
-}
-
 $makefile = Get-Content -LiteralPath (Join-Path $Root 'Makefile') -Raw
+$obsoleteBlock = [regex]::Match($makefile,
+    '(?s)export NDS_AUDIO_OBSOLETE_DERIVED_FILES :=(.*?)\n(?!\t)').Groups[1].Value
 foreach ($obsolete in @('bgm_pupupu_pcm16.raw', 'bgm_win_mario_pcm16.raw',
         'bgm_win_fox_pcm16.raw', 'bgm_results_pcm16.raw',
-        'bgm_inishie_hurry_ima.bin')) {
-    if (-not $makefile.Contains($obsolete)) {
+        'bgm_inishie_pcm16.raw', 'bgm_inishie_hurry_pcm16.raw')) {
+    if (-not $obsoleteBlock.Contains("audio/$obsolete")) {
         throw "Incremental NitroFS pruning lost obsolete asset: $obsolete"
+    }
+}
+# A live asset in the prune list is deleted from NitroFS before every pack.
+foreach ($live in @('bgm_inishie_ima.bin', 'bgm_inishie_hurry_ima.bin')) {
+    if ($obsoleteBlock.Contains($live) -or
+        -not $makefile.Contains("`taudio/$live") -or
+        -not $makefile.Contains("`$(NITROFS_DIR)/audio/${live}: `$(PROJECT_ROOT)/assets/audio/$live")) {
+        throw "Mushroom Kingdom IMA asset is not staged as a live NitroFS file: $live"
     }
 }
 if ($makefile -notmatch '(?s)prune-obsolete-audio:\s*@rm -f .*NDS_AUDIO_OBSOLETE_DERIVED_FILES.*\$\(OUTPUT\)\.nds: prune-obsolete-audio') {

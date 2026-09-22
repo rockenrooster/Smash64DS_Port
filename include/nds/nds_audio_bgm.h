@@ -152,27 +152,22 @@
 #define NDS_AUDIO_BGM_YAMABUKI_PACKET_COUNT 78u
 #define NDS_AUDIO_BGM_YAMABUKI_LOOP_PACKET 23u
 #define NDS_AUDIO_BGM_YAMABUKI_LOOP_RECORD 186428u
-/* P2-4 Inishie stream geometry comes from S1_music_sbk sequence 2. The live
- * row uses the PCM16 asset below; the old IMA container pins remain only as
- * provenance for the superseded derived file. */
+/* P2-4 Mushroom Kingdom (Inishie), S1_music_sbk sequence 2, rendered
+ * 2026-09-22 as the same IMA packet stream as every other track (owner,
+ * docs/BUGS.md Audio: "ALL BGM should be IMA-ADPCM"); it streamed PCM16
+ * from 2026-09-07. The source PCM is byte-identical to that PCM16 asset
+ * (STREAM_SHA256_LO); only the codec changed. render-audio-bgm.py encodes
+ * sequences 2 and 3 with its step-index Viterbi search instead of the greedy
+ * nibble choice: 27.19 dB codec SNR (max error 1525) against greedy's 20.34
+ * dB (max 8205). Pins are assets/audio/bgm_inishie_ima.json verbatim. */
 #define NDS_AUDIO_BGM_INISHIE_STREAM_BYTES 3918852u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_START_BYTES 114322u
 #define NDS_AUDIO_BGM_INISHIE_STREAM_SHA256_LO 0x8698ce72u
 #define NDS_AUDIO_BGM_INISHIE_ASSET_BYTES 981212u
-#define NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0xfc792691u
+#define NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0xf7d1ed1eu
 #define NDS_AUDIO_BGM_INISHIE_PACKET_COUNT 121u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_PACKET 4u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_RECORD 28672u
-/* P2-4 Inishie PCM16 path: sequence 2 rendered as signed PCM16LE mono raw
- * (scripts/sfx/bgm/render-audio-bgm.py --format pcm16). Chunks are 4098
- * samples (8196 bytes) so two chunks reuse the 16392-byte IMA ring with
- * zero RAM growth. Pre-loop ceil(114322/8196)=14, loop ceil(3804530/8196)
- * =465, total 479; loop record is the raw byte offset of the loop start. */
-#define NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES 3918852u
-#define NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_SHA256_LO 0x8698ce72u
-#define NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT 479u
-#define NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET 14u
-#define NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u
 /* P2-4 Sector BGM, rendered from music sequence 4. Every value here is read
  * straight out of assets/audio/bgm_sector_ima.json, the same mapping Castle's
  * block uses: STREAM_BYTES is source_pcm_bytes, LOOP_START_BYTES is
@@ -214,18 +209,21 @@
 #define NDS_AUDIO_BGM_JUNGLE_LOOP_RECORD 1738064u
 #endif
 #if NDS_P2_STAGE_INISHIE
-/* nSYAudioBGMInishieHurry, S1_music_sbk sequence 3. The <=30-second
- * Mushroom Kingdom source swap reaches this track, so it uses the same raw
- * PCM16 stream path as Inishie instead of the former 18.98 dB IMA asset.
- * PCM16 chunks split at the source loop point so loop restart is exact. */
+/* nSYAudioBGMInishieHurry, S1_music_sbk sequence 3, the <=30-second
+ * Mushroom Kingdom source swap (if/ifcommon.c:2500). Same IMA path and
+ * Viterbi encode as sequence 2, from the source PCM the PCM16 asset
+ * streamed since 2026-09-09: 27.28 dB codec SNR (max error 1757) against
+ * greedy's 20.27 dB (max 8162). The loop packet starts exactly at the
+ * source loop point. Pins are assets/audio/bgm_inishie_hurry_ima.json
+ * verbatim. */
 #define NDS_AUDIO_BGM_INISHIE_HURRY_STREAM_BYTES 1679478u
 #define NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_START_BYTES 267626u
 #define NDS_AUDIO_BGM_INISHIE_HURRY_STREAM_SHA256_LO 0xe2bdff1eu
-#define NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 1679478u
-#define NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0xe2bdff1eu
-#define NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 206u
-#define NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 33u
-#define NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 267626u
+#define NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 420548u
+#define NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0xab5240c5u
+#define NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 53u
+#define NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 9u
+#define NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 67056u
 #endif
 /* nSYAudioBGMWinDefault, rendered 2026-09-05 from S1_music_sbk sequence 11 through
  * scripts/sfx/bgm/render-audio-bgm.py; pins are assets/audio/bgm_win_default_ima.json
@@ -666,10 +664,6 @@
 #define NDS_AUDIO_BGM_PACKET_HEADER_BYTES 8u
 #define NDS_AUDIO_BGM_PACKET_SAMPLES 16384u
 #define NDS_AUDIO_BGM_PACKET_BYTES 8196u
-#define NDS_AUDIO_BGM_FORMAT_IMA 0u
-#define NDS_AUDIO_BGM_FORMAT_PCM16 1u
-#define NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES 4098u
-#define NDS_AUDIO_BGM_PCM16_CHUNK_BYTES 8196u
 #define NDS_AUDIO_BGM_BUFFER_COUNT 2u
 #define NDS_AUDIO_BGM_RESIDENT_BYTES \
     (NDS_AUDIO_BGM_BUFFER_COUNT * NDS_AUDIO_BGM_PACKET_BYTES)
@@ -764,6 +758,5 @@ extern volatile u32 gNdsAudioBgmErrorStopCount;
 extern volatile u32 gNdsAudioBgmBlockingSuspendCount;
 extern volatile u32 gNdsAudioBgmBlockingResumeCount;
 extern volatile u32 gNdsAudioBgmErrorCleanupFailCount;
-extern volatile u32 gNdsAudioBgmPcm16UnderrunCount;
 
 #endif
