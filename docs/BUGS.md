@@ -17,9 +17,10 @@ Main Menus:
 -VS options
 -CSS Bugs still present and need to be fixed:
     -delay between cursor hover and 3d fighter preview rendering. **Owner deferred. 5 of 12 previews draw within 24 tics; the 7 slow ones are named in BUG_NOTES.**
+    -Fighter faces not 
 
 -Yoshi:
-    -Yoshi's guard/shield (egg) is invisible **FIXED**
+    -**Not FIXED in R36** Yoshi's guard/shield (egg) is invisible 
 -Link:
 -Pikachu
     -**NOT FIXED in R36 ** face color is different from body color. 
