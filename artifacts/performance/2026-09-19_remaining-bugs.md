@@ -2757,3 +2757,41 @@ damage is fully explained and there is no anomaly. If they are repeatedly
 adjacent while Fox attacks and damage never moves, that is a real lead on
 "cannot be hit" -- and the next step would be a build with `NDS_TICK_HUD=1` to
 read the collision phase directly.
+
+## 2026-09-22 08:20 -- the damage anomaly tested, and withdrawn
+
+The previous section flagged "damage 0 for both fighters across five matches"
+as the first reading resembling "cannot be hit", and said explicitly it was not
+yet a finding. Tested it by reading both fighters' world positions:
+
+    S01 pres=63   P0 st=10  pos=0,0        | P1 st=12  pos=-1253,904  dx=1253  stocks 0/0
+    S02 pres=314  P0 st=69  pos=1870,0     | P1 st=225 pos=932,0      dx=938   stocks 0/0
+    S03 pres=565  P0 st=85  pos=2375,-327  | P1 st=12  pos=590,0      dx=1785  stocks 0/0
+    S06 pres=132  P0 st=221 pos=0,0        | P1 st=223 pos=-1397,904  dx=1397  stocks 2/2
+    S07 pres=383  P0 st=10  pos=0,0        | P1 st=12  pos=-1028,0    dx=1028  stocks 2/2
+    S08 pres=634  P0 st=69  pos=-483,0     | P1 st=208 pos=718,0      dx=-1201 stocks 2/2
+    S09 pres=885  P0 st=10  pos=-931,0     | P1 st=12  pos=-832,0     dx=-99   stocks 2/2
+    S10 pres=1136 P0 st=10  pos=-1528,0    | P1 st=12  pos=-81,0      dx=-1447 stocks 2/2
+    S11 pres=1387 P0 st=10  pos=-1626,0    | P1 st=12  pos=-1164,0    dx=-462  stocks 2/2
+    S12 pres=1638 P0 st=10  pos=-1686,0    | P1 st=232 pos=-1157,1542 dx=-529  stocks 2/2
+
+**Withdrawn.** The fighters do approach -- S09 has them 99 units apart,
+adjacent -- but at that sample Fox is in status 12 (WalkMiddle), not
+attacking. At every sample where Fox IS attacking (225, 223, 208, 232) the gap
+is 938, 1397, 1201 and 529. At 251-frame spacing these are snapshots, and I
+never caught an attack at contact range. A level-2 CPU that mostly walks and
+occasionally attacks at distance produces exactly this reading. Stocks stay
+2/2 throughout, consistent with no damage rather than evidence of a defect.
+
+So zero damage is NOT established as anomalous, and nothing here supports a
+collision failure. Recorded because the flagged lead deserved a test and the
+test came back negative -- a lead that is only ever flagged and never closed
+is how a stale citation gets born.
+
+**What would actually settle it**, if this row is picked up again: build the
+walk with `NDS_TICK_HUD=1`. That compiles in
+`gNdsCfxFighterDamagePhaseCalls` / `Hits` (`battleship_gmcollision.c:174-183`),
+which count every fighter-attack-versus-damage-collision evaluation and every
+one that connects. Calls>0 with Hits==0 over a match would be a genuine
+collision failure; Calls==0 would mean the phase never runs. Both builds in use
+tonight have `NDS_TICK_HUD 0`, so those symbols are not in either ELF.
