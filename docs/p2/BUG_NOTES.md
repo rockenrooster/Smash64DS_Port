@@ -5147,3 +5147,36 @@ home.
 Worked around in the probe with `NDS_P2_COMPACT_BATTLE_FIGHTERS=1` rather than
 changing shipping source, because choosing which guard is authoritative here
 changes behaviour in configurations nobody measured.
+
+### A fourth guard mismatch, and the Kirby-copy harness cannot build, 2026-09-22
+
+`NDS_P2_KIRBY_COPYLINK_PROOF` is the repo's scripted Kirby inhale, and its own
+header comment names its prerequisites as `NDS_P2_KIRBY=1` and
+`NDS_P2_LINK=1`. Built that way it does not link:
+
+    ftkirbycopysamusspecialn.c  -> wpSamusChargeShotMakeWeapon
+    ftkirbycopydonkeyspecialn.c -> ftCommonEscapeCheckInterruptSpecialNDonkey
+    ftcommoncapturekirby.c      -> ndsBaseFTCommonCaptureApplyCatchKnockback
+                                   ndsBaseFTCommonCaptureApplyCaptureKnockback
+
+Kirby's copy-ability translation units are compiled unconditionally while the
+donors they call are roster-gated, so admitting Kirby without Samus and Donkey
+leaves those calls unresolved. Adding both donors did not finish the link
+either; the remaining set was not captured because the `*>` wrapper swallowed
+the log -- the same trap already recorded for Boundary runs, hit again.
+
+That is the **fourth** consumer-wider-than-provider break found in one session,
+after the preview-pack API, its renderer-versus-roster guard, and
+`ndsRelocNativeRootAddress`. Four of a kind in one night is the argument for
+the checker suggested earlier: for each `#if`-guarded declaration, assert that
+every call site's guard implies the declaration's. Hand-fixing the fifth is not
+the right move.
+
+**Consequence for the Saffron row:** the one untested variable, a real Kirby
+copy, cannot currently be produced by any harness in the tree. Either that
+checker lands and the copy proof is made buildable, or the owner performs one
+inhale while the counters are readable. The prediction to check against is
+concrete: a copy loads two eager hat details of about 8,556 bytes each, so
+free-min should fall from the measured 32,504 to roughly 14,000 and cross the
+25,600 `ifCommonSetMaxNumGObj` floor -- the first measurement tonight that
+would.
