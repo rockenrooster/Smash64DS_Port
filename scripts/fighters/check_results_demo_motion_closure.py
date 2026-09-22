@@ -71,6 +71,7 @@ MANIFEST = REPO / "scripts/fighters/fighter_production_manifest.json"
 SCSUBSYS_IMPORT = REPO / "src/import/battleship_scsubsysdata_ft.c"
 RELOC_BACKEND = REPO / "src/port/reloc_backend_assets.c"
 RELOC_ASSET_PATHS = REPO / "src/nds/nds_reloc_assets.c"
+MAKEFILE = REPO / "Makefile"
 PRODUCTION_HEADER = (
     REPO / "include/nds/generated/nds_fighter_production.generated.h")
 
@@ -198,13 +199,29 @@ def demo_path_route_failures() -> list[str]:
             "path table moved and this checker must follow it")
     path_arms = set(macro.findall(paths_text[start:paths_text.find("\n};", start)]))
 
-    return [
+    failures = [
         "%s is expanded into sNdsRelocDemoAnimTokens but not into "
         "sNdsRelocAssets: its demo poses resolve an asset id and then fail "
         "ndsRelocAssetGetPath, so ftMainSetStatus silently binds the stale "
         "figatree heap" % arm
         for arm in sorted(token_arms - path_arms)
     ]
+
+    # THIRD WIRING SITE. A token route and a path row still load nothing if the
+    # payload was never packed into NitroFS. The Makefile stages these through
+    # per-arm `*_DEMO_RELOC_FILES` lists generated from the same table, so a new
+    # fighter that gets two of the three sites reads exactly like the bug this
+    # checker was written for.
+    if MAKEFILE.is_file():
+        make_text = MAKEFILE.read_text(encoding="utf-8", errors="replace")
+        for arm in sorted(token_arms):
+            staged = arm.replace("_DEMO_ANIM_ASSET_ROWS", "_DEMO_RELOC_FILES")
+            if ("$(%s)" % staged) not in make_text:
+                failures.append(
+                    "%s has a token route but the Makefile never stages "
+                    "$(%s): the payloads are absent from NitroFS and the load "
+                    "fails with no decline" % (arm, staged))
+    return failures
 
 
 def demo_root_failures(owners: list[str]) -> list[str]:
