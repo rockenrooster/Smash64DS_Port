@@ -96,9 +96,31 @@ def build_direct_trace(owner_name: str, context: dict, cross_slots: list[int]):
                         )
                     require(binding >= 0,
                             f"{owner_name}: unmapped cross-corner slot")
-                    x, y, z = context["dense_vertices"][dense_id][:3]
-                    xy, z_word = native.pack_fifo_vertex16(
-                        x, y, z, f"{owner_name} direct corner {len(corners)}"
+                    # MODEL WHAT IS DRAWN, NOT THE SOURCE IT CAME FROM.
+                    #
+                    # This re-derived the position from the canonical
+                    # dense_vertices and packed it fresh, which silently
+                    # dropped the DS coverage seam guard:
+                    # build_ds_coverage_gx_positions moves selected boundary
+                    # vertices ONE VERTEX16 lattice unit away from their
+                    # surface centroid so an internal material seam overlaps by
+                    # at most 1/16 source unit. Those guarded positions are
+                    # what the generator bakes and what BOTH runtime paths
+                    # draw; the retained packet carries them, and this trace
+                    # did not.
+                    #
+                    # So the comparison was guarded-versus-unguarded and could
+                    # only fail. It did: 35 of Mario's 960 corners, all in root
+                    # 4 epoch 6, eleven vertices, each axis off by exactly one
+                    # unit -- which is the guard's own signature, not a
+                    # rounding error and not a runtime divergence.
+                    #
+                    # gx_positions are already 12.4-scaled, so they take the
+                    # _scaled packer; pack_fifo_vertex16 would multiply by 16
+                    # a second time.
+                    xy, z_word = native.pack_fifo_vertex16_scaled(
+                        *context["gx_positions"][dense_id],
+                        f"{owner_name} direct corner {len(corners)}",
                     )
                     corners.append((
                         root_index, epoch_index, dense_id, binding,

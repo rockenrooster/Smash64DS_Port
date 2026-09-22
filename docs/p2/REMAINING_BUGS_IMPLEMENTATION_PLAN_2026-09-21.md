@@ -57,7 +57,7 @@ for anyone.
 Neither is wired into `verify-all`; fighter checkers here are run by hand and
 `expectedVerifiers` is a fragile literal. Run both after any owner regeneration.
 
-### Static checkers: 20 of 21 green, up from 17
+### Static checkers: 21 of 21 green, up from 17
 
 All four that were red were pre-existing, not from this batch. Three are now
 fixed:
@@ -75,13 +75,18 @@ fixed:
   `76b3c1c6366` (yesterday's 0x45 matrix fix started reading
   `dobj.xobjs_num`). Red since then, hiding everything else it audits.
 
-**Still red, deliberately:** `check_nds_native_owner_hierarchy.py`, Mario's
-retained packet versus direct draw. Now exact rather than vague: **35 of 960
-corners, all in root 4 epoch 6, eleven vertices, each axis off by exactly ±1
-unit.** That is a rounding-rule difference between two encoders, on a path
-shared by every owner, against a Mario export that is frozen byte-identical by
-contract. Sub-pixel, pre-existing, in no row of yours. Characterised in
-`docs/p2/BUG_NOTES.md` rather than changed the night before a playtest.
+- `check_nds_native_owner_hierarchy.py` — Mario's retained packet against the
+  direct draw, 35 of 960 corners each off by exactly ±1 unit per axis. I first
+  read that as a rounding difference and planned to defer it; it is the **DS
+  coverage seam guard**, which deliberately moves selected boundary vertices
+  one VERTEX16 lattice unit so a material seam overlaps by at most 1/16 unit.
+  Not a runtime divergence at all — the guarded positions are what the
+  generator bakes and both runtime paths draw. Only the checker's direct trace
+  was unguarded, re-deriving from canonical vertices. It now reads the guarded
+  positions the context already carries.
+
+No ROM change came from any of it: the ROM is byte-identical across all three
+rebuilds.
 
 ### One correction to section 5 below
 

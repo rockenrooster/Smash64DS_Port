@@ -5506,31 +5506,45 @@ not the convenient one. Regenerating then tripped a SECOND pin --
 114,336 -> 114,449 bytes. Both had to move; see
 [[a-number-bound-is-a-fourth-wiring-site]].
 
-### 4. `check_nds_native_owner_hierarchy.py` -- NOT fixed, but now exact
+### 4. `check_nds_native_owner_hierarchy.py` -- FIXED, and my first reading of it was wrong
 
-`ValueError: mario: retained packet corner trace mismatch`. This compares the
-retained FIFO packet's decoded corner stream against the direct draw's. They
-disagree, which is **structurally the same packet-versus-direct divergence
-class as this batch's shade-clamp fix**.
+`ValueError: mario: retained packet corner trace mismatch`, comparing the
+retained FIFO packet's decoded corner stream against the direct draw's.
 
-Measured rather than described:
+Measured first:
 
 - **35 of 960 corners diverge (3.6%)**, indices 337..410.
 - Every one is in **root 4, epoch 6** -- a single part.
 - Eleven dense ids: 86, 89, 91, 92, 93, 95, 97, 98, 99, 102, 103.
-- `xy` deltas: +65537 x14, +65535 x9, -65535 x9, -65537 x3. Packed as two
-  16-bit fields, that is **x off by exactly +/-1 and y off by exactly +/-1**.
-- `z_word` deltas: +1 x11, -1 x24. **z off by exactly +/-1.**
+- `xy` deltas: +65537 x14, +65535 x9, -65535 x9, -65537 x3 -- packed as two
+  16-bit fields, **x off by exactly +/-1 and y off by exactly +/-1**.
+- `z_word` deltas: +1 x11, -1 x24.
 
-Every affected vertex is one unit out on each axis, in varying directions.
-That is the signature of a ROUNDING RULE differing between the two encoders,
-not of wrong geometry.
+**I called that a rounding-rule difference and planned to defer it. That was
+wrong, and the number that should have stopped me was in the checker's own
+output: `associationGuard=35`.** It is the DS coverage seam guard.
+`build_ds_coverage_gx_positions` (generate_nds_native_owners.py:4772)
+deliberately moves selected boundary vertices **one VERTEX16 lattice unit**
+away from their surface centroid, so an internal material seam overlaps by at
+most 1/16 source unit. Exactly one unit per axis, confined to one root and one
+material surface, on the boundary vertices of that surface -- the divergence
+was the guard's signature, described in a docstring, all along.
 
-**Deliberately not fixed tonight, and the reasons are not scheduling.** Mario's
-export is frozen byte-identical by the P2-3 bootstrap contract; the difference
-is one unit in a 16-bit coordinate, so sub-pixel; it is pre-existing; it is in
-no owner row; and the rounding rule is on a path shared by every owner, which
-is precisely the "repair validated against one user of a shared path" failure
-this codebase keeps warning about. The next sitting should find which of the
-two encoders rounds and which truncates, for root 4 epoch 6 of Mario high,
-and change the one that disagrees with the source.
+**And it was never a runtime divergence.** Those guarded positions are what the
+generator bakes, and both runtime paths draw them. Only the CHECKER's direct
+trace was unguarded: it re-derived each position from the canonical
+`dense_vertices` and packed it fresh, so it compared guarded against unguarded
+and could only fail. The context already carries the guarded `gx_positions`;
+the direct trace now reads them, with `pack_fifo_vertex16_scaled` because they
+are already 12.4.
+
+Green, and the checker keeps its strength -- its own state and corner mutation
+tests still run and still trip (`mutations=8 postCommitFailures=0`).
+
+**The suite is now 21 of 21.**
+
+**The lesson, which cost most of a cycle:** I characterised a divergence
+precisely and then reached for the most generic explanation available
+("rounding") instead of asking what in this codebase deliberately moves a
+vertex by one unit. The answer was one grep away, and the checker was already
+printing its count.
