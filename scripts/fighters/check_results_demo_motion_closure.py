@@ -70,6 +70,7 @@ SCSUBSYS = REPO / "decomp/BattleShip-main/decomp/src/sc/scsubsys"
 MANIFEST = REPO / "scripts/fighters/fighter_production_manifest.json"
 SCSUBSYS_IMPORT = REPO / "src/import/battleship_scsubsysdata_ft.c"
 RELOC_BACKEND = REPO / "src/port/reloc_backend_assets.c"
+RELOC_ASSET_PATHS = REPO / "src/nds/nds_reloc_assets.c"
 PRODUCTION_HEADER = (
     REPO / "include/nds/generated/nds_fighter_production.generated.h")
 
@@ -160,6 +161,50 @@ def loadable_anim_symbols() -> dict[str, str]:
             for symbol in ANIM_SYMBOL.findall(match.group(2)):
                 routes.setdefault(symbol, "generated %s" % match.group(1))
     return routes
+
+
+def demo_path_route_failures() -> list[str]:
+    """Every demo-anim row the token table claims must also have a NitroFS path.
+
+    THE FAILURE THIS CATCHES, and it cost the Results rows an entire cycle.
+    `NDS_*_DEMO_ANIM_ASSET_ROWS` carries three fields -- symbol, asset id, path.
+    `sNdsRelocDemoAnimTokens` in reloc_backend_assets.c expands the first two, so
+    the token resolved, `ndsRelocIsFighterAnimID` answered TRUE and the loader ran.
+    Nothing expanded the third. `ndsRelocForceLoadFighterAObj16File` then hit its
+    `ndsRelocAssetGetPath(asset_id) == NULL` guard, returned NULL, and
+    `ftMainSetStatus` bound the stale figatree heap -- no decline, no reject, and
+    every fighter holding its last battle pose on the Results screen.
+
+    Static routing is not a runtime load. A row is only routed when BOTH tables
+    expand it, so require the two arm-for-arm.
+    """
+    macro = re.compile(r"(NDS_\w+_DEMO_ANIM_ASSET_ROWS)\s*\(")
+    backend = RELOC_BACKEND.read_text(encoding="utf-8", errors="replace")
+    start = backend.find("sNdsRelocDemoAnimTokens[] =")
+    if start < 0:
+        raise SystemExit(
+            "reloc_backend_assets.c no longer defines sNdsRelocDemoAnimTokens; "
+            "the demo token route moved and this checker must follow it")
+    token_arms = set(macro.findall(backend[start:backend.find("\n};", start)]))
+
+    if not RELOC_ASSET_PATHS.is_file():
+        return ["%s is missing; the demo animation path table cannot be read"
+                % RELOC_ASSET_PATHS]
+    paths_text = RELOC_ASSET_PATHS.read_text(encoding="utf-8", errors="replace")
+    start = paths_text.find("sNdsRelocAssets[] = {")
+    if start < 0:
+        raise SystemExit(
+            "nds_reloc_assets.c no longer defines sNdsRelocAssets; the asset "
+            "path table moved and this checker must follow it")
+    path_arms = set(macro.findall(paths_text[start:paths_text.find("\n};", start)]))
+
+    return [
+        "%s is expanded into sNdsRelocDemoAnimTokens but not into "
+        "sNdsRelocAssets: its demo poses resolve an asset id and then fail "
+        "ndsRelocAssetGetPath, so ftMainSetStatus silently binds the stale "
+        "figatree heap" % arm
+        for arm in sorted(token_arms - path_arms)
+    ]
 
 
 def demo_root_failures(owners: list[str]) -> list[str]:
@@ -284,6 +329,7 @@ def check(owners: list[str] | None = None,
                     % (owner, ROW_LABEL[row], row, anim))
                 continue
             closed += 1
+    failures.extend(demo_path_route_failures())
     failures.extend(demo_root_failures(owners))
     return failures, closed
 

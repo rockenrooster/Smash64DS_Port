@@ -453,6 +453,62 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
 #undef NDS_P2_FIGHTER_ASSET_ENTRY
 #endif
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    /* R02/R03/K06 -- THE PATH HALF OF THE RESULTS DEMO POSES, AND IT WAS THE
+     * MISSING HALF. `NDS_*_DEMO_ANIM_ASSET_ROWS` carries three fields, and
+     * until now only two of them were ever consumed: `sNdsRelocDemoAnimTokens`
+     * (reloc_backend_assets.c) expanded `symbol_`/`id_` so the token resolved,
+     * and NOTHING expanded `path_`. So every Results demo pose resolved its
+     * asset id, answered ndsRelocIsFighterAnimID, entered
+     * ndsRelocForceLoadFighterAObj16File -- and died at its
+     * `ndsRelocAssetGetPath(asset_id) == NULL` guard, because these ids live
+     * under `reloc_submotions/` with source-derived names that
+     * ndsRelocAssetP2FighterAnimEntry's `reloc_animations/<stem><NNN>`
+     * formatter cannot produce and no hand row here listed.
+     *
+     * The loader then returns NULL and ftMainSetStatus assigns fp->figatree
+     * unconditionally, so the fighter binds the previous motion's figatree with
+     * no decline. That is the whole of "all fighters hold a battle pose on the
+     * Results screen" and "No Contest does not clap": the 35 payloads were
+     * staged, all 47 cells routed statically, and the runtime could not name
+     * a single file.
+     *
+     * These rows mirror sNdsRelocDemoAnimTokens arm for arm; the two tables
+     * must stay in step, which check_results_demo_motion_closure.py asserts. */
+#define NDS_RELOC_DEMO_ANIM_PATH_ENTRY(symbol_, id_, path_) { id_, id_, path_ },
+    NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#if NDS_P2_LUIGI
+    NDS_P2_LUIGI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_LINK
+    NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_PIKACHU
+    NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
+#undef NDS_RELOC_DEMO_ANIM_PATH_ENTRY
+#endif
 };
 
 static u16 ndsReadLe16(const u8 *bytes)
