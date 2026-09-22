@@ -51,34 +51,40 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus: full remaining BUGS / serial integration / main. Phase: IMPLEMENT.
-Brief `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`; receipt
-`artifacts/performance/2026-09-19_remaining-bugs.md` holds every finding.
-r25 `builds/remaining-bugs-playtest-r25/` `461910F8...`, NATIVE_ONLY_PASS 316 inputs.
+**Every row's diagnosis and next step is in
+`docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-21.md`. Read it, not a
+summary.** Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`
+
+**PLAYTEST r28** `builds/remaining-bugs-playtest-r28/`
+`7A2D46B4F47DAC53111C80AAA0A2544EBF614E93A4537474F3DDAB455BC28E0D`,
+NATIVE_ONLY_PASS 316 inputs, hash reproduced on rebuild.
 OWNER ACCEPTED (removed from BUGS.md): Kirby pistol flash, CSS music, grab slam,
 effects regression, GROUND Thunder Jolt, Damage cadence, Results badge, winner
-emblem, Link slash.
-**THREE REGRESSIONS, ONE SHAPE** (matrix -> 3 spark effects; ground jolt -> AIR
-jolt; Poke Ball -> RAYS). Each correct for its own consumer, each with a green
-mutation test, none caught by CI. Rule in HANDOFF: census a shared path's other
-users before landing; scope, do not revert.
-OPEN, in order:
-1. Kirby face/body facing RIGHT (left + ledge-balance fixed). Facing is a mirror,
-   so that modelview has negative determinant and normals flip while the light
-   vector is written under identity. One build: add `lr` + determinant sign to the
-   shade witness. Do NOT touch the clamp or white-prim exemption.
-2. R02/R03 Results poses + claps: NO change on r25. 35 payloads ARE staged, 47/47
-   route, so the failure is downstream. Build the counter on
-   `lbRelocGetExternHeapFile`'s INVALID return FIRST -- it splits 'token
-   unresolved' from 'loaded but AObj16 normalization rejects it'.
-3. AIR Thunder Jolt regression: shares asset 342. Suspects: eviction order vs the
-   3 pinned A5I3 names, then the bind hand-off at `thunderground.exec.inc:102`.
-4. Poke Ball RAYS regression: ball visible, rays gone. Suspects: the new
-   effect-layer arm leaving item state; kind `0x44` still on the translate
-   fallback; entry-seam ordering.
-5. K04 spit-star: the Poke Ball's twin -- ITCommonObject effect, no bake, no
-   admission arm. Shape proven on the ball; census asset 86 first.
-6. M04 hover delay (owner deprioritised): residual is one 30,160 B owner-image read.
-Unverified in r25: Saffron gate, Kirby jab flurry, Ness Win3, Kirby Results pose.
+emblem, Link slash, Kirby jab flurry (r26).
+
+FIXED 09-21 night, **none observed on screen**: R02/R03/K06 (the demo rows' PATH
+field was never consumed, so every pose failed `ndsRelocAssetGetPath` and bound
+the stale figatree silently); P01 AIR jolt (reclaimable VRAM had gone 6,144 ->
+0; reclaim hook added last in the evict sweep); K04 spit-star
+(`lbCommonDObjScaleXProcDisplay` is an EMPTY port function; one bake serves four
+owners); Yoshi egg owner reinstated; plus two amplifiers in the graded-quad
+table and the bound-name tracker.
+
+REFUTED, do not re-derive: face/body is **not** a mirror (facing is
+`rotate.y = lr * 90deg`, det +1); rays are asset **85** and `0x44` cannot
+double-translate; an arena overflow **hangs** (`malloc.c:30` is `while (TRUE);`)
+so one frozen fighter is not heap exhaustion.
+
+OPEN -- all need the r28 runtime read, not source reading. Globals per row
+are in plan section 4: face/body witness (repair OFF, the packet twin would
+flicker); `gNdsFTCommonAppearOverrunFighter` for frozen Fox;
+`gNdsEntryMBallRaysRequestCount` vs `...NullCount` for the rays; arena hang
+first for Saffron/Kirby; `gNdsItemKirbyStarFromEffectCount` for K04.
+
+**THE ARENA IS THE NEXT LEVER**, blocking three rows: Pikachu/Fox has 7,556 B
+free at GO, Pikachu/Samus malloc-hangs, Saffron runs at 2,844.
+`IFCommonGameStatus` is 152,368 B resident and its letter texels are never
+uploaded. Sizing and rejected alternatives: plan section 6.1.
 Owed: Boundary/Latest, timing for +172 KiB NitroFS. Roof/Zebes deferred.
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):

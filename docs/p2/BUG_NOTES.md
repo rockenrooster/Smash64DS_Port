@@ -5029,3 +5029,40 @@ another approval question; the recovered lock is archived, not deleted.
 Remaining: complete Yoshi action/detail/entry coverage, wider qualification and
 owner acceptance. Other diagnosis rows remain open; no blanket full-moveset
 claim. Receipt: `artifacts/performance/2026-09-19_yoshi-battle-pairs.md`.
+
+## Standing lessons, 2026-09-21 night
+
+Evidence: `docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-21.md` and the
+commits that landed each row. Route markers only.
+
+**Count a generated row's fields, then find every consumer.** An X-macro row
+with three fields needs three consumers. `NDS_*_DEMO_ANIM_ASSET_ROWS` carried
+symbol, id and NitroFS path; two tables expanded the first two and *nothing*
+expanded the path, so 142 Results animations resolved an asset id and then died
+at the loader's `ndsRelocAssetGetPath` guard in silence. Packing the payloads
+and proving 47/47 static routes changed nothing on screen, because neither was
+the missing site. Ask this of any producer row whose field count exceeds the
+consumers you can name.
+
+**Price a cache change in reclaimable bytes, not total bytes.** Moving three
+images off the shared texture cache onto dedicated GL names read as a
+3,024-byte saving and was a 6,144-byte loss: `ndsRendererHardwareEvictTexture`
+is the only reclaim either upload-retry loop has and it sweeps the cache array
+alone. A starved sibling spends the reclaimable number, not the total. A dozen
+owners now hold names that sweep cannot reach, on a 256 KB pool.
+
+**A repair you cannot apply on every path is not ready to ship.** The fighter
+light word is written live and again by packet replay. Correcting only the live
+one would shade a fighter correctly on prepared frames and as before on
+replayed ones -- a flicker, and a louder defect than the steady seam under
+repair. Land such a repair with its twin, or land the witness alone and keep
+the repair off behind a flag that says why.
+
+**Re-read the source before inheriting a mechanism.** Three standing
+explanations died to one line each in a single session: a fighter's facing is
+`joints[TopN]->rotate.y = lr * 90deg`, a rotation with determinant +1 and not a
+mirror; `sGCMatrixFuncList` entries are pairs, so custom kind `0x44` resolves to
+a Translate-Scale that already carries `dobj->translate` and cannot
+double-translate; and `malloc.c:30` is `while (TRUE);`, so an arena overflow
+hangs the console rather than returning NULL -- which means a single frozen
+fighter in a running match is never heap exhaustion.
