@@ -95,13 +95,13 @@ invariant instead of working around it.
 | G1 VFX play or not by fighter combination | graded-quad texture table | r39 |
 | Y1 Yoshi's guard egg invisible | EFDesc offset mapper | r39 |
 | P2 Pikachu down-B blue burst missing | particle quad sheet admission | r39 |
-| C1 CSS hover-to-preview delay | preview service byte budget | r39 |
-| C6 Link turns gray | retired preview's texture entries | r39 |
+| C1 CSS hover-to-preview delay | preview service byte budget | r39; **deferred by owner 9/22** (profile in BUG_NOTES) |
+| C6 Link turns gray | retired preview's texture entries (r39); preview pack dropped DL textures (r54) | **r54, owner closed** |
 | S2 Zebes lights and acid | per-triangle alpha averaging | r39 |
 | S1 Castle roof texture missing | per-cycle alpha test | r40 |
 | C2/C5 one eye closed | texture-part status mirror | r41 |
 | P1/K1/J1/C3/C4/C5 face colour != body colour | fighter shade fold | r43 |
-| S3 Saffron door always open | transform chain verified working; only pixels unverified | **open, needs an owner observation** |
+| S3 Saffron door always open | transform chain verified working; only pixels unverified | **deferred by owner 9/22** |
 
 **What this batch got wrong, since it outweighs what it got right.** Five claims
 were published and withdrawn in one day: the Saffron authored pose, the Saffron

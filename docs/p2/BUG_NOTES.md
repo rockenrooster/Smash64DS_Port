@@ -6632,3 +6632,39 @@ on the foreign path) change; the other ten packs are byte-identical.
 `C8FC02AA2DF0BB6E` draws brown boots, gauntlets and belt at feed tick 90.
 `test_native_texture_loads_are_retained` uses the native owner state stream as
 its oracle and fails on the old packs (`link image 0xb188+32`).
+
+## C1 CSS hover-to-preview delay: measured, DEFERRED by owner (2026-09-22)
+
+**Measured on r54** (`C8FC02AA2DF0BB6E`, CSS feed, gdb VBlank counter plus
+timer-0 samples at each loader call and return). Cold Yoshi: hover to fighter
+build takes 19 VBlanks (~317 ms); cold Link takes about 22 (~370 ms). The CSS
+runs one update per VBlank when idle, so the delay is load work plus update
+quantisation, not the dwell.
+
+| Step (one per update today) | Cost |
+|---|---|
+| retire a zero-ref cached block | 2.6 ms |
+| REQUEST: `fopen` + header of `fighters/preview/NN.fpc` | 11.2-11.7 ms |
+| tree read, per 2 KiB unit (4 units per update) | 1.3-2.2 ms |
+| fixups/spans/REGISTER tail | ~3 ms total |
+| COMMIT `ftManagerSetupFilesAllKind` | 15.0 ms |
+| ANIM_IDLE preload | 2.7-25.2 ms |
+| ANIM_SELECTED | ~0 |
+| OWNER_HIGH image (open + read) | 12.3-14.2 ms |
+| OWNER_LOW image (open + read) | 10.3-13.4 ms |
+| fighter build `mnPlayersVSUpdateFighter` | 5-9 ms |
+
+About half of the ~100 ms total is NitroFS opens (~11 ms each): calico
+resolves every path by reading FNT entries from the card. The CSS fighter is
+HIGH detail (`dFTManagerDefaultFighterDesc`), and the draw picks its image by
+`detail_curr`, so the OWNER_LOW stage is dead work in the VS CSS.
+
+**Plan if resumed.** (1) Drop OWNER_LOW from the compact CSS transaction.
+(2) Replace the one-action-per-update budget with a wall-clock allowance
+(`cpuGetTiming`, ~8 ms) so cheap steps share an update: retire + REQUEST on the
+hover update, the tree tail + COMMIT together, and no Retry after the tree
+finishes. (3) Commit and acquire on the same update, with a cold dwell of 1.
+Estimated at 8-10 VBlanks for a cold Link. (4) Later: cache resolved NitroFS
+file ids, or ship the owner image inside the preview pack to save an open.
+`scripts/menus/test_css_preview_transaction.py` copies the stage enum and pins
+the per-update budget semantics; it needs a fake clock before (2) can pass.

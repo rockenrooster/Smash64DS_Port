@@ -5,8 +5,6 @@ AI Agent should mark fixed items with **FIXED** prefix or a 100 char summary (or
 
 treat anything not going through native renderer a failure.
 
-**PLAY r53 `b148c7a27244c124`: r51 + eyes stay live (r52) + Dream Land draws again (r53).**
-
 **Plan and evidence: docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md**
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
@@ -14,9 +12,8 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 Main Menus:
 -VS options
 -CSS Bugs still present and need to be fixed:
-    -delay between cursor hover and 3d fighter preview rendering. **NOT FIXED in R36 ** **r37: preview loader spent 1 of its 4 byte units per tic; now spends all four.**
+    -delay between cursor hover and 3d fighter preview rendering. **NOT FIXED in R36 ** **r37: preview loader spent 1 of its 4 byte units per tic; now spends all four.** **DEFERRED by owner 9/22; per-step profile and plan in BUG_NOTES "C1".**
     -Fighter faces not looking right:
-        -Link: **NOT FIXED in R45 ** sometimes missing textures/color on pants/ankle (turns gray). **r54: CSS preview pack dropped boot/glove/belt textures; kept now (capture: brown boots).**
 -Yoshi:
 -Link:
 -Pikachu
@@ -32,6 +29,6 @@ Stages:
 -Zebes: 
 -Yoshi's Island: 
 -SectorZ:
--Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **Transform chain VERIFIED by injection: the door's matrix tracks its joint, geometry submits, timing matches source. Only pixels unverified. Does it ever close over a full minute?** 
+-Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **Transform chain VERIFIED by injection: the door's matrix tracks its joint, geometry submits, timing matches source. Only pixels unverified. Does it ever close over a full minute?** **DEFERRED by owner 9/22.** 
 
 Audio:
