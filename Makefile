@@ -119,6 +119,11 @@ endif
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_HARNESS_FAST_LOGIC ?= 0
+# Diagnostic only, never on a published ROM: forces the NDS_DEV_LIVE_INPUT_PREVIEW
+# preset to run items ON at the highest rate, so an item-triggered Poke Ball
+# can be observed. That preset otherwise runs items off, which leaves the
+# item TRIGGER for the MBallRays row unexercised. See src/port/nds_match_config.c.
+NDS_HARNESS_ITEMS_ON ?= 0
 # Verifier-only on-demand presentation for the bounded fast battle harness.
 # Fast logic normally renders once after its entire update run, which is ideal
 # for state-only proofs but cannot verify source behavior that depends on one
@@ -6658,6 +6663,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BUILD_CONFIG_H'; \
 		echo '#define NDS_DEV_LIVE_INPUT_PREVIEW $(NDS_DEV_LIVE_INPUT_PREVIEW)'; \
 		echo '#define NDS_HARNESS_FAST_LOGIC $(NDS_HARNESS_FAST_LOGIC)'; \
+		echo '#define NDS_HARNESS_ITEMS_ON $(NDS_HARNESS_ITEMS_ON)'; \
 		echo '#define NDS_HARNESS_FAST_PRESENT_ON_REQUEST $(NDS_HARNESS_FAST_PRESENT_ON_REQUEST)'; \
 		echo '#define NDS_RENDERER_HW_TRIANGLES $(NDS_RENDERER_HW_TRIANGLES)'; \
 		echo '#define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY $(NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY)'; \

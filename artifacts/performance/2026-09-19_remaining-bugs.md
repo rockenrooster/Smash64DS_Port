@@ -2478,3 +2478,63 @@ fighters make the 24-tic window and seven do not, and the seven are named.
 That is a lead for that row rather than a defect in this one. Whoever takes it
 should raise `NDS_CSS_WALK_TOUR_HOLD_TICS` and re-read the masks: the dwell at
 which each of the seven starts drawing IS its load time in tics.
+
+## 2026-09-22 06:20 -- the last two rows, measured in the owner's own configuration
+
+Battle-entering walk (`NDS_P2_MENU_WALK` shell loop that reaches VS), Pikachu
+targeted, eight samples 51 presented frames apart inside one match:
+
+    B01 pres=203 P0 k=9 pk=0 lv=3 st=10  tics=317 gh=0 | P1 k=1 pk=1 lv=2 st=10  tics=3  gh=0
+    B02 pres=254 P0 k=9 pk=0 lv=3 st=69  tics=31  gh=0 | P1 k=1 pk=1 lv=2 st=18  tics=7  gh=0
+    B03 pres=305 P0 k=9 pk=0 lv=3 st=69  tics=133 gh=0 | P1 k=1 pk=1 lv=2 st=225 tics=6  gh=0
+    B04 pres=356 P0 k=9 pk=0 lv=3 st=10  tics=14  gh=0 | P1 k=1 pk=1 lv=2 st=225 tics=9  gh=0
+    B05 pres=407 P0 k=9 pk=0 lv=3 st=10  tics=14  gh=0 | P1 k=1 pk=1 lv=2 st=10  tics=5  gh=0
+    B06 pres=458 P0 k=9 pk=0 lv=3 st=37  tics=5   gh=0 | P1 k=1 pk=1 lv=2 st=225 tics=35 gh=0
+    B07 pres=509 P0 k=9 pk=0 lv=3 st=85  tics=81  gh=0 | P1 k=1 pk=1 lv=2 st=12  tics=46 gh=0
+    B08 pres=560 P0 k=9 pk=0 lv=3 st=85  tics=183 gh=0 | P1 k=1 pk=1 lv=2 st=12  tics=48 gh=0
+    END pres=560 loops=3 latch=0/0 anim=828/0
+
+### Frozen Fox: this IS the owner's configuration, and Fox is not frozen
+
+`pkind` 0 is `nFTPlayerKindMan`, 1 is `nFTPlayerKindCom`. **P0 is Pikachu as a
+HUMAN (pk=0, level 3); P1 is Fox as a CPU (pk=1, level 2).** That is exactly
+the reported setup, and it is not an artefact of the harness -- the walk
+build's preset says so in source (`nds_match_config.c`, under
+`NDS_DEV_LIVE_INPUT_PREVIEW`: *"The shipped match: one-minute Time, items off,
+Fox on the CPU"*).
+
+Fox changes status SIX times across eight samples -- 10, 18, 225, 225, 10,
+225, 12, 12 -- with `status_total_tics` resetting at each change. It waits,
+turns, runs a character-specific 225 twice and walks.
+
+**And `is_ghost` is 0 for both fighters at every sample.** That matters more
+than the status churn: `ftCommonAppearInitStatusVars` sets `is_ghost`, and a
+fighter stuck in Appear is both unresponsive and UNHITTABLE -- which is the
+only mechanism this file ever had for "frozen and cannot be hit". Measuring it
+directly at zero, in the owner's configuration, refutes that mechanism rather
+than merely failing to observe the symptom.
+
+The GObj latch never fired and 828 animations resolved with 0 fallbacks.
+
+### Poke Ball rays: they draw
+
+    RAYS    req=1 null=0 cand=50 reject=0 efFallback=0
+    RAYDRAW root41=25 root42=25 totalDraw=1862 alphaSkip=180
+    ITEMS   rate=0 toggles=0x00000000
+
+`gNdsEntryEffectNativeRootDraws[root]` increments immediately before
+`return TRUE` on a completed native draw, so this is the stage past
+"candidate" that every previous reading stopped short of.
+**Both ray roots drew 25 times each -- 50 draws, matching `cand=50` exactly**,
+with zero material rejects and zero native fallbacks. `alphaSkip=180` is the
+designed tail: the alpha-skip site's own comment records that MBallRays'
+PRIMCOLOR ramp reaches alpha 0 at source tick 50 while its rotation track runs
+to 130.
+
+So the chain is complete and clean end to end: requested, constructed,
+material-accepted, submitted, and DRAWN for exactly its 50-tick visible ramp.
+
+Note `rate=0 toggles=0` -- items are OFF in this preset, yet a ray request
+still occurred, so these rays come from the fighter-entry path rather than an
+item spawn. A Poke Ball ITEM scenario is therefore still unexercised here, and
+that is the remaining difference from the owner's report.

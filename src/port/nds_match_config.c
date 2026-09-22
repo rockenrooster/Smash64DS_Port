@@ -265,6 +265,27 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->time_limit = 1;
     cfg->item_toggles = 0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchNone;
+#if NDS_HARNESS_ITEMS_ON
+    /* DIAGNOSTIC ONLY, DEFAULT OFF. The preset above runs items off, which
+     * makes one question unanswerable on this arm: the Poke Ball rays row.
+     * Those rays (roots 41/42) were measured drawing 25 times each -- but from
+     * the FIGHTER ENTRY path, because with items off no Poke Ball item ever
+     * spawns. Entry and item reach the same effect through the same roots, so
+     * that proves the RENDER path; it does not exercise the item TRIGGER,
+     * which is the owner's actual scenario.
+     *
+     * This has to be a build flag rather than a gdb poke. The fields are
+     * copied into gSCManagerTransferBattleState (:623) immediately before the
+     * battle scene reads them, so at that moment the cache line is dirty and a
+     * stub write to DRAM is overwritten by the writeback -- the write-side of
+     * the known stale-read trap. Making the guest write the value is the only
+     * reliable way.
+     *
+     * Never set on a published ROM: it changes the match the shipped preset
+     * describes. */
+    cfg->item_toggles = ~0u;
+    cfg->item_appearance_rate = nSCBattleItemSwitchVeryHigh;
+#endif
     cfg->fighters[1].pkind = nFTPlayerKindCom;
 #if NDS_P2_KIRBY_COPYLINK_PROOF
     cfg->fighters[1].pkind = nFTPlayerKindMan;
