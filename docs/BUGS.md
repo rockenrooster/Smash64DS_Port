@@ -12,10 +12,9 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 Main Menus:
 -Make "Characters" and "VS Record" not selectable, "Characters" and "VS Record" work is Owner deferred.
 -VS options
-    -Changing Damage percentage still feels bad to use. maybe have it be 1 at a time but change at like 10 per sec?
+    -Changing Damage percentage still feels bad to use. maybe have it be 1 at a time but change at like 10 per sec? **Done: 1 per step, repeat every 6 updates (~10/sec), row-local cadence.**
 -CSS Bugs still present and need to be fixed:
-    -music pauses/reset when rendering new 3d fighter previews (moving around cursor) **8 BGM suspends per visit: the closure loads in ONE frame, 8.6 frames long. Slice it.**
-    -delay between cursor hover and 3d fighter preview rendering. **Same cause: the 13-tic dwell debounces a BLOCKING load. 70 tics waited per visit.**
+    -delay between cursor hover and 3d fighter preview rendering. **Owner: lower priority now. Dwell is 2 cold / 1 warm; residual is a 30,160 B owner-image read.**
 
 -Yoshi:
     -Yoshi's guard/shield (egg) is invisible **Latch cause found: Kirby's copy-hat load, not general pressure. Egg bake still owed.**
