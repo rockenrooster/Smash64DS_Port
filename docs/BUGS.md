@@ -16,7 +16,7 @@ Main Menus:
 -CSS Bugs still present and need to be fixed:
     -delay between cursor hover and 3d fighter preview rendering. **NOT FIXED in R36 ** **r37: preview loader spent 1 of its 4 byte units per tic; now spends all four.**
     -Fighter faces not looking right:
-        -Link: **NOT FIXED in R45 ** sometimes missing textures/color on pants/ankle (turns gray).
+        -Link: **NOT FIXED in R45 ** sometimes missing textures/color on pants/ankle (turns gray). **r54: CSS preview pack dropped boot/glove/belt textures; kept now (capture: brown boots).**
 -Yoshi:
 -Link:
 -Pikachu

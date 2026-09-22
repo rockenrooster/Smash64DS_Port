@@ -6600,3 +6600,35 @@ pinned hits by frame 240. Castle at the same frame is byte-identical to r50
 **Guard owed.** Any runtime change to a texture-key input must be mirrored in
 the corpus generator; nothing enforces that yet. The cheap tripwire is the walk
 ROM's stage-6 capture or `PinnedHitCount > 0` on Dream Land.
+
+## C6 Link's CSS legs and boots gray (r54, 2026-09-22)
+
+**Symptom.** In the VS CSS, Link's boots, gauntlets and belt drew gray/white and
+the sword blade white; the same fighter in battle was brown.
+
+**Ruled out.** A lab ROM with `NDS_R2_FIGHTER_PACKET=0 NDS_R2_FIGHTER_RUN_MEMO=0`
+drew the same gray, so neither the fighter packet nor the run-texture memo
+causes it. The MObj palette on joints 26/31 (Model 0xCFC8) is byte-identical in
+CSS and battle, and it is the white-tights palette, not a boot palette.
+
+**Cause.** The CSS preview pack (`fighters/preview/05.fpc`,
+`scripts/fighters/preview_source_metadata.py`) kept Model bytes from the first
+MObj image-table target (0xBAA0) to the end, minus display lists and vertices
+(Span C). Link's lists load 4 TLUTs and 6 texel blocks from 0xB188..0xB640,
+among them the boot TLUT 0xB4B8 and its texels 0xB4E0. `ndsRelocNativeAssetAddress`
+maps an offset outside every span to NULL, a NULL IMAGE turns implicit texturing
+off, and `ndsRendererRecordLoadTlut` keeps the previous TLUT on a NULL image, so
+those parts drew with shade colour only and nothing rejected. Battle packs
+(`generate_battle_core_packs.py`) compute an exact Gfx texture closure and were
+never affected.
+
+**Fix.** Span T: the metadata generator walks every measured list (and its G_DL
+children), and for each G_SETTIMG whose relocation targets the Model it keeps
+the extent of the following G_LOADTLUT / G_LOADBLOCK / G_LOADTILE. Only Link
+(+1,336 B) and Kirby (+1,368 B; its Yoshi copy-hat images are foreign and stay
+on the foreign path) change; the other ten packs are byte-identical.
+
+**Evidence.** `artifacts/visibility/2026-09-22_css-link-legs/`: r54
+`C8FC02AA2DF0BB6E` draws brown boots, gauntlets and belt at feed tick 90.
+`test_native_texture_loads_are_retained` uses the native owner state stream as
+its oracle and fails on the old packs (`link image 0xb188+32`).
