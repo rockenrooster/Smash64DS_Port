@@ -61,7 +61,7 @@ invariant instead of working around it.
 | S1 Castle roof texture missing | per-cycle alpha test | r40 |
 | C2/C5 one eye closed | texture-part status mirror | r41 |
 | P1/K1/J1/C3/C4/C5 face colour != body colour | fighter shade fold | r43 |
-| S3 Saffron door always open | see below | **open** |
+| S3 Saffron door always open | no defect found in 10 probes | **open, needs an owner observation** |
 
 **What this batch got wrong, since it outweighs what it got right.** Five claims
 were published and withdrawn in one day: the Saffron authored pose, the Saffron
