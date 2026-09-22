@@ -6446,17 +6446,6 @@ static u8 sNdsR2LightVectorWritten;
  * `geometry_mode & LIGHTING` alone and ran the geometry engine's light, which is
  * E32's dark-maroon hurt flash. */
 static u8 sNdsR2EpochUnlitVertexColor;
-#endif
-
-/* The solid-prim tile this epoch's untextured runs modulate by, or 0 for the
- * ordinary folded-material path. Written once per epoch by
- * ndsRendererNativeShadeProductionActions and read by the run prepare.
- *
- * Deliberately OUTSIDE the NDS_R2_UNLIT_VERTEX_EPOCH guard that
- * sNdsR2EpochUnlitVertexColor above sits inside -- that flag is 0 in every
- * shipping config, and both of this variable's users are unconditional. */
-static u32 sNdsR2EpochTintTexture;
-#if NDS_R2_UNLIT_VERTEX_EPOCH
 
 /* Byte-for-byte the expression ndsRendererHardwarePackedResolvedColor uses on
  * its no-material route, so the two paths cannot drift. */
@@ -6901,16 +6890,6 @@ static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2MaterialColor15(
 
 volatile u32 gNdsR2ShadeClampAppliedCount;
 
-/* Forward: the shade resolver and the tinted batch opener both live outside
- * the fighter ITCM section. Declared here so the two ITCM callers below can
- * reach them without carrying their bodies; see their definitions for why. */
-static u32 ndsRendererR2ResolveEpochShade(
-    u32 light1, u32 light2, u32 material_color, u32 use_material,
-    u32 color_modulate, u32 packet_mode);
-static void ndsRendererR2BeginTintBatch(
-    const NDSRendererStats *stats, u32 tint, u32 poly_fmt,
-    u32 matrix_generation);
-
 /* OWNER 2026-09-21: Kirby's face and body are still two colours, and HOLDING
  * NEUTRAL B fixes it. A static arithmetic error cannot be cured by holding a
  * button, so the clamp fold below is not the reported defect -- something a
@@ -7048,106 +7027,6 @@ static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2ClampDiffuseToMaterial(
         gNdsR2ShadeClampAppliedCount++;
     }
     return capped;
-}
-
-/* THE PRIM MULTIPLY BELONGS AFTER THE SHADE, NOT INSIDE IT.
- *
- * A tinted prim folded into diffuse/ambient can never reproduce
- * clamp8(l2 + l1*dot) * prim. The engine saturates per channel at 31 AFTER the
- * fold, so either the lit half washes toward white -- Purin's pink body
- * measured as pure (31,31,31) at full light -- or the capped ramp reaches prim
- * only at dot = 1 while the source has been sitting on prim since dot ~= 0.5,
- * which draws the body uniformly dimmer than the face beside it. Those are the
- * owner's two readings of this row, r35 and r36, and the cap is provably the
- * best the fold alone can do: any steeper hue-preserving ramp makes a channel
- * saturate before dot = 1, and every one of these prims already has a channel
- * at 31.
- *
- * So take the multiply out of the fold. Where a solid prim tile is available
- * the run draws TEXTURED, diffuse/ambient carry the raw light colours, and the
- * pipeline evaluates clamp31(RGB5(l2) + RGB5(l1)*dot) * prim -- the source's
- * own order of operations, and the same arithmetic the already-correct
- * textured FACE runs prove on hardware.
- *
- * OUT OF ITCM ON PURPOSE. This runs once per epoch, about 46 times a frame,
- * and the fighter ITCM section has no room: the first version of this change
- * inlined here and overflowed itcm by 1,416 bytes. `noinline` keeps the bodies
- * in main RAM and leaves the ITCM caller holding one branch and a call.
- *
- * Returns diffuse | (ambient << 16) and publishes sNdsR2EpochTintTexture. */
-static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
-    u32 light1, u32 light2, u32 material_color, u32 use_material,
-    u32 color_modulate, u32 packet_mode)
-{
-    u32 tint = 0u;
-    u32 diffuse;
-    u32 ambient;
-
-    if ((use_material != 0u) &&
-        (((material_color >> 8) & 0x00ffffffu) != 0x00ffffffu))
-    {
-        if ((color_modulate & 0xffu) != 0u)
-        {
-            /* The hurt flash is a second post-shade multiply and the texel
-             * cannot carry both, so those frames keep the fold. */
-            gNdsR2FighterTintDeclined[0]++;
-        }
-        else if (packet_mode == 0u)
-        {
-            tint = ndsRendererR2FighterTintTexture(material_color);
-        }
-    }
-    sNdsR2EpochTintTexture = tint;
-    diffuse = ndsRendererR2MaterialColor15(
-        light1, (tint != 0u) ? 0u : material_color,
-        (tint != 0u) ? 0u : use_material, color_modulate);
-    ambient = ndsRendererR2MaterialColor15(
-        light2, (tint != 0u) ? 0u : material_color,
-        (tint != 0u) ? 0u : use_material, color_modulate);
-    if (tint == 0u)
-    {
-        diffuse = ndsRendererR2ClampDiffuseToMaterial(
-            diffuse, ambient, material_color, use_material, color_modulate);
-    }
-    else
-    {
-        /* NO PACKET TWIN, SO REFUSE THE PACKET RATHER THAN LET IT DRIFT.
-         *
-         * A recorded packet replays its own shade words and its own bind, so a
-         * run whose colour now comes from a texel the packet never recorded
-         * would replay wrong -- and a fighter alternating recorded and live
-         * frames would flicker between two colours. The raw emitters in this
-         * file already take exactly this way out and say so. The cost is that
-         * a tinted fighter draws live every frame; the alternative is a
-         * fighter that is the wrong colour half the time. */
-        NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
-    }
-    /* Composed with the same expression the replay twin uses, deliberately:
-     * check-r2-shade-twin.py finds the derivation sites by that shape. */
-    return diffuse | (ambient << 16);
-}
-
-/* The tinted run's batch. Out of ITCM for the same reason as the resolver; it
- * runs once per run, about 53 times a frame, and only for a tinted fighter. */
-static void __attribute__((noinline)) ndsRendererR2BeginTintBatch(
-    const NDSRendererStats *stats, u32 tint, u32 poly_fmt,
-    u32 matrix_generation)
-{
-    if (sNdsRendererHardwareBoundTextureName != tint)
-    {
-        ndsRendererHardwareEndBatch();
-        ndsRendererHardwareBindTextureState((int)tint);
-        sNdsRendererHardwareBoundTextureName = tint;
-        sNdsRendererHardwareActiveTextureEntry = NULL;
-    }
-    ndsRendererNativeBeginDirectBatch(stats, TRUE, tint, poly_fmt,
-                                      matrix_generation);
-    /* Every texel of the tile is the same colour, so the DS texcoord register
-     * being sticky means ONE word covers the whole run: no per-vertex UV, and
-     * the untextured vertex emitter stays untouched. The centre of the tile in
-     * 1/16 texel units keeps the sample inside it under either wrap mode. */
-    GFX_TEX_COORD = (u32)TEXTURE_PACK((NDS_R2_FIGHTER_TINT_DIM / 2u) << 4,
-                                      (NDS_R2_FIGHTER_TINT_DIM / 2u) << 4);
 }
 #endif
 
@@ -7322,10 +7201,6 @@ ndsRendererNativeShadeProductionActions(
         ((ndsRendererHardwareUseVertexColor(stats) != FALSE) &&
          (ndsRendererHardwareUseMaterialColor(stats) == FALSE)) ? 1u : 0u;
 #endif
-    /* Cleared for EVERY epoch, not only the lit ones: the run prepare reads it
-     * unconditionally, and an epoch that never reaches the shade write below
-     * must not inherit the previous epoch's tile. */
-    sNdsR2EpochTintTexture = 0u;
     if (epoch->action_count == 0u)
     {
         return TRUE;
@@ -7460,12 +7335,18 @@ ndsRendererNativeShadeProductionActions(
         {
             ndsRendererR2WriteLightVector(stats);
         }
-        u32 shade = ndsRendererR2ResolveEpochShade(
-            stats->light_color_1, stats->light_color_2, material_color,
-            use_material, state->color_modulate, packet_mode);
-
-        diffuse = shade & 0xffffu;
-        ambient = shade >> 16;
+        diffuse = ndsRendererR2MaterialColor15(
+            stats->light_color_1, material_color, use_material,
+            state->color_modulate);
+        ambient = ndsRendererR2MaterialColor15(
+            stats->light_color_2, material_color, use_material,
+            state->color_modulate);
+        /* See ndsRendererR2ClampDiffuseToMaterial: the source clamps the shade
+         * sum before modulating by prim, and the geometry engine cannot, so
+         * hold the fully lit vertex on prim instead of letting it wash out. */
+        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+            diffuse, ambient, material_color, use_material,
+            state->color_modulate);
 
         gNdsR2ShadeWitness[(gNdsR2ShadeWitnessWrites - 1u) %
                            NDS_R2_SHADE_WITNESS_SLOTS].shade =
@@ -8895,40 +8776,9 @@ ndsRendererNativePrepareProductionRunCore(
     }
     else if (packet_mode == 0u)
     {
-        u32 tint = sNdsR2EpochTintTexture;
-
-        if ((policy->textured == 0u) && (tint != 0u))
-        {
-            /* The shade written for this epoch carries the RAW light colours,
-             * so modulating it by a tile that is uniformly prim completes the
-             * source's clamp8(l2 + l1*dot) * prim. See the resolver. */
-            ndsRendererR2BeginTintBatch(
-                stats, tint, state->texture_prepare_poly_fmt,
-                state->matrix_generation);
-            /* THE BIND HAS TO BE DECLARED, OR IT STEALS THE NEXT RUN'S TEXTURE.
-             *
-             * ndsRendererHardwareBindTexture runs ONLY inside the
-             * `texture_prepare_valid == 0` branch of the prepare
-             * (nds_renderer_native_common.c:482). A run whose prepare is
-             * REUSED therefore never re-binds -- it trusts that the texture
-             * the tracker names is still the one on the hardware. Binding the
-             * tint tile behind the tracker's back breaks exactly that trust,
-             * and the next textured run to reuse its prepare draws with a
-             * solid-colour 8x8 tile instead of its own texture.
-             *
-             * That is the r37/r42 regression: EVERY fighter after a tinted one
-             * in the draw order, not just the three that can reach this
-             * branch. The owner saw it on all of them, and the ladder named it
-             * on r42. Invalidating the prepare costs one full re-prepare per
-             * tinted run and restores the tracker's invariant. */
-            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
-        }
-        else
-        {
-            ndsRendererNativeBeginDirectBatch(
-                stats, policy->textured, state->texture_prepare_name,
-                state->texture_prepare_poly_fmt, state->matrix_generation);
-        }
+        ndsRendererNativeBeginDirectBatch(
+            stats, policy->textured, state->texture_prepare_name,
+            state->texture_prepare_poly_fmt, state->matrix_generation);
     }
 #if NDS_R2_FIGHTER_RUN_PROOF >= 2
     gNdsR2RunTailTicks += cpuGetTiming() - t_r2e11_phase;
