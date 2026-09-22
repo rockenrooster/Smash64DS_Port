@@ -6072,3 +6072,49 @@ on rigid bindings), `sNdsNativeStageOwnerExecution.binding_world` (a POINTER to
 the same array), and `binding_composed` (the live one). Two of the three froze
 on cue and neither was the defect. Read the consumer and its gate before
 deciding what a value means.
+
+### Saffron: every mechanism refuted, and what that means
+
+Probe 10 tried to cancel the camera by differencing binding 17 (the gate's
+moving door) against binding 1 (a static layer DObj) in the same frame. It does
+not work: the delta moves between samples B and C where the gate is stationary,
+because `binding_composed` is the modelview-PROJECTION product and the
+translation row of that product depends on the camera's ROTATION, which the
+subtraction does not cancel. Recorded so nobody rebuilds that discriminator.
+
+Settled by code instead. The stage path calls
+`ndsRendererAdapterPrepareInitialMatrices(dobj, cobj, TRUE, ...)`, so it takes
+`ndsRendererAdapterBuildPersistentStageWorldMatrix` -- the CACHED builder,
+which is the last place a moving joint could be dropped. Its hit test is
+`entry->validated_frame == frame` with `frame = gNdsRendererProfileFrameCount`,
+so the question is whether that counter advances in a shipping build where
+`NDS_RENDERER_PROFILE_LEVEL` is 0. It does: `taskman_seam_battle_host.c:511`
+increments it OUTSIDE every `#if`. The cache revalidates every frame and the
+gate's world is rebuilt from the live DObj.
+
+**So every mechanism this row has carried is now refuted, and no new one is
+visible.** Measured, in the shipping configuration:
+
+  - the gate GObj is created and non-NULL
+  - its joints traverse the full open pose and the full closed pose
+  - the state machine cycles Wait -> Open -> Wait with a real Pokemon spawned
+  - the blob loads at full size with no hash mismatch
+  - the native stage owner accepts all 21 bindings, no topology failure
+  - bindings 17-20 point at the gate's OWN child DObjs (`BD17 == GATEC1`)
+  - the per-frame world cache revalidates, so those bindings rebuild live
+  - the animation install is never refused (RefusedCount 0, NormalizeFail 0)
+
+**This is not a claim that the row is invalid.** BUGS.md's own rule is that
+absence is never evidence a symptom was unreal, and the owner saw what they
+saw. It is a statement that ten probes and a full source trace cannot find the
+defect, and that the next useful information is an observation only the owner
+can make.
+
+**The specific question back.** The source keeps this gate open for a long
+time: `grYamabukiGateSetClosedWait` sets `gate_wait = 1000` and
+`monster_wait = rand(1000) + 1000`, so the cycle is roughly 1000 frames closed,
+then open from the moment `gate_wait` expires until a Pokemon spawns AND
+retires. Measured on the emulator that is about half the time open. A short
+look can land entirely inside the open phase. So: over a full minute on
+Saffron, does the door ever close at all, or does it sit open the whole time?
+Those are different bugs, and the second one is the only one left.
