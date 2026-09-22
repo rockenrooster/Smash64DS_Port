@@ -545,7 +545,17 @@ QUAD_MEASURED_LIVE = frozenset(
 # These textures became mandatory when their public BattleShip makers stopped
 # being weak no-ops. They are source-proven live by the restored call paths,
 # but have not yet joined QUAD_MEASURED_LIVE's runtime-observation census.
-QUAD_RESTORED_SOURCE_LIVE = frozenset((23, 32, 44))
+# 46 is Pikachu's Thunder self-hit burst, the owner's "missing blue exp".
+# 9d0de28d3b2 routed nEFKindThunderAmp to efManagerThunderAmpMakeEffect and
+# seeded script 0x74, then recorded that "being outside that sheet is its
+# intended state". That is false for a common-bank particle: the quad sheet is
+# its ONLY draw path, so the texels were packed and the burst still drew
+# nothing. It is exactly the texture-12 case documented above -- a live,
+# correctly positioned, correctly scaled particle emitting zero pixels because
+# its cell was excluded while its texels were packed -- and for the same
+# reason, that a soak cannot observe an effect that was unreachable when the
+# soak ran.
+QUAD_RESTORED_SOURCE_LIVE = frozenset((23, 32, 44, 46))
 # A5I3: one byte per texel, 5-bit alpha, 3-bit index into a shared palette.
 # Two reasons, and the second is the one that shows on screen.
 #
@@ -618,6 +628,25 @@ QUAD_LONG_ANIMATION_CELL_MAX = 64
 # footprint, but preserve thin-line coverage when reducing it (see the atlas
 # bake below) instead of averaging a 1-texel sparkle stroke into transparency.
 QUAD_HEAL_SPARKLE_CELL_MAX = 8
+# ThunderAmp's texture 46 is the only 64x64 in the live set and it has three
+# frames: 12,288 texels at source against the 1,536 the five sheets have free,
+# so admitting it at source size would evict working cells.
+#
+# At 16x16 it is three frames of 256, and it seats in the space already there.
+# The sheet carries SHAPE only -- glColor supplies the blue from the script's
+# prim/env -- and 16x16 is the cell textures 25 and 44 already use.
+#
+# RUN THE GENERATOR THE WAY THE MAKEFILE DOES BEFORE READING ITS REPORT.
+# A bare `python scripts/generate_nds_particle_banks.py` bakes with
+# YOSTER_BAKE_ENABLED false, because that reads NDS_P2_STAGE_YOSTER from the
+# environment and the Makefile is what exports it. The committed
+# NDS_PARTICLE_BANKS.generated.json is a flag-ON bake, so diffing a bare run
+# against it shows the entire `yoster` bank disappearing and texture 192 being
+# "evicted" by whatever change you just made. Nothing was evicted; the flag was
+# off. That false alarm cost a cycle here on 2026-09-22 and is the same trap the
+# stamp machinery above (Makefile: NDS_PARTICLE_BANKS_STAMP) exists to catch
+# between two builds.
+QUAD_THUNDER_AMP_CELL_MAX = 16
 # ...and then DECIMATE what is left, because halving the cell stopped being
 # enough. The cap above trades resolution; this one trades animation rate, which
 # PROJECT_GOAL.md allows in as many words ("reduced animation update rates",
@@ -1879,6 +1908,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 cell_max = QUAD_LONG_ANIMATION_CELL_MAX
             if texture["id"] == 7:
                 cell_max = min(cell_max, QUAD_HEAL_SPARKLE_CELL_MAX)
+            elif texture["id"] == 46:
+                cell_max = min(cell_max, QUAD_THUNDER_AMP_CELL_MAX)
             # The ladder scales the whole sheet together rather than one class of
             # texture, so a rung is a single readable statement about the atlas
             # ("everything at source", "everything at half") instead of three

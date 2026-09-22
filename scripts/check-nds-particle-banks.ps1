@@ -527,7 +527,15 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # path and reads its texels from the packed NitroFS pack, not from this 2D
 # quad sheet -- so being outside the sheet is the intended state for it, and
 # it evicted nothing: the admitted count and every admitted cell are unchanged.
-$expectedExcluded = @(28, 31, 35, 36, 46)
+# 46 LEFT THIS LIST ON 2026-09-22, and it is the owner's bug being closed.
+# ThunderAmp's texture was excluded while its script and texels were packed, so
+# Pikachu's down-B self-hit burst drew nothing -- gNdsParticleQuadFirstRow[46]
+# read 0xFF and ndsParticleQuadFrameFor returned NULL. The quad sheet is the
+# only draw path a common-bank particle has, so being off the sheet is not a
+# benign deferral for it. It is admitted at 16x16 under
+# QUAD_THUNDER_AMP_CELL_MAX and takes 256 B and one frame in both bakes,
+# displacing nothing: the excluded SET is unchanged.
+$expectedExcluded = @(28, 31, 35, 36)
 $actualExcluded = @($report.quads.excluded |
     ForEach-Object { [int64]$_.texture } | Sort-Object)
 if (([int64]$report.quads.atlas_width -ne 128) -or
@@ -565,9 +573,12 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # 32x32 atlas cells (keys 160/161). The current one-frame cap therefore
     # adds 2,048 bytes, two admitted rows and two packed frames to BOTH bakes;
     # it displaces none of the standing deferred textures below.
-    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 39424 } else { 38400 })) -or
-    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 50 } else { 49 })) -or
-    (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 45 } else { 44 })) -or
+    # 2026-09-22: ThunderAmp's texture 46 is admitted at 16x16 in both bakes.
+    # The frame cap at this rung is 1, so it costs 256 B, one packed frame and
+    # one admitted row, and evicts nothing -- 39,680 of 40,960 with Yoster on.
+    ([int64]$report.quads.bytes -ne $(if ($yosterFlag -eq '1') { 39680 } else { 38656 })) -or
+    ([int64]$report.quads.frame_count -ne $(if ($yosterFlag -eq '1') { 51 } else { 50 })) -or
+    (@($report.quads.admitted).Count -ne $(if ($yosterFlag -eq '1') { 46 } else { 45 })) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
     # items-off milestone, and they are held out BY NAME because the sheet now

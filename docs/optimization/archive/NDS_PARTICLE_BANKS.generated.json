@@ -151,6 +151,7 @@
       41,
       44,
       45,
+      46,
       64,
       65,
       66,
@@ -415,6 +416,13 @@
         "width": 32
       },
       {
+        "bytes": 256,
+        "frames": 3,
+        "height": 16,
+        "texture": 46,
+        "width": 16
+      },
+      {
         "bytes": 1024,
         "frames": 1,
         "height": 32,
@@ -482,7 +490,7 @@
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 40960,
-    "bytes": 39424,
+    "bytes": 39680,
     "cell_cap": 64,
     "excluded": [
       {
@@ -512,17 +520,10 @@
         "height": 32,
         "texture": 36,
         "width": 32
-      },
-      {
-        "bytes": 4096,
-        "frames": 3,
-        "height": 64,
-        "texture": 46,
-        "width": 64
       }
     ],
     "frame_cap": 1,
-    "frame_count": 50,
+    "frame_count": 51,
     "held_frames": {
       "25": 2
     },

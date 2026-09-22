@@ -1273,6 +1273,32 @@ static sb32 ndsEFManagerMapFileOffset(void *base, size_t span,
 
         if (mapped == NULL)
         {
+            /* A DESC FIELD CAN NAME A DISPLAY LIST, NOT A DATA SPAN.
+             *
+             * An EFDesc carrying neither 0x1 nor 0x4 hands
+             * `*file_head + o_dobjsetup` straight to gcAddDObjForGObj, which
+             * stores it as DObj::dv (efmanager.c:2044, objman.c:1420).
+             * dEFManagerYoshiShieldEffectDesc and
+             * dEFManagerYoshiEggEscapeEffectDesc both do, and both name
+             * YoshiModel 0xA860. The compact battle pack PRUNES geometry and
+             * leaves one ENDDL + source-offset identity cell per retained
+             * root, outside every retained DATA span, so the data resolver
+             * answers NULL for a perfectly valid source root and the whole
+             * descriptor is disabled for the match. That is the owner's
+             * invisible guard egg, and it is upstream of every renderer arm
+             * anyone has added for it: no effect GObj and no DObj are created
+             * at all, so nothing ever reaches a native owner to be admitted.
+             *
+             * ndsRelocNativeRootAddress is the cell-aware resolver the weapon
+             * side already uses for this exact root
+             * (battleship_wpmanager_core.c:377-379). It is the identity on an
+             * unpacked file and NULL for an offset that is not a root, so no
+             * descriptor that maps today changes behaviour. */
+            mapped = ndsRelocNativeRootAddress(
+                base, (u32)(uintptr_t)source_offset);
+        }
+        if (mapped == NULL)
+        {
             return FALSE;
         }
         relative = (uintptr_t)mapped - (uintptr_t)base;
