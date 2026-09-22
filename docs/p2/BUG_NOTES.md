@@ -5401,3 +5401,35 @@ firing on Saffron.
 **Honest state: Saffron + Kirby remains unreproduced and without a mechanism.**
 Two matches with Kirby present ran clean, the gate cycled three states, the
 latch never fired, and the copy is still the one untested variable.
+
+## 2026-09-22 -- The Saffron crash was mine, not the owner's
+
+**There is no owner-reported Saffron crash.** The owner's entire Saffron row is
+one sentence: *"the pokemon garage door hazard is always open for some reason.
+It should close and open periodically."* Every crash mention in that row is
+agent text I added at `c1bee842d42` as `CRASH NOT REPRODUCED`, and I then spent
+several cycles trying to reproduce and mechanise it: a copy-cost arena theory,
+a GObj-latch theory, a null-safe-maker theory, a Kirby-inhale probe, and a
+full sweep of the Saffron build set.
+
+Checked before withdrawing it: `docs/BUGS.md` across forty revisions carries
+the owner's sentence unchanged and no crash; neither
+`Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md` nor
+`BUGS_REMAINING_DIAGNOSIS_2026-09-19.md` mentions a Saffron crash;
+`builds/2026-09-19-owner-accepted-crashes/` holds only a ROM snapshot.
+
+**The actual row is addressed.** The gate replayed a baked constant world
+matrix, so it was frozen -- and frozen CLOSED, not open; the always-open
+appearance is the layer geometry behind it. Bindings are live and the gate was
+observed cycling 0 -> 200 -> 8 across two Kirby matches.
+
+**What the phantom cost, and the two facts worth keeping from it.** The
+low-detail copy hat really is unreachable below three fighters and skipping it
+really does return 7,636 bytes -- a genuine improvement found while chasing
+nothing. And the latch's true consequence is now established:
+[[gobj-maker-null-is-tolerated-not-fatal]], a refused GObj gives missing
+objects, never a fault.
+
+The rule this breaks is one this repo already carries: an agent's own earlier
+bold text in an owner file is not an owner report. Read the owner's sentence
+and stop at its full stop.
