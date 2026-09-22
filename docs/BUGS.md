@@ -7,8 +7,7 @@ treat anything not going through native renderer a failure.
 
 **Every newly built ROM, including diagnostics, must exclude non-native renderer implementations. Runtime defaults and zero observed fallbacks are insufficient.**
 
-**09-22: play r36 `1CECBEF5`. 16 FIXED, 2 deferred, 1 open. Detail in docs/p2/BUG_NOTES.md**
-**Earlier arena alarm withdrawn: measured free-min 48,216, GObj latch never fires.**
+**09-22 r36 playtested. Face/body NOT fixed on all 3 fighters: my clamp repair was wrong. Re-investigating.**
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
@@ -17,10 +16,9 @@ Main Menus:
 -VS options
 -CSS Bugs still present and need to be fixed:
     -delay between cursor hover and 3d fighter preview rendering. **Owner deferred. 5 of 12 previews draw within 24 tics; the 7 slow ones are named in BUG_NOTES.**
-    -Fighter faces not 
 
 -Yoshi:
-    -**Not FIXED in R36** Yoshi's guard/shield (egg) is invisible 
+    -Yoshi's guard/shield (egg) is invisible **FIXED**
 -Link:
 -Pikachu
     -**NOT FIXED in R36 ** face color is different from body color. 

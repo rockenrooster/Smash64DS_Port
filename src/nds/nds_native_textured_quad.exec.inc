@@ -31,15 +31,49 @@
  * image raw mirrors every four-texel group -- the defect family that has already
  * cost this port five sessions -- so both fills and the TLUT reader take the
  * lane from the config that names the file's layout. */
-#define NDS_GRADED_QUAD_TEXTURES 8u
+/* SIXTEEN SLOTS, BECAUSE THE LIVE SET IS PER-FRAME AND ROSTER-SIZED.
+ *
+ * A slot cannot be recycled inside the frame that bound it: the geometry is
+ * already in the list and the rasteriser reads its texels at scanline time, so
+ * releasing that VRAM mid-frame corrupts polygons that are still pending. The
+ * eviction rule below is therefore correct and must stay. The consequence is
+ * that the table has to HOLD the whole set of distinct graded images drawn in
+ * one frame, and that set is roster-sized: the five graded call sites are
+ * Pikachu's Thunder, Thunder Jolt and the Jolt effect, plus Ness's PK Thunder
+ * and PK tail, and each live instance contributes its own image because these
+ * owners pass a LIVE `material->current_image` that changes per animation
+ * frame. Four fighters can want twelve at once; eight refuses four of them.
+ *
+ * A refusal is not a crash and not a missing draw -- the caller falls through
+ * to the generic cache -- but the generic cache carries ONE alpha bit, which
+ * is the whole reason this helper exists: an IA8 glow reduced to a threshold
+ * draws as a sub-pixel hairline. On screen that reads as "the effect did not
+ * play", and which effects lose the race depends on who else is on the stage.
+ * That is the owner's 2026-09-22 report of VFX that play or not depending on
+ * the fighter combination.
+ *
+ * Sixteen rows cost 16 * 28 bytes of table and NO extra VRAM until a frame
+ * actually needs the ninth texture, because entries are created on demand.
+ * `gNdsGradedQuadLiveHighWater` reports the real peak so this number can be
+ * set from a measurement instead of from this paragraph's arithmetic. */
+#define NDS_GRADED_QUAD_TEXTURES 16u
 typedef struct NDSGradedQuadTexture
 {
     const u8 *image;
+    /* The rest of the identity. `image` alone is NOT a key: width and height
+     * come from the live tile window, the TLUT selects CI4 over IA8 and its
+     * sixteen colours, and the lane decides whether the fill reads the file
+     * word-swapped. One pointer can arrive under any of these, and a hit on
+     * the pointer alone binds texels built for different content. */
+    const u8 *tlut;
     u32 name;
     u32 generation;
     u32 prim; /* RGB the palette was built for */
     u32 env;
     u32 frame; /* sNdsRendererHardwareFrameSerial + 1 at the last bind */
+    u16 width;
+    u16 height;
+    u8 lane;
 } NDSGradedQuadTexture;
 static NDSGradedQuadTexture sNdsGradedQuadTextures[NDS_GRADED_QUAD_TEXTURES];
 static u16 sNdsGradedQuadPalette[32];
@@ -49,6 +83,14 @@ volatile u32 gNdsGradedQuadPaletteUpdates;
 /* Non-zero means the table filled and a slot had to be taken back. Reading it
  * beside gNdsGradedQuadTextureFails separates "recycled, drew" from "gave up". */
 volatile u32 gNdsGradedQuadTextureRecycles;
+/* The most entries ever bound within one hardware frame. This is the number
+ * NDS_GRADED_QUAD_TEXTURES has to cover; anything at or above it means the
+ * next roster can start refusing again. */
+volatile u32 gNdsGradedQuadLiveHighWater;
+/* Key misses that were NOT a stale-pointer miss: same image, different tile
+ * window, TLUT or lane. A non-zero value proves the pointer-only key that
+ * shipped through r36 was binding the wrong texels. */
+volatile u32 gNdsGradedQuadIdentityMisses;
 
 static void ndsGradedQuadRamp(u32 prim, u32 env)
 {
@@ -176,6 +218,32 @@ static void ndsGradedQuadTlutPalette(const NDSGradedQuadFill *fill)
     }
 }
 
+/* Stamp this frame on the entry and report the peak simultaneous live set.
+ * The scan is over sixteen rows at the ~12 graded binds a frame this renderer
+ * issues, so it is below the noise floor of the bind it accompanies, and it is
+ * the only number that says whether NDS_GRADED_QUAD_TEXTURES is big enough for
+ * a given roster. */
+static void ndsGradedQuadNoteBind(NDSGradedQuadTexture *entry)
+{
+    u32 this_frame = sNdsRendererHardwareFrameSerial + 1u;
+    u32 live = 0u;
+    u32 i;
+
+    entry->frame = this_frame;
+    for (i = 0u; i < NDS_GRADED_QUAD_TEXTURES; i++)
+    {
+        if ((sNdsGradedQuadTextures[i].name != 0u) &&
+            (sNdsGradedQuadTextures[i].frame == this_frame))
+        {
+            live++;
+        }
+    }
+    if (live > gNdsGradedQuadLiveHighWater)
+    {
+        gNdsGradedQuadLiveHighWater = live;
+    }
+}
+
 static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 env)
 {
     const u8 *image = fill->image;
@@ -201,11 +269,25 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
         }
         if ((entry->image == image) && (entry->name != 0u))
         {
+            if ((entry->tlut != fill->tlut) ||
+                (entry->width != (u16)width) ||
+                (entry->height != (u16)height) ||
+                (entry->lane != (u8)fill->lane))
+            {
+                /* Same pointer, different content. Build a second entry rather
+                 * than binding texels that were decoded for another tile
+                 * window, another palette or the other byte lane. */
+                gNdsGradedQuadIdentityMisses++;
+                continue;
+            }
             ndsRendererHardwareEndBatch();
             ndsRendererHardwareBindTextureState((int)entry->name);
             sNdsRendererHardwareBoundTextureName = entry->name;
             sNdsRendererHardwareActiveTextureEntry = NULL;
-            entry->frame = sNdsRendererHardwareFrameSerial + 1u;
+            ndsGradedQuadNoteBind(entry);
+            /* CI4 entries reach here with prim and env pinned at zero by the
+             * caller, so this branch is IA8-only by construction and the ramp
+             * can never overwrite a TLUT palette. */
             if ((entry->prim != prim) || (entry->env != env))
             {
                 ndsGradedQuadRamp(prim, env);
@@ -223,7 +305,7 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
     }
     if (slot == NDS_GRADED_QUAD_TEXTURES)
     {
-        /* EIGHT SLOTS, TWELVE OWNERS, AND NOTHING EVER GAVE ONE BACK.
+        /* A FULL TABLE, AND NOTHING EVER GAVE A SLOT BACK.
          *
          * Until now a slot was freed only when `generation` changed, i.e. at a
          * whole-scene texture reset. But several owners pass a LIVE
@@ -236,12 +318,19 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
          * 1-bit-alpha path the helper exists to avoid, or was not drawn at all.
          *
          * Take the least-recently-bound resident slot instead -- never one
-         * bound this frame, the same rule ndsRendererHardwareEvictTexture
-         * applies to its own entries. This branch previously always failed, so
-         * nothing that works today can be made worse: the only paths that
-         * change behaviour are ones that were already returning FALSE. The old
-         * name is NOT zeroed below, so PrepareIFCommonA3I5Atlas releases it and
-         * the VRAM actually comes back. */
+         * bound this frame, because the rasteriser has not read its texels yet.
+         * The old name is NOT zeroed below, so PrepareIFCommonA3I5Atlas
+         * releases it and the VRAM actually comes back.
+         *
+         * The original note here claimed "nothing that works today can be made
+         * worse, because this branch previously always failed". That reasoning
+         * is wrong and is worth leaving in place as a warning: the branch also
+         * RELEASES a shared resource, and the release path inside
+         * PrepareIFCommonAtlas can call ndsRendererHardwareEvictTexture(NULL)
+         * on an upload failure, which takes entries out of the GENERIC texture
+         * cache that unrelated draws depend on. A change that only ever runs
+         * on a previously failing path can still be felt by every other
+         * consumer of what it frees. */
         u32 oldest_frame = 0u;
         u32 this_frame = sNdsRendererHardwareFrameSerial + 1u;
 
@@ -283,10 +372,14 @@ static s32 ndsRendererNativeBindGraded(NDSGradedQuadFill *fill, u32 prim, u32 en
     sNdsRendererHardwareBoundTextureName = sNdsGradedQuadTextures[slot].name;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsGradedQuadTextures[slot].image = image;
+    sNdsGradedQuadTextures[slot].tlut = fill->tlut;
     sNdsGradedQuadTextures[slot].generation = generation;
     sNdsGradedQuadTextures[slot].prim = prim;
     sNdsGradedQuadTextures[slot].env = env;
-    sNdsGradedQuadTextures[slot].frame = sNdsRendererHardwareFrameSerial + 1u;
+    sNdsGradedQuadTextures[slot].width = (u16)width;
+    sNdsGradedQuadTextures[slot].height = (u16)height;
+    sNdsGradedQuadTextures[slot].lane = (u8)fill->lane;
+    ndsGradedQuadNoteBind(&sNdsGradedQuadTextures[slot]);
     gNdsGradedQuadTextureBuilds++;
     return TRUE;
 }
