@@ -47,7 +47,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="3fe9704671177dc0192f7e87569d2970778b22fdb0fe2b182b6a9bd1a02c34c7",
+    include_sha="d925394f79d3cd73479767e1652a1a36429fbf95c8a2f458d0ccca79d6c3fe3e",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",
@@ -64,27 +64,28 @@ DESCRIPTOR = StageDescriptor(
         # so the stage rises 151 -> 172 and its runs 60 -> 72.  Every added
         # vertex is an exact average of two source vertices, so the acid
         # plane stays planar and no new geometry is invented.
-        # 2026-09-22: light-cone root 0x5870 joins it, 5 tris -> 20, taking the
-        # stage to 187 and its runs to 82.  Same exact-midpoint property.
-        "triangles": 187,
-        "runs": 82,
+        # 2026-09-22: light-cone root 0x5870 joins it at one level, 5 tris ->
+        # 20, and the acid goes to level 2, 7 -> 112.  Stage 271, runs 141.
+        "triangles": 271,
+        "runs": 141,
         "texture_epochs": 42,
         "material_events": 19,
         # 92 -> 107: the light cone's 15 new triangles all submit in the same
-        # class its 5 originals did.
-        "submit_classes": (107, 0, 80),
+        # class its 5 originals did. 80 -> 164: the acid's second level adds
+        # its 84 to the class the acid already submitted in.
+        "submit_classes": (107, 0, 164),
         "state_events": 282,
         "state_deltas": 142,
         "sync_events": 173,
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        # 317 source + 165 = 482 dense. The subdivision adds three midpoints
-        # per subdivided source triangle and, because each of the 28 acid
-        # triangles now carries its own averaged alpha, more per-triangle
-        # clones than the 7 originals needed. 2026-09-22: the light cone's
-        # 5 -> 20 split adds the remaining 51 over the acid's 114.
-        "alpha_clone_vertices": 165,
+        # 317 source + 465 = 782 dense. The subdivision adds three midpoints
+        # per subdivided triangle at every level and, because each emitted
+        # facet carries its own averaged alpha, more per-triangle clones than
+        # the originals needed. 2026-09-22: the acid's second level and the
+        # light cone's first take this from 114 to 465.
+        "alpha_clone_vertices": 465,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -190,11 +191,22 @@ DESCRIPTOR = StageDescriptor(
     # 20 triangles and four times the alpha resolution for +15 triangles on a
     # 172-triangle stage.
     #
-    # The acid stays at one level deliberately. Two levels would take it 28 ->
-    # 112 and the stage past 340 triangles, and Zebes already runs near the
-    # cadence gate -- that is a Boundary WORK-H P50/P95 measurement, not a
-    # correctness question, and it is not owed by this row's first repair.
-    alpha_subdivide_roots=((157, 0x9D8), (105, 0x5870)),
+    # The acid goes to level 2, the owner's other half of this row: its 28
+    # facets carried only FIVE distinct alphas across a smooth 0 -> 220 radial
+    # fade, which is "edges are too defined instead of a gradient". Level 2
+    # gives the quantizer 112 smaller facets.
+    #
+    # The triangle budget was the stated reason not to, and it does not hold
+    # up against the stages this port already ships. Zebes goes to 271; Peach's
+    # Castle is 325 today, Hyrule 268, Sector Z 202. 271 is unremarkable in
+    # that set. Midpoints round to the nearest unit exactly as level 1 already
+    # does -- `midpoint_signed` has always rounded -- and a 1-unit error on a
+    # plane spanning 9,876 source units is far below a pixel, so the planarity
+    # the level-1 comment relies on is no weaker here.
+    #
+    # This is arithmetic, not a frame measurement. If Zebes paces worse than
+    # its neighbours, drop the acid back to 1 and keep the cone.
+    alpha_subdivide_roots=((157, 0x9D8, 2), (105, 0x5870)),
     # (asset_id, binding_root, mobj_offset, segment_index): one row per
     # MObjSub of the eight material DObjs, in binding then segment order.
     # Segment 8*i matches gcDrawMObjForDObj's branch slot for MObj i.
@@ -228,8 +240,9 @@ DESCRIPTOR = StageDescriptor(
         # acid segment that follows it starts ten runs later for the same
         # reason, and its own count is unchanged.
         (1, 6, 0, 25, 0, 65),
-        # The acid segment carries 17 runs, not 5, once root 0x9D8 subdivides.
-        (2, 12, 25, 1, 65, 17),
+        # The acid segment carries 76 runs, not 5, once root 0x9D8 subdivides
+        # twice (17 at one level).
+        (2, 12, 25, 1, 65, 76),
     ),
     callback_partition=(
         ("layer1", "grDisplayLayer1SecProcDisplay", 6),

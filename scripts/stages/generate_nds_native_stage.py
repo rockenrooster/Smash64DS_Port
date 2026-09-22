@@ -2720,7 +2720,23 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
 
     binding_cursor = 0
     omitted_draws = set(desc.omitted_draw_roots)
-    alpha_subdivide_roots = set(desc.alpha_subdivide_roots)
+    # (file_id, root) keeps one level, the shape every existing row used;
+    # (file_id, root, levels) asks for more. Level N splits each triangle of
+    # level N-1 at ITS edge midpoints, so the facet count is 4**N and the alpha
+    # quantization gets that many smaller facets to spread over.
+    alpha_subdivide_roots = {}
+    for row in desc.alpha_subdivide_roots:
+        if len(row) == 2:
+            alpha_subdivide_roots[(row[0], row[1])] = 1
+        elif len(row) == 3:
+            if row[2] < 1:
+                raise falsify(
+                    "alpha_subdivide_roots level must be at least 1")
+            alpha_subdivide_roots[(row[0], row[1])] = row[2]
+        else:
+            raise falsify(
+                "alpha_subdivide_roots row must be (file_id, root) or "
+                "(file_id, root, levels)")
     matched_omissions = set()
     for owner in owners:
         resource = resources[owner.resource_name]
@@ -3018,23 +3034,28 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                         # facets to quantize.  Opt-in per root, so every
                         # other packet stays byte-identical.
                         dense_triangles = [tuple(dense_indices)]
-                        if (resource.file_id, root) in alpha_subdivide_roots:
-                            a_i, b_i, c_i = dense_indices
-                            ab = _append_alpha_midpoint(
-                                vertices, source_alpha, a_i, b_i
-                            )
-                            bc = _append_alpha_midpoint(
-                                vertices, source_alpha, b_i, c_i
-                            )
-                            ca = _append_alpha_midpoint(
-                                vertices, source_alpha, c_i, a_i
-                            )
-                            dense_triangles = (
-                                (a_i, ab, ca),
-                                (ab, b_i, bc),
-                                (ca, bc, c_i),
-                                (ab, bc, ca),
-                            )
+                        subdivide_levels = alpha_subdivide_roots.get(
+                            (resource.file_id, root), 0
+                        )
+                        for _level in range(subdivide_levels):
+                            split = []
+                            for a_i, b_i, c_i in dense_triangles:
+                                ab = _append_alpha_midpoint(
+                                    vertices, source_alpha, a_i, b_i
+                                )
+                                bc = _append_alpha_midpoint(
+                                    vertices, source_alpha, b_i, c_i
+                                )
+                                ca = _append_alpha_midpoint(
+                                    vertices, source_alpha, c_i, a_i
+                                )
+                                split.extend((
+                                    (a_i, ab, ca),
+                                    (ab, b_i, bc),
+                                    (ca, bc, c_i),
+                                    (ab, bc, ca),
+                                ))
+                            dense_triangles = split
                         for dense_triangle in dense_triangles:
                             dense_indices = list(dense_triangle)
                             tri_alphas = [
