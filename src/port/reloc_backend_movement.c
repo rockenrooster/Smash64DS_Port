@@ -14486,6 +14486,14 @@ volatile u32 gNdsStageGCDrawAllLoopGroundActorLastId;
 volatile u32 gNdsStageGCDrawAllLoopGroundActorLastLink;
 volatile u32 gNdsStageGCDrawAllLoopGateFailStep;
 volatile u32 gNdsStageGCDrawAllLoopGateSeenCount;
+/* Saffron gate motion witness; see the sample site for what each value means.
+ * TraZ is stored as a signed integer reinterpreted through u32 so a debugger
+ * reads it without a float decode: 330 open, 0 closed. */
+__attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZ;
+__attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZMin;
+__attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZMax;
+__attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZSamples;
+__attribute__((used)) volatile u32 gNdsYamabukiGateStatus;
 static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                                            sb32 is_layer, u32 kind,
                                            u32 callback_kind);
@@ -14557,6 +14565,50 @@ static sb32 ndsStageGCDrawAllLoopIsYamabukiGate(GObj *gobj)
      * submit=0 reject=0`, 2026-09-07): 1 = wrong link, 0 = recognised. */
     gNdsStageGCDrawAllLoopGateFailStep = (gobj->dl_link_id == 6u) ? 0u : 1u;
     gNdsStageGCDrawAllLoopGateSeenCount++;
+    /* DOES THE DOOR ACTUALLY MOVE? The owner reports it permanently open, and
+     * the two surviving explanations are indistinguishable from outside: a
+     * state machine stuck in Open, or an animation installed and never
+     * advanced. Frame 0 of the CLOSE script is itself the open pose --
+     * 160_StageYamabukiFile4.c:158 sets TraZ = 330 before ramping to 0 -- and
+     * grYamabukiMakeGate installs exactly that script at setup, so a gate
+     * whose joints are never played sits at 330 for the whole match.
+     *
+     * Sample the first animated child's TraZ here, where the gate is already
+     * identified and the cost is one load per draw. Pinned at 330 means the
+     * joints are not being advanced; sweeping 330 to 0 and back means they are
+     * and the fault is upstream in the state machine; pinned at 0 means the
+     * door is closed and the owner is describing different geometry. `Min` and
+     * `Max` are the whole point -- a single sample cannot tell a frozen value
+     * from one caught mid-cycle. */
+    {
+        DObj *root = DObjGetStruct(gobj);
+        DObj *child = (root != NULL) ? root->child : NULL;
+
+        if (child != NULL)
+        {
+            s32 traz = (s32)child->translate.vec.f.z;
+
+            gNdsYamabukiGateChildTraZ = (u32)traz;
+            if (gNdsYamabukiGateChildTraZSamples == 0u)
+            {
+                gNdsYamabukiGateChildTraZMin = (u32)traz;
+                gNdsYamabukiGateChildTraZMax = (u32)traz;
+            }
+            else
+            {
+                if (traz < (s32)gNdsYamabukiGateChildTraZMin)
+                {
+                    gNdsYamabukiGateChildTraZMin = (u32)traz;
+                }
+                if (traz > (s32)gNdsYamabukiGateChildTraZMax)
+                {
+                    gNdsYamabukiGateChildTraZMax = (u32)traz;
+                }
+            }
+            gNdsYamabukiGateChildTraZSamples++;
+        }
+        gNdsYamabukiGateStatus = (u32)gGRCommonStruct.yamabuki.gate_status;
+    }
     return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
 }
 #endif
