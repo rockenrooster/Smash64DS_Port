@@ -895,6 +895,21 @@ static void ndsFtrDrawMemoFinish(void)
  * byte-identical to one without this change at all. */
 __attribute__((used)) volatile u32 gNdsPreviewHaltNonFatalCount;
 __attribute__((used)) volatile u32 gNdsPreviewHaltNonFatalKindMask;
+/* [0]stage [1]owner [2]assetId [3]detail [4]index [5]selected
+ * [6]loaded asset_id [7]reserved[0] (kind+1). */
+__attribute__((used)) volatile u32 gNdsPreviewHaltNonFatalWitness[8];
+/* Defined in nds_renderer_native_fighter_production.c; the adapter only reads
+ * them at the decline, so no header change is warranted for a probe. */
+extern volatile u32 gNdsNativeFighterValidateRejectCode;
+extern volatile u32 gNdsNativeFighterValidateRejectSlot;
+extern volatile u32 gNdsNativeFighterValidateRejectLow;
+extern volatile u32 gNdsNativeFighterValidateRejectRoot;
+extern volatile u32 gNdsNativeFighterValidateRejectObserved;
+extern volatile u32 gNdsNativeFighterValidateRejectExpected;
+extern volatile u32 gNdsNativeFighterValidateRejectCount;
+/* The VALIDATOR's own reject words, latched at the same first decline:
+ * [0]code [1]slot [2]low [3]root [4]observed [5]expected [6]root_count. */
+__attribute__((used)) volatile u32 gNdsPreviewHaltNonFatalValidate[7];
 #endif
 
 volatile s32 gNdsR2FighterFacingLr;
@@ -4402,6 +4417,35 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              * below is the reason. A silent decline here is a preview drawn
              * with no native owner, which is the failure the halt exists to
              * make visible. */
+            /* Latch the decline witnesses on the FIRST occurrence. They are
+             * per-draw globals and the next fighter overwrites them, which is
+             * why sampling later read someone else's draw. Event-local, never
+             * rewritten -- the shape the halt itself uses. */
+            if (gNdsPreviewHaltNonFatalCount == 0u)
+            {
+                gNdsPreviewHaltNonFatalWitness[0] = (u32)gNdsFtrDeclineStage;
+                gNdsPreviewHaltNonFatalWitness[1] = (u32)gNdsFtrDeclineOwner;
+                gNdsPreviewHaltNonFatalWitness[2] = (u32)gNdsFtrDeclineAssetId;
+                gNdsPreviewHaltNonFatalWitness[3] = (u32)gNdsFtrDeclineDetail;
+                gNdsPreviewHaltNonFatalWitness[4] = (u32)gNdsFtrDeclineIndex;
+                gNdsPreviewHaltNonFatalWitness[5] = (u32)gNdsFtrDeclineSelected;
+                gNdsPreviewHaltNonFatalWitness[6] = loaded->asset_id;
+                gNdsPreviewHaltNonFatalWitness[7] = loaded->reserved[0];
+                gNdsPreviewHaltNonFatalValidate[0] =
+                    gNdsNativeFighterValidateRejectCode;
+                gNdsPreviewHaltNonFatalValidate[1] =
+                    gNdsNativeFighterValidateRejectSlot;
+                gNdsPreviewHaltNonFatalValidate[2] =
+                    gNdsNativeFighterValidateRejectLow;
+                gNdsPreviewHaltNonFatalValidate[3] =
+                    gNdsNativeFighterValidateRejectRoot;
+                gNdsPreviewHaltNonFatalValidate[4] =
+                    gNdsNativeFighterValidateRejectObserved;
+                gNdsPreviewHaltNonFatalValidate[5] =
+                    gNdsNativeFighterValidateRejectExpected;
+                gNdsPreviewHaltNonFatalValidate[6] =
+                    gNdsNativeFighterValidateRejectCount;
+            }
             gNdsPreviewHaltNonFatalCount++;
             gNdsPreviewHaltNonFatalKindMask |=
                 (1u << ((loaded->reserved[0] - 1u) & 31u));

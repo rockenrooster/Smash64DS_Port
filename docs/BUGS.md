@@ -36,7 +36,7 @@ Main Menus:
     -face color is slightly different from body color. (lighting difference???)
 -Captain falcon
 -Ness
-    **AGENT 09-22, NOT AN OWNER ROW: the shell walk hung the ROM at the CSS on Ness -- ndsPreviewPackLoadHalt(20, kind=11), a deliberate for(;;) when a packed preview reaches the draw path with no native owner. PRE-EXISTING (this batch does not touch native_owner_enabled). Not proven reachable by a human; the walk hovers faster than play. See the receipt.**
+    **AGENT 09-22, NOT AN OWNER ROW: the shell walk hangs the ROM at the CSS on Ness -- ndsPreviewPackLoadHalt(20), a deliberate for(;;). Localised: validator clause 6, root 0, offset 5,792, 82 commands, 14 roots, asset 335 -- a span that does not fit the loaded preview asset. PRE-EXISTING. Not proven reachable by a human. Receipt has the fix direction.**
 -General
     -All Fighters are not doing correct poses/animations on results screen **ROOT CAUSE FIXED, not AObj16: all 11 demo-anim arms had a token route and NO path row, so the force loader failed its path guard and ftMainSetStatus bound the stale figatree with no decline.**
     -No contest results screen, all fighters should be doing the clapping animations. **Same root cause as the poses row, fixed with it. The No Contest kind was always correct.**

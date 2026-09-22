@@ -2148,3 +2148,50 @@ is what the direct-battle probe could not reach: `AppearOverrun 0` and
 **Still true and still worth fixing:** the Ness preview halt. 56 declines across
 the run, `kindMask` bit 11 only, so it is exactly one fighter and it is
 reproducible on demand.
+
+### The Ness CSS halt, localised to one validator clause
+
+Latched the decline witnesses at the FIRST non-fatal decline (they are per-draw
+globals; sampling later reads whichever fighter drew last, which is how an
+earlier read came back as Pikachu in a battle). Shipping build, walk driving the
+real CSS:
+
+    PREVIEWHALT count=42  kindMask=0x00000800      (bit 11 = Ness, only Ness)
+    W    stage=4  owner=9  selected=14  loadedAsset=335  kindPlus1=12
+    VALIDATE code=6 slot=9 low=0 root=0 observed=5792 expected=82 rootcount=14
+
+Reading that: Ness's preview (model asset **335**) selects **14 roots**, and
+`ndsRendererValidateNativeFighterOwner` rejects at **clause 6, root index 0**.
+Clause 6 is the span triple at `nds_renderer_native_fighter_production.c:1232`
+-- it fires when ANY of
+`ndsRendererNativeAssetSpanFits(root_offset, source_command_count, sizeof(Gfx),
+asset_data_size)`, `ndsRendererNativeArraySpanFits(first_epoch, epoch_count,
+epoch_count)` or `ndsRendererValidateNativeStateSpan(tail_state_*)` fails. Its
+two reported words are the root's own `root_offset` = **5,792** and
+`source_command_count` = **82**.
+
+So root 0 wants commands spanning `5792 .. 5792 + 82*8 = 6448` bytes of the
+loaded preview asset. The asset-size arm is therefore the first thing to check:
+if the packed CSS Model for Ness is smaller than 6,448 bytes at that offset, the
+span cannot fit and the owner is declined before a single root is drawn.
+`check_preview_pack_owner_sizes.py` is green, but it compares the pack's
+declared `source_bytes` against the owner's declared `asset_data_size` -- not
+against the size actually passed to the validator, which is
+`ndsRelocNativeSourceSize(native_owner_file)` at
+`renderer_adapter_fighter.c:3928`. Those are two different numbers and only the
+first is currently checked. **That gap is the next thing to close**, and it
+would make this a static failure instead of a hang.
+
+**Provenance: pre-existing.** `git diff e802e336bc2..HEAD` touches no Ness owner
+or preview data -- the only generated header added this batch is the Kirby star.
+The `NDS_BATTLE_CORE_PACKS` archive JSON did change for Ness during the builds,
+but it is a report, not a build input, and the size checker agrees pack and
+owner still match.
+
+**Not proven:** that a human hovering Ness hits it. The walk crosses portraits
+faster than play.
+
+Probe plumbing kept, flag-gated and provably inert: with
+`NDS_PREVIEW_HALT_NONFATAL=0` the default build reproduces r32's hash
+`594EB9BA...` byte for byte, and the counters, the witness arrays and the
+externs are all declared only under the flag.
