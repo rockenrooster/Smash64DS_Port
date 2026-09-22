@@ -5846,3 +5846,44 @@ the texel cannot also carry), and a prim with no palette slot.
 **Falsifier owed.** `check_fighter_face_body_material.py`'s fold census models
 the port *without* the clamp -- it still reports the r35 numbers -- so it is a
 stale falsifier and must be re-derived from the producer, not patched to agree.
+
+## 2026-09-22 -- r37 is reproducible, and a second lab target cannot link
+
+**r37 reproduces from a cleared tree.** Cleared the gitignored generated tree
+(`git clean -fdX src/nds/generated/`, restoring the one TRACKED file in it,
+`nds_native_damage_slash.generated.inc`) plus `builds/build`, and built twice:
+
+    pass 1  ROM 9336b6debe5761b3   NATIVE_ONLY_PASS 316
+    pass 2  ROM 9336b6debe5761b3   NATIVE_ONLY_PASS 316   DIRTY 0
+
+Both match `builds/remaining-bugs-playtest-r37/smash64ds.nds` byte for byte.
+
+**And the guard earned its keep on the first try.** Between packaging r37 and
+this check I ran `verify-battle-playable-realtime-harness.ps1` WITH a build.
+That is a lab-flag target, and the default rebuild immediately afterwards
+produced `e20fdf14547fb8f7` -- a different ROM from the same source. The
+2026-09-19 note predicted exactly this ("after any non-default-flag build,
+rebuild the default and require the hash to be unchanged"), and the incremental
+build over mixed lab artifacts was the one-off, not the clean one. The rule is
+worth restating because it cost nothing to follow and would have cost the
+owner's whole playtest to skip.
+
+**The battle-playable proof target does not link, and it is the same guard
+class as the tick-HUD target.**
+
+    ld.exe: scene_backend.o:(.rodata.sNdsKnownAssetSymbols+0x748):
+    undefined reference to `llITCommonDataStarRodWeaponAttributes'
+
+That is the `ll*` registry class this repo has now recorded five times: a
+`sNdsKnownAssetSymbols` row exists without a real `extern`, and it only fails on
+a target whose input set excludes the defining TU. It is NOT caused by this
+batch -- nothing here touches item weapon attributes -- and it is why the
+realtime harness could not be used to smoke-test r37's fighters.
+
+**So r37 carries no runtime evidence, and that is stated rather than implied.**
+Every row in this batch is proven statically: source-versus-port arithmetic for
+the shade fold, decoded `.fpc` spans for the egg, the producer's own admission
+report for ThunderAmp, a byte compare of the shipped blob for Saffron, and the
+state-machine arithmetic for the CSS budget. Ten checkers are green. None of
+that is a pixel. The owner's playtest is the first runtime observation this
+batch will get.
