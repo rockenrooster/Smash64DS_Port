@@ -28,7 +28,7 @@ Main Menus:
     -when I choose pikachu, in match, fox opponent is frozen and cannot be hit. Sudden death works funnily enough though.
 -Samus
 -Kirby
-    -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **STILL BAD in r23. Holding neutral B fixes it -- a status change clears it, so it is stale cached state, not the clamp fold.**
+    -Kirby face color is slightly different from body color. (lighting difference??? pink face color looks more correct I think...) **r25: fixed facing LEFT, wrong facing RIGHT, fixed in ledge-balance. Facing-dependent = the normal transform under a mirrored modelview.**
     -Neutral A punch flurry VFX not drawing at correct locations. **Effect table read from a .bss address: all five maker args were garbage.**
     -Kirby neutral B , then A attack to spit out fighter, Star VFX is invisible. **Makers restored. NOT GObj-starved after all: ~10 slots free post-latch. Renderer side unexamined.**
     -Kirby has a wierd pose on results screen. **It was EggLay: no Results animation was packed, so every fighter held row 0.**

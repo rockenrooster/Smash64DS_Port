@@ -1667,3 +1667,37 @@ What is known, so the next reader does not start from scratch:
 Deliberately NOT guessed at: the owner is mid-verification on r25, and a blind
 change to the shared texture path is how the ground fix would get lost too. Fix
 this with the counters in hand, and keep the ground repair -- it is accepted.
+
+### r25 face/body: almost fixed, and the residue is FACING-DEPENDENT
+
+Owner on r25: fixed facing LEFT; still wrong facing RIGHT; **fixed facing right
+while in the ledge-balance animation.** That last clause is the useful one --
+it rules out anything static about the roots or the palettes.
+
+Facing-dependent shading with the same materials means the **normals**, not the
+colours. Kirby's facing is applied as a mirror (`lr`, a negative scale on X), so
+a right-facing root has a NEGATIVE-DETERMINANT modelview. The DS geometry engine
+transforms normals by that matrix's upper 3x3, so a mirror turns them inward and
+the dot product changes sign -- the diffuse term collapses and the run falls back
+toward ambient alone. Two runs that interpret vertex bytes differently (a lit
+material run versus an unlit colour run, which is exactly the `use_material`
+split the witness already found) will not degrade identically, so the seam
+appears on one facing only.
+
+The ledge-balance case fits: that animation's root carries a rotation rather
+than a plain mirror, so the determinant is positive and the normals survive.
+
+`ndsRendererR2WriteLightVector` writes `GFX_LIGHT_VECTOR` under a push /
+loadIdentity / pop bracket, i.e. in view space, deliberately. That is correct
+only if the normals reaching the engine are also in a space where the light
+vector means the same thing. Under a mirrored modelview they are not.
+
+**Next step, and it is one build:** extend the shade witness already in
+`nds_renderer_native_common.c` with the fighter's `lr` and the sign of the
+current modelview determinant, then read it facing left, facing right, and in
+the ledge-balance pose. If the sign flips with facing and the ledge pose reads
+positive, the repair is to compensate the normal transform for a
+negative-determinant modelview -- not to touch the colour fold again.
+
+Do NOT adjust the clamp or the white-prim exemption for this. Those are
+facing-independent and the owner reports the left-facing case correct.
