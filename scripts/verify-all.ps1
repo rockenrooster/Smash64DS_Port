@@ -283,7 +283,10 @@ try {
     # 18 later the same day: check_preview_pack_owner_sizes.py, the third
     # resolver of two ends no grep relates (pack source_bytes vs owner
     # asset_data_size). Same reason, same day, same symptom.
-    $expectedVerifiers = 18 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    # 19 since 2026-09-21: check-p2-yoshi-egg-efdesc-native.ps1 is back with
+    # the egg owner it guards. Restoring a checker moves this literal in the
+    # SAME edit for the same reason it was moved to add one.
+    $expectedVerifiers = 19 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
     # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
     # standing-rules/publish-law tokens and the published-ROM SHA-256 line --
@@ -329,6 +332,15 @@ try {
     # was publishing his pair-EXTENDED length, 1,232 B over the owner's.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\check_preview_pack_owner_sizes.py') `
+        -Arguments @()
+    # Yoshi's egg: ONE source list behind two owner-reported invisibilities,
+    # because the shield EFDesc and the egg-hatching EFDesc name the same DObj
+    # setup field. Both states hide his whole body on purpose, so an unowned
+    # egg means he draws nothing at all. Registered with the count below moved
+    # in the same edit -- that literal is a call site, and forgetting it is
+    # what made a Boundary run fail earlier today.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-p2-yoshi-egg-efdesc-native.ps1') `
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'fighters\test_preview_shared_pin_disjointness.py') `

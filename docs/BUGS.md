@@ -16,7 +16,7 @@ Main Menus:
     -delay between cursor hover and 3d fighter preview rendering. **Owner: lower priority now. Dwell is 2 cold / 1 warm; residual is a 30,160 B owner-image read.**
 
 -Yoshi:
-    -Yoshi's guard/shield (egg) is invisible **Latch cause found: Kirby's copy-hat load, not general pressure. Egg bake still owed.**
+    -Yoshi's guard/shield (egg) is invisible **Native owner REINSTATED (was reverted for cost, not correctness). Egg root 0xa860 is textured 64x64 CI4 -> 2,048 B persistent, and two VRAM reclaim paths now exist that did not when it was reverted.**
 -Link:
 -Pikachu
     -neutral b attack VFX that walks terrain still has hard edges. **AIR REGRESSION FIXED: the ground repair moved 3 images onto dedicated GL names, which the only eviction sweep cannot reach. Reclaimable VRAM went 6,144 -> 0, so the air jolt's 4,096 B upload had nothing to evict. Reclaim hook added.**

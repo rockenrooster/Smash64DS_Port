@@ -90,11 +90,29 @@ receipt's original note.**
 | Change | Files |
 |---|---|
 | Register the 35 Results demo animation NitroFS paths so the force loader can name them (§1.1) | `src/nds/nds_reloc_assets.c` |
-| Falsifier: every `*_DEMO_ANIM_ASSET_ROWS` arm expanded into the token table must also be expanded into the path table | `scripts/fighters/check_results_demo_motion_closure.py` |
+| Falsifier: every `*_DEMO_ANIM_ASSET_ROWS` arm expanded into the token table must also be expanded into the path table, and staged by the Makefile | `scripts/fighters/check_results_demo_motion_closure.py` |
+| P01 air-jolt reclaim hook, graded-quad recycle, refused-upload tracker clear (§4.5, §4.5a, §4.5b) | `nds_renderer_textures_effects.c`, `nds_native_textured_quad.exec.inc` |
+| K04 Kirby star bake, admission and display routing (§4.11) | `generate_nds_native_item_wave1_core.py`, `nds_native_item_kirbystar.exec.inc`, `renderer_adapter_stage.c`, `battleship_efmanager.c` |
+| Face/body witness ON, stretch repair OFF pending the packet twin (§4.8) | `nds_renderer_native_common.c`, `renderer_adapter_fighter.c` |
+| Yoshi egg owner reinstated, its checker rewritten to follow the producer (§4.4) | `generate_nds_entry_effects.py`, `check-p2-yoshi-egg-efdesc-native.ps1`, `verify-all.ps1` |
 
-Verification performed: `check_results_demo_motion_closure.py` green (47 rows);
-the new arm proven **RED at HEAD** (11 of 11 arms missing) and green in the
-worktree; `src/nds/nds_reloc_assets.c` compiles clean under the shipping flags.
+Verification performed: `check_results_demo_motion_closure.py` green (47 rows),
+its path arm proven **RED at HEAD** (11 of 11 arms missing) and its Makefile arm
+red under mutation; `check-r2-light-stretch.py` green (5 claims);
+`test_pikachu_thunderground_reclaim.py` green (8 tests, red under 9 mutations);
+`kirbystar`, `mball` and `star` generator `--check` green;
+`check-p2-yoshi-egg-efdesc-native.ps1` green and now producer-derived;
+`check-nds-particle-banks.ps1` green; `check-architecture.ps1` green.
+
+Two ROMs built, both `NATIVE_ONLY_PASS` with 316 link inputs:
+
+| build | SHA-256 | contents |
+|---|---|---|
+| r27 | `E077AF60D9E60F75F7C81748D6DE76C10576ED08C570B1DAA812F42B9E998A96` | Results paths, P01, K04, witnesses |
+| r28 | `7A2D46B4F47DAC53111C80AAA0A2544EBF614E93A4537474F3DDAB455BC28E0D` | r27 plus the Yoshi egg owner |
+
+**Playtest r28.** Its hash reproduced byte-identically across a rebuild, so the
+build is deterministic. No runtime proof: nothing here is observed on screen.
 
 ---
 
@@ -137,42 +155,47 @@ source-reachable Win1/Win2/Win3, ordinary Lose and No Contest, including Kirby's
 two-win restriction. Keep the Link "Claps" program-4 and Luigi Win2 hand-root
 repairs.
 
-### 4.4 Yoshi shield egg invisible — **blocked on a build, cause narrowed**
+### 4.4 Yoshi shield egg invisible — **owner reinstated, cost measured**
 `795e2659219` added the correct native owner:
 `dEFManagerYoshiShieldEffectDesc` and `dEFManagerYoshiEggEscapeEffectDesc` both
 name `&llYoshiModelShieldDObjDesc`, both states call `ftParamHideModelPartAll`
 behind `fp->fkind == nFTKindYoshi`, and the root at `0xa860` is an immutable
 29-command display list compiling to one group and two triangles.
 `252a9aa4290` reverted it for a Boundary RED: arena −4,096 and **14
-texture-bind rejects**.
+texture-bind rejects**. The revert was about cost, not correctness.
 
-Fourteen rejects from a two-triangle quad is the anomaly, not the egg's
-geometry. Read further tonight, and it names a likely mechanism and a better
-repair.
+**Measured tonight, rather than assumed.** Compiling root `0xa860` with the
+generator's own `Compiler` shows it *is* textured — a single 64×64 CI4 image
+with a TLUT, which converts to PAL16 at **2,048 bytes** of VRAM. Regenerating
+with the egg restored moves the entry-effect bank from 63 roots / 65 textures to
+64 / 66, and leaves `NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_BYTES` unchanged at
+18,528 — so the egg's texture is **persistent, not startup-only**, which is
+correct: the shield appears mid-match, long after the GO retirement that would
+have stranded a startup-only entry (the failure recorded on the Sector Z Arwing).
 
-The reverted generator hunk added `YOSHI_MODEL` (asset 338) as a new
-`census.InputSpec` and compiled root `0xA860` through the ordinary entry-effect
-`Compiler`, which **bakes the root's texture into the shared entry-effect image
-bank**. Every other entry-effect owner is an effect asset (356, 161, 355, 346);
-this one is a *fighter model* file. The recorded arena cost of exactly −4,096 is
-one page of bank growth, and 14 bind rejects against intact geometry is the
-signature of a root whose triangles were admitted while its texture was not —
-the shape already recorded here as "a full atlas may be packer waste", where a
-reported "no room" turned out to be 5,248 free texels.
+So the 14 rejects were almost certainly a *victim*, not the egg: one more
+persistent name on a 256 KB pool where, as §4.5 establishes, a dozen owners hold
+names the evictor cannot reach. **Two reclaim paths now exist that did not when
+this was reverted** — the coverage hook in §4.5 returns up to 3,072 bytes, more
+than the egg costs, and the graded-quad recycle in §4.5a returns VRAM that
+previously leaked permanently. Reinstating on top of those is a materially
+different proposition from reinstating on top of neither.
 
-So the preferred repair is **not** to grow the bank. Yoshi's egg can only appear
-while Yoshi is in the match, which is exactly when YoshiModel's own texture set
-is already resident — so bind the root through the existing foreign image bank
-mechanism (`scripts/fighters/test_native_foreign_image_bank.py` shows it is
-supported) instead of baking a second copy. That costs zero arena and removes
-the atlas pressure that produced the rejects. Measure bank occupancy before and
-after to confirm, and keep the original analysis: the owner was correct, the
-revert was about cost.
+Reinstated with the revert's checker, and the checker rewritten because it was
+the exact failure this repository keeps recording. It pinned five absolute
+numbers — egg ordinal 62, Falcon Kick 60, Falcon Punch 61, root count 63, and
+the group index inside the egg's own root row — every one of which had moved
+when Samus Grapple and the Falcon Punch TEXID frames landed. It now derives
+them: the egg's ordinal must equal `ROOT_COUNT − EGG_ROOT_COUNT` (the tail-append
+invariant that keeps every earlier ordinal stable), four named families must
+start before it, and the group and triangle counts come from the generator's own
+summary line. `verify-all.ps1`'s `$expectedVerifiers` literal moved 18 → 19 in
+the same edit.
 
-The generator (`scripts/3d_vfx/generate_nds_entry_effects.py`) and both renderer
-files the reverted commit touched (`nds_renderer_native_common.c`,
-`renderer_adapter_stage.c`) are held by agents B and C, so sequence this after
-they land.
+Owed: the rejects are not yet observed to be gone. Read
+`gNdsThunderGroundCoverageReclaimCount` and `gNdsGradedQuadTextureRecycles`
+beside any remaining bind rejects — if reclaim is firing and rejects persist,
+the pool is genuinely short and the entry-effect bank needs its own hook.
 
 ### 4.5 P01 — AIR Thunder Jolt regression — **root cause found and fixed**
 It is allocation, and the ground repair was priced in the wrong unit. That

@@ -115,6 +115,11 @@ KIRBY_MODEL = census.InputSpec(
     "f25adca3c25b36d5c65bd00c4e0a5973d9e1c4519f8eab67ad2b3008a55ea9cc",
     328,
 )
+YOSHI_MODEL = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiModel"),
+    "e2654cbdc969a473de1e78fa392211a4f465657a7c16ffc93e6bb2b073d4b04c",
+    338,
+)
 
 MARIO_ROOTS = (0x03C0, 0x04C0)
 FOX_ROOTS = (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00)
@@ -264,6 +269,30 @@ ITEM_GET_SWIRL_ROOTS = (0x2EF0, 0x2F80, 0x3010, 0x30A0)
 # only the exact immutable roots they submit.  Keep Draw first so its root
 # ordinal remains stable for the focused acceptance witness that introduced
 # this family; append the sibling effects after it.
+# Yoshi's egg, and it is ONE root serving two owner-reported invisibilities.
+# dEFManagerYoshiShieldEffectDesc (efmanager.c:490) and
+# dEFManagerYoshiEggEscapeEffectDesc (:1375) name the SAME
+# &llYoshiModelShieldDObjDesc, differing only in flags and their secondary
+# matrix field, so the shield and the egg-hatching intro share this list.
+#
+# Both states hide Yoshi's whole body ON PURPOSE -- ftcommonguard1.c:391 /
+# ftcommonguard2.c:23 and efmanager.c:5441 each call ftParamHideModelPartAll
+# behind `fp->fkind == nFTKindYoshi` -- so with no owner for the egg nothing
+# draws at all and Yoshi simply disappears. ftcommonguard1/2 are an if/else on
+# fkind, which is why SHIELD_ROOTS above (FTManagerCommon, asset 163) never
+# fires for him.
+#
+# 0xa860 is NOT a DObjDesc despite the field's name: decoding it as one yields
+# depths in the billions. Its MObjSub/AnimJoint/MatAnimJoint are all 0x0, and
+# for that shape the field holds the immutable Gfx directly -- the same as the
+# Fox reflector above. 29 commands, 232 bytes, 1 VTX, 1 TRI, ENDDL-terminated.
+# The decomp labels the field `// DObj Setup attributes offset (?)` for exactly
+# this reason.
+#
+# efManagerYoshiShieldProcDisplay (efmanager.c:4147-4166) derives the env colour
+# from fp->shield_health every frame. That fade stays runtime-owned, exactly as
+# the ordinary shield's per-player env does; nothing about it is baked here.
+YOSHI_EGG_ROOTS = (0xA860,)
 KIRBY_CUTTER_ROOTS = (
     0x27A0,                         # Draw
     0x0C70, 0x0CE0,                # Trail
@@ -1251,7 +1280,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          falcon_kick_alt_texture: Compiler | None = None,
          falcon_punch: Compiler | None = None,
          falcon_punch_alt1_texture: Compiler | None = None,
-         falcon_punch_alt2_texture: Compiler | None = None) -> str:
+         falcon_punch_alt2_texture: Compiler | None = None,
+         yoshi_egg: Compiler | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     if shield is not None:
@@ -1297,6 +1327,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         extra_compilers.append(falcon_punch_alt1_texture)
     if falcon_punch_alt2_texture is not None:
         extra_compilers.append(falcon_punch_alt2_texture)
+    if yoshi_egg is not None:
+        extra_groups += yoshi_egg.groups
+        extra_compilers.append(yoshi_egg)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -1420,6 +1453,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         roots += list(FALCON_KICK_ROOTS)
     if falcon_punch is not None:
         roots += list(FALCON_PUNCH_ROOTS)
+    if yoshi_egg is not None:
+        roots += list(YOSHI_EGG_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1624,6 +1659,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT {(falcon_kick_texture_slots[1] if falcon_kick_texture_slots is not None else 0)}u",
         f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS) + len(KIRBY_CUTTER_WEAPON_ROOTS) + len(SAMUS_GRAPPLE_ROOTS) + len(FALCON_KICK_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_COUNT {len(FALCON_PUNCH_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS) + len(KIRBY_CUTTER_WEAPON_ROOTS) + len(SAMUS_GRAPPLE_ROOTS) + len(FALCON_KICK_ROOTS) + len(FALCON_PUNCH_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_YOSHI_EGG_ROOT_COUNT {len(YOSHI_EGG_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT {(falcon_punch_texture_slots[0] if falcon_punch_texture_slots is not None else 0)}u",
         f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT {(falcon_punch_texture_slots[1] if falcon_punch_texture_slots is not None else 0)}u",
         f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT {(falcon_punch_texture_slots[2] if falcon_punch_texture_slots is not None else 0)}u",
@@ -1820,7 +1857,7 @@ def main() -> None:
         for spec in (
             MARIO, FOX, DONKEY, SAMUS, CAPTAIN, CAPTAIN_SPECIAL3, LINK_SPECIAL2,
             LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR, CATCH,
-            MBALLRAYS, KIRBY_SPECIAL2, KIRBY_MODEL
+            MBALLRAYS, KIRBY_SPECIAL2, KIRBY_MODEL, YOSHI_MODEL
         )
     }
     falcon_kick_texture_offsets = source_mobjsub_texture_offsets(
@@ -1992,12 +2029,20 @@ def main() -> None:
             if (replace(primary_group.state.texture_key, image_offset=0) !=
                     replace(alt_group.state.texture_key, image_offset=0)):
                 raise SystemExit("Falcon Punch TEXID frames changed texture state beyond image identity")
+    # One root, no MObjSub and no MatAnimJoint, so no live material or texture
+    # variant to reconcile -- the same two-line shape as the ordinary shield.
+    yoshi_egg_base = falcon_punch_base + len(FALCON_PUNCH_ROOTS)
+    yoshi_egg = Compiler(resources[YOSHI_MODEL.file_id], resources)
+    yoshi_egg.compile_roots(YOSHI_EGG_ROOTS, yoshi_egg_base)
+    if len(yoshi_egg.groups) < 1:
+        raise SystemExit("Yoshi egg root 0xa860 compiled to no geometry")
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
                      ko, reflectbreak, mballrays, kirby_cutter,
                      kirby_cutter_weapon, samus_grapple, samus_grapple_alt,
                      falcon_kick, falcon_kick_alt, falcon_punch,
-                     falcon_punch_variants[1], falcon_punch_variants[2])
+                     falcon_punch_variants[1], falcon_punch_variants[2],
+                     yoshi_egg)
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(
@@ -2013,6 +2058,7 @@ def main() -> None:
         f"shield_groups={len(shield.groups)} shield_triangles={sum(len(g.corners) // 3 for g in shield.groups)} "
         f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)} "
         f"catch_groups={len(catch.groups)} catch_triangles={sum(len(g.corners) // 3 for g in catch.groups)} "
+        f"yoshi_egg_groups={len(yoshi_egg.groups)} yoshi_egg_triangles={sum(len(g.corners) // 3 for g in yoshi_egg.groups)} "
         f"ko_groups={len(ko.groups)} ko_triangles={sum(len(g.corners) // 3 for g in ko.groups)} "
         f"reflectbreak_groups={len(reflectbreak.groups)} reflectbreak_triangles={sum(len(g.corners) // 3 for g in reflectbreak.groups)} "
         f"mballrays_groups={len(mballrays.groups)} mballrays_triangles={sum(len(g.corners) // 3 for g in mballrays.groups)} "
