@@ -6174,3 +6174,42 @@ door ever close at all?**
     since a hidden melonDS returns IntPtr.Zero.
   - If it closes but rarely, the row is the source's own pacing and the
     question becomes whether the port's `syUtilsRandIntRange` matches.
+
+### Saffron: the transform chain is VERIFIED WORKING, by injection not observation
+
+Every earlier probe failed the same way -- the signal (a 330-unit joint move)
+was the same order as the noise (per-frame camera drift, ~1.7M in 20.12). So
+inject a signal instead of watching for one.
+
+Wait for the gate to settle into its CLOSED hold, where the close animation has
+ended and `gcPlayDObjAnimJoint` writes nothing, so a poke to `translate`
+survives the frame instead of being overwritten. Then set it to 10,000 source
+units -- ~40,960,000 in 20.12, about 25x the camera drift -- and read the
+composed matrix two and four frames later:
+
+    BEFORE      GATEZ=-0.000001  C17=[ 3592129,  -2097250,  12633477]
+    POKE translate.z = 10000
+    AFTER (2f)  GATEZ=10000      C17=[11201320, -27853032, -27803090]
+    AFTER (4f)  GATEZ=10000      C17=[11196312, -28129768, -27874314]
+
+**The composed matrix moved by ~26M in Y and ~40M in Z, the right magnitude for
+the injected translate through the camera.** The renderer reads the live DObj
+and the gate's world matrix tracks it. This is a controlled experiment, not an
+observation, and it is the strongest single result on this row.
+
+**What is now verified end to end:** trigger -> state machine -> animation
+install -> joint motion -> binding identity -> live world composition ->
+run preparation -> submission. Thirteen mechanisms, none defective.
+
+**And the timing is the source's own, checked against the RNG.**
+`monster_wait = syUtilsRandIntRange(1000) + 1000` should land in [1000, 2000).
+Measured across a cycle: 1765, 1565, 1364, 1164, 963, 763, 562 counting down,
+and `gate_wait` 818 down from 1000. Both in range, so the port's
+`syUtilsRandIntRange` is not stretching the open phase -- a hypothesis worth
+having had, because a wrong range there would have produced exactly "always
+open" with everything else correct.
+
+**So the row's character has changed.** It is no longer "does the door move" --
+it demonstrably transforms and submits. What remains unverified is whether its
+PIXELS are visible: material, texture, alpha, depth or occlusion. That is the
+only class left, and it is the one class counters cannot reach from here.
