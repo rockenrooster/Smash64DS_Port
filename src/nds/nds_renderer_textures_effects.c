@@ -2875,6 +2875,97 @@ static s32 ndsRendererHardwareEvictTexture(
     return ndsNativeThunderGroundReleaseOneCoverageTexture();
 }
 
+volatile u32 gNdsRendererTextureRangeReleaseCalls;
+volatile u32 gNdsRendererTextureRangeReleaseEntries;
+
+/* A FREED IMAGE'S CACHE ENTRY OUTLIVES THE IMAGE, AND THE KEY IS ITS ADDRESS.
+ *
+ * ndsRendererHardwareTextureKey::image, ::tlut_image and ::texel1_image are
+ * POINTERS, and TextureKeyEqual is a memcmp of the whole key. So an entry
+ * built from a character-select preview's bytes stays in the cache after that
+ * preview is retired and its arena is reset, holding VRAM and -- worse --
+ * staying eligible for a hit. The next preview's pack is allocated out of the
+ * same resettable arena, so a later fighter's image can land at the same
+ * address with the same format, size and tile window and take that entry as
+ * its own, drawing the retired fighter's texels.
+ *
+ * ndsMNPlayersVSPreviewRetireResidentBlock already does exactly this for owner
+ * images through ndsRendererNativeReleaseOwnerImagesInRange, and says why in
+ * its comment: clear the aliases before the arena can reuse the bytes, so a
+ * stale draw fails closed instead of following freed RAM. The hardware texture
+ * cache is the one alias that was left behind. This is its twin.
+ *
+ * It also relieves the pressure that makes the character select the worst case
+ * for this pool: it is the only screen that draws up to four different
+ * fighters' textures in one frame with no pinned corpus, and both the eviction
+ * sweep and AllocTexture refuse any entry touched in the current frame. With
+ * retired previews still occupying slots, whether a takeable victim exists
+ * depends on browsing history -- which is what an intermittent symptom that
+ * tracks hover order looks like.
+ *
+ * Pinned and static entries are never touched: those are the generated corpus
+ * and the deliberately retained residents, and neither lives in a preview
+ * arena. */
+u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    uintptr_t start;
+    uintptr_t end;
+    u32 released = 0u;
+    u32 i;
+
+    if ((base == NULL) || (size == 0u))
+    {
+        return 0u;
+    }
+    start = (uintptr_t)base;
+    end = start + (uintptr_t)size;
+    if (end < start)
+    {
+        return 0u;
+    }
+    gNdsRendererTextureRangeReleaseCalls++;
+    for (i = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
+         i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+        const NDSRendererHardwareTextureKey *key;
+        uintptr_t image;
+        uintptr_t tlut;
+        uintptr_t texel1;
+
+        if ((entry->name == 0) || (entry->pinned != 0u))
+        {
+            continue;
+        }
+        /* Dynamic slots only: a static slot's key belongs to the generated
+         * corpus, which no preview arena can own. */
+        key = ndsRendererHardwareEntryDynamicKey(entry);
+        if (key == NULL)
+        {
+            continue;
+        }
+        image = (uintptr_t)key->image;
+        tlut = (uintptr_t)key->tlut_image;
+        texel1 = (uintptr_t)key->texel1_image;
+        if (((image >= start) && (image < end)) ||
+            ((tlut >= start) && (tlut < end)) ||
+            ((texel1 >= start) && (texel1 < end)))
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+            released++;
+        }
+    }
+    gNdsRendererTextureRangeReleaseEntries += released;
+    return released;
+#else
+    (void)base;
+    (void)size;
+    return 0u;
+#endif
+}
+
 static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareAllocTexture(void)
 {

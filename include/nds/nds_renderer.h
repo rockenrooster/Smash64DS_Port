@@ -1602,6 +1602,11 @@ s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail);
 /* CSS preview blocks can back owner images. Once the last fighter using such
  * a block is gone, invalidate image slots in the range before it is rewound. */
 void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size);
+/* Twin of the above for the hardware texture cache, whose keys are image
+ * POINTERS: call it wherever a resettable arena's bytes are about to be
+ * reused, or a later allocation at the same address inherits the entry.
+ * Returns the number of entries released. */
+u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size);
 /* Kirby's joint-6 copy hats are streamed at the source copy-commit beat. The
  * modelpart id is BattleShip's copy_modelpart_id (3..13); residency is keyed by
  * live fighter slot and detail so simultaneous Kirbys cannot evict each other.

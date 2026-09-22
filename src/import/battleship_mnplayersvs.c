@@ -883,6 +883,17 @@ static sb32 ndsMNPlayersVSPreviewCancelResidentLoad(
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    /* The owner-image release above clears one alias into these bytes; the
+     * hardware texture cache is the other, and it was being left behind. Its
+     * keys are image POINTERS compared by memcmp, so an entry built from this
+     * preview survives the arena reset, keeps holding VRAM, and can be taken
+     * as a HIT by whichever fighter's pack is allocated at the same address
+     * next -- which draws the retired fighter's texels. Releasing here also
+     * stops retired previews from occupying slots that the character select,
+     * the only screen drawing four fighters with no pinned corpus, needs a
+     * takeable victim among. Every site that frees this range does it. */
+    (void)ndsRendererHardwareReleaseTexturesInRange(
+        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     syMallocReset(&block->arena);
     ndsMNPlayersVSPreviewResetResidentLoadState(block);
@@ -1013,6 +1024,17 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
         block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    /* The owner-image release above clears one alias into these bytes; the
+     * hardware texture cache is the other, and it was being left behind. Its
+     * keys are image POINTERS compared by memcmp, so an entry built from this
+     * preview survives the arena reset, keeps holding VRAM, and can be taken
+     * as a HIT by whichever fighter's pack is allocated at the same address
+     * next -- which draws the retired fighter's texels. Releasing here also
+     * stops retired previews from occupying slots that the character select,
+     * the only screen drawing four fighters with no pinned corpus, needs a
+     * takeable victim among. Every site that frees this range does it. */
+    (void)ndsRendererHardwareReleaseTexturesInRange(
+        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     syMallocReset(&block->arena);
     block->fkind = nFTKindNull;
@@ -1040,6 +1062,17 @@ static void ndsMNPlayersVSPreviewAbandonCompactLoad(
     ndsMNPlayersClearPreviewFighterFiles(fkind);
     ndsRelocReleasePreviewFighter(fkind);
     ndsRendererNativeReleaseOwnerImagesInRange(
+        block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    /* The owner-image release above clears one alias into these bytes; the
+     * hardware texture cache is the other, and it was being left behind. Its
+     * keys are image POINTERS compared by memcmp, so an entry built from this
+     * preview survives the arena reset, keeps holding VRAM, and can be taken
+     * as a HIT by whichever fighter's pack is allocated at the same address
+     * next -- which draws the retired fighter's texels. Releasing here also
+     * stops retired previews from occupying slots that the character select,
+     * the only screen drawing four fighters with no pinned corpus, needs a
+     * takeable victim among. Every site that frees this range does it. */
+    (void)ndsRendererHardwareReleaseTexturesInRange(
         block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     syMallocReset(&block->arena);
