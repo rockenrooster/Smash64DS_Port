@@ -5,7 +5,7 @@ AI Agent should mark fixed items with **FIXED** prefix or a 100 char summary (or
 
 treat anything not going through native renderer a failure.
 
-**r37 built for playtest: builds/remaining-bugs-playtest-r37/smash64ds.nds, sha256 d9fea69d30a5d0db... Nine rows implemented, none accepted. Two NOT repaired and said so: Link's gray, and Saffron's door. Full plan and evidence in docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md.**
+**r37 built for playtest: builds/remaining-bugs-playtest-r37/smash64ds.nds, sha256 9336b6debe5761b3... Ten rows implemented, none accepted. One NOT repaired and said so: Saffron's door, which now carries the witness that decides it. Full plan and evidence in docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md.**
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
@@ -18,7 +18,7 @@ Main Menus:
         -Pikachu: **NOT FIXED in R36 ** face color is different from body color. **r37: prim now multiplies AFTER the shade; worst error 6/31 to 1/31.**
         -Kirby: **NOT FIXED in R36 ** face color is different from body color. **r37: same repair as Pikachu.**
         -Jigglypuff **NOT FIXED in R36 ** face color is different from body color. sometimes one eye is closed. **r37: both repaired; its body was drawing white at full light.**
-        -Link: **NOT FIXED in R36 ** sometimes missing textures/color (turns gray). **r37 NOT REPAIRED: narrowed to texture-pool pressure, needs the reject witness read.**
+        -Link: **NOT FIXED in R36 ** sometimes missing textures/color (turns gray). **r37: a retired preview's texture entries were never released, and their keys are addresses.**
 -Yoshi:
     -**NOT FIXED in R36** Yoshi's guard/shield (egg) is invisible **r37: its descriptor mapped through a data-only resolver, so no effect object was ever created.**
 -Link:
@@ -41,6 +41,6 @@ Stages:
 -Zebes: Acid plane Color is accurate now but texture blending are all visibly too HARD. Edges are too defined instead of a gradient/smooth transistion. Stage lights on the ground floor have a flat/hard transparency (hard upsidown trapezoid shape) instead of looking like a real light source with a gradient that tapers to fully transparent towards the top. **NOT FIXED in R36 ** **r37: the light cone emitted 3 flat alpha bands; subdivided to 20 triangles. Acid unchanged.**
 -Yoshi's Island: 
 -SectorZ:
--Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **r37 NOT REPAIRED: the r36 change had no reader at all; authored pose is OPEN, not closed.**
+-Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **r37 NOT REPAIRED: the r36 change had no reader at all. Frame 0 of the CLOSE script is the open pose.**
 
 Audio:

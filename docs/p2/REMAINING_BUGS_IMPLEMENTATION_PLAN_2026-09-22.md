@@ -19,7 +19,7 @@ re-derive. Do not close a row on a claim you did not re-measure.
 ## Status
 
 **Playtest build: `builds/remaining-bugs-playtest-r37/smash64ds.nds`,
-sha256 `d9fea69d30a5d0db...`, linked 2026-09-22 09:38.**
+sha256 `9336b6debe5761b3...`, linked 2026-09-22 09:47.**
 
 | Row | Seam | State |
 |---|---|---|
@@ -31,9 +31,9 @@ sha256 `d9fea69d30a5d0db...`, linked 2026-09-22 09:38.**
 | S1 Castle roof texture missing | runtime alpha-mux test | **Implemented**, `d97f7f3b2e1` |
 | S2 Zebes floor lights too hard | per-triangle alpha averaging | **Implemented**, `9bc15c3ee0b` |
 | P1/K1/J1/C3/C4/C5 face colour != body colour | fighter shade fold | **Implemented**, `3061d6ae332` |
+| C6 Link turns gray | retired preview's texture entries | **Implemented**, `5646bedf79a` |
 | S2 Zebes acid edge | same, deferred second level | **NOT repaired**, needs a cadence measurement |
-| S3 Saffron door always open | gate animation, not the blob | **NOT repaired**, needs one runtime read |
-| C6 Link turns gray | texture-pool pressure | **NOT repaired**, needs the reject witness |
+| S3 Saffron door always open | gate animation, not the blob | **NOT repaired**, witness added `b1f4be2fc9e` |
 
 Nothing here is owner-accepted. Every "Implemented" row builds clean and is
 `NATIVE_ONLY_PASS` at 316 link inputs; none has been playtested. Static
@@ -44,8 +44,42 @@ mutation-verified RED/GREEN), `check_fighter_face_body_material`,
 `check-native-owner-wiring`, `check_native_owner_image_spans`,
 `check-decomp-pristine`, `check-melonds-policy`.
 
-**The three unrepaired rows are named rather than quietly narrowed.** Each has a
-diagnosis and a single named next observation; none is blocked on a decision.
+**The unrepaired rows are named rather than quietly narrowed.** Each has a
+diagnosis and a single named next observation; neither is blocked on a decision.
+
+### S3 Saffron, the one row with no repair
+
+Frame 0 of the CLOSE script is itself the open pose:
+`160_StageYamabukiFile4.c:158` sets `TraZ = 330` with a negative rate and only
+then ramps to 0, and `grYamabukiMakeGate` installs exactly that script at setup
+with `gcAddAnimJointAll(..., 0.0F)`. **A gate whose joints are installed and
+never advanced sits wide open for the whole match** while its state machine,
+collision and sound keep cycling.
+
+This corrects both earlier readings. The descriptor says the authored pose is
+CLOSED and the DObjDesc at `0x08A0` agrees (TraZ 0, TraY 390, TraZ 0), so this
+morning's inference of an authored OPEN pose was wrong — but the descriptor's
+conclusion, that a frozen gate reads closed, is wrong too, because the gate is
+never at its authored pose once the close script's first block runs.
+
+`b1f4be2fc9e` samples the first animated child's TraZ where the gate is already
+identified, with min and max, because one sample cannot tell a frozen value
+from one caught mid-cycle:
+
+```
+pinned at 330  -> joints are not being advanced
+330 <-> 0      -> they are; the fault is upstream in the state machine
+pinned at 0    -> the door is closed; the row is about other geometry
+Samples == 0   -> the gate never reaches the draw loop at all
+```
+
+Ruled out and not to be reopened: the port's `gcPlayAnimAll` advances every
+DObj's joint unconditionally (`ndsGcPlayAnimAllStableSkip`'s skip is
+MObj-material only); the `ll*` offset arithmetic resolves correctly; and the
+DObjDesc list and both anim tables are the same length, so the lockstep walk in
+`ndsAObjEvent32NormalizeDObjTable` cannot run off the end. Three behavioural
+patches have been written for this row on hypotheses and the owner has rejected
+all three, so this one gets an observation first.
 
 ---
 
