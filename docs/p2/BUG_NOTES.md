@@ -5311,3 +5311,93 @@ implied.** Dream Land: 23,204 + 7,636 = 30,840, over the floor. Saffron City,
 measured free-min 32,504 with Kirby present: a copy still lands near 21,700,
 still under 25,600, so the cap still freezes and a maker can still return NULL.
 The Saffron crash needs a null-safe caller, not this lever.
+
+## 2026-09-22 -- The Ness CSS hang was a stale header truncating an owner image
+
+**It was a real hang in the shipping ROM, and I had recorded the opposite.**
+BUGS.md carried my line "not proven reachable by a human". The halt site
+(`renderer_adapter_fighter.c:4453`) is guarded by `NDS_P2_1P_GAME &&
+NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)`; `builds/build/
+nds_build_config.h` has all three at 1 and `NDS_P2_MENU_WALK 0`. Hovering Ness
+on the character select hung the ROM for anyone. The walk did not create the
+hang, it found it.
+
+**The chain, end to end.** `include/nds/generated/nds_native_fighter_image.
+generated.h` is TRACKED and declares each owner image's struct; `src/nds/
+generated/*.image.c` is GITIGNORED and initialises it from the same tables that
+`src/nds/nds_native_fighter_owner.generated.inc` carries. Ness's header had
+`state_sequence[177]`, `state_deltas[49]`, `runs[33]`, `epochs[33]`; the tables
+and the image source had 195, 59, 35, 35. **Excess initializers are a GCC
+warning, not an error**, so `ness_high.bin` built clean and eighteen entries
+short. `NDS_IMG_BIND` then set `state_sequence_count = 177` and the runtime
+agreed with the truncated bytes -- self-consistent, and wrong.
+
+`sNdsNativeNessRoots` is not in the image. It stays compiled in whatever the
+image flag says, and its rows 0, 4, 9, 10, 12 and 13 index tail states at
+188..193. `ndsRendererValidateNativeFighterOwner` clause 6's third arm,
+`ndsRendererValidateNativeStateSpan`, rejected root 0 at `188 <= 177` false.
+`ndsRendererAdapterValidateNativeOwnerCached` cleared `native_owner_enabled`,
+and the packed preview fell into `ndsPreviewPackLoadHalt(20u, ...)`, a
+deliberate `for (;;)`.
+
+The runtime witness matches exactly: `code=6 slot=9 low=0 root=0 observed=5792
+expected=82 rootcount=14`, which is `sNdsNativeNessRoots[0]`'s `root_offset`
+0x16a0 and `source_command_count` 82.
+
+**How it got stale, and why make could not see it.** `NDS_NATIVE_IMAGE_
+GENERATOR_DEPS` named the owners GENERATOR but not its OUTPUT, so regenerating
+the owners IR left the image header alone. That edge is now added. It does not
+close the other direction: a git operation that reverts the tracked header
+leaves the gitignored `.image.c` files alone AND gives the header a fresh
+mtime, so make sees nothing to do. Only a content check catches that.
+
+**Fixes.** Regenerated the header -- Ness only, 56 lines, every other owner
+byte-identical. Added the Makefile edge. Added
+`scripts/fighters/check_native_owner_image_spans.py`: 1,140 root spans across
+104 owners, three claims plus a parser guard, mutation-tested RED on four
+mutations including this exact regression.
+
+**A wrong turn worth recording.** The checker's first version parsed only
+`sNdsNative<Kind>Roots` and tested it against BOTH details' image counts. Roots
+are PER DETAIL -- `...Roots` is the HIGH owner's and `...RootsLow` is the LOW
+owner's -- so it invented failures for Captain, Donkey, Pikachu and Purin. The
+tell was that the four-CPU stress arm runs those fighters at LOW detail for
+1,973 frames without hanging. A checker that disagrees with a passing run is
+usually the thing that is wrong.
+
+## 2026-09-22 -- Saffron: the GObj latch cannot crash this port, so my own fix direction was wrong
+
+I wrote, in `reloc_backend_compat_shims.c` and in BUGS.md, that "a null-safe
+maker caller is the fix" for the Saffron crash. **That direction is refuted.**
+A full sweep of the Saffron build set -- `battleship_gryamabuki_ground.c`, the
+five Saffron-gated item TUs, and the shared item/weapon/effect core that
+`NDS_P2_ITEM_CORE` pulls in -- found that the consumers of a refused GObj do
+not fault:
+
+- `gcAddGObjProcess` (`objman.c:785-788`), `gcAddGObjDisplay` (`:1896-1904`)
+  and `gcAddDObjForGObj` (`:1393-1396`) all substitute `gGCCurrentCommon` when
+  handed NULL.
+- The gate's animation readers go through the port's own NULL-hardened
+  `gcAddAnimJointAll` / `gcPlayAnimAll` (`battleship_sys_objanim.c`).
+- The port-side gate binding already tests it:
+  `reloc_backend_movement.c:14551-14552` reads `ndsGRYamabukiGateGObj()` and
+  returns on NULL.
+- The monster spawner is NULL-safe by the source's own design: `gryamabuki.c
+  :177-179` treats a NULL `itManagerMakeItemSetupCommon` as the cue to close
+  the gate.
+
+So the GObj latch on Saffron produces MISSING OBJECTS and a mis-attached
+process, not a dereference. **No crash mechanism was found on this path.**
+
+One genuinely unchecked port-authored site exists and is worth hardening on its
+own merits, but it is not a crash: `itManagerMakeAppearActor`
+(`battleship_item_link_core.c:1703`) never tests its `gcMakeGObjSPAfter`
+result, so on refusal it attaches the item-appear process to whatever
+`gGCCurrentCommon` happens to be and returns NULL to a caller that discards it.
+Silent mis-attachment of another object's process list is a real defect and a
+plausible source of a LATER fault far from its cause, but nothing here shows it
+firing on Saffron.
+
+**Honest state: Saffron + Kirby remains unreproduced and without a mechanism.**
+Two matches with Kirby present ran clean, the gate cycled three states, the
+latch never fired, and the copy is still the one untested variable.

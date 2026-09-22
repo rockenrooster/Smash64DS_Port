@@ -6570,9 +6570,32 @@ $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWN
 # clone failed at native_image_%.o with "no rule to make target". The owner list
 # is P2_IMAGE_OWNERS verbatim (generate_nds_native_owner_images.py:62-63); the
 # build only compiles/links the config-enabled subset via NDS_NATIVE_IMAGE_OWNERS.
+# THE OWNER IR BELONGS HERE, AND ITS ABSENCE HUNG THE CHARACTER SELECT.
+#
+# These deps named the owners GENERATOR but not its OUTPUT, so a regenerated
+# nds_native_fighter_owner.generated.inc left the image header alone. The
+# header sizes the image structs; the image .c files are initialised from the
+# same tables the .inc carries. When the two drift, the excess initializers are
+# a GCC warning and the data is silently TRUNCATED -- the image still builds,
+# still loads, and is short.
+#
+# Measured: Ness's header declared state_sequence[177] while the tables held
+# 195, so ness_high.bin shipped 18 entries short while sNdsNativeNessRoots kept
+# indexing tail states at 188..193. Validator clause 6 rejected root 0, the
+# adapter cleared native_owner_enabled, and the packed CSS preview reached
+# ndsPreviewPackLoadHalt(20) -- a deliberate for(;;). Hovering Ness hung the
+# ROM.
+#
+# This edge closes the generator direction. It cannot close the other one: a
+# git operation that reverts the tracked header leaves the GITIGNORED
+# src/nds/generated/*.image.c alone and gives the header a FRESH mtime, so make
+# sees nothing to do. Only a content check catches that, which is
+# scripts/fighters/check_native_owner_image_spans.py -- run it after any owners
+# regeneration and after any checkout that touches the header.
 NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
 	$(NDS_NATIVE_IMAGE_GENERATOR) \
 	$(NDS_NATIVE_OWNERS_GENERATOR) \
+	$(NDS_NATIVE_OWNER_IR) \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
 	$(PROJECT_ROOT)/scripts/fighters/native_skeletons.py \
 	$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
