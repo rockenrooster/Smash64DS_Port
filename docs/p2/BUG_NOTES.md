@@ -5660,3 +5660,41 @@ between translation units hours beforehand, to unblock a lead that was already
 withdrawn on its own evidence, is the wrong trade. The break is pre-existing,
 affects a lab instrument rather than the published ROM, and the fix above is a
 single sitting whenever the tick-HUD target is next wanted.
+
+## 2026-09-22 -- if r36 fixes frozen Fox, these are the candidates, ranked
+
+The row was written 2026-09-21 and eighteen `src/` commits landed after it, so
+it was observed on a pre-r36 build. If the owner finds Fox behaves on r36, the
+question becomes which change carried it off. Ranked by plausibility, with the
+reasoning stated so a wrong ranking is falsifiable rather than just wrong:
+
+**1. The arena-returning commits.** `95441cb4546` ("give some back and say so
+loudly") and the Kirby low-detail hat deferral in `8c7dab82134` (+7,636 B).
+`ifCommonSetMaxNumGObj` freezes the GObj cap for the rest of the match once
+free drops under 25,600, after which makers return NULL and subordinate
+objects a fighter needs may never be created. That is the only mechanism in
+this codebase that plausibly leaves a fighter present but inert, and it is
+arena-driven -- which also fits the owner's strongest clue, that SUDDEN DEATH
+WORKS, because sudden death re-creates the fighters against a different arena
+state.
+
+**2. The fighter render changes.** The packet shade clamp (`8c7dab82134`) and
+the Ness owner image (`57e89c0c964`). These matter only under the reframing
+that the owner's report is VISUAL while every instrument used on this row is
+gameplay-side: a fighter drawing a stale pose looks frozen and looks
+unhittable while status, hurtboxes and `is_ghost` all read healthy, which is
+exactly what was measured.
+
+**3. The item-appear actor guard (`69ec7fad46a`) -- WEAK, and the weakness is
+worth writing down.** Before it, a refused `gcMakeGObjSPAfter` let
+`gcAddGObjProcess` substitute `gGCCurrentCommon`, bolting
+`itManagerAppearActorProcUpdate` onto whatever object was current -- possibly
+a fighter. Foreign-process attachment is real corruption and it was tempting
+to call this the answer. **But its call site is `grCommonSetupInitAll`, stage
+SETUP, where the arena is still 32-48 KB free and well above the latch floor,
+so the refusal path almost certainly never fires there.** Listed third, and
+listed with its own counter-argument, rather than promoted because it is the
+most satisfying story.
+
+None of these is a claim. The whole point of the ranking is that if Fox does
+behave on r36, checking them in this order costs least.
