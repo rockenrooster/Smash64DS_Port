@@ -4711,6 +4711,174 @@ _BLOB_RIGID_MASKS = {
     "yoster": 0x78014,
 }
 
+#: DObj anim-joint tables the ground code attaches at RUNTIME, per stage:
+#: (owner name, O2R resource key, file offset of the `AObjEvent32 *[]` table).
+#:
+#: These are the tables `gcAddAnimJointAll` binds to an owner's DObj tree, so
+#: slot i addresses the i-th DObj of that owner in `gcGetTreeDObjNext` order --
+#: the same owner-by-owner descriptor order `baked_stage_world_matrices` walks.
+#: Their contents are NOT visible in a DObjDesc table, which is why the rigid
+#: note above says the generator "cannot derive joint animation": before this
+#: table it had nothing to derive it from.
+#:
+#: Saffron's gate: `grYamabukiGateAddAnimOpen`/`AddAnimClose`
+#: (gryamabuki.c:126,132) apply `llGRYamabukiMapGateOpenAnimJoint` 0x9B0 and
+#: `llGRYamabukiMapGateCloseAnimJoint` 0xA20 to the gate GObj built at
+#: gryamabuki.c:246. Those `ll*` symbols are linker-absolute -- the symbol's
+#: ADDRESS is the offset -- and they are offsets into StageYamabukiFile4
+#: (MiscDataBank160), the file `GRYamabukiMap.map_nodes` points into at
+#: +0x8A0 (264_GRYamabukiMap.c:83), not into GRYamabukiMap itself. Both tables
+#: and every script they name lie inside file 160's 0xA90 payload.
+_ANIMATED_JOINT_TABLES = {
+    "yamabuki": (
+        ("gate", "stage_actors", 0x09B0),
+        ("gate", "stage_actors", 0x0A20),
+    ),
+}
+
+#: Bindings whose world matrix a runtime joint animation MOVES, per stage.
+#:
+#: A binding in this mask must never receive the Task 51 baked constant world
+#: matrix (`sNdsNativeStageBakedWorldMatrices`), because that constant is built
+#: from the authored DObjDesc pose and cannot follow an AObj. The runtime
+#: spends the mask through `camera_binding_mask`, whose only reader is the
+#: Task 51 opt-out in nds_renderer_native_owners.c -- "compose this binding's
+#: world live" is exactly what both halves of that mask mean.
+#:
+#: Pinned rather than computed at blob time because `build_stage_blob` has no
+#: repo root to read the O2R payload from. `derive_animated_binding_mask`
+#: reproduces each value from the actual payload and
+#: scripts/stages/test_yamabuki_gate_animation.py fails if the two disagree,
+#: so a pin cannot drift away from the source it claims to transcribe.
+_ANIMATED_BINDING_MASKS = {
+    "yamabuki": 0x000E0000,
+}
+
+# AObjEvent32 command word layout, identical to the runtime decoder in
+# src/import/battleship_sys_objanim.c (ndsAObjEvent32PlanStream) and to
+# aobjEvent32() in decomp/BattleShip-main/decomp/src/sys/objdef.h:287.
+AOBJ_OPCODE_SHIFT = 25
+AOBJ_OPCODE_MASK = 0x7F
+AOBJ_FLAGS_SHIFT = 15
+AOBJ_FLAGS_MASK = 0x03FF
+AOBJ_EVENT_END = 0
+AOBJ_EVENT_JUMP = 1
+AOBJ_EVENT_SET_ANIM = 14
+#: Opcodes whose `flags` field is a JOINT-TRACK mask (objdef.h:353-363, bits
+#: RotX..ScaZ), i.e. commands that write the DObj's local transform. SetFlags
+#: (15) and ANIM_CMD_16 carry a DObj flag VALUE in the same field and move
+#: nothing, which is why Saffron's fourth gate joint is deliberately absent
+#: from the mask above.
+AOBJ_JOINT_TRACK_OPCODES = frozenset({3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 17})
+#: SetValRateBlock/SetValRate carry a value AND a rate per set track bit.
+AOBJ_DOUBLE_VALUE_OPCODES = frozenset({5, 6})
+#: Branch opcodes consume one payload word that is the branch target pointer.
+AOBJ_BRANCH_OPCODES = frozenset({AOBJ_EVENT_JUMP, AOBJ_EVENT_SET_ANIM})
+AOBJ_MAX_COMMANDS = 256
+
+
+def aobj_script_moves_joint(resource: "O2RResource", offset: int) -> bool:
+    """Does this DObj anim-joint script write the DObj's local transform?
+
+    Walks the command stream the way the runtime decoder does and reports
+    whether any command carries a non-empty joint-track mask. A flags-only or
+    wait-only script answers False: its DObj's world matrix is genuinely
+    constant and may keep the baked-constant fast path.
+    """
+    payload = resource.payload
+    cursor = int(offset)
+    for _ in range(AOBJ_MAX_COMMANDS):
+        if cursor < 0 or cursor + 4 > len(payload):
+            raise falsify(
+                f"anim-joint script at 0x{offset:X} runs past "
+                f"{resource.spec.path}")
+        word = struct.unpack_from(">I", payload, cursor)[0]
+        opcode = (word >> AOBJ_OPCODE_SHIFT) & AOBJ_OPCODE_MASK
+        flags = (word >> AOBJ_FLAGS_SHIFT) & AOBJ_FLAGS_MASK
+        if opcode in AOBJ_JOINT_TRACK_OPCODES and flags != 0:
+            return True
+        if opcode == AOBJ_EVENT_END:
+            return False
+        if opcode in AOBJ_BRANCH_OPCODES:
+            # A branch ends this stream; its target is a separate script the
+            # caller resolves through the fixup table, and no stage joint
+            # table uses one today.
+            raise falsify(
+                f"anim-joint script at 0x{offset:X} branches; "
+                "branch following is not implemented")
+        if opcode in AOBJ_JOINT_TRACK_OPCODES:
+            words = bin(flags).count("1")
+            if opcode in AOBJ_DOUBLE_VALUE_OPCODES:
+                words *= 2
+            if opcode == 13:  # SetInterp on a DObj carries one descriptor word
+                words = 1
+        else:
+            words = 0
+        cursor += 4 * (1 + words)
+    raise falsify(f"anim-joint script at 0x{offset:X} has no End command")
+
+
+def derive_animated_binding_mask(
+    resources: dict[str, "O2RResource"],
+    packet: Packet,
+    stage: str | object = "dreamland",
+) -> int:
+    """Bindings moved by a runtime joint animation, read from the O2R payload.
+
+    The pinned `_ANIMATED_BINDING_MASKS` entry must equal this; the host test
+    is what holds the two together, because the blob builder cannot reach the
+    payload. Returns 0 for a stage that declares no runtime joint tables.
+    """
+    desc = _resolve_stage(stage)
+    tables = _ANIMATED_JOINT_TABLES.get(desc.name, ())
+    if not tables:
+        return 0
+    owners = {owner.name: owner for owner in _owner_specs_from_descriptor(desc)}
+    segments = {segment.owner: segment for segment in packet.segments}
+    moved: set[int] = set()
+    for owner_name, resource_name, table_offset in tables:
+        owner = owners.get(owner_name)
+        if owner is None:
+            raise falsify(
+                f"{desc.name}: animated joint table names unknown owner "
+                f"{owner_name!r}")
+        segment = segments.get(owner.owner)
+        if segment is None:
+            raise falsify(
+                f"{desc.name}: owner {owner_name!r} has no packet segment")
+        resource = resources[resource_name]
+        # gcAddAnimJointAll walks the GObj's DObj tree and stops at its end, so
+        # the table is only ever read for as many slots as the owner has live
+        # DObjs -- descriptor_count minus the sentinel.
+        for slot in range(owner.descriptor_count - 1):
+            ref = resource.pointer_at(table_offset + slot * 4)
+            if ref is None:
+                continue
+            if not aobj_script_moves_joint(resource, ref.offset):
+                continue
+            dobj_index = segment.first_dobj + slot
+            if dobj_index >= len(packet.dobjs):
+                raise falsify(
+                    f"{desc.name}: joint slot {slot} of {owner_name!r} has no "
+                    "DObj")
+            moved.add(dobj_index)
+    # A moved DObj drags its whole subtree: a child that carries no script of
+    # its own still leaves its authored pose once an ancestor does, so its
+    # binding cannot keep a baked constant either.
+    mask = 0
+    for index, dobj in enumerate(packet.dobjs):
+        if dobj.binding_index == INVALID_U16:
+            continue
+        cursor = index
+        for _ in range(len(packet.dobjs) + 1):
+            if cursor in moved:
+                mask |= 1 << dobj.binding_index
+                break
+            cursor = packet.dobjs[cursor].parent_index
+            if cursor == INVALID_U16:
+                break
+    return mask
+
 
 def blob_gkind(stage: str | object) -> int:
     name = stage if isinstance(stage, str) else getattr(stage, "name", "dreamland")
@@ -4720,6 +4888,12 @@ def blob_gkind(stage: str | object) -> int:
 def blob_rigid_mask(stage: str | object) -> int:
     name = stage if isinstance(stage, str) else getattr(stage, "name", "dreamland")
     return int(_BLOB_RIGID_MASKS.get(name, 0))
+
+
+def blob_animated_mask(stage: str | object) -> int:
+    """Pinned `_ANIMATED_BINDING_MASKS` entry for this stage."""
+    name = stage if isinstance(stage, str) else getattr(stage, "name", "dreamland")
+    return int(_ANIMATED_BINDING_MASKS.get(name, 0))
 
 
 def blob_camera_mask(packet: Packet) -> int:
@@ -4737,6 +4911,18 @@ def blob_camera_mask(packet: Packet) -> int:
         if packet.dobjs[dobj_index].transform_flags in (2, 4, 8):
             mask |= 1 << binding_index
     return mask
+
+
+def blob_live_world_mask(packet: Packet, stage: str | object = "dreamland") -> int:
+    """Bindings the runtime must compose live instead of replaying a constant.
+
+    Two disjoint reasons, one field: a camera-relative matrix shape (flags
+    2/4/8), and a DObj a runtime joint animation moves. The runtime reads this
+    as `camera_binding_mask`, whose sole consumer is the Task 51 baked-world
+    opt-out in nds_renderer_native_owners.c, so widening it here is exactly
+    "do not substitute the authored pose for this binding".
+    """
+    return blob_camera_mask(packet) | blob_animated_mask(stage)
 
 
 def _blob_counts(packet: Packet, stage: str | object) -> dict[str, int]:
@@ -4881,7 +5067,7 @@ def build_stage_blob(packet: Packet, stage: str | object = "dreamland") -> bytes
     counts = _blob_counts(packet, desc)
     program = build_generated_segment0_program(packet, desc)
     rigid = blob_rigid_mask(name)
-    camera = blob_camera_mask(packet)
+    camera = blob_live_world_mask(packet, desc)
     has_seg0 = 1 if program is not None else 0
     gkind = blob_gkind(name)
     dl_mask = int(packet.dl_link_owner_mask)
@@ -5089,7 +5275,7 @@ def verify_blob_roundtrip(packet: Packet, stage: str | object = "dreamland"
         raise require_blob("blob roundtrip: binding heads differ")
     if header["slab_bytes"] != packet.slab_bytes():
         raise require_blob("blob roundtrip: slab byte count differs")
-    if header["camera_mask"] != blob_camera_mask(packet):
+    if header["camera_mask"] != blob_live_world_mask(packet, desc):
         raise require_blob("blob roundtrip: camera mask differs")
     if header["dl_link_owner_mask"] != int(packet.dl_link_owner_mask):
         raise require_blob("blob roundtrip: DLLink mask differs")

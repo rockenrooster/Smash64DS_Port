@@ -768,8 +768,20 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> bool:
         macro = re.search(rf"(?m)^#define\s+{token}\s+(\w+)", code)
         require(macro is not None, f"{desc.name}: camera-mask define is absent")
         token = macro.group(1)
-    require(int(re.sub(r"[uUlL]+$", "", token), 0) == camera_mask,
-            f"{desc.name}: camera mask differs from source transform flags: {camera_mask:#x}")
+    # S04: this field is the Task 51 baked-world OPT-OUT, so it is the union of
+    # two reasons to compose a binding's world live -- the source transform
+    # flags above, and the bindings a runtime joint animation moves. Saffron's
+    # gate is the second kind: grYamabukiGateAddAnimOpen/Close drive DObjs
+    # 20-22, and replaying their authored pose is exactly why the gate looked
+    # permanently open. Compare against the producer's union, not against the
+    # flags alone, or this falsifier reds every stage that animates a binding.
+    live_mask = generator.blob_live_world_mask(packet, desc.name)
+    require(live_mask & camera_mask == camera_mask,
+            f"{desc.name}: live-world mask drops a camera binding: "
+            f"{live_mask:#x} vs {camera_mask:#x}")
+    require(int(re.sub(r"[uUlL]+$", "", token), 0) == live_mask,
+            f"{desc.name}: selector mask differs from the producer's live-world "
+            f"mask (camera {camera_mask:#x}, live {live_mask:#x})")
     getter = generator.named_c_closure(selector, "ndsRendererNativeStageRigidBindingMask")
     require("~packet->camera_binding_mask" in getter,
             "camera-dependent bindings still enter the rigid world cache")

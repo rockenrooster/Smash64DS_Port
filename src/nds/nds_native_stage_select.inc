@@ -1480,9 +1480,14 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYamabuki = {
     NDS_NATIVE_STAGE_YAMABUKI_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
     /* rigid_binding_mask: not derivable here, 0 costs only the replay.
      * camera_binding_mask: bindings whose DObj carries source flag 2 or 4
-     * (matrix kinds 48/46), read off the generated DObj table. */
+     * (matrix kinds 48/46), read off the generated DObj table, PLUS bindings
+     * a runtime joint animation moves. Both halves mean "compose this
+     * binding's world live"; the only reader is the Task 51 baked-world
+     * opt-out. 0xE0000 is Saffron's gate (S04): grYamabukiGateAddAnimOpen/
+     * Close move DObjs 20-22, so bindings 17-19 must never replay the
+     * authored pose. Keep equal to generator.blob_live_world_mask(). */
     0ULL,
-    0x4894ULL,
+    0xE4894ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_YAMABUKI,
     { 0u, 0u },

@@ -29,6 +29,28 @@ llGRYamabukiMapMapHead at gryamabuki.c:257; gryamabuki.c:121
 grYamabukiGateAddAnimOffset applies llGRYamabukiMapGateOpenAnimJoint at
 gryamabuki.c:129 and llGRYamabukiMapGateCloseAnimJoint at gryamabuki.c:134.
 The spawned monster/item actor remains outside this packet.
+
+THE GATE MOVES, AND ITS WORLD MATRIX MUST NOT BE BAKED. The two anim-joint
+tables above are the ONLY statement anywhere that owner 4 is not a static prop,
+and neither one is reachable from a DObjDesc table -- the authored descriptor
+poses at file-160 0x08A0 are the CLOSED pose and nothing in the packet says
+otherwise. Segment 3's four bindings (17-20) map to DObjs 20-23; the open
+table's scripts move DObj 20 TraZ 0 -> 330, DObj 21 TraY 390 -> -30 and DObj 22
+TraZ 0 -> -330, and the close table returns them, so bindings 17/18/19 leave
+their authored pose every cycle. DObj 23 (binding 20, the lamp at x 810) has a
+SetFlags-only channel -- DObj flag bit 0, not DOBJ_FLAG_HIDDEN, which is bit 1
+-- so its world really is constant and it keeps the baked fast path.
+
+That is why `_ANIMATED_JOINT_TABLES` and `_ANIMATED_BINDING_MASKS` in
+generate_nds_native_stage.py carry Saffron rows, and why the blob header's
+camera_binding_mask is 0xE4894 rather than the camera-only 0x4894: with
+bindings 17-19 absent from that mask the Task 51 path replays
+sNdsNativeStageBakedWorldMatrices, which is built from the authored pose and
+cannot follow an AObj, and the gate is frozen for the whole match while its
+hazard state and yakumono collision keep cycling correctly. The mask only
+widens; no geometry, binding, DObj or triangle count moves, so no include or
+count pin changes -- the stage BLOB is the one artifact that must be rebuilt.
+See scripts/stages/test_yamabuki_gate_animation.py.
 """
 
 from native_stage_descriptors import StageDescriptor
