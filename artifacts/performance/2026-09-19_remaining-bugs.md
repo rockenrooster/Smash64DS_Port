@@ -1630,3 +1630,40 @@ same saturation discipline to the no-material path, or establish that the
 no-material epochs on this fighter should have carried a material at all, which
 the `mat=0` reads make worth checking first. Do not revert the clamp: it is the
 path that now matches the source.
+
+### P01: ground jolt ACCEPTED, air jolt REGRESSED
+
+Owner on r24/r25: the terrain-following jolt's edges are fixed. The AIR jolt,
+which was working, is now broken.
+
+What is known, so the next reader does not start from scratch:
+
+  * The P01 change did NOT edit the air generators. `generate_nds_native_pikachu_thunderjolt.py`
+    and `..._effect.py` are untouched and a host test asserts they stay that way.
+    So this is not a direct edit -- it is a SHARED-RESOURCE interaction.
+  * Both jolts come from the same source asset, PikachuSpecial3 342. The air
+    owner uses the specialized CI4 quad helper; the ground owner now uses a
+    dedicated A5I3 converter with its own 3-slot cache, uploading through
+    `ndsRendererHardwarePrepareIFCommonCloudAtlas`.
+  * That converter PINS three texture names for the scene rather than making
+    them evictable, and it reports `gNdsThunderGroundCoverageVramBytes`.
+    Net VRAM was measured as NEGATIVE (-3,024 B) because the images previously
+    uploaded as direct colour -- but "less total" is not "same allocation
+    order", and the air quad's upload now happens against a differently
+    occupied allocator.
+
+**Two candidate mechanisms, in the order worth checking:**
+  1. **Allocation/eviction order.** The three pinned names change what VRAM is
+     free when the air quad asks. Read `gNdsThunderGroundCoverageVramBytes` and
+     the air owner's own bind/reject counters in one match with both jolts on
+     screen; a refused air upload is the tell.
+  2. **Bind hand-off.** `nds_native_pikachu_thunderground.exec.inc:102` tries the
+     dedicated bind and falls back to `ndsRendererHardwareBindTexture` only on
+     refusal. If the dedicated path leaves texture state the generic path's
+     cache believes it still owns, the air quad drawn afterwards inherits the
+     wrong texture. Check whether the generic bind re-binds unconditionally or
+     keys on a "current name" the dedicated path never updates.
+
+Deliberately NOT guessed at: the owner is mid-verification on r25, and a blind
+change to the shared texture path is how the ground fix would get lost too. Fix
+this with the counters in hand, and keep the ground repair -- it is accepted.
