@@ -25,10 +25,18 @@ volatile u32 gNdsLinkSpecialTourEntryCreateCount;
 volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
 #endif
 #endif
-#if NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU || NDS_P2_PURIN
+/* Both halves of the source's one fkind test (ftcommonentry.c:97) need this,
+ * and the update below already calls it under `#if NDS_P2_PURIN`. The
+ * declaration was Pikachu-only, so a Purin-without-Pikachu roster -- a legal
+ * combination, the two flags default independently -- reached the call with no
+ * prototype (2026-09-21, P03 sibling audit). The rays are EFCommonEffects3,
+ * always resident, and are a SEPARATE source trigger from the thrown ball
+ * below: the ball is made once at SetStatus, the rays when the Appear script
+ * raises flag1 at update 40. Neither proves the other. */
 GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 #endif
-#if (NDS_P2_PIKACHU || NDS_P2_PURIN) && NDS_P2_ITEM_CORE
+#if NDS_P2_PIKACHU || NDS_P2_PURIN
 /* The thrown Poke Ball, through the efmanager seam's checked wrapper.
  *
  * Not efManagerMBallThrownMakeEffect directly: its first act dereferences
@@ -37,7 +45,28 @@ GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
  * sized or will not fit the general heap. Restoring the omitted call raw
  * turned a missing effect into a data abort on the first Pikachu entry
  * (2026-09-21). The wrapper owns that residency test because the offset
- * symbols it has to resolve are file-static to that translation unit. */
+ * symbols it has to resolve are file-static to that translation unit.
+ *
+ * THE DEPENDENCY IS DECLARED, NOT SILENTLY DROPPED. The ball's geometry,
+ * constructor and native owner all live behind NDS_P2_ITEM_CORE: the DObjDesc
+ * is ITCommonObject+0x9430 (the ITEM Poke Ball's own descriptor -- see the
+ * renderer note beside NDS_NATIVE_ITEM_MBALL_LIVE_ROOT), the file is loaded by
+ * battleship_item_link_core.c, and ndsRendererSubmitNativeItemMBall is compiled
+ * under the same flag. The Makefile already makes that dependency explicit --
+ * `NDS_P2_ITEM_CORE = $(if $(filter 1,... $(NDS_P2_PIKACHU) $(NDS_P2_PURIN)
+ * ...),1,0)` (Makefile:888) -- so a Pikachu/Purin build cannot legally have the
+ * core off. Assert it here instead of wrapping the call in `#if
+ * NDS_P2_ITEM_CORE`: that guard silently produced an entry with no ball, which
+ * is the defect this row exists to fix. If a future configuration really wants
+ * Pikachu without item gameplay it must add ITCommonData/ITCommonObject and
+ * this one constructor to that configuration, not delete the effect.
+ *
+ * `#if !NDS_P2_ITEM_CORE` rather than `_Static_assert`, because an UNDEFINED
+ * macro must fail too: in `#if` it evaluates to 0 and trips this; in a
+ * `_Static_assert` it would be an unknown identifier and a confusing error. */
+#if !NDS_P2_ITEM_CORE
+#error "Pikachu/Purin entry requires ITCommonObject: set NDS_P2_ITEM_CORE (Makefile:888 derives it from these two kinds), or add ITCommonData/ITCommonObject and this one constructor to the configuration. Do not delete the effect."
+#endif
 GObj *ndsEFManagerMBallThrownMakeEffectChecked(Vec3f *pos, s32 lr);
 #endif
 #if NDS_P2_YOSHI
@@ -338,13 +367,17 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * facing field while status_vars.common.entry.lr keeps the direction
          * the source reads here, and lr picks which of the ball's two anim
          * joints the descriptor binds. The rays are a separate source trigger
-         * driven by the script's flag1 above; neither proves the other. */
+         * driven by the script's flag1 above; neither proves the other.
+         *
+         * MATCH INTRODUCTION ONLY. ftCommonAppearSetStatus has exactly one
+         * caller, the entry-focus phase in battleship_ifcommon.c; the post-KO
+         * platform is ftCommonRebirth*SetStatus in battleship_ftcommon_rebirth.c
+         * and spawns only efManagerRebirthHaloMakeEffect. Do not move this call
+         * into that path because both are called "spawn". */
         status_id = (entry_id == 0) ? nFTPikachuStatusAppearR :
                                       nFTPikachuStatusAppearL;
-#if NDS_P2_ITEM_CORE
         (void)ndsEFManagerMBallThrownMakeEffectChecked(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
-#endif
     }
 #endif
 #if NDS_P2_YOSHI
@@ -371,10 +404,8 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * Master Ball entry -- the same source case label covers both kinds --
          * so it takes the same restored call and the same entry facing. */
         status_id = (entry_id == 0) ? nFTPurinStatusAppearR : nFTPurinStatusAppearL;
-#if NDS_P2_ITEM_CORE
         (void)ndsEFManagerMBallThrownMakeEffectChecked(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
-#endif
     }
 #endif
 #if NDS_P2_KIRBY

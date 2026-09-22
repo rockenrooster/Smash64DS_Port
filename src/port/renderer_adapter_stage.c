@@ -142,6 +142,12 @@ extern volatile u32 gNdsItemMBallRoot;
 extern volatile u32 gNdsItemMBallEffectsSeen;
 extern volatile u32 gNdsItemMBallEffectsRejected;
 extern volatile u32 gNdsItemMBallSnapshotFailCount;
+/* The thrown entry Poke Ball shares the item's native owner; these say so
+ * out loud. Defined beside the maker in src/import/battleship_efmanager.c,
+ * because the whole thrown closure is that file's. */
+extern volatile u32 gNdsEntryMBallThrownRootMask;
+extern volatile u32 gNdsEntryMBallThrownDrawCount;
+extern volatile u32 gNdsEntryMBallThrownSubmitFailCount;
 extern volatile u32 gNdsItemGShellKind;
 extern volatile u32 gNdsItemGShellForeignKindCount;
 extern volatile u32 gNdsItemGShellCandidateStep;
@@ -6172,6 +6178,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRendererNativeMaterial item_mball_material;
     sb32 item_mball_native_candidate = FALSE;
     sb32 item_mball_native_handled = FALSE;
+    sb32 item_mball_from_effect = FALSE;
     NDSRendererNativeMaterial item_gshell_material;
     sb32 item_gshell_native_candidate = FALSE;
     sb32 item_gshell_native_handled = FALSE;
@@ -8175,20 +8182,63 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
              (root == NDS_NATIVE_ITEM_MBALL_LIVE_ROOT)))
         {
             u32 mball_step = 1u;
+            /* BOTH POKE BALLS ARE ONE SOURCE DESCRIPTOR, SO THEY ARE ONE
+             * NATIVE OWNER.
+             *
+             * These two roots are the two drawable children of the DObjDesc
+             * at ITCommonObject+0x9430. The ground item reaches it as
+             * ITAttributes.data at ITCommonData+0x6E4; BattleShip's entry
+             * effect, efManagerMBallThrownMakeEffect (efmanager.c:5248),
+             * reads that same fixed-up +0x6E4 pointer and SUBTRACTS 0x9430
+             * from it to recover ITCommonObject's base -- so the subtrahend
+             * IS this descriptor. Same tree, same MObjSub table at +0x9120,
+             * same eight CURRENT_IMAGE frames; only the AnimJoint and
+             * MatAnimJoint differ (the L/R pair the maker binds from lr).
+             *
+             * Requiring an ITEM GObj in the item display layer was therefore
+             * the whole of the remaining P03 failure: the effect constructed,
+             * arrived here as an EFFECT GObj in the effect layer, matched
+             * nothing, and was published as DIAG_NATIVE domain 2 root 0x9340
+             * reason 1 (NO_PROGRAM) -- which reads like missing geometry and
+             * is not. Admit the effect owner against the same asset and the
+             * same two roots; do NOT bake this geometry a second time.
+             *
+             * itGetStruct is deliberately not called on the effect GObj: an
+             * EFFECT's obj is not an ITStruct. */
+            const sb32 mball_is_effect =
+                ((sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+                 (dobj->parent_gobj != NULL) &&
+                 (dobj->parent_gobj->id == nGCCommonKindEffect)) ?
+                    TRUE : FALSE;
 
-            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            if ((sNdsRendererAdapterItemSubmitActive != FALSE) ||
+                (mball_is_effect != FALSE))
             {
                 mball_step = 2u;
                 if ((dobj->parent_gobj != NULL) &&
-                    (dobj->parent_gobj->id == nGCCommonKindItem))
+                    ((dobj->parent_gobj->id == nGCCommonKindItem) ||
+                     (mball_is_effect != FALSE)))
                 {
-                    ITStruct *ip = itGetStruct(dobj->parent_gobj);
+                    ITStruct *ip = (mball_is_effect != FALSE) ? NULL :
+                        itGetStruct(dobj->parent_gobj);
 
                     mball_step = 3u;
-                    if (ip != NULL)
+                    if ((ip != NULL) || (mball_is_effect != FALSE))
                     {
-                        gNdsItemMBallKind = (u32)ip->kind;
-                        if (ip->kind != nITKindMBall)
+                        if (mball_is_effect != FALSE)
+                        {
+                            /* Bit 0 = 0x9250, bit 1 = 0x9340. One counter
+                             * cannot say both halves of the ball arrived. */
+                            gNdsEntryMBallThrownRootMask |=
+                                (root == NDS_NATIVE_ITEM_MBALL_BAKED_ROOT) ?
+                                    1u : 2u;
+                        }
+                        else
+                        {
+                            gNdsItemMBallKind = (u32)ip->kind;
+                        }
+                        if ((mball_is_effect == FALSE) &&
+                            (ip->kind != nITKindMBall))
                         {
                             gNdsItemMBallForeignKindCount++;
                         }
@@ -8219,6 +8269,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                     item_mball_root = root;
                                     gNdsItemMBallRoot = root;
                                     item_mball_native_candidate = TRUE;
+                                    item_mball_from_effect = mball_is_effect;
                                 }
                             }
                             else if ((dobj->mobj != NULL) &&
@@ -8251,6 +8302,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                         item_mball_root = root;
                                         gNdsItemMBallRoot = root;
                                         item_mball_native_candidate = TRUE;
+                                        item_mball_from_effect =
+                                            mball_is_effect;
                                     }
                                     else
                                     {
@@ -10648,10 +10701,18 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         if (item_mball_native_handled != FALSE)
         {
             gNdsItemMBallDrawCount++;
+            if (item_mball_from_effect != FALSE)
+            {
+                gNdsEntryMBallThrownDrawCount++;
+            }
         }
         else
         {
             gNdsItemMBallSubmitFailCount++;
+            if (item_mball_from_effect != FALSE)
+            {
+                gNdsEntryMBallThrownSubmitFailCount++;
+            }
         }
     }
 

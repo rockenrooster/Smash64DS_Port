@@ -2750,6 +2750,23 @@ volatile u32 gNdsEntryMBallThrownRefusalMask;
 volatile u32 gNdsEntryMBallThrownFileSize;
 volatile u32 gNdsEntryMBallThrownHeadPtr;
 volatile u32 gNdsEntryMBallThrownDescPtr;
+/* WHICH HALF OF THE BALL THE RENDERER ACTUALLY SAW, AND WHETHER IT DREW.
+ *
+ * The maker counter above says the effect was CONSTRUCTED; it says nothing
+ * about pixels. When the constructor was first restored the effect built and
+ * then declined in the renderer with DIAG_NATIVE domain 2 root 0x9340 reason 1
+ * -- NO_PROGRAM -- because the only admission clause for those roots required
+ * an ITEM GObj in the item display layer, and this is an EFFECT GObj in the
+ * effect layer. Two roots make up the ball (ITCommonObject 0x9250 and 0x9340,
+ * the two DObjDesc children at +0x9430), so one counter cannot say "admitted";
+ * the mask names each root and the draw count is incremented only by a
+ * successful native submit. Root mask bit 0 = 0x9250, bit 1 = 0x9340.
+ * Defined here rather than in the renderer preamble because the whole thrown
+ * closure is this file's, and defined even when no Pikachu/Purin is in the
+ * roster so a probe reads a real zero instead of a missing symbol. */
+volatile u32 gNdsEntryMBallThrownRootMask __attribute__((used));
+volatile u32 gNdsEntryMBallThrownDrawCount __attribute__((used));
+volatile u32 gNdsEntryMBallThrownSubmitFailCount __attribute__((used));
 
 /* THE THROWN POKE BALL, ASKED FOR ONLY WHEN ITS FILE IS ACTUALLY THERE.
  *

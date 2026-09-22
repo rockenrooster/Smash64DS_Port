@@ -1,7 +1,26 @@
 /* Poke Ball / MBall executor. TEXTUAL INCLUDE ONLY.
  * Root 0x9250 contains no 0xDE and bakes completely. Root 0x9340 calls
  * 0xDE000000 0x0E000000 at word 16 and accepts exactly CURRENT_IMAGE from
- * its source MObj; the executor refuses any wider material effect word. */
+ * its source MObj; the executor refuses any wider material effect word.
+ *
+ * TWO SOURCE OWNERS, ONE BAKE. These two roots are the two drawable children
+ * of the ONE DObjDesc at ITCommonObject+0x9430, and both of BattleShip's Poke
+ * Balls use that descriptor:
+ *
+ *   - the ground ITEM (nITKindMBall), whose ITAttributes at ITCommonData+0x6E4
+ *     point `data` straight at +0x9430 (the generator asserts that pointer);
+ *   - the THROWN ENTRY EFFECT, efManagerMBallThrownMakeEffect, which reads the
+ *     fixed-up pointer at that same +0x6E4 head and subtracts 0x9430 from it
+ *     to recover ITCommonObject's base -- so the subtrahend IS this descriptor.
+ *     dEFManagerMBallThrownEffectDesc then binds the L/R AnimJoint and
+ *     MatAnimJoint at +0x95E0/+0x9690 and +0x9740/+0x9810 over that same tree.
+ *
+ * So the entry ball needs no second bake and no second geometry generator: it
+ * needs the renderer's admission clause to stop requiring an ITEM GObj. The
+ * eight image offsets the live root validates against are that MatAnim's
+ * frames -- the ITEM has no MatAnimJoint at all (ITAttributes+0x6F0 is NULL),
+ * which is why a still item only ever selects one of them.
+ * Do not narrow the live root to a single image to "tidy" this. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
 sb32 ndsRendererSubmitNativeItemMBall(
