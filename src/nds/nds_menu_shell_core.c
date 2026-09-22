@@ -744,8 +744,23 @@ static const NdsMenuWalkStep kNdsMenuWalkVsOptions[] = {
 static const NdsMenuWalkStep kNdsMenuWalkItemSwitch[] = {
     { 0u, 30u }, { (u16)NDS_INPUT_B, 1u }
 };
+/* M01 (owner, 2026-09-21) deferred Characters and VS Record, so A on either of
+ * those rows is refused. This script used to be dwell-then-A on the Characters
+ * row, which after that change could never leave the plate: the refusal keeps
+ * `scene_prev` unset, the same script is reselected every update, and route 2
+ * parks here exactly the way the OPTIONS row parked it in 2026-09-04 -- a lap
+ * that never closes and a verifier that burns its 3000 s ceiling.
+ *
+ * Walk down to Sound Test, the one row still enterable, with a blank step
+ * between the two presses so the second DOWN reads as a tap and not as held
+ * input. If Sound Test is locked its row does not exist, the second DOWN wraps
+ * back to Characters and A is refused again -- so the script ends with B,
+ * which leaves DATA instead of spinning. That closes the walk without a lap
+ * rather than hanging, and needs no unlock-mask dependency here. */
 static const NdsMenuWalkStep kNdsMenuWalkDataEnter[] = {
-    { 0u, 2u }, { (u16)NDS_INPUT_A, 1u }
+    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { 0u, 1u },
+    { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u },
+    { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
 };
 static const NdsMenuWalkStep kNdsMenuWalkDataAfterCharacters[] = {
     { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }

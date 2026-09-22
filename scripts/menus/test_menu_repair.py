@@ -504,9 +504,13 @@ int main(void) {
 }
 ''')
     assert "sMenuVsOptionsHaveItemSwitch = 1u;" in function(options, "ndsMenuShellVsOptionsLoad")
-    update_options = function(options, "ndsMenuShellUpdateVsOptions")
-    assert "(taps & NDS_INPUT_LEFT) ? -1 : -3" in update_options
-    assert "(taps & NDS_INPUT_RIGHT) ? 1 : 3" in update_options
+    update_options = " ".join(
+        function(options, "ndsMenuShellUpdateVsOptions").split())
+    # M02 (owner, 2026-09-21): the held magnitude moved behind a row-local
+    # helper so Damage repeats by five while every other row keeps three.
+    # Taps are still +-1, so pin the call rather than the old literal.
+    assert "(taps & NDS_INPUT_LEFT) ? -1 : -ndsMenuShellVsOptionsHeldStep()" in update_options
+    assert "(taps & NDS_INPUT_RIGHT) ? 1 : ndsMenuShellVsOptionsHeldStep()" in update_options
     apply_code = APPLY_PREAMBLE + clamp_handicap + apply_match + APPLY_MAIN
     items_code = ITEMS_PREAMBLE + items_adjust + items_confirm + items_save + ITEMS_MAIN
     css_random_code = CSS_RANDOM_PREAMBLE + css_random + CSS_RANDOM_MAIN

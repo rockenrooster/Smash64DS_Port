@@ -38,6 +38,7 @@ sb32 ndsDiagnosticsHandleImportedFTMainSetStatusBefore(GObj *fighter_gobj,
                                                        u32 flags);
 volatile u32 gNdsFoxLaserColAnimSuppressCount;
 volatile u32 gNdsFoxLaserColAnimPassCount;
+volatile u32 gNdsKirbyCopyFoxColAnimSuppressCount;
 
 /* BUGS.md owner override: BattleShip's Fox LASER / LASER AERIAL neutral-B
  * scripts (208_FoxMainMotion.c:1442-1466) each issue
@@ -48,7 +49,18 @@ volatile u32 gNdsFoxLaserColAnimPassCount;
  * and every other color animation intact; refuse only this exact event while a
  * Fox/NFox is in the two source laser statuses.  ftmain.c advances the motion
  * event unconditionally after this call, so suppression cannot stall or alter
- * the source script. */
+ * the source script.
+ *
+ * Kirby carries his own copy of those two scripts:
+ * 228_KirbyMainMotion.c dKirbyMainMotion_LaserGround and _LaserAir issue the
+ * same SetColAnim(nGMColAnimFighterFoxSpecialHiStart, 0) under
+ * nFTKirbyStatusCopyFoxSpecialN / ...AirN, where fkind is Kirby.  The Fox-only
+ * gate above therefore let it through, which is the white-and-gold flash the
+ * owner reports over Kirby's body when the copied blaster fires -- the same
+ * cosmetic event, on a fighter the override never covered.  Extend the override
+ * to exactly those two statuses.  Kirby's copied Samus and Donkey scripts reuse
+ * this colanim id under their own statuses; scoping by status leaves them
+ * alone. */
 static sb32 ndsFTMainCheckSetFighterColAnimID(GObj *fighter_gobj,
                                               s32 colanim_id, s32 length)
 {
@@ -61,6 +73,20 @@ static sb32 ndsFTMainCheckSetFighterColAnimID(GObj *fighter_gobj,
         (colanim_id == nGMColAnimFighterFoxSpecialHiStart))
     {
         gNdsFoxLaserColAnimSuppressCount++;
+        return FALSE;
+    }
+    /* Deliberately not fenced behind NDS_P2_KIRBY. Both status constants and
+     * both fighter kinds come from the unconditional enums in ft/fighter.h, so
+     * the guard would buy nothing and could only silently delete the clause in
+     * a configuration where the macro is undefined -- exactly the failure this
+     * repair is fixing. Rosters without Kirby never produce these fkinds. */
+    if ((fp != NULL) &&
+        ((fp->fkind == nFTKindKirby) || (fp->fkind == nFTKindNKirby)) &&
+        ((fp->status_id == nFTKirbyStatusCopyFoxSpecialN) ||
+         (fp->status_id == nFTKirbyStatusCopyFoxSpecialAirN)) &&
+        (colanim_id == nGMColAnimFighterFoxSpecialHiStart))
+    {
+        gNdsKirbyCopyFoxColAnimSuppressCount++;
         return FALSE;
     }
     if ((fp != NULL) &&
