@@ -54,3 +54,43 @@ never resolve; and a descriptor whose offsets address a different file is
 span-rejected and deferred with `proc_display` cleared, after which its maker
 returns a GObj with a NULL DObj and faults. Check those three before concluding
 an effect is a rendering problem.
+
+## Standing lesson from 2026-09-21, second pass
+
+Nine rows closed in one day, and **six of them had a wrong premise written down
+in this repo before work started**. The premise was the expensive part, not the
+repair. Concretely:
+
+- P01's "CI4 with a luminance-ramp TLUT" described the **air** jolt. The ground
+  owner is IA8 and loads no TLUT at all.
+- P03's "no native bake" was a misread failure code. `NO_PROGRAM` means nothing
+  *claimed* the root, not that geometry is missing. The bake had always existed.
+- K04's "GObj-starved" did not survive reading the reserve: the cap is raised by
+  eight after a mid-match latch, leaving ~10 free slots.
+- S04's earlier "root and first child read (0,0)" sampled DObj 0, whose
+  anim-joint slot is NULL by construction, so it could never have shown motion.
+- K03 and L01 were filed together on matching symptom wording and share nothing:
+  one is a producer reading a `.bss` address, the other a renderer applying a
+  translate twice.
+- The Kirby heap number was real but described the wrong regime -- it only holds
+  **after a copy**, and a plain match sits 16 KB clear of the floor.
+
+**How to apply:** before implementing from a recorded diagnosis, re-derive its
+first fact from the running build. Cheaply -- one grep, one decode, one counter.
+A stale premise reads exactly like a fresh one, and every hour spent on it
+produces a confident repair to something that was never broken.
+
+Corollary, learned the same day: **failure codes are names, not explanations.**
+Read the enum's definition before letting the word in it choose your repair.
+
+### Falsifiers must follow the producer
+
+Two checks went red this session for the same structural reason: a validator
+held a literal the producer had since redefined. `check_nds_native_stage.py`
+pinned a mask to "source transform flags" after the generator widened it to
+include animated bindings, and the stage falsifier had never classified a
+parent-scale walk that had grown into `ndsRendererAdapterApplyMvpRecalc`. The
+second one **failed the whole build** the moment an unrelated edit made its rule
+re-run -- it had been latently broken for an unknown period, invisible only
+because its output was up to date. When a producer's definition widens, widen
+the check against the producer, never against a copy of the old number.
