@@ -12588,6 +12588,17 @@ size_t lbRelocGetFileSize(const void *file_id)
     return sizeof(Sprite);
 }
 
+/* R02/R03 witness. Non-zero Unresolved means the demo token never mapped;
+ * non-zero LoadFail means it mapped and the payload did not survive loading or
+ * normalization. Exactly one of them answers whether packing the Results
+ * animations was enough. */
+volatile u32 gNdsRelocExternHeapUnresolvedCount __attribute__((used));
+volatile u32 gNdsRelocExternHeapLastUnresolvedToken __attribute__((used));
+volatile u32 gNdsRelocExternHeapNoHeapCount __attribute__((used));
+volatile u32 gNdsRelocExternHeapLoadFailCount __attribute__((used));
+volatile u32 gNdsRelocExternHeapLastLoadFailAsset __attribute__((used));
+volatile u32 gNdsRelocExternHeapOkCount __attribute__((used));
+
 void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
 {
     u32 token = ndsRelocFileID(file_id);
@@ -12600,8 +12611,29 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     NDSRelocAssetHeader header;
 #endif
 
-    if ((asset_id == NDS_RELOC_ASSET_INVALID) || (heap == NULL))
+    /* R02/R03. THIS FUNCTION FAILS SILENTLY BY CONSTRUCTION. Every arm below
+     * returns the caller's heap untouched, and ftMainSetStatus (ftmain.c:4623)
+     * assigns `fp->figatree = fp->figatree_heap` unconditionally and discards
+     * the return value -- so a fighter binds whatever the heap already held,
+     * with no decline, no reject and nothing to notice. That is why 142 missing
+     * Results animations looked like a pose bug for months.
+     *
+     * The two existing counters, gNdsRelocForceFighterAnimResolveCount and
+     * ...FallbackCount, both live INSIDE the ndsRelocIsFighterAnimID arm, so a
+     * token that fails HERE increments neither. These three split the failure
+     * exactly: Unresolved means ndsRelocAssetIDForToken did not map the token
+     * at all (the token table or its gating is wrong); LoadFail means it mapped
+     * and the payload did not load or normalize (suspect the AObj16 header
+     * contract, which submotion payloads had never been put through). */
+    if (asset_id == NDS_RELOC_ASSET_INVALID)
     {
+        gNdsRelocExternHeapUnresolvedCount++;
+        gNdsRelocExternHeapLastUnresolvedToken = token;
+        return heap;
+    }
+    if (heap == NULL)
+    {
+        gNdsRelocExternHeapNoHeapCount++;
         return heap;
     }
     ndsRelocPrepareSceneCache();
@@ -12610,8 +12642,11 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     loaded = ndsRelocLoadExternTreeAsset(asset_id, &heap_ptr);
     if (loaded == NULL)
     {
+        gNdsRelocExternHeapLoadFailCount++;
+        gNdsRelocExternHeapLastLoadFailAsset = asset_id;
         return heap;
     }
+    gNdsRelocExternHeapOkCount++;
     if (asset_id == NDS_RELOC_ASSET_N64_LOGO)
     {
         ndsRelocNormalizeN64LogoSprite(loaded);
