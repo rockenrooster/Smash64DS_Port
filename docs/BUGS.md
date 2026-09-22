@@ -21,7 +21,7 @@ Main Menus:
 -Link:
     -slash damage VFX playing at incorrect locations. **Root XObj kind 0x45 took a translate-bearing fallback: world contact applied twice.**
 -Pikachu
-    -neutral b attack VFX that walks terrain still has hard edges. **That TLUT was the AIR jolt. Ground is IA8; 2,225 of 3,072 partial alphas forced opaque. A5I3 now.**
+    -neutral b attack VFX that walks terrain still has hard edges. **GROUND fixed (owner). AIR jolt REGRESSED in r24: shares asset 342; suspect VRAM/bind interaction with the new A5I3 names.**
     -down B effect doesn't render all related VFX, missing blue exp on pikachu. **Was the generic spark; real maker routed, script 0x74 packed.**
     -Pokeball Spawn Intro not playing VFX. **Bake existed. The gate wanted an item GObj; the entry ball is an effect. Admitted.**
     -face color is slightly different from body color. (lighting difference???) **Not lighting: N64 clamps shade then multiplies prim; DS folds prim first, so lit bodies wash white.**
