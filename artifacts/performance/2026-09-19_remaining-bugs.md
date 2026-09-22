@@ -2670,3 +2670,36 @@ from the first second or only after some event. Sudden death re-creating the
 fighters is still the strongest clue in the report and still points at
 creation-time state, which none of these samples can see because they all
 start after creation succeeded.
+
+## 2026-09-22 07:50 -- a reframing of the frozen-Fox row that should have come first
+
+Every instrument I have pointed at this row is GAMEPLAY-side: `status_id`,
+`status_total_tics`, `is_ghost`, `damage_colls[].hitstatus`, animation resolves,
+the GObj latch. All read healthy. The owner's observation is VISUAL.
+
+**Those two are not in contradiction, and I spent the night treating them as
+if they were.** A fighter whose RENDER is stale -- drawing one pose while its
+gameplay state advances underneath -- looks frozen, and looks like hits do
+nothing, while every counter above reads exactly what I measured. So "I cannot
+reproduce it" is weaker than it sounded: I have been measuring a different
+layer from the one the report describes.
+
+That is why the repro guide now asks, as its own question, whether Fox
+animates at all -- idle breathing, turning -- or is a statue. Animating but
+unresponsive and completely static are different failures, and only the owner
+can see which.
+
+**What this does NOT license.** I looked at the fighter packet cache as the
+obvious stale-render candidate and stopped short of claiming it, because the
+replay path demonstrably patches pose matrices every frame:
+`ndsFighterPacketStoreMatrix4x3(&words[root->local_index[j]],
+&input->gx_locals[j])` per root per local, with a split-matrix branch covering
+`gx_valid == 0`. A stale pose through that path would need the INPUTS to be
+stale, which is upstream of the cache, and nothing measured says they are.
+Recording the candidate and its counter-evidence rather than another mechanism
+I cannot test.
+
+The available counters are global rather than per slot
+(`gNdsFighterPacketHits` / `Records` / `Declines` / `Faults` / `MissWord`),
+which is the same granularity trap that made my first refutation of this row
+unsound. If this lead is taken up, make them per slot first.
