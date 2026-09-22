@@ -1964,3 +1964,42 @@ floor is **18,044**, so trimming both MEDIUM slots from 40 to 28 KiB (-24,576,
 no slot lost, the 60 KiB LARGE slot still covers any cue) is sufficient on its
 own. Left unimplemented deliberately: it trades audio-cache residency against
 effects appearing while audio rows are open, which is the owner's call.
+
+### The FGM cue histogram, which refutes the trim I was about to recommend
+
+A cache miss is NOT a re-read. `ndsAudioFgmCacheAcquire` (nds_audio_fgm.c:1183)
+returns -1 when no free slot is large enough, the caller counts
+`gNdsAudioFgmReadFailCount` and **the cue does not play**. The slot IS the
+storage, so every slot resize moves the boundary of what can sound.
+
+573 cues in `assets/audio/fgm_phase_pack_ima.json`, by `ima_adpcm_bytes`
+against the eight slots (1x60 + 2x40 + 1x28 + 4x16 KiB):
+
+| band | cues | slots that can hold one |
+|---|---|---|
+| > 60 KiB | **0** | -- |
+| 40-60 KiB | **28** | LARGE only (there is **one**) |
+| 28-40 KiB | 34 | LARGE or MEDIUM (three) |
+| 16-28 KiB | 89 | + COMPACT (four) |
+| <= 16 KiB | 422 | any (eight) |
+
+Max cue is 59,344 bytes, so the 60 KiB LARGE slot is right-sized and nothing is
+unplayable today.
+
+**Trimming both MEDIUM slots 40 -> 28 KiB is the wrong lever after all.** It
+would push the 34 cues in the 28-40 band onto the LARGE slot, taking the
+population that depends on that single slot from 28 to 62. Two such cues
+overlapping already fail today; this would make that far more likely, and
+overlapping battle SFX is exactly where it would be heard. Recorded so the
+earlier recommendation in the plan is not acted on.
+
+What the layout can afford is bounded by concurrency, not by the histogram
+alone: the file records a measured peak of **six of eight handles with
+PoolExhaustCount 0**. Dropping two SMALL slots (8 -> 6, reclaiming 32,768 and
+clearing the 18,044 deficit with margin) matches that peak exactly -- which is
+to say it removes all of the headroom, and an unlucky size mix at peak would
+drop a cue.
+
+So the arena reclaim is available, quantified, and carries a real audio
+downside in every form measured here. It is the owner's call, and the numbers
+above are what it should be made on.

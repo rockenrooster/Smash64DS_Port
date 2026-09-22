@@ -581,9 +581,15 @@ Candidate trims, all of which clear the 18,044-byte deficit:
 | drop two SMALL slots | 32,768 | slot count 8 -> 6 |
 | COMPACT 28 -> 16 KiB plus one SMALL dropped | 28,672 | slot count 8 -> 7 |
 
-The first is the least invasive: no slot disappears and no cue loses its only
-home, because the LARGE slot still covers anything up to 60 KiB. What changes is
-how many mid-sized cues stay resident at once.
+**The first is now REFUTED — do not act on it.** A cue histogram (573 cues, in
+the receipt) shows a miss is not a re-read: `ndsAudioFgmCacheAcquire` returns -1
+and the cue **does not play**. Trimming MEDIUM to 28 KiB would push 34 cues in
+the 28-40 KiB band onto the single LARGE slot, taking the population depending
+on that one slot from 28 to 62. Two such cues overlapping already fail today.
+
+What bounds the real options is concurrency: the measured peak is **six of eight
+handles**. Dropping two SMALL slots reclaims 32,768 and clears the deficit, but
+it consumes exactly the headroom that peak leaves.
 
 **This is an owner decision, not an engineering one, and that is why it is not
 implemented here.** It trades audio-cache residency for effects appearing, while
