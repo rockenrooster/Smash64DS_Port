@@ -2598,3 +2598,28 @@ owner's playtest is the runtime check.
 `itMainSetAppearSpin` and `efManagerItemSpawnSwirlMakeEffect` for reasons of
 the same vintage. Those are NOT covered here. Check their stated reasons
 against the tree before assuming they still hold -- this one did not.
+
+## 2026-09-22 07:20 -- r36 boot smoke test
+
+I had never booted the ROM the owner will actually play. Ran
+`builds/remaining-bugs-playtest-r36/smash64ds.nds` (sha256 `1CECBEF5...3BA1`)
+unattended for 120 s on its own runner slot:
+
+    alive=True cpu=120.1s
+    BOOT    scene=60 camFrames=0 mallocOverflow=0 objmanPanic=0
+    PREVIEW packFail=0 validateCode=0
+
+Scene 60 is `nSCKindExplain`, the How-to-Play screen in the attract loop
+(title -> explain -> auto demo), which is where an idle boot belongs after two
+minutes. `camFrames=0` is expected: that counter is the battle camera and no
+battle was entered.
+
+`gNdsSyMallocOverflowCount` 0 and `gNdsObjmanPanicCount` 0 matter most --
+`malloc.c:30` is `while (TRUE);`, so an arena overrun hangs the console rather
+than declining, and this batch moved arena in three places (the Kirby low-detail
+hat deferral, the Ness owner image growing 848 bytes, and the restored Poke
+Ball rays GObj). None of them overran. `packFail=0` and `validateCode=0`
+confirm the Ness preview-pack path stays clean through the attract loop too.
+
+This is a boot smoke test, not an acceptance run: no battle was played and no
+timing was measured.
