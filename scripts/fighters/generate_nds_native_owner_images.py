@@ -637,6 +637,33 @@ def render_header(
         "#define NDS_NATIVE_KIRBY_HAT_MAX_BYTES "
         "((u32)sizeof(NDSNativeKirbyHatAnyImage))",
         "",
+        "/* PER-DETAIL SLOT SIZES. The runtime's slot array is indexed by",
+        " * [battle_slot][use_low_detail], so a given buffer only ever holds",
+        " * images of ITS detail -- the low slot can never be asked to hold a",
+        " * high image. Sizing both from the union above therefore charges every",
+        " * low slot the largest HIGH image, and a Kirby who takes a copy pays",
+        " * that twice, permanently: measured 2026-09-21, the general heap goes",
+        " * 41,684 -> 23,204 at the copy and never recovers, which is 2,396",
+        " * bytes under the 25,600 floor where ifCommonSetMaxNumGObj latches the",
+        " * GObj cap for the rest of the match. These two are what the runtime",
+        " * should allocate; the union max stays as the shared upper bound.",
+        " */",
+    ]
+    for detail in DETAILS:
+        union_name = f"NDSNativeKirbyHatAny{detail.capitalize()}Image"
+        lines += [f"typedef union {union_name}", "{"]
+        for modelpart_id in owners.KIRBY_COPY_HAT_MODEL_PART_IDS:
+            lines.append(
+                f"    {_kirby_hat_type(modelpart_id, detail)} "
+                f"hat_{modelpart_id};"
+            )
+        lines += [
+            f"}} {union_name};",
+            f"#define NDS_NATIVE_KIRBY_HAT_MAX_{detail.upper()}_BYTES "
+            f"((u32)sizeof({union_name}))",
+            "",
+        ]
+    lines += [
         "/* One source of truth for the runtime's path/size/bind switch. */",
         "#define NDS_NATIVE_KIRBY_HAT_IMAGES(X) \\",
     ]

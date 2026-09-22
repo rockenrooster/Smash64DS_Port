@@ -12979,6 +12979,49 @@ typedef union NDSNativeKirbyHatAnyImage
 } NDSNativeKirbyHatAnyImage;
 #define NDS_NATIVE_KIRBY_HAT_MAX_BYTES ((u32)sizeof(NDSNativeKirbyHatAnyImage))
 
+/* PER-DETAIL SLOT SIZES. The runtime's slot array is indexed by
+ * [battle_slot][use_low_detail], so a given buffer only ever holds
+ * images of ITS detail -- the low slot can never be asked to hold a
+ * high image. Sizing both from the union above therefore charges every
+ * low slot the largest HIGH image, and a Kirby who takes a copy pays
+ * that twice, permanently: measured 2026-09-21, the general heap goes
+ * 41,684 -> 23,204 at the copy and never recovers, which is 2,396
+ * bytes under the 25,600 floor where ifCommonSetMaxNumGObj latches the
+ * GObj cap for the rest of the match. These two are what the runtime
+ * should allocate; the union max stays as the shared upper bound.
+ */
+typedef union NDSNativeKirbyHatAnyHighImage
+{
+    NDSNativeKirbyHat3HighImage hat_3;
+    NDSNativeKirbyHat4HighImage hat_4;
+    NDSNativeKirbyHat5HighImage hat_5;
+    NDSNativeKirbyHat6HighImage hat_6;
+    NDSNativeKirbyHat7HighImage hat_7;
+    NDSNativeKirbyHat8HighImage hat_8;
+    NDSNativeKirbyHat9HighImage hat_9;
+    NDSNativeKirbyHat10HighImage hat_10;
+    NDSNativeKirbyHat11HighImage hat_11;
+    NDSNativeKirbyHat12HighImage hat_12;
+    NDSNativeKirbyHat13HighImage hat_13;
+} NDSNativeKirbyHatAnyHighImage;
+#define NDS_NATIVE_KIRBY_HAT_MAX_HIGH_BYTES ((u32)sizeof(NDSNativeKirbyHatAnyHighImage))
+
+typedef union NDSNativeKirbyHatAnyLowImage
+{
+    NDSNativeKirbyHat3LowImage hat_3;
+    NDSNativeKirbyHat4LowImage hat_4;
+    NDSNativeKirbyHat5LowImage hat_5;
+    NDSNativeKirbyHat6LowImage hat_6;
+    NDSNativeKirbyHat7LowImage hat_7;
+    NDSNativeKirbyHat8LowImage hat_8;
+    NDSNativeKirbyHat9LowImage hat_9;
+    NDSNativeKirbyHat10LowImage hat_10;
+    NDSNativeKirbyHat11LowImage hat_11;
+    NDSNativeKirbyHat12LowImage hat_12;
+    NDSNativeKirbyHat13LowImage hat_13;
+} NDSNativeKirbyHatAnyLowImage;
+#define NDS_NATIVE_KIRBY_HAT_MAX_LOW_BYTES ((u32)sizeof(NDSNativeKirbyHatAnyLowImage))
+
 /* One source of truth for the runtime's path/size/bind switch. */
 #define NDS_NATIVE_KIRBY_HAT_IMAGES(X) \
     X(3u, 0u, NDSNativeKirbyHat3HighImage, NDS_NATIVE_KIRBY_HAT_3_HIGH, "nitro:/fighters/kirby_hat_03_high.bin") \

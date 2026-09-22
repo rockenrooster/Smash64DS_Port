@@ -1081,3 +1081,272 @@ Playtest r15: `builds/remaining-bugs-playtest-r15/smash64ds.nds`, SHA-256
 `C975C9570B10B03A0F1CDBF47817C32D055D08DF08B5BE126CFFA6C7BFDCD146`, boot
 `P2_RUNTIME_OK`, FGM pack loaded. Supersedes r14, which should be discarded.
 
+
+## 2026-09-21 continuation: the consolidated brief
+
+Brief: `docs/p2/Smash64DS_BUGS_Consolidated_Fix_Instructions_2026-09-21.md`.
+Landed at `2bf791ecad8`; playtest r21
+`builds/remaining-bugs-playtest-r21/smash64ds.nds`, SHA-256
+`A9324F326163736121FD05C99F490DA94E169300A3047CB8ABA2A81B1E1676CA`, boot
+`P2_RUNTIME_OK`, `P2FAIL` all zero, FGM pack 6,968,728 and particle payload
+212,160 both matching their pins.
+
+Rows landed, each with the measured cause rather than the symptom:
+
+* Kirby's copied blaster did not fault, it halted. The firing frame selects
+  `dKirbyMain_modelparts_desc_0x3C4`, whose rows are `dFoxUnknown_DL` -- file
+  315, which the file's own header records as referenced by FoxMain and
+  KirbyMain alike. Measured at the refusing draw: stage 2, clause 4, owner 11,
+  expected asset `0x148`, offending `0x13b` root `0x3F0`, index 5 of 8, with
+  the live vector being Kirby's Fox hat, five canonical roots, the donor, then
+  two more. `NDS_R2_FOX_GUN_OVERLAY` already owned that mesh for Fox, so the
+  strip now covers Kirby and the remaining seven roots are the vector the
+  existing CopyTransition program already carries.
+* The damage collision proc had no wall or ceiling branch at all and cleared
+  those flags out of `mask_stat`. Restored from `mpcommon.c:725` in source
+  order with both arms; `scripts/check_mp_damage_proc_matches_source.py`
+  guards it and was mutation-tested red two ways.
+* `nEFKindThunderAmp` was answered by the generic HitElectric sprite, so the
+  maker had no caller, `--gc-sections` dropped it, and the bank generator --
+  which derives its packed set from reachable makers -- left script `0x74`
+  UNREACHABLE. Both halves fixed; bank 110 -> 111 scripts, 41 -> 42 textures,
+  growth entirely NitroFS payload.
+* Kirby's capture and lose-copy stars were `#define`d to NULL behind a note
+  about an asset that has been resident for some time.
+* Owner, same day: the copied blaster keeps its pistol and loses its muzzle
+  flash. Kirby's joint 17 puts that flash on his own body.
+
+Partial: the Poke Ball entry effect. Three defects fixed -- an unregistered
+file-head symbol, six offsets that address ITCommonObject rather than
+ITCommonData, and a span check comparing the second against the first -- so the
+effect now constructs instead of faulting. It then declines in the renderer
+(`DIAG_NATIVE` domain 2, root `0x9340`, reason 1) because its geometry has no
+native bake. See the `ll-symbol-address-is-the-offset` note: that same trio was
+the cause of three dead effects in one day.
+
+Implemented but NOT exercised, and therefore not closed: the Castle ramp case
+itself (no scripted launch reached a ramp; the proc is proven live with its
+floor arm hitting), Pikachu's burst on screen (`is_thunder_destroy` sets within
+~20 frames, so the head never reaches him in a scripted run, under open sky as
+well as under platforms), and the lose-copy star (never lost a copy).
+
+### Thunder Jolt ground edges: step 1 done, no repair yet
+
+The handoff's first step is to decide whether the soft edge is stored alpha,
+intensity used as coverage, filtering, or a combination. The palette settles
+it. The air sibling's generator pins the source TLUT exactly:
+
+    0x003E 0x003F 0x18FD 0x31BD 0x423D 0x4A7D 0x633D 0x7BFD
+    0x8C7D 0x9CFD 0xAD7D 0xC63D 0xD6BD 0xF7BD 0xFFFF 0xEF7E
+
+That is RGBA5551, so there is exactly one alpha bit and it is set for entries
+1..14 and clear for 0 and 15 -- no graded alpha anywhere. What the entries do
+carry is a luminance ramp from near-black blue (R0 G0 B31) to white
+(R31 G31 B31). So the edge is **intensity used as coverage**: on the console
+the dim low entries vanish into the background under the source blend, and on
+DS, drawn through the generic CI4 -> PAL16 path at full polygon alpha, the same
+texels are solid dark blue -- a hard rim rather than a fade.
+
+The repair therefore has to map that ramp's luminance to DS alpha (A3I5 or
+A5I3), not add a constant polygon alpha, which the handoff explicitly rules
+out. It should follow the existing dedicated-owner pattern
+(`ndsRendererHardwarePrepareRebirthA5I3`,
+`ndsRendererHardwarePrepareIFCommonA3I5Atlas`) rather than widen the shared
+converter, because a pattern match on "CI4 with a ramp TLUT" would catch
+unrelated textures. Not attempted here: it needs the four live images
+extracted through the generator and a visual comparison this session could not
+make.
+
+### OPEN: the flash on Kirby is not the blaster glow
+
+Owner, r21 then r22: "the effect is still played over kirby (flashing white and
+gold) ... Kirby should not have an effect overlayed at all on the body after or
+when firing the pistol."
+
+Two attempts, both wrong, both now excluded as suspects:
+
+1. r18 removed the pistol MODEL. Owner: "that wasn't the issue ... not the
+   pistol model." The model is source-correct
+   (dKirbyMain_modelparts_desc_0x3C4 puts dFoxUnknown_DL on joint 17) and was
+   restored in r21.
+2. r21 suppressed the MUZZLE call of efManagerFoxBlasterGlowMakeEffect; r22
+   suppressed ALL SEVEN of its callbacks for Kirby-owned blasters
+   (map/hit/shield/setoff/absorb/hop/reflector), measured as
+   gNdsFoxBlasterGlowAOTSpawnCount staying 0 across five shots where it
+   previously reached 1 by the third. The flash survived that, so
+   efManagerFoxBlasterGlowMakeEffect is NOT the object being seen.
+
+The r22 suppression is kept: it is measured, scoped to Kirby-owned weapons, and
+leaves Fox's four glows intact (0 -> 1 -> 2 -> 4 -> 6 across five shots). It is
+simply not sufficient, and it is not the cause.
+
+**What has not been done, and is the next step.** Stop guessing the maker and
+enumerate. `ftParamMakeEffect` (reloc_backend_compat_shims.c:8364) is the kind
+dispatcher every motion-script effect passes through: break there, filter on
+Kirby's status 235/236 (CopyFoxSpecialN / CopyFoxSpecialAirN) and print the
+effect_id and joint for every call in the firing window. Do the same for the
+colour-animation entry -- white-and-gold over a body reads more like a colanim
+on the fighter's own material than like a separate effect object, and no
+attempt so far has looked there. A probe for this exists at
+`scratchpad/kirby_fire_fx.ps1`; it was written and not run.
+
+Also unexamined: whether the same effect appears on Fox and simply looks
+correct there because it lands at the barrel rather than on the torso. The
+owner's "Look at the fox fighter for example" was an instruction to compare,
+and no side-by-side capture has been taken.
+
+### Heap headroom, and why the shield is intermittent
+
+ifCommonSetMaxNumGObj (ifcommon.c) latches the GObj cap the first frame the
+general heap drops below 25 * 1024 = 25,600 bytes, and never unlatches:
+
+    if ((gcGetMaxNumGObj() == -1) && (free_space < 25 * 1024))
+        gcSetMaxNumGObj(gcGetGObjsActiveNum());
+
+Measured gNdsTaskmanGeneralHeapFreeMin, this session's probes:
+
+    Mario vs Fox, shielding      95,068
+    Pikachu entry                65,188
+    Kirby vs Fox                 23,096 - 23,204
+
+Kirby matches sit BELOW the latch. Once it fires, no further effect GObj can be
+created, which is the shape of the owner's "shield is intermittent" (it depends
+whether the shield existed before the latch) and a candidate for the spit-out
+star never appearing. The margin needed is about 2,500 bytes, which is small
+enough that this is worth pricing before treating the star as a draw-side bug.
+
+Not yet attributed: what Kirby's presence costs that Mario/Fox does not. The
+copy-hat image slots are the first candidate -- sNdsNativeKirbyHatImages is
+[4][2] and each allocation is NDS_NATIVE_KIRBY_HAT_MAX_BYTES, the union of
+every hat image, about 8.5 KB against a largest actual hat of 8,552 bytes --
+but they allocate lazily per (slot, detail), so a two-player match should take
+one or two, not eight. `scratchpad/heap_trace.ps1` traces the allocations and
+the free-space curve; it was written and not run.
+
+## 2026-09-21, later: the flash, and what the heap trace actually says
+
+### The flash over Kirby is a colour animation. Landed, runtime proof owed.
+
+Third attempt, and the first one that named the producer instead of guessing a
+maker. `ndsFTMainCheckSetFighterColAnimID` in `src/import/battleship_ftmain.c`
+already refuses BattleShip's cosmetic `SetColAnim(nGMColAnimFighterFoxSpecialHiStart,
+0)` -- but only for `fkind` Fox/NFox in the two Fox laser statuses. Kirby does
+not run Fox's scripts. `228_KirbyMainMotion.c` carries his own copies, and they
+issue the identical command under `nFTKirbyStatusCopyFoxSpecialN` / `...AirN`
+with `fkind` Kirby, so the override never covered him.
+
+That is exactly why the owner said "you say the flash is played on fox, but I
+don't see that": Fox's was suppressed here long ago, so only the copy still
+flashes. Neither earlier suspect could ever have been it -- the pistol model
+draws no colour over the body, and `efManagerFoxBlasterGlowMakeEffect` was
+measured at zero spawns across all seven callbacks in r22 while the flash
+survived.
+
+Outside `REGION_JP` the ground script's body lives in `dKirbyMainMotion_0x1E18`
+while `dKirbyMainMotion_LaserGround` is a two-command stub, so a checker keyed
+on script NAMES would pin the wrong region. `scripts/check_kirby_copyfox_colanim_override.py`
+resolves the pair by content instead -- the scripts that issue the colanim AND
+play `nSYAudioFGMFoxSpecialN` -- and asserts the override covers exactly those,
+keeps Fox's clause, and carries no preprocessor conditional. Green; RED under
+three mutations.
+
+### The GObj latch does NOT fire in an ordinary Kirby match
+
+`scratchpad/heap_trace.ps1` ran, after replacing its `gcGetMaxNumGObj()` call
+with the `gNdsIFCommonGObjLatch*` witnesses -- a gdb inferior call crashes this
+target at `0xfffffffc`, which is the third time that has cost a probe.
+
+Kirby vs Fox, Dream Land, 720 sampled interface updates:
+
+    free      49,452 -> 41,684, monotone, flat from n=420 onward
+    applied   0 for every sample (gcGetMaxNumGObj() stayed -1)
+    active    46 - 49 live GObjs
+    hat       0 -- the copy hat was never loaded
+
+So the earlier figure of 23,096 was not this. It came from
+`gNdsTaskmanGeneralHeapFreeMin`, a minimum watermark that records transient
+load dips, and in that run Kirby had taken a copy. The board's reading -- that
+Kirby matches "sit below the latch" permanently and need ~2,500 bytes of
+headroom -- is wrong as written. Correct reading: the steady state is 41,684,
+16 KB clear of the floor, and only a transient dip during the copy-hat load can
+cross it. `ifCommonSetMaxNumGObj` samples once per interface update, so whether
+it lands inside that dip is a race.
+
+**That race is the intermittency.** It explains the owner's "shield is
+invisible / I guess its intermittent because its working now" precisely, and it
+means the repair is to bound or stage the copy-hat allocation so the dip never
+crosses 25,600 -- not to reclaim 2,500 bytes of steady-state heap, and not to
+raise a capacity. `scratchpad/heap_copy_trace.ps1` drives the inhale and
+samples across the load to measure the dip's depth and width.
+
+`heap_copy_trace.ps1` ran but did NOT test the hypothesis: `copy=8` for every
+sample -- `copy_id` stayed Kirby's own kind, so no copy was ever taken, and
+`hat` stayed 0. The input machine holds B, which re-triggers the inhale but
+never swallows; a copy needs the victim captured and then DOWN. The free-space
+curve it did capture is identical to the plain match (49,452 -> 41,684, `applied=0`),
+which re-confirms the steady state and leaves the dip unmeasured. The probe
+needs a swallow step keyed on the capture-hold status before it can answer
+whether the copy-hat load crosses 25,600.
+
+### Yoshi's shield egg: the prior owner was correct, the revert was about cost
+
+Not one of the consolidated brief's 23 rows, but it is in `BUGS.md` and the
+board carries it. `795e2659219` added the native owner and argued the case well
+-- `dEFManagerYoshiShieldEffectDesc` and `dEFManagerYoshiEggEscapeEffectDesc`
+name the same `&llYoshiModelShieldDObjDesc`, both states call
+`ftParamHideModelPartAll` behind `fp->fkind == nFTKindYoshi`, so with no owner
+nothing drew at all and the intro and the shield were one bug. The root at
+`0xa860` is an immutable 29-command display list, not a DObjDesc, and compiles
+to one group and two triangles.
+
+`252a9aa4290` reverted it for a Boundary RED: arena -4,096 and 14 texture-bind
+rejects. **Fourteen rejects from a two-triangle quad is the anomaly worth
+chasing** -- that is not the egg's own geometry failing, it is material state
+asking for an image that is not resident, or the insertion disturbing a shared
+bind cache. Start there rather than re-litigating the owner.
+
+Not touched this session: the owner lives in
+`scripts/3d_vfx/generate_nds_entry_effects.py`, which a concurrent agent holds
+for the Poke Ball row, and evaluating the arena cost needs a build.
+
+### CORRECTION: the copy-hat cost is permanent, and the latch does fire
+
+The swallow-driven run (`2026-09-21-heap-copy2`) answers it. My "transient dip"
+reading above is WRONG; the board's original "Kirby sits below the latch" was
+right, with one missing qualifier -- **only after he takes a copy**.
+
+    n=640   free=41,684   copy=8  hat=0   applied=0     (before the copy)
+    n=678   HAT call=1    free=41,348
+    n=678   HAT call=2    free=32,792
+    n=680   free=24,232   copy=1  hat=2   applied=0
+    n=720   free=23,204   copy=1  hat=2   applied=1
+    n=1400  free=23,204   copy=1  hat=2   applied=1   dip=722
+
+Free never recovers: 722 consecutive samples under 25,600, `applied=1`, live
+GObjs pinned at 46 from the copy onward. Both details load eagerly in the same
+frame at `reloc_backend_compat_shims.c:12522-12525`, about 8,556 bytes each,
+and the copy is rejected unless both succeed. 41,684 - 23,204 = 18,480 bytes
+spent permanently; the floor is missed by **2,396**.
+
+So from the moment Kirby copies anyone, no further effect GObj can be made for
+the rest of the match. That is the owner's intermittent shield exactly -- it
+works if it was alive when the latch fired -- and it is a live candidate for the
+invisible spit-out star, which is created after a copy by definition.
+
+**Landed:** `sNdsNativeKirbyHatImages` is indexed `[battle_slot][use_low_detail]`,
+so each buffer only ever holds images of its own detail, yet both were allocated
+`NDS_NATIVE_KIRBY_HAT_MAX_BYTES` -- the union over BOTH details. The generator
+now emits per-detail unions and the runtime allocates by detail.
+
+Measured from the shipped images: largest high 8,552, largest low 7,636, so the
+low slot stops overpaying by **916 bytes**. Honest arithmetic: 23,204 + 916 =
+24,120, still **1,480 under** the floor. This is a real reclaim and a correct
+scoping fix, but **it does not clear the latch by itself.**
+
+**Next lever, and the measurement that justifies it:** the low-detail image is
+loaded eagerly at copy time for every Kirby. If a two-player match never selects
+low detail, its 7,636 bytes are dead for the whole match and deferring that load
+clears the floor outright (23,204 + 7,636 = 30,840). Before doing it, count
+binds of `sNdsNativeKirbyHatImages[slot][1]` in a natural two-player copy match
+-- if it is bound, the lever is wrong and the remaining 1,480 must come from
+somewhere else. Do not guess this one.

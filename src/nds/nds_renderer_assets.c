@@ -3804,6 +3804,18 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     NDSNativeKirbyHatImageSlot *slot;
     const char *path;
     u32 bytes;
+    u32 max_bytes;
+
+    /* If a regenerate ever collapses the two per-detail unions back onto the
+     * combined one, the allocation below silently returns to charging every low
+     * slot the largest high image, the copy drops the heap under the GObj latch
+     * again, and nothing fails to show it. Assert the split is real. */
+    _Static_assert(NDS_NATIVE_KIRBY_HAT_MAX_LOW_BYTES <
+                       NDS_NATIVE_KIRBY_HAT_MAX_BYTES,
+                   "Kirby low-detail hat slots must be sized by the low union");
+    _Static_assert(NDS_NATIVE_KIRBY_HAT_MAX_HIGH_BYTES <=
+                       NDS_NATIVE_KIRBY_HAT_MAX_BYTES,
+                   "Kirby high-detail hat slots must fit the combined union");
 
     if ((copy_modelpart_id < NDS_NATIVE_KIRBY_HAT_MIN_MODELPART) ||
         (copy_modelpart_id > NDS_NATIVE_KIRBY_HAT_MAX_MODELPART) ||
@@ -3825,8 +3837,30 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
         copy_modelpart_id, use_low_detail);
     bytes = ndsRendererNativeKirbyHatImageBytes(
         copy_modelpart_id, use_low_detail);
-    if ((path == NULL) || (bytes == 0u) ||
-        (bytes > NDS_NATIVE_KIRBY_HAT_MAX_BYTES))
+    /* SIZE THE SLOT BY ITS DETAIL, NOT BY THE UNION OF BOTH.
+     *
+     * sNdsNativeKirbyHatImages is indexed [battle_slot][use_low_detail], so a
+     * buffer only ever holds images of its own detail -- the low slot can never
+     * be handed a high image. Charging it NDS_NATIVE_KIRBY_HAT_MAX_BYTES, the
+     * union over BOTH details, therefore bought nothing and cost the whole
+     * difference on every copy.
+     *
+     * That difference is not academic. Measured 2026-09-21 (Kirby vs Fox, Dream
+     * Land, natural inhale and swallow): the general heap sits at 41,684 bytes
+     * free, both details load at the copy for about 8,556 bytes each, and free
+     * drops to 23,204 and never recovers for the rest of the match. 25,600 is
+     * where ifCommonSetMaxNumGObj freezes the GObj cap at the live count, and it
+     * never unlatches -- so from the copy onward no further effect object can be
+     * created. That is the shape of the owner's intermittent shield and a
+     * candidate for the invisible spit-out star: whether either exists depends
+     * on whether it was alive when the latch fired.
+     *
+     * Reuse across copies is preserved exactly: any hat of this detail still
+     * fits, so the allocate-once path is unchanged. */
+    max_bytes = (use_low_detail != 0u) ?
+        (u32)NDS_NATIVE_KIRBY_HAT_MAX_LOW_BYTES :
+        (u32)NDS_NATIVE_KIRBY_HAT_MAX_HIGH_BYTES;
+    if ((path == NULL) || (bytes == 0u) || (bytes > max_bytes))
     {
         gNdsNativeKirbyHatFailCount++;
         return FALSE;
@@ -3834,7 +3868,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     if ((slot->base == NULL) ||
         (slot->heap_generation != gNdsTaskmanHeapGeneration))
     {
-        slot->base = syTaskmanMalloc(NDS_NATIVE_KIRBY_HAT_MAX_BYTES, 0x10u);
+        slot->base = syTaskmanMalloc(max_bytes, 0x10u);
         if (slot->base == NULL)
         {
             slot->valid = 0u;
