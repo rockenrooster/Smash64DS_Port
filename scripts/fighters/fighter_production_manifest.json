@@ -294,6 +294,358 @@
       "submotion_source": "decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdatagdonkey.c"
     }
   ],
+  "results_demo_submotions": [
+    {
+      "gate": "Mario",
+      "symbol": "llFTMarioAnimWin2FileID",
+      "asset": {
+        "id": 357,
+        "path": "reloc_submotions/FTMarioSubMotionAppearR",
+        "bytes": 4928,
+        "sha256": "b718984720a408fdb4eded012c0cc5492efcf3caa37c1dc9d3cdc4b7c8ccc16f"
+      }
+    },
+    {
+      "gate": "Mario",
+      "symbol": "llFTMarioAnimWin3FileID",
+      "asset": {
+        "id": 358,
+        "path": "reloc_submotions/FTMarioSubMotionAppearL",
+        "bytes": 7888,
+        "sha256": "047fbdebca920ca9cef24ed7713be9228e14745f8dd749aa2f8e9a8104747437"
+      }
+    },
+    {
+      "gate": "Mario",
+      "symbol": "llFTMarioAnimClapsFileID",
+      "asset": {
+        "id": 361,
+        "path": "reloc_submotions/FTMarioSubMotionTaunt",
+        "bytes": 3632,
+        "sha256": "3de9419c866a7c5fce76fd07fd2de872ca893fc6b491ca488ed81f065ee67c8f"
+      }
+    },
+    {
+      "gate": "Fox",
+      "symbol": "llFTFoxAnimWin1FileID",
+      "asset": {
+        "id": 370,
+        "path": "reloc_submotions/FTFoxSubMotionAppearR",
+        "bytes": 6048,
+        "sha256": "b4c6d2a5e33ad31e3595f1c6349d080b3b3a22621033fb01e7f31b8da5da2ae3"
+      }
+    },
+    {
+      "gate": "Fox",
+      "symbol": "llFTFoxAnimWin2FileID",
+      "asset": {
+        "id": 371,
+        "path": "reloc_submotions/FTFoxSubMotionAppearL",
+        "bytes": 6176,
+        "sha256": "d707adbb290a6f8f1d7b664a6822824d8cb989152edba5ddbedc8d7db1384a70"
+      }
+    },
+    {
+      "gate": "Fox",
+      "symbol": "llFTFoxAnimClapsFileID",
+      "asset": {
+        "id": 373,
+        "path": "reloc_submotions/FTFoxSubMotionTaunt",
+        "bytes": 2752,
+        "sha256": "5fab94176332fdc05babf37d86965a2d4c33e365973211ff281e70ec9cfea379"
+      }
+    },
+    {
+      "gate": "Donkey",
+      "symbol": "llFTDonkeyAnimWin1FileID",
+      "asset": {
+        "id": 382,
+        "path": "reloc_submotions/FTDonkeySubMotionAppearL",
+        "bytes": 8064,
+        "sha256": "14592d4a54520c65d3bebb40469c3d2c61f689e00438746f435ba7ff75c526c7"
+      }
+    },
+    {
+      "gate": "Donkey",
+      "symbol": "llFTDonkeyAnimWin2FileID",
+      "asset": {
+        "id": 383,
+        "path": "reloc_submotions/FTDonkeySubMotionAppearAlt1",
+        "bytes": 6992,
+        "sha256": "8b4bd0535bad9e28a3929c614ca747ab66c5f68ce1f584e8998c5a6f9e882954"
+      }
+    },
+    {
+      "gate": "Donkey",
+      "symbol": "llFTDonkeyAnimClapsFileID",
+      "asset": {
+        "id": 385,
+        "path": "reloc_submotions/FTDonkeySubMotionTaunt",
+        "bytes": 1808,
+        "sha256": "6f4c53a56d0d4579a2a242b792e5e445e460b982ca3f0ec4517459f5410401ff"
+      }
+    },
+    {
+      "gate": "Samus",
+      "symbol": "llFTSamusAnimWin3FileID",
+      "asset": {
+        "id": 393,
+        "path": "reloc_submotions/FTSamusSubMotionAppearR",
+        "bytes": 5264,
+        "sha256": "40f358e74babd76a4888ea28983670266dc40e85b63a8563695cd3961a120d19"
+      }
+    },
+    {
+      "gate": "Samus",
+      "symbol": "llFTSamusAnimWin1FileID",
+      "asset": {
+        "id": 394,
+        "path": "reloc_submotions/FTSamusSubMotionAppearL",
+        "bytes": 3424,
+        "sha256": "1bc0d06f5f6d54988dbda2a6981115ab78b775ee6518ac7204646e5989b7da43"
+      }
+    },
+    {
+      "gate": "Samus",
+      "symbol": "llFTSamusAnimClapsFileID",
+      "asset": {
+        "id": 396,
+        "path": "reloc_submotions/FTSamusSubMotionAppearAlt2",
+        "bytes": 1984,
+        "sha256": "96f25dd96b891228bdedcc8f797e6441e622e7564643113e6101263f906d14f8"
+      }
+    },
+    {
+      "gate": "Link",
+      "symbol": "llFTLinkAnimWin1FileID",
+      "asset": {
+        "id": 405,
+        "path": "reloc_submotions/FTLinkSubMotionAppearL",
+        "bytes": 5776,
+        "sha256": "235acc9b5722b362c5ace5c61cff4fd944e83da15f95fdf6802f30513ffd3583"
+      }
+    },
+    {
+      "gate": "Link",
+      "symbol": "llFTLinkAnimWin2FileID",
+      "asset": {
+        "id": 406,
+        "path": "reloc_submotions/FTLinkSubMotionAppearAlt1",
+        "bytes": 5280,
+        "sha256": "2af70cf8dde71a36e9f100183f3e7f4d2ec33528a46f8a4e8abcfc6d37fb4d97"
+      }
+    },
+    {
+      "gate": "Link",
+      "symbol": "llFTLinkAnimClapsFileID",
+      "asset": {
+        "id": 407,
+        "path": "reloc_submotions/FTLinkSubMotionAppearAlt2",
+        "bytes": 2848,
+        "sha256": "1ebb152b6e04eba9e27b2da616846455ea2ba3bb414080807dac356f869f1c5d"
+      }
+    },
+    {
+      "gate": "Kirby",
+      "symbol": "llFTKirbyAnimWin1FileID",
+      "asset": {
+        "id": 416,
+        "path": "reloc_submotions/FTKirbySubMotionAppearR",
+        "bytes": 8928,
+        "sha256": "b86a4e62db05eb4b81d596f16431362c1c9c30666d33e297f9ef79fa6a328cef"
+      }
+    },
+    {
+      "gate": "Kirby",
+      "symbol": "llFTKirbyAnimWin2FileID",
+      "asset": {
+        "id": 417,
+        "path": "reloc_submotions/FTKirbySubMotionAppearL",
+        "bytes": 10960,
+        "sha256": "16f4b01b0be09cb6b21961c415fa0dad31650fbdabc43fcebfbbc6416eca21e1"
+      }
+    },
+    {
+      "gate": "Kirby",
+      "symbol": "llFTKirbyAnimClapsFileID",
+      "asset": {
+        "id": 419,
+        "path": "reloc_submotions/FTKirbySubMotionAppearAlt2",
+        "bytes": 8624,
+        "sha256": "85e5b865eec234b4209a9bc1c84626e2d1011dc09fd4a4fc16ee834abfcc6b33"
+      }
+    },
+    {
+      "gate": "Captain",
+      "symbol": "llFTCaptainAnimVictory1FileID",
+      "asset": {
+        "id": 430,
+        "path": "reloc_submotions/FTCaptainSubMotionAppearL",
+        "bytes": 7168,
+        "sha256": "d19e58965b8d5b5496c3bc4e9913074b24752d354b66e6a482421e95409b4743"
+      }
+    },
+    {
+      "gate": "Captain",
+      "symbol": "llFTCaptainAnimVictory2FileID",
+      "asset": {
+        "id": 431,
+        "path": "reloc_submotions/FTCaptainSubMotionAppearAlt1",
+        "bytes": 6784,
+        "sha256": "d16920a603702526d437bd0749eca7010eb9703c89b271d4fd9e613560d949c0"
+      }
+    },
+    {
+      "gate": "Captain",
+      "symbol": "llFTCaptainAnimClapsFileID",
+      "asset": {
+        "id": 432,
+        "path": "reloc_submotions/FTCaptainSubMotionAppearAlt2",
+        "bytes": 1840,
+        "sha256": "3e4505a4e7688e253baef37cc3d0f77d448974306d0eb32adffb89353abc4845"
+      }
+    },
+    {
+      "gate": "Ness",
+      "symbol": "llFTNessAnimWin1FileID",
+      "asset": {
+        "id": 436,
+        "path": "reloc_submotions/FTNessSubMotionAppearR",
+        "bytes": 7296,
+        "sha256": "a743aa2226f441c28aed171c63ee134c130713f9514955c6e8f004f1c55b0465"
+      }
+    },
+    {
+      "gate": "Ness",
+      "symbol": "llFTNessAnimWin2FileID",
+      "asset": {
+        "id": 438,
+        "path": "reloc_submotions/FTNessSubMotionAppearAlt1",
+        "bytes": 11872,
+        "sha256": "8850b505d16ff2c9804b9006bce1193238fce4a53e06e2445afda266c8b9bc25"
+      }
+    },
+    {
+      "gate": "Ness",
+      "symbol": "llFTNessAnimClapsFileID",
+      "asset": {
+        "id": 439,
+        "path": "reloc_submotions/FTNessSubMotionAppearAlt2",
+        "bytes": 2048,
+        "sha256": "c071b72412f88c43bc39d38944052958cdb680a7e8de6c10060883e3475b8b27"
+      }
+    },
+    {
+      "gate": "Yoshi",
+      "symbol": "llFTYoshiAnimWin1FileID",
+      "asset": {
+        "id": 443,
+        "path": "reloc_submotions/FTYoshiSubMotionAppearR",
+        "bytes": 4080,
+        "sha256": "a7831508c796fad8f8f7b223ebab0c1a8c31dd6a935afa389c7cc56acde3e412"
+      }
+    },
+    {
+      "gate": "Yoshi",
+      "symbol": "llFTYoshiAnimWin2FileID",
+      "asset": {
+        "id": 445,
+        "path": "reloc_submotions/FTYoshiSubMotionAppearAlt1",
+        "bytes": 8016,
+        "sha256": "6470c9c570c02d2dcca559bd908953445e5fdf6ad5418aec215637110fde475f"
+      }
+    },
+    {
+      "gate": "Yoshi",
+      "symbol": "llFTYoshiAnimUnknown1FileID",
+      "asset": {
+        "id": 446,
+        "path": "reloc_submotions/FTYoshiSubMotionAppearAlt2",
+        "bytes": 1312,
+        "sha256": "469ccba4d316962f4ac04e2b77ed379b784935e2b21f8eaee624fb0d2338e68a"
+      }
+    },
+    {
+      "gate": "Luigi",
+      "symbol": "llFTLuigiAnimWin1FileID",
+      "asset": {
+        "id": 463,
+        "path": "reloc_submotions/FTLuigiSubMotionAppearL",
+        "bytes": 5520,
+        "sha256": "7ea9d5175ae69da23cc55fd812237a588a4ac16a463f96bee6f10d17623fd34a"
+      }
+    },
+    {
+      "gate": "Luigi",
+      "symbol": "llFTLuigiAnimWin2FileID",
+      "asset": {
+        "id": 464,
+        "path": "reloc_submotions/FTLuigiSubMotionAppearAlt1",
+        "bytes": 2880,
+        "sha256": "f5222506d62838b254d7a004ccac2739a1575aa2c65dec18ec4b4e5ce6270298"
+      }
+    },
+    {
+      "gate": "Purin",
+      "symbol": "llFTLuigiAnimUnknownFileID",
+      "asset": {
+        "id": 469,
+        "path": "reloc_submotions/FTPurinSubMotionAppearR",
+        "bytes": 5296,
+        "sha256": "2cebae13de4e6513e0f2fd084ace6370233fc5ca6dc9c68df1d85b97e1220594"
+      }
+    },
+    {
+      "gate": "Purin",
+      "symbol": "llFTPurinAnimWin1FileID",
+      "asset": {
+        "id": 471,
+        "path": "reloc_submotions/FTPurinSubMotionAppearAlt1",
+        "bytes": 3952,
+        "sha256": "4a62d5a9a8defd3767a54fdb47d66ac330a5d39f7af3885406123430b3da8373"
+      }
+    },
+    {
+      "gate": "Purin",
+      "symbol": "llFTPurinAnimWin2FileID",
+      "asset": {
+        "id": 472,
+        "path": "reloc_submotions/FTPurinSubMotionAppearAlt2",
+        "bytes": 1104,
+        "sha256": "ef3e29c4c8b19329b0b714dd0f7fb92fdffd000f3f7de13169664e875f343ccf"
+      }
+    },
+    {
+      "gate": "Pikachu",
+      "symbol": "llFTPikachuAnimWin1FileID",
+      "asset": {
+        "id": 477,
+        "path": "reloc_submotions/FTPikachuSubMotionAppearL",
+        "bytes": 2416,
+        "sha256": "5b8689fbd73b962f200813cc5709bedf91e6f4a0361bec50244ee0b3bb78fc88"
+      }
+    },
+    {
+      "gate": "Pikachu",
+      "symbol": "llFTPikachuAnimWin2FileID",
+      "asset": {
+        "id": 478,
+        "path": "reloc_submotions/FTPikachuSubMotionAppearAlt1",
+        "bytes": 1488,
+        "sha256": "219339d390f6afc8cfa786d2fb42076de17f5e36a75fafa36edf61e1dd1b91f1"
+      }
+    },
+    {
+      "gate": "Pikachu",
+      "symbol": "llFTPikachuAnimClapsFileID",
+      "asset": {
+        "id": 479,
+        "path": "reloc_submotions/FTPikachuSubMotionAppearAlt2",
+        "bytes": 2048,
+        "sha256": "303383c224eecfd199d61298be4626594ca4ab66369916d1365d44f49d10b95e"
+      }
+    }
+  ],
   "fighters": [
     {
       "fighter": "Mario",

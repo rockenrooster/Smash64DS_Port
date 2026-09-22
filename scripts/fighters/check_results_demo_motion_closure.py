@@ -130,7 +130,13 @@ def loadable_anim_symbols() -> dict[str, str]:
         routes.setdefault(symbol, "compiled-in clip (battleship_scsubsysdata_ft.c)")
 
     backend = RELOC_BACKEND.read_text(encoding="utf-8", errors="replace")
-    for array in ("sNdsRelocMarioBattleAnimFileIDs", "sNdsRelocFoxAnimFileIDs"):
+    # `sNdsRelocDemoAnimTokens` is the VS Results demo table. It contributes no
+    # symbol text of its own -- it expands the generated `*_DEMO_ANIM_ASSET_ROWS`
+    # macros read below -- but it is the only thing that turns those rows into a
+    # runtime route, so requiring it here is what stops a build that still emits
+    # the macros while nothing consumes them from reading as closed.
+    for array in ("sNdsRelocMarioBattleAnimFileIDs", "sNdsRelocFoxAnimFileIDs",
+                  "sNdsRelocDemoAnimTokens"):
         start = backend.find("%s[] =" % array)
         if start < 0:
             raise SystemExit(
@@ -142,8 +148,14 @@ def loadable_anim_symbols() -> dict[str, str]:
 
     if PRODUCTION_HEADER.is_file():
         header = PRODUCTION_HEADER.read_text(encoding="utf-8", errors="replace")
+        # `NDS_\w+` rather than `NDS_P2_\w+`: Mario and Fox are the
+        # always-compiled base pair and carry no P2 flag, so their Results demo
+        # rows are emitted as NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS. Narrowing this
+        # to the P2 prefix would hide three real routes (and Mario's Claps is
+        # Luigi's DemoLose besides). This only widens which producer text is
+        # read; every assertion below is unchanged.
         for match in re.finditer(
-                r"#define (NDS_P2_\w+_ANIM_ASSET_ROWS)\(X\)(.*?)\n\n",
+                r"#define (NDS_\w+_ANIM_ASSET_ROWS)\(X\)(.*?)\n\n",
                 header, re.S):
             for symbol in ANIM_SYMBOL.findall(match.group(2)):
                 routes.setdefault(symbol, "generated %s" % match.group(1))

@@ -3670,6 +3670,152 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
         FALSE;
 }
 
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+/* VS Results demo poses (BUGS.md R02/R03/K06), and this is the only route that
+ * can make them load.
+ *
+ * `mnVSResultsSetFighterStatus` gives every present fighter a demo status, and
+ * `ftMainSetStatus` maps it through an identity table, so `status - 0x10000` IS
+ * the `dFT<Kind>SubMotionDescs` row: Win1/Win2/Win3 are rows 1/2/3 and DemoLose
+ * -- which No Contest gives EVERYONE -- is row 5. Those rows name Win/Claps
+ * animations that live under `reloc_submotions/`, and nothing in any fighter's
+ * motion or extern-table closure reaches that directory, so the build staged
+ * none of them and no resolver answered their tokens.
+ *
+ * THE FAILURE WAS SILENT, which is why it survived as three separate bug rows.
+ * ftmain.c does
+ *
+ *     lbRelocGetForceExternHeapFile(motion_desc->anim_file_id, fp->figatree_heap);
+ *     fp->figatree = fp->figatree_heap;
+ *
+ * -- the assignment is unconditional and the return value is discarded. On an
+ * unmappable token `lbRelocGetExternHeapFile` returns the heap untouched, so
+ * the fighter bound whatever figatree the heap still held: his last battle
+ * motion. No decline, no reject, no halt. Only row 0 resolved, which is exactly
+ * why every fighter stood in his row-0 pose (Mario `Wait`, Kirby and nine
+ * others `EggLay`).
+ *
+ * These rows are separate from `sNdsP2FighterAnimTokens` for two reasons, both
+ * load-bearing. Mario and Fox are the always-compiled base pair and have no
+ * `NDS_P2_*` flag, yet three of their demo files are needed (Mario's Claps
+ * serves Luigi's DemoLose too); and their base-pair bridges are contiguous
+ * index banks -- `asset_id = BASE + i` -- which cannot carry a sparse id in
+ * the 357..498 submotion space. Keeping the demo rows in their own table also
+ * keeps `sNdsP2FighterAnimTokens`'s measured numeric early-out bound at its
+ * current 0x320 floor instead of dropping it to 0x165, so no range-missing
+ * numeric id starts paying a ~1,300-row scan it does not pay today. */
+typedef struct NDSRelocDemoAnimTokenRow
+{
+    const void *token;
+    u16 asset_id;
+} NDSRelocDemoAnimTokenRow;
+
+static u16 sNdsRelocDemoAnimIdMin;
+static u16 sNdsRelocDemoAnimIdMax;
+static sb32 sNdsRelocDemoAnimBoundsReady;
+
+static const NDSRelocDemoAnimTokenRow sNdsRelocDemoAnimTokens[] =
+{
+#define NDS_RELOC_DEMO_ANIM_TOKEN_ROW(symbol_, id_, path_) \
+    { &symbol_, (u16)(id_) },
+    NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#if NDS_P2_LUIGI
+    NDS_P2_LUIGI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_LINK
+    NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_PIKACHU
+    NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
+#undef NDS_RELOC_DEMO_ANIM_TOKEN_ROW
+};
+
+#define NDS_RELOC_DEMO_ANIM_TOKEN_COUNT \
+    (sizeof(sNdsRelocDemoAnimTokens) / sizeof(sNdsRelocDemoAnimTokens[0]))
+
+/* Answers both token shapes, like the P2 animation table: the `&ll...FileID`
+ * symbol address BattleShip's call sites actually pass, and the numeric O2R id
+ * an extern table carries. The symbol's VALUE is never read -- these `ll*`
+ * symbols are linker-absolute in BattleShip and are plain stubbed globals here,
+ * so the registry keys on `&sym` and a `0u` stub resolves exactly as well as a
+ * pinned one. */
+static u32 ndsRelocDemoAnimAssetIDForToken(u32 token)
+{
+    u32 i;
+
+    if (token <= 0xffffu)
+    {
+        if (sNdsRelocDemoAnimBoundsReady == FALSE)
+        {
+            u32 j;
+
+            sNdsRelocDemoAnimIdMin = 0xffffu;
+            sNdsRelocDemoAnimIdMax = 0u;
+            for (j = 0u; j < NDS_RELOC_DEMO_ANIM_TOKEN_COUNT; j++)
+            {
+                u16 id = sNdsRelocDemoAnimTokens[j].asset_id;
+
+                if (id < sNdsRelocDemoAnimIdMin)
+                {
+                    sNdsRelocDemoAnimIdMin = id;
+                }
+                if (id > sNdsRelocDemoAnimIdMax)
+                {
+                    sNdsRelocDemoAnimIdMax = id;
+                }
+            }
+            sNdsRelocDemoAnimBoundsReady = TRUE;
+        }
+        if ((token < (u32)sNdsRelocDemoAnimIdMin) ||
+            (token > (u32)sNdsRelocDemoAnimIdMax))
+        {
+            return NDS_RELOC_ASSET_INVALID;
+        }
+    }
+    for (i = 0u; i < NDS_RELOC_DEMO_ANIM_TOKEN_COUNT; i++)
+    {
+        if ((token == (u32)sNdsRelocDemoAnimTokens[i].asset_id) ||
+            (token == ndsRelocFileID(sNdsRelocDemoAnimTokens[i].token)))
+        {
+            return (u32)sNdsRelocDemoAnimTokens[i].asset_id;
+        }
+    }
+    return NDS_RELOC_ASSET_INVALID;
+}
+
+/* A demo pose file is a figatree like any other battle animation, so it must
+ * answer the fighter-animation predicate too: that is what runs the AObj16
+ * header normalizer and gives the file fighter scratch-heap lifetime. Without
+ * it the file would load and then be parsed as the wrong kind. */
+static s32 ndsRelocIsDemoAnimID(u32 asset_id)
+{
+    return (ndsRelocDemoAnimAssetIDForToken(asset_id) != NDS_RELOC_ASSET_INVALID)
+        ? TRUE : FALSE;
+}
+#endif
+
 /* P2-3 widens the generic fighter-animation ownership without widening P2-2's
  * Mario/Fox diagnostics.  In particular, K0 and the old 301-id R2-04 census
  * intentionally keep their original two-fighter universe; callers that care
@@ -3683,6 +3829,12 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
     {
         return TRUE;
     }
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    if (ndsRelocIsDemoAnimID(asset_id) != FALSE)
+    {
+        return TRUE;
+    }
+#endif
 #if NDS_P2_LUIGI
     if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
         (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
@@ -3764,6 +3916,19 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
         return TRUE;
     }
     return FALSE;
+}
+#elif NDS_IMPORT_BATTLESHIP_VS_RESULTS
+/* No P2 fighter is admitted, but Mario's and Fox's own Results poses still need
+ * the fighter-animation predicate, so the base-pair build cannot stay on the
+ * bare range test. The added branch is paid only when VS Results is compiled
+ * in; the `#else` below keeps the qualified P2-2 binary untouched otherwise. */
+static s32 ndsRelocIsFighterAnimID(u32 asset_id)
+{
+    if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
+    {
+        return TRUE;
+    }
+    return ndsRelocIsDemoAnimID(asset_id);
 }
 #else
 /* Keep the P2-2 binary on its already-qualified predicate when no new fighter
@@ -4942,6 +5107,20 @@ static u32 ndsRelocAssetIDForToken(u32 token)
             return fox_anim_asset_id;
         }
     }
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    /* VS Results demo poses. Kept beside the two battle-animation resolvers
+     * because it answers the same `&ll...FileID` token ABI; its ids are the
+     * 357..498 `reloc_submotions/` space, disjoint from both banks above and
+     * from every generated animation id, so no arm can shadow another. */
+    {
+        u32 demo_anim_asset_id = ndsRelocDemoAnimAssetIDForToken(token);
+
+        if (demo_anim_asset_id != NDS_RELOC_ASSET_INVALID)
+        {
+            return demo_anim_asset_id;
+        }
+    }
+#endif
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WAIT) return NDS_RELOC_ASSET_MARIO_ANIM_WAIT;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK1) return NDS_RELOC_ASSET_MARIO_ANIM_WALK1;
     if (token == NDS_RELOC_ASSET_MARIO_ANIM_WALK2) return NDS_RELOC_ASSET_MARIO_ANIM_WALK2;

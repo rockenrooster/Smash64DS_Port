@@ -1475,3 +1475,60 @@ NDS_P2_MMARIO_FIGHTER_RELOC_FILES := \
 	reloc_fighters_main/MMarioMain \
 	reloc_fighters_main/MMarioMainMotion \
 	reloc_fighters_main/MMarioModel
+
+NDS_MARIOFOX_DEMO_RELOC_FILES := \
+	reloc_submotions/FTMarioSubMotionAppearR \
+	reloc_submotions/FTMarioSubMotionAppearL \
+	reloc_submotions/FTMarioSubMotionTaunt \
+	reloc_submotions/FTFoxSubMotionAppearR \
+	reloc_submotions/FTFoxSubMotionAppearL \
+	reloc_submotions/FTFoxSubMotionTaunt
+
+NDS_P2_LUIGI_DEMO_RELOC_FILES := \
+	reloc_submotions/FTLuigiSubMotionAppearL \
+	reloc_submotions/FTLuigiSubMotionAppearAlt1
+
+NDS_P2_DONKEY_DEMO_RELOC_FILES := \
+	reloc_submotions/FTDonkeySubMotionAppearL \
+	reloc_submotions/FTDonkeySubMotionAppearAlt1 \
+	reloc_submotions/FTDonkeySubMotionTaunt
+
+NDS_P2_CAPTAIN_DEMO_RELOC_FILES := \
+	reloc_submotions/FTCaptainSubMotionAppearL \
+	reloc_submotions/FTCaptainSubMotionAppearAlt1 \
+	reloc_submotions/FTCaptainSubMotionAppearAlt2
+
+NDS_P2_SAMUS_DEMO_RELOC_FILES := \
+	reloc_submotions/FTSamusSubMotionAppearR \
+	reloc_submotions/FTSamusSubMotionAppearL \
+	reloc_submotions/FTSamusSubMotionAppearAlt2
+
+NDS_P2_LINK_DEMO_RELOC_FILES := \
+	reloc_submotions/FTLinkSubMotionAppearL \
+	reloc_submotions/FTLinkSubMotionAppearAlt1 \
+	reloc_submotions/FTLinkSubMotionAppearAlt2
+
+NDS_P2_PIKACHU_DEMO_RELOC_FILES := \
+	reloc_submotions/FTPikachuSubMotionAppearL \
+	reloc_submotions/FTPikachuSubMotionAppearAlt1 \
+	reloc_submotions/FTPikachuSubMotionAppearAlt2
+
+NDS_P2_YOSHI_DEMO_RELOC_FILES := \
+	reloc_submotions/FTYoshiSubMotionAppearR \
+	reloc_submotions/FTYoshiSubMotionAppearAlt1 \
+	reloc_submotions/FTYoshiSubMotionAppearAlt2
+
+NDS_P2_NESS_DEMO_RELOC_FILES := \
+	reloc_submotions/FTNessSubMotionAppearR \
+	reloc_submotions/FTNessSubMotionAppearAlt1 \
+	reloc_submotions/FTNessSubMotionAppearAlt2
+
+NDS_P2_PURIN_DEMO_RELOC_FILES := \
+	reloc_submotions/FTPurinSubMotionAppearR \
+	reloc_submotions/FTPurinSubMotionAppearAlt1 \
+	reloc_submotions/FTPurinSubMotionAppearAlt2
+
+NDS_P2_KIRBY_DEMO_RELOC_FILES := \
+	reloc_submotions/FTKirbySubMotionAppearR \
+	reloc_submotions/FTKirbySubMotionAppearL \
+	reloc_submotions/FTKirbySubMotionAppearAlt2

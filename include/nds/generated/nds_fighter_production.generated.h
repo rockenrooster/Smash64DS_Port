@@ -3389,4 +3389,72 @@
     X(llFTKirbyAnimDKStaringGroundFileID, 0x584u) \
     X(llFTKirbyAnimDKStaringAirFileID, 0x585u)
 
+#define NDS_MARIOFOX_DEMO_ANIM_COUNT 6u
+#define NDS_MARIOFOX_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTMarioAnimWin2FileID, 0x165u, "nitro:/reloc/reloc_submotions/FTMarioSubMotionAppearR") \
+    X(llFTMarioAnimWin3FileID, 0x166u, "nitro:/reloc/reloc_submotions/FTMarioSubMotionAppearL") \
+    X(llFTMarioAnimClapsFileID, 0x169u, "nitro:/reloc/reloc_submotions/FTMarioSubMotionTaunt") \
+    X(llFTFoxAnimWin1FileID, 0x172u, "nitro:/reloc/reloc_submotions/FTFoxSubMotionAppearR") \
+    X(llFTFoxAnimWin2FileID, 0x173u, "nitro:/reloc/reloc_submotions/FTFoxSubMotionAppearL") \
+    X(llFTFoxAnimClapsFileID, 0x175u, "nitro:/reloc/reloc_submotions/FTFoxSubMotionTaunt")
+
+#define NDS_P2_LUIGI_DEMO_ANIM_COUNT 2u
+#define NDS_P2_LUIGI_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTLuigiAnimWin1FileID, 0x1cfu, "nitro:/reloc/reloc_submotions/FTLuigiSubMotionAppearL") \
+    X(llFTLuigiAnimWin2FileID, 0x1d0u, "nitro:/reloc/reloc_submotions/FTLuigiSubMotionAppearAlt1")
+
+#define NDS_P2_DONKEY_DEMO_ANIM_COUNT 3u
+#define NDS_P2_DONKEY_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTDonkeyAnimWin1FileID, 0x17eu, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionAppearL") \
+    X(llFTDonkeyAnimWin2FileID, 0x17fu, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionAppearAlt1") \
+    X(llFTDonkeyAnimClapsFileID, 0x181u, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionTaunt")
+
+#define NDS_P2_CAPTAIN_DEMO_ANIM_COUNT 3u
+#define NDS_P2_CAPTAIN_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTCaptainAnimVictory1FileID, 0x1aeu, "nitro:/reloc/reloc_submotions/FTCaptainSubMotionAppearL") \
+    X(llFTCaptainAnimVictory2FileID, 0x1afu, "nitro:/reloc/reloc_submotions/FTCaptainSubMotionAppearAlt1") \
+    X(llFTCaptainAnimClapsFileID, 0x1b0u, "nitro:/reloc/reloc_submotions/FTCaptainSubMotionAppearAlt2")
+
+#define NDS_P2_SAMUS_DEMO_ANIM_COUNT 3u
+#define NDS_P2_SAMUS_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTSamusAnimWin3FileID, 0x189u, "nitro:/reloc/reloc_submotions/FTSamusSubMotionAppearR") \
+    X(llFTSamusAnimWin1FileID, 0x18au, "nitro:/reloc/reloc_submotions/FTSamusSubMotionAppearL") \
+    X(llFTSamusAnimClapsFileID, 0x18cu, "nitro:/reloc/reloc_submotions/FTSamusSubMotionAppearAlt2")
+
+#define NDS_P2_LINK_DEMO_ANIM_COUNT 3u
+#define NDS_P2_LINK_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTLinkAnimWin1FileID, 0x195u, "nitro:/reloc/reloc_submotions/FTLinkSubMotionAppearL") \
+    X(llFTLinkAnimWin2FileID, 0x196u, "nitro:/reloc/reloc_submotions/FTLinkSubMotionAppearAlt1") \
+    X(llFTLinkAnimClapsFileID, 0x197u, "nitro:/reloc/reloc_submotions/FTLinkSubMotionAppearAlt2")
+
+#define NDS_P2_PIKACHU_DEMO_ANIM_COUNT 3u
+#define NDS_P2_PIKACHU_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTPikachuAnimWin1FileID, 0x1ddu, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionAppearL") \
+    X(llFTPikachuAnimWin2FileID, 0x1deu, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionAppearAlt1") \
+    X(llFTPikachuAnimClapsFileID, 0x1dfu, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionAppearAlt2")
+
+#define NDS_P2_YOSHI_DEMO_ANIM_COUNT 3u
+#define NDS_P2_YOSHI_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTYoshiAnimWin1FileID, 0x1bbu, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionAppearR") \
+    X(llFTYoshiAnimWin2FileID, 0x1bdu, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionAppearAlt1") \
+    X(llFTYoshiAnimUnknown1FileID, 0x1beu, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionAppearAlt2")
+
+#define NDS_P2_NESS_DEMO_ANIM_COUNT 3u
+#define NDS_P2_NESS_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTNessAnimWin1FileID, 0x1b4u, "nitro:/reloc/reloc_submotions/FTNessSubMotionAppearR") \
+    X(llFTNessAnimWin2FileID, 0x1b6u, "nitro:/reloc/reloc_submotions/FTNessSubMotionAppearAlt1") \
+    X(llFTNessAnimClapsFileID, 0x1b7u, "nitro:/reloc/reloc_submotions/FTNessSubMotionAppearAlt2")
+
+#define NDS_P2_PURIN_DEMO_ANIM_COUNT 3u
+#define NDS_P2_PURIN_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTLuigiAnimUnknownFileID, 0x1d5u, "nitro:/reloc/reloc_submotions/FTPurinSubMotionAppearR") \
+    X(llFTPurinAnimWin1FileID, 0x1d7u, "nitro:/reloc/reloc_submotions/FTPurinSubMotionAppearAlt1") \
+    X(llFTPurinAnimWin2FileID, 0x1d8u, "nitro:/reloc/reloc_submotions/FTPurinSubMotionAppearAlt2")
+
+#define NDS_P2_KIRBY_DEMO_ANIM_COUNT 3u
+#define NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTKirbyAnimWin1FileID, 0x1a0u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearR") \
+    X(llFTKirbyAnimWin2FileID, 0x1a1u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearL") \
+    X(llFTKirbyAnimClapsFileID, 0x1a3u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearAlt2")
+
 #endif

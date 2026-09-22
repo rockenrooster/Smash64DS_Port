@@ -5662,6 +5662,49 @@ NDS_VS_RESULTS_RELOC_FILES := \
 	reloc_transitions/LBTransitionBlock \
 	reloc_transitions/LBTransitionRotScale \
 	reloc_transitions/LBTransitionCurtain
+# VS Results demo poses (BUGS.md R02/R03/K06).  Every Win/Claps animation a
+# `dFT<Kind>SubMotionDescs` Results row names lives under `reloc_submotions/`,
+# and nothing in any fighter's motion or extern closure reaches that directory,
+# so no list staged it and `ftMainSetStatus` silently bound the stale figatree
+# heap instead -- every fighter held his row-0 pose.  The file lists come from
+# `fighter_production_files.mk` (included above), generated from the SAME table
+# that emits the runtime token rows, so a staged file and the route that
+# resolves it cannot drift apart.  They ride the existing generic
+# `$(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%` rule like every other reloc
+# path.  Mario and Fox are the always-compiled base pair (Mario's Claps is
+# Luigi's DemoLose too); every other list is roster-gated so a build without a
+# fighter does not pack his poses.
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_MARIOFOX_DEMO_RELOC_FILES)
+ifeq ($(NDS_P2_LUIGI),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_LUIGI_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_DONKEY),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_DONKEY_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_CAPTAIN),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_CAPTAIN_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_SAMUS),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_SAMUS_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_LINK),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_LINK_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_PIKACHU),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_PIKACHU_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_YOSHI),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_YOSHI_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NESS),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_NESS_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_PURIN),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_PURIN_DEMO_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_KIRBY),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_KIRBY_DEMO_RELOC_FILES)
+endif
 endif
 
 NDS_STARTUP_RELOC_FILES := \

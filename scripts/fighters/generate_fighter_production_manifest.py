@@ -58,6 +58,133 @@ VARIANT_RELOC_ROOTS = {
     "GDonkey": (0xD7,),
     "MMario": (0xCE, 0xCD, 0x12C),
 }
+
+# VS Results demo poses (BUGS.md R02/R03/K06).  `ftMainSetStatus` resolves a
+# demo status through an identity table, so `status - 0x10000` indexes
+# `dFT<Kind>SubMotionDescs` directly: Win1/Win2/Win3 are rows 1/2/3 and DemoLose
+# is row 5.  Those rows name Win/Claps animations that live under
+# `reloc_submotions/`, a directory the build never staged, so
+# `lbRelocGetForceExternHeapFile` could not map the token -- and `ftMainSetStatus`
+# assigns `fp->figatree = fp->figatree_heap` UNCONDITIONALLY, discarding the
+# return value, so the fighter silently replayed whatever motion the heap still
+# held instead of declining.  Only row 0 resolved, which is why every fighter
+# held its row-0 pose (Mario `Wait`, Kirby and nine others `EggLay`).
+#
+# THE O2R FILE ID IS THE AUTHORITY, NOT THE NAME.  decomp and O2R label the same
+# file differently -- id 416 is `FTKirbyAnimWin1` in decomp and
+# `FTKirbySubMotionAppearR` in O2R -- so no id is written here.  Each row carries
+# only the O2R path, and the id is read from that file's own header at 0x40 by
+# `build_results_demo_submotions` below.  A systematic off-by-N in a transcribed
+# table would have put the wrong animation on every fighter.
+#
+# The gate is the fighter whose `dFT<Kind>SubMotionDescs` row NAMES the symbol,
+# not the fighter the symbol is named after: the corpus borrows freely across
+# owners (Purin Win1 wants `llFTLuigiAnimUnknownFileID`, whose file is Purin's
+# `FTPurinSubMotionAppearR`; Luigi's DemoLose wants Mario's Claps).  Mario and
+# Fox are the always-compiled base pair and carry no roster flag.
+# `scripts/fighters/test_results_demo_submotion_routes.py` re-derives this
+# fighter -> symbol map from the decomp submotion tables and fails if a gate
+# here would starve a fighter that needs the row.
+RESULTS_DEMO_SUBMOTIONS = (
+    # gate, animation symbol, O2R path
+    ("Mario", "llFTMarioAnimWin2FileID", "reloc_submotions/FTMarioSubMotionAppearR"),
+    ("Mario", "llFTMarioAnimWin3FileID", "reloc_submotions/FTMarioSubMotionAppearL"),
+    # Mario's Claps is Luigi's DemoLose too; the base pair is always compiled,
+    # so a Luigi-only ROM still resolves it.
+    ("Mario", "llFTMarioAnimClapsFileID", "reloc_submotions/FTMarioSubMotionTaunt"),
+    ("Fox", "llFTFoxAnimWin1FileID", "reloc_submotions/FTFoxSubMotionAppearR"),
+    ("Fox", "llFTFoxAnimWin2FileID", "reloc_submotions/FTFoxSubMotionAppearL"),
+    ("Fox", "llFTFoxAnimClapsFileID", "reloc_submotions/FTFoxSubMotionTaunt"),
+    ("Donkey", "llFTDonkeyAnimWin1FileID", "reloc_submotions/FTDonkeySubMotionAppearL"),
+    ("Donkey", "llFTDonkeyAnimWin2FileID", "reloc_submotions/FTDonkeySubMotionAppearAlt1"),
+    ("Donkey", "llFTDonkeyAnimClapsFileID", "reloc_submotions/FTDonkeySubMotionTaunt"),
+    ("Samus", "llFTSamusAnimWin3FileID", "reloc_submotions/FTSamusSubMotionAppearR"),
+    ("Samus", "llFTSamusAnimWin1FileID", "reloc_submotions/FTSamusSubMotionAppearL"),
+    ("Samus", "llFTSamusAnimClapsFileID", "reloc_submotions/FTSamusSubMotionAppearAlt2"),
+    ("Link", "llFTLinkAnimWin1FileID", "reloc_submotions/FTLinkSubMotionAppearL"),
+    ("Link", "llFTLinkAnimWin2FileID", "reloc_submotions/FTLinkSubMotionAppearAlt1"),
+    ("Link", "llFTLinkAnimClapsFileID", "reloc_submotions/FTLinkSubMotionAppearAlt2"),
+    ("Kirby", "llFTKirbyAnimWin1FileID", "reloc_submotions/FTKirbySubMotionAppearR"),
+    ("Kirby", "llFTKirbyAnimWin2FileID", "reloc_submotions/FTKirbySubMotionAppearL"),
+    ("Kirby", "llFTKirbyAnimClapsFileID", "reloc_submotions/FTKirbySubMotionAppearAlt2"),
+    ("Captain", "llFTCaptainAnimVictory1FileID", "reloc_submotions/FTCaptainSubMotionAppearL"),
+    ("Captain", "llFTCaptainAnimVictory2FileID", "reloc_submotions/FTCaptainSubMotionAppearAlt1"),
+    ("Captain", "llFTCaptainAnimClapsFileID", "reloc_submotions/FTCaptainSubMotionAppearAlt2"),
+    ("Ness", "llFTNessAnimWin1FileID", "reloc_submotions/FTNessSubMotionAppearR"),
+    ("Ness", "llFTNessAnimWin2FileID", "reloc_submotions/FTNessSubMotionAppearAlt1"),
+    ("Ness", "llFTNessAnimClapsFileID", "reloc_submotions/FTNessSubMotionAppearAlt2"),
+    ("Yoshi", "llFTYoshiAnimWin1FileID", "reloc_submotions/FTYoshiSubMotionAppearR"),
+    ("Yoshi", "llFTYoshiAnimWin2FileID", "reloc_submotions/FTYoshiSubMotionAppearAlt1"),
+    ("Yoshi", "llFTYoshiAnimUnknown1FileID", "reloc_submotions/FTYoshiSubMotionAppearAlt2"),
+    ("Luigi", "llFTLuigiAnimWin1FileID", "reloc_submotions/FTLuigiSubMotionAppearL"),
+    ("Luigi", "llFTLuigiAnimWin2FileID", "reloc_submotions/FTLuigiSubMotionAppearAlt1"),
+    # Purin's Win1 row names a Luigi-shaped symbol; the FILE is Purin's, so the
+    # row rides Purin's flag.
+    ("Purin", "llFTLuigiAnimUnknownFileID", "reloc_submotions/FTPurinSubMotionAppearR"),
+    ("Purin", "llFTPurinAnimWin1FileID", "reloc_submotions/FTPurinSubMotionAppearAlt1"),
+    ("Purin", "llFTPurinAnimWin2FileID", "reloc_submotions/FTPurinSubMotionAppearAlt2"),
+    ("Pikachu", "llFTPikachuAnimWin1FileID", "reloc_submotions/FTPikachuSubMotionAppearL"),
+    ("Pikachu", "llFTPikachuAnimWin2FileID", "reloc_submotions/FTPikachuSubMotionAppearAlt1"),
+    ("Pikachu", "llFTPikachuAnimClapsFileID", "reloc_submotions/FTPikachuSubMotionAppearAlt2"),
+)
+# Mario and Fox share one always-compiled macro/table; every other gate is its
+# own NDS_P2_<KIND> flag.
+RESULTS_DEMO_BASE_GATES = ("Mario", "Fox")
+
+
+def build_results_demo_submotions(
+    by_path: dict[str, dict[str, object]]
+) -> list[dict[str, object]]:
+    """Resolve `RESULTS_DEMO_SUBMOTIONS` against the O2R headers.
+
+    The id comes from each file's own header, never from this file, so a
+    renamed or re-numbered corpus fails here instead of shipping the wrong
+    animation.  Returned rows are ordered by id so the generated macros are
+    stable across runs.
+    """
+    rows: list[dict[str, object]] = []
+    seen_symbols: set[str] = set()
+    seen_ids: set[int] = set()
+    for gate, symbol, path in RESULTS_DEMO_SUBMOTIONS:
+        record = by_path.get(path)
+        if record is None:
+            raise ValueError(
+                f"Results demo submotion {symbol}: {path} is not an O2R file"
+            )
+        file_id = int(record["file_id"])
+        if symbol in seen_symbols:
+            raise ValueError(
+                f"Results demo submotion symbol {symbol} is routed twice; one "
+                f"symbol address cannot answer two files"
+            )
+        if file_id in seen_ids:
+            raise ValueError(
+                f"Results demo submotion id 0x{file_id:x} ({path}) is staged twice"
+            )
+        seen_symbols.add(symbol)
+        seen_ids.add(file_id)
+        rows.append({
+            "gate": gate,
+            "symbol": symbol,
+            "asset": {
+                "id": file_id,
+                "path": path,
+                "bytes": int(record["bytes"]),
+                "sha256": str(record["sha256"]),
+            },
+        })
+    # A demo id must not collide with the numbered animation banks the segment
+    # resolvers own, or two routes would answer one number.
+    for row in rows:
+        file_id = int(row["asset"]["id"])
+        if (MARIO_ANIM_FIRST <= file_id <= MARIO_ANIM_LAST) or \
+                (FOX_ANIM_FIRST <= file_id <= FOX_ANIM_LAST):
+            raise ValueError(
+                f"Results demo submotion 0x{file_id:x} lands inside the "
+                f"always-compiled Mario/Fox animation bank"
+            )
+    rows.sort(key=lambda row: int(row["asset"]["id"]))
+    return rows
 CORE_SLOT_NAMES = (
     "main",
     "mainmotion",
@@ -1103,7 +1230,8 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     named_symbols = load_named_symbols(symbols_path)
     port_symbols = load_port_symbol_values(port_symbols_path)
     semantic_ids = load_relocdata_semantic_ids(relocdata_root, named_symbols)
-    by_id, _by_path = scan_o2r(o2r_root)
+    by_id, by_path = scan_o2r(o2r_root)
+    results_demo_submotions = build_results_demo_submotions(by_path)
     ftmanager_file_size_census = build_ftmanager_file_size_census(
         repo_root, ftdata_text, named_symbols, port_symbols, semantic_ids, by_id
     )
@@ -1254,6 +1382,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
             repo_root, fighters, by_id
         ),
         "ftmanager_file_size_census": ftmanager_file_size_census,
+        "results_demo_submotions": results_demo_submotions,
         "fighters": fighters,
         "variant_closures": variant_closures,
         "boss": boss,
@@ -1448,6 +1577,38 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
         lines.append(f"{variable} := \\")
         for index, path in enumerate(added):
             suffix = " \\" if index + 1 < len(added) else ""
+            lines.append(f"\t{path}{suffix}")
+        lines.append("")
+    # VS Results demo poses.  These ride the same generic
+    # `$(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%` staging rule as every other
+    # reloc path, but they are NOT part of a fighter's `nitrofs_files` closure:
+    # nothing in the motion/extern graph reaches `reloc_submotions/`, which is
+    # exactly why the build never staged them.  Emitting them from the same
+    # table that emits the runtime token rows keeps the staged file and the
+    # route that resolves it from drifting apart.
+    demo_by_gate: dict[str, list[str]] = {}
+    for row in manifest["results_demo_submotions"]:
+        demo_by_gate.setdefault(str(row["gate"]), []).append(
+            str(row["asset"]["path"]))
+    base_demo = [
+        path for gate in RESULTS_DEMO_BASE_GATES
+        for path in demo_by_gate.get(gate, [])
+    ]
+    demo_lists: list[tuple[str, list[str]]] = [
+        ("NDS_MARIOFOX_DEMO_RELOC_FILES", base_demo)
+    ]
+    demo_lists.extend(
+        (f"NDS_P2_{name.upper()}_DEMO_RELOC_FILES", demo_by_gate.get(name, []))
+        for name in BOOTSTRAP_FIGHTERS[2:]
+    )
+    for variable, paths in demo_lists:
+        if not paths:
+            lines.append(f"{variable} :=")
+            lines.append("")
+            continue
+        lines.append(f"{variable} := \\")
+        for index, path in enumerate(paths):
+            suffix = " \\" if index + 1 < len(paths) else ""
             lines.append(f"\t{path}{suffix}")
         lines.append("")
     return "\n".join(lines)
@@ -1825,6 +1986,57 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             seen_event32_ids.add(file_id)
             event32_rows.append((str(event32["symbol"]), file_id))
         append_symbol_id_rows(f"{prefix}_AOBJ32_ASSET_ROWS", event32_rows)
+
+    # VS Results demo poses (BUGS.md R02/R03/K06).  Same row shape as
+    # `*_ANIM_ASSET_ROWS` -- symbol address, source O2R id, NitroFS path --
+    # because these resolve through the same `&ll...FileID` token ABI.  They are
+    # a separate macro rather than extra rows in the per-fighter animation
+    # tables because they are not numbered `reloc_animations/<stem><NNN>` files:
+    # the segment resolver builds its path from `stem + (id - zero_id)` and
+    # `reloc_submotions/` names carry no index, so a demo row placed there would
+    # be rejected by the segment emitter.  The gate is the fighter who NAMES the
+    # symbol, so borrowed rows ride the borrower's flag.
+    demo_rows = list(manifest["results_demo_submotions"])
+    demo_by_gate: dict[str, list[dict[str, object]]] = {}
+    for row in demo_rows:
+        demo_by_gate.setdefault(str(row["gate"]), []).append(row)
+    base_demo_rows = [
+        row for gate in RESULTS_DEMO_BASE_GATES
+        for row in demo_by_gate.get(gate, [])
+    ]
+    base_demo_rows.sort(key=lambda row: int(row["asset"]["id"]))
+    demo_macros: list[tuple[str, list[dict[str, object]]]] = [
+        ("NDS_MARIOFOX_DEMO", base_demo_rows)
+    ]
+    demo_macros.extend(
+        (f"NDS_P2_{name.upper()}_DEMO", demo_by_gate.get(name, []))
+        for name in BOOTSTRAP_FIGHTERS[2:]
+    )
+    emitted_demo = 0
+    for macro_prefix, rows in demo_macros:
+        lines.append(f"#define {macro_prefix}_ANIM_COUNT {len(rows)}u")
+        if not rows:
+            lines.append(f"#define {macro_prefix}_ANIM_ASSET_ROWS(X)")
+            lines.append("")
+            continue
+        lines.append(f"#define {macro_prefix}_ANIM_ASSET_ROWS(X) \\")
+        for index, row in enumerate(rows):
+            suffix = " \\" if index + 1 < len(rows) else ""
+            lines.append(
+                "    X({symbol}, 0x{file_id:x}u, \"nitro:/reloc/{path}\"){suffix}".format(
+                    symbol=row["symbol"],
+                    file_id=int(row["asset"]["id"]),
+                    path=row["asset"]["path"],
+                    suffix=suffix,
+                )
+            )
+        lines.append("")
+        emitted_demo += len(rows)
+    if emitted_demo != len(demo_rows):
+        raise ValueError(
+            f"Results demo rows lost a gate: emitted {emitted_demo} of "
+            f"{len(demo_rows)}; every gate must be Mario/Fox or a P2 kind"
+        )
 
     lines.extend([
         "#endif",

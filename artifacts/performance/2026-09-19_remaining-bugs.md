@@ -1350,3 +1350,53 @@ clears the floor outright (23,204 + 7,636 = 30,840). Before doing it, count
 binds of `sNdsNativeKirbyHatImages[slot][1]` in a natural two-player copy match
 -- if it is bound, the lever is wrong and the remaining 1,480 must come from
 somewhere else. Do not guess this one.
+
+### But the latch probably does NOT explain the invisible star
+
+Read the reserve against the same trace before blaming the cap for everything.
+`ndsIFCommonPreserveGObjRuntimeReserve` (`battleship_ifcommon.c:255`) waits for
+`gcGetMaxNumGObj() >= 0` and then, once, on a GO update, raises the cap by
+`NDS_IFCOMMON_GOBJ_LATCH_RESERVE` = 8. The trace shows `applied=1` from n=720,
+so that did happen after the copy latched it -- the reserve is correctly ordered
+for a mid-match latch, not only an entry one.
+
+Live GObjs were 48 at the latch and settle at 46. Cap is therefore about 54
+against 46 live: roughly **ten free slots** for the rest of the match. That is
+enough for a shield and a spit star several times over.
+
+So the latch is real, permanent, and worth removing -- but "the star is
+GObj-starved" no longer follows from it, and K04 should not be closed by heap
+work. The star constructs; the renderer's treatment of it is still the
+unexamined half. Keep the two questions apart.
+
+### CORRECTION: the Poke Ball was never missing a native bake
+
+The earlier entry above says the effect "reaches the renderer and DECLINES --
+no native bake". Wrong, and the wrongness was in reading the failure code.
+`DIAG_NATIVE` domain 2 reason 1 is `NDS_NATIVE_FAILURE_NO_PROGRAM`, which means
+**nothing claimed this root**, not "this root has no geometry".
+
+Both Poke Balls are ONE source descriptor. The ground item reaches it as
+`ITAttributes.data` at ITCommonData+0x6E4; `efManagerMBallThrownMakeEffect`
+(efmanager.c:5248) reads that same fixed-up pointer and subtracts `0x9430` from
+it to recover ITCommonObject's base, so the subtrahend IS that descriptor --
+same tree, same MObjSub table at `0x9120`, same eight CURRENT_IMAGE frames. The
+two drawable roots `0x9250` and `0x9340` were already baked in
+`nds_native_item_mball.exec.inc`.
+
+What excluded it was the admission gate in `renderer_adapter_stage.c:8179-8191`:
+it required `sNdsRendererAdapterItemSubmitActive` and a parent GObj of kind
+Item, then an `ITStruct` whose kind is `nITKindMBall`. The entry ball is an
+EFFECT GObj submitted through the effect layer, so it matched none of that, fell
+to the generic guard, and was published as a missing program. Admitting the same
+asset and the same two roots from the effect layer is the fix; the geometry is
+not baked twice.
+
+Also found, and a real second defect: `efManagerMBallRaysMakeEffect`'s prototype
+was guarded `#if NDS_P2_PIKACHU` while the call site runs under `NDS_P2_PURIN`
+as well, so a Purin-without-Pikachu roster had a call with no prototype. And the
+old `#if NDS_P2_ITEM_CORE` around both calls silently compiled the row away
+instead of failing; it is now a declared `#error` dependency.
+
+Instrumented so the next run can answer "did BOTH halves arrive":
+`gNdsEntryMBallThrownRootMask` bit 0 = `0x9250`, bit 1 = `0x9340`, expect 3.
