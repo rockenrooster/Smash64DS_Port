@@ -2624,9 +2624,11 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
     container = fp->attr->textureparts_container;
     if (container == NULL)
     {
-        /* Same phantom record as below, from the other direction: with no
-         * container the source reaches no MObj and writes nothing, so neither
-         * does this. The guard itself stays -- the source would fault here. */
+        /* Held back with the arm below: the source reaches no MObj here and
+         * writes nothing, so neither should this, but the two come out
+         * together for the r37 bisect. */
+        fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
+        fp->is_texturepart_modify = TRUE;
         return;
     }
 
@@ -2646,27 +2648,29 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
     }
     if (mobj != NULL)
     {
-        /* THE MIRROR BELONGS INSIDE THIS ARM, AND THAT IS THE ONE EYE.
-         *
-         * BattleShip ftparam.c:1127-1141 writes the status mirror and the
-         * modify flag only where it found an MObj: a chain shorter than
-         * `detail` records NOTHING. Writing the mirror unconditionally made
-         * ftParamResetTexturePartAll and ftParamInitTexturePartAll later
-         * replay a selection the source had dropped, onto whichever MObj now
-         * occupies that index. A fighter has exactly TWO texture parts
-         * (fttypes.h:172-175), each naming one MObj in a chain through its own
-         * per-detail index, so a phantom record can reach one of the two and
-         * not the other -- which is the owner's "sometimes one eye is closed"
-         * on Yoshi and Jigglypuff, the 2nd and 3rd heaviest users of this
-         * mechanism. Donkey and Samus use it zero times and are the two
-         * fighters the owner has never reported a face defect on.
-         *
-         * This can only remove a write the source never makes, so no fighter
-         * that is correct today can regress. */
         mobj->texture_id_curr = texture_id;
-        fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
-        fp->is_texturepart_modify = TRUE;
     }
+    /* HELD BACK 2026-09-22, PENDING THE r37 BISECT, AND THE REASON MATTERS.
+     *
+     * BattleShip ftparam.c:1127-1141 writes the status mirror and the modify
+     * flag only inside the `mobj != NULL` arm above: a chain shorter than
+     * `detail` records NOTHING. The port writes them unconditionally, which
+     * lets ftParamResetTexturePartAll and ftParamInitTexturePartAll replay a
+     * selection the source dropped onto whichever MObj later occupies that
+     * index -- and since a fighter has exactly TWO texture parts
+     * (fttypes.h:172-175), each reaching one MObj through its own per-detail
+     * index, a phantom record can land on one of a fighter's two eyes and not
+     * the other. That is a real defect and it is still owed.
+     *
+     * Moving these two writes inside the arm shipped in r37, alongside the
+     * face/body tint route, and the owner reports every fighter missing body
+     * parts. A texture_id that never reaches its MObj is one of the few things
+     * in this file that can take geometry off a fighter, so both changes come
+     * out together to get the owner a working ROM, and they go back one at a
+     * time with a capture each. Restoring the unconditional write is NOT a
+     * statement that the unconditional write is correct. */
+    fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
+    fp->is_texturepart_modify = TRUE;
 }
 
 /* BUGS.md #7: this reset only rewound the FTStruct mirror and left the MObj
