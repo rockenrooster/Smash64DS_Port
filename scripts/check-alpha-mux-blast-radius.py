@@ -112,14 +112,11 @@ def uses_texel(slots, keep):
 
 # The shipped predicate and the candidates, by which slots each one reads.
 PREDICATES = {
-    "cd-only (pre-2026-09-22)": {"Ac0", "Ad0"},
-    "full cycle (shipped)": {"Ac0", "Ad0", "Aa0", "Ab0"},
+    "cd-only (shipped)": {"Ac0", "Ad0"},
+    "cd + cycle0 A/B": {"Ac0", "Ad0", "Aa0", "Ab0"},
     "all eight (r37, REVERTED)": {name for name, _, _ in ALPHA_SLOTS},
 }
-# ndsRendererHardwareOutputUsesAlpha now tests all four slots of the cycle it
-# is evaluating, keeping the 2-cycle COMBINED chaining. The r37 entry stays in
-# the table as the thing that must never come back.
-SHIPPED = "full cycle (shipped)"
+SHIPPED = "cd-only (shipped)"
 
 
 def main(argv):
@@ -158,14 +155,14 @@ def main(argv):
     # The Castle roof's combine is the reason anyone wants a wider predicate;
     # if a candidate does not separate it from the shipped one, it buys nothing.
     modulateia = slots_of(*NAMED_COMBINES["G_CC_MODULATEIA"])
-    if not uses_texel(modulateia, PREDICATES[SHIPPED]):
+    if uses_texel(modulateia, PREDICATES[SHIPPED]):
         failures.append(
-            "G_CC_MODULATEIA is NOT seen by the shipped predicate, so the "
-            "Castle roof's texel alpha is being discarded again.")
-    if uses_texel(modulateia, PREDICATES["cd-only (pre-2026-09-22)"]):
-        failures.append(
-            "G_CC_MODULATEIA is seen by the old C/D-only predicate, so the "
+            "G_CC_MODULATEIA is already seen by the shipped predicate, so the "
             "premise of this whole file has changed. Re-read it.")
+    if not uses_texel(modulateia, PREDICATES["cd + cycle0 A/B"]):
+        failures.append(
+            "G_CC_MODULATEIA is NOT seen by 'cd + cycle0 A/B', so that "
+            "candidate would not repair the Castle roof either.")
 
     if failures:
         for failure in failures:
@@ -173,8 +170,8 @@ def main(argv):
         print("%d failure(s)" % len(failures))
         return 1
     print("check-alpha-mux-blast-radius: OK -- %d fighter families unchanged "
-          "by every candidate predicate; G_CC_MODULATEIA seen by '%s' and not "
-          "by the old C/D-only one" % (len(policies), SHIPPED))
+          "by every candidate predicate; G_CC_MODULATEIA separated by "
+          "'cd + cycle0 A/B' only" % len(policies))
     return 0
 
 

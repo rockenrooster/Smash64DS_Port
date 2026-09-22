@@ -6561,3 +6561,42 @@ Owner: "r52 fixes the eyes".
 of Yoshi's and Jigglypuff's eyes ever changed, and reported 0 disagreements over
 the CSS and 1,800 battle frames. Why it saw no eye run change is not
 established; the r51/r52 captures, not the arm, are the evidence here.
+
+## Dream Land blank since r40: the runtime alpha rule left the pinned corpus behind (2026-09-22, r53)
+
+**Owner, r51/r52:** Dream Land invisible (fighters over an empty background).
+
+**Measured.** Walk ROMs r45, r47, r48, r49, r50, r51: no stage pixels at any
+frame of a full match (display capture, stage 6). Counters on r51:
+`gNdsNativeStagePrepareRunFailStep = 2` on run 1, owner prepare fail step 3,
+static set prepared (44 textures, 65,408 bytes) but
+`gNdsRendererBattleStaticTexturePinnedHitCount = 0`.
+
+**Cause.** Dream Land draws only from the pinned static corpus
+(`scripts/generate_battle_playable_static_textures.py`), and its stage preflight
+is a pure resident lookup: one missed key fails `PrepareRun` step 2 and skips
+the stage. The corpus keys carry `NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS`
+(bit 29), computed by the generator's own copy of the combine test, which reads
+alpha slots C and D only. r40 (`0774cad9957`) widened the runtime's
+`ndsRendererHardwareOutputUsesAlpha` to slots A and B for the Castle roof, so
+every MODULATEIA surface with alpha compare off -- most of Dream Land -- lost
+bit 29 at runtime and missed its pinned texture. Record 15 (asset 103, image
+0xE20, run 1's texture) carries `flags 0x200020ff` in the corpus. r40's
+blast-radius checker proved no fighter family moved and never looked at the
+corpus; the corpus `--check` compares against its own previous output, so it
+stayed green.
+
+**Fix.** Revert r40's predicate (and its checker pin). r50 already fixed the
+roof's real cause -- the DS sampling TMEM padding outside the N64's 8-texel
+wrap period -- so the roof no longer needs texel alpha to hide that padding.
+Opaque MODULATEIA surfaces are back to their r39 behaviour: texel alpha ignored,
+as the N64's opaque render modes ignore it.
+
+**Measured on r53** (walk `6cb916215efe3549`): Dream Land renders
+(`artifacts/visibility/2026-09-22_dreamland-blank/`), prepare failures 0, 2,254
+pinned hits by frame 240. Castle at the same frame is byte-identical to r50
+(0 differing pixels): the roof holds without r40. Owner: "dreamland fixed".
+
+**Guard owed.** Any runtime change to a texture-key input must be mirrored in
+the corpus generator; nothing enforces that yet. The cheap tripwire is the walk
+ROM's stage-6 capture or `PinnedHitCount > 0` on Dream Land.
