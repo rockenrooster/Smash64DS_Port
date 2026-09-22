@@ -19,7 +19,7 @@ re-derive. Do not close a row on a claim you did not re-measure.
 ## Status
 
 **Playtest build: `builds/remaining-bugs-playtest-r37/smash64ds.nds`,
-sha256 `9336b6debe5761b3...`, linked 2026-09-22 09:47.**
+sha256 `37bf335e8546ece0...`, linked 2026-09-22 10:07.**
 
 | Row | Seam | State |
 |---|---|---|
@@ -67,10 +67,16 @@ identified, with min and max, because one sample cannot tell a frozen value
 from one caught mid-cycle:
 
 ```
-pinned at 330  -> joints are not being advanced
-330 <-> 0      -> they are; the fault is upstream in the state machine
-pinned at 0    -> the door is closed; the row is about other geometry
-Samples == 0   -> the gate never reaches the draw loop at all
+GroundSeen > 0, GateGObjPtr == 0  -> the gate maker was REFUSED; there is no
+                                     door object at all, and the permanent
+                                     hole is what the owner is calling "open"
+pinned at 330                     -> joints are not being advanced
+330 <-> 0                         -> they are; the fault is upstream in the
+                                     state machine
+pinned at 0                       -> the door is closed; the row is about
+                                     other geometry
+GroundSeen == 0                   -> Saffron's ground objects never reach the
+                                     draw loop, which is a larger problem
 ```
 
 Ruled out and not to be reopened: the port's `gcPlayAnimAll` advances every

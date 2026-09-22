@@ -14494,6 +14494,11 @@ __attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZMin;
 __attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZMax;
 __attribute__((used)) volatile u32 gNdsYamabukiGateChildTraZSamples;
 __attribute__((used)) volatile u32 gNdsYamabukiGateStatus;
+/* gGRCommonStruct.yamabuki.gate_gobj as the draw loop sees it, plus how many
+ * Saffron ground objects were offered. GroundSeen > 0 with GateGObjPtr == 0
+ * means the gate maker was refused and there is no door object at all. */
+__attribute__((used)) volatile u32 gNdsYamabukiGateGObjPtr;
+__attribute__((used)) volatile u32 gNdsYamabukiGroundSeenCount;
 static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                                            sb32 is_layer, u32 kind,
                                            u32 callback_kind);
@@ -14557,6 +14562,18 @@ static sb32 ndsStageGCDrawAllLoopIsYamabukiGate(GObj *gobj)
         return FALSE;
     }
     gate_gobj = (GObj *)ndsGRYamabukiGateGObj();
+    /* Recorded BEFORE the early return, and for every Saffron ground object,
+     * so a zero here means something different from a zero in the counters
+     * below. grYamabukiMakeGate stores this pointer once
+     * (gGRCommonStruct.yamabuki.gate_gobj); if gcMakeGObjSPAfter refused the
+     * maker it is NULL, gcAddAnimJointAll(NULL, ...) installs nothing, the
+     * gate's DObjs never exist, and the doorway is a permanent hole -- which
+     * looks exactly like a door stuck open. The 2026-09-07 probe's
+     * `ground_actor submit=0 reject=0` on this stage is consistent with that
+     * and with three other things, which is why it needs its own witness
+     * rather than an inference. */
+    gNdsYamabukiGateGObjPtr = (u32)(uintptr_t)gate_gobj;
+    gNdsYamabukiGroundSeenCount++;
     if ((gate_gobj == NULL) || (gobj != gate_gobj))
     {
         return FALSE;

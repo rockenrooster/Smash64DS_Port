@@ -5,7 +5,7 @@ AI Agent should mark fixed items with **FIXED** prefix or a 100 char summary (or
 
 treat anything not going through native renderer a failure.
 
-**r37 built for playtest: builds/remaining-bugs-playtest-r37/smash64ds.nds, sha256 9336b6debe5761b3... Ten rows implemented, none accepted. One NOT repaired and said so: Saffron's door, which now carries the witness that decides it. Full plan and evidence in docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md.**
+**r37 built for playtest: builds/remaining-bugs-playtest-r37/smash64ds.nds, sha256 37bf335e8546ece0... Ten rows implemented, none accepted. One NOT repaired and said so: Saffron's door, which now carries the witness that decides it. Full plan and evidence in docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md.**
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
