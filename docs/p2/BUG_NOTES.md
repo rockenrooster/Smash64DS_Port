@@ -6486,3 +6486,43 @@ the worktree, `artifacts/audio/2026-09-22_inishie_bgm_ima/` (gitignored).
 Owner: pending (listen on Mushroom Kingdom, including the <=30 s swap).
 Remaining: integrator build of the default and battle ROMs. Natural-path
 counters over a full loop wrap (~89 s) and the Hurry swap. Owner listen.
+
+## One eye closed: the texture-part container was read off the wrong byte lane (2026-09-22, r51)
+
+**Owner:** "Yoshi: sometimes one eye is closed", "Jigglypuff: sometimes one eye is
+closed" (CSS rows, still open after r45).
+
+**Instrument.** The CSS input feed from the r45 UV probe, with a per-tick trace
+of the head joint's two eye MObjs (`texture_id_curr`), the FTStruct
+texture-part mirror, and a line per `ftParamSetTexturePartID` call. Every script
+event sets the two parts as a pair (part 0 = id, part 1 = 0x100000 | id). On
+r49 each pair wrote both mirrors, but only MObj 0 ever changed: MObj 1 stayed at
+texture 0 for the whole session, first visit and revisit alike, while MObj 0
+took every expression. The eye captured on screen matched: one eye on the
+expression, one on the default.
+
+**Cause.** `FTTexturePart` is three `u8` fields (`joint_id`, `detail[2]`) and a
+fighter's main file reaches the DS word-swapped (logical byte i at physical
+i ^ 3). The FTAttributes fixups restore the fields they know; nothing restored
+the texture-part container, which three shims in
+`reloc_backend_compat_shims.c` read as a C struct. Measured in RAM: Yoshi's
+container is `07 00 00 07 00 00 01 01` (logical `07 00 00 07 01 01 00 00`), so
+part 1 read `detail {0, 0}` instead of `{1, 1}` and addressed part 0's MObj.
+Link's container has the same shape (`17 ...`); Mario's one-part container
+(`00 00 00 0c ...`) read its joint id from a padding byte, so his expressions
+never reached a material. r41 attributed the eye to the status mirror; the
+mirror was right, the index it wrote through was not.
+
+**Fix.** `ndsFTTexturePartByte` reads each field at its logical address XOR 3
+(the loaded file base is word aligned); InitTexturePartAll, SetTexturePartID
+and ResetTexturePartAll use it. The shared file is not rewritten, so a one-part
+container's part 1 still reads whatever follows it, as the source's does.
+
+**Measured on r51** (`020EC39A3CCB1757`): Jigglypuff selected in the CSS, both
+eye MObjs take 4, 5, 4, 0 in the same tick through every blink and settle on 0
+(open) for 600+ ticks. Owner (r51): the previously stuck eye now opens.
+
+**Ruled out on the way:** the run texture memo. A level-2 verify build
+(memo compared against the full resolver every draw) ran the CSS and 1,800
+battle frames with Yoshi and Jigglypuff: 0 disagreements. A material-identity
+fence written for it was removed unshipped.

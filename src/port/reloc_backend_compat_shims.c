@@ -1744,13 +1744,60 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
 }
 #endif
 
+/* FTTEXTUREPART IS THREE BYTES, AND THE FILE HOLDING IT IS WORD-SWAPPED.
+ *
+ * A fighter's main file reaches the DS with every 32-bit word byte-reversed:
+ * logical byte i of the loaded file sits at physical i ^ 3. The FTAttributes
+ * fixups in reloc_backend_assets.c undo that for the fields they know; nothing
+ * undid it for the texture-part container, a pair of { u8 joint_id;
+ * u8 detail[2]; } (fttypes.h:165-175) that this file read as a C struct.
+ * Measured in RAM at the CSS: Yoshi's container is 07 00 00 07 00 00 01 01,
+ * so the struct read gave part 1 detail {0, 0} where the source has {1, 1},
+ * and every part-1 write landed on part 0's MObj. Yoshi and Jigglypuff keep one
+ * eye in each part on the same head joint, so one eye took every expression and
+ * the other stayed on texture 0 -- the owner's "sometimes one eye is closed".
+ * Link's container has the same shape; Mario's one-part container read its
+ * joint id (0x0C) from a padding byte, so his face never changed at all.
+ *
+ * Read the three fields through the lane rather than rewriting the shared file:
+ * the loaded file base is word aligned, so a byte's physical address is its
+ * logical address XOR 3. A one-part container's part 1 still reads whatever
+ * follows it, exactly as the source's does; the source never selects it. */
+_Static_assert(sizeof(FTTexturePart) == 3u,
+               "FTTexturePart must stay three packed bytes (fttypes.h:165)");
+
+static s32 ndsFTTexturePartByte(const FTTexturePartContainer *container,
+                                s32 part, u32 field)
+{
+    uintptr_t logical = (uintptr_t)container +
+                        ((u32)part * (u32)sizeof(FTTexturePart)) + field;
+
+    return (s32)*(const u8 *)(logical ^ 3u);
+}
+
+static s32 ndsFTTexturePartJointID(const FTTexturePartContainer *container,
+                                   s32 part)
+{
+    return ndsFTTexturePartByte(container, part,
+                                (u32)offsetof(FTTexturePart, joint_id));
+}
+
+static s32 ndsFTTexturePartDetail(const FTTexturePartContainer *container,
+                                  s32 part, s32 detail_index)
+{
+    return ndsFTTexturePartByte(container, part,
+                                (u32)offsetof(FTTexturePart, detail) +
+                                    (u32)detail_index);
+}
+
 void ftParamInitTexturePartAll(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
     FTTexturePartStatus *texturepart_status;
-    FTTexturePart *texturepart;
+    const FTTexturePartContainer *container;
     DObj *joint;
     MObj *mobj;
+    s32 joint_id;
     s32 detail;
     s32 i;
     s32 j;
@@ -1760,21 +1807,26 @@ void ftParamInitTexturePartAll(GObj *fighter_gobj)
     {
         return;
     }
+    container = fp->attr->textureparts_container;
 
     /* BattleShip ftparam.c:1070-1110. Re-applying a costume replaces each
      * joint's MObj chain, so any live texture-part override must be copied back
      * to the newly-created material at this detail level. */
-    for (i = 0,
-         texturepart_status = &fp->texturepart_status[0],
-         texturepart = &fp->attr->textureparts_container->textureparts[0];
+    for (i = 0, texturepart_status = &fp->texturepart_status[0];
          i < (s32)ARRAY_COUNT(fp->texturepart_status);
-         i++, texturepart_status++, texturepart++)
+         i++, texturepart_status++)
     {
         if (texturepart_status->texture_id_curr !=
             texturepart_status->texture_id_base)
         {
-            joint = fp->joints[texturepart->joint_id];
-            detail = texturepart->detail[fp->detail_curr - nFTPartsDetailStart];
+            joint_id = ndsFTTexturePartJointID(container, i);
+            if (joint_id >= (s32)ARRAY_COUNT(fp->joints))
+            {
+                continue;
+            }
+            joint = fp->joints[joint_id];
+            detail = ndsFTTexturePartDetail(
+                container, i, fp->detail_curr - nFTPartsDetailStart);
             if (joint != NULL)
             {
                 mobj = joint->mobj;
@@ -2609,9 +2661,9 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
     FTTexturePartContainer *container;
-    FTTexturePart *texturepart;
     DObj *joint;
     MObj *mobj;
+    s32 joint_id;
     s32 detail;
     s32 i;
 
@@ -2630,15 +2682,17 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
         return;
     }
 
-    texturepart = &container->textureparts[texturepart_id];
-    if ((texturepart->joint_id >= ARRAY_COUNT(fp->joints)) ||
+    /* Through the byte lane: see ndsFTTexturePartByte. */
+    joint_id = ndsFTTexturePartJointID(container, texturepart_id);
+    if ((joint_id >= (s32)ARRAY_COUNT(fp->joints)) ||
         (fp->detail_curr < nFTPartsDetailStart))
     {
         return;
     }
 
-    detail = texturepart->detail[fp->detail_curr - nFTPartsDetailStart];
-    joint = fp->joints[texturepart->joint_id];
+    detail = ndsFTTexturePartDetail(container, texturepart_id,
+                                    fp->detail_curr - nFTPartsDetailStart);
+    joint = fp->joints[joint_id];
     mobj = (joint != NULL) ? joint->mobj : NULL;
     for (i = 0; (mobj != NULL) && (i < detail); i++)
     {
@@ -2646,24 +2700,15 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
     }
     if (mobj != NULL)
     {
-        /* THE MIRROR BELONGS INSIDE THIS ARM, AND THAT IS THE ONE EYE.
+        /* THE MIRROR BELONGS INSIDE THIS ARM.
          *
          * BattleShip ftparam.c:1127-1141 writes the status mirror and the
          * modify flag only where it found an MObj: a chain shorter than
-         * `detail` records NOTHING. Writing the mirror unconditionally made
-         * ftParamResetTexturePartAll and ftParamInitTexturePartAll later
-         * replay a selection the source had dropped, onto whichever MObj now
-         * occupies that index. A fighter has exactly TWO texture parts
-         * (fttypes.h:172-175), each naming one MObj in a chain through its own
-         * per-detail index, so a phantom record can reach one of the two and
-         * not the other -- which is the owner's "sometimes one eye is closed"
-         * on Yoshi and Jigglypuff, the 2nd and 3rd heaviest users of this
-         * mechanism. Donkey and Samus use it zero times and are the two
-         * fighters the owner has never reported a face defect on.
-         *
-         * Held back from r39/r40 while the r37 regression was attributed, and
-         * restored here as the r41 rung on its own. This can only remove a
-         * write the source never makes. */
+         * `detail` records NOTHING, so neither does this (r41). r41 blamed
+         * the owner's one closed eye on the mirror; the trace that finally
+         * watched both eye MObjs showed the mirror right and the part-1 MObj
+         * never written, because `detail` itself was read off the wrong byte
+         * lane -- ndsFTTexturePartByte. */
         mobj->texture_id_curr = texture_id;
         fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
         fp->is_texturepart_modify = TRUE;
@@ -2691,9 +2736,9 @@ void ftParamResetTexturePartAll(GObj *fighter_gobj)
     for (i = 0; i < ARRAY_COUNT(fp->texturepart_status); i++)
     {
         FTTexturePartStatus *status = &fp->texturepart_status[i];
-        FTTexturePart *texturepart;
         DObj *joint;
         MObj *mobj;
+        s32 joint_id;
         s32 detail;
         s32 j;
 
@@ -2706,13 +2751,15 @@ void ftParamResetTexturePartAll(GObj *fighter_gobj)
         {
             continue;
         }
-        texturepart = &container->textureparts[i];
-        if (texturepart->joint_id >= ARRAY_COUNT(fp->joints))
+        /* Through the byte lane: see ndsFTTexturePartByte. */
+        joint_id = ndsFTTexturePartJointID(container, i);
+        if (joint_id >= (s32)ARRAY_COUNT(fp->joints))
         {
             continue;
         }
-        detail = texturepart->detail[fp->detail_curr - nFTPartsDetailStart];
-        joint = fp->joints[texturepart->joint_id];
+        detail = ndsFTTexturePartDetail(container, i,
+                                        fp->detail_curr - nFTPartsDetailStart);
+        joint = fp->joints[joint_id];
         mobj = (joint != NULL) ? joint->mobj : NULL;
         for (j = 0; (mobj != NULL) && (j < detail); j++)
         {
