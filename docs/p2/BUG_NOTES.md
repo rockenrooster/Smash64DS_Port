@@ -6118,3 +6118,59 @@ retires. Measured on the emulator that is about half the time open. A short
 look can land entirely inside the open phase. So: over a full minute on
 Saffron, does the door ever close at all, or does it sit open the whole time?
 Those are different bugs, and the second one is the only one left.
+
+### Saffron, final: eleven probes, twelve mechanisms, no defect found
+
+Two more closed after the world-cache one.
+
+**The gate's runs are not being rejected.** The gate owner is segment 4,
+`first_run 77`, `run_count 15`, so its runs are 77-91. Sampled either side of a
+real open-to-closed transition: `gNdsNativeStagePrepareRunFailStep = 0`,
+`FailRun = 0`, `gNdsNativeStageEmitShortfallCount = 0`. Nothing on this stage
+fails to prepare, so the door's geometry IS submitted. That was the last
+hypothesis that fit every prior measurement, and it is dead.
+
+**The door panels are in the gate owner, not in a static layer.** The
+descriptor names "gate door DLs 0x0420/0x04F0 head 0", and head 0 raised the
+possibility that the visible panels were drawn by a layer while the gate GObj
+carried something else. They are not: `sNdsNativeStageYamabukiBindingHeads`
+gives bindings 17/18/19/20 -> DObjs 20/21/22/23 at heads 0/0/0/1, so the three
+head-0 bindings ARE the door panels and they are the three the open/close
+scripts move (TraZ 0->330, TraY 390->-30, TraZ 0->-330).
+
+**The full ledger, all measured in the shipping configuration** (`make
+TARGET=smash64ds NDS_P2_MENU_WALK=20`, stage forced with
+`gNdsMenuShellSssWalkTargetGkind = 7`):
+
+  1.  gate GObj created, non-NULL
+  2.  animation install never refused (RefusedCount 0, NormalizeFail 0)
+  3.  joints traverse the full open pose AND the full closed pose
+  4.  state machine cycles Wait -> Open -> Wait, real Pokemon spawned
+  5.  blob loads, full size, no hash mismatch
+  6.  native stage owner accepts all 21 bindings, no topology failure
+  7.  bindings 17-20 point at the gate's OWN child DObjs (BD17 == GATEC1)
+  8.  Task 51 baked-matrix opt-out is compiled out, so they compose live
+  9.  the per-frame world cache revalidates (frame counter is unguarded)
+  10. no stage run is rejected and no emit shortfall
+  11. the head-0 bindings are the door panels the scripts move
+  12. the `ll*` offset arithmetic resolves to the right tables
+
+**I cannot find this defect and I am saying so rather than producing a
+thirteenth theory.** Six claims were published and withdrawn on this batch
+today; five of them were on this row. Continuing to generate mechanisms after
+twelve refutations is the behaviour that produced them, not a way out of it.
+
+**The observation that would move it, which only a playtest can make.** The
+source holds this gate open for a long stretch: `grYamabukiGateSetClosedWait`
+sets `gate_wait = 1000` and `monster_wait = rand(1000) + 1000`, and the gate
+stays open from the moment `gate_wait` expires until a Pokemon both spawns and
+retires. Measured on the emulator that is roughly half the cycle. So the
+question is not "is it open" but: **across a full minute on Saffron, does the
+door ever close at all?**
+
+  - If it never closes, the defect is downstream of everything above and the
+    next probe is pixels, not counters -- and it needs a visible window, which
+    `capture-melonds.ps1` documents (2026-07-29) as the only way to capture,
+    since a hidden melonDS returns IntPtr.Zero.
+  - If it closes but rarely, the row is the source's own pacing and the
+    question becomes whether the port's `syUtilsRandIntRange` matches.
