@@ -1,0 +1,85 @@
+{
+ "pack": "artifacts\\performance\\2026-09-23_p2-2p8-mf-host\\out\\ftanim_mf_pack.bin",
+ "pack_bytes": 1425752,
+ "tables_bytes": 16928,
+ "tables": 17,
+ "expanded_table_bytes": 16328,
+ "clips": 1570,
+ "passed": 1570,
+ "errors": [],
+ "error_count": 0,
+ "per_kind": {
+  "mario": {
+   "clips": 141,
+   "bps1": 339560,
+   "mf": 122544,
+   "max_decoded": 6224
+  },
+  "fox": {
+   "clips": 156,
+   "bps1": 346244,
+   "mf": 124844,
+   "max_decoded": 4896
+  },
+  "donkey": {
+   "clips": 151,
+   "bps1": 332512,
+   "mf": 119772,
+   "max_decoded": 11568
+  },
+  "samus": {
+   "clips": 146,
+   "bps1": 294576,
+   "mf": 105672,
+   "max_decoded": 6640
+  },
+  "luigi": {
+   "clips": 12,
+   "bps1": 35520,
+   "mf": 12888,
+   "max_decoded": 6720
+  },
+  "link": {
+   "clips": 142,
+   "bps1": 310912,
+   "mf": 111368,
+   "max_decoded": 6304
+  },
+  "yoshi": {
+   "clips": 140,
+   "bps1": 367104,
+   "mf": 137400,
+   "max_decoded": 8480
+  },
+  "captain": {
+   "clips": 148,
+   "bps1": 414976,
+   "mf": 149840,
+   "max_decoded": 10784
+  },
+  "kirby": {
+   "clips": 186,
+   "bps1": 392768,
+   "mf": 136252,
+   "max_decoded": 7808
+  },
+  "pikachu": {
+   "clips": 139,
+   "bps1": 374280,
+   "mf": 143764,
+   "max_decoded": 6480
+  },
+  "purin": {
+   "clips": 63,
+   "bps1": 176088,
+   "mf": 61852,
+   "max_decoded": 8240
+  },
+  "ness": {
+   "clips": 146,
+   "bps1": 387744,
+   "mf": 141568,
+   "max_decoded": 8448
+  }
+ }
+}

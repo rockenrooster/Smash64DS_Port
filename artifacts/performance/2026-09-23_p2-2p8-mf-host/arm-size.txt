@@ -1,0 +1,16 @@
+== marm
+.text                              0      0
+.text.mfWalkTables              1332      0
+.text.mfValue                    480      0
+.text.ndsMfTablesStorageBytes     12      0
+.text.ndsMfExpandTables          140      0
+.text.ndsMfDecodeClip           2464      0
+.rodata                           74      0
+== mthumb
+.text                              0      0
+.text.mfWalkTables               936      0
+.text.mfValue                    344      0
+.text.ndsMfTablesStorageBytes     12      0
+.text.ndsMfExpandTables           92      0
+.text.ndsMfDecodeClip           2520      0
+.rodata                           74      0
