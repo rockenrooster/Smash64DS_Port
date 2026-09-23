@@ -642,6 +642,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   texture slot 3 in battles with an empty BG3 (393,216 B), scene + admitted
   fighters pinned in A+B, D the only region that allocates during the match;
   slice 2b implements it with host-generated admission lists.
+- **Phase 1 slice 2b (2026-09-23, `bd29b08e282`,
+  `artifacts/performance/2026-09-23_p2-2p8-phase1-slice2b/`)**: the plan behind
+  runtime word `gNdsFtrLeanAdmit` = 2 (default 0). Four-CPU stress, word 2 vs 0,
+  same ROM: WORK-H P50 1,690,816 -> 1,648,576, **P95 4,207,754 -> 2,527,139**,
+  P99 4,742,153 -> 3,162,301; FTR P95 2,616,477 -> 944,074; frames of 5+
+  VBlanks 23.6% -> 10.6% (two-VBlank share flat at 5.6%: the median is still
+  1.65M); Link's entry failures 254 -> 0; digest identical. Not yet whole: the
+  admission stops at the libc floor (texture cache slots carry 236 B keys and
+  libnds mallocs a record per texture), so 18 fighter uploads remain after GO;
+  319 Kirby JumpAerialF1 native-program rejects are pre-existing. Slice 2c
+  makes the admission fit with no new RAM and proves the exit and
+  creation-time paths.
 
 ## 7. Found along the way
 
