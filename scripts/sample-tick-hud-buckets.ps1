@@ -289,7 +289,16 @@ $target = $Target
 $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
                  'WAIT', 'WORK', 'SHDT', 'SWRM',
                  'GCRA', 'SCPU', 'SCAT', 'SPRM',
-                 'SINT', 'SPHD', 'SPHC')
+                 'SINT', 'SPHD', 'SPHC',
+                 'MWPN', 'MEFX', 'MPRT', 'MTEX', 'GPOL', 'GVTX',
+                 'DGSA', 'DGSB')
+# DGSA/DGSB (P2-2p8 Phase 0) are the gameplay replay digest after the undrawn
+# and the drawn logic tick; not ticks, excluded from every total, compared by
+# scripts/compare-replay-digest.py.
+# MWPN/MEFX/MPRT/MTEX (P2-2p8 Phase 0) are per-frame deltas of the MISC
+# sub-path counters: sub-spans of MISC, so out of every "named" total.
+# GPOL/GVTX are not ticks at all -- the GX polygon/vertex list RAM usage of the
+# frame -- and are excluded from every tick total for the same reason.
 # GCRA/SCPU/SCAT/SPRM are the cycle-86 SBAS split, appended after the cycle-85
 # pair on the same terms: sub-spans of SRC, so out of every "named" total.
 # GCRA is gcRunAll -- the whole simulation; SCPU/SCAT/SPRM are three of the six
@@ -303,7 +312,9 @@ $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
 # SOBJ = GCRA - SINT - SPHD - SPHC - SCAT - SHDT - SPRM, so SGCO stops being a
 # residual and stays derivable as SITR + SPHD + SPHC + SOBJ for regression.
 $srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM',
-                   'SINT', 'SPHD', 'SPHC')
+                   'SINT', 'SPHD', 'SPHC',
+                   'MWPN', 'MEFX', 'MPRT', 'MTEX', 'GPOL', 'GVTX',
+                   'DGSA', 'DGSB')
 # Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
 $fallbackReasons = if ($FallbackCensus) {
     @('calls', 'eligible', 'animLock', 'selected', 'displayList',
@@ -376,6 +387,21 @@ try {
             $symbols = [System.Collections.Generic.HashSet[string]]::new(
                 [string[]](& $nm --defined-only $elf |
                     ForEach-Object { ($_ -split '\s+')[-1] }))
+            # The ring is read as bucketNames.Count x 128 words; a list that
+            # disagrees with the ROM's enum does not fail, it returns adjacent
+            # memory as plausible columns (cycle 82). Size the ring from the
+            # ELF and refuse a mismatch before anything is launched.
+            $ringLine = @(& $nm -S --defined-only $elf |
+                Where-Object { ($_ -split '\s+')[-1] -eq 'sBattleTickHudRing' })
+            if ($ringLine.Count -eq 1) {
+                $ringSymBytes = [Convert]::ToInt64((($ringLine[0] -split '\s+')[1]), 16)
+                $ringExpected = [int64]$bucketNames.Count * 128 * 4
+                if ($ringSymBytes -ne $ringExpected) {
+                    throw ("sBattleTickHudRing is $ringSymBytes B in $([System.IO.Path]::GetFileName($elf)) " +
+                        "but this script's $($bucketNames.Count) bucket names need $ringExpected B. " +
+                        'The ROM and scripts/sample-tick-hud-buckets.ps1 disagree on enum NDSTickHudBucket.')
+                }
+            }
             foreach ($pair in @(
                 @{ n = '-ExtraGlobals';    v = $ExtraGlobals },
                 @{ n = '-PerFrameGlobals'; v = $PerFrameGlobals },
@@ -1164,6 +1190,10 @@ try {
 
         $fixed = 0
         for ($b = 0; $b -lt $bucketNames.Count; $b++) {
+            # Non-tick columns (GX list counts, the replay digest) are not
+            # spans: a 2^22 correction would corrupt them, and a digest is
+            # usually >= 2^22 by construction.
+            if ($bucketNames[$b] -in @('GPOL', 'GVTX', 'DGSA', 'DGSB')) { continue }
             if ([uint64]$rows[$i][$b + 1] -ge $timerWrap) {
                 $rows[$i][$b + 1] = [uint64]$rows[$i][$b + 1] - $timerWrap
                 $fixed++

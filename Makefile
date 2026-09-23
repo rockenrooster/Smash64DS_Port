@@ -2872,6 +2872,12 @@ ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 override NDS_P2_FOUR_CPU_STRESS := 1
 override NDS_P2_COMPACT_BATTLE_FIGHTERS := 1
 override NDS_R2_EFFECT_POOL := 38
+# P2-2p8 Phase 0 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md A9): the gate
+# measures the game, not the instrument. The on-screen tick-HUD block cost
+# ~345-450K ticks on every ninth or tenth presented frame -- inside WORK-H and
+# on exactly the frames P95 is decided on -- and the GDB sampler reads the ring,
+# never the printed table. The published ROM has no such block.
+override NDS_TICK_HUD_DRAW := 0
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
 # 1 on this target (see its declaration above). `NDS_P2_FOUR_CPU_ROSTER=0`
@@ -4241,7 +4247,7 @@ CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_re
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c video_blackout.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
-	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c utils.c vector.c \
+	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c utils.c vector.c nds_replay_digest.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \
 	battleship_sys_objhelper.c battleship_sys_objanim.c \

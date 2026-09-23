@@ -1,0 +1,21 @@
+{
+ "control": "artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/nocam-rows.csv",
+ "candidate": "artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/mutation-rows.csv",
+ "controlFrames": 1972,
+ "candidateFrames": 1972,
+ "sharedFrames": 1972,
+ "zeroDigestFrames": 0,
+ "diverged": 860,
+ "firstDivergence": {
+  "frame": 1114,
+  "tick": "B",
+  "control": [
+   "690f5c31",
+   "db3da8fd"
+  ],
+  "candidate": [
+   "690f5c31",
+   "f63db289"
+  ]
+ }
+}

@@ -4560,6 +4560,27 @@ enum NDSTickHudBucket {
     nNDSTickHudBucketSrcInterrupt,
     nNDSTickHudBucketSrcPhysicsDefault,
     nNDSTickHudBucketSrcPhysicsCapture,
+    /* P2-2p8 Phase 0 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md section 2).
+     * MISC is a residual (DRAW minus the named draw owners) and ~200K of it
+     * matched no named symbol. These four are the per-frame deltas of the
+     * existing cumulative sub-path counters (weapon, effect and particle draw,
+     * texture upload), so the residual can be sized per frame. They are
+     * sub-spans of MISC and, like the SRC sub-buckets, NOT part of `named`. */
+    nNDSTickHudBucketMiscWeapon,
+    nNDSTickHudBucketMiscEffect,
+    nNDSTickHudBucketMiscParticle,
+    nNDSTickHudBucketMiscTexUpload,
+    /* Not ticks: the geometry engine's polygon and vertex list RAM usage of
+     * this frame, read just before glFlush (2,048 / 6,144 are the hardware
+     * limits). Ringed so every percentile row carries its own GX load. */
+    nNDSTickHudBucketGxPolygons,
+    nNDSTickHudBucketGxVertices,
+    /* Not ticks: the gameplay replay digest (src/port/nds_replay_digest.c)
+     * after the undrawn and the drawn logic tick of this presented frame. A
+     * candidate and its control must agree on both for a whole match
+     * (scripts/compare-replay-digest.py). */
+    nNDSTickHudBucketDigestA,
+    nNDSTickHudBucketDigestB,
     nNDSTickHudBucketCount,
     /* The on-screen table stops at OTHR: the console is 24 rows and rows 20-23
      * already carry the legend, the VBlank histogram and the build stamp. WAIT
@@ -4568,6 +4589,7 @@ enum NDSTickHudBucket {
     nNDSTickHudBucketDisplayCount = nNDSTickHudBucketVBlankWait
 };
 extern volatile u32 gNdsTickHudBuckets[nNDSTickHudBucketCount];
+u32 ndsReplayDigestTick(void);
 extern volatile u32 gNdsTickHudVBlankWaitTicks;
 
 /* The four points at which the fighter draw can give up on the native

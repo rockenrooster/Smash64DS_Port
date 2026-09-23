@@ -93,6 +93,9 @@ static u32 ndsBattlePlayableProfileResidual(u32 total, u64 known)
 #endif
 #if NDS_TICK_HUD
 static u32 sNdsBattlePlayableTickHudLoopStartTick;
+/* P2-2p8 Phase 0 replay digest of the two logic ticks of this presented
+ * frame (src/port/nds_replay_digest.c); published as DGSA/DGSB. */
+static u32 sNdsReplayDigest[2];
 #endif
 
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -1071,6 +1074,40 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsTickHudSrcPhysicsDefaultTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketSrcPhysicsCapture] =
             gNdsTickHudSrcPhysicsCaptureTicks;
+        /* P2-2p8 Phase 0 MISC split. The four sub-path counters are cumulative
+         * (they were read by differencing two ring stops), so publish this
+         * frame's delta. Unsigned subtraction is wrap-safe. */
+        {
+            static u32 s_misc_weapon_prev;
+            static u32 s_misc_effect_prev;
+            static u32 s_misc_particle_prev;
+            static u32 s_misc_tex_prev;
+            const u32 misc_weapon = gNdsMiscWeaponDrawTicks;
+            const u32 misc_effect = gNdsMiscEffectDrawTicks;
+            const u32 misc_particle = gNdsMiscParticleDrawTicks;
+            const u32 misc_tex = gNdsMiscTexUploadTicks;
+
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscWeapon] =
+                misc_weapon - s_misc_weapon_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscEffect] =
+                misc_effect - s_misc_effect_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscParticle] =
+                misc_particle - s_misc_particle_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscTexUpload] =
+                misc_tex - s_misc_tex_prev;
+            s_misc_weapon_prev = misc_weapon;
+            s_misc_effect_prev = misc_effect;
+            s_misc_particle_prev = misc_particle;
+            s_misc_tex_prev = misc_tex;
+        }
+        gNdsTickHudBuckets[nNDSTickHudBucketGxPolygons] =
+            gNdsHardwareRendererPolyRamCount;
+        gNdsTickHudBuckets[nNDSTickHudBucketGxVertices] =
+            gNdsHardwareRendererVertexRamCount;
+#if NDS_R2_PATH
+        gNdsTickHudBuckets[nNDSTickHudBucketDigestA] = sNdsReplayDigest[0];
+        gNdsTickHudBuckets[nNDSTickHudBucketDigestB] = sNdsReplayDigest[1];
+#endif
         /* Feed the HUD percentile window here, on the per-iteration path. The
          * HUD renderer only runs about twice a second, so sampling inside it
          * would build the distribution from half-second-spaced single frames
@@ -1423,6 +1460,37 @@ static void ndsCampaignDrivePlayback(void)
 #endif
 
 #if NDS_R2_PATH
+/* P2-2p8 A6 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md). gGMCameraMatrix has a
+ * GAMEPLAY reader: Link's boomerang projects its position through it to decide
+ * the off-screen return (wp/wplink/wplinkboomerang.c:104-107). The source
+ * rebuilds the matrix in every frame's draw (gmCameraLookAtFuncMatrix, called
+ * from the camera's display process), so the boomerang's update on tick t reads
+ * the camera of tick t-1. This port draws once per presented frame, so on the
+ * second tick of a pair it read the camera of tick t-2. Rebuild the matrix
+ * after each undrawn tick, exactly where the source's draw would have, while a
+ * boomerang lives; the draw path is unchanged and recomputes it before any
+ * draw-side reader. The call is the same NULL-out-pointer form the fighter
+ * display contract already uses (renderer_adapter_fighter.c), so it only
+ * refreshes gGMCameraMatrix and the published perspective. */
+extern sb32 ndsLinkBoomerangLive(void) __attribute__((weak));
+volatile u32 gNdsCameraUndrawnTickRebuildCount;
+
+static void ndsBattleCameraMatrixAtUndrawnTick(void)
+{
+    extern GObj *gGMCameraGObj;
+    extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
+
+    if ((ndsLinkBoomerangLive == NULL) || (gGMCameraGObj == NULL) ||
+        (CObjGetStruct(gGMCameraGObj) == NULL) ||
+        (ndsLinkBoomerangLive() == FALSE))
+    {
+        return;
+    }
+    gmCameraLookAtFuncMatrix(NULL, CObjGetStruct(gGMCameraGObj),
+                             gSYTaskmanDLHeads);
+    gNdsCameraUndrawnTickRebuildCount++;
+}
+
 u32 ndsR2HostBattleUpdateOnce(u32 update_index)
 {
 #if NDS_R2_POSITION_PROBE
@@ -1562,6 +1630,20 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
         }
 #endif
         ndsRendererHardwareArmBattleStaticTextures();
+    }
+#if NDS_TICK_HUD
+    /* P2-2p8 Phase 0: fold this tick's gameplay state into the replay digest
+     * (published per presented frame as DGSA/DGSB). */
+    if (update_index < 2u)
+    {
+        sNdsReplayDigest[update_index] = ndsReplayDigestTick();
+    }
+#endif
+    /* P2-2p8 A6: a logic tick that is not followed by a draw still ends at
+     * the point where the source's per-frame draw rebuilt gGMCameraMatrix. */
+    if ((update_index + 1u) < NDS_BATTLE_PLAYABLE_REALTIME_UPDATES_PER_PRESENT)
+    {
+        ndsBattleCameraMatrixAtUndrawnTick();
     }
     /* BattleShip syTaskmanRunTask checks LoadScene immediately after
      * task_update and never draws the terminal update. */

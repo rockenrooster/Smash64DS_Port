@@ -2008,7 +2008,11 @@ static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
     /* Cycle 92 SGCO split. This array is sized by nNDSTickHudBucketCount, so a
      * bucket added without a name here leaves a NULL the HUD would dereference;
      * it must move with the enum. */
-    "SINT", "SPHD", "SPHC"
+    "SINT", "SPHD", "SPHC",
+    /* P2-2p8 Phase 0 MISC split and GX list usage. */
+    "MWPN", "MEFX", "MPRT", "MTEX", "GPOL", "GVTX",
+    /* P2-2p8 Phase 0 replay digest (not ticks). */
+    "DGSA", "DGSB"
 };
 
 /* Shell sort, Knuth gaps: no recursion, no allocation, and no worst case that

@@ -135,3 +135,25 @@ GObj *wpLinkBoomerangMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
     }
     return weapon_gobj;
 }
+
+/* P2-2p8 A6: is any Link boomerang alive? The battle host rebuilds
+ * gGMCameraMatrix after an undrawn logic tick only while one is, because the
+ * boomerang is that matrix's one gameplay reader (see
+ * ndsBattleCameraMatrixAtUndrawnTick in src/port/taskman_seam_battle_host.c).
+ * Kirby's copied boomerang is the same weapon kind. */
+sb32 ndsLinkBoomerangLive(void)
+{
+    GObj *gobj = gGCCommonLinks[nGCCommonLinkIDWeapon];
+
+    while (gobj != NULL)
+    {
+        const WPStruct *wp = wpGetStruct(gobj);
+
+        if ((wp != NULL) && (wp->kind == nWPKindBoomerang))
+        {
+            return TRUE;
+        }
+        gobj = gobj->link_next;
+    }
+    return FALSE;
+}
