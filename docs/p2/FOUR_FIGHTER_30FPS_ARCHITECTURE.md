@@ -654,6 +654,17 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   319 Kirby JumpAerialF1 native-program rejects are pre-existing. Slice 2c
   makes the admission fit with no new RAM and proves the exit and
   creation-time paths.
+- **Phase 1 slice 2c (2026-09-23, `b20b8f0f2b2`)**: the whole admission fits
+  with no new RAM -- the texture cache stores a compact identity instead of a
+  236 B key (124 -> 254 slots in less storage; 0 collisions), admitted textures
+  are carved without libnds records; shipping static RAM -9,068 B. Word 2 vs 0:
+  fighter uploads after GO 458 -> 0, native failures 293 -> 39 (the rest is one
+  pre-existing effect class; 280 came from a battle-pack bug fixed here), WORK-H
+  P50 / P95 / P99 1,634,304 / **2,449,779** / 2,996,454, FTR P95 907,763;
+  battle exit and creation-time admission proven; 1P open. Found: the stress
+  target's Sudden Death never ends (pre-existing; separate task). Next, slice 3:
+  lean for all four stress kinds and a cheap lean draw (FTR P99 <= 90K is the
+  phase gate; today P50 358K).
 
 ## 7. Found along the way
 
