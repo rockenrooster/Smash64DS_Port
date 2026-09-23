@@ -592,6 +592,19 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   match start** (Link AppearL, texture could not be bound). Replay digest
   proven (deterministic across builds; an item-rate poke diverges). Owed:
   shipping-config heap census (before Phase 3), MF experiment result.
+- **Phase 0 (2026-09-23), MF verdict: yes** (`artifacts/performance/2026-09-23_p2-2p8-mf-experiment/`).
+  Candidate B (structural re-encoding + static Huffman, one global table set)
+  is lossless on 1,570 / 1,570 clips and reaches **0.382x** on the worst four-kind
+  roster of all 495 (Yoshi + Captain + Pikachu + Ness: 579,904 B; 599,116 B with
+  tables and the non-AObj16 clips, ~111 KB under 710,000 B). LZ-class formats
+  reach only 0.53-0.73x. Risk carried into Phase 3: bind cost ~21-26K ticks per
+  2.2 KB clip (ESTIMATE; ~3x the A2 planning range, P95 clip 44-50K); the
+  mitigation is to spend the headroom keeping each kind's most-bound clips raw.
+- **Phase specs (2026-09-23)**: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`
+  (Phase 1 fighters, Phase 2 stage + MISC). Phase 1 started: slice 1 = Samus LOW
+  program 0 on an adopted packet, exact oracle, texture admission before GO.
+  Decided without an owner question: menus, CSS, Results and the 1P intro go lean
+  inside Phase 1 before its deletion step, so no dual path survives the phase.
 
 ## 7. Found along the way
 

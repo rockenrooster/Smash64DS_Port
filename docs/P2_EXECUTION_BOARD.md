@@ -59,9 +59,14 @@ resident via a new compact format (N02.04 stands); custom ARM7 audio. Phase:
 **Phase 0 instrument landed** (`3d62c6abf26`): WORK-H P50 1,689,088 / P95
 4,207,488 / P99 4,753,152, two-VBlank 5.7%. P95 is owned by a re-record
 episode (r49 re-records a tinted packet on every prim change) and the gate throws on
-Link AppearL native failures -- both are Phase 1 scope. Owed in Phase 0:
-shipping-config heap census, MF experiment verdict. Next: Phase 1 spec -> lean
-fighter path first slice. Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
+Link AppearL native failures -- both are Phase 1 scope. MF verdict **yes**
+(candidate B, 0.382x on the worst roster, byte-exact; bind cost is the Phase 3
+risk). Owed in Phase 0: shipping-config heap census. **Phase 1 in progress**:
+slice 1 = Samus LOW program 0 on an adopted packet (routes 0-3, exact oracle,
+texture admission before GO). Alongside (disjoint files): MF host encoder +
+C decoder + checker; ARM7 audio spec. Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
+Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`,
+`artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`.
 
 Previous focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
 09-22.** Every `docs/BUGS.md` row the owner

@@ -1,0 +1,308 @@
+{
+ "banks": {
+  "captain": {
+   "bytes": 414976,
+   "clips": 148,
+   "max": 10784,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "donkey": {
+   "bytes": 332512,
+   "clips": 151,
+   "max": 11568,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "fox": {
+   "bytes": 346244,
+   "clips": 156,
+   "max": 4896,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "kirby": {
+   "bytes": 392768,
+   "clips": 186,
+   "max": 7808,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "link": {
+   "bytes": 310912,
+   "clips": 142,
+   "max": 6304,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "luigi": {
+   "bytes": 35520,
+   "clips": 12,
+   "max": 6720,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "mario": {
+   "bytes": 339560,
+   "clips": 141,
+   "max": 6224,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "ness": {
+   "bytes": 387744,
+   "clips": 146,
+   "max": 8448,
+   "o2r_file_bytes": 399552,
+   "source": "o2r"
+  },
+  "pikachu": {
+   "bytes": 374280,
+   "clips": 139,
+   "max": 6480,
+   "o2r_file_bytes": 385568,
+   "source": "o2r"
+  },
+  "purin": {
+   "bytes": 176088,
+   "clips": 63,
+   "max": 8240,
+   "o2r_file_bytes": 22688,
+   "source": "o2r,pack"
+  },
+  "samus": {
+   "bytes": 294576,
+   "clips": 146,
+   "max": 6640,
+   "o2r_file_bytes": 0,
+   "source": "pack"
+  },
+  "yoshi": {
+   "bytes": 367104,
+   "clips": 140,
+   "max": 8480,
+   "o2r_file_bytes": 378864,
+   "source": "o2r"
+  }
+ },
+ "kinds": {
+  "captain": {
+   "all_main_bytes": 408624,
+   "class_bytes": {
+    "core": 340608,
+    "item": 48368,
+    "pipe": 4528,
+    "taunt": 4144,
+    "victim": 10976
+   },
+   "clips": 147,
+   "table_ids_not_aobj16_clips": [
+    1648,
+    1649,
+    1650,
+    1651
+   ],
+   "unmapped_symbols": []
+  },
+  "donkey": {
+   "all_main_bytes": 332512,
+   "class_bytes": {
+    "core": 274384,
+    "item": 39408,
+    "pipe": 7536,
+    "taunt": 2896,
+    "victim": 8288
+   },
+   "clips": 151,
+   "table_ids_not_aobj16_clips": [
+    932,
+    933
+   ],
+   "unmapped_symbols": []
+  },
+  "fox": {
+   "all_main_bytes": 345172,
+   "class_bytes": {
+    "core": 278996,
+    "item": 46720,
+    "pipe": 6064,
+    "taunt": 2576,
+    "victim": 10816
+   },
+   "clips": 155,
+   "table_ids_not_aobj16_clips": [
+    777,
+    778
+   ],
+   "unmapped_symbols": []
+  },
+  "kirby": {
+   "all_main_bytes": 389200,
+   "class_bytes": {
+    "copy": 87360,
+    "core": 237236,
+    "item": 46416,
+    "pipe": 5344,
+    "taunt": 3008,
+    "victim": 9836
+   },
+   "clips": 185,
+   "table_ids_not_aobj16_clips": [
+    1412,
+    1413
+   ],
+   "unmapped_symbols": []
+  },
+  "link": {
+   "all_main_bytes": 308560,
+   "class_bytes": {
+    "core": 245120,
+    "item": 45840,
+    "pipe": 4608,
+    "taunt": 4288,
+    "victim": 8704
+   },
+   "clips": 141,
+   "table_ids_not_aobj16_clips": [
+    1246,
+    1247
+   ],
+   "unmapped_symbols": []
+  },
+  "luigi": {
+   "all_main_bytes": 335832,
+   "class_bytes": {
+    "core": 263992,
+    "item": 54736,
+    "pipe": 4944,
+    "taunt": 4384,
+    "victim": 7776
+   },
+   "clips": 140,
+   "table_ids_not_aobj16_clips": [
+    633,
+    634
+   ],
+   "unmapped_symbols": []
+  },
+  "mario": {
+   "all_main_bytes": 335192,
+   "class_bytes": {
+    "core": 265512,
+    "item": 54736,
+    "pipe": 4944,
+    "taunt": 2224,
+    "victim": 7776
+   },
+   "clips": 140,
+   "table_ids_not_aobj16_clips": [
+    633,
+    634
+   ],
+   "unmapped_symbols": []
+  },
+  "ness": {
+   "all_main_bytes": 386256,
+   "class_bytes": {
+    "core": 311612,
+    "item": 56388,
+    "pipe": 5556,
+    "taunt": 4016,
+    "victim": 8684
+   },
+   "clips": 145,
+   "table_ids_not_aobj16_clips": [
+    1799,
+    1800,
+    1801,
+    1802,
+    1803
+   ],
+   "unmapped_symbols": []
+  },
+  "pikachu": {
+   "all_main_bytes": 374280,
+   "class_bytes": {
+    "core": 298040,
+    "item": 58400,
+    "pipe": 4592,
+    "taunt": 4288,
+    "victim": 8960
+   },
+   "clips": 139,
+   "table_ids_not_aobj16_clips": [
+    2081,
+    2082
+   ],
+   "unmapped_symbols": []
+  },
+  "purin": {
+   "all_main_bytes": 322904,
+   "class_bytes": {
+    "core": 251048,
+    "item": 51056,
+    "pipe": 5088,
+    "taunt": 5696,
+    "victim": 10016
+   },
+   "clips": 141,
+   "table_ids_not_aobj16_clips": [
+    1505,
+    1506
+   ],
+   "unmapped_symbols": []
+  },
+  "samus": {
+   "all_main_bytes": 291584,
+   "class_bytes": {
+    "core": 234708,
+    "item": 39776,
+    "pipe": 4908,
+    "taunt": 2480,
+    "victim": 9712
+   },
+   "clips": 145,
+   "table_ids_not_aobj16_clips": [
+    1013,
+    1014,
+    1090,
+    1091
+   ],
+   "unmapped_symbols": []
+  },
+  "yoshi": {
+   "all_main_bytes": 363152,
+   "class_bytes": {
+    "core": 286732,
+    "item": 56496,
+    "pipe": 5108,
+    "taunt": 5168,
+    "victim": 9648
+   },
+   "clips": 139,
+   "table_ids_not_aobj16_clips": [
+    1953,
+    1954
+   ],
+   "unmapped_symbols": []
+  }
+ },
+ "stress_tight": {
+  "donkey": {
+   "bytes": 316688,
+   "clips": 142
+  },
+  "kirby": {
+   "bytes": 320468,
+   "clips": 163
+  },
+  "link": {
+   "bytes": 301008,
+   "clips": 135
+  },
+  "samus": {
+   "bytes": 283748,
+   "clips": 138
+  }
+ }
+}

@@ -1,0 +1,581 @@
+{
+ "target_bytes": 710000,
+ "global_tables": 12864,
+ "kind_tables": {
+  "mario": 2672,
+  "fox": 2462,
+  "donkey": 2057,
+  "samus": 2399,
+  "luigi": 828,
+  "link": 1701,
+  "yoshi": 3105,
+  "captain": 2373,
+  "kirby": 4398,
+  "pikachu": 2009,
+  "purin": 2217,
+  "ness": 2561
+ },
+ "worst_by_raw": [
+  {
+   "clips": 559,
+   "raw": 1516776,
+   "B_global": 579904,
+   "B_kind": 573776,
+   "banks": [
+    "captain",
+    "ness",
+    "pikachu",
+    "yoshi"
+   ],
+   "A32": 1075815,
+   "roster": [
+    "yoshi",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 572,
+   "raw": 1492872,
+   "B_global": 566392,
+   "B_kind": 558092,
+   "banks": [
+    "captain",
+    "donkey",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1052674,
+   "roster": [
+    "donkey",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 571,
+   "raw": 1492204,
+   "B_global": 566352,
+   "B_kind": 559241,
+   "banks": [
+    "captain",
+    "fox",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1054387,
+   "roster": [
+    "fox",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 560,
+   "raw": 1491632,
+   "B_global": 566044,
+   "B_kind": 559867,
+   "banks": [
+    "captain",
+    "mario",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1051714,
+   "roster": [
+    "mario",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 576,
+   "raw": 1488208,
+   "B_global": 560976,
+   "B_kind": 555316,
+   "banks": [
+    "captain",
+    "donkey",
+    "ness",
+    "yoshi"
+   ],
+   "A32": 1047317,
+   "roster": [
+    "donkey",
+    "yoshi",
+    "captain",
+    "ness"
+   ]
+  },
+  {
+   "clips": 559,
+   "raw": 1487904,
+   "B_global": 564888,
+   "B_kind": 559607,
+   "banks": [
+    "captain",
+    "luigi",
+    "mario",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1068891,
+   "roster": [
+    "luigi",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 575,
+   "raw": 1487572,
+   "B_global": 560928,
+   "B_kind": 556457,
+   "banks": [
+    "captain",
+    "fox",
+    "ness",
+    "yoshi"
+   ],
+   "A32": 1049092,
+   "roster": [
+    "fox",
+    "yoshi",
+    "captain",
+    "ness"
+   ]
+  },
+  {
+   "clips": 564,
+   "raw": 1486712,
+   "B_global": 560472,
+   "B_kind": 556935,
+   "banks": [
+    "captain",
+    "mario",
+    "ness",
+    "yoshi"
+   ],
+   "A32": 1045850,
+   "roster": [
+    "mario",
+    "yoshi",
+    "captain",
+    "ness"
+   ]
+  },
+  {
+   "clips": 563,
+   "raw": 1482984,
+   "B_global": 559316,
+   "B_kind": 556675,
+   "banks": [
+    "captain",
+    "luigi",
+    "mario",
+    "ness",
+    "yoshi"
+   ],
+   "A32": 1063027,
+   "roster": [
+    "luigi",
+    "yoshi",
+    "captain",
+    "ness"
+   ]
+  },
+  {
+   "clips": 557,
+   "raw": 1477472,
+   "B_global": 557696,
+   "B_kind": 553942,
+   "banks": [
+    "captain",
+    "kirby",
+    "ness",
+    "pikachu",
+    "purin"
+   ],
+   "A32": 1064605,
+   "roster": [
+    "captain",
+    "pikachu",
+    "purin",
+    "ness"
+   ]
+  }
+ ],
+ "worst_by_B_global": [
+  {
+   "clips": 559,
+   "raw": 1516776,
+   "B_global": 579904,
+   "B_kind": 573776,
+   "banks": [
+    "captain",
+    "ness",
+    "pikachu",
+    "yoshi"
+   ],
+   "A32": 1075815,
+   "roster": [
+    "yoshi",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 572,
+   "raw": 1492872,
+   "B_global": 566392,
+   "B_kind": 558092,
+   "banks": [
+    "captain",
+    "donkey",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1052674,
+   "roster": [
+    "donkey",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 571,
+   "raw": 1492204,
+   "B_global": 566352,
+   "B_kind": 559241,
+   "banks": [
+    "captain",
+    "fox",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1054387,
+   "roster": [
+    "fox",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 560,
+   "raw": 1491632,
+   "B_global": 566044,
+   "B_kind": 559867,
+   "banks": [
+    "captain",
+    "mario",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1051714,
+   "roster": [
+    "mario",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 559,
+   "raw": 1487904,
+   "B_global": 564888,
+   "B_kind": 559607,
+   "banks": [
+    "captain",
+    "luigi",
+    "mario",
+    "ness",
+    "pikachu"
+   ],
+   "A32": 1068891,
+   "roster": [
+    "luigi",
+    "captain",
+    "pikachu",
+    "ness"
+   ]
+  },
+  {
+   "clips": 569,
+   "raw": 1474648,
+   "B_global": 563024,
+   "B_kind": 555140,
+   "banks": [
+    "captain",
+    "donkey",
+    "pikachu",
+    "yoshi"
+   ],
+   "A32": 1037604,
+   "roster": [
+    "donkey",
+    "yoshi",
+    "captain",
+    "pikachu"
+   ]
+  },
+  {
+   "clips": 568,
+   "raw": 1473660,
+   "B_global": 562784,
+   "B_kind": 556101,
+   "banks": [
+    "captain",
+    "fox",
+    "pikachu",
+    "yoshi"
+   ],
+   "A32": 1039076,
+   "roster": [
+    "fox",
+    "yoshi",
+    "captain",
+    "pikachu"
+   ]
+  },
+  {
+   "clips": 557,
+   "raw": 1472896,
+   "B_global": 562420,
+   "B_kind": 556663,
+   "banks": [
+    "captain",
+    "mario",
+    "pikachu",
+    "yoshi"
+   ],
+   "A32": 1036134,
+   "roster": [
+    "mario",
+    "yoshi",
+    "captain",
+    "pikachu"
+   ]
+  },
+  {
+   "clips": 556,
+   "raw": 1469168,
+   "B_global": 561264,
+   "B_kind": 556403,
+   "banks": [
+    "captain",
+    "luigi",
+    "mario",
+    "pikachu",
+    "yoshi"
+   ],
+   "A32": 1053311,
+   "roster": [
+    "luigi",
+    "yoshi",
+    "captain",
+    "pikachu"
+   ]
+  },
+  {
+   "clips": 576,
+   "raw": 1488208,
+   "B_global": 560976,
+   "B_kind": 555316,
+   "banks": [
+    "captain",
+    "donkey",
+    "ness",
+    "yoshi"
+   ],
+   "A32": 1047317,
+   "roster": [
+    "donkey",
+    "yoshi",
+    "captain",
+    "ness"
+   ]
+  }
+ ],
+ "stress_worst_stage": {
+  "clips": 590,
+  "raw": 1244308,
+  "B_global": 460328,
+  "B_kind": 452571,
+  "banks": [
+   "donkey",
+   "kirby",
+   "link",
+   "samus"
+  ],
+  "A32": 864065,
+  "roster": [
+   "donkey",
+   "samus",
+   "link",
+   "kirby"
+  ]
+ },
+ "stress_dreamland": {
+  "clips": 578,
+  "raw": 1221912,
+  "B_global": 452788,
+  "B_kind": 445167,
+  "banks": [
+   "donkey",
+   "kirby",
+   "link",
+   "samus"
+  ],
+  "A32": 851404,
+  "roster": [
+   "dreamland",
+   "donkey",
+   "samus",
+   "link",
+   "kirby"
+  ]
+ },
+ "per_kind_worst": {
+  "mario": {
+   "raw": 338744,
+   "clips": 140,
+   "B_global_ex_tables": 123380,
+   "largest_clip": 6224,
+   "opponents": [
+    "donkey",
+    "luigi",
+    "captain"
+   ]
+  },
+  "fox": {
+   "raw": 343700,
+   "clips": 154,
+   "B_global_ex_tables": 125236,
+   "largest_clip": 4896,
+   "opponents": [
+    "mario",
+    "donkey",
+    "captain"
+   ]
+  },
+  "donkey": {
+   "raw": 328432,
+   "clips": 148,
+   "B_global_ex_tables": 119492,
+   "largest_clip": 11568,
+   "opponents": [
+    "mario",
+    "yoshi",
+    "captain"
+   ]
+  },
+  "samus": {
+   "raw": 292832,
+   "clips": 144,
+   "B_global_ex_tables": 106212,
+   "largest_clip": 6640,
+   "opponents": [
+    "fox",
+    "donkey",
+    "captain"
+   ]
+  },
+  "luigi": {
+   "raw": 335016,
+   "clips": 139,
+   "B_global_ex_tables": 122224,
+   "largest_clip": 6720,
+   "opponents": [
+    "mario",
+    "donkey",
+    "captain"
+   ]
+  },
+  "link": {
+   "raw": 309312,
+   "clips": 140,
+   "B_global_ex_tables": 111964,
+   "largest_clip": 6304,
+   "opponents": [
+    "donkey",
+    "yoshi",
+    "captain"
+   ]
+  },
+  "yoshi": {
+   "raw": 366208,
+   "clips": 139,
+   "B_global_ex_tables": 138220,
+   "largest_clip": 8480,
+   "opponents": [
+    "mario",
+    "donkey",
+    "captain"
+   ]
+  },
+  "captain": {
+   "raw": 410272,
+   "clips": 147,
+   "B_global_ex_tables": 149236,
+   "largest_clip": 10784,
+   "opponents": [
+    "mario",
+    "donkey",
+    "yoshi"
+   ]
+  },
+  "kirby": {
+   "raw": 339000,
+   "clips": 165,
+   "B_global_ex_tables": 118852,
+   "largest_clip": 7808,
+   "opponents": [
+    "donkey",
+    "yoshi",
+    "captain"
+   ]
+  },
+  "pikachu": {
+   "raw": 373400,
+   "clips": 138,
+   "B_global_ex_tables": 144544,
+   "largest_clip": 6480,
+   "opponents": [
+    "mario",
+    "donkey",
+    "captain"
+   ]
+  },
+  "purin": {
+   "raw": 329472,
+   "clips": 140,
+   "B_global_ex_tables": 116764,
+   "largest_clip": 8240,
+   "opponents": [
+    "mario",
+    "donkey",
+    "captain"
+   ]
+  },
+  "ness": {
+   "raw": 387024,
+   "clips": 145,
+   "B_global_ex_tables": 142508,
+   "largest_clip": 8448,
+   "opponents": [
+    "mario",
+    "donkey",
+    "captain"
+   ]
+  }
+ },
+ "rosters_over_target_B_global": 0
+}

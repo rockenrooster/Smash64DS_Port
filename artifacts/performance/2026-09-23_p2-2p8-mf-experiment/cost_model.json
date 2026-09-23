@@ -1,0 +1,250 @@
+{
+ "P6": {
+  "lut_bits": 6,
+  "table_ram_bytes": {
+   "lut": 4352,
+   "canon": 1326,
+   "symbols": 7660,
+   "succ": 10978,
+   "words": 2496
+  },
+  "table_ram_total": 26812,
+  "all_1570": {
+   "raw": {
+    "mean": 2402.728662420382,
+    "median": 2256.0,
+    "p95": 4512,
+    "max": 11568
+   },
+   "comp": {
+    "mean": 869.7254777070063,
+    "median": 811.0,
+    "p95": 1691,
+    "max": 3670
+   },
+   "symbols": {
+    "mean": 1183.7828025477706,
+    "median": 1110.0,
+    "p95": 2247,
+    "max": 5744
+   },
+   "instr_cycles": {
+    "mean": 44383.94012738854,
+    "median": 41456.5,
+    "p95": 85118,
+    "max": 201341
+   },
+   "src_miss_cycles": {
+    "mean": 1318.940127388535,
+    "median": 1242.0,
+    "p95": 2484,
+    "max": 5336
+   },
+   "table_lines": {
+    "mean": 223.19490445859873,
+    "median": 223.0,
+    "p95": 299,
+    "max": 373
+   },
+   "table_miss_cycles": {
+    "mean": 10266.965605095542,
+    "median": 10258.0,
+    "p95": 13754,
+    "max": 17158
+   }
+  },
+  "pack_1139": {
+   "raw": {
+    "mean": 2301.0956979806847,
+    "median": 2192,
+    "p95": 4224,
+    "max": 11568
+   },
+   "comp": {
+    "mean": 821.6286215978929,
+    "median": 781,
+    "p95": 1519,
+    "max": 3670
+   },
+   "symbols": {
+    "mean": 1132.7796312554872,
+    "median": 1075,
+    "p95": 2101,
+    "max": 5744
+   },
+   "instr_cycles": {
+    "mean": 42276.70237050044,
+    "median": 40096,
+    "p95": 77327,
+    "max": 201341
+   },
+   "src_miss_cycles": {
+    "mean": 1249.5926251097453,
+    "median": 1196,
+    "p95": 2254,
+    "max": 5336
+   },
+   "table_lines": {
+    "mean": 219.32133450395082,
+    "median": 219,
+    "p95": 292,
+    "max": 369
+   },
+   "table_miss_cycles": {
+    "mean": 10088.781387181738,
+    "median": 10074,
+    "p95": 13432,
+    "max": 16974
+   }
+  },
+  "instr_cycles_per_output_byte": 18.472306432919684,
+  "largest_clip": {
+   "raw": 11568,
+   "comp": 3670,
+   "bits": 29353,
+   "symbols": 5744,
+   "instr_cycles": 201341,
+   "src_miss_cycles": 5336,
+   "table_lines": 205,
+   "table_miss_cycles": 9430
+  },
+  "ticks_dtcm": {
+   "mean_all": 22851.440127388534,
+   "mean_pack": 21763.147497805094,
+   "p95_all": 43801.0,
+   "largest_clip": 103338.5,
+   "per_2200B_raw": 20858.32033770481
+  },
+  "ticks_cold": {
+   "mean_all": 27984.922929936307,
+   "mean_pack": 26807.53819139596,
+   "p95_all": 50389.5,
+   "largest_clip": 108053.5,
+   "per_2200B_raw": 26449.297336061598
+  }
+ },
+ "P8": {
+  "lut_bits": 8,
+  "table_ram_bytes": {
+   "lut": 17408,
+   "canon": 1326,
+   "symbols": 7660,
+   "succ": 10978,
+   "words": 2496
+  },
+  "table_ram_total": 39868,
+  "all_1570": {
+   "raw": {
+    "mean": 2402.728662420382,
+    "median": 2256.0,
+    "p95": 4512,
+    "max": 11568
+   },
+   "comp": {
+    "mean": 869.7254777070063,
+    "median": 811.0,
+    "p95": 1691,
+    "max": 3670
+   },
+   "symbols": {
+    "mean": 1183.7828025477706,
+    "median": 1110.0,
+    "p95": 2247,
+    "max": 5744
+   },
+   "instr_cycles": {
+    "mean": 41891.23821656051,
+    "median": 39138.5,
+    "p95": 80395,
+    "max": 191462
+   },
+   "src_miss_cycles": {
+    "mean": 1318.940127388535,
+    "median": 1242.0,
+    "p95": 2484,
+    "max": 5336
+   },
+   "table_lines": {
+    "mean": 342.08089171974524,
+    "median": 346.0,
+    "p95": 455,
+    "max": 567
+   },
+   "table_miss_cycles": {
+    "mean": 15735.72101910828,
+    "median": 15916.0,
+    "p95": 20930,
+    "max": 26082
+   }
+  },
+  "pack_1139": {
+   "raw": {
+    "mean": 2301.0956979806847,
+    "median": 2192,
+    "p95": 4224,
+    "max": 11568
+   },
+   "comp": {
+    "mean": 821.6286215978929,
+    "median": 781,
+    "p95": 1519,
+    "max": 3670
+   },
+   "symbols": {
+    "mean": 1132.7796312554872,
+    "median": 1075,
+    "p95": 2101,
+    "max": 5744
+   },
+   "instr_cycles": {
+    "mean": 39931.453028972785,
+    "median": 37950,
+    "p95": 73122,
+    "max": 191462
+   },
+   "src_miss_cycles": {
+    "mean": 1249.5926251097453,
+    "median": 1196,
+    "p95": 2254,
+    "max": 5336
+   },
+   "table_lines": {
+    "mean": 336.7673397717296,
+    "median": 342,
+    "p95": 446,
+    "max": 567
+   },
+   "table_miss_cycles": {
+    "mean": 15491.29762949956,
+    "median": 15732,
+    "p95": 20516,
+    "max": 26082
+   }
+  },
+  "instr_cycles_per_output_byte": 17.43486015368938,
+  "largest_clip": {
+   "raw": 11568,
+   "comp": 3670,
+   "bits": 29353,
+   "symbols": 5744,
+   "instr_cycles": 191462,
+   "src_miss_cycles": 5336,
+   "table_lines": 321,
+   "table_miss_cycles": 14766
+  },
+  "ticks_dtcm": {
+   "mean_all": 21605.089171974523,
+   "mean_pack": 20590.522827041263,
+   "p95_all": 41439.5,
+   "largest_clip": 98399.0,
+   "per_2200B_raw": 19727.841367040826
+  },
+  "ticks_cold": {
+   "mean_all": 29472.949681528662,
+   "mean_pack": 28336.171641791047,
+   "p95_all": 51666.0,
+   "largest_clip": 105782.0,
+   "per_2200B_raw": 28222.190217979874
+  }
+ }
+}
