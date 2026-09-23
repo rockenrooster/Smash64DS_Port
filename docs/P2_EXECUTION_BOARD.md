@@ -61,10 +61,13 @@ resident via a new compact format (N02.04 stands); custom ARM7 audio. Phase:
 episode (r49 re-records a tinted packet on every prim change) and the gate throws on
 Link AppearL native failures -- both are Phase 1 scope. MF verdict **yes**
 (candidate B, 0.382x on the worst roster, byte-exact; bind cost is the Phase 3
-risk). Owed in Phase 0: shipping-config heap census. **Phase 1 in progress**:
+risk). **Phase 0 closed**: the shipping-config census found the heaviest
+reachable roster (Captain/Link/Pikachu/Kirby) halts at battle load, ~130 KB
+short (`artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`); Phase 3's
+RAM work is now a correctness prerequisite. **Phase 1 in progress**:
 slice 1 = Samus LOW program 0 on an adopted packet (routes 0-3, exact oracle,
-texture admission before GO). Alongside (disjoint files): MF host encoder +
-C decoder + checker; ARM7 audio spec. Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
+texture admission before GO). Alongside (disjoint files, integrator): MF host
+encoder + C decoder + checker. ARM7 audio spec queued (one subagent at a time). Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`,
 `artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`.
 

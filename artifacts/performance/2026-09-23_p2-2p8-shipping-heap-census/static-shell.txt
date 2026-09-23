@@ -1,0 +1,67 @@
+== allocated sections
+  .vectors                     PROGBITS  0x00000000        32  OTHER
+  .itcm                        PROGBITS  0x01ff8020     31776  ITCM
+  .crt0                        PROGBITS  0x02001000       960  MAIN
+  .text.hot                    PROGBITS  0x020013c0      4472  MAIN
+  .text.hot.draw               PROGBITS  0x02002538      6040  MAIN
+  .main                        PROGBITS  0x02003cd0   1568508  MAIN
+  .main.rw                     PROGBITS  0x02182be0    228612  MAIN
+  .eh_frame                    PROGBITS  0x021ba8e4         4  MAIN
+  .tinfo                       PROGBITS  0x021ba8e8        12  MAIN
+  .init_array                  INIT_ARRAY 0x021ba8f4         8  MAIN
+  .fini_array                  FINI_ARRAY 0x021ba8fc         4  MAIN
+  .main.bss                    NOBITS    0x021ba900    904560  MAIN
+  .dtcm                        PROGBITS  0x02ff0000      8800  DTCM
+  .dtcm.bss                    NOBITS    0x02ff2260      2000  DTCM
+  .dldi                        PROGBITS  0x0380b000     16384  OTHER
+  .secure                      PROGBITS  0x0e000000      2048  OTHER
+  .bootstub                    PROGBITS  0x0e000800       408  OTHER
+  .loadlist                    PROGBITS  0x0e000998        48  OTHER
+  .twl.loadlist                PROGBITS  0x0e0009c8        12  OTHER
+== bytes per region
+  DTCM       10800
+  ITCM       31776
+  MAIN     2713180
+  OTHER      18932
+== largest data/bss symbols (all regions)
+     237568  b  0x021c95ec  MAIN   sNdsAudioFgmCache
+     147840  B  0x0223d0cc  MAIN   gSYFramebufferSets
+      32768  b  0x02225148  MAIN   sNdsRendererHardwareTextureScratch
+      28800  b  0x02275c68  MAIN   sNdsRendererAdapterNativeOwnerMaterials
+      24256  b  0x0220dc40  MAIN   sNdsRendererTask36ReplayOwner
+      18644  b  0x0222d5a4  MAIN   sNdsRendererHardwareTextureKeyPool
+      18336  b  0x021c4dc0  MAIN   sNdsAudioFgmEntries
+      16392  b  0x021c013c  MAIN   sNdsAudioBgmBuffers
+      16384  b  0x0221f614  MAIN   sNdsRendererHardwareTextureRefreshLarge
+      15816  b  0x0226ce20  MAIN   sNdsRendererAdapterNativeStageWorkspace
+      14192  b  0x02233a80  MAIN   sNdsFighterPackets
+      13312  B  0x02238350  MAIN   sSYMainThread5Stack
+      12432  b  0x02270bf0  MAIN   sNdsRendererAdapterNativeOwnerWorkspace
+      10912  D  0x021b3454  MAIN   gNdsParticleScriptBank
+       9600  b  0x021bd4a0  MAIN   sNdsFtAnimStreamDir
+       8824  b  0x02217a80  MAIN   sNdsNativeFighterOwnerExecution
+       7680  b  0x02287f34  MAIN   sNdsAObjEvent32Plan
+       7504  b  0x02206da0  MAIN   sNdsR2RunTextureMemo
+       7504  b  0x02205040  MAIN   sNdsNativeFighterRunUvInputs
+       7360  b  0x02215dc0  MAIN   sNdsNativeStageOwnerExecution
+       6904  b  0x0221429c  MAIN   sNdsNativeStagePreparedDense
+       6888  b  0x02209700  MAIN   sNdsRebirthHaloPackets
+       6130  d  0x02ff0994  DTCM   sNdsNativeFighterPreparedDense
+       5780  b  0x0226923c  MAIN   sNdsRendererAdapterStageVertexCache
+       5780  b  0x022621a0  MAIN   persistent_renderer_vertices.23
+       5632  b  0x0220c4a4  MAIN   sNdsRendererStageTextureSites
+       5580  b  0x0228ff04  MAIN   sNdsItAttributes
+       5456  b  0x02231e78  MAIN   sNdsRendererHardwareTextureCache
+       5408  b  0x022666a8  MAIN   sNdsFtrDrawMemo
+       5376  b  0x0227eeb0  MAIN   sNdsRelocLoadedFiles
+       4740  d  0x02182db4  MAIN   sNdsNativeFighterPreparedDenseLow
+       4704  b  0x02267f30  MAIN   sNdsFighterDisplayContract
+       4700  b  0x021bb0b0  MAIN   sNdsIFCommonAssets
+       4280  D  0x021b7758  MAIN   dFTCommonActionStatusDescs
+       4192  b  0x0221d244  MAIN   sNdsRendererHardwareLightShadeCache
+       4128  b  0x0220b220  MAIN   sNdsRendererWhispyPacket
+       4096  b  0x02292df8  MAIN   sNdsBackupImage
+       4096  b  0x0227d438  MAIN   sNdsR2AnimCache
+       4096  b  0x02223614  MAIN   sNdsRendererHardwareTextureRefreshSmall
+       4096  b  0x0221c0dc  MAIN   sNdsRendererEntryEffectModelview
+== main RAM symbol bytes: bss 904111  data 228172

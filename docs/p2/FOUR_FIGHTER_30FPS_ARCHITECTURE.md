@@ -605,6 +605,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   program 0 on an adopted packet, exact oracle, texture admission before GO.
   Decided without an owner question: menus, CSS, Results and the 1P intro go lean
   inside Phase 1 before its deletion step, so no dual path survives the phase.
+- **Phase 0 closed (2026-09-23): shipping heap census**
+  (`artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`). The shipping
+  shell with the heaviest reachable roster (Captain human; Link, Pikachu, Kirby
+  CPUs) **halts at battle load**: arena 1,138,432 B, 178,784 B free at the first
+  fighter, `ndsSyMallocOverflowHalt` on Kirby's 35,272 B battle pack with 3,676 B
+  left -- about 130 KB short of a running match with the 25,600 B floor. Stage,
+  common and item files hold ~546 KB before any fighter (Dream Land's whole ground
+  file alone 202,816 B). The shipping image is 190,728 B larger than the four-CPU
+  gate ROM's, so the gate ROM measures a machine with more arena than ships.
+  Consequence: Phase 3's RAM work (A7 overlays, A8 FGM cache, A2 admission) is a
+  correctness prerequisite for "any four fighters", and every phase report adds
+  the shipping arena and this roster's load margin.
 
 ## 7. Found along the way
 
@@ -619,7 +631,8 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   R2 reuse key matches, and that key has no camera input (`:4263-4285`,
   `:4706-4712`).
 - **DTCM holds Mario's tables** for rosters without Mario (A7).
-- **The shipping build's four-fighter heap has never been measured** (A7).
+- **The shipping build cannot load the heaviest four-kind roster** (A7; measured
+  2026-09-23, Phase 0 log): Captain/Link/Pikachu/Kirby halts ~130 KB short.
 
 ## 8. Owner rulings (2026-09-22)
 

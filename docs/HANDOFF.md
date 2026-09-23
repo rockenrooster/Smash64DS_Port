@@ -12,6 +12,14 @@ document's sections 0, 6 and 8, then the board cursor. Phase evidence lives unde
 `artifacts/performance/2026-09-2*_p2-2p8-*`; `scripts/compare-replay-digest.py`
 is the gameplay-equivalence check every phase runs.
 
+Phase 0 closed 2026-09-23; Phase 1 (fighters) is active. Carry into every
+phase: the shipping configuration cannot load the heaviest four-kind roster
+(Captain/Link/Pikachu/Kirby halts ~130 KB short at battle load,
+`artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`), and the four-CPU
+gate ROM has ~0.2 MB more arena than the shipping image -- report the shipping
+arena and that roster's load margin with every phase. One subagent at a time
+(owner, 2026-09-22).
+
 ## Continue, do not restart
 
 With an intact context, execute the cursor's next unfinished action. Do not
