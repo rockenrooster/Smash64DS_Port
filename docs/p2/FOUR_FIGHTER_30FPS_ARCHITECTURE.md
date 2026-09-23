@@ -686,6 +686,29 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   identical. Shipping shell 1P: the first battle now loads and completes; the next
   blocker is stage 2's intro loading full fighter files. Flag default 0 until
   slice 4 lands, then on.
+- **Phase 1 slice 4 (2026-09-23, `3fd3262357c`,
+  `artifacts/performance/2026-09-23_p2-2p8-phase1-slice4/`)**: the lean path no
+  longer adopts recorded packets -- it materializes each list on the device from
+  the generated owner tables in the LOAD4x3 + P' layout, keyed by content (lists
+  survive model-part swaps and rebuilt MObjs), with fold-free tint repatch and
+  small-diff variant records. Route 1: 0 recordings, 0 declines, 100% lean share
+  for the four kinds; route 2 oracle 0 mismatches over 13.6M words; digest
+  identical; native failures 39 = 39. Admit 2, route 1 vs slice 3: FTR P50 / P95 /
+  P99 229,056 / 435,251 / 1,025,600 -> **227,488 / 318,557 / 812,284**; WORK-H
+  1,512,928 / 2,284,672 / 2,896,626 -> **1,507,808 / 2,138,586 / 2,763,228**.
+  Host proof: every recorded packet reproduced word-exact after masking; the
+  matrix layout moves clip row 3 by at most 1 LSB (0.006 px). Cost: shipping static
+  +11,312 B (lists are built at the first draw from owner tables that stay
+  resident; deletion returns production's RAM), gate-ROM heap low-water 54,020 ->
+  37,636 B (4 arena pages). Open: DK's shape-changing hand swaps still materialize
+  (26 x 537K ticks); high-detail DK/Link lists exceed an entry (Capacity decline);
+  Samus's key carries the Kirby trio head key. Found alongside: **the all-content
+  VS character select had switched every 3D preview off** -- static growth took the
+  heap under its animation reservation (fixed `050b7c18db4`,
+  `artifacts/performance/2026-09-23_css-preview-heap/`); with slice 4 it keeps
+  192,464 B against 183,072 required, 9,392 B of margin that every static byte
+  spends. Next: flip `NDS_IF_GAMESTATUS_COMPACT` on after its 1P/menu-loop proofs,
+  then the 1P intro packs and the phase's deletion step.
 
 ## 7. Found along the way
 

@@ -51,57 +51,36 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS -- architecture.**
-Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (keep the rules, replace the
-machinery; pillars A1-A10, phases 0-7). Owner rulings D1-D7 recorded in its
-section 8: gate stays P95; renderer replaced outright; tolerance classes approved,
-body-hurtbox hold kept; no run-ahead; visual reserve case by case; every motion
-resident via a new compact format (N02.04 stands); custom ARM7 audio. Phase:
-**Phase 0 instrument landed** (`3d62c6abf26`): WORK-H P50 1,689,088 / P95
-4,207,488 / P99 4,753,152, two-VBlank 5.7%. P95 is owned by a re-record
-episode (a texture-VRAM fence storm, per slice 1) and the gate throws on
-Link AppearL native failures -- both are Phase 1 scope. MF verdict **yes**
-(candidate B, 0.382x on the worst roster, byte-exact; bind cost is the Phase 3
-risk). **Phase 0 closed**: the shipping-config census found the heaviest
-reachable roster (Captain/Link/Pikachu/Kirby) halts at battle load, ~130 KB
-short (`artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`); Phase 3's
-RAM work is now a correctness prerequisite. **Phase 1 in progress**:
-slice 1 landed (`c33274f8345`: Samus LOW lean path, exact oracle, route 1 FTR
-P95 -11%); it found the P95 episode is a texture-VRAM fence storm and Link's
-entry failure is VRAM exhaustion. Slice 2a (`f1476de32dd`) measured it:
-fragmentation in a full A+B, and BG3's bank D empty in VS battles. Slice 2b
-(`bd29b08e282`, word `gNdsFtrLeanAdmit`=2, default 0): WORK-H P95 4.21M ->
-2.53M, Link entry failures 0. Slice 2c (`b20b8f0f2b2`): whole admission with
-no new RAM, uploads after GO 0, WORK-H P95 2.45M at word 2. Slice 3
-(`08736558f3b`): lean for all four stress kinds, FTR P50 229K / WORK-H P50
-1.51M at route 1. **Slice 4 in progress**: host-generated fighter lists.
-Found: the first 1P battle OOMs at load (pre-existing). Integrator (A7):
-compact IFCommonGameStatus (`002e5999244`, flag `NDS_IF_GAMESTATUS_COMPACT`,
-default 0 until slice 4 lands) frees ~110 KB per battle -- four-CPU low-water
-54,020 -> 122,412 B, digest identical -- and with it the first 1P battle loads
-and completes; bank D proven in a 1P battle. Next 1P blocker: stage 2's intro
-loads Yoshi's full 144,640 B main file (the pack loader is gated to CSS/battle
-scenes; `ndsRelocPreviewFighterLoadBegin`). Alongside (disjoint files, integrator): MF host
-encoder + C decoder + checker. ARM7 audio spec queued (one subagent at a time). Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
-Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`,
-`artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`.
+Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (pillars A1-A10, phases 0-7;
+owner rulings D1-D7 in section 8; every slice's numbers in the section 6
+phase log). Phase 0 closed 09-23 (instrument out of the gate; the heaviest
+roster halts ~130 KB short at battle load in the shipping config).
+**Phase 1 (fighters) active**: slices 1-4 landed, last `3fd3262357c` -- lists
+materialized on the device, 0 declines, oracle 0 mismatches; at admit word 2
+(default 0) route 1 FTR P95 319K, WORK-H P50 / P95 1.51M / 2.14M. A7 prep
+landed behind `NDS_IF_GAMESTATUS_COMPACT` (default 0): +68 KB four-CPU
+low-water, the first 1P battle loads. MF host encoder + C decoder landed
+(not linked).
+**Next**: compact GameStatus default on (1P battles, menu loop and the GAME
+SET stream first); 1P stage-2 intro packs (the intro loads full fighter mains;
+the pack loader is gated to CSS/battle, `ndsRelocPreviewFighterLoadBegin`);
+then the phase's deletion step. ARM7 audio spec queued. One subagent at a time.
+**Constraint**: the all-content VS character select keeps >= 183,072 B at its
+animation reservation or every 3D preview switches off (fixed `050b7c18db4`;
+9,392 B margin after slice 4): measure with
+`artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`
+after any static growth.
+Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`. Evidence:
+`artifacts/performance/2026-09-2*_p2-2p8-*`.
 
-Previous focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
-09-22.** Every `docs/BUGS.md` row the owner
-opened is either removed by the owner (fixed through r54) or owner-DEFERRED:
-C1 CSS hover-to-preview delay (profile + resume plan: `p2/BUG_NOTES.md` "C1")
-and S3 Saffron door. Only a descriptionless "-VS options" line remains.
-Status table: `docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md`.
-
-**ROOT ROM = r54** `C8FC02AA2DF0BB6E` (copy in
-`builds/remaining-bugs-playtest-r54/`), pushed through `2a144b426d0`.
-Owner-closed this sweep: castle roof (wrap period), eyes (texture-part byte
-lane + run-memo fence), Zebes, Yoshi egg roll, MK BGM, Dream Land (r40
-revert), Link's CSS boots (preview pack Span T, `538862570e7`).
-
-**Owed:** Boundary/Latest never run on this tree; the r52 memo fence and r54
-pack growth (Link +1,336 B, Kirby +1,368 B inside the fixed 80 KiB CSS block)
-are proven by probes and host tests only. `test_preview_pack_loader.py` fails
-at collection on a pre-existing pin drift (task chip offered).
+Previous focus (CLOSED 09-22): the remaining-BUGS sweep. Every owner-opened
+`docs/BUGS.md` row is fixed through r54 or owner-DEFERRED (C1 CSS hover delay,
+`p2/BUG_NOTES.md` "C1"; S3 Saffron door); only a descriptionless "-VS options"
+line remains. **ROOT ROM = r54** `C8FC02AA2DF0BB6E`
+(`builds/remaining-bugs-playtest-r54/`). Status table:
+`docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md`. **Owed:** Boundary/Latest
+on that tree; the r52 memo fence and r54 pack growth are proven by probes and
+host tests only; `test_preview_pack_loader.py` fails at collection (pin drift).
 P2-2p8 policy remains parked below.
 **NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):
 ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES

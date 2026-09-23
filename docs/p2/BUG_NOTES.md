@@ -5030,6 +5030,38 @@ Remaining: complete Yoshi action/detail/entry coverage, wider qualification and
 owner acceptance. Other diagnosis rows remain open; no blanket full-moveset
 claim. Receipt: `artifacts/performance/2026-09-19_yoshi-battle-pairs.md`.
 
+## Standing lessons, 2026-09-21 (moved from HANDOFF 2026-09-23)
+
+Evidence: `artifacts/performance/2026-09-19_remaining-bugs.md` and the commits
+that landed each row. Route markers only.
+
+**Census a shared path before changing it.** Three regressions in one day shared
+one shape: a repair validated against ONE user of a path many reach. All were
+correct for their own consumer with green mutation tests; none was caught by CI.
+A mutation test proves the repair for its case and says nothing about siblings.
+When a sibling breaks, **scope, do not revert**.
+
+**Static routing is not a runtime load.** Packing 142 Results animations closed
+47/47 cells and changed nothing on screen. Where a load can fail silently, the
+counter that observes it is part of the repair.
+
+**Re-derive a recorded premise before building on it.** Six of nine rows started
+from a wrong fact already in this repo. One grep each would have caught them.
+Failure codes are names, not explanations: read the enum.
+
+**`ll*` symbols are linker-absolute -- the ADDRESS is the offset.** Registry uses
+need a real `extern` plus a `sNdsKnownAssetSymbols` row; offset uses need the
+address-as-offset define; descriptors addressing another file need a span-check
+exemption. Recurred four times.
+
+**Falsifiers must follow the producer**, never a copy of its old number.
+
+**A compact pack must keep what its lists LOAD, not only what its structs
+point at.** Link's CSS boots drew gray for weeks: the preview pack kept Model
+bytes from the first MObj image onward, a display-list TLUT before that mapped
+to NULL, and a NULL native image draws untextured with zero rejects (2026-09-22,
+`p2/BUG_NOTES.md` "C6"). `test_native_texture_loads_are_retained` guards it.
+
 ## Standing lessons, 2026-09-21 night
 
 Evidence: `docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-21.md` and the
