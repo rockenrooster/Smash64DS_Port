@@ -1,0 +1,42 @@
+== a14-ktime rom 748668D1 route 1 admit 2 slow 8
+  attempts 6862 draws 6722 shadow 0 adopts 103 | packet hits 14 records 126 faults 0 | native failures 39 | draws(all) 6862
+  missword [22, 0, 0, 14, 0, 3, 0, 0]
+  Donkey attempts  1725 draws  1663 (96.4%) adopts   62 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tint_set': 5, 'rebind': 56}
+         refusals {}
+         programs {0: 1663}
+         joints/draw 25 classes {'fast': 26503, 'scale': 1519, 'warm': 13628}
+         per draw: head 20239 guard 4356 kernel 28288 patch 9340 submit 4532 dmawait 0 | kernel/joint 1129
+         oracle mismatches {}
+  Samus  attempts  1685 draws  1666 (98.9%) adopts   19 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tint_set': 4, 'rebind': 14}
+         refusals {}
+         programs {0: 1619, 1: 5, 2: 3, 3: 39}
+         joints/draw 23 classes {'fast': 24889, 'scale': 6, 'warm': 12549, 'lock': 150}
+         per draw: head 17950 guard 3686 kernel 24245 patch 6571 submit 4445 dmawait 0 | kernel/joint 1074
+         oracle mismatches {}
+  Link   attempts  1824 draws  1781 (97.6%) adopts   16 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'material': 11, 'tint_set': 3, 'rebind': 12, 'uncacheable': 16}
+         refusals {'plan': 16}
+         programs {0: 1753, 1: 28}
+         joints/draw 27 classes {'fast': 28207, 'scale': 4865, 'warm': 15257}
+         per draw: head 18396 guard 3816 kernel 31464 patch 15520 submit 5017 dmawait 0 | kernel/joint 1159
+         oracle mismatches {}
+  Kirby  attempts  1628 draws  1612 (99.0%) adopts    6 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'material': 10, 'tint_set': 2, 'rebind': 3}
+         refusals {}
+         programs {0: 1552, 13: 60}
+         joints/draw 21 classes {'fast': 17278, 'scale': 6333, 'warm': 11029}
+         per draw: head 16985 guard 3305 kernel 23006 patch 4281 submit 3783 dmawait 0 | kernel/joint 1071
+         oracle mismatches {}
+  guard parts/draw {'tuple': '1237', 'topology': '159', 'camera': '489', 'identity': '580', 'preamble': '510', 'packet': '516', 'shuffle': '261', 'texgen_sel': '0'}
+  patch parts/draw {'tint_tiles': '478', 'apply_tint': '1629', 'matrices': '1961', 'light': '195', 'texgen': '2383', 'sites': '0'}
+  submit parts/draw {'flush': '1480', 'gx+dma_wait': '179', 'dma+invalidate': '1260', 'stats': '1225'} book/draw 2200 flush B/draw 2531
+  oracle: runs 0 words 0 source_miss 0 unconsumed 0 fence_rekey 0
+         mismatch [0, 0, 0, 0, 0, 0, 0, 0] key_moved [0, 0, 0, 0, 0, 0, 0, 0] rec_under_hit [0, 0] rec_diff [0, 0, 0, 0, 0, 0, 0, 0, 0] max_lsb [0, 0, 0]
+  identity: watch_miss 0 last adopt watched 0 | all-admitted adoptions 103 | retuples 534 rekeys 0 | plan verify runs 0 mismatch 0 hits 35 builds 89
+  adoption: ticks/adopt 56726 copy/adopt 38519 kept 0 | projection patches 6722 | variants learned 21 (words 76) switches 119 learn-fail 0 learn ticks/learn 48655 | retuple ticks/retuple 4490
+  misc: pre_checks 1928 pre_skips 4808 light_patches 167 texgen_patches 1753 pinned_miss 0 kernel_fail 76 (rebuilt 76) tint binds 0 moved 0 miss 0 white 0 shape 0
+  kernel parts/joint (ktime lab) {'fast_local': '469', 'compose': '291', 'output': '191', 'slow_local': '1'}
+  dma: lean waits 0 ticks 0 | next-writer waits 0 ticks 0 | ge busy 0/1973
+  heap free min 33540 libc top min 18624 uploads after GO 0

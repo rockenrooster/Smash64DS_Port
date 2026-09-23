@@ -151,6 +151,17 @@ NDS_FTR_LEAN_ADMIT_DEFAULT ?= 0
 # shipping ROM's heap: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
 # BUILD=<own dir> NDS_TEX_IDENT_SHADOW=1`.
 NDS_TEX_IDENT_SHADOW ?= 0
+# P2-2p8 Phase 1 slice 3: 1 lets NDS_FTR_LEAN_ADMIT_DEFAULT through on a
+# non-tick-HUD lab target (the 1P campaign walk ROM has no tick HUD, and the
+# campaign probe has no word poke). Lab builds only, own build dir -- forced
+# to 0 below for the published targets: `make
+# TARGET=smash64ds-p2-shell-freeplay-hwtri BUILD=<own dir> NDS_P2_MENU_WALK=1
+# NDS_FTR_LEAN_ADMIT_LAB=1 NDS_FTR_LEAN_ADMIT_DEFAULT=2`.
+NDS_FTR_LEAN_ADMIT_LAB ?= 0
+# P2-2p8 Phase 1 slice 3: 1 compiles the lean kernel's phase timing
+# (gNdsFtrLeanSlow bit 8, gNdsFtrLean.kernel_part_ticks). Lab (tick-HUD)
+# builds only, own build dir -- forced to 0 below for every other target.
+NDS_FTR_LEAN_KTIME ?= 0
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
@@ -6701,9 +6712,15 @@ ifeq ($(NDS_R2_BATTLEPACK),1)
 $(NDS_BUILD_CONFIG): $(NDS_BATTLEPACK_BLOB)
 endif
 
+ifneq ($(filter $(TARGET),$(NDS_PUBLISHED_TARGETS)),)
+override NDS_FTR_LEAN_ADMIT_LAB := 0
+endif
 ifneq ($(NDS_TICK_HUD),1)
+ifneq ($(NDS_FTR_LEAN_ADMIT_LAB),1)
 override NDS_FTR_LEAN_ADMIT_DEFAULT := 0
+endif
 override NDS_TEX_IDENT_SHADOW := 0
+override NDS_FTR_LEAN_KTIME := 0
 endif
 $(NDS_BUILD_CONFIG): FORCE
 	@tmp="$@.tmp"; \
@@ -6721,6 +6738,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
 		echo '#define NDS_FTR_LEAN_ADMIT_DEFAULT $(NDS_FTR_LEAN_ADMIT_DEFAULT)u'; \
 		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
+		echo '#define NDS_FTR_LEAN_ADMIT_LAB $(NDS_FTR_LEAN_ADMIT_LAB)'; \
+		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \

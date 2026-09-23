@@ -2656,6 +2656,11 @@ void ftParamResetModelPartAll(GObj *fighter_gobj)
     }
 }
 
+/* P2-2p8 Phase 1 slice 3 (renderer_fighter_lean.c): the lean fighter draw
+ * proves its material identity through its writers, and these two shims are
+ * the in-status texture-id writer. Counted only when the id actually moves. */
+extern void ndsFtrLeanNoteTexturePart(u32 slot);
+
 void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
                              s32 texture_id)
 {
@@ -2709,6 +2714,10 @@ void ftParamSetTexturePartID(GObj *fighter_gobj, s32 texturepart_id,
          * watched both eye MObjs showed the mirror right and the part-1 MObj
          * never written, because `detail` itself was read off the wrong byte
          * lane -- ndsFTTexturePartByte. */
+        if (mobj->texture_id_curr != (u16)texture_id)
+        {
+            ndsFtrLeanNoteTexturePart((u32)fp->nds_slot);
+        }
         mobj->texture_id_curr = texture_id;
         fp->texturepart_status[texturepart_id].texture_id_curr = texture_id;
         fp->is_texturepart_modify = TRUE;
@@ -2767,6 +2776,10 @@ void ftParamResetTexturePartAll(GObj *fighter_gobj)
         }
         if (mobj != NULL)
         {
+            if (mobj->texture_id_curr != (u16)status->texture_id_curr)
+            {
+                ndsFtrLeanNoteTexturePart((u32)fp->nds_slot);
+            }
             mobj->texture_id_curr = status->texture_id_curr;
         }
     }

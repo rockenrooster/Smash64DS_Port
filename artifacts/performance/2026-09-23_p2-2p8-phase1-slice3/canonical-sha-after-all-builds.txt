@@ -1,0 +1,5 @@
+canonical four-CPU tick-HUD ROM after every build of the final tree
+(a15 build, 1P lab build, pre-slice-3 1P attribution build, two canonical re-makes)
+
+re-make 1 (particle-bank dependents compiled before their generated header was regenerated): 6B74EAF298ED46DF59529706E2ADD6CA37F25113D7BA09190BE4401921C9F66E
+re-make 2 (the five particle-bank dependents forced): 1DAA7067CC3DE49A004061101EC8F433BE0216A710C549FE50123BAD4F0686B2 = the a15 ROM

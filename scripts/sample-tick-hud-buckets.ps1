@@ -1123,7 +1123,28 @@ try {
         }
     }
     if ([uint64]$frames[0] -lt [uint64]$StartFrame) {
-        throw "Tick-HUD sampling began at frame $($frames[0]), before $StartFrame."
+        # The same labelling arithmetic as the seam duplicates above, in the
+        # other direction: a stop with skew > 0 (more presented frames than
+        # ring slots) leaves a label GAP, and the kept rows are the last
+        # -Samples ring slots, so G gaps against D seam duplicates move the
+        # first LABEL back by G - D while every slot is still a real iteration
+        # of the window. Tolerate exactly that recorded amount (2026-09-23,
+        # P2-2p8 slice 3: one run in four landed one label early); anything
+        # beyond it is still fatal.
+        $gapTotal = 0
+        if ($RingDump -and ($null -ne $ringStopSkews)) {
+            foreach ($s in $ringStopSkews) {
+                if ([int]$s.skew -gt 0) { $gapTotal += [int]$s.skew }
+            }
+        }
+        $early = [int]([uint64]$StartFrame - [uint64]$frames[0])
+        if ($early -gt $gapTotal) {
+            throw "Tick-HUD sampling began at frame $($frames[0]), before $StartFrame."
+        }
+        Write-Warning ("Tick-HUD first label is frame $($frames[0]), " +
+            "$early before -StartFrame $StartFrame; the stops' recorded " +
+            "positive skew ($gapTotal) accounts for it, so the rows are the " +
+            'requested window of real iterations labelled early.')
     }
 
     # INSTRUMENT DEFECT: cpuGetTiming() intermittently reports a span exactly

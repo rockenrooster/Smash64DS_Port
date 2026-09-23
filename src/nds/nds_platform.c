@@ -3720,6 +3720,17 @@ void ndsPlatformEndFrame(void)
         DC_FlushAll();
 #endif
     }
+#if defined(NDS_FTR_LEAN_ADMIT_LAB) && NDS_FTR_LEAN_ADMIT_LAB && !NDS_TICK_HUD
+    /* P2-2p8 Phase 1 slice 3 lab (the 1P campaign walk ROM, no tick HUD):
+     * the campaign probe reads the bank D words through GDB, which sees
+     * memory, not the D-cache -- clean them every frame so no read is a
+     * stale line. */
+    DC_FlushRange((const void *)&gNdsVramBankDTakes, sizeof(u32));
+    DC_FlushRange((const void *)&gNdsVramBankDReturns, sizeof(u32));
+    DC_FlushRange((const void *)&gNdsVramBankDMissedExits, sizeof(u32));
+    DC_FlushRange((const void *)&gNdsVramBankDLent, sizeof(u32));
+    DC_FlushRange((const void *)&gNdsVramBg3RefusedWrites, sizeof(u32));
+#endif
     /* Single final fade application, after all draws: the published lbFade
      * frame (if any) becomes the MASTER_BRIGHT level for the commit below.
      * Covers 3D, both staging layers, and fade-only frames with no staging

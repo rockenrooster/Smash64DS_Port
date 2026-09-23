@@ -6,7 +6,7 @@ param(
     [string]$Elf = '',
     [string]$BuildConfig = '',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
-    [ValidateRange(10, 180)][int]$TimeoutSeconds = 120,
+    [ValidateRange(10, 600)][int]$TimeoutSeconds = 120,
     # Scene-entry stops, not frames: one stop is one ndsSceneManagerEnter.
     # The 1P route is Title -> ModeSelect -> 1PMode -> 1P CSS -> 1PIntro ->
     # first battle, so a handful of stops covers it; a guest the walk cannot
@@ -292,6 +292,14 @@ if ($missing.Count -gt 0) {
 # The 1P-owned battle state is read when the 1P build links it; its absence
 # is a link-stage report, not a probe defect, so it stays optional.
 $has1PState = ($symbols -contains 'gSCManager1PGameBattleState')
+# P2-2p8 slice 3 (optional, read only): VRAM bank D lending across the
+# stage transition, printed as CPVRAMD lines when the ROM has the words.
+$hasVramD = (@('gNdsVramBankDTakes', 'gNdsVramBankDReturns',
+               'gNdsVramBankDMissedExits', 'gNdsVramBankDLent',
+               'gNdsVramBg3RefusedWrites', 'gNdsFtrLeanAdmit',
+               'ndsPlatformVramTakeBankD') |
+    Where-Object { $symbols -notcontains $_ }).Count -eq 0
+$vramDFmt = 'printf "CPVRAMD at={0} scene=%u stage=%u admit=%u lent=%u takes=%u returns=%u refused=%u missed=%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.spgame_stage, gNdsFtrLeanAdmit, gNdsVramBankDLent, gNdsVramBankDTakes, gNdsVramBankDReturns, gNdsVramBg3RefusedWrites, gNdsVramBankDMissedExits'
 if (-not $has1PState) {
     Write-Output 'note: gSCManager1PGameBattleState absent; CP1P will read `absent`.'
 }
@@ -528,11 +536,13 @@ try {
         'set $first_stage = gSCManagerSceneData.spgame_stage',
         'set $native_entry = gNdsRendererNativeFailure.count',
         'printf "CPTRANSITION-FIRST stage=%d enters=%u\n", $first_stage, gNdsSceneManagerEnterCount',
+        $(if ($hasVramD) { ($vramDFmt -f 'first-battle-enter') }),
         'eval "disable %d", $frame_bp',
         'printf "CPFRAMEBP-DISABLED bp=%d\n", $frame_bp',
         'else',
         'if ($saw_stageclear != 0) && (gSCManagerSceneData.spgame_stage > $first_stage)',
         'printf "CPNEXTBATTLE stage=%u first_stage=%d enters=%u score=%d bonuses=%u player_stock=%d heap_min=%u native_fail=%u native_transition_delta=%u drive_frames=%u attacks=%u approaches=%u missing_opp=%u\n", gSCManagerSceneData.spgame_stage, $first_stage, gNdsSceneManagerEnterCount, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_count, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gNdsCampaignTransitionHeapFreeMin, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$native_win, gNdsCampaignBattlePlaybackFrameCount, gNdsCampaignBattlePlaybackAttackCount, gNdsCampaignBattlePlaybackApproachCount, gNdsCampaignBattlePlaybackMissingOpponentCount',
+        $(if ($hasVramD) { ($vramDFmt -f 'next-battle-enter') }),
         'printf "CPTRANSITIONDONE n=%d stageclear=%d continue=%d\n", $n, $saw_stageclear, $saw_continue',
         'detach',
         'quit',
@@ -546,15 +556,19 @@ try {
         'set $tallyshot = 0',
         'set $tallyfinal = 0',
         'printf "CPSTAGECLEAR-ENTER prev=%u stage=%u score=%d masks=%08x/%08x/%08x\n", gSCManagerSceneData.scene_prev, gSCManagerSceneData.spgame_stage, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_get_mask[0], gSCManagerSceneData.bonus_get_mask[1], gSCManagerSceneData.bonus_get_mask[2]',
+        $(if ($hasVramD) { ($vramDFmt -f 'stageclear-enter') }),
+        'eval "enable %d", $native_bp',
         'end',
         'if gSCManagerSceneData.scene_curr == 49',
         'set $inbattle = 0',
         'set $saw_continue = 1',
         'set $continue_frames = 0',
         'printf "CPCONTINUE-ENTER prev=%u stage=%u player_stock=%d time=%d\n", gSCManagerSceneData.scene_prev, gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gSCManager1PGameBattleState.time_remain',
+        $(if ($hasVramD) { ($vramDFmt -f 'continue-enter') }),
         'end',
         'if (gSCManagerSceneData.scene_curr == 14) && ($saw_stageclear != 0)',
         'printf "CPNEXTINTRO stage=%u first_stage=%d score=%d\n", gSCManagerSceneData.spgame_stage, $first_stage, gSCManagerSceneData.spgame_score',
+        $(if ($hasVramD) { ($vramDFmt -f 'next-intro-enter') }),
         'end',
         'end',
         ('if $n < ' + $Hits),
@@ -568,15 +582,24 @@ try {
         'printf "CPSETUP count=%d stage=%u state=%08x\n", $setupcount, gSCManagerSceneData.spgame_stage, gSCManagerBattleState',
         'continue',
         'end',
+        $(if ($TransitionProof -and $hasVramD) { 'break ndsPlatformVramTakeBankD' }),
+        $(if ($TransitionProof -and $hasVramD) { 'commands' }),
+        $(if ($TransitionProof -and $hasVramD) { 'silent' }),
+        $(if ($TransitionProof -and $hasVramD) { ($vramDFmt -f 'take-entry') }),
+        $(if ($TransitionProof -and $hasVramD) { 'continue' }),
+        $(if ($TransitionProof -and $hasVramD) { 'end' }),
         $(if ($TransitionProof) { 'break *ndsRendererRecordNativeFailure' }),
+        $(if ($TransitionProof) { 'set $native_bp = $bpnum' }),
         $(if ($TransitionProof) { 'commands' }),
         $(if ($TransitionProof) { 'silent' }),
         $(if ($TransitionProof) { 'if ($r1 == 14) && ($intro_native_printed == 0)' }),
         $(if ($TransitionProof) { 'set $intro_native_printed = 1' }),
+        $(if ($TransitionProof) { 'eval "disable %d", $native_bp' }),
         $(if ($TransitionProof) { 'printf "CPNATIVE-INTRO domain=%u scene=%u identity=%u status=%u root=%u material=%u reason=%u reject_count=%u reject_site=%08x\n", $r0, $r1, $r2, $r3, *(unsigned*)$sp, *(unsigned*)($sp+4), *(unsigned*)($sp+8), gNdsRendererNativeDirectReject.count, gNdsRendererNativeDirectReject.site' }),
         $(if ($TransitionProof) { 'end' }),
         $(if ($TransitionProof) { 'if ($r1 == 51) && ($tally_native_printed == 0)' }),
         $(if ($TransitionProof) { 'set $tally_native_printed = 1' }),
+        $(if ($TransitionProof) { 'eval "disable %d", $native_bp' }),
         $(if ($TransitionProof) { 'printf "CPNATIVE-TALLY domain=%u scene=%u identity=%u status=%u root=%u material=%u reason=%u reject_count=%u reject_site=%08x\n", $r0, $r1, $r2, $r3, *(unsigned*)$sp, *(unsigned*)($sp+4), *(unsigned*)($sp+8), gNdsRendererNativeDirectReject.count, gNdsRendererNativeDirectReject.site' }),
         $(if ($TransitionProof) { 'end' }),
         $(if ($TransitionProof) { 'continue' }),

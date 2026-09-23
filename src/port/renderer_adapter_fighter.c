@@ -694,6 +694,14 @@ static u32 sNdsFighterStatusGeneration[GMCOMMON_PLAYERS_MAX];
 static u32 sNdsFtrDrawMemoState;
 static u32 sNdsFtrDrawMemoHit;
 static u32 sNdsFtrDrawMemoKey[NDS_FTR_DRAW_MEMO_KEY_WORDS];
+#if NDS_FTR_LEAN_LIVE
+/* P2-2p8 Phase 1 slice 3: a per-slot count of memo fills, and whether this
+ * draw's replay preambles are the memo slot's content (a hit, or the fill that
+ * just copied them). The lean path proves a slot's preambles once per fill
+ * instead of once per draw (renderer_fighter_lean.c). */
+static u32 sNdsFtrLeanMemoFill[GMCOMMON_PLAYERS_MAX];
+static u32 sNdsFtrLeanMemoFromSlot;
+#endif
 
 /* Writer-side coherency for source mutations of DObj display state/topology.
  * ftMainSetStatus is one writer (hidden-part replacement/re-parenting), but
@@ -823,6 +831,9 @@ static void ndsFtrDrawMemoFinish(void)
     u32 i;
 
     gNdsFtrDrawMemoSkipRoot = gNdsFtrDrawMemoStubRoot;
+#if NDS_FTR_LEAN_LIVE
+    sNdsFtrLeanMemoFromSlot = 0u;
+#endif
     if (sNdsFtrDrawMemoState != 2u)
     {
         gNdsFtrDrawMemoBypass++;
@@ -830,6 +841,14 @@ static void ndsFtrDrawMemoFinish(void)
         return;
     }
     slot = &sNdsFtrDrawMemo[sNdsFtrDrawMemoSlotIndex];
+#if NDS_FTR_LEAN_LIVE
+    sNdsFtrLeanMemoFromSlot = 1u;
+    if ((sNdsFtrDrawMemoHit == 0u) &&
+        (sNdsFtrDrawMemoSlotIndex < GMCOMMON_PLAYERS_MAX))
+    {
+        sNdsFtrLeanMemoFill[sNdsFtrDrawMemoSlotIndex]++;
+    }
+#endif
     if (sNdsFtrDrawMemoHit != 0u)
     {
         n = slot->event_count;
@@ -5142,7 +5161,7 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 #if NDS_FTR_LEAN_LIVE
 static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
 static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp,
-                                   u32 serial_before);
+                                   u32 serial_before, u32 hits_before);
 static void ndsFtrLeanFrameEnd(void);
 #endif
 
@@ -5214,8 +5233,18 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         u32 lean_head_start = cpuGetTiming();
 
         ndsFighterDisplayContractCapture(fighter_gobj);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.head_ticks +=
-                             cpuGetTiming() - lean_head_start);
+#if NDS_FTR_LEAN_LAB
+        {
+            u32 lean_head = cpuGetTiming() - lean_head_start;
+            u32 lean_kind = NDS_FTR_LEAN_OWNER_KIND(owner_slot);
+
+            gNdsFtrLean.head_ticks += lean_head;
+            if (lean_kind < NDS_FTR_LEAN_KINDS)
+            {
+                gNdsFtrLean.k_head_ticks[lean_kind] += lean_head;
+            }
+        }
+#endif
         (void)lean_head_start;
     }
 #else
@@ -5291,6 +5320,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         /* P2-2p8 Phase 1 slice 1 (H1). Route 0 is the plain call below. */
         u32 lean_route = gNdsFtrLeanRoute;
         u32 lean_serial = 0u;
+        u32 lean_hits = 0u;
         sb32 lean_drew = FALSE;
 
 #if NDS_VRAM_CENSUS_LIVE
@@ -5301,6 +5331,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         {
             lean_drew = ndsFtrLeanRun((u32)fp->nds_slot, fp, lean_route);
             lean_serial = ndsFtrLeanPacketUseSerial((u32)fp->nds_slot);
+            lean_hits = gNdsFighterPacketHits;
         }
         if (lean_drew == FALSE)
         {
@@ -5308,7 +5339,8 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
                                                NULL, 0u);
             if (lean_route != 0u)
             {
-                ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_serial);
+                ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_serial,
+                                       lean_hits);
             }
         }
 #if NDS_VRAM_CENSUS_LIVE

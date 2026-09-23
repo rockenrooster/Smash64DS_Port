@@ -3449,11 +3449,13 @@ typedef struct NDSFighterPacketTexgenSite
  * packet words are unchanged; this only names where the tile's
  * TEXIMAGE_PARAM / PLTT_BASE parameters sit and which colour chose the tile,
  * so the lean path can re-point them instead of re-recording.
- * Slice 2b BSS diet: 4 per packet (the four-CPU stress records at most 2; the
- * slice 2a census). A packet that records more sets tint_bind_overflow and is
- * simply not adopted by the lean path -- the words and the old path are
- * unchanged. 16 -> 4 saves 192 B per packet. */
-#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 4u
+ * A packet that records more sets tint_bind_overflow and is simply not
+ * adopted by the lean path -- the words and the old path are unchanged.
+ * Slice 2b cut this to 4 (Samus records 2); slice 3 measured Link above 4 and
+ * Kirby at 19 (7 tinted shade sites, one bind per tinted run; tint_bind_seen),
+ * so it is 24, and the never-read tile name is gone (12 B a bind): +224 B per
+ * packet over the 2b layout. */
+#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 24u
 typedef struct NDSFighterPacketTintBind
 {
     u16 tex_index;
@@ -3462,7 +3464,6 @@ typedef struct NDSFighterPacketTintBind
     u8 prim_from_root;
     u8 reserved[2];
     u32 rgb;
-    u32 name;
 } NDSFighterPacketTintBind;
 
 typedef struct NDSFighterPacket
@@ -3518,7 +3519,7 @@ typedef struct NDSFighterPacket
     u8 tint_bind_count;
     u8 tint_bind_overflow;
     u8 fence_other;
-    u8 tint_reserved;
+    u8 tint_bind_seen;          /* binds the record made, saturating */
     NDSFighterPacketTintBind tint_binds[NDS_FIGHTER_PACKET_TINT_BIND_MAX];
 } NDSFighterPacket;
 
@@ -3756,6 +3757,10 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void
     {
         NDSFighterPacket *packet = rec->packet;
 
+        if (packet->tint_bind_seen < 0xffu)
+        {
+            packet->tint_bind_seen++;
+        }
         if (((u32)packet->tint_bind_count >=
              NDS_FIGHTER_PACKET_TINT_BIND_MAX) ||
             (tex_index >= NDS_FIGHTER_PACKET_INDEX_NONE) ||
@@ -3775,7 +3780,6 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void
             bind->reserved[0] = 0u;
             bind->reserved[1] = 0u;
             bind->rgb = rec->pending_tint_rgb;
-            bind->name = rec->pending_tint;
         }
     }
 }

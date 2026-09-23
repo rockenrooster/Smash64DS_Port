@@ -1,0 +1,25 @@
+data/bss/dtcm symbols whose size changed (canon-47D7.elf -> a15.elf)
+symbol                                                   before      after     delta
+sNdsFtrLeanWorlds                                         4,096          0     -4096
+sNdsFtrLeanInstance                                       1,532          0     -1532
+sNdsFtrLeanInputs                                         1,248          0     -1248
+sNdsFtrLeanProjection                                        64          0       -64
+sNdsFtrLeanConfig                                            52          0       -52
+gNdsFtrLeanSlow                                               0          4        +4
+sNdsFtrLeanCamCobj                                            0          4        +4
+sNdsFtrLeanCamFrame                                           0          4        +4
+sNdsFtrLeanCamOk                                              0          4        +4
+sNdsFtrLeanMemoFromSlot                                       0          4        +4
+sNdsFtrLeanMemoFill                                           0         16       +16
+sNdsFtrLeanTexPartSerial                                      0         16       +16
+sNdsFtrLeanSlots                                            192        672      +480
+sNdsFighterPackets                                       14,464     15,360      +896
+gNdsFtrLean                                                 788      2,316     +1528
+sNdsFtrLeanInstances                                          0      2,720     +2720
+TOTAL data/bss/dtcm symbol delta                                               -1316
+code symbols (t/T) delta                                 +14674
+
+section                            before        after     delta
+.main                           1,424,604    1,439,276    +14672
+.main.bss                         930,960      929,616     -1344
+TOTAL loaded sections                                     +13328

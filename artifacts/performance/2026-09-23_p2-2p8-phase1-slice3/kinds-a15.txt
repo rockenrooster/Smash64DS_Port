@@ -1,0 +1,136 @@
+== a15-route1 rom 1DAA7067 route 1 admit 2 slow 0
+  attempts 6862 draws 6722 shadow 0 adopts 103 | packet hits 14 records 126 faults 0 | native failures 39 | draws(all) 6862
+  missword [22, 0, 0, 14, 0, 3, 0, 0]
+  Donkey attempts  1725 draws  1663 (96.4%) adopts   62 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tint_set': 5, 'rebind': 56}
+         refusals {}
+         programs {0: 1663}
+         joints/draw 25 classes {'fast': 26503, 'scale': 1519, 'warm': 13628}
+         per draw: head 20441 guard 4202 kernel 23290 patch 9287 submit 4610 dmawait 0 | kernel/joint 930
+         oracle mismatches {}
+  Samus  attempts  1685 draws  1666 (98.9%) adopts   19 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tint_set': 4, 'rebind': 14}
+         refusals {}
+         programs {0: 1619, 1: 5, 2: 3, 3: 39}
+         joints/draw 23 classes {'fast': 24889, 'scale': 6, 'warm': 12549, 'lock': 150}
+         per draw: head 18133 guard 3659 kernel 20014 patch 6487 submit 4517 dmawait 0 | kernel/joint 887
+         oracle mismatches {}
+  Link   attempts  1824 draws  1781 (97.6%) adopts   16 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'material': 11, 'tint_set': 3, 'rebind': 12, 'uncacheable': 16}
+         refusals {'plan': 16}
+         programs {0: 1753, 1: 28}
+         joints/draw 27 classes {'fast': 28207, 'scale': 4865, 'warm': 15257}
+         per draw: head 18598 guard 3732 kernel 25876 patch 15420 submit 5049 dmawait 0 | kernel/joint 954
+         oracle mismatches {}
+  Kirby  attempts  1628 draws  1612 (99.0%) adopts    6 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'material': 10, 'tint_set': 2, 'rebind': 3}
+         refusals {}
+         programs {0: 1552, 13: 60}
+         joints/draw 21 classes {'fast': 17278, 'scale': 6333, 'warm': 11029}
+         per draw: head 16817 guard 3246 kernel 18379 patch 4190 submit 3815 dmawait 0 | kernel/joint 855
+         oracle mismatches {}
+  guard parts/draw {'tuple': '1220', 'topology': '144', 'camera': '449', 'identity': '591', 'preamble': '467', 'packet': '520', 'shuffle': '240', 'texgen_sel': '0'}
+  patch parts/draw {'tint_tiles': '463', 'apply_tint': '1624', 'matrices': '1982', 'light': '204', 'texgen': '2377', 'sites': '0'}
+  submit parts/draw {'flush': '1499', 'gx+dma_wait': '185', 'dma+invalidate': '1255', 'stats': '1247'} book/draw 2145 flush B/draw 2531
+  oracle: runs 0 words 0 source_miss 0 unconsumed 0 fence_rekey 0
+         mismatch [0, 0, 0, 0, 0, 0, 0, 0] key_moved [0, 0, 0, 0, 0, 0, 0, 0] rec_under_hit [0, 0] rec_diff [0, 0, 0, 0, 0, 0, 0, 0, 0] max_lsb [0, 0, 0]
+  identity: watch_miss 0 last adopt watched 0 | all-admitted adoptions 103 | retuples 534 rekeys 0 | plan verify runs 0 mismatch 0 hits 35 builds 89
+  adoption: ticks/adopt 56917 copy/adopt 38606 kept 0 | projection patches 6722 | variants learned 21 (words 76) switches 119 learn-fail 0 learn ticks/learn 48689 | retuple ticks/retuple 4497
+  misc: pre_checks 1928 pre_skips 4808 light_patches 167 texgen_patches 1753 pinned_miss 0 kernel_fail 76 (rebuilt 76) tint binds 0 moved 0 miss 0 white 0 shape 0
+  dma: lean waits 0 ticks 0 | next-writer waits 0 ticks 0 | ge busy 0/1973
+  heap free min 54020 libc top min 18976 uploads after GO 0
+== a15-route2 rom 1DAA7067 route 2 admit 2 slow 0
+  attempts 6862 draws 0 shadow 6722 adopts 103 | packet hits 6606 records 256 faults 0 | native failures 39 | draws(all) 6862
+  missword [140, 0, 0, 14, 0, 12, 0, 0]
+  Donkey attempts  1725 draws  1663 (96.4%) adopts   62 high 0 oracle_runs 1660
+         declines {'adopt_pending': 1, 'tint_set': 5, 'rebind': 56}
+         refusals {}
+         programs {}
+         joints/draw 25 classes {'fast': 26503, 'scale': 1519, 'warm': 13628}
+         per draw: head 20442 guard 11270 kernel 23249 patch 9288 submit 0 dmawait 0 | kernel/joint 928
+         oracle mismatches {}
+  Samus  attempts  1685 draws  1666 (98.9%) adopts   19 high 0 oracle_runs 1663
+         declines {'adopt_pending': 1, 'tint_set': 4, 'rebind': 14}
+         refusals {}
+         programs {}
+         joints/draw 23 classes {'fast': 24889, 'scale': 6, 'warm': 12549, 'lock': 150}
+         per draw: head 18268 guard 10850 kernel 20223 patch 6590 submit 0 dmawait 0 | kernel/joint 896
+         oracle mismatches {}
+  Link   attempts  1824 draws  1781 (97.6%) adopts   16 high 0 oracle_runs 1721
+         declines {'adopt_pending': 1, 'material': 11, 'tint_set': 3, 'rebind': 12, 'uncacheable': 16}
+         refusals {'plan': 16}
+         programs {}
+         joints/draw 27 classes {'fast': 28207, 'scale': 4865, 'warm': 15257}
+         per draw: head 18813 guard 10276 kernel 26220 patch 15491 submit 0 dmawait 0 | kernel/joint 966
+         oracle mismatches {}
+  Kirby  attempts  1628 draws  1612 (99.0%) adopts    6 high 0 oracle_runs 1548
+         declines {'adopt_pending': 1, 'material': 10, 'tint_set': 2, 'rebind': 3}
+         refusals {}
+         programs {}
+         joints/draw 21 classes {'fast': 17278, 'scale': 6333, 'warm': 11029}
+         per draw: head 17587 guard 7276 kernel 18529 patch 4262 submit 0 dmawait 0 | kernel/joint 862
+         oracle mismatches {}
+  guard parts/draw {'tuple': '2532', 'topology': '1560', 'camera': '488', 'identity': '3311', 'preamble': '512', 'packet': '1257', 'shuffle': '266', 'texgen_sel': '0'}
+  patch parts/draw {'tint_tiles': '469', 'apply_tint': '1625', 'matrices': '1996', 'light': '209', 'texgen': '2377', 'sites': '0'}
+  submit parts/draw {'flush': '-', 'gx+dma_wait': '-', 'dma+invalidate': '-', 'stats': '-'} book/draw - flush B/draw -
+  oracle: runs 6592 words 15583404 source_miss 0 unconsumed 0 fence_rekey 2504
+         mismatch [0, 0, 0, 0, 0, 0, 0, 0] key_moved [0, 0, 0, 0, 0, 0, 0, 0] rec_under_hit [130, 0] rec_diff [0, 0, 0, 351, 0, 0, 0, 0, 0] max_lsb [0, 0, 0]
+  identity: watch_miss 0 last adopt watched 0 | all-admitted adoptions 103 | retuples 534 rekeys 0 | plan verify runs 534 mismatch 0 hits 6757 builds 89
+  adoption: ticks/adopt 56920 copy/adopt 38599 kept 0 | projection patches 6722 | variants learned 21 (words 76) switches 119 learn-fail 0 learn ticks/learn 48503 | retuple ticks/retuple 20378
+  misc: pre_checks 1928 pre_skips 4808 light_patches 167 texgen_patches 1753 pinned_miss 0 kernel_fail 76 (rebuilt 76) tint binds 0 moved 0 miss 0 white 0 shape 0
+  dma: lean waits 0 ticks 0 | next-writer waits 0 ticks 0 | ge busy 0/1973
+  heap free min 54020 libc top min 18976 uploads after GO 0
+== a15-route0 rom 1DAA7067 route 0 admit 2 slow 0
+  attempts 0 draws 0 shadow 0 adopts 0 | packet hits 6606 records 256 faults 0 | native failures 39 | draws(all) 6862
+  missword [140, 0, 0, 14, 0, 12, 0, 0]
+  guard parts/draw {'tuple': '-', 'topology': '-', 'camera': '-', 'identity': '-', 'preamble': '-', 'packet': '-', 'shuffle': '-', 'texgen_sel': '-'}
+  patch parts/draw {'tint_tiles': '-', 'apply_tint': '-', 'matrices': '-', 'light': '-', 'texgen': '-', 'sites': '-'}
+  submit parts/draw {'flush': '-', 'gx+dma_wait': '-', 'dma+invalidate': '-', 'stats': '-'} book/draw - flush B/draw -
+  oracle: runs 0 words 0 source_miss 0 unconsumed 0 fence_rekey 0
+         mismatch [0, 0, 0, 0, 0, 0, 0, 0] key_moved [0, 0, 0, 0, 0, 0, 0, 0] rec_under_hit [0, 0] rec_diff [0, 0, 0, 0, 0, 0, 0, 0, 0] max_lsb [0, 0, 0]
+  identity: watch_miss 0 last adopt watched 0 | all-admitted adoptions 0 | retuples 0 rekeys 0 | plan verify runs 0 mismatch 0 hits 6223 builds 623
+  adoption: ticks/adopt - copy/adopt - kept 0 | projection patches 0 | variants learned 0 (words 0) switches 0 learn-fail 0 learn ticks/learn - | retuple ticks/retuple -
+  misc: pre_checks 0 pre_skips 0 light_patches 0 texgen_patches 0 pinned_miss 0 kernel_fail 0 (rebuilt 0) tint binds 0 moved 0 miss 0 white 0 shape 0
+  dma: lean waits 0 ticks 0 | next-writer waits 0 ticks 0 | ge busy 0/1973
+  heap free min 54020 libc top min 18976 uploads after GO 0
+== a15-slow7 rom 1DAA7067 route 1 admit 2 slow 7
+  attempts 6862 draws 6187 shadow 0 adopts 635 | packet hits 424 records 251 faults 0 | native failures 39 | draws(all) 6862
+  missword [136, 0, 0, 14, 0, 11, 0, 0]
+  Donkey attempts  1725 draws  1575 (91.3%) adopts  150 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tuple': 89, 'tint_set': 4, 'rebind': 56}
+         refusals {}
+         programs {0: 1575}
+         joints/draw 25 classes {'fast': 25069, 'scale': 1450, 'warm': 12913}
+         per draw: head 20433 guard 11046 kernel 30539 patch 10722 submit 5225 dmawait 0 | kernel/joint 1220
+         oracle mismatches {}
+  Samus  attempts  1685 draws  1532 (90.9%) adopts  153 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tuple': 135, 'tint_set': 3, 'rebind': 14}
+         refusals {}
+         programs {0: 1485, 1: 5, 2: 3, 3: 39}
+         joints/draw 23 classes {'fast': 22810, 'scale': 6, 'warm': 11534, 'lock': 150}
+         per draw: head 18237 guard 10201 kernel 26522 patch 8192 submit 5044 dmawait 0 | kernel/joint 1178
+         oracle mismatches {}
+  Link   attempts  1824 draws  1613 (88.4%) adopts  182 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tuple': 166, 'material': 13, 'tint_set': 3, 'rebind': 12, 'uncacheable': 16}
+         refusals {'plan': 16}
+         programs {0: 1585, 1: 28}
+         joints/draw 27 classes {'fast': 25316, 'scale': 4388, 'warm': 14066}
+         per draw: head 18763 guard 9412 kernel 35218 patch 17776 submit 5949 dmawait 0 | kernel/joint 1298
+         oracle mismatches {}
+  Kirby  attempts  1628 draws  1467 (90.1%) adopts  150 high 0 oracle_runs 0
+         declines {'adopt_pending': 1, 'tuple': 144, 'material': 11, 'tint_set': 2, 'rebind': 3}
+         refusals {}
+         programs {0: 1408, 13: 59}
+         joints/draw 21 classes {'fast': 15525, 'scale': 5847, 'warm': 10070}
+         per draw: head 16962 guard 6442 kernel 27196 patch 7886 submit 4403 dmawait 0 | kernel/joint 1269
+         oracle mismatches {}
+  guard parts/draw {'tuple': '862', 'topology': '1572', 'camera': '512', 'identity': '3335', 'preamble': '1210', 'packet': '1468', 'shuffle': '273', 'texgen_sel': '0'}
+  patch parts/draw {'tint_tiles': '1836', 'apply_tint': '2061', 'matrices': '1851', 'light': '843', 'texgen': '2296', 'sites': '0'}
+  submit parts/draw {'flush': '1957', 'gx+dma_wait': '199', 'dma+invalidate': '1282', 'stats': '1350'} book/draw 2155 flush B/draw 9455
+  oracle: runs 0 words 0 source_miss 0 unconsumed 0 fence_rekey 0
+         mismatch [0, 0, 0, 0, 0, 0, 0, 0] key_moved [0, 0, 0, 0, 0, 0, 0, 0] rec_under_hit [0, 0] rec_diff [0, 0, 0, 0, 0, 0, 0, 0, 0] max_lsb [0, 0, 0]
+  identity: watch_miss 0 last adopt watched 0 | all-admitted adoptions 635 | retuples 0 rekeys 0 | plan verify runs 0 mismatch 0 hits 36 builds 623
+  adoption: ticks/adopt 35409 copy/adopt 17007 kept 389 | projection patches 6187 | variants learned 24 (words 74) switches 4 learn-fail 0 learn ticks/learn 49043 | retuple ticks/retuple -
+  misc: pre_checks 6199 pre_skips 0 light_patches 6187 texgen_patches 1585 pinned_miss 0 kernel_fail 0 (rebuilt 0) tint binds 44240 moved 0 miss 0 white 0 shape 0
+  dma: lean waits 0 ticks 0 | next-writer waits 0 ticks 0 | ge busy 0/1973
+  heap free min 54020 libc top min 18976 uploads after GO 0
