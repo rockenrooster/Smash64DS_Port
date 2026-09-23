@@ -1960,6 +1960,15 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * dynamic slot i owns key-pool entry i - STATIC_COUNT. No free-list or resident
  * key pointer is needed. Re-measure with scripts/probe-p2-fourcpu-sparse.ps1
  * before changing this count; do not grow it from a theoretical roster sum. */
+/* P2-2p8 Phase 1 slice 2b: the count is NOT grown for fighter texture
+ * admission. The stress roster's whole admitted set needs 114 dynamic slots
+ * on top of the draws' non-admitted same-frame working set (measured on a
+ * 245-slot lab ROM, artifacts/performance/2026-09-23_p2-2p8-phase1-slice2b),
+ * i.e. about 192 slots -- +19 KB of static RAM, which the taskman arena pays
+ * for: the four-CPU general-heap low-water fell to 25,620 B, 20 B above the
+ * GObj-cap floor. The admission instead stops NDS_FTR_ADMIT_SLOT_RESERVE
+ * short of this partition (nds_renderer_textures_effects.c), so it can never
+ * starve the draws of slots; growing the count is an owner RAM decision. */
 #define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 124u
 #define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
@@ -3410,8 +3419,12 @@ typedef struct NDSFighterPacketTexgenSite
  * material-coloured, non-white-prim run binds an 8x8 tile of its prim). The
  * packet words are unchanged; this only names where the tile's
  * TEXIMAGE_PARAM / PLTT_BASE parameters sit and which colour chose the tile,
- * so the lean path can re-point them instead of re-recording. */
-#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 16u
+ * so the lean path can re-point them instead of re-recording.
+ * Slice 2b BSS diet: 4 per packet (the four-CPU stress records at most 2; the
+ * slice 2a census). A packet that records more sets tint_bind_overflow and is
+ * simply not adopted by the lean path -- the words and the old path are
+ * unchanged. 16 -> 4 saves 192 B per packet. */
+#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 4u
 typedef struct NDSFighterPacketTintBind
 {
     u16 tex_index;
@@ -3549,8 +3562,10 @@ static inline void ndsFighterPacketDmaWait(void)
             u32 wait_start = cpuGetTiming();
 
             while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
-            gNdsFtrLean.packet_dma_waits++;
-            gNdsFtrLean.packet_dma_wait_ticks += cpuGetTiming() - wait_start;
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.packet_dma_waits++);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.packet_dma_wait_ticks +=
+                                 cpuGetTiming() - wait_start);
+            (void)wait_start;
         }
         sNdsFighterPacketDmaPending = 0u;
     }
@@ -5289,6 +5304,12 @@ typedef struct NDSRendererHardwareTextureCacheEntry
      * for the scene, so a per-frame dynamic upload (a scrolling texture)
      * cannot push the stage's own textures out under its prepared runs. */
     u8 stage_warm;
+    /* P2-2p8 Phase 1 slice 2b: an admitted fighter texture (uploaded by the
+     * creation-time admission, gNdsFtrLeanAdmit). Exempt from eviction and
+     * from being refreshed/repurposed for the rest of the battle, like
+     * stage_warm, without the static-pin semantics `pinned` carries.
+     * Cleared by release (the entry is zeroed) and at battle exit. */
+    u8 admitted;
 } NDSRendererHardwareTextureCacheEntry;
 
 typedef struct NDSRendererHardwareResolvedTexture

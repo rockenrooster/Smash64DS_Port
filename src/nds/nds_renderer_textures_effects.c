@@ -2430,7 +2430,8 @@ ndsRendererHardwareFindStageSourceFrameTexture(
             &sNdsRendererHardwareTextureCache[i];
         NDSRendererHardwareTextureKey source_frame;
 
-        if ((entry->ready == 0u) || (entry->pinned != 0u))
+        if ((entry->ready == 0u) || (entry->pinned != 0u) ||
+            (entry->admitted != 0u))
         {
             continue;
         }
@@ -2464,7 +2465,7 @@ ndsRendererHardwareFindTexel1RefreshTexture(
             ndsRendererHardwareEntryDynamicKey(entry);
 
         if ((resident != NULL) && (entry->ready != 0u) &&
-            (entry->pinned == 0u) &&
+            (entry->pinned == 0u) && (entry->admitted == 0u) &&
             (resident->texel1_image != 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)) &&
@@ -2817,6 +2818,7 @@ static s32 ndsRendererHardwareEvictTexture(
         sNdsRendererHardwareTextureCacheNext++;
         if ((entry != exclude) && (entry->name != 0) &&
             (entry->pinned == 0u) && (entry->stage_warm == 0u) &&
+            (entry->admitted == 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)))
         {
@@ -2931,6 +2933,21 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
 #endif
 }
 
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+/* P2-2p8 Phase 1 slice 2b (lab): dynamic-partition occupancy seen by every
+ * allocation -- ready slots, admitted slots -- and allocations that found no
+ * takeable slot at all (the ALLOC reject the admitted set could cause). */
+volatile u32 gNdsFtrAdmitDynReadyHigh __attribute__((used));
+volatile u32 gNdsFtrAdmitDynAdmittedHigh __attribute__((used));
+/* Non-admitted, non-pinned entries touched in the current frame: with the
+ * admitted ones, the slots an allocation can never take (the sizing input). */
+volatile u32 gNdsFtrAdmitDynTouchedHigh __attribute__((used));
+volatile u32 gNdsFtrAdmitDynFull __attribute__((used));
+/* The last texture reject reason (NDS_RENDERER_HW_TEXREJECT_*), so the
+ * admission can name why the cache refused one of its records. */
+volatile u32 gNdsFtrAdmitLastReject __attribute__((used));
+#endif
+
 static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareAllocTexture(void)
 {
@@ -2940,6 +2957,41 @@ ndsRendererHardwareAllocTexture(void)
 
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_ALLOC);
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+    {
+        u32 ready = 0u;
+        u32 admitted = 0u;
+        u32 touched = 0u;
+
+        for (i = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
+             i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+        {
+            const NDSRendererHardwareTextureCacheEntry *probe =
+                &sNdsRendererHardwareTextureCache[i];
+
+            ready += (probe->ready != 0u) ? 1u : 0u;
+            admitted += probe->admitted;
+            if ((probe->ready != 0u) && (probe->admitted == 0u) &&
+                (probe->last_used_frame ==
+                 (sNdsRendererHardwareFrameSerial + 1u)))
+            {
+                touched++;
+            }
+        }
+        if (ready > gNdsFtrAdmitDynReadyHigh)
+        {
+            gNdsFtrAdmitDynReadyHigh = ready;
+        }
+        if (admitted > gNdsFtrAdmitDynAdmittedHigh)
+        {
+            gNdsFtrAdmitDynAdmittedHigh = admitted;
+        }
+        if (touched > gNdsFtrAdmitDynTouchedHigh)
+        {
+            gNdsFtrAdmitDynTouchedHigh = touched;
+        }
+    }
+#endif
 
     /* Dynamic slots only. Slots below STATIC_COUNT belong to the generated
      * corpus one-for-one with its record indices and have no pool key to write,
@@ -2963,6 +3015,7 @@ ndsRendererHardwareAllocTexture(void)
         sNdsRendererHardwareTextureCacheNext++;
         entry = &sNdsRendererHardwareTextureCache[index];
         if ((entry->pinned == 0u) && (entry->stage_warm == 0u) &&
+            (entry->admitted == 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)))
         {
@@ -2972,6 +3025,9 @@ ndsRendererHardwareAllocTexture(void)
             return ndsRendererHardwareReleaseTexture(entry);
         }
     }
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+    gNdsFtrAdmitDynFull++;
+#endif
     return NULL;
 }
 
@@ -3125,6 +3181,11 @@ void ndsRendererHardwareDiscardTextureCache(void)
 volatile u32 gNdsRendererSceneTextureVramResetEnable = 1u;
 volatile u32 gNdsRendererSceneTextureVramResetCount;
 
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+static void ndsFtrAdmitSceneResetGuard(void);
+#endif
+
 void ndsRendererHardwareResetSceneTextureVram(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -3135,6 +3196,11 @@ void ndsRendererHardwareResetSceneTextureVram(void)
     {
         return;
     }
+#if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+    /* P2-2p8 Phase 1 slice 2b: a previous battle's texture regions still
+     * active here means its exit hook was missed; close them first. */
+    ndsFtrAdmitSceneResetGuard();
+#endif
     /* DiscardTextureCache ends the batch, deletes every cache name and the
      * no-texture name, and clears the lookup, refresh queue and active
      * binding. glResetTextures then drops libnds's own texture and palette
@@ -4200,6 +4266,10 @@ typedef struct NDSVramCensusSnap
     u32 bytes[NDS_VRAM_CENSUS_BUCKETS];
     u32 count[NDS_VRAM_CENSUS_BUCKETS];
     u32 pal[NDS_VRAM_CENSUS_BUCKETS];
+    /* Slice 2b: the part of tex_bytes / bytes[] whose texels live in bank D
+     * (LCD 0x06860000-0x0687ffff, texture slot 3 while a battle holds it). */
+    u32 tex_bytes_d;
+    u32 bytes_d[NDS_VRAM_CENSUS_BUCKETS];
 } NDSVramCensusSnap;
 
 typedef struct NDSVramCensus
@@ -4237,6 +4307,67 @@ typedef struct NDSVramCensus
 } NDSVramCensus;
 
 NDSVramCensus gNdsVramCensus __attribute__((used, aligned(32)));
+
+/* Slice 2b (lab): what the admission did, and every fighter-draw upload after
+ * it finished -- a key the admitted set does not hold (the gate counter). */
+typedef struct NDSFtrAdmitLab
+{
+    u32 runs;
+    u32 word;
+    u32 frame;
+    u32 regions;            /* bank D is a texture bank, A+B locked */
+    u32 bg3_not_empty;      /* word 2 refused: the battle uses BG3 */
+    u32 lock_before;
+    u32 lock_after;
+    u32 records;
+    u32 skipped_costume;
+    u32 skipped_hat;
+    u32 applied;            /* records the cache resolved */
+    u32 fails;
+    u32 asset_fails;
+    u32 entries_admitted;   /* distinct cache entries marked admitted */
+    u32 bytes_admitted;
+    u32 bytes_in_d;
+    u32 bytes_in_ab;
+    u32 per_fighter_applied[4];
+    u32 per_fighter_bytes[4];
+    u32 locked;             /* A+B locked: D is the only allocating region */
+    u32 lock_frame;
+    u32 free_before;        /* usable texture free / largest run before D */
+    u32 largest_before;
+    u32 free_after;         /* after the admission, D included */
+    u32 largest_after;
+    u32 exit_safety;        /* regions closed by the scene-reset guard */
+    u32 bases;              /* loaded fighter files the adapter handed over */
+    u32 pruned;             /* records whose span the compact pack omitted */
+    u32 absent;             /* records whose file is not loaded this battle */
+    u32 libc_skipped;       /* records left on-demand at the libc floor */
+    u32 slot_skipped;       /* records left on-demand at the slot reserve */
+    u32 libc_top_min;       /* lowest libc top chunk seen by the admission */
+    u32 read_ticks;         /* NitroFS open + index + chunk reads */
+    u32 apply_ticks;        /* replay + resolve/convert/upload */
+    u32 reject_mask;        /* NDS_RENDERER_HW_TEXREJECT_* of refused records */
+    u32 reject_first[6];    /* reason, index, render settile w0/w1, tile size
+                             * w0/w1 of the first refused record */
+    u32 ticks;
+    u32 exit_runs;
+    u32 exit_released;
+    u32 exit_orphans;
+    u32 done;
+    u32 outside[4];         /* fighter-draw uploads after admission, per slot */
+    u32 outside_count;
+    u32 outside_first[8][3];
+    /* Per slot, the first outside upload's whole cache key, and the key of an
+     * admitted entry with the same image (state 1), or state 2 when no
+     * admitted entry has that image at all. */
+    u32 diag_state[4];
+    u32 diag_same_image[4];
+    u32 diag_outside_key[4][59];
+    u32 diag_admit_key[4][59];
+} NDSFtrAdmitLab;
+
+NDSFtrAdmitLab gNdsFtrAdmitLab __attribute__((used, aligned(32)));
+#define NDS_FTR_ADMIT_LAB(stmt) do { stmt; } while (0)
 static u8 sNdsVramCensusBucketOf[NDS_VRAM_CENSUS_NAME_MAX];
 static u32 sNdsVramCensusPalSeen[NDS_VRAM_CENSUS_NAME_MAX / 32u];
 
@@ -4489,11 +4620,18 @@ static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
             ndsVramCensusParamsBytes(tex->texFormat) : 0u;
         if (bytes != 0u)
         {
+            u32 addr = (u32)(uintptr_t)tex->vramAddr;
+
             snap->tex_names++;
             snap->tex_bytes += bytes;
             snap->tex_size_field += tex->texSize;
             snap->bytes[bucket] += bytes;
             snap->count[bucket]++;
+            if ((addr >= 0x06860000u) && (addr < 0x06880000u))
+            {
+                snap->tex_bytes_d += bytes;
+                snap->bytes_d[bucket] += bytes;
+            }
         }
         if ((tex->palIndex > 0) &&
             ((u32)tex->palIndex < palettes->cur_size) &&
@@ -4651,6 +4789,10 @@ static void ndsVramCensusNoteCacheKey(
     }
     slot = slot_plus1 - 1u;
     census->key_uploads[slot]++;
+    if (gNdsFtrAdmitLab.done != 0u)
+    {
+        gNdsFtrAdmitLab.outside[slot]++;
+    }
     if (gNdsFtrLean.go_frame != 0u)
     {
         census->key_uploads_after_go[slot]++;
@@ -4685,6 +4827,45 @@ static void ndsVramCensusNoteCacheKey(
         (((entry->params >> 20) & 7u) << 8) |
         (((entry->params >> 23) & 7u) << 11) | (pal_code << 14) |
         (((entry->params >> 16) & 0xfu) << 16);
+    if ((gNdsFtrAdmitLab.done != 0u) && (gNdsFtrAdmitLab.diag_state[slot] == 0u))
+    {
+        u32 j;
+
+        memcpy(gNdsFtrAdmitLab.diag_outside_key[slot], key,
+               sizeof(gNdsFtrAdmitLab.diag_outside_key[slot]));
+        gNdsFtrAdmitLab.diag_state[slot] = 2u;
+        for (j = 0u; j < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; j++)
+        {
+            const NDSRendererHardwareTextureCacheEntry *other =
+                &sNdsRendererHardwareTextureCache[j];
+            NDSRendererHardwareTextureKey other_key;
+
+            if ((other->admitted == 0u) || (other->ready == 0u))
+            {
+                continue;
+            }
+            ndsRendererHardwareEntryCopyKey(other, &other_key);
+            if (other_key.image != key->image)
+            {
+                continue;
+            }
+            gNdsFtrAdmitLab.diag_same_image[slot]++;
+            if (gNdsFtrAdmitLab.diag_state[slot] == 2u)
+            {
+                gNdsFtrAdmitLab.diag_state[slot] = 1u;
+                memcpy(gNdsFtrAdmitLab.diag_admit_key[slot], &other_key,
+                       sizeof(gNdsFtrAdmitLab.diag_admit_key[slot]));
+            }
+        }
+    }
+    if ((gNdsFtrAdmitLab.done != 0u) && (gNdsFtrAdmitLab.outside_count < 8u))
+    {
+        gNdsFtrAdmitLab.outside_first[gNdsFtrAdmitLab.outside_count][0] =
+            (slot << 28) | (w0 & 0x0fffffffu);
+        gNdsFtrAdmitLab.outside_first[gNdsFtrAdmitLab.outside_count][1] = w1;
+        gNdsFtrAdmitLab.outside_first[gNdsFtrAdmitLab.outside_count][2] = w2;
+        gNdsFtrAdmitLab.outside_count++;
+    }
     for (i = 0u; i < census->key_count[slot]; i++)
     {
         u32 *record = census->key[slot][i];
@@ -10299,6 +10480,9 @@ static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
     /* P2-2p8 Phase 1 slice 1: the fighter texture-admission census's reject
      * witness (first fighter-owned reject, reason + cache census). */
     ndsFtrLeanNoteTextureReject(reason, format, size);
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES
+    gNdsFtrAdmitLastReject = reason;
+#endif
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_MANIFEST_FALLBACK);
     if (stats != NULL)
@@ -15859,6 +16043,654 @@ ndsRendererSubmitHardwareTriangle(
     }
 }
 #endif
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+/* ---------------------------------------------------------------------------
+ * P2-2p8 Phase 1 slice 2b: fighter texture admission and battle VRAM regions
+ * (include/nds/renderer_fighter_lean.h, gNdsFtrLeanAdmit).
+ *
+ * The table is scripts/fighters/generate_nds_fighter_admission.py's NitroFS
+ * payload: per kind x detail, every texture the fighter can show, as the RDP
+ * texture state the draw presents at the textured triangle (image / TLUT as
+ * asset id + SOURCE offset, the exact SETTIMG / SETTILE / LOAD* / SETTILESIZE
+ * / TEXTURE words, combine, othermode, prim, env). Admission replays each
+ * record through the renderer's own recorders into a fresh NDSRendererStats
+ * and hands it to the cache's own resolve/convert/upload path, so the key is
+ * built by the same code the draw uses; the entry is then marked `admitted`
+ * (exempt from eviction and refresh for the battle).
+ *
+ * Word 2 first takes bank D for textures when the battle leaves BG3 empty
+ * (ndsPlatformVramBg3Empty: no opaque BG3 pixel). The admission allocates
+ * first-fit, so it packs into what A+B still has free and spills the rest
+ * into D; the first frame end after it locks A+B (ndsFtrLeanAdmitLockRegions)
+ * and D alone allocates and frees for the rest of the battle. Battle exit
+ * releases D's cache entries, locks D and hands it back to BG3.
+ * ------------------------------------------------------------------------- */
+#include <nds/generated/nds_fighter_admission.generated.h>
+
+#ifndef NDS_FTR_ADMIT_LAB
+#define NDS_FTR_ADMIT_LAB(stmt) ((void)0)
+#endif
+
+const void *ndsRelocNativeAssetAddress(const void *base, u32 offset);
+u32 ndsPlatformVramBg3Empty(void);
+s32 ndsPlatformVramTakeBankD(void);
+void ndsPlatformVramReturnBankD(void);
+
+/* libnds keeps every texture name's record and every VRAM block split in
+ * newlib malloc, from the libc runtime reserve the taskman arena leaves
+ * (diagnostics_taskman_heap.c: 0xA000, 0x9100 on the all-content shell), and
+ * its block allocator does not check malloc (a NULL store aborts). Admission
+ * stops -- the rest stays on-demand, as today -- before the top chunk falls
+ * under this floor, which keeps the reserve's measured in-match need. */
+#define NDS_FTR_ADMIT_LIBC_FLOOR 0x4000u
+typedef struct NDSFtrAdmitMallinfo
+{
+    u32 arena;
+    u32 ordblks;
+    u32 smblks;
+    u32 hblks;
+    u32 hblkhd;
+    u32 usmblks;
+    u32 fsmblks;
+    u32 uordblks;
+    u32 fordblks;
+    u32 keepcost;
+} NDSFtrAdmitMallinfo;
+extern NDSFtrAdmitMallinfo mallinfo(void);
+
+/* Dynamic cache slots the admission leaves to the draws' non-admitted
+ * same-frame working set: the four-CPU stress measures 55 without admission
+ * (gNdsFtrAdmitDynTouchedHigh, slice 2b), so admission may hold at most
+ * DYNAMIC_COUNT - 56 entries. */
+#define NDS_FTR_ADMIT_SLOT_RESERVE 56u
+
+#define NDS_FTR_ADMIT_CHUNK 8u
+#define NDS_FTR_ADMIT_KIRBY 8u
+#define NDS_FTR_ADMIT_D_LO 0x06860000u
+#define NDS_FTR_ADMIT_D_HI 0x06880000u
+#define NDS_FTR_ADMIT_INDEX_WORDS (4u + 4u * NDS_FIGHTER_ADMISSION_KINDS)
+
+volatile u32 gNdsFtrLeanAdmitFail __attribute__((used));
+volatile u32 gNdsFtrLeanAdmitFailFirst[4] __attribute__((used));
+
+static u32 sNdsFtrAdmitRegions;
+static u32 sNdsFtrAdmitLocked;
+static int sNdsFtrAdmitSavedLock;
+static u32 sNdsFtrAdmitIndex[NDS_FTR_ADMIT_INDEX_WORDS];
+static u32 sNdsFtrAdmitChunk[NDS_FTR_ADMIT_CHUNK *
+                             NDS_FIGHTER_ADMISSION_RECORD_WORDS];
+static const NDSRendererConfig sNdsFtrAdmitConfig = {
+    .texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED
+};
+
+static void ndsFtrAdmitLatch(u32 fkind, u32 detail, u32 reason, u32 index,
+                             u32 image, u32 reject)
+{
+    if (gNdsFtrLeanAdmitFail == 0u)
+    {
+        gNdsFtrLeanAdmitFailFirst[0] = (fkind << 16) | (detail << 8) | reason;
+        gNdsFtrLeanAdmitFailFirst[1] = index;
+        gNdsFtrLeanAdmitFailFirst[2] = image;
+        gNdsFtrLeanAdmitFailFirst[3] = reject;
+    }
+    gNdsFtrLeanAdmitFail++;
+}
+
+static const u32 *sNdsFtrAdmitBaseAsset;
+static const void *const *sNdsFtrAdmitBaseData;
+static u32 sNdsFtrAdmitBaseCount;
+
+/* A record's SOURCE offset -> the live pointer the draw would carry: the
+ * fighter's own loaded file (the adapter's base table, from FTData), else the
+ * reloc backend's current-scene view. */
+/* *why on NULL: 1 = the file's compact battle pack omitted this SOURCE span
+ * (the pack keeps exactly the spans battle consumes, so battle cannot draw
+ * it either); 2 = the file is not loaded in this battle (a part that lives in
+ * another kind's file -- Kirby's copy props -- whose kind is absent);
+ * 0 = a real failure. */
+static const void *ndsFtrAdmitAddress(u32 asset, u32 offset, u32 *why)
+{
+    const void *data = NULL;
+    const void *mapped;
+    u32 size = 0u;
+    u32 i;
+
+    for (i = 0u; i < sNdsFtrAdmitBaseCount; i++)
+    {
+        if ((sNdsFtrAdmitBaseAsset[i] == asset) &&
+            (sNdsFtrAdmitBaseData[i] != NULL))
+        {
+            data = sNdsFtrAdmitBaseData[i];
+            break;
+        }
+    }
+    if (data == NULL)
+    {
+        if ((ndsRelocGetLoadedAssetView(asset, &data, &size) == FALSE) ||
+            (data == NULL))
+        {
+            *why = 2u;
+            return NULL;
+        }
+        if (offset >= size)
+        {
+            return NULL;
+        }
+    }
+    mapped = ndsRelocNativeAssetAddress(data, offset);
+    if (mapped == NULL)
+    {
+        *why = 1u;
+    }
+    return mapped;
+}
+
+static u32 ndsFtrAdmitNameAddress(int name)
+{
+    const DynamicArray *textures = &glGlobalData.texturePtrs;
+    const gl_texture_data *tex;
+
+    if ((name <= 0) || ((u32)name >= textures->cur_size))
+    {
+        return 0u;
+    }
+    tex = (const gl_texture_data *)textures->data[name];
+    return (tex != NULL) ? (u32)(uintptr_t)tex->vramAddr : 0u;
+}
+
+/* One record: the draw's texture state, replayed; then the cache resolves
+ * (and, when it is not resident yet, converts and uploads) it. Returns 1
+ * resolved, 0 refused by the cache, -1 source not addressable, -2 source span
+ * omitted by the file's compact battle pack, -3 source file not loaded in this
+ * battle (-2 and -3 cannot be drawn in this battle: skipped, not failed). */
+static s32 ndsFtrAdmitApply(NDSRendererStats *stats, const u32 *w,
+                            NDSRendererHardwareResolvedTexture *resolved)
+{
+    u32 flags = w[0];
+    u32 why = 0u;
+    const void *image = ndsFtrAdmitAddress(w[2] & 0xffffu, w[3], &why);
+    const void *tlut = NULL;
+
+    if (image == NULL)
+    {
+        return (why == 1u) ? -2 : (why == 2u) ? -3 : -1;
+    }
+    if ((flags & NDS_FIGHTER_ADMISSION_F_HAS_TLUT) != 0u)
+    {
+        tlut = ndsFtrAdmitAddress(w[2] >> 16, w[4], &why);
+        if (tlut == NULL)
+        {
+            return (why == 1u) ? -2 : (why == 2u) ? -3 : -1;
+        }
+    }
+    ndsRendererInitStats(stats);
+    if (tlut != NULL)
+    {
+        ndsRendererRecordSetImage(stats, w[10], (u32)(uintptr_t)tlut);
+        ndsRendererRecordSetTile(stats, w[11], w[12]);
+        ndsRendererRecordLoadTlut(stats, w[13]);
+    }
+    ndsRendererRecordSetImage(stats, w[5], (u32)(uintptr_t)image);
+    ndsRendererRecordSetTile(stats, w[6], w[7]);
+    if ((flags & NDS_FIGHTER_ADMISSION_F_LOAD_TILE) != 0u)
+    {
+        ndsRendererRecordLoadTile(stats, w[8], w[9]);
+    }
+    else
+    {
+        ndsRendererRecordLoadBlock(stats, w[8], w[9]);
+    }
+    ndsRendererRecordSetTile(stats, w[14], w[15]);
+    ndsRendererRecordSetTileSize(stats, w[16], w[17]);
+    ndsRendererRecordTextureState(stats, w[18], w[19]);
+    ndsRendererRecordSetCombine(stats, w[20], w[21]);
+    ndsRendererRecordOtherMode(
+        stats, NDS_RENDERER_OP_RDPSETOTHERMODE,
+        (NDS_RENDERER_OP_RDPSETOTHERMODE << 24) | (w[22] & 0x00ffffffu), w[23]);
+    if ((flags & NDS_FIGHTER_ADMISSION_F_HAS_PRIM) != 0u)
+    {
+        stats->prim_color = w[25];
+        stats->prim_min_level = (w[24] >> 8) & 0xffu;
+        stats->prim_lod_fraction = w[24] & 0xffu;
+    }
+    if ((flags & NDS_FIGHTER_ADMISSION_F_HAS_ENV) != 0u)
+    {
+        stats->env_color = w[26];
+    }
+    /* The draw path proper (resolve, convert, upload, bind: `resolved` NULL),
+     * then the resident lookup the hierarchy preflight uses, for the entry. */
+    if (ndsRendererHardwareResolveOrBindTexture(stats, &sNdsFtrAdmitConfig,
+                                                NULL, NULL, FALSE) == FALSE)
+    {
+        return 0;
+    }
+    return (ndsRendererHardwareResolveResidentTexture(
+                stats, &sNdsFtrAdmitConfig, NULL, resolved) != FALSE) ? 1 : 0;
+}
+
+#if NDS_VRAM_CENSUS_LIVE
+static void ndsFtrAdmitLabFree(u32 *free_bytes, u32 *largest)
+{
+    u32 blocks[11];
+
+    ndsVramCensusBlocks(glGlobalData.vramBlocks[0], 0u, blocks);
+    *free_bytes = blocks[8];
+    *largest = blocks[9];
+}
+#endif
+
+/* Take bank D for textures (word 2), once per battle, keyed on the property
+ * that makes it safe: the battle has left BG3 empty. A, B and D all allocate
+ * until ndsFtrLeanAdmitLockRegions, so the admission (first-fit) packs into
+ * what A+B still has free before it spills into D. */
+static void ndsFtrAdmitEnterRegions(void)
+{
+    if (sNdsFtrAdmitRegions != 0u)
+    {
+        return;
+    }
+    NDS_FTR_ADMIT_LAB(ndsFtrAdmitLabFree(&gNdsFtrAdmitLab.free_before,
+                                         &gNdsFtrAdmitLab.largest_before));
+    if ((ndsPlatformVramBg3Empty() == FALSE) ||
+        (ndsPlatformVramTakeBankD() == FALSE))
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.bg3_not_empty++);
+        return;
+    }
+    sNdsFtrAdmitSavedLock = glGlobalData.vramLock[0];
+    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.lock_before = (u32)sNdsFtrAdmitSavedLock);
+    glUnlockVRAMBank((u16 *)VRAM_D);
+    sNdsFtrAdmitRegions = 1u;
+    sNdsFtrAdmitLocked = 0u;
+    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.regions = 1u);
+}
+
+/* The battle's setup uploads are done (first frame end after the admission):
+ * A+B hold the scene set and the admitted fighters for the rest of the
+ * battle, and D alone allocates and frees. */
+void ndsFtrLeanAdmitLockRegions(void)
+{
+    if ((sNdsFtrAdmitRegions == 0u) || (sNdsFtrAdmitLocked != 0u))
+    {
+        return;
+    }
+    glLockVRAMBank((u16 *)VRAM_A);
+    glLockVRAMBank((u16 *)VRAM_B);
+    sNdsFtrAdmitLocked = 1u;
+    NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.locked = 1u,
+                       gNdsFtrAdmitLab.lock_frame = gNdsRendererProfileFrameCount,
+                       gNdsFtrAdmitLab.lock_after =
+                           (u32)glGlobalData.vramLock[0]));
+}
+
+u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
+                       const u32 *costume, const u32 *detail,
+                       const u32 *player, u32 count,
+                       const u32 *base_asset, const void *const *base_data,
+                       u32 base_count, u32 word)
+{
+    NdsRelocAssetStream stream = { NULL };
+    NDSRendererHardwareResolvedTexture resolved;
+    u32 libc_stop = 0u;
+    u32 slot_stop = 0u;
+    u32 admitted_total = 0u;
+    u32 present = 0u;
+    u32 admitted = 0u;
+    u32 start = cpuGetTiming();
+    u32 i;
+
+    if ((scratch == NULL) || (count == 0u) || (word == 0u))
+    {
+        return 0u;
+    }
+    NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.runs++, gNdsFtrAdmitLab.word = word,
+                       gNdsFtrAdmitLab.frame = gNdsRendererProfileFrameCount,
+                       gNdsFtrAdmitLab.bases = base_count));
+    sNdsFtrAdmitBaseAsset = base_asset;
+    sNdsFtrAdmitBaseData = base_data;
+    sNdsFtrAdmitBaseCount = ((base_asset != NULL) && (base_data != NULL)) ?
+        base_count : 0u;
+    if (word >= NDS_FTR_LEAN_ADMIT_REGIONS)
+    {
+        ndsFtrAdmitEnterRegions();
+    }
+    for (i = 0u; i < count; i++)
+    {
+        present |= 1u << (fkind[i] & 31u);
+    }
+    if (ndsRelocAssetStreamOpen(&stream, "nitro:/fighters/admission.bin") ==
+        FALSE)
+    {
+        sNdsFtrAdmitBaseCount = 0u;
+        ndsFtrAdmitLatch(0u, 0u, nNDSFtrLeanAdmitFailOpen, 0u, 0u, 0u);
+        return 0u;
+    }
+    if ((ndsRelocAssetStreamRead(&stream, 0u, sNdsFtrAdmitIndex,
+                                 sizeof(sNdsFtrAdmitIndex)) == FALSE) ||
+        (sNdsFtrAdmitIndex[0] != NDS_FIGHTER_ADMISSION_MAGIC) ||
+        (sNdsFtrAdmitIndex[1] != NDS_FIGHTER_ADMISSION_VERSION) ||
+        (sNdsFtrAdmitIndex[2] != NDS_FIGHTER_ADMISSION_KINDS) ||
+        (sNdsFtrAdmitIndex[3] != NDS_FIGHTER_ADMISSION_RECORD_WORDS))
+    {
+        ndsRelocAssetStreamClose(&stream);
+        sNdsFtrAdmitBaseCount = 0u;
+        ndsFtrAdmitLatch(0u, 0u, nNDSFtrLeanAdmitFailFormat, 0u, 0u, 0u);
+        return 0u;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        u32 kind = fkind[i];
+        /* FTPartsLevelDetail: High 1, Low 2 (ftdef.h) */
+        u32 d = (detail[i] == 2u) ? 1u : 0u;
+        u32 first;
+        u32 n;
+        u32 r;
+
+        if (kind >= NDS_FIGHTER_ADMISSION_KINDS)
+        {
+            continue;
+        }
+        first = sNdsFtrAdmitIndex[4u + (kind * 2u + d) * 2u];
+        n = sNdsFtrAdmitIndex[5u + (kind * 2u + d) * 2u];
+#if NDS_VRAM_CENSUS_LIVE
+        /* Census attribution: these uploads belong to this fighter's slot. */
+        gNdsVramCensusDrawSlotPlus1 = (player[i] & 3u) + 1u;
+#else
+        (void)player;
+#endif
+        for (r = 0u; r < n; r += NDS_FTR_ADMIT_CHUNK)
+        {
+            u32 m = ((n - r) < NDS_FTR_ADMIT_CHUNK) ? (n - r) :
+                NDS_FTR_ADMIT_CHUNK;
+            u32 k;
+
+#if NDS_VRAM_CENSUS_LIVE
+            u32 read_start = cpuGetTiming();
+            s32 read_ok = ndsRelocAssetStreamRead(
+                &stream,
+                NDS_FIGHTER_ADMISSION_HEADER_BYTES +
+                    (first + r) * NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u,
+                sNdsFtrAdmitChunk,
+                m * NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u);
+
+            gNdsFtrAdmitLab.read_ticks += cpuGetTiming() - read_start;
+            if (read_ok == FALSE)
+#else
+            if (ndsRelocAssetStreamRead(
+                    &stream,
+                    NDS_FIGHTER_ADMISSION_HEADER_BYTES +
+                        (first + r) * NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u,
+                    sNdsFtrAdmitChunk,
+                    m * NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u) == FALSE)
+#endif
+            {
+                ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailRead, r, 0u, 0u);
+                break;
+            }
+            for (k = 0u; k < m; k++)
+            {
+                const u32 *w =
+                    &sNdsFtrAdmitChunk[k * NDS_FIGHTER_ADMISSION_RECORD_WORDS];
+                s32 result;
+
+                NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.records++);
+                if ((w[0] & NDS_FIGHTER_ADMISSION_F_HAT) != 0u)
+                {
+                    u32 hat = (w[0] >> 8) & 0xffu;
+
+                    if ((kind != NDS_FTR_ADMIT_KIRBY) ||
+                        (hat == NDS_FTR_ADMIT_KIRBY) || (hat >= 32u) ||
+                        ((present & (1u << hat)) == 0u))
+                    {
+                        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.skipped_hat++);
+                        continue;
+                    }
+                }
+                if ((w[1] & (1u << (costume[i] & 7u))) == 0u)
+                {
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.skipped_costume++);
+                    continue;
+                }
+                if (libc_stop != 0u)
+                {
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.libc_skipped++);
+                    continue;
+                }
+                if (admitted_total + NDS_FTR_ADMIT_SLOT_RESERVE >=
+                    NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT)
+                {
+                    if (slot_stop == 0u)
+                    {
+                        slot_stop = 1u;
+                        ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailSlots,
+                                         first + r + k, admitted_total, 0u);
+                    }
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.slot_skipped++);
+                    continue;
+                }
+                {
+                    u32 top = mallinfo().keepcost;
+
+                    NDS_FTR_ADMIT_LAB(
+                        if ((gNdsFtrAdmitLab.libc_top_min == 0u) ||
+                            (top < gNdsFtrAdmitLab.libc_top_min))
+                        {
+                            gNdsFtrAdmitLab.libc_top_min = top;
+                        });
+                    if (top < NDS_FTR_ADMIT_LIBC_FLOOR)
+                    {
+                        libc_stop = 1u;
+                        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.libc_skipped++);
+                        ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailLibc,
+                                         first + r + k, top, 0u);
+                        continue;
+                    }
+                }
+#if NDS_VRAM_CENSUS_LIVE
+                gNdsFtrAdmitLastReject = 0u;
+#endif
+#if NDS_VRAM_CENSUS_LIVE
+                {
+                    u32 apply_start = cpuGetTiming();
+
+                    result = ndsFtrAdmitApply(scratch, w, &resolved);
+                    gNdsFtrAdmitLab.apply_ticks += cpuGetTiming() - apply_start;
+                }
+#else
+                result = ndsFtrAdmitApply(scratch, w, &resolved);
+#endif
+                if (result == -2)
+                {
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.pruned++);
+                    continue;
+                }
+                if (result == -3)
+                {
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.absent++);
+                    continue;
+                }
+                if (result < 0)
+                {
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.asset_fails++);
+                    ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailAsset,
+                                     first + r + k, w[3], w[2]);
+                    continue;
+                }
+                if ((result == 0) || (resolved.entry == NULL))
+                {
+#if NDS_VRAM_CENSUS_LIVE
+                    gNdsFtrAdmitLab.reject_mask |= gNdsFtrAdmitLastReject;
+                    if (gNdsFtrAdmitLab.reject_first[0] == 0u)
+                    {
+                        gNdsFtrAdmitLab.reject_first[0] =
+                            gNdsFtrAdmitLastReject | ((result == 0) ? 0u :
+                                                      0x80000000u);
+                        gNdsFtrAdmitLab.reject_first[1] = first + r + k;
+                        gNdsFtrAdmitLab.reject_first[2] = w[14];
+                        gNdsFtrAdmitLab.reject_first[3] = w[15];
+                        gNdsFtrAdmitLab.reject_first[4] = w[16];
+                        gNdsFtrAdmitLab.reject_first[5] = w[17];
+                    }
+#endif
+                    NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.fails++);
+                    ndsFtrAdmitLatch(kind, d, nNDSFtrLeanAdmitFailResolve,
+                                     first + r + k,
+                                     ((w[2] & 0xfffu) << 20) |
+                                         (w[3] & 0xfffffu),
+#if NDS_FTR_LEAN_LAB
+                                     gNdsFtrLean.reject_mask
+#else
+                                     0u
+#endif
+                                     );
+                    continue;
+                }
+                NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.applied++,
+                                   gNdsFtrAdmitLab.per_fighter_applied[i & 3u]++));
+                if (resolved.entry->admitted == 0u)
+                {
+                    resolved.entry->admitted = 1u;
+                    admitted++;
+                    admitted_total++;
+#if NDS_VRAM_CENSUS_LIVE
+                    {
+                        u32 addr = ndsFtrAdmitNameAddress(resolved.entry->name);
+                        u32 bytes = ndsVramCensusParamsBytes(
+                            resolved.entry->params);
+
+                        gNdsFtrAdmitLab.entries_admitted++;
+                        gNdsFtrAdmitLab.bytes_admitted += bytes;
+                        gNdsFtrAdmitLab.per_fighter_bytes[i & 3u] += bytes;
+                        if ((addr >= NDS_FTR_ADMIT_D_LO) &&
+                            (addr < NDS_FTR_ADMIT_D_HI))
+                        {
+                            gNdsFtrAdmitLab.bytes_in_d += bytes;
+                        }
+                        else
+                        {
+                            gNdsFtrAdmitLab.bytes_in_ab += bytes;
+                        }
+                    }
+#endif
+                }
+            }
+        }
+    }
+    ndsRelocAssetStreamClose(&stream);
+    sNdsFtrAdmitBaseCount = 0u;
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusDrawSlotPlus1 = 0u;
+    ndsFtrAdmitLabFree(&gNdsFtrAdmitLab.free_after,
+                       &gNdsFtrAdmitLab.largest_after);
+    gNdsFtrAdmitLab.ticks += cpuGetTiming() - start;
+    gNdsFtrAdmitLab.done = 1u;
+    DC_FlushRange(&gNdsFtrAdmitLab, sizeof(gNdsFtrAdmitLab));
+#else
+    (void)start;
+#endif
+    return admitted;
+}
+
+/* Battle exit: admitted textures stop being special, and bank D goes back to
+ * BG3 before any later scene can use it.
+ *  - Every cache entry living in D is released, so the next scene's draws
+ *    re-resolve into A+B instead of binding texels that are about to go.
+ *  - D is locked and A+B unlocked (the lock word the battle found, plus D),
+ *    so nothing new is allocated in D; its texels stay intact, which keeps
+ *    the final battle frame -- still on screen during the hand-off, and
+ *    still reading D -- correct.
+ *  - The platform remaps D to BG3 after the next scene's first 3D frame is
+ *    displayed, or at that scene's first BG3 request.
+ * Names outside the cache that still live in D (weapons, effects created
+ * after the lock) are left to their owners and to the next scene reset's
+ * glResetTextures; deleting them here would let libnds hand the same name to
+ * someone else while the old owner still holds it. */
+void ndsFtrLeanAdmitBattleExit(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        sNdsRendererHardwareTextureCache[i].admitted = 0u;
+    }
+    NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.exit_runs++, gNdsFtrAdmitLab.done = 0u));
+    if (sNdsFtrAdmitRegions == 0u)
+    {
+        return;
+    }
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+        u32 addr = ndsFtrAdmitNameAddress(entry->name);
+
+        if ((addr >= NDS_FTR_ADMIT_D_LO) && (addr < NDS_FTR_ADMIT_D_HI))
+        {
+            (void)ndsRendererHardwareReleaseTexture(entry);
+            NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_released++);
+        }
+    }
+#if NDS_VRAM_CENSUS_LIVE
+    {
+        const DynamicArray *textures = &glGlobalData.texturePtrs;
+        int name;
+
+        for (name = 1; (u32)name < textures->cur_size; name++)
+        {
+            u32 addr = ndsFtrAdmitNameAddress(name);
+
+            if ((addr >= NDS_FTR_ADMIT_D_LO) && (addr < NDS_FTR_ADMIT_D_HI))
+            {
+                gNdsFtrAdmitLab.exit_orphans++;
+            }
+        }
+    }
+#endif
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    glGlobalData.vramLock[0] = sNdsFtrAdmitSavedLock;
+    glLockVRAMBank((u16 *)VRAM_D);
+    ndsPlatformVramReturnBankD();
+    sNdsFtrAdmitRegions = 0u;
+    sNdsFtrAdmitLocked = 0u;
+    NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.regions = 0u,
+                       gNdsFtrAdmitLab.locked = 0u));
+}
+
+static void ndsFtrAdmitSceneResetGuard(void)
+{
+    if (sNdsFtrAdmitRegions != 0u)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_safety++);
+        ndsFtrLeanAdmitBattleExit();
+    }
+}
+#else
+volatile u32 gNdsFtrLeanAdmitFail;
+volatile u32 gNdsFtrLeanAdmitFailFirst[4];
+
+u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
+                       const u32 *costume, const u32 *detail,
+                       const u32 *player, u32 count,
+                       const u32 *base_asset, const void *const *base_data,
+                       u32 base_count, u32 word)
+{
+    (void)scratch; (void)fkind; (void)costume; (void)detail; (void)player;
+    (void)count; (void)base_asset; (void)base_data; (void)base_count;
+    (void)word;
+    return 0u;
+}
+
+void ndsFtrLeanAdmitLockRegions(void)
+{
+}
+
+void ndsFtrLeanAdmitBattleExit(void)
+{
+}
 #endif
 
 #if !NDS_RENDERER_HW_TRIANGLES

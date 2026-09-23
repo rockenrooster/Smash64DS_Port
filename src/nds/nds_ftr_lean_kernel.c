@@ -276,7 +276,7 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
             slow_joints++;
             if (slow(joint->dobj, cells, &has_local) == FALSE)
             {
-                gNdsFtrLean.kernel_slow_joints += slow_joints;
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_slow_joints += slow_joints);
                 return FALSE;
             }
         }
@@ -376,7 +376,7 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
                 if ((value < (s64)(-2147483647 - 1)) ||
                     (value > (s64)2147483647))
                 {
-                    gNdsFtrLean.kernel_slow_joints += slow_joints;
+                    NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_slow_joints += slow_joints);
                     return FALSE;
                 }
                 world->m[3][col] = (s32)value;
@@ -399,7 +399,8 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
             }
         }
     }
-    gNdsFtrLean.kernel_joints += joint_count;
-    gNdsFtrLean.kernel_slow_joints += slow_joints;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_joints += joint_count);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_slow_joints += slow_joints);
+    (void)slow_joints;
     return TRUE;
 }

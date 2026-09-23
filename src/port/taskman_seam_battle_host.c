@@ -210,6 +210,9 @@ extern volatile u32 gNdsVSResultsTransitionTicks;
 #define NDS_SEAM_CONTROLLER_PAIR 0
 #endif
 
+/* include/nds/renderer_fighter_lean.h (slice 2b). */
+void ndsFtrLeanAdmitBattleExit(void);
+
 static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
 {
     /* R2-07 R1. Opens the Battle -> Results transition bracket that
@@ -229,6 +232,12 @@ static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
      * resident identity and queue an affine reset before the next scene takes
      * the overlay, so a rematch or Results load cannot inherit this camera. */
     ndsNativeWallpaperInvalidate();
+    /* P2-2p8 Phase 1 slice 2b: the battle's texture regions end here --
+     * admitted fighter textures stop being pinned, the cache lets go of
+     * everything in bank D, and D goes back to BG3 before the next scene can
+     * use it (the remap itself waits for that scene's first displayed 3D
+     * frame, so this final battle frame keeps its texels). */
+    ndsFtrLeanAdmitBattleExit();
 }
 
 static void ndsAudioBackendUpdate(void)

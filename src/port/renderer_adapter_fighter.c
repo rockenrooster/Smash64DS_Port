@@ -5214,7 +5214,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         u32 lean_head_start = cpuGetTiming();
 
         ndsFighterDisplayContractCapture(fighter_gobj);
-        gNdsFtrLean.head_ticks += cpuGetTiming() - lean_head_start;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.head_ticks +=
+                             cpuGetTiming() - lean_head_start);
+        (void)lean_head_start;
     }
 #else
     ndsFighterDisplayContractCapture(fighter_gobj);

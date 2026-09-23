@@ -20,9 +20,8 @@
  *                        compares every patched word (expect 0 mismatches)
  *                     3  oracle-shipped: as 2 with the old path unchanged
  *                        (flat Q20.12 compose); reports LSB deltas
- *   gNdsFtrLeanAdmit  0  today's load (default); 1 pins every texture a
- *                        fighter binds from its first use and prints the
- *                        admission census (section 2.8 of the spec)
+ *   gNdsFtrLeanAdmit  0 / 1 / 2: fighter texture admission, see the slice
+ *                        2b block at the end of this header
  *
  * Both words live in DTCM: it is uncached, so a GDB poke at the first
  * frame-complete marker is seen by the next read (a main-RAM word that shares
@@ -43,6 +42,19 @@
 #define NDS_FTR_LEAN_LIVE 1
 #else
 #define NDS_FTR_LEAN_LIVE 0
+#endif
+
+/* Slice 2b BSS diet: the lean counters (engagement, kernel, oracle, census,
+ * texture witnesses: gNdsFtrLean below) are the lab instrument. A build
+ * without NDS_TICK_HUD has no gNdsFtrLean at all; NDS_FTR_LEAN_CTR() compiles
+ * to nothing there, and the oracle / census bodies are compiled out (routes 2
+ * and 3 still patch and disarm, they just record nothing). */
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+#define NDS_FTR_LEAN_LAB 1
+#define NDS_FTR_LEAN_CTR(...) do { __VA_ARGS__; } while (0)
+#else
+#define NDS_FTR_LEAN_LAB 0
+#define NDS_FTR_LEAN_CTR(...) ((void)0)
 #endif
 
 #define NDS_FTR_LEAN_ROUTE_OFF 0u
@@ -186,7 +198,9 @@ typedef struct NDSFtrLeanCounters
                                    evictable, live_bytes */
 } NDSFtrLeanCounters;
 
+#if NDS_FTR_LEAN_LAB
 extern NDSFtrLeanCounters gNdsFtrLean;
+#endif
 
 /* Route-2 handshake: set by the old path's matrix prep when the forced
  * Q43.20 source compose produced this draw's matrices. */
@@ -273,5 +287,66 @@ extern volatile u32 gNdsVramCensusDrawSlotPlus1;   /* TU A; RAF sets it */
 void ndsVramCensusFrame(void);
 void ndsVramCensusCaptureBurst(void);
 #endif
+
+/* ---- P2-2p8 Phase 1 slice 2b: fighter texture admission ------------------
+ * gNdsFtrLeanAdmit (DTCM runtime word):
+ *   0  today: fighter textures are uploaded on demand by the draw
+ *   1  admit + pin in A+B: every texture of the admission table
+ *      (scripts/fighters/generate_nds_fighter_admission.py -> NitroFS
+ *      fighters/admission.bin) for each fighter's kind x detail x costume,
+ *      plus Kirby's hats of the kinds present, is replayed through the
+ *      renderer's own texture state recorders and the cache's own
+ *      resolve/convert/upload path, and the resulting entries are exempt
+ *      from eviction/refresh for the battle
+ *   2  the plan: as 1, but first, when the battle leaves BG3 empty (no
+ *      opaque BG3 pixel), bank D becomes texture slot 3 and BG3 is hidden
+ *      and withheld. Admission allocates first-fit, so the admitted set
+ *      packs into what A+B still has free and only the rest lands in D; at
+ *      the first frame end after the admission (setup done) A+B are locked
+ *      (glLockVRAMBank), so D is the only region that allocates and frees
+ *      for the rest of the battle. Battle exit releases every cache entry in
+ *      D, locks D, unlocks A+B, and hands D back to BG3 once the next scene's
+ *      first 3D frame is the displayed one (or at its first BG3 request,
+ *      if that comes first), so the final battle frame keeps its texels.
+ * Admission runs at fighter creation when the word is already set, else at
+ * the first frame end that sees it set (the sampler pokes after setup). */
+#define NDS_FTR_LEAN_ADMIT_OFF 0u
+#define NDS_FTR_LEAN_ADMIT_PIN 1u
+#define NDS_FTR_LEAN_ADMIT_REGIONS 2u
+#define NDS_FTR_LEAN_ADMIT_FIGHTERS 4u
+
+/* Failure latch (shipping): count, and the first failure's
+ * [0] fkind << 16 | detail << 8 | reason, [1] record index, [2] image
+ * asset << 20 | source offset, [3] the cache's reject reason mask. */
+enum
+{
+    nNDSFtrLeanAdmitFailNone = 0,
+    nNDSFtrLeanAdmitFailOpen,       /* admission.bin missing / unreadable */
+    nNDSFtrLeanAdmitFailFormat,     /* magic / version / size mismatch */
+    nNDSFtrLeanAdmitFailRead,       /* short read of a record chunk */
+    nNDSFtrLeanAdmitFailAsset,      /* image or TLUT file not loaded */
+    nNDSFtrLeanAdmitFailResolve,    /* the cache refused the texture */
+    nNDSFtrLeanAdmitFailLibc,       /* libc top chunk at the floor: stopped */
+    nNDSFtrLeanAdmitFailSlots       /* cache slot reserve reached: stopped */
+};
+extern volatile u32 gNdsFtrLeanAdmitFail;
+extern volatile u32 gNdsFtrLeanAdmitFailFirst[4];
+
+/* TU B (renderer_fighter_lean.c): creation seam and frame pass. */
+void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
+                                u32 detail);
+/* TU A (nds_renderer_textures_effects.c). base_asset / base_data: the
+ * loaded files of the fighters present (asset id -> loaded data), which the
+ * adapter reads from each kind's FTData file pointers; a record's image and
+ * TLUT resolve through them (ndsRelocNativeAssetAddress), falling back to
+ * ndsRelocGetLoadedAssetView. */
+u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
+                       const u32 *costume, const u32 *detail,
+                       const u32 *player, u32 count,
+                       const u32 *base_asset, const void *const *base_data,
+                       u32 base_count, u32 word);
+/* Lock A+B once the battle's setup uploads are done (word 2; idempotent). */
+void ndsFtrLeanAdmitLockRegions(void);
+void ndsFtrLeanAdmitBattleExit(void);
 
 #endif

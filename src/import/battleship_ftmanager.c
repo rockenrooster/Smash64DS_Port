@@ -795,6 +795,11 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 }
 #endif
 
+/* include/nds/renderer_fighter_lean.h (not included here: it drags the
+ * renderer's lean-path types into a decomp TU). */
+void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
+                                u32 detail);
+
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
     ndsFTManagerEnsureOwnerImages(desc);
@@ -823,7 +828,20 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         gFTDataKirbyMainMotion = sNdsFTManagerKirbyPreviewCopyTable;
     }
 #endif
-    return ndsBaseFTManagerMakeFighter(desc);
+    {
+        GObj *fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
+
+        /* P2-2p8 Phase 1 slice 2b, the admission's creation seam (spec 2.8):
+         * note every battle fighter; the last one of the battle runs the
+         * fighter texture admission when gNdsFtrLeanAdmit is already set
+         * (src/port/renderer_fighter_lean.c). */
+        if ((fighter_gobj != NULL) && (desc != NULL))
+        {
+            ndsFtrLeanAdmitNoteFighter((u32)desc->player, (u32)desc->fkind,
+                                       (u32)desc->costume, (u32)desc->detail);
+        }
+        return fighter_gobj;
+    }
 }
 
 /* P2-3. THE POSE SLOT IS PART OF THE FIGHTER, so it has to die with it.

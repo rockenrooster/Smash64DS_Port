@@ -6237,6 +6237,19 @@ ifeq ($(NDS_P2_NESS),1)
 NDS_SHIELD_POSE_IDS += 11
 endif
 NDS_NITROFS_SHIELD_POSE_FILES := $(foreach id,$(NDS_SHIELD_POSE_IDS),$(NITROFS_DIR)/fighters/shield_pose/$(id).bin)
+# P2-2p8 Phase 1 slice 2b: the fighter texture admission table, one NitroFS
+# payload for all twelve kinds (the runtime reads only the kinds in a match).
+# The tracked header carries its layout; `generate_nds_fighter_admission.py
+# --check` fails when the header is stale against a regeneration.
+NDS_FIGHTER_ADMISSION_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_fighter_admission.generated.h
+NDS_NITROFS_ADMISSION_FILES := $(NITROFS_DIR)/fighters/admission.bin
+NDS_FIGHTER_ADMISSION_PREREQ := \
+	$(PROJECT_ROOT)/scripts/fighters/generate_nds_fighter_admission.py \
+	$(PROJECT_ROOT)/scripts/fighters/estimate_fighter_pack.py \
+	$(PROJECT_ROOT)/scripts/_paths.py \
+	$(NDS_FIGHTER_ADMISSION_HEADER) \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftparam.c \
+	$(wildcard $(BATTLESHIP_RELOCDATA)/*.c $(BATTLESHIP_RELOCDATA)/*.reloc $(BATTLESHIP_RELOCDATA)/*.h)
 NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_shield_pose_pack.py \
 	$(PROJECT_ROOT)/scripts/fighters/generate_fighter_production_manifest.py \
@@ -6472,6 +6485,10 @@ $(NDS_SHIELD_POSE_HEADER) $(NDS_SHIELD_POSE_MANIFEST) $(NDS_SHIELD_POSE_SOURCE_F
 $(NITROFS_DIR)/fighters/shield_pose/%.bin: $(NDS_SHIELD_POSE_SOURCE_DIR)/%.bin
 	@mkdir -p "$(dir $@)"
 	@cp "$<" "$@"
+
+$(NDS_NITROFS_ADMISSION_FILES): $(NDS_FIGHTER_ADMISSION_PREREQ)
+	@mkdir -p "$(dir $@)"
+	python "$(PROJECT_ROOT)/scripts/fighters/generate_nds_fighter_admission.py" --no-header --out "$@"
 
 $(NDS_NATIVE_CASTLE_BUMPER_PACKET) $(NDS_NATIVE_CASTLE_BUMPER_HEADER) &: $(NDS_NATIVE_CASTLE_BUMPER_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_castle_bumper.py" --emit
@@ -7220,7 +7237,7 @@ endif
 # racing on the named AObj32 files in an incremental build.
 $(NDS_NITROFS_RELOC_FILES): | prune-streamed-ftanim
 
-$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_NITROFS_SHIELD_POSE_FILES) $(NDS_BANNER_ICON)
+$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_NITROFS_SHIELD_POSE_FILES) $(NDS_NITROFS_ADMISSION_FILES) $(NDS_BANNER_ICON)
 
 # All targets share this packaging boundary, including diagnostics and P1.
 # Audit actual link objects and their textual compiler inputs before ndstool.

@@ -249,6 +249,27 @@ __attribute__((used)) volatile u32 gNdsTitleFireDisableCount;
 __attribute__((used)) volatile u32 gNdsTitleFireFrameCount;
 static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
+/* P2-2p8 Phase 1 slice 2b: while a battle that left BG3 empty lends bank D to
+ * 3D textures (ndsPlatformVramTakeBankD), the foreground layer is withheld. A
+ * scene that asks for it is remembered and gets it back at
+ * ndsPlatformVramReturnBankD; any attempt to draw into it meanwhile is refused
+ * and counted (gNdsVramBg3RefusedWrites -- the lossless gate: 0). */
+static u32 sOriginalSpriteOverlayBg3Lent;
+static u32 sOriginalSpriteOverlayBg3Wanted;
+/* Battle exit asked for D back; it is remapped once the next scene's first 3D
+ * frame is displayed, or at the first BG3 request, whichever comes first. */
+static u32 sOriginalSpriteOverlayBg3ReturnPending;
+static void ndsPlatformVramReturnBankDNow(void);
+/* A non-battle frame while D is still lent means the battle's exit hook was
+ * missed; ndsPlatformEndFrame closes the texture side itself (counted). Weak:
+ * targets without the scene manager or the renderer's admission link. */
+__attribute__((used)) volatile u32 gNdsVramBankDMissedExits;
+extern volatile u32 gNdsSceneManagerCurrIsBattle __attribute__((weak));
+void ndsFtrLeanAdmitBattleExit(void) __attribute__((weak));
+__attribute__((used)) volatile u32 gNdsVramBankDLent;
+__attribute__((used)) volatile u32 gNdsVramBg3RefusedWrites;
+__attribute__((used)) volatile u32 gNdsVramBankDTakes;
+__attribute__((used)) volatile u32 gNdsVramBankDReturns;
 /* See ndsPlatformSet3DLayerEnabled: an enable is ARMED here and committed by
  * ndsPlatformEndFrame only after a real GX frame was submitted, so BG0 can
  * never composite the previous 3D owner's retained frame. */
@@ -727,6 +748,15 @@ u16 *ndsPlatformGetOriginalSpriteOverlayLayer(s32 is_foreground,
         int bg = (layer != 0u) ?
             sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
+        if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
+        {
+            if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
+            {
+                gNdsVramBg3RefusedWrites++;
+                return NULL;
+            }
+            ndsPlatformVramReturnBankDNow();
+        }
         if (((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u) ||
             (bg < 0))
         {
@@ -756,6 +786,15 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
     u32 bytes;
 
+    if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
+    {
+        if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
+        {
+            gNdsVramBg3RefusedWrites++;
+            return 0u;
+        }
+        ndsPlatformVramReturnBankDNow();
+    }
     if (((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u) ||
         (bg < 0) ||
         (pixel_write_count > (SCREEN_WIDTH * SCREEN_HEIGHT)))
@@ -939,7 +978,16 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
     {
         u32 layer = (is_foreground != FALSE) ? 1u : 0u;
 
-        if ((sOriginalSpriteOverlayLayerMask & (1u << layer)) != 0u)
+        if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u) &&
+            (sOriginalSpriteOverlayBg3ReturnPending != 0u))
+        {
+            ndsPlatformVramReturnBankDNow();
+        }
+        if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u))
+        {
+            gNdsVramBg3RefusedWrites++;
+        }
+        else if ((sOriginalSpriteOverlayLayerMask & (1u << layer)) != 0u)
         {
             int bg = (is_foreground != FALSE) ?
                 sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
@@ -1004,6 +1052,14 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
     int bg = (is_foreground != FALSE) ?
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
+    if ((is_foreground != FALSE) && (sOriginalSpriteOverlayBg3Lent != 0u))
+    {
+        if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
+        {
+            return;
+        }
+        ndsPlatformVramReturnBankDNow();
+    }
     if (bg >= 0)
     {
         u32 clear_bytes =
@@ -1035,6 +1091,20 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
     u32 previous_mask = sOriginalSpriteOverlayLayerMask;
 
     layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
+    if ((sOriginalSpriteOverlayBg3Lent != 0u) &&
+        (sOriginalSpriteOverlayBg3ReturnPending != 0u) &&
+        ((layer_mask & NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u))
+    {
+        ndsPlatformVramReturnBankDNow();
+        previous_mask = sOriginalSpriteOverlayLayerMask;
+    }
+    if (sOriginalSpriteOverlayBg3Lent != 0u)
+    {
+        sOriginalSpriteOverlayBg3Wanted =
+            ((layer_mask & NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u) ?
+                1u : 0u;
+        layer_mask &= ~NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND;
+    }
     if (((previous_mask ^ layer_mask) &
          NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
     {
@@ -1095,6 +1165,114 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
 {
     ndsPlatformSetOriginalSpriteOverlayLayerMask(
         (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
+}
+
+/* P2-2p8 Phase 1 slice 2b: the property that makes lending bank D safe --
+ * BG3 shows nothing: no opaque (bit 15) pixel in its visible 256x192 window.
+ * Hiding an empty layer changes no pixel; later writes are refused and
+ * counted (gNdsVramBg3RefusedWrites). Reads only. */
+u32 ndsPlatformVramBg3Empty(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    const volatile u16 *pixels;
+    u32 i;
+
+    if (sOriginalSpriteOverlayBg3Lent != 0u)
+    {
+        return TRUE;
+    }
+    if (sOriginalSpriteOverlayForegroundBg < 0)
+    {
+        return TRUE;
+    }
+    pixels = (const volatile u16 *)bgGetGfxPtr(
+        sOriginalSpriteOverlayForegroundBg);
+    for (i = 0u; i < 256u * 192u; i++)
+    {
+        if ((pixels[i] & 0x8000u) != 0u)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
+/* Lend bank D to the 3D engine as texture slot 3 (libnds computes a texture's
+ * slot from its LCD address, so D must be slot 3). BG3 is hidden and
+ * withheld until ndsPlatformVramReturnBankD. */
+s32 ndsPlatformVramTakeBankD(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayBg3Lent != 0u)
+    {
+        /* A battle straight after a battle: D never left the texture slot. */
+        sOriginalSpriteOverlayBg3ReturnPending = 0u;
+        return TRUE;
+    }
+    sOriginalSpriteOverlayBg3Wanted =
+        ((sOriginalSpriteOverlayLayerMask &
+          NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u) ? 1u : 0u;
+    sOriginalSpriteOverlayLayerMask &= ~NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND;
+    if (sOriginalSpriteOverlayForegroundBg >= 0)
+    {
+        bgHide(sOriginalSpriteOverlayForegroundBg);
+    }
+    vramSetBankD(VRAM_D_TEXTURE);
+    sOriginalSpriteOverlayBg3Lent = 1u;
+    gNdsVramBankDLent = 1u;
+    gNdsVramBankDTakes++;
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
+/* Battle exit: the texture side has released everything in D and locked it;
+ * the final battle frame may still be on screen and reading D, so the remap
+ * waits for the next scene's first displayed 3D frame (ndsPlatformEndFrame)
+ * or its first BG3 request. */
+void ndsPlatformVramReturnBankD(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if (sOriginalSpriteOverlayBg3Lent != 0u)
+    {
+        sOriginalSpriteOverlayBg3ReturnPending = 1u;
+    }
+#endif
+}
+
+/* Give bank D back to BG3: remap, clear it whole (the texels it held are not
+ * an image), and show the foreground again if the scene still wants it. */
+static void ndsPlatformVramReturnBankDNow(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    sOriginalSpriteOverlayBg3ReturnPending = 0u;
+    if (sOriginalSpriteOverlayBg3Lent == 0u)
+    {
+        return;
+    }
+    vramSetBankD(VRAM_D_MAIN_BG_0x06020000);
+    if (sOriginalSpriteOverlayForegroundBg >= 0)
+    {
+        dmaFillHalfWords(0, bgGetGfxPtr(sOriginalSpriteOverlayForegroundBg),
+                         256u * 256u * sizeof(u16));
+    }
+    sOriginalSpriteOverlayBg3Lent = 0u;
+    gNdsVramBankDLent = 0u;
+    gNdsVramBankDReturns++;
+    if (sOriginalSpriteOverlayBg3Wanted != 0u)
+    {
+        sOriginalSpriteOverlayLayerMask |= NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND;
+        if (sOriginalSpriteOverlayForegroundBg >= 0)
+        {
+            bgShow(sOriginalSpriteOverlayForegroundBg);
+        }
+    }
+    sOriginalSpriteOverlayBg3Wanted = 0u;
+#endif
 }
 
 #if defined(NDS_TICK_HUD) && NDS_TICK_HUD
@@ -3517,6 +3695,24 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
 #endif
+    /* P2-2p8 Phase 1 slice 2b: a battle's pending bank D return lands here,
+     * after the VBlank that made the next scene's first 3D frame the displayed
+     * one -- from now on no displayed geometry reads D. */
+    if ((submitted != 0u) && (sOriginalSpriteOverlayBg3ReturnPending != 0u))
+    {
+        ndsPlatformVramReturnBankDNow();
+    }
+    else if ((sOriginalSpriteOverlayBg3Lent != 0u) &&
+             (sOriginalSpriteOverlayBg3ReturnPending == 0u) &&
+             (&gNdsSceneManagerCurrIsBattle != NULL) &&
+             (gNdsSceneManagerCurrIsBattle == 0u) &&
+             (ndsFtrLeanAdmitBattleExit != NULL))
+    {
+        /* Belt and braces: the texture side lets go now, and D comes back
+         * after the next displayed 3D frame. */
+        gNdsVramBankDMissedExits++;
+        ndsFtrLeanAdmitBattleExit();
+    }
     /* Single final fade application, after all draws: the published lbFade
      * frame (if any) becomes the MASTER_BRIGHT level for the commit below.
      * Covers 3D, both staging layers, and fade-only frames with no staging

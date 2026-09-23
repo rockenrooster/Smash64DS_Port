@@ -12,6 +12,13 @@
  * drawing. See include/nds/renderer_fighter_lean.h. */
 
 #include <nds/renderer_fighter_lean.h>
+#include <nds/generated/nds_fighter_admission.generated.h>
+#include <nds/nds_reloc_assets.h>
+
+/* Slice 2b BSS diet: the per-root arrays hold the most DL-bearing joints any
+ * kind x detail has (generator max, 24) instead of the draw collection's 32;
+ * a plan with more selected roots is never adopted. */
+#define NDS_FTR_LEAN_ROOT_MAX NDS_FIGHTER_ADMISSION_ROOT_MAX
 
 #if defined(__arm__)
 volatile u32 gNdsFtrLeanRoute
@@ -22,7 +29,9 @@ volatile u32 gNdsFtrLeanAdmit
 volatile u32 gNdsFtrLeanRoute;
 volatile u32 gNdsFtrLeanAdmit;
 #endif
+#if NDS_FTR_LEAN_LAB
 NDSFtrLeanCounters gNdsFtrLean __attribute__((used, aligned(32)));
+#endif
 volatile u32 gNdsFtrLeanOracleSourceOk __attribute__((used));
 #if NDS_VRAM_CENSUS_LIVE
 /* Slice 2a (lab): 1 = walk the texture/palette VRAM at every frame end.
@@ -34,6 +43,154 @@ volatile u32 gNdsVramCensusEnable
 volatile u32 gNdsVramCensusEnable;
 #endif
 #endif
+
+/* ---- P2-2p8 Phase 1 slice 2b: fighter texture admission, adapter side ----
+ * The creation seam (ndsFTManagerEnsureOwnerImages' caller) notes every
+ * fighter of a battle; the admission itself (ndsFtrLeanAdmitRun, TU A) runs
+ * once per battle: at creation of the last fighter when gNdsFtrLeanAdmit is
+ * already set, else at the first frame end that sees it set. */
+static u32 sNdsFtrAdmitGen;      /* gNdsTaskmanHeapGeneration + 1 noted */
+static u32 sNdsFtrAdmitCount;
+static u32 sNdsFtrAdmitKind[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+static u32 sNdsFtrAdmitCostume[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+static u32 sNdsFtrAdmitDetail[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+static u32 sNdsFtrAdmitPlayer[NDS_FTR_LEAN_ADMIT_FIGHTERS];
+static u32 sNdsFtrAdmitDone;     /* generation + 1 the admission ran for */
+
+/* "Is this a fight" is the scene manager's battle flag (VS, every 1P fight,
+ * Training, the demo), never a scene-kind literal (nds_scene_manager.h). */
+extern volatile u32 gNdsSceneManagerCurrIsBattle;
+
+static u32 ndsFtrLeanAdmitBattleScene(void)
+{
+    return ((gSCManagerBattleState != NULL) &&
+            (gNdsSceneManagerCurrIsBattle != 0u)) ? TRUE : FALSE;
+}
+
+static void ndsFtrLeanAdmitSync(void)
+{
+    u32 gen = gNdsTaskmanHeapGeneration + 1u;
+
+    if (sNdsFtrAdmitGen != gen)
+    {
+        sNdsFtrAdmitGen = gen;
+        sNdsFtrAdmitCount = 0u;
+        sNdsFtrAdmitDone = 0u;
+    }
+}
+
+#if NDS_FTR_LEAN_LIVE
+static NDSRendererStats sNdsFtrLeanStats;
+
+/* The loaded files of the fighters present, as asset id -> loaded data: each
+ * kind's FTData file pointers, named by the reloc backend's own provenance
+ * (the id the admission table's records carry). */
+#define NDS_FTR_ADMIT_BASE_MAX (NDS_FTR_LEAN_ADMIT_FIGHTERS * 9u)
+static u32 sNdsFtrAdmitBaseAsset[NDS_FTR_ADMIT_BASE_MAX];
+static const void *sNdsFtrAdmitBaseData[NDS_FTR_ADMIT_BASE_MAX];
+
+static u32 ndsFtrLeanAdmitCollectBases(void)
+{
+    u32 n = 0u;
+    u32 i;
+
+    for (i = 0u; i < sNdsFtrAdmitCount; i++)
+    {
+        const FTData *data = dFTManagerDataFiles[sNdsFtrAdmitKind[i]];
+        void **files[9];
+        u32 f;
+
+        if (data == NULL)
+        {
+            continue;
+        }
+        files[0] = data->p_file_main;
+        files[1] = data->p_file_mainmotion;
+        files[2] = data->p_file_submotion;
+        files[3] = data->p_file_model;
+        files[4] = data->p_file_shieldpose;
+        files[5] = data->p_file_special1;
+        files[6] = data->p_file_special2;
+        files[7] = data->p_file_special3;
+        files[8] = data->p_file_special4;
+        for (f = 0u; f < 9u; f++)
+        {
+            u32 asset = 0u;
+            u32 offset = 0u;
+            u32 k;
+
+            if ((files[f] == NULL) || (*files[f] == NULL) ||
+                (ndsRelocGetLoadedPointerProvenance(*files[f], &asset,
+                                                    &offset) == FALSE) ||
+                (offset != 0u))
+            {
+                continue;
+            }
+            for (k = 0u; k < n; k++)
+            {
+                if (sNdsFtrAdmitBaseAsset[k] == asset)
+                {
+                    break;
+                }
+            }
+            if ((k == n) && (n < NDS_FTR_ADMIT_BASE_MAX))
+            {
+                sNdsFtrAdmitBaseAsset[n] = asset;
+                sNdsFtrAdmitBaseData[n] = *files[f];
+                n++;
+            }
+        }
+    }
+    return n;
+}
+#endif
+
+static void ndsFtrLeanAdmitMaybeRun(u32 word)
+{
+#if NDS_FTR_LEAN_LIVE
+    u32 bases;
+
+    if ((word == 0u) || (sNdsFtrAdmitCount == 0u) ||
+        (sNdsFtrAdmitDone == sNdsFtrAdmitGen) ||
+        (ndsFtrLeanAdmitBattleScene() == FALSE))
+    {
+        return;
+    }
+    sNdsFtrAdmitDone = sNdsFtrAdmitGen;
+    bases = ndsFtrLeanAdmitCollectBases();
+    (void)ndsFtrLeanAdmitRun(&sNdsFtrLeanStats, sNdsFtrAdmitKind,
+                             sNdsFtrAdmitCostume, sNdsFtrAdmitDetail,
+                             sNdsFtrAdmitPlayer, sNdsFtrAdmitCount,
+                             sNdsFtrAdmitBaseAsset, sNdsFtrAdmitBaseData,
+                             bases, word);
+#else
+    (void)word;
+#endif
+}
+
+void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
+                                u32 detail)
+{
+    ndsFtrLeanAdmitSync();
+    if ((ndsFtrLeanAdmitBattleScene() == FALSE) ||
+        (sNdsFtrAdmitCount >= NDS_FTR_LEAN_ADMIT_FIGHTERS) ||
+        (fkind >= 12u) || (sNdsFtrAdmitDone == sNdsFtrAdmitGen))
+    {
+        return;
+    }
+    sNdsFtrAdmitKind[sNdsFtrAdmitCount] = fkind;
+    sNdsFtrAdmitCostume[sNdsFtrAdmitCount] = costume;
+    sNdsFtrAdmitDetail[sNdsFtrAdmitCount] = detail;
+    sNdsFtrAdmitPlayer[sNdsFtrAdmitCount] = player;
+    sNdsFtrAdmitCount++;
+    /* Creation-time admission: the last fighter of the battle is made. */
+    if (sNdsFtrAdmitCount ==
+        ((u32)gSCManagerBattleState->pl_count +
+         (u32)gSCManagerBattleState->cp_count))
+    {
+        ndsFtrLeanAdmitMaybeRun(gNdsFtrLeanAdmit);
+    }
+}
 
 #if NDS_FTR_LEAN_LIVE
 
@@ -52,28 +209,30 @@ typedef struct NDSFtrLeanInstance
     DObj *expect_child[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     DObj *expect_sib[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     DObj *expect_parent[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
-    u8 root_event[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-    DObj *material_dobjs[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
-    NDSRendererNativeFighterPreamble pre[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    u8 root_event[NDS_FTR_LEAN_ROOT_MAX];
+    DObj *material_dobjs[NDS_FTR_LEAN_ROOT_MAX];
+    NDSRendererNativeFighterPreamble pre[NDS_FTR_LEAN_ROOT_MAX];
 } NDSFtrLeanInstance;
 
 static NDSFtrLeanInstance sNdsFtrLeanInstance;
 static NDSRendererMatrix20p12
-    sNdsFtrLeanWorlds[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    sNdsFtrLeanWorlds[NDS_FTR_LEAN_ROOT_MAX];
 static NDSRendererNativeFighterRoot
-    sNdsFtrLeanInputs[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+    sNdsFtrLeanInputs[NDS_FTR_LEAN_ROOT_MAX];
 static NDSRendererMatrix20p12 sNdsFtrLeanProjection;
 static NDSRendererConfig sNdsFtrLeanConfig;
-static NDSRendererStats sNdsFtrLeanStats;
 static u32 sNdsFtrLeanMatchHeapGen;
-static u32 sNdsFtrLeanAdmitHeapGen;
 
 static void ndsFtrLeanDecline(u32 reason)
 {
+#if NDS_FTR_LEAN_LAB
     if (reason < nNDSFtrLeanDeclineCount)
     {
-        gNdsFtrLean.decline[reason]++;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.decline[reason]++);
     }
+#else
+    (void)reason;
+#endif
 }
 
 static void ndsFtrLeanInvalidate(NDSFtrLeanInstance *inst)
@@ -139,7 +298,7 @@ static s32 ndsFtrLeanBuildTopology(NDSFtrLeanInstance *inst, DObj *root,
     u32 b;
 
     if ((root == NULL) || (root == DOBJ_PARENT_NULL) ||
-        (binding_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+        (binding_count > NDS_FTR_LEAN_ROOT_MAX))
     {
         return FALSE;
     }
@@ -244,7 +403,7 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     {
         return FALSE;   /* not in the slice: not an attempt */
     }
-    gNdsFtrLean.attempts++;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.attempts++);
     t0 = cpuGetTiming();
     if ((inst->valid != 0u) && (inst->slot != slot))
     {
@@ -355,18 +514,18 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     shuffle_y = sNdsR2ShuffleWorldY;
 #endif
     t1 = cpuGetTiming();
-    gNdsFtrLean.guard_ticks += t1 - t0;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.guard_ticks += t1 - t0);
     if (ndsFtrLeanKernelCompose(inst->joints, inst->joint_count,
                                 sNdsFtrLeanWorlds, inst->root_count,
                                 shuffle_x, shuffle_y,
                                 ndsFtrLeanSlowLocal) == FALSE)
     {
-        gNdsFtrLean.kernel_fail++;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_fail++);
         ndsFtrLeanDecline(nNDSFtrLeanDeclineKernel);
         return FALSE;
     }
     t0 = cpuGetTiming();
-    gNdsFtrLean.kernel_ticks += t0 - t1;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_ticks += t0 - t1);
 
     sNdsFtrLeanProjection = camera_projection;
     sNdsFtrLeanConfig.color_modulate =
@@ -390,11 +549,11 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         return FALSE;
     }
     t1 = cpuGetTiming();
-    gNdsFtrLean.patch_ticks += t1 - t0;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.patch_ticks += t1 - t0);
     if (route != NDS_FTR_LEAN_ROUTE_DRAW)
     {
         ndsFtrLeanShadowArm(slot, 1u);
-        gNdsFtrLean.shadow_runs++;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.shadow_runs++);
         return FALSE;
     }
 
@@ -436,8 +595,10 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         gNdsFighterDLAllDrawSlotTriangleMask |= 1u << (slot & 3u);
     }
     gNdsFighterMarioFoxDLAllDrawCount++;
-    gNdsFtrLean.submit_ticks += cpuGetTiming() - t1;
-    gNdsFtrLean.draws++;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.submit_ticks += cpuGetTiming() - t1);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.draws++);
+    (void)t0;
+    (void)t1;
     return TRUE;
 }
 
@@ -456,7 +617,7 @@ static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before)
     if (ndsFtrLeanShadowArmed(slot) != 0u)
     {
         ndsFtrLeanShadowArm(slot, 0u);
-        gNdsFtrLean.oracle_unconsumed++;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.oracle_unconsumed++);
     }
     if ((ndsFtrLeanEligible(fp, &owner_slot) == FALSE) ||
         (fp->is_use_animlocks != FALSE) ||
@@ -479,7 +640,7 @@ static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before)
     plan = &sNdsFighterDrawPlan[slot].data;
     if ((plan->root_program != 0u) ||
         (plan->collection.selected_count == 0u) ||
-        (plan->collection.selected_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+        (plan->collection.selected_count > NDS_FTR_LEAN_ROOT_MAX))
     {
         return;
     }
@@ -488,7 +649,7 @@ static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before)
                                 plan->matrix_bindings,
                                 plan->collection.selected_count) == FALSE)
     {
-        gNdsFtrLean.adopt_refuse[nNDSFtrLeanAdoptTopology]++;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_refuse[nNDSFtrLeanAdoptTopology]++);
         return;
     }
     result = ndsFtrLeanPacketAdopt(slot, plan->collection.selected_count,
@@ -497,7 +658,7 @@ static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before)
     {
         if (result < nNDSFtrLeanAdoptRefuseCount)
         {
-            gNdsFtrLean.adopt_refuse[result]++;
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_refuse[result]++);
         }
         return;
     }
@@ -516,42 +677,52 @@ static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before)
             plan->collection.indices[i]];
     }
     inst->valid = 1u;
-    gNdsFtrLean.adopts++;
-    gNdsFtrLean.adopt_needs_fence = info.needs_fence;
-    gNdsFtrLean.adopt_words = info.word_count;
-    gNdsFtrLean.adopt_roots = info.root_count;
-    gNdsFtrLean.adopt_textures = info.texture_count;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopts++);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_needs_fence = info.needs_fence);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_words = info.word_count);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_roots = info.root_count);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_textures = info.texture_count);
+}
+
+/* Slice 2b: the lab pokes gNdsFtrLeanAdmit after setup, so the admission of
+ * an already-made battle runs at the first frame end that sees the word. Once
+ * the admission has run, this frame end is past the battle's setup uploads:
+ * lock A+B so D alone allocates from here on (word 2; idempotent). */
+static void ndsFtrLeanAdmitFrame(void)
+{
+    ndsFtrLeanAdmitSync();
+    ndsFtrLeanAdmitMaybeRun(gNdsFtrLeanAdmit);
+    if ((sNdsFtrAdmitDone != 0u) && (sNdsFtrAdmitDone == sNdsFtrAdmitGen))
+    {
+        ndsFtrLeanAdmitLockRegions();
+    }
 }
 
 /* End of the fighter submit loop, once per presented frame: per-match reset,
- * the admission census at the first frame after the poke and at GO, the GE
- * busy sample, and the counter publish. */
+ * the admission at the first frame after the poke, the GO latch, the GE busy
+ * sample, and the counter publish. */
 static void ndsFtrLeanFrameEnd(void)
 {
     if (sNdsFtrLeanMatchHeapGen != gNdsTaskmanHeapGeneration)
     {
         sNdsFtrLeanMatchHeapGen = gNdsTaskmanHeapGeneration;
         ndsFtrLeanInvalidate(&sNdsFtrLeanInstance);
-        gNdsFtrLean.go_frame = 0u;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.go_frame = 0u);
     }
-    if ((gNdsFtrLeanAdmit != 0u) &&
-        (sNdsFtrLeanAdmitHeapGen != gNdsTaskmanHeapGeneration))
-    {
-        sNdsFtrLeanAdmitHeapGen = gNdsTaskmanHeapGeneration;
-        gNdsFtrLean.admit_runs++;
-        ndsFtrLeanTextureCensus();
-    }
+    ndsFtrLeanAdmitFrame();
+#if NDS_FTR_LEAN_LAB
     if ((gNdsFtrLean.go_frame == 0u) && (gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
     {
         ndsFtrLeanNoteGo(gNdsRendererProfileFrameCount);
     }
-    gNdsFtrLean.ge_busy_samples++;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.ge_busy_samples++);
     if (((*(volatile u32 *)0x04000600u) & (1u << 27)) != 0u)
     {
-        gNdsFtrLean.ge_busy_hits++;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.ge_busy_hits++);
     }
     ndsFtrLeanCountersPublish();
+#endif
 #if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     ndsVramCensusFrame();   /* slice 2a lab census; no-op unless enabled */
