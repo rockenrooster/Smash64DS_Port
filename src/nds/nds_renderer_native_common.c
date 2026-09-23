@@ -11536,6 +11536,10 @@ void ndsFtrLeanNoteTextureReject(u32 reason, u32 format, u32 size)
         gNdsFtrLean.reject_first[9] = census[4];
         gNdsFtrLean.reject_first[10] = census[5];
         gNdsFtrLean.reject_first[11] = census[6];
+#if NDS_VRAM_CENSUS_LIVE
+        /* Slice 2a: the whole texture/palette VRAM at the entry burst. */
+        ndsVramCensusCaptureBurst();
+#endif
     }
 }
 

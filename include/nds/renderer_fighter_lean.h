@@ -253,4 +253,25 @@ s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt);
 /* ---- adapter side (src/port/renderer_fighter_lean.c) ------------------- */
 void ndsFtrLeanNoteRebind(u32 player_slot);
 
+/* ---- P2-2p8 Phase 1 slice 2a: VRAM census (lab only) --------------------
+ * Measurement, not behaviour: every GL texture name is tagged with the site
+ * (caller PC) that created/uploaded it, the fighter draw slot active at the
+ * upload and the runtime profile owner; gNdsVramCensusEnable = 1 (runtime
+ * word, default 0) walks libnds's texture/palette tables and block lists at
+ * every frame end and latches snapshots (GO, first fighter texture reject,
+ * the worst largest-free frame of the P0 episode and after it). Tagging runs
+ * whenever the build has NDS_TICK_HUD so names created before the poke are
+ * attributed too. */
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+#define NDS_VRAM_CENSUS_LIVE 1
+#else
+#define NDS_VRAM_CENSUS_LIVE 0
+#endif
+#if NDS_VRAM_CENSUS_LIVE
+extern volatile u32 gNdsVramCensusEnable;          /* TU B, DTCM word */
+extern volatile u32 gNdsVramCensusDrawSlotPlus1;   /* TU A; RAF sets it */
+void ndsVramCensusFrame(void);
+void ndsVramCensusCaptureBurst(void);
+#endif
+
 #endif

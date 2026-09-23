@@ -3141,6 +3141,9 @@ void ndsRendererHardwareResetSceneTextureVram(void)
      * metadata and rebuilds both block allocators. */
     ndsRendererHardwareDiscardTextureCache();
     glResetTextures();
+#if NDS_VRAM_CENSUS_LIVE
+    ndsVramCensusTagReset();   /* slice 2a lab tags: every name is gone */
+#endif
     /* Software state that would otherwise reference names glResetTextures has
      * just invalidated. The prepared-run cache only exists at
      * NDS_R2_STAGE_DIRECT; this function is scoped to NDS_RENDERER_HW_TRIANGLES,
@@ -3474,6 +3477,10 @@ s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
     u32 width, u32 height, const u16 palette[8],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
 {
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusAtlasUser =
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u;
+#endif
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB8_A5, palette, 8u,
         fill, user_data, texture_name, FALSE);
@@ -3483,6 +3490,10 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 palette[32],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
 {
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusAtlasUser =
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u;
+#endif
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB32_A3, palette, 32u,
         fill, user_data, texture_name, FALSE);
@@ -3499,6 +3510,10 @@ s32 ndsRendererHardwarePrepareIFCommonPal16Atlas(
     u32 width, u32 height, const u16 palette[16],
     NDSRendererTextureFillCallback fill, void *user_data, u32 *texture_name)
 {
+#if NDS_VRAM_CENSUS_LIVE
+    gNdsVramCensusAtlasUser =
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u;
+#endif
     return ndsRendererHardwarePrepareIFCommonAtlas(
         width, height, GL_RGB16, palette, 16u,
         fill, user_data, texture_name, TRUE);
@@ -4109,6 +4124,592 @@ void ndsRendererHardwareReleaseEntryStartupTextures(void)
     }
 #endif
 }
+
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+/* ---------------------------------------------------------------------------
+ * P2-2p8 Phase 1 slice 2a (lab only): texture and palette VRAM census.
+ *
+ * The ground truth is libnds's own bookkeeping: glGlobalData.texturePtrs
+ * (one gl_texture_data per name: TEXIMAGE_PARAM, palette index) and the two
+ * s_vramBlock allocators (the memory-order block list: free = indexOut 0).
+ * Each live name is attributed to one bucket: texture-cache entries by their
+ * static/warm flags or the fighter draw slot / profile owner of their last
+ * upload (PRE tag), entry-effect / tint / halo+shield names by membership,
+ * every other name by the site that created it (gNdsVramCensusSitePc; the
+ * host maps PCs to functions). Reads only; nothing is bound or written.
+ * ------------------------------------------------------------------------- */
+enum
+{
+    nNdsVcCacheStage = 0,   /* cache entry, stage owner (dynamic) */
+    nNdsVcCacheStatic,      /* cache entry with a static record / owner mask */
+    nNdsVcCacheWarm,        /* cache entry kept by a stage blob (stage_warm) */
+    nNdsVcCacheSlot0,       /* cache entry uploaded inside slot 0's draw */
+    nNdsVcCacheSlot1,
+    nNdsVcCacheSlot2,
+    nNdsVcCacheSlot3,
+    nNdsVcCacheOther,       /* cache entry, any other owner */
+    nNdsVcEntryStartup,     /* entry-effect texture, startup-only */
+    nNdsVcEntryKept,        /* entry-effect texture kept after GO */
+    nNdsVcTint,             /* fighter tint tiles */
+    nNdsVcHaloShield,       /* rebirth halo + entry shield textures */
+    nNdsVcSiteBase          /* + creating site index; last = untagged/full */
+};
+#define NDS_VRAM_CENSUS_BUCKETS \
+    ((u32)nNdsVcSiteBase + NDS_VRAM_CENSUS_SITE_MAX + 1u)
+#define NDS_VRAM_CENSUS_KEYS 48u
+#define NDS_VRAM_CENSUS_EPISODE_FIRST 798u
+#define NDS_VRAM_CENSUS_EPISODE_END 1044u
+
+typedef struct NDSVramCensusSnap
+{
+    u32 frame;
+    u32 tex_names;          /* names holding texels */
+    u32 tex_bytes;          /* sum of TEXIMAGE_PARAM texel sizes */
+    u32 tex_size_field;     /* sum of libnds texSize (unit check) */
+    u32 tex_free;           /* texture allocator, memory-order walk */
+    u32 tex_free_blocks;
+    u32 tex_largest_free;
+    u32 tex_alloc_blocks;
+    u32 tex_alloc_bytes;
+    u32 tex_start;
+    u32 tex_end;
+    u32 tex_usable;         /* bytes of banks mapped as texture slots */
+    u32 tex_free_usable;    /* free bytes inside those banks */
+    u32 tex_largest_usable; /* largest contiguous free run inside them */
+    u32 tex_free_runs_usable;
+    u32 pal_names;          /* distinct palettes referenced by live names */
+    u32 pal_bytes;          /* sum of their palSize */
+    u32 pal_free;
+    u32 pal_free_blocks;
+    u32 pal_largest_free;
+    u32 pal_alloc_blocks;
+    u32 pal_alloc_bytes;
+    u32 pal_start;
+    u32 pal_end;
+    u32 pal_usable;
+    u32 pal_free_usable;
+    u32 pal_largest_usable;
+    u32 pal_free_runs_usable;
+    u32 dispcnt;
+    u32 vramcnt_abcd;
+    u32 vramcnt_efg;
+    u32 bg2_opaque;         /* explicit captures only, else 0 */
+    u32 bg3_opaque;
+    u32 last_request;       /* gNdsVramCensusLastRequest at capture */
+    u32 bytes[NDS_VRAM_CENSUS_BUCKETS];
+    u32 count[NDS_VRAM_CENSUS_BUCKETS];
+    u32 pal[NDS_VRAM_CENSUS_BUCKETS];
+} NDSVramCensusSnap;
+
+typedef struct NDSVramCensus
+{
+    u32 frames;
+    u32 captures;
+    u32 walk_guard_hits;
+    u32 name_limit;
+    NDSVramCensusSnap live;     /* every enabled frame end */
+    NDSVramCensusSnap go;       /* first frame end at GO */
+    NDSVramCensusSnap burst;    /* first fighter texture reject */
+    NDSVramCensusSnap episode;  /* min largest-free frame in [798, 1044) */
+    NDSVramCensusSnap after;    /* min largest-free frame from 1044 */
+    u32 peak_bytes[NDS_VRAM_CENSUS_BUCKETS];
+    u32 peak_count[NDS_VRAM_CENSUS_BUCKETS];
+    u32 peak_tex_bytes;
+    u32 peak_pal_bytes;
+    u32 min_largest_free;
+    u32 min_largest_free_frame;
+    u32 bg_frame[2];            /* two mid-match overlay pixel counts */
+    u32 bg2_opaque[2];
+    u32 bg3_opaque[2];
+    /* Fighter texture keys, one record per distinct upload inside a draw:
+     * [0] image asset << 20 | offset, [1] tlut asset << 20 | offset
+     * (0xffffffff none, 0xfffffffe unresolved), [2] N64 tile fmt | siz << 3
+     * | DS fmt << 5 | DS s-size << 8 | t-size << 11 | palette code << 14
+     * (0 none, 1 <= 4, 2 <= 16, 3 <= 256 entries) | repeat/flip << 16
+     * | uploads << 20. */
+    u32 key_count[4];
+    u32 key_overflow[4];
+    u32 key_uploads[4];
+    u32 key_uploads_after_go[4];
+    u32 key_prov_fail[4];
+    u32 key[4][NDS_VRAM_CENSUS_KEYS][3];
+} NDSVramCensus;
+
+NDSVramCensus gNdsVramCensus __attribute__((used, aligned(32)));
+static u8 sNdsVramCensusBucketOf[NDS_VRAM_CENSUS_NAME_MAX];
+static u32 sNdsVramCensusPalSeen[NDS_VRAM_CENSUS_NAME_MAX / 32u];
+
+u32 ndsPlatformVramCensusOverlayOpaque(u32 layer);
+
+static u32 ndsVramCensusParamsBytes(u32 params)
+{
+    static const u8 bits_per_texel[8] = { 0u, 8u, 2u, 4u, 8u, 2u, 8u, 16u };
+    u32 width = 8u << ((params >> 20) & 7u);
+    u32 height = 8u << ((params >> 23) & 7u);
+
+    return (width * height * (u32)bits_per_texel[(params >> 26) & 7u]) / 8u;
+}
+
+/* The usable part of an allocator: the LCD ranges of the banks whose
+ * VRAMCNT mode matches (3 = texture slot for A-D, texture palette for
+ * E-G), merged when adjacent. libnds's allocators span A-D / E-G whatever
+ * the banks are mapped as; glTexImage2D skips banks in another mode. */
+static u32 ndsVramCensusSpans(u32 palettes, u32 *span_start, u32 *span_end)
+{
+    static const u32 kTexBase[4] = { 0x06800000u, 0x06820000u, 0x06840000u,
+                                     0x06860000u };
+    static const u32 kPalBase[3] = { 0x06880000u, 0x06890000u, 0x06894000u };
+    static const u32 kPalSize[3] = { 0x10000u, 0x4000u, 0x4000u };
+    const volatile u8 *cnt = (const volatile u8 *)0x04000240u;
+    u32 spans = 0u;
+    u32 i;
+
+    for (i = 0u; i < (palettes ? 3u : 4u); i++)
+    {
+        u32 mode = palettes ? cnt[4u + i] : cnt[i];
+        u32 base = palettes ? kPalBase[i] : kTexBase[i];
+        u32 size = palettes ? kPalSize[i] : 0x20000u;
+
+        if (((mode & 0x80u) == 0u) || ((mode & 7u) != 3u))
+        {
+            continue;
+        }
+        if ((spans != 0u) && (span_end[spans - 1u] == base))
+        {
+            span_end[spans - 1u] = base + size;
+        }
+        else
+        {
+            span_start[spans] = base;
+            span_end[spans] = base + size;
+            spans++;
+        }
+    }
+    return spans;
+}
+
+/* out: 0 free, 1 free blocks, 2 largest free, 3 alloc blocks, 4 alloc
+ * bytes, 5 start, 6 end, 7 usable bytes, 8 usable free, 9 usable largest
+ * contiguous free run, 10 usable free runs. */
+static void ndsVramCensusBlocks(const s_vramBlock *block, u32 palettes,
+                                u32 *out)
+{
+    const s_SingleBlock *b;
+    u32 span_start[4];
+    u32 span_end[4];
+    u32 spans;
+    u32 run_end = 0u;
+    u32 run = 0u;
+    u32 guard = 0u;
+    u32 i;
+
+    for (i = 0u; i < 11u; i++)
+    {
+        out[i] = 0u;
+    }
+    if (block == NULL)
+    {
+        return;
+    }
+    out[5] = (u32)(uintptr_t)block->startAddr;
+    out[6] = (u32)(uintptr_t)block->endAddr;
+    spans = ndsVramCensusSpans(palettes, span_start, span_end);
+    for (i = 0u; i < spans; i++)
+    {
+        out[7] += span_end[i] - span_start[i];
+    }
+    for (b = block->firstBlock; (b != NULL) && (guard < 4096u);
+         b = b->node[1], guard++)
+    {
+        u32 lo = (u32)(uintptr_t)b->AddrSet;
+        u32 hi = lo + b->blockSize;
+
+        if (b->indexOut == 0u)
+        {
+            out[0] += b->blockSize;
+            out[1]++;
+            if (b->blockSize > out[2])
+            {
+                out[2] = b->blockSize;
+            }
+            for (i = 0u; i < spans; i++)
+            {
+                u32 a = (lo > span_start[i]) ? lo : span_start[i];
+                u32 z = (hi < span_end[i]) ? hi : span_end[i];
+
+                if (a >= z)
+                {
+                    continue;
+                }
+                out[8] += z - a;
+                /* Adjacent free blocks inside one span form one run. */
+                if ((run != 0u) && (run_end == a))
+                {
+                    run += z - a;
+                }
+                else
+                {
+                    run = z - a;
+                    out[10]++;
+                }
+                run_end = z;
+                if (run > out[9])
+                {
+                    out[9] = run;
+                }
+            }
+        }
+        else
+        {
+            out[3]++;
+            out[4] += b->blockSize;
+            run = 0u;
+        }
+    }
+    if (guard >= 4096u)
+    {
+        gNdsVramCensus.walk_guard_hits++;
+    }
+}
+
+static u32 ndsVramCensusCacheBucket(
+    const NDSRendererHardwareTextureCacheEntry *entry, u32 tag)
+{
+    u32 slot_plus1 = (tag >> 5) & 7u;
+
+    if ((entry->static_record_plus1 != 0u) || (entry->static_owner_mask != 0u))
+    {
+        return nNdsVcCacheStatic;
+    }
+    if (entry->stage_warm != 0u)
+    {
+        return nNdsVcCacheWarm;
+    }
+    if ((slot_plus1 >= 1u) && (slot_plus1 <= 4u))
+    {
+        return (u32)nNdsVcCacheSlot0 + slot_plus1 - 1u;
+    }
+    if (((tag >> 8) & 31u) == (u32)NDS_RENDERER_PROFILE_OWNER_STAGE)
+    {
+        return nNdsVcCacheStage;
+    }
+    return nNdsVcCacheOther;
+}
+
+static void ndsVramCensusMark(u32 name, u32 bucket)
+{
+    if ((name != 0u) && (name < NDS_VRAM_CENSUS_NAME_MAX))
+    {
+        sNdsVramCensusBucketOf[name] = (u8)bucket;
+    }
+}
+
+static void ndsVramCensusCapture(NDSVramCensusSnap *snap, u32 pixels)
+{
+    const DynamicArray *textures = &glGlobalData.texturePtrs;
+    const DynamicArray *palettes = &glGlobalData.palettePtrs;
+    u32 blocks[11];
+    u32 limit;
+    u32 name;
+    u32 i;
+
+    memset(snap, 0, sizeof(*snap));
+    snap->frame = gNdsRendererProfileFrameCount;
+    snap->last_request = gNdsVramCensusLastRequest;
+    snap->dispcnt = REG_DISPCNT;
+    snap->vramcnt_abcd = *(volatile u32 *)0x04000240u;
+    snap->vramcnt_efg = *(volatile u32 *)0x04000244u;
+
+    memset(sNdsVramCensusBucketOf, 0xff, sizeof(sNdsVramCensusBucketOf));
+    memset(sNdsVramCensusPalSeen, 0, sizeof(sNdsVramCensusPalSeen));
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        const NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+        u32 entry_name = (u32)entry->name;
+
+        if ((entry_name != 0u) && (entry_name < NDS_VRAM_CENSUS_NAME_MAX))
+        {
+            ndsVramCensusMark(entry_name, ndsVramCensusCacheBucket(
+                entry, sNdsVramCensusTag[entry_name]));
+        }
+    }
+    for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
+    {
+        ndsVramCensusMark(sNdsRendererEntryEffectTextureName[i],
+                          (sNdsEntryEffectTextureStartupOnly[i] != 0u) ?
+                              nNdsVcEntryStartup : nNdsVcEntryKept);
+    }
+    for (i = 0u; i < sNdsR2FighterTintCount; i++)
+    {
+        ndsVramCensusMark(sNdsR2FighterTints[i].name, nNdsVcTint);
+    }
+#if NDS_R2_REBIRTH_HALO_NATIVE
+    for (i = 0u; i < NDS_REBIRTH_HALO_TEXTURE_COUNT; i++)
+    {
+        ndsVramCensusMark(sNdsRendererRebirthHaloTextureName[i],
+                          nNdsVcHaloShield);
+    }
+#endif
+    for (i = 0u; i < 5u; i++)
+    {
+        ndsVramCensusMark(sNdsEntryShieldTextureName[i], nNdsVcHaloShield);
+    }
+
+    limit = textures->cur_size;
+    if (limit > NDS_VRAM_CENSUS_NAME_MAX)
+    {
+        limit = NDS_VRAM_CENSUS_NAME_MAX;
+    }
+    gNdsVramCensus.name_limit = textures->cur_size;
+    for (name = 1u; name < limit; name++)
+    {
+        const gl_texture_data *tex =
+            (const gl_texture_data *)textures->data[name];
+        u32 bucket;
+        u32 bytes;
+
+        if (tex == NULL)
+        {
+            continue;
+        }
+        bucket = sNdsVramCensusBucketOf[name];
+        if (bucket == 0xffu)
+        {
+            u32 tag = sNdsVramCensusTag[name];
+            u32 site = tag & 31u;
+
+            bucket = (((tag & 0x4000u) == 0u) ||
+                      (site >= NDS_VRAM_CENSUS_SITE_MAX)) ?
+                ((u32)nNdsVcSiteBase + NDS_VRAM_CENSUS_SITE_MAX) :
+                ((u32)nNdsVcSiteBase + site);
+        }
+        bytes = (tex->vramAddr != NULL) ?
+            ndsVramCensusParamsBytes(tex->texFormat) : 0u;
+        if (bytes != 0u)
+        {
+            snap->tex_names++;
+            snap->tex_bytes += bytes;
+            snap->tex_size_field += tex->texSize;
+            snap->bytes[bucket] += bytes;
+            snap->count[bucket]++;
+        }
+        if ((tex->palIndex > 0) &&
+            ((u32)tex->palIndex < palettes->cur_size) &&
+            ((u32)tex->palIndex < NDS_VRAM_CENSUS_NAME_MAX) &&
+            ((sNdsVramCensusPalSeen[(u32)tex->palIndex >> 5] &
+              (1u << ((u32)tex->palIndex & 31u))) == 0u))
+        {
+            const gl_palette_data *pal =
+                (const gl_palette_data *)palettes->data[tex->palIndex];
+
+            sNdsVramCensusPalSeen[(u32)tex->palIndex >> 5] |=
+                1u << ((u32)tex->palIndex & 31u);
+            if (pal != NULL)
+            {
+                snap->pal_names++;
+                snap->pal_bytes += pal->palSize;
+                snap->pal[bucket] += pal->palSize;
+            }
+        }
+    }
+    ndsVramCensusBlocks(glGlobalData.vramBlocks[0], 0u, blocks);
+    snap->tex_usable = blocks[7];
+    snap->tex_free_usable = blocks[8];
+    snap->tex_largest_usable = blocks[9];
+    snap->tex_free_runs_usable = blocks[10];
+    snap->tex_free = blocks[0];
+    snap->tex_free_blocks = blocks[1];
+    snap->tex_largest_free = blocks[2];
+    snap->tex_alloc_blocks = blocks[3];
+    snap->tex_alloc_bytes = blocks[4];
+    snap->tex_start = blocks[5];
+    snap->tex_end = blocks[6];
+    ndsVramCensusBlocks(glGlobalData.vramBlocks[1], 1u, blocks);
+    snap->pal_usable = blocks[7];
+    snap->pal_free_usable = blocks[8];
+    snap->pal_largest_usable = blocks[9];
+    snap->pal_free_runs_usable = blocks[10];
+    snap->pal_free = blocks[0];
+    snap->pal_free_blocks = blocks[1];
+    snap->pal_largest_free = blocks[2];
+    snap->pal_alloc_blocks = blocks[3];
+    snap->pal_alloc_bytes = blocks[4];
+    snap->pal_start = blocks[5];
+    snap->pal_end = blocks[6];
+    if (pixels != 0u)
+    {
+        snap->bg2_opaque = ndsPlatformVramCensusOverlayOpaque(0u);
+        snap->bg3_opaque = ndsPlatformVramCensusOverlayOpaque(1u);
+    }
+    gNdsVramCensus.captures++;
+}
+
+void ndsVramCensusCaptureBurst(void)
+{
+    if ((gNdsVramCensusEnable == 0u) || (gNdsVramCensus.burst.frame != 0u))
+    {
+        return;
+    }
+    ndsVramCensusCapture(&gNdsVramCensus.burst, 1u);
+    DC_FlushRange(&gNdsVramCensus, sizeof(gNdsVramCensus));
+}
+
+void ndsVramCensusFrame(void)
+{
+    NDSVramCensus *census = &gNdsVramCensus;
+    NDSVramCensusSnap *live = &census->live;
+    u32 frame;
+    u32 i;
+
+    if (gNdsVramCensusEnable == 0u)
+    {
+        return;
+    }
+    ndsVramCensusCapture(live, 0u);
+    frame = live->frame;
+    census->frames++;
+    for (i = 0u; i < NDS_VRAM_CENSUS_BUCKETS; i++)
+    {
+        if (live->bytes[i] > census->peak_bytes[i])
+        {
+            census->peak_bytes[i] = live->bytes[i];
+        }
+        if (live->count[i] > census->peak_count[i])
+        {
+            census->peak_count[i] = live->count[i];
+        }
+    }
+    if (live->tex_bytes > census->peak_tex_bytes)
+    {
+        census->peak_tex_bytes = live->tex_bytes;
+    }
+    if (live->pal_bytes > census->peak_pal_bytes)
+    {
+        census->peak_pal_bytes = live->pal_bytes;
+    }
+    if ((census->min_largest_free_frame == 0u) ||
+        (live->tex_largest_usable < census->min_largest_free))
+    {
+        census->min_largest_free = live->tex_largest_usable;
+        census->min_largest_free_frame = frame;
+    }
+    if ((census->go.frame == 0u) && (gNdsFtrLean.go_frame != 0u))
+    {
+        ndsVramCensusCapture(&census->go, 1u);
+    }
+    if ((frame >= NDS_VRAM_CENSUS_EPISODE_FIRST) &&
+        (frame < NDS_VRAM_CENSUS_EPISODE_END) &&
+        ((census->episode.frame == 0u) ||
+         (live->tex_largest_usable < census->episode.tex_largest_usable)))
+    {
+        census->episode = *live;
+    }
+    if ((frame >= NDS_VRAM_CENSUS_EPISODE_END) &&
+        ((census->after.frame == 0u) ||
+         (live->tex_largest_usable < census->after.tex_largest_usable)))
+    {
+        census->after = *live;
+    }
+    for (i = 0u; i < 2u; i++)
+    {
+        static const u32 kBgFrame[2] = { 900u, 1500u };
+
+        if ((census->bg_frame[i] == 0u) && (frame >= kBgFrame[i]))
+        {
+            census->bg_frame[i] = frame;
+            census->bg2_opaque[i] = ndsPlatformVramCensusOverlayOpaque(0u);
+            census->bg3_opaque[i] = ndsPlatformVramCensusOverlayOpaque(1u);
+        }
+    }
+    DC_FlushRange(census, sizeof(*census));
+}
+
+/* One distinct fighter texture per record; the host checks every image and
+ * TLUT against the fighter's enumerated closure. */
+static void ndsVramCensusNoteCacheKey(
+    const NDSRendererHardwareTextureCacheEntry *entry,
+    const NDSRendererHardwareTextureKey *key, u32 palette_entries)
+{
+    NDSVramCensus *census = &gNdsVramCensus;
+    u32 slot_plus1 = gNdsVramCensusDrawSlotPlus1;
+    u32 slot;
+    u32 asset = 0u;
+    u32 offset = 0u;
+    u32 w0 = 0xffffffffu;
+    u32 w1 = 0xffffffffu;
+    u32 w2;
+    u32 pal_code;
+    u32 i;
+
+    /* Always on in a census build (not gated by gNdsVramCensusEnable): the
+     * first fighter draws happen before the sampler's first poke. */
+    if ((slot_plus1 == 0u) || (slot_plus1 > 4u))
+    {
+        return;
+    }
+    slot = slot_plus1 - 1u;
+    census->key_uploads[slot]++;
+    if (gNdsFtrLean.go_frame != 0u)
+    {
+        census->key_uploads_after_go[slot]++;
+    }
+    if (ndsRelocGetLoadedPointerProvenance(
+            (const void *)(uintptr_t)key->image, &asset, &offset) != FALSE)
+    {
+        w0 = ((asset & 0xfffu) << 20) | (offset & 0xfffffu);
+    }
+    else
+    {
+        census->key_prov_fail[slot]++;
+    }
+    if (key->tlut_image != 0u)
+    {
+        if (ndsRelocGetLoadedPointerProvenance(
+                (const void *)(uintptr_t)key->tlut_image, &asset,
+                &offset) != FALSE)
+        {
+            w1 = ((asset & 0xfffu) << 20) | (offset & 0xfffffu);
+        }
+        else
+        {
+            w1 = 0xfffffffeu;
+            census->key_prov_fail[slot]++;
+        }
+    }
+    pal_code = (palette_entries == 0u) ? 0u :
+        (palette_entries <= 4u) ? 1u : (palette_entries <= 16u) ? 2u : 3u;
+    w2 = (key->format & 7u) | ((key->size & 3u) << 3) |
+        (((entry->params >> 26) & 7u) << 5) |
+        (((entry->params >> 20) & 7u) << 8) |
+        (((entry->params >> 23) & 7u) << 11) | (pal_code << 14) |
+        (((entry->params >> 16) & 0xfu) << 16);
+    for (i = 0u; i < census->key_count[slot]; i++)
+    {
+        u32 *record = census->key[slot][i];
+
+        if ((record[0] == w0) && (record[1] == w1) &&
+            ((record[2] & 0xfffffu) == w2))
+        {
+            if ((record[2] >> 20) != 0xfffu)
+            {
+                record[2] += 0x100000u;
+            }
+            return;
+        }
+    }
+    if (census->key_count[slot] >= NDS_VRAM_CENSUS_KEYS)
+    {
+        census->key_overflow[slot]++;
+        return;
+    }
+    census->key[slot][census->key_count[slot]][0] = w0;
+    census->key[slot][census->key_count[slot]][1] = w1;
+    census->key[slot][census->key_count[slot]][2] = w2 | 0x100000u;
+    census->key_count[slot]++;
+}
+#endif
 
 #if NDS_P2_STAGE_HYRULE
 typedef struct NDSHyruleTextureFill
@@ -12535,6 +13136,11 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     entry->key_hash = key_hash;
 #endif
     entry->params = ndsRendererHardwareMergeTextureParams(params);
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    /* Slice 2a (lab): the distinct fighter textures each slot uploads. */
+    ndsVramCensusNoteCacheKey(entry, &key, resident_palette_entries);
+#endif
     entry->source_texels = texels;
     entry->green_texels = green_texels;
     entry->nonwhite_texels = nonwhite_texels;

@@ -4571,12 +4571,130 @@ static inline void ndsRendererHardwareRecordBattleTextureFence(
     gNdsRendererBattleTextureFenceCounts[(u32)fence_class]++;
 }
 
+#if NDS_VRAM_CENSUS_LIVE
+/* P2-2p8 Phase 1 slice 2a (lab only): one tag per libnds texture name.
+ * bits 0-4 site index (gNdsVramCensusSitePc; 31 = registry full), 5-7 the
+ * fighter draw slot + 1 active at the upload, 8-12 sNdsRendererRuntimeOwner,
+ * 14 = born through the fenced glGenTextures, 15 = an upload was seen. The site is the return address of the call into
+ * the tagging helper, i.e. a PC inside the function the fenced wrapper was
+ * inlined into -- the host maps it to a function with nm. Nothing here reads
+ * or writes GX or VRAM. */
+#define NDS_VRAM_CENSUS_NAME_MAX 512u
+#define NDS_VRAM_CENSUS_SITE_MAX 30u
+#define NDS_VRAM_CENSUS_SITE_FULL 31u
+static u16 sNdsVramCensusTag[NDS_VRAM_CENSUS_NAME_MAX];
+volatile u32 gNdsVramCensusSitePc[NDS_VRAM_CENSUS_SITE_MAX]
+    __attribute__((used));
+volatile u32 gNdsVramCensusSiteCount __attribute__((used));
+volatile u32 gNdsVramCensusNameOverflow __attribute__((used));
+volatile u32 gNdsVramCensusDrawSlotPlus1 __attribute__((used));
+/* The last glTexImage2D request: type << 16 | size_t << 8 | size_s. */
+volatile u32 gNdsVramCensusLastRequest __attribute__((used));
+/* Set by the shared IFCommon atlas wrappers to their caller's PC, so an
+ * atlas texture is tagged with the effect/stage/UI function that asked for
+ * it rather than the one shared allocator (consumed by the next upload). */
+volatile u32 gNdsVramCensusAtlasUser __attribute__((used));
+
+static u32 ndsVramCensusSiteIndex(u32 pc)
+{
+    u32 i;
+
+    for (i = 0u; i < gNdsVramCensusSiteCount; i++)
+    {
+        if (gNdsVramCensusSitePc[i] == pc)
+        {
+            return i;
+        }
+    }
+    if (gNdsVramCensusSiteCount < NDS_VRAM_CENSUS_SITE_MAX)
+    {
+        gNdsVramCensusSitePc[gNdsVramCensusSiteCount] = pc;
+        return gNdsVramCensusSiteCount++;
+    }
+    return NDS_VRAM_CENSUS_SITE_FULL;
+}
+
+static void __attribute__((noinline))
+ndsVramCensusTagBirth(int count, const int *names)
+{
+    u32 site = ndsVramCensusSiteIndex(
+        (u32)(uintptr_t)__builtin_return_address(0) & ~1u);
+    int i;
+
+    for (i = 0; i < count; i++)
+    {
+        u32 name = (u32)names[i];
+
+        if (name < NDS_VRAM_CENSUS_NAME_MAX)
+        {
+            sNdsVramCensusTag[name] = (u16)(site | 0x4000u);
+        }
+        else
+        {
+            gNdsVramCensusNameOverflow++;
+        }
+    }
+}
+
+static void __attribute__((noinline)) ndsVramCensusTagUpload(void)
+{
+    u32 user = gNdsVramCensusAtlasUser;
+    u32 site = ndsVramCensusSiteIndex((user != 0u) ? user :
+        ((u32)(uintptr_t)__builtin_return_address(0) & ~1u));
+    u32 name = (u32)glGlobalData.activeTexture;
+
+    if (name < NDS_VRAM_CENSUS_NAME_MAX)
+    {
+        sNdsVramCensusTag[name] = (u16)(site |
+            ((gNdsVramCensusDrawSlotPlus1 & 7u) << 5) |
+            (((u32)sNdsRendererRuntimeOwner & 31u) << 8) | 0xC000u);
+        gNdsVramCensusAtlasUser = 0u;
+    }
+    else
+    {
+        gNdsVramCensusNameOverflow++;
+    }
+}
+
+static void ndsVramCensusTagDelete(int count, const int *names)
+{
+    int i;
+
+    for (i = 0; i < count; i++)
+    {
+        u32 name = (u32)names[i];
+
+        if (name < NDS_VRAM_CENSUS_NAME_MAX)
+        {
+            sNdsVramCensusTag[name] = 0u;
+        }
+    }
+}
+
+static void ndsVramCensusTagReset(void)
+{
+    memset(sNdsVramCensusTag, 0, sizeof(sNdsVramCensusTag));
+}
+#endif
+
 static inline int ndsRendererHardwareFencedGlGenTextures(int count,
                                                          int *names)
 {
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_CREATE);
+#if NDS_VRAM_CENSUS_LIVE
+    {
+        int result = glGenTextures(count, names);
+
+        if (result != 0)
+        {
+            ndsVramCensusTagBirth(count, names);
+        }
+        return result;
+    }
+#else
     return glGenTextures(count, names);
+#endif
 }
 
 static inline int ndsRendererHardwareFencedGlTexImage2D(
@@ -4587,8 +4705,25 @@ static inline int ndsRendererHardwareFencedGlTexImage2D(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_UPLOAD);
     ndsRendererHardwareInvalidateGXState(
         NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
+#if NDS_VRAM_CENSUS_LIVE
+    {
+        int result;
+
+        gNdsVramCensusLastRequest = (((u32)type & 0xffu) << 16) |
+            (((u32)size_y & 0xffu) << 8) | ((u32)size_x & 0xffu);
+        result = glTexImage2D(target, empty1, type, size_x, size_y,
+                              empty2, params, texture);
+
+        if (result != 0)
+        {
+            ndsVramCensusTagUpload();
+        }
+        return result;
+    }
+#else
     return glTexImage2D(target, empty1, type, size_x, size_y, empty2,
                         params, texture);
+#endif
 }
 
 static inline int ndsRendererHardwareFencedGlDeleteTextures(int count,
@@ -4598,6 +4733,9 @@ static inline int ndsRendererHardwareFencedGlDeleteTextures(int count,
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_GL_DELETE);
     ndsRendererHardwareInvalidateGXState(
         NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
+#if NDS_VRAM_CENSUS_LIVE
+    ndsVramCensusTagDelete(count, names);
+#endif
     return glDeleteTextures(count, names);
 }
 

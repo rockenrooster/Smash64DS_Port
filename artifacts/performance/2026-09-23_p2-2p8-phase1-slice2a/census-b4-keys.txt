@@ -1,0 +1,60 @@
+run census-b4 rom CEC2D79208801D1F
+slot               keys   ovfl  uploads   after GO provfail    texel B     pal B
+DK (slot 0)          14      0       82         44        0     11,776       376
+Samus (slot 1)       19      0       90         45        0      9,728       560
+Link (slot 2)        27      0      134         63        0     15,488       816
+Kirby (slot 3)        6      0      263        256        0      3,072       192
+
+== DK (slot 0)
+   image files (asset id: keys): {'0x13d': 14}
+   0x13d+0x04344    tlut 0x13d+0x04c44    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 2
+   0x13d+0x045ac    tlut 0x13d+0x0458c    CI4b    -> Pal16   32x32     512 B pal  32  uploads 3
+   0x13d+0x047f4    tlut 0x13d+0x047d4    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 5
+   0x13d+0x04a3c    tlut 0x13d+0x04a1c    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 4
+   0x13d+0x04c64    tlut 0x13d+0x04c44    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 8
+   0x13d+0x04eac    tlut 0x13d+0x05354    CI4b    -> Pal16   32x8      128 B pal  32  uploads 10
+   0x13d+0x04ef4    tlut 0x13d+0x05354    CI4b    -> Pal16   32x8      128 B pal  32  uploads 4
+   0x13d+0x05144    tlut 0x13d+0x05124    CI4b    -> Pal16   16x32     256 B pal   8  uploads 3
+   0x13d+0x05144    tlut 0x13d+0x05124    CI4b    -> Pal16   16x64     512 B pal   8  uploads 12
+   0x13d+0x05144    tlut 0x13d+0x05124    CI4b    -> Pal16  128x64    4096 B pal   8  uploads 11
+   0x13d+0x052cc    tlut 0x13d+0x052ac    CI4b    -> Pal16   32x16     256 B pal  32  uploads 6
+   0x13d+0x05374    tlut 0x13d+0x05354    CI4b    -> Pal16   32x16     256 B pal  32  uploads 8
+   0x13d+0x053f4    tlut 0x13d+0x04c44    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 2
+   0x13d+0x05614    tlut 0x13d+0x055f4    CI4b    -> Pal16   32x32     512 B pal  32  uploads 4
+== Samus (slot 1)
+   image files (asset id: keys): {'0x140': 19}
+   0x140+0x038b8    tlut 0x140+0x03d68    CI4b    -> Pal16   32x32     512 B pal  32  uploads 6
+   0x140+0x03b00    tlut 0x140+0x03ae0    CI4b    -> Pal16   32x32     512 B pal  32  uploads 10
+   0x140+0x03dc8    tlut 0x140+0x04ee8    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 6
+   0x140+0x04070    tlut 0x140+0x04050    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 6
+   0x140+0x04318    tlut 0x140+0x04520    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 6
+   0x140+0x04970    tlut 0x140+0x04950    CI4b    -> Pal16   32x32     512 B pal  32  uploads 5
+   0x140+0x04e20    tlut 0x140+0x04ee8    CI4b    -> Pal16   16x16     128 B pal   8  uploads 5
+   0x140+0x04ea0    tlut 0x140+0x04ee8    CI4b    -> Pal16   16x8       64 B pal   8  uploads 5
+   0x140+0x04f08    tlut 0x140+0x04ee8    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 5
+   0x140+0x051b0    tlut 0x140+0x05190    CI4b    -> Pal16   32x32     512 B pal  32  uploads 6
+   0x140+0x053d8    tlut 0x140+0x04050    CI4b    -> Pal16   32x32     512 B pal  32  uploads 6
+   0x140+0x055d8    tlut 0x140+0x03d68    CI4b    -> Pal16   32x32     512 B pal  32  uploads 5
+   0x140+0x057d8    tlut 0x140+0x03d68    CI4b    -> Pal16   32x32     512 B pal  32  uploads 5
+   0x140+0x05ae0    tlut 0x140+0x03d68    CI4b    -> Pal16   32x32     512 B pal  32  uploads 6
+   0x140+0x05c98    tlut 0x140+0x06170    CI4b    -> Pal16   32x32     512 B pal  32  uploads 2
+   0x140+0x05f68    tlut 0x140+0x05f40    CI4b    -> Pal16   32x32     512 B pal  32  uploads 2
+   0x140+0x061c0    tlut 0x140+0x06198    CI4b    -> Pal16   16x16     128 B pal  32  uploads 1
+   0x140+0x06240    tlut 0x140+0x06218    CI4b    -> Pal16   16x16     128 B pal  32  uploads 2
+   0x140+0x062d0    tlut 0x140+0x062a8    CI4b    -> Pal16   16x8       64 B pal  32  uploads 1
+== Link (slot 2)
+   image files (asset id: keys): {'0x144': 27}
+   0x144+0x01f18    tlut 0x144+0x01ef8    CI4b    -> Pal16    8x8       32 B pal  32  uploads 4
+   0x144+0x02228    tlut 0x144+0x02208    CI4b    -> Pal16   16x32     256 B pal  32  uploads 6
+   0x144+0x02728    tlut 0x144+0x03328    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 6
+   0x144+0x02d28    tlut 0x144+0x03328    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 4
+   0x144+0x03348    tlut 0x144+0x03328    CI4b    -> Pal16   64x32    1024 B pal  32  uploads 6
+   0x144+0x03550    tlut 0x144+0x044d8    CI4b    -> Pal16   16x32     256 B pal  32  uploads 3
+   0x144+0x035d0    tlut 0x144+0x02208    CI4b    -> Pal16   16x16     128 B pal  32  uploads 5
+   0x144+0x035d0    tlut 0x144+0x02208    CI4b    -> Pal16   16x16     128 B pal  32  uploads 5
+   0x144+0x035d0    tlut 0x144+0x02208    CI4b    -> Pal16   64x16     512 B pal  32  uploads 5
+   0x144+0x036b8    tlut 0x144+0x03698    CI4b    -> Pal16   16x16     128 B pal  32  uploads 6
+   0x144+0x03738    tlut 0x144+0x045f8    CI4b    -> Pal16   16x16     128 B pal  32  uploads 10
+   0x144+0x037b8    tlut 0x144+0x045f8    CI4b    -> Pal16   32x32     512 B pal  32  uploads 5
+   0x144+0x038b8    tlut 0x144+0x045f8    CI4b    -> Pal16   16x16     128 B pal  32  uploads 5
+   0x144

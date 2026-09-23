@@ -1,0 +1,126 @@
+run final-census-a setGlobals [{'name': 'gNdsFtrLeanRoute', 'requested': 0, 'readback': 0, 'stuck': True}, {'name': 'gNdsVramCensusEnable', 'requested': 1, 'readback': 1, 'stuck': True}] rom CEC2D79208801D1F
+  gNdsVramCensus.frames                            1972
+  gNdsVramCensus.captures                          1974
+  gNdsVramCensus.walk_guard_hits                   0
+  gNdsVramCensus.name_limit                        256
+  gNdsVramCensusNameOverflow                       0
+  gNdsVramCensusSiteCount                          28
+  gNdsVramCensus.peak_tex_bytes                    261600
+  gNdsVramCensus.peak_pal_bytes                    6144
+  gNdsVramCensus.min_largest_free                  384
+  gNdsVramCensus.min_largest_free_frame            1165
+  gNdsVramCensusOverlayMask                        3
+  gNdsVramCensus.bg_frame[0]                       900
+  gNdsVramCensus.bg2_opaque[0]                     49152
+  gNdsVramCensus.bg3_opaque[0]                     0
+  gNdsVramCensus.bg_frame[1]                       1500
+  gNdsVramCensus.bg2_opaque[1]                     49152
+  gNdsVramCensus.bg3_opaque[1]                     0
+  gNdsOriginalSpriteBg2ClearBytes                  0
+  gNdsOriginalSpriteBg2CopyBytes                   0
+  gNdsOriginalSpriteBg2FinalWriteBytes             98304
+  gNdsOriginalSpriteBg3ClearBytes                  0
+  gNdsOriginalSpriteBg3CopyBytes                   0
+  gNdsOriginalSpriteBg3FinalWriteBytes             0
+  gNdsOriginalSpritePreviewCommitCount             1
+  gNdsEntryEffectStartupTextureReleaseCount        41
+  gNdsEntryEffectStartupTextureReleaseBytes        18528
+  gNdsRendererNativeFailure.count                  573
+  gNdsRendererNativeDirectReject.count             254
+  gNdsFtrLean.go_frame                             196
+  gNdsFtrLean.fighter_uploads_after_go             408
+
+field                         go         burst       episode         after
+frame                        196           156           798         1,165
+tex_names                    163           186           160           181
+tex_bytes                248,704       256,928       246,944       260,960
+tex_size_field           248,704       256,928       246,944       260,960
+tex_alloc_bytes          248,704       256,928       246,944       260,960
+tex_alloc_blocks             163           186           160           181
+tex_usable               262,144       262,144       262,144       262,144
+tex_free_usable           13,440         5,216        15,200         1,184
+tex_largest_usable         8,800         2,176         2,560           384
+tex_free_runs_usable             7             4            15             5
+pal_usable                32,768        32,768        32,768        32,768
+pal_free_usable           28,050        27,228        27,468        26,908
+pal_largest_usable        26,384        26,476        26,192        26,128
+pal_free_runs_usable            78            66            72            87
+tex_free                 275,584       267,360       277,344       263,328
+tex_free_blocks                7             4            15             5
+tex_largest_free         262,368       263,392       262,368       262,304
+tex_start             0x06800000    0x06800000    0x06800000    0x06800000
+tex_end               0x06880000    0x06880000    0x06880000    0x06880000
+pal_names                    171           193           175           204
+pal_bytes                  4,718         5,540         5,300         5,860
+pal_alloc_bytes            4,718         5,540         5,300         5,860
+pal_free                  93,586        92,764        93,004        92,444
+pal_free_blocks               79            67            73            88
+pal_largest_free          65,536        65,536        65,536        65,536
+pal_start             0x06880000    0x06880000    0x06880000    0x06880000
+pal_end               0x06898000    0x06898000    0x06898000    0x06898000
+dispcnt               0x00211d5d    0x00211d5d    0x00211d5d    0x00211d5d
+vramcnt_abcd          0x89818b83    0x89818b83    0x89818b83    0x89818b83
+vramcnt_efg           0x038b8382    0x038b8382    0x038b8382    0x038b8382
+bg2_opaque                49,152        49,152             0             0
+bg3_opaque                     0             0             0             0
+last_request          0x00030101    0x00030403    0x00060202    0x00030203
+
+bucket (texel bytes / names / palette bytes)                            go                 burst               episode                 after              peak
+cache:stage                                                          0/0/0                 0/0/0            1,024/1/16            1,024/1/16           1,536/3
+cache:static                                               66,432/44/1,464       66,432/44/1,464       66,432/44/1,464       66,432/44/1,464         66,432/44
+cache:slot0                                                  18,176/14/200         18,176/14/200         18,176/14/200         21,120/19/298         21,120/19
+cache:slot1                                                   8,896/15/318          8,896/15/318          8,896/15/318          8,896/15/318          9,920/19
+cache:slot2                                                  12,992/24/474          5,568/14/250          5,568/14/250         15,616/28/526         15,616/28
+cache:slot3                                                       512/1/26                 0/0/0              512/1/32            1,536/3/90           2,560/5
+entry:startup                                                        0/0/0       18,528/41/1,216                 0/0/0                 0/0/0         18,528/41
+entry:kept                                                   29,632/24/544         29,632/24/544         29,632/24/528         29,632/24/528         29,632/24
+tint                                                             256/8/256             192/6/192             288/9/288             288/9/288             288/9
+halo+shield                                                   8,192/10/464          8,192/10/464          8,192/10/464          8,192/10/464          8,192/10
+site3:ndsIFCommonNativeOamPrepareClouds                        49,152/2/32           49,152/2/32           49,152/2/32           49,152/2/32          49,152/2
+site4:ndsIFCommonNativeOamPrepareClouds                         8,192/1/64            8,192/1/64            8,192/1/64            8,192/1/64           8,192/1
+site6:ndsRendererHardwarePrepareParticleAtlas                 40,960/5/320          40,960/5/320          40,960/5/320          40,960/5/320          40,960/5
+site8:ndsRendererHardwarePrepareParticleAtlas                  1,408/3/112           1,408/3/112           1,408/3/112           1,408/3/112           1,408/3
+site10:ndsRendererHardwareFencedGlTexImage2D.constpr               64/1/28               64/1/28               64/1/28               64/1/28              64/1
+site11:ndsBattlePrepareSceneTextures                           1,280/5/160           1,280/5/160           1,280/5/160           1,280/5/160           1,280/5
+site15:ndsRendererHardwarePrepareEntryEffectTextures               0/0/144               0/0/144               0/0/144               0/0/144               0/0
+site17:ndsRendererHardwarePrepareFoxGunTexture                    256/1/32              256/1/32              256/1/32              256/1/32             256/1
+site20:ndsR2HostBattleUpdateOnce                                2,304/5/80                 0/0/0            2,304/5/80            2,304/5/80           2,304/5
+site21:ndsRendererSubmitParticleQuad                                 0/0/0                 0/0/0               0/0/320               0/0/256               0/0
+site22:ndsRendererSubmitParticleQuad                                 0/0/0                 0/0/0               0/0/192               0/0/256               0/0
+site23:ndsEFManagerShieldQuadProcDisplay                             0/0/0                 0/0/0           3,072/3/192           3,072/3/192           4,096/4
+site24:ndsRendererAdapterSubmitStageDL                               0/0/0                 0/0/0                 0/0/0                 0/0/0           1,024/1
+site25:ndsRendererSubmitNativeDamageSlash                            0/0/0                 0/0/0            1,536/2/64            1,536/2/64           1,536/2
+site26:ndsRendererSubmitNativeEntryEffect                            0/0/0                 0/0/0                 0/0/0               0/0/128               0/0
+
+sites:
+   0 0x02038600 ndsRendererHardwarePrepareBattleStaticTextures
+   1 0x0203833c ndsRendererHardwarePrepareBattleStaticTextures
+   2 0x02038c6c ndsRendererHardwarePrepareIFCommonAtlas
+   3 0x0200d680 ndsIFCommonNativeOamPrepareClouds
+   4 0x0200d6ce ndsIFCommonNativeOamPrepareClouds
+   5 0x0202a360 ndsRendererHardwarePrepareParticleAtlas
+   6 0x0202a40c ndsRendererHardwarePrepareParticleAtlas
+   7 0x0202a870 ndsRendererHardwarePrepareParticleAtlas
+   8 0x0202a91c ndsRendererHardwarePrepareParticleAtlas
+   9 0x0201d2d4 ndsRendererHardwareFencedGlGenTextures.constprop.0
+  10 0x0201d6ac ndsRendererHardwareFencedGlTexImage2D.constprop.0
+  11 0x020ad6a6 ndsBattlePrepareSceneTextures
+  12 0x020ad6aa ndsBattlePrepareSceneTextures
+  13 0x02038f04 ndsRendererHardwarePrepareIFCommonAtlas
+  14 0x020ad6ae ndsBattlePrepareSceneTextures
+  15 0x0203a38c ndsRendererHardwarePrepareEntryEffectTextures
+  16 0x0202f4dc ndsRendererHardwarePrepareFoxGunTexture
+  17 0x0202f584 ndsRendererHardwarePrepareFoxGunTexture
+  18 0x02020dc8 ndsRendererHardwareBindNoTexture.constprop.0
+  19 0x0200b230 ndsPlatformEndFrame
+  20 0x02075106 ndsR2HostBattleUpdateOnce
+  21 0x0202c130 ndsRendererSubmitParticleQuad
+  22 0x0202bf98 ndsRendererSubmitParticleQuad
+  23 0x020f215e ndsEFManagerShieldQuadProcDisplay
+  24 0x020808c0 ndsRendererAdapterSubmitStageDL
+  25 0x0203b4cc ndsRendererSubmitNativeDamageSlash
+  26 0x0203557c ndsRendererSubmitNativeEntryEffect
+  27 0x02038eb0 ndsRendererHardwarePrepareIFCommonAtlas
+
+ringStops field: int 21
+keys with stop/perStop: ['ringStops', 'ringStopSkews', 'ringStopReads']

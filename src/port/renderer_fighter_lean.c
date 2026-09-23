@@ -24,6 +24,16 @@ volatile u32 gNdsFtrLeanAdmit;
 #endif
 NDSFtrLeanCounters gNdsFtrLean __attribute__((used, aligned(32)));
 volatile u32 gNdsFtrLeanOracleSourceOk __attribute__((used));
+#if NDS_VRAM_CENSUS_LIVE
+/* Slice 2a (lab): 1 = walk the texture/palette VRAM at every frame end.
+ * DTCM like the route words, so a gdb poke is never hidden by the cache. */
+#if defined(__arm__)
+volatile u32 gNdsVramCensusEnable
+    __attribute__((used, section(".dtcm.bss"), aligned(4)));
+#else
+volatile u32 gNdsVramCensusEnable;
+#endif
+#endif
 
 #if NDS_FTR_LEAN_LIVE
 
@@ -542,6 +552,10 @@ static void ndsFtrLeanFrameEnd(void)
         gNdsFtrLean.ge_busy_hits++;
     }
     ndsFtrLeanCountersPublish();
+#if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    ndsVramCensusFrame();   /* slice 2a lab census; no-op unless enabled */
+#endif
 }
 
 #else

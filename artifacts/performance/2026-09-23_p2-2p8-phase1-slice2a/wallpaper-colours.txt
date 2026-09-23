@@ -1,0 +1,11 @@
+file bytes pixels distinct_colours unique_8x8_tiles_of_660
+native_wallpaper_castle.bin 84480 42240 1947 660
+native_wallpaper_hyrule.bin 84480 42240 812 660
+native_wallpaper_inishie.bin 84480 42240 210 309
+native_wallpaper_jungle.bin 84480 42240 339 347
+native_wallpaper_pupupu.bin 84480 42240 2735 652
+native_wallpaper_results.bin 42240 42240 13 - (format 1: u8 intensity, 240x176)
+native_wallpaper_sector.bin 84480 42240 658 660
+native_wallpaper_yamabuki.bin 84480 42240 819 660
+native_wallpaper_yoster.bin 84480 42240 1087 660
+native_wallpaper_zebes.bin 84480 42240 1603 557

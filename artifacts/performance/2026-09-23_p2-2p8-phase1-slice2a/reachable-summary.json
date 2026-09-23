@@ -1,0 +1,469 @@
+{
+ "per": {
+  "Mario": {
+   "low_dl": [
+    2048,
+    96,
+    3
+   ],
+   "high_dl": [
+    2048,
+    96,
+    3
+   ],
+   "mobj": [
+    16384,
+    0,
+    4
+   ],
+   "mobj_all_costumes": 16384,
+   "other": [
+    1472,
+    160,
+    5
+   ],
+   "low_total": 18432,
+   "low_pal": 96,
+   "low_count": 7,
+   "high_total": 18432,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Fox": {
+   "low_dl": [
+    2592,
+    192,
+    6
+   ],
+   "high_dl": [
+    2592,
+    192,
+    6
+   ],
+   "mobj": [
+    14848,
+    128,
+    10
+   ],
+   "mobj_all_costumes": 14848,
+   "other": [
+    44896,
+    1568,
+    50
+   ],
+   "low_total": 17440,
+   "low_pal": 320,
+   "low_count": 16,
+   "high_total": 17440,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Donkey": {
+   "low_dl": [
+    11776,
+    448,
+    14
+   ],
+   "high_dl": [
+    9216,
+    480,
+    15
+   ],
+   "mobj": [
+    512,
+    128,
+    4
+   ],
+   "mobj_all_costumes": 512,
+   "other": [
+    1792,
+    128,
+    4
+   ],
+   "low_total": 12288,
+   "low_pal": 576,
+   "low_count": 18,
+   "high_total": 9728,
+   "runtime": 11776,
+   "runtime_keys": 14,
+   "runtime_missing": 0
+  },
+  "Samus": {
+   "low_dl": [
+    10880,
+    704,
+    22
+   ],
+   "high_dl": [
+    10368,
+    704,
+    22
+   ],
+   "mobj": [
+    5376,
+    128,
+    9
+   ],
+   "mobj_all_costumes": 5888,
+   "other": [
+    2304,
+    96,
+    3
+   ],
+   "low_total": 16256,
+   "low_pal": 832,
+   "low_count": 31,
+   "high_total": 15744,
+   "runtime": 9728,
+   "runtime_keys": 19,
+   "runtime_missing": 0
+  },
+  "Luigi": {
+   "low_dl": [
+    1024,
+    64,
+    2
+   ],
+   "high_dl": [
+    1024,
+    64,
+    2
+   ],
+   "mobj": [
+    20480,
+    0,
+    5
+   ],
+   "mobj_all_costumes": 40960,
+   "other": [
+    1216,
+    160,
+    5
+   ],
+   "low_total": 21504,
+   "low_pal": 64,
+   "low_count": 7,
+   "high_total": 21504,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Link": {
+   "low_dl": [
+    17088,
+    1056,
+    33
+   ],
+   "high_dl": [
+    16864,
+    1056,
+    33
+   ],
+   "mobj": [
+    28928,
+    64,
+    10
+   ],
+   "mobj_all_costumes": 33024,
+   "other": [
+    14144,
+    192,
+    9
+   ],
+   "low_total": 46016,
+   "low_pal": 1120,
+   "low_count": 43,
+   "high_total": 45792,
+   "runtime": 15488,
+   "runtime_keys": 27,
+   "runtime_missing": 0
+  },
+  "Yoshi": {
+   "low_dl": [
+    288,
+    96,
+    3
+   ],
+   "high_dl": [
+    288,
+    96,
+    3
+   ],
+   "mobj": [
+    97536,
+    64,
+    54
+   ],
+   "mobj_all_costumes": 165632,
+   "other": [
+    48128,
+    2016,
+    64
+   ],
+   "low_total": 97824,
+   "low_pal": 160,
+   "low_count": 57,
+   "high_total": 97824,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Captain": {
+   "low_dl": [
+    4960,
+    512,
+    16
+   ],
+   "high_dl": [
+    5056,
+    576,
+    18
+   ],
+   "mobj": [
+    31232,
+    128,
+    11
+   ],
+   "mobj_all_costumes": 72192,
+   "other": [
+    10880,
+    416,
+    15
+   ],
+   "low_total": 36192,
+   "low_pal": 640,
+   "low_count": 27,
+   "high_total": 36288,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Kirby": {
+   "low_dl": [
+    1600,
+    160,
+    5
+   ],
+   "high_dl": [
+    1600,
+    160,
+    5
+   ],
+   "mobj": [
+    27392,
+    64,
+    22
+   ],
+   "mobj_all_costumes": 144640,
+   "other": [
+    7232,
+    448,
+    16
+   ],
+   "low_total": 28992,
+   "low_pal": 224,
+   "low_count": 27,
+   "high_total": 28992,
+   "runtime": 3072,
+   "runtime_keys": 6,
+   "runtime_missing": 0
+  },
+  "Pikachu": {
+   "low_dl": [
+    256,
+    96,
+    3
+   ],
+   "high_dl": [
+    256,
+    96,
+    3
+   ],
+   "mobj": [
+    71936,
+    64,
+    26
+   ],
+   "mobj_all_costumes": 153856,
+   "other": [
+    8832,
+    224,
+    8
+   ],
+   "low_total": 72192,
+   "low_pal": 160,
+   "low_count": 29,
+   "high_total": 72192,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Purin": {
+   "low_dl": [
+    256,
+    64,
+    2
+   ],
+   "high_dl": [
+    256,
+    64,
+    2
+   ],
+   "mobj": [
+    10240,
+    0,
+    5
+   ],
+   "mobj_all_costumes": 81920,
+   "other": [
+    11648,
+    64,
+    5
+   ],
+   "low_total": 10496,
+   "low_pal": 64,
+   "low_count": 7,
+   "high_total": 10496,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  },
+  "Ness": {
+   "low_dl": [
+    5024,
+    384,
+    12
+   ],
+   "high_dl": [
+    4960,
+    320,
+    10
+   ],
+   "mobj": [
+    110592,
+    0,
+    16
+   ],
+   "mobj_all_costumes": 110592,
+   "other": [
+    7168,
+    64,
+    5
+   ],
+   "low_total": 115616,
+   "low_pal": 384,
+   "low_count": 28,
+   "high_total": 115552,
+   "runtime": 0,
+   "runtime_keys": 0,
+   "runtime_missing": 0
+  }
+ },
+ "heaviest": [
+  [
+   333472,
+   [
+    "Link",
+    "Yoshi",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   323168,
+   [
+    "Yoshi",
+    "Captain",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   316608,
+   [
+    "Yoshi",
+    "Kirby",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   307904,
+   [
+    "Luigi",
+    "Yoshi",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   304864,
+   [
+    "Mario",
+    "Yoshi",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   304096,
+   [
+    "Fox",
+    "Yoshi",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   303424,
+   [
+    "Samus",
+    "Yoshi",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   299200,
+   [
+    "Donkey",
+    "Yoshi",
+    "Pikachu",
+    "Ness"
+   ]
+  ],
+  [
+   297952,
+   [
+    "Link",
+    "Yoshi",
+    "Captain",
+    "Ness"
+   ]
+  ],
+  [
+   296896,
+   [
+    "Yoshi",
+    "Pikachu",
+    "Purin",
+    "Ness"
+   ]
+  ]
+ ],
+ "hats": {
+  "Mario": 512,
+  "Fox": 0,
+  "Donkey": 1152,
+  "Samus": 2944,
+  "Luigi": 512,
+  "Link": 128,
+  "Yoshi": 160,
+  "Captain": 416,
+  "Pikachu": 864,
+  "Purin": 0,
+  "Ness": 32
+ }
+}

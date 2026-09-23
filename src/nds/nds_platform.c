@@ -1097,6 +1097,43 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled)
         (is_enabled != FALSE) ? NDS_ORIGINAL_SPRITE_OVERLAY_ALL : 0u);
 }
 
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+/* P2-2p8 Phase 1 slice 2a (lab only, reads only): the opaque (bit 15) pixels
+ * of one overlay layer's visible 256x192 window -- layer 0 = BG2 (bank C,
+ * the battle wallpaper), 1 = BG3 (bank D, the foreground overlay) -- and the
+ * layer mask the scene left set, for the VRAM census. */
+volatile u32 gNdsVramCensusOverlayMask __attribute__((used));
+
+u32 ndsPlatformVramCensusOverlayOpaque(u32 layer)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    int bg = (layer != 0u) ? sOriginalSpriteOverlayForegroundBg :
+        sOriginalSpriteOverlayBg;
+    const volatile u16 *pixels;
+    u32 opaque = 0u;
+    u32 i;
+
+    gNdsVramCensusOverlayMask = sOriginalSpriteOverlayLayerMask;
+    if (bg < 0)
+    {
+        return 0xffffffffu;
+    }
+    pixels = (const volatile u16 *)bgGetGfxPtr(bg);
+    for (i = 0u; i < 256u * 192u; i++)
+    {
+        if ((pixels[i] & 0x8000u) != 0u)
+        {
+            opaque++;
+        }
+    }
+    return opaque;
+#else
+    (void)layer;
+    return 0xffffffffu;
+#endif
+}
+#endif
+
 void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
 {
 #if NDS_RENDERER_HW_TRIANGLES

@@ -5291,6 +5291,10 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         u32 lean_serial = 0u;
         sb32 lean_drew = FALSE;
 
+#if NDS_VRAM_CENSUS_LIVE
+        /* Slice 2a (lab): texture uploads inside this draw belong to it. */
+        gNdsVramCensusDrawSlotPlus1 = ((u32)fp->nds_slot & 3u) + 1u;
+#endif
         if (lean_route != 0u)
         {
             lean_drew = ndsFtrLeanRun((u32)fp->nds_slot, fp, lean_route);
@@ -5305,6 +5309,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
                 ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_serial);
             }
         }
+#if NDS_VRAM_CENSUS_LIVE
+        gNdsVramCensusDrawSlotPlus1 = 0u;
+#endif
     }
 #else
     ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
