@@ -50,3 +50,25 @@ file (202,816 B on Dream Land); the FGM cache 237,568 B; battle-irrelevant code
 ~491 KB in the shipping image (Q5: CSS 143K, 1P 134K, menus 101K, opening 48K,
 diagnostics 38K, results 27K) -> calico ROM overlays (`calico/nds/arm9/ovl.h`);
 Phase 1/2 deletions (~98 KB + ~73 KB BSS).
+
+## Overlays (A7): what calico offers
+
+- `calico/nds/arm9/ovl.h`: `ovlInit`, `ovlLoadInPlace`, `ovlActivate`,
+  `ovlDeactivate`; the example linker script
+  (`C:/devkitPro/examples/nds/filesystem/nitrofs/overlays/overlays.ld`) places
+  overlays at one shared VMA (`__ovlarea_main_start`) with one PHDR each, selecting
+  input sections **by object file** (`:test0.o (.text ...)`); ndstool turns the
+  segments into overlay files.
+- This port builds large unity translation units (`scene_backend`,
+  `nds_renderer` hold 294 KB / 455 KB of code by object), so an overlay needs
+  either split TUs or section selection by name: with `-ffunction-sections`
+  every function has its own `.text.<name>`, so a section attribute macro on the
+  menu / 1P / CSS code (`.text.ovl_front.*`) lets the script pick it without
+  splitting files.
+- Two questions the spec must answer before sizing the win: (1) every battle ->
+  front-end call edge while the front-end overlay is out (a call into an
+  unloaded overlay is a wild jump -- enumerate edges from the linked ELF, not by
+  grep); (2) how the battle arena reclaims the overlay area: the taskman arena is
+  chosen once at boot (`diagnostics_taskman_heap.c:117-215`), so either the
+  overlay area sits inside a per-scene arena extension or the arena is re-seated
+  at the scene boundary.
