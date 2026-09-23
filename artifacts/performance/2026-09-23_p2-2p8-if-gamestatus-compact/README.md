@@ -46,6 +46,24 @@ Not yet exercised: the GAME SET stream at runtime (this match ends on TIME UP;
 it is baked by the same function that produced the byte-identical TIME UP bank),
 the 1P battles, and the menu loop. The flag stays 0 until they are.
 
+## 1P campaign (shipping shell configuration, `smash64ds-p2-shell-freeplay-hwtri`)
+
+Lab ROM in its own dir (`build-p2p8-ifc-1p`, flags `NDS_P2_MENU_WALK=1
+NDS_FTR_LEAN_ADMIT_LAB=1 NDS_FTR_LEAN_ADMIT_DEFAULT=2 NDS_IF_GAMESTATUS_COMPACT=1`),
+`scripts/menus/probe-p2-campaign.ps1 -TransitionProof` on runner slot 8
+(`1p-campaign-probe.txt`, `1p-tally.png`):
+
+- **The first 1P battle (vs Link) now loads and completes** -- without compaction
+  it halted in `ndsSyMallocOverflowHalt` during its setup (Phase 1 slice 3, D3).
+  In-battle heap low-water 70,832 B; Stage Clear tally reached (score 13,570).
+- **Bank D in a 1P battle (slice 2c's open D4c):** taken once in the battle and
+  returned at the stage transition; 0 refused BG3 writes, 0 missed exits.
+- **Next blocker (pre-existing, P2-6's "next-stage Intro OOM"):** stage 2's intro
+  (the Yoshi team, a four-fighter scene) requests Yoshi's full 144,640 B main file
+  (`ftManagerSetupFilesMainKind` from `sc1PIntroSetupFighterFiles`) with 50,276 B
+  free. The 1P intro loads full fighter main files where battles load compact
+  packs.
+
 ## Reproduce
 
 ```

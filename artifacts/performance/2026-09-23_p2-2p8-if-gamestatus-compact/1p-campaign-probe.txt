@@ -1,0 +1,157 @@
+0xfffffffc in ?? ()
+Breakpoint 1 at 0x20a23fc: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 270.
+Breakpoint 2 at 0x20d4b04: file D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-ifc-1p/battleship_overlay/src/sc/sc1pmode/sc1pgame.c, line 990.
+Breakpoint 3 at 0x200a644: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 1209.
+Breakpoint 4 at 0x20601e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_dispatch_profile.c, line 49.
+Breakpoint 5 at 0x20d8578: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sc1pstageclear.c, line 161.
+Breakpoint 6 at 0x20e2a1c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mn1pcontinue.c, line 85.
+Breakpoint 7 at 0x2085618: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 1268.
+Breakpoint 8 at 0x208561c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 1273.
+Breakpoint 9 at 0x2085620: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 1278.
+Breakpoint 10 at 0x20f2354: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 358.
+Breakpoint 11 at 0x2131e10: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c, line 1614.
+Breakpoint 12 at 0x2099834: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 861.
+Breakpoint 13 at 0x20990f0: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 938.
+Breakpoint 14 at 0x20f247a: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 299.
+Breakpoint 15 at 0x2087884: syAudioPlayBGM. (4 locations)
+Breakpoint 16 at 0x20878d4: func_800269C0_275C0. (5 locations)
+Breakpoint 17 at 0x200b534: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3585.
+Breakpoint 18 at 0x206459c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 133.
+Breakpoint 19 at 0x2068d14: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 277.
+Breakpoint 20 at 0x1fffb9c: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+CPLINE 1 curr=27 prev=27 enters=0 rej=0 unreg=0 mism=0 arenabase=00000000 arenasize=0
+CPERR 1 allocfail=1 openfail=0 formatfail=0 fixupfail=0 hdr=0 payload=0
+CPGFX 1 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 1 en=0 mask=0 published=0
+CPBATTLE 1 none
+CP1P 1 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 2 curr=1 prev=27 enters=1 rej=0 unreg=1 mism=0 arenabase=00000000 arenasize=0
+CPERR 2 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=3 payload=1
+CPGFX 2 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 2 en=0 mask=0 published=0
+CPBATTLE 2 none
+CP1P 2 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 3 curr=7 prev=1 enters=2 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 3 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=181
+CPGFX 3 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 3 en=0 mask=0 published=0
+CPBATTLE 3 none
+CP1P 3 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 4 curr=8 prev=7 enters=3 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 4 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=289
+CPGFX 4 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 4 en=0 mask=0 published=0
+CPBATTLE 4 none
+CP1P 4 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPMODEVIS source=0 enter=1 present=4 base=1 fail=0 mask=3 option=0 selected=0 native=0 native_delta=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-23_1p-mode.png
+CPLINE 5 curr=17 prev=8 enters=4 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 5 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=11 payload=410
+CPGFX 5 peak=0 capacity=32768 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 5 en=1 mask=1 published=0
+CPBATTLE 5 none
+CP1P 5 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSCTRL manual=1 visit=1
+CPCSSBASE visit=1 diff=1 stock=2 fkind=28 costume=0 use_right=1
+CPLINE 6 curr=8 prev=17 enters=5 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 6 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=47 payload=564
+CPGFX 6 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 6 en=1 mask=1 published=0
+CPBATTLE 6 none
+CP1P 6 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 7 curr=17 prev=8 enters=6 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 7 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=51 payload=680
+CPGFX 7 peak=16 capacity=32768 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 7 en=1 mask=1 published=0
+CPBATTLE 7 none
+CP1P 7 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSBASE visit=2 diff=1 stock=2 fkind=28 costume=0 back=1
+CPCSSMUT base_diff=1 diff=2 base_stock=2 stock=3 base_costume=0 fkind=0 costume=1 selected=1 back=1
+CPCSSVIS enter=2 present=168 base=2 fail=0 mask=ff fkind=0 diff=2 stock=3 time=5 native=0 native_delta=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-23_1p-css.png
+CPLINE 8 curr=14 prev=52 enters=7 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 8 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=87 payload=1010
+CPGFX 8 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 8 en=1 mask=1 published=0
+CPBATTLE 8 none
+CP1P 8 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPINTROAUDIO updates=209 sched=280 bgm_calls=0 bgm_id=-1 fgm_calls=0 fgm_last=-1 bgm_play_delta=0 track=10 bgm_chunks_delta=0 fgm_plays_delta=0 fgm_unsupported_delta=0
+CPFPCBEGIN scene=14 battle=0 kind=35607000 free=317088
+CPALLOC size=35607000 free=317088 lr=02011691
+CPINTRO-LINK-BEFORE free=264980
+CPFPCBEGIN scene=14 battle=0 kind=35607000 free=264980
+CPALLOC size=35607000 free=264980 lr=02011691
+CPINTRO-LINK-AFTER free=156726 paid=108254
+CPINTRO-BGM call=1 id=35
+CPNATIVE-INTRO domain=3 scene=14 identity=4294967295 status=131072 root=1112014848 material=1112014848 reason=37490992 reject_count=0 reject_site=00000000
+CPINTRO-FGM call=1 id=499
+CPINTRO-FGM call=2 id=532
+CPINTRO-FGM call=3 id=497
+CPLINE 9 curr=52 prev=1 enters=8 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 9 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=141 payload=1037
+CPGFX 9 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 9 en=1 mask=1 published=0
+CPBATTLE 9 gametype=5 gkind=06 time=1 pl=1 cp=1 s0=0/0/3 s1=1/1/0 s2=28/2/0 s3=28/2/0
+CP1P 9 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPBATTLE-HIT 9 renderframe=607
+CPTRANSITION-FIRST stage=0 enters=8
+CPVRAMD at=first-battle-enter scene=52 stage=0 admit=2 lent=0 takes=0 returns=0 refused=0 missed=0
+CPFRAMEBP-DISABLED bp=17
+CPSETUP count=1 stage=0 state=02296508
+CPFPCBEGIN scene=52 battle=1 kind=35607000 free=266440
+CPRINGFREE prev_kind=14 prev_free=83504 enters=9 current_free=266440
+CPALLOC size=35607000 free=266440 lr=02011691
+CPPACKKIND scene=52 kind=0 free=249144 loads=3 bytes=36460 extern_patches=0 extern_loads=0 foreign_bytes=0
+CPEXTERNAUDIT kind=35607000 free=228960 extern_before=0 extern_after=11 extern_delta=11
+CPEXTERNDONE kind=1 free=228960 extern_patches=11 extern_loads=4 foreign_bytes=224
+CPFPCBEGIN scene=52 battle=1 kind=35607000 free=210428
+CPALLOC size=35607000 free=210428 lr=02011691
+CPPACKKIND scene=52 kind=5 free=173854 loads=4 bytes=50932 extern_patches=12 extern_loads=4 foreign_bytes=224
+CPEXTERNAUDIT kind=35607000 free=156880 extern_before=12 extern_after=18 extern_delta=6
+CPEXTERNDONE kind=1 free=156880 extern_patches=18 extern_loads=8 foreign_bytes=224
+CPVRAMD at=take-entry scene=52 stage=0 admit=2 lent=0 takes=0 returns=0 refused=0 missed=0
+CPWINROUTE stage=0 p0=0/1 p1=1/-1 p2=2/0 p3=2/0 time=11906 score=0 masks=00000000/00000000/00000000 heap_min=70832 native_entry=15480 native_fail=15480 native_battle_delta=0 drive_frames=6095 attacks=80
+CPLINE 10 curr=51 prev=52 enters=9 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 10 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=200 payload=1435
+CPGFX 10 peak=80 capacity=1536 overflow=0 noroom=0 dl_overflow=22136 dl_kind=0 dl_bytes=112
+CPCTL 10 en=1 mask=1 published=8000
+CPBATTLE 10 gametype=5 gkind=04 time=5 pl=1 cp=1 s0=0/0/1 s1=5/1/4294967295 s2=28/2/0 s3=28/2/0
+CP1P 10 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPSTAGECLEAR-ENTER prev=52 stage=0 score=1000 masks=00000004/00000000/00000000
+CPVRAMD at=stageclear-enter scene=51 stage=0 admit=2 lent=1 takes=1 returns=0 refused=0 missed=0
+CPNATIVE-TALLY domain=3 scene=51 identity=4294967295 status=2 root=37176552 material=0 reason=1 reject_count=0 reject_site=00000000
+CPTALLY-SHOT frame=29 stage=0 score=1000 bonus_num=0 bonus_id=0 flags=00000004/00000000/00000000 allow=0 player_stock=1 heap_min=70832 native_fail=16015 taps=0
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-23_1p-tally.png
+CPTALLY-FINAL frame=180 stage=0 score=13570 bonus_num=1 bonus_id=96 flags=00000004/00000000/00000000 allow=1 player_stock=1 heap_min=70832 native_fail=19971 taps=6
+CPLINE 11 curr=14 prev=52 enters=10 rej=0 unreg=1 mism=0 arenabase=02306800 arenasize=892416
+CPERR 11 allocfail=197 openfail=0 formatfail=0 fixupfail=0 hdr=214 payload=1442
+CPGFX 11 peak=80 capacity=32768 overflow=0 noroom=0 dl_overflow=22136 dl_kind=0 dl_bytes=112
+CPCTL 11 en=1 mask=1 published=8000
+CPBATTLE 11 gametype=5 gkind=04 time=5 pl=1 cp=1 s0=0/0/1 s1=5/1/4294967295 s2=28/2/0 s3=28/2/0
+CP1P 11 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=1
+CPNEXTINTRO stage=1 first_stage=0 score=13570
+CPVRAMD at=next-intro-enter scene=14 stage=1 admit=2 lent=0 takes=1 returns=1 refused=0 missed=0
+CPFPCBEGIN scene=14 battle=0 kind=35607000 free=102384
+CPALLOC size=35607000 free=102384 lr=02011691
+CPFPCBEGIN scene=14 battle=0 kind=35607000 free=50276
+CPALLOC size=35607000 free=50276 lr=02011691
+
+Breakpoint 18, ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:133
+133	    for (;;)
+CPSTOP n=11 pc=0206459c cpsr=6000003f
+ndsSyMallocOverflowHalt in section .main
+CPREGISTERS r0=00000000 r1=00000000 lr=02064609 cpsr=6000003f
+CPOOM request=144640 free=50276 align=16 caller=020a44f1
+CPPACK loaded=5 bytes=84452 failure=0 kind=0
+#0  ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:133
+#1  0x02064608 in syMallocSet (bp=bp@entry=0x22bd4bc <gSYTaskmanGeneralHeap>, size=144640, alignment=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:173
+#2  0x020a44f0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-ifc-1p/battleship_overlay/src/sys/taskman.c:275
+#3  syTaskmanMalloc (size=<optimized out>, align=align@entry=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253
+#4  0x020f17ee in ftManagerSetupFilesMainKind (fkind=fkind@entry=6) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c:285
+#5  0x020f246c in ndsBaseFTManagerSetupFilesAllKind (fkind=6) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c:358
+#6  ndsBaseFTManagerSetupFilesAllKind (fkind=6) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c:352
+#7  ftManagerSetupFilesAllKind (fkind=6) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:396
+#8  0x020d9d16 in sc1PIntroSetupFighterFiles (stage=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c:1922
+#9  0x020d9ddc in sc1PIntroFuncStart () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c:1950
+[Inferior 1 (Remote target) detached]
+
