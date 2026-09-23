@@ -81,6 +81,17 @@ arena than the one that ships** (its arena was 1,355,520 B in Phase 0).
 - Every later phase report carries the shipping arena and this roster's load
   margin, not only the four-CPU gate ROM's heap.
 
+## Levers the Phase 3 memory spec must size (identified, not yet measured)
+
+| lever | bytes at stake | question |
+|---|---:|---|
+| `dGMCommonFileIDs` (`gmcommon.c:11-21`): the eight IFCommon sprite files, one 208,672 B allocation | up to ~200 KB | which of their bytes does the DS HUD (native OAM) still read? Strip the N64 sprite payloads at build time the way the compact battle packs stripped fighter Gfx/Vtx |
+| the stage ground file (`mpcollision.c:3963-3975`; 202,816 B on Dream Land) | per stage | gameplay needs map geometry and the DObj trees; the DS draws the stage from native blobs, so its display lists, vertices and textures are candidates to strip per stage |
+| `sNdsAudioFgmCache` BSS | 237,568 | ARM7-owned cue fill (D7) leaves the ARM9 only the resident heads |
+| menu / 1P / cinematic code (by source file; `code_by_object.py`, `nm -l` attribution) | ~123 KB named + generated menu tables | a battle-time overlay |
+| Phase 1 deletion: production / packet BSS; owner images vs generated templates | ~98 KB BSS; ~108 KB images here | net of the templates |
+| Phase 2 deletion: stage replay / workspace buffers | ~73 KB | |
+
 ## Reproduce
 
 ```
