@@ -677,6 +677,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   the slice's code adds 8 KB) -- memory work starts now in parallel (battle HUD
   file bake, A7), and the phase's deletion step returns production's RAM. Next,
   slice 4: host-generated fighter lists (LOAD4x3 + P'), the path to deletion.
+- **Phase 3 prep (A7), 2026-09-23 (`002e5999244`, `b0a0b1a851f`,
+  `artifacts/performance/2026-09-23_p2-2p8-if-gamestatus-compact/`)**: the battle
+  HUD file IFCommonGameStatus (152,288 B) is kept as a 21,056 B image after load
+  -- the letters' pixels are baked (GO into OBJ VRAM, TIME UP / GAME SET into
+  22,104 B of run-length streams) and dropped. Four-CPU lab: general-heap
+  low-water 54,020 -> 122,412 B, OBJ VRAM byte-identical, replay digest
+  identical. Shipping shell 1P: the first battle now loads and completes; the next
+  blocker is stage 2's intro loading full fighter files. Flag default 0 until
+  slice 4 lands, then on.
 
 ## 7. Found along the way
 

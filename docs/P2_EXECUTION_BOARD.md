@@ -74,8 +74,13 @@ fragmentation in a full A+B, and BG3's bank D empty in VS battles. Slice 2b
 no new RAM, uploads after GO 0, WORK-H P95 2.45M at word 2. Slice 3
 (`08736558f3b`): lean for all four stress kinds, FTR P50 229K / WORK-H P50
 1.51M at route 1. **Slice 4 in progress**: host-generated fighter lists.
-Found: the first 1P battle OOMs at load (pre-existing); integrator works the
-battle HUD file bake (A7 memory) in parallel. Alongside (disjoint files, integrator): MF host
+Found: the first 1P battle OOMs at load (pre-existing). Integrator (A7):
+compact IFCommonGameStatus (`002e5999244`, flag `NDS_IF_GAMESTATUS_COMPACT`,
+default 0 until slice 4 lands) frees ~110 KB per battle -- four-CPU low-water
+54,020 -> 122,412 B, digest identical -- and with it the first 1P battle loads
+and completes; bank D proven in a 1P battle. Next 1P blocker: stage 2's intro
+loads Yoshi's full 144,640 B main file (the pack loader is gated to CSS/battle
+scenes; `ndsRelocPreviewFighterLoadBegin`). Alongside (disjoint files, integrator): MF host
 encoder + C decoder + checker. ARM7 audio spec queued (one subagent at a time). Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`,
 `artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`.
