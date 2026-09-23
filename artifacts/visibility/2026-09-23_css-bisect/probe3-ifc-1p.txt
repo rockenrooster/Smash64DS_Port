@@ -1,0 +1,25 @@
+0x01fffb00 in armWaitForIrq () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h:117
+warning: 117	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/arm/common.h: No such file or directory
+warning: could not convert 'scene_curr' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+SCENE curr=16
+TOUR kind=0xfff drew=0x000 done=1 notready=3934256408
+$1 = {0 <repeats 12 times>}
+$2 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+PACK loads=0 fail=0 failkind=0 bytes=0 halt=36387908 commit=0 cancel=0 steps=0
+ACQ n=0 load=0 fin=0 fail=0 retry=0 hit=0 cached=0 cap=0
+PREV draw=0 frames=0 visible=0x0 selected=0x0 ready=0x0 prepare=0x0 mainfail=0x0 ownerfail=0x0 animfail=0x0 subfail=0x0 dwellreq=0 dwellcommit=0 dwellskip=0
+ORIG setup=0x0 setupres=0 start=0 reloc=0 loaded=0 deferred=0x0
+$3 = {-1, -1, -1, -1}
+$4 = 0x235a630
+$5 = 0x0
+$6 = 0x236a630
+$7 = 0x237e630
+$8 = 0x2392630
+$9 = 0x23a6630
+$10 = {id = 0x10000, start = 0x2306800, end = 0x23e0600, ptr = 0x23c46e8}
+HEAP free=114456 freemin=4294967295 arena=892416
+TRI p0=0
+NATIVE fail=0
+$11 = {count = 0, domain = 0, scene = 0, identity = 0, status = 0, root = 0, material = 0, reason = 0}
+[Inferior 1 (Remote target) detached]

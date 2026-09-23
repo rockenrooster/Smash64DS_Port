@@ -101,11 +101,30 @@ static sb32 sNdsPlayersVSPreviewRulesReady;
  * high-water. Link is the largest current combination at < 70 KiB on disk;
  * 80 KiB leaves bounded loader/alignment headroom. Source/oracle profiles still
  * consume full Gfx/Vtx closures and keep the measured 156 KiB raw-tree slot. */
-#define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (64u * 1024u)
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 1
 #else
 #define NDS_PLAYERS_VS_COMPACT_PREVIEW 0
+#endif
+/* The shared closure is the fixed tree list in sNdsPlayersVSSharedResidentAssetIDs,
+ * so its arena is sized to what those trees measure, not to a round number. The
+ * compact-preview list (seven trees) pins 15,232 B, identically on the VS-only
+ * shell and the all-content free-play ROM (2026-09-23, at VS CSS exit). The raw-
+ * tree profiles also pin YoshiModel and keep 64 KiB.
+ *
+ * Every byte here comes out of the character select's scene heap BEFORE
+ * ndsR2AnimCacheReserveCSSWorkingSet, which must also leave
+ * NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE behind its reservation. With 64 KiB the
+ * all-content configuration (the published smash64ds and its free-play twin)
+ * reached that reservation with 163,792 B free against 183,072 B required, the
+ * reservation declined, and every VS preview was switched off -- the published
+ * 2026-09-22 ROM had cleared it by 5,296 B. Too small a value cannot hide the
+ * same way: a shared tree that does not fit halts in ndsSyMallocOverflowHalt
+ * naming this arena ('CSS\0'). */
+#if NDS_PLAYERS_VS_COMPACT_PREVIEW
+#define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (24u * 1024u)
+#else
+#define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (64u * 1024u)
 #endif
 #define NDS_PLAYERS_VS_RESIDENT_BLOCKS GMCOMMON_PLAYERS_MAX
 #define NDS_PLAYERS_VS_LOAD_CHUNK_BYTES (8u * 1024u)
@@ -253,6 +272,14 @@ volatile u32 gNdsPlayersVSPreviewResidentOwnerFailMask;
  * owner images. Do not clear this at CSS re-entry; LOOPDONE must see a failure
  * from any lap in the run. */
 volatile u32 gNdsPlayersVSPreviewResidentCapacityFailCount;
+/* Boot-lifetime witness, same contract: a nonzero count is a character select
+ * that opened with every VS preview switched off, because its pools could not
+ * be built. The stage names the refusal: 1 shared arena, 2 a closure block,
+ * 3 a shared tree, 4 the animation working set (the scene heap could not also
+ * keep NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE behind it). Without it the only trace
+ * of that failure was an empty panel. */
+volatile u32 gNdsPlayersVSPreviewPoolFailCount;
+volatile u32 gNdsPlayersVSPreviewPoolFailStage;
 /* Genuine source preview rebuilds only. These counters deliberately bracket
  * mnPlayersVSUpdateFighter itself so unrelated CSS/menu NitroFS traffic cannot
  * be mistaken for a rebuild dependency again. */
@@ -771,6 +798,13 @@ void ndsMNPlayersClearPreviewFighterFiles(s32 fkind)
     data->p_file_shieldpose = NULL;
 }
 
+static sb32 ndsMNPlayersVSPreviewPoolFail(u32 stage)
+{
+    gNdsPlayersVSPreviewPoolFailCount++;
+    gNdsPlayersVSPreviewPoolFailStage = stage;
+    return FALSE;
+}
+
 static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
 {
     SYMallocRegion *previous;
@@ -790,7 +824,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     }
     if (sNdsPlayersVSSharedResidentBase == NULL)
     {
-        return FALSE;
+        return ndsMNPlayersVSPreviewPoolFail(1u);
     }
 
     syMallocInit(&sNdsPlayersVSSharedResidentArena, 0x43535300u,
@@ -800,7 +834,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     {
         if (sNdsPlayersVSResidentBlocks[i].base == NULL)
         {
-            return FALSE;
+            return ndsMNPlayersVSPreviewPoolFail(2u);
         }
         syMallocInit(&sNdsPlayersVSResidentBlocks[i].arena, 0x43535310u + i,
                      sNdsPlayersVSResidentBlocks[i].base,
@@ -827,7 +861,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
             ndsRelocReleaseHeapRange(sNdsPlayersVSSharedResidentBase,
                                      NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES);
             syMallocReset(&sNdsPlayersVSSharedResidentArena);
-            return FALSE;
+            return ndsMNPlayersVSPreviewPoolFail(3u);
         }
     }
     ndsTaskmanSwapMallocRegion(previous);
@@ -837,7 +871,7 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
      * and the same payload provider as the actual warm loader. */
     if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
     {
-        return FALSE;
+        return ndsMNPlayersVSPreviewPoolFail(4u);
     }
     return TRUE;
 }

@@ -1,0 +1,19 @@
+0x0207215c in ndsRendererAdapterBuildFighterTraRotRpyExact (mtx=0x22b4f50, tx=0, ty=-39.7824707, tz=0, r=1.36923317e-37, p=1.25857588e-37, y=1.25857678e-37) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/renderer_adapter_matrix.c:2262
+2262	{
+warning: Source file is more recent than executable.
+warning: could not convert 'scene_curr' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+SCENE curr=16
+TOUR kind=0xfff drew=0xfff done=1 notready=3934256408
+$1 = {2880, 3366, 2226, 2254, 2240, 2028, 2240, 2233, 1792, 2219, 2233, 2226}
+$2 = {236, 2048, 8192, 0, 1, 65, 236, 2048, 13, 0}
+PACK loads=13 fail=0 failkind=0 bytes=212464 halt=36178692 commit=13 cancel=0 steps=236
+ACQ n=128 load=13 fin=13 fail=0 retry=114 hit=1 cached=0 cap=0
+PREV draw=203 frames=407 visible=0x3 selected=0x3 ready=0xf prepare=0xfff mainfail=0x0 ownerfail=0x0 animfail=0x0 subfail=0x0 dwellreq=12 dwellcommit=12 dwellskip=0
+ORIG setup=0x0 setupres=0 start=0 reloc=0 loaded=0 deferred=0x0
+$3 = {65539, 65540, -1, -1}
+HEAP free=211248 freemin=4294967295 arena=1117952
+TRI p0=45217
+NATIVE fail=0
+$4 = {count = 0, domain = 0, scene = 0, identity = 0, status = 0, root = 0, material = 0, reason = 0}
+[Inferior 1 (Remote target) detached]

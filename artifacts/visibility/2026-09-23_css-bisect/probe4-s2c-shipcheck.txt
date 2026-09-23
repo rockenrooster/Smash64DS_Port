@@ -1,0 +1,27 @@
+0x020770fe in ndsRendererAdapterComposeOwnerWorldsSource (root=<optimized out>, binding_count=<optimized out>, seed=0x22b5410, seed_is_identity=1, worlds=0x22778d8 <sNdsRendererAdapterNativeOwnerModelviews>, bindings=0x22748c8 <sNdsRendererAdapterNativeOwnerWorkspace+128>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/renderer_adapter_matrix.c:7122
+7122	        u32 parent = joint_parents[joint_index];
+warning: Source file is more recent than executable.
+warning: could not convert 'scene_curr' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+SCENE curr=16
+TOUR kind=0xfff drew=0xfff done=1 notready=3934256408
+$1 = {2880, 3366, 2226, 2254, 2240, 2028, 2240, 2233, 1792, 2219, 2233, 2226}
+$2 = {236, 2048, 8192, 0, 1, 65, 236, 2048, 13, 0}
+PACK loads=13 fail=0 failkind=0 bytes=212464 halt=36178692 commit=13 cancel=0 steps=236
+ACQ n=128 load=13 fin=13 fail=0 retry=114 hit=1 cached=0 cap=0
+PREV draw=195 frames=391 visible=0x3 selected=0x3 ready=0xf prepare=0xfff mainfail=0x0 ownerfail=0x0 animfail=0x0 subfail=0x0 dwellreq=12 dwellcommit=12 dwellskip=0
+ORIG setup=0x0 setupres=0 start=0 reloc=0 loaded=0 deferred=0x0
+$3 = {65539, 65540, -1, -1}
+$4 = 0x2322a30
+$5 = 0x1
+$6 = 0x2332a30
+$7 = 0x2346a30
+$8 = 0x235aa30
+$9 = 0x236ea30
+$10 = {id = 0x10000, start = 0x22cec00, end = 0x23dfb00, ptr = 0x23ac1d0}
+ANIMCACHE reserved=52000 used=52000 count=1 fail=0 failskips=0 overflows=0
+HEAP free=211248 freemin=4294967295 arena=1117952
+TRI p0=42657
+NATIVE fail=0
+$11 = {count = 0, domain = 0, scene = 0, identity = 0, status = 0, root = 0, material = 0, reason = 0}
+[Inferior 1 (Remote target) detached]

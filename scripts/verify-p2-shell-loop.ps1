@@ -603,7 +603,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'info symbol $pc',
             ('printf "LOOPDONE enters=%u exits=%u rej=%u unreg=%u mism=%u walkloops=%u ' +
              'budget=%u rematch=%u press=%u steps=%u input=%u trans=%u denied=%u ' +
-             'rescap=%u ' +
+             'rescap=%u respool=%u respoolstage=%u ' +
              'sd=%u winm=%u winf=%u resb=%u dwell=%u posefull=%u\n", ' +
              'gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, ' +
              'gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, ' +
@@ -612,6 +612,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellWalkResultsPressCount, gNdsMenuShellWalkSteps, ' +
              'gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, ' +
              'gNdsMenuShellDeniedCount, gNdsPlayersVSPreviewResidentCapacityFailCount, ' +
+             'gNdsPlayersVSPreviewPoolFailCount, gNdsPlayersVSPreviewPoolFailStage, ' +
              'gNdsSCVSBattleSuddenDeathPrepareCount, ' +
              'gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, ' +
              'gNdsAudioBgmResidentBytes, gNdsMenuShellWalkDwellSteps, ' +
@@ -839,6 +840,11 @@ if ($null -ne $done) {
     Assert-Loop ($d['rescap'] -eq 0) (
         "CSS RESIDENT CAPACITY: gNdsPlayersVSPreviewResidentCapacityFailCount=$($d['rescap']), expected 0. " +
         'An FPC1 preview left too little of its fixed resident block for both owner images.')
+    Assert-Loop ($d['respool'] -eq 0) (
+        "CSS PREVIEW POOLS: gNdsPlayersVSPreviewPoolFailCount=$($d['respool']) " +
+        "(stage $($d['respoolstage'])), expected 0. A character select opened with every " +
+        'VS preview switched off (stage 4: the scene heap could not hold the animation ' +
+        'working set and its keep-free floor).')
     Assert-Loop ($d['unreg'] -eq $expectedUnregistered) (
         "UNREGISTERED ENTRIES: $($d['unreg']), expected $expectedUnregistered " +
         '(nSCKindStartup alone).')

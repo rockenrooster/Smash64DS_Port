@@ -1,0 +1,14 @@
+0x0200bfe6 in ndsIFCommonBilerpPremultipliedRgba (taps=0x22ed9f8, fraction_x=<optimized out>, fraction_y=<optimized out>, rgba=0x21 <ndsRendererHardwareAbortBattleStaticTextures+32> "\001 Γ") at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:700
+700	            (taps[tap_index] & 0xffu) * weights[tap_index];
+warning: could not convert 'scene_curr' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+SCENE curr=22
+TOUR kind=0xfff drew=0x000 done=2 notready=3934256408
+$1 = {0 <repeats 12 times>}
+$2 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+PACK loads=2 fail=0 failkind=0 bytes=28960 halt=36387908 commit=2 cancel=0 steps=22
+HEAP free=190892 freemin=4294967295 arena=892416
+TRI p0=0
+NATIVE fail=0
+$3 = {count = 0, domain = 0, scene = 0, identity = 0, status = 0, root = 0, material = 0, reason = 0}
+[Inferior 1 (Remote target) detached]

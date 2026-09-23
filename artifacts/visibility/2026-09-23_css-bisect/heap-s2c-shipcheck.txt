@@ -1,0 +1,22 @@
+armCopyMem32 () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-copy-fill.32.s:12
+warning: 12	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-copy-fill.32.s: No such file or directory
+warning: could not convert 'ndsR2AnimCacheReserveCSSWorkingSet' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Temporary breakpoint 1 at 0x20882d4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c, line 13859.
+
+Temporary breakpoint 1, ndsR2AnimCacheReserveCSSWorkingSet () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:13859
+warning: Source file is more recent than executable.
+13859	        gNdsR2AnimCacheArenaReserveFailCount++;
+RESERVE_AT free=381136 start=0x22cec00 end=0x23dfb00
+0x020b4076 in ndsMNPlayersVSPreviewInitResidentPools () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnplayersvs.c:838
+838	    if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
+Value returned is $1 = 1
+RESERVE_DONE free=381136 reserved=52000 fail=0
+Temporary breakpoint 2 at 0x20b4a58: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnplayersvs.c, line 2469.
+
+Temporary breakpoint 2, ndsMNPlayersVSPreviewExit () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnplayersvs.c:2469
+2469	    if (sNdsPlayersVSPreviewActive == FALSE)
+CSS_EXIT free=201644
+TOUR kind=0xfff drew=0xfff
+ACQ load=18 fail=0 cap=0
+[Inferior 1 (Remote target) detached]

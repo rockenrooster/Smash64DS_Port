@@ -1,0 +1,28 @@
+_nitroromFdReadImpl (self=0x22d2848 <s_nitroromFd>, offset=2163810, buf=0x22ed95c, size=15) at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/nitrorom.c:36
+warning: 36	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/nitrorom.c: No such file or directory
+warning: could not convert 'ndsR2AnimCacheReserveCSSWorkingSet' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Temporary breakpoint 1 at 0x208ee04: file D:/Stuff/DevFolder/Smash64DS_Port_worktrees/cssfix/src/port/reloc_backend_assets.c, line 13882.
+
+Temporary breakpoint 1, ndsR2AnimCacheReserveCSSWorkingSet () at D:/Stuff/DevFolder/Smash64DS_Port_worktrees/cssfix/src/port/reloc_backend_assets.c:13882
+13882	    return ndsR2AnimCacheArenaEnsureSetup();
+RESERVE_AT free=196560 start=0x2306800 end=0x23e0600
+0x020bac26 in ndsMNPlayersVSPreviewInitResidentPools () at D:/Stuff/DevFolder/Smash64DS_Port_worktrees/cssfix/src/import/battleship_mnplayersvs.c:872
+872	    if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
+Value returned is $1 = 1
+RESERVE_DONE free=196560 reserved=52000 fail=0
+Temporary breakpoint 2 at 0x20bb60c: file D:/Stuff/DevFolder/Smash64DS_Port_worktrees/cssfix/src/import/battleship_mnplayersvs.c, line 2503.
+
+Temporary breakpoint 2, ndsMNPlayersVSPreviewExit () at D:/Stuff/DevFolder/Smash64DS_Port_worktrees/cssfix/src/import/battleship_mnplayersvs.c:2503
+2503	    if (sNdsPlayersVSPreviewActive == FALSE)
+CSS_EXIT free=15772
+TOUR kind=0xfff drew=0xfff
+ACQ load=19 fail=0 cap=0
+FIGATREE size=11792
+SHARED used=15232
+BLOCK0 kind=0 used=10472
+BLOCK1 kind=1 used=10240
+BLOCK2 kind=6 used=51552
+BLOCK3 kind=3 used=55824
+ANIM used=52000 reserved=52000
+[Inferior 1 (Remote target) detached]
