@@ -1,0 +1,47 @@
+arms: base-route0 (rom A98C584CC775, 1972 rows), b8-route0 (rom 563F9D920438, 1972 rows)
+
+metric                     base-route0       b8-route0
+WORK-H P50                   1,644,832       1,646,080
+WORK-H P95                   2,470,262       2,458,237
+WORK-H P99                   3,040,703       3,114,861
+WORK-H mean                  1,711,077       1,711,251
+FTR P50                        358,848         359,744
+FTR P95                        915,350         910,182
+FTR P99                      1,168,066       1,172,723
+FTR mean                       386,078         385,964
+MTEX P50                             0               0
+MTEX P95                             0               0
+MTEX P99                             0               0
+MTEX mean                          744             749
+2-VBlank frames             111 (5.6%)      111 (5.6%)
+3-VBlank                   909 (46.1%)     906 (45.9%)
+4-VBlank                   754 (38.2%)     761 (38.6%)
+5+-VBlank                  199 (10.1%)      195 (9.9%)
+
+bands (WORK-H rank within each run)
+  FTR      P40-60         355,028         356,707
+  FTR      P90-95         705,891         691,444
+  FTR      P95-99         904,664         895,776
+  FTR      P99+           885,914         898,246
+  WORK-H   P40-60       1,645,612       1,646,649
+  WORK-H   P90-95       2,326,354       2,316,068
+  WORK-H   P95-99       2,718,704       2,715,946
+  WORK-H   P99+         4,527,488       4,524,326
+
+per-range means (frame 3 = the lab admission frame: the poke lands at the first frame-complete marker, the admission runs at the next frame end; listed apart, excluded from its range)
+  range                  col        base-route0       b8-route0  paired d(last)
+  frame 3 (admission)    FTR             18,816          18,112            -704
+  frame 3 (admission)    WORK-H      26,495,936      26,516,544         +20,608
+  frame 3 (admission)    MTEX         1,378,176       1,386,752          +8,576
+  2-195 entry            FTR            132,655         131,209          -1,446
+  2-195 entry            WORK-H       1,090,018       1,087,247          -2,772
+  2-195 entry            MTEX                 0               0              +0
+  196-797                FTR            425,606         425,860            +254
+  196-797                WORK-H       1,676,885       1,677,178            +293
+  196-797                MTEX                 0               0              +0
+  798-1043 P0 episode    FTR            445,222         444,963            -259
+  798-1043 P0 episode    WORK-H       1,887,699       1,888,810          +1,111
+  798-1043 P0 episode    MTEX                93              91              -3
+  1044-1974              FTR            397,834         397,798             -36
+  1044-1974              WORK-H       1,788,726       1,789,165            +439
+  1044-1974              MTEX                72              72              +0

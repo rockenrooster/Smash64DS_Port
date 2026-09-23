@@ -1,0 +1,12 @@
+data/bss/dtcm symbols whose size changed (smash64ds-p2-shell-hwtri.elf -> smash64ds-p2-shell-hwtri.elf)
+symbol                                                   before      after     delta
+sNdsFtrLeanSlots                                            544      1,312      +768
+sNdsFtrLeanInstances                                      2,720      4,160     +1440
+TOTAL data/bss/dtcm symbol delta                                               +2208
+code symbols (t/T) delta                                  +9152
+
+section                            before        after     delta
+.itcm                              31,896       31,440      -456
+.main                           1,597,724    1,607,284     +9560
+.main.bss                         902,992      905,200     +2208
+TOTAL loaded sections                                     +11312

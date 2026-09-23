@@ -1,0 +1,132 @@
+== b8-route1 rom 563F9D92 route 1 admit 2 slow 0
+  attempts 6862 draws 6862 shadow 0 materializations 62 entry hits 174 switches 156 region takes 4 | packet hits 0 records 0 faults 0 declines 0 | native failures 39 | draws(all) 6862
+  materialize: 520471 ticks/event path incl. rows (443118 list walk), last 2439 words 16 roots 15 textures 2 tint binds 0 tint pending; max 2634 words
+  materialize parts/materialization {'head': '1561', 'roots': '33679', 'spans': '101493', 'shade': '29297', 'prepare': '34115', 'corners': '66758', 'bind': '136513', 'words': '24545'} key miss [103, 0, 0, 83, 36, 8]
+  events {'first': 4, 'rebind': 87, 'material': 140, 'tint_set': 5} event_ticks 42141312 retuples 534 | keys: events 236 seen before 213 distinct 23
+  why {'invalid': 21, 'tint': 0, 'fence': 0, 'key': 103} variants learned 12 switches 144 evictions 0 reject {'other': 8, 'shape': 42, 'room': 0, 'words': 0} diff words 44 max 6 | tint repatches 9, rerecord resets 18 | verify runs 0 (variant 0) mismatch {'shape': 0, 'words': 0, 'textures': 0, 'fences': 0} first ['0x0', '0x0', '0
+  oracle runs 0 words 0 mismatch {} clip max [0, 0] roots 0 donor_memo 0 unconsumed 0 source_miss 0 rec_under_hit [0, 0] record_diff {} first ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0']
+  tint patch binds 30 moved 0 miss 0 white 0 shape 0; light 138 texgen 1775 projection 6862; pinned miss 0 ident watch miss 0
+  Donkey attempts  1725 draws  1725 (100.00%) materializations   26 max words 2467 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 56, 'tint_set': 1} event ticks/event 290217, materialize ticks/materialization 537044
+         oracle mismatch {}
+         keys: events 58 seen before 51 | key miss [47, 0, 0, 47, 0, 0] | why {'invalid': 5, 'tint': 0, 'fence': 0, 'key': 47} | variants learned 0 switches 0
+         programs {0: 1725}
+         per draw: guard 13956 kernel 23240 patch 8750 submit 4301 dma_wait 0 | head 19658 | kernel/joint 928 | classes {'fast': 27563, 'scale': 1581, 'warm': 14058}
+  Samus  attempts  1685 draws  1685 (100.00%) materializations   10 max words 2313 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 14, 'tint_set': 1} event ticks/event 240892, materialize ticks/materialization 355424
+         oracle mismatch {}
+         keys: events 16 seen before 12 | key miss [15, 0, 0, 15, 15, 8] | why {'invalid': 5, 'tint': 0, 'fence': 0, 'key': 15} | variants learned 0 switches 0
+         programs {0: 1628, 1: 6, 2: 9, 3: 42}
+         per draw: guard 5574 kernel 19538 patch 6080 submit 4166 dma_wait 0 | head 17908 | kernel/joint 869 | classes {'fast': 25055, 'scale': 11, 'warm': 12621, 'lock': 180}
+  Link   attempts  1824 draws  1824 (100.00%) materializations   15 max words 2634 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 14, 'material': 68, 'tint_set': 1} event ticks/event 204309, materialize ticks/materialization 865472
+         oracle mismatch {}
+         keys: events 84 seen before 79 | key miss [25, 0, 0, 16, 16, 0] | why {'invalid': 5, 'tint': 0, 'fence': 0, 'key': 25} | variants learned 6 switches 69
+         programs {0: 1775, 1: 33, 3: 16}
+         per draw: guard 12774 kernel 25834 patch 14823 submit 4653 dma_wait 0 | head 18348 | kernel/joint 952 | classes {'fast': 28971, 'scale': 4984, 'warm': 15555}
+  Kirby  attempts  1628 draws  1628 (100.00%) materializations   11 max words 1403 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 3, 'material': 72, 'tint_set': 2} event ticks/event 55033, materialize ticks/materialization 160884
+         oracle mismatch {}
+         keys: events 78 seen before 71 | key miss [16, 0, 0, 5, 5, 0] | why {'invalid': 6, 'tint': 0, 'fence': 0, 'key': 16} | variants learned 6 switches 75
+         programs {0: 1565, 13: 63}
+         per draw: guard 5529 kernel 18317 patch 4417 submit 3741 dma_wait 0 | head 17064 | kernel/joint 854 | classes {'fast': 17442, 'scale': 6372, 'warm': 11125}
+  guard parts/draw {'tuple': '863', 'topology': '121', 'camera': '485', 'identity': '441', 'preamble': '580', 'packet': '529', 'shuffle': '6479', 'event': '6412'}
+  patch parts/draw {'tint_tiles': '586', 'apply_tint': '1655', 'matrices': '794', 'light': '241', 'texgen': '2348', 'sites': '0'}
+  submit parts/draw {'flush': '1257', 'gx+dma_wait': '176', 'dma+invalidate': '1308', 'stats': '1194'} flush bytes/draw 1422 book/draw 2943
+  heap free min 37636 libc top min 19104 | uploads after go 0 admit fail 0
+== b8-route2 rom 563F9D92 route 2 admit 2 slow 0
+  attempts 6862 draws 0 shadow 6862 materializations 218 entry hits 18 switches 0 region takes 0 | packet hits 6606 records 256 faults 0 declines 0 | native failures 39 | draws(all) 6862
+  materialize: 473271 ticks/event path incl. rows (426534 list walk), last 2439 words 16 roots 15 textures 2 tint binds 0 tint pending; max 2634 words
+  materialize parts/materialization {'head': '1564', 'roots': '30532', 'spans': '97434', 'shade': '28914', 'prepare': '33235', 'corners': '64243', 'bind': '130631', 'words': '24577'} key miss [209, 0, 0, 69, 24, 12]
+  events {'first': 4, 'rebind': 87, 'material': 140, 'tint_set': 5} event_ticks 106765632 retuples 534 | keys: events 236 seen before 213 distinct 23
+  why {'invalid': 9, 'tint': 0, 'fence': 0, 'key': 209} variants learned 0 switches 0 evictions 0 reject {'other': 218, 'shape': 0, 'room': 0, 'words': 0} diff words 0 max 0 | tint repatches 9, rerecord resets 18 | verify runs 0 (variant 0) mismatch {'shape': 0, 'words': 0, 'textures': 0, 'fences': 0} first ['0x0', '0x0', '0x0',
+  oracle runs 6606 words 13620081 mismatch {} clip max [0, 1] roots 96259 donor_memo 192 unconsumed 0 source_miss 0 rec_under_hit [256, 0] record_diff {'shade': 98} first ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0']
+  tint patch binds 30 moved 0 miss 0 white 0 shape 0; light 286 texgen 1775 projection 6862; pinned miss 0 ident watch miss 0
+  Donkey attempts  1725 draws  1725 (100.00%) materializations   47 max words 2467 high 0 oracle_runs 1660 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 56, 'tint_set': 1} event ticks/event 454017, materialize ticks/materialization 533003
+         oracle mismatch {}
+         keys: events 58 seen before 51 | key miss [45, 0, 0, 45, 0, 0] | why {'invalid': 2, 'tint': 0, 'fence': 0, 'key': 45} | variants learned 0 switches 0
+         programs {}
+         per draw: guard 25546 kernel 23121 patch 8741 submit 0 dma_wait 0 | head 19647 | kernel/joint 923 | classes {'fast': 27563, 'scale': 1581, 'warm': 14058}
+  Samus  attempts  1685 draws  1685 (100.00%) materializations   16 max words 2313 high 0 oracle_runs 1663 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 14, 'tint_set': 1} event ticks/event 284440, materialize ticks/materialization 275748
+         oracle mismatch {}
+         keys: events 16 seen before 12 | key miss [14, 0, 0, 14, 14, 12] | why {'invalid': 2, 'tint': 0, 'fence': 0, 'key': 14} | variants learned 0 switches 0
+         programs {}
+         per draw: guard 11863 kernel 19586 patch 6201 submit 0 dma_wait 0 | head 18106 | kernel/joint 872 | classes {'fast': 25055, 'scale': 11, 'warm': 12621, 'lock': 180}
+  Link   attempts  1824 draws  1824 (100.00%) materializations   78 max words 2634 high 0 oracle_runs 1735 donor_memo 192
+         declines {}
+         events {'first': 1, 'rebind': 14, 'material': 68, 'tint_set': 1} event ticks/event 770886, materialize ticks/materialization 812402
+         oracle mismatch {}
+         keys: events 84 seen before 79 | key miss [76, 0, 0, 8, 8, 0] | why {'invalid': 2, 'tint': 0, 'fence': 0, 'key': 76} | variants learned 0 switches 0
+         programs {}
+         per draw: guard 43931 kernel 25950 patch 14938 submit 0 dma_wait 0 | head 18749 | kernel/joint 956 | classes {'fast': 28971, 'scale': 4984, 'warm': 15555}
+  Kirby  attempts  1628 draws  1628 (100.00%) materializations   77 max words 1403 high 0 oracle_runs 1548 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 3, 'material': 72, 'tint_set': 2} event ticks/event 142656, materialize ticks/materialization 134319
+         oracle mismatch {}
+         keys: events 78 seen before 71 | key miss [74, 0, 0, 2, 2, 0] | why {'invalid': 3, 'tint': 0, 'fence': 0, 'key': 74} | variants learned 0 switches 0
+         programs {}
+         per draw: guard 12703 kernel 18303 patch 4529 submit 0 dma_wait 0 | head 17448 | kernel/joint 853 | classes {'fast': 17442, 'scale': 6372, 'warm': 11125}
+  guard parts/draw {'tuple': '886', 'topology': '1495', 'camera': '495', 'identity': '3181', 'preamble': '649', 'packet': '1286', 'shuffle': '15938', 'event': '15831'}
+  patch parts/draw {'tint_tiles': '608', 'apply_tint': '1654', 'matrices': '809', 'light': '263', 'texgen': '2346', 'sites': '0'}
+  submit parts/draw {'flush': '0', 'gx+dma_wait': '0', 'dma+invalidate': '0', 'stats': '0'} flush bytes/draw 0 book/draw -
+  heap free min 37636 libc top min 19104 | uploads after go 0 admit fail 0
+== b8-route1-verify rom 563F9D92 route 1 admit 2 slow 16
+  attempts 6862 draws 6862 shadow 0 materializations 236 entry hits 165 switches 147 region takes 4 | packet hits 0 records 0 faults 0 declines 0 | native failures 39 | draws(all) 6862
+  materialize: 156888 ticks/event path incl. rows (434762 list walk), last 2439 words 16 roots 15 textures 2 tint binds 0 tint pending; max 2634 words
+  materialize parts/materialization {'head': '1549', 'roots': '31360', 'spans': '99645', 'shade': '29353', 'prepare': '33700', 'corners': '65432', 'bind': '133404', 'words': '24761'} key miss [121, 0, 0, 102, 37, 13]
+  events {'first': 4, 'rebind': 87, 'material': 140, 'tint_set': 5} event_ticks 124782592 retuples 534 | keys: events 236 seen before 213 distinct 23
+  why {'invalid': 21, 'tint': 0, 'fence': 0, 'key': 121} variants learned 12 switches 144 evictions 0 reject {'other': 8, 'shape': 51, 'room': 0, 'words': 0} diff words 44 max 6 | tint repatches 9, rerecord resets 18 | verify runs 165 (variant 134) mismatch {'shape': 0, 'words': 0, 'textures': 0, 'fences': 0} first ['0x0', '0x0'
+  oracle runs 0 words 0 mismatch {} clip max [0, 0] roots 0 donor_memo 0 unconsumed 0 source_miss 0 rec_under_hit [0, 0] record_diff {} first ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0']
+  tint patch binds 30 moved 0 miss 0 white 0 shape 0; light 147 texgen 1775 projection 6862; pinned miss 0 ident watch miss 0
+  Donkey attempts  1725 draws  1725 (100.00%) materializations   58 max words 2467 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 56, 'tint_set': 1} event ticks/event 560590, materialize ticks/materialization 322644
+         oracle mismatch {}
+         keys: events 58 seen before 51 | key miss [65, 0, 0, 65, 0, 0] | why {'invalid': 5, 'tint': 0, 'fence': 0, 'key': 65} | variants learned 0 switches 0
+         programs {0: 1725}
+         per draw: guard 23048 kernel 23239 patch 8755 submit 4297 dma_wait 0 | head 19654 | kernel/joint 928 | classes {'fast': 27563, 'scale': 1581, 'warm': 14058}
+  Samus  attempts  1685 draws  1685 (100.00%) materializations   16 max words 2313 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 14, 'tint_set': 1} event ticks/event 291656, materialize ticks/materialization 222080
+         oracle mismatch {}
+         keys: events 16 seen before 12 | key miss [15, 0, 0, 15, 15, 13] | why {'invalid': 5, 'tint': 0, 'fence': 0, 'key': 15} | variants learned 0 switches 0
+         programs {0: 1628, 1: 6, 2: 9, 3: 42}
+         per draw: guard 6062 kernel 19526 patch 6084 submit 4160 dma_wait 0 | head 17911 | kernel/joint 869 | classes {'fast': 25055, 'scale': 11, 'warm': 12621, 'lock': 180}
+  Link   attempts  1824 draws  1824 (100.00%) materializations   84 max words 2634 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 14, 'material': 68, 'tint_set': 1} event ticks/event 881220, materialize ticks/materialization 154606
+         oracle mismatch {}
+         keys: events 84 seen before 79 | key miss [25, 0, 0, 16, 16, 0] | why {'invalid': 5, 'tint': 0, 'fence': 0, 'key': 25} | variants learned 6 switches 69
+         programs {0: 1775, 1: 33, 3: 16}
+         per draw: guard 43945 kernel 25849 patch 14823 submit 4654 dma_wait 0 | head 18358 | kernel/joint 952 | classes {'fast': 28971, 'scale': 4984, 'warm': 15555}
+  Kirby  attempts  1628 draws  1628 (100.00%) materializations   78 max words 1403 high 0 oracle_runs 0 donor_memo 0
+         declines {}
+         events {'first': 1, 'rebind': 3, 'material': 72, 'tint_set': 2} event ticks/event 174095, materialize ticks/materialization 22719
+         oracle mismatch {}
+         keys: events 78 seen before 71 | key miss [16, 0, 0, 6, 6, 0] | why {'invalid': 6, 'tint': 0, 'fence': 0, 'key': 16} | variants learned 6 switches 75
+         programs {0: 1565, 13: 63}
+         per draw: guard 11236 kernel 18321 patch 4424 submit 3751 dma_wait 0 | head 17071 | kernel/joint 854 | classes {'fast': 17442, 'scale': 6372, 'warm': 11125}
+  guard parts/draw {'tuple': '863', 'topology': '122', 'camera': '486', 'identity': '441', 'preamble': '579', 'packet': '530', 'shuffle': '18523', 'event': '18455'}
+  patch parts/draw {'tint_tiles': '587', 'apply_tint': '1655', 'matrices': '794', 'light': '242', 'texgen': '2346', 'sites': '0'}
+  submit parts/draw {'flush': '1257', 'gx+dma_wait': '176', 'dma+invalidate': '1309', 'stats': '1195'} flush bytes/draw 1422 book/draw 2944
+  heap free min 37636 libc top min 19104 | uploads after go 0 admit fail 0
+== b8-route0 rom 563F9D92 route 0 admit 2 slow 0
+  attempts 0 draws 0 shadow 0 materializations 0 entry hits 0 switches 0 region takes 0 | packet hits 6606 records 256 faults 0 declines 0 | native failures 39 | draws(all) 6862
+  materialize: - ticks/event path incl. rows (- list walk), last 0 words 0 roots 0 textures 0 tint binds 0 tint pending; max 0 words
+  materialize parts/materialization {'head': '-', 'roots': '-', 'spans': '-', 'shade': '-', 'prepare': '-', 'corners': '-', 'bind': '-', 'words': '-'} key miss [0, 0, 0, 0, 0, 0]
+  events {} event_ticks 0 retuples 0 | keys: events 0 seen before 0 distinct 0
+  why {'invalid': 0, 'tint': 0, 'fence': 0, 'key': 0} variants learned 0 switches 0 evictions 0 reject {'other': 0, 'shape': 0, 'room': 0, 'words': 0} diff words 0 max 0 | tint repatches 0, rerecord resets 0 | verify runs 0 (variant 0) mismatch {'shape': 0, 'words': 0, 'textures': 0, 'fences': 0} first ['0x0', '0x0', '0x0', '0x0
+  oracle runs 0 words 0 mismatch {} clip max [0, 0] roots 0 donor_memo 0 unconsumed 0 source_miss 0 rec_under_hit [0, 0] record_diff {} first ['0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0', '0x0']
+  tint patch binds 0 moved 0 miss 0 white 0 shape 0; light 0 texgen 0 projection 0; pinned miss 0 ident watch miss 0
+  guard parts/draw {'tuple': '-', 'topology': '-', 'camera': '-', 'identity': '-', 'preamble': '-', 'packet': '-', 'shuffle': '-', 'event': '-'}
+  patch parts/draw {'tint_tiles': '-', 'apply_tint': '-', 'matrices': '-', 'light': '-', 'texgen': '-', 'sites': '-'}
+  submit parts/draw {'flush': '-', 'gx+dma_wait': '-', 'dma+invalidate': '-', 'stats': '-'} flush bytes/draw - book/draw -
+  heap free min 37636 libc top min 19104 | uploads after go 0 admit fail 0

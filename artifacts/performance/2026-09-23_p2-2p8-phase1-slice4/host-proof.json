@@ -1,0 +1,410 @@
+{
+ "dumps": 165,
+ "kinds": {
+  "samus": {
+   "dumps": 15,
+   "exact": 15,
+   "raw_exact": 15,
+   "memo_exact": 0,
+   "fail": 0,
+   "tier1_bad": 0,
+   "tier1_cmds": 11944,
+   "tier2": {
+    "vertices": 3421,
+    "clip_max": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "xw_max": 3.0816104646280706e-05,
+    "yw_max": 4.341880854175084e-05,
+    "zw_max": 2.6532940645807024e-05,
+    "px_max": 0.004168205620008081,
+    "px_moved": 2,
+    "count_mismatch": 0
+   },
+   "vectors": 4,
+   "failed": []
+  },
+  "donkey": {
+   "dumps": 47,
+   "exact": 47,
+   "raw_exact": 47,
+   "memo_exact": 0,
+   "fail": 0,
+   "tier1_bad": 0,
+   "tier1_cmds": 67584,
+   "tier2": {
+    "vertices": 17749,
+    "clip_max": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "xw_max": 3.5620084150367326e-05,
+    "yw_max": 5.9590096218475885e-05,
+    "zw_max": 3.466204506064052e-05,
+    "px_max": 0.005720649236973685,
+    "px_moved": 5,
+    "count_mismatch": 0
+   },
+   "vectors": 7,
+   "failed": []
+  },
+  "link": {
+   "dumps": 54,
+   "exact": 52,
+   "raw_exact": 54,
+   "memo_exact": 2,
+   "fail": 0,
+   "tier1_bad": 0,
+   "tier1_cmds": 84372,
+   "tier2": {
+    "vertices": 22642,
+    "clip_max": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "xw_max": 4.606943122786866e-05,
+    "yw_max": 4.793680431595485e-05,
+    "zw_max": 4.1279669762639415e-05,
+    "px_max": 0.005896887197167189,
+    "px_moved": 8,
+    "count_mismatch": 0
+   },
+   "vectors": 3,
+   "failed": []
+  },
+  "kirby": {
+   "dumps": 49,
+   "exact": 49,
+   "raw_exact": 49,
+   "memo_exact": 0,
+   "fail": 0,
+   "tier1_bad": 0,
+   "tier1_cmds": 39374,
+   "tier2": {
+    "vertices": 14196,
+    "clip_max": [
+     1,
+     1,
+     1,
+     1
+    ],
+    "xw_max": 3.121942345574169e-05,
+    "yw_max": 1.7479535224425764e-05,
+    "zw_max": 2.917571869021085e-05,
+    "px_max": 0.003996086202334936,
+    "px_moved": 4,
+    "count_mismatch": 0
+   },
+   "vectors": 2,
+   "failed": []
+  }
+ },
+ "list_words": {
+  "samus_low": {
+   "canonical": [
+    1791,
+    2093,
+    14
+   ],
+   "Catch": [
+    2313,
+    2775,
+    21
+   ],
+   "FSmash": [
+    1871,
+    2219,
+    16
+   ],
+   "MorphUnfold": [
+    645,
+    652,
+    1
+   ],
+   "MorphBall": [
+    596,
+    603,
+    1
+   ]
+  },
+  "samus_high": {
+   "canonical": [
+    2763,
+    3066,
+    14
+   ],
+   "Catch": [
+    3286,
+    3747,
+    21
+   ],
+   "FSmash": [
+    2843,
+    3191,
+    16
+   ],
+   "MorphUnfold": [
+    645,
+    652,
+    1
+   ],
+   "MorphBall": [
+    596,
+    603,
+    1
+   ]
+  },
+  "donkey_low": {
+   "canonical": [
+    2357,
+    2705,
+    16
+   ]
+  },
+  "donkey_high": {
+   "canonical": [
+    3535,
+    3883,
+    16
+   ]
+  },
+  "link_low": {
+   "canonical": [
+    2632,
+    3048,
+    19
+   ],
+   "Entry": [
+    2486,
+    2903,
+    19
+   ],
+   "SpecialN": [
+    2556,
+    2995,
+    20
+   ],
+   "Catch": [
+    2759,
+    3243,
+    22
+   ],
+   "Claps": [
+    2486,
+    2903,
+    19
+   ]
+  },
+  "link_high": {
+   "canonical": [
+    3746,
+    4162,
+    19
+   ],
+   "Entry": [
+    3601,
+    4017,
+    19
+   ],
+   "SpecialN": [
+    3670,
+    4109,
+    20
+   ],
+   "Catch": [
+    3873,
+    4358,
+    22
+   ],
+   "Claps": [
+    3601,
+    4017,
+    19
+   ]
+  },
+  "kirby_low": {
+   "canonical": [
+    1398,
+    1541,
+    7
+   ],
+   "TrioHead1": [
+    1703,
+    1892,
+    9
+   ],
+   "TrioHead14": [
+    1848,
+    2060,
+    10
+   ],
+   "TrioHead3": [
+    1945,
+    2134,
+    9
+   ],
+   "TrioHead4": [
+    2141,
+    2329,
+    9
+   ],
+   "TrioHead5": [
+    1971,
+    2160,
+    9
+   ],
+   "TrioHead6": [
+    2115,
+    2304,
+    9
+   ],
+   "TrioHead7": [
+    1966,
+    2154,
+    9
+   ],
+   "TrioHead8": [
+    2292,
+    2481,
+    9
+   ],
+   "TrioHead9": [
+    2089,
+    2278,
+    9
+   ],
+   "TrioHead11": [
+    1937,
+    2126,
+    9
+   ],
+   "TrioHead12": [
+    1937,
+    2126,
+    9
+   ],
+   "TrioHead13": [
+    1949,
+    2138,
+    9
+   ],
+   "Stone": [
+    1226,
+    1233,
+    1
+   ],
+   "CopyLink": [
+    1671,
+    1837,
+    8
+   ],
+   "CopyTransition": [
+    1602,
+    1745,
+    7
+   ]
+  },
+  "kirby_high": {
+   "canonical": [
+    1792,
+    1936,
+    7
+   ],
+   "TrioHead1": [
+    2158,
+    2346,
+    9
+   ],
+   "TrioHead14": [
+    2532,
+    2744,
+    10
+   ],
+   "TrioHead3": [
+    2551,
+    2739,
+    9
+   ],
+   "TrioHead4": [
+    2848,
+    3037,
+    9
+   ],
+   "TrioHead5": [
+    2606,
+    2795,
+    9
+   ],
+   "TrioHead6": [
+    2698,
+    2887,
+    9
+   ],
+   "TrioHead7": [
+    2460,
+    2649,
+    9
+   ],
+   "TrioHead8": [
+    2662,
+    2851,
+    9
+   ],
+   "TrioHead9": [
+    2609,
+    2798,
+    9
+   ],
+   "TrioHead11": [
+    2358,
+    2546,
+    9
+   ],
+   "TrioHead12": [
+    2358,
+    2546,
+    9
+   ],
+   "TrioHead13": [
+    2372,
+    2561,
+    9
+   ],
+   "Stone": [
+    1226,
+    1233,
+    1
+   ],
+   "CopyLink": [
+    1991,
+    2157,
+    8
+   ],
+   "CopyTransition": [
+    1921,
+    2064,
+    7
+   ]
+  }
+ },
+ "owner_images": {
+  "samus_low": 14544,
+  "samus_high": 19316,
+  "donkey_low": 15232,
+  "donkey_high": 21340,
+  "link_low": 15892,
+  "link_high": 19744,
+  "kirby_low": 24268,
+  "kirby_high": 30160,
+  "kirby_hats": 144244,
+  "kirby_hat_files": 22
+ },
+ "entry_capacity_words": 3460
+}

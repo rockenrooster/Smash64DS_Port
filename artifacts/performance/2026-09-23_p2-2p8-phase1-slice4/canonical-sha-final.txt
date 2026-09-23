@@ -1,0 +1,1 @@
+563f9d9204384daa815e14a647a0540a8e4977e2406ca7198d22d35281f457fb *builds/build-p2-fourcpu-tickhud/smash64ds-p2-fourcpu-tickhud-hwtri.nds

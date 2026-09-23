@@ -645,9 +645,15 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
             }
             if ((mv_sites != NULL) && (mv_sites[binding] != NULL))
             {
-                /* ndsFighterPacketStoreSplitModelview of that world, written
-                 * straight into the list's LOAD4x4 parameters: rows 0-2 as
-                 * they are, row 3 across the world-unit seam (4096 -> 16). */
+                /* Slice 4: the list's 12 LOAD4x3 parameters -- the first
+                 * three columns of ndsFighterPacketStoreSplitModelview's
+                 * words for that world: rows 0-2 as they are, row 3 across
+                 * the world-unit seam. The split load's fourth column
+                 * (0, 0, 0, 4096 >> 8) is what LOAD4x3 replaces with
+                 * (0, 0, 0, 4096); P' (the projection with row 3 >> 8,
+                 * loaded once at the head of the list) carries that 2^-8,
+                 * so the composed clip matrix keeps rows 0-2 bit for bit
+                 * and row 3 within one LSB (phase1-spec.md section 4). */
                 u32 *dst = mv_sites[binding];
 
                 for (row = 0u; row < 3u; row++)
@@ -655,13 +661,11 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
                     dst[0] = (u32)basis[row][0];
                     dst[1] = (u32)basis[row][1];
                     dst[2] = (u32)basis[row][2];
-                    dst[3] = 0u;
-                    dst += 4;
+                    dst += 3;
                 }
                 dst[0] = (u32)ndsFtrLeanRoundShift8S32(translation[0]);
                 dst[1] = (u32)ndsFtrLeanRoundShift8S32(translation[1]);
                 dst[2] = (u32)ndsFtrLeanRoundShift8S32(translation[2]);
-                dst[3] = (u32)ndsFtrLeanRoundShift8S32(1 << 12);
             }
         }
 #if NDS_FTR_LEAN_KTIME

@@ -1,0 +1,13 @@
+samus   dumps  15  exact  15 (raw words  15)  memo-defect 0  fail 0  tier1 0/11944 cmds differ  tier2 3421 vertices: clip max [1, 1, 1, 1], x/w 3.08e-05 y/w 4.34e-05 z/w 2.65e-05, max 0.0042 px, 2 vertices moved a pixel
+donkey  dumps  47  exact  47 (raw words  47)  memo-defect 0  fail 0  tier1 0/67584 cmds differ  tier2 17749 vertices: clip max [1, 1, 1, 1], x/w 3.56e-05 y/w 5.96e-05 z/w 3.47e-05, max 0.0057 px, 5 vertices moved a pixel
+link    dumps  54  exact  52 (raw words  54)  memo-defect 2  fail 0  tier1 0/84372 cmds differ  tier2 22642 vertices: clip max [1, 1, 1, 1], x/w 4.61e-05 y/w 4.79e-05 z/w 4.13e-05, max 0.0059 px, 8 vertices moved a pixel
+kirby   dumps  49  exact  49 (raw words  49)  memo-defect 0  fail 0  tier1 0/39374 cmds differ  tier2 14196 vertices: clip max [1, 1, 1, 1], x/w 3.12e-05 y/w 1.75e-05 z/w 2.92e-05, max 0.0040 px, 4 vertices moved a pixel
+samus_low    canonical lean  1791 / recorded  2093 words;  5 variants, worst Catch 2313 (fits the 3460-word entry)
+samus_high   canonical lean  2763 / recorded  3066 words;  5 variants, worst Catch 3286 (fits the 3460-word entry)
+donkey_low   canonical lean  2357 / recorded  2705 words;  1 variants, worst canonical 2357 (fits the 3460-word entry)
+donkey_high  canonical lean  3535 / recorded  3883 words;  1 variants, worst canonical 3535 (EXCEEDS the 3460-word entry)
+link_low     canonical lean  2632 / recorded  3048 words;  5 variants, worst Catch 2759 (fits the 3460-word entry)
+link_high    canonical lean  3746 / recorded  4162 words;  5 variants, worst Catch 3873 (EXCEEDS the 3460-word entry)
+kirby_low    canonical lean  1398 / recorded  1541 words; 16 variants, worst TrioHead8 2292 (fits the 3460-word entry)
+kirby_high   canonical lean  1792 / recorded  1936 words; 16 variants, worst TrioHead4 2848 (fits the 3460-word entry)
+owner images {'samus_low': 14544, 'samus_high': 19316, 'donkey_low': 15232, 'donkey_high': 21340, 'link_low': 15892, 'link_high': 19744, 'kirby_low': 24268, 'kirby_high': 30160, 'kirby_hats': 144244, 'kirby_hat_files': 22}

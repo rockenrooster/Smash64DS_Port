@@ -1123,7 +1123,25 @@ def main() -> int:
         default=_paths.REPO_ROOT / "include" / "nds" / "generated" /
         "nds_native_actor_tarucann.generated.h",
     )
+    # P2-2p8 Phase 1 slice 4: the host word-compare of the fighter lists
+    # against runtime-recorded packets (Samus, DK, Link, Kirby), the lean
+    # LOAD4x3 + P' layout's tier-1 / tier-2 equivalence (Task 49 method) and
+    # the list RAM -- scripts/fighters/fighter_list_proof.py. DUMPS is a
+    # directory of recorder packet dumps (the slice 4 artifacts'
+    # tools/dump-packets.ps1 writes one); this mode runs instead of the
+    # fixture checks below.
+    parser.add_argument("--fighter-lists", type=Path, default=None,
+                        metavar="DUMPS")
+    parser.add_argument("--fighter-lists-build", type=Path, default=None,
+                        help="build dir whose nitrofs holds the owner images")
+    parser.add_argument("--fighter-lists-json", type=Path, default=None)
     args = parser.parse_args()
+    if args.fighter_lists is not None:
+        import fighter_list_proof
+
+        return fighter_list_proof.run(
+            args.fighter_lists, args.fighter_lists_build,
+            args.fighter_lists_json)
     source_root = args.source_root.resolve()
     require(args.generated.is_file(), f"missing generated include: {args.generated}")
     checked_in_generated = args.generated.read_text()

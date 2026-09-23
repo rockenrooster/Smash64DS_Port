@@ -5160,8 +5160,7 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 #include <nds/renderer_fighter_lean.h>
 #if NDS_FTR_LEAN_LIVE
 static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
-static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp,
-                                   u32 serial_before, u32 hits_before);
+static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before);
 static void ndsFtrLeanFrameEnd(void);
 #endif
 
@@ -5319,7 +5318,6 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     {
         /* P2-2p8 Phase 1 slice 1 (H1). Route 0 is the plain call below. */
         u32 lean_route = gNdsFtrLeanRoute;
-        u32 lean_serial = 0u;
         u32 lean_hits = 0u;
         sb32 lean_drew = FALSE;
 
@@ -5330,7 +5328,6 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         if (lean_route != 0u)
         {
             lean_drew = ndsFtrLeanRun((u32)fp->nds_slot, fp, lean_route);
-            lean_serial = ndsFtrLeanPacketUseSerial((u32)fp->nds_slot);
             lean_hits = gNdsFighterPacketHits;
         }
         if (lean_drew == FALSE)
@@ -5339,8 +5336,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
                                                NULL, 0u);
             if (lean_route != 0u)
             {
-                ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_serial,
-                                       lean_hits);
+                ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_hits);
             }
         }
 #if NDS_VRAM_CENSUS_LIVE

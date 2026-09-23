@@ -1,18 +1,21 @@
-/* P2-2p8 Phase 1 slices 1-3 -- the lean fighter path, adapter side.
+/* P2-2p8 Phase 1 slices 1-4 -- the lean fighter path, adapter side.
  *
  * #included at the end of renderer_adapter_fighter.c so it shares that
  * translation unit (reloc_backend_renderer_dl.c) with the draw plan, the
  * display contract and the matrix helpers it reads. Not in CFILES.
  *
- * Slice 3: Donkey, Samus, Link and Kirby, every program and detail the old
- * path records, one instance per battle slot. Per draw once a list is adopted:
- *   head (unchanged, already ran) -> tuple compare (status/heap generation,
- *   root, detail, program, event count) -> the per-draw inputs the list was
- *   keyed on that no patch covers yet (material identity; preambles, proven
- *   once per memo fill) -> ndsFtrLeanKernelCompose -> the replay's patches on
- *   the lean copy (tint tiles, shade, matrices, light, Link's texgen) -> the
- *   replay's submit tail on the lean copy.
- * Route 2/3 stop after the patch and arm the TryReplay oracle instead of
+ * Slice 4: Donkey, Samus, Link and Kirby, every program and detail, one
+ * instance per battle slot, drawn from lists MATERIALIZED from the generated
+ * owner tables (nds_renderer_native_common.c, ndsFtrLeanMaterialize) -- the
+ * old path is never asked to draw or record first. Per draw:
+ *   head (unchanged, already ran) -> the proofs of the active entry (tuple,
+ *   status re-tuple, material identity, preambles once per memo fill, the
+ *   list's guard) -> on any moved input, the event path: the plan the old
+ *   path would resolve, the entry key, and the entry that holds its list or a
+ *   new materialization -> ndsFtrLeanKernelCompose (12-word LOAD4x3 straight
+ *   into the list) -> the replay's patches (P', tint tiles, shade, light,
+ *   Link's texgen) -> the replay's submit tail.
+ * Routes 2/3 stop after the patch and arm the TryReplay oracle instead of
  * drawing. See include/nds/renderer_fighter_lean.h. */
 
 #include <nds/renderer_fighter_lean.h>
@@ -254,52 +257,63 @@ void ndsFtrLeanNoteTexturePart(u32 slot)
 
 #if NDS_FTR_LEAN_LIVE
 
-/* Material identity (key[0]) without hashing every MObj every draw. Within
- * one status generation a fighter MObj's animated words (colours, texture
- * ids, lfrac, palette) have exactly three writers: its material animation,
- * which the per-frame player runs only while anim_wait != AOBJ_ANIM_NULL and
- * which only MObj creation attaches (lbCommonAddMObjForFighterPartsDObj --
- * creation, costume and model-part changes, all of which bump the status
- * generation and the rebind); the texture-part shims (counted per slot); and
- * the old path's own material preparation. So a draw proves: the texture-part
- * count is unchanged, each MObj with a live animation still hashes as at
- * adoption, and -- after any old-path draw of this fighter, and on every draw
- * of the oracle routes -- the whole identity is still the adoption's. */
+/* Material identity without hashing every MObj every draw. Within one status
+ * generation a fighter MObj's animated words (colours, texture ids, lfrac,
+ * palette) have exactly three writers: its material animation, which the
+ * per-frame player runs only while anim_wait != AOBJ_ANIM_NULL and which only
+ * MObj creation attaches (lbCommonAddMObjForFighterPartsDObj -- creation,
+ * costume and model-part changes, all of which bump the status generation and
+ * the rebind); the texture-part shims (counted per slot); and the old path's
+ * own material preparation. So a draw proves: the texture-part count is
+ * unchanged, each MObj with a live animation still hashes as when the entry
+ * was selected, and -- after any old-path draw of this fighter, and on every
+ * draw of the oracle routes -- the whole identity is still that one. */
 #define NDS_FTR_LEAN_WATCH_MAX 6u
 #define NDS_FTR_LEAN_WATCH_ALL 0xffu
 
-/* One adopted list per battle slot (slice 3). Only what the per-draw path
- * reads lives here: the draw plan, keyed on the same status generation the
- * tuple compares, still holds the root events and material DObjs the list
- * was adopted from. */
+/* One instance per battle slot (slice 4). The lists themselves live in the
+ * slot's region (ndsFtrLeanMaterialize, two entries); the instance holds the
+ * plan the active entry was selected for -- the drawn roots' display-contract
+ * events, matrix and material DObjs -- and the kernel's joint table. */
 typedef struct NDSFtrLeanInstance
 {
-    u8 valid;
+    u8 valid;                   /* an entry is active for the fields below */
     u8 kind;                    /* NDS_FTR_LEAN_OWNER_KIND */
     u8 detail;                  /* use_low_detail */
     u8 program;                 /* the plan's root program */
     u8 root_count;
     u8 joint_count;
     u8 rebind;
-    u8 last_refuse;             /* last adoption refusal (0 = none) */
+    u8 reprove;                 /* the old path drew since the last proof */
+    u8 rerecord;                /* the old path's packet was invalidated */
+    u8 pad0[3];
+    u32 rr_key;                 /* its packet key's shadow at the last
+                                   re-record (ndsFtrLeanRerecordKey) */
     u32 status_gen;
     u32 heap_gen;
     DObj *root;
-    u32 event_count;
+    const NDSRelocLoadedFile *owner_file;   /* the file the plan resolved */
+    const void *file_data;      /* ... and its identity when it did */
+    u32 file_asset;
+    u32 file_generation;
+    u32 file_size;
     u32 head_key;               /* the Kirby trio head key the draw publishes */
-    u32 ident_adopt;            /* full material identity at adoption */
-    u32 texpart_serial;         /* texture-part writes seen at adoption */
+    u32 ident_live;             /* material identity (MObj pointers too) */
+    u32 texpart_serial;         /* texture-part writes seen at selection */
     u32 pre_hash;               /* the roots' key[3] preamble fields */
     u32 pre_serial;             /* memo fill serial + 1 they were proven at */
     u32 patch_serial;           /* memo fill serial + 1 of the last patch */
     u32 topo_hash;              /* the kept joints' links (oracle routes) */
     u8 watch_count;             /* animated MObjs, or WATCH_ALL */
-    u8 reprove;                 /* the old path drew since the last proof */
-    u8 learn_pending;           /* identity moved to an unlearned state */
-    u8 pad2;
+    u8 pad[3];
     const MObj *watch[NDS_FTR_LEAN_WATCH_MAX];
     u32 watch_hash[NDS_FTR_LEAN_WATCH_MAX];
-    const Gfx *root_dl[NDS_FTR_LEAN_ROOT_MAX]; /* each root event's DL */
+    u32 root_offsets[NDS_FTR_LEAN_ROOT_MAX];
+    u8 material_counts[NDS_FTR_LEAN_ROOT_MAX];
+    u8 event_index[NDS_FTR_LEAN_ROOT_MAX];  /* each root's contract event */
+    const Gfx *root_dl[NDS_FTR_LEAN_ROOT_MAX];
+    DObj *matrix_dobjs[NDS_FTR_LEAN_ROOT_MAX];
+    DObj *material_dobjs[NDS_FTR_LEAN_ROOT_MAX];
     NDSFtrLeanJoint joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
 } NDSFtrLeanInstance;
 
@@ -309,20 +323,20 @@ static u32 sNdsFtrLeanCamFrame;     /* profile frame + 1 of the fetch */
 static const CObj *sNdsFtrLeanCamCobj;
 static u32 sNdsFtrLeanCamOk;
 
-/* Slice 3 RAM: a lean draw owns no per-draw BSS. The kernel's Q43.20 worlds
- * are a per-depth stack in its own frame; the modelviews go straight into the
- * list (ndsFtrLeanPacketModelviewSites); the rest is borrowed from the old
+/* A lean draw owns no per-draw BSS. The kernel's Q43.20 worlds are a
+ * per-depth stack in its own frame; the LOAD4x3 parameters go straight into
+ * the list (ndsFtrLeanPacketModelviewSites); the rest is borrowed from the old
  * path, which a draw of either kind rewrites before it reads (the old path
  * never runs inside a lean draw, and routes 2/3 finish the lean patch before
  * the old path starts):
  *   binding worlds  sNdsRendererAdapterNativeOwnerModelviews (the old path's
  *                   own binding modelviews; written only for a texgen list)
  *   projection      sNdsRendererAdapterNativeOwnerProjection (same camera)
- *   root inputs     the workspace's production roots/configs: the lean draw
- *                   writes exactly the fields ndsRendererAdapterRefresh-
- *                   NativePacketInputs refreshes before every old-path read
- *                   (config modulate and initial geometry mode, the root's
- *                   preamble, matrices and gx_valid), never the primed ones. */
+ *   root inputs     the workspace's production roots/configs and material
+ *                   rows: an event writes them as the old path's full input
+ *                   producer does (which rebuilds every one of them before its
+ *                   own next read); a lean draw refreshes exactly the fields
+ *                   ndsRendererAdapterRefreshNativePacketInputs refreshes */
 _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
                "lean roots must fit the borrowed binding arrays");
 #define sNdsFtrLeanWorlds sNdsRendererAdapterNativeOwnerModelviews
@@ -357,42 +371,48 @@ static void ndsFtrLeanDecline(u32 kind, u32 reason)
 #endif
 }
 
-static void ndsFtrLeanRefuse(NDSFtrLeanInstance *inst, u32 kind, u32 reason)
+static void ndsFtrLeanCountEvent(u32 kind, u32 event)
 {
-    inst->last_refuse = (u8)reason;
 #if NDS_FTR_LEAN_LAB
-    if (reason < nNDSFtrLeanAdoptRefuseCount)
+    if (event < nNDSFtrLeanEventCount)
     {
-        gNdsFtrLean.adopt_refuse[reason]++;
+        gNdsFtrLean.event[event]++;
         if (kind < NDS_FTR_LEAN_KINDS)
         {
-            gNdsFtrLean.k_adopt_refuse[kind][reason]++;
+            gNdsFtrLean.k_event[kind][event]++;
         }
     }
 #else
     (void)kind;
+    (void)event;
 #endif
 }
 
-static void ndsFtrLeanInvalidate(u32 slot)
+/* Forget the instance's plan; `lists` also drops the slot's materialized
+ * entries (a new battle, a lost joint table). */
+static void ndsFtrLeanInvalidate(u32 slot, u32 lists)
 {
     NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
 
-    if (inst->valid != 0u)
+    if (lists != FALSE)
     {
         ndsFtrLeanPacketDrop(slot);
     }
     inst->valid = 0u;
     inst->rebind = 0u;
-    inst->learn_pending = 0u;
 }
 
 void ndsFtrLeanNoteRebind(u32 player_slot)
 {
-    if ((player_slot < GMCOMMON_PLAYERS_MAX) &&
-        (sNdsFtrLeanInstances[player_slot].valid != 0u))
+    if (player_slot < GMCOMMON_PLAYERS_MAX)
     {
-        sNdsFtrLeanInstances[player_slot].rebind = 1u;
+        /* The old path's packet for this slot is gone: its next draw
+         * re-records whatever the lean path's instance state. */
+        sNdsFtrLeanInstances[player_slot].rerecord = 1u;
+        if (sNdsFtrLeanInstances[player_slot].valid != 0u)
+        {
+            sNdsFtrLeanInstances[player_slot].rebind = 1u;
+        }
     }
 }
 
@@ -430,7 +450,7 @@ static s32 ndsFtrLeanSlowLocal(DObj *dobj, f32 *accum, s32 *cells,
 }
 
 /* The joint's XObj class, in ndsRendererAdapterBuildSourceFighterLocalMtx's
- * own order; fixed for the DObj's life, so classified once per adoption. */
+ * own order; fixed for the DObj's life, so classified once per joint table. */
 static u32 ndsFtrLeanLocalKind(DObj *dobj, const FTParts **parts_out)
 {
     u32 xobj_index;
@@ -488,12 +508,13 @@ static u32 ndsFtrLeanTopologyHash(const NDSFtrLeanInstance *inst)
 }
 
 /* The live topology ComposeOwnerWorldsSource collects every draw, captured
- * once per adoption with the same link checks, then cut to the joints a drawn
+ * once per event with the same link checks, then cut to the joints a drawn
  * binding hangs from: a binding's world (lock accumulator included) depends
  * on its ancestor chain alone, so the rest are never composed. Preorder is
  * kept, so every parent still precedes its children. */
-static s32 ndsFtrLeanBuildJoints(NDSFtrLeanInstance *inst, DObj *root,
-                                 DObj *const *bindings, u32 binding_count)
+static s32 __attribute__((noinline, cold, optimize("Os")))
+ndsFtrLeanBuildJoints(NDSFtrLeanInstance *inst, DObj *root,
+                      DObj *const *bindings, u32 binding_count)
 {
     DObj *joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     u8 parents[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
@@ -589,10 +610,15 @@ static s32 ndsFtrLeanBuildJoints(NDSFtrLeanInstance *inst, DObj *root,
     return (kept != 0u) ? TRUE : FALSE;
 }
 
-/* The per-root preamble fields key[3] folds in (prim and the light direction
- * are patched, not keyed). */
-static u32 ndsFtrLeanPreambleHash(const NDSFighterDrawPlanData *plan,
-                                  u32 count)
+/* The per-root fields the recorder's key[3] folds in -- everything a list's
+ * words depend on in the roots' inputs that no patch covers (prim, the colour
+ * modulate and the light direction are patched): the root offset, the
+ * display preamble's geometry / cycle / render mode, env colour and flags,
+ * the config's initial geometry mode (the preamble's) and the material
+ * count. */
+static u32 ndsFtrLeanPreambleHash(const u8 *event_index,
+                                  const u32 *root_offsets,
+                                  const u8 *material_counts, u32 count)
 {
     u32 h = 2166136261u;
     u32 i;
@@ -600,92 +626,132 @@ static u32 ndsFtrLeanPreambleHash(const NDSFighterDrawPlanData *plan,
     for (i = 0u; i < count; i++)
     {
         const NDSRendererNativeFighterPreamble *pre =
-            &sNdsFighterDisplayReplayPreambles[plan->collection.indices[i]];
+            &sNdsFighterDisplayReplayPreambles[event_index[i]];
 
+        h = (h ^ root_offsets[i]) * 16777619u;
         h = (h ^ (u32)pre->geometry_mode) * 16777619u;
         h = (h ^ (u32)pre->cycle_type) * 16777619u;
         h = (h ^ (u32)pre->render_mode) * 16777619u;
         h = (h ^ (u32)pre->env_color) * 16777619u;
         h = (h ^ (u32)pre->flags) * 16777619u;
+        h = (h ^ (u32)material_counts[i]) * 16777619u;
     }
     return h;
 }
 
-/* The list now holds the words of material identity `ident` (its base or a
- * learned variant): hold that identity from here. */
-static void ndsFtrLeanRebaseIdentity(u32 slot, NDSFtrLeanInstance *inst,
-                                     const NDSFighterDrawPlanData *plan,
-                                     u32 ident)
-{
-    u32 w;
+#if NDS_FTR_LEAN_LAB
+/* Lab census: the last 16 distinct entry keys each slot selected, so a run
+ * says how many events re-selected a state it had already drawn (what more
+ * entries or variants could keep) against how many were new. */
+#define NDS_FTR_LEAN_KEY_CENSUS 16u
+static u32 sNdsFtrLeanKeySeen[GMCOMMON_PLAYERS_MAX][NDS_FTR_LEAN_KEY_CENSUS];
+static u32 sNdsFtrLeanKeySeenCount[GMCOMMON_PLAYERS_MAX];
 
-    (void)plan;
-    inst->ident_adopt = ident;
-    inst->texpart_serial = sNdsFtrLeanTexPartSerial[slot];
-    if (inst->watch_count != NDS_FTR_LEAN_WATCH_ALL)
-    {
-        for (w = 0u; w < inst->watch_count; w++)
-        {
-            inst->watch_hash[w] =
-                ndsRendererAdapterMaterialAnimHash(inst->watch[w]);
-        }
-    }
-}
-
-/* Slice 3: a status change that leaves the drawn roots exactly as they were.
- * Every status change bumps the generation the draw plan is keyed on, and the
- * old path then re-resolves the plan from this frame's display contract --
- * a pure function of the contract's events (the collection is derived from
- * them, and each root resolves from its event's DL, matrix and material
- * DObjs), the owner's loaded file and the detail. When all of those are the
- * ones the adopted plan was resolved from, that resolve returns this plan, so
- * re-keying it to the new generation is the old path's own answer without the
- * old path's draw: the list stays adopted and the status change draws lean.
- * The identity and the preambles are then re-proven in full on this draw
- * (the status change may have moved them); the kernel's link check covers
- * any re-parenting. The oracle routes also re-derive the plan outright
- * (ndsFighterDrawPlanVerify: gNdsFtrPlanVerifyRuns / Mismatch). */
-static s32 ndsFtrLeanRetupleBody(u32 slot, FTStruct *fp,
-                                 NDSFtrLeanInstance *inst,
-                                 u32 use_low_detail, u32 owner_slot,
-                                 u32 route)
+static void ndsFtrLeanKeyCensus(u32 slot, u32 kind, const u32 *key)
 {
-    NDSFighterDrawPlan *plan = &sNdsFighterDrawPlan[slot];
-    const NDSRelocLoadedFile *file = plan->data.owner_file;
-    NDSFighterDLAllDrawCollection live;
+    u32 h = 2166136261u;
     u32 i;
 
-    if ((gNdsFtrPlanRoute == 0u) || (plan->valid == 0u) || (file == NULL) ||
-        (file->data != plan->key_data) ||
-        (file->asset_id != plan->key_asset_id) ||
-        (file->owner_generation != plan->key_owner_generation) ||
-        (file->data_size != plan->key_data_size) ||
-        (plan->key_use_low_detail != use_low_detail) ||
-        (plan->key_status_generation != inst->status_gen))
+    for (i = 0u; i < NDS_FTR_LEAN_KEY_WORDS; i++)
     {
-        return FALSE;
+        h = (h ^ key[i]) * 16777619u;
     }
+    gNdsFtrLean.key_events++;
+    if (kind < NDS_FTR_LEAN_KINDS)
+    {
+        gNdsFtrLean.k_key_events[kind]++;
+    }
+    for (i = 0u; i < sNdsFtrLeanKeySeenCount[slot]; i++)
+    {
+        if (sNdsFtrLeanKeySeen[slot][i] == h)
+        {
+            gNdsFtrLean.key_seen_before++;
+            if (kind < NDS_FTR_LEAN_KINDS)
+            {
+                gNdsFtrLean.k_key_seen_before[kind]++;
+            }
+            return;
+        }
+    }
+    gNdsFtrLean.key_distinct++;
+    if (sNdsFtrLeanKeySeenCount[slot] < NDS_FTR_LEAN_KEY_CENSUS)
+    {
+        sNdsFtrLeanKeySeen[slot][sNdsFtrLeanKeySeenCount[slot]++] = h;
+    }
+}
+#endif
+
+/* The watch list: every MObj of the drawn roots whose material animation is
+ * live, with its animation hash now. More than the list holds proves the whole
+ * identity on every draw instead. */
+static void ndsFtrLeanBuildWatch(NDSFtrLeanInstance *inst, u32 count)
+{
+    u32 n = 0u;
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        const DObj *dobj = inst->material_dobjs[i];
+        const MObj *mobj;
+
+        for (mobj = (dobj != NULL) ? dobj->mobj : NULL; mobj != NULL;
+             mobj = mobj->next)
+        {
+            if (mobj->anim_wait == AOBJ_ANIM_NULL)
+            {
+                continue;
+            }
+            if (n >= NDS_FTR_LEAN_WATCH_MAX)
+            {
+                inst->watch_count = NDS_FTR_LEAN_WATCH_ALL;
+                return;
+            }
+            inst->watch[n] = mobj;
+            inst->watch_hash[n] = ndsRendererAdapterMaterialAnimHash(mobj);
+            n++;
+        }
+    }
+    inst->watch_count = (u8)n;
+}
+
+/* A status change that leaves the drawn roots exactly as they were: every
+ * root's display-contract event, DL, matrix and material DObj are the ones
+ * the active entry was selected for, so the plan the event path would resolve
+ * is this one and the entry stays. The identity and the preambles are then
+ * re-proven in full on this draw (the status change may have moved them); the
+ * kernel's link check covers any re-parenting. */
+static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst)
+{
+    NDSFighterDLAllDrawCollection live;
+    u32 i;
+#if NDS_FTR_LEAN_LAB
+    u32 t0 = cpuGetTiming();
+#endif
+
     ndsFighterCollectAllDObjsWithDL(fp->joints[nFTPartsJointTopN], &live);
 #if NDS_R2_FOX_GUN_OVERLAY
     ndsFighterCollectStripFoxGunSidecar(fp, &live);
 #endif
-    if (memcmp(&live, &plan->data.collection, sizeof(live)) != 0)
+    if (live.selected_count != inst->root_count)
     {
         return FALSE;
     }
     for (i = 0u; i < inst->root_count; i++)
     {
-        const NDSFighterDisplayContractEvent *event =
-            &sNdsFighterDisplayReplayEvents[live.indices[i]];
+        const NDSFighterDisplayContractEvent *event;
 
+        if (live.indices[i] != (u32)inst->event_index[i])
+        {
+            return FALSE;
+        }
+        event = &sNdsFighterDisplayReplayEvents[live.indices[i]];
         if ((event->dl != inst->root_dl[i]) ||
-            (event->matrix_dobj != plan->data.matrix_bindings[i]) ||
-            (event->material_dobj != plan->data.material_dobjs[i]))
+            (event->matrix_dobj != inst->matrix_dobjs[i]) ||
+            (event->material_dobj != inst->material_dobjs[i]))
         {
             return FALSE;
         }
     }
-    plan->key_status_generation = sNdsFighterStatusGeneration[slot];
     inst->status_gen = sNdsFighterStatusGeneration[slot];
     inst->reprove = 1u;
     inst->pre_serial = 0u;
@@ -696,41 +762,14 @@ static s32 ndsFtrLeanRetupleBody(u32 slot, FTStruct *fp,
      * from here. Re-parenting a kept joint is the kernel's to refuse. */
     inst->topo_hash = ndsFtrLeanTopologyHash(inst);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.retuples++);
-#if NDS_TICK_HUD
-    if (route != NDS_FTR_LEAN_ROUTE_DRAW)
-    {
-        ndsFighterDrawPlanVerify(
-            slot, owner_slot, use_low_detail, fp,
-            fp->joints[nFTPartsJointTopN],
-            ndsFighterNativeOwnerModelAssetId(owner_slot),
-            &sNdsRendererAdapterNativeOwnerWorkspace);
-    }
-#else
-    (void)owner_slot;
-    (void)route;
+#if NDS_FTR_LEAN_LAB
+    gNdsFtrLean.guard_part_ticks[7] += cpuGetTiming() - t0;
 #endif
     return TRUE;
 }
 
-static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp,
-                             NDSFtrLeanInstance *inst, u32 use_low_detail,
-                             u32 owner_slot, u32 route)
-{
-#if NDS_FTR_LEAN_LAB
-    u32 t0 = cpuGetTiming();
-    s32 kept = ndsFtrLeanRetupleBody(slot, fp, inst, use_low_detail,
-                                     owner_slot, route);
-
-    gNdsFtrLean.retuple_ticks += cpuGetTiming() - t0;
-    return kept;
-#else
-    return ndsFtrLeanRetupleBody(slot, fp, inst, use_low_detail, owner_slot,
-                                 route);
-#endif
-}
-
-/* Slice 3's admission: the four stress kinds, any detail, native production
- * mode, never the 1P intro's transient actors (they never plan). */
+/* The four stress kinds, any detail, native production mode, never the 1P
+ * intro's transient actors (they never plan). */
 static u32 ndsFtrLeanEligible(FTStruct *fp, u32 *owner_slot)
 {
     u32 kind;
@@ -752,16 +791,537 @@ static u32 ndsFtrLeanEligible(FTStruct *fp, u32 *owner_slot)
     return kind;
 }
 
+/* The draw's per-frame production inputs: exactly the fields
+ * ndsRendererAdapterRefreshNativePacketInputs refreshes (the primed
+ * root->config already points at its config). */
+static void ndsFtrLeanRefreshInputs(const NDSFtrLeanInstance *inst,
+                                    u32 color_modulate)
+{
+    u32 i;
+
+    if (sNdsRendererAdapterProductionInputsPrimed == FALSE)
+    {
+        ndsRendererAdapterPrimeProductionInputs(
+            &sNdsRendererAdapterNativeOwnerWorkspace);
+    }
+    for (i = 0u; i < inst->root_count; i++)
+    {
+        NDSRendererNativeFighterRoot *input =
+            &sNdsRendererAdapterNativeOwnerWorkspace.production_roots[i];
+        NDSRendererConfig *config =
+            &sNdsRendererAdapterNativeOwnerWorkspace.production_configs[i];
+        const NDSRendererNativeFighterPreamble *preamble =
+            &sNdsFighterDisplayReplayPreambles[inst->event_index[i]];
+
+        config->initial_geometry_mode = preamble->geometry_mode;
+        config->color_modulate = color_modulate;
+        input->root_offset = inst->root_offsets[i];
+        input->material_count = inst->material_counts[i];
+        input->preamble = preamble;
+        input->modelview_matrix = &sNdsFtrLeanWorlds[i];
+        input->projection_matrix = &sNdsFtrLeanProjection;
+        input->gx_valid = 0u;
+        input->gx_locals = NULL;
+        input->gx_seed = NULL;
+        input->gx_local_count = 0u;
+        input->gx_parent_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+        input->gx_store_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
+        input->gx_seed_is_identity = 0u;
+    }
+}
+
+/* Materialize `key`'s list into `entry` from the plan the event path just
+ * resolved: the production inputs' remaining fields and the draw's initial
+ * renderer state, seeded as the old path seeds its own
+ * (ndsFighterMarioFoxDLAllDrawForSlot). Returns 0 or a decline reason. */
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsFtrLeanMaterializeFor(u32 slot, u32 entry, const u32 *key, u32 count,
+                         u32 owner_slot, u32 use_low_detail,
+                         const NDSRelocLoadedFile *owner_file)
+{
+    NDSRendererAdapterNativeOwnerWorkspace *ws =
+        &sNdsRendererAdapterNativeOwnerWorkspace;
+    u32 reason;
+    u32 t1;
+    u32 i;
+
+    for (i = 0u; i < count; i++)
+    {
+        NDSRendererNativeFighterRoot *input = &ws->production_roots[i];
+        NDSRendererConfig *config = &ws->production_configs[i];
+
+        /* ndsRendererAdapterBuildNativeProductionInputs' remaining fields;
+         * texture data resolves through loaded-file pointers, so no DL
+         * resolver is needed. */
+        config->initial_projection = &sNdsFtrLeanProjection;
+        config->initial_modelview = &sNdsFtrLeanWorlds[i];
+        config->user = NULL;
+        input->asset_base = (ws->loaded[i] != NULL) ?
+            ws->loaded[i]->data : NULL;
+        input->materials = sNdsRendererAdapterNativeOwnerMaterials[
+            sNdsRendererAdapterNativeOwnerMaterialRows[i]];
+        input->gx_modelview_mirror_valid = 0u;
+    }
+    ndsRendererInitStats(&sNdsFtrLeanStats);
+    if (sNdsFighterDisplayContractPlayback != FALSE)
+    {
+        sNdsFtrLeanStats.geometry_mode =
+            sNdsFighterDisplayContract.geometry_mode;
+        sNdsFtrLeanStats.prim_color = sNdsFighterDisplayContract.prim_color;
+        sNdsFtrLeanStats.env_color = sNdsFighterDisplayContract.env_color;
+        if (sNdsFighterDisplayContract.light_valid != 0u)
+        {
+            sNdsFtrLeanStats.light_dir_x =
+                sNdsFighterDisplayContract.light.l.dir[0];
+            sNdsFtrLeanStats.light_dir_y =
+                sNdsFighterDisplayContract.light.l.dir[1];
+            sNdsFtrLeanStats.light_dir_z =
+                sNdsFighterDisplayContract.light.l.dir[2];
+            sNdsFtrLeanStats.light_dir_mask = 1u;
+        }
+        ndsFighterDisplayContractSeedMaterialLights(&sNdsFtrLeanStats);
+    }
+    ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
+    t1 = cpuGetTiming();
+    reason = ndsFtrLeanMaterialize(
+        slot, entry, key, ws->production_roots, count, owner_slot,
+        use_low_detail, owner_file->data, &sNdsFtrLeanStats);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.materialize_list_ticks +=
+                         cpuGetTiming() - t1);
+    ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
+    (void)t1;
+    return reason;
+}
+
+/* The event path: the plan the old path would resolve for this draw's
+ * display contract (the same resolver, program selection and validator),
+ * the entry key from it, then the entry that holds that key's list or a new
+ * list materialized from the templates -- no old-path draw, no recording.
+ * Returns 0 or a decline reason. */
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsFtrLeanEvent(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst, u32 kind,
+                u32 owner_slot, u32 use_low_detail, u32 color_modulate,
+                u32 force_new)
+{
+    NDSRendererAdapterNativeOwnerWorkspace *ws =
+        &sNdsRendererAdapterNativeOwnerWorkspace;
+    NDSFighterDLAllDrawCollection collection;
+    NDSRelocLoadedFile *owner_file = NULL;
+    u32 expected_asset_id = ndsFighterNativeOwnerModelAssetId(owner_slot);
+    u32 key[NDS_FTR_LEAN_KEY_WORDS];
+    u32 head_key = 0u;
+    u32 tried = 0u;
+    u32 program;
+    u32 count;
+    u32 entry;
+    u32 code;
+    u32 ident;
+    u32 rr_key;
+    u32 i;
+    u32 t0 = cpuGetTiming();
+
+#if NDS_P2_KIRBY
+    {
+        sb32 body = ((owner_slot == 11u) &&
+                     (ndsFighterKirbyTrioBodyActive(fp) != FALSE)) ?
+            TRUE : FALSE;
+        sb32 known = (ndsFighterKirbyTrioHeadKey(fp, &head_key) != FALSE) ?
+            TRUE : FALSE;
+
+        if ((body != FALSE) && (known == FALSE))
+        {
+            return nNDSFtrLeanDeclineKirbyHead;
+        }
+        if (known == FALSE)
+        {
+            head_key = 0u;
+        }
+        ndsRendererNativeKirbyTrioSetHeadKey(head_key);
+    }
+#endif
+    ndsFighterCollectAllDObjsWithDL(fp->joints[nFTPartsJointTopN],
+                                    &collection);
+#if NDS_R2_FOX_GUN_OVERLAY
+    ndsFighterCollectStripFoxGunSidecar(fp, &collection);
+#endif
+    if ((ndsFighterDrawPlanResolve(owner_slot, expected_asset_id,
+                                   &collection, ws, &owner_file) !=
+         nNDSFighterDrawPlanOk) ||
+        (owner_file == NULL) || (owner_file->data == NULL))
+    {
+        return nNDSFtrLeanDeclinePlan;
+    }
+    count = collection.selected_count;
+    if ((count == 0u) || (count > NDS_FTR_LEAN_ROOT_MAX))
+    {
+        return nNDSFtrLeanDeclineRoots;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        if ((collection.indices[i] > 0xffu) ||
+            (ws->material_counts[i] > 0xffu))
+        {
+            return nNDSFtrLeanDeclineRoots;
+        }
+    }
+    program = ndsRendererNativeFighterSelectRootProgram(
+        owner_slot, use_low_detail, ws->root_offsets, count, &tried);
+    if (program == 0xffu)
+    {
+        program = 0u;
+    }
+    ndsRendererNativeFighterSetRootProgram(owner_slot, program);
+    if (ndsRendererAdapterValidateNativeOwnerCached(
+            owner_slot, slot, use_low_detail, owner_file, count,
+            ws->root_offsets, ws->material_counts) == FALSE)
+    {
+        return nNDSFtrLeanDeclineValidate;
+    }
+    /* The instance now describes this plan (the kernel, the patches and the
+     * per-frame proofs read it); the entry below is selected for it. */
+    inst->valid = 0u;
+    inst->root_count = (u8)count;
+    for (i = 0u; i < count; i++)
+    {
+        const NDSFighterDisplayContractEvent *event =
+            &sNdsFighterDisplayReplayEvents[collection.indices[i]];
+
+        inst->event_index[i] = (u8)collection.indices[i];
+        inst->root_offsets[i] = ws->root_offsets[i];
+        inst->material_counts[i] = (u8)ws->material_counts[i];
+        inst->root_dl[i] = event->dl;
+        inst->matrix_dobjs[i] = ws->matrix_bindings[i];
+        inst->material_dobjs[i] = ws->material_dobjs[i];
+    }
+    /* The material rows (the old path's own storage and row mapping, built
+     * from the live MObjs without advancing their texture ids): every word a
+     * list takes from its materials comes from these, so their content is
+     * the entry key's word 0 -- a rebuilt MObj graph, or an animation that
+     * moved nothing the rows carry, keeps its list. */
+    sNdsRendererAdapterMaterialRowClaimMask = 0u;
+    key[0] = 2166136261u;
+    for (i = 0u; i < count; i++)
+    {
+        u32 row = ndsRendererAdapterMaterialRow(ws->material_dobjs[i], i);
+        NDSRendererNativeMaterial *rows =
+            sNdsRendererAdapterNativeOwnerMaterials[row];
+        const u32 *row_words = (const u32 *)(const void *)rows;
+        const MObj *mobj;
+        u32 n = 0u;
+        u32 k;
+
+        sNdsRendererAdapterNativeOwnerMaterialRows[i] = (u8)row;
+        for (mobj = (ws->material_dobjs[i] != NULL) ?
+                 ws->material_dobjs[i]->mobj : NULL;
+             mobj != NULL; mobj = mobj->next)
+        {
+            if ((n >= NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX) ||
+                (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                     (MObj *)mobj, &rows[n], FALSE, NULL, NULL) == FALSE))
+            {
+                return nNDSFtrLeanDeclineMaterial;
+            }
+            n++;
+        }
+        if ((n != ws->material_counts[i]) ||
+            (ndsRendererAdapterValidateNativeOwnerMaterials(rows, n) == FALSE))
+        {
+            return nNDSFtrLeanDeclineMaterial;
+        }
+        for (k = 0u;
+             k < (n * (u32)sizeof(NDSRendererNativeMaterial)) / sizeof(u32);
+             k++)
+        {
+            key[0] = (key[0] ^ row_words[k]) * 16777619u;
+        }
+        key[0] = (key[0] ^ n) * 16777619u;
+    }
+    key[1] = (owner_slot & 0xffu) | ((use_low_detail & 1u) << 8) |
+        ((slot & 3u) << 9) |
+        (((((u32)fp->costume) | ((u32)fp->shade << 8)) & 0xffffu) << 11);
+    key[2] = (u32)(uintptr_t)owner_file->data ^
+        (owner_file->owner_generation * 0x9E3779B1u) ^
+        (gNdsTaskmanHeapGeneration * 0x85EBCA77u);
+    key[3] = ndsFtrLeanPreambleHash(inst->event_index, inst->root_offsets,
+                                    inst->material_counts, count);
+    key[4] = program | (count << 8);
+    key[5] = head_key;
+    ndsFtrLeanPacketNoteKind(slot, kind);
+#if NDS_FTR_LEAN_LAB
+    ndsFtrLeanKeyCensus(slot, kind, key);
+#endif
+    ndsFtrLeanRefreshInputs(inst, color_modulate);
+    ident = ndsRendererAdapterMaterialIdentity(inst->material_dobjs, count);
+    rr_key = ndsFtrLeanRerecordKey(ident, key, ws->production_roots, count);
+    code = (force_new != FALSE) ? NDS_FTR_LEAN_ENTRY_NONE :
+        ndsFtrLeanEntryFind(slot, key);
+    if (code != NDS_FTR_LEAN_ENTRY_NONE)
+    {
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.entry_hits++);
+        if (ndsFtrLeanEntryActivate(slot, code) != FALSE)
+        {
+            /* A switch stands for the old path's re-record (its packet's
+             * key moved): put the shade words where that record puts them. */
+            ndsFtrLeanEntryResetShade(
+                slot, sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+                count);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.entry_switches++);
+        }
+        else if ((inst->rerecord != 0u) || (inst->rr_key != rr_key))
+        {
+            /* The same list, but the old path re-records here (its packet
+             * was invalidated -- a model part, a rebuilt MObj -- or its key
+             * moved without moving this list's): the same derivation. */
+            ndsFtrLeanEntryResetShade(
+                slot, sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+                count);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.rerecord_resets++);
+        }
+#if NDS_FTR_LEAN_LAB
+        if ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_VERIFY) != 0u)
+        {
+            /* Lab: the re-selected list against a fresh materialization of
+             * the same key in the other entry. */
+            u32 held = ndsFtrLeanEntryActiveIndex(slot);
+
+            entry = ndsFtrLeanEntryVictim(slot);
+            if ((held != NDS_FTR_LEAN_ENTRY_NONE) && (entry != held) &&
+                (ndsFtrLeanMaterializeFor(slot, entry, key, count, owner_slot,
+                                          use_low_detail, owner_file) == 0u))
+            {
+                ndsFtrLeanVerifyEntries(slot, held, entry);
+            }
+        }
+#endif
+    }
+    else
+    {
+        u32 reason;
+
+        entry = ndsFtrLeanEntryVictim(slot);
+        ndsFtrLeanNoteKeyMiss(slot, key);
+        reason = ndsFtrLeanMaterializeFor(slot, entry, key, count, owner_slot,
+                                          use_low_detail, owner_file);
+        if (reason != 0u)
+        {
+            return reason;
+        }
+        code = ndsFtrLeanLearnVariant(slot, entry);
+        if (code != NDS_FTR_LEAN_ENTRY_NONE)
+        {
+            /* The held list now draws this state: its words moved as the
+             * old path's re-record would move them. */
+            (void)ndsFtrLeanEntryActivate(slot, code);
+            ndsFtrLeanEntryResetShade(
+                slot, sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+                count);
+        }
+        else
+        {
+            (void)ndsFtrLeanEntryActivate(slot, entry);
+        }
+#if NDS_FTR_LEAN_LAB
+        {
+            u32 ticks = cpuGetTiming() - t0;
+
+            gNdsFtrLean.materialize_ticks += ticks;
+            if (kind < NDS_FTR_LEAN_KINDS)
+            {
+                gNdsFtrLean.k_materialize_ticks[kind] += ticks;
+            }
+        }
+#endif
+    }
+    inst->rr_key = rr_key;
+    inst->rerecord = 0u;
+    if (ndsFtrLeanBuildJoints(inst, fp->joints[nFTPartsJointTopN],
+                              inst->matrix_dobjs, count) == FALSE)
+    {
+        return nNDSFtrLeanDeclineTopology;
+    }
+    inst->kind = (u8)kind;
+    inst->detail = (u8)use_low_detail;
+    inst->program = (u8)program;
+    inst->status_gen = sNdsFighterStatusGeneration[slot];
+    inst->heap_gen = gNdsTaskmanHeapGeneration;
+    inst->root = fp->joints[nFTPartsJointTopN];
+    inst->owner_file = owner_file;
+    inst->file_data = owner_file->data;
+    inst->file_asset = owner_file->asset_id;
+    inst->file_generation = owner_file->owner_generation;
+    inst->file_size = owner_file->data_size;
+    inst->head_key = head_key;
+    inst->ident_live = ident;
+    inst->texpart_serial = sNdsFtrLeanTexPartSerial[slot];
+    ndsFtrLeanBuildWatch(inst, count);
+    inst->pre_hash = key[3];
+    inst->pre_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
+        (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
+    inst->patch_serial = 0u;
+    inst->topo_hash = ndsFtrLeanTopologyHash(inst);
+    inst->rebind = 0u;
+    inst->reprove = 0u;
+    inst->valid = 1u;
+#if NDS_FTR_LEAN_LAB
+    {
+        u32 ticks = cpuGetTiming() - t0;
+
+        gNdsFtrLean.event_ticks += ticks;
+        if (kind < NDS_FTR_LEAN_KINDS)
+        {
+            gNdsFtrLean.k_event_ticks[kind] += ticks;
+        }
+    }
+#endif
+    (void)t0;
+    return 0u;
+}
+
+/* The per-frame proofs of the active entry: the tuple (kind, detail, heap
+ * generation, root, owner file, status generation -- a status change keeps
+ * the entry when the drawn roots are unchanged), the material identity
+ * through its writers, the preamble fields once per memo fill, and the
+ * list's own guard. Returns 0 or the event that moves the draw to the event
+ * path. */
+static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
+                           u32 kind, u32 use_low_detail, u32 route,
+                           u32 slow_mode, u32 *mark)
+{
+    const NDSRelocLoadedFile *file = inst->owner_file;
+    u32 reason;
+
+    if (inst->valid == 0u)
+    {
+        return nNDSFtrLeanEventFirst;
+    }
+    if (inst->rebind != 0u)
+    {
+        return nNDSFtrLeanEventRebind;
+    }
+    if ((inst->kind != kind) || (inst->detail != use_low_detail) ||
+        (inst->heap_gen != gNdsTaskmanHeapGeneration) ||
+        (inst->root != fp->joints[nFTPartsJointTopN]) ||
+        (file == NULL) || (file->data != inst->file_data) ||
+        (file->asset_id != inst->file_asset) ||
+        (file->owner_generation != inst->file_generation) ||
+        (file->data_size != inst->file_size))
+    {
+        return nNDSFtrLeanEventTuple;
+    }
+    if ((inst->status_gen != sNdsFighterStatusGeneration[slot]) &&
+        (((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u) ||
+         (ndsFtrLeanRetuple(slot, fp, inst) == FALSE)))
+    {
+        return nNDSFtrLeanEventStatus;
+    }
+    NDS_FTR_LEAN_GUARD_PART(0u, *mark);
+    /* Topology: the kernel proves every kept joint's parent link per draw
+     * (the source compose's own check). The oracle routes and the cost A/B's
+     * slice 1 form also hash the kept joints' child/sibling links. */
+    if (((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
+         ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u)) &&
+        (ndsFtrLeanTopologyHash(inst) != inst->topo_hash))
+    {
+        return nNDSFtrLeanEventKernel;
+    }
+    NDS_FTR_LEAN_GUARD_PART(1u, *mark);
+    /* The material identity, proven through its writers (see
+     * NDS_FTR_LEAN_WATCH_MAX); a moved identity is an event: the entry for
+     * the new state, or a new list. */
+    {
+        u32 watch_ok = (inst->texpart_serial ==
+                        sNdsFtrLeanTexPartSerial[slot]) ? TRUE : FALSE;
+        u32 full = ((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
+                    ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u) ||
+                    (inst->reprove != 0u) ||
+                    (inst->watch_count == NDS_FTR_LEAN_WATCH_ALL)) ?
+            TRUE : FALSE;
+
+        if ((watch_ok != FALSE) &&
+            (inst->watch_count != NDS_FTR_LEAN_WATCH_ALL))
+        {
+            u32 w;
+
+            for (w = 0u; w < inst->watch_count; w++)
+            {
+                if (ndsRendererAdapterMaterialAnimHash(inst->watch[w]) !=
+                    inst->watch_hash[w])
+                {
+                    watch_ok = FALSE;
+                    break;
+                }
+            }
+        }
+        if ((watch_ok != FALSE) && (full != FALSE) &&
+            (ndsRendererAdapterMaterialIdentity(
+                 inst->material_dobjs, inst->root_count) != inst->ident_live))
+        {
+            /* A writer the watch did not see: after an old-path draw (its
+             * material preparation) this is expected; on a draw that did not
+             * follow one it is a hole in the watch. */
+            if (inst->reprove == 0u)
+            {
+                NDS_FTR_LEAN_CTR(gNdsFtrLean.ident_watch_miss++);
+            }
+            watch_ok = FALSE;
+        }
+        if (watch_ok == FALSE)
+        {
+            if (ndsRendererAdapterMaterialIdentity(
+                    inst->material_dobjs, inst->root_count) ==
+                inst->ident_live)
+            {
+                /* Only the texture-part count moved (a write of the same id
+                 * or to an undrawn MObj): nothing to select. */
+                inst->texpart_serial = sNdsFtrLeanTexPartSerial[slot];
+                ndsFtrLeanBuildWatch(inst, inst->root_count);
+            }
+            else
+            {
+                return nNDSFtrLeanEventMaterial;
+            }
+        }
+        inst->reprove = 0u;
+    }
+    NDS_FTR_LEAN_GUARD_PART(3u, *mark);
+    /* key[3]'s per-root fields. A memo hit replays the slot's stored
+     * preambles byte for byte, so they are proven once per memo fill. */
+    if ((sNdsFtrLeanMemoFromSlot == 0u) ||
+        (inst->pre_serial != sNdsFtrLeanMemoFill[slot] + 1u) ||
+        ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u))
+    {
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.pre_checks++);
+        if (ndsFtrLeanPreambleHash(inst->event_index, inst->root_offsets,
+                                   inst->material_counts, inst->root_count) !=
+            inst->pre_hash)
+        {
+            return nNDSFtrLeanEventPreamble;
+        }
+        inst->pre_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
+            (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
+    }
+    else
+    {
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.pre_skips++);
+    }
+    NDS_FTR_LEAN_GUARD_PART(4u, *mark);
+    reason = ndsFtrLeanPacketGuard(slot,
+        (route == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u);
+    NDS_FTR_LEAN_GUARD_PART(5u, *mark);
+    return reason;
+}
+
 /* Returns TRUE when route 1 drew the fighter (the old path must not run). */
 static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
 {
     NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
-    const NDSFighterDrawPlanData *plan;
     u32 owner_slot = 0u;
     u32 kind;
     u32 use_low_detail;
     u32 slow_mode = gNdsFtrLeanSlow;
     u32 reason;
+    u32 event;
+    u32 pass;
     u32 t0;
     u32 t1;
     u32 mark;
@@ -776,7 +1336,6 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     NDSRendererMatrix20p12 camera_modelview;
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
-    u32 i;
 
     kind = ndsFtrLeanEligible(fp, &owner_slot);
     if (kind == NDS_FTR_LEAN_KIND_NONE)
@@ -800,62 +1359,6 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         return FALSE;
     }
 #endif
-    if (inst->valid == 0u)
-    {
-        ndsFtrLeanDecline(kind,
-            (inst->last_refuse == nNDSFtrLeanAdoptPlan) ?
-                nNDSFtrLeanDeclineUncacheable :
-                nNDSFtrLeanDeclineAdoptPending);
-        return FALSE;
-    }
-    if (inst->rebind != 0u)
-    {
-        ndsFtrLeanInvalidate(slot);
-        ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineRebind);
-        return FALSE;
-    }
-    /* The tuple: kind, detail, status and heap generation, root, the plan
-     * (program and root vector) and the display contract's event count. */
-    use_low_detail = (fp->detail_curr == nFTPartsDetailLow) ? TRUE : FALSE;
-    if ((inst->kind != kind) || (inst->detail != use_low_detail) ||
-        (inst->heap_gen != gNdsTaskmanHeapGeneration) ||
-        (inst->root != fp->joints[nFTPartsJointTopN]) ||
-        ((inst->status_gen != sNdsFighterStatusGeneration[slot]) &&
-         (((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u) ||
-          (ndsFtrLeanRetuple(slot, fp, inst, use_low_detail, owner_slot,
-                             route) == FALSE))) ||
-        (ndsFighterDrawPlanHit(slot, use_low_detail) == FALSE))
-    {
-        ndsFtrLeanInvalidate(slot);
-        ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineTuple);
-        return FALSE;
-    }
-    plan = &sNdsFighterDrawPlan[slot].data;
-    if ((plan->root_program != inst->program) ||
-        (plan->collection.selected_count != inst->root_count))
-    {
-        ndsFtrLeanInvalidate(slot);
-        ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineTuple);
-        return FALSE;
-    }
-    /* A changed display contract under an unchanged plan (a hidden flag
-     * flipped inside a status) is what the old path draws from too: its plan
-     * hit reads the roots' preambles at the plan's event indices, exactly as
-     * the lean inputs do, and the preamble proof below re-checks those
-     * (an event-count change is always a memo fill or bypass). */
-    NDS_FTR_LEAN_GUARD_PART(0u, mark);
-    /* Topology: the kernel proves every kept joint's parent link per draw
-     * (the source compose's own check). The oracle routes and the cost A/B's
-     * slice 1 form also hash the kept joints' child/sibling links. */
-    if (((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
-         ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u)) &&
-        (ndsFtrLeanTopologyHash(inst) != inst->topo_hash))
-    {
-        ndsFtrLeanInvalidate(slot);
-        ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineTopology);
-        return FALSE;
-    }
-    NDS_FTR_LEAN_GUARD_PART(1u, mark);
     {
         /* The camera matrices are a per-frame, per-camera constant (the
          * adapter's own frame cache); fetch them once per frame. The storage
@@ -884,218 +1387,149 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         }
     }
     NDS_FTR_LEAN_GUARD_PART(2u, mark);
-    /* key[0]: the live MObj chains' identity (texture ids, matanim words),
-     * proven through its writers (see NDS_FTR_LEAN_WATCH_MAX). */
+    use_low_detail = (fp->detail_curr == nFTPartsDetailLow) ? TRUE : FALSE;
+    color_modulate = ndsRendererAdapterFighterColorModulate(fp);
+    ndsFtrLeanPacketNoteKind(slot, kind);
+    event = ndsFtrLeanProve(slot, fp, inst, kind, use_low_detail, route,
+                            slow_mode, &mark);
+    for (pass = 0u;; pass++)
     {
-        u32 watch_ok = (inst->texpart_serial ==
-                        sNdsFtrLeanTexPartSerial[slot]) ? TRUE : FALSE;
-        u32 full = ((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
-                    ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u) ||
-                    (inst->reprove != 0u) ||
-                    (inst->watch_count == NDS_FTR_LEAN_WATCH_ALL)) ?
-            TRUE : FALSE;
+        if (event != 0u)
+        {
+            u32 t_event = cpuGetTiming();
 
-        if ((watch_ok != FALSE) &&
-            (inst->watch_count != NDS_FTR_LEAN_WATCH_ALL))
-        {
-            u32 w;
-
-            for (w = 0u; w < inst->watch_count; w++)
+            ndsFtrLeanCountEvent(kind, event);
+            if ((event == nNDSFtrLeanEventTintSet) ||
+                (event == nNDSFtrLeanEventFence))
             {
-                if (ndsRendererAdapterMaterialAnimHash(inst->watch[w]) !=
-                    inst->watch_hash[w])
-                {
-                    watch_ok = FALSE;
-                    break;
-                }
+                /* The active list is stale against the live tile set or
+                 * texture fence (the recorder re-records on the same key
+                 * words); the other entry keeps its own. */
+                ndsFtrLeanEntryDropActive(slot);
             }
-        }
-        u32 ident_now = 0u;
-
-        if ((watch_ok != FALSE) && (full != FALSE))
-        {
-            ident_now = ndsRendererAdapterMaterialIdentity(
-                plan->material_dobjs, inst->root_count);
-            if (ident_now != inst->ident_adopt)
+            if (event == nNDSFtrLeanEventKernel)
             {
-                /* A writer the watch did not see: after an old-path draw
-                 * (its material preparation) this is expected and fine; on
-                 * a draw that did not follow one it is a hole in the watch. */
-                if (inst->reprove == 0u)
-                {
-                    NDS_FTR_LEAN_CTR(gNdsFtrLean.ident_watch_miss++);
-                }
-                watch_ok = FALSE;
+                inst->valid = 0u;
             }
-        }
-        else if (watch_ok == FALSE)
-        {
-            ident_now = ndsRendererAdapterMaterialIdentity(
-                plan->material_dobjs, inst->root_count);
-        }
-        if (watch_ok == FALSE)
-        {
-            /* The identity moved. A state this list already learned (its
-             * base or a variant) is a few word writes; anything else is the
-             * old path's to draw once, and AfterOldPath learns it. */
-            if ((ident_now != inst->ident_adopt) &&
-                (ndsFtrLeanPacketSelectVariant(slot, ident_now) != FALSE))
+            reason = ndsFtrLeanEvent(
+                slot, fp, inst, kind, owner_slot, use_low_detail,
+                color_modulate,
+                (event == nNDSFtrLeanEventTintTile) ? TRUE : FALSE);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.guard_part_ticks[7] +=
+                                 cpuGetTiming() - t_event);
+            (void)t_event;
+            if (reason != 0u)
             {
-                ndsFtrLeanRebaseIdentity(slot, inst, plan, ident_now);
-                NDS_FTR_LEAN_CTR(gNdsFtrLean.variant_switches++);
+                ndsFtrLeanInvalidate(slot, FALSE);
+                ndsFtrLeanDecline(kind, reason);
+                return FALSE;
             }
-            else if (ident_now == inst->ident_adopt)
+            event = ndsFtrLeanPacketGuard(slot,
+                (route == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u);
+            if (event != 0u)
             {
-                /* Only the texture-part count moved (a write of the same id
-                 * or to an undrawn MObj): nothing to switch. */
-                ndsFtrLeanRebaseIdentity(slot, inst, plan, ident_now);
-            }
-            else
-            {
-                inst->learn_pending = 1u;
-                ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineMaterial);
+                ndsFtrLeanInvalidate(slot, TRUE);
+                ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineStale);
                 return FALSE;
             }
         }
-        inst->reprove = 0u;
-    }
-    NDS_FTR_LEAN_GUARD_PART(3u, mark);
-    /* key[3]'s per-root preamble fields. A memo hit replays the slot's stored
-     * preambles byte for byte, so they are proven once per memo fill. */
-    if ((sNdsFtrLeanMemoFromSlot == 0u) ||
-        (inst->pre_serial != sNdsFtrLeanMemoFill[slot] + 1u) ||
-        ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u))
-    {
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.pre_checks++);
-        if (ndsFtrLeanPreambleHash(plan, inst->root_count) != inst->pre_hash)
-        {
-            ndsFtrLeanInvalidate(slot);
-            ndsFtrLeanDecline(kind, nNDSFtrLeanDeclinePreamble);
-            return FALSE;
-        }
-        inst->pre_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
-            (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
-    }
-    else
-    {
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.pre_skips++);
-    }
-    NDS_FTR_LEAN_GUARD_PART(4u, mark);
-    reason = ndsFtrLeanPacketGuard(slot,
-        (route == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u);
-    if (reason != 0u)
-    {
-        ndsFtrLeanInvalidate(slot);
-        ndsFtrLeanDecline(kind, reason);
-        return FALSE;
-    }
-    NDS_FTR_LEAN_GUARD_PART(5u, mark);
 #if NDS_R2_FIGHTER_SHUFFLE_FOLD
-    /* The old path latches this every draw; so does the lean one, so the
-     * statics read after this draw are the same in both routes. */
-    ndsRendererAdapterSetShuffleOffset(fp);
-    shuffle_x = sNdsR2ShuffleWorldX;
-    shuffle_y = sNdsR2ShuffleWorldY;
+        /* The old path latches this every draw; so does the lean one, so the
+         * statics read after this draw are the same in both routes. */
+        ndsRendererAdapterSetShuffleOffset(fp);
+        shuffle_x = sNdsR2ShuffleWorldX;
+        shuffle_y = sNdsR2ShuffleWorldY;
 #endif
-    NDS_FTR_LEAN_GUARD_PART(6u, mark);
-    t1 = cpuGetTiming();
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.guard_ticks += t1 - t0);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_guard_ticks[kind] += t1 - t0);
+        NDS_FTR_LEAN_GUARD_PART(6u, mark);
+        t1 = cpuGetTiming();
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.guard_ticks += t1 - t0);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_guard_ticks[kind] += t1 - t0);
 #if NDS_FTR_LEAN_LAB
-    class_counts = gNdsFtrLean.k_kernel_class[kind];
+        class_counts = gNdsFtrLean.k_kernel_class[kind];
 #if NDS_FTR_LEAN_KTIME
-    if ((slow_mode & NDS_FTR_LEAN_SLOW_KTIME) != 0u)
-    {
-        part_ticks = gNdsFtrLean.kernel_part_ticks;
-        gNdsFtrLean.kernel_part_joints += inst->joint_count;
-    }
+        if ((slow_mode & NDS_FTR_LEAN_SLOW_KTIME) != 0u)
+        {
+            part_ticks = gNdsFtrLean.kernel_part_ticks;
+            gNdsFtrLean.kernel_part_joints += inst->joint_count;
+        }
 #endif
 #endif
-    kernel_flags = ((fp->is_use_animlocks != FALSE) ?
-                        NDS_FTR_LEAN_KERNEL_LOCKS : 0u) |
-        (((slow_mode & NDS_FTR_LEAN_SLOW_KERNEL) != 0u) ?
-             NDS_FTR_LEAN_KERNEL_NO_FAST : 0u);
-    /* The modelviews go straight into the list; only a texgen group's root
-     * also needs its Q20.12 world (PatchTexgen reads it). */
-    sites = ndsFtrLeanPacketModelviewSites(slot, mv_sites, inst->root_count);
-    if ((sites == NDS_FTR_LEAN_SITES_NONE) ||
-        (ndsFtrLeanKernelCompose(
-             inst->joints, inst->joint_count, mv_sites, sNdsFtrLeanWorlds,
-             sites, inst->root_count, shuffle_x, shuffle_y, kernel_flags,
-             ndsFtrLeanSlowLocal, class_counts, part_ticks) == FALSE))
-    {
-        /* A kept joint was re-parented (a status change that moves no drawn
-         * root: the re-tuple proved the roots). The world is a function of
-         * the live tree, which the source compose re-collects every draw, so
-         * re-collect it once and compose again; a second refusal is the
-         * source compose's own. */
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_fail++);
+        kernel_flags = ((fp->is_use_animlocks != FALSE) ?
+                            NDS_FTR_LEAN_KERNEL_LOCKS : 0u) |
+            (((slow_mode & NDS_FTR_LEAN_SLOW_KERNEL) != 0u) ?
+                 NDS_FTR_LEAN_KERNEL_NO_FAST : 0u);
+        /* The LOAD4x3 parameters go straight into the list; only a texgen
+         * group's root also needs its Q20.12 world (PatchTexgen reads it). */
+        sites = ndsFtrLeanPacketModelviewSites(slot, mv_sites,
+                                               inst->root_count);
         if ((sites == NDS_FTR_LEAN_SITES_NONE) ||
-            (ndsFtrLeanBuildJoints(inst, fp->joints[nFTPartsJointTopN],
-                                   plan->matrix_bindings,
-                                   inst->root_count) == FALSE) ||
             (ndsFtrLeanKernelCompose(
                  inst->joints, inst->joint_count, mv_sites, sNdsFtrLeanWorlds,
                  sites, inst->root_count, shuffle_x, shuffle_y, kernel_flags,
                  ndsFtrLeanSlowLocal, class_counts, part_ticks) == FALSE))
         {
-            ndsFtrLeanInvalidate(slot);
-            ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineKernel);
+            /* A kept joint was re-parented (a status change that moves no
+             * drawn root: the re-tuple proved the roots). The world is a
+             * function of the live tree, which the source compose re-collects
+             * every draw, so re-collect it once and compose again; a second
+             * refusal is the source compose's own. */
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_fail++);
+            if ((sites == NDS_FTR_LEAN_SITES_NONE) ||
+                (ndsFtrLeanBuildJoints(inst, fp->joints[nFTPartsJointTopN],
+                                       inst->matrix_dobjs,
+                                       inst->root_count) == FALSE) ||
+                (ndsFtrLeanKernelCompose(
+                     inst->joints, inst->joint_count, mv_sites,
+                     sNdsFtrLeanWorlds, sites, inst->root_count, shuffle_x,
+                     shuffle_y, kernel_flags, ndsFtrLeanSlowLocal,
+                     class_counts, part_ticks) == FALSE))
+            {
+                ndsFtrLeanInvalidate(slot, FALSE);
+                ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineKernel);
+                return FALSE;
+            }
+            inst->topo_hash = ndsFtrLeanTopologyHash(inst);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_rebuilds++);
+        }
+        t0 = cpuGetTiming();
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_ticks += t0 - t1);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_ticks[kind] += t0 - t1);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_joints += inst->joint_count);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_joints[kind] +=
+                             inst->joint_count);
+
+        ndsFtrLeanRefreshInputs(inst, color_modulate);
+        /* The global state the old path's draw leaves behind: the owner's
+         * root program (Link's texgen tables are selected from it) and the
+         * Kirby trio head key it publishes for every fighter. */
+        ndsRendererNativeFighterSetRootProgram(owner_slot, inst->program);
+#if NDS_P2_KIRBY
+        ndsRendererNativeKirbyTrioSetHeadKey(inst->head_key);
+#endif
+        /* pre_same: this draw's preambles are the same memo fill the last
+         * patch read, so their prim and light words cannot have moved. */
+        reason = ndsFtrLeanPacketPatch(
+            slot, sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+            inst->root_count, owner_slot, use_low_detail,
+            ((sNdsFtrLeanMemoFromSlot != 0u) &&
+             (inst->patch_serial == sNdsFtrLeanMemoFill[slot] + 1u)) ?
+                TRUE : FALSE);
+        if ((reason == NDS_FTR_LEAN_PATCH_REMATERIALIZE) && (pass == 0u))
+        {
+            /* A tinted prim went white or lost its tile: the live draw
+             * binds differently now (the recorder re-records). */
+            event = nNDSFtrLeanEventTintTile;
+            continue;
+        }
+        if (reason != 0u)
+        {
+            ndsFtrLeanInvalidate(slot, FALSE);
+            ndsFtrLeanDecline(kind,
+                (reason == NDS_FTR_LEAN_PATCH_REMATERIALIZE) ?
+                    nNDSFtrLeanDeclineStale : reason);
             return FALSE;
         }
-        inst->topo_hash = ndsFtrLeanTopologyHash(inst);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_rebuilds++);
-    }
-    t0 = cpuGetTiming();
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_ticks += t0 - t1);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_ticks[kind] += t0 - t1);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_joints += inst->joint_count);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_joints[kind] += inst->joint_count);
-
-    if (sNdsRendererAdapterProductionInputsPrimed == FALSE)
-    {
-        ndsRendererAdapterPrimeProductionInputs(
-            &sNdsRendererAdapterNativeOwnerWorkspace);
-    }
-    color_modulate = ndsRendererAdapterFighterColorModulate(fp);
-    for (i = 0u; i < inst->root_count; i++)
-    {
-        NDSRendererNativeFighterRoot *input =
-            &sNdsRendererAdapterNativeOwnerWorkspace.production_roots[i];
-        NDSRendererConfig *config =
-            &sNdsRendererAdapterNativeOwnerWorkspace.production_configs[i];
-        const NDSRendererNativeFighterPreamble *preamble =
-            &sNdsFighterDisplayReplayPreambles[plan->collection.indices[i]];
-
-        /* The fields RefreshNativePacketInputs writes, and only those (the
-         * primed root->config already points at this config). */
-        config->initial_geometry_mode = preamble->geometry_mode;
-        config->color_modulate = color_modulate;
-        input->preamble = preamble;
-        input->modelview_matrix = &sNdsFtrLeanWorlds[i];
-        input->projection_matrix = &sNdsFtrLeanProjection;
-        input->gx_valid = 0u;
-    }
-    /* The global state the old path's draw leaves behind: the owner's root
-     * program (Link's texgen tables are selected from it) and the Kirby trio
-     * head key it publishes for every fighter. */
-    ndsRendererNativeFighterSetRootProgram(owner_slot, inst->program);
-#if NDS_P2_KIRBY
-    ndsRendererNativeKirbyTrioSetHeadKey(inst->head_key);
-#endif
-    /* pre_same: this draw's preambles are the same memo fill the last patch
-     * read, so their prim and light words cannot have moved. */
-    reason = ndsFtrLeanPacketPatch(
-        slot, sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
-        inst->root_count, owner_slot, use_low_detail,
-        ((sNdsFtrLeanMemoFromSlot != 0u) &&
-         (inst->patch_serial == sNdsFtrLeanMemoFill[slot] + 1u)) ?
-            TRUE : FALSE);
-    if (reason != 0u)
-    {
-        ndsFtrLeanInvalidate(slot);
-        ndsFtrLeanDecline(kind, reason);
-        return FALSE;
+        break;
     }
     inst->patch_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
         (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
@@ -1116,7 +1550,20 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     gNdsFtrDeclineDisplayListClause = 0u;
     gNdsFtrRootProgramsTried = 0u;
 #if NDS_TICK_HUD
-    ndsFtrPreWalkCensus(slot, &plan->collection);
+    {
+        NDSFighterDLAllDrawCollection census;
+        u32 i;
+
+        memset(&census, 0, sizeof(census));
+        census.selected_count = inst->root_count;
+        census.total_count = inst->root_count;
+        for (i = 0u; i < inst->root_count; i++)
+        {
+            census.indices[i] = inst->event_index[i];
+            census.dobjs[i] = inst->matrix_dobjs[i];
+        }
+        ndsFtrPreWalkCensus(slot, &census);
+    }
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackEligible);
 #endif
@@ -1172,65 +1619,13 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     return TRUE;
 }
 
-/* The watch list: every MObj of the drawn roots whose material animation is
- * live, with its animation hash now. More than the list holds proves the whole
- * identity on every draw instead. */
-static void ndsFtrLeanBuildWatch(NDSFtrLeanInstance *inst,
-                                 const NDSFighterDrawPlanData *plan,
-                                 u32 count)
+/* After the old path drew this fighter: retire an unconsumed oracle arm,
+ * and when the draw was not a replay hit (it prepared materials, which may
+ * have written this fighter's MObjs) re-prove the whole identity on the next
+ * lean draw. */
+static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before)
 {
-    u32 n = 0u;
-    u32 i;
-
-    for (i = 0u; i < count; i++)
-    {
-        const DObj *dobj = plan->material_dobjs[i];
-        const MObj *mobj;
-
-        for (mobj = (dobj != NULL) ? dobj->mobj : NULL; mobj != NULL;
-             mobj = mobj->next)
-        {
-            if (mobj->anim_wait == AOBJ_ANIM_NULL)
-            {
-                continue;
-            }
-            if (n >= NDS_FTR_LEAN_WATCH_MAX)
-            {
-                inst->watch_count = NDS_FTR_LEAN_WATCH_ALL;
-                return;
-            }
-            inst->watch[n] = mobj;
-            inst->watch_hash[n] = ndsRendererAdapterMaterialAnimHash(mobj);
-            n++;
-        }
-    }
-    inst->watch_count = (u8)n;
-}
-
-/* After the old path drew this fighter: retire an unconsumed oracle arm and
- * adopt the packet the old path just used, when it describes this draw's
- * tuple exactly (the plan of this status generation hit, and the packet was
- * replayed or recorded by this very draw). `hits_before` is the replay-hit
- * count before the old path ran: a draw that was not a replay hit ran the
- * material preparation, which may have written this fighter's MObjs. */
-static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before,
-                                   u32 hits_before)
-{
-    NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
-    const NDSFighterDrawPlanData *plan;
-    NDSFtrLeanAdoptInfo info;
-    u32 owner_slot = 0u;
-    u32 kind;
-    u32 use_low_detail;
-    u32 result;
-    u32 count;
-    u32 i;
-    u32 t0;
-    u32 t1;
-#if NDS_P2_KIRBY
-    u32 head = 0u;
-#endif
-
+    (void)fp;
     if (ndsFtrLeanShadowArmed(slot) != 0u)
     {
         ndsFtrLeanShadowArm(slot, 0u);
@@ -1238,141 +1633,8 @@ static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 serial_before,
     }
     if (gNdsFighterPacketHits == hits_before)
     {
-        inst->reprove = 1u;
+        sNdsFtrLeanInstances[slot].reprove = 1u;
     }
-    kind = ndsFtrLeanEligible(fp, &owner_slot);
-    if ((kind == NDS_FTR_LEAN_KIND_NONE) || (fp->colanim.skeleton_id != 0))
-    {
-        return;
-    }
-    use_low_detail = (fp->detail_curr == nFTPartsDetailLow) ? TRUE : FALSE;
-    if ((inst->valid != 0u) && (inst->kind == kind) &&
-        (inst->detail == use_low_detail) &&
-        (inst->status_gen == sNdsFighterStatusGeneration[slot]) &&
-        (inst->heap_gen == gNdsTaskmanHeapGeneration))
-    {
-        u32 ident;
-
-        if (inst->learn_pending == 0u)
-        {
-            return;   /* the list for this tuple is already adopted */
-        }
-        /* The lean draw declined a material move to a state the list has
-         * not learned; the old path just drew it. Learn it as a variant
-         * (the list's second entry), or adopt the recording outright. */
-        inst->learn_pending = 0u;
-        t0 = cpuGetTiming();
-        ident = ndsRendererAdapterMaterialIdentity(
-            sNdsFighterDrawPlan[slot].data.material_dobjs, inst->root_count);
-        if ((ndsFighterDrawPlanHit(slot, use_low_detail) != FALSE) &&
-            (ndsFtrLeanPacketUseSerial(slot) != serial_before) &&
-            (ndsFtrLeanPacketLearnVariant(slot, ident) != FALSE))
-        {
-            ndsFtrLeanRebaseIdentity(slot, inst,
-                                     &sNdsFighterDrawPlan[slot].data, ident);
-            inst->reprove = 0u;
-            NDS_FTR_LEAN_CTR(gNdsFtrLean.variant_learn_ticks +=
-                                 cpuGetTiming() - t0);
-            return;
-        }
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.variant_learn_ticks +=
-                             cpuGetTiming() - t0);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.variant_learn_fail++);
-        ndsFtrLeanInvalidate(slot);
-    }
-    if (ndsFtrLeanPacketUseSerial(slot) == serial_before)
-    {
-        return;   /* the old path did not replay or record a packet */
-    }
-    if (ndsFighterDrawPlanHit(slot, use_low_detail) == FALSE)
-    {
-        /* No baked plan: a mixed-file program (Kirby CopyLink, Link's
-         * boomerang donor) re-resolves every draw and is never baked. */
-        ndsFtrLeanRefuse(inst, kind, nNDSFtrLeanAdoptPlan);
-        return;
-    }
-    plan = &sNdsFighterDrawPlan[slot].data;
-    count = plan->collection.selected_count;
-    if ((count == 0u) || (count > NDS_FTR_LEAN_ROOT_MAX))
-    {
-        ndsFtrLeanRefuse(inst, kind, nNDSFtrLeanAdoptRoots);
-        return;
-    }
-    t0 = cpuGetTiming();
-    ndsFtrLeanInvalidate(slot);
-    if (ndsFtrLeanBuildJoints(inst, fp->joints[nFTPartsJointTopN],
-                              plan->matrix_bindings, count) == FALSE)
-    {
-        ndsFtrLeanRefuse(inst, kind, nNDSFtrLeanAdoptTopology);
-        return;
-    }
-    ndsFtrLeanPacketNoteKind(slot, kind);
-    /* The MObj state the copied words were recorded (or last replayed) with
-     * is the state now: a record frame's material preparation ran before its
-     * words were taken, so the identity to hold is today's, not key[0]
-     * (which the record path takes before the preparation). */
-    inst->ident_adopt = ndsRendererAdapterMaterialIdentity(
-        plan->material_dobjs, count);
-    t1 = cpuGetTiming();
-    result = ndsFtrLeanPacketAdopt(slot, count, inst->ident_adopt, &info);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_copy_ticks += cpuGetTiming() - t1);
-    if (result != nNDSFtrLeanAdoptOk)
-    {
-        ndsFtrLeanRefuse(inst, kind, result);
-        return;
-    }
-    inst->kind = (u8)kind;
-    inst->detail = (u8)use_low_detail;
-    inst->program = plan->root_program;
-    inst->root_count = (u8)count;
-    inst->status_gen = sNdsFighterStatusGeneration[slot];
-    inst->heap_gen = gNdsTaskmanHeapGeneration;
-    inst->root = fp->joints[nFTPartsJointTopN];
-    inst->event_count = sNdsFighterDisplayContract.event_count;
-    inst->head_key = 0u;
-#if NDS_P2_KIRBY
-    if (ndsFighterKirbyTrioHeadKey(fp, &head) != FALSE)
-    {
-        inst->head_key = head;
-    }
-#endif
-    inst->texpart_serial = sNdsFtrLeanTexPartSerial[slot];
-    inst->learn_pending = 0u;
-    ndsFtrLeanBuildWatch(inst, plan, count);
-    for (i = 0u; i < count; i++)
-    {
-        inst->root_dl[i] =
-            sNdsFighterDisplayReplayEvents[plan->collection.indices[i]].dl;
-    }
-    /* Route 1: the recorder's own packet holds these very words, recorded
-     * after this draw's material preparation, but keyed on the identity from
-     * BEFORE it; route 0 re-records it on its next draw to learn that. The
-     * oracle routes keep route 0's behaviour (their record-under-hit compare
-     * proves the two recordings agree). */
-    if (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW)
-    {
-        ndsFtrLeanPacketRekeyIdentity(slot, inst->ident_adopt);
-    }
-    inst->reprove = 0u;
-    inst->pre_hash = ndsFtrLeanPreambleHash(plan, count);
-    inst->pre_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
-        (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
-    inst->patch_serial = 0u;
-    inst->topo_hash = ndsFtrLeanTopologyHash(inst);
-    inst->rebind = 0u;
-    inst->last_refuse = 0u;
-    inst->valid = 1u;
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_watch = inst->watch_count);
-    ndsFtrLeanPacketNoteKind(slot, kind);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopts++);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_adopts[kind]++);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_needs_fence = info.needs_fence);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_words = info.word_count);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_roots = info.root_count);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_textures = info.texture_count);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.adopt_ticks += cpuGetTiming() - t0);
-    (void)t0;
-    (void)t1;
 }
 
 /* Slice 2b: the lab pokes gNdsFtrLeanAdmit after setup, so the admission of
@@ -1401,8 +1663,10 @@ static void ndsFtrLeanFrameEnd(void)
         sNdsFtrLeanMatchHeapGen = gNdsTaskmanHeapGeneration;
         for (slot = 0u; slot < GMCOMMON_PLAYERS_MAX; slot++)
         {
-            ndsFtrLeanInvalidate(slot);
-            sNdsFtrLeanInstances[slot].last_refuse = 0u;
+            ndsFtrLeanInvalidate(slot, TRUE);
+#if NDS_FTR_LEAN_LAB
+            sNdsFtrLeanKeySeenCount[slot] = 0u;
+#endif
         }
         NDS_FTR_LEAN_CTR(gNdsFtrLean.go_frame = 0u);
     }
