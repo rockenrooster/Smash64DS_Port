@@ -4,6 +4,14 @@ The destination is P2 under `PROJECT_GOAL.md` and `P2_PLAN.md`.
 `P2_EXECUTION_BOARD.md` owns live focus, decisions, artifacts and the
 **Execution cursor**. This file is a route, not another task or metric ledger.
 
+## Current route (2026-09-23)
+
+P2-2p8 four-fighter 30 FPS runs on `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`
+(owner rulings in its section 8, phase log in section 6). On resume read that
+document's sections 0, 6 and 8, then the board cursor. Phase evidence lives under
+`artifacts/performance/2026-09-2*_p2-2p8-*`; `scripts/compare-replay-digest.py`
+is the gameplay-equivalence check every phase runs.
+
 ## Continue, do not restart
 
 With an intact context, execute the cursor's next unfinished action. Do not
