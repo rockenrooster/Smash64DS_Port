@@ -665,6 +665,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   target's Sudden Death never ends (pre-existing; separate task). Next, slice 3:
   lean for all four stress kinds and a cheap lean draw (FTR P99 <= 90K is the
   phase gate; today P50 358K).
+- **Phase 1 slice 3 (2026-09-23, `08736558f3b`)**: lean for all four stress
+  kinds on adopted packets (96.4-99.0% of draws; route 2 oracle 0 mismatches over
+  15.6M words); slow kernel joints 34-51% -> 0-0.4%; per-draw cost DK 57.5 ->
+  41.4K, Samus 50.0 -> 34.7K, Link 68.4 -> 50.1K, Kirby 45.9 -> 29.6K. Admit 2,
+  route 1 vs 0: FTR P50 / P95 / P99 358,080 / 915,638 / 1,170,867 -> **229,056 /
+  435,251 / 1,025,600**; WORK-H 1,642,592 / 2,474,362 / 3,034,156 -> **1,512,928 /
+  2,284,672 / 2,896,626**, following FTR one for one. The kernel still runs
+  855-954 ticks/joint (cache misses; the spec budgets ~450). **Found: the first
+  1P battle runs out of general heap while loading** (pre-existing, ~15 KB short;
+  the slice's code adds 8 KB) -- memory work starts now in parallel (battle HUD
+  file bake, A7), and the phase's deletion step returns production's RAM. Next,
+  slice 4: host-generated fighter lists (LOAD4x3 + P'), the path to deletion.
 
 ## 7. Found along the way
 

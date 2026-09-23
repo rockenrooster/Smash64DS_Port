@@ -71,8 +71,11 @@ entry failure is VRAM exhaustion. Slice 2a (`f1476de32dd`) measured it:
 fragmentation in a full A+B, and BG3's bank D empty in VS battles. Slice 2b
 (`bd29b08e282`, word `gNdsFtrLeanAdmit`=2, default 0): WORK-H P95 4.21M ->
 2.53M, Link entry failures 0. Slice 2c (`b20b8f0f2b2`): whole admission with
-no new RAM, uploads after GO 0, WORK-H P95 2.45M at word 2. **Slice 3 in
-progress**: lean path for all four stress kinds + a cheap lean draw; 1P check. Alongside (disjoint files, integrator): MF host
+no new RAM, uploads after GO 0, WORK-H P95 2.45M at word 2. Slice 3
+(`08736558f3b`): lean for all four stress kinds, FTR P50 229K / WORK-H P50
+1.51M at route 1. **Slice 4 in progress**: host-generated fighter lists.
+Found: the first 1P battle OOMs at load (pre-existing); integrator works the
+battle HUD file bake (A7 memory) in parallel. Alongside (disjoint files, integrator): MF host
 encoder + C decoder + checker. ARM7 audio spec queued (one subagent at a time). Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`,
 `artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`.
