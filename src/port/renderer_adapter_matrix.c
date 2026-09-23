@@ -8,6 +8,7 @@
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_fighter_matrix_index.h>
+#include <nds/renderer_fighter_lean.h>
 #include <nds/nds_r2_camera_fixed.h>
 #include <nds/nds_fcmp.h>
 #if NDS_R2_FOX_GUN_OVERLAY
@@ -537,6 +538,8 @@ void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot)
      * was replaced needs to re-record. Invalid slots fail safe in the renderer. */
     ndsRendererFighterPacketInvalidateSlot(slot);
     ndsFighterRendererInvalidateMaterialRows();
+    /* P2-2p8 Phase 1 slice 1 (H6): the lean list's MObj bindings are stale. */
+    ndsFtrLeanNoteRebind(slot);
 }
 static NDSRendererMatrix20p12
     sNdsRendererAdapterNativeOwnerProjection;
@@ -7465,11 +7468,24 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     sNdsRendererAdapterNativeOwnerWorkspace.gx_modelview_mirror_valid = 0u;
     /* Source-world seam repair.  Keep this deliberately narrow until every
      * owner is visually/source-qualified: Mario is owner slot 0, and profile
-     * owner ids are one-based so DK's native slot is DONKEY-1. */
+     * owner ids are one-based so DK's native slot is DONKEY-1.
+     *
+     * P2-2p8 Phase 1 slice 1 (H4): the lean route-2 oracle forces the same
+     * Q43.20 source compose for Samus, so the words TryReplay patches are the
+     * ones the lean kernel must reproduce bit for bit. */
+    u32 lean_force_source =
+        ((gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_ORACLE_EXACT) &&
+         (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)) ? TRUE : FALSE;
+
+    if (lean_force_source != FALSE)
+    {
+        gNdsFtrLeanOracleSourceOk = 0u;
+    }
     if ((flat_worlds != FALSE) || (((slot == 0u)
 #if NDS_P2_DONKEY
          || (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
 #endif
+         || (lean_force_source != FALSE)
          ) &&
 #if NDS_LAB_NO_CULL
         (gNdsLabSeamArm == NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM) &&
@@ -7479,6 +7495,10 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
              sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
              seed_is_identity) != FALSE)))
     {
+        if ((lean_force_source != FALSE) && (flat_worlds == FALSE))
+        {
+            gNdsFtrLeanOracleSourceOk = 1u;
+        }
         flat_worlds = TRUE;
     }
     else if (ndsRendererAdapterCaptureOwnerChainsGx(

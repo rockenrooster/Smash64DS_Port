@@ -3776,6 +3776,10 @@ typedef struct NDSR2FighterTint
     u32 rgb;       /* 24-bit RRGGBB this tile carries */
     u32 name;
     u32 last_used; /* sNdsRendererHardwareFrameSerial of the last hit */
+    /* P2-2p8 Phase 1 slice 1: the two words a packet records when it binds
+     * this tile (glGetTexParameter / PLTT_BASE), captured at creation. */
+    u32 teximage;
+    u32 pltt;
 } NDSR2FighterTint;
 
 static NDSR2FighterTint sNdsR2FighterTints[NDS_R2_FIGHTER_TINT_SLOTS];
@@ -3954,10 +3958,50 @@ static void ndsRendererHardwareServiceFighterTintTiles(void)
         sNdsR2FighterTints[sNdsR2FighterTintCount].name = name;
         sNdsR2FighterTints[sNdsR2FighterTintCount].last_used =
             sNdsRendererHardwareFrameSerial;
+        {
+            /* P2-2p8 Phase 1 slice 1: capture exactly the words a recorded
+             * packet binds for this tile. The prepare above returns with the
+             * tile bound and its palette set (libnds's active texture), so
+             * the same two getters ndsFighterPacketRecordBoundTexture reads
+             * after a bind return them here -- reads only, no GX write. */
+            int palette_format = -1;
+
+            sNdsR2FighterTints[sNdsR2FighterTintCount].teximage =
+                (u32)glGetTexParameter();
+            glGetColorTableParameterEXT(
+                GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
+            sNdsR2FighterTints[sNdsR2FighterTintCount].pltt =
+                (palette_format >= 0) ? (u32)palette_format : 0xffffffffu;
+        }
         sNdsR2FighterTintCount++;
         gNdsR2FighterTintBuilds++;
         gNdsR2FighterTintSetGeneration++;
     }
+}
+
+/* P2-2p8 Phase 1 slice 1: the resident tile for a colour, as the words a
+ * packet bind carries. `touch` refreshes its LRU stamp (a lean draw uses it
+ * without going through ndsRendererR2FighterTintLookup). */
+s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
+{
+    u32 i;
+
+    ndsR2FighterTintSyncGeneration();
+    for (i = 0u; i < sNdsR2FighterTintCount; i++)
+    {
+        if (sNdsR2FighterTints[i].rgb == rgb)
+        {
+            if (touch != 0u)
+            {
+                sNdsR2FighterTints[i].last_used =
+                    sNdsRendererHardwareFrameSerial;
+            }
+            *teximage = sNdsR2FighterTints[i].teximage;
+            *pltt = sNdsR2FighterTints[i].pltt;
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 #else
 volatile u32 gNdsR2FighterTintSetGeneration;
@@ -3966,6 +4010,15 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
 {
     (void)material_color;
     return 0u;
+}
+
+s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
+{
+    (void)rgb;
+    (void)touch;
+    (void)teximage;
+    (void)pltt;
+    return FALSE;
 }
 #endif
 
@@ -9642,6 +9695,9 @@ static void ndsRendererHardwareRejectTexture(NDSRendererStats *stats,
                                              u32 format, u32 size,
                                              u32 reason)
 {
+    /* P2-2p8 Phase 1 slice 1: the fighter texture-admission census's reject
+     * witness (first fighter-owned reject, reason + cache census). */
+    ndsFtrLeanNoteTextureReject(reason, format, size);
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_MANIFEST_FALLBACK);
     if (stats != NULL)
@@ -12462,6 +12518,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 #if NDS_TICK_HUD
     gNdsMiscTexUploadTicks += cpuGetTiming() - tickhud_upload_mark;
 #endif
+    /* P2-2p8 Phase 1 slice 1: fighter texture uploads (after GO). */
+    ndsFtrLeanNoteTextureUpload(resident_upload_bytes);
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     ndsRendererHardwareTextureLookupRemove(entry);

@@ -5136,6 +5136,16 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 }
 #endif
 
+/* P2-2p8 Phase 1 slice 1: the lean fighter path, defined in
+ * renderer_fighter_lean.c (#included at the end of this file). */
+#include <nds/renderer_fighter_lean.h>
+#if NDS_FTR_LEAN_LIVE
+static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
+static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp,
+                                   u32 serial_before);
+static void ndsFtrLeanFrameEnd(void);
+#endif
+
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -5198,7 +5208,17 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     m2_capture_start = cpuGetTiming();
 #endif
 #endif
+#if NDS_FTR_LEAN_LIVE
+    {
+        /* P2-2p8 Phase 1 (Phase 0 leftover): FTR's head sub-phase. */
+        u32 lean_head_start = cpuGetTiming();
+
+        ndsFighterDisplayContractCapture(fighter_gobj);
+        gNdsFtrLean.head_ticks += cpuGetTiming() - lean_head_start;
+    }
+#else
     ndsFighterDisplayContractCapture(fighter_gobj);
+#endif
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     gNdsRendererProfileOwners[(u32)owner_id].m2_contract_capture_ticks +=
@@ -5264,7 +5284,31 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
     saved_no_oracle = ndsRendererHardwareNoOracleEnabled();
     ndsRendererHardwareSetNoOracle(TRUE);
 #endif
+#if NDS_FTR_LEAN_LIVE
+    {
+        /* P2-2p8 Phase 1 slice 1 (H1). Route 0 is the plain call below. */
+        u32 lean_route = gNdsFtrLeanRoute;
+        u32 lean_serial = 0u;
+        sb32 lean_drew = FALSE;
+
+        if (lean_route != 0u)
+        {
+            lean_drew = ndsFtrLeanRun((u32)fp->nds_slot, fp, lean_route);
+            lean_serial = ndsFtrLeanPacketUseSerial((u32)fp->nds_slot);
+        }
+        if (lean_drew == FALSE)
+        {
+            ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp,
+                                               NULL, 0u);
+            if (lean_route != 0u)
+            {
+                ndsFtrLeanAfterOldPath((u32)fp->nds_slot, fp, lean_serial);
+            }
+        }
+    }
+#else
     ndsFighterMarioFoxDLAllDrawForSlot((u32)fp->nds_slot, fp, NULL, 0u);
+#endif
 #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsRendererHardwareSetNoOracle(saved_no_oracle);
 #endif
@@ -5333,6 +5377,9 @@ static void ndsFighterDisplayContractSubmitStageFighters(void)
          * rewind. */
         ndsFighterDisplayContractSubmit(fighter_gobj);
     }
+#if NDS_FTR_LEAN_LIVE
+    ndsFtrLeanFrameEnd();
+#endif
     gGCCurrentCamera = saved_camera;
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     NDS_RENDERER_PHASE05_FINISH(
@@ -5378,3 +5425,7 @@ static void ndsFighterMarioFoxRecordDLAllDrawFromDisplayCallback(
                                        sNdsFighterDLAllDrawPixels,
                                        sNdsFighterDLAllDrawPitch);
 }
+
+/* P2-2p8 Phase 1 slice 1: the lean fighter path shares this translation
+ * unit (it reads the draw plan, contract and matrix statics above). */
+#include "renderer_fighter_lean.c"

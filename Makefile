@@ -4298,6 +4298,9 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downforwardback.c \
 	battleship_ftcommon_downstand.c \
 	battleship_ftcommon_dokan.c
+# P2-2p8 Phase 1 slice 1: the lean fighter path's ARM-mode joint kernel
+# (include/nds/renderer_fighter_lean.h). Route word default 0 = today's draw.
+CFILES += nds_ftr_lean_kernel.c
 # Runtime 2 battle path (R2-01). Added only when the flag is on, so the default
 # arm's link input set is unchanged rather than merely equivalent -- an empty
 # translation unit still enters the link and this project has measured

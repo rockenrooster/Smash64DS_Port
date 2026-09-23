@@ -6456,6 +6456,8 @@ static u8 sNdsR2EpochUnlitVertexColor;
  * inside -- that flag is 0 in every shipping config, and both of this
  * variable's users are unconditional. */
 static u32 sNdsR2EpochTintTexture;
+/* P2-2p8 Phase 1 slice 1: the 24-bit colour that chose the tile above. */
+static u32 sNdsR2EpochTintRgb;
 #if NDS_R2_UNLIT_VERTEX_EPOCH
 
 /* Byte-for-byte the expression ndsRendererHardwarePackedResolvedColor uses on
@@ -7086,6 +7088,7 @@ static u32 __attribute__((noinline)) ndsRendererR2ResolveEpochShade(
         tint = ndsRendererR2FighterTintLookup(material_color);
     }
     sNdsR2EpochTintTexture = tint;
+    sNdsR2EpochTintRgb = (material_color >> 8) & 0x00ffffffu;
     if (tint != 0u)
     {
         diffuse = ndsRendererR2MaterialColor15(light1, 0u, 0u, color_modulate);
@@ -8866,6 +8869,10 @@ ndsRendererNativePrepareProductionRunCore(
     {
         ndsRendererR2BindTintTile(stats, tint);
     }
+    /* P2-2p8 Phase 1 slice 1: name the tint bind the prepare records. */
+    NDS_FIGHTER_PACKET_HOOK(
+        (sNdsFighterPacketRecorder.pending_tint = tint,
+         sNdsFighterPacketRecorder.pending_tint_rgb = sNdsR2EpochTintRgb));
     NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordPrepare(
         ((use_texture != FALSE) || (tint != 0u)) ? TRUE : FALSE,
         state->texture_prepare_poly_fmt,
@@ -9687,12 +9694,22 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketNoteTextureEntry(void)
     if (entry == NULL)
     {
         packet->needs_fence = 1u;
+        /* P2-2p8 Phase 1 slice 1: a tint-tile bind is validated per tile by
+         * the lean path; every other cause keeps needing the global fence. */
+        if ((rec->pending_tint == 0u) && (packet->fence_other < 0xffu))
+        {
+            packet->fence_other++;
+        }
         return;
     }
     slot = (u32)(entry - sNdsRendererHardwareTextureCache);
     if (slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
     {
         packet->needs_fence = 1u;
+        if (packet->fence_other < 0xffu)
+        {
+            packet->fence_other++;
+        }
         return;
     }
     for (i = 0u; i < (u32)packet->texture_count; i++)
@@ -9705,6 +9722,10 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketNoteTextureEntry(void)
     if ((u32)packet->texture_count >= NDS_FIGHTER_PACKET_TEXTURE_MAX)
     {
         packet->needs_fence = 1u;
+        if (packet->fence_other < 0xffu)
+        {
+            packet->fence_other++;
+        }
         return;
     }
     packet->textures[packet->texture_count].slot_plus1 = (u16)(slot + 1u);
@@ -10042,6 +10063,13 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
     gNdsFighterPacketFaults++;
 }
 
+/* P2-2p8 Phase 1 slice 1 (defined after ndsRendererFighterPacketRelease). */
+static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet);
+static void ndsFtrLeanOracleCompare(u32 battle_slot,
+                                    const NDSFighterPacket *packet);
+static void ndsFtrLeanOnReplayHit(u32 battle_slot,
+                                  const NDSFighterPacket *packet);
+
 static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
     u32 run_count,
     u32 triangle_count,
@@ -10137,6 +10165,7 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
         gNdsFighterPacketWordsMax = packet->word_count;
     }
     packet->valid = 1u;
+    ndsFtrLeanOnRecorded(packet);
 }
 
 /* The hit predicate, shared by the replay and the adapter's pre-check so the
@@ -10320,6 +10349,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         {
             packet->valid = 0u;
             gNdsFighterPacketDeclines++;
+            gNdsFtrLean.tint_rerecords[battle_slot & 3u]++;
             return 0;
         }
         if (packet->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
@@ -10384,6 +10414,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
                     preamble->light_dir_z);
             }
         }
+        ndsFtrLeanOnReplayHit(battle_slot, packet);
         DC_FlushRange(words, packet->word_count * sizeof(u32));
 
         ndsRendererHardwareEndBatch();
@@ -10488,6 +10519,13 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
      * recorder's count/capacity checks and reported through PacketFaults. */
     region_words = NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS;
     region_base = battle_slot * region_words;
+    /* P2-2p8 Phase 1 slice 1: while the lean route is live the upper half of
+     * the region holds the lean copy, so the recorder owns the lower half. A
+     * packet that no longer fits faults cleanly (gNdsFighterPacketFaults). */
+    if (gNdsFtrLeanRoute != 0u)
+    {
+        region_words /= 2u;
+    }
     for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
     {
         packet->key[i] = key[i];
@@ -10505,6 +10543,9 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     packet->site_count = 0u;
     packet->texgen_group_count = 0u;
     packet->texgen_site_count = 0u;
+    packet->tint_bind_count = 0u;
+    packet->tint_bind_overflow = 0u;
+    packet->fence_other = 0u;
     packet->tint_modulate = inputs[0].config->color_modulate;
     packet->tint_prim_hash = 2166136261u;
     for (i = 0u; i < input_count; i++)
@@ -10525,6 +10566,8 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     rec->fault = 0u;
     rec->current_root = 0u;
     rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
+    rec->pending_tint = 0u;
+    rec->pending_tint_rgb = 0u;
     /* Self-contained stream: forget every GX tracker so the first root
      * re-issues -- and the packet captures -- its matrix mode, texture and
      * polygon attributes. */
@@ -10555,6 +10598,7 @@ void ndsRendererFighterPacketInvalidateAll(void)
     for (i = 0u; i < NDS_FIGHTER_PACKET_SLOTS; i++)
     {
         sNdsFighterPackets[i].valid = 0u;
+        ndsFtrLeanPacketDrop(i);
     }
 }
 
@@ -10572,6 +10616,7 @@ void ndsRendererFighterPacketInvalidateSlot(u32 slot)
     sNdsFighterPacketRecording = 0u;
     sNdsFighterPacketRecorder.packet = NULL;
     sNdsFighterPackets[slot].valid = 0u;
+    ndsFtrLeanPacketDrop(slot);
 }
 
 void ndsRendererFighterPacketRelease(void)
@@ -10588,7 +10633,1011 @@ void ndsRendererFighterPacketRelease(void)
         arena[i] = 0x0001u;
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * P2-2p8 Phase 1 slice 1: the lean fighter path, packet side
+ * (include/nds/renderer_fighter_lean.h). The lean list is a COPY of the packet
+ * the recorder produced for the adopted state, kept in the upper half of the
+ * same player's region: while gNdsFtrLeanRoute != 0 the recorder is capped to
+ * the lower half, so a later old-path re-record can never overwrite it. Every
+ * patch below is the replay's own helper applied to that copy, so the words
+ * the lean path submits are formatted by exactly the code TryReplay uses.
+ * ------------------------------------------------------------------------- */
+#define NDS_FTR_LEAN_REGION_WORDS \
+    (NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS)
+#define NDS_FTR_LEAN_HALF_WORDS (NDS_FTR_LEAN_REGION_WORDS / 2u)
+#define NDS_FTR_LEAN_STRUCT_WORDS \
+    ((((u32)sizeof(NDSFighterPacket)) + 31u) / 32u * 8u)
+#define NDS_FTR_LEAN_WORD_CAPACITY \
+    (NDS_FTR_LEAN_HALF_WORDS - NDS_FTR_LEAN_STRUCT_WORDS)
+_Static_assert((((sizeof(NDSFighterPacket) + 31u) / 32u) * 8u) <
+                   (NDS_FIGHTER_PACKET_ARENA_WORDS /
+                    NDS_FIGHTER_PACKET_SLOTS / 2u),
+               "lean packet copy must fit the upper half of a player region");
+
+typedef struct NDSFtrLeanSlotState
+{
+    u32 valid;
+    u32 use_serial;
+    u32 tint_set_generation;
+    u32 armed;
+    u32 union_mask[4];
+} NDSFtrLeanSlotState;
+
+static NDSFtrLeanSlotState sNdsFtrLeanSlots[NDS_FIGHTER_PACKET_SLOTS];
+
+static u32 *ndsFtrLeanRegionHalf(u32 slot)
+{
+    return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
+        (slot * NDS_FTR_LEAN_REGION_WORDS) + NDS_FTR_LEAN_HALF_WORDS;
+}
+
+static NDSFighterPacket *ndsFtrLeanPacket(u32 slot)
+{
+    return (NDSFighterPacket *)(void *)ndsFtrLeanRegionHalf(slot);
+}
+
+static u32 ndsFtrLeanOwnerIsFighter(void)
+{
+    u32 owner = (u32)sNdsRendererRuntimeOwner;
+
+    return ((owner != (u32)NDS_RENDERER_PROFILE_OWNER_STAGE) &&
+            (owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)) ? TRUE : FALSE;
+}
+
+/* TEXIMAGE_PARAM (entry->params is glGetTexParameter()): texel bytes only. */
+static u32 ndsFtrLeanTextureBytes(u32 params)
+{
+    static const u8 bits_per_texel[8] = { 0u, 8u, 2u, 4u, 8u, 2u, 8u, 16u };
+    u32 width = 8u << ((params >> 20) & 7u);
+    u32 height = 8u << ((params >> 23) & 7u);
+
+    return (width * height * (u32)bits_per_texel[(params >> 26) & 7u]) / 8u;
+}
+
+u32 ndsFtrLeanPacketUseSerial(u32 battle_slot)
+{
+    return (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
+        sNdsFtrLeanSlots[battle_slot].use_serial : 0u;
+}
+
+void ndsFtrLeanPacketDrop(u32 battle_slot)
+{
+    if (battle_slot < NDS_FIGHTER_PACKET_SLOTS)
+    {
+        sNdsFtrLeanSlots[battle_slot].valid = 0u;
+        sNdsFtrLeanSlots[battle_slot].armed = 0u;
+    }
+}
+
+void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed)
+{
+    if (battle_slot < NDS_FIGHTER_PACKET_SLOTS)
+    {
+        sNdsFtrLeanSlots[battle_slot].armed = armed;
+    }
+}
+
+u32 ndsFtrLeanShadowArmed(u32 battle_slot)
+{
+    return (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
+        sNdsFtrLeanSlots[battle_slot].armed : 0u;
+}
+
+u32 ndsFtrLeanPacketAdopt(u32 battle_slot, u32 root_count,
+                          NDSFtrLeanAdoptInfo *info)
+{
+    NDSFighterPacket *src;
+    NDSFighterPacket *dst;
+    u32 *dst_words;
+    u32 tinted = 0u;
+    u32 i;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (info == NULL))
+    {
+        return nNDSFtrLeanAdoptInvalid;
+    }
+    src = &sNdsFighterPackets[battle_slot];
+    if ((src->valid == 0u) || (root_count == 0u) ||
+        (src->root_count != root_count) ||
+        (root_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
+        (src->words != ((u32 *)(void *)&gSYFramebufferSets[0][0][0] +
+                        (battle_slot * NDS_FTR_LEAN_REGION_WORDS))))
+    {
+        return nNDSFtrLeanAdoptInvalid;
+    }
+    /* Recorded before the recorder was capped, or too big for the half. */
+    if ((src->word_count > NDS_FTR_LEAN_HALF_WORDS) ||
+        (src->word_count > NDS_FTR_LEAN_WORD_CAPACITY))
+    {
+        return nNDSFtrLeanAdoptCapacity;
+    }
+    if (src->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+    {
+        return nNDSFtrLeanAdoptProjectionIndex;
+    }
+    for (i = 0u; i < root_count; i++)
+    {
+        const NDSFighterPacketRoot *root = &src->roots[i];
+
+        /* The split layout only: local_index[0] = projection LOAD4x4,
+         * seed_index = world-scaled modelview LOAD4x4, no GX chain. */
+        if ((root->seed_index == NDS_FIGHTER_PACKET_INDEX_NONE) ||
+            (root->local_index[0] == NDS_FIGHTER_PACKET_INDEX_NONE) ||
+            (root->local_count != 0u) ||
+            ((u32)root->seed_index + 16u > src->word_count) ||
+            ((u32)root->local_index[0] + 16u > src->word_count))
+        {
+            return nNDSFtrLeanAdoptShape;
+        }
+    }
+    if (src->texgen_group_count != 0u)
+    {
+        return nNDSFtrLeanAdoptTexgen;
+    }
+    for (i = 0u; i < src->site_count; i++)
+    {
+        if (src->sites[i].reserved[0] != 0u)
+        {
+            tinted++;
+        }
+    }
+    gNdsFtrLean.adopt_tinted_sites = tinted;
+    gNdsFtrLean.adopt_tint_binds = src->tint_bind_count;
+    gNdsFtrLean.adopt_fence_other = src->fence_other;
+    /* A tinted packet is adoptable when every tile bind it made was named at
+     * record time (2.6): the lean patch rewrites those bind words for the live
+     * colour instead of re-recording. An overflowed bind list is not. */
+    if ((src->tint_bind_overflow != 0u) ||
+        ((tinted != 0u) && (src->tint_bind_count == 0u)))
+    {
+        return nNDSFtrLeanAdoptTinted;
+    }
+    for (i = 0u; i < (u32)src->tint_bind_count; i++)
+    {
+        const NDSFighterPacketTintBind *bind = &src->tint_binds[i];
+
+        if (((u32)bind->tex_index >= src->word_count) ||
+            (((u32)bind->pal_index != NDS_FIGHTER_PACKET_INDEX_NONE) &&
+             ((u32)bind->pal_index >= src->word_count)) ||
+            ((u32)bind->root >= root_count))
+        {
+            return nNDSFtrLeanAdoptTinted;
+        }
+    }
+    dst = ndsFtrLeanPacket(battle_slot);
+    dst_words = ndsFtrLeanRegionHalf(battle_slot) + NDS_FTR_LEAN_STRUCT_WORDS;
+    /* Any DMA of the previous copy finished long ago (the frame waits before
+     * glFlush), but the copy must not race a pending replay of THIS region. */
+    ndsFighterPacketDmaWait();
+    memcpy(dst, src, sizeof(*dst));
+    memcpy(dst_words, src->words, src->word_count * sizeof(u32));
+    dst->words = dst_words;
+    dst->word_capacity = NDS_FTR_LEAN_WORD_CAPACITY;
+    /* The copy's tinted sites re-derive like any other site instead of failing
+     * closed (ndsFighterPacketApplyTint): they were recorded as no-material
+     * raw light, so the re-derive is prim-independent, and their colour is the
+     * tile bind ndsFtrLeanPatchTintTiles rewrites. */
+    for (i = 0u; i < (u32)dst->site_count; i++)
+    {
+        dst->sites[i].reserved[0] = 0u;
+    }
+    sNdsFtrLeanSlots[battle_slot].valid = 1u;
+    sNdsFtrLeanSlots[battle_slot].armed = 0u;
+    sNdsFtrLeanSlots[battle_slot].tint_set_generation =
+        gNdsR2FighterTintSetGeneration;
+    for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
+    {
+        info->key[i] = dst->key[i];
+    }
+    info->word_count = dst->word_count;
+    info->root_count = dst->root_count;
+    info->texture_count = dst->texture_count;
+    info->site_count = dst->site_count;
+    info->tinted_sites = tinted;
+    info->needs_fence = dst->needs_fence;
+    return nNDSFtrLeanAdoptOk;
+}
+
+/* The replay's validity half for the copy: texture residency (and the global
+ * fence for a packet that could not name its textures), plus the tint-tile set
+ * that key[3] folds in. Returns 0 or a decline reason. */
+u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
+{
+    NDSFighterPacket *packet;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
+        (sNdsFtrLeanSlots[battle_slot].valid == 0u))
+    {
+        return nNDSFtrLeanDeclineAdoptPending;
+    }
+    packet = ndsFtrLeanPacket(battle_slot);
+    /* A fence whose only causes were tint-tile binds is not needed: the patch
+     * re-reads each tile's resident words (ndsFtrLeanPatchTintTiles). */
+    if ((packet->needs_fence != 0u) &&
+        ((packet->fence_other != 0u) || (packet->tint_bind_count == 0u)) &&
+        (packet->key[5] != (sNdsRendererHardwareTextureKeyGeneration ^
+                            (sNdsRendererRuntimeTextureCacheEvictCount << 16))))
+    {
+        return nNDSFtrLeanDeclineFence;
+    }
+    if (sNdsFtrLeanSlots[battle_slot].tint_set_generation !=
+        gNdsR2FighterTintSetGeneration)
+    {
+        return nNDSFtrLeanDeclineTintSet;
+    }
+    if (ndsFighterPacketTexturesResident(packet) == FALSE)
+    {
+        return nNDSFtrLeanDeclineResidency;
+    }
+    if (touch != 0u)
+    {
+        ndsFighterPacketTouchTextures(packet);
+    }
+    return 0u;
+}
+
+/* 2.6 tile-word patch: each tint bind's TEXIMAGE_PARAM/PAL_FORMAT words for
+ * the live colour, read from the resident tile (the words the live draw's
+ * bind would write). The colour is the root's prim unless the display list
+ * overrode it, exactly as ndsRendererR2ResolveEpochShade sees it. FALSE when
+ * the live draw would bind differently: a white prim draws untinted, a
+ * colour with no resident tile folds (and queues the tile), or the palette
+ * word's presence differs. */
+static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
+                                    const NDSRendererNativeFighterRoot *inputs,
+                                    u32 input_count)
+{
+    u32 touch = (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u;
+    u32 i;
+
+    for (i = 0u; i < (u32)packet->tint_bind_count; i++)
+    {
+        const NDSFighterPacketTintBind *bind = &packet->tint_binds[i];
+        u32 rgb = bind->rgb;
+        u32 teximage = 0u;
+        u32 pltt = 0xffffffffu;
+
+        if ((bind->prim_from_root != 0u) && ((u32)bind->root < input_count))
+        {
+            rgb = (inputs[bind->root].preamble->prim_color >> 8) &
+                0x00ffffffu;
+        }
+        if (rgb == 0x00ffffffu)
+        {
+            gNdsFtrLean.tint_patch_white++;
+            return FALSE;
+        }
+        if (ndsFtrLeanTintTileWords(rgb, touch, &teximage, &pltt) == FALSE)
+        {
+            gNdsFtrLean.tint_patch_miss++;
+            return FALSE;
+        }
+        if ((((u32)bind->pal_index == NDS_FIGHTER_PACKET_INDEX_NONE) ?
+                 1u : 0u) != ((pltt == 0xffffffffu) ? 1u : 0u))
+        {
+            gNdsFtrLean.tint_patch_shape++;
+            return FALSE;
+        }
+        packet->words[bind->tex_index] = teximage;
+        if ((u32)bind->pal_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+        {
+            packet->words[bind->pal_index] = pltt;
+        }
+        gNdsFtrLean.tint_patch_binds++;
+        if (rgb != bind->rgb)
+        {
+            gNdsFtrLean.tint_patch_moved++;
+        }
+    }
+    return TRUE;
+}
+
+/* TryReplay's patch block (tint, per-root split matrices, light), verbatim,
+ * on the copy. FALSE only where TryReplay would discard the packet. */
+s32 ndsFtrLeanPacketPatch(u32 battle_slot,
+                          const NDSRendererNativeFighterRoot *inputs,
+                          u32 input_count)
+{
+    NDSFighterPacket *packet;
+    u32 *words;
+    u32 i;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (inputs == NULL) ||
+        (sNdsFtrLeanSlots[battle_slot].valid == 0u))
+    {
+        return FALSE;
+    }
+    packet = ndsFtrLeanPacket(battle_slot);
+    if (packet->root_count != input_count)
+    {
+        return FALSE;
+    }
+    words = packet->words;
+    if (ndsFtrLeanPatchTintTiles(packet, inputs, input_count) == FALSE)
+    {
+        return FALSE;
+    }
+    if (ndsFighterPacketApplyTint(packet, inputs) == FALSE)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < input_count; i++)
+    {
+        const NDSRendererNativeFighterRoot *input = &inputs[i];
+        const NDSFighterPacketRoot *root = &packet->roots[i];
+
+        ndsFighterPacketStoreMatrix4x4(
+            &words[root->local_index[0]], input->projection_matrix);
+        ndsFighterPacketStoreSplitModelview(
+            &words[root->seed_index], input->modelview_matrix);
+    }
+    if ((packet->light_index != NDS_FIGHTER_PACKET_INDEX_NONE) &&
+        (packet->light_valid != 0u) &&
+        ((u32)packet->light_root < input_count))
+    {
+        const NDSRendererNativeFighterPreamble *preamble =
+            inputs[packet->light_root].preamble;
+
+        if ((preamble->flags &
+             NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u)
+        {
+            words[packet->light_index] = ndsFighterPacketLightWord(
+                preamble->light_dir_x, preamble->light_dir_y,
+                preamble->light_dir_z);
+        }
+    }
+    return TRUE;
+}
+
+/* TryReplay's submit tail, verbatim, on the copy. */
+void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats)
+{
+    NDSFighterPacket *packet;
+    u32 *words;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (stats == NULL) ||
+        (sNdsFtrLeanSlots[battle_slot].valid == 0u))
+    {
+        return;
+    }
+    packet = ndsFtrLeanPacket(battle_slot);
+    words = packet->words;
+    DC_FlushRange(words, packet->word_count * sizeof(u32));
+
+    ndsRendererHardwareEndBatch();
+    glEnable(GL_TEXTURE_2D);
+    glDisable(GL_ALPHA_TEST);
+    glDisable(GL_FOG);
+    if ((DMA_CR(0) & DMA_BUSY) != 0u)
+    {
+        u32 wait_start = cpuGetTiming();
+
+        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        gNdsFtrLean.dma_wait_ticks += cpuGetTiming() - wait_start;
+        gNdsFtrLean.dma_wait_spins++;
+    }
+    DMA_SRC(0) = (u32)(uintptr_t)words;
+    DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
+    DMA_CR(0) = DMA_FIFO | packet->word_count;
+    sNdsFighterPacketDmaPending = 1u;
+
+    ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    sNdsR2GxLastProjection = NULL;
+    sNdsRendererHardwareMatrixMode =
+        NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED;
+    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+
+    if (stats->first_opcode == 0u)
+    {
+        stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
+    }
+    if (packet->raw_triangles != 0u)
+    {
+        ndsRendererFastAccountRawTriangles(
+            stats, packet->raw_triangles, packet->raw_reuse);
+    }
+    if (packet->cross_triangles != 0u)
+    {
+        ndsRendererNativeAccountGXCrossTriangles(
+            stats, packet->cross_triangles, packet->cross_reuse);
+    }
+#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
+    sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
+        packet->batch_begin;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+        packet->batch_reuse;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_end_count +=
+        packet->batch_end;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_count +=
+        packet->prepare_begin;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+        packet->prepare_reuse;
+    sNdsRendererRuntimeFrameSummary.matrix_load_count +=
+        packet->matrix_loads;
+    sNdsRendererRuntimeFrameSummary.texture_binds +=
+        packet->texture_binds;
+#endif
+    sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
+    stats->triangle_count += packet->triangle_count;
+    sNdsRendererFastRunCount += packet->run_count;
+    sNdsRendererFastTriangleCount += packet->triangle_count;
+    if ((u32)sNdsRendererRuntimeOwner <
+        (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+    {
+        sNdsRendererFastOwnerTriangleCount[
+            (u32)sNdsRendererRuntimeOwner] += packet->triangle_count;
+    }
+}
+
+/* Oracle, TryReplay hit side: the old packet has just been patched for this
+ * frame; the lean copy was patched by the shadow a moment earlier from the
+ * same inputs. Every word must agree (route 2); route 3 reports the LSB
+ * spread of the matrix classes instead. */
+static u32 ndsFtrLeanOracleClass(const NDSFighterPacket *packet, u32 index,
+                                 u32 *matrix_offset)
+{
+    u32 i;
+
+    for (i = 0u; i < packet->root_count; i++)
+    {
+        const NDSFighterPacketRoot *root = &packet->roots[i];
+
+        if ((index >= root->local_index[0]) &&
+            (index < (u32)root->local_index[0] + 16u))
+        {
+            *matrix_offset = index - root->local_index[0];
+            return 0u;
+        }
+        if ((index >= root->seed_index) &&
+            (index < (u32)root->seed_index + 16u))
+        {
+            *matrix_offset = index - root->seed_index;
+            return (*matrix_offset >= 12u) ? 2u : 1u;
+        }
+    }
+    for (i = 0u; i < packet->site_count; i++)
+    {
+        if (packet->sites[i].index == index)
+        {
+            return 3u;
+        }
+    }
+    if (index == packet->light_index)
+    {
+        return 4u;
+    }
+    for (i = 0u; i < (u32)packet->tint_bind_count; i++)
+    {
+        if ((index == packet->tint_binds[i].tex_index) ||
+            (index == packet->tint_binds[i].pal_index))
+        {
+            return 6u;
+        }
+    }
+    return 5u;
+}
+
+/* The lean copy validates its tint tiles per draw, so a fence that only tint
+ * binds raised is not part of its key (ndsFtrLeanPacketGuard). */
+static u32 ndsFtrLeanFenceIsTintOnly(const NDSFighterPacket *lean)
+{
+    return ((lean->needs_fence != 0u) && (lean->fence_other == 0u) &&
+            (lean->tint_bind_count != 0u) &&
+            (lean->tint_bind_overflow == 0u)) ? TRUE : FALSE;
+}
+
+/* Key words that moved between the lean copy and the old path's packet; a
+ * tint-only fence re-key is counted apart (not a hole). */
+static u32 ndsFtrLeanOracleKeyMoved(const NDSFighterPacket *packet,
+                                    const NDSFighterPacket *lean)
+{
+    u32 moved = FALSE;
+    u32 i;
+
+    for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
+    {
+        if (packet->key[i] != lean->key[i])
+        {
+            if ((i == 5u) && (ndsFtrLeanFenceIsTintOnly(lean) != FALSE))
+            {
+                gNdsFtrLean.oracle_fence_rekey++;
+                continue;
+            }
+            gNdsFtrLean.oracle_key_moved[i]++;
+            moved = TRUE;
+        }
+    }
+    return moved;
+}
+
+static void ndsFtrLeanOracleCompare(u32 battle_slot,
+                                    const NDSFighterPacket *packet)
+{
+    const NDSFighterPacket *lean;
+    u32 moved = FALSE;
+    u32 i;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
+        (sNdsFtrLeanSlots[battle_slot].armed == 0u))
+    {
+        return;
+    }
+    sNdsFtrLeanSlots[battle_slot].armed = 0u;
+    lean = ndsFtrLeanPacket(battle_slot);
+    gNdsFtrLean.oracle_runs++;
+    if ((gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_ORACLE_EXACT) &&
+        (gNdsFtrLeanOracleSourceOk == 0u))
+    {
+        gNdsFtrLean.oracle_source_miss++;
+        return;
+    }
+    moved = ndsFtrLeanOracleKeyMoved(packet, lean);
+    if (packet->root_count != lean->root_count)
+    {
+        gNdsFtrLean.oracle_key_moved[6]++;
+        moved = TRUE;
+    }
+    if (packet->word_count != lean->word_count)
+    {
+        gNdsFtrLean.oracle_key_moved[7]++;
+        moved = TRUE;
+    }
+    if (moved != FALSE)
+    {
+        return;
+    }
+    gNdsFtrLean.oracle_words += packet->word_count;
+    for (i = 0u; i < packet->word_count; i++)
+    {
+        u32 want = packet->words[i];
+        u32 got = lean->words[i];
+
+        if (want != got)
+        {
+            u32 offset = 0u;
+            u32 klass = ndsFtrLeanOracleClass(packet, i, &offset);
+
+            gNdsFtrLean.oracle_mismatch[klass]++;
+            if (klass <= 2u)
+            {
+                s32 delta = (s32)want - (s32)got;
+                u32 magnitude = (delta < 0) ? (u32)-delta : (u32)delta;
+
+                if (magnitude > gNdsFtrLean.oracle_max_lsb[klass])
+                {
+                    gNdsFtrLean.oracle_max_lsb[klass] = magnitude;
+                }
+            }
+        }
+    }
+}
+
+static void ndsFtrLeanOnReplayHit(u32 battle_slot,
+                                  const NDSFighterPacket *packet)
+{
+    if (battle_slot >= NDS_FIGHTER_PACKET_SLOTS)
+    {
+        return;
+    }
+    sNdsFtrLeanSlots[battle_slot].use_serial++;
+    ndsFtrLeanOracleCompare(battle_slot, packet);
+}
+
+/* Census of the texture cache; also the admission's print-first number. */
+static void ndsFtrLeanCensusCache(u32 *out)
+{
+    u32 live = 0u;
+    u32 free_slots = 0u;
+    u32 pinned = 0u;
+    u32 statics = 0u;
+    u32 this_frame = 0u;
+    u32 evictable = 0u;
+    u32 live_bytes = 0u;
+    u32 i;
+
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        const NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+
+        if (entry->name == 0)
+        {
+            free_slots++;
+            continue;
+        }
+        live++;
+        live_bytes += ndsFtrLeanTextureBytes(entry->params);
+        if (entry->static_record_plus1 != 0u)
+        {
+            statics++;
+        }
+        if (entry->pinned != 0u)
+        {
+            pinned++;
+        }
+        else if (entry->last_used_frame ==
+                 (sNdsRendererHardwareFrameSerial + 1u))
+        {
+            this_frame++;
+        }
+        else
+        {
+            evictable++;
+        }
+    }
+    out[0] = live;
+    out[1] = free_slots;
+    out[2] = pinned;
+    out[3] = statics;
+    out[4] = this_frame;
+    out[5] = evictable;
+    out[6] = live_bytes;
+}
+
+void ndsFtrLeanTextureCensus(void)
+{
+    u32 census[7];
+    u32 fighter_bytes = 0u;
+    u32 slot;
+
+    ndsFtrLeanCensusCache(census);
+    gNdsFtrLean.census_live = census[0];
+    gNdsFtrLean.census_free = census[1];
+    gNdsFtrLean.census_pinned = census[2];
+    gNdsFtrLean.census_static = census[3];
+    gNdsFtrLean.census_live_bytes = census[6];
+    for (slot = 0u; slot < NDS_FIGHTER_PACKET_SLOTS; slot++)
+    {
+        u32 count = 0u;
+        u32 bytes = 0u;
+        u32 i;
+
+        for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+        {
+            if ((sNdsFtrLeanSlots[slot].union_mask[i >> 5] &
+                 (1u << (i & 31u))) != 0u)
+            {
+                count++;
+                if (sNdsRendererHardwareTextureCache[i].name != 0)
+                {
+                    bytes += ndsFtrLeanTextureBytes(
+                        sNdsRendererHardwareTextureCache[i].params);
+                }
+            }
+        }
+        gNdsFtrLean.union_textures[slot] = count;
+        gNdsFtrLean.union_bytes[slot] = bytes;
+        fighter_bytes += bytes;
+    }
+    gNdsFtrLean.census_fighter_bytes = fighter_bytes;
+}
+
+void ndsFtrLeanNoteGo(u32 frame)
+{
+    if (gNdsFtrLean.go_frame == 0u)
+    {
+        gNdsFtrLean.go_frame = (frame != 0u) ? frame : 1u;
+        ndsFtrLeanTextureCensus();
+    }
+}
+
+/* Every recorded fighter packet: texture union census, admission pinning,
+ * the use serial the adapter adopts on, and the oracle's re-record check. */
+/* Each recorded DIF_AMB word against ApplyTint's re-derivation of its own
+ * recorded inputs at the packet's tint_modulate. A difference means the live
+ * shade depended on something the site does not carry, so any later replay
+ * re-derive (prim or modulate move) writes a different colour than a fresh
+ * record would. Diagnostic only. */
+static void ndsFtrLeanShadeSelfCheck(const NDSFighterPacket *packet, u32 slot)
+{
+    u32 bad = 0u;
+    u32 i;
+
+    for (i = 0u; i < packet->site_count; i++)
+    {
+        const NDSFighterPacketShadeSite *site = &packet->sites[i];
+        u32 diffuse = ndsRendererR2MaterialColor15(
+            site->light_color_1, site->material_color, site->use_material,
+            packet->tint_modulate);
+        u32 ambient = ndsRendererR2MaterialColor15(
+            site->light_color_2, site->material_color, site->use_material,
+            packet->tint_modulate);
+        u32 derived;
+        u32 recorded;
+
+        diffuse = ndsRendererR2ClampDiffuseToMaterial(
+            diffuse, ambient, site->material_color, site->use_material,
+            packet->tint_modulate);
+        derived = diffuse | (ambient << 16);
+        recorded = packet->words[site->index];
+        gNdsFtrLean.record_shade_checked++;
+        if (recorded == derived)
+        {
+            continue;
+        }
+        bad++;
+        gNdsFtrLean.record_shade_inconsistent++;
+        if (gNdsFtrLean.record_shade_witness_count < 2u)
+        {
+            u32 *w = gNdsFtrLean.record_shade_witness[
+                gNdsFtrLean.record_shade_witness_count++];
+
+            w[0] = (slot << 24) | (u32)site->index;
+            w[1] = recorded;
+            w[2] = derived;
+            w[3] = site->light_color_1;
+            w[4] = site->light_color_2;
+            w[5] = site->material_color;
+            w[6] = (u32)site->use_material |
+                ((u32)site->prim_from_root << 8) |
+                ((u32)site->reserved[0] << 16);
+            w[7] = packet->tint_modulate;
+            w[8] = sNdsRendererHardwareFrameSerial;
+        }
+    }
+    if (bad != 0u)
+    {
+        gNdsFtrLean.record_shade_inconsistent_packets++;
+    }
+}
+
+static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet)
+{
+    u32 slot;
+    u32 i;
+
+    if ((packet < &sNdsFighterPackets[0]) ||
+        (packet >= &sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS]))
+    {
+        return;
+    }
+    slot = (u32)(packet - &sNdsFighterPackets[0]);
+    sNdsFtrLeanSlots[slot].use_serial++;
+    /* Oracle routes only, so route 1's A/B against route 0 carries no
+     * diagnostic cost. */
+    if (gNdsFtrLeanRoute >= NDS_FTR_LEAN_ROUTE_ORACLE_EXACT)
+    {
+        ndsFtrLeanShadeSelfCheck(packet, slot);
+    }
+    for (i = 0u; i < (u32)packet->texture_count; i++)
+    {
+        u32 cache_slot = (u32)packet->textures[i].slot_plus1 - 1u;
+        NDSRendererHardwareTextureCacheEntry *entry;
+
+        if (cache_slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
+        {
+            continue;
+        }
+        sNdsFtrLeanSlots[slot].union_mask[cache_slot >> 5] |=
+            1u << (cache_slot & 31u);
+        entry = &sNdsRendererHardwareTextureCache[cache_slot];
+        if ((gNdsFtrLeanAdmit != 0u) && (entry->name != 0) &&
+            (entry->pinned == 0u))
+        {
+            entry->pinned = 1u;
+            gNdsFtrLean.admit_pinned++;
+            gNdsFtrLean.admit_pinned_bytes +=
+                ndsFtrLeanTextureBytes(entry->params);
+        }
+    }
+    if (sNdsFtrLeanSlots[slot].armed != 0u)
+    {
+        const NDSFighterPacket *lean = ndsFtrLeanPacket(slot);
+
+        u32 outside = 0u;
+
+        sNdsFtrLeanSlots[slot].armed = 0u;
+        (void)ndsFtrLeanOracleKeyMoved(packet, lean);
+        /* 6.4 soundness: the old path re-recorded while the lean copy hit.
+         * Words at patch sites may legitimately differ (the live record's
+         * formula vs the replay's); a word OUTSIDE every patch site is a
+         * hole in the lean path's classification. */
+        if ((packet->word_count != lean->word_count) ||
+            (packet->root_count != lean->root_count))
+        {
+            gNdsFtrLean.oracle_record_diff[7]++;
+            outside = 1u;
+        }
+        else
+        {
+            for (i = 0u; i < packet->word_count; i++)
+            {
+                if (packet->words[i] != lean->words[i])
+                {
+                    u32 offset = 0u;
+                    u32 klass = ndsFtrLeanOracleClass(lean, i, &offset);
+
+                    gNdsFtrLean.oracle_record_diff[klass]++;
+                    if (klass == 5u)
+                    {
+                        outside++;
+                    }
+                    if ((klass == 3u) &&
+                        (gNdsFtrLean.oracle_shade_witness_count < 4u))
+                    {
+                        u32 *w = gNdsFtrLean.oracle_shade_witness[
+                            gNdsFtrLean.oracle_shade_witness_count++];
+                        u32 j;
+
+                        w[0] = sNdsRendererHardwareFrameSerial;
+                        w[1] = (slot << 24) | (i & 0xffffu);
+                        w[11] = packet->tint_modulate;
+                        w[2] = packet->words[i];
+                        w[3] = lean->words[i];
+                        w[7] =
+                            ((packet->tint_modulate == lean->tint_modulate) ?
+                                 (1u << 24) : 0u) |
+                            ((packet->tint_prim_hash == lean->tint_prim_hash) ?
+                                 (1u << 25) : 0u);
+                        for (j = 0u; j < lean->site_count; j++)
+                        {
+                            const NDSFighterPacketShadeSite *site =
+                                &lean->sites[j];
+
+                            if (site->index == i)
+                            {
+                                w[1] |= ((u32)site->root & 0xffu) << 16;
+                                w[4] = site->material_color;
+                                w[5] = site->light_color_1;
+                                w[6] = site->light_color_2;
+                                w[7] |= (u32)site->use_material |
+                                    ((u32)site->prim_from_root << 8);
+                                break;
+                            }
+                        }
+                        for (j = 0u; j < packet->site_count; j++)
+                        {
+                            if (packet->sites[j].index == i)
+                            {
+                                w[8] = packet->sites[j].material_color;
+                                w[9] = packet->sites[j].light_color_1;
+                                w[10] = packet->sites[j].light_color_2;
+                                w[7] |= (u32)packet->sites[j].reserved[0]
+                                    << 16;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        gNdsFtrLean.oracle_record_under_hit[(outside != 0u) ? 1u : 0u]++;
+    }
+}
+
+/* Texture reject witness: the first fighter-owned reject since boot, with
+ * the cache census at that instant (the P0 entry failure's root cause). */
+void ndsFtrLeanNoteTextureReject(u32 reason, u32 format, u32 size)
+{
+    if (ndsFtrLeanOwnerIsFighter() == FALSE)
+    {
+        return;
+    }
+    gNdsFtrLean.reject_count++;
+    gNdsFtrLean.reject_mask |= reason;
+    if (gNdsFtrLean.reject_first[0] == 0u)
+    {
+        u32 census[7];
+
+        ndsFtrLeanCensusCache(census);
+        gNdsFtrLean.reject_first[0] = reason;
+        gNdsFtrLean.reject_first[1] = format;
+        gNdsFtrLean.reject_first[2] = size;
+        gNdsFtrLean.reject_first[3] = (u32)sNdsRendererRuntimeOwner;
+        gNdsFtrLean.reject_first[4] = gNdsRendererProfileFrameCount;
+        gNdsFtrLean.reject_first[5] = gNdsFtrLean.go_frame;
+        gNdsFtrLean.reject_first[6] = census[0];
+        gNdsFtrLean.reject_first[7] = census[1];
+        gNdsFtrLean.reject_first[8] = census[2];
+        gNdsFtrLean.reject_first[9] = census[4];
+        gNdsFtrLean.reject_first[10] = census[5];
+        gNdsFtrLean.reject_first[11] = census[6];
+    }
+}
+
+void ndsFtrLeanNoteTextureUpload(u32 bytes)
+{
+    if (ndsFtrLeanOwnerIsFighter() == FALSE)
+    {
+        return;
+    }
+    gNdsFtrLean.fighter_uploads++;
+    if (gNdsFtrLean.go_frame != 0u)
+    {
+        gNdsFtrLean.fighter_uploads_after_go++;
+        gNdsFtrLean.fighter_upload_bytes_after_go += bytes;
+    }
+}
+
+void ndsFtrLeanCountersPublish(void)
+{
+    DC_FlushRange(&gNdsFtrLean, sizeof(gNdsFtrLean));
+}
 #else
+u32 ndsFtrLeanPacketUseSerial(u32 battle_slot)
+{
+    (void)battle_slot;
+    return 0u;
+}
+
+u32 ndsFtrLeanPacketAdopt(u32 battle_slot, u32 root_count,
+                          NDSFtrLeanAdoptInfo *info)
+{
+    (void)battle_slot;
+    (void)root_count;
+    (void)info;
+    return nNDSFtrLeanAdoptInvalid;
+}
+
+void ndsFtrLeanPacketDrop(u32 battle_slot)
+{
+    (void)battle_slot;
+}
+
+u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
+{
+    (void)battle_slot;
+    (void)touch;
+    return nNDSFtrLeanDeclineAdoptPending;
+}
+
+s32 ndsFtrLeanPacketPatch(u32 battle_slot,
+                          const NDSRendererNativeFighterRoot *inputs,
+                          u32 input_count)
+{
+    (void)battle_slot;
+    (void)inputs;
+    (void)input_count;
+    return FALSE;
+}
+
+void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats)
+{
+    (void)battle_slot;
+    (void)stats;
+}
+
+void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed)
+{
+    (void)battle_slot;
+    (void)armed;
+}
+
+u32 ndsFtrLeanShadowArmed(u32 battle_slot)
+{
+    (void)battle_slot;
+    return 0u;
+}
+
+void ndsFtrLeanTextureCensus(void)
+{
+}
+
+void ndsFtrLeanNoteGo(u32 frame)
+{
+    (void)frame;
+}
+
+void ndsFtrLeanNoteTextureReject(u32 reason, u32 format, u32 size)
+{
+    (void)reason;
+    (void)format;
+    (void)size;
+}
+
+void ndsFtrLeanNoteTextureUpload(u32 bytes)
+{
+    (void)bytes;
+}
+
+void ndsFtrLeanCountersPublish(void)
+{
+}
+
 void ndsRendererFighterPacketDmaWait(void)
 {
 }

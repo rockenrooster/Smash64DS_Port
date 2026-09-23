@@ -1,0 +1,10 @@
+{
+ "control": "route0-rows.csv",
+ "candidate": "route3-rows.csv",
+ "controlFrames": 1972,
+ "candidateFrames": 1972,
+ "sharedFrames": 1972,
+ "zeroDigestFrames": 0,
+ "diverged": 0,
+ "firstDivergence": null
+}

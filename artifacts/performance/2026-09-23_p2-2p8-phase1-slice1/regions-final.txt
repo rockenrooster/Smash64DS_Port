@@ -1,0 +1,7 @@
+mean FTR / MTEX (ticks per frame) by frame range
+frames    2- 195 n= 194  p0-nocam    379735/ 13395  route0    380164/ 13532  route1    371589/ 13552  route2    399069/ 13518  route3    395812/ 13531  admit1    326048/  3752
+frames  196- 797 n= 602  p0-nocam    458519/   580  route0    459508/   584  route1    457512/   579  route2    543298/   579  route3    530165/   582  admit1    455351/   512
+frames  798-1043 n= 246  p0-nocam   2631367/ 25832  route0   2608838/ 25536  route1   2347908/ 25525  route2   2716015/ 25566  route3   2700254/ 25560  admit1   1561893/    57
+frames 1044-1974 n= 930  p0-nocam    450845/  1918  route0    451185/  1949  route1    450864/  1947  route2    534621/  1948  route3    519413/  1950  admit1    680114/    15
+route1-route0 paired FTR: mean -34155 median -3424
+route1-route0 paired WORK-H: mean -34816 median -3712

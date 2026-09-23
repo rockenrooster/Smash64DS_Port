@@ -18,6 +18,7 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_task49_gx_differ.h>
+#include <nds/renderer_fighter_lean.h>
 #if NDS_P2_LINK
 const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #endif
@@ -3405,6 +3406,23 @@ typedef struct NDSFighterPacketTexgenSite
  * per texture; the packet words and BattleShip draw semantics are unchanged. */
 #define NDS_FIGHTER_PACKET_TEXTURE_MAX 24u
 
+/* P2-2p8 Phase 1 slice 1: one recorded tint-tile bind (r49: an untextured,
+ * material-coloured, non-white-prim run binds an 8x8 tile of its prim). The
+ * packet words are unchanged; this only names where the tile's
+ * TEXIMAGE_PARAM / PLTT_BASE parameters sit and which colour chose the tile,
+ * so the lean path can re-point them instead of re-recording. */
+#define NDS_FIGHTER_PACKET_TINT_BIND_MAX 16u
+typedef struct NDSFighterPacketTintBind
+{
+    u16 tex_index;
+    u16 pal_index;
+    u8 root;
+    u8 prim_from_root;
+    u8 reserved[2];
+    u32 rgb;
+    u32 name;
+} NDSFighterPacketTintBind;
+
 typedef struct NDSFighterPacket
 {
     u32 valid;
@@ -3453,6 +3471,13 @@ typedef struct NDSFighterPacket
         texgen_groups[NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX];
     NDSFighterPacketTexgenSite
         texgen_sites[NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX];
+    /* P2-2p8 Phase 1 slice 1 (metadata only). fence_other counts the
+     * needs_fence causes that are NOT tint-tile binds. */
+    u8 tint_bind_count;
+    u8 tint_bind_overflow;
+    u8 fence_other;
+    u8 tint_reserved;
+    NDSFighterPacketTintBind tint_binds[NDS_FIGHTER_PACKET_TINT_BIND_MAX];
 } NDSFighterPacket;
 
 typedef struct NDSFighterPacketRecorder
@@ -3472,6 +3497,9 @@ typedef struct NDSFighterPacketRecorder
     u32 prim_overridden;
     /* Current run's live texgen descriptor, or NONE for ordinary UVs. */
     u32 texgen_group;
+    /* P2-2p8 Phase 1 slice 1: the tint tile the next prepare binds, if any. */
+    u32 pending_tint;
+    u32 pending_tint_rgb;
 } NDSFighterPacketRecorder;
 
 static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
@@ -3514,7 +3542,16 @@ static inline void ndsFighterPacketDmaWait(void)
 {
     if (sNdsFighterPacketDmaPending != 0u)
     {
-        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+        /* P2-2p8 Phase 1 slice 1 (Phase 0 leftover): the next FIFO writer's
+         * DMA0 wait, counted only when it actually spins. */
+        if ((DMA_CR(0) & DMA_BUSY) != 0u)
+        {
+            u32 wait_start = cpuGetTiming();
+
+            while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
+            gNdsFtrLean.packet_dma_waits++;
+            gNdsFtrLean.packet_dma_wait_ticks += cpuGetTiming() - wait_start;
+        }
         sNdsFighterPacketDmaPending = 0u;
     }
 }
@@ -3648,14 +3685,54 @@ static void ndsFighterPacketStoreMatrix4x3(
  * exactly the bind the production path just performed. */
 static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void)
 {
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
     int palette_format = -1;
+    u32 tex_index;
+    u32 pal_index = NDS_FIGHTER_PACKET_INDEX_NONE;
 
-    ndsFighterPacketCmd1(REG2ID(GFX_TEX_FORMAT), glGetTexParameter());
+    /* ndsFighterPacketCmd1, spelled out so the parameter indices are kept
+     * (P2-2p8 Phase 1 slice 1 tint binds); the words are unchanged. */
+    tex_index = ndsFighterPacketCmd(REG2ID(GFX_TEX_FORMAT), 1u);
+    if (rec->fault == 0u)
+    {
+        rec->words[tex_index] = (u32)glGetTexParameter();
+    }
     glGetColorTableParameterEXT(
         GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
     if (palette_format >= 0)
     {
-        ndsFighterPacketCmd1(REG2ID(GFX_PAL_FORMAT), (u32)palette_format);
+        pal_index = ndsFighterPacketCmd(REG2ID(GFX_PAL_FORMAT), 1u);
+        if (rec->fault == 0u)
+        {
+            rec->words[pal_index] = (u32)palette_format;
+        }
+    }
+    if ((rec->pending_tint != 0u) && (rec->fault == 0u) &&
+        (rec->packet != NULL))
+    {
+        NDSFighterPacket *packet = rec->packet;
+
+        if (((u32)packet->tint_bind_count >=
+             NDS_FIGHTER_PACKET_TINT_BIND_MAX) ||
+            (tex_index >= NDS_FIGHTER_PACKET_INDEX_NONE) ||
+            (rec->current_root >= NDS_FIGHTER_PACKET_ROOT_MAX))
+        {
+            packet->tint_bind_overflow = 1u;
+        }
+        else
+        {
+            NDSFighterPacketTintBind *bind =
+                &packet->tint_binds[packet->tint_bind_count++];
+
+            bind->tex_index = (u16)tex_index;
+            bind->pal_index = (u16)pal_index;
+            bind->root = (u8)rec->current_root;
+            bind->prim_from_root = (rec->prim_overridden == 0u) ? 1u : 0u;
+            bind->reserved[0] = 0u;
+            bind->reserved[1] = 0u;
+            bind->rgb = rec->pending_tint_rgb;
+            bind->name = rec->pending_tint;
+        }
     }
 }
 
@@ -3722,6 +3799,7 @@ ndsFighterPacketRecordPrepare(
     }
     ndsFighterPacketCmd1(REG2ID(GFX_POLY_FORMAT), poly_fmt);
     ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
+    rec->pending_tint = 0u;
 }
 
 static void NDS_FIGHTER_PACKET_COLD_CODE
