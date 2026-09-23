@@ -1,0 +1,6 @@
+format=melonDS-arm9-retail-profile-v2
+instructions=172979504
+cycles=416781000
+program_counters=2873809
+regions=49
+timestamp_discontinuities=0

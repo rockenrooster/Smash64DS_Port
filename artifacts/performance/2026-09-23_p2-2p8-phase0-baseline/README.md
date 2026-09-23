@@ -49,6 +49,16 @@ binding. MISC split at P50: effects 55K, particles 49K, weapons ~0, texture uplo
    tile and re-records all four fighters' packets every frame. Deterministic:
    both controls and nocam show the identical episode. Phase 1's lean path must
    patch tint words in place instead of re-keying packets.
+
+   **Profile of the episode** (`profile-thrash/`, per-PC, frames 820-868, work
+   ~4.0M per frame): `ndsRendererHardwareResolveOrBindTexture` **935,578** and
+   `ndsRendererHardwareTextureColor` **226,072** ticks per frame -- textures are
+   re-resolved and re-converted on the CPU every frame, not only the 8x8 tint
+   tile -- then packet re-production (`ndsFighterPacketCmd` 141K,
+   `ndsRendererExecuteNativeFighterOwnerProduction` 90K,
+   `ndsRendererNativePrepareProductionRun` 48K, emit/shade/corner ~140K) and
+   `ndsRelocNativeAssetAddress` + `ndsPreviewFileOffset` 88K. The texture cache
+   churns because the tint key changes; the packets follow it.
 2. **Native failures at match start.** First cause: Link, status 225 =
    `nFTLinkStatusAppearL` (entry), `use_texture == FALSE` at
    `nds_renderer_native_common.c:8758` (texture could not be resolved/bound):
