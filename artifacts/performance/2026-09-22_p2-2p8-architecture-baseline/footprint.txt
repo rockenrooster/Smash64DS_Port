@@ -1,0 +1,26 @@
+distinct functions per frame: median 675 max 882
+code bytes of functions touched per frame: median 284182 max 352234
+distinct PCs (instructions) per frame: median 47646  => ~bytes (thumb 2B avg ~2.4) 114350.4
+
+IDLE             CPI 55907.84
+RENDER_STAGE     CPI 3.10
+RENDER_COMMON    CPI 2.35
+RENDER_FIGHTER   CPI 4.45
+SOFTFLOAT        CPI 1.22
+MAP_COLLISION    CPI 2.85
+FT_LOGIC         CPI 5.83
+POSE             CPI 2.46
+OTHER            CPI 2.86
+MEM              CPI 3.51
+ANIM             CPI 3.03
+CAMERA           CPI 4.27
+RENDER_EFFECT    CPI 4.25
+SYSLIB           CPI 2.87
+INSTRUMENT       CPI 1.99
+OBJMAN           CPI 6.52
+RELOC            CPI 2.97
+INTHELPER        CPI 2.06
+FT_AI            CPI 6.10
+PARTICLE         CPI 5.78
+HUD_LOGIC        CPI 4.74
+MATHLIB          CPI 3.40

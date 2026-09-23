@@ -50,8 +50,15 @@ STG 385,088; heap low-water 111,200 B; arena 1,351,424 B; native 0/0; slips 0.
 The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
-Focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
-09-22 -- next focus is the owner's call.** Every `docs/BUGS.md` row the owner
+Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS at P99 -- architecture.**
+Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (keep the rules, replace the
+machinery; pillars A1-A10, phases 0-7). Phase: **DESIGNED, owner decisions
+D1-D7 open.** Next action: Phase 0 (instrument out of the gate, MISC/SRC-other
+splits, shipping-config heap census, motion seen-bitmap, replay digest, camera
+matrix per tick). Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
+
+Previous focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
+09-22.** Every `docs/BUGS.md` row the owner
 opened is either removed by the owner (fixed through r54) or owner-DEFERRED:
 C1 CSS hover-to-preview delay (profile + resume plan: `p2/BUG_NOTES.md` "C1")
 and S3 Saffron door. Only a descriptionless "-VS options" line remains.
