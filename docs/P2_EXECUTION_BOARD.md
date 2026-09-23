@@ -50,12 +50,15 @@ STG 385,088; heap low-water 111,200 B; arena 1,351,424 B; native 0/0; slips 0.
 The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
-Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS at P99 -- architecture.**
+Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS -- architecture.**
 Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (keep the rules, replace the
-machinery; pillars A1-A10, phases 0-7). Phase: **DESIGNED, owner decisions
-D1-D7 open.** Next action: Phase 0 (instrument out of the gate, MISC/SRC-other
-splits, shipping-config heap census, motion seen-bitmap, replay digest, camera
-matrix per tick). Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
+machinery; pillars A1-A10, phases 0-7). Owner rulings D1-D7 recorded in its
+section 8: gate stays P95; renderer replaced outright; tolerance classes approved,
+body-hurtbox hold kept; no run-ahead; visual reserve case by case; every motion
+resident via a new compact format (N02.04 stands); custom ARM7 audio. Phase:
+**READY, Phase 0 next** (instrument out of the gate, MISC/SRC-other splits,
+shipping-config heap census, compact-motion-format host experiment, replay
+digest, camera matrix per tick). Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
 
 Previous focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
 09-22.** Every `docs/BUGS.md` row the owner

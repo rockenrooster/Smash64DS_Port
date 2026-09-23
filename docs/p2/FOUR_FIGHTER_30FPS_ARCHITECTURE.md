@@ -1,9 +1,10 @@
 # Four-Fighter 30 FPS Architecture (P2-2p8)
 
-Owner request, 2026-09-22: any four fighters on any stage at **30 FPS P99**, using
-the compromise list in the owner's message of that date ("Change the
-implementation as aggressively as necessary. Preserve the game."). This document
-is the architecture that request needs. It is a design, not a measurement. Every
+Owner request, 2026-09-22: any four fighters on any stage at a stable **30 FPS**,
+using the compromise list in the owner's message of that date ("Change the
+implementation as aggressively as necessary. Preserve the game."). The owner's
+rulings on this design (D1-D7, same day) are in section 8; the gate stays P95.
+This document is the architecture that request needs. It is a design, not a measurement. Every
 saving below is an ESTIMATE until its phase gate measures it on the four-CPU
 stress run. The measured basis is
 `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
@@ -43,19 +44,22 @@ becomes a compiled, DS-native runtime:
 | # | Pillar | Replaces | Main effect (ESTIMATE) |
 |---|---|---|---|
 | A1 | Compiled render: host-built per-instance GX lists patched at matrix/tint sites, one DMA per program, native per-frame draw list | display-tree walks, packet record/replay/production, CPU stage vertex emission, per-frame render caches | render 966K -> ~255K (P50) |
-| A2 | Tiered residency: resident motion hot set, ARM7-streamed audio, extent-map cold reads | on-demand NitroFS/FatFs reads inside gameplay frames | removes I/O from P99 |
+| A2 | Full motion residency in a new compact format (D6); ARM7-streamed audio (D7) | on-demand NitroFS/FatFs reads inside gameplay frames | removes I/O from the tail |
 | A3 | Shared pose, per-consumer composition; native clips | figatree interpretation | pose/anim -40..-80K |
 | A4 | Events cost O(1): pre-bound motions, pre-resolved event operands, pooled effects | per-status lookup/parse/bind/alloc/re-production | SPRM P99 311K -> <=40K |
 | A5 | Batched fixed-point hurtbox kernel (guarded, shadow-proven); stage-compiled map collision; exact AI perception memos | per-victim soft-float chains, per-query collision overhead | SHDT+SCAT P99 512K -> ~100K |
-| A6 | Rates: 60 Hz only for gameplay truth; optional one-tick run-ahead | 60 Hz visual work | smooths remaining spikes |
+| A6 | Rates: 60 Hz only for gameplay truth (no run-ahead, D4) | 60 Hz visual work | camera matrices, HUD, particles |
 | A7 | Memory: overlays, render-code retirement, per-match TCM | front-end code resident in battle; generic code in ITCM | funds A2; cuts stall |
 | A8 | ARM7 owns BGM streaming and FGM voices | ARM9 refills, timer IRQ, synchronous SFX reads | AUD spikes gone |
 | A9 | An instrument that does not move the gate | tick-HUD refresh inside measured frames | honest P99 |
 | A10 | Visual reserve, used only on a measured residual | — | LOD tiers, 15 Hz effects |
 
-**Design target** on the measured roster: **WORK P50 ~0.7M, P99 <= ~1.0M**. The
-margin at P99 is thin (~120K) and depends on two unsized items (section 2), so
-Phase 0 measures them before any phase is promised.
+**Gate (owner ruling D1, 2026-09-22): P95 WORK <= 1,120,000 and >= 95% of all
+presented frames in two VBlanks**, items on, every legal roster and stage, on the
+shipping configuration; P99 is reported, not gated. **Design target** on the
+measured roster: WORK P50 ~0.7M, P95 ~0.9M, P99 ~1.0M. The tail margin depends
+on two unsized items (section 2), so Phase 0 measures them before any phase is
+promised.
 
 ## 1. The frame today (measured)
 
@@ -117,8 +121,8 @@ Two items are unsized and carry the P99 margin:
 - **SRC "other".** Effects, items, stage logic and camera procs inside GCRA are
   not bracketed per owner. Phase 0 brackets them.
 
-If P99 still misses after A1-A5, the options in order are: A10 visual reserve,
-then A6 run-ahead (an input-latency trade, owner decision D4).
+If the gate still misses after A1-A5, the remaining option is A10 visual
+reserve, case by case with the owner (D5); run-ahead is refused (D4).
 
 ## 3. Architecture
 
@@ -244,28 +248,47 @@ file's FAT chain from its head: 447 steps at 12 MB, while the shipping ROM is
 62.7 MB, so the cost grows with content. DLDI runs on the ARM7 (calico default) and
 the ARM9 waits.
 
-**Full residency does not fit.** The tight motion set is 1,220,912 B for the stress
-roster (MEASURED) and ~1.58 MB for the worst four kinds (ESTIMATE). Generic
-compression reaches 0.78 (LZ). Full residency needs a format at <=0.41-0.53x of
-today's bytes or much more RAM (A7). Reachable SFX are 2.2-3.3 MB per match and
-are never resident.
+**Owner ruling D6 (2026-09-22): every gameplay motion is resident; no motion is
+read after GO.** N02.04 stands. The tight motion set is 1,220,912 B for the stress
+roster (MEASURED) and ~1.58 MB for the worst four kinds (ESTIMATE), against
+~0.9-1.0 MB of battle RAM after A7 (ESTIMATE). Generic LZ reaches only 0.78, so a
+**new compact motion format** is required: at most ~0.45x of today's BPS1 bytes
+for the worst four kinds (whole-kind LZMA reaches 0.45, so the information content
+allows it; the question is a form the ARM9 can use at bind time).
+
+**Compact motion format (MF).** Requirements, in order:
+
+1. **Lossless** for every value the pose engine produces: gameplay reads the
+   joints (hurtboxes, hitboxes, attach points), so the decoded pose must be
+   bit-identical to today's Q12 output, proven by the existing pose oracle over
+   every clip of every kind.
+2. **Random access per clip**: a status change binds one clip in O(clip), with no
+   stream-wide state. Decode either at bind into a small per-fighter working buffer
+   (LZ-class ~5-11K ticks per 2.2 KB clip, ESTIMATE) or, better, evaluate directly
+   from the compact form.
+3. **Exploit the redundancy the corpus actually has**: constant and
+   hold-dominated tracks, keys the interpolation reproduces exactly, shared track
+   segments across clips of one kind (the cross-clip redundancy whole-kind LZMA
+   finds), narrow deltas, per-kind dictionaries. Build-time encoder, one checker
+   that decodes every clip and compares against today's bake.
+4. **Worst-case budget**, not typical: the worst four kinds plus Kirby's copy
+   clips for the opponents present must fit the resident region with the
+   25,600 B floor intact, on the **shipping** configuration.
+
+Phase 0 runs the host-side experiment (achievable ratio per kind, decode cost
+modelled on ARM9) before any runtime work. If MF cannot reach the budget, that is
+a STOP for the owner, not a quiet fallback to demand reads.
 
 | Tier | Contents | How served | ARM9 cost per use |
 |---|---|---|---|
-| 0 resident | per-kind motion hot set sized to >=98.5% of acquisitions (~170 clips / 360-394 KB for the stress roster, ESTIMATE until measured), ShieldPose, common data | one match bank loaded before GO, served by pointer (generalise the Fox BattlePack path, `reloc_backend_assets.c:14941-14949`), pre-bound into `FTMotionDesc` (A4) | ~0 |
-| 1 resident heads | first 512 B of each reachable SFX cue; BGM ring | ARM7 starts the voice from the head and fills the rest itself | one PXI word |
-| 2 cold | remaining motions; SFX tails; BGM | **extent map**: a boot-time LBA list of the ROM file read with `blkDevReadSectors` into 32-byte-aligned buffers (`calico/dev/blk.h:57-58`): no FAT walk, no fopen, no byte swap or fixups (clips stored pre-normalised) | motions ~22-26K ticks per read on melonDS; audio 0 (ARM7) |
+| resident motions | every gameplay-reachable clip of the four kinds (+ Kirby copies for present opponents), ShieldPose, common data, in MF | one match bank built before GO, served by pointer (generalise the Fox BattlePack path, `reloc_backend_assets.c:14941-14949`), pre-bound into `FTMotionDesc` (A4) | bind/decode only |
+| resident heads | first 512 B of each reachable SFX cue; BGM ring | ARM7 starts the voice from the head and fills the rest itself (D7) | one PXI word |
+| ARM7 streams | SFX tails; BGM | **extent map**: a boot-time LBA list of the ROM file, `blkDevReadSectors` (`calico/dev/blk.h:57-58`) on the ARM7: no FAT walk, no fopen | 0 |
 
-- **Motions cannot move to the ARM7**: the parser needs the clip on the same
-  tick. Cold motion reads are bounded (target <=0.5% of acquisitions), counted per
-  match in the stress verifier, and served ahead of BGM in the ARM7 read queue.
-  One DLDI user at a time: a 3.7 ms refill must not sit in front of a motion miss.
-- **This conflicts with N02.04** ("no post-GO demand reads",
-  `docs/p2/native-optimization/04_RESIDENCY_AND_ASSETS.md`). Owner decision D6.
-  The alternative is full residency funded by A7 plus a compact random-access
-  clip format (whole-kind LZMA reaches 0.45, so the information is there).
 - **Admission.** Replace the 128 KiB keep-free constant with admission from the
   measured low-water plus the 25,600 B GObj floor.
+- **Match load builds the bank** (seconds are acceptable, compromise item 28):
+  bulk-read the four kinds' MF blocks, relocate, bind `FTMotionDesc`.
 
 ### A3. Shared pose, per-consumer composition
 
@@ -408,12 +431,10 @@ Link's boomerang projects through it every ninth tick
 (`battleship_gmcamera.c:1085-1091`) is out of date. Fix: produce the matrix per tick
 while a reader can fire. This must land before the replay digest is used as a gate.
 
-**Optional: one-tick run-ahead (owner decision D4).** After submitting frame p,
-the CPU may start tick 2p+2 as soon as VBlank >= 2p+1, never more than one tick
-ahead. Any single frame up to ~1.68M then presents on time if the frame before it
-fit in 1.12M. Game speed is unchanged. The cost is **up to one refresh (16.7 ms)
-more input-to-display latency** in steady state. It is insurance for isolated
-spikes, not a substitute for A1-A5.
+**No run-ahead (owner ruling D4, 2026-09-22).** Starting the next frame's first
+tick in the previous frame's idle time would absorb isolated spikes but adds up to
+one refresh of input latency; the owner refused it. Every frame must fit its own
+two VBlanks, so A1-A5 carry the whole requirement.
 
 ### A7. Memory, overlays and TCM
 
@@ -433,13 +454,15 @@ resident during battle (CSS 143K, 1P 134K, menus 101K, opening 48K, diagnostics
 
 | Demand | Bytes |
 |---|---:|
-| Tier-0 motion hot set (stress roster) | 360-600K |
+| All gameplay motions in MF, worst four kinds (at <=0.45x of 1.58 MB) | <=~710K |
 | SFX heads | 100-130K |
 | Compiled lists not placed in the framebuffer region | 0-30K |
 | **Total** | **~0.46-0.76M** |
 
-Full residency of the tight stress set (1.22 MB raw, ~0.95 MB at LZ 0.78) is
-borderline; the worst four kinds (~1.23 MB at LZ) are not covered.
+With MF at 0.45x the worst four kinds need ~710K and the demand total is
+~0.81-0.87M against ~0.9-1.0M of supply: it fits, with little margin, only if
+every supply row is realised and the shipping heap matches the lab estimate. Both
+are Phase 0 measurements; generic LZ (0.78) does not fit.
 
 - **Scene overlays** (calico `ovl.h`; none are used today). Front-end TUs move to
   `ovl_frontend`. The overlay area sits after BSS and shrinks the heap by its size,
@@ -542,13 +565,13 @@ Estimates are cumulative WORK-H P50 / P99 on the measured roster.
 
 | Phase | Content | Exit gate | P50 / P99 |
 |---|---|---|---:|
-| 0 Truth | A9 instrument and counters; MISC and SRC-other splits; shipping-config heap and arena census; motion seen-bitmap; replay digest + shadow scaffolding; camera-matrix fix; harness roster parameterisation | digest mutation-tested; unsized items sized | 1.57M / 2.85M |
+| 0 Truth | A9 instrument and counters; MISC and SRC-other splits; shipping-config heap and arena census; MF host experiment (ratio per kind, decode cost); replay digest + shadow scaffolding; camera-matrix fix; harness roster parameterisation | digest mutation-tested; unsized items sized; MF budget met or STOP | 1.57M / 2.85M |
 | 1 Fighters (A1) | first slice Samus LOW default program (word-compare against a recorded packet), then DK (cross slots), Link (texgen, programs), Kirby (hats), then all admitted kinds; retire packets/production/replay | FTR <= 90K P99; native failures 0; stop if FTR falls but WORK-H does not | 1.30M / 2.25M |
 | 2 Stage + MISC (A1) | stage compiler per run class; native draw list replacing display-proc traversal; effect lists; particle batcher; resident DamageSlash | STG <= 40K; MISC per Phase 0 sizing; every stage A/B | 0.85M / 1.75M |
-| 3 Residency + audio (A2, A7, A8) | Tier-0 match bank + admission rule; extent-map reader; ARM7 BGM + FGM with heads; front-end overlay | 0 Tier-0 misses after GO; AUD P99 <= 10K | 0.82M / 1.45M |
+| 3 Residency + audio (A2, A7, A8) | MF encoder + checker + runtime bind; full-roster match bank + admission rule; custom ARM7 (extent map, BGM stream, FGM voices with heads); front-end overlay | 0 motion reads after GO, every roster; pose oracle bit-identical; AUD P99 <= 10K | 0.82M / 1.45M |
 | 4 Events + pose (A3, A4) | tagged `FTMotionDesc`; pre-created hidden parts; pooled effects; pre-resolved events; native clips if the pose cost is confirmed | digest identical; SPRM P99 <= 40K | 0.77M / 1.20M |
 | 5 Combat + collision (A5) | hurtbox kernel + guarded narrow phase; stage collision tables; AI memos; delete port machinery | 0 flips; SHDT P99 <= 100K | 0.73M / 1.0M |
-| 6 Layout + schedule (A6, A7) | ITCM/DTCM reassignment; run-ahead if D4 | two-VBlank share >= 99% | — |
+| 6 Layout (A7) | ITCM/DTCM reassignment to the new kernels; per-match DTCM tables | two-VBlank share >= 95% gate with margin | — |
 | 7 Coverage | worst-case search across stages, rosters and items; A10 only for a measured residual | release matrix | — |
 
 Phases 1 and 2 share renderer files and run in sequence. Phase 0's census and
@@ -570,22 +593,23 @@ the three-Codex cap. Phase 5's kernel reads the Q locals Phase 4 produces.
 - **DTCM holds Mario's tables** for rosters without Mario (A7).
 - **The shipping build's four-fighter heap has never been measured** (A7).
 
-## 8. Owner decisions requested
+## 8. Owner rulings (2026-09-22)
 
-- **D1 Contract.** Adopt P99 <= 1,120,000 WORK on the stress gate, in place of
-  PROJECT_GOAL's P95, with the instrument fixed (A9).
-- **D2 Replace, don't wrap.** Packet record/replay/production, Task 36 replay, CPU
-  stage emission and their caches are deleted as compiled paths cover the content.
-  No dual paths survive a phase.
-- **D3 Equivalence.** Tolerance classes as in section 5; keep or remove the
-  accepted body-hurtbox one-tick hold.
-- **D4 Run-ahead.** Up to one refresh more input latency, in exchange for absorbing
-  isolated spikes.
-- **D5 Visual reserve (A10)** and the natively-missing items: linear texgen on the
-  Polygon fighters, shadows, afterimages, and Captain's high-detail alpha test.
-- **D6 Residency.** Accept bounded, counted cold motion reads (amends N02.04), or
-  fund full residency. Also: battle overlays and a longer match load.
-- **D7 ARM7 audio.** A custom ARM7 binary owning BGM streaming and FGM voices.
+- **D1 Contract: P95 stays.** Gate = P95 WORK <= 1,120,000 and >= 95% two-VBlank
+  presents over all presented frames (PROJECT_GOAL unchanged); P99 is reported.
+- **D2 Replace, don't wrap: yes.** Packet record/replay/production, Task 36
+  replay, CPU stage emission and their caches are deleted as compiled paths cover
+  the content. No dual paths survive a phase.
+- **D3 Equivalence: yes.** Tolerance classes as in section 5. The accepted
+  body-hurtbox one-tick hold stays (A3 default); exact 60 Hz is not requested.
+- **D4 Run-ahead: no.** Every frame fits its own two VBlanks.
+- **D5 Visual reserve: case by case.** A10 items and approximations for the
+  natively-missing items (linear texgen on the Polygon fighters, shadows,
+  afterimages, Captain's high-detail alpha test) go to the owner with A/B captures
+  when a phase needs them.
+- **D6 Residency: new compact motion format.** Every gameplay motion resident;
+  N02.04 (no post-GO demand reads) stands; MF is required (A2).
+- **D7 ARM7 audio: yes.** A custom ARM7 binary owns BGM streaming and FGM voices.
 
 ## 9. The owner's compromise list, mapped
 
