@@ -630,8 +630,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   (the lean path follows replay). A naive pin-on-record cut FTR P95 -39% but
   starved later frames (+51%) and raised native failures, so texture admission
   needs a **VRAM budget**: slice 2a measures VRAM and proposes a lossless battle
-  VRAM plan (today 256 KB of VRAM holds two 16-bit bitmap BGs, one of them a
-  16-colour wallpaper).
+  VRAM plan.
+- **Phase 1 slice 2a (2026-09-23, `f1476de32dd`)**: VRAM census. Texture VRAM
+  A+B is full all match (247-262 KB of 256 KB); fighters hold only 40.5 KB at GO
+  (the rest: battle static 66 KB, IFCommon clouds/traffic 57 KB, particle atlas
+  42 KB, entry textures kept after GO 30 KB); Link's entry failure and the P95
+  episode are **fragmentation** (largest free run 2.2-2.6 KB); BG3 (bank D,
+  128 KB) is **empty in a VS battle**; the wallpapers are 16-bit sources (BG2
+  stays). The reachable fighter texture set, enumerated on the host without
+  drawing, contains every runtime-recorded key. Plan (approved): bank D as
+  texture slot 3 in battles with an empty BG3 (393,216 B), scene + admitted
+  fighters pinned in A+B, D the only region that allocates during the match;
+  slice 2b implements it with host-generated admission lists.
 
 ## 7. Found along the way
 

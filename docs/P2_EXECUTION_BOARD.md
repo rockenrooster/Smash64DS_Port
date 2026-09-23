@@ -67,8 +67,10 @@ short (`artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`); Phase 3
 RAM work is now a correctness prerequisite. **Phase 1 in progress**:
 slice 1 landed (`c33274f8345`: Samus LOW lean path, exact oracle, route 1 FTR
 P95 -11%); it found the P95 episode is a texture-VRAM fence storm and Link's
-entry failure is VRAM exhaustion, so slice 2a measures VRAM and proposes a
-lossless battle VRAM plan before texture admission (2b). Alongside (disjoint files, integrator): MF host
+entry failure is VRAM exhaustion. Slice 2a (`f1476de32dd`) measured it:
+fragmentation in a full A+B, and BG3's bank D empty in VS battles. **Slice 2b
+in progress**: bank D as texture memory in battle, pinned/transient regions,
+host-generated fighter texture admission before GO. Alongside (disjoint files, integrator): MF host
 encoder + C decoder + checker. ARM7 audio spec queued (one subagent at a time). Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`,
 `artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`.
