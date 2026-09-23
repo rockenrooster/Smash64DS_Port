@@ -58,7 +58,7 @@ body-hurtbox hold kept; no run-ahead; visual reserve case by case; every motion
 resident via a new compact format (N02.04 stands); custom ARM7 audio. Phase:
 **Phase 0 instrument landed** (`3d62c6abf26`): WORK-H P50 1,689,088 / P95
 4,207,488 / P99 4,753,152, two-VBlank 5.7%. P95 is owned by a re-record
-episode (r49 re-records a tinted packet on every prim change) and the gate throws on
+episode (a texture-VRAM fence storm, per slice 1) and the gate throws on
 Link AppearL native failures -- both are Phase 1 scope. MF verdict **yes**
 (candidate B, 0.382x on the worst roster, byte-exact; bind cost is the Phase 3
 risk). **Phase 0 closed**: the shipping-config census found the heaviest

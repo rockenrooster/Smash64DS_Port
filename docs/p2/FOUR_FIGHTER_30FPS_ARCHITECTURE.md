@@ -584,12 +584,11 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   `artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`). New baseline on the
   current tree, instrument out of the gate: WORK-H P50 **1,689,088**, P95
   **4,207,488**, P99 **4,753,152**; two-VBlank **5.7%**; 14.4 FPS. Two findings
-  reshape Phase 1: (1) a **re-record episode** (r49 re-records a tinted packet
-  whenever its prim changes; a fighter whose prim changes every frame re-runs
-  production and re-resolves its textures, ~1.16M/frame, for 246 frames) owns
-  P95 -- without it P95 is 2.64M; the tint tile set itself is stable (9 builds,
-  0 evictions per match); (2) **native failures at
-  match start** (Link AppearL, texture could not be bound). Replay digest
+  reshape Phase 1: (1) a **re-record episode** owns P95 (frames 798-1043,
+  ~1.16M/frame of texture re-resolution and packet production; without it P95 is
+  2.64M) -- its mechanism, first blamed on tint, is a texture-upload fence storm
+  (Phase 1 slice 1 entry below); (2) **native failures at match start** (Link
+  AppearL, texture could not be bound). Replay digest
   proven (deterministic across builds; an item-rate poke diverges). Owed:
   shipping-config heap census (before Phase 3), MF experiment result.
 - **Phase 0 (2026-09-23), MF verdict: yes** (`artifacts/performance/2026-09-23_p2-2p8-mf-experiment/`).
@@ -617,6 +616,22 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Consequence: Phase 3's RAM work (A7 overlays, A8 FGM cache, A2 admission) is a
   correctness prerequisite for "any four fighters", and every phase report adds
   the shipping arena and this roster's load margin.
+- **Phase 1 slice 1 (2026-09-23, `c33274f8345`,
+  `artifacts/performance/2026-09-23_p2-2p8-phase1-slice1/`)**: lean path for Samus
+  LOW program 0 on an adopted packet; ARM joint kernel bit-exact with the source
+  compose (35,772 joints); route 2 oracle 0 mismatches over 1,217 replay hits;
+  digests identical across routes. Route 1 vs 0: FTR P95 -11.0%, WORK-H P95
+  -6.6%, P50 flat (one fighter of four). Three findings reorder the phase:
+  (1) the P95 episode is a **texture-VRAM fence storm** -- 408 fighter texture
+  uploads after GO, each moving the global fence so every fence-dependent packet
+  re-records (tint re-records: 0); (2) Link's AppearL failure is **texture VRAM
+  exhaustion** at the entry burst (frame 156, nothing evictable); (3) the live
+  record path never applies the colanim flash to shade words while replay does
+  (the lean path follows replay). A naive pin-on-record cut FTR P95 -39% but
+  starved later frames (+51%) and raised native failures, so texture admission
+  needs a **VRAM budget**: slice 2a measures VRAM and proposes a lossless battle
+  VRAM plan (today 256 KB of VRAM holds two 16-bit bitmap BGs, one of them a
+  16-colour wallpaper).
 
 ## 7. Found along the way
 

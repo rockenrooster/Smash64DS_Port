@@ -56,6 +56,14 @@ binding. MISC split at P50: effects 55K, particles 49K, weapons ~0, texture uplo
    must select the (already resident) tint tile by a patched texture word, never
    by re-recording.
 
+   **Superseded (Phase 1 slice 1, 2026-09-23,
+   `../2026-09-23_p2-2p8-phase1-slice1/README.md`):** with per-slot tint counters
+   the prim-change re-record fires 0 times in every arm. The episode is a **fence
+   storm**: fighter textures upload every frame inside it (MTEX 25.5K/frame vs
+   0.6-2K elsewhere; 408 fighter uploads after GO), each upload moves the global
+   texture fence, and every fence-dependent packet re-records. The cause is
+   texture VRAM, not tint.
+
    **Profile of the episode** (`profile-thrash/`, per-PC, frames 820-868, work
    ~4.0M per frame): `ndsRendererHardwareResolveOrBindTexture` **935,578** and
    `ndsRendererHardwareTextureColor` **226,072** ticks per frame -- textures are
