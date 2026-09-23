@@ -72,3 +72,42 @@ Phase 1/2 deletions (~98 KB + ~73 KB BSS).
   chosen once at boot (`diagnostics_taskman_heap.c:117-215`), so either the
   overlay area sits inside a per-scene arena extension or the arena is re-seated
   at the scene boundary.
+
+## BGM today (read 2026-09-23, `src/nds/nds_audio_bgm.c`)
+
+- One NitroFS file per track (`nitro:/audio/bgm_*_ima.bin`), a header then
+  packets of an 8 B record (samples, payload bytes) plus an IMA-ADPCM payload
+  (4 B header + nibbles, <= 16,384 samples = 743 ms at 22,050 Hz); loop point
+  as (record offset, packet index) (`ndsAudioBgmReadPacket` :1223-1293).
+- Two hardware channels (14, 15) play alternate packets one-shot;
+  `soundPreparePcm` arms the idle one (:1295-1310); ARM9 timer 0, divider 1024,
+  fires at the packet's end (:1336-1355) and posts to a worker thread that only
+  `soundStart`s the prepared channel (:1357-1424, seam). The **refill** -- two
+  `nitroromReadFile` reads + `DC_FlushRange` + prepare -- runs on the **main
+  thread** in `ndsAudioBgmUpdate` (:2141) via `ndsAudioBgmServiceRefills`
+  (:1559-1602): the ~123K-tick AUD spike every ~13 presented frames.
+- ARM9 BGM API the game uses: `ndsAudioBgmPlay(player, id)`, `StopAll`,
+  `CheckPlaying`, `IsPlaying`, `SetVolume`, `SetVolumeFade`, the
+  `syAudioSetBGMVolumeFade` shim, `SuspendForBlockingLoad` / `Resume`.
+
+## A8 design notes
+
+- **Target (D7):** the custom ARM7 owns channels 14/15 and the seam timer, reads
+  packets itself and applies loop/volume/fade; the ARM9 posts one PXI word per
+  command (play track t, stop, volume, fade, suspend) and reads a status word
+  (playing / finished) -- 0 ARM9 ticks per packet.
+- **The ARM7 needs byte-addressable access to the ROM image.** Calico reads the
+  NitroFS through libdvm/FatFs on the ARM9 (`dvm.h`), which exposes no cluster
+  chain, so an ARM7 reader needs an **extent map**: a read-only walk of the FAT
+  (FAT32; exFAT for SDXC) for the ROM file at boot, on the ARM9 with
+  `blkDevReadSectors`, handed to the ARM7 as (ROM offset -> LBA run) pairs, and
+  the identity map for slot-1 / emulator direct boot. That is a small read-only
+  FAT driver; it is the long pole of A8 and must be validated byte-for-byte
+  against `nitroromReadFile` at boot.
+- **Interim, if A8 slips:** a low-priority ARM9 refill thread (runs only while
+  the main thread waits for VBlank; storage access serialised with the main
+  thread's reads) removes the spike from WORK without the extent map. It is not
+  the target and would be deleted when A8 lands (no dual paths).
+- FGM (Q3 of the residency investigation): the same extent map lets the ARM7
+  stream cue tails; resident 512 B heads start a voice at once; the ARM9 FGM
+  cache (237,568 B BSS) goes away.
