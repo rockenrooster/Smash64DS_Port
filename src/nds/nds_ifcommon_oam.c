@@ -464,6 +464,21 @@ static NDSTask39HitSpark sNdsTask39HitSparks[
     NDS_TASK39_HIT_SPARK_CAPACITY];
 static u16 *sNdsTask39HitSparkGfx;
 
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+/* P2-2p8 Phase 3 (A7): the file this state points at is the compact image
+ * (src/port/reloc_backend_assets.c) -- the GO and end letters' pixels are not
+ * in it, so the end messages come from these pre-baked streams instead. Each
+ * stream is the whole end bank (NDS_IFCOMMON_END_BANK_BYTES) as the VRAM bake
+ * would leave it, run-length coded in halfwords: a control word 0x8000 | n
+ * copies the next n words, n (1..0x7fff) writes n zero words. */
+static u32 sNdsIFCommonCompact;
+static const u16 *sNdsIFCommonEndBaked[2];
+static u32 sNdsIFCommonEndBakedWords[2];
+volatile u32 gNdsIFCommonEndBakedBytes;
+volatile u32 gNdsIFCommonEndBakedFailCount;
+volatile u32 gNdsIFCommonEndBakedDecodeCount;
+#endif
+
 #define NDS_IFCOMMON_TAG_COUNT 6u
 #define NDS_IFCOMMON_TAG_CELL 32u
 #define NDS_IFCOMMON_TAG_CELL_BYTES 512u
@@ -1506,18 +1521,29 @@ static s32 ndsIFCommonBindGameStatusMetadata(const void *file_data,
 
 /* Direct-only tile bake into a fixed VRAM base. GO keeps its existing
  * prefiltered pixels; end letters use the same 0.8 RGBA prefilter at the
- * final DS grid. No palette, no indexed path. */
-static s32 ndsIFCommonBakeDirectAsset(u32 asset_index, const void *file_data,
-                                      size_t file_size, u32 vram_base)
+ * final DS grid. No palette, no indexed path.
+ *
+ * `dest` is where the pixels go: OBJ VRAM itself, or (P2-2p8 A7) a RAM image
+ * of an OBJ bank whose first halfword stands for VRAM offset `origin`, laid
+ * out byte-for-byte as the VRAM bake would lay it out. `set_tiles` records
+ * the tile layout the draw path reads; `fill` writes the pixels. The VRAM
+ * bake is (SPRITE_GFX, 0, TRUE, TRUE) and stays exactly what it was. */
+static s32 ndsIFCommonBakeDirectAssetTo(u32 asset_index,
+                                        const void *file_data,
+                                        size_t file_size, u32 vram_base,
+                                        u16 *dest, u32 origin,
+                                        u32 set_tiles, u32 fill)
 {
     const NDSIFCommonAssetSpec *spec =
         &sNdsIFCommonAssetSpecs[asset_index];
     NDSIFCommonNativeAsset *asset = &sNdsIFCommonAssets[asset_index];
     const Sprite *sprite = asset->sprite;
+    u32 to_vram = (dest == (u16 *)SPRITE_GFX) ? TRUE : FALSE;
     u32 tile_index;
     u32 cursor = vram_base;
 
-    if ((sprite == NULL) || (spec->tile_count > NDS_IFCOMMON_MAX_TILES))
+    if ((sprite == NULL) || (spec->tile_count > NDS_IFCOMMON_MAX_TILES) ||
+        (vram_base < origin))
     {
         return FALSE;
     }
@@ -1541,30 +1567,46 @@ static s32 ndsIFCommonBakeDirectAsset(u32 asset_index, const void *file_data,
         {
             return FALSE;
         }
-        tile->gfx = (u16 *)((u8 *)SPRITE_GFX + cursor);
-        tile->size = ndsIFCommonSpriteSize(tile_spec->cell_width,
-                                           tile_spec->cell_height);
-        tile->color_format = SpriteColorFormat_Bmp;
-        tile->spec = *tile_spec;
-        if ((u32)tile->size == 0u)
+        if ((u32)ndsIFCommonSpriteSize(tile_spec->cell_width,
+                                       tile_spec->cell_height) == 0u)
         {
             return FALSE;
         }
-        dmaFillHalfWords(0u, tile->gfx, bytes);
-        for (y = 0u; y < tile_spec->content_height; y++)
+        if (set_tiles != FALSE)
         {
-            u32 x;
+            tile->gfx = (u16 *)((u8 *)SPRITE_GFX + cursor);
+            tile->size = ndsIFCommonSpriteSize(tile_spec->cell_width,
+                                               tile_spec->cell_height);
+            tile->color_format = SpriteColorFormat_Bmp;
+            tile->spec = *tile_spec;
+        }
+        if (fill != FALSE)
+        {
+            u16 *pixels = (u16 *)((u8 *)dest + (cursor - origin));
 
-            for (x = 0u; x < tile_spec->content_width; x++)
+            if (to_vram != FALSE)
             {
-                u16 color = ndsIFCommonDecodePrefilteredGoPixel(
-                        sprite, file_data, file_size,
-                        (u32)tile_spec->source_x + x,
-                        (u32)tile_spec->source_y + y);
+                dmaFillHalfWords(0u, pixels, bytes);
+            }
+            else
+            {
+                memset(pixels, 0, bytes);
+            }
+            for (y = 0u; y < tile_spec->content_height; y++)
+            {
+                u32 x;
 
-                tile->gfx[(((u32)tile_spec->pad_y + y) *
-                               tile_spec->cell_width) +
-                          tile_spec->pad_x + x] = color;
+                for (x = 0u; x < tile_spec->content_width; x++)
+                {
+                    u16 color = ndsIFCommonDecodePrefilteredGoPixel(
+                            sprite, file_data, file_size,
+                            (u32)tile_spec->source_x + x,
+                            (u32)tile_spec->source_y + y);
+
+                    pixels[(((u32)tile_spec->pad_y + y) *
+                                tile_spec->cell_width) +
+                           tile_spec->pad_x + x] = color;
+                }
             }
         }
         cursor += bytes;
@@ -1572,6 +1614,14 @@ static s32 ndsIFCommonBakeDirectAsset(u32 asset_index, const void *file_data,
     }
     gNdsIFCommonNativeOamPrepareAssets++;
     return TRUE;
+}
+
+static s32 ndsIFCommonBakeDirectAsset(u32 asset_index, const void *file_data,
+                                      size_t file_size, u32 vram_base)
+{
+    return ndsIFCommonBakeDirectAssetTo(asset_index, file_data, file_size,
+                                        vram_base, (u16 *)SPRITE_GFX, 0u,
+                                        TRUE, TRUE);
 }
 
 static s32 ndsIFCommonEndAssetActive(u32 asset_index)
@@ -2097,6 +2147,15 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     sNdsIFCommonPreparedFileSize = 0u;
     sNdsIFCommonAnnounceActive = FALSE;
     sNdsIFCommonAnnounceGameSet = NDS_IFCOMMON_ANNOUNCE_TIME_UP;
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+    /* A new load is the full file again; the previous scene's compact image
+     * and baked streams died with its heap. */
+    sNdsIFCommonCompact = FALSE;
+    sNdsIFCommonEndBaked[0] = NULL;
+    sNdsIFCommonEndBaked[1] = NULL;
+    sNdsIFCommonEndBakedWords[0] = 0u;
+    sNdsIFCommonEndBakedWords[1] = 0u;
+#endif
 
     if (ndsIFCommonBindGameStatusMetadata(file_data, file_size) == FALSE)
     {
@@ -2164,7 +2223,12 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
     }
     if ((sNdsIFCommonPrepared == FALSE) ||
         (sNdsIFCommonPreparedFile == NULL) ||
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+        ((sNdsIFCommonCompact == FALSE) &&
+         (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE)))
+#else
         (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE))
+#endif
     {
         gNdsIFCommonNativeOamPrepareFailCount++;
         gNdsIFCommonNativeOamLastFallbackReason =
@@ -2179,6 +2243,91 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
     start = cpuGetTiming();
     slots = (game_set != FALSE) ? sNdsIFCommonGameSetSlots :
                                   sNdsIFCommonTimeUpSlots;
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+    if (sNdsIFCommonCompact != FALSE)
+    {
+        /* The letters' pixels are not resident: lay the tiles out exactly as
+         * the bake below would, then expand the pre-baked bank image. */
+        const u16 *stream = sNdsIFCommonEndBaked[game_set];
+        u32 words = sNdsIFCommonEndBakedWords[game_set];
+        u16 *out = (u16 *)((u8 *)SPRITE_GFX + NDS_IFCOMMON_END_BANK_BASE);
+        u32 out_words = NDS_IFCOMMON_END_BANK_BYTES / sizeof(u16);
+        u32 at = 0u;
+        u32 i = 0u;
+
+        for (slot = 0u; slot < 6u; slot++)
+        {
+            if ((stream == NULL) ||
+                (ndsIFCommonBakeDirectAssetTo(
+                     slots[slot].asset_index, sNdsIFCommonPreparedFile,
+                     sNdsIFCommonPreparedFileSize,
+                     NDS_IFCOMMON_END_BANK_BASE + slots[slot].bank_offset,
+                     (u16 *)SPRITE_GFX, 0u, TRUE, FALSE) == FALSE))
+            {
+                stream = NULL;
+                break;
+            }
+        }
+        while ((stream != NULL) && (i < words) && (at < out_words))
+        {
+            u32 control = stream[i++];
+            u32 count = control & 0x7fffu;
+
+            if ((count == 0u) || ((at + count) > out_words))
+            {
+                stream = NULL;
+                break;
+            }
+            if ((control & 0x8000u) != 0u)
+            {
+                if ((i + count) > words)
+                {
+                    stream = NULL;
+                    break;
+                }
+                while (count-- != 0u)
+                {
+                    out[at++] = stream[i++];
+                }
+            }
+            else
+            {
+                while (count-- != 0u)
+                {
+                    out[at++] = 0u;
+                }
+            }
+        }
+        if ((stream == NULL) || (at != out_words) || (i != words))
+        {
+            for (slot = 0u; slot < 6u; slot++)
+            {
+                NDSIFCommonNativeAsset *dead =
+                    &sNdsIFCommonAssets[slots[slot].asset_index];
+                u32 dead_tile;
+
+                for (dead_tile = 0u; dead_tile < NDS_IFCOMMON_MAX_TILES;
+                     dead_tile++)
+                {
+                    dead->tiles[dead_tile].gfx = NULL;
+                }
+            }
+            sNdsIFCommonAnnounceActive = FALSE;
+            gNdsIFCommonEndBakedFailCount++;
+            gNdsIFCommonNativeOamPrepareFailCount++;
+            gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
+            gNdsIFCommonNativeOamLastFallbackReason =
+                nNDSIFCommonFallbackBadAsset;
+            return FALSE;
+        }
+        gNdsIFCommonEndBakedDecodeCount++;
+        sNdsIFCommonAnnounceActive = TRUE;
+        sNdsIFCommonAnnounceGameSet = game_set;
+        gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
+        gNdsIFCommonNativeOamPrepareSuccessCount++;
+        return TRUE;
+    }
+#endif
     for (slot = 0u; slot < 6u; slot++)
     {
         u32 asset_index = slots[slot].asset_index;
@@ -2235,7 +2384,12 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
 
     if ((sNdsIFCommonPrepared == FALSE) ||
         (sNdsIFCommonPreparedFile == NULL) ||
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+        ((sNdsIFCommonCompact == FALSE) &&
+         (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE)))
+#else
         (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE))
+#endif
     {
         gNdsIFCommonNativeOamPrepareCloudFailureStage = 1u;
         gNdsIFCommonNativeOamPrepareFailCount++;
@@ -2277,6 +2431,278 @@ s32 ndsIFCommonNativeOamPrepareClouds(void)
     return FALSE;
 #endif
 }
+
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+extern void *syTaskmanMalloc(size_t size, u32 align);
+
+static u32 ndsIFCommonPayloadBytes(const Sprite *sprite, const Bitmap *bitmap)
+{
+    u32 texels = (u32)(u16)bitmap->width_img * (u32)(u16)bitmap->actualHeight;
+
+    switch (sprite->bmsiz)
+    {
+    case G_IM_SIZ_4b: return (texels + 1u) / 2u;
+    case G_IM_SIZ_8b: return texels;
+    case G_IM_SIZ_16b: return texels * 2u;
+    case G_IM_SIZ_32b: return texels * 4u;
+    default: return 0u;
+    }
+}
+
+/* Ranges (offset from the prepared file, bytes) the compact image may drop:
+ * every bitmap payload of an asset with OBJ tiles -- the GO and end letters,
+ * whose pixels are baked here and never read again. Returns 0 (keep the
+ * whole file) if any range is out of the file, exceeds `max`, or shares a
+ * byte with a payload whose asset keeps its pixels (lamps, rod, frame: the
+ * cloud and traffic atlases read them after this point). */
+u32 ndsIFCommonNativeOamLetterPayloads(u32 *offsets, u32 *bytes, u32 max)
+{
+    const u8 *base = (const u8 *)sNdsIFCommonPreparedFile;
+    size_t size = sNdsIFCommonPreparedFileSize;
+    u32 count = 0u;
+    u32 pass;
+
+    if ((sNdsIFCommonPrepared == FALSE) || (base == NULL) ||
+        (sNdsIFCommonCompact != FALSE))
+    {
+        return 0u;
+    }
+    for (pass = 0u; pass < 2u; pass++)
+    {
+        u32 asset_index;
+
+        for (asset_index = 0u; asset_index < NDS_IFCOMMON_ASSET_COUNT;
+             asset_index++)
+        {
+            const Sprite *sprite = sNdsIFCommonAssets[asset_index].sprite;
+            u32 letter =
+                (sNdsIFCommonAssetSpecs[asset_index].tile_count != 0u) ?
+                    TRUE : FALSE;
+            u32 b;
+
+            if (sprite == NULL)
+            {
+                return 0u;
+            }
+            if ((pass == 0u) != (letter != FALSE))
+            {
+                continue;
+            }
+            for (b = 0u; b < (u32)(u16)sprite->nbitmaps; b++)
+            {
+                const Bitmap *bitmap = &sprite->bitmap[b];
+                u32 payload = ndsIFCommonPayloadBytes(sprite, bitmap);
+                uintptr_t at = (uintptr_t)bitmap->buf - (uintptr_t)base;
+                u32 i;
+
+                if ((bitmap->buf == NULL) || (payload == 0u))
+                {
+                    continue;
+                }
+                if ((at >= size) || (payload > (size - at)))
+                {
+                    return 0u;
+                }
+                if (pass == 0u)
+                {
+                    for (i = 0u; i < count; i++)
+                    {
+                        if ((offsets[i] == (u32)at) && (bytes[i] == payload))
+                        {
+                            break;
+                        }
+                    }
+                    if (i < count)
+                    {
+                        continue;
+                    }
+                    if (count >= max)
+                    {
+                        return 0u;
+                    }
+                    offsets[count] = (u32)at;
+                    bytes[count] = payload;
+                    count++;
+                    continue;
+                }
+                for (i = 0u; i < count; i++)
+                {
+                    if (((u32)at < (offsets[i] + bytes[i])) &&
+                        (offsets[i] < ((u32)at + payload)))
+                    {
+                        return 0u;
+                    }
+                }
+            }
+        }
+    }
+    return count;
+}
+
+static u32 ndsIFCommonRleEncode(const u16 *in, u32 n, u16 *out, u32 cap)
+{
+    u32 i = 0u;
+    u32 o = 0u;
+
+    while (i < n)
+    {
+        if (in[i] == 0u)
+        {
+            u32 run = 0u;
+
+            while (((i + run) < n) && (in[i + run] == 0u) && (run < 0x7fffu))
+            {
+                run++;
+            }
+            if (o >= cap)
+            {
+                return 0u;
+            }
+            out[o++] = (u16)run;
+            i += run;
+        }
+        else
+        {
+            u32 start = i;
+            u32 literal = 0u;
+
+            /* A lone zero between texels stays literal: a zero run costs a
+             * control word either way. */
+            while ((i < n) && (literal < 0x7fffu))
+            {
+                if ((in[i] == 0u) && (((i + 1u) >= n) || (in[i + 1u] == 0u)))
+                {
+                    break;
+                }
+                i++;
+                literal++;
+            }
+            if ((o + 1u + literal) > cap)
+            {
+                return 0u;
+            }
+            out[o++] = (u16)(0x8000u | literal);
+            memcpy(&out[o], &in[start], literal * sizeof(u16));
+            o += literal;
+        }
+    }
+    return o;
+}
+
+/* Bake TIME UP (0) and GAME SET (1) into RAM images of the end bank, exactly
+ * as ndsIFCommonNativeOamPrepareAnnouncement would bake them into OBJ VRAM,
+ * and keep them run-length coded on the scene heap. `scratch` holds one bank
+ * image; `code` holds the worst-case stream. Must run while the full file is
+ * still the prepared file. */
+s32 ndsIFCommonNativeOamBakeEndVariants(u16 *scratch, u16 *code,
+                                        u32 code_capacity_words)
+{
+    u32 game_set;
+
+    if ((sNdsIFCommonPrepared == FALSE) || (sNdsIFCommonCompact != FALSE) ||
+        (scratch == NULL) || (code == NULL))
+    {
+        return FALSE;
+    }
+    gNdsIFCommonEndBakedBytes = 0u;
+    for (game_set = 0u; game_set < 2u; game_set++)
+    {
+        const NDSIFCommonEndSlot *slots =
+            (game_set != 0u) ? sNdsIFCommonGameSetSlots :
+                               sNdsIFCommonTimeUpSlots;
+        u32 slot;
+        u32 words;
+        u16 *resident;
+
+        memset(scratch, 0, NDS_IFCOMMON_END_BANK_BYTES);
+        for (slot = 0u; slot < 6u; slot++)
+        {
+            if (ndsIFCommonBakeDirectAssetTo(
+                    slots[slot].asset_index, sNdsIFCommonPreparedFile,
+                    sNdsIFCommonPreparedFileSize,
+                    NDS_IFCOMMON_END_BANK_BASE + slots[slot].bank_offset,
+                    scratch, NDS_IFCOMMON_END_BANK_BASE, FALSE, TRUE) ==
+                FALSE)
+            {
+                gNdsIFCommonEndBakedFailCount++;
+                return FALSE;
+            }
+        }
+        words = ndsIFCommonRleEncode(
+            scratch, NDS_IFCOMMON_END_BANK_BYTES / sizeof(u16), code,
+            code_capacity_words);
+        resident = (words != 0u) ?
+            (u16 *)syTaskmanMalloc(words * sizeof(u16), 4u) : NULL;
+        if (resident == NULL)
+        {
+            gNdsIFCommonEndBakedFailCount++;
+            return FALSE;
+        }
+        memcpy(resident, code, words * sizeof(u16));
+        sNdsIFCommonEndBaked[game_set] = resident;
+        sNdsIFCommonEndBakedWords[game_set] = words;
+        gNdsIFCommonEndBakedBytes += words * sizeof(u16);
+    }
+    return TRUE;
+}
+
+/* The loader copied the file into its compact image: move every retained
+ * pointer into it. `map` turns a source offset (and a byte count that must
+ * stay contiguous) into a compact offset. All-or-nothing. */
+s32 ndsIFCommonNativeOamIsPreparedFile(const void *file_data)
+{
+    return ((sNdsIFCommonPrepared != FALSE) &&
+            (sNdsIFCommonPreparedFile == file_data)) ? TRUE : FALSE;
+}
+
+s32 ndsIFCommonNativeOamRebaseGameStatus(
+    const void *old_base, size_t old_size, void *new_base, size_t new_size,
+    s32 (*map)(u32 source_offset, u32 bytes, u32 *out_offset), u32 compact)
+{
+    const Sprite *sprites[NDS_IFCOMMON_ASSET_COUNT];
+    u32 asset_index;
+
+    if ((sNdsIFCommonPrepared == FALSE) ||
+        (sNdsIFCommonPreparedFile != old_base) || (map == NULL) ||
+        (new_base == NULL))
+    {
+        return FALSE;
+    }
+    for (asset_index = 0u; asset_index < NDS_IFCOMMON_ASSET_COUNT;
+         asset_index++)
+    {
+        const Sprite *sprite = sNdsIFCommonAssets[asset_index].sprite;
+        uintptr_t at = (uintptr_t)sprite - (uintptr_t)old_base;
+        u32 mapped;
+
+        if ((sprite == NULL) || (at >= old_size) ||
+            (map((u32)at, sizeof(Sprite), &mapped) == FALSE) ||
+            ((mapped + sizeof(Sprite)) > new_size))
+        {
+            return FALSE;
+        }
+        sprites[asset_index] =
+            (const Sprite *)((const u8 *)new_base + mapped);
+    }
+    for (asset_index = 0u; asset_index < NDS_IFCOMMON_ASSET_COUNT;
+         asset_index++)
+    {
+        NDSIFCommonNativeAsset *asset = &sNdsIFCommonAssets[asset_index];
+
+        asset->sprite = sprites[asset_index];
+        /* The loader already re-seated the Sprite's own bitmap pointer. */
+        asset->bitmap = sprites[asset_index]->bitmap;
+    }
+    sNdsIFCommonPreparedFile = new_base;
+    sNdsIFCommonPreparedFileSize = new_size;
+    sNdsIFCommonCompact = (compact != FALSE) ? TRUE : FALSE;
+    return TRUE;
+}
+
+_Static_assert(NDS_IFCOMMON_END_BANK_IMAGE_BYTES ==
+                   NDS_IFCOMMON_END_BANK_BYTES,
+               "the loader's end-bank scratch must match the bank");
+#endif
 
 void ndsIFCommonNativeOamBeginFrame(void)
 {

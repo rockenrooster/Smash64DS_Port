@@ -1,0 +1,21 @@
+0x0200c006 in ndsIFCommonBilerpPremultipliedRgba (taps=0x2291770, fraction_x=<optimized out>, fraction_y=<optimized out>, rgba=0x18f18 "X─éσ\f└\023σX─éσ\b└\023σX─éσ\004└\023σ\016") at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:731
+731	            rgba[channel] = (u8)((weighted_premultiplied +
+Breakpoint 1 at 0x1fffe9c: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+warning: could not convert 'ndsBattlePlayableFrameCompleteMarker' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Temporary breakpoint 2 at 0x207abd0: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 484.
+
+Breakpoint 1, __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:71
+warning: 71	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s: No such file or directory
+STOP pc=0x01fffe9c lr=0x0206d0a0 sp=0x02fffd9e cpsr=0x40000097
+REGS r0=0x02291910 r1=0x02291a10 r2=0x00000000 r3=0x00000000 r4=0x023b7820 r5=0x00000027 r6=0x00000000 r7=0x000252e0
+REGS r8=0x0000004b r9=0x00000000 r10=0x00000001 r11=0x00005240 r12=0x00000027
+ndsRelocLoadIfGameStatusCompact.constprop.0 + 540 in section .main
+ndsRelocLoadIfGameStatusCompact.constprop.0 + 544 in section .main
+Line 15535 of "D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c" starts at address 0x206d096 <ndsRelocLoadIfGameStatusCompact+538> and ends at 0x206d09c <ndsRelocLoadIfGameStatusCompact+544>.
+   0x206d094 <ndsRelocLoadIfGameStatusCompact+536>:	bcs.n	0x206d0aa <ndsRelocLoadIfGameStatusCompact+558>
+   0x206d096 <ndsRelocLoadIfGameStatusCompact+538>:	adds	r6, #1
+   0x206d098 <ndsRelocLoadIfGameStatusCompact+540>:	cmp	r8, r6
+   0x206d09a <ndsRelocLoadIfGameStatusCompact+542>:	beq.n	0x206d0f2 <ndsRelocLoadIfGameStatusCompact+630>
+IFC stage=0 count=0 slots=75 baked=10724
+[Inferior 1 (Remote target) detached]

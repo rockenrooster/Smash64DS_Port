@@ -151,6 +151,13 @@ NDS_FTR_LEAN_ADMIT_DEFAULT ?= 0
 # shipping ROM's heap: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
 # BUILD=<own dir> NDS_TEX_IDENT_SHADOW=1`.
 NDS_TEX_IDENT_SHADOW ?= 0
+# P2-2p8 Phase 3 (A7 memory): 1 keeps IFCommonGameStatus resident without the
+# twelve big GO / TIME UP / GAME SET letters' pixels (~120 KB of the 152 KB
+# file). The file is finalized at the top of the free arena, the letters are
+# baked there (GO into OBJ VRAM, both end messages into compressed RAM), and
+# only the rest of the file is kept (src/port/reloc_backend_assets.c,
+# src/nds/nds_ifcommon_oam.c).
+NDS_IF_GAMESTATUS_COMPACT ?= 0
 # P2-2p8 Phase 1 slice 3: 1 lets NDS_FTR_LEAN_ADMIT_DEFAULT through on a
 # non-tick-HUD lab target (the 1P campaign walk ROM has no tick HUD, and the
 # campaign probe has no word poke). Lab builds only, own build dir -- forced
@@ -6738,6 +6745,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
 		echo '#define NDS_FTR_LEAN_ADMIT_DEFAULT $(NDS_FTR_LEAN_ADMIT_DEFAULT)u'; \
 		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
+		echo '#define NDS_IF_GAMESTATUS_COMPACT $(NDS_IF_GAMESTATUS_COMPACT)'; \
 		echo '#define NDS_FTR_LEAN_ADMIT_LAB $(NDS_FTR_LEAN_ADMIT_LAB)'; \
 		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \

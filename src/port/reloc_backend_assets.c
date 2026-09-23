@@ -6583,6 +6583,16 @@ __attribute__((used)) volatile u32
     gNdsRelocInternalFixupRing[NDS_RELOC_INTERNAL_FIXUP_RING];
 __attribute__((used)) volatile u32 gNdsRelocInternalFixupRingCount;
 
+/* P2-2p8 Phase 3 (A7): while non-NULL, the internal fixup walk records each
+ * slot it patches (as its word index) so a file can later be copied into a
+ * compact image and have every internal pointer re-seated exactly. */
+#define NDS_RELOC_IF_COMPACT_MARK 0xe7u
+static u16 *sNdsRelocSlotCapture;
+static u32 sNdsRelocSlotCaptureActive;
+static u32 sNdsRelocSlotCaptureCap;
+static u32 sNdsRelocSlotCaptureCount;
+static u32 sNdsRelocSlotCaptureOverflow;
+
 static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 {
     u16 reloc_intern;
@@ -6633,6 +6643,19 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
         target = (u8 *)loaded->data + target_offset;
         ndsRelocWriteNativePointer(slot, target);
+        if ((sNdsRelocSlotCaptureActive != FALSE) &&
+            (sNdsRelocSlotCapture != NULL))
+        {
+            if (sNdsRelocSlotCaptureCount < sNdsRelocSlotCaptureCap)
+            {
+                sNdsRelocSlotCapture[sNdsRelocSlotCaptureCount++] =
+                    reloc_intern;
+            }
+            else
+            {
+                sNdsRelocSlotCaptureOverflow = TRUE;
+            }
+        }
 
         fixed_count++;
         reloc_intern = next_reloc;
@@ -15387,6 +15410,347 @@ void *lbRelocGetForceStatusBufferFile(u32 id)
     return file;
 }
 
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+/* P2-2p8 Phase 3 (A7 memory), 2026-09-23: THE COMPACT IFCommonGameStatus.
+ *
+ * Every battle keeps this 152,368-byte file resident all match, yet after the
+ * load the DS reads only its Sprite/Bitmap headers and the lamp, rod and
+ * frame pixels: the GO letters are baked into OBJ VRAM while the file
+ * finalizes (ndsIFCommonNativeOamPrepareGameStatus), and here both end
+ * messages (TIME UP, GAME SET) are baked into run-length streams. So the file
+ * is finalized in free arena space at the TOP of the heap -- nothing owns
+ * that space, nothing allocates while this runs -- and then copied, minus the
+ * twelve letters' pixel payloads (~120 KB), into an ordinary allocation.
+ * Every internal pointer is re-seated from the slots the fixup walk recorded;
+ * a pointer into a dropped payload becomes NULL (only those letters'
+ * Bitmap.buf, which nothing reads after the bake), and ndsRelocGetFileData
+ * maps a source offset through the span table. If any step cannot complete,
+ * the whole file is moved down instead (the old footprint, never a partial
+ * image). */
+#define NDS_RELOC_IF_COMPACT_MAX_DROPS 64u
+#define NDS_RELOC_IF_COMPACT_MAX_SPANS (NDS_RELOC_IF_COMPACT_MAX_DROPS + 1u)
+#define NDS_RELOC_IF_COMPACT_SLOT_CAP 2048u
+#define NDS_RELOC_IF_COMPACT_MARGIN (64u * 1024u)
+
+typedef struct NDSRelocIfSpan
+{
+    u32 source;
+    u32 data;
+    u32 bytes;
+} NDSRelocIfSpan;
+
+static NDSRelocIfSpan sNdsRelocIfSpans[NDS_RELOC_IF_COMPACT_MAX_SPANS];
+static u32 sNdsRelocIfSpanCount;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactCount;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactMoveCount;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactFailStage;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactSourceBytes;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactBytes;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactDropped;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactSlots;
+__attribute__((used)) volatile u32 gNdsRelocIfCompactNulled;
+
+static s32 ndsRelocIfCompactMap(u32 source_offset, u32 bytes,
+                                u32 *out_offset)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsRelocIfSpanCount; i++)
+    {
+        const NDSRelocIfSpan *span = &sNdsRelocIfSpans[i];
+
+        if ((source_offset >= span->source) &&
+            ((source_offset - span->source) < span->bytes) &&
+            (bytes <= (span->bytes - (source_offset - span->source))))
+        {
+            *out_offset = span->data + (source_offset - span->source);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* Kept spans = [0, size) minus the sorted, merged drops. Each span's data
+ * offset keeps its source offset's alignment modulo 8. Returns the image
+ * size, 0 on overflow. */
+static u32 ndsRelocIfBuildSpans(u32 size, u32 *drop_at, u32 *drop_bytes,
+                                u32 drops)
+{
+    u32 i;
+    u32 source = 0u;
+    u32 cursor = 0u;
+
+    for (i = 1u; i < drops; i++)
+    {
+        u32 at = drop_at[i];
+        u32 bytes = drop_bytes[i];
+        u32 j = i;
+
+        while ((j > 0u) && (drop_at[j - 1u] > at))
+        {
+            drop_at[j] = drop_at[j - 1u];
+            drop_bytes[j] = drop_bytes[j - 1u];
+            j--;
+        }
+        drop_at[j] = at;
+        drop_bytes[j] = bytes;
+    }
+    sNdsRelocIfSpanCount = 0u;
+    for (i = 0u; i <= drops; i++)
+    {
+        u32 end = (i < drops) ? drop_at[i] : size;
+
+        if (end > source)
+        {
+            NDSRelocIfSpan *span;
+
+            if (sNdsRelocIfSpanCount >= NDS_RELOC_IF_COMPACT_MAX_SPANS)
+            {
+                return 0u;
+            }
+            span = &sNdsRelocIfSpans[sNdsRelocIfSpanCount++];
+            cursor += (source - cursor) & 7u;
+            span->source = source;
+            span->data = cursor;
+            span->bytes = end - source;
+            cursor += span->bytes;
+        }
+        if (i < drops)
+        {
+            u32 drop_end = drop_at[i] + drop_bytes[i];
+
+            if (drop_end > source)
+            {
+                source = drop_end;
+            }
+        }
+    }
+    return cursor;
+}
+
+/* Every captured slot must sit inside kept data and point inside the file.
+ * Checked before any allocation, so a failure can still fall back cleanly. */
+static s32 ndsRelocIfValidateSlots(const u8 *temp, u32 size)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsRelocSlotCaptureCount; i++)
+    {
+        u32 slot = (u32)sNdsRelocSlotCapture[i] * sizeof(u32);
+        uintptr_t target;
+        u32 mapped;
+
+        if ((slot + sizeof(u32)) > size)
+        {
+            return FALSE;
+        }
+        target = (uintptr_t)ndsRelocReadNative32(temp + slot) -
+                 (uintptr_t)temp;
+        if ((ndsRelocIfCompactMap(slot, sizeof(u32), &mapped) == FALSE) ||
+            (target >= size))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* Copy the finalized file at `temp` into `dst` through the span table and
+ * re-seat every captured internal slot (validated first). A slot whose
+ * target was dropped becomes NULL; returns how many did. */
+static u32 ndsRelocIfCopyImage(const u8 *temp, u8 *dst)
+{
+    u32 i;
+    u32 nulled = 0u;
+
+    for (i = 0u; i < sNdsRelocIfSpanCount; i++)
+    {
+        memcpy(dst + sNdsRelocIfSpans[i].data,
+               temp + sNdsRelocIfSpans[i].source, sNdsRelocIfSpans[i].bytes);
+    }
+    for (i = 0u; i < sNdsRelocSlotCaptureCount; i++)
+    {
+        u32 slot = (u32)sNdsRelocSlotCapture[i] * sizeof(u32);
+        u32 target =
+            (u32)((uintptr_t)ndsRelocReadNative32(temp + slot) -
+                  (uintptr_t)temp);
+        u32 slot_mapped = 0u;
+        u32 target_mapped;
+
+        (void)ndsRelocIfCompactMap(slot, sizeof(u32), &slot_mapped);
+        if (ndsRelocIfCompactMap(target, 1u, &target_mapped) != FALSE)
+        {
+            ndsRelocWriteNativePointer(dst + slot_mapped,
+                                       dst + target_mapped);
+        }
+        else
+        {
+            ndsRelocWriteNativePointer(dst + slot_mapped, NULL);
+            nulled++;
+        }
+    }
+    return nulled;
+}
+
+/* The compact load. Returns the resident image -- compact, or the whole file
+ * moved down with its pointers re-seated -- or NULL when the top-of-heap
+ * window was never used (the caller then loads the file the ordinary way;
+ * gNdsRelocIfCompactFailStage <= 4 says so). */
+static void *ndsRelocLoadIfGameStatusCompact(u32 token, u32 asset_id,
+                                             u32 bit,
+                                             const NDSRelocAssetHeader *in)
+{
+    NDSRelocAssetHeader header = *in;
+    u32 full = (u32)NDS_RELOC_ALIGN(header.data_size);
+    u32 slot_cap = (full / sizeof(u32)) + 1u;
+    uintptr_t heap_ptr = (uintptr_t)gSYTaskmanGeneralHeap.ptr;
+    uintptr_t heap_end = (uintptr_t)gSYTaskmanGeneralHeap.end;
+    u32 code_words = ((NDS_IFCOMMON_END_BANK_IMAGE_BYTES / 2u) * 3u) / 2u +
+                     16u;
+    uintptr_t temp;
+    uintptr_t capture;
+    uintptr_t scratch;
+    uintptr_t code;
+    NDSRelocLoadedFile *loaded;
+    u32 drop_at[NDS_RELOC_IF_COMPACT_MAX_DROPS];
+    u32 drop_bytes[NDS_RELOC_IF_COMPACT_MAX_DROPS];
+    u32 drops = 0u;
+    u32 image_size = 0u;
+    u32 source_size;
+    u8 *image;
+    u32 compact = FALSE;
+    u32 attempt;
+    u32 i;
+
+    gNdsRelocIfCompactFailStage = 0u;
+    if ((heap_ptr == 0u) || (heap_end <= heap_ptr) || (heap_end < full))
+    {
+        gNdsRelocIfCompactFailStage = 1u;
+        return NULL;
+    }
+    temp = (heap_end - full) & ~(uintptr_t)31u;
+    capture = (temp - (slot_cap * sizeof(u16))) & ~(uintptr_t)31u;
+    scratch = (capture - NDS_IFCOMMON_END_BANK_IMAGE_BYTES) &
+              ~(uintptr_t)31u;
+    code = (scratch - (code_words * sizeof(u16))) & ~(uintptr_t)31u;
+    if ((code <= heap_ptr) ||
+        ((code - heap_ptr) < ((uintptr_t)full + NDS_RELOC_IF_COMPACT_MARGIN)))
+    {
+        gNdsRelocIfCompactFailStage = 2u;
+        return NULL;
+    }
+    if (ndsRelocAssetLoadData(asset_id, (void *)temp, full, &header) == FALSE)
+    {
+        gNdsRelocIfCompactFailStage = 3u;
+        return NULL;
+    }
+    loaded = ndsRelocRegisterLoadedFile(asset_id, bit, (void *)temp, &header);
+    if (loaded == NULL)
+    {
+        gNdsRelocIfCompactFailStage = 4u;
+        return NULL;
+    }
+
+    /* From here the file lives in space nothing owns: every path must end in
+     * an allocation that holds it. */
+    sNdsRelocSlotCapture = (u16 *)capture;
+    sNdsRelocSlotCaptureCap = slot_cap;
+    sNdsRelocSlotCaptureCount = 0u;
+    sNdsRelocSlotCaptureOverflow = FALSE;
+    sNdsRelocSlotCaptureActive = TRUE;
+    if ((ndsRelocApplyWordByteSwap(loaded) != FALSE) &&
+        (ndsRelocFinalizeLoadedFile(loaded) != FALSE))
+    {
+        /* Stop recording, keep the record: the copy below reads it. */
+        sNdsRelocSlotCaptureActive = FALSE;
+        ndsRelocNormalizeGroundMapAsset(loaded);
+        ndsRelocNormalizeStageDreamLandSprite(loaded);
+        if (ndsIFCommonNativeOamIsPreparedFile((const void *)temp) != FALSE)
+        {
+            drops = ndsIFCommonNativeOamLetterPayloads(
+                drop_at, drop_bytes, NDS_RELOC_IF_COMPACT_MAX_DROPS);
+            if ((drops != 0u) &&
+                (ndsIFCommonNativeOamBakeEndVariants(
+                     (u16 *)scratch, (u16 *)code, code_words) == FALSE))
+            {
+                gNdsRelocIfCompactFailStage = 6u;
+                drops = 0u;
+            }
+        }
+    }
+    else
+    {
+        gNdsRelocIfCompactFailStage = 5u;
+    }
+    sNdsRelocSlotCaptureActive = FALSE;
+    gNdsRelocIfCompactSlots = sNdsRelocSlotCaptureCount;
+    source_size = loaded->data_size;
+
+    /* Attempt 0 drops the letters; attempt 1 is the plain move. */
+    image = NULL;
+    for (attempt = 0u; (attempt < 2u) && (image == NULL); attempt++)
+    {
+        u32 use = (attempt == 0u) ? drops : 0u;
+
+        if ((attempt == 0u) && (use == 0u))
+        {
+            continue;
+        }
+        image_size = ndsRelocIfBuildSpans(source_size, drop_at, drop_bytes,
+                                          use);
+        if ((image_size == 0u) || (sNdsRelocSlotCaptureOverflow != FALSE) ||
+            (ndsRelocIfValidateSlots((const u8 *)temp, source_size) ==
+             FALSE))
+        {
+            gNdsRelocIfCompactFailStage = 7u;
+            continue;
+        }
+        image = (u8 *)syTaskmanMalloc(NDS_RELOC_ALIGN(image_size), 0x10);
+        compact = (use != 0u) ? TRUE : FALSE;
+    }
+    if ((image == NULL) || (((uintptr_t)image + image_size) > code))
+    {
+        /* Capture overflow cannot happen (one slot per word); an allocation
+         * that reached the window means the heap is exhausted anyway. */
+        sNdsRelocSlotCapture = NULL;
+        gNdsRelocIfCompactFailStage = 9u;
+        return NULL;
+    }
+    gNdsRelocIfCompactNulled = ndsRelocIfCopyImage((const u8 *)temp, image);
+    sNdsRelocSlotCapture = NULL;
+    if ((ndsIFCommonNativeOamIsPreparedFile((const void *)temp) != FALSE) &&
+        (ndsIFCommonNativeOamRebaseGameStatus(
+             (const void *)temp, source_size, image, image_size,
+             ndsRelocIfCompactMap, compact) == FALSE))
+    {
+        gNdsRelocIfCompactFailStage = 8u;
+    }
+    gNdsRelocIfCompactSourceBytes = source_size;
+    loaded->data = image;
+    loaded->data_size = image_size;
+    loaded->reserved[0] = (compact != FALSE) ? NDS_RELOC_IF_COMPACT_MARK : 0u;
+    ndsRelocAddStatusBufferFile(token, image);
+    gNdsRelocIfCompactBytes = image_size;
+    gNdsRelocIfCompactDropped = 0u;
+    if (compact != FALSE)
+    {
+        for (i = 0u; i < drops; i++)
+        {
+            gNdsRelocIfCompactDropped += drop_bytes[i];
+        }
+        gNdsRelocIfCompactCount++;
+    }
+    else
+    {
+        /* A moved whole file maps as itself; clear the table so no lookup
+         * ever consults a stale one. */
+        sNdsRelocIfSpanCount = 0u;
+        gNdsRelocIfCompactMoveCount++;
+    }
+    return image;
+}
+#endif
+
 size_t lbRelocGetAllocSize(u32 *ids, u32 len)
 {
     size_t total = 0;
@@ -15397,6 +15761,13 @@ size_t lbRelocGetAllocSize(u32 *ids, u32 len)
         u32 asset_id = ndsRelocAssetIDForToken(ids[i]);
         size_t asset_size = ndsRelocAssetAllocSize(asset_id);
 
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+        /* Loaded outside this block (ndsRelocLoadIfGameStatusCompact). */
+        if (asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS)
+        {
+            asset_size = 0u;
+        }
+#endif
         total = NDS_RELOC_ALIGN(total);
         if (asset_size != 0)
         {
@@ -15440,6 +15811,49 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
             header_mask |= bit;
             asset_size = (size_t)NDS_RELOC_ALIGN(header.data_size);
 
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+            if ((heap != NULL) && (asset_size != 0) &&
+                (asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS))
+            {
+                /* lbRelocGetAllocSize sized this entry as a placeholder. */
+                void *image = ndsRelocLoadIfGameStatusCompact(
+                    token, asset_id, bit, &header);
+
+                heap_ptr = NDS_RELOC_ALIGN(heap_ptr) + sizeof(uintptr_t);
+                if ((image == NULL) && (gNdsRelocIfCompactFailStage <= 4u))
+                {
+                    /* The window was never used: the ordinary load, in an
+                     * allocation of its own. */
+                    image = syTaskmanMalloc(asset_size, 0x10);
+                    if ((image != NULL) &&
+                        (ndsRelocAssetLoadData(asset_id, image, asset_size,
+                                               &header) != FALSE))
+                    {
+                        NDSRelocLoadedFile *loaded =
+                            ndsRelocRegisterLoadedFile(asset_id, bit, image,
+                                                       &header);
+
+                        ndsRelocAddStatusBufferFile(token, image);
+                        if ((ndsRelocApplyWordByteSwap(loaded) != FALSE) &&
+                            (ndsRelocFinalizeLoadedFile(loaded) != FALSE))
+                        {
+                            ndsRelocNormalizeGroundMapAsset(loaded);
+                            ndsRelocNormalizeStageDreamLandSprite(loaded);
+                        }
+                    }
+                }
+                if (image != NULL)
+                {
+                    payload_mask |= bit;
+                    file_alloc = image;
+                }
+                if (files != NULL)
+                {
+                    files[i] = file_alloc;
+                }
+                continue;
+            }
+#endif
             if ((heap != NULL) && (asset_size != 0))
             {
                 heap_ptr = NDS_RELOC_ALIGN(heap_ptr);
@@ -15611,8 +16025,17 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
         gNdsOpeningRoomRelocSymbolResolveFailCount++;
         return NULL;
     }
+#if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
+    if ((loaded->reserved[0] == NDS_RELOC_IF_COMPACT_MARK) &&
+        (ndsRelocIfCompactMap(offset, 1u, &offset) == FALSE))
+    {
+        gNdsOpeningRoomRelocSymbolResolveFailCount++;
+        return NULL;
+    }
+#endif
 #if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     if ((loaded->reserved[0] != 0u) &&
+        (loaded->reserved[0] != NDS_RELOC_IF_COMPACT_MARK) &&
         (ndsPreviewFileOffset(loaded, offset, 1u, &offset) == FALSE))
     {
         gNdsOpeningRoomRelocSymbolResolveFailCount++;

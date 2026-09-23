@@ -1,0 +1,30 @@
+Reading symbols from D:\Stuff\DevFolder\Smash64DS_Port\builds\build-p2p8-ifc0\smash64ds-p2-fourcpu-tickhud-hwtri.elf...
+0x0212401c in __libc_lock_release ()
+Temporary breakpoint 1 at 0x2079f14: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 484.
+
+Temporary breakpoint 1, ndsBattlePlayableFrameCompleteMarker ()
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c:484
+484	    __asm__ volatile("" ::: "memory");
+FIRST frame=1 freemin=4294967295 free=69052 arena=1277696
+IFC prepfail=0 prepok=1
+Temporary breakpoint 2 at 0x200d728: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c, line 2219.
+
+Temporary breakpoint 2, ndsIFCommonNativeOamPrepareAnnouncement (game_set=0)
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:2219
+2219	    if (game_set > NDS_IFCOMMON_ANNOUNCE_GAME_SET)
+ANNOUNCE game_set=0 frame=1995
+0x020ef444 in ndsIFCommonMakeSObjForGObj (gobj=gobj@entry=0x23d4750, 
+    sprite=0x22c2758)
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ifcommon.c:165
+165	        if (((sprite == time_first) || (sprite == game_first)) &&
+Value returned is $1 = 1
+IFC prepfail=0 prepok=1
+Temporary breakpoint 3 at 0x20ee6a4: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c, line 3326.
+
+Temporary breakpoint 3, mnVSResultsFuncStart ()
+    at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c:3326
+3326		rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+RESULTS frame=2043 freemin=54020 native=293
+IFC prepfail=0 prepok=2
+DONE
+(gdb) 

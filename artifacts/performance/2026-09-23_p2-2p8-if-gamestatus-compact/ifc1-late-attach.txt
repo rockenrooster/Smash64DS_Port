@@ -1,0 +1,16 @@
+__excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:89
+#0  __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:89
+warning: 89	/home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s: No such file or directory
+#1  0x4000003e in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+pc             0x1fffec4           0x1fffec4 <__excpt_entry+40>
+lr             0x1fffec4           0x1fffec4 <__excpt_entry+40>
+sp             0x2fffd8e           0x2fffd8e
+cpsr           0x90000097          -1879048041
+IFC stage=0 count=0 move=0 slots=75 src=0 bytes=0 nulled=0 baked=10724 bakefail=0
+warning: could not convert 'ptr' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+HEAP ptr=0x022c5514 end=0x023dcb00 start=0x022aac00 halt=0 req=0 headroom=0 callerlr=0x00000000
+No symbol matches gNdsSyMallocOverflowCallerLR.
+FRAME presented=0
+[Inferior 1 (Remote target) detached]
