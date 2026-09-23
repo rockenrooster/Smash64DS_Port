@@ -123,7 +123,10 @@ EXPECTED_INCLUDE_SHA256 = (
     # 2026-09-12: ITEM OBJ bank census provenance only. Replacing the new
     # eed79afb census stamp with 157565e0 reproduces the previous include hash
     # 726a355c exactly; payload, metadata, counts and residency are unchanged.
-    "5f3faf1554c3bffbb71f237e7d2b0795e8cbd1efb4c3693594e72ecf0e041abd"
+    # 2026-09-23 (P2-2p8 Phase 1 slice 2c): texture-cache contract census
+    # provenance only. Replacing the dfbc08e0 census stamp with eed79afb
+    # reproduces the previous include hash 5f3faf15 exactly.
+    "c8769a2bc095a102c3619d749e5fea871c4e73036ab64a12fab557a0fbcf631a"
 )
 
 G_SETTIMG = 0xFD

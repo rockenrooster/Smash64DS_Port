@@ -1960,20 +1960,29 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * dynamic slot i owns key-pool entry i - STATIC_COUNT. No free-list or resident
  * key pointer is needed. Re-measure with scripts/probe-p2-fourcpu-sparse.ps1
  * before changing this count; do not grow it from a theoretical roster sum. */
-/* P2-2p8 Phase 1 slice 2b: the count is NOT grown for fighter texture
- * admission. The stress roster's whole admitted set needs 114 dynamic slots
- * on top of the draws' non-admitted same-frame working set (measured on a
- * 245-slot lab ROM, artifacts/performance/2026-09-23_p2-2p8-phase1-slice2b),
- * i.e. about 192 slots -- +19 KB of static RAM, which the taskman arena pays
- * for: the four-CPU general-heap low-water fell to 25,620 B, 20 B above the
- * GObj-cap floor. The admission instead stops NDS_FTR_ADMIT_SLOT_RESERVE
- * short of this partition (nds_renderer_textures_effects.c), so it can never
- * starve the draws of slots; growing the count is an owner RAM decision. */
-#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 124u
+/* P2-2p8 Phase 1 slice 2b did NOT grow the count for fighter texture
+ * admission: at 44 B of entry plus a 236-byte pool key per dynamic slot, the
+ * ~192 slots the stress roster's whole admitted set needs cost +19 KB of static
+ * RAM, which the taskman arena pays for.
+ *
+ * Slice 2c makes the slot cheap instead of the RAM bigger. A dynamic slot no
+ * longer stores its key: it stores a compact identity (two 32-bit multiply
+ * chains over every key word but the image, plus the image, TLUT and texel1
+ * pointers exactly -- NDSRendererHardwareTextureIdent), and the entry drops
+ * the five profile-2-only fields. 60 B per slot instead of 280, so the cache
+ * reaches the lookup table's u8 ceiling (254 slots) at ~15 KB, well under the
+ * old 24.8 KB: the whole four-CPU admission (<= 153 entries, the partition
+ * minus NDS_FTR_ADMIT_SLOT_RESERVE) plus the draws' measured same-frame set.
+ * The identity is collision-checked, not assumed: a lab build (Makefile
+ * NDS_TEX_IDENT_SHADOW=1) keeps an exact shadow of every dynamic key and counts
+ * any identity hit whose exact key differs (gNdsTexIdentLab), and the admission's lab
+ * census proves the admission tables collision-free
+ * (artifacts/performance/2026-09-23_p2-2p8-phase1-slice2c). */
+#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 254u
 #define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
     (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
-#define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
+#define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 512u
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_EMPTY 0u
 #define NDS_RENDERER_CCMUX_COMBINED 0u
 #define NDS_RENDERER_CCMUX_TEXEL0 1u
@@ -3271,9 +3280,29 @@ static inline void ndsRendererHardwareInvalidateGXState(u32 mask)
     sNdsRendererGXStateShadow.valid_mask &= ~mask;
 }
 
+/* P2-2p8 Phase 1 slice 2c: carved names. A fighter texture the admission
+ * uploads into VRAM it reserved itself has no libnds record; its cache entry
+ * is named NDS_FTR_CARVE_NAME_BASE | slot and binds its own TEXIMAGE_PARAM /
+ * PLTT_BASE words (ndsRendererHardwareBindCarvedState, with the admission in
+ * nds_renderer_textures_effects.c). libnds names count up from 1 and are
+ * recycled, so a name with these high bits can never be one of them. */
+#define NDS_FTR_CARVE_NAME_BASE 0xC000u
+#define NDS_FTR_CARVE_IS_NAME(name) \
+    ((((u32)(name)) & 0xFF00u) == NDS_FTR_CARVE_NAME_BASE)
+#define NDS_FTR_CARVE_F_CARVED 0x01u
+#define NDS_FTR_CARVE_F_PALETTE 0x02u
+static void ndsRendererHardwareBindCarvedState(u32 name);
+
 static inline void ndsRendererHardwareBindTextureState(int name)
 {
-    glBindTexture(GL_TEXTURE_2D, name);
+    if (NDS_FTR_CARVE_IS_NAME(name))
+    {
+        ndsRendererHardwareBindCarvedState((u32)name);
+    }
+    else
+    {
+        glBindTexture(GL_TEXTURE_2D, name);
+    }
     ndsRendererHardwareInvalidateGXState(
         NDS_RENDERER_GX_STATE_TEXTURE_PARAMS);
 }
@@ -5267,35 +5296,48 @@ _Static_assert(sizeof(NDSRendererHardwareTextureKey) == (59u * sizeof(u32)),
                "stage route texture-key probe ABI changed");
 #endif
 
-/* NO RESIDENT KEY. A slot's key lives either in the dynamic pool or in its
- * generated ROM record plus three resident pointer words -- see the
- * NDS_RENDERER_HW_TEXTURE_CACHE_COUNT note for why, and
- * ndsRendererHardwareEntryKeyEqual for the one place that has to know which.
- * Read a word through ndsRendererHardwareEntryKeyWord and a whole key through
- * ndsRendererHardwareEntryCopyKey; there is no `entry->key` to reach for.
+/* NO RESIDENT KEY. A static slot's key lives in its generated ROM record plus
+ * three resident pointer words; a dynamic slot keeps only its compact identity
+ * (NDSRendererHardwareTextureIdent, slice 2c) -- see the
+ * NDS_RENDERER_HW_TEXTURE_CACHE_COUNT note, and ndsRendererHardwareEntryKeyEqual
+ * for the one place that has to know which. Read a pointer word or the texel1
+ * fraction through ndsRendererHardwareEntryKeyWord; there is no `entry->key` to
+ * reach for, and a dynamic slot's whole key exists only where
+ * NDS_RENDERER_HW_TEXTURE_KEY_SHADOW keeps a copy (profile-2 and the shadow
+ * lab build).
  *
- * The remaining fields are packed rather than one-u32-each because at 123 slots
- * every four bytes spent here is 492 bytes. Widths
- * are the source's own: owner_mask and the upload dimensions are u16 in
+ * The remaining fields are packed rather than one-u32-each because at 254
+ * slots every four bytes spent here is 1,016 bytes. Widths are the source's
+ * own: owner_mask and the upload dimensions are u16 in
  * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded by
  * NDS_RENDERER_HW_TEXTURE_STATIC_COUNT in
  * ndsRendererHardwareRecordBattleStaticTextureHit, and ready/pinned are
- * booleans. */
+ * booleans. The texel census and the upload dimensions are read only by the
+ * profile-2 texture profiler, so they exist only there (slice 2c). */
 typedef struct NDSRendererHardwareTextureCacheEntry
 {
     int name;
     u32 params;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u32 source_texels;
     u32 green_texels;
     u32 nonwhite_texels;
+#endif
     u32 last_used_frame;
     u32 key_generation;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     u32 key_hash;
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     u16 profile_width;
     u16 profile_height;
+#endif
     u16 static_owner_mask;
+    /* P2-2p8 Phase 1 slice 2c: a CARVED entry -- uploaded by the fighter
+     * admission into VRAM the admission reserved itself, named
+     * NDS_FTR_CARVE_NAME_BASE | slot -- has no libnds record: its bind writes
+     * `params` and, with NDS_FTR_CARVE_F_PALETTE, this PLTT_BASE word. */
+    u16 carve_pltt;
     u8 ready;
     u8 pinned;
     u8 static_record_plus1;
@@ -5310,7 +5352,49 @@ typedef struct NDSRendererHardwareTextureCacheEntry
      * stage_warm, without the static-pin semantics `pinned` carries.
      * Cleared by release (the entry is zeroed) and at battle exit. */
     u8 admitted;
+    u8 carve_flags;
+    u8 carve_region;   /* the carve texture region holding it */
 } NDSRendererHardwareTextureCacheEntry;
+
+
+/* Slice 2c: a dynamic slot's identity. id_a/id_b are two independent 32-bit
+ * multiply chains over key words 1..58 -- every word but the image -- and the
+ * image, TLUT and texel1 pointers are kept exactly. The lookup
+ * (ndsRendererHardwareEntryKeyEqual) requires all five; the stage
+ * source-frame search, which asks for "this key with another image",
+ * requires all but the image. refresh is the texel1 refresh class (data
+ * layout, format, size, dimensions, combine: Texel1RefreshCompatible's seven
+ * words) and prim_lod_fraction the one other word the stage site plan reads. */
+typedef struct NDSRendererHardwareTextureIdent
+{
+    u32 id_a;
+    u32 id_b;
+    u32 image;
+    u32 tlut_image;
+    u32 texel1_image;
+    u32 refresh;
+    u32 prim_lod_fraction;
+} NDSRendererHardwareTextureIdent;
+
+/* Which exact copy of a dynamic slot's key exists beside its identity:
+ *   2  the whole key -- profile-2 and the CPU-prep benchmark, whose oracles
+ *      read keys back (legacy-alias census, benchmark sink hashes)
+ *   1  the lab's exact varint shadow and whole-match identity journal: with
+ *      gNdsTexIdentShadowOn set, every identity hit is re-checked against it
+ *      and a mismatch counts in gNdsTexIdentLab.collisions (and misses).
+ *      About 29.5 KB, so only the tick-HUD build made for it
+ *      (Makefile NDS_TEX_IDENT_SHADOW=1, own build dir); the default tick-HUD
+ *      ROM keeps the shipping ROM's heap
+ *   0  none (shipping and the default tick-HUD ROM) */
+#if (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
+    (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE)
+#define NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 2
+#elif defined(NDS_TICK_HUD) && NDS_TICK_HUD && \
+    defined(NDS_TEX_IDENT_SHADOW) && NDS_TEX_IDENT_SHADOW
+#define NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 1
+#else
+#define NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 0
+#endif
 
 typedef struct NDSRendererHardwareResolvedTexture
 {
@@ -5370,10 +5454,50 @@ typedef struct NDSRendererHardwareLightShadeCacheEntry
 
 static NDSRendererHardwareTextureCacheEntry
     sNdsRendererHardwareTextureCache[NDS_RENDERER_HW_TEXTURE_CACHE_COUNT];
-/* Dynamic slot i owns pool entry i - STATIC_COUNT. The partition IS the pool
+/* Dynamic slot i owns identity i - STATIC_COUNT. The partition IS the pool
  * index, which is why no entry carries one. */
+static NDSRendererHardwareTextureIdent
+    sNdsRendererHardwareTextureIdentPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
 static NDSRendererHardwareTextureKey
-    sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
+    sNdsRendererHardwareTextureKeyShadow[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
+#elif NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 1
+/* bytes[0] is the encoded length (0 = no shadow: an overflow, counted), then
+ * key words 1..58 but the TLUT and texel1 pointers (exact in the identity)
+ * as little-endian base-128 varints. 112 bytes held every key the slice 2c
+ * lab runs met (gNdsTexIdentLab.shadow_overflow). */
+#define NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES 112u
+static u8 sNdsRendererHardwareTextureKeyShadow[
+    NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT][NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES];
+#endif
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+/* The identity's collision check. A lab runtime word, default off: the
+ * encode and compare cost is the lab's, not the gate's. DTCM like the route
+ * words, so a gdb poke is never hidden by the D-cache. */
+#if defined(__arm__)
+volatile u32 gNdsTexIdentShadowOn
+    __attribute__((used, section(".dtcm.bss"), aligned(4)));
+#else
+volatile u32 gNdsTexIdentShadowOn;
+#endif
+typedef struct NDSTexIdentLab
+{
+    u32 checks;              /* identity hits re-checked exactly */
+    u32 collisions;          /* ... whose exact key differed */
+    u32 collision_first[4];  /* site, slot, id_a, id_b */
+    u32 shadow_overflow;     /* keys too long for the shadow (unverifiable) */
+    u32 journal_count;       /* distinct identities the cache took */
+    u32 journal_overflow;
+    u32 journal_collisions;  /* one identity, two fingerprints */
+} NDSTexIdentLab;
+NDSTexIdentLab gNdsTexIdentLab __attribute__((used, aligned(32)));
+/* The whole-match key set: every identity the cache ever took, with an
+ * exact-key fingerprint. Two keys with one identity and different
+ * fingerprints are a collision whether or not they were ever resident
+ * together. */
+#define NDS_TEX_IDENT_JOURNAL 384u
+static u32 sNdsTexIdentJournal[NDS_TEX_IDENT_JOURNAL][4];
+#endif
 #if NDS_TICK_HUD
 /* P2-2 capacity witnesses. These are request/use high-waters rather than
  * inferred dimensions so the stress ROM can prove the real live maxima before
@@ -5426,13 +5550,19 @@ _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
 /* The lookup stores slot + 1 in a u8, so 254 slots is its hard ceiling. */
 _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <= 254u,
                "texture lookup stores slot+1 in a u8");
-/* 45 static + the measured 79 dynamic slots costs 24,640 B. Static growth does
- * not consume the dynamic headroom established by the route census; this also
- * leaves 128 B below the previously measured 24,768 B storage ceiling. Later
- * growth must re-establish both demand and RAM margin again. */
+/* Slice 2c: 254 slots (45 static + 209 dynamic) at 32 B of entry and 28 B of
+ * identity, the 45 static pointer triples and the 512-byte lookup cost
+ * 15,032 B -- under the 24,768 B the 124-slot 2b cache cost with its 236-byte
+ * pool keys. The ceiling stays the old budget: the slot count is bounded by
+ * the lookup's u8 above, not by this. */
+_Static_assert(sizeof(NDSRendererHardwareTextureCacheEntry) == 32u,
+               "texture cache entry must stay 32 bytes");
+_Static_assert(sizeof(NDSRendererHardwareTextureIdent) == 28u,
+               "texture identity must stay 28 bytes");
 _Static_assert(sizeof(sNdsRendererHardwareTextureCache) +
-                       sizeof(sNdsRendererHardwareTextureKeyPool) +
-                       sizeof(sNdsRendererHardwareStaticKeyPointers) <=
+                       sizeof(sNdsRendererHardwareTextureIdentPool) +
+                       sizeof(sNdsRendererHardwareStaticKeyPointers) +
+                       sizeof(sNdsRendererHardwareTextureLookup) <=
                    24768u,
                "texture cache storage must stay within the measured budget");
 #endif
@@ -5467,8 +5597,8 @@ static u32 ndsRendererHardwareEntrySlot(
     return (u32)(entry - sNdsRendererHardwareTextureCache);
 }
 
-/* The writable pool key of a dynamic slot; NULL for a static one. */
-static NDSRendererHardwareTextureKey *ndsRendererHardwareEntryDynamicKey(
+/* The identity of a dynamic slot; NULL for a static one. */
+static NDSRendererHardwareTextureIdent *ndsRendererHardwareEntryIdent(
     const NDSRendererHardwareTextureCacheEntry *entry)
 {
     u32 slot;
@@ -5483,7 +5613,7 @@ static NDSRendererHardwareTextureKey *ndsRendererHardwareEntryDynamicKey(
     {
         return NULL;
     }
-    return &sNdsRendererHardwareTextureKeyPool[
+    return &sNdsRendererHardwareTextureIdentPool[
         slot - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT];
 }
 
@@ -5502,20 +5632,291 @@ ndsRendererHardwareEntryStaticRecord(
         (u32)entry->static_record_plus1 - 1u);
 }
 
+/* THE IDENTITY. Two multiply chains with different odd multipliers over key
+ * words 1..58 -- the image (word 0) is compared exactly beside it, and left
+ * out so the stage source-frame search can ask for "this key, any image" --
+ * each finished with an avalanche. A one-word difference can never collide
+ * (an odd multiplier is invertible mod 2^32); the multi-word case is what the
+ * lab shadow and the admission census check. Word for word as cheap as the
+ * 236-byte memcmp the lookup used to confirm a hit with, which is the only
+ * place it runs: after the fingerprint (key_hash) already matched. */
+static void ndsRendererHardwareTextureIdentOf(
+    const NDSRendererHardwareTextureKey *key, u32 *out_a, u32 *out_b)
+{
+    const u32 *w = (const u32 *)(const void *)key;
+    u32 a = 0x811c9dc5u;
+    u32 b = 0x2545f491u;
+    u32 i;
+
+    for (i = 1u; i < 57u; i += 2u)
+    {
+        u32 v0 = w[i];
+        u32 v1 = w[i + 1u];
+
+        a = (a * 0x01000193u) + v0;
+        b = (b * 0x5bd1e995u) + v0;
+        a = (a * 0x01000193u) + v1;
+        b = (b * 0x5bd1e995u) + v1;
+    }
+    a = (a * 0x01000193u) + w[57];
+    b = (b * 0x5bd1e995u) + w[57];
+    a = (a * 0x01000193u) + w[58];
+    b = (b * 0x5bd1e995u) + w[58];
+    a ^= a >> 16;
+    a *= 0x7feb352du;
+    a ^= a >> 15;
+    a *= 0x846ca68bu;
+    a ^= a >> 16;
+    b ^= b >> 15;
+    b *= 0x2c1b3c6du;
+    b ^= b >> 12;
+    b *= 0x297a2d39u;
+    b ^= b >> 15;
+    *out_a = a;
+    *out_b = b;
+}
+
+/* ndsRendererHardwareTexel1RefreshCompatible's seven words, as one class. */
+static u32 ndsRendererHardwareTextureRefreshClass(
+    const NDSRendererHardwareTextureKey *key)
+{
+    u32 h = 0x9e3779b9u;
+
+    h = (h * 0x01000193u) + key->data_layout;
+    h = (h * 0x01000193u) + key->format;
+    h = (h * 0x01000193u) + key->size;
+    h = (h * 0x01000193u) + key->width;
+    h = (h * 0x01000193u) + key->height;
+    h = (h * 0x01000193u) + key->combine_w0;
+    h = (h * 0x01000193u) + key->combine_w1;
+    h ^= h >> 16;
+    h *= 0x7feb352du;
+    h ^= h >> 15;
+    return h;
+}
+
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 1
+/* Exact encoding of key words 1..58 but 4 (TLUT) and 32 (texel1): 0 when it
+ * does not fit (counted; that slot is then unverifiable, never "equal"). */
+static u32 ndsRendererHardwareTextureShadowEncode(
+    const NDSRendererHardwareTextureKey *key, u8 *out)
+{
+    const u32 *w = (const u32 *)(const void *)key;
+    u32 n = 1u;
+    u32 i;
+
+    for (i = 1u; i < 59u; i++)
+    {
+        u32 v = w[i];
+
+        if ((i == 4u) || (i == 32u))
+        {
+            continue;
+        }
+        do
+        {
+            if (n >= NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES)
+            {
+                return 0u;
+            }
+            out[n++] = (u8)((v & 0x7fu) | ((v > 0x7fu) ? 0x80u : 0u));
+            v >>= 7;
+        } while (v != 0u);
+    }
+    out[0] = (u8)n;
+    return n;
+}
+
+static s32 ndsRendererHardwareTextureShadowDecode(
+    const u8 *in, const NDSRendererHardwareTextureIdent *ident,
+    NDSRendererHardwareTextureKey *key)
+{
+    u32 *w = (u32 *)(void *)key;
+    u32 n = 1u;
+    u32 len = in[0];
+    u32 i;
+
+    if (len == 0u)
+    {
+        return FALSE;
+    }
+    for (i = 1u; i < 59u; i++)
+    {
+        u32 v = 0u;
+        u32 shift = 0u;
+        u32 byte;
+
+        if ((i == 4u) || (i == 32u))
+        {
+            continue;
+        }
+        do
+        {
+            if ((n >= len) || (shift > 28u))
+            {
+                return FALSE;
+            }
+            byte = in[n++];
+            v |= (byte & 0x7fu) << shift;
+            shift += 7u;
+        } while ((byte & 0x80u) != 0u);
+        w[i] = v;
+    }
+    key->image = ident->image;
+    key->tlut_image = ident->tlut_image;
+    key->texel1_image = ident->texel1_image;
+    return TRUE;
+}
+#endif
+
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+/* An exact-key fingerprint for the journal (FNV-1a over all 59 words). */
+static u32 ndsRendererHardwareTextureKeyFingerprint(
+    const NDSRendererHardwareTextureKey *key)
+{
+    const u32 *w = (const u32 *)(const void *)key;
+    u32 h = 2166136261u;
+    u32 i;
+
+    for (i = 0u; i < 59u; i++)
+    {
+        h = (h ^ w[i]) * 16777619u;
+    }
+    return h;
+}
+
+static void ndsRendererHardwareTextureIdentCollision(u32 site, u32 slot,
+                                                     u32 id_a, u32 id_b)
+{
+    if (gNdsTexIdentLab.collisions == 0u)
+    {
+        gNdsTexIdentLab.collision_first[0] = site;
+        gNdsTexIdentLab.collision_first[1] = slot;
+        gNdsTexIdentLab.collision_first[2] = id_a;
+        gNdsTexIdentLab.collision_first[3] = id_b;
+    }
+    gNdsTexIdentLab.collisions++;
+}
+
+/* One identity the cache (or the admission census) met: a second key with
+ * the same identity and another fingerprint is a collision. */
+static void ndsRendererHardwareTextureIdentJournal(
+    const NDSRendererHardwareTextureKey *key, u32 id_a, u32 id_b)
+{
+    u32 fingerprint = ndsRendererHardwareTextureKeyFingerprint(key);
+    u32 count = gNdsTexIdentLab.journal_count;
+    u32 i;
+
+    if (count > NDS_TEX_IDENT_JOURNAL)
+    {
+        count = NDS_TEX_IDENT_JOURNAL;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        const u32 *row = sNdsTexIdentJournal[i];
+
+        if ((row[0] == id_a) && (row[1] == id_b) && (row[2] == key->image))
+        {
+            if (row[3] != fingerprint)
+            {
+                gNdsTexIdentLab.journal_collisions++;
+            }
+            return;
+        }
+    }
+    if (count >= NDS_TEX_IDENT_JOURNAL)
+    {
+        gNdsTexIdentLab.journal_overflow++;
+        return;
+    }
+    sNdsTexIdentJournal[count][0] = id_a;
+    sNdsTexIdentJournal[count][1] = id_b;
+    sNdsTexIdentJournal[count][2] = key->image;
+    sNdsTexIdentJournal[count][3] = fingerprint;
+    gNdsTexIdentLab.journal_count = count + 1u;
+}
+
+/* An identity hit, re-checked against the slot's exact key. `any_image`: the
+ * stage source-frame search, which matches every word but the image. */
+static s32 ndsRendererHardwareTextureShadowVerify(
+    const NDSRendererHardwareTextureCacheEntry *entry,
+    const NDSRendererHardwareTextureKey *key, u32 any_image, u32 site)
+{
+    u32 slot = ndsRendererHardwareEntrySlot(entry);
+    u32 pool = slot - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
+    const NDSRendererHardwareTextureIdent *ident =
+        &sNdsRendererHardwareTextureIdentPool[pool];
+    s32 equal;
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
+    NDSRendererHardwareTextureKey probe = *key;
+
+    if (any_image != 0u)
+    {
+        probe.image = sNdsRendererHardwareTextureKeyShadow[pool].image;
+    }
+    equal = (memcmp(&sNdsRendererHardwareTextureKeyShadow[pool], &probe,
+                    sizeof(probe)) == 0) ? TRUE : FALSE;
+#else
+    u8 encoded[NDS_RENDERER_HW_TEXTURE_SHADOW_BYTES];
+    const u8 *stored = sNdsRendererHardwareTextureKeyShadow[pool];
+    u32 len = ndsRendererHardwareTextureShadowEncode(key, encoded);
+
+    (void)any_image;
+    if ((len == 0u) || (stored[0] == 0u))
+    {
+        /* Unverifiable, not a collision: the overflow counter says how many. */
+        return TRUE;
+    }
+    equal = ((len == stored[0]) &&
+             (memcmp(encoded, stored, len) == 0) &&
+             (key->tlut_image == ident->tlut_image) &&
+             (key->texel1_image == ident->texel1_image)) ? TRUE : FALSE;
+#endif
+    gNdsTexIdentLab.checks++;
+    if (equal == FALSE)
+    {
+        ndsRendererHardwareTextureIdentCollision(site, slot, ident->id_a,
+                                                 ident->id_b);
+    }
+    return equal;
+}
+#endif
+
 static u32 ndsRendererHardwareEntryKeyWord(
     const NDSRendererHardwareTextureCacheEntry *entry, u32 word)
 {
-    const NDSRendererHardwareTextureKey *dynamic;
+    const NDSRendererHardwareTextureIdent *ident;
     const NDSBattlePlayableStaticTextureRecord *record;
 
     if (word >= NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT)
     {
         return 0u;
     }
-    dynamic = ndsRendererHardwareEntryDynamicKey(entry);
-    if (dynamic != NULL)
+    ident = ndsRendererHardwareEntryIdent(entry);
+    if (ident != NULL)
     {
-        return ((const u32 *)dynamic)[word];
+        /* The words a dynamic slot keeps. Every reader asks for one of
+         * these; anything else is only in the lab's shadow. */
+        switch (word)
+        {
+        case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD:
+            return ident->image;
+        case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD:
+            return ident->tlut_image;
+        case NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD:
+            return ident->texel1_image;
+        case NDS_RENDERER_HW_TEXTURE_KEY_WORD(prim_lod_fraction):
+            return ident->prim_lod_fraction;
+        default:
+            break;
+        }
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
+        return ((const u32 *)&sNdsRendererHardwareTextureKeyShadow[
+            ndsRendererHardwareEntrySlot(entry) -
+            NDS_RENDERER_HW_TEXTURE_STATIC_COUNT])[word];
+#else
+        return 0u;
+#endif
     }
     record = ndsRendererHardwareEntryStaticRecord(entry);
     if (record == NULL)
@@ -5539,27 +5940,16 @@ static u32 ndsRendererHardwareEntryKeyWord(
     return record->key_words[word];
 }
 
-/* Materialise a whole key. 236 bytes of copy -- callers that want one word use
- * ndsRendererHardwareEntryKeyWord, and the lookup compares in place. */
-static void ndsRendererHardwareEntryCopyKey(
+/* A static slot's whole key: its record's words with the three runtime
+ * pointers. Zero for a dynamic or empty slot. */
+static void ndsRendererHardwareEntryCopyStaticKey(
     const NDSRendererHardwareTextureCacheEntry *entry,
     NDSRendererHardwareTextureKey *out)
 {
-    const NDSRendererHardwareTextureKey *dynamic;
-    const NDSBattlePlayableStaticTextureRecord *record;
+    const NDSBattlePlayableStaticTextureRecord *record =
+        ndsRendererHardwareEntryStaticRecord(entry);
     const u32 *pointers;
 
-    if (out == NULL)
-    {
-        return;
-    }
-    dynamic = ndsRendererHardwareEntryDynamicKey(entry);
-    if (dynamic != NULL)
-    {
-        *out = *dynamic;
-        return;
-    }
-    record = ndsRendererHardwareEntryStaticRecord(entry);
     if (record == NULL)
     {
         memset(out, 0, sizeof(*out));
@@ -5574,18 +5964,54 @@ static void ndsRendererHardwareEntryCopyKey(
     out->texel1_image = pointers[2];
 }
 
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+/* Materialise a whole key -- only where a shadow keeps dynamic keys (the lab
+ * and profile-2 oracles). Shipping code reads words, never whole keys. */
+static void ndsRendererHardwareEntryCopyKey(
+    const NDSRendererHardwareTextureCacheEntry *entry,
+    NDSRendererHardwareTextureKey *out)
+{
+    const NDSRendererHardwareTextureIdent *ident;
+
+    if (out == NULL)
+    {
+        return;
+    }
+    ident = ndsRendererHardwareEntryIdent(entry);
+    if (ident == NULL)
+    {
+        ndsRendererHardwareEntryCopyStaticKey(entry, out);
+        return;
+    }
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
+    *out = sNdsRendererHardwareTextureKeyShadow[
+        ndsRendererHardwareEntrySlot(entry) -
+        NDS_RENDERER_HW_TEXTURE_STATIC_COUNT];
+#else
+    memset(out, 0, sizeof(*out));
+    (void)ndsRendererHardwareTextureShadowDecode(
+        sNdsRendererHardwareTextureKeyShadow[
+            ndsRendererHardwareEntrySlot(entry) -
+            NDS_RENDERER_HW_TEXTURE_STATIC_COUNT],
+        ident, out);
+#endif
+}
+#endif
+
 /* THE ONE PLACE THAT KNOWS A SLOT MAY NOT OWN ITS KEY.
  *
- * Dynamic slots compare against the pool exactly as the resident key used to.
- * Static slots compare the three runtime pointer words against RAM and the
- * other 56 against ROM -- which is exact, not an approximation, because the
- * prepare built the key by memcpy-ing key_words and then overwriting precisely
- * those three. Word 0, word 4 and word 32 leave three contiguous spans. */
+ * Dynamic slots compare their identity: the three pointer words exactly, then
+ * both multiply chains of the query (slice 2c; the lab re-checks every hit
+ * against its exact shadow). Static slots compare the three runtime pointer
+ * words against RAM and the other 56 against ROM -- which is exact, not an
+ * approximation, because the prepare built the key by memcpy-ing key_words and
+ * then overwriting precisely those three. Word 0, word 4 and word 32 leave
+ * three contiguous spans. */
 static s32 ndsRendererHardwareEntryKeyEqual(
     const NDSRendererHardwareTextureCacheEntry *entry,
     const NDSRendererHardwareTextureKey *key)
 {
-    const NDSRendererHardwareTextureKey *dynamic;
+    const NDSRendererHardwareTextureIdent *ident;
     const NDSBattlePlayableStaticTextureRecord *record;
     const u32 *pointers;
     const u32 *words;
@@ -5594,10 +6020,32 @@ static s32 ndsRendererHardwareEntryKeyEqual(
     {
         return FALSE;
     }
-    dynamic = ndsRendererHardwareEntryDynamicKey(entry);
-    if (dynamic != NULL)
+    ident = ndsRendererHardwareEntryIdent(entry);
+    if (ident != NULL)
     {
-        return (memcmp(dynamic, key, sizeof(*key)) == 0) ? TRUE : FALSE;
+        u32 id_a;
+        u32 id_b;
+
+        if ((ident->image != key->image) ||
+            (ident->tlut_image != key->tlut_image) ||
+            (ident->texel1_image != key->texel1_image))
+        {
+            return FALSE;
+        }
+        ndsRendererHardwareTextureIdentOf(key, &id_a, &id_b);
+        if ((ident->id_a != id_a) || (ident->id_b != id_b))
+        {
+            return FALSE;
+        }
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+        if ((gNdsTexIdentShadowOn != 0u) &&
+            (ndsRendererHardwareTextureShadowVerify(entry, key, 0u, 1u) ==
+             FALSE))
+        {
+            return FALSE;
+        }
+#endif
+        return TRUE;
     }
     record = ndsRendererHardwareEntryStaticRecord(entry);
     if (record == NULL)
@@ -5629,14 +6077,41 @@ static void ndsRendererHardwareEntrySetKey(
     NDSRendererHardwareTextureCacheEntry *entry,
     const NDSRendererHardwareTextureKey *key)
 {
-    NDSRendererHardwareTextureKey *dynamic =
-        ndsRendererHardwareEntryDynamicKey(entry);
+    NDSRendererHardwareTextureIdent *ident =
+        ndsRendererHardwareEntryIdent(entry);
 
-    if ((dynamic == NULL) || (key == NULL))
+    if ((ident == NULL) || (key == NULL))
     {
         return;
     }
-    *dynamic = *key;
+    ndsRendererHardwareTextureIdentOf(key, &ident->id_a, &ident->id_b);
+    ident->image = key->image;
+    ident->tlut_image = key->tlut_image;
+    ident->texel1_image = key->texel1_image;
+    ident->refresh = ndsRendererHardwareTextureRefreshClass(key);
+    ident->prim_lod_fraction = key->prim_lod_fraction;
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 2
+    sNdsRendererHardwareTextureKeyShadow[
+        ndsRendererHardwareEntrySlot(entry) -
+        NDS_RENDERER_HW_TEXTURE_STATIC_COUNT] = *key;
+#elif NDS_RENDERER_HW_TEXTURE_KEY_SHADOW == 1
+    if (ndsRendererHardwareTextureShadowEncode(
+            key, sNdsRendererHardwareTextureKeyShadow[
+                     ndsRendererHardwareEntrySlot(entry) -
+                     NDS_RENDERER_HW_TEXTURE_STATIC_COUNT]) == 0u)
+    {
+        sNdsRendererHardwareTextureKeyShadow[
+            ndsRendererHardwareEntrySlot(entry) -
+            NDS_RENDERER_HW_TEXTURE_STATIC_COUNT][0] = 0u;
+        gNdsTexIdentLab.shadow_overflow++;
+    }
+#endif
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+    if (gNdsTexIdentShadowOn != 0u)
+    {
+        ndsRendererHardwareTextureIdentJournal(key, ident->id_a, ident->id_b);
+    }
+#endif
 }
 
 /* A static slot keeps only the three pointer words; the rest is its record. */
@@ -5660,13 +6135,19 @@ static void ndsRendererHardwareEntrySetStaticKey(
 static void ndsRendererHardwareEntryClearKey(
     NDSRendererHardwareTextureCacheEntry *entry)
 {
-    NDSRendererHardwareTextureKey *dynamic =
-        ndsRendererHardwareEntryDynamicKey(entry);
+    NDSRendererHardwareTextureIdent *ident =
+        ndsRendererHardwareEntryIdent(entry);
     u32 slot;
 
-    if (dynamic != NULL)
+    if (ident != NULL)
     {
-        memset(dynamic, 0, sizeof(*dynamic));
+        memset(ident, 0, sizeof(*ident));
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+        memset(&sNdsRendererHardwareTextureKeyShadow[
+                   ndsRendererHardwareEntrySlot(entry) -
+                   NDS_RENDERER_HW_TEXTURE_STATIC_COUNT],
+               0, sizeof(sNdsRendererHardwareTextureKeyShadow[0]));
+#endif
         return;
     }
     slot = ndsRendererHardwareEntrySlot(entry);

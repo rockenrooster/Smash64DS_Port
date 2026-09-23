@@ -3,9 +3,49 @@ volatile NDSRendererNativeFailure gNdsRendererNativeFailure
 _Static_assert(sizeof(NDSRendererNativeFailure) == 32,
                "Native failure record must own one cache line");
 
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+/* P2-2p8 Phase 1 slice 2c (lab): the record above keeps only the FIRST
+ * failure, so a count can hide several causes. The first 16 distinct
+ * (identity, status, reason) with their counts and first frame. */
+volatile u32 gNdsNativeFailureLabCount __attribute__((used));
+volatile u32 gNdsNativeFailureLab[16][5] __attribute__((used));
+#endif
+
 void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
     u32 status, u32 root, u32 material, u32 reason)
 {
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+    {
+        u32 n = gNdsNativeFailureLabCount;
+        u32 i;
+
+        for (i = 0u; (i < n) && (i < 16u); i++)
+        {
+            if ((gNdsNativeFailureLab[i][0] == identity) &&
+                (gNdsNativeFailureLab[i][1] == status) &&
+                (gNdsNativeFailureLab[i][2] == reason))
+            {
+                gNdsNativeFailureLab[i][3]++;
+                break;
+            }
+        }
+        if ((i == n) && (n < 16u))
+        {
+            gNdsNativeFailureLab[n][0] = identity;
+            gNdsNativeFailureLab[n][1] = status;
+            gNdsNativeFailureLab[n][2] = reason;
+            gNdsNativeFailureLab[n][3] = 1u;
+            gNdsNativeFailureLab[n][4] = gNdsRendererProfileFrameCount;
+            gNdsNativeFailureLabCount = n + 1u;
+        }
+#if defined(ARM9)
+        DC_FlushRange((const void *)gNdsNativeFailureLab,
+                      sizeof(gNdsNativeFailureLab));
+        DC_FlushRange((const void *)&gNdsNativeFailureLabCount,
+                      sizeof(gNdsNativeFailureLabCount));
+#endif
+    }
+#endif
     if (gNdsRendererNativeFailure.count == 0u)
     {
         gNdsRendererNativeFailure.domain = domain;

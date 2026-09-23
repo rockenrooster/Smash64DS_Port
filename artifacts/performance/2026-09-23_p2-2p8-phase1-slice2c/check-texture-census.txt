@@ -1,0 +1,1 @@
+BATTLE_PLAYABLE_TEXTURE_CENSUS_OK static_blocks=16 dynamic_blocks=25 water_blocks=4 runtime_keys=UNQUALIFIED device_zero_conversion=UNPROVEN sha256=dfbc08e05da1b5323681d41b0627d41ed100c9583fe358c1cf7746e5ed24509a

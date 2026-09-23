@@ -1,0 +1,10 @@
+{
+ "control": "../2026-09-23_p2-2p8-phase1-slice2b/f-admit2-rows.csv",
+ "candidate": "f-admit2-rows.csv",
+ "controlFrames": 1972,
+ "candidateFrames": 1972,
+ "sharedFrames": 1972,
+ "zeroDigestFrames": 0,
+ "diverged": 0,
+ "firstDivergence": null
+}

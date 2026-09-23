@@ -1263,6 +1263,10 @@ static void ndsPlatformVramReturnBankDNow(void)
     sOriginalSpriteOverlayBg3Lent = 0u;
     gNdsVramBankDLent = 0u;
     gNdsVramBankDReturns++;
+#if NDS_TICK_HUD
+    /* Slice 2c lab: read from the next scene by gdb, which sees memory. */
+    DC_FlushAll();
+#endif
     if (sOriginalSpriteOverlayBg3Wanted != 0u)
     {
         sOriginalSpriteOverlayLayerMask |= NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND;
@@ -3712,6 +3716,9 @@ void ndsPlatformEndFrame(void)
          * after the next displayed 3D frame. */
         gNdsVramBankDMissedExits++;
         ndsFtrLeanAdmitBattleExit();
+#if NDS_TICK_HUD
+        DC_FlushAll();
+#endif
     }
     /* Single final fade application, after all draws: the published lbFade
      * frame (if any) becomes the MASTER_BRIGHT level for the commit below.

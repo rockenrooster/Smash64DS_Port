@@ -1,0 +1,4 @@
+5F767E6497034F1AC288D368F55CE5D5F04CA216A216F6B8EABBA498A0582C79
+# first re-make after the shell (shipcheck) build: 47D74E78E0C8E7854561791353D53F9C0E3AE702B2425D1D944478AEE8C06962
+# (efmanager/lbparticle compiled before the particle-bank regeneration, against the shell's banks);
+# forcing the five particle-bank dependents to recompile reproduces 5F767E64 exactly (build28-determinism.log)

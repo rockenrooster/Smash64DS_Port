@@ -47,8 +47,9 @@ volatile u32 gNdsVramCensusEnable;
 /* ---- P2-2p8 Phase 1 slice 2b: fighter texture admission, adapter side ----
  * The creation seam (ndsFTManagerEnsureOwnerImages' caller) notes every
  * fighter of a battle; the admission itself (ndsFtrLeanAdmitRun, TU A) runs
- * once per battle: at creation of the last fighter when gNdsFtrLeanAdmit is
- * already set, else at the first frame end that sees it set. */
+ * once per battle: when gNdsFtrLeanAdmit is already set, at the end of the
+ * battle scene's own texture preparation (ndsFtrLeanAdmitSceneTexturesReady,
+ * slice 2c), else at the first frame end that sees it set. */
 static u32 sNdsFtrAdmitGen;      /* gNdsTaskmanHeapGeneration + 1 noted */
 static u32 sNdsFtrAdmitCount;
 static u32 sNdsFtrAdmitKind[NDS_FTR_LEAN_ADMIT_FIGHTERS];
@@ -168,9 +169,26 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
 #endif
 }
 
+#if defined(NDS_FTR_LEAN_ADMIT_DEFAULT) && NDS_FTR_LEAN_ADMIT_DEFAULT && \
+    defined(NDS_TICK_HUD) && NDS_TICK_HUD
+/* P2-2p8 Phase 1 slice 2c (lab builds only, Makefile
+ * NDS_FTR_LEAN_ADMIT_DEFAULT): boot with the word set, so the admission runs
+ * at the end of the battle scene's texture preparation -- the shipping path --
+ * instead of at the first frame the sampler pokes. */
+static u32 sNdsFtrAdmitDefaultApplied;
+#endif
+
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
                                 u32 detail)
 {
+#if defined(NDS_FTR_LEAN_ADMIT_DEFAULT) && NDS_FTR_LEAN_ADMIT_DEFAULT && \
+    defined(NDS_TICK_HUD) && NDS_TICK_HUD
+    if (sNdsFtrAdmitDefaultApplied == 0u)
+    {
+        sNdsFtrAdmitDefaultApplied = 1u;
+        gNdsFtrLeanAdmit = NDS_FTR_LEAN_ADMIT_DEFAULT;
+    }
+#endif
     ndsFtrLeanAdmitSync();
     if ((ndsFtrLeanAdmitBattleScene() == FALSE) ||
         (sNdsFtrAdmitCount >= NDS_FTR_LEAN_ADMIT_FIGHTERS) ||
@@ -183,10 +201,23 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
     sNdsFtrAdmitDetail[sNdsFtrAdmitCount] = detail;
     sNdsFtrAdmitPlayer[sNdsFtrAdmitCount] = player;
     sNdsFtrAdmitCount++;
-    /* Creation-time admission: the last fighter of the battle is made. */
-    if (sNdsFtrAdmitCount ==
-        ((u32)gSCManagerBattleState->pl_count +
-         (u32)gSCManagerBattleState->cp_count))
+}
+
+/* Slice 2c: the creation-time admission. It used to run here, at the creation
+ * of the battle's last fighter -- but every battle entry creates its fighters
+ * BEFORE ndsBattlePrepareSceneTextures resets the texture VRAM
+ * (glResetTextures) and places the scene's own static set, clouds and atlases,
+ * so that reset discarded the whole admission (lab: exit_safety 1, and 458
+ * fighter uploads after GO, exactly word 0's). The scene preparation calls
+ * this last instead: the fighters are made, the scene's own textures are
+ * placed, and the first frame has not been drawn. */
+void ndsFtrLeanAdmitSceneTexturesReady(void)
+{
+    ndsFtrLeanAdmitSync();
+    if ((gSCManagerBattleState != NULL) &&
+        (sNdsFtrAdmitCount ==
+         ((u32)gSCManagerBattleState->pl_count +
+          (u32)gSCManagerBattleState->cp_count)))
     {
         ndsFtrLeanAdmitMaybeRun(gNdsFtrLeanAdmit);
     }

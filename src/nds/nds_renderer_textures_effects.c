@@ -2418,27 +2418,53 @@ static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareFindStageSourceFrameTexture(
     const NDSRendererHardwareTextureKey *key)
 {
+    u32 id_a;
+    u32 id_b;
     u32 i;
 
     if (key == NULL)
     {
         return NULL;
     }
+    /* Every word but the image: the identity's own cut (slice 2c). */
+    ndsRendererHardwareTextureIdentOf(key, &id_a, &id_b);
     for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[i];
-        NDSRendererHardwareTextureKey source_frame;
+        const NDSRendererHardwareTextureIdent *ident;
 
         if ((entry->ready == 0u) || (entry->pinned != 0u) ||
             (entry->admitted != 0u))
         {
             continue;
         }
-        ndsRendererHardwareEntryCopyKey(entry, &source_frame);
-        source_frame.image = key->image;
-        if (ndsRendererHardwareTextureKeyEqual(&source_frame, key) != FALSE)
+        ident = ndsRendererHardwareEntryIdent(entry);
+        if (ident == NULL)
         {
+            NDSRendererHardwareTextureKey source_frame;
+
+            ndsRendererHardwareEntryCopyStaticKey(entry, &source_frame);
+            source_frame.image = key->image;
+            if (ndsRendererHardwareTextureKeyEqual(&source_frame, key) !=
+                FALSE)
+            {
+                return entry;
+            }
+            continue;
+        }
+        if ((ident->id_a == id_a) && (ident->id_b == id_b) &&
+            (ident->tlut_image == key->tlut_image) &&
+            (ident->texel1_image == key->texel1_image))
+        {
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+            if ((gNdsTexIdentShadowOn != 0u) &&
+                (ndsRendererHardwareTextureShadowVerify(entry, key, 1u, 2u) ==
+                 FALSE))
+            {
+                continue;
+            }
+#endif
             return entry;
         }
     }
@@ -2451,27 +2477,46 @@ ndsRendererHardwareFindTexel1RefreshTexture(
 {
     u32 i;
 
+    u32 refresh;
+
     if ((key == NULL) || (key->texel1_image == 0u))
     {
         return NULL;
     }
+    /* Texel1RefreshCompatible's seven words, as the identity's class. */
+    refresh = ndsRendererHardwareTextureRefreshClass(key);
     for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[i];
         /* Only ever a dynamic slot: this refuses pinned entries, and the static
          * partition holds nothing else. */
-        const NDSRendererHardwareTextureKey *resident =
-            ndsRendererHardwareEntryDynamicKey(entry);
+        const NDSRendererHardwareTextureIdent *resident =
+            ndsRendererHardwareEntryIdent(entry);
 
         if ((resident != NULL) && (entry->ready != 0u) &&
             (entry->pinned == 0u) && (entry->admitted == 0u) &&
             (resident->texel1_image != 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)) &&
-            (ndsRendererHardwareTexel1RefreshCompatible(
-                 resident, key) != FALSE))
+            (resident->refresh == refresh))
         {
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+            if (gNdsTexIdentShadowOn != 0u)
+            {
+                NDSRendererHardwareTextureKey exact;
+
+                ndsRendererHardwareEntryCopyKey(entry, &exact);
+                gNdsTexIdentLab.checks++;
+                if (ndsRendererHardwareTexel1RefreshCompatible(
+                        &exact, key) == FALSE)
+                {
+                    ndsRendererHardwareTextureIdentCollision(
+                        3u, i, resident->id_a, resident->id_b);
+                    continue;
+                }
+            }
+#endif
             return entry;
         }
     }
@@ -2741,6 +2786,12 @@ u32 ndsRendererHardwareCommitPendingTextureRefreshes(void)
 #endif
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+static void ndsFtrCarveNoteRelease(
+    const NDSRendererHardwareTextureCacheEntry *entry);
+#endif
+
 static NDSRendererHardwareTextureCacheEntry *
 ndsRendererHardwareReleaseTexture(
     NDSRendererHardwareTextureCacheEntry *entry)
@@ -2769,10 +2820,20 @@ ndsRendererHardwareReleaseTexture(
     {
         sNdsRendererHardwareActiveTextureEntry = NULL;
     }
-    if (entry->name != 0)
+    if ((entry->name != 0) && (NDS_FTR_CARVE_IS_NAME(entry->name) == FALSE))
     {
         ndsRendererHardwareFencedGlDeleteTextures(1, &entry->name);
     }
+    /* A carved name (slice 2c) has no libnds record: its VRAM belongs to the
+     * admission's carve regions, which go back to libnds with their last
+     * entry. */
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    if ((entry->carve_flags & NDS_FTR_CARVE_F_CARVED) != 0u)
+    {
+        ndsFtrCarveNoteRelease(entry);
+    }
+#endif
     /* The key is no longer inside the entry, so zeroing the entry no longer
      * zeroes it. Every reader gates on `ready`, but the particle atlas keeps a
      * slot ready with a deliberately blank key, so a released slot must really
@@ -2897,7 +2958,7 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
     {
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[i];
-        const NDSRendererHardwareTextureKey *key;
+        const NDSRendererHardwareTextureIdent *key;
         uintptr_t image;
         uintptr_t tlut;
         uintptr_t texel1;
@@ -2907,8 +2968,9 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size)
             continue;
         }
         /* Dynamic slots only: a static slot's key belongs to the generated
-         * corpus, which no preview arena can own. */
-        key = ndsRendererHardwareEntryDynamicKey(entry);
+         * corpus, which no preview arena can own. The identity keeps the three
+         * pointer words exactly. */
+        key = ndsRendererHardwareEntryIdent(entry);
         if (key == NULL)
         {
             continue;
@@ -4367,6 +4429,7 @@ typedef struct NDSFtrAdmitLab
 } NDSFtrAdmitLab;
 
 NDSFtrAdmitLab gNdsFtrAdmitLab __attribute__((used, aligned(32)));
+volatile u32 gNdsFtrOutsideLr[8][4] __attribute__((used));
 #define NDS_FTR_ADMIT_LAB(stmt) do { stmt; } while (0)
 static u8 sNdsVramCensusBucketOf[NDS_VRAM_CENSUS_NAME_MAX];
 static u32 sNdsVramCensusPalSeen[NDS_VRAM_CENSUS_NAME_MAX / 32u];
@@ -4694,6 +4757,11 @@ void ndsVramCensusCaptureBurst(void)
     DC_FlushRange(&gNdsVramCensus, sizeof(gNdsVramCensus));
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+static void ndsFtrCarveLabPublish(void);
+#endif
+
 void ndsVramCensusFrame(void)
 {
     NDSVramCensus *census = &gNdsVramCensus;
@@ -4701,6 +4769,14 @@ void ndsVramCensusFrame(void)
     u32 frame;
     u32 i;
 
+    /* Slice 2c lab blocks: the sampler reads memory, not the D-cache. */
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+    DC_FlushRange(&gNdsTexIdentLab, sizeof(gNdsTexIdentLab));
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    ndsFtrCarveLabPublish();
+#endif
     if (gNdsVramCensusEnable == 0u)
     {
         return;
@@ -4827,6 +4903,9 @@ static void ndsVramCensusNoteCacheKey(
         (((entry->params >> 20) & 7u) << 8) |
         (((entry->params >> 23) & 7u) << 11) | (pal_code << 14) |
         (((entry->params >> 16) & 0xfu) << 16);
+#if NDS_RENDERER_HW_TEXTURE_KEY_SHADOW != 0
+    /* The admitted keys this compares against exist whole only where a
+     * shadow keeps them (slice 2c: the NDS_TEX_IDENT_SHADOW lab build). */
     if ((gNdsFtrAdmitLab.done != 0u) && (gNdsFtrAdmitLab.diag_state[slot] == 0u))
     {
         u32 j;
@@ -4858,8 +4937,21 @@ static void ndsVramCensusNoteCacheKey(
             }
         }
     }
+#endif
     if ((gNdsFtrAdmitLab.done != 0u) && (gNdsFtrAdmitLab.outside_count < 8u))
     {
+        /* Slice 2c (lab): who uploaded it -- the return address of the
+         * resolve path's caller (this note is inlined into it) -- and the
+         * native-failure count at that moment. */
+        gNdsFtrOutsideLr[gNdsFtrAdmitLab.outside_count][0] =
+            (u32)(uintptr_t)__builtin_return_address(0);
+        gNdsFtrOutsideLr[gNdsFtrAdmitLab.outside_count][1] =
+            gNdsRendererNativeFailure.count;
+        gNdsFtrOutsideLr[gNdsFtrAdmitLab.outside_count][2] =
+            gNdsRendererProfileFrameCount;
+        gNdsFtrOutsideLr[gNdsFtrAdmitLab.outside_count][3] =
+            key->image_format | (key->image_size << 8) |
+            (key->image_width << 16);
         gNdsFtrAdmitLab.outside_first[gNdsFtrAdmitLab.outside_count][0] =
             (slot << 28) | (w0 & 0x0fffffffu);
         gNdsFtrAdmitLab.outside_first[gNdsFtrAdmitLab.outside_count][1] = w1;
@@ -6345,14 +6437,14 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         entry->key_hash = key_hash;
 #endif
         entry->params = (u32)glGetTexParameter();
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         entry->source_texels = (u32)record->logical_width *
             (u32)record->logical_height;
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
         entry->green_texels = green_texels;
         entry->nonwhite_texels = nonwhite_texels;
-#endif
         entry->profile_width = record->upload_width;
         entry->profile_height = record->upload_height;
+#endif
         entry->last_used_frame = 0u;
         entry->pinned = TRUE;
         entry->static_record_plus1 = record_index + 1u;
@@ -11885,6 +11977,26 @@ static void ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
     gNdsRendererPrimRgbTexel0AlphaBindCount++;
 }
 
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+/* P2-2p8 Phase 1 slice 2c: while the fighter admission runs, a new cache entry
+ * is carved (ndsFtrCarveUpload, with the admission below) instead of taking a
+ * libnds name and glTexImage2D. */
+#define NDS_FTR_CARVE_LIVE 1
+static u32 sNdsFtrCarveActive;
+static s32 ndsFtrCarveUpload(NDSRendererHardwareTextureCacheEntry *entry,
+                             u32 type, u32 size_x, u32 size_y, u32 params,
+                             const void *texels, u32 palette_entries,
+                             const u16 *palette);
+#if NDS_VRAM_CENSUS_LIVE
+/* Lab: the admission census's key probe -- the resolve path copies the key
+ * it built here and returns before the lookup, conversion and upload. */
+static NDSRendererHardwareTextureKey *sNdsFtrAdmitKeyProbe;
+#endif
+#else
+#define NDS_FTR_CARVE_LIVE 0
+#endif
+
 static s32 ndsRendererHardwareResolveOrBindTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -12534,6 +12646,13 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     key_hash = ndsRendererHardwareTextureKeyHash(&key);
 #else
     key_hash = 0u;
+#endif
+#if NDS_FTR_CARVE_LIVE && NDS_VRAM_CENSUS_LIVE
+    if (sNdsFtrAdmitKeyProbe != NULL)
+    {
+        *sNdsFtrAdmitKeyProbe = key;
+        return FALSE;
+    }
 #endif
 #if NDS_TASK93_TEXKEY_CENSUS
     /* Task 93 E0. Everything above this line is the key rebuild -- ~59 stats
@@ -13252,6 +13371,27 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 stats, format, size, NDS_RENDERER_HW_TEXREJECT_ALLOC);
             return FALSE;
         }
+#if NDS_FTR_CARVE_LIVE
+        /* Slice 2c: the admission carves -- its own VRAM, no libnds name or
+         * record, no libc -- and names the entry NDS_FTR_CARVE_NAME_BASE |
+         * slot. The bind below then goes through the carved words. */
+        if ((sNdsFtrCarveActive != 0u) && (entry->name == 0))
+        {
+            ndsRendererHardwareEndBatch();
+            if (ndsFtrCarveUpload(entry, (u32)resident_texture_type,
+                                  (u32)size_x, (u32)size_y, params,
+                                  sNdsRendererHardwareTextureScratch,
+                                  resident_palette_entries,
+                                  resident_palette) == FALSE)
+            {
+                ndsRendererHardwareRejectTexture(
+                    stats, format, size, NDS_RENDERER_HW_TEXREJECT_TEXIMAGE);
+                return FALSE;
+            }
+        }
+        else
+#endif
+        {
         if (entry->name == 0)
         {
             if (ndsRendererHardwareFencedGlGenTextures(
@@ -13295,6 +13435,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             glColorTableEXT(GL_TEXTURE_2D, 0, (int)resident_palette_entries,
                             0, 0, resident_palette);
         }
+        }
     }
     ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -13325,11 +13466,16 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     /* Slice 2a (lab): the distinct fighter textures each slot uploads. */
     ndsVramCensusNoteCacheKey(entry, &key, resident_palette_entries);
 #endif
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
     entry->source_texels = texels;
     entry->green_texels = green_texels;
     entry->nonwhite_texels = nonwhite_texels;
     entry->profile_width = upload_width;
     entry->profile_height = upload_height;
+#else
+    (void)green_texels;
+    (void)nonwhite_texels;
+#endif
     entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
     entry->ready = TRUE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -16126,6 +16272,623 @@ static const NDSRendererConfig sNdsFtrAdmitConfig = {
     .texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED
 };
 
+/* ---------------------------------------------------------------------------
+ * P2-2p8 Phase 1 slice 2c: carved residency.
+ *
+ * libnds keeps a malloc'd record for every texture name and palette, and a
+ * block node for every VRAM split, in the libc reserve beside the taskman
+ * arena; slice 2b's admission hit that reserve's floor after 15 records. The
+ * admission now reserves VRAM in a few large blocks straight from libnds's own
+ * allocators -- vramBlock_allocateBlock, the search glTexImage2D and
+ * glColorTableEXT make, without a texture or palette record -- and carves every
+ * admitted texture and palette out of them with a bump pointer, writing the
+ * texels through the LCD mapping as glTexImage2D does. libc is touched once
+ * per reservation (a handful per battle), never per texture.
+ *
+ * A carved entry is named NDS_FTR_CARVE_NAME_BASE | slot and keeps its own
+ * TEXIMAGE_PARAM (params) and PLTT_BASE (carve_pltt) words. Its bind
+ * (ndsRendererHardwareBindCarvedState) writes them and points libnds's active
+ * texture and palette at one "carrier" record whose words it rewrites, so
+ * glTexParameter, glGetTexParameter and glGetColorTableParameterEXT -- the
+ * packet recorder's view of the bind -- see exactly what they would for a
+ * real name. A texture region is returned to libnds when the last entry
+ * carved in it is released (entries stop being admitted at the battle exit
+ * and are then evicted like any other); the palette regions and the carrier
+ * go with the last carved entry, or at the next scene reset
+ * (ndsFtrLeanAdmitCarveRetire).
+ * ------------------------------------------------------------------------- */
+u8 *vramBlock_examineSpecial(s_vramBlock *mb, u8 *addr, u32 size, u8 align);
+u32 vramBlock_allocateSpecial(s_vramBlock *mb, u8 *addr, u32 size);
+u32 vramBlock_allocateBlock(s_vramBlock *mb, u32 size, u8 align);
+u32 vramBlock_deallocateBlock(s_vramBlock *mb, u32 index);
+u8 *vramBlock_getAddr(s_vramBlock *mb, u32 index);
+
+#define NDS_FTR_CARVE_REGIONS 16u
+#define NDS_FTR_CARVE_TEX 0u
+#define NDS_FTR_CARVE_PAL 1u
+/* Hole filling takes free runs down to these sizes; smaller holes stay with
+ * libnds. A texture that fits no region reserves a D chunk of this size. */
+#define NDS_FTR_CARVE_TEX_FILL_MAX 0x10000u
+#define NDS_FTR_CARVE_TEX_FILL_MIN 0x800u
+#define NDS_FTR_CARVE_PAL_FILL_MAX 0x1000u
+#define NDS_FTR_CARVE_PAL_FILL_MIN 0x100u
+#define NDS_FTR_CARVE_TEX_CHUNK 0x4000u
+#define NDS_FTR_CARVE_PAL_CHUNK 0x400u
+
+typedef struct NDSFtrCarveRegion
+{
+    u32 lcd;     /* region start, LCD address */
+    u32 size;    /* bytes reserved (0: retired by the shrink) */
+    u32 used;    /* bump offset */
+    u32 index;   /* libnds vramBlock index of the reservation (0: returned) */
+    u32 live;    /* carved textures still resident in it */
+} NDSFtrCarveRegion;
+
+static NDSFtrCarveRegion sNdsFtrCarveRegion[2][NDS_FTR_CARVE_REGIONS];
+static u32 sNdsFtrCarveRegionCount[2];
+static u32 sNdsFtrCarveLazyTex;
+static u32 sNdsFtrCarveLive;
+static u32 sNdsFtrCarveRetiring;
+static int sNdsFtrCarveCarrier;
+static gl_texture_data *sNdsFtrCarveCarrierTex;
+static int sNdsFtrCarveCarrierPal;
+static gl_palette_data *sNdsFtrCarveCarrierPalData;
+
+#if NDS_VRAM_CENSUS_LIVE
+typedef struct NDSFtrCarveLab
+{
+    u32 opens;
+    u32 carrier_fail;
+    u32 regions[2];
+    u32 reserved[2];     /* bytes reserved (peak) */
+    u32 used[2];         /* bytes carved */
+    u32 carved[2];       /* textures / palettes carved */
+    u32 fails[2];        /* carve refusals: no region fits */
+    u32 lazy;            /* D chunks reserved during the admission */
+    u32 shrink_freed[2]; /* bytes the end-of-admission shrink returned */
+    u32 retires;
+    u32 retire_regions;
+    u32 region_returns;  /* texture regions returned when their last entry went */
+    u32 exit_released;   /* carved entries released at battle exit */
+    u32 libc_before;     /* libc top chunk at open / after the admission */
+    u32 libc_after;
+    /* the lab identity census (gNdsFtrAdmitIdentCensus) */
+    u32 census_runs;
+    u32 census_records;
+    u32 census_keys;     /* distinct identities */
+    u32 census_dups;     /* records that repeat an identity with the same key */
+    u32 census_skipped;  /* sources this battle cannot address */
+    u32 census_noprobe;  /* records the resolve path refused before its key */
+    u32 census_collisions;
+    u32 census_overflow;
+    u32 census_ticks;
+    u32 census_first[4]; /* kind << 8 | detail, record, other record, id_a */
+} NDSFtrCarveLab;
+NDSFtrCarveLab gNdsFtrCarveLab __attribute__((used, aligned(32)));
+
+static void ndsFtrCarveLabPublish(void)
+{
+    DC_FlushRange(&gNdsFtrCarveLab, sizeof(gNdsFtrCarveLab));
+}
+#endif
+
+/* ndsRendererHardwareBindTextureState's carved half. */
+static void ndsRendererHardwareBindCarvedState(u32 name)
+{
+    const NDSRendererHardwareTextureCacheEntry *entry;
+    u32 slot = name & 0xFFu;
+
+    if ((slot >= NDS_RENDERER_HW_TEXTURE_CACHE_COUNT) ||
+        (sNdsFtrCarveCarrierTex == NULL))
+    {
+        GFX_TEX_FORMAT = 0u;
+        GFX_PAL_FORMAT = 0u;
+        glGlobalData.activeTexture = 0;
+        glGlobalData.activePalette = 0;
+        return;
+    }
+    entry = &sNdsRendererHardwareTextureCache[slot];
+    sNdsFtrCarveCarrierTex->texFormat = entry->params;
+    GFX_TEX_FORMAT = entry->params;
+    glGlobalData.activeTexture = sNdsFtrCarveCarrier;
+    if (((entry->carve_flags & NDS_FTR_CARVE_F_PALETTE) != 0u) &&
+        (sNdsFtrCarveCarrierPalData != NULL))
+    {
+        sNdsFtrCarveCarrierPalData->addr = entry->carve_pltt;
+        GFX_PAL_FORMAT = entry->carve_pltt;
+        glGlobalData.activePalette = sNdsFtrCarveCarrierPal;
+    }
+    else
+    {
+        GFX_PAL_FORMAT = 0u;
+        glGlobalData.activePalette = 0;
+    }
+}
+
+/* The carrier: one real libnds name with one 8-colour palette, whose record
+ * words a carved bind rewrites. */
+static s32 ndsFtrCarveCarrierOpen(void)
+{
+    static const u16 kCarrierPalette[8] = { 0u };
+    int name = 0;
+    gl_texture_data *tex;
+
+    if (sNdsFtrCarveCarrier != 0)
+    {
+        return TRUE;
+    }
+    if ((ndsRendererHardwareFencedGlGenTextures(1, &name) == 0) ||
+        (name <= 0))
+    {
+        return FALSE;
+    }
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareBindTextureState(name);
+    glColorTableEXT(GL_TEXTURE_2D, 0, 8, 0, 0, kCarrierPalette);
+    tex = (gl_texture_data *)DynamicArrayGet(&glGlobalData.texturePtrs,
+                                             (unsigned int)name);
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    if ((tex == NULL) || (tex->palIndex <= 0))
+    {
+        ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+        return FALSE;
+    }
+    sNdsFtrCarveCarrierPalData = (gl_palette_data *)DynamicArrayGet(
+        &glGlobalData.palettePtrs, (unsigned int)tex->palIndex);
+    if (sNdsFtrCarveCarrierPalData == NULL)
+    {
+        ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+        return FALSE;
+    }
+    sNdsFtrCarveCarrier = name;
+    sNdsFtrCarveCarrierTex = tex;
+    sNdsFtrCarveCarrierPal = tex->palIndex;
+    return TRUE;
+}
+
+static void ndsFtrCarveCarrierClose(void)
+{
+    if (sNdsFtrCarveCarrier != 0)
+    {
+        ndsRendererHardwareEndBatch();
+        ndsRendererHardwareFencedGlDeleteTextures(1, &sNdsFtrCarveCarrier);
+    }
+    sNdsFtrCarveCarrier = 0;
+    sNdsFtrCarveCarrierTex = NULL;
+    sNdsFtrCarveCarrierPal = 0;
+    sNdsFtrCarveCarrierPalData = NULL;
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+}
+
+/* One reservation: libnds's own first-fit search over the allocator's usable,
+ * unlocked banks, 16-byte aligned. */
+static s32 ndsFtrCarveReserve(u32 which, u32 bytes)
+{
+    s_vramBlock *mb = glGlobalData.vramBlocks[which];
+    NDSFtrCarveRegion *region;
+    u32 index;
+    u8 *addr;
+
+    if ((mb == NULL) || (bytes == 0u) ||
+        (sNdsFtrCarveRegionCount[which] >= NDS_FTR_CARVE_REGIONS))
+    {
+        return FALSE;
+    }
+    bytes = (bytes + 15u) & ~15u;
+    index = vramBlock_allocateBlock(mb, bytes, 4u);
+    if (index == 0u)
+    {
+        return FALSE;
+    }
+    addr = vramBlock_getAddr(mb, index);
+    if (addr == NULL)
+    {
+        (void)vramBlock_deallocateBlock(mb, index);
+        return FALSE;
+    }
+    region = &sNdsFtrCarveRegion[which][sNdsFtrCarveRegionCount[which]++];
+    region->lcd = (u32)(uintptr_t)addr;
+    region->size = bytes;
+    region->used = 0u;
+    region->index = index;
+    region->live = 0u;
+    NDS_FTR_ADMIT_LAB((gNdsFtrCarveLab.regions[which]++,
+                       gNdsFtrCarveLab.reserved[which] += bytes));
+    return TRUE;
+}
+
+/* Take every free run down to `smallest`, largest pieces first. */
+static void ndsFtrCarveFill(u32 which, u32 largest, u32 smallest)
+{
+    u32 size;
+
+    for (size = largest; size >= smallest; size >>= 1)
+    {
+        while (ndsFtrCarveReserve(which, size) != FALSE)
+        {
+        }
+    }
+}
+
+static s32 ndsFtrCarveTake(u32 which, u32 bytes, u32 align, u32 *lcd,
+                           u32 *region_index)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsFtrCarveRegionCount[which]; i++)
+    {
+        NDSFtrCarveRegion *region = &sNdsFtrCarveRegion[which][i];
+        u32 at = (region->lcd + region->used + (align - 1u)) & ~(align - 1u);
+
+        if ((region->index != 0u) &&
+            (at + bytes <= region->lcd + region->size))
+        {
+            region->used = at + bytes - region->lcd;
+            *lcd = at;
+            *region_index = i;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static s32 ndsFtrCarveAlloc(u32 which, u32 bytes, u32 align, u32 *lcd,
+                            u32 *region_index)
+{
+    u32 chunk = (which == NDS_FTR_CARVE_TEX) ? NDS_FTR_CARVE_TEX_CHUNK :
+        NDS_FTR_CARVE_PAL_CHUNK;
+
+    if (ndsFtrCarveTake(which, bytes, align, lcd, region_index) != FALSE)
+    {
+        return TRUE;
+    }
+    if ((which == NDS_FTR_CARVE_TEX) && (sNdsFtrCarveLazyTex == 0u))
+    {
+        return FALSE;
+    }
+    if (((bytes < chunk) && (ndsFtrCarveReserve(which, chunk) != FALSE)) ||
+        (ndsFtrCarveReserve(which, bytes + align) != FALSE))
+    {
+        NDS_FTR_ADMIT_LAB(if (which == NDS_FTR_CARVE_TEX)
+                          { gNdsFtrCarveLab.lazy++; });
+        return ndsFtrCarveTake(which, bytes, align, lcd, region_index);
+    }
+    return FALSE;
+}
+
+/* libnds's glColorTableEXT offset: the bank's own offset, plus its palette
+ * slot for F and G (VRAMCNT OFS: slot 0, 1, 4 or 5 x 16 KB). */
+static u32 ndsFtrCarvePaletteOffset(u32 lcd)
+{
+    const volatile u8 *cnt = (const volatile u8 *)0x04000244u;
+    u32 base;
+    u32 ofs;
+
+    if (lcd >= 0x06894000u)
+    {
+        base = 0x06894000u;
+        ofs = (cnt[2] >> 3) & 3u;
+    }
+    else if (lcd >= 0x06890000u)
+    {
+        base = 0x06890000u;
+        ofs = (cnt[1] >> 3) & 3u;
+    }
+    else
+    {
+        return lcd - 0x06880000u;
+    }
+    return (lcd - base) + (((ofs & 1u) + ((ofs & 2u) << 1)) << 14);
+}
+
+/* CPU-copy into VRAM through the LCD mapping of exactly the banks the range
+ * covers (glTexImage2D / glColorTableEXT map A-D / E-G the same way). */
+static void ndsFtrCarveCopy(u32 lcd, const void *src, u32 bytes, u32 halfwords)
+{
+    volatile u8 *cnt;
+    u8 saved[4];
+    u32 first;
+    u32 last;
+    u32 b;
+
+    if (lcd >= 0x06880000u)
+    {
+        /* E 0x06880000 (64 KB), F 0x06890000, G 0x06894000 (16 KB each) */
+        cnt = (volatile u8 *)0x04000244u;
+        first = (lcd >= 0x06894000u) ? 2u : ((lcd >= 0x06890000u) ? 1u : 0u);
+        last = ((lcd + bytes - 1u) >= 0x06894000u) ? 2u :
+            (((lcd + bytes - 1u) >= 0x06890000u) ? 1u : 0u);
+    }
+    else
+    {
+        cnt = (volatile u8 *)0x04000240u;
+        first = (lcd - 0x06800000u) >> 17;
+        last = (lcd + bytes - 1u - 0x06800000u) >> 17;
+    }
+    for (b = first; b <= last; b++)
+    {
+        saved[b] = cnt[b];
+        cnt[b] = 0x80u;
+    }
+    if (halfwords != 0u)
+    {
+        swiCopy(src, (void *)(uintptr_t)lcd, (int)((bytes >> 1) | COPY_MODE_HWORD));
+    }
+    else
+    {
+        swiCopy(src, (void *)(uintptr_t)lcd, (int)((bytes >> 2) | COPY_MODE_WORD));
+    }
+    for (b = first; b <= last; b++)
+    {
+        cnt[b] = saved[b];
+    }
+}
+
+/* The resolve path's upload, carved: the same words glTexImage2D and
+ * glColorTableEXT would have produced, in VRAM the admission owns. */
+static s32 ndsFtrCarveUpload(NDSRendererHardwareTextureCacheEntry *entry,
+                             u32 type, u32 size_x, u32 size_y, u32 params,
+                             const void *texels, u32 palette_entries,
+                             const u16 *palette)
+{
+    /* bits per texel by GL_TEXTURE_TYPE_ENUM (GL_RGB is uploaded as GL_RGBA) */
+    static const u8 kBits[8] = { 0u, 8u, 2u, 4u, 8u, 0u, 8u, 16u };
+    u32 hw_type = (type == (u32)GL_RGB) ? (u32)GL_RGBA : type;
+    u32 bits = (hw_type < 8u) ? kBits[hw_type] : 0u;
+    u32 bytes;
+    u32 lcd = 0u;
+    u32 pal_lcd = 0u;
+    u32 pltt = 0u;
+    u32 word;
+    u32 slot;
+    u32 region = 0u;
+    u32 pal_region = 0u;
+
+    if ((entry == NULL) || (texels == NULL) || (bits == 0u) ||
+        (size_x > 7u) || (size_y > 7u) || (palette_entries > 256u) ||
+        ((palette_entries != 0u) && (palette == NULL)))
+    {
+        return FALSE;
+    }
+    bytes = ((1u << (size_x + size_y + 6u)) * bits) >> 3;
+    if (ndsFtrCarveAlloc(NDS_FTR_CARVE_TEX, bytes, 8u, &lcd, &region) == FALSE)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.fails[NDS_FTR_CARVE_TEX]++);
+        return FALSE;
+    }
+    if (palette_entries != 0u)
+    {
+        u32 pal_bytes = palette_entries * 2u;
+        u32 rgb4 = (hw_type == (u32)GL_RGB4) ? 1u : 0u;
+
+        if (ndsFtrCarveAlloc(NDS_FTR_CARVE_PAL, pal_bytes, rgb4 ? 8u : 16u,
+                             &pal_lcd, &pal_region) == FALSE)
+        {
+            NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.fails[NDS_FTR_CARVE_PAL]++);
+            return FALSE;
+        }
+        ndsFtrCarveCopy(pal_lcd, palette, pal_bytes, 1u);
+        pltt = ndsFtrCarvePaletteOffset(pal_lcd) >> (rgb4 ? 3u : 4u);
+        NDS_FTR_ADMIT_LAB((gNdsFtrCarveLab.carved[NDS_FTR_CARVE_PAL]++,
+                           gNdsFtrCarveLab.used[NDS_FTR_CARVE_PAL] += pal_bytes));
+    }
+    ndsFtrCarveCopy(lcd, texels, bytes, 0u);
+    word = (size_x << 20) | (size_y << 23) | (hw_type << 26) |
+        ((lcd >> 3) & 0xFFFFu);
+    word = (word & 0x1FF0FFFFu) | params;
+    slot = (u32)(entry - sNdsRendererHardwareTextureCache);
+    entry->name = (int)(NDS_FTR_CARVE_NAME_BASE | slot);
+    entry->params = (word & ~NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK) |
+        (params & NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK);
+    entry->carve_pltt = (u16)pltt;
+    entry->carve_flags = (u8)(NDS_FTR_CARVE_F_CARVED |
+        ((palette_entries != 0u) ? NDS_FTR_CARVE_F_PALETTE : 0u));
+    entry->carve_region = (u8)region;
+    sNdsFtrCarveRegion[NDS_FTR_CARVE_TEX][region].live++;
+    sNdsFtrCarveLive++;
+    (void)pal_region;
+    NDS_FTR_ADMIT_LAB((gNdsFtrCarveLab.carved[NDS_FTR_CARVE_TEX]++,
+                       gNdsFtrCarveLab.used[NDS_FTR_CARVE_TEX] += bytes));
+    return TRUE;
+}
+
+/* Admission start: the carrier, then every free texture run of A+B (D is
+ * held back so the holes the lock is about to strand are used first; D is
+ * chunked on demand) and every free palette run of F+G. */
+static s32 ndsFtrCarveOpen(u32 with_d)
+{
+    int saved_lock = glGlobalData.vramLock[0];
+
+    NDS_FTR_ADMIT_LAB((gNdsFtrCarveLab.opens++,
+                       gNdsFtrCarveLab.libc_before = mallinfo().keepcost));
+    if (ndsFtrCarveCarrierOpen() == FALSE)
+    {
+        NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.carrier_fail++);
+        return FALSE;
+    }
+    if (with_d != 0u)
+    {
+        glLockVRAMBank((u16 *)VRAM_D);
+    }
+    ndsFtrCarveFill(NDS_FTR_CARVE_TEX, NDS_FTR_CARVE_TEX_FILL_MAX,
+                    NDS_FTR_CARVE_TEX_FILL_MIN);
+    glGlobalData.vramLock[0] = saved_lock;
+    ndsFtrCarveFill(NDS_FTR_CARVE_PAL, NDS_FTR_CARVE_PAL_FILL_MAX,
+                    NDS_FTR_CARVE_PAL_FILL_MIN);
+    sNdsFtrCarveLazyTex = with_d;
+    sNdsFtrCarveActive = 1u;
+    return TRUE;
+}
+
+/* Admission end: give back what was not carved. A region keeps exactly its
+ * used bytes (released, then re-reserved at the same address, which is free
+ * and large enough by construction). */
+static void ndsFtrCarveShrink(u32 which)
+{
+    s_vramBlock *mb = glGlobalData.vramBlocks[which];
+    u32 i;
+
+    for (i = 0u; i < sNdsFtrCarveRegionCount[which]; i++)
+    {
+        NDSFtrCarveRegion *region = &sNdsFtrCarveRegion[which][i];
+        u32 keep = (region->used + 15u) & ~15u;
+        u32 index = 0u;
+
+        if ((which == NDS_FTR_CARVE_TEX) && (region->live == 0u))
+        {
+            keep = 0u;
+        }
+        if ((region->index == 0u) || (keep >= region->size))
+        {
+            continue;
+        }
+        (void)vramBlock_deallocateBlock(mb, region->index);
+        NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.shrink_freed[which] +=
+                              region->size - keep);
+        if (keep == 0u)
+        {
+            region->index = 0u;
+            region->size = 0u;
+            continue;
+        }
+        if (vramBlock_examineSpecial(mb, (u8 *)(uintptr_t)region->lcd, keep,
+                                     4u) == (u8 *)(uintptr_t)region->lcd)
+        {
+            index = vramBlock_allocateSpecial(mb, (u8 *)(uintptr_t)region->lcd,
+                                              keep);
+        }
+        if (index == 0u)
+        {
+            /* Cannot happen (the run was just freed); keep the whole region
+             * rather than leave carved texels unowned. */
+            NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.shrink_freed[which] -=
+                                  region->size - keep);
+            if (vramBlock_examineSpecial(mb, (u8 *)(uintptr_t)region->lcd,
+                                         region->size, 4u) ==
+                (u8 *)(uintptr_t)region->lcd)
+            {
+                index = vramBlock_allocateSpecial(
+                    mb, (u8 *)(uintptr_t)region->lcd, region->size);
+            }
+        }
+        else
+        {
+            region->size = keep;
+        }
+        region->index = index;
+    }
+}
+
+static void ndsFtrCarveClose(void)
+{
+    if (sNdsFtrCarveActive == 0u)
+    {
+        return;
+    }
+    sNdsFtrCarveActive = 0u;
+    sNdsFtrCarveLazyTex = 0u;
+    ndsFtrCarveShrink(NDS_FTR_CARVE_TEX);
+    ndsFtrCarveShrink(NDS_FTR_CARVE_PAL);
+    NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.libc_after = mallinfo().keepcost);
+}
+
+/* Everything carved goes: every carved entry still resident, every region
+ * and the carrier. The last carved entry's release calls this; so does the
+ * scene reset (before glResetTextures rebuilds the allocators) and the
+ * admission when it carved nothing. */
+void ndsFtrLeanAdmitCarveRetire(void)
+{
+    u32 which;
+    u32 i;
+
+    if ((sNdsFtrCarveRetiring != 0u) ||
+        ((sNdsFtrCarveCarrier == 0) && (sNdsFtrCarveRegionCount[0] == 0u) &&
+         (sNdsFtrCarveRegionCount[1] == 0u)))
+    {
+        return;
+    }
+    sNdsFtrCarveRetiring = 1u;
+    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        if ((sNdsRendererHardwareTextureCache[i].carve_flags &
+             NDS_FTR_CARVE_F_CARVED) != 0u)
+        {
+            (void)ndsRendererHardwareReleaseTexture(
+                &sNdsRendererHardwareTextureCache[i]);
+        }
+    }
+    for (which = 0u; which < 2u; which++)
+    {
+        s_vramBlock *mb = glGlobalData.vramBlocks[which];
+
+        for (i = 0u; i < sNdsFtrCarveRegionCount[which]; i++)
+        {
+            if ((mb != NULL) && (sNdsFtrCarveRegion[which][i].index != 0u))
+            {
+                (void)vramBlock_deallocateBlock(
+                    mb, sNdsFtrCarveRegion[which][i].index);
+                NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.retire_regions++);
+            }
+        }
+        sNdsFtrCarveRegionCount[which] = 0u;
+    }
+    ndsFtrCarveCarrierClose();
+    sNdsFtrCarveActive = 0u;
+    sNdsFtrCarveLazyTex = 0u;
+    sNdsFtrCarveLive = 0u;
+    sNdsFtrCarveRetiring = 0u;
+    NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.retires++);
+#if NDS_VRAM_CENSUS_LIVE
+    ndsFtrCarveLabPublish();
+#endif
+}
+
+/* ndsRendererHardwareReleaseTexture, for a carved entry (before it is zeroed):
+ * its region goes back to libnds with its last entry, everything else with
+ * the last carved entry. Never while the admission is still carving. */
+static void ndsFtrCarveNoteRelease(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    NDSFtrCarveRegion *region;
+
+    if ((sNdsFtrCarveRetiring != 0u) ||
+        ((entry->carve_flags & NDS_FTR_CARVE_F_CARVED) == 0u))
+    {
+        return;
+    }
+    if (sNdsFtrCarveLive != 0u)
+    {
+        sNdsFtrCarveLive--;
+    }
+    if (entry->carve_region < sNdsFtrCarveRegionCount[NDS_FTR_CARVE_TEX])
+    {
+        region = &sNdsFtrCarveRegion[NDS_FTR_CARVE_TEX][entry->carve_region];
+        if (region->live != 0u)
+        {
+            region->live--;
+        }
+        if ((region->live == 0u) && (region->index != 0u) &&
+            (sNdsFtrCarveActive == 0u))
+        {
+            (void)vramBlock_deallocateBlock(
+                glGlobalData.vramBlocks[NDS_FTR_CARVE_TEX], region->index);
+            region->index = 0u;
+            region->size = 0u;
+            NDS_FTR_ADMIT_LAB(gNdsFtrCarveLab.region_returns++);
+        }
+    }
+    if ((sNdsFtrCarveLive == 0u) && (sNdsFtrCarveActive == 0u))
+    {
+        ndsFtrLeanAdmitCarveRetire();
+    }
+}
+
+/* An entry's VRAM address (LCD) for the lab's A+B / D accounting. */
+static u32 ndsFtrAdmitEntryAddress(
+    const NDSRendererHardwareTextureCacheEntry *entry);
+
 static void ndsFtrAdmitLatch(u32 fkind, u32 detail, u32 reason, u32 index,
                              u32 image, u32 reject)
 {
@@ -16199,6 +16962,16 @@ static u32 ndsFtrAdmitNameAddress(int name)
     }
     tex = (const gl_texture_data *)textures->data[name];
     return (tex != NULL) ? (u32)(uintptr_t)tex->vramAddr : 0u;
+}
+
+static u32 ndsFtrAdmitEntryAddress(
+    const NDSRendererHardwareTextureCacheEntry *entry)
+{
+    if ((entry->carve_flags & NDS_FTR_CARVE_F_CARVED) != 0u)
+    {
+        return 0x06800000u + ((entry->params & 0xFFFFu) << 3);
+    }
+    return ndsFtrAdmitNameAddress(entry->name);
 }
 
 /* One record: the draw's texture state, replayed; then the cache resolves
@@ -16326,6 +17099,141 @@ void ndsFtrLeanAdmitLockRegions(void)
                            (u32)glGlobalData.vramLock[0]));
 }
 
+#if NDS_VRAM_CENSUS_LIVE
+/* Lab word: 1 = before admitting, prove the identities of the admission table
+ * collision-free for every kind in the match -- both details, every costume,
+ * every hat. Each record's key is built by the resolve path itself (the key
+ * probe returns right after the key); a record whose identity repeats an
+ * earlier record's is rebuilt and compared word for word, so a collision is
+ * an exact finding, not a fingerprint's. The rows live in the texture scratch
+ * buffer, which nothing converts into while the probe is set. */
+#if defined(__arm__)
+volatile u32 gNdsFtrAdmitIdentCensus
+    __attribute__((used, section(".dtcm.bss"), aligned(4)));
+#else
+volatile u32 gNdsFtrAdmitIdentCensus;
+#endif
+
+static s32 ndsFtrAdmitProbeRecord(NdsRelocAssetStream *stream,
+                                  NDSRendererStats *scratch, u32 record,
+                                  NDSRendererHardwareTextureKey *key,
+                                  s32 *result)
+{
+    u32 w[NDS_FIGHTER_ADMISSION_RECORD_WORDS];
+    NDSRendererHardwareResolvedTexture resolved;
+
+    if (ndsRelocAssetStreamRead(
+            stream,
+            NDS_FIGHTER_ADMISSION_HEADER_BYTES +
+                record * NDS_FIGHTER_ADMISSION_RECORD_WORDS * 4u,
+            w, sizeof(w)) == FALSE)
+    {
+        return FALSE;
+    }
+    memset(key, 0, sizeof(*key));
+    sNdsFtrAdmitKeyProbe = key;
+    *result = ndsFtrAdmitApply(scratch, w, &resolved);
+    sNdsFtrAdmitKeyProbe = NULL;
+    return TRUE;
+}
+
+static void ndsFtrAdmitIdentCensus(NdsRelocAssetStream *stream,
+                                   NDSRendererStats *scratch, u32 present)
+{
+    u32 (*rows)[4] = (u32 (*)[4])(void *)sNdsRendererHardwareTextureScratch;
+    u32 cap = (u32)(sizeof(sNdsRendererHardwareTextureScratch) /
+                    (4u * sizeof(u32)));
+    NDSRendererHardwareTextureKey key;
+    NDSRendererHardwareTextureKey other;
+    u32 start = cpuGetTiming();
+    u32 n = 0u;
+    u32 kind;
+    u32 d;
+
+    gNdsFtrCarveLab.census_runs++;
+    for (kind = 0u; kind < NDS_FIGHTER_ADMISSION_KINDS; kind++)
+    {
+        if ((present & (1u << kind)) == 0u)
+        {
+            continue;
+        }
+        for (d = 0u; d < 2u; d++)
+        {
+            u32 first = sNdsFtrAdmitIndex[4u + (kind * 2u + d) * 2u];
+            u32 count = sNdsFtrAdmitIndex[5u + (kind * 2u + d) * 2u];
+            u32 r;
+
+            for (r = 0u; r < count; r++)
+            {
+                s32 result = 0;
+                u32 id_a;
+                u32 id_b;
+                u32 j;
+
+                gNdsFtrCarveLab.census_records++;
+                if ((ndsFtrAdmitProbeRecord(stream, scratch, first + r, &key,
+                                            &result) == FALSE) ||
+                    (result < 0))
+                {
+                    gNdsFtrCarveLab.census_skipped++;
+                    continue;
+                }
+                if (key.image == 0u)
+                {
+                    gNdsFtrCarveLab.census_noprobe++;
+                    continue;
+                }
+                ndsRendererHardwareTextureIdentOf(&key, &id_a, &id_b);
+                for (j = 0u; j < n; j++)
+                {
+                    if ((rows[j][0] == id_a) && (rows[j][1] == id_b) &&
+                        (rows[j][2] == key.image))
+                    {
+                        break;
+                    }
+                }
+                if (j < n)
+                {
+                    s32 other_result = 0;
+
+                    if ((ndsFtrAdmitProbeRecord(stream, scratch, rows[j][3],
+                                                &other, &other_result) !=
+                         FALSE) &&
+                        (memcmp(&key, &other, sizeof(key)) == 0))
+                    {
+                        gNdsFtrCarveLab.census_dups++;
+                    }
+                    else
+                    {
+                        if (gNdsFtrCarveLab.census_collisions == 0u)
+                        {
+                            gNdsFtrCarveLab.census_first[0] = (kind << 8) | d;
+                            gNdsFtrCarveLab.census_first[1] = first + r;
+                            gNdsFtrCarveLab.census_first[2] = rows[j][3];
+                            gNdsFtrCarveLab.census_first[3] = id_a;
+                        }
+                        gNdsFtrCarveLab.census_collisions++;
+                    }
+                    continue;
+                }
+                if (n >= cap)
+                {
+                    gNdsFtrCarveLab.census_overflow++;
+                    continue;
+                }
+                rows[n][0] = id_a;
+                rows[n][1] = id_b;
+                rows[n][2] = key.image;
+                rows[n][3] = first + r;
+                n++;
+            }
+        }
+    }
+    gNdsFtrCarveLab.census_keys += n;
+    gNdsFtrCarveLab.census_ticks += cpuGetTiming() - start;
+}
+#endif
+
 u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                        const u32 *costume, const u32 *detail,
                        const u32 *player, u32 count,
@@ -16380,6 +17288,16 @@ u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
         ndsFtrAdmitLatch(0u, 0u, nNDSFtrLeanAdmitFailFormat, 0u, 0u, 0u);
         return 0u;
     }
+#if NDS_VRAM_CENSUS_LIVE
+    if (gNdsFtrAdmitIdentCensus != 0u)
+    {
+        ndsFtrAdmitIdentCensus(&stream, scratch, present);
+    }
+#endif
+    /* Slice 2c: carve (no libnds record, no libc per texture). Without the
+     * carrier the admission falls back to slice 2b's libnds uploads, which
+     * the libc floor still guards. */
+    (void)ndsFtrCarveOpen((sNdsFtrAdmitRegions != 0u) ? 1u : 0u);
     for (i = 0u; i < count; i++)
     {
         u32 kind = fkind[i];
@@ -16557,7 +17475,7 @@ u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                     admitted_total++;
 #if NDS_VRAM_CENSUS_LIVE
                     {
-                        u32 addr = ndsFtrAdmitNameAddress(resolved.entry->name);
+                        u32 addr = ndsFtrAdmitEntryAddress(resolved.entry);
                         u32 bytes = ndsVramCensusParamsBytes(
                             resolved.entry->params);
 
@@ -16578,6 +17496,11 @@ u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
                 }
             }
         }
+    }
+    ndsFtrCarveClose();
+    if (sNdsFtrCarveLive == 0u)
+    {
+        ndsFtrLeanAdmitCarveRetire();
     }
     ndsRelocAssetStreamClose(&stream);
     sNdsFtrAdmitBaseCount = 0u;
@@ -16621,14 +17544,22 @@ void ndsFtrLeanAdmitBattleExit(void)
     {
         return;
     }
+    /* Slice 2c: D is locked before anything in it is released, so a carve
+     * region that goes back to libnds with its last entry cannot be handed
+     * out again while D still holds the final frame's texels. */
+    glGlobalData.vramLock[0] = sNdsFtrAdmitSavedLock;
+    glLockVRAMBank((u16 *)VRAM_D);
     for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {
         NDSRendererHardwareTextureCacheEntry *entry =
             &sNdsRendererHardwareTextureCache[i];
-        u32 addr = ndsFtrAdmitNameAddress(entry->name);
+        u32 addr = ndsFtrAdmitEntryAddress(entry);
 
         if ((addr >= NDS_FTR_ADMIT_D_LO) && (addr < NDS_FTR_ADMIT_D_HI))
         {
+            NDS_FTR_ADMIT_LAB(if ((entry->carve_flags &
+                                   NDS_FTR_CARVE_F_CARVED) != 0u)
+                              { gNdsFtrCarveLab.exit_released++; });
             (void)ndsRendererHardwareReleaseTexture(entry);
             NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_released++);
         }
@@ -16651,13 +17582,16 @@ void ndsFtrLeanAdmitBattleExit(void)
 #endif
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
-    glGlobalData.vramLock[0] = sNdsFtrAdmitSavedLock;
-    glLockVRAMBank((u16 *)VRAM_D);
     ndsPlatformVramReturnBankD();
     sNdsFtrAdmitRegions = 0u;
     sNdsFtrAdmitLocked = 0u;
     NDS_FTR_ADMIT_LAB((gNdsFtrAdmitLab.regions = 0u,
                        gNdsFtrAdmitLab.locked = 0u));
+#if NDS_VRAM_CENSUS_LIVE
+    /* The exit is read from the Results screen (gdb reads memory). */
+    DC_FlushRange(&gNdsFtrAdmitLab, sizeof(gNdsFtrAdmitLab));
+    ndsFtrCarveLabPublish();
+#endif
 }
 
 static void ndsFtrAdmitSceneResetGuard(void)
@@ -16667,6 +17601,10 @@ static void ndsFtrAdmitSceneResetGuard(void)
         NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_safety++);
         ndsFtrLeanAdmitBattleExit();
     }
+    /* Slice 2c: glResetTextures is about to rebuild both allocators; carved
+     * entries, regions and the carrier go first, while their indices mean
+     * something. */
+    ndsFtrLeanAdmitCarveRetire();
 }
 #else
 volatile u32 gNdsFtrLeanAdmitFail;
@@ -16690,6 +17628,20 @@ void ndsFtrLeanAdmitLockRegions(void)
 
 void ndsFtrLeanAdmitBattleExit(void)
 {
+}
+
+void ndsFtrLeanAdmitCarveRetire(void)
+{
+}
+
+/* No admission, so no carved names: bind nothing. */
+static void ndsRendererHardwareBindCarvedState(u32 name)
+{
+    (void)name;
+    GFX_TEX_FORMAT = 0u;
+    GFX_PAL_FORMAT = 0u;
+    glGlobalData.activeTexture = 0;
+    glGlobalData.activePalette = 0;
 }
 #endif
 

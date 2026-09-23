@@ -1,0 +1,25 @@
+kind     det    recs   hats DS B (all) costume0
+Mario    LOW      14      0      9,216    5,120
+Mario    HIGH     14      0      9,216    5,120
+Fox      LOW      14      0      6,944    3,872
+Fox      HIGH     14      0      6,944    3,872
+Donkey   LOW      91      0    103,552   21,120
+Donkey   HIGH    106      0     58,112   12,032
+Samus    LOW      98      0     53,376   11,648
+Samus    HIGH     98      0     50,816   11,136
+Luigi    LOW      18      0     14,336    6,144
+Luigi    HIGH     18      0     14,336    6,144
+Link     LOW      49      0     25,536   24,000
+Link     HIGH     50      0     25,568   24,032
+Yoshi    LOW     115      0     13,312    2,432
+Yoshi    HIGH    127      0     13,504    2,464
+Captain  LOW     147      0     41,568    6,976
+Captain  HIGH    183      0     42,240    7,104
+Kirby    LOW     451    405    224,544    5,344
+Kirby    HIGH    417    371    208,320    5,344
+Pikachu  LOW      88      0     29,248    5,696
+Pikachu  HIGH     88      0     29,248    5,696
+Purin    LOW      38      0     14,464    2,816
+Purin    HIGH     38      0     14,464    2,816
+Ness     LOW      28      0     12,480    9,120
+Ness     HIGH     26      0     12,416    9,056

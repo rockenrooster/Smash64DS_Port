@@ -1,0 +1,47 @@
+arms: 2b:f-admit2 (rom 4E02C2088438, 1972 rows), g-admit0 (rom 5F767E649703, 1972 rows), g-admit2 (rom 5F767E649703, 1972 rows)
+
+metric                     2b:f-admit2        g-admit0        g-admit2
+WORK-H P50                   1,648,576       1,679,872       1,634,304
+WORK-H P95                   2,527,139       4,338,102       2,449,779
+WORK-H P99                   3,162,301       4,859,697       2,996,454
+WORK-H mean                  1,712,685       2,057,016       1,694,784
+FTR P50                        360,224         363,200         358,048
+FTR P95                        944,074       2,734,429         907,763
+FTR P99                      1,399,902       2,953,515       1,160,717
+FTR mean                       398,656         744,859         383,716
+MTEX P50                             0               0               0
+MTEX P95                             0          37,888               0
+MTEX P99                        16,165          76,641               0
+MTEX mean                          699           8,976             738
+2-VBlank frames             110 (5.6%)      115 (5.8%)      115 (5.8%)
+3-VBlank                   906 (45.9%)     822 (41.7%)     939 (47.6%)
+4-VBlank                   748 (37.9%)     579 (29.3%)     737 (37.4%)
+5+-VBlank                  209 (10.6%)     457 (23.2%)      182 (9.2%)
+
+bands (WORK-H rank within each run)
+  FTR      P40-60         362,734         357,989         355,148
+  FTR      P90-95         748,987       2,699,978         674,812
+  FTR      P95-99         978,317       2,759,023         897,683
+  FTR      P99+         1,507,306       4,972,371         865,168
+  WORK-H   P40-60       1,649,590       1,680,702       1,633,621
+  WORK-H   P90-95       2,356,347       4,215,399       2,291,927
+  WORK-H   P95-99       2,771,201       4,484,719       2,680,972
+  WORK-H   P99+         3,903,453       6,672,902       4,479,888
+
+per-range means (frame 3 = the lab admission frame: the poke lands at the first frame-complete marker, the admission runs at the next frame end; listed apart, excluded from its range)
+  range                  col        2b:f-admit2        g-admit0        g-admit2  paired d(last)
+  frame 3 (admission)    FTR             18,496          18,240          18,240            -256
+  frame 3 (admission)    WORK-H       6,927,552         974,592      26,446,976     +19,519,424
+  frame 3 (admission)    MTEX           237,184               0       1,366,144      +1,128,960
+  2-195 entry            FTR            176,491         408,279         130,659         -45,832
+  2-195 entry            WORK-H       1,133,835       1,353,220       1,076,097         -57,738
+  2-195 entry            MTEX             3,853          18,638               0          -3,853
+  196-797                FTR            447,342         460,798         423,276         -24,066
+  196-797                WORK-H       1,697,750       1,699,106       1,660,693         -37,057
+  196-797                MTEX               411             938               0            -411
+  798-1043 P0 episode    FTR            450,850       2,769,808         442,552          -8,297
+  798-1043 P0 episode    WORK-H       1,895,267       4,298,567       1,874,016         -21,252
+  798-1043 P0 episode    MTEX               140          40,930              91             -49
+  1044-1974              FTR            399,848         463,735         395,453          -4,395
+  1044-1974              WORK-H       1,788,577       1,842,990       1,771,221         -17,356
+  1044-1974              MTEX               125           3,730              72             -53

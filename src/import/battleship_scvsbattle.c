@@ -140,6 +140,9 @@ static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
  * they upload into an empty pool. Cost is one atlas rebuild per entry at
  * scene-entry time, which is the cheap side of the load/gameplay trade this
  * project always takes. */
+/* include/nds/renderer_fighter_lean.h (slice 2c). */
+void ndsFtrLeanAdmitSceneTexturesReady(void);
+
 void ndsBattlePrepareSceneTextures(void)
 {
     sNdsSCVSBattleEntryStartupTexturesRetired = FALSE;
@@ -209,6 +212,10 @@ void ndsBattlePrepareSceneTextures(void)
      * first use must only bind the resident name. */
     (void)ndsRendererHardwarePrepareFoxGunTexture();
 #endif
+    /* P2-2p8 Phase 1 slice 2c: LAST. The fighter texture admission (when
+     * gNdsFtrLeanAdmit is set) packs around everything the scene placed above;
+     * run before the reset, it was discarded by it. */
+    ndsFtrLeanAdmitSceneTexturesReady();
 }
 
 /* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning

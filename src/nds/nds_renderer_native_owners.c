@@ -1529,8 +1529,10 @@ ndsRendererNativeStageAlphaRampResolve(
             sNdsRendererHardwareTextureKeyGeneration++;
         }
         entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
         entry->profile_width = (u16)NDS_NATIVE_STAGE_ALPHA_RAMP_WIDTH;
         entry->profile_height = (u16)NDS_NATIVE_STAGE_ALPHA_RAMP_HEIGHT;
+#endif
         entry->ready = TRUE;
         sNdsNativeStageAlphaRampVramReset =
             gNdsRendererSceneTextureVramResetCount;

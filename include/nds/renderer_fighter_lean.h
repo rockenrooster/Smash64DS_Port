@@ -335,6 +335,9 @@ extern volatile u32 gNdsFtrLeanAdmitFailFirst[4];
 /* TU B (renderer_fighter_lean.c): creation seam and frame pass. */
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
                                 u32 detail);
+/* Slice 2c: the creation-time admission, run last by
+ * ndsBattlePrepareSceneTextures (after the scene's texture VRAM reset). */
+void ndsFtrLeanAdmitSceneTexturesReady(void);
 /* TU A (nds_renderer_textures_effects.c). base_asset / base_data: the
  * loaded files of the fighters present (asset id -> loaded data), which the
  * adapter reads from each kind's FTData file pointers; a record's image and

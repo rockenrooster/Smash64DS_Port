@@ -137,6 +137,20 @@ NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_SHIP_TELEMETRY ?= 1
 NDS_TICK_HUD ?= 0
+# P2-2p8 Phase 1 slice 2c: gNdsFtrLeanAdmit's boot value (0/1/2, fighter
+# texture admission). Lab (tick-HUD) builds only -- forced to 0 below for
+# every other target -- so the creation-time admission can be measured
+# without a debugger poke: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
+# BUILD=<own dir> NDS_FTR_LEAN_ADMIT_DEFAULT=2`.
+NDS_FTR_LEAN_ADMIT_DEFAULT ?= 0
+# P2-2p8 Phase 1 slice 2c: 1 compiles the texture cache's exact-key shadow
+# and whole-match identity journal (NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 1,
+# about 29.5 KB of static RAM) that count runtime identity collisions under
+# gNdsTexIdentShadowOn. Lab (tick-HUD) builds only, own build dir -- forced to
+# 0 below for every other target -- so the default tick-HUD ROM keeps the
+# shipping ROM's heap: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
+# BUILD=<own dir> NDS_TEX_IDENT_SHADOW=1`.
+NDS_TEX_IDENT_SHADOW ?= 0
 NDS_RENDERER_M2_DETAILED_LEDGER ?= 0
 NDS_RENDERER_M3_PHASE0_PROFILE ?= 0
 NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE ?= 0
@@ -6687,6 +6701,10 @@ ifeq ($(NDS_R2_BATTLEPACK),1)
 $(NDS_BUILD_CONFIG): $(NDS_BATTLEPACK_BLOB)
 endif
 
+ifneq ($(NDS_TICK_HUD),1)
+override NDS_FTR_LEAN_ADMIT_DEFAULT := 0
+override NDS_TEX_IDENT_SHADOW := 0
+endif
 $(NDS_BUILD_CONFIG): FORCE
 	@tmp="$@.tmp"; \
 	{ \
@@ -6701,6 +6719,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_SHIP_TELEMETRY $(NDS_SHIP_TELEMETRY)'; \
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
+		echo '#define NDS_FTR_LEAN_ADMIT_DEFAULT $(NDS_FTR_LEAN_ADMIT_DEFAULT)u'; \
+		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \
 		echo '#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE $(NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE)'; \
@@ -8062,6 +8082,7 @@ NDS_BATTLE_CORE_NITRO_FILES := $(NDS_BATTLE_CORE_NITRO_FPC) $(NDS_BATTLE_CORE_NI
 NDS_BATTLE_CORE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/archive/NDS_BATTLE_CORE_PACKS.generated.json
 NDS_BATTLE_CORE_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_battle_core_packs.py \
+	$(PROJECT_ROOT)/scripts/fighters/generate_nds_fighter_admission.py \
 	$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py \
 	$(PROJECT_ROOT)/scripts/fighters/preview_source_metadata.py \
 	$(PROJECT_ROOT)/scripts/fighters/estimate_fighter_pack.py \

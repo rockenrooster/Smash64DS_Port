@@ -10,8 +10,8 @@
 #define NDS_FIGHTER_ADMISSION_KINDS 12u
 #define NDS_FIGHTER_ADMISSION_RECORD_WORDS 28u
 #define NDS_FIGHTER_ADMISSION_HEADER_BYTES 208u
-#define NDS_FIGHTER_ADMISSION_PAYLOAD_BYTES 192624u
-#define NDS_FIGHTER_ADMISSION_PAYLOAD_FNV 0x09B2F14Cu
+#define NDS_FIGHTER_ADMISSION_PAYLOAD_BYTES 261168u
+#define NDS_FIGHTER_ADMISSION_PAYLOAD_FNV 0xDA643018u
 #define NDS_FIGHTER_ADMISSION_F_HAS_TLUT 0x01u
 #define NDS_FIGHTER_ADMISSION_F_LOAD_TILE 0x02u
 #define NDS_FIGHTER_ADMISSION_F_HAS_PRIM 0x04u
@@ -29,21 +29,21 @@
 /* Fox      LOW : first   42 count  14 */
 /* Donkey   HIGH: first   56 count 106 */
 /* Donkey   LOW : first  162 count  91 */
-/* Samus    HIGH: first  253 count  86 */
-/* Samus    LOW : first  339 count  98 */
-/* Luigi    HIGH: first  437 count  14 */
-/* Luigi    LOW : first  451 count  18 */
-/* Link     HIGH: first  469 count  50 */
-/* Link     LOW : first  519 count  49 */
-/* Yoshi    HIGH: first  568 count  52 */
-/* Yoshi    LOW : first  620 count 276 */
-/* Captain  HIGH: first  896 count 184 */
-/* Captain  LOW : first 1080 count 147 */
-/* Kirby    HIGH: first 1227 count 117 */
-/* Kirby    LOW : first 1344 count  91 */
-/* Pikachu  HIGH: first 1435 count  85 */
-/* Pikachu  LOW : first 1520 count  85 */
-/* Purin    HIGH: first 1605 count  27 */
-/* Purin    LOW : first 1632 count  35 */
-/* Ness     HIGH: first 1667 count  23 */
-/* Ness     LOW : first 1690 count  28 */
+/* Samus    HIGH: first  253 count  98 */
+/* Samus    LOW : first  351 count  98 */
+/* Luigi    HIGH: first  449 count  18 */
+/* Luigi    LOW : first  467 count  18 */
+/* Link     HIGH: first  485 count  50 */
+/* Link     LOW : first  535 count  49 */
+/* Yoshi    HIGH: first  584 count 127 */
+/* Yoshi    LOW : first  711 count 115 */
+/* Captain  HIGH: first  826 count 183 */
+/* Captain  LOW : first 1009 count 147 */
+/* Kirby    HIGH: first 1156 count 417 */
+/* Kirby    LOW : first 1573 count 451 */
+/* Pikachu  HIGH: first 2024 count  88 */
+/* Pikachu  LOW : first 2112 count  88 */
+/* Purin    HIGH: first 2200 count  38 */
+/* Purin    LOW : first 2238 count  38 */
+/* Ness     HIGH: first 2276 count  26 */
+/* Ness     LOW : first 2302 count  28 */

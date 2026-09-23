@@ -250,6 +250,13 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
+    # RE-PINNED 2026-09-23 (P2-2p8 Phase 1 slice 2c). The texture cache's
+    # dynamic slots keep a 28-byte identity instead of a 236-byte pool key, the
+    # entry drops its profile-2-only fields, and the count grows 124 -> 254.
+    # Only renderer_key_contract moved (equality, current_cache_entries,
+    # cache_entry_bytes_profile_lt2/ge2, dynamic_key_pool_bytes ->
+    # dynamic_identity_pool_bytes): restoring those leaves reproduces the
+    # previous pin eed79afb... exactly (slice 2c README). No corpus field moved.
     # RE-PINNED 2026-09-12. Include the owner's 64-byte common-item arrow
     # OBJ bank: reserved bank E bytes 63,744 -> 63,808. All other canonical
     # fields are unchanged; validate every bank's base as well as its size.
@@ -294,7 +301,7 @@ EXPECTED_CENSUS_SHA256 = (
     #
     # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
     # Native ending glyphs and fixed OBJ banks; source GX texture data unchanged.
-    "eed79afbc4befa37d0c80ef196250199f246d38111cf3f1bd78f06cc71568537"
+    "dfbc08e05da1b5323681d41b0627d41ed100c9583fe358c1cf7746e5ed24509a"
 )
 
 
@@ -759,9 +766,11 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
     required_tokens = (
         "_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u",
         "return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;",
-        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 124u",
+        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 254u",
         "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u",
         "u32 key_hash;",
+        "sNdsRendererHardwareTextureIdentPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]",
+        "_Static_assert(sizeof(NDSRendererHardwareTextureIdent) == 28u",
     )
     for token in required_tokens:
         if token not in source:
@@ -771,15 +780,21 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
         "key_bytes": len(fields) * 4,
         "fields": list(fields),
         "pointer_identity_fields": ["image", "tlut_image", "texel1_image"],
-        "equality": "memcmp over all 236 bytes",
+        # P2-2p8 Phase 1 slice 2c: static slots still compare every word (the
+        # 56 ROM record words plus the three RAM pointers). Dynamic slots keep
+        # a compact identity instead of a 236-byte pool key: the three pointer
+        # words exactly plus two independent 32-bit multiply chains over key
+        # words 1..58, collision-checked in the lab
+        # (artifacts/performance/2026-09-23_p2-2p8-phase1-slice2c).
+        "equality": "static: memcmp over all 236 bytes; dynamic: 28-byte identity",
         # The key left the entry on 2026-08-04: dynamic slots own a pool key and
         # the static slots read 56 of their 59 words out of the generated ROM
         # record, keeping only the three runtime pointer words in RAM.
-        "current_cache_entries": 124,
+        "current_cache_entries": 254,
         "static_cache_entries": 45,
-        "cache_entry_bytes_profile_lt2": 44,
-        "cache_entry_bytes_profile_ge2": 40,
-        "dynamic_key_pool_bytes": 79 * 236,
+        "cache_entry_bytes_profile_lt2": 32,
+        "cache_entry_bytes_profile_ge2": 44,
+        "dynamic_identity_pool_bytes": 209 * 28,
         "static_pointer_word_bytes": 45 * 12,
         "source_block_census_is_complete_key_census": False,
     }

@@ -33,6 +33,7 @@ import estimate_fighter_pack as est  # noqa: E402
 import generate_preview_core_packs as fpc  # noqa: E402
 import generate_nds_native_owners as native  # noqa: E402
 import preview_source_metadata as preview  # noqa: E402
+import generate_nds_fighter_admission as admission  # noqa: E402
 
 
 DISPLAY = {
@@ -300,6 +301,42 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
             raise BattlePackError("%s root 0x%x has no parsed owner" %
                                   (fighter, offset))
         queue.append(row)
+
+    # P2-2p8 Phase 1 slice 2c: MObjSub texture and palette tables are indexed
+    # with no bound (objdisplay.c sprites[texture_id_curr] /
+    # palettes[palette_id]), and several relocData TUs split one logical table
+    # into adjacent C arrays whose tail no pointer names. Object-by-object
+    # packing dropped such a tail and packed the next retained object behind
+    # the head: Kirby's LOW body table (0x1C9C, 5 + 6 entries) lost ids 5..10,
+    # so its face expressions read the palette table and drew palettes as
+    # texels. Keep every table's source extent up to the highest id a material
+    # can present (generate_nds_fighter_admission.mobj_table_extents), with the
+    # owners of those words, so the packed table indexes as the source does.
+    # An extent stops at the first geometry word (the source read there is not
+    # a pointer either, and geometry is replaced by native roots).
+    main_id_for_extents = dict(admission.KINDS).get(fighter)
+    if main_id_for_extents is not None:
+        closure = admission.Closure(fighter, idx)
+        extents = admission.mobj_table_extents(closure, main_id_for_extents)
+        for (sub_file, sub_offset), maxima in sorted(extents.items()):
+            if sub_file != model_id:
+                continue
+            for field, highest in ((4, maxima[0]), (0x2C, maxima[1])):
+                target = pf.source["pointers"].get(sub_offset + field)
+                if (highest is None) or (target is None) or (target[0] != model_id):
+                    continue
+                start = target[1]
+                end = start
+                for slot in range(start, start + 4 * (highest + 1), 4):
+                    if slot + 4 > len(pf.source["payload"]):
+                        break
+                    row = _owner(pf.objects, slot)
+                    if row is None or _is_geometry(row):
+                        break
+                    queue.append(row)
+                    end = slot + 4
+                if end > start:
+                    forced_spans.append((start, end))
 
     def keep_dispatch(root: int, label: str) -> None:
         end = root + dispatch_count * 4
