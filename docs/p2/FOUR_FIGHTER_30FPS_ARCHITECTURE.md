@@ -584,10 +584,11 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   `artifacts/performance/2026-09-23_p2-2p8-phase0-baseline/`). New baseline on the
   current tree, instrument out of the gate: WORK-H P50 **1,689,088**, P95
   **4,207,488**, P99 **4,753,152**; two-VBlank **5.7%**; 14.4 FPS. Two findings
-  reshape Phase 1: (1) a **tint-tile thrash** episode (r49's global tint-set
-  generation in every packet key; a fighter whose prim changes every frame forces
-  texture re-resolution, ~1.16M/frame, and all four fighters' packets to
-  re-record) owns P95 -- without it P95 is 2.64M; (2) **native failures at
+  reshape Phase 1: (1) a **re-record episode** (r49 re-records a tinted packet
+  whenever its prim changes; a fighter whose prim changes every frame re-runs
+  production and re-resolves its textures, ~1.16M/frame, for 246 frames) owns
+  P95 -- without it P95 is 2.64M; the tint tile set itself is stable (9 builds,
+  0 evictions per match); (2) **native failures at
   match start** (Link AppearL, texture could not be bound). Replay digest
   proven (deterministic across builds; an item-rate poke diverges). Owed:
   shipping-config heap census (before Phase 3), MF experiment result.

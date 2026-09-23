@@ -1,0 +1,8 @@
+gNdsR2FighterTintBuilds=9
+gNdsR2FighterTintEvictions=0
+gNdsR2FighterTintFails=0
+gNdsR2FighterTintHits=5,248
+gNdsR2FighterTintMisses=24
+gNdsR2FighterTintQueueFull=0
+gNdsR2FighterTintSetGeneration=11
+gNdsR2FighterTintTableFull=0

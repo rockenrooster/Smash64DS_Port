@@ -39,16 +39,22 @@ binding. MISC split at P50: effects 55K, particles 49K, weapons ~0, texture uplo
 
 ## Findings
 
-1. **A tint-tile thrash episode owns P95.** Frames 798-1043 (246 presented frames,
+1. **A re-record episode owns P95.** Frames 798-1043 (246 presented frames,
    8.2 s of game time): FTR ~2.6M per frame (median 363K), one texture upload per
-   frame (~23.5K), and an effect drawing ~144K per frame. Mechanism, from
-   `2a5bf793c20` (r49, "tint tiles from each fighter's live prim"): a tinted body
-   draws through an 8x8 tile of its live prim, "a prim change under a tinted
-   packet re-records it", and `gNdsR2FighterTintSetGeneration` is in every
-   packet key. A fighter whose prim changes every frame therefore re-uploads a
-   tile and re-records all four fighters' packets every frame. Deterministic:
-   both controls and nocam show the identical episode. Phase 1's lean path must
-   patch tint words in place instead of re-keying packets.
+   frame (~23.5K), and an effect drawing ~144K per frame. Deterministic: both
+   controls and nocam show the identical episode.
+
+   **Mechanism, corrected by measurement.** The first reading blamed r49's global
+   tint-set generation (`gNdsR2FighterTintSetGeneration`, mixed into every packet
+   key). The tint counters over the whole match refute it: builds 9, misses 24,
+   evictions 0, set generation 11, hits 5,248 (`tint-run.log`) -- the tile set
+   is stable. What r49 also did is re-record a tinted packet whenever its prim
+   changes ("a prim change under a tinted packet re-records it",
+   `2a5bf793c20`): a fighter whose prim changes every frame (a flashing colour
+   animation) re-records its own packet every frame, and each re-record re-runs
+   production and re-resolves every texture of that fighter. Phase 1's lean path
+   must select the (already resident) tint tile by a patched texture word, never
+   by re-recording.
 
    **Profile of the episode** (`profile-thrash/`, per-PC, frames 820-868, work
    ~4.0M per frame): `ndsRendererHardwareResolveOrBindTexture` **935,578** and
@@ -57,8 +63,8 @@ binding. MISC split at P50: effects 55K, particles 49K, weapons ~0, texture uplo
    tile -- then packet re-production (`ndsFighterPacketCmd` 141K,
    `ndsRendererExecuteNativeFighterOwnerProduction` 90K,
    `ndsRendererNativePrepareProductionRun` 48K, emit/shade/corner ~140K) and
-   `ndsRelocNativeAssetAddress` + `ndsPreviewFileOffset` 88K. The texture cache
-   churns because the tint key changes; the packets follow it.
+   `ndsRelocNativeAssetAddress` + `ndsPreviewFileOffset` 88K. Each re-record
+   re-resolves the fighter's textures; that, not tile creation, is the cost.
 2. **Native failures at match start.** First cause: Link, status 225 =
    `nFTLinkStatusAppearL` (entry), `use_texture == FALSE` at
    `nds_renderer_native_common.c:8758` (texture could not be resolved/bound):
