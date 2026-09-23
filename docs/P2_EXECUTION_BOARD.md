@@ -56,9 +56,12 @@ machinery; pillars A1-A10, phases 0-7). Owner rulings D1-D7 recorded in its
 section 8: gate stays P95; renderer replaced outright; tolerance classes approved,
 body-hurtbox hold kept; no run-ahead; visual reserve case by case; every motion
 resident via a new compact format (N02.04 stands); custom ARM7 audio. Phase:
-**READY, Phase 0 next** (instrument out of the gate, MISC/SRC-other splits,
-shipping-config heap census, compact-motion-format host experiment, replay
-digest, camera matrix per tick). Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
+**Phase 0 instrument landed** (`3d62c6abf26`): WORK-H P50 1,689,088 / P95
+4,207,488 / P99 4,753,152, two-VBlank 5.7%. P95 is owned by a tint-tile thrash
+episode (r49 global tint generation in every packet key) and the gate throws on
+Link AppearL native failures -- both are Phase 1 scope. Owed in Phase 0:
+shipping-config heap census, MF experiment verdict. Next: Phase 1 spec -> lean
+fighter path first slice. Evidence: `artifacts/performance/2026-09-22_p2-2p8-architecture-baseline/`.
 
 Previous focus: remaining BUGS sweep / serial integration / main. Phase: **CLOSED
 09-22.** Every `docs/BUGS.md` row the owner
