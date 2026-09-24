@@ -1,0 +1,27 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "50C0A91CE47FF773C633A09501584791B85EE06DCBEAE3E9D6682F4C1CC12D7B",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "B2EF21A42B12E9E52F5A4C34D4FC600110460039A0592C00E67EE0929386D6C6",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-f1497-new.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "A2FAB75148726FC577F8CDB6B854632D62F901D2EB0509B3D41A946D89718BCE",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-f1497-composed.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "DDE1FB7E80E2432205D21A8DFC58D6E62F43F203E59D68B8BEC44F83BC7020B7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-f1497-rigid.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AF5570F5A1810B7AF78CAF4BC70A660F0DF51E42BAF91D4DE5B2328DE0E83DFC",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-f1497-hidden.bin"
+  }
+]

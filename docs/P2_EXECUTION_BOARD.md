@@ -56,13 +56,15 @@ Phase 0 closed; Phase 1 through `98ebd1e2e51`.
 **Phase 2 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
 performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
 Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
-**Next**: compile Dream Land 0/4, then 1/2/3/6; bake immutable inputs and
-retire repeated prepare/submit work before the batch timing decision.
+**Next**: replace remaining stage preparation/material execution, retire old
+replay storage/code, then extend compiled data across VS stages and MISC.
 Owed: four-CPU timing/output, all-stage coverage, retirement, integration; gates RED.
-ROM: seg57 r2 `D4AEFF8E9F0E7143`; native-only build passed. Early probe:
-679 compiled draws, 0 declines/native failures; full-match proof remains due.
-GX oracle: all 135 corners/colours/UVs exact; two battle captures pixel-identical.
-Early prototype slower; no banked win. Jobs terminal; checkpoint preserved.
+Checked: all 202 Dream Land triangles; owner approves the shown view.
+Latest ROM `12A5031B9D55C3E9` repairs reference cross-depth dispatch; gates RED.
+First-batch checkpoint `e019998977b` pushed; no banked performance win yet.
+Corrected control/candidate differ by 2 pixels in the shown view.
+Corrected full-match replay identical; ~19.15 FPS, no overall win banked.
+All jobs terminal. Four host checks pass; continue the remaining replacement.
 Serial only (**no subagents**); owner edits preserved.
 A7 compaction on (+68 KB lab); MF codec unlinked.
 Shipping heaviest roster still ~130 KB short; lab arena is ~0.2 MB larger.

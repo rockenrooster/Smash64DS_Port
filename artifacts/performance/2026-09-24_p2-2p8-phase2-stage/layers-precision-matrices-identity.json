@@ -1,0 +1,22 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "98BFB92CC900AEBF60B74974A9243FA93BF9171FC3E03640BF966DD626E04C42",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "7F92E630A203261E7BACBD6A40DF7AF54E72CB0E12993C46B01C57B64C9276A5",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\layers-precision-matrices-new.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AEFFC933DDE2ACC80C9E5FAF2106F732472E2B6BE0C0597EB71DE6D102DB01E2",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\layers-precision-matrices-composed.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "DDE1FB7E80E2432205D21A8DFC58D6E62F43F203E59D68B8BEC44F83BC7020B7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\layers-precision-matrices-rigid.bin"
+  }
+]

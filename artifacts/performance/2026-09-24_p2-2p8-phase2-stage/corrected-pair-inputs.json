@@ -1,0 +1,50 @@
+[
+  {
+    "path": "Makefile",
+    "sha256": "D3FB6B9E60604C1E93A424BE06B6A5E3991AAEC74FF305F2F9F9808BADB7DEF3"
+  },
+  {
+    "path": "src/nds/nds_renderer_assets.c",
+    "sha256": "6534E60F0E91AEE1F6BC5238D8D4B5CBB70785F5C3CE676BE903C3388F2D4E1C"
+  },
+  {
+    "path": "src/nds/nds_renderer_native_owners.c",
+    "sha256": "37CD4403412805ED6098F42DBF1D21D84FCF181CDAE3BD3F775FF8B108CF7F7E"
+  },
+  {
+    "path": "src/nds/nds_stage_gx.exec.inc",
+    "sha256": "A882136841B6369ADE8BA8F1042D19B77BA381386435E8E37A48AD4DC17712A7"
+  },
+  {
+    "path": "include/nds/nds_stage_gx.h",
+    "sha256": "2E90C055F904F74FA25C9A62DB346B9187A6EFB472A3B84D4EFCD5DB2D84935F"
+  },
+  {
+    "path": "scripts/stages/compile_nds_stage_gx.py",
+    "sha256": "F811D1CC3585D5A7A4B61925B2F2899CA4B78AC9D72DAD64175D324476990181"
+  },
+  {
+    "path": "scripts/stages/test_stage_gx.py",
+    "sha256": "767AFDF4B9B77DD58C1131573E857BA5E2C42239B78D4D1E53AAE19EE99B023E"
+  },
+  {
+    "path": "scripts/capture-cut-g-exact-frames.ps1",
+    "sha256": "81CE31669FE0949D69B95AB9DE238B65E543D25B4A8389874E1FBFFB89B2A3DB"
+  },
+  {
+    "path": "builds/p2p8-stage-corrected-reference/nds_build_config.h",
+    "sha256": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+  },
+  {
+    "path": "builds/p2p8-stage-corrected-reference/smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "598D314FEA80D35C9E1E1284B17FD574B717CADA38FEC04E9E9CCDC179249DC1"
+  },
+  {
+    "path": "builds/p2p8-stage-corrected-reference/smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "sha256": "12A5031B9D55C3E9B97886FCD74BB5E1EF59EDA94E38F5EC5C9A4F214BA294DD"
+  },
+  {
+    "path": "builds/p2p8-stage-corrected-reference/dreamland.gxp",
+    "sha256": "E2E01486FCF3C494F8A6B2217400036F0621B062ECE292D05D9E48FE8BC527F7"
+  }
+]

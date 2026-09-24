@@ -1,0 +1,27 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "EAB96F041F2F02B361E8B9465F6DCB7894D0694EC30C09E2ACF1987F1A0A120C",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "99AAC41C6DA6E0BA4100F9F29591C8471B10738A835570693C531063EE8F1B8C",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\full-dreamland-matrices-new.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AEFFC933DDE2ACC80C9E5FAF2106F732472E2B6BE0C0597EB71DE6D102DB01E2",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\full-dreamland-matrices-composed.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "DDE1FB7E80E2432205D21A8DFC58D6E62F43F203E59D68B8BEC44F83BC7020B7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\full-dreamland-matrices-rigid.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AF5570F5A1810B7AF78CAF4BC70A660F0DF51E42BAF91D4DE5B2328DE0E83DFC",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\full-dreamland-matrices-hidden.bin"
+  }
+]

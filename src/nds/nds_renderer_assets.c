@@ -6547,9 +6547,13 @@ _Static_assert(NDS_TASK36_REPLAY_WORD_CAPACITY <=
                "Dream Land Task36 replay growth consumed the 8 KiB RAM recovery");
 /* This captured GX program is a Dream Land specialization. Other packets
  * execute their native runs live; their segment numbers and animated roots
- * cannot inherit Dream Land's replay slots. */
+ * cannot inherit Dream Land's replay slots. Compiled GX owns these segments
+ * from preparation through submission: a nonzero mask would still force the
+ * two generic preflight bodies even after their replay has been replaced. */
+extern volatile u32 gNdsP2StageProg;
 #define NDS_TASK36_REPLAY_SEGMENT_MASK \
-    ((sNdsNativeStagePacketActive->gkind == NDS_NATIVE_STAGE_GKIND_PUPUPU) ? \
+    (((gNdsP2StageProg == 0u) && \
+      (sNdsNativeStagePacketActive->gkind == NDS_NATIVE_STAGE_GKIND_PUPUPU)) ? \
         ((1u << 5u) | (1u << 7u)) : 0u)
 
 typedef enum NDSRendererTask36ReplayState

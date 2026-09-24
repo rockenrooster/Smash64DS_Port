@@ -141,6 +141,8 @@ public static class Smash64DSCutGExactCapture
     }
     [DllImport("user32.dll")]
     public static extern bool GetWindowRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool PrintWindow(IntPtr window, IntPtr destination, uint flags);
 }
 '@
 }
@@ -160,8 +162,15 @@ function Save-ExactFrameWindowCapture {
     $bitmap = New-Object System.Drawing.Bitmap $width, $height
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     try {
-        $graphics.CopyFromScreen(
-            $rect.Left, $rect.Top, 0, 0, $bitmap.Size)
+        # This path requires the software renderer. Capture that HWND's content:
+        # desktop pixels at its old rectangle are not evidence when focus moves.
+        $dc = $graphics.GetHdc()
+        try {
+            Assert-Condition ([Smash64DSCutGExactCapture]::PrintWindow($Handle, $dc, 2u)) `
+                'Could not capture the exact-frame melonDS window content.'
+        } finally {
+            $graphics.ReleaseHdc($dc)
+        }
         $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
     } finally {
         $graphics.Dispose()

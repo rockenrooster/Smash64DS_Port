@@ -6700,3 +6700,25 @@ Estimated at 8-10 VBlanks for a cold Link. (4) Later: cache resolved NitroFS
 file ids, or ship the owner image inside the preview pack to save an open.
 `scripts/menus/test_css_preview_transaction.py` copies the stage enum and pins
 the per-update budget semantics; it needs a fake clock before (2) can pass.
+
+## P2-2p8 stage cross-binding depth dispatch (2026-09-24)
+
+Status: **IMPLEMENTED_NOT_ACCEPTED**; found while qualifying compiled stage GX.
+Symptom: the full Dream Land program and legacy control differed around the
+foreground/water (1,398 of 120,000 pixels at matched tic 3300).
+Contract: the source geometry/othermode marks the five flower cross runs no-Z;
+cross binding describes vertex ownership, not a change to source depth mode.
+First divergence: `ndsRendererCommitNativeStageSegment` dispatched CROSS before
+NO_Z, preserved source Z and entered the foreground band early. The normal
+no-Z emitter already supports foreign bindings. The source-Z cross branch now
+requires a non-no-Z submit class; Inishie's source-Z strings keep that path.
+Proof: host execution of the real dispatch loop covers both classes; corrected
+control and compiled output differ at 2 pixels (0.0017%) in the shown view.
+Candidate: `12A5031B9D55C3E9B97886FCD74BB5E1EF59EDA94E38F5EC5C9A4F214BA294DD`.
+Evidence: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md` and
+`artifacts/visibility/2026-09-24_p2-2p8-stage-gx/`. A separate capture acquisition
+fault (desktop pixels copied after focus moved) was fixed in the exact-frame
+helper by using the known HWND's software-rendered content via PrintWindow.
+Corrected full-match pair: replay identical over 1,972 rows; ~19.15 FPS, still
+below the gate. Remaining: natural shipping and sibling/other-stage coverage,
+retirement, integration. This is not a closed bug.

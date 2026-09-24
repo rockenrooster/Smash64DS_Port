@@ -1,0 +1,52 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "D3FB6B9E60604C1E93A424BE06B6A5E3991AAEC74FF305F2F9F9808BADB7DEF3",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\Makefile"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "6534E60F0E91AEE1F6BC5238D8D4B5CBB70785F5C3CE676BE903C3388F2D4E1C",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_renderer_assets.c"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "A9A017E47A86D730E2DCC8F87864040B2878BB1BC662F417BD2D0DCB803B2ECB",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_renderer_native_owners.c"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "A882136841B6369ADE8BA8F1042D19B77BA381386435E8E37A48AD4DC17712A7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_stage_gx.exec.inc"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "2E90C055F904F74FA25C9A62DB346B9187A6EFB472A3B84D4EFCD5DB2D84935F",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\include\\nds\\nds_stage_gx.h"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "F811D1CC3585D5A7A4B61925B2F2899CA4B78AC9D72DAD64175D324476990181",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\stages\\compile_nds_stage_gx.py"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "F0959ED5AD86B753C2FEF27541217D12B24759F62AAF9BBB3777F8EF160AAB49",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\stages\\test_stage_gx.py"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\nds_build_config.h"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "6E2338023749580FB958E304A9FB9CBAAFA2615703D0A3157DECB63F5D05EBE5",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.elf"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "E2E01486FCF3C494F8A6B2217400036F0621B062ECE292D05D9E48FE8BC527F7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\nitrofs\\stages\\dreamland.gxp"
+  }
+]

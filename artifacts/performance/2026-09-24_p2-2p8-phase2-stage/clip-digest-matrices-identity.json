@@ -1,0 +1,47 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "50C0A91CE47FF773C633A09501584791B85EE06DCBEAE3E9D6682F4C1CC12D7B",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "4133B9D964413B96D06FBC82AB4932023A84D458B78A1017B69BB2C3885ADF60",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-a-new.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "C7B826585224769FD8178C4DDC5FE0C6195A6FFFCE84F9CB1EBB6A1CC3DA60AA",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-a-composed.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "DDE1FB7E80E2432205D21A8DFC58D6E62F43F203E59D68B8BEC44F83BC7020B7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-a-rigid.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AF5570F5A1810B7AF78CAF4BC70A660F0DF51E42BAF91D4DE5B2328DE0E83DFC",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-a-hidden.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "CF00DDB0C0E2D218A320E9247B4872DF9E81521CDDAB2053D45AFD87E72F443F",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-b-new.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "64F1B52155F1832684B9DEAFE6BBD7ED62D6E3C20AEBD2A2F20C43A132EB711F",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-b-composed.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "DDE1FB7E80E2432205D21A8DFC58D6E62F43F203E59D68B8BEC44F83BC7020B7",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-b-rigid.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AF5570F5A1810B7AF78CAF4BC70A660F0DF51E42BAF91D4DE5B2328DE0E83DFC",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\clip-digest-matrices-b-hidden.bin"
+  }
+]

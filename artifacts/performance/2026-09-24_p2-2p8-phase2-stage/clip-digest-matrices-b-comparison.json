@@ -1,0 +1,74 @@
+{
+  "corners": 378,
+  "max_pixels": 0.013191011531128364,
+  "noz_triangles": 126,
+  "corner_program_triangles": 10,
+  "clip_changes": [
+    {
+      "run": 39,
+      "corner": 4,
+      "old": 0,
+      "new": 4
+    },
+    {
+      "run": 40,
+      "corner": 0,
+      "old": 0,
+      "new": 4
+    }
+  ],
+  "cull_changes": [],
+  "limit": 1.0,
+  "worst": [
+    {
+      "run": 35,
+      "corner": 25,
+      "pixels": 0.013191011531128364
+    },
+    {
+      "run": 35,
+      "corner": 27,
+      "pixels": 0.013191011531128364
+    },
+    {
+      "run": 37,
+      "corner": 23,
+      "pixels": 0.013191011531128364
+    },
+    {
+      "run": 37,
+      "corner": 24,
+      "pixels": 0.013191011531128364
+    },
+    {
+      "run": 37,
+      "corner": 27,
+      "pixels": 0.013191011531128364
+    },
+    {
+      "run": 37,
+      "corner": 30,
+      "pixels": 0.013191011531128364
+    },
+    {
+      "run": 37,
+      "corner": 8,
+      "pixels": 0.012586175473706562
+    },
+    {
+      "run": 37,
+      "corner": 9,
+      "pixels": 0.012586175473706562
+    },
+    {
+      "run": 37,
+      "corner": 29,
+      "pixels": 0.012586175473706562
+    },
+    {
+      "run": 37,
+      "corner": 31,
+      "pixels": 0.012586175473706562
+    }
+  ]
+}

@@ -9,10 +9,13 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '../../../..')).Path
 $art = Split-Path -Parent $PSScriptRoot
 $extra = @('gNdsP2StageProg', 'gNdsP2StageProgDraws', 'gNdsP2StageProgWords',
     'gNdsP2StageProgLoads', 'gNdsP2StageProgBytes', 'gNdsP2StageProgDeclines',
-    'gNdsP2StageProgReason', 'gNdsRendererNativeFailure.count',
+    'gNdsP2StageProgReason', 'gNdsP2StageProgNearRuns', 'gNdsRendererNativeFailure.count',
     'gNdsRendererNativeFailure.reason', 'gNdsRendererNativeDirectReject.count',
     'gNdsTaskmanGeneralHeapFreeMin', 'gNdsTaskmanArenaChosenSize',
-    'gNdsFighterPacketFaults', 'gNdsFighterPacketDeclines')
+    'gNdsFighterPacketFaults', 'gNdsFighterPacketDeclines',
+    'gNdsR2StagePrepareBuildCount', 'gNdsR2StagePrepareReuseCount',
+    'gNdsR2StagePreflightElideCount', 'gNdsRendererTask36CaptureWordCount',
+    'gNdsRendererTask36CaptureOutcome')
 $log = Join-Path $art "$Arm-run.log"
 & pwsh -NoProfile -File (Join-Path $root 'scripts/sample-tick-hud-buckets.ps1') `
     -NoBuild -Target smash64ds-p2-fourcpu-tickhud-hwtri -Build build-p2p8-s7 `

@@ -2841,11 +2841,12 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
      * to (Commit proves the stage table, the replay entry proves the replay
      * table), so while that certificate is current the per-run proof is a
      * second reading of the same two cold arrays for an answer already known.
-     * `replay` picks the certificate because it picks the table `run` points
-     * into. No certificate current -> the original proof, unchanged. */
-    if (((replay == FALSE) ?
-             ndsRendererNativeStagePreparedTextureProofCurrent() :
-             ndsRendererTask36ReplayTextureProofCurrent()) == FALSE)
+     * TRUE selects the recorded table. Compiled GX uses 2: matrices are in
+     * its stream, but `run` still belongs to the normal prepared table.
+     * No certificate current -> the original proof, unchanged. */
+    if (((replay == TRUE) ?
+             ndsRendererTask36ReplayTextureProofCurrent() :
+             ndsRendererNativeStagePreparedTextureProofCurrent()) == FALSE)
     {
         if (ndsRendererNativeStagePreparedTextureValid(run) == FALSE)
         {
@@ -3438,8 +3439,9 @@ static void ndsRendererNativeStageEmitProjectedDepthVertex(
     ndsRendererNativeStageWriteVertex16(0u, 0u);
 }
 
-/* Out of line and out of ITCM on purpose. Only the Inishie scale platforms
- * set PROJECTED_CROSS_MATRIX, so this is a rare branch, and letting it
+/* Out of line and out of ITCM on purpose. Source-Z cross runs (Inishie's
+ * scale platforms) reach this branch; no-Z cross runs use their painter path.
+ * This is a rare branch, and letting it
  * inline into ndsRendererCommitNativeStageSegment grew that ITCM function
  * by 552 bytes and overflowed the 32 KiB region by 448. Same treatment the
  * near-plane clipper below already has. */
@@ -5389,8 +5391,12 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
             u32 corner_offset;
 
             if ((run->flags &
-                 NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
+                 NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u &&
+                run->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
             {
+                /* Cross binding describes vertex ownership, not depth mode.
+                 * Dream Land's flowers must keep their no-Z painter path;
+                 * source-Z projection is needed by Inishie's scale strings. */
                 emitted_triangles +=
                     ndsRendererNativeStageEmitCrossMatrixTriangle(
                         run, prepared_run, triangle_offset);

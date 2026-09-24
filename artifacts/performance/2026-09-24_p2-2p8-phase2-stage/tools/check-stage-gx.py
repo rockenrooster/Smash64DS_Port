@@ -45,7 +45,8 @@ def main():
                 re.findall(r'GX_RUN=(\d+),(\d+),(\d+),(\d+)', log)}
     gx.PARAMS.update({0x13: 1, 0x14: 1, 0x15: 0, 0x19: 12})
     count = vertices = 0
-    for index, (start, size, _, _, triangles, _) in enumerate(runs):
+    for index, record in enumerate(runs):
+        start, size, _, _, triangles, _ = record[:6]
         if not size:
             continue
         first, length, textured = metadata[index]

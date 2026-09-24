@@ -1,0 +1,118 @@
+{
+  "rom": "50C0A91CE47FF773C633A09501584791B85EE06DCBEAE3E9D6682F4C1CC12D7B",
+  "samples": 1972,
+  "fps": 19.17032724262523,
+  "vbi": [
+    207,
+    1386,
+    326,
+    54,
+    11,
+    1973
+  ],
+  "two_vblank_percent": 10.491637100861633,
+  "buckets": {
+    "WORK-H": [
+      1401952.0,
+      2020815.999999999,
+      2689291.5199999996
+    ],
+    "STG": [
+      324032.0,
+      331804.8,
+      334272.0
+    ],
+    "FTR": [
+      184224.0,
+      268150.39999999985,
+      774282.24
+    ],
+    "MISC": [
+      199232.0,
+      400351.9999999999,
+      517118.0799999998
+    ]
+  },
+  "extras": [
+    {
+      "name": "gNdsP2StageProg",
+      "value": 1
+    },
+    {
+      "name": "gNdsP2StageProgDraws",
+      "value": 106542
+    },
+    {
+      "name": "gNdsP2StageProgWords",
+      "value": 13769567
+    },
+    {
+      "name": "gNdsP2StageProgLoads",
+      "value": 1
+    },
+    {
+      "name": "gNdsP2StageProgBytes",
+      "value": 31684
+    },
+    {
+      "name": "gNdsP2StageProgDeclines",
+      "value": 0
+    },
+    {
+      "name": "gNdsP2StageProgReason",
+      "value": 0
+    },
+    {
+      "name": "gNdsP2StageProgNearRuns",
+      "value": 0
+    },
+    {
+      "name": "gNdsRendererNativeFailure.count",
+      "value": 39
+    },
+    {
+      "name": "gNdsRendererNativeFailure.reason",
+      "value": 1
+    },
+    {
+      "name": "gNdsRendererNativeDirectReject.count",
+      "value": 0
+    },
+    {
+      "name": "gNdsTaskmanGeneralHeapFreeMin",
+      "value": 93540
+    },
+    {
+      "name": "gNdsTaskmanArenaChosenSize",
+      "value": 1253120
+    },
+    {
+      "name": "gNdsFighterPacketFaults",
+      "value": 0
+    },
+    {
+      "name": "gNdsFighterPacketDeclines",
+      "value": 0
+    },
+    {
+      "name": "gNdsR2StagePrepareBuildCount",
+      "value": 1
+    },
+    {
+      "name": "gNdsR2StagePrepareReuseCount",
+      "value": 1972
+    },
+    {
+      "name": "gNdsR2StagePreflightElideCount",
+      "value": 15776
+    },
+    {
+      "name": "gNdsRendererTask36CaptureWordCount",
+      "value": 0
+    },
+    {
+      "name": "gNdsRendererTask36CaptureOutcome",
+      "value": 0
+    }
+  ]
+}
