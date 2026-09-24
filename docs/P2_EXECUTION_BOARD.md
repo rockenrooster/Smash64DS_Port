@@ -58,16 +58,15 @@ roster halts ~130 KB short at battle load in the shipping config).
 **Phase 1 (fighters) active**: slices 1-4 landed, last `3fd3262357c` -- lists
 materialized on the device, 0 declines, oracle 0 mismatches; at admit word 2
 (default 0) route 1 FTR P95 319K, WORK-H P50 / P95 1.51M / 2.14M. A7 prep
-landed behind `NDS_IF_GAMESTATUS_COMPACT` (default 0): +68 KB four-CPU
+is on by default (`NDS_IF_GAMESTATUS_COMPACT`, GAME SET and loop proven): +68 KB four-CPU
 low-water, the first 1P battle loads. MF host encoder + C decoder landed
 (not linked).
-**Next**: compact GameStatus default on (1P battles, menu loop and the GAME
-SET stream first); 1P stage-2 intro packs (the intro loads full fighter mains;
+**Next**: 1P stage-2 intro packs (the intro loads full fighter mains;
 the pack loader is gated to CSS/battle, `ndsRelocPreviewFighterLoadBegin`);
 then the phase's deletion step. ARM7 audio spec queued. One subagent at a time.
 **Constraint**: the all-content VS character select keeps >= 183,072 B at its
 animation reservation or every 3D preview switches off (fixed `050b7c18db4`;
-9,392 B margin after slice 4): measure with
+5,296 B margin with compaction on): measure with
 `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`
 after any static growth.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`. Evidence:

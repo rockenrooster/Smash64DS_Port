@@ -1,0 +1,22 @@
+0x020d1944 in ndsF32AddBits (a=<optimized out>, b=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/include/nds/nds_f32_exact.h:114
+114	    if ((grs > 4u) || ((grs == 4u) && ((m & 1u) != 0u)))
+#0  0x020d1944 in ndsF32AddBits (a=<optimized out>, b=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/include/nds/nds_f32_exact.h:114
+#1  ndsF32AddBits (a=<optimized out>, b=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/include/nds/nds_f32_exact.h:36
+#2  0x020d1ad0 in ndsF32SubBits (a=<optimized out>, b=1065353216) at D:/Stuff/DevFolder/Smash64DS_Port/include/nds/nds_f32_exact.h:129
+#3  ndsFtPoseParse (pose=pose@entry=0x229b680 <sNdsFtPose>, joint=joint@entry=0x2378e48, dobj=0x453a503b, dobj@entry=0x225e45c <gSYFramebufferSets+86672>) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ft_pose.c:699
+#4  0x020d319c in ndsFtPoseRun (advance=1, pose=0x229b680 <sNdsFtPose>, translate_scales=0x0 <ndsStaffrollFrameCommit>, evaluate_body=1) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ft_pose.c:1383
+#5  ndsFtPoseUpdate (gobj=<optimized out>, fp=<optimized out>, translate_scales=0x0 <ndsStaffrollFrameCommit>, owned_mask_lo=<optimized out>, owned_mask_hi=0x228d2e8 <sNdsRelocLoadedFiles+2184>) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ft_pose.c:1474
+#6  0x02069bca in ndsRelocIsFighterAnimID (asset_id=37) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:3921
+#7  0x00000002 in ndsStaffrollFrameCommit () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:14260
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+pc             0x20d1944           0x20d1944 <ndsF32AddBits+200>
+lr             0x20d1ae4           0x20d1ae4 <ndsFtPoseParse+88>
+sp             0x22bf430           0x22bf430
+cpsr           0x4000003f          1073741887
+IFC stage=0 count=1 move=0 slots=75 src=152288 bytes=21056 nulled=39 baked=22104 bakefail=0
+warning: could not convert 'ptr' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+HEAP ptr=0x023c22dc end=0x023e0300 start=0x022d8400 halt=0 req=0 headroom=0 callerlr=0x00000000
+No symbol matches gNdsSyMallocOverflowCallerLR.
+FRAME presented=3802
+[Inferior 1 (Remote target) detached]

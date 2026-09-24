@@ -156,8 +156,14 @@ NDS_TEX_IDENT_SHADOW ?= 0
 # file). The file is finalized at the top of the free arena, the letters are
 # baked there (GO into OBJ VRAM, both end messages into compressed RAM), and
 # only the rest of the file is kept (src/port/reloc_backend_assets.c,
-# src/nds/nds_ifcommon_oam.c).
-NDS_IF_GAMESTATUS_COMPACT ?= 0
+# src/nds/nds_ifcommon_oam.c). On by default since 2026-09-23 after its proofs
+# (artifacts/performance/2026-09-23_p2-2p8-if-gamestatus-compact/): four-CPU
+# replay digest identical, OBJ VRAM byte-identical for GO, TIME UP and GAME SET,
+# the first 1P battle loads, the shell loop passes. It costs 4,416 B of static
+# image -- one arena page off the all-content character select's margin (5,296 B
+# left at its animation reservation; see
+# artifacts/performance/2026-09-23_css-preview-heap/). 0 restores the plain load.
+NDS_IF_GAMESTATUS_COMPACT ?= 1
 # P2-2p8 Phase 1 slice 3: 1 lets NDS_FTR_LEAN_ADMIT_DEFAULT through on a
 # non-tick-HUD lab target (the 1P campaign walk ROM has no tick HUD, and the
 # campaign probe has no word poke). Lab builds only, own build dir -- forced

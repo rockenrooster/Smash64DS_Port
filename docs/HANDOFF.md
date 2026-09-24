@@ -19,7 +19,7 @@ phase: the shipping configuration cannot load the heaviest four-kind roster
 gate ROM has ~0.2 MB more arena than the shipping image -- report the shipping
 arena and that roster's load margin with every phase. The all-content
 (published) VS character select must keep >= 183,072 B free at its animation
-reservation or every 3D preview switches off (192,464 B after Phase 1 slice 4;
+reservation or every 3D preview switches off (188,368 B with slice 4 and compaction;
 `artifacts/performance/2026-09-23_css-preview-heap/`). One subagent at a time
 (owner, 2026-09-22).
 

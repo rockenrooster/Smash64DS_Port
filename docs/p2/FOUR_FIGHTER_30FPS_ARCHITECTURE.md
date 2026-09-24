@@ -709,6 +709,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   192,464 B against 183,072 required, 9,392 B of margin that every static byte
   spends. Next: flip `NDS_IF_GAMESTATUS_COMPACT` on after its 1P/menu-loop proofs,
   then the 1P intro packs and the phase's deletion step.
+- **A7 compaction on by default (2026-09-23)**: GAME SET proven at runtime (the
+  announcement forced to GAME SET on the four-CPU ROMs: OBJ end bank
+  byte-identical between the pixel conversion and the stream decode), the shell
+  loop passes one lap with it on (compaction ran: count 1, stage 0), the first
+  1P battle loads. `NDS_IF_GAMESTATUS_COMPACT ?= 1`. Its 4,416 B of image costs
+  the all-content character select one arena page: 188,368 B at the animation
+  reservation, 5,296 B of margin -- the same margin the 2026-09-22 published ROM
+  shipped with. Next: the 1P stage-2 intro packs, then the phase's deletion step.
 
 ## 7. Found along the way
 

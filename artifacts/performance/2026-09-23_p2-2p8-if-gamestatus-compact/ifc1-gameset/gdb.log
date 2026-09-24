@@ -1,0 +1,34 @@
+Reading symbols from D:\Stuff\DevFolder\Smash64DS_Port\builds\build-p2p8-ifc1\smash64ds-p2-fourcpu-tickhud-hwtri.elf...
+0x0200bff2 in ndsIFCommonBilerpPremultipliedRgba (taps=0x2291738, 
+    fraction_x=<optimized out>, fraction_y=<optimized out>, 
+    rgba=0x242d0 "­\377\377\032,p\235å¨°\235å0P\235å4`\235å¬À\235å\0060 á\020À\215å¤À\235å\005  á\bÀ\215å À\235å\n\020 á\004À\215å")
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:728
+728	                weighted_premultiplied +=
+Temporary breakpoint 1 at 0x207abe8: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 484.
+
+Temporary breakpoint 1, ndsBattlePlayableFrameCompleteMarker ()
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c:484
+484	    __asm__ volatile("" ::: "memory");
+FIRST frame=1 freemin=4294967295 free=140256 arena=1253120
+IFC count=1 move=0 fail=0 src=152288 bytes=21056 dropped=131232 slots=75 nulled=39 baked=22104 bakefail=0 decodes=0 prepfail=0 prepok=1
+Temporary breakpoint 2 at 0x200d798: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c, line 2219.
+
+Temporary breakpoint 2, ndsIFCommonNativeOamPrepareAnnouncement (game_set=0)
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:2219
+2219	    if (game_set > NDS_IFCOMMON_ANNOUNCE_GAME_SET)
+ANNOUNCE game_set=1 frame=1995
+0x020f022c in ndsIFCommonMakeSObjForGObj (gobj=gobj@entry=0x23bec28, 
+    sprite=0x22c83f8)
+    at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ifcommon.c:165
+165	        if (((sprite == time_first) || (sprite == game_first)) &&
+Value returned is $1 = 1
+IFC count=1 move=0 fail=0 src=152288 bytes=21056 dropped=131232 slots=75 nulled=39 baked=22104 bakefail=0 decodes=0 prepfail=0 prepok=1
+Temporary breakpoint 3 at 0x20ef48c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c, line 3326.
+
+Temporary breakpoint 3, mnVSResultsFuncStart ()
+    at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c:3326
+3326		rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+RESULTS frame=2043 freemin=122412 native=569
+IFC count=1 move=0 fail=0 src=152288 bytes=21056 dropped=131232 slots=75 nulled=39 baked=22104 bakefail=0 decodes=1 prepfail=0 prepok=2
+DONE
+(gdb) 

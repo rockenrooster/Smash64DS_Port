@@ -46,6 +46,18 @@ Not yet exercised: the GAME SET stream at runtime (this match ends on TIME UP;
 it is baked by the same function that produced the byte-identical TIME UP bank),
 the 1P battles, and the menu loop. The flag stays 0 until they are.
 
+**GAME SET at runtime (2026-09-23, `tools/run-ifc-vram-gameset.ps1 -ForceGameSet`,
+same two ROMs):** the announcement's `game_set` argument is poked to 1 at
+`ndsIFCommonNativeOamPrepareAnnouncement` (a register poke; the stress match
+never ends on stocks), so both arms bake and show GAME SET at frame 1995. The OBJ
+end bank after the bake is **byte-identical** between flag 0 (pixel conversion)
+and flag 1 (stream decode; `decodes=1` at Results), and differs from the TIME UP
+bank, so the poke took effect (`ifc0-gameset/`, `ifc1-gameset/`, sha256
+`6AF19173...` both). GO bank and texture A+B at the first frame identical too.
+Native failures at Results read 569 in BOTH arms against 293 on the TIME UP
+runs: the forced GAME SET presentation adds 276 in this lab target whether or
+not the file is compacted (not investigated here).
+
 ## 1P campaign (shipping shell configuration, `smash64ds-p2-shell-freeplay-hwtri`)
 
 Lab ROM in its own dir (`build-p2p8-ifc-1p`, flags `NDS_P2_MENU_WALK=1
