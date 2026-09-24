@@ -12,27 +12,27 @@ sections 0, 6 and 8, then the board cursor. Evidence:
 `artifacts/performance/2026-09-2*_p2-2p8-*`; `scripts/compare-replay-digest.py`
 is the gameplay-equivalence check every phase runs.
 
-Phase 1 (fighters): slices 1-6 committed through `53a5233b1e2` (every kind lean
-in VS; lean still off by default). **Slice 7 was mid-flight at handoff**,
-UNCOMMITTED in the main tree (lean default on + Ness's yo-yo program; evidence
-`artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/`): the owner's playtest
-of its 08:00 ROM showed VS Results, then CSS, fighters missing parts after a
-match -- fix that (lean-vs-route-0 through match -> Results -> CSS) before
-committing it. Root `smash64ds.nds` was restored to r54 (C8FC02AA); the 08:00
-ROM is in `builds/root-rom-0924-0800-inprogress/`. Boundary's preflight rebuilds
-the root ROM from the working tree. Then slice 8 (lean for CSS, Results, autodemo,
-1P scenes: D8), slice 9 (delete production everywhere), Phase 2. D9: no re-plan
+Phase 1 (fighters): slices 1-6 landed; slice 7 is ready for its candidate
+checkpoint (**IMPLEMENTED_NOT_ACCEPTED**). Lean defaults and Ness's yo-yo/bat
+are covered on the final ROMs; the Results/CSS tint-lifetime repair has natural
+transition probes and inspected A/B captures. Receipt:
+`artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`. All jobs
+finished. Root `smash64ds.nds` still matches r54 (C8FC02AA). Next is slice 8:
+the separate camera modelview and transient Intro actors, variant kinds and
+remaining D8 scene coverage. CSS/Results already reach the common lean path;
+their full roster coverage remains due. Then slice 9 deletes production
+everywhere, followed by Phase 2. Boundary preflight can rebuild the root ROM,
+so preserve r54 until publication is qualified. D9: no re-plan
 stops -- keep going and bank every measured win. Owner: optimization only, no 1P
-campaign bugs. Carry into every
-phase: the shipping configuration cannot load the heaviest four-kind roster
+campaign bugs. Carry forward: the shipping configuration cannot load the heaviest four-kind roster
 (Captain/Link/Pikachu/Kirby halts ~130 KB short at battle load,
 `artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`), and the four-CPU
 gate ROM has ~0.2 MB more arena than the shipping image -- report the shipping
 arena and that roster's load margin with every phase. The all-content
 (published) VS character select must keep >= 183,072 B free at its animation
 reservation or every 3D preview switches off (188,368 B with slice 4 and compaction;
-`artifacts/performance/2026-09-23_css-preview-heap/`). One subagent at a time
-(owner, 2026-09-22).
+`artifacts/performance/2026-09-23_css-preview-heap/`). Serial execution only:
+**no subagents** (owner, 2026-09-24).
 
 ## Continue, do not restart
 

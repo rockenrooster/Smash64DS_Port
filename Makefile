@@ -137,12 +137,13 @@ NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_SHIP_TELEMETRY ?= 1
 NDS_TICK_HUD ?= 0
-# P2-2p8 Phase 1 slice 2c: gNdsFtrLeanAdmit's boot value (0/1/2, fighter
-# texture admission). Lab (tick-HUD) builds only -- forced to 0 below for
-# every other target -- so the creation-time admission can be measured
-# without a debugger poke: `make TARGET=smash64ds-p2-fourcpu-tickhud-hwtri
-# BUILD=<own dir> NDS_FTR_LEAN_ADMIT_DEFAULT=2`.
-NDS_FTR_LEAN_ADMIT_DEFAULT ?= 0
+# P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
+# gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
+# (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
+# NDS_FTR_LEAN_ADMIT_BOOT), so slices 2c-6's lab boot value
+# NDS_FTR_LEAN_ADMIT_DEFAULT and its non-tick-HUD pass NDS_FTR_LEAN_ADMIT_LAB
+# are gone. Route 0 + admission 0 (the old path) is a GDB poke on the same ROM
+# at boot: scripts/sample-tick-hud-buckets.ps1 -BootSetGlobals.
 # P2-2p8 Phase 1 slice 2c: 1 compiles the texture cache's exact-key shadow
 # and whole-match identity journal (NDS_RENDERER_HW_TEXTURE_KEY_SHADOW 1,
 # about 29.5 KB of static RAM) that count runtime identity collisions under
@@ -164,13 +165,6 @@ NDS_TEX_IDENT_SHADOW ?= 0
 # left at its animation reservation; see
 # artifacts/performance/2026-09-23_css-preview-heap/). 0 restores the plain load.
 NDS_IF_GAMESTATUS_COMPACT ?= 1
-# P2-2p8 Phase 1 slice 3: 1 lets NDS_FTR_LEAN_ADMIT_DEFAULT through on a
-# non-tick-HUD lab target (the 1P campaign walk ROM has no tick HUD, and the
-# campaign probe has no word poke). Lab builds only, own build dir -- forced
-# to 0 below for the published targets: `make
-# TARGET=smash64ds-p2-shell-freeplay-hwtri BUILD=<own dir> NDS_P2_MENU_WALK=1
-# NDS_FTR_LEAN_ADMIT_LAB=1 NDS_FTR_LEAN_ADMIT_DEFAULT=2`.
-NDS_FTR_LEAN_ADMIT_LAB ?= 0
 # P2-2p8 Phase 1 slice 3: 1 compiles the lean kernel's phase timing
 # (gNdsFtrLeanSlow bit 8, gNdsFtrLean.kernel_part_ticks). Lab (tick-HUD)
 # builds only, own build dir -- forced to 0 below for every other target.
@@ -6732,13 +6726,7 @@ ifeq ($(NDS_R2_BATTLEPACK),1)
 $(NDS_BUILD_CONFIG): $(NDS_BATTLEPACK_BLOB)
 endif
 
-ifneq ($(filter $(TARGET),$(NDS_PUBLISHED_TARGETS)),)
-override NDS_FTR_LEAN_ADMIT_LAB := 0
-endif
 ifneq ($(NDS_TICK_HUD),1)
-ifneq ($(NDS_FTR_LEAN_ADMIT_LAB),1)
-override NDS_FTR_LEAN_ADMIT_DEFAULT := 0
-endif
 override NDS_TEX_IDENT_SHADOW := 0
 override NDS_FTR_LEAN_KTIME := 0
 endif
@@ -6756,10 +6744,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_SHIP_TELEMETRY $(NDS_SHIP_TELEMETRY)'; \
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
-		echo '#define NDS_FTR_LEAN_ADMIT_DEFAULT $(NDS_FTR_LEAN_ADMIT_DEFAULT)u'; \
 		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
 		echo '#define NDS_IF_GAMESTATUS_COMPACT $(NDS_IF_GAMESTATUS_COMPACT)'; \
-		echo '#define NDS_FTR_LEAN_ADMIT_LAB $(NDS_FTR_LEAN_ADMIT_LAB)'; \
 		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \

@@ -8345,3 +8345,34 @@ CPU-level fixture, expected 2 / observed 3. Four-CPU stress, ticks, WORK-H P50/P
 whole-match FPS and cadence are unmeasured. IMPLEMENTED_NOT_ACCEPTED; remaining
 action/detail/lifecycle and owner proof is due. Accepted root ROM is unchanged.
 Receipt: `artifacts/performance/2026-09-19_yoshi-battle-pairs.md`.
+
+## 2026-09-24 — P2-2p8 Phase 1 slice 7 default qualification
+
+**IMPLEMENTED_NOT_ACCEPTED.** Final main stress ROM `50B8AF5804D12C98...`,
+`builds/build-p2p8-s7`, DK/Samus/Link/Kirby, 1,972 samples. Same-ROM default
+route 1/admission 2 versus disabled route 0/admission 0; this qualifies the
+combined lean/admission default, not an incremental gain over slice 6.
+Ticks at 33.513982 MHz; P50/P95/P99 use linear interpolation over the samples:
+
+| Metric | Control | Default |
+|---|---:|---:|
+| WORK-H P50 / P95 / P99 | 1,611,040 / 4,485,354 / 5,138,733 | 1,393,664 / 2,021,027 / 2,665,534 |
+| FTR P50 / P95 / P99 | 349,568 / 2,961,670 / 3,227,467 | 184,448 / 269,651 / 767,704 |
+| STG P50 / P95 / P99 | 324,544 / 368,861 / 375,763 | 324,288 / 368,925 / 374,611 |
+| FPS (timer rate / mean ALL) | 14.42 | 19.21 |
+| VBlanks 2 / 3 / 4 / 5+; maximum | 146 / 953 / 422 / 452; 26 | 209 / 1388 / 322 / 54; 9 |
+| Two-VBlank share (1,973 presents) | 7.40% | 10.59% |
+| General heap low-water | 122,412 B | 122,412 B |
+| Native failures / direct rejects | 293 / 254 | 39 / 0 |
+| Fighter texture uploads after GO | 458 | 0 |
+
+All 6,862 default fighter attempts draw lean; no declines or recordings. The
+oracle compares 6,606 lists / 13,620,081 words with zero mismatches. Strict
+record-order replay compares all 1,972 digest pairs identically, with no skips
+or resynchronization; inferred frame labels differ at documented ring-stop
+skews. Final shipping static delta +104 B; CSS reserve 188,368 B, margin 5,296 B.
+Shipping's heavy-roster margin still needs remeasurement; this lab's arena is
+larger. Old lab-only boot switches were removed; production/replay retirement,
+remaining scene coverage, integrated verification and owner acceptance are due.
+Both performance and native acceptance remain RED. Root r54 is unchanged.
+Receipt and exact hashes: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.

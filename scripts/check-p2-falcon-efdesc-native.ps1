@@ -30,21 +30,43 @@ Assert-FalconEFDescNative ($punchHash -eq
     "CaptainSpecial3 O2R hash drifted: $punchHash"
 
 $generatedText = Get-Content -LiteralPath $generated -Raw
-foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST 60u',
-    '#define NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_COUNT 1u',
-    '#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT 59u',
-    '#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT 60u',
-    '#define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST 61u',
-    '#define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_COUNT 1u',
-    '#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT 61u',
-    '#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT 62u',
-    '#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT 63u',
-    '{ 0x0a30u, 104u, 1u, 0u }',
-    '{ 0x0760u, 105u, 1u, 0u }'
+# Other effects can move table ordinals. Check the named roots against their
+# source offsets and bound their texture slots; --check above verifies the bake.
+$effectDefines = @{}
+foreach ($m in [regex]::Matches($generatedText,
+    '(?m)^#define NDS_ENTRY_EFFECT_(\w+) (\d+)u\s*$')) {
+    $effectDefines[$m.Groups[1].Value] = [int]$m.Groups[2].Value
+}
+$rootTable = [regex]::Match($generatedText,
+    '(?s)sNdsEntryEffectRoots\[[^\]]+\] = \{(.*?)\r?\n\};')
+$rootRows = [regex]::Matches($rootTable.Groups[1].Value,
+    '\{ (0x[0-9a-f]+)u, (\d+)u, (\d+)u, (\d+)u \}')
+Assert-FalconEFDescNative ($rootTable.Success -and
+    ($rootRows.Count -eq $effectDefines['ROOT_COUNT'])) `
+    'Generated entry-effect root table is missing or incomplete.'
+foreach ($family in @(
+    @{ Name = 'FALCON_KICK'; Offset = '0x0a30'; Textures = 2 },
+    @{ Name = 'FALCON_PUNCH'; Offset = '0x0760'; Textures = 3 }
 )) {
-    Assert-FalconEFDescNative $generatedText.Contains($token) `
-        "Generated Falcon EFDesc corpus is missing: $token"
+    $name = $family.Name
+    $first = $effectDefines["${name}_ROOT_FIRST"]
+    Assert-FalconEFDescNative (($null -ne $first) -and
+        ($effectDefines["${name}_ROOT_COUNT"] -eq 1) -and
+        ($first -lt $rootRows.Count)) "$name must name one valid root."
+    $row = $rootRows[$first]
+    Assert-FalconEFDescNative (($row.Groups[1].Value -eq $family.Offset) -and
+        ([int]$row.Groups[2].Value -lt $effectDefines['GROUP_COUNT']) -and
+        ($row.Groups[3].Value -eq '1') -and ($row.Groups[4].Value -eq '0')) `
+        "$name root no longer matches its source display list."
+    $slots = @(for ($i = 0; $i -lt $family.Textures; $i++) {
+        $slot = $effectDefines["${name}_TEXTURE${i}_SLOT"]
+        Assert-FalconEFDescNative (($null -ne $slot) -and
+            ($slot -lt $effectDefines['TEXTURE_COUNT'])) `
+            "$name texture $i has no valid generated slot."
+        $slot
+    })
+    Assert-FalconEFDescNative ((@($slots | Select-Object -Unique).Count) -eq
+        $family.Textures) "$name lost a distinct source texture frame."
 }
 
 $generatorText = Get-Content -LiteralPath $generator -Raw
@@ -132,7 +154,7 @@ $entrySource = Get-Content -LiteralPath (Join-Path $root `
 foreach ($token in @(
     'if (fp->fkind == nFTKindPikachu)',
     'if (fp->fkind == nFTKindPurin)',
-    'efManagerMBallRaysMakeEffect(&fp->entry_pos);'
+    'efManagerMBallRaysMakeEffect(&fp->entry_pos)'
 )) {
     Assert-FalconEFDescNative $entrySource.Contains($token) `
         "Master-Ball rays source-reachability contract is missing: $token"

@@ -756,6 +756,26 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   and right on route 1. Shipping static -32 B. Next: lean as the default, then
   deletion.
 
+- **Phase 1 slice 7 (2026-09-24,
+  `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/`)**: lean route 1 /
+  admission 2 are now the boot defaults. Ness's yo-yo and bat programs cover
+  the remaining smashes (LOW 1,739/1,739 draws; HIGH 1,771/1,771, including
+  51 yo-yo and six bat draws). The final default stress ROM has WORK-H P50 /
+  P95 / P99 **1,393,664 / 2,021,027 / 2,665,534**, FTR **184,448 / 269,651 /
+  767,704**, 19.21 FPS and 10.59% two-VBlank presents; the gate remains RED.
+  This qualifies the combined default, not a new gain over slice 6. Main and
+  both Ness rosters have zero oracle mismatches and strictly identical replay
+  sequences (all 1,972 pairs, no skipped rows or resynchronization). Native
+  failures remain 39 on main and 166 on Captain/Pikachu/Purin/Ness; HIGH
+  Purin/Ness has zero. The owner-playtest regression was bank-D tint lifetime:
+  release tint tiles in D at battle exit and delay its BG3 remap until the
+  new frame or an actual BG3 write. Natural Results/CSS probes complete and
+  captures retain Mario/Fox's parts. Final shipping static +104 B; CSS keeps
+  188,368 B at its reservation. **IMPLEMENTED_NOT_ACCEPTED**: remaining D8
+  scene coverage, retirement, integration and owner look are due. Next:
+  camera-modelview and transient Intro support, then variant kinds and the
+  remaining scene checks, before deleting production everywhere.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

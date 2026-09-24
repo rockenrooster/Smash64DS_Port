@@ -1888,6 +1888,33 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNessWin3LowOwner, &sNdsNativeNessFighterLowTables,
     sNdsNativeNessWin3RootsLow, sNdsNativeNessWin3CrossPaletteSlotsLow,
     sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+/* P2-2p8 Phase 1 slice 7: the yo-yo smashes. USmash and DSmash carry the
+ * 0x10000000 anim-desc mask, so ftMainSetStatus installs hidden part 3 --
+ * joint 30, the last child of joint 4, with no display list -- and the
+ * motion's SetModelPartID(30, 0) two frames in draws the yo-yo (0x69E0, both
+ * details) on it. That ADDS a root, last in the walk: 15 against a canonical
+ * 14. Without this program the owner declined for the rest of either smash
+ * and Ness drew nothing there, in both renderer routes. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessYoYoHighOwner, &sNdsNativeNessFighterHighTables,
+    sNdsNativeNessYoYoRoots, sNdsNativeNessYoYoCrossPaletteSlots,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessYoYoLowOwner, &sNdsNativeNessFighterLowTables,
+    sNdsNativeNessYoYoRootsLow, sNdsNativeNessYoYoCrossPaletteSlotsLow,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+/* Slice 7: the forward smash. dNessMainMotion_FSmash's SetModelPartID(17, 0)
+ * puts the bat (0x6B50, both details) on joint 17 -- Win3's selected-but-blank
+ * joint -- so it ADDS a root at joint 17's place, 15 against 14, and Ness
+ * drew nothing for the rest of the smash until this program. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessFSmashHighOwner, &sNdsNativeNessFighterHighTables,
+    sNdsNativeNessFSmashRoots, sNdsNativeNessFSmashCrossPaletteSlots,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessFSmashLowOwner, &sNdsNativeNessFighterLowTables,
+    sNdsNativeNessFSmashRootsLow, sNdsNativeNessFSmashCrossPaletteSlotsLow,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
 #endif
 #endif
 
@@ -5379,6 +5406,16 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             return (use_low_detail != 0u) ?
                 &sNdsNativeNessWin3LowOwner : &sNdsNativeNessWin3HighOwner;
         }
+        if (program == 2u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeNessYoYoLowOwner : &sNdsNativeNessYoYoHighOwner;
+        }
+        if (program == 3u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeNessFSmashLowOwner : &sNdsNativeNessFSmashHighOwner;
+        }
     }
 #endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
@@ -5464,11 +5501,11 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     }
 #endif
 #if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
-    /* canonical + Win3. Every number this bound rejects falls through to the
-     * reset below and silently becomes canonical, which is how Kirby's Stone
-     * was lost for a month -- so this literal moves whenever a Ness program is
-     * added. */
-    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS) && (program <= 1u))
+    /* canonical + Win3 + YoYo + FSmash. Every number this bound rejects falls
+     * through to the reset below and silently becomes canonical, which is how
+     * Kirby's Stone was lost for a month -- so this literal moves whenever a
+     * Ness program is added. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS) && (program <= 3u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5543,8 +5580,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
     {
-        /* canonical + Win3. */
-        program_count = 2u;
+        /* canonical + Win3 + YoYo + FSmash. */
+        program_count = 4u;
     }
 #endif
     for (program = 0u; program < program_count; program++)

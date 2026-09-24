@@ -51,26 +51,22 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
 Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS -- architecture.**
-Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (pillars A1-A10, phases 0-7;
-owner rulings D1-D7 in section 8; every slice's numbers in the section 6
-phase log). Phase 0 closed 09-23 (instrument out of the gate; the heaviest
-roster halts ~130 KB short at battle load in the shipping config).
-**Phase 1 (fighters) active**: slices 1-6 landed (section 6 log) -- every kind
-draws lean in VS at both details (Ness's yo-yo smashes decline), digest identical,
-oracle 0; route 1 (admit 2, default 0) FTR P50 / P95 185K / 269K, WORK-H P50 / P95
-1.40M / 2.01M on the stress roster. A7 prep is on by default
-(`NDS_IF_GAMESTATUS_COMPACT`): +68 KB four-CPU low-water. MF host encoder + C
-decoder landed (not linked).
-**Next**: slice 7 (lean default + Ness's yo-yo) is running;
-then lean for the CSS, VS Results, autodemo and 1P scenes (owner D8, 09-24: no
-dual paths includes them); then deletion everywhere. ARM7 audio spec queued.
+Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`, D1-D9, log section 6.
+Phase 0 closed; Phase 1 slices 1-6 committed. Slice 7 **RECORD**:
+lean defaults, Ness yo-yo/bat, battle-exit tint and bank-D fixes.
+Identity: `c017e6b450b` + scoped dirty sources; **IMPLEMENTED_NOT_ACCEPTED**.
+Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.
+Retained: final-build Results -> CSS probes/captures, CSS reserve 188,368 B.
+**Next**: checkpoint slice 7; then Intro camera/transient support and variant kinds.
+Owed: D8 scene coverage, retirement, integration profile, owner look; FPS/native RED.
+Job: none; sessions 37663/53658/13155 completed, final digests/oracles pass.
+Owner 09-24: go; **no subagents**. Helper stopped; unrelated edits preserved.
+A7 compaction is on (+68 KB lab low-water); MF codec exists, not linked.
+Shipping heaviest roster still ~130 KB short; lab arena is ~0.2 MB larger.
 Owner 09-23: optimization only -- 1P campaign bugs stay out of scope (intro
 findings: `artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`).
-**Constraint**: the all-content VS character select keeps >= 183,072 B at its
-animation reservation, else no 3D previews (fixed `050b7c18db4`;
-5,296 B margin with compaction on): measure with
-`artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`
-after any static growth.
+**Constraint**: CSS animation reserve >= 183,072 B (5,296 B margin).
+After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`. Evidence:
 `artifacts/performance/2026-09-2*_p2-2p8-*`.
 

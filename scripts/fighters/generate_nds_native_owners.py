@@ -2446,8 +2446,18 @@ P2_ROOT_PROGRAM_APPENDIX = {
     # G_RDPPIPESYNC/light/combine preamble, two G_VTX loads of 7 and 11, no
     # G_MODIFYVTX and no G_DL), proved by the vertex-cache closure.
     "ness": {
-        "high": ((7, 0x6d90),),
-        "low":  ((7, 0x6d90),),
+        # (0, 0x69e0) is the yo-yo (joint 30, model part 0), appended after
+        # Win3's row so that bake keeps its indices. Joint 30 hangs from joint
+        # 4, which draws nothing and so owns no binding; 0x69e0 is a
+        # self-contained RAW program (its own G_VTX of four, one G_TRI2, no
+        # G_MODIFYVTX, no G_DL) drawn under its own live DObj matrix -- the
+        # program's binding parents are all 255 -- and Ness owns no CROSS run,
+        # so the binding names cache provenance only. Binding 0 is the first
+        # bound joint of the walk under joint 4.
+        # (7, 0x6b50) is the bat (joint 17, model part 0; FSmash), keyed to
+        # joint 16's binding 7 exactly like Win3's 0x6d90 on the same joint.
+        "high": ((7, 0x6d90), (0, 0x69e0), (7, 0x6b50)),
+        "low":  ((7, 0x6d90), (0, 0x69e0), (7, 0x6b50)),
     },
 }
 
@@ -2504,6 +2514,11 @@ LINK_MAIN_HIDDENPARTS_OFFSET = 0x00d0
 LINK_MAIN_HIDDENPART_COUNT = 6
 YOSHI_MAIN_HIDDENPARTS_OFFSET = 0x0084
 YOSHI_MAIN_HIDDENPART_COUNT = 5
+# 239_NessMain.c: `/* @ 0x0084, 64 bytes: FTAttributes.hiddenparts target */`,
+# FTHiddenPart dNessMain_hiddenparts[4]. Row 3 is { joint 30, parent 4,
+# partindex 1, kind 0 }: the yo-yo's joint, appended as joint 4's last child.
+NESS_MAIN_HIDDENPARTS_OFFSET = 0x0084
+NESS_MAIN_HIDDENPART_COUNT = 4
 
 # The anim-desc mask each program's source motions carry, copied verbatim from
 # the third field of their `ftdata.c` rows.  Every FTANIM_FLAG_* value lives in
@@ -2531,6 +2546,9 @@ OWNER_ROOT_PROGRAM_ANIM_MASKS = {
     ("link", "Catch"): 0x1c000000,
     ("yoshi", "Catch"): 0x18000000,
     ("yoshi", "Throw"): 0x18000000,
+    # Ness's USmash and DSmash, in both ftdata.c tables (6852-6853 and
+    # 7128-7129): 0x10000000 is bit 28, hidden part 3 -- joint 30, the yo-yo.
+    ("ness", "YoYo"): 0x10000000,
 }
 
 # The live root count each program must produce.  A program whose count drifts
@@ -2547,6 +2565,12 @@ OWNER_ROOT_PROGRAM_ROOT_COUNTS = {
     # (joint 17), which setup_parts already selected but the JointTree left
     # without a display list, so the live vector is 15.
     ("ness", "Win3"): 15,
+    # The yo-yo smashes: the canonical 14 plus hidden joint 30, which the
+    # motion gives model part 0 (0x69e0) two frames in.
+    ("ness", "YoYo"): 15,
+    # The forward smash: the canonical 14 plus the bat on joint 17, the same
+    # selected-but-blank descriptor Win3 lights (model part 0 here, 1 there).
+    ("ness", "FSmash"): 15,
 }
 
 
@@ -2623,18 +2647,49 @@ OWNER_ROOT_PROGRAMS = {
     # 0xAC00000x SetTexturePartID commands, which write mobj->texture_id_curr
     # and never touch the root vector. There is no restoring (17, 0) and no
     # second model-part word anywhere in the clip, so this ONE event is the
-    # whole program. 238_NessMainMotion.c's model-part writes are all
+    # whole program. 238_NessMainMotion.c's other model-part writes are
     # replacements of already-drawable joints and stay in
-    # P2_MODEL_PART_ROOT_VARIANTS; this is Ness's only topology change.
+    # P2_MODEL_PART_ROOT_VARIANTS -- except the yo-yo smashes' (30, 0), which
+    # lands on a hidden joint (YoYo, below).
     #
     # Derived from the demo scripts, not from a captured root count: the other
     # four Results-reachable Ness clips (D_ovl1_80392694 row 0, 803926C8 row 1,
     # 80392720 row 2, 80392750 row 5) carry no opcode-40 word at all, and
     # D_ovl1_80392754's (16, 2) / (10, 2) pair belongs to row 13, the trophy
     # pose no shipping scene reaches.
+    #
+    # The yo-yo smashes (P2-2p8 Phase 1 slice 7) are Ness's second topology
+    # change, and the one a match reaches: dNessMainMotion_USmash and _DSmash
+    # (238_NessMainMotion.c:1161, :1194) run under the 0x10000000 anim-desc
+    # mask, so ftMainSetStatus first installs hidden part 3 -- joint 30 under
+    # joint 4, with no display list (the JointTree leaves descriptor 26 blank
+    # in both details) -- and two frames in the motion's SetModelPartID(30, 0)
+    # (:1165, :1198) gives it desc_0x254 model part 0, 0x69e0 in both details.
+    # The live vector grows 14 -> 15 with the yo-yo LAST. Without the program
+    # the owner declined and Ness drew nothing for the rest of either smash
+    # (15 REJECTED_PROGRAM native failures a frame, statuses 207/208).
+    #
+    # The forward smash is the third, found by the same slice's high-detail
+    # run: dNessMainMotion_FSmash (238_NessMainMotion.c:1136) writes
+    # SetModelPartID(17, 0) two frames in -- the BAT, desc_0x204 model part 0,
+    # 0x6b50 in both details -- on joint 17, the descriptor setup_parts selects
+    # but the JointTree leaves blank. Exactly Win3's topology with the other
+    # model part: 15 roots, the bat at joint 17's place. It escaped
+    # check_model_part_mutation_coverage.py, which reads every part-0 write as
+    # "restores canonical" -- true only where the joint has a canonical DL.
     "ness": (
         ("Win3", ((17, 1),)),
+        ("YoYo", ((30, 0),)),
+        ("FSmash", ((17, 0),)),
     ),
+}
+
+# The appendix roots each Ness program adds, pinned so a resolver change that
+# moved a root between programs (or turned one into a no-op) cannot pass.
+NESS_ROOT_PROGRAM_NEW_ROOTS = {
+    "Win3": {0x6d90},
+    "YoYo": {0x69e0},
+    "FSmash": {0x6b50},
 }
 
 OWNER_ROOT_PROGRAM_SOURCES = {
@@ -5928,12 +5983,13 @@ def render_p2_owner_runtime_program(
         # roots against a canonical 18 and only a complete program can carry it.
         lines += ["#define NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT 1", ""]
     if owner_name == "ness" and detail == "high" and root_programs:
-        # Ness's VS Results Win3 clip lights joint 17, a selected-but-blank
-        # JointTree descriptor, so the live vector is 15 roots against a
-        # canonical 14. Same transition-safe contract as the four above: a
+        # Ness's VS Results Win3 clip and his forward smash light joint 17, a
+        # selected-but-blank JointTree descriptor, and his yo-yo smashes
+        # install hidden joint 30 and draw the yo-yo on it: all three live
+        # vectors are 15 roots against a canonical 14. Same transition-safe contract as the four above: a
         # build against a stale generated inc lacks both this marker and the
-        # Win3 arrays, so the selector compiles out and Ness keeps its current
-        # fail-closed behaviour instead of failing to link.
+        # program arrays, so the selector compiles out and Ness keeps its
+        # current fail-closed behaviour instead of failing to link.
         lines += ["#define NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT 1", ""]
     trio = context.get("kirby_trio_bodies")
     if owner_name == "kirby" and trio:
@@ -8273,6 +8329,7 @@ def build_owner_root_programs(
         root_rows_by_offset[row[0]] = (row, light_index)
     canonical_offset_set = set(canonical_offsets)
     programs = []
+    ness_covered_appendix: set[int] = set()
     for program_name, events in OWNER_ROOT_PROGRAMS[owner_name]:
         overrides = _owner_root_program_overrides(
             repo_root, owner_name, detail, events)
@@ -8346,6 +8403,71 @@ def build_owner_root_programs(
             descriptors = _owner_joint_descriptors(
                 payload, owner_name, detail, overrides)[:-1]
             selected = sorted(selected)
+        if (owner_name == "ness" and
+                (owner_name, program_name) in OWNER_ROOT_PROGRAM_ANIM_MASKS):
+            # The yo-yo smashes. ftMainSetStatus installs NessMain's hidden
+            # part 3 from the motion's 0x10000000 mask BEFORE any motion
+            # command runs, with no display list, and SetModelPartID(30, 0)
+            # then draws the yo-yo on it. The generic resolver drops that
+            # command as a write to a setup-omitted joint -- right in general,
+            # wrong here, exactly as for Link's Catch -- so the hidden part is
+            # added first and the command applied to it.
+            main_payload, container_offset = _load_owner_root_program_payload(
+                repo_root, owner_name)
+            _verify_owner_modelpart_resolver(
+                repo_root, owner_name, detail, main_payload, container_offset)
+            selected = set(selected)
+            hidden_descriptors = set()
+            for hiddenpart_id in _hiddenpart_ids_from_anim_mask(
+                    owner_name, program_name, NESS_MAIN_HIDDENPART_COUNT):
+                row_offset = NESS_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
+                if row_offset + 16 > len(main_payload):
+                    raise ValueError(
+                        f"ness {program_name} hidden-part table is truncated")
+                root_joint_id, parent_joint_id, _partindex, joint_kind = \
+                    struct.unpack_from(">iiii", main_payload, row_offset)
+                descriptor_index = root_joint_id - 4
+                if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                    raise ValueError(
+                        f"ness {program_name} hidden joint {root_joint_id} is "
+                        "out of range")
+                if descriptor_index in selected:
+                    raise ValueError(
+                        f"ness hidden joint {root_joint_id} is already in "
+                        "setup_parts; the hidden-part table and the canonical "
+                        "selection disagree")
+                # Kind 0 appends the joint as its parent's LAST child. Joint 4
+                # is descriptor 0, the JointTree's depth-0 root, so every
+                # other drawable descriptor is its descendant and the preorder
+                # draw walk reaches joint 30 last -- where sorted descriptor
+                # order puts descriptor 26. Pin both facts rather than assume
+                # them: another joint or kind would need its own walk.
+                if (root_joint_id, parent_joint_id, joint_kind) != (30, 4, 0):
+                    raise ValueError(
+                        f"ness {program_name} hidden part {hiddenpart_id} is "
+                        f"(joint {root_joint_id}, parent {parent_joint_id}, "
+                        f"kind {joint_kind}), not (30, 4, 0)")
+                if (descriptors[0][0] != 0 or
+                        descriptor_index <= max(selected) or
+                        any(descriptors[index][0] < 1
+                            for index in selected if index != 0)):
+                    raise ValueError(
+                        f"ness {detail} {program_name}: joint 30 is not the "
+                        "last joint of the walk under joint 4")
+                selected.add(descriptor_index)
+                hidden_descriptors.add(descriptor_index)
+            for joint_id, modelpart_id in events:
+                descriptor_index = joint_id - 4
+                if descriptor_index not in hidden_descriptors:
+                    raise ValueError(
+                        f"ness {program_name} event ({joint_id}, "
+                        f"{modelpart_id}) is not on a hidden joint")
+                overrides[descriptor_index] = _owner_modelpart_display_offset(
+                    main_payload, container_offset,
+                    joint_id, modelpart_id, detail)
+            descriptors = _owner_joint_descriptors(
+                payload, owner_name, detail, overrides)[:-1]
+            selected = sorted(selected)
         selected_order = tuple(sorted(selected))
         root_offsets = tuple(
             descriptors[index][1] for index in selected_order
@@ -8411,11 +8533,15 @@ def build_owner_root_programs(
             }
             new_program_offsets = (set(root_offsets) - canonical_offset_set
                                    - variant_offsets)
-            if new_program_offsets != appendix_offsets:
+            expected_new = NESS_ROOT_PROGRAM_NEW_ROOTS[program_name]
+            if (new_program_offsets != expected_new or
+                    not new_program_offsets <= appendix_offsets):
                 raise ValueError(
                     f"ness {detail} {program_name} new roots "
-                    f"{sorted(map(hex, new_program_offsets))} != appendix "
+                    f"{sorted(map(hex, new_program_offsets))} != "
+                    f"{sorted(map(hex, expected_new))} or not in the appendix "
                     f"{sorted(map(hex, appendix_offsets))}")
+            ness_covered_appendix |= new_program_offsets
             # PROVE THE PROGRAM DIFFERS. A resolver change that quietly turned
             # the (17, 1) write back into a source no-op would emit a second
             # copy of the canonical vector, which matches canonical first at
@@ -8510,6 +8636,13 @@ def build_owner_root_programs(
             # canonical setup_parts walk, so there is no source parent schedule
             # to publish. Production receives each live DObj matrix directly.
             parents = tuple(INVALID_U8 for _ in root_offsets)
+        elif owner_name == "ness" and program_name == "YoYo":
+            # Joint 30 is inserted by ftMainSetStatus under joint 4, which
+            # draws nothing: no source parent schedule to publish, and
+            # production captures each live DObj matrix directly -- the rule
+            # Yoshi's grab family and Link's Catch follow. (Win3's joint 17 is
+            # an ordinary JointTree node and keeps the generic schedule.)
+            parents = tuple(INVALID_U8 for _ in root_offsets)
         else:
             topology = decode_joint_topology(
                 payload, owner_name, program_roots, detail, overrides)
@@ -8554,6 +8687,16 @@ def build_owner_root_programs(
             program["source_owners"] = source_owners
         programs.append(program)
 
+    if owner_name == "ness":
+        appendix_offsets = {
+            offset for _binding, offset in
+            context.get("root_program_appendix_specs", ())
+        }
+        if ness_covered_appendix != appendix_offsets:
+            raise ValueError(
+                f"ness {detail}: programs cover appendix roots "
+                f"{sorted(map(hex, ness_covered_appendix))} != "
+                f"{sorted(map(hex, appendix_offsets))}")
     if owner_name == "link":
         for (_expected_detail, root_offset), expected in \
                 LINK_ROOT_PROGRAM_EXPECTED_APPENDIX.items():

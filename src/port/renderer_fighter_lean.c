@@ -29,14 +29,25 @@
 _Static_assert(NDS_FTR_LEAN_ROOT_MAX < 31u,
                "bit 31 of a modelview-sites mask is NDS_FTR_LEAN_SITES_INPUTS");
 
+/* Slice 7: the defaults are initialisers (NDS_FTR_LEAN_ROUTE_BOOT /
+ * NDS_FTR_LEAN_ADMIT_BOOT: route 1, admission 2 wherever the lean path is
+ * compiled). The ".dtcm.bss" input section is a LOADED one -- the linker
+ * script's `*(.dtcm .dtcm.*)` rule places it in the .dtcm output section with
+ * the other initialised DTCM data (these words were already 'D' there at 0),
+ * so the value is copied from the image at boot and costs no byte. A rule
+ * that moved `.dtcm.bss` into the NOLOAD .dtcm.bss output section would drop
+ * the initialisers silently and ship route 0: the slice 7 README reads them
+ * back from the shipping ELF (objdump of .dtcm) and at boot (gdb). */
 #if defined(__arm__)
 volatile u32 gNdsFtrLeanRoute
-    __attribute__((used, section(".dtcm.bss"), aligned(4)));
+    __attribute__((used, section(".dtcm.bss"), aligned(4))) =
+        NDS_FTR_LEAN_ROUTE_BOOT;
 volatile u32 gNdsFtrLeanAdmit
-    __attribute__((used, section(".dtcm.bss"), aligned(4)));
+    __attribute__((used, section(".dtcm.bss"), aligned(4))) =
+        NDS_FTR_LEAN_ADMIT_BOOT;
 #else
-volatile u32 gNdsFtrLeanRoute;
-volatile u32 gNdsFtrLeanAdmit;
+volatile u32 gNdsFtrLeanRoute = NDS_FTR_LEAN_ROUTE_BOOT;
+volatile u32 gNdsFtrLeanAdmit = NDS_FTR_LEAN_ADMIT_BOOT;
 #endif
 #if NDS_FTR_LEAN_LAB
 NDSFtrLeanCounters gNdsFtrLean __attribute__((used, aligned(32)));
@@ -185,30 +196,13 @@ static void ndsFtrLeanAdmitMaybeRun(u32 word)
 #endif
 }
 
-#if defined(NDS_FTR_LEAN_ADMIT_DEFAULT) && NDS_FTR_LEAN_ADMIT_DEFAULT && \
-    ((defined(NDS_TICK_HUD) && NDS_TICK_HUD) || \
-     (defined(NDS_FTR_LEAN_ADMIT_LAB) && NDS_FTR_LEAN_ADMIT_LAB))
-/* P2-2p8 Phase 1 slice 2c (lab builds only, Makefile
- * NDS_FTR_LEAN_ADMIT_DEFAULT; slice 3 lets a non-tick-HUD lab target -- the
- * 1P campaign walk ROM -- through with NDS_FTR_LEAN_ADMIT_LAB=1): boot with
- * the word set, so the admission runs
- * at the end of the battle scene's texture preparation -- the shipping path --
- * instead of at the first frame the sampler pokes. */
-static u32 sNdsFtrAdmitDefaultApplied;
-#endif
-
+/* (Slices 2c-6 had a lab-only boot value here, NDS_FTR_LEAN_ADMIT_DEFAULT,
+ * applied at the first fighter note. Slice 7 made admission 2 every image's
+ * initialiser -- gNdsFtrLeanAdmit above -- so the creation-time path this
+ * existed to exercise is the default path.) */
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
                                 u32 detail)
 {
-#if defined(NDS_FTR_LEAN_ADMIT_DEFAULT) && NDS_FTR_LEAN_ADMIT_DEFAULT && \
-    ((defined(NDS_TICK_HUD) && NDS_TICK_HUD) || \
-     (defined(NDS_FTR_LEAN_ADMIT_LAB) && NDS_FTR_LEAN_ADMIT_LAB))
-    if (sNdsFtrAdmitDefaultApplied == 0u)
-    {
-        sNdsFtrAdmitDefaultApplied = 1u;
-        gNdsFtrLeanAdmit = NDS_FTR_LEAN_ADMIT_DEFAULT;
-    }
-#endif
     ndsFtrLeanAdmitSync();
     if ((ndsFtrLeanAdmitBattleScene() == FALSE) ||
         (sNdsFtrAdmitCount >= NDS_FTR_LEAN_ADMIT_FIGHTERS) ||

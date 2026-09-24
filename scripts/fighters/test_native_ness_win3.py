@@ -140,12 +140,16 @@ def test_joint_17_is_selected_but_carries_no_canonical_display_list(detail):
 def test_win3_program_inserts_the_root_in_source_order(detail):
     context = native.build_p2_owner_runtime_context(SOURCE, "ness", detail)
     assert context["canonical_root_count"] == CANONICAL_ROOT_COUNT
+    # Win3's row first; slice 7 appended the yo-yo's and the forward-smash
+    # bat's after it (test_native_ness_yoyo.py, test_native_ness_fsmash.py),
+    # so Win3's bake keeps its indices.
     assert [(binding, offset)
-            for binding, offset in context["root_program_appendix_specs"]] == [
-        (WIN3_PARENT_BINDING, WIN3_ROOT)]
+            for binding, offset in context["root_program_appendix_specs"]][0] == (
+        WIN3_PARENT_BINDING, WIN3_ROOT)
 
     programs = native.build_owner_root_programs(SOURCE, context)
-    assert [program["name"] for program in programs] == ["Win3"]
+    assert [program["name"] for program in programs] == [
+        "Win3", "YoYo", "FSmash"]
     win3 = programs[0]
     assert len(win3["roots"]) == WIN3_ROOT_COUNT
     assert win3["root_offsets"][WIN3_ROOT_INDEX] == WIN3_ROOT
@@ -201,7 +205,8 @@ def test_win3_root_dropped_from_either_detail_fails(victim):
         assert native.build_owner_root_programs(SOURCE, context)
 
     saved = native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim]
-    native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = ()
+    native.P2_ROOT_PROGRAM_APPENDIX["ness"][victim] = tuple(
+        row for row in saved if row[1] != WIN3_ROOT)
     try:
         # The generator must refuse to build a program whose root has no bake,
         # rather than silently emitting a short vector that matches nothing.

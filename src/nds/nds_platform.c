@@ -257,7 +257,8 @@ static s32 sOriginalSpriteOverlayNeedsFlush;
 static u32 sOriginalSpriteOverlayBg3Lent;
 static u32 sOriginalSpriteOverlayBg3Wanted;
 /* Battle exit asked for D back; it is remapped once the next scene's first 3D
- * frame is displayed, or at the first BG3 request, whichever comes first. */
+ * frame is displayed, or at its first BG3 write or clear, whichever comes
+ * first (slice 7: a layer-mask request alone no longer returns it). */
 static u32 sOriginalSpriteOverlayBg3ReturnPending;
 static void ndsPlatformVramReturnBankDNow(void);
 /* A non-battle frame while D is still lent means the battle's exit hook was
@@ -1091,13 +1092,15 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
     u32 previous_mask = sOriginalSpriteOverlayLayerMask;
 
     layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
-    if ((sOriginalSpriteOverlayBg3Lent != 0u) &&
-        (sOriginalSpriteOverlayBg3ReturnPending != 0u) &&
-        ((layer_mask & NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u))
-    {
-        ndsPlatformVramReturnBankDNow();
-        previous_mask = sOriginalSpriteOverlayLayerMask;
-    }
+    /* P2-2p8 Phase 1 slice 7 (owner playtest, 2026-09-24): a scene that only
+     * ASKS for BG3 while a battle's bank D return is pending no longer takes
+     * D back here. VS Results asks at its first update, while the final
+     * battle frame -- whose mid-match textures and fighter tint tiles live in
+     * D -- is still the displayed picture for the whole Results load, and the
+     * remap's clear turned every tinted part of it grey. Wanting BG3 is
+     * recorded exactly as while D is lent; D comes back after the scene's
+     * first displayed 3D frame (ndsPlatformEndFrame), or at its first BG3
+     * write or clear, which return it before they touch the layer. */
     if (sOriginalSpriteOverlayBg3Lent != 0u)
     {
         sOriginalSpriteOverlayBg3Wanted =
@@ -1233,7 +1236,7 @@ s32 ndsPlatformVramTakeBankD(void)
 /* Battle exit: the texture side has released everything in D and locked it;
  * the final battle frame may still be on screen and reading D, so the remap
  * waits for the next scene's first displayed 3D frame (ndsPlatformEndFrame)
- * or its first BG3 request. */
+ * or its first BG3 write or clear. */
 void ndsPlatformVramReturnBankD(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -3720,11 +3723,15 @@ void ndsPlatformEndFrame(void)
         DC_FlushAll();
 #endif
     }
-#if defined(NDS_FTR_LEAN_ADMIT_LAB) && NDS_FTR_LEAN_ADMIT_LAB && !NDS_TICK_HUD
+#if defined(NDS_P2_1P_GAME) && NDS_P2_1P_GAME && \
+    defined(NDS_P2_MENU_WALK) && NDS_P2_MENU_WALK && !NDS_TICK_HUD
     /* P2-2p8 Phase 1 slice 3 lab (the 1P campaign walk ROM, no tick HUD):
      * the campaign probe reads the bank D words through GDB, which sees
      * memory, not the D-cache -- clean them every frame so no read is a
-     * stale line. */
+     * stale line. Slice 7: keyed on that ROM's own contract
+     * (scripts/menus/probe-p2-campaign.ps1 requires NDS_P2_1P_GAME=1 and the
+     * walk), since the lab-only NDS_FTR_LEAN_ADMIT_LAB is gone -- admission 2
+     * is the default. The VS walk ROMs (shell, shell loop) stay without it. */
     DC_FlushRange((const void *)&gNdsVramBankDTakes, sizeof(u32));
     DC_FlushRange((const void *)&gNdsVramBankDReturns, sizeof(u32));
     DC_FlushRange((const void *)&gNdsVramBankDMissedExits, sizeof(u32));

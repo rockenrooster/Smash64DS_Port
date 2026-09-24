@@ -38,8 +38,9 @@
  * and 3 are lab tools, compiled into the tick-HUD image only
  * (NDS_FTR_LEAN_ORACLE_ROUTES).
  *
- *   gNdsFtrLeanRoute  0  off -- today's behaviour (default)
- *                     1  lean path draws the VS kinds; both halves of the
+ *   gNdsFtrLeanRoute  0  off -- the old path (the A/B control since slice 7)
+ *                     1  lean path draws the VS kinds (the DEFAULT since
+ *                        slice 7, NDS_FTR_LEAN_ROUTE_BOOT); both halves of the
  *                        slot's region are lean entries, and the recorder
  *                        never arms for a slot whose lower half the lean
  *                        path owns (a declined draw runs production direct)
@@ -55,13 +56,17 @@
  *                        (2 and 3 on the lab two-fighter arm also compare
  *                        the wide lists: NDS_FTR_LEAN_ORACLE_WIDE)
  *   gNdsFtrLeanAdmit  0 / 1 / 2: fighter texture admission, see the slice
- *                        2b block at the end of this header
+ *                        2b block at the end of this header (2 is the
+ *                        DEFAULT since slice 7, NDS_FTR_LEAN_ADMIT_BOOT)
  *
- * Both words live in DTCM: it is uncached, so a GDB poke at the first
- * frame-complete marker is seen by the next read (a main-RAM word that shares
- * a dirty D-cache line gets stamped back -- see gNdsFtrPlanRoute's note in
- * diagnostics_collision_runtime.c). They are whole u32 words (never poke one
- * byte). */
+ * Both words live in DTCM: it is uncached, so a GDB poke is seen by the next
+ * read (a main-RAM word that shares a dirty D-cache line gets stamped back --
+ * see gNdsFtrPlanRoute's note in diagnostics_collision_runtime.c). They are
+ * whole u32 words (never poke one byte). Slice 7: both carry their default as
+ * an initialiser, so the A/B control -- route 0 and admission 0, the old path
+ * on the same ROM -- is a poke after crt0 and before the battle is built
+ * (scripts/sample-tick-hud-buckets.ps1 -BootSetGlobals, at `main`): the
+ * admission runs while the battle loads, before the first frame marker. */
 
 #include <nds/nds_renderer.h>
 
@@ -139,6 +144,19 @@
 #define NDS_FTR_LEAN_ROUTE_DRAW 1u
 #define NDS_FTR_LEAN_ROUTE_ORACLE_EXACT 2u
 #define NDS_FTR_LEAN_ROUTE_ORACLE_SHIPPED 3u
+
+/* P2-2p8 Phase 1 slice 7: lean is the default. Every image that compiles the
+ * lean path boots with route 1 and admission 2 -- the shipping ROMs, the shell
+ * loop and the four-CPU stress target alike (the lab-only
+ * NDS_FTR_LEAN_ADMIT_DEFAULT / NDS_FTR_LEAN_ADMIT_LAB boot values are gone).
+ * An image without the lean path keeps both words 0: nothing reads them. */
+#if NDS_FTR_LEAN_LIVE
+#define NDS_FTR_LEAN_ROUTE_BOOT NDS_FTR_LEAN_ROUTE_DRAW
+#define NDS_FTR_LEAN_ADMIT_BOOT NDS_FTR_LEAN_ADMIT_REGIONS
+#else
+#define NDS_FTR_LEAN_ROUTE_BOOT NDS_FTR_LEAN_ROUTE_OFF
+#define NDS_FTR_LEAN_ADMIT_BOOT 0u
+#endif
 
 extern volatile u32 gNdsFtrLeanRoute;
 extern volatile u32 gNdsFtrLeanAdmit;
@@ -798,7 +816,8 @@ void ndsVramCensusCaptureBurst(void);
 
 /* ---- P2-2p8 Phase 1 slice 2b: fighter texture admission ------------------
  * gNdsFtrLeanAdmit (DTCM runtime word):
- *   0  today: fighter textures are uploaded on demand by the draw
+ *   0  off: fighter textures are uploaded on demand by the draw (the A/B
+ *      control since slice 7)
  *   1  admit + pin in A+B: every texture of the admission table
  *      (scripts/fighters/generate_nds_fighter_admission.py -> NitroFS
  *      fighters/admission.bin) for each fighter's kind x detail x costume,
@@ -806,18 +825,22 @@ void ndsVramCensusCaptureBurst(void);
  *      renderer's own texture state recorders and the cache's own
  *      resolve/convert/upload path, and the resulting entries are exempt
  *      from eviction/refresh for the battle
- *   2  the plan: as 1, but first, when the battle leaves BG3 empty (no
- *      opaque BG3 pixel), bank D becomes texture slot 3 and BG3 is hidden
+ *   2  the plan (the DEFAULT since slice 7): as 1, but first, when the
+ *      battle leaves BG3 empty (no opaque BG3 pixel), bank D becomes
+ *      texture slot 3 and BG3 is hidden
  *      and withheld. Admission allocates first-fit, so the admitted set
  *      packs into what A+B still has free and only the rest lands in D; at
  *      the first frame end after the admission (setup done) A+B are locked
  *      (glLockVRAMBank), so D is the only region that allocates and frees
  *      for the rest of the battle. Battle exit releases every cache entry in
  *      D, locks D, unlocks A+B, and hands D back to BG3 once the next scene's
- *      first 3D frame is the displayed one (or at its first BG3 request,
- *      if that comes first), so the final battle frame keeps its texels.
- * Admission runs at fighter creation when the word is already set, else at
- * the first frame end that sees it set (the sampler pokes after setup). */
+ *      first 3D frame is the displayed one (or at its first BG3 write or
+ *      clear, if that comes first), so the final battle frame keeps its
+ *      texels; the renderer's fighter tint tiles in D are released with it
+ *      (slice 7).
+ * Admission runs at the end of the battle's scene-texture preparation when
+ * the word is already set (the default), else at the first frame end that
+ * sees it set (a lab poke after setup). */
 #define NDS_FTR_LEAN_ADMIT_OFF 0u
 #define NDS_FTR_LEAN_ADMIT_PIN 1u
 #define NDS_FTR_LEAN_ADMIT_REGIONS 2u

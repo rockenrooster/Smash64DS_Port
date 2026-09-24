@@ -1,0 +1,10 @@
+data/bss/dtcm symbols whose size changed (builds/build-p2p8-s7-shipcheck-pre/smash64ds-p2-shell-hwtri.elf -> builds/build-p2p8-s7-shipcheck/smash64ds-p2-shell-hwtri.elf)
+symbol                                                   before      after     delta
+sNdsFtrAdmitChunk                                           896        112      -784
+TOTAL data/bss/dtcm symbol delta                                                -784
+code symbols (t/T) delta                                   +910
+
+section                            before        after     delta
+.main                           1,611,876    1,612,780      +904
+.main.bss                         904,784      903,984      -800
+TOTAL loaded sections                                       +104

@@ -4146,6 +4146,58 @@ s32 ndsFtrLeanTintTileWords(u32 rgb, u32 touch, u32 *teximage, u32 *pltt)
     }
     return FALSE;
 }
+
+/* P2-2p8 Phase 1 slice 7 (owner playtest, 2026-09-24): THE TILE SET OUTLIVES
+ * THE BATTLE, AND A MID-MATCH TILE LIVES IN BANK D.
+ *
+ * Under admission 2 the admission locks A+B at its first frame end, so every
+ * tile the match builds after that -- the first frame's own colours included
+ * -- is allocated in D, and the battle exit hands D back to BG3. The set is
+ * forgotten only at the next VRAM reset (a battle entry), so VS Results and
+ * the character select after it bound those tiles by their texture-slot-3
+ * words once D was a cleared BG bank: every tinted part (Mario's cap and
+ * overalls, Fox's trousers) drew from nothing, in both renderer routes, until
+ * the next battle. The battle exit calls this with D already locked, so libnds
+ * cannot hand the released texels out again before the remap: every tile
+ * whose texels lie in [lcd_lo, lcd_hi) is released, its colour queued so the
+ * next frame boundary rebuilds it in A+B, and the set generation moved so
+ * every packet and lean list that bound one re-derives its words. Battle exit
+ * only, so size-optimized like the admission's own cold code. */
+static u32 __attribute__((cold, optimize("Os")))
+ndsR2FighterTintReleaseRange(u32 lcd_lo, u32 lcd_hi)
+{
+    u32 released = 0u;
+    u32 i = 0u;
+
+    ndsR2FighterTintSyncGeneration();
+    while (i < sNdsR2FighterTintCount)
+    {
+        u32 lcd = 0x06800000u +
+            ((sNdsR2FighterTints[i].teximage & 0xFFFFu) << 3);
+
+        if ((lcd < lcd_lo) || (lcd >= lcd_hi))
+        {
+            i++;
+            continue;
+        }
+        if (sNdsR2FighterTintQueueCount < NDS_R2_FIGHTER_TINT_QUEUE)
+        {
+            sNdsR2FighterTintQueue[sNdsR2FighterTintQueueCount++] =
+                sNdsR2FighterTints[i].rgb;
+        }
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(
+            &sNdsR2FighterTints[i].name);
+        sNdsR2FighterTints[i] =
+            sNdsR2FighterTints[sNdsR2FighterTintCount - 1u];
+        sNdsR2FighterTintCount--;
+        released++;
+    }
+    if (released != 0u)
+    {
+        gNdsR2FighterTintSetGeneration++;
+    }
+    return released;
+}
 #else
 volatile u32 gNdsR2FighterTintSetGeneration;
 
@@ -4415,6 +4467,7 @@ typedef struct NDSFtrAdmitLab
     u32 exit_runs;
     u32 exit_released;
     u32 exit_orphans;
+    u32 exit_tints;         /* slice 7: fighter tint tiles released from D */
     u32 done;
     u32 outside[4];         /* fighter-draw uploads after admission, per slot */
     u32 outside_count;
@@ -16253,7 +16306,22 @@ extern NDSFtrAdmitMallinfo mallinfo(void);
  * DYNAMIC_COUNT - 56 entries. */
 #define NDS_FTR_ADMIT_SLOT_RESERVE 56u
 
-#define NDS_FTR_ADMIT_CHUNK 8u
+/* P2-2p8 Phase 1 slice 7: the admission, its VRAM carve and the battle-exit
+ * release run while a battle loads or ends, never inside a presented battle
+ * frame, so they are size-optimized like the menu translation units (Makefile,
+ * `battleship_mn%.o ... CFLAGS += -Os`): every text byte is arena, and
+ * making lean the default (with Ness's yo-yo program) had to cost no static
+ * RAM. The draw path's own resolve / convert / upload that the admission
+ * replays through, and the per-draw carve upload inside it, are untouched. */
+#define NDS_FTR_ADMIT_COLD_CODE __attribute__((cold, optimize("Os")))
+
+/* Records read from the NitroFS table per stream read. Slice 7: 8 -> 1
+ * (112 B of BSS instead of 896) -- the rest of the static-RAM offset for
+ * Ness's yo-yo and forward-smash programs. The four-CPU admission reads
+ * 689 records while the battle loads; at 8 a read the table reads took
+ * 1.35M of its 25.5M ticks, at 4 1.43M -- the cost is bytes, not calls --
+ * and none of it is in a presented frame. */
+#define NDS_FTR_ADMIT_CHUNK 1u
 #define NDS_FTR_ADMIT_KIRBY 8u
 #define NDS_FTR_ADMIT_D_LO 0x06860000u
 #define NDS_FTR_ADMIT_D_HI 0x06880000u
@@ -16697,7 +16765,7 @@ static s32 ndsFtrCarveUpload(NDSRendererHardwareTextureCacheEntry *entry,
 /* Admission start: the carrier, then every free texture run of A+B (D is
  * held back so the holes the lock is about to strand are used first; D is
  * chunked on demand) and every free palette run of F+G. */
-static s32 ndsFtrCarveOpen(u32 with_d)
+static s32 NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveOpen(u32 with_d)
 {
     int saved_lock = glGlobalData.vramLock[0];
 
@@ -16725,7 +16793,7 @@ static s32 ndsFtrCarveOpen(u32 with_d)
 /* Admission end: give back what was not carved. A region keeps exactly its
  * used bytes (released, then re-reserved at the same address, which is free
  * and large enough by construction). */
-static void ndsFtrCarveShrink(u32 which)
+static void NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveShrink(u32 which)
 {
     s_vramBlock *mb = glGlobalData.vramBlocks[which];
     u32 i;
@@ -16781,7 +16849,7 @@ static void ndsFtrCarveShrink(u32 which)
     }
 }
 
-static void ndsFtrCarveClose(void)
+static void NDS_FTR_ADMIT_COLD_CODE ndsFtrCarveClose(void)
 {
     if (sNdsFtrCarveActive == 0u)
     {
@@ -16798,7 +16866,7 @@ static void ndsFtrCarveClose(void)
  * and the carrier. The last carved entry's release calls this; so does the
  * scene reset (before glResetTextures rebuilds the allocators) and the
  * admission when it carved nothing. */
-void ndsFtrLeanAdmitCarveRetire(void)
+void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitCarveRetire(void)
 {
     u32 which;
     u32 i;
@@ -16889,8 +16957,9 @@ static void ndsFtrCarveNoteRelease(
 static u32 ndsFtrAdmitEntryAddress(
     const NDSRendererHardwareTextureCacheEntry *entry);
 
-static void ndsFtrAdmitLatch(u32 fkind, u32 detail, u32 reason, u32 index,
-                             u32 image, u32 reject)
+static void NDS_FTR_ADMIT_COLD_CODE
+ndsFtrAdmitLatch(u32 fkind, u32 detail, u32 reason, u32 index,
+                 u32 image, u32 reject)
 {
     if (gNdsFtrLeanAdmitFail == 0u)
     {
@@ -17234,11 +17303,12 @@ static void ndsFtrAdmitIdentCensus(NdsRelocAssetStream *stream,
 }
 #endif
 
-u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
-                       const u32 *costume, const u32 *detail,
-                       const u32 *player, u32 count,
-                       const u32 *base_asset, const void *const *base_data,
-                       u32 base_count, u32 word)
+u32 NDS_FTR_ADMIT_COLD_CODE
+ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
+                   const u32 *costume, const u32 *detail,
+                   const u32 *player, u32 count,
+                   const u32 *base_asset, const void *const *base_data,
+                   u32 base_count, u32 word)
 {
     NdsRelocAssetStream stream = { NULL };
     NDSRendererHardwareResolvedTexture resolved;
@@ -17526,12 +17596,15 @@ u32 ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
  *    the final battle frame -- still on screen during the hand-off, and
  *    still reading D -- correct.
  *  - The platform remaps D to BG3 after the next scene's first 3D frame is
- *    displayed, or at that scene's first BG3 request.
+ *    displayed, or at that scene's first BG3 write or clear.
  * Names outside the cache that still live in D (weapons, effects created
  * after the lock) are left to their owners and to the next scene reset's
  * glResetTextures; deleting them here would let libnds hand the same name to
- * someone else while the old owner still holds it. */
-void ndsFtrLeanAdmitBattleExit(void)
+ * someone else while the old owner still holds it. The one owner that
+ * outlives the battle is the renderer's own fighter tint set, which VS Results
+ * and the character select draw with: its tiles in D go here (slice 7,
+ * ndsR2FighterTintReleaseRange). */
+void NDS_FTR_ADMIT_COLD_CODE ndsFtrLeanAdmitBattleExit(void)
 {
     u32 i;
 
@@ -17564,6 +17637,13 @@ void ndsFtrLeanAdmitBattleExit(void)
             NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_released++);
         }
     }
+    {
+        u32 tints = ndsR2FighterTintReleaseRange(NDS_FTR_ADMIT_D_LO,
+                                                 NDS_FTR_ADMIT_D_HI);
+
+        NDS_FTR_ADMIT_LAB(gNdsFtrAdmitLab.exit_tints += tints);
+        (void)tints;
+    }
 #if NDS_VRAM_CENSUS_LIVE
     {
         const DynamicArray *textures = &glGlobalData.texturePtrs;
@@ -17594,7 +17674,7 @@ void ndsFtrLeanAdmitBattleExit(void)
 #endif
 }
 
-static void ndsFtrAdmitSceneResetGuard(void)
+static void NDS_FTR_ADMIT_COLD_CODE ndsFtrAdmitSceneResetGuard(void)
 {
     if (sNdsFtrAdmitRegions != 0u)
     {

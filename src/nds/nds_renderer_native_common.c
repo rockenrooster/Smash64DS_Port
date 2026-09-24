@@ -16195,6 +16195,22 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeNessWin3BindingParents[0]));
             return sNdsNativeNessWin3BindingParents;
         }
+        /* Slice 7: the yo-yo's joint 30 IS dynamically inserted (hidden
+         * part 3), so this vector is the all-255 live capture. */
+        if (ndsRendererNativeFighterRootProgram(slot) == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeNessYoYoBindingParents) /
+                           sizeof(sNdsNativeNessYoYoBindingParents[0]));
+            return sNdsNativeNessYoYoBindingParents;
+        }
+        /* The forward smash's bat is on Win3's joint 17: a real source parent
+         * schedule, like Win3's. */
+        if (ndsRendererNativeFighterRootProgram(slot) == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeNessFSmashBindingParents) /
+                           sizeof(sNdsNativeNessFSmashBindingParents[0]));
+            return sNdsNativeNessFSmashBindingParents;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeNessBindingParents) /
                        sizeof(sNdsNativeNessBindingParents[0]));
@@ -16525,6 +16541,18 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
             *count = (u32)(sizeof(sNdsNativeNessWin3CrossPaletteSlots) /
                            sizeof(sNdsNativeNessWin3CrossPaletteSlots[0]));
             return sNdsNativeNessWin3CrossPaletteSlots;
+        }
+        if (ndsRendererNativeFighterRootProgram(slot) == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeNessYoYoCrossPaletteSlots) /
+                           sizeof(sNdsNativeNessYoYoCrossPaletteSlots[0]));
+            return sNdsNativeNessYoYoCrossPaletteSlots;
+        }
+        if (ndsRendererNativeFighterRootProgram(slot) == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeNessFSmashCrossPaletteSlots) /
+                           sizeof(sNdsNativeNessFSmashCrossPaletteSlots[0]));
+            return sNdsNativeNessFSmashCrossPaletteSlots;
         }
 #endif
         *count = (u32)(sizeof(sNdsNativeNessCrossPaletteSlots) /

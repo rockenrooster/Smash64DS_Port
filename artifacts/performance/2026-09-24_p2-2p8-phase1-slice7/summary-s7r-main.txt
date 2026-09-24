@@ -1,0 +1,29 @@
+====================================================================================================
+ROSTER s7r   ROM 50B8AF5804D12C98
+  default boot pokes []; words at end route=1 admit=2; admission runs=1 word=2 frame=0 entries=119 bytes=71008 fails=0 outside=0 locked=1 regions=1 bg3_not_empty=0
+  old     boot pokes [('gNdsFtrLeanRoute', 0), ('gNdsFtrLeanAdmit', 0)]; words at end route=0 admit=0; admission runs=0 word=0 frame=0 entries=0 bytes=0 fails=0 outside=0 locked=0 regions=0 bg3_not_empty=0
+  oracle  boot pokes [('gNdsFtrLeanRoute', 2)]; words at end route=2 admit=2; admission runs=1 word=2 frame=0 entries=119 bytes=71008 fails=0 outside=0 locked=1 regions=1 bg3_not_empty=0
+  digest default vs old: DIVERGED on 805 of 1964 shared frames; first at frame 46 tick A: control ['304b9a86', '304b9a86'] candidate ['a2625418', 'a2625418']
+  digest oracle  vs old: DIVERGED on 289 of 1966 shared frames; first at frame 320 tick A: control ['94d291b0', 'd554d6ee'] candidate ['3cf2738f', '90496965']
+  digest by sequence default / oracle vs old: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972) / IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+  native failures old / default / oracle: 293 / 39 / 39
+  native direct rejects old / default / oracle: 254 / 0 / 0
+  fighter uploads after GO old / default / oracle: 458 / 0 / 0
+  heap general low-water old / default / oracle: 122412 / 122412 / 122412; libc top min 11800 / 19320 / 19320
+  packets old / default: records 1411 / 0 hits 5451 / 0 faults 254 / 0 declines 0 / 0
+  Fox blaster draws old / default: 0 / 0
+                      old: P50 / P95 / P99 (mean) |        default: P50 / P95 / P99 (mean)
+  FTR        349,568 2,961,670 3,227,467 (782,598) |   184,448   269,651   767,704 (195,238)
+  WORK-H   1,611,040 4,485,354 5,138,733 (2,036,414) | 1,393,664 2,021,027 2,665,534 (1,435,307)
+  STG        324,544   368,861   375,763 (329,166) |   324,288   368,925   374,611 (328,754)
+  VBlanks old 2/3/4/5+: 146 953 422 452   default: 209 1388 322 54
+  default: lean share per row (kind): draws / attempts, declines, programs, high draws, words max
+    Donkey    1725 /  1725 = 100.00%  declines {}  programs {0: 1725}  high 0  words max 2467  mats 26
+    Samus     1685 /  1685 = 100.00%  declines {}  programs {0: 1628, 1: 6, 2: 9, 3: 42}  high 0  words max 2313  mats 10
+    Link      1824 /  1824 = 100.00%  declines {}  programs {0: 1775, 1: 33, 3: 16}  high 0  words max 2634  mats 15
+    Kirby     1628 /  1628 = 100.00%  declines {}  programs {0: 1565, 13: 63}  high 0  words max 1403  mats 11
+  oracle (route 2): runs 6606 words 13620081 mismatch [0, 0, 0, 0, 0, 0, 0, 0] clip max [0, 1] donor_memo 192 rec_under_hit [256, 0]
+    Donkey   runs  1660 mismatch [0, 0, 0, 0, 0, 0, 0, 0]
+    Samus    runs  1663 mismatch [0, 0, 0, 0, 0, 0, 0, 0]
+    Link     runs  1735 mismatch [0, 0, 0, 0, 0, 0, 0, 0]
+    Kirby    runs  1548 mismatch [0, 0, 0, 0, 0, 0, 0, 0]

@@ -23263,3 +23263,16 @@ realtime arm remains below the 30 FPS target, so the optimization is retained
 without closing P2-2p8. The hard-on root ROM is
 `77A047D1F1B1D0EDFB3D6F931B11E35EE677EFE5F6EB722713ABBBABD6EEFEBB`.
 Evidence: `artifacts/performance/2026-09-15_p2-2p8-particle-camera-reuse`.
+
+## 2026-09-24 — P2-2p8 Phase 1 slice 7 candidate
+
+Lean rendering and texture admission now default on; Ness's yo-yo and bat have
+native programs at both details. Battle-exit tint retirement and delayed bank-D
+return preserve the final battle picture and subsequent Results/CSS fighters.
+Final main and Ness LOW/HIGH runs have zero command-oracle mismatches and
+identical replay pairs in strict recorded order. The comparer now supports that
+equal-length order explicitly, without skipping rows at sampler label seams.
+Main WORK-H P95 is 2,021,027 ticks, 19.21 FPS and 10.59% two-VBlank: performance
+remains RED, as does remaining native coverage. This is IMPLEMENTED_NOT_ACCEPTED;
+scene coverage, renderer retirement, integration and owner acceptance remain due.
+Root r54 stays published. Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.

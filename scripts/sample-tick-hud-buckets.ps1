@@ -149,6 +149,16 @@ param(
     # `target remote` on purpose: the marker is well past bss init, so a global
     # set there cannot be zeroed out from under the run.
     [string[]]$SetGlobals = @(),
+    # `name=value` pairs poked ONCE at the first hit of -BootBreak (default
+    # `main`): after crt0 has initialised .data, .bss and DTCM, and before the
+    # first scene is built. -SetGlobals lands at the first frame-complete
+    # marker, which on a target that boots straight into a battle is AFTER the
+    # fighters are made and the battle's textures are prepared -- too late for
+    # a word read there. P2-2p8 Phase 1 slice 7 made gNdsFtrLeanAdmit default
+    # to 2 (the creation-time admission) and gNdsFtrLeanRoute to 1; their A/B
+    # control is 0 on the same ROM, poked here.
+    [string[]]$BootSetGlobals = @(),
+    [string]$BootBreak = 'main',
     [string]$JsonOut = ''
 )
 
@@ -223,6 +233,30 @@ $setGlobalLines = @(if ($SetGlobals.Count -gt 0) {
     foreach ($pair in $SetGlobals) {
         $n = ($pair -split '=')[0].Trim()
         "printf `"SETGLOBAL=$n,%u\n`", $n"
+    }
+    'delete'
+})
+# -BootSetGlobals: same grammar, poked at the first hit of -BootBreak and read
+# back in the same stop (BOOTSETGLOBAL), before the marker poke above.
+$BootSetGlobals = @($BootSetGlobals |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
+foreach ($pair in $BootSetGlobals) {
+    if ($pair -notmatch '^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*\s*=\s*-?[0-9]+$') {
+        throw "-BootSetGlobals expects name=value pairs; got '$pair'."
+    }
+}
+if ($BootBreak -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
+    throw "-BootBreak expects one function symbol; got '$BootBreak'."
+}
+$bootGlobalLines = @(if ($BootSetGlobals.Count -gt 0) {
+    "break $BootBreak"
+    'continue'
+    foreach ($pair in $BootSetGlobals) { "set var $pair" }
+    foreach ($pair in $BootSetGlobals) {
+        $n = ($pair -split '=')[0].Trim()
+        "printf `"BOOTSETGLOBAL=$n,%u\n`", $n"
     }
     'delete'
 })
@@ -593,6 +627,7 @@ try {
         'set confirm off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
+        $bootGlobalLines,
         $setGlobalLines,
         # The fallback counters run from boot, so a single read at the end would
         # charge the census window with every fallback taken during boot, the
@@ -637,6 +672,7 @@ try {
         'set confirm off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
+        $bootGlobalLines,
         $setGlobalLines,
         'set $tick_samples = 0',
         'break ndsBattlePlayableFrameCompleteMarker',
@@ -1457,6 +1493,29 @@ try {
             stuck = ([uint32]$m.Groups[1].Value -eq $wantU)
         }
     })
+    # -BootSetGlobals: the same proof for the boot-time pokes.
+    $bootGlobalReadbacks = @(foreach ($pair in $BootSetGlobals) {
+        $n = ($pair -split '=')[0].Trim()
+        $wantU = [uint32]([int64](($pair -split '=')[1].Trim()) -band 0xFFFFFFFF)
+        $m = [regex]::Match($output, "BOOTSETGLOBAL=$([regex]::Escape($n)),([0-9]+)")
+        if (-not $m.Success) {
+            throw ("-BootSetGlobals $n produced no BOOTSETGLOBAL readback line " +
+                "(did -BootBreak $BootBreak ever hit?). GDB output:`n$output")
+        }
+        [PSCustomObject]@{
+            name = $n
+            requested = $wantU
+            readback = [uint32]$m.Groups[1].Value
+            stuck = ([uint32]$m.Groups[1].Value -eq $wantU)
+            at = $BootBreak
+        }
+    })
+    $bootGlobalFailed = @($bootGlobalReadbacks | Where-Object { -not $_.stuck })
+    if ($bootGlobalFailed.Count -ne 0) {
+        throw ('-BootSetGlobals did not stick: ' + (($bootGlobalFailed | ForEach-Object {
+            '{0} requested {1} but read back {2}' -f $_.name, $_.requested, $_.readback
+        }) -join '; ') + '.')
+    }
     $setGlobalFailed = @($setGlobalReadbacks | Where-Object { -not $_.stuck })
     if ($setGlobalFailed.Count -ne 0) {
         throw ('-SetGlobals did not stick: ' + (($setGlobalFailed | ForEach-Object {
@@ -1519,6 +1578,8 @@ try {
         # unrouted run; the run throws above rather than reaching here with a
         # readback that disagrees, so every value present here is `stuck`.
         setGlobals = $setGlobalReadbacks
+        # The boot-time pokes (-BootSetGlobals), same contract.
+        bootSetGlobals = $bootGlobalReadbacks
         # Per-stop gap accounting for a repeated-ring-dump run. Empty for a
         # single-stop run. A reader deciding whether a whole-match series is
         # trustworthy needs the skew per stop, not a pass/fail: a gap that
