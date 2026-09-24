@@ -1,0 +1,71 @@
+slice 6 capture pairs (c7), route 0 vs route 1 on one ROM
+
+== mfly (frames 150,260,420,640,900,1200)
+f0150.png      top screen     24 px, viewport    126 px of 240000, max delta 251 bbox x 74..227 y 85..364
+f0260.png      top screen    105 px, viewport    355 px of 240000, max delta 251 bbox x 61..330 y 104..364
+f0420.png      top screen     93 px, viewport    237 px of 240000, max delta 251 bbox x 74..293 y 135..364
+f0640.png      top screen     34 px, viewport    111 px of 240000, max delta 251 bbox x 99..307 y 232..364
+f0900.png      top screen     10 px, viewport     61 px of 240000, max delta 251 bbox x 99..368 y 134..361
+f1200.png      top screen     60 px, viewport    195 px of 240000, max delta 251 bbox x 56..220 y 121..364
+TOTAL differing viewport pixels: 1085 
+
+
+== cppn (frames 150,260,420,640,900,1200)
+f0150.png      top screen     20 px, viewport    173 px of 240000, max delta 251 bbox x 74..220 y 352..364
+f0260.png      top screen    139 px, viewport    292 px of 240000, max delta 251 bbox x 67..340 y 113..364
+f0420.png      top screen     37 px, viewport    172 px of 240000, max delta 251 bbox x 74..266 y 218..364
+f0640.png      top screen     44 px, viewport    165 px of 240000, max delta 251 bbox x 71..321 y 138..364
+f0900.png      top screen     66 px, viewport    242 px of 240000, max delta 251 bbox x 74..327 y 176..364
+f1200.png      top screen     19 px, viewport    114 px of 240000, max delta 251 bbox x 74..220 y 260..364
+TOTAL differing viewport pixels: 1158 
+
+
+== hi-mafo (frames 150,260,420,640,900,1200)
+f0150.png      top screen     10 px, viewport     38 px of 240000, max delta 251 bbox x 211..220 y 354..361
+f0260.png      top screen     74 px, viewport    198 px of 240000, max delta 251 bbox x 74..220 y 138..364
+f0420.png      top screen     22 px, viewport    164 px of 240000, max delta 251 bbox x 74..223 y 249..364
+f0640.png      top screen     37 px, viewport    216 px of 240000, max delta 251 bbox x 74..285 y 118..364
+f0900.png      top screen     29 px, viewport    120 px of 240000, max delta 251 bbox x 167..220 y 137..364
+f1200.png      top screen     55 px, viewport    237 px of 240000, max delta 251 bbox x 74..285 y 157..364
+TOTAL differing viewport pixels: 973 
+
+
+== hi-luyo (frames 150,260,420,640,900,1200)
+f0150.png      top screen    202 px, viewport    281 px of 240000, max delta 251 bbox x 99..238 y 56..364
+f0260.png      top screen     87 px, viewport    263 px of 240000, max delta 251 bbox x 74..318 y 148..364
+f0420.png      top screen     38 px, viewport    249 px of 240000, max delta 251 bbox x 74..220 y 199..364
+f0640.png      top screen    112 px, viewport    240 px of 240000, max delta 251 bbox x 74..271 y 157..364
+f0900.png      top screen     82 px, viewport    260 px of 240000, max delta 251 bbox x 74..220 y 171..364
+f1200.png      top screen     24 px, viewport    148 px of 240000, max delta 251 bbox x 74..302 y 127..364
+TOTAL differing viewport pixels: 1441 
+
+
+== hi-capi (frames 150,260,420,640,900,1200)
+f0150.png      top screen     22 px, viewport    158 px of 240000, max delta 251 bbox x 72..220 y 224..364
+f0260.png      top screen     55 px, viewport    176 px of 240000, max delta 251 bbox x 61..315 y 152..364
+f0420.png      top screen    238 px, viewport    432 px of 240000, max delta 251 bbox x 74..220 y 140..364
+f0640.png      top screen     21 px, viewport    103 px of 240000, max delta 251 bbox x 97..223 y 81..364
+f0900.png      top screen     15 px, viewport    144 px of 240000, max delta 251 bbox x 74..220 y 59..364
+f1200.png      top screen     46 px, viewport    177 px of 240000, max delta 251 bbox x 61..232 y 143..364
+TOTAL differing viewport pixels: 1190 
+
+
+== hi-puns (frames 150,260,420,640,900,1200)
+f0150.png      top screen     33 px, viewport    146 px of 240000, max delta 251 bbox x 74..220 y 174..364
+f0260.png      top screen     13 px, viewport    101 px of 240000, max delta 251 bbox x 61..195 y 145..364
+f0420.png      top screen     58 px, viewport    266 px of 240000, max delta 251 bbox x 72..285 y 162..364
+f0640.png      top screen     32 px, viewport    202 px of 240000, max delta 251 bbox x 74..237 y 168..364
+f0900.png      top screen     30 px, viewport    177 px of 240000, max delta 251 bbox x 74..221 y 163..364
+f1200.png      top screen     17 px, viewport    118 px of 240000, max delta 251 bbox x 74..220 y 56..364
+TOTAL differing viewport pixels: 1010 
+
+
+== hi-dklk (frames 150,260,420,640,900,1200)
+f0150.png      top screen    133 px, viewport    351 px of 240000, max delta 251 bbox x 74..245 y 198..364
+f0260.png      top screen     53 px, viewport    233 px of 240000, max delta 251 bbox x 74..263 y 135..364
+f0420.png      top screen     22 px, viewport     73 px of 240000, max delta 251 bbox x 99..220 y 170..364
+f0640.png      top screen      8 px, viewport     85 px of 240000, max delta 251 bbox x 99..321 y 190..364
+f0900.png      top screen     55 px, viewport    224 px of 240000, max delta 251 bbox x 74..360 y 131..364
+f1200.png      top screen     51 px, viewport    220 px of 240000, max delta 251 bbox x 74..234 y 62..364
+TOTAL differing viewport pixels: 1186 
+

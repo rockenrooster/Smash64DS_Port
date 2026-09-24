@@ -30,8 +30,16 @@
  * kernel (12-word LOAD4x3 straight into the list), the replay's patches (P',
  * tint tiles, shade re-derive, light, Link's texgen words) and one DMA0.
  *
+ * Slice 6: every VS kind (Mario through Kirby) is a lean kind, with Mario's
+ * and Fox's electric skeleton (program 0xFE), Fox's blaster sidecar, and wide
+ * entries for the high-detail lists longer than an entry (see
+ * ndsFtrLeanEntryWide). Captain HIGH's alpha cutout is exact without its
+ * register (reference 0; nNDSFtrLeanDeclineAlphaTest otherwise). Routes 2
+ * and 3 are lab tools, compiled into the tick-HUD image only
+ * (NDS_FTR_LEAN_ORACLE_ROUTES).
+ *
  *   gNdsFtrLeanRoute  0  off -- today's behaviour (default)
- *                     1  lean path draws the four kinds; both halves of the
+ *                     1  lean path draws the VS kinds; both halves of the
  *                        slot's region are lean entries, and the recorder
  *                        never arms for a slot whose lower half the lean
  *                        path owns (a declined draw runs production direct)
@@ -44,6 +52,8 @@
  *                        and split modelview word for word, and the composed
  *                        clip matrices (rows 0-2 exact, row 3 within 1 LSB)
  *                     3  oracle-shipped: as 2 with the old path unchanged
+ *                        (2 and 3 on the lab two-fighter arm also compare
+ *                        the wide lists: NDS_FTR_LEAN_ORACLE_WIDE)
  *   gNdsFtrLeanAdmit  0 / 1 / 2: fighter texture admission, see the slice
  *                        2b block at the end of this header
  *
@@ -79,6 +89,50 @@
 #else
 #define NDS_FTR_LEAN_LAB 0
 #define NDS_FTR_LEAN_CTR(...) ((void)0)
+#endif
+
+/* Slice 6: the oracle routes (2 oracle-exact, 3 oracle-shipped) are lab
+ * tools -- they compare against the recorder and count, and a build without
+ * the tick HUD has no counters to show them. The shipping image takes route 1
+ * or the old path only (a poked 2 or 3 draws as route 0), so none of their
+ * branches is compiled into it. */
+#if NDS_FTR_LEAN_LAB
+#define NDS_FTR_LEAN_ORACLE_ROUTES 1
+#else
+#define NDS_FTR_LEAN_ORACLE_ROUTES 0
+#endif
+
+/* Slice 6: the route 1 entry (ndsFtrLeanRun) has one call site; the shipping
+ * image inlines it there, as slice 5's did before this slice's growth took it
+ * past GCC's inline limit (an outlined copy costs its own prologue and the
+ * caller's spills). The lab image keeps it outlined, as slice 5's lab did. */
+#if NDS_FTR_LEAN_ORACLE_ROUTES
+#define NDS_FTR_LEAN_RUN_INLINE
+#else
+#define NDS_FTR_LEAN_RUN_INLINE inline __attribute__((always_inline))
+#endif
+
+/* The list functions (materialize, find, guard, patch) run under the route
+ * that called them; in the shipping image that is route 1 only. */
+#if NDS_FTR_LEAN_ORACLE_ROUTES
+#define NDS_FTR_LEAN_ROUTE_IS_DRAW() \
+    (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW)
+#else
+#define NDS_FTR_LEAN_ROUTE_IS_DRAW() (1)
+#endif
+
+/* Slice 6 (lab, the two-fighter roster arm NDS_LAB_FOURCPU_TWO): a wide list
+ * (route 1: entry 0 over the battle slot's whole region) cannot share that
+ * region with the oracle routes' reference -- the recorder's packet in the
+ * lower half -- and an absent player's region is lent to a battle-lifetime
+ * pool, so the oracle routes keep the wide lists of battle slots 0 and 1 in
+ * a lab-only buffer (nds_renderer_native_common.c) and route 2 compares the
+ * high-detail lists that outgrow an entry like any other. */
+#if NDS_FTR_LEAN_ORACLE_ROUTES && defined(NDS_LAB_FOURCPU_TWO) && \
+    NDS_LAB_FOURCPU_TWO
+#define NDS_FTR_LEAN_ORACLE_WIDE 1
+#else
+#define NDS_FTR_LEAN_ORACLE_WIDE 0
 #endif
 
 #define NDS_FTR_LEAN_ROUTE_OFF 0u
@@ -146,7 +200,12 @@ enum
     nNDSFtrLeanDeclineTint,            /* shade re-derive refused */
     nNDSFtrLeanDeclineStale,           /* a fresh list still failed its guard */
     nNDSFtrLeanDeclineInputs,          /* production inputs not buildable */
-    nNDSFtrLeanDeclineReserved18,
+    nNDSFtrLeanDeclineAlphaTest,       /* slice 6: a G_AC_THRESHOLD run whose
+                                        * DS reference is not 0 -- the alpha
+                                        * test is frame-global register state
+                                        * no list carries, exact to leave out
+                                        * only at reference 0 (Captain HIGH's
+                                        * cutout; owner D5 for any other) */
     nNDSFtrLeanDeclineReserved19,
     nNDSFtrLeanDeclineCount = 20
 };
@@ -170,14 +229,21 @@ enum
     nNDSFtrLeanEventCount = 11
 };
 
-/* Slice 3: the four stress kinds, as the counters' kind index. */
+/* Slice 6: every VS kind is a lean kind -- the twelve owner slots Mario (0)
+ * through Kirby (11), NDS_RENDERER_NATIVE_FIGHTER_OWNER_*. The owner slot is
+ * the kind (the instance's tuple field). The 1P-only owners (Metal Mario, the
+ * Polygon team, Master Hand: slots 12+) stay on the old path.
+ *
+ * The lab counters' per-kind rows (k_*[NDS_FTR_LEAN_KINDS]) are indexed by
+ * BATTLE SLOT since slice 6 -- a four-fighter roster has four rows whatever
+ * its kinds -- and k_owner[] names the kind each row drew. On the stress
+ * roster (Donkey, Samus, Link, Kirby in slots 0-3) the rows are the slice 3-5
+ * kind rows exactly. */
 #define NDS_FTR_LEAN_KINDS 4u
+#define NDS_FTR_LEAN_KIND_COUNT 12u
 #define NDS_FTR_LEAN_KIND_NONE 0xffu
 #define NDS_FTR_LEAN_OWNER_KIND(owner)                                      \
-    (((owner) == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY) ? 0u :           \
-     ((owner) == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) ? 1u :            \
-     ((owner) == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) ? 2u :             \
-     ((owner) == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) ? 3u :            \
+    (((u32)(owner) < NDS_FTR_LEAN_KIND_COUNT) ? (u32)(owner) :              \
      NDS_FTR_LEAN_KIND_NONE)
 /* Kernel slow-joint classes (k_kernel_class[][]): which joints still take
  * the adapter's own source builder, and why. 0 is the fast path. */
@@ -258,6 +324,15 @@ typedef struct NDSFtrLeanCounters
                                    tint-tile set moved */
     u32 rerecord_resets;        /* held lists re-derived where the old path
                                    re-records without a new list */
+    u32 tint_rerecords_mirrored; /* slice 6: a tinted list's prims moved --
+                                    ApplyTint failed closed, as the old
+                                    path's replay does before it re-records;
+                                    the list took that record's shade
+                                    derivation (ResetShade) */
+    u32 fence_rerecords_mirrored; /* slice 6: the texture fence moved under a
+                                     list whose old-path packet keys it
+                                     (needs_fence, tint-tile binds only):
+                                     the same record derivation */
     /* lab verify (NDS_FTR_LEAN_SLOW_VERIFY) */
     u32 verify_runs;            /* re-selected lists compared */
     u32 verify_variant_runs;    /* ... of an entry holding records */
@@ -309,6 +384,13 @@ typedef struct NDSFtrLeanCounters
                                    |root, lean cmd, lean param index, lean
                                    word, recorded word, lean command ordinal,
                                    recorded command ordinal */
+    u32 oracle_shade_first[16]; /* slice 6: the first shade mismatch's site
+                                   inputs -- frame, slot<<24|root, lean
+                                   light1, light2, material, use|pfr<<8|
+                                   tinted<<16|root<<24, the same four for the
+                                   recorded site, lean / recorded modulate,
+                                   lean / recorded prim hash, lean / recorded
+                                   word */
     /* Phase 0 leftovers */
     u32 ge_busy_samples;        /* GXSTAT sampled at the end of each fighter */
     u32 ge_busy_hits;           /* ... with bit 27 (GE busy) set */
@@ -342,7 +424,9 @@ typedef struct NDSFtrLeanCounters
     u32 reject_first[12];       /* reason, format, size, owner, frame,
                                    go, live, free, pinned, thisframe,
                                    evictable, live_bytes */
-    /* ---- per kind (0 Donkey, 1 Samus, 2 Link, 3 Kirby) ---- */
+    /* ---- per battle slot (slice 6; slices 3-5: per kind, 0 Donkey,
+     * 1 Samus, 2 Link, 3 Kirby -- the stress roster's slots 0-3) ---- */
+    u32 k_owner[4];             /* owner slot + 1 of the row's last attempt */
     u32 k_attempts[4];
     u32 k_draws[4];             /* route 1 draws; routes 2/3 shadow runs */
     u32 k_materializations[4];
@@ -546,6 +630,10 @@ s32 ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
  * keeps the lists). */
 #define NDS_FTR_LEAN_KEY_WORDS 6u
 #define NDS_FTR_LEAN_ENTRY_NONE 0xffu
+/* Slice 6: ndsFtrLeanMaterialize's `entry` flag for a wide list (entry 0
+ * over the slot's whole region; route 1 -- and the oracle routes on the lab
+ * two-fighter arm, NDS_FTR_LEAN_ORACLE_WIDE). */
+#define NDS_FTR_LEAN_ENTRY_WIDE 0x100u
 
 /* The list of `battle_slot` for `key` (still current: tint-tile set, texture
  * fence) as an entry code for ndsFtrLeanEntryActivate -- an entry whose words
@@ -654,8 +742,18 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
 /* Returns the hardware triangles the list presents (slice 5: no stats
  * block; the frame summary is accounted directly). */
 u32 ndsFtrLeanPacketSubmit(u32 battle_slot);
-/* Kind index for the counters (lab) of the lean list in a battle slot,
- * published by the adapter at every attempt. */
+/* Slice 6: a list longer than an entry (the high-detail Donkey and Link
+ * lists, 3,535-3,873 words against 3,460) is materialized WIDE in route 1
+ * (ndsFtrLeanMaterialize with NDS_FTR_LEAN_ENTRY_WIDE): entry 0 over the
+ * slot's whole region, the other entry given up while it holds. The per-line
+ * dirty marks cover one entry's words, so the submit cleans a wide list whole.
+ * A slot whose high-detail list went wide once materializes its next
+ * high-detail lists wide directly (the instance's wide_high) instead of
+ * walking each one twice. TRUE when `entry` of the slot holds a wide list. */
+u32 ndsFtrLeanEntryWide(u32 battle_slot, u32 entry);
+/* Counter row (lab) of the lean list in a battle slot, published by the
+ * adapter at every attempt. Slice 6: the row is the battle slot itself (see
+ * NDS_FTR_LEAN_KINDS). */
 void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind);
 void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed);
 u32 ndsFtrLeanShadowArmed(u32 battle_slot);

@@ -55,14 +55,15 @@ Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (pillars A1-A10, phases 0-7;
 owner rulings D1-D7 in section 8; every slice's numbers in the section 6
 phase log). Phase 0 closed 09-23 (instrument out of the gate; the heaviest
 roster halts ~130 KB short at battle load in the shipping config).
-**Phase 1 (fighters) active**: slices 1-5 landed (section 6 log) -- lists
-materialized on the device, 0 declines, oracle 0 mismatches; at admit word 2
-(default 0) route 1 FTR P50 / P95 184K / 268K, WORK-H P50 / P95 1.40M / 2.03M. A7 prep
+**Phase 1 (fighters) active**: slices 1-6 landed (section 6 log) -- every kind
+draws lean in VS at both details (Ness's yo-yo smashes decline), digest identical,
+oracle 0; route 1 (admit 2, default 0) FTR P50 / P95 185K / 269K, WORK-H P50 / P95
+1.40M / 2.01M on the stress roster. A7 prep
 is on by default (`NDS_IF_GAMESTATUS_COMPACT`, GAME SET and loop proven): +68 KB four-CPU
 low-water, the first 1P battle loads. MF host encoder + C decoder landed
 (not linked).
-**Next** (one subagent each): coverage (all kinds, both details) with lean as
-the default; then the phase's deletion step. ARM7 audio spec queued. Owner
+**Next** (one subagent each): lean as the shipping default (+ Ness's yo-yo
+program); then the phase's deletion step. ARM7 audio spec queued. Owner
 09-23: optimization only, no 1P campaign work (intro findings parked in
 `artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`).
 **Constraint**: the all-content VS character select keeps >= 183,072 B at its

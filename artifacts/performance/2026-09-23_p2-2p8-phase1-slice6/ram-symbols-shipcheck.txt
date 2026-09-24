@@ -1,0 +1,35 @@
+Shipping shell ELF (smash64ds-p2-shell-hwtri), every symbol whose size changed, pre -> post slice 6
+  delta  symbol                                                     type where   before    after
+   -396  ndsFtrLeanMaterializeFor                                   t    main       396        0
+   -284  ndsFighterMarioFoxDLAllDrawForSlot.constprop.0             t    main      9012     8728
+   -252  ndsFtrLeanTintTileWords                                    T    main       252        0
+   -124  ndsFighterDisplayContractSubmit                            T    main      3912     3788
+    -84  ndsFighterPacketFinishRecord                               t    main       524      440
+    -72  ndsFtrLeanTopologyHash                                     t    main        72        0
+    -48  CSWTCH.12159                                               t    main        48        0
+    -48  ndsFtrLeanEntryActivate                                    T    main       220      172
+    -39  CSWTCH.11853                                               t    main        39        0
+    -36  ndsFtrLeanShadowArmed                                      T    main        36        0
+    -32  ndsFighterPacketTryReplay                                  t    main      2884     2852
+    -32  ndsFtrLeanLearnVariant                                     T    main      2316     2284
+    -32  ndsFtrLeanShadowArm                                        T    main        32        0
+    -20  ndsFtrLeanEntryFind                                        T    main       796      776
+    -20  ndsFtrLeanPacketGuard                                      T    ITCM       448      428
+    -12  ndsFtrLeanEntryVictim                                      T    main       240      228
+     -4  gNdsFtrLeanOracleSourceOk                                  B    main         4        0
+     -4  ndsFtrLeanBuildTexgenMap                                   t    main       304      300
+     -4  ndsRendererAdapterBuildNativeStageTopologyStamp.constprop.0 t    main      1660     1656
+    +16  ndsFtrLeanMatShade.constprop.0                             t    main       600      616
+    +24  ndsFtrLeanEvent                                            t    main      1244     1268
+    +28  ndsFtrLeanMatRun.constprop.0                               t    main      2140     2168
+    +32  ndsFtrLeanEntryResetShade                                  T    main       472      504
+    +39  CSWTCH.11861                                               t    main         0       39
+    +48  CSWTCH.12167                                               t    main         0       48
+    +52  ndsFtrLeanPacketSubmit                                     T    ITCM      1184     1236
+   +188  ndsFtrLeanMaterialize                                      T    main      2880     3068
+   +188  ndsRendererAdapterBuildFoxGunJointMtx                      t    main         0      188
+   +380  ndsFtrLeanPacketPatch                                      T    main      3372     3752
+   +492  ndsFtrLeanMaterializeFor.constprop.0                       t    main         0      492
+sum main  -88
+sum ITCM  +32
+sum DTCM  +0

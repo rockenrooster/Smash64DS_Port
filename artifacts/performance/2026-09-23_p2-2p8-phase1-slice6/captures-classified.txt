@@ -1,0 +1,64 @@
+== cap-c7-mfly-r0 vs cap-c7-mfly-r1
+  f0150.png    scene px    6  components   2  largest   4 px x 183..184 y 160..161  max delta   4  on edges  66.7%
+  f0260.png    scene px   79  components  11  largest  35 px x 228..234 y 104..112  max delta 207  on edges 100.0%
+  f0420.png    scene px   57  components  12  largest  28 px x 200..205 y 151..161  max delta 179  on edges  87.7%
+  f0640.png    scene px   24  components   5  largest  12 px x 131..134 y 301..306  max delta  94  on edges 100.0%
+  f0900.png    scene px    2  components   1  largest   2 px x 367..368 y 134..134  max delta   4  on edges 100.0%
+  f1200.png    scene px   32  components   6  largest  12 px x 67..70 y 238..241    max delta  53  on edges 100.0%
+== cap-c7-cppn-r0 vs cap-c7-cppn-r1
+  f0150.png    scene px    0  components   0  largest   0 px                        max delta   0  on edges 100.0%
+  f0260.png    scene px  105  components  12  largest  29 px x 317..324 y 179..186  max delta 243  on edges 100.0%
+  f0420.png    scene px    7  components   3  largest   3 px x 255..255 y 218..220  max delta 155  on edges 100.0%
+  f0640.png    scene px   20  components   9  largest   4 px x 311..312 y 138..139  max delta 231  on edges 100.0%
+  f0900.png    scene px   50  components   7  largest  38 px x 300..304 y 237..256  max delta 183  on edges 100.0%
+  f1200.png    scene px   11  components   4  largest   4 px x 147..148 y 260..261  max delta  89  on edges 100.0%
+== cap-c6-mfpn-s1-r0 vs cap-c6-mfpn-s1-r1
+  skel1.png    scene px   10  components   3  largest   4 px x 319..320 y 202..203  max delta 247  on edges 100.0%
+  skel2.png    scene px   28  components   7  largest  13 px x 244..248 y 256..259  max delta 207  on edges  89.3%
+  skel3.png    scene px   14  components   5  largest   4 px x 133..134 y 229..230  max delta  52  on edges 100.0%
+  skel4.png    scene px   10  components   3  largest   6 px x 136..137 y 273..275  max delta 195  on edges 100.0%
+== cap-c6-mfpn-r0 vs cap-c6-mfpn-r1
+  skel1.png    scene px   24  components   7  largest   5 px x 53..55 y 146..148    max delta 182  on edges 100.0%
+  skel2.png    scene px   32  components   8  largest  11 px x 53..55 y 267..270    max delta  77  on edges 100.0%
+  skel3.png    scene px   73  components   5  largest  53 px x 106..115 y 98..105   max delta 243  on edges  97.3%
+  skel4.png    scene px   86  components   8  largest  46 px x 131..154 y 109..111  max delta 227  on edges  98.8%
+== cap-c6-mfpn-r0 vs cap-c6-mfpn-r0b
+  skel1.png    scene px    0  components   0  largest   0 px                        max delta   0  on edges 100.0%
+  skel2.png    scene px    0  components   0  largest   0 px                        max delta   0  on edges 100.0%
+  skel3.png    scene px    0  components   0  largest   0 px                        max delta   0  on edges 100.0%
+  skel4.png    scene px    0  components   0  largest   0 px                        max delta   0  on edges 100.0%
+== cap-c7-hi-dklk-r0 vs cap-c7-hi-dklk-r1
+  f0150.png    scene px   99  components   9  largest  67 px x 217..230 y 238..248  max delta 126  on edges  93.9%
+  f0260.png    scene px   23  components   4  largest  15 px x 172..176 y 171..175  max delta 138  on edges 100.0%
+  f0420.png    scene px   16  components   3  largest  12 px x 121..126 y 170..172  max delta  24  on edges 100.0%
+  f0640.png    scene px    6  components   2  largest   4 px x 108..109 y 190..191  max delta  53  on edges 100.0%
+  f0900.png    scene px   15  components   6  largest   6 px x 97..98 y 242..244    max delta 130  on edges 100.0%
+  f1200.png    scene px   37  components  12  largest   6 px x 233..234 y 110..112  max delta  94  on edges 100.0%
+== cap-c7-hi-mafo-r0 vs cap-c7-hi-mafo-r1
+  f0150.png    scene px    0  components   0  largest   0 px                        max delta   0  on edges 100.0%
+  f0260.png    scene px   60  components   5  largest  48 px x 114..120 y 152..159  max delta 203  on edges 100.0%
+  f0420.png    scene px   10  components   3  largest   4 px x 219..220 y 249..250  max delta  12  on edges 100.0%
+  f0640.png    scene px    5  components   3  largest   2 px x 285..285 y 118..119  max delta 113  on edges 100.0%
+  f0900.png    scene px   19  components   4  largest  12 px x 181..184 y 188..191  max delta 130  on edges 100.0%
+  f1200.png    scene px   45  components  10  largest  28 px x 281..284 y 212..220  max delta 199  on edges 100.0%
+== cap-c7-hi-luyo-r0 vs cap-c7-hi-luyo-r1
+  f0150.png    scene px  192  components  11  largest 122 px x 225..238 y 56..72    max delta 154  on edges  77.6%
+  f0260.png    scene px   69  components   7  largest  30 px x 311..318 y 238..242  max delta 114  on edges 100.0%
+  f0420.png    scene px    4  components   1  largest   4 px x 203..204 y 199..200  max delta 247  on edges 100.0%
+  f0640.png    scene px  106  components   8  largest  67 px x 253..270 y 212..220  max delta 134  on edges  97.2%
+  f0900.png    scene px   52  components   7  largest  31 px x 211..216 y 273..280  max delta 247  on edges 100.0%
+  f1200.png    scene px   22  components  10  largest   4 px x 267..268 y 127..128  max delta  53  on edges  81.8%
+== cap-c7-hi-capi-r0 vs cap-c7-hi-capi-r1
+  f0150.png    scene px    6  components   2  largest   4 px x 197..198 y 224..225  max delta  85  on edges 100.0%
+  f0260.png    scene px   35  components   6  largest  17 px x 102..109 y 168..172  max delta 102  on edges 100.0%
+  f0420.png    scene px  206  components   4  largest 141 px x 161..176 y 146..167  max delta 142  on edges  95.6%
+  f0640.png    scene px   17  components   6  largest   8 px x 217..220 y 81..83    max delta  94  on edges 100.0%
+  f0900.png    scene px    9  components   4  largest   4 px x 189..190 y 77..78    max delta  40  on edges 100.0%
+  f1200.png    scene px   14  components   4  largest   4 px x 225..226 y 143..144  max delta  77  on edges 100.0%
+== cap-c7-hi-puns-r0 vs cap-c7-hi-puns-r1
+  f0150.png    scene px   17  components   6  largest   4 px x 192..193 y 174..175  max delta  69  on edges 100.0%
+  f0260.png    scene px    5  components   3  largest   2 px x 103..104 y 145..145  max delta 190  on edges 100.0%
+  f0420.png    scene px   28  components   8  largest  10 px x 275..276 y 171..175  max delta 142  on edges  96.4%
+  f0640.png    scene px   22  components   7  largest  10 px x 230..234 y 168..169  max delta  60  on edges 100.0%
+  f0900.png    scene px   16  components   4  largest  12 px x 172..174 y 163..166  max delta  61  on edges 100.0%
+  f1200.png    scene px    1  components   1  largest   1 px x 160..160 y 56..56    max delta 186  on edges 100.0%

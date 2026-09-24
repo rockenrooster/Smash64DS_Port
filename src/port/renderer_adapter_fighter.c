@@ -2493,9 +2493,21 @@ typedef struct NDSFighterDrawPlan
     u32 key_owner_generation;
     u32 key_data_size;
     u32 key_status_generation;
+    /* use_low_detail | colanim.skeleton_id << 8 (NDS_FTR_PLAN_DETAIL_KEY). */
     u32 key_use_low_detail;
     u32 valid;
 } NDSFighterDrawPlan;
+
+/* P2-2p8 Phase 1 slice 6: the plan's detail word also carries the electric
+ * skeleton. ftDisplayMainDrawAll draws Mario's and Fox's skeleton display
+ * lists instead of the body while colanim.skeleton_id is set, and the colour
+ * animation toggles it every few frames INSIDE one status -- no status
+ * generation moves -- so a plan keyed without it replayed the body's roots
+ * (program 0) on skeleton frames, or kept program 0xFE after the skeleton
+ * ended, until the next status change. Found by the lean route-2 oracle on
+ * Mario/Fox with an electric attacker in the match (structure mismatches). */
+#define NDS_FTR_PLAN_DETAIL_KEY(use_low_detail, fp) \
+    ((u32)(use_low_detail) | ((u32)(u8)(fp)->colanim.skeleton_id << 8))
 
 static NDSFighterDrawPlan sNdsFighterDrawPlan[GMCOMMON_PLAYERS_MAX];
 
@@ -3565,7 +3577,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * scratch slot, so a stored plan would replay another actor's DObj
      * pointers on every same-kind pair (Yoshi/Kirby teams, Zako). */
     native_owner_plan_hit = ((sNdsIntroTransientActive != FALSE) ||
-        (ndsFighterDrawPlanHit(slot, use_low_detail) == FALSE)) ?
+        (ndsFighterDrawPlanHit(
+             slot, NDS_FTR_PLAN_DETAIL_KEY(use_low_detail, fp)) == FALSE)) ?
         FALSE : TRUE;
     if (native_owner_plan_hit != FALSE)
     {
@@ -3986,7 +3999,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 plan->key_data_size = native_owner_file->data_size;
                 plan->key_status_generation =
                     sNdsFighterStatusGeneration[slot];
-                plan->key_use_low_detail = use_low_detail;
+                plan->key_use_low_detail =
+                    NDS_FTR_PLAN_DETAIL_KEY(use_low_detail, fp);
                 plan->valid = 1u;
 #if NDS_TICK_HUD
                 gNdsFtrPlanBuild++;
@@ -5314,7 +5328,8 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
  * renderer_fighter_lean.c (#included at the end of this file). */
 #include <nds/renderer_fighter_lean.h>
 #if NDS_FTR_LEAN_LIVE
-static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
+static NDS_FTR_LEAN_RUN_INLINE sb32
+ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
 static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before);
 static void ndsFtrLeanFrameEnd(void);
 #endif
@@ -5387,18 +5402,20 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         u32 lean_head_start = cpuGetTiming();
 
 #if NDS_FTR_LEAN_ATTR_LIVE
-        sNdsFtrLeanAttrHeadKind = NDS_FTR_LEAN_OWNER_KIND(owner_slot);
+        /* Slice 6: the counter row is the battle slot (NDS_FTR_LEAN_KINDS). */
+        sNdsFtrLeanAttrHeadKind =
+            (NDS_FTR_LEAN_OWNER_KIND(owner_slot) != NDS_FTR_LEAN_KIND_NONE) ?
+                ((u32)fp->nds_slot & 3u) : NDS_FTR_LEAN_KIND_NONE;
 #endif
         ndsFighterDisplayContractCapture(fighter_gobj);
 #if NDS_FTR_LEAN_LAB
         {
             u32 lean_head = cpuGetTiming() - lean_head_start;
-            u32 lean_kind = NDS_FTR_LEAN_OWNER_KIND(owner_slot);
 
             gNdsFtrLean.head_ticks += lean_head;
-            if (lean_kind < NDS_FTR_LEAN_KINDS)
+            if (NDS_FTR_LEAN_OWNER_KIND(owner_slot) != NDS_FTR_LEAN_KIND_NONE)
             {
-                gNdsFtrLean.k_head_ticks[lean_kind] += lean_head;
+                gNdsFtrLean.k_head_ticks[(u32)fp->nds_slot & 3u] += lean_head;
             }
         }
 #endif
@@ -5474,8 +5491,15 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
 #if NDS_FTR_LEAN_LIVE
     {
-        /* P2-2p8 Phase 1 slice 1 (H1). Route 0 is the plain call below. */
+        /* P2-2p8 Phase 1 slice 1 (H1). Route 0 is the plain call below.
+         * Slice 6: the shipping image knows route 1 only
+         * (NDS_FTR_LEAN_ORACLE_ROUTES). */
+#if NDS_FTR_LEAN_ORACLE_ROUTES
         u32 lean_route = gNdsFtrLeanRoute;
+#else
+        u32 lean_route = (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ?
+            NDS_FTR_LEAN_ROUTE_DRAW : 0u;
+#endif
         u32 lean_hits = 0u;
         sb32 lean_drew = FALSE;
 

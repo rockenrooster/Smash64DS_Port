@@ -709,6 +709,13 @@ NDS_P2_FOUR_CPU_KIND0 ?= 3
 NDS_P2_FOUR_CPU_KIND1 ?= 1
 NDS_P2_FOUR_CPU_KIND2 ?= 7
 NDS_P2_FOUR_CPU_KIND3 ?= 2
+# P2-2p8 Phase 1 slice 6 (LAB ONLY, the four-CPU roster arm): `NDS_LAB_FOURCPU_TWO=1`
+# keeps roster slots 0/1 and leaves slots 2/3 empty, so the direct battle is a
+# two-fighter match -- the source's HIGH-detail case (scvsbattle.c selects Low
+# only for 3+ fighters), which a four-fighter match reaches only at pause and
+# DeadUp. It measures the high-detail fighter lists on every frame. Empty (the
+# default) emits nothing, so every other build's config header is unchanged.
+NDS_LAB_FOURCPU_TWO ?=
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -6840,6 +6847,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND2 $(NDS_P2_FOUR_CPU_KIND2)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
+		$(if $(strip $(NDS_LAB_FOURCPU_TWO)),echo '#define NDS_LAB_FOURCPU_TWO 1';) \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \

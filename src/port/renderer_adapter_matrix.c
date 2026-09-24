@@ -5841,7 +5841,12 @@ static void ndsRendererAdapterPrepareInitialMatrices(
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-static sb32 ndsRendererAdapterComposeNativeRootMatrix(
+/* Slice 6 (P2-2p8 Phase 1): always inline. Its callers are the stage binding
+ * matrix prep (every stage binding, every frame), the Fox blaster builder
+ * and the fighter draw; a fourth call site (the lean path's blaster sidecar)
+ * tipped GCC into outlining it, and the stage prep's code changed with it. */
+static inline __attribute__((always_inline)) sb32
+ndsRendererAdapterComposeNativeRootMatrix(
     const NDSRendererMatrix20p12 *modelview,
     const NDSRendererMatrix20p12 *projection,
     NDSRendererMatrix20p12 *out)
@@ -7443,6 +7448,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * already source -- Samus, Link, Kirby), so the words TryReplay patches
      * are the ones the lean kernel must reproduce bit for bit. The animation
      * lock arm below is that same compose, so it proves the draw too. */
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     u32 lean_force_source =
         ((gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_ORACLE_EXACT) &&
          (NDS_FTR_LEAN_OWNER_KIND(slot) != NDS_FTR_LEAN_KIND_NONE)) ?
@@ -7452,6 +7458,9 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     {
         gNdsFtrLeanOracleSourceOk = 0u;
     }
+#else
+    const u32 lean_force_source = FALSE;    /* slice 6: a lab route */
+#endif
 #endif
     /* Animation locks change the source local matrix and scale accumulator.
      * Compose those source matrices on ARM9, then submit the same native owner
@@ -7470,10 +7479,12 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
                 return FALSE;
             }
 #if NDS_R2_FIGHTER_GX_COMPOSE
+#if NDS_FTR_LEAN_ORACLE_ROUTES
             if (lean_force_source != FALSE)
             {
                 gNdsFtrLeanOracleSourceOk = 1u;
             }
+#endif
 #endif
         }
     }
@@ -7506,10 +7517,12 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
              sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
              seed_is_identity) != FALSE)))
     {
+#if NDS_FTR_LEAN_ORACLE_ROUTES
         if ((lean_force_source != FALSE) && (flat_worlds == FALSE))
         {
             gNdsFtrLeanOracleSourceOk = 1u;
         }
+#endif
         flat_worlds = TRUE;
     }
     else if (ndsRendererAdapterCaptureOwnerChainsGx(

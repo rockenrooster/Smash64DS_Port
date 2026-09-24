@@ -1,0 +1,12 @@
+531e1b4b4a8e58d998778e7e5fd5fb95f7a42cff39a8b9030a0abeae6aec07b1 *build-p2p8-s6/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+62d94f5b003287eb42380119d626de057f7d36b9a758cc666282feab7d3fec0d *build-p2p8-s6-mfly/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+c24e3e84a15d21c6d17a253639157546e9aaa727f7d73cd55e21a1a1208affdb *build-p2p8-s6-cppn/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+b5b8e0746bf863f085757954a91c3f15b3d4db4f7e529f0cf1fefe1e92b9d98f *build-p2p8-s6-mfpn/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+302edf8cdb69b5c69df2d12bbf6e772f6b96f1882391c6d06f2d11712adbc892 *build-p2p8-s6-hi-capi/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+c015598099a59c88b8289289bfeb3da31dcf1c129c70e40ddc9319efd588ccdc *build-p2p8-s6-hi-dklk/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+fd8244b0813c2b10911133cce1c8c16492bd00697242b82bbce3f8f58c213aa3 *build-p2p8-s6-hi-luyo/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+468b7b745b38dbbbd40ae8004cfb1976f5e406cc09e1872a4cbbcfd25eb92d1f *build-p2p8-s6-hi-mafo/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+1cb869fbb462fbbae9934bbc9f0ce075a625145b58d3fe3fa3f16775680a1b71 *build-p2p8-s6-hi-puns/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+c5f3271ba8e92657801aeb57328c1003e077f7071b75803895aec74d9d9e705f *build-p2p8-s6-hi-saki/smash64ds-p2-fourcpu-tickhud-hwtri.nds
+b39a2a19314603ee6415e3c3c46e9683477bc757c9c8629a9a5e1cf1d4ceb38a *build-p2p8-s6-shipcheck-pre/smash64ds-p2-shell-hwtri.nds
+72d081382ee48bcb4ba6460d9d8e07cd6a7a6fd4fbaaefff9a3d81411ced5188 *build-p2p8-s6-shipcheck/smash64ds-p2-shell-hwtri.nds

@@ -44,7 +44,9 @@ NDSFtrLeanCounters gNdsFtrLean __attribute__((used, aligned(32)));
 #if NDS_FTR_LEAN_ATTR_LIVE
 NDSFtrLeanAttr gNdsFtrLeanAttr __attribute__((used, aligned(32)));
 #endif
+#if NDS_FTR_LEAN_ORACLE_ROUTES
 volatile u32 gNdsFtrLeanOracleSourceOk __attribute__((used));
+#endif
 #if NDS_VRAM_CENSUS_LIVE
 /* Slice 2a (lab): 1 = walk the texture/palette VRAM at every frame end.
  * DTCM like the route words, so a gdb poke is never hidden by the cache. */
@@ -293,7 +295,12 @@ typedef struct NDSFtrLeanInstance
     u8 rebind;
     u8 reprove;                 /* the old path drew since the last proof */
     u8 rerecord;                /* the old path's packet was invalidated */
-    u8 pad0[3];
+    u8 skeleton;                /* slice 6: colanim.skeleton_id the plan was
+                                   resolved under (Mario/Fox program 0xFE) */
+    u8 wide_high;               /* slice 6: this slot's high-detail lists
+                                   outgrow an entry (Donkey, Link): go wide
+                                   at once instead of walking twice */
+    u8 pad0[1];
     u32 rr_key;                 /* its packet key's shadow at the last
                                    re-record (ndsFtrLeanRerecordKey) */
     u32 status_gen;
@@ -350,15 +357,15 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
 #define sNdsFtrLeanProjection sNdsRendererAdapterNativeOwnerProjection
 
 #if NDS_FTR_LEAN_LAB
-/* `kind` is the caller's own (the per-kind split exists only in the slice 5
- * attribution ROM). */
+/* `row` is the caller's own counter row, the battle slot (the per-row split
+ * exists only in the slice 5 attribution ROM). */
 #define NDS_FTR_LEAN_GUARD_PART(index, mark)                               \
     do                                                                     \
     {                                                                      \
         u32 part_now_ = cpuGetTiming();                                    \
         gNdsFtrLean.guard_part_ticks[index] += part_now_ - (mark);         \
-        NDS_FTR_LEAN_ATTR(if (kind < NDS_FTR_LEAN_KINDS)                   \
-            gNdsFtrLeanAttr.guard_part_ticks[kind][index] +=               \
+        NDS_FTR_LEAN_ATTR(if (row < NDS_FTR_LEAN_KINDS)                    \
+            gNdsFtrLeanAttr.guard_part_ticks[row][index] +=                \
                 part_now_ - (mark));                                       \
         (mark) = part_now_;                                                \
     } while (0)
@@ -378,36 +385,37 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
 #define NDS_FTR_LEAN_EVENT_PART(index, mark) ((void)0)
 #endif
 
-static void ndsFtrLeanDecline(u32 kind, u32 reason)
+/* `row`: the counter row, the battle slot (slice 6; NDS_FTR_LEAN_KINDS). */
+static void ndsFtrLeanDecline(u32 row, u32 reason)
 {
 #if NDS_FTR_LEAN_LAB
     if (reason < nNDSFtrLeanDeclineCount)
     {
         gNdsFtrLean.decline[reason]++;
-        if (kind < NDS_FTR_LEAN_KINDS)
+        if (row < NDS_FTR_LEAN_KINDS)
         {
-            gNdsFtrLean.k_decline[kind][reason]++;
+            gNdsFtrLean.k_decline[row][reason]++;
         }
     }
 #else
-    (void)kind;
+    (void)row;
     (void)reason;
 #endif
 }
 
-static void ndsFtrLeanCountEvent(u32 kind, u32 event)
+static void ndsFtrLeanCountEvent(u32 row, u32 event)
 {
 #if NDS_FTR_LEAN_LAB
     if (event < nNDSFtrLeanEventCount)
     {
         gNdsFtrLean.event[event]++;
-        if (kind < NDS_FTR_LEAN_KINDS)
+        if (row < NDS_FTR_LEAN_KINDS)
         {
-            gNdsFtrLean.k_event[kind][event]++;
+            gNdsFtrLean.k_event[row][event]++;
         }
     }
 #else
-    (void)kind;
+    (void)row;
     (void)event;
 #endif
 }
@@ -421,6 +429,7 @@ static void ndsFtrLeanInvalidate(u32 slot, u32 lists)
     if (lists != FALSE)
     {
         ndsFtrLeanPacketDrop(slot);
+        inst->wide_high = 0u;
     }
     inst->valid = 0u;
     inst->rebind = 0u;
@@ -671,7 +680,7 @@ static u32 ndsFtrLeanPreambleHash(const u8 *event_index,
 static u32 sNdsFtrLeanKeySeen[GMCOMMON_PLAYERS_MAX][NDS_FTR_LEAN_KEY_CENSUS];
 static u32 sNdsFtrLeanKeySeenCount[GMCOMMON_PLAYERS_MAX];
 
-static void ndsFtrLeanKeyCensus(u32 slot, u32 kind, const u32 *key)
+static void ndsFtrLeanKeyCensus(u32 slot, u32 row, const u32 *key)
 {
     u32 h = 2166136261u;
     u32 i;
@@ -681,18 +690,18 @@ static void ndsFtrLeanKeyCensus(u32 slot, u32 kind, const u32 *key)
         h = (h ^ key[i]) * 16777619u;
     }
     gNdsFtrLean.key_events++;
-    if (kind < NDS_FTR_LEAN_KINDS)
+    if (row < NDS_FTR_LEAN_KINDS)
     {
-        gNdsFtrLean.k_key_events[kind]++;
+        gNdsFtrLean.k_key_events[row]++;
     }
     for (i = 0u; i < sNdsFtrLeanKeySeenCount[slot]; i++)
     {
         if (sNdsFtrLeanKeySeen[slot][i] == h)
         {
             gNdsFtrLean.key_seen_before++;
-            if (kind < NDS_FTR_LEAN_KINDS)
+            if (row < NDS_FTR_LEAN_KINDS)
             {
-                gNdsFtrLean.k_key_seen_before[kind]++;
+                gNdsFtrLean.k_key_seen_before[row]++;
             }
             return;
         }
@@ -781,13 +790,16 @@ static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst)
      * collection above is unchanged), which moves the kept joints' child and
      * sibling links but no drawn world; the oracle routes' link hash restarts
      * from here. Re-parenting a kept joint is the kernel's to refuse. */
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     inst->topo_hash = ndsFtrLeanTopologyHash(inst);
+#endif
     NDS_FTR_LEAN_CTR(gNdsFtrLean.retuples++);
     return TRUE;
 }
 
-/* The four stress kinds, any detail, native production mode, never the 1P
- * intro's transient actors (they never plan). */
+/* Every VS kind (slice 6; slices 3-5: the four stress kinds), any detail,
+ * native production mode, never the 1P intro's transient actors (they never
+ * plan). */
 static u32 ndsFtrLeanEligible(FTStruct *fp, u32 *owner_slot)
 {
     u32 kind;
@@ -865,14 +877,21 @@ static void ndsFtrLeanView(NDSFtrLeanPatchView *view,
     view->inputs = inputs;
 }
 
-/* Materialize `key`'s list into `entry` from the plan the event path just
+/* Materialize `key`'s list into `*entry` from the plan the event path just
  * resolved: the production inputs' remaining fields and the draw's initial
  * renderer state, seeded as the old path seeds its own
- * (ndsFighterMarioFoxDLAllDrawForSlot). Returns 0 or a decline reason. */
+ * (ndsFighterMarioFoxDLAllDrawForSlot). Returns 0 or a decline reason.
+ *
+ * Slice 6: a list that outgrows an entry (Capacity) is materialized again
+ * WIDE -- entry 0 over the slot's whole region, *entry set to 0 -- when
+ * `allow_wide` (route 1's event path; never the lab verify, whose held list
+ * the wide list would overwrite). A slot whose high-detail list went wide
+ * once goes wide directly (wide_high). The walk mutates the renderer state,
+ * so each walk starts from a fresh seed. */
 static u32 __attribute__((noinline, cold, optimize("Os")))
-ndsFtrLeanMaterializeFor(u32 slot, u32 entry, const u32 *key, u32 count,
+ndsFtrLeanMaterializeFor(u32 slot, u32 *entry, const u32 *key, u32 count,
                          u32 owner_slot, u32 use_low_detail,
-                         const NDSRelocLoadedFile *owner_file)
+                         const NDSRelocLoadedFile *owner_file, u32 allow_wide)
 {
     NDSRendererAdapterNativeOwnerWorkspace *ws =
         &sNdsRendererAdapterNativeOwnerWorkspace;
@@ -881,6 +900,7 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 entry, const u32 *key, u32 count,
      * its stack at the same depth. */
     NDSRendererStats stats;
     u32 reason;
+    u32 wide;
     u32 t1;
     u32 i;
 
@@ -901,30 +921,54 @@ ndsFtrLeanMaterializeFor(u32 slot, u32 entry, const u32 *key, u32 count,
             sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         input->gx_modelview_mirror_valid = 0u;
     }
-    ndsRendererInitStats(&stats);
-    if (sNdsFighterDisplayContractPlayback != FALSE)
+#if NDS_FTR_LEAN_ORACLE_ROUTES && !NDS_FTR_LEAN_ORACLE_WIDE
+    if (gNdsFtrLeanRoute != NDS_FTR_LEAN_ROUTE_DRAW)
     {
-        stats.geometry_mode =
-            sNdsFighterDisplayContract.geometry_mode;
-        stats.prim_color = sNdsFighterDisplayContract.prim_color;
-        stats.env_color = sNdsFighterDisplayContract.env_color;
-        if (sNdsFighterDisplayContract.light_valid != 0u)
-        {
-            stats.light_dir_x =
-                sNdsFighterDisplayContract.light.l.dir[0];
-            stats.light_dir_y =
-                sNdsFighterDisplayContract.light.l.dir[1];
-            stats.light_dir_z =
-                sNdsFighterDisplayContract.light.l.dir[2];
-            stats.light_dir_mask = 1u;
-        }
-        ndsFighterDisplayContractSeedMaterialLights(&stats);
+        allow_wide = FALSE;         /* wide lists are route 1's */
     }
+#endif
+    wide = ((allow_wide != FALSE) && (use_low_detail == FALSE) &&
+            (sNdsFtrLeanInstances[slot].wide_high != 0u)) ? TRUE : FALSE;
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
     t1 = cpuGetTiming();
-    reason = ndsFtrLeanMaterialize(
-        slot, entry, key, ws->production_roots, count, owner_slot,
-        use_low_detail, owner_file->data, &stats);
+    for (;;)
+    {
+        /* The draw's initial renderer state, seeded exactly as the old path
+         * seeds its own (ndsFighterMarioFoxDLAllDrawForSlot). */
+        ndsRendererInitStats(&stats);
+        if (sNdsFighterDisplayContractPlayback != FALSE)
+        {
+            stats.geometry_mode = sNdsFighterDisplayContract.geometry_mode;
+            stats.prim_color = sNdsFighterDisplayContract.prim_color;
+            stats.env_color = sNdsFighterDisplayContract.env_color;
+            if (sNdsFighterDisplayContract.light_valid != 0u)
+            {
+                stats.light_dir_x = sNdsFighterDisplayContract.light.l.dir[0];
+                stats.light_dir_y = sNdsFighterDisplayContract.light.l.dir[1];
+                stats.light_dir_z = sNdsFighterDisplayContract.light.l.dir[2];
+                stats.light_dir_mask = 1u;
+            }
+            ndsFighterDisplayContractSeedMaterialLights(&stats);
+        }
+        if (wide != FALSE)
+        {
+            *entry = 0u;
+        }
+        reason = ndsFtrLeanMaterialize(
+            slot, (wide != FALSE) ? NDS_FTR_LEAN_ENTRY_WIDE : *entry, key,
+            ws->production_roots, count, owner_slot, use_low_detail,
+            owner_file->data, &stats);
+        if ((wide != FALSE) || (allow_wide == FALSE) ||
+            (reason != nNDSFtrLeanDeclineCapacity))
+        {
+            break;
+        }
+        wide = TRUE;                /* Capacity: again, wide */
+    }
+    if ((wide != FALSE) && (reason == 0u) && (use_low_detail == FALSE))
+    {
+        sNdsFtrLeanInstances[slot].wide_high = 1u;
+    }
     NDS_FTR_LEAN_CTR(gNdsFtrLean.materialize_list_ticks +=
                          cpuGetTiming() - t1);
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
@@ -1021,6 +1065,7 @@ ndsFtrLeanEvent(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst, u32 kind,
     u32 ident;
     u32 rr_key;
     u32 i;
+    u32 row = slot & 3u;        /* counter row (NDS_FTR_LEAN_KINDS) */
     u32 t0 = cpuGetTiming();
 #if NDS_FTR_LEAN_ATTR_LIVE
     u32 ev_mark = t0;
@@ -1194,9 +1239,9 @@ rows:
                                     inst->material_counts, count);
     key[4] = program | (count << 8);
     key[5] = head_key;
-    ndsFtrLeanPacketNoteKind(slot, kind);
+    ndsFtrLeanPacketNoteKind(slot, row);
 #if NDS_FTR_LEAN_LAB
-    ndsFtrLeanKeyCensus(slot, kind, key);
+    ndsFtrLeanKeyCensus(slot, row, key);
 #endif
     NDS_FTR_LEAN_EVENT_PART(2u, ev_mark);
     ndsFtrLeanRefreshInputs(inst, color_modulate);
@@ -1232,9 +1277,12 @@ rows:
             u32 held = ndsFtrLeanEntryActiveIndex(slot);
 
             entry = ndsFtrLeanEntryVictim(slot);
+            /* A wide list owns both halves: nothing to compare it in. */
             if ((held != NDS_FTR_LEAN_ENTRY_NONE) && (entry != held) &&
-                (ndsFtrLeanMaterializeFor(slot, entry, key, count, owner_slot,
-                                          use_low_detail, owner_file) == 0u))
+                (ndsFtrLeanEntryWide(slot, held) == FALSE) &&
+                (ndsFtrLeanMaterializeFor(slot, &entry, key, count,
+                                          owner_slot, use_low_detail,
+                                          owner_file, FALSE) == 0u))
             {
                 ndsFtrLeanVerifyEntries(slot, held, entry);
             }
@@ -1255,8 +1303,9 @@ rows:
         }
         entry = ndsFtrLeanEntryVictim(slot);
         ndsFtrLeanNoteKeyMiss(slot, key);
-        reason = ndsFtrLeanMaterializeFor(slot, entry, key, count, owner_slot,
-                                          use_low_detail, owner_file);
+        reason = ndsFtrLeanMaterializeFor(slot, &entry, key, count,
+                                          owner_slot, use_low_detail,
+                                          owner_file, TRUE);
         if (reason != 0u)
         {
             return reason;
@@ -1278,10 +1327,7 @@ rows:
             u32 ticks = cpuGetTiming() - t0;
 
             gNdsFtrLean.materialize_ticks += ticks;
-            if (kind < NDS_FTR_LEAN_KINDS)
-            {
-                gNdsFtrLean.k_materialize_ticks[kind] += ticks;
-            }
+            gNdsFtrLean.k_materialize_ticks[row] += ticks;
         }
 #endif
         NDS_FTR_LEAN_EVENT_PART(5u, ev_mark);
@@ -1298,6 +1344,7 @@ rows:
     NDS_FTR_LEAN_EVENT_PART(6u, ev_mark);
     inst->kind = (u8)kind;
     inst->detail = (u8)use_low_detail;
+    inst->skeleton = (u8)fp->colanim.skeleton_id;
     inst->program = (u8)program;
     inst->status_gen = sNdsFighterStatusGeneration[slot];
     inst->heap_gen = gNdsTaskmanHeapGeneration;
@@ -1315,7 +1362,9 @@ rows:
     inst->pre_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
         (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
     inst->patch_serial = 0u;
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     inst->topo_hash = ndsFtrLeanTopologyHash(inst);
+#endif
     inst->rebind = 0u;
     inst->reprove = 0u;
     inst->valid = 1u;
@@ -1325,13 +1374,11 @@ rows:
         u32 ticks = cpuGetTiming() - t0;
 
         gNdsFtrLean.event_ticks += ticks;
-        if (kind < NDS_FTR_LEAN_KINDS)
-        {
-            gNdsFtrLean.k_event_ticks[kind] += ticks;
-        }
+        gNdsFtrLean.k_event_ticks[row] += ticks;
     }
 #endif
     (void)t0;
+    (void)row;
     return 0u;
 }
 
@@ -1347,7 +1394,12 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
 {
     const NDSRelocLoadedFile *file = inst->owner_file;
     u32 reason;
+    u32 row = slot & 3u;        /* counter row (attribution ROM only) */
 
+#if !NDS_FTR_LEAN_ORACLE_ROUTES
+    route = NDS_FTR_LEAN_ROUTE_DRAW;    /* the shipping image's only route */
+#endif
+    (void)row;
     if (inst->valid == 0u)
     {
         return nNDSFtrLeanEventFirst;
@@ -1356,7 +1408,13 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
     {
         return nNDSFtrLeanEventRebind;
     }
+    /* Slice 6: the electric skeleton (Mario/Fox, program 0xFE) is a
+     * colour-animation state with no status change and no writer to hook:
+     * it toggles the drawn display lists every few frames, so the tuple
+     * carries it and a toggle re-selects the list by key (both lists stay
+     * held, one per entry). */
     if ((inst->kind != kind) || (inst->detail != use_low_detail) ||
+        (inst->skeleton != (u8)fp->colanim.skeleton_id) ||
         (inst->heap_gen != gNdsTaskmanHeapGeneration) ||
         (inst->root != fp->joints[nFTPartsJointTopN]) ||
         (file == NULL) || (file->data != inst->file_data) ||
@@ -1381,12 +1439,14 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
     /* Topology: the kernel proves every kept joint's parent link per draw
      * (the source compose's own check). The oracle routes and the cost A/B's
      * slice 1 form also hash the kept joints' child/sibling links. */
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     if (((route != NDS_FTR_LEAN_ROUTE_DRAW) ||
          ((slow_mode & NDS_FTR_LEAN_SLOW_GUARD) != 0u)) &&
         (ndsFtrLeanTopologyHash(inst) != inst->topo_hash))
     {
         return nNDSFtrLeanEventKernel;
     }
+#endif
     NDS_FTR_LEAN_GUARD_PART(1u, *mark);
     /* The material identity, proven through its writers (see
      * NDS_FTR_LEAN_WATCH_MAX); a moved identity is an event: the entry for
@@ -1475,7 +1535,8 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
 }
 
 /* Returns TRUE when route 1 drew the fighter (the old path must not run). */
-static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+static NDS_FTR_LEAN_RUN_INLINE sb32
+ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
 {
     NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
     u32 owner_slot = 0u;
@@ -1501,29 +1562,41 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     u32 hardware_triangles;
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
+    u32 row = slot & 3u;        /* counter row (NDS_FTR_LEAN_KINDS) */
 #if NDS_FTR_LEAN_ATTR_LIVE
     u32 retried = FALSE;
 #endif
 
+#if !NDS_FTR_LEAN_ORACLE_ROUTES
+    route = NDS_FTR_LEAN_ROUTE_DRAW;    /* the shipping image's only route */
+#endif
     kind = ndsFtrLeanEligible(fp, &owner_slot);
     if (kind == NDS_FTR_LEAN_KIND_NONE)
     {
         return FALSE;   /* not a lean kind: not an attempt */
     }
     NDS_FTR_LEAN_CTR(gNdsFtrLean.attempts++);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_attempts[kind]++);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_attempts[row]++);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_owner[row] = owner_slot + 1u);
     t0 = cpuGetTiming();
     mark = t0;
-    if (fp->colanim.skeleton_id != 0)
+    /* Slice 6: Mario and Fox own a native electric body (program 0xFE, the
+     * generated skeleton owner); the lean path resolves it like any program
+     * (the tuple re-selects on a toggle). The port gives no other kind the
+     * skeleton colour family (ftParamCheckSetSkeletonColAnimID selects the
+     * source's no-skeleton flash for them), so a skeleton frame of any other
+     * kind is not reachable -- named, never drawn wrong, if it ever is. */
+    if ((fp->colanim.skeleton_id != 0) &&
+        (owner_slot != NDS_RENDERER_NATIVE_FIGHTER_OWNER_MARIO) &&
+        (owner_slot != NDS_RENDERER_NATIVE_FIGHTER_OWNER_FOX))
     {
-        /* R7: no native electric skeleton exists for these kinds. */
-        ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineSkeleton);
+        ndsFtrLeanDecline(row, nNDSFtrLeanDeclineSkeleton);
         return FALSE;
     }
 #if !NDS_R2_FIGHTER_SHUFFLE_FOLD
     if (fp->shuffle_tics != 0u)
     {
-        ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineKind);
+        ndsFtrLeanDecline(row, nNDSFtrLeanDeclineKind);
         return FALSE;
     }
 #endif
@@ -1550,14 +1623,20 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         }
         if (sNdsFtrLeanCamOk == FALSE)
         {
-            ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineCamera);
+            ndsFtrLeanDecline(row, nNDSFtrLeanDeclineCamera);
             return FALSE;
         }
     }
     NDS_FTR_LEAN_GUARD_PART(2u, mark);
+    /* Slice 6: Captain HIGH is a lean draw. Its G_AC_THRESHOLD cutout (root 6)
+     * compares against G_SETBLENDCOLOR alpha 0, DS reference 0 -- a test that
+     * decides no pixel, since the DS never draws an alpha-0 fragment with the
+     * test on or off -- so the list carries no alpha register state, and the
+     * materializer declines any threshold run whose reference is not 0
+     * (nNDSFtrLeanDeclineAlphaTest). */
     use_low_detail = (fp->detail_curr == nFTPartsDetailLow) ? TRUE : FALSE;
     color_modulate = ndsRendererAdapterFighterColorModulate(fp);
-    ndsFtrLeanPacketNoteKind(slot, kind);
+    ndsFtrLeanPacketNoteKind(slot, row);
     event = ndsFtrLeanProve(slot, fp, inst, kind, use_low_detail, route,
                             slow_mode, &mark);
     for (pass = 0u;; pass++)
@@ -1566,7 +1645,7 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         {
             u32 t_event = cpuGetTiming();
 
-            ndsFtrLeanCountEvent(kind, event);
+            ndsFtrLeanCountEvent(row, event);
             if ((event == nNDSFtrLeanEventTintSet) ||
                 (event == nNDSFtrLeanEventFence))
             {
@@ -1595,7 +1674,7 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
             if (reason != 0u)
             {
                 ndsFtrLeanInvalidate(slot, FALSE);
-                ndsFtrLeanDecline(kind, reason);
+                ndsFtrLeanDecline(row, reason);
                 return FALSE;
             }
             event = ndsFtrLeanPacketGuard(slot,
@@ -1603,7 +1682,7 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
             if (event != 0u)
             {
                 ndsFtrLeanInvalidate(slot, TRUE);
-                ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineStale);
+                ndsFtrLeanDecline(row, nNDSFtrLeanDeclineStale);
                 return FALSE;
             }
             NDS_FTR_LEAN_GUARD_PART(5u, mark);
@@ -1624,21 +1703,21 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
             u32 q0 = cpuGetTiming();
 
             while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
-            gNdsFtrLeanAttr.quiet_wait_ticks[kind] += cpuGetTiming() - q0;
-            gNdsFtrLeanAttr.quiet_draws[kind]++;
+            gNdsFtrLeanAttr.quiet_wait_ticks[row] += cpuGetTiming() - q0;
+            gNdsFtrLeanAttr.quiet_draws[row]++;
         }
 #endif
         t1 = cpuGetTiming();
         NDS_FTR_LEAN_CTR(gNdsFtrLean.guard_ticks += t1 - t0);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_guard_ticks[kind] += t1 - t0);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_guard_ticks[row] += t1 - t0);
 #if NDS_FTR_LEAN_LAB
-        class_counts = gNdsFtrLean.k_kernel_class[kind];
+        class_counts = gNdsFtrLean.k_kernel_class[row];
 #if NDS_FTR_LEAN_KTIME
         if ((slow_mode & NDS_FTR_LEAN_SLOW_KTIME) != 0u)
         {
 #if NDS_FTR_LEAN_ATTR_LIVE
-            part_ticks = gNdsFtrLeanAttr.kernel_part_ticks[kind];
-            gNdsFtrLeanAttr.kernel_part_joints[kind] += inst->joint_count;
+            part_ticks = gNdsFtrLeanAttr.kernel_part_ticks[row];
+            gNdsFtrLeanAttr.kernel_part_joints[row] += inst->joint_count;
 #else
             part_ticks = gNdsFtrLean.kernel_part_ticks;
 #endif
@@ -1680,10 +1759,12 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
                      class_counts, part_ticks) == FALSE))
             {
                 ndsFtrLeanInvalidate(slot, FALSE);
-                ndsFtrLeanDecline(kind, nNDSFtrLeanDeclineKernel);
+                ndsFtrLeanDecline(row, nNDSFtrLeanDeclineKernel);
                 return FALSE;
             }
+#if NDS_FTR_LEAN_ORACLE_ROUTES
             inst->topo_hash = ndsFtrLeanTopologyHash(inst);
+#endif
             NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_rebuilds++);
 #if NDS_FTR_LEAN_ATTR_LIVE
             retried = TRUE;
@@ -1691,9 +1772,9 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         }
         t0 = cpuGetTiming();
         NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_ticks += t0 - t1);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_ticks[kind] += t0 - t1);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_ticks[row] += t0 - t1);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_joints += inst->joint_count);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_joints[kind] +=
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_joints[row] +=
                              inst->joint_count);
 #if NDS_FTR_LEAN_ATTR_LIVE
         if (((slow_mode & NDS_FTR_LEAN_SLOW_KERNEL_RERUN) != 0u) &&
@@ -1729,11 +1810,11 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
                 inst->root_count, shuffle_x, shuffle_y, kernel_flags,
                 ndsFtrLeanSlowLocal, NULL, NULL);
             a3 = cpuGetTiming();
-            gNdsFtrLeanAttr.kernel_cold_ticks[kind] += t0 - t1;
-            gNdsFtrLeanAttr.kernel_warm_ticks[kind] += a1 - a0;
-            gNdsFtrLeanAttr.kernel_dcold_ticks[kind] += a3 - a2;
-            gNdsFtrLeanAttr.kernel_attr_draws[kind]++;
-            gNdsFtrLeanAttr.kernel_attr_joints[kind] += n;
+            gNdsFtrLeanAttr.kernel_cold_ticks[row] += t0 - t1;
+            gNdsFtrLeanAttr.kernel_warm_ticks[row] += a1 - a0;
+            gNdsFtrLeanAttr.kernel_dcold_ticks[row] += a3 - a2;
+            gNdsFtrLeanAttr.kernel_attr_draws[row]++;
+            gNdsFtrLeanAttr.kernel_attr_joints[row] += n;
             t0 = cpuGetTiming();
         }
 #endif
@@ -1769,8 +1850,8 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         ndsRendererNativeKirbyTrioSetHeadKey(inst->head_key);
 #endif
 #if NDS_FTR_LEAN_ATTR_LIVE
-            gNdsFtrLeanAttr.patch_part_ticks[kind][5] += r1 - r0;
-            gNdsFtrLeanAttr.patch_part_ticks[kind][6] += cpuGetTiming() - r1;
+            gNdsFtrLeanAttr.patch_part_ticks[row][5] += r1 - r0;
+            gNdsFtrLeanAttr.patch_part_ticks[row][6] += cpuGetTiming() - r1;
         }
 #endif
         /* pre_same: this draw's preambles are the same memo fill the last
@@ -1790,7 +1871,7 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         if (reason != 0u)
         {
             ndsFtrLeanInvalidate(slot, FALSE);
-            ndsFtrLeanDecline(kind,
+            ndsFtrLeanDecline(row,
                 (reason == NDS_FTR_LEAN_PATCH_REMATERIALIZE) ?
                     nNDSFtrLeanDeclineStale : reason);
             return FALSE;
@@ -1801,14 +1882,16 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
     t1 = cpuGetTiming();
     NDS_FTR_LEAN_CTR(gNdsFtrLean.patch_ticks += t1 - t0);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_patch_ticks[kind] += t1 - t0);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_patch_ticks[row] += t1 - t0);
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     if (route != NDS_FTR_LEAN_ROUTE_DRAW)
     {
         ndsFtrLeanShadowArm(slot, 1u);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.shadow_runs++);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[kind]++);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[row]++);
         return FALSE;
     }
+#endif
 
     /* Route 1: submit, then the bookkeeping DrawForSlot does after a
      * successful native draw (RAF tail), so every verifier count agrees. */
@@ -1836,11 +1919,32 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
     t0 = cpuGetTiming();
     NDS_FTR_LEAN_CTR(gNdsFtrLean.book_ticks += t0 - t1);
-    NDS_FTR_LEAN_ATTR(gNdsFtrLeanAttr.book_ticks[kind] += t0 - t1);
+    NDS_FTR_LEAN_ATTR(gNdsFtrLeanAttr.book_ticks[row] += t0 - t1);
     hardware_triangles = ndsFtrLeanPacketSubmit(slot);
     t1 = cpuGetTiming();
     NDS_FTR_LEAN_CTR(gNdsFtrLean.submit_ticks += t1 - t0);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_submit_ticks[kind] += t1 - t0);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_submit_ticks[row] += t1 - t0);
+#if NDS_R2_FOX_GUN_OVERLAY
+    /* Slice 6: Fox's blaster (and Kirby's Fox copy) is the sidecar the old
+     * path submits after either body path (DrawForSlot's tail): the same
+     * builder -- which gates on the kind, the gameplay owner and the live
+     * joint-17 model part, and refreshes that joint's mtx_translate exactly
+     * as the old path's call does -- under the fighter's profile owner. The
+     * gun waits for this list's DMA itself. */
+    if (ndsFighterHoldsFoxGunSource(fp) != FALSE)
+    {
+        NDSRendererMatrix20p12 sidecar_world;
+
+        if (ndsRendererAdapterBuildFoxGunJointMtx(
+                fp,
+                (gGCCurrentCamera != NULL) ?
+                    CObjGetStruct(gGCCurrentCamera) : NULL,
+                &sidecar_world) != FALSE)
+        {
+            (void)ndsRendererSubmitFoxGun(&sidecar_world);
+        }
+    }
+#endif
     ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_NONE);
     if (slot == 0u)
     {
@@ -1862,16 +1966,16 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     }
     gNdsFighterMarioFoxDLAllDrawCount++;
 #if NDS_FTR_LEAN_ATTR_LIVE
-    gNdsFtrLeanAttr.book_ticks[kind] += cpuGetTiming() - t1;
+    gNdsFtrLeanAttr.book_ticks[row] += cpuGetTiming() - t1;
 #endif
     NDS_FTR_LEAN_CTR(gNdsFtrLean.book_ticks += cpuGetTiming() - t1);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.draws++);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[kind]++);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_program_draws[kind][
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[row]++);
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_program_draws[row][
         (inst->program < 15u) ? inst->program : 15u]++);
     if (use_low_detail == FALSE)
     {
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_high_draws[kind]++);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_high_draws[row]++);
     }
     (void)t0;
     (void)t1;
@@ -1886,11 +1990,13 @@ static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
 static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before)
 {
     (void)fp;
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     if (ndsFtrLeanShadowArmed(slot) != 0u)
     {
         ndsFtrLeanShadowArm(slot, 0u);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.oracle_unconsumed++);
     }
+#endif
     if (gNdsFighterPacketHits == hits_before)
     {
         sNdsFtrLeanInstances[slot].reprove = 1u;

@@ -440,6 +440,14 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
         (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND3, 0);
     /* BattleShip's scvsbattle.c selects Low detail for every 3+ fighter match;
      * the ordinary fighter creation path carries that policy into all four. */
+#if defined(NDS_LAB_FOURCPU_TWO) && NDS_LAB_FOURCPU_TWO
+    /* P2-2p8 Phase 1 slice 6, LAB ONLY (Makefile NDS_LAB_FOURCPU_TWO=1): slots
+     * 2/3 left empty, so the source's own descriptor rule gives a two-fighter
+     * match its HIGH detail -- the fighter lists a four-fighter match draws
+     * only at pause and DeadUp, measured on every frame. */
+    cfg->fighters[2].pkind = nFTPlayerKindNot;
+    cfg->fighters[3].pkind = nFTPlayerKindNot;
+#endif
 #endif
 #endif
 #if NDS_P2_SHELL_ARGMAX_ROSTER

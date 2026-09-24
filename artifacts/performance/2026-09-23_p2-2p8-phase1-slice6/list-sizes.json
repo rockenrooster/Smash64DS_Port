@@ -1,0 +1,342 @@
+{
+ "mario_low": {
+  "error": "'mario'"
+ },
+ "mario_high": {
+  "error": "'mario'"
+ },
+ "fox_low": {
+  "error": "'fox'"
+ },
+ "fox_high": {
+  "error": "'fox'"
+ },
+ "luigi_low": {
+  "canonical": [
+   1710,
+   2012
+  ]
+ },
+ "luigi_high": {
+  "canonical": [
+   2571,
+   2874
+  ]
+ },
+ "donkey_low": {
+  "canonical": [
+   2357,
+   2705
+  ]
+ },
+ "donkey_high": {
+  "canonical": [
+   3535,
+   3883
+  ]
+ },
+ "captain_low": {
+  "canonical": [
+   1883,
+   2254
+  ]
+ },
+ "captain_high": {
+  "canonical": [
+   2678,
+   3048
+  ]
+ },
+ "samus_low": {
+  "canonical": [
+   1791,
+   2093
+  ],
+  "Catch": [
+   2313,
+   2775
+  ],
+  "FSmash": [
+   1871,
+   2219
+  ],
+  "MorphUnfold": [
+   645,
+   652
+  ],
+  "MorphBall": [
+   596,
+   603
+  ]
+ },
+ "samus_high": {
+  "canonical": [
+   2763,
+   3066
+  ],
+  "Catch": [
+   3286,
+   3747
+  ],
+  "FSmash": [
+   2843,
+   3191
+  ],
+  "MorphUnfold": [
+   645,
+   652
+  ],
+  "MorphBall": [
+   596,
+   603
+  ]
+ },
+ "link_low": {
+  "canonical": [
+   2632,
+   3048
+  ],
+  "Entry": [
+   2486,
+   2903
+  ],
+  "SpecialN": [
+   2556,
+   2995
+  ],
+  "Catch": [
+   2759,
+   3243
+  ],
+  "Claps": [
+   2486,
+   2903
+  ]
+ },
+ "link_high": {
+  "canonical": [
+   3746,
+   4162
+  ],
+  "Entry": [
+   3601,
+   4017
+  ],
+  "SpecialN": [
+   3670,
+   4109
+  ],
+  "Catch": [
+   3873,
+   4358
+  ],
+  "Claps": [
+   3601,
+   4017
+  ]
+ },
+ "pikachu_low": {
+  "canonical": [
+   2296,
+   2644
+  ]
+ },
+ "pikachu_high": {
+  "canonical": [
+   3241,
+   3589
+  ]
+ },
+ "yoshi_low": {
+  "canonical": [
+   2029,
+   2423
+  ],
+  "Catch": [
+   2069,
+   2486
+  ],
+  "Throw": [
+   2411,
+   2827
+  ]
+ },
+ "yoshi_high": {
+  "canonical": [
+   3015,
+   3408
+  ],
+  "Catch": [
+   3055,
+   3471
+  ],
+  "Throw": [
+   3288,
+   3705
+  ]
+ },
+ "ness_low": {
+  "canonical": [
+   1655,
+   1957
+  ],
+  "Win3": [
+   1811,
+   2136
+  ]
+ },
+ "ness_high": {
+  "canonical": [
+   2354,
+   2657
+  ],
+  "Win3": [
+   2510,
+   2836
+  ]
+ },
+ "purin_low": {
+  "canonical": [
+   1604,
+   1747
+  ]
+ },
+ "purin_high": {
+  "canonical": [
+   2212,
+   2355
+  ]
+ },
+ "kirby_low": {
+  "canonical": [
+   1398,
+   1541
+  ],
+  "TrioHead1": [
+   1703,
+   1892
+  ],
+  "TrioHead14": [
+   1848,
+   2060
+  ],
+  "TrioHead3": [
+   1945,
+   2134
+  ],
+  "TrioHead4": [
+   2141,
+   2329
+  ],
+  "TrioHead5": [
+   1971,
+   2160
+  ],
+  "TrioHead6": [
+   2115,
+   2304
+  ],
+  "TrioHead7": [
+   1966,
+   2154
+  ],
+  "TrioHead8": [
+   2292,
+   2481
+  ],
+  "TrioHead9": [
+   2089,
+   2278
+  ],
+  "TrioHead11": [
+   1937,
+   2126
+  ],
+  "TrioHead12": [
+   1937,
+   2126
+  ],
+  "TrioHead13": [
+   1949,
+   2138
+  ],
+  "Stone": [
+   1226,
+   1233
+  ],
+  "CopyLink": [
+   1671,
+   1837
+  ],
+  "CopyTransition": [
+   1602,
+   1745
+  ]
+ },
+ "kirby_high": {
+  "canonical": [
+   1792,
+   1936
+  ],
+  "TrioHead1": [
+   2158,
+   2346
+  ],
+  "TrioHead14": [
+   2532,
+   2744
+  ],
+  "TrioHead3": [
+   2551,
+   2739
+  ],
+  "TrioHead4": [
+   2848,
+   3037
+  ],
+  "TrioHead5": [
+   2606,
+   2795
+  ],
+  "TrioHead6": [
+   2698,
+   2887
+  ],
+  "TrioHead7": [
+   2460,
+   2649
+  ],
+  "TrioHead8": [
+   2662,
+   2851
+  ],
+  "TrioHead9": [
+   2609,
+   2798
+  ],
+  "TrioHead11": [
+   2358,
+   2546
+  ],
+  "TrioHead12": [
+   2358,
+   2546
+  ],
+  "TrioHead13": [
+   2372,
+   2561
+  ],
+  "Stone": [
+   1226,
+   1233
+  ],
+  "CopyLink": [
+   1991,
+   2157
+  ],
+  "CopyTransition": [
+   1921,
+   2064
+  ]
+ }
+}

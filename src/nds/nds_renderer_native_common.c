@@ -10125,14 +10125,18 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
     gNdsFighterPacketFaults++;
 }
 
-/* P2-2p8 Phase 1 slice 1 (defined after ndsRendererFighterPacketRelease). */
-static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet);
 /* Slice 4: route 1 lends a battle slot's lower half to a lean list. */
 static u32 ndsFtrLeanLowerOwned(u32 battle_slot);
+#if NDS_FTR_LEAN_ORACLE_ROUTES
+/* P2-2p8 Phase 1 slice 1 (defined after ndsRendererFighterPacketRelease):
+ * the oracle routes' hooks on every record and replay hit. Slice 6: lab only
+ * (NDS_FTR_LEAN_ORACLE_ROUTES) -- the shipping image arms no shadow draw. */
+static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet);
 static void ndsFtrLeanOracleCompare(u32 battle_slot,
                                     const NDSFighterPacket *packet);
 static void ndsFtrLeanOnReplayHit(u32 battle_slot,
                                   const NDSFighterPacket *packet);
+#endif
 
 static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
     u32 run_count,
@@ -10229,7 +10233,9 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
         gNdsFighterPacketWordsMax = packet->word_count;
     }
     packet->valid = 1u;
+#if NDS_FTR_LEAN_ORACLE_ROUTES
     ndsFtrLeanOnRecorded(packet);
+#endif
 }
 
 /* The hit predicate, shared by the replay and the adapter's pre-check so the
@@ -10285,8 +10291,13 @@ s32 ndsRendererFighterPacketPrecheck(
 #if NDS_P2_CAPTAIN
     /* Keep packet eligibility identical to replay. Captain HIGH changes alpha
      * test state outside the recorded FIFO stream, so it can never be a
-     * prechecked replay hit. */
-    if ((slot == 4u) && (use_low_detail == 0u))
+     * prechecked replay hit. (Slice 6, lab: the lean oracle routes record and
+     * replay it -- the reference for its lean list; see TryReplay.) */
+    if ((slot == 4u) && (use_low_detail == 0u)
+#if NDS_FTR_LEAN_ORACLE_ROUTES
+        && (gNdsFtrLeanRoute < NDS_FTR_LEAN_ROUTE_ORACLE_EXACT)
+#endif
+        )
     {
         return FALSE;
     }
@@ -10352,9 +10363,19 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
      * explicitly, and its Captain comment names HIGH as the first detail to
      * contain either opcode. LOW therefore has no out-of-FIFO alpha register
      * state to preserve, and may use the same packet replay contract as the
-     * other low-detail fighters. Keep only HIGH on the direct path. */
+     * other low-detail fighters. Keep only HIGH on the direct path.
+     *
+     * Slice 6 (lab): the lean oracle routes (2/3) record and replay it too,
+     * as the reference the route compares Captain HIGH's lean list against:
+     * its cutout's reference is 0, which decides no DS pixel (see the lean
+     * materializer's threshold rule), so the FIFO-only packet draws what the
+     * direct path draws. */
     if ((owner_slot == 4u) &&
-        (use_low_detail == 0u))
+        (use_low_detail == 0u)
+#if NDS_FTR_LEAN_ORACLE_ROUTES
+        && (gNdsFtrLeanRoute < NDS_FTR_LEAN_ROUTE_ORACLE_EXACT)
+#endif
+        )
     {
         gNdsFighterPacketDeclines++;
         return 0;
@@ -10478,7 +10499,9 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
                     preamble->light_dir_z);
             }
         }
+#if NDS_FTR_LEAN_ORACLE_ROUTES
         ndsFtrLeanOnReplayHit(battle_slot, packet);
+#endif
         DC_FlushRange(words, packet->word_count * sizeof(u32));
 
         ndsRendererHardwareEndBatch();
@@ -10737,6 +10760,11 @@ void ndsRendererFighterPacketRelease(void)
     ((((u32)sizeof(NDSFighterPacket)) + 31u) / 32u * 8u)
 #define NDS_FTR_LEAN_WORD_CAPACITY \
     (NDS_FTR_LEAN_HALF_WORDS - NDS_FTR_LEAN_STRUCT_WORDS)
+/* Slice 6: a wide list -- entry 0 over the whole region (route 1). Marked in
+ * its entry state's `valid` word (bit 1), so the state costs no field. */
+#define NDS_FTR_LEAN_WIDE_CAPACITY \
+    (NDS_FTR_LEAN_REGION_WORDS - NDS_FTR_LEAN_STRUCT_WORDS)
+#define NDS_FTR_LEAN_VALID_WIDE 2u
 #define NDS_FTR_LEAN_ENTRIES 2u
 _Static_assert((((sizeof(NDSFighterPacket) + 31u) / 32u) * 8u) <
                    (NDS_FIGHTER_PACKET_ARENA_WORDS /
@@ -10868,8 +10896,25 @@ ndsFtrLeanFlushDirty(NDSFtrLeanEntryState *state, const u32 *words)
     return bytes;
 }
 
+#if NDS_FTR_LEAN_ORACLE_WIDE
+/* Slice 6 (lab, the two-fighter arm): the oracle routes' wide lists of battle
+ * slots 0 and 1 (NDS_FTR_LEAN_ORACLE_WIDE). Their own regions hold the
+ * recorder's reference packet in the lower half, and an absent player's
+ * region is not idle -- ndsRendererFighterPacketIdleRegion lends it to a
+ * battle-lifetime pool (a first cut that wrote there overwrote Donkey's DObjs
+ * at match entry). 70,720 B of BSS that only this lab image carries. */
+static u32 sNdsFtrLeanOracleWide[2][NDS_FTR_LEAN_REGION_WORDS]
+    __attribute__((aligned(32)));
+#endif
+
 static u32 *ndsFtrLeanEntryBase(u32 slot, u32 entry)
 {
+#if NDS_FTR_LEAN_ORACLE_WIDE
+    if ((entry == 0u) && (slot < 2u) && !NDS_FTR_LEAN_ROUTE_IS_DRAW())
+    {
+        return sNdsFtrLeanOracleWide[slot];
+    }
+#endif
     return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
         (slot * NDS_FTR_LEAN_REGION_WORDS) + (entry * NDS_FTR_LEAN_HALF_WORDS);
 }
@@ -10918,8 +10963,8 @@ static NDS_FTR_LEAN_DRAW_CODE NDSFighterPacket *ndsFtrLeanActive(u32 slot,
 static inline u32 ndsFtrLeanEntryUsable(u32 entry)
 {
     return ((entry < NDS_FTR_LEAN_ENTRIES) &&
-            ((entry == 1u) ||
-             (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW))) ? TRUE : FALSE;
+            ((entry == 1u) || NDS_FTR_LEAN_ROUTE_IS_DRAW() ||
+             NDS_FTR_LEAN_ORACLE_WIDE)) ? TRUE : FALSE;
 }
 
 /* Declared ahead of TryReplay (whose miss path asks it). */
@@ -11012,7 +11057,8 @@ static NDSFtrLeanTexgenMap *ndsFtrLeanTexgenMapOf(const NDSFighterPacket *lean)
 {
     u32 offset = ((u32)lean->word_count + 7u) & ~7u;
 
-    if ((offset + NDS_FTR_LEAN_TEXGEN_MAP_WORDS) > NDS_FTR_LEAN_WORD_CAPACITY)
+    /* Slice 6: the list's own capacity (an entry's, or a wide list's). */
+    if ((offset + NDS_FTR_LEAN_TEXGEN_MAP_WORDS) > (u32)lean->word_capacity)
     {
         return NULL;
     }
@@ -11458,8 +11504,11 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
             /* Lean lists carry a tinted site's colour in its tile bind, which
              * ndsFtrLeanPatchTintTiles re-points: the site re-derives as the
              * no-material raw light it is (prim-independent), like any other
-             * site, instead of failing ApplyTint closed. */
-            site->reserved[0] = 0u;
+             * site. Slice 6: reserved[0] names it tinted, as the recorder's
+             * site does, so ApplyTint fails closed where the old path's
+             * replay does (any root's prim moved) and the lean patch mirrors
+             * the re-record that follows (see ndsFtrLeanPacketPatch). */
+            site->reserved[0] = (tinted != 0u) ? 1u : 0u;
             site->reserved[1] = 0u;
             site->reserved[2] = 0u;
             site->light_color_1 = stats->light_color_1;
@@ -11711,6 +11760,20 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         (state->matrix_generation == 0u))
     {
         return nNDSFtrLeanDeclinePolicy;
+    }
+    /* Slice 6: a G_AC_THRESHOLD run is exact in a list only at DS reference 0
+     * (blend alpha below 16; the old path's glAlphaFunc(alpha >> 4)). The DS
+     * never draws an alpha-0 fragment, so that test decides no pixel (melonDS:
+     * `alpha <= RenderAlphaRef`, 0 with the test off), and the frame-global
+     * alpha register -- which no FIFO list carries -- is left as the old
+     * path's draw leaves it after its next batch: disabled (the lean submit
+     * disables it too). Captain HIGH's cutout compares against
+     * G_SETBLENDCOLOR (0,0,0,0). */
+    if (((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) ==
+         NDS_RENDERER_ALPHA_COMPARE_THRESHOLD) &&
+        ((stats->blend_color & 0xf0u) != 0u))
+    {
+        return nNDSFtrLeanDeclineAlphaTest;
     }
     state->texture_prepare_source_zbuffered = TRUE;
     state->texture_prepare_decal_depth = FALSE;
@@ -12008,12 +12071,26 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     u32 root_index;
     u32 reason = 0u;
     u32 i;
+    /* Slice 6: NDS_FTR_LEAN_ENTRY_WIDE asks for entry 0 over the whole
+     * region (route 1 only); the other entry is given up while it holds. */
+    u32 wide = ((entry & NDS_FTR_LEAN_ENTRY_WIDE) != 0u) ? TRUE : FALSE;
+    u32 capacity = (wide != FALSE) ? NDS_FTR_LEAN_WIDE_CAPACITY :
+        NDS_FTR_LEAN_WORD_CAPACITY;
+    /* Slice 6: the fence the old path's key would carry for this record --
+     * built before its execute, so before any bind below uploads. */
+    u32 record_fence = sNdsRendererHardwareTextureKeyGeneration ^
+        (sNdsRendererRuntimeTextureCacheEvictCount << 16);
 
+    entry &= ~NDS_FTR_LEAN_ENTRY_WIDE;
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
         (ndsFtrLeanEntryUsable(entry) == FALSE) || (inputs == NULL) ||
         (stats == NULL) || (asset_base == NULL) || (input_count == 0u) ||
         (input_count > NDS_FIGHTER_PACKET_ROOT_MAX) ||
-        (input_count > 32u))
+        (input_count > 32u) ||
+        ((wide != FALSE) &&
+         ((entry != 0u) ||
+          (!NDS_FTR_LEAN_ROUTE_IS_DRAW() &&
+           ((NDS_FTR_LEAN_ORACLE_WIDE == 0) || (battle_slot >= 2u))))))
     {
         return nNDSFtrLeanDeclineInputs;
     }
@@ -12023,6 +12100,18 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     if (slot_state->active == entry)
     {
         slot_state->active = NDS_FTR_LEAN_ENTRY_NONE;
+    }
+    /* A wide list's words run through the other entry's half: whichever of
+     * the two is written now, the other stops holding a list. */
+    if ((wide != FALSE) ||
+        ((slot_state->entry[entry ^ 1u].valid & NDS_FTR_LEAN_VALID_WIDE) !=
+         0u))
+    {
+        slot_state->entry[entry ^ 1u].valid = 0u;
+        if (slot_state->active == (entry ^ 1u))
+        {
+            slot_state->active = NDS_FTR_LEAN_ENTRY_NONE;
+        }
     }
     /* The texture binds below write GX registers: nothing may still be
      * streaming the previous fighter's list into the FIFO, and no batch of
@@ -12040,10 +12129,12 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     root_count = sNdsNativeFighterActiveOwner->root_count;
     palette_slots = sNdsNativeFighterActiveOwner->cross_palette_slots;
     owner_tables = sNdsNativeFighterActiveTables;
-    if (entry == 0u)
+    if ((entry == 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW())
     {
         /* Route 1 takes the lower half from the recorder: its packet dies
-         * with it, and it never arms here again while the half is lean. */
+         * with it, and it never arms here again while the half is lean. (An
+         * oracle route's entry 0 is a wide list elsewhere -- see
+         * NDS_FTR_LEAN_ORACLE_WIDE.) */
         sNdsFighterPackets[battle_slot].valid = 0u;
         if (slot_state->lower_owned == 0u)
         {
@@ -12054,7 +12145,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     packet = ndsFtrLeanEntryPacket(battle_slot, entry);
     memset(packet, 0, offsetof(NDSFighterPacket, roots));
     packet->words = ndsFtrLeanEntryWords(battle_slot, entry);
-    packet->word_capacity = NDS_FTR_LEAN_WORD_CAPACITY;
+    packet->word_capacity = capacity;
     packet->root_count = root_count;
     packet->projection_index = NDS_FIGHTER_PACKET_INDEX_NONE;
     packet->light_index = NDS_FIGHTER_PACKET_INDEX_NONE;
@@ -12080,7 +12171,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
 #endif
     m.packet = packet;
     m.pk.words = packet->words;
-    m.pk.capacity = NDS_FTR_LEAN_WORD_CAPACITY;
+    m.pk.capacity = capacity;
     m.pk.cmd_slot = 4u;
     m.texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
     ndsRendererInitTraversalState(state, NULL, stats, NULL, NULL, 0u);
@@ -12301,17 +12392,15 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     es->variant_count = 0u;
     es->variant_cur = 0u;
     es->variant_next = 1u;
-    es->variant_max = (NDS_FTR_LEAN_WORD_CAPACITY - packet->word_count) /
-        NDS_FTR_LEAN_VARIANT_WORDS;
-    if (es->variant_max > NDS_FTR_LEAN_VARIANT_MAX)
-    {
-        es->variant_max = NDS_FTR_LEAN_VARIANT_MAX;
-    }
     es->fence_needed = ((packet->needs_fence != 0u) &&
                         ((packet->fence_other != 0u) ||
                          (packet->tint_bind_overflow != 0u))) ? 1u : 0u;
     es->fence = sNdsRendererHardwareTextureKeyGeneration ^
         (sNdsRendererRuntimeTextureCacheEvictCount << 16);
+    /* Slice 6: the lean list's own key words are unused (the entry state
+     * holds its key); key[5] is the fence of its last (virtual) record, as the
+     * old path's packet keys it -- see ndsFtrLeanPacketPatch. */
+    packet->key[5] = record_fence;
     es->all_pinned = 1u;
     for (i = 0u; i < (u32)packet->texture_count; i++)
     {
@@ -12352,7 +12441,30 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
 #else
     es->texgen_map = NDS_FTR_LEAN_TEXGEN_MAP_NONE;
 #endif
-    es->valid = 1u;
+    /* Variant records fill the entry's tail top down (ndsFtrLeanVariant-
+     * Record). Slice 6: above the texgen site map when the list has one --
+     * the map sits right after the words, and Link's lists (28 sites) put
+     * records 6-7 over it: the dense slots and site_slot[] would be
+     * overwritten by the seventh learned record. A wide list keeps none. */
+    {
+        u32 floor = packet->word_count;
+
+#if NDS_P2_LINK
+        if (es->texgen_map != NDS_FTR_LEAN_TEXGEN_MAP_NONE)
+        {
+            floor = ((floor + 7u) & ~7u) + NDS_FTR_LEAN_TEXGEN_MAP_WORDS;
+        }
+#endif
+        es->variant_max = ((wide != FALSE) ||
+                           (floor >= NDS_FTR_LEAN_WORD_CAPACITY)) ? 0u :
+            ((NDS_FTR_LEAN_WORD_CAPACITY - floor) /
+             NDS_FTR_LEAN_VARIANT_WORDS);
+        if (es->variant_max > NDS_FTR_LEAN_VARIANT_MAX)
+        {
+            es->variant_max = NDS_FTR_LEAN_VARIANT_MAX;
+        }
+    }
+    es->valid = (wide != FALSE) ? (1u | NDS_FTR_LEAN_VALID_WIDE) : 1u;
 #if NDS_FTR_LEAN_LAB
     gNdsFtrLean.materializations++;
     gNdsFtrLean.materialize_words = packet->word_count;
@@ -12524,7 +12636,7 @@ u32 ndsFtrLeanEntryVictim(u32 battle_slot)
     {
         return NDS_FTR_LEAN_ENTRY_NONE;
     }
-    if (gNdsFtrLeanRoute != NDS_FTR_LEAN_ROUTE_DRAW)
+    if (!NDS_FTR_LEAN_ROUTE_IS_DRAW())
     {
         return 1u;
     }
@@ -12566,6 +12678,14 @@ void ndsFtrLeanEntryDropActive(u32 battle_slot)
     }
     s->active = NDS_FTR_LEAN_ENTRY_NONE;
     s->armed = 0u;
+}
+
+u32 ndsFtrLeanEntryWide(u32 battle_slot, u32 entry)
+{
+    return ((battle_slot < NDS_FIGHTER_PACKET_SLOTS) &&
+            (entry < NDS_FTR_LEAN_ENTRIES) &&
+            ((sNdsFtrLeanSlots[battle_slot].entry[entry].valid &
+              NDS_FTR_LEAN_VALID_WIDE) != 0u)) ? TRUE : FALSE;
 }
 
 /* Put an entry's words, texture table, fences and key in record `to`'s
@@ -13149,6 +13269,9 @@ ndsFtrLeanEntryResetShade(u32 battle_slot, const NDSFtrLeanPatchView *view)
     }
     packet->tint_modulate = view->modulate;
     packet->tint_prim_hash = prim_hash;
+    /* Slice 6: this stands for an old-path record, which keys the texture
+     * fence of now (ndsFtrLeanPacketPatch's fence mirror). */
+    packet->key[5] = ndsFtrLeanFenceNow();
 }
 
 u32 NDS_FTR_LEAN_DRAW_CODE
@@ -13228,8 +13351,7 @@ ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
     {
         return nNDSFtrLeanEventFence;
     }
-    if ((state->all_pinned != 0u) &&
-        (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) &&
+    if ((state->all_pinned != 0u) && NDS_FTR_LEAN_ROUTE_IS_DRAW() &&
         ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_GUARD) == 0u))
     {
         return 0u;
@@ -13261,7 +13383,7 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
                                     const NDSFtrLeanPatchView *view,
                                     u32 force)
 {
-    u32 touch = (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u;
+    u32 touch = NDS_FTR_LEAN_ROUTE_IS_DRAW() ? 1u : 0u;
     u32 i;
 
     for (i = 0u; i < (u32)packet->tint_bind_count; i++)
@@ -13407,9 +13529,24 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
     NDS_FTR_LEAN_PART(patch_part_ticks, 0u, mark);
     tint_modulate = packet->tint_modulate;
     tint_prim_hash = packet->tint_prim_hash;
+    if ((packet->needs_fence != 0u) && (state->fence_needed == 0u) &&
+        (packet->key[5] != ndsFtrLeanFenceNow()))
+    {
+        /* Slice 6: a list whose only unvalidated binds are tint tiles stays
+         * current when the global texture fence moves (the tiles are proved
+         * per tile) -- but the old path's packet keeps that fence in its key
+         * (needs_fence, key[5]) and re-records on the move, deriving every
+         * shade word at the execute's modulate (0) while naming the live one.
+         * Purin under a steady white flash kept its words at the live
+         * modulate across such a record (route 2 oracle: 98 shade words).
+         * The list takes that record's derivation here; key[5] of a lean
+         * list holds the fence of its last (virtual) record. */
+        ndsFtrLeanEntryResetShade(battle_slot, view);
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.fence_rerecords_mirrored++);
+    }
     /* With the prims unchanged since the last patch, ApplyTint's own early
      * out reduces to the modulate compare; skip its prim hash walk. */
-    if ((pre_same == FALSE) || (tint_modulate != view->modulate))
+    else if ((pre_same == FALSE) || (tint_modulate != view->modulate))
     {
         u32 prims[NDS_FIGHTER_PACKET_ROOT_MAX];
 
@@ -13417,10 +13554,17 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
         {
             prims[i] = NDS_FTR_LEAN_VIEW_PRE(view, i)->prim_color;
         }
-        if (ndsFighterPacketApplyTintPrims(packet, prims, view->modulate) ==
-            FALSE)
+        if (ndsFighterPacketApplyTintPrims(packet, prims,
+                                           view->modulate) == FALSE)
         {
-            return nNDSFtrLeanDeclineTint;
+            /* Slice 6: ApplyTint failed closed on a tinted site (reserved[0])
+             * because a root's prim moved -- where the old path's replay
+             * re-records this draw, deriving every shade word at the
+             * execute's modulate (0) while naming the live one. The list's
+             * words take that record's derivation; the tile words were
+             * re-pointed above. */
+            ndsFtrLeanEntryResetShade(battle_slot, view);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.tint_rerecords_mirrored++);
         }
     }
     if ((packet->tint_modulate != tint_modulate) ||
@@ -13580,9 +13724,12 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
         return 0u;
     }
     words = packet->words;
-    if ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u)
+    if (((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u) ||
+        ((state->valid & NDS_FTR_LEAN_VALID_WIDE) != 0u))
     {
-        /* Slice 1's form: clean the whole list. */
+        /* Slice 1's form: clean the whole list. Slice 6: also a wide list's
+         * (its patch sites run past the entry-sized dirty marks; a wide list
+         * is a high-detail state -- pause, DeadUp). */
         memset(state->dirty, 0, sizeof(state->dirty));
         flushed = packet->word_count * sizeof(u32);
         DC_FlushRange(words, flushed);
@@ -14086,6 +14233,54 @@ static u32 ndsFtrLeanOracleSemantic(u32 slot, const NDSFighterPacket *rec,
                 ndsFtrLeanOracleNote(slot, klass, root, lop, lfirst + k, lw,
                                      rw, dl.ordinal, dr.ordinal, under_hit,
                                      kind);
+                if ((klass == nNDSFtrLeanOracleShade) && (under_hit == 0u) &&
+                    (gNdsFtrLean.oracle_shade_first[0] == 0u))
+                {
+                    /* Slice 6 lab: the first shade mismatch's site inputs on
+                     * both sides (the word is a pure function of them and
+                     * the modulate). */
+                    u32 s;
+
+                    gNdsFtrLean.oracle_shade_first[0] =
+                        sNdsRendererHardwareFrameSerial + 1u;
+                    gNdsFtrLean.oracle_shade_first[1] = (slot << 24) | root;
+                    for (s = 0u; s < lean->site_count; s++)
+                    {
+                        const NDSFighterPacketShadeSite *x = &lean->sites[s];
+
+                        if (x->index == (lfirst + k))
+                        {
+                            gNdsFtrLean.oracle_shade_first[2] = x->light_color_1;
+                            gNdsFtrLean.oracle_shade_first[3] = x->light_color_2;
+                            gNdsFtrLean.oracle_shade_first[4] = x->material_color;
+                            gNdsFtrLean.oracle_shade_first[5] =
+                                (u32)x->use_material |
+                                ((u32)x->prim_from_root << 8) |
+                                ((u32)x->reserved[1] << 16) | ((u32)x->root << 24);
+                        }
+                    }
+                    for (s = 0u; s < rec->site_count; s++)
+                    {
+                        const NDSFighterPacketShadeSite *x = &rec->sites[s];
+
+                        if (x->index == (rfirst + k))
+                        {
+                            gNdsFtrLean.oracle_shade_first[6] = x->light_color_1;
+                            gNdsFtrLean.oracle_shade_first[7] = x->light_color_2;
+                            gNdsFtrLean.oracle_shade_first[8] = x->material_color;
+                            gNdsFtrLean.oracle_shade_first[9] =
+                                (u32)x->use_material |
+                                ((u32)x->prim_from_root << 8) |
+                                ((u32)x->reserved[0] << 16) | ((u32)x->root << 24);
+                        }
+                    }
+                    gNdsFtrLean.oracle_shade_first[10] = lean->tint_modulate;
+                    gNdsFtrLean.oracle_shade_first[11] = rec->tint_modulate;
+                    gNdsFtrLean.oracle_shade_first[12] = lean->tint_prim_hash;
+                    gNdsFtrLean.oracle_shade_first[13] = rec->tint_prim_hash;
+                    gNdsFtrLean.oracle_shade_first[14] = lw;
+                    gNdsFtrLean.oracle_shade_first[15] = rw;
+                }
                 bad++;
                 if (klass == nNDSFtrLeanOracleOther)
                 {
@@ -14110,6 +14305,7 @@ static u32 ndsFtrLeanOracleSemantic(u32 slot, const NDSFighterPacket *rec,
 }
 #endif
 
+#if NDS_FTR_LEAN_ORACLE_ROUTES
 static void ndsFtrLeanOracleCompare(u32 battle_slot,
                                     const NDSFighterPacket *packet)
 {
@@ -14160,6 +14356,7 @@ static void ndsFtrLeanOnReplayHit(u32 battle_slot,
     }
     ndsFtrLeanOracleCompare(battle_slot, packet);
 }
+#endif
 
 #if NDS_FTR_LEAN_LAB
 /* Census of the texture cache; also the admission's print-first number. */
@@ -14267,6 +14464,7 @@ void ndsFtrLeanNoteGo(u32 frame)
 #endif
 }
 
+#if NDS_FTR_LEAN_ORACLE_ROUTES
 /* Every recorded fighter packet: the texture union census, and the oracle's
  * record-under-hit compare (routes 2/3: the old path re-recorded on a draw
  * the lean list was patched for -- the fresh record against the list). */
@@ -14314,6 +14512,7 @@ static void ndsFtrLeanOnRecorded(NDSFighterPacket *packet)
 #endif
     }
 }
+#endif
 
 /* Texture reject witness: the first fighter-owned reject since boot, with
  * the cache census at that instant (the P0 entry failure's root cause). */

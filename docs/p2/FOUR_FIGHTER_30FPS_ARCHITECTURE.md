@@ -736,6 +736,23 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   +154K P99 on the stress match) -- the old path the phase deletes, but also what
   non-lean kinds draw with until coverage lands. Next: coverage (all kinds, both
   details) so lean can be the default, then deletion.
+- **Phase 1 slice 6 (2026-09-24,
+  `artifacts/performance/2026-09-23_p2-2p8-phase1-slice6/`)**: VS coverage. All
+  twelve kinds draw lean in VS battles at both details (electric skeletons, Fox's
+  blaster, Yoshi's programs, Pikachu/Purin accessories, Captain's HIGH alpha --
+  exact, not an approximation: the test's reference is 0 and the DS never draws an
+  alpha-0 texel; DK/Link HIGH lists span the slot's whole region). The one
+  remaining decline is Ness's yo-yo smashes (no generated model-part program;
+  93-97% lean for Ness). Per roster (route 1 vs 0, digest identical, oracle 0,
+  native failures equal): default DK/Samus/Link/Kirby FTR P50 343K -> 185K, WORK-H
+  P95 2.46M -> 2.01M; Mario/Fox/Luigi/Yoshi FTR P50 343K -> 182K, WORK-H P95 2.54M
+  -> 2.19M; Captain/Pikachu/Purin/Ness 316K -> 170K, 3.04M -> 2.71M; two-fighter
+  HIGH rosters FTR P50 81-109K. Old-path fix found by the oracle: the draw plan
+  now keys on the electric skeleton (shared code, 1P included). Captures route 0
+  vs 1 differ by 0-206 edge pixels a frame (the accepted LOAD4x3/P' rounding);
+  Mario's skeleton frames are wrong on route 0 (texture cache ignores the program)
+  and right on route 1. Shipping static -32 B. Next: lean as the default, then
+  deletion.
 
 ## 7. Found along the way
 
