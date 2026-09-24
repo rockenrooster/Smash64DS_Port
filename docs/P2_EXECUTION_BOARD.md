@@ -61,11 +61,10 @@ materialized on the device, 0 declines, oracle 0 mismatches; at admit word 2
 is on by default (`NDS_IF_GAMESTATUS_COMPACT`, GAME SET and loop proven): +68 KB four-CPU
 low-water, the first 1P battle loads. MF host encoder + C decoder landed
 (not linked).
-**Next** (one subagent each): 1P intro packs (first attempt reverted: packed
-intro fighters fail native validation; stage 2's intro is ~200 KB short;
-`artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`);
-then coverage (all kinds, both details) with lean as the default; then the
-phase's deletion step. ARM7 audio spec queued.
+**Next** (one subagent each): coverage (all kinds, both details) with lean as
+the default; then the phase's deletion step. ARM7 audio spec queued. Owner
+09-23: optimization only, no 1P campaign work (intro findings parked in
+`artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`).
 **Constraint**: the all-content VS character select keeps >= 183,072 B at its
 animation reservation or every 3D preview switches off (fixed `050b7c18db4`;
 5,296 B margin with compaction on): measure with
