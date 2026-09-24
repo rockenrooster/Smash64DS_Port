@@ -44,7 +44,9 @@ def test_compiled_corners_patch_coverage_and_stack():
         assert record[12] | (record[13] << 32) == sum(1 << b for b in {packet.vertices[i].matrix_binding for i in indices})
         assert sum(p[1] == gx.COLOR for p in scope) == sum(attributes[i][0] is None for i in indices)
         assert sum(p[1] == gx.UV for p in scope) == sum(attributes[i][1] is None for i in indices)
-        assert all(first <= p[0] and p[0] + (1 if p[1] in (gx.COLOR, gx.UV) else 16) <= first + count for p in scope)
+        assert scope[0] == (first + 1, gx.MATERIAL, index, 0)
+        assert words[first] == 0x002B2A29
+        assert all(first <= p[0] and p[0] + (3 if p[1] == gx.MATERIAL else 1 if p[1] in (gx.COLOR, gx.UV) else 16) <= first + count for p in scope)
         actual, depth = [], 0
         for op, args in gx.commands(words[first:first + count]):
             if op == 0x11:
@@ -217,6 +219,96 @@ int main(void) {
             assert color_mode != -1
             assert baked == (packed if color_mode else 0x7FFF)
         assert gx.texture_used(policy) == bool(texture)
+
+
+def test_material_words_and_submission_boundaries():
+    sys.path.insert(0, str(gx.stage._paths.REPO_ROOT / 'scripts/menus'))
+    from source_test_helpers import function
+    source = (gx.stage._paths.REPO_ROOT / 'src/nds/nds_stage_gx.exec.inc').read_text()
+    code = r'''
+#include <stdint.h>
+#include <assert.h>
+#include <stddef.h>
+#include <nds/nds_stage_gx.h>
+typedef uint32_t u32; typedef int sb32;
+#define FALSE 0
+#define TRUE 1
+#define NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK 0xc00f0000u
+#define NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z 3u
+#define NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT 4u
+#define POLY_CULL_NONE 0xc0u
+#define POLY_CULL_BACK 0x80u
+#define NDS_RENDERER_GX_STATE_ALL 7u
+#define GL_TEXTURE_2D 1
+#define GL_ALPHA_TEST 2
+#define GL_FOG 4
+#define DMA_FIFO 0x80000000u
+typedef struct { void **data; u32 cur_size; } DynamicArray;
+typedef struct { u32 texFormat; int palIndex; } gl_texture_data;
+typedef struct { uint16_t addr; } gl_palette_data;
+static struct { DynamicArray texturePtrs, palettePtrs; } glGlobalData;
+typedef struct { u32 poly_fmt, textured, texture_name, texture_params, alpha_test, alpha_ref; } NDSNativeStagePreparedRun;
+static u32 storage[100], *sNdsStageGxWords = storage;
+static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
+static u32 sNdsFighterPacketDmaPending, gNdsP2StageProgDmas;
+static u32 sNdsRendererHardwareBoundTextureName, sNdsRendererHardwareMatrixLoaded, sNdsRendererHardwareTriangleBatchOpen;
+static void *sNdsRendererHardwareActiveTextureEntry, *sNdsR2GxLastProjection;
+static u32 regs[3], GFX_FIFO, spans[8][2], waits, alphas;
+#define DMA_SRC(i) regs[0]
+#define DMA_DEST(i) regs[1]
+#define DMA_CR(i) regs[2]
+#define NDS_FIGHTER_PACKET_DMA_WAIT() do { if (sNdsFighterPacketDmaPending) waits++; sNdsFighterPacketDmaPending=0; } while (0)
+static void DC_FlushRange(const u32 *p, u32 bytes) {
+    spans[gNdsP2StageProgDmas][0] = (u32)(p-storage);
+    spans[gNdsP2StageProgDmas][1] = bytes/4;
+}
+static void ndsRendererHardwareInvalidateGXState(u32 mask) { assert(mask==7); }
+static void ndsRendererNativeStageTask36EndSegment(void) { assert(!sNdsFighterPacketDmaPending); }
+static void ndsRendererHardwareEndBatch(void) { assert(!sNdsFighterPacketDmaPending); }
+static void glEnable(u32 mode) { assert(!sNdsFighterPacketDmaPending); }
+static void glDisable(u32 mode) { assert(!sNdsFighterPacketDmaPending); }
+static void glAlphaFunc(u32 ref) { assert(!sNdsFighterPacketDmaPending); alphas++; }
+''' + '\n'.join(function(source, name) for name in ('ndsStageGxMaterial', 'ndsStageGxFlush', 'ndsStageGxAppend')) + r'''
+int main(void) {
+    gl_texture_data texture = {0x12345678u,1}; gl_palette_data palette = {0x321};
+    void *textures[] = {0,&texture,0}, *palettes[] = {0,&palette,0};
+    glGlobalData.texturePtrs = (DynamicArray){textures,3};
+    glGlobalData.palettePtrs = (DynamicArray){palettes,3};
+    NDSNativeStagePreparedRun p = {0xc0,1,1,0xc00a0000u,1,3}; u32 w[3];
+    assert(ndsStageGxMaterial(w,&p,3,0) && w[0]==0x80 && w[1]==0xd23a5678 && w[2]==0x321);
+    assert(ndsStageGxMaterial(w,&p,3,4) && w[0]==0xc0); /* Actors stay two-sided. */
+    assert(ndsStageGxMaterial(w,&p,0,0) && w[0]==0xc0); /* Source Z keeps its cull state. */
+    texture.palIndex=2; assert(!ndsStageGxMaterial(w,&p,3,0));
+    texture.palIndex=-1; assert(!ndsStageGxMaterial(w,&p,3,0));
+    texture.palIndex=0; assert(ndsStageGxMaterial(w,&p,3,0) && w[2]==0);
+    p.texture_name=3; assert(!ndsStageGxMaterial(w,&p,3,0));
+    p.texture_name=2; assert(!ndsStageGxMaterial(w,&p,3,0));
+    p.textured=0; assert(ndsStageGxMaterial(w,&p,3,0) && w[1]==0 && w[2]==0);
+    NDSStageGxRun a = {.first_word=0,.word_count=10};
+    NDSStageGxRun b = {.first_word=10,.word_count=20};
+    ndsStageGxAppend(&a,&p); ndsStageGxAppend(&b,&p);
+    assert(gNdsP2StageProgDmas==0 && sNdsStageGxWordCount==30);
+    a.first_word=40; /* A hidden run leaves a gap: do not submit its words. */
+    ndsStageGxAppend(&a,&p);
+    assert(gNdsP2StageProgDmas==1 && spans[0][0]==0 && spans[0][1]==30 && waits==1);
+    a.first_word=50; p.alpha_ref=7; ndsStageGxAppend(&a,&p);
+    assert(gNdsP2StageProgDmas==2 && spans[1][0]==40 && spans[1][1]==10 && waits==2);
+    ndsStageGxFlush(); /* Segment/cold-clip boundary must drain the queued span. */
+    assert(gNdsP2StageProgDmas==3 && spans[2][0]==50 && spans[2][1]==10);
+    assert(sNdsFighterPacketDmaPending && !sNdsStageGxWordCount && alphas==3);
+    ndsStageGxFlush(); assert(gNdsP2StageProgDmas==3);
+}
+'''
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / 'stage_submit.c'
+        binary = path.with_suffix('.exe')
+        path.write_text(code)
+        built = subprocess.run([shutil.which('gcc'), '-std=c11', '-O2',
+                                '-I', str(gx.stage._paths.REPO_ROOT / 'include'), str(path), '-o', str(binary)],
+                               capture_output=True, text=True)
+        assert built.returncode == 0, built.stderr
+        run = subprocess.run([str(binary)], capture_output=True, text=True)
+        assert run.returncode == 0, run.stderr
 
 
 def test_cross_binding_preserves_source_depth_mode():

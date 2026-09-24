@@ -312,3 +312,58 @@ identity for this final pair is recorded separately in `corrected-pair-inputs.js
 12A5 ROM/ELF are preserved in `builds/p2p8-stage-corrected-reference/`. The one
 post-build source change only corrected the cross-emitter comment.
 All runtime/build jobs are terminal. Root ROM still hashes to r54; no publication.
+
+Material/submission replacement starts from pushed checkpoint `497825f14c5`.
+GXP v4 inserts native polygon/texture/palette operands, resolved directly from
+admitted libnds texture objects. The material binder no longer executes on each
+compiled run. Adjacent visible programs with equal alpha state share one DMA;
+hidden runs, alpha changes and cold clipping split the span. The existing DMA0
+fence owns submission. Five host checks pass, including real-C material lookup
+and queue boundary checks. The libnds archive's actual palette getter was
+inspected: FORMAT_EXT returns gl_palette_data.addr, not a readable GX register.
+Named invalidator: changed material execution and submission scheduling. Reuse
+the preserved 12A5 controls; qualify the frozen candidate's output and timing.
+The receipt's earlier in-place patch hit a Windows mapped-file restriction;
+writing through an open handle succeeded. No evidence or owner file was lost.
+Material/submission candidate built native-only (246 inputs):
+`02DA58513F8C7B72ACDC60CF3E838F52A9A63C334B93D39E4834225A07515D7D`.
+Payload 33,028 B, 7,195 words, 309 patches, all 202 triangles. Full four-CPU
+`material-batch-on` now running, 1,972 samples, slot 9/GDB 3423. Source frozen;
+replay/timing/output and matching capture remain owed.
+`material-batch-on` completed: all 1,972 replay pairs and every GPOL/GVTX pair
+match the preceding compiled control. 106,542 program runs use 53,271 DMAs
+(27/frame rather than 54). Native failures remain 39, declines/near routes 0.
+WORK-H P50/P95/P99 1,388,096 / 2,020,896 / 2,645,330; STG 316,992 / 324,928 /
+327,123; FTR 185,344 / 269,760 / 782,912; MISC 200,064 / 402,016 / 519,170.
+Cadence 223/1,366/329/55, max 10, 1,973 presents. Heap 88,148 B, lab arena
+1,249,024 B. Source-depth image differences at tics 3300/3298 are 2/8 pixels;
+the first view is unchanged from the preceding compiled image.
+Review found one old binder side effect still needed by retained cache consumers:
+copy the prepared sampler word to texture_entry.params. The direct GX word was
+already correct; preserve that metadata write too. This is the explicit
+invalidator for the final rebuild/run. Preserve 02DA as the pre-repair candidate
+in builds/p2p8-stage-material-batch-before-entry-state. No ROM is published.
+Final material batch built native-only: 49263A2E789B4059081F60F46DE1EA1BEC5E2CAA9E4BF54F49D96A8CDF515018. Full material-final-on running; source and payload identity: material-final-inputs.json.
+
+Final material/submission checkpoint (`material-final-summary.json`):
+ROM `49263A2E789B4059081F60F46DE1EA1BEC5E2CAA9E4BF54F49D96A8CDF515018`.
+WORK-H P50/P95/P99 1,391,936 / 2,026,259 / 2,656,071 ticks; STG 316,864 /
+325,184 / 327,315; FTR 184,800 / 269,645 / 779,412; MISC 199,264 / 400,826 /
+519,379. Quantiles use linear interpolation over all 1,972 samples. Mean-ALL
+FPS 19.197; 215/1,973 two-VBlank presents (10.897%); 2/3/4/5+ histogram
+215/1,380/321/57, max 10, slips 0. Replay and GPOL/GVTX match the preceding
+compiled control on every sample. All 106,542 runs submit with 53,271 DMAs;
+0 program declines/near routes, 0 packet faults/declines/direct rejects, same
+39 native failures. Heap low-water 88,148 B, lab arena 1,249,024 B.
+
+Compared with the preceding compiled path: WORK-H median -9,952, P95 -9,027;
+STG median -8,256, P95 -7,872. Compared with the corrected native reference,
+WORK-H P95 is +2,659 ticks and FPS differs only 0.02. **No overall win banked.**
+The final static image adds 1,920 B (text 1,888, BSS 32) to 12A5; the arena
+steps down 4,096 B, plus the GX payload grows 1,296 B. Shipping CSS and heavy
+roster must be remeasured after retirement; these lab margins do not prove fit.
+The old per-run material binder and per-run DMA wait no longer execute on the
+compiled route. Their legacy code, replay storage and the temporary route still
+exist: remove those next, with hard-on qualification, then finish preparation,
+other VS-stage and MISC coverage. This remains IMPLEMENTED_NOT_ACCEPTED.
+Final captures inspected: 2/8 changed pixels at tics 3300/3298, same as the preliminary material batch; see visibility material-final-pixels.json. ROM/ELF/config/template preserved in builds/p2p8-stage-material-final. All jobs terminal. Next: remove Task36 replay storage/hooks and qualify compiled Dream Land hard-on; then remaining preparation, all VS stages and MISC. Shipping root remains r54.

@@ -776,6 +776,17 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   camera-modelview and transient Intro support, then variant kinds and the
   remaining scene checks, before deleting production everywhere.
 
+- **Phase 2 stage compiler (2026-09-24), IMPLEMENTED_NOT_ACCEPTED.** All 202
+  Dream Land triangles and their material commands compile to native GX lists;
+  adjacent visible runs share 27 DMAs/frame instead of 54. Source-depth dispatch
+  in the old reference is repaired. Five host checks pass; all 1,972 replay pairs
+  and geometry counts match the preceding compiled control. Final `49263A2E`
+  WORK-H P50/P95/P99 1,391,936 / 2,026,259 / 2,656,071; STG 316,864 / 325,184 /
+  327,315. Mean-ALL 19.20 FPS; two-VBlank 215/1,973 (10.90%). No overall win
+  banked. Lab heap 88,148 B, arena 1,249,024 B; shipping heavy-roster/CSS checks
+  remain due. Next: physical replay retirement, remaining preparation, other VS
+  stages and MISC. Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/`.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

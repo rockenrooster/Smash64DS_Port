@@ -11,11 +11,14 @@ volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
 volatile u32 gNdsP2StageProgLoads, gNdsP2StageProgBytes;
 volatile u32 gNdsP2StageProgDeclines, gNdsP2StageProgReason;
 volatile u32 gNdsP2StageProgNearRuns;
+volatile u32 gNdsP2StageProgDmas;
 static u32 sNdsStageGxGeneration, sNdsStageGxAttempted;
 static u64 sNdsStageGxStaticWorld;
 static NDSStageGxRun *sNdsStageGxRuns;
 static NDSStageGxPatch *sNdsStageGxPatches;
 static u32 *sNdsStageGxWords;
+/* Only the unsent span; ownership of DMA0 uses the existing renderer fence. */
+static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
 
 static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
@@ -65,10 +68,11 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
             { wanted = TRUE; break; }
         }
         if (wanted == FALSE) { if (r->word_count != 0u) { return FALSE; } continue; }
-        if (r->word_count == 0u || r->segment != segment ||
+        if (r->word_count < 4u || r->segment != segment ||
             r->triangles != sNdsNativeStageRuns[i].triangle_count ||
             (u32)r->first_word + r->word_count > h->word_count ||
             (u32)r->first_patch + r->patch_count > h->patch_count) { return FALSE; }
+        if (words[r->first_word] != 0x002B2A29u) { return FALSE; }
         /* The bounds admit the GPU path only when the entire run is inside.
          * Refuse a producer whose bounds omit any source corner. */
         for (p = 0u; p < (u32)r->triangles * 3u; p++)
@@ -102,6 +106,12 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                 case 0x20: n = 1u; kind = NDS_STAGE_GX_COLOR; break;
                 case 0x22: n = 1u; kind = NDS_STAGE_GX_UV; break;
                 case 0x23: n = 2u; vertices++; if (depth != 1u) { return FALSE; } break;
+                case 0x29: n = 1u; kind = NDS_STAGE_GX_MATERIAL;
+                    if (cursor != (u32)r->first_word + 1u) { return FALSE; } break;
+                case 0x2A: n = 1u;
+                    if (cursor != (u32)r->first_word + 2u) { return FALSE; } break;
+                case 0x2B: n = 1u;
+                    if (cursor != (u32)r->first_word + 3u) { return FALSE; } break;
                 default: return FALSE;
                 }
                 if (cursor + n > end || (op == 0x12 && words[cursor] != 1u) ||
@@ -149,7 +159,8 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                          (q->index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT ||
                           (q->aux & 7u) > 6u || (q->aux >> 3) >= r->triangles)) ||
                         ((q->kind == NDS_STAGE_GX_COLOR || q->kind == NDS_STAGE_GX_UV) &&
-                         q->index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT))
+                         q->index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
+                        (q->kind == NDS_STAGE_GX_MATERIAL && (q->index != i || q->aux != 0u)))
                     { return FALSE; }
                 }
                 cursor += n;
@@ -178,7 +189,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (!ndsRelocAssetStreamOpen(&stream, "nitro:/stages/dreamland.gxp") ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 3u || h.gkind != NDS_NATIVE_STAGE_GKIND_PUPUPU ||
+    if (h.magic != 0x31505847u || h.version != 4u || h.gkind != NDS_NATIVE_STAGE_GKIND_PUPUPU ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
         h.patch_count > 4096u || h.segment_mask != 0xffu ||
         (((u64)h.static_world_lo | ((u64)h.static_world_hi << 32)) &
@@ -231,6 +242,82 @@ static sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatr
         w += (s64)cw * (cw >= 0 ? run->minimum[axis] : run->maximum[axis]);
     }
     return w > 0 && (s64)ndsRendererClampS64ToS32(z) + ndsRendererClampS64ToS32(w) >= 0;
+}
+
+static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
+                             u32 submit_class, u32 owner)
+{
+    u32 poly = run->poly_fmt, texture = 0u, palette = 0u;
+    if (run->textured != 0u)
+    {
+        const DynamicArray *textures = &glGlobalData.texturePtrs;
+        const DynamicArray *palettes = &glGlobalData.palettePtrs;
+        const gl_texture_data *tex;
+        if (run->texture_name == 0u || run->texture_name >= textures->cur_size ||
+            (tex = textures->data[run->texture_name]) == NULL) { return FALSE; }
+        /* The same immutable address/format and mutable sampler split as
+         * glTexParameter. The current whole-table proof owns the texture. */
+        texture = (tex->texFormat & ~NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK) |
+                  (run->texture_params & NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK);
+        if (tex->palIndex != 0)
+        {
+            const gl_palette_data *pal;
+            if ((u32)tex->palIndex >= palettes->cur_size ||
+                (pal = palettes->data[tex->palIndex]) == NULL) { return FALSE; }
+            /* libnds GL_COLOR_TABLE_FORMAT_EXT returns this encoded word. */
+            palette = pal->addr;
+        }
+    }
+    if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z &&
+        owner < NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT &&
+        (poly & POLY_CULL_NONE) == POLY_CULL_NONE)
+    { poly = (poly & ~POLY_CULL_NONE) | POLY_CULL_BACK; }
+    dst[0] = poly; dst[1] = texture; dst[2] = palette;
+    return TRUE;
+}
+
+static void ndsStageGxFlush(void)
+{
+    if (sNdsStageGxWordCount == 0u) { return; }
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    DC_FlushRange(&sNdsStageGxWords[sNdsStageGxFirstWord], sNdsStageGxWordCount * 4u);
+    DMA_SRC(0) = (u32)(uintptr_t)&sNdsStageGxWords[sNdsStageGxFirstWord];
+    DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
+    DMA_CR(0) = DMA_FIFO | sNdsStageGxWordCount;
+    sNdsFighterPacketDmaPending = 1u;
+    sNdsStageGxWordCount = 0u;
+    gNdsP2StageProgDmas++;
+    ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
+    sNdsRendererHardwareBoundTextureName = 0u;
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    sNdsR2GxLastProjection = NULL;
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+    sNdsRendererHardwareTriangleBatchOpen = FALSE;
+}
+
+static void ndsStageGxAppend(const NDSStageGxRun *run,
+                           const NDSNativeStagePreparedRun *prepared)
+{
+    u32 alpha = prepared->alpha_test != 0u ? 0x100u | prepared->alpha_ref : 0u;
+    if (sNdsStageGxWordCount != 0u &&
+        (run->first_word != sNdsStageGxFirstWord + sNdsStageGxWordCount ||
+         alpha != sNdsStageGxAlpha))
+    { ndsStageGxFlush(); }
+    if (sNdsStageGxWordCount == 0u)
+    {
+        /* Alpha-test registers are outside the FIFO. Drain the previous span
+         * before changing them; never merge across a hidden run or state edge. */
+        NDS_FIGHTER_PACKET_DMA_WAIT();
+        ndsRendererNativeStageTask36EndSegment();
+        ndsRendererHardwareEndBatch();
+        glEnable(GL_TEXTURE_2D);
+        if (alpha != 0u) { glEnable(GL_ALPHA_TEST); glAlphaFunc(prepared->alpha_ref); }
+        else { glDisable(GL_ALPHA_TEST); }
+        glDisable(GL_FOG);
+        sNdsStageGxFirstWord = run->first_word;
+        sNdsStageGxAlpha = alpha;
+    }
+    sNdsStageGxWordCount += run->word_count;
 }
 
 /* Keep the patcher out of the nearly full ITCM executor during coexistence. */
@@ -323,9 +410,10 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
             const NDSNativeStagePreparedDense *v = &sNdsNativeStagePreparedDense[q->index];
             *dst = (u32)(u16)v->s | ((u32)(u16)v->t << 16);
         }
+        else if (q->kind == NDS_STAGE_GX_MATERIAL &&
+                 !ndsStageGxMaterial(dst, prepared, native->submit_class, owner))
+        { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 6u; return FALSE; }
     }
-    if (!ndsRendererNativeStageBeginRun(native, prepared, native->submit_class, owner, stats, 2u))
-    { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 6u; return FALSE; }
     if (native->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
     { ndsRendererHardwareEnterProjectedForeground(); }
     for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
@@ -352,16 +440,20 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
             }
         }
     }
-    DC_FlushRange(&sNdsStageGxWords[r->first_word], (u32)r->word_count * 4u);
-    DMA_SRC(0) = (u32)&sNdsStageGxWords[r->first_word];
-    DMA_DEST(0) = (u32)&GFX_FIFO;
-    DMA_CR(0) = DMA_FIFO | r->word_count;
-    /* Bring-up keeps the existing synchronous boundary. Whole-segment async
-     * submission follows once the remaining run classes are compiled. */
-    while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
-    sNdsRendererHardwareMatrixLoaded = FALSE;
-    sNdsRendererHardwareTriangleBatchOpen = FALSE;
-    sNdsNativeStageOwnerExecution.task36_local_pushed = FALSE;
+    if (prepared->textured != 0u)
+    {
+        prepared->texture_entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+        prepared->texture_entry->params = prepared->texture_params;
+        if (prepared->texture_entry->pinned != 0u)
+        { ndsRendererHardwareRecordBattleStaticTextureHit(prepared->texture_entry); }
+        stats->hardware_texture_ready_count++;
+        stats->hardware_texture_bind_count++;
+        stats->hardware_texture_format = prepared->texture_format;
+        stats->hardware_texture_width = prepared->texture_width;
+        stats->hardware_texture_height = prepared->texture_height;
+        ndsRendererProfileRecordTextureBind();
+    }
+    ndsStageGxAppend(r, prepared);
     gNdsP2StageProgDraws++; gNdsP2StageProgWords += r->word_count;
     return TRUE;
 }

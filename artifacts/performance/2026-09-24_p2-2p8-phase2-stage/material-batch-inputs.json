@@ -1,0 +1,38 @@
+[
+  {
+    "path": "src/nds/nds_stage_gx.exec.inc",
+    "sha256": "BF43779153C325AE88CD0E7801436B1A92ADF226AB7850FA46686631C11DF82A"
+  },
+  {
+    "path": "src/nds/nds_renderer_native_owners.c",
+    "sha256": "3C631A169C9D1F007517D8FA25E7ABECD10C698702BF83D3603689578EF6469E"
+  },
+  {
+    "path": "include/nds/nds_stage_gx.h",
+    "sha256": "5B7DCE80E6A2B60EAE6DB3B72578F7CD4F9F630A0797EF7FEA040C3E8BB6CDA1"
+  },
+  {
+    "path": "scripts/stages/compile_nds_stage_gx.py",
+    "sha256": "F26C936B4A302D404648752E2F5E1EEE1748D4AB28EBAE788E2DD5CDB2E217E4"
+  },
+  {
+    "path": "scripts/stages/test_stage_gx.py",
+    "sha256": "D61B57A57E4769003A63F0A413A9724FC1C9EAB89900A949363F2462289B9D1B"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "sha256": "02DA58513F8C7B72ACDC60CF3E838F52A9A63C334B93D39E4834225A07515D7D"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "BA93C044884AED4D23EB34CDCD8F3A6874F357349CE2DEF160BF5C3698ED0B3D"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nds_build_config.h",
+    "sha256": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nitrofs/stages/dreamland.gxp",
+    "sha256": "6BAB61773CC324C89F4D5D6EFCB492827E8AE695F7D05F524CF858520C541942"
+  }
+]

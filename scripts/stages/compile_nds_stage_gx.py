@@ -11,6 +11,7 @@ import generate_nds_native_stage as stage
 
 MAGIC = 0x31505847  # GXP1
 VIEW, WORLD, NOZ, COLOR, UV, PROJECTION, COMPOSED_NOZ, CORNER_NOZ = range(1, 9)
+MATERIAL = 9
 SEGMENTS = tuple(range(8))
 HEADER = struct.Struct('<12I')
 RUN_V1 = struct.Struct('<6H')
@@ -18,7 +19,8 @@ RUN_V2 = struct.Struct('<6H6h')
 RUN = struct.Struct('<6H6h2I')
 PATCH = struct.Struct('<4H')
 PARAMS = {0: 0, 0x10: 1, 0x11: 0, 0x12: 1, 0x15: 0, 0x16: 16, 0x18: 16,
-          0x20: 1, 0x22: 1, 0x23: 2, 0x40: 1, 0x41: 0}
+          0x20: 1, 0x22: 1, 0x23: 2, 0x29: 1, 0x2A: 1, 0x2B: 1,
+          0x40: 1, 0x41: 0}
 
 
 def signature(packet):
@@ -182,6 +184,12 @@ def compile_packet(packet, name='dreamland'):
                 offset = emit(op, *([0] * PARAMS[op]))
                 patches.append((offset, kind, index, aux))
 
+            # Three consecutive native state words, resolved from the admitted
+            # texture objects. No runtime bind/record pass is needed.
+            patch(0x29, MATERIAL, run_id)
+            emit(0x2A, 0)
+            emit(0x2B, 0)
+            emit(0)
             if run.submit_class != stage.SUBMIT_PROJECTED_NO_Z:
                 emit(0x10, 0)
                 patch(0x16, PROJECTION)
@@ -249,7 +257,7 @@ def compile_packet(packet, name='dreamland'):
     body = b''.join(RUN.pack(*r) for r in runs)
     body += b''.join(PATCH.pack(*p) for p in patches)
     body += struct.pack(f'<{len(words)}I', *words)
-    return HEADER.pack(MAGIC, 3, stage.blob_gkind(name), len(runs), len(words),
+    return HEADER.pack(MAGIC, 4, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), sum(1 << s for s in SEGMENTS), signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body
 
@@ -257,9 +265,9 @@ def compile_packet(packet, name='dreamland'):
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3) or len(blob) != HEADER.size + nb:
+    if magic != MAGIC or version not in (1, 2, 3, 4) or len(blob) != HEADER.size + nb:
         raise ValueError('Invalid GX header/length')
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN}[version]
+    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN}[version]
     if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size

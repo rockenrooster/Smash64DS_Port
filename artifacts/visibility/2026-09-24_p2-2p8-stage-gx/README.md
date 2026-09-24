@@ -32,3 +32,11 @@ method-matched captures at tics 3300/3298. The old reference had incorrectly
 routed Dream Land's no-Z cross-binding flowers through source-Z emission;
 the repaired reference and compiled path differ at only 2 pixels at tic 3300
 (0.0017%, max channel delta 16). See the performance receipt for identities.
+
+Material/submission final (`49263A2E`, 2026-09-24): inspected
+`material-final-t3300.png` and the comparison. `material-final-side-by-side.png`
+and `material-final-t3300-diff.png` show the corrected reference against the
+final compiled stage. The two pairs at tics 3300/3298 differ by 2/8 pixels,
+max channel differences 16/89, over the same 120,000-pixel surface. The first
+view is unchanged from the preceding compiled path. Identities and exact crop
+are in `material-final-pixels.json`. No all-camera/stage acceptance is implied.

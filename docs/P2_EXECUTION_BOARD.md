@@ -56,15 +56,15 @@ Phase 0 closed; Phase 1 through `98ebd1e2e51`.
 **Phase 2 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
 performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
 Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
-**Next**: replace remaining stage preparation/material execution, retire old
-replay storage/code, then extend compiled data across VS stages and MISC.
+**Next**: retire obsolete Task36 replay storage/code with compiled Dream Land
+hard-on; replace preparation, extend VS stages and MISC.
 Owed: four-CPU timing/output, all-stage coverage, retirement, integration; gates RED.
 Checked: all 202 Dream Land triangles; owner approves the shown view.
-Latest ROM `12A5031B9D55C3E9` repairs reference cross-depth dispatch; gates RED.
-First-batch checkpoint `e019998977b` pushed; no banked performance win yet.
-Corrected control/candidate differ by 2 pixels in the shown view.
-Corrected full-match replay identical; ~19.15 FPS, no overall win banked.
-All jobs terminal. Four host checks pass; continue the remaining replacement.
+Latest ROM `49263A2E789B4059` compiles material state and groups draws; gates RED.
+Checkpoint `497825f14c5` pushed; receipt owns later evidence.
+Full-match replay/counts identical; ~19.2 FPS, no overall win banked.
+Verified: 27 DMAs/frame; five host checks; 2/8 diff pixels.
+All jobs terminal. Owed: hard-on retirement, shipping heap/CSS, stages, integration.
 Serial only (**no subagents**); owner edits preserved.
 A7 compaction on (+68 KB lab); MF codec unlinked.
 Shipping heaviest roster still ~130 KB short; lab arena is ~0.2 MB larger.

@@ -9,7 +9,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '../../../..')).Path
 $art = Split-Path -Parent $PSScriptRoot
 $extra = @('gNdsP2StageProg', 'gNdsP2StageProgDraws', 'gNdsP2StageProgWords',
     'gNdsP2StageProgLoads', 'gNdsP2StageProgBytes', 'gNdsP2StageProgDeclines',
-    'gNdsP2StageProgReason', 'gNdsP2StageProgNearRuns', 'gNdsRendererNativeFailure.count',
+    'gNdsP2StageProgReason', 'gNdsP2StageProgNearRuns', 'gNdsP2StageProgDmas', 'gNdsRendererNativeFailure.count',
     'gNdsRendererNativeFailure.reason', 'gNdsRendererNativeDirectReject.count',
     'gNdsTaskmanGeneralHeapFreeMin', 'gNdsTaskmanArenaChosenSize',
     'gNdsFighterPacketFaults', 'gNdsFighterPacketDeclines',

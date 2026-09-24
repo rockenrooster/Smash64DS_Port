@@ -19,8 +19,8 @@ transition probes and inspected A/B captures. Receipt:
 finished; the checkpoint is pushed to origin/master. Root is still r54.
 **Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
 Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
-**Phase 2 ongoing:** all 202 Dream Land triangles compiled; replay identical,
-source-depth reference repaired, gates RED. Next: preparation/other stages. Receipt:
+**Phase 2 ongoing:** all 202 Dream Land triangles/materials compiled; 27 DMAs/frame,
+replay identical, ~19.2 FPS, gates RED. Next: retirement/preparation/VS stages. Receipt:
 `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).

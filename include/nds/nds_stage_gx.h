@@ -5,7 +5,8 @@
 
 enum { NDS_STAGE_GX_VIEW = 1, NDS_STAGE_GX_WORLD, NDS_STAGE_GX_NOZ,
        NDS_STAGE_GX_COLOR, NDS_STAGE_GX_UV, NDS_STAGE_GX_PROJECTION,
-       NDS_STAGE_GX_COMPOSED_NOZ, NDS_STAGE_GX_CORNER_NOZ };
+       NDS_STAGE_GX_COMPOSED_NOZ, NDS_STAGE_GX_CORNER_NOZ,
+       NDS_STAGE_GX_MATERIAL };
 typedef struct NDSStageGxHeader {
     uint32_t magic, version, gkind, run_count, word_count, patch_count;
     uint32_t segment_mask, source_hash, body_bytes, body_hash, static_world_lo, static_world_hi;

@@ -2841,8 +2841,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
      * to (Commit proves the stage table, the replay entry proves the replay
      * table), so while that certificate is current the per-run proof is a
      * second reading of the same two cold arrays for an answer already known.
-     * TRUE selects the recorded table. Compiled GX uses 2: matrices are in
-     * its stream, but `run` still belongs to the normal prepared table.
+     * TRUE selects the recorded table; FALSE selects the normal prepared table.
      * No certificate current -> the original proof, unchanged. */
     if (((replay == TRUE) ?
              ndsRendererTask36ReplayTextureProofCurrent() :
@@ -5306,6 +5305,9 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
             emitted_triangles = run->triangle_count;
             goto task36_account_run;
         }
+        /* A cold clipped run follows all earlier compiled runs in source order. */
+        ndsStageGxFlush();
+        NDS_FIGHTER_PACKET_DMA_WAIT();
         if (task36_replay_segment != FALSE)
         {
             if (ndsRendererTask36ReplayRun(
@@ -5496,6 +5498,9 @@ task36_account_run:
         gNdsTask103IterCount++;
 #endif
     }
+#if NDS_TASK36_HW_COMPOSE == 2
+    ndsStageGxFlush();
+#endif
 #if NDS_TASK36_HW_COMPOSE
     ndsRendererNativeStageTask36EndSegment();
 #endif

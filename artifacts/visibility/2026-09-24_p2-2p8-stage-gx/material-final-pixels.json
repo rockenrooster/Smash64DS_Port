@@ -1,0 +1,26 @@
+{
+  "t3300": {
+    "changed_pixels": 2,
+    "total_pixels": 120000,
+    "max_channel_delta": 16,
+    "crop": [
+      8,
+      53,
+      408,
+      353
+    ]
+  },
+  "adjacent": {
+    "changed_pixels": 8,
+    "total_pixels": 120000,
+    "max_channel_delta": 89,
+    "crop": [
+      8,
+      53,
+      408,
+      353
+    ]
+  },
+  "control_rom": "12A5031B9D55C3E9B97886FCD74BB5E1EF59EDA94E38F5EC5C9A4F214BA294DD",
+  "candidate_rom": "49263A2E789B4059081F60F46DE1EA1BEC5E2CAA9E4BF54F49D96A8CDF515018"
+}

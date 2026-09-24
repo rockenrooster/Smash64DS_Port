@@ -1,0 +1,24 @@
+{
+  "t3300": {
+    "changed_pixels": 2,
+    "total_pixels": 120000,
+    "max_channel_delta": 16,
+    "crop": [
+      8,
+      53,
+      408,
+      353
+    ]
+  },
+  "adjacent": {
+    "changed_pixels": 8,
+    "total_pixels": 120000,
+    "max_channel_delta": 89,
+    "crop": [
+      8,
+      53,
+      408,
+      353
+    ]
+  }
+}
