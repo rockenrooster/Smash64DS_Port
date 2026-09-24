@@ -1,0 +1,7 @@
+{
+  "runs": 7,
+  "corners": 135,
+  "triangles": 45,
+  "corner_attribute_mismatches": 0,
+  "matrices": "separate live-camera visual gate"
+}

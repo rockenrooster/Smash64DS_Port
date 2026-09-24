@@ -5080,6 +5080,10 @@ ndsRendererNativeStagePublishRunEmission(u32 run_index, u32 emitted_triangles)
     gNdsNativeStageRoofSnapValid[run_index] = gNdsNativeStageRoofSnapSerial;
 }
 
+#if NDS_TASK36_HW_COMPOSE == 2
+#include "nds_stage_gx.exec.inc"
+#endif
+
 s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index)
 {
     NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
@@ -5106,6 +5110,7 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
 #if NDS_TASK36_HW_COMPOSE == 2
     u32 task36_capture_segment = FALSE;
     u32 task36_replay_segment = FALSE;
+    u32 stage_gx_segment;
 #endif
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
     u32 census_owner_start = 0u;
@@ -5128,6 +5133,9 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
+#if NDS_TASK36_HW_COMPOSE == 2
+    stage_gx_segment = ndsStageGxEligible(segment_index);
+#endif
     /* The prepared table outlives the cache entries it names. Validate before
      * this segment's first GX or renderer-state write so a recycled slot falls
      * back as one source-owned segment, never as a mixed native/source segment
@@ -5202,6 +5210,11 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
     task36_replay_segment =
         (sNdsRendererTask36ReplayOwner.frame_replay != FALSE) &&
         (ndsRendererTask36ReplaySegmentEligible(segment_index) != FALSE);
+    if (stage_gx_segment != FALSE)
+    {
+        task36_capture_segment = FALSE;
+        task36_replay_segment = FALSE;
+    }
     if ((task36_capture_segment || task36_replay_segment) &&
         (ndsRendererNativeStageTask36BeginSegment() == FALSE))
     {
@@ -5286,6 +5299,11 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
                 task34_dobj_index : NDS_TASK34_STAGE_STREAM_DOBJ_NONE);
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
+        if (stage_gx_segment != FALSE && ndsStageGxDraw(run_index, segment->owner, stats) != FALSE)
+        {
+            emitted_triangles = run->triangle_count;
+            goto task36_account_run;
+        }
         if (task36_replay_segment != FALSE)
         {
             if (ndsRendererTask36ReplayRun(

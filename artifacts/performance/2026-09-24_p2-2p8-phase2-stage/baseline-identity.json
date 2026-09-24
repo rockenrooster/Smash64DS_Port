@@ -1,0 +1,18 @@
+[
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-phase2-control-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "Hash": "50B8AF5804D12C984E09CB276212E297E3CD1944519274E22B45831CE2A509C8"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-phase2-control-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "Hash": "739A174F8392F758923DF3E39CE5435D35445421122383DDFAED52FB5256BE3A"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-phase2-control-s7\\.map",
+    "Hash": "81E70A4ED36C1114D4F81A36B8B5232BDA0CA45134C4BF7936AC03716705F1A2"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-phase2-control-s7\\nds_build_config.h",
+    "Hash": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+  }
+]

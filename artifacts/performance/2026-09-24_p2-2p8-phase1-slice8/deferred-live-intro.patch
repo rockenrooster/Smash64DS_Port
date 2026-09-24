@@ -1,0 +1,472 @@
+diff --git a/include/nds/renderer_fighter_lean.h b/include/nds/renderer_fighter_lean.h
+index b855524a525..c7b4ac03129 100644
+--- a/include/nds/renderer_fighter_lean.h
++++ b/include/nds/renderer_fighter_lean.h
+@@ -107,12 +107,12 @@
+ #define NDS_FTR_LEAN_ORACLE_ROUTES 0
+ #endif
+ 
+-/* Slice 6: the route 1 entry (ndsFtrLeanRun) has one call site; the shipping
+- * image inlines it there, as slice 5's did before this slice's growth took it
+- * past GCC's inline limit (an outlined copy costs its own prologue and the
+- * caller's spills). The lab image keeps it outlined, as slice 5's lab did. */
++/* Single-caller images keep the inline draw. Intro adds a second caller, so
++ * share one body there rather than duplicating it in the scarce main RAM. */
+ #if NDS_FTR_LEAN_ORACLE_ROUTES
+ #define NDS_FTR_LEAN_RUN_INLINE
++#elif NDS_P2_1P_GAME
++#define NDS_FTR_LEAN_RUN_INLINE __attribute__((noinline))
+ #else
+ #define NDS_FTR_LEAN_RUN_INLINE inline __attribute__((always_inline))
+ #endif
+@@ -249,8 +249,8 @@ enum
+ 
+ /* Slice 6: every VS kind is a lean kind -- the twelve owner slots Mario (0)
+  * through Kirby (11), NDS_RENDERER_NATIVE_FIGHTER_OWNER_*. The owner slot is
+- * the kind (the instance's tuple field). The 1P-only owners (Metal Mario, the
+- * Polygon team, Master Hand: slots 12+) stay on the old path.
++ * the kind (the instance's tuple field). Slice 8 includes every compiled
++ * native owner: Metal Mario, the Polygon team and Master Hand too.
+  *
+  * The lab counters' per-kind rows (k_*[NDS_FTR_LEAN_KINDS]) are indexed by
+  * BATTLE SLOT since slice 6 -- a four-fighter roster has four rows whatever
+@@ -258,7 +258,7 @@ enum
+  * roster (Donkey, Samus, Link, Kirby in slots 0-3) the rows are the slice 3-5
+  * kind rows exactly. */
+ #define NDS_FTR_LEAN_KINDS 4u
+-#define NDS_FTR_LEAN_KIND_COUNT 12u
++#define NDS_FTR_LEAN_KIND_COUNT NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
+ #define NDS_FTR_LEAN_KIND_NONE 0xffu
+ #define NDS_FTR_LEAN_OWNER_KIND(owner)                                      \
+     (((u32)(owner) < NDS_FTR_LEAN_KIND_COUNT) ? (u32)(owner) :              \
+diff --git a/scripts/fighters/test_intro_transient_context.py b/scripts/fighters/test_intro_transient_context.py
+index 3b253547202..bcd41c6aea7 100644
+--- a/scripts/fighters/test_intro_transient_context.py
++++ b/scripts/fighters/test_intro_transient_context.py
+@@ -206,10 +206,12 @@ typedef unsigned u32; typedef int sb32;
+ #define FALSE 0
+ #define NDS_R2_FIGHTER_NO_ORACLE 1
+ #define NDS_RENDERER_PROFILE_LEVEL 0
++#define NDS_FTR_LEAN_LIVE 1
++#define NDS_FTR_LEAN_ROUTE_DRAW 1u
+ #define NDS_INTRO_TRANSIENT_SCRATCH_SLOT 0u
+ #define nSCKind1PIntro 14
+ typedef struct GObj GObj;
+-typedef struct FTStruct { GObj *fighter_gobj; u32 fkind; } FTStruct;
++typedef struct FTStruct { GObj *fighter_gobj; u32 fkind; u32 pose; } FTStruct;
+ struct GObj { FTStruct *fp; };
+ static u32 gNdsSceneManagerCurrKind = 14;
+ static GObj *sNdsIntroTransientBoundGObj, *captured;
+@@ -217,10 +219,12 @@ static sb32 sNdsIntroTransientActive, sNdsFighterDisplayContractPlayback;
+ static u32 gNdsIntroTransientSubmitCount, gNdsIntroTransientDrawCount;
+ static u32 gNdsIntroTransientBindChanges, gNdsIntroTransientOwnerRejectCount;
+ static u32 gNdsFighterMarioFoxDLAllDrawCount, invalidations, oracle, empty;
++static u32 gNdsFtrLeanRoute = 1, lean_rebinds, lean_draws, old_draws, decline;
++static u32 observed_pose;
+ static struct { u32 event_count; } sNdsFighterDisplayContract;
+ static FTStruct *ftGetStruct(GObj *g) { return g->fp; }
+ static sb32 ndsFighterGetNativeOwnerSlot(FTStruct *fp, u32 *slot) {
+-    *slot = fp->fkind; return fp->fkind < 12;
++    *slot = fp->fkind; return fp->fkind < 25;
+ }
+ static void ndsFighterIntroTransientInvalidateScratch(void) { invalidations++; }
+ static void ndsFighterDisplayContractCapture(GObj *g) {
+@@ -229,12 +233,22 @@ static void ndsFighterDisplayContractCapture(GObj *g) {
+ }
+ static u32 ndsRendererHardwareNoOracleEnabled(void) { return oracle; }
+ static void ndsRendererHardwareSetNoOracle(u32 value) { oracle = value; }
++static void ndsFtrLeanNoteRebind(u32 slot) {
++    assert(slot == 0 && sNdsIntroTransientActive); lean_rebinds++;
++}
++static sb32 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route) {
++    assert(slot == 0 && route == 1 && oracle && captured->fp == fp);
++    assert(sNdsIntroTransientActive && sNdsFighterDisplayContractPlayback);
++    if (decline) return FALSE;
++    observed_pose = fp->pose; lean_draws++; gNdsFighterMarioFoxDLAllDrawCount++;
++    return TRUE;
++}
+ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
+                                               void *pixels, u32 pitch) {
+     assert(slot == 0 && pixels == NULL && pitch == 0);
+     assert(sNdsIntroTransientActive && sNdsFighterDisplayContractPlayback);
+     assert(oracle && captured->fp == fp);
+-    gNdsFighterMarioFoxDLAllDrawCount++;
++    old_draws++; gNdsFighterMarioFoxDLAllDrawCount++;
+ }
+ '''
+         code += '\n' + function(ADAPTER, 'ndsIntroTransientNeedsBindChange')
+@@ -244,7 +258,7 @@ int main(void) {
+     GObj actors[21]; FTStruct fighters[21];
+     for (u32 i = 0; i < 21; i++) {
+         actors[i].fp = &fighters[i]; fighters[i].fighter_gobj = &actors[i];
+-        fighters[i].fkind = 6; oracle = i & 1;
++        fighters[i].fkind = 6; fighters[i].pose = i; oracle = i & 1;
+         assert(ndsFighterIntroTransientSubmit(&actors[i]));
+         assert(!sNdsIntroTransientActive && !sNdsFighterDisplayContractPlayback);
+         assert(oracle == (i & 1));
+@@ -252,6 +266,20 @@ int main(void) {
+     assert(invalidations == 21 && gNdsIntroTransientDrawCount == 21);
+     assert(ndsFighterIntroTransientSubmit(&actors[20]));
+     assert(invalidations == 21 && gNdsIntroTransientDrawCount == 22);
++    assert(lean_draws == 22 && old_draws == 0 && lean_rebinds == 22);
++    /* Same actor, different poses within a frame must each reach lean. */
++    for (u32 pose = 100; pose < 103; pose++) {
++        fighters[20].pose = pose;
++        assert(ndsFighterIntroTransientSubmit(&actors[20]));
++        assert(observed_pose == pose);
++    }
++    assert(lean_draws == 25 && lean_rebinds == 25 && invalidations == 21);
++    gNdsFtrLeanRoute = 0;
++    assert(ndsFighterIntroTransientSubmit(&actors[20]));
++    assert(old_draws == 1 && lean_draws == 25);
++    gNdsFtrLeanRoute = 1; decline = 1;
++    assert(ndsFighterIntroTransientSubmit(&actors[20]));
++    assert(old_draws == 2 && lean_draws == 25);
+     empty = 1; assert(!ndsFighterIntroTransientSubmit(&actors[0]));
+     assert(!sNdsIntroTransientActive && !sNdsFighterDisplayContractPlayback);
+     assert(!ndsFighterIntroTransientSubmit(NULL));
+diff --git a/scripts/menus/probe-p2-campaign.ps1 b/scripts/menus/probe-p2-campaign.ps1
+index 935caa93440..b2d1607cfb6 100644
+--- a/scripts/menus/probe-p2-campaign.ps1
++++ b/scripts/menus/probe-p2-campaign.ps1
+@@ -21,6 +21,8 @@ param(
+     [string]$CssScreenshot = '',
+     [string]$GoScreenshot = '',
+     [string]$IntroScreenshot = '',
++    # Observe the actual Intro draw routes through GDB; no ROM instrumentation.
++    [switch]$IntroLeanProof,
+     [switch]$TransitionProof,
+     [switch]$FullRosterHover,
+     [string]$TallyScreenshot = '',
+@@ -63,6 +65,9 @@ param(
+ # signature, or a dead emulator ends the run as FAILED, not as a verdict.
+ 
+ $ErrorActionPreference = 'Stop'
++if ($IntroLeanProof -and [string]::IsNullOrWhiteSpace($IntroScreenshot)) {
++    throw '-IntroLeanProof requires -IntroScreenshot to anchor its observed window.'
++}
+ $scripts = Split-Path -Parent $PSScriptRoot
+ $root = Split-Path -Parent $scripts
+ . (Join-Path $scripts 'lib\melonds.ps1')
+@@ -398,12 +403,59 @@ try {
+             'printf "CP1P %d absent\n", $n'
+         })
+     )
++    $introLeanCommands = @()
++    if ($IntroLeanProof) {
++        foreach ($hook in @(
++            @{ Counter = 'attempts'; Symbol = 'ndsFtrLeanRun' },
++            @{ Counter = 'cameras'; Symbol = 'ndsFtrLeanApplyCamera' },
++            @{ Counter = 'old'; Symbol = 'ndsFighterMarioFoxDLAllDrawForSlot' }
++        )) {
++            $symbol = @($symbols -match ('^' + $hook.Symbol + '(\.|$)')) | Select-Object -First 1
++            if (-not $symbol) { throw ('Intro proof symbol missing: ' + $hook.Symbol) }
++            $counter = '$intro_lean_' + $hook.Counter
++            $introLeanCommands += @(
++                "set $counter = 0", "break '$symbol'", 'commands', 'silent',
++                'if gNdsSceneManagerCurrKind == 14',
++                "set $counter = $counter + 1"
++            )
++            if ($hook.Counter -eq 'old') {
++                $introLeanCommands += @(
++                    'if $intro_lean_old == 1',
++                    'printf "CPINTROFALLBACK camera=%u valid=%u kind=%u detail=%u roots=%u program=%u sourcefail=%u\n", sNdsFtrLeanCamOk, sNdsFtrLeanInstances[0].valid, sNdsFtrLeanInstances[0].kind, sNdsFtrLeanInstances[0].detail, sNdsFtrLeanInstances[0].root_count, sNdsFtrLeanInstances[0].program, gNdsFtrComposeSourceFail',
++                    'info args',
++                    'printf "CPINTROFIGHTER kind=%u detail=%u skeleton=%u ndsslot=%u\n", fp->fkind, fp->detail_curr, fp->colanim.skeleton_id, fp->nds_slot',
++                    'end'
++                )
++            }
++            $introLeanCommands += @('end', 'continue', 'end')
++        }
++        # Observe the event's return value before the caller can clobber r0.
++        # Resolve the return PC from THIS ELF, never retain an address across builds.
++        $drawSymbol = @($symbols -match '^ndsFtrLeanRun(\.|$)') | Select-Object -First 1
++        $assembly = @(& (Join-Path (Split-Path $gdb) 'arm-none-eabi-objdump.exe') `
++            -d "--disassemble=$drawSymbol" $elf)
++        $introLeanCommands += 'set $intro_lean_events = 0'
++        for ($i = 0; $i + 1 -lt $assembly.Count; $i++) {
++            if ($assembly[$i] -notmatch '\bblx?\s+.*<ndsFtrLeanEvent') { continue }
++            if ($assembly[$i + 1] -notmatch '^\s*([0-9a-f]+):') {
++                throw 'Cannot identify the lean event return instruction.'
++            }
++            $introLeanCommands += @(
++                ('break *0x' + $Matches[1]), 'commands', 'silent',
++                'if (gNdsSceneManagerCurrKind == 14) && ($r0 != 0) && ($intro_lean_events < 4)',
++                'set $intro_lean_events = $intro_lean_events + 1',
++                'printf "CPINTROEVENT decline=%u\n", $r0',
++                'end', 'continue', 'end'
++            )
++        }
++    }
+     $commands = @(
+         'set pagination off',
+         'set confirm off',
+         'set print elements 128',
+         'set remotetimeout 20',
+-        ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
++        ("target remote 127.0.0.1:{0}" -f $context.GdbPort)
++    ) + $introLeanCommands + @(
+         'set $n = 0',
+         'set $inbattle = 0',
+         'set $battleframes = 0',
+@@ -968,6 +1020,9 @@ try {
+             'set $intro_rejects = gNdsSceneManagerRejectCount'
+             'printf "CPINTROSCENE enters=%u rejects=%u\n", $intro_enters, $intro_rejects'
+             'printf "CPINTRO updates=%u submits=%u draws=%u rejects=%u\n", dSYTaskmanUpdateCount, gNdsIntroTransientSubmitCount, gNdsIntroTransientDrawCount, gNdsIntroTransientOwnerRejectCount'
++            if ($IntroLeanProof) {
++                'printf "CPINTROLEAN attempts=%u cameras=%u old=%u\n", $intro_lean_attempts, $intro_lean_cameras, $intro_lean_old'
++            }
+             ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $IntroScreenshot + '"')
+             'end'
+@@ -1155,6 +1210,15 @@ $mismatches = @([regex]::Matches($text, '(?m)^CPLINE \d+ curr=\d+ prev=\d+ enter
+ if ($mismatches.Count -gt 0) {
+     $failReasons += ('registry: ' + $mismatches.Value.Trim())
+ }
++if ($IntroLeanProof) {
++    $leanProof = [regex]::Match($text, '(?m)^CPINTROLEAN attempts=(\d+) cameras=(\d+) old=(\d+)')
++    if (-not $leanProof.Success -or [uint32]$leanProof.Groups[1].Value -eq 0 -or
++        [uint32]$leanProof.Groups[2].Value -eq 0 -or [uint32]$leanProof.Groups[3].Value -ne 0) {
++        $failReasons += 'intro-lean-unengaged-or-fallback'
++    } else {
++        Write-Output $leanProof.Value
++    }
++}
+ if ($failReasons.Count -gt 0) {
+     Write-Output ('VERDICT: FAILED ' + ($failReasons -join ' | '))
+     exit 1
+diff --git a/src/port/renderer_adapter_fighter.c b/src/port/renderer_adapter_fighter.c
+index 55c5fe0152d..0b98483df65 100644
+--- a/src/port/renderer_adapter_fighter.c
++++ b/src/port/renderer_adapter_fighter.c
+@@ -5197,6 +5197,15 @@ static void ndsRendererAdapterM2FinishOwner(
+ }
+ #endif
+ 
++/* The lean path is defined by the fragment included at this file's end. */
++#include <nds/renderer_fighter_lean.h>
++#if NDS_FTR_LEAN_LIVE
++static NDS_FTR_LEAN_RUN_INLINE sb32
++ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
++static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before);
++static void ndsFtrLeanFrameEnd(void);
++#endif
++
+ #if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+ /* 1P Intro transient native context.
+  *
+@@ -5307,8 +5316,19 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
+ #endif
+     saved_playback = sNdsFighterDisplayContractPlayback;
+     sNdsFighterDisplayContractPlayback = TRUE;
+-    ndsFighterMarioFoxDLAllDrawForSlot(
+-        NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
++#if NDS_FTR_LEAN_LIVE
++    /* The Polygon Intro changes a Demo actor's pose/status and draws it
++     * again in the same frame. These actors have no tracked battle slot,
++     * so re-resolve scratch on every submit instead of trusting slot writers. */
++    ndsFtrLeanNoteRebind(NDS_INTRO_TRANSIENT_SCRATCH_SLOT);
++    if ((gNdsFtrLeanRoute != NDS_FTR_LEAN_ROUTE_DRAW) ||
++        (ndsFtrLeanRun(NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp,
++                       NDS_FTR_LEAN_ROUTE_DRAW) == FALSE))
++#endif
++    {
++        ndsFighterMarioFoxDLAllDrawForSlot(
++            NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
++    }
+     sNdsFighterDisplayContractPlayback = saved_playback;
+ #if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+     ndsRendererHardwareSetNoOracle(saved_no_oracle);
+@@ -5324,16 +5344,6 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
+ }
+ #endif
+ 
+-/* P2-2p8 Phase 1 slice 1: the lean fighter path, defined in
+- * renderer_fighter_lean.c (#included at the end of this file). */
+-#include <nds/renderer_fighter_lean.h>
+-#if NDS_FTR_LEAN_LIVE
+-static NDS_FTR_LEAN_RUN_INLINE sb32
+-ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
+-static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before);
+-static void ndsFtrLeanFrameEnd(void);
+-#endif
+-
+ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
+ {
+ #if NDS_RENDERER_HW_TRIANGLES
+diff --git a/src/port/renderer_fighter_lean.c b/src/port/renderer_fighter_lean.c
+index b611984196b..e07e12ec33d 100644
+--- a/src/port/renderer_fighter_lean.c
++++ b/src/port/renderer_fighter_lean.c
+@@ -350,6 +350,51 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
+ #define sNdsFtrLeanWorlds sNdsRendererAdapterNativeOwnerModelviews
+ #define sNdsFtrLeanProjection sNdsRendererAdapterNativeOwnerProjection
+ 
++/* Intro cameras keep a separate modelview. Match ComposeOwnerWorldsSource:
++ * round the binding to 20.12 first, then multiply by (shuffle * camera).
++ * Ordinary battle cameras need no extra world stores or matrix multiply. */
++static void __attribute__((noinline, cold, optimize("Os")))
++ndsFtrLeanApplyCamera(u32 count, u32 *const *sites,
++                      const NDSRendererMatrix20p12 *camera,
++                      s32 shuffle_x, s32 shuffle_y)
++{
++    NDSRendererMatrix20p12 seed;
++    u32 i;
++    u32 row;
++    u32 col;
++
++    if ((shuffle_x != 0) || (shuffle_y != 0))
++    {
++        ndsRendererAdapterMtxIdentity20p12(&seed);
++        seed.m[3][0] = shuffle_x;
++        seed.m[3][1] = shuffle_y;
++        ndsRendererMtxMulAffine20p12(&seed, camera, &seed);
++    }
++    else
++    {
++        seed = *camera;
++    }
++    for (i = 0u; i < count; i++)
++    {
++        NDSRendererMatrix20p12 *world = &sNdsFtrLeanWorlds[i];
++
++        ndsRendererMtxMulAffine20p12(world, &seed, world);
++        if (sites[i] == NULL)
++        {
++            continue;
++        }
++        for (row = 0u; row < 4u; row++)
++        {
++            for (col = 0u; col < 3u; col++)
++            {
++                sites[i][row * 3u + col] = (u32)((row == 3u) ?
++                    ndsRendererAdapterSourceRoundShiftS64(world->m[row][col], 8u) :
++                    world->m[row][col]);
++            }
++        }
++    }
++}
++
+ #if NDS_FTR_LEAN_LAB
+ /* `row` is the caller's own counter row, the battle slot (the per-row split
+  * exists only in the slice 5 attribution ROM). */
+@@ -791,15 +836,12 @@ static s32 ndsFtrLeanRetuple(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst)
+     return TRUE;
+ }
+ 
+-/* Every VS kind (slice 6; slices 3-5: the four stress kinds), any detail,
+- * native production mode, never the 1P intro's transient actors (they never
+- * plan). */
++/* All registered native owners, including Intro actors bound to scratch 0. */
+ static u32 ndsFtrLeanEligible(FTStruct *fp, u32 *owner_slot)
+ {
+     u32 kind;
+ 
+-    if ((sNdsIntroTransientActive != FALSE) ||
+-        (ndsFighterGetNativeOwnerSlot(fp, owner_slot) == FALSE))
++    if (ndsFighterGetNativeOwnerSlot(fp, owner_slot) == FALSE)
+     {
+         return NDS_FTR_LEAN_KIND_NONE;
+     }
+@@ -1603,7 +1645,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+             CObjGetStruct(gGCCurrentCamera) : NULL;
+ 
+         if ((sNdsFtrLeanCamFrame != gNdsRendererProfileFrameCount + 1u) ||
+-            (sNdsFtrLeanCamCobj != cobj))
++            (sNdsFtrLeanCamCobj != cobj) || (sNdsFtrLeanCamOk == 2u))
+         {
+             ndsRendererAdapterGetFrameCameraMatrices(
+                 cobj, &sNdsFtrLeanProjection, &camera_projection_valid,
+@@ -1611,9 +1653,18 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+                 NULL);
+             sNdsFtrLeanCamFrame = gNdsRendererProfileFrameCount + 1u;
+             sNdsFtrLeanCamCobj = cobj;
+-            sNdsFtrLeanCamOk = ((camera_projection_valid != FALSE) &&
+-                                (camera_modelview_valid == FALSE)) ?
+-                TRUE : FALSE;
++            /* 2 fetches the cached modelview on each draw, without another
++             * persistent camera copy. LOAD4x3 requires an affine modelview. */
++            sNdsFtrLeanCamOk = (camera_projection_valid != FALSE) ?
++                ((camera_modelview_valid != FALSE) ? 2u : 1u) : 0u;
++            if ((camera_modelview_valid != FALSE) &&
++                ((camera_modelview.m[0][3] != 0) ||
++                 (camera_modelview.m[1][3] != 0) ||
++                 (camera_modelview.m[2][3] != 0) ||
++                 (camera_modelview.m[3][3] != (1 << 12))))
++            {
++                sNdsFtrLeanCamOk = FALSE;
++            }
+         }
+         if (sNdsFtrLeanCamOk == FALSE)
+         {
+@@ -1730,10 +1781,17 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+ #endif
+         sites = ndsFtrLeanPacketModelviewSites(slot, mv_sites,
+                                                inst->root_count);
++        if ((camera_modelview_valid != FALSE) &&
++            (sites != NDS_FTR_LEAN_SITES_NONE))
++        {
++            sites |= (1u << inst->root_count) - 1u;
++        }
+         if ((sites == NDS_FTR_LEAN_SITES_NONE) ||
+             (ndsFtrLeanKernelCompose(
+                  inst->joints, inst->joint_count, mv_sites, sNdsFtrLeanWorlds,
+-                 sites, inst->root_count, shuffle_x, shuffle_y, kernel_flags,
++                 sites, inst->root_count,
++                 camera_modelview_valid ? 0 : shuffle_x,
++                 camera_modelview_valid ? 0 : shuffle_y, kernel_flags,
+                  ndsFtrLeanSlowLocal, class_counts, part_ticks) == FALSE))
+         {
+             /* A kept joint was re-parented (a status change that moves no
+@@ -1748,8 +1806,10 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+                                        inst->root_count) == FALSE) ||
+                 (ndsFtrLeanKernelCompose(
+                      inst->joints, inst->joint_count, mv_sites,
+-                     sNdsFtrLeanWorlds, sites, inst->root_count, shuffle_x,
+-                     shuffle_y, kernel_flags, ndsFtrLeanSlowLocal,
++                     sNdsFtrLeanWorlds, sites, inst->root_count,
++                     camera_modelview_valid ? 0 : shuffle_x,
++                     camera_modelview_valid ? 0 : shuffle_y,
++                     kernel_flags, ndsFtrLeanSlowLocal,
+                      class_counts, part_ticks) == FALSE))
+             {
+                 ndsFtrLeanInvalidate(slot, FALSE);
+@@ -1789,19 +1849,22 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+ 
+             (void)ndsFtrLeanKernelCompose(
+                 inst->joints, n, mv_sites, sNdsFtrLeanWorlds, sites,
+-                inst->root_count, shuffle_x, shuffle_y, kernel_flags,
++                inst->root_count, camera_modelview_valid ? 0 : shuffle_x,
++                camera_modelview_valid ? 0 : shuffle_y, kernel_flags,
+                 ndsFtrLeanSlowLocal, NULL, NULL);
+             a0 = cpuGetTiming();
+             (void)ndsFtrLeanKernelCompose(
+                 inst->joints, n, mv_sites, sNdsFtrLeanWorlds, sites,
+-                inst->root_count, shuffle_x, shuffle_y, kernel_flags,
++                inst->root_count, camera_modelview_valid ? 0 : shuffle_x,
++                camera_modelview_valid ? 0 : shuffle_y, kernel_flags,
+                 ndsFtrLeanSlowLocal, NULL, NULL);
+             a1 = cpuGetTiming();
+             DC_FlushAll();
+             a2 = cpuGetTiming();
+             (void)ndsFtrLeanKernelCompose(
+                 inst->joints, n, mv_sites, sNdsFtrLeanWorlds, sites,
+-                inst->root_count, shuffle_x, shuffle_y, kernel_flags,
++                inst->root_count, camera_modelview_valid ? 0 : shuffle_x,
++                camera_modelview_valid ? 0 : shuffle_y, kernel_flags,
+                 ndsFtrLeanSlowLocal, NULL, NULL);
+             a3 = cpuGetTiming();
+             gNdsFtrLeanAttr.kernel_cold_ticks[row] += t0 - t1;
+@@ -1813,6 +1876,12 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
+         }
+ #endif
+ 
++        if (camera_modelview_valid != FALSE)
++        {
++            ndsFtrLeanApplyCamera(inst->root_count, mv_sites,
++                                  &camera_modelview, shuffle_x, shuffle_y);
++        }
++
+ #if NDS_FTR_LEAN_ATTR_LIVE
+         {
+             u32 r0 = cpuGetTiming();

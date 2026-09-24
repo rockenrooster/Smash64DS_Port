@@ -1,0 +1,17 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "D4AEFF8E9F0E7143BAD024BE3D4B6C500B88CB3708A65808B3BEA21B97C63F77",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "AC2EF845D5980624B1BC79C8C7372061EF988C71946B304DAB768FBBCE02C850",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\seg57-gx-oracle-r1-old.bin"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "FC1379431AB8F5058A88F0F83B018B519BED00A6C740EFE774FD7363D357C9A6",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\seg57-gx-oracle-r1-new.bin"
+  }
+]

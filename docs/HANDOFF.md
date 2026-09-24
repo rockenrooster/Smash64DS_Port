@@ -1,7 +1,6 @@
 # Handoff
 
-The destination is P2 under `PROJECT_GOAL.md` and `P2_PLAN.md`.
-`P2_EXECUTION_BOARD.md` owns live focus, decisions, artifacts and the
+P2 follows `PROJECT_GOAL.md` and `P2_PLAN.md`; `P2_EXECUTION_BOARD.md` owns focus, decisions, artifacts and the
 **Execution cursor**. This file is a route, not another task or metric ledger.
 
 ## Current route (2026-09-24)
@@ -12,19 +11,20 @@ sections 0, 6 and 8, then the board cursor. Evidence:
 `artifacts/performance/2026-09-2*_p2-2p8-*`; `scripts/compare-replay-digest.py`
 is the gameplay-equivalence check every phase runs.
 
-Phase 1 (fighters): slices 1-6 landed; slice 7 is ready for its candidate
-checkpoint (**IMPLEMENTED_NOT_ACCEPTED**). Lean defaults and Ness's yo-yo/bat
+Phase 1 (fighters): slices 1-7 landed through `98ebd1e2e51`, with slice 7 an
+**IMPLEMENTED_NOT_ACCEPTED** checkpoint. Lean defaults and Ness's yo-yo/bat
 are covered on the final ROMs; the Results/CSS tint-lifetime repair has natural
 transition probes and inspected A/B captures. Receipt:
-`artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`. All jobs
-finished. Root `smash64ds.nds` still matches r54 (C8FC02AA). Next is slice 8:
-the separate camera modelview and transient Intro actors, variant kinds and
-remaining D8 scene coverage. CSS/Results already reach the common lean path;
-their full roster coverage remains due. Then slice 9 deletes production
-everywhere, followed by Phase 2. Boundary preflight can rebuild the root ROM,
-so preserve r54 until publication is qualified. D9: no re-plan
-stops -- keep going and bank every measured win. Owner: optimization only, no 1P
-campaign bugs. Carry forward: the shipping configuration cannot load the heaviest four-kind roster
+`artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`. Runtime jobs
+finished; the checkpoint is pushed to origin/master. Root is still r54.
+**Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
+Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
+**Phase 2 ongoing:** the first 45-triangle GX batch has exact corner/pixel checks;
+expand Dream Land 0/4, then 1/2/3/6. Receipt:
+`artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
+Campaign-specific coverage and global renderer retirement remain explicit debt.
+No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
+Carry forward: the shipping configuration cannot load the heaviest four-kind roster
 (Captain/Link/Pikachu/Kirby halts ~130 KB short at battle load,
 `artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`), and the four-CPU
 gate ROM has ~0.2 MB more arena than the shipping image -- report the shipping

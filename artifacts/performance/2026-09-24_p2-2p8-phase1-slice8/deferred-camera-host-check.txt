@@ -1,0 +1,107 @@
+"""Host-run the real lean camera patch and matrix arithmetic against Python integers.
+
+Run: python scripts/fighters/test_lean_camera_patch.py
+The input worlds are the kernel's already-rounded bindings; no joint kernel,
+gameplay or hardware behavior is mocked into a claimed result here.
+"""
+import random
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'scripts/menus'))
+from source_test_helpers import function  # noqa: E402
+
+
+def rounded(value, bits):
+    return (-1 if value < 0 else 1) * ((abs(value) + (1 << (bits - 1))) >> bits)
+
+
+def multiply(a, b):
+    return [max(-(1 << 31), min((1 << 31) - 1,
+            rounded(sum(a[r * 4 + k] * b[k * 4 + c] for k in range(4)), 12)))
+            for r in range(4) for c in range(4)]
+
+
+def test_camera_patch():
+    core = (ROOT / 'src/nds/nds_renderer_dl_core.c').read_text()
+    core = core.replace('void NDS_TASK82_ITCM_CODE\n', 'void ')
+    core = core.replace('void NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE\n', 'void ')
+    adapter = (ROOT / 'src/port/renderer_adapter_matrix.c').read_text()
+    lean = (ROOT / 'src/port/renderer_fighter_lean.c').read_text().replace(
+        'static void __attribute__((noinline, cold, optimize("Os")))\n', 'static void ')
+    code = r'''
+#include <stdint.h>
+#include <stddef.h>
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+typedef int32_t s32; typedef int64_t s64; typedef uint32_t u32;
+typedef struct { s32 m[4][4]; } NDSRendererMatrix20p12;
+#define NDS_RENDERER_PROFILE_LEVEL 0
+#define NDS_RENDERER_DS_MTX_FRAC_BITS 12
+static NDSRendererMatrix20p12 sNdsFtrLeanWorlds[2];
+static void ndsRendererAdapterMtxIdentity20p12(NDSRendererMatrix20p12 *m) {
+    memset(m, 0, sizeof(*m)); for (u32 i = 0; i < 4; i++) m->m[i][i] = 4096;
+}
+'''
+    for name in ('ndsRendererClampS64ToS32', 'ndsRendererRoundShiftS64',
+                 'ndsRendererMtxMul20p12', 'ndsRendererMtxMulAffine20p12'):
+        code += '\n' + function(core, name)
+    code += '\n' + function(adapter, 'ndsRendererAdapterSourceRoundShiftS64')
+    code += '\n' + function(lean, 'ndsFtrLeanApplyCamera')
+    code += '\nint main(void) {\n'
+    rng = random.Random(8)
+    expected = []
+    for case in range(24):
+        matrices = []
+        for _ in range(2):
+            m = [rng.randint(-8192, 8192) for _ in range(16)]
+            m[3] = m[7] = m[11] = 0
+            m[12:15] = [rng.randint(-100000000, 100000000) for _ in range(3)]
+            m[15] = 4096
+            matrices.append(m)
+        world, camera = matrices
+        sx, sy = (0, 0) if case % 2 == 0 else (-129 * 4096, 127 * 4096)
+        shift = [4096 if i % 5 == 0 else 0 for i in range(16)]
+        shift[12:14] = [sx, sy]
+        result = multiply(world, multiply(shift, camera))
+        packed = [rounded(result[r * 4 + c], 8) if r == 3 else result[r * 4 + c]
+                  for r in range(4) for c in range(3)]
+        expected.append(result + result + packed)
+        code += f'''{{
+const s32 w[16] = {{{','.join(map(str, world))}}};
+const s32 c[16] = {{{','.join(map(str, camera))}}};
+NDSRendererMatrix20p12 camera;
+u32 words[14] = {{0}}, *sites[2] = {{words, NULL}};
+memcpy(&camera, c, sizeof(c)); memcpy(&sNdsFtrLeanWorlds[0], w, sizeof(w));
+sNdsFtrLeanWorlds[1] = sNdsFtrLeanWorlds[0];
+words[12] = words[13] = 0x12345678u;
+ndsFtrLeanApplyCamera(2, sites, &camera, {sx}, {sy});
+assert(words[12] == 0x12345678u && words[13] == 0x12345678u);
+assert(memcmp(&camera, c, sizeof(c)) == 0);
+for (u32 j = 0; j < 2; j++) for (u32 i = 0; i < 16; i++)
+    printf("%d ", ((s32*)&sNdsFtrLeanWorlds[j])[i]);
+for (u32 i = 0; i < 12; i++) printf("%d ", (s32)words[i]);
+puts("");
+}}\n'''
+    code += 'return 0; }\n'
+    with tempfile.TemporaryDirectory() as directory:
+        source = Path(directory) / 'camera.c'
+        binary = source.with_suffix('.exe')
+        source.write_text(code)
+        built = subprocess.run([shutil.which('gcc'), '-std=c11', '-O2',
+                                str(source), '-o', str(binary)], capture_output=True, text=True)
+        assert built.returncode == 0, built.stderr
+        run = subprocess.run([str(binary)], capture_output=True, text=True)
+        assert run.returncode == 0, run.stderr
+        assert [list(map(int, line.split())) for line in run.stdout.splitlines()] == expected
+
+
+if __name__ == '__main__':
+    test_camera_patch()
+    print('LEAN_CAMERA_PATCH_OK: affine camera, shuffle, sparse sites, exact packing')

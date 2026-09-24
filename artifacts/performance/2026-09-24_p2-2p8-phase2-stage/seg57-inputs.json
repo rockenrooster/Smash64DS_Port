@@ -1,0 +1,47 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "D3FB6B9E60604C1E93A424BE06B6A5E3991AAEC74FF305F2F9F9808BADB7DEF3",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\Makefile"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "391BED853B83D98FFE684B0B2CBF4AA3CEBF71797320FEFB8254A4DBE753A191",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_renderer_native_owners.c"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "A87933365E1F0B98B80C09D88DAE0359A02D3DB66A0FE2E1B0BDE2B069CAEB17",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_stage_gx.exec.inc"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "CEF1310BB6D5E52FC7B65D03B1F110CE2FA68AA09F9177F5E2EA731EFEF84037",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\include\\nds\\nds_stage_gx.h"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "550B9C35F0134D26613DADFB92E3DFE60B11C3FA86A0B61C6ED491E54EA2D6FE",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\stages\\compile_nds_stage_gx.py"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "C9BFC16AE42F11AE5F63FC015E9E7859D48C160FC42F7302E0BCC939891A2EAE",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\stages\\test_stage_gx.py"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "7D7D3F84C2C4F3B3C9AC93FEE5FB7B3C13D3D7A6FA793CF77C4512C06FBD9467",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\stages\\generate_nds_native_stage.py"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\nds_build_config.h"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "8B7F533B12F1DA512C01A47BDBEE9546F09D05D0908A68A13B9FE9704CFA7FD6",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.elf"
+  }
+]

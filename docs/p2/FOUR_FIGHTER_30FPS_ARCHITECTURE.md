@@ -820,6 +820,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   phase starts, accumulating every measured win. A bucket that falls while WORK-H
   does not is still not banked as a win.
 
+**Owner clarification, 2026-09-24 (D10-D11):** pre-stage 1P intros use static
+images, not live 3D. Campaign work is deferred; at least 95% of current effort
+goes to making four concurrent VS fighters playable. Continue battle rendering,
+memory and frame-cost work from the slice-7 checkpoint. The uncommitted live
+Intro experiment is withdrawn. Deferred campaign coverage and global retirement
+remain recorded obligations, not prerequisites for the next VS optimization
+batch or claims of completion.
+
 ## 9. The owner's compromise list, mapped
 
 | Item | Where it lands | Weight for the gate |

@@ -1,7 +1,7 @@
 # P2-2p8 Phase 1 slice 7: default lean renderer
 
-Status: **IMPLEMENTED_NOT_ACCEPTED**, resumed 2026-09-24 on `c017e6b450b`.
-The scoped uncommitted implementation enables route 1 / admission 2 at boot,
+Status: **IMPLEMENTED_NOT_ACCEPTED**, committed as `98ebd1e2e51` after resuming
+2026-09-24 on `c017e6b450b`. The implementation enables route 1 / admission 2 at boot,
 adds Ness's yo-yo and forward-smash programs, and repairs fighter tint lifetime
 when bank D returns from battle textures to the menu's BG3.
 
@@ -146,3 +146,9 @@ zero mismatches; all 1,972 replay pairs match. LOW's oracle compares 6,515 lists
 was indexed in the local docs README; both remain outside the slice-7 commit.
 Root ROM was rehashed after these tests and still matches r54. No new build or
 publication was performed during this qualification.
+
+The follow-up live-Intro experiment was withdrawn on the owner's 09-24
+clarification: >=95% four-concurrent VS work, campaign later, static 1P intros.
+Its source edits were reverted; the recoverable patch and findings are under
+`artifacts/performance/2026-09-24_p2-2p8-phase1-slice8/`. Continue with Phase 2.
+Slice 7 is pushed to origin/master; its completed proofs remain reusable.

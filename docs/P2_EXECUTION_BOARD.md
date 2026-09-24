@@ -52,19 +52,20 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 
 Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS -- architecture.**
 Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`, D1-D9, log section 6.
-Phase 0 closed; Phase 1 slices 1-6 committed. Slice 7 **RECORD**:
-lean defaults, Ness yo-yo/bat, battle-exit tint and bank-D fixes.
-Identity: `c017e6b450b` + scoped dirty sources; **IMPLEMENTED_NOT_ACCEPTED**.
-Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.
-Retained: final-build Results -> CSS probes/captures, CSS reserve 188,368 B.
-**Next**: checkpoint slice 7; then Intro camera/transient support and variant kinds.
-Owed: D8 scene coverage, retirement, integration profile, owner look; FPS/native RED.
-Job: none; sessions 37663/53658/13155 completed, final digests/oracles pass.
-Owner 09-24: go; **no subagents**. Helper stopped; unrelated edits preserved.
-A7 compaction is on (+68 KB lab low-water); MF codec exists, not linked.
+Phase 0 closed; Phase 1 through `98ebd1e2e51`.
+**Phase 2 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
+performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
+Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
+**Next**: compile Dream Land 0/4, then 1/2/3/6; bake immutable inputs and
+retire repeated prepare/submit work before the batch timing decision.
+Owed: four-CPU timing/output, all-stage coverage, retirement, integration; gates RED.
+ROM: seg57 r2 `D4AEFF8E9F0E7143`; native-only build passed. Early probe:
+679 compiled draws, 0 declines/native failures; full-match proof remains due.
+GX oracle: all 135 corners/colours/UVs exact; two battle captures pixel-identical.
+Early prototype slower; no banked win. Jobs terminal; checkpoint preserved.
+Serial only (**no subagents**); owner edits preserved.
+A7 compaction on (+68 KB lab); MF codec unlinked.
 Shipping heaviest roster still ~130 KB short; lab arena is ~0.2 MB larger.
-Owner 09-23: optimization only -- 1P campaign bugs stay out of scope (intro
-findings: `artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`).
 **Constraint**: CSS animation reserve >= 183,072 B (5,296 B margin).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`. Evidence:
