@@ -560,7 +560,9 @@ any of them (A1).
 ## 6. Delivery sequence
 
 Each phase is one coherent Codex batch: one integrator, measured once at the end.
-A phase that misses its estimate by more than half stops for re-planning.
+A phase that misses its estimate records the shortfall in the phase log and the
+work continues into the next phase, banking every measured win (owner, D9) --
+it no longer stops for re-planning.
 Estimates are cumulative WORK-H P50 / P99 on the measured roster.
 
 | Phase | Content | Exit gate | P50 / P99 |
@@ -793,6 +795,10 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   variant kinds); production is then deleted everywhere, not only in VS battles.
   This is coverage of those scenes' fighter rendering -- 1P campaign bugs outside
   it stay out of scope (owner, 2026-09-23: optimization work only).
+- **D9 (2026-09-24) Keep going: yes.** A phase that falls short of its estimate
+  or gate does not stop for re-planning; its shortfall is recorded and the next
+  phase starts, accumulating every measured win. A bucket that falls while WORK-H
+  does not is still not banked as a win.
 
 ## 9. The owner's compromise list, mapped
 
