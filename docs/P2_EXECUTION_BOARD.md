@@ -58,16 +58,16 @@ roster halts ~130 KB short at battle load in the shipping config).
 **Phase 1 (fighters) active**: slices 1-6 landed (section 6 log) -- every kind
 draws lean in VS at both details (Ness's yo-yo smashes decline), digest identical,
 oracle 0; route 1 (admit 2, default 0) FTR P50 / P95 185K / 269K, WORK-H P50 / P95
-1.40M / 2.01M on the stress roster. A7 prep
-is on by default (`NDS_IF_GAMESTATUS_COMPACT`, GAME SET and loop proven): +68 KB four-CPU
-low-water, the first 1P battle loads. MF host encoder + C decoder landed
-(not linked).
-**Next** (one subagent each): lean as the shipping default (+ Ness's yo-yo
-program); then the phase's deletion step. ARM7 audio spec queued. Owner
-09-23: optimization only, no 1P campaign work (intro findings parked in
-`artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`).
+1.40M / 2.01M on the stress roster. A7 prep is on by default
+(`NDS_IF_GAMESTATUS_COMPACT`): +68 KB four-CPU low-water. MF host encoder + C
+decoder landed (not linked).
+**Next**: slice 7 (lean default + Ness's yo-yo) is running;
+then lean for the CSS, VS Results, autodemo and 1P scenes (owner D8, 09-24: no
+dual paths includes them); then deletion everywhere. ARM7 audio spec queued.
+Owner 09-23: optimization only -- 1P campaign bugs stay out of scope (intro
+findings: `artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`).
 **Constraint**: the all-content VS character select keeps >= 183,072 B at its
-animation reservation or every 3D preview switches off (fixed `050b7c18db4`;
+animation reservation, else no 3D previews (fixed `050b7c18db4`;
 5,296 B margin with compaction on): measure with
 `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`
 after any static growth.

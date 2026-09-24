@@ -787,6 +787,12 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
 - **D6 Residency: new compact motion format.** Every gameplay motion resident;
   N02.04 (no post-GO demand reads) stands; MF is required (A2).
 - **D7 ARM7 audio: yes.** A custom ARM7 binary owns BGM streaming and FGM voices.
+- **D8 (2026-09-24) No dual paths includes the menus and 1P: yes.** Before the
+  fighter production path is deleted, the lean path must also draw the character
+  selects, VS Results, autodemo and the 1P scenes (intro, battles and their
+  variant kinds); production is then deleted everywhere, not only in VS battles.
+  This is coverage of those scenes' fighter rendering -- 1P campaign bugs outside
+  it stay out of scope (owner, 2026-09-23: optimization work only).
 
 ## 9. The owner's compromise list, mapped
 
