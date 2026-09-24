@@ -380,7 +380,13 @@ try {
         'printf "CPGFX %d peak=%u capacity=%u overflow=%u noroom=%u dl_overflow=%u dl_kind=%u dl_bytes=%u\n", $n, gNdsTaskmanGraphicsHeapHighWater, gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount, gNdsTaskmanDLOverflowCount, gNdsTaskmanDLOverflowKind, gNdsTaskmanDLOverflowBytes',
         # Controller-pipeline proof: the driver's A/START taps must publish
         # through the source edge accumulator (bit 15 set == A delivered).
-        'printf "CPCTL %d en=%u mask=%x published=%x\n", $n, gNdsControllerPlaybackEnabled, gNdsControllerPlaybackConnectedMask, gNdsControllerPublishedTapMask',
+        'printf "CPCTL %d en=%u mask=%x published=%x\n", $n, gNdsControllerPlaybackEnabled, gNdsControllerPlaybackConnectedMask, gNdsControllerPublishedTapMask'
+    ) + $(if ($symbols -contains 'gNdsPreviewHaltNonFatalCount') {
+        # Probe builds with NDS_PREVIEW_HALT_NONFATAL=1 count reason-20 draws
+        # instead of halting; the first one's decline witnesses are latched
+        # once, so a later stop reads them after their lines left the cache.
+        @('printf "CPNONFATAL %d count=%u kindmask=%x stage=%u owner=%u asset=%u detail=%u index=%u selected=%u loaded_asset=%u loaded_kind=%u validate=%u/%u/%u/%u/%u/%u/%u\n", $n, gNdsPreviewHaltNonFatalCount, gNdsPreviewHaltNonFatalKindMask, gNdsPreviewHaltNonFatalWitness[0], gNdsPreviewHaltNonFatalWitness[1], gNdsPreviewHaltNonFatalWitness[2], gNdsPreviewHaltNonFatalWitness[3], gNdsPreviewHaltNonFatalWitness[4], gNdsPreviewHaltNonFatalWitness[5], gNdsPreviewHaltNonFatalWitness[6], gNdsPreviewHaltNonFatalWitness[7], gNdsPreviewHaltNonFatalValidate[0], gNdsPreviewHaltNonFatalValidate[1], gNdsPreviewHaltNonFatalValidate[2], gNdsPreviewHaltNonFatalValidate[3], gNdsPreviewHaltNonFatalValidate[4], gNdsPreviewHaltNonFatalValidate[5], gNdsPreviewHaltNonFatalValidate[6]')
+    } else { @() }) + @(
         'if gSCManagerBattleState != 0'
     ) + $battleLines + @(
         'else',
