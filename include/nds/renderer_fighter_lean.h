@@ -96,6 +96,14 @@ extern volatile u32 gNdsFtrLeanAdmit;
  *      residency proved and touched every draw, live link hash every draw
  *   4  patch/submit: light word re-derived every draw, whole list cleaned */
 extern volatile u32 gNdsFtrLeanSlow;
+/* Slice 5: the cost A/B forms are lab tools. A build without the tick HUD
+ * reads the word as 0, so none of those forms is compiled into the shipping
+ * image (the word itself stays, unread). */
+#if defined(NDS_TICK_HUD) && NDS_TICK_HUD
+#define NDS_FTR_LEAN_SLOW_WORD() (gNdsFtrLeanSlow)
+#else
+#define NDS_FTR_LEAN_SLOW_WORD() (0u)
+#endif
 #define NDS_FTR_LEAN_SLOW_KERNEL 1u
 #define NDS_FTR_LEAN_SLOW_GUARD 2u
 #define NDS_FTR_LEAN_SLOW_SUBMIT 4u
@@ -258,6 +266,17 @@ typedef struct NDSFtrLeanCounters
     u32 verify_first[4];        /* first word mismatch: slot | entry << 4 |
                                    record << 8 | records << 16, index,
                                    held word, fresh word */
+    /* slice 5: a material event's kept plan (ndsFtrLeanEvent reuse_plan) */
+    u32 plan_reuses;            /* events that kept the plan: no resolve, no
+                                   joint-table rebuild */
+    u32 plan_reuse_restarts;    /* ... that restarted as a full event (the
+                                   head key or an MObj count moved, or a key
+                                   no entry holds) */
+    u32 verify_plan_runs;       /* verify arm: kept plans resolved anyway */
+    u32 verify_plan_mismatch[3]; /* ... that differ: 0 count / program /
+                                    file, 1 roots (event, offset, DL,
+                                    material count), 2 matrix / material
+                                    DObjs */
     u32 region_takes;           /* route 1: lower half taken from recorder */
     /* kernel */
     u32 kernel_joints;
@@ -379,6 +398,75 @@ typedef struct NDSFtrLeanCounters
 extern NDSFtrLeanCounters gNdsFtrLean;
 #endif
 
+/* Slice 5 attribution, lab ROM only (a tick-HUD build made with
+ * NDS_FTR_LEAN_KTIME=1, own build dir): every per-draw phase split per kind,
+ * the head's own parts, the event path's steps, and the kernel's stall share.
+ * Two more gNdsFtrLeanSlow bits select the kernel experiments there:
+ *   32  after each lock-free kernel pass, run the same pass again at once
+ *       (code and data warm) and once more after DC_FlushAll (data cold, code
+ *       warm); the passes write the same words, so the list is unchanged
+ *   64  drain DMA0 (the previous fighter's list) before the kernel, so its
+ *       loads never wait behind a GXFIFO burst
+ * Neither bit, nor any of this block, exists outside that ROM. */
+#define NDS_FTR_LEAN_SLOW_KERNEL_RERUN 32u
+#define NDS_FTR_LEAN_SLOW_KERNEL_QUIET 64u
+/* Slice 5 cost A/B (any tick-HUD ROM, like bits 1/2/4): each bit puts one
+ * slice 5 cut back to its slice 4 form on the same ROM.
+ *   128  the head's camera LookAt runs for every fighter (no reuse)
+ *   256  the per-draw patch refreshes the shared production inputs first */
+#define NDS_FTR_LEAN_SLOW_HEAD_LOOKAT 128u
+#define NDS_FTR_LEAN_SLOW_REFRESH 256u
+/* A build whose roster compiles in a lean kind (P2: Donkey, Samus, Link or
+ * Kirby). P1's Mario/Fox build never engages the lean path, so the slice 5
+ * placement and head changes stay out of it. */
+#if (defined(NDS_P2_DONKEY) && NDS_P2_DONKEY) || \
+    (defined(NDS_P2_SAMUS) && NDS_P2_SAMUS) || \
+    (defined(NDS_P2_LINK) && NDS_P2_LINK) || \
+    (defined(NDS_P2_KIRBY) && NDS_P2_KIRBY)
+#define NDS_FTR_LEAN_KINDS_BUILD 1
+#else
+#define NDS_FTR_LEAN_KINDS_BUILD 0
+#endif
+#if NDS_FTR_LEAN_LAB && NDS_FTR_LEAN_KTIME
+#define NDS_FTR_LEAN_ATTR_LIVE 1
+typedef struct NDSFtrLeanAttr
+{
+    u32 head_part_ticks[4][4];      /* 0 capture setup + camera LookAt,
+                                       1 ProcDisplay up to the head boundary,
+                                       2 boundary to its end (the walk, or
+                                       the memo's collapsed stub), 3 memo
+                                       finish + restore */
+    u32 guard_part_ticks[4][8];     /* gNdsFtrLean.guard_part_ticks, per kind */
+    u32 patch_part_ticks[4][8];     /* 0 tint tiles, 1 apply tint, 2 P',
+                                       3 light, 4 texgen, 5 input refresh,
+                                       6 root program + head key, 7 the rest
+                                       of the patch phase */
+    u32 submit_part_ticks[4][4];    /* gNdsFtrLean.submit_part_ticks, per kind */
+    u32 book_ticks[4];
+    u32 kernel_cold_ticks[4];       /* bit 32 draws: the draw's own pass */
+    u32 kernel_warm_ticks[4];       /* ... the same pass again at once */
+    u32 kernel_dcold_ticks[4];      /* ... and again after DC_FlushAll */
+    u32 kernel_attr_draws[4];
+    u32 kernel_attr_joints[4];
+    u32 quiet_wait_ticks[4];        /* bit 64: DMA0 drain before the kernel */
+    u32 quiet_draws[4];
+    u32 kernel_part_ticks[4][4];    /* bit 8, per kind (gNdsFtrLean's parts) */
+    u32 kernel_part_joints[4];
+    u32 event_part_ticks[8];        /* event path: 0 plan resolve, 1 program
+                                       + validate, 2 material rows + key,
+                                       3 refresh + identity + re-record key,
+                                       4 held entry (find, activate, shade),
+                                       5 materialize (+ learn), 6 joint table,
+                                       7 watch + proofs */
+    u32 event_part_count[8];
+} NDSFtrLeanAttr;
+extern NDSFtrLeanAttr gNdsFtrLeanAttr;
+#define NDS_FTR_LEAN_ATTR(...) do { __VA_ARGS__; } while (0)
+#else
+#define NDS_FTR_LEAN_ATTR_LIVE 0
+#define NDS_FTR_LEAN_ATTR(...) ((void)0)
+#endif
+
 /* Route-2 handshake: set by the old path's matrix prep when the forced
  * Q43.20 source compose produced this draw's matrices. */
 extern volatile u32 gNdsFtrLeanOracleSourceOk;
@@ -498,9 +586,27 @@ u32 ndsFtrLeanEntryActivate(u32 battle_slot, u32 code);
 u32 ndsFtrLeanRerecordKey(u32 ident, const u32 *key,
                           const NDSRendererNativeFighterRoot *inputs,
                           u32 input_count);
+/* Slice 5: what the per-draw patch reads, without the shared production
+ * inputs (the adapter refreshed ~13 fields of every root of that shared
+ * workspace per draw, 1.3-2.7K ticks, for the four fields below): the draw's
+ * replay preambles and each root's index into them, the colour modulate, P's
+ * source projection and the binding worlds (Link's texgen). `inputs` is the
+ * refreshed workspace or NULL: only the generic texgen fallback (a list whose
+ * site map was not built) needs it. */
+typedef struct NDSFtrLeanPatchView
+{
+    const NDSRendererNativeFighterPreamble *preambles;
+    const u8 *event_index;
+    u32 root_count;
+    u32 modulate;
+    const NDSRendererMatrix20p12 *projection;
+    const NDSRendererMatrix20p12 *worlds;
+    const NDSRendererNativeFighterRoot *inputs;
+} NDSFtrLeanPatchView;
+#define NDS_FTR_LEAN_VIEW_PRE(view, root) \
+    (&(view)->preambles[(view)->event_index[(root)]])
 void ndsFtrLeanEntryResetShade(u32 battle_slot,
-                               const NDSRendererNativeFighterRoot *inputs,
-                               u32 input_count);
+                               const NDSFtrLeanPatchView *view);
 /* Materialize the list for `key` into `entry` from the generated tables of
  * the owner (selected by owner_slot / use_low_detail and the root program
  * the caller set) and the production inputs `inputs` (preambles, configs,
@@ -521,8 +627,12 @@ void ndsFtrLeanPacketRebind(u32 battle_slot);
 /* The active list's per-root LOAD4x3 parameter sites, for the kernel to
  * write (their cache lines are marked for the submit). Returns the mask of
  * roots whose Q20.12 world the patch also reads (Link's texgen group roots),
- * or NDS_FTR_LEAN_SITES_NONE. */
+ * or NDS_FTR_LEAN_SITES_NONE. Slice 5: bit 31 (NDS_FTR_LEAN_SITES_INPUTS, no
+ * root -- NDS_FTR_LEAN_ROOT_MAX is 24) says the list's texgen patch reads the
+ * refreshed production inputs (NDSFtrLeanPatchView.inputs): texgen sites and
+ * no site map. */
 #define NDS_FTR_LEAN_SITES_NONE 0xffffffffu
+#define NDS_FTR_LEAN_SITES_INPUTS 0x80000000u
 u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
                                    u32 root_count);
 /* The active list's validity half: tint-tile set generation (the tile words
@@ -539,11 +649,11 @@ u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch);
  * REMATERIALIZE when a tinted prim went white or lost its tile (the list's
  * structure is the live draw's no longer). */
 #define NDS_FTR_LEAN_PATCH_REMATERIALIZE 0x100u
-u32 ndsFtrLeanPacketPatch(u32 battle_slot,
-                          const NDSRendererNativeFighterRoot *inputs,
-                          u32 input_count, u32 owner_slot,
-                          u32 use_low_detail, u32 pre_same);
-void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats);
+u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
+                          u32 owner_slot, u32 use_low_detail, u32 pre_same);
+/* Returns the hardware triangles the list presents (slice 5: no stats
+ * block; the frame summary is accounted directly). */
+u32 ndsFtrLeanPacketSubmit(u32 battle_slot);
 /* Kind index for the counters (lab) of the lean list in a battle slot,
  * published by the adapter at every attempt. */
 void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind);

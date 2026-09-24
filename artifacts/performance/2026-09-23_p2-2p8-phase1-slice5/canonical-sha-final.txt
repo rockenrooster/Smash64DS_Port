@@ -1,0 +1,11 @@
+slice 5 canonical ROMs (sha256)
+gate (build-p2p8-s5, smash64ds-p2-fourcpu-tickhud-hwtri.nds): c366e5d4ab4abd576b6d336ba75d9d33d67b6373c6c1e6cc130018ec349120f3
+  reproduced by build-final-recheck.log and build-final-remake2.log after every later build
+pre (build-p2p8-s5-pre, pre-slice-5 sources of the six edited files, today's tree): 5d68834fb4e0fac048fafb8984b96bcc927662d5a0d5273466a7eca0ae3ee894
+  build-pre-final.log, build-pre-final2.log (stable)
+attribution (build-p2p8-s5-ktime, NDS_FTR_LEAN_KTIME=1): 5014e9dc42609e4989490c7c5f65451cac206605665c426a1fb8bb65bd8db91a
+  build-ktime-a5.log, build-ktime-a5-recheck.log (stable)
+shipping shell final (build-p2p8-s5-shipcheck, smash64ds-p2-shell-hwtri.nds): dae44c453f372619825ad5a49ceb76ed12bd6a8359630eb4f0d7beffb93b5ece
+  build-shipcheck-final2.log (stable after the intermediate 7bc9bedf... of build-shipcheck-final.log)
+shipping shell pre (build-p2p8-s5-shipcheck-pre): 260526686d2da6d75237fd174b8a8018dd6eb40e8aba9cc4020a1eef213004f1
+  build-shipcheck-pre-recheck.log, build-shipcheck-pre-recheck2.log (stable)

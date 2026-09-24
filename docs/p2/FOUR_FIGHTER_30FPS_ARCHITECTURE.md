@@ -717,6 +717,25 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   the all-content character select one arena page: 188,368 B at the animation
   reservation, 5,296 B of margin -- the same margin the 2026-09-22 published ROM
   shipped with. Next: the 1P stage-2 intro packs, then the phase's deletion step.
+- **Phase 1 slice 5 (2026-09-23,
+  `artifacts/performance/2026-09-23_p2-2p8-phase1-slice5/`)**: lean draw cost. The
+  camera LookAt runs once a frame instead of once per fighter (exact: input and
+  output hashes, graphics-heap footprint kept; the decomp control arm, level 0,
+  always calls); the patch reads a per-draw view; material events keep their
+  plan when a held list matches (verify arm: 140 kept plans re-resolved, 0
+  differences); the kernel and the per-draw list code (3,328 B) run from ITCM,
+  funded by moving the old path's production execute (7.9 KB) to main RAM. Digest
+  identical, oracle 0 mismatches, native failures 39 in routes 0-2. Route 1 (admit
+  2, compaction on): FTR P50 / P95 / P99 228,992 / 321,715 / 812,019 -> **183,552 /
+  268,333 / 766,360**; WORK-H 1,556,096 / 2,190,358 / 2,815,923 -> **1,404,128 /
+  2,031,187 / 2,690,529** (WORK-H less STG fell 41,756 with FTR's 41,929; STG's
+  own drop, seen in route 0 too, is layout and not claimed). Per draw DK / Samus /
+  Link / Kirby 50.5 / 35.5 / 58.2 / 32.3K -> 42.0 / 28.6 / 48.5 / 24.9K; kernel
+  704-822 ticks/joint (target ~450: ~250 is data stall on DObj lines). Shipping
+  static -136 B. **Accepted cost**: route 0's record frames lost ITCM (+88K P95,
+  +154K P99 on the stress match) -- the old path the phase deletes, but also what
+  non-lean kinds draw with until coverage lands. Next: coverage (all kinds, both
+  details) so lean can be the default, then deletion.
 
 ## 7. Found along the way
 

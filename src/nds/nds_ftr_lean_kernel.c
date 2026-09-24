@@ -38,12 +38,20 @@
  * ancestor chain alone, locks included), so joints with no drawn descendant
  * are never composed.
  *
- * ARM state (SMULL/SMLAL; Thumb has neither), in main RAM. Placement was
- * measured both ways on the four-CPU match (slice 1): kernel in ITCM
- * (evicting ndsRendererNativePrepareProductionRun, 2,600 B) cost route 0
- * +20,000 FTR ticks/frame mean and +99,000 at P95 through the evicted
- * function, while the kernel itself runs only ~2,700 ticks/draw slower from
- * main RAM. */
+ * ARM state (SMULL/SMLAL; Thumb has neither). Placement history: slice 1
+ * measured the kernel in ITCM, evicting ndsRendererNativePrepareProductionRun
+ * (2,600 B), at +20,000 FTR ticks/frame mean in route 0 through the evicted
+ * function -- when route 0 re-recorded far more often than it does now (256
+ * records a match) -- against ~2,700 ticks/draw for the kernel itself.
+ *
+ * Slice 5 (the attribution ROM, gNdsFtrLeanSlow bit 32): of ~930 ticks/joint,
+ * ~250 are data-cache misses and ~60-120 instruction fetch; the rest is the
+ * arithmetic and the list stores. The kernel now lives in ITCM (funded by the
+ * production execute, which a lean draw never runs: route 0's record path),
+ * with the three angle conversions inline. A half-period ITCM copy of
+ * gSYSinTable for its six sine lookups a joint (sNdsFtrLeanSinHalf below;
+ * the 4 KB table is the whole data cache) was measured and left off
+ * (NDS_FTR_LEAN_SIN_ITCM): the same ITCM holds per-draw list code for more. */
 
 #include <sys/obj.h>
 #include <ft/fighter.h>
@@ -55,9 +63,21 @@
 
 extern u16 gSYSinTable[0x800];
 
+/* ITCM only where the production execute left it (a roster with a lean kind:
+ * NDS_FTR_LEAN_EVICT_PRODUCTION, src/nds/nds_renderer_preamble.c); P1 keeps
+ * the kernel in main RAM, where it never runs. */
+#define NDS_FTR_LEAN_KERNEL_ITCM NDS_FTR_LEAN_KINDS_BUILD
+
 #if defined(__arm__)
+#if NDS_FTR_LEAN_KERNEL_ITCM
+#define NDS_FTR_LEAN_KERNEL_CODE \
+    __attribute__((noinline, target("arm"), section(".itcm.ftr_lean")))
+#define NDS_FTR_LEAN_SIN_SECTION __attribute__((section(".itcm.ftr_lean_sin")))
+#else
 #define NDS_FTR_LEAN_KERNEL_CODE \
     __attribute__((noinline, target("arm")))
+#define NDS_FTR_LEAN_SIN_SECTION
+#endif
 /* Helpers are ARM too, so they inline into the ARM kernel (a Thumb helper
  * cannot be inlined into an ARM caller and became a main-RAM call). */
 #define NDS_FTR_LEAN_KERNEL_INLINE \
@@ -65,6 +85,7 @@ extern u16 gSYSinTable[0x800];
 #else
 #define NDS_FTR_LEAN_KERNEL_CODE __attribute__((noinline))
 #define NDS_FTR_LEAN_KERNEL_INLINE static inline
+#define NDS_FTR_LEAN_SIN_SECTION
 #endif
 
 #define NDS_FTR_LEAN_ONE_BITS 0x3f800000u
@@ -141,6 +162,71 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanFloatPow2ToS32(f32 value, u32 scale_bit
     return TRUE;
 }
 
+/* Slice 5: the kernel's sine table. gSYSinTable (u16[0x800], one half
+ * period) is symmetric about 0x3ff.5 -- entry i equals entry 0x7ff - i for
+ * every i (decomp/.../sys/sintable.c; checked on the host over all 2,048
+ * entries, and again on the device at fill time in the lab ROM) -- so its first
+ * 0x400 entries reproduce it exactly. That half lives in ITCM (2 KB, no main
+ * RAM: the ITCM load image is overwritten when .main is relocated at boot),
+ * filled from gSYSinTable at the kernel's first call; entry 0x3ff (32,768) is
+ * never 0, so it doubles as the "filled" flag. Gameplay keeps reading
+ * gSYSinTable itself. A build without the ITCM kernel (P1) reads gSYSinTable
+ * as before and carries no copy. */
+#define NDS_FTR_LEAN_SIN_HALF 0x400u
+/* Off by default: measured on the four-CPU match (slice 5, a2 against
+ * a2nosin, same sources), the ITCM half saved 38-50 ticks/joint, ~4.2K ticks
+ * a frame of FTR, for 2 KB of ITCM -- about half of what the same ITCM buys
+ * holding the per-draw list code (which also leaves main RAM; the half-table
+ * is new bytes). 1 puts it back, where the kernel is in ITCM. */
+#ifndef NDS_FTR_LEAN_SIN_ITCM
+#define NDS_FTR_LEAN_SIN_ITCM 0
+#endif
+#if NDS_FTR_LEAN_SIN_ITCM && !NDS_FTR_LEAN_KERNEL_ITCM
+#undef NDS_FTR_LEAN_SIN_ITCM
+#define NDS_FTR_LEAN_SIN_ITCM 0
+#endif
+#if NDS_FTR_LEAN_SIN_ITCM
+static u16 sNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF]
+    NDS_FTR_LEAN_SIN_SECTION __attribute__((aligned(32)));
+#if NDS_FTR_LEAN_LAB
+/* Lab: entries of the full table the half does not reproduce (expect 0). */
+volatile u32 gNdsFtrLeanSinHalfMismatch __attribute__((used));
+#endif
+
+static void __attribute__((noinline, cold)) ndsFtrLeanSinHalfFill(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_FTR_LEAN_SIN_HALF; i++)
+    {
+        sNdsFtrLeanSinHalf[i] = gSYSinTable[i];
+    }
+#if NDS_FTR_LEAN_LAB
+    for (i = 0u; i < 0x800u; i++)
+    {
+        u32 h = (i < NDS_FTR_LEAN_SIN_HALF) ? i : (0x7ffu - i);
+
+        if (sNdsFtrLeanSinHalf[h] != gSYSinTable[i])
+        {
+            gNdsFtrLeanSinHalfMismatch++;
+        }
+    }
+#endif
+}
+
+/* ndsRendererAdapterFighterSinFromIndex's value, read from the ITCM half:
+ * h < 0x400 is gSYSinTable[h] itself; h >= 0x400 is gSYSinTable[0x7ff - h],
+ * which equals gSYSinTable[h] by the symmetry above. */
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
+{
+    u32 id = (u32)index & 0xfffu;
+    u32 h = id & 0x7ffu;
+    s32 value = (s32)sNdsFtrLeanSinHalf[
+        (h < NDS_FTR_LEAN_SIN_HALF) ? h : (0x7ffu - h)];
+
+    return ((id & 0x800u) != 0u) ? -value : value;
+}
+#else
 /* ndsRendererAdapterFighterSinFromIndex, verbatim. */
 NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
 {
@@ -149,9 +235,9 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanSinFromIndex(s32 index)
 
     return ((id & 0x800u) != 0u) ? -value : value;
 }
+#endif
 
-static NDS_FTR_LEAN_KERNEL_CODE s32
-ndsFtrLeanAngleIndex(f32 angle, s32 *out)
+NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanAngleIndex(f32 angle, s32 *out)
 {
     return ndsFighterMatrixAngleToIndexExact(angle, out);
 }
@@ -302,6 +388,7 @@ NDS_FTR_LEAN_KERNEL_INLINE u32 ndsFtrLeanFastLocal(const NDSFtrLeanJoint *joint,
         f32 f;
         u32 u;
     } sx, sy, sz;
+    u32 scaled;
 
     *need_slow = FALSE;
     switch (joint->local_kind)
@@ -332,23 +419,23 @@ NDS_FTR_LEAN_KERNEL_INLINE u32 ndsFtrLeanFastLocal(const NDSFtrLeanJoint *joint,
     sx.f = dobj->scale.vec.f.x;
     sy.f = dobj->scale.vec.f.y;
     sz.f = dobj->scale.vec.f.z;
-    if ((sx.u != NDS_FTR_LEAN_ONE_BITS) || (sy.u != NDS_FTR_LEAN_ONE_BITS) ||
-        (sz.u != NDS_FTR_LEAN_ONE_BITS))
+    /* One TrsCells for both classes (the scaled form is a runtime branch
+     * inside it), so the angle conversions and sine lookups are emitted once
+     * in the ITCM kernel instead of once per class. */
+    scaled = ((sx.u != NDS_FTR_LEAN_ONE_BITS) ||
+              (sy.u != NDS_FTR_LEAN_ONE_BITS) ||
+              (sz.u != NDS_FTR_LEAN_ONE_BITS)) ? 1u : 0u;
+    if ((scaled != 0u) && (no_fast != 0u))
     {
-        if ((no_fast != 0u) || (ndsFtrLeanTrsCells(dobj, cells, 1u) == FALSE))
-        {
-            *need_slow = TRUE;
-            return (no_fast != 0u) ? nNDSFtrLeanJointScale :
-                nNDSFtrLeanJointConvert;
-        }
+        *need_slow = TRUE;
         return nNDSFtrLeanJointScale;
     }
-    if (ndsFtrLeanTrsCells(dobj, cells, 0u) == FALSE)
+    if (ndsFtrLeanTrsCells(dobj, cells, scaled) == FALSE)
     {
         *need_slow = TRUE;
         return nNDSFtrLeanJointConvert;
     }
-    return nNDSFtrLeanJointFast;
+    return (scaled != 0u) ? nNDSFtrLeanJointScale : nNDSFtrLeanJointFast;
 }
 
 /* ndsRendererAdapterSourceRoundShiftS64(v, 8) for an s32 v, which is also
@@ -395,6 +482,12 @@ ndsFtrLeanKernelCompose(const NDSFtrLeanJoint *joints, u32 joint_count,
     {
         return FALSE;
     }
+#if NDS_FTR_LEAN_SIN_ITCM
+    if (sNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF - 1u] == 0u)
+    {
+        ndsFtrLeanSinHalfFill();
+    }
+#endif
     for (j = 0u; j < nNDSFtrLeanJointClassCount; j++)
     {
         counts[j] = 0u;

@@ -1,0 +1,92 @@
+shipping static RAM, slice 5: pre = build-p2p8-s5-shipcheck-pre (pre-slice-5 sources of the 6 slice-5 files, today's tree, rom sha256 260526686d2da6d75237fd174b8a8018dd6eb40e8aba9cc4020a1eef213004f1); final = build-p2p8-s5-shipcheck (rom sha256 dae44c453f372619825ad5a49ceb76ed12bd6a8359630eb4f0d7beffb93b5ece); both re-made until stable
+
+data/bss/dtcm symbols whose size changed (smash64ds-p2-shell-hwtri.elf -> smash64ds-p2-shell-hwtri.elf)
+symbol                                                   before      after     delta
+sNdsFtrLeanStats                                          1,300          0     -1300
+sNdsFtrLookAtCObj                                             0          4        +4
+sNdsFtrLookAtIn                                               0          4        +4
+sNdsFtrLookAtOut                                              0          4        +4
+TOTAL data/bss/dtcm symbol delta                                               -1288
+code symbols (t/T) delta                                   +494
+
+section                            before        after     delta
+.itcm                              31,440       30,792      -648
+.main                           1,610,804    1,611,948     +1144
+.main.bss                         906,064      904,784     -1280
+TOTAL loaded sections                                       -784
+
+all sections (size -A):
+pre:
+.secure               2048   234881024
+.bootstub              408   234883072
+.crt0                  960    33558528
+.dldi                16384    58765312
+.vectors                32           0
+.itcm                31440    33521696
+.dtcm                 8800    50266112
+.dtcm.bss             2000    50274912
+.text.hot             4472    33559488
+.text.hot.draw        6040    33563960
+.main              1610804    33570000
+.main.rw            228620    35180832
+.eh_frame                4    35409452
+.tinfo                  12    35409456
+.init_array              8    35409468
+.fini_array              4    35409476
+.tdata                   0           0
+.tbss                    0           0
+.main.tls                0    35409480
+.main.bss           906064    35409504
+.twl                     0    36315584
+.twl.rw                  0    36315584
+.twl.bss                 0    36315584
+.loadlist               48   234883480
+.twl.loadlist           12   234883528
+.comment                24           0
+.debug_aranges       66592           0
+.debug_info        8288895           0
+.debug_abbrev       352469           0
+.debug_line        2052605           0
+.debug_frame        213452           0
+.debug_str         1119004           0
+.ARM.attributes         39           0
+.debug_line_str       1167           0
+.debug_loclists    1772613           0
+.debug_rnglists     222240           0
+final:
+.secure               2048   234881024
+.bootstub              408   234883072
+.crt0                  960    33558528
+.dldi                16384    58765312
+.vectors                32           0
+.itcm                30792    33521696
+.dtcm                 8800    50266112
+.dtcm.bss             2000    50274912
+.text.hot             4472    33559488
+.text.hot.draw        6040    33563960
+.main              1611948    33570000
+.main.rw            228620    35181952
+.eh_frame                4    35410572
+.tinfo                  12    35410576
+.init_array              8    35410588
+.fini_array              4    35410596
+.tdata                   0           0
+.tbss                    0           0
+.main.tls                0    35410600
+.main.bss           904784    35410624
+.twl                     0    36315424
+.twl.rw                  0    36315424
+.twl.bss                 0    36315424
+.loadlist               48   234883480
+.twl.loadlist           12   234883528
+.comment                24           0
+.debug_aranges       66608           0
+.debug_info        8289528           0
+.debug_abbrev       352368           0
+.debug_line        2052666           0
+.debug_frame        213496           0
+.debug_str         1119233           0
+.ARM.attributes         39           0
+.debug_line_str       1163           0
+.debug_loclists    1773210           0
+.debug_rnglists     222257           0

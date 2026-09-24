@@ -53,14 +53,40 @@ static NDSRendererProfileOwner sNdsRendererRuntimeOwner;
 /* The measured mode-163 renderer wins in ARM state on retail hardware.  Its
  * six zero-wait ITCM paths retain explicit ARM state and O3; host fixtures
  * retain only the portable optimization annotations. */
+/* P2-2p8 Phase 1 slice 5: NDS_RENDERER_NATIVE_FIGHTER_CODE marks the
+ * production execute and its run helpers (prepare, shade, the two emitters):
+ * the old path's record path. A lean draw never runs them (the materializer
+ * has its own twins), and route 0 runs them only when a packet misses, so
+ * their ITCM goes to the lean joint kernel and its sine half-table
+ * (src/nds/nds_ftr_lean_kernel.c). Placement only: same noinline/hot/O3/ARM
+ * in main RAM, no emitted instruction changes. Only a roster with a lean kind
+ * (P2: Donkey, Samus, Link or Kirby compiled in) trades; P1's Mario/Fox build
+ * never engages the lean path and keeps production resident
+ * (scripts/check-renderer-itcm-placement.ps1 pins it there). 0 restores the
+ * old placement everywhere. */
+#ifndef NDS_FTR_LEAN_EVICT_PRODUCTION
+#if (defined(NDS_P2_DONKEY) && NDS_P2_DONKEY) || \
+    (defined(NDS_P2_SAMUS) && NDS_P2_SAMUS) || \
+    (defined(NDS_P2_LINK) && NDS_P2_LINK) || \
+    (defined(NDS_P2_KIRBY) && NDS_P2_KIRBY)
+#define NDS_FTR_LEAN_EVICT_PRODUCTION 1
+#else
+#define NDS_FTR_LEAN_EVICT_PRODUCTION 0
+#endif
+#endif
 #if defined(__arm__)
 #define NDS_RENDERER_HOT_CODE \
     __attribute__((hot, optimize("O3"), target("arm"), section(".itcm")))
 #define NDS_RENDERER_FAST_RUN_CODE \
     __attribute__((noinline, optimize("O3"), target("arm")))
+#if NDS_FTR_LEAN_EVICT_PRODUCTION
+#define NDS_RENDERER_NATIVE_FIGHTER_CODE \
+    __attribute__((noinline, hot, optimize("O3"), target("arm")))
+#else
 #define NDS_RENDERER_NATIVE_FIGHTER_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm"), \
                    section(".itcm.native_fighter")))
+#endif
 #define NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE \
     __attribute__((noinline, hot, optimize("O3"), target("arm")))
 #else

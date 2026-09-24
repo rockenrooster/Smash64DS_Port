@@ -9611,6 +9611,27 @@ u32 gNdsR2ExecEpochCalls;
 #if NDS_FIGHTER_PACKET_LIVE
 extern u16 gSYFramebufferSets[1][231][320];
 
+/* Slice 5: the list code every lean draw runs (the active entry, its guard,
+ * the kernel's modelview sites, the dirty-line flush, the submit, and the
+ * shade re-derive the replay shares) lives in ITCM beside the joint kernel,
+ * in the production execute's former ITCM (a lean draw never runs it:
+ * NDS_FTR_LEAN_EVICT_PRODUCTION). Placement only. The slice 5 attribution
+ * priced this code's instruction fetch at roughly one tick per byte per draw:
+ * each draw runs it once, cold, after the head. */
+#if defined(__arm__) && NDS_FTR_LEAN_KINDS_BUILD
+#define NDS_FTR_LEAN_DRAW_CODE __attribute__((section(".itcm.ftr_lean_draw")))
+#else
+#define NDS_FTR_LEAN_DRAW_CODE
+#endif
+/* The KTIME attribution ROM's timers do not fit ITCM beside the rest (64 B
+ * over): there, and only there, the tint core stays in main RAM, so that
+ * ROM's apply_tint part reads a little high. */
+#if NDS_FTR_LEAN_KTIME
+#define NDS_FTR_LEAN_TINT_CODE
+#else
+#define NDS_FTR_LEAN_TINT_CODE NDS_FTR_LEAN_DRAW_CODE
+#endif
+
 static u32 ndsFighterPacketMix(u32 hash, u32 value)
 {
     return (hash ^ value) * 16777619u;
@@ -9782,18 +9803,30 @@ static void ndsFighterPacketTouchTextures(const NDSFighterPacket *packet)
 }
 
 /* Re-derive every shade site's DIF_AMB word for the live prim/modulate.
- * Skipped when neither moved since the words were last derived. */
-static s32 ndsFighterPacketApplyTint(
-    NDSFighterPacket *packet, const NDSRendererNativeFighterRoot *inputs)
+ * Skipped when neither moved since the words were last derived.
+ *
+ * Slice 5: one core for both callers -- the replay's (the roots' prims read
+ * from its production inputs) and the lean path's (read from its patch view,
+ * NDSFtrLeanPatchView) -- taking the roots' prim colours as an array. A site
+ * whose inputs (both light colours, the material colour, use_material) equal
+ * the previous site's takes that site's word: the word is a pure function of
+ * those inputs and the modulate, and under a flashing modulate each
+ * MaterialColor15 costs three divides a channel. */
+static s32 NDS_FTR_LEAN_TINT_CODE
+ndsFighterPacketApplyTintPrims(NDSFighterPacket *packet, const u32 *prims,
+                               u32 modulate)
 {
-    u32 modulate = inputs[0].config->color_modulate;
     u32 prim_hash = 2166136261u;
+    u32 memo_light_1 = 0u;
+    u32 memo_light_2 = 0u;
+    u32 memo_material = 0u;
+    u32 memo_use = 0xffffffffu;
+    u32 memo_word = 0u;
     u32 i;
 
     for (i = 0u; i < packet->root_count; i++)
     {
-        prim_hash = ndsFighterPacketMix(prim_hash,
-                                        inputs[i].preamble->prim_color);
+        prim_hash = ndsFighterPacketMix(prim_hash, prims[i]);
     }
     if ((packet->tint_modulate == modulate) &&
         (packet->tint_prim_hash == prim_hash))
@@ -9822,52 +9855,81 @@ static s32 ndsFighterPacketApplyTint(
     {
         const NDSFighterPacketShadeSite *site = &packet->sites[i];
         u32 material_color = site->material_color;
-        u32 diffuse;
-        u32 ambient;
 
         if ((site->prim_from_root != 0u) &&
             ((u32)site->root < packet->root_count))
         {
-            material_color = inputs[site->root].preamble->prim_color;
+            material_color = prims[site->root];
         }
-        diffuse = ndsRendererR2MaterialColor15(
-            site->light_color_1, material_color, site->use_material,
-            modulate);
-        ambient = ndsRendererR2MaterialColor15(
-            site->light_color_2, material_color, site->use_material,
-            modulate);
-        /* THE SAME CLAMP THE PRODUCTION PATH APPLIES (:7347), AND ITS ABSENCE
-         * HERE WAS P04/K02/J01.
-         *
-         * The word this function overwrites was recorded CLAMPED --
-         * ndsFighterPacketRecordDiffuseAmbient tees the post-clamp value. This
-         * re-derive rebuilt it from the frozen inputs and stopped one call
-         * short, so the first tint move (damage flash, invincibility blink,
-         * team colour) replaced a clamped word with an unclamped one and then
-         * latched it: the early-out above keeps the new prim hash, so nothing
-         * re-derives it again until the packet is re-recorded.
-         *
-         * That is the shape of the owner's report exactly. The clamp only bites
-         * a TINTED prim -- it returns `diffuse` untouched for use_material == 0
-         * and for a white prim -- so the only fighters that can show it are the
-         * three it was written for: Pikachu 0xFFD933, Kirby 0x00FF5A and Purin
-         * 0xFFCDD8, which are the three face/body rows. A part whose run is
-         * untinted kept its value while the tinted run beside it jumped, which
-         * reads as two colours on one model. And holding neutral B cured it
-         * because a status change re-records the packet, restoring the clamped
-         * word -- a static arithmetic error could not be cured by a button, but
-         * a latched cache entry is cured by exactly that.
-         *
-         * Nothing else needs to change: a rigid clamp of the recorded inputs is
-         * what the live draw would have written for this prim, so prepared and
-         * replayed frames now derive the identical word instead of two. */
-        diffuse = ndsRendererR2ClampDiffuseToMaterial(
-            diffuse, ambient, material_color, site->use_material, modulate);
-        packet->words[site->index] = diffuse | (ambient << 16);
+        if ((site->light_color_1 != memo_light_1) ||
+            (site->light_color_2 != memo_light_2) ||
+            (material_color != memo_material) ||
+            ((u32)site->use_material != memo_use))
+        {
+            u32 diffuse = ndsRendererR2MaterialColor15(
+                site->light_color_1, material_color, site->use_material,
+                modulate);
+            u32 ambient = ndsRendererR2MaterialColor15(
+                site->light_color_2, material_color, site->use_material,
+                modulate);
+
+            /* THE SAME CLAMP THE PRODUCTION PATH APPLIES (:7347), AND ITS ABSENCE
+             * HERE WAS P04/K02/J01.
+             *
+             * The word this function overwrites was recorded CLAMPED --
+             * ndsFighterPacketRecordDiffuseAmbient tees the post-clamp value. This
+             * re-derive rebuilt it from the frozen inputs and stopped one call
+             * short, so the first tint move (damage flash, invincibility blink,
+             * team colour) replaced a clamped word with an unclamped one and then
+             * latched it: the early-out above keeps the new prim hash, so nothing
+             * re-derives it again until the packet is re-recorded.
+             *
+             * That is the shape of the owner's report exactly. The clamp only bites
+             * a TINTED prim -- it returns `diffuse` untouched for use_material == 0
+             * and for a white prim -- so the only fighters that can show it are the
+             * three it was written for: Pikachu 0xFFD933, Kirby 0x00FF5A and Purin
+             * 0xFFCDD8, which are the three face/body rows. A part whose run is
+             * untinted kept its value while the tinted run beside it jumped, which
+             * reads as two colours on one model. And holding neutral B cured it
+             * because a status change re-records the packet, restoring the clamped
+             * word -- a static arithmetic error could not be cured by a button, but
+             * a latched cache entry is cured by exactly that.
+             *
+             * Nothing else needs to change: a rigid clamp of the recorded inputs is
+             * what the live draw would have written for this prim, so prepared and
+             * replayed frames now derive the identical word instead of two. */
+            diffuse = ndsRendererR2ClampDiffuseToMaterial(
+                diffuse, ambient, material_color, site->use_material,
+                modulate);
+            memo_light_1 = site->light_color_1;
+            memo_light_2 = site->light_color_2;
+            memo_material = material_color;
+            memo_use = site->use_material;
+            memo_word = diffuse | (ambient << 16);
+        }
+        packet->words[site->index] = memo_word;
     }
     packet->tint_modulate = modulate;
     packet->tint_prim_hash = prim_hash;
     return TRUE;
+}
+
+static s32 ndsFighterPacketApplyTint(
+    NDSFighterPacket *packet, const NDSRendererNativeFighterRoot *inputs)
+{
+    u32 prims[NDS_FIGHTER_PACKET_ROOT_MAX];
+    u32 i;
+
+    if (packet->root_count > NDS_FIGHTER_PACKET_ROOT_MAX)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < packet->root_count; i++)
+    {
+        prims[i] = inputs[i].preamble->prim_color;
+    }
+    return ndsFighterPacketApplyTintPrims(
+        packet, prims, inputs[0].config->color_modulate);
 }
 
 /* ndsRendererR2WriteLightVector's normalisation, same hardware units.
@@ -10688,6 +10750,7 @@ _Static_assert(NDS_FTR_LEAN_KEY_WORDS == 6u, "entry key width");
 #define NDS_FTR_LEAN_DIRTY_LINES ((NDS_FTR_LEAN_WORD_CAPACITY + 7u) / 8u + 1u)
 #define NDS_FTR_LEAN_DIRTY_WORDS ((NDS_FTR_LEAN_DIRTY_LINES + 31u) / 32u)
 
+
 typedef struct NDSFtrLeanEntryState
 {
     u32 valid;
@@ -10774,7 +10837,8 @@ static inline void ndsFtrLeanMarkDirty(NDSFtrLeanEntryState *state,
 
 /* Clean every marked line (runs of consecutive lines in one call) and clear
  * the marks. Returns the bytes cleaned. */
-static u32 ndsFtrLeanFlushDirty(NDSFtrLeanEntryState *state, const u32 *words)
+static u32 NDS_FTR_LEAN_DRAW_CODE
+ndsFtrLeanFlushDirty(NDSFtrLeanEntryState *state, const u32 *words)
 {
     uintptr_t base = (uintptr_t)words & ~(uintptr_t)31u;
     u32 bytes = 0u;
@@ -10830,7 +10894,7 @@ static NDSFtrLeanVariant *ndsFtrLeanVariantRecord(u32 slot, u32 entry,
 }
 
 /* The active entry's list and state, or NULL. */
-static NDSFighterPacket *ndsFtrLeanActive(u32 slot,
+static NDS_FTR_LEAN_DRAW_CODE NDSFighterPacket *ndsFtrLeanActive(u32 slot,
                                           NDSFtrLeanEntryState **state)
 {
     NDSFtrLeanSlotState *s;
@@ -11015,7 +11079,7 @@ static u32 ndsFtrLeanBuildTexgenMap(const NDSFighterPacket *lean)
  * and casts per unique normal, then one table copy per site. */
 static s32 ndsFtrLeanPatchTexgenMapped(
     NDSFighterPacket *packet, const NDSFtrLeanTexgenMap *map,
-    const NDSRendererNativeFighterRoot *inputs, u32 input_count)
+    const NDSRendererMatrix20p12 *worlds, u32 input_count)
 {
     const LookAt *look_at;
     u32 group_index;
@@ -11026,7 +11090,7 @@ static s32 ndsFtrLeanPatchTexgenMapped(
     }
     if ((packet->texgen_group_count > NDS_FIGHTER_PACKET_TEXGEN_GROUP_MAX) ||
         (packet->texgen_site_count > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
-        (sNdsNativeFighterActiveTables == NULL))
+        (sNdsNativeFighterActiveTables == NULL) || (worlds == NULL))
     {
         return FALSE;
     }
@@ -11050,14 +11114,13 @@ static s32 ndsFtrLeanPatchTexgenMapped(
         u32 site_index;
 
         if (((u32)group->root >= input_count) ||
-            (inputs[group->root].modelview_matrix == NULL) ||
             (site_end > (u32)packet->texgen_site_count) ||
             (site_end > NDS_FIGHTER_PACKET_TEXGEN_SITE_MAX) ||
             (ndsRendererNativePrepareTexgenDirectionQ15(
-                 &look_at->l[0], inputs[group->root].modelview_matrix,
+                 &look_at->l[0], &worlds[group->root],
                  &lookat_x) == FALSE) ||
             (ndsRendererNativePrepareTexgenDirectionQ15(
-                 &look_at->l[1], inputs[group->root].modelview_matrix,
+                 &look_at->l[1], &worlds[group->root],
                  &lookat_y) == FALSE))
         {
             return FALSE;
@@ -13040,24 +13103,22 @@ u32 ndsFtrLeanRerecordKey(u32 ident, const u32 *key,
  * modulate (0) from this draw's prims and names the live modulate. Put the
  * switched-to list in the same state (ApplyTint's derivation, modulate 0). */
 void NDS_FIGHTER_PACKET_COLD_CODE
-ndsFtrLeanEntryResetShade(u32 battle_slot,
-                          const NDSRendererNativeFighterRoot *inputs,
-                          u32 input_count)
+ndsFtrLeanEntryResetShade(u32 battle_slot, const NDSFtrLeanPatchView *view)
 {
     NDSFtrLeanEntryState *es;
     NDSFighterPacket *packet = ndsFtrLeanActive(battle_slot, &es);
     u32 prim_hash = 2166136261u;
     u32 i;
 
-    if ((packet == NULL) || (inputs == NULL) ||
-        (packet->root_count != input_count))
+    if ((packet == NULL) || (view == NULL) ||
+        (packet->root_count != view->root_count))
     {
         return;
     }
     for (i = 0u; i < packet->root_count; i++)
     {
         prim_hash = ndsFighterPacketMix(prim_hash,
-                                        inputs[i].preamble->prim_color);
+                                        NDS_FTR_LEAN_VIEW_PRE(view, i)->prim_color);
     }
     for (i = 0u; i < packet->site_count; i++)
     {
@@ -13070,7 +13131,8 @@ ndsFtrLeanEntryResetShade(u32 battle_slot,
         if ((site->prim_from_root != 0u) &&
             ((u32)site->root < packet->root_count))
         {
-            material_color = inputs[site->root].preamble->prim_color;
+            material_color =
+                NDS_FTR_LEAN_VIEW_PRE(view, site->root)->prim_color;
         }
         diffuse = ndsRendererR2MaterialColor15(
             site->light_color_1, material_color, site->use_material, 0u);
@@ -13085,11 +13147,12 @@ ndsFtrLeanEntryResetShade(u32 battle_slot,
             ndsFtrLeanMarkDirty(es, packet->words, site->index, 1u);
         }
     }
-    packet->tint_modulate = inputs[0].config->color_modulate;
+    packet->tint_modulate = view->modulate;
     packet->tint_prim_hash = prim_hash;
 }
 
-u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
+u32 NDS_FTR_LEAN_DRAW_CODE
+ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
                                    u32 root_count)
 {
     NDSFtrLeanEntryState *state;
@@ -13115,10 +13178,17 @@ u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
     }
     for (i = 0u; i < (u32)packet->texgen_group_count; i++)
     {
-        if ((u32)packet->texgen_groups[i].root < 32u)
+        if ((u32)packet->texgen_groups[i].root < 31u)
         {
             mask |= 1u << packet->texgen_groups[i].root;
         }
+    }
+    if ((packet->texgen_group_count != 0u) &&
+        (state->texgen_map == NDS_FTR_LEAN_TEXGEN_MAP_NONE))
+    {
+        /* No site map: the generic texgen patch reads the refreshed
+         * production inputs (the caller refreshes them for this draw). */
+        mask |= NDS_FTR_LEAN_SITES_INPUTS;
     }
     return mask;
 }
@@ -13130,7 +13200,8 @@ u32 ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
  * could not name a texture keeps the global fence; residency is proved every
  * draw except for an all-admitted list in route 1. Returns 0 or the event
  * reason (nNDSFtrLeanEvent*). */
-u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
+u32 NDS_FTR_LEAN_DRAW_CODE
+ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
 {
     NDSFtrLeanEntryState *state;
     NDSFighterPacket *packet = ndsFtrLeanActive(battle_slot, &state);
@@ -13159,7 +13230,7 @@ u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
     }
     if ((state->all_pinned != 0u) &&
         (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) &&
-        ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_GUARD) == 0u))
+        ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_GUARD) == 0u))
     {
         return 0u;
     }
@@ -13187,8 +13258,8 @@ u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
  * word's presence differs -- the list is re-materialized then. */
 static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
                                     NDSFtrLeanEntryState *state,
-                                    const NDSRendererNativeFighterRoot *inputs,
-                                    u32 input_count, u32 force)
+                                    const NDSFtrLeanPatchView *view,
+                                    u32 force)
 {
     u32 touch = (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ? 1u : 0u;
     u32 i;
@@ -13205,13 +13276,14 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
         u32 teximage = 0u;
         u32 pltt = 0xffffffffu;
 
-        if ((bind->prim_from_root != 0u) && ((u32)bind->root < input_count))
+        if ((bind->prim_from_root != 0u) &&
+            ((u32)bind->root < view->root_count))
         {
-            rgb = (inputs[bind->root].preamble->prim_color >> 8) &
+            rgb = (NDS_FTR_LEAN_VIEW_PRE(view, bind->root)->prim_color >> 8) &
                 0x00ffffffu;
         }
         if ((rgb == bind->rgb) && (force == 0u) &&
-            ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_SUBMIT) == 0u))
+            ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) == 0u))
         {
             continue;
         }
@@ -13258,21 +13330,34 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
  * projection with row 3 across the world-unit seam -- written once at the
  * head. Returns 0, NDS_FTR_LEAN_PATCH_REMATERIALIZE, or a decline reason. */
 #if NDS_FTR_LEAN_LAB
+/* `part_kind_` (the function's own local) names the kind for the slice 5
+ * per-kind split, which only the attribution ROM carries. */
+#if NDS_FTR_LEAN_ATTR_LIVE
+#define NDS_FTR_LEAN_PART_KIND(array, index, delta)                        \
+    do                                                                     \
+    {                                                                      \
+        if (part_kind_ < NDS_FTR_LEAN_KINDS)                               \
+        {                                                                  \
+            gNdsFtrLeanAttr.array[part_kind_][index] += (delta);           \
+        }                                                                  \
+    } while (0)
+#else
+#define NDS_FTR_LEAN_PART_KIND(array, index, delta) ((void)0)
+#endif
 #define NDS_FTR_LEAN_PART(array, index, mark)                              \
     do                                                                     \
     {                                                                      \
         u32 part_now_ = cpuGetTiming();                                    \
         gNdsFtrLean.array[index] += part_now_ - (mark);                    \
+        NDS_FTR_LEAN_PART_KIND(array, index, part_now_ - (mark));          \
         (mark) = part_now_;                                                \
     } while (0)
 #else
 #define NDS_FTR_LEAN_PART(array, index, mark) ((void)0)
 #endif
 
-u32 ndsFtrLeanPacketPatch(u32 battle_slot,
-                          const NDSRendererNativeFighterRoot *inputs,
-                          u32 input_count, u32 owner_slot,
-                          u32 use_low_detail, u32 pre_same)
+u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
+                          u32 owner_slot, u32 use_low_detail, u32 pre_same)
 {
     NDSFtrLeanEntryState *state;
     NDSFighterPacket *packet;
@@ -13283,23 +13368,27 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
 #if NDS_FTR_LEAN_LAB
     u32 mark = cpuGetTiming();
 #endif
+#if NDS_FTR_LEAN_ATTR_LIVE
+    u32 part_kind_ = (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
+        sNdsFtrLeanSlots[battle_slot].kind : NDS_FTR_LEAN_KIND_NONE;
+#endif
 
     packet = ndsFtrLeanActive(battle_slot, &state);
-    if ((packet == NULL) || (inputs == NULL))
+    if ((packet == NULL) || (view == NULL))
     {
         return nNDSFtrLeanDeclineStale;
     }
-    if (packet->root_count != input_count)
+    if (packet->root_count != view->root_count)
     {
         return nNDSFtrLeanDeclineStale;
     }
     words = packet->words;
-    if ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u)
+    if ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u)
     {
         pre_same = FALSE;
     }
     if (((pre_same == FALSE) || (state->tint_repatch != 0u)) &&
-        (ndsFtrLeanPatchTintTiles(packet, state, inputs, input_count,
+        (ndsFtrLeanPatchTintTiles(packet, state, view,
                                   state->tint_repatch) == FALSE))
     {
         /* The live draw binds differently now: this list is done. */
@@ -13312,7 +13401,7 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
          * draw, so the shade words take that record's derivation too. */
         state->tint_repatch = 0u;
         state->tint_set_generation = gNdsR2FighterTintSetGeneration;
-        ndsFtrLeanEntryResetShade(battle_slot, inputs, input_count);
+        ndsFtrLeanEntryResetShade(battle_slot, view);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.tint_repatches++);
     }
     NDS_FTR_LEAN_PART(patch_part_ticks, 0u, mark);
@@ -13320,11 +13409,19 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
     tint_prim_hash = packet->tint_prim_hash;
     /* With the prims unchanged since the last patch, ApplyTint's own early
      * out reduces to the modulate compare; skip its prim hash walk. */
-    if (((pre_same == FALSE) ||
-         (tint_modulate != inputs[0].config->color_modulate)) &&
-        (ndsFighterPacketApplyTint(packet, inputs) == FALSE))
+    if ((pre_same == FALSE) || (tint_modulate != view->modulate))
     {
-        return nNDSFtrLeanDeclineTint;
+        u32 prims[NDS_FIGHTER_PACKET_ROOT_MAX];
+
+        for (i = 0u; i < packet->root_count; i++)
+        {
+            prims[i] = NDS_FTR_LEAN_VIEW_PRE(view, i)->prim_color;
+        }
+        if (ndsFighterPacketApplyTintPrims(packet, prims, view->modulate) ==
+            FALSE)
+        {
+            return nNDSFtrLeanDeclineTint;
+        }
     }
     if ((packet->tint_modulate != tint_modulate) ||
         (packet->tint_prim_hash != tint_prim_hash))
@@ -13339,10 +13436,10 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
      * RoundShiftS32Signed(., 8) (ndsRendererBuildRawHardwareMatrix's seam),
      * written only when this frame's camera moved it. */
     {
-        const s32 *projection = &inputs[0].projection_matrix->m[0][0];
+        const s32 *projection = &view->projection->m[0][0];
         u32 *site = &words[packet->projection_index];
         u32 pprime[16];
-        u32 same = ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_SUBMIT) == 0u) ?
+        u32 same = ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) == 0u) ?
             TRUE : FALSE;
 
         for (i = 0u; i < 12u; i++)
@@ -13374,16 +13471,16 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
     NDS_FTR_LEAN_PART(patch_part_ticks, 2u, mark);
     if ((packet->light_index != NDS_FIGHTER_PACKET_INDEX_NONE) &&
         (packet->light_valid != 0u) &&
-        ((u32)packet->light_root < input_count) &&
+        ((u32)packet->light_root < view->root_count) &&
         ((pre_same == FALSE) || (state->light_valid == 0u)))
     {
         const NDSRendererNativeFighterPreamble *preamble =
-            inputs[packet->light_root].preamble;
+            NDS_FTR_LEAN_VIEW_PRE(view, packet->light_root);
 
         if (((preamble->flags &
               NDS_RENDERER_NATIVE_PREAMBLE_LIGHT_VALID) != 0u) &&
             ((state->light_valid == 0u) ||
-             ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u) ||
+             ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u) ||
              (state->light_dir[0] != (s32)preamble->light_dir_x) ||
              (state->light_dir[1] != (s32)preamble->light_dir_y) ||
              (state->light_dir[2] != (s32)preamble->light_dir_z)))
@@ -13415,7 +13512,8 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
         if (state->texgen_map == NDS_FTR_LEAN_TEXGEN_MAP_READY)
         {
             texgen_ok = ndsFtrLeanPatchTexgenMapped(
-                packet, ndsFtrLeanTexgenMapOf(packet), inputs, input_count);
+                packet, ndsFtrLeanTexgenMapOf(packet), view->worlds,
+                view->root_count);
         }
         else if (state->texgen_map == NDS_FTR_LEAN_TEXGEN_MAP_REFUSE)
         {
@@ -13424,8 +13522,11 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
         else
 #endif
         {
-            texgen_ok = ndsFighterPacketPatchTexgen(packet, inputs,
-                                                    input_count);
+            /* No site map: the generic patch reads the refreshed production
+             * inputs (the caller refreshed them: NDS_FTR_LEAN_SITES_INPUTS). */
+            texgen_ok = (view->inputs != NULL) ?
+                ndsFighterPacketPatchTexgen(packet, view->inputs,
+                                            view->root_count) : FALSE;
         }
         if (texgen_ok == FALSE)
         {
@@ -13446,24 +13547,40 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot,
 }
 
 /* TryReplay's submit tail on the active list: only the lines the patches
- * wrote are cleaned (the list was cleaned whole when it was materialized). */
-void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats)
+ * wrote are cleaned (the list was cleaned whole when it was materialized).
+ * Returns the hardware triangles the list presents.
+ *
+ * Slice 5: the frame-summary half of TryReplay's accounting
+ * (ndsRendererFastAccountRawTriangles / ndsRendererNativeAccountGXCross-
+ * Triangles, field for field) is written here directly, before the DMA
+ * starts. The draw's own NDSRendererStats (a 1,300 B static) was per-draw
+ * scratch nobody read but the hardware triangle count, which is returned; the
+ * materializer and the admission now take a stack block for the calls that
+ * need a whole one. */
+u32 NDS_FTR_LEAN_DRAW_CODE
+ndsFtrLeanPacketSubmit(u32 battle_slot)
 {
     NDSFtrLeanEntryState *state;
     NDSFighterPacket *packet;
     u32 *words;
     u32 flushed;
+    u32 raw;
+    u32 cross;
 #if NDS_FTR_LEAN_LAB
     u32 mark = cpuGetTiming();
 #endif
+#if NDS_FTR_LEAN_ATTR_LIVE
+    u32 part_kind_ = (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
+        sNdsFtrLeanSlots[battle_slot].kind : NDS_FTR_LEAN_KIND_NONE;
+#endif
 
     packet = ndsFtrLeanActive(battle_slot, &state);
-    if ((packet == NULL) || (stats == NULL))
+    if (packet == NULL)
     {
-        return;
+        return 0u;
     }
     words = packet->words;
-    if ((gNdsFtrLeanSlow & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u)
+    if ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_SUBMIT) != 0u)
     {
         /* Slice 1's form: clean the whole list. */
         memset(state->dirty, 0, sizeof(state->dirty));
@@ -13482,6 +13599,71 @@ void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats)
     glEnable(GL_TEXTURE_2D);
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_FOG);
+    raw = packet->raw_triangles;
+    cross = packet->cross_triangles;
+    if (raw != 0u)
+    {
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX] += raw;
+        sNdsRendererRuntimeFrameSummary.raw_current_candidate_count += raw;
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+            packet->raw_reuse;
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+            packet->raw_reuse;
+        sNdsRendererRuntimeFrameSummary.hardware_triangles += raw;
+        sNdsRendererRuntimeFrameSummary.hardware_vertices += raw * 3u;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+        sNdsRendererBenchmarkTriangleCount += raw;
+#endif
+        sNdsRendererHardwareSubmitted = TRUE;
+    }
+    if (cross != 0u)
+    {
+        sNdsRendererHardwareSubmitClassCounts[
+            NDS_RENDERER_HW_SUBMIT_PROJECTED_CROSS_MATRIX] += cross;
+        sNdsRendererRuntimeFrameSummary.raw_cross_matrix_count += cross;
+        sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+            packet->cross_reuse;
+        sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+            packet->cross_reuse;
+        sNdsRendererRuntimeFrameSummary.hardware_triangles += cross;
+        sNdsRendererRuntimeFrameSummary.hardware_vertices += cross * 3u;
+        if ((sNdsRendererRuntimeFrameSummary.hardware_triangles > 2048u) ||
+            (sNdsRendererRuntimeFrameSummary.hardware_vertices > 6144u))
+        {
+            sNdsRendererRuntimeFrameSummary.hardware_over_limit = 1u;
+        }
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+        sNdsRendererBenchmarkTriangleCount += cross;
+#endif
+        sNdsRendererHardwareSubmitted = TRUE;
+    }
+#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
+    sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
+        packet->batch_begin;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
+        packet->batch_reuse;
+    sNdsRendererRuntimeFrameSummary.hardware_batch_end_count +=
+        packet->batch_end;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_count +=
+        packet->prepare_begin;
+    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
+        packet->prepare_reuse;
+    sNdsRendererRuntimeFrameSummary.matrix_load_count +=
+        packet->matrix_loads;
+    sNdsRendererRuntimeFrameSummary.texture_binds +=
+        packet->texture_binds;
+#endif
+    sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
+    sNdsRendererFastRunCount += packet->run_count;
+    sNdsRendererFastTriangleCount += packet->triangle_count;
+    if ((u32)sNdsRendererRuntimeOwner <
+        (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
+    {
+        sNdsRendererFastOwnerTriangleCount[
+            (u32)sNdsRendererRuntimeOwner] += packet->triangle_count;
+    }
+    NDS_FTR_LEAN_PART(submit_part_ticks, 3u, mark);
     if ((DMA_CR(0) & DMA_BUSY) != 0u)
     {
         u32 wait_start = cpuGetTiming();
@@ -13515,48 +13697,7 @@ void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats)
     sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
     sNdsRendererHardwareMatrixLoaded = FALSE;
     NDS_FTR_LEAN_PART(submit_part_ticks, 2u, mark);
-
-    if (stats->first_opcode == 0u)
-    {
-        stats->first_opcode = NDS_RENDERER_OP_RDPPIPESYNC;
-    }
-    if (packet->raw_triangles != 0u)
-    {
-        ndsRendererFastAccountRawTriangles(
-            stats, packet->raw_triangles, packet->raw_reuse);
-    }
-    if (packet->cross_triangles != 0u)
-    {
-        ndsRendererNativeAccountGXCrossTriangles(
-            stats, packet->cross_triangles, packet->cross_reuse);
-    }
-#if NDS_RENDERER_FRAME_SUMMARY_COUNTERS
-    sNdsRendererRuntimeFrameSummary.hardware_batch_begin_count +=
-        packet->batch_begin;
-    sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count +=
-        packet->batch_reuse;
-    sNdsRendererRuntimeFrameSummary.hardware_batch_end_count +=
-        packet->batch_end;
-    sNdsRendererRuntimeFrameSummary.texture_prepare_count +=
-        packet->prepare_begin;
-    sNdsRendererRuntimeFrameSummary.texture_prepare_reuse_count +=
-        packet->prepare_reuse;
-    sNdsRendererRuntimeFrameSummary.matrix_load_count +=
-        packet->matrix_loads;
-    sNdsRendererRuntimeFrameSummary.texture_binds +=
-        packet->texture_binds;
-#endif
-    sNdsRendererHardwareSourceVertexLoadCount += packet->vertex_loads;
-    stats->triangle_count += packet->triangle_count;
-    sNdsRendererFastRunCount += packet->run_count;
-    sNdsRendererFastTriangleCount += packet->triangle_count;
-    if ((u32)sNdsRendererRuntimeOwner <
-        (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)
-    {
-        sNdsRendererFastOwnerTriangleCount[
-            (u32)sNdsRendererRuntimeOwner] += packet->triangle_count;
-    }
-    NDS_FTR_LEAN_PART(submit_part_ticks, 3u, mark);
+    return raw + cross;
 }
 
 #if NDS_FTR_LEAN_LAB
@@ -14245,6 +14386,9 @@ void ndsFtrLeanCountersPublish(void)
 #if NDS_FTR_LEAN_LAB
     DC_FlushRange(&gNdsFtrLean, sizeof(gNdsFtrLean));
 #endif
+#if NDS_FTR_LEAN_ATTR_LIVE
+    DC_FlushRange(&gNdsFtrLeanAttr, sizeof(gNdsFtrLeanAttr));
+#endif
 #if NDS_VRAM_CENSUS_LIVE && NDS_RENDERER_HW_TRIANGLES &&     (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
     /* Slice 2b: the admission lab and the words the sampler reads once at
      * the end -- flushed every frame so a GDB read is never a stale line. */
@@ -14290,12 +14434,10 @@ u32 ndsFtrLeanEntryActivate(u32 battle_slot, u32 code)
 }
 
 void ndsFtrLeanEntryResetShade(u32 battle_slot,
-                               const NDSRendererNativeFighterRoot *inputs,
-                               u32 input_count)
+                               const NDSFtrLeanPatchView *view)
 {
     (void)battle_slot;
-    (void)inputs;
-    (void)input_count;
+    (void)view;
 }
 
 u32 ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
@@ -14384,24 +14526,21 @@ u32 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
     return nNDSFtrLeanEventFirst;
 }
 
-u32 ndsFtrLeanPacketPatch(u32 battle_slot,
-                          const NDSRendererNativeFighterRoot *inputs,
-                          u32 input_count, u32 owner_slot,
-                          u32 use_low_detail, u32 pre_same)
+u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
+                          u32 owner_slot, u32 use_low_detail, u32 pre_same)
 {
     (void)battle_slot;
-    (void)inputs;
-    (void)input_count;
+    (void)view;
     (void)owner_slot;
     (void)use_low_detail;
     (void)pre_same;
     return nNDSFtrLeanDeclineStale;
 }
 
-void ndsFtrLeanPacketSubmit(u32 battle_slot, NDSRendererStats *stats)
+u32 ndsFtrLeanPacketSubmit(u32 battle_slot)
 {
     (void)battle_slot;
-    (void)stats;
+    return 0u;
 }
 
 void ndsFtrLeanShadowArm(u32 battle_slot, u32 armed)

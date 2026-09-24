@@ -1,0 +1,37 @@
+every symbol whose size or region (main / itcm / dtcm) moved, shipping shell pre -> final
+symbol                                                       was   size ->   now   size  main RAM delta
+ndsFtrLeanKernelCompose                                     main   4620 ->  itcm   4640   -4620
+ndsFtrLeanPacketSubmit                                      main   1340 ->  itcm   1184   -1340
+sNdsFtrLeanStats                                            main   1300 ->     -      0   -1300
+ndsFtrLeanPacketGuard                                       main    472 ->  itcm    448    -472
+ndsFighterPacketApplyTint                                   main    436 ->     -      0    -436
+ndsFtrLeanPacketModelviewSites                              main    384 ->  itcm    484    -384
+ndsFtrLeanAngleIndex                                        main    256 ->     -      0    -256
+ndsFtrLeanPacketPatch                                       main   3536 ->  main   3372    -164
+CSWTCH.12144                                                main     48 ->     -      0     -48
+CSWTCH.11840                                                main     39 ->     -      0     -39
+CSWTCH.2861                                                 main     20 ->     -      0     -20
+ndsFighterPacketApplyTintPrims                                 -      0 ->  itcm    476      +0
+sNdsFtrLookAtCObj                                              -      0 ->  main      4      +4
+sNdsFtrLookAtIn                                                -      0 ->  main      4      +4
+sNdsFtrLookAtOut                                               -      0 ->  main      4      +4
+syTaskmanRunTask                                            main   3752 ->  main   3764     +12
+ndsFtrLeanAdmitMaybeRun                                     main    364 ->  main    380     +16
+CSWTCH.2857                                                    -      0 ->  main     20     +20
+ndsFtrLeanEntryResetShade                                   main    448 ->  main    472     +24
+ndsFtrLookAtMixWords                                           -      0 ->  main     34     +34
+CSWTCH.11851                                                   -      0 ->  main     39     +39
+ndsFtrLeanMaterializeFor                                    main    352 ->  main    396     +44
+CSWTCH.12157                                                   -      0 ->  main     48     +48
+ndsFtrLookAtOutputs                                            -      0 ->  main     64     +64
+ndsFighterPacketTryReplay                                   main   2796 ->  main   2884     +88
+ndsFtrLookAtInputs                                             -      0 ->  main     92     +92
+ndsFtrLeanEvent                                             main   1140 ->  main   1244    +104
+ndsFighterDisplayContractSubmit                             main   3748 ->  main   3952    +204
+ndsFtrLeanTintTileWords                                        -      0 ->  main    252    +252
+ndsRendererNativeEmitProductionPrimitiveGroups              itcm    564 ->  main    564    +564
+ndsRendererNativeEmitProductionCrossRun.constprop.0         itcm    604 ->  main    604    +604
+ndsRendererNativeShadeProductionActions.constprop.0.isra.0  itcm    876 ->  main    876    +876
+ndsRendererNativePrepareProductionRun.constprop.0           itcm   2516 ->  main   2516   +2516
+ndsRendererExecuteNativeFighterOwnerProduction              itcm   3320 ->  main   3320   +3320
+main RAM symbol delta -146 (section delta -136: alignment and fill)

@@ -55,17 +55,17 @@ Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md` (pillars A1-A10, phases 0-7;
 owner rulings D1-D7 in section 8; every slice's numbers in the section 6
 phase log). Phase 0 closed 09-23 (instrument out of the gate; the heaviest
 roster halts ~130 KB short at battle load in the shipping config).
-**Phase 1 (fighters) active**: slices 1-4 landed, last `3fd3262357c` -- lists
+**Phase 1 (fighters) active**: slices 1-5 landed (section 6 log) -- lists
 materialized on the device, 0 declines, oracle 0 mismatches; at admit word 2
-(default 0) route 1 FTR P95 319K, WORK-H P50 / P95 1.51M / 2.14M. A7 prep
+(default 0) route 1 FTR P50 / P95 184K / 268K, WORK-H P50 / P95 1.40M / 2.03M. A7 prep
 is on by default (`NDS_IF_GAMESTATUS_COMPACT`, GAME SET and loop proven): +68 KB four-CPU
 low-water, the first 1P battle loads. MF host encoder + C decoder landed
 (not linked).
-**Next**: Phase 1 slice 5 (lean draw cost) is running. 1P intro packs: first
-attempt reverted -- packed intro fighters fail native validation and stage 2's
-intro is ~200 KB short (`artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`);
-queued for the next subagent. Then the phase's deletion step. ARM7 audio spec
-queued. One subagent at a time.
+**Next** (one subagent each): 1P intro packs (first attempt reverted: packed
+intro fighters fail native validation; stage 2's intro is ~200 KB short;
+`artifacts/performance/2026-09-23_p2-2p8-1p-intro-packs/`);
+then coverage (all kinds, both details) with lean as the default; then the
+phase's deletion step. ARM7 audio spec queued.
 **Constraint**: the all-content VS character select keeps >= 183,072 B at its
 animation reservation or every 3D preview switches off (fixed `050b7c18db4`;
 5,296 B margin with compaction on): measure with

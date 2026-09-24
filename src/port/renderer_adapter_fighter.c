@@ -702,6 +702,12 @@ static u32 sNdsFtrDrawMemoKey[NDS_FTR_DRAW_MEMO_KEY_WORDS];
 static u32 sNdsFtrLeanMemoFill[GMCOMMON_PLAYERS_MAX];
 static u32 sNdsFtrLeanMemoFromSlot;
 #endif
+#if NDS_FTR_LEAN_ATTR_LIVE
+/* Slice 5 attribution ROM: the head's parts (gNdsFtrLeanAttr.head_part_ticks)
+ * need the capture's kind and the tick the head boundary fired at. */
+static u32 sNdsFtrLeanAttrHeadKind = NDS_FTR_LEAN_KIND_NONE;
+static u32 sNdsFtrLeanAttrBoundary;
+#endif
 
 /* Writer-side coherency for source mutations of DObj display state/topology.
  * ftMainSetStatus is one writer (hidden-part replacement/re-parenting), but
@@ -790,6 +796,12 @@ void ndsFighterDisplayContractHeadBoundary(u32 sky_fog_alpha, u32 is_shade_fog,
     const NDSFtrDrawMemoSlot *slot;
     u32 i;
 
+#if NDS_FTR_LEAN_ATTR_LIVE
+    if (sNdsFtrLeanAttrBoundary == 0u)
+    {
+        sNdsFtrLeanAttrBoundary = cpuGetTiming() | 1u;
+    }
+#endif
     if (sNdsFtrDrawMemoState != 1u)
     {
         return;
@@ -935,12 +947,92 @@ volatile s32 gNdsR2FighterFacingLr;
 volatile u32 gNdsR2FighterFacingSlot;
 volatile u32 gNdsR2FighterFacingWrites;
 
+#if NDS_FTR_LEAN_KINDS_BUILD
+/* P2-2p8 Phase 1 slice 5 (phase1-spec.md 2.1 stage 1): the head's camera
+ * LookAt below is a camera-only input. The slice 5 attribution ROM priced
+ * "capture setup + LookAt" at 6.7-7.5K ticks per fighter, every fighter,
+ * every frame, for the same camera. It is now called only when it could
+ * produce something new: the CObj differs from the last call's, its inputs
+ * (eye, at, up, perspective, the two camera-path words) hash differently, or
+ * its outputs (gGMCameraMatrix, the look-at, the perspective norm) no longer
+ * hash as that call left them -- otherwise the call would rewrite the very
+ * values already there, and the reuse is exact by construction. The reuse
+ * keeps the call's graphics-heap footprint (one Mtx below camera path level
+ * 3, which the capture's own heap restore releases), so every later head
+ * allocation lands where it did; it does not rewrite that Mtx, which only
+ * sGCMatrixProjectL names and nothing on this port reads (battleship_gmcamera.c,
+ * W2b). The slice 5 draw memo showed why the footprint matters: the head's
+ * scene Light is copied whole -- uninitialised colour bytes included -- into
+ * the memo key, so moving it 64 B cost 124 extra memo fills a match.
+ * gNdsFtrLeanSlow bit 128 calls it every time (the slice 4 form, same ROM). */
+extern Mtx44f gGMCameraMatrix;
+extern Mtx *sGCMatrixProjectL;
+extern volatile u32 gNdsCameraMatrixLeanEnabled;
+extern volatile u32 gNdsR2CameraFixedEnabled;
+const LookAt *ndsR2CameraCurrentLookAt(void);
+static const CObj *sNdsFtrLookAtCObj;
+static u32 sNdsFtrLookAtIn;
+static u32 sNdsFtrLookAtOut;
+
+/* Out of line on purpose: every call site passes a constant count, and the
+ * inlined, unrolled copies cost ~500 B of main RAM (shipping static RAM must
+ * not grow in slice 5). */
+static u32 __attribute__((noinline))
+ndsFtrLookAtMixWords(u32 h, const void *data, u32 words)
+{
+    const u32 *w = (const u32 *)data;
+    u32 i;
+
+    for (i = 0u; i < words; i++)
+    {
+        h = (h ^ w[i]) * 16777619u;
+    }
+    return h;
+}
+
+static u32 __attribute__((noinline)) ndsFtrLookAtInputs(const CObj *cobj)
+{
+    /* eye, at, up: CObjVec's nine consecutive floats; fovy, aspect, near,
+     * far, scale: GCPersp's five (the same words, in the same order, as one
+     * field at a time). */
+    u32 h = ndsFtrLookAtMixWords(2166136261u, &cobj->vec.eye, 9u);
+
+    _Static_assert(__builtin_offsetof(CObjVec, up) ==
+                       __builtin_offsetof(CObjVec, eye) + 6u * sizeof(f32),
+                   "LookAt inputs: eye, at, up must be consecutive");
+    _Static_assert(__builtin_offsetof(GCPersp, scale) ==
+                       __builtin_offsetof(GCPersp, fovy) + 4u * sizeof(f32),
+                   "LookAt inputs: fovy .. scale must be consecutive");
+    h = ndsFtrLookAtMixWords(h, &cobj->projection.persp.fovy, 5u);
+    h = (h ^ gNdsCameraMatrixLeanEnabled) * 16777619u;
+    return (h ^ gNdsR2CameraFixedEnabled) * 16777619u;
+}
+
+static u32 __attribute__((noinline)) ndsFtrLookAtOutputs(const CObj *cobj)
+{
+    u32 h = 2166136261u;
+
+    h = ndsFtrLookAtMixWords(h, gGMCameraMatrix,
+                             (u32)(sizeof(gGMCameraMatrix) / sizeof(u32)));
+    h = ndsFtrLookAtMixWords(h, ndsR2CameraCurrentLookAt(),
+                             (u32)(sizeof(LookAt) / sizeof(u32)));
+    return (h ^ (u32)cobj->projection.persp.norm) * 16777619u;
+}
+#endif
+
 static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
 {
     extern void ndsBaseFTDisplayMainProcDisplay(GObj *fighter_gobj);
     extern sb32 gmCameraLookAtFuncMatrix(Mtx *mtx, CObj *cobj, Gfx **dls);
     FTStruct *fp = ftGetStruct(fighter_gobj);
     u32 i;
+#if NDS_FTR_LEAN_ATTR_LIVE
+    u32 attr_t0 = cpuGetTiming();
+    u32 attr_t1;
+    u32 attr_t3;
+
+    sNdsFtrLeanAttrBoundary = 0u;
+#endif
 
     /* A miss/bypass consumes this frame's fresh source capture. MemoFinish
      * changes the views only after proving a hit. */
@@ -997,9 +1089,51 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
          * frame -- wrote into a dead local. The port wrapper in
          * battleship_gmcamera.c skips that conversion for a NULL out-pointer
          * and still gives decomp's kind-0x4C caller its matrix. */
+#if NDS_FTR_LEAN_KINDS_BUILD
+        /* Slice 5: only when it could write something new (see
+         * ndsFtrLookAtInputs above). */
+        CObj *look_cobj = CObjGetStruct(gGMCameraGObj);
+        u32 look_in = ndsFtrLookAtInputs(look_cobj);
+
+        /* Level 0 is the decomp control arm, which also emits LookAt,
+         * projection and PerspNormalize GBI into dls[0]; only the port's
+         * levels (1-3, shipping 2) are pure matrix writers, so only they may
+         * skip. */
+        if ((gNdsCameraMatrixLeanEnabled == 0u) ||
+            (look_cobj != sNdsFtrLookAtCObj) || (look_in != sNdsFtrLookAtIn) ||
+            ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_HEAD_LOOKAT) != 0u) ||
+            (ndsFtrLookAtOutputs(look_cobj) != sNdsFtrLookAtOut))
+        {
+            gmCameraLookAtFuncMatrix(NULL, look_cobj, gSYTaskmanDLHeads);
+            sNdsFtrLookAtCObj = look_cobj;
+            sNdsFtrLookAtIn = look_in;
+            sNdsFtrLookAtOut = ndsFtrLookAtOutputs(look_cobj);
+        }
+        else
+        {
+            /* The call's graphics-heap footprint, kept: below camera path
+             * level 3 it takes one Mtx for its projection before anything
+             * the head allocates, so the head's own allocations (the scene
+             * Light the display contract copies whole, uninitialised colour
+             * bytes included, into the draw memo's key) land where they
+             * always did. The Mtx itself is not rewritten: nothing on this
+             * port reads sGCMatrixProjectL (battleship_gmcamera.c, W2b). */
+            if (gNdsCameraMatrixLeanEnabled < 3u)
+            {
+                sGCMatrixProjectL = (Mtx *)gSYTaskmanGraphicsHeap.ptr;
+                gSYTaskmanGraphicsHeap.ptr =
+                    (void *)((Mtx *)gSYTaskmanGraphicsHeap.ptr + 1);
+            }
+            else
+            {
+                sGCMatrixProjectL = NULL;
+            }
+        }
+#else
         gmCameraLookAtFuncMatrix(NULL,
                                  CObjGetStruct(gGMCameraGObj),
                                  gSYTaskmanDLHeads);
+#endif
     }
 #if NDS_R2_FTR_CONTRACT_CENSUS
     sNdsFtrContractCensusKey = NDS_FTR_CONTRACT_HASH_SEED;
@@ -1034,7 +1168,13 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
          (sNdsIntroTransientActive == FALSE) &&
          (fp->camera_mode != nFTCameraModeEntry)) ? 1u : 0u;
     sNdsFtrDrawMemoSlotIndex = (fp != NULL) ? (u32)fp->nds_slot : 0u;
+#if NDS_FTR_LEAN_ATTR_LIVE
+    attr_t1 = cpuGetTiming();
+#endif
     ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
+#if NDS_FTR_LEAN_ATTR_LIVE
+    attr_t3 = cpuGetTiming();
+#endif
     ndsFtrDrawMemoFinish();
     sNdsFighterDisplayContract.active = FALSE;
     for (i = 0u; i < 4u; i++)
@@ -1043,6 +1183,21 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     }
     gSYTaskmanGraphicsHeap.ptr =
         sNdsFighterDisplayContract.saved_graphics_heap_ptr;
+#if NDS_FTR_LEAN_ATTR_LIVE
+    if (sNdsFtrLeanAttrHeadKind < NDS_FTR_LEAN_KINDS)
+    {
+        u32 k = sNdsFtrLeanAttrHeadKind;
+        u32 attr_t4 = cpuGetTiming();
+        u32 attr_tb = (sNdsFtrLeanAttrBoundary != 0u) ?
+            sNdsFtrLeanAttrBoundary : attr_t1;
+
+        gNdsFtrLeanAttr.head_part_ticks[k][0] += attr_t1 - attr_t0;
+        gNdsFtrLeanAttr.head_part_ticks[k][1] += attr_tb - attr_t1;
+        gNdsFtrLeanAttr.head_part_ticks[k][2] += attr_t3 - attr_tb;
+        gNdsFtrLeanAttr.head_part_ticks[k][3] += attr_t4 - attr_t3;
+    }
+    sNdsFtrLeanAttrBoundary = 0u;
+#endif
 }
 
 static void ndsFighterCollectAllDObjsWithDL(
@@ -5231,6 +5386,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         /* P2-2p8 Phase 1 (Phase 0 leftover): FTR's head sub-phase. */
         u32 lean_head_start = cpuGetTiming();
 
+#if NDS_FTR_LEAN_ATTR_LIVE
+        sNdsFtrLeanAttrHeadKind = NDS_FTR_LEAN_OWNER_KIND(owner_slot);
+#endif
         ndsFighterDisplayContractCapture(fighter_gobj);
 #if NDS_FTR_LEAN_LAB
         {

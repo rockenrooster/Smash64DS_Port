@@ -1,0 +1,31 @@
+tick-HUD gate image, slice 5: pre = build-p2p8-s5-pre (rom 5d68834fb4e0fac048fafb8984b96bcc927662d5a0d5273466a7eca0ae3ee894); final = build-p2p8-s5 (rom c366e5d4ab4abd576b6d336ba75d9d33d67b6373c6c1e6cc130018ec349120f3)
+
+data/bss/dtcm symbols whose size changed (smash64ds-p2-fourcpu-tickhud-hwtri.elf -> smash64ds-p2-fourcpu-tickhud-hwtri.elf)
+symbol                                                   before      after     delta
+sNdsFtrLeanStats                                          1,300          0     -1300
+sNdsFtrLookAtCObj                                             0          4        +4
+sNdsFtrLookAtIn                                               0          4        +4
+sNdsFtrLookAtOut                                              0          4        +4
+gNdsFtrLean                                               2,352      2,376       +24
+TOTAL data/bss/dtcm symbol delta                                               -1264
+code symbols (t/T) delta                                   +952
+
+section                            before        after     delta
+.itcm                              32,208       32,280       +72
+.main                           1,456,556    1,457,436      +880
+.main.bss                         933,008      931,728     -1280
+TOTAL loaded sections                                       -328
+
+ITCM/DTCM (size -A):
+build-p2p8-s5-pre/smash64ds-p2-fourcpu-tickhud-hwtri.elf
+.itcm                32208    33521696
+.dtcm                 8800    50266112
+.dtcm.bss             2028    50274912
+build-p2p8-s5/smash64ds-p2-fourcpu-tickhud-hwtri.elf
+.itcm                32280    33521696
+.dtcm                 8800    50266112
+.dtcm.bss             2028    50274912
+build-p2p8-s5-ktime/smash64ds-p2-fourcpu-tickhud-hwtri.elf
+.itcm                32328    33521696
+.dtcm                 8800    50266112
+.dtcm.bss             2028    50274912

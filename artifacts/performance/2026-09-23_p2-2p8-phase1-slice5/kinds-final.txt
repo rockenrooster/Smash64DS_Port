@@ -1,0 +1,39 @@
+== pre-route1 rom 5D68834F route 1 admit 2 slow 0 
+  attempts 6862 draws 6862 shadow 0 materializations 62 entry hits 174 switches 156 | packet hits 0 records 0 faults 0 declines 0 | native failures 39 | draws(all) 6862
+  materialize: 520484 ticks/materialization (443465 list walk); max 2634 words; parts {'head': '1606', 'roots': '31640', 'spans': '101492', 'shade': '29041', 'prepare': '37854', 'corners': '67985', 'bind': '135532', 'words': '23111'}
+  events {'first': 4, 'rebind': 87, 'material': 140, 'tint_set': 5} event_ticks 42120960 retuples 534 | variants learned 12 switches 144 reject [8, 42, 0, 0] | tint repatches 9 rerecord resets 18 | verify runs 0 (variant 0) mismatch [0, 0, 0, 0]
+  oracle runs 0 words 0 mismatch [0, 0, 0, 0, 0, 0, 0, 0] clip max [0, 0] donor_memo 0 unconsumed 0 source_miss 0 rec_under_hit [0, 0] record_diff [0, 0, 0, 0, 0, 0, 0, 0]
+  light patches 138 texgen 1775 projection 6862 pre checks 1822 skips 4809 flush bytes 9758560 ident watch miss 0 kernel fail 57 rebuilds 57
+  per draw, all kinds: guard parts {'tuple': '871', 'topology': '120', 'camera': '532', 'identity': '422', 'preamble': '586', 'packet': '555', 'shuffle': '6552', 'event+retuple': '6412'}
+                       patch parts {'tint_tiles': '586', 'apply_tint': '1651', "P'": '824', 'light': '266', 'texgen': '2343'} | submit parts {'flush': '1263', 'gx+dma_wait': '177', 'dma+invalidate': '1252', 'stats': '1149'} | book 3071
+  kind     draws    mats |   head  guard  event  g-net kernel  patch submit |   sum* | k/joint  joints ev/draw
+  Donkey    1725      26 |  20132  14034   9717   4318  23307   8841   4350 |  50533 |     931    25.0   0.034
+          events {'first': 1, 'rebind': 56, 'tint_set': 1} event ticks/event 288984 materialize ticks/mat 535594 declines {} classes {'fast': 27563, 'scale': 1581, 'warm': 14058} variants 0 0
+  Samus     1685      10 |  17986   5742   2290   3452  19643   6089   4015 |  35488 |     874    22.5   0.009
+          events {'first': 1, 'rebind': 14, 'tint_set': 1} event ticks/event 241172 materialize ticks/mat 355981 declines {} classes {'fast': 25055, 'scale': 11, 'warm': 12621, 'lock': 180} variants 0 0
+  Link      1824      15 |  18450  12958   9431   3527  25831  14874   4561 |  58224 |     952    27.1   0.046
+          events {'first': 1, 'rebind': 14, 'material': 68, 'tint_set': 1} event ticks/event 204789 materialize ticks/mat 867755 declines {} classes {'fast': 28971, 'scale': 4984, 'warm': 15555} variants 6 69
+  Kirby     1628      11 |  17105   5700   2641   3059  18452   4443   3686 |  32282 |     860    21.5   0.048
+          events {'first': 1, 'rebind': 3, 'material': 72, 'tint_set': 2} event ticks/event 55114 materialize ticks/mat 160768 declines {} classes {'fast': 17442, 'scale': 6372, 'warm': 11125} variants 6 75
+  heap free min 122164 libc top min 18784 arena 1236736 | memo hits 4836 fills 1662 bypass 1393 | uploads after go 0 admit fail 0
+  * sum = guard (incl. event paths) + kernel + patch + submit, per lean draw
+== a5-route1 rom C366E5D4 route 1 admit 2 slow 0 
+  attempts 6862 draws 6862 shadow 0 materializations 62 entry hits 174 switches 156 | packet hits 0 records 0 faults 0 declines 0 | native failures 39 | draws(all) 6862
+  materialize: 519959 ticks/materialization (438642 list walk); max 2634 words; parts {'head': '1568', 'roots': '31636', 'spans': '99037', 'shade': '26188', 'prepare': '34254', 'corners': '69174', 'bind': '137760', 'words': '23697'}
+  events {'first': 4, 'rebind': 87, 'material': 140, 'tint_set': 5} event_ticks 39760832 retuples 534 | variants learned 12 switches 144 reject [8, 42, 0, 0] | tint repatches 9 rerecord resets 18 | verify runs 0 (variant 0) mismatch [0, 0, 0, 0]
+  kept plans (material events): reuses 128 restarts 12 | verify plan runs 0 mismatch [0, 0, 0]
+  oracle runs 0 words 0 mismatch [0, 0, 0, 0, 0, 0, 0, 0] clip max [0, 0] donor_memo 0 unconsumed 0 source_miss 0 rec_under_hit [0, 0] record_diff [0, 0, 0, 0, 0, 0, 0, 0]
+  light patches 138 texgen 1775 projection 6862 pre checks 1822 skips 4809 flush bytes 9758560 ident watch miss 0 kernel fail 73 rebuilds 73
+  per draw, all kinds: guard parts {'tuple': '567', 'topology': '160', 'camera': '510', 'identity': '420', 'preamble': '584', 'packet': '236', 'shuffle': '264', 'event+retuple': '6075'}
+                       patch parts {'tint_tiles': '583', 'apply_tint': '1110', "P'": '740', 'light': '225', 'texgen': '2352'} | submit parts {'flush': '932', 'gx+dma_wait': '50', 'dma+invalidate': '997', 'stats': '229'} | book 2652
+  kind     draws    mats |   head  guard  event  g-net kernel  patch submit |   sum* | k/joint  joints ev/draw
+  Donkey    1725      26 |  20808  13724   9694   4030  20124   5499   2650 |  41997 |     804    25.0   0.034
+          events {'first': 1, 'rebind': 56, 'tint_set': 1} event ticks/event 288319 materialize ticks/mat 531668 declines {} classes {'fast': 27563, 'scale': 1581, 'warm': 14058} variants 0 0
+  Samus     1685      10 |  13307   5185   2275   2910  17507   3497   2439 |  28628 |     779    22.5   0.009
+          events {'first': 1, 'rebind': 14, 'tint_set': 1} event ticks/event 239540 materialize ticks/mat 352141 declines {} classes {'fast': 25055, 'scale': 11, 'warm': 12621, 'lock': 180} variants 0 0
+  Link      1824      15 |  13921  11612   8641   2972  22313  11958   2606 |  48490 |     822    27.1   0.046
+          events {'first': 1, 'rebind': 14, 'material': 68, 'tint_set': 1} event ticks/event 187628 materialize ticks/mat 868395 declines {} classes {'fast': 28971, 'scale': 4984, 'warm': 15555} variants 6 69
+  Kirby     1628      11 |  12198   4652   2116   2536  15101   3076   2025 |  24854 |     704    21.5   0.048
+          events {'first': 1, 'rebind': 3, 'material': 72, 'tint_set': 2} event ticks/event 44166 materialize ticks/mat 169705 declines {} classes {'fast': 17442, 'scale': 6372, 'warm': 11125} variants 6 75
+  heap free min 122412 libc top min 19200 arena 1257216 | memo hits 4836 fills 1662 bypass 1394 | uploads after go 0 admit fail 0
+  * sum = guard (incl. event paths) + kernel + patch + submit, per lean draw
