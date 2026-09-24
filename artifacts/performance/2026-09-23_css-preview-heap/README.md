@@ -95,6 +95,27 @@ gdb reads taken right after `finish` in `run-css-heap.ps1` (`RESERVE_DONE`) are
 stale on this melonDS fork (dirty dcache lines); only the entry reads and the
 CSS-exit reads are used above.
 
+## Where the rest of main RAM goes: the pre-arena census
+
+The taskman arena is the largest block libc can still give when the chooser first
+runs, so everything libc allocated before that point is arena the character
+select (and every battle) lacks. On the all-content configuration the arena starts
+~210 KB above the static image's end. `tools/run-prearena-census.ps1` (breaks at the
+entries of `malloc`/`calloc`/`aligned_alloc`/`realloc` for >= 2 KiB until the first
+`ndsTaskmanArenaBytes` call; `prearena-census.txt`) names them:
+
+| caller | bytes |
+|---|---:|
+| `dvmDiscCacheCreate` (calico disc cache), 2 x 65,536 | 131,072 |
+| `portCoroutineCreate`, 7 service-thread stacks x 16,384 (`NDS_OS_SERVICE_STACK_SIZE`, `src/port/libultra_os.c`) | 114,688 |
+| `nitroromOpen` | 8,416 |
+
+Two measurable levers for Phase 3 (A7), neither taken here: per-thread stack sizes
+from a current stack high-water profile (`NDS_TASK20_STACK_PROFILE`; the last one is
+P1-era, 2026-07-18) instead of one 16 KiB size for every service thread, and the
+disc-cache size weighed against CSS pack and BGM stream read cost. Each byte either
+returns goes to the arena one for one.
+
 ## Not fixed here
 
 - Nothing checks the walk tour's `kind == drew` automatically:

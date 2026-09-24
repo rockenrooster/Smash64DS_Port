@@ -1,0 +1,34 @@
+0xfffffffc in ?? ()
+warning: could not convert 'malloc' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Breakpoint 1 at 0x2159e98
+Breakpoint 2 at 0x2157f8c
+Breakpoint 3 at 0x2157fa4
+Breakpoint 4 at 0x21589ec
+Temporary breakpoint 5 at 0x206b854: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/diagnostics_taskman_heap.c, line 118.
+ALLOC aligned_alloc size=65536 align=32 lr=0x0214a264
+dvmDiscCacheCreate + 104 in section .main
+ALLOC malloc size=8416 lr=0x021559dc
+nitroromOpen + 184 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC malloc size=16384 lr=0x02064921
+portCoroutineCreate + 45 in section .main
+ALLOC aligned_alloc size=65536 align=32 lr=0x0214a264
+dvmDiscCacheCreate + 104 in section .main
+
+Temporary breakpoint 5, ndsTaskmanArenaBytes () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/diagnostics_taskman_heap.c:118
+118	    if (sNdsTaskmanArenaBytes == NULL)
+D:\Stuff\DevFolder\Smash64DS_Port\artifacts\verifier-temp\slot7\prearena.gdb:35: Error in sourced command file:
+'__malloc_max_sbrked_mem' has unknown type; cast it to its declared type
+[Inferior 1 (Remote target) detached]
