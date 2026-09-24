@@ -83,7 +83,10 @@ $required = @(
     'gNdsMenuShellCssCommitSlot', 'gSCManagerSceneData',
     'gNdsTaskmanGeneralHeapFreeMin', 'gNdsTaskmanGraphicsHeapHighWater',
     'gNdsTaskmanGraphicsHeapCapacity', 'gNdsTaskmanGraphicsHeapOverflowCount',
-    'gNdsTaskmanGraphicsHeapNoRoomCount'
+    'gNdsTaskmanGraphicsHeapNoRoomCount',
+    'ndsRelocRecordExternalFixupFail', 'gNdsRelocHeapDeclineCount',
+    'gNdsRelocExternalFixupFailCount', 'gNdsRelocExternalFixupFailFirstAsset',
+    'gNdsRelocExternalFixupFailFirstLR', 'gNdsRelocExternalFixupFailLastLR'
 )
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -282,12 +285,24 @@ try {
         ))
     }
 
+    # Extern loading can refuse the request before syMallocSet, so a pack halt
+    # alone does not distinguish memory exhaustion from a missing dependency.
+    $commands.AddRange([string[]]@(
+        'break ndsRelocRecordExternalFixupFail',
+        'commands',
+        'silent',
+        ('printf "FOURKIND EXTERNFAIL asset=%u caller=0x%08x scene=%d free=%u\n", $r0, $lr, (int)gSCManagerSceneData.scene_curr, {0}' -f $free),
+        'bt 5',
+        'continue',
+        'end'
+    ))
     $commands.Add('continue')
     $commands.AddRange([string[]]@(
         'printf "FOURKIND STOP pc=0x%x lr=0x%x commit=%d setup=%d make=%d batt=%d\n", $pc, $lr, $c_commit, $c_setup, $c_make, $c_batt',
         ('printf "FOURKIND ARENA chosen=%u allocfail=%u heapgen=%u start=0x%08x ptr=0x%08x end=0x%08x free=%u overflow=%u\n", gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount, gNdsTaskmanHeapGeneration, (unsigned)gSYTaskmanGeneralHeap.start, (unsigned)gSYTaskmanGeneralHeap.ptr, (unsigned)gSYTaskmanGeneralHeap.end, {0}, gNdsSyMallocOverflowCount' -f $free),
         'printf "FOURKIND ROSTER s0=0x%06x s1=0x%06x s2=0x%06x s3=0x%06x\n", gNdsMenuShellCssCommitSlot[0], gNdsMenuShellCssCommitSlot[1], gNdsMenuShellCssCommitSlot[2], gNdsMenuShellCssCommitSlot[3]',
         'printf "FOURKIND LOWWATER generalfreemin=%u gfxpeak=%u gfxcap=%u gfxoverflow=%u gfxnoroom=%u\n", gNdsTaskmanGeneralHeapFreeMin, gNdsTaskmanGraphicsHeapHighWater, gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount',
+        'printf "FOURKIND RELOC heapdeclines=%u externfails=%u firstasset=%u firstlr=0x%08x lastlr=0x%08x\n", gNdsRelocHeapDeclineCount, gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstLR, gNdsRelocExternalFixupFailLastLR',
         'bt 8',
         'detach',
         'quit'

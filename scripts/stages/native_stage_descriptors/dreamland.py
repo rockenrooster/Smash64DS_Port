@@ -24,7 +24,7 @@ OWNER_MAP3 = 7
 
 DESCRIPTOR = StageDescriptor(
     name="dreamland",
-    include_sha="c28c1e4c4c32140f494a8410a939d09ee79ef0945ac1c4269baef741614bde29",
+    include_sha="b38335496a236f4770a0e7e9ee63e38fd0641a09756cf548a43346a2601cf2ee",
     # Frozen P1 packet: keeps the pre-2026-09-07 cull-clear layer entry so
     # its 53 golden pins in check_nds_native_stage.py stay byte-identical; the
     # runtime's Pupupu-only no-Z CULL_BACK force covers it instead.

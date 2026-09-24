@@ -7091,9 +7091,7 @@ $(NDS_TASK32_DRAW_HOT_FRAGMENT): FORCE
 			echo '*nds_renderer.o(.text.ndsRendererMtxMulAffine20p12)'; \
 			echo '*nds_renderer.o(.text.ndsRendererMtxLoadN64ToDS20p12)'; \
 			echo '*nds_renderer.o(.text.ndsRendererLoadHardwareMatrixPair.isra.0)'; \
-			if test "$(NDS_TASK36_HW_COMPOSE)" = 2; then \
-				echo '*nds_renderer.o(.text.ndsRendererTask36ReplayRun)'; \
-			else \
+			if test "$(NDS_TASK36_HW_COMPOSE)" != 2; then \
 				echo '*nds_renderer.o(.text.ndsRendererCommitNativeStageSegment)'; \
 			fi; \
 			echo '*nds_renderer.o(.text.ndsRendererNativeStageLoadNoZMatrix)'; \

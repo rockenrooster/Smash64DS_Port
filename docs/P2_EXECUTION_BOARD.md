@@ -56,19 +56,18 @@ Phase 0 closed; Phase 1 through `98ebd1e2e51`.
 **Phase 2 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
 performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
 Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
-**Next**: retire obsolete Task36 replay storage/code with compiled Dream Land
-hard-on; replace preparation, extend VS stages and MISC.
-Owed: four-CPU timing/output, all-stage coverage, retirement, integration; gates RED.
+**Next**: replace remaining stage preparation; extend compiled VS stages/MISC
+and retire their caches. Task36 retirement is qualified only for the scoped run.
+Owed: remaining stage/MISC output/timing, coverage, cache retirement, integration.
 Checked: all 202 Dream Land triangles; owner approves the shown view.
-Latest ROM `49263A2E789B4059` compiles material state and groups draws; gates RED.
-Checkpoint `497825f14c5` pushed; receipt owns later evidence.
-Full-match replay/counts identical; ~19.2 FPS, no overall win banked.
-Verified: 27 DMAs/frame; five host checks; 2/8 diff pixels.
-All jobs terminal. Owed: hard-on retirement, shipping heap/CSS, stages, integration.
+Retirement replay/counts/pixels match; lab 19.41 FPS, heap +32 KB; gates RED.
+Retired ROM `0A14A9F95D133F4B`: -35,652 B static; stage/26 host/GBI checks pass.
+Shipping CSS free 221,136 B; heavy roster halts on Link with 4,222 B free.
+All jobs terminal. Global gates RED; retirement IMPLEMENTED_NOT_ACCEPTED.
 Serial only (**no subagents**); owner edits preserved.
 A7 compaction on (+68 KB lab); MF codec unlinked.
-Shipping heaviest roster still ~130 KB short; lab arena is ~0.2 MB larger.
-**Constraint**: CSS animation reserve >= 183,072 B (5,296 B margin).
+Shipping arena 916,992 B; lab 1,281,792 B. Heavy-roster deficit still unsized.
+**Constraint**: CSS reserve >= 183,072 B; now 38,064 B margin (0879E550).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`. Evidence:
 `artifacts/performance/2026-09-2*_p2-2p8-*`.

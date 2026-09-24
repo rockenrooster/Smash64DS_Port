@@ -1,0 +1,34 @@
+{
+  "before": {
+    "elf": "builds\\p2p8-stage-material-final\\smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "c533486ae157f05a525c536e61fc1a39fa03bbd578d8c40119d12de6476da8d3",
+    "retired_symbols": [
+      "gNdsP2StageProg",
+      "ndsRendererTask36ReplayRecord",
+      "ndsRendererTask36ReplayRun",
+      "sNdsRendererTask36CaptureActive",
+      "sNdsRendererTask36ReplayOwner"
+    ]
+  },
+  "after": {
+    "elf": "builds\\p2p8-stage-replay-retired\\smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "4c604de37945fd3679152d01affd29294672efee08cb28ed08ec11592e0c7e54",
+    "retired_symbols": []
+  },
+  "static_delta_bytes": {
+    "text": -11328,
+    "data": 0,
+    "bss": -24324,
+    "total": -35652
+  },
+  "native_only_link_inputs": {
+    "lab": 246,
+    "shipping": 318
+  },
+  "host_checks": {
+    "stage_gx_and_native_only_tests": 26,
+    "stage_blob_roundtrip": "PASS",
+    "stage_fail_closed_perturbations": 12,
+    "gbi_decode_fixtures": "PASS"
+  }
+}

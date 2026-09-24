@@ -6,7 +6,6 @@ _Static_assert(sizeof(NDSStageGxHeader) == 48, "stage GX header ABI");
 _Static_assert(sizeof(NDSStageGxRun) == 32, "stage GX run ABI");
 _Static_assert(sizeof(NDSStageGxPatch) == 8, "stage GX patch ABI");
 
-volatile u32 gNdsP2StageProg __attribute__((used, section(".dtcm.bss"), aligned(4))) = 0u;
 volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
 volatile u32 gNdsP2StageProgLoads, gNdsP2StageProgBytes;
 volatile u32 gNdsP2StageProgDeclines, gNdsP2StageProgReason;
@@ -221,7 +220,7 @@ failed:
 
 static sb32 ndsStageGxEligible(u32 segment)
 {
-    if (gNdsP2StageProg == 0u || sNdsNativeStagePacketActive->gkind != NDS_NATIVE_STAGE_GKIND_PUPUPU ||
+    if (sNdsNativeStagePacketActive->gkind != NDS_NATIVE_STAGE_GKIND_PUPUPU ||
         segment >= 8u) { return FALSE; }
     if (!ndsStageGxLoad()) { gNdsP2StageProgDeclines++; return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)

@@ -60,15 +60,11 @@ foreach ($line in (& $Nm -S -n $Elf)) {
         }
     }
 }
-if ($nmRows.ContainsKey('ndsRendererTask36ReplayRun')) {
+if ($nmRows.ContainsKey('gNdsP2StageProgDraws')) {
+    # Compiled stage submission has no replay leaf in the Task32 section.
     $expected = @($expected | Where-Object {
         $_[0] -ne 'ndsRendererCommitNativeStageSegment'
     })
-    $expected += ,@(
-        'ndsRendererTask36ReplayRun',
-        '.text.ndsRendererTask36ReplayRun',
-        'nds_renderer.o'
-    )
 }
 
 $mapText = Get-Content -LiteralPath $Map -Raw

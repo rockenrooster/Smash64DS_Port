@@ -1,0 +1,44 @@
+{
+  "rom": "BB81E3B0E0A9A75902706D6452886901D4CBA59CF0F963439351CFB15C984445",
+  "configuration": "All-content shipping freeplay plus automated menu navigation and argmax roster preset; no fast logic or tick HUD",
+  "roster": [
+    {
+      "kind": 7,
+      "name": "Captain",
+      "control": "human"
+    },
+    {
+      "kind": 5,
+      "name": "Link",
+      "control": "CPU"
+    },
+    {
+      "kind": 9,
+      "name": "Pikachu",
+      "control": "CPU"
+    },
+    {
+      "kind": 8,
+      "name": "Kirby",
+      "control": "CPU"
+    }
+  ],
+  "outcome": "HEAP_ADMISSION_REFUSED_BEFORE_FIRST_BATTLE_FRAME",
+  "battle_frames": 0,
+  "battle_fighters_created": 1,
+  "arena_bytes": 916992,
+  "free_at_halt_bytes": 4222,
+  "heap_declines": 1,
+  "pack_halt_reason": 14,
+  "pack_halt_kind": 5,
+  "refused_dependency_asset": 224,
+  "caller": "ndsRelocEnsureLoadedAsset",
+  "caller_source": "src/port/reloc_backend_assets.c",
+  "caller_line": 8756,
+  "general_heap_low_water": null,
+  "low_water_note": "Uninitialized UINT_MAX before the first battle sample, not a free-space measurement.",
+  "additional_memory_needed": null,
+  "lab_arena_bytes": 1281792,
+  "lab_minus_diagnostic_arena_bytes": 364800,
+  "qualification": "Capacity failed. No shipping performance or all-roster acceptance."
+}

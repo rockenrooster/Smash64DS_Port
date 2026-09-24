@@ -3280,9 +3280,6 @@ void ndsRendererHardwareResetSceneTextureVram(void)
 #if NDS_R2_STAGE_DIRECT
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 0u;
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayReset();
-#endif
     gNdsRendererSceneTextureVramResetCount++;
 #endif
 }

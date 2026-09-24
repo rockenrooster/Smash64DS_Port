@@ -1,0 +1,26 @@
+{
+  "rom": "0879E5500C8622A1555E7E88257CC97F5012ADE10D5574EABA47F77A48CF2247",
+  "profile": "shipping freeplay; menu walk=0, fast logic=0, tick HUD=0",
+  "reserveFreeBytes": 221136,
+  "reserveRequiredBytes": 183072,
+  "reserveMarginBytes": 38064,
+  "reserveFailures": 0,
+  "capturesValid": true,
+  "selections": [
+    {
+      "tick": 104,
+      "kind": 5,
+      "triangles": 12162
+    },
+    {
+      "tick": 185,
+      "kind": 6,
+      "triangles": 23140
+    },
+    {
+      "tick": 270,
+      "kind": 9,
+      "triangles": 33550
+    }
+  ]
+}

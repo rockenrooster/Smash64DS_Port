@@ -75,8 +75,11 @@ $memoryGlobals = @(
     'gNdsTaskmanArenaRefineBytes',
     'gNdsTaskmanLibcRuntimeHighWater',
     'gNdsTaskmanLibcTopChunkMin',
-    'gNdsRendererTask36CaptureWordCount',
-    'gNdsRendererTask36CaptureOutcome',
+    'gNdsP2StageProgLoads',
+    'gNdsP2StageProgBytes',
+    'gNdsP2StageProgDraws',
+    'gNdsP2StageProgDmas',
+    'gNdsP2StageProgDeclines',
     'gNdsRendererTextureScratchFillBytesHighWater',
     'gNdsRendererTextureScratchStaticPayloadBytesHighWater',
     'gNdsRendererTextureScratchWhispyBytesHighWater',
@@ -820,8 +823,11 @@ $memory = [PSCustomObject]@{
     arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
     libcRuntimeHighWaterBytes = $extra['gNdsTaskmanLibcRuntimeHighWater']
     libcTopChunkMinBytes = $extra['gNdsTaskmanLibcTopChunkMin']
-    task36CaptureWords = $extra['gNdsRendererTask36CaptureWordCount']
-    task36CaptureOutcome = $extra['gNdsRendererTask36CaptureOutcome']
+    stageProgramLoads = $extra['gNdsP2StageProgLoads']
+    stageProgramBytes = $extra['gNdsP2StageProgBytes']
+    stageProgramDraws = $extra['gNdsP2StageProgDraws']
+    stageProgramDmas = $extra['gNdsP2StageProgDmas']
+    stageProgramDeclines = $extra['gNdsP2StageProgDeclines']
     textureScratchFillBytesHighWater = $extra['gNdsRendererTextureScratchFillBytesHighWater']
     textureScratchStaticPayloadBytesHighWater = $extra['gNdsRendererTextureScratchStaticPayloadBytesHighWater']
     textureScratchWhispyBytesHighWater = $extra['gNdsRendererTextureScratchWhispyBytesHighWater']
@@ -1141,26 +1147,17 @@ if ([uint64]$memory.weaponPoolRefusalCount -ne 0) {
 }
 Write-Output ("Weapon pool: entries=$($memory.weaponPoolEntries) " +
     "highWater=$($memory.weaponPoolLiveHighWater) refusals=$($memory.weaponPoolRefusalCount)")
-# The Task36 replay owner's word storage is sized from the generated Dream Land
-# bound; an overflowing capture parks the owner DISABLED and the stage silently
-# falls back to live execution. Prove the replay stayed READY inside the bound.
-$task36BoundSource = Join-Path $root 'src\nds\nds_native_stage_owner.generated.inc'
-$task36BoundMatch = [regex]::Match(
-    (Get-Content -LiteralPath $task36BoundSource -Raw),
-    'NDS_NATIVE_STAGE_TASK36_REPLAY_WORD_MAX (\d+)u')
-if (-not $task36BoundMatch.Success) {
-    throw "The generated Dream Land Task36 replay bound is missing from $task36BoundSource."
-}
-$task36Bound = [uint64]$task36BoundMatch.Groups[1].Value
-# gNdsRendererTask36ReplayState only has compiled writers at profile level 1;
-# the capture outcome carries the same NDSRendererTask36ReplayState values on
-# every arm (2 = READY, 3 = DISABLED).
-if (([uint64]$memory.task36CaptureOutcome -ne 2) -or
-    ([uint64]$memory.task36CaptureWords -eq 0) -or
-    ([uint64]$memory.task36CaptureWords -gt $task36Bound)) {
-    throw ("Four-fighter stress did not keep the Dream Land Task36 replay READY " +
-        "within its generated bound: outcome=$($memory.task36CaptureOutcome) (2 = READY) " +
-        "words=$($memory.task36CaptureWords) bound=$task36Bound.")
+# The native-only link guard rejects the retired recorder and its storage.
+# Positive runtime engagement is still required; a zero counter is not coverage.
+if (([uint64]$memory.stageProgramLoads -ne 1) -or
+    ([uint64]$memory.stageProgramBytes -eq 0) -or
+    ([uint64]$memory.stageProgramDraws -eq 0) -or
+    ([uint64]$memory.stageProgramDmas -eq 0) -or
+    ([uint64]$memory.stageProgramDeclines -ne 0)) {
+    throw ("Four-fighter stress did not engage the compiled stage cleanly: " +
+        "loads=$($memory.stageProgramLoads) bytes=$($memory.stageProgramBytes) " +
+        "draws=$($memory.stageProgramDraws) dma=$($memory.stageProgramDmas) " +
+        "declines=$($memory.stageProgramDeclines).")
 }
 if ([uint64]$memory.animCacheArenaReservedBytes -ne 0) {
     if (([uint64]$memory.animCacheHits -eq 0) -or

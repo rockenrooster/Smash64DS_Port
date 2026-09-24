@@ -153,58 +153,11 @@
  * arm. See docs/optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md
  * section 8.
  *
- * Overridable from nds_build_config.h for BUGS.md #9 only. A zero mask routes
- * every binding through the CPU-composed submit path -- the one binding 29
- * already uses -- which is the A/B that decides whether the pause-orbit floor
- * seam belongs to the rigid path or to the shared no-Z path. It must be paired
- * with NDS_TASK36_HW_COMPOSE=1, never 2: the replay segment set below is fixed
- * at 0/5/7 on the contract that every binding in them is rigid, and replaying a
- * dynamic binding's per-triangle LOAD4x4 stream pins that geometry to the
- * capture frame's camera. The default value is unchanged, so a build that does
- * not set this is byte-identical to one compiled before the guard existed. */
+ * The compiled stage verifies baked worlds against this mask at load.
+ * A binding demoted by the live source-key check cannot use baked data. */
 #ifndef NDS_RENDERER_TASK36_RIGID_BINDING_MASK
 #define NDS_RENDERER_TASK36_RIGID_BINDING_MASK 0x00000381c00fffffULL
 #endif
-#endif
-
-/* Task 53: default-off re-activation guard for the Task 36 replay arena
- * admission path. The robust downward-stepping arena allocator at
- * src/port/diagnostics.c:7368 secures anywhere from the 0x130000 floor
- * (after stepping down from NDS_TASKMAN_ARENA_SIZE) up to the full arena;
- * the captured words live in a STATIC BSS buffer and have no
- * arena-layout dependency, so the legacy exact-arena guard was a stale
- * "pristine environment only" check. When this flag is 1 the BeginFrame
- * and StartCapture admission guards admit any arena of >= 0x130000 bytes
- * regardless of alloc-fail-count, so 0x14C000 (tick-HUD) and 0x14E000
- * (published) become eligible. When this flag is 0 the guards are kept
- * byte-identical to master so the published ROM stays 1818AA77-sh equivalent. */
-#ifndef NDS_TASK53_REPLAY_ARENA_FIX
-#define NDS_TASK53_REPLAY_ARENA_FIX 0
-#endif
-
-#if (NDS_TASK53_REPLAY_ARENA_FIX != 0) && \
-    (NDS_TASK53_REPLAY_ARENA_FIX != 1)
-#error "NDS_TASK53_REPLAY_ARENA_FIX must be 0 or 1"
-#endif
-
-#if NDS_TASK53_REPLAY_ARENA_FIX && (NDS_TASK36_HW_COMPOSE != 2)
-#error "NDS_TASK53_REPLAY_ARENA_FIX=1 requires NDS_TASK36_HW_COMPOSE=2"
-#endif
-
-#ifndef NDS_TASK55_STAGE_GEOM
-#define NDS_TASK55_STAGE_GEOM 0
-#endif
-
-#if (NDS_TASK55_STAGE_GEOM != 0) && (NDS_TASK55_STAGE_GEOM != 1)
-#error "NDS_TASK55_STAGE_GEOM must be 0 or 1"
-#endif
-
-#if NDS_TASK55_STAGE_GEOM && (NDS_TASK36_HW_COMPOSE != 2)
-#error "NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK36_HW_COMPOSE=2"
-#endif
-
-#if NDS_TASK55_STAGE_GEOM && !NDS_TASK53_REPLAY_ARENA_FIX
-#error "NDS_TASK55_STAGE_GEOM=1 requires NDS_TASK53_REPLAY_ARENA_FIX=1 (capture path must be live)"
 #endif
 
 #ifndef NDS_TASK56_FIGHTER_PRIMITIVES
@@ -246,7 +199,7 @@
 
 #if (NDS_TASK36_HW_COMPOSE == 2) && \
     (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS)
-#error "Task 36 replay cannot be combined with the Task 29/34 stream census"
+#error "Compiled stage GX bypasses the Task 29/34 stream census"
 #endif
 
 #ifndef NDS_RENDERER_SCREEN_SPACE_CENSUS
@@ -2188,27 +2141,6 @@ extern volatile u32 gNdsRendererTask44SteadyAdmitCount;
 extern volatile u32 gNdsRendererTask44RevalidateCount;
 extern volatile u32 gNdsRendererTask44AdmissionGeneration;
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-extern volatile u32 gNdsRendererTask36ReplayState;
-extern volatile u32 gNdsRendererTask36BakeAttemptCount;
-extern volatile u32 gNdsRendererTask36BakeSuccessCount;
-extern volatile u32 gNdsRendererTask36BakeFailureCount;
-extern volatile u32 gNdsRendererTask36ReplayFrameCount;
-extern volatile u32 gNdsRendererTask36ReplaySegmentCount;
-extern volatile u32 gNdsRendererTask36ReplayRunCount;
-extern volatile u32 gNdsRendererTask36ReplayWordCount;
-extern volatile u32 gNdsRendererTask36ReplayFallbackCount;
-extern volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
-extern volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
-extern volatile u32 gNdsRendererTask36ReplayProjectionRejectCount;
-extern volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
-#endif
-#endif
-/* Task 53: declared outside the profile-1 block above so it is visible at
- * profile-0 too (mirrors the definition in nds_renderer.c) -- the staleness
- * detector is a regression catch, not a profiling instrument. */
-#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
-extern volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 extern volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;

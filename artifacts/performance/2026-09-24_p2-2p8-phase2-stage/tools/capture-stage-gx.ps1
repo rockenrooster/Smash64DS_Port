@@ -12,21 +12,9 @@ $words = [BitConverter]::ToUInt32($payload, 16)
 $out = Join-Path $art $Label
 if (Test-Path -LiteralPath "$out.gdb.out") { throw 'Use a new label to preserve the previous capture' }
 $gdbOut = $out.Replace('\','/')
-$commands = @(
-    'set pagination off', 'set confirm off', 'set remotetimeout 30',
-    "target remote 127.0.0.1:$($context.GdbPort)", 'break main', 'continue',
-    'set var gNdsP2StageProg = 0', 'delete breakpoints',
-    'break ndsBattlePlayableFrameCompleteMarker', 'ignore 2 31', 'continue',
-    'printf "GX_OLD words=%u state=%u\n", sNdsRendererTask36ReplayOwner.word_count, sNdsRendererTask36ReplayOwner.state',
-    ('dump binary memory {0}-old.bin &sNdsRendererTask36ReplayOwner.words[0] (&sNdsRendererTask36ReplayOwner.words[0]+sNdsRendererTask36ReplayOwner.word_count)' -f $gdbOut),
-    'set $i = 0', 'while $i < 54',
-    'printf "GX_RUN=%u,%u,%u,%u\n", $i, sNdsRendererTask36ReplayOwner.runs[$i].word_offset, sNdsRendererTask36ReplayOwner.runs[$i].word_count, sNdsRendererTask36ReplayOwner.runs[$i].prepared.textured',
-    'set $i = $i + 1', 'end', 'set var gNdsP2StageProg = 1', 'continue',
-    'printf "GX_NEW draws=%u declines=%u reason=%u gxstat=%u\n", gNdsP2StageProgDraws, gNdsP2StageProgDeclines, gNdsP2StageProgReason, *(unsigned int*)0x04000600',
-    'if gNdsP2StageProgDraws == 0', 'quit 2', 'end',
-    ('dump binary memory {0}-new.bin sNdsStageGxWords (sNdsStageGxWords+{1})' -f $gdbOut, $words),
-    'detach', 'quit'
-)
+# Historical recorder comparisons are preserved with their old ELF/scripts.
+if (-not $Matrices -and -not $RamCounts) { $Matrices = $true }
+$commands = @()
 if ($Matrices) {
     $stop = if ($Frame -gt 0) { "gNdsBattlePlayablePacingPresentedFrames >= $($Frame-1)" } else {
         'gSCManagerBattleState != 0 && gSCManagerBattleState->time_remain > 0 && gSCManagerBattleState->time_remain <= 3300'
@@ -34,7 +22,7 @@ if ($Matrices) {
     $commands = @(
         'set pagination off', 'set confirm off', 'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)", 'break main', 'continue',
-        'set var gNdsP2StageProg = 1', 'delete breakpoints',
+        'delete breakpoints',
         "break ndsRendererFinishNativeStageOwner if $stop",
         'continue',
         'printf "GX_MATRIX tic=%u presented=%u draws=%u near=%u declines=%u gxstat=%u\n", gSCManagerBattleState->time_remain, gNdsBattlePlayablePacingPresentedFrames, gNdsP2StageProgDraws, gNdsP2StageProgNearRuns, gNdsP2StageProgDeclines, *(unsigned int*)0x04000600',
@@ -51,7 +39,7 @@ if ($RamCounts) {
     $commands = @(
         'set pagination off', 'set confirm off', 'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)", 'break main', 'continue',
-        'set var gNdsP2StageProg = 1', 'delete breakpoints'
+        'delete breakpoints'
     )
     if ($Matrices) {
         $commands += @("break ndsRendererFinishNativeStageOwner if $matchDigests", 'commands', 'silent')
@@ -68,8 +56,11 @@ if ($RamCounts) {
         }
         $commands += @('continue', 'end')
     }
+    $countSite = @(Select-String -LiteralPath (Join-Path $root 'src/nds/nds_platform.c') `
+        -SimpleMatch 'gNdsHardwareRendererPolyRamCount = GFX_POLYGON_RAM_USAGE;')
+    if ($countSite.Count -ne 1) { throw 'Hardware-count stop must resolve uniquely' }
     $commands += @(
-        "break nds_platform.c:3626 if $matchDigests",
+        "break nds_platform.c:$($countSite[0].LineNumber) if $matchDigests",
         'commands', 'silent',
         'set $polys = *(unsigned short*)0x04000604',
         'set $verts = *(unsigned short*)0x04000606',
@@ -98,10 +89,10 @@ try {
     if (-not $RamCounts -and -not (Test-Path -LiteralPath "$out-new.bin")) { throw 'Missing compiled GX capture' }
     $captured = if ($RamCounts -and $Matrices) {
         foreach ($case in 'a','b') { foreach ($part in 'new','composed','rigid','hidden') { "$out-$case-$part.bin" } }
-    } elseif ($RamCounts) { @() } elseif ($Matrices) { @("$out-new.bin", "$out-composed.bin", "$out-rigid.bin", "$out-hidden.bin") } else { @("$out-new.bin", "$out-old.bin") }
+    } elseif ($RamCounts) { @() } elseif ($Matrices) { @("$out-new.bin", "$out-composed.bin", "$out-rigid.bin", "$out-hidden.bin") } else { @("$out-new.bin") }
     Get-FileHash -LiteralPath (@($rom) + $captured) | ConvertTo-Json |
         Set-Content -LiteralPath "$out-identity.json"
-    Select-String -LiteralPath "$out.gdb.out" -Pattern '^GX_OLD|^GX_NEW|^GX_MATRIX|^GX_RAM'
+    Select-String -LiteralPath "$out.gdb.out" -Pattern '^GX_MATRIX|^GX_RAM'
 } finally {
     foreach ($process in @($debugger, $emulator)) {
         if ($null -ne $process -and -not $process.HasExited) { $process.Kill(); $process.WaitForExit() }

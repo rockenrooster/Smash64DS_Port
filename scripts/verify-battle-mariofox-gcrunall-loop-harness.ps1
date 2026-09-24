@@ -105,7 +105,7 @@ $usesPublishedIntrinsicRendererDefaults = $Target -in @(
     'smash64ds-battle-playable-fast-hwtri',
     'smash64ds-p2-shell-hwtri'
 )
-$usesIntrinsicTask36Replay = $usesPublishedIntrinsicRendererDefaults
+$usesIntrinsicStageGx = $usesPublishedIntrinsicRendererDefaults
 $usesIntrinsicTask16FloatHelpers = $Target -in @(
     'smash64ds-battle-playable-hwtri',
     'smash64ds-battle-playable-proof-hwtri',
@@ -145,11 +145,11 @@ $effectiveTask16FloatI2fMode = if (
 $effectiveTask16FloatAddSubMode = if (
     $usesIntrinsicTask16FloatHelpers) { 1 } else { $Task16FloatAddSubMode }
 $effectiveTask36HwComposeMode = if (
-    $usesIntrinsicTask36Replay) { 2 } else { $Task36HwComposeMode }
+    $usesIntrinsicStageGx) { 2 } else { $Task36HwComposeMode }
 # Task 44 rides the same intrinsic block as the Task 36 replay it depends on:
 # the published targets force it on, so the harness must expect it on there.
 $effectiveTask44StageSteadyMode = if (
-    $usesIntrinsicTask36Replay) { 1 } else { $Task44StageSteadyMode }
+    $usesIntrinsicStageGx) { 1 } else { $Task44StageSteadyMode }
 if (($effectiveTask44StageSteadyMode -eq 1) -and
     ($effectiveTask36HwComposeMode -eq 0)) {
     throw 'Task44StageSteadyMode requires Task36HwComposeMode.'
@@ -1763,7 +1763,7 @@ try {
                             } else { '0' }
                         $coarseBenchmarkCommands += ('printf "TASK36_HW=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererTask36HardwareComposedDObjCount, gNdsRendererTask36CameraLoadCount, gNdsRendererTask36WorldMultCount, {0}, {1}, {2}, gNdsRendererTask36AdapterRejectReason, gNdsRendererTask36RendererRejectReason, gNdsRendererTask36PrepareRunRejectReason, gNdsRendererM3PreflightFallbackCount, gNdsRendererM3PostArmFailureCount' -f $task36MismatchExpression, $task36DynamicLoExpression, $task36DynamicHiExpression)
                         if ($Task36HwComposeMode -eq 2) {
-                            $coarseBenchmarkCommands += 'printf "TASK36_REPLAY=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererTask36ReplayState, gNdsRendererTask36BakeAttemptCount, gNdsRendererTask36BakeSuccessCount, gNdsRendererTask36BakeFailureCount, gNdsRendererTask36ReplayFrameCount, gNdsRendererTask36ReplaySegmentCount, gNdsRendererTask36ReplayRunCount, gNdsRendererTask36ReplayWordCount, gNdsRendererTask36ReplayFallbackCount, gNdsRendererTask36ReplayArenaRejectCount, gNdsRendererTask36ReplayMaterialRejectCount, gNdsRendererTask36ReplayCaptureWordCount, gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount, sNdsRendererTask36ReplayOwner.word_count, sNdsRendererTask36ReplayOwner.captured_segment_mask, sNdsRendererTask36ReplayOwner.capture_fault, sNdsRendererTask36CaptureActive'
+                            $coarseBenchmarkCommands += 'printf "STAGE_GX=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsP2StageProgDraws, gNdsP2StageProgWords, gNdsP2StageProgLoads, gNdsP2StageProgBytes, gNdsP2StageProgDeclines, gNdsP2StageProgReason, gNdsP2StageProgNearRuns, gNdsP2StageProgDmas'
                         }
                         if ($effectiveTask44StageSteadyMode -eq 1) {
                             # Task 44 item 3 admission ledger. Admit + revalidate
@@ -3033,7 +3033,7 @@ try {
     $fastRunBenchmark = @()
     $m3StageBenchmark = @()
     $task36HwBenchmark = @()
-    $task36ReplayBenchmark = @()
+    $stageGxBenchmark = @()
     $task44AdmitBenchmark = @()
     $m3GeneratedSegment0Benchmark = @()
     $m3GeneratedSegment0ShadowBenchmark = @()
@@ -3193,7 +3193,7 @@ try {
             if ($Task36HwComposeMode -gt 0) {
                 $task36HwBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK36_HW' -FieldCount 12)
                 if ($Task36HwComposeMode -eq 2) {
-                    $task36ReplayBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK36_REPLAY' -FieldCount 19)
+                    $stageGxBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'STAGE_GX' -FieldCount 9)
                 }
                 if ($effectiveTask44StageSteadyMode -eq 1) {
                     $task44AdmitBenchmark = @(Get-UnsignedMarkerMatches -Text $gdbStdout -Name 'TASK44_ADMIT' -FieldCount 4)
@@ -4323,7 +4323,7 @@ try {
                 $texturePhaseMetricSummary = ''
                 $fastRunMetricSummary = ''
                 $m3StageMetricSummary = ''
-                $task36ReplayMetricSummary = ''
+                $stageGxMetricSummary = ''
                 $task44MetricSummary = ''
                 $m3GeneratedSegment0MetricSummary = ''
                 $m3GeneratedSegment0ShadowMetricSummary = ''
@@ -4580,7 +4580,7 @@ try {
                         $m3WhispySamples = [System.Collections.Generic.List[object]]::new()
                         $g2StateSamples = [System.Collections.Generic.List[object]]::new()
                         $task36HwSamples = [System.Collections.Generic.List[object]]::new()
-                        $task36ReplaySamples = [System.Collections.Generic.List[object]]::new()
+                        $stageGxSamples = [System.Collections.Generic.List[object]]::new()
                         $task44AdmitSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxMetaSamples = [System.Collections.Generic.List[object]]::new()
                         $task29GxClassSamples = [System.Collections.Generic.List[object]]::new()
@@ -4677,7 +4677,7 @@ try {
                         if ($Task36HwComposeMode -gt 0) {
                             Assert-Condition ($task36HwBenchmark.Count -eq $RendererBenchmarkSamples) "Task 36 hardware-compose benchmark captured $($task36HwBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             if ($Task36HwComposeMode -eq 2) {
-                                Assert-Condition ($task36ReplayBenchmark.Count -eq $RendererBenchmarkSamples) "Task 36 replay benchmark captured $($task36ReplayBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
+                                Assert-Condition ($stageGxBenchmark.Count -eq $RendererBenchmarkSamples) "Compiled stage benchmark captured $($stageGxBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
                             }
                             if ($effectiveTask44StageSteadyMode -eq 1) {
                                 Assert-Condition ($task44AdmitBenchmark.Count -eq $RendererBenchmarkSamples) "Task 44 admission ledger captured $($task44AdmitBenchmark.Count) of $RendererBenchmarkSamples synchronized records." $gdbStdout
@@ -5101,12 +5101,9 @@ try {
                                         } else { 0 }
                                     Assert-Condition (
                                         $task36[0] -eq $frame -and
-                                        $task36[1] -eq 26 -and
-                                        (($Task36HwComposeMode -ne 2) -or
-                                         (($task36[2] -eq 3) -and
-                                          ($task36[3] -eq 31))) -and
-                                        $task36[2] -gt 0 -and
-                                        $task36[3] -ge $task36[1] -and
+                                        (($Task36HwComposeMode -eq 2) -or
+                                         ($task36[1] -eq 26 -and $task36[2] -gt 0 -and
+                                          $task36[3] -ge $task36[1])) -and
                                         $task36[4] -eq 0 -and
                                         $task36[5] -eq
                                             $task36ExpectedDynamicLo -and
@@ -5119,41 +5116,22 @@ try {
                                     ) "Task 36 hardware compose lost its rigid/dynamic partition, engagement, or zero-rejection/post-arm contract at frame $frame (actual=$($task36 -join ','))." $gdbStdout
                                     $task36HwSamples.Add($task36)
                                     if ($Task36HwComposeMode -eq 2) {
-                                        $task36Replay = Get-Ints `
-                                            $task36ReplayBenchmark[$sampleIndex]
+                                        $stageGx = Get-Ints $stageGxBenchmark[$sampleIndex]
                                         Assert-Condition (
-                                            $task36Replay[0] -eq $frame -and
-                                            $task36Replay[1] -eq 2 -and
-                                            $task36Replay[2] -eq 1 -and
-                                            $task36Replay[3] -eq 1 -and
-                                            $task36Replay[4] -eq 0 -and
-                                            $task36Replay[5] -gt 0 -and
-                                            $task36Replay[6] -eq 3 -and
-                                            $task36Replay[7] -eq 33 -and
-                                            $task36Replay[8] -gt 0 -and
-                                            $task36Replay[8] -eq
-                                                $task36Replay[12] -and
-                                            $task36Replay[12] -eq 3916 -and
-                                            $task36Replay[9] -eq 0 -and
-                                            $task36Replay[10] -eq 0 -and
-                                            $task36Replay[11] -eq 0 -and
-                                            $task36Replay[13] -eq 0x150000 -and
-                                            $task36Replay[14] -eq 0 -and
-                                            $task36Replay[15] -eq 3916 -and
-                                            $task36Replay[16] -eq 0xA1 -and
-                                            $task36Replay[17] -eq 0 -and
-                                            $task36Replay[18] -eq 0
-                                        ) "Task 36 replay lost READY/one-bake/3-segment/33-run/full-arena/zero-fallback engagement at frame $frame (actual=$($task36Replay -join ','))." $gdbStdout
+                                            $stageGx[0] -eq $frame -and
+                                            $stageGx[1] -gt 0 -and $stageGx[2] -gt 0 -and
+                                            $stageGx[3] -eq 1 -and $stageGx[4] -gt 0 -and
+                                            $stageGx[5] -eq 0 -and $stageGx[6] -eq 0 -and
+                                            $stageGx[8] -gt 0
+                                        ) "Compiled stage did not load/draw cleanly at frame $frame (actual=$($stageGx -join ','))." $gdbStdout
                                         if ($sampleIndex -gt 0) {
-                                            $previousTask36Replay = Get-Ints `
-                                                $task36ReplayBenchmark[$sampleIndex - 1]
-                                            Assert-Condition (
-                                                $task36Replay[5] -eq
-                                                    ($previousTask36Replay[5] + 1)
-                                            ) "Task 36 replay did not advance exactly once across frame $frame." $gdbStdout
+                                            $previousStageGx = Get-Ints $stageGxBenchmark[$sampleIndex - 1]
+                                            Assert-Condition ($stageGx[1] -gt $previousStageGx[1] -and
+                                                $stageGx[2] -gt $previousStageGx[2] -and
+                                                $stageGx[8] -gt $previousStageGx[8]) `
+                                                "Compiled stage stopped submitting at frame $frame." $gdbStdout
                                         }
-                                        $task36ReplaySamples.Add(
-                                            $task36Replay)
+                                        $stageGxSamples.Add($stageGx)
                                     }
                                     if ($effectiveTask44StageSteadyMode -eq 1) {
                                         $task44Admit = Get-Ints `
@@ -5762,8 +5740,8 @@ try {
                             $m3Last = $m3StageSamples[-1]
                             $m3StageMetricSummary = "Renderer M3 stage owner: attempts/success/fallback=$($m3Last[1])/$($m3Last[2])/$($m3Last[3]) segments/mask=$($m3Last[4])/$($m3Last[5]) postArm=$($m3Last[6]) dobjs/bindings/runs/triangles/epochs=$($m3Last[7])/$($m3Last[8])/$($m3Last[9])/$($m3Last[10])/$($m3Last[11]) materials=$($m3Last[12])/$($m3Last[13]) cross=$($m3Last[14])/$($m3Last[15])/$($m3Last[16]) topology=full$($m3Last[17])/hit$($m3Last[18])/mismatch$($m3Last[19])/inject$($m3Last[20])/revalidate$($m3Last[21])"
                             if ($Task36HwComposeMode -eq 2) {
-                                $task36ReplayLast = $task36ReplaySamples[-1]
-                                $task36ReplayMetricSummary = "Renderer Task 36 replay: state=$($task36ReplayLast[1]) bake=$($task36ReplayLast[2])/$($task36ReplayLast[3])/$($task36ReplayLast[4]) frames=$($task36ReplayLast[5]) segments/runs/words=$($task36ReplayLast[6])/$($task36ReplayLast[7])/$($task36ReplayLast[8]) fallback/arena/material=$($task36ReplayLast[9])/$($task36ReplayLast[10])/$($task36ReplayLast[11]) arena=$('{0:X}' -f $task36ReplayLast[13])/$($task36ReplayLast[14])"
+                                $stageGxLast = $stageGxSamples[-1]
+                                $stageGxMetricSummary = "Compiled stage: draws=$($stageGxLast[1]) words=$($stageGxLast[2]) loads=$($stageGxLast[3]) bytes=$($stageGxLast[4]) declines=$($stageGxLast[5]) reason=$($stageGxLast[6]) near=$($stageGxLast[7]) dma=$($stageGxLast[8])"
                             }
                             if ($effectiveTask44StageSteadyMode -eq 1) {
                                 $task44AdmitFirst = $task44AdmitSamples[0]
@@ -6078,7 +6056,7 @@ try {
                                     @($screenSpaceCensusStageOwnerValues)
                                 m3Stage = @($m3StageSamples)
                                 task36Hw = @($task36HwSamples)
-                                task36Replay = @($task36ReplaySamples)
+                                stageGx = @($stageGxSamples)
                                 m3GeneratedSegment0 =
                                     @($m3GeneratedSegment0Samples)
                                 m3GeneratedSegment0Shadow =
@@ -6203,7 +6181,7 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
-                    if ($task36ReplayMetricSummary) { Write-Output $task36ReplayMetricSummary }
+                    if ($stageGxMetricSummary) { Write-Output $stageGxMetricSummary }
                     if ($task44MetricSummary) { Write-Output $task44MetricSummary }
                     if ($m3GeneratedSegment0MetricSummary) { Write-Output $m3GeneratedSegment0MetricSummary }
                     if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }
@@ -6953,7 +6931,7 @@ try {
                     if ($texturePhaseMetricSummary) { Write-Output $texturePhaseMetricSummary }
                     if ($fastRunMetricSummary) { Write-Output $fastRunMetricSummary }
                     if ($m3StageMetricSummary) { Write-Output $m3StageMetricSummary }
-                    if ($task36ReplayMetricSummary) { Write-Output $task36ReplayMetricSummary }
+                    if ($stageGxMetricSummary) { Write-Output $stageGxMetricSummary }
                     if ($task44MetricSummary) { Write-Output $task44MetricSummary }
                     if ($m3GeneratedSegment0MetricSummary) { Write-Output $m3GeneratedSegment0MetricSummary }
                     if ($m3GeneratedSegment0ShadowMetricSummary) { Write-Output $m3GeneratedSegment0ShadowMetricSummary }

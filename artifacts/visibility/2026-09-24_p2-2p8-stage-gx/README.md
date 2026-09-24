@@ -40,3 +40,12 @@ final compiled stage. The two pairs at tics 3300/3298 differ by 2/8 pixels,
 max channel differences 16/89, over the same 120,000-pixel surface. The first
 view is unchanged from the preceding compiled path. Identities and exact crop
 are in `material-final-pixels.json`. No all-camera/stage acceptance is implied.
+
+Task36 retirement (`0A14A9F9`): `replay-retired-t3300/adjacent.png` are inspected
+and pixel-identical to the two `49263A2E` control surfaces. Exact counts/crop:
+`replay-retired-pixels.json`. Shipping `0879E550` character-select captures
+`replay-retired-css-link/yoshi/pikachu.png` show the selected previews; reservation
+margin is recorded in the performance receipt. The first CSS capture attempt
+returned desktop wallpaper through CopyFromScreen and is invalid. The shared
+running-window helper was repaired to use PrintWindow; only its valid retakes
+are included here. No visual approximation was introduced by retirement.

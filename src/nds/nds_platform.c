@@ -2551,14 +2551,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         ndsPlatformPrintDebugLine(21u, "VBI  --  --  --");
         ndsPlatformPrintDebugLine(22u, "5+  --  max --  BGM --/--");
         ndsPlatformPrintDebugLine(
-#if NDS_TASK36_HW_COMPOSE == 2
-            23u, "GIT %s H%lu P%lu F%lu A%lx S%u", NDS_TASK10_GIT_SHORT,
-            (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
-            (unsigned long)gNdsRendererTask36ReplaySegmentCount,
-            (unsigned long)gNdsRendererTask36ReplayFallbackCount,
-            (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
-            (unsigned int)NDS_TASK44_STAGE_STEADY);
-#elif NDS_TASK36_HW_COMPOSE
+#if NDS_TASK36_HW_COMPOSE
             23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
             (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
             (unsigned long)(gNdsRendererTask36AdapterRejectReason |
@@ -2738,15 +2731,7 @@ static void ndsPlatformRenderBattleFpsHud(void)
         0ul,
 #endif
         (gNdsAudioBgmFalsifierOff != 0u) ? " [OFF]" : "");
-#if NDS_TASK36_HW_COMPOSE == 2
-    ndsPlatformPrintDebugLine(
-        23u, "GIT %s H%lu P%lu F%lu A%lx S%u", NDS_TASK10_GIT_SHORT,
-        (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,
-        (unsigned long)gNdsRendererTask36ReplaySegmentCount,
-        (unsigned long)gNdsRendererTask36ReplayFallbackCount,
-        (unsigned long)(gNdsTaskmanArenaChosenSize >> 12),
-        (unsigned int)NDS_TASK44_STAGE_STEADY);
-#elif NDS_TASK36_HW_COMPOSE
+#if NDS_TASK36_HW_COMPOSE
     ndsPlatformPrintDebugLine(
         23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,
         (unsigned long)gNdsRendererTask36HardwareComposedDObjCount,

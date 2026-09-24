@@ -367,3 +367,70 @@ compiled route. Their legacy code, replay storage and the temporary route still
 exist: remove those next, with hard-on qualification, then finish preparation,
 other VS-stage and MISC coverage. This remains IMPLEMENTED_NOT_ACCEPTED.
 Final captures inspected: 2/8 changed pixels at tics 3300/3298, same as the preliminary material batch; see visibility material-final-pixels.json. ROM/ELF/config/template preserved in builds/p2p8-stage-material-final. All jobs terminal. Next: remove Task36 replay storage/hooks and qualify compiled Dream Land hard-on; then remaining preparation, all VS stages and MISC. Shipping root remains r54.
+
+Task36 retirement, from `3eefca0fd42` (2026-09-24): the capture/replay owner,
+recorder hooks, per-run replay consumer, copied texture certificate, routing
+controls and obsolete replay diagnostics are removed. Compiled Dream Land has
+no gNdsP2StageProg on/off variable. Cold native clipping and not-yet-compiled
+stages retain their existing native emitters. The buffer alone was 24,256 B
+in the preserved baseline ELF; linked size/arena recovery still requires build.
+The native-only guard now rejects retired symbols and was checked against the
+old ELF: it finds the recorder, replay run, buffer, capture flag and route flag.
+The stress and renderer benchmark consumers now require compiled-stage loads,
+draws and DMA activity instead of the removed replay counters.
+26 host tests pass (GX/compiler checks plus native-only guard tests); five changed
+PowerShell files parse. The stage producer's only packet-byte change is deletion
+of the obsolete replay-bound #define; its descriptor/checker SHA pin was updated
+from c28c1e4c to b3833549 after an inspected diff. Source geometry is unchanged.
+The first one-use patch producer stopped on an unmatched comment anchor before
+editing source; corrected and applied through apply_patch. Stage checking exposed
+both stale include-hash pins; the producer and checker now agree. No old evidence
+was relabelled. Full stage check, native-only build, hard-on run/capture, and
+shipping CSS/heavy-roster heap proofs are due; this is IMPLEMENTED_NOT_ACCEPTED.
+Stage check now passes all 12 fail-closed perturbations and blob round-trip. Remaining link-layout and benchmark consumers of the deleted replay leaf were updated. The GBI check identified the old compiler-load hook ahead of the texture-proof anchor; load/admission now follows the whole-table proof and the optional mesh branch. GBI recheck running; runtime sources are frozen for replay-retired-build.
+Retirement build passed (native-only, 246 actual inputs):
+0A14A9F95D133F4B49922E148FDACD9207DEA404861DA064D330FA75A3B81C78.
+Static delta against 49263A2E: text -11,328 B, data 0, BSS -24,324 B; total
+-35,652 B. All retired symbols are absent. GXP payload is byte-identical:
+6BAB61773CC324C89F4D5D6EFCB492827E8AE695F7D05F524CF858520C541942.
+GBI fixtures now pass in full after updating the obsolete bulk-replay painter
+assertion to the compiled per-triangle depth contract (already host/runtime
+checked). Sources frozen. Full replay-retired four-CPU run is starting; actual
+arena/heap/FPS/output and shipping CSS/heavy-roster measurements remain due.
+Hard-on lab run completed: all 1,972 replay and geometry-count pairs match; both image crops are pixel-identical to 49263A2E. Heap minimum 120,916 B and arena 1,281,792 B (+32,768 B each), mean-ALL 19.413 FPS. Lab preserved in builds/p2p8-stage-replay-retired. Actual shipping/freeplay control DB66E237 is preserved in builds/p2p8-stage-retirement-shipping-control. Incoming Yoster=1 particle producer preflight precedes the one freeplay build; no double-build workaround and no root publication.
+Actual shipping freeplay built native-only (318 inputs), 0879E5500C8622A1555E7E88257CC97F5012ADE10D5574EABA47F77A48CF2247. Menu walk/fast logic/tick HUD are all 0. Its static image is 36,860 B smaller than the preserved slice-7 freeplay control (text -12,600, BSS -24,260). The producer preflight was a no-op; the actual build generated particles at line 41422 before all three consumers at 41694/41705/41709, so no second make was needed. Natural CSS reservation has 221,136 B free, 38,064 B over the 183,072 B requirement, fail=0. Link/Yoshi/Pikachu preview counters and inspected captures are valid. The first CSS pictures were desktop pixels despite successful CopyFromScreen; the shared running-window capture helper now uses HWND PrintWindow directly. Retaken r1 images are valid; invalid originals are not committed. No ROM publication.
+Shipping CSS proof is complete: 0879E550 is preserved under builds/p2p8-stage-replay-retired-shipping. Next a diagnostic sibling of the same all-content freeplay configuration adds only menu walk=1 and argmax roster=1 to drive Captain/Link/Pikachu/Kirby through the normal shell allocation path. This is a capacity probe, not shipping timing or a publication candidate. Source/runtime inputs frozen for that build.
+Hard-on lab timing (`replay-retired-summary.json`): WORK-H P50/P95/P99
+1,378,016 / 1,990,128 / 2,612,394; STG 310,080 / 318,080 / 320,576;
+FTR 184,416 / 269,565 / 780,259; MISC 199,328 / 400,058 / 515,463.
+Mean-ALL 19.413 FPS, two-VBlank 242/1,973 (12.27%), histogram
+242/1,386/293/52, maximum 10, slips 0. WORK-H improves 13,920 median /
+36,131 P95 ticks versus the preceding compiled build; this is the measured
+whole batch, not a gain attributed to each removed component or any other case.
+All 106,542 compiled runs and 53,271 DMAs engage, 1 load, no declines/near routes;
+native failures remain 39, direct/packet rejects 0. All replay/count pairs match.
+The two captured 120,000-pixel game surfaces are exactly identical to control.
+This banks scoped lab memory/frame-cost progress; the 30 FPS/native-zero gate
+and every-roster/stage coverage remain RED. Lab arena/heap are not shipping fit.
+
+Heavy-roster capacity remains RED on the all-content shipping sibling BB81E3B0
+(menu walk=1, argmax=1, fast logic/tick HUD/profile=0). Captain is created in
+battle, then Link's external dependency asset 224 is refused with 4,222 B free.
+The added failure marker and addr2line identify ndsRelocEnsureLoadedAsset at
+reloc_backend_assets.c:8756: its heap-fit guard, with heapdeclines=1. The loader
+halts as pack reason 14, kind 5; zero battle frames. The diagnostic arena is
+916,992 B, 364,800 B below the lab. General low-water UINT_MAX is uninitialized,
+not a measurement. Exact remaining roster-wide memory demand is not sized here.
+The older ~130 KB shortage was a different, restricted shell configuration;
+do not reuse that estimate as the current all-content shipping margin.
+`replay-retired-heavy-summary.json` records the result, and the exact image is
+preserved under builds/p2p8-stage-replay-retired-heavy. The first capacity probe
+lacked the allocation-vs-format distinction; the second added the missing extern
+failure marker, reused the same ROM and confirmed the heap refusal. No build or
+whole-match timing rerun was needed. All jobs are terminal.
+
+Task36 storage, hooks and replay are physically retired; compiled Dream Land is
+hard-on with unchanged geometry/pixels. Remaining phase-2 work is preparation,
+other VS-stage compilation, native MISC lists and further renderer/cache removal.
+The shipping capacity failure and global 30 FPS/native-zero gates remain open.
+Root stays r54; no publication, no campaign work, no subagents.

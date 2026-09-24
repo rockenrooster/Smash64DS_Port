@@ -1,0 +1,14 @@
+[
+  {
+    "Hash": "BB81E3B0E0A9A75902706D6452886901D4CBA59CF0F963439351CFB15C984445",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7-fpwalk\\smash64ds-p2-shell-freeplay-hwtri.nds"
+  },
+  {
+    "Hash": "8ABD3BD20F1F480A3A3BC547D43F538F75882CE9C91432787786881C3CD27186",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7-fpwalk\\smash64ds-p2-shell-freeplay-hwtri.elf"
+  },
+  {
+    "Hash": "AC6E96325B652A6B1666A2C3AA9871F6AE0F869A7033871173CAC5A11C501506",
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7-fpwalk\\nds_build_config.h"
+  }
+]

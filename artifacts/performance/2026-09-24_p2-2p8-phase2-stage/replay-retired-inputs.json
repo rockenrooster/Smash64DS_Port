@@ -1,0 +1,62 @@
+[
+  {
+    "path": "Makefile",
+    "sha256": "5A88618C327C27DA2DF4EE27ABF2DE3F89860D331705C2CC4B8E2EDA76B910DF"
+  },
+  {
+    "path": "src/nds/nds_renderer_assets.c",
+    "sha256": "C55E558E50E854AB3E2472B63271C7A36761D622D101BD990FDCDD7D4752D500"
+  },
+  {
+    "path": "src/nds/nds_renderer_native_owners.c",
+    "sha256": "9F85974C1699D4B39EEFF08F3A212DE0F914CE8B048D9A6FECBD9A7042198890"
+  },
+  {
+    "path": "src/nds/nds_renderer_preamble.c",
+    "sha256": "B78848911A988DB9FB91766A952ADA877E1D868503C6D4C0BC26B8335867D864"
+  },
+  {
+    "path": "src/nds/nds_renderer_textures_effects.c",
+    "sha256": "1E0C15B173BE8B820AC3BD3B530F1FB6C4E0DDE9CE1BE81A83DECBAC08D54E9C"
+  },
+  {
+    "path": "src/nds/nds_platform.c",
+    "sha256": "702B35312888F4D79D7CE703EA179EDCEAFAE9CA687F46632AF2F53FC27AB8AE"
+  },
+  {
+    "path": "src/nds/nds_stage_gx.exec.inc",
+    "sha256": "F660A45E6374CDDBCC8F01EEE93107A86E059570250515E44739B69AE1E0468D"
+  },
+  {
+    "path": "include/nds/nds_renderer.h",
+    "sha256": "2D10792C907D9A5E2DA415DD71B6007D0725218C1D05D3DAC65AC67DD59D6502"
+  },
+  {
+    "path": "scripts/stages/generate_nds_native_stage.py",
+    "sha256": "CD5C48080B3F21DBBDA2B60FABE7D4988EFA61E0519CA4E76F4566267166323D"
+  },
+  {
+    "path": "scripts/stages/native_stage_descriptors/dreamland.py",
+    "sha256": "26A2B214DD354828238EC9D9E72DC70A352B530CF69C375E2A664AD7E1853E9C"
+  },
+  {
+    "path": "scripts/check_native_only_rom.py",
+    "sha256": "2603BA3F550D2FEBEE991D7782D5D17010B9ED59C69AE600674E97033A2D9FAC"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "sha256": "0A14A9F95D133F4B49922E148FDACD9207DEA404861DA064D330FA75A3B81C78"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "4C604DE37945FD3679152D01AFFD29294672EFEE08CB28ED08EC11592E0C7E54"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nds_build_config.h",
+    "sha256": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nitrofs/stages/dreamland.gxp",
+    "sha256": "6BAB61773CC324C89F4D5D6EFCB492827E8AE695F7D05F524CF858520C541942"
+  }
+]

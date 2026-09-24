@@ -19,19 +19,18 @@ transition probes and inspected A/B captures. Receipt:
 finished; the checkpoint is pushed to origin/master. Root is still r54.
 **Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
 Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
-**Phase 2 ongoing:** all 202 Dream Land triangles/materials compiled; 27 DMAs/frame,
-replay identical, ~19.2 FPS, gates RED. Next: retirement/preparation/VS stages. Receipt:
+**Phase 2 ongoing:** Task36 retired; lab heap +32 KB, 19.41 FPS, replay/pixels match.
+Shipping heavy roster still fails. Next: preparation/VS stages/MISC. Receipt:
 `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Carry forward: the shipping configuration cannot load the heaviest four-kind roster
-(Captain/Link/Pikachu/Kirby halts ~130 KB short at battle load,
-`artifacts/performance/2026-09-23_p2-2p8-shipping-heap-census/`), and the four-CPU
-gate ROM has ~0.2 MB more arena than the shipping image -- report the shipping
-arena and that roster's load margin with every phase. The all-content
-(published) VS character select must keep >= 183,072 B free at its animation
-reservation or every 3D preview switches off (188,368 B with slice 4 and compaction;
-`artifacts/performance/2026-09-23_css-preview-heap/`). Serial execution only:
+Carry forward: all-content shipping arena is 916,992 B versus 1,281,792 B in
+the lab. Captain/Link/Pikachu/Kirby halts on Link's dependency 224 with 4,222 B
+free, before any battle frame. Its full memory deficit is unsized; the old
+~130 KB estimate belonged to a different shell configuration. Report shipping
+capacity with each phase. CSS now has 221,136 B at animation reservation,
+above the required 183,072 B (margin 38,064 B); Link/Yoshi/Pikachu previews
+are inspected. These proofs are in the phase-2 receipt above. Serial only:
 **no subagents** (owner, 2026-09-24).
 
 ## Continue, do not restart

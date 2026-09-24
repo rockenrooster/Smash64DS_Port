@@ -112,7 +112,7 @@ if ($handle -eq [IntPtr]::Zero) {
 }
 
 # Serialized shared-desktop capture: parallel diagnostic runs share one
-# desktop, so window bring-to-front + CopyFromScreen/PrintWindow + save +
+# desktop, so window bring-to-front + PrintWindow + save +
 # clear-topmost must not interleave. Named OS mutex works cross-process
 # (cross-pwsh); only this brief section is serialized, no emulator lock.
 $captureMutexName = 'Global\Smash64DS_MelonDSCapture'
@@ -170,23 +170,17 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) |
     Out-Null
 $bitmap = New-Object System.Drawing.Bitmap $width, $height
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-$usedPrintWindow = $false
 try {
+    # A successful screen copy can still contain another window or wallpaper.
+    # Capture this HWND's content, as the exact-frame helper does.
+    $destination = $graphics.GetHdc()
     try {
-        $graphics.CopyFromScreen(
-            $rect.Left, $rect.Top, 0, 0, $bitmap.Size)
-    } catch {
-        $screenError = $_.Exception.Message
-        $destination = $graphics.GetHdc()
-        try {
-            if (-not [Smash64DSRunningMelonDSCapture]::PrintWindow(
-                    $handle, $destination, 2)) {
-                throw "CopyFromScreen failed ($screenError) and PrintWindow failed."
-            }
-            $usedPrintWindow = $true
-        } finally {
-            $graphics.ReleaseHdc($destination)
+        if (-not [Smash64DSRunningMelonDSCapture]::PrintWindow(
+                $handle, $destination, 2)) {
+            throw 'PrintWindow failed to capture the melonDS window content.'
         }
+    } finally {
+        $graphics.ReleaseHdc($destination)
     }
     $bitmap.Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Png)
 } finally {
@@ -208,7 +202,4 @@ try {
     }
 }
 
-if ($usedPrintWindow) {
-    Write-Warning 'CopyFromScreen unavailable; used PrintWindow capture.'
-}
 Write-Output "Captured repo-local melonDS window: $outputPath"

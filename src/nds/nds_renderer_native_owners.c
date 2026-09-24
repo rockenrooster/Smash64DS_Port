@@ -2827,8 +2827,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
     const NDSNativeStagePreparedRun *run,
     u32 submit_class,
     u32 segment_owner,
-    NDSRendererStats *stats,
-    u32 replay)
+    NDSRendererStats *stats)
 {
     u32 poly_fmt;
 
@@ -2836,16 +2835,8 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
     {
         return FALSE;
     }
-    /* R2-07 leg A. This is the defensive last gate at the point of use, and it
-     * is kept -- but the caller has already proved the table this run belongs
-     * to (Commit proves the stage table, the replay entry proves the replay
-     * table), so while that certificate is current the per-run proof is a
-     * second reading of the same two cold arrays for an answer already known.
-     * TRUE selects the recorded table; FALSE selects the normal prepared table.
-     * No certificate current -> the original proof, unchanged. */
-    if (((replay == TRUE) ?
-             ndsRendererTask36ReplayTextureProofCurrent() :
-             ndsRendererNativeStagePreparedTextureProofCurrent()) == FALSE)
+    /* Commit proves this prepared table before its first GX write. */
+    if (ndsRendererNativeStagePreparedTextureProofCurrent() == FALSE)
     {
         if (ndsRendererNativeStagePreparedTextureValid(run) == FALSE)
         {
@@ -2871,8 +2862,6 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
 #if NDS_TASK103_STAGE_RUN_PHASE
     gNdsTask103BeginEndBatchTicks += cpuGetTiming() - t103_phase;
 #endif
-    if (replay == FALSE)
-    {
 #if NDS_TASK103_STAGE_RUN_PHASE
     u32 t103_mtx_start = cpuGetTiming();
     u32 t103_mtx_class = 3u;
@@ -2963,7 +2952,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
     gNdsTask103BeginMtxTicks[t103_mtx_class] += cpuGetTiming() - t103_mtx_start;
     gNdsTask103BeginMtxCount[t103_mtx_class]++;
 #endif
-    }
+
 #if NDS_TASK103_STAGE_RUN_PHASE
     t103_phase = cpuGetTiming();
 #endif
@@ -3008,238 +2997,56 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
 #if NDS_TASK103_STAGE_RUN_PHASE
     gNdsTask103BeginTailTicks += cpuGetTiming() - t103_phase;
 #endif
-    if (replay == FALSE)
-    {
-        glBegin(GL_TRIANGLE);
-        ndsRendererProfileRecordBatchBegin();
-        sNdsRendererHardwareTriangleBatchOpen = TRUE;
-        sNdsRendererHardwareTriangleBatchTextured = run->textured;
-        sNdsRendererHardwareTriangleBatchTextureName = run->texture_name;
-        sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
-        sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
-        sNdsRendererHardwareTriangleBatchFogKey = 0u;
-        sNdsRendererHardwareTriangleBatchMatrixMode =
+    glBegin(GL_TRIANGLE);
+    ndsRendererProfileRecordBatchBegin();
+    sNdsRendererHardwareTriangleBatchOpen = TRUE;
+    sNdsRendererHardwareTriangleBatchTextured = run->textured;
+    sNdsRendererHardwareTriangleBatchTextureName = run->texture_name;
+    sNdsRendererHardwareTriangleBatchPolyFmt = poly_fmt;
+    sNdsRendererHardwareTriangleBatchAlphaKey = run->alpha_test;
+    sNdsRendererHardwareTriangleBatchFogKey = 0u;
+    sNdsRendererHardwareTriangleBatchMatrixMode =
 #if NDS_TASK36_HW_COMPOSE
-            (ndsRendererNativeStageTask36BindingIsRigid(
-                 native_run->binding_index) != FALSE) ?
-                NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
+        (ndsRendererNativeStageTask36BindingIsRigid(
+             native_run->binding_index) != FALSE) ?
+            NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE :
 #endif
-            ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
-             (submit_class ==
-              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
-                NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
-                NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
-        sNdsRendererHardwareTriangleBatchMatrixGeneration =
+        ((submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ||
+         (submit_class ==
+          NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)) ?
+            NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED :
+            NDS_RENDERER_HW_MATRIX_MODE_PROJECTED_IDENTITY;
+    sNdsRendererHardwareTriangleBatchMatrixGeneration =
 #if NDS_TASK36_HW_COMPOSE
-            (ndsRendererNativeStageTask36BindingIsRigid(
-                 native_run->binding_index) != FALSE) ?
-                sNdsRendererHardwareMatrixGeneration :
+        (ndsRendererNativeStageTask36BindingIsRigid(
+             native_run->binding_index) != FALSE) ?
+            sNdsRendererHardwareMatrixGeneration :
 #endif
-            (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
-                1u :
-            (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
-                2u : 0u;
-    }
+        (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) ?
+            1u :
+        (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+            2u : 0u;
+
     return TRUE;
 }
 
-#if NDS_TASK36_HW_COMPOSE == 2
 #if NDS_TASK103_STAGE_RUN_PHASE
-/* Task 103. The stage bucket is ~89% fixed (Task 99) and Task 100 refuted the
- * last proposed currency for that remainder, so ~331,300 ticks/frame are still
- * unattributed -- ~6,135 over each of the 54 runs. These four counters split
- * the replay run into its three spans and normalise by run and word count, so
- * the two live explanations separate without removing a single run. Removing
- * runs is what Task 99 arm C did, and it disarmed the capture-once replay for
- * +109,888.
- *
- * Cumulative, not per-frame: sample with a two-stop GDB delta over a known
- * window, the way scripts/census-aobj-chain-layout.ps1 does. Lab only. */
-volatile u32 gNdsTask103BeginTicks;
-volatile u32 gNdsTask103PushTicks;
-volatile u32 gNdsTask103TailTicks;
-volatile u32 gNdsTask103RunCount;
-volatile u32 gNdsTask103WordCount;
-/* E1. The first run of this census found the whole replay function is only
- * 59,553 of a ~370,000 stage bucket, so 84% of the stage's cost is outside the
- * path five tasks have been optimising. These cover the other branch of the
- * same loop -- the generic emit for runs the replay does not serve -- and the
- * whole loop body, so "inside the run loop" and "outside it" separate too. */
 volatile u32 gNdsTask103GenericTicks;
 volatile u32 gNdsTask103GenericRunCount;
 volatile u32 gNdsTask103GenericTriangles;
 volatile u32 gNdsTask103IterTicks;
 volatile u32 gNdsTask103IterCount;
-/* E7 (R2-02 E3 sizing). GenericTicks aggregates all five replay-ineligible
- * segments into one number, and the two candidate cuts want different halves
- * of it: segment 4 is a *static* layer owner that is simply absent from
- * NDS_TASK36_REPLAY_SEGMENT_MASK, while 1/2/3/6 are the actor owners the switch
- * plan puts on a specialized update+draw path. GenericBeginTicks splits the
- * per-run matrix/state head from the vertex emit, because 21 runs carrying only
- * ~103 triangles cannot be paying 3,168 ticks each for the triangles. */
 volatile u32 gNdsTask103GenericBeginTicks;
-/* R2-04 E0. Generic emit is 21 runs for 103 triangles, and BeginRun's fixed
- * state sequence is 1,157 of the 3,129 ticks each run costs. If consecutive
- * runs carry identical state, that sequence is being re-issued for nothing and
- * the runs could be merged into one batch -- which is the only way to attack a
- * per-run cost when the run count is the problem.
- *
- * Count it before designing it. Redundant means every field BeginRun would
- * write matches the previous generic run: submit class, poly_fmt, texture
- * identity and params, alpha test, and the matrix binding. */
-volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
-volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
-volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
-/* E2's counters live in reloc_backend_renderer_dl.c, next to the call site
- * they wrap.
- *
- * E5. E4 put 160,588 ticks/frame -- 41% of the stage bucket and 12% of all
- * frame work -- inside ndsRendererPrepareNativeStageOwner at one call per
- * frame. These split it into the steps it actually runs: the one-shot topology
- * validation, the per-segment stats/traversal reset, the Task 36 prepared-
- * segment reuse check, and the per-run state-span and prepare-run work for the
- * segments that reuse misses. */
 volatile u32 gNdsTask103OwnValidateTicks;
 volatile u32 gNdsTask103OwnInitTicks;
 volatile u32 gNdsTask103OwnInitCount;
-volatile u32 gNdsTask103OwnReuseTicks;
-volatile u32 gNdsTask103OwnReuseCount;
-volatile u32 gNdsTask103OwnReuseMissCount;
 volatile u32 gNdsTask103OwnStateSpanTicks;
 volatile u32 gNdsTask103OwnStateSpanCount;
 volatile u32 gNdsTask103OwnPrepareRunTicks;
 volatile u32 gNdsTask103OwnPrepareRunCount;
-/* E6's four counters are defined ahead of ndsRendererNativeStagePrepareRun. */
-#endif
-static s32 NDS_RENDERER_FAST_RUN_CODE NDS_TASK82_ITCM_CODE
-ndsRendererTask36ReplayRun(
-    u32 run_index,
-    const NDSNativeStageRun *native_run,
-    u32 segment_owner,
-    NDSRendererStats *stats)
-{
-    NDSRendererTask36ReplayOwner *owner =
-        &sNdsRendererTask36ReplayOwner;
-    const NDSRendererTask36ReplayRun *run;
-    const u32 *words;
-    u32 i;
-#if NDS_TASK103_STAGE_RUN_PHASE
-    u32 task103_t0;
-    u32 task103_t1;
-    u32 task103_t2;
-#endif
-
-    if ((run_index >= NDS_NATIVE_STAGE_RUN_COUNT) ||
-        (native_run == NULL) || (stats == NULL))
-    {
-        return FALSE;
-    }
-    run = &owner->runs[run_index];
-    if ((run->valid == FALSE) || (run->word_count == 0u) ||
-        ((u32)run->word_offset + (u32)run->word_count > owner->word_count))
-    {
-        return FALSE;
-    }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    task103_t0 = cpuGetTiming();
-#endif
-    if (ndsRendererNativeStageBeginRun(
-            native_run, &run->prepared, native_run->submit_class,
-            segment_owner, stats, TRUE) == FALSE)
-    {
-        return FALSE;
-    }
-#if NDS_TASK103_STAGE_RUN_PHASE
-    task103_t1 = cpuGetTiming();
-#endif
-    words = &owner->words[run->word_offset];
-#if NDS_R2_STAGE_DMA
-    /* R2-02 E2. The replay is a flat push of a captured GX command stream out
-     * of a 32-byte-aligned buffer in main RAM -- roughly 4,200 words a frame
-     * across the 21 runs, which the CPU loop drags through the data cache one
-     * word at a time. Task 103 timed that at 9.51 ticks per word. GXFIFO DMA is
-     * what the hardware provides for exactly this: it reads main RAM directly,
-     * so the words stop being cache-line fills, and it self-throttles on FIFO
-     * space instead of stalling the core on each store.
-     *
-     * The switch plan's §3.3 is explicit that a traffic optimization is judged
-     * by cache lines that stopped being touched, and this stops ~16 KB/frame of
-     * them.
-     *
-     * Coherency is already satisfied: the capture path DC_FlushRange()s
-     * owner->words when it completes, and replay never writes the buffer.
-     *
-     * Channel 0 and this exact idiom are what libnds glCallList uses. Only
-     * channel 0 is polled, not all four: a DMA on another channel cannot
-     * interleave GX commands unless it is also in GXFIFO mode, and nothing else
-     * here is. */
-    if (run->word_count != 0u)
-    {
-        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
-        DMA_SRC(0) = (u32)words;
-        DMA_DEST(0) = (u32)&GFX_FIFO;
-        DMA_CR(0) = DMA_FIFO | run->word_count;
-        while ((DMA_CR(0) & DMA_BUSY) != 0u) { }
-    }
-    (void)i;
-#else
-    for (i = 0u; i < run->word_count; i++)
-    {
-        GFX_FIFO = words[i];
-    }
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-    task103_t2 = cpuGetTiming();
-#endif
-    /* Report the stack state the stream actually left, not TRUE unconditionally:
-     * ndsRendererNativeStageTask36EndSegment pops on this flag, and an actor
-     * segment's stream never pushed. */
-    sNdsNativeStageOwnerExecution.task36_local_pushed = run->local_pushed;
-    sNdsNativeStageOwnerExecution.task36_binding = native_run->binding_index;
-    sNdsRendererHardwareMatrixMode =
-        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
-    sNdsRendererHardwareMatrixGeneration = ndsRendererNextMatrixGeneration();
-    sNdsRendererHardwareMatrixLoaded = TRUE;
-    ndsRendererProfileRecordBatchBegin();
-    sNdsRendererHardwareTriangleBatchOpen = TRUE;
-    sNdsRendererHardwareTriangleBatchTextured = run->prepared.textured;
-    sNdsRendererHardwareTriangleBatchTextureName = run->prepared.texture_name;
-    sNdsRendererHardwareTriangleBatchPolyFmt = run->prepared.poly_fmt;
-    sNdsRendererHardwareTriangleBatchAlphaKey = run->prepared.alpha_test;
-    sNdsRendererHardwareTriangleBatchFogKey = 0u;
-    sNdsRendererHardwareTriangleBatchMatrixMode =
-        NDS_RENDERER_HW_MATRIX_MODE_STAGE_HW_COMPOSE;
-    sNdsRendererHardwareTriangleBatchMatrixGeneration =
-        sNdsRendererHardwareMatrixGeneration;
-    ndsRendererHardwareEndBatch();
-#if NDS_TASK103_STAGE_RUN_PHASE
-    /* The tail is the bookkeeping stores plus ndsRendererHardwareEndBatch. It
-     * closes here rather than at the return so the profile-level-1 counters
-     * below, which the tick-HUD ROM does not compile, can never enter it. */
-    gNdsTask103BeginTicks += task103_t1 - task103_t0;
-    gNdsTask103PushTicks += task103_t2 - task103_t1;
-    gNdsTask103TailTicks += cpuGetTiming() - task103_t2;
-    gNdsTask103RunCount++;
-    gNdsTask103WordCount += run->word_count;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-    {
-        u64 binding_bit = (u64)1u << native_run->binding_index;
-
-        if ((sNdsNativeStageOwnerExecution.task36_seen_binding_mask &
-             binding_bit) == 0u)
-        {
-            sNdsNativeStageOwnerExecution.task36_seen_binding_mask |=
-                binding_bit;
-            gNdsRendererTask36HardwareComposedDObjCount++;
-        }
-    }
-    gNdsRendererTask36WorldMultCount += run->world_mult_count;
-    gNdsRendererTask36ReplayRunCount++;
-    gNdsRendererTask36ReplayWordCount += run->word_count;
-#endif
-    return TRUE;
-}
+volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
 #endif
 
 static inline void ndsRendererNativeStageEmitVertex(
@@ -4188,17 +3995,6 @@ static void ndsRendererR2ActorPreparedProof(void)
 }
 #endif
 
-/* The forced-generic route only exists where the Task 36 replay owner does; the
- * r2_reuse gates below are compiled on NDS_R2_STAGE_DIRECT alone, which is a
- * wider condition, so they need a definition in both cases. */
-#if NDS_TASK36_HW_COMPOSE == 2
-#define NDS_TASK36_FORCED_GENERIC(seg) \
-    (ndsRendererTask36SegmentForcedGeneric(seg) != FALSE)
-#else
-#define NDS_TASK36_FORCED_GENERIC(seg) (((void)(seg)), 0)
-#endif
-
-
 /* Which decline site of ndsRendererPrepareNativeStageOwner ran last (1-based,
  * source order of its goto done sites; 0 = accepted or never run) and the
  * segment index at that point. Companion of gNdsNativeStageValidateFullFailStep:
@@ -4455,9 +4251,6 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     ndsRendererM3MeasureResidualKey(frame);
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayBeginFrame(frame);
-#endif
 
 #if NDS_DREAMLAND_DS_MESH
     /* The generated static mesh is submitted from segment 0's display commit,
@@ -4478,65 +4271,15 @@ s32 ndsRendererPrepareNativeStageOwner(
         const NDSNativeStageSegment *segment =
             &sNdsNativeStageSegments[segment_index];
         u32 binding_offset;
-#if NDS_R2_STAGE_DIRECT
-        /* R2-07 E2. Queried once per segment rather than once per run: the
-         * route is constant across the segment and each query records an
-         * observation, so per-run calls would only add noise. */
-        const s32 segment_forced_generic =
-            NDS_TASK36_FORCED_GENERIC(segment_index) ? TRUE : FALSE;
-#endif
 
 #if NDS_TASK103_STAGE_RUN_PHASE
         task103_own_mark = cpuGetTiming();
 #endif
-#if (NDS_TASK36_HW_COMPOSE == 2) && NDS_TASK104_STAGE_STATS_ELISION
-        /* Task 104: tested before the clear rather than after it. The
-         * eligibility predicate reads nothing out of the incoming stats — only
-         * the replay owner's own flags and the segment mask — so moving it is
-         * order-independent. What changes is that a hit no longer clears 1,292
-         * bytes on behalf of a copy that overwrote every one of them. */
-        if (ndsRendererTask36ReplayUsePreparedSegment(
-                segment_index,
-                &sNdsNativeStageOwnerExecution.preflight_stats,
-                &epoch_mask) != FALSE)
-        {
-#if NDS_TASK103_STAGE_RUN_PHASE
-            gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
-            gNdsTask103OwnReuseCount++;
-#endif
-            continue;
-        }
-#endif
 #if NDS_R2_STAGE_PREFLIGHT && (NDS_TASK36_HW_COMPOSE == 2) && \
     NDS_R2_STAGE_DIRECT
-        /* R2-02 E8, and the switch plan's §7 instruction taken literally: "no
-         * generic preflight, no stats temporaries". For the five segments the
-         * Task 36 replay does not serve, this loop body has no consumer once
-         * E1a's prepared run table is valid.
-         *
-         * Every output is accounted for:
-         *   runs[]         -- E1a reuses it wholesale; PrepareRun is already
-         *                     skipped below on exactly this condition.
-         *   epoch_mask     -- restored from the same memo above.
-         *   preflight_stats/traversal -- ndsRendererTask36ReplayCapturePrepared
-         *                     Segment early-returns for an ineligible segment,
-         *                     the next segment reinitialises both, and
-         *                     `sNdsNativeStageOwnerExecution.traversal` is read
-         *                     nowhere outside this function (the commit path
-         *                     consumes runs[], not the traversal). The single
-         *                     member that escapes the loop is
-         *                     `sync_command_count`, memoised as
-         *                     r2_prepared_sync_count.
-         *
-         * Eligible segments are deliberately excluded rather than relying on
-         * the replay having hit: on a capture frame `frame_replay` is FALSE, so
-         * they must run the full body to produce the stats being captured.
-         *
-         * Cost removed, measured on the graduated program: ndsRendererInitStats
-         * plus ndsRendererInitTraversalState 13,565 ticks/frame over these five
-         * segments, and 21 run-level plus 16 binding-level state spans. */
-        if ((r2_reuse != 0u) && (segment_forced_generic == FALSE) &&
-            (ndsRendererTask36ReplaySegmentEligible(segment_index) == FALSE))
+        /* Prepared runs, epoch mask and sync count already have owners;
+         * no replay snapshot consumes these state/traversal temporaries. */
+        if (r2_reuse != 0u)
         {
             gNdsR2StagePreflightElideCount++;
             continue;
@@ -4557,25 +4300,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsTask103OwnInitCount++;
         task103_own_mark = cpuGetTiming();
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-#if !NDS_TASK104_STAGE_STATS_ELISION
-        if (ndsRendererTask36ReplayUsePreparedSegment(
-                segment_index,
-                &sNdsNativeStageOwnerExecution.preflight_stats,
-                &epoch_mask) != FALSE)
-        {
-#if NDS_TASK103_STAGE_RUN_PHASE
-            gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
-            gNdsTask103OwnReuseCount++;
-#endif
-            continue;
-        }
-#endif
-#if NDS_TASK103_STAGE_RUN_PHASE
-        gNdsTask103OwnReuseTicks += cpuGetTiming() - task103_own_mark;
-        gNdsTask103OwnReuseMissCount++;
-#endif
-#endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
     !NDS_RENDERER_M3_PHASE0_PROFILE
         if ((segment_index == 0u) &&
@@ -4593,12 +4317,6 @@ s32 ndsRendererPrepareNativeStageOwner(
                 gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
-#if NDS_TASK36_HW_COMPOSE == 2
-            ndsRendererTask36ReplayCapturePreparedSegment(
-                segment_index,
-                &sNdsNativeStageOwnerExecution.preflight_stats,
-                epoch_mask);
-#endif
             continue;
         }
 #endif
@@ -4671,8 +4389,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     u32 prepare_run_start = ndsRendererM3Phase0Tick();
                     s32 prepare_run_result =
 #if NDS_R2_STAGE_DIRECT
-                        ((r2_reuse != 0u) &&
-                         (segment_forced_generic == FALSE)) ? TRUE :
+                        (r2_reuse != 0u) ? TRUE :
 #endif
                         ndsRendererNativeStagePrepareRun(
                         run_index, frame,
@@ -4707,7 +4424,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                 task103_own_mark = cpuGetTiming();
 #endif
 #if NDS_R2_STAGE_DIRECT
-                if ((r2_reuse == 0u) || (segment_forced_generic != FALSE))
+                if (r2_reuse == 0u)
 #endif
                 if (ndsRendererNativeStagePrepareRun(
                         run_index, frame,
@@ -4843,12 +4560,6 @@ s32 ndsRendererPrepareNativeStageOwner(
             epoch_mask = generated_epoch_mask;
         }
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-        ndsRendererTask36ReplayCapturePreparedSegment(
-            segment_index,
-            &sNdsNativeStageOwnerExecution.preflight_stats,
-            epoch_mask);
-#endif
     }
 #if NDS_TASK36_REJECT_TRACE
     task36_reject_reason = 3u;
@@ -4935,9 +4646,6 @@ s32 ndsRendererPrepareNativeStageOwner(
         stats->sync_command_count;
     sNdsNativeStageOwnerExecution.r2_prepared_valid = 1u;
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayStartCapture(frame);
-#endif
 
 done:
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -4946,13 +4654,6 @@ done:
 #endif
     if (accepted == FALSE)
     {
-#if NDS_TASK36_HW_COMPOSE == 2
-        if (sNdsRendererTask36ReplayOwner.frame_capture != FALSE)
-        {
-            sNdsRendererTask36ReplayOwner.capture_fault = TRUE;
-            ndsRendererTask36ReplayFinishFrame();
-        }
-#endif
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36RendererRejectReason = task36_reject_reason;
 #endif
@@ -4982,9 +4683,6 @@ void ndsRendererResetNativeStageValidationCache(void)
 {
     memset(&sNdsNativeStageValidationCache, 0,
            sizeof(sNdsNativeStageValidationCache));
-#if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayReset();
-#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     sNdsRendererM3ResidualKeyValid = FALSE;
 #endif
@@ -5109,8 +4807,6 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
     const u32 head_pass_count = (binding_heads != NULL) ? 4u : 1u;
     u32 head_pass;
 #if NDS_TASK36_HW_COMPOSE == 2
-    u32 task36_capture_segment = FALSE;
-    u32 task36_replay_segment = FALSE;
     u32 stage_gx_segment;
 #endif
 #if NDS_RENDERER_SCREEN_SPACE_CENSUS
@@ -5134,9 +4830,6 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         return TRUE;
     }
     segment = &sNdsNativeStageSegments[segment_index];
-#if NDS_TASK36_HW_COMPOSE == 2
-    stage_gx_segment = ndsStageGxEligible(segment_index);
-#endif
     /* The prepared table outlives the cache entries it names. Validate before
      * this segment's first GX or renderer-state write so a recycled slot falls
      * back as one source-owned segment, never as a mixed native/source segment
@@ -5184,6 +4877,9 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         return TRUE;
     }
 #endif
+#if NDS_TASK36_HW_COMPOSE == 2
+    stage_gx_segment = ndsStageGxEligible(segment_index);
+#endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     if (segment_index == 0u)
     {
@@ -5203,27 +4899,6 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
 #endif
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamBeginSegment(segment_index);
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    task36_capture_segment =
-        (sNdsRendererTask36ReplayOwner.frame_capture != FALSE) &&
-        (ndsRendererTask36ReplaySegmentEligible(segment_index) != FALSE);
-    task36_replay_segment =
-        (sNdsRendererTask36ReplayOwner.frame_replay != FALSE) &&
-        (ndsRendererTask36ReplaySegmentEligible(segment_index) != FALSE);
-    if (stage_gx_segment != FALSE)
-    {
-        task36_capture_segment = FALSE;
-        task36_replay_segment = FALSE;
-    }
-    if ((task36_capture_segment || task36_replay_segment) &&
-        (ndsRendererNativeStageTask36BeginSegment() == FALSE))
-    {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererM3PostArmFailureCount++;
-#endif
-        return TRUE;
-    }
 #endif
 #if NDS_RENDER_ECONOMY
     if ((gNdsRendererEconomyActiveOwnerMask &
@@ -5303,72 +4978,18 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         if (stage_gx_segment != FALSE && ndsStageGxDraw(run_index, segment->owner, stats) != FALSE)
         {
             emitted_triangles = run->triangle_count;
-            goto task36_account_run;
+            goto stage_account_run;
         }
         /* A cold clipped run follows all earlier compiled runs in source order. */
         ndsStageGxFlush();
         NDS_FIGHTER_PACKET_DMA_WAIT();
-        if (task36_replay_segment != FALSE)
-        {
-            if (ndsRendererTask36ReplayRun(
-                    run_index, run, segment->owner, stats) == FALSE)
-            {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-                gNdsRendererM3PostArmFailureCount++;
-#endif
-                return TRUE;
-            }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            ndsRendererM3Phase0FinishSpan(
-                &gNdsRendererM3Phase0RunTransitionTicks, phase_start);
-            phase_start = ndsRendererM3Phase0Tick();
-#endif
-            if (run->submit_class ==
-                NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
-            {
-                sNdsRendererHardwareProjectedDepth -=
-                    (s32)run->triangle_count *
-                    NDS_RENDERER_HW_PROJECTED_DEPTH_STEP;
-            }
-            else
-            {
-                ndsRendererHardwareEnterProjectedForeground();
-            }
-            emitted_triangles = run->triangle_count;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            if (run->submit_class ==
-                NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
-            {
-                ndsRendererM3Phase0FinishSpan(
-                    &gNdsRendererM3Phase0RawEmitTicks, phase_start);
-            }
-            else if (run->submit_class ==
-                     NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
-            {
-                ndsRendererM3Phase0FinishSpan(
-                    &gNdsRendererM3Phase0RangeEmitTicks, phase_start);
-            }
-            else
-            {
-                ndsRendererM3Phase0FinishSpan(
-                    &gNdsRendererM3Phase0NoZEmitTicks, phase_start);
-            }
-            phase_start = ndsRendererM3Phase0Tick();
-#endif
-            goto task36_account_run;
-        }
-        if (task36_capture_segment != FALSE)
-        {
-            ndsRendererTask36ReplayCaptureBeginRun(run_index);
-        }
 #endif
 #if NDS_TASK103_STAGE_RUN_PHASE
         task103_generic_start = cpuGetTiming();
         task103_generic_armed = 1u;
 #endif
         if (ndsRendererNativeStageBeginRun(
-                run, prepared_run, run->submit_class, segment->owner, stats,
-                FALSE) == FALSE)
+                run, prepared_run, run->submit_class, segment->owner, stats) == FALSE)
         {
 #if NDS_RENDERER_PROFILE_LEVEL == 1
             gNdsRendererM3PostArmFailureCount++;
@@ -5467,11 +5088,7 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         }
 #endif
 #if NDS_TASK36_HW_COMPOSE == 2
-        if (task36_capture_segment != FALSE)
-        {
-            ndsRendererTask36ReplayCaptureEndRun(run_index);
-        }
-task36_account_run:
+stage_account_run:
 #endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
         if (segment_index == 0u)
@@ -5503,19 +5120,6 @@ task36_account_run:
 #endif
 #if NDS_TASK36_HW_COMPOSE
     ndsRendererNativeStageTask36EndSegment();
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    if (task36_capture_segment != FALSE)
-    {
-        sNdsRendererTask36ReplayOwner.captured_segment_mask |=
-            1u << segment_index;
-    }
-    if (task36_replay_segment != FALSE)
-    {
-#if NDS_RENDERER_PROFILE_LEVEL == 1
-        gNdsRendererTask36ReplaySegmentCount++;
-#endif
-    }
 #endif
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamEndSegment();
@@ -5556,9 +5160,6 @@ task36_account_run:
 
 void ndsRendererFinishNativeStageOwner(void)
 {
-#if NDS_TASK36_HW_COMPOSE == 2
-    ndsRendererTask36ReplayFinishFrame();
-#endif
     if (sNdsNativeStageOwnerExecution.active != FALSE)
     {
 #if NDS_TASK36_HW_COMPOSE

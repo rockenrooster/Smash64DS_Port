@@ -787,6 +787,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   remain due. Next: physical replay retirement, remaining preparation, other VS
   stages and MISC. Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/`.
 
+- **Phase 2 Task36 retirement (2026-09-24), IMPLEMENTED_NOT_ACCEPTED.** Removed
+  the recorder, replay consumer, 24,256 B owner buffer, routing flag and copied
+  certificates. Native-only guard forbids their return. `0A14A9F9`: static
+  -35,652 B; lab heap +32,768 B to 120,916. WORK-H P50/P95/P99 1,378,016 /
+  1,990,128 / 2,612,394; 19.41 FPS, two-VBlank 242/1,973. All 1,972 replay and
+  geometry-count pairs match; both captures are pixel-identical. Native failures
+  remain 39. Shipping `0879E550` CSS reserve is 221,136 B, margin 38,064 B.
+  The all-content heavy-roster diagnostic `BB81E3B0` still halts loading Link
+  dependency 224: arena 916,992 B, free 4,222 B, zero battle frames. This replaces
+  the older restricted-shell memory estimate. Next: remaining preparation,
+  VS-stage/MISC compilation and cache retirement. Same phase-2 receipt.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

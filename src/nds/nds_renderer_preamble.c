@@ -606,7 +606,7 @@ static inline void ndsRendererBenchmarkGlTexCoord2t16(t16 s, t16 t)
 #endif
 
 #if (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-     (NDS_TASK36_HW_COMPOSE == 2)) && \
+     NDS_TASK49_GX_DIFFER || NDS_TICK_HUD) && \
     NDS_RENDERER_HW_TRIANGLES
 #define NDS_TASK29_GX_MAX_WORDS 16u
 #define NDS_TASK29_GX_CENSUS_CODE \
@@ -739,18 +739,8 @@ ndsRendererTask34StageStreamEndSegment(void)
  * settle before a packet builder is written: what SHAPE is the GX stream an
  * effect display list emits, and can a captured copy of it be replayed?
  *
- * This matters because the precompiled-packet mechanism the board's G3 row
- * describes ALREADY EXISTS in this file as Task 36 replay
- * (NDSRendererTask36ReplayOwner, below): a captured word stream, a fixed static
- * arena, per-run word offsets, and a segment admission mask. What Task 36 also
- * carries is the reason it admits only three stage segments, recorded at its
- * NDS_TASK36_REPLAY_SEGMENT_MASK -- a RIGID binding records PUSH + MULT4x4 of a
- * constant world under a camera the segment bracket loads live each frame, so
- * it replays; a DYNAMIC binding records LOAD4x4 per triangle of
- * projection x view x model, so replaying it pins that geometry to the camera
- * the capture frame happened to have. R2-02 E3 and E4 widened that mask twice
- * and produced a smear of specks across Whispy's trunk and then a lost flower
- * bed.
+ * A moving instance needs patchable matrices; captured per-triangle
+ * camera transforms cannot be replayed unchanged.
  *
  * Effect instances MOVE -- each one spawns somewhere else and fades on its own
  * clock -- so E3's failure is the DEFAULT outcome for a verbatim effect packet.
@@ -1027,36 +1017,6 @@ void ndsEffectPacketCaptureEnd(void)
 }
 #endif
 
-#if NDS_TASK36_HW_COMPOSE == 2
-/* Task 44 item 2: the single source of truth for "the replay capture window is
- * open". It lives out here, next to the wrapped GX record sites, so the hot
- * path can test it inline instead of calling the recorder to learn that it has
- * nothing to do. The replay owner owns every write; see
- * ndsRendererTask36ReplayCaptureBeginRun/EndRun and ...ReplayReset. */
-static u32 sNdsRendererTask36CaptureActive;
-
-static void ndsRendererTask36ReplayRecord(
-    NDSRendererTask29GXClass command_class,
-    const u32 *words,
-    u32 word_count);
-
-#if NDS_TASK44_STAGE_STEADY
-/* Replay steady state pays one predictable test-and-skip per wrapped GX
- * command. The capture window itself is bit-identical: when the scalar is set
- * the recorder runs exactly as before. */
-#define NDS_TASK36_REPLAY_RECORD(command_class, words, word_count) \
-    do { \
-        if (sNdsRendererTask36CaptureActive != 0u) \
-        { \
-            ndsRendererTask36ReplayRecord((command_class), (words), \
-                                          (word_count)); \
-        } \
-    } while (0)
-#else
-#define NDS_TASK36_REPLAY_RECORD(command_class, words, word_count) \
-    ndsRendererTask36ReplayRecord((command_class), (words), (word_count))
-#endif
-#endif
 
 #if NDS_TASK29_GX_CENSUS
 volatile u32 gNdsTask29GXFrame;
@@ -1190,9 +1150,6 @@ ndsRendererTask29GXRecord(
 
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
 #endif
 #if NDS_TICK_HUD
     if (sNdsEffectPacketArmed != 0u)
@@ -1368,9 +1325,6 @@ static inline void ndsRendererTask29GXRecord(
 {
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
-#endif
-#if NDS_TASK36_HW_COMPOSE == 2
-    NDS_TASK36_REPLAY_RECORD(command_class, words, word_count);
 #endif
 #if NDS_TICK_HUD
     if (sNdsEffectPacketArmed != 0u)
@@ -1646,7 +1600,7 @@ static inline void ndsRendererHardwareWriteColorWord(u32 value)
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
+    NDS_TASK49_GX_DIFFER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_COLOR, &value, 1u);
 #endif
     GFX_COLOR = value;
@@ -1683,7 +1637,7 @@ static inline void ndsRendererHardwareWriteTexCoordWord(u32 value)
     ndsRendererBenchmarkSinkWord(value);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
+    NDS_TASK49_GX_DIFFER
     ndsRendererTask29GXRecord(NDS_TASK29_GX_TEX_COORD, &value, 1u);
 #endif
     GFX_TEX_COORD = value;
@@ -1700,7 +1654,7 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
     ndsRendererBenchmarkSinkWord(z);
 #else
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
-    (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
+    NDS_TASK49_GX_DIFFER
     u32 words[2] = {xy, z};
 
     ndsRendererTask29GXRecord(NDS_TASK29_GX_VERTEX16, words, 2u);
@@ -1710,29 +1664,8 @@ static inline void ndsRendererHardwareWriteVertex16Words(u32 xy, u32 z)
 #endif
 }
 
-/* ---------------------------------------------------------------------------
- * Fighter-owned GX writers: the same stores, without the two capture hooks that
- * can never fire on this path.
- *
- * The Task 36 replay capture window is opened by
- * ndsRendererTask36ReplayCaptureBeginRun and closed by ...EndRun, and both calls
- * sit inside ndsRendererCommitNativeStageSegment bracketing ONE STAGE run --
- * BeginRun even faults on `run_index >= NDS_NATIVE_STAGE_RUN_COUNT`. The fighter
- * production owner is a separate draw call and can never be nested inside that
- * window, so `sNdsRendererTask36CaptureActive` is FALSE at every fighter corner.
- * The effect packet capture is armed the same way, around an effect display list
- * (`phase_effect`) in reloc_backend_renderer_dl.c, never around a fighter.
- *
- * Testing both per corner was not free. In the c106 profile the untextured emit
- * runs 537,780 corners for 27,484,418 cycles (51.1 a corner) and the capture
- * scaffolding -- the main-RAM flag load, the compare, the branch, and the two
- * register spills the maybe-call forces -- is 6,591,047 of them for Task 36
- * alone, 24.0%, ~7,600 ticks/frame. The textured emit pays it twice a corner.
- *
- * Every other GX diagnostic is kept: the Task 29 census, the Task 34 stage
- * stream and the Task 49 differ all want the fighter's stream, and their builds
- * are not performance builds. Only the two capture recorders are dropped, and
- * both were provably no-ops here. */
+/* Fighter-owned GX writers omit effect capture, which is armed only
+ * around an effect display list. Keep the GX census and differ hooks. */
 #define NDS_RENDERER_GX_RECORD_FIGHTER \
     (NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
      NDS_TASK49_GX_DIFFER)
@@ -2802,24 +2735,6 @@ volatile u32 gNdsRendererTask44SteadyAdmitCount;
 volatile u32 gNdsRendererTask44RevalidateCount;
 volatile u32 gNdsRendererTask44AdmissionGeneration;
 #endif
-#if NDS_TASK36_HW_COMPOSE == 2
-volatile u32 gNdsRendererTask36ReplayState;
-volatile u32 gNdsRendererTask36BakeAttemptCount;
-volatile u32 gNdsRendererTask36BakeSuccessCount;
-volatile u32 gNdsRendererTask36BakeFailureCount;
-volatile u32 gNdsRendererTask36ReplayFrameCount;
-volatile u32 gNdsRendererTask36ReplaySegmentCount;
-volatile u32 gNdsRendererTask36ReplayRunCount;
-volatile u32 gNdsRendererTask36ReplayWordCount;
-volatile u32 gNdsRendererTask36ReplayFallbackCount;
-volatile u32 gNdsRendererTask36ReplayArenaRejectCount;
-volatile u32 gNdsRendererTask36ReplayMaterialRejectCount;
-/* BUGS.md #9. Nonzero exactly while the live projection differs from the one
- * the stream was baked against -- so it should read 0 for a whole match and
- * start counting the moment the paused player-zoom camera moves the FOV. */
-volatile u32 gNdsRendererTask36ReplayProjectionRejectCount;
-volatile u32 gNdsRendererTask36ReplayCaptureWordCount;
-#endif
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
 volatile u32 gNdsRendererM3GeneratedSegment0AttemptCount;
@@ -3039,15 +2954,6 @@ static void ndsRendererM3MeasureResidualKey(
     gNdsRendererM3ResidualKeyMissCount = (hit != FALSE) ? 0u : 1u;
 }
 #endif
-#endif
-/* Task 53: the arena-staleness counter is declared at file scope here (outside
- * the profile-1 block above) so it exists at profile-0 too. Its use site in
- * ndsRendererTask36ReplayBeginFrame is gated only on NDS_TASK53_REPLAY_ARENA_FIX
- * (no profile gate), so the definition must match. The staleness detector is a
- * regression catch -- proof the relaxed guard is admitting frames the legacy
- * strict guard would have blocked -- not a profiling instrument. */
-#if NDS_TASK36_HW_COMPOSE == 2 && NDS_TASK53_REPLAY_ARENA_FIX
-volatile u32 gNdsRendererTask36ReplayArenaStaleCount;
 #endif
 static NDSRendererProfileOwner sNdsRendererRuntimeOwner =
     NDS_RENDERER_PROFILE_OWNER_NONE;
