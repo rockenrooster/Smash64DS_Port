@@ -1,0 +1,1399 @@
+diff --git a/artifacts/performance/2026-09-24_p2-2p8-phase2-stage/tools/run-stage.ps1 b/artifacts/performance/2026-09-24_p2-2p8-phase2-stage/tools/run-stage.ps1
+index 17d9481b391..34f9c196962 100644
+--- a/artifacts/performance/2026-09-24_p2-2p8-phase2-stage/tools/run-stage.ps1
++++ b/artifacts/performance/2026-09-24_p2-2p8-phase2-stage/tools/run-stage.ps1
+@@ -13,7 +13,8 @@ $extra = @('gNdsP2StageProgDraws', 'gNdsP2StageProgWords',
+     'gNdsTaskmanGeneralHeapFreeMin', 'gNdsTaskmanArenaChosenSize',
+     'gNdsFighterPacketFaults', 'gNdsFighterPacketDeclines',
+     'gNdsR2StagePrepareBuildCount', 'gNdsR2StagePrepareReuseCount',
+-    'gNdsR2StagePreflightElideCount')
++    'gNdsR2StagePreflightElideCount', 'gNdsStageWorldFlatFrames',
++    'gNdsStageWorldFlatNodes', 'gNdsStageWorldFlatBindings')
+ $log = Join-Path $art "$Arm-run.log"
+ & pwsh -NoProfile -File (Join-Path $root 'scripts/sample-tick-hud-buckets.ps1') `
+     -NoBuild -Target smash64ds-p2-fourcpu-tickhud-hwtri -Build build-p2p8-s7 `
+diff --git a/include/nds/nds_renderer.h b/include/nds/nds_renderer.h
+index 7431bb30986..90072178216 100644
+--- a/include/nds/nds_renderer.h
++++ b/include/nds/nds_renderer.h
+@@ -1766,6 +1766,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
+ /* P2-4n1 step 6: per-stage facts the adapter's capture side used to carry as
+  * Dream Land literals. Both read the packet the renderer selected. */
+ u64 ndsRendererNativeStageRigidBindingMask(void);
++u64 ndsRendererNativeStageStaticWorldBindingMask(void);
+ s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
+                                           u32 *binding_index, u32 *flags);
+ /* P2-4n1 step 7: DLLink packets expose the DObj index and display head each
+diff --git a/include/nds/nds_startup.h b/include/nds/nds_startup.h
+index 362e2ea643d..8e4b4869441 100644
+--- a/include/nds/nds_startup.h
++++ b/include/nds/nds_startup.h
+@@ -5068,12 +5068,6 @@ extern volatile u32 gNdsRendererProfileCameraMatrixCacheOverflowCount;
+ extern volatile u32 gNdsRendererProfileDObjWorldCacheHitCount;
+ extern volatile u32 gNdsRendererProfileDObjWorldCacheMissCount;
+ extern volatile u32 gNdsRendererProfileDObjWorldCacheOverflowCount;
+-extern volatile u32 gNdsRendererProfileStageWorldPersistentHitCount;
+-extern volatile u32 gNdsRendererProfileStageWorldPersistentMissCount;
+-extern volatile u32 gNdsRendererProfileStageWorldPersistentRejectCount;
+-extern volatile u32 gNdsRendererProfileStageWorldPersistentOverflowCount;
+-extern volatile u32 gNdsRendererProfileStageWorldPersistentOracleSampleCount;
+-extern volatile u32 gNdsRendererProfileStageWorldPersistentOracleMismatchCount;
+ extern volatile u32 gNdsRendererProfileAffineMatrixSamples;
+ extern volatile u32 gNdsRendererProfileAffineMatrixMismatches;
+ extern volatile u32 gNdsRendererProfileAffineMatrixMaxDelta;
+diff --git a/scripts/check-gbi-decode-fixtures.ps1 b/scripts/check-gbi-decode-fixtures.ps1
+index 3b72a7263a4..a8cc68fc59a 100644
+--- a/scripts/check-gbi-decode-fixtures.ps1
++++ b/scripts/check-gbi-decode-fixtures.ps1
+@@ -1873,17 +1873,13 @@ Assert-True ($relocRendererDL.Contains('ndsRendererAdapterGetFrameCameraMatrices
+ Assert-True ($relocRendererDL.Contains('sNdsRendererAdapterCameraCacheFrame != frame')) 'Renderer adapter camera cache is not bounded to one presented frame.'
+ Assert-True ($relocRendererDL.Contains('ndsRendererAdapterFindDObjWorldMatrix')) 'Renderer adapter does not reuse parent DObj world matrices within one BattleShip draw frame.'
+ Assert-True ($relocRendererDL.Contains('sNdsRendererAdapterDObjWorldCacheFrame != frame')) 'Renderer adapter DObj world cache is not bounded to one presented frame.'
+-Assert-True ($relocRendererDL.Contains('NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u')) 'Renderer adapter DObj world cache lost its measured fixed-capacity fallback bound.'
++Assert-True ($relocRendererDL.Contains('NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 64u')) 'Renderer adapter DObj world cache lost its measured fixed-capacity fallback bound.'
+ Assert-True ($relocRendererDL.Contains('syTaskmanMalloc(bytes, 0x10u)')) 'Renderer adapter DObj world cache returned to scarce static memory instead of scene-owned taskman storage.'
+ Assert-True ($relocRendererDL.Contains('ndsRelocUpdateMemoryLedger();')) 'Renderer adapter scene-heap cache is absent from the P1 reserve ledger.'
+ Assert-True ($relocAssets.Contains('ndsRendererAdapterResetSceneCaches();')) 'Renderer adapter scene-owned cache is not invalidated before taskman heap reuse.'
+-Assert-True ($relocRendererDL.Contains('NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT 64u') -and $relocRendererDL.Contains('ndsRendererAdapterStageWorldSourceKeyMatches')) 'Renderer adapter lost its bounded exact stage-world reuse cache.'
+-Assert-True ($relocRendererDL.Contains('NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE') -and $relocRendererDL.Contains('sNdsRendererAdapterDObjWorldCacheDynamicLimit') -and $relocRendererDL.Contains('ndsRendererAdapterStageWorldEntryMatrix')) 'Persistent stage-world matrices no longer reuse the measured spare half of the existing 128-entry scene cache.'
+-Assert-True ($relocRendererDL.Contains('entry->validated_frame = ~gNdsRendererProfileFrameCount;')) 'Fresh persistent stage-world entries can collide with accelerated frame zero before their first exact build.'
+-Assert-True ($relocRendererDL.Contains('(xobj->kind >= 33u) && (xobj->kind <= 40u)') -and $relocRendererDL.Contains('NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND')) 'Persistent stage-world reuse no longer rejects camera-facing or fighter-parts transforms.'
+-Assert-True ($relocRendererDL.Contains('(dobj->xobjs_num > 5u) || (dobj->vec != NULL)')) 'Persistent stage-world reuse no longer falls back for unbounded XObj or live vector-track transforms.'
+-Assert-True ($relocRendererDL -match '(?s)static void ndsRendererAdapterResetSceneCaches.*?sNdsRendererAdapterStageWorldCache = NULL') 'Persistent stage-world cache is not invalidated before taskman scene-heap reuse.'
+-Assert-True ($relocRendererDL.Contains('ndsRendererAdapterBuildDObjWorldMatrixUncached') -and $relocRendererDL.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Persistent stage-world cache lost its profile-2 uncached exact matrix shadow.'
++Assert-True ($relocRendererDL.Contains('ndsRendererAdapterPrepareStageWorlds') -and $relocRendererDL.Contains('needed[parent] = TRUE') -and $relocRendererDL.Contains('gNdsStageWorldFlatBindings += consumed') -and -not $relocRendererDL.Contains('ndsRendererAdapterBuildPersistentStageWorldMatrix(')) 'The stage world pass must cover dynamic consumers and their parents without restoring the persistent cache.'
++Assert-True ($relocRendererDL.Contains('(xobj->kind >= 33u) && (xobj->kind <= 40u)') -and $relocRendererDL.Contains('NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND')) 'Rigid world guard no longer rejects camera-facing or fighter-parts transforms.'
++Assert-True ($relocRendererDL.Contains('(dobj->xobjs_num > 5u) || (dobj->vec != NULL)')) 'Rigid world guard no longer refuses for unbounded XObj or live vector-track transforms.'
+ Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 254u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer bounds no longer preserve 45 static plus the 209-slot compact-identity dynamic partition (P2-2p8 slice 2c: the whole four-CPU admission plus the draws'' same-frame set), 40-matrix oracle, and 832-event trace.'
+ # The static corpus does not duplicate its ROM key in RAM, and (P2-2p8 Phase 1
+ # slice 2c) a dynamic slot keeps a 28-byte identity instead of a 236-byte key.
+@@ -2189,7 +2185,6 @@ Assert-True (
+     $harnessScript.Contains('Assert-Condition ($renderTexel1.Success -and $rt1[0] -eq 2 -and $rt1[1] -eq $rt1[0] -and $rt1[2] -eq 0 -and $rt1[9] -eq 0 -and $rt1[10] -eq 0 -and $rt1[11] -eq 0)')
+ ) 'Canonical renderer verifier no longer requires zero upload and live CI4/TEXEL1 gameplay work after exactly two pre-GO water composites.'
+ Assert-True ($harnessScript.Contains('RENDER_ADAPTER_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileDObjWorldCacheOverflowCount')) 'Forensic renderer verifier does not prove bounded frame-local matrix-cache reuse.'
+-Assert-True ($harnessScript.Contains('RENDER_STAGE_WORLD_CACHE=') -and $harnessScript.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Forensic renderer verifier does not prove exact persistent stage-world reuse.'
+ Assert-True ($harnessScript.Contains('RENDER_AFFINE_MATRIX=') -and $harnessScript.Contains('gNdsRendererProfileAffineMatrixMismatches')) 'Forensic renderer verifier does not compare affine DObj composition with the former exact generic multiply.'
+ Assert-True ($renderer.Contains('texel1_palette_entries = texel1_source.palette_base +') -and $renderer.Contains('texel1_source.size == NDS_RENDERER_HW_TEXTURE_SIZ_4B')) 'Renderer TLUT pointer validation does not cover the TEXEL1 CI palette bank.'
+ Assert-True ($renderer.Contains('texel1_palette_entries > palette_entries')) 'Renderer does not resolve the maximum TEXEL0/TEXEL1 CI4 palette span.'
+diff --git a/scripts/check_native_only_rom.py b/scripts/check_native_only_rom.py
+index 7e074c1df41..fbd06075376 100644
+--- a/scripts/check_native_only_rom.py
++++ b/scripts/check_native_only_rom.py
+@@ -26,6 +26,9 @@ FORBIDDEN = frozenset((
+     "ndsRendererTask36ReplayBeginFrame", "ndsRendererTask36ReplayStartCapture",
+     "sNdsRendererTask36ReplayOwner", "sNdsRendererTask36CaptureActive",
+     "gNdsP2StageProg",
++    "ndsRendererAdapterBuildPersistentStageWorldMatrix",
++    "ndsRendererAdapterEnsureStageWorldCache",
++    "sNdsRendererAdapterStageWorldCache", "sNdsRendererAdapterStageWorldIndex",
+ ))
+ # These are the exact SDK archive leaves extracted by the existing Task 9/37
+ # rules, not project translation units. Their archive/code pins remain enforced
+diff --git a/scripts/menus/test_world_cache_budget.py b/scripts/menus/test_world_cache_budget.py
+index a7132d57fea..f43aefaaee0 100644
+--- a/scripts/menus/test_world_cache_budget.py
++++ b/scripts/menus/test_world_cache_budget.py
+@@ -12,11 +12,9 @@ ROOT=Path(__file__).resolve().parents[2]
+ class WorldCacheBudgetTest(unittest.TestCase):
+     def test_reserve_alignment_and_scene_retry(self):
+         source=(ROOT/'src/port/renderer_adapter_matrix.c').read_text()
+-        body='\n'.join(function(source,name) for name in (
+-            'ndsRendererAdapterEnsureDObjWorldCache',
+-            'ndsRendererAdapterEnsureStageWorldCache'))
++        body=function(source,'ndsRendererAdapterEnsureDObjWorldCache')
+         # These allocator helpers only depend on the entries' sizes. The
+-        # target ELF measures these as 68 and 72 bytes; no matrix math is mocked.
++        # target ELF measures these as 68 bytes; no matrix math is mocked.
+         program=r'''
+ #include <stdint.h>
+ #include <stddef.h>
+@@ -26,17 +24,11 @@ typedef uint32_t u32; typedef int sb32;
+ #define TRUE 1
+ #define FALSE 0
+ #define NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES 131072u
+-#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
+-#define NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT 64u
+-#define NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE 64u
++#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 64u
+ typedef struct {unsigned char bytes[68];} NDSRendererAdapterDObjWorldCacheEntry;
+-typedef struct {unsigned char bytes[72];} NDSRendererAdapterStageWorldCacheEntry;
+ static NDSRendererAdapterDObjWorldCacheEntry *sNdsRendererAdapterDObjWorldCache;
+-static NDSRendererAdapterStageWorldCacheEntry *sNdsRendererAdapterStageWorldCache;
+ static u32 sNdsRendererAdapterDObjWorldCacheAllocationAttempted;
+-static u32 sNdsRendererAdapterStageWorldCacheAllocationAttempted;
+ static u32 sNdsRendererAdapterDObjWorldCacheCount;
+-static u32 sNdsRendererAdapterDObjWorldCacheDynamicLimit;
+ static struct {unsigned char *ptr,*end;} gSYTaskmanGeneralHeap;
+ static _Alignas(16) unsigned char arena[262144];
+ static unsigned allocations;
+@@ -47,11 +39,9 @@ static void *syTaskmanMalloc(size_t size,u32 align) {
+     gSYTaskmanGeneralHeap.ptr=(unsigned char *)(p+size); ++allocations; return (void *)p;
+ }
+ static void reset(size_t free_bytes,size_t misalignment) {
+-    sNdsRendererAdapterDObjWorldCache=NULL; sNdsRendererAdapterStageWorldCache=NULL;
++    sNdsRendererAdapterDObjWorldCache=NULL;
+     sNdsRendererAdapterDObjWorldCacheAllocationAttempted=0;
+-    sNdsRendererAdapterStageWorldCacheAllocationAttempted=0;
+     sNdsRendererAdapterDObjWorldCacheCount=0;
+-    sNdsRendererAdapterDObjWorldCacheDynamicLimit=128;
+     gSYTaskmanGeneralHeap.ptr=arena+misalignment;
+     gSYTaskmanGeneralHeap.end=arena+misalignment+free_bytes; allocations=0;
+ }
+@@ -60,22 +50,16 @@ static void reset(size_t free_bytes,size_t misalignment) {
+ int main(void) {
+     for(size_t bias=0;bias<16;++bias) {
+         size_t pad=(16-bias)&15;
+-        reset(131072+8704+pad-1,bias);
++        reset(131072+4352+pad-1,bias);
+         CHECK(!ndsRendererAdapterEnsureDObjWorldCache() && !allocations);
+         gSYTaskmanGeneralHeap.end=arena+sizeof(arena);
+         CHECK(!ndsRendererAdapterEnsureDObjWorldCache() && !allocations);
+-        reset(131072+8704+pad,bias);
++        reset(131072+4352+pad,bias);
+         CHECK(ndsRendererAdapterEnsureDObjWorldCache() && allocations==1);
+         CHECK(gSYTaskmanGeneralHeap.end-gSYTaskmanGeneralHeap.ptr==131072);
+-        CHECK(!ndsRendererAdapterEnsureStageWorldCache() && allocations==1);
+-        reset(131072+8704+4608+pad,bias);
+-        CHECK(ndsRendererAdapterEnsureStageWorldCache() && allocations==2);
+-        CHECK(gSYTaskmanGeneralHeap.end-gSYTaskmanGeneralHeap.ptr==131072);
+-        CHECK(sNdsRendererAdapterDObjWorldCacheDynamicLimit==64);
+-        CHECK(ndsRendererAdapterEnsureStageWorldCache() && allocations==2);
+     }
+     reset(33312,0);
+-    CHECK(!ndsRendererAdapterEnsureStageWorldCache() && !allocations);
++    CHECK(!ndsRendererAdapterEnsureDObjWorldCache() && !allocations);
+     CHECK(gSYTaskmanGeneralHeap.end-gSYTaskmanGeneralHeap.ptr==33312);
+     return 0;
+ }
+diff --git a/scripts/probe-halo-attach.ps1 b/scripts/probe-halo-attach.ps1
+index 591d826fc32..4d3710165e8 100644
+--- a/scripts/probe-halo-attach.ps1
++++ b/scripts/probe-halo-attach.ps1
+@@ -82,8 +82,8 @@ $required = @(
+     'gNdsEffectRendererRejectedDrawCount',
+     'gNdsEffectRendererTriangleCount',
+     'gNdsEffectRendererTextureReadyCount',
+-    'sNdsRendererAdapterStageWorldCache',
+-    'sNdsRendererAdapterStageWorldCacheCount',
++    'sNdsRendererAdapterDObjWorldCache',
++    'sNdsRendererAdapterDObjWorldCacheCount',
+     'sNdsRendererAdapterDObjWorldCache'
+ )
+ $nmLines = & $nm $elf
+@@ -185,14 +185,14 @@ try {
+         'set $dls = $dls + 1',
+         'printf "HALOSUBMIT n=%d dobj=%p dl=%p tr=%d tris=%u texready=%u\n", $dls, $r0, $r1, gSCManagerBattleState->time_remain, gNdsEffectRendererTriangleCount, gNdsEffectRendererTextureReadyCount',
+         # The world matrix the prep actually built, read out of the file-static
+-        # stage-world cache rather than any argument register. A translation at
++        # frame-local world cache rather than any argument register. A translation at
+         # or near 0,0,0 is the fallback identity; the respawning fighter's Top
+         # joint is not at the origin.
+         'set $wi = 0',
+-        'while $wi < sNdsRendererAdapterStageWorldCacheCount',
+-        'if (sNdsRendererAdapterStageWorldCache[$wi].dobj == $hroot) || (sNdsRendererAdapterStageWorldCache[$wi].dobj == $hchild)',
+-        'set $ws = sNdsRendererAdapterStageWorldCache[$wi].world_slot',
+-        'printf "HALOWORLD i=%d dobj=%p slot=%d t=%d,%d,%d r0=%d,%d,%d\n", $wi, sNdsRendererAdapterStageWorldCache[$wi].dobj, $ws, sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][2]',
++        'while $wi < sNdsRendererAdapterDObjWorldCacheCount',
++        'if (sNdsRendererAdapterDObjWorldCache[$wi].dobj == $hroot) || (sNdsRendererAdapterDObjWorldCache[$wi].dobj == $hchild)',
++        'set $ws = $wi',
++        'printf "HALOWORLD i=%d dobj=%p slot=%d t=%d,%d,%d r0=%d,%d,%d\n", $wi, sNdsRendererAdapterDObjWorldCache[$wi].dobj, $ws, sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][2]',
+         'end',
+         'set $wi = $wi + 1',
+         'end',
+diff --git a/scripts/probe-shield-submit.ps1 b/scripts/probe-shield-submit.ps1
+index 0a9d508f3c0..a88c7d642a0 100644
+--- a/scripts/probe-shield-submit.ps1
++++ b/scripts/probe-shield-submit.ps1
+@@ -52,7 +52,7 @@ $required = @(
+     # so every name the command list reads is checked here, not just the
+     # breakpoint targets.
+     'gNdsRendererAdapterEffectPrepMask',
+-    'sNdsRendererAdapterStageWorldCache',
++    'sNdsRendererAdapterDObjWorldCache',
+     'sNdsRendererAdapterDObjWorldCache',
+     'gNdsEffectDLCfgMask',
+     'gNdsEffectDLCfgMvT',
+@@ -181,23 +181,23 @@ try {
+         'printf "CFGMV t=%d,%d,%d r0=%d,%d,%d\n", $mv[12], $mv[13], $mv[14], $mv[0], $mv[1], $mv[2]',
+         'end',
+         # The world matrix the prep actually built, read from the file-static
+-        # stage-world cache instead of from any argument register. With prep
++        # frame-local world cache instead of from any argument register. With prep
+         # mask bit 1 clear (the battle camera folds LookAt into the projection)
+         # ndsRendererAdapterPrepareInitialMatrices copies dobj_world straight
+         # into the modelview, so this IS what config.initial_modelview must
+         # carry -- an independent second opinion on the line above.
+         'set $wi = 0',
+-        'while $wi < sNdsRendererAdapterStageWorldCacheCount',
+-        'if (sNdsRendererAdapterStageWorldCache[$wi].dobj == $sroot) || (sNdsRendererAdapterStageWorldCache[$wi].dobj == $schild)',
+-        'set $ws = sNdsRendererAdapterStageWorldCache[$wi].world_slot',
+-        'printf "WORLD i=%d dobj=%p slot=%d vf=%u t=%d,%d,%d r0=%d,%d,%d\n", $wi, sNdsRendererAdapterStageWorldCache[$wi].dobj, $ws, sNdsRendererAdapterStageWorldCache[$wi].validated_frame, sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][2]',
++        'while $wi < sNdsRendererAdapterDObjWorldCacheCount',
++        'if (sNdsRendererAdapterDObjWorldCache[$wi].dobj == $sroot) || (sNdsRendererAdapterDObjWorldCache[$wi].dobj == $schild)',
++        'set $ws = $wi',
++        'printf "WORLD i=%d dobj=%p slot=%d vf=%u t=%d,%d,%d r0=%d,%d,%d\n", $wi, sNdsRendererAdapterDObjWorldCache[$wi].dobj, $ws, sNdsRendererAdapterDObjWorldCacheFrame, sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[3][2], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][0], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][1], sNdsRendererAdapterDObjWorldCache[$ws].world.m[0][2]',
+         'end',
+         'set $wi = $wi + 1',
+         'end',
+         # File statics, so these are sound reads where the stack and the
+         # argument registers are not.
+         'printf "CAMCACHE count=%u frame=%u cobj0=%p pv0=%u mv0=%u\n", sNdsRendererAdapterCameraCacheCount, sNdsRendererAdapterCameraCacheFrame, sNdsRendererAdapterCameraCache[0].cobj, sNdsRendererAdapterCameraCache[0].projection_valid, sNdsRendererAdapterCameraCache[0].modelview_valid',
+-        'printf "SWCACHE ptr=%p count=%u attempted=%u\n", sNdsRendererAdapterStageWorldCache, sNdsRendererAdapterStageWorldCacheCount, sNdsRendererAdapterStageWorldCacheAllocationAttempted',
++        'printf "SWCACHE ptr=%p count=%u attempted=%u\n", sNdsRendererAdapterDObjWorldCache, sNdsRendererAdapterDObjWorldCacheCount, sNdsRendererAdapterDObjWorldCacheAllocationAttempted',
+         # 1 cam-proj valid, 2 cam-mv valid, 4 world valid, 8/16 proj/mv pointer
+         # non-NULL before the 0x47 rewrite, 32/64 after it. 0x7d is the healthy
+         # battle value: the camera folds LookAt into the projection, so bit 1 is
+diff --git a/scripts/stages/generate_nds_native_stage.py b/scripts/stages/generate_nds_native_stage.py
+index 085608c3f81..c172688f7db 100644
+--- a/scripts/stages/generate_nds_native_stage.py
++++ b/scripts/stages/generate_nds_native_stage.py
+@@ -1055,6 +1055,20 @@ SOURCE_CLOSURE_POLICIES = (
+             ),
+         },
+     },
++    {
++        "path": "src/port/reloc_backend_renderer_dl.c",
++        "closure": "ndsRendererAdapterPrepareStageWorlds",
++        "tracked_bases": ("workspace", "node"),
++        "fields": {
++            **_classified(FIELD_CLASS_IMMUTABLE,
++                "workspace.dobj_count workspace.binding_count workspace.dobjs "
++                "workspace.binding_dobjs workspace.live_dobjs "
++                "node.depth node.parent_index"),
++            **_classified(FIELD_CLASS_LIVE,
++                "workspace.task36_runtime_rigid_mask workspace.static_world_mask"),
++            **_classified(FIELD_CLASS_IMMUTABLE, "workspace.binding_world"),
++        },
++    },
+     {
+         "path": "src/port/reloc_backend_renderer_dl.c",
+         "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
+@@ -5739,6 +5753,7 @@ def build_consumed_fields_manifest(
+                     "ndsRendererAdapterMvpMod1F",
+                     "ndsRendererAdapterApplyMvpRecalc",
+                     "ndsRendererAdapterPrepareNativeStageMatrices",
++                    "ndsRendererAdapterPrepareStageWorlds",
+                     "ndsRendererAdapterPrepareNativeStageBindingMatrix",
+                 ],
+                 "disposition": (
+diff --git a/scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1 b/scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1
+index 33504439c8f..14c798b0660 100644
+--- a/scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1
++++ b/scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1
+@@ -2489,7 +2489,6 @@ try {
+             'printf "RENDER_ORACLE=%u,%u,%u\n", gNdsRendererProfileOracleSamples, gNdsRendererProfileOracleMismatches, gNdsRendererProfileOracleMaxDelta',
+             'printf "RENDER_MATRIX=%u,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n", gNdsRendererProfileMatrixLoadCount, gNdsRendererProfileMatrixScaleWorld, gNdsRendererProfileProjectionM00, gNdsRendererProfileProjectionM11, gNdsRendererProfileProjectionM22, gNdsRendererProfileProjectionM32, gNdsRendererProfileModelviewM00, gNdsRendererProfileModelviewM11, gNdsRendererProfileModelviewM22, gNdsRendererProfileModelviewM30, gNdsRendererProfileModelviewM31, gNdsRendererProfileModelviewM32',
+             'printf "RENDER_ADAPTER_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileCameraMatrixCacheHitCount, gNdsRendererProfileCameraMatrixCacheMissCount, gNdsRendererProfileCameraMatrixCacheOverflowCount, gNdsRendererProfileDObjWorldCacheHitCount, gNdsRendererProfileDObjWorldCacheMissCount, gNdsRendererProfileDObjWorldCacheOverflowCount',
+-            'printf "RENDER_STAGE_WORLD_CACHE=%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileStageWorldPersistentHitCount, gNdsRendererProfileStageWorldPersistentMissCount, gNdsRendererProfileStageWorldPersistentRejectCount, gNdsRendererProfileStageWorldPersistentOverflowCount, gNdsRendererProfileStageWorldPersistentOracleSampleCount, gNdsRendererProfileStageWorldPersistentOracleMismatchCount',
+             'printf "RENDER_AFFINE_MATRIX=%u,%u,%u\n", gNdsRendererProfileAffineMatrixSamples, gNdsRendererProfileAffineMatrixMismatches, gNdsRendererProfileAffineMatrixMaxDelta',
+             'printf "RENDER_RAW_MATRIX=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileRawCurrentCandidateCount, gNdsRendererProfileRawCurrentRangeRejectCount, gNdsRendererProfileRawCrossMatrixCount, gNdsRendererProfileMatrixPosTestSamples, gNdsRendererProfileMatrixPosTestMismatches, gNdsRendererProfileMatrixPosTestMaxError, gNdsRendererProfileMatrixPosTestWSignMismatches, gNdsRendererProfileMatrixPosTestClipMismatches, gNdsRendererProfileMatrixPosTestMatrixWordSamples, gNdsRendererProfileMatrixPosTestDropped',
+             'printf "RENDER_SUBMIT=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileSubmitRawCurrentCount, gNdsRendererProfileSubmitRawSnapshotCount, gNdsRendererProfileSubmitProjectedCrossCount, gNdsRendererProfileSubmitProjectedNoZCount, gNdsRendererProfileSubmitProjectedDecalCount, gNdsRendererProfileSubmitProjectedPrimDepthCount, gNdsRendererProfileSubmitProjectedRangeOrMatrixCount, gNdsRendererProfileSubmitRejectCount, (6 * gNdsRendererProfileSubmitProjectedNoZCount) + (9 * (gNdsRendererProfileSubmitProjectedCrossCount + gNdsRendererProfileSubmitProjectedDecalCount + gNdsRendererProfileSubmitProjectedPrimDepthCount + gNdsRendererProfileSubmitProjectedRangeOrMatrixCount))',
+@@ -3268,7 +3267,6 @@ try {
+     $renderOracle = [regex]::Match($gdbStdout, 'RENDER_ORACLE=([0-9]+),([0-9]+),([0-9]+)')
+     $renderMatrix = [regex]::Match($gdbStdout, 'RENDER_MATRIX=([0-9]+),([0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)')
+     $renderAdapterCache = [regex]::Match($gdbStdout, 'RENDER_ADAPTER_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+-    $renderStageWorldCache = [regex]::Match($gdbStdout, 'RENDER_STAGE_WORLD_CACHE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+     $renderAffineMatrix = [regex]::Match($gdbStdout, 'RENDER_AFFINE_MATRIX=([0-9]+),([0-9]+),([0-9]+)')
+     $renderRawMatrix = [regex]::Match($gdbStdout, 'RENDER_RAW_MATRIX=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+     $renderSubmit = [regex]::Match($gdbStdout, 'RENDER_SUBMIT=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+@@ -4292,7 +4290,6 @@ try {
+                 $ro = Get-Ints $renderOracle
+                 $rm = Get-Ints $renderMatrix
+                 $rac = Get-Ints $renderAdapterCache
+-                $rswc = Get-Ints $renderStageWorldCache
+                 $ram = Get-Ints $renderAffineMatrix
+                 $rrm = Get-Ints $renderRawMatrix
+                 $rs = Get-Ints $renderSubmit
+@@ -6827,7 +6824,6 @@ try {
+                     Assert-Condition ($rc[0] -gt 0 -and $rc[1] -gt 0) 'Forensic realtime HW build did not report source combine modes.' $gdbStdout
+                     Assert-Condition ($renderLight.Success -and $rl[2] -eq 0) 'Forensic realtime HW build reported a source-light fallback.' $gdbStdout
+                     Assert-Condition ($renderAdapterCache.Success -and $rac[0] -gt $rac[1] -and $rac[1] -gt 0 -and $rac[2] -eq 0 -and $rac[3] -gt 0 -and $rac[4] -gt 0 -and $rac[5] -eq 0) 'Forensic realtime HW build did not reuse frame-local camera/DObj matrices without cache overflow.' $gdbStdout
+-                    Assert-Condition ($renderStageWorldCache.Success -and $rswc[0] -gt 0 -and $rswc[3] -eq 0 -and $rswc[4] -gt 0 -and $rswc[5] -eq 0) 'Forensic persistent stage-world cache did not reuse exact source keys or its uncached matrix shadow mismatched.' $gdbStdout
+                     Assert-Condition ($renderAffineMatrix.Success -and $ram[0] -gt 0 -and $ram[1] -eq 0 -and $ram[2] -eq 0) 'Forensic affine DObj matrix path drifted from the former exact generic multiply.' $gdbStdout
+                     Assert-Condition ($rrm[3] -gt 0 -and $rrm[4] -eq 0 -and $rrm[5] -le 16 -and $rrm[6] -eq 0 -and $rrm[7] -eq 0 -and $rrm[8] -gt 0 -and $rrm[9] -eq 0) 'Forensic corrected composed GX matrix PosTest failed homogeneous, W-sign, clip, matrix-word, or capacity checks.' $gdbStdout
+                 } elseif ($RendererFastRunMode -eq 9) {
+@@ -6850,7 +6846,6 @@ try {
+                     $hardwareSummary += " wallOracle=$($wo[0])/$($wo[1])/$($wo[2])/$($wo[3])"
+                     $hardwareSummary += " texel1state=0x{0:x}/0x{1:x}" -f $rt1[7], $rt1[8]
+                     $hardwareSummary += " adapterCache=$($rac[0])/$($rac[1])/$($rac[2])/$($rac[3])/$($rac[4])/$($rac[5])"
+-                    $hardwareSummary += " stageWorld=$($rswc[0])/$($rswc[1])/reject$($rswc[2])/overflow$($rswc[3])/oracle$($rswc[4])/$($rswc[5])"
+                     $hardwareSummary += " affineMtx=$($ram[0])/$($ram[1])/$($ram[2])"
+                 }
+                 if ($RendererProfileLevel -ge 1) {
+@@ -7218,7 +7213,6 @@ try {
+             $rs = Get-Ints $renderSubmit
+             $rhdiv = Get-Ints $renderHardwareDivide
+             $rlazy = Get-Ints $renderLazy
+-            $rswc = Get-Ints $renderStageWorldCache
+             $rp = Get-Ints $renderProfile
+             # P2-3r3 (2026-08-23): since the grab pass-drive the bounded proof
+             # completes inside its first outer iteration, so the fast target
+@@ -7259,10 +7253,9 @@ try {
+             Assert-Condition ($renderSubmit.Success -and $renderProfile.Success -and $rs[0] -eq $rrm[0] -and $rs[0] -gt 0 -and $rs[2] -eq $rrm[2] -and $rs[3] -gt 0 -and $rs[6] -eq $rrm[1] -and $rs[7] -eq 0 -and $submitTotal -eq $rp[16] -and $rs[8] -eq $expectedProjectedDivisions) 'Boundary hybrid raw/projected class or projected-division accounting drifted.' $gdbStdout
+             $expectedHardwareDivideEvaluations = $rs[8] + (3 * ($rs[2] + $rs[4] + $rs[5] + $rs[6]))
+             Assert-Condition ($renderHardwareDivide.Success -and $rhdiv[0] -gt 0 -and ($rhdiv[0] + $rhdiv[1] + $rhdiv[2]) -eq $expectedHardwareDivideEvaluations -and $rhdiv[3] -eq 0 -and $rhdiv[4] -eq 0) 'Boundary forensic hardware-divider coverage or exact-result oracle drifted.' $gdbStdout
+-            Assert-Condition ($renderStageWorldCache.Success -and $rswc[0] -eq 0 -and $rswc[1] -eq 57 -and $rswc[2] -eq 0 -and $rswc[3] -eq 0 -and $rswc[4] -eq 0 -and $rswc[5] -eq 0) 'Boundary first-frame stage-world cache did not build all 57 exact nodes before reuse.' $gdbStdout
+             Assert-Condition ($renderLazy.Success -and $rlazy[0] -gt 0 -and $rlazy[1] -eq $rlazy[0] -and $rlazy[2] -gt 0 -and $rlazy[3] -gt 0 -and $rlazy[4] -gt 0 -and $rlazy[5] -eq 0) 'Boundary forensic snapshot/lazy-transform accounting drifted or overflowed.' $gdbStdout
+             }
+-            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1])/p0$($shwf[2])/p1$($shwf[3]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4]) stageWorld=$($rswc[0])/$($rswc[1])/reject$($rswc[2])/overflow$($rswc[3]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/mw$($rrm[8])"
++            $hardwareSummary = " hwflush=$($hw[0])/$($hw[1]) hwsubmit=$($shw[0]) hwtri=$($shw[1]) hwdepth=z$($shw[2])/proj$($shw[3])/decal$($shw[4]) hwtex=bind$($shw[5])/upload$($shw[6])/ready$($shw[7])/reject$($shw[8])/fmt$($shw[9])/max$($shw[10])x$($shw[11]) hwftr=$($shwf[0])/$($shwf[1])/p0$($shwf[2])/p1$($shwf[3]) oracle=$($ro[0])/$($ro[1])/$($ro[2]) submit=raw$($rs[0])/snap$($rs[1])/cross$($rs[2])/noz$($rs[3])/range$($rs[6])/rej$($rs[7])/div$($rs[8]) hdiv=$($rhdiv[0])/$($rhdiv[1])/$($rhdiv[2])/z$($rhdiv[3])/mis$($rhdiv[4]) lazy=load$($rlazy[0])/xf$($rlazy[1])/hit$($rlazy[2])/new$($rlazy[3])/reuse$($rlazy[4])/ovf$($rlazy[5]) rawcand=$($rrm[0])/$($rrm[1])/$($rrm[2]) postest=$($rrm[3])/$($rrm[4])/e$($rrm[5])/mw$($rrm[8])"
+         }
+         Assert-Condition ($boundary.Success -and (Convert-MarkerUInt32 $boundary.Groups[1].Value) -eq 0x53434e45 -and [int]$boundary.Groups[2].Value -eq 22) 'VSBattle did not park at the bounded scene boundary after natural-motion proof.' $gdbStdout
+         Write-Output ("$Label ftmanager natural-combat harness passed: wait={0}/{1} walk={2}/{3} dash={4}/{5} run={6}/{7} attack={8} hitbox={9} dmg={10}->{11} status={12} knock={13} guard={14}/{15}/{16} retries={17} updates={18} mask=0x{19:x}{20}{21}{22}{23}" -f $nw[0], $nw[1], $nwalk[1], $nwalk[2], $nc[3], $nc[4], $nc[5], $nc[6], $na[2], $na[4], $na[8], $na[9], $na[6], $na[10], $ng[0], $ng[1], $ng[2], $na[5], $nat[4], $nat[2], $projectileSummary, $battlePlayableSummary, $hardwareSummary, $aobjSummary)
+diff --git a/scripts/verify-p2-four-fighter-stress.ps1 b/scripts/verify-p2-four-fighter-stress.ps1
+index f91c6a7725b..f8cd4c483e6 100644
+--- a/scripts/verify-p2-four-fighter-stress.ps1
++++ b/scripts/verify-p2-four-fighter-stress.ps1
+@@ -80,6 +80,9 @@ $memoryGlobals = @(
+     'gNdsP2StageProgDraws',
+     'gNdsP2StageProgDmas',
+     'gNdsP2StageProgDeclines',
++    'gNdsStageWorldFlatFrames',
++    'gNdsStageWorldFlatNodes',
++    'gNdsStageWorldFlatBindings',
+     'gNdsRendererTextureScratchFillBytesHighWater',
+     'gNdsRendererTextureScratchStaticPayloadBytesHighWater',
+     'gNdsRendererTextureScratchWhispyBytesHighWater',
+@@ -828,6 +831,9 @@ $memory = [PSCustomObject]@{
+     stageProgramDraws = $extra['gNdsP2StageProgDraws']
+     stageProgramDmas = $extra['gNdsP2StageProgDmas']
+     stageProgramDeclines = $extra['gNdsP2StageProgDeclines']
++    stageWorldFrames = $extra['gNdsStageWorldFlatFrames']
++    stageWorldNodes = $extra['gNdsStageWorldFlatNodes']
++    stageWorldBindings = $extra['gNdsStageWorldFlatBindings']
+     textureScratchFillBytesHighWater = $extra['gNdsRendererTextureScratchFillBytesHighWater']
+     textureScratchStaticPayloadBytesHighWater = $extra['gNdsRendererTextureScratchStaticPayloadBytesHighWater']
+     textureScratchWhispyBytesHighWater = $extra['gNdsRendererTextureScratchWhispyBytesHighWater']
+@@ -1153,6 +1159,9 @@ if (([uint64]$memory.stageProgramLoads -ne 1) -or
+     ([uint64]$memory.stageProgramBytes -eq 0) -or
+     ([uint64]$memory.stageProgramDraws -eq 0) -or
+     ([uint64]$memory.stageProgramDmas -eq 0) -or
++    ([uint64]$memory.stageWorldFrames -eq 0) -or
++    ([uint64]$memory.stageWorldNodes -eq 0) -or
++    ([uint64]$memory.stageWorldBindings -eq 0) -or
+     ([uint64]$memory.stageProgramDeclines -ne 0)) {
+     throw ("Four-fighter stress did not engage the compiled stage cleanly: " +
+         "loads=$($memory.stageProgramLoads) bytes=$($memory.stageProgramBytes) " +
+diff --git a/src/nds/nds_native_stage_select.inc b/src/nds/nds_native_stage_select.inc
+index bba0786f0b6..4fa3780b1ef 100644
+--- a/src/nds/nds_native_stage_select.inc
++++ b/src/nds/nds_native_stage_select.inc
+@@ -3625,6 +3625,14 @@ static s32 ndsRendererNativeStageSelectPacket(void)
+ /* Read by the stage ADAPTER (a separate translation unit) so its capture
+  * side can classify the live bindings against the stage the renderer
+  * selected, instead of against Dream Land's literals. */
++u64 ndsRendererNativeStageStaticWorldBindingMask(void)
++{
++    const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
++    /* Billboard orientation is camera-dependent; its authored affine world
++     * can still be static. Keep those two producer facts separate. */
++    return packet != NULL ? packet->rigid_binding_mask : 0u;
++}
++
+ u64 ndsRendererNativeStageRigidBindingMask(void)
+ {
+     /* Capture runs before PrepareNativeStageOwner selects the draw packet.
+diff --git a/src/port/diagnostics_renderer_census.c b/src/port/diagnostics_renderer_census.c
+index bcb5e737a00..a9540a9a6f0 100644
+--- a/src/port/diagnostics_renderer_census.c
++++ b/src/port/diagnostics_renderer_census.c
+@@ -234,12 +234,6 @@ volatile u32 gNdsRendererProfileCameraMatrixCacheOverflowCount;
+ volatile u32 gNdsRendererProfileDObjWorldCacheHitCount;
+ volatile u32 gNdsRendererProfileDObjWorldCacheMissCount;
+ volatile u32 gNdsRendererProfileDObjWorldCacheOverflowCount;
+-volatile u32 gNdsRendererProfileStageWorldPersistentHitCount;
+-volatile u32 gNdsRendererProfileStageWorldPersistentMissCount;
+-volatile u32 gNdsRendererProfileStageWorldPersistentRejectCount;
+-volatile u32 gNdsRendererProfileStageWorldPersistentOverflowCount;
+-volatile u32 gNdsRendererProfileStageWorldPersistentOracleSampleCount;
+-volatile u32 gNdsRendererProfileStageWorldPersistentOracleMismatchCount;
+ volatile u32 gNdsRendererProfileAffineMatrixSamples;
+ volatile u32 gNdsRendererProfileAffineMatrixMismatches;
+ volatile u32 gNdsRendererProfileAffineMatrixMaxDelta;
+diff --git a/src/port/renderer_adapter_fighter.c b/src/port/renderer_adapter_fighter.c
+index 55c5fe0152d..303c79ecb1e 100644
+--- a/src/port/renderer_adapter_fighter.c
++++ b/src/port/renderer_adapter_fighter.c
+@@ -4812,7 +4812,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
+                     contract_event->matrix_dobj : collection.dobjs[i],
+                 (gGCCurrentCamera != NULL) ?
+                     CObjGetStruct(gGCCurrentCamera) : NULL,
+-                FALSE,
+                 &initial_projection,
+                 &initial_projection_ptr,
+                 &initial_modelview,
+diff --git a/src/port/renderer_adapter_matrix.c b/src/port/renderer_adapter_matrix.c
+index 454813882dd..72172a2acc1 100644
+--- a/src/port/renderer_adapter_matrix.c
++++ b/src/port/renderer_adapter_matrix.c
+@@ -62,17 +62,10 @@
+  * root rather than rejecting valid native geometry. */
+ #define NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX 9u
+ #define NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT 4u
+-#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 128u
++#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT 64u
+ #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT 256u
+ #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK \
+     (NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT - 1u)
+-#define NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT 64u
+-#define NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE \
+-    (NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT - \
+-     NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT)
+-#define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT 128u
+-#define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK \
+-    (NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT - 1u)
+ #define NDS_RENDERER_ADAPTER_G_TX_LOADTILE 7u
+ #define NDS_RENDERER_ADAPTER_G_TX_RENDERTILE 0u
+ #define NDS_RENDERER_ADAPTER_G_TX_WRAP 0u
+@@ -1742,6 +1735,7 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
+     NDSRendererAdapterStageWorldSourceKey task36_rigid_source_keys[
+         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+     u64 task36_runtime_rigid_mask;
++    u64 static_world_mask;
+ #if NDS_TASK44_STAGE_STEADY
+     /* Static bindings need only the source-key guard; frame matrix preparation
+      * consumes the current mask directly. */
+@@ -1841,19 +1835,6 @@ typedef struct NDSRendererAdapterDObjWorldCacheEntry
+     NDSRendererMatrix20p12 world;
+ } NDSRendererAdapterDObjWorldCacheEntry;
+ 
+-typedef struct NDSRendererAdapterStageWorldCacheEntry
+-{
+-    const DObj *dobj;
+-    const DObj *parent;
+-    NDSRendererAdapterStageWorldSourceKey source_key;
+-    u32 parent_generation;
+-    u32 generation;
+-    u32 validated_frame;
+-    u8 source_key_valid;
+-    u8 world_slot;
+-    u8 reserved[2];
+-} NDSRendererAdapterStageWorldCacheEntry;
+-
+ static NDSRendererAdapterCameraCacheEntry
+     sNdsRendererAdapterCameraCache[NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT];
+ static u32 sNdsRendererAdapterCameraCacheFrame;
+@@ -1869,7 +1850,6 @@ static u32 sNdsRendererAdapterCameraCacheCount;
+  * declining every owner -- one counter would have said the same thing there.
+  * __attribute__((used)): these are write-only from C, so -ffunction-sections
+  * plus --gc-sections drops them and Boundary fails on a missing ELF symbol. */
+-__attribute__((used)) u32 gNdsR2Slice44StaleReuse;
+ __attribute__((used)) u32 gNdsR2Slice44RigidChecks;
+ __attribute__((used)) u32 gNdsR2Slice44RigidSkips;
+ #endif
+@@ -1877,18 +1857,9 @@ static NDSRendererAdapterDObjWorldCacheEntry
+     *sNdsRendererAdapterDObjWorldCache;
+ static u32 sNdsRendererAdapterDObjWorldCacheFrame;
+ static u32 sNdsRendererAdapterDObjWorldCacheCount;
+-static u32 sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+-    NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
+ static u32 sNdsRendererAdapterDObjWorldCacheAllocationAttempted;
+ static u8 sNdsRendererAdapterDObjWorldIndex[
+     NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT];
+-static NDSRendererAdapterStageWorldCacheEntry
+-    *sNdsRendererAdapterStageWorldCache;
+-static u32 sNdsRendererAdapterStageWorldCacheCount;
+-static u32 sNdsRendererAdapterStageWorldCacheAllocationAttempted;
+-static u32 sNdsRendererAdapterStageWorldNextGeneration;
+-static u8 sNdsRendererAdapterStageWorldIndex[
+-    NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT];
+ #endif
+ 
+ static sb32 ndsRendererAdapterRangeIsEmptySegmentEDL(const Gfx *dl,
+@@ -4420,17 +4391,9 @@ static void ndsRendererAdapterResetSceneCaches(void)
+     sNdsRendererAdapterDObjWorldCache = NULL;
+     sNdsRendererAdapterDObjWorldCacheFrame = 0u;
+     sNdsRendererAdapterDObjWorldCacheCount = 0u;
+-    sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+-        NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
+     sNdsRendererAdapterDObjWorldCacheAllocationAttempted = FALSE;
+     memset(sNdsRendererAdapterDObjWorldIndex, 0,
+            sizeof(sNdsRendererAdapterDObjWorldIndex));
+-    sNdsRendererAdapterStageWorldCache = NULL;
+-    sNdsRendererAdapterStageWorldCacheCount = 0u;
+-    sNdsRendererAdapterStageWorldCacheAllocationAttempted = FALSE;
+-    sNdsRendererAdapterStageWorldNextGeneration = 1u;
+-    memset(sNdsRendererAdapterStageWorldIndex, 0,
+-           sizeof(sNdsRendererAdapterStageWorldIndex));
+ #if NDS_RENDERER_PROFILE_LEVEL < 2
+     memset(&sNdsRendererAdapterNativeStageWorkspace, 0,
+            sizeof(sNdsRendererAdapterNativeStageWorkspace));
+@@ -4550,7 +4513,7 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
+     }
+     if ((sNdsRendererAdapterDObjWorldCache == NULL) ||
+         (sNdsRendererAdapterDObjWorldCacheCount >=
+-         sNdsRendererAdapterDObjWorldCacheDynamicLimit))
++         NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT))
+     {
+ #if NDS_RENDERER_PROFILE_LEVEL >= 2
+         gNdsRendererProfileDObjWorldCacheOverflowCount++;
+@@ -4579,159 +4542,11 @@ static void ndsRendererAdapterStoreDObjWorldMatrix(
+     }
+ }
+ 
+-static u32 ndsRendererAdapterStageWorldIndexHash(const DObj *dobj)
+-{
+-    uintptr_t key = (uintptr_t)dobj >> 2;
+-
+-    key ^= key >> 7;
+-    key ^= key >> 15;
+-    return (u32)key & NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK;
+-}
+-
+-static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
+-{
+-    uintptr_t aligned;
+-    size_t bytes = sizeof(NDSRendererAdapterStageWorldCacheEntry) *
+-        NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT;
+-
+-    if (sNdsRendererAdapterStageWorldCache != NULL)
+-    {
+-        return TRUE;
+-    }
+-    if (sNdsRendererAdapterStageWorldCacheAllocationAttempted != FALSE)
+-    {
+-        return FALSE;
+-    }
+-    if ((ndsRendererAdapterEnsureDObjWorldCache() == FALSE) ||
+-        (sNdsRendererAdapterDObjWorldCacheCount >
+-         NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE))
+-    {
+-        return FALSE;
+-    }
+-    sNdsRendererAdapterStageWorldCacheAllocationAttempted = TRUE;
+-    if ((gSYTaskmanGeneralHeap.ptr == NULL) ||
+-        (gSYTaskmanGeneralHeap.end == NULL))
+-    {
+-        return FALSE;
+-    }
+-    aligned = ((uintptr_t)gSYTaskmanGeneralHeap.ptr + 0x0fu) &
+-        ~(uintptr_t)0x0fu;
+-    if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
+-        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
+-        (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
+-         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
+-    {
+-        return FALSE;
+-    }
+-    sNdsRendererAdapterStageWorldCache =
+-        (NDSRendererAdapterStageWorldCacheEntry *)
+-            syTaskmanMalloc(bytes, 0x10u);
+-    if (sNdsRendererAdapterStageWorldCache != NULL)
+-    {
+-        memset(sNdsRendererAdapterStageWorldCache, 0, bytes);
+-        sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+-            NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE;
+-        ndsRelocUpdateMemoryLedger();
+-        return TRUE;
+-    }
+-    return FALSE;
+-}
+-
+ static void ndsRendererAdapterPrepareWorldCaches(void)
+ {
+-    /* Reserve the existing 8,704/4,608-byte caches before the animation
+-     * cache sizes itself from the arena remainder. First-draw allocation
+-     * otherwise spends the runtime headroom that sizing just preserved. */
++    /* Keep the previous 64-entry allowance for non-stage native consumers.
++     * Stage matrices no longer allocate cache keys or reserve matrix slots. */
+     (void)ndsRendererAdapterEnsureDObjWorldCache();
+-    (void)ndsRendererAdapterEnsureStageWorldCache();
+-}
+-
+-static NDSRendererAdapterStageWorldCacheEntry *
+-__attribute__((section(".itcm")))
+-ndsRendererAdapterFindStageWorldEntry(const DObj *dobj)
+-{
+-    u32 slot;
+-    u32 probe;
+-
+-    if ((dobj == NULL) ||
+-        (ndsRendererAdapterEnsureStageWorldCache() == FALSE))
+-    {
+-        return NULL;
+-    }
+-    slot = ndsRendererAdapterStageWorldIndexHash(dobj);
+-    for (probe = 0u;
+-         probe < NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT;
+-         probe++)
+-    {
+-        u32 encoded = sNdsRendererAdapterStageWorldIndex[slot];
+-        u32 cache_index;
+-
+-        if (encoded == 0u)
+-        {
+-            return NULL;
+-        }
+-        cache_index = encoded - 1u;
+-        if ((cache_index < sNdsRendererAdapterStageWorldCacheCount) &&
+-            (sNdsRendererAdapterStageWorldCache[cache_index].dobj == dobj))
+-        {
+-            return &sNdsRendererAdapterStageWorldCache[cache_index];
+-        }
+-        slot = (slot + 1u) & NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK;
+-    }
+-    return NULL;
+-}
+-
+-static NDSRendererAdapterStageWorldCacheEntry *
+-ndsRendererAdapterFindOrAllocateStageWorldEntry(const DObj *dobj)
+-{
+-    NDSRendererAdapterStageWorldCacheEntry *entry;
+-    u32 cache_index;
+-    u32 slot;
+-    u32 probe;
+-
+-    entry = ndsRendererAdapterFindStageWorldEntry(dobj);
+-    if (entry != NULL)
+-    {
+-        return entry;
+-    }
+-    if ((sNdsRendererAdapterStageWorldCache == NULL) ||
+-        (sNdsRendererAdapterStageWorldCacheCount >=
+-         NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT))
+-    {
+-        return NULL;
+-    }
+-    cache_index = sNdsRendererAdapterStageWorldCacheCount++;
+-    entry = &sNdsRendererAdapterStageWorldCache[cache_index];
+-    memset(entry, 0, sizeof(*entry));
+-    entry->dobj = dobj;
+-    /* A zero frame is valid in accelerated harnesses. Ensure a freshly
+-     * allocated entry cannot take the same-frame shortcut before its first
+-     * exact world build; no u32 equals its own bitwise complement. */
+-    entry->validated_frame = ~gNdsRendererProfileFrameCount;
+-    entry->world_slot = (u8)(NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE +
+-                             cache_index);
+-    sNdsRendererAdapterDObjWorldCache[entry->world_slot].dobj = dobj;
+-    slot = ndsRendererAdapterStageWorldIndexHash(dobj);
+-    for (probe = 0u;
+-         probe < NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT;
+-         probe++)
+-    {
+-        if (sNdsRendererAdapterStageWorldIndex[slot] == 0u)
+-        {
+-            sNdsRendererAdapterStageWorldIndex[slot] =
+-                (u8)(cache_index + 1u);
+-            return entry;
+-        }
+-        slot = (slot + 1u) & NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK;
+-    }
+-    return NULL;
+-}
+-
+-static NDSRendererMatrix20p12 *
+-ndsRendererAdapterStageWorldEntryMatrix(
+-    const NDSRendererAdapterStageWorldCacheEntry *entry)
+-{
+-    return &sNdsRendererAdapterDObjWorldCache[entry->world_slot].world;
+ }
+ 
+ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
+@@ -4858,16 +4673,6 @@ static sb32 ndsRendererAdapterStageWorldSourceKeyMatches(
+     return TRUE;
+ }
+ 
+-static u32 ndsRendererAdapterNextStageWorldGeneration(void)
+-{
+-    u32 generation = sNdsRendererAdapterStageWorldNextGeneration++;
+-
+-    if (generation == 0u)
+-    {
+-        generation = sNdsRendererAdapterStageWorldNextGeneration++;
+-    }
+-    return generation;
+-}
+ #endif
+ 
+ #if NDS_RENDERER_HW_TRIANGLES
+@@ -5142,194 +4947,6 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixM2Profile(
+ #endif
+ 
+ #if NDS_RENDERER_HW_TRIANGLES
+-/* allow_stale: slice 44. TRUE means "this DObj's chain is not in this frame's
+- * stride class, so a world matrix built on an earlier frame is accepted as-is".
+- * Only the stage's own dynamic bindings may pass TRUE. The general caller at
+- * the effect/fighter seam must not: kinds 0x4F and 0x50 are on the source-key
+- * reject list precisely because their locals read live FTParts state, and a
+- * matrix held over even one frame there is the frozen-attachment bug cycle 52
+- * already paid for. */
+-static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
+-    DObj *dobj, NDSRendererMatrix20p12 *out, sb32 allow_stale)
+-{
+-    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+-    DObj *cursor = dobj;
+-    NDSRendererMatrix20p12 parent_world;
+-    NDSRendererMatrix20p12 local;
+-    NDSRendererAdapterStageWorldCacheEntry *entry;
+-    NDSRendererAdapterStageWorldSourceKey source_key;
+-    u32 parent_generation = 0u;
+-    u32 depth = 0u;
+-    u32 frame = gNdsRendererProfileFrameCount;
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-    u32 reused_persistent = FALSE;
+-#endif
+-    u32 i;
+-
+-#if !NDS_R2_STAGE_VALIDATE_STRIDE
+-    (void)allow_stale;
+-#endif
+-    if ((dobj == NULL) || (out == NULL))
+-    {
+-        return FALSE;
+-    }
+-    entry = ndsRendererAdapterFindStageWorldEntry(dobj);
+-    if ((entry != NULL) &&
+-        ((entry->validated_frame == frame)
+-#if NDS_R2_STAGE_VALIDATE_STRIDE
+-         /* generation, not validated_frame, is the "has a world matrix at all"
+-          * test: ndsRendererAdapterNextStageWorldGeneration never returns 0,
+-          * and frame 0 is a real frame. */
+-         || ((allow_stale != FALSE) && (entry->generation != 0u))
+-#endif
+-         ))
+-    {
+-        ndsRendererMatrixCopy20p12(
+-            out, ndsRendererAdapterStageWorldEntryMatrix(entry));
+-#if NDS_TASK68_FALLBACK_CENSUS
+-        ndsRendererAdapterRecordAttachWorld(dobj, out);
+-#endif
+-#if NDS_R2_STAGE_VALIDATE_STRIDE
+-        if (entry->validated_frame != frame)
+-        {
+-            gNdsR2Slice44StaleReuse++;
+-        }
+-#endif
+-        return TRUE;
+-    }
+-    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL) &&
+-           (depth < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+-    {
+-        chain[depth++] = cursor;
+-        cursor = cursor->parent;
+-    }
+-    if ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+-    {
+-        return FALSE;
+-    }
+-    if (ndsRendererAdapterEnsureStageWorldCache() == FALSE)
+-    {
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-        gNdsRendererProfileStageWorldPersistentOverflowCount++;
+-#endif
+-        return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
+-    }
+-
+-    ndsRendererAdapterMtxIdentity20p12(&parent_world);
+-    for (i = depth; i != 0u; i--)
+-    {
+-        DObj *node = chain[i - 1u];
+-        u32 source_key_valid;
+-        u32 reuse = FALSE;
+-
+-        entry = ndsRendererAdapterFindOrAllocateStageWorldEntry(node);
+-        if (entry == NULL)
+-        {
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-            gNdsRendererProfileStageWorldPersistentOverflowCount++;
+-#endif
+-            return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
+-        }
+-        if (entry->validated_frame == frame)
+-        {
+-            ndsRendererMatrixCopy20p12(
+-                &parent_world,
+-                ndsRendererAdapterStageWorldEntryMatrix(entry));
+-#if NDS_TASK68_FALLBACK_CENSUS
+-            ndsRendererAdapterRecordAttachWorld(node, &parent_world);
+-#endif
+-            parent_generation = entry->generation;
+-            continue;
+-        }
+-
+-        source_key_valid = FALSE;
+-        if ((entry->source_key_valid != FALSE) &&
+-            (entry->parent == node->parent) &&
+-            (entry->parent_generation == parent_generation) &&
+-            (ndsRendererAdapterStageWorldSourceKeyMatches(
+-                 node, &entry->source_key) != FALSE))
+-        {
+-            reuse = TRUE;
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-            reused_persistent = TRUE;
+-            gNdsRendererProfileStageWorldPersistentHitCount++;
+-#endif
+-        }
+-        if (reuse == FALSE)
+-        {
+-            source_key_valid = ndsRendererAdapterCaptureStageWorldSourceKey(
+-                node, &source_key);
+-            if (ndsRendererAdapterBuildDObjLocalMatrix(node, &local) == FALSE)
+-            {
+-                return FALSE;
+-            }
+-            ndsRendererMtxMulAffine20p12(
+-                &local, &parent_world,
+-                ndsRendererAdapterStageWorldEntryMatrix(entry));
+-            entry->parent = node->parent;
+-            entry->parent_generation = parent_generation;
+-            entry->generation = ndsRendererAdapterNextStageWorldGeneration();
+-            entry->source_key_valid = source_key_valid;
+-            if (source_key_valid != FALSE)
+-            {
+-                entry->source_key = source_key;
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-                gNdsRendererProfileStageWorldPersistentMissCount++;
+-#endif
+-            }
+-            else
+-            {
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-                gNdsRendererProfileStageWorldPersistentRejectCount++;
+-#endif
+-            }
+-        }
+-        entry->validated_frame = frame;
+-        ndsRendererMatrixCopy20p12(
+-                &parent_world,
+-                ndsRendererAdapterStageWorldEntryMatrix(entry));
+-#if NDS_TASK68_FALLBACK_CENSUS
+-        ndsRendererAdapterRecordAttachWorld(node, &parent_world);
+-#endif
+-        parent_generation = entry->generation;
+-    }
+-    *out = parent_world;
+-
+-#if NDS_RENDERER_PROFILE_LEVEL >= 2
+-    if (reused_persistent != FALSE)
+-    {
+-        NDSRendererMatrix20p12 oracle_world;
+-
+-        if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
+-                dobj, &oracle_world) != FALSE)
+-        {
+-            gNdsRendererProfileStageWorldPersistentOracleSampleCount++;
+-            if (memcmp(out, &oracle_world, sizeof(oracle_world)) != 0)
+-            {
+-                NDSRendererAdapterStageWorldCacheEntry *target =
+-                    ndsRendererAdapterFindStageWorldEntry(dobj);
+-
+-                gNdsRendererProfileStageWorldPersistentOracleMismatchCount++;
+-                *out = oracle_world;
+-                if (target != NULL)
+-                {
+-                    target->source_key_valid = FALSE;
+-                    target->validated_frame = 0u;
+-                    /* Slice 44 reads `generation != 0` as "this entry holds a
+-                     * world matrix a later frame may reuse", so the oracle's
+-                     * rebuild-forcing invalidation has to clear that too or the
+-                     * stride would hand back the matrix the oracle just
+-                     * rejected. The two are never compiled together today --
+-                     * this branch is PROFILE_LEVEL >= 2 -- but a one-word
+-                     * omission here is exactly how a lab arm reads clean. */
+-                    target->generation = 0u;
+-                }
+-            }
+-        }
+-    }
+-#endif
+-    return TRUE;
+-}
+ #endif
+ 
+ static sb32 ndsRendererAdapterBuildCameraMatrices(
+@@ -5775,7 +5392,6 @@ static sb32 sNdsRendererAdapterEffectSubmitActive;
+ static void ndsRendererAdapterPrepareInitialMatrices(
+     DObj *dobj,
+     CObj *cobj,
+-    u32 persistent_stage_world,
+     NDSRendererMatrix20p12 *projection,
+     const NDSRendererMatrix20p12 **projection_ptr,
+     NDSRendererMatrix20p12 *modelview,
+@@ -5820,19 +5436,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
+ #endif
+     if (dobj != NULL)
+     {
+-#if NDS_RENDERER_HW_TRIANGLES
+-        if (persistent_stage_world != FALSE)
+-        {
+-            dobj_world_valid =
+-                ndsRendererAdapterBuildPersistentStageWorldMatrix(
+-                    dobj, &dobj_world, FALSE);
+-        }
+-        else
+-#endif
+-        {
+-            dobj_world_valid =
+-                ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
+-        }
++        dobj_world_valid = ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
+     }
+ 
+     if (camera_projection_valid != FALSE)
+diff --git a/src/port/renderer_adapter_stage.c b/src/port/renderer_adapter_stage.c
+index e48a3e63ec4..3e73c3326ad 100644
+--- a/src/port/renderer_adapter_stage.c
++++ b/src/port/renderer_adapter_stage.c
+@@ -3102,32 +3102,30 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
+     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
+     u32 binding_index
+ #if NDS_TASK36_HW_COMPOSE
+-    , NDSRendererAdapterStageFrameCamera *camera
++    , NDSRendererAdapterStageFrameCamera *camera,
++    const NDSRendererMatrix20p12 *world
+ #endif
+     )
+ {
+ #if NDS_TASK36_HW_COMPOSE
+     DObj *dobj = workspace->binding_dobjs[binding_index];
+-    NDSRendererMatrix20p12 world;
+     NDSRendererMatrix20p12 *out = &workspace->binding_composed[binding_index];
+     const NDSRendererMatrix20p12 *projection_ptr = NULL;
+     const NDSRendererMatrix20p12 *modelview_ptr = out;
+     u32 kind = ndsRendererAdapterDirectMvpRecalcKind(dobj);
+ 
+     if (kind != 0u) { sNdsRendererAdapterMvpRecalcScaleX = 1.0F; }
+-    if (!ndsRendererAdapterBuildPersistentStageWorldMatrix(dobj, &world, FALSE))
+-    { return FALSE; }
+     /* Preserve the source multiplication order when a camera owns both parts.
+      * Battle cameras normally supply LookAt*Persp in projection alone. */
+     if (camera->modelview_valid != FALSE)
+     {
+-        ndsRendererMtxMul20p12(&world, &camera->modelview, out);
++        ndsRendererMtxMul20p12(world, &camera->modelview, out);
+         if (camera->projection_valid != FALSE)
+         { ndsRendererMtxMul20p12(out, &camera->projection, out); }
+     }
+     else if (camera->projection_valid != FALSE)
+-    { ndsRendererMtxMul20p12(&world, &camera->projection, out); }
+-    else { *out = world; }
++    { ndsRendererMtxMul20p12(world, &camera->projection, out); }
++    else { *out = *world; }
+     if (kind != 0u)
+     {
+         ndsRendererAdapterApplyMvpRecalc(dobj, kind, cobj,
+@@ -3143,7 +3141,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
+     const NDSRendererMatrix20p12 *modelview_ptr;
+ 
+     ndsRendererAdapterPrepareInitialMatrices(
+-        workspace->binding_dobjs[binding_index], cobj, TRUE,
++        workspace->binding_dobjs[binding_index], cobj,
+         &projection, &projection_ptr, &modelview, &modelview_ptr);
+     /* MVP recalc returns the completed product in modelview with no separate
+      * projection. ComposeNativeRootMatrix explicitly supports that shape. */
+@@ -3179,6 +3177,93 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
+ #endif
+ }
+ 
++#if NDS_TASK36_HW_COMPOSE
++volatile u32 gNdsStageWorldFlatFrames, gNdsStageWorldFlatNodes, gNdsStageWorldFlatBindings;
++
++static sb32 ndsRendererAdapterPrepareStageWorlds(
++    CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
++    NDSRendererAdapterStageFrameCamera *camera)
++{
++    NDSRendererMatrix20p12 identity, local;
++    u8 needed[NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT] = { 0 };
++    u32 i, binding = 0u, previous_depth = 0u, built = 0u, consumed = 0u;
++    u32 max_depth = 0u;
++
++    if (workspace->dobj_count > NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT ||
++        workspace->binding_count > 64u) { return FALSE; }
++
++    /* The validated table is preorder, and a DObj's display-head bindings are
++     * consecutive. Only ancestors of live matrix consumers need world work. */
++    for (i = 0u; i < workspace->dobj_count; i++)
++    {
++        u32 depth = workspace->live_dobjs[i].depth;
++        if (depth >= NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX) { return FALSE; }
++        if (depth > max_depth) { max_depth = depth; }
++        while (binding < workspace->binding_count &&
++               workspace->binding_dobjs[binding] == workspace->dobjs[i])
++        {
++            if ((workspace->static_world_mask & ((u64)1u << binding)) == 0u)
++            { needed[i] = TRUE; }
++            binding++;
++        }
++    }
++    if (binding != workspace->binding_count) { return FALSE; }
++    /* Allocate only this tree's bounded depth on the stack, not 32 matrices
++     * for a stage whose deepest chain contains only a few nodes. */
++    NDSRendererMatrix20p12 worlds[max_depth + 1u];
++    u16 parents[max_depth + 1u];
++    for (i = workspace->dobj_count; i != 0u; i--)
++    {
++        u32 parent = workspace->live_dobjs[i - 1u].parent_index;
++        if (parent != 0xffffu)
++        {
++            if (parent >= i - 1u) { return FALSE; }
++            if (needed[i - 1u] != FALSE) { needed[parent] = TRUE; }
++        }
++    }
++    ndsRendererAdapterMtxIdentity20p12(&identity);
++    binding = 0u;
++    for (i = 0u; i < workspace->dobj_count; i++)
++    {
++        const NDSRendererNativeStageDObj *node = &workspace->live_dobjs[i];
++        u32 depth = node->depth;
++        if (depth >= NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX ||
++            (i == 0u && depth != 0u) || depth > previous_depth + 1u ||
++            node->parent_index != (depth == 0u ? 0xffffu : parents[depth - 1u]))
++        { return FALSE; }
++        parents[depth] = (u16)i;
++        previous_depth = depth;
++        if (needed[i] != FALSE)
++        {
++            const NDSRendererMatrix20p12 *parent = depth == 0u ?
++                &identity : &worlds[depth - 1u];
++            if (ndsRendererAdapterBuildDObjLocalMatrix(workspace->dobjs[i], &local))
++            { ndsRendererMtxMulAffine20p12(&local, parent, &worlds[depth]); }
++            else { worlds[depth] = *parent; }
++            built++;
++        }
++        while (binding < workspace->binding_count &&
++               workspace->binding_dobjs[binding] == workspace->dobjs[i])
++        {
++            if ((workspace->task36_runtime_rigid_mask & ((u64)1u << binding)) == 0u)
++            {
++                if (!ndsRendererAdapterPrepareNativeStageBindingMatrix(
++                        cobj, workspace, binding, camera,
++                        (workspace->static_world_mask & ((u64)1u << binding)) != 0u ?
++                            &workspace->binding_world[binding] : &worlds[depth]))
++                { return FALSE; }
++                consumed++;
++            }
++            binding++;
++        }
++    }
++    gNdsStageWorldFlatFrames++;
++    gNdsStageWorldFlatNodes += built;
++    gNdsStageWorldFlatBindings += consumed;
++    return binding == workspace->binding_count;
++}
++#endif
++
+ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
+     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace)
+ {
+@@ -3238,28 +3323,21 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
+ #endif
+ #endif
+ 
++#if NDS_TASK36_HW_COMPOSE
++    return ndsRendererAdapterPrepareStageWorlds(cobj, workspace, &camera);
++#else
+     for (binding_index = 0u;
+          binding_index < workspace->binding_count;
+          binding_index++)
+     {
+-#if NDS_TASK36_HW_COMPOSE
+-        if ((workspace->task36_runtime_rigid_mask &
+-             ((u64)1u << binding_index)) != 0u)
+-        {
+-            continue;
+-        }
+-#endif
+         if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
+-                cobj, workspace, binding_index
+-#if NDS_TASK36_HW_COMPOSE
+-                , &camera
+-#endif
+-                ) == FALSE)
++                cobj, workspace, binding_index) == FALSE)
+         {
+             return FALSE;
+         }
+     }
+     return TRUE;
++#endif
+ }
+ 
+ #if NDS_TASK36_HW_COMPOSE
+@@ -3267,7 +3345,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
+     NDSRendererAdapterNativeStageWorkspace *workspace)
+ {
+     u32 binding_index;
+-    const u64 rigid_mask = ndsRendererNativeStageRigidBindingMask();
++    const u64 static_mask = ndsRendererNativeStageStaticWorldBindingMask();
+ 
+     for (binding_index = 0u;
+          binding_index < workspace->binding_count;
+@@ -3281,7 +3359,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
+             gNdsRendererAdapterStageTopologyFailIndex = binding_index;
+             return FALSE;
+         }
+-        if (((rigid_mask &
++        if (((static_mask &
+               ((u64)1u << binding_index)) != 0u) &&
+             (ndsRendererAdapterCaptureStageWorldSourceKey(
+                  workspace->binding_dobjs[binding_index],
+@@ -3294,14 +3372,15 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
+         }
+     }
+     workspace->task36_runtime_rigid_mask =
+-        rigid_mask;
++        ndsRendererNativeStageRigidBindingMask();
++    workspace->static_world_mask = static_mask;
+ #if NDS_TASK44_STAGE_STEADY
+     workspace->task44_rigid_binding_count = 0u;
+     for (binding_index = 0u;
+          binding_index < workspace->binding_count;
+          binding_index++)
+     {
+-        if ((rigid_mask &
++        if ((static_mask &
+              ((u64)1u << binding_index)) != 0u)
+         {
+             workspace->task44_rigid_bindings[
+@@ -3317,7 +3396,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
+     NDSRendererAdapterNativeStageWorkspace *workspace)
+ {
+     u32 binding_index;
+-    const u64 rigid_mask = ndsRendererNativeStageRigidBindingMask();
++    const u64 static_mask = ndsRendererNativeStageStaticWorldBindingMask();
+ #if NDS_TASK44_STAGE_STEADY
+     u32 rigid_slot;
+ #endif
+@@ -3330,13 +3409,14 @@ static void ndsRendererAdapterValidateTask36StageWorld(
+      * which was equivalent only because the sweep was complete. With a partial
+      * sweep, re-arming would resurrect a binding this frame's slice did not
+      * look at. */
+-    if (workspace->task36_runtime_rigid_mask == 0u)
++    if (workspace->static_world_mask == 0u)
+     {
+         return;
+     }
+ #endif
+     workspace->task36_runtime_rigid_mask =
+-        rigid_mask;
++        ndsRendererNativeStageRigidBindingMask();
++    workspace->static_world_mask = static_mask;
+ #if NDS_TASK44_STAGE_STEADY
+     /* Task 44 item 4: walk the 26 rigid bindings directly. The list is only
+      * consulted when capture built it for this topology; otherwise fall back
+@@ -3363,6 +3443,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
+                 FALSE)
+             {
+                 workspace->task36_runtime_rigid_mask = 0u;
++                workspace->static_world_mask = 0u;
+ #if NDS_RENDERER_PROFILE_LEVEL == 1
+                 gNdsRendererTask36RigidConstancyMismatchCount++;
+ #endif
+@@ -3376,7 +3457,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
+          binding_index < workspace->binding_count;
+          binding_index++)
+     {
+-        if ((rigid_mask &
++        if ((static_mask &
+              ((u64)1u << binding_index)) == 0u)
+         {
+             continue;
+@@ -3387,6 +3468,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
+             FALSE)
+         {
+             workspace->task36_runtime_rigid_mask = 0u;
++            workspace->static_world_mask = 0u;
+ #if NDS_RENDERER_PROFILE_LEVEL == 1
+             gNdsRendererTask36RigidConstancyMismatchCount++;
+ #endif
+@@ -3635,18 +3717,6 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
+         gNdsR2StageTopologyRebuildCount++;
+ #endif
+         bzero(workspace, sizeof(*workspace));
+-#if NDS_R2_STAGE_VALIDATE_STRIDE
+-        /* Slice 44. binding_dobjs[] is about to be re-collected from the live
+-         * tree, so every stage world entry keyed on an old DObj address is now
+-         * meaningless -- and a recycled heap address makes one of them *match*.
+-         * That was harmless while `validated_frame == frame` forced a rebuild
+-         * every frame; under the stride a collision would hand back the
+-         * previous topology's matrix. Free at runtime: this branch is the
+-         * once-per-scene rebuild that already bzeroes the whole workspace. */
+-        sNdsRendererAdapterStageWorldCacheCount = 0u;
+-        memset(sNdsRendererAdapterStageWorldIndex, 0,
+-               sizeof(sNdsRendererAdapterStageWorldIndex));
+-#endif
+         for (i = 0u; i < asset_count; i++)
+         {
+             workspace->loaded[i] = loaded[i];
+@@ -5814,7 +5884,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
+         dobj,
+         (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+             ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
+-        FALSE, &projection, &projection_ptr, &modelview, &modelview_ptr);
++        &projection, &projection_ptr, &modelview, &modelview_ptr);
+     /* The default battle camera has one legitimate split shape where the
+      * complete camera transform lives on only one side of the DS pair (the
+      * world-quad bridge handles the same contract above).  The generic DL
+@@ -6317,7 +6387,6 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
+                 dobj,
+                 (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) :
+                     ((gGCCurrentCamera != NULL) ? CObjGetStruct(gGCCurrentCamera) : NULL),
+-                TRUE,
+                 &rebirth_projection,
+                 &rebirth_projection_ptr,
+                 &rebirth_modelview,
+@@ -9769,7 +9838,6 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
+                                                       CObjGetStruct(
+                                                           gGCCurrentCamera) :
+                                                       NULL),
+-                                             TRUE,
+                                              &initial_projection,
+                                              &initial_projection_ptr,
+                                              &initial_modelview,
+diff --git a/src/port/taskman_seam_battle_host.c b/src/port/taskman_seam_battle_host.c
+index f3f4aabe4ed..21fbd91430e 100644
+--- a/src/port/taskman_seam_battle_host.c
++++ b/src/port/taskman_seam_battle_host.c
+@@ -633,12 +633,6 @@ static void ndsBattlePlayablePresentFrame(void)
+     gNdsRendererProfileDObjWorldCacheHitCount = 0;
+     gNdsRendererProfileDObjWorldCacheMissCount = 0;
+     gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
+-    gNdsRendererProfileStageWorldPersistentHitCount = 0;
+-    gNdsRendererProfileStageWorldPersistentMissCount = 0;
+-    gNdsRendererProfileStageWorldPersistentRejectCount = 0;
+-    gNdsRendererProfileStageWorldPersistentOverflowCount = 0;
+-    gNdsRendererProfileStageWorldPersistentOracleSampleCount = 0;
+-    gNdsRendererProfileStageWorldPersistentOracleMismatchCount = 0;
+     gNdsRendererProfileAffineMatrixSamples = 0;
+     gNdsRendererProfileAffineMatrixMismatches = 0;
+     gNdsRendererProfileAffineMatrixMaxDelta = 0;
+diff --git a/src/port/taskman_seam_core.c b/src/port/taskman_seam_core.c
+index a362385fda1..eff47db5ee5 100644
+--- a/src/port/taskman_seam_core.c
++++ b/src/port/taskman_seam_core.c
+@@ -990,12 +990,6 @@ void ndsResetStartupDiagnostics(void)
+     gNdsRendererProfileDObjWorldCacheHitCount = 0;
+     gNdsRendererProfileDObjWorldCacheMissCount = 0;
+     gNdsRendererProfileDObjWorldCacheOverflowCount = 0;
+-    gNdsRendererProfileStageWorldPersistentHitCount = 0;
+-    gNdsRendererProfileStageWorldPersistentMissCount = 0;
+-    gNdsRendererProfileStageWorldPersistentRejectCount = 0;
+-    gNdsRendererProfileStageWorldPersistentOverflowCount = 0;
+-    gNdsRendererProfileStageWorldPersistentOracleSampleCount = 0;
+-    gNdsRendererProfileStageWorldPersistentOracleMismatchCount = 0;
+     gNdsRendererProfileAffineMatrixSamples = 0;
+     gNdsRendererProfileAffineMatrixMismatches = 0;
+     gNdsRendererProfileAffineMatrixMaxDelta = 0;
+--- /dev/null
++++ b/scripts/stages/test_stage_world_pass.py
+@@ -0,0 +1,120 @@
++"""Execute the production preorder world pass against independent parent chains."""
++from pathlib import Path
++import shutil
++import subprocess
++import sys
++
++ROOT = Path(__file__).resolve().parents[2]
++sys.path.insert(0, str(ROOT / 'scripts/menus'))
++from source_test_helpers import function
++
++
++def test_preorder_worlds_match_chains_and_reject_bad_topology(tmp_path):
++    source = (ROOT / 'src/port/renderer_adapter_stage.c').read_text()
++    body = function(source, 'ndsRendererAdapterPrepareStageWorlds')
++    program = r'''
++#include <stdint.h>
++#include <assert.h>
++#include <string.h>
++typedef uint8_t u8; typedef uint16_t u16; typedef uint32_t u32; typedef uint64_t u64;
++typedef int sb32;
++#define TRUE 1
++#define FALSE 0
++#define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 8u
++#define NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT 32u
++typedef struct { int32_t m[4][4]; } NDSRendererMatrix20p12;
++typedef struct { NDSRendererMatrix20p12 local; u32 index; } DObj;
++typedef struct { u16 parent_index; u8 depth; } NDSRendererNativeStageDObj;
++typedef struct { int unused; } CObj;
++typedef struct { int unused; } NDSRendererAdapterStageFrameCamera;
++typedef struct {
++    u32 dobj_count,binding_count;
++    DObj *dobjs[32], *binding_dobjs[32];
++    NDSRendererNativeStageDObj live_dobjs[32];
++    u64 task36_runtime_rigid_mask;
++    u64 static_world_mask;
++    NDSRendererMatrix20p12 binding_world[32];
++} NDSRendererAdapterNativeStageWorkspace;
++static u32 gNdsStageWorldFlatFrames,gNdsStageWorldFlatNodes,gNdsStageWorldFlatBindings;
++static u32 builds[32],draws[32];
++static NDSRendererMatrix20p12 outputs[32];
++static void ndsRendererAdapterMtxIdentity20p12(NDSRendererMatrix20p12 *m) {
++    memset(m,0,sizeof(*m)); for(int i=0;i<4;i++) m->m[i][i]=4096;
++}
++static int ndsRendererAdapterBuildDObjLocalMatrix(DObj *d,NDSRendererMatrix20p12 *m) {
++    builds[d->index]++; *m=d->local; return TRUE;
++}
++/* Noncommuting affine products with per-level truncation catch reordered or
++ * reassociated parent composition; the reference walks each chain separately. */
++static void ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *a,
++ const NDSRendererMatrix20p12 *b,NDSRendererMatrix20p12 *out) {
++    NDSRendererMatrix20p12 t={0};
++    for(int r=0;r<4;r++) for(int c=0;c<4;c++) {
++        int64_t v=0; for(int k=0;k<4;k++) v+=(int64_t)a->m[r][k]*b->m[k][c];
++        t.m[r][c]=(int32_t)(v>>12);
++    } *out=t;
++}
++static int ndsRendererAdapterPrepareNativeStageBindingMatrix(CObj *c,
++ NDSRendererAdapterNativeStageWorkspace *w,u32 b,NDSRendererAdapterStageFrameCamera *cam,
++ const NDSRendererMatrix20p12 *world) { draws[b]++; outputs[b]=*world; return TRUE; }
++''' + body + r'''
++int main(void) {
++    /* Two roots, siblings after deep subtrees, and two heads on one DObj. */
++    const u16 parent[]={65535,0,1,1,0,4,65535,6,7,6};
++    const u8 depth[]={0,1,2,2,1,2,0,1,2,1};
++    const u8 map[]={0,2,3,3,5,8,9};
++    DObj d[10]; NDSRendererAdapterNativeStageWorkspace w={0};
++    CObj c={0}; NDSRendererAdapterStageFrameCamera cam={0};
++    w.dobj_count=10; w.binding_count=7;
++    for(int i=0;i<10;i++) {
++        d[i].index=i; ndsRendererAdapterMtxIdentity20p12(&d[i].local);
++        d[i].local.m[0][0]+=i*31; d[i].local.m[0][1]=i*47;
++        d[i].local.m[1][0]=-i*13; d[i].local.m[3][0]=i*1003-77;
++        d[i].local.m[3][1]=i*731+17;
++        w.dobjs[i]=&d[i]; w.live_dobjs[i]=(NDSRendererNativeStageDObj){parent[i],depth[i]};
++    }
++    for(int i=0;i<7;i++) w.binding_dobjs[i]=&d[map[i]];
++    for(u32 mask=0;mask<128;mask++) {
++        w.task36_runtime_rigid_mask=mask; w.static_world_mask=mask;
++        memset(builds,0,sizeof(builds)); memset(draws,0,sizeof(draws));
++        assert(ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam));
++        u8 required[10]={0};
++        for(int b=0;b<7;b++) {
++            if(mask & (1u<<b)) { assert(draws[b]==0); continue; }
++            u16 chain[10]; u32 n=0; u16 i=map[b];
++            while(i!=65535) { chain[n++]=i; required[i]=1; i=parent[i]; }
++            NDSRendererMatrix20p12 ref; ndsRendererAdapterMtxIdentity20p12(&ref);
++            while(n) { i=chain[--n]; ndsRendererMtxMulAffine20p12(&d[i].local,&ref,&ref); }
++            assert(draws[b]==1 && memcmp(&ref,&outputs[b],sizeof(ref))==0);
++        }
++        for(int i=0;i<10;i++) assert(builds[i]==required[i]);
++        /* A live source change must be visible on the very next frame. */
++        d[1].local.m[3][0]+=333;
++    }
++    /* Static affine worlds still need camera-dependent binding preparation. */
++    w.task36_runtime_rigid_mask=0; w.static_world_mask=127;
++    for(int b=0;b<7;b++) {
++        ndsRendererAdapterMtxIdentity20p12(&w.binding_world[b]);
++        w.binding_world[b].m[3][0]=10000+b;
++    }
++    memset(builds,0,sizeof(builds)); memset(draws,0,sizeof(draws));
++    assert(ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam));
++    for(int b=0;b<7;b++) assert(draws[b]==1 && outputs[b].m[3][0]==10000+b);
++    for(int i=0;i<10;i++) assert(builds[i]==0);
++    w.static_world_mask=0;
++    w.task36_runtime_rigid_mask=0;
++    w.live_dobjs[0].depth=1; assert(!ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam)); w.live_dobjs[0].depth=0;
++    w.live_dobjs[2].parent_index=2; assert(!ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam)); w.live_dobjs[2].parent_index=1;
++    w.live_dobjs[1].depth=3; assert(!ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam)); w.live_dobjs[1].depth=1;
++    w.live_dobjs[5].parent_index=1; assert(!ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam)); w.live_dobjs[5].parent_index=4;
++    w.binding_dobjs[0]=&d[8]; assert(!ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam));
++    w.dobj_count=33; assert(!ndsRendererAdapterPrepareStageWorlds(&c,&w,&cam));
++}
++'''
++    path = tmp_path / 'world_pass.c'
++    binary = path.with_suffix('.exe')
++    path.write_text(program)
++    built = subprocess.run([shutil.which('gcc'), '-std=c11', '-O2', str(path), '-o', str(binary)], capture_output=True, text=True)
++    assert built.returncode == 0, built.stderr
++    run = subprocess.run([str(binary)], capture_output=True, text=True)
++    assert run.returncode == 0, run.stderr

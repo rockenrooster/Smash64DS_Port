@@ -2362,7 +2362,7 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     },
     {
-      "closure": "ndsRendererAdapterApplyMvpRecalc",
+      "closure": "ndsRendererAdapterMvpPerspectiveF",
       "fields": [
         {
           "access": "cobj.projection.persp.aspect",
@@ -2387,7 +2387,13 @@
         {
           "access": "cobj.projection.persp.scale",
           "classification": "live_camera_dependent"
-        },
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterMvpMod1F",
+      "fields": [
         {
           "access": "cobj.vec.at.x",
           "classification": "live_camera_dependent"
@@ -2410,6 +2416,56 @@
         },
         {
           "access": "cobj.vec.eye.z",
+          "classification": "live_camera_dependent"
+        }
+      ],
+      "path": "src/port/reloc_backend_renderer_dl.c"
+    },
+    {
+      "closure": "ndsRendererAdapterApplyMvpRecalc",
+      "fields": [
+        {
+          "access": "camera.mod1_f",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.mod1_valid",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.perspective",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.perspective_f",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.perspective_f_valid",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.aspect",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.far",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.fovy",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.near",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.norm",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.projection.persp.scale",
           "classification": "live_camera_dependent"
         },
         {
@@ -2905,6 +2961,26 @@
       "closure": "ndsRendererAdapterPrepareNativeStageBindingMatrix",
       "fields": [
         {
+          "access": "camera.modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.modelview_valid",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.projection_valid",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "camera.recalc",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "workspace.binding_composed",
           "classification": "live_camera_dependent"
         },
@@ -2922,10 +2998,6 @@
     {
       "closure": "ndsRendererAdapterPrepareNativeStageMatrices",
       "fields": [
-        {
-          "access": "workspace.binding_composed",
-          "classification": "live_camera_dependent"
-        },
         {
           "access": "workspace.binding_count",
           "classification": "immutable_generation"
@@ -2948,18 +3020,6 @@
         },
         {
           "access": "workspace.task36_runtime_rigid_mask",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "workspace.task44_binding_lists_valid",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "workspace.task44_dynamic_binding_count",
-          "classification": "live_camera_independent"
-        },
-        {
-          "access": "workspace.task44_dynamic_bindings",
           "classification": "live_camera_independent"
         }
       ],
@@ -3847,6 +3907,8 @@
         "ndsRendererAdapterBuildDObjXObjMatrix",
         "ndsRendererAdapterBuildDObjLocalMatrix",
         "ndsRendererAdapterMvpParentScaleX",
+        "ndsRendererAdapterMvpPerspectiveF",
+        "ndsRendererAdapterMvpMod1F",
         "ndsRendererAdapterApplyMvpRecalc",
         "ndsRendererAdapterPrepareNativeStageMatrices",
         "ndsRendererAdapterPrepareNativeStageBindingMatrix"

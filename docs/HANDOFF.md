@@ -20,7 +20,8 @@ finished; the checkpoint is pushed to origin/master. Root is still r54.
 **Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
 Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
 **Phase 2 ongoing:** Task36 retired; shared camera operands reach lab 19.81 FPS.
-Shipping heavy roster still fails. Next: preparation/VS stages/MISC. Receipt:
+Shipping heavy roster still fails. World-pass replacement was slower and is
+reverted; shared-camera source retained. Next: other VS stages/MISC. Receipt:
 `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).

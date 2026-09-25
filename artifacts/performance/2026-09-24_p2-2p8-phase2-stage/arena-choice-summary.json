@@ -1,0 +1,106 @@
+[
+  {
+    "label": "arena-camera-allocations",
+    "identity": [
+      {
+        "Algorithm": "SHA256",
+        "Hash": "8E6E7D8DA131FFC7807FA024AB32D22BBAACA240A5C6CFFDE165BF62FAD9F71B",
+        "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-stage-frame-camera\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+      },
+      {
+        "Algorithm": "SHA256",
+        "Hash": "197AAD0297A169D85F81DCF8E6DEE43CBD92471C018EF72B78BC91AC1AFDCF2C",
+        "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-stage-frame-camera\\smash64ds-p2-fourcpu-tickhud-hwtri.elf"
+      }
+    ],
+    "pre_arena_allocations_at_least_1024": [
+      65592,
+      3224,
+      16440,
+      16440,
+      16440,
+      16440,
+      16440,
+      16440,
+      16440,
+      65592,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080
+    ],
+    "pre_arena_sbrk_requests": [
+      136,
+      1064,
+      4096,
+      69632,
+      20480,
+      20480,
+      20480,
+      20480,
+      69632
+    ],
+    "arena": [
+      "ARENA_ENTER start=02275b50 end=023f0000 chosen=0",
+      "ARENA_READY start=02275b50 end=023f0000 chosen=1281792 failed=101 refined=3840 base=022a8000 top=19360"
+    ],
+    "limitations": "GDB stack backtraces after coroutine switches are cache-incoherent; only request sizes and settled arena values are used."
+  },
+  {
+    "label": "arena-static-allocations",
+    "identity": [
+      {
+        "Algorithm": "SHA256",
+        "Hash": "7442844501FD3D0EEFD1009CCE86FDA9A63EC2BCB05458FA6C98BE300BDAF8EA",
+        "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.nds"
+      },
+      {
+        "Algorithm": "SHA256",
+        "Hash": "2705AD35819C07FBE67928A861EEE63983A4A50E61EEA630BB1B38D48E65DB77",
+        "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\build-p2p8-s7\\smash64ds-p2-fourcpu-tickhud-hwtri.elf"
+      }
+    ],
+    "pre_arena_allocations_at_least_1024": [
+      65592,
+      3224,
+      16440,
+      16440,
+      16440,
+      16440,
+      16440,
+      16440,
+      16440,
+      65592,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080,
+      1080
+    ],
+    "pre_arena_sbrk_requests": [
+      136,
+      1512,
+      69632,
+      20480,
+      20480,
+      20480,
+      20480,
+      20480,
+      69632
+    ],
+    "arena": [
+      "ARENA_ENTER start=02275990 end=023f0000 chosen=0",
+      "ARENA_READY start=02275990 end=023f0000 chosen=1265408 failed=105 refined=3840 base=022a8000 top=19808"
+    ],
+    "limitations": "GDB stack backtraces after coroutine switches are cache-incoherent; only request sizes and settled arena values are used."
+  }
+]

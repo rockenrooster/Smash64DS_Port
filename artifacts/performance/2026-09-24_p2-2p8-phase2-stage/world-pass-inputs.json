@@ -1,0 +1,38 @@
+[
+  {
+    "path": "src/port/renderer_adapter_matrix.c",
+    "sha256": "80A57133690F354A42E74B8532AF38274578E6221DD0F3D599D044E1E75D0A29"
+  },
+  {
+    "path": "src/port/renderer_adapter_stage.c",
+    "sha256": "06DD4D19AE946AEF8E000203526FF8AB55ACDC85D2C13DA610D5516C49FF237D"
+  },
+  {
+    "path": "src/port/renderer_adapter_fighter.c",
+    "sha256": "0A390AE66F4F1B15727C6D82B44F458FF6AEEC75DEC21845364F4FC47A4DACAF"
+  },
+  {
+    "path": "scripts/stages/generate_nds_native_stage.py",
+    "sha256": "2809C2BAD532A093B55F26093C315425172CB1881D249ACF5B4CC766E42B68B1"
+  },
+  {
+    "path": "scripts/stages/test_stage_world_pass.py",
+    "sha256": "2765C93CA14CAB218F0B80451E8A0667CE25CD0168F05FAE0650740B35E8ACFC"
+  },
+  {
+    "path": "scripts/check_native_only_rom.py",
+    "sha256": "7F75202B3862C3C2EBA92871552F59158E05C5A976A2EB5B314DD6133A481186"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "sha256": "D27BB2D06D63E9875E20AA4D81E5E752902A7F86238105743D107C7D2AAE3EBA"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "721750E2C74D58637B8608E75D199551A743D31A5CDD7F1E5AD8F7B1C8627177"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nds_build_config.h",
+    "sha256": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+  }
+]

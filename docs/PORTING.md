@@ -23276,3 +23276,5 @@ Main WORK-H P95 is 2,021,027 ticks, 19.21 FPS and 10.59% two-VBlank: performance
 remains RED, as does remaining native coverage. This is IMPLEMENTED_NOT_ACCEPTED;
 scene coverage, renderer retirement, integration and owner acceptance remain due.
 Root r54 stays published. Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.
+
+2026-09-24 P2-2p8 Phase 2: rejected and reverted the preorder stage-world/cache-retirement experiment after two exact-output but slower full matches. Refined 74428445 reaches 19.65 FPS versus 19.81 control, with 7,424 B less usable heap due to early allocator placement. Preserved source diff, matched matrices/replays and allocator traces in artifacts/performance/2026-09-24_p2-2p8-phase2-stage. No new ROM published. Next: compiled coverage of other VS stages and MISC; no subagents, campaign deferred.

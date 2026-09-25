@@ -468,3 +468,85 @@ Both time-matched game captures are pixel-identical to 0A14A9F9. The lab image
 is preserved under builds/p2p8-stage-frame-camera. Shipping build/footprint and
 CSS check follow; the prior heavy-roster capacity failure remains open.
 Shared-camera shipping build passed native-only (318 inputs): B99B32FB80593D92164ED84426347B48DDC66ED20D22AE043ADFDEB34A15B1CD. Static image is 320 B smaller than 0879E550 (text -288, BSS -32). CSS reservation remains 221,136 B free with 38,064 B margin, fail=0; all three selected preview surfaces are pixel-identical to the retirement control. The shipping general heap span remains 916,992 B. The prior BB81E3B0 heavy-roster failure is retained: this camera batch changes no pre-battle allocation path, and makes no new capacity claim. Shipping artifact preserved in builds/p2p8-stage-frame-camera-shipping; root remains r54. All jobs terminal. This is scoped IMPLEMENTED_NOT_ACCEPTED progress; persistent world-cache/hierarchy work, other VS stages, MISC and global gates remain open.
+
+Next batch after 0bb6d5766bc: replace the persistent stage-world cache with a
+preorder pass over the already validated DObj table. Mark dynamic bindings and
+their ancestors, build each required world once in source parent order, and
+consume consecutive display-head bindings. Only the stage's bounded depth is
+kept on the stack; there is no permanent mirror or hash/source-key cache.
+The baked rigid-world guard remains. Other native consumers keep the prior
+64-entry frame-local allowance; the old 64 stage slots and 4,608-byte metadata
+allocation are removed. Legacy persistent-cache counters/readers are retired.
+A real-C host test compares all 128 binding masks against independent parent
+chains, exercises multi-head nodes and live changes, and rejects malformed
+parents/depths. The optional-cache reserve/alignment/scene-retry test passes at
+its new 4,352-byte size. Eight focused host checks and all GBI fixtures pass.
+Control 8E6E7D8D and its paired matrix snapshots are retained. Candidate sources
+freeze for world-pass-build; runtime matrix, output, frame cost and heap proof
+remain due. This is IMPLEMENTED_NOT_ACCEPTED, not a new capacity claim.
+World-pass build passed native-only: D27BB2D06D63E9875E20AA4D81E5E752902A7F86238105743D107C7D2AAE3EBA. Old persistent-cache definitions are absent from the ELF. Linked static image -660 B (text -520, data -8, BSS -132); allocator recovery remains to be measured. Source frozen for paired matrix capture at the existing gameplay digests; job 47950. Reuse the 8E6E7D8D frame-camera-candidate-a/b control matrices.
+World-pass paired comparison passes: every cell of all 42 composed matrices and both masks match the saved 8E6E7D8D states at both gameplay digests. Full world-pass four-CPU run 32930 is active, with frame/node/binding engagement counters. Sources remain frozen; no performance or allocation gain is yet claimed.
+
+World-pass D27BB2D0 full run completed and regressed; it is not banked. WORK-H
+P50/P95/P99 1,371,904 / 1,991,757 / 2,606,667; STG 300,160 / 302,877 /
+304,403; FTR 185,344 / 270,787 / 774,326; MISC 199,776 / 398,480 / 508,950.
+Mean-ALL 19.449 FPS; two-VBlank 256/1,973, histogram 256/1,367/300/50,
+maximum 10. All 1,972 replay and geometry-count pairs match. Engagement:
+1,973 flat frames, 80,893 worlds (41/frame), 53,271 matrix consumers;
+106,542 compiled runs, 53,271 DMAs, one load, no declines/near routes. Native
+failures remain 39. Heap 113,492 B (-7,424), arena 1,265,408 B (-16,384).
+The 8,960 B cache allocation recovery is outweighed by the arena loss. Config,
+ROM file inventory and ARM7 match the control; ARM9 static shrank 660 B, so
+the arena loss is unexplained. Preserved image: builds/p2p8-stage-world-pass-before-static.
+All jobs terminal. Refinement reuses captured affine worlds for bindings whose
+orientation still follows the camera, with the existing source-key guard.
+This avoids rebuilding authored static chains; their camera composition remains
+live. The real-C test covers both masks independently. New producer semantics
+invalidate the first candidate's timing and require a new frozen qualification.
+Static-world refinement: all eight focused host checks and full GBI/source
+fixtures pass; generated Dream Land packet remains b3833549, manifest follows
+701 consumed fields. Source frozen for world-static-build (9589). The memory
+diagnostic only reads boot/allocation state from preserved ROMs; it changes no
+reserve or arena policy and supplies no acceptance timing.
+Refinement 7442844501FD3D0EEFD1009CCE86FDA9A63EC2BCB05458FA6C98BE300BDAF8EA
+build passes (246 native link inputs), static -540 B from 8E6E7D8D. Both
+42-matrix comparisons and masks remain exact. Full world-static run 66525
+active; inputs frozen. Boot probes on the preserved control, first attempt and
+refinement locate the 16 KB arena loss before stage work: same heap ceiling
+0x023f0000, same large allocation counts/sizes, but early newlib growth differs
+by four pages. Two 65,592 B aligned requests and seven 16,440 B aligned stack
+requests occur in both images. The control uses four 20,480 B stack growths;
+the refinement uses five, while avoiding one earlier 4,096 B growth. This is
+allocator placement/fragmentation, not growth of stage cache storage. The
+current arena chooser retains the smaller result; no reserve/padding workaround
+has been applied. GDB backtraces after coroutine switches are cache-incoherent
+and are not evidence of guest corruption; raw request sizes and final arena
+counters are the usable observations.
+
+**World-pass outcome: REJECTED, production changes reverted.** The refinement
+74428445 built only 28 worlds/frame (55,244 total), but WORK-H P50/P95/P99
+1,351,680 / 1,980,259 / 2,619,994 still regresses the retained 8E6E7D8D
+control by 14,400 / 17,498 / 32,134 ticks. STG 282,240 / 284,992 / 286,611;
+FTR 185,216 / 270,269 / 770,452; MISC 199,520 / 398,157 / 508,837. Mean-ALL
+19.650 FPS; two-VBlank 289/1,973 (14.65%), histogram 289/1,360/276/48,
+max 11, slips 0. Heap/arena remain 113,492 / 1,265,408 B. All replay/count
+pairs and both matrix states match; compiled engagement/native failures remain
+unchanged. No gain or cache retirement is banked from either attempt. The
+preorder pass recomputes worlds which the persistent source-key cache already
+reuses; static-affine reuse removes some of that work but does not recover the
+control's cost. Stop refining this replacement. Next: the other eight compiled
+VS stages, then native MISC lists; cache retirement remains owed.
+
+Preserved final attempt: builds/p2p8-stage-world-static; source and host test in
+world-static-rejected.patch, based on 0bb6d5766bc. world-pass-rejected-summary.json
+owns both measurements and the retained control. Production files are restored
+to HEAD through focused patches and the consumed-field manifest through its
+generator. The restore helper first hit Windows text-encoding/BOM errors;
+explicit UTF-8 corrected them before the successful patch. All runtime jobs are
+terminal; no new shipping build or publication is justified for reverted code.
+Root remains r54. Continue serially, without campaign work or subagents.
+Restore check: runtime/source helpers match 0bb6d5766bc exactly. Regenerating
+the consumed-field manifest also exposes the prior checkpoint's unstaged
+shared-camera manifest update (691 fields); retain that producer output now.
+It is documentation of the already-qualified camera code, not a ROM change.
+The rejected patch applies cleanly against the base index; docs check passes.

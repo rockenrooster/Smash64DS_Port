@@ -828,6 +828,17 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
 - **The shipping build cannot load the heaviest four-kind roster** (A7; measured
   2026-09-23, Phase 0 log): Captain/Link/Pikachu/Kirby halts ~130 KB short.
 
+- **Phase 2 world-pass experiment (2026-09-24), REJECTED.** Replacing the
+  persistent stage-world cache with a preorder pass cost more than cache reuse.
+  Static-affine refinement still gives WORK-H P50/P95/P99 1,351,680 / 1,980,259 /
+  2,619,994 (14,400 / 17,498 / 32,134 worse than 8E6E7D8D), 19.65 FPS and
+  289/1,973 two-VBlank presents. Replay/counts and paired matrices match.
+  Removing 8,960 B of cache allocations was outweighed by a 16 KB startup
+  allocator-placement loss; usable heap -7,424 B. Both attempts and source
+  diff are preserved in the phase-2 receipt; production changes reverted.
+  Shared-camera control remains current. Next: other VS-stage compilation
+  and MISC; world-cache retirement is still owed, without another leaf retry.
+
 ## 8. Owner rulings (2026-09-22)
 
 - **D1 Contract: P95 stays.** Gate = P95 WORK <= 1,120,000 and >= 95% two-VBlank

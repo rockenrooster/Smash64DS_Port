@@ -1,0 +1,31 @@
+{
+  "base_commit": "0bb6d5766bc",
+  "source_overlay": "world-static-rejected.patch",
+  "rebuild": "Apply the preserved overlay to the base, run the stage producer, then build the recorded lab configuration. No running source depends on this rejected overlay.",
+  "files": [
+    {
+      "path": "artifacts\\performance\\2026-09-24_p2-2p8-phase2-stage\\world-static-rejected.patch",
+      "sha256": "AB9A3ADC6D122CF06348B3FE576C24B0997E23CAE25359EFE8122175BEEF5C7F"
+    },
+    {
+      "path": "builds\\p2p8-stage-world-static\\smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+      "sha256": "7442844501FD3D0EEFD1009CCE86FDA9A63EC2BCB05458FA6C98BE300BDAF8EA"
+    },
+    {
+      "path": "builds\\p2p8-stage-world-static\\.map",
+      "sha256": "6BC726144F91910D4304F5CF9DB91CD94D35648E62F6EA4B9A573A616E578D4A"
+    },
+    {
+      "path": "builds\\p2p8-stage-world-static\\dreamland.gxp",
+      "sha256": "6BAB61773CC324C89F4D5D6EFCB492827E8AE695F7D05F524CF858520C541942"
+    },
+    {
+      "path": "builds\\p2p8-stage-world-static\\nds_build_config.h",
+      "sha256": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+    },
+    {
+      "path": "builds\\p2p8-stage-world-static\\smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+      "sha256": "2705AD35819C07FBE67928A861EEE63983A4A50E61EEA630BB1B38D48E65DB77"
+    }
+  ]
+}
