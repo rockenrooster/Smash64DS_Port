@@ -1,0 +1,38 @@
+[
+  {
+    "path": "src/port/renderer_adapter_matrix.c",
+    "sha256": "EFB648BCD4DA09BDB3AD1BEE618A66B4329F419A640EEAE54626BE7DEE3912C5"
+  },
+  {
+    "path": "src/port/renderer_adapter_stage.c",
+    "sha256": "FFBD96598E26995674269181EDA9A0D7B64904E31D442C2D3C6A71C376F88B83"
+  },
+  {
+    "path": "scripts/stages/generate_nds_native_stage.py",
+    "sha256": "F62A91437EF52CA223927772261863E772C8887C3B864B63CF27E49164A8A412"
+  },
+  {
+    "path": "scripts/stages/check_nds_native_stage.py",
+    "sha256": "B6AD06DCB6FB1986C9E0E1617E1BF7E1D9A289844266112159DB4002E99FAA4F"
+  },
+  {
+    "path": "scripts/stages/test_stage_frame_camera.py",
+    "sha256": "62229C086CB89E8F69938E48F7697EBBC886368DAC1D24716E56FFC90FA19814"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "sha256": "8E6E7D8DA131FFC7807FA024AB32D22BBAACA240A5C6CFFDE165BF62FAD9F71B"
+  },
+  {
+    "path": "builds/build-p2p8-s7/smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "sha256": "197AAD0297A169D85F81DCF8E6DEE43CBD92471C018EF72B78BC91AC1AFDCF2C"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nds_build_config.h",
+    "sha256": "34E5B7D68814E046372788BCAC17B43D0BD33AAB4EEA13E2FEB38C9CC4E46D71"
+  },
+  {
+    "path": "builds/build-p2p8-s7/nitrofs/stages/dreamland.gxp",
+    "sha256": "6BAB61773CC324C89F4D5D6EFCB492827E8AE695F7D05F524CF858520C541942"
+  }
+]

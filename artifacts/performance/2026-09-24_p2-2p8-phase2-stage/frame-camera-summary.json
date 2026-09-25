@@ -1,0 +1,121 @@
+{
+  "control": {
+    "rom": "0A14A9F95D133F4B49922E148FDACD9207DEA404861DA064D330FA75A3B81C78",
+    "samples": 1972,
+    "fps": 19.412688712646162,
+    "vbi": [
+      242,
+      1386,
+      293,
+      52,
+      10,
+      1973
+    ],
+    "buckets": {
+      "WORK-H": [
+        1378016.0,
+        1990127.9999999998,
+        2612394.239999999
+      ],
+      "STG": [
+        310080.0,
+        318080.0,
+        320576.0
+      ],
+      "FTR": [
+        184416.0,
+        269564.7999999999,
+        780258.5599999999
+      ],
+      "MISC": [
+        199328.0,
+        400057.6,
+        515463.03999999963
+      ]
+    },
+    "extras": {
+      "gNdsP2StageProgDraws": 106542,
+      "gNdsP2StageProgWords": 14195735,
+      "gNdsP2StageProgLoads": 1,
+      "gNdsP2StageProgBytes": 32980,
+      "gNdsP2StageProgDeclines": 0,
+      "gNdsP2StageProgReason": 0,
+      "gNdsP2StageProgNearRuns": 0,
+      "gNdsP2StageProgDmas": 53271,
+      "gNdsRendererNativeFailure.count": 39,
+      "gNdsRendererNativeFailure.reason": 1,
+      "gNdsRendererNativeDirectReject.count": 0,
+      "gNdsTaskmanGeneralHeapFreeMin": 120916,
+      "gNdsTaskmanArenaChosenSize": 1281792,
+      "gNdsFighterPacketFaults": 0,
+      "gNdsFighterPacketDeclines": 0,
+      "gNdsR2StagePrepareBuildCount": 1,
+      "gNdsR2StagePrepareReuseCount": 1972,
+      "gNdsR2StagePreflightElideCount": 15776
+    }
+  },
+  "candidate": {
+    "rom": "8E6E7D8DA131FFC7807FA024AB32D22BBAACA240A5C6CFFDE165BF62FAD9F71B",
+    "samples": 1972,
+    "fps": 19.81086672630744,
+    "vbi": [
+      317,
+      1353,
+      255,
+      48,
+      11,
+      1973
+    ],
+    "buckets": {
+      "WORK-H": [
+        1337280.0,
+        1962761.5999999999,
+        2587859.84
+      ],
+      "STG": [
+        267520.0,
+        276224.0,
+        278418.56
+      ],
+      "FTR": [
+        185152.0,
+        270803.19999999984,
+        777661.44
+      ],
+      "MISC": [
+        197920.0,
+        398524.7999999999,
+        514865.27999999974
+      ]
+    },
+    "extras": {
+      "gNdsP2StageProgDraws": 106542,
+      "gNdsP2StageProgWords": 14195735,
+      "gNdsP2StageProgLoads": 1,
+      "gNdsP2StageProgBytes": 32980,
+      "gNdsP2StageProgDeclines": 0,
+      "gNdsP2StageProgReason": 0,
+      "gNdsP2StageProgNearRuns": 0,
+      "gNdsP2StageProgDmas": 53271,
+      "gNdsRendererNativeFailure.count": 39,
+      "gNdsRendererNativeFailure.reason": 1,
+      "gNdsRendererNativeDirectReject.count": 0,
+      "gNdsTaskmanGeneralHeapFreeMin": 120916,
+      "gNdsTaskmanArenaChosenSize": 1281792,
+      "gNdsFighterPacketFaults": 0,
+      "gNdsFighterPacketDeclines": 0,
+      "gNdsR2StagePrepareBuildCount": 1,
+      "gNdsR2StagePrepareReuseCount": 1972,
+      "gNdsR2StagePreflightElideCount": 15776
+    }
+  },
+  "geometry_counter_differences": [],
+  "static_delta_bytes": {
+    "text": -280,
+    "data": 0,
+    "bss": -32,
+    "total": -312
+  },
+  "percentiles": "linear over all samples",
+  "tick_hz": 33513982
+}

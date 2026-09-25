@@ -1,0 +1,11 @@
+{
+ "control": "artifacts/performance/2026-09-24_p2-2p8-phase2-stage/replay-retired-rows.csv",
+ "candidate": "artifacts/performance/2026-09-24_p2-2p8-phase2-stage/frame-camera-rows.csv",
+ "comparison": "sequence",
+ "controlFrames": 1972,
+ "candidateFrames": 1972,
+ "sharedFrames": 1972,
+ "zeroDigestFrames": 0,
+ "diverged": 0,
+ "firstDivergence": null
+}

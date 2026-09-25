@@ -434,3 +434,37 @@ hard-on with unchanged geometry/pixels. Remaining phase-2 work is preparation,
 other VS-stage compilation, native MISC lists and further renderer/cache removal.
 The shipping capacity failure and global 30 FPS/native-zero gates remain open.
 Root stays r54; no publication, no campaign work, no subagents.
+Next batch, after 5f7b1212097: old Task103 costs predate compiled GX and retirement. One current diagnostic partition is required to select the remaining producer-to-consumer replacement. The existing census collector now supports the four-CPU target and reads compiled submission plus live preparation counters, removing retired replay counters/reporting. Diagnostic build build-p2p8-stage-prep-census (seeded from the qualified lab) sets only NDS_TASK103_STAGE_RUN_PHASE=1; source inputs frozen, job 26709. These diagnostic timings are not acceptance FPS.
+
+Current diagnostic 1445944F completed over frames 439..499: matrix preparation
+135,635 ticks/frame, material preparation 6,203, config 4,017, renderer prepare
+6,462. No repeated state-span/PrepareRun work occurs in the warm window. Commit
+is 153,840 ticks (132,599 in the run loop); preparation totals 157,254. All 54
+compiled runs/27 DMAs per frame engage. Use this partition only, not acceptance FPS.
+
+Shared-camera candidate: stage bindings now consume one frame camera product,
+source perspective and Mod1 billboard operands. Individual world transforms and
+source multiplication order remain live. The context is stack-scoped, not a
+persistent mirror. The obsolete dynamic-binding list is removed; the rigid
+source-key guard remains. The existing generic camera function still serves
+other native effects through the same formulas. The host test executes the real
+kind48/cache branches: 24 camera states x 7 bindings match the per-draw path,
+including the collapsed eye distance, with one shared perspective/Mod1 build.
+The consumed-field policy follows the two factored camera producers; stale
+field pins were detected and corrected at the producer. Runtime matrix, image
+and timing proof is still due. The diagnostic baseline is retained separately.
+Shared-camera host suite: 32 checks passed initially and one source-token pin required updating to the factored Mod1 producer; the full Yoster suite then passed 8/8. GBI/source fixtures pass in full and the stage packet remains b3833549 (geometry unchanged). Baseline 0A14A9F9 matrix snapshots at the two preserved gameplay digests are captured as frame-camera-control-a/b. Candidate runtime sources now freeze for frame-camera-build; no comparison may borrow the candidate composed matrices as its own reference.
+Shared-camera build passed native-only: 8E6E7D8DA131FFC7807FA024AB32D22BBAACA240A5C6CFFDE165BF62FAD9F71B. Static image -312 B (-280 text, -32 BSS) against retirement control. All 42 composed matrices (672 cells), rigid mask and hidden mask are bit-identical at both recorded gameplay digests (frame-camera-matrix-pairs.json). The candidate uses the original frame multiplication order, with world transforms remaining live. Full frame-camera four-CPU timing/output run now starts; source inputs remain frozen.
+Shared-camera full run completed: all 1,972 replay/count pairs match. WORK-H
+P50/P95/P99 1,337,280 / 1,962,762 / 2,587,860; STG 267,520 / 276,224 / 278,419;
+FTR 185,152 / 270,803 / 777,661; MISC 197,920 / 398,525 / 514,865. Mean-ALL
+19.811 FPS; 317/1,973 two-VBlank presents (16.07%), histogram 317/1,353/255/48,
+max 11, slips 0. WORK-H improves 40,736 median / 27,366 P95 ticks against the
+retirement control; stage improves 42,560 median / 41,856 P95 ticks. This is
+one measured default-roster case, not an all-case gain. Engagement is unchanged:
+106,542 runs, 53,271 DMAs, one load, no declines/near routes; native failures
+remain 39 and packet/direct rejects 0. Lab heap/arena remain 120,916/1,281,792 B.
+Both time-matched game captures are pixel-identical to 0A14A9F9. The lab image
+is preserved under builds/p2p8-stage-frame-camera. Shipping build/footprint and
+CSS check follow; the prior heavy-roster capacity failure remains open.
+Shared-camera shipping build passed native-only (318 inputs): B99B32FB80593D92164ED84426347B48DDC66ED20D22AE043ADFDEB34A15B1CD. Static image is 320 B smaller than 0879E550 (text -288, BSS -32). CSS reservation remains 221,136 B free with 38,064 B margin, fail=0; all three selected preview surfaces are pixel-identical to the retirement control. The shipping general heap span remains 916,992 B. The prior BB81E3B0 heavy-roster failure is retained: this camera batch changes no pre-battle allocation path, and makes no new capacity claim. Shipping artifact preserved in builds/p2p8-stage-frame-camera-shipping; root remains r54. All jobs terminal. This is scoped IMPLEMENTED_NOT_ACCEPTED progress; persistent world-cache/hierarchy work, other VS stages, MISC and global gates remain open.

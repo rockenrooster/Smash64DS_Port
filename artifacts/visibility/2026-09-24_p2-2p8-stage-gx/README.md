@@ -49,3 +49,9 @@ margin is recorded in the performance receipt. The first CSS capture attempt
 returned desktop wallpaper through CopyFromScreen and is invalid. The shared
 running-window helper was repaired to use PrintWindow; only its valid retakes
 are included here. No visual approximation was introduced by retirement.
+
+Shared stage camera (`8E6E7D8D`): `frame-camera-t3300/adjacent.png` are
+pixel-identical to the retirement captures over both complete game surfaces
+(`frame-camera-pixels.json`). Shipping `B99B32FB` Link/Yoshi/Pikachu previews
+in `frame-camera-css-*.png` also match the prior shipping captures pixel-for-pixel;
+see `frame-camera-shipping-css.json` in the performance receipt directory.

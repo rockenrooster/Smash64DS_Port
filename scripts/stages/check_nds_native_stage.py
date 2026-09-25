@@ -782,14 +782,15 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> bool:
     predicate = generator.named_c_closure(matrix, "ndsRendererAdapterIsMvpRecalcKind")
     require("kind == nGCMatrixKind48" in predicate, "kind 48 still takes affine local scale")
     apply = re.sub(r"\s+", "", generator.named_c_closure(matrix, "ndsRendererAdapterApplyMvpRecalc"))
+    mod1 = re.sub(r"\s+", "", generator.named_c_closure(matrix, "ndsRendererAdapterMvpMod1F"))
     for expression in (
-        "syMatrixLookAtF(&zrot_f,0.0F,cobj->vec.eye.y,eye_z,0.0F,cobj->vec.at.y,0.0F,0.0F,1.0F,0.0F)",
-        "guMtxCatF(zrot_f,perspective_f,zrot_f)",
+        "syMatrixLookAtF(out,0.0F,cobj->vec.eye.y,eye_z,0.0F,cobj->vec.at.y,0.0F,0.0F,1.0F,0.0F)",
+        "guMtxCatF(*out,perspective_f,*out)",
         "recalc_scale_x=parent_scale_x*dobj->scale.vec.f.x",
         "recalc_scale_y=parent_scale_x*dobj->scale.vec.f.y",
-        "source_orientation_f[row][col]=zrot_f[row][col]*scale",
+        "source_orientation_f[row][col]=mod1_f[row][col]*scale",
     ):
-        require(expression in apply, f"kind-48 source formula changed: {expression}")
+        require(expression in apply + mod1, f"kind-48 source formula changed: {expression}")
     return True
 
 

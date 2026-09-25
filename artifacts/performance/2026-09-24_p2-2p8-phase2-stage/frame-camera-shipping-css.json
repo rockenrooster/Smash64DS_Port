@@ -1,0 +1,33 @@
+{
+  "rom": "B99B32FB80593D92164ED84426347B48DDC66ED20D22AE043ADFDEB34A15B1CD",
+  "profile": "shipping freeplay; walk=0, fast logic=0, tick HUD=0",
+  "reserve_free_bytes": 221136,
+  "required_bytes": 183072,
+  "margin_bytes": 38064,
+  "reserve_failures": 0,
+  "general_heap_span_bytes": 916992,
+  "static_delta_vs_retirement": {
+    "text": -288,
+    "data": 0,
+    "bss": -32,
+    "total": -320
+  },
+  "pixels": {
+    "link": {
+      "changed_pixels": 0,
+      "pixels": 120000,
+      "max_channel_delta": 0
+    },
+    "yoshi": {
+      "changed_pixels": 0,
+      "pixels": 120000,
+      "max_channel_delta": 0
+    },
+    "pikachu": {
+      "changed_pixels": 0,
+      "pixels": 120000,
+      "max_channel_delta": 0
+    }
+  },
+  "heavy_roster": "Prior BB81E3B0 capacity failure retained; no allocation-path change and no new capacity claim."
+}

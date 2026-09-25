@@ -799,6 +799,19 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   the older restricted-shell memory estimate. Next: remaining preparation,
   VS-stage/MISC compilation and cache retirement. Same phase-2 receipt.
 
+- **Phase 2 shared stage camera (2026-09-24), IMPLEMENTED_NOT_ACCEPTED.** A
+  current diagnostic attributed 135,635 ticks/frame to matrix preparation.
+  Stage bindings now share frame camera/billboard operands, retaining live
+  world transforms and multiplication order. Removed the obsolete dynamic
+  binding list. `8E6E7D8D`: WORK-H P50/P95/P99 1,337,280 / 1,962,762 /
+  2,587,860; STG 267,520 / 276,224 / 278,419. Mean-ALL 19.81 FPS; two-VBlank
+  317/1,973. WORK-H median/P95 improve 40,736/27,366 ticks against retirement.
+  Both 42-matrix comparisons, all 1,972 replay/count pairs and both captures
+  match. Static -312 B; lab heap/arena unchanged. Shipping `B99B32FB` static
+  -320 B and CSS margin 38,064 B; all three preview captures match. Prior heavy
+  capacity failure remains open. Next: remaining transform/preparation machinery,
+  other VS stages and MISC; no further profiling of the settled camera change.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

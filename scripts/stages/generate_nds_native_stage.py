@@ -889,8 +889,25 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterMvpPerspectiveF",
+        "tracked_bases": ("cobj",),
+        "fields": _classified(FIELD_CLASS_CAMERA,
+            "cobj.projection.persp.aspect cobj.projection.persp.far "
+            "cobj.projection.persp.fovy cobj.projection.persp.near "
+            "cobj.projection.persp.norm cobj.projection.persp.scale"),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterMvpMod1F",
+        "tracked_bases": ("cobj",),
+        "fields": _classified(FIELD_CLASS_CAMERA,
+            "cobj.vec.at.x cobj.vec.at.y cobj.vec.at.z "
+            "cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z"),
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterApplyMvpRecalc",
-        "tracked_bases": ("cobj", "dobj"),
+        "tracked_bases": ("cobj", "dobj", "camera"),
         "fields": {
             **_classified(
                 FIELD_CLASS_CAMERA,
@@ -898,9 +915,9 @@ SOURCE_CLOSURE_POLICIES = (
                 cobj.projection.persp.aspect cobj.projection.persp.far
                 cobj.projection.persp.fovy cobj.projection.persp.near
                 cobj.projection.persp.norm cobj.projection.persp.scale
-                cobj.vec.at.x cobj.vec.at.y cobj.vec.at.z
-                cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z
                 cobj.xobjs cobj.xobjs_num modelview.m
+                camera.perspective camera.perspective_f camera.mod1_f
+                camera.perspective_f_valid camera.mod1_valid
                 """,
             ),
             **_classified(
@@ -1025,14 +1042,16 @@ SOURCE_CLOSURE_POLICIES = (
         # with it; both halves stay bound here.
         "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterPrepareNativeStageBindingMatrix",
-        "tracked_bases": ("workspace",),
+        "tracked_bases": ("workspace", "camera"),
         "fields": {
             **_classified(
                 FIELD_CLASS_IMMUTABLE, "workspace.binding_dobjs"
             ),
             **_classified(
                 FIELD_CLASS_CAMERA,
-                "workspace.binding_composed workspace.projection",
+                "workspace.binding_composed workspace.projection "
+                "camera.modelview camera.modelview_valid camera.projection "
+                "camera.projection_valid camera.recalc",
             ),
         },
     },
@@ -1045,14 +1064,11 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 "workspace.binding_count workspace.binding_dobjs workspace.binding_world",
             ),
-            # R2-02 E7 hoisted camera_modelview x projection out of the dynamic
-            # binding loop, so this closure now writes binding_composed itself
-            # instead of only through PrepareNativeStageBindingMatrix. Same
-            # camera classification it carries there and in root_frame_fields.
+            # Camera operands are produced once for all bindings in this frame.
             **_classified(
                 FIELD_CLASS_CAMERA,
                 """
-                workspace.binding_composed workspace.camera_modelview
+                workspace.camera_modelview
                 workspace.projection
                 """,
             ),
@@ -1070,9 +1086,6 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_LIVE,
                 """
                 workspace.task36_runtime_rigid_mask
-                workspace.task44_binding_lists_valid
-                workspace.task44_dynamic_binding_count
-                workspace.task44_dynamic_bindings
                 """,
             ),
         },
@@ -5722,6 +5735,8 @@ def build_consumed_fields_manifest(
                     "ndsRendererAdapterBuildDObjXObjMatrix",
                     "ndsRendererAdapterBuildDObjLocalMatrix",
                     "ndsRendererAdapterMvpParentScaleX",
+                    "ndsRendererAdapterMvpPerspectiveF",
+                    "ndsRendererAdapterMvpMod1F",
                     "ndsRendererAdapterApplyMvpRecalc",
                     "ndsRendererAdapterPrepareNativeStageMatrices",
                     "ndsRendererAdapterPrepareNativeStageBindingMatrix",

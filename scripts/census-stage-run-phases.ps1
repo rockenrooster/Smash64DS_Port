@@ -5,6 +5,7 @@ param(
     [int]$GdbPort = 4621,
     [int]$RunnerSlot = -1,
     [string]$Build = 'build-task103-census',
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [switch]$NoBuild,
     [ValidateRange(1,1000000)][int]$StartFrame = 439,
     [ValidateRange(2,600)][int]$WindowFrames = 60,
@@ -12,40 +13,21 @@ param(
     [string]$JsonOut = ''
 )
 
-# Task 103. Splits the stage replay run into its three spans, to attribute the
-# ~331,300 ticks/frame that Task 99 left as "89% fixed" and Task 100 proved are
-# not pixels.
-#
-# The two live explanations separate cleanly here:
-#   push  large  -> the cost is GX FIFO stall. That is geometry-side
-#                   backpressure and is real, but it would mean Task 55 E2's
-#                   "-355 words -> +64" needs re-reading, because stall would
-#                   then scale with drain time rather than with word count.
-#   begin/tail large -> the cost is per-run scaffolding. Run count is the
-#                   currency, exactly as Task 99 §4's refined rule predicts,
-#                   and the lever is run structure.
-#
-# Measures in place. Task 99 arm C varied run count by culling 27 of 54 runs and
-# measured +109,888 because that disarms the Task 36 capture-once replay, so
-# this instrument never removes a run.
-#
-# Counting/timing build: the four cpuGetTiming reads per run perturb the ITCM
-# body of ndsRendererTask36ReplayRun, so the ROM it produces must never be used
-# for A/B timing. Read the partition, not the totals.
+# Diagnostic partition of the current stage path. Timer reads perturb the
+# image and frame cost: use these spans to choose work, never as acceptance FPS.
+# The two stops exclude scene loading and report positive compiled-GX activity.
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
 
 $counters = @(
-    'gNdsTask103BeginTicks',
-    'gNdsTask103PushTicks',
-    'gNdsTask103TailTicks',
-    'gNdsTask103RunCount',
-    'gNdsTask103WordCount',
+    'gNdsP2StageProgDraws',
+    'gNdsP2StageProgWords',
+    'gNdsP2StageProgDmas',
+    'gNdsP2StageProgDeclines',
     'gNdsTask103GenericTicks',
     'gNdsTask103GenericRunCount',
     'gNdsTask103GenericTriangles',
@@ -72,9 +54,6 @@ $counters = @(
     'gNdsTask103OwnValidateTicks',
     'gNdsTask103OwnInitTicks',
     'gNdsTask103OwnInitCount',
-    'gNdsTask103OwnReuseTicks',
-    'gNdsTask103OwnReuseCount',
-    'gNdsTask103OwnReuseMissCount',
     'gNdsTask103OwnStateSpanTicks',
     'gNdsTask103OwnStateSpanCount',
     'gNdsTask103OwnPrepareRunTicks',
@@ -206,167 +185,22 @@ try {
         $delta[$c] = [int64]$samples['B'][$c] - [int64]$samples['A'][$c]
     }
 
-    $runs = [double]$delta['gNdsTask103RunCount']
-    if ($runs -le 0) {
-        throw 'Stage-run census recorded no replay runs; the replay path did not execute.'
+    if ($delta['gNdsP2StageProgDraws'] -le 0 -or
+        $delta['gNdsP2StageProgDmas'] -le 0 -or
+        $delta['gNdsP2StageProgDeclines'] -ne 0) {
+        throw 'Compiled stage did not submit cleanly in the diagnostic window.'
     }
-    $begin = [double]$delta['gNdsTask103BeginTicks']
-    $push = [double]$delta['gNdsTask103PushTicks']
-    $tail = [double]$delta['gNdsTask103TailTicks']
-    $words = [double]$delta['gNdsTask103WordCount']
-    $total = $begin + $push + $tail
-
-    Write-Host ""
-    Write-Host ("Task 103 -- stage replay run partition over $frames presented frames")
-    Write-Host ("(frames {0} .. {1})" -f $samples['A'].frame, $samples['B'].frame)
-    Write-Host ""
-    Write-Host ("runs        {0,10:N1} / frame" -f ($runs / $frames))
-    Write-Host ("words       {0,10:N1} / frame   ({1:N1} per run)" -f `
-        ($words / $frames), ($words / $runs))
-    Write-Host ""
-    Write-Host ("span            ticks/frame   ticks/run     share")
-    Write-Host ("begin-run     {0,12:N0} {1,11:N0} {2,9:P1}" -f `
-        ($begin / $frames), ($begin / $runs), ($begin / $total))
-    Write-Host ("word push     {0,12:N0} {1,11:N0} {2,9:P1}" -f `
-        ($push / $frames), ($push / $runs), ($push / $total))
-    Write-Host ("tail+endbatch {0,12:N0} {1,11:N0} {2,9:P1}" -f `
-        ($tail / $frames), ($tail / $runs), ($tail / $total))
-    Write-Host ("TOTAL         {0,12:N0} {1,11:N0}" -f `
-        ($total / $frames), ($total / $runs))
-    Write-Host ""
-    if ($words -gt 0) {
-        Write-Host ("push cost per GX word   {0:N2} ticks" -f ($push / $words))
+    $perFrame = [ordered]@{}
+    Write-Host "Stage diagnostic: $frames frames, $($samples['A'].frame)..$($samples['B'].frame)"
+    foreach ($c in $counters) {
+        $perFrame[$c] = [double]$delta[$c] / $frames
+        Write-Host ('{0,-38} {1,12:N1} / frame' -f $c, $perFrame[$c])
     }
-
-    $generic = [double]$delta['gNdsTask103GenericTicks']
-    $genericRuns = [double]$delta['gNdsTask103GenericRunCount']
-    $genericTris = [double]$delta['gNdsTask103GenericTriangles']
-    $iter = [double]$delta['gNdsTask103IterTicks']
-    $iterCount = [double]$delta['gNdsTask103IterCount']
-
-    Write-Host ""
-    Write-Host ("the other branch of the same loop")
-    Write-Host ("generic runs  {0,10:N1} / frame" -f ($genericRuns / $frames))
-    if ($genericRuns -gt 0) {
-        Write-Host ("generic tris  {0,10:N1} / frame   ({1:N1} per run)" -f `
-            ($genericTris / $frames), ($genericTris / $genericRuns))
-        Write-Host ("generic emit  {0,10:N0} ticks/frame  ({1:N0} per run, {2:N0} per triangle)" -f `
-            ($generic / $frames), ($generic / $genericRuns),
-            ($(if ($genericTris -gt 0) { $generic / $genericTris } else { 0 })))
-    }
-    Write-Host ""
-    Write-Host ("whole run-loop body")
-    Write-Host ("iterations    {0,10:N1} / frame" -f ($iterCount / $frames))
-    Write-Host ("loop total    {0,10:N0} ticks/frame" -f ($iter / $frames))
-    Write-Host ("  replay {0:N0} + generic {1:N0} = {2:N0}; loop overhead {3:N0}" -f `
-        ($total / $frames), ($generic / $frames),
-        (($total + $generic) / $frames), (($iter - $total - $generic) / $frames))
-    Write-Host ""
-    $commit = [double]$delta['gNdsTask103CommitTicks']
-    $commits = [double]$delta['gNdsTask103CommitCount']
-    $material = [double]$delta['gNdsTask103MaterialTicks']
-    if ($commits -gt 0) {
-        Write-Host ("segment commit")
-        Write-Host ("commits       {0,10:N1} / frame" -f ($commits / $frames))
-        Write-Host ("material prep {0,10:N0} ticks/frame  ({1:N0} per commit)" -f `
-            ($material / $frames), ($material / $commits))
-        Write-Host ("commit total  {0,10:N0} ticks/frame  ({1:N0} per commit)" -f `
-            ($commit / $frames), ($commit / $commits))
-        Write-Host ("  of which run loop {0:N0}; per-segment scaffolding {1:N0}" -f `
-            ($iter / $frames), (($commit - $iter) / $frames))
-        Write-Host ""
-    }
-    $prep = [double]$delta['gNdsTask103PrepareTicks']
-    $trav = [double]$delta['gNdsTask103TraversalTicks']
-    $disp = [double]$delta['gNdsTask103DisplayTicks']
-    $fin = [double]$delta['gNdsTask103FinishTicks']
-    $stgSum = $prep + $trav + $disp + $fin
-    if ($stgSum -gt 0) {
-        Write-Host ("the whole STG bucket, by accumulation site (no added timer reads)")
-        Write-Host ("site              ticks/frame     calls/frame   share")
-        Write-Host ("prepare owner   {0,12:N0} {1,13:N1} {2,8:P1}" -f `
-            ($prep / $frames), ($delta['gNdsTask103PrepareCount'] / $frames), ($prep / $stgSum))
-        Write-Host ("dobj traversal  {0,12:N0} {1,13:N1} {2,8:P1}" -f `
-            ($trav / $frames), ($delta['gNdsTask103TraversalCount'] / $frames), ($trav / $stgSum))
-        Write-Host ("display commit  {0,12:N0} {1,13:N1} {2,8:P1}" -f `
-            ($disp / $frames), ($delta['gNdsTask103DisplayCount'] / $frames), ($disp / $stgSum))
-        Write-Host ("finish owner    {0,12:N0} {1,13:N1} {2,8:P1}" -f `
-            ($fin / $frames), ($delta['gNdsTask103FinishCount'] / $frames), ($fin / $stgSum))
-        Write-Host ("SUM             {0,12:N0}" -f ($stgSum / $frames))
-        Write-Host ""
-        Write-Host ("The four sites are the only writers of gNdsTickHudStageTicks, so")
-        Write-Host ("SUM should equal the STG bucket. If it exceeds STG the spans nest")
-        Write-Host ("and the bucket double-counts; compare against the ring dump.")
-        Write-Host ""
-    }
-    $prepCalls = [double]$delta['gNdsTask103PrepCalls']
-    if ($prepCalls -gt 0) {
-        $steps = [ordered]@{
-            'admit / revalidate' = [double]$delta['gNdsTask103PrepAdmitTicks']
-            'validate task36 world' = [double]$delta['gNdsTask103PrepValidateTicks']
-            'prepare matrices' = [double]$delta['gNdsTask103PrepMatrixTicks']
-            'prepare materials' = [double]$delta['gNdsTask103PrepMaterialTicks']
-            'config / frame setup' = [double]$delta['gNdsTask103PrepConfigTicks']
-            'renderer prepare owner' = [double]$delta['gNdsTask103PrepOwnerTicks']
-        }
-        $prepSum = ($steps.Values | Measure-Object -Sum).Sum
-        Write-Host ("inside prepare owner ({0:N1} calls/frame)" -f ($prepCalls / $frames))
-        Write-Host ("step                       ticks/frame     share")
-        foreach ($k in $steps.Keys) {
-            Write-Host ("{0,-24} {1,12:N0} {2,9:P1}" -f `
-                $k, ($steps[$k] / $frames), ($steps[$k] / $prepSum))
-        }
-        Write-Host ("{0,-24} {1,12:N0}" -f 'SUM', ($prepSum / $frames))
-        Write-Host ""
-    }
-    $own = [double]$delta['gNdsTask103PrepOwnerTicks']
-    if ($own -gt 0) {
-        $ownSteps = [ordered]@{
-            'validate topology' = @([double]$delta['gNdsTask103OwnValidateTicks'], 1)
-            'init stats+traversal' = @([double]$delta['gNdsTask103OwnInitTicks'], [double]$delta['gNdsTask103OwnInitCount'])
-            'task36 reuse check' = @([double]$delta['gNdsTask103OwnReuseTicks'], [double]$delta['gNdsTask103OwnReuseCount'])
-            'apply state span' = @([double]$delta['gNdsTask103OwnStateSpanTicks'], [double]$delta['gNdsTask103OwnStateSpanCount'])
-            'prepare run' = @([double]$delta['gNdsTask103OwnPrepareRunTicks'], [double]$delta['gNdsTask103OwnPrepareRunCount'])
-        }
-        $ownSum = 0.0
-        foreach ($v in $ownSteps.Values) { $ownSum += $v[0] }
-        Write-Host ("inside ndsRendererPrepareNativeStageOwner")
-        Write-Host ("step                       ticks/frame   calls/frame    per call     share")
-        foreach ($k in $ownSteps.Keys) {
-            $t = $ownSteps[$k][0]; $c = $ownSteps[$k][1]
-            Write-Host ("{0,-24} {1,12:N0} {2,13:N1} {3,11:N0} {4,9:P1}" -f `
-                $k, ($t / $frames), ($c / $frames),
-                ($(if ($c -gt 0) { $t / $c } else { 0 })), ($t / $own))
-        }
-        Write-Host ("{0,-24} {1,12:N0}  (span total {2:N0}, unattributed {3:N0})" -f `
-            'SUM', ($ownSum / $frames), ($own / $frames), (($own - $ownSum) / $frames))
-        Write-Host ("task36 reuse: {0:N1} hits, {1:N1} misses per frame" -f `
-            ($delta['gNdsTask103OwnReuseCount'] / $frames),
-            ($delta['gNdsTask103OwnReuseMissCount'] / $frames))
-        Write-Host ""
-    }
-    $runHead = [double]$delta['gNdsTask103RunHeadTicks']
-    $runDense = [double]$delta['gNdsTask103RunDenseTicks']
-    $denseN = [double]$delta['gNdsTask103RunDenseCount']
-    $nearN = [double]$delta['gNdsTask103RunNearCount']
-    if (($runHead + $runDense) -gt 0) {
-        Write-Host ("inside ndsRendererNativeStagePrepareRun")
-        Write-Host ("head (policy/memset/texture) {0,10:N0} ticks/frame" -f ($runHead / $frames))
-        Write-Host ("dense vertex loop            {0,10:N0} ticks/frame" -f ($runDense / $frames))
-        Write-Host ("dense vertices               {0,10:N1} /frame  ({1:N0} ticks each)" -f `
-            ($denseN / $frames), ($(if ($denseN -gt 0) { $runDense / $denseN } else { 0 })))
-        Write-Host ("  of which near-transformed  {0,10:N1} /frame  ({1:P1} of dense)" -f `
-            ($nearN / $frames), ($(if ($denseN -gt 0) { $nearN / $denseN } else { 0 })))
-        Write-Host ("  colour+texcoord only       {0,10:N1} /frame  <- memo candidate" -f `
-            (($denseN - $nearN) / $frames))
-        Write-Host ""
-    }
-    Write-Host ("Instrument overhead: E3 adds no timer reads; E0-E2/E4-E6 add a few per call.")
-    Write-Host ""
+    Write-Host 'Diagnostic spans include timer overhead; not performance acceptance.'
 
     if ($JsonOut) {
         $payload = [ordered]@{
-            task = 'Task 103 - stage replay run phase partition'
+            task = 'Stage preparation and compiled submission diagnostic'
             target = $target
             rom = $rom
             romSha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $rom).Hash
@@ -377,18 +211,7 @@ try {
             sampleA = $samples['A']
             sampleB = $samples['B']
             delta = $delta
-            perFrame = [ordered]@{
-                runs = $runs / $frames
-                words = $words / $frames
-                beginTicks = $begin / $frames
-                pushTicks = $push / $frames
-                tailTicks = $tail / $frames
-            }
-            perRun = [ordered]@{
-                beginTicks = $begin / $runs
-                pushTicks = $push / $runs
-                tailTicks = $tail / $runs
-            }
+            perFrame = $perFrame
         }
         $jsonPath = if ([System.IO.Path]::IsPathRooted($JsonOut)) { $JsonOut }
                     else { Join-Path $root $JsonOut }

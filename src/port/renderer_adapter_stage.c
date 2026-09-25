@@ -3087,10 +3087,56 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
     return TRUE;
 }
 
+#if NDS_TASK36_HW_COMPOSE
+typedef struct NDSRendererAdapterStageFrameCamera
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u32 projection_valid;
+    u32 modelview_valid;
+    NDSRendererAdapterMvpCamera recalc;
+} NDSRendererAdapterStageFrameCamera;
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
-    u32 binding_index)
+    u32 binding_index
+#if NDS_TASK36_HW_COMPOSE
+    , NDSRendererAdapterStageFrameCamera *camera
+#endif
+    )
 {
+#if NDS_TASK36_HW_COMPOSE
+    DObj *dobj = workspace->binding_dobjs[binding_index];
+    NDSRendererMatrix20p12 world;
+    NDSRendererMatrix20p12 *out = &workspace->binding_composed[binding_index];
+    const NDSRendererMatrix20p12 *projection_ptr = NULL;
+    const NDSRendererMatrix20p12 *modelview_ptr = out;
+    u32 kind = ndsRendererAdapterDirectMvpRecalcKind(dobj);
+
+    if (kind != 0u) { sNdsRendererAdapterMvpRecalcScaleX = 1.0F; }
+    if (!ndsRendererAdapterBuildPersistentStageWorldMatrix(dobj, &world, FALSE))
+    { return FALSE; }
+    /* Preserve the source multiplication order when a camera owns both parts.
+     * Battle cameras normally supply LookAt*Persp in projection alone. */
+    if (camera->modelview_valid != FALSE)
+    {
+        ndsRendererMtxMul20p12(&world, &camera->modelview, out);
+        if (camera->projection_valid != FALSE)
+        { ndsRendererMtxMul20p12(out, &camera->projection, out); }
+    }
+    else if (camera->projection_valid != FALSE)
+    { ndsRendererMtxMul20p12(&world, &camera->projection, out); }
+    else { *out = world; }
+    if (kind != 0u)
+    {
+        ndsRendererAdapterApplyMvpRecalc(dobj, kind, cobj,
+            &workspace->projection, &projection_ptr, out, &modelview_ptr,
+            &camera->recalc);
+        if ((modelview_ptr == NULL) || (projection_ptr != NULL)) { return FALSE; }
+    }
+    return TRUE;
+#else
     NDSRendererMatrix20p12 projection;
     NDSRendererMatrix20p12 modelview;
     const NDSRendererMatrix20p12 *projection_ptr;
@@ -3130,6 +3176,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
         ndsRendererMatrixCopy20p12(&workspace->projection, projection_ptr);
     }
     return TRUE;
+#endif
 }
 
 static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
@@ -3138,6 +3185,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     u32 binding_index;
 
 #if NDS_TASK36_HW_COMPOSE
+    NDSRendererAdapterStageFrameCamera camera;
     {
         if (ndsRendererAdapterBuildTask36StageCameraMatrices(
                 cobj, &workspace->projection,
@@ -3149,6 +3197,12 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             return FALSE;
         }
     }
+    camera.recalc.perspective = &workspace->projection;
+    camera.recalc.perspective_f_valid = FALSE;
+    camera.recalc.mod1_valid = FALSE;
+    ndsRendererAdapterGetFrameCameraMatrices(cobj,
+        &camera.projection, &camera.projection_valid,
+        &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     gNdsRendererTask36ObservedDynamicMaskLo = 0u;
     gNdsRendererTask36ObservedDynamicMaskHi = 0u;
@@ -3184,95 +3238,6 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
 #endif
 #endif
 
-#if NDS_TASK36_HW_COMPOSE && NDS_TASK44_STAGE_STEADY
-    /* Task 44 item 4: steady state composes exactly the 16 dynamic bindings.
-     * The dense list is trusted only while the runtime rigid mask still equals
-     * the captured one — a rigid-constancy fallback drops the mask to 0, which
-     * makes every binding dynamic and must take the full scan. */
-    if ((workspace->task44_binding_lists_valid != FALSE) &&
-        (workspace->task36_runtime_rigid_mask ==
-         ndsRendererNativeStageRigidBindingMask()))
-    {
-        u32 dynamic_slot;
-#if NDS_R2_STAGE_VIEWPROJ
-        /* R2-02 E7. Composing the 16 dynamic bindings the long way cost 54,901
-         * ticks/frame, 44.6% of the stage preflight, and almost none of it was
-         * arithmetic. Per binding the old path ran the camera cache lookup and
-         * three 64-byte matrix copies -- and MTXCOPY is a `bl memcpy` here, see
-         * the Task 86 note on NDSRendererMatrix20p12 -- to rebuild operands
-         * that are identical for all 16.
-         *
-         * This is exact, not an approximation. For the battle camera
-         * ndsRendererAdapterBuildCameraMatrices leaves modelview_valid FALSE
-         * and returns projection = MtxMul(lookat, persp), so the old compose
-         * was world x (lookat x persp) with the modelview a plain copy of the
-         * world -- one multiply, never two.
-         * ndsRendererAdapterBuildTask36StageCameraMatrices derives
-         * camera_modelview and projection from the same syMatrixLookAtReflect
-         * and syMatrixPerspFast calls on the same CObj, so view_projection
-         * reproduces that product bit-for-bit rather than reassociating it.
-         * Verified against the pre-E7 arm: binding_composed[] identical across
-         * all 42 bindings at frames 260/420/500/700/1100/1700, spanning the
-         * camera's full range of motion. No fidelity budget is spent. */
-        NDSRendererMatrix20p12 view_projection;
-
-        ndsRendererMtxMul20p12(&workspace->camera_modelview,
-                               &workspace->projection, &view_projection);
-        for (dynamic_slot = 0u;
-             dynamic_slot < workspace->task44_dynamic_binding_count;
-             dynamic_slot++)
-        {
-            u32 vp_binding = workspace->task44_dynamic_bindings[dynamic_slot];
-            DObj *vp_dobj = workspace->binding_dobjs[vp_binding];
-            NDSRendererMatrix20p12 vp_world;
-
-            /* An mvp-recalc (0x47 or the kind-44 billboard) rewrites the pair
-             * after composition, so those bindings keep the exact original
-             * path. */
-            if ((vp_dobj == NULL) ||
-                (ndsRendererAdapterDirectMvpRecalcKind(vp_dobj) != 0u) ||
-                /* BUGS.md row 1, 2026-08-13. These are the stage's DYNAMIC
-                 * bindings, and several of them are animated (Whispy eyes and
-                 * mouth plus the flower actors). Slice 44 used to pass
-                 * allow_stale=TRUE on seven of eight frames, before the source
-                 * key was even checked. The source DObj therefore advanced at
-                 * 30 Hz while its cached world matrix could remain frozen for
-                 * eight presented frames. FALSE does not force a rebuild: the
-                 * persistent cache still reuses an unchanged source key and
-                 * parent generation. It only forbids blind stale reuse. Keep
-                 * the stride on the separately-proven rigid-binding guard, not
-                 * on dynamic world transforms. */
-                (ndsRendererAdapterBuildPersistentStageWorldMatrix(
-                     vp_dobj, &vp_world, FALSE) == FALSE))
-            {
-                if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
-                        cobj, workspace, vp_binding) == FALSE)
-                {
-                    return FALSE;
-                }
-                continue;
-            }
-            ndsRendererMtxMul20p12(&vp_world, &view_projection,
-                                   &workspace->binding_composed[vp_binding]);
-        }
-        return TRUE;
-#else
-
-        for (dynamic_slot = 0u;
-             dynamic_slot < workspace->task44_dynamic_binding_count;
-             dynamic_slot++)
-        {
-            if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
-                    cobj, workspace,
-                    workspace->task44_dynamic_bindings[dynamic_slot]) == FALSE)
-            {
-                return FALSE;
-            }
-        }
-        return TRUE;
-#endif
-    }
-#endif
     for (binding_index = 0u;
          binding_index < workspace->binding_count;
          binding_index++)
@@ -3285,7 +3250,11 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
         }
 #endif
         if (ndsRendererAdapterPrepareNativeStageBindingMatrix(
-                cobj, workspace, binding_index) == FALSE)
+                cobj, workspace, binding_index
+#if NDS_TASK36_HW_COMPOSE
+                , &camera
+#endif
+                ) == FALSE)
         {
             return FALSE;
         }
@@ -3328,7 +3297,6 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
         rigid_mask;
 #if NDS_TASK44_STAGE_STEADY
     workspace->task44_rigid_binding_count = 0u;
-    workspace->task44_dynamic_binding_count = 0u;
     for (binding_index = 0u;
          binding_index < workspace->binding_count;
          binding_index++)
@@ -3338,11 +3306,6 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
         {
             workspace->task44_rigid_bindings[
                 workspace->task44_rigid_binding_count++] = (u8)binding_index;
-        }
-        else
-        {
-            workspace->task44_dynamic_bindings[
-                workspace->task44_dynamic_binding_count++] = (u8)binding_index;
         }
     }
     workspace->task44_binding_lists_valid = TRUE;

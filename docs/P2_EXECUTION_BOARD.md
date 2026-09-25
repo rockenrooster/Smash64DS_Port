@@ -58,12 +58,13 @@ performance; 1P later, pre-stage intros static images. Live-Intro edits reverted
 Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
 **Next**: replace remaining stage preparation; extend compiled VS stages/MISC
 and retire their caches. Task36 retirement is qualified only for the scoped run.
-Owed: remaining stage/MISC output/timing, coverage, cache retirement, integration.
+Owed: stage/MISC work, coverage, cache retirement and integration.
 Checked: all 202 Dream Land triangles; owner approves the shown view.
-Retirement replay/counts/pixels match; lab 19.41 FPS, heap +32 KB; gates RED.
-Retired ROM `0A14A9F95D133F4B`: -35,652 B static; stage/26 host/GBI checks pass.
+Replay/counts/pixels match; camera batch lab 19.81 FPS, heap 120,916 B; RED.
+Retirement control `0A14A9F9` is preserved; receipt owns prior measurements.
 Shipping CSS free 221,136 B; heavy roster halts on Link with 4,222 B free.
-All jobs terminal. Global gates RED; retirement IMPLEMENTED_NOT_ACCEPTED.
+Matrix prep was 135,635 ticks/frame; shared camera operands implemented.
+Camera `8E6E7D8D` / shipping `B99B32FB` qualified for scoped checks; jobs done.
 Serial only (**no subagents**); owner edits preserved.
 A7 compaction on (+68 KB lab); MF codec unlinked.
 Shipping arena 916,992 B; lab 1,281,792 B. Heavy-roster deficit still unsized.

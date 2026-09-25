@@ -1743,14 +1743,10 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     u64 task36_runtime_rigid_mask;
 #if NDS_TASK44_STAGE_STEADY
-    /* Task 44 item 4: the rigid/dynamic partition of the 42 bindings is fixed
-     * for one topology, so build it once at stage capture. Steady-state matrix
-     * preparation and rigid validation then walk their own dense list instead
-     * of scanning all 42 and re-testing the 64-bit mask per entry. */
+    /* Static bindings need only the source-key guard; frame matrix preparation
+     * consumes the current mask directly. */
     u8 task44_rigid_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
-    u8 task44_dynamic_bindings[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     u8 task44_rigid_binding_count;
-    u8 task44_dynamic_binding_count;
     u8 task44_binding_lists_valid;
 #if NDS_R2_STAGE_VALIDATE_STRIDE
     /* Slice 44. Which residue class of the stride is revalidated this frame.
@@ -3970,6 +3966,44 @@ static sb32 ndsRendererAdapterMvpParentScaleX(DObj *dobj, f32 *out)
     return TRUE;
 }
 
+/* One camera's source-derived billboard operands, scoped to a stage frame.
+ * Geometry bindings share these values; no persistent source-state mirror. */
+typedef struct NDSRendererAdapterMvpCamera
+{
+    const NDSRendererMatrix20p12 *perspective;
+    Mtx44f perspective_f;
+    Mtx44f mod1_f;
+    u32 perspective_f_valid;
+    u32 mod1_valid;
+} NDSRendererAdapterMvpCamera;
+
+static void ndsRendererAdapterMvpPerspectiveF(
+    CObj *cobj, Mtx44f out)
+{
+    u16 norm = cobj->projection.persp.norm;
+    syMatrixPerspFastF(out, &norm, cobj->projection.persp.fovy,
+        cobj->projection.persp.aspect, cobj->projection.persp.near,
+        cobj->projection.persp.far, cobj->projection.persp.scale);
+}
+
+static void ndsRendererAdapterMvpMod1F(
+    CObj *cobj, Mtx44f perspective_f, Mtx44f *out)
+{
+    f32 dx = cobj->vec.at.x - cobj->vec.eye.x;
+    f32 dz = cobj->vec.at.z - cobj->vec.eye.z;
+    f32 eye_z = sqrtf((dz * dz) + (dx * dx));
+    if (eye_z < 0.0001F)
+    {
+        syMatrixScaF(out, 0.0F, 0.0F, 0.0F);
+    }
+    else
+    {
+        syMatrixLookAtF(out, 0.0F, cobj->vec.eye.y, eye_z,
+                       0.0F, cobj->vec.at.y, 0.0F, 0.0F, 1.0F, 0.0F);
+        guMtxCatF(*out, perspective_f, *out);
+    }
+}
+
 static void ndsRendererAdapterApplyMvpRecalc(
     DObj *dobj,
     u32 kind,
@@ -3977,14 +4011,17 @@ static void ndsRendererAdapterApplyMvpRecalc(
     NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 **projection_ptr,
     NDSRendererMatrix20p12 *modelview,
-    const NDSRendererMatrix20p12 **modelview_ptr)
+    const NDSRendererMatrix20p12 **modelview_ptr,
+    NDSRendererAdapterMvpCamera *camera)
 {
     Mtx rotation_mtx;
-    Mtx44f perspective_f;
+    Mtx44f local_perspective_f;
+    f32 (*perspective_f)[4] = local_perspective_f;
     Mtx44f zrot_f;
     Mtx44f source_orientation_f;
     NDSRendererMatrix20p12 rotation;
-    NDSRendererMatrix20p12 perspective;
+    NDSRendererMatrix20p12 local_perspective;
+    const NDSRendererMatrix20p12 *perspective = &local_perspective;
     NDSRendererMatrix20p12 source_orientation;
     NDSRendererMatrix20p12 composed;
     s32 translate[4];
@@ -4064,13 +4101,38 @@ static void ndsRendererAdapterApplyMvpRecalc(
      * contains LookAt * Persp, so seed the renderer with the completed MVP to
      * avoid applying LookAt a second time to the rewritten orientation. */
     perspective_norm = cobj->projection.persp.norm;
-    ndsRendererAdapterCameraPerspFast(&perspective,
+    if (camera != NULL)
+    {
+        perspective = camera->perspective;
+    }
+    else
+    {
+        ndsRendererAdapterCameraPerspFast(&local_perspective,
                                       &perspective_norm,
                                       cobj->projection.persp.fovy,
                                       cobj->projection.persp.aspect,
                                       cobj->projection.persp.near,
                                       cobj->projection.persp.far,
                                       cobj->projection.persp.scale);
+    }
+    if ((kind == nGCMatrixKind48) || (kind == nGCMatrixKind46) ||
+        (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND) ||
+        (kind == NDS_RENDERER_ADAPTER_EF_GROUND_BILLBOARD_KIND))
+    {
+        if (camera != NULL)
+        {
+            if (camera->perspective_f_valid == FALSE)
+            {
+                ndsRendererAdapterMvpPerspectiveF(cobj, camera->perspective_f);
+                camera->perspective_f_valid = TRUE;
+            }
+            perspective_f = camera->perspective_f;
+        }
+        else
+        {
+            ndsRendererAdapterMvpPerspectiveF(cobj, local_perspective_f);
+        }
+    }
     if (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND)
     {
         NDSRendererMatrix20p12 scale;
@@ -4106,15 +4168,13 @@ static void ndsRendererAdapterApplyMvpRecalc(
         scale.m[0][0] = scale_x;
         scale.m[1][1] = scale_y;
         scale.m[2][2] = scale_x;
-        ndsRendererMtxMul20p12(&scale, &perspective, &source_orientation);
+        ndsRendererMtxMul20p12(&scale, perspective, &source_orientation);
         gNdsRendererAdapterMvpRecalcPerspScaCount++;
     }
     else if (kind == nGCMatrixKind48)
     {
         f32 parent_scale_x;
-        f32 dx = cobj->vec.at.x - cobj->vec.eye.x;
-        f32 dz = cobj->vec.at.z - cobj->vec.eye.z;
-        f32 eye_z = sqrtf((dz * dz) + (dx * dx));
+        f32 (*mod1_f)[4] = zrot_f;
 
         if (ndsRendererAdapterMvpParentScaleX(dobj, &parent_scale_x) == FALSE)
         {
@@ -4126,21 +4186,18 @@ static void ndsRendererAdapterApplyMvpRecalc(
         /* gmCameraDefaultProcDisplay selects camera matrix mode 3. Its Mod1
          * removes yaw, preserves the vertical eye/target relation, and then
          * multiplies by perspective (objdisplay.c:3094-3118). */
-        syMatrixPerspFastF(perspective_f, &perspective_norm,
-                           cobj->projection.persp.fovy,
-                           cobj->projection.persp.aspect,
-                           cobj->projection.persp.near,
-                           cobj->projection.persp.far,
-                           cobj->projection.persp.scale);
-        if (eye_z < 0.0001F)
+        if (camera != NULL)
         {
-            syMatrixScaF(&zrot_f, 0.0F, 0.0F, 0.0F);
+            if (camera->mod1_valid == FALSE)
+            {
+                ndsRendererAdapterMvpMod1F(cobj, perspective_f, &camera->mod1_f);
+                camera->mod1_valid = TRUE;
+            }
+            mod1_f = camera->mod1_f;
         }
         else
         {
-            syMatrixLookAtF(&zrot_f, 0.0F, cobj->vec.eye.y, eye_z,
-                            0.0F, cobj->vec.at.y, 0.0F, 0.0F, 1.0F, 0.0F);
-            guMtxCatF(zrot_f, perspective_f, zrot_f);
+            ndsRendererAdapterMvpMod1F(cobj, perspective_f, &zrot_f);
         }
         recalc_scale_x = parent_scale_x * dobj->scale.vec.f.x;
         recalc_scale_y = parent_scale_x * dobj->scale.vec.f.y;
@@ -4151,7 +4208,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
             f32 scale = (row == 1u) ? recalc_scale_y : recalc_scale_x;
             for (col = 0u; col < 4u; col++)
             {
-                source_orientation_f[row][col] = zrot_f[row][col] * scale;
+                source_orientation_f[row][col] = mod1_f[row][col] * scale;
             }
         }
         syMatrixF2L(&source_orientation_f, &rotation_mtx);
@@ -4170,12 +4227,6 @@ static void ndsRendererAdapterApplyMvpRecalc(
          * The built-in kind also carries the source's odd gGCScaleX contract:
          * X and Z use prior_scale_x * scale.x, Y uses prior_scale_x * scale.y.
          * Custom 0x46 is the unscaled Z-only version used by Samus Bomb. */
-        syMatrixPerspFastF(perspective_f, &perspective_norm,
-                           cobj->projection.persp.fovy,
-                           cobj->projection.persp.aspect,
-                           cobj->projection.persp.near,
-                           cobj->projection.persp.far,
-                           cobj->projection.persp.scale);
         syMatrixRotRpyRF(&zrot_f, 0.0F, 0.0F, dobj->rotate.vec.f.z);
         cosz = zrot_f[0][0];
         sinz = zrot_f[0][1];
@@ -4277,12 +4328,6 @@ static void ndsRendererAdapterApplyMvpRecalc(
          * tail below restore the already-composed translation row. */
         float ef_ground_rows[3][4];
 
-        syMatrixPerspFastF(perspective_f, &perspective_norm,
-                           cobj->projection.persp.fovy,
-                           cobj->projection.persp.aspect,
-                           cobj->projection.persp.near,
-                           cobj->projection.persp.far,
-                           cobj->projection.persp.scale);
         ndsRendererAdapterEfGroundBillboardRows(perspective_f,
             dobj->rotate.vec.f.x, dobj->rotate.vec.f.y,
             dobj->scale.vec.f.x, dobj->scale.vec.f.y,
@@ -4308,7 +4353,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
                         0.0F);
         ndsRendererAdapterMtxFromN64(&rotation_mtx, &rotation);
         ndsRendererMtxMul20p12(
-            &rotation, &perspective, &source_orientation);
+            &rotation, perspective, &source_orientation);
     }
     for (row = 0u; row < 3u; row++)
     {
@@ -5831,7 +5876,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     }
     ndsRendererAdapterApplyMvpRecalc(
         (mvp_recalc_kind != 0u) ? dobj : NULL, mvp_recalc_kind, cobj,
-        projection, projection_ptr, modelview, modelview_ptr);
+        projection, projection_ptr, modelview, modelview_ptr, NULL);
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
         gNdsRendererAdapterEffectPrepMask |=
@@ -8276,7 +8321,7 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
         sNdsRendererAdapterMvpRecalcScaleX = 1.0F;
         ndsRendererAdapterApplyMvpRecalc(draws[i], nGCMatrixKind48, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr);
+            mvp, &modelview_ptr, NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             gNdsNativeYosterCloudFailStep = 12u;
@@ -8496,7 +8541,7 @@ sb32 ndsRendererAdapterSubmitNativeEfLakitu(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(joints[3],
             billboard_kind, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr);
+            mvp, &modelview_ptr, NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             return FALSE;
@@ -8520,7 +8565,7 @@ sb32 ndsRendererAdapterSubmitNativeEfLakitu(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(joints[3u + i],
             billboard_kind, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr);
+            mvp, &modelview_ptr, NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             return FALSE;
@@ -8701,7 +8746,7 @@ sb32 ndsRendererAdapterSubmitNativeEfBronto(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(draw,
             billboard_kind, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr);
+            mvp, &modelview_ptr, NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             return FALSE;
