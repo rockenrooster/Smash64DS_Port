@@ -1,0 +1,2972 @@
+{
+  "allowed_crossing_pairs": [
+    {
+      "count": 1,
+      "reason": "Allocator boundary address at the end of the overlay, never an overlay-code call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00000234",
+          "source_section": ".crt0",
+          "source_symbol": "crt0Startup",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__heap_start_ntr",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "crt0Startup",
+      "target_symbol": "__heap_start_ntr"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007ea8",
+          "source_section": ".main.rw",
+          "source_symbol": "dGM1PStageClearTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PStageClearFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dGM1PStageClearTaskmanSetup",
+      "target_symbol": "sc1PStageClearFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007ef8",
+          "source_section": ".main.rw",
+          "source_symbol": "dGM1PStageClearTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PStageClearFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dGM1PStageClearTaskmanSetup",
+      "target_symbol": "sc1PStageClearFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a854",
+          "source_section": ".main.rw",
+          "source_symbol": "dMN1PContinueTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PGameContinueFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMN1PContinueTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameContinueFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a8a4",
+          "source_section": ".main.rw",
+          "source_symbol": "dMN1PContinueTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PGameContinueFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMN1PContinueTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameContinueFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a774",
+          "source_section": ".main.rw",
+          "source_symbol": "dMN1PModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "battleship_mn1pmode.c::ndsMN1PModeDraw",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMN1PModeTaskmanSetup",
+      "target_symbol": "battleship_mn1pmode.c::ndsMN1PModeDraw"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a7a4",
+          "source_section": ".main.rw",
+          "source_symbol": "dMN1PModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mn1PModeFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMN1PModeTaskmanSetup",
+      "target_symbol": "mn1PModeFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a7f4",
+          "source_section": ".main.rw",
+          "source_symbol": "dMN1PModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mn1PModeFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMN1PModeTaskmanSetup",
+      "target_symbol": "mn1PModeFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008574",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNCharactersTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCharactersFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNCharactersTaskmanSetup",
+      "target_symbol": "mnCharactersFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000085c4",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNCharactersTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCharactersFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNCharactersTaskmanSetup",
+      "target_symbol": "mnCharactersFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000aa8c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNCongraTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCongraFuncDraw",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNCongraTaskmanSetup",
+      "target_symbol": "mnCongraFuncDraw"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000aabc",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNCongraTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCongraFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNCongraTaskmanSetup",
+      "target_symbol": "mnCongraFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000ab0c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNCongraTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCongraFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNCongraTaskmanSetup",
+      "target_symbol": "mnCongraFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006884",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNMapsTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnMapsFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNMapsTaskmanSetup",
+      "target_symbol": "mnMapsFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000068d4",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNMapsTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMNMapsFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNMapsTaskmanSetup",
+      "target_symbol": "ndsBaseMNMapsFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000082a0",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNMessageTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnMessageFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNMessageTaskmanSetup",
+      "target_symbol": "mnMessageFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000082f0",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNMessageTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnMessageFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNMessageTaskmanSetup",
+      "target_symbol": "mnMessageFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a9e8",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PBonusFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+      "target_symbol": "mnPlayers1PBonusFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000aa38",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PBonusFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+      "target_symbol": "mnPlayers1PBonusFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a8e4",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "battleship_mnplayers1pgame.c::ndsMNPlayers1PGameDraw",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+      "target_symbol": "battleship_mnplayers1pgame.c::ndsMNPlayers1PGameDraw"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a914",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PGameFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000a964",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PGameFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000067c0",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayersVSTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayersVSFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayersVSTaskmanSetup",
+      "target_symbol": "mnPlayersVSFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006810",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNPlayersVSTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMNPlayersVSFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNPlayersVSTaskmanSetup",
+      "target_symbol": "ndsBaseMNPlayersVSFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007644",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNScreenAdjustTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnScreenAdjustFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNScreenAdjustTaskmanSetup",
+      "target_symbol": "mnScreenAdjustFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007694",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNScreenAdjustTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnScreenAdjustFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNScreenAdjustTaskmanSetup",
+      "target_symbol": "mnScreenAdjustFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006710",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNVSModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSModeFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNVSModeTaskmanSetup",
+      "target_symbol": "mnVSModeFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006760",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNVSModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMNVSModeFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNVSModeTaskmanSetup",
+      "target_symbol": "ndsBaseMNVSModeFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00033eb0",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNVSResultsTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSResultsFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNVSResultsTaskmanSetup",
+      "target_symbol": "mnVSResultsFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00033f00",
+          "source_section": ".main.rw",
+          "source_symbol": "dMNVSResultsTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSResultsFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMNVSResultsTaskmanSetup",
+      "target_symbol": "mnVSResultsFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000ac28",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVEndingTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvEndingFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVEndingTaskmanSetup",
+      "target_symbol": "mvEndingFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000ac78",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVEndingTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvEndingFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVEndingTaskmanSetup",
+      "target_symbol": "mvEndingFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005f30",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningDonkeyTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningDonkeyFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningDonkeyTaskmanSetup",
+      "target_symbol": "mvOpeningDonkeyFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005f80",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningDonkeyTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningDonkeyFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningDonkeyTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningDonkeyFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000063fc",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningFoxTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningFoxFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningFoxTaskmanSetup",
+      "target_symbol": "mvOpeningFoxFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000644c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningFoxTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningFoxFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningFoxTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningFoxFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006308",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningKirbyTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningKirbyFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningKirbyTaskmanSetup",
+      "target_symbol": "mvOpeningKirbyFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006358",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningKirbyTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningKirbyFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningKirbyTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningKirbyFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000602c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningLinkTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningLinkFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningLinkTaskmanSetup",
+      "target_symbol": "mvOpeningLinkFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000607c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningLinkTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningLinkFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningLinkTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningLinkFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005e28",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningMarioTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningMarioFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningMarioTaskmanSetup",
+      "target_symbol": "mvOpeningMarioFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005e78",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningMarioTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningMarioFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningMarioTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningMarioFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000064fc",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningPikachuTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningPikachuFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningPikachuTaskmanSetup",
+      "target_symbol": "mvOpeningPikachuFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000654c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningPikachuTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningPikachuFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningPikachuTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningPikachuFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005d78",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningPortraitsTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningPortraitsFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningPortraitsTaskmanSetup",
+      "target_symbol": "mvOpeningPortraitsFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005dc8",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningPortraitsTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningPortraitsFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningPortraitsTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningPortraitsFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00005d00",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningRoomTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningRoomFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningRoomTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningRoomFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000611c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningSamusTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningSamusFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningSamusTaskmanSetup",
+      "target_symbol": "mvOpeningSamusFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000616c",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningSamusTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningSamusFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningSamusTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningSamusFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006210",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningYoshiTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningYoshiFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningYoshiTaskmanSetup",
+      "target_symbol": "mvOpeningYoshiFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00006260",
+          "source_section": ".main.rw",
+          "source_symbol": "dMVOpeningYoshiTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsBaseMVOpeningYoshiFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dMVOpeningYoshiTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningYoshiFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000081f4",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PChallengerTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PChallengerFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PChallengerTaskmanSetup",
+      "target_symbol": "sc1PChallengerFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008244",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PChallengerTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PChallengerFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PChallengerTaskmanSetup",
+      "target_symbol": "sc1PChallengerFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007aec",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PGameTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PGameFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PGameTaskmanSetup",
+      "target_symbol": "sc1PGameFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007b3c",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PGameTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PGameFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PGameTaskmanSetup",
+      "target_symbol": "sc1PGameFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00007ab8",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PGameTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PGameFuncUpdate",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PGameTaskmanSetup",
+      "target_symbol": "sc1PGameFuncUpdate"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000810c",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PIntroTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "battleship_sc1pintro.c::ndsSC1PIntroDraw",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PIntroTaskmanSetup",
+      "target_symbol": "battleship_sc1pintro.c::ndsSC1PIntroDraw"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000813c",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PIntroTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PIntroFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PIntroTaskmanSetup",
+      "target_symbol": "sc1PIntroFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000818c",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PIntroTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PIntroFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PIntroTaskmanSetup",
+      "target_symbol": "sc1PIntroFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008424",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeUpdateCPOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateCPOption"
+    },
+    {
+      "count": 1,
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008438",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeUpdateExitOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateExitOption"
+    },
+    {
+      "count": 1,
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008428",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeUpdateItemOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateItemOption"
+    },
+    {
+      "count": 1,
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008434",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeUpdateResetOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateResetOption"
+    },
+    {
+      "count": 1,
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000842c",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeUpdateSpeedOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateSpeedOption"
+    },
+    {
+      "count": 1,
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008430",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeUpdateViewOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateViewOption"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00008350",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+      "target_symbol": "sc1PTrainingModeFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000083a0",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+      "target_symbol": "sc1PTrainingModeFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000831c",
+          "source_section": ".main.rw",
+          "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeFuncUpdate",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+      "target_symbol": "sc1PTrainingModeFuncUpdate"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbd0",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "SCAutoDemoProcFocusPlayer1",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "SCAutoDemoProcFocusPlayer1"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbdc",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "SCAutoDemoProcFocusPlayer2",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "SCAutoDemoProcFocusPlayer2"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbf0",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoExit",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoExit"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbb4",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoMakeFade",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoMakeFade"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbd8",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoResetFocusPlayerAll",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoResetFocusPlayerAll"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbc0",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoSetFocusPlayer1",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoSetFocusPlayer1"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbcc",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoSetFocusPlayer2",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoSetFocusPlayer2"
+    },
+    {
+      "count": 1,
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cbe4",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoFuncList",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoSetMagnifyDisplayOn",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoSetMagnifyDisplayOn"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cad8",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoTaskmanSetup",
+      "target_symbol": "scAutoDemoFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cb28",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoTaskmanSetup",
+      "target_symbol": "scAutoDemoFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000caa4",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCAutoDemoTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoFuncUpdate",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCAutoDemoTaskmanSetup",
+      "target_symbol": "scAutoDemoFuncUpdate"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cc18",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCExplainTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scExplainFuncDraw",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncDraw"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cc48",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCExplainTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scExplainFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cc98",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCExplainTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scExplainFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000cc14",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCExplainTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scExplainFuncUpdate",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncUpdate"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000aca8",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCStaffrollTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scStaffrollFuncDraw",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCStaffrollTaskmanSetup",
+      "target_symbol": "scStaffrollFuncDraw"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000acd8",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCStaffrollTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scStaffrollFuncLights",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCStaffrollTaskmanSetup",
+      "target_symbol": "scStaffrollFuncLights"
+    },
+    {
+      "count": 1,
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x0000ad28",
+          "source_section": ".main.rw",
+          "source_symbol": "dSCStaffrollTaskmanSetup",
+          "source_symbol_type": 1,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scStaffrollFuncStart",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "dSCStaffrollTaskmanSetup",
+      "target_symbol": "scStaffrollFuncStart"
+    },
+    {
+      "count": 1,
+      "reason": "The source caller checks scene_curr == nSCKind1PTrainingMode before invoking this target; VS cannot take this branch.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000f86a6",
+          "source_section": ".main",
+          "source_symbol": "grWallpaperMakeDecideKind",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeLoadWallpaper",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "grWallpaperMakeDecideKind",
+      "target_symbol": "sc1PTrainingModeLoadWallpaper"
+    },
+    {
+      "count": 1,
+      "reason": "This is the non-VS bonus scene entry, invoked after frontend preparation or from the retained campaign driver. Stage-only VS ground creation does not call this scene entry.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000c2b10",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSC1PBonusStageStartScene",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PManagerCheckUnlockSoundTest",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSC1PBonusStageStartScene",
+      "target_symbol": "sc1PManagerCheckUnlockSoundTest"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006685c",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mn1PModeStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mn1PModeStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000664c2",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnBackupClearStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnBackupClearStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000665f0",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCharactersStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnCharactersStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000669b2",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnCongraStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnCongraStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066986",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnDataStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnDataStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000666aa",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnMapsStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnMapsStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066804",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnMessageStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnMessageStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066872",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnModeSelectStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnModeSelectStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006699a",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnOptionStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnOptionStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066488",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PBonusStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PBonusStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006665e",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PGameContinueStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PGameContinueStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000666c8",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayers1PGameStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PGameStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006678c",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnPlayersVSStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayersVSStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000667aa",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnScreenAdjustStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnScreenAdjustStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066970",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnSoundTestStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnSoundTestStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066920",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnTitleStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnTitleStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006681a",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSItemSwitchStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSItemSwitchStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066846",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSModeStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSModeStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066830",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSOptionsStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSOptionsStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066604",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSRecordStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSRecordStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066620",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mnVSResultsStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSResultsStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000664a6",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvEndingStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvEndingStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006658c",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningDonkeyStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningDonkeyStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066574",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningFoxStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningFoxStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066544",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningKirbyStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningKirbyStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066568",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningLinkStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningLinkStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000665a0",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningMarioStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningMarioStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066550",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningPikachuStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningPikachuStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000665ac",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningPortraitsStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningPortraitsStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000665c0",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningRoomStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningRoomStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066580",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningSamusStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningSamusStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006655c",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningYoshiStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningYoshiStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000667e6",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PChallengerStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PChallengerStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000667c8",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PIntroStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PIntroStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000669ec",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PManagerUpdateScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PManagerUpdateScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006646a",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PStageClearStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PStageClearStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000669cc",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "sc1PTrainingModeStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PTrainingModeStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x00066944",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scAutoDemoStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "scAutoDemoStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0006695c",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scExplainStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "scExplainStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000669a6",
+          "source_section": ".main",
+          "source_symbol": "ndsBaseSCManagerRunLoop",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "scStaffrollStartScene",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "scStaffrollStartScene"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a2f78",
+          "source_section": ".main",
+          "source_symbol": "ndsFrontendOverlayBeginScene",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_end",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_end"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a2f74",
+          "source_section": ".main",
+          "source_symbol": "ndsFrontendOverlayBeginScene",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_start",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_start"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a2f04",
+          "source_section": ".main",
+          "source_symbol": "ndsFrontendOverlayPrepareDispatch",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_end",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsFrontendOverlayPrepareDispatch",
+      "target_symbol": "__nds_frontend_end"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a2f00",
+          "source_section": ".main",
+          "source_symbol": "ndsFrontendOverlayPrepareDispatch",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_start",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsFrontendOverlayPrepareDispatch",
+      "target_symbol": "__nds_frontend_start"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a2fe4",
+          "source_section": ".main",
+          "source_symbol": "ndsFrontendOverlayTryAlloc",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_end",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsFrontendOverlayTryAlloc",
+      "target_symbol": "__nds_frontend_end"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a2fe8",
+          "source_section": ".main",
+          "source_symbol": "ndsFrontendOverlayTryAlloc",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_start",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsFrontendOverlayTryAlloc",
+      "target_symbol": "__nds_frontend_start"
+    },
+    {
+      "count": 1,
+      "reason": "Opening capture compares a callback address for identity; it never calls the target.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x00085790",
+          "source_section": ".main",
+          "source_symbol": "ndsOpeningRoomCaptureCloseUpOverlayCreation",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningRoomCloseUpOverlayProcDisplay",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsOpeningRoomCaptureCloseUpOverlayCreation",
+      "target_symbol": "mvOpeningRoomCloseUpOverlayProcDisplay"
+    },
+    {
+      "count": 1,
+      "reason": "Opening capture compares a callback address for identity; it never calls the target.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000855b0",
+          "source_section": ".main",
+          "source_symbol": "ndsOpeningRoomCapturePencilsCreation",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "mvOpeningRoomCommonProcUpdate",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsOpeningRoomCapturePencilsCreation",
+      "target_symbol": "mvOpeningRoomCommonProcUpdate"
+    },
+    {
+      "count": 1,
+      "reason": "The caller returns unless scene_curr is VSResults before invoking this getter. Results dispatch reloads the frontend before scene entry.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x0009deb0",
+          "source_section": ".main",
+          "source_symbol": "ndsResultsEmblemRecordCapturedDisplay",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsVSResultsEmblemGObj",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "ndsResultsEmblemRecordCapturedDisplay",
+      "target_symbol": "ndsVSResultsEmblemGObj"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a3058",
+          "source_section": ".main",
+          "source_symbol": "ndsSceneAssetAlloc",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_end",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsSceneAssetAlloc",
+      "target_symbol": "__nds_frontend_end"
+    },
+    {
+      "count": 1,
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 2,
+          "source_offset": "0x000a305c",
+          "source_section": ".main",
+          "source_symbol": "ndsSceneAssetAlloc",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "__nds_frontend_start",
+          "target_symbol_type": 0
+        }
+      ],
+      "source_symbol": "ndsSceneAssetAlloc",
+      "target_symbol": "__nds_frontend_start"
+    },
+    {
+      "count": 1,
+      "reason": "The resident pump is selected only for Results/source menus in taskman_seam_harness.c; VS uses its separate battle pump. Frontend remains loaded for source menus and nested campaign scenes.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a15da",
+          "source_section": ".main",
+          "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMNVSResultsRecordFrame",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
+      "target_symbol": "ndsMNVSResultsRecordFrame"
+    },
+    {
+      "count": 1,
+      "reason": "The resident pump is selected only for Results/source menus in taskman_seam_harness.c; VS uses its separate battle pump. Frontend remains loaded for source menus and nested campaign scenes.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a15be",
+          "source_section": ".main",
+          "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellWalkDrive1PSourceMenus",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
+      "target_symbol": "ndsMenuShellWalkDrive1PSourceMenus"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a1b26",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunBackupClear",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunBackupClear"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19d8",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunCharSelect",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunCharSelect"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19ea",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunCharacters",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunCharacters"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a1b32",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunData",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunData"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19d2",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunItemSwitch",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunItemSwitch"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19b0",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunModeSelect",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunModeSelect"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a1b2c",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunOption",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunOption"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a1b38",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunSoundTest",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunSoundTest"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19de",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunStageSelect",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunStageSelect"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a1b1c",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunStartup",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunStartup"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a197e",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunTitle",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunTitle"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19c6",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunVSMode",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunVSMode"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19cc",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunVsOptions",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunVsOptions"
+    },
+    {
+      "count": 1,
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts.",
+      "relocations": [
+        {
+          "addend": null,
+          "relocation_type": 10,
+          "source_offset": "0x000a19e4",
+          "source_section": ".main",
+          "source_symbol": "syTaskmanRunTask",
+          "source_symbol_type": 2,
+          "target_section": ".ovl.frontend",
+          "target_symbol": "ndsMenuShellRunVsRecord",
+          "target_symbol_type": 2
+        }
+      ],
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunVsRecord"
+    }
+  ],
+  "elf": "builds\\build-p2p8-s7-fpwalk\\smash64ds-p2-shell-freeplay-hwtri.elf",
+  "elf_type": 2,
+  "errors": [],
+  "machine": 40,
+  "overlay_bytes": 232672,
+  "overlay_present": true,
+  "overlay_section": ".ovl.frontend",
+  "overlay_sections": [
+    {
+      "address": "0x02299780",
+      "alignment": 4,
+      "alloc": true,
+      "name": ".ovl.frontend",
+      "size": 232672
+    }
+  ],
+  "passed": true,
+  "relocation_sections": 20,
+  "required": true,
+  "resident_alloc_relocations": 68149,
+  "schema_version": 1,
+  "unknown_crossing_pairs": [],
+  "unused_allowlist_pairs": []
+}

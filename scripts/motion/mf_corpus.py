@@ -23,7 +23,7 @@ ID rows (P2 kinds) and `sNdsRelocMarioBattleAnimFileIDs`
 
 Usage:
   python scripts/motion/mf_corpus.py [--json OUT] [--no-verify-pack]
-The parsed corpus is cached (pickle) under the system temp dir so the
+The parsed corpus is cached (pickle) under builds/ with source-input hashes so the
 compression experiments do not re-run the O2R normaliser.
 """
 
@@ -39,7 +39,6 @@ import pickle
 import re
 import struct
 import sys
-import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 PACK = ROOT / "assets" / "animation" / "ftanim_stream_pack.bin"
@@ -47,7 +46,7 @@ BANK = ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r" / "reloc_animation
 GEN_H = ROOT / "include" / "nds" / "generated" / "nds_fighter_production.generated.h"
 FTDATA = ROOT / "decomp" / "BattleShip-main" / "decomp" / "src" / "ft" / "ftdata.c"
 ASSETS_C = ROOT / "src" / "port" / "reloc_backend_assets.c"
-CACHE = pathlib.Path(tempfile.gettempdir()) / "smash64ds_mf_corpus_v1.pickle"
+CACHE = ROOT / "builds" / "mf_corpus_v2.pickle"
 
 BPS1_HEADER = struct.Struct("<4sIIIIIII")
 BPS1_DIR = struct.Struct("<II")
@@ -281,14 +280,48 @@ def build_corpus(verify_pack=True, log=print):
             "tables": tables, "names": names, "aobj32": sorted(a32)}
 
 
+def corpus_cache_key(verify_pack=True):
+    """Key the actual clip and motion-table inputs, not just the BPS1 pack.
+
+    The backend supplies a small symbol map; hash that parsed map rather than
+    unrelated renderer/backend implementation edits. O2R-only clips and every
+    source motion-table user must invalidate a previously normalized corpus.
+    """
+    digest = hashlib.sha256()
+
+    def add(label, data):
+        digest.update(label.encode("utf-8") + b"\0")
+        digest.update(len(data).to_bytes(8, "little"))
+        digest.update(data)
+
+    add("pack", PACK.read_bytes())
+    for path in (pathlib.Path(__file__),
+                 ROOT / "scripts" / "generate_battlepack_anim.py",
+                 ROOT / "scripts" / "ftanim_reloc_probe.py"):
+        add(path.name, path.read_bytes())
+    prefixes = tuple(sorted({s[3] for s in SEGMENTS}))
+    for path in sorted(BANK.iterdir()):
+        if path.is_file() and path.name.startswith(prefixes):
+            add("o2r/" + path.name, path.read_bytes())
+    rows = generated_rows()
+    add("metadata", json.dumps({
+        "rows": rows, "tables": motion_tables(rows),
+        "aobj32": sorted(aobj32_ids()), "verify_pack": bool(verify_pack),
+    }, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+    return digest.hexdigest()
+
+
 def load_corpus(rebuild=False, verify_pack=True, log=print):
+    inputs_key = corpus_cache_key(verify_pack)
     if CACHE.exists() and not rebuild:
         with CACHE.open("rb") as fh:
             c = pickle.load(fh)
-        if c.get("pack_sha256") == hashlib.sha256(PACK.read_bytes()).hexdigest():
+        if c.get("inputs_sha256") == inputs_key:
             return c
     c = build_corpus(verify_pack=verify_pack, log=log)
     c["pack_sha256"] = c["header"]["sha256"]
+    c["inputs_sha256"] = inputs_key
+    CACHE.parent.mkdir(parents=True, exist_ok=True)
     with CACHE.open("wb") as fh:
         pickle.dump(c, fh)
     return c

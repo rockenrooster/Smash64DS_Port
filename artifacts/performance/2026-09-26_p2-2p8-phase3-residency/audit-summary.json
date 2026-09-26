@@ -1,0 +1,28 @@
+{
+  "status": "SCOPED_AUDIT_COMPLETE_RUNTIME_NOT_ACCEPTED",
+  "subagents_used": false,
+  "confirmed_new_false_pass_fixes": [
+    "MFP2 clip owner not source-checked",
+    "Unclaimed MFP stream tail accepted",
+    "Absolute ELF symbol into overlay ignored",
+    "ABS32 effective address into overlay ignored"
+  ],
+  "focused_tests": 31,
+  "tests_passed": 31,
+  "pack_clips_exact": 1570,
+  "raw_exceptions": 29,
+  "roster_budgets_unchanged": true,
+  "rosters": 1365,
+  "overlay_unknown_crossings": 0,
+  "runtime_rom": "9F7C46CD83B7C2352C1E05BE192432B93A08DA1D9DED413B95402DBAB77F720D",
+  "runtime_accepted": false,
+  "reserve_shortfall_bytes": 13044,
+  "logs": {
+    "builds/p2-phase3-audit-mf-negative-before.log": "5f76f8a78216b64c8d8ec710780ab03c816885b9e40c07431753a1e099bb6b3f",
+    "builds/p2-phase3-audit-mf-negative-after.log": "09588571148df3fe6ffb921f5c80c0724218e8832f096814652f75c69c70956a",
+    "builds/p2-phase3-audit-elf-negative-before.log": "2b491aedc29c628b1178df39875b0c19c3ea8085ffd0e4921bf0b00d82a3c1c9",
+    "builds/p2-phase3-audit-elf-after.log": "eccfe8b63515aa1bf62b96bb6787b09edd44d3510ac054bea95f60855045278d",
+    "builds/p2-phase3-audit-final-tests.log": "fe0d7c39c9c00820a5cec84352d55fd1d0389eee1be66539d9c148446f970519",
+    "builds/p2-phase3-audit-mf-valid.log": "e1125bf84f0215bf5d27a504332342d040dd5a75157aba3f50f2c51c8e6e02b3"
+  }
+}

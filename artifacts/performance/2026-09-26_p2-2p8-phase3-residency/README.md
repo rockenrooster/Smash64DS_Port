@@ -92,6 +92,9 @@ Next A7 work: price additional non-VS scene code for the same exclusive overlay.
 The measured 184 KiB loan is much smaller than the original front-end estimate;
 do not treat that estimated supply as available RAM for MF. Natural-input CSS,
 menu reload, all four fighters/GO and final integrated performance remain owed.
+Overlay checkpoint **feaa37dc3a7** committed/pushed. Root's final combined
+checker/pool fixture run passes 9/9; docs pass. No root/P1 ROM was rebuilt or
+published. MF metadata edits remain a separate in-progress helper-owned batch.
 
 ## MF contract finding
 
@@ -101,3 +104,95 @@ The metadata producer is being extended to derive actual main-table users,
 including Luigi/Mario and Purin/Kirby sharing, and to price retained table/index
 storage and all 29 raw exceptions. Old ~599 KiB bank estimates are provisional
 until complete admission metadata is priced. No production bank is linked yet.
+
+MFP2 now records main-table users independently of owner/opponent masks and lists
+all 29 raw O2R exceptions (27 AObj32, two splines). Roster selection preserves
+mirror opponents by slot. The planner charges the retained index/table storage,
+16-byte raw-block alignment and individually rounded raw asset allocations.
+An unresolved non-NULL motion symbol fails admission instead of disappearing.
+
+Root review also found that the corpus cache only keyed the BPS1 pack. It now
+keys O2R sources, normalizer code, parsed motion-table/symbol metadata and the
+verification mode, under `builds/`. This prevents stale borrower masks and clips
+without invalidating the corpus for unrelated backend edits. Eight focused tests
+pass, including cache changes with an unchanged BPS1 pack and missing mappings.
+
+First full MFP2 producer/checker job **81758**: `mf_emit.py --out builds/p2-2p8-mf2`,
+then `check_mf_pack.py .../ftanim_mf_pack.bin --json .../check.json`. Logs/exits:
+`builds/p2-phase3-mf2-{emit,check}.{log,exit}`. This regenerates the corrected
+production metadata/pack and rechecks its unchanged codec; it does not repeat
+the rejected codec experiments. Source inputs frozen; no ROM/emulator active.
+Job 81758 exited 0 for both producer and checker: 1,570/1,570 exact C decodes,
+29 raw exceptions, 1,432,612 B pack / 64,848 B metadata. Expanded tables are
+16,328 B on host, 16,260 B on ARM; retained backing blob is 16,928 B. The actual
+manifest prices all 1,365 unordered four-slot rosters, including mirrors:
+canonical bank 566,336 B, heavy probe bank 651,824 B, maximum 697,760 B
+(Yoshi/Captain/Pikachu/Ness). These exclude existing fighter/scene heaps.
+
+The next overlay slice moves ten more non-VS TUs and three small file companions,
+priced from the linked map at 54,144 B. Keep the complete `sc1pgameboss` TU
+resident: its wallpaper initializer is reachable for Last-stage ground through
+a shared constructor, regardless of scene kind. Training's wallpaper call is
+explicitly guarded by its non-VS scene. The existing ELF gate must still review
+new exact crossing pairs before packaging. Kirby asset348 is KirbySpecial2,
+10,512 B aligned; with 6,210 B free and 2 B padding the current miss is 4,304 B
+for that file alone. Extra space is still needed to construct Kirby and retain
+the runtime floor. Warm heavy relink log `builds/p2-phase3-overlay-heavy-build-r3.log`.
+Extended relink session5081 linked but the packaging gate rejected58 unreviewed
+crossings (exit2); no candidate ROM was produced. Review found additional shared
+fighter-death/camera/boss closures in the 1P runtime TU. Their complete local
+functions/constants stay resident, as do the whole bonus-stage code/files: its
+ground/target calls are selected by stage kind, independently of scene kind.
+The corrected relink is session66655, log
+`builds/p2-phase3-overlay-heavy-build-r4.log`. Its remaining scene callback pairs
+still require exact review before packaging/running. No emulator is active.
+
+`mf2-{check,manifest,budgets,inputs}.json` and `mf2-rosters.csv` preserve the full
+MF-host result and all roster budgets. Pack SHA-256 `1AA26F69790C09F6D6A68B748BF2F55D9920B3161955EEE382666AB7FB65D480`.
+Both the MFT1 table blob and aligned stream-data range are byte-identical to the
+prior proven MFP1 artifact; only metadata/selection changed. Full pack remains
+in `builds/p2-2p8-mf2/`; it is not in a ROM or an admitted runtime bank.
+
+Extended gate review kept the complete shared boss/death/camera function closure
+and its own constants resident, while moving unrelated jump tables with their
+owning scene functions. The checker also now normalizes ELF Thumb function
+address bits before bounding source symbols; two fixtures cover a relocation
+at entry and one immediately after the real function end. All 11 checker/pool
+tests pass. The final fresh scan passes 155 exact reviewed pairs, zero unknowns.
+Relink session55952 exited 0, native-only 319 inputs, overlay232,672 B; ROM
+`9F7C46CD83B7C2352C1E05BE192432B93A08DA1D9DED413B95402DBAB77F720D`.
+Next: same two-frame heavy probe, runner7, logs
+`builds/p2-phase3-overlay-heavy-probe-r1.{log,exit,txt}`. Inputs frozen.
+Probe session **89166** exited 0: all four fighters constructed and two initial
+battle updates reached, no heap decline/external failure/overflow. Loan232,672 B,
+used231,632 B in20 allocations, one load/no load failure. Main arena896,512 B,
+immediate free12,556 B: **RESERVE_RED**, 13,044 B below the25,600 B floor before
+any long match or motion bank. Pre-sample low-water remains invalid. This clears
+the previous first-load OOM but does not qualify GO, pixels, timing or stability.
+`overlay-wide-heavy-summary.json` and `overlay-wide-crossings.json` own the exact
+proof; matched binaries/config are in `builds/p2p8-frontend-wide-9f7c46cd/`.
+All jobs/helpers are terminal. Next: scoped memory reclamation to restore the
+runtime reserve, then complete MF admission/bind and ARM7 audio. The full motion
+bank remains an additional priced requirement, not funded by this startup pass.
+
+## Owner-directed solo audit (2026-09-26)
+
+Owner requested no further subagents and an independent audit of their work.
+All four existing helpers are terminal. Root owns all further edits and checks.
+Audit scope: MFP2 producer/selection/budget/checker; ELF overlay crossing checker
+and lifetime claims; retained particle fixture and DamageFlyMDust producer/owner.
+Already corrected by root: missing raw alignment, pack-only corpus cache key,
+unmapped motion symbols silently omitted, Thumb source-range bounds, and shared
+gameplay/frame callers incorrectly considered eligible for overlaying. Recheck
+the retained implementations against source and hostile/boundary inputs; prior
+helper PASS reports alone do not close this audit. Do not restart unrelated
+performance experiments or publish the candidate while reserve remains RED.
+Scoped audit completed in `solo-audit.md`: four reproducible false-PASS gaps
+fixed in the pack/ELF checkers; 31 focused tests pass. Actual pack decodes and
+the current ELF remain GREEN under the strengthened validators. Budget pricing
+now consumes the checked binary with source-bound receipts; all roster figures
+are unchanged. Target reserve/performance and remaining lifecycle proof stay RED/open.
+Checkpoint staging initially encountered another empty Git index lock. Its
+timestamp was over 33 minutes old, no Git process was active, and an exclusive
+read handle succeeded. Root removed that exact lock under the owner's earlier
+explicit approval, then retried scoped staging. The first failure was not a commit.

@@ -69,6 +69,7 @@ STT_FUNC = 2
 STT_SECTION = 3
 STT_FILE = 4
 STT_NOTYPE = 0
+R_ARM_ABS32 = 2
 
 OVERLAY_SECTION = ".ovl.frontend"
 OVERLAY_PREFIX = ".ovl.frontend."
@@ -291,7 +292,8 @@ class Elf32:
                         f"symbol {name or index} needs a missing extended section index"
                     )
                 section_index = extended[index]
-            exact = bool(name) and kind != STT_SECTION and not name.startswith("<")
+            exact = (bool(name) and kind != STT_SECTION and
+                     not name.startswith(("<", "$")))
             identity = name
             if binding == STB_LOCAL and name and current_file:
                 identity = f"{current_file}::{name}"
@@ -373,9 +375,13 @@ def _section_offset(elf: Elf32, section: Section, address: int) -> int:
 
 
 def _symbol_offset(elf: Elf32, section: Section, symbol: Symbol) -> int:
-    if section.address <= symbol.value < section.address + section.size:
-        return symbol.value - section.address
-    return symbol.value
+    # ELF32 ARM encodes Thumb state in a function symbol's low bit. It is not
+    # part of its address/size: retaining it misattributes the first byte after
+    # a function to that function and misses a relocation at its true entry.
+    value = symbol.value & ~1 if symbol.kind == STT_FUNC else symbol.value
+    if section.address <= value < section.address + section.size:
+        return value - section.address
+    return value
 
 
 def _source_symbol_indexes(elf: Elf32, symbols: list[Symbol]
@@ -418,14 +424,45 @@ def _source_symbol_indexes(elf: Elf32, symbols: list[Symbol]
     return indices
 
 
-def _overlay_target(elf: Elf32, symbol: Symbol,
-                    overlay_indices: set[int]) -> tuple[str, bool, int, str | None]:
-    if symbol.section_index not in overlay_indices:
-        return "", False, symbol.kind, None
-    section = elf.section_by_index[symbol.section_index]
-    if symbol.kind == STT_SECTION or not symbol.name:
-        return f"<section:{section.name}>", False, symbol.kind, section.name
-    return symbol.identity, symbol.exact, symbol.kind, section.name
+def _overlay_target(elf: Elf32, symbol: Symbol, overlay_indices: set[int],
+                    source: Section, source_offset: int,
+                    relocation: Relocation) -> tuple[str, bool, int, str | None]:
+    if symbol.section_index in overlay_indices:
+        section = elf.section_by_index[symbol.section_index]
+        if symbol.kind == STT_SECTION or not symbol.name:
+            return f"<section:{section.name}>", False, symbol.kind, section.name
+        return symbol.identity, symbol.exact, symbol.kind, section.name
+
+    def containing(address: int):
+        return next((elf.section_by_index[index] for index in overlay_indices
+                     if elf.section_by_index[index].address <= address <
+                     elf.section_by_index[index].address + elf.section_by_index[index].size),
+                    None)
+
+    # A linker-script ABSOLUTE alias can name overlay code without carrying
+    # the overlay's section index. It still requires an exact reviewed edge.
+    if symbol.section_index == SHN_ABS:
+        section = containing(symbol.value)
+        if section is not None:
+            return symbol.identity, symbol.exact, symbol.kind, section.name
+
+    # In linked ET_EXEC/SHT_REL, an ABS32 word already contains S+A. Checking
+    # only S's section misses a resident/boundary symbol whose addend enters
+    # the overlay, including symbol-zero absolute relocations. Such addresses
+    # have no exact target symbol and cannot be exempted with a broad allowlist.
+    if relocation.kind == R_ARM_ABS32:
+        if relocation.addend is not None:
+            address = (symbol.value + relocation.addend) & 0xffffffff
+        else:
+            if source.kind == SHT_NOBITS or source_offset + 4 > source.size:
+                raise CheckerError("ABS32 relocation has no complete source word")
+            address = struct.unpack_from(elf.endian + "I", elf.data,
+                                         source.offset + source_offset)[0]
+        section = containing(address)
+        if section is not None:
+            name = f"<address:{section.name}+0x{address - section.address:x}>"
+            return name, False, symbol.kind, section.name
+    return "", False, symbol.kind, None
 
 
 def _relocation_detail(source_section: Section, source_offset: int,
@@ -525,7 +562,7 @@ def inspect_elf(data: bytes, *, elf_name: str,
 
         for relocation in elf.relocations(relocation_section):
             resident_alloc_relocation_count += 1
-            if relocation.symbol_index == 0:
+            if relocation.symbol_index == 0 and relocation.kind != R_ARM_ABS32:
                 continue
             if relocation.symbol_index >= len(symbols):
                 raise CheckerError(
@@ -533,11 +570,12 @@ def inspect_elf(data: bytes, *, elf_name: str,
                     f"{relocation.symbol_index}"
                 )
             target = symbols[relocation.symbol_index]
+            source_offset = _section_offset(elf, source_section, relocation.offset)
             target_symbol, target_exact, target_kind, target_section_name = \
-                _overlay_target(elf, target, overlay_indices)
+                _overlay_target(elf, target, overlay_indices, source_section,
+                                source_offset, relocation)
             if target_section_name is None:
                 continue
-            source_offset = _section_offset(elf, source_section, relocation.offset)
             if section_source_index is None:
                 source_name = f"<section:{source_section.name}+0x{source_offset:x}>"
                 source_exact = False

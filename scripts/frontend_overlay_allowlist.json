@@ -8,6 +8,16 @@
       "reason": "Allocator boundary address at the end of the overlay, never an overlay-code call."
     },
     {
+      "source_symbol": "dGM1PStageClearTaskmanSetup",
+      "target_symbol": "sc1PStageClearFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dGM1PStageClearTaskmanSetup",
+      "target_symbol": "sc1PStageClearFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
       "source_symbol": "dMN1PContinueTaskmanSetup",
       "target_symbol": "mnPlayers1PGameContinueFuncLights",
       "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
@@ -248,24 +258,189 @@
       "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
     },
     {
-      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
-      "target_symbol": "mnCongraStartScene",
-      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+      "source_symbol": "dSC1PChallengerTaskmanSetup",
+      "target_symbol": "sc1PChallengerFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
     },
     {
-      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
-      "target_symbol": "mnMessageStartScene",
-      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+      "source_symbol": "dSC1PChallengerTaskmanSetup",
+      "target_symbol": "sc1PChallengerFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
     },
     {
-      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
-      "target_symbol": "mnPlayers1PGameContinueStartScene",
-      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+      "source_symbol": "dSC1PGameTaskmanSetup",
+      "target_symbol": "sc1PGameFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
     },
     {
-      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
-      "target_symbol": "mvEndingStartScene",
-      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+      "source_symbol": "dSC1PGameTaskmanSetup",
+      "target_symbol": "sc1PGameFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PGameTaskmanSetup",
+      "target_symbol": "sc1PGameFuncUpdate",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PIntroTaskmanSetup",
+      "target_symbol": "battleship_sc1pintro.c::ndsSC1PIntroDraw",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PIntroTaskmanSetup",
+      "target_symbol": "sc1PIntroFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PIntroTaskmanSetup",
+      "target_symbol": "sc1PIntroFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateCPOption",
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateExitOption",
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateItemOption",
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateResetOption",
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateSpeedOption",
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeMenuUpdateFuncList",
+      "target_symbol": "sc1PTrainingModeUpdateViewOption",
+      "reason": "Training's menu callback table is reached only from the Training scene, for which the frontend stays loaded."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+      "target_symbol": "sc1PTrainingModeFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+      "target_symbol": "sc1PTrainingModeFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PTrainingModeTaskmanSetup",
+      "target_symbol": "sc1PTrainingModeFuncUpdate",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoExit",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoMakeFade",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "SCAutoDemoProcFocusPlayer1",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "SCAutoDemoProcFocusPlayer2",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoResetFocusPlayerAll",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoSetFocusPlayer1",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoSetFocusPlayer2",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoFuncList",
+      "target_symbol": "scAutoDemoSetMagnifyDisplayOn",
+      "reason": "AutoDemo's source scene owns this callback table and retains the frontend for the complete scene task."
+    },
+    {
+      "source_symbol": "dSCAutoDemoTaskmanSetup",
+      "target_symbol": "scAutoDemoFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCAutoDemoTaskmanSetup",
+      "target_symbol": "scAutoDemoFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCAutoDemoTaskmanSetup",
+      "target_symbol": "scAutoDemoFuncUpdate",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncDraw",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCExplainTaskmanSetup",
+      "target_symbol": "scExplainFuncUpdate",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCStaffrollTaskmanSetup",
+      "target_symbol": "scStaffrollFuncDraw",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCStaffrollTaskmanSetup",
+      "target_symbol": "scStaffrollFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSCStaffrollTaskmanSetup",
+      "target_symbol": "scStaffrollFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "grWallpaperMakeDecideKind",
+      "target_symbol": "sc1PTrainingModeLoadWallpaper",
+      "reason": "The source caller checks scene_curr == nSCKind1PTrainingMode before invoking this target; VS cannot take this branch."
+    },
+    {
+      "source_symbol": "ndsBaseSC1PBonusStageStartScene",
+      "target_symbol": "sc1PManagerCheckUnlockSoundTest",
+      "reason": "This is the non-VS bonus scene entry, invoked after frontend preparation or from the retained campaign driver. Stage-only VS ground creation does not call this scene entry."
     },
     {
       "source_symbol": "ndsBaseSCManagerRunLoop",
@@ -428,6 +603,46 @@
       "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
     },
     {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PChallengerStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PIntroStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PManagerUpdateScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PStageClearStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PTrainingModeStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "scAutoDemoStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "scExplainStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "scStaffrollStartScene",
+      "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
+    },
+    {
       "source_symbol": "ndsFrontendOverlayBeginScene",
       "target_symbol": "__nds_frontend_end",
       "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
@@ -484,12 +699,12 @@
     },
     {
       "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
-      "target_symbol": "ndsMNVSResultsRecordFrame",
+      "target_symbol": "ndsMenuShellWalkDrive1PSourceMenus",
       "reason": "The resident pump is selected only for Results/source menus in taskman_seam_harness.c; VS uses its separate battle pump. Frontend remains loaded for source menus and nested campaign scenes."
     },
     {
       "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
-      "target_symbol": "ndsMenuShellWalkDrive1PSourceMenus",
+      "target_symbol": "ndsMNVSResultsRecordFrame",
       "reason": "The resident pump is selected only for Results/source menus in taskman_seam_harness.c; VS uses its separate battle pump. Frontend remains loaded for source menus and nested campaign scenes."
     },
     {
@@ -499,12 +714,12 @@
     },
     {
       "source_symbol": "syTaskmanRunTask",
-      "target_symbol": "ndsMenuShellRunCharSelect",
+      "target_symbol": "ndsMenuShellRunCharacters",
       "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
     },
     {
       "source_symbol": "syTaskmanRunTask",
-      "target_symbol": "ndsMenuShellRunCharacters",
+      "target_symbol": "ndsMenuShellRunCharSelect",
       "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
     },
     {

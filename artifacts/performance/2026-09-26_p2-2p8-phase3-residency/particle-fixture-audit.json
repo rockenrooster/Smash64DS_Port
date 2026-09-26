@@ -1,0 +1,17 @@
+{
+  "scope": "Retained particle FIFO fixture sensitivity",
+  "canonical_source_modified": false,
+  "mutations": [
+    {
+      "change": "Disable horizontal mirror split",
+      "detector": "actual C harness rejects changed quad count",
+      "result": "detected"
+    },
+    {
+      "change": "Shift the mirrored UV endpoint by one packed unit without changing count",
+      "compile_and_execution": "completed",
+      "detector": "independent Python FIFO/quad expected values",
+      "result": "detected"
+    }
+  ]
+}

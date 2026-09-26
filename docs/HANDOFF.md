@@ -30,8 +30,8 @@ are exact; reserve free 204,752 B versus required 183,072 B. Current receipt:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Phase 3 A7 overlay `39790FA2` loans 184,112 B; three heavy fighters now load,
-then Kirby asset348 fails at 6,210 B free. Next: more non-VS code reclamation;
+Phase 3 A7 `9F7C46CD`: all four heavy fighters/two updates, loan 231,632 B;
+free 12,556 B <25,600. Next: recover reserve and fund MF2 (worst bank 697,760 B);
 receipt `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 
 ## Continue, do not restart

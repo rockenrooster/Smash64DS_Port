@@ -2,7 +2,7 @@
 #define NDS_MOTION_MF_H
 
 /* P2-2p8 Phase 3 (docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md A2, owner ruling
- * D6): the compact motion format "MF1".
+ * D6): MFT1 clip coding in the MFP2 match-bank container.
  *
  * A BPS1 clip (an AObjEvent16 script set, generate_battlepack_anim.py) is
  * stored as one MSB-first bitstream of the symbols the pose parser consumes --
@@ -31,8 +31,8 @@ typedef int32_t s32;
 #endif
 
 #define NDS_MF_TABLES_MAGIC 0x3154464Du /* "MFT1" */
-#define NDS_MF_PACK_MAGIC 0x3150464Du   /* "MFP1" */
-#define NDS_MF_PACK_VERSION 1u
+#define NDS_MF_PACK_MAGIC 0x3250464Du   /* "MFP2" */
+#define NDS_MF_PACK_VERSION 2u
 
 #define NDS_MF_MAX_CODE_BITS 12
 #define NDS_MF_LUT_BITS 6
@@ -77,7 +77,7 @@ typedef struct NdsMfTables
     u16 ntables;
 } NdsMfTables;
 
-/* Pack header and rows (MFP1). */
+/* Pack header and rows (MFP2).  The MFT1 tables/bitstreams are unchanged. */
 typedef struct NdsMfPackHeader
 {
     u32 magic;
@@ -91,7 +91,8 @@ typedef struct NdsMfPackHeader
     u32 by_id_off;          /* u16[dir_count]: entry indices sorted by asset id */
     u32 data_off;
     u32 data_bytes;
-    u32 reserved[2];
+    u32 raw_off;            /* NdsMfPackRawException[raw_count] */
+    u32 raw_count;
 } NdsMfPackHeader;
 
 typedef struct NdsMfPackKind
@@ -112,7 +113,29 @@ typedef struct NdsMfPackEntry
     u8 kind;                /* index into the kind table */
     u8 cls;                 /* 0 always resident, 1 victim, 2 Kirby copy */
     u16 need_mask;          /* cls 1/2: opponent kinds (bit = kind index) that need it */
+    u16 main_user_mask;     /* direct users from every kind's FTMotionDesc table */
+    u16 reserved;
 } NdsMfPackEntry;
+
+enum
+{
+    nNdsMfRawAObj32 = 1,
+    nNdsMfRawSpline = 2
+};
+
+/* Raw clips which cannot be represented as MFT1 streams.  The source O2R
+ * asset remains the byte provider; these rows make its identity, exact load
+ * sizes and main-table users part of MFP2 admission and budgeting. */
+typedef struct NdsMfPackRawException
+{
+    u32 asset_id;
+    u32 payload_bytes;      /* resident O2R payload bytes */
+    u32 source_bytes;       /* retained O2R file bytes */
+    u32 source_crc32;       /* CRC32 of the retained source file */
+    u16 main_user_mask;     /* direct FTMotionDesc users; kind is fallback owner */
+    u8 kind;                /* index into the kind table */
+    u8 reason;              /* nNdsMfRawAObj32 or nNdsMfRawSpline */
+} NdsMfPackRawException;
 
 /* Bytes of storage ndsMfExpandTables needs for this blob (0 = malformed). */
 u32 ndsMfTablesStorageBytes(const u8 *blob, u32 blob_bytes);

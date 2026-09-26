@@ -33,7 +33,9 @@ def _symbol(name_offset, value, size, binding, kind, section_index):
 
 def make_elf(*, include_overlay=True, overlay_address=0x2000,
              overlay_size=32, rel_text=None, rel_rodata=None,
-             rel_overlay=None, rel_debug=None, rela_text=None):
+             rel_overlay=None, rel_debug=None, rela_text=None,
+             resident_function_value=0x1000, text_size=4,
+             frontend_entry_section=3, text_data=None):
     """Create a tiny linked ELF32 ARM image with real SHT_REL/SHT_RELA tables."""
     rel_text = [(0x1000, (3 << 8) | 2)] if rel_text is None else rel_text
     rel_rodata = [(0x1800, (4 << 8) | 2)] if rel_rodata is None else rel_rodata
@@ -47,9 +49,10 @@ def make_elf(*, include_overlay=True, overlay_address=0x2000,
     strings, str_offsets = _string_table(names)
     symbol_data = b"".join((
         _symbol(0, 0, 0, 0, 0, 0),
-        _symbol(str_offsets["resident_func"], 0x1000, 4, 1, 2, 1),
+        _symbol(str_offsets["resident_func"], resident_function_value, 4, 1, 2, 1),
         _symbol(str_offsets["resident_table"], 0x1800, 4, 1, 1, 2),
-        _symbol(str_offsets["frontend_entry"], overlay_address, 4, 1, 2, 3),
+        _symbol(str_offsets["frontend_entry"], overlay_address, 4, 1, 2,
+                frontend_entry_section),
         _symbol(str_offsets["frontend_table"], overlay_address + 4, 4, 1, 1, 3),
         _symbol(0, overlay_address, 0, 0, 3, 3),  # section symbol (not allowlistable)
     ))
@@ -66,7 +69,8 @@ def make_elf(*, include_overlay=True, overlay_address=0x2000,
         {"name": "", "type": 0, "flags": 0, "addr": 0, "data": b"",
          "size": 0, "link": 0, "info": 0, "align": 0, "entsize": 0},
         {"name": ".text", "type": 1, "flags": 0x6, "addr": 0x1000,
-         "data": b"\0\0\0\0", "link": 0, "info": 0, "align": 4, "entsize": 0},
+         "data": b"\0" * text_size if text_data is None else text_data,
+         "link": 0, "info": 0, "align": 4, "entsize": 0},
         {"name": ".rodata", "type": 1, "flags": 0x2, "addr": 0x1800,
          "data": b"\0\0\0\0", "link": 0, "info": 0, "align": 4, "entsize": 0},
         {"name": ".ovl.frontend" if include_overlay else ".other.frontend",
@@ -142,6 +146,37 @@ class FrontendOverlayTests(unittest.TestCase):
     def inspect(self, **kwargs):
         return checker.inspect_elf(make_elf(**kwargs), elf_name="fixture.elf",
                                    required=True)
+
+    def test_thumb_function_entry_uses_code_address(self):
+        report = self.inspect(resident_function_value=0x1001, rel_rodata=[])
+        self.assertEqual(report["unknown_crossing_pairs"][0]["source_symbol"],
+                         "resident_func")
+
+    def test_thumb_end_does_not_authorize_adjacent_data(self):
+        report = checker.inspect_elf(
+            make_elf(resident_function_value=0x1001, text_size=8,
+                     rel_text=[(0x1004, (3 << 8) | 2)], rel_rodata=[]),
+            elf_name="fixture.elf", required=True,
+            allowed_pairs={("resident_func", "frontend_entry")},
+        )
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["allowed_crossing_pairs"], [])
+        self.assertNotEqual(report["unknown_crossing_pairs"][0]["source_symbol"],
+                            "resident_func")
+
+    def test_absolute_alias_into_overlay_cannot_hide_crossing(self):
+        report = self.inspect(frontend_entry_section=0xfff1, rel_rodata=[])
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["unknown_crossing_pairs"][0]["target_symbol"],
+                         "frontend_entry")
+
+    def test_resolved_abs32_addend_into_overlay_cannot_hide_crossing(self):
+        report = self.inspect(
+            rel_text=[(0x1000, (2 << 8) | 2)], rel_rodata=[],
+            text_data=struct.pack("<I", 0x2004),
+        )
+        self.assertFalse(report["passed"])
+        self.assertEqual(len(report["unknown_crossing_pairs"]), 1)
 
     def test_exact_relocations_are_gated_and_reported_completely(self):
         report = self.inspect()

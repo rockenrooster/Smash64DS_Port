@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
-"""P2-2p8 Phase 3: emit the MF1 compact motion pack (ftanim_mf_pack.bin).
+"""P2-2p8 Phase 3: emit the MFP2 compact motion pack (ftanim_mf_pack.bin).
 
 Candidate B of the Phase 0 experiment (mf_codec_b.py, cfg "fast", one global
 table set), productionised: every AObj16 clip of every kind is encoded against
 one set of static canonical Huffman tables and written as
 
-    header (NdsMfPackHeader, 48 B)
+    header (NdsMfPackHeader, 48 B; MFP2)
     kind table   (NdsMfPackKind x kinds, 16 B each)
     tables blob  ("MFT1", expanded once at boot by ndsMfExpandTables)
-    directory    (NdsMfPackEntry x clips, 24 B each), per kind contiguous,
+    directory    (NdsMfPackEntry x clips, 28 B each), per kind contiguous,
                  ordered [always resident][victim clips by opponent]
-                 [Kirby copies by opponent]
+                 [Kirby copies by opponent], with a source-table user mask
     by-id index  (u16 x clips: entry indices sorted by asset id)
+    raw rows     (NdsMfPackRawException x AObj32/spline exceptions)
     data         (one bitstream per clip, 4-aligned, in directory order)
 
 Layouts are the C structs in include/nds/nds_motion_mf.h; the decoder is
@@ -49,18 +50,21 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import mf_aobj16 as ma  # noqa: E402
 import mf_codec_b as mb  # noqa: E402
 import mf_corpus as mc  # noqa: E402
+import mf_residency as mr  # noqa: E402
 
 TABLES_MAGIC = 0x3154464D  # "MFT1"
-PACK_MAGIC = 0x3150464D    # "MFP1"
-PACK_VERSION = 1
+PACK_MAGIC = 0x3250464D    # "MFP2"
+PACK_VERSION = 2
 
 CLASS_IDS = {"NSLOT": 0, "SLOT": 1, "CRANK": 2, "CRANK0": 3, "PAY": 4,
              "VD": 5, "RT": 6, "RT6": 7, "TAIL": 8}
 CLS_ALWAYS, CLS_VICTIM, CLS_COPY = 0, 1, 2
-HEADER = struct.Struct("<IHHIIIIIIII8x")
+HEADER = struct.Struct("<IHHIIIIIIIIII")
 KIND_ROW = struct.Struct("<8sHHI")
-ENTRY = struct.Struct("<IIIIIBBH")
-assert HEADER.size == 48 and KIND_ROW.size == 16 and ENTRY.size == 24
+ENTRY = struct.Struct("<IIIIIBBHHH")
+RAW_ENTRY = struct.Struct("<IIIIHBB")
+assert (HEADER.size == 48 and KIND_ROW.size == 16 and ENTRY.size == 28
+        and RAW_ENTRY.size == 20)
 
 
 def ctx_id(cls, ctx):
@@ -128,19 +132,18 @@ def serialise_tables(model):
 
 
 def classify_clip(corpus, kind, aid):
-    cls, who = mc.classify(kind, corpus["names"].get(aid))
-    if cls not in ("victim", "copy"):
-        return CLS_ALWAYS, 0
-    kinds = (who,) if isinstance(who, str) else tuple(who)
-    mask = 0
-    for k in kinds:
-        mask |= 1 << mc.KINDS.index(k)
-    return (CLS_VICTIM if cls == "victim" else CLS_COPY), mask
+    return mr.classify_clip(corpus, kind, aid)
 
 
 def build(log=print):
     corpus = mc.load_corpus(log=log)
     clips = corpus["clips"]
+    main_users = mr.main_user_masks(corpus)
+    raw_exceptions = mr.raw_exception_inventory(corpus)
+    raw_ids = {r["asset_id"] for r in raw_exceptions}
+    conflict = raw_ids & set(clips)
+    if conflict:
+        raise SystemExit("raw exception also has MF payload: 0x%x" % min(conflict))
     parsed = {a: ma.parse_clip(clips[a]["bytes"]) for a in clips}
     for a, p in parsed.items():
         if len(p["slots"]) > 64 or len(p["runs"]) > 64:
@@ -150,7 +153,7 @@ def build(log=print):
     model = mb.Model([parsed[a] for a in sorted(clips)], cfg)
     blob = serialise_tables(model)
 
-    rows = []  # (kind index, cls, mask, aid, stream, bits, bps1)
+    rows = []  # (kind index, cls, need mask, aid, stream, bits, bps1, users)
     for a in sorted(clips):
         kind = clips[a]["bank"]
         data, bits, _n = model.encode(parsed[a])
@@ -159,7 +162,8 @@ def build(log=print):
         if model.decode(data, len(clips[a]["bytes"])) != clips[a]["bytes"]:
             raise SystemExit("python round trip failed for 0x%x" % a)
         cls, mask = classify_clip(corpus, kind, a)
-        rows.append((mc.KINDS.index(kind), cls, mask, a, data, bits, clips[a]["bytes"]))
+        rows.append((mc.KINDS.index(kind), cls, mask, a, data, bits,
+                     clips[a]["bytes"], main_users.get(a, 0)))
     rows.sort(key=lambda r: (r[0], r[1], r[2], r[3]))
 
     kinds_present = sorted({r[0] for r in rows})
@@ -171,12 +175,12 @@ def build(log=print):
         for r in rows:
             if r[0] != ki:
                 continue
-            _k, cls, mask, aid, stream, bits, bps1 = r
+            _k, cls, mask, aid, stream, bits, bps1, users = r
             rel = len(data)
             data += stream
             data += bytes((-len(data)) & 3)
             entries.append((aid, rel, bits, len(bps1), zlib.crc32(bps1) & 0xFFFFFFFF,
-                            ki, cls, mask, bps1, stream))
+                            ki, cls, mask, users, bps1, stream))
         kind_rows.append((k.encode()[:8], first, len(entries) - first))
     by_id = sorted(range(len(entries)), key=lambda i: entries[i][0])
 
@@ -184,32 +188,48 @@ def build(log=print):
     tables_off = kind_off + KIND_ROW.size * len(kind_rows)
     dir_off = (tables_off + len(blob) + 3) & ~3
     by_id_off = dir_off + ENTRY.size * len(entries)
-    data_off = (by_id_off + 2 * len(entries) + 3) & ~3
+    raw_off = (by_id_off + 2 * len(entries) + 3) & ~3
+    data_off = (raw_off + RAW_ENTRY.size * len(raw_exceptions) + 3) & ~3
     out = bytearray(data_off)
     HEADER.pack_into(out, 0, PACK_MAGIC, PACK_VERSION, len(kind_rows), tables_off,
                      len(blob), dir_off, len(entries), kind_off, by_id_off, data_off,
-                     len(data))
+                     len(data), raw_off, len(raw_exceptions))
     for i, (name, first, count) in enumerate(kind_rows):
         KIND_ROW.pack_into(out, kind_off + KIND_ROW.size * i, name, first, count, 0)
     out[tables_off:tables_off + len(blob)] = blob
     for i, e in enumerate(entries):
-        ENTRY.pack_into(out, dir_off + ENTRY.size * i, *e[:8])
+        ENTRY.pack_into(out, dir_off + ENTRY.size * i, *e[:9], 0)
     struct.pack_into("<%dH" % len(by_id), out, by_id_off, *by_id)
+    for i, raw in enumerate(raw_exceptions):
+        RAW_ENTRY.pack_into(
+            out, raw_off + RAW_ENTRY.size * i,
+            raw["asset_id"], raw["payload_bytes"], raw["source_bytes"],
+            raw["source_crc32"], raw["main_user_mask"], raw["kind_index"],
+            raw["reason"],
+        )
     out += data
 
     manifest = {
-        "pack_bytes": len(out), "tables_bytes": len(blob), "data_bytes": len(data),
+        "pack_bytes": len(out), "metadata_bytes": data_off,
+        "tables_bytes": len(blob), "tables_expanded_arm_bytes": mr.mft1_arm_storage_bytes(blob),
+        "data_bytes": len(data), "raw_bytes": RAW_ENTRY.size * len(raw_exceptions),
         "clips": len(entries), "kinds_present": [mc.KINDS[k] for k in kinds_present],
-        "bps1_bytes": sum(len(e[8]) for e in entries),
+        "raw_exceptions": raw_exceptions,
+        "raw_exception_count": len(raw_exceptions),
+        "raw_payload_bytes": sum(r["payload_bytes"] for r in raw_exceptions),
+        "raw_source_bytes": sum(r["source_bytes"] for r in raw_exceptions),
+        "bps1_bytes": sum(len(e[9]) for e in entries),
         "tables": len(model.tables), "words": len(model.words),
         "succ_contexts": len(model.succ_list),
         "entries": [{"id": "0x%x" % e[0], "kind": mc.KINDS[e[5]], "cls": e[6],
-                     "need_mask": e[7], "bps1_bytes": e[3],
-                     "bps1_sha256": hashlib.sha256(e[8]).hexdigest(),
-                     "mf_bytes": (len(e[9]) + 3) & ~3, "stream_bits": e[2]}
+                     "need_mask": e[7], "main_user_mask": e[8], "bps1_bytes": e[3],
+                     "decoded_bytes": e[3],
+                     "bps1_sha256": hashlib.sha256(e[9]).hexdigest(),
+                     "mf_bytes": (len(e[10]) + 3) & ~3, "stream_bits": e[2]}
                     for e in entries],
     }
     manifest["ratio"] = (len(data) + len(blob)) / manifest["bps1_bytes"]
+    manifest["pack_ratio"] = len(out) / manifest["bps1_bytes"]
     return bytes(out), manifest
 
 
@@ -222,9 +242,12 @@ def main():
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "ftanim_mf_pack.bin").write_bytes(pack)
     (a.json or (a.out / "ftanim_mf_pack.json")).write_text(json.dumps(manifest, indent=1))
-    print("MF1 pack: %d clips, %d B (tables %d, data %d) from %d B of BPS1: ratio %.3f" % (
-        manifest["clips"], manifest["pack_bytes"], manifest["tables_bytes"],
-        manifest["data_bytes"], manifest["bps1_bytes"], manifest["ratio"]))
+    print("MFP2 pack: %d clips + %d raw exceptions, %d B (%d metadata, %d tables, "
+          "%d streams) from %d B BPS1: pack ratio %.3f; raw O2R %d payload B / %d source B" % (
+              manifest["clips"], manifest["raw_exception_count"], manifest["pack_bytes"],
+              manifest["metadata_bytes"], manifest["tables_bytes"],
+              manifest["data_bytes"], manifest["bps1_bytes"], manifest["pack_ratio"],
+              manifest["raw_payload_bytes"], manifest["raw_source_bytes"]))
     return 0
 
 

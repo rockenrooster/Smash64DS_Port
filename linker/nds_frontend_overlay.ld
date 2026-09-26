@@ -17,6 +17,15 @@ SECTIONS {
         :nds_ui_kit.o (.text.ndsUiKitCommit .text.ndsUiKitOam
             .text.ndsUiKitObjBase .text.ndsUiKitObjAt .text.ndsUiKitSpriteSize
             .rodata.kNdsUiKitImageMetrics .rodata.ndsUiKitCommit.*)
+        /* Fighter death, camera/interface and boss callbacks have shared
+         * gameplay callers. Preserve their full local closure and constants. */
+        :battleship_sc1pgame_runtime.o (.text.sc1PGameBoss*
+            .text.func_ovl65_8018F6DC .text.sc1PGameSpawnEnemyTeamNext
+            .text.sc1PGameGetRandomStartPosition .text.sc1PGameSetPlayerDefeatStats
+            .text.sc1PGameSetCameraZoom
+            .rodata.sc1PGameBoss* .rodata.func_ovl65_8018F6DC*
+            .rodata.sc1PGameSpawnEnemyTeamNext* .rodata.sc1PGameGetRandomStartPosition*
+            .rodata.sc1PGameSetPlayerDefeatStats* .rodata.sc1PGameSetCameraZoom*)
         . = ALIGN(4);
     } >main AT>lma9 :main = 0xff
 }
@@ -89,6 +98,20 @@ SECTIONS {
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         :nds_menu_shell.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
+        /* Non-VS scenes retain this overlay for their complete nested call.
+         * sc1pgameboss stays resident: Last-stage wallpaper also has a direct
+         * call from the shared ground constructor, independent of scene kind. */
+        :battleship_sc1pmanager.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pgame_runtime.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pintro.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pstageclear.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pchallenger.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1ptrainingmode.o (.text .text.* .rodata .rodata.*)
+        :battleship_scstaffroll.o (.text .text.* .rodata .rodata.*)
+        :battleship_scautodemo.o (.text .text.* .rodata .rodata.*)
+        :battleship_scautodemofiles.o (.text .text.* .rodata .rodata.*)
+        :battleship_scexplain.o (.text .text.* .rodata .rodata.*)
+        :battleship_scexplainfiles.o (.text .text.* .rodata .rodata.*)
         . = ALIGN(32);
         __nds_frontend_end = .;
     } AT>ovlmem :ovl_frontend = 0xff

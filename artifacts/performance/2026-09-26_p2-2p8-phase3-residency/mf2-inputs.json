@@ -1,0 +1,26 @@
+{
+  "status": "HOST_CHECK_PASS_RUNTIME_NOT_LINKED",
+  "producer_checker_session": 81758,
+  "producer_exit": 0,
+  "checker_exit": 0,
+  "corpus_inputs_sha256": "86be321f0fcd4b8c1f96071fa5ae619af3420874b6464891aa85342d65bf51b3",
+  "pack_path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2-2p8-mf2\\ftanim_mf_pack.bin",
+  "pack_sha256": "1aa26f69790c09f6d6a68b748bf2f55d9920b3161955eee382666ab7fb65d480",
+  "baseline_pack_sha256": "2d451eac6a9061c78931fb51acb6bd9217039236f455f15c9df210a3225030c6",
+  "mft1_tables_identical": true,
+  "mft1_streams_identical": true,
+  "tables_sha256": "6bbdb777b50010499edee273af44472f3b5f83923ee895ff24a098b0f3427204",
+  "streams_sha256": "0bc84e5bd20e997bda3afc75371883a3418b151990a9ace20f552c0c6020c777",
+  "sources": {
+    "include/nds/nds_motion_mf.h": "b8896eaf2f981e1444fe7887fcdb7cf00828ab6f8b776bbbd0cebcd499e5b10b",
+    "src/nds/nds_motion_mf.c": "d6e914474194e5b2fb40ebc0eb82891ea2129365e2a66d882f09e1d0222dfd77",
+    "scripts/motion/mf_emit.py": "e941dfb4eb86064d07fe9b9f28c3fa68d20db07fa009aa05a2181d141ae55375",
+    "scripts/motion/mf_residency.py": "2d511a5f79860f520d6003baf20bbe33671fd59fe2a063f266a440b140b03fb0",
+    "scripts/motion/mf_corpus.py": "f7cc9c32aab098a615f36247d74306efc26de16cd6e7fef683b20ea63716e402",
+    "scripts/motion/check_mf_pack.py": "a674397d9f55b3dfd92a18f27500f65554da6115f9d9769ba17852fa7203aa94",
+    "scripts/motion/price_mf_rosters.py": "fd6a8b233ea8ef1629833332871e7d8226d4ceef8800b3218332ab5283c63967",
+    "scripts/motion/host/mf_host.c": "46df86fc22797ac6dfb516e6764419528246594c36f9e47775478a61f62a75f9",
+    "scripts/generate_battlepack_anim.py": "516abec558250a1ebef68f0a7d01f74e01021c2ede9264bd3cbf8b8951f2c438",
+    "scripts/ftanim_reloc_probe.py": "0a506cd9ae5cc8722b3859c34f0fd27cb3d2a84bb95f0a11b23444895d8ab1a6"
+  }
+}
