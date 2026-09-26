@@ -1,6 +1,6 @@
 """Compile native stage tables to GX templates; no N64 commands at runtime.
 
-Dream Land's eight native segments. Constant worlds and known colour/UV are
+All nine VS stages. Constant worlds and known colour/UV are
 baked; animated inputs, camera matrices and painter depth use patch sites.
 """
 import argparse
@@ -12,7 +12,10 @@ import generate_nds_native_stage as stage
 MAGIC = 0x31505847  # GXP1
 VIEW, WORLD, NOZ, COLOR, UV, PROJECTION, COMPOSED_NOZ, CORNER_NOZ = range(1, 9)
 MATERIAL = 9
-SEGMENTS = tuple(range(8))
+COMPOSED, CORNER_SOURCE = 10, 11
+STAGES = ('castle', 'sector', 'jungle', 'zebes', 'hyrule', 'yoster',
+          'dreamland', 'yamabuki', 'inishie')
+FOUR_PLAYER_BODY_MAX = 36992
 HEADER = struct.Struct('<12I')
 RUN_V1 = struct.Struct('<6H')
 RUN_V2 = struct.Struct('<6H6h')
@@ -77,7 +80,7 @@ def vertex_colour(policy, rgba):
     return ((rgba >> 27) & 31) | (((rgba >> 19) & 31) << 5) | (((rgba >> 11) & 31) << 10)
 
 
-def vertex_attributes(packet):
+def vertex_attributes(packet, name='dreamland'):
     """Resolve first-use colour/UV inputs from the native state spans.
 
     Only explicit texture-on state is baked here. Material-driven UVs and
@@ -118,8 +121,9 @@ def vertex_attributes(packet):
                     v = packet.vertices[dense]
                     uv = None
                     if (enabled and origins[tile] is not None and
-                        epoch.material_event == stage.INVALID_U8 and texture_used(policy)):
-                        offset = 16 if policy.othermode_h & (3 << 12) else 0
+                        epoch.material_event == stage.INVALID_U8 and texture_used(policy) and
+                        not run.flags & stage.RUN_FLAG_VERTEX_ALPHA_RAMP):
+                        offset = (16 if name == 'dreamland' else 8) if policy.othermode_h & (3 << 12) else 0
                         s = ((v.s * scales[0]) >> 17) - origins[tile][0] * 4 + offset
                         t = ((v.t * scales[1]) >> 17) - origins[tile][1] * 4 + offset
                         uv = (s & 65535) | ((t & 65535) << 16)
@@ -143,28 +147,27 @@ def texture_used(policy):
 
 
 def compile_packet(packet, name='dreamland'):
-    if name != 'dreamland':
-        raise ValueError('Only the proved Dream Land batch is admitted yet')
+    if name not in STAGES:
+        raise ValueError('Only VS stages are admitted')
     words, patches = [], []
     runs = [(0,) * 14] * len(packet.runs)
     static_mask = stage.blob_rigid_mask(name) & ~stage.blob_camera_mask(packet)
-    attributes = vertex_attributes(packet)
+    attributes = vertex_attributes(packet, name)
     baked_mask = 0
-    for segment_id in SEGMENTS:
-        segment = packet.segments[segment_id]
+    for segment_id, segment in enumerate(packet.segments):
         for run_id in range(segment.first_run, segment.first_run + segment.run_count):
             run = packet.runs[run_id]
             cross = bool(run.flags & stage.RUN_FLAG_PROJECTED_CROSS_MATRIX)
-            if (run.submit_class not in (stage.SUBMIT_RAW_CURRENT, stage.SUBMIT_PROJECTED_NO_Z, stage.SUBMIT_PROJECTED_RANGE_OR_MATRIX)
-                or (cross and run.submit_class != stage.SUBMIT_PROJECTED_NO_Z)):
+            if run.submit_class not in (stage.SUBMIT_RAW_CURRENT, stage.SUBMIT_PROJECTED_NO_Z, stage.SUBMIT_PROJECTED_RANGE_OR_MATRIX):
                 raise ValueError('Unsupported stage run class')
             all_vertices = [packet.vertices[i] for i in packet.corners[
                 run.first_corner:run.first_corner + run.triangle_count * 3]]
             bounds = tuple(min(getattr(v, axis) for v in all_vertices) for axis in ('x', 'y', 'z'))
             bounds += tuple(max(getattr(v, axis) for v in all_vertices) for axis in ('x', 'y', 'z'))
             binding_mask = sum(1 << b for b in {v.matrix_binding for v in all_vertices})
-            composed_noz = (run.submit_class == stage.SUBMIT_PROJECTED_NO_Z and
-                            (cross or not static_mask & (1 << run.binding_index)))
+            is_noz = run.submit_class == stage.SUBMIT_PROJECTED_NO_Z
+            composed = cross or not static_mask & (1 << run.binding_index)
+            source_corner = cross and not is_noz
             first_word, first_patch = len(words), len(patches)
             lane, command = 0, 0
 
@@ -190,12 +193,12 @@ def compile_packet(packet, name='dreamland'):
             emit(0x2A, 0)
             emit(0x2B, 0)
             emit(0)
-            if run.submit_class != stage.SUBMIT_PROJECTED_NO_Z:
+            if not is_noz and not composed:
                 emit(0x10, 0)
                 patch(0x16, PROJECTION)
             emit(0x10, 2)  # position/vector matrix
-            if composed_noz:
-                emit(0x15)  # preserve the CPU's composed precision for billboards
+            if composed:
+                emit(0x15)  # preserve the CPU's composed precision
             else:
                 patch(0x16, VIEW)
             last_shift = None
@@ -204,31 +207,33 @@ def compile_packet(packet, name='dreamland'):
                 vertices = [packet.vertices[i] for i in indices]
                 if not cross and any(v.matrix_binding != run.binding_index for v in vertices):
                     raise ValueError('Foreign-binding corner needs a cross program')
-                shift = run_shift(packet, run, indices)
+                shift = 0 if source_corner else run_shift(packet, run, indices)
                 if shift != last_shift:
                     if last_shift is not None:
                         emit(0x12, 1)
                     emit(0x11)
-                    if composed_noz:
+                    if composed:
                         pass  # the full transform is the triangle's projection
-                    elif static_mask & (1 << run.binding_index):
+                    else:
                         emit(0x18, *world_words(packet, run.binding_index, shift))
                         baked_mask |= 1 << run.binding_index
-                    else:
-                        patch(0x18, WORLD, run.binding_index, shift)
                     last_shift = shift
                 if triangle == 0:
                     emit(0x40, 0)  # triangles
-                if run.submit_class == stage.SUBMIT_PROJECTED_NO_Z and not cross:
+                if not cross and (is_noz or (composed and triangle == 0)):
                     emit(0x10, 0)
-                    if composed_noz:
-                        patch(0x16, COMPOSED_NOZ, run.binding_index, shift)
+                    if composed:
+                        patch(0x16, COMPOSED_NOZ if is_noz else COMPOSED, run.binding_index, shift)
                     else:
                         patch(0x16, NOZ, triangle)
                     emit(0x10, 2)
                 for index, v in zip(indices, vertices):
                     vertex_shift = shift
-                    if cross:
+                    if source_corner:
+                        emit(0x10, 0)
+                        patch(0x16, CORNER_SOURCE, index, triangle)
+                        emit(0x10, 2)
+                    elif cross:
                         if len({v.matrix_binding for v in vertices}) != 1:
                             vertex_shift = stage.stage_vertex_coordinate_shift(v)
                         emit(0x10, 0)
@@ -243,7 +248,8 @@ def compile_packet(packet, name='dreamland'):
                         patch(0x22, UV, index)
                     else:
                         emit(0x22, uv)
-                    xyz = [stage.round_shift_signed(x, vertex_shift) * 16 for x in (v.x, v.y, v.z)]
+                    xyz = ([0, 0, 0] if source_corner else
+                           [stage.round_shift_signed(x, vertex_shift) * 16 for x in (v.x, v.y, v.z)])
                     if not all(-32768 <= x <= 32767 for x in xyz):
                         raise ValueError('Vertex does not fit DS VTX16')
                     emit(0x23, (xyz[0] & 0xFFFF) | ((xyz[1] & 0xFFFF) << 16), xyz[2] & 0xFFFF)
@@ -257,17 +263,19 @@ def compile_packet(packet, name='dreamland'):
     body = b''.join(RUN.pack(*r) for r in runs)
     body += b''.join(PATCH.pack(*p) for p in patches)
     body += struct.pack(f'<{len(words)}I', *words)
-    return HEADER.pack(MAGIC, 4, stage.blob_gkind(name), len(runs), len(words),
-                       len(patches), sum(1 << s for s in SEGMENTS), signature(packet), len(body),
+    if len(body) > FOUR_PLAYER_BODY_MAX:
+        raise ValueError('GX template exceeds four-player framebuffer tail')
+    return HEADER.pack(MAGIC, 5, stage.blob_gkind(name), len(runs), len(words),
+                       len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body
 
 
 def decode(blob):
     header = HEADER.unpack_from(blob)
     magic, version, _, nr, nw, np, _, _, nb, checksum, _, _ = header
-    if magic != MAGIC or version not in (1, 2, 3, 4) or len(blob) != HEADER.size + nb:
+    if magic != MAGIC or version not in (1, 2, 3, 4, 5) or len(blob) != HEADER.size + nb:
         raise ValueError('Invalid GX header/length')
-    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN}[version]
+    record = {1: RUN_V1, 2: RUN_V2, 3: RUN, 4: RUN, 5: RUN}[version]
     if nb != nr * record.size + np * PATCH.size + nw * 4 or stage.fnv1a_bytes(blob[HEADER.size:]) != checksum:
         raise ValueError('Invalid GX body')
     pos = HEADER.size
@@ -295,10 +303,11 @@ def commands(words):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--stage', choices=STAGES, default='dreamland')
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
-    packet = stage.generate(stage._paths.REPO_ROOT, 'dreamland')
-    blob = compile_packet(packet)
+    packet = stage.generate(stage._paths.REPO_ROOT, args.stage)
+    blob = compile_packet(packet, args.stage)
     decode(blob)
     if args.check:
         if args.output.read_bytes() != blob:
@@ -307,9 +316,8 @@ def main():
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_bytes(blob)
     h = HEADER.unpack_from(blob)
-    triangles = sum(packet.runs[i].triangle_count for s in SEGMENTS for i in
-                    range(packet.segments[s].first_run, packet.segments[s].first_run + packet.segments[s].run_count))
-    print(f'STAGE_GX_COMPILED bytes={len(blob)} words={h[4]} patches={h[5]} triangles={triangles}')
+    triangles = sum(run.triangle_count for run in packet.runs)
+    print(f'STAGE_GX_COMPILED stage={args.stage} bytes={len(blob)} words={h[4]} patches={h[5]} triangles={triangles}')
 
 
 if __name__ == '__main__':

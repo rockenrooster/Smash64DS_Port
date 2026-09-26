@@ -48,10 +48,14 @@
 #include <nds/generated/nds_native_ness_pktail.generated.h>
 #include <nds/generated/nds_native_yoshi_entryegg.generated.h>
 #include <nds/generated/nds_native_damage_slash.generated.h>
+#include <nds/generated/nds_native_damage_fly_mdust.generated.h>
+#include <nds/nds_reloc_assets.h>
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_native_wallpaper.h>
+#include <sys/objman.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
+extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 extern volatile u32 gNdsDamageSlashRootMask;
 extern volatile u32 gNdsDamageSlashEffectsSeen;
 extern volatile u32 gNdsDamageSlashEffectsRejected;
@@ -66,6 +70,10 @@ sb32 ndsRendererSubmitNativeDamageSlash(
     const void *asset_base, u32 asset_bytes, u32 root_offset,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererPreflightNativeDamageSlash(
+    const void *asset_base, u32 asset_bytes, u32 root_offset,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config);
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
@@ -2447,6 +2455,915 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
         mobj, out, TRUE, NULL, NULL);
 #endif
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+/*
+ * P2-2p8 M1 Native Draw List (NDL), first closed owners.
+ *
+ * The camera capture loop calls this before RecordCapturedDisplay.  A source
+ * effect GObj is bound once for its current allocation lifetime, then the hot
+ * path jumps straight to the existing typed native owner.  The binding stores
+ * the exact DObjs that source traversal would reach; matrices and live MObj
+ * state are still rebuilt from those source objects each frame.
+ */
+#define NDS_P2_NDL_RECORD_COUNT 64u
+#define NDS_P2_NDL_OWNER_NONE 0u
+#define NDS_P2_NDL_OWNER_IMPACT_WAVE 1u
+#define NDS_P2_NDL_OWNER_DAMAGE_SLASH 2u
+#define NDS_P2_NDL_OWNER_EFGROUND 3u
+#define NDS_P2_NDL_OWNER_GROUND 4u
+#define NDS_P2_NDL_OWNER_WEAPON 5u
+#define NDS_P2_NDL_OWNER_ITEM 6u
+#define NDS_P2_NDL_OWNER_NEGATIVE 0xffffu
+#define NDS_P2_NDL_FLAG_BOUND 1u
+#define NDS_P2_NDL_DOBJ_MAX 2u
+
+typedef struct NDSNdlRecord
+{
+    GObj *gobj;
+    u32 serial;
+    u16 owner;
+    u8 kind;
+    u8 flags;
+    DObj *dobj[NDS_P2_NDL_DOBJ_MAX];
+    const Gfx *body[NDS_P2_NDL_DOBJ_MAX];
+    u32 hdr[NDS_P2_NDL_DOBJ_MAX];
+    u8 body_count;
+    u8 pad[3];
+} NDSNdlRecord;
+
+__attribute__((section(".data"))) volatile u32 gNdsP2Ndl = 0u;
+volatile u32 gNdsNdlDispatch[NDS_P2_NDL_KIND_COUNT];
+volatile u32 gNdsNdlFallback[NDS_P2_NDL_KIND_COUNT];
+volatile u32 gNdsNdlProcsSkipped;
+volatile u32 gNdsNdlBindCount;
+volatile u32 gNdsNdlNegativeBindCount;
+volatile u32 gNdsNdlItemRejectStep;
+
+static NDSNdlRecord sNdsP2NdlRecords[NDS_P2_NDL_RECORD_COUNT];
+
+static u32 ndsP2NdlRecordIndex(const GObj *gobj)
+{
+    return ((u32)(uintptr_t)gobj >> 4) & (NDS_P2_NDL_RECORD_COUNT - 1u);
+}
+
+static sb32 ndsP2NdlDObjVisible(const DObj *dobj)
+{
+    const DObj *walk = dobj;
+    u32 depth = 0u;
+
+    if ((dobj == NULL) || ((dobj->flags & DOBJ_FLAG_NOTEXTURE) != 0u))
+    {
+        return FALSE;
+    }
+    /*
+     * BattleShip roots end at DOBJ_PARENT_NULL ((DObj *)1), not at C NULL.
+     * The source tree walkers stop on that sentinel; dereferencing it here
+     * faults on the first direct ImpactWave draw.
+     */
+    while ((walk != NULL) && (walk != DOBJ_PARENT_NULL) &&
+           (depth++ < NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        if ((walk->flags & DOBJ_FLAG_HIDDEN) != 0u)
+        {
+            return FALSE;
+        }
+        walk = walk->parent;
+    }
+    return (walk == DOBJ_PARENT_NULL) ? TRUE : FALSE;
+}
+
+static void ndsP2NdlScanDamageSlashTree(DObj *dobj, const u8 *asset_base,
+                                         NDSNdlRecord *record, u32 depth)
+{
+    DObj *sibling;
+
+    if ((dobj == NULL) || (asset_base == NULL) || (record == NULL) ||
+        (depth >= NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        return;
+    }
+    if (dobj->dl_link != NULL)
+    {
+        DObjDLLink *link = dobj->dl_link;
+        u32 i;
+
+        for (i = 0u; i < 8u; i++, link++)
+        {
+            u32 root = 0u;
+            u32 j;
+
+            if (link->list_id == NDS_RENDERER_STAGE_DL_HEADS)
+            {
+                break;
+            }
+            if ((link->list_id < 0) ||
+                ((u32)link->list_id >= NDS_RENDERER_STAGE_DL_HEADS))
+            {
+                break;
+            }
+            if (link->dl == (const Gfx *)(asset_base +
+                    NDS_NATIVE_DAMAGE_SLASH_ROOT0))
+            {
+                root = NDS_NATIVE_DAMAGE_SLASH_ROOT0;
+            }
+            else if (link->dl == (const Gfx *)(asset_base +
+                         NDS_NATIVE_DAMAGE_SLASH_ROOT1))
+            {
+                root = NDS_NATIVE_DAMAGE_SLASH_ROOT1;
+            }
+            if (root == 0u)
+            {
+                continue;
+            }
+            for (j = 0u; j < record->body_count; j++)
+            {
+                if (record->hdr[j] == root)
+                {
+                    root = 0u;
+                    break;
+                }
+            }
+            if ((root != 0u) &&
+                (record->body_count < NDS_P2_NDL_DOBJ_MAX))
+            {
+                u32 out = record->body_count++;
+                record->dobj[out] = dobj;
+                record->body[out] = link->dl;
+                record->hdr[out] = root;
+            }
+        }
+    }
+    if (dobj->child != NULL)
+    {
+        ndsP2NdlScanDamageSlashTree(
+            dobj->child, asset_base, record, depth + 1u);
+    }
+    if (dobj->sib_prev == NULL)
+    {
+        sibling = dobj->sib_next;
+        while (sibling != NULL)
+        {
+            ndsP2NdlScanDamageSlashTree(
+                sibling, asset_base, record, depth + 1u);
+            sibling = sibling->sib_next;
+        }
+    }
+}
+
+#if NDS_P2_LINK
+extern void itDisplayColAnimXLUProcDisplay(GObj *item_gobj);
+
+static void ndsP2NdlScanLinkBombTree(DObj *dobj, const u8 *asset_base,
+                                     NDSNdlRecord *record, u32 depth)
+{
+    DObj *sibling;
+
+    if ((dobj == NULL) || (asset_base == NULL) || (record == NULL) ||
+        (depth >= NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX))
+    {
+        return;
+    }
+    if (dobj->dl_link != NULL)
+    {
+        DObjDLLink *link = dobj->dl_link;
+        u32 i;
+
+        for (i = 0u; i < GC_COMMON_MAX_DLLINKS; i++, link++)
+        {
+            u32 root = 0u;
+            u32 j;
+
+            if (link->list_id == NDS_RENDERER_STAGE_DL_HEADS)
+            {
+                break;
+            }
+            if ((link->list_id < 0) ||
+                ((u32)link->list_id >= NDS_RENDERER_STAGE_DL_HEADS))
+            {
+                break;
+            }
+            if (link->dl == (const Gfx *)(asset_base +
+                    NDS_NATIVE_LINK_BOMB_BODY_ROOT))
+            {
+                root = NDS_NATIVE_LINK_BOMB_BODY_ROOT;
+            }
+            else if (link->dl == (const Gfx *)(asset_base +
+                         NDS_NATIVE_LINK_BOMB_FUSE_ROOT))
+            {
+                root = NDS_NATIVE_LINK_BOMB_FUSE_ROOT;
+            }
+            if (root == 0u)
+            {
+                continue;
+            }
+            for (j = 0u; j < record->body_count; j++)
+            {
+                if (record->hdr[j] == root)
+                {
+                    root = 0u;
+                    break;
+                }
+            }
+            if ((root != 0u) &&
+                (record->body_count < NDS_P2_NDL_DOBJ_MAX))
+            {
+                u32 out = record->body_count++;
+                record->dobj[out] = dobj;
+                record->body[out] = link->dl;
+                record->hdr[out] = root;
+            }
+        }
+    }
+    if (dobj->child != NULL)
+    {
+        ndsP2NdlScanLinkBombTree(
+            dobj->child, asset_base, record, depth + 1u);
+    }
+    if (dobj->sib_prev == NULL)
+    {
+        sibling = dobj->sib_next;
+        while (sibling != NULL)
+        {
+            ndsP2NdlScanLinkBombTree(
+                sibling, asset_base, record, depth + 1u);
+            sibling = sibling->sib_next;
+        }
+    }
+}
+
+static sb32 ndsP2NdlValidateLinkBombRecord(
+    const NDSNdlRecord *record, const u8 *asset_base, u32 asset_bytes)
+{
+    u32 mask = 0u;
+    u32 i;
+
+    if ((record == NULL) || (asset_base == NULL) ||
+        (asset_bytes < NDS_NATIVE_LINK_BOMB_FILE_END) ||
+        (record->body_count != 2u))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < record->body_count; i++)
+    {
+        const Gfx *dl = record->body[i];
+
+        if ((record->dobj[i] == NULL) || (record->dobj[i]->mobj != NULL) ||
+            (dl == NULL))
+        {
+            return FALSE;
+        }
+        if (record->hdr[i] == NDS_NATIVE_LINK_BOMB_BODY_ROOT)
+        {
+            if ((asset_bytes <
+                    (NDS_NATIVE_LINK_BOMB_BODY_ROOT +
+                     NDS_NATIVE_LINK_BOMB_BODY_DL_BYTES)) ||
+                (dl[11].words.w0 != NDS_NATIVE_LINK_BOMB_BODY_TLUT_W0) ||
+                (dl[11].words.w1 != (u32)(uintptr_t)(
+                    asset_base + NDS_NATIVE_LINK_BOMB_TLUT_OFFSET)) ||
+                (dl[17].words.w0 != NDS_NATIVE_LINK_BOMB_BODY_IMAGE_W0) ||
+                (dl[17].words.w1 != (u32)(uintptr_t)(
+                    asset_base + NDS_NATIVE_LINK_BOMB_BODY_IMAGE_OFFSET)))
+            {
+                return FALSE;
+            }
+            mask |= 1u;
+        }
+        else if (record->hdr[i] == NDS_NATIVE_LINK_BOMB_FUSE_ROOT)
+        {
+            if ((asset_bytes <
+                    (NDS_NATIVE_LINK_BOMB_FUSE_ROOT +
+                     NDS_NATIVE_LINK_BOMB_FUSE_DL_BYTES)) ||
+                (dl[13].words.w0 != NDS_NATIVE_LINK_BOMB_FUSE_IMAGE_W0) ||
+                (dl[13].words.w1 != (u32)(uintptr_t)(
+                    asset_base + NDS_NATIVE_LINK_BOMB_FUSE_IMAGE_OFFSET)))
+            {
+                return FALSE;
+            }
+            mask |= 2u;
+        }
+        else
+        {
+            return FALSE;
+        }
+    }
+    return (mask == 3u) ? TRUE : FALSE;
+}
+#endif
+
+static void ndsP2NdlBindRecord(GObj *gobj, u32 serial, NDSNdlRecord *record)
+{
+    DObj *root;
+    u32 variant;
+    u32 kind;
+
+    bzero(record, sizeof(*record));
+    record->gobj = gobj;
+    record->serial = serial;
+    record->owner = NDS_P2_NDL_OWNER_NEGATIVE;
+    record->kind = 0xffu;
+    record->flags = NDS_P2_NDL_FLAG_BOUND;
+
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    if ((gobj->dl_link_id == 10) &&
+        (ndsEFManagerImpactWaveVariant(gobj, &variant) != FALSE))
+    {
+        root = DObjGetStruct(gobj);
+        if ((root != NULL) && (root->dl != NULL) && (root->mobj != NULL))
+        {
+            record->owner = NDS_P2_NDL_OWNER_IMPACT_WAVE;
+            record->kind = 0u;
+            record->dobj[0] = root;
+            record->body[0] = root->dl;
+            record->hdr[0] = variant;
+            record->body_count = 1u;
+            gNdsNdlBindCount++;
+            return;
+        }
+    }
+#endif
+    if ((gobj->dl_link_id == 18) &&
+        (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj))
+    {
+        const void *asset_view = NULL;
+        u32 asset_bytes = 0u;
+
+        if ((ndsRelocGetLoadedAssetView(
+                 NDS_NATIVE_DAMAGE_SLASH_ASSET,
+                 &asset_view, &asset_bytes) != FALSE) &&
+            (asset_view != NULL) &&
+            (asset_bytes >= NDS_NATIVE_DAMAGE_SLASH_PALETTE_END))
+        {
+            root = DObjGetStruct(gobj);
+            ndsP2NdlScanDamageSlashTree(
+                root, (const u8 *)asset_view, record, 0u);
+            if (record->body_count == 2u)
+            {
+                record->owner = NDS_P2_NDL_OWNER_DAMAGE_SLASH;
+                record->kind = 1u;
+                gNdsNdlBindCount++;
+                return;
+            }
+            record->body_count = 0u;
+        }
+    }
+    kind = ndsStageGCDrawAllLoopNdlEfGroundKind(gobj);
+    if (kind < NDS_P2_NDL_KIND_COUNT)
+    {
+        record->owner = NDS_P2_NDL_OWNER_EFGROUND;
+        record->kind = (u8)kind;
+        record->dobj[0] = DObjGetStruct(gobj);
+        record->body_count = 1u;
+        gNdsNdlBindCount++;
+        return;
+    }
+    kind = ndsStageGCDrawAllLoopNdlGroundKind(gobj);
+    if (kind < NDS_P2_NDL_KIND_COUNT)
+    {
+        record->owner = NDS_P2_NDL_OWNER_GROUND;
+        record->kind = (u8)kind;
+        record->dobj[0] = DObjGetStruct(gobj);
+        record->body_count = 1u;
+        gNdsNdlBindCount++;
+        return;
+    }
+    kind = ndsStageGCDrawAllLoopNdlWeaponKind(gobj);
+    if (kind < NDS_P2_NDL_KIND_COUNT)
+    {
+        record->owner = NDS_P2_NDL_OWNER_WEAPON;
+        record->kind = (u8)kind;
+        record->dobj[0] = DObjGetStruct(gobj);
+        record->body_count = 1u;
+        gNdsNdlBindCount++;
+        return;
+    }
+#if NDS_P2_LINK
+    if ((gobj->id == nGCCommonKindItem) &&
+        (gobj->dl_link_id == 11) &&
+        (gobj->proc_display == itDisplayColAnimXLUProcDisplay))
+    {
+        ITStruct *ip = itGetStruct(gobj);
+        const void *asset_view = NULL;
+        u32 asset_bytes = 0u;
+
+        if ((ip != NULL) && (ip->kind == nITKindLinkBomb) &&
+            (ndsRelocGetLoadedAssetView(
+                 NDS_NATIVE_LINK_BOMB_ASSET,
+                 &asset_view, &asset_bytes) != FALSE) &&
+            (asset_view != NULL) &&
+            (asset_bytes >= NDS_NATIVE_LINK_BOMB_FILE_END))
+        {
+            root = DObjGetStruct(gobj);
+            ndsP2NdlScanLinkBombTree(
+                root, (const u8 *)asset_view, record, 0u);
+            if (ndsP2NdlValidateLinkBombRecord(
+                    record, (const u8 *)asset_view, asset_bytes) != FALSE)
+            {
+                record->owner = NDS_P2_NDL_OWNER_ITEM;
+                record->kind = NDS_P2_NDL_KIND_IT_LINK_BOMB;
+                gNdsNdlBindCount++;
+                return;
+            }
+            record->body_count = 0u;
+        }
+    }
+#endif
+    gNdsNdlNegativeBindCount++;
+}
+
+static void ndsP2NdlAccumulateStats(const NDSRendererStats *stats)
+{
+    if (stats == NULL)
+    {
+        return;
+    }
+    gNdsStageGCDrawAllLoopHardwareTriangleCount +=
+        stats->hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats->hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+        stats->hardware_projected_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+        stats->hardware_decal_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+        stats->hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+        stats->hardware_texture_upload_count;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+        stats->hardware_texture_ready_count;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+        stats->hardware_texture_reject_count;
+    if (stats->hardware_texture_ready_count != 0u)
+    {
+        if (stats->hardware_texture_format < 32u)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureFormatMask |=
+                1u << stats->hardware_texture_format;
+        }
+        if (stats->hardware_texture_width >
+            gNdsStageGCDrawAllLoopHardwareTextureMaxWidth)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureMaxWidth =
+                stats->hardware_texture_width;
+        }
+        if (stats->hardware_texture_height >
+            gNdsStageGCDrawAllLoopHardwareTextureMaxHeight)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureMaxHeight =
+                stats->hardware_texture_height;
+        }
+    }
+}
+
+static sb32 ndsP2NdlPrepareConfig(
+    DObj *dobj, GObj *camera_gobj, NDSRendererConfig *config,
+    NDSRendererMatrix20p12 *projection,
+    NDSRendererMatrix20p12 *modelview,
+    NDSRendererMatrix20p12 *identity)
+{
+    const NDSRendererMatrix20p12 *projection_ptr;
+    const NDSRendererMatrix20p12 *modelview_ptr;
+
+    if ((dobj == NULL) || (camera_gobj == NULL) || (config == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterPrepareInitialMatrices(
+        dobj, CObjGetStruct(camera_gobj), TRUE,
+        projection, &projection_ptr, modelview, &modelview_ptr);
+    if ((projection_ptr == NULL) && (modelview_ptr == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererAdapterMtxIdentity20p12(identity);
+    if (projection_ptr == NULL)
+    {
+        projection_ptr = identity;
+    }
+    if (modelview_ptr == NULL)
+    {
+        modelview_ptr = identity;
+    }
+    bzero(config, sizeof(*config));
+    config->max_depth = 8u;
+    config->max_commands = 8192u;
+    config->max_list_commands = 512u;
+    config->initial_projection = projection_ptr;
+    config->initial_modelview = modelview_ptr;
+    config->initial_geometry_mode =
+        NDS_RENDERER_GEOM_RESET_MODE |
+        NDS_RENDERER_GEOM_LIGHTING |
+        NDS_RENDERER_GEOM_ZBUFFER;
+    config->texture_data_layout =
+        NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    return TRUE;
+}
+
+static sb32 ndsP2NdlEmitImpactWave(GObj *gobj, GObj *camera_gobj,
+                                    NDSNdlRecord *record,
+                                    NDSRendererStats *stats)
+{
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    NDSRendererConfig config;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    NDSRendererMatrix20p12 identity;
+    NDSRendererNativeMaterial material;
+    NDSRendererStats trial_stats;
+    u32 variant;
+    u32 prim;
+    u32 env;
+
+    if ((record->body_count != 1u) ||
+        (ndsP2NdlDObjVisible(record->dobj[0]) == FALSE) ||
+        (record->dobj[0]->mobj == NULL) ||
+        (ndsEFManagerImpactWaveNdlHeader(
+             gobj, &variant, &prim, &env) == FALSE) ||
+        (ndsRendererAdapterBuildNativeMaterial(
+             record->dobj[0]->mobj, &material) == FALSE) ||
+        (ndsP2NdlPrepareConfig(
+             record->dobj[0], camera_gobj, &config,
+             &projection, &modelview, &identity) == FALSE))
+    {
+        return FALSE;
+    }
+    /* Exact header emitted by efManagerImpactWaveProcDisplay before its DObj.
+     * Keep the persistent renderer state transactional until the native owner
+     * has crossed all rejectable checks; the submit's first GX mutation is now
+     * its resident texture bind. */
+    trial_stats = *stats;
+    trial_stats.othermode_l = G_RM_AA_ZB_XLU_SURF | G_RM_AA_ZB_XLU_SURF2;
+    trial_stats.prim_color = prim;
+    trial_stats.env_color = env;
+    if (ndsRendererSubmitNativeImpactWave(
+            sNdsImpactWaveVertices,
+            (u32)(sizeof(sNdsImpactWaveVertices) /
+                  sizeof(sNdsImpactWaveVertices[0])),
+            sNdsImpactWaveTriangles,
+            (u32)(sizeof(sNdsImpactWaveTriangles) / 3u),
+            record->body[0], &material, variant, &config,
+            &trial_stats) == FALSE)
+    {
+        gNdsImpactWaveNativeFallbackCount++;
+        return FALSE;
+    }
+    *stats = trial_stats;
+    gNdsImpactWaveNativeDrawCount++;
+    return TRUE;
+#else
+    (void)gobj;
+    (void)camera_gobj;
+    (void)record;
+    (void)stats;
+    return FALSE;
+#endif
+}
+
+static sb32 ndsP2NdlEmitDamageSlash(GObj *camera_gobj,
+                                     NDSNdlRecord *record,
+                                     NDSRendererStats *stats)
+{
+    const void *asset_view = NULL;
+    u32 asset_bytes = 0u;
+    NDSRendererConfig config[2];
+    NDSRendererMatrix20p12 projection[2];
+    NDSRendererMatrix20p12 modelview[2];
+    NDSRendererMatrix20p12 identity[2];
+    NDSRendererNativeMaterial material[2];
+    u8 visible[2] = { FALSE, FALSE };
+    u32 i;
+    const u32 want_effects =
+        NDS_RENDERER_NATIVE_MATERIAL_LIGHT1 |
+        NDS_RENDERER_NATIVE_MATERIAL_LIGHT2 |
+        NDS_RENDERER_NATIVE_MATERIAL_PRIM |
+        NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE;
+
+    if ((record->body_count != 2u) ||
+        (ndsRelocGetLoadedAssetView(
+             NDS_NATIVE_DAMAGE_SLASH_ASSET,
+             &asset_view, &asset_bytes) == FALSE) ||
+        (asset_view == NULL))
+    {
+        return FALSE;
+    }
+    /* First pass: validate both source children and their resident frame names
+     * before either child can touch GX.  A FALSE return from this pass is a
+     * clean source-proc fallback for the whole effect. */
+    for (i = 0u; i < record->body_count; i++)
+    {
+        if (ndsP2NdlDObjVisible(record->dobj[i]) == FALSE)
+        {
+            continue;
+        }
+        visible[i] = TRUE;
+        if ((record->dobj[i]->mobj == NULL) ||
+            (record->dobj[i]->mobj->next != NULL) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 record->dobj[i]->mobj, &material[i], FALSE,
+                 NULL, NULL) == FALSE) ||
+            (material[i].effects != want_effects) ||
+            (ndsP2NdlPrepareConfig(
+                 record->dobj[i], camera_gobj, &config[i],
+                 &projection[i], &modelview[i], &identity[i]) == FALSE) ||
+            (ndsRendererPreflightNativeDamageSlash(
+                 asset_view, asset_bytes, record->hdr[i],
+                 &material[i], &config[i]) == FALSE))
+        {
+            gNdsDamageSlashSubmitFailCount++;
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < record->body_count; i++)
+    {
+        if (visible[i] == FALSE)
+        {
+            continue;
+        }
+        if (ndsRendererSubmitNativeDamageSlash(
+                asset_view, asset_bytes, record->hdr[i],
+                &material[i], &config[i], stats) == FALSE)
+        {
+            /* Preflight made every route-1 rejection impossible without a
+             * state change.  Count an invariant failure, but consume this proc
+             * so a partially emitted owner can never be drawn a second time by
+             * the source fallback.  Acceptance requires this counter to stay 0. */
+            gNdsDamageSlashSubmitFailCount++;
+            return TRUE;
+        }
+        gNdsDamageSlashRootMask |=
+            (record->hdr[i] == NDS_NATIVE_DAMAGE_SLASH_ROOT0) ? 1u : 2u;
+        gNdsDamageSlashEffectsSeen |= material[i].effects;
+        gNdsDamageSlashDrawCount++;
+    }
+    return TRUE;
+}
+
+#if NDS_P2_LINK
+static u32 ndsP2NdlPackItemColor(const GMColKeys *color)
+{
+    return ((u32)color->r << 24) | ((u32)color->g << 16) |
+           ((u32)color->b << 8) | (u32)color->a;
+}
+
+static sb32 ndsP2NdlEmitLinkBomb(GObj *gobj, GObj *camera_gobj,
+                                 NDSNdlRecord *record,
+                                 NDSRendererStats *stats)
+{
+    ITStruct *ip;
+    const void *asset_view = NULL;
+    u32 asset_bytes = 0u;
+    NDSRendererConfig config[NDS_P2_NDL_DOBJ_MAX];
+    NDSRendererMatrix20p12 projection[NDS_P2_NDL_DOBJ_MAX];
+    NDSRendererMatrix20p12 modelview[NDS_P2_NDL_DOBJ_MAX];
+    NDSRendererMatrix20p12 identity[NDS_P2_NDL_DOBJ_MAX];
+    u8 visible[NDS_P2_NDL_DOBJ_MAX] = { FALSE, FALSE };
+    u32 i;
+
+    gNdsNdlItemRejectStep = 1u;
+    if ((record->body_count != 2u) ||
+        (gobj->proc_display != itDisplayColAnimXLUProcDisplay))
+    {
+        return FALSE;
+    }
+    gNdsNdlItemRejectStep = 2u;
+    ip = itGetStruct(gobj);
+    if ((ip == NULL) || (ip->kind != nITKindLinkBomb) ||
+        (ndsRelocGetLoadedAssetView(
+             NDS_NATIVE_LINK_BOMB_ASSET,
+             &asset_view, &asset_bytes) == FALSE) ||
+        (asset_view == NULL) ||
+        (asset_bytes < NDS_NATIVE_LINK_BOMB_FILE_END))
+    {
+        return FALSE;
+    }
+    gNdsNdlItemRejectStep = 3u;
+    /* Source itDisplayColAnimXLUProcDisplay consumes the callback while a held
+     * item is hidden with its fighter.  No tree walk and no GX output occur. */
+    if (itDisplayCheckItemVisible(ip) == FALSE)
+    {
+        gNdsNdlItemRejectStep = 10u;
+        return TRUE;
+    }
+    gNdsNdlItemRejectStep = 4u;
+    /* Validate both live DObjs and matrix inputs before either native list can
+     * touch GX.  Asset bytes are immutable for this allocation lifetime; the
+     * per-frame fields below are the only state that can invalidate the bind. */
+    for (i = 0u; i < record->body_count; i++)
+    {
+        const Gfx *expected;
+
+        if ((record->dobj[i] == NULL) ||
+            (record->dobj[i]->parent_gobj != gobj) ||
+            (record->dobj[i]->mobj != NULL))
+        {
+            return FALSE;
+        }
+        gNdsNdlItemRejectStep = 5u;
+        expected = (const Gfx *)((const u8 *)asset_view + record->hdr[i]);
+        if ((record->body[i] != expected) ||
+            (ndsP2NdlDObjVisible(record->dobj[i]) == FALSE))
+        {
+            gNdsNdlItemRejectStep = 6u;
+            continue;
+        }
+        visible[i] = TRUE;
+        gNdsNdlItemRejectStep = 7u;
+        if (ndsP2NdlPrepareConfig(
+                record->dobj[i], camera_gobj, &config[i],
+                &projection[i], &modelview[i], &identity[i]) == FALSE)
+        {
+            return FALSE;
+        }
+        gNdsNdlItemRejectStep = 8u;
+    }
+    gNdsNdlItemRejectStep = 9u;
+    for (i = 0u; i < record->body_count; i++)
+    {
+        NDSRendererStats trial_stats;
+
+        if (visible[i] == FALSE)
+        {
+            continue;
+        }
+        trial_stats = *stats;
+        /* itDisplayColAnimXLU writes the same live EnvColor into both heads.
+         * The body consumes it; the fuse list immediately overwrites it. */
+        trial_stats.env_color = (ip->colanim.is_use_color1 != FALSE) ?
+            ndsP2NdlPackItemColor(&ip->colanim.color1) : 0u;
+        if (ndsRendererSubmitNativeLinkBomb(
+                record->hdr[i], asset_view, asset_bytes,
+                &config[i], &trial_stats) == FALSE)
+        {
+            /* The owner has crossed into its native executor.  Never replay the
+             * source proc after a possible GX mutation; keep the rejection loud. */
+            gNdsLinkBombSubmitFailCount++;
+            return TRUE;
+        }
+        *stats = trial_stats;
+        gNdsLinkBombDrawCount++;
+    }
+    gNdsNdlItemRejectStep = 10u;
+    return TRUE;
+}
+#endif
+
+/*
+ * Return TRUE only when the source proc_display is fully consumed. Any stale
+ * lifetime, unknown owner, visibility/material mismatch or native decline
+ * returns FALSE and the camera loop executes the original source route.
+ */
+s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj_ptr,
+                                        void *display_gobj_ptr,
+                                        s32 link_id)
+{
+    GObj *camera_gobj = camera_gobj_ptr;
+    GObj *gobj = display_gobj_ptr;
+    NDSNdlRecord *record;
+    NDSRendererStats *stats;
+    u32 serial;
+    u32 kind;
+    sb32 handled = FALSE;
+    void *saved_graphics_heap_ptr;
+
+    if ((gNdsP2Ndl == 0u) || (gNdsSceneManagerCurrIsBattle == 0u) ||
+        (camera_gobj == NULL) || (gobj == NULL) ||
+        ((gobj->id != nGCCommonKindEffect) &&
+         (gobj->id != nGCCommonKindGround) &&
+         (gobj->id != nGCCommonKindWeapon) &&
+         (gobj->id != nGCCommonKindItem)) ||
+        (gobj->dl_link_id != (u8)link_id))
+    {
+        return FALSE;
+    }
+    serial = ndsGcGetGObjLifetimeSerial(gobj);
+    if (serial == 0u)
+    {
+        return FALSE;
+    }
+    record = &sNdsP2NdlRecords[ndsP2NdlRecordIndex(gobj)];
+    if ((record->gobj != gobj) || (record->serial != serial) ||
+        ((record->flags & NDS_P2_NDL_FLAG_BOUND) == 0u))
+    {
+        ndsP2NdlBindRecord(gobj, serial, record);
+    }
+    if ((record->owner == NDS_P2_NDL_OWNER_NEGATIVE) ||
+        (record->kind >= NDS_P2_NDL_KIND_COUNT))
+    {
+        return FALSE;
+    }
+    kind = record->kind;
+    if (record->owner == NDS_P2_NDL_OWNER_EFGROUND)
+    {
+        handled = ndsStageGCDrawAllLoopSubmitNdlEfGround(
+            camera_gobj, gobj, kind);
+        if (handled != FALSE)
+        {
+            gNdsNdlDispatch[kind]++;
+            gNdsNdlProcsSkipped++;
+        }
+        else
+        {
+            gNdsNdlFallback[kind]++;
+        }
+        return handled;
+    }
+    if (record->owner == NDS_P2_NDL_OWNER_GROUND)
+    {
+        handled = ndsStageGCDrawAllLoopSubmitNdlGround(
+            camera_gobj, gobj, kind);
+        if (handled != FALSE)
+        {
+            gNdsNdlDispatch[kind]++;
+            gNdsNdlProcsSkipped++;
+        }
+        else
+        {
+            gNdsNdlFallback[kind]++;
+        }
+        return handled;
+    }
+    if (record->owner == NDS_P2_NDL_OWNER_WEAPON)
+    {
+        handled = ndsStageGCDrawAllLoopSubmitNdlWeapon(
+            camera_gobj, gobj, kind);
+        if (handled != FALSE)
+        {
+            gNdsNdlDispatch[kind]++;
+            gNdsNdlProcsSkipped++;
+        }
+        else
+        {
+            gNdsNdlFallback[kind]++;
+        }
+        return handled;
+    }
+    if (record->owner == NDS_P2_NDL_OWNER_ITEM)
+    {
+#if NDS_P2_LINK
+        saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+        ndsRendererAdapterBeginStageTraversal();
+        stats = &sNdsRendererAdapterStagePersistentStats;
+        handled = (kind == NDS_P2_NDL_KIND_IT_LINK_BOMB) ?
+            ndsP2NdlEmitLinkBomb(gobj, camera_gobj, record, stats) : FALSE;
+        if (handled != FALSE)
+        {
+            ndsP2NdlAccumulateStats(stats);
+            gNdsNdlDispatch[kind]++;
+            gNdsNdlProcsSkipped++;
+            ndsStageGCDrawAllLoopRecordNdlItemSubmit(
+                gobj,
+                stats->hardware_triangle_count,
+                stats->hardware_texture_ready_count,
+                stats->hardware_texture_reject_count);
+        }
+        else
+        {
+            gNdsNdlFallback[kind]++;
+        }
+        ndsRendererAdapterEndStageTraversal();
+        ndsTaskmanSampleGraphicsHeap();
+        gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+        return handled;
+#else
+        return FALSE;
+#endif
+    }
+    saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+    ndsRendererAdapterBeginStageTraversal();
+#if NDS_TASK49_GX_DIFFER
+    /* Task49 needs the M1 stream separated from stage GX.  This is diagnostic
+     * attribution only; production builds retain their existing owner state. */
+    ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_EFFECT);
+#endif
+    stats = &sNdsRendererAdapterStagePersistentStats;
+    if (record->owner == NDS_P2_NDL_OWNER_IMPACT_WAVE)
+    {
+        handled = ndsP2NdlEmitImpactWave(gobj, camera_gobj, record, stats);
+    }
+    else if (record->owner == NDS_P2_NDL_OWNER_DAMAGE_SLASH)
+    {
+        handled = ndsP2NdlEmitDamageSlash(camera_gobj, record, stats);
+    }
+    if (handled != FALSE)
+    {
+        ndsP2NdlAccumulateStats(stats);
+        gNdsNdlDispatch[kind]++;
+        gNdsNdlProcsSkipped++;
+        ndsStageGCDrawAllLoopRecordNdlEffectSubmit(
+            stats->hardware_triangle_count,
+            stats->hardware_texture_ready_count,
+            stats->hardware_texture_reject_count);
+    }
+    else
+    {
+        gNdsNdlFallback[kind]++;
+    }
+    ndsRendererAdapterEndStageTraversal();
+    ndsTaskmanSampleGraphicsHeap();
+    gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+    return handled;
+}
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 /* P2-4n1 step 6: every per-segment fact below reads the active stage's
@@ -4881,7 +5798,7 @@ static sb32 ndsRendererAdapterPrepareMaterialSegment(
     return TRUE;
 }
 
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
 /* G3 STEP 0 -- THE UNIQUE-TEMPLATE CENSUS, and it is the number a packet arena
  * is sized by. Every G3 figure banked so far counts list INSTANCES
  * (gNdsEffectDLSubmitCount: 1,360 Boundary, 527-563 gate arm); an arena sized
@@ -6022,6 +6939,37 @@ static sb32 ndsRendererAdapterPikachuThunder(NDSRelocLoadedFile *loaded,
 }
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES
+static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitDamageFlyMDust(
+    DObj *dobj, const NDSRelocLoadedFile *loaded,
+    const NDSRendererConfig *config, NDSRendererStats *stats)
+{
+    NDSRendererNativeMaterial material;
+    const NDSRendererNativeMaterial *material_ptr = NULL;
+    NDSRendererConfig local = *config;
+    NDSRendererMatrix20p12 identity;
+
+    /* Both source makers share this animated DObjDLLink. Preserve its current
+     * image and tile state without a synthetic segment-E command stream. */
+    if ((dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj != NULL) && (dobj->mobj->next == NULL) &&
+        (ndsRendererAdapterBuildNativeMaterialSnapshot(
+             dobj->mobj, &material, FALSE, NULL, NULL) != FALSE))
+    {
+        material_ptr = &material;
+    }
+    ndsRendererAdapterMtxIdentity20p12(&identity);
+    if ((local.initial_projection == NULL) &&
+        (local.initial_modelview != NULL)) { local.initial_projection = &identity; }
+    else if ((local.initial_modelview == NULL) &&
+             (local.initial_projection != NULL)) { local.initial_modelview = &identity; }
+    return ndsRendererSubmitNativeDamageFlyMDust(
+        loaded->data, loaded->data_size, NDS_NATIVE_DAMAGE_FLY_MDUST_ROOT,
+        material_ptr, &local, stats);
+}
+#endif
+
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              GObj *camera_gobj,
                                              u32 initial_geometry_mode)
@@ -6080,6 +7028,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 damage_slash_native_candidate = FALSE;
     sb32 damage_slash_native_handled = FALSE;
     sb32 damage_slash_native_settled = FALSE;
+    sb32 damage_fly_mdust_native_seen = FALSE;
+    sb32 damage_fly_mdust_native_settled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
     NDSRendererNativeMaterial ness_pkfire_materials[2];
@@ -6248,7 +7198,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 inherited_tile = FALSE;
     sb32 inherited_segment = FALSE;
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     /* R2-08 phase split. Latched once at entry rather than re-read per phase:
      * the flag is cleared by the tree submit's own epilogue, and a phase that
      * started inside the effect layer must be charged to it whatever the flag
@@ -6416,7 +7366,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
 #endif
 
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     phase_effect =
         (sNdsRendererAdapterEffectSubmitActive != FALSE) ? TRUE : FALSE;
     if (phase_effect != FALSE)
@@ -6431,7 +7381,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
     {
         ndsStageRejectNativeRender(dobj, dl, NDS_NATIVE_FAILURE_BAD_ASSET, NULL);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
         /* The REJECT exit still costs a full loaded-file scan plus an arena
          * scan, so it is charged rather than dropped -- an unmeasured early
          * return is exactly how a phase split acquires a residual. */
@@ -7275,6 +8225,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
      * single segment-E material hook; the live MObj supplies CURRENT_IMAGE,
      * PRIM and both light colours.  Asset+root is source-complete: each root has
      * exactly one referrer in file 83, its own DObjDLLink slot. */
+    damage_fly_mdust_native_seen =
+        ((loaded != NULL) &&
+         (loaded->asset_id == NDS_NATIVE_DAMAGE_FLY_MDUST_ASSET) &&
+         (ndsRelocNativeRootOffset(loaded, dl) ==
+          NDS_NATIVE_DAMAGE_FLY_MDUST_ROOT)) ? TRUE : FALSE;
     if ((loaded != NULL) &&
         (loaded->asset_id == NDS_NATIVE_DAMAGE_SLASH_ASSET))
     {
@@ -9609,7 +10564,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         gNdsEffectPhaseFindTicks += cpuGetTiming() - phase_mark;
@@ -9683,7 +10638,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     step_start = cpuGetTiming();
 #endif
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         phase_mark = cpuGetTiming();
@@ -9700,7 +10655,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     else
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
-    if (damage_slash_native_candidate != FALSE)
+    if ((damage_slash_native_candidate != FALSE) ||
+        (damage_fly_mdust_native_seen != FALSE))
     {
         /* The native owner consumes the typed live MObj snapshot directly at
          * the source segment-E position.  Building a Gfx material branch here
@@ -9751,7 +10707,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     {
         ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         gNdsEffectPhaseMaterialTicks += cpuGetTiming() - phase_mark;
@@ -9774,7 +10730,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              &initial_projection_ptr,
                                              &initial_modelview,
                                              &initial_modelview_ptr);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         gNdsEffectPhaseMatrixTicks += cpuGetTiming() - phase_mark;
@@ -9911,7 +10867,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                 sNdsRendererAdapterItemOtherModeH[head];
         }
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         /* Armed OUTSIDE the Exec tick bracket so the capture's own setup is not
@@ -10339,6 +11295,16 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         {
             gNdsThunderJoltFxSubmitFailCount++;
         }
+    }
+    if (damage_fly_mdust_native_seen != FALSE)
+    {
+        if (ndsRendererAdapterSubmitDamageFlyMDust(
+                dobj, loaded, &config, render_stats) == FALSE)
+        {
+            ndsStageRejectNativeRender(dobj, dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
+        }
+        damage_fly_mdust_native_settled = TRUE;
     }
     if (damage_slash_native_seen != FALSE)
     {
@@ -11376,6 +12342,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
         (damage_slash_native_settled == FALSE) &&
+        (damage_fly_mdust_native_settled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
         (ness_pkfire_native_handled == FALSE) &&
@@ -11483,6 +12450,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
         (damage_slash_native_settled == FALSE) &&
+        (damage_fly_mdust_native_settled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
         (ness_pkfire_native_handled == FALSE) &&
@@ -11595,6 +12563,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (thunder_ground_native_handled == FALSE)
         && (thunder_fx_native_handled == FALSE)
         && (damage_slash_native_settled == FALSE)
+        && (damage_fly_mdust_native_settled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_NESS
         && (ness_pkfire_native_handled == FALSE)
@@ -11670,7 +12639,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             NDS_NATIVE_FAILURE_NO_PROGRAM, render_stats);
     }
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         gNdsEffectPhaseExecTicks += cpuGetTiming() - phase_mark;
@@ -11724,7 +12693,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
         gNdsEffectDLBlocker = render_stats->blocker;
         gNdsEffectDLCommandCount = render_stats->command_count;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
         /* R2-08 CAP-VERSUS-END. The two lines above are LAST-VALUE-WINS, so a
          * stop reads one list; these are cumulative, so a stop reads the whole
          * window. The question they settle is whether the interpreter stops at
@@ -11763,7 +12732,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         gNdsEffectDLVertexCount = render_stats->vertex_count;
         gNdsEffectDLTriangleCount = render_stats->triangle_count;
         gNdsEffectDLPublishCount++;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
         /* Cumulative twins of the two last-value-wins deltas above: a stop reads
          * one list from those, and the census needs the whole window. */
         {
@@ -11894,7 +12863,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                 render_stats->hardware_texture_height;
         }
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
         gNdsEffectPhaseDLTicks += cpuGetTiming() - phase_dl_mark;
@@ -11967,7 +12936,7 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
         return;
     }
     gNdsRendererStageDObjNodeCount++;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
         gNdsEffectPhaseNodeCount++;
@@ -12040,6 +13009,10 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
 {
     DObj *root = (DObj *)dobj_ptr;
 
+#if NDS_TASK49_GX_DIFFER
+    ndsRendererProfileSetOwner(NDS_RENDERER_PROFILE_OWNER_EFFECT);
+#endif
+
     /* The procedural visual templates: proc plus vars, resolved once per GObj,
      * exactly as the impact wave's latch does. The DObj cannot answer this --
      * sNdsVisualTemplates is static to battleship_efmanager.c and the list has
@@ -12075,12 +13048,12 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
 #endif
 #endif
     sNdsRendererAdapterEffectSubmitActive = TRUE;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     gNdsEffectPhaseActive = 1u;
 #endif
     ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
                                                initial_geometry_mode, 0u);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     gNdsEffectPhaseActive = 0u;
 #endif
     sNdsRendererAdapterEffectSubmitActive = FALSE;
@@ -12194,6 +13167,16 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
 }
 
 #else
+s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj,
+                                        void *display_gobj,
+                                        s32 link_id)
+{
+    (void)camera_gobj;
+    (void)display_gobj;
+    (void)link_id;
+    return FALSE;
+}
+
 void ndsRendererAdapterBeginStageTraversal(void)
 {
 }

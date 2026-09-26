@@ -180,6 +180,20 @@ static void ndsFoxBlasterProcDisplay(GObj *weapon_gobj)
     wpDisplayMain(weapon_gobj, gcDrawDObjDLHead1);
 }
 
+sb32 ndsFoxBlasterIsNativeDisplayGObj(void *weapon_gobj_ptr)
+{
+    GObj *weapon_gobj = weapon_gobj_ptr;
+    WPStruct *wp;
+
+    if ((weapon_gobj == NULL) ||
+        (weapon_gobj->proc_display != ndsFoxBlasterProcDisplay))
+    {
+        return FALSE;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    return ((wp != NULL) && (wp->kind == nWPKindBlaster)) ? TRUE : FALSE;
+}
+
 #if NDS_R2_POSITION_PROBE
 /* BUGS.md "Fox's muzzle flash and laser spawn at the wrong Y", the A-vs-B
  * invariant. This wrapper is the one port seam that runs at the exact spawn

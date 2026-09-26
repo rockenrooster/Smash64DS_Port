@@ -142,6 +142,11 @@ extern volatile u32 gNdsVisualEffectNativeDeclineCount;
  * this to replace only ImpactWave's hot display-list execution. */
 s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj);
 s32 ndsEFManagerImpactWaveVariant(GObj *effect_gobj, u32 *variant_out);
+/* Runtime header emitted by efManagerImpactWaveProcDisplay, packed exactly as
+ * G_SETPRIMCOLOR/G_SETENVCOLOR consume it. NDL uses this when it skips the
+ * source proc_display and submits the already-native owner directly. */
+s32 ndsEFManagerImpactWaveNdlHeader(GObj *effect_gobj, u32 *variant_out,
+                                    u32 *prim_out, u32 *env_out);
 extern volatile u32 gNdsImpactWaveNativeDrawCount;
 extern volatile u32 gNdsImpactWaveNativeFallbackCount;
 extern volatile u32 gNdsImpactWaveNativeTexturePrepareCount;
@@ -384,5 +389,45 @@ extern volatile u32 gNdsEffectRendererDObjFlagsMask;
 /* Which DObj field carries the geometry: bit0 dl, bit1 dl_link, bit2 dv.
  * DLHEAD0 submits `dl`; only the *_DLLINKS kinds read `dl_link`. */
 extern volatile u32 gNdsEffectRendererDObjFieldMask;
+
+/* P2-2p8 native draw-list A/B word and evidence counters.  The first two
+ * slots are the closed M1 meanings and stay stable for its same-ROM receipt;
+ * later Phase-2 owners append new slots in source-order migration batches. */
+#define NDS_P2_NDL_KIND_IMPACT_WAVE  0u
+#define NDS_P2_NDL_KIND_DAMAGE_SLASH 1u
+#define NDS_P2_NDL_KIND_EF_LAKITU    2u
+#define NDS_P2_NDL_KIND_EF_BRONTO    3u
+#define NDS_P2_NDL_KIND_GR_YOSTER_CLOUD 4u
+#define NDS_P2_NDL_KIND_GR_TARUCANN     5u
+#define NDS_P2_NDL_KIND_WP_FIREBALL      6u
+#define NDS_P2_NDL_KIND_WP_BLASTER       7u
+#define NDS_P2_NDL_KIND_IT_LINK_BOMB      8u
+#define NDS_P2_NDL_KIND_COUNT            9u
+extern volatile u32 gNdsP2Ndl;
+extern volatile u32 gNdsNdlDispatch[NDS_P2_NDL_KIND_COUNT];
+extern volatile u32 gNdsNdlFallback[NDS_P2_NDL_KIND_COUNT];
+extern volatile u32 gNdsNdlProcsSkipped;
+extern volatile u32 gNdsNdlBindCount;
+extern volatile u32 gNdsNdlNegativeBindCount;
+s32 ndsRendererAdapterNdlDispatchEffect(void *camera_gobj,
+                                        void *display_gobj,
+                                        s32 link_id);
+u32 ndsStageGCDrawAllLoopNdlEfGroundKind(void *display_gobj);
+s32 ndsStageGCDrawAllLoopSubmitNdlEfGround(void *camera_gobj,
+                                            void *display_gobj,
+                                            u32 kind);
+u32 ndsStageGCDrawAllLoopNdlGroundKind(void *display_gobj);
+s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
+                                          void *display_gobj,
+                                          u32 kind);
+u32 ndsStageGCDrawAllLoopNdlWeaponKind(void *display_gobj);
+s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj,
+                                          void *display_gobj,
+                                          u32 kind);
+sb32 ndsFoxBlasterIsNativeDisplayGObj(void *weapon_gobj);
+void ndsStageGCDrawAllLoopRecordNdlEffectSubmit(
+    u32 triangles, u32 texture_ready, u32 texture_reject);
+void ndsStageGCDrawAllLoopRecordNdlItemSubmit(
+    void *item_gobj, u32 triangles, u32 texture_ready, u32 texture_reject);
 
 #endif

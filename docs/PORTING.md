@@ -23278,3 +23278,13 @@ scene coverage, renderer retirement, integration and owner acceptance remain due
 Root r54 stays published. Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.
 
 2026-09-24 P2-2p8 Phase 2: rejected and reverted the preorder stage-world/cache-retirement experiment after two exact-output but slower full matches. Refined 74428445 reaches 19.65 FPS versus 19.81 control, with 7,424 B less usable heap due to early allocator placement. Preserved source diff, matched matrices/replays and allocator traces in artifacts/performance/2026-09-24_p2-2p8-phase2-stage. No new ROM published. Next: compiled coverage of other VS stages and MISC; no subagents, campaign deferred.
+
+2026-09-26 P2-2p8 Phase 2: recovered and rejected the packet-only timing gains;
+implemented view-space particle centres/shared camera factors and the source
+DamageFlyMDust owner. Its disjoint A5I3 planes preserve native RGB5/alpha5.
+Seven host tests and GBI fixtures pass; matched particle captures are identical.
+Natural four-CPU ROM 8B4D66EE with NDL armed draws dust 39 times across all 7 frames,
+reducing native failures 39->0 with unchanged 1,972 replay pairs. WORK-H P95 is
+2,587,264 ticks at 18.98 FPS: performance remains RED. IMPLEMENTED_NOT_ACCEPTED;
+final defaults, shipping memory, wider output/lifetimes and release proof remain
+owed. Published root/P1 unchanged. Evidence in the phase2-particle-ab receipt.

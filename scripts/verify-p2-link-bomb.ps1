@@ -111,6 +111,7 @@ try {
         'set confirm off',
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $ctx.GdbPort),
+        'set var gNdsP2Ndl = 1',
         'set $link_stop = 0',
         'tbreak ndsLinkBombTourProofStop',
         'commands',
@@ -120,6 +121,8 @@ try {
         'continue',
         'printf "LINK_BOMB_STOPPED=%u\n", $link_stop',
         'printf "LINK_FAST_PRESENT=%u,%u\n", gNdsHarnessFastPresentRequestCount, gNdsHarnessFastPresentConsumeCount',
+        'printf "NDL_LINK=%u,%u,%u,%u\n", gNdsNdlDispatch[8], gNdsNdlFallback[8], gNdsNdlItemRejectStep, gNdsNdlProcsSkipped',
+        'printf "NDL_LIFETIME=%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsGcNdlLifetimeStampCount, gNdsGcNdlLifetimeReuseCount, gNdsGcNdlLifetimeReuseGObj, gNdsGcNdlLifetimeReuseOldSerial, gNdsGcNdlLifetimeReuseNewSerial, gNdsGcNdlLifetimeStampKindCount[0], gNdsGcNdlLifetimeStampKindCount[1], gNdsGcNdlLifetimeStampKindCount[2], gNdsGcNdlLifetimeStampKindCount[3], gNdsGcNdlLifetimeReuseKindCount[0], gNdsGcNdlLifetimeReuseKindCount[1], gNdsGcNdlLifetimeReuseKindCount[2], gNdsGcNdlLifetimeReuseKindCount[3]',
         'printf "LINK_BOMB_TOUR=%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%d,%d,%#x,%#x,%u,%u,%d,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u\n",gNdsLinkBombTourPhase,gNdsLinkBombTourFrames,gNdsLinkBombTourInputCount,gNdsLinkBombTourStatusMask,gNdsLinkBombTourAttrValidCount,gNdsLinkBombTourHoldObserved,gNdsLinkBombTourThrowObserved,gNdsLinkBombTourColAnimObserved,gNdsLinkBombTourExplodeObserved,gNdsLinkBombTourDestroyObserved,gNdsLinkBombTourHoldKind,gNdsLinkBombTourHoldLifetime,gNdsLinkBombTourThrowLifetime,gNdsLinkBombTourThrowVelXMilli,gNdsLinkBombTourThrowVelYMilli,gNdsLinkBombTourColAnimRGBA,gNdsLinkBombTourRenderEnvRGBA,gNdsLinkBombTourExplodeDamage,gNdsLinkBombTourExplodeSize,gNdsLinkBombTourExplodeAngle,gNdsLinkBombTourExplodeElement,gNdsLinkBombTourExplodeEventID,gNdsLinkBombTourExplodeMulti,gNdsLinkBombTourDestroyMulti,gNdsItemRendererCaptureCount,gNdsItemRendererDObjDrawCount,gNdsItemRendererSubmitCount,gNdsItemRendererVisibleDrawCount,gNdsItemRendererTriangleCount,gNdsItemRendererTextureReadyCount,gNdsItemRendererTextureRejectCount,gNdsItemRendererKindMask,gNdsItemRendererRejectedDrawCount,gNdsItemRendererAttach52BuildCount,gNdsFighterNaturalCombatStallCount,gNdsFtPoseTrackOverflow,gNdsLinkBombTourFixtureCount',
         'detach',
         'quit'
@@ -130,6 +133,38 @@ try {
 
     $stdoutPath = Join-Path $env:SMASH64DS_VERIFY_TEMP_DIR 'p2-link-bomb.gdb.out'
     $stdout = Get-Content -LiteralPath $stdoutPath -Raw
+    $ndlDiag = [regex]::Match(
+        $stdout, 'NDL_LINK=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    Assert-LinkBomb $ndlDiag.Success 'LinkBomb NDL diagnostics are missing.' $stdout
+    $ndlDispatch = [uint32]$ndlDiag.Groups[1].Value
+    $ndlFallback = [uint32]$ndlDiag.Groups[2].Value
+    $ndlRejectStep = [uint32]$ndlDiag.Groups[3].Value
+    $ndlSkipped = [uint32]$ndlDiag.Groups[4].Value
+    Assert-LinkBomb (($ndlDispatch -gt 0u) -and ($ndlFallback -eq 0u) -and
+        ($ndlRejectStep -eq 10u) -and ($ndlSkipped -ge $ndlDispatch)) `
+        'LinkBomb NDL did not dispatch cleanly through the fully validated item record.' `
+        $ndlDiag.Value
+    Write-Output $ndlDiag.Value
+    $lifetimeDiag = [regex]::Match(
+        $stdout, 'NDL_LIFETIME=([0-9]+),([0-9]+),(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    Assert-LinkBomb $lifetimeDiag.Success 'NDL pooled-GObj lifetime diagnostics are missing.' $stdout
+    $lifetime = @()
+    foreach ($i in 1..13) {
+        $field = $lifetimeDiag.Groups[$i].Value
+        $lifetime += if ($field -like '0x*') {
+            [uint64]::Parse($field.Substring(2), [Globalization.NumberStyles]::HexNumber)
+        } else {
+            [uint64]$field
+        }
+    }
+    Assert-LinkBomb (($lifetime[0] -gt 0u) -and ($lifetime[1] -gt 0u) -and
+        ($lifetime[2] -ne 0u) -and ($lifetime[3] -gt 0u) -and
+        ($lifetime[4] -gt 0u) -and ($lifetime[3] -ne $lifetime[4]) -and
+        ($lifetime[5] -gt 0u) -and ($lifetime[7] -gt 0u) -and
+        ($lifetime[8] -gt 0u)) `
+        'NDL lifetime witness did not observe fresh serials across pooled reuse with effect/item/ground coverage.' `
+        $lifetimeDiag.Value
+    Write-Output $lifetimeDiag.Value
     Assert-LinkBomb ($stdout -match 'LINK_BOMB_STOPPED=1') `
         'LinkBomb proof stopped before its cache-coherent terminal marker.' $stdout
     $fastPresentMatch = [regex]::Match(
@@ -184,7 +219,8 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($Artifact)) {
         $artifactPath = if ([IO.Path]::IsPathRooted($Artifact)) { $Artifact } else { Join-Path $root $Artifact }
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $artifactPath) | Out-Null
-        Set-Content -LiteralPath $artifactPath -Value @($summary, $match.Value)
+        Set-Content -LiteralPath $artifactPath -Value @(
+            $summary, $ndlDiag.Value, $lifetimeDiag.Value, $match.Value)
     }
 }
 finally {

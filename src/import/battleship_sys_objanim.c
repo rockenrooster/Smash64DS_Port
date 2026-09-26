@@ -1106,7 +1106,7 @@ static u32 ndsAObjEvent32CapacityForGKind(u32 gkind, sb32 *stage_bound)
     case nGRKindYamabuki:
         return 2560u;
     case nGRKindInishie:
-        return 1792u;
+        return 3072u;
     default:
         *stage_bound = FALSE;
         return NDS_AOBJ_EVENT32_NORMALIZED_MAX;

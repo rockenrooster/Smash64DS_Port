@@ -95,6 +95,18 @@ extern CObj* gcAddCameraForGObj(GObj *gobj);
 extern void gcEjectCamera(CObj *cobj);
 extern GObj* gcInitGObjCommon(u32 id, void (*func_run)(GObj*), u8 link, u32 priority);
 extern GObj* gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority);
+/* DS-side lifetime witness for hot-path caches keyed by a GObj address.
+ * Effect/weapon/item/ground GObjs are pooled and their addresses are reused
+ * inside a scene; this serial changes every time gcMakeGObjSPAfter hands a
+ * tracked slot out again. Zero means the object is not tracked by the witness. */
+extern u32 ndsGcGetGObjLifetimeSerial(const GObj *gobj);
+extern volatile u32 gNdsGcNdlLifetimeStampCount;
+extern volatile u32 gNdsGcNdlLifetimeReuseCount;
+extern volatile u32 gNdsGcNdlLifetimeReuseGObj;
+extern volatile u32 gNdsGcNdlLifetimeReuseOldSerial;
+extern volatile u32 gNdsGcNdlLifetimeReuseNewSerial;
+extern volatile u32 gNdsGcNdlLifetimeStampKindCount[4];
+extern volatile u32 gNdsGcNdlLifetimeReuseKindCount[4];
 extern GObj* gcMakeGObjSPBefore(u32 id, void (*func_run)(GObj*), u8 link, u32 priority);
 extern GObj* gcMakeGObjAfter(u32 id, void (*func_run)(GObj*), GObj *link_gobj);
 extern GObj* gcMakeGObjBefore(u32 id, void (*func_run)(GObj*), GObj *link_gobj);

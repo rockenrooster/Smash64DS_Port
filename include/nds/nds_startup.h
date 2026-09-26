@@ -4567,9 +4567,15 @@ enum NDSTickHudBucket {
      * texture upload), so the residual can be sized per frame. They are
      * sub-spans of MISC and, like the SRC sub-buckets, NOT part of `named`. */
     nNDSTickHudBucketMiscWeapon,
+    nNDSTickHudBucketMiscItem,
     nNDSTickHudBucketMiscEffect,
+    nNDSTickHudBucketMiscActor,
     nNDSTickHudBucketMiscParticle,
     nNDSTickHudBucketMiscTexUpload,
+    nNDSTickHudBucketMiscCapture,
+    nNDSTickHudBucketMiscProc,
+    nNDSTickHudBucketMiscCamera,
+    nNDSTickHudBucketMiscFlush,
     /* Not ticks: the geometry engine's polygon and vertex list RAM usage of
      * this frame, read just before glFlush (2,048 / 6,144 are the hardware
      * limits). Ringed so every percentile row carries its own GX load. */
@@ -4691,9 +4697,26 @@ extern volatile u32 gNdsTickHudFlushTicks;
 /* R2-07 MISC split. Cumulative, never reset per frame -- difference them
  * across two ring stops with -PerStopGlobals. See diagnostics.c. */
 extern volatile u32 gNdsMiscWeaponDrawTicks;
+extern volatile u32 gNdsMiscItemDrawTicks;
 extern volatile u32 gNdsMiscEffectDrawTicks;
+extern volatile u32 gNdsMiscActorDrawTicks;
 extern volatile u32 gNdsMiscParticleDrawTicks;
 extern volatile u32 gNdsMiscSplitAccountedTicks;
+enum
+{
+    NDS_MISC_PROC_KIND_WEAPON = 0,
+    NDS_MISC_PROC_KIND_ITEM,
+    NDS_MISC_PROC_KIND_EFFECT,
+    NDS_MISC_PROC_KIND_GROUND,
+    NDS_MISC_PROC_KIND_INTERFACE,
+    NDS_MISC_PROC_KIND_PARTICLE,
+    NDS_MISC_PROC_KIND_OTHER,
+    NDS_MISC_PROC_KIND_COUNT
+};
+extern volatile u32 gNdsMiscCaptureTicks;
+extern volatile u32 gNdsMiscProcDisplayTicks;
+extern volatile u32 gNdsMiscProcDisplayKindTicks[NDS_MISC_PROC_KIND_COUNT];
+extern volatile u32 gNdsMiscProcDisplayKindCount[NDS_MISC_PROC_KIND_COUNT];
 /* R2-07 effect-cost probe, all cumulative. See diagnostics.c. */
 extern volatile u32 gNdsMiscTexUploadTicks;
 extern volatile u32 gNdsMiscTexUploadCount;
@@ -5563,6 +5586,7 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
  * world-space quad. Used by the Fox blaster lab to avoid rebuilding the
  * BattleShip CObj matrices once per laser. */
 s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj);
+s32 ndsRendererAdapterBeginParticleViewPass(void *camera_gobj);
 /* Same cached camera seat, plus the source-equivalent normalized billboard
  * right/up axes in Q20.12. Only cameras whose native builder publishes that
  * basis return TRUE; callers retain their source path for every other shape. */

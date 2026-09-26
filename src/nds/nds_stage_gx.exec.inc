@@ -1,4 +1,4 @@
-/* Phase 2: native GX templates for all eight Dream Land segments.
+/* Phase 2: native GX templates for all nine VS stages.
  * Included after the stage helpers. No N64 decoder or runtime GX recorder. */
 #include <nds/nds_stage_gx.h>
 
@@ -59,7 +59,7 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
         const NDSStageGxRun *r = &runs[i];
         u32 segment, wanted = FALSE, p, cursor, end, depth = 0u, vertices = 0u;
         u64 binding_mask = 0u;
-        for (segment = 0u; segment < 8u; segment++)
+        for (segment = 0u; segment < NDS_NATIVE_STAGE_SEGMENT_COUNT; segment++)
         {
             const NDSNativeStageSegment *s = &sNdsNativeStageSegments[segment];
             if ((h->segment_mask & (1u << segment)) != 0u &&
@@ -116,11 +116,12 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                 if (cursor + n > end || (op == 0x12 && words[cursor] != 1u) ||
                     (op == 0x10 && words[cursor] != 0u && words[cursor] != 2u) ||
                     (op == 0x40 && words[cursor] != 0u)) { return FALSE; }
-                if (op == 0x18 && (static_world & ((u64)1u << sNdsNativeStageRuns[i].binding_index)) != 0u)
+                if (op == 0x18)
                 {
                     const NDSNativeStageRun *native = &sNdsNativeStageRuns[i];
                     u32 shift;
                     m4x4 expected;
+                    if ((static_world & ((u64)1u << native->binding_index)) == 0u) { return FALSE; }
                     if (vertices >= (u32)r->triangles * 3u || depth != 1u) { return FALSE; }
                     shift = native->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX ? 0u :
                         native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX ?
@@ -151,12 +152,16 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
                     if (q->word != cursor ||
                         (q->kind != kind && !(op == 0x16 &&
                          (q->kind == NDS_STAGE_GX_NOZ || q->kind == NDS_STAGE_GX_PROJECTION ||
-                          q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ))) ||
-                        ((q->kind == NDS_STAGE_GX_WORLD || q->kind == NDS_STAGE_GX_COMPOSED_NOZ) &&
+                          q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ ||
+                          q->kind == NDS_STAGE_GX_COMPOSED || q->kind == NDS_STAGE_GX_CORNER_SOURCE))) ||
+                        ((q->kind == NDS_STAGE_GX_WORLD || q->kind == NDS_STAGE_GX_COMPOSED_NOZ ||
+                          q->kind == NDS_STAGE_GX_COMPOSED) &&
                          (q->index >= NDS_NATIVE_STAGE_BINDING_COUNT || q->aux > 6u)) ||
                         (q->kind == NDS_STAGE_GX_CORNER_NOZ &&
                          (q->index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT ||
                           (q->aux & 7u) > 6u || (q->aux >> 3) >= r->triangles)) ||
+                        (q->kind == NDS_STAGE_GX_CORNER_SOURCE &&
+                         (q->index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT || q->aux >= r->triangles)) ||
                         ((q->kind == NDS_STAGE_GX_COLOR || q->kind == NDS_STAGE_GX_UV) &&
                          q->index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
                         (q->kind == NDS_STAGE_GX_MATERIAL && (q->index != i || q->aux != 0u)))
@@ -173,10 +178,20 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
 
 static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
 {
+    static const char *const paths[] = {
+        "nitro:/stages/castle.gxp", "nitro:/stages/sector.gxp",
+        "nitro:/stages/jungle.gxp", "nitro:/stages/zebes.gxp",
+        "nitro:/stages/hyrule.gxp", "nitro:/stages/yoster.gxp",
+        "nitro:/stages/dreamland.gxp", "nitro:/stages/yamabuki.gxp",
+        "nitro:/stages/inishie.gxp"
+    };
     NdsRelocAssetStream stream = { NULL };
     NDSStageGxHeader h;
     u8 *body;
+    u32 static_bytes = 0u;
     u32 reason = 1u;
+    u32 gkind = sNdsNativeStagePacketActive->gkind;
+    if (gkind >= sizeof(paths) / sizeof(paths[0])) { return FALSE; }
     if (sNdsStageGxGeneration != gNdsTaskmanHeapGeneration)
     {
         sNdsStageGxGeneration = gNdsTaskmanHeapGeneration;
@@ -185,22 +200,31 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (sNdsStageGxRuns != NULL) { return TRUE; }
     if (sNdsStageGxAttempted != FALSE) { return FALSE; }
     sNdsStageGxAttempted = TRUE;
-    if (!ndsRelocAssetStreamOpen(&stream, "nitro:/stages/dreamland.gxp") ||
+    if (!ndsRelocAssetStreamOpen(&stream, paths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
-    if (h.magic != 0x31505847u || h.version != 4u || h.gkind != NDS_NATIVE_STAGE_GKIND_PUPUPU ||
+    if (h.magic != 0x31505847u || h.version != 5u || h.gkind != gkind ||
         h.run_count != NDS_NATIVE_STAGE_RUN_COUNT || h.word_count == 0u || h.word_count > 16384u ||
-        h.patch_count > 4096u || h.segment_mask != 0xffu ||
+        h.patch_count > 4096u || NDS_NATIVE_STAGE_SEGMENT_COUNT >= 32u ||
+        h.segment_mask != (1u << NDS_NATIVE_STAGE_SEGMENT_COUNT) - 1u ||
         (((u64)h.static_world_lo | ((u64)h.static_world_hi << 32)) &
          ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u ||
         h.body_bytes != h.run_count * sizeof(NDSStageGxRun) + h.patch_count * 8u + h.word_count * 4u ||
         h.source_hash != ndsStageGxSourceHash()) { goto failed; }
     reason = 3u;
-    if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
-        (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr < h.body_bytes + 25632u)
-    { goto failed; }
-    body = syTaskmanMalloc(h.body_bytes, 32u);
-    if (body == NULL) { goto failed; }
+    body = ndsRendererStageGxBuffer(&static_bytes);
+    if (body != NULL)
+    {
+        if (h.body_bytes > static_bytes) { goto failed; }
+    }
+    else
+    {
+        if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
+            (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr < h.body_bytes + 25632u)
+        { goto failed; }
+        body = syTaskmanMalloc(h.body_bytes, 32u);
+        if (body == NULL) { goto failed; }
+    }
     reason = 4u;
     if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
         ndsStageGxHashBytes(body, h.body_bytes, 2166136261u) != h.body_hash ||
@@ -220,8 +244,8 @@ failed:
 
 static sb32 ndsStageGxEligible(u32 segment)
 {
-    if (sNdsNativeStagePacketActive->gkind != NDS_NATIVE_STAGE_GKIND_PUPUPU ||
-        segment >= 8u) { return FALSE; }
+    if (sNdsNativeStagePacketActive->gkind >= 9u ||
+        segment >= NDS_NATIVE_STAGE_SEGMENT_COUNT) { return FALSE; }
     if (!ndsStageGxLoad()) { gNdsP2StageProgDeclines++; return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)
     { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 7u; return FALSE; }
@@ -240,7 +264,8 @@ static sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatr
         z += (s64)cz * (cz >= 0 ? run->minimum[axis] : run->maximum[axis]);
         w += (s64)cw * (cw >= 0 ? run->minimum[axis] : run->maximum[axis]);
     }
-    return w > 0 && (s64)ndsRendererClampS64ToS32(z) + ndsRendererClampS64ToS32(w) >= 0;
+    /* Source-Z cross corners also require nonzero W after rounding to /256. */
+    return w >= 128 && (s64)ndsRendererClampS64ToS32(z) + ndsRendererClampS64ToS32(w) >= 0;
 }
 
 static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
@@ -267,7 +292,8 @@ static sb32 ndsStageGxMaterial(u32 *dst, const NDSNativeStagePreparedRun *run,
             palette = pal->addr;
         }
     }
-    if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z &&
+    if (sNdsNativeStagePacketActive->gkind == NDS_NATIVE_STAGE_GKIND_PUPUPU &&
+        submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z &&
         owner < NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT &&
         (poly & POLY_CULL_NONE) == POLY_CULL_NONE)
     { poly = (poly & ~POLY_CULL_NONE) | POLY_CULL_BACK; }
@@ -333,7 +359,9 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         ~sNdsNativeStageOwnerExecution.rigid_binding_mask;
     sb32 near_boundary = FALSE;
     NDS_FIGHTER_PACKET_DMA_WAIT();
-    while (native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z && near_bindings != 0u)
+    while ((native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z ||
+            (native->flags & NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u) &&
+           near_bindings != 0u)
     {
         u32 low = (u32)near_bindings;
         u32 binding = low != 0u ? (u32)__builtin_ctz(low) : 32u + (u32)__builtin_ctz((u32)(near_bindings >> 32));
@@ -369,12 +397,6 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
             ndsRendererNativeBuildHierarchyHardwareAffine(sNdsNativeStageOwnerExecution.camera_modelview, &matrix);
             memcpy(dst, &matrix, sizeof(matrix));
         }
-        else if (q->kind == NDS_STAGE_GX_WORLD)
-        {
-            if (!ndsRendererNativeStageTask36BuildWorld(q->index, q->aux, &matrix))
-            { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 5u; return FALSE; }
-            memcpy(dst, &matrix, sizeof(matrix));
-        }
         else if (q->kind == NDS_STAGE_GX_PROJECTION)
         {
             NDSRendererMatrix20p12 projection = *sNdsNativeStageOwnerExecution.projection;
@@ -388,11 +410,12 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         {
             memcpy(dst, sNdsNativeStageOwnerExecution.projection, sizeof(composed));
         }
-        else if (q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ)
+        else if (q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_COMPOSED ||
+                 q->kind == NDS_STAGE_GX_CORNER_NOZ)
         {
-            u32 binding = q->kind == NDS_STAGE_GX_COMPOSED_NOZ ? q->index :
-                sNdsNativeStageVertices[q->index].matrix_binding;
-            u32 shift = q->kind == NDS_STAGE_GX_COMPOSED_NOZ ? q->aux : q->aux & 7u;
+            u32 binding = q->kind == NDS_STAGE_GX_CORNER_NOZ ?
+                sNdsNativeStageVertices[q->index].matrix_binding : q->index;
+            u32 shift = q->kind == NDS_STAGE_GX_CORNER_NOZ ? q->aux & 7u : q->aux;
             if (composed_shift != (s32)shift || composed_binding != binding)
             {
                 if (!ndsRendererBuildShiftedRawHardwareMatrix(
@@ -402,6 +425,18 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
                 composed_binding = binding;
             }
             memcpy(dst, &composed, sizeof(composed));
+        }
+        else if (q->kind == NDS_STAGE_GX_CORNER_SOURCE)
+        {
+            const NDSNativeStageDenseVertex *v = &sNdsNativeStageVertices[q->index];
+            NDSRendererInputVertex input;
+            NDSRendererClipVertex20p12 clip;
+            NDSRendererMatrix20p12 projected;
+            ndsRendererNativeStageInputVertex(v, &input);
+            ndsRendererTransformVertex20p12(
+                &sNdsNativeStageOwnerExecution.binding_composed[v->matrix_binding], &input, &clip);
+            ndsRendererNativeStageProjectedDepthMatrix(&clip, &projected);
+            memcpy(dst, &projected, sizeof(projected));
         }
         else if (q->kind == NDS_STAGE_GX_COLOR) { *dst = sNdsNativeStagePreparedDense[q->index].packed_color; }
         else if (q->kind == NDS_STAGE_GX_UV)

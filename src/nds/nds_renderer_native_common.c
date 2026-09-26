@@ -1080,6 +1080,10 @@ static s32 ndsRendererHardwareBindImpactWaveTexture(
 }
 #endif
 
+#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_IMPACT_WAVE_NATIVE
+extern volatile u32 gNdsP2Ndl;
+#endif
+
 s32 ndsRendererSubmitNativeImpactWave(
     const NDSRendererInputVertex *vertices, u32 vertex_count,
     const u8 *triangle_indices, u32 triangle_count,
@@ -1104,6 +1108,7 @@ s32 ndsRendererSubmitNativeImpactWave(
     u32 implicit_texture_on;
     u32 use_texture;
     s32 texture_offset;
+    u32 matrix_generation;
     v16 projected_x[18];
     v16 projected_y[18];
     v16 projected_z[18];
@@ -1132,50 +1137,52 @@ s32 ndsRendererSubmitNativeImpactWave(
 
     ndsRendererInitTraversalState(
         &state, config, stats, &vertex_storage, NULL, 0u);
-    if (state.matrix_valid == 0u)
+    if (((gNdsP2Ndl == 0u) && (state.matrix_valid == 0u)) ||
+        ((gNdsP2Ndl != 0u) &&
+         ((config->initial_projection == NULL) ||
+          (config->initial_modelview == NULL))))
     {
         return FALSE;
     }
 
-    /* Transform the immutable source ring once. The generic path loads the
-     * same 18 vertices at command 19 and transforms them before its eight TRI2
-     * commands. Reject before touching GX if any corner needs near clipping;
-     * the generic fallback already owns the uncommon clipped case. */
+    /* Route 0 is the exact pre-M1 control: CPU-transform/project the immutable
+     * ring once and emit cached projected corners.  Route 1 keeps only the
+     * source vertices and lets GX perform world/view/projection for the fixed
+     * body.  Both paths need real traversal backing for input/color/UV state. */
     for (i = 0u; i < vertex_count; i++)
     {
         u32 mask = 1u << i;
-        NDSRendererClipVertex20p12 *out = &state.vertices[i];
 
         state.input_vertices[i] = vertices[i];
         state.input_vertex_valid_mask |= mask;
-        state.current_transform_vertex_mask |= mask;
-        ndsRendererTransformVertex20p12(&state.matrix, &vertices[i], out);
-        if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) == FALSE)
+        if (gNdsP2Ndl == 0u)
         {
-            return FALSE;
+            NDSRendererClipVertex20p12 *out = &state.vertices[i];
+
+            state.current_transform_vertex_mask |= mask;
+            ndsRendererTransformVertex20p12(&state.matrix, &vertices[i], out);
+            if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) == FALSE)
+            {
+                return FALSE;
+            }
+            projected_x[i] = ndsRendererHardwareProjectToV16(
+                (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+            projected_y[i] = ndsRendererHardwareProjectToV16(
+                (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+            projected_z[i] = ndsRendererHardwareSourceDepthToV16(
+                (s64)out->z * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+            state.vertex_valid_mask |= mask;
+            stats->matrix_transform_count++;
+            stats->transformed_vertex_count++;
+            if (stats->transformed_vertex_count == 1u)
+            {
+                stats->first_transformed_x = out->x;
+                stats->first_transformed_y = out->y;
+                stats->first_transformed_z = out->z;
+                stats->first_transformed_w = out->w;
+            }
+            ndsRendererProfileRecordCPUTransform();
         }
-        /* The source ring uses Z compare. Cache all three projected
-         * coordinates once per unique vertex; use the same depth mapping as
-         * ndsRendererHardwareClipVertex, not raw clip Z or painter depth.
-         * Eighteen XYZ projections still avoid repeating the divides for all
-         * 48 submitted corners. */
-        projected_x[i] = ndsRendererHardwareProjectToV16(
-            (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-        projected_y[i] = ndsRendererHardwareProjectToV16(
-            (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-        projected_z[i] = ndsRendererHardwareSourceDepthToV16(
-            (s64)out->z * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
-        state.vertex_valid_mask |= mask;
-        stats->matrix_transform_count++;
-        stats->transformed_vertex_count++;
-        if (stats->transformed_vertex_count == 1u)
-        {
-            stats->first_transformed_x = out->x;
-            stats->first_transformed_y = out->y;
-            stats->first_transformed_z = out->z;
-            stats->first_transformed_w = out->w;
-        }
-        ndsRendererProfileRecordCPUTransform();
         ndsRendererProfileRecordSourceVertexLoad();
     }
     if (stats->vertex_count < vertex_count)
@@ -1183,11 +1190,14 @@ s32 ndsRendererSubmitNativeImpactWave(
         stats->vertex_count = vertex_count;
     }
 
-    /* Only now cross the side-effect boundary. The 35-command source list is
-     * fixed; replay its state mutations directly and let the existing typed
-     * MObj material owner supply the dynamic segment-E body. This preserves the
-     * source command order without scanning opcodes/branches/reloc ownership. */
-    ndsRendererHardwareEndBatch();
+    /* Route 0 remains the exact pre-M1 control. Route 1's camera-loop
+     * interception may fall back to the source proc only before a GX write, so
+     * only that arm defers the hardware side-effect boundary to the admitted
+     * resident texture bind below. */
+    if (gNdsP2Ndl == 0u)
+    {
+        ndsRendererHardwareEndBatch();
+    }
     if (stats->first_opcode == 0u)
     {
         stats->first_opcode = source_setup[0].words.w0 >> 24;
@@ -1240,7 +1250,14 @@ s32 ndsRendererSubmitNativeImpactWave(
     ndsRendererRecordSetImage(
         stats, source_setup[13].words.w0, source_setup[13].words.w1);
 
-    ndsRendererNativeApplyMaterial(material, stats, &state);
+    if (gNdsP2Ndl != 0u)
+    {
+        ndsRendererNativeApplyMaterialPreflight(material, stats, &state);
+    }
+    else
+    {
+        ndsRendererNativeApplyMaterial(material, stats, &state);
+    }
 
     NDS_IMPACT_INVALIDATE();
     NDS_IMPACT_HASH(16u);
@@ -1291,10 +1308,10 @@ s32 ndsRendererSubmitNativeImpactWave(
      * ImpactWave therefore reaches a resident-name bind here and never enters
      * ndsRendererHardwareBindTexture / the generic N64 conversion cache. */
     use_texture =
-        (ndsRendererHardwareUseTexture(stats) != FALSE) &&
+        (ndsRendererHardwareUseTexture(stats) != FALSE) ? TRUE : FALSE;
+    if ((use_texture == FALSE) ||
         (ndsRendererHardwareBindImpactWaveTexture(
-             stats, render_tile, variant) != FALSE) ? TRUE : FALSE;
-    if (use_texture == FALSE)
+             stats, render_tile, variant) == FALSE))
     {
         return FALSE;
     }
@@ -1338,53 +1355,99 @@ s32 ndsRendererSubmitNativeImpactWave(
               NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX);
     }
 #endif
-    /* Raw-slot preparation supplies colour and UV only. The closed emitter
-     * below supplies cached source depth explicitly; it must not consume the
-     * per-triangle painter counter. */
+    /* Raw-slot preparation supplies colour and UV only. GX receives source
+     * positions below and performs the world/view/projection work. */
     ndsRendererFastPrepareRawSlots(
         stats, &state, required_mask, use_texture);
 
     if (poly_alpha != 0u)
     {
-        ndsRendererHardwareEnterProjectedForeground();
-        ndsRendererLoadHardwareMatrices(NULL, FALSE);
-        ndsRendererHardwareBeginTriangleBatch(
-            stats, use_texture, state.texture_prepare_name,
-            state.texture_prepare_poly_fmt,
-            sNdsRendererHardwareMatrixMode,
-            sNdsRendererHardwareMatrixGeneration);
-
-        for (i = 0u; i < triangle_count; i++)
+        if (gNdsP2Ndl != 0u)
         {
-            const u8 *tri = &triangle_indices[i * 3u];
-            u32 corner;
+            matrix_generation = ndsRendererNextMatrixGeneration();
+            ndsRendererLoadHardwareSplitMatrices(
+                config->initial_projection, config->initial_modelview,
+                matrix_generation);
+            ndsRendererHardwareBeginTriangleBatch(
+                stats, use_texture, state.texture_prepare_name,
+                state.texture_prepare_poly_fmt,
+                sNdsRendererHardwareMatrixMode, matrix_generation);
 
-            for (corner = 0u; corner < 3u; corner++)
+            for (i = 0u; i < triangle_count; i++)
             {
-                u32 index = (u32)tri[corner];
-                v16 out_z = projected_z[index];
+                const u8 *tri = &triangle_indices[i * 3u];
+                u32 corner;
 
-                glColor(state.prepared_vertex_colors[index]);
-                if (use_texture != FALSE)
+                for (corner = 0u; corner < 3u; corner++)
                 {
-                    glTexCoord2t16(state.prepared_texcoord_s[index],
-                                  state.prepared_texcoord_t[index]);
+                    u32 index = (u32)tri[corner];
+                    const NDSRendererInputVertex *v = &vertices[index];
+                    v16 out_x = ndsRendererHardwareVertexCoord(v->x, TRUE);
+                    v16 out_y = ndsRendererHardwareVertexCoord(v->y, TRUE);
+                    v16 out_z = ndsRendererHardwareVertexCoord(v->z, TRUE);
+
+                    glColor(state.prepared_vertex_colors[index]);
+                    if (use_texture != FALSE)
+                    {
+                        glTexCoord2t16(state.prepared_texcoord_s[index],
+                                      state.prepared_texcoord_t[index]);
+                    }
+                    ndsRendererProfileHWVertexRange(out_x, out_y, out_z);
+                    glVertex3v16(out_x, out_y, out_z);
                 }
-                ndsRendererProfileHWVertexRange(
-                    projected_x[index], projected_y[index], out_z);
-                glVertex3v16(projected_x[index], projected_y[index], out_z);
-            }
-            sNdsRendererHardwareSubmitted = TRUE;
+                sNdsRendererHardwareSubmitted = TRUE;
 #if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
-            sNdsRendererBenchmarkTriangleCount++;
+                sNdsRendererBenchmarkTriangleCount++;
 #endif
-            stats->triangle_count++;
-            stats->transformed_triangle_count++;
-            stats->hardware_triangle_count++;
-            stats->hardware_vertex_count += 3u;
-            stats->hardware_projected_depth_triangle_count++;
-            ndsRendererProfileRecordProjectedSubmit();
-            ndsRendererProfileRecordHardwareTriangle();
+                stats->triangle_count++;
+                stats->hardware_triangle_count++;
+                stats->hardware_vertex_count += 3u;
+                stats->hardware_zbuffer_triangle_count++;
+                ndsRendererProfileRecordHardwareTriangle();
+            }
+        }
+        else
+        {
+            ndsRendererHardwareEnterProjectedForeground();
+            ndsRendererLoadHardwareMatrices(NULL, FALSE);
+            ndsRendererHardwareBeginTriangleBatch(
+                stats, use_texture, state.texture_prepare_name,
+                state.texture_prepare_poly_fmt,
+                sNdsRendererHardwareMatrixMode,
+                sNdsRendererHardwareMatrixGeneration);
+
+            for (i = 0u; i < triangle_count; i++)
+            {
+                const u8 *tri = &triangle_indices[i * 3u];
+                u32 corner;
+
+                for (corner = 0u; corner < 3u; corner++)
+                {
+                    u32 index = (u32)tri[corner];
+                    v16 out_z = projected_z[index];
+
+                    glColor(state.prepared_vertex_colors[index]);
+                    if (use_texture != FALSE)
+                    {
+                        glTexCoord2t16(state.prepared_texcoord_s[index],
+                                      state.prepared_texcoord_t[index]);
+                    }
+                    ndsRendererProfileHWVertexRange(
+                        projected_x[index], projected_y[index], out_z);
+                    glVertex3v16(projected_x[index], projected_y[index], out_z);
+                }
+                sNdsRendererHardwareSubmitted = TRUE;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+                sNdsRendererBenchmarkTriangleCount++;
+#endif
+                stats->triangle_count++;
+                stats->transformed_triangle_count++;
+                stats->hardware_triangle_count++;
+                stats->hardware_vertex_count += 3u;
+                stats->hardware_projected_depth_triangle_count++;
+                ndsRendererProfileRecordProjectedSubmit();
+                ndsRendererProfileRecordHardwareTriangle();
+            }
         }
     }
     ndsRendererHardwareEndBatch();
@@ -10612,7 +10675,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
      * four fixed, equal regions; there is no runtime partition-end condition to
      * test here.  A packet that actually outgrows its region is detected by the
      * recorder's count/capacity checks and reported through PacketFaults. */
-    region_words = NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS;
+    region_words = ndsRendererFighterPacketRegionWords();
     region_base = battle_slot * region_words;
     /* P2-2p8 Phase 1 slice 1: while the lean route is live the upper half of
      * the region holds the lean copy, so the recorder owns the lower half. A
@@ -10753,8 +10816,7 @@ void ndsRendererFighterPacketRelease(void)
  * matrices take the lean layout. The per-frame patches are the replay's own
  * helpers applied to the active entry.
  * ------------------------------------------------------------------------- */
-#define NDS_FTR_LEAN_REGION_WORDS \
-    (NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS)
+#define NDS_FTR_LEAN_REGION_WORDS NDS_FIGHTER_PACKET_FOUR_REGION_WORDS
 #define NDS_FTR_LEAN_HALF_WORDS (NDS_FTR_LEAN_REGION_WORDS / 2u)
 #define NDS_FTR_LEAN_STRUCT_WORDS \
     ((((u32)sizeof(NDSFighterPacket)) + 31u) / 32u * 8u)
@@ -10833,6 +10895,12 @@ typedef struct NDSFtrLeanVariant
 /* A learn (or the lab verify) masks the patch sites of the fresh list in the
  * top of that entry's own capacity, which holds no record yet. */
 #define NDS_FTR_LEAN_MASK_WORDS ((NDS_FTR_LEAN_WORD_CAPACITY + 31u) / 32u)
+
+#define ndsFtrLeanRegionWords() (NDS_FTR_LEAN_REGION_WORDS)
+#define ndsFtrLeanHalfWords() (NDS_FTR_LEAN_HALF_WORDS)
+#define ndsFtrLeanWordCapacity() (NDS_FTR_LEAN_WORD_CAPACITY)
+#define ndsFtrLeanWideCapacity() (NDS_FTR_LEAN_WIDE_CAPACITY)
+#define ndsFtrLeanMaskWords() (NDS_FTR_LEAN_MASK_WORDS)
 
 typedef struct NDSFtrLeanSlotState
 {
@@ -10916,7 +10984,7 @@ static u32 *ndsFtrLeanEntryBase(u32 slot, u32 entry)
     }
 #endif
     return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
-        (slot * NDS_FTR_LEAN_REGION_WORDS) + (entry * NDS_FTR_LEAN_HALF_WORDS);
+        (slot * ndsFtrLeanRegionWords()) + (entry * ndsFtrLeanHalfWords());
 }
 
 static NDSFighterPacket *ndsFtrLeanEntryPacket(u32 slot, u32 entry)
@@ -10934,7 +11002,7 @@ static NDSFtrLeanVariant *ndsFtrLeanVariantRecord(u32 slot, u32 entry,
                                                   u32 record)
 {
     return (NDSFtrLeanVariant *)(void *)(ndsFtrLeanEntryWords(slot, entry) +
-        NDS_FTR_LEAN_WORD_CAPACITY -
+        ndsFtrLeanWordCapacity() -
         ((record + 1u) * NDS_FTR_LEAN_VARIANT_WORDS));
 }
 
@@ -10980,6 +11048,9 @@ static u32 ndsFtrLeanOwnerIsFighter(void)
     u32 owner = (u32)sNdsRendererRuntimeOwner;
 
     return ((owner != (u32)NDS_RENDERER_PROFILE_OWNER_STAGE) &&
+#if NDS_TASK49_GX_DIFFER
+            (owner != (u32)NDS_RENDERER_PROFILE_OWNER_EFFECT) &&
+#endif
             (owner < (u32)NDS_RENDERER_PROFILE_OWNER_COUNT)) ? TRUE : FALSE;
 }
 
@@ -12074,8 +12145,8 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     /* Slice 6: NDS_FTR_LEAN_ENTRY_WIDE asks for entry 0 over the whole
      * region (route 1 only); the other entry is given up while it holds. */
     u32 wide = ((entry & NDS_FTR_LEAN_ENTRY_WIDE) != 0u) ? TRUE : FALSE;
-    u32 capacity = (wide != FALSE) ? NDS_FTR_LEAN_WIDE_CAPACITY :
-        NDS_FTR_LEAN_WORD_CAPACITY;
+    u32 capacity = (wide != FALSE) ? ndsFtrLeanWideCapacity() :
+        ndsFtrLeanWordCapacity();
     /* Slice 6: the fence the old path's key would carry for this record --
      * built before its execute, so before any bind below uploads. */
     u32 record_fence = sNdsRendererHardwareTextureKeyGeneration ^
@@ -12448,6 +12519,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
      * overwritten by the seventh learned record. A wide list keeps none. */
     {
         u32 floor = packet->word_count;
+        u32 word_capacity = ndsFtrLeanWordCapacity();
 
 #if NDS_P2_LINK
         if (es->texgen_map != NDS_FTR_LEAN_TEXGEN_MAP_NONE)
@@ -12456,8 +12528,8 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         }
 #endif
         es->variant_max = ((wide != FALSE) ||
-                           (floor >= NDS_FTR_LEAN_WORD_CAPACITY)) ? 0u :
-            ((NDS_FTR_LEAN_WORD_CAPACITY - floor) /
+                           (floor >= word_capacity)) ? 0u :
+            ((word_capacity - floor) /
              NDS_FTR_LEAN_VARIANT_WORDS);
         if (es->variant_max > NDS_FTR_LEAN_VARIANT_MAX)
         {
@@ -12890,13 +12962,15 @@ static void ndsFtrLeanPatchMask(const NDSFighterPacket *packet, u32 *mask)
 {
     u32 i;
     u32 j;
+    u32 word_capacity = ndsFtrLeanWordCapacity();
+    u32 mask_words = ndsFtrLeanMaskWords();
 
-    memset(mask, 0, ((NDS_FTR_LEAN_WORD_CAPACITY + 31u) / 32u) * sizeof(u32));
+    memset(mask, 0, mask_words * sizeof(u32));
 #define NDS_FTR_LEAN_MASK_SET(index_)                                      \
     do                                                                     \
     {                                                                      \
         u32 w_ = (u32)(index_);                                            \
-        if (w_ < NDS_FTR_LEAN_WORD_CAPACITY)                               \
+        if (w_ < word_capacity)                                             \
         {                                                                  \
             mask[w_ >> 5] |= 1u << (w_ & 31u);                             \
         }                                                                  \
@@ -12958,6 +13032,8 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
     u32 record;
     u32 n = 0u;
     u32 i;
+    u32 word_capacity = ndsFtrLeanWordCapacity();
+    u32 mask_words = ndsFtrLeanMaskWords();
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
         (fresh >= NDS_FTR_LEAN_ENTRIES))
@@ -12987,7 +13063,7 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
         ndsFtrLeanVariantReject(2u);
         return NDS_FTR_LEAN_ENTRY_NONE;
     }
-    if (a->word_count + NDS_FTR_LEAN_MASK_WORDS > NDS_FTR_LEAN_WORD_CAPACITY)
+    if (a->word_count + mask_words > word_capacity)
     {
         ndsFtrLeanVariantReject(2u);
         return NDS_FTR_LEAN_ENTRY_NONE;
@@ -12999,7 +13075,7 @@ ndsFtrLeanLearnVariant(u32 battle_slot, u32 fresh)
         (void)ndsFtrLeanVariantSwitch(battle_slot, held, 0u);
     }
     mask = ndsFtrLeanEntryWords(battle_slot, fresh) +
-        NDS_FTR_LEAN_WORD_CAPACITY - NDS_FTR_LEAN_MASK_WORDS;
+        word_capacity - mask_words;
     ndsFtrLeanPatchMask(a, mask);
     for (i = 0u; i < a->word_count; i++)
     {
@@ -13092,6 +13168,8 @@ void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)
     NDSFighterPacket *b;
     u32 *mask;
     u32 i;
+    u32 word_capacity = ndsFtrLeanWordCapacity();
+    u32 mask_words = ndsFtrLeanMaskWords();
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) ||
         (held >= NDS_FTR_LEAN_ENTRIES) || (fresh >= NDS_FTR_LEAN_ENTRIES) ||
@@ -13118,12 +13196,12 @@ void ndsFtrLeanVerifyEntries(u32 battle_slot, u32 held, u32 fresh)
         gNdsFtrLean.verify_mismatch[0]++;
         return;
     }
-    if (a->word_count + NDS_FTR_LEAN_MASK_WORDS > NDS_FTR_LEAN_WORD_CAPACITY)
+    if (a->word_count + mask_words > word_capacity)
     {
         return;
     }
     mask = ndsFtrLeanEntryWords(battle_slot, fresh) +
-        NDS_FTR_LEAN_WORD_CAPACITY - NDS_FTR_LEAN_MASK_WORDS;
+        word_capacity - mask_words;
     ndsFtrLeanPatchMask(a, mask);
     for (i = 0u; i < a->word_count; i++)
     {

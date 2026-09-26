@@ -13397,11 +13397,12 @@ static sb32 ndsStageGCDrawAllLoopDrawFireballQuad(DObj *root, WPStruct *wp)
 volatile u32 gNdsFoxBlasterQuadDrawCount;
 volatile u32 gNdsFoxBlasterQuadFallbackCount;
 
-static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp)
+static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp,
+                                                     GObj *camera_gobj)
 {
     s32 facing;
 
-    if ((root == NULL) || (wp == NULL) ||
+    if ((root == NULL) || (wp == NULL) || (camera_gobj == NULL) ||
         (root->rotate.vec.f.x != 0.0F) ||
         (root->rotate.vec.f.y != 0.0F) ||
         (root->scale.vec.f.y != 1.0F) ||
@@ -13425,8 +13426,7 @@ static sb32 ndsStageGCDrawAllLoopDrawFoxBlasterQuad(DObj *root, WPStruct *wp)
     {
         return FALSE;
     }
-    if (ndsRendererAdapterSetWorldQuadCamera(
-            sNdsStageGCDrawAllLoopCurrentCameraGObj) == FALSE)
+    if (ndsRendererAdapterSetWorldQuadCamera(camera_gobj) == FALSE)
     {
         return FALSE;
     }
@@ -13507,8 +13507,9 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
 
         if ((blaster_wp != NULL) && (blaster_wp->kind == nWPKindBlaster))
         {
-            if (ndsStageGCDrawAllLoopDrawFoxBlasterQuad(root, blaster_wp) !=
-                FALSE)
+            if (ndsStageGCDrawAllLoopDrawFoxBlasterQuad(
+                    root, blaster_wp,
+                    sNdsStageGCDrawAllLoopCurrentCameraGObj) != FALSE)
             {
                 gNdsFoxBlasterQuadDrawCount++;
                 gNdsWeaponRendererSubmitCount++;
@@ -13638,6 +13639,162 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
 }
+
+#if NDS_RENDERER_HW_TRIANGLES
+extern void wpDisplayDLHead1(GObj *weapon_gobj);
+
+/*
+ * Phase-2 weapon NDL owners. These are intentionally narrower than the
+ * generic weapon renderer: both admitted kinds already have direct native
+ * quads and both are single-DObj link-14 source weapons.
+ *
+ * Binding checks allocation-lifetime identity (kind + exact display callback).
+ * Dispatch rechecks wpDisplayMain's live visibility branch because display
+ * mode and attack state are runtime state. Collision/hitbox debug modes fall
+ * through to the original source proc instead of being consumed here.
+ */
+u32 ndsStageGCDrawAllLoopNdlWeaponKind(void *display_gobj_ptr)
+{
+    GObj *weapon_gobj = display_gobj_ptr;
+    WPStruct *wp;
+    DObj *root;
+
+    if ((weapon_gobj == NULL) ||
+        (weapon_gobj->id != nGCCommonKindWeapon) ||
+        (weapon_gobj->dl_link_id != 14))
+    {
+        return NDS_P2_NDL_KIND_COUNT;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    root = DObjGetStruct(weapon_gobj);
+    if ((wp == NULL) || (root == NULL) ||
+        ((root->dv == NULL) && (root->child == NULL)))
+    {
+        return NDS_P2_NDL_KIND_COUNT;
+    }
+#if NDS_R2_FIREBALL_QUAD
+    if ((wp->kind == nWPKindFireball) &&
+        (weapon_gobj->proc_display == wpDisplayDLHead1))
+    {
+        return NDS_P2_NDL_KIND_WP_FIREBALL;
+    }
+#endif
+#if NDS_R2_FOX_BLASTER_QUAD
+    if (ndsFoxBlasterIsNativeDisplayGObj(weapon_gobj) != FALSE)
+    {
+        return NDS_P2_NDL_KIND_WP_BLASTER;
+    }
+#endif
+    return NDS_P2_NDL_KIND_COUNT;
+}
+
+static sb32 ndsStageGCDrawAllLoopNdlWeaponModelVisible(const WPStruct *wp)
+{
+    if ((wp == NULL) || (wp->display_mode == nDBDisplayModeMapCollision))
+    {
+        return FALSE;
+    }
+    return ((wp->display_mode == nDBDisplayModeMaster) ||
+            (wp->attack_coll.attack_state == nGMAttackStateOff)) ? TRUE : FALSE;
+}
+
+s32 ndsStageGCDrawAllLoopSubmitNdlWeapon(void *camera_gobj_ptr,
+                                         void *display_gobj_ptr,
+                                         u32 kind)
+{
+    GObj *camera_gobj = camera_gobj_ptr;
+    GObj *weapon_gobj = display_gobj_ptr;
+    WPStruct *wp;
+    DObj *root;
+    u32 x_bits;
+    u32 y_bits;
+    u32 submit_count_before;
+    sb32 handled = FALSE;
+
+    if ((camera_gobj == NULL) || (weapon_gobj == NULL) ||
+        (weapon_gobj->id != nGCCommonKindWeapon) ||
+        (weapon_gobj->dl_link_id != 14) ||
+        (gGCCurrentCamera != camera_gobj))
+    {
+        return FALSE;
+    }
+    wp = wpGetStruct(weapon_gobj);
+    root = DObjGetStruct(weapon_gobj);
+    if ((wp == NULL) || (root == NULL) ||
+        (ndsStageGCDrawAllLoopNdlWeaponModelVisible(wp) == FALSE))
+    {
+        return FALSE;
+    }
+    submit_count_before = gNdsWeaponRendererSubmitCount;
+
+    switch (kind)
+    {
+#if NDS_R2_FIREBALL_QUAD
+    case NDS_P2_NDL_KIND_WP_FIREBALL:
+        if ((wp->kind == nWPKindFireball) &&
+            (weapon_gobj->proc_display == wpDisplayDLHead1) &&
+            (ndsStageGCDrawAllLoopDrawFireballQuad(root, wp) != FALSE))
+        {
+            gNdsFireballQuadDrawCount++;
+            sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+            gNdsStageGCDrawAllLoopHardwareSubmitCount =
+                sNdsStageGCDrawAllLoopHardwareSubmitCount;
+            handled = TRUE;
+        }
+        break;
+#endif
+#if NDS_R2_FOX_BLASTER_QUAD
+    case NDS_P2_NDL_KIND_WP_BLASTER:
+        if ((ndsFoxBlasterIsNativeDisplayGObj(weapon_gobj) != FALSE) &&
+            (ndsStageGCDrawAllLoopDrawFoxBlasterQuad(
+                 root, wp, camera_gobj) != FALSE))
+        {
+            gNdsFoxBlasterQuadDrawCount++;
+            gNdsWeaponRendererSubmitCount++;
+            gNdsWeaponRendererVisibleDrawCount++;
+            gNdsWeaponRendererTriangleCount += 2u;
+            gNdsStageGCDrawAllLoopHardwareTriangleCount += 2u;
+            sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+            gNdsStageGCDrawAllLoopHardwareSubmitCount =
+                sNdsStageGCDrawAllLoopHardwareSubmitCount;
+            handled = TRUE;
+        }
+        break;
+#endif
+    default:
+        break;
+    }
+    if (handled == FALSE)
+    {
+        return FALSE;
+    }
+
+    /* NDL runs before RecordCapturedDisplay and bypasses gcDrawDObjDLHead1.
+     * Preserve their proof accounting without replaying either traversal. */
+    gNdsStageGCDrawAllLoopCapturedDisplayCount++;
+    gNdsStageGCDrawAllLoopNonStageCaptureCount++;
+    gNdsWeaponRendererCaptureCount++;
+    if ((wp->kind >= 0) && (wp->kind < 32))
+    {
+        gNdsWeaponRendererKindMask |= 1u << (u32)wp->kind;
+    }
+    gNdsWeaponRendererDObjDrawCount++;
+    gNdsWeaponRendererCallbackKind =
+        NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1;
+
+    x_bits = ndsFloatBits(root->translate.vec.f.x);
+    y_bits = ndsFloatBits(root->translate.vec.f.y);
+    if ((submit_count_before != 0u) &&
+        ((x_bits != gNdsWeaponRendererLastXBits) ||
+         (y_bits != gNdsWeaponRendererLastYBits)))
+    {
+        gNdsWeaponRendererMovingDrawCount++;
+    }
+    gNdsWeaponRendererLastXBits = x_bits;
+    gNdsWeaponRendererLastYBits = y_bits;
+    return TRUE;
+}
+#endif /* NDS_RENDERER_HW_TRIANGLES */
 
 /* First generic item hardware owner.  BattleShip draws items on link 11 using
  * gcDrawDObjTree* just like stage/effects, but until LinkBomb there was no DS
@@ -13889,7 +14046,7 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
     /* Consume the colour this effect's own proc_display just emitted, before
      * the tree submit inherits the previous list's persistent RDP state. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     {
         u32 phase_mark = cpuGetTiming();
         ndsRendererAdapterCaptureDisplayProcColors();
@@ -13919,7 +14076,7 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
      * still emits nothing from it. texready and texreject are both 0, so it
      * does not even reach texture handling. That is the next seam and it is
      * inside SubmitStageDL, not here. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     {
         u32 phase_mark = cpuGetTiming();
         ndsRendererAdapterSubmitEffectDObjTree(
@@ -13970,6 +14127,56 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsEffectRendererLink15DrawCount++;
     }
     gNdsEffectRendererSubmitCount++;
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
+
+void ndsStageGCDrawAllLoopRecordNdlEffectSubmit(
+    u32 triangles, u32 texture_ready, u32 texture_reject)
+{
+    /* NDL enters before RecordCapturedDisplay and therefore bypasses the
+     * ordinary effect callback that maintains these proof counters. Keep the
+     * accounting contract identical without recreating its classification/tree
+     * work. */
+    gNdsEffectRendererCaptureCount++;
+    gNdsEffectRendererDObjDrawCount++;
+    gNdsEffectRendererTriangleCount += triangles;
+    gNdsEffectRendererTextureReadyCount += texture_ready;
+    gNdsEffectRendererTextureRejectCount += texture_reject;
+    gNdsEffectRendererSubmitCount++;
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
+
+void ndsStageGCDrawAllLoopRecordNdlItemSubmit(
+    void *item_gobj_ptr, u32 triangles, u32 texture_ready, u32 texture_reject)
+{
+    GObj *item_gobj = item_gobj_ptr;
+    ITStruct *ip = (item_gobj != NULL) ? item_gobj->user_data.p : NULL;
+
+    /* NDL consumes the item proc before RecordCapturedDisplay, so retain the
+     * same proof census that the ordinary camera path would have recorded. */
+    gNdsItemRendererCaptureCount++;
+    if ((ip != NULL) && (ip->kind >= 0) && (ip->kind < 32))
+    {
+        gNdsItemRendererKindMask |= 1u << (u32)ip->kind;
+    }
+    /* Invisible held items execute no DObj draw in the source callback. */
+    if (triangles == 0u)
+    {
+        return;
+    }
+    gNdsItemRendererDObjDrawCount++;
+    gNdsItemRendererTriangleCount += triangles;
+    gNdsItemRendererTextureReadyCount += texture_ready;
+    gNdsItemRendererTextureRejectCount += texture_reject;
+    gNdsItemRendererSubmitCount++;
+    if (texture_reject == 0u)
+    {
+        gNdsItemRendererVisibleDrawCount++;
+    }
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
@@ -14126,8 +14333,9 @@ static sb32 ndsStageGCDrawAllLoopIsYosterCloud(GObj *gobj, u32 *index_out)
     return FALSE;
 }
 
-static void ndsStageGCDrawAllLoopSubmitYosterCloudDObj(GObj *cloud_gobj,
-    u32 callback_kind)
+static sb32 ndsStageGCDrawAllLoopSubmitYosterCloudDObjForCamera(
+    GObj *cloud_gobj, GObj *camera_gobj, u32 callback_kind,
+    u32 initial_geometry_mode, sb32 record_reject)
 {
     DObj *root;
     CObj *cobj;
@@ -14136,29 +14344,35 @@ static void ndsStageGCDrawAllLoopSubmitYosterCloudDObj(GObj *cloud_gobj,
     sb32 submitted;
 
     if ((cloud_gobj == NULL) ||
-        (cloud_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
         (ndsStageGCDrawAllLoopIsYosterCloud(cloud_gobj, NULL) == FALSE))
     {
-        return;
+        return FALSE;
     }
     root = DObjGetStruct(cloud_gobj);
     if ((root == NULL) ||
-        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (camera_gobj == NULL) ||
         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
     {
-        return;
+        return FALSE;
     }
-    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    cobj = CObjGetStruct(camera_gobj);
     ndsRendererInitStats(&stats);
     submitted = ndsRendererAdapterSubmitNativeYosterCloud(root, cobj,
-        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
-    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
-    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+        initial_geometry_mode, &stats);
     if (submitted == FALSE)
     {
-        gNdsStageGCDrawAllLoopYosterCloudRejectCount++;
-        return;
+        if (record_reject != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+                stats.hardware_texture_bind_count;
+            gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+                stats.hardware_texture_upload_count;
+            gNdsStageGCDrawAllLoopYosterCloudRejectCount++;
+        }
+        return FALSE;
     }
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
     triangle_delta = stats.hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -14166,11 +14380,25 @@ static void ndsStageGCDrawAllLoopSubmitYosterCloudDObj(GObj *cloud_gobj,
     gNdsStageGCDrawAllLoopYosterCloudTriangleCount += triangle_delta;
     if (triangle_delta == 0u)
     {
-        return;
+        return TRUE;
     }
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
+    return TRUE;
+}
+
+static void ndsStageGCDrawAllLoopSubmitYosterCloudDObj(GObj *cloud_gobj,
+    u32 callback_kind)
+{
+    if ((cloud_gobj == NULL) ||
+        (cloud_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj))
+    {
+        return;
+    }
+    (void)ndsStageGCDrawAllLoopSubmitYosterCloudDObjForCamera(
+        cloud_gobj, sNdsStageGCDrawAllLoopCurrentCameraGObj, callback_kind,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), TRUE);
 }
 #endif
 
@@ -14262,8 +14490,9 @@ static sb32 ndsStageGCDrawAllLoopIsEfLakitu(GObj *gobj)
     return TRUE;
 }
 
-static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObj(GObj *lakitu_gobj,
-    u32 callback_kind)
+static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObjForCamera(
+    GObj *lakitu_gobj, GObj *camera_gobj, u32 callback_kind,
+    u32 initial_geometry_mode, sb32 record_reject)
 {
     DObj *root;
     CObj *cobj;
@@ -14272,29 +14501,35 @@ static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObj(GObj *lakitu_gobj,
     sb32 submitted;
 
     if ((lakitu_gobj == NULL) ||
-        (lakitu_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
         (ndsStageGCDrawAllLoopIsEfLakitu(lakitu_gobj) == FALSE))
     {
         return FALSE;
     }
     root = DObjGetStruct(lakitu_gobj);
     if ((root == NULL) ||
-        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (camera_gobj == NULL) ||
         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
     {
         return FALSE;
     }
-    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    cobj = CObjGetStruct(camera_gobj);
     ndsRendererInitStats(&stats);
     submitted = ndsRendererAdapterSubmitNativeEfLakitu(root, cobj,
-        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
-    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
-    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+        initial_geometry_mode, &stats);
     if (submitted == FALSE)
     {
-        gNdsStageGCDrawAllLoopEfLakituRejectCount++;
+        if (record_reject != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+                stats.hardware_texture_bind_count;
+            gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+                stats.hardware_texture_upload_count;
+            gNdsStageGCDrawAllLoopEfLakituRejectCount++;
+        }
         return FALSE;
     }
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
     triangle_delta = stats.hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -14308,6 +14543,19 @@ static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObj(GObj *lakitu_gobj,
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
     return TRUE;
+}
+
+static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObj(GObj *lakitu_gobj,
+    u32 callback_kind)
+{
+    if ((lakitu_gobj == NULL) ||
+        (lakitu_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj))
+    {
+        return FALSE;
+    }
+    return ndsStageGCDrawAllLoopSubmitEfLakituDObjForCamera(
+        lakitu_gobj, sNdsStageGCDrawAllLoopCurrentCameraGObj, callback_kind,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), TRUE);
 }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
@@ -14360,8 +14608,9 @@ static sb32 ndsStageGCDrawAllLoopIsEfBronto(GObj *gobj)
     return TRUE;
 }
 
-static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObj(GObj *bronto_gobj,
-    u32 callback_kind)
+static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObjForCamera(
+    GObj *bronto_gobj, GObj *camera_gobj, u32 callback_kind,
+    u32 initial_geometry_mode, sb32 record_reject)
 {
     DObj *root;
     CObj *cobj;
@@ -14370,29 +14619,35 @@ static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObj(GObj *bronto_gobj,
     sb32 submitted;
 
     if ((bronto_gobj == NULL) ||
-        (bronto_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
         (ndsStageGCDrawAllLoopIsEfBronto(bronto_gobj) == FALSE))
     {
         return FALSE;
     }
     root = DObjGetStruct(bronto_gobj);
     if ((root == NULL) ||
-        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (camera_gobj == NULL) ||
         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
     {
         return FALSE;
     }
-    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    cobj = CObjGetStruct(camera_gobj);
     ndsRendererInitStats(&stats);
     submitted = ndsRendererAdapterSubmitNativeEfBronto(root, cobj,
-        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
-    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
-    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+        initial_geometry_mode, &stats);
     if (submitted == FALSE)
     {
-        gNdsStageGCDrawAllLoopEfBrontoRejectCount++;
+        if (record_reject != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+                stats.hardware_texture_bind_count;
+            gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+                stats.hardware_texture_upload_count;
+            gNdsStageGCDrawAllLoopEfBrontoRejectCount++;
+        }
         return FALSE;
     }
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
     triangle_delta = stats.hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -14407,11 +14662,102 @@ static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObj(GObj *bronto_gobj,
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
     return TRUE;
 }
+
+static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObj(GObj *bronto_gobj,
+    u32 callback_kind)
+{
+    if ((bronto_gobj == NULL) ||
+        (bronto_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj))
+    {
+        return FALSE;
+    }
+    return ndsStageGCDrawAllLoopSubmitEfBrontoDObjForCamera(
+        bronto_gobj, sNdsStageGCDrawAllLoopCurrentCameraGObj, callback_kind,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), TRUE);
+}
+
+u32 ndsStageGCDrawAllLoopNdlEfGroundKind(void *display_gobj)
+{
+    GObj *gobj = (GObj *)display_gobj;
+
+    /* The NDL consumes the whole source proc, so admit only the efground
+     * actors whose source display callback is exactly the side-effect-free
+     * DObj-tree draw used by efGroundMakeEffect. */
+    if ((gobj == NULL) || (gobj->proc_display != gcDrawDObjTreeForGObj))
+    {
+        return NDS_P2_NDL_KIND_COUNT;
+    }
+#if NDS_P2_STAGE_CASTLE
+    if (ndsStageGCDrawAllLoopIsEfLakitu(gobj) != FALSE)
+    {
+        return NDS_P2_NDL_KIND_EF_LAKITU;
+    }
+#endif
+    if (ndsStageGCDrawAllLoopIsEfBronto(gobj) != FALSE)
+    {
+        return NDS_P2_NDL_KIND_EF_BRONTO;
+    }
+    return NDS_P2_NDL_KIND_COUNT;
+}
+
+s32 ndsStageGCDrawAllLoopSubmitNdlEfGround(void *camera_gobj,
+                                            void *display_gobj,
+                                            u32 kind)
+{
+    GObj *camera = (GObj *)camera_gobj;
+    GObj *display = (GObj *)display_gobj;
+    const u32 initial_geometry_mode =
+        (NDS_RENDERER_GEOM_RESET_MODE | NDS_RENDERER_GEOM_LIGHTING) &
+        ~NDS_RENDERER_GEOM_ZBUFFER;
+    sb32 handled = FALSE;
+
+    /* Link 4 takes the same no-Z initial mode through the legacy capture path.
+     * Pass it explicitly because NDL runs before that path publishes its
+     * CurrentDisplay globals. */
+    if ((camera == NULL) || (display == NULL) || (display->dl_link_id != 4u))
+    {
+        return FALSE;
+    }
+    switch (kind)
+    {
+#if NDS_P2_STAGE_CASTLE
+    case NDS_P2_NDL_KIND_EF_LAKITU:
+        handled = ndsStageGCDrawAllLoopSubmitEfLakituDObjForCamera(
+            display, camera, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
+            initial_geometry_mode, FALSE);
+        if (handled != FALSE)
+        {
+            gNdsStageGCDrawAllLoopEfLakituDisplayCallbackCount++;
+        }
+        break;
+#endif
+    case NDS_P2_NDL_KIND_EF_BRONTO:
+        handled = ndsStageGCDrawAllLoopSubmitEfBrontoDObjForCamera(
+            display, camera, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
+            initial_geometry_mode, FALSE);
+        if (handled != FALSE)
+        {
+            gNdsStageGCDrawAllLoopEfBrontoDisplayCallbackCount++;
+        }
+        break;
+    default:
+        return FALSE;
+    }
+    if (handled != FALSE)
+    {
+        /* These two counters normally live in RecordCapturedDisplay and the
+         * rejected-classification DObj callback. NDL bypasses both. */
+        gNdsEffectRendererCaptureCount++;
+        gNdsEffectRendererDObjDrawCount++;
+    }
+    return handled;
+}
 #endif
 
 #if NDS_P2_STAGE_JUNGLE
-static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
-                                                   u32 callback_kind)
+static sb32 ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(
+    GObj *tarucann_gobj, GObj *camera_gobj, u32 callback_kind,
+    u32 initial_geometry_mode, sb32 record_reject)
 {
     DObj *root;
     CObj *cobj;
@@ -14420,33 +14766,43 @@ static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
     sb32 submitted;
 
     if ((tarucann_gobj == NULL) ||
-        (tarucann_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
         (ndsStageGCDrawAllLoopIsTaruCann(tarucann_gobj) == FALSE))
     {
-        return;
+        return FALSE;
     }
     root = DObjGetStruct(tarucann_gobj);
     if ((root == NULL) || (root->child == NULL) ||
-        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (camera_gobj == NULL) ||
         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
     {
-        return;
+        return FALSE;
     }
-    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    cobj = CObjGetStruct(camera_gobj);
     ndsRendererInitStats(&stats);
     submitted = ndsRendererAdapterSubmitNativeTaruCann(root, cobj,
-        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
+        initial_geometry_mode, &stats);
     /* A failed texture upload may already have bound or evicted cache entries.
      * Keep that owner's telemetry even when the actor emitted no triangles. */
+    if (submitted == FALSE)
+    {
+        if (record_reject != FALSE)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+                stats.hardware_texture_bind_count;
+            gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+                stats.hardware_texture_upload_count;
+            gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+                stats.hardware_texture_ready_count;
+            gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+                stats.hardware_texture_reject_count;
+            gNdsStageGCDrawAllLoopActorRejectCount++;
+        }
+        return FALSE;
+    }
     gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
     gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
     gNdsStageGCDrawAllLoopHardwareTextureReadyCount += stats.hardware_texture_ready_count;
     gNdsStageGCDrawAllLoopHardwareTextureRejectCount += stats.hardware_texture_reject_count;
-    if (submitted == FALSE)
-    {
-        gNdsStageGCDrawAllLoopActorRejectCount++;
-        return;
-    }
     triangle_delta = stats.hardware_triangle_count;
     gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
     gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
@@ -14454,13 +14810,101 @@ static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
     gNdsStageGCDrawAllLoopActorTriangleCount += triangle_delta;
     if (triangle_delta == 0u)
     {
-        return;
+        return TRUE;
     }
     sNdsStageGCDrawAllLoopHardwareSubmitCount++;
     gNdsStageGCDrawAllLoopHardwareSubmitCount =
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
+    return TRUE;
+}
+
+static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
+                                                   u32 callback_kind)
+{
+    if ((tarucann_gobj == NULL) ||
+        (tarucann_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj))
+    {
+        return;
+    }
+    (void)ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(
+        tarucann_gobj, sNdsStageGCDrawAllLoopCurrentCameraGObj, callback_kind,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), TRUE);
 }
 #endif
+
+u32 ndsStageGCDrawAllLoopNdlGroundKind(void *display_gobj)
+{
+    GObj *gobj = (GObj *)display_gobj;
+
+    if ((gobj == NULL) || (gobj->proc_display != gcDrawDObjTreeForGObj))
+    {
+        return NDS_P2_NDL_KIND_COUNT;
+    }
+#if NDS_P2_STAGE_YOSTER
+    if (ndsStageGCDrawAllLoopIsYosterCloud(gobj, NULL) != FALSE)
+    {
+        return NDS_P2_NDL_KIND_GR_YOSTER_CLOUD;
+    }
+#endif
+#if NDS_P2_STAGE_JUNGLE
+    if (ndsStageGCDrawAllLoopIsTaruCann(gobj) != FALSE)
+    {
+        return NDS_P2_NDL_KIND_GR_TARUCANN;
+    }
+#endif
+    return NDS_P2_NDL_KIND_COUNT;
+}
+
+s32 ndsStageGCDrawAllLoopSubmitNdlGround(void *camera_gobj,
+                                          void *display_gobj,
+                                          u32 kind)
+{
+    GObj *camera = (GObj *)camera_gobj;
+    GObj *display = (GObj *)display_gobj;
+    const u32 initial_geometry_mode =
+        NDS_RENDERER_GEOM_RESET_MODE | NDS_RENDERER_GEOM_LIGHTING;
+    sb32 handled = FALSE;
+
+    if ((camera == NULL) || (display == NULL) || (display->dl_link_id != 6u))
+    {
+        return FALSE;
+    }
+    switch (kind)
+    {
+#if NDS_P2_STAGE_YOSTER
+    case NDS_P2_NDL_KIND_GR_YOSTER_CLOUD:
+        handled = ndsStageGCDrawAllLoopSubmitYosterCloudDObjForCamera(
+            display, camera, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
+            initial_geometry_mode, FALSE);
+        if (handled != FALSE)
+        {
+            gNdsStageGCDrawAllLoopYosterCloudDisplayCallbackCount++;
+        }
+        break;
+#endif
+#if NDS_P2_STAGE_JUNGLE
+    case NDS_P2_NDL_KIND_GR_TARUCANN:
+        handled = ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(
+            display, camera, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE,
+            initial_geometry_mode, FALSE);
+        if (handled != FALSE)
+        {
+            gNdsStageGCDrawAllLoopActorDisplayCallbackCount++;
+        }
+        break;
+#endif
+    default:
+        return FALSE;
+    }
+    if (handled != FALSE)
+    {
+        /* RecordCapturedDisplay is skipped by NDL.  Preserve its generic
+         * accepted-display count; these ground actors are classification
+         * rejects, so RecordDObjDraw has no generic callback counter to copy. */
+        gNdsStageGCDrawAllLoopCapturedDisplayCount++;
+    }
+    return handled;
+}
 
 #if NDS_RENDERER_HW_TRIANGLES
 /* GROUND-ACTORS: generic fallback for the Ground-kind stage actors the
@@ -15208,8 +15652,16 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
 #endif
             ndsStageGCDrawAllLoopSubmitItemDObj(stage_gobj,
                                                 callback_kind);
+#if NDS_TICK_HUD
+            gNdsMiscItemDrawTicks += cpuGetTiming() - misc_split_mark;
+            misc_split_mark = cpuGetTiming();
+#endif
             ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
                                                   callback_kind);
+#if NDS_TICK_HUD
+            gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
+            misc_split_mark = cpuGetTiming();
+#endif
 #if NDS_P2_STAGE_JUNGLE
             /* The barrel is none of weapon/item/effect (ground kind), so the
              * three submits above no-op on it; its actor commit runs here, in
@@ -15234,7 +15686,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
                                                        callback_kind);
 #endif
 #if NDS_TICK_HUD
-            gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
+            gNdsMiscActorDrawTicks += cpuGetTiming() - misc_split_mark;
 #endif
         }
 #endif

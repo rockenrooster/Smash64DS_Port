@@ -6,7 +6,8 @@ param(
     [ValidateRange(30, 600)][int]$TimeoutSeconds = 180,
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]*$')]
     [string]$EvidenceLabel = '2026-08-08_fox-blaster-native-lab',
-    [switch]$Control
+    [switch]$Control,
+    [switch]$P2Ndl
 )
 
 # Event-driven Fox blaster proof. The canonical level-3 Fox CPU stays enabled;
@@ -99,6 +100,15 @@ if (-not $Control) {
         'ndsRendererHardwarePackedVertexColor'
     )
 }
+if ($P2Ndl) {
+    $required += @(
+        'gNdsP2Ndl',
+        'gNdsNdlDispatch',
+        'gNdsNdlFallback',
+        'gNdsNdlProcsSkipped',
+        'gNdsNdlBindCount'
+    )
+}
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
@@ -146,6 +156,7 @@ try {
         'tbreak scVSBattleStartBattle',
         'continue',
         'set variable gNdsBattlePlayableFoxCpuEnabled = 1',
+        $(if ($P2Ndl) { 'set variable gNdsP2Ndl = 1' }),
         'tbreak battleship_wpFoxBlasterMakeWeapon',
         'continue',
         'set $blaster_spawn_frame = gNdsBattlePlayablePacingPresentedFrames',
@@ -213,6 +224,13 @@ try {
                 'gNdsRendererFoxBlasterGlowPrepareCount, ' +
                 'gNdsRendererFoxBlasterGlowFailCount, ' +
                 'gNdsRendererFoxBlasterGlowBytes')
+        )
+    }
+    if ($P2Ndl) {
+        $commands += @(
+            ('printf "FOX_BLASTER_NDL=%u,%u,%u,%u\n", ' +
+                'gNdsNdlDispatch[7], gNdsNdlFallback[7], ' +
+                'gNdsNdlProcsSkipped, gNdsNdlBindCount')
         )
     }
     $commands += @(
@@ -293,6 +311,14 @@ try {
             $generic[2] -eq $generic[0]) `
             'The source-display control did not submit visible blaster quads.' `
             $gdbStdout
+    }
+    if ($P2Ndl) {
+        $ndlMatch = [regex]::Match(
+            $gdbStdout, 'FOX_BLASTER_NDL=([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+        $ndl = Get-Ints $ndlMatch
+        Assert-Condition ($ndlMatch.Success -and $ndl[0] -ge 2 -and
+            $ndl[1] -eq 0 -and $ndl[2] -ge $ndl[0] -and $ndl[3] -gt 0) `
+            'Fox blaster NDL did not engage cleanly.' $gdbStdout
     }
     Assert-Condition ((Test-Path -LiteralPath $shot -PathType Leaf) -and
         ((Get-Item -LiteralPath $shot).Length -gt 1024)) `

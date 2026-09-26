@@ -3184,6 +3184,13 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
     { &llMNVSModeVSTextSprite, NDS_RELOC_SYMBOL_MNVSMODE_VS_TEXT },
 };
 
+/* The registry is linked by reduced battle targets that intentionally omit
+ * battleship_item_starrod.c, but Kirby's capture/lose-star effect still needs
+ * the ITCommonData+0x4D4 registry key.  Full item builds provide the strong
+ * definition from battleship_item_starrod.c; this weak registry-owned value
+ * keeps the same address/key available when that optional TU is absent. */
+__attribute__((weak)) uintptr_t llITCommonDataStarRodWeaponAttributes = 0x4d4u;
+
 #define NDS_KNOWN_ASSET_SYMBOL(asset, name, value) { asset, &name, value },
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)

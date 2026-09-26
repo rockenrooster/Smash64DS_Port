@@ -1634,6 +1634,54 @@ extern sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
                                                   s32 link_id);
 #endif
 
+#if NDS_TICK_HUD
+/* P2-2p8 Phase 2 B3. The particle pass is implemented by effect-display
+ * GObjs, so gobj->id alone cannot distinguish it from model effects. Match
+ * the five source particle display procs first, then use the ordinary GObj
+ * kind for the remaining proc_display residual. */
+extern void efDisplayCLDProcDisplay(GObj *effect_gobj);
+extern void efDisplayXLUProcDisplay(GObj *effect_gobj);
+extern void efDisplayZPerspXLUProcDisplay(GObj *effect_gobj);
+extern void efDisplayZPerspCLDProcDisplay(GObj *effect_gobj);
+extern void efDisplayZPerspAAXLUProcDisplay(GObj *effect_gobj);
+
+static inline u32 ndsP2MiscProcKind(const GObj *gobj)
+{
+    if ((gobj->proc_display == efDisplayCLDProcDisplay) ||
+        (gobj->proc_display == efDisplayXLUProcDisplay) ||
+        (gobj->proc_display == efDisplayZPerspXLUProcDisplay) ||
+        (gobj->proc_display == efDisplayZPerspCLDProcDisplay) ||
+        (gobj->proc_display == efDisplayZPerspAAXLUProcDisplay))
+    {
+        return NDS_MISC_PROC_KIND_PARTICLE;
+    }
+    switch (gobj->id)
+    {
+    case nGCCommonKindWeapon:
+        return NDS_MISC_PROC_KIND_WEAPON;
+    case nGCCommonKindItem:
+        return NDS_MISC_PROC_KIND_ITEM;
+    case nGCCommonKindEffect:
+        return NDS_MISC_PROC_KIND_EFFECT;
+    case nGCCommonKindGround:
+        return NDS_MISC_PROC_KIND_GROUND;
+    case nGCCommonKindInterface:
+        return NDS_MISC_PROC_KIND_INTERFACE;
+    default:
+        return NDS_MISC_PROC_KIND_OTHER;
+    }
+}
+
+static inline u32 ndsP2MiscNestedDrawTicks(void)
+{
+    return gNdsMiscWeaponDrawTicks + gNdsMiscItemDrawTicks +
+        gNdsMiscEffectDrawTicks + gNdsMiscActorDrawTicks +
+        gNdsMiscParticleDrawTicks + gNdsTickHudFighterTicks +
+        gNdsTickHudStageTicks + gNdsTickHudBackgroundTicks +
+        gNdsTickHudForegroundTicks;
+}
+#endif
+
 void __attribute__((section(".itcm")))
 gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
 {
@@ -1666,13 +1714,32 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     GObj *prev_camera_gobj =
                         sNdsOpeningRoomCurrentDrawCameraGObj;
                     sb32 native_stage_handled;
+#if NDS_TICK_HUD
+                    const sb32 p2_misc_measure =
+                        (gNdsSceneManagerCurrIsBattle != 0u) ? TRUE : FALSE;
+                    u32 p2_capture_mark = 0u;
+                    u32 p2_capture_stage_before = 0u;
+#endif
 
                     dGCCurrentStatus = nGCStatusDisplaying;
                     gGCCurrentDisplay = current_gobj;
 
+#if NDS_TICK_HUD
+                    if (p2_misc_measure != FALSE)
+                    {
+                        p2_capture_mark = cpuGetTiming();
+                        p2_capture_stage_before = gNdsTickHudStageTicks;
+                    }
+#endif
                     native_stage_handled =
-                        ndsStageGCDrawAllLoopRecordCapturedDisplay(
+                        ndsRendererAdapterNdlDispatchEffect(
                             camera_gobj, current_gobj, link_id);
+                    if (native_stage_handled == FALSE)
+                    {
+                        native_stage_handled =
+                            ndsStageGCDrawAllLoopRecordCapturedDisplay(
+                                camera_gobj, current_gobj, link_id);
+                    }
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
                     /* R01-B. The Results winner-series emblem, on the same
                      * handled/not-handled contract as the stage interception
@@ -1693,13 +1760,56 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                                 camera_gobj, current_gobj, link_id);
                     }
 #endif
-                    ndsOpeningRoomRecordCapturedDisplay(camera_gobj,
-                                                        current_gobj,
-                                                        link_id);
+                    if (native_stage_handled == FALSE)
+                    {
+                        ndsOpeningRoomRecordCapturedDisplay(camera_gobj,
+                                                            current_gobj,
+                                                            link_id);
+                    }
+#if NDS_TICK_HUD
+                    if (p2_misc_measure != FALSE)
+                    {
+                        const u32 capture_ticks =
+                            cpuGetTiming() - p2_capture_mark;
+                        const u32 stage_delta =
+                            gNdsTickHudStageTicks - p2_capture_stage_before;
+
+                        gNdsMiscCaptureTicks +=
+                            (capture_ticks >= stage_delta) ?
+                                (capture_ticks - stage_delta) : 0u;
+                    }
+#endif
                     sNdsOpeningRoomCurrentDrawCameraGObj = camera_gobj;
                     if (native_stage_handled == FALSE)
                     {
+#if NDS_TICK_HUD
+                        u32 p2_proc_mark = 0u;
+                        u32 p2_proc_nested_before = 0u;
+
+                        if (p2_misc_measure != FALSE)
+                        {
+                            p2_proc_mark = cpuGetTiming();
+                            p2_proc_nested_before = ndsP2MiscNestedDrawTicks();
+                        }
+#endif
                         current_gobj->proc_display(current_gobj);
+#if NDS_TICK_HUD
+                        if (p2_misc_measure != FALSE)
+                        {
+                            const u32 proc_ticks = cpuGetTiming() - p2_proc_mark;
+                            const u32 nested_delta =
+                                ndsP2MiscNestedDrawTicks() -
+                                p2_proc_nested_before;
+                            const u32 exclusive =
+                                (proc_ticks >= nested_delta) ?
+                                    (proc_ticks - nested_delta) : 0u;
+                            const u32 kind = ndsP2MiscProcKind(current_gobj);
+
+                            gNdsMiscProcDisplayTicks += exclusive;
+                            gNdsMiscProcDisplayKindTicks[kind] += exclusive;
+                            gNdsMiscProcDisplayKindCount[kind]++;
+                        }
+#endif
                     }
                     sNdsOpeningRoomCurrentDrawCameraGObj = prev_camera_gobj;
 

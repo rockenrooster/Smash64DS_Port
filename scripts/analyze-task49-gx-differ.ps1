@@ -14,6 +14,13 @@ harness) and reports equivalence under TWO TIERS WITH DIFFERENT STANDARDS:
             frames. Any Tier 1 divergence is a defect, full stop -- both paths
             read the same baked source data.
 
+            EFFECT is the one deliberate exception for VERTEX16 itself. M1
+            moves projection of ImpactWave/DamageSlash vertices from ARM9 into
+            GX, so route 0 writes already-projected 4.12 vertices while route 1
+            writes object-space 4.12 vertices. EFFECT therefore grades every
+            other non-matrix word at Tier 1 and moves VERTEX16 positions into
+            Tier 2, where the active projection/modelview pair is applied.
+
   Tier 2 -- matrix equivalence by EFFECTIVE TRANSFORM.
             Recompose each binding's clip matrix from its captured
             MATRIX_LOAD4X4 words (profile 1 emits the CPU-composed
@@ -57,12 +64,16 @@ $ErrorActionPreference = 'Stop'
 $script:matrixClasses = 7,8,9,10,11,12,13,14,22   # MATRIX_MODE..MATRIX_RESTORE + MULT4x3
 $script:load4x4Class = 9                          # NDS_TASK29_GX_MATRIX_LOAD4X4
 $script:matrixMult4x3Class = 22                   # NDS_TASK29_GX_MATRIX_MULT4x3 (Task 51, appended)
+$script:vertex16Class = 20                        # NDS_TASK29_GX_VERTEX16
 
 # DS screen resolution.
 $script:screenW = 256
 $script:screenH = 192
 # 20.12 fixed-point reciprocal.
 $script:one20p12 = [double]4096.0
+$script:one4p12 = [double]4096.0
+$script:effectScreenThresholdPx = [double]1.0
+$script:effectDepthThresholdNdc = [double](1.0 / 4096.0)
 
 function ConvertFrom-Task49Capture {
     param([Parameter(Mandatory=$true)][string]$Path)
@@ -79,12 +90,21 @@ function ConvertFrom-Task49Capture {
 function Test-Tier1BitExact {
     param(
         [Parameter(Mandatory=$true)]$CapA,
-        [Parameter(Mandatory=$true)]$CapB
+        [Parameter(Mandatory=$true)]$CapB,
+        [switch]$ExcludeVertex16
     )
     # Compare non-matrix classes word-for-word, entry-by-entry. The capture is
     # per-owner, one frame, so the two streams must align entry-for-entry.
-    $aNonMatrix = @($CapA.entries | Where-Object { -not ($script:matrixClasses -contains [int]$_.command_class) })
-    $bNonMatrix = @($CapB.entries | Where-Object { -not ($script:matrixClasses -contains [int]$_.command_class) })
+    $aNonMatrix = @($CapA.entries | Where-Object {
+        -not ($script:matrixClasses -contains [int]$_.command_class) -and
+        (-not $ExcludeVertex16 -or
+         ([int]$_.command_class -ne $script:vertex16Class))
+    })
+    $bNonMatrix = @($CapB.entries | Where-Object {
+        -not ($script:matrixClasses -contains [int]$_.command_class) -and
+        (-not $ExcludeVertex16 -or
+         ([int]$_.command_class -ne $script:vertex16Class))
+    })
 
     $maxLen = [Math]::Max($aNonMatrix.Count, $bNonMatrix.Count)
     $divergences = [Collections.Generic.List[object]]::new()
@@ -128,7 +148,11 @@ function Test-Tier1BitExact {
     }
     return [pscustomobject]@{
         tier = 1
-        standard = 'bit-exact, zero tolerance'
+        standard = if ($ExcludeVertex16) {
+            'bit-exact, zero tolerance; EFFECT VERTEX16 positions are Tier 2'
+        } else {
+            'bit-exact, zero tolerance'
+        }
         entries_compared = $maxLen
         words_compared = $wordsCompared
         words_matched = $wordsMatched
@@ -136,6 +160,213 @@ function Test-Tier1BitExact {
         divergences = $divergences
         verdict = if ($divergences.Count -eq 0 -and $wordsCompared -gt 0) { 'PASS' }
                   elseif ($wordsCompared -eq 0) { 'EMPTY' } else { 'FAIL' }
+    }
+}
+
+function New-Task49IdentityMatrix {
+    $m = [double[]]::new(16)
+    $m[0] = 1.0
+    $m[5] = 1.0
+    $m[10] = 1.0
+    $m[15] = 1.0
+    , $m
+}
+
+function Invoke-Task49RowVectorTransform {
+    param(
+        [Parameter(Mandatory=$true)][double[]]$V,
+        [Parameter(Mandatory=$true)][double[]]$M
+    )
+    $out = [double[]]::new(4)
+    for ($col = 0; $col -lt 4; $col++) {
+        $out[$col] =
+            $V[0] * $M[$col] +
+            $V[1] * $M[4 + $col] +
+            $V[2] * $M[8 + $col] +
+            $V[3] * $M[12 + $col]
+    }
+    , $out
+}
+
+function ConvertFrom-Task49Vertex16 {
+    param([Parameter(Mandatory=$true)]$Words)
+    $w = @($Words)
+    if ($w.Count -ne 2) { return $null }
+    $xy = [uint32][int64]$w[0]
+    $zWord = [uint32][int64]$w[1]
+    $raw = @(
+        [uint16]($xy -band 0xffffu),
+        [uint16](($xy -shr 16) -band 0xffffu),
+        [uint16]($zWord -band 0xffffu)
+    )
+    $v = [double[]]::new(4)
+    for ($i = 0; $i -lt 3; $i++) {
+        $signed = if ($raw[$i] -ge 0x8000) {
+            [double]$raw[$i] - 65536.0
+        } else {
+            [double]$raw[$i]
+        }
+        $v[$i] = $signed / $script:one4p12
+    }
+    $v[3] = 1.0
+    , $v
+}
+
+function Get-Task49EffectVertices {
+    param([Parameter(Mandatory=$true)]$Cap)
+
+    # DS geometry uses row vectors for the renderer's m[4][4] convention:
+    # v' = v * modelview * projection.  M1's split loader writes projection in
+    # mode 0 and modelview in mode 2.  Route 0 writes identity/identity because
+    # ARM9 already projected its VERTEX16 positions.  Replaying the captured
+    # state here therefore compares what reaches rasterization, not unlike
+    # operands.
+    $projection = New-Task49IdentityMatrix
+    $modelview = New-Task49IdentityMatrix
+    $mode = 2
+    $vertices = [Collections.Generic.List[object]]::new()
+    $faults = [Collections.Generic.List[object]]::new()
+
+    for ($entryIndex = 0; $entryIndex -lt $Cap.entries.Count; $entryIndex++) {
+        $entry = $Cap.entries[$entryIndex]
+        $class = [int]$entry.command_class
+        if ($class -eq 7) {
+            $words = @($entry.words)
+            if ($words.Count -ne 1) {
+                $faults.Add([pscustomobject]@{
+                    entry=$entryIndex; reason='matrix-mode-word-count'
+                })
+                continue
+            }
+            $mode = [int][uint32][int64]$words[0]
+            continue
+        }
+        if ($class -eq 8) {
+            if ($mode -eq 0) {
+                $projection = New-Task49IdentityMatrix
+            } elseif ($mode -eq 2) {
+                $modelview = New-Task49IdentityMatrix
+            }
+            continue
+        }
+        if ($class -eq $script:load4x4Class) {
+            $loaded = ConvertTo-ClipMatrix @($entry.words)
+            if ($null -eq $loaded) {
+                $faults.Add([pscustomobject]@{
+                    entry=$entryIndex; reason='load4x4-word-count'
+                })
+                continue
+            }
+            if ($mode -eq 0) {
+                $projection = $loaded
+            } elseif ($mode -eq 2) {
+                $modelview = $loaded
+            } else {
+                $faults.Add([pscustomobject]@{
+                    entry=$entryIndex; reason='unsupported-matrix-mode'; mode=$mode
+                })
+            }
+            continue
+        }
+        if (($script:matrixClasses -contains $class) -and
+            ($class -notin @(7,8,$script:load4x4Class))) {
+            $faults.Add([pscustomobject]@{
+                entry=$entryIndex; reason='unsupported-matrix-command'; class=$class
+            })
+            continue
+        }
+        if ($class -ne $script:vertex16Class) { continue }
+
+        $source = ConvertFrom-Task49Vertex16 @($entry.words)
+        if ($null -eq $source) {
+            $faults.Add([pscustomobject]@{
+                entry=$entryIndex; reason='vertex16-word-count'
+            })
+            continue
+        }
+        $view = Invoke-Task49RowVectorTransform $source $modelview
+        $clip = Invoke-Task49RowVectorTransform $view $projection
+        if ([Math]::Abs($clip[3]) -lt 1e-9) {
+            $faults.Add([pscustomobject]@{
+                entry=$entryIndex; reason='zero-clip-w'
+            })
+            continue
+        }
+        $vertices.Add([pscustomobject]@{
+            entry = $entryIndex
+            binding = [int]$entry.binding_index
+            ndc_x = $clip[0] / $clip[3]
+            ndc_y = $clip[1] / $clip[3]
+            ndc_z = $clip[2] / $clip[3]
+        })
+    }
+    [pscustomobject]@{
+        vertices = $vertices
+        faults = $faults
+    }
+}
+
+function Test-EffectTier2EffectiveVertices {
+    param(
+        [Parameter(Mandatory=$true)]$CapA,
+        [Parameter(Mandatory=$true)]$CapB
+    )
+
+    $a = Get-Task49EffectVertices $CapA
+    $b = Get-Task49EffectVertices $CapB
+    $n = [Math]::Min($a.vertices.Count, $b.vertices.Count)
+    $maxPx = 0.0
+    $sumPx = 0.0
+    $maxDepth = 0.0
+    $perVertex = [Collections.Generic.List[object]]::new()
+
+    for ($i = 0; $i -lt $n; $i++) {
+        $va = $a.vertices[$i]
+        $vb = $b.vertices[$i]
+        $dxPx = ([double]$va.ndc_x - [double]$vb.ndc_x) *
+            ($script:screenW / 2.0)
+        $dyPx = ([double]$va.ndc_y - [double]$vb.ndc_y) *
+            ($script:screenH / 2.0)
+        $screenPx = [Math]::Sqrt($dxPx*$dxPx + $dyPx*$dyPx)
+        $depthNdc = [Math]::Abs([double]$va.ndc_z - [double]$vb.ndc_z)
+        if ($screenPx -gt $maxPx) { $maxPx = $screenPx }
+        if ($depthNdc -gt $maxDepth) { $maxDepth = $depthNdc }
+        $sumPx += $screenPx
+        $perVertex.Add([pscustomobject]@{
+            vertex = $i
+            a_entry = $va.entry
+            b_entry = $vb.entry
+            screen_px = [Math]::Round($screenPx,6)
+            depth_ndc = [Math]::Round($depthNdc,9)
+        })
+    }
+
+    $faults = @($a.faults) + @($b.faults)
+    $countMismatch = ($a.vertices.Count -ne $b.vertices.Count)
+    $pass = (
+        $n -gt 0 -and
+        -not $countMismatch -and
+        $faults.Count -eq 0 -and
+        $maxPx -le $script:effectScreenThresholdPx -and
+        $maxDepth -le $script:effectDepthThresholdNdc
+    )
+    [pscustomobject]@{
+        tier = 2
+        standard = 'EFFECT effective VERTEX16 transform; <=1 px screen, <=1 4.12 LSB depth'
+        vertices_compared = $n
+        vertices_a = $a.vertices.Count
+        vertices_b = $b.vertices.Count
+        screen_threshold_px = $script:effectScreenThresholdPx
+        depth_threshold_ndc = $script:effectDepthThresholdNdc
+        max_screen_px = [Math]::Round($maxPx,6)
+        mean_screen_px = if ($n -gt 0) {
+            [Math]::Round($sumPx / $n,6)
+        } else { 0.0 }
+        max_depth_ndc = [Math]::Round($maxDepth,9)
+        fault_count = $faults.Count
+        faults = $faults
+        per_vertex = $perVertex
+        verdict = if ($pass) { 'PASS' } else { 'FAIL' }
     }
 }
 
@@ -151,7 +382,14 @@ function ConvertTo-ClipMatrix {
     for ($i = 0; $i -lt 16; $i++) {
         $u = [uint32][int64]$w[$i]
         # Reinterpret as signed int32.
-        $s = if ($u -ge 0x80000000) { ([double]$u - 4294967296.0) } else { [double]$u }
+        # PowerShell parses bare 0x80000000 as signed Int32 (-2147483648),
+        # which makes every UInt32 compare >= it and corrupts all positive
+        # matrix elements. Compare in double precision against 2^31 instead.
+        $s = if ([double]$u -ge 2147483648.0) {
+            [double]$u - 4294967296.0
+        } else {
+            [double]$u
+        }
         $m[$i] = $s / $script:one20p12
     }
     # Wrap in a single-element array so PowerShell returns the array object
@@ -245,8 +483,13 @@ function Test-Tier2EffectiveTransform {
 $capA = ConvertFrom-Task49Capture $CaptureA
 $capB = ConvertFrom-Task49Capture $CaptureB
 
-$tier1 = Test-Tier1BitExact $capA $capB
-$tier2 = Test-Tier2EffectiveTransform $capA $capB
+$effectOwner = ($OwnerName.ToUpperInvariant() -eq 'EFFECT')
+$tier1 = Test-Tier1BitExact $capA $capB -ExcludeVertex16:$effectOwner
+$tier2 = if ($effectOwner) {
+    Test-EffectTier2EffectiveVertices $capA $capB
+} else {
+    Test-Tier2EffectiveTransform $capA $capB
+}
 
 $result = [ordered]@{
     task = 49

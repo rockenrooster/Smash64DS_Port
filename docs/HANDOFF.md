@@ -3,7 +3,7 @@
 P2 follows `PROJECT_GOAL.md` and `P2_PLAN.md`; `P2_EXECUTION_BOARD.md` owns focus, decisions, artifacts and the
 **Execution cursor**. This file is a route, not another task or metric ledger.
 
-## Current route (2026-09-24)
+## Current route (2026-09-26)
 
 P2-2p8 four-fighter 30 FPS runs on `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`
 (rulings D1-D9 in its section 8, phase log in section 6). On resume read its
@@ -19,20 +19,20 @@ transition probes and inspected A/B captures. Receipt:
 finished; the checkpoint is pushed to origin/master. Root is still r54.
 **Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
 Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
-**Phase 2 ongoing:** Task36 retired; shared camera operands reach lab 19.81 FPS.
-Shipping heavy roster still fails. World-pass replacement was slower and is
-reverted; shared-camera source retained. Next: other VS stages/MISC. Receipt:
-`artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
+**Phase 2 ongoing:** Task36 retired; all-VS stage compilation and NDL owner
+proofs are retained. View-space particles on `608C79AC` pass host/replay and
+paired captures; mean/P50 improve, P95 worsens. Not accepted. Dust owner now
+preserves native RGB5/alpha5: `8B4D66EE` draws all seven frames, native failures
+39->0, replay identical, full stress correctness GREEN with NDL armed. Performance
+still RED (18.98 FPS, WORK-H P95 2.587M). Next: retire particle experiment routes
+and qualify intended MISC defaults/shipping memory. No live jobs. Current receipt:
+`artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Carry forward: all-content shipping arena is 916,992 B versus 1,281,792 B in
-the lab. Captain/Link/Pikachu/Kirby halts on Link's dependency 224 with 4,222 B
-free, before any battle frame. Its full memory deficit is unsized; the old
-~130 KB estimate belonged to a different shell configuration. Report shipping
-capacity with each phase. CSS now has 221,136 B at animation reservation,
-above the required 183,072 B (margin 38,064 B); Link/Yoshi/Pikachu previews
-are inspected. These proofs are in the phase-2 receipt above. Serial only:
-**no subagents** (owner, 2026-09-24).
+Carry forward: shipping heavy roster still halts loading Link; full deficit is
+unsized. CSS last reserve is 221,136 B versus required 183,072 B. Recheck after
+static growth; lab capacity is not shipping capacity (stage receipt). Owner goal
+09-26 permits up to eight GPT-6 Luna Max helpers; builds/timing remain serialized.
 
 ## Continue, do not restart
 

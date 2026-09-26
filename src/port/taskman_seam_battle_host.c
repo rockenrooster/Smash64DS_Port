@@ -972,7 +972,8 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
          * this, differenced across two ring stops, is the part still
          * unexplained. */
         gNdsMiscSplitAccountedTicks =
-            gNdsMiscWeaponDrawTicks + gNdsMiscEffectDrawTicks +
+            gNdsMiscWeaponDrawTicks + gNdsMiscItemDrawTicks +
+            gNdsMiscEffectDrawTicks + gNdsMiscActorDrawTicks +
             gNdsMiscParticleDrawTicks + gNdsMiscTexUploadTicks +
             gNdsMiscTexUploadCount + gNdsMiscTexUploadBytes +
             /* R2-08 phase split, same reason: every one of these is written
@@ -1083,31 +1084,76 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsTickHudSrcPhysicsDefaultTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketSrcPhysicsCapture] =
             gNdsTickHudSrcPhysicsCaptureTicks;
-        /* P2-2p8 Phase 0 MISC split. The four sub-path counters are cumulative
+        /* P2-2p8 Phase 2 B3 MISC split. The owner counters are cumulative
          * (they were read by differencing two ring stops), so publish this
          * frame's delta. Unsigned subtraction is wrap-safe. */
         {
             static u32 s_misc_weapon_prev;
+            static u32 s_misc_item_prev;
             static u32 s_misc_effect_prev;
+            static u32 s_misc_actor_prev;
             static u32 s_misc_particle_prev;
             static u32 s_misc_tex_prev;
+            static u32 s_misc_capture_prev;
+            static u32 s_misc_proc_prev;
             const u32 misc_weapon = gNdsMiscWeaponDrawTicks;
+            const u32 misc_item = gNdsMiscItemDrawTicks;
             const u32 misc_effect = gNdsMiscEffectDrawTicks;
+            const u32 misc_actor = gNdsMiscActorDrawTicks;
             const u32 misc_particle = gNdsMiscParticleDrawTicks;
             const u32 misc_tex = gNdsMiscTexUploadTicks;
+            const u32 misc_capture = gNdsMiscCaptureTicks;
+            const u32 misc_proc = gNdsMiscProcDisplayTicks;
 
             gNdsTickHudBuckets[nNDSTickHudBucketMiscWeapon] =
                 misc_weapon - s_misc_weapon_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscItem] =
+                misc_item - s_misc_item_prev;
             gNdsTickHudBuckets[nNDSTickHudBucketMiscEffect] =
                 misc_effect - s_misc_effect_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscActor] =
+                misc_actor - s_misc_actor_prev;
             gNdsTickHudBuckets[nNDSTickHudBucketMiscParticle] =
                 misc_particle - s_misc_particle_prev;
             gNdsTickHudBuckets[nNDSTickHudBucketMiscTexUpload] =
                 misc_tex - s_misc_tex_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscCapture] =
+                misc_capture - s_misc_capture_prev;
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscProc] =
+                misc_proc - s_misc_proc_prev;
+            {
+                const u32 misc_partition =
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscWeapon] +
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscItem] +
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscEffect] +
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscActor] +
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscParticle] +
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscCapture] +
+                    gNdsTickHudBuckets[nNDSTickHudBucketMiscProc];
+                const u32 misc_draw_only =
+                    (misc_draw >= gNdsTickHudFlushTicks) ?
+                        (misc_draw - gNdsTickHudFlushTicks) : 0u;
+
+                /* B3 MCAM is the exact draw remainder after every disjoint
+                 * per-GObj owner/capture/proc span. It includes the camera
+                 * loop/setup plus SObj end-frame and the tiny draw-shell work
+                 * that has no GObj owner. MTEX is intentionally absent: it is
+                 * nested inside the owner spans and remains a diagnostic
+                 * overlay, not a second owner. */
+                gNdsTickHudBuckets[nNDSTickHudBucketMiscCamera] =
+                    (misc_draw_only >= misc_partition) ?
+                        (misc_draw_only - misc_partition) : 0u;
+            }
+            gNdsTickHudBuckets[nNDSTickHudBucketMiscFlush] =
+                gNdsTickHudFlushTicks;
             s_misc_weapon_prev = misc_weapon;
+            s_misc_item_prev = misc_item;
             s_misc_effect_prev = misc_effect;
+            s_misc_actor_prev = misc_actor;
             s_misc_particle_prev = misc_particle;
             s_misc_tex_prev = misc_tex;
+            s_misc_capture_prev = misc_capture;
+            s_misc_proc_prev = misc_proc;
         }
         gNdsTickHudBuckets[nNDSTickHudBucketGxPolygons] =
             gNdsHardwareRendererPolyRamCount;

@@ -8376,3 +8376,52 @@ larger. Old lab-only boot switches were removed; production/replay retirement,
 remaining scene coverage, integrated verification and owner acceptance are due.
 Both performance and native acceptance remain RED. Root r54 is unchanged.
 Receipt and exact hashes: `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`.
+
+## 2026-09-26 — Phase 2 recovered particle packet comparisons
+
+**No measured gain; not accepted.** Completed the missing control arm on ROM
+`A3845609C75675D9C2E807A8AA4018579F5F319E11518E925371EF1C6BF59E4A`.
+DK/Samus/Link/Kirby, Dream Land, natural item law; 1,972 timing samples at
+frames 2..1,973. Same-ROM immediate control 0 versus direct-FIFO route 2:
+
+| Metric | Control | Direct FIFO |
+| --- | ---: | ---: |
+| WORK-H P50 / P95, ticks | 1,355,776 / 2,614,016 | 1,357,888 / 2,605,568 |
+| MISC P50 / P95, ticks | 214,144 / 400,704 | 215,616 / 401,152 |
+| MPRT P50 / P95, ticks | 47,168 / 81,728 | 48,384 / 83,200 |
+| FPS (timer rate / mean ALL) | 18.87 | 18.88 |
+| VBlank 2 / 3 / 4 / 5+; maximum | 276 / 1324 / 223 / 150; 10 | 274 / 1332 / 218 / 149; 10 |
+
+All 1,972 gameplay digest pairs match. Route 2 engages 8,386 quads and 4,426
+state groups, with zero fallback; native failures remain 39 and direct rejects
+zero in both arms. Native pixels are unqualified. MPRT/MISC are slightly slower;
+the mixed whole-frame tail is not a particle gain. The recovered earlier
+same-ROM DMA comparison is also slower in MPRT/MISC. Both binaries' completed
+proofs are retained; neither experiment is restarted.
+
+Next is the architecture's complete view-space producer/consumer batch,
+including shared camera factors and two scalar billboard extents. Receipt:
+`artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
+
+## 2026-09-26 — View-space particles and native DamageFlyMDust checkpoint
+
+**IMPLEMENTED_NOT_ACCEPTED.** Same-ROM `608C79AC` route 0 -> 3, 1,972 samples:
+MPRT mean/P50/P95 48,681/46,912/81,920 -> 44,940/44,096/78,208 ticks;
+WORK-H mean/P50/P95 1,455,444/1,359,744/2,611,264 ->
+1,451,281/1,354,304/2,638,784. Mean/P50 improve, P95 worsens 27,520.
+Paired rows retain shifted AUD refill contributions; no audio subtraction or
+favorable-repeat result is used. Replay matches 1,972/1,972; matched pictures
+at tics 1500/1498 are pixel-identical. This is a scoped retained candidate,
+not a P95 gain or phase acceptance.
+
+Integrated ROM `8B4D66EE18945BA77036C51C8D1A7B37E8D5083458601C0A344F5D8097B2D7F1`
+adds the source dust owner; NDL is armed at boot. Natural stress exits 0: 39 dust
+draws, seven-frame mask 0x7f, 25 resident A5I3 planes/25,600 B, zero native failures,
+rejects and preparation failures. All gameplay digest pairs still match. Exact
+1042/1043 captures show its output. Heap low-water 122,412 B; arena 1,281,792 B.
+WORK-H P50/P95 **1,344,768/2,587,264 ticks**, MISC 205,632/354,368;
+**18.98 FPS**, VBlank 2/3/4/5+ **282/1341/206/144**, max 11, 1,973 presents.
+Correctness GREEN; product performance RED. Combined output/NDL/particle work
+does not establish a separate timing gain for each change. Final hard-on,
+shipping memory, broader output/lifetimes and all-roster/stage proof remain owed.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.

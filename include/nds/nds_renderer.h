@@ -380,6 +380,13 @@ typedef struct NDSRendererMatrix20p12
  * behind headers the renderer does not include. Pass NULLs to invalidate. */
 void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
                                   const NDSRendererMatrix20p12 *modelview);
+/* Particle passes can consume the camera's original split matrices. Centres
+ * are transformed once on ARM9; the four billboard corners then use view X/Y.
+ * Other world-quad callers retain their own camera and rotated basis. */
+extern volatile u32 gNdsP2ParticlePacket;
+s32 ndsRendererBeginParticleViewPass(
+    const NDSRendererMatrix20p12 *projection,
+    const NDSRendererMatrix20p12 *modelview);
 
 /* Task 86. `*dst = *src` on this struct is 64 bytes, and GCC answers that with
  * `bl memcpy` rather than inline loads: on ARMv5 it cannot assume the pointers
@@ -563,6 +570,12 @@ typedef enum NDSRendererProfileOwner
 #endif
 #if NDS_P2_1P_GAME
     NDS_RENDERER_PROFILE_OWNER_BOSS,
+#endif
+#if NDS_TASK49_GX_DIFFER
+    /* Task49/M1 effect-stream owner.  This diagnostic owner must not enlarge
+     * the production owner enum: several hot arrays and compact owner maps use
+     * COUNT as their exact fighter/stage domain. */
+    NDS_RENDERER_PROFILE_OWNER_EFFECT,
 #endif
     NDS_RENDERER_PROFILE_OWNER_COUNT,
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
@@ -1362,6 +1375,8 @@ s32 ndsRendererSubmitNativeImpactWave(
  * texel indices and RGB555 palettes are already in DS format in ROM; this does
  * allocation/upload only, never source conversion. */
 s32 ndsRendererHardwarePrepareImpactWaveTextures(void);
+s32 ndsRendererHardwarePrepareDamageSlashTextures(void);
+s32 ndsRendererHardwarePrepareDamageFlyMDustTextures(void);
 
 /* AOT EFCommonEffects3 RebirthHalo owner. root_offset is one of the three
  * immutable source wrapper offsets (main, beam, leaves); live DObj matrices
@@ -1375,6 +1390,15 @@ s32 ndsRendererHardwarePrepareRebirthHaloTextures(void);
 /* Immutable fighter prop/effect presentation. BattleShip keeps ownership of
  * live DObj transforms/animation and, when supplied, live typed MObj material
  * state; owner_asset_id selects the SHA-pinned generated model. */
+s32 ndsRendererPreflightNativeDamageFlyMDust(
+    const void *asset_base, u32 asset_bytes, u32 root_offset,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config);
+s32 ndsRendererSubmitNativeDamageFlyMDust(
+    const void *asset_base, u32 asset_bytes, u32 root_offset,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,

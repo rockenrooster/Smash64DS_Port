@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-17.
+Updated: 2026-09-26.
 
 **Last integrated Boundary GREEN: N04.08; P2-2p8 acceptance RED.** Figures below.
 
@@ -11,42 +11,37 @@ Measurements: `PERF_LEDGER.md`. Chronology: `PORTING.md`.
 
 ## Standing rules
 
-1. **Measurement law:** `docs/VERIFYING.md` owns procedure and each entry's
-   coverage. Boundary = `p2_shell_loop`, `p2_battle_realtime`,
-   `p2_fourcpu_stress`. Gate arms use the one-minute match; soak is a separate flag.
-2. Cadence verdicts use all presented frames; the 1,600-frame gameplay rank-80
-   remains candidate-sizing evidence. Measure the configuration that actually
-   ships (`nds_build_config.h` is truth).
-3. **Publish law:** P2 publishes only verifier-covered `smash64ds.nds` from the
-   shipping VS shell with human input — no scripted walk, no fast logic. Rebuild
-   after each verified fix batch; the frozen P1 artifact is not rebuilt routinely.
+1. `docs/VERIFYING.md` owns one-minute measurements, coverage and command lifecycle.
+   Boundary: `p2_shell_loop`, `p2_battle_realtime`, `p2_fourcpu_stress`.
+2. Cadence uses all presents; rank-80 is sizing only. Actual shipping flags in
+   `nds_build_config.h` control qualification.
+3. **Publish law:** only qualified natural-input `smash64ds.nds`, without menu walk or
+   fast logic, after verified batches. Keep P1 frozen.
 4. Published P2 ROM after N04.08 + the clean rebuild, 2026-09-16. **Runtime proof
    owed** — the payload changed since the last runtime verification:
 
 SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 
-5. Performance/visibility evidence is permanent under `artifacts/performance`
-   and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
-   histogram, max interval, and P50/P95.
+5. Permanent evidence: `artifacts/performance` and `artifacts/visibility`.
+   Report P50/P95, FPS and 2/3/4/5+ VBlank histogram/maximum.
 
 ## Phase status
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Final roster tour is 12/12 native (`kind=fff drew=fff`, every triangle bucket nonzero); FPS/music/dwell remain open. |
-| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; BPS1 directory resident. Low-water 111,680 B; libc reserve 40,960 B, weapon pool 10; scoped guards pass; FPS RED. |
-| P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
-| P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission proved in `d8660bc2fd9`; natural Hyrule/Inishie pass. Three VS captures remain. |
-| P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`). Atlas membership, other kinds/children and interactions remain open. |
+| P2-1 VS shell | **Loop/realtime GREEN** | 12/12 roster tour native; FPS/music/dwell open. Detailed scoped proof is archived. |
+| P2-2 Four-fighter engine | **Scoped capacity GREEN; performance RED** | FPC/BPS1 guards pass; shipping heavy roster still OOM. Follow current cursor. |
+| P2-3 Fighter production | **Acceptance OPEN** | Link diagnostic-only; Samus engagement owed. Queue below. |
+| P2-4 Stage production | **Visual acceptance OPEN** | Collision parity and Hyrule/Inishie natural proof pass; three VS captures remain. |
+| P2-5 Items | **Native coverage incomplete** | Sword repair/fidelity-02 landed; kinds, children, atlas and interactions remain open. |
 | P2-6 1P Game | **TALLY REACHED 09-14** | Guest playback wins stage 0 and reaches source StageClear (31,940, three bonuses; `a1209354b`). Open: next-stage Intro OOM (144,640 B asked, 120,164 B free), 41,952 native failures by the tally, DL overflow 3,744 B; shipping flag stays 0. |
-| P2-7 Modes & meta | **Options/Backup Clear accepted 09-06; DATA blue screen diagnosed** | DATA/VS Record/Sound Test draw only through the retired MAIN text slab (audit 16): bake their surfaces (fix queued). Characters blits a real surface. 1P stays gated. |
+| P2-7 Modes & meta | **Options/Backup Clear accepted** | Bake DATA/VS Record/Sound Test surfaces (retired MAIN slab); Characters works. 1P gated. |
 
 ## Current integration checkpoint
 
-**Last qualified checkpoint:** `a4eb24c9a85` -- Yoshi + Samus root programs,
-both resolvers registered, accounting literal fixed. **Boundary GREEN all three
-arms 2026-09-17.** WORK-H **1,600,960 / 2,320,576**, FTR **350,144 / 736,960**,
-STG 385,088; heap low-water 111,200 B; arena 1,351,424 B; native 0/0; slips 0.
+**Last qualified integration:** `a4eb24c9a85`, Boundary all three arms GREEN
+2026-09-17 (Yoshi/Samus roots). Historical measurements: `PERF_LEDGER.md`.
+The newer candidates below do not inherit that qualification.
 The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
@@ -56,16 +51,45 @@ Phase 0 closed; Phase 1 through `98ebd1e2e51`.
 **Phase 2 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
 performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
 Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
-**Next**: extend compiled lists to the other eight VS stages, then MISC.
-Task36 retirement is qualified only for the scoped run; world cache remains.
-Owed: stage/MISC work, coverage, cache retirement and integration.
-Checked: all 202 Dream Land triangles; owner approves the shown view.
-Replay/counts/pixels match; camera batch lab 19.81 FPS, heap 120,916 B; RED.
-Retirement control `0A14A9F9` is preserved; receipt owns prior measurements.
-Shipping CSS free 221,136 B; heavy roster halts on Link with 4,222 B free.
-Matrix prep was 135,635 ticks/frame; shared camera operands implemented.
-World passes rejected/reverted (slower, less heap); 8E6E7D8D stays control.
-Serial only (**no subagents**); owner edits preserved.
+Completed scoped checks (not phase acceptance): B3 conserves exactly; MINS is
+off by default. M1 ImpactWave/DamageSlash has replay/Task49 proof. Pooled GObj
+serials remove stale item binding; Link Bomb, clouds/TaruCann and Fox Blaster
+have focused positive owner proofs. Reuse their receipts:
+
+- M1: `artifacts/performance/2026-09-25_p2-2p8-phase2-m1/README.md`.
+- Lifetime/integrated: `artifacts/performance/2026-09-26_p2-2p8-phase2-item-linkbomb-fixed/README.md`.
+- Bomb: `artifacts/performance/2026-09-26_p2-2p8-phase2-link-bomb/link-bomb-proof.txt`.
+- Ground: `artifacts/performance/2026-09-26_p2-2p8-phase2-ground/` (mixed timing).
+- Fox: `artifacts/verification/2026-09-26_p2-2p8-phase2-fox-ndl.txt`.
+
+**Engagement owed:** Fireball playback reaches GO but never Special-N; no state
+injection. Lakitu/Bronto slots remain unengaged in the canonical 59 s match
+(Bronto's first wait is 6,000..15,999 source updates). Their host/replay proof:
+`artifacts/performance/2026-09-26_p2-2p8-phase2-efground/README.md`.
+Integrated NDL `5A72DD48` retains replay pairs, 511+149 M1 dispatches and zero
+fallback; its Link Bomb dispatch is zero, so retain the focused bomb proof.
+
+**Particle CHECK / DamageFlyMDust IMPLEMENT (09-26):**
+recovered DMA/direct-FIFO pairs are replay-identical but show no MPRT/MISC gain.
+Route 3 connects split frame-camera factors to fixed view-space centres and
+two billboard extents. ROM `608C79AC` built native-only; five host tests pass,
+both 1500/1498 captures are pixel-identical; 1,972 replay pairs match. MPRT mean
+-3,741; WORK-H mean/P50 -4,163/-5,440, but P95 +27,520 (audio timing shifts).
+KEEP/IMPLEMENTED_NOT_ACCEPTED. Dust `8B4D66EE`: 39 draws, mask 7f, native
+failures 39->0, 1,972 replay pairs identical; stress exit 0 (NDL armed).
+WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **Next**: retire
+particle experiment routes, qualify intended MISC defaults and shipping memory.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
+Jobs terminal. Particle Task49, camera/lifecycle and integrated gates remain owed.
+Owner confirmed abandoned Git lock; removed after process recheck. Checkpoint staged.
+Receipt owns prior Stage measurements and retirement control `0A14A9F9`.
+All-VS `9F69CA39` is KEEP/IMPLEMENTED_NOT_ACCEPTED: Jungle heap restored;
+Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
+Task36 retirement remains scoped; world-cache retirement/integration is owed.
+CSS free 221,136 B; heavy roster still halts on Link with 4,222 B free.
+Owner goal 09-26 permits up to eight GPT-6 Luna Max helpers; one integrator
+owns shared edits/builds/timing. Particle audits/fixtures finished; dust helper
+owns only its new generator/executor/tests. Owner edits are preserved.
 A7 compaction on (+68 KB lab); MF codec unlinked.
 Shipping arena 916,992 B; lab 1,281,792 B. Heavy-roster deficit still unsized.
 **Constraint**: CSS reserve >=183,072 B; margin 38,064 B.
@@ -81,21 +105,11 @@ line remains. **ROOT ROM = r54** `C8FC02AA2DF0BB6E`
 `docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md`. **Owed:** Boundary/Latest
 on that tree; the r52 memo fence and r54 pack growth are proven by probes and
 host tests only; `test_preview_pack_loader.py` fails at collection (pin drift).
-P2-2p8 policy remains parked below.
-**NO CLASS REACHES THE GATE, INCLUDING LOCALITY** (`..._p2-2p8-gate-decision/`):
-ceiling **90.6%**, **44,208 OVER**; residual **321,866 unfound**. CLOSED LANES
-archived; OWED: per-hat look, captures.
-**DTCM HOT SCALARS: -43,200 WORK-H P50 FOR 508 B** (`5e109a47d5d`); 9.2% of gap.
-**OWNER: one-line call** on its non-zero exit.
-**OWNER 09-17: SRC REOPENED**, **30 Hz still refused**; ~99.7% of the largest
-class is gameplay/fidelity gated, so it is a **POLICY call** (detail archived).
-**OWNER 09-17 ROSTER CLOSED (P2-3f47).** Detail in the closed-row archive.
-**CLEANUP AUDIT** done; proof-fleet REFUTED (20/43); O1 reclaim 5 pages.
+Pre-architecture policy/closed lanes, DTCM and roster proofs are in
+`docs/archive/P2_CLOSED_ROWS.md`; per-hat look/captures remain owed.
 
-Shared causes banked 09-12 in `p2/BUG_NOTES.md` have rows below. Main owns shared
-outputs/builds/timing; preserve other-owner 1P/CSS work. Retained proofs:
-`docs/archive/P2_CLOSED_ROWS.md`. Do not replace the published artifact until
-gates pass.
+Preserve owner 1P/CSS work and the published ROM until gates pass. Older scoped
+proofs: `p2/BUG_NOTES.md`, `docs/archive/P2_CLOSED_ROWS.md`.
 
 ## Queue — acceptance only
 
@@ -110,11 +124,11 @@ pixels/audio or unexercised states stay engineering work.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin, ThrowF/ThrowB; Neutral-B/Spin need isolated source-default requalification. |
-| P2-3 Samus | Morph-ball closure + **F-smash vanish** | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source input for roll/Bomb. F-smash is now program 4: `0x00180000` installs drawing hidden parts 11/12 (`0x2c20`/`0x2ce8`), 16 roots vs canonical 14, neither offset was resident. Derived, not observed — confirm on hardware. |
+| P2-3 Samus | Morph-ball closure + **F-smash vanish** | **IMPLEMENTED; engagement owed** | Programs 2/3 morph; 4 F-smash hidden parts. Source-input roll/Bomb/F-smash proof remains; prior 1,536-frame CPU window did not morph. Details: `p2/BUG_NOTES.md`. |
 | P2-3f46 | Yoshi stress arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`); pose values stay Q12. Run `test_pose_clock_differential.py` through the ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab + egg lay/throw | **IMPLEMENTED; captures owed** | Two programs carry the 18→19 vector hidden part 4 (joint 9, `0x2800`) forces: Catch (`Catch`/`CatchPull`/`EggLay` 202-206) and Throw (+ joint 7 = `0x7D10`). Grab AND B-attack were ONE bug. Intro is **NOT** this class. OWED: captures. `…_p2-3f52-yoshi-root-programs/`. |
-| P2-3f53 | EFDesc effects without native owners | **ALL FOUR RESOLVED: 1 done, 3 blocked, none a wiring change** | **Falcon Punch/Kick DONE** (row was stale). **Yoshi egg** `0xa860` (= invisible intro AND shield) built clean but Boundary RED (arena −4,096, 14 texture-bind rejects); reverted `252a9aa4290`. **Kirby Vulcan Jab** BLOCKED: its state root branches to RGBA32, needs a lossy conversion + fidelity call. **Pikachu down-B Thunder** format CLEAN but `PikachuModel` is no InputSpec, gate `NDS_P2_PIKACHU 0`. **2 of 4 blocked on the SAME resident budget.** `…_p2-3f53-vulcan-jab-blocker/`. |
+| P2-3f53 | EFDesc effects without native owners | **1 done; 3 blocked** | Falcon Punch/Kick done. Yoshi egg reverted (`252a9aa4290`: arena -4,096, 14 bind rejects). Kirby Vulcan: RGBA32/fidelity and residency. Pikachu Thunder: missing InputSpec/flag off. Two share the resident-budget blocker; `…_p2-3f53-vulcan-jab-blocker/`. |
 | P2-3f54 | Weak stubs shadowing real bodies | **LANDED; runtime proof owed** | Wrappers + `itMainCheckShootNoAmmo` import; all six `T` in the shell ELF; atlas 4→5 sheets. |
 
 ## Queue — P2-4 engineering

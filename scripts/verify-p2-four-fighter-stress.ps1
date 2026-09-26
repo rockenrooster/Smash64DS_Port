@@ -16,6 +16,10 @@ param(
     # The registry gate never passes it, so the default stays the gate build
     # running exactly as shipped. Every poked name is reported with the run.
     [string[]]$SetGlobals = @(),
+    # Creation-time A/B words such as gNdsP2Ndl must land before the battle
+    # prepares resident textures, so forward them to the sampler's main-break
+    # poke instead of waiting for the first presented-frame marker.
+    [string[]]$BootSetGlobals = @(),
     # Calibrated from the first crash-free four-CPU source match: source
     # identity/clock are read exactly at presented frame 1, while the tick-HUD
     # ring's first populated timing sample is frame 2. Frames 2..1973 therefore
@@ -113,6 +117,29 @@ $memoryGlobals = @(
     # already-prepared fixed frame camera rather than rebuild perspective *
     # look-at independently in binary32. Zero means the candidate did not run.
     'gNdsParticleCameraRendererReuseCount',
+    # P2-2p8 Phase 2 shared particle GX packet. These are engagement/fail-closed
+    # counters, not acceptance figures: zero quads means the implementation did
+    # not run and any fallback means a required particle draw was dropped.
+    'gNdsP2ParticlePacket',
+    'gNdsParticlePacketQuads',
+    'gNdsParticlePacketStateGroups',
+    'gNdsParticlePacketFlushes',
+    'gNdsParticlePacketWords',
+    'gNdsParticlePacketFallbacks',
+    'gNdsParticlePacketDynamicBinds',
+    'gNdsParticleViewPasses',
+    'gNdsParticleViewCenters',
+    'gNdsParticleViewRejects',
+    'gNdsDamageFlyMDustNativeSubmitCount',
+    'gNdsDamageFlyMDustNativeRejectCount',
+    'gNdsDamageFlyMDustNativeAlphaZeroCount',
+    'gNdsDamageFlyMDustNativeTriangleCount',
+    'gNdsDamageFlyMDustNativeCurrentFrameMask',
+    'gNdsDamageFlyMDustNativeFirstFrame',
+    'gNdsDamageFlyMDustNativeLastFrame',
+    'gNdsDamageFlyMDustTexturePrepareCount',
+    'gNdsDamageFlyMDustTexturePrepareFailCount',
+    'gNdsDamageFlyMDustTextureBytes',
     'gNdsAObjEvent32NormalizedHighWater',
     'gNdsAObjEvent32NormalizeFailCount',
     'gNdsRelocSYInterpDescFixCount',
@@ -246,6 +273,32 @@ $memoryGlobals = @(
     'gNdsDamageSlashTextureUpdateCount',
     'gNdsDamageSlashTextureBindCount',
     'gNdsDamageSlashBadImageCount',
+    # P2-2p8 native draw-list engagement. M1 owns slots 0/1 (ImpactWave and
+    # DamageSlash); the first post-M1 efground batch appends Lakitu/Bronto in
+    # slots 2/3. Array elements are legal sampler expressions; its ELF
+    # preflight validates their base symbol.
+    'gNdsP2Ndl',
+    'gNdsNdlDispatch[0]',
+    'gNdsNdlDispatch[1]',
+    'gNdsNdlDispatch[2]',
+    'gNdsNdlDispatch[3]',
+    'gNdsNdlDispatch[4]',
+    'gNdsNdlDispatch[5]',
+    'gNdsNdlDispatch[6]',
+    'gNdsNdlDispatch[7]',
+    'gNdsNdlDispatch[8]',
+    'gNdsNdlFallback[0]',
+    'gNdsNdlFallback[1]',
+    'gNdsNdlFallback[2]',
+    'gNdsNdlFallback[3]',
+    'gNdsNdlFallback[4]',
+    'gNdsNdlFallback[5]',
+    'gNdsNdlFallback[6]',
+    'gNdsNdlFallback[7]',
+    'gNdsNdlFallback[8]',
+    'gNdsNdlProcsSkipped',
+    'gNdsNdlBindCount',
+    'gNdsNdlNegativeBindCount',
     # Existing tick-HUD texture reject reason mask. Keep it in the same-run
     # ledger so a native owner that fails during a long battle can distinguish
     # source/state rejection from VRAM allocation pressure without a second
@@ -398,6 +451,10 @@ if ($SetGlobals.Count -gt 0) {
     $sampleArgs.SetGlobals = $SetGlobals
     Write-Host ("Lab arm: " + ($SetGlobals -join ' '))
 }
+if ($BootSetGlobals.Count -gt 0) {
+    $sampleArgs.BootSetGlobals = $BootSetGlobals
+    Write-Host ("Lab boot arm: " + ($BootSetGlobals -join ' '))
+}
 
 & (Join-Path $PSScriptRoot 'sample-tick-hud-buckets.ps1') @sampleArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -536,9 +593,45 @@ if (($extra['gNdsITCommonDataBytes'] -ne 82976) -or
 if ($extra['gNdsRelocSYInterpDescUnresolvedCount'] -ne 0) {
     throw 'Four-CPU animation loading left an unresolved source spline descriptor.'
 }
-if ($extra['gNdsParticleCameraRendererReuseCount'] -eq 0) {
+if (($extra['gNdsParticleCameraRendererReuseCount'] -eq 0) -and
+    ($extra['gNdsParticleViewPasses'] -eq 0)) {
     throw ('Four-CPU particle draw never reused the renderer frame camera: ' +
         "reuse=$($extra['gNdsParticleCameraRendererReuseCount']).")
+}
+$particleViewEnabled = ([uint64]$extra['gNdsP2ParticlePacket'] -eq 3)
+if ($particleViewEnabled -and
+    (($extra['gNdsParticleViewPasses'] -eq 0) -or
+     ($extra['gNdsParticleViewCenters'] -eq 0) -or
+     ($extra['gNdsParticleViewRejects'] -ne 0))) {
+    throw ('Four-CPU view-space particles did not engage cleanly: ' +
+        "passes=$($extra['gNdsParticleViewPasses']) " +
+        "centers=$($extra['gNdsParticleViewCenters']) " +
+        "rejects=$($extra['gNdsParticleViewRejects']).")
+}
+$particlePacketEnabled = ([uint64]$extra['gNdsP2ParticlePacket'] -ne 0)
+if (($extra['gNdsDamageFlyMDustNativeRejectCount'] -ne 0) -or
+    ($extra['gNdsDamageFlyMDustTexturePrepareFailCount'] -ne 0)) {
+    throw ('Native DamageFlyMDust failed its source frame/residency contract: ' +
+        "rejects=$($extra['gNdsDamageFlyMDustNativeRejectCount']) " +
+        "prepareFailures=$($extra['gNdsDamageFlyMDustTexturePrepareFailCount']).")
+}
+if ($particlePacketEnabled -and
+    (($extra['gNdsParticlePacketQuads'] -eq 0) -or
+     ($extra['gNdsParticlePacketFlushes'] -eq 0) -or
+     ($extra['gNdsParticlePacketWords'] -eq 0) -or
+     ($extra['gNdsParticlePacketFallbacks'] -ne 0))) {
+    throw ('Four-CPU Phase-2 particle packet did not engage cleanly: ' +
+        "quads=$($extra['gNdsParticlePacketQuads']) " +
+        "groups=$($extra['gNdsParticlePacketStateGroups']) " +
+        "flushes=$($extra['gNdsParticlePacketFlushes']) " +
+        "words=$($extra['gNdsParticlePacketWords']) " +
+        "fallbacks=$($extra['gNdsParticlePacketFallbacks']) " +
+        "dynamicBinds=$($extra['gNdsParticlePacketDynamicBinds']).")
+}
+if ((-not $particlePacketEnabled) -and
+    ($extra['gNdsParticlePacketFallbacks'] -ne 0)) {
+    throw ('Four-CPU particle-packet control recorded a fallback: ' +
+        "fallbacks=$($extra['gNdsParticlePacketFallbacks']).")
 }
 Write-Output ("Source spline descriptors normalized: " +
     $extra['gNdsRelocSYInterpDescFixCount'])
@@ -551,6 +644,31 @@ $leanRoute = $extra['gNdsFtrLeanRoute']
 $leanAttempts = $extra['gNdsFtrLean.attempts']
 $leanDraws = $extra['gNdsFtrLean.draws']
 $leanDeclines = if ($leanAttempts -gt $leanDraws) { $leanAttempts - $leanDraws } else { 0 }
+$ndlEnabled = ([uint64]$extra['gNdsP2Ndl'] -ne 0)
+if ($ndlEnabled) {
+    $ndlDispatch = $extra['gNdsNdlDispatch[0]'] + $extra['gNdsNdlDispatch[1]'] +
+        $extra['gNdsNdlDispatch[2]'] + $extra['gNdsNdlDispatch[3]'] +
+        $extra['gNdsNdlDispatch[4]'] + $extra['gNdsNdlDispatch[5]'] +
+        $extra['gNdsNdlDispatch[6]'] + $extra['gNdsNdlDispatch[7]'] +
+        $extra['gNdsNdlDispatch[8]']
+    $ndlFallback = $extra['gNdsNdlFallback[0]'] + $extra['gNdsNdlFallback[1]'] +
+        $extra['gNdsNdlFallback[2]'] + $extra['gNdsNdlFallback[3]'] +
+        $extra['gNdsNdlFallback[4]'] + $extra['gNdsNdlFallback[5]'] +
+        $extra['gNdsNdlFallback[6]'] + $extra['gNdsNdlFallback[7]'] +
+        $extra['gNdsNdlFallback[8]']
+    if (($ndlDispatch -eq 0) -or
+        ($extra['gNdsNdlProcsSkipped'] -ne $ndlDispatch) -or
+        ($ndlFallback -ne 0) -or
+        ($extra['gNdsDamageSlashTexturePrepareCount'] -ne 13) -or
+        ($extra['gNdsDamageSlashTexturePrepareFailCount'] -ne 0) -or
+        ($extra['gNdsDamageSlashTextureUpdateCount'] -ne 0)) {
+        throw ("M1 NDL arm failed engagement/residency: " +
+            "dispatch=$ndlDispatch skipped=$($extra['gNdsNdlProcsSkipped']) " +
+            "fallback=$ndlFallback prep=$($extra['gNdsDamageSlashTexturePrepareCount']) " +
+            "prepFail=$($extra['gNdsDamageSlashTexturePrepareFailCount']) " +
+            "updates=$($extra['gNdsDamageSlashTextureUpdateCount']).")
+    }
+}
 if ($leanRoute -eq 1) {
     if (($leanDraws -eq 0) -or ($nativePlanMismatch -ne 0) -or
         (($leanDeclines -ne 0) -and (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0)))) {
@@ -892,6 +1010,28 @@ $memory = [PSCustomObject]@{
     damageSlashTextureUpdateCount = $extra['gNdsDamageSlashTextureUpdateCount']
     damageSlashTextureBindCount = $extra['gNdsDamageSlashTextureBindCount']
     damageSlashBadImageCount = $extra['gNdsDamageSlashBadImageCount']
+    p2Ndl = $extra['gNdsP2Ndl']
+    ndlImpactWaveDispatch = $extra['gNdsNdlDispatch[0]']
+    ndlDamageSlashDispatch = $extra['gNdsNdlDispatch[1]']
+    ndlEfLakituDispatch = $extra['gNdsNdlDispatch[2]']
+    ndlEfBrontoDispatch = $extra['gNdsNdlDispatch[3]']
+    ndlGrYosterCloudDispatch = $extra['gNdsNdlDispatch[4]']
+    ndlGrTaruCannDispatch = $extra['gNdsNdlDispatch[5]']
+    ndlWpFireballDispatch = $extra['gNdsNdlDispatch[6]']
+    ndlWpBlasterDispatch = $extra['gNdsNdlDispatch[7]']
+    ndlItLinkBombDispatch = $extra['gNdsNdlDispatch[8]']
+    ndlImpactWaveFallback = $extra['gNdsNdlFallback[0]']
+    ndlDamageSlashFallback = $extra['gNdsNdlFallback[1]']
+    ndlEfLakituFallback = $extra['gNdsNdlFallback[2]']
+    ndlEfBrontoFallback = $extra['gNdsNdlFallback[3]']
+    ndlGrYosterCloudFallback = $extra['gNdsNdlFallback[4]']
+    ndlGrTaruCannFallback = $extra['gNdsNdlFallback[5]']
+    ndlWpFireballFallback = $extra['gNdsNdlFallback[6]']
+    ndlWpBlasterFallback = $extra['gNdsNdlFallback[7]']
+    ndlItLinkBombFallback = $extra['gNdsNdlFallback[8]']
+    ndlProcsSkipped = $extra['gNdsNdlProcsSkipped']
+    ndlBindCount = $extra['gNdsNdlBindCount']
+    ndlNegativeBindCount = $extra['gNdsNdlNegativeBindCount']
     textureRejectReasonMask = $extra['gNdsRendererProfileTextureRejectReasonMask']
     nativeOwnerPlanBuild = $nativePlanBuild
     leanRoute = $leanRoute
@@ -973,15 +1113,30 @@ $damageSlashBroken =
      ([uint64]$memory.damageSlashEffectsRejected -ne 0) -or
      ([uint64]$memory.damageSlashTexturePrepareFailCount -ne 0) -or
      ([uint64]$memory.damageSlashBadImageCount -ne 0))
-$damageSlashUncovered =
-    (([uint64]$memory.damageSlashRootMask -ne 3) -or
-     ([uint64]$memory.damageSlashCandidateStep -ne 5) -or
-     ([uint64]$memory.damageSlashDrawCount -eq 0) -or
-     ([uint64]$memory.damageSlashTriangleDrawCount -eq 0) -or
-     ([uint64]$memory.damageSlashTexturePrepareCount -ne 2) -or
-     ([uint64]$memory.damageSlashTextureUpdateCount -eq 0) -or
-     ([uint64]$memory.damageSlashTextureBindCount -eq 0) -or
-     ([uint64]$memory.damageSlashSubmitStep -ne 9))
+if ($ndlEnabled) {
+    # M1 consumes the source display proc before it enters the old stage-adapter
+    # candidate probe, so CandidateStep remains 0 by construction. All 13 CI4
+    # frames are resident at battle entry and no frame may be uploaded after GO.
+    $damageSlashUncovered =
+        (([uint64]$memory.damageSlashRootMask -ne 3) -or
+         ([uint64]$memory.damageSlashDrawCount -eq 0) -or
+         ([uint64]$memory.damageSlashTriangleDrawCount -eq 0) -or
+         ([uint64]$memory.damageSlashTexturePrepareCount -ne 13) -or
+         ([uint64]$memory.damageSlashTextureUpdateCount -ne 0) -or
+         ([uint64]$memory.damageSlashTextureBindCount -eq 0) -or
+         ([uint64]$memory.damageSlashSubmitStep -ne 9))
+} else {
+    # Same-ROM control: preserve the exact pre-M1 two-name mutable texture arm.
+    $damageSlashUncovered =
+        (([uint64]$memory.damageSlashRootMask -ne 3) -or
+         ([uint64]$memory.damageSlashCandidateStep -ne 5) -or
+         ([uint64]$memory.damageSlashDrawCount -eq 0) -or
+         ([uint64]$memory.damageSlashTriangleDrawCount -eq 0) -or
+         ([uint64]$memory.damageSlashTexturePrepareCount -ne 2) -or
+         ([uint64]$memory.damageSlashTextureUpdateCount -eq 0) -or
+         ([uint64]$memory.damageSlashTextureBindCount -eq 0) -or
+         ([uint64]$memory.damageSlashSubmitStep -ne 9))
+}
 if ($damageSlashUncovered -and -not $rosterIsCanonical -and -not $damageSlashBroken) {
     Write-Host ("NOTE: DamageSlash was not exercised by this lab roster " +
         "($shieldPoseRosterLabel) -- draws=$($memory.damageSlashDrawCount) " +
@@ -997,7 +1152,7 @@ if ($damageSlashBroken -or ($damageSlashUncovered -and $rosterIsCanonical)) {
         "triangleDraws=$($memory.damageSlashTriangleDrawCount) " +
         "snapshotFail=$($memory.damageSlashSnapshotFailCount) " +
         "submitFail=$($memory.damageSlashSubmitFailCount) " +
-        "texturePrepare=$($memory.damageSlashTexturePrepareCount)/2 " +
+        "texturePrepare=$($memory.damageSlashTexturePrepareCount)/$(if($ndlEnabled){13}else{2}) " +
         "texturePrepareFail=$($memory.damageSlashTexturePrepareFailCount) " +
         "textureUpdate=$($memory.damageSlashTextureUpdateCount) " +
         "textureBind=$($memory.damageSlashTextureBindCount) " +

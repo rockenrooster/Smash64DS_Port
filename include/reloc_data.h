@@ -590,12 +590,13 @@ NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_MN_PLAYERS_GAME_MODES_
     NDS_IT_COMMON_DATA_OWNED_RELOC_SYMBOLS(X) \
     X(NDS_RELOC_ASSET_IT_COMMON_DATA, llITCommonDataStarRodWeaponAttributes, 0x4d4u)
 
-/* Split because the two rows have different owners. The Star Rod attributes
- * symbol is already DEFINED by src/import/battleship_item_starrod.c beside its
- * item/smash siblings, so this header may only declare it; defining it again
- * from the shared block below is a duplicate-definition link error. Kirby's
- * capture/lose star reads it as the head of its own effect closure, which is
- * why it needs a registry row it never had. */
+/* Split because the two rows have different owners. Full item builds provide
+ * the Star Rod attributes symbol strongly from battleship_item_starrod.c;
+ * reloc_backend_assets.c provides the same 0x4D4 value weakly so reduced
+ * battle builds can still link this registry row. This header therefore only
+ * declares it. Kirby's capture/lose star reads it as the head of its own
+ * effect closure, which is why the registry row is required even when the
+ * Star Rod item translation unit is absent. */
 #define NDS_IT_COMMON_DATA_OWNED_RELOC_SYMBOLS(X) \
     X(NDS_RELOC_ASSET_IT_COMMON_DATA, llITCommonDataMBallThrownFileHead, 0x6e4u)
 

@@ -2213,6 +2213,18 @@
           "classification": "live_camera_dependent"
         },
         {
+          "access": "particle.modelview",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "particle.projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "particle.valid",
+          "classification": "live_camera_dependent"
+        },
+        {
           "access": "xobj.kind",
           "classification": "live_camera_dependent"
         }

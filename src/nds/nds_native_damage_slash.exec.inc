@@ -26,8 +26,9 @@ volatile u32 gNdsDamageSlashTexturePrepareFailCount;
 volatile u32 gNdsDamageSlashTextureUpdateCount;
 volatile u32 gNdsDamageSlashTextureBindCount;
 volatile u32 gNdsDamageSlashBadImageCount;
+extern volatile u32 gNdsRendererTextureScratchDamageSlashBytesHighWater;
 
-static u32 sNdsDamageSlashTextureNames[2];
+static u32 sNdsDamageSlashTextureNames[NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT];
 static u32 sNdsDamageSlashTextureLoadedSlot[2] = { 0xffffffffu, 0xffffffffu };
 static u32 sNdsDamageSlashTextureGeneration;
 
@@ -113,6 +114,79 @@ static s32 ndsDamageSlashTextureFill(u8 *pixels, u32 bytes, void *user_data)
     return TRUE;
 }
 
+/*
+ * M1: make the complete 13-frame MaterialAnim texture set resident before the
+ * first battle presentation.  The source frames total 10,752 bytes in DS
+ * PAL16 form (8 x 32x64 plus 5 x 32x32).  DamageSlash can therefore select a
+ * texture name from CURRENT_IMAGE at draw time without touching the texture
+ * allocator, refilling scratch, or issuing glTexImage2D in the effect pass.
+ */
+s32 ndsRendererHardwarePrepareDamageSlashTextures(void)
+{
+    const void *asset_view = NULL;
+    const u8 *asset_base;
+    u32 asset_bytes = 0u;
+    NDSRendererConfig config;
+    u32 slot;
+
+    if (gNdsP2Ndl == 0u)
+    {
+        return TRUE;
+    }
+
+    /* Keep the retired hot-path diagnostics link-visible.  M1 requires these
+     * to read exactly zero after scene preparation: any later non-zero value
+     * would prove that per-hit upload/scratch work returned. */
+    gNdsDamageSlashTextureUpdateCount = 0u;
+#if NDS_TICK_HUD
+    gNdsRendererTextureScratchDamageSlashBytesHighWater = 0u;
+#endif
+    memset(&config, 0, sizeof(config));
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+
+    if (ndsRelocGetLoadedAssetView(
+            NDS_NATIVE_DAMAGE_SLASH_ASSET, &asset_view, &asset_bytes) == FALSE)
+    {
+        gNdsDamageSlashTexturePrepareFailCount++;
+        return FALSE;
+    }
+    asset_base = (const u8 *)asset_view;
+    memset(sNdsDamageSlashTextureNames, 0,
+           sizeof(sNdsDamageSlashTextureNames));
+    sNdsDamageSlashTextureGeneration = gNdsTaskmanHeapGeneration;
+
+    for (slot = 0u; slot < NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT; slot++)
+    {
+        const u8 *shape = sNdsDamageSlashTextureShape[slot];
+        u32 offset = sNdsDamageSlashTextureOffsets[slot];
+        u32 source_bytes = ((u32)shape[0] * shape[1]) >> 1;
+        NDSDamageSlashTextureFill fill;
+
+        if ((offset > asset_bytes) || (source_bytes > asset_bytes - offset))
+        {
+            gNdsDamageSlashTexturePrepareFailCount++;
+            return FALSE;
+        }
+        fill.config = &config;
+        fill.source = asset_base + offset;
+        fill.source_width = shape[0];
+        fill.source_height = shape[1];
+        fill.upload_width = shape[2];
+        fill.upload_height = shape[3];
+        fill.mirror_s = shape[4];
+        if (ndsRendererHardwarePrepareIFCommonPal16Atlas(
+                fill.upload_width, fill.upload_height,
+                sNdsDamageSlashPalette, ndsDamageSlashTextureFill, &fill,
+                &sNdsDamageSlashTextureNames[slot]) == FALSE)
+        {
+            gNdsDamageSlashTexturePrepareFailCount++;
+            return FALSE;
+        }
+        gNdsDamageSlashTexturePrepareCount++;
+    }
+    return TRUE;
+}
+
 static s32 ndsDamageSlashEnsureTexture(
     const u8 *asset_base, u32 asset_bytes, u32 child, u32 slot,
     const NDSRendererConfig *config)
@@ -130,6 +204,16 @@ static s32 ndsDamageSlashEnsureTexture(
     {
         return FALSE;
     }
+
+    if (gNdsP2Ndl != 0u)
+    {
+        return ((sNdsDamageSlashTextureGeneration == gNdsTaskmanHeapGeneration) &&
+                (sNdsDamageSlashTextureNames[slot] != 0u)) ? TRUE : FALSE;
+    }
+
+    /* Route 0 is the exact pre-M1 control.  It keeps one allocation per
+     * simultaneously drawable child and replaces that allocation's texels
+     * when CURRENT_IMAGE advances. */
     if (sNdsDamageSlashTextureGeneration != gNdsTaskmanHeapGeneration)
     {
         memset(sNdsDamageSlashTextureNames, 0,
@@ -173,12 +257,6 @@ static s32 ndsDamageSlashEnsureTexture(
         return TRUE;
     }
 
-    /* libnds reuses an existing allocation when glTexImage2D sees the same
-     * format and extent on the same name (libnds 2.0.2 videoGL.o checks the
-     * stored byte size/type before its allocator path).  Keep one name per
-     * simultaneously drawable child and replace only its texels as the source
-     * material animation advances.  This caps DamageSlash at 1.5 KiB texture
-     * VRAM instead of asking the already-full battle allocator for 13 names. */
     upload_bytes = ((u32)shape[2] * shape[3]) >> 1;
     NDS_RENDERER_CAPACITY_HIGH_WATER(
         gNdsRendererTextureScratchDamageSlashBytesHighWater, upload_bytes);
@@ -262,7 +340,9 @@ static s32 ndsDamageSlashBindTexture(
     {
         return FALSE;
     }
-    name = sNdsDamageSlashTextureNames[child];
+    name = (gNdsP2Ndl != 0u) ?
+        sNdsDamageSlashTextureNames[slot] :
+        sNdsDamageSlashTextureNames[child];
     if (name == 0u)
     {
         return FALSE;
@@ -291,6 +371,58 @@ static s32 ndsDamageSlashBindTexture(
         NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE;
     ndsRendererProfileRecordTexturePrepare();
     gNdsDamageSlashTextureBindCount++;
+    return TRUE;
+}
+
+/* M1 admission is all-or-nothing for the two DamageSlash children.  The
+ * camera loop may execute the source proc only when this native path has made
+ * no GX writes, so validate every draw-time input that can still reject a
+ * resident-texture submit before either child is emitted. */
+sb32 ndsRendererPreflightNativeDamageSlash(
+    const void *asset_base_ptr, u32 asset_bytes, u32 root_offset,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config)
+{
+    const u8 *asset_base = (const u8 *)asset_base_ptr;
+    u32 child;
+    u32 texture_slot;
+
+    if ((asset_base == NULL) || (material == NULL) || (config == NULL) ||
+        (config->initial_projection == NULL) ||
+        (config->initial_modelview == NULL) ||
+        (asset_bytes < NDS_NATIVE_DAMAGE_SLASH_PALETTE_END) ||
+        (root_offset > asset_bytes) ||
+        (NDS_NATIVE_DAMAGE_SLASH_DL_BYTES > asset_bytes - root_offset) ||
+        (material->effects != NDS_DAMAGE_SLASH_MATERIAL_EFFECTS))
+    {
+        return FALSE;
+    }
+    if (root_offset == NDS_NATIVE_DAMAGE_SLASH_ROOT0)
+    {
+        child = 0u;
+    }
+    else if (root_offset == NDS_NATIVE_DAMAGE_SLASH_ROOT1)
+    {
+        child = 1u;
+    }
+    else
+    {
+        return FALSE;
+    }
+
+    if (gNdsP2Ndl == 0u)
+    {
+        return TRUE;
+    }
+    if ((ndsDamageSlashTextureSlot(
+             asset_base, asset_bytes, child,
+             (const void *)(uintptr_t)material->current_image,
+             &texture_slot) == FALSE) ||
+        (sNdsDamageSlashTextureGeneration != gNdsTaskmanHeapGeneration) ||
+        (sNdsDamageSlashTextureNames[texture_slot] == 0u))
+    {
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -371,7 +503,15 @@ sb32 ndsRendererSubmitNativeDamageSlash(
     {
         ndsDamageSlashSetup1(stats, palette);
     }
-    ndsRendererNativeApplyMaterial(material, stats, &state);
+    if (gNdsP2Ndl != 0u)
+    {
+        /* Keep every route-1 rejection before the first GX mutation. */
+        ndsRendererNativeApplyMaterialPreflight(material, stats, &state);
+    }
+    else
+    {
+        ndsRendererNativeApplyMaterial(material, stats, &state);
+    }
     if (child == 0u)
     {
         ndsDamageSlashAfterMaterial0(stats);
@@ -415,14 +555,27 @@ sb32 ndsRendererSubmitNativeDamageSlash(
         gNdsDamageSlashSubmitStep = 5u;
         return FALSE;
     }
-    NDS_FIGHTER_PACKET_DMA_WAIT();
-    ndsRendererHardwareEndBatch();
+    if (gNdsP2Ndl == 0u)
+    {
+        /* Route 0 is the exact pre-M1 control: fence/close before a possible
+         * glTexImage2D update, exactly as the old hot-upload owner did. */
+        NDS_FIGHTER_PACKET_DMA_WAIT();
+        ndsRendererHardwareEndBatch();
+    }
     if (ndsDamageSlashEnsureTexture(
             asset_base, asset_bytes, child, texture_slot, config) == FALSE)
     {
         gNdsDamageSlashSubmitStep = 6u;
         return FALSE;
     }
+    if (gNdsP2Ndl != 0u)
+    {
+        NDS_FIGHTER_PACKET_DMA_WAIT();
+    }
+    /* On route 1, ndsDamageSlashBindTexture ->
+     * ndsRendererHardwareBindTextureName closes any open batch itself. Delaying
+     * that bind until all route-1 checks have passed keeps FALSE a safe source
+     * fallback result. Route 0 already closed at its historical point above. */
     if (ndsDamageSlashBindTexture(child, texture_slot, stats, &state) == FALSE)
     {
         gNdsDamageSlashSubmitStep = 7u;

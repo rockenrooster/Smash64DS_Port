@@ -45,6 +45,7 @@ param(
     # SELECT presses at different poses.  Keep the writes inside this GDB
     # session so the requested arm is already live before the frame lock.
     [string[]]$GlobalWrites = @(),
+    [ValidateRange(-1,8)][int]$StageKind = -1,
     [string]$TempDirectory = ''
 )
 
@@ -263,8 +264,19 @@ $markerValues =
     'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamPrepareSuccessCount, gNdsIFCommonNativeOamPrepareFailCount, gNdsIFCommonNativeOamPrepareCloudTextureBytes, gNdsIFCommonNativeOamPrepareCloudTextureCount, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamPrepareCloudFailureStage, gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[0], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[1], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[2], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[3], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[4], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[5], gNdsIFCommonNativeOamFrameCloudDrawCount'
 $selectorCommands = @()
 $captureSelectorAssertions = @()
+if ($StageKind -ge 0) {
+    $selectorCommands += @(
+        'tbreak ndsMatchConfigApply', 'continue',
+        # melonDS disconnects on the byte write; retain the adjacent rule bytes.
+        "set {unsigned int}&gNdsMatchConfig.gkind = (*(unsigned int*)&gNdsMatchConfig.gkind & 0xffffff00) | $StageKind"
+    )
+    $captureSelectorAssertions += @(
+        "if gSCManagerBattleState == 0 || gSCManagerBattleState->gkind != $StageKind",
+        'echo CUTG_STAGE_MISMATCH\n', 'quit 1', 'end'
+    )
+}
 if ($FoxCpuMode -ge 0) {
-    $selectorCommands = @(
+    $selectorCommands += @(
         'tbreak scVSBattleStartBattle',
         'continue',
         ('set variable gNdsBattlePlayableFoxCpuEnabled = {0}' -f $FoxCpuMode)

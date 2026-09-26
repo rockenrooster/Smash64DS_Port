@@ -3648,7 +3648,8 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
                                         const Vec3f *camera_up,
                                         Vec3f *world_pos,
                                         Vec3f *quad_right,
-                                        Vec3f *quad_up
+                                        Vec3f *quad_up,
+                                        sb32 view_space
 #if NDS_R2_WHISPY_NATIVE_AOT
                                         , sb32 rigid_whispy
 #endif
@@ -3726,12 +3727,20 @@ static void ndsParticleTransformForDraw(LBParticle *pc,
 
         if (xf->affine[0][0] < 0.0F) { scale_x = -scale_x; }
         if (xf->affine[1][1] < 0.0F) { scale_y = -scale_y; }
-        quad_right->x *= scale_x;
-        quad_right->y *= scale_x;
-        quad_right->z *= scale_x;
-        quad_up->x *= scale_y;
-        quad_up->y *= scale_y;
-        quad_up->z *= scale_y;
+        if (view_space != FALSE)
+        {
+            quad_right->x = scale_x;
+            quad_up->y = scale_y;
+        }
+        else
+        {
+            quad_right->x *= scale_x;
+            quad_right->y *= scale_x;
+            quad_right->z *= scale_x;
+            quad_up->x *= scale_y;
+            quad_up->y *= scale_y;
+            quad_up->z *= scale_y;
+        }
     }
 }
 
@@ -4143,6 +4152,7 @@ void lbParticleDrawTextures(GObj *gobj)
     u32 emitted = 0u;
     u32 atlas_name;
     u32 link;
+    sb32 view_space = FALSE;
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
     u32 fox_blaster_glow_name = 0u;
 #endif
@@ -4194,6 +4204,19 @@ void lbParticleDrawTextures(GObj *gobj)
 #endif
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
+#if NDS_RENDERER_HW_TRIANGLES && NDS_R2_WHISPY_NATIVE_AOT
+    if ((atlas_name != 0u) && (gNdsP2ParticlePacket == 3u) &&
+        (ndsRendererAdapterBeginParticleViewPass(gGCCurrentCamera) != FALSE))
+    {
+        /* LBTransform still supplies source world centres and signed X/Y
+         * magnitudes. In the view-space pass those magnitudes scale two axes,
+         * instead of reconstructing six world-space leg components. */
+        right.x = 1.0F; right.y = 0.0F; right.z = 0.0F;
+        up.x = 0.0F; up.y = 1.0F; up.z = 0.0F;
+        view_space = TRUE;
+    }
+    else
+#endif
     if ((atlas_name != 0u) &&
         (ndsParticleSetCurrentCamera(&right, &up) == FALSE))
     {
@@ -4625,7 +4648,8 @@ void lbParticleDrawTextures(GObj *gobj)
                         ((pc->flags & LBPARTICLE_FLAG_MASKT) ? 2u : 0u);
 
                     ndsParticleTransformForDraw(
-                        pc, &right, &up, &world_pos, &quad_right, &quad_up
+                        pc, &right, &up, &world_pos, &quad_right, &quad_up,
+                        view_space
 #if NDS_R2_WHISPY_NATIVE_AOT
                         , ((whispy_native != FALSE) &&
                            (gNdsWhispyAOTRoute == 1u))

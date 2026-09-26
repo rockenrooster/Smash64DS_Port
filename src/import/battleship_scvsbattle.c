@@ -12,6 +12,7 @@
 #include <mn/menu.h>
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_effects.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
@@ -194,6 +195,16 @@ void ndsBattlePrepareSceneTextures(void)
      * conversion, cache lookup or texture allocation on an impact frame. */
     (void)ndsRendererHardwarePrepareImpactWaveTextures();
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    /* M1: the 13 DamageSlash MaterialAnim frames are only 10,752 bytes in
+     * PAL16.  Make them resident here so a hit frame performs a name bind and
+     * never replaces texture storage from inside gcDrawAll.  Route 0 is the
+     * same-ROM control and must retain the pre-M1 two-name update path. */
+    if (gNdsP2Ndl != 0u)
+    {
+        (void)ndsRendererHardwarePrepareDamageSlashTextures();
+    }
+#endif
 #if NDS_R2_REBIRTH_HALO_NATIVE && NDS_RENDERER_HW_TRIANGLES
     /* Five tiny AOT-native names (four PAL16, one A5I3) after every large
      * scene allocation. Rebirth frames therefore bind only resident DS data. */
@@ -205,6 +216,9 @@ void ndsBattlePrepareSceneTextures(void)
      * resident DS texture binds -- no N64 texture/TLUT conversion and no hot
      * allocator traffic while the fighters are appearing. */
     (void)ndsRendererHardwarePrepareEntryEffectTextures();
+    /* Allocate the small dust planes after the larger entry owners. Convert
+     * once before GO; effect draws only bind these resident native names. */
+    (void)ndsRendererHardwarePrepareDamageFlyMDustTextures();
 #endif
 #if NDS_R2_FOX_GUN_OVERLAY && NDS_RENDERER_HW_TRIANGLES
     /* The source can reveal Fox's gun long after GO. Prepare its 256-byte

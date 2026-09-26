@@ -1823,6 +1823,13 @@ static NDSRendererAdapterNativeOwnerValidationCache
         NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
 #endif
 
+typedef struct NDSRendererAdapterParticleCamera
+{
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u32 valid;
+} NDSRendererAdapterParticleCamera;
+
 typedef struct NDSRendererAdapterCameraCacheEntry
 {
     const CObj *cobj;
@@ -1833,6 +1840,10 @@ typedef struct NDSRendererAdapterCameraCacheEntry
     s32 billboard_right_q12[3];
     s32 billboard_up_q12[3];
     u32 billboard_basis_valid;
+    /* The 0x4C producer already has both factors before composing them. Keep
+     * them in this frame-scoped context for the particle pass, avoiding a
+     * second look-at/perspective build for each particle camera callback. */
+    NDSRendererAdapterParticleCamera particle;
 } NDSRendererAdapterCameraCacheEntry;
 
 typedef struct NDSRendererAdapterDObjWorldCacheEntry
@@ -5340,7 +5351,8 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
     u32 *modelview_valid,
     s32 *billboard_right_q12,
     s32 *billboard_up_q12,
-    u32 *billboard_basis_valid)
+    u32 *billboard_basis_valid,
+    NDSRendererAdapterParticleCamera *particle)
 {
     NDSRendererMatrix20p12 incoming;
     XObj *xobj;
@@ -5355,6 +5367,7 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
 
     *projection_valid = FALSE;
     *modelview_valid = FALSE;
+    if (particle != NULL) { particle->valid = FALSE; }
     if (billboard_basis_valid != NULL)
     {
         *billboard_basis_valid = FALSE;
@@ -5411,6 +5424,12 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
                 cobj->projection.persp.near,
                 cobj->projection.persp.far,
                 cobj->projection.persp.scale);
+            if ((particle != NULL) && (cobj->xobjs_num == 1))
+            {
+                MTXCOPY(&particle->projection, &persp);
+                MTXCOPY(&particle->modelview, &lookat);
+                particle->valid = TRUE;
+            }
             ndsRendererMtxMul20p12(&lookat, &persp, projection);
             *projection_valid = TRUE;
             break;
@@ -5597,6 +5616,7 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
     s32 built_billboard_right_q12[3] = { 0, 0, 0 };
     s32 built_billboard_up_q12[3] = { 0, 0, 0 };
     u32 built_billboard_basis_valid = FALSE;
+    NDSRendererAdapterParticleCamera *particle = NULL;
 
     if ((projection == NULL) || (projection_valid == NULL) ||
         (modelview == NULL) || (modelview_valid == NULL))
@@ -5644,10 +5664,16 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     gNdsRendererProfileCameraMatrixCacheMissCount++;
 #endif
+    if (sNdsRendererAdapterCameraCacheCount <
+        NDS_RENDERER_ADAPTER_CAMERA_CACHE_COUNT)
+    {
+        particle = &sNdsRendererAdapterCameraCache[
+            sNdsRendererAdapterCameraCacheCount].particle;
+    }
     ndsRendererAdapterBuildCameraMatrices(
         cobj, projection, projection_valid, modelview, modelview_valid,
         built_billboard_right_q12, built_billboard_up_q12,
-        &built_billboard_basis_valid);
+        &built_billboard_basis_valid, particle);
     if ((*projection_valid == FALSE) && (*modelview_valid == FALSE))
     {
         ndsRendererAdapterBuildDefaultBattleCameraMatrices(
@@ -5691,6 +5717,34 @@ static void ndsRendererAdapterGetFrameCameraMatrices(
                sizeof(built_billboard_up_q12));
         *billboard_basis_valid = TRUE;
     }
+}
+
+s32 ndsRendererAdapterBeginParticleViewPass(void *camera_gobj)
+{
+    GObj *gobj = camera_gobj;
+    CObj *cobj = (gobj != NULL) ? CObjGetStruct(gobj) : NULL;
+    u32 i;
+
+    /* gcDrawAll has prepared this camera before its particle callbacks. Never
+     * reuse the preceding frame, nor rebuild a different camera behind the
+     * caller's back. Non-0x4C cameras keep their existing native world path. */
+    if ((cobj == NULL) ||
+        (sNdsRendererAdapterCameraCacheFrame != gNdsRendererProfileFrameCount))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsRendererAdapterCameraCacheCount; i++)
+    {
+        const NDSRendererAdapterCameraCacheEntry *entry =
+            &sNdsRendererAdapterCameraCache[i];
+
+        if ((entry->cobj == cobj) && (entry->particle.valid != FALSE))
+        {
+            return ndsRendererBeginParticleViewPass(
+                &entry->particle.projection, &entry->particle.modelview);
+        }
+    }
+    return FALSE;
 }
 
 s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj)
@@ -5816,7 +5870,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
                                           &camera_projection_valid,
                                           &camera_modelview,
                                           &camera_modelview_valid,
-                                          NULL, NULL, NULL);
+                                          NULL, NULL, NULL, NULL);
 #endif
     if (dobj != NULL)
     {

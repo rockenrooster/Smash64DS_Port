@@ -734,7 +734,7 @@ ndsRendererTask34StageStreamEndSegment(void)
     sNdsTask34StageStreamActive = FALSE;
 }
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
 /* G3 STEP 1 -- THE EFFECT GX STREAM CAPTURE, and the question it exists to
  * settle before a packet builder is written: what SHAPE is the GX stream an
  * effect display list emits, and can a captured copy of it be replayed?
@@ -1151,7 +1151,7 @@ ndsRendererTask29GXRecord(
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (sNdsEffectPacketArmed != 0u)
     {
         ndsEffectPacketRecord((u32)command_class, words, word_count);
@@ -1326,7 +1326,7 @@ static inline void ndsRendererTask29GXRecord(
 #if NDS_TASK34_STAGE_STREAM_CENSUS
     ndsRendererTask34StageStreamRecord(command_class, words, word_count);
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (sNdsEffectPacketArmed != 0u)
     {
         ndsEffectPacketRecord((u32)command_class, words, word_count);
@@ -3265,23 +3265,72 @@ static inline void ndsRendererHardwareBindTextureState(int name)
 /* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
  * pointer that sys/video.h documents as aliased into the buffer's tail. */
 #define NDS_FIGHTER_PACKET_ARENA_WORDS 35360u
+#define NDS_FIGHTER_PACKET_FULL_REGION_WORDS \
+    (NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS)
+/* P2-2p8 Phase 2: the production lean route owns one compact framebuffer
+ * layout for the whole battle. Four 6,528-word fighter regions leave a
+ * contiguous 36,992-byte tail for the compiled stage GX body while retaining
+ * 5,568 list words after the 960-word packet header; Phase 1's all-roster HIGH
+ * census peaked at 3,754. An absent player's compact region is still lent to
+ * objman below, so two/three-player battles keep their existing scratch path. */
+#define NDS_FIGHTER_PACKET_FOUR_REGION_WORDS 6528u
+#define NDS_FIGHTER_PACKET_FOUR_STAGE_BASE_WORDS \
+    (NDS_FIGHTER_PACKET_FOUR_REGION_WORDS * NDS_FIGHTER_PACKET_SLOTS)
+#define NDS_FIGHTER_PACKET_FOUR_STAGE_WORDS \
+    (NDS_FIGHTER_PACKET_ARENA_WORDS - NDS_FIGHTER_PACKET_FOUR_STAGE_BASE_WORDS)
 _Static_assert(NDS_FIGHTER_PACKET_SLOTS == 4u,
                "fighter packet key encodes two source-player slot bits");
 _Static_assert((NDS_FIGHTER_PACKET_ARENA_WORDS %
                 NDS_FIGHTER_PACKET_SLOTS) == 0u,
                "fighter packet arena must divide evenly by player slot");
+_Static_assert(NDS_FIGHTER_PACKET_FOUR_STAGE_WORDS * sizeof(u32) >= 36296u,
+               "four-fighter packet tail must hold the largest VS stage GX body");
 #define NDS_FIGHTER_PACKET_ROOT_MAX NDS_NATIVE_FIGHTER_ROOT_MAX
 #define NDS_FIGHTER_PACKET_LOCAL_MAX 8u
 
-/* AN ABSENT PLAYER'S REGION IS 35,360 IDLE BYTES FOR THE WHOLE MATCH. The arena
- * is four fixed, equal regions keyed by source-player slot, and a packet only
- * ever writes its own. Hand an idle one to a battle-lifetime pool instead of
- * charging the taskman arena for it; the Results entry's Release rewrites the
- * buffer after that scene's arena (and everything in it) is already dead. */
+static inline sb32 ndsRendererFighterPacketCompactLayout(void)
+{
+#if NDS_FTR_LEAN_LIVE
+    return (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ? TRUE : FALSE;
+#else
+    return FALSE;
+#endif
+}
+
+static inline u32 ndsRendererFighterPacketRegionWords(void)
+{
+    return (ndsRendererFighterPacketCompactLayout() != FALSE) ?
+        NDS_FIGHTER_PACKET_FOUR_REGION_WORDS :
+        NDS_FIGHTER_PACKET_FULL_REGION_WORDS;
+}
+
+static void *ndsRendererStageGxBuffer(u32 *bytes)
+{
+    extern u16 gSYFramebufferSets[1][231][320];
+
+    if (bytes == NULL)
+    {
+        return NULL;
+    }
+    if (ndsRendererFighterPacketCompactLayout() == FALSE)
+    {
+        *bytes = 0u;
+        return NULL;
+    }
+    *bytes = NDS_FIGHTER_PACKET_FOUR_STAGE_WORDS * (u32)sizeof(u32);
+    return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
+           NDS_FIGHTER_PACKET_FOUR_STAGE_BASE_WORDS;
+}
+
+/* AN ABSENT PLAYER'S REGION IS BATTLE-LIFETIME SCRATCH. The production lean
+ * route lends its 26,112-byte compact region; lab/old-path routes retain the
+ * original 35,360-byte region. Both are fixed, equal regions keyed by source
+ * player slot, and a packet only ever writes its own. Results Release rewrites
+ * the buffer after that scene's arena (and everything in it) is already dead. */
 void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
 {
     extern u16 gSYFramebufferSets[1][231][320];
-    u32 region_words = NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS;
+    u32 region_words = ndsRendererFighterPacketRegionWords();
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (bytes == NULL))
     {
@@ -6139,6 +6188,12 @@ typedef struct NDSRendererWhispyNativeBinding
 static NDSRendererWhispyNativeBinding
     sNdsRendererWhispyNativeBinding[
         NDS_WHISPY_NATIVE_TEXTURE_COUNT + NDS_R2_FOX_BLASTER_GLOW_AOT];
+/* The common particle atlas is just as immutable as Whispy's texels.  Keep
+ * the exact TEXIMAGE_PARAM / PLTT_BASE pair for each sheet so the Phase-2
+ * particle packet can switch sheets without calling glBindTexture from the
+ * hot path.  Palette variants override only palette_format at submission. */
+static NDSRendererWhispyNativeBinding
+    sNdsRendererParticleAtlasBinding[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 #endif
 #endif
 static u32 sNdsRendererParticleAtlasPrepared;

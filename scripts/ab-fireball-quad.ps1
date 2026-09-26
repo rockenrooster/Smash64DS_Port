@@ -18,6 +18,9 @@ param(
     # quad arm and dropped a frame (see the ring note in Run-Arm).
     [ValidateRange(16, 128)][int]$Samples = 64,
     [int]$Fb2Delay = 45,
+    # Focused P2-2p8 proof: enable the lifetime-keyed native draw list only
+    # for the quad arm. Default A/B behavior remains unchanged.
+    [switch]$P2Ndl,
     # 2 = drive two fireballs via the playback pads and sample while both are
     # live (the cliff state). 0 = no input at all, sampling the SAME window
     # frames the 2-fireball runs land on, so the pair differs ONLY in the
@@ -107,18 +110,25 @@ function Run-Arm {
             -WindowStyle Hidden -PassThru
         Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
 
-        # Two fireballs, both forced by the playback pads. First throw: B held
-        # until ftMarioSpecialNSetStatus enters (exactly the fireball verifier's
-        # proven sequence), released, weapon made. Second throw: B pulsed every
+        # Two fireballs, both forced by the playback pads. Arm playback first,
+        # then wait for BattleShip's source interface update to enter GO before
+        # presenting the first B edge. Holding B from scVSBattleStartBattle can
+        # consume the tap during the countdown before Mario is allowed to
+        # interrupt into Special-N. This hook owns the transition that sets
+        # sIFCommonTimerIsStarted and runs in the source task loop itself.
+        # First throw: B held until ftMarioSpecialNSetStatus enters, released,
+        # weapon made. Second throw: B pulsed every
         # 15 frames from +25 so a press edge lands whenever Mario is back in
         # Wait -- holding B across the status would consume the edge and the
         # second tbreak would never fire, hanging the run to its timeout. The
         # second status-entry stop releases and arms the make-weapon stop.
         $throwLines = if ($Fireballs -eq 2) {
             @(
-                ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $padsAddress),
                 ('set {{unsigned int}}0x{0:x8} = 3' -f $connectedAddress),
                 ('set {{unsigned int}}0x{0:x8} = 1' -f $enabledAddress),
+                'tbreak ifCommonBattleUpdateInterfaceAll if gSCManagerBattleState->game_status == nSCBattleGameStatusGo',
+                'continue',
+                ('set {{unsigned short}}0x{0:x8} = 0x4000' -f $padsAddress),
                 'tbreak ftmariospecialn.c:ftMarioSpecialNSetStatus',
                 'continue',
                 ('set {{unsigned short}}0x{0:x8} = 0' -f $padsAddress),
@@ -174,6 +184,9 @@ function Run-Arm {
             'tbreak scVSBattleStartBattle',
             'continue',
             'set gNdsBattlePlayableFoxCpuEnabled = 0',
+            $(if ($P2Ndl -and ($ArmName -eq 'quad')) {
+                'set gNdsP2Ndl = 1'
+            }),
             $throwLines,
             'printf "FIREBALL_FRAMES=%u,%u\n", $fb1, $fb2',
             # Both fireballs live and rolling: sample buckets from the ROM's own
@@ -437,13 +450,33 @@ $control = Run-Arm `
                       'gNdsWeaponRendererFireballSubmitCount') `
     -EndGlobals @('gNdsWeaponRendererFireballSubmitCount',
                   'gNdsWeaponRendererFireballTriangleCount')
+$quadEndGlobals = @('gNdsFireballQuadDrawCount',
+                    'gNdsFireballQuadFallbackCount',
+                    'gNdsWeaponRendererFireballSubmitCount')
+if ($P2Ndl) {
+    $quadEndGlobals += @('gNdsNdlDispatch[6]',
+                         'gNdsNdlFallback[6]',
+                         'gNdsNdlProcsSkipped',
+                         'gNdsNdlBindCount')
+}
 $quad = Run-Arm `
     -ArmName 'quad' -Build $quadBuild `
     -Rom $quadRom -Elf $quadElf `
     -PerStopGlobals @('gNdsMiscWeaponDrawTicks', 'gNdsMiscEffectDrawTicks',
                       'gNdsFireballQuadDrawCount', 'gNdsFireballQuadFallbackCount') `
-    -EndGlobals @('gNdsFireballQuadDrawCount', 'gNdsFireballQuadFallbackCount',
-                  'gNdsWeaponRendererFireballSubmitCount')
+    -EndGlobals $quadEndGlobals
+
+if ($P2Ndl) {
+    if (($quad.endGlobals[3] -eq 0) -or
+        ($quad.endGlobals[4] -ne 0) -or
+        ($quad.endGlobals[5] -lt $quad.endGlobals[3]) -or
+        ($quad.endGlobals[6] -eq 0)) {
+        throw (("Fireball NDL did not engage cleanly: dispatch={0} fallback={1} " +
+            "skipped={2} binds={3}") -f
+            $quad.endGlobals[3], $quad.endGlobals[4],
+            $quad.endGlobals[5], $quad.endGlobals[6])
+    }
+}
 
 $stateLabel = if ($Fireballs -eq 2) { 'two fireballs live' } else { 'no fireballs' }
 $rows = @('arm,fb1,fb2,' + ($bucketNames -join ',') + ',WORK-H' +
@@ -486,6 +519,11 @@ Write-Host ('cadence slips: control {0}  quad {1}' -f $control.slip, $quad.slip)
 Write-Host ('engagement: control generic fireball submits={0}/{1}tris  quad draws={2} fallbacks={3} generic-submits={4}' -f
     $control.endGlobals[0], $control.endGlobals[1],
     $quad.endGlobals[0], $quad.endGlobals[1], $quad.endGlobals[2])
+if ($P2Ndl) {
+    Write-Host ('NDL: fireball dispatch={0} fallback={1} procs-skipped={2} binds={3}' -f
+        $quad.endGlobals[3], $quad.endGlobals[4],
+        $quad.endGlobals[5], $quad.endGlobals[6])
+}
 Write-Host '====================================================================='
 
 if (-not [string]::IsNullOrWhiteSpace($JsonOut)) {

@@ -439,8 +439,14 @@ volatile u32 gNdsTickHudFlushTicks;
  * (particles at 0.21 quads/frame, and the six proof-scoped counters that read
  * zero for a whole match), and a count cannot tell those apart. */
 volatile u32 gNdsMiscWeaponDrawTicks;
+volatile u32 gNdsMiscItemDrawTicks;
 volatile u32 gNdsMiscEffectDrawTicks;
+volatile u32 gNdsMiscActorDrawTicks;
 volatile u32 gNdsMiscParticleDrawTicks;
+volatile u32 gNdsMiscCaptureTicks;
+volatile u32 gNdsMiscProcDisplayTicks;
+volatile u32 gNdsMiscProcDisplayKindTicks[NDS_MISC_PROC_KIND_COUNT];
+volatile u32 gNdsMiscProcDisplayKindCount[NDS_MISC_PROC_KIND_COUNT];
 /* Written by ndsBattlePlayableFinalizePresentedIteration, which is what keeps
  * the three above from being collected: --gc-sections drops a volatile u32
  * that live code never names, and a debugger is not live code. This is also

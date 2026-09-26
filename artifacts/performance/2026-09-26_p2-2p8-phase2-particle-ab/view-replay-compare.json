@@ -1,0 +1,11 @@
+{
+ "control": "artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/view-control-rows.csv",
+ "candidate": "artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/view-armed-rows.csv",
+ "comparison": "frame",
+ "controlFrames": 1972,
+ "candidateFrames": 1972,
+ "sharedFrames": 1972,
+ "zeroDigestFrames": 0,
+ "diverged": 0,
+ "firstDivergence": null
+}

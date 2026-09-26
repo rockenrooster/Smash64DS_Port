@@ -834,7 +834,9 @@ SOURCE_CLOSURE_POLICIES = (
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterBuildCameraMatrices",
-        "tracked_bases": ("cobj", "xobj"),
+        "tracked_bases": ("cobj", "xobj", "particle"),
+        # The optional particle output retains the existing 0x4C factors in
+        # the same frame-scoped camera context; these are camera-derived data.
         "fields": _classified(
             FIELD_CLASS_CAMERA,
             """
@@ -848,6 +850,7 @@ SOURCE_CLOSURE_POLICIES = (
             cobj.vec.at.z cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z
             cobj.vec.up.x cobj.vec.up.y cobj.vec.up.z cobj.xobjs
             cobj.xobjs_num xobj.kind
+            particle.projection particle.modelview particle.valid
             """,
         ),
     },

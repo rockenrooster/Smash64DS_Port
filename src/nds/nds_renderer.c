@@ -4,6 +4,8 @@
 #include "nds_renderer_textures_effects.c"
 #include "nds_renderer_native_common.c"
 #include "nds_native_textured_quad.exec.inc"
+#include "generated/nds_native_damage_fly_mdust.generated.inc"
+#include "nds_native_damage_fly_mdust.exec.inc"
 #if NDS_P2_PIKACHU
 #include "generated/nds_native_pikachu_thunder.generated.inc"
 #include "nds_native_pikachu_thunder.exec.inc"

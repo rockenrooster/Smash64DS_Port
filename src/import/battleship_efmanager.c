@@ -378,6 +378,34 @@ s32 ndsEFManagerImpactWaveVariant(GObj *effect_gobj, u32 *variant_out)
     return TRUE;
 }
 
+s32 ndsEFManagerImpactWaveNdlHeader(GObj *effect_gobj, u32 *variant_out,
+                                    u32 *prim_out, u32 *env_out)
+{
+    EFStruct *ep;
+    u32 variant;
+    u32 alpha;
+
+    if ((variant_out == NULL) || (prim_out == NULL) || (env_out == NULL) ||
+        (ndsEFManagerImpactWaveVariant(effect_gobj, &variant) == FALSE))
+    {
+        return FALSE;
+    }
+    ep = efGetStruct(effect_gobj);
+    if (ep == NULL)
+    {
+        return FALSE;
+    }
+    alpha = (u32)((s32)ep->effect_vars.impact_wave.alpha) & 0xffu;
+    *variant_out = variant;
+    *prim_out =
+        ((u32)dEFManagerImpactWavePrimColorR[variant] << 24) |
+        ((u32)dEFManagerImpactWavePrimColorG[variant] << 16) |
+        ((u32)dEFManagerImpactWavePrimColorB[variant] << 8) |
+        alpha;
+    *env_out = 0x000000ffu;
+    return TRUE;
+}
+
 s32 ndsEFManagerIsImpactWaveGObj(GObj *effect_gobj)
 {
     u32 variant;

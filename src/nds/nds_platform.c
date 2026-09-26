@@ -2232,7 +2232,8 @@ static const char *const sBattleTickHudNames[nNDSTickHudBucketCount] = {
      * it must move with the enum. */
     "SINT", "SPHD", "SPHC",
     /* P2-2p8 Phase 0 MISC split and GX list usage. */
-    "MWPN", "MEFX", "MPRT", "MTEX", "GPOL", "GVTX",
+    "MWPN", "MITM", "MEFX", "MACT", "MPRT", "MTEX", "MCAP", "MPRO",
+    "MFLS", "GPOL", "GVTX",
     /* P2-2p8 Phase 0 replay digest (not ticks). */
     "DGSA", "DGSB"
 };

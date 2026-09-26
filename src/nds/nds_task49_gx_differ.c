@@ -15,6 +15,7 @@
  * the lean ndsRendererTask29GXRecord funnel.
  */
 
+#include <ssb_types.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task49_gx_differ.h>
 

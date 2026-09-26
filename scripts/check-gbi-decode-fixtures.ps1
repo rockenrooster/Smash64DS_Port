@@ -2899,6 +2899,10 @@ Assert-True ($relocAssets -match '(?s)#if !NDS_RENDERER_HW_TRIANGLES \|\| \(NDS_
 Assert-True ($relocAssets.Contains('mobjsub->flags = ((u16)old_block_siz << 8) | old_block_fmt;')) 'MObjSub flags/block format lane restoration regressed.'
 Assert-True ($relocAssets.Contains('ndsRelocReverseColorPackBytes(&mobjsub->primcolor);')) 'MObjSub primary-color lane restoration regressed.'
 $openingBackend = Get-Content (Join-Path $root 'src/port/opening_movie_backend.c') -Raw
+$damageSlashNative = Get-Content (Join-Path $root 'src/nds/nds_native_damage_slash.exec.inc') -Raw
+$objmanImport = Get-Content (Join-Path $root 'src/import/battleship_sys_objman.c') -Raw
+$task49Differ = Get-Content (Join-Path $root 'scripts/run-task49-gx-differ.ps1') -Raw
+$fourCpuStress = Get-Content (Join-Path $root 'scripts/verify-p2-four-fighter-stress.ps1') -Raw
 # RETIRED, not lost: the opening-room software DL preview this seed hook fed
 # was deleted outright by 9a56d104780 (native-only migration):
 # opening_movie_backend.c now records a native failure
@@ -2916,7 +2920,62 @@ Assert-True ($gcRunAllVerifier.Contains('RENDER_TEXUSE=')) 'gcRunAll verifier te
 Assert-True ($gcRunAllVerifier.Contains('hwftr=')) 'gcRunAll verifier hardware fighter summary is missing.'
 $movement = Get-Content (Join-Path $root 'src/port/reloc_backend_movement.c') -Raw
 Assert-True ($movement.Contains('ndsStageGCDrawAllLoopSubmitHardwareFrame')) 'Stage gcDrawAll hardware replay hook is missing.'
-Assert-True ($openingBackend -match '(?s)native_stage_handled =\s*ndsStageGCDrawAllLoopRecordCapturedDisplay\(.*?if \(native_stage_handled == FALSE\)\s*\{\s*current_gobj->proc_display\(current_gobj\);') 'Native-stage FALSE return no longer selects the source display-list fallback.'
+Assert-True ($openingBackend -match '(?s)native_stage_handled =\s*ndsRendererAdapterNdlDispatchEffect\(.*?if \(native_stage_handled == FALSE\)\s*\{\s*native_stage_handled =\s*ndsStageGCDrawAllLoopRecordCapturedDisplay\(.*?if \(native_stage_handled == FALSE\).*?current_gobj->proc_display\(current_gobj\);') 'M1 NDL no longer dispatches in source order before capture and then falls through to the source display proc only when both native seams decline.'
+Assert-True ($rendererAdapter -match '__attribute__\(\(section\("\.data"\)\)\)\s+volatile\s+u32\s+gNdsP2Ndl\s*=\s*0u;' -and
+    $rendererAdapter.Contains('ndsGcGetGObjLifetimeSerial(gobj)') -and
+    $rendererAdapter.Contains('ndsP2NdlBindRecord(gobj, serial, record);') -and
+    $rendererAdapter.Contains('(walk != DOBJ_PARENT_NULL)') -and
+    $rendererAdapter.Contains('return (walk == DOBJ_PARENT_NULL) ? TRUE : FALSE;') -and
+    $rendererAdapter.Contains('ndsP2NdlEmitImpactWave') -and
+    $rendererAdapter.Contains('ndsP2NdlEmitDamageSlash') -and
+    $rendererAdapter.Contains('ndsP2NdlEmitLinkBomb') -and
+    $rendererAdapter.Contains('NDS_P2_NDL_OWNER_ITEM') -and
+    $rendererAdapter.Contains('NDS_P2_NDL_KIND_IT_LINK_BOMB') -and
+    $rendererAdapter.Contains('gNdsNdlDispatch[kind]++') -and
+    $rendererAdapter.Contains('gNdsNdlFallback[kind]++') -and
+    $rendererAdapter.Contains('gNdsNdlProcsSkipped++')) 'M1 NDL lost its explicit .data A/B word, lifetime-keyed binding, direct effect owners, or engagement accounting.'
+Assert-True ($objmanImport.Contains('u32 ndsGcGetGObjLifetimeSerial(const GObj *gobj)') -and
+    $objmanImport.Contains('sNdsGcNdlSerialSlots[NDS_GC_NDL_SERIAL_SLOTS]') -and
+    $objmanImport.Contains('sNdsGcNdlNextSerial') -and
+    $objmanImport.Contains('id == nGCCommonKindEffect') -and
+    $objmanImport.Contains('id == nGCCommonKindWeapon') -and
+    $objmanImport.Contains('id == nGCCommonKindItem') -and
+    $objmanImport.Contains('id == nGCCommonKindGround') -and
+    $objmanImport.Contains('slot = ((uintptr_t)gobj >> 4) & (NDS_GC_NDL_SERIAL_SLOTS - 1u);') -and
+    $objmanImport.Contains('new_serial = sNdsGcNdlNextSerial++;') -and
+    $objmanImport.Contains('gNdsGcNdlLifetimeReuseCount++;') -and
+    $objmanImport.Contains('gNdsGcNdlLifetimeReuseOldSerial = old_serial;') -and
+    $objmanImport.Contains('gNdsGcNdlLifetimeReuseNewSerial = new_serial;') -and
+    $objmanImport.Contains('sNdsGcNdlSerialSlots[slot].serial = new_serial;')) 'Phase-2 NDL no longer has an O(1) allocation-lifetime witness for effect/weapon/item/ground GObjs and recycled-address serial changes.'
+Assert-True ($scVSBattleImport -match '(?s)if \(gNdsP2Ndl != 0u\)\s*\{\s*\(void\)ndsRendererHardwarePrepareDamageSlashTextures\(\);\s*\}' -and
+    $damageSlashNative.Contains('NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT') -and
+    $damageSlashNative -match '(?s)if \(gNdsP2Ndl == 0u\)\s*\{\s*return TRUE;\s*\}.*?for \(slot = 0u; slot < NDS_NATIVE_DAMAGE_SLASH_TEXTURE_COUNT; slot\+\+\)' -and
+    $damageSlashNative -match '(?s)if \(gNdsP2Ndl != 0u\).*?sNdsDamageSlashTextureNames\[slot\].*?Route 0 is the exact pre-M1 control.*?ndsRendererHardwareFencedGlTexImage2D') 'M1 DamageSlash no longer keeps the 13-frame resident arm and exact pre-M1 two-name hot-upload control in one ROM.'
+Assert-True ($rendererHeader.Contains('NDS_RENDERER_PROFILE_OWNER_EFFECT') -and
+    $task49Differ.Contains('[ValidateRange(0,31)][int]$Owner = 0') -and
+    $task49Differ.Contains('[string[]]$BootSetGlobals = @()') -and
+    $task49Differ.Contains('set variable gNdsTask49GxDifferSelectedOwner = $Owner')) 'Task49 no longer exposes the M1 EFFECT owner or boot-time same-ROM selector.'
+Assert-True ($fourCpuStress.Contains('[string[]]$BootSetGlobals = @()') -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[0]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[1]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[2]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[3]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[4]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[5]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[6]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[7]'") -and
+    $fourCpuStress.Contains("'gNdsNdlDispatch[8]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[0]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[1]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[2]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[3]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[4]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[5]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[6]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[7]'") -and
+    $fourCpuStress.Contains("'gNdsNdlFallback[8]'") -and
+    $fourCpuStress.Contains("`$extra['gNdsDamageSlashTextureUpdateCount'] -ne 0") -and
+    $fourCpuStress.Contains("`$extra['gNdsDamageSlashTexturePrepareCount'] -ne 13")) 'Four-CPU stress no longer proves M1 dispatch engagement, zero fallback, or zero post-GO DamageSlash uploads.'
 Assert-True (-not $movement.Contains('NDS_STAGE_GCDRAWALL_HW_SUBMIT_LIMIT')) 'Stage gcDrawAll hardware replay still has the old bounded submit limit.'
 Assert-True ($movement.Contains('NDS_RENDERER_GEOM_RESET_MODE | NDS_RENDERER_GEOM_LIGHTING')) 'VS battle traversal no longer inherits scVSBattleFuncLights G_LIGHTING state.'
 

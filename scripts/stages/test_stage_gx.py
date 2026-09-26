@@ -14,33 +14,40 @@ import pytest
 import compile_nds_stage_gx as gx
 
 
-def test_compiled_corners_patch_coverage_and_stack():
-    packet = gx.stage.generate(gx.stage._paths.REPO_ROOT, 'dreamland')
-    blob = gx.compile_packet(packet)
+@pytest.mark.parametrize('name', gx.STAGES)
+def test_compiled_corners_patch_coverage_and_stack(name):
+    packet = gx.stage.generate(gx.stage._paths.REPO_ROOT, name)
+    blob = gx.compile_packet(packet, name)
+    assert len(blob) - gx.HEADER.size <= gx.FOUR_PLAYER_BODY_MAX
     header, runs, patches, words = gx.decode(blob)
-    assert header[6] == 0xFF and header[7] == gx.signature(packet)
+    assert header[2] == gx.stage.blob_gkind(name)
+    assert header[6] == (1 << len(packet.segments)) - 1 and header[7] == gx.signature(packet)
     static_mask = header[10] | (header[11] << 32)
-    attributes = gx.vertex_attributes(packet)
+    attributes = gx.vertex_attributes(packet, name)
     triangles = 0
     for index, record in enumerate(runs):
         first, count, pf, pc, nt, segment = record[:6]
         if not count:
             continue
-        assert segment in gx.SEGMENTS
+        assert segment in range(len(packet.segments))
         run = packet.runs[index]
         assert nt == run.triangle_count
         cross = bool(run.flags & gx.stage.RUN_FLAG_PROJECTED_CROSS_MATRIX)
         scope = patches[pf:pf + pc]
         is_noz = run.submit_class == gx.stage.SUBMIT_PROJECTED_NO_Z
-        composed_noz = is_noz and (cross or not static_mask & (1 << run.binding_index))
-        assert sum(p[1] == gx.VIEW for p in scope) == (0 if composed_noz else 1)
+        composed = cross or not static_mask & (1 << run.binding_index)
+        source_corner = cross and not is_noz
+        assert sum(p[1] == gx.VIEW for p in scope) == (0 if composed else 1)
         assert sum(p[1] in (gx.NOZ, gx.COMPOSED_NOZ) for p in scope) == (nt if is_noz and not cross else 0)
-        assert sum(p[1] == gx.CORNER_NOZ for p in scope) == (nt*3 if cross else 0)
-        if cross:
+        assert sum(p[1] == gx.CORNER_NOZ for p in scope) == (nt*3 if cross and is_noz else 0)
+        if cross and is_noz:
             assert [p[3] >> 3 for p in scope if p[1] == gx.CORNER_NOZ] == [t for t in range(nt) for _ in range(3)]
-        assert sum(p[1] == gx.PROJECTION for p in scope) == (0 if is_noz else 1)
-        assert bool(sum(p[1] == gx.WORLD for p in scope)) == (not composed_noz and not static_mask & (1 << run.binding_index))
+        assert sum(p[1] == gx.PROJECTION for p in scope) == (0 if is_noz or composed else 1)
+        assert sum(p[1] == gx.COMPOSED for p in scope) == (1 if composed and not is_noz and not cross else 0)
+        assert not any(p[1] == gx.WORLD for p in scope)
         indices = packet.corners[run.first_corner:run.first_corner + nt*3]
+        assert [p[2] for p in scope if p[1] == gx.CORNER_SOURCE] == (list(indices) if source_corner else [])
+        assert [p[3] for p in scope if p[1] == gx.CORNER_SOURCE] == ([t for t in range(nt) for _ in range(3)] if source_corner else [])
         assert record[12] | (record[13] << 32) == sum(1 << b for b in {packet.vertices[i].matrix_binding for i in indices})
         assert sum(p[1] == gx.COLOR for p in scope) == sum(attributes[i][0] is None for i in indices)
         assert sum(p[1] == gx.UV for p in scope) == sum(attributes[i][1] is None for i in indices)
@@ -74,20 +81,23 @@ def test_compiled_corners_patch_coverage_and_stack():
                 vertex_shift = gx.stage.stage_vertex_coordinate_shift(v) if cross and len({v.matrix_binding for v in vertices}) != 1 else shift
                 assert all(record[6+a] <= getattr(v, axis) <= record[9+a] for a, axis in enumerate(('x', 'y', 'z')))
                 # Independent nearest/away-from-zero arithmetic, not the compiler helper.
-                expected.append(tuple(((-1 if n < 0 else 1) * ((abs(n) + (1 << (vertex_shift-1))) >> vertex_shift) if vertex_shift else n) * 16
-                                      for n in (v.x, v.y, v.z)))
+                expected.append((0, 0, 0) if source_corner else tuple(
+                    ((-1 if n < 0 else 1) * ((abs(n) + (1 << (vertex_shift-1))) >> vertex_shift) if vertex_shift else n) * 16
+                    for n in (v.x, v.y, v.z)))
         assert actual == expected and depth == 0
         triangles += nt
-    assert triangles == 202
+    assert triangles == {'castle':136, 'sector':299, 'jungle':182, 'zebes':151,
+                         'hyrule':206, 'yoster':164, 'dreamland':202,
+                         'yamabuki':243, 'inishie':176}[name]
     damaged = bytearray(blob)
     damaged[-1] ^= 1
     with pytest.raises(ValueError):
         gx.decode(damaged)
     bad = list(packet.runs)
-    first = packet.segments[4].first_run  # cross-binding source-Z is not admitted
-    bad[first] = replace(bad[first], flags=bad[first].flags | gx.stage.RUN_FLAG_PROJECTED_CROSS_MATRIX)
+    first = packet.segments[0].first_run
+    bad[first] = replace(bad[first], submit_class=255)
     with pytest.raises(ValueError):
-        gx.compile_packet(replace(packet, runs=tuple(bad)))
+        gx.compile_packet(replace(packet, runs=tuple(bad)), name)
 
 
 def test_live_near_bounds_are_conservative():
@@ -236,6 +246,8 @@ typedef uint32_t u32; typedef int sb32;
 #define NDS_RENDERER_TEXTURE_PARAM_MUTABLE_MASK 0xc00f0000u
 #define NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z 3u
 #define NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT 4u
+#define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u
+static struct { u32 gkind; } packet = {6}, *sNdsNativeStagePacketActive = &packet;
 #define POLY_CULL_NONE 0xc0u
 #define POLY_CULL_BACK 0x80u
 #define NDS_RENDERER_GX_STATE_ALL 7u
@@ -277,6 +289,9 @@ int main(void) {
     NDSNativeStagePreparedRun p = {0xc0,1,1,0xc00a0000u,1,3}; u32 w[3];
     assert(ndsStageGxMaterial(w,&p,3,0) && w[0]==0x80 && w[1]==0xd23a5678 && w[2]==0x321);
     assert(ndsStageGxMaterial(w,&p,3,4) && w[0]==0xc0); /* Actors stay two-sided. */
+    packet.gkind=0;
+    assert(ndsStageGxMaterial(w,&p,3,0) && w[0]==0xc0); /* Other stages keep source culling. */
+    packet.gkind=6;
     assert(ndsStageGxMaterial(w,&p,0,0) && w[0]==0xc0); /* Source Z keeps its cull state. */
     texture.palIndex=2; assert(!ndsStageGxMaterial(w,&p,3,0));
     texture.palIndex=-1; assert(!ndsStageGxMaterial(w,&p,3,0));

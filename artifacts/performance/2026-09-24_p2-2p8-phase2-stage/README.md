@@ -550,3 +550,125 @@ the consumed-field manifest also exposes the prior checkpoint's unstaged
 shared-camera manifest update (691 fields); retain that producer output now.
 It is documentation of the already-qualified camera code, not a ROM change.
 The rejected patch applies cleanly against the base index; docs check passes.
+
+Next batch after 3ac4d751582: compiled coverage for all nine VS stages. Frozen
+control build build-p2p8-stage-vs-control uses the ordinary four-CPU tick-HUD
+target with all eight NDS_P2_STAGE_<VS> flags enabled. Default roster/items and
+rules stay unchanged; the existing match-config input sets the requested stage
+before ndsMatchConfigApply. Check capacity on this shared configuration before
+using it for paired comparisons. Compiler work must preserve blob-stage filter
+phase 8 (Dream Land uses 16), Zebes's native alpha-ramp texture and Inishie's
+four source-Z cross-binding triangles. Reuse existing material/clip helpers;
+no campaign work, no subagents. The prior goal turn is progress: it rejected
+measured regressions and restored the faster authoritative implementation.
+All-VS control 6439AF51FEFE5EB97B7B97E02F188F7590D2F899007E2F577734FCACDA03B91B
+built successfully (261 native link inputs). Its first stage-selection run
+failed before gameplay: writing the u8 gkind through GDB disconnected the local
+melonDS stub. A bounded word-write probe preserved the neighboring bytes and
+reached native stage drawing with scene/config both 8; arena 1,212,160 B.
+The uninitialized UINT_MAX low-water in that first-frame stop is not capacity
+proof. The sampler/capture selectors now use that verified word write. The
+control ROM/ELF/config/payload stay immutable, recorded in vs-control-inputs.json;
+candidate source edits are not consumed by this preserved executable.
+Control Inishie full-run attempt reaches frame 79, then faults in
+gcParseDObjAnimJoint at 0x020a9d5a while reading the next opcode from r4=0x002c0400;
+DObj r5=0x023beb48. Arena 1,212,160 B, free 115,504 B at the stop, low-water
+116,400 B; scene/config both 8, compiled-program counters 0, native rejects 0.
+This predates the new GX compiler: 6439AF51 is the frozen old implementation.
+The sampler stopped on its exception trap, not a timeout. The remaining
+qualification is blocked for this case by the malformed animation pointer;
+trace and fix its producer while advancing other stage coverage. No control
+timing or stage PASS is claimed from the failed attempt. Compiler host checks
+now cover every corner/patch/stack for all 1,759 VS triangles (13 tests passed).
+
+The Inishie producer defect is now bounded and fixed in the current source:
+its scene-normalized AObjEvent32 capacity was 1,792 entries while the live
+four-CPU match requires 2,300. Raising only Inishie to 3,072 was exercised for
+all 1,972 gameplay samples (frames 2..1,973) in
+`vs-inishie-cap3072.json`: capacity gkind/limit 8/3,072, 23,552 B allocated,
+high-water 2,300, stage-bound applied, zero normalize/refusal/add-anim
+failures, and 71,612 B heap low-water. The old frame-79 parser fault did not
+recur. This fixes the control blocker; it is not a performance acceptance.
+That same capacity-only run still records 189 pre-existing native stage
+NO_PROGRAM failures, so native-failure closure remains independently owed.
+
+The first all-VS compiled candidate is ROM
+`B5AB7F737E1B033CE5A5C949B00C28676ABB0DF1E24C6AAAD841D071951ECEAB`
+(ELF `0E99344C0D7AF4651886C99B419B2A166AACC4D311CDE36EB14B1A351D3D8172`).
+Every stage probe loaded one compiled program with zero program declines and
+zero packet faults. Representative WORK-H P95 values: Castle 798,848,
+Sector 889,536, Jungle 798,656, Hyrule 678,592, Yoster 1,231,360,
+Dream Land 776,960, Yamabuki 949,376, Inishie 2,009,984 (256 samples), and
+Zebes 1,961,152 (256 samples). The full Inishie run is 2,260,672 P95 and
+remains RED. Jungle's matched 64-frame frozen control is 838,336 P95, so the
+compiled path improves that window by 39,680 ticks, above the documented
+14,080 cross-build floor.
+
+That first compiled build is not the next candidate: its GX body came from the
+general heap. Jungle fell from 49,436 B control heap low-water to 21,364 B,
+almost exactly its 28,060-byte compiled body. Post-run source therefore
+partitions the four fighter packet arena into four 6,528-word regions and
+uses its contiguous 36,992-byte tail for the stage GX body. The largest
+current body is Yamabuki at 36,296 B. Lean packet capacity remains above the
+measured all-roster high-water. These framebuffer-tail/dynamic-region edits
+postdate the B5AB7F73 ELF and have not yet been measured. Current host gates:
+stage GX 13/13, native-stage blob 17 tests + 26 subtests, GBI fixtures PASS,
+architecture PASS. Next action is one serialized current-source build, then
+paired Jungle heap/timing and Inishie/Zebes stage probes before advancing the
+cursor to MISC.
+
+Recovery reconciliation on 2026-09-25 found that the interrupted turn had
+already completed the tail build and Jungle probe. The retained ROM is
+`9F69CA392F5CA32399C68E8D7C895CA5C8F0EFE482C197393EC23CDBDFBD1A3B`
+(ELF `A0148EBAB0298D287E91065DB459BA2ADA0D76C2B11B8E280EEA84E7083128DE`),
+native-only with 261 link inputs. Its all-VS configuration hash remained
+`E7EC235BA79CB3EC027AAEB601C5206564E627FED3077A8AC882F77098F7EE25`.
+Current-ROM probes close the framebuffer-tail check:
+
+* Jungle, 64 samples: WORK-H P50/P95 702,656 / 801,856 ticks; STG
+  288,256 / 290,432; heap low-water 49,436 B, restoring the old-path
+  control low-water instead of the first compiled build's 21,364 B. Program
+  bytes 28,060; zero program declines, packet faults/declines and native
+  failures.
+* Inishie, 256 samples: WORK-H P50/P95 1,216,384 / 2,603,328; STG
+  242,688 / 247,360; heap low-water 101,572 B; VBlank histogram
+  2:62, 3:141, 4:37, 5+:17. One compiled program loaded; zero program
+  declines, packet faults/declines and native failures.
+* Zebes, 256 samples: WORK-H P50/P95 990,848 / 2,165,120; STG
+  263,872 / 266,560; heap low-water 58,732 B. One compiled program loaded;
+  zero program declines, packet faults/declines and native failures.
+
+Verdict: **KEEP / IMPLEMENTED_NOT_ACCEPTED** for the all-VS compiled stage
+path plus framebuffer-tail storage. The storage regression is closed and the
+compiled route engages on the difficult sibling stages, but Inishie and Zebes
+remain far above the product P95/cadence gate. Continue Phase 2 with MISC;
+their current profiles make effect/particle work the next measured target.
+
+### 2026-09-25: B3 exact MISC partition and MINS
+
+Recovery found B3 partially wired from the interrupted turn. The completed
+partition adds MCAM as the exact non-flush draw-shell remainder after the
+disjoint MWPN/MITM/MEFX/MACT/MPRT/MCAP/MPRO spans; MTEX is deliberately an
+overlay because its upload time is nested in those spans. The 256-row
+b3-census-on-rows.csv run conserves exactly on every frame:
+
+MISC = MWPN + MITM + MEFX + MACT + MPRT + MCAP + MPRO + MCAM + MFLS
+
+Maximum and mean conservation error are both 0 ticks. Census-on P50/P95:
+MISC 161,920 / 320,832; MEFX 58,816 / 167,616; MPRO 28,992 / 48,576;
+MCAM 26,752 / 29,824; MPRT 22,528 / 44,224; MCAP 20,992 / 25,344.
+The census-on ROM is
+33DEAE8932CEA76E180288E1DD50E297FCCD23F0762616A6832820E5177B2D30
+(ELF 0F85C84D3AB0DE6369E7A1C8565270018A44D1410D857F87E7FE37C4A5DFE3DC).
+
+MINS rebuilt the same target with NDS_P2_EFFECT_CENSUS=0; the NitroFS is
+byte-population identical at 404 files / 29,066,719 bytes. Off-arm ROM is
+7D54806A5A776DC4FD3EA8A3F7F2B23E9866C902AB8DD60C17843805A99AFF3D
+(ELF C57D2BEC70FD45B99A41AF0D0E458D4BF61AAB3313818C921C71D1BCC2A432CC).
+Both arms contain 256 rows and both conserve MISC with zero error. The local
+effect bucket improves in the off arm: MEFX mean 61,146.0 -> 55,020.2 ticks
+(-6,125.8), P50 58,816 -> 52,544, P95 167,616 -> 157,568. Whole-frame
+WORK-H P95 is 1,752,320 on vs 1,827,904 off and 142/256 replay digest rows
+differ, so this short cross-build pair does not establish a whole-frame gain.
+The census is instrumentation only; the shipping default is therefore off.
+Advance the cursor to M1 NDL/ImpactWave/DamageSlash.

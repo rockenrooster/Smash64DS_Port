@@ -423,7 +423,8 @@ static void __attribute__((unused)) ndsRendererNativeQuadGuardDepth(
 static s32 __attribute__((noinline, noclone)) ndsRendererNativeTexturedQuadGraded(
     const NDSRendererInputVertex vertices[4], const u16 indices[6],
     const u8 *image, const u8 *tlut, const NDSRendererConfig *config,
-    NDSRendererStats *stats, NDSRendererTraversalState *state)
+    NDSRendererStats *stats, NDSRendererTraversalState *state,
+    u32 resident_texture)
 {
     const NDSRendererTileState *tile;
     u32 material_color, use_material, use_vertex, alpha, tri, poly_fmt;
@@ -434,7 +435,11 @@ static s32 __attribute__((noinline, noclone)) ndsRendererNativeTexturedQuadGrade
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
     tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
-    if (image != NULL)
+    if (resident_texture != 0u)
+    {
+        ndsRendererHardwareBindTextureName(stats, resident_texture);
+    }
+    else if (image != NULL)
     {
         NDSGradedQuadFill fill;
 
@@ -448,7 +453,7 @@ static s32 __attribute__((noinline, noclone)) ndsRendererNativeTexturedQuadGrade
             (tlut != NULL) ? 0u : (stats->prim_color & 0xffffff00u),
             (tlut != NULL) ? 0u : (stats->env_color & 0xffffff00u));
     }
-    if ((graded == FALSE) &&
+    if ((resident_texture == 0u) && (graded == FALSE) &&
         (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)) return -1;
     alpha = ndsRendererHardwareAlpha(stats, &vertices[0]);
     if (alpha == 0u) return 0;
@@ -498,20 +503,20 @@ static s32 ndsRendererNativeTexturedQuad(
     const NDSRendererConfig *config, NDSRendererStats *stats,
     NDSRendererTraversalState *state)
 {
-    return ndsRendererNativeTexturedQuadGraded(vertices, indices, NULL, NULL, config, stats, state);
+    return ndsRendererNativeTexturedQuadGraded(vertices, indices, NULL, NULL, config, stats, state, 0u);
 }
 static s32 __attribute__((unused)) ndsRendererNativeTexturedQuadIa8(
     const NDSRendererInputVertex vertices[4], const u16 indices[6],
     const u8 *ia8_image, const NDSRendererConfig *config,
     NDSRendererStats *stats, NDSRendererTraversalState *state)
 {
-    return ndsRendererNativeTexturedQuadGraded(vertices, indices, ia8_image, NULL, config, stats, state);
+    return ndsRendererNativeTexturedQuadGraded(vertices, indices, ia8_image, NULL, config, stats, state, 0u);
 }
 static s32 __attribute__((unused)) ndsRendererNativeTexturedQuadCi4(
     const NDSRendererInputVertex vertices[4], const u16 indices[6],
     const void *ci4_image, const void *tlut, const NDSRendererConfig *config,
     NDSRendererStats *stats, NDSRendererTraversalState *state)
 {
-    return ndsRendererNativeTexturedQuadGraded(vertices, indices, ci4_image, tlut, config, stats, state);
+    return ndsRendererNativeTexturedQuadGraded(vertices, indices, ci4_image, tlut, config, stats, state, 0u);
 }
 #endif

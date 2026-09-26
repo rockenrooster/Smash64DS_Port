@@ -1,0 +1,54 @@
+[
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-misc-dust-8b4d66ee\\smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "Hash": "8B4D66EE18945BA77036C51C8D1A7B37E8D5083458601C0A344F5D8097B2D7F1"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-misc-dust-8b4d66ee\\smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "Hash": "D5B7CC2467BB88831FCC640F498527CD26E4D8DE845EFD57557C4D25845E441E"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-misc-dust-8b4d66ee\\nds_build_config.h",
+    "Hash": "B93F9170E567B0F5C758D782544A7AD75A730AFF9E01D7F9D3646C8A489782A4"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\import\\battleship_lbparticle.c",
+    "Hash": "80F493C31712505BC386BE8480779ECBC68FD12A6F4050411D350D8D7FB24BFD"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\import\\battleship_scvsbattle.c",
+    "Hash": "620837EBD56D49544C585364DDE568EB3525416E6CAFCDA02CF9674C5C0B53B5"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\port\\renderer_adapter_matrix.c",
+    "Hash": "8F723549F0065F399100EBAD8E9D1F6987D22A99FAE513A779C8653F331A2E27"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\port\\renderer_adapter_stage.c",
+    "Hash": "BB6B6AA4BC2C64AD9C8131DF5816AA422E1D1E245EF80A39FE7881F539EDF147"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_native_damage_fly_mdust.exec.inc",
+    "Hash": "ADB293825E9F95799316ED6D2F7C23A32D1A5D9666728602146C7BAA285537B7"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_native_textured_quad.exec.inc",
+    "Hash": "F33FCC4EA5F4C59CBFF9FDCDFE04D71D2EFD6EE71604D335022B3EAECD150869"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_renderer_textures_effects.c",
+    "Hash": "2E0D671400F4F052BE66F18C8A821CEAE901FF677D1F9F602B1AD661FCD40103"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\include\\nds\\nds_particle_view.h",
+    "Hash": "07B3FD07F6B5FAC4AE3F389D337E87F8B38238E9E484215AFA6BC9033E8BE101"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\include\\nds\\nds_damage_fly_mdust_texture.h",
+    "Hash": "91409A561FCAF34BB0EBA1B1F38AB522F2B825E3DE9BD63CDC9CF1DAFCFAC61A"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\scripts\\3d_vfx\\generate_nds_native_damage_fly_mdust.py",
+    "Hash": "BD96DC91FA8CB80DBA92F4FFF61E581CC31B559A7AD14E1FE54A374188E77C6E"
+  }
+]

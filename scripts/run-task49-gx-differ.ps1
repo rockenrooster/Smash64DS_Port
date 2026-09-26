@@ -20,8 +20,13 @@ Modeled on scripts/capture-fighter-animation-audit.ps1's GDB flow.
 param(
     [string]$MelonDS = '',
     [int]$RunnerSlot = -1,
+    [string]$Target = 'smash64ds-battle-playable-task49-differ-hwtri',
     [string]$Build = 'build-task49-lab',
-    [ValidateRange(0,2)][int]$Owner = 0,    # 0=STAGE, 1=MARIO, 2=FOX
+    # Owner IDs are build-config dependent once optional fighter owners are
+    # compiled in.  Read NDSRendererProfileOwner for the diagnostic build;
+    # EFFECT is appended immediately before COUNT when TASK49 is enabled.
+    [ValidateRange(0,31)][int]$Owner = 0,
+    [string[]]$BootSetGlobals = @(),
     [ValidateRange(1,1000000)][int]$StartFrame = 438,
     [ValidateRange(1,64)][int]$Frames = 8,
     [ValidateRange(60,1800)][int]$TimeoutSeconds = 900,
@@ -34,7 +39,17 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-task49-differ-hwtri'
+$target = $Target
+
+$BootSetGlobals = @($BootSetGlobals |
+    ForEach-Object { $_ -split ',' } |
+    ForEach-Object { $_.Trim() } |
+    Where-Object { $_ -ne '' })
+foreach ($pair in $BootSetGlobals) {
+    if ($pair -notmatch '^[A-Za-z_][A-Za-z0-9_]*\s*=\s*-?[0-9]+$') {
+        throw "-BootSetGlobals expects name=value pairs; got '$pair'."
+    }
+}
 
 if ([string]::IsNullOrWhiteSpace($MelonDS)) {
     $MelonDS = Join-Path $root 'emulators\melonds\melonDS.exe'
@@ -88,10 +103,18 @@ $commands = @(
     'set pagination off',
     'set confirm off',
     'set remotetimeout 15',
-    "target remote 127.0.0.1:$gdbPort",
-    'break ndsBattlePlayableFrameCompleteMarker',
-    'continue'   # first hit
+    "target remote 127.0.0.1:$gdbPort"
 )
+if ($BootSetGlobals.Count -gt 0) {
+    $commands += @('break main', 'continue')
+    foreach ($pair in $BootSetGlobals) { $commands += "set variable $pair" }
+    foreach ($pair in $BootSetGlobals) {
+        $n = ($pair -split '=')[0].Trim()
+        $commands += "printf `"BOOTSETGLOBAL=$n,%u\n`", $n"
+    }
+    $commands += 'delete'
+}
+$commands += @('break ndsBattlePlayableFrameCompleteMarker', 'continue') # first hit
 for ($i = 2; $i -le ($StartFrame - 1); $i++) {
     $commands += 'continue'
 }
@@ -238,4 +261,4 @@ $result = [ordered]@{
 $result | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $json -Encoding utf8
 Write-Output "wrote $json"
 Write-Output ("meta: frame={0} owner={1} entries={2} words={3} overflow={4} fault={5} bindings={6}" -f `
-    $cFrame, $cOwner, $cEntryCount, $cWordCount, $cOverflow, $cFault, $cBinding)
+    $cFrame, $Owner, $cEntryCount, $cWordCount, $cOverflow, $cFault, $cBinding)

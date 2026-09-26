@@ -253,7 +253,13 @@ if ($BootBreak -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
 $bootGlobalLines = @(if ($BootSetGlobals.Count -gt 0) {
     "break $BootBreak"
     'continue'
-    foreach ($pair in $BootSetGlobals) { "set var $pair" }
+    foreach ($pair in $BootSetGlobals) {
+        if ($pair -match '^gNdsMatchConfig[.]gkind\s*=\s*(-?[0-9]+)$') {
+            # This aligned u8 store disconnects the local melonDS GDB stub.
+            # A word write preserves the adjacent rules/type/stage bytes.
+            "set {unsigned int}&gNdsMatchConfig.gkind = (*(unsigned int*)&gNdsMatchConfig.gkind & 0xffffff00) | ($($Matches[1]) & 255)"
+        } else { "set var $pair" }
+    }
     foreach ($pair in $BootSetGlobals) {
         $n = ($pair -split '=')[0].Trim()
         "printf `"BOOTSETGLOBAL=$n,%u\n`", $n"
@@ -324,7 +330,8 @@ $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
                  'WAIT', 'WORK', 'SHDT', 'SWRM',
                  'GCRA', 'SCPU', 'SCAT', 'SPRM',
                  'SINT', 'SPHD', 'SPHC',
-                 'MWPN', 'MEFX', 'MPRT', 'MTEX', 'GPOL', 'GVTX',
+                 'MWPN', 'MITM', 'MEFX', 'MACT', 'MPRT', 'MTEX', 'MCAP', 'MPRO',
+                 'MCAM', 'MFLS', 'GPOL', 'GVTX',
                  'DGSA', 'DGSB')
 # DGSA/DGSB (P2-2p8 Phase 0) are the gameplay replay digest after the undrawn
 # and the drawn logic tick; not ticks, excluded from every total, compared by
@@ -347,7 +354,8 @@ $bucketNames = @('ALL', 'FTR', 'STG', 'BG', 'AUD', 'HUD', 'SRC', 'MISC', 'OTHR',
 # residual and stays derivable as SITR + SPHD + SPHC + SOBJ for regression.
 $srcSubBuckets = @('SHDT', 'SWRM', 'GCRA', 'SCPU', 'SCAT', 'SPRM',
                    'SINT', 'SPHD', 'SPHC',
-                   'MWPN', 'MEFX', 'MPRT', 'MTEX', 'GPOL', 'GVTX',
+                   'MWPN', 'MITM', 'MEFX', 'MACT', 'MPRT', 'MTEX',
+                   'MCAP', 'MPRO', 'MCAM', 'MFLS', 'GPOL', 'GVTX',
                    'DGSA', 'DGSB')
 # Must match enum NDSTickHudNativeOwnerFallbackReason in include/nds/nds_startup.h.
 $fallbackReasons = if ($FallbackCensus) {

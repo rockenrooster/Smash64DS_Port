@@ -81,7 +81,8 @@ param(
     # Names must be plain `u32` globals present in the ELF; the read-back is
     # what turns "the arm did nothing" into "the arm was never set", which is
     # the distinction this row was created by losing.
-    [string[]]$SetGlobals = @()
+    [string[]]$SetGlobals = @(),
+    [ValidateRange(-1,8)][int]$StageKind = -1
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
@@ -127,6 +128,9 @@ $exactTimeCaptureEnabled = ($ExactTimeRemain -gt 0)
 $exactFrameCaptureEnabled =
     (($ExactFirstFrame -ge 0) -or ($ExactSecondFrame -ge 0) -or
      $exactTimeCaptureEnabled)
+if ($StageKind -ge 0 -and -not $exactFrameCaptureEnabled) {
+    throw '-StageKind requires an exact frame or simulation-time capture.'
+}
 if ($exactFrameCaptureEnabled) {
     if ($exactTimeCaptureEnabled) {
         # One lock or the other. Accepting both would leave which one actually
@@ -624,7 +628,7 @@ try {
                            else { $ExactSecondFrame }) `
             -TimeRemain $ExactTimeRemain `
             -FoxCpuMode $FoxCpuMode `
-            -GlobalWrites $SetGlobals
+            -GlobalWrites $SetGlobals -StageKind $StageKind
     } else {
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
         [void][Smash64DSWindowCapture]::SetForegroundWindow(

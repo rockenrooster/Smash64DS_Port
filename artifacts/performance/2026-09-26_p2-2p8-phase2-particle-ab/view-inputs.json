@@ -1,0 +1,14 @@
+[
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-particle-view-608c79ac\\smash64ds-p2-fourcpu-tickhud-hwtri.nds",
+    "Hash": "608C79AC150A39BFF519DF2AEA77271A59C3F368F87B764BFE5E33CC9E561F48"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-particle-view-608c79ac\\smash64ds-p2-fourcpu-tickhud-hwtri.elf",
+    "Hash": "A0C1F679F401F191F2DA6F8FA691300A787C1D50C3709FE89A7AE6FF0409CA56"
+  },
+  {
+    "Path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-particle-view-608c79ac\\nds_build_config.h",
+    "Hash": "B93F9170E567B0F5C758D782544A7AD75A730AFF9E01D7F9D3646C8A489782A4"
+  }
+]

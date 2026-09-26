@@ -159,7 +159,9 @@ def test_native_state_compiler_rejects_unknown_command():
 
 def test_barrel_route_has_no_interpreter_fallback():
     text = (REPO_ROOT / "src/port/reloc_backend_movement.c").read_text()
-    start = text.index("static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(")
-    body = text[start:text.index("\n#endif", start)]
+    start = text.index(
+        "static sb32 ndsStageGCDrawAllLoopSubmitTaruCannDObjForCamera(")
+    body = text[start:text.index(
+        "static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(", start)]
     assert "ndsRendererAdapterSubmitNativeTaruCann(" in body
     assert "SubmitItemDObjTree" not in body

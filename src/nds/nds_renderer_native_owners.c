@@ -3219,6 +3219,16 @@ static void ndsRendererNativeStageEmitClippedVertex(
  * Project each corner with its own live binding matrix, then load its clip
  * x/y/z/w as a one-vertex matrix. Unlike the no-Z path, the clip z is kept in
  * the matrix translation so link-6 depth behavior remains source-owned. */
+static void ndsRendererNativeStageProjectedDepthMatrix(
+    const NDSRendererClipVertex20p12 *clip, NDSRendererMatrix20p12 *matrix)
+{
+    memset(matrix, 0, sizeof(*matrix));
+    matrix->m[3][0] = ndsRendererRoundShiftS32Signed(clip->x, 8u);
+    matrix->m[3][1] = ndsRendererRoundShiftS32Signed(clip->y, 8u);
+    matrix->m[3][2] = ndsRendererRoundShiftS32Signed(clip->z, 8u);
+    matrix->m[3][3] = ndsRendererRoundShiftS32Signed(clip->w, 8u);
+}
+
 static void ndsRendererNativeStageEmitProjectedDepthVertex(
     const NDSRendererProjectedClipVertex *vertex,
     const NDSNativeStagePreparedRun *run)
@@ -3226,11 +3236,7 @@ static void ndsRendererNativeStageEmitProjectedDepthVertex(
     NDSRendererMatrix20p12 matrix;
     m4x4 hardware;
 
-    memset(&matrix, 0, sizeof(matrix));
-    matrix.m[3][0] = ndsRendererRoundShiftS32Signed(vertex->clip.x, 8u);
-    matrix.m[3][1] = ndsRendererRoundShiftS32Signed(vertex->clip.y, 8u);
-    matrix.m[3][2] = ndsRendererRoundShiftS32Signed(vertex->clip.z, 8u);
-    matrix.m[3][3] = ndsRendererRoundShiftS32Signed(vertex->clip.w, 8u);
+    ndsRendererNativeStageProjectedDepthMatrix(&vertex->clip, &matrix);
     ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
     glLoadMatrix4x4(&hardware);
     ndsRendererProfileRecordMatrixLoad();

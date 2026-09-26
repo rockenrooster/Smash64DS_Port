@@ -5,6 +5,7 @@
 
 #include <sys/controller.h>
 #include <sc/scene.h>
+#include <string.h>
 
 #include <nds/nds_controller.h>
 
@@ -63,8 +64,99 @@ extern void ndsBaseGcSetupObjman(GCSetup *setup);
 #define NDS_GC_EFFECT_ARENA_FLOOR_BYTES 8192u
 volatile u32 gNdsGcEffectArenaFloorRefusals;
 
+#define NDS_GC_NDL_SERIAL_SLOTS 128u
+typedef struct NDSGcNdlSerialSlot
+{
+    const GObj *gobj;
+    u32 serial;
+} NDSGcNdlSerialSlot;
+
+static NDSGcNdlSerialSlot sNdsGcNdlSerialSlots[NDS_GC_NDL_SERIAL_SLOTS];
+static u32 sNdsGcNdlNextSerial = 1u;
+volatile u32 gNdsGcNdlLifetimeStampCount;
+volatile u32 gNdsGcNdlLifetimeReuseCount;
+volatile u32 gNdsGcNdlLifetimeReuseGObj;
+volatile u32 gNdsGcNdlLifetimeReuseOldSerial;
+volatile u32 gNdsGcNdlLifetimeReuseNewSerial;
+volatile u32 gNdsGcNdlLifetimeStampKindCount[4];
+volatile u32 gNdsGcNdlLifetimeReuseKindCount[4];
+
+static sb32 ndsGcIsNdlLifetimeKind(u32 id)
+{
+    return ((id == nGCCommonKindEffect) ||
+            (id == nGCCommonKindWeapon) ||
+            (id == nGCCommonKindItem) ||
+            (id == nGCCommonKindGround)) ? TRUE : FALSE;
+}
+
+static void ndsGcRecordNdlLifetime(GObj *gobj)
+{
+    u32 slot;
+    u32 kind_index;
+    u32 old_serial;
+    u32 new_serial;
+
+#if NDS_RENDERER_HW_TRIANGLES
+    extern volatile u32 gNdsP2Ndl;
+
+    if ((gNdsP2Ndl == 0u) || (gobj == NULL))
+    {
+        return;
+    }
+#else
+    (void)gobj;
+    return;
+#endif
+    switch (gobj->id)
+    {
+    case nGCCommonKindEffect: kind_index = 0u; break;
+    case nGCCommonKindWeapon: kind_index = 1u; break;
+    case nGCCommonKindItem:   kind_index = 2u; break;
+    case nGCCommonKindGround: kind_index = 3u; break;
+    default: return;
+    }
+    slot = ((uintptr_t)gobj >> 4) & (NDS_GC_NDL_SERIAL_SLOTS - 1u);
+    old_serial = (sNdsGcNdlSerialSlots[slot].gobj == gobj) ?
+        sNdsGcNdlSerialSlots[slot].serial : 0u;
+    if (sNdsGcNdlNextSerial == 0u)
+    {
+        sNdsGcNdlNextSerial = 1u;
+    }
+    new_serial = sNdsGcNdlNextSerial++;
+    if (old_serial != 0u)
+    {
+        gNdsGcNdlLifetimeReuseCount++;
+        gNdsGcNdlLifetimeReuseGObj = (u32)(uintptr_t)gobj;
+        gNdsGcNdlLifetimeReuseOldSerial = old_serial;
+        gNdsGcNdlLifetimeReuseNewSerial = new_serial;
+        gNdsGcNdlLifetimeReuseKindCount[kind_index]++;
+    }
+    gNdsGcNdlLifetimeStampCount++;
+    gNdsGcNdlLifetimeStampKindCount[kind_index]++;
+    /* O(1) is part of the witness contract: this runs in the display hot path.
+     * A hash collision is deliberately a safe false negative for the displaced
+     * object, whose lookup then returns zero and uses its source draw. */
+    sNdsGcNdlSerialSlots[slot].gobj = gobj;
+    sNdsGcNdlSerialSlots[slot].serial = new_serial;
+}
+
+u32 ndsGcGetGObjLifetimeSerial(const GObj *gobj)
+{
+    u32 slot;
+
+    if (gobj == NULL)
+    {
+        return 0u;
+    }
+    slot = ((uintptr_t)gobj >> 4) & (NDS_GC_NDL_SERIAL_SLOTS - 1u);
+    return (sNdsGcNdlSerialSlots[slot].gobj == gobj) ?
+        sNdsGcNdlSerialSlots[slot].serial : 0u;
+}
+
 GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
 {
+    GObj *gobj;
+
     if ((id == nGCCommonKindEffect) &&
         (gSYTaskmanGeneralHeap.ptr != NULL) &&
         (((uintptr_t)gSYTaskmanGeneralHeap.end -
@@ -73,7 +165,12 @@ GObj *gcMakeGObjSPAfter(u32 id, void (*func_run)(GObj*), u8 link, u32 priority)
         gNdsGcEffectArenaFloorRefusals++;
         return NULL;
     }
-    return ndsBaseGcMakeGObjSPAfter(id, func_run, link, priority);
+    gobj = ndsBaseGcMakeGObjSPAfter(id, func_run, link, priority);
+    if ((gobj != NULL) && (ndsGcIsNdlLifetimeKind(id) != FALSE))
+    {
+        ndsGcRecordNdlLifetime(gobj);
+    }
+    return gobj;
 }
 
 /* Size the GObj thread stack pool for a DS coroutine, once, for every scene.
@@ -221,6 +318,9 @@ void gcSetupObjman(GCSetup *setup)
     sNdsBattleIdleScratchBytes = 0u;
     gNdsBattleIdleScratchServedBytes = 0u;
     u32 aobj_pool_count = NDS_R2_AOBJ_POOL_COUNT;
+
+    memset(sNdsGcNdlSerialSlots, 0, sizeof(sNdsGcNdlSerialSlots));
+    sNdsGcNdlNextSerial = 1u;
 
 #if NDS_FT_POSE
     if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&

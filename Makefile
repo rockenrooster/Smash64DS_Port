@@ -137,6 +137,10 @@ NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
 NDS_SHIP_TELEMETRY ?= 1
 NDS_TICK_HUD ?= 0
+# P2-2p8 Phase 2 B3/MINS. The old G3 effect packet/census code hashes every
+# emitted GX word and brackets per-vertex/per-triangle work. Keep that retired
+# experiment selectable so a tick-HUD performance ROM can compile it out.
+NDS_P2_EFFECT_CENSUS ?= 0
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
 # gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
 # (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
@@ -3475,6 +3479,41 @@ override NDS_RENDERER_PROFILE_LEVEL := 1
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
+# Keep the differ on the same accepted battle/runtime program it is comparing.
+# This target is intentionally separate from the profile-0 proof/tick-HUD block
+# above, so it has to carry that block's renderer prerequisites explicitly.
+override NDS_R2_PATH := 1
+override NDS_R2_FIGHTER_HW_MTX := 1
+override NDS_R2_FIGHTER_GX_COMPOSE := 1
+override NDS_R2_STAGE_VALIDATE_STRIDE := 8
+override NDS_R2_FIGHTER_HW_LIGHT := 1
+override NDS_R2_FIGHTER_SHUFFLE_FOLD := 1
+override NDS_R2_CUBIC_FIXED := 1
+override NDS_R2_DELTA_PATH_ITCM := 1
+override NDS_R2_ANIM_CACHE := 1
+override NDS_R2_AOBJ16_PREBAKE := 1
+override NDS_BATTLE_PROFILE := 1
+override NDS_TASK44_STAGE_STEADY := 1
+override NDS_R2_STAGE_DIRECT := 1
+override NDS_R2_STAGE_DMA := 1
+override NDS_R2_STAGE_VIEWPROJ := 1
+override NDS_R2_STAGE_PREFLIGHT := 1
+override NDS_R2_FIGHTER_MTX_DIRECT := 1
+override NDS_R2_FIGHTER_RUN_MEMO := 1
+override NDS_SCENE_MIP_CACHE_LAB := 0
+override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
+override NDS_IFCOMMON_HYBRID_OAM := 0
+override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
+override NDS_TASK16_FLOAT_COMPARE := 1
+override NDS_TASK16_FLOAT_I2F := 1
+override NDS_TASK16_FLOAT_ADDSUB := 1
+override NDS_TASK32_DRAW_HOT_TEXT := 1
+override NDS_TASK39_FX_SPRITES := 1
+override NDS_TASK39_FX_FLASH := 1
+# Profile-1 keeps the reloc symbol registry live.  Its ITCommonData rows include
+# the Star Rod weapon-attribute symbol, whose owning definition deliberately
+# lives in the shared item core rather than the generic reloc diagnostics TU.
+override NDS_P2_ITEM_CORE := 1
 override NDS_TASK49_GX_DIFFER := 1
 # Task 55 E2: the differ target keeps the replay path live (Task 53) so the
 # Task 55 elision can be captured. NDS_TASK55_STAGE_GEOM stays command-line
@@ -6459,6 +6498,17 @@ NDS_NATIVE_THUNDERJOLTFX_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_nat
 NDS_NATIVE_THUNDERJOLTFX_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderjolt_effect.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wppikachu/wppikachuthunderjolt.c
 NDS_NATIVE_DAMAGE_SLASH_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_damage_slash.generated.inc
 NDS_NATIVE_DAMAGE_SLASH_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_damage_slash.generated.h
+NDS_NATIVE_DAMAGE_FLY_MDUST_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_damage_fly_mdust.generated.inc
+NDS_NATIVE_DAMAGE_FLY_MDUST_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_damage_fly_mdust.generated.h
+NDS_NATIVE_DAMAGE_FLY_MDUST_PREREQ := \
+	$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_native_damage_fly_mdust.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efdef.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objtypes.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/83_EFCommonEffects1.c \
+	$(BATTLESHIP_O2R)/reloc_effects/EFCommonEffects1
 NDS_NATIVE_DAMAGE_SLASH_PREREQ := 	$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_damage_slash.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/83_EFCommonEffects1.c 	$(BATTLESHIP_O2R)/reloc_effects/EFCommonEffects1
 NDS_NATIVE_THUNDERJOLT_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunderjolt.generated.inc
 NDS_NATIVE_THUNDERJOLT_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunderjolt.generated.h
@@ -6619,6 +6669,13 @@ $(NDS_NATIVE_DAMAGE_SLASH_PACKET) $(NDS_NATIVE_DAMAGE_SLASH_HEADER) &: $(NDS_NAT
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_damage_slash.py" --emit
 	@touch $(NDS_NATIVE_DAMAGE_SLASH_PACKET) $(NDS_NATIVE_DAMAGE_SLASH_HEADER)
 
+$(NDS_NATIVE_DAMAGE_FLY_MDUST_PACKET) $(NDS_NATIVE_DAMAGE_FLY_MDUST_HEADER) &: $(NDS_NATIVE_DAMAGE_FLY_MDUST_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_native_damage_fly_mdust.py" --emit
+	@touch $(NDS_NATIVE_DAMAGE_FLY_MDUST_PACKET) $(NDS_NATIVE_DAMAGE_FLY_MDUST_HEADER)
+
+nds_renderer.o: $(NDS_NATIVE_DAMAGE_FLY_MDUST_PACKET) $(NDS_NATIVE_DAMAGE_FLY_MDUST_HEADER)
+scene_backend.o: $(NDS_NATIVE_DAMAGE_FLY_MDUST_HEADER)
+
 $(NDS_NATIVE_ITEM_TOMATO_PACKET) $(NDS_NATIVE_ITEM_TOMATO_HEADER) &: $(NDS_NATIVE_ITEM_TOMATO_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_tomato.py" --emit
 	@touch $(NDS_NATIVE_ITEM_TOMATO_PACKET) $(NDS_NATIVE_ITEM_TOMATO_HEADER)
@@ -6744,6 +6801,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
 		echo '#define NDS_SHIP_TELEMETRY $(NDS_SHIP_TELEMETRY)'; \
 		echo '#define NDS_TICK_HUD $(NDS_TICK_HUD)'; \
+		echo '#define NDS_P2_EFFECT_CENSUS $(NDS_P2_EFFECT_CENSUS)'; \
 		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
 		echo '#define NDS_IF_GAMESTATUS_COMPACT $(NDS_IF_GAMESTATUS_COMPACT)'; \
 		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
@@ -8045,11 +8103,12 @@ $(NITROFS_DIR)/stages/native_stage_%.bin: $(NDS_NATIVE_STAGE_BLOB_DIR)/native_st
 	@cp $< $@
 
 # Phase 2 GX templates live on NitroFS; no duplicated template slab in main RAM.
-NDS_STAGE_GX_FILE := $(NITROFS_DIR)/stages/dreamland.gxp
-$(NDS_STAGE_GX_FILE): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ) $(PROJECT_ROOT)/scripts/stages/compile_nds_stage_gx.py
+NDS_STAGE_GX_STAGES := castle sector jungle zebes hyrule yoster dreamland yamabuki inishie
+NDS_STAGE_GX_FILES := $(foreach stage,$(NDS_STAGE_GX_STAGES),$(NITROFS_DIR)/stages/$(stage).gxp)
+$(NITROFS_DIR)/stages/%.gxp: $(NDS_NATIVE_STAGE_GENERATOR_PREREQ) $(PROJECT_ROOT)/scripts/stages/compile_nds_stage_gx.py
 	@mkdir -p $(dir $@)
-	python "$(PROJECT_ROOT)/scripts/stages/compile_nds_stage_gx.py" --output "$@"
-$(OUTPUT).nds: $(NDS_STAGE_GX_FILE)
+	python "$(PROJECT_ROOT)/scripts/stages/compile_nds_stage_gx.py" --stage $* --output "$@"
+$(OUTPUT).nds: $(NDS_STAGE_GX_FILES)
 # Under src/nds/generated/ because that whole directory is gitignored (.gitignore
 # line 39); at src/nds/ the header matched no ignore pattern (the neighbouring
 # rule only covers nds_native_stage_*.generated.inc) and would have shown up
