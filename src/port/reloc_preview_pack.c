@@ -537,7 +537,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     load->allocation = header.data_bytes +
         header.section_count * sizeof(sections[0]) +
         header.span_count * sizeof(NDSPreviewPackSpan);
-    load->data = syTaskmanMalloc(load->allocation, 16u);
+    load->data = ndsSceneAssetAlloc(load->allocation, 16u);
     if (load->data == NULL) { ndsPreviewPackLoadHalt(5u, fkind); }
     ndsFsUnlock();
     load->file = file;

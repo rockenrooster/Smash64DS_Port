@@ -30,9 +30,9 @@ are exact; reserve free 204,752 B versus required 183,072 B. Current receipt:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Next: Phase 3 A7/A2. Heavy `1E3A5E9D` halts on Link's 33,520 B FPC allocation
-with 20,316 B free; arena 896,512 B, full deficit unsized. No live build/emulator.
-Up to eight Luna Max helpers audit overlays/MF; root owns edits/builds/timing.
+Phase 3 A7 overlay `39790FA2` loans 184,112 B; three heavy fighters now load,
+then Kirby asset348 fails at 6,210 B free. Next: more non-VS code reclamation;
+receipt `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 
 ## Continue, do not restart
 

@@ -2,6 +2,7 @@
 
 #include <nds/nds_os.h>
 #include <nds/nds_scene_manager.h>
+#include <nds/nds_frontend_overlay.h>
 #include <nds/nds_particle_runtime.h>
 #include <sc/scene.h>
 #include <sys/malloc.h>
@@ -335,6 +336,7 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
 
     gNdsSceneManagerPrevKind = (u32)gSCManagerSceneData.scene_prev;
     gNdsSceneManagerCurrKind = kind;
+    ndsFrontendOverlayBeginScene(kind);
     gNdsSceneManagerCurrIsBattle =
         ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u)) ?
         1u : 0u;
@@ -383,6 +385,7 @@ void ndsSceneManagerExit(void)
     gNdsSceneManagerRingArenaHigh[sNdsSceneManagerRingIndex] = high;
     gNdsSceneManagerRingArenaFree[sNdsSceneManagerRingIndex] = freed;
     gNdsSceneManagerExitCount++;
+    ndsFrontendOverlayEndScene();
     gNdsSceneManagerCurrIsBattle = 0u;
     if (sNdsSceneManagerDepth != 0u)
     {

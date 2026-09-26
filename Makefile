@@ -4049,6 +4049,8 @@ CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 NDS_HOT_TEXT_SPECS := $(PROJECT_ROOT)/linker/ds9_hot_text.specs
 NDS_HOT_TEXT_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_hot_text.ld
+NDS_MEMORY_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_memory.ld
+NDS_FRONTEND_OVERLAY_LINKER_SCRIPT := $(PROJECT_ROOT)/linker/nds_frontend_overlay.ld
 NDS_TASK32_DRAW_HOT_FRAGMENT := $(PROJECT_ROOT)/$(BUILD)/nds_task32_draw_hot.inc
 NDS_TASK39_HIT_SPARKS_INC := $(PROJECT_ROOT)/src/nds/generated/task39_hit_sparks.generated.inc
 NDS_TASK39_HIT_SPARKS_ASSET := $(PROJECT_ROOT)/assets/effects/task39_hit_sparks.rgb5a1.bin
@@ -4203,7 +4205,9 @@ NDS_MN_UI_SURFACE_ASSET := $(PROJECT_ROOT)/assets/menus/mn_surfaces.bin
 NDS_MN_TITLE_ANIM_INC := \
 	$(PROJECT_ROOT)/src/nds/generated/mn_title_anim.generated.inc
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
-	-Wl,-Map,$(notdir $*.map),--gc-sections \
+	-Wl,-Map,$(notdir $*.map),--gc-sections,--emit-relocs \
+	-Wl,-T,$(NDS_MEMORY_LINKER_SCRIPT) \
+	-Wl,-T,$(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
 ifeq ($(NDS_TASK16_FLOAT_COMPARE),1)
 LDFLAGS += -Wl,--undefined=__nds_task9_libgcc_fcmpeq_golden \
@@ -4326,7 +4330,7 @@ CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_re
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c video_blackout.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
-	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c utils.c vector.c nds_replay_digest.c \
+	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c nds_frontend_overlay.c utils.c vector.c nds_replay_digest.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \
 	battleship_sys_objhelper.c battleship_sys_objanim.c \
@@ -7361,6 +7365,14 @@ native-only-rom-check: $(OUTPUT).elf
 	@python "$(PROJECT_ROOT)/scripts/check_native_only_rom.py" --elf "$(OUTPUT).elf" --objects-list "$(CURDIR)/native-rom-objects.list" --build-dir "$(CURDIR)"
 $(OUTPUT).nds: | native-only-rom-check
 
+# A reclaimed frontend range must never be reached by battle code. Review
+# exact resident callback/entry pairs, and keep this gate before packaging.
+.PHONY: frontend-overlay-rom-check
+frontend-overlay-rom-check: $(OUTPUT).elf
+	@python "$(PROJECT_ROOT)/scripts/check_frontend_overlay.py" "$(OUTPUT).elf" $(if $(filter 1,$(NDS_P2_MENU_SHELL)),--required,) --allowlist "$(PROJECT_ROOT)/scripts/frontend_overlay_allowlist.json" --json "$(CURDIR)/frontend-overlay-check.json" > "$(CURDIR)/frontend-overlay-check.log" || { cat "$(CURDIR)/frontend-overlay-check.log"; exit 1; }
+	@echo FRONTEND_OVERLAY_PASS: $(notdir $(OUTPUT).elf)
+$(OUTPUT).nds: | frontend-overlay-rom-check
+
 # Custom lab output roots need not exist yet. Directory timestamps never
 # invalidate the ELF; this only ensures the linker can create its output.
 $(OUTPUT).elf: | $(dir $(OUTPUT))
@@ -7368,7 +7380,7 @@ $(dir $(OUTPUT)):
 	@mkdir -p "$@"
 
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
-	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
+	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) $(NDS_MEMORY_LINKER_SCRIPT) $(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_ENTRY_EFFECT_INC) \
 	$(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) \

@@ -1,5 +1,6 @@
 /* Compile the original BattleShip scene manager translation unit. */
 #include <nds/nds_scene_harness.h>
+#include <nds/nds_frontend_overlay.h>
 
 #define scManagerRunLoop ndsBaseSCManagerRunLoop
 

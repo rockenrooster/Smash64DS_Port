@@ -4863,7 +4863,7 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
     }
     else
     {
-        buffer = syTaskmanMalloc(bytes, 0x10u);
+        buffer = ndsSceneAssetAlloc(bytes, 0x10u);
     }
     if (buffer == NULL)
     {

@@ -1,0 +1,79 @@
+{
+  "status": "IMPLEMENTED_NOT_ACCEPTED_CAPACITY_RED",
+  "baseCommit": "ab7bcec472905cf41b9e60c3439b7239d592d3c5",
+  "identity": [
+    {
+      "path": "builds\\p2p8-frontend-overlay-39790fa2\\smash64ds-p2-shell-freeplay-hwtri.nds",
+      "sha256": "39790FA258E8DB84DAA6F123B39058E7119CA95AB845B6E97863347D8DDFA483"
+    },
+    {
+      "path": "builds\\p2p8-frontend-overlay-39790fa2\\smash64ds-p2-shell-freeplay-hwtri.elf",
+      "sha256": "710A7864C5E581652B89F1C2D7E7585162776668E1EAD686F1578280FE31A1D7"
+    },
+    {
+      "path": "builds\\p2p8-frontend-overlay-39790fa2\\nds_build_config.h",
+      "sha256": "B1EB16D28E40CF20393BD4ABBC7E4CCDF427E179EE8E62BF20D142105CA0D58C"
+    },
+    {
+      "path": "builds\\p2p8-frontend-overlay-39790fa2\\frontend-overlay-check.json",
+      "sha256": "43E73F5F019DD72D0AE827A7575AF2D57AF7F84257A92C9EA86C33EFA69950A8"
+    }
+  ],
+  "sourceOverlay": "A7 VS-only frontend text/rodata overlay; persistent menu data/BSS; shared frame guards resident; asset-pool loan",
+  "writerSession": 24598,
+  "writerExit": 0,
+  "runner": 7,
+  "battleFrames": 0,
+  "arenaBytes": 896512,
+  "roster": [
+    "Captain human",
+    "Link CPU",
+    "Pikachu CPU",
+    "Kirby CPU"
+  ],
+  "battleFightersMade": 3,
+  "failureKind": 8,
+  "failureAsset": 348,
+  "failureOwner": "ndsRelocEnsureLoadedAsset",
+  "packHaltReason": 14,
+  "headroomBytes": 6210,
+  "loanBytes": 184128,
+  "loanUsedBytes": 184112,
+  "loanAllocations": 15,
+  "loanSpillBytes": 94040,
+  "loadCount": 1,
+  "loadFailCount": 0,
+  "lowWaterValid": false,
+  "fullMatchDeficit": null,
+  "rawLog": "builds/p2-phase3-overlay-heavy-probe.txt",
+  "rawLogSha256": "16D3CA3BEA08D44B1686458112B7ECE5ED79CD69674008DD381C5A376B4FA600",
+  "markers": [
+    "FOURKIND FTINIT gobj=0x023d1ff0 fkind=7 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023d5c18 fkind=5 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023d8d10 fkind=9 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023dc2f8 fkind=8 copy=8 kirbymm=0x021b88e8 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023d1ff0 fkind=7 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023d5c18 fkind=5 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023d8d10 fkind=9 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND FTINIT gobj=0x023dc2f8 fkind=8 copy=8 kirbymm=0x021b88e8 kirbycopyoff=0x00000000",
+    "FOURKIND MAKE hit=9 scene=22 free=221488",
+    "FOURKIND FTINIT gobj=0x023ad2f0 fkind=7 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND MAKE hit=10 scene=22 free=150736",
+    "FOURKIND FTINIT gobj=0x023bd9d0 fkind=5 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND MAKE hit=11 scene=22 free=79424",
+    "FOURKIND FTINIT gobj=0x023cfdc0 fkind=9 copy=8 kirbymm=0x00000000 kirbycopyoff=0x00000000",
+    "FOURKIND EXTERNFAIL asset=348 caller=0x0207aaf1 scene=22 free=6210",
+    "FOURKIND PACKHALT reason=14 kind=8 scene=22 free=6210",
+    "FOURKIND STOP pc=0x206d1f8 lr=0x206d26b commit=2 setup=0 make=11 batt=0",
+    "FOURKIND ARENA chosen=896512 allocfail=196 heapgen=9 start=0x02305c00 ptr=0x023df1be end=0x023e0a00 free=6210 overflow=0",
+    "FOURKIND ROSTER s0=0x070003 s1=0x050103 s2=0x090103 s3=0x080103",
+    "FOURKIND LOWWATER generalfreemin=4294967295 gfxpeak=0 gfxcap=0 gfxoverflow=0 gfxnoroom=0",
+    "FOURKIND RELOC heapdeclines=1 externfails=0 firstasset=348 firstlr=0x0207aaf1 lastlr=0x0207aaf1",
+    "FOURKIND OVERLAY loads=1 loadfails=0 bytes=184128 loans=1 loanbytes=184128 used=184112 allocs=15 spill=94040"
+  ],
+  "limits": [
+    "No gameplay frame; no timing or fidelity acceptance",
+    "Final externfails counter reports 0 despite observed asset348 failure breakpoint; not a clean-failure assertion",
+    "Natural CSS exact captures, menu reload and final integrated coverage remain owed"
+  ]
+}

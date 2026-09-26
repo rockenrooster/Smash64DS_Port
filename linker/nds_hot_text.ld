@@ -8,22 +8,7 @@
 OUTPUT_ARCH(arm)
 ENTRY(__ds9_bootstub)
 
-MEMORY {
-	/* Physical binaries loaded from ROM (LMAs) */
-	lma9    : ORIGIN = 0x2004000, LENGTH = 0x27c000
-	lma9i   : ORIGIN = 0x2400000, LENGTH = 0x280000
-
-	/* Runtime memory layout for code/data areas (VMAs) */
-	vectors : ORIGIN = 0x0000000, LENGTH = 0x20     /* Vectors */
-	itcm    : ORIGIN = 0x1ff8020, LENGTH = 0x7fe0   /* ITCM (minus vectors) */
-	main    : ORIGIN = 0x2001000, LENGTH = 0xf7f000 /* Main RAM (usable area for ARM9) */
-	dtcm    : ORIGIN = 0x2ff0000, LENGTH = 0x3e80   /* DTCM (minus stacks/reserved BIOS memory) */
-	dldi    : ORIGIN = 0x380b000, LENGTH = 0x4000   /* DLDI (on ARM7 WRAM) */
-	stub    : ORIGIN = 0xe000000, LENGTH = 0x4000   /* Fake bootstub memory */
-
-	/* Special TLS address space */
-	tls     : ORIGIN = 0, LENGTH = 1K
-}
+/* MEMORY is owned by nds_memory.ld, passed first by the Makefile. */
 
 PHDRS {
 	/* ELF program headers for the ARM9 binary */

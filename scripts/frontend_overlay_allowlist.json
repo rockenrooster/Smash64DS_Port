@@ -1,0 +1,566 @@
+{
+  "schema_version": 1,
+  "scope": "A7 frontend text/rodata; only VS borrows the overlay. Mutable state remains resident.",
+  "pairs": [
+    {
+      "source_symbol": "crt0Startup",
+      "target_symbol": "__heap_start_ntr",
+      "reason": "Allocator boundary address at the end of the overlay, never an overlay-code call."
+    },
+    {
+      "source_symbol": "dMN1PContinueTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameContinueFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMN1PContinueTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameContinueFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMN1PModeTaskmanSetup",
+      "target_symbol": "battleship_mn1pmode.c::ndsMN1PModeDraw",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMN1PModeTaskmanSetup",
+      "target_symbol": "mn1PModeFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMN1PModeTaskmanSetup",
+      "target_symbol": "mn1PModeFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNCharactersTaskmanSetup",
+      "target_symbol": "mnCharactersFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNCharactersTaskmanSetup",
+      "target_symbol": "mnCharactersFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNCongraTaskmanSetup",
+      "target_symbol": "mnCongraFuncDraw",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNCongraTaskmanSetup",
+      "target_symbol": "mnCongraFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNCongraTaskmanSetup",
+      "target_symbol": "mnCongraFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNMapsTaskmanSetup",
+      "target_symbol": "mnMapsFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNMapsTaskmanSetup",
+      "target_symbol": "ndsBaseMNMapsFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNMessageTaskmanSetup",
+      "target_symbol": "mnMessageFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNMessageTaskmanSetup",
+      "target_symbol": "mnMessageFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+      "target_symbol": "mnPlayers1PBonusFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+      "target_symbol": "mnPlayers1PBonusFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+      "target_symbol": "battleship_mnplayers1pgame.c::ndsMNPlayers1PGameDraw",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayers1PGameTaskmanSetup",
+      "target_symbol": "mnPlayers1PGameFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayersVSTaskmanSetup",
+      "target_symbol": "mnPlayersVSFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayersVSTaskmanSetup",
+      "target_symbol": "ndsBaseMNPlayersVSFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNScreenAdjustTaskmanSetup",
+      "target_symbol": "mnScreenAdjustFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNScreenAdjustTaskmanSetup",
+      "target_symbol": "mnScreenAdjustFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNVSModeTaskmanSetup",
+      "target_symbol": "mnVSModeFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNVSModeTaskmanSetup",
+      "target_symbol": "ndsBaseMNVSModeFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNVSResultsTaskmanSetup",
+      "target_symbol": "mnVSResultsFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNVSResultsTaskmanSetup",
+      "target_symbol": "mnVSResultsFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVEndingTaskmanSetup",
+      "target_symbol": "mvEndingFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVEndingTaskmanSetup",
+      "target_symbol": "mvEndingFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningDonkeyTaskmanSetup",
+      "target_symbol": "mvOpeningDonkeyFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningDonkeyTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningDonkeyFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningFoxTaskmanSetup",
+      "target_symbol": "mvOpeningFoxFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningFoxTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningFoxFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningKirbyTaskmanSetup",
+      "target_symbol": "mvOpeningKirbyFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningKirbyTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningKirbyFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningLinkTaskmanSetup",
+      "target_symbol": "mvOpeningLinkFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningLinkTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningLinkFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningMarioTaskmanSetup",
+      "target_symbol": "mvOpeningMarioFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningMarioTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningMarioFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningPikachuTaskmanSetup",
+      "target_symbol": "mvOpeningPikachuFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningPikachuTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningPikachuFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningPortraitsTaskmanSetup",
+      "target_symbol": "mvOpeningPortraitsFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningPortraitsTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningPortraitsFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningRoomTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningRoomFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningSamusTaskmanSetup",
+      "target_symbol": "mvOpeningSamusFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningSamusTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningSamusFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningYoshiTaskmanSetup",
+      "target_symbol": "mvOpeningYoshiFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMVOpeningYoshiTaskmanSetup",
+      "target_symbol": "ndsBaseMVOpeningYoshiFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
+      "target_symbol": "mnCongraStartScene",
+      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+    },
+    {
+      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
+      "target_symbol": "mnMessageStartScene",
+      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+    },
+    {
+      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
+      "target_symbol": "mnPlayers1PGameContinueStartScene",
+      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+    },
+    {
+      "source_symbol": "ndsBaseSC1PManagerUpdateScene",
+      "target_symbol": "mvEndingStartScene",
+      "reason": "The resident campaign driver is entered through the prepared non-VS scene dispatch. Nested campaign scenes retain the frontend for the full driver call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mn1PModeStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnBackupClearStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnCharactersStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnCongraStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnDataStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnMapsStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnMessageStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnModeSelectStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnOptionStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PBonusStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PGameContinueStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PGameStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayersVSStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnScreenAdjustStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnSoundTestStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnTitleStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSItemSwitchStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSModeStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSOptionsStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSRecordStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnVSResultsStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvEndingStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningDonkeyStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningFoxStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningKirbyStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningLinkStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningMarioStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningPikachuStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningPortraitsStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningRoomStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningSamusStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mvOpeningYoshiStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_end",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_start",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayPrepareDispatch",
+      "target_symbol": "__nds_frontend_end",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayPrepareDispatch",
+      "target_symbol": "__nds_frontend_start",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayTryAlloc",
+      "target_symbol": "__nds_frontend_end",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayTryAlloc",
+      "target_symbol": "__nds_frontend_start",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsOpeningRoomCaptureCloseUpOverlayCreation",
+      "target_symbol": "mvOpeningRoomCloseUpOverlayProcDisplay",
+      "reason": "Opening capture compares a callback address for identity; it never calls the target."
+    },
+    {
+      "source_symbol": "ndsOpeningRoomCapturePencilsCreation",
+      "target_symbol": "mvOpeningRoomCommonProcUpdate",
+      "reason": "Opening capture compares a callback address for identity; it never calls the target."
+    },
+    {
+      "source_symbol": "ndsResultsEmblemRecordCapturedDisplay",
+      "target_symbol": "ndsVSResultsEmblemGObj",
+      "reason": "The caller returns unless scene_curr is VSResults before invoking this getter. Results dispatch reloads the frontend before scene entry."
+    },
+    {
+      "source_symbol": "ndsSceneAssetAlloc",
+      "target_symbol": "__nds_frontend_end",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "ndsSceneAssetAlloc",
+      "target_symbol": "__nds_frontend_start",
+      "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
+    },
+    {
+      "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
+      "target_symbol": "ndsMNVSResultsRecordFrame",
+      "reason": "The resident pump is selected only for Results/source menus in taskman_seam_harness.c; VS uses its separate battle pump. Frontend remains loaded for source menus and nested campaign scenes."
+    },
+    {
+      "source_symbol": "scene_backend.c::ndsSeamRunSourceMenuScene",
+      "target_symbol": "ndsMenuShellWalkDrive1PSourceMenus",
+      "reason": "The resident pump is selected only for Results/source menus in taskman_seam_harness.c; VS uses its separate battle pump. Frontend remains loaded for source menus and nested campaign scenes."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunBackupClear",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunCharSelect",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunCharacters",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunData",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunItemSwitch",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunModeSelect",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunOption",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunSoundTest",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunStageSelect",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunStartup",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunTitle",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunVSMode",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunVsOptions",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMenuShellRunVsRecord",
+      "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    }
+  ]
+}

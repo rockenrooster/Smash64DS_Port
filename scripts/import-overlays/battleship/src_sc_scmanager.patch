@@ -12,7 +12,17 @@
  
  	while ((uintptr_t)framebuffer < end)
  	{
-@@ -1282,6 +1286,7 @@
+@@ -867,6 +871,9 @@
+ 	}
+ 	while (TRUE)
+ 	{
++#if defined(SSB64_TARGET_NDS)
++		ndsFrontendOverlayPrepareDispatch((u32)gSCManagerSceneData.scene_curr);
++#endif
+ 		switch (gSCManagerSceneData.scene_curr)
+ 		{
+ 			case nSCKindNoController:
+@@ -1282,6 +1289,7 @@
  	}
  }
  
@@ -20,7 +30,7 @@
  // 0x800A2698
  void scManagerFuncUpdate(SYTaskmanSetup *arg)
  {
-@@ -1552,3 +1557,4 @@
+@@ -1552,3 +1560,4 @@
  {
  	syDebugRunFuncPrint(scManagerFuncPrint);
  }

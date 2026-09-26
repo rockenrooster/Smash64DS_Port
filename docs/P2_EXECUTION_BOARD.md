@@ -48,7 +48,7 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS -- architecture.**
 Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`, D1-D9, log section 6.
 Phase 0 closed; Phase 1 through `98ebd1e2e51`.
-**Phase 2 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
+**Phase 3 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
 performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
 Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
 Completed scoped checks (not phase acceptance): B3 conserves exactly; MINS is
@@ -76,7 +76,8 @@ failures 39->0, 1,972 replay pairs identical; stress exit 0 (NDL armed).
 WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **CHECK**: particle selector/
 direct route retired; NDL defaults on. `F5CA9FE7` passes natural match/replay
 without pokes. Shipping-like `8062C536`: CSS free 204,752 B, three previews exact.
-Next: Phase 3 residency/memory; reclaim front-end residency before MF admission.
+Next: extend non-VS overlay. `39790FA2` loans 184,112 B; Kirby still cannot load.
+Phase3 receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Heavy `1E3A5E9D` fails before GO: Link requests 33,520 B with 20,316 B free.
 Particle Task49, camera/lifecycle and integrated gates remain owed.
@@ -87,9 +88,9 @@ Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
 Task36 retirement remains scoped; world-cache retirement/integration is owed.
 CSS free 204,752 B. Heavy arena 896,512 B; full match deficit remains unsized.
 Owner goal 09-26 permits up to eight GPT-6 Luna Max helpers; one integrator
-owns shared edits/builds/timing. Helpers audit overlays and MF dependency closure;
-no active build/emulator. Owner edits are preserved.
-A7 compaction on (+68 KB lab); MF codec unlinked.
+owns shared edits/builds/timing. Helpers own MF metadata and crossing checker;
+overlay audit done. Probe 24598 exited 0: three fighters made, asset348 OOM.
+A7 adds 184 KiB VS asset loan; MF codec unlinked; no live build/emulator.
 Shipping CSS arena 900,608 B; lab 1,285,888 B. Heavy-roster deficit still unsized.
 **Constraint**: CSS reserve >=183,072 B; current margin 21,680 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.

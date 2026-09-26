@@ -20,6 +20,7 @@
 #include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_frontend_overlay.h>
 #include <nds/nds_shield_pose.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
@@ -8708,7 +8709,7 @@ static void *ndsRelocStaticBufferForAsset(u32 asset_id, size_t asset_size)
     (void)asset_id;
     (void)asset_size;
 #endif
-    return NULL;
+    return ndsFrontendOverlayTryAlloc(asset_size, NDS_RELOC_ALIGN_BYTES);
 }
 
 /* Counts heap allocations DECLINED rather than allowed to spin. Any non-zero

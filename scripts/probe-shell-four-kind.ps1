@@ -302,7 +302,12 @@ try {
         ('printf "FOURKIND ARENA chosen=%u allocfail=%u heapgen=%u start=0x%08x ptr=0x%08x end=0x%08x free=%u overflow=%u\n", gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount, gNdsTaskmanHeapGeneration, (unsigned)gSYTaskmanGeneralHeap.start, (unsigned)gSYTaskmanGeneralHeap.ptr, (unsigned)gSYTaskmanGeneralHeap.end, {0}, gNdsSyMallocOverflowCount' -f $free),
         'printf "FOURKIND ROSTER s0=0x%06x s1=0x%06x s2=0x%06x s3=0x%06x\n", gNdsMenuShellCssCommitSlot[0], gNdsMenuShellCssCommitSlot[1], gNdsMenuShellCssCommitSlot[2], gNdsMenuShellCssCommitSlot[3]',
         'printf "FOURKIND LOWWATER generalfreemin=%u gfxpeak=%u gfxcap=%u gfxoverflow=%u gfxnoroom=%u\n", gNdsTaskmanGeneralHeapFreeMin, gNdsTaskmanGraphicsHeapHighWater, gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount',
-        'printf "FOURKIND RELOC heapdeclines=%u externfails=%u firstasset=%u firstlr=0x%08x lastlr=0x%08x\n", gNdsRelocHeapDeclineCount, gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstLR, gNdsRelocExternalFixupFailLastLR',
+        'printf "FOURKIND RELOC heapdeclines=%u externfails=%u firstasset=%u firstlr=0x%08x lastlr=0x%08x\n", gNdsRelocHeapDeclineCount, gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstLR, gNdsRelocExternalFixupFailLastLR'
+    ))
+    if ($symbols -contains 'gNdsFrontendOverlayLoanBytes') {
+        $commands.Add('printf "FOURKIND OVERLAY loads=%u loadfails=%u bytes=%u loans=%u loanbytes=%u used=%u allocs=%u spill=%u\n", gNdsFrontendOverlayLoadCount, gNdsFrontendOverlayLoadFailCount, gNdsFrontendOverlayBytes, gNdsFrontendOverlayLoanCount, gNdsFrontendOverlayLoanBytes, gNdsFrontendOverlayUsedBytes, gNdsFrontendOverlayAllocCount, gNdsFrontendOverlaySpillBytes')
+    }
+    $commands.AddRange([string[]]@(
         'bt 8',
         'detach',
         'quit'
