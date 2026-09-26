@@ -3,10 +3,9 @@
 
 This fixture extracts the actual packet reserve/flush, state, quad and submit
 functions from nds_renderer_textures_effects.c, compiles them as C, then
-independently decodes the command words captured from packet RAM and direct
-FIFO writes. The mock only replaces the DS MMIO/cache/DMA sinks and texture
-binding lookup. It does not claim to prove hardware DMA timing or rendered
-pixels.
+independently decodes the command words captured from packet RAM. The mock
+only replaces the DS MMIO/cache/DMA sinks and texture binding lookup. It does
+not claim to prove hardware DMA timing or rendered pixels.
 
 Run from the repository root with:
     python -m pytest scripts/test_particle_packet.py -q
@@ -117,9 +116,6 @@ FUNCTIONS = (
     "ndsRendererAppendParticlePacketStateRaw",
     "ndsRendererAppendWhispyPacketScale",
     "ndsRendererAppendParticlePacketQuad",
-    "ndsRendererEmitParticleStateRawDirect",
-    "ndsRendererEmitParticleScaleDirect",
-    "ndsRendererEmitParticleQuadDirect",
     "ndsRendererSubmitParticleQuadPacket",
 )
 
@@ -191,7 +187,6 @@ static void *sNdsRendererHardwareActiveTextureEntry;
 static TestGlState sTestGlState;
 static TestGlState *glGlob = &sTestGlState;
 static TestGXShadow sNdsRendererGXStateShadow;
-static u32 gNdsP2ParticlePacket;
 
 static volatile u32 gNdsWhispyAOTTier4PacketQuads;
 static volatile u32 gNdsWhispyAOTTier4PacketStateGroups;
@@ -243,12 +238,6 @@ static void testCaptureDmaPacket(const void *source, size_t bytes)
     for (i = 0; i < count; i++) testAppendPublished(words[i]);
 }
 
-static u32 *testDirectFifoWrite(void)
-{
-    assert(gPublishedCount < (u32)(sizeof(gPublished) / sizeof(gPublished[0])));
-    return &gPublished[gPublishedCount++];
-}
-
 static void ndsRendererHardwareInvalidateGXState(u32 mask)
 {
     (void)mask;
@@ -289,7 +278,6 @@ static s32 inttof32(s32 value)
     return value * 65536;
 }
 
-static u32 gDirectWriteCount;
 """
 
 
@@ -334,7 +322,6 @@ static void reset_fixture(void)
     sNdsRendererParticleScaleShift = 0u;
     sNdsRendererHardwareBoundTextureName = 11u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
-    gNdsP2ParticlePacket = 1u;
     sNdsRendererParticleViewSpace = FALSE;
     gNdsWhispyAOTTier4PacketQuads = 0u;
     gNdsWhispyAOTTier4PacketStateGroups = 0u;
@@ -357,10 +344,9 @@ static void reset_fixture(void)
     gPrepareCalls = 0u;
 }
 
-static void submit_draw(u32 index, u32 route)
+static void submit_draw(u32 index)
 {
     const struct TestDraw *draw = &sDraws[index];
-    gNdsP2ParticlePacket = route;
     if (index == 4u) sNdsRendererParticlePacketStateDirty = TRUE;
     assert(ndsRendererSubmitParticleQuadPacket(
         draw->texture, draw->palette,
@@ -376,11 +362,11 @@ static void print_trace(const char *name)
     for (i = 0; i < gPublishedCount; i++) printf("%08x\n", gPublished[i]);
 }
 
-static void run_packet_route(void)
+static void run_buffered_route(void)
 {
     u32 i;
     reset_fixture();
-    for (i = 0; i < 6u; i++) submit_draw(i, 1u);
+    for (i = 0; i < 6u; i++) submit_draw(i);
     ndsRendererFlushWhispyNativePacket();
     assert(gNdsParticlePacketQuads == 6u);
     assert(gNdsParticleQuadSheetBreaks == 1u);
@@ -391,39 +377,7 @@ static void run_packet_route(void)
     assert(sTestGlState.activeTexture == 22);
     assert(sTestGlState.activePalette == 7100);
     assert(sNdsRendererWhispyPacket.word_count == 0u);
-    print_trace("packet");
-}
-
-static void run_direct_route(void)
-{
-    u32 i;
-    reset_fixture();
-    for (i = 0; i < 6u; i++) submit_draw(i, 2u);
-    assert(gNdsParticlePacketQuads == 6u);
-    assert(gNdsParticleQuadSheetBreaks == 1u);
-    assert(gNdsParticleQuadPaletteBreaks == 1u);
-    assert(gNdsParticleQuadAlphaBreaks == 1u);
-    assert(gPrepareCalls == 0u);
-    assert(gTextureBindCalls == 1u);
-    assert(sTestGlState.activeTexture == 22);
-    assert(sTestGlState.activePalette == 7100);
-    print_trace("direct");
-}
-
-static void run_interleaved_routes(void)
-{
-    reset_fixture();
-    submit_draw(0u, 1u);
-    submit_draw(1u, 1u);
-    submit_draw(2u, 2u); /* Direct route must DMA-publish the pending packet. */
-    submit_draw(3u, 2u);
-    submit_draw(4u, 1u);
-    submit_draw(5u, 1u);
-    ndsRendererFlushWhispyNativePacket();
-    assert(gNdsParticlePacketQuads == 6u);
-    assert(gNdsParticlePacketFlushes == 2u);
-    assert(gPrepareCalls == 0u);
-    print_trace("interleaved");
+    print_trace("buffered");
 }
 
 static void run_reserve_boundary(void)
@@ -437,7 +391,7 @@ static void run_reserve_boundary(void)
     sNdsRendererWhispyPacket.final_poly_alpha = 31u;
     sNdsRendererWhispyPacket.word_count = 1008u;
     for (i = 0; i < 1008u; i++) sNdsRendererWhispyPacket.words[i] = 0u;
-    submit_draw(3u, 1u);
+    submit_draw(3u);
     assert(gNdsParticlePacketFlushes == 1u);
     assert(gNdsParticlePacketQuads == 1u);
     ndsRendererFlushWhispyNativePacket();
@@ -465,22 +419,21 @@ static const struct TestPlaneDraw sPlaneDraws[] = {
      {17000000, 2560, -2048}, {-1024, 0, 0}, {0, 768, 0}, 20u, 1u, 2u, 4u}
 };
 
-static void submit_plane_draw(u32 index, u32 route)
+static void submit_plane_draw(u32 index)
 {
     const struct TestPlaneDraw *draw = &sPlaneDraws[index];
-    gNdsP2ParticlePacket = route;
     assert(ndsRendererSubmitParticleQuadPacket(
         11u, 0u, draw->center, draw->right, draw->up,
         draw->color, 31u, draw->mirror_mask,
         draw->atlas_x, draw->atlas_y, draw->atlas_w, draw->atlas_h));
 }
 
-static void run_plane_route(const char *trace_name, u32 view_space, u32 route)
+static void run_plane_route(const char *trace_name, u32 view_space)
 {
     u32 i;
     reset_fixture();
     sNdsRendererParticleViewSpace = view_space;
-    for (i = 0; i < 4u; i++) submit_plane_draw(i, route);
+    for (i = 0; i < 4u; i++) submit_plane_draw(i);
     ndsRendererFlushWhispyNativePacket();
     assert(gNdsParticleScaleEscalations == 2u);
     assert(gNdsParticleScaleShiftMax == 2u);
@@ -492,12 +445,10 @@ static void run_plane_route(const char *trace_name, u32 view_space, u32 route)
 
 int main(void)
 {
-    run_packet_route();
-    run_direct_route();
-    run_interleaved_routes();
+    run_buffered_route();
     run_reserve_boundary();
-    run_plane_route("generic3d", FALSE, 1u);
-    run_plane_route("viewspace3", TRUE, 3u);
+    run_plane_route("generic3d", FALSE);
+    run_plane_route("viewspace3", TRUE);
     return 0;
 }
 """
@@ -512,12 +463,12 @@ def production_harness() -> str:
 
     # Compile the real flush body against an inert address target for GFX_FIFO.
     # The mock DC_FlushRange captures its RAM block at the same point the real
-    # cache publication happens. Direct emit functions below use the FIFO hook.
+    # cache publication happens.
     flush = functions["ndsRendererFlushWhispyNativePacket"]
     functions["ndsRendererFlushWhispyNativePacket"] = (
         "#define GFX_FIFO gDmaFifoDummy\n"
         + flush
-        + "\n#undef GFX_FIFO\n#define GFX_FIFO (*testDirectFifoWrite())\n"
+        + "\n#undef GFX_FIFO\n"
     )
     ordered = (
         "ndsRendererParticleAbsQ8",
@@ -530,9 +481,6 @@ def production_harness() -> str:
         "ndsRendererAppendParticlePacketStateRaw",
         "ndsRendererAppendWhispyPacketScale",
         "ndsRendererAppendParticlePacketQuad",
-        "ndsRendererEmitParticleStateRawDirect",
-        "ndsRendererEmitParticleScaleDirect",
-        "ndsRendererEmitParticleQuadDirect",
         "ndsRendererSubmitParticleQuadPacket",
     )
     bodies = "\n\n".join(functions[name] for name in ordered)
@@ -739,7 +687,7 @@ def decode_quads(events: list[tuple]) -> list[tuple]:
 
 
 class ParticlePacketHostRegression(unittest.TestCase):
-    def test_packet_direct_interleaving_and_reserve_boundary(self) -> None:
+    def test_buffered_packet_overflow_and_plane_specialization(self) -> None:
         compiler = next(
             (shutil.which(candidate) for candidate in ("gcc", "clang", "cc")
              if shutil.which(candidate)),
@@ -767,19 +715,13 @@ class ParticlePacketHostRegression(unittest.TestCase):
             self.assertEqual(run.returncode, 0, f"C harness failed:\n{run.stderr}")
             traces = parse_traces(run.stdout)
 
-        self.assertEqual(set(traces), {
-            "packet", "direct", "interleaved", "boundary", "generic3d", "viewspace3"
-        })
-        packet = decode_fifo(traces["packet"])
-        direct = decode_fifo(traces["direct"])
-        interleaved = decode_fifo(traces["interleaved"])
+        self.assertEqual(set(traces), {"buffered", "boundary", "generic3d", "viewspace3"})
+        buffered = decode_fifo(traces["buffered"])
         boundary = decode_fifo(traces["boundary"])
         generic3d = decode_fifo(traces["generic3d"])
         viewspace3 = decode_fifo(traces["viewspace3"])
         expected = expected_complete_trace()
-        self.assertEqual(packet, expected, "RAM packet command/data sequence changed")
-        self.assertEqual(direct, expected, "direct FIFO command/data sequence changed")
-        self.assertEqual(interleaved, expected, "route switch changed source order")
+        self.assertEqual(buffered, expected, "buffered packet command/data sequence changed")
         self.assertEqual(boundary, expected_boundary_trace(),
                          "reserve-triggered DMA split changed state/quad order")
         self.assertEqual(viewspace3, generic3d,

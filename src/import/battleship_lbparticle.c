@@ -4205,7 +4205,7 @@ void lbParticleDrawTextures(GObj *gobj)
 #if NDS_R2_PARTICLE_DRAW
     atlas_name = ndsRendererHardwareParticleAtlasName();
 #if NDS_RENDERER_HW_TRIANGLES && NDS_R2_WHISPY_NATIVE_AOT
-    if ((atlas_name != 0u) && (gNdsP2ParticlePacket == 3u) &&
+    if ((atlas_name != 0u) &&
         (ndsRendererAdapterBeginParticleViewPass(gGCCurrentCamera) != FALSE))
     {
         /* LBTransform still supplies source world centres and signed X/Y

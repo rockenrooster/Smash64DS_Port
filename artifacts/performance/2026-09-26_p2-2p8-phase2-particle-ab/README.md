@@ -265,3 +265,104 @@ No published target was built or overwritten. A direct file check found root
 verified on-disk root identity. The verified lab ROM/ELF/config are preserved in
 `builds/p2p8-misc-dust-8b4d66ee/`; `dust-inputs.json` records their hashes and
 scoped source identities.
+
+## Continuation: production defaults and retirement
+
+Previous turn classified **progress**: pushed c116fffa03e/afb59462ad2,
+native dust closure and qualified scoped evidence. Current-state reconciliation
+found that checkpoint intact, no active build/emulator and no Git lock; only
+unrelated owner/docs and configuration-derived particle files remained dirty.
+Completed comparisons are reused, not restarted.
+
+Removed `gNdsP2ParticlePacket` and the rejected packed-direct FIFO helpers.
+Source particles now use the frame-camera view path whenever its typed camera
+contract matches; the shared buffered emitter handles both view-space particles
+and required world/rotated quads. The separate native standalone emitter is
+compiled only in builds without the Whispy/particle packet capability.
+NDL now defaults on; its remaining comparison control and unengaged-owner proof
+remain explicit debt. The host fixture was updated to exercise production
+buffering, material/overflow, mirror and scale behavior; it passes.
+
+Next: one incremental four-CPU build and natural full-match proof with no boot
+pokes, then the actual all-content natural-input lab/CSS memory shape. The
+retirement changes linked layout, so 8B4D66EE timing remains a baseline and does
+not qualify the new executable. Preserve its binary/config in the existing lab.
+Build 22781 exited 0, native-only 246 link inputs. Retired selector and all three
+direct FIFO helpers are absent from the ELF. New ROM:
+`F5CA9FE783047C44585C1B6EF8C12A3C6BA2ADB30EA2C55836EF63524606512C`.
+Active natural full-match job: exec-command session **28268**, runner 4, **no
+boot/runtime pokes**. Log/exit `builds/p2-phase2-misc-default-run.log` / `.exit`;
+`default-final-*` sidecars belong to this executable. Inputs frozen; no parallel
+build, emulator, generator or heavy host test until writer exit.
+Job 28268 exited 0. No boot/runtime writes; replay matches 8B4D66EE for all
+1,972 pairs. View passes/centres 5,919/11,192, dust draws 39/mask 0x7f, all packet,
+view, dust, native and direct-reject failures zero. WORK-H P50/P95
+1,345,216/2,582,528 ticks; mean-ALL 18.95 FPS. VBlank2/3/4/5+:
+278/1343/210/142, max 10, 1,973 presents. Arena 1,285,888 B (+4,096), heap low-water
+122,412 B. This qualifies default behavior, not a new cross-build timing gain.
+
+Next shipping-like target is the existing non-published twin:
+`TARGET=smash64ds-p2-shell-freeplay-hwtri BUILD=build-p2p8-s7-freeplay`.
+Preserved B99B32FB baseline remains in `builds/p2p8-stage-frame-camera-shipping`.
+Its config was D7C8896D; the current Makefile adds the known effect-census default,
+so reconcile definitions rather than requiring a historical header hash blindly.
+The incoming stamped particle producer runs for Yoster=1 before the single warm
+build. No published target/root ROM is selected. CSS probe uses runner7 and the
+existing owner-input route after the build/configuration checks.
+The first top-level absolute generated-file preflight exited 0 but left stamp0;
+the explicit stamp assertion stopped before any shipping build. The file rule
+lives in the inner Makefile branch, so pathname spelling alone cannot route it.
+Added `prepare-particle-banks` to forward the incoming TARGET/BUILD into that
+inner producer; documented it in VERIFYING.md. This fixes the demonstrated
+no-op entry instead of adding a repeated-build workaround.
+Active sequential producer/build job: exec-command session **43796**. Logs:
+`builds/p2-phase2-misc-shipping-producer-r1.log` and
+`builds/p2-phase2-misc-shipping-build.log`, each with a matching `.exit` file.
+The script requires stamp1 before launching the single shipping-like compile.
+The new producer target established stamp1 correctly, but placing it before
+`all` also changed Make's implicit default goal. The following bare Make call
+therefore prepared only assets and left the B99B32FB ROM/ELF untouched. Hash
+comparison caught this; CSS job11621 completed on that old ROM and is **not
+candidate proof** (its images/tag `p2p8-misc-defaults` stay unqualified).
+Fixed the Makefile with `.DEFAULT_GOAL := all`. The actual current-source build
+now names `all` explicitly; this is the first shipping compile of these inputs,
+not a qualification rerun. Log `builds/p2-phase2-misc-shipping-build-r1.log`.
+Actual shipping-like build 14493 exited 0, native-only 318 link inputs. ROM
+`8062C53602EBAB65D96C634D2F4C86DAA14AC75B31BB72E916E61634274FF816`.
+Config differs from B99B only by the documented `NDS_P2_EFFECT_CENSUS 0` define;
+all fighters/stages/1P are present, menu walk/fast logic/tick HUD remain off.
+Static image grows 18,992 B against that older baseline (text 14,376/data 8/BSS 4,608);
+this is the whole recovered Phase2 batch, not just particle retirement.
+
+Current CSS job 22762 exited 0. Free at animation reservation 204,752 B versus
+183,072 B required (margin 21,680), failure 0, arena span 900,608 B. Link/Yoshi/
+Pikachu previews draw and were inspected. All three 400x280 menu crops are
+pixel-identical to B99B; FPS instrumentation is outside those crops and is not
+performance evidence. Hash-preserving dated copies and comparison results:
+`artifacts/visibility/2026-09-26_p2-2p8-misc-defaults/`.
+
+The changed shipping layout invalidates the old heavy-roster capacity result
+as a current measurement. Reuse the established warm diagnostic sibling
+`BUILD=build-p2p8-s7-fpwalk` with only menu-walk/argmax flags set to1; no fast
+logic/tick HUD. Active build session **89322**, log
+`builds/p2-phase2-misc-heavy-build.log`. Next is the existing four-kind probe,
+which distinguishes allocation refusal from asset-format failure.
+Build 89322 exited 0, native-only 318 link inputs. Heavy ROM `1E3A5E9D`,
+ELF `4A687127`, config `B1EB16D2`; config differs from natural `8062C536` only
+by the intended menu-walk and argmax-roster flags. Run the existing capacity
+probe for two battle frames with allocation tracing at 8 KiB. This supplies
+current admission and allocation sizes, not timing or performance evidence.
+Capacity probe session **19172** exited 0 with a complete allocator-halt dump;
+the ROM verdict is **FAIL_CAPACITY**, not a successful match. Captain is made,
+then Link's 33,520 B FPC allocation fails with 20,316 B free (12 B alignment
+padding). Arena 896,512 B, first battle frames zero. It needs at least another
+13,216 B for this allocation alone; the full roster deficit is still unknown.
+The pre-sample UINT_MAX low-water is invalid. `default-heavy-summary.json`
+records identities, raw-log hash, terminal markers and the >=8 KiB battle
+allocation census. Matched ROM/ELF/config preserved under
+`builds/p2p8-misc-default-heavy-1e3a5e9d/`.
+
+Phase change: begin A7 front-end residency reclamation and A2 complete motion
+admission. No build/emulator remains active. Helpers perform bounded read-only
+overlay and MF dependency audits; root owns implementation/build/timing. Phase2
+performance remains RED and its unengaged-owner/lifecycle debt stays open.

@@ -1,0 +1,334 @@
+{
+  "status": "FAIL_CAPACITY",
+  "identity": [
+    {
+      "path": "builds\\p2p8-misc-default-heavy-1e3a5e9d\\smash64ds-p2-shell-freeplay-hwtri.nds",
+      "sha256": "1E3A5E9D67C40A3D403081D28D72AA24EA30521E4E36458862CC8820900D794E"
+    },
+    {
+      "path": "builds\\p2p8-misc-default-heavy-1e3a5e9d\\smash64ds-p2-shell-freeplay-hwtri.elf",
+      "sha256": "4A687127CE9930353D9F6B33C980139DBD6EDD69B7238D0497756C2C856E1CD6"
+    },
+    {
+      "path": "builds\\p2p8-misc-default-heavy-1e3a5e9d\\nds_build_config.h",
+      "sha256": "B1EB16D28E40CF20393BD4ABBC7E4CCDF427E179EE8E62BF20D142105CA0D58C"
+    }
+  ],
+  "baseCommit": "afb59462ad22fb74d172ebdbc15982433f436fa9",
+  "scenario": "Captain human, Link/Pikachu/Kirby CPUs; source menu walk",
+  "sourceOverlay": "production particle route retirement, NDL default on, named particle preflight",
+  "runner": 7,
+  "interpreter": true,
+  "battleFrames": 0,
+  "writerSession": 19172,
+  "writerExit": 0,
+  "rawLog": "builds/p2-phase2-misc-heavy-probe.txt",
+  "rawLogSha256": "6D511572C80A8BE473430A6440B9CC839A7D1F517C7DA45D2921B3119597F89A",
+  "command": "scripts/probe-shell-four-kind.ps1 -Build build-p2p8-s7-fpwalk -Target smash64ds-p2-shell-freeplay-hwtri -BattleFrames 2 -TraceMallocAtLeast 8192 -RunnerSlot 7 -TimeoutSeconds 300",
+  "arenaBytes": 896512,
+  "failedKind": 5,
+  "failedOwner": "ndsRelocPreviewFighterLoadBegin",
+  "failedAllocationBytes": 33520,
+  "alignment": 16,
+  "headroomBytes": 20316,
+  "paddingBytes": 12,
+  "minimumExtraForThisAllocation": 13216,
+  "fullMatchDeficit": null,
+  "lowWaterValid": false,
+  "markers": [
+    "FOURKIND HALT count=1 arena_id=65536 request=33520 align=16 headroom=20316 caller_lr=0x020a8bb1",
+    "FOURKIND STOP pc=0x206800c lr=0x2068079 commit=2 setup=0 make=9 batt=0",
+    "FOURKIND ARENA chosen=896512 allocfail=196 heapgen=9 start=0x02305400 ptr=0x023db2a4 end=0x023e0200 free=20316 overflow=1",
+    "FOURKIND ROSTER s0=0x070003 s1=0x050103 s2=0x090103 s3=0x080103",
+    "FOURKIND LOWWATER generalfreemin=4294967295 gfxpeak=0 gfxcap=0 gfxoverflow=0 gfxnoroom=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000"
+  ],
+  "battleAllocationsAtLeast8192": [
+    {
+      "bytes": 13824,
+      "freeObserved": 896512,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=13824, alignment=4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020aa556 in gcSetupObjman (setup=0x180 <ndsMNPlayersVSRunReadyTransitionProbe+384>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objman.c:314",
+        "#4  0x020a8846 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=8) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275"
+      ]
+    },
+    {
+      "bytes": 23552,
+      "freeObserved": 896512,
+      "stack": [
+        "#0  syMallocSet (bp=0x22bbddc <gSYTaskmanGeneralHeap>, bp@entry=0x0 <efManagerNessPKFlashMakeEffect>, size=size@entry=23552, alignment=alignment@entry=4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020adff0 in ndsAObjEvent32ConfigureNormalizedCapacity (gkind=6) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objanim.c:1179",
+        "#2  0x0206cb84 in ndsRelocPrepareSceneCache () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:5298",
+        "#3  0x02091dec in lbRelocInitSetup (setup=setup@entry=0x22ec838) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:12321",
+        "#4  0x020c5d10 in scVSBattleSetupFiles () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c:36"
+      ]
+    },
+    {
+      "bytes": 56400,
+      "freeObserved": 854816,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=56400, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020c5d1a in scVSBattleSetupFiles () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c:37",
+        "#4  0x020c5f1a in ndsBaseSCVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sc/sccommon/scvsbattle.c:141"
+      ]
+    },
+    {
+      "bytes": 10724,
+      "freeObserved": 798416,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=10724, alignment=4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02014d42 in ndsIFCommonRleEncode (n=<optimized out>, in=<optimized out>, out=<optimized out>, cap=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:2585",
+        "#4  ndsIFCommonNativeOamBakeEndVariants (scratch=scratch@entry=0x23a34a0, code=code@entry=0x239bb00, code_capacity_words=37368992, code_capacity_words@entry=15568) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:2631"
+      ]
+    },
+    {
+      "bytes": 11380,
+      "freeObserved": 787692,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=11380, alignment=4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02014cd0 in ndsIFCommonNativeOamBakeEndVariants (scratch=scratch@entry=0x23a34a0, code=code@entry=0x239bb00, code_capacity_words=code_capacity_words@entry=15568) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_ifcommon_oam.c:2620",
+        "#4  0x0207a880 in ndsRelocLoadIfGameStatusCompact (token=token@entry=36401804, bit=bit@entry=0, in=in@entry=0x22ec800, asset_id=82) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:15680"
+      ]
+    },
+    {
+      "bytes": 21056,
+      "freeObserved": 787692,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=21056, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x0207a880 in ndsRelocLoadIfGameStatusCompact (token=token@entry=36401804, bit=75, bit@entry=0, in=in@entry=0x22ec800, asset_id=82) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:15680",
+        "#4  0x02094050 in lbRelocLoadFilesExtern (ids=ids@entry=0x21bc974 <dGMCommonFileIDs>, len=len@entry=8, files=0x22c34c8 <gGMCommonFiles>, heap=0x230f6e0) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:15826"
+      ]
+    },
+    {
+      "bytes": 202816,
+      "freeObserved": 726376,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=202816, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020a2cc4 in mpCollisionInitGroundData () at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:12995",
+        "#4  0x020c5f38 in ndsBaseSCVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sc/sccommon/scvsbattle.c:161"
+      ]
+    },
+    {
+      "bytes": 14784,
+      "freeObserved": 523136,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=14784, alignment=8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x022eca84 in ?? ()",
+        "Backtrace stopped: previous frame identical to this frame (corrupt stack?)"
+      ]
+    },
+    {
+      "bytes": 82976,
+      "freeObserved": 507784,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=82976, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020fbe68 in itManagerInitItems () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_item_link_core.c:841",
+        "#4  0x020c5f56 in ndsBaseSCVSBattleStartBattle () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sc/sccommon/scvsbattle.c:166"
+      ]
+    },
+    {
+      "bytes": 12048,
+      "freeObserved": 409468,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=12048, size@entry=36, alignment=8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=36) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=size@entry=36, align=align@entry=4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020a8ce2 in gcGetGObjProcess () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:250",
+        "#4  0x020a8faa in gcAddGObjProcess (gobj=0x22bbddc <gSYTaskmanGeneralHeap>, proc=0x22eca84, kind=1 '\\001', priority=1) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:853"
+      ]
+    },
+    {
+      "bytes": 33152,
+      "freeObserved": 409468,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=33152, size@entry=36, alignment=8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=36) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=size@entry=36, align=align@entry=4) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020a8ce2 in gcGetGObjProcess () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:250",
+        "#4  0x020a8faa in gcAddGObjProcess (gobj=0x22ca3ec <sFTManagerStructsAllocBuf>, proc=0x22eca84, kind=1 '\\001', priority=1) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:853"
+      ]
+    },
+    {
+      "bytes": 30160,
+      "freeObserved": 361072,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=30160, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02032480 in ndsRendererNativeEnsureOwnerImage (owner_slot=9, use_low_detail=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4859",
+        "#4  0x02294358 in gSCManager1PGameBattleState ()"
+      ]
+    },
+    {
+      "bytes": 24268,
+      "freeObserved": 330912,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=24268, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020324d4 in ndsRendererNativeEnsureOwnerImage (owner_slot=owner_slot@entry=9, use_low_detail=1, use_low_detail@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4884",
+        "#4  0x020f5ac2 in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 19744,
+      "freeObserved": 306644,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=19744, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02032560 in ndsRendererNativeEnsureOwnerImage (owner_slot=4, owner_slot@entry=9, use_low_detail=0, use_low_detail@entry=1) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4898",
+        "#4  0x020f5ace in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 15892,
+      "freeObserved": 286896,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=15892, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020324d4 in ndsRendererNativeEnsureOwnerImage (owner_slot=owner_slot@entry=4, use_low_detail=1, use_low_detail@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4884",
+        "#4  0x020f5ac2 in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 15916,
+      "freeObserved": 271004,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=15916, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020324d4 in ndsRendererNativeEnsureOwnerImage (owner_slot=2, owner_slot@entry=4, use_low_detail=0, use_low_detail@entry=1) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4884",
+        "#4  0x020f5ace in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 11168,
+      "freeObserved": 255076,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=11168, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02032560 in ndsRendererNativeEnsureOwnerImage (owner_slot=owner_slot@entry=2, use_low_detail=1, use_low_detail@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4898",
+        "#4  0x020f5ac2 in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 12220,
+      "freeObserved": 243904,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=12220, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x020324d4 in ndsRendererNativeEnsureOwnerImage (owner_slot=5, owner_slot@entry=2, use_low_detail=0, use_low_detail@entry=1) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4884",
+        "#4  0x020f5ace in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 9076,
+      "freeObserved": 231684,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=9076, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02032560 in ndsRendererNativeEnsureOwnerImage (owner_slot=owner_slot@entry=5, use_low_detail=1, use_low_detail@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:4898",
+        "#4  0x020f5ac2 in ndsFTManagerEnsureOwnerImages (desc=desc@entry=0x22ec7f8) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:719"
+      ]
+    },
+    {
+      "bytes": 52736,
+      "freeObserved": 212736,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=52736, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02131852 in ndsBaseEFManagerInitEffects () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1754",
+        "#4  0x0213587a in efManagerInitEffects () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:2371"
+      ]
+    },
+    {
+      "bytes": 28352,
+      "freeObserved": 160000,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=28352, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x0213186c in ndsBaseEFManagerInitEffects () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1755",
+        "#4  0x0213587a in efManagerInitEffects () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:2371"
+      ]
+    },
+    {
+      "bytes": 13616,
+      "freeObserved": 131648,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=13616, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x02131884 in ndsBaseEFManagerInitEffects () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1756",
+        "#4  0x0213587a in efManagerInitEffects () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_efmanager.c:2371"
+      ]
+    },
+    {
+      "bytes": 27300,
+      "freeObserved": 112500,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=27300, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x0209c2b2 in ndsRelocPreviewFighterLoadBegin (fkind=fkind@entry=7) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c:510",
+        "#4  0x0209d2c6 in ndsRelocLoadPreviewFighterUnlocked (fkind=7) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c:873"
+      ]
+    },
+    {
+      "bytes": 26080,
+      "freeObserved": 72048,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=26080, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x0207a2ae in ndsRelocAssetAllocSize (asset_id=36620188) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:11350",
+        "#4  ndsRelocEnsureLoadedAsset (asset_id=36620188) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_assets.c:8741"
+      ]
+    },
+    {
+      "bytes": 10784,
+      "freeObserved": 45968,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=10784, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x022ec878 in ?? ()",
+        "Backtrace stopped: previous frame identical to this frame (corrupt stack?)"
+      ]
+    },
+    {
+      "bytes": 33520,
+      "freeObserved": 20316,
+      "stack": [
+        "#0  syMallocSet (bp=bp@entry=0x22bbddc <gSYTaskmanGeneralHeap>, size=33520, alignment=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:140",
+        "#1  0x020a8bb0 in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/taskman.c:275",
+        "#2  syTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253",
+        "#3  0x0209c38c in ndsRelocPreviewFighterLoadBegin (fkind=fkind@entry=5) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c:526",
+        "#4  0x0209d2c6 in ndsRelocLoadPreviewFighterUnlocked (fkind=5) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c:873"
+      ]
+    }
+  ]
+}

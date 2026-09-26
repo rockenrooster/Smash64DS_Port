@@ -1,5 +1,6 @@
 # Nintendo DS architecture probe for the BattleShip Smash 64 decompilation.
 .SUFFIXES:
+.DEFAULT_GOAL := all
 
 ifeq ($(strip $(DEVKITARM)),)
 $(error "DEVKITARM is not set. Install devkitPro and set DEVKITARM to devkitARM")
@@ -6080,6 +6081,13 @@ NDS_NITROFS_EFFECT_FILES := \
 endif
 
 .PHONY: all clean clean-generated distclean run $(BUILD) prune-obsolete-audio p2-fighter-production-manifest
+.PHONY: prepare-particle-banks
+
+# Generated-file rules live in the inner build. An absolute file goal at the
+# repository root can silently be a no-op; expose a configuration-aware entry.
+prepare-particle-banks:
+	@mkdir -p $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) BUILD_OUTPUT_ROOT=$(BUILD_OUTPUT_ROOT) NDS_OUTPUT_ROOT=$(NDS_OUTPUT_ROOT) NDS_PUBLISH_USER_ROM=$(NDS_PUBLISH_USER_ROM) prepare-particle-banks
 
 all: $(BUILD)
 
@@ -7221,6 +7229,9 @@ $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSE
 	python "$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py"
 
 $(NDS_PARTICLE_BANKS_HEADER): $(NDS_PARTICLE_BANKS_INC)
+
+.PHONY: prepare-particle-banks
+prepare-particle-banks: $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_BANKS_HEADER)
 
 # Slice 32's baked animation bank. `--verify` is not optional here: the emitter
 # range-checks every field as it encodes and then decodes the whole blob back

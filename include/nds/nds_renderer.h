@@ -383,7 +383,6 @@ void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
 /* Particle passes can consume the camera's original split matrices. Centres
  * are transformed once on ARM9; the four billboard corners then use view X/Y.
  * Other world-quad callers retain their own camera and rotated basis. */
-extern volatile u32 gNdsP2ParticlePacket;
 s32 ndsRendererBeginParticleViewPass(
     const NDSRendererMatrix20p12 *projection,
     const NDSRendererMatrix20p12 *modelview);

@@ -66,36 +66,34 @@ have focused positive owner proofs. Reuse their receipts:
 injection. Lakitu/Bronto slots remain unengaged in the canonical 59 s match
 (Bronto's first wait is 6,000..15,999 source updates). Their host/replay proof:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-efground/README.md`.
-Integrated NDL `5A72DD48` retains replay pairs, 511+149 M1 dispatches and zero
-fallback; its Link Bomb dispatch is zero, so retain the focused bomb proof.
 
 **Particle CHECK / DamageFlyMDust IMPLEMENT (09-26):**
 recovered DMA/direct-FIFO pairs are replay-identical but show no MPRT/MISC gain.
-Route 3 connects split frame-camera factors to fixed view-space centres and
-two billboard extents. ROM `608C79AC` built native-only; five host tests pass,
-both 1500/1498 captures are pixel-identical; 1,972 replay pairs match. MPRT mean
--3,741; WORK-H mean/P50 -4,163/-5,440, but P95 +27,520 (audio timing shifts).
+View-space particles `608C79AC`: host tests, both captures and 1,972 replay
+pairs pass. MPRT mean -3,741; WORK-H mean/P50 -4,163/-5,440, P95 +27,520.
 KEEP/IMPLEMENTED_NOT_ACCEPTED. Dust `8B4D66EE`: 39 draws, mask 7f, native
 failures 39->0, 1,972 replay pairs identical; stress exit 0 (NDL armed).
-WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **Next**: retire
-particle experiment routes, qualify intended MISC defaults and shipping memory.
+WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **CHECK**: particle selector/
+direct route retired; NDL defaults on. `F5CA9FE7` passes natural match/replay
+without pokes. Shipping-like `8062C536`: CSS free 204,752 B, three previews exact.
+Next: Phase 3 residency/memory; reclaim front-end residency before MF admission.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
-Jobs terminal. Particle Task49, camera/lifecycle and integrated gates remain owed.
+Heavy `1E3A5E9D` fails before GO: Link requests 33,520 B with 20,316 B free.
+Particle Task49, camera/lifecycle and integrated gates remain owed.
 Implementation/evidence checkpoint: `c116fffa03e`. Owner-confirmed Git lock resolved.
 Receipt owns prior Stage measurements and retirement control `0A14A9F9`.
 All-VS `9F69CA39` is KEEP/IMPLEMENTED_NOT_ACCEPTED: Jungle heap restored;
 Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
 Task36 retirement remains scoped; world-cache retirement/integration is owed.
-CSS free 221,136 B; heavy roster still halts on Link with 4,222 B free.
+CSS free 204,752 B. Heavy arena 896,512 B; full match deficit remains unsized.
 Owner goal 09-26 permits up to eight GPT-6 Luna Max helpers; one integrator
-owns shared edits/builds/timing. Particle audits/fixtures finished; dust helper
-owns only its new generator/executor/tests. Owner edits are preserved.
+owns shared edits/builds/timing. Helpers audit overlays and MF dependency closure;
+no active build/emulator. Owner edits are preserved.
 A7 compaction on (+68 KB lab); MF codec unlinked.
-Shipping arena 916,992 B; lab 1,281,792 B. Heavy-roster deficit still unsized.
-**Constraint**: CSS reserve >=183,072 B; margin 38,064 B.
+Shipping CSS arena 900,608 B; lab 1,285,888 B. Heavy-roster deficit still unsized.
+**Constraint**: CSS reserve >=183,072 B; current margin 21,680 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
-Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`. Evidence:
-`artifacts/performance/2026-09-2*_p2-2p8-*`.
+Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 
 Previous focus (CLOSED 09-22): the remaining-BUGS sweep. Every owner-opened
 `docs/BUGS.md` row is fixed through r54 or owner-DEFERRED (C1 CSS hover delay,

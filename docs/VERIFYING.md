@@ -117,6 +117,12 @@ then return to runtime work. Do not hand-edit outputs/stamps, run a whole fresh
 shell build merely to change a stamp when a supported producer target suffices,
 or remove Yoster/required content. Distinct BUILD directories alone are not isolation.
 
+Use `make TARGET=<incoming-target> BUILD=<incoming-build> prepare-particle-banks`
+for the bounded particle preflight. It forwards to the inner build with the
+incoming flags and updates both outputs and stamp. A generated-file goal passed
+directly to the repository-root Makefile can report success without running its
+inner recipe; verify the actual stamp, not that command's exit code alone.
+
 | Output | Role |
 |---|---|
 | Root `smash64ds.nds` | Verifier-covered natural-input P2, no scripted walk/fast logic |

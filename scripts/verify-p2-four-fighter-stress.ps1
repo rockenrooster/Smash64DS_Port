@@ -120,7 +120,6 @@ $memoryGlobals = @(
     # P2-2p8 Phase 2 shared particle GX packet. These are engagement/fail-closed
     # counters, not acceptance figures: zero quads means the implementation did
     # not run and any fallback means a required particle draw was dropped.
-    'gNdsP2ParticlePacket',
     'gNdsParticlePacketQuads',
     'gNdsParticlePacketStateGroups',
     'gNdsParticlePacketFlushes',
@@ -598,28 +597,24 @@ if (($extra['gNdsParticleCameraRendererReuseCount'] -eq 0) -and
     throw ('Four-CPU particle draw never reused the renderer frame camera: ' +
         "reuse=$($extra['gNdsParticleCameraRendererReuseCount']).")
 }
-$particleViewEnabled = ([uint64]$extra['gNdsP2ParticlePacket'] -eq 3)
-if ($particleViewEnabled -and
-    (($extra['gNdsParticleViewPasses'] -eq 0) -or
+if (($extra['gNdsParticleViewPasses'] -eq 0) -or
      ($extra['gNdsParticleViewCenters'] -eq 0) -or
-     ($extra['gNdsParticleViewRejects'] -ne 0))) {
+     ($extra['gNdsParticleViewRejects'] -ne 0)) {
     throw ('Four-CPU view-space particles did not engage cleanly: ' +
         "passes=$($extra['gNdsParticleViewPasses']) " +
         "centers=$($extra['gNdsParticleViewCenters']) " +
         "rejects=$($extra['gNdsParticleViewRejects']).")
 }
-$particlePacketEnabled = ([uint64]$extra['gNdsP2ParticlePacket'] -ne 0)
 if (($extra['gNdsDamageFlyMDustNativeRejectCount'] -ne 0) -or
     ($extra['gNdsDamageFlyMDustTexturePrepareFailCount'] -ne 0)) {
     throw ('Native DamageFlyMDust failed its source frame/residency contract: ' +
         "rejects=$($extra['gNdsDamageFlyMDustNativeRejectCount']) " +
         "prepareFailures=$($extra['gNdsDamageFlyMDustTexturePrepareFailCount']).")
 }
-if ($particlePacketEnabled -and
-    (($extra['gNdsParticlePacketQuads'] -eq 0) -or
+if (($extra['gNdsParticlePacketQuads'] -eq 0) -or
      ($extra['gNdsParticlePacketFlushes'] -eq 0) -or
      ($extra['gNdsParticlePacketWords'] -eq 0) -or
-     ($extra['gNdsParticlePacketFallbacks'] -ne 0))) {
+     ($extra['gNdsParticlePacketFallbacks'] -ne 0)) {
     throw ('Four-CPU Phase-2 particle packet did not engage cleanly: ' +
         "quads=$($extra['gNdsParticlePacketQuads']) " +
         "groups=$($extra['gNdsParticlePacketStateGroups']) " +
@@ -627,11 +622,6 @@ if ($particlePacketEnabled -and
         "words=$($extra['gNdsParticlePacketWords']) " +
         "fallbacks=$($extra['gNdsParticlePacketFallbacks']) " +
         "dynamicBinds=$($extra['gNdsParticlePacketDynamicBinds']).")
-}
-if ((-not $particlePacketEnabled) -and
-    ($extra['gNdsParticlePacketFallbacks'] -ne 0)) {
-    throw ('Four-CPU particle-packet control recorded a fallback: ' +
-        "fallbacks=$($extra['gNdsParticlePacketFallbacks']).")
 }
 Write-Output ("Source spline descriptors normalized: " +
     $extra['gNdsRelocSYInterpDescFixCount'])

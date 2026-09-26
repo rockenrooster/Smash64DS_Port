@@ -24,15 +24,15 @@ proofs are retained. View-space particles on `608C79AC` pass host/replay and
 paired captures; mean/P50 improve, P95 worsens. Not accepted. Dust owner now
 preserves native RGB5/alpha5: `8B4D66EE` draws all seven frames, native failures
 39->0, replay identical, full stress correctness GREEN with NDL armed. Performance
-still RED (18.98 FPS, WORK-H P95 2.587M). Next: retire particle experiment routes
-and qualify intended MISC defaults/shipping memory. No live jobs. Current receipt:
+still RED. Particle experiment routes are retired; `F5CA9FE7` passes naturally
+with NDL on (18.95 FPS, WORK-H P95 2.583M). Shipping `8062C536` CSS previews
+are exact; reserve free 204,752 B versus required 183,072 B. Current receipt:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Carry forward: shipping heavy roster still halts loading Link; full deficit is
-unsized. CSS last reserve is 221,136 B versus required 183,072 B. Recheck after
-static growth; lab capacity is not shipping capacity (stage receipt). Owner goal
-09-26 permits up to eight GPT-6 Luna Max helpers; builds/timing remain serialized.
+Next: Phase 3 A7/A2. Heavy `1E3A5E9D` halts on Link's 33,520 B FPC allocation
+with 20,316 B free; arena 896,512 B, full deficit unsized. No live build/emulator.
+Up to eight Luna Max helpers audit overlays/MF; root owns edits/builds/timing.
 
 ## Continue, do not restart
 

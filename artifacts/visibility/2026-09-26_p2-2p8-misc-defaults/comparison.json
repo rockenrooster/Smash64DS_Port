@@ -1,0 +1,26 @@
+[
+  {
+    "Kind": "link",
+    "Source": "artifacts/visibility/2026-09-06_css-link-p2p8-misc-defaults-r1.png",
+    "Destination": "artifacts/visibility/2026-09-26_p2-2p8-misc-defaults/css-link.png",
+    "Sha256": "B99D881D7CB37500A00C00BD4EE65F4CB5F399D0707E96A928C545C33F3D2E95",
+    "CompareExit": 0,
+    "Comparison": "compared 112,000 pixels (400x280 at window 8,56 -- guest viewport -- CROPPED to 400x280 at 0,0)\r\n  control   2026-09-06_css-link-p2p8-frame-camera-20260924.png\r\n  candidate css-link.png\r\n  differing 0 (0.0000%)\r\n  max channel delta 0\r\n\r\nPIXEL-IDENTICAL.\r\n"
+  },
+  {
+    "Kind": "yoshi",
+    "Source": "artifacts/visibility/2026-09-06_css-yoshi-p2p8-misc-defaults-r1.png",
+    "Destination": "artifacts/visibility/2026-09-26_p2-2p8-misc-defaults/css-yoshi.png",
+    "Sha256": "E52ECEF2850BCFF9EF3BB085A57AF05DB3F895FAEBEB8BB56C7F9F1EB991AF74",
+    "CompareExit": 0,
+    "Comparison": "compared 112,000 pixels (400x280 at window 8,56 -- guest viewport -- CROPPED to 400x280 at 0,0)\r\n  control   2026-09-06_css-yoshi-p2p8-frame-camera-20260924.png\r\n  candidate css-yoshi.png\r\n  differing 0 (0.0000%)\r\n  max channel delta 0\r\n\r\nPIXEL-IDENTICAL.\r\n"
+  },
+  {
+    "Kind": "pikachu",
+    "Source": "artifacts/visibility/2026-09-06_css-pikachu-p2p8-misc-defaults-r1.png",
+    "Destination": "artifacts/visibility/2026-09-26_p2-2p8-misc-defaults/css-pikachu.png",
+    "Sha256": "0F7F902E8F6BBFA397373D18294F87405EF50FF7200FA07C0E80FBBDB5122237",
+    "CompareExit": 0,
+    "Comparison": "compared 112,000 pixels (400x280 at window 8,56 -- guest viewport -- CROPPED to 400x280 at 0,0)\r\n  control   2026-09-06_css-pikachu-p2p8-frame-camera-20260924.png\r\n  candidate css-pikachu.png\r\n  differing 0 (0.0000%)\r\n  max channel delta 0\r\n\r\nPIXEL-IDENTICAL.\r\n"
+  }
+]
