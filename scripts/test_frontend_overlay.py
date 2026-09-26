@@ -35,7 +35,8 @@ def make_elf(*, include_overlay=True, overlay_address=0x2000,
              overlay_size=32, rel_text=None, rel_rodata=None,
              rel_overlay=None, rel_debug=None, rela_text=None,
              resident_function_value=0x1000, text_size=4,
-             frontend_entry_section=3, text_data=None):
+             frontend_entry_section=3, text_data=None,
+             overlay_bss_size=0, overlay_bss_address=None):
     """Create a tiny linked ELF32 ARM image with real SHT_REL/SHT_RELA tables."""
     rel_text = [(0x1000, (3 << 8) | 2)] if rel_text is None else rel_text
     rel_rodata = [(0x1800, (4 << 8) | 2)] if rel_rodata is None else rel_rodata
@@ -92,6 +93,14 @@ def make_elf(*, include_overlay=True, overlay_address=0x2000,
         {"name": ".strtab", "type": 3, "flags": 0, "addr": 0,
          "data": strings, "link": 0, "info": 0, "align": 1, "entsize": 0},
     ]
+    if overlay_bss_size:
+        section_defs.append({
+            "name": ".ovl.frontend.bss", "type": 8, "flags": 0x3,
+            "addr": (overlay_address + overlay_size if overlay_bss_address is None
+                     else overlay_bss_address),
+            "data": b"", "size": overlay_bss_size, "link": 0, "info": 0,
+            "align": 4, "entsize": 0,
+        })
     if rela_text is not None:
         section_defs[4]["type"] = 4
         section_defs[4]["data"] = rela_bytes(rela_text)
@@ -146,6 +155,19 @@ class FrontendOverlayTests(unittest.TestCase):
     def inspect(self, **kwargs):
         return checker.inspect_elf(make_elf(**kwargs), elf_name="fixture.elf",
                                    required=True)
+
+    def test_overlay_bss_counts_toward_the_memory_loan(self):
+        report = self.inspect(overlay_bss_size=64)
+        self.assertEqual(report["overlay_bytes"], 32)
+        self.assertEqual(report["overlay_bss_bytes"], 64)
+        self.assertEqual(report["overlay_memory_bytes"], 96)
+        self.assertFalse(any("contiguous" in error for error in report["errors"]))
+
+    def test_overlay_bss_gap_or_overlap_is_rejected(self):
+        for address in (0x2010, 0x2040):
+            report = self.inspect(overlay_bss_size=64, overlay_bss_address=address)
+            self.assertFalse(report["passed"])
+            self.assertTrue(any("contiguous" in error for error in report["errors"]))
 
     def test_thumb_function_entry_uses_code_address(self):
         report = self.inspect(resident_function_value=0x1001, rel_rodata=[])

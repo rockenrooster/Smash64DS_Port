@@ -199,3 +199,110 @@ explicit approval, then retried scoped staging. The first failure was not a comm
 Audited implementation/evidence checkpoint **2c9511de5e2** is committed and
 pushed. Owner's unrelated edits remain outside it. Current next action is solo
 memory reclamation: restore the 13,044 B reserve shortfall and fund MF residency.
+
+## Continue: scene-owned relocation workspaces
+
+Previous turn was **progress**: audited checkpoint250665eec56/2c9511de5e2 is intact,
+all jobs terminal, only unrelated owner edits remain. No completed probe or codec
+experiment is restarted. Current `9F7C46CD` is preserved as the capacity baseline.
+
+The linked frontend TUs retain66,195 B of data/BSS. Of that,58 source LBFileNode
+status/force-status arrays total18,672 B. Each is installed by its own scene's
+`lbRelocInitSetup` with both active counts reset to zero; these are workspace,
+not persistent menu/campaign state. Move exactly those arrays into Calico's
+overlay BSS, and include that BSS in the exclusive VS asset loan. The SDK loader
+clears it on reload. The resident dispatcher retires old workspace pointers before
+loading/lending the range; the next scene installs its own buffers normally.
+
+The ELF gate now prices both file-backed and total runtime overlay bytes and
+rejects a gap/overlap between code and BSS. Fifteen focused checker/loan tests pass.
+First target falsifier is the same heavy roster/config; warm build
+`build-p2p8-s7-fpwalk`, producer stamp remains canonicalYoster1. Log/exit
+`builds/p2-phase3-status-bss-heavy-build.{log,exit}`. Source inputs frozen.
+After capacity, natural CSS reserve/captures and scene reload still need proof;
+MF's697,760 B worst bank remains a separate unfunded requirement.
+Build session88898 exited0, native-only319 and ELF crossing gate GREEN. ROM
+`B96BEF342906263CD950192F198001F435A3A8977385EFF88B0DE710F4527179`.
+The ROM's actual overlay table agrees with the ELF:232,672 B loaded code/data,
+18,688 B zero-filled BSS including alignment, total251,360 B loan. No new
+resident crossing exemptions were needed. Run the existing two-update heavy
+probe on this exact ROM, runner7, `builds/p2-phase3-status-bss-heavy-probe.*`.
+Probe session8433 exited0: all four fighters and two updates, no allocator/reloc
+failures. Main arena896,512 B, free31,324 B (+18,768 versus9F7C46CD), startup
+reserve margin5,724 B. Loan251,360 B, used250,384 B in18 allocations. This is
+startup capacity only; GO/full-match/lifecycle/native visuals remain unproved.
+Next frozen batch check is the actual natural-input all-content twin in warm
+`build-p2p8-s7-freeplay`; preserved8062C536 CSS baseline is unchanged. Log/exit
+`builds/p2-phase3-status-bss-natural-build.{log,exit}`. No emulator active.
+Natural build46401 exited0: ROM `3ADAE9979183FD9A4B82E9610856B6516902B009D0EE5F14BFA3787C27FE9D19`,
+native-only319 and ELF gate GREEN. Config differs from heavy only by the two
+expected walk/roster flags. CSS probe68996 exited0: reserve200,656 B, failure0,
+margin17,584 B. Link/Yoshi/Pikachu400x280 crops are pixel-identical to8062C536.
+Dated captures are in `artifacts/visibility/2026-09-26_p2-2p8-status-bss/`.
+
+Extend the existing heavy probe with `-ThroughResults` for the missing reload
+coverage. It records the first battle update, then disables that breakpoint so
+the source match runs uninterrupted until its natural exit; it records end-of-
+match low-water before the next scene resets it and stops after three Results
+updates. It performs no guest state writes. This is lifecycle/resource evidence,
+not timing acceptance. Use B96BEF34, runner7, logs
+`builds/p2-phase3-status-bss-results-probe.{log,exit,txt}`; all runtime inputs frozen.
+Lifecycle probe50120 exited0: natural exit after2,043 presents, second overlay
+load succeeds, three Results updates reached, no allocator/reloc failures. Match
+low-water14,816 B remains **RESERVE_RED** (10,784 B short); startup-only margin
+did not cover16,508 B of subsequent allocations. Results free41,976 B. This is
+the new resource constraint; no separate timing acceptance is inferred.
+
+Next add13,829 B of immutable frontend tables from the linked map: Characters
+motion descriptors, Sound Test cue IDs, and credits name/job/company text/metadata.
+Source readers copy/read these tables. StaffRoleCharacters remains resident:
+`scStaffrollSetTextQuetions` mutates it based on unlocks. Persistent selections
+and other mutable state remain resident. No runtime inputs or gameplay code are
+changed. Frozen heavy relink: `builds/p2-phase3-frontend-tables-heavy-build.*`.
+Qualify the complete match/reload directly; no repeated startup-only ladder.
+Build65940 exited0, native-only319, no new crossing exemptions. ROM
+`FB299B25B21B0A70503BC2A8F31453441398B1F131577800EB289891661BEB97`,
+saved with ELF/config/gate in `builds/p2p8-frontend-tables-fb299b25/`. Overlay
+code/data246,528 B + BSS18,688 B =265,216 B. Active full-match/reload probe
+session32477; log `builds/p2-phase3-frontend-tables-results-probe.log`.
+
+Evidence limitation: B96BEF34's intermediate heavy binary/ELF was overwritten
+by the next relink before preservation. Its original log/hash/markers are kept
+in the status-bss summaries, but it is not a reusable binary baseline. The
+matched9F7C46CD baseline remains saved; natural3ADAE997 is now saved in
+`builds/p2p8-status-bss-natural-3adae997/`. Preserve FB299B25 before future reuse.
+Probe32477 exited0: first-update free46,092 B; natural exit after2,043 presents;
+end/low-water9,672 B; Results reload passes. This remains **RESERVE_RED** and
+does not establish an end-of-match gain against B96BEF34's different workload.
+
+Specific invalidator for one repeat:36,420 B of runtime heap growth needed an
+owner, not a guess. The added `-TraceRuntimeAllocations` observer records live
+allocation size/alignment/caller LR only during the match. Probe92984 exited0,
+reproducing the same2,043 presents/9,672 B low-water. It records205 allocations
+totalling36,300 B (120 B remainder is alignment):16,188 B from two Kirby copy-hat
+buffers,4,216 B thread stack, and the remainder source GObj/DObj/MObj/AObj/XObj/
+SObj/process growth. Kirby hats are currently loaded/read on demand after GO;
+required content and its full admission footprint remain unfunded. Native owner
+images include writable prepared-dense data, so sharing their buffers blindly
+would be incorrect. Follow that producer-to-consumer residency seam next.
+
+All30 moved lookup tables are byte-identical between the saved9F7C46CD ELF and
+FB299B25:13,829 B verified by symbol, recorded in `frontend-table-bytes.json`.
+No new ELF exemptions were needed. The natural twin's final relink is session
+37478, log `builds/p2-phase3-frontend-tables-natural-build.log`; no emulator active.
+Natural build37478 exited0, native-only319 and ELF gate GREEN. ROM
+`7E0B1C7F995C0F8564D7B419A350D1049FCFF0DD98E6558FCFDC029B7AA60F1B`, saved
+with ELF/config/gate in `builds/p2p8-frontend-tables-natural-7e0b1c7f/`.
+CSS probe63034 exited0: free200,656 B, reserve margin17,584 B, no reservation
+failure. All three400x280 captures remain pixel-identical to8062C536; dated
+copies/comparisons are in `artifacts/visibility/2026-09-26_p2-2p8-frontend-tables/`.
+
+The ordered allocation trace independently reproduces the exact36,420 B heap
+growth:36,300 B requested plus120 B alignment. `frontend-memory-summary.json`
+and `frontend-runtime-allocations.json` own the final identities and resource
+evidence. New reclaimable range versus9F7C46CD is32,544 B; no FPS/cadence gain is
+claimed. All jobs are terminal,33 focused tests pass, no root/P1 ROM published.
+KEEP/IMPLEMENTED_NOT_ACCEPTED: full-match reserve is15,928 B short. Next is
+source-faithful Kirby hat residency/admission, preserving mutable per-consumer
+prepared data, then the complete motion bank and ARM7 audio. Do not treat the
+startup-only margin or natural match completion as performance acceptance.

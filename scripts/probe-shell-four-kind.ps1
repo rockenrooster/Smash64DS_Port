@@ -6,6 +6,12 @@ param(
     # prove the match started; raise it to watch the arena past setup. Only the
     # first and the last are printed, so a whole-match figure costs one line.
     [ValidateRange(1, 4096)][int]$BattleFrames = 2,
+    # Observe the natural match exit and the reloaded Results scene. This is
+    # lifecycle/resource proof, not a timing measurement; no guest state writes.
+    [switch]$ThroughResults,
+    # Attribute only allocations after the first battle update by size/live LR.
+    # This changes debugger stops, not guest inputs, and is never timing proof.
+    [switch]$TraceRuntimeAllocations,
     # Name every scene-arena allocation of at least this many bytes, with its
     # caller. 0 disables. This is the census a scaling fix is sized from: the
     # per-kind file trees are only part of what a four-fighter battle spends,
@@ -94,6 +100,11 @@ if ($missing.Count -gt 0) {
     throw "shell-four-kind probe symbols absent from ${elf}: $($missing -join ', ')"
 }
 $hasExcptEntry = $symbols -contains '__excpt_entry'
+if ($ThroughResults -and
+    (($symbols -notcontains 'ndsFrontendOverlayPrepareDispatch') -or
+     ($symbols -notcontains 'ndsMNVSResultsRecordFrame'))) {
+    throw 'Results lifecycle probe requires frontend dispatch and Results observers.'
+}
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
@@ -136,6 +147,8 @@ try {
         'set $c_setup = 0',
         'set $c_make = 0',
         'set $c_batt = 0',
+        'set $c_results = 0',
+        'set $in_match = 0',
         'set $c_vsproc = 0',
         'set $c_vsstatus = 0'
     ))
@@ -190,17 +203,58 @@ try {
     #      the match STARTED, which is the other half of the answer.
     $commands.AddRange([string[]]@(
         'break ifCommonBattleUpdateInterfaceAll',
+        'set $b_battle = $bpnum',
         'commands',
         'silent',
         'set $c_batt = $c_batt + 1',
+        'set $in_match = 1',
         ('if ($c_batt == 1) || ($c_batt >= {0})' -f $BattleFrames),
         ('printf "FOURKIND BATTLE hit=%d make=%d setup=%d free=%u\n", $c_batt, $c_make, $c_setup, {0}' -f $free),
-        'end',
-        ('if $c_batt < {0}' -f $BattleFrames),
-        'continue',
-        'end',
         'end'
     ))
+    if ($ThroughResults) {
+        $commands.AddRange([string[]]@('disable $b_battle', 'continue', 'end'))
+    } else {
+        $commands.AddRange([string[]]@(
+            ('if $c_batt < {0}' -f $BattleFrames), 'continue', 'end', 'end'
+        ))
+    }
+
+    if ($ThroughResults) {
+        $commands.AddRange([string[]]@(
+            'break ndsFrontendOverlayPrepareDispatch',
+            'commands',
+            'silent',
+            'if ($c_batt > 0) && ($c_results == 0)',
+            ('printf "FOURKIND MATCH_EXIT next=%u free=%u lowwater=%u presents=%u overflow=%u\n", $r0, {0}, gNdsTaskmanGeneralHeapFreeMin, gNdsBattlePlayablePacingPresentedFrames, gNdsSyMallocOverflowCount' -f $free),
+            'set $in_match = 0',
+            'end',
+            'continue',
+            'end',
+            'break ndsMNVSResultsRecordFrame',
+            'commands',
+            'silent',
+            'set $c_results = $c_results + 1',
+            ('printf "FOURKIND RESULTS hit=%u free=%u scene=%u loads=%u loadfails=%u\n", $c_results, {0}, (unsigned)gSCManagerSceneData.scene_curr, gNdsFrontendOverlayLoadCount, gNdsFrontendOverlayLoadFailCount' -f $free),
+            'if $c_results < 3',
+            'continue',
+            'end',
+            'end'
+        ))
+    }
+
+    if ($TraceRuntimeAllocations) {
+        $commands.AddRange([string[]]@(
+            'break syTaskmanMalloc',
+            'commands',
+            'silent',
+            'if $in_match != 0',
+            'printf "FOURKIND RUNTIME_ALLOC size=%u align=%u caller=0x%08x presents=%u\n", $r0, $r1, $lr, gNdsBattlePlayablePacingPresentedFrames',
+            'end',
+            'continue',
+            'end'
+        ))
+    }
 
     # 6 -- compact fighter-core load failures are fail-closed infinite loops.
     #      Without this breakpoint a pack regression burns the full probe

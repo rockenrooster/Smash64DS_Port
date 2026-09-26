@@ -1,0 +1,160 @@
+{
+  "status": "IMPLEMENTED_NOT_ACCEPTED_RUNTIME_RESERVE_RED",
+  "identity": {
+    "builds/p2p8-frontend-tables-fb299b25/smash64ds-p2-shell-freeplay-hwtri.nds": "fb299b25b21b0a70503bc2a8f31453441398b1f131577800eb289891661beb97",
+    "builds/p2p8-frontend-tables-fb299b25/smash64ds-p2-shell-freeplay-hwtri.elf": "c7c87657fbd0e939d8f327227fc4d3c18cf31ea5e0bd7e44e5b14f35db76062a",
+    "builds/p2p8-frontend-tables-fb299b25/nds_build_config.h": "b1eb16d28e40cf20393bd4abbc7e4ccdf427e179ee8e62bf20d142105ca0d58c",
+    "builds/p2p8-frontend-tables-natural-7e0b1c7f/smash64ds-p2-shell-freeplay-hwtri.nds": "7e0b1c7f995c0f8564d7b419a350d1049fcff0dd98e6558fcfdc029b7aa60f1b",
+    "builds/p2p8-frontend-tables-natural-7e0b1c7f/smash64ds-p2-shell-freeplay-hwtri.elf": "dbd7d11073b8e81b0f367564bb93e80d659e23f11b31b4df541370af03743516",
+    "builds/p2p8-frontend-tables-natural-7e0b1c7f/nds_build_config.h": "01693b64bebcebe98963c61f162307fefbc6034b940a5f64db3ed97a8c55bc1d"
+  },
+  "frontend_code_data_bytes": 246528,
+  "frontend_bss_bytes": 18688,
+  "loan_bytes": 265216,
+  "gain_vs_9f7c46cd_bytes": 32544,
+  "natural_css_free_bytes": 200656,
+  "natural_css_required_bytes": 183072,
+  "css_three_crops_pixel_identical": true,
+  "match_presents": 2043,
+  "first_update_free": 46092,
+  "low_water": 9672,
+  "required_floor": 25600,
+  "shortfall": 15928,
+  "runtime_allocations": 205,
+  "runtime_requested_bytes": 36300,
+  "alignment_bytes": 120,
+  "heap_growth": 36420,
+  "next_dependency": "Required Kirby hat admission and full residency; current images include writable prepared-dense members.",
+  "caller_totals": [
+    {
+      "lr": 33755100,
+      "bytes": 16188,
+      "count": 2,
+      "function": "ndsRendererNativeEnsureKirbyCopyHat",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c:3959 (discriminator 1)"
+    },
+    {
+      "lr": 34249822,
+      "bytes": 4216,
+      "count": 1,
+      "function": "gcGetGObjStackOfSize",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:200"
+    },
+    {
+      "lr": 34250528,
+      "bytes": 3128,
+      "count": 23,
+      "function": "gcGetDObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:740"
+    },
+    {
+      "lr": 34250260,
+      "bytes": 2992,
+      "count": 22,
+      "function": "gcGetGObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:437"
+    },
+    {
+      "lr": 34250474,
+      "bytes": 2352,
+      "count": 14,
+      "function": "gcGetMObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:701"
+    },
+    {
+      "lr": 34252082,
+      "bytes": 1980,
+      "count": 55,
+      "function": "gcGetAObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:644"
+    },
+    {
+      "lr": 34250422,
+      "bytes": 1872,
+      "count": 26,
+      "function": "gcGetXObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:607"
+    },
+    {
+      "lr": 34250584,
+      "bytes": 1404,
+      "count": 13,
+      "function": "gcGetSObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:776"
+    },
+    {
+      "lr": 34249974,
+      "bytes": 1116,
+      "count": 31,
+      "function": "gcGetGObjProcess",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:251"
+    },
+    {
+      "lr": 34252172,
+      "bytes": 576,
+      "count": 16,
+      "function": "gcGetAObjSetNextAlloc",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:644"
+    },
+    {
+      "lr": 34249728,
+      "bytes": 464,
+      "count": 1,
+      "function": "gcGetGObjThread",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:123"
+    },
+    {
+      "lr": 34249834,
+      "bytes": 12,
+      "count": 1,
+      "function": "gcGetGObjStackOfSize",
+      "location": "D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-s7-fpwalk/battleship_overlay/src/sys/objman.c:181"
+    }
+  ],
+  "observations": [
+    {
+      "session": 32477,
+      "exit": 0,
+      "raw_log": "builds\\p2-phase3-frontend-tables-results-probe.txt",
+      "sha256": "130f11dcfe0af59788b9e3233143118cd92e2c769821a49012092285f167f18a",
+      "markers": [
+        "FOURKIND BATTLE hit=1 make=12 setup=0 free=46092",
+        "FOURKIND MATCH_EXIT next=24 free=9672 lowwater=9672 presents=2043 overflow=0",
+        "FOURKIND RESULTS hit=1 free=40560 scene=24 loads=2 loadfails=0",
+        "FOURKIND RESULTS hit=2 free=40560 scene=24 loads=2 loadfails=0",
+        "FOURKIND RESULTS hit=3 free=40560 scene=24 loads=2 loadfails=0",
+        "FOURKIND STOP pc=0x22aa24c lr=0x20a61c7 commit=2 setup=0 make=12 batt=1",
+        "FOURKIND ARENA chosen=896512 allocfail=196 heapgen=10 start=0x02305c00 ptr=0x023d6b90 end=0x023e0a00 free=40560 overflow=0",
+        "FOURKIND LOWWATER generalfreemin=9672 gfxpeak=80 gfxcap=32768 gfxoverflow=0 gfxnoroom=0",
+        "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+        "FOURKIND OVERLAY loads=2 loadfails=0 bytes=265216 loans=1 loanbytes=0 used=0 allocs=0 spill=0"
+      ]
+    },
+    {
+      "session": 92984,
+      "exit": 0,
+      "raw_log": "builds\\p2-phase3-frontend-tables-alloc-probe.txt",
+      "sha256": "48e11c2427cb7c08e7c3fd5fad1b64aba55a85cd922d7fff105369c6bb7afae6",
+      "markers": [
+        "FOURKIND BATTLE hit=1 make=12 setup=0 free=46092",
+        "FOURKIND MATCH_EXIT next=24 free=9672 lowwater=9672 presents=2043 overflow=0",
+        "FOURKIND RESULTS hit=1 free=40560 scene=24 loads=2 loadfails=0",
+        "FOURKIND RESULTS hit=2 free=40560 scene=24 loads=2 loadfails=0",
+        "FOURKIND RESULTS hit=3 free=40560 scene=24 loads=2 loadfails=0",
+        "FOURKIND STOP pc=0x22aa24c lr=0x20a61c7 commit=2 setup=0 make=12 batt=1",
+        "FOURKIND ARENA chosen=896512 allocfail=196 heapgen=10 start=0x02305c00 ptr=0x023d6b90 end=0x023e0a00 free=40560 overflow=0",
+        "FOURKIND LOWWATER generalfreemin=9672 gfxpeak=80 gfxcap=32768 gfxoverflow=0 gfxnoroom=0",
+        "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+        "FOURKIND OVERLAY loads=2 loadfails=0 bytes=265216 loans=1 loanbytes=0 used=0 allocs=0 spill=0"
+      ]
+    }
+  ],
+  "acceptance_owed": [
+    "reserve for full required workload",
+    "all native/output checks",
+    "timing and cadence",
+    "all roster-stage coverage",
+    "MF runtime admission/bind",
+    "ARM7 audio"
+  ]
+}

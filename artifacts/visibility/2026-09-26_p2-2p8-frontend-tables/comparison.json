@@ -1,0 +1,34 @@
+{
+  "candidate_rom": "7E0B1C7F995C0F8564D7B419A350D1049FCFF0DD98E6558FCFDC029B7AA60F1B",
+  "baseline_rom": "8062C53602EBAB65D96C634D2F4C86DAA14AC75B31BB72E916E61634274FF816",
+  "scope": "400x280 native CSS viewport; excludes FPS instrumentation",
+  "comparisons": [
+    {
+      "kind": "link",
+      "status": "fulfilled",
+      "chunk_id": "263433",
+      "wall_time_seconds": 0.8329559,
+      "exit_code": 0,
+      "original_token_count": 55,
+      "output": "compared 112,000 pixels (400x280 at window 8,56 -- guest viewport -- CROPPED to 400x280 at 0,0)\r\n  control   css-link.png\r\n  candidate css-link.png\r\n  differing 0 (0.0000%)\r\n  max channel delta 0\r\n\r\nPIXEL-IDENTICAL.\r\n"
+    },
+    {
+      "kind": "yoshi",
+      "status": "fulfilled",
+      "chunk_id": "748a4a",
+      "wall_time_seconds": 0.7779984,
+      "exit_code": 0,
+      "original_token_count": 55,
+      "output": "compared 112,000 pixels (400x280 at window 8,56 -- guest viewport -- CROPPED to 400x280 at 0,0)\r\n  control   css-yoshi.png\r\n  candidate css-yoshi.png\r\n  differing 0 (0.0000%)\r\n  max channel delta 0\r\n\r\nPIXEL-IDENTICAL.\r\n"
+    },
+    {
+      "kind": "pikachu",
+      "status": "fulfilled",
+      "chunk_id": "05832e",
+      "wall_time_seconds": 0.7710141,
+      "exit_code": 0,
+      "original_token_count": 56,
+      "output": "compared 112,000 pixels (400x280 at window 8,56 -- guest viewport -- CROPPED to 400x280 at 0,0)\r\n  control   css-pikachu.png\r\n  candidate css-pikachu.png\r\n  differing 0 (0.0000%)\r\n  max channel delta 0\r\n\r\nPIXEL-IDENTICAL.\r\n"
+    }
+  ]
+}

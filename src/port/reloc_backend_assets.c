@@ -12316,6 +12316,16 @@ void ndsRelocExternTreeSliceCancel(void *cursor)
 }
 #endif
 
+void ndsRelocReleaseSceneStatusBuffers(void)
+{
+    sNdsRelocStatusBuffer = NULL;
+    sNdsRelocStatusBufferCount = 0;
+    sNdsRelocStatusBufferMax = 0;
+    sNdsRelocForceStatusBuffer = NULL;
+    sNdsRelocForceStatusBufferCount = 0;
+    sNdsRelocForceStatusBufferMax = 0;
+}
+
 void lbRelocInitSetup(LBRelocSetup *setup)
 {
     sNdsRelocInitCount++;

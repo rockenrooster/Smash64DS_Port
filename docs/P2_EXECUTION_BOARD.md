@@ -76,23 +76,22 @@ failures 39->0, 1,972 replay pairs identical; stress exit 0 (NDL armed).
 WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **CHECK**: particle selector/
 direct route retired; NDL defaults on. `F5CA9FE7` passes natural match/replay
 without pokes. Shipping-like `8062C536`: CSS free 204,752 B, three previews exact.
-Next: solo reserve/MF work. Audit fixed four false-PASS gaps; 31 tests pass.
+Next: make required Kirby hat residency explicit before GO and fund its RAM.
 Phase3 receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
-Heavy `1E3A5E9D` fails before GO: Link requests 33,520 B with 20,316 B free.
 Particle Task49, camera/lifecycle and integrated gates remain owed.
 Defaults `ab7bcec4729`; expanded overlay/solo audit `2c9511de5e2`, pushed.
-Receipt owns prior Stage measurements and retirement control `0A14A9F9`.
 All-VS `9F69CA39` is KEEP/IMPLEMENTED_NOT_ACCEPTED: Jungle heap restored;
 Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
 Task36 retirement remains scoped; world-cache retirement/integration is owed.
-Pre-overlay CSS free 204,752 B; recheck owed. Heavy arena 896,512 B.
+Final natural `7E0B1C7F` CSS free 200,656 B; three previews exact. Heavy arena 896,512 B.
 Owner 09-26: no more subagents; root audits retained delegated work personally.
 MF2 check passes 1,570 clips/29 raw exceptions; scoped audit recorded in receipt.
-`9F7C46CD`: all four made/two updates; free 12,556 B <25,600, reserve RED.
-A7 loan uses 231,632 B; MF2 worst bank 697,760 B, unlinked. No active jobs.
+`FB299B25`: 2,043 presents/Results; low-water 9,672 B, reserve RED. Reload passes.
+A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
+MF2 worst bank 697,760 B, unlinked. No live jobs; 33 focused tests pass.
 Shipping CSS arena 900,608 B; lab 1,285,888 B. Heavy-roster deficit still unsized.
-**Constraint**: CSS reserve >=183,072 B; pre-overlay margin 21,680 B.
+**Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 

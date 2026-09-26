@@ -22,7 +22,8 @@ CLI::
 The JSON report is printed to stdout on both pass and policy failure. Exit 0
 means the check passed, 1 means policy failure, and 2 means malformed input or
 invocation. ``overlay_bytes`` is the total allocated, file-backed byte count
-for ``.ovl.frontend`` and its allocated suffix sections.
+for ``.ovl.frontend`` and its allocated suffix sections. ``overlay_memory_bytes``
+includes their BSS and is the size available to the scene-asset loan.
 """
 
 from __future__ import annotations
@@ -494,9 +495,20 @@ def inspect_elf(data: bytes, *, elf_name: str,
     overlay_indices = {section.index for section in overlay_sections}
     overlay_bytes = sum(section.size for section in overlay_sections
                         if section.kind != SHT_NOBITS)
+    overlay_memory_bytes = sum(section.size for section in overlay_sections)
+    overlay_bss_bytes = overlay_memory_bytes - overlay_bytes
     errors: list[str] = []
 
     if required:
+        ordered_overlay = sorted((s for s in overlay_sections if s.size),
+                                 key=lambda s: s.address)
+        for previous, current in zip(ordered_overlay, ordered_overlay[1:]):
+            if current.address != previous.address + previous.size:
+                errors.append("overlay code/BSS sections must form one contiguous loan")
+        if (ordered_overlay and
+                (ordered_overlay[-1].address + ordered_overlay[-1].size) %
+                OVERLAY_RUNTIME_ALIGNMENT != 0):
+            errors.append("overlay runtime end is not 32-byte aligned")
         if len(primary_overlay) != 1:
             if not primary_overlay:
                 errors.append(f"required overlay section {OVERLAY_SECTION} is missing")
@@ -637,6 +649,8 @@ def inspect_elf(data: bytes, *, elf_name: str,
         "required": required,
         "overlay_present": bool(primary_overlay),
         "overlay_bytes": overlay_bytes,
+        "overlay_bss_bytes": overlay_bss_bytes,
+        "overlay_memory_bytes": overlay_memory_bytes,
         "overlay_sections": [
             {
                 "name": section.name,

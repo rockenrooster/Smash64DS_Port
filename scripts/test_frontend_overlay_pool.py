@@ -46,6 +46,7 @@ static int ovlLoadAndActivate(unsigned id) {
 static void ovlDeactivate(unsigned id) { assert(id == 0); ++deactivations; }
 static void ndsFsLock(void) { assert(locks++ == 0); }
 static void ndsFsUnlock(void) { assert(--locks == 0); }
+static void ndsRelocReleaseSceneStatusBuffers(void) {}
 static void *syTaskmanMalloc(size_t bytes, u32 alignment) {
     assert(bytes <= sizeof(general_asset) && alignment == 16);
     ++allocations;

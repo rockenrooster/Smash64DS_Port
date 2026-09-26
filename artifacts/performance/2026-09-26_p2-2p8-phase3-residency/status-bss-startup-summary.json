@@ -1,0 +1,24 @@
+{
+  "rom_sha256": "B96BEF342906263CD950192F198001F435A3A8977385EFF88B0DE710F4527179",
+  "writer_session": 8433,
+  "writer_exit": 0,
+  "scope": "status-bss-startup",
+  "updates": 2,
+  "free": 31324,
+  "loan": 251360,
+  "loan_used": 250384,
+  "allocations": 18,
+  "reserve_margin_at_startup": 5724,
+  "binary_retained": false,
+  "raw_log": "builds\\p2-phase3-status-bss-heavy-probe.txt",
+  "raw_sha256": "25554783ce3babcf889c7ea544d452d83cd7e8b95b1571ab3cf3ecd19bca3f90",
+  "markers": [
+    "FOURKIND BATTLE hit=1 make=12 setup=0 free=31324",
+    "FOURKIND BATTLE hit=2 make=12 setup=0 free=31324",
+    "FOURKIND STOP pc=0x2101dbc lr=0x20b636f commit=2 setup=0 make=12 batt=2",
+    "FOURKIND ARENA chosen=896512 allocfail=196 heapgen=9 start=0x02305c00 ptr=0x023d8fa4 end=0x023e0a00 free=31324 overflow=0",
+    "FOURKIND LOWWATER generalfreemin=4294967295 gfxpeak=0 gfxcap=0 gfxoverflow=0 gfxnoroom=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+    "FOURKIND OVERLAY loads=1 loadfails=0 bytes=251360 loans=1 loanbytes=251360 used=250384 allocs=18 spill=60520"
+  ]
+}

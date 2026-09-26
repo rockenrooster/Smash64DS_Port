@@ -1,0 +1,27 @@
+{
+  "rom_sha256": "B96BEF342906263CD950192F198001F435A3A8977385EFF88B0DE710F4527179",
+  "writer_session": 50120,
+  "writer_exit": 0,
+  "scope": "status-bss-results",
+  "presents": 2043,
+  "low_water": 14816,
+  "reserve_shortfall": 10784,
+  "results_updates": 3,
+  "reloads": 2,
+  "load_failures": 0,
+  "binary_retained": false,
+  "raw_log": "builds\\p2-phase3-status-bss-results-probe.txt",
+  "raw_sha256": "5006fe98938264a08c3b0f8b108e0ea0b2f77192890b5c6771e69e6f5803e956",
+  "markers": [
+    "FOURKIND BATTLE hit=1 make=12 setup=0 free=31324",
+    "FOURKIND MATCH_EXIT next=24 free=14816 lowwater=14816 presents=2043 overflow=0",
+    "FOURKIND RESULTS hit=1 free=41976 scene=24 loads=2 loadfails=0",
+    "FOURKIND RESULTS hit=2 free=41976 scene=24 loads=2 loadfails=0",
+    "FOURKIND RESULTS hit=3 free=41976 scene=24 loads=2 loadfails=0",
+    "FOURKIND STOP pc=0x22ad84c lr=0x20a61c7 commit=2 setup=0 make=12 batt=1",
+    "FOURKIND ARENA chosen=896512 allocfail=196 heapgen=10 start=0x02305c00 ptr=0x023d6608 end=0x023e0a00 free=41976 overflow=0",
+    "FOURKIND LOWWATER generalfreemin=14816 gfxpeak=80 gfxcap=32768 gfxoverflow=0 gfxnoroom=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+    "FOURKIND OVERLAY loads=2 loadfails=0 bytes=251360 loans=1 loanbytes=0 used=0 allocs=0 spill=0"
+  ]
+}

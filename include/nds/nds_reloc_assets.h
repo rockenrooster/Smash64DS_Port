@@ -18,6 +18,8 @@ typedef struct NDSRelocAssetHeader {
 struct MObjSub;
 
 void ndsRelocAssetsInit(void);
+/* Retire caller-owned LBFileNode workspaces after the scene has returned. */
+void ndsRelocReleaseSceneStatusBuffers(void);
 /* R2-04 E4/E5. Makes the match's animation streams resident. PreloadMatch arms
  * the walk at the battle-start seam; PreloadStep advances one bounded chunk.
  * PreloadFinish drains those bounded chunks before battle BGM/countdown starts,

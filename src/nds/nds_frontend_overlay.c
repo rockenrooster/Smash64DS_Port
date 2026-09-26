@@ -32,6 +32,10 @@ void ndsFrontendOverlayPrepareDispatch(u32 kind)
     u32 bytes = (u32)(__nds_frontend_end - __nds_frontend_start);
 
     gNdsFrontendOverlayBytes = bytes;
+    /* The previous scene has returned to resident code. Drop its borrowed
+     * LBFileNode buffers before their overlay bytes can become asset storage.
+     * The next scene installs its own workspace through lbRelocInitSetup. */
+    ndsRelocReleaseSceneStatusBuffers();
     sNdsFrontendCursor = NULL;
     if (bytes == 0u)
     {
@@ -41,7 +45,8 @@ void ndsFrontendOverlayPrepareDispatch(u32 kind)
     {
         /* The caller is the resident dispatcher, after the previous scene has
          * returned. No front-end return address may remain on this stack.
-         * The overlay contains only text/rodata: menu state stays resident. */
+         * Persistent menu state stays resident; only scene-local relocation
+         * workspaces accompany the text/rodata in the loaned range. */
         if (sNdsFrontendLoaded != 0u)
         {
             ovlDeactivate(0u);

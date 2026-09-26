@@ -1,0 +1,188 @@
+{
+  "baseline": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-frontend-wide-9f7c46cd\\smash64ds-p2-shell-freeplay-hwtri.elf",
+  "candidate": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-frontend-tables-fb299b25\\smash64ds-p2-shell-freeplay-hwtri.elf",
+  "tables": [
+    {
+      "symbol": "dMNCharactersAttack1MotionDescs",
+      "bytes": 1152,
+      "sha256": "d0c1485e0e431b5c01326e1bc32bbe65723fe02e037976e99ac48ec5bfeec4ec",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersCommonMotionDescs",
+      "bytes": 3744,
+      "sha256": "9f0bc217c1fa5c842964bc96e2f0777c7b6f6520285ed64809ad60422fe15166",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersKirbyFallMotionDesc",
+      "bytes": 12,
+      "sha256": "7fbb9177492fe224542e7875d8d2ba0a11a2a04ea003a60402e98f69f02eccdd",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersKirbyJumpAerialMotionDescs",
+      "bytes": 96,
+      "sha256": "9e5ef1affcf4d917fbb71e6aca2e7c80668ff546dcab56581c8b21ebae7efce4",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersPurinFallMotionDesc",
+      "bytes": 12,
+      "sha256": "7fbb9177492fe224542e7875d8d2ba0a11a2a04ea003a60402e98f69f02eccdd",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersPurinJumpAerialMotionDescs",
+      "bytes": 96,
+      "sha256": "9e5ef1affcf4d917fbb71e6aca2e7c80668ff546dcab56581c8b21ebae7efce4",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionCaptain",
+      "bytes": 288,
+      "sha256": "c96e71eeaf532f3637d1e6db923174720b5d776964e624f307a34c445ce6aae1",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionDonkey",
+      "bytes": 288,
+      "sha256": "fc5254d49dbcce841c0508ec0ed8c7a3bb230ceb9f961a16ddccc53fe359a660",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionFox",
+      "bytes": 288,
+      "sha256": "747a5bf81425c8eb1d65624ef042c4763d48a9e9c9919b8e462547867f315bb0",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionKirby",
+      "bytes": 288,
+      "sha256": "236fcd4177e8662252d298418423c5101ad7a6d527b4595cc62161a83e2fc2db",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionLink",
+      "bytes": 288,
+      "sha256": "2ab59fcb459e118e93e3a251511544dd2d4c8b03265e4199c4b55e2c7090e31e",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionLuigi",
+      "bytes": 288,
+      "sha256": "71a55489ea48f218c436f110c9fd7900b6c91df431b1fec58f97bd03a3a78b8f",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionMario",
+      "bytes": 288,
+      "sha256": "71a55489ea48f218c436f110c9fd7900b6c91df431b1fec58f97bd03a3a78b8f",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionNess",
+      "bytes": 288,
+      "sha256": "d7364c2a6f784b4429df5073502d3eb8418ba86ea0a06a807bbd6cc6d597146f",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionPikachu",
+      "bytes": 288,
+      "sha256": "8d9c1e6315a4fccbcc15ee96216d58f46c93e1a303a149cd6922d6fae014952a",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionPurin",
+      "bytes": 288,
+      "sha256": "9f8de69c5535da7a3b050b476e7a1e2bc9c0aae50bb7b0d345daa5597b7cf97c",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionSamus",
+      "bytes": 288,
+      "sha256": "263b2928a5c86fe609bb89f0b962eaa52b4385dda800c135bd0858284b79d7e7",
+      "identical": true
+    },
+    {
+      "symbol": "dMNCharactersSpecialMotionYoshi",
+      "bytes": 288,
+      "sha256": "7fc5a9196ba72be16ecf9a8455748fa92d4022531e1a142b9eae69a9298ef990",
+      "identical": true
+    },
+    {
+      "symbol": "dMNSoundTestMusicIDs",
+      "bytes": 180,
+      "sha256": "c36ae18a75708da54f364d47e639ecd348527411b25875b17048232d4ca33dd8",
+      "identical": true
+    },
+    {
+      "symbol": "dMNSoundTestSoundIDs",
+      "bytes": 776,
+      "sha256": "c94e827ea47f1d4c902fc36826c6b263d47001f02668b9d8a601cf266d4a4b84",
+      "identical": true
+    },
+    {
+      "symbol": "dMNSoundTestVoiceIDs",
+      "bytes": 976,
+      "sha256": "d911b079f5efec7948305891013407f6ebb73c4a2cf5ed14acf6022f244abdcd",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollCompanyCharacters",
+      "bytes": 115,
+      "sha256": "da0bd985e3a138fb4f6e47578dad805efd3efae09461bfc0b4fdbce888af7002",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollCompanyIDs",
+      "bytes": 84,
+      "sha256": "a38e1382e8e1fc9aeb7f6232814de07fe04c69f0e85da2a1040eaf3937f2a05f",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollCompanyTextInfo",
+      "bytes": 88,
+      "sha256": "d5f3de5717a1c30b9ee358b83830ea3ee108b43383f83bf11a0fd999c38089bc",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollJobCharacters",
+      "bytes": 173,
+      "sha256": "e4d1b8eba25f61c4fa8967fc7e07a23bbdbf5a540cf8b06fe217972c013e1fd8",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollJobDescriptions",
+      "bytes": 192,
+      "sha256": "71bbc40f7897f869b979a608ca2b29d2ea31f2d2fba69a6f4c29986617bf7ef7",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollJobTextInfo",
+      "bytes": 144,
+      "sha256": "ef5d30357e7b904d21b577efc9a6f754c09e3a02dc0659aa575a1f2f4a9aa589",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollNameCharacters",
+      "bytes": 1189,
+      "sha256": "f0f616170f594685f7188de2121002aed0f58e2cfe933f0990a2f17c5137cea8",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollNameTextInfo",
+      "bytes": 672,
+      "sha256": "26ab5d3ab15c390d505490b3bebc6ca1b25898353c62cd7d2461d320a8d36328",
+      "identical": true
+    },
+    {
+      "symbol": "dSCStaffrollStaffRoleTextInfo",
+      "bytes": 672,
+      "sha256": "b9c0a490a50370ae9475ae8923fb3c0e373a43d9dfee2d88dc09fc66e0afeef3",
+      "identical": true
+    }
+  ],
+  "total_bytes": 13829,
+  "count": 30
+}
