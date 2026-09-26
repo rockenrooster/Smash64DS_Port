@@ -5,7 +5,7 @@ Contract: the exact generated initial PreparedDense bytes ship inside the
 existing NitroFS native owner image payloads, the runtime tables bind
 `prepared_dense` to that aligned resident member, and no image-backed owner
 keeps a static initialized array in builds that load it from an image.
-Mario/Fox keep their frozen static path (no image, no bind block).
+Mario/Fox keep their frozen base path; alternate skeletons use owner images.
 
 Strategy: exercise the real producer (`generate_nds_native_owner_images`)
 on small synthetic owner contexts (no BattleShip inputs, no ROM, no
@@ -315,20 +315,25 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                              f"bind call arg count changed: {call[:80]}")
             self.assertNotIn("PreparedDense", call)
             args = tuple(arg.strip() for arg in call.split(","))
-            (hats if args[0].startswith("sNdsNativeKirbyHatTables[") else ordinary).append(args)
+            (hats if args[0] == "entry->tables" else ordinary).append(args)
         expected = {
             (f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables",
              images._image_type(owner, detail), "base",
              f"NDS_NATIVE_IMAGE_{owner.upper()}_{detail.upper()}")
             for owner in images.P2_IMAGE_OWNERS for detail in images.DETAILS
         }
+        expected.update({
+            (f"sNds{owner}1SkeletonTables", f"NDSNative{owner}_Skeleton1HighImage",
+             "base", f"NDS_NATIVE_IMAGE_{owner.upper()}_SKELETON1_HIGH")
+            for owner in ("Mario", "Fox")
+        })
         self.assertEqual(set(ordinary), expected)
         self.assertEqual(len(ordinary), len(expected), "duplicate ordinary image bind")
         self.assertEqual(len(hats), 1, "expected one deferred-hat image bind")
         hat_call = ",".join(hats[0]).replace("\\", "").replace("\r", "").replace("\n", "").replace(" ", "")
         self.assertEqual(
             hat_call,
-            "sNdsNativeKirbyHatTables[battle_slot][use_low_detail],type_,base,prefix_",
+            "entry->tables,type_,base,prefix_",
         )
         self.assertIn("NDS_NATIVE_KIRBY_HAT_IMAGES(NDS_KIRBY_HAT_BIND_CASE)", src)
         # No static PreparedDense symbol survives inside the bind function.

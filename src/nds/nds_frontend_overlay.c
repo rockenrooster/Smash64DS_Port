@@ -4,6 +4,8 @@
 #include <nds/nds_reloc_assets.h>
 #include <sc/scene.h>
 #include <sys/taskman.h>
+#include <sys/malloc.h>
+#include <nds/nds_startup.h>
 
 extern u8 __nds_frontend_start[];
 extern u8 __nds_frontend_end[];
@@ -138,4 +140,35 @@ void *ndsSceneAssetAlloc(size_t bytes, u32 alignment)
         storage = syTaskmanMalloc(bytes, alignment);
     }
     return storage;
+}
+
+void *ndsSceneAssetTryAlloc(size_t bytes, u32 alignment, size_t keep_free)
+{
+    void *storage;
+
+    if ((bytes == 0u) || (alignment == 0u) ||
+        ((alignment & (alignment - 1u)) != 0u) ||
+        (bytes > SIZE_MAX - keep_free))
+    {
+        return NULL;
+    }
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, keep_free, 1u) == FALSE)
+    {
+        return NULL;
+    }
+    storage = ndsFrontendOverlayTryAlloc(bytes, alignment);
+    if (storage != NULL)
+    {
+        return storage;
+    }
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                           bytes + keep_free, alignment) == FALSE)
+    {
+        return NULL;
+    }
+    if (sNdsFrontendCursor != NULL)
+    {
+        gNdsFrontendOverlaySpillBytes += (u32)bytes;
+    }
+    return syTaskmanMalloc(bytes, alignment);
 }

@@ -1,0 +1,50 @@
+{
+  "rom_sha256": "D675C034D70833EBA6A006BEDD19D642A2D21BD018EABBA9B31BA504822A45BC",
+  "elf_sha256": "DEC815B33E91166B67874BEE90E90DBA60F057E6A33B53978D8B88D935BED487",
+  "config_sha256": "B93F9170E567B0F5C758D782544A7AD75A730AFF9E01D7F9D3646C8A489782A4",
+  "saved": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-hat-bank-d675c034",
+  "native_only_inputs": 248,
+  "baseline_rom_sha256": "F5CA9FE783047C44585C1B6EF8C12A3C6BA2ADB30EA2C55836EF63524606512C",
+  "nitrofs": {
+    "baseline_count": 404,
+    "candidate_count": 404,
+    "baseline_bytes": 29066719,
+    "candidate_bytes": 29066719,
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "config_identical": true,
+  "source_sha256": {
+    "Makefile": "D5C3CB159E3CC95A921C173E1C2ED8CC3C3594F0663AA2C4874261D70F11860B",
+    "src/nds/nds_renderer_assets.c": "EFA81712AA37370C8F280A159BCE9725F31237B1A5C0F4AE6ECA28C67D2BE3B3",
+    "src/nds/nds_frontend_overlay.c": "13077134BD8BCEF14B04826F8184F3150AF13A5F17472B0AC3F28E747EB5B91E",
+    "src/port/nds_kirby_hat_residency.c": "A042C7EB07FB5EE8297992F70B87F4ABB79F392A90CAA82FBA6EFD3924EA567D",
+    "src/port/reloc_backend_compat_shims.c": "00A075C93C677092863A1C138802DA766593C62E0F5586258149687D6F974E13",
+    "src/import/battleship_scvsbattle.c": "E4FA8C03FED91F2C1FCA5E8872953E2ABD8DE047066918144061FBE09DA6FCDC",
+    "include/nds/nds_frontend_overlay.h": "4011D2A0FB43BEE64CCF8D9DDF6DBD8158BB0C8AFF505158CA5A93DADEF380B3",
+    "include/nds/nds_renderer.h": "E7EE61BA302B72FCB4D76CA34B0A5B855A909AA980871621E95FEABC172ADBAB",
+    "include/nds/nds_kirby_hat_residency.h": "B290C6511AEFFB3C27860BD763FB183438024486F92357977A5BB6870874DDB3",
+    "linker/nds_frontend_overlay.ld": "8BD72E7C50B683824C90D8DF3FAD7CCB2F899936B06D60F2C75882F1C53F15CB",
+    "linker/nds_memory.ld": "F01182DEED125DA578FB64038DACC753C2E84A6C3906F6D9033BFAE52A90FDA7",
+    "scripts/check_frontend_overlay.py": "927B4E08DD098CE3890CCC88A7080F98D771D566FA97475A865ADCACD92E7871",
+    "scripts/frontend_overlay_allowlist.json": "118E23B9DAD56D9C93D0BE850F59F45ADEA78DB47FFE63060F1744BE04918328",
+    "scripts/sample-tick-hud-buckets.ps1": "DE55137C73375BF9A76E9967CDB5F880F5B44D5D6497AA28A7B9C97397DE942B",
+    "scripts/verify-p2-four-fighter-stress.ps1": "95642A9FB1DDAE2E355BDA89CDE5FD3F18CD9DBD198D549E3B75391101E75386",
+    "src/port/diagnostics_renderer_census.c": "CAFE1F9C4036B1AE45EEBC31874B722F76B284628C8C3E11487888F7F1A67CCD"
+  },
+  "source_base_commit": "5d0325d2eff",
+  "preserved_owner_edit": "src/port/diagnostics_renderer_census.c",
+  "host_tests": {
+    "passed": 15,
+    "ordered_rosters": 20736,
+    "checks": [
+      "actual C bank lifetime/sharing/admission failures",
+      "source copy-set closure",
+      "frontend allocation reserve",
+      "prepared-dense image binding",
+      "owner-image ABI positive and negative control"
+    ]
+  },
+  "target_verification": "natural canonical match replay identical; performance RED; no copy engagement"
+}

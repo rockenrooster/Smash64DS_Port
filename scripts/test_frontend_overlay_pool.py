@@ -36,6 +36,12 @@ enum { FALSE = 0, nSCKindVSBattle = 22 };
 static _Alignas(32) u8 test_overlay[256];
 static u8 general_asset[512];
 static unsigned loads, deactivations, initializations, locks, allocations;
+static size_t general_free = 512;
+static int gSYTaskmanGeneralHeap;
+static int ndsSyMallocWouldFit(const int *heap, size_t bytes, u32 alignment) {
+    assert(heap == &gSYTaskmanGeneralHeap && alignment != 0);
+    return bytes <= general_free;
+}
 static int ovlInit(void) { ++initializations; return 1; }
 static int ovlLoadAndActivate(unsigned id) {
     assert(id == 0 && locks == 1);
@@ -85,6 +91,23 @@ int main(void) {
     // Same-kind re-entry must reuse the region, not retain an exhausted cursor.
     ndsFrontendOverlayBeginScene(nSCKindVSBattle);
     assert(gNdsFrontendOverlayUsedBytes == 0);
+    // Admission preserves the general reserve even when the loan has room.
+    general_free = 63;
+    assert(ndsSceneAssetTryAlloc(32, 16, 64) == NULL);
+    assert(gNdsFrontendOverlayUsedBytes == 0 && allocations == 1);
+    general_free = 64;
+    assert(ndsSceneAssetTryAlloc(256, 16, 64) == test_overlay);
+    assert(ndsSceneAssetTryAlloc(1, 16, 64) == NULL);
+    assert(allocations == 1);
+    general_free = 96;
+    assert(ndsSceneAssetTryAlloc(32, 16, 64) == general_asset);
+    assert(allocations == 2 && gNdsFrontendOverlaySpillBytes == 32);
+    assert(ndsSceneAssetTryAlloc(SIZE_MAX, 16, 64) == NULL);
+    assert(ndsSceneAssetTryAlloc(0, 16, 64) == NULL);
+    assert(ndsSceneAssetTryAlloc(32, 0, 64) == NULL);
+    assert(ndsSceneAssetTryAlloc(32, 3, 64) == NULL);
+    ndsFrontendOverlayEndScene();
+    ndsFrontendOverlayBeginScene(nSCKindVSBattle);
     assert(ndsFrontendOverlayTryAlloc(256, 16) == test_overlay);
     memset(test_overlay, 0x33, sizeof(test_overlay));
     ndsFrontendOverlayEndScene();

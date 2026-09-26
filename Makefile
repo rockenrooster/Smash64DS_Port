@@ -4330,7 +4330,7 @@ CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_re
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c video_blackout.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
-	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c nds_frontend_overlay.c utils.c vector.c nds_replay_digest.c \
+	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c nds_frontend_overlay.c nds_kirby_hat_residency.c utils.c vector.c nds_replay_digest.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \
 	battleship_sys_objhelper.c battleship_sys_objanim.c \

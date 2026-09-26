@@ -1585,10 +1585,10 @@ void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size);
  * reused, or a later allocation at the same address inherits the entry.
  * Returns the number of entries released. */
 u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size);
-/* Kirby's joint-6 copy hats are streamed at the source copy-commit beat. The
- * modelpart id is BattleShip's copy_modelpart_id (3..13); residency is keyed by
- * live fighter slot and detail so simultaneous Kirbys cannot evict each other.
- * FALSE is a hard copy-commit failure for real Kirby. */
+/* VS admits source-reachable copy hats before GO. Copy commits bind an admitted
+ * shared image/table; display scenes use their bounded preview working slots. */
+void ndsRendererNativeBeginKirbyHatMatch(void);
+s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask);
 s32 ndsRendererNativeEnsureKirbyCopyHat(
     u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail);
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY

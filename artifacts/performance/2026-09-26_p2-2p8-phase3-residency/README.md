@@ -306,3 +306,101 @@ KEEP/IMPLEMENTED_NOT_ACCEPTED: full-match reserve is15,928 B short. Next is
 source-faithful Kirby hat residency/admission, preserving mutable per-consumer
 prepared data, then the complete motion bank and ARM7 audio. Do not treat the
 startup-only margin or natural match completion as performance acceptance.
+
+## Continue: complete VS Kirby hat admission
+
+The previous checkpoint is pushed as5d0325d2eff; no old job is live. Root
+continues alone. The source's Catch selects the donor's copy_id, then CopyInit
+selects that row's modelpart. The reachable VS set is the union of the active
+roster; a second Kirby can transfer a power from that same set. Both normal VS
+and Sudden Death start with the source default descriptor's empty Kirby power.
+High images are always needed; low images are needed when the source battle
+player count is at least three. Prepare after fighter setup and before BGM/GO.
+
+The new bank gives each image one table identity, shared between Kirby slots.
+This matches the renderer's mutable prepared-dense/UV memo ownership. Bind-only
+copies cannot read storage or allocate in VS; non-VS preview working buffers
+retain their existing bounded lifetime. Missing admission is a named failure,
+never a branch that silently removes Kirby's gameplay power. The existing copy
+failure branch did clear copy_id; that defect is removed in this batch.
+
+Raw heavy-roster images total37,640 B before metadata/alignment. Reusing the
+existing LZ10 codec prices23,100 B plus16,188 B decode workspaces, worse than
+raw, so that one experiment is rejected. All22 codec roundtrips passed in
+`builds/p2-phase3-hat-lz-pricing.json`; do not rerun it. Shipping memory is still
+unfunded. First checks are actual-C host admission/bind failures, shared table
+identity, generation invalidation and all20,736 ordered normal rosters. The
+canonical four-CPU lab has enough headroom to test the mechanism; its evidence
+will not prove shipping admission or any final performance acceptance.
+
+The first focused run passes15 tests: actual-C bank/roster/loan fixtures plus
+prepared-dense and native-image ABI tests. Two older fixtures were stale (the
+alternate Mario/Fox skeleton image binds and the scratch/loan allocator mocks)
+and now cover the current seams; no ABI guard or negative control was removed.
+The savedF5CA9FE7 ROM/ELF/config remains the canonical baseline. Build the warm
+`build-p2-fourcpu-tickhud` after its Yoster-off particle preflight; log/exit
+`builds/p2-phase3-hat-bank-build.{log,exit}`. Inputs frozen for this build.
+Build92510 exited2: startup.h needs the source sb32 type before its allocator
+declaration. Reordered the new include after scene/taskman headers; no producer
+or flag changed. Retry log `builds/p2-phase3-hat-bank-build-r1.{log,exit}`.
+Build70032 compiled/linked but exited2 at the ELF gate: the first post-overlay
+four-CPU build exposes two shell-off taskman crossings not present in the
+shipping configuration. Root traced the Title-only bounded update branch and
+the Results-only inlined recorder; both run after dispatcher reload and cannot
+be entered from a VS frame. Added exactly these reviewed pairs, retaining the
+strict checker. Resume packaging unchanged ELF in `hat-bank-build-r2`.
+Build90889 exited0: ROM `D675C034D70833EBA6A006BEDD19D642A2D21BD018EABBA9B31BA504822A45BC`,
+native-only248 and ELF crossing gate pass. Saved ROM/ELF/config/map/check in
+`builds/p2p8-hat-bank-d675c034/`. Compared with F5CA9FE7: config byte-identical;
+all404 NitroFS files byte-identical, total29,066,719 B. ARM hat record164 B.
+`hat-bank-inputs.json` records identities. Run the natural four-CPU stress arm
+without pokes, runner4; log/exit `builds/p2-phase3-hat-bank-run.{log,exit}`,
+sidecars `hat-bank-*`. This new executable requires its own timing/replay proof;
+F5CA9FE7 remains the baseline. No build/producer runs alongside the emulator.
+Run11976 exited0;1972 gameplay digest pairs are identical toF5CA9FE7. Native
+failure0, general low-water122,412 B, arena1,281,792 B. Required masks0x510,
+bank38,656 B, six images loaded, admission1, failures0. **Copy UNENGAGED**:
+resident binds and hat draws are0. This proves admission and unchanged canonical
+gameplay, not the bind/draw path. WORK-H P50/P95 1,352,128/2,601,664 ticks;
+18.89 FPS from meanALL1,773,705. VBI2/3/4/5+267/1347/214/145, max10, total1973;
+13.53% two-VBlank, performance RED. No per-hat speed gain is claimed.
+
+Next missing question is all-content admission, not another unchanged match.
+Reuse warm `build-p2p8-s7-fpwalk`, preservedFB299B25 baseline, flags menu-walk1
+and argmax-roster1, canonicalYoster1 via producer. Build log/exit
+`builds/p2-phase3-hat-heavy-build.{log,exit}`. The short existing heavy probe
+now stops at the named hat admission failure with required bytes and headroom;
+no gameplay writes or timeout-based inference. Positive copies, mirror slots,
+Sudden Death/reload, pixels and final natural shipping qualification stay owed.
+Heavy build89610 exited0: ROM `9E4A666D5A5C325D04835EDE9826CADCE047E61D946BAD38EF8A3C4A561EA497`,
+native-only320, ELF gate pass. Saved binary/ELF/config/map/check in
+`builds/p2p8-hat-heavy-9e4a666d/`; identity `hat-heavy-inputs.json`. Probe16473
+is the two-update admission check, runner7, log/exit
+`builds/p2-phase3-hat-heavy-probe.{log,exit,txt}`. Its fatal breakpoint resolves
+to the halt loop after DC_FlushAll (verified in ARM disassembly), so resource
+witnesses describe current RAM. ROM/source/producer inputs remain frozen.
+Probe16473 captured the expected **FAILED_ADMISSION**, not a match pass (the
+probe's exit0 denotes successful capture). All four fighters are created; before
+BGM, reason4, masks0x640, bank38,672 B, free41,996 B, alignment12 B. Keeping the
+25,600 B floor therefore requires **22,288 additional bytes**, before later
+match allocations. Overlay265,216 B is already265,152 B used. Arena892,416 B;
+zero allocator/reloc failures; no battle update and no valid low-water yet.
+`hat-heavy-summary.json` preserves the failure and raw-capture hash. This is
+containment of insufficient residency, not a fixed or accepted shipping game.
+
+All jobs are terminal. Canonical timing/admission,15 focused tests and both
+native-only/ELF gates are retained; heavy natural shipping, positive copying,
+mirror sharing on target, Sudden Death/reload and visual checks remain due.
+The remaining >=256 B frontend objects sum only17,872 B before excluding shared
+UI state (`builds/p2-phase3-frontend-resident-candidates.json`); they cannot alone
+fund even this admission shortfall. The two repeated native image binders occupy
+22,416 B of text, an upper bound before replacement data/code, also insufficient
+for hats plus future play and MF. These are measurements, not reclaimed RAM.
+
+Continue perD7/D9 with **A8 PREP**: trace the existing ARM7 sound/extent services
+and price source-reachable resident SFX heads before replacing the237,568 B
+eight-slot FGM cache with the architecture's ARM7 tail streaming/voice owner.
+The current cache already contains DS ADPCM, so recompressing PCM is not a
+valid saving. Preserve all cue, envelope, loop, channel and pause semantics;
+fund hat/full-MF admission and resume the missing natural proofs afterwards.
+No root or P1 ROM was published. This is an IMPLEMENTED_NOT_ACCEPTED checkpoint.

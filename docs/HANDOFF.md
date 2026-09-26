@@ -30,8 +30,8 @@ are exact; reserve free 204,752 B versus required 183,072 B. Current receipt:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Phase 3 A7 `FB299B25`: heavy match/Results reload passes; loan 265,216 B,
-low-water 9,672 B. Next: Kirby hat admission/residency and MF2 RAM (697,760 B);
+Phase 3 Kirby bank `D675C034`: replay exact, copies unengaged, performance RED.
+Heavy `9E4A666D`: admission 22,288 B short. Next A8 audio RAM; MF2 needs697,760 B.
 receipt `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 
 ## Continue, do not restart

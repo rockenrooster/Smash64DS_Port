@@ -8425,3 +8425,18 @@ Correctness GREEN; product performance RED. Combined output/NDL/particle work
 does not establish a separate timing gain for each change. Final hard-on,
 shipping memory, broader output/lifetimes and all-roster/stage proof remain owed.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
+
+## 2026-09-26 — A7 and pre-GO Kirby hat residency checkpoint
+
+ROM `D675C034D70833EBA6A006BEDD19D642A2D21BD018EABBA9B31BA504822A45BC`,
+natural four-CPU DK/Samus/Link/Kirby, 1,972 samples: WORK-H mean/P50/P95
+1,447,984/1,352,128/2,601,664 ticks; 18.895 FPS. VBlank 2/3/4/5+
+267/1347/214/145, maximum10, 1,973 presents (13.53% two-VBlank). Performance RED.
+Replay is identical to F5CA9FE7; config and all404 NitroFS files match. Native
+failure0 and heap low-water122,412 B. Six hat images admitted (38,656 B), but no copy
+or hat draw occurs: this is admission/unchanged-gameplay proof only. Compared
+with F5CA9FE7, P50/P95 worsen6,912/19,136 ticks; no gain attributed to the bank
+or accumulated A7 changes. Heavy all-content `9E4A666D` fails admission before
+GO:38,672 B bank,22,288 B missing to preserve the25,600 B reserve, plus later
+play allocations still owed. No shipping acceptance or root publication.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.

@@ -17,6 +17,7 @@
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_startup.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -281,6 +282,7 @@ static void ndsSCVSBattlePrepareBeforeTimer(void)
 
 static void ndsSCVSBattleStartPlayBGM(void)
 {
+    ndsKirbyHatPrepareMatch();
 #if NDS_R2_ANIM_CACHE
     ndsR2AnimCachePreloadMatch();
     (void)ndsR2AnimCachePreloadFinish();
@@ -303,6 +305,7 @@ void scVSBattleStartBattle(void)
      * and fighters; a load longer than its packet would be its seam miss.
      * Silence it here; the stage track replaces it inside the setup. */
     ndsAudioBgmSuspendForBlockingLoad();
+    ndsRendererNativeBeginKirbyHatMatch();
     ndsBaseSCVSBattleStartBattle();
 
     gNdsSCVSBattleOriginalGObjCount = (u32)gcGetGObjsActiveNum();
@@ -389,6 +392,7 @@ void scVSBattleStartBattle(void)
  * from an empty pool. */
 void scVSBattleStartSuddenDeath(void)
 {
+    ndsRendererNativeBeginKirbyHatMatch();
     ndsBaseSCVSBattleStartSuddenDeath();
     gNdsSCVSBattleSuddenDeathPrepareCount++;
 }

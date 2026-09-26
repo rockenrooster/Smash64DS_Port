@@ -1,0 +1,25 @@
+{
+  "status": "FAILED_ADMISSION_IMPLEMENTED_NOT_ACCEPTED",
+  "rom_sha256": "9E4A666D5A5C325D04835EDE9826CADCE047E61D946BAD38EF8A3C4A561EA497",
+  "capture_exit": 0,
+  "gate_passed": false,
+  "battle_updates": 0,
+  "failure_reason": 4,
+  "required_bank_bytes": 38672,
+  "general_free_bytes": 41996,
+  "alignment_bytes": 12,
+  "general_reserve_bytes": 25600,
+  "admission_shortfall_bytes": 22288,
+  "later_match_allocations_included": false,
+  "low_water_valid": false,
+  "raw_capture": "builds\\p2-phase3-hat-heavy-probe.txt",
+  "raw_sha256": "BAE259869A9533AC03F10098A633B6BCF77A834DB1A5ED63A45F3A3DF6BF6BAA",
+  "markers": [
+    "FOURKIND HATHALT reason=4 required=38672 high=0x640 low=0x640 free=41996",
+    "FOURKIND STOP pc=0x20a83fa lr=0x20a83fb commit=2 setup=0 make=12 batt=0",
+    "FOURKIND ARENA chosen=892416 allocfail=197 heapgen=9 start=0x02306400 ptr=0x023d5df4 end=0x023e0200 free=41996 overflow=0",
+    "FOURKIND LOWWATER generalfreemin=4294967295 gfxpeak=0 gfxcap=0 gfxoverflow=0 gfxnoroom=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+    "FOURKIND OVERLAY loads=1 loadfails=0 bytes=265216 loans=1 loanbytes=265216 used=265152 allocs=21 spill=60520"
+  ]
+}

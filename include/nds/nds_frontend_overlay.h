@@ -14,5 +14,8 @@ void ndsFrontendOverlayEndScene(void);
  * allocation, whose newlib header and ownership must never be overwritten. */
 void *ndsFrontendOverlayTryAlloc(size_t bytes, u32 alignment);
 void *ndsSceneAssetAlloc(size_t bytes, u32 alignment);
+/* Atomic admission: preserve keep_free bytes in the taskman heap, including
+ * alignment, and leave both cursors unchanged on rejection. */
+void *ndsSceneAssetTryAlloc(size_t bytes, u32 alignment, size_t keep_free);
 
 #endif

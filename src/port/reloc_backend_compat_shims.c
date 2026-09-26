@@ -7,6 +7,7 @@
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_ftanim_track.h>
 #include <nds/nds_ft_pose.h>
+#include <nds/nds_kirby_hat_residency.h>
 #include <nds/nds_native_stage_blob.h>
 #include <nds/nds_scene_manager.h>
 #include <sys/vector.h>
@@ -12641,8 +12642,9 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
                  (ndsRendererNativeEnsureKirbyCopyHat(
                       (u32)fp->nds_slot, (u32)modelpart_id, 1u) == FALSE)))
             {
-                fp->passive_vars.kirby.copy_id = nFTKindKirby;
-                modelpart_id = 0;
+                /* A missing native image is a failed residency contract. It
+                 * must never silently remove the source's copied ability. */
+                ndsKirbyHatResidencyHalt(5u);
             }
         }
     }

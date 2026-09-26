@@ -3,6 +3,16 @@
   "scope": "A7 frontend text/rodata; only VS borrows the overlay. Mutable state remains resident.",
   "pairs": [
     {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMNTitleRunBoundedUpdates",
+      "reason": "The shell-off lab taskman calls this only inside its nSCKindTitle branch. The resident dispatcher loads the frontend before entering Title; no VS frame reaches the branch."
+    },
+    {
+      "source_symbol": "syTaskmanRunTask",
+      "target_symbol": "ndsMNVSResultsRecordFrame",
+      "reason": "The shell-off lab inlines ndsSeamRunSourceMenuScene into taskman. Only the nSCKindVSResults branch passes is_results=1; the dispatcher has reloaded the frontend before Results enters taskman."
+    },
+    {
       "source_symbol": "crt0Startup",
       "target_symbol": "__heap_start_ntr",
       "reason": "Allocator boundary address at the end of the overlay, never an overlay-code call."

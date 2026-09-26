@@ -89,22 +89,22 @@ Owner 09-26: no more subagents; root audits retained delegated work personally.
 MF2 check passes 1,570 clips/29 raw exceptions; scoped audit recorded in receipt.
 `FB299B25`: 2,043 presents/Results; low-water 9,672 B, reserve RED. Reload passes.
 A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
-MF2 worst bank 697,760 B, unlinked. No live jobs; 33 focused tests pass.
-Shipping CSS arena 900,608 B; lab 1,285,888 B. Heavy-roster deficit still unsized.
+MF2 worst bank 697,760 B, unlinked. Kirby bank implemented: 15 focused tests pass.
+`D675C034` natural four-CPU replay exact, P95 2.602M (RED); copies unengaged.
+Heavy `9E4A666D` admission FAIL: 38,672 B bank, 22,288 B short before later play
+allocations. All jobs terminal; binaries/receipts saved. **Next A8 PREP**: trace
+ARM7 streaming/voice ownership and price resident SFX heads to replace the
+237,568 B fixed cache; fund hats/MF before positive copy/lifecycle/visual proof.
+Current heavy arena 892,416 B; lab 1,281,792 B. Baseline CSS arena 900,608 B.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 
-Previous focus (CLOSED 09-22): the remaining-BUGS sweep. Every owner-opened
-`docs/BUGS.md` row is fixed through r54 or owner-DEFERRED (C1 CSS hover delay,
-`p2/BUG_NOTES.md` "C1"; S3 Saffron door); only a descriptionless "-VS options"
-line remains. **ROOT ROM = r54** `C8FC02AA2DF0BB6E`
-(`builds/remaining-bugs-playtest-r54/`). Status table:
-`docs/p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md`. **Owed:** Boundary/Latest
-on that tree; the r52 memo fence and r54 pack growth are proven by probes and
-host tests only; `test_preview_pack_loader.py` fails at collection (pin drift).
-Pre-architecture policy/closed lanes, DTCM and roster proofs are in
-`docs/archive/P2_CLOSED_ROWS.md`; per-hat look/captures remain owed.
+Closed 09-22 bug sweep: owner fixes/deferred rows and remaining obligations are
+in `p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md` and
+`docs/archive/P2_CLOSED_ROWS.md`. Last historical publication r54
+`C8FC02AA2DF0BB6E` is saved in `builds/remaining-bugs-playtest-r54/`.
+Boundary/Latest, per-hat captures and preview-pack test pin drift remain owed.
 
 Preserve owner 1P/CSS work and the published ROM until gates pass. Older scoped
 proofs: `p2/BUG_NOTES.md`, `docs/archive/P2_CLOSED_ROWS.md`.

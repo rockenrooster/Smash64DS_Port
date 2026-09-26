@@ -1,0 +1,11 @@
+{
+  "rom_sha256": "9E4A666D5A5C325D04835EDE9826CADCE047E61D946BAD38EF8A3C4A561EA497",
+  "elf_sha256": "1695AD3A5EEBBCC5689C0855E9CC17657ABA3BDB12A66F4BF6E5EA474347F98B",
+  "config_sha256": "B1EB16D28E40CF20393BD4ABBC7E4CCDF427E179EE8E62BF20D142105CA0D58C",
+  "saved": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-hat-heavy-9e4a666d",
+  "baseline_saved": "builds/p2p8-frontend-tables-fb299b25",
+  "config_identical_to_baseline": true,
+  "native_only_inputs": 320,
+  "source_base_commit": "5d0325d2eff",
+  "probe_sha256": "6C155BB280C3007876FB60B0359E2BF57B41BE76B262EC21CFE491D384C117AF"
+}

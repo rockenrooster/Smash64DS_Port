@@ -1,0 +1,50 @@
+{
+  "status": "IMPLEMENTED_NOT_ACCEPTED_COPY_UNENGAGED",
+  "rom_sha256": "D675C034D70833EBA6A006BEDD19D642A2D21BD018EABBA9B31BA504822A45BC",
+  "samples": 1972,
+  "replay_identical": true,
+  "mean_fps": 18.894901914354417,
+  "work_h": {
+    "bucket": "WORK-H",
+    "mean": 1447984,
+    "p50": 1352128,
+    "p95": 2601664,
+    "min": 628032,
+    "max": 4416832
+  },
+  "vbi": {
+    "vbi2": 267,
+    "vbi3": 1347,
+    "vbi4": 214,
+    "vbi5plus": 145,
+    "vbiMax": 10,
+    "vbiTotal": 1973
+  },
+  "two_vblank_fraction": 0.1353269133299544,
+  "hat": {
+    "gNdsKirbyHatRequiredHighMask": 1296,
+    "gNdsKirbyHatRequiredLowMask": 1296,
+    "gNdsKirbyHatAdmissionFailure": 0,
+    "gNdsNativeKirbyHatMatchRequiredBytes": 38656,
+    "gNdsNativeKirbyHatMatchReadyCount": 1,
+    "gNdsNativeKirbyHatMatchRejectCount": 0,
+    "gNdsNativeKirbyHatResidentBindCount": 0,
+    "gNdsNativeKirbyHatLoadCount": 6,
+    "gNdsNativeKirbyHatFailCount": 0,
+    "gNdsNativeKirbyHatTableHits[0]": 0,
+    "gNdsNativeKirbyHatTableHits[1]": 0,
+    "gNdsNativeKirbyHatTableMisses[0]": 0,
+    "gNdsNativeKirbyHatTableMisses[1]": 0
+  },
+  "general_heap_low_water": 122412,
+  "performance_accepted": false,
+  "baseline_work_h": {
+    "bucket": "WORK-H",
+    "mean": 1441166,
+    "p50": 1345216,
+    "p95": 2582528,
+    "min": 612864,
+    "max": 4418112
+  },
+  "baseline_mean_fps": 18.94885209382271
+}

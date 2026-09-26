@@ -126,6 +126,7 @@ static u32 gNdsTaskmanHeapGeneration = 1u;
 static volatile u32 gNdsNativeOwnerImageLoadCount;
 static volatile u32 gNdsNativeOwnerImageFailCount;
 static volatile u32 gNdsNativeOwnerImageBytes;
+static volatile u32 gNdsNativeOwnerImageScratchBytes;
 /* mock controls */
 static uint8_t mock_file[256]; static u32 mock_file_len;
 static int mock_open_fail; static int mock_malloc_fail;
@@ -138,6 +139,12 @@ void *syTaskmanMalloc(size_t size, u32 align) {
     if (mock_malloc_fail) return NULL;
     if (nallocs < 64) { allocs[nallocs++] = malloc(size ? size : 1); return allocs[nallocs-1]; }
     return malloc(size ? size : 1);
+}
+void *ndsBattleIdleScratchAlloc(size_t size, u32 align) {
+    (void)size; (void)align; return NULL;
+}
+void *ndsSceneAssetAlloc(size_t size, u32 align) {
+    return syTaskmanMalloc(size, align);
 }
 s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *s, const char *p) {
     mock_open_count++;

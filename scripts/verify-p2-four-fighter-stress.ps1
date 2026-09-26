@@ -73,6 +73,19 @@ if ([string]::IsNullOrWhiteSpace($MemoryJsonOut)) {
 # saturation belongs to the frames whose cadence was measured. These are all
 # existing live counters, so this adds no guest instrumentation or placement.
 $memoryGlobals = @(
+    'gNdsKirbyHatRequiredHighMask',
+    'gNdsKirbyHatRequiredLowMask',
+    'gNdsKirbyHatAdmissionFailure',
+    'gNdsNativeKirbyHatMatchRequiredBytes',
+    'gNdsNativeKirbyHatMatchReadyCount',
+    'gNdsNativeKirbyHatMatchRejectCount',
+    'gNdsNativeKirbyHatResidentBindCount',
+    'gNdsNativeKirbyHatLoadCount',
+    'gNdsNativeKirbyHatFailCount',
+    'gNdsNativeKirbyHatTableHits[0]',
+    'gNdsNativeKirbyHatTableHits[1]',
+    'gNdsNativeKirbyHatTableMisses[0]',
+    'gNdsNativeKirbyHatTableMisses[1]',
     'gNdsTaskmanGeneralHeapFreeMin',
     'gNdsTaskmanArenaChosenSize',
     'gNdsTaskmanArenaAllocFailCount',

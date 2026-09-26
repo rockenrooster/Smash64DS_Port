@@ -23288,3 +23288,12 @@ reducing native failures 39->0 with unchanged 1,972 replay pairs. WORK-H P95 is
 2,587,264 ticks at 18.98 FPS: performance remains RED. IMPLEMENTED_NOT_ACCEPTED;
 final defaults, shipping memory, wider output/lifetimes and release proof remain
 owed. Published root/P1 unchanged. Evidence in the phase2-particle-ab receipt.
+
+2026-09-26 P2-2p8 Phase3: solo follow-through after the helper audit implements
+source-derived pre-GO Kirby hat admission and shared table/image ownership.
+Copies bind resident images; load failure no longer clears the copied ability.
+Fifteen focused tests pass. D675C034 canonical match replays exactly (1,972
+pairs), native failures0, P95 2.602M/18.895 FPS, copies unengaged. Heavy9E4A666D
+rejects before GO with an exact22,288 B admission shortfall; no shipping pass.
+Saved both binaries and receipts. Next is A8 audio memory/streaming to fund hats
+and full MF2 residency. IMPLEMENTED_NOT_ACCEPTED; root/P1 unchanged.

@@ -281,6 +281,21 @@ try {
         ))
     }
 
+    if ($symbols -contains 'ndsKirbyHatResidencyHalt') {
+        # Stop on the spin AFTER its cache flush. A function-entry breakpoint
+        # can read stale physical RAM for the requirement/heap witnesses.
+        $hatHaltLine = (Select-String -LiteralPath (Join-Path $root 'src/port/nds_kirby_hat_residency.c') -Pattern '^    for \(;;\)').LineNumber
+        if (@($hatHaltLine).Count -ne 1) { throw 'Cannot locate the Kirby admission halt loop.' }
+        $commands.AddRange([string[]]@(
+            ('break nds_kirby_hat_residency.c:{0}' -f $hatHaltLine),
+            'commands',
+            'silent',
+            ('printf "FOURKIND HATHALT reason=%u required=%u high=0x%x low=0x%x free=%u\n", gNdsKirbyHatAdmissionFailure, gNdsNativeKirbyHatMatchRequiredBytes, gNdsKirbyHatRequiredHighMask, gNdsKirbyHatRequiredLowMask, {0}' -f $free),
+            'bt 8',
+            'end'
+        ))
+    }
+
     if ($TraceMallocAtLeast -eq 0) {
         # Keep the ordinary capacity probe cheap, but expose the two source CSS
         # callbacks that run immediately after fighter construction. A low PC
