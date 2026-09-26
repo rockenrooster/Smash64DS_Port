@@ -256,6 +256,9 @@ The owner subsequently confirmed the lock was abandoned and authorized removal.
 No Git process was active on recheck; only the confirmed lock path was removed.
 Scoped staging then succeeded. This is the observed authorization change that
 permits checkpointing; the earlier failed attempt did not establish a commit.
+Implementation/evidence commit **c116fffa03e** completed successfully after the
+lock was removed. Unrelated owner edits remain outside this checkpoint. The
+remaining work is acceptance/integration work listed above, not lost code.
 
 No published target was built or overwritten. A direct file check found root
 `smash64ds.nds` absent; r54 is the last documented publication, not a newly

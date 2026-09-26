@@ -81,7 +81,7 @@ WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **Next**: retire
 particle experiment routes, qualify intended MISC defaults and shipping memory.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Jobs terminal. Particle Task49, camera/lifecycle and integrated gates remain owed.
-Owner confirmed abandoned Git lock; removed after process recheck. Checkpoint staged.
+Implementation/evidence checkpoint: `c116fffa03e`. Owner-confirmed Git lock resolved.
 Receipt owns prior Stage measurements and retirement control `0A14A9F9`.
 All-VS `9F69CA39` is KEEP/IMPLEMENTED_NOT_ACCEPTED: Jungle heap restored;
 Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
