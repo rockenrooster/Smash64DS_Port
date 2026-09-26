@@ -81,7 +81,7 @@ Phase3 receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Heavy `1E3A5E9D` fails before GO: Link requests 33,520 B with 20,316 B free.
 Particle Task49, camera/lifecycle and integrated gates remain owed.
-Defaults `ab7bcec4729`; overlay `feaa37dc3a7`, pushed. Git lock resolved.
+Defaults `ab7bcec4729`; expanded overlay/solo audit `2c9511de5e2`, pushed.
 Receipt owns prior Stage measurements and retirement control `0A14A9F9`.
 All-VS `9F69CA39` is KEEP/IMPLEMENTED_NOT_ACCEPTED: Jungle heap restored;
 Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
