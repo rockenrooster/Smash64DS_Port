@@ -8649,3 +8649,13 @@ fighter draw; debugger-only counters) ran in every tick-HUD frame. Now behind
 identical: WORK-H P50/P95/P99 1,198,912/1,659,712/2,038,144 -> 1,197,376/
 1,641,216/2,055,360; FTR P50 -4.9K. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 3.
+
+## 2026-09-27 — A9: per-GObj MISC split out of the gate ROM
+
+**BANKED (instrument).** Phase 2 B3's MCAP/MPRO spans (four clock reads plus two
+nine-counter sums per displayed GObj in gcCaptureCameraGObj) now sit behind
+`NDS_P2_MISC_SPLIT` (default 0); they fold into MCAM. `5BF3DC64` -> `7F2123F3`,
+replay identical: WORK-H P50/P95/P99 1,197,376/1,641,216/2,055,360 ->
+1,182,784/1,622,336/2,024,704; two-VBlank 625 -> 687; 22.22 FPS. RED. Refuted: a
+written-out digest mix (noise).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 4.

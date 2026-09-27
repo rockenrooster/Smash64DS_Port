@@ -1634,7 +1634,7 @@ extern sb32 ndsResultsEmblemRecordCapturedDisplay(void *camera_gobj,
                                                   s32 link_id);
 #endif
 
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
 /* P2-2p8 Phase 2 B3. The particle pass is implemented by effect-display
  * GObjs, so gobj->id alone cannot distinguish it from model effects. Match
  * the five source particle display procs first, then use the ordinary GObj
@@ -1714,7 +1714,7 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     GObj *prev_camera_gobj =
                         sNdsOpeningRoomCurrentDrawCameraGObj;
                     sb32 native_stage_handled;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
                     const sb32 p2_misc_measure =
                         (gNdsSceneManagerCurrIsBattle != 0u) ? TRUE : FALSE;
                     u32 p2_capture_mark = 0u;
@@ -1724,7 +1724,7 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     dGCCurrentStatus = nGCStatusDisplaying;
                     gGCCurrentDisplay = current_gobj;
 
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
                     if (p2_misc_measure != FALSE)
                     {
                         p2_capture_mark = cpuGetTiming();
@@ -1766,7 +1766,7 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                                                             current_gobj,
                                                             link_id);
                     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
                     if (p2_misc_measure != FALSE)
                     {
                         const u32 capture_ticks =
@@ -1782,7 +1782,7 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                     sNdsOpeningRoomCurrentDrawCameraGObj = camera_gobj;
                     if (native_stage_handled == FALSE)
                     {
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
                         u32 p2_proc_mark = 0u;
                         u32 p2_proc_nested_before = 0u;
 
@@ -1793,7 +1793,7 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                         }
 #endif
                         current_gobj->proc_display(current_gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_P2_MISC_SPLIT
                         if (p2_misc_measure != FALSE)
                         {
                             const u32 proc_ticks = cpuGetTiming() - p2_proc_mark;

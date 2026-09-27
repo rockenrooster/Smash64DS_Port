@@ -154,6 +154,10 @@ NDS_FAST_MEM ?= 1
 # counters are read only by a debugger) is a lab instrument: 1 compiles it into
 # tick-HUD builds, 0 (default) keeps it out of the gate's WORK-H (A9).
 NDS_FTR_PRE_WALK_CENSUS ?= 0
+# Phase 2 B3's per-GObj MISC split (MCAP capture / MPRO proc-display spans in
+# gcCaptureCameraGObj, four clock reads per displayed GObj) is a lab
+# instrument like the census above: 0 folds both into MCAM (A9).
+NDS_P2_MISC_SPLIT ?= 0
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
 # gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
 # (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
@@ -7147,6 +7151,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_HURTBOX_REJECT $(NDS_P2_HURTBOX_REJECT)'; \
 		echo '#define NDS_FAST_MEM $(NDS_FAST_MEM)'; \
 		echo '#define NDS_FTR_PRE_WALK_CENSUS $(NDS_FTR_PRE_WALK_CENSUS)'; \
+		echo '#define NDS_P2_MISC_SPLIT $(NDS_P2_MISC_SPLIT)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \

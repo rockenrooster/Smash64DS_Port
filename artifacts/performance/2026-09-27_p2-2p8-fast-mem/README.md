@@ -110,3 +110,16 @@ frame still ran. Instrument only; the shipping ROM never had it. WORK-H
 P50/P95/P99 1,198,912/1,659,712/2,038,144 -> 1,197,376/1,641,216/2,055,360
 (P95 partly noise; FTR P50 -4.9K, P95 -5.6K); VBlanks 625/1,252/84/12, 21.91 FPS;
 replay identical.
+
+## Section 4: Phase 2 B3's per-GObj MISC split leaves the gate ROM (A9)
+
+`miscsplit` `7F2123F3`: `NDS_P2_MISC_SPLIT` (default 0) gates the per-GObj
+capture/proc-display spans in `gcCaptureCameraGObj` (four clock reads, two
+nine-counter nested sums and a kind classification per displayed GObj). The
+MCAP and MPRO columns read 0 and fold into MCAM; MWPN/MITM/MEFX/MACT/MPRT and
+the top-level MISC bucket are measured as before. WORK-H P50/P95/P99
+1,197,376/1,641,216/2,055,360 -> **1,182,784/1,622,336/2,024,704**; MISC P50
+-13.6K; VBlanks 687/1,200/76/10, 22.22 FPS; replay identical.
+
+Refuted (reverted): unrolling the replay digest's byte-wise FNV mix
+(`digestunroll` `262BE55A`, identical digest words): P50 -1.7K, P95 +6.1K.
