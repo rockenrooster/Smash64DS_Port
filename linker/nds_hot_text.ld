@@ -119,9 +119,7 @@ SECTIONS {
 		 * this ALIGN they push Calico's __irq_table off its 32-byte boundary
 		 * whenever the fighter geometry changes. Input sections bind to the
 		 * first matching rule, so the wildcard below does not re-match these. */
-		*(.dtcm.fighter)
-		. = ALIGN(32);
-		*(.dtcm .dtcm.*)
+		*(.dtcm .dtcm.bss)
 		*.32.o (.data .data.* .gnu.linkonce.d.*)
 		*.32.o (.data1)
 		/* P2-2p8 hot scalar statics. Sizing:
@@ -167,6 +165,8 @@ SECTIONS {
 
 	/* DTCM BSS area */
 	.dtcm.bss . (NOLOAD) : {
+		/* The DTCM hot stack leads the section (src/port/coroutine.c). */
+		*(.sbss.gNdsDtcmHotStack)
 		*(.sbss .sbss.*)
 		*.32.o (.dynbss)
 		*.32.o (.bss .bss.* .gnu.linkonce.b.*)
@@ -386,6 +386,11 @@ SECTIONS {
 	 * read +6.5K across builds, the difference being SRC code it never touched
 	 * (2026-09-27). The heap arena is pinned for the same reason. */
 	.main.rw : ALIGN_WITH_INPUT {
+		/* R2-03 E29's static Mario owner dense tables (.dtcm.fighter). Every VS
+		 * kind draws through the lean list, which reads them only while it
+		 * materializes a Mario list; their 8.5 KB of DTCM now hold the hot
+		 * stack (gNdsDtcmHotStack, src/port/coroutine.c). */
+		*(.dtcm.fighter)
 		EXCLUDE_FILE(*.twl.*) *(.data .data.* .gnu.linkonce.d.*)
 		EXCLUDE_FILE(*.twl.*) *(.data1)
 		EXCLUDE_FILE(*.twl.*) *(.igot.plt)

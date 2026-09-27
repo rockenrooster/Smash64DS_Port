@@ -716,3 +716,79 @@ Both were attribution that ran in every tick-HUD build.
 - WORK-H P50/P95/P99 1,090,752/1,494,272/1,788,608 (+1.2K/-5.1K/-0.6K).
 - Paired median +640 (layout), mean -0.9K.
 - Materializations 44, native failures 0.
+
+## 30. Where the D-cache fills go, and the DTCM hot stack
+
+**Instrument.** A scratch copy of the melonDS fork (the owner's tree was not
+touched) records every D-cache line fill by (PC, 32-byte line) when
+`MELONDS_ARM9_DMISS=1` is set beside the profiler. It writes
+`<base>.dmiss.csv`. The patch is `dmiss/melonds-dmiss.patch`; the reports are
+`dmiss/dmiss_report.py` (by class, function and FTStruct line) and
+`dmiss/dmiss_static.py` (by static object). The census window is frames
+200-584, 385 frames (`dmiss/census.txt`).
+
+**What it showed.**
+- 12,907 line fills a frame. ITCM code took 4,635 of them against 290K cycles
+  of ITCM-tier memory stall: about 62 cycles, 31 ticks, per fill. A 32-byte
+  fill over the 16-bit main-RAM bus is that slow, so fills are about a third
+  of the frame.
+- The largest single object is the gameplay coroutine's own main-RAM stack:
+  1,470 fills a frame, 11%. The ARM946 D-cache is read-allocate, so a push is
+  a write-through and the pop of a frame whose line was evicted is a fill.
+  The kernel compose's world stack alone is 216 a frame.
+- Next is the FTStruct pool (`sFTManagerStructsAllocBuf`, 4 x 3,012 B):
+  1,073 fills a frame, spread over 88 of its 95 lines.
+- The top static object is `gSYSinTable` (288 fills a frame).
+- Heap pages holding per-fighter state make up most of the rest.
+
+**Stack depth.** A lab paint probe measured the battle loop's reach below
+`ndsR2BattleRun`'s SP over the stress match:
+- update phase 1,200 B;
+- present phase 9,460 B, on rare effect paths whose frames hold a 3 KB
+  `NDSRendererTraversalState` (`stkdepth2`).
+
+The whole loop cannot move to DTCM, and storage reads into stack locals
+would break there anyway: DMA and the ARM7 cannot see DTCM.
+
+**Change.** Two audited draw subtrees run on an 8 KB DTCM stack
+(`gNdsDtcmHotStack`, `ndsDtcmHotStackRun` in `src/port/coroutine.c`, an ARM
+trampoline that runs in place when already on it):
+- `ndsFtrLeanRun` (the lean fighter list: kernel compose, patch, submit);
+- `ndsRendererCommitNativeStageSegment` (the stage GX commit).
+
+Neither does I/O, DMAs from a local or switches coroutines. Texture uploads
+stage through static buffers.
+
+The DTCM came from R2-03 E29's Mario dense tables (8,582 B,
+`.dtcm.fighter`). Every VS kind draws through the lean list, which reads them
+only when it materializes a Mario list, so they moved to `.main.rw`. The
+renderer frame summary, which rode the same section, stays in DTCM as
+`.dtcm`. `check-task20-dtcm-layout.ps1` was already failing at HEAD (lab
+control words it did not model). It now models:
+- no fighter tables in DTCM;
+- the named `.dtcm` owners, with pinned sizes;
+- the hot stack leading `.dtcm.bss`, pinned.
+
+It passes on the gate and all-content ROMs.
+
+**Measured.** Same-ROM (`FF6AC2FA`, lab word; `hotc0` off, `hotc1` on), both
+replay IDENTICAL:
+- WORK-H P50/P95/P99 1,089,472/1,491,840/1,752,320 ->
+  1,068,800/1,465,152/1,721,472.
+- Paired median -18,432, mean -19.4K; FTR -11.5K, STG -7.0K.
+- Frames at or under 1,120,000: 1,114 -> 1,214.
+- Deepest reach 3,740 of 8,192 B.
+
+Final `7D51B305` (`hotfin`, toggle removed) vs `instr`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,069,440/1,468,224/1,720,256.
+- 1,216 of 1,972 frames at or under 1,120,000.
+- Heap low-water 69,340; native failures 0.
+
+All-content CSS reserve free 249,808 (margin 66,736; the tables cost
+12,288 of arena). Previews draw.
+
+**Trap hit on the way.** PowerShell `Copy-Item` keeps the source file's
+modification time. Restoring `nds_r2_battle.c` from a backup that way left
+make's lab object in place, so three arms (`hot0`, `hot1`, `hotdiag`) and one
+"HEAD" rerun carried an 11 KB stack paint twice a frame (+110K WORK-H). The
+ROM hash gave it away: `base2` equalled `stkdepth2`.

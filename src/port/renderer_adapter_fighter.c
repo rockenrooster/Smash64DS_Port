@@ -5327,11 +5327,27 @@ static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
 /* P2-2p8 Phase 1 slice 1: the lean fighter path, defined in
  * renderer_fighter_lean.c (#included at the end of this file). */
 #include <nds/renderer_fighter_lean.h>
+#include <port/coroutine.h>
 #if NDS_FTR_LEAN_LIVE
 static NDS_FTR_LEAN_RUN_INLINE sb32
 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route);
 static void ndsFtrLeanAfterOldPath(u32 slot, FTStruct *fp, u32 hits_before);
 static void ndsFtrLeanFrameEnd(void);
+
+/* ndsFtrLeanRun on the DTCM hot stack (port/coroutine.h). */
+typedef struct NDSFtrLeanRunCall
+{
+    u32 slot;
+    FTStruct *fp;
+    u32 route;
+} NDSFtrLeanRunCall;
+
+static unsigned int ndsFtrLeanRunOnHotStack(void *arg)
+{
+    const NDSFtrLeanRunCall *call = arg;
+
+    return (unsigned int)ndsFtrLeanRun(call->slot, call->fp, call->route);
+}
 #endif
 
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
@@ -5509,7 +5525,10 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #endif
         if (lean_route != 0u)
         {
-            lean_drew = ndsFtrLeanRun((u32)fp->nds_slot, fp, lean_route);
+            NDSFtrLeanRunCall call = { (u32)fp->nds_slot, fp, lean_route };
+
+            lean_drew = (sb32)ndsDtcmHotStackRun(ndsFtrLeanRunOnHotStack,
+                                                 &call);
             lean_hits = gNdsFighterPacketHits;
         }
         if (lean_drew == FALSE)

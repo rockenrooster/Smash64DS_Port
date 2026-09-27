@@ -3,6 +3,7 @@
  * the renderer translation unit, so its pinned constants live in a generated
  * header both can include -- the barrel-cannon actor's shape. */
 #include <nds/generated/nds_native_sector_arwing_laser.generated.h>
+#include <port/coroutine.h>
 #include <nds/generated/nds_native_castle_bumper.generated.h>
 #include <nds/generated/nds_native_samus_chargeshot.generated.h>
 #include <nds/generated/nds_native_link_bomb.generated.h>
@@ -4837,6 +4838,13 @@ extern volatile u32 gNdsTickHudStageTicks;
 #define NDS_STAGE_DISPLAY_SPAN_END() ((void)0)
 #endif
 
+/* ndsRendererCommitNativeStageSegment on the DTCM hot stack. */
+static unsigned int ndsRendererAdapterCommitSegmentOnHotStack(void *arg)
+{
+    return (unsigned int)ndsRendererCommitNativeStageSegment(
+        *(const u32 *)arg);
+}
+
 s32 __attribute__((section(".itcm")))
 ndsRendererAdapterCommitNativeStageDisplay(
     void *display_gobj_ptr, s32 link_id)
@@ -4899,7 +4907,8 @@ ndsRendererAdapterCommitNativeStageDisplay(
             }
 #else
             ndsRendererAdapterCommitNativeStageMaterials(workspace, i);
-            if (ndsRendererCommitNativeStageSegment(i) == FALSE)
+            if (ndsDtcmHotStackRun(ndsRendererAdapterCommitSegmentOnHotStack,
+                                   &i) == FALSE)
             {
                 ndsRendererFinishNativeStageOwner();
                 workspace->active = FALSE;

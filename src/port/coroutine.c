@@ -32,6 +32,104 @@ struct PortCoroutine {
 
 static PortCoroutine *sCurrentCoroutine;
 
+/* The DTCM hot stack. The four-fighter frame spent ~1,470 D-cache line fills
+ * a frame on the gameplay coroutine's main-RAM stack (a read-allocate cache:
+ * every push is a write-through, every pop of an evicted frame is a ~62-cycle
+ * fill). The two draw subtrees that own most of them, the lean fighter list
+ * and the stage GX segment commit, run here instead: zero-wait, uncached and
+ * out of the 4 KB D-cache (same-ROM WORK-H paired -18.4K; deepest reach
+ * 3,740 B). Only port-owned subtrees that do no I/O, hand no stack address to
+ * DMA and never switch coroutines may run on it. */
+#ifndef NDS_DTCM_HOT_STACK_BYTES
+#define NDS_DTCM_HOT_STACK_BYTES 8192u
+#endif
+#define NDS_DTCM_HOT_STACK_STR2(x) #x
+#define NDS_DTCM_HOT_STACK_STR(x) NDS_DTCM_HOT_STACK_STR2(x)
+u64 gNdsDtcmHotStack[NDS_DTCM_HOT_STACK_BYTES / 8u]
+    __attribute__((section(".sbss.gNdsDtcmHotStack"), aligned(8)));
+extern unsigned int ndsDtcmHotStackCall(unsigned int (*fn)(void *), void *arg);
+
+__asm__(
+    "    .pushsection .text.ndsDtcmHotStackCall,\"ax\",%progbits\n"
+    "    .arm\n"
+    "    .align 2\n"
+    "    .global ndsDtcmHotStackCall\n"
+    "    .type ndsDtcmHotStackCall, %function\n"
+    "ndsDtcmHotStackCall:\n"
+    "    push  {r4, lr}\n"
+    "    ldr   r2, =gNdsDtcmHotStack\n"
+    "    ldr   r3, =gNdsDtcmHotStack+" NDS_DTCM_HOT_STACK_STR(NDS_DTCM_HOT_STACK_BYTES) "\n"
+    "    cmp   sp, r2\n"
+    "    bls   1f\n"
+    "    cmp   sp, r3\n"
+    "    bls   2f\n"
+    "1:  mov   r4, sp\n"
+    "    mov   sp, r3\n"
+    "    mov   ip, r0\n"
+    "    mov   r0, r1\n"
+    "    blx   ip\n"
+    "    mov   sp, r4\n"
+    "    pop   {r4, pc}\n"
+    "2:  mov   ip, r0\n"
+    "    mov   r0, r1\n"
+    "    blx   ip\n"
+    "    pop   {r4, pc}\n"
+    "    .ltorg\n"
+    "    .size ndsDtcmHotStackCall, .-ndsDtcmHotStackCall\n"
+    "    .popsection\n");
+
+#if NDS_TICK_HUD
+/* Lab: the stack's deepest reach. Painted once from outside it, scanned every
+ * 256th entry from outside it (a call made on it would scan live frames). */
+#define NDS_DTCM_HOT_STACK_PAINT 0x5ca1ab1eu
+__attribute__((used)) volatile u32 gNdsDtcmHotStackHighWater;
+__attribute__((used)) volatile u32 gNdsDtcmHotStackCalls;
+static u32 sNdsDtcmHotStackPainted;
+
+static void ndsDtcmHotStackLabNote(void)
+{
+    u32 *words = (u32 *)(void *)gNdsDtcmHotStack;
+    u32 count = NDS_DTCM_HOT_STACK_BYTES / 4u;
+    u32 sp;
+    u32 i;
+
+    __asm__ volatile ("mov %0, sp" : "=r"(sp));
+    if ((sp > (u32)(uintptr_t)words) &&
+        (sp <= (u32)(uintptr_t)(words + count)))
+    {
+        return;
+    }
+    if (sNdsDtcmHotStackPainted == 0u)
+    {
+        for (i = 0u; i < count; i++)
+        {
+            words[i] = NDS_DTCM_HOT_STACK_PAINT;
+        }
+        sNdsDtcmHotStackPainted = 1u;
+        return;
+    }
+    if ((gNdsDtcmHotStackCalls++ & 255u) != 0u)
+    {
+        return;
+    }
+    for (i = 0u; (i < count) && (words[i] == NDS_DTCM_HOT_STACK_PAINT); i++)
+    {
+    }
+    if (((count - i) * 4u) > gNdsDtcmHotStackHighWater)
+    {
+        gNdsDtcmHotStackHighWater = (count - i) * 4u;
+    }
+}
+#endif
+
+unsigned int ndsDtcmHotStackRun(unsigned int (*fn)(void *), void *arg)
+{
+#if NDS_TICK_HUD
+    ndsDtcmHotStackLabNote();
+#endif
+    return ndsDtcmHotStackCall(fn, arg);
+}
+
 #if NDS_TASK20_STACK_PROFILE
 extern u8 __dtcm_bss_end[];
 extern u8 __sp_usr[];

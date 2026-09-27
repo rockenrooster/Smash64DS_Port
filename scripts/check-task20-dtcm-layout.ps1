@@ -183,72 +183,52 @@ foreach ($elfPath in $Elf) {
     }
     $playbackBytes = if ($applicationOwners.Count -eq 0) { 0 } else { 32 }
 
-    # R2-03 E29. The two hot fighter vertex tables. Both are randomly indexed by
-    # 1,878 corners a frame and did not fit the 4 KB data cache in main RAM.
-    # Audited for this gate's DMA/IPC/ARM7 requirement: both are written and read
-    # only by ARM9 code in the fighter draw, neither is ever a DMA source or
-    # destination (the renderer's only GXFIFO DMA is the stage replay's
-    # owner->words buffer in main RAM), and neither is visible to the ARM7 or
-    # IPC. They lead the section, so everything below shifts up by their size.
-    $fighterOwnerSizes = [ordered]@{
-        # Generator census: Fox Results-Lose variants add 26 high-detail dense
-        # vertices (541->567), and Mario hand variants add 46 more (567->613).
-        # Normals are 4 bytes and hardware-lit prepared rows are 10 bytes,
-        # with ARM-safe halfword alignment.
-        'sNdsNativeFighterDenseNormals'  = 2452
-        'sNdsNativeFighterPreparedDense' = 6130
+    # R2-03 E29's Mario dense tables left DTCM for main RAM (P2-2p8): every VS
+    # kind draws through the lean list, which reads them only while it
+    # materializes a Mario list, and their bytes now hold the DTCM hot stack.
+    # They must not come back.
+    foreach ($name in @('sNdsNativeFighterDenseNormals',
+                        'sNdsNativeFighterPreparedDense')) {
+        if (@($owners | Where-Object { $_.Name -eq $name }).Count -ne 0) {
+            throw ("DTCM owner '$name' is back in DTCM in '$resolvedElf'; " +
+                'its bytes hold the hot stack.')
+        }
     }
-    $fighterOwners = @($owners | Where-Object {
-        $fighterOwnerSizes.Contains($_.Name)
-    })
-    if ($fighterOwners.Count -ne 0 -and
-        $fighterOwners.Count -ne $fighterOwnerSizes.Count) {
-        throw "Fighter DTCM owners must be present all-or-none in '$resolvedElf'."
-    }
-    # Cycle 110 puts the renderer's per-frame counter block in the same section
-    # on the same terms. 108 bytes of u32 counters read-modify-written on every
-    # hardware batch, every matrix load and every texture prepare; compiling
-    # them out measured FTR -7,378 and STG -2,776, and they cannot be compiled
-    # out because verify-battle-mariofox-gcrunall-loop-harness.ps1 asserts exact
-    # batch and texture-prepare accounting off them. DTCM keeps the evidence and
-    # stops paying main-RAM latency and a cache line for it. Same audit as the
-    # two tables above: ARM9 renderer code only, never a DMA source or
-    # destination, never visible to the ARM7 or IPC.
-    #
-    # OPTIONAL, unlike the pair above, because it only exists at
-    # NDS_RENDERER_PROFILE_LEVEL < 2 -- an all-or-none rule would reject a
-    # level-2 ELF for a reason that has nothing to do with the layout. Its size
-    # is still pinned when it is there.
-    $rendererOwnerSizes = [ordered]@{
+    # Named .dtcm owners, sizes pinned, order the linker's. The renderer's
+    # per-frame counter block (cycle 110: FTR -7,378 / STG -2,776 when it left
+    # main RAM; ARM9 renderer code only, never a DMA endpoint, never visible
+    # to the ARM7 or IPC) and the lean / VRAM lab control words, which are
+    # read on every draw and poked by the lab harnesses. Each is optional:
+    # configurations differ.
+    $dtcmNamedSizes = [ordered]@{
         'sNdsRendererRuntimeFrameSummary' = 108
+        'gNdsFtrAdmitIdentCensus' = 4
+        'gNdsFtrLeanSlow' = 4
+        'gNdsVramCensusEnable' = 4
+        'gNdsFtrLeanAdmit' = 4
+        'gNdsFtrLeanRoute' = 4
     }
-
-    $fighterBytes = 0
-    if ($fighterOwners.Count -ne 0) {
-        foreach ($name in $fighterOwnerSizes.Keys) {
-            $owner = @($fighterOwners | Where-Object { $_.Name -eq $name })[0]
-            if ($owner.Bytes -ne $fighterOwnerSizes[$name]) {
-                throw ("DTCM owner '$name' is $($owner.Bytes) bytes, " +
-                    "expected $($fighterOwnerSizes[$name]), in '$resolvedElf'.")
-            }
-            $fighterBytes += $fighterOwnerSizes[$name]
+    foreach ($entry in $dtcmNamedSizes.GetEnumerator()) {
+        $owner = @($owners | Where-Object { $_.Name -eq $entry.Key })
+        if (($owner.Count -ne 0) -and
+            (($owner[0].Bytes -ne $entry.Value) -or
+             ($owner[0].Section -ne '.dtcm'))) {
+            throw ("DTCM owner '$($entry.Key)' is $($owner[0].Bytes) bytes " +
+                "in $($owner[0].Section), expected $($entry.Value) in .dtcm, " +
+                "in '$resolvedElf'.")
         }
-        foreach ($name in $rendererOwnerSizes.Keys) {
-            $owner = @($owners | Where-Object { $_.Name -eq $name })
-            if ($owner.Count -eq 0) { continue }
-            if ($owner[0].Bytes -ne $rendererOwnerSizes[$name]) {
-                throw ("DTCM owner '$name' is $($owner[0].Bytes) bytes, " +
-                    "expected $($rendererOwnerSizes[$name]), in '$resolvedElf'.")
-            }
-            # Packed fighter rows can end on a halfword; the next renderer
-            # object's u32 fields still require the linker's word alignment.
-            $fighterBytes = [int]([math]::Ceiling($fighterBytes / 4.0) * 4)
-            $fighterBytes += $rendererOwnerSizes[$name]
-        }
-        # The linker realigns to 32 after .dtcm.fighter so that Calico's
-        # __irq_table keeps its 32-byte boundary no matter how the data-driven
-        # fighter table sizes come out.
-        $fighterBytes = [int](([math]::Ceiling($fighterBytes / 32.0)) * 32)
+    }
+    # The DTCM hot stack (src/port/coroutine.c) leads .dtcm.bss by its own
+    # linker line. ARM9 code only: the subtrees that run on it do no I/O and
+    # hand no stack address to DMA, the ARM7 or storage.
+    $hotStack = @($owners | Where-Object { $_.Name -eq 'gNdsDtcmHotStack' })
+    if ($hotStack.Count -ne 1) {
+        throw "DTCM hot stack gNdsDtcmHotStack missing in '$resolvedElf'."
+    }
+    $hotStackBytes = [int]$hotStack[0].Bytes
+    if (($hotStackBytes -lt 4096) -or (($hotStackBytes % 32) -ne 0)) {
+        throw ("DTCM hot stack is $hotStackBytes bytes (needs >= 4096 and a " +
+            "multiple of 32 to keep __irq_table aligned) in '$resolvedElf'.")
     }
     # P2-2p8 hot scalar statics. 112 scattered 4-byte-ish statics moved into
     # DTCM by linker script alone, worth -43,200 WORK-H P50 confirmed per-PC
@@ -310,7 +290,15 @@ foreach ($elfPath in $Elf) {
     $hotScalarData = $hotScalarSpan['.dtcm']
     $hotScalarBss = $hotScalarSpan['.dtcm.bss']
 
-    $dtcmBytes = $fighterBytes + $playbackBytes + $hotScalarData
+    $dtcmOwnerRows = @($owners | Where-Object { $_.Section -eq '.dtcm' })
+    $dtcmHigh = if ($dtcmOwnerRows.Count -eq 0) { $expectedBase } else {
+        ($dtcmOwnerRows | ForEach-Object { $_.Address + $_.Bytes } |
+            Measure-Object -Maximum).Maximum
+    }
+    $dtcmBytes = [int]([math]::Ceiling(($dtcmHigh - $expectedBase) / 32.0) * 32)
+    # Everything in .dtcm is modelled below or a named hot scalar; the pin
+    # loop throws on anything else, so the span cannot hide a stranger.
+    $null = $hotScalarData
     # Native ShieldPose publishes a synchronous ARM9-only DObjDesc lookup:
     # 32 source rows * 44 bytes. The repo linker maps .sbss.shield_pose before
     # Calico's BSS. RefreshBaseRow writes transforms; guard evaluation
@@ -319,13 +307,13 @@ foreach ($elfPath in $Elf) {
         $_.Name -eq 'sNdsShieldPoseDObjScratch'
     })
     $shieldPoseBytes = if ($shieldPoseOwners.Count -eq 0) { 0 } else { 1408 }
-    $dtcmBssBytes = $shieldPoseBytes + $hotScalarBss + 152
+    $dtcmBssBytes = $hotStackBytes + $shieldPoseBytes + $hotScalarBss + 152
     # NOT shifted by $hotScalarBss. The hot-scalar bss block is gathered LAST
     # in .dtcm.bss, after Calico's own BSS, so it grows the section tail and
     # leaves __irq_table where it was. Calico does move by $hotScalarData,
     # because that lands in .dtcm and pushes .dtcm.bss's base -- and that is
     # already carried in $dtcmBytes.
-    $calicoBase = $expectedBase + $dtcmBytes + $shieldPoseBytes
+    $calicoBase = $expectedBase + $dtcmBytes + $hotStackBytes + $shieldPoseBytes
 
     if ($dtcm.Address -ne $expectedBase -or
         $dtcmBss.Address -ne ($expectedBase + $dtcmBytes) -or
@@ -356,60 +344,26 @@ foreach ($elfPath in $Elf) {
             Alignment = 32
         }
     }
+    $expectedOwners['gNdsDtcmHotStack'] = [PSCustomObject]@{
+        Address = $expectedBase + $dtcmBytes
+        Section = '.dtcm.bss'
+        Bytes = $hotStackBytes
+        Alignment = 8
+    }
     if ($shieldPoseBytes -ne 0) {
         $expectedOwners['sNdsShieldPoseDObjScratch'] = [PSCustomObject]@{
-            Address = $expectedBase + $dtcmBytes
+            Address = $expectedBase + $dtcmBytes + $hotStackBytes
             Section = '.dtcm.bss'
             Bytes = 1408
             Alignment = 4
         }
     }
-    if ($fighterBytes -ne 0) {
-        $fighterAddress = $expectedBase
-        foreach ($entry in $fighterOwnerSizes.GetEnumerator()) {
-            $expectedOwners[$entry.Key] = [PSCustomObject]@{
-                Address = $fighterAddress
-                Section = '.dtcm'
-                Bytes = $entry.Value
-                Alignment = 4
-            }
-            $fighterAddress += $entry.Value
-        }
-        # Optional renderer owners follow the pinned pair, in declaration order.
-        foreach ($entry in $rendererOwnerSizes.GetEnumerator()) {
-            if (@($owners | Where-Object { $_.Name -eq $entry.Key }).Count -eq 0) {
-                continue
-            }
-            $fighterAddress = [int64]([math]::Ceiling($fighterAddress / 4.0) * 4)
-            $expectedOwners[$entry.Key] = [PSCustomObject]@{
-                Address = $fighterAddress
-                Section = '.dtcm'
-                Bytes = $entry.Value
-                Alignment = 4
-            }
-            $fighterAddress += $entry.Value
-        }
-    }
-    if ($playbackBytes -ne 0) {
-        # The fighter tables lead the section, so playback starts above them.
-        $playbackBase = $expectedBase + $fighterBytes
-        $expectedOwners['sControllerPlaybackEnabled'] = [PSCustomObject]@{
-            Address = $playbackBase
+    $namedDtcm = @($dtcmNamedSizes.Keys) + $playbackOwnerNames
+    foreach ($owner in @($owners | Where-Object { $namedDtcm -contains $_.Name })) {
+        $expectedOwners[$owner.Name] = [PSCustomObject]@{
+            Address = $owner.Address
             Section = '.dtcm'
-            Bytes = 4
-            Alignment = 4
-        }
-        $expectedOwners['sControllerPlaybackConnectedMask'] =
-            [PSCustomObject]@{
-                Address = $playbackBase + 4
-                Section = '.dtcm'
-                Bytes = 4
-                Alignment = 4
-            }
-        $expectedOwners['sControllerPlaybackPads'] = [PSCustomObject]@{
-            Address = $playbackBase + 8
-            Section = '.dtcm'
-            Bytes = 24
+            Bytes = $owner.Bytes
             Alignment = 4
         }
     }

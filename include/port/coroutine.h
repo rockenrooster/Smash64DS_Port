@@ -35,6 +35,11 @@ int portCoroutineIsFinished(const PortCoroutine *coroutine);
 int portCoroutineInCoroutine(void);
 PortCoroutine *portCoroutineCurrent(void);
 
+/* Run fn(arg) on the DTCM hot stack and return its result. A call made while
+ * already on that stack runs in place. fn must not yield a coroutine or hand
+ * a stack address to DMA, the ARM7 or storage: none of them can see DTCM. */
+unsigned int ndsDtcmHotStackRun(unsigned int (*fn)(void *), void *arg);
+
 #if NDS_TASK20_STACK_PROFILE
 /* Task 20 profile-only stack watermarks. */
 #define NDS_TASK20_COROUTINE_CENSUS_CAPACITY 64u

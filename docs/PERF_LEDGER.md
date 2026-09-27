@@ -8897,3 +8897,17 @@ counters (8 reads a frame) now need the new `NDS_WHISPY_AOT_TICKS=1`.
 `8C78E908` vs `dgt`, replay identical: FTR-spike frames -31.5K each; WORK-H
 P50/P95/P99 1,090,752/1,494,272/1,788,608 (+1.2K/-5.1K/-0.6K). RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 29.
+
+## 2026-09-27 — DTCM hot stack for the lean fighter list and stage commit
+
+**BANKED.** A D-cache fill census (a scratch melonDS with a per-line fill
+histogram) puts 12,907 fills a frame at about 31 ticks each. The gameplay
+coroutine's main-RAM stack is the largest single object: 1,470 fills a frame.
+`ndsFtrLeanRun` and `ndsRendererCommitNativeStageSegment` now run on an 8 KB
+DTCM stack through an ARM trampoline. The DTCM came from the Mario dense
+tables, which the lean list reads only on a Mario materialization and which
+moved to main RAM. Same-ROM A/B WORK-H P50/P95 -20.7K/-26.7K, paired median
+-18.4K; deepest reach 3,740 B. Final `7D51B305` vs `instr`, replay identical:
+WORK-H P50/P95/P99 1,069,440/1,468,224/1,720,256; 1,216/1,972 frames within
+1,120,000; CSS reserve free 249,808. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 30.

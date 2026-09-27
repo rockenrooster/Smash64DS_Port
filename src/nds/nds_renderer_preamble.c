@@ -4066,12 +4066,9 @@ typedef struct NDSRendererRuntimeFrameSummary
  * it -- so the fix is to stop paying main-memory latency and a cache line for
  * evidence.
  *
- * `.dtcm.fighter`, not `.dtcm.bss`: check-task20-dtcm-layout.ps1 pins
- * `.dtcm.bss` at Calico's own 152 bytes (__irq_table + __sched_state) and
- * throws on anything else landing there. The fighter group is the modelled
- * home for audited renderer DTCM data and the checker rounds it to 32, which
- * keeps __irq_table's alignment. Adding an owner here means adding its size to
- * that script's $fighterOwnerSizes -- the layout is pinned on purpose.
+ * `.dtcm` (loaded), where check-task20-dtcm-layout.ps1 models it; it used to
+ * ride `.dtcm.fighter`, which left DTCM with Mario's dense tables (P2-2p8,
+ * the DTCM hot stack).
  *
  * Audited against that gate's DMA/IPC/ARM7 requirement, same as the two vertex
  * tables above it: written and read only by ARM9 renderer code, never a DMA
@@ -4079,7 +4076,7 @@ typedef struct NDSRendererRuntimeFrameSummary
  * DTCM at all. Zero-initialised at every frame begin by memset, so nothing
  * depends on the crt's copy of its (zero) image. */
 static NDSRendererRuntimeFrameSummary sNdsRendererRuntimeFrameSummary
-    __attribute__((section(".dtcm.fighter")));
+    __attribute__((section(".dtcm")));
 static u32 sNdsRendererRuntimeTexel1FractionRefreshCount;
 static u32 sNdsRendererRuntimeTextureCacheEvictCount;
 static u32 sNdsRendererRuntimeTextureCi4DirectPixels;
