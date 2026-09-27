@@ -105,4 +105,11 @@ static inline uint32_t ndsAudioStorageCardCapacity(uint32_t device_capacity)
     return device_capacity <= 12u ? 0x20000u << device_capacity : 0u;
 }
 
+#ifdef ARM7
+/* The ARM7 audio worker and ARM9 RPC server share this serialized media owner.
+ * Unlike RPC outputs, internal audio destinations may live in ARM7 WRAM. */
+int ndsAudioStorageReadRom(uint32_t offset, void *destination, uint32_t bytes);
+uint32_t ndsAudioStorageRomSize(void);
+#endif
+
 #endif

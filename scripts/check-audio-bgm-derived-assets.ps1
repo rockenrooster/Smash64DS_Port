@@ -177,7 +177,9 @@ foreach ($track in $tracks) {
 }
 
 $header = Get-Content -LiteralPath (Join-Path $Root 'include/nds/nds_audio_bgm.h') -Raw
+$header += Get-Content -LiteralPath (Join-Path $Root 'include/nds/nds_bgm_stream.h') -Raw
 $runtime = Get-Content -LiteralPath (Join-Path $Root 'src/nds/nds_audio_bgm.c') -Raw
+$service = Get-Content -LiteralPath (Join-Path $Root 'src/nds/arm7/nds_audio_bgm_service.c') -Raw
 $required = @(
     'NDS_AUDIO_BGM_CONTAINER_MAGIC 0x31414742u',
     'NDS_AUDIO_BGM_CONTAINER_VERSION 1u',
@@ -225,14 +227,14 @@ foreach ($needle in $required) {
 if ($compressedTotal -ne 2138892) {
     throw "ADPCM asset total changed: $compressedTotal"
 }
-if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
-    $runtime -match '#define NDS_AUDIO_BGM_TIMER [23]u') {
-    throw 'BGM seam scheduling must not overwrite Calico cpuGetTiming timers 2/3.'
+if (-not $service.Contains('tickTaskStart(&sBgmTimers[') -or
+    $runtime -match 'timerStart\s*\(' -or $service -match 'REG_TMxCNT|timerBegin\s*\(') {
+    throw 'ARM7 BGM must schedule through Calico tick tasks without overwriting shared hardware timers.'
 }
 # Owner, docs/BUGS.md Audio: "ALL BGM should be IMA-ADPCM". The PCM16 stream
 # arm that carried Mushroom Kingdom from 2026-09-07 was retired 2026-09-22;
 # no track may name a raw asset or prepare a PCM16 hardware channel again.
-if ($runtime -match 'nitro:/audio/bgm_\w+\.raw' -or $runtime.Contains('SoundFmt_Pcm16')) {
+if ($runtime -match 'nitro:/audio/bgm_\w+\.raw' -or ($runtime + $service).Contains('SoundFmt_Pcm16')) {
     throw 'A BGM track streams raw PCM; every BGM track must be an IMA-ADPCM packet stream.'
 }
 if ($runtime -notmatch '\{\s*nSYAudioBGMInishie,\s*NDS_AUDIO_BGM_PATH_INISHIE,' -or

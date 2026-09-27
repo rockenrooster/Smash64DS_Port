@@ -288,12 +288,6 @@ static void ndsSCVSBattleStartPlayBGM(void)
     (void)ndsR2AnimCachePreloadFinish();
 #endif
     mpCollisionSetPlayBGM();
-    /* The rest of this setup frame and the first frame's native stage warm
-     * uploads outrun a PCM16 packet (Mushroom Kingdom read one seam miss on
-     * its entry frame every run, probe inishie-b6, 2026-09-07); silence the
-     * stream across them and resume on the fourth battle frame: two updates
-     * resumed before the warm-upload frame and still missed (inishie-b8). */
-    ndsAudioBgmSuspendUntilUpdates(4u);
 }
 
 void scVSBattleStartBattle(void)
@@ -301,10 +295,6 @@ void scVSBattleStartBattle(void)
     gNdsSCVSBattleOriginalFuncStartResult =
         NDS_SCVSBATTLE_ORIGINAL_FUNC_START_PASS;
 
-    /* The menu track is still streaming while this setup loads the stage
-     * and fighters; a load longer than its packet would be its seam miss.
-     * Silence it here; the stage track replaces it inside the setup. */
-    ndsAudioBgmSuspendForBlockingLoad();
     ndsRendererNativeBeginKirbyHatMatch();
     ndsBaseSCVSBattleStartBattle();
 

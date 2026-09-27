@@ -5,6 +5,8 @@
 
 #include <gm/gmsound.h>
 #include <nds/nds_audio_bgm.h>
+#include <nds/nds_audio_fgm.h>
+#include <nds/nds_bgm_ipc.h>
 #include <sys/audio.h>
 
 #define NDS_AUDIO_BGM_PATH_PUPUPU "nitro:/audio/bgm_pupupu_ima.bin"
@@ -118,10 +120,6 @@
 #if NDS_P2_ITEM_CORE
 #define NDS_AUDIO_BGM_PATH_STAR "nitro:/audio/bgm_star_ima.bin"
 #endif
-#define NDS_AUDIO_BGM_CHANNEL_BASE 14u
-#define NDS_AUDIO_BGM_CHANNEL_MASK (3u << NDS_AUDIO_BGM_CHANNEL_BASE)
-#define NDS_AUDIO_BGM_TIMER 0u
-#define NDS_AUDIO_BGM_WORKER_STACK_BYTES 1024u
 #define NDS_AUDIO_BGM_NO_LOOP 0xffffffffu
 
 _Static_assert(NDS_AUDIO_BGM_RESIDENT_BYTES == 16392u,
@@ -130,9 +128,6 @@ _Static_assert((NDS_AUDIO_BGM_PACKET_BYTES % 4u) == 0u,
                "BGM ADPCM packet must contain whole DS words");
 _Static_assert(NDS_AUDIO_BGM_BYTES_PER_SECOND == 44100u,
                "BGM source-time byte rate changed");
-_Static_assert(NDS_AUDIO_BGM_CHANNEL_BASE + NDS_AUDIO_BGM_BUFFER_COUNT <=
-                   SOUND_NUM_CHANNELS,
-               "BGM channels exceed the Calico mixer");
 
 typedef struct NDSAudioBgmTrack {
     s32 id;
@@ -857,11 +852,6 @@ __attribute__((used)) volatile u32 gNdsAudioBgmDirectFallbackCount;
 volatile u32 gNdsAudioBgmRefillTicksLast;
 volatile u32 gNdsAudioBgmRefillTicksMax;
 #endif
-#if NDS_BGM_FALSIFIER_OFF
-volatile u32 gNdsAudioBgmFalsifierOff = 1u;
-#else
-volatile u32 gNdsAudioBgmFalsifierOff;
-#endif
 volatile u32 gNdsAudioBgmPlaybackPositionBytes;
 volatile u32 gNdsAudioBgmWritePositionBytes;
 volatile u32 gNdsAudioBgmPlaybackHalf;
@@ -904,779 +894,183 @@ volatile u32 gNdsAudioBgmSeamMissCount;
 volatile u32 gNdsAudioBgmTimerEventDropCount;
 volatile u32 gNdsAudioBgmWorkerWakeCount;
 volatile u32 gNdsAudioBgmErrorStopCount;
-volatile u32 gNdsAudioBgmBlockingSuspendCount;
-volatile u32 gNdsAudioBgmBlockingResumeCount;
 volatile u32 gNdsAudioBgmErrorCleanupFailCount;
 volatile u32 gNdsAudioBgmFirstMissFrame;
 volatile u32 gNdsAudioBgmFirstMissTrackID;
 extern volatile u32 gNdsRendererProfileFrameCount;
-static volatile u32 sNdsAudioBgmResumeOnUpdate;
 
 /* decomp sys/audio.c:76. Exported current sound quality the Options menu reads
  * (mnoption.c:808): 0 = mono, 1 = stereo. Default stereo, like the source. */
 sb32 dSYAudioSoundQuality = 1;
 
-static u8 sNdsAudioBgmBuffers[NDS_AUDIO_BGM_BUFFER_COUNT]
-    [NDS_AUDIO_BGM_PACKET_BYTES] __attribute__((aligned(4)));
-static FILE *sNdsAudioBgmFile;
-static NitroRom *sNdsAudioBgmRom;
-static u16 sNdsAudioBgmRomFileId;
-static u8 sNdsAudioBgmRomReady;
-static const NDSAudioBgmTrack *sNdsAudioBgmTrack;
-static Thread sNdsAudioBgmWorker;
-static Mailbox sNdsAudioBgmMailbox;
-static u32 sNdsAudioBgmMailboxSlot;
-static u8 sNdsAudioBgmWorkerStack[NDS_AUDIO_BGM_WORKER_STACK_BYTES]
-    __attribute__((aligned(8)));
-static u32 sNdsAudioBgmWorkerStarted;
-static volatile u32 sNdsAudioBgmTimerArmed;
-static volatile u32 sNdsAudioBgmBlockingSuspend;
-static volatile u32 sNdsAudioBgmGeneration;
-static volatile u32 sNdsAudioBgmWorkerActive;
-static volatile u32 sNdsAudioBgmCurrentBuffer;
-static volatile u32 sNdsAudioBgmPreparedMask;
-static volatile u32 sNdsAudioBgmRefillPendingMask;
-static volatile u32 sNdsAudioBgmStreamExhausted;
-static volatile u32 sNdsAudioBgmNaturalStopPending;
-static volatile u32 sNdsAudioBgmErrorPending;
-static u32 sNdsAudioBgmPacketSamples[NDS_AUDIO_BGM_BUFFER_COUNT];
-static u32 sNdsAudioBgmPacketBytes[NDS_AUDIO_BGM_BUFFER_COUNT];
-static u32 sNdsAudioBgmPacketLoopRestart[NDS_AUDIO_BGM_BUFFER_COUNT];
-static u32 sNdsAudioBgmOffset;
-static u32 sNdsAudioBgmNextPacket;
-static u32 sNdsAudioBgmLastTimerTick;
-static u64 sNdsAudioBgmTimerTicksTotal;
-static u64 sNdsAudioBgmNextSeamTick;
-static u64 sNdsAudioBgmSourceBytesLoaded;
-static u64 sNdsAudioBgmInitialSourceBytes;
+/* ARM9 owns source commands and frame-counted fades. ARM7 owns all packet
+ * reads, buffers, sound-channel timing and natural completion. */
+static NdsBgmSpec sBgmSpecs[sizeof(sNdsAudioBgmTracks)/sizeof(sNdsAudioBgmTracks[0])]
+    __attribute__((aligned(32)));
+static volatile NdsBgmReport sBgmReport;
+static NdsBgmInit sBgmInit;
+static Mutex sBgmCommandMutex;
+static u32 sBgmInitialized, sBgmGeneration, sBgmPendingPlaying, sBgmLastSequence;
 static s32 sNdsAudioBgmNaturalStopArmed;
-/* syAudioSetBGMVolumeFade state (decomp sys/audio.c:1315-1327). The source keeps
- * a float rate per player stepped every audio tick; this is its integer
- * Bresenham form in the same 0..0x7800 units as gNdsAudioBgmVolume: one s32
- * division at setup, add/compare per frame, exact snap to target on the last
- * frame. No float: the DS has no FPU. */
-static u32 sNdsAudioBgmFadeFramesLeft;
-static u32 sNdsAudioBgmFadeTarget;
-static u32 sNdsAudioBgmFadeDenom;
-static s32 sNdsAudioBgmFadeStep;
-static s32 sNdsAudioBgmFadeRem;
-static s32 sNdsAudioBgmFadeError;
+static u32 sNdsAudioBgmFadeFramesLeft, sNdsAudioBgmFadeTarget, sNdsAudioBgmFadeDenom;
+static s32 sNdsAudioBgmFadeStep, sNdsAudioBgmFadeRem, sNdsAudioBgmFadeError;
+volatile u32 gNdsAudioBgmArm7Commands;
+volatile u32 gNdsAudioBgmArm7Ready;
+volatile u32 gNdsAudioBgmArm7Failure;
 
-static u16 ndsAudioBgmReadLe16(const u8 *data)
+_Static_assert(sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]) <= NDS_BGM_MAX_TRACKS, "BGM index encoding");
+/* soundPlaySample scans upward from channel 0. These are its only callers,
+ * so twelve FGM handles cannot claim the two BGM channels at 14/15. */
+_Static_assert(NDS_AUDIO_FGM_HANDLE_CAPACITY <= 14u, "FGM overlaps BGM channels");
+
+void __attribute__((noinline, used, noreturn)) ndsAudioBgmControlHalt(u32 reason)
 {
-    return (u16)(((u16)data[1] << 8) | data[0]);
+    gNdsAudioBgmArm7Failure = reason;
+    DC_FlushAll();
+    for (;;) { __asm__ volatile("" ::: "memory"); }
 }
 
-static u32 ndsAudioBgmReadLe32(const u8 *data)
+static u32 ndsBgmNextGeneration(void)
 {
-    return ((u32)data[3] << 24) | ((u32)data[2] << 16) |
-           ((u32)data[1] << 8) | data[0];
+    sBgmGeneration = (sBgmGeneration + 1u) & NDS_BGM_GENERATION_MASK;
+    if (!sBgmGeneration) sBgmGeneration = 1u;
+    return sBgmGeneration;
 }
 
-static u32 ndsAudioBgmPacketDurationTicks(u32 samples)
+static void ndsBgmPost(u32 operation, u32 argument, u32 wait)
 {
-    return (u32)(((u64)samples * BUS_CLOCK) / NDS_AUDIO_BGM_SAMPLE_RATE);
+    u32 message = ndsBgmCommand(operation, argument);
+    mutexLock(&sBgmCommandMutex);
+    gNdsAudioBgmArm7Commands++;
+    if (wait)
+    {
+        if (pxiSendAndReceive((PxiChannel)NDS_BGM_IPC_CHANNEL, message) != message)
+            ndsAudioBgmControlHalt(4u);
+    }
+    else pxiSend((PxiChannel)NDS_BGM_IPC_CHANNEL, message);
+    mutexUnlock(&sBgmCommandMutex);
 }
 
-static u8 ndsAudioBgmScaleVolume(u32 vol)
+static void ndsBgmInitialize(void)
 {
-    if (vol >= 0x7800u)
+    if (sBgmInitialized) return;
+    NitroRom *rom = nitroromGetSelf();
+    if (!rom) ndsAudioBgmControlHalt(1u);
+    for (u32 i = 0; i < sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]); ++i)
     {
-        return 127u;
+        const NDSAudioBgmTrack *track = &sNdsAudioBgmTracks[i];
+        if (strncmp(track->path, "nitro:/", 7u)) ndsAudioBgmControlHalt(2u);
+        int file = nitroromResolvePath(rom, NITROROM_ROOT_DIR, track->path + 7u);
+        if (file < 0 || file >= NITROROM_ROOT_DIR ||
+            nitroromGetFileSize(rom, (u16)file) != track->asset_bytes)
+            ndsAudioBgmControlHalt(3u);
+        sBgmSpecs[i] = (NdsBgmSpec){
+            nitroromGetFileOffset(rom, (u16)file), track->asset_bytes,
+            track->stream_bytes / 2u,
+            track->is_looping ? track->loop_start_bytes / 2u : NDS_BGM_NO_LOOP,
+            track->packet_count, track->loop_packet, track->loop_record, (u32)track->id
+        };
     }
-    return (u8)((vol * 127u) / 0x7800u);
+    sBgmInit = (NdsBgmInit){
+        NDS_BGM_IPC_ABI, (u32)(uintptr_t)sBgmSpecs,
+        sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]), (u32)(uintptr_t)&sBgmReport,
+        gNdsAudioBgmVolume > 0x7800u ? 0x7800u : gNdsAudioBgmVolume, {0,0,0}
+    };
+    DC_FlushRange(sBgmSpecs, sizeof(sBgmSpecs));
+    DC_FlushRange((void *)&sBgmReport, sizeof(sBgmReport));
+    DC_FlushRange(&sBgmInit, sizeof(sBgmInit));
+    pxiWaitRemote((PxiChannel)NDS_BGM_IPC_CHANNEL);
+    ndsBgmPost(NDS_BGM_INIT, (u32)(uintptr_t)&sBgmInit >> 5, TRUE);
+    sBgmInitialized = 1u;
+    gNdsAudioBgmArm7Ready = 1u;
 }
 
-static const NDSAudioBgmTrack *ndsAudioBgmFindTrack(s32 bgm_id)
+static void ndsBgmObserve(void)
 {
-    u32 i;
-
-    for (i = 0u;
-         i < (sizeof(sNdsAudioBgmTracks) / sizeof(sNdsAudioBgmTracks[0]));
-         i++)
+    if (!sBgmInitialized) return;
+    DC_InvalidateRange((void *)&sBgmReport, 32u);
+    u32 control = sBgmReport.control;
+    u32 state = control >> 17;
+    gNdsAudioBgmPlaying = (control & NDS_BGM_GENERATION_MASK) == sBgmGeneration ?
+        (state == NDS_BGM_STARTING || state == NDS_BGM_PLAYING) : sBgmPendingPlaying;
+    if ((sBgmReport.sequence & 1u) || sBgmReport.sequence == sBgmLastSequence) return;
+    NdsBgmReport snapshot;
+    u32 before;
+    do
     {
-        if (sNdsAudioBgmTracks[i].id == bgm_id)
-        {
-            return &sNdsAudioBgmTracks[i];
-        }
-    }
-    return NULL;
-}
-
-static u32 ndsAudioBgmMapPlaybackByte(u64 playback_byte)
-{
-    u32 loop_bytes;
-
-    if ((sNdsAudioBgmTrack == NULL) ||
-        (playback_byte < sNdsAudioBgmTrack->stream_bytes))
+        DC_InvalidateRange((void *)&sBgmReport, sizeof(sBgmReport));
+        before = sBgmReport.sequence;
+        if (before & 1u) continue;
+        snapshot = sBgmReport;
+        /* Re-read the sequence from RAM, not the cache line fetched above. */
+        DC_InvalidateRange((void *)&sBgmReport, 32u);
+    } while ((before & 1u) || before != sBgmReport.sequence);
+    sBgmLastSequence = before;
+    gNdsAudioBgmReadBytes = snapshot.read_bytes;
+    gNdsAudioBgmDirectReadCount = snapshot.reads;
+    gNdsAudioBgmRefillCount = snapshot.refills;
+    gNdsAudioBgmPreparedCount = snapshot.prepared;
+    gNdsAudioBgmChunkPlayCount = snapshot.chunks;
+    gNdsAudioBgmSeamStartCount = snapshot.seams;
+    gNdsAudioBgmLoopCount = snapshot.loops_loaded;
+    gNdsAudioBgmPlaybackLoopCount = snapshot.loops_played;
+    gNdsAudioBgmSeamMissCount = snapshot.seam_misses;
+    gNdsAudioBgmOverrunCount = snapshot.seam_misses;
+    gNdsAudioBgmTimerEventDropCount = snapshot.event_drops;
+    gNdsAudioBgmWorkerWakeCount = snapshot.seams;
+    gNdsAudioBgmHeaderFailCount = snapshot.header_errors;
+    gNdsAudioBgmPacketFailCount = snapshot.packet_errors;
+    gNdsAudioBgmReadFailCount = snapshot.read_errors;
+    gNdsAudioBgmErrorStopCount = snapshot.error_stops;
+    gNdsAudioBgmPlayFailCount = snapshot.bad_commands;
+    gNdsAudioBgmNaturalStopCount = snapshot.natural_stops;
+    gNdsAudioBgmLastNaturalStopTrackID = snapshot.last_natural_track;
+    if (snapshot.error_stops) ndsAudioBgmControlHalt(5u);
+    if (snapshot.seam_misses && !gNdsAudioBgmFirstMissFrame)
     {
-        return (u32)playback_byte;
+        gNdsAudioBgmFirstMissFrame = gNdsRendererProfileFrameCount + 1u;
+        gNdsAudioBgmFirstMissTrackID = snapshot.track_id;
     }
-    if (sNdsAudioBgmTrack->is_looping == FALSE)
-    {
-        return sNdsAudioBgmTrack->stream_bytes;
-    }
-    loop_bytes = sNdsAudioBgmTrack->stream_bytes -
-        sNdsAudioBgmTrack->loop_start_bytes;
-    return sNdsAudioBgmTrack->loop_start_bytes +
-        (u32)((playback_byte - sNdsAudioBgmTrack->stream_bytes) % loop_bytes);
-}
-
-/* The stream pack is immutable NitroFS data. The stdio reader below is still
- * the correctness fallback, but paying libfat's cluster walk on the worker
- * thread for every packet is a DS-port artifact: the source DMA path reads an
- * already-known ROM range. Resolve this track's NitroROM file ID once, after
- * the source-visible track identity is selected, and keep the logical byte
- * cursor in sNdsAudioBgmOffset. */
-static void ndsAudioBgmDirectRouteReset(void)
-{
-    sNdsAudioBgmRom = NULL;
-    sNdsAudioBgmRomFileId = 0u;
-    sNdsAudioBgmRomReady = FALSE;
-}
-
-static void ndsAudioBgmDirectRouteInit(void)
-{
-    NitroRom *rom;
-    const char *path;
-    int file_id;
-
-    ndsAudioBgmDirectRouteReset();
-    if ((sNdsAudioBgmTrack == NULL) || (sNdsAudioBgmTrack->path == NULL))
-    {
-        gNdsAudioBgmDirectFallbackCount++;
-        return;
-    }
-    path = sNdsAudioBgmTrack->path;
-    if (strncmp(path, "nitro:/", 7u) != 0)
-    {
-        gNdsAudioBgmDirectFallbackCount++;
-        return;
-    }
-    rom = nitroromGetSelf();
-    if (rom == NULL)
-    {
-        gNdsAudioBgmDirectFallbackCount++;
-        return;
-    }
-    file_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path + 7u);
-    if ((file_id < 0) || (file_id >= (s32)NITROROM_ROOT_DIR) ||
-        (nitroromGetFileSize(rom, (u16)file_id) !=
-         sNdsAudioBgmTrack->asset_bytes))
-    {
-        gNdsAudioBgmDirectFallbackCount++;
-        return;
-    }
-    sNdsAudioBgmRom = rom;
-    sNdsAudioBgmRomFileId = (u16)file_id;
-    sNdsAudioBgmRomReady = TRUE;
-}
-
-static void ndsAudioBgmCloseFile(void)
-{
-    if (sNdsAudioBgmFile != NULL)
-    {
-        fclose(sNdsAudioBgmFile);
-        sNdsAudioBgmFile = NULL;
-    }
-    ndsAudioBgmDirectRouteReset();
-    gNdsAudioBgmFileOpen = 0u;
-}
-
-void ndsFsLock(void);
-void ndsFsUnlock(void);
-
-static s32 ndsAudioBgmOpenFileUnlocked(void)
-{
-    if (sNdsAudioBgmTrack == NULL)
-    {
-        gNdsAudioBgmOpenFailCount++;
-        return FALSE;
-    }
-    sNdsAudioBgmFile = fopen(sNdsAudioBgmTrack->path, "rb");
-    if (sNdsAudioBgmFile == NULL)
-    {
-        gNdsAudioBgmOpenFailCount++;
-        return FALSE;
-    }
-    gNdsAudioBgmFileOpen = 1u;
-    return TRUE;
-}
-
-static s32 ndsAudioBgmOpenFile(void)
-{
-    s32 result;
-
-    ndsFsLock();
-    result = ndsAudioBgmOpenFileUnlocked();
-    ndsFsUnlock();
-    return result;
-}
-
-static s32 ndsAudioBgmReadExactUnlocked(u8 *dst, u32 bytes)
-{
-    if ((dst == NULL) || (sNdsAudioBgmTrack == NULL) ||
-        (sNdsAudioBgmOffset > sNdsAudioBgmTrack->asset_bytes) ||
-        (bytes > (sNdsAudioBgmTrack->asset_bytes - sNdsAudioBgmOffset)))
-    {
-        gNdsAudioBgmReadFailCount++;
-        return FALSE;
-    }
-    if (sNdsAudioBgmRomReady != FALSE)
-    {
-        if (nitroromReadFile(sNdsAudioBgmRom, sNdsAudioBgmRomFileId,
-                             sNdsAudioBgmOffset, dst, bytes) != false)
-        {
-            sNdsAudioBgmOffset += bytes;
-            gNdsAudioBgmReadBytes += bytes;
-            gNdsAudioBgmDirectReadCount++;
-            return TRUE;
-        }
-        /* Re-seat stdio at the authoritative logical cursor once, then keep
-         * using its established sequential behavior. A failed direct transfer
-         * never changes the live cursor or publishes a partial packet. */
-        gNdsAudioBgmDirectFallbackCount++;
-        sNdsAudioBgmRomReady = FALSE;
-        if ((sNdsAudioBgmFile == NULL) ||
-            (fseek(sNdsAudioBgmFile, (long)sNdsAudioBgmOffset, SEEK_SET) != 0))
-        {
-            gNdsAudioBgmReadFailCount++;
-            return FALSE;
-        }
-    }
-    if ((sNdsAudioBgmFile == NULL) ||
-        (fread(dst, 1u, bytes, sNdsAudioBgmFile) != bytes))
-    {
-        gNdsAudioBgmReadFailCount++;
-        return FALSE;
-    }
-    sNdsAudioBgmOffset += bytes;
-    gNdsAudioBgmReadBytes += bytes;
-    return TRUE;
-}
-
-static s32 ndsAudioBgmReadExact(u8 *dst, u32 bytes)
-{
-    s32 result;
-
-    ndsFsLock();
-    result = ndsAudioBgmReadExactUnlocked(dst, bytes);
-    ndsFsUnlock();
-    return result;
-}
-
-static s32 ndsAudioBgmReadHeader(void)
-{
-    u8 header[NDS_AUDIO_BGM_CONTAINER_HEADER_BYTES];
-    long asset_bytes;
-    u32 sample_count;
-    u32 loop_sample;
-    u32 flags;
-
-    if ((sNdsAudioBgmFile == NULL) || (sNdsAudioBgmTrack == NULL) ||
-        (fseek(sNdsAudioBgmFile, 0, SEEK_END) != 0) ||
-        ((asset_bytes = ftell(sNdsAudioBgmFile)) < 0) ||
-        ((u32)asset_bytes != sNdsAudioBgmTrack->asset_bytes) ||
-        (fseek(sNdsAudioBgmFile, 0, SEEK_SET) != 0))
-    {
-        gNdsAudioBgmHeaderFailCount++;
-        return FALSE;
-    }
-    sNdsAudioBgmOffset = 0u;
-    if (ndsAudioBgmReadExact(header, sizeof(header)) == FALSE)
-    {
-        gNdsAudioBgmHeaderFailCount++;
-        return FALSE;
-    }
-    sample_count = ndsAudioBgmReadLe32(&header[12]);
-    loop_sample = ndsAudioBgmReadLe32(&header[16]);
-    flags = ndsAudioBgmReadLe32(&header[36]);
-    if ((ndsAudioBgmReadLe32(&header[0]) != NDS_AUDIO_BGM_CONTAINER_MAGIC) ||
-        (ndsAudioBgmReadLe16(&header[4]) != NDS_AUDIO_BGM_CONTAINER_VERSION) ||
-        (ndsAudioBgmReadLe16(&header[6]) !=
-            NDS_AUDIO_BGM_CONTAINER_HEADER_BYTES) ||
-        (ndsAudioBgmReadLe32(&header[8]) != NDS_AUDIO_BGM_SAMPLE_RATE) ||
-        ((sample_count * 2u) != sNdsAudioBgmTrack->stream_bytes) ||
-        (ndsAudioBgmReadLe32(&header[20]) != NDS_AUDIO_BGM_PACKET_SAMPLES) ||
-        (ndsAudioBgmReadLe32(&header[24]) !=
-            sNdsAudioBgmTrack->packet_count) ||
-        (ndsAudioBgmReadLe32(&header[28]) !=
-            sNdsAudioBgmTrack->loop_packet) ||
-        (ndsAudioBgmReadLe32(&header[32]) !=
-            sNdsAudioBgmTrack->loop_record) ||
-        (((flags & 1u) != 0u) !=
-            (sNdsAudioBgmTrack->is_looping != FALSE)) ||
-        ((sNdsAudioBgmTrack->is_looping != FALSE) &&
-            ((loop_sample * 2u) !=
-             sNdsAudioBgmTrack->loop_start_bytes)) ||
-        ((sNdsAudioBgmTrack->is_looping == FALSE) &&
-            (loop_sample != NDS_AUDIO_BGM_NO_LOOP)))
-    {
-        gNdsAudioBgmHeaderFailCount++;
-        return FALSE;
-    }
-    sNdsAudioBgmNextPacket = 0u;
-    return TRUE;
-}
-
-/* 1 = loaded, 0 = finite end, -1 = malformed/read failure. */
-static s32 ndsAudioBgmReadPacket(u32 buffer)
-{
-    u8 record[NDS_AUDIO_BGM_PACKET_HEADER_BYTES];
-    u32 samples;
-    u32 payload_bytes;
-    u32 expected_bytes;
-    u32 loop_restart = 0u;
-
-    if ((buffer >= NDS_AUDIO_BGM_BUFFER_COUNT) ||
-        (sNdsAudioBgmTrack == NULL) || (sNdsAudioBgmFile == NULL))
-    {
-        gNdsAudioBgmPacketFailCount++;
-        return -1;
-    }
-    if (sNdsAudioBgmNextPacket >= sNdsAudioBgmTrack->packet_count)
-    {
-        if (sNdsAudioBgmTrack->is_looping == FALSE)
-        {
-            sNdsAudioBgmStreamExhausted = 1u;
-            return 0;
-        }
-        if ((sNdsAudioBgmRomReady == FALSE) &&
-            (fseek(sNdsAudioBgmFile,
-                   (long)sNdsAudioBgmTrack->loop_record, SEEK_SET) != 0))
-        {
-            gNdsAudioBgmReadFailCount++;
-            return -1;
-        }
-        sNdsAudioBgmOffset = sNdsAudioBgmTrack->loop_record;
-        sNdsAudioBgmNextPacket = sNdsAudioBgmTrack->loop_packet;
-        loop_restart = 1u;
-        gNdsAudioBgmLoopCount++;
-        gNdsAudioBgmMask |= 1u << 4;
-    }
-    if (ndsAudioBgmReadExact(record, sizeof(record)) == FALSE)
-    {
-        return -1;
-    }
-    samples = ndsAudioBgmReadLe32(&record[0]);
-    payload_bytes = ndsAudioBgmReadLe32(&record[4]);
-    expected_bytes = 4u + (((samples + 7u) / 8u) * 4u);
-    if ((samples == 0u) || (samples > NDS_AUDIO_BGM_PACKET_SAMPLES) ||
-        (payload_bytes != expected_bytes) ||
-        (payload_bytes > NDS_AUDIO_BGM_PACKET_BYTES) ||
-        ((payload_bytes & 3u) != 0u) ||
-        ((sNdsAudioBgmOffset + payload_bytes) >
-            sNdsAudioBgmTrack->asset_bytes))
-    {
-        gNdsAudioBgmPacketFailCount++;
-        return -1;
-    }
-    if (ndsAudioBgmReadExact(sNdsAudioBgmBuffers[buffer],
-                             payload_bytes) == FALSE)
-    {
-        return -1;
-    }
-    DC_FlushRange(sNdsAudioBgmBuffers[buffer], payload_bytes);
-    sNdsAudioBgmPacketSamples[buffer] = samples;
-    sNdsAudioBgmPacketBytes[buffer] = payload_bytes;
-    sNdsAudioBgmPacketLoopRestart[buffer] = loop_restart;
-    sNdsAudioBgmNextPacket++;
-    sNdsAudioBgmSourceBytesLoaded += (u64)samples * 2u;
-    gNdsAudioBgmChunkBytes = payload_bytes;
+#if NDS_RENDERER_PROFILE_LEVEL >= 1
+    gNdsAudioBgmRefillTicksLast = snapshot.refill_ticks_last;
+    gNdsAudioBgmRefillTicksMax = snapshot.refill_ticks_max;
+#endif
+    if ((snapshot.control & NDS_BGM_GENERATION_MASK) != sBgmGeneration) return;
+    state = snapshot.control >> 17;
+    gNdsAudioBgmPlaying = state == NDS_BGM_STARTING || state == NDS_BGM_PLAYING;
+    gNdsAudioBgmSoundActive = state == NDS_BGM_PLAYING;
+    /* Legacy field denotes an owned stream, with no open FILE on ARM9. */
+    gNdsAudioBgmFileOpen = gNdsAudioBgmPlaying;
+    if (state == NDS_BGM_NATURAL) { sNdsAudioBgmNaturalStopArmed = TRUE; gNdsAudioBgmMask |= 1u << 5; }
     gNdsAudioBgmResidentBytes = NDS_AUDIO_BGM_RESIDENT_BYTES;
-    if ((sNdsAudioBgmTrack->is_looping == FALSE) &&
-        (sNdsAudioBgmNextPacket == sNdsAudioBgmTrack->packet_count))
-    {
-        sNdsAudioBgmStreamExhausted = 1u;
-    }
-    return 1;
-}
-
-static void ndsAudioBgmPrepareBuffer(u32 buffer)
-{
-    u32 channel = NDS_AUDIO_BGM_CHANNEL_BASE + buffer;
-
-    soundPreparePcm(channel,
-                    (u32)ndsAudioBgmScaleVolume(gNdsAudioBgmVolume) << 4,
-                    64u,
-                    soundTimerFromHz(NDS_AUDIO_BGM_SAMPLE_RATE),
-                    SoundMode_OneShot,
-                    SoundFmt_ImaAdpcm,
-                    sNdsAudioBgmBuffers[buffer],
-                    0u,
-                    sNdsAudioBgmPacketBytes[buffer] / 4u);
-    sNdsAudioBgmPreparedMask |= 1u << buffer;
-    gNdsAudioBgmPreparedCount++;
-}
-
-static void ndsAudioBgmStopTimer(void)
-{
-#if !NDS_HARNESS_FAST_LOGIC
-    if (sNdsAudioBgmTimerArmed != 0u)
-    {
-        timerStop(NDS_AUDIO_BGM_TIMER);
-        sNdsAudioBgmTimerArmed = 0u;
-    }
-#endif
-}
-
-static void ndsAudioBgmTimerCallback(void)
-{
-    TIMER_CR(NDS_AUDIO_BGM_TIMER) = 0u;
-    sNdsAudioBgmTimerArmed = 0u;
-    if ((sNdsAudioBgmWorkerActive != 0u) &&
-        (mailboxTrySend(&sNdsAudioBgmMailbox,
-                        sNdsAudioBgmGeneration) == false))
-    {
-        gNdsAudioBgmTimerEventDropCount++;
-        sNdsAudioBgmErrorPending = 1u;
-    }
-}
-
-static void ndsAudioBgmArmTimer(u32 samples)
-{
-#if !NDS_HARNESS_FAST_LOGIC
-    u32 timer_ticks = (u32)((((u64)samples * (BUS_CLOCK >> 10)) +
-                             (NDS_AUDIO_BGM_SAMPLE_RATE / 2u)) /
-                            NDS_AUDIO_BGM_SAMPLE_RATE);
-
-    if (timer_ticks == 0u)
-    {
-        timer_ticks = 1u;
-    }
-    timerStart(NDS_AUDIO_BGM_TIMER,
-               ClockDivider_1024,
-               (u16)(0u - timer_ticks),
-               ndsAudioBgmTimerCallback);
-    sNdsAudioBgmTimerArmed = 1u;
-#else
-    (void)samples;
-#endif
-}
-
-static s32 ndsAudioBgmHandleSeam(void)
-{
-    u32 current = sNdsAudioBgmCurrentBuffer;
-    u32 next = 1u - current;
-
-    if (sNdsAudioBgmWorkerActive == 0u)
-    {
-        return FALSE;
-    }
-    if ((sNdsAudioBgmPreparedMask & (1u << next)) == 0u)
-    {
-        sNdsAudioBgmWorkerActive = 0u;
-        if (sNdsAudioBgmStreamExhausted != 0u)
-        {
-            sNdsAudioBgmNaturalStopPending = 1u;
-        }
-        else
-        {
-            gNdsAudioBgmSeamMissCount++;
-            gNdsAudioBgmOverrunCount++;
-            if (gNdsAudioBgmFirstMissFrame == 0u)
-            {
-                /* Which presented frame the first miss landed on: the former
-                 * PCM16 Mushroom Kingdom stream read exactly one miss by
-                 * present 300 and none after (probe inishie-b3, 2026-09-07),
-                 * and it was the stage-entry load hitch. */
-                gNdsAudioBgmFirstMissFrame = gNdsRendererProfileFrameCount + 1u;
-                gNdsAudioBgmFirstMissTrackID = gNdsAudioBgmTrackID;
-            }
-            sNdsAudioBgmErrorPending = 1u;
-        }
-        return FALSE;
-    }
-    soundStart(1u << (NDS_AUDIO_BGM_CHANNEL_BASE + next));
-    sNdsAudioBgmPreparedMask &= ~(1u << next);
-    sNdsAudioBgmCurrentBuffer = next;
-    sNdsAudioBgmRefillPendingMask |= 1u << current;
-    gNdsAudioBgmPlaybackHalf = next;
-    gNdsAudioBgmWriteHalf = current;
-    gNdsAudioBgmWritePositionBytes =
-        current * NDS_AUDIO_BGM_PACKET_BYTES;
-    gNdsAudioBgmChunkBytes = sNdsAudioBgmPacketBytes[next];
-    gNdsAudioBgmChunkPlayCount++;
-    gNdsAudioBgmSeamStartCount++;
-    if (sNdsAudioBgmPacketLoopRestart[next] != 0u)
-    {
-        gNdsAudioBgmPlaybackLoopCount++;
-    }
-    ndsAudioBgmArmTimer(sNdsAudioBgmPacketSamples[next]);
-    return TRUE;
-}
-
-static int ndsAudioBgmWorkerMain(void *arg)
-{
-    (void)arg;
-    for (;;)
-    {
-        u32 generation = mailboxRecv(&sNdsAudioBgmMailbox);
-
-        gNdsAudioBgmWorkerWakeCount++;
-        if ((sNdsAudioBgmWorkerActive != 0u) &&
-            (generation == sNdsAudioBgmGeneration))
-        {
-            (void)ndsAudioBgmHandleSeam();
-        }
-    }
-    return 0;
-}
-
-/* Slice 48. Calico: "Higher numerical values correspond to lower thread
- * priority", MAIN_THREAD_PRIO is 0x1c, and "higher priority threads are always
- * guaranteed to preempt the current thread when they become runnable". So the
- * original MAIN_THREAD_PRIO - 1 put the refill ABOVE the gameplay thread: every
- * seam interrupted whatever frame was running to do an ~8 KB cartridge read.
- *
- * That is the 49-of-80 FAT lane in the c123 top-80 attribution -- armCopyMem32
- * 27,331 + get_fat 16,418 + f_lseek 10,375 + _dvmDiscCacheReadWrite 4,552 =
- * 58,676 cyc/frame, ~29,338 tk. It was invisible to the AUD bucket, which
- * brackets only the main thread's ndsAudioBgmUpdate, and an earlier draft of
- * docs/RAM_RECOVERY_PLAN.md read AUD's 0.2% as proof BGM was not the tail. A
- * preempting thread's cycles land on whatever bucket the main thread was inside.
- *
- * The counters that identify it: gNdsAudioBgmRefillCount 104 ==
- * gNdsAudioBgmWorkerWakeCount 104, so every read is on this thread, and 104
- * reads over 1600 frames is the only file traffic large enough -- the anim cache
- * is at 2 misses since slice 46 and 85 of its 123 payload reads happen in the
- * warm preload before the window opens.
- *
- * +1 puts the worker BELOW main, so it runs when main blocks, which is the
- * VBlank wait. The same bytes are read at the same rate; only the placement in
- * the frame changes, so there is no audio fidelity question here. It is safe by
- * two independent margins: WAIT P50 is 207,104 ticks of idle per frame, far more
- * than one refill, and the seam budget is ~186 ms against a 16.7 ms frame, so
- * the read has ~11 VBlank windows to finish. A failure would be loud and is
- * already covered -- Boundary's ADPCM smoke watches gNdsAudioBgmPlaying and
- * SeamMissCount, and gNdsAudioBgmOverrunCount catches a late buffer.
- *
- * `.data` aligned(32) so the A/B is ONE binary: -SetGlobals
- * gNdsAudioBgmWorkerPrio=27 restores the preempting arm at identical placement.
- * E11 lost a proven -7,667 cut to +15,744 of relink movement measuring this
- * subsystem across two builds; a route bit removes that floor entirely. */
-volatile u32 gNdsAudioBgmWorkerPrio
-    __attribute__((section(".data"), aligned(32))) = MAIN_THREAD_PRIO + 1u;
-
-/* The priority the worker RUNS at, applied once BGM is updating. It is not the
- * creation value and the split is measured, not aesthetic -- at byte-identical
- * placement (the two ROMs differ in 41 bytes, the .data word plus build stamps):
- *
- *   creation 27, run 27  ->  WORK-H P95 1,101,248   (build-c124-bgmprio-create27)
- *   creation 29, run 29  ->                1,091,520
- *   creation 29, run 27  ->                1,083,456   <- ships
- *
- * So preempting during SCENE SETUP costs ~17,792 and preempting during the match
- * saves ~8,064; the two pull opposite ways and the best combination is low at
- * creation, high while playing. Setup is where the anim warm preload and the
- * asset loads run, and a higher-priority cartridge reader interleaving with them
- * is the only difference between those two arms.
- *
- * Do NOT read the c123 bank's 1,196,224 as this lever's size. create27 restores
- * the bank's exact behaviour and still measures 1,101,248, so ~94,976 of that
- * gap is PLACEMENT -- see SLICE48.md. */
-volatile u32 gNdsAudioBgmWorkerRunPrio
-    __attribute__((section(".data"), aligned(32))) = MAIN_THREAD_PRIO - 1u;
-
-/* Engagement proof, and it is not optional here. -SetGlobals pokes at the FIRST
- * frame-complete marker, while the worker is created the moment BGM starts, so
- * a poke can easily arrive after threadPrepare has already taken the value. If
- * that happened the control arm would be the candidate wearing a different
- * label -- the failure `prove-the-control-differs` records. This records what
- * threadPrepare was ACTUALLY handed, so the two arms' readbacks either differ
- * (the A/B is real) or they do not (the route needs re-applying, not a
- * conclusion). */
-volatile u32 gNdsAudioBgmWorkerPrioApplied;
-
-/* Clamp to the documented range so a poke cannot hand the scheduler a priority
- * it rejects and leave the match with no BGM worker at all -- the same reason
- * gNdsR2AnimWarmStep clamps a poke of 0. */
-static u32 ndsAudioBgmClampPrio(u32 prio)
-{
-    return (prio > (u32)THREAD_MIN_PRIO) ? (u32)THREAD_MIN_PRIO : prio;
-}
-
-/* The route has to be re-appliable, and finding that out cost a run. The worker
- * is created the moment BGM starts, which is BEFORE -SetGlobals fires at the
- * first frame-complete marker, so the first attempt at this A/B poked 27 into
- * gNdsAudioBgmWorkerPrio and measured a thread still running at 29: both arms
- * returned WORK-H P95 1,102,208 to the byte. gNdsAudioBgmWorkerPrioApplied is
- * what caught it. This is also HANDOFF's own slice-47 lesson -- a tunable
- * belongs in a pokeable global or a sweep costs a rebuild per value.
- *
- * Called once per frame from ndsAudioBgmUpdate, which has already returned early
- * unless BGM is playing. Two .data loads and a compare off one cache line when
- * the route is untouched, which is every shipping frame. */
-static void ndsAudioBgmApplyWorkerPrio(void)
-{
-    u32 prio = ndsAudioBgmClampPrio(gNdsAudioBgmWorkerRunPrio);
-
-    if ((sNdsAudioBgmWorkerStarted == 0u) ||
-        (prio == gNdsAudioBgmWorkerPrioApplied))
-    {
-        return;
-    }
-    threadSetPrio(&sNdsAudioBgmWorker, (u8)prio);
-    gNdsAudioBgmWorkerPrioApplied = prio;
-}
-
-static void ndsAudioBgmEnsureWorker(void)
-{
-    u32 prio;
-
-    if (sNdsAudioBgmWorkerStarted != 0u)
-    {
-        return;
-    }
-
-    prio = ndsAudioBgmClampPrio(gNdsAudioBgmWorkerPrio);
-    gNdsAudioBgmWorkerPrioApplied = prio;
-
-    mailboxPrepare(&sNdsAudioBgmMailbox, &sNdsAudioBgmMailboxSlot, 1u);
-    threadPrepare(&sNdsAudioBgmWorker,
-                  ndsAudioBgmWorkerMain,
-                  NULL,
-                  &sNdsAudioBgmWorkerStack[sizeof(sNdsAudioBgmWorkerStack)],
-                  (u8)prio);
-    threadStart(&sNdsAudioBgmWorker);
-    sNdsAudioBgmWorkerStarted = 1u;
-}
-
-static void ndsAudioBgmKillSound(void)
-{
-    sNdsAudioBgmWorkerActive = 0u;
-    sNdsAudioBgmGeneration++;
-    ndsAudioBgmStopTimer();
-    if (gNdsAudioBgmSoundActive != 0u)
-    {
-        soundStop(NDS_AUDIO_BGM_CHANNEL_MASK);
-    }
-    sNdsAudioBgmPreparedMask = 0u;
-    sNdsAudioBgmRefillPendingMask = 0u;
-    gNdsAudioBgmSoundActive = 0u;
-}
-
-static s32 ndsAudioBgmServiceRefills(void)
-{
-    u32 pending = sNdsAudioBgmRefillPendingMask;
-    u32 buffer;
-
-    for (buffer = 0u; buffer < NDS_AUDIO_BGM_BUFFER_COUNT; buffer++)
-    {
-        s32 read_result;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        u32 refill_start;
-#endif
-        if ((pending & (1u << buffer)) == 0u)
-        {
-            continue;
-        }
-        sNdsAudioBgmRefillPendingMask &= ~(1u << buffer);
-        if (buffer == sNdsAudioBgmCurrentBuffer)
-        {
-            gNdsAudioBgmUnsafeWriteCount++;
-            return FALSE;
-        }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        refill_start = cpuGetTiming();
-#endif
-        read_result = ndsAudioBgmReadPacket(buffer);
-        if (read_result < 0)
-        {
-            return FALSE;
-        }
-        if (read_result > 0)
-        {
-            ndsAudioBgmPrepareBuffer(buffer);
-            gNdsAudioBgmRefillCount++;
-        }
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsAudioBgmRefillTicksLast = cpuGetTiming() - refill_start;
-        if (gNdsAudioBgmRefillTicksLast > gNdsAudioBgmRefillTicksMax)
-        {
-            gNdsAudioBgmRefillTicksMax = gNdsAudioBgmRefillTicksLast;
-        }
-#endif
-    }
-    return TRUE;
-}
-
+    gNdsAudioBgmPlaybackHalf = snapshot.current_buffer;
+    gNdsAudioBgmWriteHalf = snapshot.current_buffer ^ 1u;
+    gNdsAudioBgmWritePositionBytes = gNdsAudioBgmWriteHalf * NDS_AUDIO_BGM_PACKET_BYTES;
+    gNdsAudioBgmChunkBytes = snapshot.current_bytes;
 #if NDS_SHIP_TELEMETRY
-static void ndsAudioBgmUpdateRateMarkers(void)
-{
-    u64 playback_bytes =
-        (sNdsAudioBgmTimerTicksTotal * NDS_AUDIO_BGM_BYTES_PER_SECOND) /
-        BUS_CLOCK;
-
-    gNdsAudioBgmStreamedBytes =
-        (sNdsAudioBgmSourceBytesLoaded > sNdsAudioBgmInitialSourceBytes) ?
-        (u32)(sNdsAudioBgmSourceBytesLoaded -
-              sNdsAudioBgmInitialSourceBytes) : 0u;
-    gNdsAudioBgmExpectedBytesPerSecond = NDS_AUDIO_BGM_BYTES_PER_SECOND;
-    if (sNdsAudioBgmTimerTicksTotal != 0u)
-    {
-        gNdsAudioBgmStreamBytesPerSecond =
-            (u32)((playback_bytes * BUS_CLOCK) /
-                  sNdsAudioBgmTimerTicksTotal);
-    }
-    gNdsAudioBgmPlaybackPositionBytes =
-        ndsAudioBgmMapPlaybackByte(playback_bytes);
-    gNdsAudioBgmPlaybackHalf = sNdsAudioBgmCurrentBuffer;
-    gNdsAudioBgmTimerTicks = (u32)sNdsAudioBgmTimerTicksTotal;
-    gNdsAudioBgmPlaybackBytes = (u32)playback_bytes;
-}
+    u64 ticks = ((u64)snapshot.elapsed_ticks_hi << 32) | snapshot.elapsed_ticks_lo;
+    u64 played = ticks * NDS_AUDIO_BGM_BYTES_PER_SECOND / BUS_CLOCK;
+    u64 loaded = ((u64)snapshot.loaded_samples_hi << 32) | snapshot.loaded_samples_lo;
+    gNdsAudioBgmStreamedBytes = loaded >= snapshot.initial_loaded_samples ?
+        (u32)((loaded - snapshot.initial_loaded_samples) * 2u) : 0u;
+    gNdsAudioBgmTimerTicks = (u32)ticks;
+    gNdsAudioBgmPlaybackBytes = (u32)played;
+    gNdsAudioBgmStreamBytesPerSecond = ticks ? (u32)(played * BUS_CLOCK / ticks) : 0u;
+    if (played < gNdsAudioBgmStreamBytes) gNdsAudioBgmPlaybackPositionBytes = (u32)played;
+    else if (!gNdsAudioBgmIsLooping) gNdsAudioBgmPlaybackPositionBytes = gNdsAudioBgmStreamBytes;
+    else gNdsAudioBgmPlaybackPositionBytes = gNdsAudioBgmLoopStartBytes +
+        (u32)((played - gNdsAudioBgmStreamBytes) %
+              (gNdsAudioBgmStreamBytes - gNdsAudioBgmLoopStartBytes));
 #endif
-
-static void ndsAudioBgmFailPlayback(void)
-{
-    ndsAudioBgmKillSound();
-    ndsAudioBgmCloseFile();
-    gNdsAudioBgmPlaying = 0u;
-    gNdsAudioBgmErrorStopCount++;
-    if ((gNdsAudioBgmSoundActive != 0u) ||
-        (sNdsAudioBgmFile != NULL) || (gNdsAudioBgmFileOpen != 0u))
-    {
-        gNdsAudioBgmErrorCleanupFailCount++;
-    }
-}
-
-static void ndsAudioBgmFinishNaturally(void)
-{
-#if NDS_SHIP_TELEMETRY
-    ndsAudioBgmUpdateRateMarkers();
-#endif
-    ndsAudioBgmKillSound();
-    ndsAudioBgmCloseFile();
-    gNdsAudioBgmPlaying = 0u;
-    gNdsAudioBgmNaturalStopCount++;
-    gNdsAudioBgmLastNaturalStopTrackID = gNdsAudioBgmTrackID;
-    sNdsAudioBgmNaturalStopArmed = TRUE;
-    gNdsAudioBgmMask |= 1u << 5;
 }
 
 void ndsAudioBgmDiagnosticsReset(void)
 {
-    ndsAudioBgmKillSound();
-    ndsAudioBgmCloseFile();
-    sNdsAudioBgmTrack = NULL;
-    sNdsAudioBgmOffset = 0u;
-    sNdsAudioBgmNextPacket = 0u;
-    sNdsAudioBgmLastTimerTick = 0u;
-    sNdsAudioBgmTimerTicksTotal = 0u;
-    sNdsAudioBgmNextSeamTick = 0u;
-    sNdsAudioBgmSourceBytesLoaded = 0u;
-    sNdsAudioBgmInitialSourceBytes = 0u;
+    if (sBgmInitialized) ndsBgmPost(NDS_BGM_RESET, ndsBgmNextGeneration(), TRUE);
+    sBgmPendingPlaying = sBgmLastSequence = 0u;
     sNdsAudioBgmNaturalStopArmed = FALSE;
-    sNdsAudioBgmStreamExhausted = 0u;
-    sNdsAudioBgmNaturalStopPending = 0u;
-    sNdsAudioBgmErrorPending = 0u;
-    sNdsAudioBgmFadeFramesLeft = 0u;
-    sNdsAudioBgmFadeTarget = 0u;
-    sNdsAudioBgmFadeDenom = 0u;
-    sNdsAudioBgmFadeStep = 0;
-    sNdsAudioBgmFadeRem = 0;
-    sNdsAudioBgmFadeError = 0;
-
+    sNdsAudioBgmFadeFramesLeft = sNdsAudioBgmFadeTarget = sNdsAudioBgmFadeDenom = 0u;
+    sNdsAudioBgmFadeStep = sNdsAudioBgmFadeRem = sNdsAudioBgmFadeError = 0;
     gNdsAudioBgmResult = 0u;
     gNdsAudioBgmMask = 0u;
     gNdsAudioBgmPlaying = 0u;
@@ -1746,62 +1140,36 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmTimerEventDropCount = 0u;
     gNdsAudioBgmWorkerWakeCount = 0u;
     gNdsAudioBgmErrorStopCount = 0u;
-    gNdsAudioBgmBlockingSuspendCount = 0u;
-    gNdsAudioBgmBlockingResumeCount = 0u;
     gNdsAudioBgmErrorCleanupFailCount = 0u;
+    if (sBgmInitialized) ndsBgmPost(NDS_BGM_VOLUME, 0x7800u, FALSE);
 }
 
 void ndsAudioBgmPlay(s32 player, s32 bgm_id)
 {
-    const NDSAudioBgmTrack *track;
-    s32 second_read;
-    u32 stale_message;
-
     (void)player;
+    ndsBgmObserve();
     gNdsAudioBgmPlayCalls++;
-    track = ndsAudioBgmFindTrack(bgm_id);
-    if (track == NULL)
+    u32 index;
+    for (index = 0; index < sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]); ++index)
+        if (sNdsAudioBgmTracks[index].id == bgm_id) break;
+    if (index == sizeof(sBgmSpecs)/sizeof(sBgmSpecs[0]))
     {
         gNdsAudioBgmUnsupportedTrackCount++;
         return;
     }
-    gNdsAudioBgmTrackID = (u32)bgm_id;
-    /* A new track supersedes any blocking suspend the old one carried; the
-     * battle start suspends the menu track across its loads and the stage
-     * track must start with a clean bracket. */
-    sNdsAudioBgmBlockingSuspend = 0u;
-    sNdsAudioBgmResumeOnUpdate = 0u;
-    if (gNdsAudioBgmPlaying != 0u)
-    {
-        if ((sNdsAudioBgmTrack != NULL) &&
-            (sNdsAudioBgmTrack->id != track->id))
-        {
-            gNdsAudioBgmTrackSwitchCount++;
-        }
-        ndsAudioBgmKillSound();
-        ndsAudioBgmCloseFile();
-    }
-    if (sNdsAudioBgmNaturalStopArmed != FALSE)
+    const NDSAudioBgmTrack *track = &sNdsAudioBgmTracks[index];
+    if (gNdsAudioBgmPlaying && gNdsAudioBgmTrackID != (u32)bgm_id) gNdsAudioBgmTrackSwitchCount++;
+    if (sNdsAudioBgmNaturalStopArmed)
     {
         gNdsAudioBgmPostNaturalTransitionCount++;
-        gNdsAudioBgmPostNaturalTransitionFromTrackID =
-            gNdsAudioBgmLastNaturalStopTrackID;
-        gNdsAudioBgmPostNaturalTransitionToTrackID = (u32)track->id;
+        gNdsAudioBgmPostNaturalTransitionFromTrackID = gNdsAudioBgmLastNaturalStopTrackID;
+        gNdsAudioBgmPostNaturalTransitionToTrackID = (u32)bgm_id;
         sNdsAudioBgmNaturalStopArmed = FALSE;
     }
-
-    sNdsAudioBgmTrack = track;
-    sNdsAudioBgmStreamExhausted = 0u;
-    sNdsAudioBgmNaturalStopPending = 0u;
-    sNdsAudioBgmErrorPending = 0u;
-    sNdsAudioBgmSourceBytesLoaded = 0u;
-    sNdsAudioBgmPreparedMask = 0u;
-    sNdsAudioBgmRefillPendingMask = 0u;
+    gNdsAudioBgmTrackID = (u32)bgm_id;
     gNdsAudioBgmStreamBytes = track->stream_bytes;
     gNdsAudioBgmLoopStartBytes = track->loop_start_bytes;
-    gNdsAudioBgmIsLooping = (track->is_looping != FALSE) ? 1u : 0u;
-    gNdsAudioBgmStreamedBytes = 0u;
-    gNdsAudioBgmPlaybackLoopCount = 0u;
+    gNdsAudioBgmIsLooping = track->is_looping != FALSE;
     switch (bgm_id)
     {
     case nSYAudioBGMPupupu: gNdsAudioBgmPupupuPlayCount++; break;
@@ -1817,118 +1185,49 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     case nSYAudioBGMCastle: gNdsAudioBgmCastlePlayCount++; break;
 #endif
     }
-    if ((gNdsAudioBgmSetVolumeCalls == 0u) &&
-        (gNdsAudioBgmVolume == 0u))
-    {
-        gNdsAudioBgmVolume = 0x7800u;
-    }
+    if (!gNdsAudioBgmSetVolumeCalls && !gNdsAudioBgmVolume) gNdsAudioBgmVolume = 0x7800u;
     soundEnable();
-
-#if NDS_BGM_FALSIFIER_OFF
+    ndsBgmInitialize();
+    u32 generation = ndsBgmNextGeneration();
+    sBgmPendingPlaying = 1u;
     gNdsAudioBgmPlaying = 1u;
-    gNdsAudioBgmMask |= 1u << 0;
+    gNdsAudioBgmFileOpen = 1u;
+    gNdsAudioBgmSoundActive = 0u;
+    gNdsAudioBgmMask |= 1u;
     gNdsAudioBgmResult = NDS_AUDIO_BGM_PASS;
-    return;
-#endif
-    if (ndsAudioBgmOpenFile() == FALSE)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    ndsAudioBgmDirectRouteInit();
-    if ((ndsAudioBgmReadHeader() == FALSE) ||
-        (ndsAudioBgmReadPacket(0u) != 1))
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    second_read = ndsAudioBgmReadPacket(1u);
-    if (second_read < 0)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    sNdsAudioBgmInitialSourceBytes = sNdsAudioBgmSourceBytesLoaded;
-    ndsAudioBgmEnsureWorker();
-    while (mailboxTryRecv(&sNdsAudioBgmMailbox, &stale_message))
-    {
-    }
-    ndsAudioBgmPrepareBuffer(0u);
-    if (second_read > 0)
-    {
-        ndsAudioBgmPrepareBuffer(1u);
-    }
-    soundSynchronize();
-    sNdsAudioBgmGeneration++;
-    if (sNdsAudioBgmGeneration == 0u)
-    {
-        sNdsAudioBgmGeneration = 1u;
-    }
-    sNdsAudioBgmCurrentBuffer = 0u;
-    sNdsAudioBgmWorkerActive = 1u;
-    soundStart(1u << NDS_AUDIO_BGM_CHANNEL_BASE);
-    sNdsAudioBgmPreparedMask &= ~1u;
-    gNdsAudioBgmSoundActive = 1u;
-    gNdsAudioBgmResidentBytes = NDS_AUDIO_BGM_RESIDENT_BYTES;
-    gNdsAudioBgmChunkBytes = sNdsAudioBgmPacketBytes[0];
-    gNdsAudioBgmPlaybackHalf = 0u;
-    gNdsAudioBgmWriteHalf = 1u;
-    gNdsAudioBgmWritePositionBytes = NDS_AUDIO_BGM_PACKET_BYTES;
-    gNdsAudioBgmPlaybackPositionBytes = 0u;
-    gNdsAudioBgmChunkPlayCount++;
-    sNdsAudioBgmLastTimerTick = cpuGetTiming();
-    sNdsAudioBgmTimerTicksTotal = 0u;
-    sNdsAudioBgmNextSeamTick =
-        ndsAudioBgmPacketDurationTicks(sNdsAudioBgmPacketSamples[0]);
-    ndsAudioBgmArmTimer(sNdsAudioBgmPacketSamples[0]);
-    gNdsAudioBgmPlaying = 1u;
-    gNdsAudioBgmMask |= 1u << 0;
-    gNdsAudioBgmResult = NDS_AUDIO_BGM_PASS;
+    ndsBgmPost(NDS_BGM_PLAY, (generation << 6) | index, FALSE);
 }
 
 void ndsAudioBgmStopAll(void)
 {
     gNdsAudioBgmStopCalls++;
-    ndsAudioBgmKillSound();
-    if (gNdsAudioBgmPlaying != 0u)
-    {
-        gNdsAudioBgmStoppedOnTeardown = 1u;
-    }
-    gNdsAudioBgmPlaying = 0u;
-    ndsAudioBgmCloseFile();
+    if (gNdsAudioBgmPlaying) gNdsAudioBgmStoppedOnTeardown = 1u;
+    if (sBgmInitialized) ndsBgmPost(NDS_BGM_STOP, ndsBgmNextGeneration(), TRUE);
+    sBgmPendingPlaying = 0u;
+    gNdsAudioBgmPlaying = gNdsAudioBgmFileOpen = gNdsAudioBgmSoundActive = 0u;
     sNdsAudioBgmNaturalStopArmed = FALSE;
-    sNdsAudioBgmNaturalStopPending = 0u;
-    sNdsAudioBgmErrorPending = 0u;
     gNdsAudioBgmMask |= 1u << 1;
 }
 
 s32 ndsAudioBgmCheckPlaying(s32 player)
 {
     (void)player;
-    gNdsAudioBgmCheckCalls++;
-    gNdsAudioBgmMask |= 1u << 2;
-    return (gNdsAudioBgmPlaying != 0u) ? TRUE : FALSE;
+    ndsBgmObserve();
+    gNdsAudioBgmCheckCalls++; gNdsAudioBgmMask |= 1u << 2;
+    return gNdsAudioBgmPlaying != 0u;
 }
+s32 ndsAudioBgmIsPlaying(void) { ndsBgmObserve(); return gNdsAudioBgmPlaying != 0u; }
 
-s32 ndsAudioBgmIsPlaying(void)
+static void ndsAudioBgmApplyVolume(u32 volume)
 {
-    return (gNdsAudioBgmPlaying != 0u) ? TRUE : FALSE;
-}
-
-static void ndsAudioBgmApplyVolume(u32 vol)
-{
-    u32 volume = (u32)ndsAudioBgmScaleVolume(vol) << 4;
-
-    if (gNdsAudioBgmSoundActive != 0u)
-    {
-        soundChSetVolume(NDS_AUDIO_BGM_CHANNEL_BASE, volume);
-        soundChSetVolume(NDS_AUDIO_BGM_CHANNEL_BASE + 1u, volume);
-    }
+    if (volume > 0x7800u) volume = 0x7800u;
+    if (sBgmInitialized) ndsBgmPost(NDS_BGM_VOLUME, volume, FALSE);
 }
 
 void ndsAudioBgmSetVolume(s32 player, u32 vol)
 {
     (void)player;
+    if (vol > 0x7800u) vol = 0x7800u;
     gNdsAudioBgmSetVolumeCalls++;
     gNdsAudioBgmVolume = vol;
     /* The source's syAudioSetBGMVolume clears that player's fade timer; an
@@ -1999,220 +1298,16 @@ static void ndsAudioBgmStepFade(void)
     gNdsAudioBgmMask |= 1u << 3;
 }
 
-/* decomp sys/audio.c:1255-1259 (0 = mono, 1 = stereo). Stored only, like the
- * source: the N64 folds its output buffer down in the audio thread, while the
- * DS selects the fold at voice/buffer setup (ndsAudioFgmPlayAtPan and the FGM
- * restart path centre the pan on mono), so switching is event-driven with no
- * per-frame cost. The BGM stream is mono and plays centred in both modes, so
- * it needs no branch: centre already is the summed mix. */
-void syAudioSetQuality(s32 quality)
+void syAudioSetQuality(s32 quality) { dSYAudioSoundQuality = quality; }
+void syAudioSetBGMVolumeFade(s32 player, u32 volume, u32 frames)
 {
-    dSYAudioSoundQuality = quality;
-}
-
-/* decomp sys/audio.c:1315-1327. Thin source-named wrapper over the backend
- * ramp so the Sound Test import links against the same ABI it read. */
-void syAudioSetBGMVolumeFade(s32 sngplayer, u32 vol, u32 time)
-{
-    ndsAudioBgmSetVolumeFade(sngplayer, vol, time);
-}
-
-/* P2-3. A BLOCKING LOAD MUST NOT KILL THE MUSIC.
- *
- * The stream is two hardware-played packets and a worker that refills the one
- * that just finished; the seam between them is driven by a hardware timer.
- * That contract assumes frames keep arriving. A NitroFS fighter load does not
- * honour it -- selecting a fighter on the character select reads its model and
- * motion files synchronously, the frame that does it is far longer than a
- * packet, and the seam then fires with the next buffer still unprepared. The
- * seam handler correctly calls that an underrun and stops the stream
- * (`gNdsAudioBgmSeamMissCount`, then `ndsAudioBgmFailPlayback`), so the music
- * was gone for the rest of the screen -- measured on the shell walk the moment
- * Luigi became selectable: seam misses 1, error stops 1, deterministic.
- *
- * The load is legitimate and the stall is known in advance, so BRACKET it.
- * Suspend tops the stream up, stops the hardware and disarms the timer, which
- * makes the stall silent instead of fatal; resume restarts playback from the
- * stream's own current position. The gap is one packet at worst and the file
- * position, loop state and track are untouched, so the music continues rather
- * than restarting. Both halves count, so a caller that suspends and forgets to
- * resume shows up as a resident suspend rather than as silence nobody
- * attributed. */
-void ndsAudioBgmSuspendForBlockingLoad(void)
-{
-    if ((gNdsAudioBgmPlaying == 0u) || (sNdsAudioBgmFile == NULL) ||
-        (sNdsAudioBgmBlockingSuspend != 0u))
-    {
-        return;
-    }
-    /* Top up first: a buffer that is already pending refill would otherwise
-     * come back from the stall still owing its read. */
-    if (ndsAudioBgmServiceRefills() == FALSE)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    ndsAudioBgmKillSound();
-    sNdsAudioBgmBlockingSuspend = 1u;
-    gNdsAudioBgmBlockingSuspendCount++;
-}
-
-/* The battle scene starts its stage track inside the setup frame
- * (mpCollisionSetPlayBGM) and the rest of that setup plus the first frame's
- * native stage warm uploads run longer than the since-retired PCM16 packet
- * (4,098 samples, ~186 ms): Mushroom Kingdom read one seam miss on its entry
- * frame every run (probe inishie-b6, first_miss_frame = the setup frame).
- * Full 16k-sample IMA packets hide that stall, but a track's first packet
- * can be short (Dream Land's is 4,399 samples, ~200 ms), so every stage
- * track keeps the bracket. Suspend now and resume two updates later --
- * the seam that runs once per battle frame -- so the stall is silent
- * instead of fatal; the stream position is untouched, so the track goes on
- * from where it stood rather than restarting. */
-void ndsAudioBgmSuspendUntilUpdates(u32 updates)
-{
-    ndsAudioBgmSuspendForBlockingLoad();
-    if (sNdsAudioBgmBlockingSuspend != 0u)
-    {
-        sNdsAudioBgmResumeOnUpdate = (updates != 0u) ? updates : 1u;
-    }
-}
-
-void ndsAudioBgmResumeAfterBlockingLoad(void)
-{
-    s32 second_read;
-    u32 stale_message;
-
-    if (sNdsAudioBgmBlockingSuspend == 0u)
-    {
-        return;
-    }
-    sNdsAudioBgmBlockingSuspend = 0u;
-    gNdsAudioBgmBlockingResumeCount++;
-    if ((gNdsAudioBgmPlaying == 0u) || (sNdsAudioBgmFile == NULL))
-    {
-        return;
-    }
-    /* Re-read from where the stream stands. `ndsAudioBgmReadPacket` advances
-     * the same file cursor the worker uses, so this is a continuation, not a
-     * restart of the track. */
-    sNdsAudioBgmPreparedMask = 0u;
-    sNdsAudioBgmRefillPendingMask = 0u;
-    if (ndsAudioBgmReadPacket(0u) != 1)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    second_read = ndsAudioBgmReadPacket(1u);
-    if (second_read < 0)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    ndsAudioBgmEnsureWorker();
-    while (mailboxTryRecv(&sNdsAudioBgmMailbox, &stale_message))
-    {
-    }
-    ndsAudioBgmPrepareBuffer(0u);
-    if (second_read > 0)
-    {
-        ndsAudioBgmPrepareBuffer(1u);
-    }
-    soundSynchronize();
-    sNdsAudioBgmGeneration++;
-    if (sNdsAudioBgmGeneration == 0u)
-    {
-        sNdsAudioBgmGeneration = 1u;
-    }
-    sNdsAudioBgmCurrentBuffer = 0u;
-    sNdsAudioBgmWorkerActive = 1u;
-    soundStart(1u << NDS_AUDIO_BGM_CHANNEL_BASE);
-    sNdsAudioBgmPreparedMask &= ~1u;
-    gNdsAudioBgmSoundActive = 1u;
-    gNdsAudioBgmChunkBytes = sNdsAudioBgmPacketBytes[0];
-    gNdsAudioBgmPlaybackHalf = 0u;
-    gNdsAudioBgmWriteHalf = 1u;
-    gNdsAudioBgmWritePositionBytes = NDS_AUDIO_BGM_PACKET_BYTES;
-    sNdsAudioBgmLastTimerTick = cpuGetTiming();
-    sNdsAudioBgmNextSeamTick = sNdsAudioBgmTimerTicksTotal +
-        ndsAudioBgmPacketDurationTicks(sNdsAudioBgmPacketSamples[0]);
-    ndsAudioBgmArmTimer(sNdsAudioBgmPacketSamples[0]);
+    ndsAudioBgmSetVolumeFade(player, volume, frames);
 }
 
 void ndsAudioBgmUpdate(void)
 {
-    u32 delta;
-
-    if ((gNdsAudioBgmPlaying == 0u) || (sNdsAudioBgmFile == NULL))
-    {
-        return;
-    }
+    ndsBgmObserve();
+    if (!gNdsAudioBgmPlaying) return;
     gNdsAudioBgmElapsedFrames++;
-    if (sNdsAudioBgmResumeOnUpdate != 0u)
-    {
-        sNdsAudioBgmResumeOnUpdate--;
-        if (sNdsAudioBgmResumeOnUpdate == 0u)
-        {
-            ndsAudioBgmResumeAfterBlockingLoad();
-        }
-        return;
-    }
-    /* Existing per-frame BGM volume seam: the source applies its fade rates
-     * every audio tick. A stopped track holds its ramp here (the update returns
-     * early below); stepping it would be inaudible either way. */
     ndsAudioBgmStepFade();
-    ndsAudioBgmApplyWorkerPrio();
-#if NDS_HARNESS_FAST_LOGIC
-    delta = BUS_CLOCK / 60u;
-#else
-    {
-        u32 now = cpuGetTiming();
-
-        delta = now - sNdsAudioBgmLastTimerTick;
-        sNdsAudioBgmLastTimerTick = now;
-    }
-#endif
-    sNdsAudioBgmTimerTicksTotal += delta;
-#if NDS_SHIP_TELEMETRY
-    ndsAudioBgmUpdateRateMarkers();
-#endif
-    if (sNdsAudioBgmErrorPending != 0u)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-    if (sNdsAudioBgmNaturalStopPending != 0u)
-    {
-        ndsAudioBgmFinishNaturally();
-        return;
-    }
-    if (ndsAudioBgmServiceRefills() == FALSE)
-    {
-        ndsAudioBgmFailPlayback();
-        return;
-    }
-#if NDS_HARNESS_FAST_LOGIC
-    while ((sNdsAudioBgmWorkerActive != 0u) &&
-           (sNdsAudioBgmTimerTicksTotal >= sNdsAudioBgmNextSeamTick))
-    {
-        if (ndsAudioBgmHandleSeam() == FALSE)
-        {
-            break;
-        }
-        sNdsAudioBgmNextSeamTick += ndsAudioBgmPacketDurationTicks(
-            sNdsAudioBgmPacketSamples[sNdsAudioBgmCurrentBuffer]);
-        if (ndsAudioBgmServiceRefills() == FALSE)
-        {
-            sNdsAudioBgmErrorPending = 1u;
-            break;
-        }
-    }
-#endif
-    if (sNdsAudioBgmErrorPending != 0u)
-    {
-        ndsAudioBgmFailPlayback();
-    }
-    else if (sNdsAudioBgmNaturalStopPending != 0u)
-    {
-        ndsAudioBgmFinishNaturally();
-    }
 }

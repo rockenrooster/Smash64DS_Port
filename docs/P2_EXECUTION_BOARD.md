@@ -89,13 +89,13 @@ Owner 09-26: no more subagents; root audits retained delegated work personally.
 MF2 check passes 1,570 clips/29 raw exceptions; scoped audit recorded in receipt.
 `FB299B25`: 2,043 presents/Results; low-water 9,672 B, reserve RED. Reload passes.
 A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
-MF2 worst bank 697,760 B, unlinked. Kirby bank implemented: 15 focused tests pass.
-`D675C034` natural four-CPU replay exact, P95 2.602M (RED); copies unengaged.
-Heavy `9E4A666D` admission FAIL: 38,672 B bank, 22,288 B short before later play
-allocations. **A8 IMPLEMENT**:4905A1C6 ARM7 storage boot/30,170 reads pass.
-13 tests and61 MB exact-map proof; no jobs. Next: ARM7 BGM playback/refills.
-FGM VS heads/voices,237,568 B cache replacement and hat/MF funding remain owed.
-Current heavy arena 892,416 B; lab 1,281,792 B. Baseline CSS arena 900,608 B.
+MF2 worst bank697,760 B unlinked; Kirby copy engagement still owed.
+**A8 IMPLEMENTED_NOT_ACCEPTED**:17 host tests pass.
+0BD4523E replay exact;141 BGM refills, no audio failures, arena +20,480 B.
+AUD P95 6,528; WORK-H P95 2.625M/18.97 FPS, RED. Mixed audio identifies BGM.
+HeavyF7443068 gains16,384 B; admission still5,904 B short, plus later play.
+Next A8 FGM: derive VS heads and move voice/envelope/refill ownership; retire
+237,568 B cache. Jobs terminal; current heavy/lab arenas908,800/1,302,272 B.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

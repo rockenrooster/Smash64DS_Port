@@ -6722,3 +6722,159 @@ helper by using the known HWND's software-rendered content via PrintWindow.
 Corrected full-match pair: replay identical over 1,972 rows; ~19.15 FPS, still
 below the gate. Remaining: natural shipping and sibling/other-stage coverage,
 retirement, integration. This is not a closed bug.
+
+## P2-2p8 B3 exact MISC partition + MINS (2026-09-25)
+
+Status: **MEASUREMENT CLOSED; PERFORMANCE RED.** The interrupted Phase-2 work
+already had per-owner/proc timing wired but lacked the camera/shell remainder.
+MCAM now owns the exact draw remainder after disjoint weapon/item/effect/
+actor/particle/capture/proc spans and before MFLS; MTEX remains an overlay
+because upload time is nested inside those owners.
+
+On the 256-row census-on run, MISC P50/P95 is 161,920 / 320,832 ticks.
+MEFX is 58,816 / 167,616; MPRO 28,992 / 48,576; MCAM 26,752 / 29,824;
+MPRT 22,528 / 44,224; MCAP 20,992 / 25,344. The disjoint sum equals MISC
+on every row: maximum conservation error 0 ticks.
+
+MINS rebuilt the same 404-file, 29,066,719-byte NitroFS with
+NDS_P2_EFFECT_CENSUS=0. MEFX mean falls 61,146.0 -> 55,020.2 ticks
+(-6,125.8), but the short cross-build WORK-H P95 moves 1,752,320 ->
+1,827,904 and 142/256 replay digest rows differ, so no whole-frame speedup is
+claimed from this A/B. The final build keeps the effect census compiled out;
+M1 NDL/ImpactWave/DamageSlash is the next measured implementation slice.
+
+## P2-2p8 M1 NDL + ImpactWave + resident DamageSlash (2026-09-26)
+
+Status: **M1 CLOSED; WHOLE P2-2p8 PERFORMANCE RED.** The interrupted tree
+already contained the lifetime-keyed NDL dispatch, typed native ImpactWave,
+transactional two-child DamageSlash path, 13 resident DamageSlash frames and
+Task49 EFFECT support. The transport recovery completed the missing current-tree
+qualification instead of rebuilding that work.
+
+The accepted A/B is one four-CPU ROM,
+`4B7E4F5835E6D41311DE2BE46A4B386B9CDAFE2C5BB77BBE2BD99ED806E9384B`,
+with only the creation-time `gNdsP2Ndl` word changed. Both arms cover timing
+frames 2..1973 and source-identity frames 1..1973 (clock 60 -> 1, 1,972
+presented timing rows, four CPUs/four fighters, active mask 15, item overrides
+zero). Replay digests are identical over all 1,972 recorded rows.
+
+    lane     control mean/P50/P95        armed mean/P50/P95          P95 delta
+    MEFX       42,106 /    256 / 193,152    15,321 /    128 /  84,928   -108,224
+    MISC      228,377 /213,056 / 398,976   218,056 /206,272 / 353,216    -45,760
+    WORK-H  1,453,749 /1,356,288/2,604,288 1,442,598/1,343,552/2,589,312 -14,976
+
+Engagement is direct: armed NDL dispatches 511 ImpactWaves and 149
+DamageSlashes, skips 660 source display procs, and records zero ImpactWave or
+DamageSlash NDL fallbacks. DamageSlash keeps root mask 3, 298 draws and zero
+submit failures while runtime texture updates fall 223 -> 0 and the
+DamageSlash texture-scratch high-water falls 1,024 -> 0 bytes. General-heap
+low-water is unchanged at 122,412 bytes.
+
+The stale pre-recovery EFFECT capture lacked the newly-added direct FIFO matrix
+records and therefore produced a false Tier-2 failure. A live recapture from
+diagnostic ROM
+`36B95E33B678956BF05E4D79995B9B1458BB09150A12463BA6B22FD93E842534`
+at frame 516 has 157 entries / 236 words / 2 bindings in both arms, zero
+capture faults/overflow, Tier-1 106/106 non-matrix words bit-exact, and Tier-2
+48/48 vertices within max 0.030260 px screen error and 0.000209957 depth
+(limits 1 px / one 4.12 LSB). Architecture and GBI fixture checks both exit 0.
+
+Evidence:
+`artifacts/performance/2026-09-25_p2-2p8-phase2-m1/README.md`.
+Next Phase-2 work follows the frozen order: migrate weapon/item/efground/
+grcommon draw owners into the NDL owner-by-owner before the particle batcher.
+
+## P2-2p8 efground NDL candidate (2026-09-26)
+
+Status: **IMPLEMENTED_NOT_ACCEPTED; ENGAGEMENT OWED.** The first post-M1 NDL
+extension keeps ImpactWave/DamageSlash as slots 0/1 and appends Castle Lakitu
+and Dream Land Bronto as slots 2/3. The binder admits only their exact
+`gcDrawDObjTreeForGObj` source display proc; direct execution reuses the existing
+native actor emitters and restores the capture/DObj accounting bypassed by the
+NDL route. Host executor coverage is 19/19 green and the exact four-CPU target
+builds native-only.
+
+Same-ROM control/armed ROM
+`DB0C2789D85A5FDFADF7675A6862001DF664A6BC5EE55C98B822B3BB93CB2BA8`
+records 1,972/1,972 identical replay digests. Armed M1 engagement remains
+511 ImpactWave + 149 DamageSlash with zero fallback, but Lakitu/Bronto are 0/0:
+Dream Land source initializes the efground actor's first `make_wait` to
+`rand(10000)+6000`, beyond the 59-second canonical stress. Do not call this a
+runtime efground PASS; obtain an engaged source/debugger actor proof.
+
+The same stress also exposes the identical pre-existing native failure in both
+arms (count 39, domain 2, scene 22, identity 66,256,979, status 6, root 51,800,
+material 37,498,584, reason 1), so the integrated verifier is RED independently
+of the candidate. WORK-H P50/P95 is 1,359,872/2,614,528 control and
+1,345,920/2,581,760 armed; no efground performance gain is claimed because its
+new slots did not engage. Evidence:
+`artifacts/performance/2026-09-26_p2-2p8-phase2-efground/README.md`.
+
+## P2-2p8 Link Bomb NDL + pooled lifetime witness (2026-09-26)
+
+Status: **FOCUSED CHECK GREEN; INTEGRATED ACCEPTANCE OWED.** Recovery found the
+interrupted tree already carrying the generalized GObj lifetime serial witness
+for effect/weapon/item/ground plus a Link Bomb NDL owner. The focused source
+lifecycle verifier was completed rather than reimplemented.
+
+`scripts/verify-p2-link-bomb.ps1 -NoBuild` exits 0 on the recovered build. NDL
+dispatch is 2 with zero fallback and two source display procs skipped. The
+lifetime witness records 18 stamps and one pooled-address reuse, issuing fresh
+serials 16 -> 17; effect, item and ground creation are all observed. Link's own
+Down+B reaches source SpecialLw, hold, critical-fuse ColAnim, LightThrowF4,
+event-script explosion and six-frame destruction without status/item injection.
+Evidence:
+`artifacts/performance/2026-09-26_p2-2p8-phase2-link-bomb/link-bomb-proof.txt`.
+
+This is a focused owner/lifetime proof, not a P2-2p8 performance acceptance
+claim. Next is the recovered Fireball/Fox-Blaster NDL weapon route; efground's
+engaged Lakitu/Bronto proof remains owed.
+
+## P2-2p8 recovered ground / weapon NDL evidence (2026-09-26)
+
+Status: **GROUND + FOX FOCUSED CHECK GREEN; FIREBALL CHECK OWED.** Recovery
+found owner evidence that had not reached the execution cursor before the
+transport failure.
+
+- Yoshi's Island cloud: NDL dispatch 291, fallback 0, procs skipped 291, bind 3.
+  The 96-frame NDL-off/on replay digests are identical. Focused WORK-H P50/P95
+  moves 924,032/2,386,240 -> 920,000/2,382,016.
+- Jungle TaruCann: NDL dispatch 97, fallback 0, procs skipped 97, bind 1. The
+  96-frame NDL-off/on replay digests are identical. Focused WORK-H P50/P95 moves
+  977,024/1,611,648 -> 978,816/1,614,272, so this owner is correctness-green but
+  not a measured performance win in the short sample.
+- Fox Blaster: `scripts/probe-fox-blaster-native.ps1 -P2Ndl` exits 0 on the
+  recovered current-source proof build. A natural level-3 CPU shot records NDL
+  dispatch 2, fallback 0, procs skipped 8, bind count 2, with native draw/safety
+  assertions and the visibility capture green.
+
+Ground evidence: `artifacts/performance/2026-09-26_p2-2p8-phase2-ground/`.
+Fox evidence: `artifacts/verification/2026-09-26_p2-2p8-phase2-fox-ndl.txt` and
+`artifacts/visibility/2026-09-26_p2-2p8-phase2-fox-ndl.png`.
+
+The recovered pre-fix integrated Link Bomb pair is not acceptance evidence. Its
+armed four-CPU run records Link-Bomb dispatch 0 / fallback 511 and exits at the
+NDL engagement gate; the control exits only on the already-known native failure
+count 39. The later focused Link Bomb/lifetime fix therefore requires a fresh
+same-ROM integrated off/on run. Fireball's NDL A/B harness reaches BattleShip GO
+but playback does not naturally enter Mario Special-N; the verifier was stopped
+without injecting status or a weapon, so Fireball direct-route engagement stays
+owed rather than manufacturing a green result.
+
+### Current-source integrated recheck
+
+The fresh same-ROM recheck closes the stale pooled-item regression. ROM SHA-256
+`5A72DD484B3F0A39121AFD21F025062677C7814C3CA368ECF30819A73804EBEA` runs
+1,972 control and 1,972 NDL-on samples with **zero replay-digest divergence**.
+The armed route dispatches ImpactWave 511 and DamageSlash 149, skips exactly 660
+source procs, and records **zero fallback in every slot**. In particular, the
+old pooled-item `gNdsNdlFallback[8]=511` is now 0. Link Bomb itself did not occur
+in this deterministic four-CPU match (`dispatch[8]=0`), so its positive dispatch
+proof remains the focused source lifecycle run above rather than this workload.
+
+WORK-H P50/P95 moves 1,350,016/2,582,016 -> 1,345,344/2,570,816; MISC moves
+212,992/399,424 -> 207,616/353,152 and MEFX 256/192,768 -> 128/84,864. Both
+arms exit only on the exact same standing native-render failure signature
+`count=39 domain=2 scene=22 identity=66256979 status=6 root=51800
+material=37496536 reason=1`; direct rejects are zero. Receipt:
+`artifacts/performance/2026-09-26_p2-2p8-phase2-item-linkbomb-fixed/README.md`.

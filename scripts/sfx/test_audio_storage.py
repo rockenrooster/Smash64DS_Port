@@ -30,7 +30,7 @@ def run_c(text, extra_flags=()):
 
 
 def function(source, name):
-    m = re.search(r"^static (?:bool|int|uint32_t) " + name + r"\([^;]*?\)\s*\{", source, re.M)
+    m = re.search(r"^(?:static )?(?:bool|int|uint32_t) " + name + r"\([^;]*?\)\s*\{", source, re.M)
     assert m
     depth, end = 1, source.index("{", m.start()) + 1
     while depth:
@@ -302,6 +302,45 @@ int main(void) {
     failure = 0; order = 0; empty = 1;
     assert(ndsAudioStorageCall(NDS_AUDIO_STORAGE_OPEN_CARD, 0, NULL, 0));
     assert(order == 2 && gNdsAudioStorageRequests == 4);
+    return 0;
+}
+''')
+
+
+def test_media_owner_chunk_bounds_and_close_generation():
+    source = (ROOT / "src/nds/arm7/nds_audio_main.c").read_text()
+    run_c(r'''
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+static uint32_t sMediaMutex, sMediaGeneration=1, sRomBytes=40000, calls, close_after, fail_at;
+static bool sCardOpen;
+static struct { uint32_t extent_count; } sFileMap={1};
+static void mutexLock(uint32_t *m) { assert((*m)++==0); }
+static void mutexUnlock(uint32_t *m) {
+    assert(--(*m)==0);
+    if(close_after&&calls==close_after) {sMediaGeneration++;sRomBytes=0;sFileMap.extent_count=0;close_after=0;}
+}
+static bool ndsAudioStorageReadMap(uint32_t offset,uint8_t *out,uint32_t bytes) {
+    assert(sMediaMutex&&bytes<=8192&&offset<=40000&&bytes<=40000-offset);
+    if(++calls==fail_at)return false;
+    memset(out,(int)(offset/8192),bytes);return true;
+}
+static bool ntrcardRomRead(int dma,uint32_t offset,void *out,uint32_t bytes) {
+    assert(dma==-1);return ndsAudioStorageReadMap(offset,out,bytes);
+}
+''' + function(source, "ndsAudioStorageReadRom") + r'''
+int main(void) {
+    uint8_t output[20000];
+    assert(ndsAudioStorageReadRom(0,output,sizeof(output))&&calls==3&&!sMediaMutex);
+    assert(output[0]==0&&output[8192]==1&&output[16384]==2);
+    calls=0;close_after=1;
+    assert(!ndsAudioStorageReadRom(0,output,sizeof(output))&&calls==1&&!sMediaMutex);
+    sRomBytes=40000;sCardOpen=true;sFileMap.extent_count=0;calls=0;fail_at=2;
+    assert(!ndsAudioStorageReadRom(0,output,sizeof(output))&&calls==2&&!sMediaMutex);
+    assert(!ndsAudioStorageReadRom(UINT32_MAX,output,10));
+    assert(!ndsAudioStorageReadRom(0,NULL,10));
     return 0;
 }
 ''')

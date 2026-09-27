@@ -30,8 +30,8 @@ are exact; reserve free 204,752 B versus required 183,072 B. Current receipt:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Campaign-specific coverage and global renderer retirement remain explicit debt.
 No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Phase 3 A8 storage `4905A1C6`: ARM7 boot/reads and mapped bytes pass;13 host tests.
-Next: BGM playback/refills on ARM7. Hat admission still22,288 B short; MF2 unlinked.
+Phase 3 A8 BGM `0BD4523E`: replay/audio engagement pass,17 tests; performance RED.
+HeavyF7443068 admission still5,904 B short. Next: FGM voices/cache; MF2 unlinked.
 receipt `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 
 ## Continue, do not restart

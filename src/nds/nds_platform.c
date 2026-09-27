@@ -2720,18 +2720,18 @@ static void ndsPlatformRenderBattleFpsHud(void)
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[3u],
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[4u]);
     ndsPlatformPrintDebugLine(
-        22u, "5+:%-5lu max:%lu BGM %lu/%lu%s",
+        22u, "5+:%-5lu max:%lu BGM %lu/%lu",
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalBucket[
             NDS_BATTLE_PLAYABLE_PACING_INTERVAL_BUCKET_5PLUS],
         (unsigned long)gNdsBattlePlayablePacingPresentIntervalMax,
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
         (unsigned long)gNdsAudioBgmRefillTicksLast,
-        (unsigned long)gNdsAudioBgmRefillTicksMax,
+        (unsigned long)gNdsAudioBgmRefillTicksMax
 #else
         0ul,
-        0ul,
+        0ul
 #endif
-        (gNdsAudioBgmFalsifierOff != 0u) ? " [OFF]" : "");
+        );
 #if NDS_TASK36_HW_COMPOSE
     ndsPlatformPrintDebugLine(
         23u, "GIT %s HC%lu R%lu F%lu", NDS_TASK10_GIT_SHORT,

@@ -4313,6 +4313,10 @@ override NDS_P2_PURIN := 1
 override NDS_P2_KIRBY := 1
 endif
 
+ifneq ($(NDS_BGM_FALSIFIER_OFF),0)
+$(error NDS_BGM_FALSIFIER_OFF is retired; ARM7 BGM is required in every ROM)
+endif
+
 ifneq ($(abspath $(PROJECT_ROOT)/$(BUILD)),$(abspath $(CURDIR)))
 
 export OUTPUT := $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME)
@@ -6179,7 +6183,8 @@ all: $(OUTPUT).nds
 NDS_ARM7_ELF := $(CURDIR)/nds-audio-arm7.elf
 NDS_ARM7_SOURCE := $(PROJECT_ROOT)/src/nds/arm7/nds_audio_main.c
 NDS_ARM7_HEADER := $(PROJECT_ROOT)/include/nds/nds_audio_storage.h
-NDS_ARM7_OBJECTS := nds-audio-arm7.o nds-audio-dldi-arm7.o nds-audio-extent-arm7.o
+NDS_ARM7_OBJECTS := nds-audio-arm7.o nds-audio-dldi-arm7.o nds-audio-extent-arm7.o \
+	nds-bgm-stream-arm7.o nds-bgm-service-arm7.o
 NDS_ARM7_FLAGS := -march=armv4t -mtune=arm7tdmi -mthumb -g -Os \
 	-Wall -Wextra -ffunction-sections -fdata-sections -DARM7 -D__NDS__ \
 	-I$(PROJECT_ROOT)/include -I$(CALICO)/include
@@ -6192,6 +6197,10 @@ nds-audio-dldi-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_audio_dldi.c
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-audio-dldi-arm7.d -c $< -o $@
 nds-audio-extent-arm7.o: $(PROJECT_ROOT)/src/nds/nds_audio_extent.c $(PROJECT_ROOT)/include/nds/nds_audio_extent.h
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-audio-extent-arm7.d -c $< -o $@
+nds-bgm-stream-arm7.o: $(PROJECT_ROOT)/src/nds/nds_bgm_stream.c $(PROJECT_ROOT)/include/nds/nds_bgm_stream.h
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-stream-arm7.d -c $< -o $@
+nds-bgm-service-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_audio_bgm_service.c $(PROJECT_ROOT)/include/nds/nds_bgm_ipc.h
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-service-arm7.d -c $< -o $@
 $(NDS_ARM7_ELF): $(NDS_ARM7_OBJECTS) $(PROJECT_ROOT)/linker/nds_arm7_contract.ld
 	$(CC) $(NDS_ARM7_FLAGS) -specs=$(CALICO)/share/ds7.specs \
 		-L$(CALICO)/lib -Wl,-Map,nds-audio-arm7.map \

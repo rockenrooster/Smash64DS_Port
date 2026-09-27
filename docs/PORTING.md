@@ -23306,3 +23306,13 @@ The captured map reproduces61,043,200 B of NitroFS/overlay data exactly. Hat
 admission still lacks22,288 B. BGM/FGM ownership, cache savings, timing and final
 qualification remain due; next move BGM playback/refills to ARM7. Saved receipts
 in phase3-residency. IMPLEMENTED_NOT_ACCEPTED; root/P1 unchanged.
+
+2026-09-26 P2-2p8 A8 BGM: ARM7 owns packet reads, buffers, playback seams and
+refills; retired ARM9 workers, mute-on-load and four-update restart delay.
+Corrected Calico one-shot lifetime after a captured stall and failing host
+fixture. Seventeen tests pass, including all47 BGA1 tracks. Natural0BD4523E
+replays1,972 frames exactly;141 refills, zero audio/native failures, AUD P95
+6,528 ticks. WORK-H P95 still2.625M/18.97 FPS (RED). Canonical arena gains20,480 B;
+heavyF7443068 gains16,384 B and still lacks5,904 B for pre-GO hat admission.
+Mixed output identifies source BGM; broader output/lifecycle proof remains due.
+Next FGM voices/cache and MF RAM. IMPLEMENTED_NOT_ACCEPTED; root/P1 unchanged.

@@ -1512,14 +1512,12 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
     if (block->load_tree_done == FALSE)
     {
         payload_before = gNdsRelocAssetPayloadReadCount;
-        ndsAudioBgmSuspendForBlockingLoad();
         previous = ndsTaskmanSwapMallocRegion(&block->arena);
         slice_result = ndsRelocExternTreeSliceStep(
             block->load_cursor, NDS_PLAYERS_VS_LOAD_CHUNK_BYTES,
             NDS_PLAYERS_VS_LOAD_CHUNK_NODES, &block->load_root,
             &payload_bytes);
         ndsTaskmanSwapMallocRegion(previous);
-        ndsAudioBgmResumeAfterBlockingLoad();
         payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
         gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
         if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
@@ -1557,7 +1555,6 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
      * residency action. This keeps Main/Kind binding + prepare off the last
      * payload tic and preserves the source setup side effects. */
     payload_before = gNdsRelocAssetPayloadReadCount;
-    ndsAudioBgmSuspendForBlockingLoad();
     previous = ndsTaskmanSwapMallocRegion(&block->arena);
     prepared = ndsMNPlayersVSPreviewBindResidentKindMain(fkind,
                                                          block->load_root);
@@ -1566,7 +1563,6 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         prepared = ndsMNPlayersVSPreviewPrepareResidentKind(fkind, previous);
     }
     ndsTaskmanSwapMallocRegion(previous);
-    ndsAudioBgmResumeAfterBlockingLoad();
     payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
     gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
     if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
@@ -1733,11 +1729,8 @@ void ndsMNPlayersVSPreviewInit(void)
         return;
     }
 
-    /* Shared reloc dependencies are the only entry-time file burst now. A
-     * second CSS entry can still inherit menu BGM, so keep that bounded burst
-     * under the established blocking-load fence. Per-fighter closures and
-     * native owner images are acquired later by the slot that needs them. */
-    ndsAudioBgmSuspendForBlockingLoad();
+    /* Shared dependencies load here. ARM7 continues BGM while the slot-owned
+     * fighter closures and native images are acquired on ARM9. */
 
     gNdsPlayersVSPreviewFrameCount = 0u;
     gNdsPlayersVSPreviewDrawCount = 0u;
@@ -1786,7 +1779,6 @@ void ndsMNPlayersVSPreviewInit(void)
         ndsMNPlayersVSPreviewInitResidentPools();
     if (sNdsPlayersVSResidentPoolsReady == FALSE)
     {
-        ndsAudioBgmResumeAfterBlockingLoad();
         return;
     }
 
@@ -1823,7 +1815,6 @@ void ndsMNPlayersVSPreviewInit(void)
     scSubsysFighterSetLightParams(45.0F, 45.0F, 0xFF, 0xFF, 0xFF, 0xFF);
     sNdsPlayersVSPreviewDrawPhase = 0u;
     sNdsPlayersVSPreviewActive = TRUE;
-    ndsAudioBgmResumeAfterBlockingLoad();
 }
 
 /* P2-2a: the shell owns the 2D controls, but costume/shade behavior stays in

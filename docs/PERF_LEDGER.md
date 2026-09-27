@@ -8440,3 +8440,24 @@ or accumulated A7 changes. Heavy all-content `9E4A666D` fails admission before
 GO:38,672 B bank,22,288 B missing to preserve the25,600 B reserve, plus later
 play allocations still owed. No shipping acceptance or root publication.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
+
+## 2026-09-26 — ARM7 BGM playback/refills
+
+**IMPLEMENTED_NOT_ACCEPTED.** Natural canonical ROM
+`0BD4523E479DF0E0449A8E65B12C70990143BC44EC84701C3CF0E4D912E7823E`,1,972 samples,
+replays exactly against D675C034;404 NitroFS files remain byte-identical.
+ARM7 performs141 refills/142 packet starts with zero header, packet, read, seam
+or event-drop failures. AUD mean/P50/P95:13,213/3,776/122,304 ->
+3,727/3,136/6,528 ticks. WORK-H mean/P50/P95:
+1,447,984/1,352,128/2,601,664 ->1,440,593/1,342,848/2,624,640.
+18.969 FPS; VBI2/3/4/5+268/1374/181/150, max11;13.58% two-VBlank, RED.
+The P95 regression is retained, not hidden by the AUD gain. Broader accumulated
+storage/BGM work is an enabling dependency, not an isolated per-member win.
+
+Canonical arena+20,480 B to1,302,272 B; low-water122,412 B. The separate all-content
+heavy F7443068 gains16,384 B to908,800 B; admission still lacks5,904 B before later
+play growth. Seventeen host tests cover all47 BGA1 tracks and scheduler/IO failures.
+Mixed captured output identifies source BGM; full output/lifecycle/shared-startup
+qualification remains owed. The first AD63487E run stalled in an invalid one-shot
+task rearm and yields no timing evidence; its failing fixture and repair are kept.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.

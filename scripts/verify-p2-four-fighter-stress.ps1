@@ -248,6 +248,21 @@ $memoryGlobals = @(
     # back to stdio after engagement.
     'gNdsAudioBgmDirectReadCount',
     'gNdsAudioBgmDirectFallbackCount',
+    'gNdsAudioBgmArm7Ready',
+    'gNdsAudioBgmArm7Commands',
+    'gNdsAudioBgmArm7Failure',
+    'gNdsAudioBgmRefillCount',
+    'gNdsAudioBgmPreparedCount',
+    'gNdsAudioBgmChunkPlayCount',
+    'gNdsAudioBgmSeamStartCount',
+    'gNdsAudioBgmSeamMissCount',
+    'gNdsAudioBgmHeaderFailCount',
+    'gNdsAudioBgmPacketFailCount',
+    'gNdsAudioBgmReadFailCount',
+    'gNdsAudioBgmErrorStopCount',
+    'gNdsAudioBgmTimerEventDropCount',
+    'gNdsAudioBgmPlaying',
+    'gNdsAudioBgmSoundActive',
     # P2-2p8 FGM live ranges. Samples and envelopes live in one immutable
     # validated NitroFS pack; starting a cue must not re-enter stdio/libfat.
     'gNdsAudioFgmDirectReadCount',
@@ -936,6 +951,16 @@ $memory = [PSCustomObject]@{
     animStreamDirLoadFailures = $extra['gNdsRelocAssetFighterStreamDirLoadFailures']
     bgmDirectReads = $extra['gNdsAudioBgmDirectReadCount']
     bgmDirectFallbacks = $extra['gNdsAudioBgmDirectFallbackCount']
+    bgmArm7Ready = $extra['gNdsAudioBgmArm7Ready']
+    bgmArm7Commands = $extra['gNdsAudioBgmArm7Commands']
+    bgmArm7Failure = $extra['gNdsAudioBgmArm7Failure']
+    bgmArm7Refills = $extra['gNdsAudioBgmRefillCount']
+    bgmSeamMisses = $extra['gNdsAudioBgmSeamMissCount']
+    bgmHeaderFailures = $extra['gNdsAudioBgmHeaderFailCount']
+    bgmPacketFailures = $extra['gNdsAudioBgmPacketFailCount']
+    bgmReadFailures = $extra['gNdsAudioBgmReadFailCount']
+    bgmErrorStops = $extra['gNdsAudioBgmErrorStopCount']
+    bgmEventDrops = $extra['gNdsAudioBgmTimerEventDropCount']
     fgmDirectReads = $extra['gNdsAudioFgmDirectReadCount']
     fgmDirectFallbacks = $extra['gNdsAudioFgmDirectFallbackCount']
     fgmStdioRangeReads = $extra['gNdsAudioFgmStdioRangeReadCount']
@@ -1379,6 +1404,13 @@ if (([uint64]$memory.bgmDirectReads -eq 0) -or
     throw ("Four-fighter BGM direct NitroROM refill did not engage cleanly: " +
         "reads=$($memory.bgmDirectReads) " +
         "fallbacks=$($memory.bgmDirectFallbacks).")
+}
+if ($memory.bgmArm7Ready -ne 1 -or $memory.bgmArm7Commands -le 0 -or
+    $memory.bgmArm7Refills -le 0 -or $memory.bgmArm7Failure -ne 0 -or
+    $memory.bgmSeamMisses -ne 0 -or $memory.bgmHeaderFailures -ne 0 -or
+    $memory.bgmPacketFailures -ne 0 -or $memory.bgmReadFailures -ne 0 -or
+    $memory.bgmErrorStops -ne 0 -or $memory.bgmEventDrops -ne 0) {
+    throw 'ARM7 BGM playback/refill did not engage without failure.'
 }
 if (([uint64]$memory.fgmDirectReads -eq 0) -or
     ([uint64]$memory.fgmDirectFallbacks -ne 0) -or

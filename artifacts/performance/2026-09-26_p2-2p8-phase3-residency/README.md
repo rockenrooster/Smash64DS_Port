@@ -517,3 +517,110 @@ coherent progress remains IMPLEMENTED_NOT_ACCEPTED.
 Checkpoint staging encountered another zero-byte index lock,24 minutes old,
 with no Git process and an exclusive-open check passing. Removed that exact
 abandoned lock under the owner's existing authorization; proof is unchanged.
+
+## Continue: ARM7 BGM player
+
+Previous turn was progress;2ab84bdc435 is pushed, all storage jobs terminal.
+Root continues alone. BattleShip sys/audio.c play/stop/volume/fade rules and the
+installed Calico timers/sound allocator were inspected. ARM9 posts track and
+volume events; ARM7 now owns BGA1 parsing, both8,196 B buffers, IRQ seams and
+background refills. Source-frame fades stay on ARM9 as small volume commands.
+Track offsets/specifications are admitted once before the first playback; no
+BGM fopen/fseek/read, refill worker or timer path remains on ARM9. The SDK's
+channel scan starts at0;12 FGM handles leave14/15 for BGM. Shared status uses
+generation ownership and cache-line/seqlock snapshots; no frame-based audio
+simulation or runtime BGM-off selector survives.
+
+The old load-suspension calls only fenced ARM9 stalls, and resume skipped the
+prefetched packets. Removed those calls and their APIs; ARM7 continues music
+through CSS and battle setup. Native packet data, nominal sample rate, loop
+points and source volume/fade behavior are retained. The17 focused host tests
+cover all47 packed tracks through complete finite/loop boundaries; actual service
+IRQ/queue tests cover short final packets, stale generations, DMA buffer
+ownership, underruns and malformed requests. Media ownership now fences close/
+reopen generations and yields between bounded transfers. Derived-asset checks
+pass, and the ARM7 image compiles; target audio/timing proof is still owed.
+
+Next frozen build is the warm canonical `build-p2-fourcpu-tickhud`, after its
+Yoster0 particle preflight. Saved D675C034 is the timing/replay baseline;4905A1C6
+retains the all-content storage proof. Build log/exit:
+`builds/p2-phase3-a8-bgm-build.{log,exit}`. No emulator is active.
+Build39211 exited0. ROMAD63487E487AA5E3CE8E2B9AE5C83ED09DDF307111DDFC8E04FEF2628830B0B8
+is saved with both ELFs/config/maps under `builds/p2p8-a8-bgm-ad63487e/`.
+ARM9/ARM7 native-only gates pass (250/5 project inputs), overlay gate passes,
+and the packaged ARM7 load segments match its ELF. The ARM9 ELF lacks the old
+BGM packet buffers/reader/refill worker and delayed-resume entrypoint. Same
+canonical build config hashB93F9170 asD675C034. Full natural four-CPU run is
+`builds/p2-phase3-a8-bgm-run.{log,exit}`, runner4, sidecars `a8-bgm-*`. The
+collector now records and requires positive ARM7 BGM refills with zero packet,
+header, read, seam or event-drop failures. No boot/runtime pokes; inputs frozen.
+Run56386 reached its first gameplay marker, then stalled without a timing window.
+The ARM7 listener uses the collector's explicit4614 port; an initial3374 connection
+timed out and its zero/static readbacks are not runtime evidence. Live4614 capture
+shows PC0x1078 with LR in `_tickTaskIsr`; typed global/backtrace output was unreliable.
+Stopped the failed guest and retained both diagnostics under `builds/`. No timing
+result is claimed. The SDK source gives the cause: after a one-shot callback,
+Calico clears that task's `fn`; rearming the same object in its callback leaves
+the new queued task with NULL. The corrected host model reproduces the failure
+(`p2-phase3-a8-bgm-timer-negative.log`).
+
+Repair: alternate one task per audio buffer. A queued flag is cleared on callback
+entry, so stop/error handling never dequeues the task already removed by the SDK.
+The host model now enforces both lifecycle rules. This is the specific invalidator
+for build/run r1 (`p2-phase3-a8-bgm-build-r1.*`); other completed fixtures/assets
+are reused. No emulator remains active.
+Build11464 exited0; repaired ROM0BD4523E479DF0E0449A8E65B12C70990143BC44EC84701C3CF0E4D912E7823E
+is saved in `builds/p2p8-a8-bgm-0bd4523e/`. Natural run37663 exited0 with1,972
+replay pairs identical toD675C034. ARM7 ready1,287 media reads,141 refills,
+142 packet starts, zero header/packet/read/seam/drop failures; output validation
+is still separate. Arena1,302,272 B (+20,480), general low-water122,412 B. AUD
+mean/P50/P95 3,727/3,136/6,528 ticks (baseline13,213/3,776/122,304).
+WORK-H mean/P50/P95 1,440,593/1,342,848/2,624,640;18.969 FPS; VBI2/3/4/5+
+268/1374/181/150, max11, total1,973. P95 worsens22,976 versusD675C034; performance
+remains RED. The accumulated storage/BGM change is an enabling dependency, not a
+per-roster acceptance claim or a P95 win.
+
+The exact ROM now gets an independent output capture through SDL's disk audio
+driver (built into the repo emulator); no guest writes or audible host output.
+The owned runner is volume-enabled only into that file, uses audio sync and a
+slow disk consumer, then restores its original config/environment. This is
+explicitly not timing evidence. Script `scripts/sfx/capture_bgm_disk_audio.ps1`,
+runner6, outputs `builds/p2-phase3-a8-bgm-audio.*`; source/assets remain frozen.
+Capture63503/46663 found no file at the requested path: this SDL2 Windows build
+reused getenv's string for the subsequent delay lookup, so PCM was written as
+runner file `80`. The second capture was hash-preserved under builds; no output
+pass was inferred from the empty logs. The corrected helper uses identical
+numeric-prefixed filename/delay strings and hash-migrates the output. Capture11797
+produced24.853 s PCM; empty optional stdout then exposed a null-string parser
+error, fixed without repeating the recording. Converted that same raw output.
+
+Actual output SHA DBC61D8629F4BFA92C0C4C8FA42EA28BC0AB967B2D3BCD9A0C7B81F0D78CD5A4.
+The source BGA1 music is identifiable in the mixed output at a coherent sequence
+of22 packet starts. The quietest comparison reaches0.84 normalized correlation;
+whole-mix correlation0.215 is limited by foreground FGM. The analyzer accounts
+for melonDS1.0's documented-in-source32823.6328125 input resampling convention.
+This is output engagement, not complete fidelity/lifecycle acceptance. Reproducer
+`scripts/sfx/analyze_bgm_capture.py`; full mix remains in builds,4 s exact excerpt
+and hashes in `artifacts/visibility/2026-09-26_p2-2p8-a8-bgm/`.
+
+All404 NitroFS payloads (29,066,719 B) remain byte-identical toD675C034. Next
+missing resource coverage: warm all-content heavy build `build-p2p8-s7-fpwalk`,
+Yoster1 producer, walk1/argmax1. Saved4905A1C6 is its baseline. Build log/exit
+`builds/p2-phase3-a8-bgm-heavy-build.{log,exit}` then the short admission probe.
+Heavy build50903 exited0, ROMF74430685F1B41E920084945827BACD20C5A3C4765B1C980612E39FF186F5194,
+saved with both ELFs/config/maps in `builds/p2p8-a8-bgm-heavy-f7443068/`.
+Probe43852 captures the continuing admission failure after all four fighters:
+bank38,672 B, free58,380 B, alignment12 B, reserve25,600 B, now **5,904 B short**.
+Arena908,800 B is16,384 B larger than4905A1C6; do not assign the canonical20,480 B
+gain to this different configuration. Zero relocation/storage failures. No battle
+update, so later play growth is still owed. `a8-bgm-heavy-summary.json` owns the
+failure, markers and capture hash. This is a resource gain, not acceptance.
+
+All jobs are terminal. The BGM backend is hard-on, its ARM9 buffers/refills and
+load-mute/frame-delay workaround are retired, and the old BGM-off option fails
+explicitly at build time. Source assets are unchanged. Full audio lifecycle/
+fidelity, natural CSS/shared-startup qualification and all-roster/stage performance
+remain open; no root/P1 ROM was published. **Next A8 FGM:** derive the complete
+source-reachable VS cue/head set, then move voice/envelope/refill ownership to
+ARM7 and retire the237,568 B cache. MF2's697,760 B bank still needs funding/linking.
+KEEP/IMPLEMENTED_NOT_ACCEPTED; reuse the completed corpus/replay/stream proofs.

@@ -11,6 +11,8 @@ static uint32_t sStorageMessages[4];
 static uint8_t sStorageStack[2048] __attribute__((aligned(8)));
 static int sCardOpen;
 static uint32_t sRomBytes;
+static uint32_t sMediaGeneration;
+static Mutex sMediaMutex;
 static NdsAudioStorageMap sFileMap;
 static uint8_t sSectorBuffer[512] __attribute__((aligned(4)));
 extern bool ndsAudioDldiInstall(void);
@@ -65,6 +67,34 @@ static bool ndsAudioStorageReadMap(uint32_t offset, uint8_t *out, uint32_t bytes
     return true;
 }
 
+uint32_t ndsAudioStorageRomSize(void) { return sRomBytes; }
+
+int ndsAudioStorageReadRom(uint32_t offset, void *destination, uint32_t bytes)
+{
+    uint8_t *out = destination;
+    uint32_t generation;
+    mutexLock(&sMediaMutex);
+    generation = sMediaGeneration;
+    int valid = destination && offset <= sRomBytes && bytes <= sRomBytes - offset &&
+                (sCardOpen || sFileMap.extent_count);
+    mutexUnlock(&sMediaMutex);
+    if (!valid) return 0;
+    while (bytes)
+    {
+        /* Bound ownership so a high-priority refill can run between large
+         * foreground transfers; the generation fences a close/reopen. */
+        uint32_t part = bytes < 8192u ? bytes : 8192u;
+        mutexLock(&sMediaMutex);
+        int ok = generation == sMediaGeneration &&
+            (sFileMap.extent_count ? ndsAudioStorageReadMap(offset, out, part) :
+             sCardOpen && ntrcardRomRead(-1, offset, out, part));
+        mutexUnlock(&sMediaMutex);
+        if (!ok) return 0;
+        offset += part; out += part; bytes -= part;
+    }
+    return 1;
+}
+
 static int ndsAudioStorageThread(void *unused)
 {
     (void)unused;
@@ -87,28 +117,31 @@ static int ndsAudioStorageThread(void *unused)
                 switch (request->operation)
                 {
                 case NDS_AUDIO_STORAGE_OPEN_CARD:
+                    mutexLock(&sMediaMutex);
                     if (!sCardOpen) sCardOpen = ntrcardOpen();
                     if (sCardOpen)
                         sRomBytes = ndsAudioStorageCardCapacity(g_envAppNdsHeader->device_capacity);
                     if (!sRomBytes) sCardOpen = 0;
                     status = sCardOpen ? NDS_AUDIO_STORAGE_OK :
                                         NDS_AUDIO_STORAGE_IO_ERROR;
+                    sMediaGeneration++;
+                    mutexUnlock(&sMediaMutex);
                     break;
                 case NDS_AUDIO_STORAGE_CLOSE_CARD:
+                    mutexLock(&sMediaMutex);
                     if (sCardOpen) ntrcardClose();
                     sCardOpen = 0;
                     sRomBytes = 0u;
                     memset(&sFileMap, 0, sizeof(sFileMap));
+                    sMediaGeneration++;
+                    mutexUnlock(&sMediaMutex);
                     status = NDS_AUDIO_STORAGE_OK;
                     break;
                 case NDS_AUDIO_STORAGE_READ_CARD:
                     if (!sCardOpen && !sFileMap.extent_count)
                         status = NDS_AUDIO_STORAGE_NOT_OPEN;
-                    else if (!(sFileMap.extent_count ?
-                               ndsAudioStorageReadMap(request->offset,
-                                   (void *)(uintptr_t)request->destination, request->bytes) :
-                               ntrcardRomRead(-1, request->offset,
-                                   (void *)(uintptr_t)request->destination, request->bytes)))
+                    else if (!ndsAudioStorageReadRom(request->offset,
+                                   (void *)(uintptr_t)request->destination, request->bytes))
                         status = NDS_AUDIO_STORAGE_IO_ERROR;
                     else
                     {
@@ -118,8 +151,11 @@ static int ndsAudioStorageThread(void *unused)
                     }
                     break;
                 case NDS_AUDIO_STORAGE_OPEN_MAP:
+                    mutexLock(&sMediaMutex);
                     status = ndsAudioStorageOpenMap((const NdsAudioStorageMap *)(uintptr_t)
                                 request->destination) ? NDS_AUDIO_STORAGE_OK : NDS_AUDIO_STORAGE_BAD_REQUEST;
+                    sMediaGeneration++;
+                    mutexUnlock(&sMediaMutex);
                     break;
                 }
             }
@@ -158,6 +194,8 @@ int main(void)
     threadPrepare(&sStorageThread, ndsAudioStorageThread, NULL,
                   sStorageStack + sizeof(sStorageStack), 24);
     threadStart(&sStorageThread);
+    extern void ndsArm7BgmStartService(void);
+    ndsArm7BgmStartService();
     while (pmMainLoop()) threadWaitForVBlank();
     return 0;
 }

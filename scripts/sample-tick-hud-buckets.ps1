@@ -716,7 +716,7 @@ try {
     # marker that can never arrive. Keep these traps installed while each
     # sampling breakpoint is replaced; $bpnum identifies the newest marker.
     $faultLines = @()
-    foreach ($faultSymbol in @('ndsSyMallocOverflowHalt', 'ndsKirbyHatResidencyHalt', '__excpt_entry')) {
+    foreach ($faultSymbol in @('ndsSyMallocOverflowHalt', 'ndsKirbyHatResidencyHalt', 'ndsAudioStorageInitHalt', 'ndsAudioBgmControlHalt', '__excpt_entry')) {
         if (($null -ne $symbols) -and $symbols.Contains($faultSymbol)) {
             $faultLines += @(
                 "break $faultSymbol", 'commands', 'silent',
@@ -726,6 +726,9 @@ try {
                 }),
                 $(if ($faultSymbol -eq 'ndsKirbyHatResidencyHalt') {
                     'printf "TICKFAULT_HAT reason=%u\n", $r0'
+                }),
+                $(if ($faultSymbol -in @('ndsAudioStorageInitHalt', 'ndsAudioBgmControlHalt')) {
+                    'printf "TICKFAULT_AUDIO reason=%u\n", $r0'
                 }),
                 $(if ($symbols.Contains('sGCCommonsMaxNum')) {
                     'printf "TICKFAULT_GOBJ active=%u max=%d free=%u frame=%u\n", sGCCommonsActiveNum, sGCCommonsMaxNum, (unsigned int)gSYTaskmanGeneralHeap.end - (unsigned int)gSYTaskmanGeneralHeap.ptr, gNdsBattlePlayablePacingPresentedFrames'
