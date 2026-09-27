@@ -3192,7 +3192,8 @@ extern volatile u32 gNdsP2HurtboxLatchEpoch;
 #define NDS_P2_HURTBOX_LATCH_EPOCH_BUMP() ((void)0)
 #endif
 
-void __attribute__((noinline, optimize("Os")))
+/* ITCM (2026-09-27 census: ~0.6K ticks/frame non-memory stall at 88 B). */
+void __attribute__((noinline, optimize("Os"))) __attribute__((section(".itcm")))
 ftParamsUpdateFighterPartsTransform(DObj *joint)
 {
     GObj *fighter_gobj;

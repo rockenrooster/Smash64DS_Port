@@ -1494,7 +1494,8 @@ static u32 ndsFighterStructUsedMask(void)
 #endif
 }
 
-static sb32 ndsFighterStructIsTrackedPointer(const void *ptr)
+/* ITCM (2026-09-27 census: ~1.1K ticks/frame non-memory stall at 88 B). */
+static sb32 __attribute__((section(".itcm"))) ndsFighterStructIsTrackedPointer(const void *ptr)
 {
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     const FTStruct *fp = ptr;

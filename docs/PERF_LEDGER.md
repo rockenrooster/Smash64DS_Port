@@ -8767,3 +8767,13 @@ P50/P95/P99 1,125,376/1,568,128/1,964,096 -> 1,112,768/1,551,168/1,964,864
 (median now under 1,120,000); paired -12.6K; two-VBlank frames 895 -> 936.
 ITCM 32,616 of 32,736 B. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 14.
+
+## 2026-09-27 — ITCM round 3: idle old-path residents out, six small admissions in
+
+**BANKED (small).** Out: `ndsRendererLoadHardwareGxComposedMatrices` (668 B) and
+`ndsRendererNativeStageEmitNoZVertex` (176 B), never executed in the four-CPU
+match. In: the census's six small high-stall functions (822 B, ~6.9K
+ticks/frame non-memory stall). `AD8E0F00` vs `itcm2`, replay identical: WORK-H
+P50/P95/P99 1,112,768/1,551,168/1,964,864 -> 1,111,040/1,547,776/1,951,552;
+paired -3.6K. ITCM 32,600 of 32,736 B. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 15.

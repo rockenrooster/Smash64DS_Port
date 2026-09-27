@@ -458,7 +458,9 @@ void gmCameraMakeBattleCamera(void)
  * Do not "optimize" this by inlining without re-measuring the pair. */
 #define NDS_R2_CAM_LEAF NDS_R2_CAM_ARM static
 
-NDS_R2_CAM_ARM static s32 ndsR2CamDiv64(s64 numerator, s32 denominator)
+/* ITCM (2026-09-27 census: ~1.3K ticks/frame non-memory stall at 68 B). */
+NDS_R2_CAM_ARM static s32 __attribute__((section(".itcm")))
+ndsR2CamDiv64(s64 numerator, s32 denominator)
 {
     NDS_R2_CAM_DIVCNT = NDS_R2_CAM_DIV_64_32;
     NDS_R2_CAM_DIV_NUMER = numerator;

@@ -3891,7 +3891,8 @@ ndsRendererAdapterBuildDObjLocalMatrix(
     return TRUE;
 }
 
-static u32 ndsRendererAdapterDirectMvpRecalcKind(DObj *dobj)
+/* ITCM (2026-09-27 census: ~0.45K ticks/frame non-memory stall at 72 B). */
+static u32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterDirectMvpRecalcKind(DObj *dobj)
 {
     u32 i;
 
@@ -4948,10 +4949,10 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
     return TRUE;
 }
 
-/* Main RAM, not ITCM: the four-CPU tick-HUD link overflowed ITCM by 16 bytes
- * (2026-09-07) and this 222-byte compare runs once per stage node per frame,
- * where the fetch penalty is a few dozen cycles against a 1.12M budget. */
-static sb32 ndsRendererAdapterStageWorldSourceKeyMatches(
+/* 2026-09-07 this 222-byte compare left ITCM to fix a 16-byte link overflow.
+ * 2026-09-27: back in (census: ~1.0K ticks/frame non-memory stall in main
+ * RAM), in the room two never-executed old-path residents left. */
+static sb32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
     DObj *dobj, const NDSRendererAdapterStageWorldSourceKey *source_key)
 {
     u32 i;

@@ -3165,7 +3165,9 @@ static void __attribute__((noinline)) ndsRendererNativeStageLoadNoZMatrix(
 #endif
 }
 
-static void NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageEmitNoZVertex(
+/* 2026-09-27: out of ITCM (old path only; the four-CPU census never
+ * executed it). Its bytes went to the census's small high-stall admissions. */
+static void ndsRendererNativeStageEmitNoZVertex(
     const NDSNativeStageDenseVertex *dense,
     const NDSNativeStagePreparedDense *prepared,
     const NDSNativeStagePreparedRun *run,

@@ -337,3 +337,30 @@ Placement-only: no instruction changes. The MP live-link checker cannot run on
 this ELF: it reports `__deregister_frame_info`, which comes from the build
 config, not from this move. It names `mpCollisionGetFCCommonFloor` only as an
 API symbol.
+
+## 15. ITCM round 3: two idle old-path residents out, six small admissions in
+
+Out: `ndsRendererLoadHardwareGxComposedMatrices` (668 B) and
+`ndsRendererNativeStageEmitNoZVertex` (176 B). Both are old-path residents that
+the four-CPU census never executed.
+
+In, 822 B, together ~6.9K ticks/frame of census non-memory stall in main RAM:
+
+| Function | Bytes | Stall (ticks/frame) |
+|---|---|---|
+| `ndsRendererBuildShiftedRawHardwareMatrix` | 284 | 1.9K |
+| `ndsR2CamDiv64` | 68 | 1.3K |
+| `ndsFighterStructIsTrackedPointer` | 88 | 1.1K |
+| `ndsRendererAdapterStageWorldSourceKeyMatches` | 222 | 1.0K |
+| `ftParamsUpdateFighterPartsTransform` | 88 | 0.6K |
+| `ndsRendererAdapterDirectMvpRecalcKind` | 72 | 0.45K |
+
+`ndsRendererAdapterStageWorldSourceKeyMatches` left ITCM on 09-07 to fix a
+16-byte link overflow. ITCM is now 32,600 of 32,736 B.
+
+`itcm3` `AD8E0F00` against `itcm2`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,112,768/1,551,168/1,964,864 -> **1,111,040/1,547,776/
+  1,951,552**.
+- Paired median -3,648: SRC -3.9K and STG -1.7K, offset by FTR +1.1K of
+  layout drift.
+- VBlanks 952/963/52/6.

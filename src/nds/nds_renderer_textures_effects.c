@@ -14367,7 +14367,8 @@ static void ndsRendererBuildRawHardwareMatrix(
     }
 }
 
-static s32 ndsRendererBuildShiftedRawHardwareMatrix(
+/* ITCM (2026-09-27 census: ~1.9K ticks/frame non-memory stall at 284 B). */
+static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererBuildShiftedRawHardwareMatrix(
     const NDSRendererMatrix20p12 *composed,
     NDSRendererMatrix20p12 *hardware,
     u32 coordinate_shift)
@@ -14937,7 +14938,9 @@ ndsFighterPacketLoadSplitMatricesRecord(
 }
 #endif
 
-static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
+/* 2026-09-27: out of ITCM (old path only; the four-CPU census never
+ * executed it). Its bytes went to the census's small high-stall admissions. */
+static void __attribute__((noinline))
 ndsRendererLoadHardwareGxComposedMatrices(
     const NDSRendererNativeFighterRoot *input, u32 generation)
 {
