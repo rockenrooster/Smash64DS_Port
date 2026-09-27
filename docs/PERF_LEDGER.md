@@ -8810,3 +8810,13 @@ soft float, every frame, every build; read only by
 1,099,136/1,536,576/1,961,152; paired +0.3K vs `libcf` (cross-build layout, not
 claimed). RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 19.
+
+## 2026-09-27 — VS Results emblem hook no longer called in battle
+
+**BANKED (small).** `gcCaptureCameraGObj` called the Results emblem hook for
+every non-stage display GObj; the hook bails on any scene but VS Results, yet a
+battle paid the call and its large-frame prologue (~2.0K ticks/frame). The
+scene test now sits at the call site. `E544771E` vs `camf`, replay identical:
+WORK-H P50/P95/P99 1,098,432/1,536,384/1,953,920; paired -2.0K (MISC -1.7K);
+two-VBlank frames 1,001 of 1,973. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 20.

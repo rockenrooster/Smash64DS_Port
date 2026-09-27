@@ -1753,7 +1753,11 @@ gcCaptureCameraGObj(GObj *camera_gobj, sb32 is_tag_mask_or_id)
                      * hand. The battle loop publishes it through
                      * `sNdsStageGCDrawAllLoopCurrentCameraGObj`, which nothing
                      * in Results ever writes. */
-                    if (native_stage_handled == FALSE)
+                    /* The hook bails on any other scene; testing the scene
+                     * here spares every battle display GObj the call and
+                     * its prologue (~2.0K ticks a frame, four-CPU census). */
+                    if ((native_stage_handled == FALSE) &&
+                        (gSCManagerSceneData.scene_curr == nSCKindVSResults))
                     {
                         native_stage_handled =
                             ndsResultsEmblemRecordCapturedDisplay(

@@ -458,3 +458,18 @@ Build note: the first `-j8` build after the Makefile edit failed in the
 particle-texture generator (Python `io.open`) and the run measured the stale
 lab ROM. A serial rebuild succeeded, and `nm` confirmed the witness symbols
 are absent.
+
+## 20. The VS Results emblem hook is no longer called in battle
+
+`gcCaptureCameraGObj` called `ndsResultsEmblemRecordCapturedDisplay` for every
+display GObj that the stage did not take. Its first test bails on any scene but
+VS Results, but a battle still paid the call and its large-frame prologue:
+~2.0K ticks/frame in the `4f08` census. The scene test now sits at the call
+site. The behaviour is identical because the hook has no side effects before
+that test.
+
+`emblem` `E544771E` against `camf`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,099,136/1,536,576/1,961,152 -> **1,098,432/1,536,384/
+  1,953,920**.
+- Paired median -2,048 (MISC -1,728, STG -704).
+- VBlanks 1,001/920/46/6: over half the presented frames now fit two VBlanks.
