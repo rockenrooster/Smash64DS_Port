@@ -5165,7 +5165,11 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 {
     DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
     DObj *cursor = dobj;
-    NDSRendererMatrix20p12 parent_world;
+    /* The chain composes from the cached parent entries in place: pointing at
+     * an ancestor's stored world instead of copying it into a local for every
+     * link (the copies were a third of this function's profile). */
+    NDSRendererMatrix20p12 identity;
+    const NDSRendererMatrix20p12 *parent_world = &identity;
     NDSRendererMatrix20p12 local;
     NDSRendererAdapterStageWorldCacheEntry *entry;
     NDSRendererAdapterStageWorldSourceKey source_key;
@@ -5226,7 +5230,7 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
     }
 
-    ndsRendererAdapterMtxIdentity20p12(&parent_world);
+    ndsRendererAdapterMtxIdentity20p12(&identity);
     for (i = depth; i != 0u; i--)
     {
         DObj *node = chain[i - 1u];
@@ -5243,11 +5247,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         }
         if (entry->validated_frame == frame)
         {
-            ndsRendererMatrixCopy20p12(
-                &parent_world,
-                ndsRendererAdapterStageWorldEntryMatrix(entry));
+            parent_world = ndsRendererAdapterStageWorldEntryMatrix(entry);
 #if NDS_TASK68_FALLBACK_CENSUS
-            ndsRendererAdapterRecordAttachWorld(node, &parent_world);
+            ndsRendererAdapterRecordAttachWorld(node, parent_world);
 #endif
             parent_generation = entry->generation;
             continue;
@@ -5275,7 +5277,7 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
                 return FALSE;
             }
             ndsRendererMtxMulAffine20p12(
-                &local, &parent_world,
+                &local, parent_world,
                 ndsRendererAdapterStageWorldEntryMatrix(entry));
             entry->parent = node->parent;
             entry->parent_generation = parent_generation;
@@ -5296,15 +5298,13 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
             }
         }
         entry->validated_frame = frame;
-        ndsRendererMatrixCopy20p12(
-                &parent_world,
-                ndsRendererAdapterStageWorldEntryMatrix(entry));
+        parent_world = ndsRendererAdapterStageWorldEntryMatrix(entry);
 #if NDS_TASK68_FALLBACK_CENSUS
-        ndsRendererAdapterRecordAttachWorld(node, &parent_world);
+        ndsRendererAdapterRecordAttachWorld(node, parent_world);
 #endif
         parent_generation = entry->generation;
     }
-    *out = parent_world;
+    ndsRendererMatrixCopy20p12(out, parent_world);
 
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     if (reused_persistent != FALSE)

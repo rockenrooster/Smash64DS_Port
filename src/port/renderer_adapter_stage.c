@@ -4830,13 +4830,17 @@ ndsRendererAdapterCommitNativeStageDisplay(
     NDSRendererAdapterNativeStageWorkspace *workspace =
         &sNdsRendererAdapterNativeStageWorkspace;
     GObj *display_gobj = display_gobj_ptr;
+    u32 segment_count;
     u32 i;
 
     if (workspace->active == FALSE)
     {
         return FALSE;
     }
-    for (i = 0u; i < ndsRendererAdapterNativeStageActiveSegmentCount(); i++)
+    /* Called for every display GObj of the stage camera: read the loaded
+     * descriptor's count once, not once per compared segment. */
+    segment_count = ndsRendererAdapterNativeStageActiveSegmentCount();
+    for (i = 0u; i < segment_count; i++)
     {
         if (display_gobj == workspace->segments[i])
         {

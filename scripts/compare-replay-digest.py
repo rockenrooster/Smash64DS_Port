@@ -13,6 +13,14 @@ Usage: compare-replay-digest.py CONTROL.csv CANDIDATE.csv [--json OUT.json]
 For matched ring-dump windows with skewed presented-frame labels, --sequence
 compares every recorded pair in file order. It requires equal lengths and never
 skips or realigns rows. The sampler's population/coherence checks still apply.
+
+--resync N (with --sequence) allows ONE realignment: when the runs diverge at
+sample i, it accepts a single offset k (0 < |k| <= N) only if every later
+overlapping sample matches at that offset. This is the case where a pre-GO load
+wait ends one presented frame earlier or later: the same tick states, presented
+one frame apart. It is reported as such, never as plain IDENTICAL.
+Within a resync only, a digest word of 0 counts as unrecorded (a ring-stop seam
+sample can carry DGSB 0); the count of such samples is reported.
 """
 import argparse
 import csv
@@ -41,6 +49,9 @@ def main():
     parser.add_argument('--json', default='')
     parser.add_argument('--sequence', action='store_true',
                         help='compare equal-length matched windows in recorded order; no row skipping')
+    parser.add_argument('--resync', type=int, default=0,
+                        help='with --sequence: accept one shift of up to N samples '
+                             'after the first divergence if every later sample matches')
     args = parser.parse_args()
 
     control = load(args.control, args.sequence)
@@ -79,9 +90,43 @@ def main():
                     'control': [f'{v:08x}' for v in control[frame]],
                     'candidate': [f'{v:08x}' for v in candidate[frame]],
                 }
+    if result['diverged'] and args.sequence and args.resync > 0:
+        first = result['firstDivergence']['sample']
+        count = len(shared)
+        for k in sorted(range(-args.resync, args.resync + 1), key=abs):
+            if k == 0:
+                continue
+            pairs = [(j + k, j) for j in range(first, count)
+                     if 0 <= j + k < count]
+            if len(pairs) < count - first - abs(k):
+                continue
+            unrecorded = 0
+            ok = True
+            for c, d in pairs:
+                if control[c] == candidate[d]:
+                    continue
+                if all((x == y) or (x == 0) or (y == 0)
+                       for x, y in zip(control[c], candidate[d])):
+                    unrecorded += 1
+                    continue
+                ok = False
+                break
+            if ok:
+                result['resync'] = {'sample': first, 'shift': k,
+                                    'matched': len(pairs),
+                                    'unrecordedWords': unrecorded}
+                break
     if args.json:
         with open(args.json, 'w') as fh:
             json.dump(result, fh, indent=1)
+    if result.get('resync'):
+        r = result['resync']
+        print(f"IDENTICAL AFTER ONE RESYNC: from sample {r['sample']} candidate "
+              f"sample j equals control sample j{r['shift']:+d} for all "
+              f"{r['matched']} later samples ({r['unrecordedWords']} with an "
+              f"unrecorded zero word; control {len(control)}, "
+              f"candidate {len(candidate)})")
+        return 0
     if result['diverged']:
         first = result['firstDivergence']
         print(f"DIVERGED on {result['diverged']} of {len(shared)} {unit}; "

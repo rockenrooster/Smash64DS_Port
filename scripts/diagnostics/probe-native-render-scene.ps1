@@ -276,6 +276,7 @@ try {
         'printf "DIAG_WALK_SCENE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsMenuShellWalkSteps, gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
         'set variable gNdsMenuShellWalkBudget = 1',
         'set variable gNdsNativeStageCastleRoofClipArm = 1',
+        'set variable gNdsNativeStageRunWitness = 1',
         ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $StageKind),
         ('set variable gNdsMenuShellCssWalkTargetKind = ' + $Fighter1Kind),
         ('set variable gNdsMenuShellCssWalkTargetKind2 = ' + $Fighter2Kind),

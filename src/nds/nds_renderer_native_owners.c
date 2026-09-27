@@ -2231,6 +2231,13 @@ static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
 #endif
 #endif
 
+/* The stage run witness (per-run RoofSnap publication and the emit-shortfall
+ * snapshot/accounting) is lab visibility read by
+ * scripts/diagnostics/probe-native-render-scene.ps1, which sets this word at
+ * boot. Off by default: its per-run snapshot of seven counters, publication and
+ * accounting ran in every frame's commit loop. */
+__attribute__((used)) volatile u32 gNdsNativeStageRunWitness;
+
 /* The shortfall witness is visibility/debug accounting, not part of the stage
  * emit hot path.  Keep its comparatively large attribution tree in cached
  * main RAM so adding a diagnostic cannot consume the fixed 32 KiB ITCM budget
@@ -2300,7 +2307,10 @@ static void ndsRendererNativeStageAccountRun(
 {
     u32 reuse_count = (triangle_count != 0u) ? triangle_count - 1u : 0u;
 
-    ndsRendererNativeStageAccountShortfall();
+    if (gNdsNativeStageRunWitness != 0u)
+    {
+        ndsRendererNativeStageAccountShortfall();
+    }
 
     sNdsRendererHardwareSubmitClassCounts[submit_class] += triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += reuse_count;
@@ -4039,7 +4049,8 @@ s32 ndsRendererPrepareNativeStageOwner(
         gNdsNativeStageRoofSnapSerial = 1u;
     }
     for (roof_snap_run_index = 0u;
-         roof_snap_run_index < NDS_NATIVE_STAGE_MAX_RUN_COUNT;
+         (gNdsNativeStageRunWitness != 0u) &&
+         (roof_snap_run_index < NDS_NATIVE_STAGE_MAX_RUN_COUNT);
          roof_snap_run_index++)
     {
         gNdsNativeStageRoofSnapValid[roof_snap_run_index] = 0u;
@@ -4746,7 +4757,7 @@ ndsRendererNativeStageBindingHidden(const NDSNativeStageRun *run)
         ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
           ((u64)1u << binding_index)) != 0u) ? TRUE : FALSE;
 
-    if (hidden == FALSE)
+    if ((hidden == FALSE) && (gNdsNativeStageRunWitness != 0u))
     {
         /* This existing non-ITCM call is immediately before the diagnostic
          * card-cull gate. The gate itself moves none of these counters, and a
@@ -5102,7 +5113,10 @@ stage_account_run:
             ndsRendererBenchmarkSegment0CheckpointRun(run_offset);
         }
 #endif
-        ndsRendererNativeStagePublishRunEmission(run_index, emitted_triangles);
+        if (gNdsNativeStageRunWitness != 0u)
+        {
+            ndsRendererNativeStagePublishRunEmission(run_index, emitted_triangles);
+        }
         ndsRendererNativeStageAccountRun(
             stats,
             (run->submit_class ==

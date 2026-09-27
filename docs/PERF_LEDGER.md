@@ -8583,3 +8583,14 @@ frame labels shifted after ring-stop seams): WORK-H P50/P95/P99 1,293,056/
 1,782,784/2,189,632 -> 1,283,520/1,772,160/2,178,496; MISC P50 -7.7K; two-VBlank
 327 -> 373. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md` section 5.
+
+## 2026-09-27 — stage commit loop: witness off, pointer chain, hoisted count
+
+**BANKED.** The per-run RoofSnap/shortfall witness (lab-only readers) is gated by
+`gNdsNativeStageRunWitness` (default 0); the persistent stage world build points
+at cached ancestor worlds instead of copying them; the display commit hoists its
+segment count. `C55BCBBD` -> `44F19756`: WORK-H P50/P95/P99 1,283,520/1,772,160/
+2,178,496 -> 1,264,192/1,750,784/2,155,008; STG P50 -16.6K; two-VBlank 373 -> 440.
+Gameplay identical after one pre-GO resync (load wait one frame sooner;
+`compare-replay-digest.py --resync`). RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-stg-gx/README.md` section 2.
