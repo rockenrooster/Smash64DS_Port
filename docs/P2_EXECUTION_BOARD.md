@@ -91,8 +91,8 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo; texpool witness; digest word mix; lean phase clocks out; STG span; ITCM x4; witnesses; Results guard; key words; HW divides; lean spare; stage memo + 1 KB data pin; ForgetRange blocks; digest in HUD; lab clocks out; DTCM hot stack x2; DTCM sine: `D0627BDB` WORK-H P50/P95/P99 1,057,600/1,455,360/1,751,616.
-**Constraint**: CSS reserve >=183,072 B; freeplay owner route 249,808 free at the DTCM hot stack (margin 66,736).
+MP f32 cache reads; billboard memo; texpool witness; digest word mix; lean phase clocks out; STG span; ITCM x4; witnesses; Results guard; key words; HW divides; lean spare; stage memo + 1 KB data pin; ForgetRange blocks; digest in HUD; lab clocks out; DTCM hot stack x2; DTCM sine; DTCM scalars 2: `4501F881` WORK-H P50/P95/P99 1,046,592/1,444,736/1,704,384.
+**Constraint**: CSS reserve >=183,072 B; freeplay owner route 253,904 free (09-27, margin 70,832).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 

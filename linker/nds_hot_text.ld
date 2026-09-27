@@ -134,6 +134,9 @@ SECTIONS {
 		 * Initialised half: these carry a value, so they belong in the LOADED
 		 * .dtcm section. In NOLOAD .dtcm.bss the link succeeds and the
 		 * initialiser is silently dropped. */
+		/* The 2026-09-27 tail of each block was ranked by the D-cache fill
+		 * census (artifacts/performance/2026-09-27_p2-2p8-fast-mem/dmiss2/):
+		 * fills a frame per byte, ARM9-only objects. */
 		/* DTCM-RESIDENT HOT SCALARS: BEGIN */
 		*(.data.sNdsRendererRuntimeOwner)
 		*(.data.gNdsRendererFastRunMode)
@@ -145,6 +148,12 @@ SECTIONS {
 		*(.data.gNdsFtrDrawMemoStubRoot)
 		*(.data.dLBParticleCurrentTransformID)
 		*(.data.sNdsNativeStagePacketActive)
+		*(.data.dSYMainSceneManagerOverlay)
+		*(.data.sNdsFighterDisplayContractLastFrame)
+		*(.data.sNdsDamageSlashTextureLoadedSlot)
+		*(.data.gNdsDonkeyChargePresentationAppliedID)
+		*(.data.dFTPurinJumpAerialFVelocities)
+		*(.data.gNdsTaskmanGeneralHeapFreeMin)
 		/* DTCM-RESIDENT HOT SCALARS: END */
 		/* 32, not 4. The ALIGN(32) after .dtcm.fighter above exists so that
 		 * Calico's __irq_table keeps its 32-byte boundary whatever the
@@ -181,12 +190,14 @@ SECTIONS {
 		 * wildcard that matches nothing cannot be observed, and
 		 * scripts/check-dtcm-residency.py proves each name below landed.
 		 * Zero-initialised half; NOLOAD is correct. */
+		/* The 2026-09-27 tail of each block was ranked by the D-cache fill
+		 * census (artifacts/performance/2026-09-27_p2-2p8-fast-mem/dmiss2/):
+		 * fills a frame per byte, ARM9-only objects. */
 		/* DTCM-RESIDENT HOT SCALARS: BEGIN */
 		*(.bss.dSYTaskmanFrameCount)
 		*(.bss.sNdsRendererBattleStaticTextureArmed)
 		*(.bss.gNdsMPLineYakumonoHits)
 		*(.bss.gSCManagerBattleState)
-		*(.bss.sNdsRendererTask36CaptureActive)
 		*(.bss.gNdsFighterMarioFoxDLAllDrawCount)
 		*(.bss.sFTDisplayMainSkyFogAlpha)
 		*(.bss.sNdsOpeningRoomCurrentDrawCameraGObj)
@@ -202,7 +213,6 @@ SECTIONS {
 		*(.bss.sNdsRendererFastRunCount)
 		*(.bss.gNdsTickHudStageTicks)
 		*(.bss.gNdsG1SiteCacheRoute)
-		*(.bss.sNdsEffectPacketArmed)
 		*(.bss.gNdsRendererBattleStaticTexturePinnedHitCount)
 		*(.bss.sNdsRendererAdapterStageWorldCache)
 		*(.bss.gNdsSceneHarnessMode)
@@ -274,7 +284,6 @@ SECTIONS {
 		*(.bss.sNdsNativeFighterActiveRootLightPreambles)
 		*(.bss.sNdsRendererAdapterEffectOtherModeL)
 		*(.bss.gNdsTickHudSrcPhysicsDefaultTicks)
-		*(.bss.gNdsCameraFrameCount)
 		*(.bss.gNdsBattlePlayablePacingPresentedFrames)
 		*(.bss.sNdsRendererRuntimeTextureCacheEvictCount)
 		*(.bss.gNdsIFCommonHUDRecordCount)
@@ -284,6 +293,50 @@ SECTIONS {
 		*(.bss.sNdsRendererHardwareSubmitClassCounts)
 		*(.bss.gMPCollisionLightAngleY)
 		*(.bss.sNdsRendererWhispyBasisValid)
+		*(.bss.gNdsHardwareRendererOverlayOnlyFlushCount)
+		*(.bss.gNdsFighterMarioFoxStageGCDrawAllLoopMask)
+		*(.bss.gFTDataYoshiParticleBankID)
+		*(.bss.sSYTaskmanDLBranches)
+		*(.bss.sNdsFtrLeanKeySeenCount)
+		*(.bss.sNdsRendererGXStateShadow)
+		*(.bss.gNdsMPWallSweepCalls)
+		*(.bss.gNdsLabPoseJointCapLimit)
+		*(.bss.gMPCollisionLineGroups)
+		*(.bss.sNdsRendererParticleAtlasName)
+		*(.bss.sNdsFtrLeanMemoFill)
+		*(.bss.gspF3DEX2_fifoTextStart)
+		*(.bss.sNdsMPLineYakumonoState)
+		*(.bss.gNdsFtPoseStepped)
+		*(.bss.gIFCommonPlayerInterface)
+		*(.bss.sNdsFighterManagerLiveGObjs)
+		*(.bss.gSYTaskmanGeneralHeap)
+		*(.bss.gNdsRendererBattleStaticTextureSeenMaskHi)
+		*(.bss.gNdsNativeStageRunWitness)
+		*(.bss.sGCProcessQueue)
+		*(.bss.sNdsRendererFastOwnerTriangleCount)
+		*(.bss.gGCCommonLinks)
+		*(.bss.sNdsMPLineYakumonoValue)
+		*(.bss.gNdsR2FtAnimNullSkips)
+		*(.bss.gGRCommonStruct)
+		*(.bss.gNdsFighterDLAllDrawP0HardwareTriangleCount)
+		*(.bss.sNdsFighterStatusGeneration)
+		*(.bss.sNdsStageGxStaticWorld)
+		*(.bss.sSYTaskmanDefaultGraphicsHeap)
+		*(.bss.sNdsFtPose)
+		*(.bss.gGMCameraMatrix)
+		*(.bss.sNdsRendererAdapterStageWorldIndex)
+		*(.bss.gLBCommonScale)
+		*(.bss.gNdsTickHudAudioTicks)
+		*(.bss.sNdsRendererParticleScaleShift)
+		*(.bss.gNdsStageMPSweepFloorLoopLineSweepDiffMissCount)
+		*(.bss.sLBParticleStructsAllocLinks)
+		*(.bss.gNdsTickHudFlushTicks)
+		*(.bss.gNdsItemCapsuleAlpha)
+		*(.bss.sMNStartupStatusBuffer)
+		*(.bss.sSYTaskmanDLBuffers)
+		*(.bss.gNdsFtrDrawMemoInvalidations)
+		*(.bss.gNdsR2FighterFacingLr)
+		*(.bss.glGlobalData)
 		/* DTCM-RESIDENT HOT SCALARS: END */
 		. = ALIGN(4);
 	} >dtcm AT>lma9 :dtcm

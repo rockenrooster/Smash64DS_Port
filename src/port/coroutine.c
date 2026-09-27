@@ -43,7 +43,7 @@ static PortCoroutine *sCurrentCoroutine;
  * coroutines may run on it. The fighter pose was priced and left off: its
  * frames were ~46 fills a frame, a wash against the trampoline. */
 #ifndef NDS_DTCM_HOT_STACK_BYTES
-#define NDS_DTCM_HOT_STACK_BYTES 7168u
+#define NDS_DTCM_HOT_STACK_BYTES 6144u
 #endif
 #define NDS_DTCM_HOT_STACK_STR2(x) #x
 #define NDS_DTCM_HOT_STACK_STR(x) NDS_DTCM_HOT_STACK_STR2(x)

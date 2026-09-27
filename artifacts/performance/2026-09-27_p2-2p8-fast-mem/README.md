@@ -865,3 +865,33 @@ the match's heap low-water is 69,340 B. So `ak96` lowered the keep-free to
 
 Reverted. Zero motion reads after GO needs clips resident or prefetched
 before first use, not a larger LRU.
+
+## 34. DTCM hot scalars, second batch, ranked by fills per byte
+
+With the half sine table in, 284 B of DTCM were left under the 0x02ff3000
+boot-stack ceiling. The hot stack dropped to 6 KB (reach 3,740 B), which freed
+1 KB. `scratchpad dtcm_pick.py`, kept here as `dmiss2/`'s method, ranked the
+census's static objects by fills a frame per byte. It kept only single-TU
+`.bss.<name>` / `.data.<name>` input sections and filled a 1,500 B budget:
+- 49 objects, about 638 fills a frame;
+- plus libnds `glGlobalData` (`.bss.glGlobalData`, 76 B, 68 fills a frame).
+
+They include the taskman DL/heap descriptors, `gGCCommonLinks`,
+`sGCProcessQueue`, `sNdsFtPose`, `gGRCommonStruct`, `gGMCameraMatrix`/
+`gGMCameraStruct`'s neighbours, the MP line/yakumono state, the stage world
+index and a set of per-frame counters. All are ARM9-only: no DMA endpoint,
+nothing the ARM7 or IPC sees. They join the existing hot-scalar blocks by
+name. The three names this configuration compiles out
+(`sNdsRendererTask36CaptureActive`, `sNdsEffectPacketArmed`,
+`gNdsCameraFrameCount`) left the list, so `check-dtcm-residency.py` passes
+again: 159/159 resident. The layout gate passes.
+
+`4501F881` (`hs2`) vs `sindtcm` (cross-build), replay IDENTICAL:
+- WORK-H P50/P95/P99 1,046,592/1,444,736/1,704,384 (-11.0K/-10.6K/-47K).
+- Paired median -11,008, mean -11.8K: SRC -5.1K, STG -2.4K, MISC -2.4K,
+  FTR -0.8K.
+- 1,288 of 1,972 frames at or under 1,120,000.
+- Heap low-water 69,340; materializations 44.
+
+All-content config: DTCM end 0x02ff2ef4, layout gate passes, CSS reserve free
+253,904, previews draw.

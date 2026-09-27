@@ -8941,3 +8941,14 @@ clip hits 334 -> 339: the ~367 in-match reads (~30K ticks each) are first
 uses. The tighter heap refused lean spares (materializations 44 -> 54);
 WORK-H P95 1,462,912. Reverted.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 33.
+
+## 2026-09-27 — DTCM hot scalars, second batch
+
+**BANKED.** 49 ARM9-only statics plus libnds `glGlobalData` (1,576 B, about
+706 D-cache fills a frame in the census) join the DTCM hot-scalar blocks by
+name. The hot stack went to 6 KB (reach 3,740 B) to make room; the residency
+check (now 159/159) and the layout gate pass. `4501F881` vs `sindtcm`, replay
+identical: WORK-H P50/P95/P99 1,046,592/1,444,736/1,704,384, paired -11.0K
+(SRC -5.1K); 1,288/1,972 frames within 1,120,000. All-content CSS free
+253,904. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 34.
