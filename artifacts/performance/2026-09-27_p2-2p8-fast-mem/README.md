@@ -76,3 +76,27 @@ Net: P50 -43,072, P95 -70,144, P99 -71,296; VBlanks 2/3/4/5+ 556/1,315/90/12,
 ## Files
 
 `<arm>{.json,-rows.csv,-run.log}` for every arm above.
+
+## Section 2: memcmp and the flat-walk cache (same day, same control)
+
+| arm | ROM | change | WORK-H P50 / P95 / P99 | 2-VBlank |
+|---|---|---|---|---:|
+| fastmem | F6CE3DAB | (section 1 result) | 1,215,616 / 1,657,152 / 2,056,192 | 556 |
+| memcmp | 537A52A1 | ARM memcmp in ITCM; Task 37 libc extraction off while `NDS_FAST_MEM=1` | 1,205,632 / 1,658,880 / 2,047,488 | 585 |
+| flatassoc | 6A6CF3CE | searched 4-entry flat-walk cache (`reloc_backend_compat_shims.c`) | **1,198,912 / 1,659,712 / 2,038,144** | **624** |
+
+VBlanks 2/3/4/5+ 624/1,249/88/12, 21.89 FPS. P95 is flat across both (inside
+the ~±7K single-run noise); P50 -16.7K, P99 -18K, SRC P50 -9K.
+
+- **memcmp.** 129 calls a frame, all but two from the stage world source-key
+  compare. Words while both pointers are aligned, then the first differing word
+  (or the tail) bytewise, so the value is newlib's: the difference of the first
+  differing bytes as unsigned chars. The boot self-test adds memcmp at seven
+  positions both ways (29,088 cases, 0 failures). With all three members
+  replaced, `NDS_TASK37_ITCM_LIBC` is 0 whenever `NDS_FAST_MEM` is 1.
+- **Flat-walk cache.** `ndsFTParamsFlatWalkFor` was direct-mapped on
+  `(ptr >> 4) & 3`; its steady keys are the four fighters' TopN joints
+  (`ftmain.c:942`, per fighter per tick), and equally strided DObjs shared a
+  slot, so the flatten walk re-ran on most calls (~12K/frame in the profile).
+  Now four compares find a resident key; a miss takes a stale or empty slot,
+  else the next in turn. Same table, same invalidation, same results.

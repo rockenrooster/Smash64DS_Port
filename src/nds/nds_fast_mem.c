@@ -1,4 +1,4 @@
-/* P2-2p8 (2026-09-27): memcpy and memset in ARM state, in ITCM.
+/* P2-2p8 (2026-09-27): memcpy, memset and memcmp in ARM state, in ITCM.
  *
  * The per-PC profile of the four-CPU stress put newlib's generic C memcpy at
  * 33.8K ticks a frame and memset at 15.7K. Both were the -Os Thumb builds that
@@ -14,9 +14,13 @@
  * libc members (NDS_FAST_MEM, Makefile), so every caller -- including GCC's
  * own struct copies and libc internals -- takes them.
  *
+ * memcmp (129 calls a frame, the stage world key compare) followed: newlib's
+ * Thumb member compared bytewise.
+ *
  * Tick-HUD builds run ndsFastMemSelfTest at boot: every size 0..100 at every
  * source/destination word offset against a byte loop, with guard bytes on
- * both sides; gNdsFastMemSelfTestFailures must read 0. */
+ * both sides, and memcmp against the byte difference at seven positions both
+ * ways; gNdsFastMemSelfTestFailures must read 0. */
 #include <nds.h>
 #include <string.h>
 
@@ -112,6 +116,51 @@ __asm__(
     "    bne   .LndsMsTail\n"
     "    bx    lr\n"
     "    .size memset, . - memset\n"
+    "\n"
+    /* memcmp: words while both pointers are aligned, then the first differing
+     * word (or the tail) bytewise, so the result is newlib's own: the
+     * difference of the first differing bytes as unsigned chars, else 0. */
+    "    .global memcmp\n"
+    "    .type memcmp, %function\n"
+    "memcmp:\n"
+    "    orr   r3, r0, r1\n"
+    "    tst   r3, #3\n"
+    "    bne   .LndsMpBytes\n"
+    "    subs  r2, r2, #4\n"
+    "    blo   .LndsMpWordsDone\n"
+    ".LndsMpLoop4:\n"
+    "    ldr   r3, [r0], #4\n"
+    "    ldr   ip, [r1], #4\n"
+    "    cmp   r3, ip\n"
+    "    bne   .LndsMpDiff\n"
+    "    subs  r2, r2, #4\n"
+    "    bhs   .LndsMpLoop4\n"
+    ".LndsMpWordsDone:\n"
+    "    adds  r2, r2, #4\n"
+    "    bne   .LndsMpBytes\n"
+    "    mov   r0, #0\n"
+    "    bx    lr\n"
+    ".LndsMpDiff:\n"
+    "    sub   r0, r0, #4\n"
+    "    sub   r1, r1, #4\n"
+    "    mov   r2, #4\n"
+    ".LndsMpBytes:\n"
+    "    subs  r2, r2, #1\n"
+    "    blo   .LndsMpEqual\n"
+    ".LndsMpLoop1:\n"
+    "    ldrb  r3, [r0], #1\n"
+    "    ldrb  ip, [r1], #1\n"
+    "    subs  r3, r3, ip\n"
+    "    bne   .LndsMpReturn\n"
+    "    subs  r2, r2, #1\n"
+    "    bhs   .LndsMpLoop1\n"
+    ".LndsMpEqual:\n"
+    "    mov   r0, #0\n"
+    "    bx    lr\n"
+    ".LndsMpReturn:\n"
+    "    mov   r0, r3\n"
+    "    bx    lr\n"
+    "    .size memcmp, . - memcmp\n"
     "    .popsection\n"
 #if defined(__thumb__)
     "    .thumb\n"
@@ -125,6 +174,8 @@ __attribute__((used)) volatile u32 gNdsFastMemSelfTestFailures;
 /* Called through volatile pointers so GCC cannot expand the calls itself. */
 static void *(*volatile sNdsFastMemCopy)(void *, const void *, size_t) = memcpy;
 static void *(*volatile sNdsFastMemSet)(void *, int, size_t) = memset;
+static int (*volatile sNdsFastMemCmp)(const void *, const void *, size_t) =
+    memcmp;
 
 void ndsFastMemSelfTest(void)
 {
@@ -185,6 +236,57 @@ void ndsFastMemSelfTest(void)
                     {
                         gNdsFastMemSelfTestFailures++;
                         break;
+                    }
+                }
+                /* memcmp: equal, then one differing byte at the first four,
+                 * middle and last positions, in both directions. */
+                {
+                    static const u32 kSpots = 7u;
+                    u32 spot;
+
+                    for (i = 0u; i < size; i++)
+                    {
+                        src[16u + so + i] = (u8)(0x40u + i);
+                        dst[16u + dof + i] = (u8)(0x40u + i);
+                    }
+                    for (spot = 0u; spot <= kSpots; spot++)
+                    {
+                        u32 pos = (spot < 4u) ? spot :
+                            (spot == 4u) ? (size / 2u) :
+                            (spot == 5u) ? (size - 1u) : 0xffffffffu;
+                        u32 dir;
+
+                        for (dir = 0u; dir < 2u; dir++)
+                        {
+                            s32 want = 0;
+                            s32 got;
+                            u32 k;
+
+                            if ((spot < 6u) && (pos < size))
+                            {
+                                dst[16u + dof + pos] =
+                                    (u8)(dir ? 0x20u : 0xf0u);
+                            }
+                            for (k = 0u; k < size; k++)
+                            {
+                                want = (s32)src[16u + so + k] -
+                                       (s32)dst[16u + dof + k];
+                                if (want != 0)
+                                {
+                                    break;
+                                }
+                            }
+                            got = sNdsFastMemCmp(&src[16u + so], d, size);
+                            gNdsFastMemSelfTestRuns++;
+                            if (got != want)
+                            {
+                                gNdsFastMemSelfTestFailures++;
+                            }
+                            if ((spot < 6u) && (pos < size))
+                            {
+                                dst[16u + dof + pos] = (u8)(0x40u + pos);
+                            }
+                        }
                     }
                 }
             }

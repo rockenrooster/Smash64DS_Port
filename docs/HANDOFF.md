@@ -29,7 +29,7 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26/27 solo (Codex out of usage):** slice-7 regression fixed; storage/FGM
 (ARM7 async, 160 KiB arena, -72 KiB); fast cpuGetTiming; stage, status-path,
 HUD and reloc overhead cuts; A5 hurtbox reject; ARM memcpy/memset (ITCM).
-`F6CE3DAB` WORK-H P50/P95 1,215,616/1,657,152. Receipts `2026-09-2{6,7}_p2-2p8-*`.
+`6A6CF3CE` WORK-H P50/P95 1,198,912/1,659,712. Receipts `2026-09-2{6,7}_p2-2p8-*`.
 Digest: `--sequence --resync 4`. Median > gate: next FTR materialize tail,
 SINT/status path, MISC; STG/SPHD machinery.
 

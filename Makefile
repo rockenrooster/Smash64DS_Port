@@ -146,9 +146,9 @@ NDS_P2_EFFECT_CENSUS ?= 0
 # decomp float test (src/port/nds_p2_hurtbox_reject.c). gNdsP2HurtboxRejectMode
 # selects off/reject/shadow at runtime.
 NDS_P2_HURTBOX_REJECT ?= 1
-# P2-2p8: memcpy/memset in ARM state with 32-byte LDM/STM bodies, in ITCM
+# P2-2p8: memcpy/memset/memcmp in ARM state (32-byte LDM/STM bodies), in ITCM
 # (src/nds/nds_fast_mem.c), in place of newlib's Thumb C members that Task 37
-# moved into ITCM. 0 restores those members.
+# moved into ITCM (NDS_TASK37_ITCM_LIBC is 0 while this is 1). 0 restores them.
 NDS_FAST_MEM ?= 1
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
 # gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
@@ -2440,7 +2440,7 @@ NDS_TASK37_ITCM_LEAVES ?= 0
 # and produce a byte-identical ROM. Environment-driven builds were unaffected
 # (the env value is in place before line 110), which is why the lab A/B runs
 # were valid and this stayed hidden.
-NDS_TASK37_ITCM_LIBC = $(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
+NDS_TASK37_ITCM_LIBC = $(if $(filter 1,$(NDS_FAST_MEM)),0,$(if $(filter 1 3 5 7,$(NDS_TASK37_ITCM_LEAVES)),1,0))
 NDS_TASK37_ITCM_LIBM = $(if $(filter 2 3 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
 NDS_TASK37_ITCM_PORT = $(if $(filter 4 5 6 7,$(NDS_TASK37_ITCM_LEAVES)),1,0)
 # Layout control: N bytes of never-executed padding in .main, nothing in ITCM.
@@ -4281,7 +4281,7 @@ NDS_TASK37_LIBC_SHA256 := \
 	01424211f6f671e0b07b52fb72086f14e18000fca089e9ecfe45aa77b36873e2
 NDS_TASK37_LIBM_SHA256 := \
 	b437e8747f520c891d2784df015ab6f8cd30bb91cd02430f03657c20027d6685
-NDS_TASK37_LIBC_MEMBERS := $(if $(filter 1,$(NDS_FAST_MEM)),,libc_a-memset.o libc_a-memcpy-stub.o) libc_a-memcmp.o
+NDS_TASK37_LIBC_MEMBERS := libc_a-memset.o libc_a-memcpy-stub.o libc_a-memcmp.o
 NDS_TASK37_LIBM_MEMBERS := libm_a-ef_sqrt.o
 NDS_TASK37_ITCM_OFILES := \
 	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBC_MEMBERS)))) \

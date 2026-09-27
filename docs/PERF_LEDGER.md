@@ -8629,3 +8629,14 @@ each step replay identical: WORK-H P50/P95/P99 1,258,688/1,727,296/2,127,488 ->
 556; 21.61 FPS. RED. Refuted: a hand-written cpuGetTiming (-0.5K P95, noise)
 and a 200 KB animation cache (motion reads 362 -> 275, P95 -2.7K).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md`.
+
+## 2026-09-27 — ARM memcmp; flat-walk cache searched instead of direct-mapped
+
+**BANKED (P50).** memcmp joins memcpy/memset in ARM/ITCM (129 calls/frame, the
+stage world key compare; self-test 29,088 cases / 0 failures). The fighter-parts
+flat-walk cache was direct-mapped on `(ptr>>4)&3` and its four steady keys (the
+fighters' TopN joints) collided, re-running the flatten walk; it is now a
+searched 4-entry table. `F6CE3DAB` -> `6A6CF3CE`, replay identical: WORK-H
+P50/P95/P99 1,215,616/1,657,152/2,056,192 -> 1,198,912/1,659,712/2,038,144
+(P95 within noise); two-VBlank 556 -> 624; 21.89 FPS. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 2.

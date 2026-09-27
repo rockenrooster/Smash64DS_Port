@@ -3073,17 +3073,44 @@ static u32 ndsFTParamsFlattenDescendants(
     }
 }
 
+/* Searched, not direct-mapped (2026-09-27). The steady keys are the four
+ * fighters' TopN joints (ftmain.c:942, once per fighter per tick), and a
+ * `(ptr >> 4) & 3` slot let equally-strided DObjs share one slot: the flatten
+ * walk re-ran on most calls (~12K ticks a frame of the profile). Four compares
+ * find any resident key; a miss takes a stale slot, else the next in turn. */
+static u32 sNdsFtPartsFlatNext;
+
 static const NDSFtPartsFlatWalk *ndsFTParamsFlatWalkFor(DObj *root)
 {
-    NDSFtPartsFlatWalk *flat =
-        &sNdsFtPartsFlat[((u32)(uintptr_t)root >> 4) &
-                         (NDS_FTPARTS_FLAT_SLOTS - 1u)];
+    NDSFtPartsFlatWalk *flat = NULL;
     u32 count;
+    u32 i;
 
-    if ((flat->root == root) &&
-        (flat->heap_generation == gNdsTaskmanHeapGeneration))
+    for (i = 0u; i < NDS_FTPARTS_FLAT_SLOTS; i++)
     {
-        return flat;
+        NDSFtPartsFlatWalk *slot = &sNdsFtPartsFlat[i];
+
+        if (slot->heap_generation != gNdsTaskmanHeapGeneration)
+        {
+            if (flat == NULL)
+            {
+                flat = slot;
+            }
+            continue;
+        }
+        if (slot->root == root)
+        {
+            return slot;
+        }
+        if ((slot->root == NULL) && (flat == NULL))
+        {
+            flat = slot;
+        }
+    }
+    if (flat == NULL)
+    {
+        flat = &sNdsFtPartsFlat[sNdsFtPartsFlatNext++ &
+                                (NDS_FTPARTS_FLAT_SLOTS - 1u)];
     }
     count = ndsFTParamsFlattenDescendants(
         root, flat->parts, NDS_FTPARTS_FLAT_MAX);
