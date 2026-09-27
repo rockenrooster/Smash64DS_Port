@@ -101,6 +101,14 @@ volatile u32 gNdsR2CameraFixedSaturateCount __attribute__((used));
 volatile u32 gNdsR2CameraFixedDegenerateCount __attribute__((used));
 volatile u32 gNdsR2CameraFixedRescaleCount __attribute__((used));
 
+/* A9 (2026-09-27): the framing witness is a diagnostic for
+ * scripts/diagnostics/probe-native-render-scene.ps1, built only with
+ * NDS_CAMERA_FRAME_WITNESS=1. It cost ~1.7K ticks a frame (four fighters'
+ * soft-float margins) in every build, the gate ROM included. */
+#ifndef NDS_CAMERA_FRAME_WITNESS
+#define NDS_CAMERA_FRAME_WITNESS 0
+#endif
+#if NDS_CAMERA_FRAME_WITNESS
 /* Battle framing witness.  Keep the source f32 values exactly as
  * gmCameraUpdateInterests produced them: converting them in the guest would
  * add work and would make the diagnostic itself another numeric boundary.
@@ -306,6 +314,11 @@ static void ndsCameraRecordFrame(const Vec3f *center, f32 half_w, f32 half_h)
         }
     }
 }
+#else
+#define ndsCameraResetFrameWitness() ((void)0)
+#define ndsCameraRecordFrame(center, half_w, half_h) \
+    ((void)(center), (void)(half_w), (void)(half_h))
+#endif
 
 /* These three functions are the source battle-follow callers with one bounded
  * diagnostic call immediately after gmCameraUpdateInterests.  The original

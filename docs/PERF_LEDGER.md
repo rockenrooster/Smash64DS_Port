@@ -8799,3 +8799,14 @@ every 128th sample. Same-ROM A/B: -2.9K, witness values identical on both arms.
 Final `3FDE5B3B`, replay identical: WORK-H P50/P95/P99 1,099,200/1,536,512/
 1,948,416; paired -2.3K vs `itcm4`. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 18.
+
+## 2026-09-27 — battle-camera framing witness out of every ROM (A9)
+
+**BANKED (small).** `ndsCameraRecordFrame` (four fighters' off-screen margins in
+soft float, every frame, every build; read only by
+`probe-native-render-scene.ps1`) now compiles only with
+`NDS_CAMERA_FRAME_WITNESS=1` (default 0). Same-ROM A/B: WORK-H paired median
+-2.4K (SRC). Final `947E6F19`, replay identical: WORK-H P50/P95/P99
+1,099,136/1,536,576/1,961,152; paired +0.3K vs `libcf` (cross-build layout, not
+claimed). RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 19.

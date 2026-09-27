@@ -435,3 +435,26 @@ Final `3FDE5B3B` (`libcf`), replay IDENTICAL to `itcm4`:
 
 The same census shows ITCM at 128 B free. The remaining admissions are worth
 about 0.5K each, so the ITCM lever is spent.
+
+## 19. Battle-camera framing witness out of every ROM (A9)
+
+`ndsCameraRecordFrame` computes four fighters' off-screen margins in soft
+float, once a frame, in every build. Only `probe-native-render-scene.ps1`
+reads it. It now compiles only with `NDS_CAMERA_FRAME_WITNESS=1` (Makefile,
+default 0). Its globals go with it, so the probe fails on a missing symbol
+instead of reading zeros.
+
+Same-ROM A/B (`BA72BD7E`, lab word): witness-off minus witness-on, paired WORK-H
+median -2,368 (SRC -2,368). Both arms replay IDENTICAL to `libcf`.
+
+Final `947E6F19` (`camf`) replays IDENTICAL to `libcf`:
+- WORK-H P50/P95/P99 1,099,136/1,536,576/1,961,152.
+- Paired median against `libcf` is +320. The work removed is the same-ROM
+  -2.4K; this cross-build compare also moves every later function's address.
+  It is reported, not claimed as a further cut.
+- VBlanks 986/932/49/6.
+
+Build note: the first `-j8` build after the Makefile edit failed in the
+particle-texture generator (Python `io.open`) and the run measured the stale
+lab ROM. A serial rebuild succeeded, and `nm` confirmed the witness symbols
+are absent.
