@@ -8711,3 +8711,14 @@ high-water stays exact (123). `473CCE25` -> `B9AF6D9D`, replay identical:
 WORK-H P50/P95/P99 1,157,440/1,609,728/2,000,128 -> 1,152,192/1,606,592/
 2,002,496; OTHR P50 -5.8K; two-VBlank frames 777 -> 792. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 9.
+
+## 2026-09-27 — replay digest word mix (A9)
+
+**BANKED (small, A9).** The tick-HUD replay digest folded each word byte-wise
+(FNV-1a, four multiplies); it now folds one word per step (xor, odd multiply,
+xorshift; a bijection in hash and word). Same-ROM A/B: byte-wise arm replays
+identical to `texpool`; word-wise arm WORK-H paired median -3.4K. Final
+`7C2EF9D0` replays identical to the word-wise arm: WORK-H P50/P95/P99
+1,148,416/1,599,104/2,000,384 (from 1,152,192/1,606,592/2,002,496). Digest words
+change: later A/Bs use `wmixf` as control. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 10.

@@ -3,7 +3,7 @@
  * docs/p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md section 5. Every later phase
  * replaces machinery around the source's gameplay rules and must leave those
  * rules' results untouched. This is the instrument that says so: after every
- * logic tick it folds the gameplay state into one 32-bit FNV-1a word, and the
+ * logic tick it folds the gameplay state into one 32-bit word, and the
  * battle host publishes the two words of each presented frame into the tick-HUD
  * ring (DGSA = the undrawn tick, DGSB = the drawn tick). A candidate ROM and its
  * control, run on the same deterministic four-CPU match, must produce identical
@@ -34,17 +34,16 @@ extern s32 syUtilsRandSeed(void);
 
 volatile u32 gNdsReplayDigestTicks;
 
+/* One multiply per word rather than FNV-1a's four (one per byte): the digest is
+ * instrument work inside every measured frame. Each step is a bijection in both
+ * the running hash and the word (xor, odd multiply, xorshift), so any single
+ * differing word still changes the result; the xorshift carries high-bit
+ * differences (a float's sign) down so two of them cannot cancel in the top bit.
+ * Word mix vs byte-wise FNV-1a, same ROM: WORK-H paired median -3.4K. */
 static inline u32 ndsReplayDigestMix(u32 hash, u32 value)
 {
-    u32 i;
-
-    for (i = 0u; i < 4u; i++)
-    {
-        hash ^= value & 0xffu;
-        hash *= 16777619u;
-        value >>= 8;
-    }
-    return hash;
+    hash = (hash ^ value) * 16777619u;
+    return hash ^ (hash >> 15);
 }
 
 static inline u32 ndsReplayDigestMixF32(u32 hash, f32 value)
@@ -59,7 +58,7 @@ static inline u32 ndsReplayDigestMixF32(u32 hash, f32 value)
     return ndsReplayDigestMix(hash, bits.u);
 }
 
-static u32 ndsReplayDigestMixVec3(u32 hash, const Vec3f *v)
+static inline u32 ndsReplayDigestMixVec3(u32 hash, const Vec3f *v)
 {
     hash = ndsReplayDigestMixF32(hash, v->x);
     hash = ndsReplayDigestMixF32(hash, v->y);

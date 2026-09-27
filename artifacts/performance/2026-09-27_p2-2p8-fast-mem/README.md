@@ -216,3 +216,25 @@ stays exact (123 over the match); nothing in the gate build reads it.
 WORK-H P50/P95/P99 1,157,440/1,609,728/2,000,128 -> **1,152,192/1,606,592/
 2,002,496**; OTHR P50 359,296 -> 353,536; VBlanks/FPS 777 1118 67 11 22.63 ->
 792 1106 64 11 22.71. Evidence `texpool.*`.
+
+## 10. Replay digest mixes one word per multiply (A9)
+
+The tick-HUD replay digest (instrument only, two ticks per presented frame)
+folded each word byte by byte (FNV-1a: four xor/multiply steps). It now folds a
+word in one step: `h = (h ^ v) * 16777619; h ^= h >> 15`. Each step is a
+bijection in both the hash and the word, so a single differing word still
+changes the digest. The xorshift moves high-bit differences, such as a float's
+sign, into lower bits, so two of them cannot cancel in the top bit.
+`ndsReplayDigestMixVec3` is now inline. Digest words change, so later A/Bs
+use `wmixf` as the control.
+
+Same-ROM A/B (`80BB8AF4`, lab word `gNdsReplayDigestWordMix`):
+- `wmix0` (byte-wise) replays IDENTICAL to `texpool`, so the lab ROM's gameplay
+  is unchanged.
+- `wmix1` (word-wise): paired WORK-H median -3,392 (mean -3,473); SRC/STG/FTR/
+  MISC deltas under 100.
+
+The lab word was then deleted. Final `7C2EF9D0` (`wmixf`) replays IDENTICAL to
+`wmix1`, so it is the measured candidate. WORK-H P50/P95/P99 against `texpool`:
+1,152,192/1,606,592/2,002,496 -> **1,148,416/1,599,104/2,000,384**. VBlanks
+804/1,095/64/10. Native failures 0; heap low-water unchanged.
