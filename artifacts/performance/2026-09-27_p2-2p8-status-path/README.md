@@ -38,3 +38,17 @@ with unchanged stage code -- layout noise, not banked alone.
 hash overflow 0. Evidence: `token-route1`, `forget-route1` (json/rows/log).
 
 Not changed: pose parse/play and the figatree copy (A3/A4 pre-bound motions).
+
+## 4. Pose clock adder in ARM state -- BANKED
+
+`include/nds/nds_f32_exact.h` asks to be compiled in ARM state (CLZ is one
+instruction there). `nds_ft_pose.c` is a Thumb TU, so the static inline could
+not inline into the ARM-state `ndsFtPoseParse` and became an out-of-line Thumb
+function in main RAM calling `__clzsi2`: 306 calls a frame at 105 cycles
+(profile). The header is now included under `#pragma GCC target("arm")`; the
+adder is ARM with native CLZ. Same arithmetic, same bits.
+
+`f32arm` `A8E6AFD9` against `forget` `077110CD`: WORK-H P50/P95/P99
+1,301,504/1,794,240/2,197,184 -> 1,293,056/1,782,784/2,189,632; SRC P50
+588,352 -> 581,120; two-VBlank 311 -> 327. Pose oracle mismatches 0, 702
+binds. Replay digest IDENTICAL. Evidence: `f32arm-route1` (json/rows/log).

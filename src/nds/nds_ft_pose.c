@@ -52,7 +52,13 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseFrame);
 #include <sys/taskman.h>
 #include <nds/nds_fcmp.h>
 #include <nds/nds_anim_fixed.h>
+/* ARM state for the clock adder, as its header asks: this TU is Thumb, and a
+ * Thumb inline cannot inline into the ARM-state parser, so the adder became a
+ * main-RAM Thumb function calling __clzsi2 (~105 cycles, ~300 calls a frame). */
+#pragma GCC push_options
+#pragma GCC target("arm")
 #include <nds/nds_f32_exact.h>
+#pragma GCC pop_options
 #include <nds/nds_startup.h>
 
 /* The clock is binary32 bits (see the block above ndsFtPoseParse); the two

@@ -8564,3 +8564,12 @@ figatree heap (485 skips/match). All exact. `70D3B9DE` -> `077110CD`, replay
 identical: WORK-H P50/P95/P99 1,302,080/1,808,576/2,225,408 -> 1,301,504/
 1,794,240/2,197,184; SRC P95 -21K. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md`.
+
+## 2026-09-27 — pose clock adder compiled in ARM state
+
+**BANKED.** `ndsF32AddBits` (binary32 pose clock) was an out-of-line Thumb
+function in main RAM calling `__clzsi2` (306 calls/frame, 105 cycles) because
+its Thumb TU could not inline it into the ARM parser. Header now included under
+`#pragma GCC target("arm")`. `077110CD` -> `A8E6AFD9`, replay identical: WORK-H
+P50/P95/P99 1,301,504/1,794,240/2,197,184 -> 1,293,056/1,782,784/2,189,632. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md` section 4.
