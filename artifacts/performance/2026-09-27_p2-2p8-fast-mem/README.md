@@ -1265,3 +1265,28 @@ median 0, top 5% -0.3K. Whether the mask was ever set is unverified. Reverted.
 
 A premium row with a few thousand cycles on half the tail frames has not, on
 this evidence, been a lever.
+
+## 45. DTCM hot scalars, third batch
+
+The dmiss7 fill census ranked small static objects by D-cache fills per byte
+(`dtcm3_pick.py`, input sections resolved from the objects). Forty-four
+objects of 4-16 bytes (212 B) join the DTCM hot-scalar blocks. They are the
+densest fillers: frame counters, the stage display cursor, pose bind flags,
+the taskman graphics heap descriptor, the VBlank count, and similar.
+
+The residency check cannot name a function-local static, so the loaded-file
+lookup's 4-way memo became the file-scope `sNdsRelocFindContainingMemo`.
+
+`check-dtcm-residency.py` and `check-task20-dtcm-layout.ps1` pass: forbidden
+DMA references 0, and `.dtcm.bss` ends at 0x02ff2fc4 against the 0x02ff3000
+ceiling. The P1 ROM links, its DTCM ending at 0x02ff21e8; the frozen root was
+restored.
+
+`FAD6C57E` (`dtcm3`) vs `presenthot`, replay IDENTICAL:
+- Paired WORK-H median -128, which is flat.
+- Top 5% median -1,344, mean -3,634; SRC -2.3K.
+- WORK-H P50/P95/P99 986,112/1,371,008/1,649,728 (P95 -3.4K).
+- 1,500 frames at or under 1,120,000.
+
+Banked for the tail. The census put ~330 fills a frame on these objects, but
+the median did not move, so most of those fills fall on the heavy frames.

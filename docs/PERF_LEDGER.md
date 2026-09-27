@@ -9047,3 +9047,14 @@ paired -11,072 (1,970/1,972 frames better); P50/P95 986,752/1,374,400;
 1,493/1,972 frames within 1,120,000; 71.9% of frames in two VBlanks.
 RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 43.
+
+## 2026-09-27 — DTCM hot scalars, third batch
+
+**BANKED (tail).** Forty-four 4-16 B objects (212 B), ranked by dmiss7 fills
+per byte, join the DTCM hot scalars. The reloc lookup's memo becomes a named
+file-scope static so the residency check can name it. `FAD6C57E` vs
+`presenthot`, replay identical: paired median -128 (flat); top 5% mean -3.6K;
+P50/P95 986,112/1,371,008; 1,500/1,972 frames within 1,120,000. RED (P95).
+Refuted the same day (section 44): a loaded-file (data, size) mirror and a
+pack-span bisection.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` sections 44-45.

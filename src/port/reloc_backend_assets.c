@@ -6117,12 +6117,16 @@ volatile u32 gNdsRelocFindMemoWay0;
 volatile u32 gNdsRelocFindMemoScans;
 volatile u32 gNdsRelocFindMemoAbsent;
 
+/* File scope, not function-local, so linker/nds_hot_text.ld can name its
+ * input section (.data.sNdsRelocFindContainingMemo) and keep it in DTCM. */
+static u32 sNdsRelocFindContainingMemo[NDS_RELOC_FIND_MEMO_WAYS] = {
+    0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
+};
+
 static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(const void *ptr,
                                                              size_t size)
 {
-    static u32 memo[NDS_RELOC_FIND_MEMO_WAYS] = {
-        0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
-    };
+    u32 *memo = sNdsRelocFindContainingMemo;
     u32 w;
     u32 i;
 

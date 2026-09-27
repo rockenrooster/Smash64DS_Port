@@ -91,7 +91,7 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo; texpool witness; digest word mix; lean phase clocks out; STG span; ITCM x4; witnesses; Results guard; key words; HW divides; lean spare; stage memo + 1 KB data pin; ForgetRange blocks; digest in HUD; lab clocks out; DTCM hot stack x2; DTCM sine; DTCM scalars 2; ITCM trampoline; stage GX in ITCM; int->float convs; ITCM packs; sim tick, stage prep, fighter display on DTCM stack: `8B62F8D4` WORK-H P50/P95/P99 986,752/1,374,400/1,652,544.
+MP f32 cache reads; billboard memo; texpool witness; digest word mix; lean phase clocks out; STG span; ITCM x4; witnesses; Results guard; key words; HW divides; lean spare; stage memo + 1 KB data pin; ForgetRange blocks; digest in HUD; lab clocks out; DTCM hot stack x2; DTCM sine; DTCM scalars 2; ITCM trampoline; stage GX in ITCM; int->float convs; ITCM packs; sim tick, stage prep, fighter display on DTCM stack; DTCM scalars 3: `FAD6C57E` WORK-H P50/P95/P99 986,112/1,371,008/1,649,728.
 **Constraint**: CSS reserve >=183,072 B; freeplay owner route 253,904 free (09-27, margin 70,832).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
