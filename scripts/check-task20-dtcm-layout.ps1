@@ -207,6 +207,10 @@ foreach ($elfPath in $Elf) {
         'gNdsVramCensusEnable' = 4
         'gNdsFtrLeanAdmit' = 4
         'gNdsFtrLeanRoute' = 4
+        # The lean kernel's half sine table (nds_ftr_lean_kernel.c,
+        # NDS_FTR_LEAN_SIN_DTCM): ARM9 kernel reads only, filled once from
+        # gSYSinTable by the kernel itself.
+        'sNdsFtrLeanSinHalf' = 2048
     }
     foreach ($entry in $dtcmNamedSizes.GetEnumerator()) {
         $owner = @($owners | Where-Object { $_.Name -eq $entry.Key })

@@ -668,7 +668,12 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
     }
 }
 
-void gcPlayDObjAnimJoint(DObj *dobj) __attribute__((section(".itcm")));
+/* P2-2p8: out of ITCM into plain .text (not .text.hot, which is closed).
+ * The fighter pose engine took its fighter joints; the four-CPU census ran
+ * ~9 instructions a frame here against 612 B of ITCM, which the lean
+ * kernel's DTCM sine lookup needed. */
+void gcPlayDObjAnimJoint(DObj *dobj)
+    __attribute__((section(".text.ndsColdPlayDObjAnimJoint")));
 void gcPlayDObjAnimJoint(DObj *dobj)
 {
     ndsPlayDObjAnimJointBody(dobj, NULL);

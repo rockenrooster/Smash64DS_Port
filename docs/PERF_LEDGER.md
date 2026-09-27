@@ -8922,3 +8922,14 @@ The fighter pose on the hot stack read +0.4K and was reverted. Final
 `54785514` vs `hotfin`, replay identical: WORK-H P50/P95/P99
 1,062,016/1,461,056/1,716,800; 1,241/1,972 frames within 1,120,000. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 31.
+
+## 2026-09-27 — lean kernel half sine table in DTCM
+
+**BANKED.** The kernel's six sine lookups a joint read a 2 KB symmetric-exact
+half of `gSYSinTable` in DTCM (`NDS_FTR_LEAN_SIN_DTCM`, default 1). In ITCM it
+had been refuted for the code it evicted. The hot stack went to 7 KB (reach
+3,740 B), and `gcPlayDObjAnimJoint` (~9 instructions a frame) left ITCM for
+the table's index code. `D0627BDB` vs `hot2fin`, replay identical, mismatch
+0: WORK-H P50/P95 1,057,600/1,455,360 (-4.4K/-5.7K), paired -4.2K
+(FTR -3.6K). RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 32.

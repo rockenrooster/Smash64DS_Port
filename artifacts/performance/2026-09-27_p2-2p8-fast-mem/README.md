@@ -824,3 +824,29 @@ Final `54785514` (`hot2fin`) vs `hotfin`, replay IDENTICAL:
 - WORK-H P50/P95/P99 1,062,016/1,461,056/1,716,800.
 - 1,241 of 1,972 frames at or under 1,120,000.
 - Layout gate passes.
+
+## 32. The lean kernel's half sine table, in DTCM
+
+Section 17 refuted the half table in ITCM because of the code it evicted. The
+fill census puts the 4 KB `gSYSinTable` at 288 line fills a frame, most of
+them the kernel's six lookups a joint. `NDS_FTR_LEAN_SIN_DTCM` (default 1)
+places the same symmetric-exact 2 KB half in `.dtcm`. The kernel fills it
+from `gSYSinTable` on first use; gameplay still reads the full table.
+
+Room was needed in two places:
+- DTCM: the hot stack went from 8 KB to 7 KB. Its deepest reach is 3,740 B.
+- ITCM: the table's index mirror, inlined six times a joint, overflowed ITCM
+  by 144 B. `gcPlayDObjAnimJoint` (612 B) left ITCM for plain `.text`. The
+  pose engine owns fighter joints now, and the census ran it at ~9
+  instructions a frame.
+
+The layout gate names the table.
+
+`D0627BDB` (`sindtcm`) vs `hot2fin` (cross-build), replay IDENTICAL, lab
+mismatch counter 0:
+- WORK-H P50/P95 1,057,600/1,455,360 (-4.4K/-5.7K).
+- Paired median -4,224: FTR -3,584, STG -2,112, SRC +1,536.
+- 1,253 of 1,972 frames at or under 1,120,000.
+- P99 1,751,616 (+35K). That is six frames whose event cost (motion/FGM
+  timing) moved by 100-500K with the layout. The 60 costliest control frames
+  pair at median -3,840.

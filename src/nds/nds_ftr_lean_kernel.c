@@ -72,7 +72,12 @@ extern u16 gSYSinTable[0x800];
 #if NDS_FTR_LEAN_KERNEL_ITCM
 #define NDS_FTR_LEAN_KERNEL_CODE \
     __attribute__((noinline, target("arm"), section(".itcm.ftr_lean")))
+#if defined(NDS_FTR_LEAN_SIN_ITCM) && NDS_FTR_LEAN_SIN_ITCM
 #define NDS_FTR_LEAN_SIN_SECTION __attribute__((section(".itcm.ftr_lean_sin")))
+#else
+/* P2-2p8: DTCM, where it evicts no code (see NDS_FTR_LEAN_SIN_DTCM). */
+#define NDS_FTR_LEAN_SIN_SECTION __attribute__((section(".dtcm")))
+#endif
 #else
 #define NDS_FTR_LEAN_KERNEL_CODE \
     __attribute__((noinline, target("arm")))
@@ -181,10 +186,20 @@ NDS_FTR_LEAN_KERNEL_INLINE s32 ndsFtrLeanFloatPow2ToS32(f32 value, u32 scale_bit
 #ifndef NDS_FTR_LEAN_SIN_ITCM
 #define NDS_FTR_LEAN_SIN_ITCM 0
 #endif
-#if NDS_FTR_LEAN_SIN_ITCM && !NDS_FTR_LEAN_KERNEL_ITCM
-#undef NDS_FTR_LEAN_SIN_ITCM
-#define NDS_FTR_LEAN_SIN_ITCM 0
+/* P2-2p8: the same half in DTCM (default). The ITCM copy lost because of the
+ * code it evicted; DTCM holds data only, and the D-cache fill census put the
+ * 4 KB gSYSinTable at 288 line fills a frame, the kernel's six lookups a
+ * joint most of them. NDS_FTR_LEAN_SIN_HALF_ON is "either copy". */
+#ifndef NDS_FTR_LEAN_SIN_DTCM
+#define NDS_FTR_LEAN_SIN_DTCM 1
 #endif
+#if (NDS_FTR_LEAN_SIN_ITCM || NDS_FTR_LEAN_SIN_DTCM) && NDS_FTR_LEAN_KERNEL_ITCM
+#define NDS_FTR_LEAN_SIN_HALF_ON 1
+#else
+#define NDS_FTR_LEAN_SIN_HALF_ON 0
+#endif
+#undef NDS_FTR_LEAN_SIN_ITCM
+#define NDS_FTR_LEAN_SIN_ITCM NDS_FTR_LEAN_SIN_HALF_ON
 #if NDS_FTR_LEAN_SIN_ITCM
 static u16 sNdsFtrLeanSinHalf[NDS_FTR_LEAN_SIN_HALF]
     NDS_FTR_LEAN_SIN_SECTION __attribute__((aligned(32)));
