@@ -1111,6 +1111,9 @@ typedef struct NDSOpeningActionPreviewCache {
 
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[NDS_RELOC_LOADED_FILE_CAPACITY];
 static u32 sNdsRelocLoadedFileCount;
+/* Bumped by every change to the table's order, count or `data` pointers; the
+ * by-data lookup's one-entry memo is valid only within one epoch. */
+static u32 sNdsRelocLoadedFilesEpoch;
 static const void *sNdsRelocRelativeOffsetsMemoBase;
 static NDSRelocLoadedFile *sNdsRelocRelativeOffsetsMemo;
 static NDSRelocNormalizedMObjSub
@@ -5330,6 +5333,7 @@ static void ndsRelocResetLoadedFiles(void)
 #endif
     memset(sNdsRelocLoadedFiles, 0, sizeof(sNdsRelocLoadedFiles));
     sNdsRelocLoadedFileCount = 0;
+    sNdsRelocLoadedFilesEpoch++;
     memset(sNdsRelocNormalizedMObjSubs, 0,
            sizeof(sNdsRelocNormalizedMObjSubs));
     sNdsRelocNormalizedMObjSubCount = 0u;
@@ -5926,14 +5930,29 @@ s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
     return TRUE;
 }
 
+/* lbRelocGetFileData asks this ~70 times a battle frame, mostly for the same
+ * file, and materialization asks it per native asset address; the scan over
+ * the whole table was the cost. Memo the last answer (the FIRST entry with
+ * this data, or none) for the current table epoch. */
 static NDSRelocLoadedFile *ndsRelocFindLoadedFileByData(void *file)
 {
+    static void *s_file;
+    static u32 s_epoch = 0xffffffffu;
+    static s32 s_index = -1;
     u32 i;
 
+    if ((file == s_file) && (s_epoch == sNdsRelocLoadedFilesEpoch))
+    {
+        return (s_index >= 0) ? &sNdsRelocLoadedFiles[s_index] : NULL;
+    }
+    s_file = file;
+    s_epoch = sNdsRelocLoadedFilesEpoch;
+    s_index = -1;
     for (i = 0; i < sNdsRelocLoadedFileCount; i++)
     {
         if (sNdsRelocLoadedFiles[i].data == file)
         {
+            s_index = (s32)i;
             return &sNdsRelocLoadedFiles[i];
         }
     }
@@ -6600,6 +6619,7 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     loaded->asset_id = asset_id;
     loaded->bit = bit;
     loaded->data = data;
+    sNdsRelocLoadedFilesEpoch++;
     loaded->data_size = header->data_size;
     loaded->owner_scene = (u32)gSCManagerSceneData.scene_curr;
     loaded->owner_generation = sNdsRelocSceneGeneration;
@@ -7085,6 +7105,7 @@ static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
                         (size_t)remaining * sizeof(sNdsRelocLoadedFiles[0]));
             }
             sNdsRelocLoadedFileCount--;
+            sNdsRelocLoadedFilesEpoch++;
             continue;
         }
         i++;
@@ -7165,6 +7186,7 @@ void ndsRelocReleaseHeapRange(void *base, size_t size)
                         (size_t)remaining * sizeof(sNdsRelocLoadedFiles[0]));
             }
             sNdsRelocLoadedFileCount--;
+            sNdsRelocLoadedFilesEpoch++;
             continue;
         }
         i++;
@@ -10837,10 +10859,25 @@ static void ndsRelocNormalizeMVCommonMObjSubs(NDSRelocLoadedFile *loaded)
                                   2u);
 }
 
+/* The known-symbol table is const, so its answer for (asset, symbol) never
+ * changes. lbRelocGetFileData resolves ~70 symbols a battle frame (HUD sprites
+ * among them) and each scanned the whole table; a direct-mapped memo of the
+ * scan's result (found with its offset, or absent) answers repeats. */
+#define NDS_RELOC_SYMBOL_MEMO_SLOTS 64u
+typedef struct NDSRelocSymbolMemo
+{
+    const void *symbol;
+    u32 asset_id;
+    u32 offset;
+    u32 state;                  /* 0 empty, 1 in the table, 2 not in it */
+} NDSRelocSymbolMemo;
+static NDSRelocSymbolMemo sNdsRelocSymbolMemo[NDS_RELOC_SYMBOL_MEMO_SLOTS];
+
 static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
                                         const void *symbol, u32 *out_offset)
 {
     uintptr_t raw_symbol = (uintptr_t)symbol;
+    NDSRelocSymbolMemo *memo;
     u32 i;
 
     if ((loaded == NULL) || (out_offset == NULL))
@@ -10857,15 +10894,30 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         *out_offset = NDS_RELOC_SYMBOL_N64_LOGO_SPRITE;
         return TRUE;
     }
-    for (i = 0; i < ARRAY_COUNT(sNdsKnownAssetSymbols); i++)
+    memo = &sNdsRelocSymbolMemo[((raw_symbol >> 2) ^ loaded->asset_id) &
+                                (NDS_RELOC_SYMBOL_MEMO_SLOTS - 1u)];
+    if ((memo->state == 0u) || (memo->symbol != symbol) ||
+        (memo->asset_id != loaded->asset_id))
     {
-        if ((sNdsKnownAssetSymbols[i].asset_id != NDS_RELOC_ASSET_INVALID) &&
-            (loaded->asset_id == sNdsKnownAssetSymbols[i].asset_id) &&
-            (symbol == sNdsKnownAssetSymbols[i].symbol))
+        memo->symbol = symbol;
+        memo->asset_id = loaded->asset_id;
+        memo->state = 2u;
+        for (i = 0; i < ARRAY_COUNT(sNdsKnownAssetSymbols); i++)
         {
-            *out_offset = sNdsKnownAssetSymbols[i].offset;
-            return TRUE;
+            if ((sNdsKnownAssetSymbols[i].asset_id != NDS_RELOC_ASSET_INVALID) &&
+                (loaded->asset_id == sNdsKnownAssetSymbols[i].asset_id) &&
+                (symbol == sNdsKnownAssetSymbols[i].symbol))
+            {
+                memo->offset = sNdsKnownAssetSymbols[i].offset;
+                memo->state = 1u;
+                break;
+            }
         }
+    }
+    if (memo->state == 1u)
+    {
+        *out_offset = memo->offset;
+        return TRUE;
     }
     if (loaded->asset_id == NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE)
     {
@@ -15859,6 +15911,7 @@ static void *ndsRelocLoadIfGameStatusCompact(u32 token, u32 asset_id,
     }
     gNdsRelocIfCompactSourceBytes = source_size;
     loaded->data = image;
+    sNdsRelocLoadedFilesEpoch++;
     loaded->data_size = image_size;
     loaded->reserved[0] = (compact != FALSE) ? NDS_RELOC_IF_COMPACT_MARK : 0u;
     ndsRelocAddStatusBufferFile(token, image);

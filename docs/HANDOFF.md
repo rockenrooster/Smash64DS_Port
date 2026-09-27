@@ -30,7 +30,7 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 (compact packet layout); edge-only ROM bounce; FGM LRU/aligned/envelopes, ARM7
 async fills and a 160 KiB arena (-72 KiB); fast cpuGetTiming; stage no-Z
 staging; status-path cuts; ARM pose clock; HUD once/pass; stage witness off.
-`44F19756` P50/P95 1,264,192/1,750,784. Digest: `--sequence --resync 4`.
+reloc memos. `69CAB23E` P50/P95 1,258,688/1,740,544. Digest: `--sequence --resync 4`.
 Receipts `2026-09-2{6,7}_p2-2p8-*`. Median > gate: next STG/port-machinery
 median cuts, FTR materialize tail, A5.
 

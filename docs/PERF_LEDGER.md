@@ -8594,3 +8594,13 @@ segment count. `C55BCBBD` -> `44F19756`: WORK-H P50/P95/P99 1,283,520/1,772,160/
 Gameplay identical after one pre-GO resync (load wait one frame sooner;
 `compare-replay-digest.py --resync`). RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-stg-gx/README.md` section 2.
+
+## 2026-09-27 — relocation lookups memoised (symbol offsets, loaded files)
+
+**BANKED.** Known-symbol offset resolution (a const-table scan per
+`lbRelocGetFileData`, ~70/frame) gets a direct-mapped result memo; the by-data
+loaded-file lookup gets a one-entry memo valid within a table epoch bumped on
+every append/remove/data change. `44F19756` -> `69CAB23E`: WORK-H P50/P95/P99
+1,264,192/1,750,784/2,155,008 -> 1,258,688/1,740,544/2,128,768; MISC P50 -7.1K;
+two-VBlank 440 -> 460. Gameplay identical after one pre-GO resync. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md` section 6.

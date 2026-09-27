@@ -72,3 +72,24 @@ tests it only against 0.
 frame f equals control frame f+1 inside the 96-frame windows after the three
 ring-stop seams the sampler warned about -- a label shift, not gameplay).
 Evidence: `hudonce-route1` (json/rows/log).
+
+## 6. Relocation lookups memoised -- BANKED
+
+- `ndsRelocResolveSymbolOffset` scanned the const known-symbol table on every
+  `lbRelocGetFileData` (~70 a battle frame, HUD sprites among them). A 64-slot
+  direct-mapped memo of the scan's result per (asset, symbol) -- found with its
+  offset, or absent -- serves repeats; the table is const, so it never goes stale.
+- `ndsRelocFindLoadedFileByData` scanned the loaded-file table on every call. A
+  one-entry memo holds the last answer (the first matching entry, or none) for
+  the current `sNdsRelocLoadedFilesEpoch`, which every change to the table's
+  count, order or `data` pointers bumps (append/replace, three removal memmoves,
+  reset, the IF-compact image swap).
+
+`memo` `69CAB23E` against `stgb` `44F19756`: WORK-H P50/P95/P99
+1,264,192/1,750,784/2,155,008 -> 1,258,688/1,740,544/2,128,768; MISC P50
+191,104 -> 184,000; two-VBlank 440 -> 460. Gameplay identical after one pre-GO
+resync (`--sequence --resync 4`). Evidence: `memo-route1` (json/rows/log).
+
+Also measured and not banked (07-27): the lean-path lab counters compiled out
+of the gate ROM moved WORK-H P50/P95 by only -1.5K/-2K (`leanctr0`, local); the
+gate's remaining instrument is small after the fast cpuGetTiming.

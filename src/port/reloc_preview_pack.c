@@ -1125,6 +1125,7 @@ void ndsRelocReleasePreviewFighter(s32 fkind)
                         (size_t)remaining * sizeof(sNdsRelocLoadedFiles[0]));
             }
             sNdsRelocLoadedFileCount--;
+            sNdsRelocLoadedFilesEpoch++;
             continue;
         }
         i++;
