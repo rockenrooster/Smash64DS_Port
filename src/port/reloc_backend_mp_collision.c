@@ -774,6 +774,15 @@ static f32 ndsMPLineDistanceFC(f32 opx, s32 v1x, s32 v1y, s32 v2x,
         ((f32)v2y - (f32)v1y));
 }
 
+/* The same expression on the vertex cache's floats (ndsMPVertexF32Get). Each
+ * (f32)v of an s16 vertex coordinate is exact and the cache holds exactly
+ * that value, so every operand -- and so every rounding -- is the integer
+ * form's; only the four __aeabi_i2f calls are gone. */
+static f32 ndsMPLineDistanceFCf(f32 opx, f32 v1x, f32 v1y, f32 v2x, f32 v2y)
+{
+    return v1y + (((opx - v1x) / (v2x - v1x)) * (v2y - v1y));
+}
+
 static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
                             s32 v2y, s32 ud)
 {
@@ -801,6 +810,49 @@ static void ndsMPGetFCAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x,
         return;
     }
     py = -(dist_y / (f32)(v2x - v1x));
+    inv_len = 1.0F / sqrtf((py * py) + 1.0F);
+    if (ud < 0)
+    {
+        angle->x = -py * inv_len;
+        angle->y = -inv_len;
+    }
+    else
+    {
+        angle->x = py * inv_len;
+        angle->y = inv_len;
+    }
+}
+
+/* ndsMPGetFCAngle on cached vertex floats. An s16 difference is exact in f32
+ * whether it is taken before or after the conversion, so (f32)(v2y - v1y) ==
+ * v2y_f - v1y_f and the compares agree: identical results. */
+static void ndsMPGetFCAnglef(Vec3f *angle, f32 v1x, f32 v1y, f32 v2x, f32 v2y,
+                             s32 ud)
+{
+    f32 py;
+    f32 inv_len;
+    f32 dist_y;
+
+    if (angle == NULL)
+    {
+        return;
+    }
+    angle->z = 0.0F;
+    dist_y = v2y - v1y;
+    if (dist_y == 0.0F)
+    {
+        angle->x = 0.0F;
+        angle->y = (f32)ud;
+        return;
+    }
+    if (v2x == v1x)
+    {
+        gNdsStageCollisionLoopDivisionGuardCount++;
+        angle->x = 0.0F;
+        angle->y = (f32)ud;
+        return;
+    }
+    py = -(dist_y / (v2x - v1x));
     inv_len = 1.0F / sqrtf((py * py) + 1.0F);
     if (ud < 0)
     {
@@ -1619,35 +1671,29 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
         u32 v2_index = v1_index + 1u;
         u32 v1_id = ndsMPVertexID(ids, v1_index);
         u32 v2_id = ndsMPVertexID(ids, v2_index);
-        s32 x1;
-        s32 y1;
-        s32 x2;
-        s32 y2;
         f32 fx1;
         f32 fx2;
-        f32 unused_y;
+        f32 fy1;
+        f32 fy2;
         f32 floor_y;
 
-        ndsMPVertexF32Get(verts, v1_id, &fx1, &unused_y);
-        ndsMPVertexF32Get(verts, v2_id, &fx2, &unused_y);
-        /* The four s32 reads used to sit above this gate, where every rejected
-         * segment paid four bounds-checked `ndsMPO2RReadU16` calls for values
-         * only the accepted segment reads. Pure code motion. */
+        ndsMPVertexF32Get(verts, v1_id, &fx1, &fy1);
+        ndsMPVertexF32Get(verts, v2_id, &fx2, &fy2);
         if (!((NDS_FCMP_LE(fx1, object_x) && NDS_FCMP_GE(fx2, object_x)) ||
               (NDS_FCMP_LE(fx2, object_x) && NDS_FCMP_GE(fx1, object_x))))
         {
             continue;
         }
-        x1 = ndsMPVertexX(verts, v1_id);
-        y1 = ndsMPVertexY(verts, v1_id);
-        x2 = ndsMPVertexX(verts, v2_id);
-        y2 = ndsMPVertexY(verts, v2_id);
-        if (x1 == x2)
+        /* 2026-09-27: the accepted segment works on the cached floats (exact
+         * conversions of the s16 vertices, so x1 == x2 iff fx1 == fx2 and
+         * every operand below is the integer form's) instead of four O2R
+         * reads and six __aeabi_i2f calls. */
+        if (fx1 == fx2)
         {
             gNdsStageCollisionLoopDivisionGuardCount++;
             continue;
         }
-        floor_y = ndsMPLineDistanceFC(object_x, x1, y1, x2, y2);
+        floor_y = ndsMPLineDistanceFCf(object_x, fx1, fy1, fx2, fy2);
         if (floor_dist != NULL)
         {
             *floor_dist = floor_y - object_y;
@@ -1673,7 +1719,7 @@ sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
         {
             *floor_flags = ndsMPVertexFlags(verts, v1_id);
         }
-        ndsMPGetFCAngle(angle, x1, y1, x2, y2, +1);
+        ndsMPGetFCAnglef(angle, fx1, fy1, fx2, fy2, +1);
         if (ndsFighterMarioFoxStageFloorEdgeLoopProofEnabled() != FALSE)
         {
             gNdsStageFloorEdgeLoopFCCommonHitCount++;
@@ -2574,6 +2620,55 @@ static void ndsMPGetLRAngle(Vec3f *angle, s32 v1x, s32 v1y, s32 v2x, s32 v2y,
     }
 }
 
+/* (s32)v -- truncation toward zero, as the cast does -- and whether v has a
+ * fractional part, on the bit pattern alone. Exact for |v| < 2^31 (biased
+ * exponent < 158); returns FALSE for anything larger, infinite or NaN so the
+ * caller keeps its soft-float form. */
+static inline sb32 ndsMPF32TruncFrac(f32 v, s32 *trunc, u32 *frac)
+{
+    union
+    {
+        f32 f;
+        u32 u;
+    } b;
+    u32 e;
+    u32 m;
+    s32 t;
+
+    b.f = v;
+    e = (b.u >> 23) & 0xffu;
+    if (e >= 158u)
+    {
+        return FALSE;
+    }
+    if (e < 127u)
+    {
+        *trunc = 0;
+        *frac = ((b.u & 0x7fffffffu) != 0u) ? 1u : 0u;
+        return TRUE;
+    }
+    m = (b.u & 0x7fffffu) | 0x800000u;
+    if (e >= 150u)
+    {
+        t = (s32)(m << (e - 150u));
+        *frac = 0u;
+    }
+    else
+    {
+        u32 sh = 150u - e;
+
+        t = (s32)(m >> sh);
+        *frac = ((m & ((1u << sh) - 1u)) != 0u) ? 1u : 0u;
+    }
+    *trunc = ((b.u & 0x80000000u) != 0u) ? -t : t;
+    return TRUE;
+}
+
+/* Sign bit clear. Only asked of values with a fractional part, which are
+ * never zero, so it is exactly `v > 0`. */
+#define NDS_MP_F32_POSITIVE(v) \
+    ((((union { f32 f; u32 u; }){ .f = (v) }).u & 0x80000000u) == 0u)
+
 volatile u32 gNdsMPWallSweepCalls;
 volatile u32 gNdsMPWallSweepSegmentTests;
 volatile u32 gNdsMPWallSweepHits;
@@ -2706,15 +2801,44 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
             vdist1 = vtdist_x - 0.001F;
             vdist2 = vpdist_x + 0.001F;
         }
-        range_lo = (s32)vdist1;
-        if ((f32)range_lo < vdist1)
+        /* ceil(vdist1) and floor(vdist2) from the bits (2026-09-27): the
+         * truncate-then-compare form cost an __aeabi_f2iz, an __aeabi_i2f and a
+         * float compare per bound, per group, per call (~180 i2f a frame).
+         * Truncation toward zero plus a fraction flag gives the same integers
+         * for every |v| < 2^31; anything else keeps the soft-float form. */
         {
-            range_lo++;
-        }
-        range_hi = (s32)vdist2;
-        if ((f32)range_hi > vdist2)
-        {
-            range_hi--;
+            u32 frac;
+
+            if (ndsMPF32TruncFrac(vdist1, &range_lo, &frac) != FALSE)
+            {
+                if ((frac != 0u) && NDS_MP_F32_POSITIVE(vdist1))
+                {
+                    range_lo++;
+                }
+            }
+            else
+            {
+                range_lo = (s32)vdist1;
+                if ((f32)range_lo < vdist1)
+                {
+                    range_lo++;
+                }
+            }
+            if (ndsMPF32TruncFrac(vdist2, &range_hi, &frac) != FALSE)
+            {
+                if ((frac != 0u) && !NDS_MP_F32_POSITIVE(vdist2))
+                {
+                    range_hi--;
+                }
+            }
+            else
+            {
+                range_hi = (s32)vdist2;
+                if ((f32)range_hi > vdist2)
+                {
+                    range_hi--;
+                }
+            }
         }
         for (line_id = first; line_id < (first + count); line_id++)
         {

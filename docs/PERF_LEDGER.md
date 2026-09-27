@@ -8680,3 +8680,12 @@ by 15 with an exhaustively checked multiply-shift instead of `__udivsi3`.
 1,614,528/2,017,664 -> 1,162,816/1,612,416/2,007,552; two-VBlank 712 -> 764. RED.
 Refuted: dropping the per-run stage DMA wait (+1.5K; bus-bound either way).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 6.
+
+## 2026-09-27 — map collision reads the f32 vertex cache it already had
+
+**BANKED (small).** The floor query's accepted segment and angle use cached
+vertex floats (exact for s16 coordinates) instead of O2R reads and i2f calls;
+the wall sweep's ceil/floor bounds come from the float's bits. `FC908A40` ->
+`A5A7644F`, replay identical: WORK-H P50/P95/P99 1,162,816/1,612,416/2,007,552 ->
+1,162,112/1,602,240/2,004,544; SRC P50 -2.6K, P95 -3.6K. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 7.

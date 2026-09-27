@@ -157,3 +157,16 @@ VBlanks/FPS after div15: 764 1129 70 10 22.57; every step replay identical.
 Refuted (reverted): dropping the DMA wait at the top of each stage GX run
 (`nowait` `94BA349A`): patches never touch an in-flight span, but WORK-H
 moved +1.5K/+1.8K -- the CPU stalls on the bus during the DMA anyway.
+
+## Section 7: map-collision float inputs from the vertex cache
+
+`mpf32` `A5A7644F`: the floor query's accepted segment uses the f32 vertex
+cache (four O2R reads and six `__aeabi_i2f` calls gone; float-input
+`ndsMPLineDistanceFCf`/`ndsMPGetFCAnglef`), and the wall sweep's ceil/floor
+range bounds come from the float's bits (`ndsMPF32TruncFrac`, checked on the
+host against the truncate-and-compare form over 2.4 million values, 0
+mismatches) instead of an f2iz + i2f + compare per bound. Every (f32) of an s16
+vertex is exact, so every operand and rounding is the integer form's. WORK-H
+P50/P95/P99 1,162,816/1,612,416/2,007,552 -> 1,162,112/1,602,240/2,004,544 (P95
+inside ~1.5x single-build noise; SRC P50 -2.6K, P95 -3.6K); VBlanks/FPS 757 1138 69 9 22.55;
+replay identical.
