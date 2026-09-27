@@ -50,7 +50,37 @@ GObj *ndsBaseFTManagerMakeFighter(FTDesc *desc);
 void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
 void ndsBaseFTManagerAllocFighter(u32 data_flags, s32 allocs_num);
 
+#if NDS_P2_ARM9_WRAM
+/* The first allocation in ftManagerAllocFighter is the FTStruct pool; it
+ * goes to ARM9's shared-WRAM block when it fits (src/nds/main.c). The block
+ * is granted once per taskman heap generation, so a second pool in one scene
+ * falls back to the heap instead of aliasing the first. */
+extern volatile u32 gNdsTaskmanHeapGeneration;
+static u32 sNdsFTManagerPoolToWram;
+static u32 sNdsFTManagerPoolWramGranted;
+static u32 sNdsFTManagerPoolWramGeneration;
+static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
+{
+    u32 generation = gNdsTaskmanHeapGeneration;
+
+    if ((sNdsFTManagerPoolToWram != 0u) && (size <= 0x4000u) &&
+        ((sNdsFTManagerPoolWramGranted == 0u) ||
+         (sNdsFTManagerPoolWramGeneration != generation)))
+    {
+        sNdsFTManagerPoolToWram = 0u;
+        sNdsFTManagerPoolWramGranted = 1u;
+        sNdsFTManagerPoolWramGeneration = generation;
+        return (void *)0x03000000u;
+    }
+    sNdsFTManagerPoolToWram = 0u;
+    return syTaskmanMalloc(size, align);
+}
+#define syTaskmanMalloc ndsFTManagerPoolMalloc
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
+#if NDS_P2_ARM9_WRAM
+#undef syTaskmanMalloc
+#endif
 
 #undef ftManagerSetupFileSize
 #undef ftManagerSetupFilesAllKind
@@ -112,6 +142,9 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
             allocs_num = players;
         }
     }
+#if NDS_P2_ARM9_WRAM
+    sNdsFTManagerPoolToWram = 1u;
+#endif
     ndsBaseFTManagerAllocFighter(data_flags, allocs_num);
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* Both VS entries (battle and Sudden Death) come through here before

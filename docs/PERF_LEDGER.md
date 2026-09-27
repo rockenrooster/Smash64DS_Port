@@ -9058,3 +9058,13 @@ P50/P95 986,112/1,371,008; 1,500/1,972 frames within 1,120,000. RED (P95).
 Refuted the same day (section 44): a loaded-file (data, size) mirror and a
 pack-span bisection.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` sections 44-45.
+
+## 2026-09-27 — Fighter FTStruct pool in ARM9 shared WRAM
+
+**BANKED.** ARM9 takes the first 16 KB shared-WRAM block (WRAMCNT = 2, MPU
+region 3 cached) and ARM7 links above it at 0x037FC000. The FTStruct pool
+(about 12 KB) lives there, granted once per heap generation. BGM counters
+match the control. `8A133553` vs `dtcm3`, replay identical: paired median
+-21,632, mean -21,966 (1,946/1,972 frames better); P50/P95 965,184/1,344,320;
+1,551/1,972 frames within 1,120,000; vbi2 1,502. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 46.

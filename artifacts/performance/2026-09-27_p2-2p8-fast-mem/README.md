@@ -1290,3 +1290,49 @@ restored.
 
 Banked for the tail. The census put ~330 fills a frame on these objects, but
 the median did not move, so most of those fills fall on the heavy frames.
+
+## 46. Fighter FTStruct pool in ARM9 shared WRAM
+
+ARM9 ran with no shared WRAM. Calico's ARM7 image started at 0x037F8000 and
+held both 16 KB blocks, but it only needs about 50 KB. That is 21.4 KB of
+`.wram` plus 28.8 KB of `.wram.bss`, including 16 KB of BGM `sBuffers`.
+
+Changes, under `NDS_P2_ARM9_WRAM` (default 1; 0 is the lab control):
+
+- ARM7 links from 0x037FC000 (`linker/nds_arm7_ds7_wram16.ld`, a copy of
+  calico `ds7.ld` with only the origin moved). Its image now ends at
+  0x03808440, below the DLDI shelter at 0x0380B000.
+- `main()` first writes WRAMCNT = 2, which gives ARM9 the first block and
+  ARM7 the second. ARM7's 0x037FC000 already addressed the second block
+  under WRAMCNT = 3, so no ARM7 byte moves.
+- MPU region 3 (unused by calico's crt0) maps 0x03000000 as 16 KB of
+  cacheable, write-buffered data. A line fill there crosses the 32-bit WRAM
+  bus instead of 16-bit main RAM.
+- `ftManagerAllocFighter`'s first allocation is the FTStruct pool (about
+  12 KB for four fighters). When it fits, it takes the WRAM block. The block
+  is granted once per taskman heap generation, and any second request falls
+  back to the heap.
+
+BGM health (`bgmctl`/`bgmwram`, 600 samples): refills 29 in both arms,
+playing 1, result equal, overruns 0, read failures 0.
+
+Checks: DTCM residency 204/204; Task 20 layout; renderer ITCM placement
+32,688/32,768; GBI fixtures. The P1 ROM links (the frozen root was
+restored, `576F51ED`).
+
+`8A133553` (`wramfin`, flag default) vs `dtcm3`, replay IDENTICAL:
+- Paired WORK-H median -21,632, mean -21,966; 1,946 better, 26 worse.
+- Top 5% median -26.6K, mean -29.4K; SRC -24K of that.
+- WORK-H P50/P95/P99 965,184/1,344,320/1,610,752 (P95 -26.7K).
+- 1,551 frames at or under 1,120,000; vbi2 1,502 (was 1,421).
+- Native failures 0; general heap free min 69,340.
+
+The same-ROM lab arm `wram1` (flag set on the command line) read
+-21,312/-21,503, so the default build reproduces it.
+
+Banked. The FTStruct is the sim's hottest record: every status, physics and
+hit proc reads it. Moving 12 KB off 16-bit RAM is worth more than any of the
+day's single-function cuts.
+
+Next: about 4 KB of the block is still free. If ARM7's BGM buffers move,
+ARM9 could hold all 32 KB.
