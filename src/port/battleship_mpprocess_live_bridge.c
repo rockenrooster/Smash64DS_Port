@@ -1,10 +1,12 @@
 /*
  * Reversible public ABI bridge for the renamed BattleShip mp/mpprocess.c TU.
  *
- * Keep this file to exact one-to-one forwarding wrappers. The source import
- * owns collision behavior; this port seam owns only live symbol selection.
+ * Keep this file to exact one-to-one forwarding wrappers (mpProcessUpdateMain
+ * also picks the stack it runs on). The source import owns collision
+ * behavior; this port seam owns only live symbol selection.
  */
 #include <nds/nds_mpprocess_source.h>
+#include <port/coroutine.h>
 
 #if NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE != 1
 #error "battleship_mpprocess_live_bridge.c requires the LIVE mpprocess import"
@@ -147,11 +149,33 @@ void mpProcessRunFloorEdgeAdjust(MPCollData *coll_data)
     ndsBaseMPProcessRunFloorEdgeAdjust(coll_data);
 }
 
+/* The one exception to exact forwarding: the map-collision step runs on the
+ * DTCM hot stack (port/coroutine.h). Its geometry and collision callbacks set
+ * flags and positions only; status changes, motion loads and every other I/O
+ * happen after it returns, in the caller's proc_map. */
+typedef struct NDSMPProcessUpdateCall
+{
+    MPCollData *coll_data;
+    sb32 (*proc_coll)(MPCollData *, GObj *, u32);
+    GObj *gobj;
+    u32 flags;
+} NDSMPProcessUpdateCall;
+
+static unsigned int ndsMPProcessUpdateMainOnHotStack(void *arg)
+{
+    const NDSMPProcessUpdateCall *call = arg;
+
+    return (unsigned int)ndsBaseMPProcessUpdateMain(
+        call->coll_data, call->proc_coll, call->gobj, call->flags);
+}
+
 sb32 mpProcessUpdateMain(
     MPCollData *coll_data,
     sb32 (*proc_coll)(MPCollData *, GObj *, u32),
     GObj *gobj,
     u32 flags)
 {
-    return ndsBaseMPProcessUpdateMain(coll_data, proc_coll, gobj, flags);
+    NDSMPProcessUpdateCall call = { coll_data, proc_coll, gobj, flags };
+
+    return (sb32)ndsDtcmHotStackRun(ndsMPProcessUpdateMainOnHotStack, &call);
 }

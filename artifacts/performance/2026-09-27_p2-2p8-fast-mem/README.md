@@ -792,3 +792,35 @@ modification time. Restoring `nds_r2_battle.c` from a backup that way left
 make's lab object in place, so three arms (`hot0`, `hot1`, `hotdiag`) and one
 "HEAD" rerun carried an 11 KB stack paint twice a frame (+110K WORK-H). The
 ROM hash gave it away: `base2` equalled `stkdepth2`.
+
+## 31. Hot stack round 2: map collision and particles; pose refuted
+
+A fill census on `5506c91a436` (`dmiss2/`) read 12,268 fills a frame, down
+from 12,907. The gameplay stack's share fell from 1,486 to 985. Of what
+remains, map collision is the largest block (~124 a frame: wall sweep, floor
+query, line lookups under `mpProcessUpdateMain`), then particles (~34), camera
+capture, matrix leaves and the pose (~50).
+
+**Pose, refuted.** `ndsFtPoseUpdate` on the hot stack (`hpose0`/`hpose1`,
+same ROM, IDENTICAL) read paired +384. Its frames were too few fills to pay
+the trampoline. Reverted.
+
+**Kept.**
+- `mpProcessUpdateMain` runs on the hot stack from the live bridge. Its
+  geometry and collision callbacks only set flags and positions. The one
+  side effect is an item FGM: storage IPC requests are static, and their
+  destinations are range-checked to main RAM. `proc_map`, which changes
+  status and loads motions, runs after it returns.
+- `lbParticleDrawTextures` runs on it too: GX writes, no I/O, no DMA from
+  locals.
+
+Same-ROM (`7348A4BD`, two lab words; `hb0` off, `hb1` on), both replay
+IDENTICAL:
+- WORK-H P50/P95 1,069,760/1,469,696 -> 1,061,184/1,457,984.
+- Paired median -7,872, mean -9.7K; SRC -4.0K, MISC -3.6K.
+- Deepest reach still 3,740 B.
+
+Final `54785514` (`hot2fin`) vs `hotfin`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,062,016/1,461,056/1,716,800.
+- 1,241 of 1,972 frames at or under 1,120,000.
+- Layout gate passes.

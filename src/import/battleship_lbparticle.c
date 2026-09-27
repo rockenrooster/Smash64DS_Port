@@ -4143,8 +4143,9 @@ static u32 sNdsFireGrindLastUpdateFrame;
 #endif
 
 #include <nds/nds_battle_hud.h>
+#include <port/coroutine.h>
 
-void lbParticleDrawTextures(GObj *gobj)
+static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 {
     Vec3f right;
     Vec3f up;
@@ -4923,4 +4924,17 @@ void lbParticleDrawTextures(GObj *gobj)
 #if NDS_TICK_HUD
     gNdsMiscParticleDrawTicks += cpuGetTiming() - misc_particle_mark;
 #endif
+}
+
+/* The particle display proc runs on the DTCM hot stack (port/coroutine.h):
+ * GX writes and ARM9-only state, no I/O, no DMA from locals, no yield. */
+static unsigned int ndsLbParticleDrawTexturesOnHotStack(void *arg)
+{
+    ndsLbParticleDrawTexturesBody((GObj *)arg);
+    return 0u;
+}
+
+void lbParticleDrawTextures(GObj *gobj)
+{
+    (void)ndsDtcmHotStackRun(ndsLbParticleDrawTexturesOnHotStack, gobj);
 }

@@ -35,11 +35,13 @@ static PortCoroutine *sCurrentCoroutine;
 /* The DTCM hot stack. The four-fighter frame spent ~1,470 D-cache line fills
  * a frame on the gameplay coroutine's main-RAM stack (a read-allocate cache:
  * every push is a write-through, every pop of an evicted frame is a ~62-cycle
- * fill). The two draw subtrees that own most of them, the lean fighter list
- * and the stage GX segment commit, run here instead: zero-wait, uncached and
- * out of the 4 KB D-cache (same-ROM WORK-H paired -18.4K; deepest reach
- * 3,740 B). Only port-owned subtrees that do no I/O, hand no stack address to
- * DMA and never switch coroutines may run on it. */
+ * fill). The subtrees that own most of them run here instead: zero-wait,
+ * uncached and out of the 4 KB D-cache. The lean fighter list and the stage
+ * GX segment commit (same-ROM WORK-H paired -18.4K), then the map-collision
+ * step and the particle display proc (-7.9K); deepest reach 3,740 B. Only
+ * subtrees that do no I/O, hand no stack address to DMA and never switch
+ * coroutines may run on it. The fighter pose was priced and left off: its
+ * frames were ~46 fills a frame, a wash against the trampoline. */
 #ifndef NDS_DTCM_HOT_STACK_BYTES
 #define NDS_DTCM_HOT_STACK_BYTES 8192u
 #endif

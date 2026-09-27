@@ -8911,3 +8911,14 @@ moved to main RAM. Same-ROM A/B WORK-H P50/P95 -20.7K/-26.7K, paired median
 WORK-H P50/P95/P99 1,069,440/1,468,224/1,720,256; 1,216/1,972 frames within
 1,120,000; CSS reserve free 249,808. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 30.
+
+## 2026-09-27 — hot stack round 2: map collision and particle draw
+
+**BANKED.** `mpProcessUpdateMain` (geometry and flag-setting collision
+callbacks; status changes and loads run after it, in `proc_map`) and
+`lbParticleDrawTextures` now run on the DTCM hot stack. Same-ROM paired WORK-H
+-7.9K (SRC -4.0K, MISC -3.6K), P95 -11.7K; deepest reach unchanged at 3,740 B.
+The fighter pose on the hot stack read +0.4K and was reverted. Final
+`54785514` vs `hotfin`, replay identical: WORK-H P50/P95/P99
+1,062,016/1,461,056/1,716,800; 1,241/1,972 frames within 1,120,000. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 31.
