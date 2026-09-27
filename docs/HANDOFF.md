@@ -22,7 +22,7 @@ Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
 **Phase 2 ongoing:** Task36 retired; all-VS stage compilation, NDL, native MISC
 owners and view-space particles/dust landed (receipt
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`). CSS
-reserve free 204,752 B versus required 183,072 B. Campaign coverage and global
+reserve free 262,096 B (09-27) versus required 183,072 B. Campaign coverage and global
 renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
 Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.

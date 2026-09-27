@@ -669,3 +669,15 @@ Final `48F428A1` (`fgtfin`, toggle removed) vs `pin`, replay IDENTICAL:
 - WORK-H P50/P95/P99 1,093,568/1,498,304/1,793,856 (-3.0K/-3.0K/-2.9K).
 - 1,086 of 1,972 frames at or under 1,120,000 (`pin` 1,081).
 - Heap low-water 69,340 B; native failures 0.
+
+## 27. CSS reserve re-measured after this batch's static growth
+
+The owed all-content check (`3aef3ef6b33`, `smash64ds-p2-shell-freeplay-hwtri`
+in `builds/build-css-margin`, owner CSS route
+`2026-09-23_css-preview-heap/tools/run-owner-css.ps1`) reads
+`CSSRESERVE free=262096 fail=0` against the required 183,072 B (margin 79,024).
+Link, Yoshi and Pikachu previews draw (cumulative triangles 11,824 / 23,140 /
+33,550; screenshots `artifacts/visibility/2026-09-06_css-*-margin0927.png`).
+Log: `css-owner-margin0927.log`. Pass `-Rom`/`-Elf` as absolute paths: the
+emulator starts in its own directory, a relative ROM never opens the GDB
+listener, and the failed run prints the previous run's capture.

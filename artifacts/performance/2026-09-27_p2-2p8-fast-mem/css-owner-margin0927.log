@@ -1,0 +1,5 @@
+GDB marker capture: 14.1s elapsed of 90s ceiling (16% used).
+CSSRESERVE free=262096 ptr=0x23a0a30 end=0x23e0a00 start=0x22f6c00 fail=0
+CSS_OWNER tick=104 kind=5 selected=1 status=65537 triangles=11824
+CSS_OWNER tick=185 kind=6 selected=1 status=65538 triangles=23140
+CSS_OWNER tick=270 kind=9 selected=1 status=65537 triangles=33550
