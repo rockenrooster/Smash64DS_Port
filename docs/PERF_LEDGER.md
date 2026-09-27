@@ -8743,3 +8743,15 @@ replay identical: paired -2.1K vs `lclkf`; WORK-H P50/P95/P99 1,131,008/
 1,584,000/1,984,128 (P95 flat). STG -5.3K / MISC +3.1K is the segment lookup
 changing bucket. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 12.
+
+## 2026-09-27 — MP wall sweep into ITCM; two stage cuts refuted
+
+**BANKED.** A fresh whole-match profile shows 2,576 B of ITCM free since the fast
+libc left it. The census admission table ranks
+`ndsStageMPAdjustFloorLoopWallSweep` (1,644 B, ~8.9K ticks/frame non-memory
+stall) first among main-RAM functions that fit. `63784792` vs HEAD `29C70289`,
+replay identical: WORK-H P50/P95/P99 1,131,712/1,582,912/1,961,792 ->
+1,125,376/1,568,128/1,964,096; paired median -6.7K, SRC -8.5K; two-VBlank
+frames 863 -> 895. Refuted (same-ROM, reverted): deferring the stage draw's
+DMA wait (-128) and an ARM-state painter Z column (+2.0K: store-bound). RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 13.

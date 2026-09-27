@@ -278,3 +278,36 @@ replay IDENTICAL to `lclkf`. Final `FE3AF61F` (`stgf`) also replays IDENTICAL
 to `lclkf`. Against `lclkf`, paired WORK-H median is -2,112. WORK-H P50/P95/P99
 is **1,131,008/1,584,000/1,984,128**; P95 is flat (+256) and P99 is within
 run-to-run spread. VBlanks 862/1,045/59/7.
+
+## 13. Fresh profile (`4922D3C5`), WallSweep into ITCM, two refuted stage cuts
+
+A new whole-match profile at `4922d3c5d94` (`profile-4922-census.txt`;
+384 frames from frame 200) re-ranked the frame. Per frame, in ticks:
+- Soft-float: ~92K (`__aeabi_fadd` 50K, 1,806 calls). The callers are source
+  gameplay floats (pose clock, collision, AI), a closed lane.
+- Materialization: ~90K excess in tail frames.
+- `ndsStageGxDraw`: 52.6K. Dream Land's program is 54 runs, 7,009 words and
+  297 patches a frame; 146 of the patches are painter matrices.
+
+The census places `.itcm` at 30,160 of 32,736 B: 2,576 B are free since the
+fast libc left ITCM. Its admission table ranks
+`ndsStageMPAdjustFloorLoopWallSweep` (1,644 B, ~8.9K ticks/frame of non-memory
+stall) first among the main-RAM functions that fit.
+
+**WallSweep into ITCM (banked).** `itcmsw` `63784792` against `headchk`
+(`29C70289`, HEAD rebuilt), replay IDENTICAL:
+- WORK-H P50/P95/P99 1,131,712/1,582,912/1,961,792 -> **1,125,376/1,568,128/
+  1,964,096**.
+- Paired median -6,720; SRC -8,512. The layout moved STG +1.2K and FTR +0.6K.
+- Two-VBlank frames 863 -> 895. ITCM now 31,800 B (936 B free).
+
+**Refuted: stage DMA wait moved to the first GX write** (`sgw0`/`sgw1`, same
+ROM). `ndsStageGxDraw` patches words only in main RAM before `ndsStageGxAppend`
+writes GX, so the fighter-packet wait at its top was moved down. Paired WORK-H
+-128, which is no effect: the wait moves into Append. Reverted.
+
+**Refuted: ARM-state painter Z column** (`noz0`/`noz1`, same ROM). SMULL
+replaced Thumb-1's 16-bit-partial s64 multiply in the 146 painter matrices a
+frame. The rounding was host-checked (2e8 cases, 0 mismatches). Paired WORK-H
+went +1,984 (STG +1,920): the cost is the stores into the DMA buffer, not the
+arithmetic. Reverted.

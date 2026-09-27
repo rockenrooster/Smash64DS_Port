@@ -2693,7 +2693,10 @@ static sb32 ndsMPFCSegmentCrosses(const Vec3f *position,
         TRUE : FALSE;
 }
 
-static sb32
+/* ITCM (2026-09-27): the four-CPU census ranked this sweep first among
+ * main-RAM code by non-memory stall (~8.9K ticks/frame at 1,644 B) and it fit
+ * the ITCM the fast libc left free: WORK-H paired median -6.7K, SRC -8.5K. */
+static sb32 NDS_R2_ITCM_PACK2_CODE
 ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                                                Vec3f *translate,
                                                Vec3f *ga_last,
