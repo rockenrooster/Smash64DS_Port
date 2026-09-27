@@ -7,7 +7,10 @@ _Static_assert(PxiChannel_User0 == NDS_AUDIO_STORAGE_CHANNEL,
 
 static Thread sStorageThread;
 static Mailbox sStorageMailbox;
-static uint32_t sStorageMessages[4];
+/* One synchronous request plus the ARM9's asynchronous FGM fills (at most two
+ * parts for each of eight cache slots). */
+#define NDS_ARM7_STORAGE_MESSAGES 20u
+static uint32_t sStorageMessages[NDS_ARM7_STORAGE_MESSAGES];
 static uint8_t sStorageStack[2048] __attribute__((aligned(8)));
 static int sCardOpen;
 static uint32_t sRomBytes;
@@ -138,6 +141,7 @@ static int ndsAudioStorageThread(void *unused)
                     status = NDS_AUDIO_STORAGE_OK;
                     break;
                 case NDS_AUDIO_STORAGE_READ_CARD:
+                case NDS_AUDIO_STORAGE_READ_CARD_ASYNC:
                     if (!sCardOpen && !sFileMap.extent_count)
                         status = NDS_AUDIO_STORAGE_NOT_OPEN;
                     else if (!ndsAudioStorageReadRom(request->offset,
@@ -161,6 +165,18 @@ static int ndsAudioStorageThread(void *unused)
             }
         }
         if (status != NDS_AUDIO_STORAGE_OK) gNdsArm7StorageFailures++;
+        if ((message <= (UINT32_MAX >> 5)) &&
+            ndsAudioStorageMainRange(address, sizeof(NdsAudioStorageRequest)) &&
+            (((const volatile NdsAudioStorageRequest *)(uintptr_t)address)->operation ==
+             NDS_AUDIO_STORAGE_READ_CARD_ASYNC))
+        {
+            /* The ARM9 is not waiting: the reply goes into its request line.
+             * A malformed async request still completes (with its status), so
+             * the poller never spins on a line nobody will write. */
+            ((volatile NdsAudioStorageRequest *)(uintptr_t)address)->reserved[1] =
+                NDS_AUDIO_STORAGE_ASYNC_DONE | ndsAudioStorageReply(sequence, status);
+            continue;
+        }
         pxiReply((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL,
                  ndsAudioStorageReply(sequence, status));
     }
@@ -189,7 +205,7 @@ int main(void)
     soundStartServer(12);
     micStartServer(4);
 
-    mailboxPrepare(&sStorageMailbox, sStorageMessages, 4);
+    mailboxPrepare(&sStorageMailbox, sStorageMessages, NDS_ARM7_STORAGE_MESSAGES);
     pxiSetMailbox((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL, &sStorageMailbox);
     threadPrepare(&sStorageThread, ndsAudioStorageThread, NULL,
                   sStorageStack + sizeof(sStorageStack), 24);

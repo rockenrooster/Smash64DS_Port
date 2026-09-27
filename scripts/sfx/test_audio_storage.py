@@ -354,3 +354,80 @@ int main(void) {
     return 0;
 }
 ''')
+
+def test_async_read_submit_poll_and_refusals():
+    """READ_CARD_ASYNC: validator parity with READ_CARD, the ARM9 submit (flush
+    order, one PXI word, no wait) and the poll over the ARM7-written reply."""
+    source = (ROOT / "src/nds/nds_audio_storage.c").read_text()
+    run_c(r'''
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include <nds/nds_audio_storage.h>
+typedef unsigned PxiChannel;
+static int sCardRomReady = 1;
+static uint32_t sRomBytes = 0x100000;
+static uint32_t gNdsAudioStorageRequests, gNdsAudioStorageAsyncRequests;
+static uint32_t gNdsAudioStorageReads, gNdsAudioStorageBytes, gNdsAudioStorageFailures;
+static unsigned sends, flushes, invalidates;
+static uint32_t last_packet;
+static NdsAudioStorageRequest line;
+static void DC_FlushRange(void *address, size_t bytes) {
+    (void)address; (void)bytes; ++flushes;
+}
+static void DC_InvalidateRange(void *address, size_t bytes) {
+    (void)address; (void)bytes; ++invalidates;
+}
+static void pxiSend(PxiChannel channel, uint32_t imm) {
+    assert(channel == NDS_AUDIO_STORAGE_CHANNEL && flushes == 2);
+    last_packet = imm; ++sends;
+}
+''' + function(source, "ndsAudioStorageReadAsync") + "\n" +
+          function(source, "ndsAudioStorageReadAsyncPoll") + r'''
+int main(void) {
+    NdsAudioStorageRequest r = {NDS_AUDIO_STORAGE_ABI, NDS_AUDIO_STORAGE_READ_CARD_ASYNC,
+                               1, 0x100, 0x02001000, 512, {0,0}};
+    assert(ndsAudioStorageValidate(&r, 0x02000000, 0x10000));
+    r.bytes = 31; assert(!ndsAudioStorageValidate(&r, 0x02000000, 0x10000));
+
+    /* Refused requests send nothing. */
+    assert(!ndsAudioStorageReadAsync(&line, 0, (void *)0x02001001, 64));
+    assert(!ndsAudioStorageReadAsync(&line, 0, (void *)0x02001000, 48));
+    assert(!ndsAudioStorageReadAsync(&line, 0, (void *)0x02001000,
+                                     NDS_AUDIO_STORAGE_MAX_READ + 32));
+    assert(!ndsAudioStorageReadAsync(&line, sRomBytes - 32, (void *)0x02001000, 64));
+    assert(!ndsAudioStorageReadAsync((NdsAudioStorageRequest *)((char *)&line + 4),
+                                     0, (void *)0x02001000, 64));
+    sCardRomReady = 0;
+    assert(!ndsAudioStorageReadAsync(&line, 0, (void *)0x02001000, 64));
+    sCardRomReady = 1;
+    assert(sends == 0 && flushes == 0);
+
+    assert(ndsAudioStorageReadAsync(&line, 0x4000, (void *)0x02001000, 8192));
+    assert(sends == 1 && last_packet == ((uint32_t)(uintptr_t)&line >> 5));
+    assert(line.operation == NDS_AUDIO_STORAGE_READ_CARD_ASYNC && line.offset == 0x4000);
+    assert(line.reserved[0] == 0 && line.reserved[1] == 0 && line.sequence != 0);
+    assert(ndsAudioStorageValidate(&line, 0x02000000, sRomBytes));
+    /* In flight until the ARM7 writes the reply word into reserved[1]. */
+    assert(ndsAudioStorageReadAsyncPoll(&line) == 0 && gNdsAudioStorageReads == 0);
+    line.reserved[1] = NDS_AUDIO_STORAGE_ASYNC_DONE |
+        ndsAudioStorageReply(line.sequence, NDS_AUDIO_STORAGE_OK);
+    assert(ndsAudioStorageReadAsyncPoll(&line) == 1);
+    assert(gNdsAudioStorageReads == 1 && gNdsAudioStorageBytes == 8192);
+
+    /* An I/O error or a reply for another sequence is a failure. */
+    flushes = 0;
+    assert(ndsAudioStorageReadAsync(&line, 0, (void *)0x02001000, 64));
+    line.reserved[1] = NDS_AUDIO_STORAGE_ASYNC_DONE |
+        ndsAudioStorageReply(line.sequence, NDS_AUDIO_STORAGE_IO_ERROR);
+    assert(ndsAudioStorageReadAsyncPoll(&line) == -1);
+    flushes = 0;
+    assert(ndsAudioStorageReadAsync(&line, 0, (void *)0x02001000, 64));
+    line.reserved[1] = NDS_AUDIO_STORAGE_ASYNC_DONE |
+        ndsAudioStorageReply(line.sequence + 1u, NDS_AUDIO_STORAGE_OK);
+    assert(ndsAudioStorageReadAsyncPoll(&line) == -1);
+    assert(gNdsAudioStorageFailures == 2 && gNdsAudioStorageAsyncRequests == 3);
+    return 0;
+}
+''')

@@ -8,6 +8,7 @@
 
 #include <gm/gmsound.h>
 #include <nds/nds_audio_fgm.h>
+#include <nds/nds_audio_storage.h>
 #include <nds/nds_freeze_diagnostics.h>
 
 #define NDS_AUDIO_FGM_PATH "nitro:/audio/fgm_phase_pack_ima.bin"
@@ -118,7 +119,22 @@ typedef struct NDSAudioFgmHandle {
     u8 pause_with_game;
     u8 paused;
     u8 pause_hardware;
+    /* Live but not yet sounding: its sample is still being read into the cache
+     * slot. ndsAudioFgmUpdate starts the voice once the fill lands. */
+    u8 pending;
 } NDSAudioFgmHandle;
+
+/* A miss no longer blocks the game thread on the ROM read (66K ticks a miss,
+ * 342 misses in the four-CPU match): the ARM7 media service reads the sample
+ * into the slot while the game runs on, and the voice starts at the first
+ * update after the fill lands -- at most a frame late (A8). */
+enum
+{
+    NDS_AUDIO_FGM_FILL_READY = 0u,
+    NDS_AUDIO_FGM_FILL_PENDING = 1u,
+    NDS_AUDIO_FGM_FILL_FAILED = 2u
+};
+#define NDS_AUDIO_FGM_FILL_PARTS 2u     /* 59,344 B largest cue, 32 KiB reads */
 
 typedef struct NDSAudioFgmCacheSlot {
     u8 *data;
@@ -127,6 +143,8 @@ typedef struct NDSAudioFgmCacheSlot {
     u16 fgm_id;
     u16 references;
     u32 last_use;               /* acquire serial of the latest hit or fill */
+    u8 fill_state;              /* NDS_AUDIO_FGM_FILL_* */
+    u8 fill_parts;              /* async reads still in flight */
 } NDSAudioFgmCacheSlot;
 
 volatile u32 gNdsAudioFgmResult;
@@ -208,6 +226,14 @@ static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
 static u8 sNdsAudioFgmEnvelopes[NDS_AUDIO_FGM_ENVELOPE_TABLE_BYTES]
     __attribute__((aligned(4)));
 static u32 sNdsAudioFgmEnvelopeBase;
+/* Each slot's async read lines; the ARM7 writes each reply into its own. */
+static NdsAudioStorageRequest
+    sNdsAudioFgmFillRequests[NDS_AUDIO_FGM_CACHE_SLOT_COUNT]
+                            [NDS_AUDIO_FGM_FILL_PARTS];
+volatile u32 gNdsAudioFgmAsyncFillCount;
+volatile u32 gNdsAudioFgmAsyncFillFailCount;
+volatile u32 gNdsAudioFgmDeferredStartCount;
+volatile u32 gNdsAudioFgmDeferredFailCount;
 static NDSAudioFgmCacheSlot
     sNdsAudioFgmCacheSlots[NDS_AUDIO_FGM_CACHE_SLOT_COUNT];
 static FILE *sNdsAudioFgmFile;
@@ -1195,6 +1221,107 @@ static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
     return TRUE;
 }
 
+/* Queue the ARM7 read of `entry` into `slot` (32 KiB per part, line-rounded:
+ * every capacity is a multiple of 1 KiB). FALSE sends nothing, and the caller
+ * falls back to the synchronous read. */
+static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
+{
+    NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[index];
+    u32 bytes = (entry->data_bytes + 31u) & ~31u;
+    u32 rom_offset;
+    u32 part = 0u;
+    u32 done = 0u;
+
+    if ((sNdsAudioFgmRomReady == FALSE) || (bytes > slot->capacity) ||
+        (bytes > NDS_AUDIO_FGM_FILL_PARTS * NDS_AUDIO_STORAGE_MAX_READ))
+    {
+        return FALSE;
+    }
+    rom_offset = nitroromGetFileOffset(sNdsAudioFgmRom, sNdsAudioFgmRomFileId) +
+                 entry->data_offset;
+    while (done < bytes)
+    {
+        u32 chunk = bytes - done;
+
+        if (chunk > NDS_AUDIO_STORAGE_MAX_READ)
+        {
+            chunk = NDS_AUDIO_STORAGE_MAX_READ;
+        }
+        if (ndsAudioStorageReadAsync(&sNdsAudioFgmFillRequests[index][part],
+                                     rom_offset + done, slot->data + done,
+                                     chunk) == 0)
+        {
+            /* A refused later part leaves earlier parts in flight: the slot
+             * waits for them and then reads FAILED. */
+            if (part == 0u)
+            {
+                return FALSE;
+            }
+            slot->fill_parts = (u8)part;
+            slot->fill_state = NDS_AUDIO_FGM_FILL_FAILED;
+            return TRUE;
+        }
+        done += chunk;
+        part++;
+    }
+    slot->fill_parts = (u8)part;
+    slot->fill_state = NDS_AUDIO_FGM_FILL_PENDING;
+    gNdsAudioFgmAsyncFillCount++;
+    return TRUE;
+}
+
+/* Collect landed fills. A slot stays unusable (not READY, not evictable)
+ * while any of its reads is in flight, whatever it will end as. */
+static void ndsAudioFgmPollFills(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+        u32 part;
+        u32 in_flight = 0u;
+
+        if (slot->fill_parts == 0u)
+        {
+            continue;
+        }
+        for (part = 0u; part < (u32)slot->fill_parts; part++)
+        {
+            s32 result = ndsAudioStorageReadAsyncPoll(
+                &sNdsAudioFgmFillRequests[i][part]);
+
+            if (result == 0)
+            {
+                in_flight++;
+            }
+            else if (result < 0)
+            {
+                slot->fill_state = NDS_AUDIO_FGM_FILL_FAILED;
+            }
+        }
+        if (in_flight != 0u)
+        {
+            continue;
+        }
+        slot->fill_parts = 0u;
+        if (slot->fill_state == NDS_AUDIO_FGM_FILL_FAILED)
+        {
+            slot->fgm_id = 0u;
+            slot->data_bytes = 0u;
+            gNdsAudioFgmAsyncFillFailCount++;
+            gNdsAudioFgmReadFailCount++;
+        }
+        else
+        {
+            slot->fill_state = NDS_AUDIO_FGM_FILL_READY;
+            gNdsAudioFgmDirectReadCount++;
+            gNdsAudioFgmReadBytes += slot->data_bytes;
+        }
+    }
+}
+
+/* -> the slot holding or filling this cue, or -1. */
 static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
 {
     static u32 serial;
@@ -1206,7 +1333,8 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
     {
         NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
         if ((slot->fgm_id == entry->id) &&
-            (slot->data_bytes == entry->data_bytes))
+            (slot->data_bytes == entry->data_bytes) &&
+            (slot->fill_state != NDS_AUDIO_FGM_FILL_FAILED))
         {
             slot->last_use = serial;
             return (s32)i;
@@ -1214,8 +1342,9 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
         /* Smallest free slot that fits; among equal capacities the least
          * recently used. Ties used to go to the lowest index, so every small
          * miss refilled the same 16 KiB slot while its three siblings kept
-         * stale cues: 342 of 456 plays missed in the four-CPU match. */
-        if ((slot->references == 0u) &&
+         * stale cues: 342 of 456 plays missed in the four-CPU match. A slot
+         * with a read in flight belongs to the ARM7 until it lands. */
+        if ((slot->references == 0u) && (slot->fill_parts == 0u) &&
             (slot->capacity >= entry->data_bytes) &&
             ((best < 0) ||
              (slot->capacity < sNdsAudioFgmCacheSlots[best].capacity) ||
@@ -1231,6 +1360,13 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
          * partially refilled slot. */
         sNdsAudioFgmCacheSlots[best].fgm_id = 0u;
         sNdsAudioFgmCacheSlots[best].data_bytes = 0u;
+        if (ndsAudioFgmFillAsync((u32)best, entry) != FALSE)
+        {
+            sNdsAudioFgmCacheSlots[best].fgm_id = entry->id;
+            sNdsAudioFgmCacheSlots[best].data_bytes = entry->data_bytes;
+            sNdsAudioFgmCacheSlots[best].last_use = serial;
+            return best;
+        }
     }
     if ((best < 0) ||
         (ndsAudioFgmReadRange(entry->data_offset,
@@ -1243,6 +1379,7 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
     sNdsAudioFgmCacheSlots[best].fgm_id = entry->id;
     sNdsAudioFgmCacheSlots[best].data_bytes = entry->data_bytes;
     sNdsAudioFgmCacheSlots[best].last_use = serial;
+    sNdsAudioFgmCacheSlots[best].fill_state = NDS_AUDIO_FGM_FILL_READY;
     DC_FlushRange(sNdsAudioFgmCacheSlots[best].data, entry->data_bytes);
     return best;
 }
@@ -1398,10 +1535,11 @@ static void ndsAudioFgmReleaseHandle(
         sNdsAudioFgmChannelOwners[channel] = NULL;
         sNdsAudioFgmChannelGenerations[channel] = 0u;
     }
-    else if (handle->live != FALSE)
+    else if ((handle->live != FALSE) && (handle->pending == FALSE))
     {
         gNdsAudioFgmGenerationMismatchCount++;
     }
+    handle->pending = FALSE;
     if (handle->live != FALSE)
     {
         handle->live = FALSE;
@@ -1531,6 +1669,132 @@ static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
         now + (u32)(((u64)BUS_CLOCK * entry->sample_count) / entry->frequency);
     sNdsAudioFgmChannelOwners[channel] = handle;
     sNdsAudioFgmChannelGenerations[channel] = handle->generation;
+    gNdsAudioFgmChannelMask |= 1u << channel;
+    gNdsAudioFgmLastChannel = (u32)channel;
+    return TRUE;
+}
+
+/* The hardware half of a play: start a live handle's voice from its filled
+ * cache slot and take the channel. A hit runs it inside ndsAudioFgmPlayAtPan
+ * exactly as before (now == 0: clock read after the play command); a miss
+ * runs it from ndsAudioFgmUpdate once the fill lands, at that update's `now`.
+ * FALSE leaves the handle for the caller to release. */
+static s32 ndsAudioFgmStartHandle(NDSAudioFgmHandle *handle,
+                                  const NDSAudioFgmPackEntry *entry, u32 now)
+{
+    s32 channel;
+    u32 start;
+    u32 duration_cpu_ticks;
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    u32 play_command_tick = 0u;
+    u32 play_command_return_tick = 0u;
+#endif
+
+    NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(handle->fgm_id);
+    soundEnable();
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
+    {
+        play_command_tick = cpuGetTiming();
+    }
+#endif
+    channel = soundPlaySample(
+        sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].data,
+        SoundFormat_ADPCM,
+        entry->data_bytes - ((u32)entry->loop_point_words * 4u),
+        entry->frequency, entry->volume, handle->effect.balance,
+        ((entry->flags & 1u) != 0u), entry->loop_point_words);
+    NDS_FREEZE_DIAGNOSTICS_FGM_RETURN(channel);
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
+    {
+        play_command_return_tick = cpuGetTiming();
+    }
+#endif
+    if ((channel < 0) || (channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT))
+    {
+        return FALSE;
+    }
+    if (sNdsAudioFgmChannelOwners[channel] != NULL)
+    {
+        NDSAudioFgmHandle *completed_handle =
+            sNdsAudioFgmChannelOwners[channel];
+
+        /* soundPlaySample synchronizes with ARM7 and only selects an inactive
+         * hardware channel. Retire its completed software owner instead of
+         * killing the newly started sample when the source-duration clock
+         * trails the hardware one-shot completion. */
+        if ((completed_handle->allocated != FALSE) &&
+            (completed_handle->live != FALSE) &&
+            (completed_handle->channel == channel) &&
+            (sNdsAudioFgmChannelGenerations[channel] ==
+             completed_handle->generation))
+        {
+            /* BUGS.md "Some Crowd noise audio cues get cut off (the for big
+             * hits)". The retire above is justified by soundPlaySample only
+             * choosing an INACTIVE hardware channel -- so the owner must be
+             * finished. Measure that rather than trust it.
+             *
+             * Measure it against audible_end_tick, NOT end_tick. This test was
+             * written against end_tick first and reported 3 hits over a 5-minute
+             * both-CPU soak, which read as confirmed channel contention and was
+             * wrong: end_tick is the source note length and every one of the 88
+             * cues outlives its own DS sample, so that form fires on ordinary
+             * completion and can only ever over-report. Against the audible end
+             * a hit means the hardware channel was reused while this cue was
+             * genuinely still sounding, which is the row's mechanism; zero
+             * clears contention and moves the search to the release ramp. */
+            u32 retire_now = cpuGetTiming();
+
+            if ((completed_handle->audible_end_tick != 0u) &&
+                ((s32)(completed_handle->audible_end_tick - retire_now) > 0))
+            {
+                gNdsAudioFgmPrematureRetireCount++;
+                gNdsAudioFgmPrematureRetireLastID = completed_handle->fgm_id;
+            }
+            ndsAudioFgmReleaseHandle(
+                completed_handle, FALSE
+                NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                    NDS_AUDIO_FGM_RELEASE_REASON_DURATION,
+                    retire_now));
+            gNdsAudioFgmDurationStopCount++;
+        }
+        else
+        {
+            soundKill(channel);
+            gNdsAudioFgmGenerationMismatchCount++;
+            return FALSE;
+        }
+    }
+
+    start = (now != 0u) ? now : cpuGetTiming();
+    duration_cpu_ticks = (u32)(((u64)BUS_CLOCK * entry->duration_ticks *
+                                NDS_AUDIO_FGM_TIMER_MICROSECONDS) /
+                               1000000u);
+    handle->start_tick = start;
+    handle->end_tick = start + duration_cpu_ticks;
+    handle->audible_end_tick =
+        start + (u32)(((u64)BUS_CLOCK * entry->sample_count) /
+                      entry->frequency);
+    handle->channel = (s8)channel;
+    handle->pending = FALSE;
+    sNdsAudioFgmChannelOwners[channel] = handle;
+    sNdsAudioFgmChannelGenerations[channel] = handle->generation;
+#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
+    if (ndsAudioFgmIsArm7AckTarget(handle->fgm_id) != FALSE)
+    {
+        u32 active_channels;
+        u32 acknowledge_tick;
+
+        ndsAudioFgmArm7AckTraceBegin(handle, entry);
+        active_channels = (u32)soundGetActiveChannels();
+        acknowledge_tick = cpuGetTiming();
+        ndsAudioFgmArm7AckTraceRecord(
+            handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY, 0u, entry->volume,
+            handle->start_tick, play_command_tick, play_command_return_tick,
+            acknowledge_tick, active_channels);
+    }
+#endif
     gNdsAudioFgmChannelMask |= 1u << channel;
     gNdsAudioFgmLastChannel = (u32)channel;
     return TRUE;
@@ -1834,6 +2098,7 @@ void ndsAudioFgmUpdate(void)
     u32 now;
     u32 i;
 
+    ndsAudioFgmPollFills();
     if (gNdsAudioFgmActiveHandles == 0u)
     {
         return;
@@ -1851,6 +2116,32 @@ void ndsAudioFgmUpdate(void)
             if (handle->paused != FALSE)
             {
                 continue;
+            }
+            if (handle->pending != FALSE)
+            {
+                const NDSAudioFgmCacheSlot *slot =
+                    &sNdsAudioFgmCacheSlots[(u32)handle->cache_slot];
+                const NDSAudioFgmPackEntry *entry;
+
+                if (slot->fill_parts != 0u)
+                {
+                    continue;
+                }
+                entry = ndsAudioFgmFindEntry(handle->fgm_id);
+                if ((slot->fill_state != NDS_AUDIO_FGM_FILL_READY) ||
+                    (entry == NULL) ||
+                    (ndsAudioFgmStartHandle(handle, entry, now) == FALSE))
+                {
+                    gNdsAudioFgmDeferredFailCount++;
+                    gNdsAudioFgmPlayFailCount++;
+                    ndsAudioFgmReleaseHandle(
+                        handle, FALSE
+                        NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                            NDS_AUDIO_FGM_RELEASE_REASON_GENERATION_LOST,
+                            now));
+                    continue;
+                }
+                gNdsAudioFgmDeferredStartCount++;
             }
             u32 elapsed_cpu_ticks = now - handle->start_tick;
             u32 elapsed_fgm_ticks = (u32)(
@@ -2121,14 +2412,8 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     NDSAudioFgmHandle *handle = NULL;
     s32 phase_index;
     s32 ko_index;
-    s32 channel;
     s32 cache_slot;
     u32 i;
-    u32 duration_cpu_ticks;
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    u32 play_command_tick = 0u;
-    u32 play_command_return_tick = 0u;
-#endif
 
     gNdsAudioFgmPlayCalls++;
     gNdsAudioFgmLastID = fgm_id;
@@ -2181,9 +2466,6 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         gNdsAudioFgmPlayFailCount++;
         return NULL;
     }
-
-    NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id);
-    soundEnable();
     /* Mono fold-down (dSYAudioSoundQuality == 0, see syAudioSetQuality):
      * event-driven at voice start, no per-frame cost. Stereo honours the
      * caller's pan; mono centres it, so both channels carry the centred mix.
@@ -2192,81 +2474,6 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     if (dSYAudioSoundQuality == 0)
     {
         pan = 64u;
-    }
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
-    {
-        play_command_tick = cpuGetTiming();
-    }
-#endif
-    channel = soundPlaySample(
-        sNdsAudioFgmCacheSlots[cache_slot].data, SoundFormat_ADPCM,
-        entry->data_bytes - ((u32)entry->loop_point_words * 4u),
-        entry->frequency, entry->volume, pan,
-        ((entry->flags & 1u) != 0u), entry->loop_point_words);
-    NDS_FREEZE_DIAGNOSTICS_FGM_RETURN(channel);
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
-    {
-        play_command_return_tick = cpuGetTiming();
-    }
-#endif
-    if ((channel < 0) || (channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT))
-    {
-        gNdsAudioFgmPlayFailCount++;
-        return NULL;
-    }
-    if (sNdsAudioFgmChannelOwners[channel] != NULL)
-    {
-        NDSAudioFgmHandle *completed_handle =
-            sNdsAudioFgmChannelOwners[channel];
-
-        /* soundPlaySample synchronizes with ARM7 and only selects an inactive
-         * hardware channel. Retire its completed software owner instead of
-         * killing the newly started sample when the source-duration clock
-         * trails the hardware one-shot completion. */
-        if ((completed_handle->allocated != FALSE) &&
-            (completed_handle->live != FALSE) &&
-            (completed_handle->channel == channel) &&
-            (sNdsAudioFgmChannelGenerations[channel] ==
-             completed_handle->generation))
-        {
-            /* BUGS.md "Some Crowd noise audio cues get cut off (the for big
-             * hits)". The retire above is justified by soundPlaySample only
-             * choosing an INACTIVE hardware channel -- so the owner must be
-             * finished. Measure that rather than trust it.
-             *
-             * Measure it against audible_end_tick, NOT end_tick. This test was
-             * written against end_tick first and reported 3 hits over a 5-minute
-             * both-CPU soak, which read as confirmed channel contention and was
-             * wrong: end_tick is the source note length and every one of the 88
-             * cues outlives its own DS sample, so that form fires on ordinary
-             * completion and can only ever over-report. Against the audible end
-             * a hit means the hardware channel was reused while this cue was
-             * genuinely still sounding, which is the row's mechanism; zero
-             * clears contention and moves the search to the release ramp. */
-            u32 retire_now = cpuGetTiming();
-
-            if ((completed_handle->audible_end_tick != 0u) &&
-                ((s32)(completed_handle->audible_end_tick - retire_now) > 0))
-            {
-                gNdsAudioFgmPrematureRetireCount++;
-                gNdsAudioFgmPrematureRetireLastID = completed_handle->fgm_id;
-            }
-            ndsAudioFgmReleaseHandle(
-                completed_handle, FALSE
-                NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
-                    NDS_AUDIO_FGM_RELEASE_REASON_DURATION,
-                    retire_now));
-            gNdsAudioFgmDurationStopCount++;
-        }
-        else
-        {
-            soundKill(channel);
-            gNdsAudioFgmGenerationMismatchCount++;
-            gNdsAudioFgmPlayFailCount++;
-            return NULL;
-        }
     }
 
     memset(&handle->effect, 0, sizeof(handle->effect));
@@ -2278,14 +2485,9 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     {
         sNdsAudioFgmNextGeneration = 1u;
     }
-    duration_cpu_ticks = (u32)(((u64)BUS_CLOCK * entry->duration_ticks *
-                                NDS_AUDIO_FGM_TIMER_MICROSECONDS) /
-                               1000000u);
-    handle->start_tick = cpuGetTiming();
-    handle->end_tick = handle->start_tick + duration_cpu_ticks;
-    handle->audible_end_tick =
-        handle->start_tick +
-        (u32)(((u64)BUS_CLOCK * entry->sample_count) / entry->frequency);
+    handle->start_tick = 0u;
+    handle->end_tick = 0u;
+    handle->audible_end_tick = 0u;
     handle->volume = entry->volume;
     handle->loops = (((entry->flags & NDS_AUDIO_FGM_FLAG_LOOP) != 0u) ?
                      TRUE : FALSE);
@@ -2294,7 +2496,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
                                sNdsAudioFgmEnvelopeBase] : NULL;
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
-    handle->channel = (s8)channel;
+    handle->channel = -1;
     handle->cache_slot = (s8)cache_slot;
     handle->child_handle = NULL;
     handle->child_generation = 0u;
@@ -2306,6 +2508,7 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
          TRUE : FALSE);
     handle->paused = FALSE;
     handle->pause_hardware = FALSE;
+    handle->pending = TRUE;
     sNdsAudioFgmCacheSlots[cache_slot].references++;
     if (handle->ever_allocated != FALSE)
     {
@@ -2314,34 +2517,28 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     handle->ever_allocated = TRUE;
     handle->allocated = TRUE;
     handle->live = TRUE;
-    sNdsAudioFgmChannelOwners[channel] = handle;
-    sNdsAudioFgmChannelGenerations[channel] = handle->generation;
-
-#if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
-    if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
-    {
-        u32 active_channels;
-        u32 acknowledge_tick;
-
-        ndsAudioFgmArm7AckTraceBegin(handle, entry);
-        active_channels = (u32)soundGetActiveChannels();
-        acknowledge_tick = cpuGetTiming();
-        ndsAudioFgmArm7AckTraceRecord(
-            handle, NDS_AUDIO_FGM_ARM7_ACK_KIND_PLAY, 0u, entry->volume,
-            handle->start_tick, play_command_tick, play_command_return_tick,
-            acknowledge_tick, active_channels);
-    }
-#endif
-
-    gNdsAudioFgmSupportedPlayCount++;
-    gNdsAudioFgmHandleAcquireCount++;
     gNdsAudioFgmActiveHandles++;
     if (gNdsAudioFgmActiveHandles > gNdsAudioFgmMaxActiveHandles)
     {
         gNdsAudioFgmMaxActiveHandles = gNdsAudioFgmActiveHandles;
     }
-    gNdsAudioFgmChannelMask |= 1u << channel;
-    gNdsAudioFgmLastChannel = (u32)channel;
+    /* A hit starts now, as it always did. A miss stays pending until its fill
+     * lands; ndsAudioFgmUpdate starts it then. */
+    if ((sNdsAudioFgmCacheSlots[cache_slot].fill_parts == 0u) &&
+        (sNdsAudioFgmCacheSlots[cache_slot].fill_state ==
+         NDS_AUDIO_FGM_FILL_READY) &&
+        (ndsAudioFgmStartHandle(handle, entry, 0u) == FALSE))
+    {
+        ndsAudioFgmReleaseHandle(
+            handle, FALSE
+            NDS_AUDIO_FGM_ACK_RELEASE_ARGS(
+                NDS_AUDIO_FGM_RELEASE_REASON_GENERATION_LOST, 0u));
+        gNdsAudioFgmPlayFailCount++;
+        return NULL;
+    }
+
+    gNdsAudioFgmSupportedPlayCount++;
+    gNdsAudioFgmHandleAcquireCount++;
     gNdsAudioFgmLastGeneration = handle->generation;
     gNdsAudioFgmLastInstanceToken = handle->effect.sfx_id;
     gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_SUPPORTED_PLAY;

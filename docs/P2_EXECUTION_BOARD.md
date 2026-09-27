@@ -94,7 +94,8 @@ program now expected to decline (RAM). Receipt `2026-09-26_p2-2p8-ftr-item-tail`
 ticks/frame. `5EEE8AFD` WORK-H P95/P99 1,892,160/2,384,256; 19.94 FPS; replay
 identical. Rest is transfer (3.58 MB/match): Phase 3 residency. Receipt `2026-09-26_p2-2p8-storage-bounce`.
 **FGM cache (09-26)**: 342/456 plays missed. LRU tiebreak, 32 B-aligned slots, resident
-envelopes: `096C3002` P95/P99 1,869,504/2,360,192, 20.02 FPS, replay identical. ARM9 worker-
+envelopes; A8 async fills via the ARM7 (storage op 5): `FF3DC3FC` P95/P99 1,852,672/
+2,291,456, 20.06 FPS, replay identical. Next A8: shrink the 232 KiB cache. ARM9 worker-
 thread fills reverted (layout-dependent divergence). STG split: `2026-09-26_p2-2p8-stg-partition`.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.

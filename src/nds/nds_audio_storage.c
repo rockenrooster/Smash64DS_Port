@@ -39,6 +39,7 @@ volatile uint32_t gNdsAudioStorageBounceBytes;
 volatile uint32_t gNdsAudioStorageFailures;
 /* ARM9 time blocked in the PXI round-trip, in /64 system ticks (x64 for
  * cpuGetTiming units). Zero them at a frame marker to price a window. */
+volatile uint32_t gNdsAudioStorageAsyncRequests;
 volatile uint32_t gNdsAudioStorageWaitTicks64;
 volatile uint32_t gNdsAudioStorageWaitMaxTicks64;
 volatile uint32_t gNdsAudioStorageMapFailure;
@@ -267,6 +268,69 @@ static bool ndsAudioStorageReadCard(void *unused, uint32_t offset,
     }
     mutexUnlock(&sStorageMutex);
     return ok != 0;
+}
+
+/* Queue one read and return at once; the ARM7 writes its reply into the
+ * request's own line (NDS_AUDIO_STORAGE_READ_CARD_ASYNC). The caller owns
+ * `request` (one aligned line) and the destination lines until the poll says
+ * done. `rom_offset` is ROM-absolute. -> 1 queued, 0 refused (nothing sent). */
+int ndsAudioStorageReadAsync(NdsAudioStorageRequest *request,
+                             uint32_t rom_offset, void *destination,
+                             uint32_t bytes)
+{
+    static uint32_t sequence;
+    uintptr_t address = (uintptr_t)destination;
+
+    if ((request == NULL) || (((uintptr_t)request & 31u) != 0u) ||
+        (sCardRomReady == 0) || (bytes == 0u) ||
+        (bytes > NDS_AUDIO_STORAGE_MAX_READ) ||
+        (((address | bytes) & 31u) != 0u) || (address > UINT32_MAX) ||
+        !ndsAudioStorageMainRange((uint32_t)address, bytes) ||
+        (rom_offset > sRomBytes) || (bytes > sRomBytes - rom_offset))
+    {
+        return 0;
+    }
+    sequence = (sequence + 1u) & 0xffffu;
+    if (sequence == 0u) sequence = 1u;
+    *request = (NdsAudioStorageRequest){
+        .abi = NDS_AUDIO_STORAGE_ABI,
+        .operation = NDS_AUDIO_STORAGE_READ_CARD_ASYNC,
+        .sequence = sequence, .offset = rom_offset,
+        .destination = (uint32_t)address, .bytes = bytes
+    };
+    /* No dirty line may later write back over the ARM7's bytes. */
+    DC_FlushRange(destination, bytes);
+    DC_FlushRange(request, sizeof(*request));
+    gNdsAudioStorageRequests++;
+    gNdsAudioStorageAsyncRequests++;
+    pxiSend((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL,
+            (uint32_t)(uintptr_t)request >> 5);
+    return 1;
+}
+
+/* -> 0 in flight, 1 landed (destination lines invalidated), -1 failed. */
+int ndsAudioStorageReadAsyncPoll(NdsAudioStorageRequest *request)
+{
+    uint32_t done;
+
+    DC_InvalidateRange(request, sizeof(*request));
+    done = ((volatile NdsAudioStorageRequest *)request)->reserved[1];
+    if ((done & NDS_AUDIO_STORAGE_ASYNC_DONE) == 0u)
+    {
+        return 0;
+    }
+    if (done != (NDS_AUDIO_STORAGE_ASYNC_DONE |
+                 ndsAudioStorageReply(request->sequence,
+                                      NDS_AUDIO_STORAGE_OK)))
+    {
+        gNdsAudioStorageFailures++;
+        return -1;
+    }
+    DC_InvalidateRange((void *)(uintptr_t)request->destination,
+                       request->bytes);
+    gNdsAudioStorageReads++;
+    gNdsAudioStorageBytes += request->bytes;
+    return 1;
 }
 
 static void ndsAudioStorageCloseCard(void *unused)

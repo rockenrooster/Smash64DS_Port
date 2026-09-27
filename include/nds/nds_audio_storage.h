@@ -18,8 +18,14 @@ enum {
     NDS_AUDIO_STORAGE_OPEN_CARD = 1,
     NDS_AUDIO_STORAGE_READ_CARD = 2,
     NDS_AUDIO_STORAGE_CLOSE_CARD = 3,
-    NDS_AUDIO_STORAGE_OPEN_MAP = 4
+    NDS_AUDIO_STORAGE_OPEN_MAP = 4,
+    /* READ_CARD without a PXI reply: ARM7 writes the reply word, with
+     * NDS_AUDIO_STORAGE_ASYNC_DONE set, into reserved[1] of the request line
+     * when the read has landed. The ARM9 polls that line (invalidate, read) and
+     * never waits; it must not write the line or the destination meanwhile. */
+    NDS_AUDIO_STORAGE_READ_CARD_ASYNC = 5
 };
+#define NDS_AUDIO_STORAGE_ASYNC_DONE 0x80000000u
 
 enum {
     NDS_AUDIO_STORAGE_OK = 0,
@@ -70,7 +76,8 @@ static inline int ndsAudioStorageValidate(
         (request->sequence == 0u) || (request->sequence > 0xffffu) ||
         request->reserved[0] || request->reserved[1])
         return 0;
-    if (request->operation == NDS_AUDIO_STORAGE_READ_CARD)
+    if ((request->operation == NDS_AUDIO_STORAGE_READ_CARD) ||
+        (request->operation == NDS_AUDIO_STORAGE_READ_CARD_ASYNC))
     {
         if ((request->bytes == 0u) ||
             (request->bytes > NDS_AUDIO_STORAGE_MAX_READ) ||
@@ -104,6 +111,13 @@ static inline uint32_t ndsAudioStorageCardCapacity(uint32_t device_capacity)
 {
     return device_capacity <= 12u ? 0x20000u << device_capacity : 0u;
 }
+
+#ifndef ARM7
+int ndsAudioStorageReadAsync(NdsAudioStorageRequest *request,
+                             uint32_t rom_offset, void *destination,
+                             uint32_t bytes);
+int ndsAudioStorageReadAsyncPoll(NdsAudioStorageRequest *request);
+#endif
 
 #ifdef ARM7
 /* The ARM7 audio worker and ARM9 RPC server share this serialized media owner.

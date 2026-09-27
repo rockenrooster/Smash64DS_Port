@@ -1,7 +1,7 @@
 # P2-2p8: FGM cache fills (2026-09-26)
 
 **Outcome: BANKED** (LRU tiebreak, line-aligned cache, resident envelopes).
-**Async fills: REVERTED** (digest divergence in one binary layout).
+**Async fills: BANKED on the ARM7 media service** (an ARM9-thread version was reverted).
 
 ## Where the remaining ROM wait was
 
@@ -56,3 +56,27 @@ Any future ARM9 thread needs a generously sized stack and a layout-shift test
 
 Committed evidence: `fgmlru-route1`, `fgmfinal-route1` (json/rows/log). The
 async/repro runs are summarised above; their files stay local.
+
+## Banked: asynchronous fills by the ARM7 (2026-09-27)
+
+`NDS_AUDIO_STORAGE_READ_CARD_ASYNC` (op 5) is `READ_CARD` without a PXI reply:
+the ARM7 storage thread writes the reply word, with `NDS_AUDIO_STORAGE_ASYNC_DONE`,
+into `reserved[1]` of the request's own cache line. The ARM9
+(`ndsAudioStorageReadAsync`/`...Poll`) flushes the destination and request lines,
+sends one PXI word and returns; it polls by invalidating the line. No ARM9
+thread. The ARM7 mailbox grows 4 -> 20 messages (eight slots x two 32 KiB parts
+plus one synchronous request).
+
+A miss queues its slot's reads and returns a live, pending handle; the slot is
+neither READY nor evictable while any part is in flight. `ndsAudioFgmUpdate`
+collects landed fills first, then starts pending handles at that update's clock
+(`ndsAudioFgmStartHandle`, shared with the hit path, which still starts at
+once). A failed fill releases its pending handles as play failures.
+
+`fgm7` `FF3DC3FC` against `fgmfinal` `096C3002` (frames 2..1973, route 1):
+WORK-H P50/P95/P99 1,328,576/1,869,504/2,360,192 -> 1,328,192/1,852,672/
+2,291,456; SRC P95 993,984 -> 967,296; VBlanks 5+ 30 -> 27; 20.06 FPS. 331
+async fills, 320 deferred starts, 0 fill/start/play failures, 0 generation
+mismatches, pool never exhausted. Replay digest IDENTICAL. Host: new
+`test_async_read_submit_poll_and_refusals` in `scripts/sfx/test_audio_storage.py`.
+The cache is still 232 KiB; shrinking it (the A8 RAM win) is the next step.

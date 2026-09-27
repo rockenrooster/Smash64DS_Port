@@ -23333,3 +23333,7 @@ requests 18,651 -> 2,233, WORK-H P95 1,892,160, P99 2,384,256, replay identical.
 remaining ROM wait. LRU tiebreak, 32 B-aligned cache, resident envelopes banked
 (P95 1,869,504, replay identical). An ARM9 worker thread for async fills was
 reverted after a layout-dependent digest divergence; see the fgm-cache receipt.
+
+2026-09-27 P2-2p8 A8: FGM misses now queue an ARM7 read (storage op 5, reply
+written into the request line) and start their voice at the next update; no ARM9
+thread. P95 1,852,672, P99 2,291,456, replay identical. Next: shrink the cache.

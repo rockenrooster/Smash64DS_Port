@@ -8502,3 +8502,25 @@ identical: WORK-H P50/P95/P99 1,333,504/1,892,160/2,384,256 -> 1,328,576/
 measured -16K P95 same-ROM but one binary layout diverged at frame 46
 deterministically (suspected worker stack overflow into the slot table): reverted.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-fgm-cache/README.md`.
+
+## 2026-09-27 — two refuted levers (not banked, reverted)
+
+- Sorted index for fighter-animation pointer tokens (binary search instead of a
+  ~690-row walk per motion load): digest identical, SRC P95 -13K, P99 -30K, but
+  WORK-H P95 +2.7K, inside the ~±7K single-run noise; 1.4 KB BSS. Not banked (D9).
+- cpuGetTiming overridden with ARM9 TIMER0/TIMER1 cascaded at the bus clock (the
+  libnds version is Calico tickGetCount, ~65 ticks a call, ~500 calls a tick-HUD
+  frame): P50 -10.9K and digest identical, but 420/1,972 frames read ALL exactly
+  +2^22 on the repo melonDS. The instrument cannot carry the gate; reverted.
+Evidence: `artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail/{tokenidx,fasttiming}-route1*` (local).
+
+## 2026-09-27 — A8: FGM misses filled asynchronously by the ARM7
+
+**BANKED.** New storage op `READ_CARD_ASYNC`: the ARM7 writes its reply into the
+request's cache line instead of a PXI reply, so the ARM9 queues an FGM miss and
+continues; the voice starts at the next update (pending handles). No ARM9 thread
+(an earlier ARM9-worker version diverged in one binary layout and was reverted).
+`096C3002` -> `FF3DC3FC`, replay identical, 331 async fills / 320 deferred starts /
+0 failures: WORK-H P50/P95/P99 1,328,576/1,869,504/2,360,192 -> 1,328,192/
+1,852,672/2,291,456; 5+-VBlank 30 -> 27; 20.06 FPS. RED. Cache still 232 KiB.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-fgm-cache/README.md`.

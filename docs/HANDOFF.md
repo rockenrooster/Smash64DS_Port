@@ -28,10 +28,10 @@ Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26 solo (Codex out of usage):** the ~0.6M P95 regression since slice 7 was
 the compact packet layout (stage GX tail starved lean entries). Stage body is
-heap again (P95 1,955,392); unaligned ROM reads now bounce only edges:
-`5EEE8AFD` P95/P99 1,892,160/2,384,256, 19.94 FPS, replay identical.
-Receipts `2026-09-26_p2-2p8-{ftr-item-tail,storage-bounce}`. Next: FGM voices/cache
-(A8), then MF bind; solo, no subagents.
+heap again (P95 1,955,392); ROM reads bounce only edges (1,892,160); FGM cache
++ ARM7 async fills (A8, storage op 5): `FF3DC3FC` P95/P99 1,852,672/2,291,456,
+20.06 FPS, replay identical. Receipts `2026-09-26_p2-2p8-{ftr-item-tail,
+storage-bounce,fgm-cache}`. Next: shrink the FGM cache (A8 RAM), then MF bind.
 
 ## Continue, do not restart
 
