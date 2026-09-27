@@ -8866,3 +8866,15 @@ touches): `.main.rw`/`.main.bss` followed the code's size, so they now start on
 identical: WORK-H P50/P95/P99 1,096,576/1,501,312/1,796,736 (+5.5K/+7.4K: the
 one-time layout move). Sub-10K changes are priced same-ROM from here. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 25.
+
+## 2026-09-27 — Event32 ForgetRange: block-interval skip
+
+**BANKED.** `ndsAObjEvent32ForgetRange` (every figatree-heap motion load) now
+keeps a per-page [lo, hi] 16-byte block interval next to its page count, and
+each scan re-derives the edge pages' intervals. Before, 159 of 702 calls a
+match scanned the whole 1,508-entry ledger (6 KiB through a 4 KiB D-cache) to
+remove nothing: a ~1 KiB clip shared its page with another file's entries.
+Skips 457 -> 698. Same-ROM A/B WORK-H P50/P95 -2.7K/-10.0K, SRC P95 -15.8K.
+Final `48F428A1` vs `pin`, replay identical: WORK-H P50/P95/P99
+1,093,568/1,498,304/1,793,856 (-3.0K/-3.0K/-2.9K); BSS +2 KiB. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 26.

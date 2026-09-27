@@ -1072,6 +1072,16 @@ static u32 sNdsEvent32InterpDescFixedCount;
 #define NDS_AOBJ_EVENT32_RAM_END 0x02400000u
 #define NDS_AOBJ_EVENT32_PAGES     ((NDS_AOBJ_EVENT32_RAM_END - NDS_AOBJ_EVENT32_RAM_BASE) >>      NDS_AOBJ_EVENT32_PAGE_SHIFT)
 static u16 sNdsAObjEvent32PageEntries[NDS_AOBJ_EVENT32_PAGES];
+/* The 16-byte blocks of each page that can hold an entry: [lo, hi] is set by
+ * the first entry after the count reaches zero and widens with each add, so it
+ * bounds every live entry; a removal leaves it wide until a ForgetRange scan
+ * re-derives it for the range's two edge pages. A figatree buffer starts and
+ * ends inside pages shared with the files around it, so the page count alone
+ * refused most skips (237 of 722 calls scanned the 1,508-entry ledger, 6 KB
+ * through a 4 KB D-cache, to remove nothing). */
+#define NDS_AOBJ_EVENT32_BLOCK_SHIFT 4u
+static u8 sNdsAObjEvent32PageLo[NDS_AOBJ_EVENT32_PAGES];
+static u8 sNdsAObjEvent32PageHi[NDS_AOBJ_EVENT32_PAGES];
 static u32 sNdsAObjEvent32OutsideEntries;
 __attribute__((used)) volatile u32 gNdsAObjEvent32ForgetSkips;
 
@@ -1082,8 +1092,28 @@ static void ndsAObjEvent32PageAdd(const void *command, s32 delta)
     if ((address >= NDS_AOBJ_EVENT32_RAM_BASE) &&
         (address < NDS_AOBJ_EVENT32_RAM_END))
     {
-        sNdsAObjEvent32PageEntries[(address - NDS_AOBJ_EVENT32_RAM_BASE) >>
-                                   NDS_AOBJ_EVENT32_PAGE_SHIFT] += (u16)delta;
+        u32 offset = (u32)(address - NDS_AOBJ_EVENT32_RAM_BASE);
+        u32 page = offset >> NDS_AOBJ_EVENT32_PAGE_SHIFT;
+        u8 block = (u8)((offset & ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
+                        NDS_AOBJ_EVENT32_BLOCK_SHIFT);
+
+        if (delta > 0)
+        {
+            if (sNdsAObjEvent32PageEntries[page] == 0u)
+            {
+                sNdsAObjEvent32PageLo[page] = block;
+                sNdsAObjEvent32PageHi[page] = block;
+            }
+            else if (block < sNdsAObjEvent32PageLo[page])
+            {
+                sNdsAObjEvent32PageLo[page] = block;
+            }
+            else if (block > sNdsAObjEvent32PageHi[page])
+            {
+                sNdsAObjEvent32PageHi[page] = block;
+            }
+        }
+        sNdsAObjEvent32PageEntries[page] += (u16)delta;
     }
     else
     {
@@ -1102,6 +1132,8 @@ static sb32 ndsAObjEvent32RangeHoldsNone(uintptr_t start, uintptr_t end)
 {
     u32 page;
     u32 last;
+    u32 first_block;
+    u32 last_block;
 
     if ((sNdsAObjEvent32OutsideEntries != 0u) ||
         (start < NDS_AOBJ_EVENT32_RAM_BASE) ||
@@ -1113,12 +1145,31 @@ static sb32 ndsAObjEvent32RangeHoldsNone(uintptr_t start, uintptr_t end)
                  NDS_AOBJ_EVENT32_PAGE_SHIFT);
     last = (u32)((end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) >>
                  NDS_AOBJ_EVENT32_PAGE_SHIFT);
+    /* The range's blocks inside its first and last pages; every page between
+     * is covered whole. */
+    first_block = (u32)(((start - NDS_AOBJ_EVENT32_RAM_BASE) &
+                         ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
+                        NDS_AOBJ_EVENT32_BLOCK_SHIFT);
+    last_block = (u32)(((end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) &
+                        ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
+                       NDS_AOBJ_EVENT32_BLOCK_SHIFT);
     for (; page <= last; page++)
     {
         if (sNdsAObjEvent32PageEntries[page] != 0u)
         {
-            return FALSE;
+            u32 range_hi = (page == last) ? last_block :
+                     ((1u << (NDS_AOBJ_EVENT32_PAGE_SHIFT -
+                              NDS_AOBJ_EVENT32_BLOCK_SHIFT)) - 1u);
+
+            /* The page's entries lie in blocks [PageLo, PageHi]; the range
+             * covers blocks [first_block, range_hi] of it. */
+            if ((sNdsAObjEvent32PageHi[page] >= first_block) &&
+                (sNdsAObjEvent32PageLo[page] <= range_hi))
+            {
+                return FALSE;
+            }
         }
+        first_block = 0u;
     }
     return TRUE;
 }
@@ -1446,6 +1497,10 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
     uintptr_t range_end;
     u32 read_index;
     u32 write_index = 0u;
+    u32 edge_page[2];
+    u32 edge_lo[2];
+    u32 edge_hi[2];
+    u32 side;
 
     if ((base == NULL) || (size == 0u))
     {
@@ -1464,25 +1519,80 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         read_index = write_index = sNdsAObjEvent32NormalizedCount;
     }
     else
-    for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
-         read_index++)
     {
-        uintptr_t command =
-            (uintptr_t)sNdsAObjEvent32Normalized[read_index].command;
+        /* The range's first and last pages (an index past the table when the
+         * edge is outside main RAM): the scan re-derives their block interval
+         * from the entries it keeps, so a stale wide one refuses one skip,
+         * not every later one. */
+        edge_page[0] = edge_page[1] = NDS_AOBJ_EVENT32_PAGES;
+        if ((range_start >= NDS_AOBJ_EVENT32_RAM_BASE) &&
+            (range_start < NDS_AOBJ_EVENT32_RAM_END))
+        {
+            edge_page[0] = (u32)((range_start - NDS_AOBJ_EVENT32_RAM_BASE) >>
+                                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
+        }
+        if ((range_end > NDS_AOBJ_EVENT32_RAM_BASE) &&
+            (range_end <= NDS_AOBJ_EVENT32_RAM_END))
+        {
+            edge_page[1] = (u32)((range_end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) >>
+                                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
+        }
+        edge_lo[0] = edge_lo[1] = 0xffu;
+        edge_hi[0] = edge_hi[1] = 0u;
+        for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
+             read_index++)
+        {
+            uintptr_t command =
+                (uintptr_t)sNdsAObjEvent32Normalized[read_index].command;
+            u32 page;
+            u32 block;
+            u32 edge;
 
-        if ((command >= range_start) && (command < range_end))
-        {
-            ndsAObjEvent32PageAdd((const void *)command, -1);
-            continue;
+            if ((command >= range_start) && (command < range_end))
+            {
+                ndsAObjEvent32PageAdd((const void *)command, -1);
+                continue;
+            }
+            if (write_index != read_index)
+            {
+                sNdsAObjEvent32Normalized[write_index] =
+                    sNdsAObjEvent32Normalized[read_index];
+                sNdsAObjEvent32NormalizedSig[write_index] =
+                    sNdsAObjEvent32NormalizedSig[read_index];
+            }
+            write_index++;
+            page = (u32)(command - NDS_AOBJ_EVENT32_RAM_BASE) >>
+                   NDS_AOBJ_EVENT32_PAGE_SHIFT;
+            edge = (page == edge_page[0]) ? 0u :
+                   (page == edge_page[1]) ? 1u : 2u;
+            if (edge < 2u)
+            {
+                block = (u32)(command &
+                              ((1u << NDS_AOBJ_EVENT32_PAGE_SHIFT) - 1u)) >>
+                        NDS_AOBJ_EVENT32_BLOCK_SHIFT;
+                if (block < edge_lo[edge])
+                {
+                    edge_lo[edge] = block;
+                }
+                if (block > edge_hi[edge])
+                {
+                    edge_hi[edge] = block;
+                }
+            }
         }
-        if (write_index != read_index)
+        /* A single-page range accumulated everything in slot 0. */
+        for (side = 0u; side < 2u; side++)
         {
-            sNdsAObjEvent32Normalized[write_index] =
-                sNdsAObjEvent32Normalized[read_index];
-            sNdsAObjEvent32NormalizedSig[write_index] =
-                sNdsAObjEvent32NormalizedSig[read_index];
+            u32 page = edge_page[side];
+
+            if ((page < NDS_AOBJ_EVENT32_PAGES) &&
+                (sNdsAObjEvent32PageEntries[page] != 0u) &&
+                (edge_lo[side] <= edge_hi[side]))
+            {
+                sNdsAObjEvent32PageLo[page] = (u8)edge_lo[side];
+                sNdsAObjEvent32PageHi[page] = (u8)edge_hi[side];
+            }
         }
-        write_index++;
     }
     if (write_index != sNdsAObjEvent32NormalizedCount)
     {

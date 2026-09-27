@@ -634,3 +634,38 @@ payload directly needs:
 - ring eviction that respects pins (6 ring wraps a match);
 - an `ndsBattlePackContains`-style resolver hook in
   `ndsRelocResolvePointerFromFileBase` and `ndsRelocPointerIsFighterAObj16`.
+
+## 26. Event32 ledger: ForgetRange skips on a block interval, not a page count
+
+Every fighter motion load into a figatree heap calls
+`ndsAObjEvent32ForgetRange` over the old occupant. It skips the ledger scan
+when no 4 KiB page of the range holds an entry. Lab counters (`forgetprobe`,
+`fgt-cnt`, `fgt-why`) showed:
+- 702 calls a match; 457 skipped.
+- 163 scanned; only 4 of those removed anything (1,446 entries, file
+  retirement). The other 159 scans removed nothing.
+- All 159 empty scans were single-page ranges (a ~1 KiB clip). The page's 10
+  entries (`fgt-why2`) all sit in blocks 0-6, below the range at block 8.
+  Each empty scan still read the 1,508-entry ledger: 6 KiB through a 4 KiB
+  D-cache.
+
+The fix keeps a [lo, hi] 16-byte block interval per page (2 x 1,024 B BSS,
+a 1 KiB-multiple growth):
+- The first add after the count reaches zero sets the interval; later adds
+  widen it. It always bounds every live entry, so a skip is still exact.
+- Removals leave the interval wide. The first build (`fgt-on`) therefore
+  skipped only 82 more calls: the page's `hi` was 255, stale from an earlier
+  file's entries.
+- The scan that does run now re-derives the interval of the range's two edge
+  pages from the entries it keeps.
+
+Same-ROM A/B (`FBD06447`, lab word `gNdsAObjEvent32ForgetBlocksOn`):
+- `fgt2-off` vs `fgt2-on`: skips 457 -> 698 (4 scans left).
+- WORK-H P50/P95 1,095,552/1,509,568 -> 1,092,864/1,499,584 (-2.7K/-10.0K),
+  paired mean -2.6K; SRC P95 -15.8K.
+- Both arms replay IDENTICAL.
+
+Final `48F428A1` (`fgtfin`, toggle removed) vs `pin`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,093,568/1,498,304/1,793,856 (-3.0K/-3.0K/-2.9K).
+- 1,086 of 1,972 frames at or under 1,120,000 (`pin` 1,081).
+- Heap low-water 69,340 B; native failures 0.
