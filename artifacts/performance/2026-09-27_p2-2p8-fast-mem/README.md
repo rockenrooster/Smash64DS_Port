@@ -554,3 +554,45 @@ The 2-entry model reproduces DK and Samus. A third entry would save about 10 +
 were unchanged at 5,614: each box is tested about 1.7 times per its own
 fighter's epoch. Paired -1.2K, SRC +1.9K. Shadow mode (`hbepshadow`) showed 0
 flips and replay IDENTICAL. Both changes were reverted.
+
+## 24. Lean spare buffer: evicted lists are parked, not re-materialized
+
+Each fighter slot keeps two lean lists in its half-region pair. A slot whose
+display states outnumber two re-materializes a list it held moments earlier.
+The section 23 shadow LRU showed this for Donkey, and each materialization is a
+~480K-tick spike.
+
+**Design.** In route 1, once the recorder has given up the lower half, a slot
+gets one more half-sized buffer from the battle's general heap.
+- The buffer is allocated lazily, at the first eviction of a valid list, and
+  only while the heap keeps the stage body's floor: 25,600 + 36,420 B after the
+  allocation.
+- An entry-to-buffer permutation (`phys`) lets an eviction swap the evicted list
+  into the spare. A miss whose key the spare holds swaps it back in and is
+  treated as an entry switch.
+- Nothing is copied. A packet's `words` pointer points into its own buffer, so
+  a list never moves.
+- A wide list (entry 0 over both halves) restores the identity map first.
+  `ndsFtrLeanPacketDrop` resets the map, and a heap-generation change forgets
+  the buffer.
+- The slot-state struct grows by 168 B per slot. Padding brings the array's
+  growth to exactly 1,024 B (one D-cache way). Unpadded (`sparef`), the same
+  code read P50 +8.2K and SRC +4.2K from cache phase alone.
+
+**Same-ROM A/B** (`85D19B8E`, lab word; `spare0` off, `spare1` on; both
+replay IDENTICAL to `hwdiv`):
+- Materializations 62 -> 44 (DK 26 -> 16, Link 15 -> 7). Three spare buffers
+  were allocated; the fourth was refused by the floor.
+- WORK-H P95/P99 1,528,128/1,932,352 -> **1,504,704/1,792,704**; paired mean
+  -5.9K. The median is unchanged, as a tail-only cut should be.
+- Heap low-water 122,412 -> 69,340 B (floor 25,600).
+
+The lab verify arm (`sparever`, Slow 16) re-materialized 179 re-selected lists,
+spare hits included, with 0 mismatches.
+
+**Final** `52272220` (`sparepad`) against `hwdiv`:
+- WORK-H P50/P90/P95/P99 1,087,808/1,368,448/1,523,648/1,932,416 ->
+  **1,091,072/1,367,424/1,493,952/1,784,064**.
+- Paired median +2.2K, mean -3.7K. The extra cost is FTR's entry-map lookup,
+  +1.2K median.
+- VBlanks 1,026/912/33/2. Native failures 0.

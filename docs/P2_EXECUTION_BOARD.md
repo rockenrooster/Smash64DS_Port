@@ -91,7 +91,7 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo; texpool witness; digest word mix; lean phase clocks out; STG span; ITCM x4; witnesses; Results guard; key words; HW divides: `FB41F7D6` WORK-H P50/P95/P99 1,087,808/1,523,648/1,932,416.
+MP f32 cache reads; billboard memo; texpool witness; digest word mix; lean phase clocks out; STG span; ITCM x4; witnesses; Results guard; key words; HW divides; lean spare: `52272220` WORK-H P50/P95/P99 1,091,072/1,493,952/1,784,064.
 **Constraint**: CSS reserve >=183,072 B; margin 17,584 B less ~1.4 KB BSS (owed).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

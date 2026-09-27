@@ -327,6 +327,10 @@ typedef struct NDSFtrLeanCounters
     u32 key_events;             /* event paths that reached the entry key */
     u32 key_seen_before;        /* ... whose key the slot had selected before */
     u32 key_distinct;           /* ... whose key was new to the slot */
+    u32 spare_hits;             /* misses the spare's list answered */
+    u32 spare_parks;            /* valid lists parked instead of lost */
+    u32 spare_allocs;           /* spare buffers taken from the heap */
+    u32 spare_alloc_refused;    /* ... refused by the keep-free floor */
     u32 materialize_why[4];     /* per usable entry at a materialization:
                                    0 invalid, 1 same key but tint set moved,
                                    2 same key but fence moved, 3 key differs */
@@ -681,6 +685,9 @@ u32 ndsFtrLeanEntryFind(u32 battle_slot, const u32 *key);
 /* The entry a new list goes into: an empty or stale one, else the one that
  * is not active (route 1); the upper half (routes 2/3). */
 u32 ndsFtrLeanEntryVictim(u32 battle_slot);
+/* The miss path's spare: the code of `key`'s list swapped in as `victim`, or
+ * NONE (having parked the victim's valid list, when there is a spare). */
+u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key);
 /* The active entry, or NDS_FTR_LEAN_ENTRY_NONE. */
 u32 ndsFtrLeanEntryActiveIndex(u32 battle_slot);
 /* The active list cannot serve its key any more (its tint folds under a moved

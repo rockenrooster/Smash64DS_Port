@@ -1296,6 +1296,35 @@ rows:
             goto restart;
         }
         entry = ndsFtrLeanEntryVictim(slot);
+        code = ndsFtrLeanSpareTake(slot, entry, key);
+        if ((code != NDS_FTR_LEAN_ENTRY_NONE) &&
+            (ndsFtrLeanEntryActivate(slot, code) != FALSE))
+        {
+            /* The spare held this list: an entry switch, as above. */
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.entry_hits++);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.entry_switches++);
+            ndsFtrLeanEntryResetShade(slot, &view);
+#if NDS_FTR_LEAN_LAB
+            if ((NDS_FTR_LEAN_SLOW_WORD() & NDS_FTR_LEAN_SLOW_VERIFY) != 0u)
+            {
+                /* Lab: the spare's list against a fresh materialization of
+                 * the same key in the other entry (as the hit path's). */
+                u32 held = ndsFtrLeanEntryActiveIndex(slot);
+
+                entry = ndsFtrLeanEntryVictim(slot);
+                if ((held != NDS_FTR_LEAN_ENTRY_NONE) && (entry != held) &&
+                    (ndsFtrLeanEntryWide(slot, held) == FALSE) &&
+                    (ndsFtrLeanMaterializeFor(slot, &entry, key, count,
+                                              owner_slot, use_low_detail,
+                                              owner_file, FALSE) == 0u))
+                {
+                    ndsFtrLeanVerifyEntries(slot, held, entry);
+                }
+            }
+#endif
+            NDS_FTR_LEAN_EVENT_PART(4u, ev_mark);
+            goto listed;
+        }
         ndsFtrLeanNoteKeyMiss(slot, key);
         reason = ndsFtrLeanMaterializeFor(slot, &entry, key, count,
                                           owner_slot, use_low_detail,
@@ -1326,6 +1355,7 @@ rows:
 #endif
         NDS_FTR_LEAN_EVENT_PART(5u, ev_mark);
     }
+listed:
     inst->rr_key = rr_key;
     inst->rerecord = 0u;
     if ((reuse_plan == FALSE) &&

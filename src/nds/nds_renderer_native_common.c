@@ -10902,13 +10902,39 @@ typedef struct NDSFtrLeanVariant
 #define ndsFtrLeanWideCapacity() (NDS_FTR_LEAN_WIDE_CAPACITY)
 #define ndsFtrLeanMaskWords() (NDS_FTR_LEAN_MASK_WORDS)
 
+/* The spare (2026-09-27). A slot whose states outnumber its two entries
+ * re-materializes a list it held a moment ago (Donkey: 26 of the four-CPU
+ * match's 62 materializations; a 3-key LRU model of the key stream says 15).
+ * Route 1 gives each such slot one more half-sized buffer from the battle's
+ * general heap, and an entry -> buffer map: evicting a valid list parks it in
+ * the spare (a map swap, no copy -- a packet's `words` pointer is into its own
+ * buffer, so a list never moves), and a miss that finds its key there swaps it
+ * back instead of materializing. Entry index 2 of the slot state is the spare;
+ * every loop over NDS_FTR_LEAN_ENTRIES leaves it alone. A wide list needs the
+ * two halves as entries 0 and 1, so it restores the identity map first. */
+#define NDS_FTR_LEAN_SPARE NDS_FTR_LEAN_ENTRIES
+/* The stage body's floor (nds_stage_gx.exec.inc): the GObj cap latches the
+ * moment the general heap drops under 25,600 B, and a match grows it by up to
+ * 36,420 B after the allocation. */
+#define NDS_FTR_LEAN_SPARE_KEEP_FREE (25600u + 36420u)
+
 typedef struct NDSFtrLeanSlotState
 {
-    NDSFtrLeanEntryState entry[NDS_FTR_LEAN_ENTRIES];
+    NDSFtrLeanEntryState entry[NDS_FTR_LEAN_ENTRIES + 1u]; /* [2] the spare */
     u32 active;                 /* entry index, NDS_FTR_LEAN_ENTRY_NONE */
     u32 armed;
     u32 kind;                   /* counters' kind index, NONE = unknown */
     u32 lower_owned;            /* route 1: entry 0 holds a lean list */
+    u32 *spare_buf;             /* general heap, this heap generation */
+    u32 spare_gen;              /* gNdsTaskmanHeapGeneration it came from */
+    u8 phys[NDS_FTR_LEAN_ENTRIES + 1u]; /* entry -> buffer (2 = spare_buf) */
+    u8 phys_on;                 /* 0: the identity map */
+    /* The spare grew this struct by 168 B a slot; 88 more make the array's
+     * growth exactly 1,024 B, one D-cache way (4 KB, 4-way, 32 B lines),
+     * so every BSS object behind it keeps the cache set it was measured
+     * at. Unpadded, the same code read P50 +8K with SRC +4K from phase
+     * alone; padded, +3K. */
+    u8 layout_pad[88];
 #if NDS_FTR_LEAN_LAB
     /* census: every cache slot this fighter's lists or packets bound */
     u32 union_mask[(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT + 31u) / 32u];
@@ -10916,6 +10942,7 @@ typedef struct NDSFtrLeanSlotState
 } NDSFtrLeanSlotState;
 
 static NDSFtrLeanSlotState sNdsFtrLeanSlots[NDS_FIGHTER_PACKET_SLOTS];
+static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s);
 
 static inline void ndsFtrLeanMarkDirty(NDSFtrLeanEntryState *state,
                                        const u32 *words, u32 first,
@@ -10983,8 +11010,17 @@ static u32 *ndsFtrLeanEntryBase(u32 slot, u32 entry)
         return sNdsFtrLeanOracleWide[slot];
     }
 #endif
-    return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
-        (slot * ndsFtrLeanRegionWords()) + (entry * ndsFtrLeanHalfWords());
+    {
+        const NDSFtrLeanSlotState *s = &sNdsFtrLeanSlots[slot];
+        u32 buffer = (s->phys_on != 0u) ? (u32)s->phys[entry] : entry;
+
+        if (buffer >= NDS_FTR_LEAN_SPARE)
+        {
+            return s->spare_buf;
+        }
+        return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
+            (slot * ndsFtrLeanRegionWords()) + (buffer * ndsFtrLeanHalfWords());
+    }
 }
 
 static NDSFighterPacket *ndsFtrLeanEntryPacket(u32 slot, u32 entry)
@@ -11091,8 +11127,15 @@ void ndsFtrLeanPacketDrop(u32 battle_slot)
     }
     s->active = NDS_FTR_LEAN_ENTRY_NONE;
     s->armed = 0u;
-    /* The recorder may use the lower half again. */
+    /* The recorder may use the lower half again: the identity map, no spare
+     * list, and no buffer from an older heap generation. */
     s->lower_owned = 0u;
+    s->entry[NDS_FTR_LEAN_SPARE].valid = 0u;
+    s->phys_on = 0u;
+    if (s->spare_gen != gNdsTaskmanHeapGeneration)
+    {
+        s->spare_buf = NULL;
+    }
 }
 
 void ndsFtrLeanPacketNoteKind(u32 battle_slot, u32 kind)
@@ -12168,6 +12211,10 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
         return nNDSFtrLeanDeclineInputs;
     }
     slot_state = &sNdsFtrLeanSlots[battle_slot];
+    if (wide != FALSE)
+    {
+        ndsFtrLeanSpareIdentity(slot_state);
+    }
     es = &slot_state->entry[entry];
     es->valid = 0u;
     if (slot_state->active == entry)
@@ -12597,6 +12644,40 @@ static u32 ndsFtrLeanEntryStale(const NDSFtrLeanEntryState *es, u32 fence)
         TRUE : FALSE;
 }
 
+/* Entry `e`'s code for `key` (its words, or one of its records), or NONE. The
+ * spare (e == NDS_FTR_LEAN_SPARE) is matched by the same rules. */
+static u32 ndsFtrLeanEntryMatch(u32 battle_slot, u32 e, const u32 *key,
+                                u32 fence)
+{
+    const NDSFtrLeanEntryState *es = &sNdsFtrLeanSlots[battle_slot].entry[e];
+    u32 r;
+
+    if ((es->valid == 0u) ||
+        ((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
+         (es->tint_folds != 0u)))
+    {
+        return NDS_FTR_LEAN_ENTRY_NONE;
+    }
+    if (((es->fence_needed == 0u) || (es->fence == fence)) &&
+        (ndsFtrLeanKeyEqual(es->key, key) != FALSE))
+    {
+        return e;
+    }
+    for (r = 0u; r < es->variant_count; r++)
+    {
+        const NDSFtrLeanVariant *v =
+            ndsFtrLeanVariantRecord(battle_slot, e, r);
+
+        if ((r != es->variant_cur) &&
+            ((v->fence_needed == 0u) || (v->fence == fence)) &&
+            (ndsFtrLeanKeyEqual(v->key, key) != FALSE))
+        {
+            return e | ((r + 1u) << 4);
+        }
+    }
+    return NDS_FTR_LEAN_ENTRY_NONE;
+}
+
 u32 ndsFtrLeanEntryFind(u32 battle_slot, const u32 *key)
 {
     NDSFtrLeanSlotState *s;
@@ -12614,33 +12695,140 @@ u32 ndsFtrLeanEntryFind(u32 battle_slot, const u32 *key)
     {
         u32 e = (s->active < NDS_FTR_LEAN_ENTRIES) ?
             ((pass == 0u) ? s->active : (s->active ^ 1u)) : pass;
-        const NDSFtrLeanEntryState *es = &s->entry[e];
-        u32 r;
+        u32 code;
 
-        if ((ndsFtrLeanEntryUsable(e) == FALSE) || (es->valid == 0u) ||
-            ((es->tint_set_generation != gNdsR2FighterTintSetGeneration) &&
-             (es->tint_folds != 0u)))
+        if (ndsFtrLeanEntryUsable(e) == FALSE)
         {
             continue;
         }
-        if (((es->fence_needed == 0u) || (es->fence == fence)) &&
-            (ndsFtrLeanKeyEqual(es->key, key) != FALSE))
+        code = ndsFtrLeanEntryMatch(battle_slot, e, key, fence);
+        if (code != NDS_FTR_LEAN_ENTRY_NONE)
         {
-            return e;
-        }
-        for (r = 0u; r < es->variant_count; r++)
-        {
-            const NDSFtrLeanVariant *v =
-                ndsFtrLeanVariantRecord(battle_slot, e, r);
-
-            if ((r != es->variant_cur) &&
-                ((v->fence_needed == 0u) || (v->fence == fence)) &&
-                (ndsFtrLeanKeyEqual(v->key, key) != FALSE))
-            {
-                return e | ((r + 1u) << 4);
-            }
+            return code;
         }
     }
+    return NDS_FTR_LEAN_ENTRY_NONE;
+}
+
+/* Swap entry `e`'s list, state and buffer with the spare's. */
+static void ndsFtrLeanSpareSwap(NDSFtrLeanSlotState *s, u32 e)
+{
+    NDSFtrLeanEntryState state = s->entry[e];
+    u8 buffer;
+
+    if (s->phys_on == 0u)
+    {
+        s->phys[0] = 0u;
+        s->phys[1] = 1u;
+        s->phys[NDS_FTR_LEAN_SPARE] = (u8)NDS_FTR_LEAN_SPARE;
+        s->phys_on = 1u;
+    }
+    buffer = s->phys[e];
+    s->entry[e] = s->entry[NDS_FTR_LEAN_SPARE];
+    s->entry[NDS_FTR_LEAN_SPARE] = state;
+    s->phys[e] = s->phys[NDS_FTR_LEAN_SPARE];
+    s->phys[NDS_FTR_LEAN_SPARE] = buffer;
+    if (s->active == e)
+    {
+        s->active = NDS_FTR_LEAN_ENTRY_NONE;
+    }
+}
+
+/* A wide list is entry 0 over both halves: put the identity map back. The
+ * list the spare buffer holds (whichever entry maps to it) stays as the spare;
+ * the two halves' lists are about to be overwritten anyway. */
+static void ndsFtrLeanSpareIdentity(NDSFtrLeanSlotState *s)
+{
+    u32 e;
+
+    if (s->phys_on == 0u)
+    {
+        return;
+    }
+    for (e = 0u; e < NDS_FTR_LEAN_ENTRIES; e++)
+    {
+        if (s->phys[e] == (u8)NDS_FTR_LEAN_SPARE)
+        {
+            s->entry[NDS_FTR_LEAN_SPARE] = s->entry[e];
+        }
+        s->entry[e].valid = 0u;
+        if (s->active == e)
+        {
+            s->active = NDS_FTR_LEAN_ENTRY_NONE;
+        }
+    }
+    s->phys_on = 0u;
+}
+
+/* The miss path, with `victim` chosen: the code of the spare's list for `key`,
+ * swapped in as `victim` (NONE when the spare does not hold it), else the
+ * victim's valid list parked in the spare before it is overwritten. */
+u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
+{
+    NDSFtrLeanSlotState *s;
+    u32 code;
+
+    if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (key == NULL) ||
+        (victim >= NDS_FTR_LEAN_ENTRIES) || !NDS_FTR_LEAN_ROUTE_IS_DRAW())
+    {
+        return NDS_FTR_LEAN_ENTRY_NONE;
+    }
+    s = &sNdsFtrLeanSlots[battle_slot];
+    if ((s->spare_buf != NULL) && (s->spare_gen != gNdsTaskmanHeapGeneration))
+    {
+        /* The battle's heap was rewound under the map: nothing mapped to the
+         * old buffer is a list any more. */
+        ndsFtrLeanSpareIdentity(s);
+        s->entry[NDS_FTR_LEAN_SPARE].valid = 0u;
+        s->spare_buf = NULL;
+    }
+    if ((s->lower_owned == 0u) || (s->active == victim) ||
+        ((s->entry[0].valid & NDS_FTR_LEAN_VALID_WIDE) != 0u) ||
+        ((s->entry[1].valid & NDS_FTR_LEAN_VALID_WIDE) != 0u))
+    {
+        return NDS_FTR_LEAN_ENTRY_NONE;
+    }
+    if (s->spare_buf != NULL)
+    {
+        code = ndsFtrLeanEntryMatch(battle_slot, NDS_FTR_LEAN_SPARE, key,
+                                    ndsFtrLeanFenceNow());
+        if (code != NDS_FTR_LEAN_ENTRY_NONE)
+        {
+            ndsFtrLeanSpareSwap(s, victim);
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_hits++);
+            return victim | (code & ~0xfu);
+        }
+    }
+    if (s->entry[victim].valid == 0u)
+    {
+        return NDS_FTR_LEAN_ENTRY_NONE;
+    }
+    if (s->spare_buf == NULL)
+    {
+        u32 bytes = ndsFtrLeanHalfWords() * (u32)sizeof(u32);
+
+        if (((uintptr_t)gSYTaskmanGeneralHeap.end <
+             (uintptr_t)gSYTaskmanGeneralHeap.ptr) ||
+            ((uintptr_t)gSYTaskmanGeneralHeap.end -
+             (uintptr_t)gSYTaskmanGeneralHeap.ptr <
+             bytes + NDS_FTR_LEAN_SPARE_KEEP_FREE))
+        {
+            NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_alloc_refused++);
+            return NDS_FTR_LEAN_ENTRY_NONE;
+        }
+        s->spare_buf = syTaskmanMalloc(bytes, 32u);
+        if (s->spare_buf == NULL)
+        {
+            return NDS_FTR_LEAN_ENTRY_NONE;
+        }
+        s->spare_gen = gNdsTaskmanHeapGeneration;
+        s->entry[NDS_FTR_LEAN_SPARE].valid = 0u;
+        NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_allocs++);
+    }
+    ndsFtrLeanSpareSwap(s, victim);
+    /* The victim now maps to the old spare buffer, about to be rewritten. */
+    s->entry[victim].valid = 0u;
+    NDS_FTR_LEAN_CTR(gNdsFtrLean.spare_parks++);
     return NDS_FTR_LEAN_ENTRY_NONE;
 }
 
@@ -14689,6 +14877,14 @@ void ndsFtrLeanCountersPublish(void)
 u32 ndsFtrLeanEntryFind(u32 battle_slot, const u32 *key)
 {
     (void)battle_slot;
+    (void)key;
+    return NDS_FTR_LEAN_ENTRY_NONE;
+}
+
+u32 ndsFtrLeanSpareTake(u32 battle_slot, u32 victim, const u32 *key)
+{
+    (void)battle_slot;
+    (void)victim;
     (void)key;
     return NDS_FTR_LEAN_ENTRY_NONE;
 }

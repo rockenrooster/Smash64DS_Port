@@ -8841,3 +8841,16 @@ FPS statistics use `ndsR2HwMathDivideLead` (C truncation). `FB41F7D6` vs
 paired median -3.5K (mean -6.2K; the reject's misses cluster in hit frames).
 RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 22.
+
+## 2026-09-27 — lean spare buffer: evicted lists parked, not re-materialized
+
+**BANKED (tail).** Route 1 gives a lean slot one more half-sized list buffer
+from the battle heap (lazily, keep-free 25,600 + 36,420 B) and an
+entry-to-buffer map: an evicted list is swapped into the spare and a later miss
+on its key swaps it back (no copy; a wide list restores the identity map).
+Same-ROM A/B: materializations 62 -> 44, WORK-H P95/P99 -23K/-140K, paired
+mean -5.9K; verify arm 179 re-selections, 0 mismatches; heap low-water 69,340 B.
+Final `52272220` vs `hwdiv`, replay identical: WORK-H P50/P95/P99 1,091,072/
+1,493,952/1,784,064 (+3.3K/-29.7K/-148K); slot state padded to a 1 KB growth
+(cache phase: unpadded read P50 +8K). RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 24.
