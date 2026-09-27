@@ -4460,7 +4460,30 @@ volatile u32 gNdsTask103PrepOwnerTicks;
 volatile u32 gNdsTask103PrepCalls;
 #endif
 
+static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
+    void *camera_gobj_ptr);
+
+static unsigned int ndsRendererAdapterPrepareNativeStageOwnerOnHotStack(
+    void *camera_gobj_ptr)
+{
+    return (unsigned int)ndsRendererAdapterPrepareNativeStageOwnerBody(
+        camera_gobj_ptr);
+}
+
+/* P2-2p8 (2026-09-27): the stage owner prep -- world matrices, MVP
+ * recalc, material snapshot, once a frame -- runs on the DTCM hot stack
+ * (port/coroutine.h), as the segment commit already did. Same-ROM A/B with
+ * the fighter display proc: paired WORK-H -11.8K (STG -8.7K). It reads no
+ * storage into a stack buffer and hands no stack address to DMA. */
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
+{
+    return (s32)ndsDtcmHotStackRun(
+        ndsRendererAdapterPrepareNativeStageOwnerOnHotStack,
+        camera_gobj_ptr);
+}
+
+static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
+    void *camera_gobj_ptr)
 {
     NDSRendererAdapterNativeStageWorkspace *workspace =
         &sNdsRendererAdapterNativeStageWorkspace;

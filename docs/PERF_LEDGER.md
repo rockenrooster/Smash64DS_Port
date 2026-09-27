@@ -9034,3 +9034,16 @@ WORK-H median -2,176; P50/P95 997,888/1,385,920; 1,465/1,972 frames within
 Refuted the same day (section 41): an ftGetStruct DTCM memo (+0.6K) and
 DC_FlushRange without per-range drains (+0.3K).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` sections 41-42.
+
+## 2026-09-27 — stage owner prep and fighter display proc on the DTCM hot stack
+
+**BANKED.** After the sim moved (section 40), 320 present-phase stack fills a
+frame remained. The whole present cannot move: 60 native emitter sites hold a
+3 KB traversal state, and those paths reach 9.5 KB. Two shallow subtrees now
+run through `ndsDtcmHotStackRun`: the once-a-frame stage owner prep and the
+fighter display seam. Same-ROM A/B: paired WORK-H median -11,776 (STG -8.7K,
+FTR -3.7K), high-water 3,876 B, replay identical. `8B62F8D4` vs `pack3`:
+paired -11,072 (1,970/1,972 frames better); P50/P95 986,752/1,374,400;
+1,493/1,972 frames within 1,120,000; 71.9% of frames in two VBlanks.
+RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 43.

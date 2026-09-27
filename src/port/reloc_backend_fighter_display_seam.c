@@ -1,4 +1,23 @@
+#include <port/coroutine.h>
+
+static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj);
+
+static unsigned int ndsFtDisplayMainProcDisplayOnHotStack(void *arg)
+{
+    ndsFtDisplayMainProcDisplayBody((GObj *)arg);
+    return 0u;
+}
+
+/* P2-2p8 (2026-09-27): the fighter display proc runs on the DTCM hot
+ * stack; its lean run already did and now runs in place under it (FTR
+ * -3.7K in the same-ROM A/B with the stage owner prep). */
 void ftDisplayMainProcDisplay(GObj *fighter_gobj)
+{
+    (void)ndsDtcmHotStackRun(ndsFtDisplayMainProcDisplayOnHotStack,
+                             fighter_gobj);
+}
+
+static void ndsFtDisplayMainProcDisplayBody(GObj *fighter_gobj)
 {
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     extern volatile u32 gNdsVSResultsFighterDisplayCount;

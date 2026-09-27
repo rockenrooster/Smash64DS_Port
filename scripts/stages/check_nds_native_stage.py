@@ -662,7 +662,7 @@ def verify_multistage_runtime(repo_root: Path) -> None:
     require("ndsRendererNativeStageMaterialMask(segment_index)" in commit,
             "material commit still assumes Dream Land's segment/slot partition")
     prepare_adapter = re.sub(r"\s+", "", generator.named_c_closure(
-        adapter, "ndsRendererAdapterPrepareNativeStageOwner"))
+        adapter, "ndsRendererAdapterPrepareNativeStageOwnerBody"))
     require("asset_count=ndsRendererAdapterNativeStageActiveAssetCount()" in prepare_adapter,
             "stage loading must use the active asset count (Castle has three)")
     require("i<NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT" not in prepare_adapter,

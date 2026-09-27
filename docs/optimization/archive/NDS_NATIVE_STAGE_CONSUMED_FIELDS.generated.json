@@ -3086,7 +3086,7 @@
       "path": "src/port/reloc_backend_renderer_dl.c"
     },
     {
-      "closure": "ndsRendererAdapterPrepareNativeStageOwner",
+      "closure": "ndsRendererAdapterPrepareNativeStageOwnerBody",
       "fields": [
         {
           "access": "cobj.vec.at.x",

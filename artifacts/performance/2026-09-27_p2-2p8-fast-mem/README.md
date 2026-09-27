@@ -1210,3 +1210,38 @@ from 637 a frame to 320. What remains is present-phase base frames:
 - the camera capture loop;
 - the stage world-matrix prep;
 - the fighter display procs.
+
+## 43. The stage owner prep and the fighter display proc on the DTCM hot stack
+
+After section 40, 320 stack fills a frame remained, all in the present phase
+(dmiss6). The whole present cannot move: the rare native item and effect
+emitters each hold a 3 KB `NDSRendererTraversalState` on the stack (60 sites),
+and those paths reached 9.5 KB. Two shallow subtrees carry much of the rest:
+- `ndsRendererAdapterPrepareNativeStageOwner`, once a frame: stage world
+  matrices, MVP recalc, material snapshot. Its body is now
+  `...PrepareNativeStageOwnerBody`, and the public name runs the body through
+  `ndsDtcmHotStackRun`.
+- `ftDisplayMainProcDisplay`, the fighter display seam, split the same way.
+  Its lean run already used the hot stack and now runs in place under it.
+
+Neither subtree reads storage into a stack buffer or hands a stack address to
+DMA. The native-stage consumed-field certificate tracks the renamed body:
+`generate_nds_native_stage.py` and `check_nds_native_stage.py` name the new
+closure. The regenerated manifest differs in that one line, and the generated
+include is unchanged.
+
+**Same-ROM A/B** (lab toggle, since removed; `ph0` off, `ph1` on), replay
+IDENTICAL:
+- Paired WORK-H median -11,776; 1,971 of 1,972 frames better.
+- Mean by bucket: STG -8.7K, FTR -3.7K.
+- Hot-stack high-water 3,876 B (was 3,740).
+
+**Final** `8B62F8D4` (`presenthot`) vs `pack3`, replay IDENTICAL:
+- Paired median -11,072; 1,970 of 1,972 frames better.
+- WORK-H P50/P95/P97/P99 986,752/1,374,400/1,452,864/1,652,544.
+- 1,493 of 1,972 frames at or under 1,120,000.
+- VBlanks 1,418/535/19/1: 71.9% of presented frames in two.
+- Native failures 0; heap low-water 69,340 B.
+
+The P1 ROM links with 856 B ITCM spare; the frozen root was restored after the
+link check.

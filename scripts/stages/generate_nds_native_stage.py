@@ -1125,7 +1125,8 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
-        "closure": "ndsRendererAdapterPrepareNativeStageOwner",
+        # The body the DTCM hot-stack wrapper runs (2026-09-27).
+        "closure": "ndsRendererAdapterPrepareNativeStageOwnerBody",
         "tracked_bases": ("cobj", "workspace"),
         "fields": {
             **_classified(

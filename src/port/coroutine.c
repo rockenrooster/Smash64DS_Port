@@ -39,12 +39,13 @@ static PortCoroutine *sCurrentCoroutine;
  * uncached and out of the 4 KB D-cache. The lean fighter list and the stage
  * GX segment commit (same-ROM WORK-H paired -18.4K), then the map-collision
  * step and the particle display proc (-7.9K); each source tick (ndsR2BattleRun,
- * -15.4K); deepest reach 3,740 B. Only
- * subtrees that read no storage into a stack buffer (ndsAudioStorageReadCard
- * bounces one) and hand no stack address to DMA or the ARM7 may run on it; a
- * coroutine switched to from it runs its own hot-stack calls in place
- * (gNdsDtcmHotStackBusy). The fighter pose was priced and left off: its
- * frames were ~46 fills a frame, a wash against the trampoline. */
+ * -15.4K); the stage owner prep and the fighter display proc (-11.8K);
+ * deepest reach 3,876 B. Only subtrees that read no storage into a stack
+ * buffer (ndsAudioStorageReadCard bounces one) and hand no stack address to
+ * DMA or the ARM7 may run on it; a coroutine switched to from it runs its own
+ * hot-stack calls in place (gNdsDtcmHotStackBusy). The fighter pose was priced
+ * and left off: its frames were ~46 fills a frame, a wash against the
+ * trampoline. */
 #ifndef NDS_DTCM_HOT_STACK_BYTES
 #define NDS_DTCM_HOT_STACK_BYTES 6144u
 #endif
