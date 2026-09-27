@@ -26,7 +26,10 @@ the NEXT sample agrees in full: the drawn tick's state is what the next undrawn
 tick starts from, so a real difference there cannot heal one tick later, while
 a DGSB read across one of the sampler's ring stops does exactly that (seen
 2026-09-27 on a one-frame-shifted run, every 384 samples). Those are reported
-separately as seam tick-B words.
+separately as seam tick-B words. The same seam shape with NO shift (every
+differing sample has equal DGSA and a fully equal next sample; seen 2026-09-27
+at three of four ring stops of an unshifted run) is reported as IDENTICAL WITH
+N SEAM TICK-B WORDS, and only when --resync is given.
 """
 import argparse
 import csv
@@ -104,6 +107,21 @@ def main():
                     'candidate': [f'{v:08x}' for v in candidate[frame]],
                 }
     if result['diverged'] and args.sequence and args.resync > 0:
+        seam_only = 0
+        for frame in shared:
+            if control[frame] == candidate[frame]:
+                continue
+            if ((control[frame][0] == candidate[frame][0]) and
+                    ((frame + 1) in control) and ((frame + 1) in candidate) and
+                    (control[frame + 1] == candidate[frame + 1])):
+                seam_only += 1
+                continue
+            seam_only = -1
+            break
+        if seam_only > 0:
+            result['seamOnly'] = seam_only
+    if (result['diverged'] and args.sequence and args.resync > 0 and
+            not result.get('seamOnly')):
         first = result['firstDivergence']['sample']
         count = len(shared)
         for k in sorted(range(-args.resync, args.resync + 1), key=abs):
@@ -139,6 +157,11 @@ def main():
     if args.json:
         with open(args.json, 'w') as fh:
             json.dump(result, fh, indent=1)
+    if result.get('seamOnly'):
+        print(f"IDENTICAL WITH {result['seamOnly']} SEAM TICK-B WORDS over "
+              f"{len(shared)} {unit} (DGSA equal and the next sample equal at "
+              f"each; control {len(control)}, candidate {len(candidate)})")
+        return 0
     if result.get('resync'):
         r = result['resync']
         print(f"IDENTICAL AFTER ONE RESYNC: from sample {r['sample']} candidate "

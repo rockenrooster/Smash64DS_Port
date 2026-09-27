@@ -383,3 +383,24 @@ here) stays: stages with animated parts use it.
   1,955,136**.
 - Paired median -8,512: SRC -4.2K, STG -2.5K, MISC -0.9K, FTR -0.7K.
 - VBlanks 976/944/47/6. ITCM is 32,608 of 32,736 B.
+
+## 17. Refuted: the lean kernel's half sine table in ITCM
+
+The 2 KB half copy of `gSYSinTable` (`NDS_FTR_LEAN_SIN_ITCM=1`) needed room, so
+these left ITCM:
+- `ndsRendererNativeApplyStateDelta`, `ndsRendererAdapterBuildDObjLocalMatrix`,
+  `ndsRendererR2ClampDiffuseToMaterial` and `ndsRendererRecordTextureState`.
+  The census gave all four together ~0.55K ticks/frame of rent.
+- `_arm_addsubsf3.o`, whose fadd/fsub are dead Task 16 goldens but whose l2f and
+  ui2f run.
+
+`sinitcm` `F22816AE` against `itcm4`: FTR paired -5.1K, as slice 5 measured, but
+SRC +1.2K, STG +1.1K and MISC +1.4K. WORK-H paired median -1,088 (mean +201);
+P95 +7K. That is not a win, so it was reverted. Mismatch counter 0.
+
+**Digest tool.** The run differed from `itcm4` at 3 of the 4 ring stops,
+without any shift. Each was DGSA equal, DGSB different and the next sample
+equal: the sampler reads DGSB across a stop. With `--resync`,
+`compare-replay-digest.py` now reports that shape as IDENTICAL WITH N SEAM
+TICK-B WORDS. Strict mode still reports DIVERGED, and injected DGSA or DGSB
+mutations still read DIVERGED.
