@@ -596,3 +596,41 @@ spare hits included, with 0 mismatches.
 - Paired median +2.2K, mean -3.7K. The extra cost is FTR's entry-map lookup,
   +1.2K median.
 - VBlanks 1,026/912/33/2. Native failures 0.
+
+## 25. Stage matrix memo; data sections pinned to 1 KB; motion-acquisition map
+
+**Stage memo.** `sNdsNativeStageMatrixGen` is bumped wherever the stage owner
+takes a frame's camera and binding matrices. For one generation,
+`nds_stage_gx.exec.inc` memoizes the VIEW patch's hardware affine (22
+rebuilds a frame before) and each (binding, shift) composed matrix (~52 rebuilds
+a frame, 23 distinct). Same-ROM A/B (`F83D7C29`, lab word; `smemo0` off,
+`smemo1` on, both replay IDENTICAL): paired WORK-H median -4,736, STG -4,928.
+
+**Layout noise.** The lab ROM read P50 +13K and P95 +28K against `sparepad` in
+*both* arms, and the final unpinned memo build (`smemof`) read P50 +6.5K and
+P95 +22K. Most of that sat in SRC code the change never touches.
+`.main.rw` and `.main.bss` start right after the code, so any code growth
+re-phases every global's D-cache set. They now start on 1 KB boundaries: `.main`
+pads its own end so the load image stays contiguous, and `.main.bss` is
+`ALIGN(1024)`. That removes the data half of the drift for future builds. Code
+(I-cache) layout still moves.
+
+The pinned final `0E7B9ABF` (`pin`, memo plus pin) replays IDENTICAL to
+`sparepad`:
+- WORK-H P50/P95/P99 1,096,576/1,501,312/1,796,736, against `sparepad`'s
+  1,091,072/1,493,952/1,784,064.
+- Paired median +5.5K, SRC +3.3K. That is the one-time layout move, not the
+  memo, whose own effect is the same-ROM -4.7K.
+
+From here, changes under ~10K are priced by same-ROM toggle words.
+
+**Motion acquisition (read-only map, for the next step).** P2 fighters' clips
+(DK/Samus/Link/Kirby) are READY_STREAM bytes: slot offsets plus u16 command
+runs, immutable after load, with no absolute pointers. About 340-370 hits a
+match are still copied into the fighter heap, registered and resolved on every
+status change; the Mario/Fox battlepack skips all of that. Serving the cache
+payload directly needs:
+- a per-heap pin table;
+- ring eviction that respects pins (6 ring wraps a match);
+- an `ndsBattlePackContains`-style resolver hook in
+  `ndsRelocResolvePointerFromFileBase` and `ndsRelocPointerIsFighterAObj16`.

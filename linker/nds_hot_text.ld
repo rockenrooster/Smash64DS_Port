@@ -376,10 +376,15 @@ SECTIONS {
 
 		EXCLUDE_FILE(*.twl.*) *(.rodata .rodata.* .gnu.linkonce.r.*)
 		EXCLUDE_FILE(*.twl.*) *(.rodata1)
-		. = ALIGN(4);
+		. = ALIGN(1024);
 	} >main AT>lma9 :main = 0xff
 
-	/* Main user data section */
+	/* Main user data section. Starts on a 1 KB boundary -- one ARM9 D-cache way
+	 * (4 KB, 4-way, 32 B lines); .main pads its own end, so the load image stays
+	 * contiguous -- so a change in code size cannot re-phase every
+	 * global's cache set; unpinned, a stage-draw memo measured -4.7K same-ROM
+	 * read +6.5K across builds, the difference being SRC code it never touched
+	 * (2026-09-27). The heap arena is pinned for the same reason. */
 	.main.rw : ALIGN_WITH_INPUT {
 		EXCLUDE_FILE(*.twl.*) *(.data .data.* .gnu.linkonce.d.*)
 		EXCLUDE_FILE(*.twl.*) *(.data1)
@@ -490,8 +495,8 @@ SECTIONS {
 	PROVIDE_HIDDEN( __tls_start = ADDR(.main.tls)                  );
 	PROVIDE_HIDDEN( __tls_end   = ADDR(.main.tls) + SIZEOF(.tdata) );
 
-	/* Main BSS area */
-	.main.bss (NOLOAD) : {
+	/* Main BSS area, pinned to 1 KB like .main.rw above. */
+	.main.bss ALIGN(1024) (NOLOAD) : {
 		EXCLUDE_FILE(*.twl.*) *(.dynbss)
 		EXCLUDE_FILE(*.twl.*) *(.bss .bss.* .gnu.linkonce.b.*)
 		EXCLUDE_FILE(*.twl.*) *(COMMON)

@@ -1,3 +1,8 @@
+/* Bumped each time the stage owner takes a frame's camera and binding
+ * matrices (and when it drops them): nds_stage_gx.exec.inc memoizes values
+ * derived only from those matrices for one generation. */
+static u32 sNdsNativeStageMatrixGen = 1u;
+
 #if NDS_P2_STAGE_YOSTER && NDS_RENDERER_HW_TRIANGLES
 #include <nds/nds_native_actor_yoster_cloud.h>
 #include "generated/nds_native_actor_yoster_cloud.generated.inc"
@@ -4607,6 +4612,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
     sNdsNativeStageOwnerExecution.hidden_binding_mask = frame->hidden_binding_mask;
+    sNdsNativeStageMatrixGen++;
 #if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = frame->projection;
     sNdsNativeStageOwnerExecution.camera_modelview = frame->camera_modelview;

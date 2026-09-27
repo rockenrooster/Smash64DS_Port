@@ -343,6 +343,50 @@ static void ndsStageGxAppend(const NDSStageGxRun *run,
     sNdsStageGxWordCount += run->word_count;
 }
 
+/* Per stage-matrix generation (sNdsNativeStageMatrixGen): the VIEW patch's
+ * hardware affine and each (binding, shift) composed matrix depend only on
+ * that generation's camera and binding matrices, yet Dream Land's program
+ * rebuilt the affine for each of its 22 VIEW patches and a composed matrix at
+ * ~52 binding changes a frame (23 distinct). Same-ROM A/B: STG -4.9K. */
+#define NDS_STAGE_GX_MEMO_SLOTS 32u
+typedef struct NDSStageGxMatMemo
+{
+    u32 gen;
+    u16 binding;
+    u8 shift;
+    u8 ok;
+    NDSRendererMatrix20p12 m;
+} NDSStageGxMatMemo;
+static NDSStageGxMatMemo sNdsStageGxMatMemo[NDS_STAGE_GX_MEMO_SLOTS];
+static m4x4 sNdsStageGxViewMemo;
+static u32 sNdsStageGxViewGen;
+
+static sb32 ndsStageGxComposedFor(u32 binding, u32 shift,
+                                  NDSRendererMatrix20p12 *out)
+{
+    NDSStageGxMatMemo *m = &sNdsStageGxMatMemo[((binding << 3) | shift) &
+                                               (NDS_STAGE_GX_MEMO_SLOTS - 1u)];
+    sb32 ok;
+
+    if ((m->gen == sNdsNativeStageMatrixGen) &&
+        (m->binding == (u16)binding) && (m->shift == (u8)shift))
+    {
+        *out = m->m;
+        return (m->ok != 0u) ? TRUE : FALSE;
+    }
+    ok = ndsRendererBuildShiftedRawHardwareMatrix(
+        &sNdsNativeStageOwnerExecution.binding_composed[binding], out, shift);
+    m->gen = sNdsNativeStageMatrixGen;
+    m->binding = (u16)binding;
+    m->shift = (u8)shift;
+    m->ok = (ok != FALSE) ? 1u : 0u;
+    if (ok != FALSE)
+    {
+        m->m = *out;
+    }
+    return ok;
+}
+
 /* Keep the patcher out of the nearly full ITCM executor during coexistence. */
 static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRendererStats *stats)
 {
@@ -400,8 +444,14 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         m4x4 matrix;
         if (q->kind == NDS_STAGE_GX_VIEW)
         {
-            ndsRendererNativeBuildHierarchyHardwareAffine(sNdsNativeStageOwnerExecution.camera_modelview, &matrix);
-            memcpy(dst, &matrix, sizeof(matrix));
+            if (sNdsStageGxViewGen != sNdsNativeStageMatrixGen)
+            {
+                ndsRendererNativeBuildHierarchyHardwareAffine(
+                    sNdsNativeStageOwnerExecution.camera_modelview,
+                    &sNdsStageGxViewMemo);
+                sNdsStageGxViewGen = sNdsNativeStageMatrixGen;
+            }
+            memcpy(dst, &sNdsStageGxViewMemo, sizeof(sNdsStageGxViewMemo));
         }
         else if (q->kind == NDS_STAGE_GX_PROJECTION)
         {
@@ -432,8 +482,7 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
             u32 shift = q->kind == NDS_STAGE_GX_CORNER_NOZ ? q->aux & 7u : q->aux;
             if (composed_shift != (s32)shift || composed_binding != binding)
             {
-                if (!ndsRendererBuildShiftedRawHardwareMatrix(
-                    &sNdsNativeStageOwnerExecution.binding_composed[binding], &composed, shift))
+                if (!ndsStageGxComposedFor(binding, shift, &composed))
                 { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 8u; return FALSE; }
                 composed_shift = (s32)shift;
                 composed_binding = binding;

@@ -8854,3 +8854,15 @@ Final `52272220` vs `hwdiv`, replay identical: WORK-H P50/P95/P99 1,091,072/
 1,493,952/1,784,064 (+3.3K/-29.7K/-148K); slot state padded to a 1 KB growth
 (cache phase: unpadded read P50 +8K). RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 24.
+
+## 2026-09-27 — stage matrix memo; .main data sections pinned to 1 KB
+
+**BANKED (small).** A per-frame stage-matrix generation lets `ndsStageGxDraw`
+memoize the VIEW affine (22 rebuilds a frame) and the (binding, shift) composed
+matrices (~52 a frame, 23 distinct). Same-ROM A/B: WORK-H paired -4.7K (STG
+-4.9K), replay identical. Cross-build the memo read +6.5K (SRC code it never
+touches): `.main.rw`/`.main.bss` followed the code's size, so they now start on
+1 KB (D-cache way) boundaries. Pinned final `0E7B9ABF` vs `sparepad`, replay
+identical: WORK-H P50/P95/P99 1,096,576/1,501,312/1,796,736 (+5.5K/+7.4K: the
+one-time layout move). Sub-10K changes are priced same-ROM from here. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 25.
