@@ -8659,3 +8659,12 @@ replay identical: WORK-H P50/P95/P99 1,197,376/1,641,216/2,055,360 ->
 1,182,784/1,622,336/2,024,704; two-VBlank 625 -> 687; 22.22 FPS. RED. Refuted: a
 written-out digest mix (noise).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 4.
+
+## 2026-09-27 — A9: per-fighter SRC split out of the gate ROM
+
+**BANKED (instrument).** Cycle 86's SCAT/SHDT/SPRM/SINT/SPHD/SPHC/SCPU brackets
+(two clock reads around every fighter proc, every tick) sit behind
+`NDS_TICK_HUD_SRC_SPLIT` (default 0; set 1 for attribution runs). `7F2123F3` ->
+`75F3EEF5`, replay identical: WORK-H P50/P95/P99 1,182,784/1,622,336/2,024,704
+-> 1,174,720/1,614,528/2,017,664; two-VBlank 687 -> 712. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 5.

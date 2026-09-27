@@ -181,7 +181,7 @@ void ftComputerProcessAll(GObj *fighter_gobj)
      * ndsR2AnimCachePreloadStep. cpuGetTiming is forward-declared for the reason
      * given in battleship_lbparticle.c:1697; libnds nds/timers.h:255 is the
      * authority for the signature. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     extern u32 cpuGetTiming(void);
     u32 computer_start = cpuGetTiming();
 #endif
@@ -204,7 +204,7 @@ void ftComputerProcessAll(GObj *fighter_gobj)
         ndsFTComputerRecord(fp);
 #endif
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcComputerTicks += cpuGetTiming() - computer_start;
 #endif
 }

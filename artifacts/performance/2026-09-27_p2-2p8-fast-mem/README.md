@@ -123,3 +123,12 @@ the top-level MISC bucket are measured as before. WORK-H P50/P95/P99
 
 Refuted (reverted): unrolling the replay digest's byte-wise FNV mix
 (`digestunroll` `262BE55A`, identical digest words): P50 -1.7K, P95 +6.1K.
+
+## Section 5: Cycle 86's per-fighter SRC split leaves the gate ROM (A9)
+
+`srcsplit` `75F3EEF5`: `NDS_TICK_HUD_SRC_SPLIT` (default 0) gates the two
+clock reads around each fighter proc every tick (SCAT/SHDT/SPRM/SINT/SPHD/SPHC
+and SCPU). Those columns read 0 in gate runs; GCRA and SRC are measured as
+before; analysis runs set the flag to 1. WORK-H P50/P95/P99
+1,182,784/1,622,336/2,024,704 -> **1,174,720/1,614,528/2,017,664**; SRC P50
+-8.7K; VBlanks/FPS 712 1175 75 11 22.32; replay identical.

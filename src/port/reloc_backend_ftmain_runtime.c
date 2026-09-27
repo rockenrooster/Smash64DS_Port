@@ -518,12 +518,12 @@ void ftMainProcSearchCatch(GObj *fighter_gobj)
      * ft/ftmanager.c:861) -- the sequential sibling of SHDT at priority 1, and
      * the other search population that can switch on. Nested inside GCRA and
      * disjoint from every other bracketed proc. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     u32 catch_start = cpuGetTiming();
 #endif
 
     battleship_ftMainProcSearchCatch(fighter_gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcCatchTicks += cpuGetTiming() - catch_start;
 #endif
 }
@@ -567,13 +567,13 @@ void ftMainProcSearchHitAll(GObj *fighter_gobj)
      * bracket is safe. R2-03 E35 measured this population as the owner of the
      * SRC excursion but did so on a 128-frame window; this is the whole-match
      * re-measurement. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     u32 hit_start = cpuGetTiming();
 #endif
 
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_HIT_SEARCH);
     battleship_ftMainProcSearchHitAll(fighter_gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcHitDetectTicks += cpuGetTiming() - hit_start;
 #endif
 }
@@ -586,7 +586,7 @@ void ftMainProcParams(GObj *fighter_gobj)
      * bracket: it is compiled out of the measuring ROM
      * (NDS_FIGHTER_ANIM_AUDIT 0) so it costs nothing there, and if it is ever
      * enabled its cost belongs to this owner rather than silently to SGCO. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     u32 params_start = cpuGetTiming();
 #endif
 
@@ -594,7 +594,7 @@ void ftMainProcParams(GObj *fighter_gobj)
 #if NDS_FIGHTER_ANIM_AUDIT
     ndsFighterAnimAuditUpdate(fighter_gobj);
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcParamsTicks += cpuGetTiming() - params_start;
 #endif
 }
@@ -883,7 +883,7 @@ void ftMainProcUpdateInterrupt(GObj *fighter_gobj)
      * already bracketed as SCPU, so this span deliberately includes it and the
      * analyzer subtracts: SITR = SINT - SCPU. That keeps SCPU's banked series
      * unchanged and makes SITR's non-negativity the proof the nesting is real. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     u32 interrupt_start = cpuGetTiming();
 #endif
 
@@ -894,7 +894,7 @@ void ftMainProcUpdateInterrupt(GObj *fighter_gobj)
 #if NDS_TASK108_SITR_CALLBACK_CENSUS
     ndsTask108SitrEnd(fighter_gobj);
 #endif
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcInterruptTicks += cpuGetTiming() - interrupt_start;
 #endif
 }
@@ -907,12 +907,12 @@ void ftMainProcPhysicsMapDefault(GObj *fighter_gobj)
      * outer procs is disjoint and exhaustive over the shared worker. In a match
      * without grabs SPHD does the work and SPHC is a two-field early-out, which
      * is the prediction these two are checked against. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     u32 physics_default_start = cpuGetTiming();
 #endif
 
     battleship_ftMainProcPhysicsMapDefault(fighter_gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcPhysicsDefaultTicks +=
         cpuGetTiming() - physics_default_start;
 #endif
@@ -921,12 +921,12 @@ void ftMainProcPhysicsMapDefault(GObj *fighter_gobj)
 void ftMainProcPhysicsMapCapture(GObj *fighter_gobj)
 {
     /* SPHC. Fighter proc priority 3, the captured arm of the pair above. */
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     u32 physics_capture_start = cpuGetTiming();
 #endif
 
     battleship_ftMainProcPhysicsMapCapture(fighter_gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_TICK_HUD_SRC_SPLIT
     gNdsTickHudSrcPhysicsCaptureTicks +=
         cpuGetTiming() - physics_capture_start;
 #endif

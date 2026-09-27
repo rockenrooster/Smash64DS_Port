@@ -90,8 +90,8 @@ local W columns (STG P50 253K); status path (token index, path formatter,
 ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
-cache, pre-walk census + MISC split off (`2026-09-27_p2-2p8-fast-mem`): `7F2123F3`
-WORK-H P50/P95/P99 1,182,784/1,622,336/2,024,704; 2-VBlank 687.
+cache; lab census/MISC/SRC splits off (`2026-09-27_p2-2p8-fast-mem`): `75F3EEF5`
+WORK-H P50/P95/P99 1,174,720/1,614,528/2,017,664; 2-VBlank 712.
 **Constraint**: CSS reserve >=183,072 B; margin 17,584 B less ~1.4 KB BSS (owed).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
