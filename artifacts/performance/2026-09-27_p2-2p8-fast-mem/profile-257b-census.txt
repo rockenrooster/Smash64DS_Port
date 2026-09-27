@@ -1,0 +1,378 @@
+profile      D:\Stuff\DevFolder\Smash64DS_Port\builds\p2p8-profile-257b\arm9-profile.csv
+elf          D:\Stuff\DevFolder\Smash64DS_Port\builds\build-p2p8-n0409-profile\smash64ds-p2-fourcpu-tickhud-hwtri.elf
+pc rows      16,158,440
+cycles       1,016,181,168
+unattributed 27,869 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  1,480 of 5,485 FUNC symbols
+
+section sizes
+  .itcm               32,616
+  .text.hot            3,956  free 4,236 of cap 8,192
+  .text.hot.draw       6,328  free 1,864 of cap 8,192
+
+== 0. stall accounting by tier (placement can only touch non-mem stall) ==
+   excluding idle spin: armWaitForIrq
+tier                 cycles        insns  cyc/insn  nonmem stall     %    mem stall     %
+--------------  -----------  -----------  --------  ------------  ----  -----------  ----
+.itcm           351,745,360  183,843,970      1.91    57,019,244  16.2  110,882,146  31.5
+.text.hot        24,595,034    3,634,960      6.77     8,804,929  35.8   12,155,145  49.4
+.text.hot.draw    2,162,294      840,538      2.57       791,483  36.6      530,273  24.5
+.main           451,535,095  101,887,266      4.43   142,614,319  31.6  207,033,510  45.9
+
+== A. top 80 symbols by measured cycles ==
+     cycles   %tot  bytes      cyc/byte  tier       symbol
+-----------  -----  -----  ------------  ---------  -------------------------------------------------------------
+186,115,516  18.32      8  23,264,439.5  .itcm      armWaitForIrq
+ 53,006,613   5.22  4,640      11,423.8  .itcm      ndsFtrLeanKernelCompose
+ 44,352,757   4.36  3,380      13,122.1  .main      ndsStageGxDraw
+ 38,374,497   3.78    400      95,936.2  .itcm      __aeabi_fadd
+ 26,790,822   2.64  1,592      16,828.4  .itcm      ndsFtPosePlay
+ 17,031,830   1.68    408      41,744.7  .itcm      __aeabi_fmul (+1 alias)
+ 16,605,021   1.63  4,640       3,578.7  .main      ndsFtPoseParse
+ 15,417,542   1.52  1,644       9,378.1  .itcm      ndsStageMPAdjustFloorLoopWallSweep
+ 11,945,996   1.18    116     102,982.7  .itcm      memcpy
+ 11,548,349   1.14  3,344       3,453.5  .main      ndsFtrLeanRun
+ 10,933,044   1.08  1,484       7,367.3  .itcm      mpCollisionGetFCCommonFloor
+ 10,593,476   1.04  4,120       2,571.2  .main      ndsFtrLeanPacketPatch
+ 10,332,605   1.02  1,136       9,095.6  .itcm      ndsFtPoseUpdate
+ 10,084,211   0.99  1,556       6,480.9  .main      ndsFighterDisplayContractSubmit
+  9,758,539   0.96    816      11,959.0  .itcm      ftParamUpdateAnimKeys
+  9,724,020   0.96  2,176       4,468.8  .text.hot  battleship_ftMainProcUpdateInterrupt
+  9,277,684   0.91    876      10,591.0  .main      ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+  8,634,931   0.85    120      71,957.8  .itcm      ndsBaseGcRunAll
+  8,615,892   0.85    352      24,477.0  .itcm      __aeabi_fdiv (+1 alias)
+  8,438,081   0.83    324      26,043.5  .itcm      ndsRendererMtxMul20p12
+  7,684,541   0.76  4,320       1,778.8  .itcm      ndsRendererCommitNativeStageSegment
+  7,660,329   0.75    484      15,827.1  .itcm      ndsFTParamsInvalidateSubtree
+  7,491,976   0.74  4,164       1,799.2  .main      lbParticleDrawTextures
+  7,452,141   0.73    528      14,113.9  .itcm      gcPlayAnimAll
+  7,406,052   0.73     40     185,151.3  .itcm      ftGetStruct
+  6,656,881   0.66     56     118,872.9  .itcm      ndsStageCollisionLoopGeometryReady
+  6,624,840   0.65    360      18,402.3  .itcm      gcCaptureCameraGObj
+  6,254,281   0.62  1,816       3,444.0  .main      ndsStageMPSweepFloorLoopSweep
+  6,104,069   0.60  1,084       5,631.1  .text.hot  ftMainProcPhysicsMap
+  5,988,095   0.59  2,760       2,169.6  .main      ndsRendererAdapterApplyMvpRecalc
+  5,941,491   0.58    388      15,313.1  .main      ftDisplayMainDrawDefault
+  5,918,502   0.58  1,868       3,168.4  .main      gcParseMObjMatAnimJoint
+  5,840,048   0.57     28     208,573.1  .itcm      armDCacheFlush
+  5,707,823   0.56    284      20,098.0  .itcm      ndsRendererBuildShiftedRawHardwareMatrix
+  5,377,959   0.53    160      33,612.2  .text.hot  gcRunGObjProcess
+  5,021,244   0.49    328      15,308.7  .main      ndsStageGxFlush.part.0
+  4,836,062   0.48    480      10,075.1  .itcm      ndsStageGCDrawAllLoopRecordCapturedDisplay
+  4,724,493   0.46  8,020         589.1  .main      ndsRendererSubmitParticleQuad
+  4,682,012   0.46    216      21,676.0  .itcm      ndsRendererAdapterStageWorldSourceKeyMatches
+  4,594,994   0.45    120      38,291.6  .itcm      __wrap_cpuGetTiming
+  4,533,734   0.45  2,360       1,921.1  .main      ndsBaseFTDisplayMainProcDisplay
+  4,304,463   0.42    316      13,621.7  .main      ndsMPFindLineYakumonoID
+  4,299,872   0.42  1,236       3,478.9  .main      ndsRendererAdapterNdlDispatchEffect
+  4,032,870   0.40    308      13,093.7  .itcm      ndsRendererAdapterCommitNativeStageDisplay
+  3,968,087   0.39    148      26,811.4  .itcm      memset
+  3,951,840   0.39  2,824       1,399.4  .main      ndsP2HbRejectPoints
+  3,909,639   0.38    100      39,096.4  .itcm      ndsRendererAdapterFindStageWorldEntry
+  3,775,593   0.37  3,368       1,121.0  .main      ndsRendererAdapterPrepareNativeStageOwner
+  3,614,475   0.36  1,204       3,002.1  .main      battleship_ftMainSearchHitFighter
+  3,510,135   0.35  1,416       2,478.9  .main      gmCameraUpdateInterests
+  3,497,192   0.34    480       7,285.8  .itcm      ndsMPLineExtentSweepRejects
+  3,406,340   0.34  1,296       2,628.3  .main      ndsReplayDigestTick
+  3,282,568   0.32  2,388       1,374.6  .main      ndsRendererAdapterBuildNativeMaterialSnapshot
+  3,160,225   0.31     36      87,784.0  .itcm      __aeabi_fcmpeq
+  2,978,530   0.29  7,316         407.1  .main      ndsRendererSubmitNativeImpactWave
+  2,975,813   0.29  2,172       1,370.1  .main      ndsR2HostBattlePresent
+  2,934,959   0.29    300       9,783.2  .itcm      ndsMPGetLineKindForLineID
+  2,877,855   0.28    252      11,420.1  .itcm      ndsMPLineExtentRejects
+  2,813,149   0.28    732       3,843.1  .itcm      ndsBaseGcPlayMObjMatAnim
+  2,812,424   0.28  1,624       1,731.8  .main      gcParseDObjAnimJoint
+  2,809,948   0.28    220      12,772.5  .itcm      sqrtf
+  2,738,178   0.27    500       5,476.4  .main      ndsBaseGcPlayDObjAnimJoint
+  2,684,633   0.26    524       5,123.3  .main      ndsRendererAdapterPrepareNativeStageMatrices.constprop.0
+  2,650,645   0.26    136      19,490.0  .itcm      ndsRendererAdapterMarkDisplayProcHeads
+  2,604,992   0.26    720       3,618.0  .main      ifCommonPlayerDamageProcDisplay
+  2,603,081   0.26    436       5,970.4  .main      ftComputerCheckFindTarget
+  2,570,849   0.25    444       5,790.2  .main      ndsFighterDisplayContractHeadBoundary
+  2,560,248   0.25    812       3,153.0  .main      ndsMPFindLineEndpoints
+  2,481,322   0.24  1,040       2,385.9  .main      ftMainUpdateColAnim
+  2,416,373   0.24    484       4,992.5  .itcm      ndsFtrLeanPacketModelviewSites
+  2,397,591   0.24  1,280       1,873.1  .itcm      ndsFtrLeanPacketSubmit
+  2,378,301   0.23     92      25,851.1  .itcm      __aeabi_i2f
+  2,325,759   0.23     52      44,726.1  .itcm      __aeabi_fcmplt
+  2,297,706   0.23     68      33,789.8  .itcm      ndsR2CamDiv64
+  2,240,382   0.22     72      31,116.4  .itcm      ndsRendererAdapterDirectMvpRecalcKind
+  2,203,937   0.22  3,100         710.9  .main      ftComputerCheckDetectTarget
+  2,172,004   0.21    308       7,052.0  .main      ndsRendererHardwareRecordBattleStaticTextureHit
+  2,162,198   0.21  1,436       1,505.7  .main      battleship_ftMainProcParams
+  2,137,646   0.21    424       5,041.6  .main      ndsBaseMPProcessUpdateMain
+  2,128,570   0.21  4,292         495.9  .main      ndsBattleHudRender
+
+== B. .itcm rent: 96 residents covering 32,564 of 32,616 section bytes (52 unnamed); 16 never executed (1,288 B idle) ==
+    cyc/byte       cycles  bytes       insns  symbol
+------------  -----------  -----  ----------  --------------------------------------------
+23,264,439.5  186,115,516      8       2,157  armWaitForIrq
+   208,573.1    5,840,048     28   2,212,302  armDCacheFlush
+   185,151.3    7,406,052     40   2,679,883  ftGetStruct
+   118,872.9    6,656,881     56   3,868,353  ndsStageCollisionLoopGeometryReady
+   102,982.7   11,945,996    116   2,438,048  memcpy
+    95,936.2   38,374,497    400  32,305,671  __aeabi_fadd
+    87,784.0    3,160,225     36   2,716,201  __aeabi_fcmpeq
+    82,456.5      329,826      4     329,824  __aeabi_fsub
+    71,957.8    8,634,931    120     940,525  ndsBaseGcRunAll
+    44,726.1    2,325,759     52   2,067,404  __aeabi_fcmplt
+    43,347.2      520,167     12     154,971  armDrainWriteBuffer
+    41,744.7   17,031,830    408  15,030,069  __aeabi_fmul (+1 alias)
+    39,096.4    3,909,639    100   1,567,298  ndsRendererAdapterFindStageWorldEntry
+    38,291.6    4,594,994    120     972,798  __wrap_cpuGetTiming
+    33,789.8    2,297,706     68     509,682  ndsR2CamDiv64
+    31,116.4    2,240,382     72     429,146  ndsRendererAdapterDirectMvpRecalcKind
+    30,629.1    1,592,713     52   1,411,321  __aeabi_fcmpgt
+    26,811.4    3,968,087    148     917,837  memset
+    26,043.5    8,438,081    324   5,147,656  ndsRendererMtxMul20p12
+    25,851.1    2,378,301     92   1,804,091  __aeabi_i2f
+    24,477.0    8,615,892    352   7,805,275  __aeabi_fdiv (+1 alias)
+    21,676.0    4,682,012    216   1,898,899  ndsRendererAdapterStageWorldSourceKeyMatches
+    21,478.6    1,202,799     56     693,354  gcPlayMObjMatAnim
+    21,306.7    1,874,993     88     349,636  ndsFighterStructIsTrackedPointer
+    20,098.0    5,707,823    284   3,174,919  ndsRendererBuildShiftedRawHardwareMatrix
+    19,490.0    2,650,645    136   1,743,574  ndsRendererAdapterMarkDisplayProcHeads
+    18,402.3    6,624,840    360   1,451,836  gcCaptureCameraGObj
+    17,416.0      975,298     56     312,979  lbCommonSin
+    16,828.4   26,790,822  1,592  16,061,880  ndsFtPosePlay
+    15,916.5    1,018,653     64     345,955  lbCommonCos
+    15,827.1    7,660,329    484   1,499,660  ndsFTParamsInvalidateSubtree
+    15,693.9    1,443,839     92   1,143,132  __aeabi_f2iz (+1 alias)
+    14,113.9    7,452,141    528   2,568,926  gcPlayAnimAll
+    13,093.7    4,032,870    308   1,288,603  ndsRendererAdapterCommitNativeStageDisplay
+    12,772.5    2,809,948    220   1,029,179  sqrtf
+    11,959.0    9,758,539    816   2,910,504  ftParamUpdateAnimKeys
+    11,423.8   53,006,613  4,640  26,442,860  ndsFtrLeanKernelCompose
+    11,420.1    2,877,855    252   1,498,991  ndsMPLineExtentRejects
+    10,716.8      300,071     28      53,763  ndsFTParamsInvalidateRootParts.constprop.0
+    10,075.1    4,836,062    480   1,738,629  ndsStageGCDrawAllLoopRecordCapturedDisplay
+     9,783.2    2,934,959    300   1,286,490  ndsMPGetLineKindForLineID
+     9,378.1   15,417,542  1,644   9,790,530  ndsStageMPAdjustFloorLoopWallSweep
+     9,127.7      292,086     32     214,898  __floatsisf (+1 alias)
+     9,095.6   10,332,605  1,136   3,152,597  ndsFtPoseUpdate
+     8,827.5      459,028     52     409,578  __aeabi_fcmple
+     7,367.3   10,933,044  1,484   6,487,383  mpCollisionGetFCCommonFloor
+     7,285.8    3,497,192    480   1,933,466  ndsMPLineExtentSweepRejects
+     6,394.5      179,046     28      69,146  armDCacheInvalidate
+     5,664.1      498,443     88     112,132  ftParamsUpdateFighterPartsTransform
+     5,651.8      972,114    172     819,074  __aeabi_l2f (+1 alias)
+     5,488.7      285,414     52     255,879  __aeabi_fcmpge
+     4,992.5    2,416,373    484   1,155,792  ndsFtrLeanPacketModelviewSites
+     4,200.8      554,509    132     299,222  ndsRendererAdapterMaterialAnimHash
+     3,919.4      156,775     40      78,387  __aeabi_ui2f (+1 alias)
+     3,843.1    2,813,149    732   1,434,821  ndsBaseGcPlayMObjMatAnim
+     2,442.3    1,162,544    476     394,738  ndsFighterPacketApplyTintPrims
+     1,873.1    2,397,591  1,280   1,186,361  ndsFtrLeanPacketSubmit
+     1,778.8    7,684,541  4,320   2,294,407  ndsRendererCommitNativeStageSegment
+     1,521.7      377,388    248     116,632  ndsRendererSyncTextureTile
+     1,309.8      193,855    148      75,440  ndsRendererHardwareEndBatch
+     1,025.4      233,789    228      71,804  __arm_excpt_irq
+       855.2      249,728    292     168,011  ndsRendererR2MaterialColor15
+       825.2      425,818    516     100,963  ndsFtrLeanPacketGuard
+       804.1       96,497    120      33,363  memcmp
+       785.8      260,885    332     105,056  ndsRendererRecordSetTile
+       784.6      166,339    212      30,400  threadBlock
+       492.9        3,943      8          83  ____ieee754_sqrtf_from_arm
+       456.0       20,064     44       7,296  armContextSave
+       450.6       86,518    192      20,560  ndsRendererHardwareBindTextureName
+       386.7       35,572     92       8,064  ndsRendererHardwareApplyTextureParams
+       327.7       99,610    304      42,387  ndsRendererAdapterBuildDObjLocalMatrix
+       308.9       38,304    124      20,064  threadSwitchTo
+       263.9      233,322    884      72,405  ndsRendererNativeApplyStateDelta
+       223.7       55,483    248      21,653  ndsRendererR2ClampDiffuseToMaterial
+       135.2       20,547    152      16,226  ndsRendererRecordTextureState
+       123.2       29,568    240      20,736  threadUnblockAllByMask
+        59.2       12,544    212       9,632  threadUnblockOneByValue
+        57.0        1,824     32         608  armContextLoad
+        15.2        9,298    612       3,540  gcPlayDObjAnimJoint
+         0.0      139,350      0       8,512  armContextLoadFromSvc
+         0.0            0    444           0  __addsf3 (+1 alias)
+         0.0            0     28           0  __aeabi_fcmpun
+         0.0            0    456           0  __aeabi_frsub
+         0.0            0    188           0  __aeabi_ul2f (+1 alias)
+         0.0            0     12           0  __arm_excpt_dabt
+         0.0            0      4           0  __arm_excpt_pabt
+         0.0            0      4           0  __arm_excpt_rst
+         0.0            0     12           0  __arm_excpt_und
+         0.0            0      8           0  __cpuGetTiming_from_arm
+         0.0            0     48           0  __excpt_entry
+         0.0            0    448           0  __nds_task16_libgcc_fsub_golden (+1 alias)
+         0.0            0     76           0  armCopyMem32
+         0.0            0     40           0  armDCacheFlushAll
+         0.0            0     88           0  armFillMem32
+         0.0            0     12           0  armICacheInvalidateAll
+         0.0            0    312           0  threadUnblockAllByValue
+
+== C. unplaced candidates for 4,236 free .text.hot bytes, ranked by recoverable (non-mem) stall ==
+pack  nonmem stall      cycles   bytes  cyc/insn  stall/byte  symbol
+----  ------------  ----------  ------  --------  ----------  -------------------------------------------------------------
+fit      8,394,920  44,352,757   3,380      3.13     2,483.7  ndsStageGxDraw
+-        3,673,866  10,593,476   4,120      4.03       891.7  ndsFtrLeanPacketPatch
+-        3,433,163  16,605,021   4,640      3.19       739.9  ndsFtPoseParse
+-        3,070,232  10,084,211   1,556     12.99     1,973.2  ndsFighterDisplayContractSubmit
+-        2,968,039   7,491,976   4,164      5.55       712.8  lbParticleDrawTextures
+-        2,795,000  11,548,349   3,344     10.70       835.8  ndsFtrLeanRun
+-        2,592,718   6,254,281   1,816      2.96     1,427.7  ndsStageMPSweepFloorLoopSweep
+-        2,365,028   4,724,493   8,020      5.99       294.9  ndsRendererSubmitParticleQuad
+-        2,026,985   4,533,734   2,360     11.09       858.9  ndsBaseFTDisplayMainProcDisplay
+-        1,827,367   5,988,095   2,760      3.35       662.1  ndsRendererAdapterApplyMvpRecalc
+-        1,698,251   9,277,684     876      3.25     1,938.6  ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+-        1,467,754   3,282,568   2,388      4.28       614.6  ndsRendererAdapterBuildNativeMaterialSnapshot
+-        1,256,190   2,102,505     910      4.99     1,380.4  ndsBaseMPProcessCheckTestLWallCollision
+-        1,238,644   1,907,067     910      4.53     1,361.1  ndsBaseMPProcessCheckTestRWallCollision
+-        1,179,390   2,481,322   1,040      9.59     1,134.0  ftMainUpdateColAnim
+-        1,169,997   3,510,135   1,416      4.63       826.3  gmCameraUpdateInterests
+-        1,133,462   4,299,872   1,236      6.44       917.0  ndsRendererAdapterNdlDispatchEffect
+-        1,089,487   2,978,530   7,316      2.94       148.9  ndsRendererSubmitNativeImpactWave
+-        1,062,543   1,891,800     944      7.53     1,125.6  ndsR2CameraLookAtReflect20p12
+-        1,056,903   1,910,509  17,220     10.43        61.4  ndsRendererHardwareResolveOrBindTexture
+fit      1,050,561   2,137,646     424      4.81     2,477.7  ndsBaseMPProcessUpdateMain
+-        1,023,995   3,951,840   2,824      2.46       362.6  ndsP2HbRejectPoints
+-        1,014,824   3,406,340   1,296      2.63       783.0  ndsReplayDigestTick
+-        1,010,718   5,918,502   1,868      4.53       541.1  gcParseMObjMatAnimJoint
+-          987,881   3,775,593   3,368      6.38       293.3  ndsRendererAdapterPrepareNativeStageOwner
+-          986,026   1,555,460   2,204      6.09       447.4  ftComputerUpdateInputs.part.0
+-          968,833   3,614,475   1,204      3.13       804.7  battleship_ftMainSearchHitFighter
+-          965,278   1,906,858   1,324      3.11       729.1  mpCollisionCheckProjectFloor
+-          955,774   2,560,248     812      4.71     1,177.1  ndsMPFindLineEndpoints
+-          935,287   1,972,764   1,628      8.42       574.5  ftComputerGetObjectiveStatus
+fit        915,448   5,941,491     388      5.82     2,359.4  ftDisplayMainDrawDefault
+-          815,161   2,203,937   3,100      3.12       263.0  ftComputerCheckDetectTarget
+-          806,301   1,351,001   2,240      4.19       360.0  ndsMPFCSegmentCrossesKernel
+-          780,579   1,298,352   1,708      5.49       457.0  ndsBaseMPProcessCheckTestLWallCollisionAdjNew
+-          779,104   2,738,178     500      2.94     1,558.2  ndsBaseGcPlayDObjAnimJoint
+-          767,970   1,552,333   1,168      2.99       657.5  ndsStageMPCeilFloorLoopSweep
+-          742,449   1,266,630     520      7.34     1,427.8  ndsR2CameraPerspFast20p12
+-          737,503   4,304,463     316      2.27     2,333.9  ndsMPFindLineYakumonoID
+-          724,291   2,975,813   2,172     10.22       333.5  ndsR2HostBattlePresent
+-          715,686   1,099,539   1,708      4.65       419.0  ndsBaseMPProcessCheckTestRWallCollisionAdjNew
+-          710,254   1,404,936   2,244      7.85       316.5  ftComputerFollowObjectiveWalk
+-          701,245   2,812,424   1,624      3.60       431.8  gcParseDObjAnimJoint
+-          686,140   2,604,992     720      4.86       953.0  ifCommonPlayerDamageProcDisplay
+-          685,003   2,128,570   4,292      2.54       159.6  ndsBattleHudRender
+-          681,295   2,603,081     436      2.96     1,562.6  ftComputerCheckFindTarget
+-          663,676   1,465,129   4,088      4.79       162.3  lbParticleUpdateStruct.part.0
+-          645,623   2,684,633     524      2.96     1,232.1  ndsRendererAdapterPrepareNativeStageMatrices.constprop.0
+-          602,893   1,705,518   4,148      2.91       145.3  ndsIFCommonNativeOamDrawGObj
+-          601,832   5,021,244     328     10.09     1,834.9  ndsStageGxFlush.part.0
+-          599,357   2,109,732   1,040      5.96       576.3  ndsAudioFgmUpdate
+-          586,513   1,070,098     436     12.50     1,345.2  ndsR2HostBattleUpdateOnce
+-          570,229   2,162,198   1,436      5.55       397.1  battleship_ftMainProcParams
+-          554,138     830,558     364      9.23     1,522.4  ftComputerProcDefault
+-          553,804   1,232,944     760      6.28       728.7  lbCommonDrawSObjAttr
+-          549,143   1,417,807     288      6.72     1,906.7  ftMainUpdateMotionEventsAll
+-          548,938   1,296,554     430      3.15     1,276.6  gmCollisionTransformMatrixAll
+-          541,923     964,620     368      3.77     1,472.6  ndsFighterDisplayContractProjectTarget
+-          529,965   1,038,000     248      2.80     2,137.0  ndsRendererParticleFloatToFixed
+-          520,861     792,106     312      7.89     1,669.4  gmCameraDefaultFuncCamera
+-          506,813   1,399,157  10,628     12.23        47.7  ndsRendererPrepareNativeStageOwner
+-          497,994   1,518,478   1,072      6.03       464.5  ndsIFCommonRecordHUDState
+-          495,367     748,701     500      5.73       990.7  grWallpaperCalcPersp
+-          493,697   1,812,088     236      6.71     2,091.9  ftComputerCheckEvadeDistance
+-          490,226   2,036,947     304      3.53     1,612.6  gmCollisionGetFighterPartsWorldPosition
+-          487,245     837,297     352      5.15     1,384.2  ftPhysicsSetGroundVelTransferAir
+-          483,447   1,247,767   2,376      6.12       203.5  ndsFtrLeanMatRun.constprop.0
+-          467,503   1,026,032     876      4.41       533.7  syTaskmanUpdateDLBuffers
+-          460,046   1,382,357     508      5.42       905.6  ndsBaseFTCommonDeadCheckInterruptCommon
+-          453,801     891,391   1,092      7.19       415.6  ndsNativeWallpaperDraw
+-          449,794     721,662     404      4.52     1,113.4  __kernel_cosf
+-          449,276     869,302     188      4.36     2,389.8  ftDisplayLightsDrawReflect
+-          446,603   2,570,849     444      3.74     1,005.9  ndsFighterDisplayContractHeadBoundary
+-          444,746   1,610,594   2,260      9.27       196.8  battleship_ftMainSetStatus
+-          422,220   1,911,235     252      2.74     1,675.5  ndsMPGetTopologyEdgeLineID
+-          421,652   1,541,426     184      2.38     2,291.6  ndsR2FtAnimRecipQ30
+-          412,065     670,203     252      2.60     1,635.2  __udivsi3 (+1 alias)
+-          411,107     629,598     144      7.37     2,854.9  ndsBaseMPProcessCheckTestFloorCollision
+-          403,301     940,081   2,452      4.67       164.5  ndsParticleSetCurrentCamera
+-          400,831   1,113,925     280     12.72     1,431.5  osContGetReadData
+-          395,918     983,601     824      2.47       480.5  ndsMPCheckWallSurfaceTilt
+
+greedy pack claims 4,192 of 4,236 free bytes and reaches 10,360,929 non-mem stall cycles (1.02% of measured)
+
+== D. ITCM admissions by non-mem stall per byte (120 B free now, +1,288 B recoverable by eviction) ==
+slot   stall/byte  nonmem stall  bytes  cyc/insn  tier       symbol
+-----  ----------  ------------  -----  --------  ---------  --------------------------------------------
+free       16,216       129,730      8     24.27  .main      mpProcessUpdateMain
+free       12,644       101,153      8     18.04  .main      ftMainProcUpdateInterrupt
+free       10,325        82,603      8     11.52  .main      ftCommonDeadCheckInterruptCommon
+free       10,185        81,481      8     17.03  .main      mpProcessCheckTestLWallCollision
+free        9,529        76,234      8     14.19  .main      mpProcessCheckTestFloorCollisionNew
+free        9,225        18,450      2     47.36  .main      func_80017CC8
+free        9,046        36,185      4     24.56  .main      ndsFighterMarioFoxNaturalMotionUpdateEnabled
+free        8,216        65,730      8      8.27  .main      __sinf
+free        7,807       312,293     40      4.52  .main      syVectorAdd3D
+free        7,689        61,512      8      9.90  .main      mpProcessCheckTestRWallCollision
+free        7,267        58,135      8      7.83  .main      ftMainProcSearchHitAll
+evict       6,829       136,577     20      3.17  .main      mpCollisionCheckExistLineID
+evict       6,800     1,087,976    160      3.90  .text.hot  gcRunGObjProcess
+free        6,500        13,001      2      5.23  .main      mpCommonUpdateFighterSlopeContour
+free        6,424        12,848      2      5.18  .main      lbCommonPrepSObjAttr
+evict       6,144        49,149      8     12.53  .main      ftMainProcPhysicsMapDefault
+evict       6,127        61,271     10      5.47  .main      mpCollisionGetEdgeUnderLLineID
+evict       5,604        44,829      8      7.53  .main      mpProcessRunFloorEdgeAdjust
+free        5,370        10,740      2     14.98  .main      ftParamKirbyTryMakeMapStarEffect
+evict       5,344       106,874     20     15.72  .main      grPupupuProcUpdate
+evict       5,236        41,884      8     21.17  .main      mpProcessCheckTestLWallCollisionAdjNew
+evict       5,169       413,521     80      7.55  .text.hot  ndsBaseFTComputerProcessAll
+evict       5,094        40,754      8     23.73  .main      ndsCameraDefaultFuncCameraWitness
+evict       5,047       161,489     32      5.70  .main      __aeabi_idivmod
+evict       4,995        39,960      8      5.91  .main      ftMainProcPhysicsMapCapture
+evict       4,863        29,180      6      4.03  .main      syDebugPrintf
+evict       4,761        57,133     12      2.36  .main      ndsR2CamDivQ
+evict       4,673        37,385      8     20.92  .main      ftCommonAttackLw4CheckInterruptCommon
+evict       4,624        36,991      8      6.93  .main      ftMainProcParams
+evict       4,584        36,668      8     20.41  .main      ftCommonAttackLw3CheckInterruptCommon
+evict       4,486        35,892      8     13.24  .main      mpProcessCheckTestCeilCollisionAdjNew
+free        4,416         8,832      2     12.50  .main      gcSetCameraMatrixMode
+evict       4,218        33,743      8      5.70  .main      __cosf
+evict       4,216        33,729      8     16.52  .main      mpProcessSetCollProjectFloorID
+evict       4,149        33,189      8      7.80  .main      mpProcessCheckTestFloorCollision
+evict       4,124        32,994      8     21.42  .main      ftCommonSquatCheckInterruptCommon
+evict       4,106       172,465     42      4.72  .main      syVectorDiff3D
+evict       4,093        32,741      8     17.39  .main      ftCommonCatchCheckInterruptCommon
+evict       3,853       262,007     68      8.46  .main      gcRunGObj
+evict       3,759        37,588     10     15.47  .main      gcDefaultFuncRun
+evict       3,592        86,219     24      1.82  .main      ndsR2CamMulQ
+evict       3,392       257,784     76      5.50  .text.hot  battleship_ftMainProcSearchHitAll
+evict       3,384       311,335     92     12.14  .main      ndsFtrLookAtInputs
+evict       3,368       161,643     48      8.82  .main      ndsBaseMPProcessRunFloorEdgeAdjust
+evict       3,350       241,229     72     13.76  .text.hot  battleship_ftMainProcPhysicsMapDefault
+evict       3,176        50,815     16     24.46  .main      ndsRendererHardwareNoOracleEnabled
+evict       3,150       302,431     96      2.22  .main      func_ovl2_800F8FFC
+evict       3,072        12,288      4      9.00  .main      gcParseGObjScript
+evict       3,060        73,449     24     17.56  .main      ndsRendererHardwareSetNoOracle
+evict       3,054        12,217      4      8.95  .main      ndsFighterMarioFoxLivePreviewUpdateEnabled
+evict       3,028       175,643     58      3.16  .main      syVectorMag3D
+evict       3,019       120,765     40      8.30  .main      ndsGcGetGObjLifetimeSerial
+evict       2,893       335,569    116      7.14  .main      sinf
+free        2,891         5,782      2     50.42  .main      ftCommonCliffCommonProcMap
+evict       2,881       109,486     38      3.31  .main      syVectorScale3D
+-           2,855       411,107    144      7.37  .main      ndsBaseMPProcessCheckTestFloorCollision
+-           2,821       372,385    132      8.92  .main      ndsFtPoseBodyChangedThisTick
+evict       2,741        21,925      8      8.76  .main      mpProcessCheckTestRWallCollisionAdjNew
+-           2,709        75,859     28      1.66  .main      mpCollisionCheckRWallLineCollisionSame
+-           2,674         5,349      2      2.00  .main      lbCommonPrepSObjDraw
+-           2,642        26,420     10     29.82  .main      grWallpaperCommonProcUpdate
+-           2,626        42,010     16     43.66  .main      gmCameraRunFuncCamera
+-           2,618        62,843     24      3.90  .main      mpCollisionCheckCeilLineCollisionSame
+-           2,576       247,309     96      8.72  .main      mpCollisionGetSpeedLineID
+-           2,542        20,336      8     15.41  .main      ftCommonGuardOnCheckInterruptCommon
+-           2,511         5,022      2     14.08  .main      func_8001663C
+-           2,492        19,938      8      5.73  .main      ftMainProcSearchCatch
+-           2,484     8,394,920  3,380      3.13  .main      ndsStageGxDraw
+-           2,478     1,050,561    424      4.81  .main      ndsBaseMPProcessUpdateMain
+-           2,476       277,336    112      6.83  .main      cosf
+-           2,473        79,129     32     16.07  .main      ndsFtrLeanPacketNoteKind
+-           2,404       105,779     44      5.58  .main      ndsR2CamSqrt64
+-           2,394       153,225     64     10.66  .text.hot  ftComputerProcessAll
+-           2,390       449,276    188      4.36  .main      ftDisplayLightsDrawReflect
+-           2,359       915,448    388      5.82  .main      ftDisplayMainDrawDefault
+-           2,334       737,503    316      2.27  .main      ndsMPFindLineYakumonoID
+-           2,312     2,506,647  1,084      7.58  .text.hot  ftMainProcPhysicsMap
+-           2,312        78,606     34      1.96  .main      ndsFtrLookAtMixWords
+-           2,305        55,314     24      3.15  .main      mpCollisionCheckFloorLineCollisionSame
+-           2,292       421,652    184      2.38  .main      ndsR2FtAnimRecipQ30
+
+zero-eviction pack: 120 B, 1,074,709 non-mem stall cycles in reach
+with eviction:      1,408 B, 6,403,496 non-mem stall cycles in reach
+wrote D:\Stuff\DevFolder\Smash64DS_Port\builds\p2p8-profile-257b\census.json

@@ -512,3 +512,45 @@ divides a frame, ~275 ticks each: libgcc's bit-by-bit loop. The callers:
 
 Build note: the first attempt also bound `NDS_R2_COLLISION_DIV64`. That broke
 `nds_r2_collision_mtx.h` and the hook is not needed here, so it was dropped.
+
+## 23. Where the P95 set's tail lives now, and two refuted hurtbox caches
+
+**Attribution** (`attrsplit`, `NDS_TICK_HUD_SRC_SPLIT=1 NDS_P2_MISC_SPLIT=1`,
+replay IDENTICAL to `hwdiv`). P95-set mean over the median:
+
+| Bucket | Excess over median |
+|---|---|
+| FTR | +283K |
+| SINT | +122K |
+| SHDT | +106K |
+| SPRM | +72K |
+| MISC | +60K (items +30K, weapons +25K, effects +22K, capture +19K) |
+
+In the `257b` profile (`profile-257b-census.txt`), the hit-heavy frames carry
+the hurtbox reject's own composition: `ndsP2HbRejectPoints` +42.5K,
+`ndsR2CfxBuildLocal` +14.6K and `ndsP2HbVec` +8.4K. The source's float hit
+tests for the pairs it passes add a further ~+32K.
+
+**Lean entry thrash, measured** (`lru`, a lab-only shadow LRU at every lean key
+event; reverted). It counts the misses an LRU of 2, 3 or 4 distinct keys
+would take, against the actual materializations:
+
+| Slot | Actual | 2 entries | 3 entries | 4 entries |
+|---|---|---|---|---|
+| DK | 26 | 25 | 15 | 12 |
+| Samus | 10 | 9 | 4 | 4 |
+| Link (variants cover it) | 15 | 27 | 13 | 10 |
+| Kirby (variants cover it) | 11 | 39 | 26 | 18 |
+
+The 2-entry model reproduces DK and Samus. A third entry would save about 10 +
+5 materializations of 62, roughly -25K P95 by the spike-removal estimate, for
+~17.7 KB of heap per slot.
+
+**Refuted: per-damage box cache** (`hbbox`). The reject caches its hurtbox half
+(world centre, extent, column sums) per damage box and latch epoch. Hits were
+5,609 against 8,542 fills. Paired WORK-H -2.1K, but P95 +1.7K and SRC +1.3K.
+
+**Refuted: per-fighter latch epochs** (`hbep`, with the box cache). Box hits
+were unchanged at 5,614: each box is tested about 1.7 times per its own
+fighter's epoch. Paired -1.2K, SRC +1.9K. Shadow mode (`hbepshadow`) showed 0
+flips and replay IDENTICAL. Both changes were reverted.
