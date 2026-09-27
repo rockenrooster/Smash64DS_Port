@@ -97,6 +97,11 @@ static u32 sNdsBattlePlayableTickHudLoopStartTick;
 /* P2-2p8 Phase 0 replay digest of the two logic ticks of this presented
  * frame (src/port/nds_replay_digest.c); published as DGSA/DGSB. */
 static u32 sNdsReplayDigest[2];
+#if NDS_TICK_HUD
+/* The digest exists only in the measuring ROM, so its ticks are the
+ * instrument's: they are charged to HUD, which WORK-H takes back out. */
+static u32 sNdsReplayDigestTicks;
+#endif
 #endif
 
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -1030,7 +1035,8 @@ static void ndsBattlePlayableFinalizePresentedIteration(void)
             gNdsTickHudBackgroundTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketAudio] = gNdsTickHudAudioTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketHud] =
-            gNdsTickHudForegroundTicks + gNdsRendererProfileHudTicks;
+            gNdsTickHudForegroundTicks + gNdsRendererProfileHudTicks +
+            sNdsReplayDigestTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketSourceUpdate] =
             gNdsTickHudSourceTicks;
         gNdsTickHudBuckets[nNDSTickHudBucketMiscDraw] = misc_draw;
@@ -1263,6 +1269,7 @@ void ndsR2HostBattleIterationBegin(void)
     gNdsTickHudForegroundTicks = 0u;
     gNdsTickHudAudioTicks = 0u;
     gNdsTickHudSourceTicks = 0u;
+    sNdsReplayDigestTicks = 0u;
     gNdsTickHudSrcHitDetectTicks = 0u;
     gNdsTickHudSrcAnimWarmTicks = 0u;
     gNdsTickHudSrcRunAllTicks = 0u;
@@ -1694,7 +1701,10 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * (published per presented frame as DGSA/DGSB). */
     if (update_index < 2u)
     {
+        u32 digest_start = cpuGetTiming();
+
         sNdsReplayDigest[update_index] = ndsReplayDigestTick();
+        sNdsReplayDigestTicks += cpuGetTiming() - digest_start;
     }
 #endif
     /* P2-2p8 A6: a logic tick that is not followed by a draw still ends at

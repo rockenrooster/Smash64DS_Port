@@ -8878,3 +8878,13 @@ Skips 457 -> 698. Same-ROM A/B WORK-H P50/P95 -2.7K/-10.0K, SRC P95 -15.8K.
 Final `48F428A1` vs `pin`, replay identical: WORK-H P50/P95/P99
 1,093,568/1,498,304/1,793,856 (-3.0K/-3.0K/-2.9K); BSS +2 KiB. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 26.
+
+## 2026-09-27 — replay digest charged to the HUD (instrument) bucket
+
+**RE-ACCOUNTED (not a speedup).** `ndsReplayDigestTick` runs only in the
+tick-HUD ROM, inside WORK (in OTHR), costing ~4.4K ticks at the median. Its
+ticks now go to HUD, which WORK-H subtracts, because the instrument stays out
+of the gate. `8B541A87` vs `fgtfin`, replay identical: HUD +4,992 paired;
+WORK +768 paired (layout plus two timer reads); WORK-H P50/P95/P99
+1,089,600/1,499,392/1,789,248. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 28.

@@ -681,3 +681,21 @@ Link, Yoshi and Pikachu previews draw (cumulative triangles 11,824 / 23,140 /
 Log: `css-owner-margin0927.log`. Pass `-Rom`/`-Elf` as absolute paths: the
 emulator starts in its own directory, a relative ROM never opens the GDB
 listener, and the failed run prints the previous run's capture.
+
+## 28. The replay digest is instrument time: charged to HUD
+
+`ndsReplayDigestTick` exists only in the tick-HUD ROM (`#if NDS_TICK_HUD`),
+and it ran inside WORK, in OTHR (after the SRC span closes). The median frame
+spent ~4.4K ticks in it (profile `p2p8-profile-257b`). The shipping ROM has
+no digest. The guardrail says the instrument stays out of the gate. So the
+digest's own ticks are now timed and added to the HUD bucket, and WORK-H
+(WORK - HUD) takes them back out. WORK, ALL and the named total are unchanged.
+
+This is re-accounting, not a speedup.
+
+`8B541A87` (`dgt`) vs `fgtfin`, replay IDENTICAL:
+- HUD paired median +4,992.
+- WORK paired median +768, mean +1.8K. That is layout, plus the two timer
+  reads per tick.
+- WORK-H P50/P95/P99 1,089,600/1,499,392/1,789,248 (-4.0K/+1.1K/-4.6K).
+- 1,107 of 1,972 frames at or under 1,120,000 (`fgtfin` 1,086).
