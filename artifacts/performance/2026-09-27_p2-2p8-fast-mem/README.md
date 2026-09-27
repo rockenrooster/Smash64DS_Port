@@ -473,3 +473,17 @@ that test.
   1,953,920**.
 - Paired median -2,048 (MISC -1,728, STG -704).
 - VBlanks 1,001/920/46/6: over half the presented frames now fit two VBlanks.
+
+## 21. Stage world-key compare reads words, not four memcmp calls
+
+`ndsRendererAdapterStageWorldSourceKeyMatches` validates each stage node's
+cached world matrix. For each node it called `memcmp` four times: translate
+(12 B), rotate.a (4 B), rotate.vec (12 B) and scale (12 B). That was 129 calls
+a frame and ~3.4K ticks of `memcmp` in the `4f08` census. The compares now read
+the float fields as `may_alias` words, the same bitwise equality.
+
+`keycmp` `962DCD90` against `emblem`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,098,432/1,536,384/1,953,920 -> **1,094,528/1,533,888/
+  1,956,352**.
+- Paired median -2,240, all of it STG.
+- VBlanks 1,009/909/50/5.

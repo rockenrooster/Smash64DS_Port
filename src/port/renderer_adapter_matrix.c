@@ -4952,6 +4952,21 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
 /* 2026-09-07 this 222-byte compare left ITCM to fix a 16-byte link overflow.
  * 2026-09-27: back in (census: ~1.0K ticks/frame non-memory stall in main
  * RAM), in the room two never-executed old-path residents left. */
+/* The four base-vector compares read the float fields as words: the same
+ * bitwise equality memcmp tested, without four library calls a node (129 a
+ * frame on the four-CPU census, ~3.4K ticks of memcmp). */
+typedef u32 __attribute__((may_alias)) NDSRendererAdapterAliasU32;
+
+static inline sb32 ndsRendererAdapterWords3Equal(const u32 *key,
+                                                 const void *live)
+{
+    const NDSRendererAdapterAliasU32 *w =
+        (const NDSRendererAdapterAliasU32 *)live;
+
+    return ((key[0] == w[0]) && (key[1] == w[1]) && (key[2] == w[2])) ?
+        TRUE : FALSE;
+}
+
 static sb32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
     DObj *dobj, const NDSRendererAdapterStageWorldSourceKey *source_key)
 {
@@ -4960,15 +4975,14 @@ static sb32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
     if ((dobj == NULL) || (source_key == NULL) ||
         (dobj->xobjs_num > 5u) || (dobj->vec != NULL) ||
         (dobj->xobjs_num != source_key->xobjs_num) ||
-        (memcmp(source_key->base_translate, &dobj->translate.vec.f,
-                sizeof(source_key->base_translate)) != 0) ||
-        (memcmp(&source_key->base_rotate[0], &dobj->rotate.a,
-                sizeof(source_key->base_rotate[0])) != 0) ||
-        (memcmp(&source_key->base_rotate[1], &dobj->rotate.vec.f,
-                sizeof(source_key->base_rotate) -
-                    sizeof(source_key->base_rotate[0])) != 0) ||
-        (memcmp(source_key->base_scale, &dobj->scale.vec.f,
-                sizeof(source_key->base_scale)) != 0))
+        (ndsRendererAdapterWords3Equal(source_key->base_translate,
+                                       &dobj->translate.vec.f) == FALSE) ||
+        (source_key->base_rotate[0] !=
+         *(const NDSRendererAdapterAliasU32 *)&dobj->rotate.a) ||
+        (ndsRendererAdapterWords3Equal(&source_key->base_rotate[1],
+                                       &dobj->rotate.vec.f) == FALSE) ||
+        (ndsRendererAdapterWords3Equal(source_key->base_scale,
+                                       &dobj->scale.vec.f) == FALSE))
     {
         return FALSE;
     }

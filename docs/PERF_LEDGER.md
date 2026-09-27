@@ -8820,3 +8820,12 @@ scene test now sits at the call site. `E544771E` vs `camf`, replay identical:
 WORK-H P50/P95/P99 1,098,432/1,536,384/1,953,920; paired -2.0K (MISC -1.7K);
 two-VBlank frames 1,001 of 1,973. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 20.
+
+## 2026-09-27 — stage world-key compare reads words, not memcmp
+
+**BANKED (small).** `ndsRendererAdapterStageWorldSourceKeyMatches` compared each
+stage node's key with four small `memcmp` calls (129 a frame, ~3.4K ticks); it
+now reads the float fields as `may_alias` words (same bitwise equality).
+`962DCD90` vs `emblem`, replay identical: WORK-H P50/P95/P99 1,094,528/
+1,533,888/1,956,352; paired -2.2K (STG). RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 21.
