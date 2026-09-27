@@ -311,3 +311,29 @@ replaced Thumb-1's 16-bit-partial s64 multiply in the 146 painter matrices a
 frame. The rounding was host-checked (2e8 cases, 0 mismatches). Paired WORK-H
 went +1,984 (STG +1,920): the cost is the stores into the DMA buffer, not the
 arithmetic. Reverted.
+
+## 14. ITCM residency swap: old fighter matrix builder out, MP floor + pose update in
+
+`ndsRendererAdapterBuildFighterTraRotRpyDirect20p12` (2,056 B of ITCM) serves
+only the old fighter path: route 0 and declined lean draws. The four-CPU census
+never executed it. It moves to main RAM. Three census admissions take its room:
+
+| Function | Bytes | Non-memory stall in main RAM (ticks/frame) |
+|---|---|---|
+| `mpCollisionGetFCCommonFloor` | 1,484 | ~7.1K |
+| `ndsFtPoseUpdate` | 1,136 | ~4.2K |
+| `ndsMPLineExtentRejects` | 252 | ~1.3K |
+
+`ndsMPLineExtentRejects` left ITCM on 09-09 to fix a 56-byte link overflow.
+ITCM is now 32,616 of 32,736 B.
+
+`itcm2` `FA8BE821` against `itcmsw`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,125,376/1,568,128/1,964,096 -> **1,112,768/1,551,168/
+  1,964,864**. The median is now under 1,120,000.
+- Paired median -12,608 (SRC -12,544, FTR +832).
+- VBlanks 936/973/58/6. Native failures 0.
+
+Placement-only: no instruction changes. The MP live-link checker cannot run on
+this ELF: it reports `__deregister_frame_info`, which comes from the build
+config, not from this move. It names `mpCollisionGetFCCommonFloor` only as an
+API symbol.

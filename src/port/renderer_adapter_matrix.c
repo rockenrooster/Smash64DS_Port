@@ -2349,7 +2349,10 @@ ndsRendererAdapterBuildFighterTraRotRpyExact(
  * Kept as a separate function rather than parameterising the original: the two
  * differ only in their store, and a shared version would need a branch per cell
  * in the hottest loop of the phase. */
-static NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE NDS_R2_ITCM_PACK2_CODE sb32
+/* 2026-09-27: out of ITCM. Only the old fighter path (route 0 and declined
+ * lean draws) reaches it; the four-CPU census never executed it, and its
+ * 2,056 B now hold the MP floor query and the pose update. */
+static NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE sb32
 ndsRendererAdapterBuildFighterTraRotRpyDirect20p12(
     NDSRendererMatrix20p12 *dst,
     f32 tx,

@@ -682,12 +682,11 @@ static inline int ndsMPLineExtentReady(MPVertexArray *ids,
     return 1;
 }
 
-/* 2026-09-09 ITCM headroom recovery. This 252-byte reject helper leaves useful
- * room after the 56-byte link overflow at a low measured admission value:
- * retained profiling records 32.60 calls/frame and estimates ~1,317 gate-80
- * I-cache-fill ticks/frame of ITCM benefit. Keep it sectioned/out-of-line so
- * this remains a placement-only change, but serve it from cached main RAM. */
-static int __attribute__((section(".text.ndsMPLineExtentRejects")))
+/* 2026-09-09 this 252-byte reject helper left ITCM to fix a 56-byte link
+ * overflow (~1,317 I-cache-fill ticks/frame of ITCM benefit at 32.60 calls a
+ * frame). 2026-09-27: back in ITCM, in the room the old fighter matrix builder
+ * left (census: ~1.3K ticks/frame of non-memory stall in main RAM). */
+static int NDS_R2_ITCM_PACK2_CODE
 ndsMPLineExtentRejects(MPVertexArray *ids, MPVertexPosContainer *verts,
                        u32 line_id, u32 vertex_first, u32 vertex_count,
                        f32 object_x)
@@ -1584,7 +1583,9 @@ void mpCollisionGetVertexPositionID(s32 line_id, s32 vertex_id,
     }
 }
 
-sb32 mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
+/* ITCM (2026-09-27): second in the four-CPU census admission table after
+ * the wall sweep (~7.1K ticks/frame non-memory stall at 1,484 B). */
+sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *object_pos,
                                  f32 *floor_dist, u32 *floor_flags,
                                  Vec3f *angle)
 {

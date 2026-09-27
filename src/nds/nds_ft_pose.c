@@ -1412,7 +1412,10 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
     }
 }
 
-sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
+/* ITCM (2026-09-27): the per-joint driver of the parser and the player,
+ * ~4.2K ticks/frame of non-memory stall at 1,136 B in main RAM. */
+sb32 __attribute__((section(".itcm")))
+ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
                      u32 *owned_mask_lo, u32 *owned_mask_hi)
 {
     NdsFtPose *pose = ndsFtPoseFind(gobj);

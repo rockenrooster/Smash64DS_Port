@@ -8755,3 +8755,15 @@ replay identical: WORK-H P50/P95/P99 1,131,712/1,582,912/1,961,792 ->
 frames 863 -> 895. Refuted (same-ROM, reverted): deferring the stage draw's
 DMA wait (-128) and an ARM-state painter Z column (+2.0K: store-bound). RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 13.
+
+## 2026-09-27 — ITCM swap: old fighter matrix builder out, MP floor + pose update in
+
+**BANKED.** `ndsRendererAdapterBuildFighterTraRotRpyDirect20p12` (2,056 B ITCM,
+old fighter path only, never executed in the four-CPU match) moves to main RAM;
+`mpCollisionGetFCCommonFloor` (1,484 B), `ndsFtPoseUpdate` (1,136 B) and
+`ndsMPLineExtentRejects` (252 B) take its room (census non-memory stall ~7.1K,
+~4.2K, ~1.3K ticks/frame). `FA8BE821` vs `itcmsw`, replay identical: WORK-H
+P50/P95/P99 1,125,376/1,568,128/1,964,096 -> 1,112,768/1,551,168/1,964,864
+(median now under 1,120,000); paired -12.6K; two-VBlank frames 895 -> 936.
+ITCM 32,616 of 32,736 B. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 14.
