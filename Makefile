@@ -2387,7 +2387,10 @@ NDS_R2_TILESYNC_ROUTE ?= 0
 # arithmetic does not change, because only the address does. Paid for by
 # NDS_TASK9_FLOAT_MAIN_MEMBERS (332 B) plus the light-shade LUT builder (404 B),
 # both measured at ZERO executed instructions across the gate window.
-NDS_R2_ANIM_Q_ITCM_ON ?= 1
+# 2026-09-27: 0. The P2 pose engine (nds_ft_pose.c) now evaluates every
+# fighter joint; the four-CPU census executed this kernel ZERO times, and its
+# 1,028 B went to ndsFtPosePlay.
+NDS_R2_ANIM_Q_ITCM_ON ?= 0
 # Lab SAME-BINARY route for that placement: two out-of-line copies of one body,
 # one in .itcm and one in .main, selected by a `.data` word. Costs 1,028 B of
 # .main and nothing in the shipped build.

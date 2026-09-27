@@ -11007,7 +11007,9 @@ static NDSFtrLeanVariant *ndsFtrLeanVariantRecord(u32 slot, u32 entry,
 }
 
 /* The active entry's list and state, or NULL. */
-static NDS_FTR_LEAN_DRAW_CODE NDSFighterPacket *ndsFtrLeanActive(u32 slot,
+/* 2026-09-27: out of ITCM (hot callers inline it; the out-of-line copy
+ * ran ~2 ticks a frame in the four-CPU census). */
+static NDSFighterPacket *ndsFtrLeanActive(u32 slot,
                                           NDSFtrLeanEntryState **state)
 {
     NDSFtrLeanSlotState *s;

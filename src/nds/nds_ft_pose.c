@@ -988,8 +988,10 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
 
 /* ---- the player (sys/objanim.c:714 / lb/lbcommon.c:1261, Q form) --------- */
 
-/* ARM, not Thumb: the evaluator's SMULLs and CLZ inline here. */
-static void __attribute__((noinline, target("arm")))
+/* ARM, not Thumb: the evaluator's SMULLs and CLZ inline here. ITCM
+ * (2026-09-27 census: ~5.7K ticks/frame of non-memory stall at 1,592 B in main
+ * RAM), in the room the pre-pose-engine anim residents left. */
+static void __attribute__((noinline, target("arm"), section(".itcm")))
 ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
               const Vec3f *tra_scale)
 {

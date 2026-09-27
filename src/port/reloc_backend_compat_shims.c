@@ -2833,7 +2833,9 @@ void ftParamProcStopEffect(GObj *fighter_gobj)
  * cycles per instruction -- a recursive walk down the joint tree whose every
  * hot PC is a pointer-chasing load. The loads keep their cost wherever this
  * lives; what ITCM buys is the fetch of the loop around them. */
-static void NDS_TASK37_ITCM_CODE ndsFTParamsInvalidateFighterParts(
+/* 2026-09-27: out of ITCM (the flat walk serves every call in the
+ * four-CPU census; this recursive fallback executed zero times). */
+static void ndsFTParamsInvalidateFighterParts(
     DObj *joint, sb32 reset_mode)
 {
     DObj *child;

@@ -364,3 +364,22 @@ In, 822 B, together ~6.9K ticks/frame of census non-memory stall in main RAM:
 - Paired median -3,648: SRC -3.9K and STG -1.7K, offset by FTR +1.1K of
   layout drift.
 - VBlanks 952/963/52/6.
+
+## 16. ITCM round 4: pre-pose-engine anim residents out, `ndsFtPosePlay` in
+
+Out, 1,578 B that the four-CPU census never executed, or ran ~2 ticks a frame:
+- `ndsR2AnimValueQ` (1,076 B): `NDS_R2_ANIM_Q_ITCM_ON` now defaults to 0,
+  because the P2 pose engine evaluates every fighter joint.
+- `ndsR2AnimTargetValue` (240 B) and `ndsR2AnimBuildTrackTable` (72 B).
+- `ndsFTParamsInvalidateFighterParts` (54 B), the flat walk's recursive fallback.
+- The out-of-line `ndsFtrLeanActive` (136 B); hot callers inline it.
+
+In: `ndsFtPosePlay` (1,592 B, ARM). The census charged it ~5.7K ticks/frame of
+non-memory stall in main RAM. `gcPlayDObjAnimJoint` (612 B, 12 ticks/frame
+here) stays: stages with animated parts use it.
+
+`itcm4` `C2259F24` against `itcm3`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,111,040/1,547,776/1,951,552 -> **1,102,720/1,538,624/
+  1,955,136**.
+- Paired median -8,512: SRC -4.2K, STG -2.5K, MISC -0.9K, FTR -0.7K.
+- VBlanks 976/944/47/6. ITCM is 32,608 of 32,736 B.

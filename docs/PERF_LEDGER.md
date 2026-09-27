@@ -8777,3 +8777,14 @@ ticks/frame non-memory stall). `AD8E0F00` vs `itcm2`, replay identical: WORK-H
 P50/P95/P99 1,112,768/1,551,168/1,964,864 -> 1,111,040/1,547,776/1,951,552;
 paired -3.6K. ITCM 32,600 of 32,736 B. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 15.
+
+## 2026-09-27 — ITCM round 4: pre-pose-engine anim residents out, pose player in
+
+**BANKED.** Out of ITCM (1,578 B the four-CPU census never ran, or ran ~2 ticks
+a frame): `ndsR2AnimValueQ` (`NDS_R2_ANIM_Q_ITCM_ON` now 0; the pose engine
+evaluates every fighter joint), `ndsR2AnimTargetValue`, `ndsR2AnimBuildTrackTable`,
+`ndsFTParamsInvalidateFighterParts`, out-of-line `ndsFtrLeanActive`. In:
+`ndsFtPosePlay` (1,592 B ARM, ~5.7K ticks/frame non-memory stall). `C2259F24`
+vs `itcm3`, replay identical: WORK-H P50/P95/P99 1,111,040/1,547,776/1,951,552
+-> 1,102,720/1,538,624/1,955,136; paired -8.5K. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 16.
