@@ -10,7 +10,9 @@ param(
     # extra comma-free global names to read at the end (appended)
     [string[]]$Also = @(),
     [string]$Sampler = 'sample-tick-hud-buckets.ps1',
-    [string]$BootSet = ''
+    [string]$BootSet = '',
+    # extra name=value pokes at the first frame marker (e.g. zero a counter)
+    [string[]]$ExtraSets = @()
 )
 # P2-2p8 Phase 1 slice 6 sampler wrapper (from slice 5's run-s5.ps1): runner
 # slot 9 / GDB 3423 only. The words are poked at the first frame-complete
@@ -120,7 +122,7 @@ foreach ($n in $extra) {
     if ($n -match '^gNdsFtrLeanAttr\.(\w+)') { if (-not $fieldsAttr.ContainsKey($Matches[1])) { $dropped++; continue } }
     $kept += $n
 }
-$sets = @("gNdsFtrLeanRoute=$Route", "gNdsFtrLeanAdmit=$Admit", "gNdsFtrLeanSlow=$Slow")
+$sets = @("gNdsFtrLeanRoute=$Route", "gNdsFtrLeanAdmit=$Admit", "gNdsFtrLeanSlow=$Slow") + $ExtraSets
 $rows = Join-Path $art "$Arm-rows.csv"
 $json = Join-Path $art "$Arm.json"
 $log = Join-Path $art "$Arm-run.log"

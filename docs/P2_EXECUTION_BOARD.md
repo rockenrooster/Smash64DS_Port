@@ -70,15 +70,9 @@ injection. Lakitu/Bronto slots remain unengaged in the canonical 59 s match
 **Particle/Dust (09-26):** view-space particles `608C79AC` and dust `8B4D66EE`
 replay-identical, native failures 39->0; KEEP/IMPLEMENTED_NOT_ACCEPTED. Particle
 selector retired, NDL default on. Shipping-like `8062C536` CSS previews exact.
-Phase3 receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
-Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
-Particle Task49, camera/lifecycle and integrated gates remain owed.
-Defaults `ab7bcec4729`; expanded overlay/solo audit `2c9511de5e2`, pushed.
-All-VS `9F69CA39` is KEEP/IMPLEMENTED_NOT_ACCEPTED: Jungle heap restored;
-Inishie/Zebes have zero stage/packet/native faults but remain performance RED.
-Task36 retirement remains scoped; world-cache retirement/integration is owed.
-Final natural `7E0B1C7F` CSS free 200,656 B; three previews exact. Heavy arena 896,512 B.
-Owner 09-26: no more subagents; root audits retained delegated work personally.
+Receipts: `2026-09-26_p2-2p8-{phase3-residency,phase2-particle-ab}`. Owed: particle
+Task49/lifecycle, world-cache retirement, integrated gates. All-VS `9F69CA39` KEEP.
+`7E0B1C7F` CSS free 200,656 B. Owner 09-26: no subagents.
 MF2 check passes 1,570 clips/29 raw exceptions; scoped audit recorded in receipt.
 `FB299B25`: 2,043 presents/Results; low-water 9,672 B, reserve RED. Reload passes.
 A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
@@ -95,6 +89,10 @@ Regions back to 8,840, stage body in heap (keep-free 25,600+36,420). `BC3500EA`
 WORK-H P50/P95/P99 1,332,160/1,955,392/2,786,944 (was 1,343,808/2,626,368/
 3,379,648); FTR P95 269,696; 19.72 FPS; replay identical. Heavy roster's stage
 program now expected to decline (RAM). Receipt `2026-09-26_p2-2p8-ftr-item-tail`.
+**Storage split-bounce (09-26)**: unaligned ROM reads bounced 512 B per PXI trip
+(79% of bytes). Head/tail only now: requests 18,651->2,233, ARM9 blocked 35K->18K
+ticks/frame. `5EEE8AFD` WORK-H P95/P99 1,892,160/2,384,256; 19.94 FPS; replay
+identical. Rest is transfer (3.58 MB/match): Phase 3 residency. Receipt `2026-09-26_p2-2p8-storage-bounce`.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

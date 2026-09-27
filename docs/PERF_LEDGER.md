@@ -8479,3 +8479,14 @@ VBI2/3/4/5+ 274/1433/212/54, max 10; 13.89% two-VBlank, RED. Lab low-water
 122,412 B unchanged. Shipping heavy roster expected to decline the stage program
 until Phase 3 RAM lands (not measured).
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail/README.md`.
+
+## 2026-09-26 — ROM reads bounce only unaligned edges
+
+**BANKED.** All ARM9 ROM reads block on one ARM7 media PXI round trip per
+request; unaligned destinations bounced their whole length in 512 B requests
+(79% of match bytes). Only head/tail lines bounce now. In-match (frames 1..1973)
+requests 18,651 -> 2,233, ARM9 blocked 69.4M -> 35.8M ticks (35,208 -> 18,147
+per frame). Same dir `F2603E76` -> `5EEE8AFD`, replay identical: WORK-H P50/P95/P99
+1,336,256/1,962,112/2,793,280 -> 1,333,504/1,892,160/2,384,256; VBI 5+ 55 -> 31;
+19.68 -> 19.94 FPS. RED. Remaining wait is 3.58 MB of transfer per match.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-storage-bounce/README.md`.

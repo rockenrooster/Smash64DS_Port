@@ -37,6 +37,10 @@ volatile uint32_t gNdsAudioStorageReads;
 volatile uint32_t gNdsAudioStorageBytes;
 volatile uint32_t gNdsAudioStorageBounceBytes;
 volatile uint32_t gNdsAudioStorageFailures;
+/* ARM9 time blocked in the PXI round-trip, in /64 system ticks (x64 for
+ * cpuGetTiming units). Zero them at a frame marker to price a window. */
+volatile uint32_t gNdsAudioStorageWaitTicks64;
+volatile uint32_t gNdsAudioStorageWaitMaxTicks64;
 volatile uint32_t gNdsAudioStorageMapFailure;
 volatile uint32_t gNdsAudioStorageMapDevice;
 volatile uint32_t gNdsAudioStorageMapVolumeSector;
@@ -184,8 +188,16 @@ static int ndsAudioStorageCall(uint32_t operation, uint32_t offset,
     }
     DC_FlushRange(&sStorageRequest, sizeof(sStorageRequest));
     gNdsAudioStorageRequests++;
-    reply = pxiSendAndReceive((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL,
-                             (uint32_t)(uintptr_t)&sStorageRequest >> 5);
+    {
+        uint32_t wait_start = (uint32_t)tickGetCount();
+        uint32_t waited;
+        reply = pxiSendAndReceive((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL,
+                                 (uint32_t)(uintptr_t)&sStorageRequest >> 5);
+        waited = (uint32_t)tickGetCount() - wait_start;
+        gNdsAudioStorageWaitTicks64 += waited;
+        if (waited > gNdsAudioStorageWaitMaxTicks64)
+            gNdsAudioStorageWaitMaxTicks64 = waited;
+    }
     if (bytes != 0u) DC_InvalidateRange(destination, bytes);
     if (reply != ndsAudioStorageReply(sequence, NDS_AUDIO_STORAGE_OK))
     {
@@ -224,7 +236,15 @@ static bool ndsAudioStorageReadCard(void *unused, uint32_t offset,
         {
             uint32_t transfer;
             uint32_t read_offset = offset;
+            uint32_t head = 32u - (uint32_t)(address & 31u);
             part = bytes < sizeof(sStorageBounce) ? bytes : sizeof(sStorageBounce);
+            /* An unaligned main-RAM destination bounces only up to its next
+             * line; the lines after that are its own and read directly. One
+             * 512 B round trip per chunk was 79% of match bytes. */
+            if (((address & 31u) != 0u) && (bytes >= head + 32u) &&
+                (address <= UINT32_MAX) &&
+                ndsAudioStorageMainRange((uint32_t)address, bytes))
+                part = head;
             transfer = (part + 31u) & ~31u;
             /* The final ROM bytes may not fill a cache line. Read a complete
              * preceding line into the owned bounce, then select its suffix. */

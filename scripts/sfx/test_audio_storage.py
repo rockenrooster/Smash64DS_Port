@@ -223,6 +223,14 @@ int main(void) {
             for (unsigned i = 32 + to + 1001; i < 2048; ++i) assert(buffer[i] == 0xa5);
         }
     }
+    // An unaligned destination bounces only its head and tail lines.
+    calls = 0;
+    memset(buffer, 0xa5, 24576);
+    assert(ndsAudioStorageReadCard(NULL, 5, buffer + 7, 20000));
+    assert(!memcmp(buffer + 7, rom_data + 5, 20000));
+    for (unsigned i = 0; i < 7; ++i) assert(buffer[i] == 0xa5);
+    for (unsigned i = 20007; i < 24576; ++i) assert(buffer[i] == 0xa5);
+    assert(calls == 3);
     // Cross the peer's bounded-read limit on the aligned fast path.
     calls = 0;
     assert(ndsAudioStorageReadCard(NULL, 1, buffer, 65536));
@@ -266,6 +274,8 @@ typedef unsigned PxiChannel;
 static NdsAudioStorageRequest sStorageRequest;
 static uint32_t sStorageSequence;
 static uint32_t gNdsAudioStorageRequests, gNdsAudioStorageFailures;
+static uint32_t gNdsAudioStorageWaitTicks64, gNdsAudioStorageWaitMaxTicks64, ticks;
+static uint32_t tickGetCount(void) { return ticks += 7u; }
 static uint8_t output[64] __attribute__((aligned(32)));
 static unsigned order, failure, empty;
 static void DC_FlushRange(void *address, size_t bytes) {

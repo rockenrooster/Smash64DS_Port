@@ -23323,3 +23323,8 @@ lean entries (2,304 list words) so three fighters' lists went wide. Restored the
 8,840-word regions; the stage GX body loads from the heap with the in-match growth
 margin. `BC3500EA`: WORK-H P95 2,626,368 -> 1,955,392, FTR P95 269,696, 19.72 FPS,
 replay identical. Committed the A8 BGM checkpoint (`d0d02c61a83`) first.
+
+2026-09-26 P2-2p8 storage: new ARM9 wait counters priced in-match ROM reads at
+35K blocked ticks/frame, 79% of bytes through the 512 B bounce because motion/FGM
+destinations are unaligned. Split reads into head/tail bounce + one direct middle:
+requests 18,651 -> 2,233, WORK-H P95 1,892,160, P99 2,384,256, replay identical.
