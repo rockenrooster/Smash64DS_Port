@@ -1041,3 +1041,57 @@ Two static checks had gone stale on earlier commits from today:
   (`4922d3c5d94`) between a native-stage deactivation and its return.
 - `check-renderer-itcm-placement.ps1` now lists this session's ITCM
   evictions (`17fcab47d7e`, section 35) as evicted rather than pinned.
+
+## 39. The stage segment commit out of ITCM; an 82-function census pack in
+
+Section 38's census, rerun with `--top 300`
+(`dmiss4/census-top300.txt`), set two ITCM residents against a long section D
+tail:
+- `ndsRendererCommitNativeStageSegment`: 4,252 B renting 1,309 cycles a byte.
+- `__aeabi_l2f` (`nds_float_conv.c`): 244 B that never ran in the match.
+
+Both moved to main RAM: the commit dropped its `NDS_R2_ITCM_PACK2_CODE`, and
+the conversion now sits in `.text.ndsFloatConvL2f`.
+
+The 4,560 B went to the section D tail. The tail was ranked by non-mem stall
+less the ITCM tier's own 0.31 cycles an instruction, per byte. The pack skips
+`.text.hot` members, libgcc members and names already admitted.
+
+The first link overflowed by 40 B, so the seven lowest-ranked small entries
+were dropped. That left 83 functions admitted by input-section name. Most are
+Thumb functions of 2-20 bytes: interrupt checks, map-collision tests and
+decomp wrappers. At 7-40 cycles an instruction, they read as I-cache misses
+on nearly every call from main RAM. The larger entries are:
+- `ndsBaseMPProcessUpdateMain` (424 B);
+- `ftDisplayMainDrawDefault` (388 B);
+- `ftComputerProcDefault` (364 B);
+- `ndsFighterDisplayContractProjectTarget` (368 B);
+- `ftMainUpdateMotionEventsAll` (288 B);
+- `ftComputerCheckEvadeDistance` (236 B);
+- `ftPhysicsApplyGroundVelFriction` (192 B);
+- `sinf`/`cosf` (228 B combined).
+
+The estimated reach was ~11.7K ticks a frame gross, before the commit's
+eviction cost.
+
+`F07B0D40` (`repack5`) vs `caladmit`, replay IDENTICAL: paired WORK-H
+median -12,544.
+
+The P1 ROM (`smash64ds-battle-playable-hwtri`) then overflowed ITCM by
+1,376 B. It shares this linker script, keeps `.itcm.native_fighter` (7.0 KB)
+where the four-CPU build holds the lean kernel, and inlines the whole lean run
+into `ndsFtrLeanRunOnHotStack`: 2,144 B there, 12 B in the four-CPU build.
+Dropping that entry leaves 82 functions, and P1 links with 768 B spare.
+
+`85B19565` (`repack5b`, the committed tree) vs `caladmit`, replay IDENTICAL:
+- Paired WORK-H median -11,200, mean -11,151; 1,949 of 1,972 frames better.
+- Top 5% median -12,608.
+- Mean by bucket: SRC -6.8K, FTR -3.4K, MISC -2.4K, STG +1.6K. STG is the
+  commit's eviction cost.
+- WORK-H P50/P95/P97/P99 1,017,472/1,415,744/1,486,528/1,703,424.
+- 1,394 of 1,972 frames at or under 1,120,000.
+- The 1.3K below `repack5` is layout phase: the 12 B thunk carried 40K census
+  stall cycles, about 50 ticks a frame.
+
+`check-renderer-itcm-placement.ps1` lists the commit as evicted. The GBI,
+DTCM layout and DTCM residency checks pass.

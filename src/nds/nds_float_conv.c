@@ -74,7 +74,9 @@ float NDS_FLOAT_CONV_CODE __aeabi_ui2f(unsigned int x)
 
 float __floatunsisf(unsigned int x) __attribute__((alias("__aeabi_ui2f")));
 
-float NDS_FLOAT_CONV_CODE __aeabi_l2f(long long v)
+/* Main RAM: the four-CPU census never ran it in a match. */
+float __attribute__((section(".text.ndsFloatConvL2f"), target("arm")))
+__aeabi_l2f(long long v)
 {
     uint64_t u = (uint64_t)v;
     uint32_t sign = (uint32_t)(u >> 63) << 31;

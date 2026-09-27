@@ -8997,3 +8997,15 @@ functions from census section D (1,258 B, 2,400+ non-mem stall cycles a byte).
 (1,953/1,972 frames better); P50/P95 1,029,696/1,430,336; 1,354/1,972 frames
 within 1,120,000. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 38.
+
+## 2026-09-27 — stage segment commit out of ITCM; 82-function census pack in
+
+**BANKED.** `ndsRendererCommitNativeStageSegment` (4,252 B, 1,309 cycles a
+byte) and the unused `__aeabi_l2f` (244 B) moved to main RAM. Their bytes
+took 82 functions from the census's section D tail. Most are 2-20 B Thumb
+interrupt checks, collision tests and wrappers that miss the I-cache on nearly
+every call. `85B19565` vs `caladmit`, replay identical: paired WORK-H median
+-11,200 (1,949/1,972 frames better; STG +1.6K is the eviction cost); P50/P95
+1,017,472/1,415,744; 1,394/1,972 frames within 1,120,000. The P1 ROM links
+with 768 B ITCM spare. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 39.

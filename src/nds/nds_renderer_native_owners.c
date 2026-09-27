@@ -4808,7 +4808,9 @@ ndsRendererNativeStagePublishRunEmission(u32 run_index, u32 emitted_triangles)
 #include "nds_stage_gx.exec.inc"
 #endif
 
-s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index)
+/* 2026-09-27: out of ITCM. 4,252 B renting 1,309 cycles a byte in the
+ * four-CPU census; the bytes went to the census's section D pack. */
+s32 ndsRendererCommitNativeStageSegment(u32 segment_index)
 {
     NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
     const NDSNativeStageSegment *segment;

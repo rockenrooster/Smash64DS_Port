@@ -37,7 +37,6 @@ if ($LASTEXITCODE -ne 0 -or $forbiddenFunctions.Count -eq 0) {
 # linked. Reference graphics implementations are forbidden in the executable.
 # artifacts/performance/2026-08-17_itcm-repack2/ carries the ranking.
 $hotFunctions = @(
-    'ndsRendererCommitNativeStageSegment',
     'ndsRendererNativeStageBeginRun',
     'ndsRendererHardwareEndBatch',
     'ndsRendererHardwareApplyTextureParams'
@@ -66,6 +65,9 @@ $evictedFunctions = @(
     # stage GX draw and the census's high-stall admissions.
     'ndsRendererLoadHardwareGxComposedMatrices',
     'ndsRendererNativeStageEmitNoZVertex',
+    # Section 39: 4,252 B renting 1,309 cycles a byte; the second census pack
+    # bought -11.2K paired with its bytes.
+    'ndsRendererCommitNativeStageSegment',
     'ndsRendererR2MaterialColor15'
 )
 $nativeFighterFunctions = @(
