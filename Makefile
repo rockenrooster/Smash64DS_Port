@@ -142,6 +142,10 @@ NDS_TICK_HUD ?= 0
 # emitted GX word and brackets per-vertex/per-triangle work. Keep that retired
 # experiment selectable so a tick-HUD performance ROM can compile it out.
 NDS_P2_EFFECT_CENSUS ?= 0
+# P2-2p8 A5: fixed-point proof that a fighter hurtbox test misses, ahead of the
+# decomp float test (src/port/nds_p2_hurtbox_reject.c). gNdsP2HurtboxRejectMode
+# selects off/reject/shadow at runtime.
+NDS_P2_HURTBOX_REJECT ?= 1
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
 # gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
 # (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
@@ -4451,6 +4455,9 @@ endif
 ifeq ($(NDS_R2_COLLISION_FIXED),1)
 CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
 endif
+ifeq ($(NDS_P2_HURTBOX_REJECT),1)
+CFILES += nds_p2_hurtbox_reject.c
+endif
 ifeq ($(NDS_R2_SIM_MAC_SHADOW),1)
 CFILES += nds_r2_sim_mac_fixed.c
 endif
@@ -7126,6 +7133,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_DEMO_FOX_CPU_LADDER $(NDS_DEMO_FOX_CPU_LADDER)'; \
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
+		echo '#define NDS_P2_HURTBOX_REJECT $(NDS_P2_HURTBOX_REJECT)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \
@@ -7707,6 +7715,9 @@ endif
 # the ring -marm too would grow it for nothing; inlining the kernels INTO it
 # would put SMULL-shaped code in a Thumb object and no gate would notice.
 nds_r2_collision_fixed.o: CFLAGS += -marm
+# Same reason: 64-bit products throughout (the fixed chain from
+# nds_r2_collision_fixed.h), which Thumb would turn into __aeabi_lmul calls.
+nds_p2_hurtbox_reject.o: CFLAGS += -marm
 # Same rule, same reason: src/port/nds_r2_sim_mac_fixed.c holds the shadow
 # bodies of the warm-MAC exchange-rate instrument, and its whole content is
 # 64-bit integer products. A Thumb build of it would price __aeabi_lmul at 4.49

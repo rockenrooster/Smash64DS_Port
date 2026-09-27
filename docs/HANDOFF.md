@@ -26,13 +26,12 @@ reserve free 204,752 B versus required 183,072 B. Campaign coverage and global
 renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
 Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
-**09-26/27 solo (Codex out of usage):** fixed the slice-7 P95 regression
-(compact packet layout); edge-only ROM bounce; FGM LRU/aligned/envelopes, ARM7
-async fills and a 160 KiB arena (-72 KiB); fast cpuGetTiming; stage no-Z
-staging; status-path cuts; ARM pose clock; HUD once/pass; stage witness off.
-reloc memos. `69CAB23E` P50/P95 1,258,688/1,740,544. Digest: `--sequence --resync 4`.
-Receipts `2026-09-2{6,7}_p2-2p8-*`. Median > gate: next STG/port-machinery
-median cuts, FTR materialize tail, A5.
+**09-26/27 solo (Codex out of usage):** slice-7 regression fixed; storage/FGM
+(ARM7 async, 160 KiB arena, -72 KiB); fast cpuGetTiming; stage, status-path,
+HUD and reloc overhead cuts; A5 conservative hurtbox reject (shadow 0 flips).
+`56AF4CCB` WORK-H P50/P95 1,257,472/1,725,376. Receipts `2026-09-2{6,7}_p2-2p8-*`.
+Digest: `--sequence --resync 4`. Median > gate: next FTR materialize tail,
+SINT/status path, MISC; STG/SPHD machinery.
 
 ## Continue, do not restart
 

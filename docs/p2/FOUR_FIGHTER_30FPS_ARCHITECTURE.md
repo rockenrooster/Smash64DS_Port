@@ -833,6 +833,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   clock without IME masking: `E6DB1E1A` WORK-H P50/P95/P99 1,314,880 /
   1,822,144 / 2,232,704, replay identical. Receipt `2026-09-27_p2-2p8-fast-timing`.
 
+- **A5 step 1: conservative hurtbox reject (2026-09-27), BANKED.** Not the
+  guarded narrow phase: a fixed-point world chain from the source's cached
+  locals feeds only a margin-guarded world-AABB separation test; anything not
+  provably a miss takes the decomp float test unchanged, and no latch is
+  written. Shadow oracle 0 flips over 14,153 tests (13,499 rejected); replay
+  identical. `56AF4CCB` WORK-H P50/P95/P99 1,257,472 / 1,725,376 / 2,127,744,
+  SHDT P95 216,640 -> 154,624. Receipt `2026-09-27_p2-2p8-a5-hurtbox-reject`.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

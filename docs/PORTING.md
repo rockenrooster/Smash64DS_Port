@@ -23351,3 +23351,8 @@ IME masking or main-RAM call chain. Tick-HUD WORK-H P50/P95 -13.8K/-17.3K.
 binary search over two sorted row indices, motion paths are formatted without
 `sniprintf`, and the event32 ledger's ForgetRange skips ranges whose main-RAM
 pages hold no entries. WORK-H P95 1,794,240, P99 2,197,184.
+
+2026-09-27 P2-2p8 A5 step 1: `src/port/nds_p2_hurtbox_reject.c` proves fighter
+hurtbox misses in fixed point (margin-guarded world AABB separation) before the
+decomp float test; `gNdsP2HurtboxRejectMode` 0/1/2 = off/reject/shadow. Shadow
+over the stress match: 13,499 rejects, 0 flips; replay identical.

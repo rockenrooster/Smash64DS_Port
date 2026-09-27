@@ -8604,3 +8604,14 @@ every append/remove/data change. `44F19756` -> `69CAB23E`: WORK-H P50/P95/P99
 1,264,192/1,750,784/2,155,008 -> 1,258,688/1,740,544/2,128,768; MISC P50 -7.1K;
 two-VBlank 440 -> 460. Gameplay identical after one pre-GO resync. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md` section 6.
+
+## 2026-09-27 — A5 step 1: conservative hurtbox reject (shadow 0 flips)
+
+**BANKED.** 12,376 fighter hurtbox tests/match ended in 39 hits. A fixed-point
+world chain (nds_r2_collision_fixed.h helpers) plus a margin-guarded world-AABB
+separation proves most misses before the decomp float test (fighter, weapon and
+item attacks); no source latch written. Shadow: 13,499 rejects / 654 passes / 0
+flips. `69CAB23E` -> `56AF4CCB`, replay identical: WORK-H P50/P95/P99 1,258,688/
+1,740,544/2,128,768 -> 1,257,472/1,725,376/2,127,744; SHDT P95 216,640 ->
+154,624. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-a5-hurtbox-reject/README.md`.

@@ -134,7 +134,7 @@ void scManagerRunPrintGObjStatus(void);
  * cluster (NDS_R2_COLLISION_FIXED). They share one pair of wrappers because
  * they hook the same two entry points, and hooking them twice would mean two
  * renames of one definition. */
-#if NDS_TICK_HUD || NDS_R2_COLLISION_FIXED
+#if NDS_TICK_HUD || NDS_R2_COLLISION_FIXED || NDS_P2_HURTBOX_REJECT
 #define NDS_R2_CFX_RING_WRAP 1
 #else
 #define NDS_R2_CFX_RING_WRAP 0
@@ -217,7 +217,98 @@ void ndsR2SimMacBaseCompose(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
 #define func_ovl2_800ED490 ndsR2SimMacBaseCompose
 #endif /* NDS_R2_SIM_MAC_SHADOW */
 
+#if NDS_P2_HURTBOX_REJECT
+/* The weapon/item attack paths against fighter hurtboxes: same joint frame,
+ * same TestRectangle. Their only callers are in ftmain.c, so this rename moves
+ * the definitions and captures every call. */
+sb32 ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide(
+    WPAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll);
+sb32 ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
+    ITAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll);
+#define gmCollisionCheckWeaponAttackFighterDamageCollide     ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide
+#define gmCollisionCheckItemAttackFighterDamageCollide     ndsBaseGmCollisionCheckItemAttackFighterDamageCollide
+#endif
+
 #include "../../decomp/BattleShip-main/decomp/src/gm/gmcollision.c"
+
+#if NDS_P2_HURTBOX_REJECT
+#undef gmCollisionCheckWeaponAttackFighterDamageCollide
+#undef gmCollisionCheckItemAttackFighterDamageCollide
+
+int ndsP2HurtboxRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+                             f32 attack_size, const FTDamageColl *damage);
+extern volatile u32 gNdsP2HurtboxRejectMode;
+extern volatile u32 gNdsP2HurtboxRejects;
+extern volatile u32 gNdsP2HurtboxPasses;
+extern volatile u32 gNdsP2HurtboxFlips;
+
+/* Mode 1 skips the float test on a proof of a miss; mode 2 runs it anyway and
+ * counts each contradicted proof as a flip. */
+static sb32 ndsP2HurtboxRejectGate(const Vec3f *pos_curr, const Vec3f *pos_prev,
+                                   f32 attack_size, const FTDamageColl *damage,
+                                   sb32 *rejected)
+{
+    const u32 mode = gNdsP2HurtboxRejectMode;
+
+    *rejected = FALSE;
+    if (mode == 0u)
+    {
+        return FALSE;
+    }
+    if (ndsP2HurtboxRejectPoints(pos_curr, pos_prev, attack_size, damage) != 0)
+    {
+        gNdsP2HurtboxRejects++;
+        *rejected = TRUE;
+        return (mode == 1u) ? TRUE : FALSE;
+    }
+    gNdsP2HurtboxPasses++;
+    return FALSE;
+}
+
+sb32 gmCollisionCheckWeaponAttackFighterDamageCollide(
+    WPAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll)
+{
+    sb32 rejected;
+    sb32 hit;
+
+    if (ndsP2HurtboxRejectGate(&attack_coll->attack_pos[attack_id].pos_curr,
+                               &attack_coll->attack_pos[attack_id].pos_prev,
+                               attack_coll->size, damage_coll,
+                               &rejected) != FALSE)
+    {
+        return FALSE;
+    }
+    hit = ndsBaseGmCollisionCheckWeaponAttackFighterDamageCollide(
+        attack_coll, attack_id, damage_coll);
+    if ((rejected != FALSE) && (hit != FALSE))
+    {
+        gNdsP2HurtboxFlips++;
+    }
+    return hit;
+}
+
+sb32 gmCollisionCheckItemAttackFighterDamageCollide(
+    ITAttackColl *attack_coll, s32 attack_id, FTDamageColl *damage_coll)
+{
+    sb32 rejected;
+    sb32 hit;
+
+    if (ndsP2HurtboxRejectGate(&attack_coll->attack_pos[attack_id].pos_curr,
+                               &attack_coll->attack_pos[attack_id].pos_prev,
+                               attack_coll->size, damage_coll,
+                               &rejected) != FALSE)
+    {
+        return FALSE;
+    }
+    hit = ndsBaseGmCollisionCheckItemAttackFighterDamageCollide(
+        attack_coll, attack_id, damage_coll);
+    if ((rejected != FALSE) && (hit != FALSE))
+    {
+        gNdsP2HurtboxFlips++;
+    }
+    return hit;
+}
+#endif
 
 #if NDS_R2_SIM_MAC_SHADOW
 #undef gmCollisionGetWorldPosition
@@ -329,12 +420,45 @@ void ndsR2SimMacDriveJoint(DObj *joint, const Vec3f *offset, u32 arm)
  * still gmCollisionTestRectangle's, unchanged, in decomp code.
  *
  * Before the base call, not after: the base is where the latches are read. */
+#if NDS_P2_HURTBOX_REJECT
+/* P2-2p8 A5 (src/port/nds_p2_hurtbox_reject.c): a fixed-point proof that the
+ * float test below would miss. Mode 1 skips the float test on a proof; mode 2
+ * (shadow) still runs it and counts every proof it contradicts as a flip. */
+int ndsP2HurtboxRejectTest(const FTAttackColl *attack,
+                           const FTDamageColl *damage);
+extern volatile u32 gNdsP2HurtboxRejectMode;
+extern volatile u32 gNdsP2HurtboxRejects;
+extern volatile u32 gNdsP2HurtboxPasses;
+extern volatile u32 gNdsP2HurtboxFlips;
+#endif
+
 sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
                                                 FTDamageColl *damage_coll)
 {
     sb32 hit;
 #if NDS_R2_COLLISION_FIXED && NDS_R2_COLLISION_FIXED_NARROW
     int fixed_result;
+#endif
+#if NDS_P2_HURTBOX_REJECT
+    const u32 reject_mode = gNdsP2HurtboxRejectMode;
+    sb32 rejected = FALSE;
+
+    if (reject_mode != 0u)
+    {
+        if (ndsP2HurtboxRejectTest(attack_coll, damage_coll) != 0)
+        {
+            gNdsP2HurtboxRejects++;
+            rejected = TRUE;
+            if (reject_mode == 1u)
+            {
+                return FALSE;
+            }
+        }
+        else
+        {
+            gNdsP2HurtboxPasses++;
+        }
+    }
 #endif
 
 #if NDS_R2_COLLISION_FIXED
@@ -355,6 +479,12 @@ sb32 gmCollisionCheckFighterAttackDamageCollide(FTAttackColl *attack_coll,
 #endif
     hit = ndsBaseGmCollisionCheckFighterAttackDamageCollide(attack_coll,
                                                             damage_coll);
+#if NDS_P2_HURTBOX_REJECT
+    if ((rejected != FALSE) && (hit != FALSE))
+    {
+        gNdsP2HurtboxFlips++;
+    }
+#endif
 #if NDS_R2_SIM_MAC_SHADOW
     /* After the base, never before: the base is where the joint's matrices are
      * brought up to date, so this reads exactly what the source's own call read.

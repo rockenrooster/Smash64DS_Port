@@ -213,6 +213,15 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
      * the dynamically enabled item-heavy joint's world matrix. */
     ndsFTParamsInvalidateFlatWalkCacheForFighter(fighter_gobj);
     ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);
+#if NDS_P2_HURTBOX_REJECT
+    /* The same topology change retires the hurtbox reject's cached worlds
+     * (src/port/nds_p2_hurtbox_reject.c keys them on the DObj pointer). */
+    {
+        extern volatile u32 gNdsP2HurtboxLatchEpoch;
+
+        gNdsP2HurtboxLatchEpoch++;
+    }
+#endif
 #if NDS_TASK108_SITR_CALLBACK_CENSUS
     /* A status change can happen between the census's outer-proc entry and the
      * later proc_update/proc_interrupt calls. Re-wrap the newly installed

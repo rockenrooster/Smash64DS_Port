@@ -3156,6 +3156,15 @@ ndsFTParamsInvalidateSubtree(DObj *root, sb32 reset_mode)
     }
 }
 
+#if NDS_P2_HURTBOX_REJECT
+/* src/port/nds_p2_hurtbox_reject.c: its cached fixed worlds live exactly as
+ * long as the FTParts latches these functions clear. */
+extern volatile u32 gNdsP2HurtboxLatchEpoch;
+#define NDS_P2_HURTBOX_LATCH_EPOCH_BUMP() (gNdsP2HurtboxLatchEpoch++)
+#else
+#define NDS_P2_HURTBOX_LATCH_EPOCH_BUMP() ((void)0)
+#endif
+
 void __attribute__((noinline, optimize("Os")))
 ftParamsUpdateFighterPartsTransform(DObj *joint)
 {
@@ -3163,6 +3172,7 @@ ftParamsUpdateFighterPartsTransform(DObj *joint)
     FTStruct *fp;
     u32 joint_id;
 
+    NDS_P2_HURTBOX_LATCH_EPOCH_BUMP();
     if (joint == NULL)
     {
         return;
@@ -3196,6 +3206,7 @@ ftParamsUpdateFighterPartsTransform(DObj *joint)
 
 void ftParamsUpdateFighterPartsTransformAll(DObj *joint)
 {
+    NDS_P2_HURTBOX_LATCH_EPOCH_BUMP();
     if (joint != NULL)
     {
         ndsFTParamsInvalidateRootParts(joint, TRUE);
