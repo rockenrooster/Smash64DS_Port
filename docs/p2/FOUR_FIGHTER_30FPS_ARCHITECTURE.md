@@ -812,6 +812,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   capacity failure remains open. Next: remaining transform/preparation machinery,
   other VS stages and MISC; no further profiling of the settled camera change.
 
+- **Compact packet layout reverted (2026-09-26), BANKED.** Placing the stage GX
+  body in a framebuffer tail (`c116fffa03e`) cut fighter regions to 6,528 words;
+  lean entries (2,304 list words) could no longer hold DK/Samus/Link low-detail
+  lists, which went wide (double walk, no variants): FTR P95 1.20M. Regions are
+  8,840 again; the body is heap with the measured in-match growth margin.
+  `BC3500EA` WORK-H P50/P95/P99 1,332,160 / 1,955,392 / 2,786,944, 19.72 FPS,
+  replay identical. Lesson: a fighter-list budget is per entry, not per region.
+  Receipt: `artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail/`.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

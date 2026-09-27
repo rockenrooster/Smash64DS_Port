@@ -67,16 +67,9 @@ injection. Lakitu/Bronto slots remain unengaged in the canonical 59 s match
 (Bronto's first wait is 6,000..15,999 source updates). Their host/replay proof:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-efground/README.md`.
 
-**Particle CHECK / DamageFlyMDust IMPLEMENT (09-26):**
-recovered DMA/direct-FIFO pairs are replay-identical but show no MPRT/MISC gain.
-View-space particles `608C79AC`: host tests, both captures and 1,972 replay
-pairs pass. MPRT mean -3,741; WORK-H mean/P50 -4,163/-5,440, P95 +27,520.
-KEEP/IMPLEMENTED_NOT_ACCEPTED. Dust `8B4D66EE`: 39 draws, mask 7f, native
-failures 39->0, 1,972 replay pairs identical; stress exit 0 (NDL armed).
-WORK-H P50/P95 1,344,768/2,587,264; 18.98 FPS, RED. **CHECK**: particle selector/
-direct route retired; NDL defaults on. `F5CA9FE7` passes natural match/replay
-without pokes. Shipping-like `8062C536`: CSS free 204,752 B, three previews exact.
-Next: make required Kirby hat residency explicit before GO and fund its RAM.
+**Particle/Dust (09-26):** view-space particles `608C79AC` and dust `8B4D66EE`
+replay-identical, native failures 39->0; KEEP/IMPLEMENTED_NOT_ACCEPTED. Particle
+selector retired, NDL default on. Shipping-like `8062C536` CSS previews exact.
 Phase3 receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
 Particle Task49, camera/lifecycle and integrated gates remain owed.
@@ -96,6 +89,12 @@ AUD P95 6,528; WORK-H P95 2.625M/18.97 FPS, RED. Mixed audio identifies BGM.
 HeavyF7443068 gains16,384 B; admission still5,904 B short, plus later play.
 Next A8 FGM: derive VS heads and move voice/envelope/refill ownership; retire
 237,568 B cache. Jobs terminal; current heavy/lab arenas908,800/1,302,272 B.
+**FTR tail fix (09-26, solo)**: `c116fffa03e`'s 6,528-word regions left lean
+entries 2,304 words; DK/Samus/Link lists went wide (double walk, no variants).
+Regions back to 8,840, stage body in heap (keep-free 25,600+36,420). `BC3500EA`
+WORK-H P50/P95/P99 1,332,160/1,955,392/2,786,944 (was 1,343,808/2,626,368/
+3,379,648); FTR P95 269,696; 19.72 FPS; replay identical. Heavy roster's stage
+program now expected to decline (RAM). Receipt `2026-09-26_p2-2p8-ftr-item-tail`.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

@@ -5,6 +5,7 @@
 _Static_assert(sizeof(NDSStageGxHeader) == 48, "stage GX header ABI");
 _Static_assert(sizeof(NDSStageGxRun) == 32, "stage GX run ABI");
 _Static_assert(sizeof(NDSStageGxPatch) == 8, "stage GX patch ABI");
+#define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 36420u)
 
 volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
 volatile u32 gNdsP2StageProgLoads, gNdsP2StageProgBytes;
@@ -188,7 +189,6 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     NdsRelocAssetStream stream = { NULL };
     NDSStageGxHeader h;
     u8 *body;
-    u32 static_bytes = 0u;
     u32 reason = 1u;
     u32 gkind = sNdsNativeStagePacketActive->gkind;
     if (gkind >= sizeof(paths) / sizeof(paths[0])) { return FALSE; }
@@ -212,19 +212,16 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
         h.body_bytes != h.run_count * sizeof(NDSStageGxRun) + h.patch_count * 8u + h.word_count * 4u ||
         h.source_hash != ndsStageGxSourceHash()) { goto failed; }
     reason = 3u;
-    body = ndsRendererStageGxBuffer(&static_bytes);
-    if (body != NULL)
-    {
-        if (h.body_bytes > static_bytes) { goto failed; }
-    }
-    else
-    {
-        if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
-            (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr < h.body_bytes + 25632u)
-        { goto failed; }
-        body = syTaskmanMalloc(h.body_bytes, 32u);
-        if (body == NULL) { goto failed; }
-    }
+    /* The body is battle-lifetime heap. It loads at the first stage draw, and
+     * the match still grows the heap after that: 36,420 B on the heavy roster
+     * (phase3-residency, probe 92984). Keep the 25,600 B floor above both, or
+     * decline and draw the stage uncompiled. */
+    if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
+        (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr <
+            h.body_bytes + NDS_STAGE_GX_HEAP_KEEP_FREE)
+    { goto failed; }
+    body = syTaskmanMalloc(h.body_bytes, 32u);
+    if (body == NULL) { goto failed; }
     reason = 4u;
     if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
         ndsStageGxHashBytes(body, h.body_bytes, 2166136261u) != h.body_hash ||

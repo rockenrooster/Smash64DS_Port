@@ -15,7 +15,8 @@ MATERIAL = 9
 COMPOSED, CORNER_SOURCE = 10, 11
 STAGES = ('castle', 'sector', 'jungle', 'zebes', 'hyrule', 'yoster',
           'dreamland', 'yamabuki', 'inishie')
-FOUR_PLAYER_BODY_MAX = 36992
+# Heap ceiling for one stage's body (battle-lifetime, nds_stage_gx.exec.inc).
+BODY_MAX = 36992
 HEADER = struct.Struct('<12I')
 RUN_V1 = struct.Struct('<6H')
 RUN_V2 = struct.Struct('<6H6h')
@@ -263,8 +264,8 @@ def compile_packet(packet, name='dreamland'):
     body = b''.join(RUN.pack(*r) for r in runs)
     body += b''.join(PATCH.pack(*p) for p in patches)
     body += struct.pack(f'<{len(words)}I', *words)
-    if len(body) > FOUR_PLAYER_BODY_MAX:
-        raise ValueError('GX template exceeds four-player framebuffer tail')
+    if len(body) > BODY_MAX:
+        raise ValueError('GX template exceeds the stage body heap ceiling')
     return HEADER.pack(MAGIC, 5, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),
                        stage.fnv1a_bytes(body), baked_mask & 0xFFFFFFFF, baked_mask >> 32) + body

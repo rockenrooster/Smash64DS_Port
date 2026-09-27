@@ -10675,7 +10675,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
      * four fixed, equal regions; there is no runtime partition-end condition to
      * test here.  A packet that actually outgrows its region is detected by the
      * recorder's count/capacity checks and reported through PacketFaults. */
-    region_words = ndsRendererFighterPacketRegionWords();
+    region_words = NDS_FIGHTER_PACKET_REGION_WORDS;
     region_base = battle_slot * region_words;
     /* P2-2p8 Phase 1 slice 1: while the lean route is live the upper half of
      * the region holds the lean copy, so the recorder owns the lower half. A
@@ -10816,7 +10816,7 @@ void ndsRendererFighterPacketRelease(void)
  * matrices take the lean layout. The per-frame patches are the replay's own
  * helpers applied to the active entry.
  * ------------------------------------------------------------------------- */
-#define NDS_FTR_LEAN_REGION_WORDS NDS_FIGHTER_PACKET_FOUR_REGION_WORDS
+#define NDS_FTR_LEAN_REGION_WORDS NDS_FIGHTER_PACKET_REGION_WORDS
 #define NDS_FTR_LEAN_HALF_WORDS (NDS_FTR_LEAN_REGION_WORDS / 2u)
 #define NDS_FTR_LEAN_STRUCT_WORDS \
     ((((u32)sizeof(NDSFighterPacket)) + 31u) / 32u * 8u)

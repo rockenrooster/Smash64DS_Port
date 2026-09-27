@@ -19,20 +19,18 @@ transition probes and inspected A/B captures. Receipt:
 finished; the checkpoint is pushed to origin/master. Root is still r54.
 **Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
 Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
-**Phase 2 ongoing:** Task36 retired; all-VS stage compilation and NDL owner
-proofs are retained. View-space particles on `608C79AC` pass host/replay and
-paired captures; mean/P50 improve, P95 worsens. Not accepted. Dust owner now
-preserves native RGB5/alpha5: `8B4D66EE` draws all seven frames, native failures
-39->0, replay identical, full stress correctness GREEN with NDL armed. Performance
-still RED. Particle experiment routes are retired; `F5CA9FE7` passes naturally
-with NDL on (18.95 FPS, WORK-H P95 2.583M). Shipping `8062C536` CSS previews
-are exact; reserve free 204,752 B versus required 183,072 B. Current receipt:
-`artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`.
-Campaign-specific coverage and global renderer retirement remain explicit debt.
-No full-test restart: reuse slice 7's proofs and bank measured battle wins (D9).
-Phase 3 A8 BGM `0BD4523E`: replay/audio engagement pass,17 tests; performance RED.
-HeavyF7443068 admission still5,904 B short. Next: FGM voices/cache; MF2 unlinked.
-receipt `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
+**Phase 2 ongoing:** Task36 retired; all-VS stage compilation, NDL, native MISC
+owners and view-space particles/dust landed (receipt
+`artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`). CSS
+reserve free 204,752 B versus required 183,072 B. Campaign coverage and global
+renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
+Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
+MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
+**09-26 solo (Codex out of usage):** the ~0.6M P95 regression since slice 7 was
+the compact packet layout (stage GX tail starved lean entries). Stage body is
+heap again; `BC3500EA` WORK-H P95 1,955,392, 19.72 FPS, replay identical.
+Receipt `2026-09-26_p2-2p8-ftr-item-tail/README.md`. Next: FGM voices/cache
+(A8), then MF bind; solo, no subagents.
 
 ## Continue, do not restart
 

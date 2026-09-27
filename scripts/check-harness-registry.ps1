@@ -142,9 +142,10 @@ if (($melonLibText -notmatch 'function\s+Set-MelonDSDualScreenLayout') -or
     ($debugMelonText -notmatch 'Set-MelonDSDualScreenLayout')) {
     Fail-Check 'visible melonDS launch/capture no longer guarantees both DS screens'
 }
+# The running-window capture is PrintWindow-only since 5f7b1212097: a screen copy
+# can return another window or the wallpaper, so it captures the HWND's content.
 if (($captureText -notmatch 'CopyFromScreen') -or
     ($captureText -notmatch 'PrintWindow') -or
-    ($runningCaptureText -notmatch 'CopyFromScreen') -or
     ($runningCaptureText -notmatch 'PrintWindow')) {
     Fail-Check 'melonDS capture no longer supports disconnected-session fallback'
 }

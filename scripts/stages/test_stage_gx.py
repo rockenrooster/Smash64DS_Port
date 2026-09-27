@@ -18,7 +18,7 @@ import compile_nds_stage_gx as gx
 def test_compiled_corners_patch_coverage_and_stack(name):
     packet = gx.stage.generate(gx.stage._paths.REPO_ROOT, name)
     blob = gx.compile_packet(packet, name)
-    assert len(blob) - gx.HEADER.size <= gx.FOUR_PLAYER_BODY_MAX
+    assert len(blob) - gx.HEADER.size <= gx.BODY_MAX
     header, runs, patches, words = gx.decode(blob)
     assert header[2] == gx.stage.blob_gkind(name)
     assert header[6] == (1 << len(packet.segments)) - 1 and header[7] == gx.signature(packet)

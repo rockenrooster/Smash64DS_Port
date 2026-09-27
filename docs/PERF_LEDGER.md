@@ -8461,3 +8461,21 @@ Mixed captured output identifies source BGM; full output/lifecycle/shared-startu
 qualification remains owed. The first AD63487E run stalled in an invalid one-shot
 task rearm and yields no timing evidence; its failing fixture and repair are kept.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-phase3-residency/README.md`.
+
+## 2026-09-26 — lean FTR tail: compact packet layout reverted
+
+**BANKED.** `c116fffa03e` gave the compiled stage GX body a 36,992 B tail of the
+fighter packet arena by cutting each region 8,840 -> 6,528 words. A lean entry
+then held 2,304 list words; this roster's low-detail lists (DK 2,467, Samus
+2,313, Link 2,634) went wide: two walks per materialization and no variants.
+Materializations 62 -> 147, Link variants 6 -> 0. Regions are 8,840 again and the
+stage body is heap (keep-free 25,600 + 36,420 B measured in-match growth).
+
+Same build dir, control `0BD4523E` vs candidate `BC3500EA`, 1,972 samples,
+replay digest identical: WORK-H P50/P95/P99 1,343,808/2,626,368/3,379,648 ->
+1,332,160/1,955,392/2,786,944; FTR P95 1,204,992 -> 269,696; STG unchanged
+(263,040/271,296, stage program loads 32,140 B from heap). 18.96 -> 19.72 FPS;
+VBI2/3/4/5+ 274/1433/212/54, max 10; 13.89% two-VBlank, RED. Lab low-water
+122,412 B unchanged. Shipping heavy roster expected to decline the stage program
+until Phase 3 RAM lands (not measured).
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail/README.md`.

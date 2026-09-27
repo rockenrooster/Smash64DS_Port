@@ -23316,3 +23316,10 @@ replays1,972 frames exactly;141 refills, zero audio/native failures, AUD P95
 heavyF7443068 gains16,384 B and still lacks5,904 B for pre-GO hat admission.
 Mixed output identifies source BGM; broader output/lifecycle proof remains due.
 Next FGM voices/cache and MF RAM. IMPLEMENTED_NOT_ACCEPTED; root/P1 unchanged.
+
+2026-09-26 P2-2p8 FTR tail (solo review of the Codex Phase 2/3 work): the P95
+regression since slice 7 was `c116fffa03e`'s compact packet layout, which starved
+lean entries (2,304 list words) so three fighters' lists went wide. Restored the
+8,840-word regions; the stage GX body loads from the heap with the in-match growth
+margin. `BC3500EA`: WORK-H P95 2,626,368 -> 1,955,392, FTR P95 269,696, 19.72 FPS,
+replay identical. Committed the A8 BGM checkpoint (`d0d02c61a83`) first.

@@ -3265,72 +3265,32 @@ static inline void ndsRendererHardwareBindTextureState(int name)
 /* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
  * pointer that sys/video.h documents as aliased into the buffer's tail. */
 #define NDS_FIGHTER_PACKET_ARENA_WORDS 35360u
-#define NDS_FIGHTER_PACKET_FULL_REGION_WORDS \
+/* One 8,840-word region per source-player slot, two lean entries each. A
+ * 6,528-word compact layout that gave the stage GX body a 36,992-byte tail
+ * here (c116fffa03e) left an entry 2,304 list words: the four-CPU stress's
+ * Donkey/Samus/Link lists (2,467/2,313/2,634) went wide, walked twice per
+ * materialization and kept no variants -- FTR P95 268,032 -> 1,204,992
+ * (artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail). The stage body
+ * lives in the general heap (nds_stage_gx.exec.inc). */
+#define NDS_FIGHTER_PACKET_REGION_WORDS \
     (NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS)
-/* P2-2p8 Phase 2: the production lean route owns one compact framebuffer
- * layout for the whole battle. Four 6,528-word fighter regions leave a
- * contiguous 36,992-byte tail for the compiled stage GX body while retaining
- * 5,568 list words after the 960-word packet header; Phase 1's all-roster HIGH
- * census peaked at 3,754. An absent player's compact region is still lent to
- * objman below, so two/three-player battles keep their existing scratch path. */
-#define NDS_FIGHTER_PACKET_FOUR_REGION_WORDS 6528u
-#define NDS_FIGHTER_PACKET_FOUR_STAGE_BASE_WORDS \
-    (NDS_FIGHTER_PACKET_FOUR_REGION_WORDS * NDS_FIGHTER_PACKET_SLOTS)
-#define NDS_FIGHTER_PACKET_FOUR_STAGE_WORDS \
-    (NDS_FIGHTER_PACKET_ARENA_WORDS - NDS_FIGHTER_PACKET_FOUR_STAGE_BASE_WORDS)
 _Static_assert(NDS_FIGHTER_PACKET_SLOTS == 4u,
                "fighter packet key encodes two source-player slot bits");
 _Static_assert((NDS_FIGHTER_PACKET_ARENA_WORDS %
                 NDS_FIGHTER_PACKET_SLOTS) == 0u,
                "fighter packet arena must divide evenly by player slot");
-_Static_assert(NDS_FIGHTER_PACKET_FOUR_STAGE_WORDS * sizeof(u32) >= 36296u,
-               "four-fighter packet tail must hold the largest VS stage GX body");
 #define NDS_FIGHTER_PACKET_ROOT_MAX NDS_NATIVE_FIGHTER_ROOT_MAX
 #define NDS_FIGHTER_PACKET_LOCAL_MAX 8u
 
-static inline sb32 ndsRendererFighterPacketCompactLayout(void)
-{
-#if NDS_FTR_LEAN_LIVE
-    return (gNdsFtrLeanRoute == NDS_FTR_LEAN_ROUTE_DRAW) ? TRUE : FALSE;
-#else
-    return FALSE;
-#endif
-}
-
-static inline u32 ndsRendererFighterPacketRegionWords(void)
-{
-    return (ndsRendererFighterPacketCompactLayout() != FALSE) ?
-        NDS_FIGHTER_PACKET_FOUR_REGION_WORDS :
-        NDS_FIGHTER_PACKET_FULL_REGION_WORDS;
-}
-
-static void *ndsRendererStageGxBuffer(u32 *bytes)
-{
-    extern u16 gSYFramebufferSets[1][231][320];
-
-    if (bytes == NULL)
-    {
-        return NULL;
-    }
-    if (ndsRendererFighterPacketCompactLayout() == FALSE)
-    {
-        *bytes = 0u;
-        return NULL;
-    }
-    *bytes = NDS_FIGHTER_PACKET_FOUR_STAGE_WORDS * (u32)sizeof(u32);
-    return (u32 *)(void *)&gSYFramebufferSets[0][0][0] +
-           NDS_FIGHTER_PACKET_FOUR_STAGE_BASE_WORDS;
-}
-
-/* AN ABSENT PLAYER'S REGION IS BATTLE-LIFETIME SCRATCH. The production lean
- * route lends its 26,112-byte compact region; lab/old-path routes retain the
- * original 35,360-byte region. Both are fixed, equal regions keyed by source
- * player slot, and a packet only ever writes its own. Results Release rewrites
- * the buffer after that scene's arena (and everything in it) is already dead. */
+/* AN ABSENT PLAYER'S REGION IS 35,360 IDLE BYTES FOR THE WHOLE MATCH. The arena
+ * is four fixed, equal regions keyed by source-player slot, and a packet only
+ * ever writes its own. Hand an idle one to a battle-lifetime pool instead of
+ * charging the taskman arena for it; the Results entry's Release rewrites the
+ * buffer after that scene's arena (and everything in it) is already dead. */
 void *ndsRendererFighterPacketIdleRegion(u32 battle_slot, u32 *bytes)
 {
     extern u16 gSYFramebufferSets[1][231][320];
-    u32 region_words = ndsRendererFighterPacketRegionWords();
+    u32 region_words = NDS_FIGHTER_PACKET_REGION_WORDS;
 
     if ((battle_slot >= NDS_FIGHTER_PACKET_SLOTS) || (bytes == NULL))
     {
