@@ -8722,3 +8722,14 @@ identical to `texpool`; word-wise arm WORK-H paired median -3.4K. Final
 1,148,416/1,599,104/2,000,384 (from 1,152,192/1,606,592/2,002,496). Digest words
 change: later A/Bs use `wmixf` as control. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 10.
+
+## 2026-09-27 — lean per-draw phase clocks leave the gate ROM (A9)
+
+**BANKED.** The lean fighter path read the clock ~30 times per fighter per frame
+for its phase counters (head/guard/kernel/patch/book/submit and parts). They now
+compile only with `NDS_FTR_LEAN_PHASE_TICKS=1` (default 0) or a KTIME
+attribution build. Same-ROM A/B (clock reads only): WORK-H paired median -4.9K.
+Final `887951B9` (reads and counter writes out), replay identical: WORK-H
+P50/P95/P99 1,148,416/1,599,104/2,000,384 -> 1,134,016/1,583,744/1,961,536;
+FTR paired -9.1K; two-VBlank frames 804 -> 858. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 11.

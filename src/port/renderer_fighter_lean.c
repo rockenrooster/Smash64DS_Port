@@ -350,13 +350,13 @@ _Static_assert(NDS_FTR_LEAN_ROOT_MAX <= NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED,
 #define sNdsFtrLeanWorlds sNdsRendererAdapterNativeOwnerModelviews
 #define sNdsFtrLeanProjection sNdsRendererAdapterNativeOwnerProjection
 
-#if NDS_FTR_LEAN_LAB
+#if NDS_FTR_LEAN_TIMED
 /* `row` is the caller's own counter row, the battle slot (the per-row split
  * exists only in the slice 5 attribution ROM). */
 #define NDS_FTR_LEAN_GUARD_PART(index, mark)                               \
     do                                                                     \
     {                                                                      \
-        u32 part_now_ = cpuGetTiming();                                    \
+        u32 part_now_ = NDS_FTR_LEAN_CLOCK();                              \
         gNdsFtrLean.guard_part_ticks[index] += part_now_ - (mark);         \
         NDS_FTR_LEAN_ATTR(if (row < NDS_FTR_LEAN_KINDS)                    \
             gNdsFtrLeanAttr.guard_part_ticks[row][index] +=                \
@@ -1572,7 +1572,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     NDS_FTR_LEAN_CTR(gNdsFtrLean.attempts++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_attempts[row]++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_owner[row] = owner_slot + 1u);
-    t0 = cpuGetTiming();
+    t0 = NDS_FTR_LEAN_CLOCK();
     mark = t0;
     /* Slice 6: Mario and Fox own a native electric body (program 0xFE, the
      * generated skeleton owner); the lean path resolves it like any program
@@ -1637,7 +1637,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     {
         if (event != 0u)
         {
-            u32 t_event = cpuGetTiming();
+            u32 t_event = NDS_FTR_LEAN_CLOCK();
 
             ndsFtrLeanCountEvent(row, event);
             if ((event == nNDSFtrLeanEventTintSet) ||
@@ -1658,7 +1658,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
                 (event == nNDSFtrLeanEventTintTile) ? TRUE : FALSE,
                 ((event == nNDSFtrLeanEventMaterial) && (inst->valid != 0u)) ?
                     TRUE : FALSE);
-#if NDS_FTR_LEAN_LAB
+#if NDS_FTR_LEAN_TIMED
             /* The event path is its own part (7); the guard parts after it
              * restart from here. */
             mark = t_event;
@@ -1701,9 +1701,9 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
             gNdsFtrLeanAttr.quiet_draws[row]++;
         }
 #endif
-        t1 = cpuGetTiming();
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.guard_ticks += t1 - t0);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_guard_ticks[row] += t1 - t0);
+        t1 = NDS_FTR_LEAN_CLOCK();
+        NDS_FTR_LEAN_TCTR(gNdsFtrLean.guard_ticks += t1 - t0);
+        NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_guard_ticks[row] += t1 - t0);
 #if NDS_FTR_LEAN_LAB
         class_counts = gNdsFtrLean.k_kernel_class[row];
 #if NDS_FTR_LEAN_KTIME
@@ -1764,9 +1764,9 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
             retried = TRUE;
 #endif
         }
-        t0 = cpuGetTiming();
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_ticks += t0 - t1);
-        NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_ticks[row] += t0 - t1);
+        t0 = NDS_FTR_LEAN_CLOCK();
+        NDS_FTR_LEAN_TCTR(gNdsFtrLean.kernel_ticks += t0 - t1);
+        NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_kernel_ticks[row] += t0 - t1);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.kernel_joints += inst->joint_count);
         NDS_FTR_LEAN_CTR(gNdsFtrLean.k_kernel_joints[row] +=
                              inst->joint_count);
@@ -1874,9 +1874,9 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     }
     inst->patch_serial = (sNdsFtrLeanMemoFromSlot != 0u) ?
         (sNdsFtrLeanMemoFill[slot] + 1u) : 0u;
-    t1 = cpuGetTiming();
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.patch_ticks += t1 - t0);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_patch_ticks[row] += t1 - t0);
+    t1 = NDS_FTR_LEAN_CLOCK();
+    NDS_FTR_LEAN_TCTR(gNdsFtrLean.patch_ticks += t1 - t0);
+    NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_patch_ticks[row] += t1 - t0);
 #if NDS_FTR_LEAN_ORACLE_ROUTES
     if (route != NDS_FTR_LEAN_ROUTE_DRAW)
     {
@@ -1913,13 +1913,13 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackEligible);
 #endif
     ndsRendererProfileSetOwner(ndsFighterNativeOwnerProfileId(owner_slot));
-    t0 = cpuGetTiming();
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.book_ticks += t0 - t1);
+    t0 = NDS_FTR_LEAN_CLOCK();
+    NDS_FTR_LEAN_TCTR(gNdsFtrLean.book_ticks += t0 - t1);
     NDS_FTR_LEAN_ATTR(gNdsFtrLeanAttr.book_ticks[row] += t0 - t1);
     hardware_triangles = ndsFtrLeanPacketSubmit(slot);
-    t1 = cpuGetTiming();
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.submit_ticks += t1 - t0);
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.k_submit_ticks[row] += t1 - t0);
+    t1 = NDS_FTR_LEAN_CLOCK();
+    NDS_FTR_LEAN_TCTR(gNdsFtrLean.submit_ticks += t1 - t0);
+    NDS_FTR_LEAN_TCTR(gNdsFtrLean.k_submit_ticks[row] += t1 - t0);
 #if NDS_R2_FOX_GUN_OVERLAY
     /* Slice 6: Fox's blaster (and Kirby's Fox copy) is the sidecar the old
      * path submits after either body path (DrawForSlot's tail): the same
@@ -1964,7 +1964,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
 #if NDS_FTR_LEAN_ATTR_LIVE
     gNdsFtrLeanAttr.book_ticks[row] += cpuGetTiming() - t1;
 #endif
-    NDS_FTR_LEAN_CTR(gNdsFtrLean.book_ticks += cpuGetTiming() - t1);
+    NDS_FTR_LEAN_TCTR(gNdsFtrLean.book_ticks += NDS_FTR_LEAN_CLOCK() - t1);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.draws++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_draws[row]++);
     NDS_FTR_LEAN_CTR(gNdsFtrLean.k_program_draws[row][

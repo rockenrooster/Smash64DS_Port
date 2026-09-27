@@ -158,6 +158,11 @@ NDS_FTR_PRE_WALK_CENSUS ?= 0
 # gcCaptureCameraGObj, four clock reads per displayed GObj) is a lab
 # instrument like the census above: 0 folds both into MCAM (A9).
 NDS_P2_MISC_SPLIT ?= 0
+# The lean fighter path's per-draw phase clocks (gNdsFtrLean head/guard/
+# kernel/patch/book/submit ticks and their parts, ~30 reads a frame per
+# fighter) are attribution: 1 compiles them into tick-HUD builds, 0 (default)
+# leaves those counters at 0 and out of WORK-H (A9).
+NDS_FTR_LEAN_PHASE_TICKS ?= 0
 # Cycle 86's per-fighter SRC split (SCAT/SHDT/SPRM/SINT/SPHD/SPHC/SCPU: two
 # clock reads around each fighter proc, every tick) -- the same kind of lab
 # attribution. 0 leaves those columns 0; GCRA/SRC are measured as before.
@@ -7156,6 +7161,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_FAST_MEM $(NDS_FAST_MEM)'; \
 		echo '#define NDS_FTR_PRE_WALK_CENSUS $(NDS_FTR_PRE_WALK_CENSUS)'; \
 		echo '#define NDS_P2_MISC_SPLIT $(NDS_P2_MISC_SPLIT)'; \
+		echo '#define NDS_FTR_LEAN_PHASE_TICKS $(NDS_FTR_LEAN_PHASE_TICKS)'; \
 		echo '#define NDS_TICK_HUD_SRC_SPLIT $(NDS_TICK_HUD_SRC_SPLIT)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \

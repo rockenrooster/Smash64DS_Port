@@ -238,3 +238,27 @@ The lab word was then deleted. Final `7C2EF9D0` (`wmixf`) replays IDENTICAL to
 `wmix1`, so it is the measured candidate. WORK-H P50/P95/P99 against `texpool`:
 1,152,192/1,606,592/2,002,496 -> **1,148,416/1,599,104/2,000,384**. VBlanks
 804/1,095/64/10. Native failures 0; heap low-water unchanged.
+
+## 11. Lean per-draw phase clocks leave the gate ROM (A9)
+
+The lean fighter path timed each draw's phases for gNdsFtrLean: head, guard
+and its parts, kernel, patch and its parts, book, and submit and its parts.
+That was about 30 clock reads per fighter per frame, plus the counter updates.
+The `NDS_FTR_LEAN_PHASE_TICKS` Makefile flag (default 0) now controls these
+clocks. With the flag at 0, `NDS_FTR_LEAN_CLOCK()` returns 0 and the phase
+counters are not written. They are compiled in only when the flag is 1 or in
+an `NDS_FTR_LEAN_KTIME` attribution build. Event and materialize ticks stay,
+because those events are rare. The ship image also loses its unused
+`cpuGetTiming()` calls for `t0`, `t1` and the head.
+
+Same-ROM A/B (`4E02C85C`, a lab word gating only the clock reads; counters
+written in both arms):
+- `lclk0` (clocks off) vs `lclk1`: paired WORK-H median -4,864; FTR -4,608.
+- Both arms replay IDENTICAL to `wmixf`.
+
+The lab word was then deleted. Final `887951B9` (`lclkf`, clocks and counter
+writes compiled out) replays IDENTICAL to `wmixf`:
+- WORK-H P50/P95/P99 1,148,416/1,599,104/2,000,384 -> **1,134,016/1,583,744/
+  1,961,536**; paired median -14,080 (FTR -9,088; cross-build).
+- VBlanks 858/1,044/64/7.
+- Lean draws 6,862, materializations 62, native failures 0.

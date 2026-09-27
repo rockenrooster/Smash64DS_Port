@@ -13529,7 +13529,7 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
  * exactly the code TryReplay uses; the projection is P' -- this frame's
  * projection with row 3 across the world-unit seam -- written once at the
  * head. Returns 0, NDS_FTR_LEAN_PATCH_REMATERIALIZE, or a decline reason. */
-#if NDS_FTR_LEAN_LAB
+#if NDS_FTR_LEAN_TIMED
 /* `part_kind_` (the function's own local) names the kind for the slice 5
  * per-kind split, which only the attribution ROM carries. */
 #if NDS_FTR_LEAN_ATTR_LIVE
@@ -13547,7 +13547,7 @@ static s32 ndsFtrLeanPatchTintTiles(NDSFighterPacket *packet,
 #define NDS_FTR_LEAN_PART(array, index, mark)                              \
     do                                                                     \
     {                                                                      \
-        u32 part_now_ = cpuGetTiming();                                    \
+        u32 part_now_ = NDS_FTR_LEAN_CLOCK();                              \
         gNdsFtrLean.array[index] += part_now_ - (mark);                    \
         NDS_FTR_LEAN_PART_KIND(array, index, part_now_ - (mark));          \
         (mark) = part_now_;                                                \
@@ -13565,8 +13565,8 @@ u32 ndsFtrLeanPacketPatch(u32 battle_slot, const NDSFtrLeanPatchView *view,
     u32 tint_modulate;
     u32 tint_prim_hash;
     u32 i;
-#if NDS_FTR_LEAN_LAB
-    u32 mark = cpuGetTiming();
+#if NDS_FTR_LEAN_TIMED
+    u32 mark = NDS_FTR_LEAN_CLOCK();
 #endif
 #if NDS_FTR_LEAN_ATTR_LIVE
     u32 part_kind_ = (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?
@@ -13788,8 +13788,8 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
     u32 flushed;
     u32 raw;
     u32 cross;
-#if NDS_FTR_LEAN_LAB
-    u32 mark = cpuGetTiming();
+#if NDS_FTR_LEAN_TIMED
+    u32 mark = NDS_FTR_LEAN_CLOCK();
 #endif
 #if NDS_FTR_LEAN_ATTR_LIVE
     u32 part_kind_ = (battle_slot < NDS_FIGHTER_PACKET_SLOTS) ?

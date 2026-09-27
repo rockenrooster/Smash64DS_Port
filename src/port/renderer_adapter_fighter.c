@@ -5399,7 +5399,7 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 #if NDS_FTR_LEAN_LIVE
     {
         /* P2-2p8 Phase 1 (Phase 0 leftover): FTR's head sub-phase. */
-        u32 lean_head_start = cpuGetTiming();
+        u32 lean_head_start = NDS_FTR_LEAN_CLOCK();
 
 #if NDS_FTR_LEAN_ATTR_LIVE
         /* Slice 6: the counter row is the battle slot (NDS_FTR_LEAN_KINDS). */
@@ -5408,9 +5408,9 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
                 ((u32)fp->nds_slot & 3u) : NDS_FTR_LEAN_KIND_NONE;
 #endif
         ndsFighterDisplayContractCapture(fighter_gobj);
-#if NDS_FTR_LEAN_LAB
+#if NDS_FTR_LEAN_TIMED
         {
-            u32 lean_head = cpuGetTiming() - lean_head_start;
+            u32 lean_head = NDS_FTR_LEAN_CLOCK() - lean_head_start;
 
             gNdsFtrLean.head_ticks += lean_head;
             if (NDS_FTR_LEAN_OWNER_KIND(owner_slot) != NDS_FTR_LEAN_KIND_NONE)

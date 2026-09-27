@@ -569,6 +569,27 @@ extern NDSFtrLeanAttr gNdsFtrLeanAttr;
 #define NDS_FTR_LEAN_ATTR(...) ((void)0)
 #endif
 
+/* A9: the per-draw phase clocks (head, guard and its parts, kernel, patch and
+ * its parts, book, submit and its parts: ~30 clock reads per frame per
+ * fighter) are attribution, not the gate. They run only in a tick-HUD build
+ * made with NDS_FTR_LEAN_PHASE_TICKS=1 (or an NDS_FTR_LEAN_KTIME attribution
+ * build, whose parts need them); elsewhere NDS_FTR_LEAN_CLOCK() is 0 and the
+ * phase *_ticks counters read 0. Event and materialize ticks stay (rare).
+ * Same-ROM A/B (clocks off vs on, counters written in both): WORK-H paired
+ * median -4.9K, FTR -4.6K. */
+#ifndef NDS_FTR_LEAN_PHASE_TICKS
+#define NDS_FTR_LEAN_PHASE_TICKS 0
+#endif
+#if NDS_FTR_LEAN_LAB && (NDS_FTR_LEAN_PHASE_TICKS || NDS_FTR_LEAN_ATTR_LIVE)
+#define NDS_FTR_LEAN_TIMED 1
+#define NDS_FTR_LEAN_CLOCK() cpuGetTiming()
+#define NDS_FTR_LEAN_TCTR(...) do { __VA_ARGS__; } while (0)
+#else
+#define NDS_FTR_LEAN_TIMED 0
+#define NDS_FTR_LEAN_CLOCK() 0u
+#define NDS_FTR_LEAN_TCTR(...) ((void)0)
+#endif
+
 /* Route-2 handshake: set by the old path's matrix prep when the forced
  * Q43.20 source compose produced this draw's matrices. */
 extern volatile u32 gNdsFtrLeanOracleSourceOk;
