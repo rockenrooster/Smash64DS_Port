@@ -11455,7 +11455,9 @@ typedef struct NDSFtrLeanMat
     u32 mark;                   /* lab: the materializer's part timer */
 } NDSFtrLeanMat;
 
-#if NDS_FTR_LEAN_LAB
+/* ~300 clock reads per materialization, and materializations are tail
+ * frames: attribution, so only in a phase-ticks build (NDS_FTR_LEAN_TIMED). */
+#if NDS_FTR_LEAN_TIMED
 #define NDS_FTR_LEAN_MAT_PART(mat, index)                                  \
     do                                                                     \
     {                                                                      \
@@ -12286,7 +12288,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
             packet->tint_prim_hash, inputs[i].preamble->prim_color);
     }
     memset(&m, 0, sizeof(m));
-#if NDS_FTR_LEAN_LAB
+#if NDS_FTR_LEAN_TIMED
     m.mark = cpuGetTiming();
 #endif
     m.packet = packet;

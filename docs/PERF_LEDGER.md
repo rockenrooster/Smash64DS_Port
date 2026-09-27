@@ -8888,3 +8888,12 @@ of the gate. `8B541A87` vs `fgtfin`, replay identical: HUD +4,992 paired;
 WORK +768 paired (layout plus two timer reads); WORK-H P50/P95/P99
 1,089,600/1,499,392/1,789,248. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 28.
+
+## 2026-09-27 — lean materializer part clocks and Whispy AOT ticks out of the gate ROM
+
+**BANKED (instrument out).** `NDS_FTR_LEAN_MAT_PART` (~300 clock reads per
+materialization) now needs `NDS_FTR_LEAN_PHASE_TICKS=1`. The Whispy AOT tick
+counters (8 reads a frame) now need the new `NDS_WHISPY_AOT_TICKS=1`.
+`8C78E908` vs `dgt`, replay identical: FTR-spike frames -31.5K each; WORK-H
+P50/P95/P99 1,090,752/1,494,272/1,788,608 (+1.2K/-5.1K/-0.6K). RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 29.

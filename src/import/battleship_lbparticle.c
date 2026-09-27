@@ -570,13 +570,13 @@ volatile u32 gNdsWhispyAOTGeneratorFallbackRuns;
 volatile u32 gNdsWhispyAOTGeneratorVisits;
 volatile u32 gNdsWhispyAOTGeneratorEmits;
 volatile u32 gNdsWhispyAOTTableTrigPairs;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
 volatile u32 gNdsWhispyAOTGeneratorTicks;
 #endif
 volatile u32 gNdsWhispyAOTStructVisits;
 volatile u32 gNdsWhispyAOTStructFastUpdates;
 volatile u32 gNdsWhispyAOTStructSourceUpdates;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
 volatile u32 gNdsWhispyAOTStructTicks;
 #endif
 volatile u32 gNdsWhispyAOTDividesAvoided;
@@ -728,14 +728,14 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
 {
     LBGenerator *gn;
     LBGenerator *next_gn;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
     u32 tick_start = cpuGetTiming();
 #endif
 
     if (gNdsWhispyAOTRoute == 0u)
     {
         lbParticleGeneratorFuncRun(gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
         gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
 #endif
         return;
@@ -743,7 +743,7 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
     if (sLBParticleGeneratorsQueued == NULL)
     {
         lbParticleGeneratorFuncRun(gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
         gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
 #endif
         return;
@@ -758,7 +758,7 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
         {
             gNdsWhispyAOTGeneratorFallbackRuns++;
             lbParticleGeneratorFuncRun(gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
             gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
 #endif
             return;
@@ -891,7 +891,7 @@ static void ndsWhispyAOTGeneratorFuncRun(GObj *gobj)
         sLBParticleGeneratorsLastProcessed = gn;
         gn = gn->next;
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
     gNdsWhispyAOTGeneratorTicks += cpuGetTiming() - tick_start;
 #endif
 }
@@ -1490,14 +1490,14 @@ static void ndsWhispyAOTStructFuncRun(GObj *gobj)
 {
     u32 flags = gobj->flags;
     s32 link;
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
     u32 tick_start = cpuGetTiming();
 #endif
 
     if (gNdsWhispyAOTRoute >= 6u)
     {
         ndsWhispyAOTStructFuncRunLean(gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
         gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
 #endif
         return;
@@ -1505,7 +1505,7 @@ static void ndsWhispyAOTStructFuncRun(GObj *gobj)
     if (gNdsWhispyAOTRoute == 0u)
     {
         lbParticleStructFuncRun(gobj);
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
         gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
 #endif
         return;
@@ -1538,7 +1538,7 @@ static void ndsWhispyAOTStructFuncRun(GObj *gobj)
             }
         }
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_WHISPY_AOT_TICKS
     gNdsWhispyAOTStructTicks += cpuGetTiming() - tick_start;
 #endif
 }

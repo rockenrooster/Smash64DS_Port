@@ -167,6 +167,11 @@ NDS_FTR_LEAN_PHASE_TICKS ?= 0
 # scripts/diagnostics/probe-native-render-scene.ps1) is a diagnostic: 1
 # compiles it in, 0 (default) keeps its per-frame margins out of every ROM.
 NDS_CAMERA_FRAME_WITNESS ?= 0
+# Dream Land's Whispy AOT tick counters (gNdsWhispyAOT*Ticks, read by
+# scripts/probe-whispy-native-aot.ps1 -TraceFrames): ~8 clock reads a frame
+# of attribution. 1 compiles them into tick-HUD builds; 0 (default) leaves
+# the symbols out, so the probe's -TraceFrames mode fails loudly.
+NDS_WHISPY_AOT_TICKS ?= 0
 # Cycle 86's per-fighter SRC split (SCAT/SHDT/SPRM/SINT/SPHD/SPHC/SCPU: two
 # clock reads around each fighter proc, every tick) -- the same kind of lab
 # attribution. 0 leaves those columns 0; GCRA/SRC are measured as before.
@@ -7170,6 +7175,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_MISC_SPLIT $(NDS_P2_MISC_SPLIT)'; \
 		echo '#define NDS_FTR_LEAN_PHASE_TICKS $(NDS_FTR_LEAN_PHASE_TICKS)'; \
 		echo '#define NDS_CAMERA_FRAME_WITNESS $(NDS_CAMERA_FRAME_WITNESS)'; \
+		echo '#define NDS_WHISPY_AOT_TICKS $(NDS_WHISPY_AOT_TICKS)'; \
 		echo '#define NDS_TICK_HUD_SRC_SPLIT $(NDS_TICK_HUD_SRC_SPLIT)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \

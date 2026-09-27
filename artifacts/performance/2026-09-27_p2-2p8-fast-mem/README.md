@@ -699,3 +699,20 @@ This is re-accounting, not a speedup.
   reads per tick.
 - WORK-H P50/P95/P99 1,089,600/1,499,392/1,789,248 (-4.0K/+1.1K/-4.6K).
 - 1,107 of 1,972 frames at or under 1,120,000 (`fgtfin` 1,086).
+
+## 29. Two lab clocks out of the gate ROM
+
+Both were attribution that ran in every tick-HUD build.
+- The lean materializer's per-part clocks (`NDS_FTR_LEAN_MAT_PART`, about 300
+  clock reads per materialization) now compile only under
+  `NDS_FTR_LEAN_TIMED` (`NDS_FTR_LEAN_PHASE_TICKS=1`). Materializations are
+  tail frames. `materialize_ticks` (two reads) stays.
+- Dream Land's Whispy AOT tick counters (8 reads a frame) now need
+  `NDS_WHISPY_AOT_TICKS=1`. Without it the symbols are absent, so
+  `probe-whispy-native-aot.ps1 -TraceFrames` fails loudly rather than reading 0.
+
+`8C78E908` (`instr`) vs `dgt`, replay IDENTICAL:
+- The 29 FTR-spike frames: FTR -31.5K each.
+- WORK-H P50/P95/P99 1,090,752/1,494,272/1,788,608 (+1.2K/-5.1K/-0.6K).
+- Paired median +640 (layout), mean -0.9K.
+- Materializations 44, native failures 0.

@@ -28,9 +28,9 @@ Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26/27 solo:** leaf, A9-instrument, ITCM-placement (ITCM now full; lab
 split builds keep ndsFtPoseUpdate in main RAM) and DS-divide cuts; receipts
-`2026-09-2{6,7}_p2-2p8-*`. `8B541A87` WORK-H P50/P95 1,089,600/1,499,392 (data pinned to 1 KB);
-lab flags NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS.
-Digest `--sequence --resync 4`, control `dgt`. P95 set: FTR +283K (DK's 3+
+`2026-09-2{6,7}_p2-2p8-*`. `8C78E908` WORK-H P50/P95 1,090,752/1,494,272 (data pinned to 1 KB);
+lab flags NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS, NDS_WHISPY_AOT_TICKS.
+Digest `--sequence --resync 4`, control `instr`. P95 set: FTR +283K (DK's 3+
 lean states thrash two entries; heap spare buffer banked, 62 -> 44, verify arm
 0 mismatches), SINT +122K (motion start), SHDT +106K, SPRM +72K, MISC +60K.
 

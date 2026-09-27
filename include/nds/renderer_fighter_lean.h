@@ -317,7 +317,8 @@ typedef struct NDSFtrLeanCounters
     u32 materialize_tint_binds; /* tint tiles bound by the last one */
     u32 materialize_tint_pending; /* tint epochs that folded (tile queued) */
     u32 event_ticks;            /* event paths that did not materialize */
-    u32 materialize_part_ticks[8]; /* 0 preflight + head, 1 root binds,
+    u32 materialize_part_ticks[8]; /* (phase-ticks builds) 0 preflight +
+                                      head, 1 root binds,
                                       2 spans + materials, 3 shade, 4 run
                                       prepares (validate, words), 5 corners,
                                       6 texture resolve + bind, 7 tint bind +
@@ -578,7 +579,8 @@ extern NDSFtrLeanAttr gNdsFtrLeanAttr;
  * fighter) are attribution, not the gate. They run only in a tick-HUD build
  * made with NDS_FTR_LEAN_PHASE_TICKS=1 (or an NDS_FTR_LEAN_KTIME attribution
  * build, whose parts need them); elsewhere NDS_FTR_LEAN_CLOCK() is 0 and the
- * phase *_ticks counters read 0. Event and materialize ticks stay (rare).
+ * phase *_ticks counters read 0. Event and materialize ticks stay (rare);
+ * the materializer's per-part clocks (materialize_part_ticks) are phase ticks.
  * Same-ROM A/B (clocks off vs on, counters written in both): WORK-H paired
  * median -4.9K, FTR -4.6K. */
 #ifndef NDS_FTR_LEAN_PHASE_TICKS
