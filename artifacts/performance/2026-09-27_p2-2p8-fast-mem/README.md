@@ -404,3 +404,34 @@ equal: the sampler reads DGSB across a stop. With `--resync`,
 `compare-replay-digest.py` now reports that shape as IDENTICAL WITH N SEAM
 TICK-B WORDS. Strict mode still reports DIVERGED, and injected DGSA or DGSB
 mutations still read DIVERGED.
+
+## 18. libc heap witness reads the top chunk directly
+
+A fresh profile (`profile-4f08-census.txt`) put newlib's
+`__malloc_update_mallinfo` at ~1.8K ticks/frame. With `_mallinfo_r`, `mallinfo`
+and the malloc locks, the total is ~2.3K. The caller is
+`ndsTaskmanSampleLibcHeapNow`, once a frame. The only field it needs is
+`keepcost`, which is `chunksize(top)`. The disassembly of
+`__malloc_update_mallinfo` shows the store: it loads `__malloc_av_[2]`, masks
+`top->size & ~3`, and writes that to `mallinfo+36`. The rest of the call walks
+all 128 bins.
+
+The witness now reads the top chunk directly:
+- The direct read is armed only when it matched `mallinfo().keepcost` at the
+  post-shrink reset.
+- The tick-HUD build re-checks every 128th sample
+  (`gNdsTaskmanLibcTopDirectMismatch`).
+
+Same-ROM A/B (`71EB6367`):
+- Paired WORK-H median -2,944.
+- `gNdsTaskmanLibcTopChunkMin` (13,528) and the runtime high-water (30,976) are
+  identical on both arms, with 0 mismatches.
+- Both arms replay IDENTICAL to `itcm4`.
+
+Final `3FDE5B3B` (`libcf`), replay IDENTICAL to `itcm4`:
+- WORK-H P50/P95/P99 1,102,720/1,538,624/1,955,136 -> **1,099,200/1,536,512/
+  1,948,416**.
+- Paired median -2,304; mismatches 0.
+
+The same census shows ITCM at 128 B free. The remaining admissions are worth
+about 0.5K each, so the ITCM lever is spent.

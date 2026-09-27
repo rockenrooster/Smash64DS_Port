@@ -8788,3 +8788,14 @@ evaluates every fighter joint), `ndsR2AnimTargetValue`, `ndsR2AnimBuildTrackTabl
 vs `itcm3`, replay identical: WORK-H P50/P95/P99 1,111,040/1,547,776/1,951,552
 -> 1,102,720/1,538,624/1,955,136; paired -8.5K. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 16.
+
+## 2026-09-27 — libc heap witness reads newlib's top chunk directly
+
+**BANKED (small).** The once-a-frame libc heap witness called `mallinfo()` (~2.3K
+ticks/frame: a walk of all 128 bins) for one field, `keepcost` =
+`chunksize(__malloc_av_[2])`. It now reads that word directly, armed only after
+it matched `mallinfo()` at the post-shrink reset; the tick-HUD build re-checks
+every 128th sample. Same-ROM A/B: -2.9K, witness values identical on both arms.
+Final `3FDE5B3B`, replay identical: WORK-H P50/P95/P99 1,099,200/1,536,512/
+1,948,416; paired -2.3K vs `itcm4`. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 18.

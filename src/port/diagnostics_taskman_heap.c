@@ -51,13 +51,43 @@ __attribute__((used)) volatile u32 gNdsTaskmanLibcTopChunkMin;
 static u32 sNdsTaskmanLibcInitialTop;
 static u32 sNdsTaskmanLibcLastSampleFrame = 0xffffffffu;
 
+/* mallinfo().keepcost is newlib's chunksize(top): mallocr.c keeps the top chunk
+ * at __malloc_av_[2], and __malloc_update_mallinfo stores `top->size & ~3` into
+ * keepcost (its disassembly: ldr [av,#8]; ldr [top,#4]; bics #3; str [mi,#36]).
+ * The call also walks all 128 bins for fields this witness never reads --
+ * ~2.3K ticks a frame in the four-CPU profile. The direct read is used only
+ * after it matched mallinfo() at the post-shrink reset; the tick-HUD build
+ * re-checks every 128th sample (gNdsTaskmanLibcTopDirectMismatch). */
+extern void *__malloc_av_[];
+static u32 sNdsTaskmanLibcTopDirect;
+#if NDS_TICK_HUD
+__attribute__((used)) volatile u32 gNdsTaskmanLibcTopDirectMismatch;
+static u32 sNdsTaskmanLibcTopCheck;
+#endif
+static u32 ndsTaskmanLibcTopChunkBytes(void)
+{
+    return ((const u32 *)__malloc_av_[2])[1] & ~3u;
+}
+
 void ndsTaskmanSampleLibcHeapNow(void)
 {
-    NDSNewlibMallinfo info;
     u32 top;
 
-    info = mallinfo();
-    top = info.keepcost;
+    if (sNdsTaskmanLibcTopDirect != 0u)
+    {
+        top = ndsTaskmanLibcTopChunkBytes();
+#if NDS_TICK_HUD
+        if (((++sNdsTaskmanLibcTopCheck & 127u) == 0u) &&
+            (top != mallinfo().keepcost))
+        {
+            gNdsTaskmanLibcTopDirectMismatch++;
+        }
+#endif
+    }
+    else
+    {
+        top = mallinfo().keepcost;
+    }
     if (top < gNdsTaskmanLibcTopChunkMin)
     {
         gNdsTaskmanLibcTopChunkMin = top;
@@ -87,6 +117,8 @@ static void ndsTaskmanLibcResetAfterShrink(void)
 {
     NDSNewlibMallinfo info = mallinfo();
 
+    sNdsTaskmanLibcTopDirect =
+        (ndsTaskmanLibcTopChunkBytes() == info.keepcost) ? 1u : 0u;
     sNdsTaskmanLibcInitialTop = info.keepcost;
     gNdsTaskmanLibcTopChunkMin = info.keepcost;
     gNdsTaskmanLibcRuntimeHighWater = 0u;
