@@ -5450,11 +5450,27 @@ static u32 sNdsTexIdentJournal[NDS_TEX_IDENT_JOURNAL][4];
  * witness; the four-fighter verifier publishes them in its memory artifact. */
 volatile u32 gNdsRendererTextureKeyPoolEntriesHighWater;
 
+static u32 sNdsRendererHardwareTextureKeyGeneration; /* defined below */
+
 static void ndsRendererRecordTextureKeyPoolUse(void)
 {
+    /* A whole-cache scan every frame (~600 entries, ~5.5K ticks inside
+     * WORK-H) for a high-water that only moves when textures are taken. Scan
+     * when the texture key generation moved since the last scan -- uploads
+     * and evictions bump it -- and every 16th frame regardless, so a take
+     * that does not bump it is still seen within 16 frames; entries stay
+     * resident far longer than that. (A9, 2026-09-27.) */
+    static u32 s_last_generation;
+    static u32 s_frames;
     u32 i;
     u32 entries = 0u;
 
+    if ((sNdsRendererHardwareTextureKeyGeneration == s_last_generation) &&
+        ((++s_frames & 15u) != 0u))
+    {
+        return;
+    }
+    s_last_generation = sNdsRendererHardwareTextureKeyGeneration;
     for (i = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
          i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
     {

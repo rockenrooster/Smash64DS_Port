@@ -202,3 +202,17 @@ across the stop -- DGSA equal, DGSB different, the next sample equal in full.
 state feeds the next tick A, so a real difference cannot heal one tick later)
 and reports it as seam tick-B words: `k46` reads IDENTICAL AFTER ONE RESYNC
 (shift +1, 3 seam tick-B words).
+
+## 9. Texture-pool witness sampled on key generation (A9)
+
+`ndsRendererRecordTextureKeyPoolUse` (tick-HUD only) scanned all ~79 dynamic
+texture-cache entries every frame to keep `gNdsRendererTextureKeyPoolEntriesHighWater`.
+Every insert and release stamps `sNdsRendererHardwareTextureKeyGeneration`, so
+the entry count can only change on a frame where the generation moved. The scan
+now runs on those frames, plus every 16th frame as a backstop. The high-water
+stays exact (123 over the match); nothing in the gate build reads it.
+
+`B9AF6D9D` against `473CCE25` (`k46on`), replay identical over 1,972 samples:
+WORK-H P50/P95/P99 1,157,440/1,609,728/2,000,128 -> **1,152,192/1,606,592/
+2,002,496**; OTHR P50 359,296 -> 353,536; VBlanks/FPS 777 1118 67 11 22.63 ->
+792 1106 64 11 22.71. Evidence `texpool.*`.

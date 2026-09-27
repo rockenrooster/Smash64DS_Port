@@ -91,7 +91,7 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo: `473CCE25` WORK-H P50/P95/P99 1,157,440/1,609,728/2,000,128.
+MP f32 cache reads; billboard memo; texpool witness: `B9AF6D9D` WORK-H P50/P95/P99 1,152,192/1,606,592/2,002,496.
 **Constraint**: CSS reserve >=183,072 B; margin 17,584 B less ~1.4 KB BSS (owed).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

@@ -8701,3 +8701,13 @@ WORK-H P50/P95/P99 1,165,120/1,618,368/2,008,384 -> 1,157,440/1,609,728/
 2,000,128; STG P50 -7.6K; digest identical. `compare-replay-digest.py --resync`
 now tolerates a ring-stop DGSB read that heals on the next sample. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 8.
+
+## 2026-09-27 — texture-pool witness scans only on key-generation change
+
+**BANKED (small, A9).** The tick-HUD texture-pool high-water scanned ~79 cache
+entries every frame. Every insert and release already stamps the key
+generation, so the scan runs only when it moved (plus every 16th frame); the
+high-water stays exact (123). `473CCE25` -> `B9AF6D9D`, replay identical:
+WORK-H P50/P95/P99 1,157,440/1,609,728/2,000,128 -> 1,152,192/1,606,592/
+2,002,496; OTHR P50 -5.8K; two-VBlank frames 777 -> 792. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 9.
