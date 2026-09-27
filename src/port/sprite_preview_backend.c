@@ -857,9 +857,29 @@ static Gfx *sNdsMenuFillDrainMark = NULL;
 volatile u32 gNdsMenuFillRectCount;
 volatile u32 gNdsMenuFillPixelCount;
 
+/* One lower-HUD state record per frame pass. Every routed interface SObj used
+ * to re-derive the whole record (four players' damage digits, stock min/max,
+ * masks, timer): ~25 identical records a battle frame. The interface display
+ * procs only set sprites (ifcommon.c), and the record is taken during the draw
+ * pass after every update proc, so the first record of a pass equals the last.
+ * The unbracketed call site keeps recording every time. */
+static u32 sNdsSObjHudPass;
+static u32 sNdsSObjHudRecordedPass = 0xffffffffu;
+
+static void ndsSObjRecordHudStateOncePerPass(void)
+{
+    if (sNdsSObjHudRecordedPass != sNdsSObjHudPass)
+    {
+        sNdsSObjHudRecordedPass = sNdsSObjHudPass;
+        ndsIFCommonRecordHUDState();
+    }
+}
+
 void ndsSObjPreviewBeginFrame(void)
 {
     static u32 sLastSceneCurr = 0xffffffffu;
+
+    sNdsSObjHudPass++;
 
     if (sLastSceneCurr != (u32)gSCManagerSceneData.scene_curr)
     {
@@ -987,7 +1007,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
              * stock, and damage state advance normally. Only its prepared
              * steady HUD composition is redirected to the DS lower text
              * backend; countdown/GO GObjs keep the original top BG3 path. */
-            ndsIFCommonRecordHUDState();
+            ndsSObjRecordHudStateOncePerPass();
             return;
         }
         if ((gNdsSceneManagerCurrIsBattle != 0u) &&
@@ -1000,7 +1020,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
         ndsDrawLayeredSObjFrame(gobj, 0u);
         if (gNdsSceneManagerCurrIsBattle != 0u)
         {
-            ndsIFCommonRecordHUDState();
+            ndsSObjRecordHudStateOncePerPass();
         }
         return;
     }

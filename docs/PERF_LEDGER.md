@@ -8573,3 +8573,13 @@ its Thumb TU could not inline it into the ARM parser. Header now included under
 `#pragma GCC target("arm")`. `077110CD` -> `A8E6AFD9`, replay identical: WORK-H
 P50/P95/P99 1,301,504/1,794,240/2,197,184 -> 1,293,056/1,782,784/2,189,632. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md` section 4.
+
+## 2026-09-27 — lower-HUD state recorded once per frame pass
+
+**BANKED.** Every routed interface SObj re-derived the whole lower-HUD record
+(~25x a frame); display procs do not write that state, so one record per SObj
+pass is identical. `A8E6AFD9` -> `C55BCBBD`, replay identical (`--sequence`;
+frame labels shifted after ring-stop seams): WORK-H P50/P95/P99 1,293,056/
+1,782,784/2,189,632 -> 1,283,520/1,772,160/2,178,496; MISC P50 -7.7K; two-VBlank
+327 -> 373. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md` section 5.

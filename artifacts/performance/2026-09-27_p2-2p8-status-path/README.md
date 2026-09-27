@@ -52,3 +52,23 @@ adder is ARM with native CLZ. Same arithmetic, same bits.
 1,301,504/1,794,240/2,197,184 -> 1,293,056/1,782,784/2,189,632; SRC P50
 588,352 -> 581,120; two-VBlank 311 -> 327. Pose oracle mismatches 0, 702
 binds. Replay digest IDENTICAL. Evidence: `f32arm-route1` (json/rows/log).
+
+## 5. Lower-HUD state recorded once per frame pass -- BANKED
+
+`ndsIFCommonRecordHUDState` (8.7K ticks/frame in the profile) re-derived the
+whole lower-HUD record -- four players' damage digits, stock min/max, masks,
+timer -- on every routed interface SObj draw, ~25 times a battle frame. The
+interface display procs only set sprites (decomp `ifcommon.c`) and the record
+is taken during the draw pass after every update proc, so the first record of
+a pass equals the last. `sprite_preview_backend.c` now records once per
+`ndsSObjPreviewBeginFrame` pass (the unbracketed call site still records every
+time). `gNdsIFCommonHUDRecordCount` becomes one per frame (1,973); every reader
+tests it only against 0.
+
+`hudonce` `C55BCBBD` against `f32arm` `A8E6AFD9`: WORK-H P50/P95/P99
+1,293,056/1,782,784/2,189,632 -> 1,283,520/1,772,160/2,178,496; MISC P50
+200,000 -> 192,256; two-VBlank 327 -> 373. Replay digest IDENTICAL in
+`--sequence` mode (the frame-label compare reported 273 "divergences": candidate
+frame f equals control frame f+1 inside the 96-frame windows after the three
+ring-stop seams the sampler warned about -- a label shift, not gameplay).
+Evidence: `hudonce-route1` (json/rows/log).

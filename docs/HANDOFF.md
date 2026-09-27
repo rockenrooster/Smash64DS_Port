@@ -29,7 +29,8 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26/27 solo (Codex out of usage):** fixed the slice-7 P95 regression
 (compact packet layout); edge-only ROM bounce; FGM LRU/aligned/envelopes, ARM7
 async fills and a 160 KiB arena (-72 KiB); fast cpuGetTiming; stage no-Z
-staging; status-path cuts; ARM pose clock. `A8E6AFD9` P50/P95 1,293,056/1,782,784.
+staging; status-path cuts; ARM pose clock; HUD once/pass. `C55BCBBD` P50/P95
+1,283,520/1,772,160. Digest compare after ring-stop seams: `--sequence`.
 Receipts `2026-09-2{6,7}_p2-2p8-*`. Median > gate: next STG/port-machinery
 median cuts, FTR materialize tail, A5.
 

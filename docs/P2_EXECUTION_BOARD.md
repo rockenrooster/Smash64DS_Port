@@ -87,8 +87,8 @@ compact packet layout reverted (`BC3500EA` P95 1,955,392, was 2,626,368);
 edge-only ROM bounce (1,892,160); FGM LRU/aligned/envelopes + ARM7 async fills
 (1,852,672); 160 KiB FGM ring arena (-72 KiB); fast cpuGetTiming; stage no-Z
 local W columns (STG P50 253K); status path (token index, path formatter,
-ForgetRange skip); pose clock adder in ARM state: `A8E6AFD9` WORK-H P50/P95/P99
-1,293,056/1,782,784/2,189,632.
+ForgetRange skip); ARM pose clock; HUD state once per pass: `C55BCBBD` WORK-H
+P50/P95/P99 1,283,520/1,772,160/2,178,496.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
