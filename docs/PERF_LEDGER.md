@@ -8933,3 +8933,11 @@ the table's index code. `D0627BDB` vs `hot2fin`, replay identical, mismatch
 0: WORK-H P50/P95 1,057,600/1,455,360 (-4.4K/-5.7K), paired -4.2K
 (FTR -3.6K). RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 32.
+
+## 2026-09-27 — refuted: bigger motion-clip arena
+
+**REFUTED.** A 96 KiB arena keep-free (arena 118,576 B, from ~65 KB) moved
+clip hits 334 -> 339: the ~367 in-match reads (~30K ticks each) are first
+uses. The tighter heap refused lean spares (materializations 44 -> 54);
+WORK-H P95 1,462,912. Reverted.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 33.

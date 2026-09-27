@@ -850,3 +850,18 @@ mismatch counter 0:
 - P99 1,751,616 (+35K). That is six frames whose event cost (motion/FGM
   timing) moved by 100-500K with the layout. The 60 costliest control frames
   pair at median -3,840.
+
+## 33. Refuted: a bigger motion-clip arena
+
+The ~367 in-match NitroFS clip reads cost ~30K ticks each
+(`gNdsRelocAssetFighterStreamReadTicks64` 169,749 x 64 over 367 reads). The
+arena takes whatever is spare above a 128 KiB keep-free at reservation, and
+the match's heap low-water is 69,340 B. So `ak96` lowered the keep-free to
+96 KiB:
+- The arena reserved 118,576 B, against ~65 KB used before.
+- Hits 334 -> 339 and misses 372 -> 367: the misses are first uses.
+- The tighter heap refused lean spares: materializations 44 -> 54.
+- WORK-H P95 1,462,912, worse than `sindtcm`.
+
+Reverted. Zero motion reads after GO needs clips resident or prefetched
+before first use, not a larger LRU.
