@@ -23342,3 +23342,7 @@ thread. P95 1,852,672, P99 2,291,456, replay identical. Next: shrink the cache.
 size; pinned/in-flight cues are never overwritten), down from eight fixed slots
 in 232 KiB. Taskman arena +73,728 B; P95 1,839,488; replay identical; the stress
 verifier fails on any FGM no-fit or play failure.
+
+2026-09-27 P2-2p8 A9: `cpuGetTiming` is wrapped (`-Wl,--wrap=cpuGetTiming`) by an
+ITCM ARM reader of Calico's own TIMER2/overflow/tickRef state; same values, no
+IME masking or main-RAM call chain. Tick-HUD WORK-H P50/P95 -13.8K/-17.3K.

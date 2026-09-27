@@ -828,6 +828,11 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   B). `18A992BB` WORK-H P50/P95/P99 1,328,512 / 1,839,488 / 2,263,936, replay
   identical. Receipts `2026-09-26_p2-2p8-{storage-bounce,fgm-cache}`.
 
+- **A9 fast cpuGetTiming (2026-09-27), BANKED.** The tick-HUD's ~500 clock reads
+  per frame cost ~32K inside WORK-H. An ITCM `--wrap` reads the same Calico
+  clock without IME masking: `E6DB1E1A` WORK-H P50/P95/P99 1,314,880 /
+  1,822,144 / 2,232,704, replay identical. Receipt `2026-09-27_p2-2p8-fast-timing`.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

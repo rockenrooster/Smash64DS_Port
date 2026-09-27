@@ -443,11 +443,97 @@ static void ndsPlatformVBlankInterrupt(void)
  * `svcSoftReset`, bare BIOS `swi #0` is measurably a no-op here, and
  * `crt0Startup` needs three loader-supplied arguments that no longer exist. */
 
+/* cpuGetTiming without its call chain (A9: the instrument stays out of the
+ * gate). The libnds version is Thumb in main RAM and calls Calico's
+ * tickGetCount, which masks IME around five I/O accesses: ~65 ticks a call,
+ * ~500 calls in a tick-HUD frame, all inside WORK-H. This returns the same
+ * value from the same state -- Calico's TIMER2 count, its overflow count and
+ * the pending-overflow rule, minus the same tickRef -- but retries on a
+ * changed overflow count instead of masking IRQs, from ARM code in ITCM.
+ *
+ * Calico keeps the overflow count and tickRef static, so their addresses come
+ * from the literal pools of tickGetCount and the real cpuGetTiming, accepted
+ * only when the surrounding instructions are the ones decoded below. Anything
+ * else leaves the fast path off and every call goes to the real function. */
+extern u32 __real_cpuGetTiming(void);
+extern u64 tickGetCount(void);
+static volatile const u32 *sNdsFastTimingHigh;
+static volatile const u32 *sNdsFastTimingRef;
+__attribute__((used)) volatile u32 gNdsFastTimingEnabled;
+__attribute__((used)) volatile u32 gNdsFastTimingMismatch;
+
+u32 __attribute__((section(".itcm"), target("arm"), noinline))
+__wrap_cpuGetTiming(void)
+{
+    volatile const u32 *high = sNdsFastTimingHigh;
+    u32 hi, count, flags;
+
+    if (high == NULL)
+    {
+        return __real_cpuGetTiming();
+    }
+    do
+    {
+        hi = *high;
+        count = TIMER_DATA(2);
+        flags = REG_IF;
+    } while (hi != *high);
+    /* An overflow not yet serviced counts once, and only if the count read
+     * already wrapped (Calico's rule). */
+    hi += ((flags >> 5) & 1u) & ((count ^ 0x8000u) >> 15);
+    return (((hi << 16) | count) - *sNdsFastTimingRef) << 6;
+}
+
+static void ndsPlatformFastTimingInit(void)
+{
+    const u32 *tick = (const u32 *)(uintptr_t)tickGetCount;
+    const u16 *get = (const u16 *)((uintptr_t)__real_cpuGetTiming & ~1u);
+    u32 i;
+
+    /* tickGetCount (ARM): ldr r2,=high; ldr r0,=TIMER0_DATA; ldrh r0,[r0,#8];
+     * ldrd r4,[r2]. cpuGetTiming (Thumb): ldr r4,=tickRef; ldr r2,[r4];
+     * subs r0,r0,r2; ... lsls r0,r0,#6. */
+    if (((uintptr_t)tickGetCount & 3u) != 0u ||
+        tick[5] != 0xe59f2038u || tick[6] != 0xe59f0038u ||
+        tick[7] != 0xe1d000b8u || tick[8] != 0xe1c240d0u ||
+        tick[22] != 0x04000100u ||
+        ((uintptr_t)__real_cpuGetTiming & 1u) == 0u ||
+        get[4] != 0x4c02u || get[5] != 0x6822u || get[6] != 0x1a80u ||
+        get[8] != 0x0180u)
+    {
+        return;
+    }
+    /* Thumb ldr literal: Align(PC, 4) + 8, with PC = that instruction + 4. */
+    sNdsFastTimingRef = *(volatile const u32 *const *)(
+        (((uintptr_t)&get[4] + 4u) & ~(uintptr_t)3u) + 8u);
+    sNdsFastTimingHigh = (volatile const u32 *)tick[21];
+    /* Bracket the fast value with the real one; any disagreement turns the
+     * fast path off for good. */
+    for (i = 0u; i < 64u; i++)
+    {
+        u32 before = __real_cpuGetTiming();
+        u32 fast = __wrap_cpuGetTiming();
+        u32 after = __real_cpuGetTiming();
+
+        if ((u32)(fast - before) > (u32)(after - before))
+        {
+            gNdsFastTimingMismatch++;
+        }
+    }
+    if (gNdsFastTimingMismatch != 0u)
+    {
+        sNdsFastTimingHigh = NULL;
+        return;
+    }
+    gNdsFastTimingEnabled = 1u;
+}
+
 void ndsPlatformInit(void)
 {
     /* Calico's system tick owns timers 2/3. Initialize it before original
      * code can sample libultra time/count; BGM seam timing uses free timer 0. */
     cpuStartTiming(0);
+    ndsPlatformFastTimingInit();
     sVBlankCount = 0u;
     sEarliestPresentVBlank = 0u;
     irqSet(IRQ_VBLANK, ndsPlatformVBlankInterrupt);

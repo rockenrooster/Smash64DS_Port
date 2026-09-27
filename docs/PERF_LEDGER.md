@@ -8534,3 +8534,13 @@ overwritten. Peak pinned 133,424 B; no-fit 0 at 144/160/232 KiB. `FF3DC3FC` ->
 1,328,512/1,839,488/2,263,936 (P95 within ~2x single-run noise; banked for RAM);
 async fills 331 -> 274. Taskman arena +73,728 B (1,371,904). RED.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-fgm-cache/README.md`.
+
+## 2026-09-27 — A9: cpuGetTiming without its call chain (instrument)
+
+**BANKED (instrument overhead).** ~500 cpuGetTiming calls per tick-HUD frame cost
+~32K ticks inside WORK-H (Thumb main-RAM call into Calico tickGetCount with IME
+masking). `--wrap` to an ITCM ARM reader of the same Calico clock state (retry,
+no IME), verified against the real one at init. `18A992BB` -> `E6DB1E1A`, replay
+identical: WORK-H P50/P95/P99 1,328,512/1,839,488/2,263,936 -> 1,314,880/
+1,822,144/2,232,704; two-VBlank 274 -> 296. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-timing/README.md`.
