@@ -150,7 +150,6 @@ SECTIONS {
 		*(.text.ftCommonAttack1CheckInterruptCommon)
 		*(.text.ftAnimEndSetWait)
 		*(.text.func_8001663C)
-		*(.text.osContStartReadData)
 		*(.text.mpProcessCheckTestFloorCollisionAdjNew)
 		*(.text.mpProcessCheckTestLWallCollisionAdjNew)
 		*(.text.mpProcessCheckTestCeilCollisionAdjNew)
@@ -164,7 +163,6 @@ SECTIONS {
 		*(.text.mpProcessCheckTestRWallCollisionAdjNew)
 		*(.text.ftCommonAttackS3CheckInterruptCommon)
 		*(.text.ftCommonDamageAirCommonProcMap)
-		*(.text.ndsBaseMPProcessCheckTestFloorCollision)
 		*(.text.cosf)
 		*(.text.ndsFtPoseBodyChangedThisTick)
 		*(.text.syVectorNorm3D)
@@ -183,7 +181,6 @@ SECTIONS {
 		*(.text.lbCommonPrepSObjDraw)
 		*(.text.ftCommonAttackLw4CheckInterruptCommon)
 		*(.text.ndsRendererNativeStageMaterialMask)
-		*(.text.fabsf)
 		*(.text.ftCommonCliffCommonProcMap)
 		*(.text.ftPhysicsApplyGroundVelFriction)
 		*(.text.mpCollisionCheckCeilLineCollisionSame)
@@ -195,7 +192,6 @@ SECTIONS {
 		*(.text.ndsR2CameraCurrentLookAt)
 		*(.text.ndsFighterDisplayContractSetLight)
 		*(.text.lbCommonTan)
-		*(.text.ftComputerProcDefault)
 		*(.text.ndsBaseMPProcessCheckFloorEdgeCollisionR)
 		*(.text.ndsRendererProfileSetOwner)
 		*(.text.ndsCoroutineSwap)
@@ -203,6 +199,15 @@ SECTIONS {
 		*(.text.ndsRendererAdapterBeginParticleViewPass)
 		*(.text.ndsFighterDisplayContractProjectTarget)
 		*(.text.osSendMesg)
+		/* Third pack (2026-09-27 dmiss6 census): these seven for ftComputerProcDefault,
+		 * ndsBaseMPProcessCheckTestFloorCollision, osContStartReadData and fabsf. */
+		*(.text.ftDisplayMainProcDisplay)
+		*(.text.ndsMPFindLineYakumonoID)
+		*(.text.syVectorScale3D)
+		*(.text.ndsFighterDisplayContractSetRenderMode)
+		*(.text.ftMainPlayAnim)
+		*(.text.ndsFighterDisplayContractSetCycleType)
+		*(.text.DynamicArrayGet)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
 		 * main RAM. The census rents them under 800 cycles a byte, and

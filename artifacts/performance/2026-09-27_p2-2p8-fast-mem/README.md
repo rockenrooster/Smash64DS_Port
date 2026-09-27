@@ -1145,3 +1145,68 @@ The P1 ROM links with 848 B ITCM spare.
 on another roster, stage or item set would overflow into `.dtcm` below the
 stack, and nothing checks for that at run time. Re-read
 `gNdsDtcmHotStackHighWater` on the next all-stage or item campaign run.
+
+## 41. Refuted: an ftGetStruct memo; DC_FlushRange without per-range drains
+
+**ftGetStruct memo** (`ftmemo`, `6842824F`). The leaf attribution
+(`dmiss5/census5-leaves.txt`) put `ftGetStruct` at 468 calls a frame, 49.6 cycles a
+call (~11.6K ticks). In the shipping configuration the pool-pointer test
+always fails, so each call reads two GObj lines: `id` and `user_data`.
+
+A 4-entry DTCM memo (gobj to fp) was built with three invalidation points:
+- a free hook in `gcSetGObjPrevAlloc`, through the objman overlay patch;
+- objman setup;
+- the heap generation.
+
+Result vs `updhot`, replay IDENTICAL: paired median +576, top 5% -0.9K. The
+callers read the same GObj and FTStruct lines right after the call, so the
+misses moved rather than vanished (see "a memo is a memory stream"). Reverted.
+
+**No-drain flush** (`nodrain`, `AE0CD6D1`). calico's `armDCacheFlush` drains
+the write buffer on every call: ~143 cycles, 66 lean dirty-run flushes a frame
+plus 24 debugger-group members. An ITCM clean+invalidate loop with one drain
+per batch measured flat:
+- paired median +256;
+- FTR mean -1.5K;
+- STG mean +1.3K, from the ITCM layout shift.
+
+Reverted.
+
+Also measured:
+- **MISC split** (lab `NDS_P2_MISC_SPLIT=1`, `miscsplit`). Medians: capture
+  interception and NDL-native draws 27.5K; un-owned `proc_display` 32.9K;
+  camera loop remainder 25.7K.
+- **Stage GX flush.** Its per-PC cost is bus contention: the first main-RAM
+  loads after each DMA start wait ~430 cycles behind the burst.
+
+## 42. Third ITCM pack (dmiss6 census)
+
+The census on `a2381568e27` (`dmiss6/census.txt`) found a few more swaps.
+Evicted: four second-pack residents renting 810-900 cycles a byte
+(`ftComputerProcDefault`, `ndsBaseMPProcessCheckTestFloorCollision`,
+`osContStartReadData`, `fabsf`; 532 B).
+
+Admitted, 604 B:
+- `ftDisplayMainProcDisplay`;
+- `ndsMPFindLineYakumonoID`;
+- `syVectorScale3D`;
+- `ndsFighterDisplayContractSetRenderMode`;
+- `ftMainPlayAnim`;
+- `ndsFighterDisplayContractSetCycleType`;
+- `DynamicArrayGet`.
+
+The census put ~1.7M non-mem stall cycles in reach, about 2.2K ticks a frame.
+
+`851469AA` (`pack3`) vs `updhot`, replay IDENTICAL:
+- Paired WORK-H median -2,176; 1,614 of 1,972 frames better.
+- WORK-H P50/P95/P97/P99 997,888/1,385,920/1,465,408/1,666,048.
+- 1,465 frames at or under 1,120,000.
+
+Link check: the P1 ROM links with 776 B of ITCM spare. The frozen root P1 ROM
+(576F51ED) was copied aside before that link check and restored after it.
+
+The census also shows what the section 40 move did to stack fills. They fell
+from 637 a frame to 320. What remains is present-phase base frames:
+- the camera capture loop;
+- the stage world-matrix prep;
+- the fighter display procs.

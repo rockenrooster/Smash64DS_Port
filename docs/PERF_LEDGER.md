@@ -9023,3 +9023,14 @@ paired -16,768 (1,969/1,972 frames better); P50/P95 1,000,768/1,390,784;
 1,459/1,972 frames within 1,120,000; 70.0% of frames in two VBlanks.
 RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 40.
+
+## 2026-09-27 — third ITCM census pack
+
+**BANKED.** Four second-pack residents renting under 900 cycles a byte (532 B)
+out; seven functions in (604 B), among them the fighter display proc and
+`ndsMPFindLineYakumonoID`. `851469AA` vs `updhot`, replay identical: paired
+WORK-H median -2,176; P50/P95 997,888/1,385,920; 1,465/1,972 frames within
+1,120,000. RED (P95).
+Refuted the same day (section 41): an ftGetStruct DTCM memo (+0.6K) and
+DC_FlushRange without per-range drains (+0.3K).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` sections 41-42.
