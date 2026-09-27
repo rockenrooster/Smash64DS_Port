@@ -3988,6 +3988,37 @@ typedef struct NDSRendererAdapterMvpCamera
     u32 mod1_valid;
 } NDSRendererAdapterMvpCamera;
 
+/* Billboard orientation memo (2026-09-27), used only with a stage camera and
+ * emptied by ndsRendererAdapterMvpMemoReset wherever that camera's cached
+ * Mod1/perspective are (once per stage prepare). Kind 48's rows are a function
+ * of the camera's Mod1 and the two recalc scales; kind 46's of the camera's
+ * perspective, rotate.z, both scales and the incoming gGCScaleX accumulator
+ * (whose outgoing value is kept too). Bindings that share those inputs share
+ * the rows, so a hit skips the float rows, syMatrixF2L and the N64 conversion
+ * (~2.9K ticks a billboard). Same inputs, same bits. Static, not in the
+ * camera: the stage prepare's camera lives on the DTCM stack. */
+#define NDS_MVP_MEMO_48 4u
+#define NDS_MVP_MEMO_46 8u
+static u32 sNdsMvpMemoOn;
+static u32 sNdsMvpMemo48Count;
+static u32 sNdsMvpMemo48Key[NDS_MVP_MEMO_48][2];
+static NDSRendererMatrix20p12 sNdsMvpMemo48Rows[NDS_MVP_MEMO_48];
+static u32 sNdsMvpMemo46Count;
+static u32 sNdsMvpMemo46Key[NDS_MVP_MEMO_46][4];
+static u32 sNdsMvpMemo46AccAfter[NDS_MVP_MEMO_46];
+static NDSRendererMatrix20p12 sNdsMvpMemo46Rows[NDS_MVP_MEMO_46];
+
+/* Same-binary A/B word (a whole-word gdb poke at boot): 0 runs every
+ * billboard through the full build, as before the memo. */
+volatile u32 gNdsMvpMemoEnable __attribute__((used, section(".data"))) = 1u;
+
+static void ndsRendererAdapterMvpMemoReset(void)
+{
+    sNdsMvpMemoOn = (gNdsMvpMemoEnable != 0u) ? 1u : 0u;
+    sNdsMvpMemo48Count = 0u;
+    sNdsMvpMemo46Count = 0u;
+}
+
 static void ndsRendererAdapterMvpPerspectiveF(
     CObj *cobj, Mtx44f out)
 {
@@ -4212,18 +4243,51 @@ static void ndsRendererAdapterApplyMvpRecalc(
         }
         recalc_scale_x = parent_scale_x * dobj->scale.vec.f.x;
         recalc_scale_y = parent_scale_x * dobj->scale.vec.f.y;
-        memset(&source_orientation_f, 0, sizeof(source_orientation_f));
-        source_orientation_f[3][3] = 1.0F;
-        for (row = 0u; row < 3u; row++)
         {
-            f32 scale = (row == 1u) ? recalc_scale_y : recalc_scale_x;
-            for (col = 0u; col < 4u; col++)
+            const u32 sx_bits = ndsFloatBits(recalc_scale_x);
+            const u32 sy_bits = ndsFloatBits(recalc_scale_y);
+            u32 slot = 0u;
+            sb32 cached = FALSE;
+
+            if ((camera != NULL) && (sNdsMvpMemoOn != 0u))
             {
-                source_orientation_f[row][col] = mod1_f[row][col] * scale;
+                for (slot = 0u; slot < sNdsMvpMemo48Count; slot++)
+                {
+                    if ((sNdsMvpMemo48Key[slot][0] == sx_bits) &&
+                        (sNdsMvpMemo48Key[slot][1] == sy_bits))
+                    {
+                        source_orientation = sNdsMvpMemo48Rows[slot];
+                        cached = TRUE;
+                        break;
+                    }
+                }
+            }
+            if (cached == FALSE)
+            {
+                memset(&source_orientation_f, 0, sizeof(source_orientation_f));
+                source_orientation_f[3][3] = 1.0F;
+                for (row = 0u; row < 3u; row++)
+                {
+                    f32 scale = (row == 1u) ? recalc_scale_y : recalc_scale_x;
+                    for (col = 0u; col < 4u; col++)
+                    {
+                        source_orientation_f[row][col] =
+                            mod1_f[row][col] * scale;
+                    }
+                }
+                syMatrixF2L(&source_orientation_f, &rotation_mtx);
+                ndsRendererAdapterMtxFromN64(&rotation_mtx,
+                                             &source_orientation);
+                if ((camera != NULL) && (sNdsMvpMemoOn != 0u) &&
+                    (sNdsMvpMemo48Count < NDS_MVP_MEMO_48))
+                {
+                    slot = sNdsMvpMemo48Count++;
+                    sNdsMvpMemo48Key[slot][0] = sx_bits;
+                    sNdsMvpMemo48Key[slot][1] = sy_bits;
+                    sNdsMvpMemo48Rows[slot] = source_orientation;
+                }
             }
         }
-        syMatrixF2L(&source_orientation_f, &rotation_mtx);
-        ndsRendererAdapterMtxFromN64(&rotation_mtx, &source_orientation);
         sNdsRendererAdapterMvpRecalcScaleX = recalc_scale_x;
     }
     else if ((kind == nGCMatrixKind46) ||
@@ -4238,9 +4302,8 @@ static void ndsRendererAdapterApplyMvpRecalc(
          * The built-in kind also carries the source's odd gGCScaleX contract:
          * X and Z use prior_scale_x * scale.x, Y uses prior_scale_x * scale.y.
          * Custom 0x46 is the unscaled Z-only version used by Samus Bomb. */
-        syMatrixRotRpyRF(&zrot_f, 0.0F, 0.0F, dobj->rotate.vec.f.z);
-        cosz = zrot_f[0][0];
-        sinz = zrot_f[0][1];
+        sb32 orientation_ready = FALSE;
+
         memset(&source_orientation_f, 0, sizeof(source_orientation_f));
         source_orientation_f[3][3] = 1.0F;
 
@@ -4285,37 +4348,96 @@ static void ndsRendererAdapterApplyMvpRecalc(
                 }
             }
 
-            ndsRendererAdapterEfGroundKind46Rows(perspective_f,
-                dobj->rotate.vec.f.z,
-                dobj->scale.vec.f.x, dobj->scale.vec.f.y,
-                &sNdsRendererAdapterMvpRecalcScaleX, ef_ground_kind46_rows);
-            if (dobj == sNdsRendererAdapterCustom4ARollDObj)
             {
-                /* These rows just consumed the roll kind 0x4A wrote during
-                 * this prepare's world build. Bits, not a float compare. */
-                u32 roll_bits = ndsFloatBits(dobj->rotate.vec.f.z);
+                const u32 key[4] = {
+                    ndsFloatBits(dobj->rotate.vec.f.z),
+                    ndsFloatBits(dobj->scale.vec.f.x),
+                    ndsFloatBits(dobj->scale.vec.f.y),
+                    ndsFloatBits(sNdsRendererAdapterMvpRecalcScaleX)
+                };
+                const sb32 memo = ((camera != NULL) && (sNdsMvpMemoOn != 0u) &&
+                    (dobj != sNdsRendererAdapterCustom4ARollDObj)) ?
+                    TRUE : FALSE;
+                u32 slot;
 
-                sNdsRendererAdapterCustom4ARollDObj = NULL;
-                gNdsRendererAdapterCustom4AWitness[2] = roll_bits;
-                if ((roll_bits & 0x7fffffffu) != 0u)
+                if (memo != FALSE)
                 {
-                    gNdsRendererAdapterCustom4AWitness[1]++;
+                    for (slot = 0u; slot < sNdsMvpMemo46Count; slot++)
+                    {
+                        if ((sNdsMvpMemo46Key[slot][0] == key[0]) &&
+                            (sNdsMvpMemo46Key[slot][1] == key[1]) &&
+                            (sNdsMvpMemo46Key[slot][2] == key[2]) &&
+                            (sNdsMvpMemo46Key[slot][3] == key[3]))
+                        {
+                            union { u32 u; f32 f; } after;
+
+                            after.u = sNdsMvpMemo46AccAfter[slot];
+                            sNdsRendererAdapterMvpRecalcScaleX = after.f;
+                            source_orientation = sNdsMvpMemo46Rows[slot];
+                            orientation_ready = TRUE;
+                            break;
+                        }
+                    }
                 }
-                DC_FlushRange(
-                    (const void *)(uintptr_t)gNdsRendererAdapterCustom4AWitness,
-                    sizeof(gNdsRendererAdapterCustom4AWitness));
-            }
-            for (row = 0u; row < 3u; row++)
-            {
-                for (col = 0u; col < 4u; col++)
+                if (orientation_ready == FALSE)
                 {
-                    source_orientation_f[row][col] =
-                        ef_ground_kind46_rows[row][col];
+                    ndsRendererAdapterEfGroundKind46Rows(perspective_f,
+                        dobj->rotate.vec.f.z,
+                        dobj->scale.vec.f.x, dobj->scale.vec.f.y,
+                        &sNdsRendererAdapterMvpRecalcScaleX,
+                        ef_ground_kind46_rows);
+                    if (dobj == sNdsRendererAdapterCustom4ARollDObj)
+                    {
+                        /* These rows just consumed the roll kind 0x4A wrote
+                         * during this prepare's world build. Bits, not a
+                         * float compare. */
+                        u32 roll_bits = ndsFloatBits(dobj->rotate.vec.f.z);
+
+                        sNdsRendererAdapterCustom4ARollDObj = NULL;
+                        gNdsRendererAdapterCustom4AWitness[2] = roll_bits;
+                        if ((roll_bits & 0x7fffffffu) != 0u)
+                        {
+                            gNdsRendererAdapterCustom4AWitness[1]++;
+                        }
+                        DC_FlushRange(
+                            (const void *)(uintptr_t)
+                                gNdsRendererAdapterCustom4AWitness,
+                            sizeof(gNdsRendererAdapterCustom4AWitness));
+                    }
+                    for (row = 0u; row < 3u; row++)
+                    {
+                        for (col = 0u; col < 4u; col++)
+                        {
+                            source_orientation_f[row][col] =
+                                ef_ground_kind46_rows[row][col];
+                        }
+                    }
+                    syMatrixF2L(&source_orientation_f, &rotation_mtx);
+                    ndsRendererAdapterMtxFromN64(&rotation_mtx,
+                                                 &source_orientation);
+                    orientation_ready = TRUE;
+                    if ((memo != FALSE) &&
+                        (sNdsMvpMemo46Count < NDS_MVP_MEMO_46))
+                    {
+                        slot = sNdsMvpMemo46Count++;
+                        sNdsMvpMemo46Key[slot][0] = key[0];
+                        sNdsMvpMemo46Key[slot][1] = key[1];
+                        sNdsMvpMemo46Key[slot][2] = key[2];
+                        sNdsMvpMemo46Key[slot][3] = key[3];
+                        sNdsMvpMemo46AccAfter[slot] =
+                            ndsFloatBits(sNdsRendererAdapterMvpRecalcScaleX);
+                        sNdsMvpMemo46Rows[slot] = source_orientation;
+                    }
                 }
             }
         }
         else
         {
+            /* Only the custom kind reads the Z rotation's sine and cosine;
+             * kind 46 used to evaluate them here too and discard them. */
+            syMatrixRotRpyRF(&zrot_f, 0.0F, 0.0F, dobj->rotate.vec.f.z);
+            cosz = zrot_f[0][0];
+            sinz = zrot_f[0][1];
             for (col = 0u; col < 4u; col++)
             {
                 source_orientation_f[0][col] =
@@ -4327,8 +4449,11 @@ static void ndsRendererAdapterApplyMvpRecalc(
                 source_orientation_f[2][col] = perspective_f[2][col];
             }
         }
-        syMatrixF2L(&source_orientation_f, &rotation_mtx);
-        ndsRendererAdapterMtxFromN64(&rotation_mtx, &source_orientation);
+        if (orientation_ready == FALSE)
+        {
+            syMatrixF2L(&source_orientation_f, &rotation_mtx);
+            ndsRendererAdapterMtxFromN64(&rotation_mtx, &source_orientation);
+        }
     }
     else if (kind == NDS_RENDERER_ADAPTER_EF_GROUND_BILLBOARD_KIND)
     {

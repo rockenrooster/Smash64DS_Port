@@ -170,3 +170,35 @@ vertex is exact, so every operand and rounding is the integer form's. WORK-H
 P50/P95/P99 1,162,816/1,612,416/2,007,552 -> 1,162,112/1,602,240/2,004,544 (P95
 inside ~1.5x single-build noise; SRC P50 -2.6K, P95 -3.6K); VBlanks/FPS 757 1138 69 9 22.55;
 replay identical.
+
+## Section 8: stage billboard orientation memo; kind-46 trig; digest seam reads
+
+Task 103 lab (`task103now`, `D95C74EA`): the stage prepare spends ~87K/frame
+on matrices, 31.7K of it on 11 billboard MVP recalcs (~2.9K each; counters in
+`k48ctr`: 12,432 kind-46 and ~9,900 other applies per match).
+
+- **Orientation memo.** Kind 48's rows depend only on the camera's Mod1 and the
+  two recalc scales; kind 46's on the camera perspective, rotate.z, both scales
+  and the incoming gGCScaleX accumulator (the outgoing accumulator is stored
+  too). Within one stage prepare, bindings with the same inputs now reuse the
+  converted rows (float rows + syMatrixF2L + N64 conversion skipped). Static
+  storage (the prepare's camera is on the DTCM stack), reset per prepare, only
+  with the stage camera; the 0x4A roll-witness DObj always takes the full path.
+  `gNdsMvpMemoEnable` (default 1) is the same-binary A/B word.
+- **Kind 46 trig.** `syMatrixRotRpyRF` (six sin/cos evaluations) ran for kind
+  46 too and its cos/sin were discarded; it now runs only in the custom-0x46
+  arm that reads them. Pure function, same results.
+
+Same-ROM A/B (`473CCE25`, `k46off` = BootSet `gNdsMvpMemoEnable=0`):
+WORK-H P50/P95/P99 1,165,120/1,618,368/2,008,384 -> **1,157,440/1,609,728/
+2,000,128**; STG P50 206,656 -> 199,104; VBlanks/FPS 777 1118 67 11 22.63; digest IDENTICAL.
+Against `mpf32` (different layout): P50 -4.7K, P95 +7.5K.
+
+**Digest tool.** `k46` against the control first read DIVERGED at sample 44:
+the pre-GO load wait ended a frame sooner, and `--resync` could not realign
+because three samples (every 384, the sampler's ring stops) carried a DGSB read
+across the stop -- DGSA equal, DGSB different, the next sample equal in full.
+`compare-replay-digest.py --resync` now accepts exactly that shape (a tick-B
+state feeds the next tick A, so a real difference cannot heal one tick later)
+and reports it as seam tick-B words: `k46` reads IDENTICAL AFTER ONE RESYNC
+(shift +1, 3 seam tick-B words).

@@ -20,7 +20,13 @@ overlapping sample matches at that offset. This is the case where a pre-GO load
 wait ends one presented frame earlier or later: the same tick states, presented
 one frame apart. It is reported as such, never as plain IDENTICAL.
 Within a resync only, a digest word of 0 counts as unrecorded (a ring-stop seam
-sample can carry DGSB 0); the count of such samples is reported.
+sample can carry DGSB 0); the count of such samples is reported. Also within a
+resync only, a sample whose DGSA agrees but whose DGSB differs is accepted when
+the NEXT sample agrees in full: the drawn tick's state is what the next undrawn
+tick starts from, so a real difference there cannot heal one tick later, while
+a DGSB read across one of the sampler's ring stops does exactly that (seen
+2026-09-27 on a one-frame-shifted run, every 384 samples). Those are reported
+separately as seam tick-B words.
 """
 import argparse
 import csv
@@ -30,16 +36,21 @@ import sys
 COLUMNS = ('DGSA', 'DGSB')
 
 
-def load(path, sequence=False):
+def load(path, sequence=False, labels=None):
     with open(path, newline='') as fh:
         reader = csv.DictReader(fh)
         missing = [c for c in COLUMNS if c not in (reader.fieldnames or [])]
         if missing:
             raise SystemExit(f'{path}: no {"/".join(missing)} column; '
                              'the ROM predates the replay digest or the sampler list is stale')
+        rows = list(reader)
+        if labels is not None:
+            labels.extend(int(row['frame']) for row in rows)
         return {i if sequence else int(row['frame']):
                 (int(row['DGSA']), int(row['DGSB']))
-                for i, row in enumerate(reader)}
+                for i, row in enumerate(rows)}
+
+
 
 
 def main():
@@ -54,8 +65,10 @@ def main():
                              'after the first divergence if every later sample matches')
     args = parser.parse_args()
 
-    control = load(args.control, args.sequence)
-    candidate = load(args.candidate, args.sequence)
+    control_labels = []
+    candidate_labels = []
+    control = load(args.control, args.sequence, control_labels)
+    candidate = load(args.candidate, args.sequence, candidate_labels)
     if args.sequence and len(control) != len(candidate):
         print('sequence comparison requires equal sample counts', file=sys.stderr)
         return 2
@@ -101,6 +114,7 @@ def main():
             if len(pairs) < count - first - abs(k):
                 continue
             unrecorded = 0
+            seam_b = 0
             ok = True
             for c, d in pairs:
                 if control[c] == candidate[d]:
@@ -109,12 +123,18 @@ def main():
                        for x, y in zip(control[c], candidate[d])):
                     unrecorded += 1
                     continue
+                if ((control[c][0] == candidate[d][0]) and
+                        ((c + 1) in control) and ((d + 1) in candidate) and
+                        (control[c + 1] == candidate[d + 1])):
+                    seam_b += 1
+                    continue
                 ok = False
                 break
             if ok:
                 result['resync'] = {'sample': first, 'shift': k,
                                     'matched': len(pairs),
-                                    'unrecordedWords': unrecorded}
+                                    'unrecordedWords': unrecorded,
+                                    'seamTickBWords': seam_b}
                 break
     if args.json:
         with open(args.json, 'w') as fh:
@@ -124,8 +144,8 @@ def main():
         print(f"IDENTICAL AFTER ONE RESYNC: from sample {r['sample']} candidate "
               f"sample j equals control sample j{r['shift']:+d} for all "
               f"{r['matched']} later samples ({r['unrecordedWords']} with an "
-              f"unrecorded zero word; control {len(control)}, "
-              f"candidate {len(candidate)})")
+              f"unrecorded zero word, {r['seamTickBWords']} seam tick-B "
+              f"words; control {len(control)}, candidate {len(candidate)})")
         return 0
     if result['diverged']:
         first = result['firstDivergence']

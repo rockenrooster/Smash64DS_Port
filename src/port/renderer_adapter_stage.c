@@ -4158,6 +4158,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     camera.recalc.perspective = &workspace->projection;
     camera.recalc.perspective_f_valid = FALSE;
     camera.recalc.mod1_valid = FALSE;
+    ndsRendererAdapterMvpMemoReset();
     ndsRendererAdapterGetFrameCameraMatrices(cobj,
         &camera.projection, &camera.projection_valid,
         &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);

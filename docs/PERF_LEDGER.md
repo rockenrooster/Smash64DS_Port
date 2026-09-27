@@ -8689,3 +8689,15 @@ the wall sweep's ceil/floor bounds come from the float's bits. `FC908A40` ->
 `A5A7644F`, replay identical: WORK-H P50/P95/P99 1,162,816/1,612,416/2,007,552 ->
 1,162,112/1,602,240/2,004,544; SRC P50 -2.6K, P95 -3.6K. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 7.
+
+## 2026-09-27 — stage billboard orientation memo; kind-46 trig skipped
+
+**BANKED.** Dream Land's 11 billboard MVP recalcs cost ~2.9K each. Bindings whose
+orientation inputs match (kind 48: camera Mod1 + recalc scales; kind 46: camera
+perspective + rotate.z + scales + incoming gGCScaleX, outgoing kept) reuse the
+converted rows within one stage prepare; kind 46 no longer evaluates the unused
+RotRpyRF sine/cosine. Same-ROM A/B (`gNdsMvpMemoEnable` 0 vs 1, `473CCE25`):
+WORK-H P50/P95/P99 1,165,120/1,618,368/2,008,384 -> 1,157,440/1,609,728/
+2,000,128; STG P50 -7.6K; digest identical. `compare-replay-digest.py --resync`
+now tolerates a ring-stop DGSB read that heals on the next sample. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 8.
