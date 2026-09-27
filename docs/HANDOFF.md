@@ -28,10 +28,14 @@ Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26/27 solo (Codex out of usage):** slice-7 regression fixed; storage/FGM
 (ARM7 async, 160 KiB arena, -72 KiB); fast cpuGetTiming; stage, status-path,
-HUD and reloc overhead cuts; A5 hurtbox reject; ARM memcpy/memset (ITCM).
+HUD and reloc overhead cuts; A5 hurtbox reject; ARM memcpy/memset (ITCM);
+A9 instrument diet; ITCM placement from the census (now full: lab split
+builds keep ndsFtPoseUpdate in main RAM); DS divide units.
 `FB41F7D6` WORK-H P50/P95 1,087,808/1,523,648 (lab flags: NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS). Receipts `2026-09-2{6,7}_p2-2p8-*`.
-Digest: `--sequence --resync 4`, control `hwdiv`. Median > gate: next FTR materialize tail,
-SINT/status path, MISC; STG/SPHD machinery.
+Digest: `--sequence --resync 4`, control `hwdiv`. P95 set (attribution run):
+FTR +283K (lean re-materializations: DK 26 of 62, its 3+ states thrash two
+entries; a heap-backed third entry is ~-37K P95, verify arm = oracle),
+SINT +122K (motion-start parse/bind), SHDT +106K, SPRM +72K, MISC +60K.
 
 ## Continue, do not restart
 
