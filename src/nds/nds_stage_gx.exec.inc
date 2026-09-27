@@ -387,8 +387,9 @@ static sb32 ndsStageGxComposedFor(u32 binding, u32 shift,
     return ok;
 }
 
-/* Keep the patcher out of the nearly full ITCM executor during coexistence. */
-static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRendererStats *stats)
+/* ITCM since 2026-09-27: the fill census charged it ~8.5M cycles of
+ * instruction-fetch stall in main RAM; low-rent renderer residents made room. */
+static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index, u32 owner, NDSRendererStats *stats)
 {
     const NDSStageGxRun *r = &sNdsStageGxRuns[index];
     const NDSNativeStageRun *native = &sNdsNativeStageRuns[index];

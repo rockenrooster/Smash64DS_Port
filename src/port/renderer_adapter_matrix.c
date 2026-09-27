@@ -3769,7 +3769,9 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
 volatile u32 gNdsRendererAdapterXObjOrderLegacy
     __attribute__((section(".data"), aligned(32))) = 0u;
 
-static sb32 __attribute__((section(".itcm")))
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static sb32 __attribute__((noinline))
 ndsRendererAdapterBuildDObjLocalMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {

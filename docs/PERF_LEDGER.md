@@ -8963,3 +8963,14 @@ FTStruct field-heat data (a possible 5-8K from a hot-first reorder) is in
 the receipt. That reorder waits on the owner: the source-layout pin is a
 contract. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 35.
+
+## 2026-09-27 — ndsStageGxDraw into ITCM
+
+**BANKED.** `ndsStageGxDraw` (3,724 B, ~8.5M cycles of main-RAM fetch-type
+stall in the census) moved into ITCM. Eleven low-rent residents and `memcmp`
+left for it, all noinline. `0EA2F97D` vs `itcm6`, replay identical after one
+resync: aligned paired -4.9K (STG -6.7K, FTR +1.0K). WORK-H P50/P95/P99
+1,039,616/1,441,728/1,729,856; 1,311/1,972 frames within 1,120,000. The tail
+pays for evicted tint/texture helpers in materialization frames; the recovery
+plan is in the receipt. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 36.

@@ -601,7 +601,9 @@ static void ndsRendererTask107RecordTextureSync(
     u32 site);
 #endif
 
-static void NDS_R2_DELTA_PATH_CODE
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static void __attribute__((noinline))
 ndsRendererRecordTextureState(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     if (stats == NULL)
@@ -745,7 +747,9 @@ static void ndsRendererTask107RecordTextureSync(
 }
 #endif
 
-static void NDS_R2_DELTA_PATH_CODE
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static void __attribute__((noinline))
 ndsRendererSyncTextureTile(NDSRendererStats *stats)
 {
     u32 tile_index;
@@ -812,7 +816,9 @@ ndsRendererSyncTextureTile(NDSRendererStats *stats)
     stats->texture_render_tile_flags = flags;
 }
 
-static void NDS_R2_DELTA_PATH_CODE
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static void __attribute__((noinline))
 ndsRendererRecordSetTile(NDSRendererStats *stats, u32 w0, u32 w1)
 {
     u32 tile;

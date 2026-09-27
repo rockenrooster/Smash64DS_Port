@@ -120,6 +120,12 @@ __asm__(
     /* memcmp: words while both pointers are aligned, then the first differing
      * word (or the tail) bytewise, so the result is newlib's own: the
      * difference of the first differing bytes as unsigned chars, else 0. */
+    /* 2026-09-27: memcmp leaves ITCM (the stage key compare reads words
+     * now; census rent ~890 cycles a byte) for ndsStageGxDraw. */
+    "    .popsection\n"
+    "    .pushsection .text.ndsFastMemcmp,\"ax\",%progbits\n"
+    "    .arm\n"
+    "    .align 2\n"
     "    .global memcmp\n"
     "    .type memcmp, %function\n"
     "memcmp:\n"

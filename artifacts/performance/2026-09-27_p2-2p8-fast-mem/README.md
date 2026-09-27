@@ -936,3 +936,32 @@ ticks). But `include/ft/fighter.h` pins FTStruct to the BattleShip source
 layout with static asserts: port-only fields go after it, and lab tools key
 on the offsets. Changing that is a layout-contract decision for the owner, so
 it is recorded here and not done.
+
+## 36. ndsStageGxDraw into ITCM, eleven low-rent residents out
+
+The census shows main-RAM code running about 1.1 extra cycles an
+instruction over ITCM. `ndsStageGxDraw` (3,724 B) carried ~8.5M cycles of
+that non-memory stall; it had been kept out only for space. Eleven residents
+at under ~1,300 cycles a byte of census rent (3,452 B) moved to main RAM,
+each marked noinline so no ITCM caller pulls it back in:
+- `ndsRendererNativeApplyStateDelta`, `ndsRendererRecordTextureState`,
+  `ndsRendererRecordSetTile` and `ndsRendererSyncTextureTile`;
+- `ndsRendererR2ClampDiffuseToMaterial` and `ndsRendererR2MaterialColor15`;
+- `ndsRendererHardwareApplyTextureParams`, `ndsRendererHardwareBindTextureName`
+  and `ndsRendererHardwareEndBatch`;
+- `ndsRendererAdapterBuildDObjLocalMatrix` and `ndsFtrLeanPacketGuard`.
+
+`memcmp` also left: 120 B, now its own `.text` section. Without `noinline` the
+first link overflowed ITCM by 808 B.
+
+`0EA2F97D` (`itcm7`) vs `itcm6`, replay IDENTICAL after one resync:
+- Aligned paired WORK-H median -4,928, mean -4.1K: STG -6.7K, FTR +1.0K,
+  MISC +0.4K.
+- WORK-H P50/P95/P99 1,039,616/1,441,728/1,729,856 (-6.1K/-1.3K/+58K).
+- 1,311 of 1,972 frames at or under 1,120,000 (from 1,298).
+
+The tail cost is FTR in materialization and hit frames (top 5% FTR mean
++10.6K). The evicted tint/shade and texture-bind helpers run on those paths.
+The follow-up is `_arm_addsubsf3.o` (684 B, mostly dead Task 16 goldens). It
+can leave ITCM once port `ui2f`/`l2f` and a `__floatsisf` alias replace its
+live conversions, and that frees about 530 B to re-admit the tail helpers.

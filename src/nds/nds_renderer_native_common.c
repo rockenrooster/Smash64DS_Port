@@ -637,7 +637,9 @@ ndsRendererNativeApplyRootLightPreamble(
 #endif
 }
 
-static void NDS_TASK82_ITCM_CODE
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static void __attribute__((noinline))
 ndsRendererNativeApplyStateDelta(
     const NDSNativeStateDelta *delta,
     const u8 *asset_base,
@@ -6947,7 +6949,9 @@ static void __attribute__((noinline)) ndsRendererR2WriteLightVector(
     sNdsR2LightVectorWritten = 1u;
 }
 
-static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2MaterialColor15(
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static u16 __attribute__((noinline)) ndsRendererR2MaterialColor15(
     u32 light_color, u32 material_color, u32 use_material, u32 color_modulate)
 {
     u32 r = ndsRendererR2MaterialChannel(
@@ -7065,7 +7069,9 @@ static inline u32 ndsRendererR2ClampDiffuseChannel(
     return (d > headroom) ? headroom : d;
 }
 
-static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2ClampDiffuseToMaterial(
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+static u16 __attribute__((noinline)) ndsRendererR2ClampDiffuseToMaterial(
     u32 diffuse, u32 ambient, u32 material_color, u32 use_material,
     u32 color_modulate)
 {
@@ -13593,7 +13599,9 @@ ndsFtrLeanPacketModelviewSites(u32 battle_slot, u32 **sites,
  * could not name a texture keeps the global fence; residency is proved every
  * draw except for an all-admitted list in route 1. Returns 0 or the event
  * reason (nNDSFtrLeanEvent*). */
-u32 NDS_FTR_LEAN_DRAW_CODE
+/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
+ * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
+u32 __attribute__((noinline))
 ndsFtrLeanPacketGuard(u32 battle_slot, u32 touch)
 {
     NDSFtrLeanEntryState *state;
