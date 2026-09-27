@@ -1893,6 +1893,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
     gNdsFtrDeclineDisplayListClause = 0u;
     gNdsFtrRootProgramsTried = 0u;
 #if NDS_TICK_HUD
+#if NDS_FTR_PRE_WALK_CENSUS
     {
         NDSFighterDLAllDrawCollection census;
         u32 i;
@@ -1907,6 +1908,7 @@ ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
         }
         ndsFtrPreWalkCensus(slot, &census);
     }
+#endif
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackCalls);
     NDS_TICK_HUD_NATIVE_OWNER_MARK(nNDSTickHudNativeOwnerFallbackEligible);
 #endif

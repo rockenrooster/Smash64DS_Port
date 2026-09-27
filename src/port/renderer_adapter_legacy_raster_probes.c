@@ -23,7 +23,7 @@ typedef struct NDSFighterDLAllDrawCollection {
     u32 selected_index_mask;
 } NDSFighterDLAllDrawCollection;
 
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_FTR_PRE_WALK_CENSUS
 /* CYCLE 98 -- does the DObj walk rebuild the same collection every frame?
  *
  * The board's seam table calls the walk "match-load constant for Mario/Fox --

@@ -150,6 +150,10 @@ NDS_P2_HURTBOX_REJECT ?= 1
 # (src/nds/nds_fast_mem.c), in place of newlib's Thumb C members that Task 37
 # moved into ITCM (NDS_TASK37_ITCM_LIBC is 0 while this is 1). 0 restores them.
 NDS_FAST_MEM ?= 1
+# Cycle 98's FTR pre-walk census (identity hash of each draw's collection; its
+# counters are read only by a debugger) is a lab instrument: 1 compiles it into
+# tick-HUD builds, 0 (default) keeps it out of the gate's WORK-H (A9).
+NDS_FTR_PRE_WALK_CENSUS ?= 0
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
 # gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
 # (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
@@ -7142,6 +7146,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
 		echo '#define NDS_P2_HURTBOX_REJECT $(NDS_P2_HURTBOX_REJECT)'; \
 		echo '#define NDS_FAST_MEM $(NDS_FAST_MEM)'; \
+		echo '#define NDS_FTR_PRE_WALK_CENSUS $(NDS_FTR_PRE_WALK_CENSUS)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \

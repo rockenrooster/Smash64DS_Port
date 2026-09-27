@@ -100,3 +100,13 @@ the ~±7K single-run noise); P50 -16.7K, P99 -18K, SRC P50 -9K.
   slot, so the flatten walk re-ran on most calls (~12K/frame in the profile).
   Now four compares find a resident key; a miss takes a stale or empty slot,
   else the next in turn. Same table, same invalidation, same results.
+
+## Section 3: Cycle 98's pre-walk census leaves the gate ROM (A9)
+
+`prewalk` `5BF3DC64`: `NDS_FTR_PRE_WALK_CENSUS` (default 0) now gates the
+Cycle 98 collection-identity census (a memset of a draw collection plus an FNV
+hash per fighter draw, counters read only by a debugger) that every tick-HUD
+frame still ran. Instrument only; the shipping ROM never had it. WORK-H
+P50/P95/P99 1,198,912/1,659,712/2,038,144 -> 1,197,376/1,641,216/2,055,360
+(P95 partly noise; FTR P50 -4.9K, P95 -5.6K); VBlanks 625/1,252/84/12, 21.91 FPS;
+replay identical.

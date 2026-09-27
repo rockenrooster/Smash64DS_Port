@@ -8640,3 +8640,12 @@ searched 4-entry table. `F6CE3DAB` -> `6A6CF3CE`, replay identical: WORK-H
 P50/P95/P99 1,215,616/1,657,152/2,056,192 -> 1,198,912/1,659,712/2,038,144
 (P95 within noise); two-VBlank 556 -> 624; 21.89 FPS. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 2.
+
+## 2026-09-27 — A9: Cycle 98 pre-walk census out of the gate ROM
+
+**BANKED (instrument).** The collection-identity census (memset + FNV hash per
+fighter draw; debugger-only counters) ran in every tick-HUD frame. Now behind
+`NDS_FTR_PRE_WALK_CENSUS` (default 0). `6A6CF3CE` -> `5BF3DC64`, replay
+identical: WORK-H P50/P95/P99 1,198,912/1,659,712/2,038,144 -> 1,197,376/
+1,641,216/2,055,360; FTR P50 -4.9K. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 3.

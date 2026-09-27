@@ -3665,7 +3665,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         gNdsFighterDLAllDrawP1SelectedIndexMask =
             collection.selected_index_mask;
     }
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD && NDS_FTR_PRE_WALK_CENSUS
     /* Cycle 98. Placed after the publish so it sees the same collection the
      * rest of the draw does, and before any early-out below, so
      * Same+Variant+First is exactly the number of draws that reached here --
