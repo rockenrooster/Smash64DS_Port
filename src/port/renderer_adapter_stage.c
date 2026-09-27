@@ -4824,6 +4824,19 @@ reject:
     return FALSE;
 }
 
+/* The tick HUD's STG span for a committed segment (see the caller,
+ * ndsStageGCDrawAllLoopRecordCapturedDisplay). */
+#if NDS_TICK_HUD && !NDS_TASK103_STAGE_RUN_PHASE && \
+    (NDS_RENDERER_PROFILE_LEVEL != 1)
+extern volatile u32 gNdsTickHudStageTicks;
+#define NDS_STAGE_DISPLAY_SPAN_BEGIN() u32 stage_span_start_ = cpuGetTiming()
+#define NDS_STAGE_DISPLAY_SPAN_END() \
+    (gNdsTickHudStageTicks += cpuGetTiming() - stage_span_start_)
+#else
+#define NDS_STAGE_DISPLAY_SPAN_BEGIN() ((void)0)
+#define NDS_STAGE_DISPLAY_SPAN_END() ((void)0)
+#endif
+
 s32 __attribute__((section(".itcm")))
 ndsRendererAdapterCommitNativeStageDisplay(
     void *display_gobj_ptr, s32 link_id)
@@ -4845,10 +4858,13 @@ ndsRendererAdapterCommitNativeStageDisplay(
     {
         if (display_gobj == workspace->segments[i])
         {
+            NDS_STAGE_DISPLAY_SPAN_BEGIN();
+
             if ((i != workspace->next_segment) ||
                 ((u32)link_id != ndsRendererAdapterNativeStageSegmentLink(i)))
             {
                 (void)ndsRendererCommitNativeStageSegment(0xffffffffu);
+                NDS_STAGE_DISPLAY_SPAN_END();
                 return TRUE;
             }
 #if NDS_TASK29_GX_CENSUS
@@ -4887,10 +4903,12 @@ ndsRendererAdapterCommitNativeStageDisplay(
             {
                 ndsRendererFinishNativeStageOwner();
                 workspace->active = FALSE;
+                NDS_STAGE_DISPLAY_SPAN_END();
                 return FALSE;
             }
 #endif
             workspace->next_segment++;
+            NDS_STAGE_DISPLAY_SPAN_END();
             return TRUE;
         }
     }

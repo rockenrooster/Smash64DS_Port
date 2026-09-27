@@ -262,3 +262,19 @@ writes compiled out) replays IDENTICAL to `wmixf`:
   1,961,536**; paired median -14,080 (FTR -9,088; cross-build).
 - VBlanks 858/1,044/64/7.
 - Lean draws 6,862, materializations 62, native failures 0.
+
+## 12. STG span on committed segments only (A9)
+
+`ndsStageGCDrawAllLoopRecordCapturedDisplay` wrapped every display GObj of the
+stage camera (~35 a frame) in two clock reads. Only the stage's own segments
+commit. The tick-HUD STG span is now taken inside
+`ndsRendererAdapterCommitNativeStageDisplay`, on the matched segment only.
+Task 103's E3 fork and the level-1 profile keep the old wrapper. The segment
+lookup for a display is no longer in STG. It falls in MISC's window, which
+subtracts STG: STG P50 -5.3K, MISC +3.1K.
+
+Same-ROM A/B (`C8563B9C`, lab word): paired WORK-H median -1,792. Both arms
+replay IDENTICAL to `lclkf`. Final `FE3AF61F` (`stgf`) also replays IDENTICAL
+to `lclkf`. Against `lclkf`, paired WORK-H median is -2,112. WORK-H P50/P95/P99
+is **1,131,008/1,584,000/1,984,128**; P95 is flat (+256) and P99 is within
+run-to-run spread. VBlanks 862/1,045/59/7.

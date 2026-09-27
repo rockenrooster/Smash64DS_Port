@@ -8733,3 +8733,13 @@ Final `887951B9` (reads and counter writes out), replay identical: WORK-H
 P50/P95/P99 1,148,416/1,599,104/2,000,384 -> 1,134,016/1,583,744/1,961,536;
 FTR paired -9.1K; two-VBlank frames 804 -> 858. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 11.
+
+## 2026-09-27 — STG span on committed stage segments only (A9)
+
+**BANKED (small).** The tick-HUD STG span wrapped every stage-camera display
+GObj (~35/frame, two clock reads each); it is now taken on the matched stage
+segment only. Same-ROM A/B: WORK-H paired median -1.8K. Final `FE3AF61F`,
+replay identical: paired -2.1K vs `lclkf`; WORK-H P50/P95/P99 1,131,008/
+1,584,000/1,984,128 (P95 flat). STG -5.3K / MISC +3.1K is the segment lookup
+changing bucket. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 12.

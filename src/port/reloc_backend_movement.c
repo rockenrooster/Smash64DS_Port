@@ -15420,7 +15420,12 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #if NDS_RENDERER_HW_TRIANGLES
     if (sNdsStageGCDrawAllLoopNativeStageArmed != FALSE)
     {
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL == 1)
+        /* A9: every display GObj of the stage camera passes through here, but
+         * only the stage's own segments commit. The tick HUD's STG span is
+         * taken inside ndsRendererAdapterCommitNativeStageDisplay, on the
+         * matched segment only, instead of two clock reads per display. */
+#if (NDS_TICK_HUD && NDS_TASK103_STAGE_RUN_PHASE) || \
+    (NDS_RENDERER_PROFILE_LEVEL == 1)
         u32 owner_start = cpuGetTiming();
         s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
             display, link_id);
