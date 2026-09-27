@@ -8544,3 +8544,13 @@ no IME), verified against the real one at init. `18A992BB` -> `E6DB1E1A`, replay
 identical: WORK-H P50/P95/P99 1,328,512/1,839,488/2,263,936 -> 1,314,880/
 1,822,144/2,232,704; two-VBlank 274 -> 296. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-timing/README.md`.
+
+## 2026-09-27 — Phase 2: stage no-Z W columns staged locally
+
+**BANKED.** The stage GX painter pass read each no-Z matrix's W column back from
+body words just written to main RAM (no write-allocate: a line fill per row
+pair) and rescanned every patch. The first pass now stages W columns (<=12 per
+run) on the stack. Identical words. `E6DB1E1A` -> `70D3B9DE`, replay identical:
+WORK-H P50/P95/P99 1,314,880/1,822,144/2,232,704 -> 1,302,080/1,808,576/
+2,225,408; STG P50 262,912 -> 253,056. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-stg-gx/README.md`.

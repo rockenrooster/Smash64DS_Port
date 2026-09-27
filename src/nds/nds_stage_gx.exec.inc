@@ -6,6 +6,7 @@ _Static_assert(sizeof(NDSStageGxHeader) == 48, "stage GX header ABI");
 _Static_assert(sizeof(NDSStageGxRun) == 32, "stage GX run ABI");
 _Static_assert(sizeof(NDSStageGxPatch) == 8, "stage GX patch ABI");
 #define NDS_STAGE_GX_HEAP_KEEP_FREE (25600u + 36420u)
+#define NDS_STAGE_GX_NOZ_LOCAL 16u
 
 volatile u32 gNdsP2StageProgDraws, gNdsP2StageProgWords;
 volatile u32 gNdsP2StageProgLoads, gNdsP2StageProgBytes;
@@ -352,6 +353,14 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
     s32 composed_shift = -1;
     u32 p, composed_binding = UINT_MAX, corner_triangle = UINT_MAX;
     s16 corner_depth = 0;
+    /* W columns of this run's no-Z matrices, kept on the stack so the painter
+     * pass below never reads back the body lines the first pass just wrote
+     * (a main-RAM line fill per matrix row pair). The stages carry at most 12
+     * per run; a longer run takes the read-back path. */
+    s32 noz_w[NDS_STAGE_GX_NOZ_LOCAL][4];
+    u16 noz_patch[NDS_STAGE_GX_NOZ_LOCAL];
+    u32 noz_count = 0u;
+    sb32 noz_local = TRUE;
     u64 near_bindings = ((u64)r->binding_lo | ((u64)r->binding_hi << 32)) &
         ~sNdsNativeStageOwnerExecution.rigid_binding_mask;
     sb32 near_boundary = FALSE;
@@ -405,7 +414,15 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
         }
         else if (q->kind == NDS_STAGE_GX_NOZ)
         {
-            memcpy(dst, sNdsNativeStageOwnerExecution.projection, sizeof(composed));
+            const NDSRendererMatrix20p12 *projection = sNdsNativeStageOwnerExecution.projection;
+            memcpy(dst, projection, sizeof(composed));
+            if (noz_count < NDS_STAGE_GX_NOZ_LOCAL)
+            {
+                noz_w[noz_count][0] = projection->m[0][3]; noz_w[noz_count][1] = projection->m[1][3];
+                noz_w[noz_count][2] = projection->m[2][3]; noz_w[noz_count][3] = projection->m[3][3];
+                noz_patch[noz_count++] = (u16)p;
+            }
+            else { noz_local = FALSE; }
         }
         else if (q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_COMPOSED ||
                  q->kind == NDS_STAGE_GX_CORNER_NOZ)
@@ -422,6 +439,16 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
                 composed_binding = binding;
             }
             memcpy(dst, &composed, sizeof(composed));
+            if (q->kind != NDS_STAGE_GX_COMPOSED)
+            {
+                if (noz_count < NDS_STAGE_GX_NOZ_LOCAL)
+                {
+                    noz_w[noz_count][0] = composed.m[0][3]; noz_w[noz_count][1] = composed.m[1][3];
+                    noz_w[noz_count][2] = composed.m[2][3]; noz_w[noz_count][3] = composed.m[3][3];
+                    noz_patch[noz_count++] = (u16)p;
+                }
+                else { noz_local = FALSE; }
+            }
         }
         else if (q->kind == NDS_STAGE_GX_CORNER_SOURCE)
         {
@@ -447,6 +474,30 @@ static sb32 __attribute__((noinline)) ndsStageGxDraw(u32 index, u32 owner, NDSRe
     }
     if (native->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
     { ndsRendererHardwareEnterProjectedForeground(); }
+    if (noz_local != FALSE)
+    {
+        u32 k;
+        for (k = 0u; k < noz_count; k++)
+        {
+            const NDSStageGxPatch *q = &sNdsStageGxPatches[noz_patch[k]];
+            u32 *dst = &sNdsStageGxWords[q->word], row;
+            s16 depth;
+            if (q->kind == NDS_STAGE_GX_CORNER_NOZ)
+            {
+                u32 triangle = q->aux >> 3;
+                if (corner_triangle != triangle)
+                { corner_triangle = triangle; corner_depth = ndsRendererHardwareNextProjectedDepth(); }
+                depth = corner_depth;
+            }
+            else { depth = ndsRendererHardwareNextProjectedDepth(); }
+            for (row = 0u; row < 4u; row++)
+            {
+                dst[row * 4u + 2u] = (u32)(s32)ndsRendererRoundShiftS64(
+                    (s64)noz_w[k][row] * depth, 12u);
+            }
+        }
+    }
+    else
     for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
     {
         const NDSStageGxPatch *q = &sNdsStageGxPatches[p];

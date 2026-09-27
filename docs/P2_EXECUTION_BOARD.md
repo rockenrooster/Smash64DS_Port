@@ -93,7 +93,8 @@ Receipt `2026-09-26_p2-2p8-storage-bounce`.
 **FGM cache (09-26)**: LRU, aligned slots, resident envelopes, ARM7 async fills
 (storage op 5): `FF3DC3FC` P95/P99 1,852,672/2,291,456, replay identical. Cache now a 160 KiB ring arena (-72 KiB, no-fit 0):
 `18A992BB` P95/P99 1,839,488/2,263,936. A9 fast cpuGetTiming (ITCM wrap):
-`E6DB1E1A` P50/P95 1,314,880/1,822,144. ARM9-thread fills reverted. STG split: `2026-09-26_p2-2p8-stg-partition`.
+`E6DB1E1A` P50/P95 1,314,880/1,822,144. Stage no-Z W columns local (`70D3B9DE`):
+P50/P95 1,302,080/1,808,576, STG P50 253K. ARM9-thread fills reverted. STG split: `2026-09-26_p2-2p8-stg-partition`.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
