@@ -42,6 +42,45 @@ void ndsBaseGcRunAll(void) NDS_R2_ITCM_PACK2_CODE;
 
 extern void ndsBaseGcSetupObjman(GCSetup *setup);
 
+#if NDS_P2_ARM9_WRAM
+#include <nds/nds_arm9_wram.h>
+
+_Static_assert(sizeof(GObj) <= NDS_ARM9_WRAM_GOBJ_BYTES, "WRAM GObj slot");
+_Static_assert(sizeof(DObj) <= NDS_ARM9_WRAM_DOBJ_BYTES, "WRAM DObj slot");
+
+/* P2-2p8: a battle fighter's GObj and its top joint are the sim's most
+ * re-read objects after the FTStruct (ftGetStruct alone fills the GObj's
+ * line ~20 times a frame), so they come from ARM9 shared WRAM. A donated
+ * slot joins the free list like any pool object and is dropped with the
+ * lists at the next gcSetupObjman, which also resets the slot count, so a
+ * slot is never on a list twice. */
+static u32 sNdsGcWramObjSlotsUsed;
+
+void ndsGcDonateFighterObjs(void)
+{
+    u8 *slot;
+    GObj *gobj;
+    DObj *dobj;
+
+    if ((sNdsGcWramObjSlotsUsed >= NDS_ARM9_WRAM_OBJ_SLOTS) ||
+        (sGCCommonSize > NDS_ARM9_WRAM_GOBJ_BYTES) ||
+        (sGCDrawSize > NDS_ARM9_WRAM_DOBJ_BYTES))
+    {
+        return;
+    }
+    slot = (u8 *)NDS_ARM9_WRAM_OBJ_BASE +
+           sNdsGcWramObjSlotsUsed *
+               (NDS_ARM9_WRAM_GOBJ_BYTES + NDS_ARM9_WRAM_DOBJ_BYTES);
+    sNdsGcWramObjSlotsUsed++;
+    gobj = (GObj *)(void *)slot;
+    gobj->link_next = sGCCommonHead;
+    sGCCommonHead = gobj;
+    dobj = (DObj *)(void *)(slot + NDS_ARM9_WRAM_GOBJ_BYTES);
+    dobj->alloc_free = sGCDrawHead;
+    sGCDrawHead = dobj;
+}
+#endif
+
 /* AN EXHAUSTED ARENA IS A FROZEN GAME, SO THE LAST FEW KILOBYTES ARE NOT FOR
  * COSMETICS.
  *
@@ -314,6 +353,9 @@ void gcSetupObjman(GCSetup *setup)
     GCSetup ds_setup = *setup;
     size_t needed = ndsOsGObjThreadBlockBytes();
 
+#if NDS_P2_ARM9_WRAM
+    sNdsGcWramObjSlotsUsed = 0u;
+#endif
     sNdsBattleIdleScratch = NULL;
     sNdsBattleIdleScratchBytes = 0u;
     gNdsBattleIdleScratchServedBytes = 0u;

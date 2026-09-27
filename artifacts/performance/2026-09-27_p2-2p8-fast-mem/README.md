@@ -1336,3 +1336,43 @@ day's single-function cuts.
 
 Next: about 4 KB of the block is still free. If ARM7's BGM buffers move,
 ARM9 could hold all 32 KB.
+
+## 47. Fighter GObj and top joint in ARM9 shared WRAM
+
+The dmiss8 census (`builds/p2p8-dmiss8`, WRAM build) put about 98 D-cache
+fills a frame on each fighter's first heap objects. The GObj is filled by
+`ftGetStruct` about 36 times a frame, and the top joint DObj by
+physics, AI and camera reads. The source grows its GObj and DObj pools
+from the arena one 136 B object at a time, so a fighter's GObj and top
+joint are simply the first two objects made in `ftManagerMakeFighter`.
+
+The change: `ndsGcDonateFighterObjs` pushes one WRAM GObj slot and one WRAM
+DObj slot onto the source free lists right before `ftManagerMakeFighter`,
+and the source's own allocations take them.
+
+- There are 4 slots, at the top of the WRAM block
+  (`include/nds/nds_arm9_wram.h`).
+- The FTStruct pool must end below the slots.
+- `gcSetupObjman` resets the slot count when it drops the lists, so a slot
+  is never on a list twice.
+- The arena also keeps 1,088 B.
+
+Same-ROM A/B (`wo0`/`wo1`, lab toggle since removed), replay IDENTICAL:
+- Paired median -5,248, mean -5,645; 1,942 frames better, 30 worse.
+- The run read 4 slots used.
+
+Final `19D81E71` (`wobj`) vs `wramfin`, replay IDENTICAL:
+- Paired median -4,832, mean -5,307; top 5% mean -4.8K.
+- WORK-H P50/P95/P99 959,872/1,338,048/1,616,896.
+- 1,571 frames at or under 1,120,000; vbi2 1,514; native failures 0.
+
+Checks pass: DTCM residency, Task 20 layout, ITCM placement. The P1 ROM
+links; the root was restored to `576F51ED`.
+
+On DSi mode: the header maps NWRAM for ARM9 at 0x03700000-0x037BFFFF and for
+ARM7 at 0x037C0000-0x037FFFFF. Neither overlaps the ARM9 block at
+0x03000000.
+
+Banked. About 11 cycles are saved per moved fill, against about 20 for the
+FTStruct pool. The remaining 3,248 B of the block would buy roughly 2-4K
+more (census statics or more joints).

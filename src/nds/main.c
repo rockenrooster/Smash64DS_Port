@@ -3,6 +3,7 @@
 
 #include <nds/nds_platform.h>
 #include <nds/nds_os.h>
+#include <nds/nds_arm9_wram.h>
 #include <nds/nds_boot.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_reloc_assets.h>
@@ -93,7 +94,7 @@ static void ndsP2Arm9WramInit(void)
 {
 #if NDS_P2_ARM9_WRAM
     *(volatile u8 *)0x04000247 = 2u;
-    armMpuSetRegion(3, armMpuDefineRegion(0x03000000u, CP15_PU_16K));
+    armMpuSetRegion(3, armMpuDefineRegion(NDS_ARM9_WRAM_BASE, CP15_PU_16K));
     armMpuSetRegionDataPerm(3, CP15_PU_PERM_RW);
     armMpuSetRegionWrBufEnable(3, true);
     armMpuSetRegionDCacheEnable(3, true);

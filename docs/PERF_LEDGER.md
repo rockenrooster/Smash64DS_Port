@@ -9068,3 +9068,12 @@ match the control. `8A133553` vs `dtcm3`, replay identical: paired median
 -21,632, mean -21,966 (1,946/1,972 frames better); P50/P95 965,184/1,344,320;
 1,551/1,972 frames within 1,120,000; vbi2 1,502. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 46.
+
+## 2026-09-27 — Fighter GObj and top joint in ARM9 shared WRAM
+
+**BANKED.** Each battle fighter's GObj and top joint DObj come from WRAM
+slots donated to the source free lists before `ftManagerMakeFighter`. There
+are 4 slots, reset with the lists at `gcSetupObjman`. `19D81E71` vs
+`wramfin`, replay identical: paired median -4,832, mean -5,307; P50/P95
+959,872/1,338,048; 1,571/1,972 frames within 1,120,000; vbi2 1,514. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 47.

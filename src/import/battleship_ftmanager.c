@@ -51,6 +51,8 @@ void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
 void ndsBaseFTManagerAllocFighter(u32 data_flags, s32 allocs_num);
 
 #if NDS_P2_ARM9_WRAM
+#include <nds/nds_arm9_wram.h>
+
 /* The first allocation in ftManagerAllocFighter is the FTStruct pool; it
  * goes to ARM9's shared-WRAM block when it fits (src/nds/main.c). The block
  * is granted once per taskman heap generation, so a second pool in one scene
@@ -63,14 +65,15 @@ static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
 {
     u32 generation = gNdsTaskmanHeapGeneration;
 
-    if ((sNdsFTManagerPoolToWram != 0u) && (size <= 0x4000u) &&
+    if ((sNdsFTManagerPoolToWram != 0u) &&
+        (size <= NDS_ARM9_WRAM_FTSTRUCT_POOL_MAX) &&
         ((sNdsFTManagerPoolWramGranted == 0u) ||
          (sNdsFTManagerPoolWramGeneration != generation)))
     {
         sNdsFTManagerPoolToWram = 0u;
         sNdsFTManagerPoolWramGranted = 1u;
         sNdsFTManagerPoolWramGeneration = generation;
-        return (void *)0x03000000u;
+        return (void *)NDS_ARM9_WRAM_BASE;
     }
     sNdsFTManagerPoolToWram = 0u;
     return syTaskmanMalloc(size, align);
@@ -862,7 +865,14 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
     }
 #endif
     {
-        GObj *fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
+        GObj *fighter_gobj;
+
+#if NDS_P2_ARM9_WRAM
+        /* The fighter GObj and top joint DObj are the source's first two
+         * object allocations below: they take WRAM slots. */
+        ndsGcDonateFighterObjs();
+#endif
+        fighter_gobj = ndsBaseFTManagerMakeFighter(desc);
 
         /* P2-2p8 Phase 1 slice 2b, the admission's creation seam (spec 2.8):
          * note every battle fighter; the last one of the battle runs the
