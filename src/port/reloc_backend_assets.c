@@ -4402,10 +4402,75 @@ static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
 #undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
 };
 
-static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
+#define NDS_P2_FIGHTER_ANIM_TOKEN_COUNT \
+    ((u32)(sizeof(sNdsP2FighterAnimTokens) / sizeof(sNdsP2FighterAnimTokens[0])))
+_Static_assert(sizeof(sNdsP2FighterAnimTokens) / sizeof(sNdsP2FighterAnimTokens[0]) <= 0xffffu,
+               "token index rows are u16");
+/* Row indices ordered by (asset id, row) and by (symbol address, row): the
+ * row component keeps the first row in table order first among equal keys. */
+static u16 sNdsP2FighterAnimTokenById[NDS_P2_FIGHTER_ANIM_TOKEN_COUNT];
+static u16 sNdsP2FighterAnimTokenByAddress[NDS_P2_FIGHTER_ANIM_TOKEN_COUNT];
+static sb32 sNdsP2FighterAnimTokenIndexReady;
+
+static sb32 ndsRelocP2FighterAnimTokenBefore(u32 a, u32 b, sb32 by_address)
 {
+    u32 ka = by_address ?
+        ndsRelocFileID(sNdsP2FighterAnimTokens[a].token) :
+        (u32)sNdsP2FighterAnimTokens[a].asset_id;
+    u32 kb = by_address ?
+        ndsRelocFileID(sNdsP2FighterAnimTokens[b].token) :
+        (u32)sNdsP2FighterAnimTokens[b].asset_id;
+
+    return ((ka < kb) || ((ka == kb) && (a < b))) ? TRUE : FALSE;
+}
+
+/* Once, at the first lookup: a shell sort of two u16 index arrays (no
+ * allocation; the keys are unique with the row index, so the order is fixed). */
+static void __attribute__((noinline, cold))
+ndsRelocP2FighterAnimTokenIndexSort(u16 *order, sb32 by_address)
+{
+    static const u16 gaps[] = { 701u, 301u, 132u, 57u, 23u, 10u, 4u, 1u };
+    u32 g;
     u32 i;
 
+    for (i = 0u; i < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT; i++)
+    {
+        order[i] = (u16)i;
+    }
+    for (g = 0u; g < (u32)(sizeof(gaps) / sizeof(gaps[0])); g++)
+    {
+        u32 gap = gaps[g];
+
+        for (i = gap; i < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT; i++)
+        {
+            u16 value = order[i];
+            u32 j = i;
+
+            while ((j >= gap) &&
+                   ndsRelocP2FighterAnimTokenBefore(value, order[j - gap],
+                                                    by_address))
+            {
+                order[j] = order[j - gap];
+                j -= gap;
+            }
+            order[j] = value;
+        }
+    }
+}
+
+static inline void ndsRelocP2FighterAnimTokenIndexBuild(void)
+{
+    if (sNdsP2FighterAnimTokenIndexReady == FALSE)
+    {
+        ndsRelocP2FighterAnimTokenIndexSort(sNdsP2FighterAnimTokenById, FALSE);
+        ndsRelocP2FighterAnimTokenIndexSort(sNdsP2FighterAnimTokenByAddress,
+                                            TRUE);
+        sNdsP2FighterAnimTokenIndexReady = TRUE;
+    }
+}
+
+static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
+{
 #if NDS_P2_LUIGI
     if ((token >= NDS_P2_LUIGI_ANIM_FIRST) &&
         (token <= NDS_P2_LUIGI_ANIM_LAST))
@@ -4531,15 +4596,64 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
             return NDS_RELOC_ASSET_INVALID;
         }
     }
-    for (i = 0u;
-         i < (sizeof(sNdsP2FighterAnimTokens) /
-              sizeof(sNdsP2FighterAnimTokens[0]));
-         i++)
+    /* A numeric token can only equal an asset id and an address token only a
+     * row's symbol address (addresses are above 0xffff), so the table scan this
+     * replaces answered "some row has this id" for the first and "the first row
+     * in table order with this address" for the second. Both are binary
+     * searches over the index below: ~10 probes instead of a ~690-row walk,
+     * which several lookups per status change paid on a four-kind roster. */
+    ndsRelocP2FighterAnimTokenIndexBuild();
+    if (token <= 0xffffu)
     {
-        if ((token == (u32)sNdsP2FighterAnimTokens[i].asset_id) ||
-            (token == ndsRelocFileID(sNdsP2FighterAnimTokens[i].token)))
+        u32 lo = 0u;
+        u32 hi = NDS_P2_FIGHTER_ANIM_TOKEN_COUNT;
+
+        while (lo < hi)
         {
-            return (u32)sNdsP2FighterAnimTokens[i].asset_id;
+            u32 mid = (lo + hi) >> 1;
+
+            if ((u32)sNdsP2FighterAnimTokens[
+                    sNdsP2FighterAnimTokenById[mid]].asset_id < token)
+            {
+                lo = mid + 1u;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        if ((lo < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT) &&
+            ((u32)sNdsP2FighterAnimTokens[
+                 sNdsP2FighterAnimTokenById[lo]].asset_id == token))
+        {
+            return token;
+        }
+    }
+    else
+    {
+        u32 lo = 0u;
+        u32 hi = NDS_P2_FIGHTER_ANIM_TOKEN_COUNT;
+
+        while (lo < hi)
+        {
+            u32 mid = (lo + hi) >> 1;
+
+            if (ndsRelocFileID(sNdsP2FighterAnimTokens[
+                    sNdsP2FighterAnimTokenByAddress[mid]].token) < token)
+            {
+                lo = mid + 1u;
+            }
+            else
+            {
+                hi = mid;
+            }
+        }
+        if ((lo < NDS_P2_FIGHTER_ANIM_TOKEN_COUNT) &&
+            (ndsRelocFileID(sNdsP2FighterAnimTokens[
+                 sNdsP2FighterAnimTokenByAddress[lo]].token) == token))
+        {
+            return (u32)sNdsP2FighterAnimTokens[
+                sNdsP2FighterAnimTokenByAddress[lo]].asset_id;
         }
     }
     return NDS_RELOC_ASSET_INVALID;

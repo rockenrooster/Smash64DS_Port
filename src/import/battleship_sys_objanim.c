@@ -1062,6 +1062,67 @@ static u32 sNdsAObjEvent32NormalizedLimit;
 static u32 sNdsAObjEvent32NormalizedHashSlots;
 static u32 sNdsEvent32InterpDescFixedCount;
 
+/* Ledger entries per 4 KiB page of main RAM. ForgetRange runs at every fighter
+ * motion load over a range (the figatree heap) whose AObj16 commands never
+ * enter this ledger; with these counts it skips its whole-ledger scan when no
+ * page of the range holds an entry. An entry outside main RAM counts in
+ * Outside and disables the skip. */
+#define NDS_AOBJ_EVENT32_PAGE_SHIFT 12u
+#define NDS_AOBJ_EVENT32_RAM_BASE 0x02000000u
+#define NDS_AOBJ_EVENT32_RAM_END 0x02400000u
+#define NDS_AOBJ_EVENT32_PAGES     ((NDS_AOBJ_EVENT32_RAM_END - NDS_AOBJ_EVENT32_RAM_BASE) >>      NDS_AOBJ_EVENT32_PAGE_SHIFT)
+static u16 sNdsAObjEvent32PageEntries[NDS_AOBJ_EVENT32_PAGES];
+static u32 sNdsAObjEvent32OutsideEntries;
+__attribute__((used)) volatile u32 gNdsAObjEvent32ForgetSkips;
+
+static void ndsAObjEvent32PageAdd(const void *command, s32 delta)
+{
+    uintptr_t address = (uintptr_t)command;
+
+    if ((address >= NDS_AOBJ_EVENT32_RAM_BASE) &&
+        (address < NDS_AOBJ_EVENT32_RAM_END))
+    {
+        sNdsAObjEvent32PageEntries[(address - NDS_AOBJ_EVENT32_RAM_BASE) >>
+                                   NDS_AOBJ_EVENT32_PAGE_SHIFT] += (u16)delta;
+    }
+    else
+    {
+        sNdsAObjEvent32OutsideEntries += (u32)delta;
+    }
+}
+
+static void ndsAObjEvent32PageReset(void)
+{
+    memset(sNdsAObjEvent32PageEntries, 0, sizeof(sNdsAObjEvent32PageEntries));
+    sNdsAObjEvent32OutsideEntries = 0u;
+}
+
+/* TRUE when no ledger entry can lie in [start, end). */
+static sb32 ndsAObjEvent32RangeHoldsNone(uintptr_t start, uintptr_t end)
+{
+    u32 page;
+    u32 last;
+
+    if ((sNdsAObjEvent32OutsideEntries != 0u) ||
+        (start < NDS_AOBJ_EVENT32_RAM_BASE) ||
+        (end > NDS_AOBJ_EVENT32_RAM_END) || (end <= start))
+    {
+        return FALSE;
+    }
+    page = (u32)((start - NDS_AOBJ_EVENT32_RAM_BASE) >>
+                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
+    last = (u32)((end - 1u - NDS_AOBJ_EVENT32_RAM_BASE) >>
+                 NDS_AOBJ_EVENT32_PAGE_SHIFT);
+    for (; page <= last; page++)
+    {
+        if (sNdsAObjEvent32PageEntries[page] != 0u)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 /* Live capacity and its verifier-facing witness. Every new published diagnostic
  * is both `used` and volatile because --gc-sections has removed otherwise
  * unreferenced globals in this target. A valid VS-stage row sets Applied=1;
@@ -1195,6 +1256,7 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
     sNdsAObjEvent32NormalizedHashSlots = hash_slots;
     memset(sNdsAObjEvent32NormalizedHash, 0, (size_t)hash_bytes);
     sNdsAObjEvent32NormalizedCount = 0u;
+    ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
     sNdsEvent32InterpDescFixedCount = 0u;
     if (stage_bound != FALSE)
@@ -1396,6 +1458,12 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         return;
     }
 
+    if (ndsAObjEvent32RangeHoldsNone(range_start, range_end) != FALSE)
+    {
+        gNdsAObjEvent32ForgetSkips++;
+        read_index = write_index = sNdsAObjEvent32NormalizedCount;
+    }
+    else
     for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
          read_index++)
     {
@@ -1404,6 +1472,7 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
 
         if ((command >= range_start) && (command < range_end))
         {
+            ndsAObjEvent32PageAdd((const void *)command, -1);
             continue;
         }
         if (write_index != read_index)
@@ -2127,6 +2196,7 @@ static sb32 ndsAObjEvent32NormalizeScript(
         sNdsAObjEvent32NormalizedSig[sNdsAObjEvent32NormalizedCount] =
             ndsAObjEvent32WordSig(sNdsAObjEvent32Plan[i].native_word);
         ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
+        ndsAObjEvent32PageAdd(sNdsAObjEvent32Plan[i].command, 1);
         sNdsAObjEvent32NormalizedCount++;
     }
 
@@ -2156,6 +2226,7 @@ void ndsAObjEvent32ResetNormalizedScripts(void)
     sNdsAObjEvent32NormalizedLimit = 0u;
     sNdsAObjEvent32NormalizedHashSlots = 0u;
     sNdsAObjEvent32NormalizedCount = 0u;
+    ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
     /* Discarded with the ledger it shadows, in the same breath. */
     sNdsEvent32InterpDescFixedCount = 0u;

@@ -23346,3 +23346,8 @@ verifier fails on any FGM no-fit or play failure.
 2026-09-27 P2-2p8 A9: `cpuGetTiming` is wrapped (`-Wl,--wrap=cpuGetTiming`) by an
 ITCM ARM reader of Calico's own TIMER2/overflow/tickRef state; same values, no
 IME masking or main-RAM call chain. Tick-HUD WORK-H P50/P95 -13.8K/-17.3K.
+
+2026-09-27 P2-2p8: motion-load overheads cut exactly -- token->asset lookup is a
+binary search over two sorted row indices, motion paths are formatted without
+`sniprintf`, and the event32 ledger's ForgetRange skips ranges whose main-RAM
+pages hold no entries. WORK-H P95 1,794,240, P99 2,197,184.

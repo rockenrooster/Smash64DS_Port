@@ -8554,3 +8554,13 @@ run) on the stack. Identical words. `E6DB1E1A` -> `70D3B9DE`, replay identical:
 WORK-H P50/P95/P99 1,314,880/1,822,144/2,232,704 -> 1,302,080/1,808,576/
 2,225,408; STG P50 262,912 -> 253,056. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-stg-gx/README.md`.
+
+## 2026-09-27 — status-change path: token index, path formatter, ForgetRange skip
+
+**BANKED.** On motion loads: a binary-searched index replaces the ~690-row token
+scan, a small formatter replaces `sniprintf` in the three motion path builders,
+and per-page ledger counts let ForgetRange skip its whole-ledger scan for the
+figatree heap (485 skips/match). All exact. `70D3B9DE` -> `077110CD`, replay
+identical: WORK-H P50/P95/P99 1,302,080/1,808,576/2,225,408 -> 1,301,504/
+1,794,240/2,197,184; SRC P95 -21K. RED.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-status-path/README.md`.

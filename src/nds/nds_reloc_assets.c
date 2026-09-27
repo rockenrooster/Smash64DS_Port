@@ -578,6 +578,58 @@ u32 ndsK0AfterGoFighter(u32 asset_id)
     return NDS_K0_FIGHTER_NONE;
 }
 
+/* "nitro:/reloc/reloc_animations/<stem>%03lu" without the formatter. Every
+ * asset->path resolution of a motion comes through the three entry functions
+ * below (GetPath, ReadHeader, ReadExternFileIDs and both payload loaders), and
+ * a sniprintf there cost a few thousand ticks per call on status-change
+ * frames. -> the length written, or `capacity` when it does not fit, which the
+ * callers refuse exactly as they refused a truncated sniprintf. */
+static size_t ndsRelocFormatAnimPath(char *path, size_t capacity,
+                                     const char *stem, u32 number)
+{
+    static const char prefix[] = "nitro:/reloc/reloc_animations/";
+    char digits[10];
+    u32 count = 0u;
+    size_t length = 0u;
+    const char *p;
+
+    do
+    {
+        digits[count++] = (char)('0' + (number % 10u));
+        number /= 10u;
+    } while (number != 0u);
+    while (count < 3u)
+    {
+        digits[count++] = '0';
+    }
+    for (p = prefix; *p != '\0'; p++)
+    {
+        if (length + 1u >= capacity)
+        {
+            return capacity;
+        }
+        path[length++] = *p;
+    }
+    for (p = stem; *p != '\0'; p++)
+    {
+        if (length + 1u >= capacity)
+        {
+            return capacity;
+        }
+        path[length++] = *p;
+    }
+    while (count != 0u)
+    {
+        if (length + 1u >= capacity)
+        {
+            return capacity;
+        }
+        path[length++] = digits[--count];
+    }
+    path[length] = '\0';
+    return length;
+}
+
 static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
 {
     static NDSRelocAssetEntry entry;
@@ -591,6 +643,11 @@ static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
         return NULL;
     }
 
+    /* The path is a function of the id: the last answer is still exact. */
+    if ((entry.path != NULL) && (entry.asset_id == asset_id))
+    {
+        return &entry;
+    }
     index = asset_id - NDS_RELOC_MARIO_ANIM_FIRST;
     if (index == 0u)
     {
@@ -609,9 +666,8 @@ static const NDSRelocAssetEntry *ndsRelocAssetMarioAnimEntry(u32 asset_id)
     }
     else
     {
-        written = sniprintf(path, sizeof(path),
-                           "nitro:/reloc/reloc_animations/FTMarioAnim%03lu",
-                           (unsigned long)index);
+        written = (int)ndsRelocFormatAnimPath(path, sizeof(path),
+                                              "FTMarioAnim", index);
     }
     if ((written < 0) || ((size_t)written >= sizeof(path)))
     {
@@ -636,9 +692,12 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
         return NULL;
     }
 
-    written = sniprintf(path, sizeof(path),
-                       "nitro:/reloc/reloc_animations/FTFoxAnim%03lu",
-                       (unsigned long)(asset_id - NDS_RELOC_FOX_ANIM_FIRST));
+    if ((entry.path != NULL) && (entry.asset_id == asset_id))
+    {
+        return &entry;
+    }
+    written = (int)ndsRelocFormatAnimPath(path, sizeof(path), "FTFoxAnim",
+                                          asset_id - NDS_RELOC_FOX_ANIM_FIRST);
     if ((written < 0) || ((size_t)written >= sizeof(path)))
     {
         return NULL;
@@ -714,6 +773,10 @@ static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
     size_t i;
     int written;
 
+    if ((entry.path != NULL) && (entry.asset_id == asset_id))
+    {
+        return &entry;
+    }
     for (i = 0u; i < (sizeof(sNdsP2FighterAnimSegments) /
                  sizeof(sNdsP2FighterAnimSegments[0])); i++)
     {
@@ -729,10 +792,8 @@ static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
         return NULL;
     }
 
-    written = sniprintf(path, sizeof(path),
-                        "nitro:/reloc/reloc_animations/%s%03lu",
-                        segment->stem,
-                        (unsigned long)(asset_id - segment->zero_id));
+    written = (int)ndsRelocFormatAnimPath(path, sizeof(path), segment->stem,
+                                          asset_id - segment->zero_id);
     if ((written < 0) || ((size_t)written >= sizeof(path)))
     {
         return NULL;
