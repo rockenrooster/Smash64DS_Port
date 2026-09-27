@@ -3563,6 +3563,14 @@ s32 ndsIFCommonNativeOamBakePlayerTag(const Sprite *sprite)
     return TRUE;
 }
 
+/* x / 15 for x < 2^16 (checked exhaustively): the palette ramps below divide
+ * by 15 per channel per entry, and Thumb code has no UMULL, so GCC called
+ * __udivsi3 for each (~55 calls a frame between this file and the HUD). */
+static inline u32 ndsIFCommonDiv15(u32 x)
+{
+    return (x * 34953u) >> 19;
+}
+
 static void ndsIFCommonPlayerTagPalette(u32 color_id)
 {
     u32 red = (u32)dIFCommonPlayerTagPrimColorsR[color_id];
@@ -3576,10 +3584,10 @@ static void ndsIFCommonPlayerTagPalette(u32 color_id)
     for (i = 1u; i < 16u; i++)
     {
         palette[i] = (u16)((1u << 15) |
-                           ((((red * i + 7u) / 15u) >> 3) & 31u) |
-                           (((((green * i + 7u) / 15u) >> 3) & 31u)
+                           ((ndsIFCommonDiv15(red * i + 7u) >> 3) & 31u) |
+                           (((ndsIFCommonDiv15(green * i + 7u) >> 3) & 31u)
                             << 5) |
-                           (((((blue * i + 7u) / 15u) >> 3) & 31u)
+                           (((ndsIFCommonDiv15(blue * i + 7u) >> 3) & 31u)
                             << 10));
     }
     /* Intensity 0 with kept alpha maps to entry 1 in the bake; the source

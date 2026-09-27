@@ -344,9 +344,10 @@ static void ndsBattleHudDamagePalette(
     palette[0] = 0u;
     for (i = 1u; i < 16u; i++)
     {
-        u32 ir = (r * i + 7u) / 15u;
-        u32 ig = (g * i + 7u) / 15u;
-        u32 ib = (b * i + 7u) / 15u;
+        /* x / 15 as multiply-shift, exact for x < 2^16 (no Thumb UMULL). */
+        u32 ir = ((r * i + 7u) * 34953u) >> 19;
+        u32 ig = ((g * i + 7u) * 34953u) >> 19;
+        u32 ib = ((b * i + 7u) * 34953u) >> 19;
 
         palette[i] = RGB15(ir >> 3, ig >> 3, ib >> 3) | BIT(15);
     }

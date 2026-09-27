@@ -8668,3 +8668,15 @@ Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 4.
 `75F3EEF5`, replay identical: WORK-H P50/P95/P99 1,182,784/1,622,336/2,024,704
 -> 1,174,720/1,614,528/2,017,664; two-VBlank 687 -> 712. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 5.
+
+## 2026-09-27 — pose clock through libgcc's ITCM adder; HUD divide-by-15
+
+**BANKED.** `ndsF32AddBits` (the exact binary32 pose-clock add, outlined at ~50
+instructions in main RAM, ~300 calls/frame) now adds reinterpreted floats on the
+ARM9, i.e. libgcc's ITCM `__aeabi_fadd` -- the same IEEE RNE add its host proof
+(1.14 billion operations, 0 mismatches) compares against. HUD palette ramps divide
+by 15 with an exhaustively checked multiply-shift instead of `__udivsi3`.
+`75F3EEF5` -> `FC908A40`, replay identical: WORK-H P50/P95/P99 1,174,720/
+1,614,528/2,017,664 -> 1,162,816/1,612,416/2,007,552; two-VBlank 712 -> 764. RED.
+Refuted: dropping the per-run stage DMA wait (+1.5K; bus-bound either way).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 6.

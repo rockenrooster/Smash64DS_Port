@@ -132,3 +132,28 @@ and SCPU). Those columns read 0 in gate runs; GCRA and SRC are measured as
 before; analysis runs set the flag to 1. WORK-H P50/P95/P99
 1,182,784/1,622,336/2,024,704 -> **1,174,720/1,614,528/2,017,664**; SRC P50
 -8.7K; VBlanks/FPS 712 1175 75 11 22.32; replay identical.
+
+## Section 6: pose clock through libgcc's adder; HUD divide-by-15
+
+| arm | ROM | change | WORK-H P50 / P95 / P99 | 2-VBlank |
+|---|---|---|---|---:|
+| srcsplit | 75F3EEF5 | (section 5 result) | 1,174,720 / 1,614,528 / 2,017,664 | 712 |
+| f32libgcc | 418FC19C | `ndsF32AddBits` = libgcc binary32 add on ARM9 (`nds_f32_exact.h`) | 1,165,248 / 1,613,568 / 2,008,832 | 740 |
+| div15 | FC908A40 | HUD palette ramps divide by 15 via multiply-shift | **1,162,816 / 1,612,416 / 2,007,552** | **764** |
+
+VBlanks/FPS after div15: 764 1129 70 10 22.57; every step replay identical.
+
+- **Pose clock.** The integer binary32 adder (proved equal to the IEEE adder
+  over 1.14 billion host operations, re-run today: 0 mismatches) was outlined
+  by GCC at ~50 instructions in main RAM, ~300 calls a frame. On the ARM9 the
+  header now adds the reinterpreted floats, i.e. libgcc's ITCM `__aeabi_fadd`
+  -- the same IEEE round-to-nearest-even add; soft-float passes floats in core
+  registers, so the reinterpretation is free. The host keeps the integer form
+  and its proof. SRC P50 -7.9K, P95 -11.6K.
+- **Divide by 15.** `(x * 34953) >> 19` equals `x / 15` for every x < 2^16
+  (checked exhaustively; inputs are u8 channel x 15 + 7 <= 3,832). Thumb has no
+  UMULL, so each `/ 15u` was a `__udivsi3` call (~55 a frame). HUD P50 -5K.
+
+Refuted (reverted): dropping the DMA wait at the top of each stage GX run
+(`nowait` `94BA349A`): patches never touch an in-flight span, but WORK-H
+moved +1.5K/+1.8K -- the CPU stalls on the bus during the DMA anyway.

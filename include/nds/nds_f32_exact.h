@@ -32,7 +32,30 @@
  * PROOF. scripts/fighters/test_f32_exact_kernel.c compiles this header on
  * the host and compares it, bit for bit, with the host's own IEEE adder over
  * the structured operand set and a large random sweep. Keep that test green
- * before changing a line here. */
+ * before changing a line here.
+ *
+ * ARM9 (2026-09-27): that proof is also why the device can take libgcc's own
+ * binary32 add instead -- the integer form IS an IEEE round-to-nearest-even
+ * add on this operand class, and __aeabi_fadd is one too. Soft-float passes
+ * floats in core registers, so the reinterpretation is free, and libgcc's
+ * ARM assembly adder lives in ITCM (Task 9) where this function, outlined by
+ * GCC at ~50 instructions, ran from main RAM (~300 calls a frame). The host
+ * build keeps the integer form, so the proof above still covers it. */
+#if defined(__arm__) && defined(ARM9)
+static inline uint32_t ndsF32AddBits(uint32_t a, uint32_t b)
+{
+    union
+    {
+        uint32_t u;
+        float f;
+    } x, y, r;
+
+    x.u = a;
+    y.u = b;
+    r.f = x.f + y.f;
+    return r.u;
+}
+#else
 static inline uint32_t ndsF32AddBits(uint32_t a, uint32_t b)
 {
     uint32_t sa, sb, ea, eb, ma, mb, m, e, s, d, grs;
@@ -122,6 +145,7 @@ static inline uint32_t ndsF32AddBits(uint32_t a, uint32_t b)
     }
     return (s << 31) | (e << 23) | (m & 0x7fffffu);
 }
+#endif
 
 /* a - b: the clock's subtract, as the source writes it. */
 static inline uint32_t ndsF32SubBits(uint32_t a, uint32_t b)
