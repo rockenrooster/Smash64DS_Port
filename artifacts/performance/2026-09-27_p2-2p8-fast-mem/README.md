@@ -965,3 +965,34 @@ The tail cost is FTR in materialization and hit frames (top 5% FTR mean
 The follow-up is `_arm_addsubsf3.o` (684 B, mostly dead Task 16 goldens). It
 can leave ITCM once port `ui2f`/`l2f` and a `__floatsisf` alias replace its
 live conversions, and that frees about 530 B to re-admit the tail helpers.
+
+## 37. libgcc's int-to-float member out of ITCM; texture-bind helpers back in
+
+`_arm_addsubsf3.o` held 684 B of ITCM. Most of it was Task 16 goldens that
+never run; it stayed only because its `__aeabi_ui2f`, `__aeabi_l2f` and
+`__floatsisf` are live. `src/nds/nds_float_conv.c` now supplies them in ITCM
+(ARM, CLZ, round-to-nearest-even):
+- `ui2f` and `l2f` are new, host-checked against the host's own conversion
+  (`conv_impl.h`/`conv_test.c` here): all 2^32 unsigned inputs and 4e8 random
+  plus every power-of-two edge and halfway 64-bit input, 0 mismatches.
+- `__floatsisf` forwards to the Task 16 `__aeabi_i2f`.
+
+`NDS_P2_FLOAT_CONV` (default: the Task 16 i2f flag) renames the member's
+copies to `__nds_p2_libgcc_*_golden` and places the member in main RAM.
+`check-task9-float-itcm.ps1` fails on this tree and on the pre-change build
+alike ("Task 16 off-mode did not retain the stock fadd wrapper"), so that
+check is stale, not broken by this change.
+
+`EBF9D29D` (`fconv`) vs `itcm7`: replay IDENTICAL; WORK-H P50/P95
+1,038,656/1,439,744.
+
+The 472 B left free took back `ndsRendererHardwareBindTextureName`,
+`ndsRendererHardwareApplyTextureParams` and `ndsRendererHardwareEndBatch`
+(432 B, noinline; texture binds on the materialization and effect paths).
+
+`BB4B8539` (`readmit`) vs `fconv`, replay IDENTICAL:
+- Paired WORK-H median -2,752 (MISC -1.7K); top 5% median -5.8K.
+- WORK-H P50/P95/P97/P99 1,037,440/1,436,224/1,510,080/1,725,312.
+- 1,322 of 1,972 frames at or under 1,120,000.
+- P99 moves ±50K between builds with event timing (`itcm6` 1.67M, `hs2`
+  1.70M, `sindtcm` 1.75M).

@@ -5519,9 +5519,9 @@ static u32 ndsRendererHardwareMergeTextureParams(u32 params)
     return current;
 }
 
-/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
- * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
-static void __attribute__((noinline)) ndsRendererHardwareApplyTextureParams(u32 params)
+/* Back in ITCM (2026-09-27): _arm_addsubsf3.o left for the port int->float
+ * conversions, and the texture-bind path is materialization/hit-frame work. */
+static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareApplyTextureParams(u32 params)
 {
     if (((sNdsRendererGXStateShadow.valid_mask &
           NDS_RENDERER_GX_STATE_TEXTURE_PARAMS) != 0u) &&
@@ -5574,7 +5574,7 @@ _Static_assert(
     sizeof(sNdsRendererStageTextureSites) <= (12u * 1024u),
     "stage texture-site plans must stay below 12 KiB");
 
-static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
+static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -5835,7 +5835,7 @@ static u32 ndsRendererHardwareFogStateKey(const NDSRendererStats *stats)
            ((stats->fog_color & 0xfffu) << 20);
 }
 
-static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
+static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name)
 {
@@ -15577,9 +15577,9 @@ static void ndsRendererHardwareClipVertexNdcDepth(
     glVertex3v16(x, y, out_z);
 }
 
-/* P2-2p8 2026-09-27 ITCM swap: out (noinline, so no ITCM caller pulls it
- * back in) for ndsStageGxDraw; census rent under ~1,300 cycles a byte. */
-static void __attribute__((noinline)) ndsRendererHardwareEndBatch(void)
+/* Back in ITCM (2026-09-27): _arm_addsubsf3.o left for the port int->float
+ * conversions, and the texture-bind path is materialization/hit-frame work. */
+static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareEndBatch(void)
 {
     if (sNdsRendererHardwareTriangleBatchOpen != 0u)
     {

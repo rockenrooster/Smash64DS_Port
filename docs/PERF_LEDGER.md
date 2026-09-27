@@ -8974,3 +8974,14 @@ resync: aligned paired -4.9K (STG -6.7K, FTR +1.0K). WORK-H P50/P95/P99
 pays for evicted tint/texture helpers in materialization frames; the recovery
 plan is in the receipt. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 36.
+
+## 2026-09-27 — int-to-float conversions in ITCM; libgcc member out; texture binds back
+
+**BANKED.** Host-checked port `ui2f`/`l2f` (exhaustive u32, 4e8 s64 plus
+edges) and a `__floatsisf` alias replace `_arm_addsubsf3.o`'s live
+conversions (`NDS_P2_FLOAT_CONV`). That member (684 B, mostly dead goldens)
+moves to main RAM. The texture-bind helpers evicted for the stage GX draw
+came back. `BB4B8539` vs `itcm7`, replay identical: WORK-H P50/P95
+1,037,440/1,436,224 (-2.2K/-5.5K); 1,322/1,972 frames within 1,120,000.
+RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 37.

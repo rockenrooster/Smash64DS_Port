@@ -4283,6 +4283,14 @@ NDS_TASK9_FLOAT_LIBGCC_SHA256 := \
 NDS_TASK9_FLOAT_ITCM_MEMBERS := \
 	_arm_addsubsf3.o _arm_muldivsf3.o _arm_cmpsf2.o \
 	_arm_unordsf2.o _arm_fixsfsi.o _arm_fixunssfsi.o
+# P2-2p8 2026-09-27: src/nds/nds_float_conv.c supplies the unsigned and 64-bit
+# int->float conversions and __floatsisf (host-checked exact), so the extracted
+# _arm_addsubsf3.o -- otherwise dead Task 16 goldens in ITCM -- has its copies
+# renamed below and lives in main RAM. Needs the Task 16 __aeabi_i2f.
+NDS_P2_FLOAT_CONV ?= $(NDS_TASK16_FLOAT_I2F)
+ifeq ($(NDS_P2_FLOAT_CONV),1)
+NDS_TASK9_FLOAT_MAIN_MEMBERS += _arm_addsubsf3.o
+endif
 # The suffix is load-bearing, not cosmetic. `linker/nds_hot_text.ld:113` reads
 #   *.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 # so a file NAMED `*.itcm.*` has its .text placed in ITCM whatever its section
@@ -4907,6 +4915,9 @@ SFILES += nds_task16_float_compare.s
 endif
 ifeq ($(NDS_TASK16_FLOAT_I2F),1)
 SFILES += nds_task16_float_i2f.s
+endif
+ifeq ($(NDS_P2_FLOAT_CONV),1)
+CFILES += nds_float_conv.c
 endif
 ifeq ($(NDS_TASK16_FLOAT_ADDSUB),1)
 SFILES += nds_task16_float_addsub.s
@@ -7643,6 +7654,9 @@ $(NDS_TASK9_FLOAT_ITCM_OFILES) &: $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG)
 		fi; \
 		if test "$(NDS_TASK16_FLOAT_I2F)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
 			phase2_filter="$$phase2_filter --redefine-sym __aeabi_i2f=__nds_task16_libgcc_i2f_golden"; \
+		fi; \
+		if test "$(NDS_P2_FLOAT_CONV)" = "1" && test "$$member" = "_arm_addsubsf3.o"; then \
+			phase2_filter="$$phase2_filter --redefine-sym __aeabi_ui2f=__nds_p2_libgcc_ui2f_golden --redefine-sym __floatunsisf=__nds_p2_libgcc_floatunsisf_golden --redefine-sym __aeabi_l2f=__nds_p2_libgcc_l2f_golden --redefine-sym __floatdisf=__nds_p2_libgcc_floatdisf_golden --redefine-sym __floatsisf=__nds_p2_libgcc_floatsisf_golden"; \
 		fi; \
 		rename_filter="--rename-section .text=.itcm,alloc,load,readonly,code,contents"; \
 		out="$$stem.itcm.o"; \
