@@ -95,6 +95,8 @@ SECTIONS {
 	/* ITCM section */
 	.itcm : {
 		*(.itcm .itcm.*)
+		/* decomp sys/vector.c's add, admitted by the 2026-09-27 census. */
+		*(.text.syVectorAdd3D)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
 		*.32.o (.text .stub .text.* .gnu.linkonce.t.*)
 		*.itcm.* (.glue_7t .glue_7 .vfp11_veneer .v4_bx)

@@ -8952,3 +8952,14 @@ identical: WORK-H P50/P95/P99 1,046,592/1,444,736/1,704,384, paired -11.0K
 (SRC -5.1K); 1,288/1,972 frames within 1,120,000. All-content CSS free
 253,904. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 34.
+
+## 2026-09-27 — hot-stack trampoline and syVectorAdd3D into ITCM
+
+**BANKED (small).** The fill census charged the main-RAM trampoline pair
+~1.2M cycles of instruction fetch. It (212 B) and decomp `syVectorAdd3D`
+(40 B) now sit in ITCM. `878584CE` vs `hs2`, replay identical after one
+resync: WORK-H P50/P95 1,045,696/1,443,008, aligned paired -1.5K. The
+FTStruct field-heat data (a possible 5-8K from a hot-first reorder) is in
+the receipt. That reorder waits on the owner: the source-layout pin is a
+contract. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 35.

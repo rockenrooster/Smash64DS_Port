@@ -52,7 +52,7 @@ u64 gNdsDtcmHotStack[NDS_DTCM_HOT_STACK_BYTES / 8u]
 extern unsigned int ndsDtcmHotStackCall(unsigned int (*fn)(void *), void *arg);
 
 __asm__(
-    "    .pushsection .text.ndsDtcmHotStackCall,\"ax\",%progbits\n"
+    "    .pushsection .itcm.ndsDtcmHotStackCall,\"ax\",%progbits\n"
     "    .arm\n"
     "    .align 2\n"
     "    .global ndsDtcmHotStackCall\n"
@@ -124,7 +124,10 @@ static void ndsDtcmHotStackLabNote(void)
 }
 #endif
 
-unsigned int ndsDtcmHotStackRun(unsigned int (*fn)(void *), void *arg)
+/* ITCM: the fill census charged ~1.2M cycles of instruction fetch to the
+ * trampoline pair in main RAM. */
+unsigned int __attribute__((section(".itcm")))
+ndsDtcmHotStackRun(unsigned int (*fn)(void *), void *arg)
 {
 #if NDS_TICK_HUD
     ndsDtcmHotStackLabNote();

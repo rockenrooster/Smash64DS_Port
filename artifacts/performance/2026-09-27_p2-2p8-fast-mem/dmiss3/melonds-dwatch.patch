@@ -1,0 +1,150 @@
+--- /d/Stuff/DevFolder/melonDS-cache-profiler/src/ARM9PerformanceProfiler.h	2026-07-22 08:52:26.818468000 -0500
++++ /c/Users/Tyler/AppData/Local/Temp/claude/D--Stuff-DevFolder-Smash64DS-Port/31e5c78d-38d0-4d75-b683-91723230d2cc/scratchpad/melonds-dmiss/src/ARM9PerformanceProfiler.h	2026-09-27 14:18:36.285118900 -0500
+@@ -75,6 +75,25 @@
+ 
+     Snapshot GetSnapshot(u64 timestamp) const;
+ 
++    // MELONDS_ARM9_DMISS=1 (with the profiler on): count each D-cache line
++    // fill by (instruction PC, 32-byte line address); written next to the PC
++    // report as <base>.dmiss.csv.
++    // MELONDS_ARM9_DWATCH=lo-hi (hex): count every cached data read by
++    // 4-byte word inside [lo, hi); written as <base>.dwatch.csv.
++    void RecordDataRead(u32 addr)
++    {
++        if (!DataWatchEnabled || addr < DataWatchLo || addr >= DataWatchHi)
++            return;
++        DataReads[addr & ~3u]++;
++    }
++
++    void RecordDataMiss(u32 addr)
++    {
++        if (!DataMissEnabled || !CurrentValid)
++            return;
++        DataMisses[(static_cast<u64>(CurrentPC) << 32) | (addr & ~31u)]++;
++    }
++
+ private:
+     struct Key
+     {
+@@ -137,6 +156,12 @@
+     u64 TimestampDiscontinuities = 0;
+ 
+     std::string OutputPath;
++    bool DataMissEnabled = false;
++    bool DataWatchEnabled = false;
++    u32 DataWatchLo = 0;
++    u32 DataWatchHi = 0;
++    std::unordered_map<u32, u64> DataReads;
++    std::unordered_map<u64, u64> DataMisses;
+     std::unordered_map<Key, Entry, KeyHash> Entries;
+     std::unordered_map<u16, RegionEntry> RegionEntries;
+ };
+--- /d/Stuff/DevFolder/melonDS-cache-profiler/src/ARM9PerformanceProfiler.cpp	2026-07-22 08:52:26.820467300 -0500
++++ /c/Users/Tyler/AppData/Local/Temp/claude/D--Stuff-DevFolder-Smash64DS-Port/31e5c78d-38d0-4d75-b683-91723230d2cc/scratchpad/melonds-dmiss/src/ARM9PerformanceProfiler.cpp	2026-09-27 14:18:36.385922000 -0500
+@@ -9,6 +9,7 @@
+     any later version.
+ */
+ 
++#include <cstdio>
+ #include "ARM9PerformanceProfiler.h"
+ 
+ #include <algorithm>
+@@ -59,6 +60,17 @@
+     {
+         OutputPath = path;
+         Enabled = true;
++        DataMissEnabled = EnvironmentFlag("MELONDS_ARM9_DMISS");
++        {
++            const char* watch = std::getenv("MELONDS_ARM9_DWATCH");
++            unsigned int lo = 0, hi = 0;
++            if (watch && std::sscanf(watch, "%x-%x", &lo, &hi) == 2 && hi > lo)
++            {
++                DataWatchEnabled = true;
++                DataWatchLo = lo;
++                DataWatchHi = hi;
++            }
++        }
+         return;
+     }
+ 
+@@ -123,6 +135,8 @@
+     {
+         Entries.clear();
+         RegionEntries.clear();
++        DataMisses.clear();
++        DataReads.clear();
+         TimestampDiscontinuities = 0;
+         ActiveRegion = 0;
+         PendingRegionValid = false;
+@@ -203,6 +217,8 @@
+     TimestampDiscontinuities = 0;
+     Entries.clear();
+     RegionEntries.clear();
++    DataMisses.clear();
++    DataReads.clear();
+ }
+ 
+ void ARM9PerformanceProfiler::Finish(u64 timestamp)
+@@ -349,6 +365,44 @@
+                    << entry.MaximumCycles << '\n';
+     }
+ 
++    if (DataMissEnabled)
++    {
++        const std::size_t dot = OutputPath.find_last_of('.');
++        const std::string missPath = (dot == std::string::npos)
++            ? OutputPath + ".dmiss.csv"
++            : OutputPath.substr(0, dot) + ".dmiss.csv";
++        std::ofstream missFile(missPath, std::ios::trunc);
++        if (missFile)
++        {
++            missFile << "pc,line,misses\n";
++            for (const auto& pair : DataMisses)
++            {
++                missFile << "0x" << std::hex << std::setw(8) << std::setfill('0')
++                         << static_cast<u32>(pair.first >> 32) << ",0x"
++                         << std::setw(8) << static_cast<u32>(pair.first)
++                         << ',' << std::dec << pair.second << '\n';
++            }
++        }
++    }
++
++    if (DataWatchEnabled)
++    {
++        const std::size_t dot = OutputPath.find_last_of('.');
++        const std::string watchPath = (dot == std::string::npos)
++            ? OutputPath + ".dwatch.csv"
++            : OutputPath.substr(0, dot) + ".dwatch.csv";
++        std::ofstream watchFile(watchPath, std::ios::trunc);
++        if (watchFile)
++        {
++            watchFile << "addr,reads\n";
++            for (const auto& pair : DataReads)
++            {
++                watchFile << "0x" << std::hex << std::setw(8) << std::setfill('0')
++                          << pair.first << ',' << std::dec << pair.second << '\n';
++            }
++        }
++    }
++
+     const Snapshot snapshot = GetSnapshot(LastTimestamp);
+     std::ofstream metadataFile(MetadataReportPath(OutputPath), std::ios::trunc);
+     if (!metadataFile)
+--- /d/Stuff/DevFolder/melonDS-cache-profiler/src/CP15.cpp	2026-07-22 08:52:26.816467900 -0500
++++ /c/Users/Tyler/AppData/Local/Temp/claude/D--Stuff-DevFolder-Smash64DS-Port/31e5c78d-38d0-4d75-b683-91723230d2cc/scratchpad/melonds-dmiss/src/CP15.cpp	2026-09-27 14:18:36.286130700 -0500
+@@ -583,6 +583,7 @@
+ 
+ bool ARMv5::DCacheLookup(const u32 addr)
+ {
++    PerformanceProfiler.RecordDataRead(addr);
+     //Log(LogLevel::Debug,"DCache load @ %08x\n", addr);
+     const u32 tag = (addr & ~(DCACHE_LINELENGTH - 1));
+     const u32 id = ((addr >> DCACHE_LINELENGTH_LOG2) & (DCACHE_LINESPERSET-1)) << DCACHE_SETS_LOG2;
+@@ -668,6 +669,7 @@
+ 
+     // cache miss
+     miss:
++    PerformanceProfiler.RecordDataMiss(addr);
+     // We do not fill the cacheline if it is disabled in the 
+     // BIST test State register (See arm946e-s Rev 1 technical manual, 2.3.15 "Register 15, test State Register")
+     if (CP15BISTTestStateRegister & CP15_BIST_TR_DISABLE_DCACHE_LINEFILL) [[unlikely]]

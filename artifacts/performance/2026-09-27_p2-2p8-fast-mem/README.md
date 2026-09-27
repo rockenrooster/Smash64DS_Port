@@ -895,3 +895,44 @@ again: 159/159 resident. The layout gate passes.
 
 All-content config: DTCM end 0x02ff2ef4, layout gate passes, CSS reserve free
 253,904, previews draw.
+
+## 35. Trampoline into ITCM; FTStruct field heat (a proposal, not a change)
+
+**ITCM.** A fresh census (`dmiss3/`, on `006bc827673`) charged the hot-stack
+trampoline pair in main RAM ~1.2M cycles of instruction fetch. So
+`ndsDtcmHotStackCall` (80 B, now `.itcm.*`) and `ndsDtcmHotStackRun` (132 B)
+moved into the 472 B that `gcPlayDObjAnimJoint` left, together with decomp
+`syVectorAdd3D` (40 B, by input-section rule).
+
+`878584CE` (`itcm6`) vs `hs2`, replay IDENTICAL after one resync (a sampler
+label shift at sample 44):
+- WORK-H P50/P95/P99 1,045,696/1,443,008/1,671,872.
+- Paired on the aligned samples: median -1,536, mean -1.6K.
+- 1,298 of 1,972 frames at or under 1,120,000.
+
+**FTStruct field heat.** The scratch melonDS now also counts every cached
+data read by word (`MELONDS_ARM9_DWATCH=lo-hi`, `dmiss3/arm9-profile.dwatch.csv`;
+patch in `dmiss/melonds-dmiss.patch` plus `dmiss3/melonds-dwatch.patch`).
+Joined with the fill census and the pool base (0x02311868 in that ROM),
+`dmiss3/ftfield_heat.py` gives, per FTStruct field, reads a frame and fills
+apportioned by reads. The totals are 4,021 reads and 1,074 fills a frame, a
+27% miss rate.
+
+The hot aggregates are:
+- `coll_data`: 903 reads, 68 fills;
+- `joints`: 461 reads, 46 fills;
+- `attack_colls`: 244 reads, 61 fills;
+- `physics`: 225 reads, 17 fills;
+- `computer`: 202 reads, 33 fills;
+- `colanim`: 124 reads, 46 fills.
+
+About forty hot scalars are spread over some 25 lines; together they draw
+~400 fills a frame. The worst are `status_id`, `ga`, `figatree_heap`,
+`nds_magic`/`nds_slot`, `motion_vars`, `input`, the capture/catch/item/throw
+GObjs, `fkind`/`team` and the status wait counters.
+
+A hot-first reorder could remove an estimated 150-250 fills a frame (5-8K
+ticks). But `include/ft/fighter.h` pins FTStruct to the BattleShip source
+layout with static asserts: port-only fields go after it, and lab tools key
+on the offsets. Changing that is a layout-contract decision for the owner, so
+it is recorded here and not done.
