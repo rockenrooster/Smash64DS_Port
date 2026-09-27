@@ -146,6 +146,10 @@ NDS_P2_EFFECT_CENSUS ?= 0
 # decomp float test (src/port/nds_p2_hurtbox_reject.c). gNdsP2HurtboxRejectMode
 # selects off/reject/shadow at runtime.
 NDS_P2_HURTBOX_REJECT ?= 1
+# P2-2p8: memcpy/memset in ARM state with 32-byte LDM/STM bodies, in ITCM
+# (src/nds/nds_fast_mem.c), in place of newlib's Thumb C members that Task 37
+# moved into ITCM. 0 restores those members.
+NDS_FAST_MEM ?= 1
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
 # gNdsFtrLeanRoute 1 and gNdsFtrLeanAdmit 2 are initialisers
 # (include/nds/renderer_fighter_lean.h NDS_FTR_LEAN_ROUTE_BOOT /
@@ -4277,7 +4281,7 @@ NDS_TASK37_LIBC_SHA256 := \
 	01424211f6f671e0b07b52fb72086f14e18000fca089e9ecfe45aa77b36873e2
 NDS_TASK37_LIBM_SHA256 := \
 	b437e8747f520c891d2784df015ab6f8cd30bb91cd02430f03657c20027d6685
-NDS_TASK37_LIBC_MEMBERS := libc_a-memset.o libc_a-memcpy-stub.o libc_a-memcmp.o
+NDS_TASK37_LIBC_MEMBERS := $(if $(filter 1,$(NDS_FAST_MEM)),,libc_a-memset.o libc_a-memcpy-stub.o) libc_a-memcmp.o
 NDS_TASK37_LIBM_MEMBERS := libm_a-ef_sqrt.o
 NDS_TASK37_ITCM_OFILES := \
 	$(if $(filter 1,$(NDS_TASK37_ITCM_LIBC)),$(addsuffix .itcm.o,$(basename $(NDS_TASK37_LIBC_MEMBERS)))) \
@@ -4457,6 +4461,9 @@ CFILES += nds_r2_collision_fixed.c nds_r2_collision_ring.c
 endif
 ifeq ($(NDS_P2_HURTBOX_REJECT),1)
 CFILES += nds_p2_hurtbox_reject.c
+endif
+ifeq ($(NDS_FAST_MEM),1)
+CFILES += nds_fast_mem.c
 endif
 ifeq ($(NDS_R2_SIM_MAC_SHADOW),1)
 CFILES += nds_r2_sim_mac_fixed.c
@@ -7134,6 +7141,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_COLLISION_L7_ORACLE $(NDS_R2_COLLISION_L7_ORACLE)'; \
 		echo '#define NDS_R2_COLLISION_FIXED $(NDS_R2_COLLISION_FIXED)'; \
 		echo '#define NDS_P2_HURTBOX_REJECT $(NDS_P2_HURTBOX_REJECT)'; \
+		echo '#define NDS_FAST_MEM $(NDS_FAST_MEM)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_DISPATCH $(NDS_R2_COLLISION_FIXED_DISPATCH)u'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW $(NDS_R2_COLLISION_FIXED_NARROW)'; \
 		echo '#define NDS_R2_COLLISION_FIXED_NARROW_DISPATCH $(NDS_R2_COLLISION_FIXED_NARROW_DISPATCH)u'; \

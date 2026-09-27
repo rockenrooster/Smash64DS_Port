@@ -286,16 +286,25 @@ ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
         return;
     }
 
+    /* The lhs row stays in registers across its four cells and the k loop is
+     * unrolled: the rolled form reloaded both operands per product (~1,100
+     * cycles a call, 27 stage bindings a frame). Two's-complement sums
+     * associate, so the cells are the rolled loop's bit for bit. */
+    (void)k;
     for (row = 0; row < 4u; row++)
     {
+        const s32 a0 = lhs->m[row][0];
+        const s32 a1 = lhs->m[row][1];
+        const s32 a2 = lhs->m[row][2];
+        const s32 a3 = lhs->m[row][3];
+
         for (col = 0; col < 4u; col++)
         {
-            s64 sum = 0;
+            s64 sum = (s64)a0 * rhs->m[0][col];
 
-            for (k = 0; k < 4u; k++)
-            {
-                sum += (s64)lhs->m[row][k] * rhs->m[k][col];
-            }
+            sum += (s64)a1 * rhs->m[1][col];
+            sum += (s64)a2 * rhs->m[2][col];
+            sum += (s64)a3 * rhs->m[3][col];
             temp.m[row][col] = ndsRendererClampS64ToS32(
                 ndsRendererRoundShiftS64(sum, NDS_RENDERER_DS_MTX_FRAC_BITS));
         }

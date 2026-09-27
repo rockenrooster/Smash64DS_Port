@@ -534,6 +534,13 @@ void ndsPlatformInit(void)
      * code can sample libultra time/count; BGM seam timing uses free timer 0. */
     cpuStartTiming(0);
     ndsPlatformFastTimingInit();
+#if NDS_FAST_MEM && NDS_TICK_HUD
+    {
+        extern void ndsFastMemSelfTest(void);
+
+        ndsFastMemSelfTest();
+    }
+#endif
     sVBlankCount = 0u;
     sEarliestPresentVBlank = 0u;
     irqSet(IRQ_VBLANK, ndsPlatformVBlankInterrupt);

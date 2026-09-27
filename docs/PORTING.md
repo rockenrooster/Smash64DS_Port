@@ -23356,3 +23356,9 @@ pages hold no entries. WORK-H P95 1,794,240, P99 2,197,184.
 hurtbox misses in fixed point (margin-guarded world AABB separation) before the
 decomp float test; `gNdsP2HurtboxRejectMode` 0/1/2 = off/reject/shadow. Shadow
 over the stress match: 13,499 rejects, 0 flips; replay identical.
+
+2026-09-27 P2-2p8: `memcpy`/`memset` are ARM LDM/STM routines in ITCM
+(`src/nds/nds_fast_mem.c`, `NDS_FAST_MEM=1`) instead of newlib's Thumb C members;
+Task 37 still extracts `memcmp`. Tick-HUD builds self-test them at boot
+(`gNdsFastMemSelfTestFailures` must read 0). FGM cue lookup is an id map built at
+pack load. WORK-H P50/P95 1,215,616/1,657,152, replay identical.

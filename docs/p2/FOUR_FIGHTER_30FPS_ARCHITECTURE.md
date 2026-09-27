@@ -841,6 +841,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   identical. `56AF4CCB` WORK-H P50/P95/P99 1,257,472 / 1,725,376 / 2,127,744,
   SHDT P95 216,640 -> 154,624. Receipt `2026-09-27_p2-2p8-a5-hurtbox-reject`.
 
+- **Fast memcpy/memset, FGM id map, stage matrix leaves (2026-09-27), BANKED.**
+  newlib's Thumb memcpy/memset (~49K/frame) become ARM LDM/STM routines in ITCM
+  (boot self-test 0 failures); FGM lookup is an id map; the 4x4 fixed multiply is
+  unrolled; the shifted-raw matrix range check is 32-bit. `F6CE3DAB` WORK-H
+  P50/P95/P99 1,215,616 / 1,657,152 / 2,056,192, two-VBlank 556/1,973, replay
+  identical. Priced and refuted: a 200 KB anim cache (motion reads 362 -> 275,
+  P95 -2.7K: reads are not a tail lever). Receipt `2026-09-27_p2-2p8-fast-mem`.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

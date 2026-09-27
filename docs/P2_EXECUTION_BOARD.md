@@ -88,9 +88,10 @@ edge-only ROM bounce (1,892,160); FGM LRU/aligned/envelopes + ARM7 async fills
 (1,852,672); 160 KiB FGM ring arena (-72 KiB); fast cpuGetTiming; stage no-Z
 local W columns (STG P50 253K); status path (token index, path formatter,
 ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
-world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips):
-`56AF4CCB` WORK-H P50/P95/P99 1,257,472/1,725,376/2,127,744.
-**Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
+world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
+ARM memcpy/memset in ITCM + FGM id map + matrix leaves (`2026-09-27_p2-2p8-fast-mem`):
+`F6CE3DAB` WORK-H P50/P95/P99 1,215,616/1,657,152/2,056,192; 2-VBlank 556.
+**Constraint**: CSS reserve >=183,072 B; margin 17,584 B less ~1.4 KB BSS (owed).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
 

@@ -8615,3 +8615,17 @@ flips. `69CAB23E` -> `56AF4CCB`, replay identical: WORK-H P50/P95/P99 1,258,688/
 1,740,544/2,128,768 -> 1,257,472/1,725,376/2,127,744; SHDT P95 216,640 ->
 154,624. RED.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-a5-hurtbox-reject/README.md`.
+
+## 2026-09-27 — memcpy/memset in ARM (ITCM), FGM id map, stage matrix leaves
+
+**BANKED (four exact changes).** A fresh per-PC profile put newlib's generic
+Thumb memcpy/memset (moved into ITCM by Task 37) at ~49K ticks/frame, one
+LDR/STR per word. Replaced by ARM LDM/STM versions in ITCM (`NDS_FAST_MEM`,
+boot self-test 3,232 cases / 0 failures); plus an FGM id->entry map (was a
+573-entry scan per lookup), an unrolled 4x4 fixed multiply, and a 32-bit range
+check in the Thumb shifted-raw matrix builder. Control `F712AF50` -> `F6CE3DAB`,
+each step replay identical: WORK-H P50/P95/P99 1,258,688/1,727,296/2,127,488 ->
+1,215,616/1,657,152/2,056,192; STG P50 241,024 -> 208,128; two-VBlank 422 ->
+556; 21.61 FPS. RED. Refuted: a hand-written cpuGetTiming (-0.5K P95, noise)
+and a 200 KB animation cache (motion reads 362 -> 275, P95 -2.7K).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md`.

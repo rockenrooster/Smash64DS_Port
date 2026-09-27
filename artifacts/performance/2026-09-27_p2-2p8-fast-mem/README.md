@@ -1,0 +1,78 @@
+# P2-2p8: memcpy/memset in ARM, FGM id map, stage matrix leaves (2026-09-27)
+
+**Outcome: four exact changes BANKED; two levers priced and refuted.**
+All arms: four-CPU stress (Donkey/Samus/Link/Kirby, Dream Land, items on),
+route 1, frames 2..1973, `build-p2-fourcpu-tickhud`, HEAD `7e47e1f21e6` plus
+the change. Every candidate's replay digest is IDENTICAL to the control
+(`compare-replay-digest.py --sequence --resync 4`).
+
+## Control
+
+`rebase` `F712AF50`: the committed tree rebuilt (the committed `56AF4CCB` ROM
+measures within noise: `animrd` 1,257,472/1,725,376 vs 1,258,688/1,727,296,
+digest identical). WORK-H P50/P95/P99 1,258,688 / 1,727,296 / 2,127,488;
+VBlanks 2/3/4/5+ 422/1,420/115/16; 20.97 FPS.
+
+## Where it came from
+
+A fresh per-PC profile of `7e47e1f21e6` (`builds/p2p8-profile-7e47`, 385
+frames, local) ranked by symbol, by P90-99 vs P40-60 frame excess, and by
+dynamic call-site counts (the BL instruction's own execution count):
+
+- `memcpy` 33.8K + `memset` 15.7K ticks/frame: newlib's generic C members,
+  compiled -Os Thumb, which Task 37 moved into ITCM unchanged. One LDR/STR per
+  word, 16 bytes a loop (1,036 loop trips a frame). 252 memcpy calls a frame,
+  173 of them the stage GX patcher's 64-byte matrix copies.
+- `ndsRendererMtxMul20p12` 16.4K: 27 stage bindings a frame x ~1,100 cycles; the
+  rolled k loop reloaded both operands per product.
+- `ndsRendererBuildShiftedRawHardwareMatrix` 11.6K: Thumb, s64 shift and range
+  compare per cell.
+- `ndsAudioFgmFindEntry` ~2.4K mean, far more on sound bursts: a linear scan of
+  573 32-byte entries (one cache line each) per cue start and per live handle.
+
+## Changes (each measured on its own, cumulative)
+
+| arm | ROM | change | WORK-H P50 / P95 / P99 | 2-VBlank |
+|---|---|---|---|---:|
+| rebase | F712AF50 | control | 1,258,688 / 1,727,296 / 2,127,488 | 422 |
+| fgmmap | DE4EC439 | FGM id -> entry map (`nds_audio_fgm.c`) | 1,253,312 / 1,721,856 / 2,136,384 | 435 |
+| mtxmul | 4F22CCFC | unrolled 4x4 multiply, lhs row in registers (`nds_renderer_dl_core.c`) | 1,248,896 / 1,717,312 / 2,134,848 | 460 |
+| shift32 | 3D8F364D | 32-bit range check for the shifted raw matrix (`nds_renderer_textures_effects.c`) | 1,242,112 / 1,710,912 / 2,129,216 | 484 |
+| fastmem | F6CE3DAB | ARM LDM/STM memcpy + memset in ITCM (`nds_fast_mem.c`, `NDS_FAST_MEM`) | **1,215,616 / 1,657,152 / 2,056,192** | **556** |
+
+Net: P50 -43,072, P95 -70,144, P99 -71,296; VBlanks 2/3/4/5+ 556/1,315/90/12,
+21.61 FPS. STG P50 241,024 -> 208,128; AUD P95 18,432 -> 12,224.
+
+- **FGM id map.** `sNdsAudioFgmIdMap[688]` (u16 index+1, 1,376 B BSS) built when
+  the pack loads, dropped on reset; ids are unique, so it names the scan's own
+  first match. Ids past the map, or a pack that never loaded, still scan.
+- **MtxMul20p12.** Same products, same s64 sums (two's-complement addition
+  associates), same round/clamp per cell; only operand reuse changed.
+- **Shifted raw matrix.** For shift < 32, `v << s` fits an s32 exactly when
+  `(v << s) >> s == v`; shifts >= 32 keep the s64 form.
+- **memcpy/memset.** Same contracts (return dst). 32-byte LDM/STM when both
+  pointers are word aligned, word loop, then bytes; a misaligned pair copies
+  bytewise as newlib's did. Linked instead of the Task 37 libc members
+  (`NDS_TASK37_LIBC_MEMBERS` keeps memcmp only when `NDS_FAST_MEM=1`). ITCM
+  30,776 -> 30,728 B. Tick-HUD builds run `ndsFastMemSelfTest` at boot: sizes
+  0..100 x source/destination offsets 0..3, guard bytes both sides, return
+  value: `gNdsFastMemSelfTestRuns` 3,232, `gNdsFastMemSelfTestFailures` 0.
+
+## Refuted (reverted, not banked)
+
+- **Hand-written cpuGetTiming** (`fasttime2` `0461A607`): ITCM literals instead
+  of main-RAM pointers, no push/pop, 22 instructions. The profile priced the
+  wrapper at 20.6K/frame (499 calls x ~95 cycles); WORK-H moved -1.6K/-0.5K,
+  inside noise. Not banked (D9). Lesson: the profile's per-instruction cycles for
+  I/O-bound leaf code did not transfer to the gate.
+- **Bigger animation cache** (`keep48` `4F1B4948`, lab): keep-free 128 -> 48 KiB
+  gave the ring arena 200,496 B (from 118,576). Motion reads 362 -> 275
+  (each ~29.3K ticks: 10.6M -> 7.9M ticks a match) but WORK-H P95 moved only
+  -2.7K. Motion reads are not a tail lever on this roster; A2's "0 motion reads
+  after GO" remains a DONE item, not a performance one. `animctr`/`animrd` are
+  the counter reads on the committed ROM (hits 339 / misses 367 / fills 363 /
+  6 ring recycles; 362 stream reads, 717,016 B).
+
+## Files
+
+`<arm>{.json,-rows.csv,-run.log}` for every arm above.

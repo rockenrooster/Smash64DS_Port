@@ -14380,6 +14380,27 @@ static s32 ndsRendererBuildShiftedRawHardwareMatrix(
         return FALSE;
     }
     *hardware = *composed;
+    /* 32-bit form of the s64 range check below: this is Thumb code, where
+     * every s64 shift and compare is an instruction sequence. For a shift
+     * under 32, v << shift fits an s32 exactly when shifting back returns v. */
+    if (coordinate_shift < 32u)
+    {
+        for (row = 0u; row < 3u; row++)
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                s32 v = hardware->m[row][col];
+                s32 scaled = (s32)((u32)v << coordinate_shift);
+
+                if ((scaled >> coordinate_shift) != v)
+                {
+                    return FALSE;
+                }
+                hardware->m[row][col] = scaled;
+            }
+        }
+    }
+    else
     for (row = 0u; row < 3u; row++)
     {
         for (col = 0u; col < 4u; col++)

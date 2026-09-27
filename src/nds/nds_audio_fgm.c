@@ -1124,10 +1124,42 @@ static s32 ndsAudioFgmIsSamusChargeRoot(u16 id)
             (id <= NDS_AUDIO_FGM_SAMUS_CHARGE_LAST)) ? TRUE : FALSE;
 }
 
+/* id -> entry index + 1 (0: no entry), built once the pack's entries are
+ * final (ndsAudioFgmLoadFenced) and dropped with them. The linear scan below
+ * walked up to 573 32-byte entries -- one cache line each -- per lookup, and
+ * every cue start and every live handle's update looks one up. Ids are unique
+ * (ndsAudioFgmValidateCachedEntry), so the map names the scan's own first
+ * match. An id past the map, or a pack that never loaded, takes the scan. */
+#define NDS_AUDIO_FGM_ID_MAP_COUNT 688u
+static u16 sNdsAudioFgmIdMap[NDS_AUDIO_FGM_ID_MAP_COUNT];
+static u8 sNdsAudioFgmIdMapReady;
+
+static void ndsAudioFgmBuildIdMap(void)
+{
+    u32 i;
+
+    memset(sNdsAudioFgmIdMap, 0, sizeof(sNdsAudioFgmIdMap));
+    for (i = NDS_AUDIO_FGM_ENTRY_COUNT; i-- != 0u;)
+    {
+        u16 id = sNdsAudioFgmEntries[i].id;
+
+        if (id < NDS_AUDIO_FGM_ID_MAP_COUNT)
+        {
+            sNdsAudioFgmIdMap[id] = (u16)(i + 1u);
+        }
+    }
+    sNdsAudioFgmIdMapReady = 1u;
+}
+
 static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 {
     u32 i;
 
+    if ((sNdsAudioFgmIdMapReady != 0u) && (id < NDS_AUDIO_FGM_ID_MAP_COUNT))
+    {
+        i = sNdsAudioFgmIdMap[id];
+        return (i != 0u) ? &sNdsAudioFgmEntries[i - 1u] : NULL;
+    }
     for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
     {
         if (sNdsAudioFgmEntries[i].id == id)
@@ -1983,6 +2015,7 @@ void ndsAudioFgmDiagnosticsReset(void)
     memset(sNdsAudioFgmChannelGenerations, 0,
            sizeof(sNdsAudioFgmChannelGenerations));
     memset(sNdsAudioFgmEntries, 0, sizeof(sNdsAudioFgmEntries));
+    sNdsAudioFgmIdMapReady = 0u;
     for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
     {
         sNdsAudioFgmHandles[i].channel = -1;
@@ -2195,6 +2228,7 @@ void ndsAudioFgmLoadFenced(void)
 
     sNdsAudioFgmFile = file;
     ndsAudioFgmDirectRouteInit();
+    ndsAudioFgmBuildIdMap();
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
                                 sizeof(sNdsAudioFgmEntries);
