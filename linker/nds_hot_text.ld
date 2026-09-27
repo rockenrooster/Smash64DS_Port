@@ -191,7 +191,6 @@ SECTIONS {
 		*(.text.gcDrawAll)
 		*(.text.ftCommonAttackLw3CheckInterruptCommon)
 		*(.text.gmCameraRunFuncCamera)
-		*(.text.ndsPlatformReadInput)
 		*(.text.ftComputerCheckEvadeDistance)
 		*(.text.ndsR2CameraCurrentLookAt)
 		*(.text.ndsFighterDisplayContractSetLight)
@@ -307,6 +306,7 @@ SECTIONS {
 		 * census (artifacts/performance/2026-09-27_p2-2p8-fast-mem/dmiss2/):
 		 * fills a frame per byte, ARM9-only objects. */
 		/* DTCM-RESIDENT HOT SCALARS: BEGIN */
+		*(.bss.gNdsDtcmHotStackBusy)
 		*(.bss.dSYTaskmanFrameCount)
 		*(.bss.sNdsRendererBattleStaticTextureArmed)
 		*(.bss.gNdsMPLineYakumonoHits)

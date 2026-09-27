@@ -39,6 +39,7 @@
 
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_r2_battle.h>
+#include <port/coroutine.h>
 
 extern volatile u32 gNdsFtPoseEvalTick;
 
@@ -55,6 +56,21 @@ extern volatile u32 gNdsFtPoseEvalTick;
  * configuration nobody is watching. */
 #error "NDS_R2_PATH does not implement the NDS_SCENE_MIP_CACHE_LAB seed path"
 #endif
+
+/* P2-2p8 (2026-09-27): each source tick runs on the DTCM hot stack
+ * (src/port/coroutine.c). The top 1.5 KB of the gameplay coroutine's
+ * main-RAM stack -- the update's own base frames -- took ~525 of the
+ * frame's ~637 stack line fills: every return into a frame whose line
+ * the update's data had evicted. The tick does no I/O into a stack buffer
+ * (storage reads bounce any destination outside main RAM:
+ * ndsAudioStorageReadCard) and hands no stack address to DMA or the ARM7;
+ * a coroutine it switches to runs any hot-stack call of its own in place
+ * (gNdsDtcmHotStackBusy). Its deepest reach stays under the draw
+ * subtrees' 3,740 B. */
+static unsigned int ndsR2BattleUpdateOnHotStack(void *arg)
+{
+    return ndsR2HostBattleUpdateOnce((u32)(uintptr_t)arg);
+}
 
 void ndsR2BattleRun(void)
 {
@@ -80,7 +96,9 @@ void ndsR2BattleRun(void)
              update_in_iteration < updates_per_present;
              update_in_iteration++)
         {
-            if (ndsR2HostBattleUpdateOnce(update_in_iteration) != 0u)
+            if (ndsDtcmHotStackRun(ndsR2BattleUpdateOnHotStack,
+                                   (void *)(uintptr_t)update_in_iteration) !=
+                0u)
             {
                 /* BattleShip syTaskmanRunTask checks LoadScene immediately
                  * after task_update and never draws the terminal update. */

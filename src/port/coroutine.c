@@ -38,9 +38,12 @@ static PortCoroutine *sCurrentCoroutine;
  * fill). The subtrees that own most of them run here instead: zero-wait,
  * uncached and out of the 4 KB D-cache. The lean fighter list and the stage
  * GX segment commit (same-ROM WORK-H paired -18.4K), then the map-collision
- * step and the particle display proc (-7.9K); deepest reach 3,740 B. Only
- * subtrees that do no I/O, hand no stack address to DMA and never switch
- * coroutines may run on it. The fighter pose was priced and left off: its
+ * step and the particle display proc (-7.9K); each source tick (ndsR2BattleRun,
+ * -15.4K); deepest reach 3,740 B. Only
+ * subtrees that read no storage into a stack buffer (ndsAudioStorageReadCard
+ * bounces one) and hand no stack address to DMA or the ARM7 may run on it; a
+ * coroutine switched to from it runs its own hot-stack calls in place
+ * (gNdsDtcmHotStackBusy). The fighter pose was priced and left off: its
  * frames were ~46 fills a frame, a wash against the trampoline. */
 #ifndef NDS_DTCM_HOT_STACK_BYTES
 #define NDS_DTCM_HOT_STACK_BYTES 6144u
@@ -49,6 +52,11 @@ static PortCoroutine *sCurrentCoroutine;
 #define NDS_DTCM_HOT_STACK_STR(x) NDS_DTCM_HOT_STACK_STR2(x)
 u64 gNdsDtcmHotStack[NDS_DTCM_HOT_STACK_BYTES / 8u]
     __attribute__((section(".sbss.gNdsDtcmHotStack"), aligned(8)));
+/* Nonzero while a context entered from outside holds frames on the hot stack.
+ * A coroutine switch can leave those frames suspended; a hot-stack call from
+ * another stack then runs in place on that stack instead of reusing the top
+ * (linker/nds_hot_text.ld keeps the word in DTCM). */
+u32 gNdsDtcmHotStackBusy;
 extern unsigned int ndsDtcmHotStackCall(unsigned int (*fn)(void *), void *arg);
 
 __asm__(
@@ -65,12 +73,21 @@ __asm__(
     "    bls   1f\n"
     "    cmp   sp, r3\n"
     "    bls   2f\n"
-    "1:  mov   r4, sp\n"
+    "1:  ldr   r2, =gNdsDtcmHotStackBusy\n"
+    "    ldr   ip, [r2]\n"
+    "    cmp   ip, #0\n"
+    "    bne   2f\n"
+    "    mov   ip, #1\n"
+    "    str   ip, [r2]\n"
+    "    mov   r4, sp\n"
     "    mov   sp, r3\n"
     "    mov   ip, r0\n"
     "    mov   r0, r1\n"
     "    blx   ip\n"
     "    mov   sp, r4\n"
+    "    ldr   r2, =gNdsDtcmHotStackBusy\n"
+    "    mov   r1, #0\n"
+    "    str   r1, [r2]\n"
     "    pop   {r4, pc}\n"
     "2:  mov   ip, r0\n"
     "    mov   r0, r1\n"
@@ -96,8 +113,9 @@ static void ndsDtcmHotStackLabNote(void)
     u32 i;
 
     __asm__ volatile ("mov %0, sp" : "=r"(sp));
-    if ((sp > (u32)(uintptr_t)words) &&
-        (sp <= (u32)(uintptr_t)(words + count)))
+    if (((sp > (u32)(uintptr_t)words) &&
+         (sp <= (u32)(uintptr_t)(words + count))) ||
+        (gNdsDtcmHotStackBusy != 0u))
     {
         return;
     }

@@ -1095,3 +1095,53 @@ Dropping that entry leaves 82 functions, and P1 links with 768 B spare.
 
 `check-renderer-itcm-placement.ps1` lists the commit as evicted. The GBI,
 DTCM layout and DTCM residency checks pass.
+
+## 40. Every source tick on the DTCM hot stack
+
+**Where the stack fills were.** The dmiss4 fill census was split by
+instruction class (`stack_fills.py`): pop and `[sp, #]` loads against every
+other load. That leaves 637 stack fills a frame after the earlier hot-stack
+rounds. About 525 of them land in the top 1.5 KB of the gameplay coroutine's
+main-RAM stack (0x2280400-0x22809ff), spread over more than 100 functions.
+These are the update's own base frames: every return into a frame whose line
+the update's data had evicted pays a fill.
+
+**Change.** `ndsR2BattleRun` runs each `ndsR2HostBattleUpdateOnce` through
+`ndsDtcmHotStackRun`.
+
+The trampoline gains a busy word, `gNdsDtcmHotStackBusy`, a DTCM hot scalar:
+- An entry from outside sets it and clears it on return.
+- A hot-stack call from another stack while it is set runs in place on that
+  stack. A coroutine the tick switches to can therefore never reuse the top
+  over suspended frames.
+- The lab high-water scan skips while it is set.
+
+The tick's I/O is safe on a DTCM stack:
+- Storage reads bounce any destination outside main RAM
+  (`ndsAudioStorageReadCard`).
+- PXI requests and DMA sources are static or heap buffers.
+- The pointer-range checks in the tree accept DTCM addresses.
+
+The trampoline's 28 B took `ndsPlatformReadInput` (120 B, rent 627 cycles a
+byte) back out of ITCM.
+
+**Same-ROM A/B** (lab toggle, since removed; `uh0` off, `uh1` on), replay
+IDENTICAL:
+- Paired WORK-H median -15,424; 1,969 of 1,972 frames better.
+- Top 5% median -26,816. SRC -16.0K mean; the other buckets are flat.
+- Hot-stack high-water 3,740 B, unchanged: the tick's depth stays under the
+  draw subtrees' depth.
+
+**Final** `5258C6EA` (`updhot`) vs `repack5b`, replay IDENTICAL:
+- Paired median -16,768; 1,969 of 1,972 frames better.
+- WORK-H P50/P95/P97/P99 1,000,768/1,390,784/1,468,032/1,667,392.
+- 1,459 of 1,972 frames at or under 1,120,000.
+- VBlanks 1,381/570/21/1: 70.0% of presented frames in two.
+- Native failures 0; heap low-water 69,340 B.
+
+The P1 ROM links with 848 B ITCM spare.
+
+**Owed.** The high-water comes from the stress roster alone. A deeper tick path
+on another roster, stage or item set would overflow into `.dtcm` below the
+stack, and nothing checks for that at run time. Re-read
+`gNdsDtcmHotStackHighWater` on the next all-stage or item campaign run.

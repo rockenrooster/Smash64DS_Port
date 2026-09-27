@@ -9009,3 +9009,17 @@ every call. `85B19565` vs `caladmit`, replay identical: paired WORK-H median
 1,017,472/1,415,744; 1,394/1,972 frames within 1,120,000. The P1 ROM links
 with 768 B ITCM spare. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 39.
+
+## 2026-09-27 — every source tick on the DTCM hot stack
+
+**BANKED.** About 525 of the frame's 637 stack line fills hit the top 1.5 KB of
+the gameplay coroutine's main-RAM stack: the update's base frames, re-filled
+on every return. `ndsR2BattleRun` now runs each source tick through
+`ndsDtcmHotStackRun`. A new busy word makes a hot-stack call from another
+stack (a coroutine the tick switches to) run in place, never over suspended
+frames. Same-ROM A/B: paired WORK-H median -15,424, top 5% -26.8K (SRC),
+replay identical, high-water unchanged at 3,740 B. `5258C6EA` vs `repack5b`:
+paired -16,768 (1,969/1,972 frames better); P50/P95 1,000,768/1,390,784;
+1,459/1,972 frames within 1,120,000; 70.0% of frames in two VBlanks.
+RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 40.
