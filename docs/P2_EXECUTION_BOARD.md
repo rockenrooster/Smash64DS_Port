@@ -92,9 +92,9 @@ A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
 MF2 worst bank 697,760 B, unlinked. Kirby bank implemented: 15 focused tests pass.
 `D675C034` natural four-CPU replay exact, P95 2.602M (RED); copies unengaged.
 Heavy `9E4A666D` admission FAIL: 38,672 B bank, 22,288 B short before later play
-allocations. All jobs terminal; binaries/receipts saved. **Next A8 PREP**: trace
-ARM7 streaming/voice ownership and price resident SFX heads to replace the
-237,568 B fixed cache; fund hats/MF before positive copy/lifecycle/visual proof.
+allocations. **A8 IMPLEMENT**:4905A1C6 ARM7 storage boot/30,170 reads pass.
+13 tests and61 MB exact-map proof; no jobs. Next: ARM7 BGM playback/refills.
+FGM VS heads/voices,237,568 B cache replacement and hat/MF funding remain owed.
 Current heavy arena 892,416 B; lab 1,281,792 B. Baseline CSS arena 900,608 B.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.

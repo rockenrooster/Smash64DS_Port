@@ -1,0 +1,13 @@
+{
+  "status": "BOOT_SERVICES_PASS_NTR_STORAGE_UNENGAGED",
+  "rom_sha256": "30615F5D61511AC12EA7C81E96A109C90B209F4A21D9D5F5A767FEEF3ADFB5E7",
+  "raw_capture": "builds/p2-phase3-a8-storage-probe.txt",
+  "raw_capture_sha256": "C30FEBC3A4170594F742200A161312427B950C03B85F1CD0853FEB5A3CE6C0AF",
+  "markers": [
+    "FOURKIND HATHALT reason=4 required=38672 high=0x640 low=0x640 free=41996",
+    "FOURKIND ARENA chosen=892416 allocfail=197 heapgen=9 start=0x02306800 ptr=0x023d61f4 end=0x023e0600 free=41996 overflow=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+    "FOURKIND ARM7_STORAGE card=0 requests=0 reads=0 bytes=0 bounce=0 failures=0"
+  ],
+  "timing_qualified": false
+}

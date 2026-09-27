@@ -23297,3 +23297,12 @@ pairs), native failures0, P95 2.602M/18.895 FPS, copies unengaged. Heavy9E4A666D
 rejects before GO with an exact22,288 B admission shortfall; no shipping pass.
 Saved both binaries and receipts. Next is A8 audio memory/streaming to fund hats
 and full MF2 residency. IMPLEMENTED_NOT_ACCEPTED; root/P1 unchanged.
+
+2026-09-26 P2-2p8 A8: project-owned ARM7 boots with native storage service,
+FAT12/16/32 ROM extents and serialized DLDI. Corrected the libnds argv/header
+alias that initially truncated the map. Thirteen host tests pass;4905A1C6 reaches
+all four heavy fighters after30,170 reads with zero storage/relocation failures.
+The captured map reproduces61,043,200 B of NitroFS/overlay data exactly. Hat
+admission still lacks22,288 B. BGM/FGM ownership, cache savings, timing and final
+qualification remain due; next move BGM playback/refills to ARM7. Saved receipts
+in phase3-residency. IMPLEMENTED_NOT_ACCEPTED; root/P1 unchanged.

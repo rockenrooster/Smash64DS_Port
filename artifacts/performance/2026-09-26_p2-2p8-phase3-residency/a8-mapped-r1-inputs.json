@@ -1,0 +1,57 @@
+{
+  "rom_sha256": "4905A1C6254B7CC196D5BBB07207F2E19EBA89197977B17209DE58AB0E04A447",
+  "arm9_elf_sha256": "76F9A7E24215E68391CE0F26B8D742AAA2300A51FCD8DB580FA175AB125CAFAC",
+  "arm7_elf_sha256": "5CB74A3B45789E781547D1F3EF49D9B64E63E4430314E686F904D55C6FDA673A",
+  "config_sha256": "B1EB16D28E40CF20393BD4ABBC7E4CCDF427E179EE8E62BF20D142105CA0D58C",
+  "saved": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-a8-mapped-4905a1c6",
+  "ntr_rom_bytes": 63184896,
+  "arm7_segments": [
+    {
+      "vma": "0x2380000",
+      "lma": "0x2380000",
+      "bytes": 1568,
+      "packaged_bytes_match": true
+    },
+    {
+      "vma": "0x2ff0000",
+      "lma": "0x2380620",
+      "bytes": 500,
+      "packaged_bytes_match": true
+    },
+    {
+      "vma": "0x37f8000",
+      "lma": "0x2380814",
+      "bytes": 17588,
+      "packaged_bytes_match": true
+    },
+    {
+      "vma": "0x2384cc8",
+      "lma": "0x2384cc8",
+      "bytes": 24,
+      "packaged_bytes_match": true
+    }
+  ],
+  "host_tests": 13,
+  "native_only_inputs": {
+    "arm9": 322,
+    "arm7": 3
+  },
+  "status": "STORAGE_BOOT_PASS_HAT_ADMISSION_STILL_FAILED",
+  "source_sha256": {
+    "Makefile": "E0C509FC48D1EAF69141711E247BE98CD79DEBB33B284AF881EC43C4ECDA740C",
+    "include/nds/nds_audio_storage.h": "2E64E35CDD077C5B9CB89E4451A6F513D3F066CD93CFF9E20395A832E5438803",
+    "include/nds/nds_audio_extent.h": "952C3D63CB63C5C5EFB4B2AF08D0689EF6620DB6A6294CA3D647A93F35A431F4",
+    "src/nds/nds_audio_storage.c": "07D6B79194C68623F46D0FD500B3D18B8F1B668B5EFDAC13AB6DACE2620533D7",
+    "src/nds/nds_audio_extent.c": "AC13D9EB183C747ABE99255DE96E8C2F785BDC4B98D9597F682962AA6A3FEB13",
+    "src/nds/arm7/nds_audio_main.c": "C2FA6E05CDBC08F3BA37E6106A4B13D0AAC348352A5983C16CF5777EA48AA1BA",
+    "src/nds/arm7/nds_audio_dldi.c": "C0D484C0EB7D0707A49B0F496B50BCC64C0E1BD5EB4B22701B7C9433BAC86BDA",
+    "linker/nds_arm7_contract.ld": "EE5119F289BD034A22A90ACF6284895FC7145F9D8CBFC33EA5197EA6F212C62F",
+    "scripts/probe-shell-four-kind.ps1": "1E69C4F0C0855C7AE2E7C6B73E24FA5F5847787DC59AA67D996C1FDA6E567F92"
+  },
+  "sdk_sha256": {
+    "C:/devkitPro/calico/lib/libcalico_ds7.a": "BF55F4A55D036D45E8E18908BC874B82094EF10FA57D60CAE8512A96C741E25D",
+    "C:/devkitPro/calico/lib/ds7.ld": "DBE750A0353C8CB0B71B53A095F0088BFF64EE8A955415D2B97359ED28E8E35D",
+    "C:/devkitPro/libnds/lib/libfat.a": "479B063888E12238413B35ECF62658675190F4FA519A1EF519A50F5E43C3E280"
+  },
+  "source_base_commit": "2564d1d5ae0"
+}

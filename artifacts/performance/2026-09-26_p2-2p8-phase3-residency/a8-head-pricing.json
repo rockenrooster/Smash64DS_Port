@@ -1,0 +1,24 @@
+{
+  "pack_sha256": "52514D45DEA6F27EC74750B83C2CBB8A971EF46DDD2B9CF03B85A4E7C0571CEF",
+  "entries": 573,
+  "wave_ranges": 513,
+  "largest_wave_bytes": 59344,
+  "head_banks": [
+    {
+      "head_bytes": 256,
+      "unique_heads": 505,
+      "aligned_bytes": 129280
+    },
+    {
+      "head_bytes": 512,
+      "unique_heads": 509,
+      "aligned_bytes": 259424
+    },
+    {
+      "head_bytes": 1024,
+      "unique_heads": 510,
+      "aligned_bytes": 515808
+    }
+  ],
+  "status": "PRICING_ONLY_NOT_A_REACHABILITY_PROOF"
+}

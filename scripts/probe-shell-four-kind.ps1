@@ -295,6 +295,16 @@ try {
             'end'
         ))
     }
+    if ($symbols -contains 'ndsAudioStorageInitHalt') {
+        $storageHaltLine = (Select-String -LiteralPath (Join-Path $root 'src/nds/nds_audio_storage.c') -Pattern '^    for \(;;\)').LineNumber
+        if (@($storageHaltLine).Count -ne 1) { throw 'Cannot locate the ARM7 storage halt loop.' }
+        $commands.AddRange([string[]]@(
+            ('break nds_audio_storage.c:{0}' -f $storageHaltLine),
+            'commands', 'silent',
+            'printf "FOURKIND STORAGEHALT reason=%u requests=%u failures=%u\n", gNdsAudioStorageMapFailure, gNdsAudioStorageRequests, gNdsAudioStorageFailures',
+            'bt 8', 'end'
+        ))
+    }
 
     if ($TraceMallocAtLeast -eq 0) {
         # Keep the ordinary capacity probe cheap, but expose the two source CSS
@@ -354,15 +364,14 @@ try {
         ))
     }
 
-    # Extern loading can refuse the request before syMallocSet, so a pack halt
-    # alone does not distinguish memory exhaustion from a missing dependency.
+    # Extern loading can refuse the request before syMallocSet. Stop at its
+    # first rejection: later source pointer consumers are no longer safe.
     $commands.AddRange([string[]]@(
         'break ndsRelocRecordExternalFixupFail',
         'commands',
         'silent',
         ('printf "FOURKIND EXTERNFAIL asset=%u caller=0x%08x scene=%d free=%u\n", $r0, $lr, (int)gSCManagerSceneData.scene_curr, {0}' -f $free),
         'bt 5',
-        'continue',
         'end'
     ))
     $commands.Add('continue')
@@ -375,6 +384,20 @@ try {
     ))
     if ($symbols -contains 'gNdsFrontendOverlayLoanBytes') {
         $commands.Add('printf "FOURKIND OVERLAY loads=%u loadfails=%u bytes=%u loans=%u loanbytes=%u used=%u allocs=%u spill=%u\n", gNdsFrontendOverlayLoadCount, gNdsFrontendOverlayLoadFailCount, gNdsFrontendOverlayBytes, gNdsFrontendOverlayLoanCount, gNdsFrontendOverlayLoanBytes, gNdsFrontendOverlayUsedBytes, gNdsFrontendOverlayAllocCount, gNdsFrontendOverlaySpillBytes')
+    }
+    if ($symbols -contains 'gNdsAudioStorageCardRoute') {
+        $commands.Add('printf "FOURKIND ARM7_STORAGE card=%u requests=%u reads=%u bytes=%u bounce=%u failures=%u\n", gNdsAudioStorageCardRoute, gNdsAudioStorageRequests, gNdsAudioStorageReads, gNdsAudioStorageBytes, gNdsAudioStorageBounceBytes, gNdsAudioStorageFailures')
+    }
+    if ($symbols -contains 'gNdsAudioStorageMapExtentCount') {
+        $commands.AddRange([string[]]@(
+            'printf "FOURKIND ROM_MAP failure=%u device=%u volume=%u cluster=%u extents=%u address=0x%08x\n", gNdsAudioStorageMapFailure, gNdsAudioStorageMapDevice, gNdsAudioStorageMapVolumeSector, gNdsAudioStorageMapFirstCluster, gNdsAudioStorageMapExtentCount, gNdsAudioStorageMapAddress',
+            'set $map_i = 0',
+            'set $map_words = (unsigned int*)gNdsAudioStorageMapAddress',
+            'if (gNdsAudioStorageMapAddress != 0) && (gNdsAudioStorageMapExtentCount <= 4096)',
+            'while $map_i < gNdsAudioStorageMapExtentCount',
+            'printf "FOURKIND EXTENT file=%u lba=%u sectors=%u\n", $map_words[$map_i*3], $map_words[$map_i*3+1], $map_words[$map_i*3+2]',
+            'set $map_i = $map_i + 1', 'end', 'end'
+        ))
     }
     $commands.AddRange([string[]]@(
         'bt 8',

@@ -4206,6 +4206,7 @@ NDS_MN_TITLE_ANIM_INC := \
 	$(PROJECT_ROOT)/src/nds/generated/mn_title_anim.generated.inc
 LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections,--emit-relocs \
+	-Wl,--wrap=nitroromGetSelf,--wrap=dvmMountVolume,--wrap=dvmUnmountVolume \
 	-Wl,-T,$(NDS_MEMORY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)
@@ -4322,7 +4323,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
-CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_results_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_results_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_audio_storage.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -4330,7 +4331,7 @@ CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_re
 	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c video_blackout.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
-	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c nds_frontend_overlay.c nds_kirby_hat_residency.c utils.c vector.c nds_replay_digest.c \
+	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c nds_frontend_overlay.c nds_kirby_hat_residency.c nds_audio_extent.c utils.c vector.c nds_replay_digest.c \
 	battleship_scsubsyscontroller.c \
 	battleship_sys_taskman.c battleship_sys_objman.c \
 	battleship_sys_objhelper.c battleship_sys_objanim.c \
@@ -6093,6 +6094,11 @@ prepare-particle-banks:
 	@mkdir -p $(BUILD)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) BUILD_OUTPUT_ROOT=$(BUILD_OUTPUT_ROOT) NDS_OUTPUT_ROOT=$(NDS_OUTPUT_ROOT) NDS_PUBLISH_USER_ROM=$(NDS_PUBLISH_USER_ROM) prepare-particle-banks
 
+.PHONY: arm7-service
+arm7-service:
+	@mkdir -p $(BUILD)
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile PROJECT_ROOT=$(PROJECT_ROOT) BUILD=$(BUILD) arm7-service
+
 all: $(BUILD)
 
 
@@ -6167,6 +6173,37 @@ SCENE_BACKEND_SLICES := \
 .PHONY: all FORCE prune-obsolete-audio
 
 all: $(OUTPUT).nds
+
+# A8: build the project-owned ARM7 from source and package that exact ELF.
+# This uses the installed Calico services and contains no graphics backend.
+NDS_ARM7_ELF := $(CURDIR)/nds-audio-arm7.elf
+NDS_ARM7_SOURCE := $(PROJECT_ROOT)/src/nds/arm7/nds_audio_main.c
+NDS_ARM7_HEADER := $(PROJECT_ROOT)/include/nds/nds_audio_storage.h
+NDS_ARM7_OBJECTS := nds-audio-arm7.o nds-audio-dldi-arm7.o nds-audio-extent-arm7.o
+NDS_ARM7_FLAGS := -march=armv4t -mtune=arm7tdmi -mthumb -g -Os \
+	-Wall -Wextra -ffunction-sections -fdata-sections -DARM7 -D__NDS__ \
+	-I$(PROJECT_ROOT)/include -I$(CALICO)/include
+_ARM7_ELF := -7 $(NDS_ARM7_ELF)
+.PHONY: arm7-service
+arm7-service: $(NDS_ARM7_ELF)
+nds-audio-arm7.o: $(NDS_ARM7_SOURCE) $(NDS_ARM7_HEADER)
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-audio-arm7.d -c $< -o $@
+nds-audio-dldi-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_audio_dldi.c
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-audio-dldi-arm7.d -c $< -o $@
+nds-audio-extent-arm7.o: $(PROJECT_ROOT)/src/nds/nds_audio_extent.c $(PROJECT_ROOT)/include/nds/nds_audio_extent.h
+	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-audio-extent-arm7.d -c $< -o $@
+$(NDS_ARM7_ELF): $(NDS_ARM7_OBJECTS) $(PROJECT_ROOT)/linker/nds_arm7_contract.ld
+	$(CC) $(NDS_ARM7_FLAGS) -specs=$(CALICO)/share/ds7.specs \
+		-L$(CALICO)/lib -Wl,-Map,nds-audio-arm7.map \
+		-Wl,-T,$(CALICO)/lib/ds7.ld,--section-start=.main=0x02ff0000 \
+		-Wl,-T,$(PROJECT_ROOT)/linker/nds_arm7_contract.ld,--wrap=armCopyMem32 $(NDS_ARM7_OBJECTS) -lcalico_ds7 -o $@
+.PHONY: native-only-arm7-check
+native-only-arm7-check: $(NDS_ARM7_ELF)
+	@echo $(NDS_ARM7_OBJECTS) > native-arm7-objects.list
+	@python "$(PROJECT_ROOT)/scripts/check_native_only_rom.py" --elf "$(NDS_ARM7_ELF)" --objects-list native-arm7-objects.list --build-dir "$(CURDIR)"
+$(OUTPUT).nds: $(NDS_ARM7_ELF)
+$(OUTPUT).nds: | native-only-arm7-check
+-include $(NDS_ARM7_OBJECTS:.o=.d)
 
 # P2-3r4. THE NATIVE-OWNER TABLE IMAGES.
 #

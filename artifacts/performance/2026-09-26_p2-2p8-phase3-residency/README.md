@@ -404,3 +404,116 @@ The current cache already contains DS ADPCM, so recompressing PCM is not a
 valid saving. Preserve all cue, envelope, loop, channel and pause semantics;
 fund hat/full-MF admission and resume the missing natural proofs afterwards.
 No root or P1 ROM was published. This is an IMPLEMENTED_NOT_ACCEPTED checkpoint.
+
+## Continue: A8 storage ownership
+
+Previous turn was progress: checkpoint2564d1d5ae0 is pushed, all jobs terminal,
+and the22,288 B admission shortfall is retained. Root continues alone. Installed
+Calico headers, its packaged ARM7 main disassembly, sm64-nds ARM7 channel code
+and sm64ds sound-bank declarations were inspected before this architecture step.
+Read-only SDK source references are in `builds/a8-sdk-reference/`: Calico commit
+81b75e314d57ed1784545e28554e567f26f572f1; libdvm aa0b5aa7573de30e838a0700432b89e059b91bc3.
+
+The real573-cue FGM1 pack has513 wave ranges. Globally shared512 B heads still
+cost259,424 B, before voice rings, so loading every head cannot supply the planned
+RAM. `a8-head-pricing.json` is pricing only, not a source reachability proof.
+Source-derived VS admission remains necessary; no cue is omitted by this step.
+
+Direct-card NitroROM currently reads on ARM9; DLDI's block device already lives
+on ARM7. The custom ARM7 retains keypad/touch, RTC, power, block and sound services
+and owns native cartridge reads on one PXI mailbox. A linked wrapper selects
+that reader for direct-card boot; file-backed boot retains the SDK's device path.
+There is no storage route toggle. This is the storage dependency for autonomous
+audio, not its finished streaming/voice owner or a memory/performance gain.
+
+Requests occupy their own32 B cache line, with sequence-checked replies. ARM7
+validates ROM/main-RAM bounds and rejects request/output overlap. ARM9 transfers
+only complete owned cache lines; unaligned destinations and short tails use a
+private bounce buffer. Three actual-C host fixtures cover all32x32 source/output
+lanes,512 EOF tails, bulk splitting, failed/foreign acknowledgements and cache
+handoff ordering. ARM7 source compilation passes.
+
+The first ARM7 ELF exposed the generic SDK linker's0x02fcc000 main-RAM default,
+which would overlap this project's ARM9 scene heap. It was never packaged/run.
+The final link fixes .main at the packaged SDK's0x02ff0000 and asserts its end,
+heap validity and the sheltered DLDI WRAM boundary. Both CPU link inputs now run
+the native-only checker before ROM packaging. Target full build first falsifier:
+warm `build-p2p8-s7-fpwalk`, Yoster1, walk1/argmax1, log/exit
+`builds/p2-phase3-a8-storage-build.{log,exit}`. Source inputs frozen. Preserve the
+saved9E4A666D baseline; next short probe must positively engage ARM7 reads and
+reach the existing measured hat admission boundary without new corruption.
+Build53531 exited0: ROM30615F5D61511AC12EA7C81E96A109C90B209F4A21D9D5F5A767FEEF3ADFB5E7;
+ARM9/ARM7 native-only and overlay gates pass. Every packaged ARM7 load segment
+matches the custom ELF. Main RAM0x02ff0000..0x02ff01f4; WRAM ends0x037fdd58,
+leaving53,928 B below the fixed DLDI block for subsequent audio code/rings. This
+is ARM7 headroom, not freed ARM9 scene memory. Saved full identities and binaries
+in `a8-storage-inputs.json` / `builds/p2p8-a8-storage-30615f5d/`.
+Run the short heavy probe, runner7, `builds/p2-phase3-a8-storage-probe.*`.
+Probe50669 exited0 and reaches the existing hat boundary with unchanged41,996 B
+free. The custom ARM7's retained services boot, but its direct-card route has
+zero requests: the primary verifier is actually a file-backed DLDI boot. This
+is **UNENGAGED storage**, not a reader pass. Do not rerun the same route.
+
+Continue the real file-backed seam. Link wrappers capture the ROM volume's
+public dvmMountVolume arguments (the installed archive has an undefined call
+from dvm_prober.o, so interception is effective). fstat supplies the32-bit first
+cluster. A boot-only FAT12/16/32 walker builds a compact immutable extent map;
+ARM7 validates/reads it using the block API. No private FatFs structure casts or
+guessed partition/path mapping. The map is retained before scene arenas exist.
+
+The SDK's DLDI calls are not serialized across its block thread and an independent
+audio worker. A public DISC_INTERFACE adapter adds a priority-inheriting recursive
+mutex and bounded16-sector calls. Its driver export restores the original
+interface in the exported copy, preserving later chainloading. Driver code/data
+are unchanged. Twelve host tests now cover FAT fragmentation/cycles/bounds,
+mapped partial reads and actual concurrent read/write callers; exported driver
+bytes match the original fixture. Target validation is still owed. Build frozen
+inputs in `p2-phase3-a8-mapped-build.{log,exit}`, then probe the primary DLDI path.
+Build97402 exited0, ROM901B3CEEBCB5AB7B6C774DB6B33EEBF6F7B421EC29FFDC598BE536F1DE83E097,
+saved as `builds/p2p8-a8-mapped-901b3cee/`. Probe76562 positively engages10,473
+ARM7 reads but has16 relocation failures and a CPU abort; it is FAILED, and the
+probe stopped execution. Transport's zero error count is not content correctness.
+
+Root cause: libnds argv begins at0x02fffe70 and overlaps the application header's
+ntr_rom_size at0x02fffe80. That field held the argv pointer (~50 MB), truncating
+the new extent map/read bound before late assets in this63 MB ROM. The SDK's old
+reader used only the earlier FAT/FNT fields. The file-backed owner now reads the
+immutable file header and checks its FAT/FNT identity and file/chip bounds;
+direct-card bounds use the preserved device-capacity byte. ARM7 retains the
+validated size instead of rereading the aliased RAM field. A host regression
+fixture must reject the old-field mutation. Retry after this specific repair:
+`p2-phase3-a8-mapped-build-r1.{log,exit}`, then the short mapped probe r1.
+The13-test suite passes, including the negative old-field mutation. Build57914
+exited0 with both native-only gates and ELF gate green. ROM
+4905A1C6254B7CC196D5BBB07207F2E19EBA89197977B17209DE58AB0E04A447 is saved in
+`builds/p2p8-a8-mapped-4905a1c6/`; `a8-mapped-r1-inputs.json` verifies its ARM7
+payload against the ELF and records the correct63,184,896-byte NTR region.
+Probe21642 runs this exact corrected ROM, runner7, mapped-probe-r1 logs.
+Probe21642 exited0 and reaches all four heavy fighters with zero storage or
+relocation failures. Backend2 is the real mapped DLDI path:30,170 reads,
+7,111,460 B returned,2,469,060 B through the partial-line bounce. The one extent
+atLBA328032 now covers123,408 sectors. Independent host reconstruction from the
+actual slot7 storage image matches **all61,043,200 B from the FNT through NTR end**,
+including NitroFS payloads and overlays. ARM9 code before that range contains the
+emulator's DLDI patch and is not mislabelled byte-identical. Structured result:
+`a8-mapped-r1-summary.json`; source/SDK hashes and both CPU identities are in
+`a8-mapped-r1-inputs.json`. ARM7 WRAM ends0x037fe6b0 (51,536 B below DLDI).
+
+The hat admission failure remains exactly38,672 B requested versus41,996 B free,
+12 B alignment and25,600 B reserve:22,288 B short. This run reaches no gameplay
+update; its UINT_MAX low-water is invalid. It is storage/boot proof, not timing,
+audio output, full-match reserve or publication acceptance. Direct-card/DSi
+target routes, fragmented media and driver export have only their noted host/
+source coverage. The probe now stops at the first relocation rejection rather
+than letting unsafe consumers reach a subsequent abort; the passing run had no
+such rejection, so it needs no repeat for that observer-only failure-path change.
+
+**Next A8 implementation:** move BGM playback, timer/seam handling and refills to
+ARM7 using the admitted ROM media. Then the source-derived FGM head set and voice/
+envelope owner can replace the237,568 B fixed cache. Audio code and refills still
+run on ARM9 today; no cache/RAM/FPS saving is claimed by this storage dependency.
+Reuse all completed proof above. All jobs terminal, no root/P1 publication;
+coherent progress remains IMPLEMENTED_NOT_ACCEPTED.
+Checkpoint staging encountered another zero-byte index lock,24 minutes old,
+with no Git process and an exclusive-open check passing. Removed that exact
+abandoned lock under the owner's existing authorization; proof is unchanged.

@@ -1,0 +1,16 @@
+{
+  "status": "FAILED_BOOT_ARGV_HEADER_ALIAS",
+  "rom_sha256": "901B3CEEBCB5AB7B6C774DB6B33EEBF6F7B421EC29FFDC598BE536F1DE83E097",
+  "raw_capture": "builds/p2-phase3-a8-mapped-probe.txt",
+  "raw_capture_sha256": "2B0AE19F324EEB45D04E3A3EB278234158AC2DA4B83B8B0C5E290C0F3D7065C6",
+  "markers": [
+    "FOURKIND CPUABORT pc=01fff1a8 lr=020a69e8 cpsr=20000097 r0=02318180 r1=000003eb r2=00000034 r3=00000031",
+    "FOURKIND CPUABORT2 r4=02318180 r5=00000001 r6=02281154 r7=022edf04 sp=02fffd9e scene=22 free=821240",
+    "FOURKIND ARENA chosen=892416 allocfail=197 heapgen=9 start=0x02306c00 ptr=0x02318208 end=0x023e0a00 free=821240 overflow=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=16 firstasset=194 firstlr=0x0207f133 lastlr=0x0207bda3",
+    "FOURKIND ARM7_STORAGE card=2 requests=10474 reads=10473 bytes=4413439 bounce=1062143 failures=0",
+    "FOURKIND ROM_MAP failure=0 device=0 volume=63 cluster=20482 extents=1 address=0x022e3c60",
+    "FOURKIND EXTENT file=0 lba=328032 sectors=98297"
+  ],
+  "timing_qualified": false
+}

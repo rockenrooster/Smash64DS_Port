@@ -1,0 +1,44 @@
+{
+  "rom_sha256": "30615F5D61511AC12EA7C81E96A109C90B209F4A21D9D5F5A767FEEF3ADFB5E7",
+  "arm9_elf_sha256": "08DD04AEACBC5CD944956985FA7068CCF99EC38209EFA33EFD884D94AF848248",
+  "arm7_elf_sha256": "E2501857DB0F33640BD9E052307993842B7DCEF6553D5F3E392F13A9FB00CB20",
+  "config_sha256": "B1EB16D28E40CF20393BD4ABBC7E4CCDF427E179EE8E62BF20D142105CA0D58C",
+  "config_identical_to_9e4a666d": true,
+  "saved": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-a8-storage-30615f5d",
+  "arm7_segments": [
+    {
+      "vma": "0x2380000",
+      "lma": "0x2380000",
+      "bytes": 1568,
+      "packaged_bytes_match": true
+    },
+    {
+      "vma": "0x2ff0000",
+      "lma": "0x2380620",
+      "bytes": 500,
+      "packaged_bytes_match": true
+    },
+    {
+      "vma": "0x37f8000",
+      "lma": "0x2380814",
+      "bytes": 15788,
+      "packaged_bytes_match": true
+    },
+    {
+      "vma": "0x23845c0",
+      "lma": "0x23845c0",
+      "bytes": 24,
+      "packaged_bytes_match": true
+    }
+  ],
+  "host_tests": 3,
+  "native_only_inputs": {
+    "arm9": 321,
+    "arm7": 1
+  },
+  "arm7_main_start": "0x02ff0000",
+  "arm7_main_end": "0x02ff01f4",
+  "arm7_wram_end": "0x037fdd58",
+  "wram_headroom_before_dldi_bytes": 53928,
+  "status": "BOOT_SERVICES_PASS_NTR_STORAGE_UNENGAGED"
+}

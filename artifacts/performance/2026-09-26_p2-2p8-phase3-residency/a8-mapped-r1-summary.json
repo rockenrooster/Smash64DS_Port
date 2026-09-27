@@ -1,0 +1,29 @@
+{
+  "status": "STORAGE_BOOT_PASS_HAT_ADMISSION_STILL_FAILED",
+  "rom_sha256": "4905A1C6254B7CC196D5BBB07207F2E19EBA89197977B17209DE58AB0E04A447",
+  "mapped_ntr_bytes": 63184896,
+  "extents": [
+    {
+      "file_sector": 0,
+      "device_sector": 328032,
+      "sectors": 123408
+    }
+  ],
+  "raw_capture_sha256": "1EF5FFC4C13798416BB0F2B459AE0371A3EA5B3035A3E9E26524C9F2F8CF8E5A",
+  "nitrofs_and_overlay_bytes_exact": true,
+  "compared_region_start": 2141696,
+  "compared_region_bytes": 61043200,
+  "compared_region_sha256": "E5A366DFCCCA1BB129BC2F38BA4F57849FE311D762EC854A5B098CEBD9370E83",
+  "dldi_image": "emulators\\melonds-runners\\slot7\\storage\\dldi.bin",
+  "markers": [
+    "FOURKIND HATHALT reason=4 required=38672 high=0x640 low=0x640 free=41996",
+    "FOURKIND ARENA chosen=892416 allocfail=197 heapgen=9 start=0x02306c00 ptr=0x023d65f4 end=0x023e0a00 free=41996 overflow=0",
+    "FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000",
+    "FOURKIND ARM7_STORAGE card=2 requests=30171 reads=30170 bytes=7111460 bounce=2469060 failures=0",
+    "FOURKIND ROM_MAP failure=0 device=0 volume=63 cluster=20482 extents=1 address=0x022e3d20",
+    "FOURKIND EXTENT file=0 lba=328032 sectors=123408"
+  ],
+  "runtime_timing_qualified": false,
+  "audio_ownership_migrated": false,
+  "dldi_image_sha256": "5AB8BD281AA17CABBC86A13765EACED56F26E0765FCE3F22239F8CD21AE03CC8"
+}
