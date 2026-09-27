@@ -1415,8 +1415,20 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
 }
 
 /* ITCM (2026-09-27): the per-joint driver of the parser and the player,
- * ~4.2K ticks/frame of non-memory stall at 1,136 B in main RAM. */
-sb32 __attribute__((section(".itcm")))
+ * ~4.2K ticks/frame of non-memory stall at 1,136 B in main RAM. The gate ROM's
+ * ITCM is full, so an attribution build (a lab split flag at 1 adds ITCM-
+ * resident instrument code: 504 B over with SRC + MISC splits) keeps this in
+ * main RAM instead of failing to link. */
+#if (defined(NDS_TICK_HUD_SRC_SPLIT) && NDS_TICK_HUD_SRC_SPLIT) || \
+    (defined(NDS_P2_MISC_SPLIT) && NDS_P2_MISC_SPLIT) || \
+    (defined(NDS_FTR_LEAN_PHASE_TICKS) && NDS_FTR_LEAN_PHASE_TICKS) || \
+    (defined(NDS_FTR_PRE_WALK_CENSUS) && NDS_FTR_PRE_WALK_CENSUS) || \
+    (defined(NDS_FTR_LEAN_KTIME) && NDS_FTR_LEAN_KTIME)
+#define NDS_FT_POSE_UPDATE_SECTION
+#else
+#define NDS_FT_POSE_UPDATE_SECTION __attribute__((section(".itcm")))
+#endif
+sb32 NDS_FT_POSE_UPDATE_SECTION
 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
                      u32 *owned_mask_lo, u32 *owned_mask_hi)
 {
