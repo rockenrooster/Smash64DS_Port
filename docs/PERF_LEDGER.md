@@ -8829,3 +8829,15 @@ now reads the float fields as `may_alias` words (same bitwise equality).
 `962DCD90` vs `emblem`, replay identical: WORK-H P50/P95/P99 1,094,528/
 1,533,888/1,956,352; paired -2.2K (STG). RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 21.
+
+## 2026-09-27 — 64-bit divides and the reject's square root on the DS units
+
+**BANKED.** libgcc's bit-by-bit `__udivmoddi4` cost ~275 ticks per divide
+(~2.2K/frame). The hurtbox reject now binds its kernel's divide and square-root
+hooks to the DS units (`ndsR2HwMathCfxDiv64`/`Isqrt64`, proven identical by
+`scripts/check-r2-hwmath.ps1`); the wallpaper's two `s64 / 5` and the pacing
+FPS statistics use `ndsR2HwMathDivideLead` (C truncation). `FB41F7D6` vs
+`keycmp`, replay identical: WORK-H P50/P95/P99 1,087,808/1,523,648/1,932,416;
+paired median -3.5K (mean -6.2K; the reject's misses cluster in hit frames).
+RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 22.

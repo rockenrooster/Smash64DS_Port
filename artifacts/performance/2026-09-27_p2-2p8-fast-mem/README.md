@@ -487,3 +487,28 @@ the float fields as `may_alias` words, the same bitwise equality.
   1,956,352**.
 - Paired median -2,240, all of it STG.
 - VBlanks 1,009/909/50/5.
+
+## 22. 64-bit divides and the reject's square root on the DS units
+
+The `4f08` census charged `__udivmoddi4` ~2.2K ticks/frame for about eight
+divides a frame, ~275 ticks each: libgcc's bit-by-bit loop. The callers:
+- `ndsP2HbRejectPoints`. The hurtbox reject used the kernel header's portable
+  hooks, a C 64-bit divide plus a 32-step digit-by-digit square root, on every
+  cache-slot miss. It now binds `NDS_R2_CFX_DIV64` and `NDS_R2_CFX_ISQRT64` to
+  `ndsR2HwMathCfxDiv64` and `ndsR2HwMathCfxIsqrt64`, as
+  `nds_r2_collision_fixed.c` does under `NDS_R2_CFX_HWMATH`. The arithmetic is
+  proven identical (`scripts/check-r2-hwmath.ps1`).
+- `ndsNativeWallpaperDraw`: two `s64 / 5` a frame, now `ndsR2HwMathDivideLead`.
+  The unit truncates toward zero, which is C's rule.
+- `ndsBattlePlayablePacingUpdate`: two `u64 / ticks` FPS statistics a frame,
+  the same change. The operands are below 2^40.
+
+`hwdiv` `FB41F7D6` against `keycmp`, replay IDENTICAL:
+- WORK-H P50/P95/P99 1,094,528/1,533,888/1,956,352 -> **1,087,808/1,523,648/
+  1,932,416**.
+- Paired median -3,456, mean -6,197. The mean is larger because the reject's
+  slot misses cluster in hit-active frames (SRC mean -3.8K).
+- VBlanks 1,034/891/43/5. Native failures 0.
+
+Build note: the first attempt also bound `NDS_R2_COLLISION_DIV64`. That broke
+`nds_r2_collision_mtx.h` and the hook is not needed here, so it was dropped.

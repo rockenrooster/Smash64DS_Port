@@ -1,4 +1,5 @@
 #include <nds/nds_native_wallpaper.h>
+#include <nds/nds_r2_hwmath_unit.h>
 
 /* Effect-instance pool free count (efmanager.c:1720), sampled per presented
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
@@ -423,11 +424,13 @@ static void ndsBattlePlayablePacingUpdate(void)
     if (ticks != 0u)
     {
         gNdsBattlePlayablePacingPresentFpsX10 =
-            (u32)(((u64)gNdsBattlePlayablePacingPresentedFrames *
-                   BUS_CLOCK * 10u) / ticks);
+            (u32)ndsR2HwMathDivideLead(
+                (s64)((u64)gNdsBattlePlayablePacingPresentedFrames *
+                      BUS_CLOCK * 10u), (s64)ticks);
         gNdsBattlePlayablePacingLogicFpsX10 =
-            (u32)(((u64)gNdsBattlePlayablePacingLogicFrames *
-                   BUS_CLOCK * 10u) / ticks);
+            (u32)ndsR2HwMathDivideLead(
+                (s64)((u64)gNdsBattlePlayablePacingLogicFrames *
+                      BUS_CLOCK * 10u), (s64)ticks);
     }
     /* Short samples still need enough completed presentations to distinguish
      * sustained cadence from startup. Lifecycle verification resets this

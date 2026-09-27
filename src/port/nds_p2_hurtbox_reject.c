@@ -25,6 +25,16 @@
 #include <ft/fighter.h>
 #include <macros.h>
 
+/* The DS divide and square-root units for the kernel's two overridable
+ * hooks, as src/port/nds_r2_collision_fixed.c binds them under
+ * NDS_R2_CFX_HWMATH: the same truncating 64-bit divide and floor root, proven
+ * identical to the portable forms (scripts/check-r2-hwmath.ps1). The portable
+ * defaults were a bit-by-bit __aeabi_ldivmod and a 32-step digit root on every
+ * slot miss. */
+#include <nds/nds_r2_hwmath_unit.h>
+#define NDS_R2_CFX_DIV64(numerator, denominator) \
+    ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
+#define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
 #include <nds/nds_r2_collision_fixed.h>
 
 #define NDS_P2_HB_CHAIN_MAX 18

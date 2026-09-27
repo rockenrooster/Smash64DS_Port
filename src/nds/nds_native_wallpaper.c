@@ -5,6 +5,7 @@
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_r2_hwmath_unit.h>
 
 #include "generated/native_wallpapers.generated.inc"
 
@@ -278,8 +279,12 @@ static s32 ndsNativeWallpaperAffine(const NDSNativeWallpaper *asset,
     {
         return FALSE;
     }
-    x = (s64)*pa / 2 - ((s64)origin_x * 4 * *pa) / 5;
-    y = (s64)*pd / 2 - ((s64)origin_y * 4 * *pd) / 5;
+    /* The DS divide unit: C's truncating s64 division (the unit's own rule),
+     * in place of a bit-by-bit __aeabi_ldivmod twice a frame. */
+    x = (s64)*pa / 2 -
+        ndsR2HwMathDivideLead((s64)origin_x * 4 * *pa, 5);
+    y = (s64)*pd / 2 -
+        ndsR2HwMathDivideLead((s64)origin_y * 4 * *pd, 5);
     if ((x < -134217728) || (x > 134217727) ||
         (y < -134217728) || (y > 134217727))
     {

@@ -29,8 +29,8 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26/27 solo (Codex out of usage):** slice-7 regression fixed; storage/FGM
 (ARM7 async, 160 KiB arena, -72 KiB); fast cpuGetTiming; stage, status-path,
 HUD and reloc overhead cuts; A5 hurtbox reject; ARM memcpy/memset (ITCM).
-`962DCD90` WORK-H P50/P95 1,094,528/1,533,888 (lab flags: NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS). Receipts `2026-09-2{6,7}_p2-2p8-*`.
-Digest: `--sequence --resync 4`, control `keycmp`. Median > gate: next FTR materialize tail,
+`FB41F7D6` WORK-H P50/P95 1,087,808/1,523,648 (lab flags: NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS). Receipts `2026-09-2{6,7}_p2-2p8-*`.
+Digest: `--sequence --resync 4`, control `hwdiv`. Median > gate: next FTR materialize tail,
 SINT/status path, MISC; STG/SPHD machinery.
 
 ## Continue, do not restart
