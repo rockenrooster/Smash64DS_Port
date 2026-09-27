@@ -1243,5 +1243,25 @@ IDENTICAL:
 - VBlanks 1,418/535/19/1: 71.9% of presented frames in two.
 - Native failures 0; heap low-water 69,340 B.
 
-The P1 ROM links with 856 B ITCM spare; the frozen root was restored after the
+The P1 ROM links with 864 B ITCM spare; the frozen root was restored after the
 link check.
+
+## 44. Refuted: two lookups from the tail split
+
+The dmiss7 tail split (`dmiss7/census7-top20.txt`, 20 costliest frames) put
+the loaded-file scans (`ndsRelocFindLoadedFileByData`/`Containing`, ~16K
+cycles a tail frame) and the pack span map (`ndsPreviewFileOffset`, ~12K on 9
+of 20) among the motion-start premium. Both A/Bs are same-ROM with lab
+toggles, and replay is IDENTICAL in each.
+
+**Find rows** (`fr0`/`fr1`). A 1 KB mirror of each row's (data, size) was
+rebuilt whenever the table epoch moved. Result: paired median +192, top 5%
++1.6K. On load-heavy frames the epoch moves as often as the scans ran, so the
+rebuild costs what it saves. Reverted.
+
+**Span bisection** (`sb0`/`sb1`). A section's spans were marked sorted at
+REGISTER, and a sorted section was bisected instead of scanned. Result: paired
+median 0, top 5% -0.3K. Whether the mask was ever set is unverified. Reverted.
+
+A premium row with a few thousand cycles on half the tail frames has not, on
+this evidence, been a lever.
