@@ -286,8 +286,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # bytes; his FuraSleep 596 (six notes over 968 ticks) is rendered as a
     # 16 kHz body (44,532 bytes) so it fits the 60 KiB slot at all -- the
     # cache does not move.
+    # 2026-09-27: the slots became a 160 KiB ring arena (P2-2p8 A8); cues take
+    # their own size, so the cache no longer moves with the largest body.
     ([int64]$metadata.resident_bytes -ne 6968728) -or
-    ([int64]$metadata.resident_limit_bytes -ne 237568) -or
+    ([int64]$metadata.resident_limit_bytes -ne 163840) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
     # blocked the seven crowd cues, both for no runtime reason; the bound that
@@ -719,7 +721,7 @@ if (($fgm218.acoustic_oracle.source_custom_fx_dry_only -ne $true) -or
 $header = Get-Content -LiteralPath $headerPath -Raw
 $runtime = Get-Content -LiteralPath $runtimePath -Raw
 foreach ($token in @(
-    '#define NDS_AUDIO_FGM_CACHE_BYTES 237568u',
+    '#define NDS_AUDIO_FGM_CACHE_BYTES 163840u',
     '#define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u')) {
     if (-not $header.Contains($token)) { throw "Runtime header lost: $token" }
 }

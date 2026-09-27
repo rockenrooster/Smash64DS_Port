@@ -30,8 +30,9 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 the compact packet layout (stage GX tail starved lean entries). Stage body is
 heap again (P95 1,955,392); ROM reads bounce only edges (1,892,160); FGM cache
 + ARM7 async fills (A8, storage op 5): `FF3DC3FC` P95/P99 1,852,672/2,291,456,
-20.06 FPS, replay identical. Receipts `2026-09-26_p2-2p8-{ftr-item-tail,
-storage-bounce,fgm-cache}`. Next: shrink the FGM cache (A8 RAM), then MF bind.
+replay identical; cache is a 160 KiB ring arena (-72 KiB): `18A992BB` P95/P99
+1,839,488/2,263,936. Receipts `2026-09-26_p2-2p8-{ftr-item-tail,storage-bounce,
+fgm-cache}`. Next: MF bind / heavy admission with the freed RAM, then A5.
 
 ## Continue, do not restart
 

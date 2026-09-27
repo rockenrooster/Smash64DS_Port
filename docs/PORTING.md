@@ -23337,3 +23337,8 @@ reverted after a layout-dependent digest divergence; see the fgm-cache receipt.
 2026-09-27 P2-2p8 A8: FGM misses now queue an ARM7 read (storage op 5, reply
 written into the request line) and start their voice at the next update; no ARM9
 thread. P95 1,852,672, P99 2,291,456, replay identical. Next: shrink the cache.
+
+2026-09-27 P2-2p8 A8: the FGM cache is a 160 KiB ring arena (cues take their own
+size; pinned/in-flight cues are never overwritten), down from eight fixed slots
+in 232 KiB. Taskman arena +73,728 B; P95 1,839,488; replay identical; the stress
+verifier fails on any FGM no-fit or play failure.

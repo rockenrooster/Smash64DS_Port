@@ -8524,3 +8524,13 @@ continues; the voice starts at the next update (pending handles). No ARM9 thread
 0 failures: WORK-H P50/P95/P99 1,328,576/1,869,504/2,360,192 -> 1,328,192/
 1,852,672/2,291,456; 5+-VBlank 30 -> 27; 20.06 FPS. RED. Cache still 232 KiB.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-fgm-cache/README.md`.
+
+## 2026-09-27 — A8: FGM cache becomes a 160 KiB ring arena (-72 KiB)
+
+**BANKED (RAM).** Eight fixed slots (232 KiB) -> one ring arena where each cue
+takes its own rounded size; pinned cues and in-flight fills are never
+overwritten. Peak pinned 133,424 B; no-fit 0 at 144/160/232 KiB. `FF3DC3FC` ->
+`18A992BB`, replay identical: WORK-H P50/P95/P99 1,328,192/1,852,672/2,291,456 ->
+1,328,512/1,839,488/2,263,936 (P95 within ~2x single-run noise; banked for RAM);
+async fills 331 -> 274. Taskman arena +73,728 B (1,371,904). RED.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-fgm-cache/README.md`.

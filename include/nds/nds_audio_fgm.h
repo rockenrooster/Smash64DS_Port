@@ -98,15 +98,17 @@
  * so the DS stores the exact gameplay-reachable root prefixes and private fork
  * 673 separately. The root remains pauseable while 673 is not, matching the
  * source set_unk1F bit. Charge7 is source-unreachable as a held loop: level 7
- * enters immediate release. The streaming cache is 232 KiB (60/40/40/28 + four
- * 16 KiB slots); the handle pool grows to 12 so four roots + four children do
- * not consume every source sound handle during a four-fighter startup burst. */
+ * enters immediate release. The handle pool grows to 12 so four roots + four
+ * children do not consume every source sound handle during a four-fighter
+ * startup burst. The streaming cache is a 160 KiB ring arena (P2-2p8 A8,
+ * 2026-09-27): cues take their own rounded size; the four-CPU stress pins at
+ * most 133,424 B and never fails to place a cue. */
 /* Full source cue set, including both forked tails of PublicPrologue/TitleWait.
  * Their complete schedules fit the 60 KiB slot at 12/8 kHz respectively;
  * other long voices use 16 kHz. Every cue passes the acoustic/cache checker. */
 #define NDS_AUDIO_FGM_PACK_BYTES 6968728u
 #define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x63e22da5u
-#define NDS_AUDIO_FGM_CACHE_BYTES 237568u
+#define NDS_AUDIO_FGM_CACHE_BYTES 163840u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE (1u << 3)

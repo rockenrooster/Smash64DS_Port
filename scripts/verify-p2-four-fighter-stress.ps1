@@ -268,6 +268,12 @@ $memoryGlobals = @(
     'gNdsAudioFgmDirectReadCount',
     'gNdsAudioFgmDirectFallbackCount',
     'gNdsAudioFgmStdioRangeReadCount',
+    # P2-2p8 A8 FGM ring arena: a miss the arena cannot place, and any play
+    # that fails, is a dropped sound.
+    'gNdsAudioFgmNoFitCount',
+    'gNdsAudioFgmPlayFailCount',
+    'gNdsAudioFgmPinnedBytesMax',
+    'gNdsAudioFgmAsyncFillFailCount',
     # P2-2 compact Main/Model residency. The FPC loader replaces the raw
     # per-kind Main+Model allocation on this direct VSBattle arm; these are its
     # own load/failure counters, not inferred from the absence of an OOM.
@@ -964,6 +970,10 @@ $memory = [PSCustomObject]@{
     fgmDirectReads = $extra['gNdsAudioFgmDirectReadCount']
     fgmDirectFallbacks = $extra['gNdsAudioFgmDirectFallbackCount']
     fgmStdioRangeReads = $extra['gNdsAudioFgmStdioRangeReadCount']
+    fgmNoFit = $extra['gNdsAudioFgmNoFitCount']
+    fgmPlayFailures = $extra['gNdsAudioFgmPlayFailCount']
+    fgmPinnedBytesMax = $extra['gNdsAudioFgmPinnedBytesMax']
+    fgmAsyncFillFailures = $extra['gNdsAudioFgmAsyncFillFailCount']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
@@ -1419,6 +1429,14 @@ if (([uint64]$memory.fgmDirectReads -eq 0) -or
         "reads=$($memory.fgmDirectReads) " +
         "fallbacks=$($memory.fgmDirectFallbacks) " +
         "stdioReads=$($memory.fgmStdioRangeReads).")
+}
+if (([uint64]$memory.fgmNoFit -ne 0) -or
+    ([uint64]$memory.fgmPlayFailures -ne 0) -or
+    ([uint64]$memory.fgmAsyncFillFailures -ne 0)) {
+    throw ("Four-fighter FGM arena dropped sounds: " +
+        "noFit=$($memory.fgmNoFit) playFailures=$($memory.fgmPlayFailures) " +
+        "asyncFillFailures=$($memory.fgmAsyncFillFailures) " +
+        "pinnedMax=$($memory.fgmPinnedBytesMax).")
 }
 
 Write-Host ''

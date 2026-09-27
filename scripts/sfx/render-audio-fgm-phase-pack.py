@@ -101,7 +101,11 @@ MAX_PACK_BYTES = 8 * 1024 * 1024
 # two old 28 KiB slots to 40 KiB. That permits full-charge ShootF plus Charge0,
 # Charge1 and Charge2 to coexist in a four-fighter match, while fork 673 shares
 # one of the four unchanged 16 KiB slots.
-RUNTIME_CACHE_BYTES = ((60 + 40 + 40 + 28 + 16 + 16 + 16 + 16) * 1024)
+# 2026-09-27 (P2-2p8 A8): the eight fixed slots became one ring arena in which
+# each cue takes its own 32-byte-rounded size. The four-CPU stress pins at most
+# 133,424 B at once with zero no-fit misses at 144, 160 and 232 KiB; 160 KiB
+# keeps margin. MAX_CUE_IMA_BYTES remains the single-cue bound.
+RUNTIME_CACHE_BYTES = 160 * 1024
 MAX_CUE_IMA_BYTES = 60 * 1024
 MAX_RESIDENT_BYTES = 128 * 1024  # historical Phase-C comparison only
 PUBLIC_EXCITED_ID = 626

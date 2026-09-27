@@ -81,22 +81,20 @@ MF2 worst bank697,760 B unlinked; Kirby copy engagement still owed.
 0BD4523E replay exact;141 BGM refills, no audio failures, arena +20,480 B.
 AUD P95 6,528; WORK-H P95 2.625M/18.97 FPS, RED. Mixed audio identifies BGM.
 HeavyF7443068 gains16,384 B; admission still5,904 B short, plus later play.
-Next A8 FGM: derive VS heads and move voice/envelope/refill ownership; retire
-237,568 B cache. Jobs terminal; current heavy/lab arenas908,800/1,302,272 B.
+A8 FGM: ARM7 fills + 160 KiB arena landed 09-27 (FGM cache below). Jobs terminal; current heavy/lab arenas908,800/1,302,272 B.
 **FTR tail fix (09-26, solo)**: `c116fffa03e`'s 6,528-word regions left lean
 entries 2,304 words; DK/Samus/Link lists went wide (double walk, no variants).
 Regions back to 8,840, stage body in heap (keep-free 25,600+36,420). `BC3500EA`
 WORK-H P50/P95/P99 1,332,160/1,955,392/2,786,944 (was 1,343,808/2,626,368/
 3,379,648); FTR P95 269,696; 19.72 FPS; replay identical. Heavy roster's stage
 program now expected to decline (RAM). Receipt `2026-09-26_p2-2p8-ftr-item-tail`.
-**Storage split-bounce (09-26)**: unaligned ROM reads bounced 512 B per PXI trip
-(79% of bytes). Head/tail only now: requests 18,651->2,233, ARM9 blocked 35K->18K
-ticks/frame. `5EEE8AFD` WORK-H P95/P99 1,892,160/2,384,256; 19.94 FPS; replay
-identical. Rest is transfer (3.58 MB/match): Phase 3 residency. Receipt `2026-09-26_p2-2p8-storage-bounce`.
+**Storage split-bounce (09-26)**: unaligned ROM reads bounce only head/tail lines
+(requests 18,651->2,233). `5EEE8AFD` P95/P99 1,892,160/2,384,256; replay identical.
+Receipt `2026-09-26_p2-2p8-storage-bounce`.
 **FGM cache (09-26)**: 342/456 plays missed. LRU tiebreak, 32 B-aligned slots, resident
 envelopes; A8 async fills via the ARM7 (storage op 5): `FF3DC3FC` P95/P99 1,852,672/
-2,291,456, 20.06 FPS, replay identical. Next A8: shrink the 232 KiB cache. ARM9 worker-
-thread fills reverted (layout-dependent divergence). STG split: `2026-09-26_p2-2p8-stg-partition`.
+2,291,456, replay identical. Cache now a 160 KiB ring arena (-72 KiB, no-fit 0):
+`18A992BB` P95/P99 1,839,488/2,263,936. ARM9-thread fills reverted. STG split: `2026-09-26_p2-2p8-stg-partition`.
 **Constraint**: CSS reserve >=183,072 B; current margin 17,584 B.
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

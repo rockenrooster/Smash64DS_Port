@@ -821,6 +821,13 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   replay identical. Lesson: a fighter-list budget is per entry, not per region.
   Receipt: `artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail/`.
 
+- **A8 storage and FGM (2026-09-26/27), BANKED.** ROM reads bounce only their
+  unaligned head/tail lines; FGM misses fill asynchronously through the ARM7
+  (storage op 5, reply in the request line, voice starts next update); the FGM
+  cache is a 160 KiB ring arena instead of 232 KiB of fixed slots (arena +73,728
+  B). `18A992BB` WORK-H P50/P95/P99 1,328,512 / 1,839,488 / 2,263,936, replay
+  identical. Receipts `2026-09-26_p2-2p8-{storage-bounce,fgm-cache}`.
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick

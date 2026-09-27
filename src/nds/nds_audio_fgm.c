@@ -32,11 +32,9 @@
  * only the length is generic. Extending a handle by 57.5 ms is affordable:
  * the measured peak is six of eight handles with PoolExhaustCount 0. */
 #define NDS_AUDIO_FGM_RELEASE_MICROSECONDS (NDS_AUDIO_FGM_TIMER_MICROSECONDS * 10u)
-#define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 8u
-#define NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES (60u * 1024u)
-#define NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES (40u * 1024u)
-#define NDS_AUDIO_FGM_CACHE_SLOT_COMPACT_BYTES (28u * 1024u)
-#define NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES (16u * 1024u)
+/* Cue entries in the ring arena (NDS_AUDIO_FGM_CACHE_BYTES). Eight handles pin
+ * at most eight; the rest keep recently played cues for hits. */
+#define NDS_AUDIO_FGM_CACHE_SLOT_COUNT 16u
 #define NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS 32u
 #define NDS_AUDIO_FGM_EVENT_RESTART_SAMPLE (1u << 0)
 #define NDS_AUDIO_FGM_FLAG_LOOP (1u << 0)
@@ -216,10 +214,18 @@ __attribute__((used)) volatile u32 gNdsAudioFgmStdioRangeReadCount;
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
 
-/* Line-aligned so a sample fill is one direct ROM read, not a bounced head,
- * body and tail (every slot offset is a multiple of 1 KiB). */
+/* The cue ring arena. Line-aligned, and every span is a whole number of lines,
+ * so a fill is one direct ROM read, not a bounced head, body and tail. */
 static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
     __attribute__((aligned(32)));
+static u32 sNdsAudioFgmArenaHead;
+/* Async read parts queued on the ARM7 and not yet collected (<= 16 of its 20
+ * mailbox messages; the rest stay free for synchronous requests). */
+#define NDS_AUDIO_FGM_FILL_PARTS_MAX 16u
+static u32 sNdsAudioFgmFillPartsInFlight;
+/* Lab sizing word (boot poke): the arena bytes actually used, <= the array. */
+__attribute__((used)) volatile u32 gNdsAudioFgmArenaLimit =
+    NDS_AUDIO_FGM_CACHE_BYTES;
 /* Every envelope in the pack, read once at load: 24 cues, 448 B. A play used
  * to re-read its envelope from ROM on the game thread. */
 #define NDS_AUDIO_FGM_ENVELOPE_TABLE_BYTES 512u
@@ -230,6 +236,10 @@ static u32 sNdsAudioFgmEnvelopeBase;
 static NdsAudioStorageRequest
     sNdsAudioFgmFillRequests[NDS_AUDIO_FGM_CACHE_SLOT_COUNT]
                             [NDS_AUDIO_FGM_FILL_PARTS];
+/* Arena margin: the largest byte total of cues pinned by live handles at any
+ * acquire, and misses the arena could not place (each one a dropped sound). */
+volatile u32 gNdsAudioFgmPinnedBytesMax;
+volatile u32 gNdsAudioFgmNoFitCount;
 volatile u32 gNdsAudioFgmAsyncFillCount;
 volatile u32 gNdsAudioFgmAsyncFillFailCount;
 volatile u32 gNdsAudioFgmDeferredStartCount;
@@ -283,14 +293,9 @@ _Static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ &&
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET ==
                    (16u + (NDS_AUDIO_FGM_ENTRY_COUNT * 32u)),
                "FGM pack header layout changed");
-_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES == (232u * 1024u),
-               "FGM cache budget changed");
-_Static_assert(NDS_AUDIO_FGM_CACHE_BYTES ==
-                   (NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES +
-                    (2u * NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES) +
-                    NDS_AUDIO_FGM_CACHE_SLOT_COMPACT_BYTES +
-                    (4u * NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES)),
-               "FGM cache slots no longer cover the resident cache exactly");
+_Static_assert(((NDS_AUDIO_FGM_CACHE_BYTES & 31u) == 0u) &&
+               (NDS_AUDIO_FGM_CACHE_BYTES >= 59392u),
+               "FGM arena must be line-sized and hold the largest cue (59,344 B)");
 _Static_assert(offsetof(NDSAudioFgmHandle, effect) == 0u,
                "BattleShip audio handle must be the backend handle prefix");
 _Static_assert(offsetof(alSoundEffect, sfx_id) == 0x26u,
@@ -1135,26 +1140,9 @@ static NDSAudioFgmPackEntry *ndsAudioFgmFindEntry(u16 id)
 
 static void ndsAudioFgmCacheReset(void)
 {
-    static const u32 capacities[NDS_AUDIO_FGM_CACHE_SLOT_COUNT] = {
-        NDS_AUDIO_FGM_CACHE_SLOT_LARGE_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_MEDIUM_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_COMPACT_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES,
-        NDS_AUDIO_FGM_CACHE_SLOT_SMALL_BYTES
-    };
-    u32 offset = 0u;
-    u32 i;
-
     memset(sNdsAudioFgmCacheSlots, 0, sizeof(sNdsAudioFgmCacheSlots));
-    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
-    {
-        sNdsAudioFgmCacheSlots[i].data = &sNdsAudioFgmCache[offset];
-        sNdsAudioFgmCacheSlots[i].capacity = capacities[i];
-        offset += capacities[i];
-    }
+    sNdsAudioFgmArenaHead = 0u;
+    sNdsAudioFgmFillPartsInFlight = 0u;
 }
 
 /* The FGM pack is immutable NitroFS data and every live cue already owns exact
@@ -1233,7 +1221,11 @@ static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
     u32 done = 0u;
 
     if ((sNdsAudioFgmRomReady == FALSE) || (bytes > slot->capacity) ||
-        (bytes > NDS_AUDIO_FGM_FILL_PARTS * NDS_AUDIO_STORAGE_MAX_READ))
+        (bytes > NDS_AUDIO_FGM_FILL_PARTS * NDS_AUDIO_STORAGE_MAX_READ) ||
+        /* The ARM7 queue holds 20 messages; a full one would drop the next
+         * synchronous request and leave the game thread waiting forever. */
+        (sNdsAudioFgmFillPartsInFlight + NDS_AUDIO_FGM_FILL_PARTS >
+         NDS_AUDIO_FGM_FILL_PARTS_MAX))
     {
         return FALSE;
     }
@@ -1258,6 +1250,7 @@ static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
                 return FALSE;
             }
             slot->fill_parts = (u8)part;
+            sNdsAudioFgmFillPartsInFlight += part;
             slot->fill_state = NDS_AUDIO_FGM_FILL_FAILED;
             return TRUE;
         }
@@ -1265,6 +1258,7 @@ static s32 ndsAudioFgmFillAsync(u32 index, const NDSAudioFgmPackEntry *entry)
         part++;
     }
     slot->fill_parts = (u8)part;
+    sNdsAudioFgmFillPartsInFlight += part;
     slot->fill_state = NDS_AUDIO_FGM_FILL_PENDING;
     gNdsAudioFgmAsyncFillCount++;
     return TRUE;
@@ -1304,6 +1298,7 @@ static void ndsAudioFgmPollFills(void)
         {
             continue;
         }
+        sNdsAudioFgmFillPartsInFlight -= slot->fill_parts;
         slot->fill_parts = 0u;
         if (slot->fill_state == NDS_AUDIO_FGM_FILL_FAILED)
         {
@@ -1321,45 +1316,163 @@ static void ndsAudioFgmPollFills(void)
     }
 }
 
+static s32 ndsAudioFgmSlotPinned(const NDSAudioFgmCacheSlot *slot)
+{
+    return ((slot->references != 0u) || (slot->fill_parts != 0u)) ?
+        TRUE : FALSE;
+}
+
+/* The cue store is one ring arena, not fixed size classes: a fill takes the
+ * next free span after the ring head, overwriting (and forgetting) unpinned
+ * cues in its way and stepping past pinned ones -- a live handle's sample or a
+ * read still in flight. -> the byte offset, or FALSE when no span of `bytes`
+ * clears the pinned cues (a play failure). */
+static s32 ndsAudioFgmArenaPlace(u32 bytes, u32 *out_offset)
+{
+    u32 limit = gNdsAudioFgmArenaLimit;
+    u32 start = sNdsAudioFgmArenaHead;
+    u32 attempt;
+    u32 i;
+
+    if (limit > NDS_AUDIO_FGM_CACHE_BYTES)
+    {
+        limit = NDS_AUDIO_FGM_CACHE_BYTES;
+    }
+    limit &= ~31u;
+    if (bytes > limit)
+    {
+        return FALSE;
+    }
+    for (attempt = 0u; attempt <= NDS_AUDIO_FGM_CACHE_SLOT_COUNT + 1u;
+         attempt++)
+    {
+        u32 blocked_end = 0u;
+
+        if (start > limit - bytes)
+        {
+            start = 0u;
+        }
+        for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+        {
+            const NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+            u32 begin;
+            u32 end;
+
+            if ((slot->data == NULL) || (ndsAudioFgmSlotPinned(slot) == FALSE))
+            {
+                continue;
+            }
+            begin = (u32)(slot->data - sNdsAudioFgmCache);
+            end = begin + slot->capacity;
+            if ((begin < start + bytes) && (start < end) && (end > blocked_end))
+            {
+                blocked_end = end;
+            }
+        }
+        if (blocked_end == 0u)
+        {
+            *out_offset = start;
+            return TRUE;
+        }
+        start = blocked_end;
+    }
+    return FALSE;
+}
+
+/* Take an entry for a new cue at [offset, offset + bytes): forget every
+ * unpinned cue the span overwrites, then use a free entry or the least
+ * recently used unpinned one. -> the entry index, or -1. */
+static s32 ndsAudioFgmArenaClaim(u32 offset, u32 bytes)
+{
+    s32 best = -1;
+    u32 i;
+
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+        u32 begin;
+
+        if ((slot->data == NULL) || (ndsAudioFgmSlotPinned(slot) != FALSE))
+        {
+            continue;
+        }
+        begin = (u32)(slot->data - sNdsAudioFgmCache);
+        if ((begin < offset + bytes) && (offset < begin + slot->capacity))
+        {
+            memset(slot, 0, sizeof(*slot));
+        }
+    }
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
+        NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
+
+        if (slot->data == NULL)
+        {
+            best = (s32)i;
+            break;
+        }
+        if ((ndsAudioFgmSlotPinned(slot) == FALSE) &&
+            ((best < 0) ||
+             (slot->last_use < sNdsAudioFgmCacheSlots[best].last_use)))
+        {
+            best = (s32)i;
+        }
+    }
+    if (best < 0)
+    {
+        return -1;
+    }
+    memset(&sNdsAudioFgmCacheSlots[best], 0, sizeof(sNdsAudioFgmCacheSlots[0]));
+    sNdsAudioFgmCacheSlots[best].data = &sNdsAudioFgmCache[offset];
+    sNdsAudioFgmCacheSlots[best].capacity = bytes;
+    sNdsAudioFgmArenaHead = offset + bytes;
+    return best;
+}
+
 /* -> the slot holding or filling this cue, or -1. */
 static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
 {
     static u32 serial;
     s32 best = -1;
+    u32 pinned = 0u;
+    u32 offset;
     u32 i;
 
     serial++;
     for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
     {
+        if (sNdsAudioFgmCacheSlots[i].references != 0u)
+        {
+            pinned += sNdsAudioFgmCacheSlots[i].data_bytes;
+        }
+    }
+    pinned += entry->data_bytes;
+    if (pinned > gNdsAudioFgmPinnedBytesMax)
+    {
+        gNdsAudioFgmPinnedBytesMax = pinned;
+    }
+    for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
+    {
         NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
-        if ((slot->fgm_id == entry->id) &&
+        if ((slot->data != NULL) && (slot->fgm_id == entry->id) &&
             (slot->data_bytes == entry->data_bytes) &&
             (slot->fill_state != NDS_AUDIO_FGM_FILL_FAILED))
         {
             slot->last_use = serial;
             return (s32)i;
         }
-        /* Smallest free slot that fits; among equal capacities the least
-         * recently used. Ties used to go to the lowest index, so every small
-         * miss refilled the same 16 KiB slot while its three siblings kept
-         * stale cues: 342 of 456 plays missed in the four-CPU match. A slot
-         * with a read in flight belongs to the ARM7 until it lands. */
-        if ((slot->references == 0u) && (slot->fill_parts == 0u) &&
-            (slot->capacity >= entry->data_bytes) &&
-            ((best < 0) ||
-             (slot->capacity < sNdsAudioFgmCacheSlots[best].capacity) ||
-             ((slot->capacity == sNdsAudioFgmCacheSlots[best].capacity) &&
-              (slot->last_use < sNdsAudioFgmCacheSlots[best].last_use))))
-        {
-            best = (s32)i;
-        }
+    }
+    if (ndsAudioFgmArenaPlace((entry->data_bytes + 31u) & ~31u, &offset) !=
+        FALSE)
+    {
+        best = ndsAudioFgmArenaClaim(offset, (entry->data_bytes + 31u) & ~31u);
+    }
+    if (best < 0)
+    {
+        gNdsAudioFgmNoFitCount++;
     }
     if (best >= 0)
     {
-        /* The read overwrites the old cue first: never leave its tag on a
-         * partially refilled slot. */
-        sNdsAudioFgmCacheSlots[best].fgm_id = 0u;
-        sNdsAudioFgmCacheSlots[best].data_bytes = 0u;
         if (ndsAudioFgmFillAsync((u32)best, entry) != FALSE)
         {
             sNdsAudioFgmCacheSlots[best].fgm_id = entry->id;

@@ -2,6 +2,7 @@
 
 **Outcome: BANKED** (LRU tiebreak, line-aligned cache, resident envelopes).
 **Async fills: BANKED on the ARM7 media service** (an ARM9-thread version was reverted).
+**160 KiB ring arena: BANKED** (-72 KiB BSS, P95 1,839,488, replay identical).
 
 ## Where the remaining ROM wait was
 
@@ -79,4 +80,35 @@ WORK-H P50/P95/P99 1,328,576/1,869,504/2,360,192 -> 1,328,192/1,852,672/
 async fills, 320 deferred starts, 0 fill/start/play failures, 0 generation
 mismatches, pool never exhausted. Replay digest IDENTICAL. Host: new
 `test_async_read_submit_poll_and_refusals` in `scripts/sfx/test_audio_storage.py`.
-The cache is still 232 KiB; shrinking it (the A8 RAM win) is the next step.
+The cache was still 232 KiB here; the next section shrinks it.
+
+## Banked: the cache becomes a 160 KiB ring arena (2026-09-27)
+
+The eight fixed slots (60/40/40/28/4x16 KiB, 232 KiB) became one ring arena with
+sixteen cue entries. A miss takes the next span of its own 32-byte-rounded size
+after the ring head, forgetting unpinned cues it overwrites and stepping past
+pinned ones (a live handle's sample or a fill still in flight). The ARM7 mailbox
+bound is kept by capping in-flight fill parts at 16. A miss the arena cannot
+place counts in `gNdsAudioFgmNoFitCount`; the stress verifier now fails on any
+no-fit, play failure or async-fill failure.
+
+Sizing (same 232 KiB build, arena limit poked at boot, route 1, all digests
+identical): peak bytes pinned by live handles 133,424; no-fit 0 and play
+failures 0 at 232, 160 and 144 KiB; WORK-H P95 1,849,216 / 1,848,128 / 1,849,216.
+160 KiB keeps ~27 KiB above the observed peak.
+
+Final `arena160final` `18A992BB` (static 160 KiB) against `fgm7` `FF3DC3FC`
+(frames 2..1973, route 1): WORK-H P50/P95/P99 1,328,192/1,852,672/2,291,456 ->
+1,328,512/1,839,488/2,263,936; SRC P95 967,296 -> 959,104; VBlanks 2/3/4/5+
+276/1,475/195/27 -> 274/1,477/197/25. Tight cue sizes hold more distinct cues:
+async fills 331 -> 274, bytes read 2,547,188 -> 2,369,216. RAM: the taskman arena
+grows exactly 73,728 B (1,298,176 -> 1,371,904); libc top-chunk low-water 13,592
+-> 16,664; general-heap low-water unchanged (122,412). No-fit 0, play/fill/
+deferred failures 0, pool never exhausted. Replay digest IDENTICAL.
+
+Also: `NDS_AUDIO_FGM_CACHE_BYTES` 237,568 -> 163,840 (the phase-pack checker pins
+it and the generator's `RUNTIME_CACHE_BYTES`, which the pack metadata records).
+Host tests (`test_fgm_metadata_residency`, `test_audio_storage`,
+`test_boss_defeat_fgm_gate`), `check-fgm-pack-coverage.py` and
+`check-audio-fgm-phase-pack.ps1` pass. Committed evidence: `arena160final-route1`
+(json/rows/log); the three sizing runs stay local.
