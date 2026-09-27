@@ -84,6 +84,9 @@ volatile u32 gNdsRelocAssetDirectFallbackCount;
 __attribute__((used)) volatile u32 gNdsRelocAssetDirectDispatch = 1u;
 __attribute__((used)) volatile u32 gNdsRelocAssetFighterStreamDispatch = 1u;
 volatile u32 gNdsRelocAssetFighterStreamReads;
+/* ARM9 time (/64 system ticks) and bytes of the clip body reads. */
+volatile u32 gNdsRelocAssetFighterStreamReadTicks64;
+volatile u32 gNdsRelocAssetFighterStreamReadBytes;
 volatile u32 gNdsRelocAssetFighterStreamMisses;
 volatile u32 gNdsRelocAssetFighterStreamFailures;
 
@@ -1426,14 +1429,21 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
         {
             return TRUE;
         }
-        if (nitroromReadFile(sNdsFtAnimStreamRom,
-                             sNdsFtAnimStreamFileId, entry.offset, dst,
-                             entry.size) == false)
         {
-            gNdsRelocAssetFighterStreamFailures++;
-            return FALSE;
+            u32 read_start = (u32)tickGetCount();
+
+            if (nitroromReadFile(sNdsFtAnimStreamRom,
+                                 sNdsFtAnimStreamFileId, entry.offset, dst,
+                                 entry.size) == false)
+            {
+                gNdsRelocAssetFighterStreamFailures++;
+                return FALSE;
+            }
+            gNdsRelocAssetFighterStreamReadTicks64 +=
+                (u32)tickGetCount() - read_start;
         }
         gNdsRelocAssetFighterStreamReads++;
+        gNdsRelocAssetFighterStreamReadBytes += entry.size;
         return TRUE;
     }
 #else

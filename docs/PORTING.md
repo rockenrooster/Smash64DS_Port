@@ -23328,3 +23328,8 @@ replay identical. Committed the A8 BGM checkpoint (`d0d02c61a83`) first.
 35K blocked ticks/frame, 79% of bytes through the 512 B bounce because motion/FGM
 destinations are unaligned. Split reads into head/tail bounce + one direct middle:
 requests 18,651 -> 2,233, WORK-H P95 1,892,160, P99 2,384,256, replay identical.
+
+2026-09-26 P2-2p8 FGM: per-source read counters put FGM misses at 64% of the
+remaining ROM wait. LRU tiebreak, 32 B-aligned cache, resident envelopes banked
+(P95 1,869,504, replay identical). An ARM9 worker thread for async fills was
+reverted after a layout-dependent digest divergence; see the fgm-cache receipt.

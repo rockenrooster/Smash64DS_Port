@@ -8490,3 +8490,15 @@ per frame). Same dir `F2603E76` -> `5EEE8AFD`, replay identical: WORK-H P50/P95/
 1,336,256/1,962,112/2,793,280 -> 1,333,504/1,892,160/2,384,256; VBI 5+ 55 -> 31;
 19.68 -> 19.94 FPS. RED. Remaining wait is 3.58 MB of transfer per match.
 Receipt: `artifacts/performance/2026-09-26_p2-2p8-storage-bounce/README.md`.
+
+## 2026-09-26 — FGM cache: LRU, aligned slots, resident envelopes
+
+**BANKED.** FGM misses were 64% of the remaining in-match ROM wait (342 of 456
+plays, 66K ticks each). LRU tiebreak (misses 342 -> 332; the working set exceeds
+the cache), line-aligned slots (one direct read per fill) and a 448 B resident
+envelope table (no per-play envelope read). `5EEE8AFD` -> `096C3002`, replay
+identical: WORK-H P50/P95/P99 1,333,504/1,892,160/2,384,256 -> 1,328,576/
+1,869,504/2,360,192; 20.02 FPS. RED. Asynchronous fills on an ARM9 thread
+measured -16K P95 same-ROM but one binary layout diverged at frame 46
+deterministically (suspected worker stack overflow into the slot table): reverted.
+Receipt: `artifacts/performance/2026-09-26_p2-2p8-fgm-cache/README.md`.

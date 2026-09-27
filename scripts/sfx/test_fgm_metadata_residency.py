@@ -59,8 +59,11 @@ static const char *pack_path;
 static NDSAudioFgmPackEntry sNdsAudioFgmEntries[NDS_AUDIO_FGM_ENTRY_COUNT];
 static struct { int channel, cache_slot; } sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
 static FILE *sNdsAudioFgmFile;
-static unsigned cache_resets, read_calls, short_read;
+static u8 sNdsAudioFgmEnvelopes[512];
+static u32 sNdsAudioFgmEnvelopeBase;
+static unsigned cache_resets, read_calls, short_read, route_inits;
 static void ndsAudioFgmCacheReset(void) { ++cache_resets; }
+static void ndsAudioFgmDirectRouteInit(void) { ++route_inits; }
 static size_t injected_read(void *out, size_t size, size_t count, FILE *f) {
     ++read_calls;
     if (short_read && read_calls == short_read) return fread(out, size, count-1, f);
@@ -83,7 +86,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     ndsAudioFgmLoadFenced(); /* Reload fence must preserve resident handles. */
-    if (cache_resets != 1 || read_calls != 2 ||
+    if (cache_resets != 1 || read_calls != 3 || route_inits != 1 ||
         gNdsAudioFgmSupportedCount != NDS_AUDIO_FGM_ENTRY_COUNT ||
         gNdsAudioFgmResidentBytes != NDS_AUDIO_FGM_CACHE_BYTES + sizeof(sNdsAudioFgmEntries) ||
         gNdsAudioFgmHandleCapacity != NDS_AUDIO_FGM_HANDLE_COUNT) return 5;
@@ -93,7 +96,9 @@ int main(int argc, char **argv) {
     /* Use a file to preserve binary bytes on the Windows host. */
     FILE *out=fopen(argv[2], "wb");
     if (!out) return 7;
-    fwrite(sNdsAudioFgmEntries, 1, sizeof(sNdsAudioFgmEntries), out); fclose(out);
+    fwrite(sNdsAudioFgmEntries, 1, sizeof(sNdsAudioFgmEntries), out);
+    fwrite(sNdsAudioFgmEnvelopes, 1, NDS_AUDIO_FGM_PACK_BYTES - sNdsAudioFgmEnvelopeBase, out);
+    fclose(out);
     puts("PASS"); return 0;
 }
 '''
@@ -113,9 +118,12 @@ int main(int argc, char **argv) {
                 self.assertEqual(result.stdout.strip(),expected.encode())
             run(pack, 'PASS')
             count=struct.unpack_from('<H',pack,6)[0]
-            self.assertEqual(output.read_bytes(),pack[16:16+count*32])
+            sample_end=max(o+n for o,n in (struct.unpack_from('<II',pack,16+32*i+4) for i in range(count)))
+            # The loader keeps the entry table and the whole envelope tail resident.
+            self.assertEqual(output.read_bytes(),pack[16:16+count*32]+pack[sample_end:])
             run(pack,'READ',1)
             run(pack,'READ',2)
+            run(pack,'READ',3)
             run(pack[:-1],'FORMAT')
             for offset, fmt, value in (
                 (0,'I',0), (4,'H',0), (6,'H',0), (8,'I',0), (12,'I',0),

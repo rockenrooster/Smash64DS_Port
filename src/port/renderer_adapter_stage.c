@@ -4015,6 +4015,19 @@ typedef struct NDSRendererAdapterStageFrameCamera
 } NDSRendererAdapterStageFrameCamera;
 #endif
 
+#if NDS_TASK103_STAGE_RUN_PHASE
+/* Task 103 E5 (2026-09-26): PrepMatrix was 92,426 ticks/frame of the four-CPU
+ * stress's 114,133 prepare. These split it: the two camera builds, then per
+ * dynamic binding its world, its composition and any MVP recalc. Lab only. */
+volatile u32 gNdsTask103MatTask36CameraTicks;
+volatile u32 gNdsTask103MatFrameCameraTicks;
+volatile u32 gNdsTask103MatWorldTicks;
+volatile u32 gNdsTask103MatComposeTicks;
+volatile u32 gNdsTask103MatRecalcTicks;
+volatile u32 gNdsTask103MatRecalcCount;
+volatile u32 gNdsTask103MatBindings;
+#endif
+
 static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
     u32 binding_index
@@ -4030,10 +4043,20 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     const NDSRendererMatrix20p12 *projection_ptr = NULL;
     const NDSRendererMatrix20p12 *modelview_ptr = out;
     u32 kind = ndsRendererAdapterDirectMvpRecalcKind(dobj);
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 task103_mark = cpuGetTiming();
+    u32 task103_now;
+#endif
 
     if (kind != 0u) { sNdsRendererAdapterMvpRecalcScaleX = 1.0F; }
     if (!ndsRendererAdapterBuildPersistentStageWorldMatrix(dobj, &world, FALSE))
     { return FALSE; }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_now = cpuGetTiming();
+    gNdsTask103MatWorldTicks += task103_now - task103_mark;
+    task103_mark = task103_now;
+    gNdsTask103MatBindings++;
+#endif
     /* Preserve the source multiplication order when a camera owns both parts.
      * Battle cameras normally supply LookAt*Persp in projection alone. */
     if (camera->modelview_valid != FALSE)
@@ -4045,11 +4068,20 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     else if (camera->projection_valid != FALSE)
     { ndsRendererMtxMul20p12(&world, &camera->projection, out); }
     else { *out = world; }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_now = cpuGetTiming();
+    gNdsTask103MatComposeTicks += task103_now - task103_mark;
+    task103_mark = task103_now;
+#endif
     if (kind != 0u)
     {
         ndsRendererAdapterApplyMvpRecalc(dobj, kind, cobj,
             &workspace->projection, &projection_ptr, out, &modelview_ptr,
             &camera->recalc);
+#if NDS_TASK103_STAGE_RUN_PHASE
+        gNdsTask103MatRecalcTicks += cpuGetTiming() - task103_mark;
+        gNdsTask103MatRecalcCount++;
+#endif
         if ((modelview_ptr == NULL) || (projection_ptr != NULL)) { return FALSE; }
     }
     return TRUE;
@@ -4103,6 +4135,10 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
 
 #if NDS_TASK36_HW_COMPOSE
     NDSRendererAdapterStageFrameCamera camera;
+#if NDS_TASK103_STAGE_RUN_PHASE
+    u32 task103_mark = cpuGetTiming();
+    u32 task103_now;
+#endif
     {
         if (ndsRendererAdapterBuildTask36StageCameraMatrices(
                 cobj, &workspace->projection,
@@ -4114,12 +4150,20 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
             return FALSE;
         }
     }
+#if NDS_TASK103_STAGE_RUN_PHASE
+    task103_now = cpuGetTiming();
+    gNdsTask103MatTask36CameraTicks += task103_now - task103_mark;
+    task103_mark = task103_now;
+#endif
     camera.recalc.perspective = &workspace->projection;
     camera.recalc.perspective_f_valid = FALSE;
     camera.recalc.mod1_valid = FALSE;
     ndsRendererAdapterGetFrameCameraMatrices(cobj,
         &camera.projection, &camera.projection_valid,
         &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);
+#if NDS_TASK103_STAGE_RUN_PHASE
+    gNdsTask103MatFrameCameraTicks += cpuGetTiming() - task103_mark;
+#endif
 #if NDS_RENDERER_M3_PHASE0_PROFILE
     gNdsRendererTask36ObservedDynamicMaskLo = 0u;
     gNdsRendererTask36ObservedDynamicMaskHi = 0u;

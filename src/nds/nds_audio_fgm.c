@@ -87,8 +87,7 @@ typedef struct NDSAudioFgmHandle {
      * ticks for a 165-tick sample.  Anything asking "was this cut off?" must
      * use audible_end_tick; end_tick answers yes for every cue, always. */
     u32 audible_end_tick;
-    u8 envelope_points[NDS_AUDIO_FGM_CACHE_MAX_ENVELOPE_POINTS *
-                       NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES];
+    const u8 *envelope_points;      /* into the resident envelope table */
     u16 envelope_count;
     u16 envelope_index;
     u16 fgm_id;
@@ -127,6 +126,7 @@ typedef struct NDSAudioFgmCacheSlot {
     u32 data_bytes;
     u16 fgm_id;
     u16 references;
+    u32 last_use;               /* acquire serial of the latest hit or fill */
 } NDSAudioFgmCacheSlot;
 
 volatile u32 gNdsAudioFgmResult;
@@ -189,14 +189,25 @@ volatile u32 gNdsAudioFgmChildStartFailCount;
 volatile u32 gNdsAudioFgmBlockNewStartCalls;
 volatile u32 gNdsAudioFgmBlockedPlayCount;
 __attribute__((used)) volatile u32 gNdsAudioFgmDirectReadCount;
+/* ARM9 time (/64 system ticks) and bytes of the direct pack reads. */
+__attribute__((used)) volatile u32 gNdsAudioFgmReadTicks64;
+__attribute__((used)) volatile u32 gNdsAudioFgmReadBytes;
 __attribute__((used)) volatile u32 gNdsAudioFgmDirectFallbackCount;
 __attribute__((used)) volatile u32 gNdsAudioFgmStdioRangeReadCount;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
 
+/* Line-aligned so a sample fill is one direct ROM read, not a bounced head,
+ * body and tail (every slot offset is a multiple of 1 KiB). */
 static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
+    __attribute__((aligned(32)));
+/* Every envelope in the pack, read once at load: 24 cues, 448 B. A play used
+ * to re-read its envelope from ROM on the game thread. */
+#define NDS_AUDIO_FGM_ENVELOPE_TABLE_BYTES 512u
+static u8 sNdsAudioFgmEnvelopes[NDS_AUDIO_FGM_ENVELOPE_TABLE_BYTES]
     __attribute__((aligned(4)));
+static u32 sNdsAudioFgmEnvelopeBase;
 static NDSAudioFgmCacheSlot
     sNdsAudioFgmCacheSlots[NDS_AUDIO_FGM_CACHE_SLOT_COUNT];
 static FILE *sNdsAudioFgmFile;
@@ -1162,10 +1173,14 @@ static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
     }
     if (sNdsAudioFgmRomReady != FALSE)
     {
+        u32 read_start = (u32)tickGetCount();
+
         if (nitroromReadFile(sNdsAudioFgmRom, sNdsAudioFgmRomFileId, offset,
                              dst, bytes) != false)
         {
             gNdsAudioFgmDirectReadCount++;
+            gNdsAudioFgmReadTicks64 += (u32)tickGetCount() - read_start;
+            gNdsAudioFgmReadBytes += bytes;
             return TRUE;
         }
         gNdsAudioFgmDirectFallbackCount++;
@@ -1182,24 +1197,40 @@ static s32 ndsAudioFgmReadRange(u32 offset, void *dst, u32 bytes)
 
 static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
 {
+    static u32 serial;
     s32 best = -1;
     u32 i;
 
+    serial++;
     for (i = 0u; i < NDS_AUDIO_FGM_CACHE_SLOT_COUNT; i++)
     {
         NDSAudioFgmCacheSlot *slot = &sNdsAudioFgmCacheSlots[i];
         if ((slot->fgm_id == entry->id) &&
             (slot->data_bytes == entry->data_bytes))
         {
+            slot->last_use = serial;
             return (s32)i;
         }
+        /* Smallest free slot that fits; among equal capacities the least
+         * recently used. Ties used to go to the lowest index, so every small
+         * miss refilled the same 16 KiB slot while its three siblings kept
+         * stale cues: 342 of 456 plays missed in the four-CPU match. */
         if ((slot->references == 0u) &&
             (slot->capacity >= entry->data_bytes) &&
             ((best < 0) ||
-             (slot->capacity < sNdsAudioFgmCacheSlots[best].capacity)))
+             (slot->capacity < sNdsAudioFgmCacheSlots[best].capacity) ||
+             ((slot->capacity == sNdsAudioFgmCacheSlots[best].capacity) &&
+              (slot->last_use < sNdsAudioFgmCacheSlots[best].last_use))))
         {
             best = (s32)i;
         }
+    }
+    if (best >= 0)
+    {
+        /* The read overwrites the old cue first: never leave its tag on a
+         * partially refilled slot. */
+        sNdsAudioFgmCacheSlots[best].fgm_id = 0u;
+        sNdsAudioFgmCacheSlots[best].data_bytes = 0u;
     }
     if ((best < 0) ||
         (ndsAudioFgmReadRange(entry->data_offset,
@@ -1211,6 +1242,7 @@ static s32 ndsAudioFgmCacheAcquire(const NDSAudioFgmPackEntry *entry)
     }
     sNdsAudioFgmCacheSlots[best].fgm_id = entry->id;
     sNdsAudioFgmCacheSlots[best].data_bytes = entry->data_bytes;
+    sNdsAudioFgmCacheSlots[best].last_use = serial;
     DC_FlushRange(sNdsAudioFgmCacheSlots[best].data, entry->data_bytes);
     return best;
 }
@@ -1755,6 +1787,25 @@ void ndsAudioFgmLoadFenced(void)
         return;
     }
 
+    /* The envelopes are the pack's tail, sample_end..pack end. */
+    if (envelope_cursor - sample_end > sizeof(sNdsAudioFgmEnvelopes))
+    {
+        memset(sNdsAudioFgmEntries, 0, sizeof(sNdsAudioFgmEntries));
+        fclose(file);
+        gNdsAudioFgmFormatFailCount++;
+        return;
+    }
+    if ((fseek(file, (long)sample_end, SEEK_SET) != 0) ||
+        (fread(sNdsAudioFgmEnvelopes, 1u, envelope_cursor - sample_end, file) !=
+         envelope_cursor - sample_end))
+    {
+        memset(sNdsAudioFgmEntries, 0, sizeof(sNdsAudioFgmEntries));
+        fclose(file);
+        gNdsAudioFgmReadFailCount++;
+        return;
+    }
+    sNdsAudioFgmEnvelopeBase = sample_end;
+
     /* The production boot path reaches this load fence without ever calling
      * ndsAudioFgmDiagnosticsReset, so the cache slot table must be initialized
      * here or every ndsAudioFgmCacheAcquire fails eligibility (capacity 0). */
@@ -2130,16 +2181,6 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         gNdsAudioFgmPlayFailCount++;
         return NULL;
     }
-    if ((entry->envelope_count != 0u) &&
-        (ndsAudioFgmReadRange(
-             entry->envelope_offset, handle->envelope_points,
-             (u32)entry->envelope_count * NDS_AUDIO_FGM_ENVELOPE_POINT_BYTES) ==
-         FALSE))
-    {
-        gNdsAudioFgmReadFailCount++;
-        gNdsAudioFgmPlayFailCount++;
-        return NULL;
-    }
 
     NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id);
     soundEnable();
@@ -2248,6 +2289,9 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     handle->volume = entry->volume;
     handle->loops = (((entry->flags & NDS_AUDIO_FGM_FLAG_LOOP) != 0u) ?
                      TRUE : FALSE);
+    handle->envelope_points = (entry->envelope_count != 0u) ?
+        &sNdsAudioFgmEnvelopes[entry->envelope_offset -
+                               sNdsAudioFgmEnvelopeBase] : NULL;
     handle->envelope_count = entry->envelope_count;
     handle->envelope_index = 0u;
     handle->channel = (s8)channel;
