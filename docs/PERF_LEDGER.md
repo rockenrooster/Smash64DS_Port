@@ -8985,3 +8985,15 @@ came back. `BB4B8539` vs `itcm7`, replay identical: WORK-H P50/P95
 1,037,440/1,436,224 (-2.2K/-5.5K); 1,322/1,972 frames within 1,120,000.
 RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 37.
+
+## 2026-09-27 — calico thread/copy code out of ITCM; twenty census admissions in
+
+**BANKED.** An `EXCLUDE_FILE` on the linker's `*.32.o` ITCM rule moves calico's
+`thread_hot.32.o` and `arm-copy-fill.32.o` (1,264 B, rent under 800 cycles a
+byte; three of their functions never run) to main RAM. That alone is neutral:
+paired median +128, replay identical. The freed bytes took twenty main-RAM
+functions from census section D (1,258 B, 2,400+ non-mem stall cycles a byte).
+`7278DFE0` vs `readmit`, replay identical: paired WORK-H median -8,128
+(1,953/1,972 frames better); P50/P95 1,029,696/1,430,336; 1,354/1,972 frames
+within 1,120,000. RED (P95).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 38.

@@ -996,3 +996,48 @@ The 472 B left free took back `ndsRendererHardwareBindTextureName`,
 - 1,322 of 1,972 frames at or under 1,120,000.
 - P99 moves ±50K between builds with event timing (`itcm6` 1.67M, `hs2`
   1.70M, `sindtcm` 1.75M).
+
+## 38. Calico's thread and copy/fill code out of ITCM; twenty census admissions in
+
+The fresh census (`dmiss4/census.txt`, on `4fb5cd1dfd9`) rented calico's
+`thread_hot.32.o` (thread switch/block/unblock, 1,100 B) and
+`arm-copy-fill.32.o` (164 B) under 800 cycles a byte. `threadUnblockAllByValue`,
+`armCopyMem32` and `armFillMem32` never ran on the ARM9. The linker's
+`*.32.o` ITCM rule now has an `EXCLUDE_FILE` for those two members, so the
+code runs from main RAM. Their `.bss` placement is unchanged.
+
+`C036871C` (`calev`, eviction alone) vs `readmit`: replay IDENTICAL; paired
+WORK-H median +128 (942 frames better, 1,011 worse), so the eviction is
+neutral.
+
+The freed 1,264 B took the census section D pack: twenty main-RAM functions
+at 2,400+ non-mem stall cycles a byte, 1,258 B, admitted by input-section
+name in the `.itcm` rule:
+- collision: `mpCollisionCheckExistLineID`, the three `*LineCollisionSame`,
+  `ndsMPGetTopologyEdgeLineID`;
+- objects: `gcRunGObj`, `ndsR2AObjLiveCount`, `ndsGcGetGObjLifetimeSerial`;
+- vectors and matrices: `syVectorMag3D`, `syVectorDiff3D`,
+  `syMatrixTraRotRpyRScaF`;
+- camera: `ndsR2CamMulQ`, `ndsR2CamDivQ`, `ndsR2CamSqrt64`;
+- fighter display and look-at: `ftDisplayLightsDrawReflect`,
+  `ndsFtrLookAtInputs`, `ndsFtrLookAtOutputs`, `ndsFtrLookAtMixWords`,
+  `ndsFighterGetNativeOwnerSlot`;
+- `func_ovl2_800F8FFC`.
+
+The census put 4.48M non-mem stall cycles in reach (~5.8K ticks a frame).
+
+`7278DFE0` (`caladmit`) vs `readmit`, replay IDENTICAL:
+- Paired WORK-H median -8,128, mean -7,970; 1,953 of 1,972 frames better.
+- Top 5% median -8,000. Mean by bucket: SRC -4.9K, FTR -1.9K, STG -0.7K.
+- WORK-H P50/P95/P97/P99 1,029,696/1,430,336/1,495,808/1,715,392.
+- 1,354 of 1,972 frames at or under 1,120,000.
+
+The measured gain exceeds the census reach. The admitted code no longer
+competes for the I-cache, which is the likely source of the difference; it
+is not attributed.
+
+Two static checks had gone stale on earlier commits from today:
+- `check-gbi-decode-fixtures.ps1` now accepts the lab STG span end
+  (`4922d3c5d94`) between a native-stage deactivation and its return.
+- `check-renderer-itcm-placement.ps1` now lists this session's ITCM
+  evictions (`17fcab47d7e`, section 35) as evicted rather than pinned.

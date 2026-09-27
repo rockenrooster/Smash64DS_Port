@@ -39,11 +39,8 @@ if ($LASTEXITCODE -ne 0 -or $forbiddenFunctions.Count -eq 0) {
 $hotFunctions = @(
     'ndsRendererCommitNativeStageSegment',
     'ndsRendererNativeStageBeginRun',
-    'ndsRendererLoadHardwareGxComposedMatrices',
-    'ndsRendererNativeStageEmitNoZVertex',
     'ndsRendererHardwareEndBatch',
-    'ndsRendererHardwareApplyTextureParams',
-    'ndsRendererR2MaterialColor15'
+    'ndsRendererHardwareApplyTextureParams'
 )
 $evictedFunctions = @(
     'ndsRendererRecordLoadTile',
@@ -62,7 +59,14 @@ $evictedFunctions = @(
     # again and crowd the four-CPU tick-HUD ELF, whose current ITCM headroom is
     # smaller than this function. The per-run prepare/shade/emit loops remain
     # pinned above and carry the higher-value zero-wait work.
-    'ndsRendererNativeApplyProductionPreamble'
+    'ndsRendererNativeApplyProductionPreamble',
+    # P2-2p8 2026-09-27 ITCM swaps (fast-mem receipt sections 35-36): the old
+    # GX-composed fighter path never ran in the four-CPU census, and the tint
+    # colour helper rents under 800 cycles a byte; their bytes went to the
+    # stage GX draw and the census's high-stall admissions.
+    'ndsRendererLoadHardwareGxComposedMatrices',
+    'ndsRendererNativeStageEmitNoZVertex',
+    'ndsRendererR2MaterialColor15'
 )
 $nativeFighterFunctions = @(
     'ndsRendererNativeShadeProductionActions',

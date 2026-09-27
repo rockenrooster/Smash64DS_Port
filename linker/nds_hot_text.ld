@@ -97,8 +97,34 @@ SECTIONS {
 		*(.itcm .itcm.*)
 		/* decomp sys/vector.c's add, admitted by the 2026-09-27 census. */
 		*(.text.syVectorAdd3D)
+		/* P2-2p8 2026-09-27: the census section D pack for the calico bytes freed
+		 * below -- main-RAM functions at 2,400+ non-mem stall cycles a byte. */
+		*(.text.mpCollisionCheckExistLineID)
+		*(.text.ndsR2AObjLiveCount)
+		*(.text.ndsFtrLookAtOutputs)
+		*(.text.ndsR2CamMulQ)
+		*(.text.gcRunGObj)
+		*(.text.syVectorMag3D)
+		*(.text.func_ovl2_800F8FFC)
+		*(.text.syVectorDiff3D)
+		*(.text.syMatrixTraRotRpyRScaF)
+		*(.text.mpCollisionCheckRWallLineCollisionSame)
+		*(.text.mpCollisionCheckLWallLineCollisionSame)
+		*(.text.mpCollisionCheckFloorLineCollisionSame)
+		*(.text.ndsFighterGetNativeOwnerSlot)
+		*(.text.ndsMPGetTopologyEdgeLineID)
+		*(.text.ftDisplayLightsDrawReflect)
+		*(.text.ndsGcGetGObjLifetimeSerial)
+		*(.text.ndsR2CamSqrt64)
+		*(.text.ndsFtrLookAtInputs)
+		*(.text.ndsFtrLookAtMixWords)
+		*(.text.ndsR2CamDivQ)
 		*.itcm.* (.text .stub .text.* .gnu.linkonce.t.*)
-		*.32.o (.text .stub .text.* .gnu.linkonce.t.*)
+		/* P2-2p8 2026-09-27: calico's thread scheduler and word copy/fill run from
+		 * main RAM. The census rents them under 800 cycles a byte, and
+		 * threadUnblockAllByValue, armCopyMem32 and armFillMem32 never run on the
+		 * ARM9 in a match; the 1,264 B go to hotter code. */
+		EXCLUDE_FILE(*thread_hot.32.o *arm-copy-fill.32.o) *.32.o (.text .stub .text.* .gnu.linkonce.t.*)
 		*.itcm.* (.glue_7t .glue_7 .vfp11_veneer .v4_bx)
 		*.32.o (.glue_7t .glue_7 .vfp11_veneer .v4_bx)
 		*.itcm.* (.rodata .rodata.* .gnu.linkonce.r.*)

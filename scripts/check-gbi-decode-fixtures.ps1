@@ -2003,7 +2003,9 @@ Assert-True ($renderer.Contains('u32 entry_generation;') -and $renderer.Contains
 # now a superset -- a stale run in any segment rejects every segment -- which is
 # the conservative direction for exactly the failure this guards.
 Assert-True ($renderer -match '(?s)segment = &sNdsNativeStageSegments\[segment_index\];\s*/\* The prepared table.*?if \(ndsRendererNativeStagePreparedTexturesProven\(\) == FALSE\)\s*\{\s*return FALSE;\s*\}\s*#if NDS_DREAMLAND_DS_MESH') 'Native-stage commit no longer validates the prepared table before its first GX/state mutation and returns the unhandled polarity on stale texture state.'
-Assert-True ([regex]::Matches($relocRendererDL, 'ndsRendererFinishNativeStageOwner\(\);\s*workspace->active = FALSE;\s*return FALSE;').Count -eq 2) 'Native-stage adapter no longer deactivates both profiled and normal commit paths before propagating an unhandled segment.'
+# The lab STG span (NDS_STAGE_DISPLAY_SPAN_END, empty outside NDS_TICK_HUD)
+# closes on the profiled path between the deactivation and the return.
+Assert-True ([regex]::Matches($relocRendererDL, 'ndsRendererFinishNativeStageOwner\(\);\s*workspace->active = FALSE;\s*(?:NDS_STAGE_DISPLAY_SPAN_END\(\);\s*)?return FALSE;').Count -eq 2) 'Native-stage adapter no longer deactivates both profiled and normal commit paths before propagating an unhandled segment.'
 # R2-03 E12: the fighter memo removed the last warm-frame texture lookup, so
 # RENDER_TEXHASH now reads all zero and the coverage proof has two legs. Pin the
 # probe bound as an expression rather than the words 'bounded probes' -- the
