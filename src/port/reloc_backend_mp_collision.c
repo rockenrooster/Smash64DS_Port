@@ -1730,9 +1730,121 @@ sb32 NDS_R2_ITCM_PACK2_CODE mpCollisionGetFCCommonFloor(s32 line_id, Vec3f *obje
     return FALSE;
 }
 
+/* "Is there floor at or just above this point?" -- asked by the CPU AI for
+ * every target it weighs (ftcomputer.c), so the same TopN position is asked by
+ * up to three CPUs in a tick, and each ask ran mpCollisionGetFCCommonFloor
+ * over every floor line (~32K ticks a frame on Dream Land, P2-2p8 2026-09-28;
+ * same-ROM A/B median -10.9K Dream Land, -34K Mushroom Kingdom, -21K Hyrule,
+ * replay identical). Out of ITCM: the memo's hits no longer need it there.
+ *
+ * The answer is a pure function of the point's x/y and, per floor line, its
+ * yakumono DObj's status, animation presence and translate x/y (the only live
+ * inputs mpCollisionGetFCCommonFloor reads; the vertices are static). So it is
+ * memoised on the point's bits while a snapshot of every yakumono's state --
+ * and the geometry it belongs to -- is bit-identical; any change empties the
+ * memo. A served answer is the one the lines would give. */
+#define NDS_MP_AI_FLOOR_MEMO_SLOTS 8u
+typedef struct NDSMPAiFloorYakumono
+{
+    const DObj *dobj;
+    s32 status;
+    u32 animated;
+    u32 x_bits;
+    u32 y_bits;
+} NDSMPAiFloorYakumono;
+static MPGeometryData *sNdsMPAiFloorGeometry;
+static u32 sNdsMPAiFloorYakumonoCount;
+#define NDS_MP_AI_FLOOR_YAKUMONO_MAX 32u
+static NDSMPAiFloorYakumono sNdsMPAiFloorYakumono[NDS_MP_AI_FLOOR_YAKUMONO_MAX];
+static u32 sNdsMPAiFloorKey[NDS_MP_AI_FLOOR_MEMO_SLOTS][2];
+static u8 sNdsMPAiFloorAnswer[NDS_MP_AI_FLOOR_MEMO_SLOTS];
+static u32 sNdsMPAiFloorCount;
+static u32 sNdsMPAiFloorNext;
+
+static inline u32 ndsMPAiFloorBits(f32 value)
+{
+    u32 bits;
+
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+/* Refresh the yakumono snapshot; returns FALSE when it could not be taken
+ * (the memo is then bypassed). Empties the memo on any change. */
+static sb32 __attribute__((noinline)) ndsMPAiFloorSnapshot(void)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    MPLineInfo *line_info;
+    u32 count;
+    u32 i;
+    sb32 same;
+
+    if ((geometry == NULL) || (geometry->line_info == NULL) ||
+        (gMPCollisionYakumonoDObjs == NULL))
+    {
+        sNdsMPAiFloorCount = 0u;
+        sNdsMPAiFloorGeometry = NULL;
+        return FALSE;
+    }
+    line_info = geometry->line_info;
+    count = ndsMPGeometryYakumonoCount(geometry);
+    if (count > NDS_MP_AI_FLOOR_YAKUMONO_MAX)
+    {
+        /* More groups than the snapshot holds: no memo for this stage. */
+        sNdsMPAiFloorCount = 0u;
+        sNdsMPAiFloorGeometry = NULL;
+        return FALSE;
+    }
+    same = ((sNdsMPAiFloorGeometry == geometry) &&
+            (sNdsMPAiFloorYakumonoCount == count)) ? TRUE : FALSE;
+    for (i = 0u; i < count; i++)
+    {
+        NDSMPAiFloorYakumono now;
+        NDSMPAiFloorYakumono *was = &sNdsMPAiFloorYakumono[i];
+        u32 yakumono_id =
+            ndsMPLineInfoYakumonoID(ndsMPLineInfoAt(line_info, i));
+
+        now.dobj = (yakumono_id < NDS_MP_YAKUMONO_DOBJ_SLOTS) ?
+            gMPCollisionYakumonoDObjs->dobjs[yakumono_id] : NULL;
+        if (now.dobj != NULL)
+        {
+            now.status = now.dobj->user_data.s;
+            now.animated = (now.dobj->anim_joint.event32 != NULL) ? 1u : 0u;
+            now.x_bits = ndsMPAiFloorBits(now.dobj->translate.vec.f.x);
+            now.y_bits = ndsMPAiFloorBits(now.dobj->translate.vec.f.y);
+        }
+        else
+        {
+            now.status = 0;
+            now.animated = 0u;
+            now.x_bits = 0u;
+            now.y_bits = 0u;
+        }
+        if ((same == FALSE) || (was->dobj != now.dobj) ||
+            (was->status != now.status) || (was->animated != now.animated) ||
+            (was->x_bits != now.x_bits) || (was->y_bits != now.y_bits))
+        {
+            same = FALSE;
+            *was = now;
+        }
+    }
+    if (same == FALSE)
+    {
+        sNdsMPAiFloorGeometry = geometry;
+        sNdsMPAiFloorYakumonoCount = count;
+        sNdsMPAiFloorCount = 0u;
+        sNdsMPAiFloorNext = 0u;
+    }
+    return TRUE;
+}
+
 sb32 func_ovl2_800F8FFC(Vec3f *position)
 {
     MPLineGroup *floors = &gMPCollisionLineGroups[nMPLineKindFloor];
+    u32 x_bits;
+    u32 y_bits;
+    sb32 memo;
+    sb32 answer = FALSE;
     u32 i;
 
     if (position == NULL)
@@ -1740,6 +1852,20 @@ sb32 func_ovl2_800F8FFC(Vec3f *position)
         return FALSE;
     }
     ndsMPCollisionEnsureLineGroups();
+    x_bits = ndsMPAiFloorBits(position->x);
+    y_bits = ndsMPAiFloorBits(position->y);
+    memo = ndsMPAiFloorSnapshot();
+    if (memo != FALSE)
+    {
+        for (i = 0u; i < sNdsMPAiFloorCount; i++)
+        {
+            if ((sNdsMPAiFloorKey[i][0] == x_bits) &&
+                (sNdsMPAiFloorKey[i][1] == y_bits))
+            {
+                return (sb32)sNdsMPAiFloorAnswer[i];
+            }
+        }
+    }
     for (i = 0u; i < floors->line_count; i++)
     {
         f32 floor_dist;
@@ -1748,10 +1874,24 @@ sb32 func_ovl2_800F8FFC(Vec3f *position)
                  &floor_dist, NULL, NULL) != FALSE) &&
             (floor_dist < 0.001F))
         {
-            return TRUE;
+            answer = TRUE;
+            break;
         }
     }
-    return FALSE;
+    if (memo != FALSE)
+    {
+        u32 slot = sNdsMPAiFloorNext;
+
+        sNdsMPAiFloorNext = (slot + 1u) & (NDS_MP_AI_FLOOR_MEMO_SLOTS - 1u);
+        if (sNdsMPAiFloorCount < NDS_MP_AI_FLOOR_MEMO_SLOTS)
+        {
+            sNdsMPAiFloorCount++;
+        }
+        sNdsMPAiFloorKey[slot][0] = x_bits;
+        sNdsMPAiFloorKey[slot][1] = y_bits;
+        sNdsMPAiFloorAnswer[slot] = (u8)answer;
+    }
+    return answer;
 }
 
 sb32 mpCollisionGetFCCommonCeil(s32 line_id, Vec3f *object_pos,

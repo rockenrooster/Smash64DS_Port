@@ -1652,3 +1652,62 @@ The first sweep runs (`shd_g*`) also carried lab hurtbox counters and are
 superseded by `shd2_g*`.
 
 Banked.
+
+## 56. CPU AI floor query: exact memo
+
+A fresh Dream Land profile of the gate target (`builds/p2p8-dl-census2`,
+current tree) confirms that the tail is SRC, not FTR. On the three final ROMs,
+the top-5% SRC median is 300-400K above the overall SRC median. Removing every
+FTR spike would lower gate P95 by only ~42K.
+
+Inside SRC, map collision self time is a flat cost:
+- Dream Land 94K ticks a frame.
+- Mushroom Kingdom 150K.
+- Saffron 132K.
+
+Of that, the CPU AI's "floor under this point?" query (`func_ovl2_800F8FFC`)
+made ~95 `mpCollisionGetFCCommonFloor` calls a frame on Dream Land. With its
+callees that is ~32K ticks. Up to three CPUs ask about the same target TopN in
+the same tick.
+
+The query's answer is a pure function of the point's x/y and, per floor line,
+the line's yakumono state (status, animation present, translate x/y); the
+vertices are static. It is now memoized on the point's bits. The memo is kept
+while a snapshot of every yakumono's state, and the geometry pointer, stays
+bit-identical; any change empties it.
+
+Memo sizes:
+- 8 slots.
+- Snapshot of up to 32 yakumono. A stage with more gets no memo.
+
+The function left ITCM (the memo made it 480 B too large), freeing its bytes.
+ITCM is now 32,592/32,768.
+
+Same-ROM A/B (`gafm0/1`, `afm0/1_g*`, word `gNdsLabAiFloorMemo`), replay
+IDENTICAL on every stage:
+
+| Stage | Median | P95 |
+|---|---|---|
+| Dream Land (gate) | -10.9K | -10.6K |
+| Mushroom Kingdom | -34.1K | -38.9K |
+| Hyrule | -21.1K | -27.5K |
+| Saffron | -5.1K | flat |
+| Castle | flat | flat |
+
+Final build (lab word removed), replay IDENTICAL in all:
+
+| Run | Control | P50 | P95 |
+|---|---|---|---|
+| Gate `gafmf` | `gshd` | 948,480 -> 936,128 | 1,318,272 -> 1,305,856 |
+| Mushroom | `afm0_g8` | -43K | -37K |
+| Hyrule | `afm0_g4` | -28K | -26K |
+| Yoshi | `shd2_g5` | -30K | -26K |
+| Saffron | `shd2_g7` | -15K | -10K |
+
+- Jungle and Zebes against their older census-instrumented controls: median
+  -10.5K and -12.9K.
+- Native failures 0.
+- Checks pass: `check-renderer-itcm-placement.ps1` and
+  `check-dtcm-residency.py`.
+
+Banked.

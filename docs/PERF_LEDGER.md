@@ -9135,3 +9135,13 @@ each tick. The decode is now ARM and O2, with inline reads and an exact
 CLZ-built Q-to-f32. Output words are unchanged. Saffron: P95 -5.4K. Gate:
 P95 -2.8K, median -1.9K. Replay identical.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 55.
+
+## 2026-09-28 — CPU AI floor query: exact memo
+
+**BANKED (any-stage, median and tail).** The AI's floor-under-point query ran
+`mpCollisionGetFCCommonFloor` over every floor line. The same target is
+asked by up to three CPUs a tick. The answer is now memoized on the point's
+bits while a snapshot of every yakumono's state is unchanged, and the
+function left ITCM. Gate P50/P95 -12.4K/-12.4K; Mushroom -43K/-37K; Hyrule
+-28K/-26K; Yoshi -30K/-26K; Saffron -15K/-10K. Replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 56.

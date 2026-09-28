@@ -105,7 +105,6 @@ SECTIONS {
 		*(.text.ndsR2CamMulQ)
 		*(.text.gcRunGObj)
 		*(.text.syVectorMag3D)
-		*(.text.func_ovl2_800F8FFC)
 		*(.text.syVectorDiff3D)
 		*(.text.syMatrixTraRotRpyRScaF)
 		*(.text.mpCollisionCheckRWallLineCollisionSame)
