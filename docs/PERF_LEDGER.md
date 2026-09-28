@@ -9117,3 +9117,13 @@ Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 52
 and size, are memoized on their float bits. Saffron: P95 -8.7K, top 5% mean
 -10.3K. Gate ROM: P95 +0.5K, top 5% mean -3.5K. Replay identical.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 53.
+
+## 2026-09-28 — Shared billboard camera memo for stage-DL submits
+
+**BANKED (any-stage).** A lab census of stage-DL submits (items, weapons,
+effects) put their cost at 26K-73K ticks each. Of that, 7-11K was the
+billboard recalc rebuilding the float camera per call, because it was called
+with no camera. The Yoshi cloud camera memo is now shared, and its row memo
+is scoped to the camera that owns it. Mushroom Kingdom: median -8.1K, P95
+-7.2K. Gate ROM: flat. Replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 54.

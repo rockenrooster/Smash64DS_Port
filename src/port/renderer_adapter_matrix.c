@@ -53,6 +53,18 @@
 
 #define NDS_RENDERER_ADAPTER_MTX_FRAC_BITS 12
 #define NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX 32u
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB ONLY: the stage-DL census's split of PrepareInitialMatrices (camera, world,
+ * compose, recalc) and the persistent world build's uncached fallbacks. */
+extern u32 cpuGetTiming(void);
+u32 gNdsLabPimAcc[5];
+#define NDS_LAB_PIM_MARK(v) ((v) = cpuGetTiming())
+#define NDS_LAB_PIM_ADD(i, v) (gNdsLabPimAcc[(i)] += cpuGetTiming() - (v))
+#else
+#define NDS_LAB_PIM_MARK(v) ((void)0)
+#define NDS_LAB_PIM_ADD(i, v) ((void)0)
+#endif
+
 #define NDS_RENDERER_ADAPTER_MATERIAL_MOBJ_MAX 64u
 /* Mario/Fox top out at four MObjs on one selected model root. Luigi root 4
  * carried six when this bound was introduced. Purin's Win2/CSS body root in
@@ -4018,16 +4030,25 @@ static NDSRendererMatrix20p12 sNdsMvpMemo46Rows[NDS_MVP_MEMO_46];
  * billboard through the full build, as before the memo. */
 volatile u32 gNdsMvpMemoEnable __attribute__((used, section(".data"))) = 1u;
 
-/* Counts resets, so a second owner of the memo (the Yoster cloud camera)
- * can tell that the rows now belong to someone else's camera. */
-static u32 sNdsMvpMemoEpoch;
+/* The camera whose operands the rows were built from. The memo is shared by
+ * the stage prepare's camera and the shared camera below, so a row is served
+ * only to the camera that last reset it: whichever of the two built rows
+ * last, the other one builds its own. */
+static const NDSRendererAdapterMvpCamera *sNdsMvpMemoOwner;
 
-static void ndsRendererAdapterMvpMemoReset(void)
+static void ndsRendererAdapterMvpMemoReset(const NDSRendererAdapterMvpCamera *owner)
 {
-    sNdsMvpMemoEpoch++;
+    sNdsMvpMemoOwner = owner;
     sNdsMvpMemoOn = (gNdsMvpMemoEnable != 0u) ? 1u : 0u;
     sNdsMvpMemo48Count = 0u;
     sNdsMvpMemo46Count = 0u;
+}
+
+static inline sb32 ndsRendererAdapterMvpMemoFor(
+    const NDSRendererAdapterMvpCamera *camera)
+{
+    return ((camera != NULL) && (camera == sNdsMvpMemoOwner) &&
+            (sNdsMvpMemoOn != 0u)) ? TRUE : FALSE;
 }
 
 static void ndsRendererAdapterMvpPerspectiveF(
@@ -4055,6 +4076,70 @@ static void ndsRendererAdapterMvpMod1F(
                        0.0F, cobj->vec.at.y, 0.0F, 0.0F, 1.0F, 0.0F);
         guMtxCatF(*out, perspective_f, *out);
     }
+}
+
+/* One camera memo for every billboard recalc outside the stage prepare
+ * (P2-2p8, 2026-09-27). Without it each recalc rebuilt the float perspective
+ * and, for kind 48, the look-at Mod1 (syMatrixLookAtF + guMtxCatF) from the
+ * CObj, and never hit the row memo: Yoshi's Island's nine cloud drawables cost
+ * ~45K ticks a frame there, and every billboarded item and weapon the stage
+ * DL submit draws paid ~3-4K ticks a call more than with it (Mushroom
+ * Kingdom's Meowth coins: same-ROM A/B -8K WORK-H median, replay
+ * identical; the Lakitu and Bronto actors share it too). The operands
+ * are kept while the CObj's own inputs (eye, at, perspective) are
+ * bit-identical, so every value it serves is the one the recalc would
+ * compute. It claims the row memo (resets it as its owner)
+ * whenever the stage prepare's camera has claimed it since. */
+typedef struct NDSRendererAdapterSharedMvpCameraKey
+{
+    Vec3f eye;
+    Vec3f at;
+    f32 fovy;
+    f32 aspect;
+    f32 near;
+    f32 far;
+    f32 scale;
+} NDSRendererAdapterSharedMvpCameraKey;
+static NDSRendererAdapterSharedMvpCameraKey sNdsSharedMvpCameraKey;
+static const void *sNdsSharedMvpCameraCobj;
+static NDSRendererAdapterMvpCamera sNdsSharedMvpCamera;
+static NDSRendererMatrix20p12 sNdsSharedMvpPerspective;
+
+static NDSRendererAdapterMvpCamera *ndsRendererAdapterSharedMvpCamera(CObj *cobj)
+{
+    NDSRendererAdapterSharedMvpCameraKey key;
+    u16 norm;
+
+    memset(&key, 0, sizeof(key));
+    key.eye = cobj->vec.eye;
+    key.at = cobj->vec.at;
+    key.fovy = cobj->projection.persp.fovy;
+    key.aspect = cobj->projection.persp.aspect;
+    key.near = cobj->projection.persp.near;
+    key.far = cobj->projection.persp.far;
+    key.scale = cobj->projection.persp.scale;
+    if ((sNdsSharedMvpCameraCobj != (const void *)cobj) ||
+        (memcmp(&key, &sNdsSharedMvpCameraKey, sizeof(key)) != 0))
+    {
+        norm = cobj->projection.persp.norm;
+        ndsRendererAdapterCameraPerspFast(&sNdsSharedMvpPerspective, &norm,
+                                          cobj->projection.persp.fovy,
+                                          cobj->projection.persp.aspect,
+                                          cobj->projection.persp.near,
+                                          cobj->projection.persp.far,
+                                          cobj->projection.persp.scale);
+        sNdsSharedMvpCamera.perspective = &sNdsSharedMvpPerspective;
+        sNdsSharedMvpCamera.perspective_f_valid = FALSE;
+        sNdsSharedMvpCamera.mod1_valid = FALSE;
+        sNdsSharedMvpCameraKey = key;
+        sNdsSharedMvpCameraCobj = cobj;
+        ndsRendererAdapterMvpMemoReset(&sNdsSharedMvpCamera);
+    }
+    else if (sNdsMvpMemoOwner != &sNdsSharedMvpCamera)
+    {
+        ndsRendererAdapterMvpMemoReset(&sNdsSharedMvpCamera);
+    }
+    return &sNdsSharedMvpCamera;
 }
 
 static void ndsRendererAdapterApplyMvpRecalc(
@@ -4260,7 +4345,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
             u32 slot = 0u;
             sb32 cached = FALSE;
 
-            if ((camera != NULL) && (sNdsMvpMemoOn != 0u))
+            if (ndsRendererAdapterMvpMemoFor(camera))
             {
                 for (slot = 0u; slot < sNdsMvpMemo48Count; slot++)
                 {
@@ -4289,7 +4374,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
                 syMatrixF2L(&source_orientation_f, &rotation_mtx);
                 ndsRendererAdapterMtxFromN64(&rotation_mtx,
                                              &source_orientation);
-                if ((camera != NULL) && (sNdsMvpMemoOn != 0u) &&
+                if (ndsRendererAdapterMvpMemoFor(camera) &&
                     (sNdsMvpMemo48Count < NDS_MVP_MEMO_48))
                 {
                     slot = sNdsMvpMemo48Count++;
@@ -4366,7 +4451,7 @@ static void ndsRendererAdapterApplyMvpRecalc(
                     ndsFloatBits(dobj->scale.vec.f.y),
                     ndsFloatBits(sNdsRendererAdapterMvpRecalcScaleX)
                 };
-                const sb32 memo = ((camera != NULL) && (sNdsMvpMemoOn != 0u) &&
+                const sb32 memo = (ndsRendererAdapterMvpMemoFor(camera) &&
                     (dobj != sNdsRendererAdapterCustom4ARollDObj)) ?
                     TRUE : FALSE;
                 u32 slot;
@@ -5377,6 +5462,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
         gNdsRendererProfileStageWorldPersistentOverflowCount++;
 #endif
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        gNdsLabPimAcc[4] += 1u;
+#endif
         return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
     }
 
@@ -5392,6 +5480,9 @@ static sb32 ndsRendererAdapterBuildPersistentStageWorldMatrix(
         {
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
             gNdsRendererProfileStageWorldPersistentOverflowCount++;
+#endif
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+            gNdsLabPimAcc[4] += 0x10000u;
 #endif
             return ndsRendererAdapterBuildDObjWorldMatrixUncached(dobj, out);
         }
@@ -5992,6 +6083,9 @@ static void ndsRendererAdapterPrepareInitialMatrices(
     u32 camera_projection_valid = FALSE;
     u32 camera_modelview_valid = FALSE;
     u32 dobj_world_valid = FALSE;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    u32 lab_mark = 0u;
+#endif
 
     if ((projection_ptr == NULL) || (modelview_ptr == NULL))
     {
@@ -6010,6 +6104,7 @@ static void ndsRendererAdapterPrepareInitialMatrices(
         return;
     }
 
+    NDS_LAB_PIM_MARK(lab_mark);
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererAdapterGetFrameCameraMatrices(
         cobj, &camera_projection, &camera_projection_valid,
@@ -6022,6 +6117,8 @@ static void ndsRendererAdapterPrepareInitialMatrices(
                                           &camera_modelview_valid,
                                           NULL, NULL, NULL, NULL);
 #endif
+    NDS_LAB_PIM_ADD(0, lab_mark);
+    NDS_LAB_PIM_MARK(lab_mark);
     if (dobj != NULL)
     {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -6038,6 +6135,8 @@ static void ndsRendererAdapterPrepareInitialMatrices(
                 ndsRendererAdapterBuildDObjWorldMatrix(dobj, &dobj_world);
         }
     }
+    NDS_LAB_PIM_ADD(1, lab_mark);
+    NDS_LAB_PIM_MARK(lab_mark);
 
     if (camera_projection_valid != FALSE)
     {
@@ -6078,9 +6177,14 @@ static void ndsRendererAdapterPrepareInitialMatrices(
             ((*projection_ptr != NULL) ? 8u : 0u) |
             ((*modelview_ptr != NULL) ? 16u : 0u);
     }
+    NDS_LAB_PIM_ADD(2, lab_mark);
+    NDS_LAB_PIM_MARK(lab_mark);
     ndsRendererAdapterApplyMvpRecalc(
         (mvp_recalc_kind != 0u) ? dobj : NULL, mvp_recalc_kind, cobj,
-        projection, projection_ptr, modelview, modelview_ptr, NULL);
+        projection, projection_ptr, modelview, modelview_ptr,
+        ((mvp_recalc_kind != 0u) && (cobj != NULL)) ?
+            ndsRendererAdapterSharedMvpCamera(cobj) : NULL);
+    NDS_LAB_PIM_ADD(3, lab_mark);
     if (sNdsRendererAdapterEffectSubmitActive != FALSE)
     {
         gNdsRendererAdapterEffectPrepMask |=
@@ -8377,66 +8481,6 @@ static NDSRendererAdapterNativeYosterCloudWorkspace
 
 volatile u32 gNdsNativeYosterCloudFailStep;
 
-/* The clouds' billboards recalc through the camera memo the stage prepare
- * uses (P2-2p8, 2026-09-27): without one, each of a frame's nine cloud
- * drawables rebuilt the look-at Mod1 (syMatrixLookAtF + guMtxCatF), the float
- * perspective and the billboard rows -- Yoshi's Island's census put ~45K
- * ticks a frame there; same-ROM A/B -51K WORK-H a frame, replay identical. The memo is kept while the camera's own inputs (eye,
- * at, perspective) are bit-identical, so every value it serves is the one the
- * recalc would compute. It shares the stage prepare's billboard row memo:
- * it resets the memo when it is rebuilt, and rebuilds when anyone else has
- * reset it since (sNdsMvpMemoEpoch), so the rows it reads are its own. */
-typedef struct NDSRendererAdapterYosterCloudCameraKey
-{
-    Vec3f eye;
-    Vec3f at;
-    f32 fovy;
-    f32 aspect;
-    f32 near;
-    f32 far;
-    f32 scale;
-} NDSRendererAdapterYosterCloudCameraKey;
-static NDSRendererAdapterYosterCloudCameraKey sNdsYosterCloudCameraKey;
-static const void *sNdsYosterCloudCameraCobj;
-static u32 sNdsYosterCloudCameraEpoch;
-static NDSRendererAdapterMvpCamera sNdsYosterCloudCamera;
-static NDSRendererMatrix20p12 sNdsYosterCloudPerspective;
-
-static NDSRendererAdapterMvpCamera *ndsRendererAdapterYosterCloudCamera(CObj *cobj)
-{
-    NDSRendererAdapterYosterCloudCameraKey key;
-    u16 norm;
-
-    memset(&key, 0, sizeof(key));
-    key.eye = cobj->vec.eye;
-    key.at = cobj->vec.at;
-    key.fovy = cobj->projection.persp.fovy;
-    key.aspect = cobj->projection.persp.aspect;
-    key.near = cobj->projection.persp.near;
-    key.far = cobj->projection.persp.far;
-    key.scale = cobj->projection.persp.scale;
-    if ((sNdsYosterCloudCameraCobj != (const void *)cobj) ||
-        (sNdsYosterCloudCameraEpoch != sNdsMvpMemoEpoch) ||
-        (memcmp(&key, &sNdsYosterCloudCameraKey, sizeof(key)) != 0))
-    {
-        norm = cobj->projection.persp.norm;
-        ndsRendererAdapterCameraPerspFast(&sNdsYosterCloudPerspective, &norm,
-                                          cobj->projection.persp.fovy,
-                                          cobj->projection.persp.aspect,
-                                          cobj->projection.persp.near,
-                                          cobj->projection.persp.far,
-                                          cobj->projection.persp.scale);
-        sNdsYosterCloudCamera.perspective = &sNdsYosterCloudPerspective;
-        sNdsYosterCloudCamera.perspective_f_valid = FALSE;
-        sNdsYosterCloudCamera.mod1_valid = FALSE;
-        ndsRendererAdapterMvpMemoReset();
-        sNdsYosterCloudCameraEpoch = sNdsMvpMemoEpoch;
-        sNdsYosterCloudCameraKey = key;
-        sNdsYosterCloudCameraCobj = cobj;
-    }
-    return &sNdsYosterCloudCamera;
-}
-
 sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
     u32 initial_geometry_mode, NDSRendererStats *stats)
 {
@@ -8586,7 +8630,7 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(draws[i], nGCMatrixKind48, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
             mvp, &modelview_ptr,
-            ndsRendererAdapterYosterCloudCamera((CObj *)cobj));
+            ndsRendererAdapterSharedMvpCamera((CObj *)cobj));
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             gNdsNativeYosterCloudFailStep = 12u;
@@ -8806,7 +8850,9 @@ sb32 ndsRendererAdapterSubmitNativeEfLakitu(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(joints[3],
             billboard_kind, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr, NULL);
+            mvp, &modelview_ptr,
+            (cobj != NULL) ?
+                ndsRendererAdapterSharedMvpCamera((CObj *)cobj) : NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             return FALSE;
@@ -8830,7 +8876,9 @@ sb32 ndsRendererAdapterSubmitNativeEfLakitu(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(joints[3u + i],
             billboard_kind, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr, NULL);
+            mvp, &modelview_ptr,
+            (cobj != NULL) ?
+                ndsRendererAdapterSharedMvpCamera((CObj *)cobj) : NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             return FALSE;
@@ -9011,7 +9059,9 @@ sb32 ndsRendererAdapterSubmitNativeEfBronto(void *root_ptr, void *cobj,
         ndsRendererAdapterApplyMvpRecalc(draw,
             billboard_kind, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr, NULL);
+            mvp, &modelview_ptr,
+            (cobj != NULL) ?
+                ndsRendererAdapterSharedMvpCamera((CObj *)cobj) : NULL);
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             return FALSE;

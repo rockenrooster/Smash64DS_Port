@@ -1573,3 +1573,50 @@ Results:
   replay IDENTICAL; native failures 0.
 
 Banked as a tail lever.
+
+## 54. Generic stage-DL submit census; shared billboard camera memo
+
+A lab-only census (`NDS_LAB_FOURCPU_SWEEP`, `gNdsLabStageDLCensus`, in
+`renderer_adapter_stage.c`) keys every stage-DL submit by GObj id and
+item/weapon kind. It times the whole submit and splits it at phase marks:
+find, seed, material, matrix, config, exec and tail. Inside the matrix step
+it splits camera, world, compose and recalc (`gNdsLabPimAcc`).
+
+What the census found:
+- Each item/weapon submit costs 26K-73K ticks of its own CPU time.
+- A GX-drain split (`gNdsLabStageDLDrain=1`) showed only ~130 ticks of wait
+  for earlier geometry, so this is not FIFO backpressure.
+- Weapons: find ~4-5K, matrix 4-19K, exec 16-42K.
+- The two expensive parts of the matrix step:
+  - The persistent world build: Link's Boomerang 14.9K a call.
+  - The billboard recalc: Meowth's coin 10.8K, Capsule 8.2K, PK Thunder 7.6K,
+    Samus Bomb 7.1K a call.
+- Per-frame own time: Mushroom Kingdom ~152K (coins 82K), Peach's Castle
+  ~132K, Saffron ~90K (boomerang 47K), Dream Land ~38K.
+
+Runs `sdl*_g*` are in `artifacts/performance/2026-09-26_p2-2p8-ftr-item-tail/`.
+
+The cause of the recalc cost: `PrepareInitialMatrices` called
+`ApplyMvpRecalc` with no camera. Every billboard therefore rebuilt the float
+perspective, and for kind 48 the look-at Mod1, and never used the row memo.
+The Lakitu and Bronto actors did the same.
+
+The change:
+- The Yoshi cloud camera memo is now `ndsRendererAdapterSharedMvpCamera`,
+  used by all of these callers.
+- The row memo is scoped to its owner camera (`sNdsMvpMemoOwner` replaces
+  the epoch). A row is served only to the camera that last reset the memo,
+  so the stage prepare's camera and the shared camera never read each
+  other's rows.
+
+Results:
+- Same-ROM (`smc0`/`smc1`): Mushroom Kingdom median -8.0K (1,905 of 1,972
+  frames better). Saffron, Castle and Dream Land flat.
+- Coin recalc: 10.8K -> 7.2K a call. It spins, so its kind-46 rows still
+  miss the row memo.
+- Final sweep: Mushroom `smcf_g8` vs `smc0_g8`, median -8,064, top 5% median
+  -9,536, P95 1,534,656 -> 1,527,488. Castle median -1.4K.
+- Gate ROM `gsmcf` vs `gsmc0`: median +0.7K (layout), P95 -0.4K.
+- Replay IDENTICAL on all of these; native failures 0.
+
+Banked.

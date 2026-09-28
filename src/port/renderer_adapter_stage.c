@@ -4159,7 +4159,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     camera.recalc.perspective = &workspace->projection;
     camera.recalc.perspective_f_valid = FALSE;
     camera.recalc.mod1_valid = FALSE;
-    ndsRendererAdapterMvpMemoReset();
+    ndsRendererAdapterMvpMemoReset(&camera.recalc);
     ndsRendererAdapterGetFrameCameraMatrices(cobj,
         &camera.projection, &camera.projection_valid,
         &camera.modelview, &camera.modelview_valid, NULL, NULL, NULL);
@@ -7069,9 +7069,106 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitDamageFlyMDust(
 }
 #endif
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB ONLY (the any-stage sweep ROM): which GObjs reach the generic stage DL
+ * submit and what they cost. Key = GObj id | (item/weapon kind << 16) for the
+ * item and weapon links (ITStruct/WPStruct kind, both at +0xC), 0xFFFF for
+ * everything else. Rows: key, calls, own ticks, GX-drain wait ticks, then
+ * own ticks split at the Impl's phase marks: find, seed, material, matrix,
+ * config/stats, exec, tail (a call that returns before a mark leaves the
+ * rest in [2] only), then PrepareInitialMatrices' camera, world, compose,
+ * recalc and its uncached-fallback count (gNdsLabPimAcc). */
+#define NDS_LAB_STAGE_DL_CENSUS_ROWS 24u
+volatile u32 gNdsLabStageDLCensus[NDS_LAB_STAGE_DL_CENSUS_ROWS][16]
+    __attribute__((used));
+/* Samples whose own or wait span read >= 2^20 ticks (the clock's 2^22
+ * artifact), left out of the rows. */
+volatile u32 gNdsLabStageDLCensusOutliers __attribute__((used));
+static u32 sNdsLabStageDLMark[6];
+/* 1 = drain the geometry engine before each submit (the wait split). */
+volatile u32 gNdsLabStageDLDrain __attribute__((used, section(".data"))) = 0u;
+#define NDS_LAB_SDL_MARK(i) (sNdsLabStageDLMark[(i)] = cpuGetTiming())
+static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
+                                                 GObj *camera_gobj,
+                                                 u32 initial_geometry_mode);
 static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
                                              GObj *camera_gobj,
                                              u32 initial_geometry_mode)
+{
+    u32 start = cpuGetTiming();
+    u32 idle;
+    u32 spins = 0u;
+    GObj *owner = (dobj != NULL) ? dobj->parent_gobj : NULL;
+    u32 id = (owner != NULL) ? (u32)owner->id : 0u;
+    u32 kind = 0xffffu;
+    u32 key;
+    u32 own;
+    u32 i;
+
+    /* Drain whatever the geometry engine still holds, so [3] is the
+     * wait for earlier work and [2] this submit's own cost. */
+    while ((gNdsLabStageDLDrain != 0u) &&
+           (((*(volatile u32 *)0x04000600u) & (1u << 27)) != 0u) && /* GXSTAT */
+           (spins < 0x40000u)) { spins++; }
+    sNdsLabStageDLMark[0] = sNdsLabStageDLMark[1] = 0u;
+    sNdsLabStageDLMark[2] = sNdsLabStageDLMark[3] = 0u;
+    sNdsLabStageDLMark[4] = sNdsLabStageDLMark[5] = 0u;
+    for (i = 0u; i < 5u; i++)
+    {
+        gNdsLabPimAcc[i] = 0u;
+    }
+    idle = cpuGetTiming();
+    ndsRendererAdapterSubmitStageDLImpl(dobj, dl, camera_gobj,
+                                        initial_geometry_mode);
+    own = cpuGetTiming() - idle;
+    if ((own >= 0x100000u) || ((idle - start) >= 0x100000u))
+    {
+        gNdsLabStageDLCensusOutliers++;
+        return;
+    }
+    if ((owner != NULL) && ((id == 1012u) || (id == 1013u)) &&
+        (owner->user_data.p != NULL))
+    {
+        kind = (u32)((const s32 *)owner->user_data.p)[3] & 0xffffu;
+    }
+    key = (id & 0xffffu) | (kind << 16);
+    for (i = 0u; i < NDS_LAB_STAGE_DL_CENSUS_ROWS; i++)
+    {
+        if ((gNdsLabStageDLCensus[i][0] == key) ||
+            (gNdsLabStageDLCensus[i][1] == 0u))
+        {
+            gNdsLabStageDLCensus[i][0] = key;
+            gNdsLabStageDLCensus[i][1]++;
+            gNdsLabStageDLCensus[i][2] += own;
+            gNdsLabStageDLCensus[i][3] += idle - start;
+            if ((sNdsLabStageDLMark[0] != 0u) && (sNdsLabStageDLMark[1] != 0u) &&
+                (sNdsLabStageDLMark[2] != 0u) && (sNdsLabStageDLMark[3] != 0u) &&
+                (sNdsLabStageDLMark[4] != 0u) && (sNdsLabStageDLMark[5] != 0u))
+            {
+                gNdsLabStageDLCensus[i][4] += sNdsLabStageDLMark[0] - idle;
+                gNdsLabStageDLCensus[i][5] += sNdsLabStageDLMark[4] - sNdsLabStageDLMark[0];
+                gNdsLabStageDLCensus[i][6] += sNdsLabStageDLMark[5] - sNdsLabStageDLMark[4];
+                gNdsLabStageDLCensus[i][7] += sNdsLabStageDLMark[1] - sNdsLabStageDLMark[5];
+                gNdsLabStageDLCensus[i][8] += sNdsLabStageDLMark[2] - sNdsLabStageDLMark[1];
+                gNdsLabStageDLCensus[i][9] += sNdsLabStageDLMark[3] - sNdsLabStageDLMark[2];
+                gNdsLabStageDLCensus[i][10] += (idle + own) - sNdsLabStageDLMark[3];
+            }
+            gNdsLabStageDLCensus[i][11] += gNdsLabPimAcc[0];
+            gNdsLabStageDLCensus[i][12] += gNdsLabPimAcc[1];
+            gNdsLabStageDLCensus[i][13] += gNdsLabPimAcc[2];
+            gNdsLabStageDLCensus[i][14] += gNdsLabPimAcc[3];
+            gNdsLabStageDLCensus[i][15] += gNdsLabPimAcc[4];
+            break;
+        }
+    }
+}
+#else
+#define ndsRendererAdapterSubmitStageDLImpl ndsRendererAdapterSubmitStageDL
+#define NDS_LAB_SDL_MARK(i) ((void)0)
+#endif
+static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
+                                                 GObj *camera_gobj,
+                                                 u32 initial_geometry_mode)
 {
     NDSRelocLoadedFile *loaded;
     NDSRendererConfig config = {0};
@@ -10670,6 +10767,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
 #endif
 
+    NDS_LAB_SDL_MARK(0);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     detailed_output = (ndsRendererHardwareNoOracleEnabled() == FALSE) ?
         TRUE : FALSE;
@@ -10729,6 +10827,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             gNdsStageGCDrawAllLoopHardwareCarrySegmentSeedCount++;
         }
     }
+    NDS_LAB_SDL_MARK(4);
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     adapter_start = cpuGetTiming();
@@ -10806,6 +10905,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     {
         ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
     }
+    NDS_LAB_SDL_MARK(5);
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
@@ -10839,6 +10939,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     gNdsRendererProfileMatrixTicks += cpuGetTiming() - step_start;
 #endif
 
+    NDS_LAB_SDL_MARK(1);
     config.max_depth = 8u;
     config.max_commands = 8192u;
     config.max_list_commands = 512u;
@@ -10977,6 +11078,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         phase_mark = cpuGetTiming();
     }
 #endif
+    NDS_LAB_SDL_MARK(2);
 #if NDS_R2_REBIRTH_HALO_NATIVE
     if (rebirth_halo_native_candidate != FALSE)
     {
@@ -12738,6 +12840,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             NDS_NATIVE_FAILURE_NO_PROGRAM, render_stats);
     }
 #endif
+    NDS_LAB_SDL_MARK(3);
 #if NDS_TICK_HUD && NDS_P2_EFFECT_CENSUS
     if (phase_effect != FALSE)
     {
