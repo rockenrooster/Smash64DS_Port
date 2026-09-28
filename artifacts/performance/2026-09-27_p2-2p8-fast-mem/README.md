@@ -1814,3 +1814,75 @@ Refuted (reverted; same-ROM, replay IDENTICAL):
 The lesson is that in the render adapters, per-call cost is cold-code and data
 misses. Deleting arithmetic inside a call does not move WORK-H; deleting calls,
 or moving the code to fast memory, does.
+
+## 61. Status changes: the motion load, and a 2.6M-tick directory walk
+
+Lab timers (sweep ROM, since reverted) split `ftMainSetStatus`. On Dream Land
+(DK/Samus/Link/Kirby) the match makes 728 status changes at ~110K ticks each.
+Of that, the figatree force-load (`lbRelocGetForceExternHeapFile`) takes ~63K
+and the figatree bind ~12K.
+
+How the 706 force-loads are served on Dream Land:
+
+| Path | Loads | Ticks each | Notes |
+|---|---|---|---|
+| raw-cache hit | 204 | ~13K | copy + register |
+| BPS1 stream read | 495 | ~47K | read ~31K for ~2 KB, cache store ~4K, register ~2K, prepare ~5K |
+| legacy O2R loader | 7 | ~2.7M | four AObj32 entry clips (frames 51-144) and Samus's spline clip 061, three times mid-match |
+
+Saffron is the same shape: 668 stream loads, 6 hits, 7 legacy.
+
+A lab log of every load, replayed offline, gives:
+- The match touches 195 (Dream Land) or 214 (Saffron) distinct clips. That is
+  391 KB and 423 KB of raw bytes: the compulsory misses.
+- The raw cache reserved only 51,024 B on Dream Land and 2,768 B on Saffron,
+  against a 258,048 B design. A 256 KB FIFO would miss 245 and 262 times, and
+  an LRU 214 and 234, against 502 and 675 today.
+
+**The legacy loads were a directory walk, not I/O.**
+- `ndsRelocAssetLoadIntoZeroedHeapDirect` resolves each clip with
+  `nitroromResolvePath`. That call walks the FNT subtable of
+  `reloc/reloc_animations`, 460 files, one entry at a time through the ROM
+  read interface.
+- The walk is 2.62M of the 2.72M each load costs. Register+swap is ~20K,
+  cache store ~33K and finalize ~38K.
+- None of Ness, Yoshi, Pikachu or Purin's motions are in the BPS1 pack, which
+  covers Mario, Fox, DK, Samus, Luigi, Link, Kirby and Captain. So in the
+  all-content (owner) ROM, **every** new motion for those four fighters paid
+  that walk.
+
+**Fix (banked):** `ndsRelocAnimDirBuild` makes one buffered pass over that
+subtable at boot.
+- File ids in a directory are consecutive in FNT order, so the pass yields
+  (asset, file id) runs: 12 runs for 460 files, or 8 runs for 18 files in the
+  gate target.
+- Each member is checked against the path `ndsRelocAssetFindEntry` formats.
+  The loader still checks the O2R header's file id, so a wrong row can only
+  fall back to the walk.
+- Static cost: a 32-run table of 256 B.
+
+Results:
+
+| Arm | Build | P50 | P95 | Note |
+|---|---|---|---|---|
+| `fr_off` | full-roster lab (+Ness/Yoshi/Pikachu/Purin flags), Ness/Yoshi/Pikachu/Purin on DL | 981K | **6,028K** | 394 walks = 1.18G ticks/match |
+| `fr_on` | same ROM, lookup on | 981K | **1,538K** | replay IDENTICAL; legacy load 2.62M -> 54K |
+| `ad_g6` vs `leg_g6` | sweep, DK/Samus/Link/Kirby DL | +0.8K | +5K | 7 walks removed; replay IDENTICAL |
+| `gadir` vs `gafmf` | gate target | +1.7K | -1.3K | 18 files / 8 runs, fallbacks 0, native failures 0, heap 69,340 |
+
+Remaining per-load cost for those four fighters (`fr_on`, ~220K a load):
+- read ~54K;
+- swap/register ~16K;
+- cache store with AObj16 prebake ~65K;
+- finalize, which reruns the AObj16 transform on the heap copy, ~72K.
+
+Adding them to the BPS1 pack would bring a load to ~50K. That is the next
+lever for late-fighter rosters.
+
+Other findings:
+- In the full-roster build the DK/Samus/Link/Kirby roster reserves **0 B**
+  of raw cache (`fr_def`), so all 706 loads miss.
+- The full-roster lab also crashes at frame 79 in `gcParseDObjAnimJoint`
+  (Ness/Yoshi/Pikachu/Purin on Yoshi's Island and Saffron). The crash is the
+  same with the lookup compiled out (`flo_g5`), so it predates this change.
+  It is logged for the stability lane.

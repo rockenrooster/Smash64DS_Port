@@ -31,8 +31,8 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 billboard camera, shield decode, AI floor memo): `D37EFA19` (`gafmf`, control) WORK-H
 P50/P95 936,128/1,305,856. Sweep ROM (NDS_LAB_FOURCPU_SWEEP, gNdsLabFourCpuGkind) P95:
 Mushroom 1.49M, Saffron 1.53M, Yoshi 1.60M, Zebes 1.49M, Castle 1.45M, Hyrule 1.38M,
-Jungle 1.36M. Digest `--sequence --resync 4`. P95 set, top 5% over median: SRC +326K
-(SINT +113K, SHDT +98K, SPRM +60K), MISC +87K; the tail is sim, not FTR.
+Jungle 1.36M. Digest `--sequence --resync 4`. P95 set: SRC +326K over median (status
+changes ~110K each). 09-28 sec 61: FNT walk fix (Ness/Yoshi/Pika/Purin P95 6.03M->1.54M).
 
 ## Continue, do not restart
 

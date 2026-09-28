@@ -852,11 +852,288 @@ const char *ndsRelocAssetGetPath(u32 asset_id)
     return (entry != NULL) ? entry->path : NULL;
 }
 
+/* reloc/reloc_animations file ids, read once from the FNT (P2-2p8,
+ * 2026-09-28). nitroromResolvePath walks a directory's FNT subtable one entry
+ * at a time through the ROM read interface, and this directory holds 460
+ * files: resolving one fighter clip measured ~2.6M ticks (about two frames of
+ * WORK) inside the frame that changed action. Every Ness/Yoshi/Pikachu/Purin
+ * motion (none is in the BPS1 stream pack) and every other fighter's AObj32
+ * entry and spline clip takes that path. A Ness/Yoshi/Pikachu/Purin match
+ * paid 394 of them: P95 6.03M, 1.54M with this table, replay digest identical
+ * (artifacts/performance/2026-09-27_p2-2p8-fast-mem, section 61).
+ *
+ * File ids within one directory are consecutive in FNT order, so one buffered
+ * pass over the subtable at boot yields (asset, file id) runs. Each member is
+ * checked against the path ndsRelocAssetFindEntry formats for that asset, and
+ * the loader still validates the O2R header's file id, so a foreign row can
+ * only fall back to the walk, never load a wrong file. */
+#define NDS_RELOC_ANIM_DIR_PATH "reloc/reloc_animations"
+#define NDS_RELOC_ANIM_DIR_PREFIX "nitro:/" NDS_RELOC_ANIM_DIR_PATH "/"
+#define NDS_RELOC_ANIM_DIR_RUNS_MAX 32u
+#define NDS_RELOC_ANIM_DIR_CHUNK 256u
+
+typedef struct NDSRelocAnimDirRun
+{
+    u16 asset_first;
+    u16 count;
+    u16 nitro_first;
+    u16 pad;
+} NDSRelocAnimDirRun;
+
+static NDSRelocAnimDirRun sNdsRelocAnimDirRuns[NDS_RELOC_ANIM_DIR_RUNS_MAX];
+static u16 sNdsRelocAnimDirRunCount;
+static u16 sNdsRelocAnimDirAssetMin;
+static u16 sNdsRelocAnimDirAssetMax;
+__attribute__((used)) volatile u32 gNdsRelocAnimDirFiles;
+__attribute__((used)) volatile u32 gNdsRelocAnimDirRows;
+__attribute__((used)) volatile u32 gNdsRelocAnimDirFailStep;
+__attribute__((used)) volatile u32 gNdsRelocAnimDirRuns;
+__attribute__((used)) volatile u32 gNdsRelocAnimDirHits;
+
+typedef struct NDSRelocAnimDirReader
+{
+    NitroRom *rom;
+    u32 offset;
+    u32 pos;
+    u32 fill;
+    u8 buf[NDS_RELOC_ANIM_DIR_CHUNK];
+} NDSRelocAnimDirReader;
+
+static s32 ndsRelocAnimDirReadByte(NDSRelocAnimDirReader *r)
+{
+    if (r->pos >= r->fill)
+    {
+        if (nitroromRead(r->rom, r->offset, r->buf, sizeof(r->buf)) == false)
+        {
+            return -1;
+        }
+        r->offset += sizeof(r->buf);
+        r->pos = 0u;
+        r->fill = sizeof(r->buf);
+    }
+    return r->buf[r->pos++];
+}
+
+static void ndsRelocAnimDirNote(u32 asset_id, u32 nitro_id)
+{
+    NDSRelocAnimDirRun *run;
+
+    if (sNdsRelocAnimDirRunCount != 0u)
+    {
+        run = &sNdsRelocAnimDirRuns[sNdsRelocAnimDirRunCount - 1u];
+        if ((asset_id == (u32)run->asset_first + run->count) &&
+            (nitro_id == (u32)run->nitro_first + run->count))
+        {
+            run->count++;
+            goto noted;
+        }
+    }
+    if (sNdsRelocAnimDirRunCount >= NDS_RELOC_ANIM_DIR_RUNS_MAX)
+    {
+        /* Unlisted clips keep the directory walk. */
+        return;
+    }
+    run = &sNdsRelocAnimDirRuns[sNdsRelocAnimDirRunCount++];
+    run->asset_first = (u16)asset_id;
+    run->count = 1u;
+    run->nitro_first = (u16)nitro_id;
+    run->pad = 0u;
+noted:
+    if ((gNdsRelocAnimDirRows == 0u) || (asset_id < sNdsRelocAnimDirAssetMin))
+    {
+        sNdsRelocAnimDirAssetMin = (u16)asset_id;
+    }
+    if (asset_id > sNdsRelocAnimDirAssetMax)
+    {
+        sNdsRelocAnimDirAssetMax = (u16)asset_id;
+    }
+    gNdsRelocAnimDirRows++;
+}
+
+/* The asset whose ndsRelocAssetFindEntry path is exactly this file, or 0. */
+static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
+{
+    static const char prefix[] = NDS_RELOC_ANIM_DIR_PREFIX;
+    char full[sizeof(prefix) + NITROROM_NAME_MAX + 1u];
+    const NDSRelocAssetEntry *entry;
+    u32 digits = len;
+    u32 number = 0u;
+    u32 asset_id = 0u;
+    u32 i;
+
+    while ((digits != 0u) && (name[digits - 1u] >= '0') &&
+           (name[digits - 1u] <= '9'))
+    {
+        digits--;
+    }
+    if ((digits == len) || ((len - digits) > 4u))
+    {
+        return 0u;
+    }
+    for (i = digits; i < len; i++)
+    {
+        number = (number * 10u) + (u32)(name[i] - '0');
+    }
+    if ((digits == 11u) && (memcmp(name, "FTMarioAnim", 11u) == 0))
+    {
+        asset_id = NDS_RELOC_MARIO_ANIM_FIRST + number;
+    }
+    else if ((digits == 9u) && (memcmp(name, "FTFoxAnim", 9u) == 0))
+    {
+        asset_id = NDS_RELOC_FOX_ANIM_FIRST + number;
+    }
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
+    else
+    {
+        for (i = 0u; i < (sizeof(sNdsP2FighterAnimSegments) /
+                          sizeof(sNdsP2FighterAnimSegments[0])); i++)
+        {
+            const NDSP2FighterAnimSegment *segment =
+                &sNdsP2FighterAnimSegments[i];
+            u32 candidate = segment->zero_id + number;
+
+            if ((strlen(segment->stem) == digits) &&
+                (memcmp(name, segment->stem, digits) == 0) &&
+                (candidate >= segment->first) && (candidate <= segment->last))
+            {
+                asset_id = candidate;
+                break;
+            }
+        }
+    }
+#endif
+    if ((asset_id == 0u) || (asset_id > 0xffffu))
+    {
+        return 0u;
+    }
+    entry = ndsRelocAssetFindEntry(asset_id);
+    memcpy(full, prefix, sizeof(prefix) - 1u);
+    memcpy(&full[sizeof(prefix) - 1u], name, len);
+    full[sizeof(prefix) - 1u + len] = '\0';
+    if ((entry == NULL) || (entry->path == NULL) ||
+        (strcmp(entry->path, full) != 0))
+    {
+        return 0u;
+    }
+    return asset_id;
+}
+
+static void ndsRelocAnimDirBuild(void)
+{
+    NDSRelocAnimDirReader reader;
+    const NitroRomDir *dir;
+    char name[NITROROM_NAME_MAX + 1u];
+    NitroRom *rom = nitroromGetSelf();
+    int dir_id;
+    u32 file_id;
+
+    sNdsRelocAnimDirRunCount = 0u;
+    gNdsRelocAnimDirRows = 0u;
+    gNdsRelocAnimDirFiles = 0u;
+    if (rom == NULL)
+    {
+        gNdsRelocAnimDirFailStep = 1u;
+        return;
+    }
+    dir_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR,
+                                 NDS_RELOC_ANIM_DIR_PATH);
+    if ((dir_id < (s32)NITROROM_ROOT_DIR) ||
+        ((u32)(dir_id - NITROROM_ROOT_DIR) >= rom->num_dirs))
+    {
+        gNdsRelocAnimDirFailStep = 2u;
+        return;
+    }
+    dir = &rom->dir_table[dir_id - NITROROM_ROOT_DIR];
+    reader.rom = rom;
+    reader.offset = rom->fnt_offset + dir->subtable_offset;
+    reader.pos = 0u;
+    reader.fill = 0u;
+    file_id = dir->file_id_base;
+    for (;;)
+    {
+        s32 kind = ndsRelocAnimDirReadByte(&reader);
+        u32 len;
+        u32 i;
+
+        if (kind <= 0)
+        {
+            if (kind < 0)
+            {
+                gNdsRelocAnimDirFailStep = 3u;
+                sNdsRelocAnimDirRunCount = 0u;
+            }
+            break;
+        }
+        len = (u32)kind & 0x7fu;
+        for (i = 0u; i < len; i++)
+        {
+            s32 c = ndsRelocAnimDirReadByte(&reader);
+
+            if (c < 0)
+            {
+                gNdsRelocAnimDirFailStep = 3u;
+                sNdsRelocAnimDirRunCount = 0u;
+                return;
+            }
+            name[i] = (char)c;
+        }
+        if (((u32)kind & 0x80u) != 0u)
+        {
+            /* Subdirectory: its 16-bit id follows; it uses no file id. */
+            if ((ndsRelocAnimDirReadByte(&reader) < 0) ||
+                (ndsRelocAnimDirReadByte(&reader) < 0))
+            {
+                gNdsRelocAnimDirFailStep = 3u;
+                sNdsRelocAnimDirRunCount = 0u;
+                return;
+            }
+            continue;
+        }
+        if (file_id < rom->num_files)
+        {
+            u32 asset_id = ndsRelocAnimDirAssetForName(name, len);
+
+            if (asset_id != 0u)
+            {
+                ndsRelocAnimDirNote(asset_id, file_id);
+            }
+        }
+        gNdsRelocAnimDirFiles++;
+        file_id++;
+    }
+    gNdsRelocAnimDirRuns = sNdsRelocAnimDirRunCount;
+}
+
+static int ndsRelocAnimDirLookup(u32 asset_id)
+{
+    u32 i;
+
+    if ((sNdsRelocAnimDirRunCount == 0u) ||
+        (asset_id < sNdsRelocAnimDirAssetMin) ||
+        (asset_id > sNdsRelocAnimDirAssetMax))
+    {
+        return -1;
+    }
+    for (i = 0u; i < sNdsRelocAnimDirRunCount; i++)
+    {
+        const NDSRelocAnimDirRun *run = &sNdsRelocAnimDirRuns[i];
+        u32 delta = asset_id - run->asset_first;
+
+        if (delta < run->count)
+        {
+            gNdsRelocAnimDirHits++;
+            return (int)(run->nitro_first + delta);
+        }
+    }
+    return -1;
+}
+
 void ndsRelocAssetsInit(void)
 {
     if (nitroFSInit(NULL))
     {
         gNdsRelocAssetInitResult = NDS_RELOC_ASSET_INIT_PASS;
+        ndsRelocAnimDirBuild();
 #if NDS_BOOT_DIAG_TEXT
         /* P2-1L (11). gNdsRelocAssetInitResult is what every verifier reads;
          * the console line is the human copy, and the owner's free-play ROM
@@ -1549,7 +1826,11 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
         return FALSE;
     }
     path = entry->path + 7u;
-    nitro_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path);
+    nitro_id = ndsRelocAnimDirLookup(entry->asset_id);
+    if (nitro_id < 0)
+    {
+        nitro_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path);
+    }
     if ((nitro_id < 0) || (nitro_id >= (s32)NITROROM_ROOT_DIR))
     {
         gNdsRelocAssetDirectFailStep = 2u;

@@ -6966,3 +6966,14 @@ Next steps:
 
 Probe: scratch `probe_sectorz.ps1` (break at `gcParseDObjAnimJoint+0x76`
 when r4 is outside every RAM range).
+
+More witnesses (2026-09-28, receipt `2026-09-27_p2-2p8-fast-mem` section 61):
+- A full-roster lab (the sweep ROM plus the Ness/Yoshi/Pikachu/Purin flags),
+  with Ness/Yoshi/Pikachu/Purin, faults at frame 79 in `gcParseDObjAnimJoint`
+  on Yoshi's Island and Saffron. Dream Land and Mushroom run.
+- The fault is the same with the new FNT run table compiled out, so it
+  predates that change.
+- Every fighter's AObj32 entry clips (Appear R/L) load through the legacy
+  O2R path (`ndsRelocAssetLoadIntoZeroedHeap`, then byte swap, raw-cache
+  store and finalize), never through BPS1. On Dream Land the four entry
+  loads land at frames 51-144.

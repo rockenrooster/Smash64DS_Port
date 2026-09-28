@@ -9154,3 +9154,14 @@ now decoded once, with the topology, in the same order. Medians: Saffron
 -6.0K, Mushroom -5.0K, Zebes -4.9K, Castle -4.5K, Jungle -4.4K, Yoshi -3.9K.
 Hyrule +1.2K; gate +1.7K (layout band). Replay identical everywhere.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 59.
+
+## 2026-09-28 — Fighter-clip FNT walk: boot-time run table
+
+**BANKED (any roster).** A legacy O2R motion load resolved its NitroFS path
+with `nitroromResolvePath`, which walks the 460-entry `reloc_animations` FNT
+subtable one entry at a time: 2.62M ticks of a 2.72M load. Ness, Yoshi,
+Pikachu and Purin are not in the BPS1 pack, so every new motion of theirs paid
+it (394 a match). A boot pass now records (asset, file id) runs (12 runs, 256
+B). Ness/Yoshi/Pikachu/Purin on Dream Land (full-roster lab) P95 6.03M ->
+1.54M; gate +1.7K/-1.3K (layout band); replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 61.
