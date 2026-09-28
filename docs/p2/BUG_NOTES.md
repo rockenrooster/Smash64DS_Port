@@ -6928,3 +6928,41 @@ Suspects:
 To look at later: `ndsAudioFgmPlayAtPan` and voice-steal counters on the
 four-CPU run, the per-tick versus per-present update cadence, and an
 r54-versus-current listen.
+
+## S1 Sector Z: a slot-4 entry data-aborts at frame 79 (four-CPU sweep, 2026-09-27)
+
+Found by the any-stage sweep (receipt `2026-09-27_p2-2p8-fast-mem` section 51)
+on the sweep ROM (`NDS_LAB_FOURCPU_SWEEP=1`, all stages admitted, full
+NitroFS). The crash is NOT from the 09-27 WRAM work: the `NDS_P2_ARM9_WRAM=0`
+build crashes identically.
+
+Where it happens:
+- `gcParseDObjAnimJoint` (objanim.c:348) reads `dobj->anim_joint.event32 =
+  0x002c0400`, an unrelocated value.
+- Path: `ftCommonAppearSetStatus` -> `ftMainSetStatus(251 Appear)` ->
+  `ftMainPlayAnim` -> `ftParamUpdateAnimKeys`. This is the generic AObj
+  path; the pose engine does not own that joint.
+- The DObj's fighter sits in slot 3 (the fourth player). Kirby's `motion_id`
+  is 226, `nFTKirbyMotionAppearL`.
+
+Which rosters fail on Sector Z:
+
+| Slot 3 | Result |
+|---|---|
+| Kirby | crash |
+| Captain (DK/Samus/Link/Captain) | crash |
+| DK (Kirby in slot 0) | runs, 3 native failures |
+
+Dream Land never crashes: Kirby in slot 3 or slot 0 both run.
+
+Working theory: Sector Z's fourth spawn gives `entry_id` 1, the L entry.
+Kirby's and Captain's AppearL entry animations resolve an animation
+pointer that was never relocated.
+
+Next steps:
+- Confirm on the shipping flow: CSS, then SSS Sector Z, with Kirby as P4.
+- Then find which file or token the AppearL descriptor names, and why only
+  the L side fails.
+
+Probe: scratch `probe_sectorz.ps1` (break at `gcParseDObjAnimJoint+0x76`
+when r4 is outside every RAM range).
