@@ -9110,3 +9110,10 @@ the row-memo epoch, fixes that. Sweep ROM, Yoshi's Island: paired median
 -49,568; P50/P95 1,269,056/1,685,824 -> 1,220,864/1,634,368; replay
 identical. The Dream Land gate ROM is flat (+1.0K median, P95 -0.8K).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 52.
+
+## 2026-09-27 — Hurtbox reject: memoized edge conversions
+
+**BANKED (tail).** The attack points and radius, and each damage box's offset
+and size, are memoized on their float bits. Saffron: P95 -8.7K, top 5% mean
+-10.3K. Gate ROM: P95 +0.5K, top 5% mean -3.5K. Replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 53.

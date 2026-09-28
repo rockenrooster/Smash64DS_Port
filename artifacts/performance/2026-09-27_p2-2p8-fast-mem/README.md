@@ -1550,3 +1550,26 @@ Results (sweep ROM, Yoshi's Island, stress roster):
 
 Checks pass: DTCM residency, Task 20 layout, ITCM placement. The P1 ROM
 links; the root was restored to `576F51ED`.
+
+## 53. Hurtbox reject: memoized edge conversions
+
+The Saffron census (`builds/p2p8-yamabuki-census`) puts `ndsP2HbRejectPoints`
+at ~48 calls a frame on over-gate frames, ~2,270 cycles each. Of that, about
+190 float-to-Q12 conversions a frame (`ndsP2HbVec`, ~100 cycles each) go to
+inputs that repeat:
+- One attack's two points and radius are tried against every damage box of
+  a victim in turn.
+- A damage box's offset and size never change.
+
+Both are now memoized on the float bits they convert (one attack slot, eight
+damage slots), so a hit returns exactly what the conversion would.
+
+Results:
+- Same-ROM on Saffron (`hm0_g7`/`hm1_g7`): top 5% mean -6.9K, P95 -4.5K,
+  median flat; replay IDENTICAL. Dream Land: top 5% mean -3.5K.
+- Final on Saffron (`hmf_g7` vs `hm0_g7`): P95 1,550,656 -> 1,541,952; top 5%
+  mean -10.3K (SRC -10.7K); median +0.4K.
+- Gate ROM (`hmg` vs `ccg`): median +0.6K, P95 +0.5K, top 5% mean -3.5K;
+  replay IDENTICAL; native failures 0.
+
+Banked as a tail lever.

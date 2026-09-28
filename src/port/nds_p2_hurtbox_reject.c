@@ -225,6 +225,110 @@ static int ndsP2HbVec(int32_t out[3], const Vec3f *v)
             (ndsR2CfxAbs32(out[2]) < NDS_R2_CFX_POS_MAX)) ? 1 : 0;
 }
 
+/* The four float -> Q12 edge conversions are ~100 cycles each, and a test
+ * repeats most of them: one attack is tried against every damage box of a
+ * victim in turn, and a damage box's offset and size never change. Both are
+ * memoized on the float bits they convert, so a hit returns exactly what the
+ * conversion would (P2-2p8, 2026-09-27: Saffron's hazard frames made ~190
+ * conversions a frame; same-ROM A/B there: top 5% -6.9K, replay identical). */
+typedef struct NDSP2HbAttackMemo
+{
+    u32 bits[7];
+    int32_t p0[3];
+    int32_t p1[3];
+    int32_t radius;
+    u32 ok;
+} NDSP2HbAttackMemo;
+#define NDS_P2_HB_DAMAGE_MEMO_SLOTS 8u
+typedef struct NDSP2HbDamageMemo
+{
+    const FTDamageColl *damage;
+    u32 bits[6];
+    int32_t off[3];
+    int32_t size[3];
+    u32 ok;
+} NDSP2HbDamageMemo;
+static NDSP2HbAttackMemo sNdsP2HbAttackMemo;
+static NDSP2HbDamageMemo sNdsP2HbDamageMemo[NDS_P2_HB_DAMAGE_MEMO_SLOTS];
+
+static inline u32 ndsP2HbBits(f32 value)
+{
+    u32 bits;
+
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+/* The attack's two points and radius, as ndsP2HbVec / the radius conversion
+ * give them; 0 when any is out of range. */
+static int ndsP2HbAttackPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+                               f32 attack_size, int32_t p0[3], int32_t p1[3],
+                               int32_t *radius_out)
+{
+    NDSP2HbAttackMemo *m = &sNdsP2HbAttackMemo;
+    u32 bits[7];
+    int32_t radius;
+    u32 i;
+
+    bits[0] = ndsP2HbBits(pos_curr->x); bits[1] = ndsP2HbBits(pos_curr->y);
+    bits[2] = ndsP2HbBits(pos_curr->z); bits[3] = ndsP2HbBits(pos_prev->x);
+    bits[4] = ndsP2HbBits(pos_prev->y); bits[5] = ndsP2HbBits(pos_prev->z);
+    bits[6] = ndsP2HbBits(attack_size);
+    if (__builtin_memcmp(bits, m->bits, sizeof(bits)) != 0)
+    {
+        radius = ndsR2CollisionF32ToFixed(attack_size, NDS_R2_CFX_POS_BITS);
+        m->ok = ((radius != NDS_R2_COLLISION_F32_OVERFLOW) &&
+                 (ndsR2CfxAbs32(radius) < NDS_R2_CFX_POS_MAX) &&
+                 (ndsP2HbVec(m->p0, pos_curr) != 0) &&
+                 (ndsP2HbVec(m->p1, pos_prev) != 0)) ? 1u : 0u;
+        m->radius = radius;
+        __builtin_memcpy(m->bits, bits, sizeof(bits));
+    }
+    if (m->ok == 0u)
+    {
+        return 0;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        p0[i] = m->p0[i];
+        p1[i] = m->p1[i];
+    }
+    *radius_out = m->radius;
+    return 1;
+}
+
+/* The damage box's offset and size in Q12; 0 when either is out of range. */
+static int ndsP2HbDamageBox(const FTDamageColl *damage, int32_t off[3],
+                            int32_t size[3])
+{
+    NDSP2HbDamageMemo *m = &sNdsP2HbDamageMemo[((u32)(uintptr_t)damage >> 2) &
+                                               (NDS_P2_HB_DAMAGE_MEMO_SLOTS - 1u)];
+    u32 bits[6];
+    u32 i;
+
+    bits[0] = ndsP2HbBits(damage->offset.x); bits[1] = ndsP2HbBits(damage->offset.y);
+    bits[2] = ndsP2HbBits(damage->offset.z); bits[3] = ndsP2HbBits(damage->size.x);
+    bits[4] = ndsP2HbBits(damage->size.y); bits[5] = ndsP2HbBits(damage->size.z);
+    if ((m->damage != damage) ||
+        (__builtin_memcmp(bits, m->bits, sizeof(bits)) != 0))
+    {
+        m->ok = ((ndsP2HbVec(m->off, &damage->offset) != 0) &&
+                 (ndsP2HbVec(m->size, &damage->size) != 0)) ? 1u : 0u;
+        m->damage = damage;
+        __builtin_memcpy(m->bits, bits, sizeof(bits));
+    }
+    if (m->ok == 0u)
+    {
+        return 0;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        off[i] = m->off[i];
+        size[i] = m->size[i];
+    }
+    return 1;
+}
+
 /* 1 = the float test would certainly miss; 0 = let it decide.
  *
  * The float test clips the attack's segment (pos_curr..pos_prev, or pos_curr
@@ -259,13 +363,9 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     {
         return 0;
     }
-    radius = ndsR2CollisionF32ToFixed(attack_size, NDS_R2_CFX_POS_BITS);
-    if ((radius == NDS_R2_COLLISION_F32_OVERFLOW) ||
-        (ndsR2CfxAbs32(radius) >= NDS_R2_CFX_POS_MAX) ||
-        (ndsP2HbVec(p0, pos_curr) == 0) ||
-        (ndsP2HbVec(p1, pos_prev) == 0) ||
-        (ndsP2HbVec(off, &damage->offset) == 0) ||
-        (ndsP2HbVec(size, &damage->size) == 0) ||
+    if ((ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size, p0, p1,
+                             &radius) == 0) ||
+        (ndsP2HbDamageBox(damage, off, size) == 0) ||
         (ndsP2HbWorldOf(&w, joint) == 0))
     {
         return 0;
