@@ -786,6 +786,111 @@
       "source_symbol": "syTaskmanRunTask",
       "target_symbol": "ndsMenuShellRunVsRecord",
       "reason": "The scene switch in taskman_seam_harness.c selects this native-menu entry only for its non-VS scene. The source dispatcher has loaded the frontend before taskman starts."
+    },
+    {
+      "source_symbol": "battleship_ftMainProcParams",
+      "target_symbol": "ftBossCommonUpdateDamageStats",
+      "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+    },
+    {
+      "source_symbol": "ftManagerInitFighter",
+      "target_symbol": "ftBossCommonSetDefaultLineID",
+      "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+    },
+    {
+      "source_symbol": "ftManagerInitFighter",
+      "target_symbol": "ftBossCommonSetNextAttackWait",
+      "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+    },
+    {
+      "source_symbol": "dFTMainSpecialStatusDescs",
+      "target_symbol": "dFTBossSpecialStatusDescs",
+      "reason": "dFTMainSpecialStatusDescs is read only as [fp->fkind] by ftMainSetStatus (ftmain.c:4566). The Boss row is used only by a Boss fighter, which VS cannot construct. The read-only table moved with its overlay procs."
+    },
+    {
+      "source_symbol": "battleship_item_link_core.c::sNdsITManagerProcMakeList",
+      "target_symbol": "itTargetMakeItem",
+      "reason": "Kind-indexed item maker table. Targets are spawned only by sc1PBonusStageMakeTargets (Bonus 1) and TaruBombs only by grBonus3TaruBombMakeActor (Bonus 3); VS random/ground spawns never select these kinds. Bonus scenes retain the frontend."
+    },
+    {
+      "source_symbol": "battleship_item_link_core.c::sNdsITManagerProcMakeList",
+      "target_symbol": "itTaruBombMakeItem",
+      "reason": "Kind-indexed item maker table. Targets are spawned only by sc1PBonusStageMakeTargets (Bonus 1) and TaruBombs only by grBonus3TaruBombMakeActor (Bonus 3); VS random/ground spawns never select these kinds. Bonus scenes retain the frontend."
+    },
+    {
+      "source_symbol": "dMNPlayers1PTrainingTaskmanSetup",
+      "target_symbol": "mnPlayers1PTrainingFuncLights",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dMNPlayers1PTrainingTaskmanSetup",
+      "target_symbol": "mnPlayers1PTrainingFuncStart",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
+      "source_symbol": "dSC1PBonusStageTaskmanSetup",
+      "target_symbol": "sc1PBonusStageFuncLights",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PBonusStageTaskmanSetup",
+      "target_symbol": "sc1PBonusStageFuncStart",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PBonusStageTaskmanSetup",
+      "target_symbol": "sc1PBonusStageFuncUpdate",
+      "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "ftCommonDeadCheckRebirth",
+      "target_symbol": "sc1PGameSpawnEnemyTeamNext",
+      "reason": "The source caller tests SCBATTLE_GAMERULE_1PGAME (or game_type 1PGame) before this call. VS battles never set that rule/type; the 1P Game retains the frontend for its nested battle."
+    },
+    {
+      "source_symbol": "ftCommonDeadUpdateScore",
+      "target_symbol": "sc1PGameSetPlayerDefeatStats",
+      "reason": "The source caller tests SCBATTLE_GAMERULE_1PGAME (or game_type 1PGame) before this call. VS battles never set that rule/type; the 1P Game retains the frontend for its nested battle."
+    },
+    {
+      "source_symbol": "ifCommon1PGameInterfaceProcSet",
+      "target_symbol": "sc1PGameSetCameraZoom",
+      "reason": "ifCommonAnnounceEndMessage installs this callback only when game_type is nSCBattleGameType1PGame; VS installs ifCommonBattleInterfaceProcSet instead."
+    },
+    {
+      "source_symbol": "ifCommonBattleEndSetBossDefeat",
+      "target_symbol": "func_ovl65_8018F6DC",
+      "reason": "This resident function is called only by the boss wallpaper scene code (sc1pgameboss.c:772), itself in the overlay; no VS frame reaches it."
+    },
+    {
+      "source_symbol": "grMainSetupMakeGround",
+      "target_symbol": "grBonus3MakeGround",
+      "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
+    },
+    {
+      "source_symbol": "grMainSetupMakeGround",
+      "target_symbol": "sc1PBonusStageInitBonus2",
+      "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
+    },
+    {
+      "source_symbol": "grMainSetupMakeGround",
+      "target_symbol": "sc1PBonusStageMakeBonus1Ground",
+      "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
+    },
+    {
+      "source_symbol": "grWallpaperMakeDecideKind",
+      "target_symbol": "sc1PGameBossInitWallpaper",
+      "reason": "grWallpaperMakeDecideKind calls this only for gkind == nGRKindLast (Final Destination), a 1P Game stage the VS stage select cannot choose."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "mnPlayers1PTrainingStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "ndsBaseSCManagerRunLoop",
+      "target_symbol": "sc1PBonusStageStartScene",
+      "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
     }
   ]
 }

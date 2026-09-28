@@ -17,15 +17,6 @@ SECTIONS {
         :nds_ui_kit.o (.text.ndsUiKitCommit .text.ndsUiKitOam
             .text.ndsUiKitObjBase .text.ndsUiKitObjAt .text.ndsUiKitSpriteSize
             .rodata.kNdsUiKitImageMetrics .rodata.ndsUiKitCommit.*)
-        /* Fighter death, camera/interface and boss callbacks have shared
-         * gameplay callers. Preserve their full local closure and constants. */
-        :battleship_sc1pgame_runtime.o (.text.sc1PGameBoss*
-            .text.func_ovl65_8018F6DC .text.sc1PGameSpawnEnemyTeamNext
-            .text.sc1PGameGetRandomStartPosition .text.sc1PGameSetPlayerDefeatStats
-            .text.sc1PGameSetCameraZoom
-            .rodata.sc1PGameBoss* .rodata.func_ovl65_8018F6DC*
-            .rodata.sc1PGameSpawnEnemyTeamNext* .rodata.sc1PGameGetRandomStartPosition*
-            .rodata.sc1PGameSetPlayerDefeatStats* .rodata.sc1PGameSetCameraZoom*)
         . = ALIGN(4);
     } >main AT>lma9 :main = 0xff
 }
@@ -99,8 +90,8 @@ SECTIONS {
         :nds_menu_shell.o (.text .text.* .gnu.linkonce.t.* .glue_7t .glue_7 .vfp11_veneer .v4_bx
             .rodata .rodata1 .rodata.* .gnu.linkonce.r.*)
         /* Non-VS scenes retain this overlay for their complete nested call.
-         * sc1pgameboss stays resident: Last-stage wallpaper also has a direct
-         * call from the shared ground constructor, independent of scene kind. */
+         * The 1P runtime's boss/death/camera closure moved here too: its shared
+         * callers test the 1P game rule/type or are themselves boss code. */
         :battleship_sc1pmanager.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pgame_runtime.o (.text .text.* .rodata .rodata.*)
         :battleship_sc1pintro.o (.text .text.* .rodata .rodata.*)
@@ -112,6 +103,68 @@ SECTIONS {
         :battleship_scautodemofiles.o (.text .text.* .rodata .rodata.*)
         :battleship_scexplain.o (.text .text.* .rodata .rodata.*)
         :battleship_scexplainfiles.o (.text .text.* .rodata .rodata.*)
+        /* 1P-only TUs (2026-09-28): Training CSS, bonus stages, Master Hand
+         * (fighter, bullet, Final Destination wallpaper), Race to the Finish
+         * ground and its two ground items. Every resident entry is selected by
+         * a non-VS scene, a 1P game rule/type, fighter kind Boss, item kind
+         * Target/TaruBomb or ground kind Bonus1/2/3/Last; none is reachable in
+         * VS (VS CSS/SSS cannot select them). Each pair is in the allowlist.
+         * The VS loan grows with this range. See the 2026-09-28 1P overlay
+         * receipt under artifacts/performance/. */
+        :battleship_mntraining.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pbonusstage.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pbonusstagefiles.o (.text .text.* .rodata .rodata.*)
+        :battleship_sc1pgameboss.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_1.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_2.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_3.o (.text .text.* .rodata .rodata.*)
+        :battleship_ftboss_status_4.o (.text .text.* .rodata .rodata.*)
+        :battleship_wpbossbullet.o (.text .text.* .rodata .rodata.*)
+        :battleship_grbonus3.o (.text .text.* .rodata .rodata.*)
+        :battleship_item_tarubomb.o (.text .text.* .rodata .rodata.*)
+        :battleship_item_target.o (.text .text.* .rodata .rodata.*)
+        /* Read-only descriptor/lookup tables of 1P-only code, declared without
+         * const by BattleShip (readers audited in the 2026-09-28 receipt; none
+         * writes). Taskman/video setups, ll* offsets and tables whose address
+         * is stored in resident interface state stay resident. */
+        :battleship_ftboss.o (.data.dFTBossSpecialStatusDescs
+            .data.dFTBossWaitRandomArrayLookup .data.dFTBossWaitRandomNoGround
+            .data.dFTBossWaitRandomGround .data.dFTBossWaitRandomStatusLookup
+            .data.dFTBossWaitRandomStatusIDs)
+        :battleship_wpbossbullet.o (.data.dWPBossBulletNormalWeaponDesc
+            .data.dWPBossBulletHardWeaponDesc)
+        :battleship_item_target.o (.data.dITTargetItemDesc)
+        :battleship_item_tarubomb.o (.data.dITTaruBombItemDesc
+            .data.dITTaruBombStatusDescs)
+        :battleship_sc1pgameboss.o (.data.dSC1PGameBossWallpapers
+            .data.dSC1PGameBossPlans0 .data.dSC1PGameBossPlans1
+            .data.dSC1PGameBossPlans2 .data.dSC1PGameBossPlans3
+            .data.dSC1PGameBossAnims0 .data.dSC1PGameBossAnims1
+            .data.dSC1PGameBossAnims2 .data.dSC1PGameBossAnims3
+            .data.dSC1PGameBossEffects0 .data.dSC1PGameBossEffects1
+            .data.dSC1PGameBossEffects2 .data.dSC1PGameBossEffects3
+            .data.dSC1PGameBossCometEnvColorR .data.dSC1PGameBossCometEnvColorG
+            .data.dSC1PGameBossCometEnvColorB)
+        :battleship_sc1pbonusstage.o (.data.dSC1PBonusStageTargetDescs
+            .data.dSC1PBonusStageBumperDescs .data.dSC1PBonusStagePlatformDescs
+            .data.dSC1PBonusStageBoardedPlatformDescs
+            .data.dSC1PBonusStageTimerUnitLengths .data.dSC1PBonusStageTimerDigitPositions)
+        :battleship_mntraining.o (.data.dMNPlayers1PTrainingFileIDs)
+        :battleship_sc1pgame_runtime.o (.data.dSC1PGameStageDesc
+            .data.dSC1PGameComputerDesc .data.dSC1PGameZoomEyeX .data.dSC1PGameZoomEyeY
+            .data.dSC1PGameKirbyTeamCopyKinds .data.dSC1PGameStageCommonSleepTics)
+        :battleship_sc1pmanager.o (.data.dSC1PManagerSubsysOverlay
+            .data.dSC1PManagerObjectsOverlay .data.dSC1PManager1PIntroOverlay
+            .data.dSC1PManager1PBonusStageOverlay .data.dSC1PManager1PGameOverlay
+            .data.dSC1PManager1PContinueOverlay .data.dSC1PManager1PStageClearOverlay
+            .data.dSC1PManager1PChallengerOverlay .data.dSC1PManagerEndingOverlay
+            .data.dSC1PManagerStaffrollOverlay .data.dSC1PManagerCongraOverlay
+            .data.dSC1PManagerMessageOverlay)
+        :battleship_sc1pstageclear.o (.data.dSC1PStageClearBonusData)
+        :battleship_mncongra.o (.data.dMNCongraPictures)
+        :battleship_scstaffroll.o (.data.dSCStaffrollTextBoxSpriteInfo
+            .data.dSCStaffrollNameAndJobSpriteInfo .data.dSCStaffrollTextBoxDisplayList)
         /* Read-only source lookup tables declared without const by BattleShip.
          * Their scene code copies/reads them; persistent selections stay in BSS.
          * Keep StaffRoleCharacters resident: TryHideUnlocks mutates that array. */
@@ -197,6 +250,10 @@ SECTIONS {
         :battleship_scexplainfiles.o (.bss.sSCExplainStatusBuffer)
         :battleship_mnvsresults.o (.bss.sMNVSResultsForceStatusBuffer)
         :battleship_mnvsresults.o (.bss.sMNVSResultsStatusBuffer)
+        :battleship_mntraining.o (.bss.sMNPlayers1PTrainingStatusBuffer)
+        :battleship_mntraining.o (.bss.sMNPlayers1PTrainingForceStatusBuffer)
+        :battleship_sc1pbonusstagefiles.o (.bss.sSC1PBonusStageStatusBuffer)
+        :battleship_sc1pbonusstagefiles.o (.bss.sSC1PBonusStageForceStatusBuffer)
         . = ALIGN(32);
         __nds_frontend_end = .;
     } AT>ovlmem :ovl_frontend

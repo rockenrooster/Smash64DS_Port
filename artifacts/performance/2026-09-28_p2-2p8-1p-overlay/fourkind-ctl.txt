@@ -1,0 +1,28 @@
+FOURKIND MAKE hit=1 scene=16 free=137760
+FOURKIND MAKE hit=2 scene=16 free=127040
+FOURKIND MAKE hit=3 scene=16 free=119184
+FOURKIND MAKE hit=4 scene=16 free=110064
+FOURKIND COMMIT hit=1 s0=0x000000 s1=0x000000 s2=0x000000 s3=0x000000 free=104000
+FOURKIND MAKE hit=5 scene=16 free=137760
+FOURKIND MAKE hit=6 scene=16 free=127040
+FOURKIND MAKE hit=7 scene=16 free=119184
+FOURKIND MAKE hit=8 scene=16 free=110064
+FOURKIND COMMIT hit=2 s0=0x000000 s1=0x000000 s2=0x000000 s3=0x000000 free=86320
+FOURKIND MAKE hit=9 scene=22 free=314624
+FOURKIND MAKE hit=10 scene=22 free=294000
+FOURKIND MAKE hit=11 scene=22 free=236896
+FOURKIND MAKE hit=12 scene=22 free=159488
+FOURKIND BATTLE hit=1 make=12 setup=0 free=103936
+FOURKIND CPUABORT pc=01fffd80 lr=02127c5a cpsr=40000097 r0=00000000 r1=00000101 r2=5920d828 r3=040004ac
+FOURKIND CPUABORT2 r4=023ea280 r5=00000050 r6=02ff2f78 r7=023a6c28 sp=02fffd9e scene=22 free=54304
+FOURKIND STOP pc=0x1fffd80 lr=0x2127c5a commit=2 setup=0 make=12 batt=1
+FOURKIND ARENA chosen=962304 allocfail=178 heapgen=9 start=0x022f9c00 ptr=0x023d76e0 end=0x023e4b00 free=54304 overflow=0
+FOURKIND ROSTER s0=0x070003 s1=0x050103 s2=0x090103 s3=0x080103
+FOURKIND LOWWATER generalfreemin=54304 gfxpeak=80 gfxcap=1536 gfxoverflow=0 gfxnoroom=0
+FOURKIND RELOC heapdeclines=0 externfails=0 firstasset=0 firstlr=0x00000000 lastlr=0x00000000
+FOURKIND OVERLAY loads=1 loadfails=0 bytes=265216 loans=1 loanbytes=265216 used=265152 allocs=21 spill=99192
+FOURKIND ARM7_STORAGE card=2 requests=30302 reads=30301 bytes=7361643 bounce=235403 failures=0
+FOURKIND ROM_MAP failure=0 device=0 volume=63 cluster=8194 extents=1 address=0x022d7cc0
+FOURKIND EXTENT file=0 lba=131424 sectors=123160
+# VSPROC lines: 1492
+# raw sha256 7951484E3DD8E8E574611F376E484374C396178DF355A696E256490BDAD8BE79

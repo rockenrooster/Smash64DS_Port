@@ -14,6 +14,8 @@ Allowlist format::
        "reason": "Lifecycle reviewed: ..."}
     ]}
 
+Every pair must carry a non-empty ``reason``.
+
 CLI::
 
     python scripts/check_frontend_overlay.py smash64ds.elf --required \
@@ -354,6 +356,12 @@ def load_allowlist(path: Path | None) -> tuple[set[tuple[str, str]], dict[tuple[
         if source.startswith("<") or target.startswith("<"):
             raise CheckerError(
                 f"allowlist pair {index} must name real ELF symbols, not section fallbacks"
+            )
+        if not reason.strip():
+            # An exemption is a reviewed lifecycle claim. Without its reason the
+            # next reader cannot tell why VS can never reach the target.
+            raise CheckerError(
+                f"allowlist pair {index} ({source} -> {target}) needs a review reason"
             )
         key = (source, target)
         if key in allowed:

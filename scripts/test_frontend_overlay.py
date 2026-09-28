@@ -301,6 +301,25 @@ class FrontendOverlayTests(unittest.TestCase):
             with self.assertRaisesRegex(checker.CheckerError, "wildcards"):
                 checker.load_allowlist(path)
 
+    def test_allowlist_rejects_pairs_without_a_review_reason(self):
+        for pair in ({"source_symbol": "resident_func", "target_symbol": "frontend_entry"},
+                     {"source_symbol": "resident_func", "target_symbol": "frontend_entry",
+                      "reason": "  "}):
+            with tempfile.TemporaryDirectory() as temp:
+                path = Path(temp) / "allow.json"
+                path.write_text(json.dumps({"schema_version": 1, "pairs": [pair]}),
+                                encoding="utf-8")
+                with self.assertRaisesRegex(checker.CheckerError, "review reason"):
+                    checker.load_allowlist(path)
+
+    def test_repository_allowlist_is_well_formed(self):
+        # The shipped document must load under every policy rule above:
+        # exact names, no wildcards/fallbacks/duplicates, and a reason each.
+        allowed, reasons = checker.load_allowlist(
+            ROOT / "scripts" / "frontend_overlay_allowlist.json")
+        self.assertTrue(allowed)
+        self.assertEqual(set(allowed), set(reasons))
+
     def test_cli_emits_json_with_bytes_and_unknown_pairs(self):
         script = ROOT / "scripts" / "check_frontend_overlay.py"
         with tempfile.TemporaryDirectory() as temp:

@@ -1,0 +1,304 @@
+{
+ "arms": {
+  "shell_twin_ctl": {
+   "elf": "builds\\build-ovl1p-ctl\\saved\\smash64ds-p2-shell-hwtri.elf",
+   "elf_sha256": "F40A0CB8C794A5636677D378B5FD822E54EAFB9B88CA03F0461B977B89691446",
+   "nds_sha256": "953F9AD9AD20F8BE1A64F5814A81AAA49C75B44EFAA1C7A3DB5A49267E49B57E",
+   "sections": {
+    ".itcm": {
+     "size": 32520,
+     "addr": "0x01ff8020"
+    },
+    ".text.frontend_resident": {
+     "size": 3500,
+     "addr": "0x02003ee0"
+    },
+    ".main": {
+     "size": 1552240,
+     "addr": "0x02004c90"
+    },
+    ".main.rw": {
+     "size": 246868,
+     "addr": "0x0217fc00"
+    },
+    ".main.bss": {
+     "size": 825240,
+     "addr": "0x021bc400"
+    },
+    ".ovl.frontend": {
+     "size": 247136,
+     "addr": "0x02285ba0"
+    },
+    ".ovl.frontend.bss": {
+     "size": 18688,
+     "addr": "0x022c2100"
+    }
+   },
+   "gate": {
+    "passed": true,
+    "overlay_bytes": 247136,
+    "overlay_bss_bytes": 18688,
+    "overlay_memory_bytes": 265824
+   },
+   "gate_allowed_pairs": 155,
+   "gate_unknown_pairs": 0
+  },
+  "shell_twin_cand": {
+   "elf": "builds\\build-ovl1p\\saved\\smash64ds-p2-shell-hwtri.elf",
+   "elf_sha256": "9A3F885A533DE67EA3E1E0CDEB28CFFF7FB275C7BE24CAD1C3686649B9DA0F6C",
+   "nds_sha256": "1844FA3936784B37F1623F8C966C19BFA17F50A17DBCD70047E720C4D9D31C1F",
+   "sections": {
+    ".itcm": {
+     "size": 32520,
+     "addr": "0x01ff8020"
+    },
+    ".text.frontend_resident": {
+     "size": 1892,
+     "addr": "0x02003ee0"
+    },
+    ".main": {
+     "size": 1521080,
+     "addr": "0x02004648"
+    },
+    ".main.rw": {
+     "size": 241932,
+     "addr": "0x02177c00"
+    },
+    ".main.bss": {
+     "size": 823368,
+     "addr": "0x021b3000"
+    },
+    ".ovl.frontend": {
+     "size": 284864,
+     "addr": "0x0227c060"
+    },
+    ".ovl.frontend.bss": {
+     "size": 20544,
+     "addr": "0x022c1920"
+    }
+   },
+   "gate": {
+    "passed": true,
+    "overlay_bytes": 284864,
+    "overlay_bss_bytes": 20544,
+    "overlay_memory_bytes": 305408
+   },
+   "gate_allowed_pairs": 175,
+   "gate_unknown_pairs": 0
+  },
+  "freeplay_walk_argmax_ctl": {
+   "elf": "builds\\build-ovl1p-ctl\\saved-fw\\smash64ds-p2-shell-freeplay-hwtri.elf",
+   "elf_sha256": "38F98A9255602FB592DEDB261955430F3DD4B0D2E10549BA684474FEA954D2BB",
+   "nds_sha256": "82FE7847895A65E3B29F7C556112F7A8E300334D200795DEDCEDF28C38AC8735",
+   "sections": {
+    ".itcm": {
+     "size": 32392,
+     "addr": "0x01ff8020"
+    },
+    ".text.frontend_resident": {
+     "size": 3500,
+     "addr": "0x02003ee0"
+    },
+    ".main": {
+     "size": 1555312,
+     "addr": "0x02004c90"
+    },
+    ".main.rw": {
+     "size": 246868,
+     "addr": "0x02180800"
+    },
+    ".main.bss": {
+     "size": 825496,
+     "addr": "0x021bd000"
+    },
+    ".ovl.frontend": {
+     "size": 246528,
+     "addr": "0x022868a0"
+    },
+    ".ovl.frontend.bss": {
+     "size": 18688,
+     "addr": "0x022c2ba0"
+    }
+   },
+   "gate": {
+    "passed": true,
+    "overlay_bytes": 246528,
+    "overlay_bss_bytes": 18688,
+    "overlay_memory_bytes": 265216
+   },
+   "gate_allowed_pairs": 155,
+   "gate_unknown_pairs": 0
+  },
+  "freeplay_walk_argmax_cand": {
+   "elf": "builds\\build-ovl1p\\saved-fw\\smash64ds-p2-shell-freeplay-hwtri.elf",
+   "elf_sha256": "38866ECC2066162D897239FE3733623AA4EA867704DFCC850F90DAB59EC26439",
+   "nds_sha256": "04857BA94DFBBA884E51BA2259F786E27CD4218AB0CA09FE16B17F50A9A5C380",
+   "sections": {
+    ".itcm": {
+     "size": 32392,
+     "addr": "0x01ff8020"
+    },
+    ".text.frontend_resident": {
+     "size": 1892,
+     "addr": "0x02003ee0"
+    },
+    ".main": {
+     "size": 1524152,
+     "addr": "0x02004648"
+    },
+    ".main.rw": {
+     "size": 241932,
+     "addr": "0x02178800"
+    },
+    ".main.bss": {
+     "size": 823624,
+     "addr": "0x021b3c00"
+    },
+    ".ovl.frontend": {
+     "size": 284256,
+     "addr": "0x0227cd60"
+    },
+    ".ovl.frontend.bss": {
+     "size": 20544,
+     "addr": "0x022c23c0"
+    }
+   },
+   "gate": {
+    "passed": true,
+    "overlay_bytes": 284256,
+    "overlay_bss_bytes": 20544,
+    "overlay_memory_bytes": 304800
+   },
+   "gate_allowed_pairs": 175,
+   "gate_unknown_pairs": 0
+  }
+ },
+ "new_reviewed_pairs": [
+  {
+   "source": "battleship_ftMainProcParams",
+   "target": "ftBossCommonUpdateDamageStats",
+   "count": 1,
+   "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+  },
+  {
+   "source": "battleship_item_link_core.c::sNdsITManagerProcMakeList",
+   "target": "itTargetMakeItem",
+   "count": 1,
+   "reason": "Kind-indexed item maker table. Targets are spawned only by sc1PBonusStageMakeTargets (Bonus 1) and TaruBombs only by grBonus3TaruBombMakeActor (Bonus 3); VS random/ground spawns never select these kinds. Bonus scenes retain the frontend."
+  },
+  {
+   "source": "battleship_item_link_core.c::sNdsITManagerProcMakeList",
+   "target": "itTaruBombMakeItem",
+   "count": 1,
+   "reason": "Kind-indexed item maker table. Targets are spawned only by sc1PBonusStageMakeTargets (Bonus 1) and TaruBombs only by grBonus3TaruBombMakeActor (Bonus 3); VS random/ground spawns never select these kinds. Bonus scenes retain the frontend."
+  },
+  {
+   "source": "dFTMainSpecialStatusDescs",
+   "target": "dFTBossSpecialStatusDescs",
+   "count": 1,
+   "reason": "dFTMainSpecialStatusDescs is read only as [fp->fkind] by ftMainSetStatus (ftmain.c:4566). The Boss row is used only by a Boss fighter, which VS cannot construct. The read-only table moved with its overlay procs."
+  },
+  {
+   "source": "dMNPlayers1PTrainingTaskmanSetup",
+   "target": "mnPlayers1PTrainingFuncLights",
+   "count": 1,
+   "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+  },
+  {
+   "source": "dMNPlayers1PTrainingTaskmanSetup",
+   "target": "mnPlayers1PTrainingFuncStart",
+   "count": 1,
+   "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+  },
+  {
+   "source": "dSC1PBonusStageTaskmanSetup",
+   "target": "sc1PBonusStageFuncLights",
+   "count": 1,
+   "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+  },
+  {
+   "source": "dSC1PBonusStageTaskmanSetup",
+   "target": "sc1PBonusStageFuncStart",
+   "count": 1,
+   "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+  },
+  {
+   "source": "dSC1PBonusStageTaskmanSetup",
+   "target": "sc1PBonusStageFuncUpdate",
+   "count": 1,
+   "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+  },
+  {
+   "source": "ftCommonDeadCheckRebirth",
+   "target": "sc1PGameSpawnEnemyTeamNext",
+   "count": 1,
+   "reason": "The source caller tests SCBATTLE_GAMERULE_1PGAME (or game_type 1PGame) before this call. VS battles never set that rule/type; the 1P Game retains the frontend for its nested battle."
+  },
+  {
+   "source": "ftCommonDeadUpdateScore",
+   "target": "sc1PGameSetPlayerDefeatStats",
+   "count": 1,
+   "reason": "The source caller tests SCBATTLE_GAMERULE_1PGAME (or game_type 1PGame) before this call. VS battles never set that rule/type; the 1P Game retains the frontend for its nested battle."
+  },
+  {
+   "source": "ftManagerInitFighter",
+   "target": "ftBossCommonSetDefaultLineID",
+   "count": 1,
+   "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+  },
+  {
+   "source": "ftManagerInitFighter",
+   "target": "ftBossCommonSetNextAttackWait",
+   "count": 1,
+   "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage). VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+  },
+  {
+   "source": "grMainSetupMakeGround",
+   "target": "grBonus3MakeGround",
+   "count": 1,
+   "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
+  },
+  {
+   "source": "grMainSetupMakeGround",
+   "target": "sc1PBonusStageInitBonus2",
+   "count": 1,
+   "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
+  },
+  {
+   "source": "grMainSetupMakeGround",
+   "target": "sc1PBonusStageMakeBonus1Ground",
+   "count": 1,
+   "reason": "grMainSetupMakeGround selects this target only for ground kinds Bonus1/Bonus2/Bonus3 (gkind > nGRKindBattleEnd). The VS stage select offers only nGRKindCastle..nGRKindInishie, so VS cannot take this branch."
+  },
+  {
+   "source": "grWallpaperMakeDecideKind",
+   "target": "sc1PGameBossInitWallpaper",
+   "count": 1,
+   "reason": "grWallpaperMakeDecideKind calls this only for gkind == nGRKindLast (Final Destination), a 1P Game stage the VS stage select cannot choose."
+  },
+  {
+   "source": "ifCommon1PGameInterfaceProcSet",
+   "target": "sc1PGameSetCameraZoom",
+   "count": 1,
+   "reason": "ifCommonAnnounceEndMessage installs this callback only when game_type is nSCBattleGameType1PGame; VS installs ifCommonBattleInterfaceProcSet instead."
+  },
+  {
+   "source": "ifCommonBattleEndSetBossDefeat",
+   "target": "func_ovl65_8018F6DC",
+   "count": 1,
+   "reason": "This resident function is called only by the boss wallpaper scene code (sc1pgameboss.c:772), itself in the overlay; no VS frame reaches it."
+  },
+  {
+   "source": "ndsBaseSCManagerRunLoop",
+   "target": "mnPlayers1PTrainingStartScene",
+   "count": 1,
+   "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+  },
+  {
+   "source": "ndsBaseSCManagerRunLoop",
+   "target": "sc1PBonusStageStartScene",
+   "count": 1,
+   "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+  }
+ ]
+}
