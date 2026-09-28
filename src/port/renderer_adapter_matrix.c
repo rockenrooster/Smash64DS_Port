@@ -3007,6 +3007,8 @@ ndsRendererAdapterCopyJointPitchToRoll(DObj *dobj)
  * itMainSetFighterHold.  The source deliberately removes joint/parent scale,
  * preserves world orientation + translation, then folds hitlag shuffle before
  * converting to fixed matrix form.  LinkBomb is the first live item client. */
+/* S2 (2026-09-28): held items whose attach joint was freed. */
+volatile u32 gNdsRendererAdapterItemAttachStale;
 static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
 {
     DObj *attach_dobj;
@@ -3026,6 +3028,18 @@ static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
     if ((attach_dobj == NULL) || (attach_dobj == DOBJ_PARENT_NULL) ||
         (attach_dobj->parent_gobj == NULL))
     {
+        return FALSE;
+    }
+    /* S2: the source keeps a held item's attach pointer when the fighter
+     * joint it names is ejected, and the freed DObj is recycled. With
+     * Ness/Yoshi/Pikachu/Purin on Zebes the item's joint belonged to an
+     * Effect by frame 1920; its user_data (read as FTParts) was a WRAM DObj
+     * whose matrix ran past the 32 KB WRAM region and data-aborted. N64 reads
+     * the same garbage without a fault. A joint that no longer belongs to a
+     * fighter takes the fallback matrix (render only). */
+    if (attach_dobj->parent_gobj->id != nGCCommonKindFighter)
+    {
+        gNdsRendererAdapterItemAttachStale++;
         return FALSE;
     }
     parts = ftGetParts(attach_dobj);

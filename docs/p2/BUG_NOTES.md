@@ -7007,6 +7007,16 @@ drawn at all.
 
 ## S2 Zebes: a held item's attach joint faults at frame 1920 (four-CPU lab, 2026-09-28)
 
+**FIXED (render guard) 2026-09-28.** A flushed witness in
+`ndsRendererAdapterBuildItemAttachMtx` showed the held item's attach DObj
+owned by an Effect GObj (kind 1011): the fighter joint the item named had been
+freed and its DObj recycled. The source keeps that pointer too; on N64 the
+garbage read is silent, but here the recycled DObj's `user_data` was a WRAM
+DObj whose matrix ran past the 32 KB WRAM region. The renderer now refuses an
+attach joint that no longer belongs to a fighter and uses the fallback matrix
+(`gNdsRendererAdapterItemAttachStale`, 66 draws in that match), which then runs
+to the end. Gameplay reads of the stale pointer are unchanged.
+
 Found while sizing the event32 ledger (S1): Ness/Yoshi/Pikachu/Purin on
 Planet Zebes, ledger forced to 5,120 so S1 cannot fire (`ev_l_g3`).
 - Data abort in `ndsRendererAdapterBuildItemAttachMtx`

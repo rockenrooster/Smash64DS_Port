@@ -135,3 +135,14 @@ scene grows them again.
 | gate (`gs2` vs `gs1`) | arena -7,680 B, heap low-water 69,340 both, libc low-water 20,376; P50/P95 928,768/1,295,616; replay identical after one sampling resync |
 
 `tools/probe-shell-four-kind-s3.ps1` is the probe with the GL/libc prints.
+
+## S2: a held item's freed attach joint (render guard)
+
+Ness/Yoshi/Pikachu/Purin on Zebes (`fx_l_g3`, with the S1 fix) still faulted at
+frame 1920 in `ndsRendererAdapterBuildItemAttachMtx`. A flushed witness showed
+the item (GObj kind 1013) attached to a DObj now owned by an Effect (kind 1011):
+the fighter joint had been freed and recycled. Its `user_data`, read as
+FTParts, was a WRAM DObj at 0x03007F78, and the matrix read ran past the 32 KB
+WRAM MPU region. The renderer now returns FALSE (fallback matrix) when the
+attach joint's GObj is not a fighter. `fx2_l_g3`: full match, 66 guarded draws,
+native failures 0.
