@@ -755,6 +755,15 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # DeadUp. It measures the high-detail fighter lists on every frame. Empty (the
 # default) emits nothing, so every other build's config header is unchanged.
 NDS_LAB_FOURCPU_TWO ?=
+# P2-2p8 (LAB ONLY, the four-CPU stress target): `NDS_LAB_FOURCPU_SWEEP=1`
+# compiles two boot-pokable words into the stress preset
+# (src/port/nds_match_config.c), so one ROM sweeps the any-4-fighters x
+# any-stage gate (owner 2026-09-27): gNdsLabFourCpuGkind (nGRKind: 0 Castle,
+# 1 Sector Z, 2 Jungle, 3 Zebes, 4 Hyrule, 5 Yoshi's Island, 6 Dream Land,
+# 7 Saffron, 8 Mushroom Kingdom) and gNdsLabFourCpuKinds (four nFTKind
+# bytes, slot 0 lowest; admitted kinds only). 0xFF keeps the preset. Empty
+# (the default) emits nothing, so the gate ROM carries neither word.
+NDS_LAB_FOURCPU_SWEEP ?=
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -7012,6 +7021,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_FOUR_CPU_KIND2 $(NDS_P2_FOUR_CPU_KIND2)'; \
 		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
 		$(if $(strip $(NDS_LAB_FOURCPU_TWO)),echo '#define NDS_LAB_FOURCPU_TWO 1';) \
+		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)),echo '#define NDS_LAB_FOURCPU_SWEEP 1';) \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \

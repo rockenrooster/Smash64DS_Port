@@ -186,6 +186,11 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #endif
 #endif
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+volatile u32 gNdsLabFourCpuGkind __attribute__((used)) = 0xffu;
+volatile u32 gNdsLabFourCpuKinds __attribute__((used)) = 0xffffffffu;
+#endif
+
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 {
     s32 i;
@@ -412,6 +417,13 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      * the rate scmanager.c:583 seeds, nSCBattleItemSwitchMiddle. */
     cfg->item_toggles = ~0u;
     cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    /* LAB ONLY (Makefile NDS_LAB_FOURCPU_SWEEP): boot-poked stage. */
+    if (gNdsLabFourCpuGkind < 9u)
+    {
+        cfg->gkind = (u8)gNdsLabFourCpuGkind;
+    }
+#endif
 #if NDS_P2_FOUR_CPU_ROSTER
     /* THE STRESS ARM FOLLOWS THE LANDED ROSTER, which is what PROJECT_GOAL's
      * P2 gate actually asks for: "the measured hardest fighter set", a measured
@@ -438,6 +450,25 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[3].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND3;
     cfg->fighters[3].costume =
         (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND3, 0);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    /* LAB ONLY: boot-poked roster, one nFTKind byte a slot (0xFF keeps
+     * the preset's). Distinct kinds keep common costume 0 legal. */
+    {
+        u32 slot;
+
+        for (slot = 0u; slot < 4u; slot++)
+        {
+            u32 kind = (gNdsLabFourCpuKinds >> (slot * 8u)) & 0xffu;
+
+            if (kind != 0xffu)
+            {
+                cfg->fighters[slot].fkind = (FTKind)kind;
+                cfg->fighters[slot].costume =
+                    (u8)ftParamGetCostumeCommonID((FTKind)kind, 0);
+            }
+        }
+    }
+#endif
     /* BattleShip's scvsbattle.c selects Low detail for every 3+ fighter match;
      * the ordinary fighter creation path carries that policy into all four. */
 #if defined(NDS_LAB_FOURCPU_TWO) && NDS_LAB_FOURCPU_TWO

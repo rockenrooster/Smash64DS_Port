@@ -12,7 +12,10 @@ param(
     [string]$Sampler = 'sample-tick-hud-buckets.ps1',
     [string]$BootSet = '',
     # extra name=value pokes at the first frame marker (e.g. zero a counter)
-    [string[]]$ExtraSets = @()
+    [string[]]$ExtraSets = @(),
+    # Parallel runs (owner 09-27: 32 threads): give each a distinct slot/port.
+    [int]$RunnerSlot = 9,
+    [int]$GdbPort = 3423
 )
 # P2-2p8 Phase 1 slice 6 sampler wrapper (from slice 5's run-s5.ps1): runner
 # slot 9 / GDB 3423 only. The words are poked at the first frame-complete
@@ -130,7 +133,7 @@ $start = Get-Date
 $argsList = @('-NoProfile', '-File', (Join-Path $root ('scripts\' + $Sampler)), '-NoBuild',
     '-Target', $Target, '-Build', $Build, '-RingDump',
     '-Samples', "$Samples", '-StartFrame', "$StartFrame", '-SetGlobals', ($sets -join ','), '-ExtraGlobals', ($kept -join ','),
-    '-RowsCsv', $rows, '-JsonOut', $json, '-RunnerSlot', '9', '-GdbPort', '3423', '-TimeoutSeconds', '3600')
+    '-RowsCsv', $rows, '-JsonOut', $json, '-RunnerSlot', "$RunnerSlot", '-GdbPort', "$GdbPort", '-TimeoutSeconds', '3600')
 if ($BootSet -ne '') { $argsList += @('-BootSetGlobals', $BootSet) }
 & pwsh @argsList *> $log
 $code = $LASTEXITCODE
