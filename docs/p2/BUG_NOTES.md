@@ -7018,3 +7018,16 @@ Planet Zebes, ledger forced to 5,120 so S1 cannot fire (`ev_l_g3`).
 
 Next: find which item and holder, and whether the TopN slot was re-donated
 or ejected while the item still pointed at it.
+
+## S3 Published config: glBindTexture(name=80) aborts in a VS battle (2026-09-28, FIXED)
+
+Captain/Link/Pikachu/Kirby through the shipped menus
+(`smash64ds-p2-shell-freeplay-hwtri`, walk + argmax) aborted at frame 418. The
+1P-overlay receipt first saw it. The cause: libnds's palette-name table (256
+slots) had to grow for palette 257 while libc's top chunk held 953 B.
+`glColorTableEXT` had already stored the index in the texture, so the bind read
+a NULL palette. Fixed by growing the libnds name tables to 512 at boot
+(`ndsPlatformReserveGlNameTables`); the match now runs to Results. Receipt:
+`artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/` (S3 section).
+Open: libc headroom in battle is ~14 KB at its low point; coroutine stacks
+are its main in-battle consumer.

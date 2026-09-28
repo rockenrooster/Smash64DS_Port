@@ -106,3 +106,32 @@ overflowed before:
 S2 (BUG_NOTES): with the ledger forced large, Ness/Yoshi/Pikachu/Purin on
 Zebes data-aborted at frame 1920 in `ndsRendererAdapterBuildItemAttachMtx`
 (a held item's attach joint is the fourth fighter's WRAM TopN slot).
+
+## S3: libnds palette table growth failed in the published configuration
+
+Lane A's report (1P overlay receipt): the published configuration with
+Captain/Link/Pikachu/Kirby (`smash64ds-p2-shell-freeplay-hwtri` +
+`NDS_P2_MENU_WALK=1 NDS_P2_SHELL_ARGMAX_ROSTER=1`, `probe-shell-four-kind.ps1
+-ThroughResults`) aborts in `glBindTexture(name=80)`. It still aborts after the
+S1 fix (`fourkind-argmax-fix.txt`) and with the owner texture memo off
+(`fourkind-argmax-nomemo.txt`).
+
+At the abort (`fourkind-argmax-s3.txt`, frame 418): libnds held 259 palette
+names in a 256-slot `palettePtrs`, texture 80 had `palIndex` 257, and libc's
+top chunk was 953 B. `glColorTableEXT` writes the palette index into the
+texture before `DynamicArraySet` grows the array. The growth (a 2 KB realloc)
+failed, and `glBindTexture` then read the NULL entry. In battle, libc also
+carries every GObj thread's coroutine stack (`coroutine.c`).
+
+Fix: `ndsPlatformReserveGlNameTables` grows the four libnds name arrays to 512
+entries right after `glInit`. `glResetTextures` keeps their capacity, so no
+scene grows them again.
+
+| Build | Result |
+|---|---|
+| published config, before | abort at frame 418 |
+| published config, 1,024 entries | full match, Results; arena -16,128 B |
+| published config, 512 entries (`fourkind-argmax-s3fix512.txt`) | full match (2,043 presents), Results; libc top low-water 14,440 B; texture/palette names at match end 216/208 |
+| gate (`gs2` vs `gs1`) | arena -7,680 B, heap low-water 69,340 both, libc low-water 20,376; P50/P95 928,768/1,295,616; replay identical after one sampling resync |
+
+`tools/probe-shell-four-kind-s3.ps1` is the probe with the GL/libc prints.

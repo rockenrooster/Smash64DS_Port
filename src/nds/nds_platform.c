@@ -528,6 +528,33 @@ static void ndsPlatformFastTimingInit(void)
     gNdsFastTimingEnabled = 1u;
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* P2-2p8 S3 (2026-09-28). libnds keeps texture and palette names in
+ * DynamicArrays that grow by realloc when a new name reaches their size, and
+ * glColorTableEXT stores the new palette index in the texture BEFORE it grows
+ * the palette array, ignoring a failed growth. In the published configuration
+ * with Captain/Link/Pikachu/Kirby the 257th palette arrived at frame 418 of a
+ * VS battle with 953 B left in libc's top chunk: the 2 KB realloc failed, the
+ * texture kept palette index 257 with no entry behind it, and the next
+ * glBindTexture read the NULL entry. glResetTextures frees the entries but
+ * keeps each array's capacity, so growing the arrays once, here, while libc
+ * has room, takes the realloc out of every later scene. */
+#define NDS_PLATFORM_GL_NAME_TABLE_ENTRIES 512u
+__attribute__((used)) volatile u32 gNdsPlatformGlNameTablesReserved;
+
+static void ndsPlatformReserveGlNameTables(void)
+{
+    const u32 last = NDS_PLATFORM_GL_NAME_TABLE_ENTRIES - 1u;
+    u32 ok = 0u;
+
+    ok += (DynamicArraySet(&glGlob->texturePtrs, last, NULL) != false) ? 1u : 0u;
+    ok += (DynamicArraySet(&glGlob->palettePtrs, last, NULL) != false) ? 1u : 0u;
+    ok += (DynamicArraySet(&glGlob->deallocTex, last, NULL) != false) ? 1u : 0u;
+    ok += (DynamicArraySet(&glGlob->deallocPal, last, NULL) != false) ? 1u : 0u;
+    gNdsPlatformGlNameTablesReserved = ok;
+}
+#endif
+
 void ndsPlatformInit(void)
 {
     /* Calico's system tick owns timers 2/3. Initialize it before original
@@ -563,6 +590,7 @@ void ndsPlatformInit(void)
     vramSetBankG(VRAM_G_TEX_PALETTE_SLOT1);
     ndsIFCommonNativeOamInit();
     glInit();
+    ndsPlatformReserveGlNameTables();
     glClearColor(2, 3, 6, 31);
     glClearDepth(GL_MAX_DEPTH);
     glEnable(GL_ANTIALIAS);
