@@ -32,3 +32,4 @@ Stages:
 
 Audio:
 -CSS and SSS: **audio is delayed (owner report 2026-09-27, latest builds). LOGGED for later; suspects in BUG_NOTES "A1".**
+-In match: **hit effects and audio cues can sound a little glitchy, as if the CPU can't keep up (owner report 2026-09-27). LOGGED for later; suspects in BUG_NOTES "A2".**

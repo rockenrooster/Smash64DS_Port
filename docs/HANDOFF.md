@@ -19,7 +19,7 @@ transition probes and inspected A/B captures. Receipt:
 finished; the checkpoint is pushed to origin/master. Root is still r54.
 **Owner 09-27: VS Mode first, 1P deferred. Any 4 fighters on any stage hit the P95 gate
 with items on over a full 1-minute match (plus sudden death); CSS and SSS 100%; Results
-and transitions/loading seamless. CSS/SSS audio delay logged (BUGS.md, BUG_NOTES A1).**
+and transitions/loading seamless. CSS/SSS audio delay + in-match SFX glitches logged (BUG_NOTES A1/A2).**
 **Phase 2 ongoing:** Task36 retired; all-VS stage compilation, NDL, native MISC
 owners and view-space particles/dust landed (receipt
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`). CSS

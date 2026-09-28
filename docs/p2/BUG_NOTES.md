@@ -6904,3 +6904,27 @@ How to measure it later:
 - Compare r54 (before A8) with current.
 - The CSS probe (`builds/resume-20260905/probe-owner-vs-options.ps1 -Css`)
   already walks Title -> VS -> CSS.
+
+## A2 In-match SFX glitchy under load: logged, not yet investigated (2026-09-27)
+
+Owner report 2026-09-27: in a match, hit effects and audio cues can sound a
+little glitchy, as if the CPU can't keep up. The report is logged for later
+work.
+
+Suspects:
+1. The FGM driver steps on the ARM9 frame, not a timer. Envelopes and pitch
+   or volume updates advance once per presented frame, so a two- or
+   three-VBlank frame stretches each step. Check the call site:
+   `ndsAudioFgm*` update against ticks versus presents.
+2. Cache misses play late. An uncached cue waits for its asynchronous ARM7
+   storage fill, so hit-heavy frames (many new cues) start sounds late or
+   drop them.
+3. Voice pressure. Four fighters plus items exceed the channel budget
+   ("the hardware ceiling is part of the source", FGM 203), and steals cut
+   cues short.
+4. ARM7 load. The storage thread, the BGM worker (its stack is in main RAM
+   since `a9b229ffbc7`) and the sound PXI server share the ARM7 during reads.
+
+To look at later: `ndsAudioFgmPlayAtPan` and voice-steal counters on the
+four-CPU run, the per-tick versus per-present update cadence, and an
+r54-versus-current listen.
