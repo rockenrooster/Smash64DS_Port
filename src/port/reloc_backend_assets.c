@@ -13385,6 +13385,9 @@ static sb32 sNdsR2AnimCacheArenaRawOnly;
 /* The taskman-heap generation this block was reserved under. Ownership is this
  * value matching gNdsTaskmanHeapGeneration; see ndsR2AnimCacheArenaStillOwned. */
 static u32 sNdsR2AnimCacheArenaGeneration;
+/* The block is the general heap's elastic top (see ndsR2AnimCacheArena-
+ * CarveElastic), not an allocation. */
+static sb32 sNdsR2AnimCacheArenaElastic;
 volatile u32 gNdsR2AnimCacheHits;
 volatile u32 gNdsR2AnimCacheMisses;
 volatile u32 gNdsR2AnimCacheFills;
@@ -13509,6 +13512,19 @@ static sb32 ndsR2AnimCacheArenaStillOwned(void)
         gNdsR2AnimCacheArenaGenerationMismatches++;
         return FALSE;
     }
+    if (sNdsR2AnimCacheArenaElastic != FALSE)
+    {
+        /* An elastic block lives ABOVE the cursor: every allocation that would
+         * reach it takes the bytes back first (battleship_sys_malloc.c). */
+        if ((sNdsR2AnimCacheArena < cursor) ||
+            ((sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes) >
+             (const u8 *)gSYTaskmanGeneralHeap.end))
+        {
+            gNdsR2AnimCacheArenaRangeFaults++;
+            return FALSE;
+        }
+        return TRUE;
+    }
     if ((sNdsR2AnimCacheArena < (const u8 *)gSYTaskmanGeneralHeap.start) ||
         ((sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes) > cursor))
     {
@@ -13536,6 +13552,7 @@ static void ndsR2AnimCacheArenaDropForReset(void)
     sNdsR2AnimCacheArenaBytes = 0u;
     sNdsR2AnimCacheArenaUsed = 0u;
     sNdsR2AnimCacheArenaRawOnly = FALSE;
+    sNdsR2AnimCacheArenaElastic = FALSE;
     sNdsR2AnimCacheArenaGeneration = 0u;
     /* Drops every entry, which is what makes the payload pointers unreachable.
      * The entries are the only holders of those pointers. */
@@ -13733,6 +13750,106 @@ static sb32 ndsR2AnimCacheArenaReserveDecline(void)
     return FALSE;
 }
 
+/* THE ELASTIC MOTION CACHE (P2-2p8, 2026-09-28).
+ *
+ * The raw cache used to be a block allocated below the cursor and sized by
+ * what the heap spared after the fighters and a fixed 128 KiB keep-free: 51 KB
+ * on the four-CPU gate's Dream Land and 0 B for a four-kind roster on the
+ * full-content image, where every status change then read its clip from
+ * storage mid-frame (~30K ticks). Most of that keep-free is never used -- the
+ * match's low-water sits well above the 25,600 B floor -- but a static block
+ * cannot give bytes back when the match does grow.
+ *
+ * The elastic cache borrows the free bytes at the TOP of the heap instead,
+ * without allocating them: `end` does not move, so the source's GObj latch
+ * and every admission check still read the true free space. An allocation
+ * that would reach the borrowed range asks for it back first (the allocator
+ * calls ndsR2AnimCacheElasticYield); the entries in the returned range are
+ * dropped and the block's base moves up. Cached templates are copied into a
+ * fighter's own heap before use, so nothing ever points into the block and
+ * giving bytes back is always safe. Same-ROM A/B word below. */
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheElastic = 1u;
+__attribute__((used)) volatile u32 gNdsR2AnimCacheElasticCarves;
+__attribute__((used)) volatile u32 gNdsR2AnimCacheElasticDrops;
+/* Bytes kept below the block at the carve, so the next small allocations do
+ * not each take a slice back; and the extra slice a yield returns. */
+#define NDS_R2_ANIM_CACHE_ELASTIC_FLOOR 12288u
+#define NDS_R2_ANIM_CACHE_ELASTIC_SLACK 8192u
+#define NDS_R2_ANIM_CACHE_ELASTIC_MIN 4096u
+
+void ndsTaskmanElasticRegister(void *base, u8 *(*yield)(u8 *need_top));
+static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size);
+
+static u8 *ndsR2AnimCacheElasticYield(u8 *need_top)
+{
+    u8 *arena = sNdsR2AnimCacheArena;
+    u32 bytes = sNdsR2AnimCacheArenaBytes;
+    uintptr_t want;
+    u32 delta;
+
+    if ((arena == NULL) || (sNdsR2AnimCacheArenaElastic == FALSE) ||
+        (sNdsR2AnimCacheArenaGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return (u8 *)gSYTaskmanGeneralHeap.end;
+    }
+    want = ((uintptr_t)need_top + NDS_R2_ANIM_CACHE_ELASTIC_SLACK + 31u) &
+        ~(uintptr_t)31u;
+    if ((want + NDS_R2_ANIM_CACHE_ELASTIC_MIN) >= ((uintptr_t)arena + bytes))
+    {
+        ndsR2AnimCacheArenaDropForReset();
+        gNdsR2AnimCacheElasticDrops++;
+        return (u8 *)gSYTaskmanGeneralHeap.end;
+    }
+    if (want <= (uintptr_t)arena)
+    {
+        return arena;
+    }
+    delta = (u32)(want - (uintptr_t)arena);
+    ndsR2AnimCacheEvictRawRange(0u, delta);
+    sNdsR2AnimCacheArena = arena + delta;
+    sNdsR2AnimCacheArenaBytes = bytes - delta;
+    sNdsR2AnimCacheArenaUsed = (sNdsR2AnimCacheArenaUsed > delta) ?
+        (sNdsR2AnimCacheArenaUsed - delta) : 0u;
+    gNdsR2AnimCacheArenaReservedBytes = sNdsR2AnimCacheArenaBytes;
+    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    return sNdsR2AnimCacheArena;
+}
+
+/* `available` is the true free space above the aligned cursor. */
+static sb32 ndsR2AnimCacheArenaCarveElastic(size_t available,
+                                           u32 fighter_bytes)
+{
+    uintptr_t top = (uintptr_t)gSYTaskmanGeneralHeap.end & ~(uintptr_t)31u;
+    u32 bytes;
+
+    if ((fighter_bytes > available) ||
+        ((available - fighter_bytes) <=
+         (NDS_R2_ANIM_CACHE_ELASTIC_FLOOR + NDS_R2_ANIM_CACHE_ELASTIC_MIN + 32u)))
+    {
+        return ndsR2AnimCacheArenaReserveDecline();
+    }
+    bytes = (u32)(available - fighter_bytes - NDS_R2_ANIM_CACHE_ELASTIC_FLOOR -
+                  32u);
+    if (bytes > (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES)
+    {
+        bytes = (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES;
+    }
+    bytes &= ~31u;
+    sNdsR2AnimCacheReserveFailLatched = FALSE;
+    sNdsR2AnimCacheArena = (u8 *)(top - bytes);
+    sNdsR2AnimCacheArenaBytes = bytes;
+    sNdsR2AnimCacheArenaUsed = 0u;
+    sNdsR2AnimCacheArenaRawOnly = TRUE;
+    sNdsR2AnimCacheArenaElastic = TRUE;
+    sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
+    gNdsR2AnimCacheArenaReservedBytes = bytes;
+    gNdsR2AnimCacheArenaUsedBytes = 0u;
+    gNdsR2AnimCacheArenaReserveCount++;
+    gNdsR2AnimCacheElasticCarves++;
+    ndsTaskmanElasticRegister(sNdsR2AnimCacheArena, ndsR2AnimCacheElasticYield);
+    return TRUE;
+}
+
 static sb32 ndsR2AnimCacheArenaEnsure(void)
 {
     void *block;
@@ -13786,6 +13903,10 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
               ~((uintptr_t)NDS_RELOC_ALIGN_BYTES - 1u);
     available = ((uintptr_t)gSYTaskmanGeneralHeap.end >= aligned) ?
         (uintptr_t)gSYTaskmanGeneralHeap.end - aligned : 0u;
+    if ((reserve == 0u) && (gNdsR2AnimCacheElastic != 0u))
+    {
+        return ndsR2AnimCacheArenaCarveElastic(available, fighter_bytes);
+    }
     if ((fighter_bytes > available) ||
         (NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE >= available - fighter_bytes))
     {
@@ -15242,11 +15363,18 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             /* K0 line 6, "raw animation-file cache copies". */
             NDS_K0_MARK(gNdsK0AfterGoCacheCopies, asset_id);
             ndsRelocPrepareFighterAnimHeapOverwrite(asset_id, heap);
+            u32 ready;
+
             memcpy(heap, cached->payload, cached->size);
             asset_size = cached->size;
             header = cached->header;
+            /* Read everything the entry holds before anything can allocate:
+             * an allocation may take an elastic cache's bytes back and drop
+             * this entry (ndsR2AnimCacheElasticYield). */
+            ready = cached->aobj16_ready;
+            cached = NULL;
             loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
-            if (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM)
+            if (ready == NDS_R2_ANIM_CACHE_READY_STREAM)
             {
                 if (loaded == NULL)
                 {
@@ -15268,8 +15396,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
              * The flag is per entry: anything the prebake declined still runs
              * the pass below, unchanged. */
             if ((loaded != NULL) &&
-                (cached->aobj16_ready ==
-                 NDS_R2_ANIM_CACHE_READY_PREBAKE))
+                (ready == NDS_R2_ANIM_CACHE_READY_PREBAKE))
             {
                 loaded->format_fixups_applied = TRUE;
                 gNdsR2AObj16PrebakeSkips++;
@@ -15784,6 +15911,8 @@ static u32 ndsRelocIfCopyImage(const u8 *temp, u8 *dst)
  * moved down with its pointers re-seated -- or NULL when the top-of-heap
  * window was never used (the caller then loads the file the ordinary way;
  * gNdsRelocIfCompactFailStage <= 4 says so). */
+void ndsTaskmanElasticReleaseAll(void);
+
 static void *ndsRelocLoadIfGameStatusCompact(u32 token, u32 asset_id,
                                              u32 bit,
                                              const NDSRelocAssetHeader *in)
@@ -16004,9 +16133,14 @@ size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap)
             if ((heap != NULL) && (asset_size != 0) &&
                 (asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS))
             {
-                /* lbRelocGetAllocSize sized this entry as a placeholder. */
-                void *image = ndsRelocLoadIfGameStatusCompact(
-                    token, asset_id, bit, &header);
+                /* lbRelocGetAllocSize sized this entry as a placeholder. The
+                 * compact load uses the free bytes above the cursor as its
+                 * window, so any elastic cache hands them back first. */
+                void *image;
+
+                ndsTaskmanElasticReleaseAll();
+                image = ndsRelocLoadIfGameStatusCompact(token, asset_id, bit,
+                                                        &header);
 
                 heap_ptr = NDS_RELOC_ALIGN(heap_ptr) + sizeof(uintptr_t);
                 if ((image == NULL) && (gNdsRelocIfCompactFailStage <= 4u))

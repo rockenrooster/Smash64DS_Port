@@ -73,3 +73,44 @@ early in the match, where first-time keys cluster.
   counters: build `build_lab.ps1 -Extra NDS_TICK_HUD_SRC_SPLIT=1`.
 - Profile split: `python scripts/task37_census.py --elf <dlprof elf>
   --split-top-frames 20 --attribute-leaves __aeabi_fadd,... <profile csv>`.
+
+## 4. Banked: the elastic motion cache
+
+The raw motion cache was a block allocated below the heap cursor, sized by
+what the heap spared after the fighters and a fixed 128 KiB keep-free, which
+the match mostly never uses. It is now carved from the free bytes at the TOP
+of the general heap without allocating them (`ndsR2AnimCacheArenaCarve-
+Elastic`, `src/port/reloc_backend_assets.c`). `heap.end` never moves, so the
+source's GObj latch, every admission check and the low-water instrument read
+the true free space. The one place the cursor advances, the port's
+`syMallocSet` (`src/import/battleship_sys_malloc.c`), asks the cache to give
+back any bytes an allocation would reach; the cache drops the entries there
+and moves its base up. Cached clips are copied into a fighter's heap before
+use, so nothing points into the block. The cache hit path now reads the entry
+before anything can allocate, and the IFCommon compact load (which uses the
+free bytes as a window) releases the cache first. Same-ROM A/B word
+`gNdsR2AnimCacheElastic` (default 1).
+
+Note for every later report: `gNdsTaskmanGeneralHeapFreeMin` now counts the
+cache's bytes as free (they are), so it reads the real headroom; the old
+static block used to hide up to 128 KiB of it.
+
+| Run (same ROM, word 0 -> 1) | cache bytes | motion reads | P50 | P95 | P99 | replay |
+|---|---|---|---|---|---|---|
+| gate `el0/el1_gate` | 131,920 -> 175,776 | 343 -> 293 | 929,856 -> 929,728 | 1,297,536 -> 1,290,176 | 1,530,816 -> 1,490,304 | IDENTICAL |
+| DL lab `ea*_def` | 0 -> 68,064 | 699 -> 448 | 947,520 -> 946,432 | 1,332,352 -> 1,331,776 | 1,634,816 -> 1,639,808 | IDENTICAL |
+| Saffron `ea*_fp_g7` | 33,520 -> 77,888 | 560 -> 447 | 1,154,752 -> 1,153,536 | 1,582,976 -> 1,581,184 | 1,810,880 -> 1,793,024 | IDENTICAL |
+| Yoshi's Island `ea*_lk_g5` | 0 -> 69,216 | 699 -> 461 | 1,093,056 -> 1,088,512 | 1,476,096 -> 1,472,768 | 1,664,832 -> 1,660,352 | IDENTICAL |
+| Jungle `ea*_cy_g2` | 0 -> 42,592 | 676 -> 531 | 1,077,952 -> 1,077,056 | 1,459,904 -> 1,460,032 | 1,844,672 -> 1,833,984 | IDENTICAL |
+
+On the gate the lean spare buffers also stop being refused (7 -> 0) and
+model rebuilds fall 44 -> 39. The GObj cap never latched in any run; native
+failures unchanged. The gain is small at P95 because the hits land on the
+common clips (Wait, Walk, Fall), while the P95 frames' transitions are the
+rarer ones; the lever grows with every byte of RAM the reclamation work
+frees, since the cache now takes whatever the heap is not using.
+
+Published configuration (`smash64ds-p2-shell-freeplay-hwtri`, argmax roster
+Captain/Link/Pikachu/Kirby, menu walk, `fourkind-argmax-elastic.txt`): full
+match (2,043 presents), Results reached, allocation overflow 0, relocation
+and storage failures 0, general-heap low-water 59,048 B (true free).

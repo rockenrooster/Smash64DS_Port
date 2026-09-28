@@ -73,12 +73,73 @@ extern SYMallocRegion gSYTaskmanGeneralHeap;
  * future code path, because every such path goes through one of these two. */
 volatile u32 gNdsTaskmanHeapGeneration;
 
+/* THE ELASTIC TOP OF THE GENERAL HEAP (P2-2p8, 2026-09-28).
+ *
+ * A cache may borrow the free bytes at the top of the general heap, between
+ * the cursor and `end`, without allocating them: `end` never moves, so every
+ * free-space reader -- ifCommonSetMaxNumGObj's 25 KiB latch, the effect-GObj
+ * floor, every admission check and the low-water instrument -- still sees the
+ * true free space, exactly as if the cache did not exist. The price is paid
+ * here, in the one place the cursor advances: an allocation that would reach
+ * the borrowed range first asks the owner to give back enough of it (the
+ * owner drops whatever lived there and returns its new lowest byte). A cache
+ * owns no live object, so giving back is always possible, down to nothing.
+ *
+ * One owner at a time (the fighter motion cache). A heap rewind makes the
+ * borrowed bytes the heap's again with nothing to hand back: the owner's own
+ * generation test drops its entries. */
+static u8 *sNdsTaskmanElasticBase;
+static u32 sNdsTaskmanElasticGeneration;
+static u8 *(*sNdsTaskmanElasticYield)(u8 *need_top);
+__attribute__((used)) volatile u32 gNdsTaskmanElasticYields;
+__attribute__((used)) volatile u32 gNdsTaskmanElasticYieldBytes;
+
+void ndsTaskmanElasticRegister(void *base, u8 *(*yield)(u8 *need_top))
+{
+    sNdsTaskmanElasticBase = (u8 *)base;
+    sNdsTaskmanElasticGeneration = gNdsTaskmanHeapGeneration;
+    sNdsTaskmanElasticYield = yield;
+}
+
+static void ndsTaskmanElasticMakeRoom(uintptr_t top)
+{
+    u8 *base = sNdsTaskmanElasticBase;
+
+    if ((base == NULL) ||
+        (sNdsTaskmanElasticGeneration != gNdsTaskmanHeapGeneration))
+    {
+        sNdsTaskmanElasticBase = NULL;
+        return;
+    }
+    if (top <= (uintptr_t)base)
+    {
+        return;
+    }
+    sNdsTaskmanElasticBase = sNdsTaskmanElasticYield((u8 *)top);
+    gNdsTaskmanElasticYields++;
+    gNdsTaskmanElasticYieldBytes +=
+        (u32)((uintptr_t)sNdsTaskmanElasticBase - (uintptr_t)base);
+    if ((uintptr_t)sNdsTaskmanElasticBase >=
+        (uintptr_t)gSYTaskmanGeneralHeap.end)
+    {
+        sNdsTaskmanElasticBase = NULL;
+    }
+}
+
+/* For code that uses the free bytes above the cursor as scratch without
+ * allocating them: the owner gives everything back first. */
+void ndsTaskmanElasticReleaseAll(void)
+{
+    ndsTaskmanElasticMakeRoom((uintptr_t)gSYTaskmanGeneralHeap.end);
+}
+
 void syMallocInit(SYMallocRegion *bp, u32 id, void *start, size_t size)
 {
     battleship_syMallocInit(bp, id, start, size);
     if (bp == &gSYTaskmanGeneralHeap)
     {
         gNdsTaskmanHeapGeneration++;
+        sNdsTaskmanElasticBase = NULL;
     }
 }
 
@@ -88,6 +149,7 @@ void syMallocReset(SYMallocRegion *bp)
     if (bp == &gSYTaskmanGeneralHeap)
     {
         gNdsTaskmanHeapGeneration++;
+        sNdsTaskmanElasticBase = NULL;
     }
 }
 
@@ -138,6 +200,18 @@ void __attribute__((noinline, used)) ndsSyMallocOverflowHalt(void)
 
 void *syMallocSet(SYMallocRegion *bp, size_t size, u32 alignment)
 {
+    if ((bp == &gSYTaskmanGeneralHeap) && (sNdsTaskmanElasticBase != NULL))
+    {
+        uintptr_t aligned = (uintptr_t)bp->ptr;
+
+        if (alignment != 0u)
+        {
+            uintptr_t offset = (uintptr_t)alignment - 1u;
+
+            aligned = (aligned + offset) & ~offset;
+        }
+        ndsTaskmanElasticMakeRoom(aligned + size);
+    }
     /* ndsSyMallocWouldFit mirrors the `bp->end < bp->ptr` test that
      * decomp/src/sys/malloc.c applies AFTER committing bp->ptr. There are
      * deliberately two copies of that expression; if the decomp one ever
