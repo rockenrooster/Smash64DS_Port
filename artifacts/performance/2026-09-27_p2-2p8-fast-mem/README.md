@@ -1521,3 +1521,32 @@ flow (SSS) does the same.
 - Roster Captain/Luigi/Mario/Fox on Dream Land: 48 (scene 22, identity
   0x03F300A1, 24 REJECTED + 24 NO_PROGRAM from frame 196). These appear
   with fast WRAM on and off alike.
+
+## 52. Yoshi's Island clouds share the billboard camera memo
+
+Yoshi's Island was the worst stage in the section 51 sweep (P50 1.27M). Its
+D-miss census (`builds/p2p8-yoshi-census`, 384 frames), compared with Dream
+Land's, put the extra float work in `ndsRendererAdapterMvpMod1F`. It runs
+9 times a frame, and each run is `syMatrixLookAtF` plus `guMtxCatF`.
+
+The cause: `ndsRendererAdapterSubmitNativeYosterCloud` recalculated each of
+the frame's nine cloud drawables with no camera memo (`camera == NULL`). So
+every drawable rebuilt the look-at Mod1, the float perspective and the
+billboard rows. The stage prepare's own bindings already use a camera memo.
+
+The change: the clouds now get a static camera memo. It is reused while the
+camera's eye, at and perspective inputs are bit-identical and no one else
+has reset the billboard-row memo since (`sNdsMvpMemoEpoch`), so every value
+it serves is the one the recalculation would produce. When it is rebuilt,
+it resets the shared row memo, as the stage prepare does.
+
+Results (sweep ROM, Yoshi's Island, stress roster):
+- Same-ROM (`cc0`/`cc1`): paired median -51,200 (MISC -51.2K); 1,965 of
+  1,972 frames better; replay IDENTICAL.
+- Final (`ccf`) vs `cc0`: paired median -49,568. P50/P95 1,269,056/1,685,824
+  -> 1,220,864/1,634,368. Frames at or under 1,120,000: 400 -> 546.
+- Gate ROM (Dream Land, no clouds), `ccg` vs `w32b`: paired median +1,024
+  (layout), P95 1,322,752 -> 1,321,984. Replay IDENTICAL; native failures 0.
+
+Checks pass: DTCM residency, Task 20 layout, ITCM placement. The P1 ROM
+links; the root was restored to `576F51ED`.

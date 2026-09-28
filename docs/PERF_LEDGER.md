@@ -9100,3 +9100,13 @@ The stage GX program re-copied an unchanged projection into 76 NOZ patches
 a frame. A per-patch stamp read -1.3K same-ROM. The final build, which
 needed a 64 B ITCM eviction and shifted main-RAM code, read +4.0K paired
 median. Reverted. Receipt section 50.
+
+## 2026-09-27 — Yoshi's Island clouds share the billboard camera memo
+
+**BANKED (any-stage gate).** The nine cloud drawables recalculated their
+billboard MVP with no camera memo: a float look-at, perspective and rows
+for each drawable. A static camera memo, keyed on the camera's inputs and
+the row-memo epoch, fixes that. Sweep ROM, Yoshi's Island: paired median
+-49,568; P50/P95 1,269,056/1,685,824 -> 1,220,864/1,634,368; replay
+identical. The Dream Land gate ROM is flat (+1.0K median, P95 -0.8K).
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 52.

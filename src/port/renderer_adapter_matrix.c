@@ -4018,8 +4018,13 @@ static NDSRendererMatrix20p12 sNdsMvpMemo46Rows[NDS_MVP_MEMO_46];
  * billboard through the full build, as before the memo. */
 volatile u32 gNdsMvpMemoEnable __attribute__((used, section(".data"))) = 1u;
 
+/* Counts resets, so a second owner of the memo (the Yoster cloud camera)
+ * can tell that the rows now belong to someone else's camera. */
+static u32 sNdsMvpMemoEpoch;
+
 static void ndsRendererAdapterMvpMemoReset(void)
 {
+    sNdsMvpMemoEpoch++;
     sNdsMvpMemoOn = (gNdsMvpMemoEnable != 0u) ? 1u : 0u;
     sNdsMvpMemo48Count = 0u;
     sNdsMvpMemo46Count = 0u;
@@ -8372,6 +8377,66 @@ static NDSRendererAdapterNativeYosterCloudWorkspace
 
 volatile u32 gNdsNativeYosterCloudFailStep;
 
+/* The clouds' billboards recalc through the camera memo the stage prepare
+ * uses (P2-2p8, 2026-09-27): without one, each of a frame's nine cloud
+ * drawables rebuilt the look-at Mod1 (syMatrixLookAtF + guMtxCatF), the float
+ * perspective and the billboard rows -- Yoshi's Island's census put ~45K
+ * ticks a frame there; same-ROM A/B -51K WORK-H a frame, replay identical. The memo is kept while the camera's own inputs (eye,
+ * at, perspective) are bit-identical, so every value it serves is the one the
+ * recalc would compute. It shares the stage prepare's billboard row memo:
+ * it resets the memo when it is rebuilt, and rebuilds when anyone else has
+ * reset it since (sNdsMvpMemoEpoch), so the rows it reads are its own. */
+typedef struct NDSRendererAdapterYosterCloudCameraKey
+{
+    Vec3f eye;
+    Vec3f at;
+    f32 fovy;
+    f32 aspect;
+    f32 near;
+    f32 far;
+    f32 scale;
+} NDSRendererAdapterYosterCloudCameraKey;
+static NDSRendererAdapterYosterCloudCameraKey sNdsYosterCloudCameraKey;
+static const void *sNdsYosterCloudCameraCobj;
+static u32 sNdsYosterCloudCameraEpoch;
+static NDSRendererAdapterMvpCamera sNdsYosterCloudCamera;
+static NDSRendererMatrix20p12 sNdsYosterCloudPerspective;
+
+static NDSRendererAdapterMvpCamera *ndsRendererAdapterYosterCloudCamera(CObj *cobj)
+{
+    NDSRendererAdapterYosterCloudCameraKey key;
+    u16 norm;
+
+    memset(&key, 0, sizeof(key));
+    key.eye = cobj->vec.eye;
+    key.at = cobj->vec.at;
+    key.fovy = cobj->projection.persp.fovy;
+    key.aspect = cobj->projection.persp.aspect;
+    key.near = cobj->projection.persp.near;
+    key.far = cobj->projection.persp.far;
+    key.scale = cobj->projection.persp.scale;
+    if ((sNdsYosterCloudCameraCobj != (const void *)cobj) ||
+        (sNdsYosterCloudCameraEpoch != sNdsMvpMemoEpoch) ||
+        (memcmp(&key, &sNdsYosterCloudCameraKey, sizeof(key)) != 0))
+    {
+        norm = cobj->projection.persp.norm;
+        ndsRendererAdapterCameraPerspFast(&sNdsYosterCloudPerspective, &norm,
+                                          cobj->projection.persp.fovy,
+                                          cobj->projection.persp.aspect,
+                                          cobj->projection.persp.near,
+                                          cobj->projection.persp.far,
+                                          cobj->projection.persp.scale);
+        sNdsYosterCloudCamera.perspective = &sNdsYosterCloudPerspective;
+        sNdsYosterCloudCamera.perspective_f_valid = FALSE;
+        sNdsYosterCloudCamera.mod1_valid = FALSE;
+        ndsRendererAdapterMvpMemoReset();
+        sNdsYosterCloudCameraEpoch = sNdsMvpMemoEpoch;
+        sNdsYosterCloudCameraKey = key;
+        sNdsYosterCloudCameraCobj = cobj;
+    }
+    return &sNdsYosterCloudCamera;
+}
+
 sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
     u32 initial_geometry_mode, NDSRendererStats *stats)
 {
@@ -8520,7 +8585,8 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
         sNdsRendererAdapterMvpRecalcScaleX = 1.0F;
         ndsRendererAdapterApplyMvpRecalc(draws[i], nGCMatrixKind48, cobj,
             &workspace->hierarchy_projection, &projection_ptr,
-            mvp, &modelview_ptr, NULL);
+            mvp, &modelview_ptr,
+            ndsRendererAdapterYosterCloudCamera((CObj *)cobj));
         if ((modelview_ptr == NULL) || (projection_ptr != NULL))
         {
             gNdsNativeYosterCloudFailStep = 12u;
