@@ -27,12 +27,12 @@ reserve free 253,904 B (09-27) versus required 183,072 B. Campaign coverage and 
 renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
 Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
-**09-26/27 solo:** leaf, A9-instrument, ITCM-placement (ITCM now full; lab
-split builds keep ndsFtPoseUpdate in main RAM) and DS-divide cuts; receipts
-`2026-09-2{6,7}_p2-2p8-*`. `429D478C` WORK-H P50/P95 948,928/1,322,752 (DTCM stack subtrees, ITCM packs, fighter state in 32 KB A9 WRAM);
-lab flags NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS, NDS_WHISPY_AOT_TICKS.
-Digest `--sequence --resync 4`, control `w32b`. P95 band (split9): SINT +123K, SHDT
-+72K, SPHD +41K, SPRM +25K, FTR +68K (44 materializations), MISC +74K.
+**09-26..28 solo** (receipts `2026-09-2{6,7}_p2-2p8-*`; 09-28 = fast-mem sec 54-56:
+billboard camera, shield decode, AI floor memo): `D37EFA19` (`gafmf`, control) WORK-H
+P50/P95 936,128/1,305,856. Sweep ROM (NDS_LAB_FOURCPU_SWEEP, gNdsLabFourCpuGkind) P95:
+Mushroom 1.49M, Saffron 1.53M, Yoshi 1.60M, Zebes 1.49M, Castle 1.45M, Hyrule 1.38M,
+Jungle 1.36M. Digest `--sequence --resync 4`. P95 set, top 5% over median: SRC +326K
+(SINT +113K, SHDT +98K, SPRM +60K), MISC +87K; the tail is sim, not FTR.
 
 ## Continue, do not restart
 
