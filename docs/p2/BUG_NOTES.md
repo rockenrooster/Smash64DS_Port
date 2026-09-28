@@ -7041,3 +7041,32 @@ a NULL palette. Fixed by growing the libnds name tables to 512 at boot
 `artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/` (S3 section).
 Open: libc headroom in battle is ~14 KB at its low point; coroutine stacks
 are its main in-battle consumer.
+
+## S4 Poke Ball Pokemon never animated; five more item offsets read RAM addresses (2026-09-28, FIXED)
+
+The 45-match crash sweep (no crashes) left one refused event32 script in six
+matches. A flushed lab witness named the callers: `itSawamuraMakeItem`,
+`itDogasMakeItem`, `itNyarsMakeItem` and `itStarmieMakeItem`, each passing a
+script address such as 0x001a8554 (outside every loaded file). The cause is the
+ll-symbol trap: the source's `&llITCommonDataFooDataStart` is a linker symbol
+whose address is the offset, but in the port it is the address of a
+`uintptr_t` holding it. `itGetMonsterAnimNode` subtracted that address, so all
+thirteen Pokemon got a garbage animation pointer, the normalizer refused it and
+the joint was detached (no animation, no crash).
+
+The same audit of `&ll` arithmetic on plain variables found five more sites:
+- Saffron's Venusaur and Porygon (`itGetMonsterEvent`, local macro): hit
+  events read from file base + a RAM address, so their damage, angle and
+  knockback came from unrelated memory.
+- Fire Flower `itFFlowerShootFlame`: flame angles read from a garbage address.
+- Crate/barrel break shards `itBoxContainerSmashMakeEffect`: display list 4 B
+  into the attributes instead of the shard DL.
+- Charizard `itLizardonAttackInitVars`: attack animation and material
+  animation detached like the other Pokemon.
+- Fan `func_ovl3_80175408` (unused in the source).
+
+Fix: `itGetMonsterAnimNode` and both `itGetMonsterEvent` macros read through the
+token; the four raw expressions use the value. On the four matches that
+refused a script: detaches 0, normalize failures 0, replay IDENTICAL to the
+pre-fix runs, WORK-H within layout noise. Receipt:
+`artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/` (S4 section).

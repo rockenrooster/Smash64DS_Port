@@ -146,3 +146,45 @@ FTParts, was a WRAM DObj at 0x03007F78, and the matrix read ran past the 32 KB
 WRAM MPU region. The renderer now returns FALSE (fallback matrix) when the
 attach joint's GObj is not a fighter. `fx2_l_g3`: full match, 66 guarded draws,
 native failures 0.
+
+## Crash sweep: 45 matches on the fixed ROM
+
+`build-p2p8-s1` (S1, S2 and S3 fixes; full-roster lab) ran five rosters on all
+nine stages: Luigi/Kirby/Ness/Purin, Fox/Pikachu/Ness/Samus,
+Captain/Yoshi/Kirby/DK, Pikachu x4 and Kirby x4 (`crash-sweep-jobs.txt`).
+All 45 ran the full 1,972 samples without a fault
+(`crash-sweep-summary.txt`). General-heap low-water ranged 47,592 to 79,856 B.
+The S2 guard fired in three matches (up to 709 draws).
+
+Six matches refused exactly one event32 script with the ledger far below its
+limit (e.g. Kirby x4 on Hyrule, 604 of 1,536), so capacity was not the cause.
+
+## S4: Poke Ball Pokemon never animated
+
+The refusals were reason 2 (a command outside every loaded file), owner DObj.
+A flushed lab witness in `gcAddDObjAnimJoint`'s detach path
+(`gNdsLabDetachWitness`, lab builds only) recorded the script, the caller and
+the parent GObj kind (1013, item). The callers were `itSawamuraMakeItem`,
+`itDogasMakeItem`, `itNyarsMakeItem` and `itStarmieMakeItem`, with scripts at
+0x001a28c4-0x001b8ef8.
+
+`itGetMonsterAnimNode(ip, &llITCommonDataFooDataStart)` subtracted the address
+of the port's `uintptr_t` rather than the offset it holds, so every Pokemon's
+animation pointer was garbage and the joint was detached. An audit of `&ll`
+arithmetic on plain variables found the same trap in Venusaur/Porygon hit
+events, Fire Flower flame angles, the crate-break shard DL and Charizard's
+attack animation (list in `docs/p2/BUG_NOTES.md`, S4).
+
+| Match (`dw_` = before, `lf_` = fixed) | Detaches | Normalize fails | Ledger high water / limit | Replay vs `cs_` |
+|---|---|---|---|---|
+| Fox/Pikachu/Ness/Samus, Dream Land | 1 -> 0 | 1 -> 0 | 1,898 / 3,072 | IDENTICAL |
+| Kirby x4, Hyrule | 1 -> 0 | 1 -> 0 | 604 -> 622 / 1,536 | IDENTICAL |
+| Pikachu x4, Peach's Castle | 1 -> 0 | 1 -> 0 | 3,372 / 4,394 | IDENTICAL |
+| Pikachu x4, Saffron City | 1 -> 0 | 1 -> 0 | 3,639 / 4,661 | IDENTICAL |
+| Captain/Yoshi/Kirby/DK, Jungle | 1 -> 0 | 1 -> 0 | 3,090 / 3,288 | IDENTICAL |
+| Fox/Pikachu/Ness/Samus, Saffron City | 1 -> 0 | 1 -> 0 | 2,893 / 3,586 | DIVERGED at sample 861 |
+
+The Saffron divergence is the Venusaur/Porygon fix changing a hit: the same
+ROM with only that fix reverted (`ls_fp_g7`) is IDENTICAL to the pre-fix run
+and diverges from `lf_fp_g7` at the same sample. WORK-H paired medians moved
+-1.4K and -1.1K on the other matches (layout noise).

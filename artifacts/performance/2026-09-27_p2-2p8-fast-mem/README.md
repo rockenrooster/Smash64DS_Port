@@ -2107,3 +2107,23 @@ memos): P50/P95 1,183,360/1,606,976 -> 1,171,200/1,599,424; paired median
 An exact affine multiply for the cloud matrices was tried beside it and
 dropped: an earlier run today had already removed all 27 cloud multiplies for
 -0.06K (the loop is cold-code misses).
+
+## 68. Where a motion read's time goes (lab, not shipped)
+
+Status changes that stream a new motion clip cost ~27.3K ticks of I/O wait per
+read in the four-CPU match (427 x64). A lab-only boot test
+(`tools/lab-read-timing.patch`, under `NDS_LAB_FOURCPU_SWEEP`) timed eight
+reads of each shape from the BPS1 pack on the ARM9, min tick count x64:
+
+| read | ticks x64 | ~ticks |
+|---|---|---|
+| 16 B | 97 | 6.2K |
+| one aligned 512 B sector | 94 | 6.0K |
+| four aligned sectors (2,048 B) | 227 | 14.5K |
+| 2,048 B at +16 (unaligned, five sectors) | 312 | 20.0K |
+
+So each request pays a ~6K floor (PXI round trip plus the DLDI call) and each
+sector ~2.8K after it. Aligning clips to sector boundaries or merging a
+status's reads would save at most ~8K per missed read; the lever that matters
+is not reading at all (motion residency), which needs RAM. The test was
+reverted from source after the measurement.

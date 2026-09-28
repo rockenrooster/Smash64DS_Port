@@ -69,7 +69,10 @@ typedef struct ITMonsterEvent
 /* decomp/BattleShip-main/decomp/src/it/item.h:51 verbatim. Guarded so a later
  * port declaration wins without a redefinition. */
 #ifndef itGetMonsterEvent
-#define itGetMonsterEvent(it_desc, off) ((ITMonsterEvent*)((uintptr_t) * (it_desc).p_file + (intptr_t) (off)))
+/* `off` is `&llGRYamabukiMap...`: the address of the port variable holding
+ * the offset, so it is read through (the source's symbol address IS the
+ * offset). */
+#define itGetMonsterEvent(it_desc, off) ((ITMonsterEvent*)((uintptr_t) * (it_desc).p_file + (intptr_t) * (const uintptr_t *)(off)))
 #endif
 
 /* decomp itporygon.h:8-10 verbatim. The port publishes no per-kind item

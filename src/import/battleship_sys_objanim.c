@@ -1198,6 +1198,24 @@ __attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundApplyCount;
 __attribute__((used)) volatile u32 gNdsAObjEvent32RosterNeed;
 /* Scripts whose normalization failed; their joints were detached. */
 __attribute__((used)) volatile u32 gNdsAObjEvent32DetachCount;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+#include <nds/arm9/cache.h>
+/* LAB: the last detached DObj script: [0] script, [1] caller, [2] parent
+ * GObj id, [3] the refused command. Flushed, since gdb reads memory. */
+__attribute__((used, aligned(32))) volatile u32 gNdsLabDetachWitness[8];
+extern volatile u32 gNdsAObjEvent32NormalizeLastFailAddress;
+
+static void ndsLabNoteDetach(DObj *dobj, AObjEvent32 *script, void *caller)
+{
+    gNdsLabDetachWitness[0] = (u32)(uintptr_t)script;
+    gNdsLabDetachWitness[1] = (u32)(uintptr_t)caller;
+    gNdsLabDetachWitness[2] = ((dobj != NULL) && (dobj->parent_gobj != NULL)) ?
+                                  (u32)dobj->parent_gobj->id : 0xffffffffu;
+    gNdsLabDetachWitness[3] = gNdsAObjEvent32NormalizeLastFailAddress;
+    DC_FlushRange((const void *)gNdsLabDetachWitness,
+                  sizeof(gNdsLabDetachWitness));
+}
+#endif
 
 /* Static event32 command census + conservative 901-command common-shell and
  * 512-command match corpus. Dream Land deliberately keeps 3072: its measured
@@ -2982,6 +3000,9 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
          * pointer. The joint plays no script instead. */
         ndsBaseGcAddDObjAnimJoint(dobj, NULL, anim_frame);
         gNdsAObjEvent32DetachCount++;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+        ndsLabNoteDetach(dobj, anim_joint, __builtin_return_address(0));
+#endif
     }
 #endif
 }

@@ -955,10 +955,18 @@ enum {
  * which is the trap that aborted Planet Zebes.
  *
  * Owned here rather than by a monster TU because every monster needs it and
- * duplicating the offset thirteen times is thirteen chances to mistype it. */
+ * duplicating the offset thirteen times is thirteen chances to mistype it.
+ *
+ * `off` is the source's own spelling, `&llITCommonDataFooDataStart`. There it
+ * is a linker symbol whose address IS the offset; here it is the address of
+ * the port variable that holds it, so the macro reads through it. Subtracting
+ * the address itself left every Pokemon's animation pointer outside the file
+ * (e.g. 0x001a8554), the event32 normalizer refused it, and all thirteen
+ * played no animation (2026-09-28). */
 #define NDS_IT_MONSTER_ANIM_BANK_START 0x13624
 #define itGetMonsterAnimNode(ip, off)                                          \
-    ((void *)(((uintptr_t)(ip)->attr->data - (intptr_t)(off)) +                 \
+    ((void *)(((uintptr_t)(ip)->attr->data -                                    \
+               (intptr_t)*(const uintptr_t *)(off)) +                           \
               (intptr_t)NDS_IT_MONSTER_ANIM_BANK_START))
 
 /* decomp it/itdisplay.h:13. An item held by an invisible or item-hidden

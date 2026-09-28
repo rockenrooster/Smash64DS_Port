@@ -262,7 +262,7 @@ void itBoxContainerSmashMakeEffect(Vec3f *pos)
         {
             gcAddGObjDisplay(effect_gobj, gcDrawDObjTreeForGObj, 11, GOBJ_PRIORITY_DEFAULT, ~0);
 
-            dl = (Gfx*) ((*(uintptr_t*) ((uintptr_t)*dITBoxItemDesc.p_file + *(uintptr_t*)dITBoxItemDesc.o_attributes) - (intptr_t)&llITCommonDataBoxDataStart) + (intptr_t)&llITCommonDataBoxEffectDisplayList);
+            dl = (Gfx*) ((*(uintptr_t*) ((uintptr_t)*dITBoxItemDesc.p_file + *(uintptr_t*)dITBoxItemDesc.o_attributes) - (intptr_t)llITCommonDataBoxDataStart) + (intptr_t)llITCommonDataBoxEffectDisplayList);
 
             for (i = 0; i < ITCONTAINER_EFFECT_COUNT; i++)
             {

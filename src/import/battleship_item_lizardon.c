@@ -358,7 +358,7 @@ void itLizardonAttackInitVars(GObj *item_gobj)
 
     if (ip->kind == nITKindLizardon)
     {
-        addr = (void*) ((uintptr_t)ip->attr->data - (intptr_t)&llITCommonDataLizardonDataStart);
+        addr = (void*) ((uintptr_t)ip->attr->data - (intptr_t)llITCommonDataLizardonDataStart);
 
         gcAddDObjAnimJoint(dobj, lbRelocGetFileData(AObjEvent32*, addr, &llITCommonDataLizardonAnimJoint), 0.0F);
         gcAddMObjMatAnimJoint(dobj->mobj, lbRelocGetFileData(AObjEvent32*, addr, &llITCommonDataLizardonMatAnimJoint), 0.0F);

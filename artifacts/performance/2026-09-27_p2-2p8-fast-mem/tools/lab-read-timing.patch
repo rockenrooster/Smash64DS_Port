@@ -1,0 +1,74 @@
+diff --git a/src/nds/nds_reloc_assets.c b/src/nds/nds_reloc_assets.c
+index b0a7deb5a4e..22f42b4d1c6 100644
+--- a/src/nds/nds_reloc_assets.c
++++ b/src/nds/nds_reloc_assets.c
+@@ -1132,6 +1132,10 @@ static int ndsRelocAnimDirLookup(u32 asset_id)
+     return -1;
+ }
+ 
++#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && NDS_R2_FTANIM_STREAM
++static void ndsRelocLabReadTimingTest(void);
++#endif
++
+ void ndsRelocAssetsInit(void)
+ {
+     if (nitroFSInit(NULL))
+@@ -1142,6 +1146,9 @@ void ndsRelocAssetsInit(void)
+         /* Its resident directory is read in 256 B chunks: do that on the
+          * boot stack, not inside the first frame that streams a clip. */
+         (void)ndsRelocAssetOpenFighterStream();
++#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
++        ndsRelocLabReadTimingTest();
++#endif
+ #endif
+ #if NDS_BOOT_DIAG_TEXT
+         /* P2-1L (11). gNdsRelocAssetInitResult is what every verifier reads;
+@@ -1763,6 +1770,48 @@ fail:
+ }
+ #endif
+ 
++#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && NDS_R2_FTANIM_STREAM
++/* LAB: where a clip read's ~30K ticks go. Eight reads of each shape from the
++ * BPS1 pack into a 32-byte-aligned buffer, timed on the ARM9 (tick units):
++ * [0] one aligned sector, [1] four aligned sectors, [2] 2,048 B at +16,
++ * [3] 16 B; min and sum for each. */
++volatile u32 gNdsLabReadTiming[4][2];
++static u8 sNdsLabReadBuffer[2048] __attribute__((aligned(32)));
++
++static void ndsRelocLabReadTimingTest(void)
++{
++    static const u32 offs[4] = { 0x1000u, 0x1000u, 0x1010u, 0x1000u };
++    static const u32 sizes[4] = { 512u, 2048u, 2048u, 16u };
++    u32 t;
++    u32 r;
++
++    if (sNdsFtAnimStreamState != 1u)
++    {
++        return;
++    }
++    for (t = 0u; t < 4u; t++)
++    {
++        gNdsLabReadTiming[t][0] = 0xffffffffu;
++        gNdsLabReadTiming[t][1] = 0u;
++        for (r = 0u; r < 8u; r++)
++        {
++            u32 start = (u32)tickGetCount();
++            u32 ticks;
++
++            (void)nitroromReadFile(sNdsFtAnimStreamRom, sNdsFtAnimStreamFileId,
++                                   offs[t] + (r * 4096u), sNdsLabReadBuffer,
++                                   sizes[t]);
++            ticks = (u32)tickGetCount() - start;
++            if (ticks < gNdsLabReadTiming[t][0])
++            {
++                gNdsLabReadTiming[t][0] = ticks;
++            }
++            gNdsLabReadTiming[t][1] += ticks;
++        }
++    }
++}
++#endif
++
+ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
+                                        u32 *out_size)
+ {
