@@ -57,3 +57,40 @@ UNPROVEN: Training Mode (1P) with compact maps -- lane 1 added a
 Training-only wallpaper region; no device probe exists for Training yet. The
 owner CSS reserve tool failed to open its GDB listener on four runner slots;
 the static image grew ~0.8 KB against a ~70 KB CSS reserve margin.
+
+## Banked: R1 retirement (legacy fighter executors out of P2 targets)
+
+Lane 3's P1-safe patch (`lane3_r1_p1safe_sources.patch`,
+`lane3_r1_p1safe_makefile.patch`, `lane3-r1-p1safe.md`) adds
+`NDS_FIGHTER_LEGACY_EXEC`: 0 for the P2 targets (four-CPU, shell, free-play,
+shell-loop, scene-walk, published), 1 everywhere else. At 0 the fighter draw
+path drops hierarchy mode 7, the per-root hardware executor and CPU triangle
+rasteriser behind it, and the resident raw-path corner tables; an `#error`
+refuses 0 outside the production fighter configuration. A poked lab mode 5-7
+takes the fail-closed reject instead of an executor.
+
+Image: gate ELF text -38,912 B, bss -9,984 B, heap start -48,896 B; lab ELF
+heap start -139,520 B.
+
+| Run | P50 | P95 | P99 | heap low-water | replay |
+|---|---|---|---|---|---|
+| Gate (`t2_gate` -> `t3r_gate`, same tree +/- R1) | 935,360 -> 934,592 | 1,294,208 -> **1,289,280** | 1,519,296 -> 1,461,568 | 337,612 -> 386,508 | IDENTICAL after one resync |
+
+Gate: native failures 0, compact map engaged, motion cache 329,824 -> 378,720 B,
+reads 224 -> 217.
+
+Lab (nine rosters, `t2_*` control vs `su_*` = R1 plus the lab-only status
+timers of `2026-09-28_p2-2p8-status-change`, which cost ~+2.7K at P50): replay
+IDENTICAL on all nine, heap low-water +47,872 to +48,048 B on every roster,
+motion cache +47,872 B (to the 458,752 B cap on Kirby x4 and Pikachu x4),
+reads down on every roster; P95 within -5.8K..+10.8K, i.e. the timers' band.
+
+Published configuration (`fourkind-argmax-r1.txt`): full match (2,043
+presents), Results reached, allocation overflow 0, relocation/storage failures
+0, general-heap low-water 168,504 -> 215,352 B.
+
+Note: the lab sweep ROM must be built with `NDS_P2_PIKACHU/YOSHI/NESS/PURIN=1`
+(the four-CPU target leaves them 0); without them every roster naming one of
+those kinds wedges melonDS before frame 98. Six lab rosters report native
+failures (36-268 a match) identically with and without R1 -- a pre-existing
+lab-roster defect, logged for its own investigation.

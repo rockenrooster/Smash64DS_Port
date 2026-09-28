@@ -288,6 +288,35 @@ extern volatile u32 gNdsG1SiteOccupancy;
 #error "NDS_RENDERER_BENCHMARK_MODE must be 0 through 4"
 #endif
 
+/* R1 retirement. NDS_FIGHTER_LEGACY_EXEC=1 keeps four fighter draw modes that
+ * only lab tooling can still select: hierarchy mode 7, the per-root hardware
+ * executor (modes 5-7) with the CPU triangle rasteriser behind it, and the
+ * resident raw-path tables (PackedCorners, DenseCorners, RunFirstCorner and the
+ * joint schedules). A build that draws fighters through the production owner
+ * (fast-run mode 8 or 9, no oracle, Task 56 primitive streams, HW light) never
+ * reaches them, so the P2 targets set 0 and the linker drops the code. Every
+ * other target and the host tools keep the default 1 and compile exactly as
+ * before. The guard turns a flag combination that would need one of the retired
+ * modes into a build error instead of a fighter with no executor. */
+#ifndef NDS_FIGHTER_LEGACY_EXEC
+#define NDS_FIGHTER_LEGACY_EXEC 1
+#endif
+
+#if (NDS_FIGHTER_LEGACY_EXEC != 0) && (NDS_FIGHTER_LEGACY_EXEC != 1)
+#error "NDS_FIGHTER_LEGACY_EXEC must be 0 or 1"
+#endif
+
+#if !NDS_FIGHTER_LEGACY_EXEC && \
+    (!NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL != 0) || \
+     !NDS_R2_FIGHTER_NO_ORACLE || !NDS_R2_FIGHTER_HW_LIGHT || \
+     (NDS_TASK56_FIGHTER_PRIMITIVES < 1) || NDS_R2_STRIP_ROUTE || \
+     NDS_RENDERER_SCREEN_SPACE_CENSUS || \
+     (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE) || \
+     (NDS_RENDERER_FAST_RUN_DEFAULT < \
+      NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION))
+#error "NDS_FIGHTER_LEGACY_EXEC=0 needs HW triangles, profile 0, NO_ORACLE, HW light, Task 56 streams (no strip route or census) and fast-run mode 8 or 9"
+#endif
+
 #define NDS_RENDERER_BLOCKER_NONE 0u
 #define NDS_RENDERER_BLOCKER_BAD_BRANCH 1u
 #define NDS_RENDERER_BLOCKER_TOO_DEEP 2u

@@ -766,9 +766,14 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     sNdsNativeFighterDenseColorSource,
 #endif
+#if NDS_FIGHTER_LEGACY_EXEC
     sNdsNativeFighterPackedCorners, NDS_FTR_COUNT(sNdsNativeFighterPackedCorners),
     sNdsNativeFighterRunFirstCorner,
     NDS_FTR_COUNT(sNdsNativeFighterRunFirstCorner),
+#else
+    /* R1 retired: no raw-path reader is compiled, so these stay unlinked. */
+    NULL, 0u, NULL, 0u,
+#endif
     sNdsNativeFighterRunFirstUnique,
     sNdsNativeFighterRunUniqueCount,
     sNdsNativeFighterRunUniqueDense,
@@ -803,10 +808,14 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     sNdsNativeFighterDenseColorSourceLow,
 #endif
+#if NDS_FIGHTER_LEGACY_EXEC
     sNdsNativeFighterPackedCornersLow,
     NDS_FTR_COUNT(sNdsNativeFighterPackedCornersLow),
     sNdsNativeFighterRunFirstCornerLow,
     NDS_FTR_COUNT(sNdsNativeFighterRunFirstCornerLow),
+#else
+    NULL, 0u, NULL, 0u,
+#endif
     sNdsNativeFighterRunFirstUniqueLow,
     sNdsNativeFighterRunUniqueCountLow,
     sNdsNativeFighterRunUniqueDenseLow,
