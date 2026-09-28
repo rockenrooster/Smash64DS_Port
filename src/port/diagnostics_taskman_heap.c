@@ -15,6 +15,7 @@ typedef struct NDSNewlibMallinfo
     u32 keepcost;
 } NDSNewlibMallinfo;
 extern NDSNewlibMallinfo mallinfo(void);
+extern int malloc_trim(size_t pad);
 
 /* 2026-09-14 build-p2-fidelity-02 with the shipped 0xA000 reserve reported
  * arena 1,380,096 B, BattleShip general-heap low-water 118,752 B and the old
@@ -33,6 +34,17 @@ extern NDSNewlibMallinfo mallinfo(void);
 #define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0xA000u
 #endif
 #define NDS_TASKMAN_LIBC_RUNTIME_MARGIN 0x1000u
+/* libc's top chunk after the arena is taken: the reserve plus the most the
+ * old chooser could leave there by accident (a trimmed top of up to one page
+ * plus 16 B, and up to one page of sbrk rounding past the request). It is a
+ * fixed size, so the arena gets everything else in every layout, and libc
+ * never starts with a smaller top chunk than the old chooser could give it.
+ * What libc loses is the unclaimed space past the break. The four-CPU lab
+ * never reached it: the top-chunk minimum was 13,464 B or more on the six
+ * stages measured. A 41,720 B top (the reserve plus 760) did fail: Dream Land's
+ * fighter texture admission stopped at its 16 KiB libc floor, and the
+ * on-demand path then ran libnds out of heap. */
+#define NDS_TASKMAN_LIBC_TOP_BYTES (NDS_TASKMAN_LIBC_RUNTIME_RESERVE + 0x2100u)
 
 /* Slack requested from `calloc` so the arena base can be rounded UP to the
  * cache-set period without running past the block. It must be at least the
@@ -46,6 +58,8 @@ extern NDSNewlibMallinfo mallinfo(void);
  * that fit (0 when the page boundary was already the ceiling). Read by the
  * four-fighter stress arm beside the chosen size and the page fail count. */
 __attribute__((used)) volatile u32 gNdsTaskmanArenaRefineBytes;
+/* newlib's top chunk just before the pre-probe trim below. */
+__attribute__((used)) volatile u32 gNdsTaskmanArenaPreTrimTop;
 __attribute__((used)) volatile u32 gNdsTaskmanLibcRuntimeHighWater;
 __attribute__((used)) volatile u32 gNdsTaskmanLibcTopChunkMin;
 static u32 sNdsTaskmanLibcInitialTop;
@@ -156,6 +170,26 @@ static u8 *ndsTaskmanArenaBytes(void)
          * even when only a few pages were unavailable. Keep page granularity
          * below 0x130000 too: the expanded campaign used to fall directly to
          * 0xc0000, discarding usable pages exactly where RAM is tightest. */
+        /* Probe from a trimmed break, then give libc a fixed top chunk.
+         *
+         * newlib's malloc_extend_top asks sbrk for the whole request past the
+         * break and does not count the free top chunk in front of it, so each
+         * probe used to fail early by whatever top chunk boot left (25,088 B in
+         * the four-CPU lab layout). The first probe that fit was then freed,
+         * which trims the top, and the kept block landed under a break that
+         * could have taken more: 20,480 B stayed past it, unclaimed. How much
+         * depended on layout. 1,888 B of .bss cost that arena 8,192 B, which
+         * decided whether Jungle's stage GX body (28,060 B) and Dream Land's
+         * stage world cache (4,608 B) cleared their keep-free floors: STG +66K
+         * and +61K median when they did not.
+         *
+         * Trimming first makes the search see the break the kept block uses.
+         * The shrink below then leaves libc exactly NDS_TASKMAN_LIBC_TOP_BYTES,
+         * not the reserve plus up to 8 KiB of layout-dependent rounding. The
+         * arena tracks .bss byte for byte, less at most one 4 KiB sbrk page.
+         * Evidence: artifacts/performance/2026-09-28_p2-2p8-stage-heap-cliff/. */
+        gNdsTaskmanArenaPreTrimTop = mallinfo().keepcost;
+        (void)malloc_trim(0u);
         for (arena_size = NDS_TASKMAN_ARENA_SIZE;
              arena_size >= 0x40000u;
              arena_size -= 0x1000u)
@@ -198,8 +232,13 @@ static u8 *ndsTaskmanArenaBytes(void)
                     gNdsTaskmanArenaAllocFailCount++;
                     continue;
                 }
-                size_t persistent_size = arena_size -
-                    NDS_TASKMAN_LIBC_RUNTIME_RESERVE;
+                /* Whatever the probe left in the top chunk counts toward
+                 * libc's share; the arena returns only the rest of it. */
+                u32 libc_top = mallinfo().keepcost;
+                size_t give = (libc_top < NDS_TASKMAN_LIBC_TOP_BYTES) ?
+                    (((size_t)(NDS_TASKMAN_LIBC_TOP_BYTES - libc_top) + 0xffu) &
+                     ~(size_t)0xffu) : 0u;
+                size_t persistent_size = arena_size - give;
                 void *resized = realloc(
                     sNdsTaskmanArenaAlloc, persistent_size + NDS_TASKMAN_ARENA_ALIGN_SLACK);
 
