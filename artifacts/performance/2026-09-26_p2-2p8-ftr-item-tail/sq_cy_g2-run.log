@@ -1,0 +1,18 @@
+Exception: D:\Stuff\DevFolder\Smash64DS_Port\scripts\sample-tick-hud-buckets.ps1:864
+Line |
+ 864 |          throw "Tick-HUD GDB run failed: $failedTail`n$(Get-Content $g .
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Tick-HUD GDB run failed: 0xfffffffc in ?? () Breakpoint 1 at 0x20620b4: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 195. Breakpoint 2 at 0x209f7f8: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_kirby_hat_residency.c, line 15. Breakpoint 3 at 0x201c36c: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_storage.c, line 86. Breakpoint 4 at 0x201986c: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_bgm.c, line 928. Breakpoint 5 at 0x1fffc88: file
+     | /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+     | Breakpoint 6 at 0x200c0e8: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/main.c, line 96.  Breakpoint 6, main () at
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/nds/main.c:111 111     ndsP2Arm9WramInit(); BOOTSETGLOBAL=gNdsLabFourCpuGkind,2
+     | BOOTSETGLOBAL=gNdsLabFourCpuKinds,34080263 Breakpoint 7 at 0x1ffed40: file
+     | D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 492.  warning: could not convert
+     | 'ndsSyMallocOverflowHalt' from the host encoding (CP1252) to UTF-32. This normally should not happen, please file a bug
+     | report.
+
+RUN_EXIT=1 elapsed=253.1363287 extras=629 dropped=0 rom=3D062A84A4404E404D62C9751012D1206C9D909CF09DCD78E8365F56735403FD
