@@ -114,3 +114,26 @@ Published configuration (`smash64ds-p2-shell-freeplay-hwtri`, argmax roster
 Captain/Link/Pikachu/Kirby, menu walk, `fourkind-argmax-elastic.txt`): full
 match (2,043 presents), Results reached, allocation overflow 0, relocation
 and storage failures 0, general-heap low-water 59,048 B (true free).
+
+## 5. Lean model events per frame (lab columns)
+
+Lab-only columns (`NDS_LAB_FOURCPU_SWEEP`, no SRC split): SINT carries the
+frame's non-materializing lean event ticks, SCAT the materializing ones
+(`src/port/renderer_fighter_lean.c`). Runs `lv_*` on the full-content lab ROM
+(elastic cache on):
+
+| Run | P95 | events, top 5% / mid | materialize, top 5% | events x0.5 | both x0.5 | events x0 |
+|---|---|---|---|---|---|---|
+| DL (`lv_def`) | 1,330,880 | 11.8K / 2.0K | 174.7K | -2.9K | -46.2K | -15.2K |
+| Saffron (`lv_fp_g7`) | 1,583,104 | 13.1K / 3.9K | 94.0K | -4.7K | -25.2K | -7.2K |
+| Yoshi's Island (`lv_lk_g5`) | 1,474,624 | 16.4K / 5.2K | 52.1K | -0.3K | -16.3K | -9.2K |
+| Jungle (`lv_cy_g2`) | 1,462,656 | 25.1K / 1.6K | 134.6K | -20.2K | -37.9K | -29.6K |
+| Kirby x4 DL (`lv_kk_g6`) | 1,204,160 | 9.5K / 2.7K | 19.9K | -1.6K | -7.1K | -3.8K |
+| Pikachu x4 Zebes (`lv_pp_g3`) | 1,427,008 | 14.7K / 4.0K | 48.9K | -2.2K | -7.5K | -7.5K |
+
+The non-materializing event path is not a P95 lever. Materializations are:
+on the full-content image the lean spare buffers are refused (DL: 37 times),
+so a slot re-materializes lists it held moments earlier. Fewer rebuilds need
+list storage (RAM, or a tighter per-slot packing than two 4,420-word halves
+for lists of at most ~2,600 words); cheaper builds need the materializer's
+cold path (~330K ticks, texture resolve, corners, runs) cut.

@@ -1060,6 +1060,7 @@ ndsFtrLeanEvent(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst, u32 kind,
     u32 rr_key;
     u32 i;
     u32 row = slot & 3u;        /* counter row (NDS_FTR_LEAN_KINDS) */
+    u32 materialized = 0u;
     u32 t0 = cpuGetTiming();
 #if NDS_FTR_LEAN_ATTR_LIVE
     u32 ev_mark = t0;
@@ -1333,6 +1334,7 @@ rows:
         {
             return reason;
         }
+        materialized = 1u;
         code = ndsFtrLeanLearnVariant(slot, entry);
         if (code != NDS_FTR_LEAN_ENTRY_NONE)
         {
@@ -1399,10 +1401,24 @@ listed:
 
         gNdsFtrLean.event_ticks += ticks;
         gNdsFtrLean.k_event_ticks[row] += ticks;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP &&     NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+        /* LAB: this frame's lean event ticks, in two columns the SRC split
+         * leaves unused: SCAT for events that materialized, SINT for the
+         * rest. */
+        if (materialized != 0u)
+        {
+            gNdsTickHudSrcCatchTicks += ticks;
+        }
+        else
+        {
+            gNdsTickHudSrcInterruptTicks += ticks;
+        }
+#endif
     }
 #endif
     (void)t0;
     (void)row;
+    (void)materialized;
     return 0u;
 }
 
