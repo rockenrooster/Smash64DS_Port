@@ -9198,3 +9198,19 @@ writes. The native actor camera matrices are memoised per camera state, and a
 fully evaporated cloud skips its matrix build. Same-ROM DK/Samus/Link/Kirby on
 Yoshi's Island: P50/P95 1,196K/1,606K -> 1,176K/1,587K; replay identical.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 66.
+
+## 2026-09-28 — Native actors: texture memo
+
+**BANKED (Yoshi's Island; Castle, Link rosters).** The Yoshi's Island clouds,
+Lakitu, Bronto and Link's bomb re-resolved their fixed textures through the
+full resolver on every draw. They now use the owner texture memo. Same-ROM on
+Yoshi's Island: P50/P95 1,183K/1,607K -> 1,171K/1,599K; replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 67.
+
+## 2026-09-28 — S1 fixed: event32 ledger sized for the roster
+
+**BUG FIX (any roster, any stage).** The frame-79 entry crash was the event32
+normalize ledger overflowing: per-stage bounds from a 09-09 census, entry
+clips of 214-758 commands per fighter. The ledger now adds the roster's entry
+clips to a measured stage part, and a refused script binds NULL. Gate
+unchanged (limit 3,072). Receipt: `artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/`.

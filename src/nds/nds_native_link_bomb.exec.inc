@@ -19,6 +19,10 @@
  * carries its own prim/env words and overrides it, exactly as the source does. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo):
+ * the fixed texture re-resolved through the full resolver every draw. */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_linkbomb[1];
+
 static sb32 ndsNativeLinkBombEmit(
     const s16 *verts, const u32 *colors,
     const NDSRendererConfig *config, NDSRendererStats *stats,
@@ -48,7 +52,9 @@ static sb32 ndsNativeLinkBombEmit(
 
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_linkbomb[0], 0u, stats, config,
+            state) == FALSE)
     {
         gNdsLinkBombSubmitStep = 3u;
         return FALSE;

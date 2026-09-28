@@ -25,6 +25,10 @@
 #ifndef NDS_NATIVE_ACTOR_EF_BRONTO_EXEC_INC
 #define NDS_NATIVE_ACTOR_EF_BRONTO_EXEC_INC
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo):
+ * the fixed texture re-resolved through the full resolver every draw. */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_efbronto[1];
+
 #include <nds/nds_native_actor_ef_bronto.h>
 
 /* One Bronto instance: 1 drawable x 2 source tris = 2 live triangles.
@@ -117,7 +121,9 @@ sb32 ndsRendererSubmitNativeEfBronto(const void *packet_base,
     ndsNativeActorEfBrontoSetupTail(stats, asset_base);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, &config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_efbronto[0], 0u, stats, &config,
+            &state) == FALSE)
     {
         return FALSE;
     }

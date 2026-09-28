@@ -1194,6 +1194,10 @@ __attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundGKind = 0xffffffffu;
 __attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundLimit;
 __attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundBytes;
 __attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundApplyCount;
+/* The roster term of the VS bound (0 before the first VS battle). */
+__attribute__((used)) volatile u32 gNdsAObjEvent32RosterNeed;
+/* Scripts whose normalization failed; their joints were detached. */
+__attribute__((used)) volatile u32 gNdsAObjEvent32DetachCount;
 
 /* Static event32 command census + conservative 901-command common-shell and
  * 512-command match corpus. Dream Land deliberately keeps 3072: its measured
@@ -1230,6 +1234,95 @@ static u32 ndsAObjEvent32CapacityForGKind(u32 gkind, sb32 *stage_bound)
     }
 }
 
+/* P2-2p8 S1 (2026-09-28): THE BOUNDS ABOVE COVER THE ROSTERS THEY WERE
+ * MEASURED ON, NOT EVERY ROSTER. Each fighter's entry motion is an event32
+ * clip, and Pikachu's (758 commands), Yoshi's (728), Captain's (599) and
+ * Link's (557) are two to three times Kirby's (214). Ness/Yoshi/Pikachu/Purin
+ * reached 4,041 on Yoshi's Island against its 3,328 bound; the 19 scripts
+ * that no longer fit kept their joints' previous event32 pointers, into the
+ * figatree buffer the new motion had just overwritten, and the next parse
+ * read a float as a command pointer (the frame-79 crash). So a VS ledger
+ * also covers the roster that is actually in the match:
+ *
+ *   limit = max(stage bound, stage part + sum of the players' entry clips
+ *               + margin)
+ *
+ * Stage part is the largest measured high-water less its roster's clip sum,
+ * over four rosters (Ness/Yoshi/Pikachu/Purin, Pikachu/Yoshi/Captain/Link,
+ * DK/Samus/Link/Kirby, Mario/Fox/Samus/Captain) on all nine stages
+ * (artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/). The stress
+ * roster itself overflowed the old bounds on Castle, Sector Z (the first S1
+ * witness), Jungle and Hyrule. */
+#define NDS_AOBJ_EVENT32_ROSTER_MARGIN 384u
+static const u16 sNdsAObjEvent32EntryClipCommands[nFTKindPlayableEnd + 1] = {
+    378u, /* Mario 0x279 */
+    318u, /* Fox 0x309 */
+    268u, /* Donkey 0x3A5 */
+    508u, /* Samus 0x443 */
+    378u, /* Luigi (Mario's pipe entry) */
+    557u, /* Link 0x4DE */
+    728u, /* Yoshi 0x7A2 */
+    599u, /* Captain 0x670 */
+    214u, /* Kirby 0x585 */
+    758u, /* Pikachu 0x821 */
+    498u, /* Purin 0x5E2 */
+    373u, /* Ness 0x70B */
+};
+
+static u32 ndsAObjEvent32StagePart(u32 gkind)
+{
+    switch (gkind)
+    {
+    case nGRKindCastle:
+        return 978u;
+    case nGRKindSector:
+        return 1427u;
+    case nGRKindJungle:
+        return 1095u;
+    case nGRKindZebes:
+        return 3116u;
+    case nGRKindHyrule:
+        return 72u;
+    case nGRKindYoster:
+        return 1979u;
+    case nGRKindPupupu:
+        return 205u;
+    case nGRKindYamabuki:
+        return 1245u;
+    case nGRKindInishie:
+        return 1069u;
+    default:
+        return 0u;
+    }
+}
+
+static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
+{
+    u32 need = ndsAObjEvent32StagePart(gkind) + NDS_AOBJ_EVENT32_ROSTER_MARGIN;
+    u32 i;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return limit;
+    }
+    for (i = 0u; i < GMCOMMON_PLAYERS_MAX; i++)
+    {
+        const SCPlayerData *player = &gSCManagerBattleState->players[i];
+
+        if ((player->pkind != nFTPlayerKindNot) &&
+            (player->fkind <= nFTKindPlayableEnd))
+        {
+            need += sNdsAObjEvent32EntryClipCommands[player->fkind];
+        }
+    }
+    if (need > (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u))
+    {
+        need = NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u;
+    }
+    gNdsAObjEvent32RosterNeed = need;
+    return (need > limit) ? need : limit;
+}
+
 static u32 ndsAObjEvent32HashSlotsForLimit(u32 limit)
 {
     u32 slots = 1u;
@@ -1246,10 +1339,35 @@ static u32 ndsAObjEvent32HashSlotsForLimit(u32 limit)
  * and hash index under one taskman lifetime and avoids partial-allocation
  * states. Non-VS scenes pass 0xffffffff and retain the conservative 5120
  * default; only a recognized VS-stage gkind publishes Applied=1. */
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB: a VS stage's ledger limit, forced (0 = the per-stage bound). Sizes the
+ * bound against rosters the static census did not cover. */
+volatile u32 gNdsLabAObjEvent32CapacityOverride
+    __attribute__((used, section(".data"))) = 0u;
+#endif
+
+/* A VS stage's bound, raised to cover the roster in the match. */
+static u32 ndsAObjEvent32VSLimit(u32 gkind, sb32 *stage_bound)
+{
+    u32 limit = ndsAObjEvent32CapacityForGKind(gkind, stage_bound);
+
+    if (*stage_bound == FALSE)
+    {
+        return limit;
+    }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    if (gNdsLabAObjEvent32CapacityOverride != 0u)
+    {
+        return gNdsLabAObjEvent32CapacityOverride;
+    }
+#endif
+    return ndsAObjEvent32RosterLimit(gkind, limit);
+}
+
 sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
 {
     sb32 stage_bound;
-    u32 limit = ndsAObjEvent32CapacityForGKind(gkind, &stage_bound);
+    u32 limit = ndsAObjEvent32VSLimit(gkind, &stage_bound);
     u32 hash_slots = ndsAObjEvent32HashSlotsForLimit(limit);
     u32 ledger_bytes = limit * (u32)sizeof(NDSAObjEvent32Normalized);
     u32 sig_bytes = limit * (u32)sizeof(u8);
@@ -2834,6 +2952,11 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
         ndsBaseGcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
         gNdsR2AddDObjBaseTicks += cpuGetTiming() - phase;
     }
+    else
+    {
+        ndsBaseGcAddDObjAnimJoint(dobj, NULL, anim_frame);
+        gNdsAObjEvent32DetachCount++;
+    }
     {
         u32 total = cpuGetTiming() - enter;
 
@@ -2851,6 +2974,15 @@ void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint,
     {
         ndsBaseGcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
     }
+    else
+    {
+        /* S1: a refused script must not leave the joint's previous one in
+         * place. For a fighter that pointer is into the figatree buffer the
+         * new motion just overwrote; parsing it read a float as a command
+         * pointer. The joint plays no script instead. */
+        ndsBaseGcAddDObjAnimJoint(dobj, NULL, anim_frame);
+        gNdsAObjEvent32DetachCount++;
+    }
 #endif
 }
 
@@ -2861,6 +2993,11 @@ void gcAddMObjMatAnimJoint(MObj *mobj, AObjEvent32 *matanim_joint,
             matanim_joint, nNDSAObjEvent32OwnerMObj) != FALSE)
     {
         ndsBaseGcAddMObjMatAnimJoint(mobj, matanim_joint, anim_frame);
+    }
+    else
+    {
+        ndsBaseGcAddMObjMatAnimJoint(mobj, NULL, anim_frame);
+        gNdsAObjEvent32DetachCount++;
     }
 }
 

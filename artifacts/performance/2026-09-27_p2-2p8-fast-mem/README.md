@@ -2090,3 +2090,20 @@ copy of the player with the test. No other GObj runs the test, and the ITCM
 player shrank by 120 B. Re-measured on that ROM (`yoc0_g5`/`yoc1_g5`, whose
 lab joint witness adds ~100K to both arms): paired median -24.6K, P95
 1,717,824 -> 1,689,216, replay IDENTICAL.
+
+## 67. Owner texture memo for the native actors
+
+Yoshi's Island's cloud submit bound its one texture through the full resolver
+on every draw (~9.2K cycles a call, three clouds a frame, 12.5K ticks). The
+clouds, Lakitu (three epochs), Bronto and Link's bomb now bind through
+`ndsRendererHardwareBindTextureOwnerMemo` (section 64), one memo per bind site.
+
+Same-ROM A/B on Yoshi's Island, DK/Samus/Link/Kirby (`yom0_g5`/`yom1_g5`,
+word `gNdsRendererOwnerTexMemoEnable`, which also switches the item owners'
+memos): P50/P95 1,183,360/1,606,976 -> 1,171,200/1,599,424; paired median
+-11.7K (1,532 of 1,972 frames better), MISC -10.9K. Memo hits 3,104, fills
+324, stale 0. Replay IDENTICAL.
+
+An exact affine multiply for the cloud matrices was tried beside it and
+dropped: an earlier run today had already removed all 27 cloud multiplies for
+-0.06K (the loop is cold-code misses).

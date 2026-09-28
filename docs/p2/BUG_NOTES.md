@@ -6931,6 +6931,17 @@ r54-versus-current listen.
 
 ## S1 Sector Z: a slot-4 entry data-aborts at frame 79 (four-CPU sweep, 2026-09-27)
 
+**RESOLVED 2026-09-28** (receipt `2026-09-28_p2-2p8-s1-event32-ledger`): the
+event32 ledger overflowed. Each VS stage fixed its size from a 09-09 census,
+and the fighters' entry clips (event32, 214-758 commands each) outgrew it:
+DK/Samus/Link/Kirby needed 2,752 on Sector Z against 2,560, and
+Ness/Yoshi/Pikachu/Purin 4,041 on Yoshi's Island against 3,328. A refused
+script left the joint's previous `event32` pointing into the overwritten
+figatree buffer. The ledger now adds the roster's entry clips to a measured
+stage part, and a refused script binds NULL. All eight crash/overflow
+configurations run the full match with 0 normalize failures; replay is
+identical to the forced-capacity runs.
+
 Found by the any-stage sweep (receipt `2026-09-27_p2-2p8-fast-mem` section 51)
 on the sweep ROM (`NDS_LAB_FOURCPU_SWEEP=1`, all stages admitted, full
 NitroFS). The crash is NOT from the 09-27 WRAM work: the `NDS_P2_ARM9_WRAM=0`
@@ -6993,3 +7004,17 @@ flags), with Ness/Yoshi/Pikachu/Purin on Mushroom Kingdom (`nf_g8`).
 It is a native-coverage gap against "native failures 0", not a performance
 item. Next: confirm which item kind it is, and check whether the pillar is
 drawn at all.
+
+## S2 Zebes: a held item's attach joint faults at frame 1920 (four-CPU lab, 2026-09-28)
+
+Found while sizing the event32 ledger (S1): Ness/Yoshi/Pikachu/Purin on
+Planet Zebes, ledger forced to 5,120 so S1 cannot fire (`ev_l_g3`).
+- Data abort in `ndsRendererAdapterBuildItemAttachMtx`
+  (renderer_adapter_matrix.c:3057), frame 1920 of the match.
+- The item's attach DObj is `0x03007F78`: the ARM9-WRAM TopN slot the
+  fourth fighter received (`ndsGcDonateFighterObjs`), so the item draws
+  against a fighter joint whose FTParts no longer holds.
+- Only this run showed it; the other 34 sizing runs completed.
+
+Next: find which item and holder, and whether the TopN slot was re-donated
+or ejected while the item still pointed at it.

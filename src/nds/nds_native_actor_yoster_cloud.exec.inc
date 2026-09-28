@@ -24,6 +24,10 @@
 
 #include <nds/nds_native_actor_yoster_cloud.h>
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo):
+ * the fixed texture re-resolved through the full resolver every draw. */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_yostercloud[1];
+
 /* One cloud instance: 3 drawables x 2 shared triangles = 6 live triangles
  * when solid. prim_alpha_* are the drawables' live MObj prim alphas
  * (mobj->sub.primcolor.s.a, the exact field objdisplay.c submits). */
@@ -120,7 +124,9 @@ sb32 ndsRendererSubmitNativeYosterCloud(const void *packet_base,
     }
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, &config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_yostercloud[0], 0u, stats, &config,
+            &state) == FALSE)
     {
         return FALSE;
     }

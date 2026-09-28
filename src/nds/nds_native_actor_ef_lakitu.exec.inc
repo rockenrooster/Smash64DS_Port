@@ -57,6 +57,10 @@
 #ifndef NDS_NATIVE_ACTOR_EF_LAKITU_EXEC_INC
 #define NDS_NATIVE_ACTOR_EF_LAKITU_EXEC_INC
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo):
+ * the fixed texture re-resolved through the full resolver every draw. */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_eflakitu[3];
+
 #include <nds/nds_native_actor_ef_lakitu.h>
 
 /* One Lakitu instance: 3 drawables x 2 source tris = 6 live triangles. */
@@ -229,8 +233,9 @@ sb32 ndsRendererSubmitNativeEfLakitu(const void *packet_base,
                 ndsNativeActorEfLakituSetupEpoch2(stats, asset_base);
             }
             ndsRendererHardwareEndBatch();
-            if (ndsRendererHardwareBindTexture(stats, &config, &state) ==
-                FALSE)
+            if (ndsRendererHardwareBindTextureOwnerMemo(
+                    &sNdsNativeOwnerTexMemo_eflakitu[(d < 3u) ? d : 0u], d,
+                    stats, &config, &state) == FALSE)
             {
                 return FALSE;
             }
