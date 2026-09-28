@@ -6977,3 +6977,19 @@ More witnesses (2026-09-28, receipt `2026-09-27_p2-2p8-fast-mem` section 61):
   O2R path (`ndsRelocAssetLoadIntoZeroedHeap`, then byte swap, raw-cache
   store and finalize), never through BPS1. On Dream Land the four entry
   loads land at frames 51-144.
+
+## N1 Ness item DL from NessSpecial3 has no native program (four-CPU lab, 2026-09-28)
+
+Found in the full-roster lab (the sweep ROM plus the Ness/Yoshi/Pikachu/Purin
+flags), with Ness/Yoshi/Pikachu/Purin on Mushroom Kingdom (`nf_g8`).
+- `gNdsRendererNativeFailure` counts 90, and all 90 have one cause.
+- The cause: domain STAGE, scene 22, identity `0x03f50150`, status 8
+  (gkind), reason 1 (NO_PROGRAM), root offset 2160. First seen at frame 1906.
+- Decoded, the identity is an Item GObj (kind 1013) drawing a DL from asset
+  336, `NessSpecial3`. The likely source is the PK Fire pillar item.
+- Dream Land with the same roster counts 50. DK/Samus/Link/Kirby count 0.
+- Recorded by `ndsStageRejectNativeRender` (renderer_adapter_stage.c).
+
+It is a native-coverage gap against "native failures 0", not a performance
+item. Next: confirm which item kind it is, and check whether the pillar is
+drawn at all.
