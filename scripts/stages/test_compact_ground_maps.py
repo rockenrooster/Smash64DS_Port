@@ -523,6 +523,7 @@ _Static_assert(sizeof(MPGroundData) == 0xA8, "MPGroundData size");
 static NDSRelocLoadedFile sNdsRelocLoadedFiles[32];
 static u32 sNdsRelocLoadedFileCount;
 static u32 sNdsRelocLoadedFilesEpoch = 1u;
+static u32 sNdsRelocSceneGeneration = 1u;
 
 static struct { u8 scene_curr, scene_prev; } gSCManagerSceneData;
 enum { nSCKindOther = 3, nSCKind1PTrainingMode = 100 };
@@ -579,6 +580,9 @@ static NDSRelocLoadedFile *load_file(const O2RFile *o, u32 asset_id)
 {
     NDSRelocLoadedFile *lf = &sNdsRelocLoadedFiles[sNdsRelocLoadedFileCount++];
     u32 aligned = (o->size + 15u) & ~15u;
+    /* Mirrors the runtime registration's drop of the compact-map record. */
+    if (sNdsRelocCompactGroundMapActive.map_asset_id == asset_id)
+        sNdsRelocCompactGroundMapActive.map_asset_id = 0u;
     u8 *raw = (u8 *)calloc(aligned + 16u, 1);
     u8 *data = (u8 *)(((uintptr_t)raw + 15u) & ~(uintptr_t)15u);
     u32 i, cursor, index = 0;

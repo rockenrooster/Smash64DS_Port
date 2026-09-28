@@ -6116,6 +6116,19 @@ static const struct {
 __attribute__((used)) volatile u32 gNdsRelocCompactGroundMapCount;
 __attribute__((used)) volatile u32 gNdsRelocCompactGroundMapKeyCount;
 
+/* The scene's compact map, recorded once when its stub Sprite is normalized:
+ * the wallpaper key is asked every frame and the stage packet's map size on
+ * every revalidation, and both used to scan the loaded-file table to find
+ * what this record already says. Valid for the scene generation it was taken
+ * in; anything it does not match takes the scanning path below. */
+static struct
+{
+    u32 scene_generation;
+    u32 map_asset_id;
+    u32 bitmap_offset;
+    u32 wallpaper_asset_id;
+} sNdsRelocCompactGroundMapActive;
+
 static __attribute__((noinline)) s32 ndsRelocCompactGroundMapIndex(u32 asset_id)
 {
     u32 i;
@@ -6160,6 +6173,12 @@ static __attribute__((noinline)) u32 ndsRelocCompactGroundMapExpectedSize(
 {
     const NDSRelocLoadedFile *loaded;
 
+    if ((sNdsRelocCompactGroundMapActive.map_asset_id == asset_id) &&
+        (sNdsRelocCompactGroundMapActive.scene_generation ==
+         sNdsRelocSceneGeneration))
+    {
+        return source_size + NDS_RELOC_COMPACT_GROUND_MAP_GROWTH;
+    }
     if (ndsRelocCompactGroundMapIndex(asset_id) < 0)
     {
         return source_size;
@@ -6178,10 +6197,21 @@ static __attribute__((noinline)) u32 ndsRelocCompactGroundMapExpectedSize(
 static __attribute__((noinline)) s32 ndsRelocCompactGroundMapWallpaperKey(
     u32 *asset_id, u32 *bitmap_offset)
 {
-    s32 index = ndsRelocCompactGroundMapIndex(*asset_id);
+    s32 index;
     const NDSRelocLoadedFile *loaded;
     const Sprite *sprite;
 
+    if ((sNdsRelocCompactGroundMapActive.map_asset_id == *asset_id) &&
+        (sNdsRelocCompactGroundMapActive.bitmap_offset == *bitmap_offset) &&
+        (sNdsRelocCompactGroundMapActive.scene_generation ==
+         sNdsRelocSceneGeneration))
+    {
+        *asset_id = sNdsRelocCompactGroundMapActive.wallpaper_asset_id;
+        *bitmap_offset = NDS_RELOC_COMPACT_WALLPAPER_BITMAP;
+        gNdsRelocCompactGroundMapKeyCount++;
+        return TRUE;
+    }
+    index = ndsRelocCompactGroundMapIndex(*asset_id);
     if (index < 0)
     {
         return FALSE;
@@ -6778,6 +6808,13 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     {
         loaded = &sNdsRelocLoadedFiles[sNdsRelocLoadedFileCount++];
     }
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+    /* A re-registered map is compact again only once its stub is normalized. */
+    if (sNdsRelocCompactGroundMapActive.map_asset_id == asset_id)
+    {
+        sNdsRelocCompactGroundMapActive.map_asset_id = 0u;
+    }
+#endif
 
 #if NDS_TASK44_STAGE_STEADY
     /* Registration owns every new or replacement stage data pointer. */
@@ -10151,6 +10188,7 @@ static __attribute__((noinline)) s32 ndsRelocNormalizeCompactGroundMapSprite(
     NDSRelocLoadedFile *loaded)
 {
     Sprite *sprite = ndsRelocCompactGroundMapSprite(loaded);
+    s32 index;
 
     if (sprite == NULL)
     {
@@ -10165,6 +10203,19 @@ static __attribute__((noinline)) s32 ndsRelocNormalizeCompactGroundMapSprite(
                                             G_IM_SIZ_16b);
         (void)ndsRelocNormalizeSpriteBitmapTable(loaded, sprite, 44u);
         gNdsRelocCompactGroundMapCount++;
+    }
+    index = ndsRelocCompactGroundMapIndex(loaded->asset_id);
+    if ((index >= 0) &&
+        (ndsRelocPointerRangeInLoadedFile(loaded, sprite->bitmap,
+                                          sizeof(Bitmap)) != FALSE))
+    {
+        sNdsRelocCompactGroundMapActive.scene_generation =
+            sNdsRelocSceneGeneration;
+        sNdsRelocCompactGroundMapActive.map_asset_id = loaded->asset_id;
+        sNdsRelocCompactGroundMapActive.bitmap_offset =
+            (u32)((const u8 *)sprite->bitmap - (const u8 *)loaded->data);
+        sNdsRelocCompactGroundMapActive.wallpaper_asset_id =
+            sNdsRelocCompactGroundMaps[index].wallpaper_asset_id;
     }
     return TRUE;
 }
@@ -13231,7 +13282,10 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * entry count is a HARD refusal in both store paths -- ndsR2AnimWarmLoadOne
  * counts it as a warm failure and the miss path never fills -- so at 64 the last
  * 21 animations of the match could not be cached whatever the arena had left. */
-#define NDS_R2_ANIM_CACHE_ENTRIES 128u
+/* 256 since the elastic cache (2026-09-28): with the compact ground maps it
+ * reaches its byte cap on most rosters, and at ~2.1 KB a clip 128 entries
+ * would refuse stores long before the bytes ran out. */
+#define NDS_R2_ANIM_CACHE_ENTRIES 256u
 
 /* THIS CACHE MUST NEVER CALL syTaskmanMalloc, AND THAT IS NOT A STYLE RULE.
  *
@@ -13987,6 +14041,9 @@ __attribute__((used)) volatile u32 gNdsR2AnimCacheElasticDrops;
 #define NDS_R2_ANIM_CACHE_ELASTIC_FLOOR 12288u
 #define NDS_R2_ANIM_CACHE_ELASTIC_SLACK 8192u
 #define NDS_R2_ANIM_CACHE_ELASTIC_MIN 4096u
+/* The elastic block's own cap: it gives bytes back on demand, so it is not
+ * bounded by the static reservation's 258,048. */
+#define NDS_R2_ANIM_CACHE_ELASTIC_MAX_BYTES (448u * 1024u)
 
 void ndsTaskmanElasticRegister(void *base, u8 *(*yield)(u8 *need_top));
 static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size);
@@ -14041,9 +14098,9 @@ static sb32 ndsR2AnimCacheArenaCarveElastic(size_t available,
     }
     bytes = (u32)(available - fighter_bytes - NDS_R2_ANIM_CACHE_ELASTIC_FLOOR -
                   32u);
-    if (bytes > (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES)
+    if (bytes > NDS_R2_ANIM_CACHE_ELASTIC_MAX_BYTES)
     {
-        bytes = (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES;
+        bytes = NDS_R2_ANIM_CACHE_ELASTIC_MAX_BYTES;
     }
     bytes &= ~31u;
     sNdsR2AnimCacheReserveFailLatched = FALSE;
