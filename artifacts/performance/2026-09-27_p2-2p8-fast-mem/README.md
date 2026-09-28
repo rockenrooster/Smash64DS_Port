@@ -2031,3 +2031,53 @@ Results:
 
 The first A/B (`lm0/lm1`) is void. Its "off" arm still captured and stored
 the keys, which cost ~1.2K per call.
+
+## 66. Yoshi's Island clouds: unread animation values, camera memo
+
+Yoshi's Island's median frame is ~260K above Dream Land's. A census diff of
+the two stage profiles (`p2p8-yoshi-census3` vs `p2p8-dl-census3`) put ~36K of
+it in `gcPlayDObjAnimJoint` (self 14.4K, plus ~21K of soft-float fadd/fmul
+attributed to it) and ~25K in the three cloud draws.
+
+**Unread animation values.** Each cloud GObj runs `gcPlayAnimAll` every tick
+over AnimJoint 0x1E0, whose tracks drive the root's and the mids' rotation
+and scale. `grYosterInitAll` builds those DObjs with `nGCMatrixKindTra` alone
+(the source's own comment: "Make this nGCMatrixKindTraRotRpyRSca to see cloud
+scale animation"). So no matrix reads the values -- neither the source's nor
+the port's (the native cloud slot builds Tra locals) -- and no gameplay code
+does: gryoster.c reads only the root's translate and the drawables' MObj
+`anim_wait`, collision uses the yakumono DObjs, and the replay digest folds no
+stage DObj. For a cloud DObj whose single XObj is Tra and whose live tracks
+are all rotation/scale, `ndsGcAdvanceDObjAnimJoint` keeps what the source
+player does to state (each live AObj's `length` advance and END -> NULL) and
+drops the cubic evaluations nobody reads. Any live translation track, other
+matrix kind or other GObj takes the source player.
+
+**Camera memo.** `ndsRendererAdapterGetHierarchyCameraMatrices` rebuilt the
+look-at and perspective matrices for every native actor draw (three clouds a
+frame here). A one-entry memo keys the eye/at/up and perspective words and the
+float/fixed route word, and requires the perspective norm it wrote to be
+unchanged.
+
+**Evaporated clouds.** A cloud whose three prim alphas are all 0 draws
+nothing; the adapter now returns the same TRUE before building its matrices.
+
+Same-ROM A/B (`yos0_g5`/`yos1_g5`, DK/Samus/Link/Kirby on Yoshi's Island,
+words `gNdsGcDObjTraOnlyEnable` and
+`gNdsRendererAdapterHierarchyCameraMemoEnable`):
+
+| Arm | P50 | P95 | <=1.12M |
+|---|---|---|---|
+| off | 1,196,352 | 1,606,400 | 642 |
+| on | 1,176,320 | 1,586,624 | 740 |
+
+- Paired median -21.7K; 1,971 of 1,972 frames better. SRC -14.2K, MISC -7.8K.
+- Engagement: 35,523 skipped evaluations, 3,997 memo hits (0 and 0 off).
+- Replay IDENTICAL over 1,972 samples; native failures 0; heap low-water
+  56,360 B in both arms.
+
+The Ness/Yoshi/Pikachu/Purin arms crashed at frame 79 in both arms (S1, the
+pre-existing late-roster crash on Yoshi's Island): a fighter DObj's
+`anim_joint.event32` holds a float (0xc035bfa0 = -2.84f) when
+`gcParseDObjAnimJoint` reads it. Logged for the S1 lane; gdb reads of that
+DObj return stale RAM on the cache-accurate fork.

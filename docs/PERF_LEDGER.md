@@ -9187,3 +9187,14 @@ Replay identical.
 A world-cache split tried alongside it measured neutral against a fresh
 control and was reverted.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 64.
+
+## 2026-09-28 — Yoshi's Island clouds: unread animation values, camera memo
+
+**BANKED (Yoshi's Island).** The three cloud GObjs evaluated cubic rotation
+and scale tracks every tick for DObjs built with a translate-only matrix, so
+nothing read them (~30K ticks a frame of soft float). Those DObjs now advance
+their AObj clocks exactly as the source player does and skip the unread value
+writes. The native actor camera matrices are memoised per camera state, and a
+fully evaporated cloud skips its matrix build. Same-ROM DK/Samus/Link/Kirby on
+Yoshi's Island: P50/P95 1,196K/1,606K -> 1,176K/1,587K; replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 66.

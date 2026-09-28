@@ -2579,6 +2579,83 @@ static inline sb32 ndsMObjMatAnimWasStableZero(const MObj *mobj)
         TRUE : FALSE;
 }
 
+#if NDS_P2_STAGE_YOSTER
+/* P2-2p8 (2026-09-28). Yoshi's Island's three cloud GObjs run gcPlayAnimAll
+ * every tick over AnimJoint 0x1E0, whose tracks drive the root's and the three
+ * mids' rotation and scale. gryoster.c builds those DObjs with
+ * nGCMatrixKindTra alone ("Make this nGCMatrixKindTraRotRpyRSca to see cloud
+ * scale animation"), so no matrix -- source or port -- reads the values, and
+ * no gameplay code does: gryoster.c reads only the root's translate and the
+ * drawables' MObj anim_wait, collision uses the yakumono DObjs, and the replay
+ * digest folds no stage DObj. The cubic evaluation was ~30K ticks a frame
+ * (about 60 evaluations of 13 fmul + 9 fadd, soft float).
+ *
+ * For such a DObj the player below keeps everything the source player does to
+ * state -- each live AObj's `length` advance and the END -> NULL step -- and
+ * drops only the value writes nobody reads. Any live translation track, any
+ * other matrix kind, or any other GObj takes the source player. */
+volatile u32 gNdsGcDObjTraOnlyEnable __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsGcDObjTraOnlySkips;
+
+extern void *ndsGRYosterCloudGObj(u32 index);
+
+static sb32 ndsGcDObjAnimValuesUnread(const DObj *dobj)
+{
+    const GObj *gobj;
+    const AObj *aobj;
+
+    if ((gNdsGcDObjTraOnlyEnable == 0u) || (dobj->anim_wait == AOBJ_ANIM_NULL) ||
+        (dobj->xobjs_num != 1) || (dobj->xobjs[0] == NULL) ||
+        (dobj->xobjs[0]->kind != nGCMatrixKindTra) ||
+        (gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindYoster))
+    {
+        return FALSE;
+    }
+    gobj = dobj->parent_gobj;
+    if ((gobj != ndsGRYosterCloudGObj(0u)) &&
+        (gobj != ndsGRYosterCloudGObj(1u)) &&
+        (gobj != ndsGRYosterCloudGObj(2u)))
+    {
+        return FALSE;
+    }
+    for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
+    {
+        if ((aobj->kind != nGCAnimKindNone) &&
+            ((aobj->track < nGCAnimTrackRotX) ||
+             ((aobj->track > nGCAnimTrackRotZ) &&
+              (aobj->track < nGCAnimTrackScaX)) ||
+             (aobj->track > nGCAnimTrackScaZ)))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* decomp objanim.c gcPlayDObjAnimJoint without the value computation. */
+static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
+{
+    AObj *aobj;
+
+    if (dobj->anim_wait != AOBJ_ANIM_END)
+    {
+        for (aobj = dobj->aobj; aobj != NULL; aobj = aobj->next)
+        {
+            if (aobj->kind != nGCAnimKindNone)
+            {
+                aobj->length += dobj->anim_speed;
+            }
+        }
+    }
+    else
+    {
+        dobj->anim_wait = AOBJ_ANIM_NULL;
+    }
+    gNdsGcDObjTraOnlySkips++;
+}
+#endif
+
 static void ndsGcPlayAnimAllStableSkip(GObj *gobj)
 {
     DObj *dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
@@ -2588,6 +2665,13 @@ static void ndsGcPlayAnimAllStableSkip(GObj *gobj)
         MObj *mobj;
 
         gcParseDObjAnimJoint(dobj);
+#if NDS_P2_STAGE_YOSTER
+        if (ndsGcDObjAnimValuesUnread(dobj) != FALSE)
+        {
+            ndsGcAdvanceDObjAnimJoint(dobj);
+        }
+        else
+#endif
 #if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
         ndsBaseGcPlayDObjAnimJoint(dobj);
 #else

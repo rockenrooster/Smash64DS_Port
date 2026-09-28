@@ -8076,6 +8076,45 @@ static sb32 ndsRendererAdapterMatrixIsAffine20p12(
  * 0x4C look-at/projection matrix.  The hierarchy candidate needs the same
  * product split at its natural affine boundary so source-unit translation can
  * be scaled once in GX without CPU-composing every fighter root. */
+/* One-entry memo of the look-at/perspective pair (P2-2p8, 2026-09-28). The
+ * native actor slots (Yoshi's Island's three clouds, Lakitu, Bronto, the
+ * barrel cannons) each call this once per draw, and each call rebuilt both
+ * matrices from the same camera: ~8K ticks a frame on Yoshi's Island. The
+ * outputs are a pure function of the key below -- the eye/at/up and
+ * perspective words and the float/fixed route word -- plus the norm the
+ * perspective build writes back, which a hit requires to be unchanged. */
+#define NDS_RENDERER_ADAPTER_HIERARCHY_CAMERA_KEY_WORDS 15u
+typedef struct NDSRendererAdapterHierarchyCameraMemo
+{
+    const CObj *cobj;
+    u32 key[NDS_RENDERER_ADAPTER_HIERARCHY_CAMERA_KEY_WORDS];
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    u16 norm;
+    u16 valid;
+} NDSRendererAdapterHierarchyCameraMemo;
+static NDSRendererAdapterHierarchyCameraMemo
+    sNdsRendererAdapterHierarchyCameraMemo;
+/* Same-binary A/B word: 0 rebuilds both matrices on every call, as before. */
+volatile u32 gNdsRendererAdapterHierarchyCameraMemoEnable
+    __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsRendererAdapterHierarchyCameraMemoHits;
+
+static void ndsRendererAdapterHierarchyCameraKey(const CObj *cobj, u32 *key)
+{
+    const GCPersp *persp = &cobj->projection.persp;
+
+    memcpy(&key[0], &cobj->vec.eye, 3u * sizeof(u32));
+    memcpy(&key[3], &cobj->vec.at, 3u * sizeof(u32));
+    memcpy(&key[6], &cobj->vec.up, 3u * sizeof(u32));
+    memcpy(&key[9], &persp->fovy, sizeof(u32));
+    memcpy(&key[10], &persp->aspect, sizeof(u32));
+    memcpy(&key[11], &persp->near, sizeof(u32));
+    memcpy(&key[12], &persp->far, sizeof(u32));
+    memcpy(&key[13], &persp->scale, sizeof(u32));
+    key[14] = gNdsR2CameraFixedEnabled;
+}
+
 /* Cold with the hierarchy mode it serves: only
  * NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS reaches it, and the live mode is
  * NATIVE_FIGHTER_OWNER_PRODUCTION. */
@@ -8107,7 +8146,21 @@ ndsRendererAdapterGetHierarchyCameraMatrices(
             (xobj->kind == NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
         {
             LookAt look_at;
+            NDSRendererAdapterHierarchyCameraMemo *memo =
+                &sNdsRendererAdapterHierarchyCameraMemo;
+            u32 key[NDS_RENDERER_ADAPTER_HIERARCHY_CAMERA_KEY_WORDS];
 
+            ndsRendererAdapterHierarchyCameraKey(cobj, key);
+            if ((gNdsRendererAdapterHierarchyCameraMemoEnable != 0u) &&
+                (memo->valid != 0u) && (memo->cobj == cobj) &&
+                (memcmp(memo->key, key, sizeof(key)) == 0) &&
+                (cobj->projection.persp.norm == memo->norm))
+            {
+                ndsRendererMatrixCopy20p12(projection, &memo->projection);
+                ndsRendererMatrixCopy20p12(modelview, &memo->modelview);
+                gNdsRendererAdapterHierarchyCameraMemoHits++;
+                return TRUE;
+            }
             ndsRendererAdapterCameraLookAtReflect(
                 modelview, &look_at,
                 cobj->vec.eye.x, cobj->vec.eye.y,
@@ -8122,6 +8175,12 @@ ndsRendererAdapterGetHierarchyCameraMatrices(
                 cobj->projection.persp.near,
                 cobj->projection.persp.far,
                 cobj->projection.persp.scale);
+            memo->cobj = cobj;
+            memcpy(memo->key, key, sizeof(key));
+            memo->norm = cobj->projection.persp.norm;
+            ndsRendererMatrixCopy20p12(&memo->projection, projection);
+            ndsRendererMatrixCopy20p12(&memo->modelview, modelview);
+            memo->valid = 1u;
             return TRUE;
         }
     }
@@ -8653,6 +8712,21 @@ sb32 ndsRendererAdapterSubmitNativeYosterCloud(void *root_ptr, void *cobj,
                 return FALSE;
             }
         }
+    }
+    /* A fully evaporated cloud (all three prim alphas 0) draws nothing:
+     * ndsRendererSubmitNativeYosterCloud returns TRUE before emitting. The
+     * matrices below only feed that emit, and every local here is a
+     * Tra/kind-48 build, which cannot refuse; so the same TRUE comes back
+     * without building them (P2-2p8, 2026-09-28). */
+    if (((alphas[0] | alphas[1] | alphas[2]) == 0u) && (cobj != NULL))
+    {
+        gNdsNativeYosterCloudFailStep = 0u;
+        return TRUE;
+    }
+    for (i = 0u; i < 7u; i++)
+    {
+        DObj *joint = workspace->hierarchy_joints[i];
+
         if ((ndsRendererAdapterBuildDObjLocalMatrix(joint,
                 &workspace->hierarchy_storage.hierarchy_locals[i]) == FALSE) ||
             (ndsRendererAdapterMatrixIsAffine20p12(
