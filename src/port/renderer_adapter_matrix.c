@@ -5117,6 +5117,73 @@ static u32 ndsRendererAdapterNextStageWorldGeneration(void)
 #endif
 
 #if NDS_RENDERER_HW_TRIANGLES
+/* Local-matrix memo for the uncached world build (P2-2p8, 2026-09-28). On
+ * Jungle, Zebes, Yoshi's Island and Saffron the heap refuses the DObj and
+ * stage world caches (95-113K free when they are sized, against a ~137K
+ * need), so every item, weapon and effect rebuilt its whole DObj chain from
+ * float TRS every draw: a lying Beam Sword's two DObjs cost ~18K ticks each,
+ * ~26K a frame of world builds on Saffron. A node's local matrix is a pure
+ * function of what the stage world source key captures (the capture refuses
+ * every kind that reads camera, fighter-part or other live state), so a hit
+ * on that key returns the matrix the builder produced for it -- the same
+ * reuse the persistent stage world cache already makes on the other stages.
+ * 16 direct-mapped rows, 1,920 B. */
+#define NDS_RENDERER_ADAPTER_LOCAL_MEMO_COUNT 16u
+typedef struct NDSRendererAdapterLocalMemo
+{
+    const DObj *dobj;
+    NDSRendererAdapterStageWorldSourceKey key;
+    NDSRendererMatrix20p12 local;
+    u32 valid;
+} NDSRendererAdapterLocalMemo;
+static NDSRendererAdapterLocalMemo
+    sNdsRendererAdapterLocalMemo[NDS_RENDERER_ADAPTER_LOCAL_MEMO_COUNT];
+/* Same-binary A/B word: 0 rebuilds every local as before. */
+volatile u32 gNdsRendererAdapterLocalMemoEnable
+    __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsRendererAdapterLocalMemoHits;
+volatile u32 gNdsRendererAdapterLocalMemoFills;
+
+static sb32 ndsRendererAdapterUncachedLocalMatrix(
+    DObj *node, NDSRendererMatrix20p12 *local)
+{
+    NDSRendererAdapterLocalMemo *m = &sNdsRendererAdapterLocalMemo[
+        ((u32)(uintptr_t)node >> 4) & (NDS_RENDERER_ADAPTER_LOCAL_MEMO_COUNT - 1u)];
+    NDSRendererAdapterStageWorldSourceKey key;
+    sb32 key_valid;
+
+    if (gNdsRendererAdapterLocalMemoEnable == 0u)
+    {
+        return ndsRendererAdapterBuildDObjLocalMatrix(node, local);
+    }
+    if ((m->valid != 0u) && (m->dobj == node) &&
+        (ndsRendererAdapterStageWorldSourceKeyMatches(node, &m->key) != FALSE))
+    {
+        ndsRendererMatrixCopy20p12(local, &m->local);
+        gNdsRendererAdapterLocalMemoHits++;
+        return TRUE;
+    }
+    key_valid = ndsRendererAdapterCaptureStageWorldSourceKey(node, &key);
+    if (ndsRendererAdapterBuildDObjLocalMatrix(node, local) == FALSE)
+    {
+        m->valid = 0u;
+        return FALSE;
+    }
+    if (key_valid != FALSE)
+    {
+        m->dobj = node;
+        m->key = key;
+        ndsRendererMatrixCopy20p12(&m->local, local);
+        m->valid = 1u;
+        gNdsRendererAdapterLocalMemoFills++;
+    }
+    else if (m->dobj == node)
+    {
+        m->valid = 0u;
+    }
+    return TRUE;
+}
+
 static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
     DObj *dobj, NDSRendererMatrix20p12 *out)
 {
@@ -5143,7 +5210,7 @@ static sb32 ndsRendererAdapterBuildDObjWorldMatrixUncached(
     ndsRendererAdapterMtxIdentity20p12(out);
     for (i = depth; i != 0u; i--)
     {
-        if (ndsRendererAdapterBuildDObjLocalMatrix(chain[i - 1u], &local) !=
+        if (ndsRendererAdapterUncachedLocalMatrix(chain[i - 1u], &local) !=
             FALSE)
         {
             ndsRendererMtxMulAffine20p12(&local, out, out);

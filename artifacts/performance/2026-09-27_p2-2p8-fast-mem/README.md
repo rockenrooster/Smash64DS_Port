@@ -2003,3 +2003,31 @@ A Beam Sword's two DObjs each spend ~18K rebuilding their world uncached.
 - The split was reverted. It cost up to 14K of heap for nothing.
 - The uncached world build on the tight stages is still open: it needs heap
   those scenes do not have, or a cheaper uncached build.
+
+## 65. Local-matrix memo for the uncached world build
+
+On Jungle, Zebes, Yoshi's Island and Saffron the heap refuses the DObj and
+stage world caches, so every item, weapon and effect rebuilds its DObj chain
+from float TRS on every draw. On Dream Land the 64-entry stage world cache
+fills and the overflow does the same. `ndsRendererAdapterUncachedLocalMatrix`
+keeps 16 direct-mapped rows (1,920 B BSS). A row holds a node's local matrix
+keyed by the stage world source key: the same purity contract, and the same
+reuse, as the persistent cache.
+
+Results:
+- Same-ROM A/B in the full-roster lab (`ln0`/`ln1`, word
+  `gNdsRendererAdapterLocalMemoEnable`), replay IDENTICAL:
+
+| Stage | Median |
+|---|---|
+| Zebes | -11.5K (1,935 of 1,972 frames better) |
+| Dream Land | -7.0K |
+| Saffron | -5.2K |
+| Jungle | -2.0K |
+| Yoshi's Island | +0.4K |
+| Mushroom Kingdom | 0 |
+
+- Gate ROM: neutral. It runs the uncached path about 108 times a match.
+
+The first A/B (`lm0/lm1`) is void. Its "off" arm still captured and stored
+the keys, which cost ~1.2K per call.
