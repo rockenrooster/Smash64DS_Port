@@ -1,0 +1,138 @@
+{
+ "IFCommonGameStatus": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "EFCommonEffects1": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "EFCommonEffects2": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "EFCommonEffects3": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "MiscData086": {
+  "slots": 69,
+  "files": [
+   "ITCommonData",
+   "YoshiMain"
+  ],
+  "targets": [
+   "0x10000",
+   "0x104a0",
+   "0x10550",
+   "0x110e0",
+   "0x112a0",
+   "0x1158",
+   "0x119d8",
+   "0x11f40",
+   "0x12820",
+   "0x12b8",
+   "0x12f78",
+   "0x13100",
+   "0x13190",
+   "0x131e0",
+   "0x13598",
+   "0x1560",
+   "0x15f0",
+   "0x1918",
+   "0x1e00",
+   "0x2198",
+   "0x2750",
+   "0x3230",
+   "0x33f8",
+   "0x39a0",
+   "0x3f50",
+   "0x40a8",
+   "0x4388",
+   "0x46b0",
+   "0x4760",
+   "0x4b60",
+   "0x5458",
+   "0x5de0",
+   "0x5f88",
+   "0x670",
+   "0x6778",
+   "0x71a8",
+   "0x7488",
+   "0x7648",
+   "0x9120",
+   "0x9430",
+   "0xa140",
+   "0xa9d0",
+   "0xab0",
+   "0xab98",
+   "0xb158",
+   "0xb540",
+   "0xb708",
+   "0xbcc0",
+   "0xc130",
+   "0xc520",
+   "0xd410",
+   "0xd5c0",
+   "0xdd70",
+   "0xdf38",
+   "0xe2e0",
+   "0xe4a8",
+   "0xe560",
+   "0xea60",
+   "0xf6c0",
+   "0xf9d8",
+   "0xfa90",
+   "0xfb70"
+  ]
+ },
+ "IFCommonItem": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "ITCommonData": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonPlayerDamage": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonTimer": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonDigits": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonBattlePause": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonPlayerTags": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonAnnounceCommon": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ },
+ "IFCommonPlayer": {
+  "slots": 0,
+  "files": [],
+  "targets": []
+ }
+}

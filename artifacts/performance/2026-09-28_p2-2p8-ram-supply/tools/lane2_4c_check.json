@@ -1,0 +1,62 @@
+{
+ "IFCommonPlayerDamage": {
+  "sprites": 12,
+  "bmsiz_histogram": {
+   "1": 12
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonTimer": {
+  "sprites": 15,
+  "bmsiz_histogram": {
+   "0": 1,
+   "1": 14
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonDigits": {
+  "sprites": 13,
+  "bmsiz_histogram": {
+   "1": 13
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonBattlePause": {
+  "sprites": 16,
+  "bmsiz_histogram": {
+   "0": 9,
+   "1": 7
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonPlayerTags": {
+  "sprites": 6,
+  "bmsiz_histogram": {
+   "1": 6
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonAnnounceCommon": {
+  "sprites": 28,
+  "bmsiz_histogram": {
+   "1": 28
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonGameStatus": {
+  "sprites": 24,
+  "bmsiz_histogram": {
+   "0": 3,
+   "1": 9,
+   "3": 12
+  },
+  "sprites_4c": 0
+ },
+ "IFCommonItem": {
+  "sprites": 1,
+  "bmsiz_histogram": {
+   "0": 1
+  },
+  "sprites_4c": 0
+ }
+}

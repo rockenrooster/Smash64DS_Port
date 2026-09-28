@@ -1,0 +1,241 @@
+{
+ "EFCommonEffects1": {
+  "file": "EFCommonEffects1",
+  "fid": 83,
+  "payload": 52736,
+  "tags": {
+   "dead_unreferenced": 23476,
+   "pad_other": 940,
+   "prepare_only": 20064,
+   "keep_runtime": 2160,
+   "dead_vertices": 608,
+   "dead_dl": 1480,
+   "keep_fingerprint": 48,
+   "dead_texture": 3960
+  },
+  "classes": {
+   "unplaced": 8,
+   "texture": 46580,
+   "pad": 940,
+   "material": 824,
+   "vertices": 672,
+   "display_list": 1640,
+   "dllink": 240,
+   "palette": 600,
+   "animation": 1232
+  },
+  "structural_override_bytes": {
+   "display_list": 368,
+   "vertices": 0
+  },
+  "kept_runs_A": 22,
+  "kept_runs_B": 16,
+  "identity_cells": 0,
+  "label_classes": {
+   "unplaced": 8,
+   "texture": 46580,
+   "pad": 956,
+   "material": 824,
+   "vertices": 672,
+   "display_list": 1512,
+   "palette": 624,
+   "animation": 1560
+  }
+ },
+ "EFCommonEffects2": {
+  "file": "EFCommonEffects2",
+  "fid": 84,
+  "payload": 28352,
+  "tags": {
+   "dead_unreferenced": 1360,
+   "dead_texture": 12664,
+   "keep_runtime": 4836,
+   "pad_other": 1500,
+   "dead_vertices": 816,
+   "dead_dl": 1896,
+   "identity_only": 5280
+  },
+  "classes": {
+   "unplaced": 8,
+   "texture": 18392,
+   "material": 1120,
+   "pad": 1500,
+   "vertices": 944,
+   "display_list": 2080,
+   "animation": 2936,
+   "palette": 384,
+   "dobjdesc": 796,
+   "dllink": 192
+  },
+  "structural_override_bytes": {
+   "display_list": 0,
+   "vertices": 0
+  },
+  "kept_runs_A": 15,
+  "kept_runs_B": 15,
+  "identity_cells": 3,
+  "label_classes": {
+   "unplaced": 8,
+   "texture": 18392,
+   "material": 1120,
+   "pad": 1500,
+   "vertices": 944,
+   "display_list": 2272,
+   "animation": 2936,
+   "palette": 384,
+   "dobjdesc": 796
+  }
+ },
+ "EFCommonEffects3": {
+  "file": "EFCommonEffects3",
+  "fid": 85,
+  "payload": 13616,
+  "tags": {
+   "dead_unreferenced": 136,
+   "dead_texture": 632,
+   "keep_runtime": 2376,
+   "pad_other": 1520,
+   "dead_vertices": 2896,
+   "dead_dl": 6056
+  },
+  "classes": {
+   "unplaced": 8,
+   "texture": 512,
+   "material": 1000,
+   "pad": 1520,
+   "vertices": 2896,
+   "display_list": 6184,
+   "dllink": 688,
+   "palette": 120,
+   "animation": 688
+  },
+  "structural_override_bytes": {
+   "display_list": 528,
+   "vertices": 0
+  },
+  "kept_runs_A": 6,
+  "kept_runs_B": 6,
+  "identity_cells": 0,
+  "label_classes": {
+   "unplaced": 8,
+   "texture": 512,
+   "material": 1000,
+   "pad": 1544,
+   "vertices": 2896,
+   "display_list": 6344,
+   "animation": 1184,
+   "palette": 128
+  }
+ },
+ "_total": {
+  "dead_unreferenced": 24972,
+  "pad_other": 3960,
+  "prepare_only": 20064,
+  "keep_runtime": 9372,
+  "dead_vertices": 4320,
+  "dead_dl": 9432,
+  "keep_fingerprint": 48,
+  "dead_texture": 17256,
+  "identity_only": 5280
+ },
+ "_handlers": {
+  "1": {
+   "DamageSlash": [
+    "native owner + prepare reads 13 CI4 frames from the file",
+    "src/nds/nds_native_damage_slash.exec.inc:124-190; renderer_adapter_stage.c:8430-8470"
+   ],
+   "DamageFlyMDust": [
+    "native owner + prepare reads 7 frames from the file",
+    "src/nds/nds_native_damage_fly_mdust.exec.inc:44-100"
+   ],
+   "ImpactWave": [
+    "NDL/native: geometry+palette+texel from ROM data, GObj identity",
+    "renderer_adapter_stage.c:2963-3012; nds_renderer_textures_effects.c:3754-3781"
+   ],
+   "FlyOrbs": [
+    "no DS owner found for root 0x7E80 (no reference in src/)",
+    "UNPROVEN"
+   ],
+   "CommonSpark": [
+    "no DS owner found for root 0x8FA0 (no reference in src/)",
+    "UNPROVEN"
+   ],
+   "QuakeMag0": [
+    "camera quake: AnimJoint only, no DL",
+    ""
+   ],
+   "QuakeMag1": [
+    "camera quake: AnimJoint only, no DL",
+    ""
+   ],
+   "QuakeMag2": [
+    "camera quake: AnimJoint only, no DL",
+    ""
+   ],
+   "QuakeMag3": [
+    "camera quake: AnimJoint only, no DL",
+    ""
+   ]
+  },
+  "2": {
+   "CatchSwirl": [
+    "entry-effect generated pack, address-equality admission (roots 0x2500/0x2588/0x2610/0x2698)",
+    "renderer_adapter_stage.c:6211-6231; nds_entry_effects.generated.inc"
+   ],
+   "DeadExplodeDefault": [
+    "entry-effect generated pack (KO roots 0x5218/0x52b0/0x5310)",
+    "renderer_adapter_stage.c:6217-6222"
+   ],
+   "DeadExplode1": [
+    "MatAnimJoint only",
+    ""
+   ],
+   "DeadExplode2": [
+    "MatAnimJoint only",
+    ""
+   ],
+   "DeadExplode3": [
+    "MatAnimJoint only",
+    ""
+   ],
+   "DeadExplode4": [
+    "MatAnimJoint only",
+    ""
+   ],
+   "ReflectBreak": [
+    "entry-effect generated pack (roots 0x31d0/0x3258/0x32e0); alt DLs 0x38d8.. unreachable",
+    "renderer_adapter_stage.c:6222-6226"
+   ],
+   "FireSpark": [
+    "no DS owner found for root 0x1f78 (no reference in src/)",
+    "UNPROVEN"
+   ],
+   "NessPKFlash": [
+    "no DS owner found for root 0x6c28 (no reference in src/)",
+    "UNPROVEN"
+   ],
+   "ShockSmall": [
+    "no DS owner found for root 0x1500 (only an unrelated generated-table hit)",
+    "UNPROVEN"
+   ],
+   "ShadowTexture": [
+    "decomp ftshadow.c only; port ftShadowMakeShadow returns NULL",
+    "src/port/reloc_backend_compat_shims.c:12811-12815"
+   ]
+  },
+  "3": {
+   "ItemGetSwirl": [
+    "entry-effect generated pack (roots 0x2ef0/0x2f80/0x3010/0x30a0)",
+    "renderer_adapter_stage.c:6626-6640"
+   ],
+   "MBallRays": [
+    "entry-effect generated pack (roots 0x0440/0x0518)",
+    "renderer_adapter_stage.c:6626-6650"
+   ],
+   "RebirthHalo": [
+    "native RebirthHalo generated data (roots 0x2378/0x27e8/0x2a88), ROM textures",
+    "renderer_adapter_stage.c:7432-7440; nds_renderer_textures_effects.c:3784-3830"
+   ]
+  }
+ }
+}

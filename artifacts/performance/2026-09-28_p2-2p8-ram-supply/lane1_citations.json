@@ -1,0 +1,692 @@
+{
+ "nativeEntryOwnsDependency": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8937
+  ]
+ },
+ "resolveNativeEntryExternalFixup": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8950
+  ]
+ },
+ "applyExternalPointerFixups": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8979
+  ]
+ },
+ "shieldPoseResolve": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   9056
+  ]
+ },
+ "externTreeAllocSize_def": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8823,
+   11562
+  ]
+ },
+ "ownsDep_in_treesize": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   11602,
+   11918
+  ]
+ },
+ "loadExternTreeAsset_def": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8825,
+   11802
+  ]
+ },
+ "ensureLoadedAsset": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8863
+  ]
+ },
+ "staticBufferForAsset": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8828
+  ]
+ },
+ "normalizeGroundMapAsset": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   9731
+  ]
+ },
+ "normalizeStageDreamLandSprite": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   9968
+  ]
+ },
+ "isStageWallpaperAsset": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   9943
+  ]
+ },
+ "loadedPointerProvenance": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   6187
+  ]
+ },
+ "findLoadedFileContaining": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   6126
+  ]
+ },
+ "lbRelocGetFileSize": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   12753
+  ]
+ },
+ "lbRelocGetExternHeapFile": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   12820
+  ]
+ },
+ "ifCompactLoad": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   15916
+  ]
+ },
+ "ifCompactMap": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   15768
+  ]
+ },
+ "ifBuildSpans": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   15791
+  ]
+ },
+ "groundMapAssetsTable": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   9673
+  ]
+ },
+ "relocAlign": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   803
+  ]
+ },
+ "mpCollisionInitGroundData_port": {
+  "file": "src/port/reloc_backend_compat_shims.c",
+  "lines": [
+   12941
+  ]
+ },
+ "ground_syTaskmanMalloc": {
+  "file": "src/port/reloc_backend_compat_shims.c",
+  "lines": [
+   13044
+  ]
+ },
+ "ground_blobLoad": {
+  "file": "src/port/reloc_backend_compat_shims.c",
+  "lines": [
+   13071
+  ]
+ },
+ "ground_preload": {
+  "file": "src/port/reloc_backend_compat_shims.c",
+  "lines": [
+   13075
+  ]
+ },
+ "previewFileOffset": {
+  "file": "src/port/reloc_preview_pack.c",
+  "lines": [
+   112
+  ]
+ },
+ "nativeRootAddress": {
+  "file": "src/port/reloc_preview_pack.c",
+  "lines": [
+   165
+  ]
+ },
+ "nativeAssetAddress": {
+  "file": "src/port/reloc_preview_pack.c",
+  "lines": [
+   198
+  ]
+ },
+ "nativeForeignImageAddress": {
+  "file": "src/port/reloc_preview_pack.c",
+  "lines": [
+   220
+  ]
+ },
+ "previewResident": {
+  "file": "src/port/reloc_preview_pack.c",
+  "lines": [
+   28
+  ]
+ },
+ "admission_data_size": {
+  "file": "src/port/renderer_adapter_stage.c",
+  "lines": [
+   4585
+  ]
+ },
+ "direct_wallpaper_bind": {
+  "file": "src/port/renderer_adapter_stage.c",
+  "lines": [
+   4525
+  ]
+ },
+ "collect_dl_link_read": {
+  "file": "src/port/renderer_adapter_stage.c",
+  "lines": [
+   3639
+  ]
+ },
+ "stamp_live_list": {
+  "file": "src/port/renderer_adapter_stage.c",
+  "lines": [
+   3836
+  ]
+ },
+ "commitNativeStageDisplay": {
+  "file": "src/port/renderer_adapter_stage.c",
+  "lines": [
+   4872,
+   4973
+  ]
+ },
+ "prepareNativeStageOwnerBody": {
+  "file": "src/port/renderer_adapter_stage.c",
+  "lines": [
+   4463,
+   4485
+  ]
+ },
+ "preloadAssets_def": {
+  "file": "src/port/renderer_adapter_matrix.c",
+  "lines": [
+   1702
+  ]
+ },
+ "validate_display_list_compare": {
+  "file": "src/nds/nds_renderer_native_owners.c",
+  "lines": [
+   839
+  ]
+ },
+ "state_delta_image_base": {
+  "file": "src/nds/nds_renderer_native_owners.c",
+  "lines": [
+   1271
+  ]
+ },
+ "task26_image_macro": {
+  "file": "src/nds/nds_renderer_native_owners.c",
+  "lines": [
+   2046
+  ]
+ },
+ "warm_resolve_call": {
+  "file": "src/nds/nds_renderer_native_owners.c",
+  "lines": [
+   1699,
+   1713
+  ]
+ },
+ "warm_flag_clear": {
+  "file": "src/nds/nds_renderer_native_owners.c",
+  "lines": [
+   4657
+  ]
+ },
+ "stage_warm_pin": {
+  "file": "src/nds/nds_renderer_native_owners.c",
+  "lines": [
+   1759
+  ]
+ },
+ "texel_read": {
+  "file": "src/nds/nds_renderer_textures_effects.c",
+  "lines": [
+   13553
+  ]
+ },
+ "tlut_read": {
+  "file": "src/nds/nds_renderer_textures_effects.c",
+  "lines": [
+   13670
+  ]
+ },
+ "staticKeyBuild": {
+  "file": "src/nds/nds_renderer_textures_effects.c",
+  "lines": [
+   5984
+  ]
+ },
+ "resolveTextureDataPointer": {
+  "file": "src/nds/nds_renderer_textures_effects.c",
+  "lines": [
+   2092
+  ]
+ },
+ "warmEvictSkip": {
+  "file": "src/nds/nds_renderer_textures_effects.c",
+  "lines": [
+   2881,
+   3079
+  ]
+ },
+ "blob_warm_set": {
+  "file": "src/nds/nds_native_stage_blob.c",
+  "lines": [
+   174
+  ]
+ },
+ "blob_alloc": {
+  "file": "src/nds/nds_native_stage_blob.c",
+  "lines": [
+   251
+  ]
+ },
+ "gx_alloc": {
+  "file": "src/nds/nds_stage_gx.exec.inc",
+  "lines": [
+   224
+  ]
+ },
+ "gx_keepfree": {
+  "file": "src/nds/nds_stage_gx.exec.inc",
+  "lines": [
+   8
+  ]
+ },
+ "scanDObjs": {
+  "file": "src/port/reloc_backend_movement.c",
+  "lines": [
+   14946,
+   15206
+  ]
+ },
+ "recordDObjDraw": {
+  "file": "src/port/reloc_backend_movement.c",
+  "lines": [
+   15606
+  ]
+ },
+ "recordCapturedDisplay": {
+  "file": "src/port/reloc_backend_movement.c",
+  "lines": [
+   15338
+  ]
+ },
+ "classifyGObj": {
+  "file": "src/port/reloc_backend_movement.c",
+  "lines": [
+   14186
+  ]
+ },
+ "gcDrawAll_dispatch": {
+  "file": "src/port/opening_movie_backend.c",
+  "lines": [
+   1740
+  ]
+ },
+ "gcDrawAll_proc_display": {
+  "file": "src/port/opening_movie_backend.c",
+  "lines": [
+   1799
+  ]
+ },
+ "makeSObj": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   133
+  ]
+ },
+ "decode4c": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   118
+  ]
+ },
+ "drawCachedWallpaperFinal": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   558
+  ]
+ },
+ "sobj_provenance": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   603
+  ]
+ },
+ "drawLayeredSObjFrame": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   741
+  ]
+ },
+ "drawSObjPreview": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   642
+  ]
+ },
+ "lbCommonDrawSObjAttr": {
+  "file": "src/port/sprite_preview_backend.c",
+  "lines": [
+   962
+  ]
+ },
+ "battleWallpaperBindings": {
+  "file": "src/nds/nds_native_wallpaper.c",
+  "lines": [
+   56
+  ]
+ },
+ "wallpaperUpload": {
+  "file": "src/nds/nds_native_wallpaper.c",
+  "lines": [
+   191
+  ]
+ },
+ "wallpaperDraw": {
+  "file": "src/nds/nds_native_wallpaper.c",
+  "lines": [
+   298
+  ]
+ },
+ "battleWallpaperDraw": {
+  "file": "src/nds/nds_native_wallpaper.c",
+  "lines": [
+   407
+  ]
+ },
+ "battleWallpaperPreload": {
+  "file": "src/nds/nds_native_wallpaper.c",
+  "lines": [
+   365
+  ]
+ },
+ "preloadCaller": {
+  "file": "src/port/taskman_seam_battle_host.c",
+  "lines": [
+   415
+  ]
+ },
+ "sssStartScene": {
+  "file": "src/nds/nds_menu_shell_router.c",
+  "lines": [
+   855
+  ]
+ },
+ "mnmapsGuard": {
+  "file": "src/import/battleship_mnmaps.c",
+  "lines": [
+   301
+  ]
+ },
+ "overlayTryAlloc": {
+  "file": "src/nds/nds_frontend_overlay.c",
+  "lines": [
+   103
+  ]
+ },
+ "sceneAssetAlloc": {
+  "file": "src/nds/nds_frontend_overlay.c",
+  "lines": [
+   130
+  ]
+ },
+ "grwallpaper_uses": {
+  "file": "decomp/BattleShip-main/decomp/src/gr/grwallpaper.c",
+  "lines": [
+   147,
+   177,
+   240
+  ]
+ },
+ "grwallpaper_decide": {
+  "file": "decomp/BattleShip-main/decomp/src/gr/grwallpaper.c",
+  "lines": [
+   267
+  ]
+ },
+ "decomp_mpInitGround": {
+  "file": "decomp/BattleShip-main/decomp/src/mp/mpcollision.c",
+  "lines": [
+   3961
+  ]
+ },
+ "gcSetupCustomDObjs": {
+  "file": "decomp/BattleShip-main/decomp/src/sys/objanim.c",
+  "lines": [
+   2332
+  ]
+ },
+ "gcSetupCommonDObjs": {
+  "file": "decomp/BattleShip-main/decomp/src/sys/objanim.c",
+  "lines": [
+   2153
+  ]
+ },
+ "scvs_initGround": {
+  "file": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c",
+  "lines": [
+   155,
+   427
+  ]
+ },
+ "efground_filehead": {
+  "file": "decomp/BattleShip-main/decomp/src/ef/efground.c",
+  "lines": [
+   1594
+  ]
+ },
+ "fpc_build_pack": {
+  "file": "scripts/fighters/generate_preview_core_packs.py",
+  "lines": [
+   119
+  ]
+ },
+ "fpc_decode_pack": {
+  "file": "scripts/fighters/generate_preview_core_packs.py",
+  "lines": [
+   423
+  ]
+ },
+ "fpc_section_struct": {
+  "file": "include/nds/nds_preview_pack.h",
+  "lines": [
+   49
+  ]
+ },
+ "gen_load_o2r": {
+  "file": "scripts/stages/generate_nds_native_stage.py",
+  "lines": [
+   1425
+  ]
+ },
+ "gen_compile_state_delta": {
+  "file": "scripts/stages/generate_nds_native_stage.py",
+  "lines": [
+   2307
+  ]
+ },
+ "gen_wallpaper_sources": {
+  "file": "scripts/stages/generate_native_wallpapers.py",
+  "lines": [
+   91
+  ]
+ },
+ "makefile_if_compact": {
+  "file": "Makefile",
+  "lines": [
+   212
+  ]
+ },
+ "makefile_gx_stages": {
+  "file": "Makefile",
+  "lines": [
+   8285
+  ]
+ },
+ "makefile_reloc_rule": {
+  "file": "Makefile",
+  "lines": [
+   7865
+  ]
+ },
+ "nds_reloc_assets_stage_rows": {
+  "file": "src/nds/nds_reloc_assets.c",
+  "lines": [
+   226
+  ]
+ },
+ "descriptor_jungle_107": {
+  "file": "scripts/stages/native_stage_descriptors/jungle.py",
+  "lines": [
+   59
+  ]
+ },
+ "descriptor_jungle_asset_order": {
+  "file": "scripts/stages/native_stage_descriptors/jungle.py",
+  "lines": [
+   137
+  ]
+ },
+ "groundActorSubmit": {
+  "file": "src/port/reloc_backend_movement.c",
+  "lines": [
+   15110
+  ]
+ },
+ "mpVertexF32Get": {
+  "file": "src/port/reloc_backend_mp_collision.c",
+  "lines": [
+   607
+  ]
+ },
+ "mpSetGeometry": {
+  "file": "src/port/reloc_backend_mp_collision.c",
+  "lines": [
+   593
+  ]
+ },
+ "gmcamera_bounds": {
+  "file": "decomp/BattleShip-main/decomp/src/gm/gmcamera.c",
+  "lines": [
+   101
+  ]
+ },
+ "gcPlayAnimAll": {
+  "file": "decomp/BattleShip-main/decomp/src/sys/objanim.c",
+  "lines": [
+   1428
+  ]
+ },
+ "gcParseDObjAnimJoint": {
+  "file": "decomp/BattleShip-main/decomp/src/sys/objanim.c",
+  "lines": [
+   268
+  ]
+ },
+ "gcAddMObjAll": {
+  "file": "decomp/BattleShip-main/decomp/src/sys/objanim.c",
+  "lines": [
+   2429
+  ]
+ },
+ "itemWeights": {
+  "file": "decomp/BattleShip-main/decomp/src/it/itmanager.c",
+  "lines": [
+   548,
+   646
+  ]
+ },
+ "overlayLoanSym": {
+  "file": "src/nds/nds_frontend_overlay.c",
+  "lines": [
+   103
+  ]
+ },
+ "mvopeningroom_wallpaper": {
+  "file": "decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningroom.c",
+  "lines": [
+   619
+  ]
+ },
+ "mvopeningyoster_wallpaper": {
+  "file": "decomp/BattleShip-main/decomp/src/mv/mvopening/mvopeningyoster.c",
+  "lines": [
+   140
+  ]
+ },
+ "gr_jungle_forcefile": {
+  "file": "decomp/BattleShip-main/decomp/src/gr/grcommon/grsector.c",
+  "lines": [
+   1094
+  ]
+ },
+ "static_texture_check": {
+  "file": "scripts/stages/check_nds_native_stage.py",
+  "lines": [
+   153
+  ]
+ },
+ "emitRows": {
+  "file": "scripts/stages/emit_native_stage_runtime_rows.py",
+  "lines": [
+   192
+  ]
+ },
+ "ndsRelocNativeEntryHookComment": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   8959
+  ]
+ },
+ "pupupuMaskPass": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   9240
+  ]
+ },
+ "pupupuDiagDoc": {
+  "file": "docs/DIAGNOSTIC_REFERENCE.md",
+  "lines": [
+   584
+  ]
+ },
+ "assetIsStage": {
+  "file": "src/port/reloc_backend_assets.c",
+  "lines": [
+   5482
+  ]
+ },
+ "preload_comment_jungle": {
+  "file": "src/port/renderer_adapter_matrix.c",
+  "lines": [
+   1697
+  ]
+ }
+}

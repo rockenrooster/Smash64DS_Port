@@ -210,6 +210,22 @@ NDS_TEX_IDENT_SHADOW ?= 0
 # left at its animation reservation; see
 # artifacts/performance/2026-09-23_css-preview-heap/). 0 restores the plain load.
 NDS_IF_GAMESTATUS_COMPACT ?= 1
+# P2-2p8 T1 (A7 memory): 1 stages each of the nine VS ground maps (GR<Stage>Map)
+# as a COMPACT map -- the stage wallpaper's Sprite and Bitmap[44] table (776 B)
+# appended, MPGroundData.wallpaper pointing at them -- so the map's extern tree
+# stops holding the 158,928-byte wallpaper container: 158,144 B less resident in
+# every VS battle (scripts/stages/generate_compact_ground_maps.py; runtime seams
+# in src/port/reloc_backend_assets.c). The container's pixels were never read;
+# the background is the converted BG2 image. Default 1 on the P2 targets that
+# load VS stages -- the four-CPU stress target and the shell family (the
+# published smash64ds is the free-play twin) -- and 0 everywhere else, notably
+# the frozen P1 battle-playable target, whose NitroFS map files, packet rows and
+# Dream Land golden pin stay the source sizes. `NDS_P2_COMPACT_GROUND_MAPS=0` is
+# the same-ROM A/B control. The staged maps follow the flag through a per-build
+# stamp (nds_compact_ground_maps.stamp), so a flip inside one BUILD dir re-stages
+# them instead of shipping the other arm's files.
+NDS_P2_COMPACT_GROUND_MAPS ?= \
+	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds,$(TARGET)),1,0)
 # P2-2p8 Phase 1 slice 3: 1 compiles the lean kernel's phase timing
 # (gNdsFtrLeanSlow bit 8, gNdsFtrLean.kernel_part_ticks). Lab (tick-HUD)
 # builds only, own build dir -- forced to 0 below for every other target.
@@ -6955,6 +6971,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_EFFECT_CENSUS $(NDS_P2_EFFECT_CENSUS)'; \
 		echo '#define NDS_TEX_IDENT_SHADOW $(NDS_TEX_IDENT_SHADOW)'; \
 		echo '#define NDS_IF_GAMESTATUS_COMPACT $(NDS_IF_GAMESTATUS_COMPACT)'; \
+		echo '#define NDS_P2_COMPACT_GROUND_MAPS $(NDS_P2_COMPACT_GROUND_MAPS)'; \
 		echo '#define NDS_FTR_LEAN_KTIME $(NDS_FTR_LEAN_KTIME)'; \
 		echo '#define NDS_RENDERER_M2_DETAILED_LEDGER $(NDS_RENDERER_M2_DETAILED_LEDGER)'; \
 		echo '#define NDS_RENDERER_M3_PHASE0_PROFILE $(NDS_RENDERER_M3_PHASE0_PROFILE)'; \
@@ -7865,6 +7882,54 @@ $(NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES): $(NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP)
 $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
 	@mkdir -p $(dir $@)
 	@cp $< $@
+
+# P2-2p8 T1: the nine VS ground maps are the one reloc group whose staged bytes
+# follow a flag. Flag 1 stages the compact map (wallpaper Sprite/Bitmap stub
+# appended, the 158,928-byte container dropped from its extern tree); flag 0 is
+# the plain copy the generic rule above makes, byte for byte. An explicit
+# static-pattern rule overrides the generic one for these nine only. The
+# containers themselves stay staged by their own lists: the opening movies load
+# them directly, and each map's generation reads its container. The stamp is
+# per BUILD and OUTSIDE nitrofs/ (the ROM packs that whole directory), and only
+# changes when the flag does, so a flip re-stages the maps and nothing else.
+NDS_COMPACT_GROUND_MAP_FILES := \
+	reloc_stages/GRCastleMap reloc_stages/GRSectorMap \
+	reloc_stages/GRJungleMap reloc_stages/GRZebesMap \
+	reloc_stages/GRHyruleMap reloc_stages/GRYosterMap \
+	reloc_stages/GRPupupuMap reloc_stages/GRYamabukiMap \
+	reloc_stages/GRInishieMap
+NDS_COMPACT_GROUND_MAP_CONTAINERS := \
+	$(BATTLESHIP_O2R)/reloc_movies/MVOpeningRoomWallpaper \
+	$(BATTLESHIP_O2R)/reloc_stages/StageSector \
+	$(BATTLESHIP_O2R)/reloc_stages/StageJungle \
+	$(BATTLESHIP_O2R)/reloc_stages/StageZebes \
+	$(BATTLESHIP_O2R)/reloc_stages/StageCastle \
+	$(BATTLESHIP_O2R)/reloc_stages/StageYoshi \
+	$(BATTLESHIP_O2R)/reloc_stages/StageDreamLand \
+	$(BATTLESHIP_O2R)/reloc_stages/StagePokemon \
+	$(BATTLESHIP_O2R)/reloc_stages/StageHyruleWallpaper
+NDS_COMPACT_GROUND_MAPS_STAMP := $(PROJECT_ROOT)/$(BUILD)/nds_compact_ground_maps.stamp
+
+$(NDS_COMPACT_GROUND_MAPS_STAMP): FORCE
+	@mkdir -p $(dir $@)
+	@printf %s "$(NDS_P2_COMPACT_GROUND_MAPS)" > $@.tmp
+	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
+
+NDS_COMPACT_GROUND_MAP_TARGETS := \
+	$(foreach file,$(NDS_COMPACT_GROUND_MAP_FILES),$(NITROFS_DIR)/reloc/$(file))
+
+$(NDS_COMPACT_GROUND_MAP_TARGETS): $(NITROFS_DIR)/reloc/%: $(BATTLESHIP_O2R)/%
+	@mkdir -p $(dir $@)
+	@if test "$(NDS_P2_COMPACT_GROUND_MAPS)" = 1; then \
+		python "$(PROJECT_ROOT)/scripts/stages/generate_compact_ground_maps.py" \
+			--o2r-root "$(BATTLESHIP_O2R)" --map "$*" --output "$@" || exit 1; \
+	else \
+		cp "$(BATTLESHIP_O2R)/$*" "$@"; \
+	fi
+
+$(NDS_COMPACT_GROUND_MAP_TARGETS): $(NDS_COMPACT_GROUND_MAP_CONTAINERS) \
+		$(NDS_COMPACT_GROUND_MAPS_STAMP) \
+		$(PROJECT_ROOT)/scripts/stages/generate_compact_ground_maps.py
 
 $(NITROFS_DIR)/relocdata/us/%: $(BATTLESHIP_RELOCDATA)/%
 	@mkdir -p $(dir $@)

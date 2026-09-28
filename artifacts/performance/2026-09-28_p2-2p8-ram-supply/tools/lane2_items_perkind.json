@@ -1,0 +1,672 @@
+[
+ {
+  "kind": "Bat:ItemAttributes",
+  "dl_roots": [
+   "0x1bf0",
+   "0x1d48"
+  ],
+  "owner_roots": 2,
+  "bytes": {
+   "vertices": 256,
+   "display-list": 528,
+   "dobjdesc": 176,
+   "palette": 128,
+   "texture": 136
+  },
+  "total": 1224
+ },
+ {
+  "kind": "BombHei:ItemAttributes",
+  "dl_roots": [
+   "0x3310"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "material": 160,
+   "vertices": 64,
+   "display-list": 232,
+   "dobjdesc": 132,
+   "palette": 32,
+   "texture": 2592
+  },
+  "total": 3212
+ },
+ {
+  "kind": "Box:ItemAttributes",
+  "dl_roots": [
+   "0x6630"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 64,
+   "texture": 1032,
+   "vertices": 320,
+   "display-list": 328,
+   "dobjdesc": 132
+  },
+  "total": 1876
+ },
+ {
+  "kind": "Capsule:ItemAttributes",
+  "dl_roots": [
+   "0x3e0",
+   "0x540",
+   "0x5e0"
+  ],
+  "owner_roots": 3,
+  "bytes": {
+   "palette": 96,
+   "texture": 400,
+   "vertices": 464,
+   "display-list": 656,
+   "dobjdesc": 220
+  },
+  "total": 1836
+ },
+ {
+  "kind": "Dogas:ItemAttributes",
+  "dl_roots": [
+   "0x12730"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 512,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 176
+  },
+  "total": 1024
+ },
+ {
+  "kind": "DogasSmog:WeaponAttributes",
+  "dl_roots": [
+   "0x13050"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "animation": 88,
+   "pad": 944,
+   "texture": 1552,
+   "material": 328,
+   "vertices": 64,
+   "dobjdesc": 132
+  },
+  "total": 3108
+ },
+ {
+  "kind": "Egg:ItemAttributes",
+  "dl_roots": [
+   "0x103b0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 32,
+   "texture": 512,
+   "vertices": 48,
+   "display-list": 240,
+   "dobjdesc": 176,
+   "animation": 12,
+   "pad": 2948
+  },
+  "total": 3968
+ },
+ {
+  "kind": "FFlower:ItemAttributes",
+  "dl_roots": [
+   "0x4520",
+   "0x4608"
+  ],
+  "owner_roots": 2,
+  "bytes": {
+   "texture": 128,
+   "vertices": 320,
+   "display-list": 568,
+   "pad": 1076,
+   "palette": 496,
+   "material": 152,
+   "dobjdesc": 176,
+   "animation": 12
+  },
+  "total": 2928
+ },
+ {
+  "kind": "GBumper:ItemAttributes",
+  "dl_roots": [
+   "0x7558"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "pad": 64,
+   "texture": 512,
+   "material": 144,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 1156
+ },
+ {
+  "kind": "GShell:ItemAttributes",
+  "dl_roots": [
+   "0x5ec0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "texture": 2072,
+   "material": 160,
+   "vertices": 64,
+   "display-list": 200,
+   "dobjdesc": 132,
+   "palette": 64
+  },
+  "total": 2692
+ },
+ {
+  "kind": "Hammer:ItemAttributes",
+  "dl_roots": [
+   "0x25f0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 32,
+   "texture": 192,
+   "vertices": 576,
+   "display-list": 352,
+   "dobjdesc": 132
+  },
+  "total": 1284
+ },
+ {
+  "kind": "Harisen:ItemAttributes",
+  "dl_roots": [
+   "0x20a0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 32,
+   "texture": 64,
+   "vertices": 384,
+   "display-list": 248,
+   "dobjdesc": 176
+  },
+  "total": 904
+ },
+ {
+  "kind": "Heart:ItemAttributes",
+  "dl_roots": [
+   "0xff8"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "display-list": 352,
+   "dobjdesc": 132,
+   "palette": 32,
+   "texture": 1032,
+   "vertices": 128
+  },
+  "total": 1676
+ },
+ {
+  "kind": "Kabigon:ItemAttributes",
+  "dl_roots": [
+   "0xb070"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 896,
+   "vertices": 64,
+   "display-list": 232,
+   "dobjdesc": 132
+  },
+  "total": 1356
+ },
+ {
+  "kind": "Kamex:ItemAttributes",
+  "dl_roots": [
+   "0xe970"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "pad": 1268,
+   "dobjdesc": 132
+  },
+  "total": 1400
+ },
+ {
+  "kind": "KamexHydro:WeaponAttributes",
+  "dl_roots": [
+   "0xf848",
+   "0xf920"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 64,
+   "texture": 1768,
+   "material": 296,
+   "vertices": 96,
+   "display-list": 400,
+   "dobjdesc": 176,
+   "animation": 236,
+   "pad": 1156
+  },
+  "total": 4192
+ },
+ {
+  "kind": "LGun:ItemAttributes",
+  "dl_roots": [
+   "0x3db0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "display-list": 416,
+   "dobjdesc": 132,
+   "palette": 96,
+   "texture": 208,
+   "vertices": 496
+  },
+  "total": 1348
+ },
+ {
+  "kind": "LGunAmmo:WeaponAttributes",
+  "dl_roots": [
+   "0x4190"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "texture": 128,
+   "vertices": 64,
+   "display-list": 168
+  },
+  "total": 360
+ },
+ {
+  "kind": "Lizardon:ItemAttributes",
+  "dl_roots": [
+   "0xd4e0"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 3592,
+   "material": 144,
+   "vertices": 64,
+   "display-list": 224,
+   "dobjdesc": 132
+  },
+  "total": 4188
+ },
+ {
+  "kind": "MBall:ItemAttributes",
+  "dl_roots": [
+   "0x9250",
+   "0x9340"
+  ],
+  "owner_roots": 2,
+  "bytes": {
+   "palette": 64,
+   "texture": 4928,
+   "material": 176,
+   "vertices": 128,
+   "display-list": 480,
+   "dobjdesc": 220
+  },
+  "total": 5996
+ },
+ {
+  "kind": "MLucky:ItemAttributes",
+  "dl_roots": [
+   "0xff10"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "pad": 1156,
+   "dobjdesc": 176
+  },
+  "total": 1332
+ },
+ {
+  "kind": "MSBomb:ItemAttributes",
+  "dl_roots": [
+   "0x37a0",
+   "0x38b0"
+  ],
+  "owner_roots": 2,
+  "bytes": {
+   "palette": 64,
+   "texture": 200,
+   "vertices": 128,
+   "display-list": 512,
+   "dobjdesc": 220
+  },
+  "total": 1124
+ },
+ {
+  "kind": "Mew:ItemAttributes",
+  "dl_roots": [
+   "0xbbd0"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "display-list": 240,
+   "dobjdesc": 132,
+   "palette": 32,
+   "texture": 512,
+   "vertices": 64
+  },
+  "total": 980
+ },
+ {
+  "kind": "NBumper:ItemAttributes",
+  "dl_roots": [
+   "0x7558"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "pad": 64,
+   "texture": 512,
+   "material": 144,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 1156
+ },
+ {
+  "kind": "Nyars:ItemAttributes",
+  "dl_roots": [
+   "0xc040"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 640,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 1108
+ },
+ {
+  "kind": "NyarsCoin:WeaponAttributes",
+  "dl_roots": [
+   "0xc430"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 512,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 980
+ },
+ {
+  "kind": "Pippi:ItemAttributes",
+  "dl_roots": [
+   "0x134b0"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "pad": 944,
+   "dobjdesc": 132
+  },
+  "total": 1076
+ },
+ {
+  "kind": "PippiSwarm:WeaponAttributes",
+  "dl_roots": [
+   "0x134b0"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "pad": 944,
+   "dobjdesc": 132
+  },
+  "total": 1076
+ },
+ {
+  "kind": "RShell:ItemAttributes",
+  "dl_roots": [
+   "0x5ec0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "texture": 2072,
+   "material": 160,
+   "vertices": 64,
+   "display-list": 200,
+   "dobjdesc": 132,
+   "palette": 64
+  },
+  "total": 2692
+ },
+ {
+  "kind": "Sawamura:ItemAttributes",
+  "dl_roots": [
+   "0x11e50"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "texture": 896,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132,
+   "palette": 32
+  },
+  "total": 1364
+ },
+ {
+  "kind": "Spear:ItemAttributes",
+  "dl_roots": [
+   "0xde48"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 1552,
+   "material": 152,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 176
+  },
+  "total": 2216
+ },
+ {
+  "kind": "SpearSwarm:WeaponAttributes",
+  "dl_roots": [
+   "0xe3b8"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 1552,
+   "material": 152,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 176,
+   "animation": 12,
+   "pad": 1268
+  },
+  "total": 3496
+ },
+ {
+  "kind": "Star:ItemAttributes",
+  "dl_roots": [
+   "0x1440"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "pad": 864,
+   "palette": 128,
+   "material": 280,
+   "vertices": 112,
+   "display-list": 288,
+   "dobjdesc": 132,
+   "animation": 8
+  },
+  "total": 1812
+ },
+ {
+  "kind": "StarRod:ItemAttributes",
+  "dl_roots": [
+   "0x49b0",
+   "0x4aa0"
+  ],
+  "owner_roots": 2,
+  "bytes": {
+   "pad": 1012,
+   "dobjdesc": 176
+  },
+  "total": 1188
+ },
+ {
+  "kind": "StarRod:WeaponAttributes",
+  "dl_roots": [
+   "0x4c18",
+   "0x5458"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "texture": 2048,
+   "vertices": 64,
+   "other": 176
+  },
+  "total": 2288
+ },
+ {
+  "kind": "StarRodSmash:WeaponAttributes",
+  "dl_roots": [
+   "0x4c18",
+   "0x5458"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "texture": 2048,
+   "vertices": 64,
+   "other": 176
+  },
+  "total": 2288
+ },
+ {
+  "kind": "Starmie:ItemAttributes",
+  "dl_roots": [
+   "0x111b0"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "pad": 2948,
+   "material": 160,
+   "vertices": 48,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 3528
+ },
+ {
+  "kind": "StarmieSwift:WeaponAttributes",
+  "dl_roots": [
+   "0x11918"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "texture": 1152,
+   "vertices": 64,
+   "pad": 192,
+   "dobjdesc": 132
+  },
+  "total": 1540
+ },
+ {
+  "kind": "Sword:ItemAttributes",
+  "dl_roots": [
+   "0x17d8",
+   "0x1850"
+  ],
+  "owner_roots": 2,
+  "bytes": {
+   "pad": 800,
+   "dobjdesc": 176
+  },
+  "total": 976
+ },
+ {
+  "kind": "Taru:ItemAttributes",
+  "dl_roots": [
+   "0x7000"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 64,
+   "texture": 1032,
+   "vertices": 448,
+   "display-list": 424,
+   "dobjdesc": 132
+  },
+  "total": 2100
+ },
+ {
+  "kind": "Tomato:ItemAttributes",
+  "dl_roots": [
+   "0x9c0"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 32,
+   "texture": 512,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 980
+ },
+ {
+  "kind": "Tosakinto:ItemAttributes",
+  "dl_roots": [
+   "0xb618"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "palette": 32,
+   "texture": 776,
+   "material": 152,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 176
+  },
+  "total": 1440
+ },
+ {
+  "kind": "Wark:ItemAttributes",
+  "dl_roots": [
+   "0xa050"
+  ],
+  "owner_roots": 1,
+  "bytes": {
+   "palette": 32,
+   "texture": 1792,
+   "vertices": 64,
+   "display-list": 240,
+   "dobjdesc": 132
+  },
+  "total": 2260
+ },
+ {
+  "kind": "WarkRock:WeaponAttributes",
+  "dl_roots": [
+   "0xaaa8"
+  ],
+  "owner_roots": 0,
+  "bytes": {
+   "display-list": 240,
+   "dobjdesc": 132,
+   "palette": 32,
+   "texture": 400,
+   "material": 152,
+   "vertices": 64
+  },
+  "total": 1020
+ }
+]

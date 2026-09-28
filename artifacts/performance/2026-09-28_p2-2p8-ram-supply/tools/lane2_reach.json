@@ -1,0 +1,395 @@
+{
+ "EFCommonEffects1": {
+  "file": "EFCommonEffects1",
+  "fid": 83,
+  "payload": 52736,
+  "all_classes": {
+   "unplaced": 8,
+   "texture": 46580,
+   "pad": 956,
+   "material": 824,
+   "vertices": 672,
+   "display_list": 1512,
+   "palette": 624,
+   "animation": 1560
+  },
+  "live": {
+   "pad": 336,
+   "texture": 23968,
+   "material": 704,
+   "vertices": 608,
+   "display_list": 1384,
+   "animation": 1560,
+   "palette": 80
+  },
+  "unreferenced": {
+   "unplaced": 8,
+   "texture": 22612,
+   "pad": 620,
+   "material": 120,
+   "vertices": 64,
+   "display_list": 128,
+   "palette": 544
+  },
+  "per_effect": {
+   "CommonSpark": {
+    "material": 120,
+    "pad": 120,
+    "vertices": 64,
+    "display_list": 176,
+    "animation": 224,
+    "palette": 32,
+    "texture": 3584
+   },
+   "DamageFlyMDust": {
+    "texture": 14336,
+    "pad": 64,
+    "material": 152,
+    "vertices": 64,
+    "display_list": 128,
+    "animation": 224
+   },
+   "DamageSlash": {
+    "pad": 112,
+    "texture": 5728,
+    "material": 304,
+    "vertices": 128,
+    "display_list": 608,
+    "animation": 328
+   },
+   "FlyOrbs": {
+    "palette": 16,
+    "pad": 24,
+    "texture": 64,
+    "vertices": 64,
+    "display_list": 192,
+    "animation": 40
+   },
+   "ImpactWave": {
+    "palette": 32,
+    "pad": 16,
+    "texture": 256,
+    "material": 128,
+    "vertices": 288,
+    "display_list": 280,
+    "animation": 168
+   },
+   "QuakeMag0": {
+    "animation": 96
+   },
+   "QuakeMag1": {
+    "animation": 208
+   },
+   "QuakeMag2": {
+    "animation": 208
+   },
+   "QuakeMag3": {
+    "animation": 64
+   }
+  },
+  "dead_intervals": [
+   [
+    "0x8",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x0008"
+   ],
+   [
+    "0x810",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x0810"
+   ],
+   [
+    "0x1018",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x1018"
+   ],
+   [
+    "0x1820",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x1820"
+   ],
+   [
+    "0x2028",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x2028"
+   ],
+   [
+    "0x2830",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x2830"
+   ],
+   [
+    "0x3038",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x3038"
+   ],
+   [
+    "0x3840",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x3840"
+   ],
+   [
+    "0x4048",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x4048"
+   ],
+   [
+    "0x4850",
+    2056,
+    "texture",
+    "dEFCommonEffects1_Tex_0x4850"
+   ],
+   [
+    "0x5058",
+    2052,
+    "texture",
+    "dEFCommonEffects1_Tex_0x5058"
+   ],
+   [
+    "0x5888",
+    120,
+    "material",
+    "dEFCommonEffects1_gap_0x0000_sub_0x5888"
+   ],
+   [
+    "0x5908",
+    64,
+    "vertices",
+    "dEFCommonEffects1_gap_0x0000_sub_0x5908"
+   ],
+   [
+    "0x5948",
+    112,
+    "display_list",
+    "dEFCommonEffects1_gap_0x0000_sub_0x5948"
+   ],
+   [
+    "0x59d4",
+    256,
+    "pad",
+    "dEFCommonEffects1_gap_0x0000_sub_0x59D4"
+   ],
+   [
+    "0x5ad4",
+    140,
+    "pad",
+    "dEFCommonEffects1_gap_0x0000_sub_0x5AD4"
+   ]
+  ]
+ },
+ "EFCommonEffects2": {
+  "file": "EFCommonEffects2",
+  "fid": 84,
+  "payload": 28352,
+  "all_classes": {
+   "unplaced": 8,
+   "texture": 18392,
+   "material": 1120,
+   "pad": 1500,
+   "vertices": 944,
+   "display_list": 2272,
+   "animation": 2936,
+   "palette": 384,
+   "dobjdesc": 796
+  },
+  "live": {
+   "texture": 17880,
+   "material": 1120,
+   "pad": 1296,
+   "vertices": 816,
+   "display_list": 2056,
+   "animation": 2936,
+   "palette": 64,
+   "dobjdesc": 620
+  },
+  "unreferenced": {
+   "unplaced": 8,
+   "palette": 320,
+   "pad": 204,
+   "texture": 512,
+   "vertices": 128,
+   "display_list": 216,
+   "dobjdesc": 176
+  },
+  "per_effect": {
+   "CatchSwirl": {
+    "texture": 256,
+    "dobjdesc": 144,
+    "material": 360,
+    "pad": 408,
+    "vertices": 48,
+    "display_list": 608,
+    "animation": 672
+   },
+   "DeadExplode1": {
+    "animation": 112
+   },
+   "DeadExplode2": {
+    "animation": 112
+   },
+   "DeadExplode3": {
+    "animation": 100,
+    "pad": 20
+   },
+   "DeadExplode4": {
+    "animation": 112
+   },
+   "DeadExplodeDefault": {
+    "texture": 5280,
+    "dobjdesc": 136,
+    "material": 240,
+    "pad": 272,
+    "vertices": 384,
+    "display_list": 464,
+    "animation": 912
+   },
+   "FireSpark": {
+    "palette": 32,
+    "pad": 44,
+    "texture": 2072,
+    "material": 136,
+    "vertices": 64,
+    "display_list": 200,
+    "dobjdesc": 152,
+    "animation": 204
+   },
+   "NessPKFlash": {
+    "palette": 32,
+    "pad": 224,
+    "texture": 4096,
+    "dobjdesc": 44,
+    "vertices": 64,
+    "display_list": 216,
+    "animation": 296
+   },
+   "ReflectBreak": {
+    "texture": 1024,
+    "dobjdesc": 144,
+    "material": 240,
+    "pad": 308,
+    "vertices": 192,
+    "display_list": 456,
+    "animation": 420
+   },
+   "ShockSmall": {
+    "texture": 5152,
+    "material": 144,
+    "pad": 20,
+    "vertices": 64,
+    "display_list": 112,
+    "animation": 108
+   },
+   "ShadowTexture": {
+    "texture": 5280
+   }
+  },
+  "dead_intervals": [
+   [
+    "0x3658",
+    512,
+    "texture",
+    "dEFCommonEffects2_ReflectBreak_Tex_0x3658"
+   ],
+   [
+    "0x3858",
+    64,
+    "vertices",
+    "dEFCommonEffects2_ReflectBreak_Vtx_0x3858"
+   ],
+   [
+    "0x3898",
+    64,
+    "vertices",
+    "dEFCommonEffects2_ReflectBreak_Vtx_0x3898"
+   ],
+   [
+    "0x38d8",
+    96,
+    "display_list",
+    "dEFCommonEffects2_ReflectBreak_DL_0x38D8"
+   ],
+   [
+    "0x39a8",
+    184,
+    "dobjdesc",
+    "dEFCommonEffects2_ReflectBreak_DObjDesc_0x39A8"
+   ],
+   [
+    "0x6b6c",
+    116,
+    "pad",
+    "dEFCommonEffects2_gap_0x6B6C"
+   ]
+  ]
+ },
+ "EFCommonEffects3": {
+  "file": "EFCommonEffects3",
+  "fid": 85,
+  "payload": 13616,
+  "all_classes": {
+   "unplaced": 8,
+   "texture": 512,
+   "material": 1000,
+   "pad": 1544,
+   "vertices": 2896,
+   "display_list": 6344,
+   "animation": 1184,
+   "palette": 128
+  },
+  "live": {
+   "texture": 512,
+   "material": 1000,
+   "pad": 1544,
+   "vertices": 2896,
+   "display_list": 6216,
+   "animation": 1184,
+   "palette": 128
+  },
+  "unreferenced": {
+   "unplaced": 8,
+   "display_list": 128
+  },
+  "per_effect": {
+   "ItemGetSwirl": {
+    "texture": 256,
+    "material": 504,
+    "pad": 32,
+    "vertices": 48,
+    "display_list": 960,
+    "animation": 640
+   },
+   "MBallRays": {
+    "texture": 256,
+    "material": 496,
+    "pad": 48,
+    "vertices": 304,
+    "display_list": 720,
+    "animation": 496
+   },
+   "RebirthHalo": {
+    "palette": 128,
+    "pad": 1464,
+    "vertices": 2544,
+    "display_list": 4536,
+    "animation": 48
+   }
+  },
+  "dead_intervals": [
+   [
+    "0x1888",
+    128,
+    "display_list",
+    "dEFCommonEffects3_MBallRays_DL_0x1888"
+   ]
+  ]
+ }
+}

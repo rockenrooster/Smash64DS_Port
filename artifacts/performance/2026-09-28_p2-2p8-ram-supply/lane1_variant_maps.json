@@ -1,0 +1,505 @@
+[
+ {
+  "stage": "Peach's Castle",
+  "map_file": "GRCastleMap",
+  "orig_size": 192,
+  "variant_size": 976,
+  "external_fixups": [
+   9,
+   8
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    106,
+    106,
+    106,
+    106,
+    106,
+    106,
+    106,
+    90,
+    156
+   ],
+   [
+    106,
+    106,
+    106,
+    106,
+    106,
+    106,
+    106,
+    156
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 176880,
+  "alloc_new": 18736,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 192,
+   "spr_off": 896,
+   "size": 976,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Sector Z",
+  "map_file": "GRSectorMap",
+  "orig_size": 304,
+  "variant_size": 1088,
+  "external_fixups": [
+   9,
+   8
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    109,
+    109,
+    109,
+    109,
+    109,
+    99,
+    153,
+    153,
+    153
+   ],
+   [
+    109,
+    109,
+    109,
+    109,
+    109,
+    153,
+    153,
+    153
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 226192,
+  "alloc_new": 68048,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 304,
+   "spr_off": 1008,
+   "size": 1088,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Kongo Jungle",
+  "map_file": "GRJungleMap",
+  "orig_size": 224,
+  "variant_size": 1008,
+  "external_fixups": [
+   8,
+   7
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    108,
+    108,
+    108,
+    108,
+    108,
+    108,
+    92,
+    158
+   ],
+   [
+    108,
+    108,
+    108,
+    108,
+    108,
+    108,
+    158
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 225392,
+  "alloc_new": 67248,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 224,
+   "spr_off": 928,
+   "size": 1008,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Planet Zebes",
+  "map_file": "GRZebesMap",
+  "orig_size": 224,
+  "variant_size": 1008,
+  "external_fixups": [
+   7,
+   6
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    105,
+    105,
+    105,
+    105,
+    105,
+    89,
+    157
+   ],
+   [
+    105,
+    105,
+    105,
+    105,
+    105,
+    157
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 219872,
+  "alloc_new": 61728,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 224,
+   "spr_off": 928,
+   "size": 1008,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Hyrule Castle",
+  "map_file": "GRHyruleMap",
+  "orig_size": 224,
+  "variant_size": 1008,
+  "external_fixups": [
+   5,
+   4
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    113,
+    113,
+    113,
+    113,
+    95
+   ],
+   [
+    113,
+    113,
+    113,
+    113
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 185920,
+  "alloc_new": 27776,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 224,
+   "spr_off": 928,
+   "size": 1008,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Yoshi's Island",
+  "map_file": "GRYosterMap",
+  "orig_size": 192,
+  "variant_size": 976,
+  "external_fixups": [
+   10,
+   9
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    111,
+    111,
+    111,
+    111,
+    111,
+    111,
+    111,
+    111,
+    93,
+    154
+   ],
+   [
+    111,
+    111,
+    111,
+    111,
+    111,
+    111,
+    111,
+    111,
+    154
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 229280,
+  "alloc_new": 71136,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 192,
+   "spr_off": 896,
+   "size": 976,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Dream Land",
+  "map_file": "GRPupupuMap",
+  "orig_size": 192,
+  "variant_size": 976,
+  "external_fixups": [
+   9,
+   8
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    104,
+    104,
+    104,
+    104,
+    104,
+    104,
+    104,
+    88,
+    152
+   ],
+   [
+    104,
+    104,
+    104,
+    104,
+    104,
+    104,
+    104,
+    152
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 202816,
+  "alloc_new": 44672,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 192,
+   "spr_off": 896,
+   "size": 976,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Saffron City",
+  "map_file": "GRYamabukiMap",
+  "orig_size": 832,
+  "variant_size": 1616,
+  "external_fixups": [
+   23,
+   22
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    112,
+    112,
+    112,
+    112,
+    112,
+    112,
+    112,
+    112,
+    94,
+    160,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159
+   ],
+   [
+    112,
+    112,
+    112,
+    112,
+    112,
+    112,
+    112,
+    112,
+    160,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159,
+    159
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 239600,
+  "alloc_new": 81456,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 832,
+   "spr_off": 1536,
+   "size": 1616,
+   "dropped": 158928
+  }
+ },
+ {
+  "stage": "Mushroom Kingdom",
+  "map_file": "GRInishieMap",
+  "orig_size": 368,
+  "variant_size": 1152,
+  "external_fixups": [
+   14,
+   13
+  ],
+  "internal_fixups": [
+   1,
+   3
+  ],
+  "extern_ids": [
+   [
+    107,
+    107,
+    107,
+    107,
+    107,
+    107,
+    107,
+    107,
+    91,
+    155,
+    155,
+    155,
+    155,
+    155
+   ],
+   [
+    107,
+    107,
+    107,
+    107,
+    107,
+    107,
+    107,
+    107,
+    155,
+    155,
+    155,
+    155,
+    155
+   ]
+  ],
+  "wallpaper_in_tree": false,
+  "alloc_old": 192224,
+  "alloc_new": 34080,
+  "saved": 158144,
+  "checks": {
+   "ext_minus_1": true,
+   "int_plus_2": true,
+   "wallpaper_slot_to_stub_sprite": true,
+   "stub_sprite_bitmap_ptr": true
+  },
+  "stub": {
+   "bm_off": 368,
+   "spr_off": 1072,
+   "size": 1152,
+   "dropped": 158928
+  }
+ }
+]

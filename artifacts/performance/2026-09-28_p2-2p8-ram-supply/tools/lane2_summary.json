@@ -1,0 +1,386 @@
+{
+ "rows": [
+  {
+   "owner": "A",
+   "fid": 166,
+   "name": "IFCommonPlayer",
+   "payload": 976,
+   "resident_now": 976,
+   "keep": 976,
+   "A": 0,
+   "B": 0,
+   "conf": "H",
+   "confA": "H",
+   "confB": "H",
+   "note": "DObjDesc/DL/Vtx/anim/IA8; tiny, kept",
+   "tags": {}
+  },
+  {
+   "owner": "A",
+   "fid": 82,
+   "name": "IFCommonGameStatus (compact image)",
+   "payload": 152288,
+   "resident_now": 21056,
+   "keep": 2448,
+   "A": 304,
+   "B": 18320,
+   "conf": "H/M",
+   "confA": "H",
+   "confB": "M",
+   "note": "letters (131,232 B) already dropped by NDS_IF_GAMESTATUS_COMPACT; lamp/rod/frame pixels read only by the scene-entry atlas prepare",
+   "tags": {
+    "keep_headers": 1632,
+    "keep_bitmap_arrays": 816,
+    "setup_read_pixels": 18016,
+    "pad_other": 592
+   }
+  },
+  {
+   "owner": "A",
+   "fid": 82,
+   "name": "IFCommonGameStatus baked end streams",
+   "payload": 0,
+   "resident_now": 22104,
+   "keep": 0,
+   "A": 0,
+   "B": 22104,
+   "conf": "-/M",
+   "confA": "-",
+   "confB": "M",
+   "note": "RLE TIME UP / GAME SET banks (measured 22,104 B); decoded into OBJ VRAM at game end; could be a NitroFS pack read at the announcement",
+   "tags": {}
+  },
+  {
+   "owner": "A",
+   "fid": 164,
+   "name": "IFCommonPlayerDamage",
+   "payload": 5664,
+   "resident_now": 5664,
+   "keep": 816,
+   "A": 4704,
+   "B": 4704,
+   "conf": "H/H",
+   "confA": "H",
+   "confB": "H",
+   "note": "",
+   "tags": {
+    "keep_headers": 816,
+    "dead_pixels": 4472,
+    "pad_other": 184,
+    "dead_bitmap_array": 192
+   }
+  },
+  {
+   "owner": "A",
+   "fid": 165,
+   "name": "IFCommonTimer",
+   "payload": 4736,
+   "resident_now": 4736,
+   "keep": 1020,
+   "A": 3536,
+   "B": 3536,
+   "conf": "H/H",
+   "confA": "H",
+   "confB": "H",
+   "note": "",
+   "tags": {
+    "keep_headers": 1020,
+    "dead_pixels": 3280,
+    "pad_other": 196,
+    "dead_bitmap_array": 240
+   }
+  },
+  {
+   "owner": "A",
+   "fid": 36,
+   "name": "IFCommonDigits",
+   "payload": 2336,
+   "resident_now": 2336,
+   "keep": 884,
+   "A": 1296,
+   "B": 1296,
+   "conf": "H/H",
+   "confA": "H",
+   "confB": "H",
+   "note": "",
+   "tags": {
+    "keep_headers": 884,
+    "dead_pixels": 1080,
+    "pad_other": 164,
+    "dead_bitmap_array": 208
+   }
+  },
+  {
+   "owner": "A",
+   "fid": 197,
+   "name": "IFCommonBattlePause",
+   "payload": 6416,
+   "resident_now": 6416,
+   "keep": 1088,
+   "A": 5136,
+   "B": 5136,
+   "conf": "M/M",
+   "confA": "M",
+   "confB": "M",
+   "note": "",
+   "tags": {
+    "keep_headers": 1088,
+    "dead_pixels": 4872,
+    "pad_other": 200,
+    "dead_bitmap_array": 256
+   }
+  },
+  {
+   "owner": "A",
+   "fid": 38,
+   "name": "IFCommonPlayerTags",
+   "payload": 3840,
+   "resident_now": 3840,
+   "keep": 504,
+   "A": 0,
+   "B": 3264,
+   "conf": "H/H",
+   "confA": "H",
+   "confB": "H",
+   "note": "",
+   "tags": {
+    "keep_headers": 408,
+    "setup_read_pixels": 3264,
+    "pad_other": 72,
+    "keep_bitmap_arrays": 96
+   }
+  },
+  {
+   "owner": "A",
+   "fid": 37,
+   "name": "IFCommonAnnounceCommon",
+   "payload": 32416,
+   "resident_now": 32416,
+   "keep": 1904,
+   "A": 30176,
+   "B": 30176,
+   "conf": "M/M",
+   "confA": "M",
+   "confB": "M",
+   "note": "",
+   "tags": {
+    "keep_headers": 1904,
+    "dead_pixels": 29632,
+    "pad_other": 432,
+    "dead_bitmap_array": 448
+   }
+  },
+  {
+   "owner": "B",
+   "fid": 87,
+   "name": "IFCommonItem",
+   "payload": 160,
+   "resident_now": 160,
+   "keep": 160,
+   "A": 0,
+   "B": 0,
+   "conf": "H",
+   "confA": "H",
+   "confB": "H",
+   "note": "160 B; arrow sprite baked at itManagerInitItems; not worth compacting",
+   "tags": {}
+  },
+  {
+   "owner": "B",
+   "fid": 251,
+   "name": "ITCommonData",
+   "payload": 3392,
+   "resident_now": 3392,
+   "keep": 3392,
+   "A": 0,
+   "B": 0,
+   "conf": "H",
+   "confA": "H",
+   "confB": "H",
+   "note": "68 externs + attribute rows decoded once per kind by ndsItDecodeAttributes; kept whole",
+   "tags": {}
+  },
+  {
+   "owner": "B",
+   "fid": 86,
+   "name": "MiscData086 (ITCommonObject)",
+   "payload": 79584,
+   "resident_now": 79584,
+   "keep": 57252,
+   "A": 19712,
+   "B": 41624,
+   "conf": "H/M",
+   "confA": "H",
+   "confB": "M",
+   "note": "B = owned-kind textures fetched from a NitroFS pack at first bind (UNPROVEN cost); 12 Pokemon + weapons have no native owner (their DL/Vtx/tex are unread today)",
+   "tags": {
+    "unreached_keep_unproven": 680,
+    "bind_read_owned_kinds": 21912,
+    "dead_vertices": 6640,
+    "dead_dl": 11032,
+    "keep_fingerprint": 1032,
+    "keep_runtime": 13468,
+    "pad_other": 4660,
+    "no_owner_kinds_texture": 20160
+   }
+  },
+  {
+   "owner": "B",
+   "fid": null,
+   "name": "ITStruct pool (16 x 924)",
+   "payload": 14784,
+   "resident_now": 14784,
+   "keep": 14784,
+   "A": 0,
+   "B": 0,
+   "conf": "H",
+   "confA": "H",
+   "confB": "H",
+   "note": "ITEM_ALLOC_MAX is the source's; no high-water counter exists for concurrent items",
+   "tags": {}
+  },
+  {
+   "owner": "C",
+   "fid": 83,
+   "name": "EFCommonEffects1",
+   "payload": 52736,
+   "resident_now": 52736,
+   "keep": 22272,
+   "A": 30176,
+   "B": 50240,
+   "conf": "H/M",
+   "confA": "H",
+   "confB": "M",
+   "note": "unreferenced island / DL / Vtx / textures with no DS reader",
+   "tags": {
+    "dead_unreferenced": 23476,
+    "pad_other": 940,
+    "prepare_only": 20064,
+    "keep_runtime": 2160,
+    "dead_vertices": 608,
+    "dead_dl": 1480,
+    "keep_fingerprint": 48,
+    "dead_texture": 3960
+   }
+  },
+  {
+   "owner": "C",
+   "fid": 84,
+   "name": "EFCommonEffects2",
+   "payload": 28352,
+   "resident_now": 28352,
+   "keep": 4836,
+   "A": 23164,
+   "B": 23164,
+   "conf": "H/H",
+   "confA": "H",
+   "confB": "H",
+   "note": "unreferenced island / DL / Vtx / textures with no DS reader",
+   "tags": {
+    "dead_unreferenced": 1360,
+    "dead_texture": 12664,
+    "keep_runtime": 4836,
+    "pad_other": 1500,
+    "dead_vertices": 816,
+    "dead_dl": 1896,
+    "identity_only": 5280
+   }
+  },
+  {
+   "owner": "C",
+   "fid": 85,
+   "name": "EFCommonEffects3",
+   "payload": 13616,
+   "resident_now": 13616,
+   "keep": 2376,
+   "A": 11096,
+   "B": 11096,
+   "conf": "H/H",
+   "confA": "H",
+   "confB": "H",
+   "note": "unreferenced island / DL / Vtx / textures with no DS reader",
+   "tags": {
+    "dead_unreferenced": 136,
+    "dead_texture": 632,
+    "keep_runtime": 2376,
+    "pad_other": 1520,
+    "dead_vertices": 2896,
+    "dead_dl": 6056
+   }
+  },
+  {
+   "owner": "C",
+   "fid": null,
+   "name": "EFStruct pool (38 x 60)",
+   "payload": 2280,
+   "resident_now": 2280,
+   "keep": 2280,
+   "A": 0,
+   "B": 0,
+   "conf": "H",
+   "confA": "H",
+   "confB": "H",
+   "note": "measured FreeMin 0 of 38 in three four-kind runs (pool saturates): cannot shrink",
+   "tags": {}
+  },
+  {
+   "owner": "C",
+   "fid": null,
+   "name": "visual templates (7 x 352)",
+   "payload": 2464,
+   "resident_now": 2464,
+   "keep": 2464,
+   "A": 0,
+   "B": 0,
+   "conf": "L/L",
+   "confA": "L",
+   "confB": "L",
+   "note": "procedural Task-39 stand-ins; reader coverage not audited",
+   "tags": {}
+  },
+  {
+   "owner": "C",
+   "fid": null,
+   "name": "particle pools (efParticleInitAll)",
+   "payload": 28320,
+   "resident_now": 28320,
+   "keep": 28320,
+   "A": 0,
+   "B": 0,
+   "conf": "H",
+   "confA": "H",
+   "confB": "H",
+   "note": "measured max 53/15/36 of 112/24/80 over 30 runs; see pools table",
+   "tags": {}
+  }
+ ],
+ "total": {
+  "payload": 434360,
+  "resident_now": 325232,
+  "keep": 147776,
+  "A": 129300,
+  "B": 214660,
+  "A_pct_of_need": [
+   22.7,
+   18.5
+  ],
+  "B_pct_of_need": [
+   37.7,
+   30.7
+  ],
+  "levers": [
+   {
+    "name": "particle pools right-sized 112/24/80 -> 64/20/48",
+    "bytes": 11120,
+    "conf": "M",
+    "note": "measured max 53/15/36 in 30 runs; KO burst needs a transform (silent missing effect if short)"
+   },
+   {
+    "name": "skip item files + pool when no item can spawn",
+    "bytes": 97920,
+    "conf": "L",
+    "note": "MiscData086 is also an extern of Yoshi's main file (slot 0x40 -> 0x5458, lane2_xrefs.py); ITCommonData is read by the thrown Master Ball effect (Pikachu/Jigglypuff), stage bumpers and the Poke Ball; UNPROVEN consumer census"
+   }
+  ]
+ }
+}

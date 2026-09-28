@@ -1,0 +1,108 @@
+{
+ "IFCommonPlayerDamage": {
+  "fid": 164,
+  "payload": 5664,
+  "sprites": 12,
+  "tags": {
+   "keep_headers": 816,
+   "dead_pixels": 4472,
+   "pad_other": 184,
+   "dead_bitmap_array": 192
+  }
+ },
+ "IFCommonTimer": {
+  "fid": 165,
+  "payload": 4736,
+  "sprites": 15,
+  "tags": {
+   "keep_headers": 1020,
+   "dead_pixels": 3280,
+   "pad_other": 196,
+   "dead_bitmap_array": 240
+  }
+ },
+ "IFCommonDigits": {
+  "fid": 36,
+  "payload": 2336,
+  "sprites": 13,
+  "tags": {
+   "keep_headers": 884,
+   "dead_pixels": 1080,
+   "pad_other": 164,
+   "dead_bitmap_array": 208
+  }
+ },
+ "IFCommonBattlePause": {
+  "fid": 197,
+  "payload": 6416,
+  "sprites": 16,
+  "tags": {
+   "keep_headers": 1088,
+   "dead_pixels": 4872,
+   "pad_other": 200,
+   "dead_bitmap_array": 256
+  }
+ },
+ "IFCommonPlayerTags": {
+  "fid": 38,
+  "payload": 3840,
+  "sprites": 6,
+  "tags": {
+   "keep_headers": 408,
+   "setup_read_pixels": 3264,
+   "pad_other": 72,
+   "keep_bitmap_arrays": 96
+  }
+ },
+ "IFCommonAnnounceCommon": {
+  "fid": 37,
+  "payload": 32416,
+  "sprites": 28,
+  "tags": {
+   "keep_headers": 1904,
+   "dead_pixels": 29632,
+   "pad_other": 432,
+   "dead_bitmap_array": 448
+  }
+ },
+ "IFCommonItem": {
+  "fid": 87,
+  "payload": 160,
+  "sprites": 1,
+  "tags": {
+   "keep_headers": 68,
+   "setup_read_pixels": 56,
+   "pad_other": 20,
+   "keep_bitmap_arrays": 16
+  }
+ },
+ "IFCommonGameStatus": {
+  "fid": 82,
+  "payload": 152288,
+  "compact": {
+   "asset_rows": 25,
+   "unique_sprites": 24,
+   "letter_sprites": 12,
+   "keeper_sprites": 12,
+   "dropped_letter_pixel_bytes": 131232,
+   "resident_image_bytes": 21056,
+   "kept_pixel_bytes": 18016,
+   "sprite_headers": 1632,
+   "bitmap_arrays": 816,
+   "pad_or_other": 592
+  },
+  "tags_resident_image": {
+   "keep_headers": 1632,
+   "keep_bitmap_arrays": 816,
+   "setup_read_pixels": 18016,
+   "pad_other": 592
+  },
+  "already_dropped_letter_pixels": 131232,
+  "baked_end_streams_measured": 22104
+ },
+ "IFCommonPlayer": {
+  "fid": 166,
+  "payload": 976,
+  "note": "DObjDesc/DL/Vtx/anim + one IA8 image; not classified, kept"
+ }
+}

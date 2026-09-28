@@ -1,0 +1,101 @@
+{
+ "if_block_flag0": 208672,
+ "if_block_flag1": 56400,
+ "if_files": [
+  {
+   "name": "IFCommonPlayer",
+   "slot": "gGMCommonFiles[0]",
+   "fid": 166,
+   "container": 1056,
+   "payload": 976,
+   "aligned": 976,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonGameStatus",
+   "slot": "gGMCommonFiles[1]",
+   "fid": 82,
+   "container": 152368,
+   "payload": 152288,
+   "aligned": 152288,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonPlayerDamage",
+   "slot": "gGMCommonFiles[2]",
+   "fid": 164,
+   "container": 5744,
+   "payload": 5664,
+   "aligned": 5664,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonTimer",
+   "slot": "gGMCommonFiles[3]",
+   "fid": 165,
+   "container": 4816,
+   "payload": 4736,
+   "aligned": 4736,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonDigits",
+   "slot": "gGMCommonFiles[4]",
+   "fid": 36,
+   "container": 2416,
+   "payload": 2336,
+   "aligned": 2336,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonBattlePause",
+   "slot": "gGMCommonFiles[5]",
+   "fid": 197,
+   "container": 6496,
+   "payload": 6416,
+   "aligned": 6416,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonPlayerTags",
+   "slot": "gGMCommonFiles[6]",
+   "fid": 38,
+   "container": 3920,
+   "payload": 3840,
+   "aligned": 3840,
+   "nitro_identical": true
+  },
+  {
+   "name": "IFCommonAnnounceCommon",
+   "slot": "gGMCommonFiles[7]",
+   "fid": 37,
+   "container": 32496,
+   "payload": 32416,
+   "aligned": 32416,
+   "nitro_identical": true
+  }
+ ],
+ "item_tree": 82976,
+ "item_pool": 14784,
+ "ifcommonitem": 160,
+ "nitro_items": [
+  true,
+  true,
+  true
+ ],
+ "ef_files": 94704,
+ "ef_pool": 2280,
+ "ef_templates": 2464,
+ "nitro_ef": [
+  true,
+  true,
+  true
+ ],
+ "particle_pools": {
+  "structs": 112,
+  "generators": 24,
+  "transforms": 80,
+  "bytes": 28320
+ },
+ "owner_totals_flag0": 406040
+}

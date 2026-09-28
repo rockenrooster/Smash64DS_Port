@@ -1,0 +1,121 @@
+{
+ "compared_words_bytes_union": 992,
+ "contiguous_prefix_bytes_union": 5632,
+ "per_owner": {
+  "CASTLE_BUMPER": {
+   "roots": 1,
+   "max_index": null,
+   "prefix_bytes": 0
+  },
+  "ITEM_BAT": {
+   "roots": 3,
+   "max_index": 14,
+   "prefix_bytes": 328
+  },
+  "ITEM_BOMBHEI": {
+   "roots": 1,
+   "max_index": 21,
+   "prefix_bytes": 176
+  },
+  "ITEM_BOX": {
+   "roots": 1,
+   "max_index": 33,
+   "prefix_bytes": 272
+  },
+  "ITEM_CAPSULE": {
+   "roots": 4,
+   "max_index": 17,
+   "prefix_bytes": 528
+  },
+  "ITEM_EGG": {
+   "roots": 1,
+   "max_index": 21,
+   "prefix_bytes": 176
+  },
+  "ITEM_FFLOWER": {
+   "roots": 3,
+   "max_index": 12,
+   "prefix_bytes": 296
+  },
+  "ITEM_GSHELL": {
+   "roots": 1,
+   "max_index": 17,
+   "prefix_bytes": 144
+  },
+  "ITEM_HAMMER": {
+   "roots": 1,
+   "max_index": 36,
+   "prefix_bytes": 296
+  },
+  "ITEM_HARISEN": {
+   "roots": 1,
+   "max_index": 22,
+   "prefix_bytes": 184
+  },
+  "ITEM_HEART": {
+   "roots": 1,
+   "max_index": 36,
+   "prefix_bytes": 296
+  },
+  "ITEM_IWARK": {
+   "roots": 1,
+   "max_index": 21,
+   "prefix_bytes": 176
+  },
+  "ITEM_KIRBYSTAR": {
+   "roots": 1,
+   "max_index": 15,
+   "prefix_bytes": 128
+  },
+  "ITEM_LGUN": {
+   "roots": 1,
+   "max_index": 43,
+   "prefix_bytes": 352
+  },
+  "ITEM_MBALL": {
+   "roots": 2,
+   "max_index": 21,
+   "prefix_bytes": 352
+  },
+  "ITEM_MSBOMB": {
+   "roots": 2,
+   "max_index": 25,
+   "prefix_bytes": 416
+  },
+  "ITEM_NBUMPER": {
+   "roots": 1,
+   "max_index": 21,
+   "prefix_bytes": 176
+  },
+  "ITEM_RSHELL": {
+   "roots": 1,
+   "max_index": 17,
+   "prefix_bytes": 144
+  },
+  "ITEM_STAR": {
+   "roots": 1,
+   "max_index": 29,
+   "prefix_bytes": 240
+  },
+  "ITEM_STARROD": {
+   "roots": 3,
+   "max_index": 15,
+   "prefix_bytes": 360
+  },
+  "ITEM_SWORD": {
+   "roots": 2,
+   "max_index": 15,
+   "prefix_bytes": 248
+  },
+  "ITEM_TARU": {
+   "roots": 1,
+   "max_index": 38,
+   "prefix_bytes": 312
+  },
+  "ITEM_TOMATO": {
+   "roots": 1,
+   "max_index": 21,
+   "prefix_bytes": 176
+  }
+ }
+}

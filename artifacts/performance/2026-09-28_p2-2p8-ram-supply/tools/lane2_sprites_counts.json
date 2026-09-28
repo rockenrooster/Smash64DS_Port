@@ -1,0 +1,10 @@
+{
+ "IFCommonPlayerDamage": 12,
+ "IFCommonTimer": 15,
+ "IFCommonDigits": 13,
+ "IFCommonBattlePause": 16,
+ "IFCommonPlayerTags": 6,
+ "IFCommonAnnounceCommon": 28,
+ "IFCommonGameStatus": 24,
+ "IFCommonItem": 1
+}

@@ -12937,6 +12937,11 @@ void lbParticleDrawTextures(GObj *gobj)
 
 /* renderer_adapter_matrix.c, included later in this translation unit. */
 void ndsRendererAdapterNativeStagePreloadAssets(void);
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS && NDS_P2_1P_GAME
+/* reloc_backend_assets.c, included later in this translation unit. */
+static __attribute__((noinline)) void ndsRelocCompactGroundMapPrepareTraining(
+    void *file, MPGroundData *ground_data);
+#endif
 
 void mpCollisionInitGroundData(void)
 {
@@ -13048,6 +13053,9 @@ void mpCollisionInitGroundData(void)
             {
                 break;
             }
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS && NDS_P2_1P_GAME
+            ndsRelocCompactGroundMapPrepareTraining(file, ground_data);
+#endif
             gMPCollisionGroundData = ground_data;
             ndsMPCollisionSetGeometry(ground_data->map_geometry);
             gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?

@@ -583,7 +583,14 @@ Opening movie / Opening Portraits:
   VSBattle stage-data use.
 - `gNdsStagePupupuRelocAssetMask`: expected low five bits `0x1F`. Bits mean:
   `0` GRPupupuMap, `1` StageDreamLand, `2` ExternDataBank103, `3`
-  ExternDataBank104, `4` MiscDataBank152.
+  ExternDataBank104, `4` MiscDataBank152. With `NDS_P2_COMPACT_GROUND_MAPS`
+  (P2 builds) the compact `GRPupupuMap` carries the wallpaper Sprite/Bitmap
+  stub itself and `StageDreamLand` is not loaded, so bit `1` is set by the map.
+- `gNdsRelocCompactGroundMapCount` / `gNdsRelocCompactGroundMapKeyCount`
+  (`NDS_P2_COMPACT_GROUND_MAPS` builds only): compact VS ground maps whose stub
+  Sprite was normalized (one per battle load; `0` means NitroFS held source
+  maps and the container was loaded as before), and wallpaper draws keyed
+  through a compact map's stub (non-zero once a battle frame has drawn).
 - `gNdsStagePupupuRelocDependencyMask`: expected low five bits `0x1F`,
   proving the external dependency chain was traversed.
 - `gNdsStagePupupuExternalFixupCount` /

@@ -1,0 +1,1822 @@
+{
+ "stages": [
+  {
+   "label": "Peach's Castle",
+   "gkind": 0,
+   "map_id": 259,
+   "files": [
+    {
+     "file_id": 259,
+     "name": "GRCastleMap",
+     "role": "map",
+     "payload": 192,
+     "aligned": 192
+    },
+    {
+     "file_id": 106,
+     "name": "ExternDataBank106",
+     "role": "typed",
+     "payload": 17696,
+     "aligned": 17696
+    },
+    {
+     "file_id": 90,
+     "name": "MVOpeningRoomWallpaper",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 156,
+     "name": "MiscDataBank156",
+     "role": "typed",
+     "payload": 64,
+     "aligned": 64
+    }
+   ],
+   "payload_total": 176880,
+   "tree_alloc": 176880,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "pad": 322,
+    "pal": 416,
+    "tex": 4840,
+    "vtx": 4192,
+    "gfx": 5144,
+    "dobjdesc": 1144,
+    "coll": 530,
+    "other16": 80,
+    "anim": 1096,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 259,
+     "name": "GRCastleMap",
+     "role": "map",
+     "payload": 192,
+     "aligned": 192,
+     "classes": {
+      "hdr": 188,
+      "pad": 4
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 106,
+     "name": "ExternDataBank106",
+     "role": "typed",
+     "payload": 17696,
+     "aligned": 17696,
+     "classes": {
+      "pad": 306,
+      "pal": 416,
+      "tex": 4840,
+      "vtx": 4192,
+      "gfx": 5144,
+      "dobjdesc": 1144,
+      "coll": 530,
+      "other16": 80,
+      "anim": 1044
+     },
+     "gfx_pkt_only": 4640,
+     "vtx_pkt_only": 4000,
+     "dobjdesc_pkt_owned": 880,
+     "tex_static": 0,
+     "tex_pkt": 2968,
+     "tex_mat": 0,
+     "tex_other": 1872,
+     "pal_static": 0,
+     "pal_pkt": 320,
+     "pal_mat": 0,
+     "pal_other": 96
+    },
+    {
+     "file_id": 90,
+     "name": "MVOpeningRoomWallpaper",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 156,
+     "name": "MiscDataBank156",
+     "role": "typed",
+     "payload": 64,
+     "aligned": 64,
+     "classes": {
+      "anim": 52,
+      "pad": 12
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    }
+   ],
+   "pkt_roots": 12,
+   "pkt_only_decls": 52,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 18736,
+   "T2_gross": 8640,
+   "T2_gfx": 4640,
+   "T2_vtx": 4000,
+   "T2_cells": 96,
+   "T2_spans_bound": 56,
+   "T2_net": 7744,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 167114,
+   "L_load_or_first_use": 4944,
+   "F_read_in_frames": 4822,
+   "blob": {
+    "file": 9840,
+    "body": 9680
+   },
+   "gxp": {
+    "file": 17808,
+    "body": 17760
+   }
+  },
+  {
+   "label": "Sector Z",
+   "gkind": 1,
+   "map_id": 262,
+   "files": [
+    {
+     "file_id": 262,
+     "name": "GRSectorMap",
+     "role": "map",
+     "payload": 304,
+     "aligned": 304
+    },
+    {
+     "file_id": 109,
+     "name": "ExternDataBank109",
+     "role": "typed",
+     "payload": 47120,
+     "aligned": 47120
+    },
+    {
+     "file_id": 99,
+     "name": "StageSector",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 153,
+     "name": "MiscDataBank153",
+     "role": "typed",
+     "payload": 7680,
+     "aligned": 7680
+    },
+    {
+     "file_id": 161,
+     "name": "FoxSpecial3",
+     "role": "typed",
+     "payload": 12160,
+     "aligned": 12160
+    }
+   ],
+   "payload_total": 226192,
+   "tree_alloc": 226192,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "attr": 116,
+    "pad": 572,
+    "pal": 1152,
+    "tex": 19820,
+    "vtx": 12976,
+    "gfx": 9816,
+    "dltab": 432,
+    "dobjdesc": 1980,
+    "anim": 19476,
+    "coll": 520,
+    "other16": 88,
+    "mobj": 128,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 262,
+     "name": "GRSectorMap",
+     "role": "map",
+     "payload": 304,
+     "aligned": 304,
+     "classes": {
+      "hdr": 188,
+      "attr": 116
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 109,
+     "name": "ExternDataBank109",
+     "role": "typed",
+     "payload": 47120,
+     "aligned": 47120,
+     "classes": {
+      "pad": 340,
+      "pal": 640,
+      "tex": 15980,
+      "vtx": 9360,
+      "gfx": 6512,
+      "dltab": 304,
+      "dobjdesc": 1408,
+      "anim": 11840,
+      "coll": 520,
+      "other16": 88,
+      "mobj": 128
+     },
+     "gfx_pkt_only": 5448,
+     "vtx_pkt_only": 9136,
+     "dobjdesc_pkt_owned": 1100,
+     "tex_static": 0,
+     "tex_pkt": 14304,
+     "tex_mat": 0,
+     "tex_other": 1676,
+     "pal_static": 0,
+     "pal_pkt": 512,
+     "pal_mat": 0,
+     "pal_other": 128
+    },
+    {
+     "file_id": 99,
+     "name": "StageSector",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 153,
+     "name": "MiscDataBank153",
+     "role": "typed",
+     "payload": 7680,
+     "aligned": 7680,
+     "classes": {
+      "anim": 7368,
+      "vtx": 96,
+      "gfx": 216
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 161,
+     "name": "FoxSpecial3",
+     "role": "typed",
+     "payload": 12160,
+     "aligned": 12160,
+     "classes": {
+      "pad": 232,
+      "pal": 512,
+      "tex": 3840,
+      "vtx": 3520,
+      "gfx": 3088,
+      "dltab": 128,
+      "dobjdesc": 572,
+      "anim": 268
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 3840,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 512
+    }
+   ],
+   "pkt_roots": 19,
+   "pkt_only_decls": 87,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 68048,
+   "T2_gross": 14584,
+   "T2_gfx": 5448,
+   "T2_vtx": 9136,
+   "T2_cells": 152,
+   "T2_spans_bound": 92,
+   "T2_net": 13168,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 173308,
+   "L_load_or_first_use": 16692,
+   "F_read_in_frames": 36192,
+   "blob": {
+    "file": 17759,
+    "body": 17599
+   },
+   "gxp": {
+    "file": 30116,
+    "body": 30068
+   }
+  },
+  {
+   "label": "Kongo Jungle",
+   "gkind": 2,
+   "map_id": 261,
+   "files": [
+    {
+     "file_id": 261,
+     "name": "GRJungleMap",
+     "role": "map",
+     "payload": 224,
+     "aligned": 224
+    },
+    {
+     "file_id": 108,
+     "name": "ExternDataBank108",
+     "role": "typed",
+     "payload": 62944,
+     "aligned": 62944
+    },
+    {
+     "file_id": 92,
+     "name": "StageJungle",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 158,
+     "name": "MiscDataBank158",
+     "role": "typed",
+     "payload": 3296,
+     "aligned": 3296
+    }
+   ],
+   "payload_total": 225392,
+   "tree_alloc": 225392,
+   "extra_preload": 27792,
+   "extra_preload_assets": [
+    107
+   ],
+   "class_total": {
+    "hdr": 188,
+    "attr": 36,
+    "pad": 364,
+    "pal": 832,
+    "tex": 38884,
+    "vtx": 5360,
+    "gfx": 7272,
+    "dobjdesc": 1936,
+    "coll": 408,
+    "other16": 40,
+    "anim": 10992,
+    "mobj": 152,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 261,
+     "name": "GRJungleMap",
+     "role": "map",
+     "payload": 224,
+     "aligned": 224,
+     "classes": {
+      "hdr": 188,
+      "attr": 36
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 108,
+     "name": "ExternDataBank108",
+     "role": "typed",
+     "payload": 62944,
+     "aligned": 62944,
+     "classes": {
+      "pad": 344,
+      "pal": 800,
+      "tex": 36836,
+      "vtx": 5136,
+      "gfx": 6880,
+      "dobjdesc": 1804,
+      "coll": 408,
+      "other16": 40,
+      "anim": 10544,
+      "mobj": 152
+     },
+     "gfx_pkt_only": 6640,
+     "vtx_pkt_only": 5072,
+     "dobjdesc_pkt_owned": 1672,
+     "tex_static": 0,
+     "tex_pkt": 29120,
+     "tex_mat": 7716,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 640,
+     "pal_mat": 0,
+     "pal_other": 160
+    },
+    {
+     "file_id": 92,
+     "name": "StageJungle",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 158,
+     "name": "MiscDataBank158",
+     "role": "typed",
+     "payload": 3296,
+     "aligned": 3296,
+     "classes": {
+      "pad": 20,
+      "pal": 32,
+      "tex": 2048,
+      "vtx": 224,
+      "gfx": 392,
+      "dobjdesc": 132,
+      "anim": 448
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 2048,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 32
+    }
+   ],
+   "pkt_roots": 30,
+   "pkt_only_decls": 97,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 67248,
+   "T2_gross": 11712,
+   "T2_gfx": 6640,
+   "T2_vtx": 5072,
+   "T2_cells": 240,
+   "T2_spans_bound": 101,
+   "T2_net": 10132,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": [
+    107,
+    158
+   ],
+   "T4": 27792,
+   "A_never_read": 170228,
+   "L_load_or_first_use": 32208,
+   "F_read_in_frames": 22956,
+   "blob": {
+    "file": 14676,
+    "body": 14516
+   },
+   "gxp": {
+    "file": 28108,
+    "body": 28060
+   }
+  },
+  {
+   "label": "Planet Zebes",
+   "gkind": 3,
+   "map_id": 257,
+   "files": [
+    {
+     "file_id": 257,
+     "name": "GRZebesMap",
+     "role": "map",
+     "payload": 224,
+     "aligned": 224
+    },
+    {
+     "file_id": 105,
+     "name": "ExternDataBank105",
+     "role": "typed",
+     "payload": 57184,
+     "aligned": 57184
+    },
+    {
+     "file_id": 89,
+     "name": "StageZebes",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 157,
+     "name": "MiscDataBank157",
+     "role": "typed",
+     "payload": 3536,
+     "aligned": 3536
+    }
+   ],
+   "payload_total": 219872,
+   "tree_alloc": 219872,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "attr": 36,
+    "pad": 388,
+    "pal": 1320,
+    "tex": 17316,
+    "mobj": 2788,
+    "anim": 25540,
+    "vtx": 5248,
+    "gfx": 5456,
+    "dltab": 416,
+    "dobjdesc": 1672,
+    "coll": 396,
+    "other16": 180,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 257,
+     "name": "GRZebesMap",
+     "role": "map",
+     "payload": 224,
+     "aligned": 224,
+     "classes": {
+      "hdr": 188,
+      "attr": 36
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 105,
+     "name": "ExternDataBank105",
+     "role": "typed",
+     "payload": 57184,
+     "aligned": 57184,
+     "classes": {
+      "pad": 312,
+      "pal": 1192,
+      "tex": 15268,
+      "mobj": 2640,
+      "anim": 24968,
+      "vtx": 5120,
+      "gfx": 5168,
+      "dltab": 400,
+      "dobjdesc": 1540,
+      "coll": 396,
+      "other16": 180
+     },
+     "gfx_pkt_only": 4256,
+     "vtx_pkt_only": 4896,
+     "dobjdesc_pkt_owned": 1276,
+     "tex_static": 0,
+     "tex_pkt": 9832,
+     "tex_mat": 0,
+     "tex_other": 5436,
+     "pal_static": 0,
+     "pal_pkt": 224,
+     "pal_mat": 0,
+     "pal_other": 968
+    },
+    {
+     "file_id": 89,
+     "name": "StageZebes",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 157,
+     "name": "MiscDataBank157",
+     "role": "typed",
+     "payload": 3536,
+     "aligned": 3536,
+     "classes": {
+      "pad": 76,
+      "pal": 128,
+      "tex": 2048,
+      "mobj": 148,
+      "vtx": 128,
+      "gfx": 288,
+      "dltab": 16,
+      "dobjdesc": 132,
+      "anim": 572
+     },
+     "gfx_pkt_only": 288,
+     "vtx_pkt_only": 128,
+     "dobjdesc_pkt_owned": 132,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 2048,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 32,
+     "pal_mat": 0,
+     "pal_other": 96
+    }
+   ],
+   "pkt_roots": 26,
+   "pkt_only_decls": 73,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 61728,
+   "T2_gross": 9568,
+   "T2_gfx": 4544,
+   "T2_vtx": 5024,
+   "T2_cells": 208,
+   "T2_spans_bound": 77,
+   "T2_net": 8308,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 168108,
+   "L_load_or_first_use": 12272,
+   "F_read_in_frames": 39492,
+   "blob": {
+    "file": 14002,
+    "body": 13842
+   },
+   "gxp": {
+    "file": 19888,
+    "body": 19840
+   }
+  },
+  {
+   "label": "Hyrule Castle",
+   "gkind": 4,
+   "map_id": 265,
+   "files": [
+    {
+     "file_id": 265,
+     "name": "GRHyruleMap",
+     "role": "map",
+     "payload": 224,
+     "aligned": 224
+    },
+    {
+     "file_id": 113,
+     "name": "ExternDataBank113",
+     "role": "typed",
+     "payload": 26768,
+     "aligned": 26768
+    },
+    {
+     "file_id": 95,
+     "name": "StageCastle",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    }
+   ],
+   "payload_total": 185920,
+   "tree_alloc": 185920,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "attr": 36,
+    "pad": 234,
+    "pal": 416,
+    "tex": 11904,
+    "vtx": 6496,
+    "gfx": 6264,
+    "dltab": 56,
+    "dobjdesc": 924,
+    "coll": 406,
+    "other16": 68,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 265,
+     "name": "GRHyruleMap",
+     "role": "map",
+     "payload": 224,
+     "aligned": 224,
+     "classes": {
+      "hdr": 188,
+      "attr": 36
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 113,
+     "name": "ExternDataBank113",
+     "role": "typed",
+     "payload": 26768,
+     "aligned": 26768,
+     "classes": {
+      "pad": 234,
+      "pal": 416,
+      "tex": 11904,
+      "vtx": 6496,
+      "gfx": 6264,
+      "dltab": 56,
+      "dobjdesc": 924,
+      "coll": 406,
+      "other16": 68
+     },
+     "gfx_pkt_only": 6264,
+     "vtx_pkt_only": 6496,
+     "dobjdesc_pkt_owned": 924,
+     "tex_static": 0,
+     "tex_pkt": 11904,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 416,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 95,
+     "name": "StageCastle",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    }
+   ],
+   "pkt_roots": 15,
+   "pkt_only_decls": 84,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 27776,
+   "T2_gross": 12760,
+   "T2_gfx": 6264,
+   "T2_vtx": 6496,
+   "T2_cells": 120,
+   "T2_spans_bound": 87,
+   "T2_net": 11500,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 171146,
+   "L_load_or_first_use": 14020,
+   "F_read_in_frames": 754,
+   "blob": {
+    "file": 14291,
+    "body": 14131
+   },
+   "gxp": {
+    "file": 30252,
+    "body": 30204
+   }
+  },
+  {
+   "label": "Yoshi's Island",
+   "gkind": 5,
+   "map_id": 263,
+   "files": [
+    {
+     "file_id": 263,
+     "name": "GRYosterMap",
+     "role": "map",
+     "payload": 192,
+     "aligned": 192
+    },
+    {
+     "file_id": 111,
+     "name": "ExternDataBank111",
+     "role": "typed",
+     "payload": 47408,
+     "aligned": 47408
+    },
+    {
+     "file_id": 110,
+     "name": "ExternDataBank110",
+     "role": "typed",
+     "payload": 21040,
+     "aligned": 21040
+    },
+    {
+     "file_id": 93,
+     "name": "StageYoshi",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 154,
+     "name": "MiscDataBank154",
+     "role": "typed",
+     "payload": 1712,
+     "aligned": 1712
+    }
+   ],
+   "payload_total": 229280,
+   "tree_alloc": 229280,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "pad": 474,
+    "mobj": 1280,
+    "vtx": 5280,
+    "gfx": 6616,
+    "dobjdesc": 2420,
+    "anim": 17676,
+    "coll": 494,
+    "other16": 52,
+    "pal": 896,
+    "tex": 34976,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 263,
+     "name": "GRYosterMap",
+     "role": "map",
+     "payload": 192,
+     "aligned": 192,
+     "classes": {
+      "hdr": 188,
+      "pad": 4
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 111,
+     "name": "ExternDataBank111",
+     "role": "typed",
+     "payload": 47408,
+     "aligned": 47408,
+     "classes": {
+      "mobj": 1144,
+      "vtx": 5216,
+      "gfx": 6128,
+      "dobjdesc": 2200,
+      "pad": 266,
+      "anim": 17404,
+      "coll": 494,
+      "other16": 52,
+      "pal": 576,
+      "tex": 13928
+     },
+     "gfx_pkt_only": 4688,
+     "vtx_pkt_only": 4832,
+     "dobjdesc_pkt_owned": 1408,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 13928,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 576
+    },
+    {
+     "file_id": 110,
+     "name": "ExternDataBank110",
+     "role": "typed",
+     "payload": 21040,
+     "aligned": 21040,
+     "classes": {
+      "pad": 184,
+      "pal": 320,
+      "tex": 20536
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 20024,
+     "tex_mat": 512,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 320,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 93,
+     "name": "StageYoshi",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 154,
+     "name": "MiscDataBank154",
+     "role": "typed",
+     "payload": 1712,
+     "aligned": 1712,
+     "classes": {
+      "gfx": 488,
+      "dobjdesc": 220,
+      "pad": 20,
+      "anim": 272,
+      "tex": 512,
+      "mobj": 136,
+      "vtx": 64
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 512,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    }
+   ],
+   "pkt_roots": 19,
+   "pkt_only_decls": 62,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 71136,
+   "T2_gross": 9520,
+   "T2_gfx": 4688,
+   "T2_vtx": 4832,
+   "T2_cells": 152,
+   "T2_spans_bound": 67,
+   "T2_net": 8404,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 168146,
+   "L_load_or_first_use": 22528,
+   "F_read_in_frames": 38606,
+   "blob": {
+    "file": 12684,
+    "body": 12524
+   },
+   "gxp": {
+    "file": 29500,
+    "body": 29452
+   }
+  },
+  {
+   "label": "Dream Land",
+   "gkind": 6,
+   "map_id": 255,
+   "files": [
+    {
+     "file_id": 255,
+     "name": "GRPupupuMap",
+     "role": "map",
+     "payload": 192,
+     "aligned": 192
+    },
+    {
+     "file_id": 104,
+     "name": "ExternDataBank104",
+     "role": "typed",
+     "payload": 17392,
+     "aligned": 17392
+    },
+    {
+     "file_id": 103,
+     "name": "ExternDataBank103",
+     "role": "typed",
+     "payload": 12224,
+     "aligned": 12224
+    },
+    {
+     "file_id": 88,
+     "name": "StageDreamLand",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 152,
+     "name": "MiscDataBank152",
+     "role": "typed",
+     "payload": 14080,
+     "aligned": 14080
+    }
+   ],
+   "payload_total": 202816,
+   "tree_alloc": 202816,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "pad": 492,
+    "vtx": 4880,
+    "gfx": 7360,
+    "dobjdesc": 3124,
+    "coll": 488,
+    "mobj": 760,
+    "anim": 8616,
+    "pal": 2864,
+    "tex": 15116,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 255,
+     "name": "GRPupupuMap",
+     "role": "map",
+     "payload": 192,
+     "aligned": 192,
+     "classes": {
+      "hdr": 188,
+      "pad": 4
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 104,
+     "name": "ExternDataBank104",
+     "role": "typed",
+     "payload": 17392,
+     "aligned": 17392,
+     "classes": {
+      "vtx": 4128,
+      "gfx": 5144,
+      "dobjdesc": 1804,
+      "coll": 488,
+      "mobj": 444,
+      "pad": 72,
+      "anim": 3052,
+      "pal": 128,
+      "tex": 2132
+     },
+     "gfx_pkt_only": 4664,
+     "vtx_pkt_only": 4000,
+     "dobjdesc_pkt_owned": 1540,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 1172,
+     "tex_other": 960,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 128
+    },
+    {
+     "file_id": 103,
+     "name": "ExternDataBank103",
+     "role": "typed",
+     "payload": 12224,
+     "aligned": 12224,
+     "classes": {
+      "pad": 304,
+      "pal": 2576,
+      "tex": 9344
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 9344,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 1512,
+     "pal_pkt": 0,
+     "pal_mat": 1064,
+     "pal_other": 0
+    },
+    {
+     "file_id": 88,
+     "name": "StageDreamLand",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 152,
+     "name": "MiscDataBank152",
+     "role": "typed",
+     "payload": 14080,
+     "aligned": 14080,
+     "classes": {
+      "pad": 112,
+      "pal": 160,
+      "tex": 3640,
+      "mobj": 316,
+      "vtx": 752,
+      "gfx": 2216,
+      "dobjdesc": 1320,
+      "anim": 5564
+     },
+     "gfx_pkt_only": 2216,
+     "vtx_pkt_only": 752,
+     "dobjdesc_pkt_owned": 1320,
+     "tex_static": 3376,
+     "tex_pkt": 0,
+     "tex_mat": 264,
+     "tex_other": 0,
+     "pal_static": 160,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    }
+   ],
+   "pkt_roots": 42,
+   "pkt_only_decls": 104,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 44672,
+   "T2_gross": 11632,
+   "T2_gfx": 6880,
+   "T2_vtx": 4752,
+   "T2_cells": 336,
+   "T2_spans_bound": 109,
+   "T2_net": 9828,
+   "T3_gross": 14392,
+   "T3_net": 14072,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 184668,
+   "L_load_or_first_use": 3636,
+   "F_read_in_frames": 14512,
+   "blob": null,
+   "gxp": {
+    "file": 32188,
+    "body": 32140
+   }
+  },
+  {
+   "label": "Saffron City",
+   "gkind": 7,
+   "map_id": 264,
+   "files": [
+    {
+     "file_id": 264,
+     "name": "GRYamabukiMap",
+     "role": "map",
+     "payload": 832,
+     "aligned": 832
+    },
+    {
+     "file_id": 112,
+     "name": "ExternDataBank112",
+     "role": "typed",
+     "payload": 66160,
+     "aligned": 66160
+    },
+    {
+     "file_id": 94,
+     "name": "StagePokemon",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 160,
+     "name": "MiscDataBank160",
+     "role": "typed",
+     "payload": 2704,
+     "aligned": 2704
+    },
+    {
+     "file_id": 159,
+     "name": "MiscDataBank159",
+     "role": "typed",
+     "payload": 10976,
+     "aligned": 10976
+    }
+   ],
+   "payload_total": 239600,
+   "tree_alloc": 239600,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "attr": 644,
+    "pad": 798,
+    "pal": 1728,
+    "tex": 44556,
+    "vtx": 8288,
+    "gfx": 11608,
+    "dobjdesc": 2552,
+    "anim": 8316,
+    "mobj": 1108,
+    "dltab": 248,
+    "coll": 554,
+    "other16": 84,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 264,
+     "name": "GRYamabukiMap",
+     "role": "map",
+     "payload": 832,
+     "aligned": 832,
+     "classes": {
+      "hdr": 188,
+      "attr": 644
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 112,
+     "name": "ExternDataBank112",
+     "role": "typed",
+     "payload": 66160,
+     "aligned": 66160,
+     "classes": {
+      "pad": 622,
+      "pal": 1472,
+      "tex": 38388,
+      "vtx": 7120,
+      "gfx": 8584,
+      "dobjdesc": 1496,
+      "anim": 6860,
+      "mobj": 820,
+      "dltab": 160,
+      "coll": 554,
+      "other16": 84
+     },
+     "gfx_pkt_only": 7624,
+     "vtx_pkt_only": 6864,
+     "dobjdesc_pkt_owned": 968,
+     "tex_static": 0,
+     "tex_pkt": 10976,
+     "tex_mat": 0,
+     "tex_other": 27412,
+     "pal_static": 0,
+     "pal_pkt": 864,
+     "pal_mat": 0,
+     "pal_other": 608
+    },
+    {
+     "file_id": 94,
+     "name": "StagePokemon",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 160,
+     "name": "MiscDataBank160",
+     "role": "typed",
+     "payload": 2704,
+     "aligned": 2704,
+     "classes": {
+      "vtx": 720,
+      "gfx": 1424,
+      "dltab": 64,
+      "dobjdesc": 264,
+      "pad": 24,
+      "anim": 208
+     },
+     "gfx_pkt_only": 1168,
+     "vtx_pkt_only": 720,
+     "dobjdesc_pkt_owned": 264,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 159,
+     "name": "MiscDataBank159",
+     "role": "typed",
+     "payload": 10976,
+     "aligned": 10976,
+     "classes": {
+      "pad": 152,
+      "pal": 256,
+      "tex": 6168,
+      "vtx": 448,
+      "gfx": 1600,
+      "dobjdesc": 792,
+      "anim": 1248,
+      "mobj": 288,
+      "dltab": 24
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 3472,
+     "tex_other": 2696,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 256
+    }
+   ],
+   "pkt_roots": 21,
+   "pkt_only_decls": 107,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 81456,
+   "T2_gross": 16376,
+   "T2_gfx": 8792,
+   "T2_vtx": 7584,
+   "T2_cells": 168,
+   "T2_spans_bound": 112,
+   "T2_net": 14704,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 175326,
+   "L_load_or_first_use": 13848,
+   "F_read_in_frames": 50426,
+   "blob": {
+    "file": 18369,
+    "body": 18209
+   },
+   "gxp": {
+    "file": 36344,
+    "body": 36296
+   }
+  },
+  {
+   "label": "Mushroom Kingdom",
+   "gkind": 8,
+   "map_id": 260,
+   "files": [
+    {
+     "file_id": 260,
+     "name": "GRInishieMap",
+     "role": "map",
+     "payload": 368,
+     "aligned": 368
+    },
+    {
+     "file_id": 107,
+     "name": "ExternDataBank107",
+     "role": "typed",
+     "payload": 27792,
+     "aligned": 27792
+    },
+    {
+     "file_id": 91,
+     "name": "StageHyruleWallpaper",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928
+    },
+    {
+     "file_id": 155,
+     "name": "MiscDataBank155",
+     "role": "typed",
+     "payload": 5136,
+     "aligned": 5136
+    }
+   ],
+   "payload_total": 192224,
+   "tree_alloc": 192224,
+   "extra_preload": 0,
+   "extra_preload_assets": [],
+   "class_total": {
+    "hdr": 188,
+    "attr": 180,
+    "pad": 230,
+    "tex": 14992,
+    "pal": 288,
+    "mobj": 704,
+    "anim": 3068,
+    "vtx": 4928,
+    "gfx": 6360,
+    "dltab": 168,
+    "dobjdesc": 1584,
+    "coll": 530,
+    "other16": 76,
+    "pixels": 158152,
+    "sprite": 776
+   },
+   "per_file": [
+    {
+     "file_id": 260,
+     "name": "GRInishieMap",
+     "role": "map",
+     "payload": 368,
+     "aligned": 368,
+     "classes": {
+      "hdr": 188,
+      "attr": 180
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 107,
+     "name": "ExternDataBank107",
+     "role": "typed",
+     "payload": 27792,
+     "aligned": 27792,
+     "classes": {
+      "pad": 162,
+      "tex": 13728,
+      "pal": 288,
+      "mobj": 552,
+      "anim": 2256,
+      "vtx": 3904,
+      "gfx": 5072,
+      "dltab": 168,
+      "dobjdesc": 1056,
+      "coll": 530,
+      "other16": 76
+     },
+     "gfx_pkt_only": 5072,
+     "vtx_pkt_only": 3904,
+     "dobjdesc_pkt_owned": 1056,
+     "tex_static": 0,
+     "tex_pkt": 10952,
+     "tex_mat": 0,
+     "tex_other": 2776,
+     "pal_static": 0,
+     "pal_pkt": 288,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 91,
+     "name": "StageHyruleWallpaper",
+     "role": "wallpaper",
+     "payload": 158928,
+     "aligned": 158928,
+     "classes": {
+      "pixels": 158152,
+      "sprite": 776
+     },
+     "gfx_pkt_only": 0,
+     "vtx_pkt_only": 0,
+     "dobjdesc_pkt_owned": 0,
+     "tex_static": 0,
+     "tex_pkt": 0,
+     "tex_mat": 0,
+     "tex_other": 0,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    },
+    {
+     "file_id": 155,
+     "name": "MiscDataBank155",
+     "role": "typed",
+     "payload": 5136,
+     "aligned": 5136,
+     "classes": {
+      "pad": 68,
+      "tex": 1264,
+      "vtx": 1024,
+      "gfx": 1288,
+      "dobjdesc": 528,
+      "anim": 812,
+      "mobj": 152
+     },
+     "gfx_pkt_only": 440,
+     "vtx_pkt_only": 384,
+     "dobjdesc_pkt_owned": 264,
+     "tex_static": 0,
+     "tex_pkt": 152,
+     "tex_mat": 784,
+     "tex_other": 328,
+     "pal_static": 0,
+     "pal_pkt": 0,
+     "pal_mat": 0,
+     "pal_other": 0
+    }
+   ],
+   "pkt_roots": 23,
+   "pkt_only_decls": 74,
+   "T1_gross_pixels": 158152,
+   "T1_net_variant_map": 158144,
+   "T1_net_skip_dep": 158928,
+   "alloc_after_T1": 34080,
+   "T2_gross": 9800,
+   "T2_gfx": 5512,
+   "T2_vtx": 4288,
+   "T2_cells": 184,
+   "T2_spans_bound": 78,
+   "T2_net": 8552,
+   "T3_gross": 0,
+   "T3_net": 0,
+   "T4_phantom_assets": null,
+   "T4": 0,
+   "A_never_read": 168182,
+   "L_load_or_first_use": 13488,
+   "F_read_in_frames": 10554,
+   "blob": {
+    "file": 14248,
+    "body": 14088
+   },
+   "gxp": {
+    "file": 24236,
+    "body": 24188
+   }
+  }
+ ],
+ "walker_crosscheck": {
+  "rows": [
+   {
+    "label": "Peach's Castle",
+    "walker_reached": 172432,
+    "agree": 172350
+   },
+   {
+    "label": "Sector Z",
+    "walker_reached": 201406,
+    "agree": 201314
+   },
+   {
+    "label": "Kongo Jungle",
+    "walker_reached": 212500,
+    "agree": 212456
+   },
+   {
+    "label": "Planet Zebes",
+    "walker_reached": 207544,
+    "agree": 207268
+   },
+   {
+    "label": "Hyrule Castle",
+    "walker_reached": 185298,
+    "agree": 185228
+   },
+   {
+    "label": "Yoshi's Island",
+    "walker_reached": 190232,
+    "agree": 190018
+   },
+   {
+    "label": "Dream Land",
+    "walker_reached": 182182,
+    "agree": 180142
+   },
+   {
+    "label": "Saffron City",
+    "walker_reached": 190884,
+    "agree": 190770
+   },
+   {
+    "label": "Mushroom Kingdom",
+    "walker_reached": 186322,
+    "agree": 185876
+   }
+  ],
+  "reached": 1728800,
+  "agree": 1725422,
+  "disagreements": {
+   "coll->other16": 540,
+   "coll->pad": 18,
+   "mobj->anim": 248,
+   "tex->pad": 148,
+   "tex->pal": 2224,
+   "coll->mobj": 4,
+   "mobj->pad": 8,
+   "tex->mobj": 152,
+   "tex->anim": 36
+  }
+ }
+}

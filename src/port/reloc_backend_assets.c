@@ -6069,6 +6069,173 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
     return ndsRelocRangeInLoadedFile(loaded, addr - base, size);
 }
 
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+/* P2-2p8 T1: compact ground maps. scripts/stages/generate_compact_ground_maps.py
+ * rewrites each of the nine VS maps so the stage wallpaper's Sprite and
+ * Bitmap[44] table (776 B, 784 padded) ride at the map's tail and
+ * MPGroundData.wallpaper points at them. That takes the 158,928-byte wallpaper
+ * container out of the map's extern tree: 158,144 B less resident per stage.
+ * Nothing read the container's pixels -- the background is the converted BG2
+ * image, keyed by the IDENTITY of the Bitmap table -- and every source offset
+ * in the map is unchanged, so what differs is confined to the seams below: the
+ * stub Sprite's lane normalization (ndsRelocNormalizeCompactGroundMapSprite),
+ * the wallpaper's identity (ndsRelocCompactGroundMapWallpaperKey), the size the
+ * stage packet pins for the map (ndsRelocCompactGroundMapExpectedSize),
+ * Training Mode's wallpaper region and the Dream Land reloc diagnostic in
+ * ndsRelocFinalizeLoadedFile.
+ *
+ * At load, a map IS compact exactly when its own `wallpaper` pointer lands
+ * inside its own file, so a source map that NitroFS still holds loads as it
+ * always did. The packet size check cannot ask that way: Training Mode
+ * rewrites `wallpaper` after load, so it asks the loaded size instead. The P1
+ * build compiles none of this: its packets, rows and pins are the source sizes. */
+#define NDS_RELOC_COMPACT_GROUND_MAP_HEADER 0x14u
+#define NDS_RELOC_COMPACT_GROUND_MAP_GROWTH 784u
+#define NDS_RELOC_COMPACT_WALLPAPER_BITMAP 0x269c8u
+
+/* gr/grdef.h order. The wallpaper is the container each map's header named
+ * before the rewrite, which is the row identity in kNDSNativeWallpapers
+ * (generate_native_wallpapers.py SOURCES). */
+static const struct {
+    u32 map_asset_id;
+    u32 wallpaper_asset_id;
+} sNdsRelocCompactGroundMaps[] = {
+    { NDS_RELOC_ASSET_GR_CASTLE_MAP, NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER },
+    { NDS_RELOC_ASSET_GR_SECTOR_MAP, NDS_RELOC_ASSET_STAGE_SECTOR },
+    { NDS_RELOC_ASSET_GR_JUNGLE_MAP, NDS_RELOC_ASSET_STAGE_JUNGLE },
+    { NDS_RELOC_ASSET_GR_ZEBES_MAP, NDS_RELOC_ASSET_STAGE_ZEBES },
+    { NDS_RELOC_ASSET_GR_HYRULE_MAP, NDS_RELOC_ASSET_STAGE_CASTLE },
+    { NDS_RELOC_ASSET_GR_YOSTER_MAP, NDS_RELOC_ASSET_STAGE_YOSHI },
+    { NDS_RELOC_ASSET_GR_PUPUPU_MAP, NDS_RELOC_ASSET_STAGE_DREAM_LAND },
+    { NDS_RELOC_ASSET_GR_YAMABUKI_MAP, NDS_RELOC_ASSET_STAGE_POKEMON },
+    { NDS_RELOC_ASSET_GR_INISHIE_MAP, NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER }
+};
+
+/* Compact maps whose stub Sprite was normalized (once per load), and wallpaper
+ * draws keyed through a compact map. Both read 0 when NitroFS holds source maps. */
+__attribute__((used)) volatile u32 gNdsRelocCompactGroundMapCount;
+__attribute__((used)) volatile u32 gNdsRelocCompactGroundMapKeyCount;
+
+static __attribute__((noinline)) s32 ndsRelocCompactGroundMapIndex(u32 asset_id)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(sNdsRelocCompactGroundMaps); i++)
+    {
+        if (sNdsRelocCompactGroundMaps[i].map_asset_id == asset_id)
+        {
+            return (s32)i;
+        }
+    }
+    return -1;
+}
+
+/* The Sprite a compact map carries at its tail, or NULL for anything else. */
+static __attribute__((noinline)) Sprite *ndsRelocCompactGroundMapSprite(
+    const NDSRelocLoadedFile *loaded)
+{
+    const MPGroundData *ground_data;
+    Sprite *sprite;
+
+    if ((loaded == NULL) ||
+        (ndsRelocCompactGroundMapIndex(loaded->asset_id) < 0) ||
+        (ndsRelocRangeInLoadedFile(loaded, NDS_RELOC_COMPACT_GROUND_MAP_HEADER,
+                                   sizeof(MPGroundData)) == FALSE))
+    {
+        return NULL;
+    }
+    ground_data = (const MPGroundData *)((const u8 *)loaded->data +
+                                         NDS_RELOC_COMPACT_GROUND_MAP_HEADER);
+    sprite = ground_data->wallpaper;
+    return (ndsRelocPointerRangeInLoadedFile(loaded, sprite,
+                                             sizeof(Sprite)) != FALSE) ?
+        sprite : NULL;
+}
+
+/* The size a ground map's packet pins is its SOURCE size; a compact map is that
+ * plus its stub. Decided by the size that was loaded rather than by the
+ * `wallpaper` pointer, which Training Mode rewrites after load. */
+static __attribute__((noinline)) u32 ndsRelocCompactGroundMapExpectedSize(
+    u32 asset_id, u32 source_size)
+{
+    const NDSRelocLoadedFile *loaded;
+
+    if (ndsRelocCompactGroundMapIndex(asset_id) < 0)
+    {
+        return source_size;
+    }
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    return ((loaded != NULL) &&
+            (loaded->data_size ==
+             (source_size + NDS_RELOC_COMPACT_GROUND_MAP_GROWTH))) ?
+        (source_size + NDS_RELOC_COMPACT_GROUND_MAP_GROWTH) : source_size;
+}
+
+/* The wallpaper's SObj points its Bitmap table at a compact map's stub, so
+ * provenance names (map, stub offset). kNDSNativeWallpapers is written against
+ * the source container's Bitmap table; translate to that key. FALSE, key
+ * untouched, for anything that is not exactly a compact map's stub table. */
+static __attribute__((noinline)) s32 ndsRelocCompactGroundMapWallpaperKey(
+    u32 *asset_id, u32 *bitmap_offset)
+{
+    s32 index = ndsRelocCompactGroundMapIndex(*asset_id);
+    const NDSRelocLoadedFile *loaded;
+    const Sprite *sprite;
+
+    if (index < 0)
+    {
+        return FALSE;
+    }
+    loaded = ndsRelocFindLoadedFileByAsset(*asset_id);
+    sprite = ndsRelocCompactGroundMapSprite(loaded);
+    if ((sprite == NULL) ||
+        ((const u8 *)sprite->bitmap !=
+         ((const u8 *)loaded->data + *bitmap_offset)))
+    {
+        return FALSE;
+    }
+    *asset_id = sNdsRelocCompactGroundMaps[index].wallpaper_asset_id;
+    *bitmap_offset = NDS_RELOC_COMPACT_WALLPAPER_BITMAP;
+    gNdsRelocCompactGroundMapKeyCount++;
+    return TRUE;
+}
+
+#if NDS_P2_1P_GAME
+/* Training Mode swaps in its own wallpaper (decomp sc1ptrainingmode.c:652) by
+ * force-loading the training file at `wallpaper - 0x26c88`, the base of the
+ * wallpaper container a SOURCE map's tree holds. A compact map holds none, so
+ * that base would land 0x26c88 bytes before the map and the load would overwrite
+ * whatever precedes it. Give Training the region the source tree gave it --
+ * container-sized, `wallpaper` where the source puts it -- before anything reads
+ * the pointer; the training wallpaper then replaces both. Called by
+ * mpCollisionInitGroundData with the map file it just loaded. */
+#define NDS_RELOC_COMPACT_TRAINING_WALLPAPER_BYTES 0x26cd0u
+static __attribute__((noinline)) void ndsRelocCompactGroundMapPrepareTraining(
+    void *file, MPGroundData *ground_data)
+{
+    const Sprite *sprite;
+    void *region;
+
+    if ((ground_data == NULL) ||
+        (gSCManagerSceneData.scene_curr != nSCKind1PTrainingMode))
+    {
+        return;
+    }
+    sprite = ndsRelocCompactGroundMapSprite(ndsRelocFindLoadedFileByData(file));
+    if ((sprite == NULL) || (sprite != ground_data->wallpaper))
+    {
+        return;
+    }
+    region = syTaskmanMalloc(NDS_RELOC_COMPACT_TRAINING_WALLPAPER_BYTES, 0x10);
+    if (region != NULL)
+    {
+        ground_data->wallpaper = (Sprite *)((u8 *)region +
+            NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE);
+    }
+}
+#endif
+#endif
+
 /* R2-07 cycle 109. The memo is four-way move-to-front, not one-deep.
  *
  * This is 1 of the 30 callers' shared lookup and it sits under the fighter draw
@@ -9237,6 +9404,17 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
             ndsPupupuStageAssetBit(loaded->asset_id);
         gNdsStagePupupuRelocDependencyMask |=
             ndsPupupuStageAssetBit(loaded->asset_id);
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+        /* The compact Pupupu map carries the wallpaper stub itself, so
+         * StageDreamLand (bit 1) is no longer a file of its tree. */
+        if (ndsRelocCompactGroundMapSprite(loaded) != NULL)
+        {
+            gNdsStagePupupuRelocAssetMask |=
+                ndsPupupuStageAssetBit(NDS_RELOC_ASSET_STAGE_DREAM_LAND);
+            gNdsStagePupupuRelocDependencyMask |=
+                ndsPupupuStageAssetBit(NDS_RELOC_ASSET_STAGE_DREAM_LAND);
+        }
+#endif
         if ((gNdsStagePupupuRelocAssetMask & 0x1fu) == 0x1fu)
         {
             gNdsStagePupupuRelocResult = NDS_STAGE_PUPUPU_RELOC_PASS;
@@ -9965,11 +10143,44 @@ static u32 ndsRelocIsStageWallpaperAsset(u32 asset_id)
     }
 }
 
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+/* A compact ground map's appended Sprite and Bitmap table took the same word
+ * swap the container's did, so they need the same lane fix and get the same
+ * "already normalized" test. TRUE when `loaded` is a compact map at all. */
+static __attribute__((noinline)) s32 ndsRelocNormalizeCompactGroundMapSprite(
+    NDSRelocLoadedFile *loaded)
+{
+    Sprite *sprite = ndsRelocCompactGroundMapSprite(loaded);
+
+    if (sprite == NULL)
+    {
+        return FALSE;
+    }
+    if (!((sprite->width == 300) && (sprite->height == 220) &&
+          (sprite->nbitmaps == 44) &&
+          (sprite->bmfmt == G_IM_FMT_RGBA) &&
+          (sprite->bmsiz == G_IM_SIZ_16b)))
+    {
+        ndsRelocNormalizeSpriteHeaderFields(sprite, G_IM_FMT_RGBA,
+                                            G_IM_SIZ_16b);
+        (void)ndsRelocNormalizeSpriteBitmapTable(loaded, sprite, 44u);
+        gNdsRelocCompactGroundMapCount++;
+    }
+    return TRUE;
+}
+#endif
+
 static void ndsRelocNormalizeStageDreamLandSprite(
     NDSRelocLoadedFile *loaded)
 {
     Sprite *sprite;
 
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+    if (ndsRelocNormalizeCompactGroundMapSprite(loaded) != FALSE)
+    {
+        return;
+    }
+#endif
     if ((loaded == NULL) ||
         (ndsRelocIsStageWallpaperAsset(loaded->asset_id) == FALSE) ||
         (ndsRelocRangeInLoadedFile(

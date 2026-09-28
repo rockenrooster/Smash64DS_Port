@@ -1,0 +1,215 @@
+--- a/include/nds/nds_renderer.h
++++ b/include/nds/nds_renderer.h
+@@ -286,6 +286,35 @@
+ #if (NDS_RENDERER_BENCHMARK_MODE < NDS_RENDERER_BENCHMARK_NONE) || \
+     (NDS_RENDERER_BENCHMARK_MODE > NDS_RENDERER_BENCHMARK_WARM_NO_UPLOAD)
+ #error "NDS_RENDERER_BENCHMARK_MODE must be 0 through 4"
++#endif
++
++/* R1 retirement. NDS_FIGHTER_LEGACY_EXEC=1 keeps four fighter draw modes that
++ * only lab tooling can still select: hierarchy mode 7, the per-root hardware
++ * executor (modes 5-7) with the CPU triangle rasteriser behind it, and the
++ * resident raw-path tables (PackedCorners, DenseCorners, RunFirstCorner and the
++ * joint schedules). A build that draws fighters through the production owner
++ * (fast-run mode 8 or 9, no oracle, Task 56 primitive streams, HW light) never
++ * reaches them, so the P2 targets set 0 and the linker drops the code. Every
++ * other target and the host tools keep the default 1 and compile exactly as
++ * before. The guard turns a flag combination that would need one of the retired
++ * modes into a build error instead of a fighter with no executor. */
++#ifndef NDS_FIGHTER_LEGACY_EXEC
++#define NDS_FIGHTER_LEGACY_EXEC 1
++#endif
++
++#if (NDS_FIGHTER_LEGACY_EXEC != 0) && (NDS_FIGHTER_LEGACY_EXEC != 1)
++#error "NDS_FIGHTER_LEGACY_EXEC must be 0 or 1"
++#endif
++
++#if !NDS_FIGHTER_LEGACY_EXEC && \
++    (!NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL != 0) || \
++     !NDS_R2_FIGHTER_NO_ORACLE || !NDS_R2_FIGHTER_HW_LIGHT || \
++     (NDS_TASK56_FIGHTER_PRIMITIVES < 1) || NDS_R2_STRIP_ROUTE || \
++     NDS_RENDERER_SCREEN_SPACE_CENSUS || \
++     (NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE) || \
++     (NDS_RENDERER_FAST_RUN_DEFAULT < \
++      NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION))
++#error "NDS_FIGHTER_LEGACY_EXEC=0 needs HW triangles, profile 0, NO_ORACLE, HW light, Task 56 streams (no strip route or census) and fast-run mode 8 or 9"
+ #endif
+ 
+ #define NDS_RENDERER_BLOCKER_NONE 0u
+--- a/src/port/renderer_adapter_fighter.c
++++ b/src/port/renderer_adapter_fighter.c
+@@ -3428,7 +3428,9 @@
+     /* The snapshot table is traversal-owned but too large for BattleShip's
+      * nested task stack. Draw callbacks are serialized, so one reset fixed
+      * cache preserves the same per-fighter lifetime without caching output. */
++#if NDS_FIGHTER_LEGACY_EXEC
+     static NDSRendererVertexCache persistent_renderer_vertices;
++#endif
+ #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
+     NDSRendererStats *stats;
+ #endif
+@@ -3475,11 +3477,18 @@
+         sNdsRendererAdapterNativeOwnerWorkspace.modelviews;
+     const NDSRendererMatrix20p12 *native_owner_projection = NULL;
+     u32 native_owner_material_saved_root_count = 0u;
++#if NDS_FIGHTER_LEGACY_EXEC
+     sb32 native_owner_started = FALSE;
++#endif
+     sb32 native_owner_failed = FALSE;
+     sb32 native_owner_production_attempted = FALSE;
+     sb32 native_owner_production_mode;
++#if NDS_FIGHTER_LEGACY_EXEC
+     sb32 native_owner_hierarchy_mode;
++#else
++    /* R1 retired: hierarchy mode 7 is not compiled, every test of it folds. */
++    const sb32 native_owner_hierarchy_mode = FALSE;
++#endif
+     u32 native_owner_root_program = 0u;
+     /* Cycle 99. TRUE == this draw replayed the baked plan instead of walking
+      * the DObj tree and re-resolving every selected root. */
+@@ -3736,7 +3745,9 @@
+     bzero(&persistent_state, sizeof(persistent_state));
+     bzero(clean, sizeof(sNdsFighterDLAllDrawClean[slot]));
+ #endif
++#if NDS_FIGHTER_LEGACY_EXEC
+     ndsRendererInitVertexCache(&persistent_renderer_vertices);
++#endif
+     ndsRendererInitStats(&persistent_stats);
+     if (sNdsFighterDisplayContractPlayback != FALSE)
+     {
+@@ -3757,6 +3768,7 @@
+         ndsFighterDisplayContractSeedMaterialLights(&persistent_stats);
+     }
+ #if NDS_RENDERER_HW_TRIANGLES
++#if NDS_FIGHTER_LEGACY_EXEC
+     native_owner_enabled =
+         (((gNdsRendererFastRunMode ==
+            NDS_RENDERER_FAST_RUN_NATIVE_MARIO) && (owner_slot == 0u)) ||
+@@ -3769,6 +3781,15 @@
+            (gNdsRendererFastRunMode ==
+             NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
+                                                                      FALSE;
++#else
++    /* R1 retired: only the production modes admit a native owner. A poked
++     * mode 5-7 is not native and takes the fail-closed reject below. */
++    native_owner_enabled =
++        ((gNdsRendererFastRunMode ==
++          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
++         (gNdsRendererFastRunMode ==
++          NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE : FALSE;
++#endif
+ #if NDS_P2_KIRBY
+     if (kirby_trio_unknown != FALSE)
+     {
+@@ -3786,9 +3807,11 @@
+          (gNdsRendererFastRunMode ==
+           NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
+                                                                    FALSE;
++#if NDS_FIGHTER_LEGACY_EXEC
+     native_owner_hierarchy_mode =
+         (gNdsRendererFastRunMode ==
+          NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ? TRUE : FALSE;
++#endif
+     if ((native_owner_hierarchy_mode != FALSE) && (use_low_detail != 0u))
+     {
+         /* Mode 7's hierarchy schedule is generated only from the high-detail
+@@ -4510,6 +4533,7 @@
+         ndsRendererProfileGlobalStateHash();
+ #endif
+ #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
++#if NDS_FIGHTER_LEGACY_EXEC
+     if ((native_owner_enabled != FALSE) &&
+         (native_owner_production_attempted == FALSE))
+     {
+@@ -4533,6 +4557,7 @@
+ #endif
+         }
+     }
++#endif
+ #endif
+ #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+     if (native_owner_production_attempted == FALSE)
+@@ -4664,6 +4689,7 @@
+                     TRUE : FALSE;
+         }
+ #if NDS_RENDERER_PROFILE_LEVEL < 2
++#if NDS_FIGHTER_LEGACY_EXEC
+         if (native_root_enabled != FALSE)
+         {
+             native_materials =
+@@ -4671,6 +4697,11 @@
+                     sNdsRendererAdapterNativeOwnerMaterialRows[i]];
+             native_material_count = native_owner_material_counts[i];
+         }
++#else
++        /* R1 retired: the per-root executor that read these is not compiled. */
++        (void)native_materials;
++        (void)native_material_count;
++#endif
+ #endif
+ #endif
+ 
+@@ -4882,6 +4913,7 @@
+         {
+             current_stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+         }
++#if NDS_FIGHTER_LEGACY_EXEC
+         else if (native_owner_started != FALSE)
+         {
+             if ((native_root_enabled == FALSE) ||
+@@ -4908,6 +4940,7 @@
+                 native_owner_failed = TRUE;
+             }
+         }
++#endif
+         else
+         {
+             ndsFighterRejectNativeRender(fp, collection.dobjs[i], dl,
+@@ -4979,6 +5012,7 @@
+     }
+ 
+ #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
++#if NDS_FIGHTER_LEGACY_EXEC
+     if (native_owner_started != FALSE)
+     {
+         if (ndsRendererEndNativeFighterOwner(
+@@ -4992,6 +5026,7 @@
+         }
+         native_owner_started = FALSE;
+     }
++#endif
+     if (native_owner_failed != FALSE)
+     {
+         u32 failure_index = (collection.selected_count != 0u) ?
+--- a/src/nds/nds_renderer_assets.c
++++ b/src/nds/nds_renderer_assets.c
+@@ -766,9 +766,14 @@
+ #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+     sNdsNativeFighterDenseColorSource,
+ #endif
++#if NDS_FIGHTER_LEGACY_EXEC
+     sNdsNativeFighterPackedCorners, NDS_FTR_COUNT(sNdsNativeFighterPackedCorners),
+     sNdsNativeFighterRunFirstCorner,
+     NDS_FTR_COUNT(sNdsNativeFighterRunFirstCorner),
++#else
++    /* R1 retired: no raw-path reader is compiled, so these stay unlinked. */
++    NULL, 0u, NULL, 0u,
++#endif
+     sNdsNativeFighterRunFirstUnique,
+     sNdsNativeFighterRunUniqueCount,
+     sNdsNativeFighterRunUniqueDense,
+@@ -803,10 +808,14 @@
+ #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+     sNdsNativeFighterDenseColorSourceLow,
+ #endif
++#if NDS_FIGHTER_LEGACY_EXEC
+     sNdsNativeFighterPackedCornersLow,
+     NDS_FTR_COUNT(sNdsNativeFighterPackedCornersLow),
+     sNdsNativeFighterRunFirstCornerLow,
+     NDS_FTR_COUNT(sNdsNativeFighterRunFirstCornerLow),
++#else
++    NULL, 0u, NULL, 0u,
++#endif
+     sNdsNativeFighterRunFirstUniqueLow,
+     sNdsNativeFighterRunUniqueCountLow,
+     sNdsNativeFighterRunUniqueDenseLow,

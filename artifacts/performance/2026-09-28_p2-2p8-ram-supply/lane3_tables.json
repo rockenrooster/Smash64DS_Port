@@ -1,0 +1,1326 @@
+{
+ "fp": {
+  "units": {
+   "DIAG": {
+    "text": 22688,
+    "rodata": 6968,
+    "data": 4,
+    "bss": 12396,
+    "heap_total": 42056,
+    "itcm": 0,
+    "dtcm": 16,
+    "overlay": 0,
+    "members": 3162
+   },
+   "OLD_ALL": {
+    "text": 60096,
+    "rodata": 13826,
+    "data": 8,
+    "bss": 51427,
+    "heap_total": 125357,
+    "itcm": 0,
+    "dtcm": 1,
+    "overlay": 0,
+    "members": 271
+   },
+   "P0": {
+    "text": 26292,
+    "rodata": 12949,
+    "data": 0,
+    "bss": 4196,
+    "heap_total": 43437,
+    "itcm": 0,
+    "dtcm": 0,
+    "overlay": 0,
+    "members": 80
+   },
+   "P1": {
+    "text": 33804,
+    "rodata": 877,
+    "data": 8,
+    "bss": 47231,
+    "heap_total": 81920,
+    "itcm": 0,
+    "dtcm": 1,
+    "overlay": 0,
+    "members": 191
+   }
+  },
+  "families": {
+   "PKT": {
+    "title": "ndsFighterPacket* / ndsRendererFighterPacket* / sNdsFighterPacket* / gNdsFighterPacket*",
+    "all": {
+     "text": 9656,
+     "rodata": 0,
+     "data": 0,
+     "bss": 15516,
+     "heap_total": 25172,
+     "itcm": 476,
+     "dtcm": 8,
+     "overlay": 0,
+     "members": 49
+    },
+    "in_old_unit": {
+     "text": 7584,
+     "rodata": 0,
+     "data": 0,
+     "bss": 15448,
+     "heap_total": 23032,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 35
+    },
+    "outside_old_unit": {
+     "text": 2072,
+     "rodata": 0,
+     "data": 0,
+     "bss": 68,
+     "heap_total": 2140,
+     "itcm": 476,
+     "dtcm": 8,
+     "overlay": 0,
+     "members": 14
+    }
+   },
+   "LEANPKT": {
+    "title": "ndsFtrLeanPacket* (the lean path itself)",
+    "all": {
+     "text": 3752,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 3752,
+     "itcm": 1744,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 7
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 3752,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 3752,
+     "itcm": 1744,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 7
+    }
+   },
+   "PROD": {
+    "title": "*Production* (native fighter production)",
+    "all": {
+     "text": 10344,
+     "rodata": 0,
+     "data": 0,
+     "bss": 540,
+     "heap_total": 10884,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 27
+    },
+    "in_old_unit": {
+     "text": 9188,
+     "rodata": 0,
+     "data": 0,
+     "bss": 24,
+     "heap_total": 9212,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 18
+    },
+    "outside_old_unit": {
+     "text": 1156,
+     "rodata": 0,
+     "data": 0,
+     "bss": 516,
+     "heap_total": 1672,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 9
+    }
+   },
+   "OWNIMG": {
+    "title": "owner-image bind/ensure/hat-image + image slots",
+    "all": {
+     "text": 24616,
+     "rodata": 0,
+     "data": 4,
+     "bss": 1996,
+     "heap_total": 26616,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 24
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 24616,
+     "rodata": 0,
+     "data": 4,
+     "bss": 1996,
+     "heap_total": 26616,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 24
+    }
+   },
+   "OWNMAT": {
+    "title": "native-owner materials/workspace/validation/keys (renderer_adapter_matrix)",
+    "all": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 56464,
+     "heap_total": 56464,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 10
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 5888,
+     "heap_total": 5888,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 4
+    },
+    "outside_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 50576,
+     "heap_total": 50576,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    }
+   },
+   "TEXSCR": {
+    "title": "texture scratch / refresh / key pools",
+    "all": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 75280,
+     "heap_total": 75280,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 15
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 75280,
+     "heap_total": 75280,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 15
+    }
+   },
+   "TASK36": {
+    "title": "*Task36* remnants",
+    "all": {
+     "text": 756,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 756,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 2
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 756,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 756,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 2
+    }
+   },
+   "STGSUB": {
+    "title": "ndsRendererAdapterSubmitStageDL (dispatch hub)",
+    "all": {
+     "text": 28848,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 28848,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 28848,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 28848,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    }
+   },
+   "STGEMIT": {
+    "title": "ndsRendererNativeStageEmit* (CPU stage vertex emission)",
+    "all": {
+     "text": 2956,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 2956,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 2956,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 2956,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    }
+   },
+   "STGALL": {
+    "title": "all native-stage symbols (NativeStage*, ndsStageGx*, PrepareNativeStageOwner ...)",
+    "all": {
+     "text": 36980,
+     "rodata": 16790,
+     "data": 20,
+     "bss": 37228,
+     "heap_total": 91018,
+     "itcm": 4064,
+     "dtcm": 36,
+     "overlay": 0,
+     "members": 219
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 36980,
+     "rodata": 16790,
+     "data": 20,
+     "bss": 37228,
+     "heap_total": 91018,
+     "itcm": 4064,
+     "dtcm": 36,
+     "overlay": 0,
+     "members": 219
+    }
+   },
+   "MARIOFOX": {
+    "title": "ndsFighterMarioFox* (proof-era names)",
+    "all": {
+     "text": 10734,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 10734,
+     "itcm": 4,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 19
+    },
+    "in_old_unit": {
+     "text": 9248,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 9248,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 2
+    },
+    "outside_old_unit": {
+     "text": 1486,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 1486,
+     "itcm": 4,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 17
+    }
+   },
+   "HALO": {
+    "title": "rebirth halo packets + submit",
+    "all": {
+     "text": 7124,
+     "rodata": 5626,
+     "data": 48,
+     "bss": 6960,
+     "heap_total": 19758,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 41
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 7124,
+     "rodata": 5626,
+     "data": 48,
+     "bss": 6960,
+     "heap_total": 19758,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 41
+    }
+   },
+   "WHISPY": {
+    "title": "whispy packet + submit",
+    "all": {
+     "text": 15208,
+     "rodata": 288,
+     "data": 204,
+     "bss": 4488,
+     "heap_total": 20188,
+     "itcm": 0,
+     "dtcm": 24,
+     "overlay": 0,
+     "members": 94
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 15208,
+     "rodata": 288,
+     "data": 204,
+     "bss": 4488,
+     "heap_total": 20188,
+     "itcm": 0,
+     "dtcm": 24,
+     "overlay": 0,
+     "members": 94
+    }
+   },
+   "FRAMEBUF": {
+    "title": "gSYFramebufferSets",
+    "all": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 147840,
+     "heap_total": 147840,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 147840,
+     "heap_total": 147840,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    }
+   },
+   "LEAN": {
+    "title": "the lean path (ndsFtrLean*, sNdsFtrLean*, nds_ftr_lean_kernel, renderer_fighter_lean)",
+    "all": {
+     "text": 27106,
+     "rodata": 0,
+     "data": 0,
+     "bss": 6544,
+     "heap_total": 33650,
+     "itcm": 6664,
+     "dtcm": 2084,
+     "overlay": 0,
+     "members": 66
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 27106,
+     "rodata": 0,
+     "data": 0,
+     "bss": 6544,
+     "heap_total": 33650,
+     "itcm": 6664,
+     "dtcm": 2084,
+     "overlay": 0,
+     "members": 66
+    }
+   },
+   "DIAGFILES": {
+    "title": "diagnostics_*.c globals (all)",
+    "all": {
+     "text": 620,
+     "rodata": 0,
+     "data": 5090,
+     "bss": 22317,
+     "heap_total": 28027,
+     "itcm": 0,
+     "dtcm": 158,
+     "overlay": 0,
+     "members": 6510
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 4,
+     "bss": 0,
+     "heap_total": 4,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    },
+    "outside_old_unit": {
+     "text": 620,
+     "rodata": 0,
+     "data": 5086,
+     "bss": 22317,
+     "heap_total": 28023,
+     "itcm": 0,
+     "dtcm": 158,
+     "overlay": 0,
+     "members": 6509
+    }
+   },
+   "ORACLE": {
+    "title": "oracle/shadow/witness/census/probe/proof named symbols",
+    "all": {
+     "text": 1218,
+     "rodata": 880,
+     "data": 38,
+     "bss": 1076,
+     "heap_total": 3212,
+     "itcm": 8,
+     "dtcm": 48,
+     "overlay": 1684,
+     "members": 240
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 200,
+     "heap_total": 200,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 3
+    },
+    "outside_old_unit": {
+     "text": 1218,
+     "rodata": 880,
+     "data": 38,
+     "bss": 876,
+     "heap_total": 3012,
+     "itcm": 8,
+     "dtcm": 48,
+     "overlay": 1684,
+     "members": 237
+    }
+   }
+  }
+ },
+ "gate": {
+  "units": {
+   "DIAG": {
+    "text": 22672,
+    "rodata": 6968,
+    "data": 4,
+    "bss": 12532,
+    "heap_total": 42176,
+    "itcm": 0,
+    "dtcm": 16,
+    "overlay": 0,
+    "members": 3196
+   },
+   "OLD_ALL": {
+    "text": 62196,
+    "rodata": 12587,
+    "data": 4,
+    "bss": 51879,
+    "heap_total": 126666,
+    "itcm": 0,
+    "dtcm": 1,
+    "overlay": 0,
+    "members": 212
+   },
+   "P0": {
+    "text": 25236,
+    "rodata": 11970,
+    "data": 0,
+    "bss": 4208,
+    "heap_total": 41414,
+    "itcm": 0,
+    "dtcm": 0,
+    "overlay": 0,
+    "members": 51
+   },
+   "P1": {
+    "text": 36960,
+    "rodata": 617,
+    "data": 4,
+    "bss": 47671,
+    "heap_total": 85252,
+    "itcm": 0,
+    "dtcm": 1,
+    "overlay": 0,
+    "members": 161
+   }
+  },
+  "families": {
+   "PKT": {
+    "title": "ndsFighterPacket* / ndsRendererFighterPacket* / sNdsFighterPacket* / gNdsFighterPacket*",
+    "all": {
+     "text": 10020,
+     "rodata": 0,
+     "data": 0,
+     "bss": 15516,
+     "heap_total": 25536,
+     "itcm": 476,
+     "dtcm": 8,
+     "overlay": 0,
+     "members": 48
+    },
+    "in_old_unit": {
+     "text": 7836,
+     "rodata": 0,
+     "data": 0,
+     "bss": 15448,
+     "heap_total": 23284,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 35
+    },
+    "outside_old_unit": {
+     "text": 2184,
+     "rodata": 0,
+     "data": 0,
+     "bss": 68,
+     "heap_total": 2252,
+     "itcm": 476,
+     "dtcm": 8,
+     "overlay": 0,
+     "members": 13
+    }
+   },
+   "LEANPKT": {
+    "title": "ndsFtrLeanPacket* (the lean path itself)",
+    "all": {
+     "text": 4352,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 4352,
+     "itcm": 1676,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 7
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 4352,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 4352,
+     "itcm": 1676,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 7
+    }
+   },
+   "PROD": {
+    "title": "*Production* (native fighter production)",
+    "all": {
+     "text": 10452,
+     "rodata": 0,
+     "data": 0,
+     "bss": 516,
+     "heap_total": 10968,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 21
+    },
+    "in_old_unit": {
+     "text": 9296,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 9296,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 12
+    },
+    "outside_old_unit": {
+     "text": 1156,
+     "rodata": 0,
+     "data": 0,
+     "bss": 516,
+     "heap_total": 1672,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 9
+    }
+   },
+   "OWNIMG": {
+    "title": "owner-image bind/ensure/hat-image + image slots",
+    "all": {
+     "text": 13892,
+     "rodata": 0,
+     "data": 4,
+     "bss": 1996,
+     "heap_total": 15892,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 22
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 13892,
+     "rodata": 0,
+     "data": 4,
+     "bss": 1996,
+     "heap_total": 15892,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 22
+    }
+   },
+   "OWNMAT": {
+    "title": "native-owner materials/workspace/validation/keys (renderer_adapter_matrix)",
+    "all": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 52720,
+     "heap_total": 52720,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 10
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 5888,
+     "heap_total": 5888,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 4
+    },
+    "outside_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 46832,
+     "heap_total": 46832,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    }
+   },
+   "TEXSCR": {
+    "title": "texture scratch / refresh / key pools",
+    "all": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 75280,
+     "heap_total": 75280,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 15
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 75280,
+     "heap_total": 75280,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 15
+    }
+   },
+   "TASK36": {
+    "title": "*Task36* remnants",
+    "all": {
+     "text": 732,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 732,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 2
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 732,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 732,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 2
+    }
+   },
+   "STGSUB": {
+    "title": "ndsRendererAdapterSubmitStageDL (dispatch hub)",
+    "all": {
+     "text": 20516,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 20516,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 20516,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 20516,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    }
+   },
+   "STGEMIT": {
+    "title": "ndsRendererNativeStageEmit* (CPU stage vertex emission)",
+    "all": {
+     "text": 2924,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 2924,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 2924,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 2924,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    }
+   },
+   "STGALL": {
+    "title": "all native-stage symbols (NativeStage*, ndsStageGx*, PrepareNativeStageOwner ...)",
+    "all": {
+     "text": 35560,
+     "rodata": 13707,
+     "data": 20,
+     "bss": 34628,
+     "heap_total": 83915,
+     "itcm": 4196,
+     "dtcm": 36,
+     "overlay": 0,
+     "members": 141
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 35560,
+     "rodata": 13707,
+     "data": 20,
+     "bss": 34628,
+     "heap_total": 83915,
+     "itcm": 4196,
+     "dtcm": 36,
+     "overlay": 0,
+     "members": 141
+    }
+   },
+   "MARIOFOX": {
+    "title": "ndsFighterMarioFox* (proof-era names)",
+    "all": {
+     "text": 10574,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 10574,
+     "itcm": 4,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 19
+    },
+    "in_old_unit": {
+     "text": 9036,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 9036,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 2
+    },
+    "outside_old_unit": {
+     "text": 1538,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 1538,
+     "itcm": 4,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 17
+    }
+   },
+   "HALO": {
+    "title": "rebirth halo packets + submit",
+    "all": {
+     "text": 7200,
+     "rodata": 5626,
+     "data": 48,
+     "bss": 6960,
+     "heap_total": 19834,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 41
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 7200,
+     "rodata": 5626,
+     "data": 48,
+     "bss": 6960,
+     "heap_total": 19834,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 41
+    }
+   },
+   "WHISPY": {
+    "title": "whispy packet + submit",
+    "all": {
+     "text": 15272,
+     "rodata": 288,
+     "data": 204,
+     "bss": 4492,
+     "heap_total": 20256,
+     "itcm": 0,
+     "dtcm": 24,
+     "overlay": 0,
+     "members": 95
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 15272,
+     "rodata": 288,
+     "data": 204,
+     "bss": 4492,
+     "heap_total": 20256,
+     "itcm": 0,
+     "dtcm": 24,
+     "overlay": 0,
+     "members": 95
+    }
+   },
+   "FRAMEBUF": {
+    "title": "gSYFramebufferSets",
+    "all": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 147840,
+     "heap_total": 147840,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 147840,
+     "heap_total": 147840,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 1
+    }
+   },
+   "LEAN": {
+    "title": "the lean path (ndsFtrLean*, sNdsFtrLean*, nds_ftr_lean_kernel, renderer_fighter_lean)",
+    "all": {
+     "text": 38408,
+     "rodata": 0,
+     "data": 0,
+     "bss": 9416,
+     "heap_total": 47824,
+     "itcm": 6596,
+     "dtcm": 2100,
+     "overlay": 0,
+     "members": 93
+    },
+    "in_old_unit": {
+     "text": 3880,
+     "rodata": 0,
+     "data": 0,
+     "bss": 4,
+     "heap_total": 3884,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    },
+    "outside_old_unit": {
+     "text": 34528,
+     "rodata": 0,
+     "data": 0,
+     "bss": 9412,
+     "heap_total": 43940,
+     "itcm": 6596,
+     "dtcm": 2100,
+     "overlay": 0,
+     "members": 87
+    }
+   },
+   "DIAGFILES": {
+    "title": "diagnostics_*.c globals (all)",
+    "all": {
+     "text": 660,
+     "rodata": 0,
+     "data": 4918,
+     "bss": 22697,
+     "heap_total": 28275,
+     "itcm": 0,
+     "dtcm": 202,
+     "overlay": 0,
+     "members": 6540
+    },
+    "in_old_unit": {
+     "text": 0,
+     "rodata": 0,
+     "data": 0,
+     "bss": 0,
+     "heap_total": 0,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 0
+    },
+    "outside_old_unit": {
+     "text": 660,
+     "rodata": 0,
+     "data": 4918,
+     "bss": 22697,
+     "heap_total": 28275,
+     "itcm": 0,
+     "dtcm": 202,
+     "overlay": 0,
+     "members": 6540
+    }
+   },
+   "ORACLE": {
+    "title": "oracle/shadow/witness/census/probe/proof named symbols",
+    "all": {
+     "text": 9128,
+     "rodata": 880,
+     "data": 38,
+     "bss": 9672,
+     "heap_total": 19718,
+     "itcm": 8,
+     "dtcm": 56,
+     "overlay": 624,
+     "members": 260
+    },
+    "in_old_unit": {
+     "text": 3180,
+     "rodata": 0,
+     "data": 0,
+     "bss": 200,
+     "heap_total": 3380,
+     "itcm": 0,
+     "dtcm": 0,
+     "overlay": 0,
+     "members": 6
+    },
+    "outside_old_unit": {
+     "text": 5948,
+     "rodata": 880,
+     "data": 38,
+     "bss": 9472,
+     "heap_total": 16338,
+     "itcm": 8,
+     "dtcm": 56,
+     "overlay": 624,
+     "members": 254
+    }
+   }
+  }
+ }
+}

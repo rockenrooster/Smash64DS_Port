@@ -606,6 +606,12 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
         ndsSObjRecordSpriteFailure(NULL, sobj, NDS_NATIVE_FAILURE_BAD_ASSET);
         return FALSE;
     }
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+    /* A compact ground map carries the wallpaper's Sprite and Bitmap table
+     * itself: name the source container bitmap they stand for, which is the
+     * key kNDSNativeWallpapers is written against. */
+    (void)ndsRelocCompactGroundMapWallpaperKey(&asset_id, &bitmap_offset);
+#endif
     if (palette == NULL)
     {
         /* Battle wallpapers keep the presentation stretch; the Results

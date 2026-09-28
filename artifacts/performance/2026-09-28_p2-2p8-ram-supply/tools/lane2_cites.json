@@ -1,0 +1,620 @@
+[
+ {
+  "id": "A01",
+  "path": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c",
+  "lines": "23-37",
+  "note": "owner A: one lbRelocLoadFilesListed over dGMCommonFileIDs"
+ },
+ {
+  "id": "A02",
+  "path": "decomp/BattleShip-main/decomp/src/gm/gmcommon.c",
+  "lines": "11-20",
+  "note": "the eight IF file ids and slot order"
+ },
+ {
+  "id": "A03",
+  "path": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c",
+  "lines": "137",
+  "note": "VS setup order: IF files first"
+ },
+ {
+  "id": "A04",
+  "path": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c",
+  "lines": "153",
+  "note": "then particle pools"
+ },
+ {
+  "id": "A05",
+  "path": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c",
+  "lines": "160",
+  "note": "then item tree + pool"
+ },
+ {
+  "id": "A06",
+  "path": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c",
+  "lines": "164",
+  "note": "then effect files"
+ },
+ {
+  "id": "A07",
+  "path": "decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c",
+  "lines": "177",
+  "note": "then per-player fighter files (after all three owners)"
+ },
+ {
+  "id": "A08",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "15916",
+  "note": "IFCommonGameStatus compact loader (top-of-heap window, copy kept runs, re-seat)"
+ },
+ {
+  "id": "A09",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "16142",
+  "note": "loader call site; ndsTaskmanElasticReleaseAll() hands the window back first"
+ },
+ {
+  "id": "A10",
+  "path": "src/nds/nds_battle_hud.c",
+  "lines": "240-320",
+  "note": "lower HUD prepare"
+ },
+ {
+  "id": "A11",
+  "path": "src/nds/nds_battle_hud.c",
+  "lines": "251",
+  "note": "lower HUD glyphs come from a NitroFS blob, not the IF files"
+ },
+ {
+  "id": "A12",
+  "path": "src/nds/nds_platform.c",
+  "lines": "577",
+  "note": "shipping config routes timer/stock/damage to the lower HUD"
+ },
+ {
+  "id": "A13",
+  "path": "src/import/battleship_ifcommon.c",
+  "lines": "876-918",
+  "note": "timer/stock/damage GObjs are redirected; state only, no pixels"
+ },
+ {
+  "id": "A14",
+  "path": "src/import/battleship_ifcommon.c",
+  "lines": "757-874",
+  "note": "HUD state comes from game state, not sprite data"
+ },
+ {
+  "id": "A15",
+  "path": "src/port/sprite_preview_backend.c",
+  "lines": "791",
+  "note": "foreground SObjs: native OAM first"
+ },
+ {
+  "id": "A16",
+  "path": "src/port/sprite_preview_backend.c",
+  "lines": "833",
+  "note": "anything unrecognised records a native failure, is not drawn"
+ },
+ {
+  "id": "A17",
+  "path": "src/port/sprite_preview_backend.c",
+  "lines": "1004",
+  "note": "battle: lower-HUD route before the layered path"
+ },
+ {
+  "id": "A18",
+  "path": "src/port/sprite_preview_backend.c",
+  "lines": "137",
+  "note": "SObj creation expands 4c bitmaps in place (no IF sprite is 4c: lane2_4c_check.py)"
+ },
+ {
+  "id": "A19",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "2759-2797",
+  "note": "native OAM recognises SObjs by Bitmap pointer + size (GameStatus assets only)"
+ },
+ {
+  "id": "A20",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "3901",
+  "note": "native OAM draw: tag / arrow / recognised GameStatus assets"
+ },
+ {
+  "id": "A21",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "3445-3564",
+  "note": "tag bake reads the sprite's I8 pixels (setup)"
+ },
+ {
+  "id": "A22",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "3290-3376",
+  "note": "arrow bake reads the sprite pixels (setup)"
+ },
+ {
+  "id": "A23",
+  "path": "src/import/battleship_ifcommon.c",
+  "lines": "469",
+  "note": "tag bake call at interface creation"
+ },
+ {
+  "id": "A24",
+  "path": "src/import/battleship_ifcommon.c",
+  "lines": "489",
+  "note": "arrow bake call at itManagerInitItems' ifCommonItemArrowSetAttr"
+ },
+ {
+  "id": "A25",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "2101",
+  "note": "GameStatus prepare (bakes GO bank, binds metadata)"
+ },
+ {
+  "id": "A26",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "2380",
+  "note": "cloud/traffic atlas prepare: reads lamp/rod/frame pixels once"
+ },
+ {
+  "id": "A27",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "2458",
+  "note": "the twelve letter payloads dropped by the compact load"
+ },
+ {
+  "id": "A28",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "2597",
+  "note": "TIME UP / GAME SET run-length streams (22,104 B resident)"
+ },
+ {
+  "id": "A29",
+  "path": "src/nds/nds_ifcommon_oam.c",
+  "lines": "2658",
+  "note": "retained Sprite/Bitmap pointers moved into the image"
+ },
+ {
+  "id": "A30",
+  "path": "src/port/battle_playable_compat_stubs.c",
+  "lines": "201",
+  "note": "pause decals were once drawn (top-screen layered path, 2026-09-06); now only native owners draw"
+ },
+ {
+  "id": "A31",
+  "path": "src/port/sprite_preview_backend.c",
+  "lines": "133-155",
+  "note": "SObj creation copies the Sprite header (why headers stay); expands 4c only"
+ },
+ {
+  "id": "A32",
+  "path": "decomp/BattleShip-main/decomp/src/sys/objman.c",
+  "lines": "1591",
+  "note": "gcAddSObjForGObj copies the 68 B Sprite header into the SObj (headers are read whenever an interface SObj is made or re-pointed)"
+ },
+ {
+  "id": "B01",
+  "path": "src/import/battleship_item_link_core.c",
+  "lines": "807-902",
+  "note": "owner B: pool + extern tree load + arrow"
+ },
+ {
+  "id": "B02",
+  "path": "src/import/battleship_item_link_core.c",
+  "lines": "856",
+  "note": "82,976 B tree (ITCommonData + MiscData086) in one allocation"
+ },
+ {
+  "id": "B03",
+  "path": "src/import/battleship_item_link_core.c",
+  "lines": "368-448",
+  "note": "ITAttributes decode: pointers to DObjDesc/MObjSub/anim rows (kept)"
+ },
+ {
+  "id": "B04",
+  "path": "src/import/battleship_item_link_core.c",
+  "lines": "1024",
+  "note": "DObj trees built from DObjDesc arrays"
+ },
+ {
+  "id": "B05",
+  "path": "include/it/item.h",
+  "lines": "439",
+  "note": "ITStruct pool capacity"
+ },
+ {
+  "id": "B06",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "8793",
+  "note": "first item owner admission (root identity + DL word compares follow)"
+ },
+ {
+  "id": "B07",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "9300",
+  "note": "example raw base+OFFSET pointer-word compare (dl[11].w1) that a re-seat would break"
+ },
+ {
+  "id": "B08",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "9297",
+  "note": "example raw data_size >= source FILE_END compare"
+ },
+ {
+  "id": "B09",
+  "path": "src/import/battleship_item_link_core.c",
+  "lines": "832",
+  "note": "MiscData086 is shared with Yoshi's fighter closure"
+ },
+ {
+  "id": "B10",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "2905",
+  "note": "thrown Master Ball effect reads ITCommonData through gITManagerCommonData (file 86 base recovered by subtraction)"
+ },
+ {
+  "id": "B11",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "9338",
+  "note": "decomp efManagerMBallThrownMakeEffect subtracts a source offset from a fixed-up pointer"
+ },
+ {
+  "id": "B12",
+  "path": "src/nds/nds_native_item_hammer.exec.inc",
+  "lines": "32",
+  "note": "item owner reads texel/palette bytes at raw base + offset at first draw (bind)"
+ },
+ {
+  "id": "B13",
+  "path": "src/nds/nds_native_item_hammer.exec.inc",
+  "lines": "26",
+  "note": "raw source-size compare against the loaded size"
+ },
+ {
+  "id": "C01",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "154",
+  "note": "owner C: decomp efManagerInitEffects renamed; loads the three files and the EFStruct pool"
+ },
+ {
+  "id": "C02",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "208",
+  "note": "EFStruct pool = NDS_R2_EFFECT_POOL (38) x 60 B"
+ },
+ {
+  "id": "C03",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "2359-2417",
+  "note": "init sequence incl. desc resolve and visual templates"
+ },
+ {
+  "id": "C24",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "2023",
+  "note": "resolves every EFDesc against the loaded EF/IT/FT files at init"
+ },
+ {
+  "id": "C04",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "1107",
+  "note": "EFDesc span check uses the LOADED file size"
+ },
+ {
+  "id": "C05",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "1277-1343",
+  "note": "EFDesc offsets already resolve through ndsRelocNativeAssetAddress / ndsRelocNativeRootAddress"
+ },
+ {
+  "id": "C06",
+  "path": "src/import/battleship_efmanager.c",
+  "lines": "593-621",
+  "note": "7 x 352 B procedural templates (heap)"
+ },
+ {
+  "id": "C07",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "6218-6227",
+  "note": "EF2 entry-effect roots: RAW address equality (must become cell-aware)"
+ },
+ {
+  "id": "C08",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "6631",
+  "note": "EF3 MBallRays/ItemGetSwirl roots: raw dl - base compare"
+ },
+ {
+  "id": "C09",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "7438",
+  "note": "EF3 RebirthHalo roots: raw dl - base compare"
+ },
+ {
+  "id": "C10",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "8438",
+  "note": "EF1 DamageSlash: cell-aware root, then raw fingerprint compares"
+ },
+ {
+  "id": "C11",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "8471",
+  "note": "DamageSlash raw pointer-word fingerprint"
+ },
+ {
+  "id": "C12",
+  "path": "src/nds/nds_native_damage_slash.exec.inc",
+  "lines": "124-188",
+  "note": "13 CI4 frames read at scene prepare, raw asset_base + offset"
+ },
+ {
+  "id": "C13",
+  "path": "src/nds/nds_native_damage_fly_mdust.exec.inc",
+  "lines": "44-99",
+  "note": "7 frames read at scene prepare, raw offsets"
+ },
+ {
+  "id": "C14",
+  "path": "src/nds/nds_native_damage_fly_mdust.exec.inc",
+  "lines": "202",
+  "note": "preflight compares source offsets against the loaded size"
+ },
+ {
+  "id": "C15",
+  "path": "src/nds/nds_renderer_textures_effects.c",
+  "lines": "3754",
+  "note": "ImpactWave texels are ROM tables"
+ },
+ {
+  "id": "C16",
+  "path": "src/nds/nds_renderer_textures_effects.c",
+  "lines": "3784",
+  "note": "RebirthHalo texels are ROM tables"
+ },
+ {
+  "id": "C17",
+  "path": "src/nds/nds_renderer_native_common.c",
+  "lines": "6319",
+  "note": "entry-effect texels are ROM tables (sNdsEntryEffectTextures)"
+ },
+ {
+  "id": "C18",
+  "path": "src/port/reloc_backend_compat_shims.c",
+  "lines": "12811-12815",
+  "note": "shadow maker returns NULL: decomp ftshadow.c never runs"
+ },
+ {
+  "id": "C19",
+  "path": "src/nds/nds_renderer_textures_effects.c",
+  "lines": "5984-6052",
+  "note": "static-corpus key build: identity only, fails if the offset does not map"
+ },
+ {
+  "id": "C20",
+  "path": "src/nds/nds_renderer_textures_effects.c",
+  "lines": "6054",
+  "note": "every applicable record must build a key or stage admission declines"
+ },
+ {
+  "id": "C21",
+  "path": "src/import/battleship_lbparticle.c",
+  "lines": "266",
+  "note": "particle pool capacities 112/24/80 (menu shell / four-CPU)"
+ },
+ {
+  "id": "C22",
+  "path": "src/import/battleship_lbparticle.c",
+  "lines": "403",
+  "note": "pool allocation"
+ },
+ {
+  "id": "C23",
+  "path": "src/import/battleship_lbparticle.c",
+  "lines": "217",
+  "note": "history: a saturated transform pool silently drops KO bursts"
+ },
+ {
+  "id": "C25",
+  "path": "src/port/reloc_backend_compat_shims.c",
+  "lines": "8252",
+  "note": "source (file/particle) effect makers reached for a subset of effect kinds"
+ },
+ {
+  "id": "C26",
+  "path": "src/port/reloc_backend_compat_shims.c",
+  "lines": "8662",
+  "note": "hit sparks / fly orbs / star-rod spark go to procedural visual templates, not EF file lists"
+ },
+ {
+  "id": "C28",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "12735",
+  "note": "fall-through of the stage/effect/item submit: no owner admitted the list -> NO_PROGRAM record, nothing executed"
+ },
+ {
+  "id": "B14",
+  "path": "src/nds/nds_native_item_hammer.exec.inc",
+  "lines": "2",
+  "note": "item owners bake geometry/state into ROM; only TLUT/image bytes are read from the file"
+ },
+ {
+  "id": "C29",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "1279-1306",
+  "note": "DL-heap scanner: walks the frame's emitted list (gSYTaskmanDLHeads), not a file list"
+ },
+ {
+  "id": "C30",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "1378-1440",
+  "note": "DL-heap scanner for item procs: prim/env colour and other-mode words of the frame's list"
+ },
+ {
+  "id": "C31",
+  "path": "src/port/renderer_adapter_stage.c",
+  "lines": "1324-1371",
+  "note": "DL-heap scanner for effect procs"
+ },
+ {
+  "id": "S01",
+  "path": "src/import/battleship_sc1pgame_runtime.c",
+  "lines": "85",
+  "note": "1P also reads an IFCommonDigits Sprite header (not audited here: scope is the VS battle)"
+ },
+ {
+  "id": "C27",
+  "path": "decomp/BattleShip-main/decomp/src/ef/efmanager.c",
+  "lines": "1754-1756",
+  "note": "decomp: the three EF files, three separate 16 B-aligned allocations sized by lbRelocGetFileSize"
+ },
+ {
+  "id": "R09",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "12753",
+  "note": "the size hook the EF/IT allocations are made from (return the packed size here)"
+ },
+ {
+  "id": "P01",
+  "path": "scripts/fighters/generate_battle_core_packs.py",
+  "lines": "2-16",
+  "note": "battle-time pack precedent: root identity cells + extern patch manifest (BEX1) for cross-file slots"
+ },
+ {
+  "id": "P02",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "925",
+  "note": "runtime patch of a packed file's cross-file externs once the other files are resident"
+ },
+ {
+  "id": "P03",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "851",
+  "note": "pack load + publish: the loader a common-file pack path would mirror"
+ },
+ {
+  "id": "P04",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "138-148",
+  "note": "source extent of a packed file (what raw size compares must use)"
+ },
+ {
+  "id": "R01",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "16332",
+  "note": "ll* offset-token resolver: IF compact map or FPC span map, then size check (already handles both)"
+ },
+ {
+  "id": "R02",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "15768",
+  "note": "IF compact source->image offset map (static table, 65 rows max)"
+ },
+ {
+  "id": "R03",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "15750-15755",
+  "note": "IF span row (12 B)"
+ },
+ {
+  "id": "R04",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "16072",
+  "note": "sizes the IFCommon block that lbRelocLoadFilesListed allocates (compact GameStatus counted as a placeholder); EF and item allocations are sized by lbRelocGetFileSize instead"
+ },
+ {
+  "id": "R05",
+  "path": "include/nds/nds_reloc_assets.h",
+  "lines": "78",
+  "note": "NitroFS range reader for retargeted (scenario B) readers"
+ },
+ {
+  "id": "R06",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "5909",
+  "note": "what owners call to get (base, size): size is the LOADED (compact) size"
+ },
+ {
+  "id": "R07",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "87",
+  "note": "pack section lookup: keyed to the fighter resident table today"
+ },
+ {
+  "id": "R08",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "16141",
+  "note": "elastic motion cache hands the heap top back before a compaction window is used"
+ },
+ {
+  "id": "M01",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "150-163",
+  "note": "root identity from an ENDDL cell (pack) or dl - data (plain)"
+ },
+ {
+  "id": "M02",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "165-196",
+  "note": "source root offset -> cell address"
+ },
+ {
+  "id": "M03",
+  "path": "src/port/reloc_preview_pack.c",
+  "lines": "198-218",
+  "note": "source offset -> packed address through spans"
+ },
+ {
+  "id": "M04",
+  "path": "include/nds/nds_preview_pack.h",
+  "lines": "67-71",
+  "note": "12 B span row"
+ },
+ {
+  "id": "M05",
+  "path": "include/nds/nds_preview_pack.h",
+  "lines": "60-63",
+  "note": "8 B fixup row (file only, not resident)"
+ },
+ {
+  "id": "M06",
+  "path": "scripts/fighters/generate_preview_core_packs.py",
+  "lines": "119",
+  "note": "fighter pack generator (spans, fixups, root cells)"
+ },
+ {
+  "id": "M07",
+  "path": "scripts/fighters/generate_preview_core_packs.py",
+  "lines": "211",
+  "note": "8 B root cells {ENDDL, source root offset}"
+ },
+ {
+  "id": "M08",
+  "path": "scripts/fighters/generate_preview_core_packs.py",
+  "lines": "423",
+  "note": "independent decoder used as the pack's verifier"
+ },
+ {
+  "id": "M09",
+  "path": "scripts/check_native_only_rom.py",
+  "lines": "13",
+  "note": "display-list interpreter symbols the ROM must not link"
+ },
+ {
+  "id": "M10",
+  "path": "Makefile",
+  "lines": "7515",
+  "note": "the guard runs at ROM packaging (ARM9 image)"
+ },
+ {
+  "id": "M11",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "11516-11526",
+  "note": "allocation size = 16 B-aligned payload size"
+ },
+ {
+  "id": "M12",
+  "path": "src/port/reloc_backend_assets.c",
+  "lines": "802",
+  "note": "16 B allocation alignment"
+ }
+]

@@ -1,0 +1,20 @@
+{
+ "EFCommonEffects1": {
+  "dl_roots_all": 4,
+  "dl_roots_reachable": 3,
+  "admitted_roots": 2,
+  "admitted_not_in_reachable_roots": []
+ },
+ "EFCommonEffects2": {
+  "dl_roots_all": 13,
+  "dl_roots_reachable": 11,
+  "admitted_roots": 10,
+  "admitted_not_in_reachable_roots": []
+ },
+ "EFCommonEffects3": {
+  "dl_roots_all": 9,
+  "dl_roots_reachable": 9,
+  "admitted_roots": 9,
+  "admitted_not_in_reachable_roots": []
+ }
+}

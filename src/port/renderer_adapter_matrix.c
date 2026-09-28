@@ -1718,11 +1718,28 @@ void ndsRendererAdapterNativeStagePreloadAssets(void)
     }
 }
 
-static u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+/* Out of line: the flag must not grow the hot stage-prep function whose
+ * revalidation loop this is inlined into. */
+static __attribute__((noinline))
+#else
+static
+#endif
+u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
 {
     const NDSRendererAdapterNativeStageDescriptor *desc =
         ndsRendererAdapterNativeStageDescriptor();
 
+#if defined(NDS_P2_COMPACT_GROUND_MAPS) && NDS_P2_COMPACT_GROUND_MAPS
+    /* The pinned size of a ground map is its source size; a compact map (T1,
+     * reloc_backend_assets.c) is that plus its wallpaper stub. The rows and the
+     * P1 golden pin stay the source sizes. */
+    if ((desc != NULL) && (index < desc->asset_count))
+    {
+        return ndsRelocCompactGroundMapExpectedSize(desc->asset_ids[index],
+                                                    desc->asset_sizes[index]);
+    }
+#endif
     return ((desc != NULL) && (index < desc->asset_count)) ?
         desc->asset_sizes[index] : 0u;
 }

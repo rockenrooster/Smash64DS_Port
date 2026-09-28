@@ -1,0 +1,600 @@
+{
+ "classes": {
+  "unclassified": 8,
+  "palette": 1680,
+  "texture": 40392,
+  "vertices": 6640,
+  "display_list": 12064,
+  "dobjdesc": 6240,
+  "dllink": 16,
+  "pad": 4660,
+  "material": 2296,
+  "animation": 5476,
+  "other": 112
+ },
+ "structural_override_bytes": {
+  "display_list": 4968,
+  "vertices": 912,
+  "texture": 5560,
+  "palette": 512
+ },
+ "tags": {
+  "unreached_keep_unproven": 680,
+  "bind_read_owned_kinds": 21912,
+  "dead_vertices": 6640,
+  "dead_dl": 11032,
+  "keep_fingerprint": 1032,
+  "keep_runtime": 13468,
+  "pad_other": 4660,
+  "no_owner_kinds_texture": 20160
+ },
+ "fp_owner_indices": {
+  "ITEM_BAT": [
+   9,
+   14
+  ],
+  "ITEM_BOMBHEI": [
+   11,
+   17,
+   21
+  ],
+  "ITEM_BOX": [
+   8,
+   14,
+   18,
+   24,
+   28,
+   32,
+   33
+  ],
+  "ITEM_CAPSULE": [
+   9,
+   10,
+   17
+  ],
+  "ITEM_EGG": [
+   10,
+   16,
+   21
+  ],
+  "ITEM_FFLOWER": [
+   3,
+   6,
+   8,
+   9,
+   12
+  ],
+  "ITEM_GSHELL": [
+   12,
+   17
+  ],
+  "ITEM_HAMMER": [
+   11,
+   17,
+   21,
+   36
+  ],
+  "ITEM_HARISEN": [
+   11,
+   17,
+   22
+  ],
+  "ITEM_HEART": [
+   11,
+   17,
+   21,
+   32,
+   36
+  ],
+  "ITEM_IWARK": [
+   10,
+   16,
+   21
+  ],
+  "ITEM_KIRBYSTAR": [
+   11,
+   15
+  ],
+  "ITEM_LGUN": [
+   11,
+   17,
+   22,
+   28,
+   32,
+   38,
+   43
+  ],
+  "ITEM_MBALL": [
+   10,
+   11,
+   16,
+   17,
+   21
+  ],
+  "ITEM_MSBOMB": [
+   10,
+   14,
+   16,
+   20,
+   21,
+   25
+  ],
+  "ITEM_NBUMPER": [
+   10,
+   16,
+   21
+  ],
+  "ITEM_RSHELL": [
+   12,
+   17
+  ],
+  "ITEM_STAR": [
+   8,
+   14,
+   18,
+   23,
+   29
+  ],
+  "ITEM_STARROD": [
+   5,
+   10,
+   11,
+   15
+  ],
+  "ITEM_SWORD": [
+   7,
+   10,
+   15
+  ],
+  "ITEM_TARU": [
+   11,
+   17,
+   21,
+   29,
+   34,
+   38
+  ],
+  "ITEM_TOMATO": [
+   11,
+   17,
+   21
+  ],
+  "CASTLE_BUMPER": []
+ },
+ "covered_kinds": [
+  "Bat:ItemAttributes",
+  "BombHei:ItemAttributes",
+  "Box:ItemAttributes",
+  "Capsule:ItemAttributes",
+  "Egg:ItemAttributes",
+  "FFlower:ItemAttributes",
+  "GBumper:ItemAttributes",
+  "GShell:ItemAttributes",
+  "Hammer:ItemAttributes",
+  "Harisen:ItemAttributes",
+  "Heart:ItemAttributes",
+  "LGun:ItemAttributes",
+  "MBall:ItemAttributes",
+  "MSBomb:ItemAttributes",
+  "NBumper:ItemAttributes",
+  "RShell:ItemAttributes",
+  "Star:ItemAttributes",
+  "StarRod:ItemAttributes",
+  "StarRod:WeaponAttributes",
+  "StarRodSmash:WeaponAttributes",
+  "Sword:ItemAttributes",
+  "Taru:ItemAttributes",
+  "Tomato:ItemAttributes",
+  "Wark:ItemAttributes"
+ ],
+ "uncovered_kinds": [
+  "Dogas:ItemAttributes",
+  "DogasSmog:WeaponAttributes",
+  "Kabigon:ItemAttributes",
+  "Kamex:ItemAttributes",
+  "KamexHydro:WeaponAttributes",
+  "LGunAmmo:WeaponAttributes",
+  "Lizardon:ItemAttributes",
+  "MLucky:ItemAttributes",
+  "Mew:ItemAttributes",
+  "Nyars:ItemAttributes",
+  "NyarsCoin:WeaponAttributes",
+  "Pippi:ItemAttributes",
+  "PippiSwarm:WeaponAttributes",
+  "Sawamura:ItemAttributes",
+  "Spear:ItemAttributes",
+  "SpearSwarm:WeaponAttributes",
+  "Starmie:ItemAttributes",
+  "StarmieSwift:WeaponAttributes",
+  "Tosakinto:ItemAttributes",
+  "WarkRock:WeaponAttributes"
+ ],
+ "owners": {
+  "ITEM_BAT": {
+   "roots": [
+    "0x1bf0",
+    "0x1c48",
+    "0x1d48"
+   ],
+   "dl_indices": [
+    "0x9",
+    "0xe"
+   ],
+   "binds": [
+    "0x19d8",
+    "0x1a20",
+    "0x1a68",
+    "0x1ab0"
+   ],
+   "file_end": 7680
+  },
+  "ITEM_BOMBHEI": {
+   "roots": [
+    "0x3310"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x15"
+   ],
+   "binds": [
+    "0x27e8"
+   ],
+   "file_end": 13304
+  },
+  "ITEM_BOX": {
+   "roots": [
+    "0x6630"
+   ],
+   "dl_indices": [
+    "0x8",
+    "0xe",
+    "0x12",
+    "0x18",
+    "0x1c",
+    "0x20",
+    "0x21"
+   ],
+   "binds": [
+    "0x6098",
+    "0x60c0",
+    "0x60e8",
+    "0x62f0"
+   ],
+   "file_end": 26488
+  },
+  "ITEM_CAPSULE": {
+   "roots": [
+    "0x3e0",
+    "0x440",
+    "0x540",
+    "0x5e0"
+   ],
+   "dl_indices": [
+    "0x9",
+    "0xa",
+    "0x11"
+   ],
+   "binds": [
+    "0x8",
+    "0x30",
+    "0x58",
+    "0x80",
+    "0x108",
+    "0x190"
+   ],
+   "file_end": 1648
+  },
+  "ITEM_EGG": {
+   "roots": [
+    "0x103b0"
+   ],
+   "dl_indices": [
+    "0xa",
+    "0x10",
+    "0x15"
+   ],
+   "binds": [
+    "0x10158",
+    "0x10180"
+   ],
+   "file_end": 66720
+  },
+  "ITEM_FFLOWER": {
+   "roots": [
+    "0x4520",
+    "0x4578",
+    "0x4608"
+   ],
+   "dl_indices": [
+    "0x3",
+    "0x6",
+    "0x8",
+    "0x9",
+    "0xc"
+   ],
+   "binds": [
+    "0x4168",
+    "0x4200",
+    "0x4308"
+   ],
+   "file_end": 18272
+  },
+  "ITEM_GSHELL": {
+   "roots": [
+    "0x5ec0"
+   ],
+   "dl_indices": [
+    "0xc",
+    "0x11"
+   ],
+   "binds": [],
+   "file_end": 24456
+  },
+  "ITEM_HAMMER": {
+   "roots": [
+    "0x25f0"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x15",
+    "0x24"
+   ],
+   "binds": [
+    "0x22c8",
+    "0x22f0"
+   ],
+   "file_end": 10064
+  },
+  "ITEM_HARISEN": {
+   "roots": [
+    "0x20a0"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x16"
+   ],
+   "binds": [
+    "0x1eb8",
+    "0x1ee0"
+   ],
+   "file_end": 8600
+  },
+  "ITEM_HEART": {
+   "roots": [
+    "0xff8"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x15",
+    "0x20",
+    "0x24"
+   ],
+   "binds": [
+    "0xb48",
+    "0xb70",
+    "0xd78"
+   ],
+   "file_end": 4572
+  },
+  "ITEM_IWARK": {
+   "roots": [
+    "0xa050"
+   ],
+   "dl_indices": [
+    "0xa",
+    "0x10",
+    "0x15"
+   ],
+   "binds": [
+    "0x98e8",
+    "0x9910"
+   ],
+   "file_end": 41280
+  },
+  "ITEM_KIRBYSTAR": {
+   "roots": [
+    "0x5458"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0xf"
+   ],
+   "binds": [
+    "0x4c18"
+   ],
+   "file_end": 21768
+  },
+  "ITEM_LGUN": {
+   "roots": [
+    "0x3db0"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x16",
+    "0x1c",
+    "0x20",
+    "0x26",
+    "0x2b"
+   ],
+   "binds": [
+    "0x3a88",
+    "0x3af0",
+    "0x3b38",
+    "0x3b80"
+   ],
+   "file_end": 16208
+  },
+  "ITEM_MBALL": {
+   "roots": [
+    "0x9250",
+    "0x9340"
+   ],
+   "dl_indices": [
+    "0xa",
+    "0xb",
+    "0x10",
+    "0x11",
+    "0x15"
+   ],
+   "binds": [
+    "0x7d90",
+    "0x7db8",
+    "0x8e20"
+   ],
+   "file_end": 37936
+  },
+  "ITEM_MSBOMB": {
+   "roots": [
+    "0x37a0",
+    "0x38b0"
+   ],
+   "dl_indices": [
+    "0xa",
+    "0xe",
+    "0x10",
+    "0x14",
+    "0x15",
+    "0x19"
+   ],
+   "binds": [
+    "0x3608",
+    "0x3630",
+    "0x3658",
+    "0x36e0"
+   ],
+   "file_end": 14972
+  },
+  "ITEM_NBUMPER": {
+   "roots": [
+    "0x7558"
+   ],
+   "dl_indices": [
+    "0xa",
+    "0x10",
+    "0x15"
+   ],
+   "binds": [
+    "0x7288"
+   ],
+   "file_end": 30412
+  },
+  "ITEM_RSHELL": {
+   "roots": [
+    "0x5ec0"
+   ],
+   "dl_indices": [
+    "0xc",
+    "0x11"
+   ],
+   "binds": [],
+   "file_end": 24456
+  },
+  "ITEM_STAR": {
+   "roots": [
+    "0x1440"
+   ],
+   "dl_indices": [
+    "0x8",
+    "0xe",
+    "0x12",
+    "0x17",
+    "0x1d"
+   ],
+   "binds": [
+    "0x1238"
+   ],
+   "file_end": 5472
+  },
+  "ITEM_STARROD": {
+   "roots": [
+    "0x49b0",
+    "0x4a18",
+    "0x4aa0"
+   ],
+   "dl_indices": [
+    "0x5",
+    "0xa",
+    "0xb",
+    "0xf"
+   ],
+   "binds": [
+    "0x4798",
+    "0x47c0",
+    "0x47e8",
+    "0x4870"
+   ],
+   "file_end": 19472
+  },
+  "ITEM_SWORD": {
+   "roots": [
+    "0x17d8",
+    "0x1850"
+   ],
+   "dl_indices": [
+    "0x7",
+    "0xa",
+    "0xf"
+   ],
+   "binds": [
+    "0x1668"
+   ],
+   "file_end": 6392
+  },
+  "ITEM_TARU": {
+   "roots": [
+    "0x7000"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x15",
+    "0x1d",
+    "0x22",
+    "0x26"
+   ],
+   "binds": [
+    "0x69e8",
+    "0x6a10",
+    "0x6a38",
+    "0x6c40"
+   ],
+   "file_end": 29096
+  },
+  "ITEM_TOMATO": {
+   "roots": [
+    "0x9c0"
+   ],
+   "dl_indices": [
+    "0xb",
+    "0x11",
+    "0x15"
+   ],
+   "binds": [
+    "0x758",
+    "0x780"
+   ],
+   "file_end": 2432
+  },
+  "CASTLE_BUMPER": {
+   "roots": [
+    "0x7558"
+   ],
+   "dl_indices": [],
+   "binds": [
+    "0x7238",
+    "0x7260",
+    "0x7288"
+   ],
+   "file_end": null
+  }
+ },
+ "sum": 79584,
+ "decode_roots": 56,
+ "decode_errors": [],
+ "kept_runs_A": 181
+}

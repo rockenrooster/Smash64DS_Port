@@ -1,0 +1,5066 @@
+{
+ "totals": {
+  "unlabeled": 8,
+  "palette": 1872,
+  "pad": 14596,
+  "texture": 37232,
+  "vertices": 5552,
+  "display-list": 9800,
+  "dobjdesc": 5808,
+  "material": 2608,
+  "animation": 1932,
+  "other": 176
+ },
+ "rows": [
+  [
+   0,
+   8,
+   "unlabeled",
+   "(none)"
+  ],
+  [
+   8,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x0008"
+  ],
+  [
+   40,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x0008 (trailing slack)"
+  ],
+  [
+   48,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x0030"
+  ],
+  [
+   80,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x0030 (trailing slack)"
+  ],
+  [
+   88,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x0058"
+  ],
+  [
+   120,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x0058 (trailing slack)"
+  ],
+  [
+   128,
+   136,
+   "texture",
+   "dITCommonObject_Tex_0x0080"
+  ],
+  [
+   264,
+   136,
+   "texture",
+   "dITCommonObject_Tex_0x0108"
+  ],
+  [
+   400,
+   128,
+   "texture",
+   "dITCommonObject_Tex_0x0190"
+  ],
+  [
+   528,
+   224,
+   "vertices",
+   "dITCommonObject_Vtx_0x0210"
+  ],
+  [
+   752,
+   176,
+   "vertices",
+   "dITCommonObject_Vtx_0x02F0"
+  ],
+  [
+   928,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x03A0"
+  ],
+  [
+   992,
+   96,
+   "display-list",
+   "dITCommonObject_Gfx_0x03E0"
+  ],
+  [
+   1088,
+   256,
+   "display-list",
+   "dITCommonObject_Gfx_0x0440"
+  ],
+  [
+   1344,
+   160,
+   "display-list",
+   "dITCommonObject_Gfx_0x0540"
+  ],
+  [
+   1504,
+   144,
+   "display-list",
+   "dITCommonObject_Gfx_0x05E0"
+  ],
+  [
+   1648,
+   220,
+   "dobjdesc",
+   "dITCommonObject_Capsule_Item_data_DObjDesc"
+  ],
+  [
+   1868,
+   12,
+   "pad",
+   "dITCommonObject_Capsule_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   1880,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x0758"
+  ],
+  [
+   1912,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x0758 (trailing slack)"
+  ],
+  [
+   1920,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x0780"
+  ],
+  [
+   2432,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x0980"
+  ],
+  [
+   2496,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x09C0"
+  ],
+  [
+   2736,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Tomato_Item_data_DObjDesc"
+  ],
+  [
+   2868,
+   20,
+   "pad",
+   "dITCommonObject_Tomato_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   2888,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x0B48"
+  ],
+  [
+   2920,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x0B48 (trailing slack)"
+  ],
+  [
+   2928,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x0B70"
+  ],
+  [
+   3448,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x0D78"
+  ],
+  [
+   3960,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x0F78"
+  ],
+  [
+   4024,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x0FB8"
+  ],
+  [
+   4088,
+   336,
+   "display-list",
+   "dITCommonObject_Tomato_Item_DL"
+  ],
+  [
+   4424,
+   16,
+   "display-list",
+   "dITCommonObject_Heart_Item_DLLink"
+  ],
+  [
+   4440,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Heart_Item_data_DObjDesc"
+  ],
+  [
+   4572,
+   12,
+   "pad",
+   "dITCommonObject_Heart_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   4584,
+   32,
+   "pad",
+   "dITCommonObject_Heart_Item_data_remainder_gap_0x11DC_sub_0xC"
+  ],
+  [
+   4616,
+   8,
+   "pad",
+   "dITCommonObject_Heart_Item_data_remainder_gap_0x11DC_sub_0xC (trailing slack)"
+  ],
+  [
+   4624,
+   32,
+   "pad",
+   "dITCommonObject_Heart_Item_data_remainder_gap_0x11DC_sub_0x34"
+  ],
+  [
+   4656,
+   8,
+   "pad",
+   "dITCommonObject_Heart_Item_data_remainder_gap_0x11DC_sub_0x34 (trailing slack)"
+  ],
+  [
+   4664,
+   128,
+   "palette",
+   "dITCommonObject_LUT_0x1238"
+  ],
+  [
+   4792,
+   8,
+   "material",
+   "dITCommonObject_Star_Item_mobjsubs_gap_0x12B8"
+  ],
+  [
+   4800,
+   8,
+   "material",
+   "dITCommonObject_Star_Item_mobjsubs_gap_0x12B8_sub_0x8"
+  ],
+  [
+   4808,
+   8,
+   "material",
+   "dITCommonObject_Star_Item_mobjsubs_gap_0x12B8_sub_0x10"
+  ],
+  [
+   4816,
+   120,
+   "material",
+   "dITCommonObject_Star_Item_mobjsubs_gap_0x12B8_sub_0x18"
+  ],
+  [
+   4936,
+   120,
+   "material",
+   "dITCommonObject_Star_Item_mobjsubs_gap_0x12B8_sub_0x90"
+  ],
+  [
+   5056,
+   16,
+   "material",
+   "dITCommonObject_Star_Item_mobjsubs_gap_0x12B8_sub_0x108"
+  ],
+  [
+   5072,
+   48,
+   "vertices",
+   "dITCommonObject_Vtx_0x13D0"
+  ],
+  [
+   5120,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x1400"
+  ],
+  [
+   5184,
+   288,
+   "display-list",
+   "dITCommonObject_Gfx_0x1440"
+  ],
+  [
+   5472,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Star_Item_data_DObjDesc"
+  ],
+  [
+   5604,
+   12,
+   "pad",
+   "dITCommonObject_Star_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   5616,
+   8,
+   "animation",
+   "dITCommonObject_Star_Item_matanimjoints"
+  ],
+  [
+   5624,
+   800,
+   "pad",
+   "dITCommonObject_Star_Item_matanimjoints (trailing slack)"
+  ],
+  [
+   6424,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Sword_Item_data_DObjDesc"
+  ],
+  [
+   6600,
+   16,
+   "pad",
+   "dITCommonObject_Sword_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   6616,
+   64,
+   "palette",
+   "dITCommonObject_LUT_0x19D8"
+  ],
+  [
+   6680,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x19D8 (trailing slack)"
+  ],
+  [
+   6688,
+   64,
+   "palette",
+   "dITCommonObject_LUT_0x1A20"
+  ],
+  [
+   6752,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x1A20 (trailing slack)"
+  ],
+  [
+   6760,
+   72,
+   "texture",
+   "dITCommonObject_Tex_0x1A68"
+  ],
+  [
+   6832,
+   64,
+   "texture",
+   "dITCommonObject_Tex_0x1AB0"
+  ],
+  [
+   6896,
+   48,
+   "vertices",
+   "dITCommonObject_Vtx_0x1AF0"
+  ],
+  [
+   6944,
+   144,
+   "vertices",
+   "dITCommonObject_Vtx_0x1B20"
+  ],
+  [
+   7088,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x1BB0"
+  ],
+  [
+   7152,
+   88,
+   "display-list",
+   "dITCommonObject_Gfx_0x1BF0"
+  ],
+  [
+   7240,
+   256,
+   "display-list",
+   "dITCommonObject_Gfx_0x1C48"
+  ],
+  [
+   7496,
+   184,
+   "display-list",
+   "dITCommonObject_Gfx_0x1D48"
+  ],
+  [
+   7680,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Bat_Item_data_DObjDesc"
+  ],
+  [
+   7856,
+   8,
+   "pad",
+   "dITCommonObject_Bat_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   7864,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x1EB8"
+  ],
+  [
+   7896,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x1EB8 (trailing slack)"
+  ],
+  [
+   7904,
+   64,
+   "texture",
+   "dITCommonObject_Tex_0x1EE0"
+  ],
+  [
+   7968,
+   384,
+   "vertices",
+   "dITCommonObject_Vtx_0x1F20"
+  ],
+  [
+   8352,
+   248,
+   "display-list",
+   "dITCommonObject_Gfx_0x20A0"
+  ],
+  [
+   8600,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Harisen_Item_data_DObjDesc"
+  ],
+  [
+   8776,
+   20,
+   "pad",
+   "dITCommonObject_Harisen_Item_data_remainder_gap_0x2248"
+  ],
+  [
+   8796,
+   20,
+   "animation",
+   "dITCommonObject_Harisen_Item_data_remainder_gap_0x2248_sub_0x14"
+  ],
+  [
+   8816,
+   12,
+   "pad",
+   "dITCommonObject_Harisen_Item_data_remainder_gap_0x2248_sub_0x14 (trailing slack)"
+  ],
+  [
+   8828,
+   64,
+   "animation",
+   "dITCommonObject_Harisen_Item_data_remainder_gap_0x2248_sub_0x34"
+  ],
+  [
+   8892,
+   12,
+   "pad",
+   "dITCommonObject_Harisen_Item_data_remainder_gap_0x2248_sub_0x34 (trailing slack)"
+  ],
+  [
+   8904,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x22C8"
+  ],
+  [
+   8936,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x22C8 (trailing slack)"
+  ],
+  [
+   8944,
+   192,
+   "texture",
+   "dITCommonObject_Tex_0x22F0"
+  ],
+  [
+   9136,
+   192,
+   "vertices",
+   "dITCommonObject_Vtx_0x23B0"
+  ],
+  [
+   9328,
+   384,
+   "vertices",
+   "dITCommonObject_Vtx_0x2470"
+  ],
+  [
+   9712,
+   352,
+   "display-list",
+   "dITCommonObject_Gfx_0x25F0"
+  ],
+  [
+   10064,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Hammer_Item_data_DObjDesc"
+  ],
+  [
+   10196,
+   20,
+   "pad",
+   "dITCommonObject_Hammer_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   10216,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x27E8"
+  ],
+  [
+   10248,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x27E8 (trailing slack)"
+  ],
+  [
+   10256,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x2810"
+  ],
+  [
+   10776,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x2A18"
+  ],
+  [
+   11296,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x2C20"
+  ],
+  [
+   11816,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x2E28"
+  ],
+  [
+   12336,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x3030"
+  ],
+  [
+   12848,
+   8,
+   "material",
+   "dITCommonObject_BombHei_Item_mobjsubs_gap_0x3230"
+  ],
+  [
+   12856,
+   24,
+   "material",
+   "dITCommonObject_BombHei_Item_mobjsubs_gap_0x3230_sub_0x8"
+  ],
+  [
+   12880,
+   120,
+   "material",
+   "dITCommonObject_BombHei_Item_mobjsubs_gap_0x3230_sub_0x20"
+  ],
+  [
+   13000,
+   8,
+   "material",
+   "dITCommonObject_BombHei_Item_mobjsubs_gap_0x3230_sub_0x98"
+  ],
+  [
+   13008,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x32D0"
+  ],
+  [
+   13072,
+   232,
+   "display-list",
+   "dITCommonObject_Gfx_0x3310"
+  ],
+  [
+   13304,
+   132,
+   "dobjdesc",
+   "dITCommonObject_BombHei_Item_data_DObjDesc"
+  ],
+  [
+   13436,
+   4,
+   "pad",
+   "dITCommonObject_BombHei_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   13440,
+   64,
+   "vertices",
+   "dITCommonObject_BombHei_Item_data_remainder_gap_0x347C_sub_0x4"
+  ],
+  [
+   13504,
+   248,
+   "pad",
+   "dITCommonObject_BombHei_Item_data_remainder_gap_0x347C_sub_0x4 (trailing slack)"
+  ],
+  [
+   13752,
+   60,
+   "pad",
+   "dITCommonObject_BombHei_Item_data_remainder_gap_0x347C_sub_0x13C"
+  ],
+  [
+   13812,
+   20,
+   "pad",
+   "dITCommonObject_BombHei_Item_data_remainder_gap_0x347C_sub_0x178"
+  ],
+  [
+   13832,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x3608"
+  ],
+  [
+   13864,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x3608 (trailing slack)"
+  ],
+  [
+   13872,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x3630"
+  ],
+  [
+   13904,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x3630 (trailing slack)"
+  ],
+  [
+   13912,
+   136,
+   "texture",
+   "dITCommonObject_Tex_0x3658"
+  ],
+  [
+   14048,
+   64,
+   "texture",
+   "dITCommonObject_Tex_0x36E0"
+  ],
+  [
+   14112,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x3720"
+  ],
+  [
+   14176,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x3760"
+  ],
+  [
+   14240,
+   272,
+   "display-list",
+   "dITCommonObject_Gfx_0x37A0"
+  ],
+  [
+   14512,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x38B0"
+  ],
+  [
+   14752,
+   220,
+   "dobjdesc",
+   "dITCommonObject_MSBomb_Item_data_DObjDesc"
+  ],
+  [
+   14972,
+   12,
+   "pad",
+   "dITCommonObject_MSBomb_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   14984,
+   96,
+   "palette",
+   "dITCommonObject_LUT_0x3A88"
+  ],
+  [
+   15080,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x3A88 (trailing slack)"
+  ],
+  [
+   15088,
+   72,
+   "texture",
+   "dITCommonObject_Tex_0x3AF0"
+  ],
+  [
+   15160,
+   72,
+   "texture",
+   "dITCommonObject_Tex_0x3B38"
+  ],
+  [
+   15232,
+   64,
+   "texture",
+   "dITCommonObject_Tex_0x3B80"
+  ],
+  [
+   15296,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x3BC0"
+  ],
+  [
+   15360,
+   192,
+   "vertices",
+   "dITCommonObject_Vtx_0x3C00"
+  ],
+  [
+   15552,
+   240,
+   "vertices",
+   "dITCommonObject_Vtx_0x3CC0"
+  ],
+  [
+   15792,
+   416,
+   "display-list",
+   "dITCommonObject_Gfx_0x3DB0"
+  ],
+  [
+   16208,
+   132,
+   "dobjdesc",
+   "dITCommonObject_LGun_Item_data_DObjDesc"
+  ],
+  [
+   16340,
+   20,
+   "pad",
+   "dITCommonObject_LGun_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   16360,
+   128,
+   "texture",
+   "dITCommonObject_Tex_0x3FE8"
+  ],
+  [
+   16488,
+   64,
+   "vertices",
+   "dITCommonObject_LGun_Item_data_remainder_sub_0x94"
+  ],
+  [
+   16552,
+   168,
+   "display-list",
+   "dITCommonObject_LGunAmmo_Weapon_data"
+  ],
+  [
+   16720,
+   64,
+   "pad",
+   "dITCommonObject_LGunAmmo_Weapon_data (trailing slack)"
+  ],
+  [
+   16784,
+   32,
+   "palette",
+   "dITCommonObject_LGunAmmo_Weapon_data_post_0x40"
+  ],
+  [
+   16816,
+   8,
+   "pad",
+   "dITCommonObject_LGunAmmo_Weapon_data_post_0x40 (trailing slack)"
+  ],
+  [
+   16824,
+   464,
+   "palette",
+   "dITCommonObject_LGunAmmo_Weapon_data_post_0x68"
+  ],
+  [
+   17288,
+   12,
+   "material",
+   "dITCommonObject_FFlower_Item_mobjsubs_gap_0x4388"
+  ],
+  [
+   17300,
+   12,
+   "material",
+   "dITCommonObject_FFlower_Item_mobjsubs_gap_0x4388_sub_0xC"
+  ],
+  [
+   17312,
+   120,
+   "material",
+   "dITCommonObject_FFlower_Item_mobjsubs_gap_0x4388_sub_0x18"
+  ],
+  [
+   17432,
+   8,
+   "material",
+   "dITCommonObject_FFlower_Item_mobjsubs_gap_0x4388_sub_0x90"
+  ],
+  [
+   17440,
+   192,
+   "vertices",
+   "dITCommonObject_Vtx_0x4420"
+  ],
+  [
+   17632,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x44E0"
+  ],
+  [
+   17696,
+   88,
+   "display-list",
+   "dITCommonObject_Gfx_0x4520"
+  ],
+  [
+   17784,
+   144,
+   "display-list",
+   "dITCommonObject_Gfx_0x4578"
+  ],
+  [
+   17928,
+   168,
+   "display-list",
+   "dITCommonObject_Gfx_0x4608"
+  ],
+  [
+   18096,
+   176,
+   "dobjdesc",
+   "dITCommonObject_FFlower_Item_data_DObjDesc"
+  ],
+  [
+   18272,
+   12,
+   "animation",
+   "dITCommonObject_FFlower_Item_matanimjoints"
+  ],
+  [
+   18284,
+   1012,
+   "pad",
+   "dITCommonObject_FFlower_Item_matanimjoints (trailing slack)"
+  ],
+  [
+   19296,
+   176,
+   "dobjdesc",
+   "dITCommonObject_StarRod_Item_data_DObjDesc"
+  ],
+  [
+   19472,
+   8,
+   "pad",
+   "dITCommonObject_StarRod_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   19480,
+   2048,
+   "texture",
+   "dITCommonObject_Tex_0x4C18"
+  ],
+  [
+   21528,
+   64,
+   "vertices",
+   "dITCommonObject_StarRod_Item_data_remainder_sub_0x808"
+  ],
+  [
+   21592,
+   176,
+   "other",
+   "dITCommonObject_StarRod_Weapon_data"
+  ],
+  [
+   21768,
+   112,
+   "pad",
+   "dITCommonObject_StarRod_Weapon_data (trailing slack)"
+  ],
+  [
+   21880,
+   32,
+   "palette",
+   "dITCommonObject_StarRod_Weapon_data_post_0x70"
+  ],
+  [
+   21912,
+   8,
+   "pad",
+   "dITCommonObject_StarRod_Weapon_data_post_0x70 (trailing slack)"
+  ],
+  [
+   21920,
+   32,
+   "palette",
+   "dITCommonObject_StarRod_Weapon_data_post_0x98"
+  ],
+  [
+   21952,
+   8,
+   "pad",
+   "dITCommonObject_StarRod_Weapon_data_post_0x98 (trailing slack)"
+  ],
+  [
+   21960,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x55C8"
+  ],
+  [
+   22480,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x57D0"
+  ],
+  [
+   23000,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x59D8"
+  ],
+  [
+   23520,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x5BE0"
+  ],
+  [
+   24032,
+   8,
+   "material",
+   "dITCommonObject_GShell_Item_mobjsubs_gap_0x5DE0"
+  ],
+  [
+   24040,
+   16,
+   "material",
+   "dITCommonObject_GShell_Item_mobjsubs_gap_0x5DE0_sub_0x8"
+  ],
+  [
+   24056,
+   8,
+   "material",
+   "dITCommonObject_GShell_Item_mobjsubs_gap_0x5DE0_sub_0x18"
+  ],
+  [
+   24064,
+   120,
+   "material",
+   "dITCommonObject_GShell_Item_mobjsubs_gap_0x5DE0_sub_0x20"
+  ],
+  [
+   24184,
+   8,
+   "material",
+   "dITCommonObject_GShell_Item_mobjsubs_gap_0x5DE0_sub_0x98"
+  ],
+  [
+   24192,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x5E80"
+  ],
+  [
+   24256,
+   200,
+   "display-list",
+   "dITCommonObject_Gfx_0x5EC0"
+  ],
+  [
+   24456,
+   132,
+   "dobjdesc",
+   "dITCommonObject_GShell_Item_data_DObjDesc"
+  ],
+  [
+   24588,
+   12,
+   "pad",
+   "dITCommonObject_GShell_Item_data_remainder_gap_0x600C"
+  ],
+  [
+   24600,
+   32,
+   "animation",
+   "dITCommonObject_GShell_Item_data_remainder_gap_0x600C_sub_0xC"
+  ],
+  [
+   24632,
+   16,
+   "pad",
+   "dITCommonObject_GShell_Item_data_remainder_gap_0x600C_sub_0xC (trailing slack)"
+  ],
+  [
+   24648,
+   60,
+   "pad",
+   "dITCommonObject_GShell_Item_data_remainder_gap_0x600C_sub_0x3C"
+  ],
+  [
+   24708,
+   20,
+   "animation",
+   "dITCommonObject_GShell_Item_data_remainder_gap_0x600C_sub_0x78"
+  ],
+  [
+   24728,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x6098"
+  ],
+  [
+   24760,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x6098 (trailing slack)"
+  ],
+  [
+   24768,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x60C0"
+  ],
+  [
+   24800,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x60C0 (trailing slack)"
+  ],
+  [
+   24808,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x60E8"
+  ],
+  [
+   25328,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x62F0"
+  ],
+  [
+   25840,
+   224,
+   "vertices",
+   "dITCommonObject_Vtx_0x64F0"
+  ],
+  [
+   26064,
+   96,
+   "vertices",
+   "dITCommonObject_Vtx_0x65D0"
+  ],
+  [
+   26160,
+   328,
+   "display-list",
+   "dITCommonObject_Gfx_0x6630"
+  ],
+  [
+   26488,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Box_Item_data_DObjDesc"
+  ],
+  [
+   26620,
+   12,
+   "pad",
+   "dITCommonObject_Box_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   26632,
+   32,
+   "pad",
+   "dITCommonObject_Box_Item_data_remainder_gap_0x67FC_sub_0xC"
+  ],
+  [
+   26664,
+   8,
+   "pad",
+   "dITCommonObject_Box_Item_data_remainder_gap_0x67FC_sub_0xC (trailing slack)"
+  ],
+  [
+   26672,
+   128,
+   "pad",
+   "dITCommonObject_Box_Item_data_remainder_gap_0x67FC_sub_0x34"
+  ],
+  [
+   26800,
+   64,
+   "vertices",
+   "dITCommonObject_Box_Item_data_remainder_gap_0x67FC_sub_0xB4"
+  ],
+  [
+   26864,
+   248,
+   "pad",
+   "dITCommonObject_Box_Item_data_remainder_gap_0x67FC_sub_0xB4 (trailing slack)"
+  ],
+  [
+   27112,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x69E8"
+  ],
+  [
+   27144,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x69E8 (trailing slack)"
+  ],
+  [
+   27152,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x6A10"
+  ],
+  [
+   27184,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x6A10 (trailing slack)"
+  ],
+  [
+   27192,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x6A38"
+  ],
+  [
+   27712,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x6C40"
+  ],
+  [
+   28224,
+   160,
+   "vertices",
+   "dITCommonObject_Vtx_0x6E40"
+  ],
+  [
+   28384,
+   288,
+   "vertices",
+   "dITCommonObject_Vtx_0x6EE0"
+  ],
+  [
+   28672,
+   424,
+   "display-list",
+   "dITCommonObject_Gfx_0x7000"
+  ],
+  [
+   29096,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Taru_Item_data_DObjDesc"
+  ],
+  [
+   29228,
+   12,
+   "pad",
+   "dITCommonObject_Taru_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   29240,
+   32,
+   "pad",
+   "dITCommonObject_Taru_Item_data_remainder_sub_0xC"
+  ],
+  [
+   29272,
+   8,
+   "pad",
+   "dITCommonObject_Taru_Item_data_remainder_sub_0xC (trailing slack)"
+  ],
+  [
+   29280,
+   32,
+   "pad",
+   "dITCommonObject_Taru_Item_data_remainder_sub_0x34"
+  ],
+  [
+   29312,
+   8,
+   "pad",
+   "dITCommonObject_Taru_Item_data_remainder_sub_0x34 (trailing slack)"
+  ],
+  [
+   29320,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x7288"
+  ],
+  [
+   29832,
+   8,
+   "material",
+   "dITCommonObject_NBumper_Item_mobjsubs_gap_0x7488"
+  ],
+  [
+   29840,
+   8,
+   "material",
+   "dITCommonObject_NBumper_Item_mobjsubs_gap_0x7488_sub_0x8"
+  ],
+  [
+   29848,
+   120,
+   "material",
+   "dITCommonObject_NBumper_Item_mobjsubs_gap_0x7488_sub_0x10"
+  ],
+  [
+   29968,
+   8,
+   "material",
+   "dITCommonObject_NBumper_Item_mobjsubs_gap_0x7488_sub_0x88"
+  ],
+  [
+   29976,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x7518"
+  ],
+  [
+   30040,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x7558"
+  ],
+  [
+   30280,
+   132,
+   "dobjdesc",
+   "dITCommonObject_NBumper_Item_data_DObjDesc"
+  ],
+  [
+   30412,
+   12,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   30424,
+   32,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0xC"
+  ],
+  [
+   30456,
+   8,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0xC (trailing slack)"
+  ],
+  [
+   30464,
+   32,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x34"
+  ],
+  [
+   30496,
+   8,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x34 (trailing slack)"
+  ],
+  [
+   30504,
+   776,
+   "texture",
+   "dITCommonObject_Tex_0x7728"
+  ],
+  [
+   31280,
+   8,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x364"
+  ],
+  [
+   31288,
+   120,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x36C"
+  ],
+  [
+   31408,
+   8,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x3E4"
+  ],
+  [
+   31416,
+   64,
+   "vertices",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x3EC"
+  ],
+  [
+   31480,
+   240,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x42C"
+  ],
+  [
+   31720,
+   424,
+   "pad",
+   "dITCommonObject_NBumper_Item_data_remainder_gap_0x76CC_sub_0x42C (trailing slack)"
+  ],
+  [
+   32144,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x7D90"
+  ],
+  [
+   32176,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x7D90 (trailing slack)"
+  ],
+  [
+   32184,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x7DB8"
+  ],
+  [
+   32216,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x7DB8 (trailing slack)"
+  ],
+  [
+   32224,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x7DE0"
+  ],
+  [
+   32744,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x7FE8"
+  ],
+  [
+   33264,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x81F0"
+  ],
+  [
+   33784,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x83F8"
+  ],
+  [
+   34304,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x8600"
+  ],
+  [
+   34824,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x8808"
+  ],
+  [
+   35344,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x8A10"
+  ],
+  [
+   35864,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x8C18"
+  ],
+  [
+   36384,
+   768,
+   "texture",
+   "dITCommonObject_Tex_0x8E20"
+  ],
+  [
+   37152,
+   16,
+   "material",
+   "dITCommonObject_MBall_Item_mobjsubs_gap_0x9120"
+  ],
+  [
+   37168,
+   32,
+   "material",
+   "dITCommonObject_MBall_Item_mobjsubs_gap_0x9120_sub_0x10"
+  ],
+  [
+   37200,
+   120,
+   "material",
+   "dITCommonObject_MBall_Item_mobjsubs_gap_0x9120_sub_0x30"
+  ],
+  [
+   37320,
+   8,
+   "material",
+   "dITCommonObject_MBall_Item_mobjsubs_gap_0x9120_sub_0xA8"
+  ],
+  [
+   37328,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x91D0"
+  ],
+  [
+   37392,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x9210"
+  ],
+  [
+   37456,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x9250"
+  ],
+  [
+   37696,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x9340"
+  ],
+  [
+   37936,
+   220,
+   "dobjdesc",
+   "dITCommonObject_MBall_Item_data_DObjDesc"
+  ],
+  [
+   38156,
+   20,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C"
+  ],
+  [
+   38176,
+   176,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x14"
+  ],
+  [
+   38352,
+   32,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0xC4"
+  ],
+  [
+   38384,
+   120,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0xE4"
+  ],
+  [
+   38504,
+   16,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x15C"
+  ],
+  [
+   38520,
+   12,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x16C"
+  ],
+  [
+   38532,
+   28,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x16C (trailing slack)"
+  ],
+  [
+   38560,
+   120,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x194"
+  ],
+  [
+   38680,
+   16,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x20C"
+  ],
+  [
+   38696,
+   12,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x21C"
+  ],
+  [
+   38708,
+   28,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x21C (trailing slack)"
+  ],
+  [
+   38736,
+   176,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x244"
+  ],
+  [
+   38912,
+   32,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x2F4"
+  ],
+  [
+   38944,
+   176,
+   "pad",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x314"
+  ],
+  [
+   39120,
+   24,
+   "animation",
+   "dITCommonObject_MBall_Item_data_remainder_gap_0x950C_sub_0x3C4"
+  ],
+  [
+   39144,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x98E8"
+  ],
+  [
+   39176,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x98E8 (trailing slack)"
+  ],
+  [
+   39184,
+   1792,
+   "texture",
+   "dITCommonObject_Tex_0x9910"
+  ],
+  [
+   40976,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xA010"
+  ],
+  [
+   41040,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xA050"
+  ],
+  [
+   41280,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Wark_Item_data_DObjDesc"
+  ],
+  [
+   41412,
+   20,
+   "pad",
+   "dITCommonObject_Wark_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   41432,
+   32,
+   "pad",
+   "dITCommonObject_Wark_Item_data_remainder_gap_0xA1C4_sub_0x14"
+  ],
+  [
+   41464,
+   8,
+   "pad",
+   "dITCommonObject_Wark_Item_data_remainder_gap_0xA1C4_sub_0x14 (trailing slack)"
+  ],
+  [
+   41472,
+   1024,
+   "texture",
+   "dITCommonObject_Tex_0xA200"
+  ],
+  [
+   42496,
+   64,
+   "vertices",
+   "dITCommonObject_Wark_Item_data_remainder_gap_0xA1C4_sub_0x43C"
+  ],
+  [
+   42560,
+   240,
+   "pad",
+   "dITCommonObject_Wark_Item_data_remainder_gap_0xA1C4_sub_0x47C"
+  ],
+  [
+   42800,
+   232,
+   "pad",
+   "dITCommonObject_Wark_Item_data_remainder_gap_0xA1C4_sub_0x47C (trailing slack)"
+  ],
+  [
+   43032,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xA818"
+  ],
+  [
+   43064,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xA818 (trailing slack)"
+  ],
+  [
+   43072,
+   136,
+   "texture",
+   "dITCommonObject_Tex_0xA840"
+  ],
+  [
+   43208,
+   136,
+   "texture",
+   "dITCommonObject_Tex_0xA8C8"
+  ],
+  [
+   43344,
+   128,
+   "texture",
+   "dITCommonObject_Tex_0xA950"
+  ],
+  [
+   43472,
+   8,
+   "material",
+   "dITCommonObject_WarkRock_Weapon_mobjsubs_gap_0xA9D0"
+  ],
+  [
+   43480,
+   16,
+   "material",
+   "dITCommonObject_WarkRock_Weapon_mobjsubs_gap_0xA9D0_sub_0x8"
+  ],
+  [
+   43496,
+   120,
+   "material",
+   "dITCommonObject_WarkRock_Weapon_mobjsubs_gap_0xA9D0_sub_0x18"
+  ],
+  [
+   43616,
+   8,
+   "material",
+   "dITCommonObject_WarkRock_Weapon_mobjsubs_gap_0xA9D0_sub_0x90"
+  ],
+  [
+   43624,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xAA68"
+  ],
+  [
+   43688,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xAAA8"
+  ],
+  [
+   43928,
+   132,
+   "dobjdesc",
+   "dITCommonObject_WarkRock_Weapon_data_DObjDesc"
+  ],
+  [
+   44060,
+   12,
+   "pad",
+   "dITCommonObject_WarkRock_Weapon_data_remainder_gap_0xAC1C"
+  ],
+  [
+   44072,
+   80,
+   "pad",
+   "dITCommonObject_WarkRock_Weapon_data_remainder_gap_0xAC1C_sub_0xC"
+  ],
+  [
+   44152,
+   16,
+   "pad",
+   "dITCommonObject_WarkRock_Weapon_data_remainder_gap_0xAC1C_sub_0x5C"
+  ],
+  [
+   44168,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xAC88"
+  ],
+  [
+   44200,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xAC88 (trailing slack)"
+  ],
+  [
+   44208,
+   896,
+   "texture",
+   "dITCommonObject_Tex_0xACB0"
+  ],
+  [
+   45104,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xB030"
+  ],
+  [
+   45168,
+   232,
+   "display-list",
+   "dITCommonObject_Gfx_0xB070"
+  ],
+  [
+   45400,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Kabigon_Item_data_DObjDesc"
+  ],
+  [
+   45532,
+   52,
+   "pad",
+   "dITCommonObject_Kabigon_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   45584,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xB210"
+  ],
+  [
+   45616,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xB210 (trailing slack)"
+  ],
+  [
+   45624,
+   392,
+   "texture",
+   "dITCommonObject_Tex_0xB238"
+  ],
+  [
+   46016,
+   384,
+   "texture",
+   "dITCommonObject_Tex_0xB3C0"
+  ],
+  [
+   46400,
+   12,
+   "material",
+   "dITCommonObject_Tosakinto_Item_mobjsubs_gap_0xB540"
+  ],
+  [
+   46412,
+   12,
+   "material",
+   "dITCommonObject_Tosakinto_Item_mobjsubs_gap_0xB540_sub_0xC"
+  ],
+  [
+   46424,
+   120,
+   "material",
+   "dITCommonObject_Tosakinto_Item_mobjsubs_gap_0xB540_sub_0x18"
+  ],
+  [
+   46544,
+   8,
+   "material",
+   "dITCommonObject_Tosakinto_Item_mobjsubs_gap_0xB540_sub_0x90"
+  ],
+  [
+   46552,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xB5D8"
+  ],
+  [
+   46616,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xB618"
+  ],
+  [
+   46856,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Tosakinto_Item_data_DObjDesc"
+  ],
+  [
+   47032,
+   20,
+   "pad",
+   "dITCommonObject_Tosakinto_Item_data_remainder_gap_0xB7B8"
+  ],
+  [
+   47052,
+   300,
+   "animation",
+   "dITCommonObject_Tosakinto_Item_data_remainder_gap_0xB7B8_sub_0x14"
+  ],
+  [
+   47352,
+   20,
+   "pad",
+   "dITCommonObject_Tosakinto_Item_data_remainder_gap_0xB7B8_sub_0x14 (trailing slack)"
+  ],
+  [
+   47372,
+   80,
+   "pad",
+   "dITCommonObject_Tosakinto_Item_data_remainder_gap_0xB7B8_sub_0x154"
+  ],
+  [
+   47452,
+   12,
+   "animation",
+   "dITCommonObject_Tosakinto_Item_data_remainder_gap_0xB7B8_sub_0x1A4"
+  ],
+  [
+   47464,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xB968"
+  ],
+  [
+   47496,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xB968 (trailing slack)"
+  ],
+  [
+   47504,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0xB990"
+  ],
+  [
+   48016,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xBB90"
+  ],
+  [
+   48080,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xBBD0"
+  ],
+  [
+   48320,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Mew_Item_data_DObjDesc"
+  ],
+  [
+   48452,
+   20,
+   "pad",
+   "dITCommonObject_Mew_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   48472,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xBD58"
+  ],
+  [
+   48504,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xBD58 (trailing slack)"
+  ],
+  [
+   48512,
+   640,
+   "texture",
+   "dITCommonObject_Tex_0xBD80"
+  ],
+  [
+   49152,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xC000"
+  ],
+  [
+   49216,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xC040"
+  ],
+  [
+   49456,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Nyars_Item_data_DObjDesc"
+  ],
+  [
+   49588,
+   20,
+   "pad",
+   "dITCommonObject_Nyars_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   49608,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xC1C8"
+  ],
+  [
+   49640,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xC1C8 (trailing slack)"
+  ],
+  [
+   49648,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0xC1F0"
+  ],
+  [
+   50160,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xC3F0"
+  ],
+  [
+   50224,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xC430"
+  ],
+  [
+   50464,
+   132,
+   "dobjdesc",
+   "dITCommonObject_NyarsCoin_Weapon_data_DObjDesc"
+  ],
+  [
+   50596,
+   60,
+   "pad",
+   "dITCommonObject_NyarsCoin_Weapon_data_DObjDesc (trailing slack)"
+  ],
+  [
+   50656,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xC5E0"
+  ],
+  [
+   50688,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xC5E0 (trailing slack)"
+  ],
+  [
+   50696,
+   1800,
+   "texture",
+   "dITCommonObject_Tex_0xC608"
+  ],
+  [
+   52496,
+   1792,
+   "texture",
+   "dITCommonObject_Tex_0xCD10"
+  ],
+  [
+   54288,
+   8,
+   "material",
+   "dITCommonObject_Lizardon_Item_mobjsubs_gap_0xD410"
+  ],
+  [
+   54296,
+   8,
+   "material",
+   "dITCommonObject_Lizardon_Item_mobjsubs_gap_0xD410_sub_0x8"
+  ],
+  [
+   54304,
+   120,
+   "material",
+   "dITCommonObject_Lizardon_Item_mobjsubs_gap_0xD410_sub_0x10"
+  ],
+  [
+   54424,
+   8,
+   "material",
+   "dITCommonObject_Lizardon_Item_mobjsubs_gap_0xD410_sub_0x88"
+  ],
+  [
+   54432,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xD4A0"
+  ],
+  [
+   54496,
+   224,
+   "display-list",
+   "dITCommonObject_Gfx_0xD4E0"
+  ],
+  [
+   54720,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Lizardon_Item_data_DObjDesc"
+  ],
+  [
+   54852,
+   20,
+   "pad",
+   "dITCommonObject_Lizardon_Item_data_remainder_gap_0xD644"
+  ],
+  [
+   54872,
+   44,
+   "animation",
+   "dITCommonObject_Lizardon_Item_data_remainder_gap_0xD644_sub_0x14"
+  ],
+  [
+   54916,
+   4,
+   "pad",
+   "dITCommonObject_Lizardon_Item_data_remainder_gap_0xD644_sub_0x14 (trailing slack)"
+  ],
+  [
+   54920,
+   72,
+   "pad",
+   "dITCommonObject_Lizardon_Item_data_remainder_gap_0xD644_sub_0x44"
+  ],
+  [
+   54992,
+   24,
+   "pad",
+   "dITCommonObject_Lizardon_Item_data_remainder_gap_0xD644_sub_0x8C"
+  ],
+  [
+   55016,
+   80,
+   "pad",
+   "dITCommonObject_Lizardon_Item_data_remainder_gap_0xD644_sub_0x8C (trailing slack)"
+  ],
+  [
+   55096,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xD738"
+  ],
+  [
+   55128,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xD738 (trailing slack)"
+  ],
+  [
+   55136,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0xD760"
+  ],
+  [
+   55656,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0xD968"
+  ],
+  [
+   56176,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0xDB70"
+  ],
+  [
+   56688,
+   12,
+   "material",
+   "dITCommonObject_Spear_Item_mobjsubs_gap_0xDD70"
+  ],
+  [
+   56700,
+   12,
+   "material",
+   "dITCommonObject_Spear_Item_mobjsubs_gap_0xDD70_sub_0xC"
+  ],
+  [
+   56712,
+   120,
+   "material",
+   "dITCommonObject_Spear_Item_mobjsubs_gap_0xDD70_sub_0x18"
+  ],
+  [
+   56832,
+   8,
+   "material",
+   "dITCommonObject_Spear_Item_mobjsubs_gap_0xDD70_sub_0x90"
+  ],
+  [
+   56840,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xDE08"
+  ],
+  [
+   56904,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xDE48"
+  ],
+  [
+   57144,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Spear_Item_data_DObjDesc"
+  ],
+  [
+   57320,
+   20,
+   "pad",
+   "dITCommonObject_Spear_Item_data_remainder"
+  ],
+  [
+   57340,
+   292,
+   "animation",
+   "dITCommonObject_Spear_Item_data_remainder_sub_0x14"
+  ],
+  [
+   57632,
+   12,
+   "pad",
+   "dITCommonObject_Spear_Item_data_remainder_sub_0x14 (trailing slack)"
+  ],
+  [
+   57644,
+   432,
+   "pad",
+   "dITCommonObject_Spear_Item_data_remainder_sub_0x144"
+  ],
+  [
+   58076,
+   4,
+   "animation",
+   "dITCommonObject_Spear_Item_data_remainder_sub_0x2F4"
+  ],
+  [
+   58080,
+   12,
+   "material",
+   "dITCommonObject_SpearSwarm_Weapon_mobjsubs_gap_0xE2E0"
+  ],
+  [
+   58092,
+   12,
+   "material",
+   "dITCommonObject_SpearSwarm_Weapon_mobjsubs_gap_0xE2E0_sub_0xC"
+  ],
+  [
+   58104,
+   120,
+   "material",
+   "dITCommonObject_SpearSwarm_Weapon_mobjsubs_gap_0xE2E0_sub_0x18"
+  ],
+  [
+   58224,
+   8,
+   "material",
+   "dITCommonObject_SpearSwarm_Weapon_mobjsubs_gap_0xE2E0_sub_0x90"
+  ],
+  [
+   58232,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xE378"
+  ],
+  [
+   58296,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0xE3B8"
+  ],
+  [
+   58536,
+   176,
+   "dobjdesc",
+   "dITCommonObject_SpearSwarm_Weapon_data_DObjDesc"
+  ],
+  [
+   58712,
+   8,
+   "pad",
+   "dITCommonObject_SpearSwarm_Weapon_data_DObjDesc (trailing slack)"
+  ],
+  [
+   58720,
+   12,
+   "animation",
+   "dITCommonObject_SpearSwarm_Weapon_matanimjoints"
+  ],
+  [
+   58732,
+   1268,
+   "pad",
+   "dITCommonObject_SpearSwarm_Weapon_matanimjoints (trailing slack)"
+  ],
+  [
+   60000,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Kamex_Item_data_DObjDesc"
+  ],
+  [
+   60132,
+   20,
+   "pad",
+   "dITCommonObject_Kamex_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   60152,
+   32,
+   "pad",
+   "dITCommonObject_Kamex_Item_data_remainder_gap_0xEAE4_sub_0x14"
+  ],
+  [
+   60184,
+   8,
+   "pad",
+   "dITCommonObject_Kamex_Item_data_remainder_gap_0xEAE4_sub_0x14 (trailing slack)"
+  ],
+  [
+   60192,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0xEB20"
+  ],
+  [
+   60704,
+   64,
+   "vertices",
+   "dITCommonObject_Kamex_Item_data_remainder_gap_0xEAE4_sub_0x23C"
+  ],
+  [
+   60768,
+   240,
+   "pad",
+   "dITCommonObject_Kamex_Item_data_remainder_gap_0xEAE4_sub_0x27C"
+  ],
+  [
+   61008,
+   232,
+   "pad",
+   "dITCommonObject_Kamex_Item_data_remainder_gap_0xEAE4_sub_0x27C (trailing slack)"
+  ],
+  [
+   61240,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xEF38"
+  ],
+  [
+   61272,
+   88,
+   "pad",
+   "dITCommonObject_LUT_0xEF38 (trailing slack)"
+  ],
+  [
+   61360,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0xEFB0"
+  ],
+  [
+   61392,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0xEFB0 (trailing slack)"
+  ],
+  [
+   61400,
+   200,
+   "texture",
+   "dITCommonObject_Tex_0xEFD8"
+  ],
+  [
+   61600,
+   200,
+   "texture",
+   "dITCommonObject_Tex_0xF0A0"
+  ],
+  [
+   61800,
+   200,
+   "texture",
+   "dITCommonObject_Tex_0xF168"
+  ],
+  [
+   62000,
+   392,
+   "texture",
+   "dITCommonObject_Tex_0xF230"
+  ],
+  [
+   62392,
+   392,
+   "texture",
+   "dITCommonObject_Tex_0xF3B8"
+  ],
+  [
+   62784,
+   384,
+   "texture",
+   "dITCommonObject_Tex_0xF540"
+  ],
+  [
+   63168,
+   12,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0"
+  ],
+  [
+   63180,
+   12,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0_sub_0xC"
+  ],
+  [
+   63192,
+   16,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0_sub_0x18"
+  ],
+  [
+   63208,
+   120,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0_sub_0x28"
+  ],
+  [
+   63328,
+   120,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0_sub_0xA0"
+  ],
+  [
+   63448,
+   8,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0_sub_0x118"
+  ],
+  [
+   63456,
+   8,
+   "material",
+   "dITCommonObject_KamexHydro_Weapon_mobjsubs_gap_0xF6C0_sub_0x120"
+  ],
+  [
+   63464,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0xF7E8"
+  ],
+  [
+   63528,
+   32,
+   "vertices",
+   "dITCommonObject_Vtx_0xF828"
+  ],
+  [
+   63560,
+   96,
+   "display-list",
+   "dITCommonObject_Gfx_0xF848"
+  ],
+  [
+   63656,
+   120,
+   "display-list",
+   "dITCommonObject_Gfx_0xF8A8"
+  ],
+  [
+   63776,
+   184,
+   "display-list",
+   "dITCommonObject_Gfx_0xF920"
+  ],
+  [
+   63960,
+   176,
+   "dobjdesc",
+   "dITCommonObject_KamexHydro_Weapon_data_DObjDesc"
+  ],
+  [
+   64136,
+   8,
+   "pad",
+   "dITCommonObject_KamexHydro_Weapon_data_DObjDesc (trailing slack)"
+  ],
+  [
+   64144,
+   12,
+   "animation",
+   "dITCommonObject_KamexHydro_Weapon_animjoints"
+  ],
+  [
+   64156,
+   176,
+   "animation",
+   "dITCommonObject_KamexHydro_Weapon_animjoints_0xFA9C"
+  ],
+  [
+   64332,
+   36,
+   "animation",
+   "dITCommonObject_KamexHydro_Weapon_animjoints_0xFB4C"
+  ],
+  [
+   64368,
+   12,
+   "animation",
+   "dITCommonObject_KamexHydro_Weapon_matanimjoints"
+  ],
+  [
+   64380,
+   1156,
+   "pad",
+   "dITCommonObject_KamexHydro_Weapon_matanimjoints (trailing slack)"
+  ],
+  [
+   65536,
+   176,
+   "dobjdesc",
+   "dITCommonObject_MLucky_Item_data_DObjDesc"
+  ],
+  [
+   65712,
+   12,
+   "pad",
+   "dITCommonObject_MLucky_Item_data_remainder_gap_0x100B0"
+  ],
+  [
+   65724,
+   144,
+   "animation",
+   "dITCommonObject_MLucky_Item_data_remainder_gap_0x100B0_sub_0xC"
+  ],
+  [
+   65868,
+   12,
+   "pad",
+   "dITCommonObject_MLucky_Item_data_remainder_gap_0x100B0_sub_0xC (trailing slack)"
+  ],
+  [
+   65880,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x10158"
+  ],
+  [
+   65912,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x10158 (trailing slack)"
+  ],
+  [
+   65920,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x10180"
+  ],
+  [
+   66432,
+   48,
+   "vertices",
+   "dITCommonObject_Vtx_0x10380"
+  ],
+  [
+   66480,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x103B0"
+  ],
+  [
+   66720,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Egg_Item_data_DObjDesc"
+  ],
+  [
+   66896,
+   12,
+   "animation",
+   "dITCommonObject_Egg_Item_animjoints"
+  ],
+  [
+   66908,
+   2948,
+   "pad",
+   "dITCommonObject_Egg_Item_animjoints (trailing slack)"
+  ],
+  [
+   69856,
+   8,
+   "material",
+   "dITCommonObject_Starmie_Item_mobjsubs_gap_0x110E0"
+  ],
+  [
+   69864,
+   24,
+   "material",
+   "dITCommonObject_Starmie_Item_mobjsubs_gap_0x110E0_sub_0x8"
+  ],
+  [
+   69888,
+   120,
+   "material",
+   "dITCommonObject_Starmie_Item_mobjsubs_gap_0x110E0_sub_0x20"
+  ],
+  [
+   70008,
+   8,
+   "material",
+   "dITCommonObject_Starmie_Item_mobjsubs_gap_0x110E0_sub_0x98"
+  ],
+  [
+   70016,
+   48,
+   "vertices",
+   "dITCommonObject_Vtx_0x11180"
+  ],
+  [
+   70064,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x111B0"
+  ],
+  [
+   70304,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Starmie_Item_data_DObjDesc"
+  ],
+  [
+   70436,
+   20,
+   "pad",
+   "dITCommonObject_Starmie_Item_data_remainder"
+  ],
+  [
+   70456,
+   272,
+   "pad",
+   "dITCommonObject_Starmie_Item_data_remainder_sub_0x14"
+  ],
+  [
+   70728,
+   16,
+   "pad",
+   "dITCommonObject_Starmie_Item_data_remainder_sub_0x124"
+  ],
+  [
+   70744,
+   1152,
+   "texture",
+   "dITCommonObject_Tex_0x11458"
+  ],
+  [
+   71896,
+   64,
+   "vertices",
+   "dITCommonObject_Starmie_Item_data_remainder_sub_0x5B4"
+  ],
+  [
+   71960,
+   176,
+   "pad",
+   "dITCommonObject_Starmie_Item_data_remainder_sub_0x5F4"
+  ],
+  [
+   72136,
+   16,
+   "pad",
+   "dITCommonObject_Starmie_Item_data_remainder_sub_0x6A4"
+  ],
+  [
+   72152,
+   132,
+   "dobjdesc",
+   "dITCommonObject_StarmieSwift_Weapon_data_DObjDesc"
+  ],
+  [
+   72284,
+   12,
+   "pad",
+   "dITCommonObject_StarmieSwift_Weapon_data_DObjDesc (trailing slack)"
+  ],
+  [
+   72296,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x11A68"
+  ],
+  [
+   72328,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x11A68 (trailing slack)"
+  ],
+  [
+   72336,
+   896,
+   "texture",
+   "dITCommonObject_Tex_0x11A90"
+  ],
+  [
+   73232,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x11E10"
+  ],
+  [
+   73296,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x11E50"
+  ],
+  [
+   73536,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Sawamura_Item_data_DObjDesc"
+  ],
+  [
+   73668,
+   20,
+   "pad",
+   "dITCommonObject_Sawamura_Item_data_DObjDesc (trailing slack)"
+  ],
+  [
+   73688,
+   32,
+   "pad",
+   "dITCommonObject_Sawamura_Item_data_remainder_gap_0x11FC4_sub_0x14"
+  ],
+  [
+   73720,
+   8,
+   "pad",
+   "dITCommonObject_Sawamura_Item_data_remainder_gap_0x11FC4_sub_0x14 (trailing slack)"
+  ],
+  [
+   73728,
+   768,
+   "texture",
+   "dITCommonObject_Tex_0x12000"
+  ],
+  [
+   74496,
+   64,
+   "vertices",
+   "dITCommonObject_Sawamura_Item_data_remainder_gap_0x11FC4_sub_0x33C"
+  ],
+  [
+   74560,
+   240,
+   "pad",
+   "dITCommonObject_Sawamura_Item_data_remainder_gap_0x11FC4_sub_0x37C"
+  ],
+  [
+   74800,
+   152,
+   "pad",
+   "dITCommonObject_Sawamura_Item_data_remainder_gap_0x11FC4_sub_0x37C (trailing slack)"
+  ],
+  [
+   74952,
+   32,
+   "palette",
+   "dITCommonObject_LUT_0x124C8"
+  ],
+  [
+   74984,
+   8,
+   "pad",
+   "dITCommonObject_LUT_0x124C8 (trailing slack)"
+  ],
+  [
+   74992,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x124F0"
+  ],
+  [
+   75504,
+   64,
+   "vertices",
+   "dITCommonObject_Vtx_0x126F0"
+  ],
+  [
+   75568,
+   240,
+   "display-list",
+   "dITCommonObject_Gfx_0x12730"
+  ],
+  [
+   75808,
+   176,
+   "dobjdesc",
+   "dITCommonObject_Dogas_Item_data_DObjDesc"
+  ],
+  [
+   75984,
+   12,
+   "pad",
+   "dITCommonObject_Dogas_Item_data_remainder"
+  ],
+  [
+   75996,
+   124,
+   "animation",
+   "dITCommonObject_Dogas_Item_data_remainder_sub_0xC"
+  ],
+  [
+   76120,
+   16,
+   "pad",
+   "dITCommonObject_Dogas_Item_data_remainder_sub_0xC (trailing slack)"
+  ],
+  [
+   76136,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x12968"
+  ],
+  [
+   76656,
+   520,
+   "texture",
+   "dITCommonObject_Tex_0x12B70"
+  ],
+  [
+   77176,
+   512,
+   "texture",
+   "dITCommonObject_Tex_0x12D78"
+  ],
+  [
+   77688,
+   8,
+   "material",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs"
+  ],
+  [
+   77696,
+   16,
+   "material",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs_sub_0x8"
+  ],
+  [
+   77712,
+   120,
+   "material",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs_sub_0x18"
+  ],
+  [
+   77832,
+   8,
+   "material",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs_sub_0x90"
+  ],
+  [
+   77840,
+   64,
+   "vertices",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs_sub_0x98"
+  ],
+  [
+   77904,
+   160,
+   "material",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs_sub_0xD8"
+  ],
+  [
+   78064,
+   16,
+   "material",
+   "dITCommonObject_DogasSmog_Weapon_mobjsubs_sub_0x178"
+  ],
+  [
+   78080,
+   132,
+   "dobjdesc",
+   "dITCommonObject_DogasSmog_Weapon_data_DObjDesc"
+  ],
+  [
+   78212,
+   12,
+   "pad",
+   "dITCommonObject_DogasSmog_Weapon_data_DObjDesc (trailing slack)"
+  ],
+  [
+   78224,
+   8,
+   "animation",
+   "dITCommonObject_DogasSmog_Weapon_animjoints"
+  ],
+  [
+   78232,
+   72,
+   "animation",
+   "dITCommonObject_DogasSmog_Weapon_animjoints_0x13198"
+  ],
+  [
+   78304,
+   8,
+   "animation",
+   "dITCommonObject_DogasSmog_Weapon_matanimjoints"
+  ],
+  [
+   78312,
+   944,
+   "pad",
+   "dITCommonObject_DogasSmog_Weapon_matanimjoints (trailing slack)"
+  ],
+  [
+   79256,
+   132,
+   "dobjdesc",
+   "dITCommonObject_Pippi_Item_data_DObjDesc"
+  ],
+  [
+   79388,
+   8,
+   "pad",
+   "dITCommonObject_Pippi_Item_data_remainder"
+  ],
+  [
+   79396,
+   188,
+   "animation",
+   "dITCommonObject_Pippi_Item_data_remainder_sub_0x8"
+  ]
+ ],
+ "kinds": [
+  {
+   "kind": "Bat:ItemAttributes",
+   "data": "0x1e00",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x1bf0",
+    "0x1d48"
+   ],
+   "covered": 2,
+   "n": 2
+  },
+  {
+   "kind": "BombHei:ItemAttributes",
+   "data": "0x33f8",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x3310"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Box:ItemAttributes",
+   "data": "0x6778",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x6630"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Capsule:ItemAttributes",
+   "data": "0x670",
+   "dobjs": 4,
+   "dl_roots": [
+    "0x3e0",
+    "0x540",
+    "0x5e0"
+   ],
+   "covered": 3,
+   "n": 3
+  },
+  {
+   "kind": "Dogas:ItemAttributes",
+   "data": "0x12820",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x12730"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "DogasSmog:WeaponAttributes",
+   "data": "0x13100",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x13050"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Egg:ItemAttributes",
+   "data": "0x104a0",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x103b0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "FFlower:ItemAttributes",
+   "data": "0x46b0",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x4520",
+    "0x4608"
+   ],
+   "covered": 2,
+   "n": 2
+  },
+  {
+   "kind": "GBumper:ItemAttributes",
+   "data": "0x7648",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x7558"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "GShell:ItemAttributes",
+   "data": "0x5f88",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x5ec0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Hammer:ItemAttributes",
+   "data": "0x2750",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x25f0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Harisen:ItemAttributes",
+   "data": "0x2198",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x20a0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Heart:ItemAttributes",
+   "data": "0x1158",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xff8"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Kabigon:ItemAttributes",
+   "data": "0xb158",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xb070"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Kamex:ItemAttributes",
+   "data": "0xea60",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xe970"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "KamexHydro:WeaponAttributes",
+   "data": "0xf9d8",
+   "dobjs": 3,
+   "dl_roots": [
+    "0xf848",
+    "0xf920"
+   ],
+   "covered": 0,
+   "n": 2
+  },
+  {
+   "kind": "LGun:ItemAttributes",
+   "data": "0x3f50",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x3db0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "LGunAmmo:WeaponAttributes",
+   "data": "0x40a8",
+   "dobjs": 40,
+   "dl_roots": [
+    "0x4190"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Lizardon:ItemAttributes",
+   "data": "0xd5c0",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xd4e0"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "MBall:ItemAttributes",
+   "data": "0x9430",
+   "dobjs": 4,
+   "dl_roots": [
+    "0x9250",
+    "0x9340"
+   ],
+   "covered": 2,
+   "n": 2
+  },
+  {
+   "kind": "MLucky:ItemAttributes",
+   "data": "0x10000",
+   "dobjs": 3,
+   "dl_roots": [
+    "0xff10"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "MSBomb:ItemAttributes",
+   "data": "0x39a0",
+   "dobjs": 4,
+   "dl_roots": [
+    "0x37a0",
+    "0x38b0"
+   ],
+   "covered": 2,
+   "n": 2
+  },
+  {
+   "kind": "Mew:ItemAttributes",
+   "data": "0xbcc0",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xbbd0"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "NBumper:ItemAttributes",
+   "data": "0x7648",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x7558"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Nyars:ItemAttributes",
+   "data": "0xc130",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xc040"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "NyarsCoin:WeaponAttributes",
+   "data": "0xc520",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xc430"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Pippi:ItemAttributes",
+   "data": "0x13598",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x134b0"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "PippiSwarm:WeaponAttributes",
+   "data": "0x13598",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x134b0"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "RShell:ItemAttributes",
+   "data": "0x5f88",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x5ec0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Sawamura:ItemAttributes",
+   "data": "0x11f40",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x11e50"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Spear:ItemAttributes",
+   "data": "0xdf38",
+   "dobjs": 3,
+   "dl_roots": [
+    "0xde48"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "SpearSwarm:WeaponAttributes",
+   "data": "0xe4a8",
+   "dobjs": 3,
+   "dl_roots": [
+    "0xe3b8"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Star:ItemAttributes",
+   "data": "0x1560",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x1440"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "StarRod:ItemAttributes",
+   "data": "0x4b60",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x49b0",
+    "0x4aa0"
+   ],
+   "covered": 2,
+   "n": 2
+  },
+  {
+   "kind": "StarRod:WeaponAttributes",
+   "data": "0x5458",
+   "dobjs": 40,
+   "dl_roots": [
+    "0x4c18",
+    "0x5458"
+   ],
+   "covered": 1,
+   "n": 2
+  },
+  {
+   "kind": "StarRodSmash:WeaponAttributes",
+   "data": "0x5458",
+   "dobjs": 40,
+   "dl_roots": [
+    "0x4c18",
+    "0x5458"
+   ],
+   "covered": 1,
+   "n": 2
+  },
+  {
+   "kind": "Starmie:ItemAttributes",
+   "data": "0x112a0",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x111b0"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "StarmieSwift:WeaponAttributes",
+   "data": "0x119d8",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x11918"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Sword:ItemAttributes",
+   "data": "0x1918",
+   "dobjs": 3,
+   "dl_roots": [
+    "0x17d8",
+    "0x1850"
+   ],
+   "covered": 2,
+   "n": 2
+  },
+  {
+   "kind": "Taru:ItemAttributes",
+   "data": "0x71a8",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x7000"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Tomato:ItemAttributes",
+   "data": "0xab0",
+   "dobjs": 2,
+   "dl_roots": [
+    "0x9c0"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "Tosakinto:ItemAttributes",
+   "data": "0xb708",
+   "dobjs": 3,
+   "dl_roots": [
+    "0xb618"
+   ],
+   "covered": 0,
+   "n": 1
+  },
+  {
+   "kind": "Wark:ItemAttributes",
+   "data": "0xa140",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xa050"
+   ],
+   "covered": 1,
+   "n": 1
+  },
+  {
+   "kind": "WarkRock:WeaponAttributes",
+   "data": "0xab98",
+   "dobjs": 2,
+   "dl_roots": [
+    "0xaaa8"
+   ],
+   "covered": 0,
+   "n": 1
+  }
+ ],
+ "owners86": {
+  "ITEM_BAT": {
+   "consts": {
+    "ASSET": 86,
+    "HEADER_ROOT": 7152,
+    "CALLEE_ROOT": 7240,
+    "SECOND_ROOT": 7496,
+    "FILE_END": 7680,
+    "BRANCH_W0": 3724541952,
+    "BRANCH_RAW_W1": 119211794,
+    "TLUT0_OFFSET": 6616,
+    "IMAGE0_OFFSET": 6760,
+    "TLUT1_OFFSET": 6688,
+    "IMAGE1_OFFSET": 6832,
+    "VERTEX0_OFFSET": 6896,
+    "VERTEX1_OFFSET": 6944,
+    "VERTEX2_OFFSET": 7088,
+    "VERTEX0_COUNT": 3,
+    "TRIANGLE0_COUNT": 1,
+    "CORNER0_COUNT": 3,
+    "VERTEX1_COUNT": 9,
+    "TRIANGLE1_COUNT": 3,
+    "CORNER1_COUNT": 9,
+    "VERTEX2_COUNT": 4,
+    "TRIANGLE2_COUNT": 2,
+    "CORNER2_COUNT": 6,
+    "PACKET_ROM_BYTES": 260,
+    "PACKET_RAM_BYTES": 260
+   }
+  },
+  "ITEM_BOMBHEI": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 13072,
+    "FILE_END": 13304,
+    "TLUT_OFFSET": 10216,
+    "TLUT_W0": 4245684224,
+    "HOOK_W0": 3724541952,
+    "HOOK_W1": 234881024,
+    "VERTEX_OFFSET": 13008,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6,
+    "IMAGE_COUNT": 5,
+    "PACKET_ROM_BYTES": 88,
+    "PACKET_RAM_BYTES": 88
+   }
+  },
+  "ITEM_BOX": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 26160,
+    "FILE_END": 26488,
+    "TLUT0_OFFSET": 24768,
+    "TLUT0_W0": 4245684224,
+    "IMAGE0_OFFSET": 25328,
+    "IMAGE0_W0": 4249878528,
+    "VERTEX0_OFFSET": 25840,
+    "TLUT1_OFFSET": 24728,
+    "TLUT1_W0": 4245684224,
+    "IMAGE1_OFFSET": 24808,
+    "IMAGE1_W0": 4249878528,
+    "VERTEX1A_OFFSET": 26016,
+    "VERTEX1B_OFFSET": 26064,
+    "VERTEX0_COUNT": 14,
+    "TRIANGLE0_COUNT": 8,
+    "CORNER0_COUNT": 24,
+    "VERTEX1_COUNT": 8,
+    "TRIANGLE1_COUNT": 4,
+    "CORNER1_COUNT": 12,
+    "PACKET_ROM_BYTES": 380,
+    "PACKET_RAM_BYTES": 380
+   }
+  },
+  "ITEM_CAPSULE": {
+   "consts": {
+    "ASSET": 86,
+    "HEADER_ROOT": 992,
+    "CALLEE_ROOT": 1088,
+    "SECOND_ROOT": 1344,
+    "THIRD_ROOT": 1504,
+    "FILE_END": 1648,
+    "BRANCH_W0": 3724541952,
+    "BRANCH_RAW_W1": 18415888,
+    "TLUT0_OFFSET": 8,
+    "IMAGE0_OFFSET": 128,
+    "VERTEX0_OFFSET": 528,
+    "VERTEX1_OFFSET": 752,
+    "TLUT2_OFFSET": 88,
+    "IMAGE2_OFFSET": 400,
+    "VERTEX2_OFFSET": 928,
+    "TLUT3_OFFSET": 48,
+    "IMAGE3_OFFSET": 264,
+    "VERTEX3_OFFSET": 928,
+    "VERTEX0_COUNT": 14,
+    "TRIANGLE0_COUNT": 12,
+    "CORNER0_COUNT": 36,
+    "VERTEX1_COUNT": 11,
+    "TRIANGLE1_COUNT": 8,
+    "CORNER1_COUNT": 24,
+    "VERTEX2_COUNT": 4,
+    "TRIANGLE2_COUNT": 2,
+    "CORNER2_COUNT": 6,
+    "VERTEX3_COUNT": 4,
+    "TRIANGLE3_COUNT": 2,
+    "CORNER3_COUNT": 6,
+    "PACKET_ROM_BYTES": 606,
+    "PACKET_RAM_BYTES": 606
+   }
+  },
+  "ITEM_EGG": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 66480,
+    "FILE_END": 66720,
+    "TLUT_OFFSET": 65880,
+    "TLUT_W0": 4245684224,
+    "IMAGE_OFFSET": 65920,
+    "IMAGE_W0": 4249878528,
+    "VERTEX_OFFSET": 66432,
+    "VERTEX_COUNT": 3,
+    "TRIANGLE_COUNT": 1,
+    "CORNER_COUNT": 3,
+    "PACKET_ROM_BYTES": 48,
+    "PACKET_RAM_BYTES": 48
+   }
+  },
+  "ITEM_FFLOWER": {
+   "consts": {
+    "ASSET": 86,
+    "BRANCH_ROOT": 17696,
+    "CALLEE_ROOT": 17784,
+    "LIVE_ROOT": 17928,
+    "FILE_END": 18272,
+    "BRANCH_W0": 3724541952,
+    "BRANCH_RAW_W1": 292622686,
+    "HOOK_W0": 3724541952,
+    "HOOK_W1": 234881024,
+    "MOBJ_FLAGS": 4,
+    "BRANCH_TLUT_OFFSET": 16744,
+    "BRANCH_IMAGE_OFFSET": 16896,
+    "BRANCH_VERTEX_OFFSET": 17440,
+    "LIVE_IMAGE_OFFSET": 17160,
+    "LIVE_VERTEX_OFFSET": 17632,
+    "VERTEX0_COUNT": 12,
+    "TRIANGLE0_COUNT": 6,
+    "CORNER0_COUNT": 18,
+    "VERTEX1_COUNT": 4,
+    "TRIANGLE1_COUNT": 2,
+    "CORNER1_COUNT": 6,
+    "PALETTE_COUNT": 2,
+    "PACKET_ROM_BYTES": 280,
+    "PACKET_RAM_BYTES": 280
+   }
+  },
+  "ITEM_GSHELL": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 24256,
+    "DL_BYTES": 200,
+    "FILE_END": 24456,
+    "HOOK_W0": 3724541952,
+    "HOOK_W1": 234881024,
+    "VERTEX_OFFSET": 24192,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6
+   }
+  },
+  "ITEM_HAMMER": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 9712,
+    "DL_BYTES": 352,
+    "FILE_END": 10064,
+    "TLUT_OFFSET": 8904,
+    "TLUT_W0": 4245684224,
+    "IMAGE_OFFSET": 8944,
+    "IMAGE_W0": 4249878528,
+    "VERTEX0_OFFSET": 9136,
+    "VERTEX1_OFFSET": 9328,
+    "VERTEX0_COUNT": 12,
+    "TRIANGLE0_COUNT": 12,
+    "CORNER0_COUNT": 36,
+    "VERTEX1_COUNT": 24,
+    "TRIANGLE1_COUNT": 12,
+    "CORNER1_COUNT": 36
+   }
+  },
+  "ITEM_HARISEN": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 8352,
+    "FILE_END": 8600,
+    "TLUT_OFFSET": 7864,
+    "TLUT_W0": 4245684224,
+    "IMAGE_OFFSET": 7904,
+    "IMAGE_W0": 4249878528,
+    "VERTEX_OFFSET": 7968,
+    "VERTEX_COUNT": 24,
+    "TRIANGLE_COUNT": 8,
+    "CORNER_COUNT": 24,
+    "PACKET_ROM_BYTES": 384,
+    "PACKET_RAM_BYTES": 384
+   }
+  },
+  "ITEM_HEART": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 4088,
+    "FILE_END": 4572,
+    "TLUT_OFFSET": 2888,
+    "TLUT_W0": 4245684224,
+    "IMAGE0_OFFSET": 3448,
+    "IMAGE0_W0": 4249878528,
+    "IMAGE1_OFFSET": 2928,
+    "IMAGE1_W0": 4254072832,
+    "VERTEX0_OFFSET": 3960,
+    "VERTEX1_OFFSET": 4024,
+    "VERTEX0_COUNT": 4,
+    "TRIANGLE0_COUNT": 2,
+    "CORNER0_COUNT": 6,
+    "VERTEX1_COUNT": 4,
+    "TRIANGLE1_COUNT": 2,
+    "CORNER1_COUNT": 6,
+    "PACKET_ROM_BYTES": 136,
+    "PACKET_RAM_BYTES": 136
+   }
+  },
+  "ITEM_IWARK": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 41040,
+    "FILE_END": 41280,
+    "TLUT_OFFSET": 39144,
+    "TLUT_W0": 4245684224,
+    "IMAGE_OFFSET": 39184,
+    "IMAGE_W0": 4249878528,
+    "VERTEX_OFFSET": 40976,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6,
+    "PACKET_ROM_BYTES": 68,
+    "PACKET_RAM_BYTES": 68
+   }
+  },
+  "ITEM_KIRBYSTAR": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 21592,
+    "FILE_END": 21768,
+    "IMAGE_OFFSET": 19480,
+    "IMAGE_W0": 4254072832,
+    "VERTEX_OFFSET": 21528,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6,
+    "PACKET_ROM_BYTES": 68,
+    "PACKET_RAM_BYTES": 68
+   }
+  },
+  "ITEM_LGUN": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 15792,
+    "FILE_END": 16208,
+    "TLUT_OFFSET": 14984,
+    "TLUT_W0": 4245684224,
+    "IMAGE0_OFFSET": 15232,
+    "IMAGE1_OFFSET": 15160,
+    "IMAGE2_OFFSET": 15088,
+    "VERTEX0_OFFSET": 15296,
+    "VERTEX1_OFFSET": 15360,
+    "VERTEX2_OFFSET": 15552,
+    "VERTEX0_COUNT": 4,
+    "TRIANGLE0_COUNT": 2,
+    "CORNER0_COUNT": 6,
+    "VERTEX1_COUNT": 12,
+    "TRIANGLE1_COUNT": 4,
+    "CORNER1_COUNT": 12,
+    "VERTEX2_COUNT": 15,
+    "TRIANGLE2_COUNT": 7,
+    "CORNER2_COUNT": 21,
+    "PACKET_ROM_BYTES": 512,
+    "PACKET_RAM_BYTES": 512
+   }
+  },
+  "ITEM_MBALL": {
+   "consts": {
+    "ASSET": 86,
+    "BAKED_ROOT": 37456,
+    "LIVE_ROOT": 37696,
+    "FILE_END": 37936,
+    "BAKED_TLUT_OFFSET": 32184,
+    "BAKED_TLUT_W0": 4245684224,
+    "BAKED_IMAGE_OFFSET": 36384,
+    "BAKED_IMAGE_W0": 4249878528,
+    "BAKED_VERTEX_OFFSET": 37328,
+    "LIVE_TLUT_OFFSET": 32144,
+    "LIVE_TLUT_W0": 4245684224,
+    "LIVE_HOOK_W0": 3724541952,
+    "LIVE_HOOK_W1": 234881024,
+    "LIVE_VERTEX_OFFSET": 37392,
+    "BAKED_VERTEX_COUNT": 4,
+    "BAKED_TRIANGLE_COUNT": 2,
+    "BAKED_CORNER_COUNT": 6,
+    "LIVE_VERTEX_COUNT": 4,
+    "LIVE_TRIANGLE_COUNT": 2,
+    "LIVE_CORNER_COUNT": 6
+   }
+  },
+  "ITEM_MSBOMB": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT0": 14240,
+    "ROOT1": 14512,
+    "FILE_END": 14972,
+    "TLUT0_OFFSET": 13872,
+    "IMAGE0_OFFSET": 14048,
+    "VERTEX0_OFFSET": 14112,
+    "TLUT1_OFFSET": 13832,
+    "IMAGE1_OFFSET": 13912,
+    "VERTEX1_OFFSET": 14176,
+    "VERTEX0_COUNT": 4,
+    "TRIANGLE0_COUNT": 2,
+    "CORNER0_COUNT": 6,
+    "VERTEX1_COUNT": 4,
+    "TRIANGLE1_COUNT": 2,
+    "CORNER1_COUNT": 6,
+    "PACKET_ROM_BYTES": 136,
+    "PACKET_RAM_BYTES": 136
+   }
+  },
+  "ITEM_NBUMPER": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 30040,
+    "FILE_END": 30412,
+    "HOOK_W0": 3724541952,
+    "HOOK_W1": 234881024,
+    "MOBJ_FLAGS": 4,
+    "IMAGE_OFFSET": 29320,
+    "VERTEX_OFFSET": 29976,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6,
+    "PALETTE_COUNT": 2,
+    "PACKET_ROM_BYTES": 76,
+    "PACKET_RAM_BYTES": 76
+   }
+  },
+  "ITEM_RSHELL": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 24256,
+    "FILE_END": 24456,
+    "HOOK_W0": 3724541952,
+    "HOOK_W1": 234881024,
+    "VERTEX_OFFSET": 24192,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6,
+    "IMAGE_COUNT": 4,
+    "PALETTE_COUNT": 2,
+    "PACKET_ROM_BYTES": 0,
+    "PACKET_RAM_BYTES": 0
+   }
+  },
+  "ITEM_STAR": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 5184,
+    "DL_BYTES": 288,
+    "FILE_END": 5472,
+    "HOOK0_W0": 3724541952,
+    "HOOK0_W1": 234881024,
+    "HOOK1_W0": 3724541952,
+    "HOOK1_W1": 234881032,
+    "IMAGE_OFFSET": 4664,
+    "IMAGE_W0": 4249878528,
+    "VERTEX0_OFFSET": 5072,
+    "VERTEX1_OFFSET": 5120,
+    "VERTEX0_COUNT": 3,
+    "TRIANGLE0_COUNT": 1,
+    "CORNER0_COUNT": 3,
+    "VERTEX1_COUNT": 4,
+    "TRIANGLE1_COUNT": 2,
+    "CORNER1_COUNT": 6
+   }
+  },
+  "ITEM_STARROD": {
+   "consts": {
+    "ASSET": 86,
+    "HEADER_ROOT": 18864,
+    "CALLEE_ROOT": 18968,
+    "SECOND_ROOT": 19104,
+    "FILE_END": 19472,
+    "BRANCH_W0": 3724541952,
+    "BRANCH_RAW_W1": 311235206,
+    "TLUT0_OFFSET": 18328,
+    "IMAGE0_OFFSET": 18408,
+    "VERTEX0_OFFSET": 18672,
+    "TLUT1_OFFSET": 18368,
+    "IMAGE1_OFFSET": 18544,
+    "VERTEX1_OFFSET": 18800,
+    "VERTEX0_COUNT": 8,
+    "TRIANGLE0_COUNT": 6,
+    "CORNER0_COUNT": 18,
+    "VERTEX1_COUNT": 4,
+    "TRIANGLE1_COUNT": 2,
+    "CORNER1_COUNT": 6,
+    "PACKET_ROM_BYTES": 216,
+    "PACKET_RAM_BYTES": 216
+   }
+  },
+  "ITEM_SWORD": {
+   "consts": {
+    "ASSET": 86,
+    "BLADE_ROOT": 6104,
+    "HILT_ROOT": 6224,
+    "FILE_END": 6392,
+    "BLADE_VERTEX_OFFSET": 5864,
+    "HILT_IMAGE_OFFSET": 5736,
+    "HILT_IMAGE_W0": 4254072832,
+    "HILT_VERTEX_OFFSET": 6040,
+    "BLADE_VERTEX_COUNT": 11,
+    "BLADE_TRIANGLE_COUNT": 11,
+    "BLADE_CORNER_COUNT": 33,
+    "HILT_VERTEX_COUNT": 4,
+    "HILT_TRIANGLE_COUNT": 2,
+    "HILT_CORNER_COUNT": 6
+   }
+  },
+  "ITEM_TARU": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 28672,
+    "FILE_END": 29096,
+    "TLUT0_OFFSET": 27152,
+    "TLUT0_W0": 4245684224,
+    "IMAGE0_OFFSET": 27712,
+    "IMAGE0_W0": 4249878528,
+    "VERTEX0_OFFSET": 28224,
+    "TLUT1_OFFSET": 27112,
+    "TLUT1_W0": 4245684224,
+    "IMAGE1_OFFSET": 27192,
+    "IMAGE1_W0": 4249878528,
+    "VERTEX1_OFFSET": 28384,
+    "VERTEX0_COUNT": 10,
+    "TRIANGLE0_COUNT": 6,
+    "CORNER0_COUNT": 18,
+    "VERTEX1_COUNT": 18,
+    "TRIANGLE1_COUNT": 20,
+    "CORNER1_COUNT": 60,
+    "PACKET_ROM_BYTES": 548,
+    "PACKET_RAM_BYTES": 548
+   }
+  },
+  "ITEM_TOMATO": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 2496,
+    "DL_BYTES": 240,
+    "TLUT_OFFSET": 1880,
+    "IMAGE_OFFSET": 1920,
+    "FILE_END": 2432,
+    "TLUT_W0": 4245684224,
+    "IMAGE_W0": 4249878528,
+    "TLUT_SLOT": 92,
+    "IMAGE_SLOT": 140,
+    "VERTEX_OFFSET": 2432,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6
+   }
+  },
+  "CASTLE_BUMPER": {
+   "consts": {
+    "ASSET": 86,
+    "ROOT": 30040,
+    "DL_BYTES": 240,
+    "IMAGE_OFFSET": 29320,
+    "IMAGE_END": 29832,
+    "PALETTE0_OFFSET": 29280,
+    "PALETTE1_OFFSET": 29240,
+    "PALETTE_BYTES": 32,
+    "MOBJ_FLAGS": 4,
+    "VERTEX_COUNT": 4,
+    "TRIANGLE_COUNT": 2,
+    "CORNER_COUNT": 6
+   }
+  }
+ },
+ "dl_reads": {
+  "NDS_NATIVE_LINK_BOMB_BODY_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ],
+   [
+    11,
+    "w1"
+   ],
+   [
+    13,
+    "w0"
+   ],
+   [
+    13,
+    "w1"
+   ],
+   [
+    17,
+    "w0"
+   ],
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_LINK_BOMB_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_LINK_BOMB_BODY_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_LINK_BOMB_BODY_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_LINK_BOMB_FUSE_IMAGE_W0": [
+   [
+    13,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_LINK_BOMB_FUSE_IMAGE_OFFSET": [
+   [
+    13,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_TLUT_W0": [
+   [
+    8,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_W0": [
+   [
+    14,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_W0": [
+   [
+    26,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_PAL_ASSET": [
+   [
+    8,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_TLUT_OFFSET": [
+   [
+    8,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_OFFSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_OFFSET": [
+   [
+    26,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_SECTOR_LASER_TLUT_W0": [
+   [
+    8,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_SECTOR_LASER_IMAGE_W0": [
+   [
+    14,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_SECTOR_LASER_TEX_ASSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_SECTOR_LASER_TLUT_OFFSET": [
+   [
+    8,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_SECTOR_LASER_IMAGE_OFFSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_YOSHI_ENTRYEGG_PALETTE_W0": [
+   [
+    9,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_YOSHI_ENTRYEGG_VERTEX_W0": [
+   [
+    9,
+    "w1"
+   ],
+   [
+    13,
+    "w0"
+   ],
+   [
+    13,
+    "w1"
+   ],
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_YOSHI_ENTRYEGG_MATERIAL_EFFECTS": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_YOSHI_EGGLAY_PALETTE_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_YOSHI_EGGLAY_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_YOSHI_EGGLAY_VERTEX_W0": [
+   [
+    21,
+    "w0"
+   ]
+  ],
+  "?": [
+   [
+    7,
+    "w1"
+   ],
+   [
+    11,
+    "w0"
+   ],
+   [
+    11,
+    "w1"
+   ],
+   [
+    13,
+    "w0"
+   ],
+   [
+    13,
+    "w1"
+   ],
+   [
+    17,
+    "w1"
+   ],
+   [
+    18,
+    "w1"
+   ],
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLT_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLT_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLT_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLT_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLT_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLTFX_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLTFX_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_THUNDERJOLTFX_VERTEX_OFFSET": [
+   [
+    17,
+    "w0"
+   ],
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_MARUMINE_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_MARUMINE_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_MARUMINE_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_MARUMINE_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_MARUMINE_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GLUCKY_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GLUCKY_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GLUCKY_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GLUCKY_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GLUCKY_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_PORYGON_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_PORYGON_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_PORYGON_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_PORYGON_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_PORYGON_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HITOKAGE_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HITOKAGE_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HITOKAGE_HOOK_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HITOKAGE_HOOK_W1": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HITOKAGE_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FUSHIGIBANA_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FUSHIGIBANA_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FUSHIGIBANA_HOOK_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FUSHIGIBANA_HOOK_W1": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FUSHIGIBANA_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_HOOK0_W0": [
+   [
+    8,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_HOOK0_W1": [
+   [
+    8,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_HOOK1_W0": [
+   [
+    23,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_HOOK1_W1": [
+   [
+    23,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_IMAGE_W0": [
+   [
+    14,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_IMAGE_OFFSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_VERTEX0_OFFSET": [
+   [
+    18,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STAR_VERTEX1_OFFSET": [
+   [
+    29,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_SWORD_BLADE_VERTEX_OFFSET": [
+   [
+    7,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_SWORD_HILT_IMAGE_W0": [
+   [
+    10,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_SWORD_HILT_IMAGE_OFFSET": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_SWORD_HILT_VERTEX_OFFSET": [
+   [
+    15,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HAMMER_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HAMMER_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HAMMER_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HAMMER_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HAMMER_VERTEX0_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HAMMER_VERTEX1_OFFSET": [
+   [
+    36,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_BAKED_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_BAKED_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_BAKED_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_BAKED_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_BAKED_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_LIVE_TLUT_W0": [
+   [
+    10,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_LIVE_TLUT_OFFSET": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_LIVE_HOOK_W0": [
+   [
+    16,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_LIVE_HOOK_W1": [
+   [
+    16,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MBALL_LIVE_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_KIRBYSTAR_IMAGE_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_KIRBYSTAR_IMAGE_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_KIRBYSTAR_VERTEX_OFFSET": [
+   [
+    15,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GSHELL_HOOK_W0": [
+   [
+    12,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GSHELL_HOOK_W1": [
+   [
+    12,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_GSHELL_VERTEX_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_RSHELL_HOOK_W0": [
+   [
+    12,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_RSHELL_HOOK_W1": [
+   [
+    12,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_RSHELL_VERTEX_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BAT_BRANCH_W0": [
+   [
+    9,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BAT_CALLEE_ROOT": [
+   [
+    9,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BAT_VERTEX2_OFFSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_CAPSULE_BRANCH_W0": [
+   [
+    10,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_CAPSULE_CALLEE_ROOT": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_CAPSULE_VERTEX2_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_CAPSULE_VERTEX3_OFFSET": [
+   [
+    9,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOMBHEI_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOMBHEI_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOMBHEI_HOOK_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOMBHEI_HOOK_W1": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOMBHEI_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_IMAGE0_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_VERTEX0_OFFSET": [
+   [
+    22,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_IMAGE1_OFFSET": [
+   [
+    28,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_VERTEX1_OFFSET": [
+   [
+    32,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_IMAGE2_OFFSET": [
+   [
+    38,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_LGUN_VERTEX2_OFFSET": [
+   [
+    43,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HARISEN_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HARISEN_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HARISEN_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HARISEN_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HARISEN_VERTEX_OFFSET": [
+   [
+    22,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_IMAGE0_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_IMAGE0_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_VERTEX0_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_IMAGE1_W0": [
+   [
+    32,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_IMAGE1_OFFSET": [
+   [
+    32,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_HEART_VERTEX1_OFFSET": [
+   [
+    36,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STARROD_BRANCH_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STARROD_CALLEE_ROOT": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STARROD_TLUT1_OFFSET": [
+   [
+    5,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STARROD_IMAGE1_OFFSET": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_STARROD_VERTEX1_OFFSET": [
+   [
+    15,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_BRANCH_TLUT_OFFSET": [
+   [
+    6,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_BRANCH_W0": [
+   [
+    9,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_CALLEE_ROOT": [
+   [
+    9,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_HOOK_W0": [
+   [
+    3,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_HOOK_W1": [
+   [
+    3,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_LIVE_IMAGE_OFFSET": [
+   [
+    8,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_FFLOWER_LIVE_VERTEX_OFFSET": [
+   [
+    12,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MSBOMB_TLUT0_OFFSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MSBOMB_IMAGE0_OFFSET": [
+   [
+    20,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MSBOMB_VERTEX0_OFFSET": [
+   [
+    25,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MSBOMB_TLUT1_OFFSET": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MSBOMB_IMAGE1_OFFSET": [
+   [
+    16,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_MSBOMB_VERTEX1_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_NBUMPER_HOOK_W0": [
+   [
+    10,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_NBUMPER_HOOK_W1": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_NBUMPER_IMAGE_OFFSET": [
+   [
+    16,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_NBUMPER_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_TLUT0_W0": [
+   [
+    8,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_TLUT0_OFFSET": [
+   [
+    8,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_IMAGE0_W0": [
+   [
+    14,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_IMAGE0_OFFSET": [
+   [
+    14,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_VERTEX0_OFFSET": [
+   [
+    18,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_TLUT1_W0": [
+   [
+    24,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_TLUT1_OFFSET": [
+   [
+    24,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_IMAGE1_W0": [
+   [
+    28,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_IMAGE1_OFFSET": [
+   [
+    28,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_VERTEX1A_OFFSET": [
+   [
+    32,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_BOX_VERTEX1B_OFFSET": [
+   [
+    33,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_TLUT0_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_TLUT0_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_IMAGE0_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_IMAGE0_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_VERTEX0_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_TLUT1_W0": [
+   [
+    29,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_TLUT1_OFFSET": [
+   [
+    29,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_IMAGE1_W0": [
+   [
+    34,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_IMAGE1_OFFSET": [
+   [
+    34,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TARU_VERTEX1_OFFSET": [
+   [
+    38,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_EGG_TLUT_W0": [
+   [
+    10,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_EGG_TLUT_OFFSET": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_EGG_IMAGE_W0": [
+   [
+    16,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_EGG_IMAGE_OFFSET": [
+   [
+    16,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_EGG_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_IWARK_TLUT_W0": [
+   [
+    10,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_IWARK_TLUT_OFFSET": [
+   [
+    10,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_IWARK_IMAGE_W0": [
+   [
+    16,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_IWARK_IMAGE_OFFSET": [
+   [
+    16,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_IWARK_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TOMATO_TLUT_W0": [
+   [
+    11,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TOMATO_IMAGE_W0": [
+   [
+    17,
+    "w0"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TOMATO_TLUT_OFFSET": [
+   [
+    11,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TOMATO_IMAGE_OFFSET": [
+   [
+    17,
+    "w1"
+   ]
+  ],
+  "NDS_NATIVE_ITEM_TOMATO_VERTEX_OFFSET": [
+   [
+    21,
+    "w1"
+   ]
+  ]
+ }
+}

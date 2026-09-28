@@ -1,0 +1,34 @@
+--- a/Makefile
++++ b/Makefile
+@@ -2578,6 +2578,15 @@
+ $(error NDS_BATTLE_PROFILE=0 (DS-native precompiled path) is not implemented yet; it lands with Task 51. Set NDS_BATTLE_PROFILE=1.)
+ endif
+ NDS_RENDERER_FAST_RUN_DEFAULT ?= $(if $(filter smash64ds-battle-playable-coarse-hwtri,$(TARGET)),8,0)
++# R1 retirement, P2 targets only. 0 drops fighter hierarchy mode 7, the per-root hardware
++# executor, the CPU triangle rasteriser and the resident raw-path tables; the P1 family and
++# every other name keep 1 and build exactly as before. nds_renderer.h refuses 0 outside the
++# production fighter configuration (profile 0, mode 8/9, NO_ORACLE, HW light, Task 56 streams).
++NDS_FIGHTER_LEGACY_EXEC ?= $(if $(filter smash64ds smash64ds-p2-shell-hwtri smash64ds-p2-shell-freeplay-hwtri smash64ds-p2-shell-loop-hwtri smash64ds-p2-1b-scene-walk-hwtri smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),0,1)
++ifneq ($(filter $(NDS_FIGHTER_LEGACY_EXEC),0 1),)
++else
++$(error NDS_FIGHTER_LEGACY_EXEC must be 0 or 1)
++endif
+ ifeq ($(TARGET),smash64ds-battle-playable-hwtri)
+ # This is the only published P1 battle ROM. Keep the complete realtime
+ # configuration intrinsic to the target so direct builds and verifiers cannot
+@@ -7170,6 +7179,7 @@
+ 		echo '#define NDS_R2_RESULTS_LAYER_MEMO $(NDS_R2_RESULTS_LAYER_MEMO)'; \
+ 		echo '#define NDS_R2_MAIN_PRESENT_GUARD $(NDS_R2_MAIN_PRESENT_GUARD)'; \
+ 		echo '#define NDS_R2_FIGHTER_NO_ORACLE $(NDS_R2_FIGHTER_NO_ORACLE)'; \
++		echo '#define NDS_FIGHTER_LEGACY_EXEC $(NDS_FIGHTER_LEGACY_EXEC)'; \
+ 		echo '#define NDS_BGM_FALSIFIER_OFF $(NDS_BGM_FALSIFIER_OFF)'; \
+ 		echo '#define NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT $(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'; \
+ 		echo '#define NDS_IFCOMMON_HYBRID_OAM $(NDS_IFCOMMON_HYBRID_OAM)'; \
+@@ -8552,6 +8562,7 @@
+ 	@printf '%s\n' 'BENCH_MAKE_RENDER_ECONOMY_OWNER_MASK=$(NDS_RENDER_ECONOMY_OWNER_MASK)'
+ 	@printf '%s\n' 'BENCH_MAKE_RENDERER_BENCHMARK_MODE=$(NDS_RENDERER_BENCHMARK_MODE)'
+ 	@printf '%s\n' 'BENCH_MAKE_FAST_RUN_DEFAULT=$(NDS_RENDERER_FAST_RUN_DEFAULT)'
++	@printf '%s\n' 'BENCH_MAKE_FIGHTER_LEGACY_EXEC=$(NDS_FIGHTER_LEGACY_EXEC)'
+ 	@printf '%s\n' 'BENCH_MAKE_SCENE_MIP_CACHE_LAB=$(NDS_SCENE_MIP_CACHE_LAB)'
+ 	@printf '%s\n' 'BENCH_MAKE_BATTLE_STATIC_TEXTURE_DEFAULT=$(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'
+ 	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'

@@ -1,0 +1,15 @@
+{
+ "stage_item_root_identity_checks": 18,
+ "stage_item_raw_pointer_word_lines": 26,
+ "stage_item_raw_size_lines": 27,
+ "stage_entry_effect_raw_address_lines": 10,
+ "stage_ef3_raw_root_lines": 11,
+ "stage_slash_raw_pointer_word_lines": 2,
+ "stage_loaded_data_size_uses_total": 88,
+ "stage_ndsRelocNativeSourceSize_uses": 1,
+ "native_common_entry_effect_owner_asset_lines": 9,
+ "item_exec_files": 23,
+ "item_exec_raw_size_lines": 21,
+ "item_exec_raw_texel_lines": 7,
+ "damage_exec_raw_texel_lines": 3
+}
