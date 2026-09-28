@@ -9145,3 +9145,12 @@ bits while a snapshot of every yakumono's state is unchanged, and the
 function left ITCM. Gate P50/P95 -12.4K/-12.4K; Mushroom -43K/-37K; Hyrule
 -28K/-26K; Yoshi -30K/-26K; Saffron -15K/-10K. Replay identical.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 56.
+
+## 2026-09-28 — Map collision: per-kind yakumono group table
+
+**BANKED (any-stage, flat).** The wall and floor sweeps walked every yakumono
+group through O2R reads on every query. The non-empty groups per line kind are
+now decoded once, with the topology, in the same order. Medians: Saffron
+-6.0K, Mushroom -5.0K, Zebes -4.9K, Castle -4.5K, Jungle -4.4K, Yoshi -3.9K.
+Hyrule +1.2K; gate +1.7K (layout band). Replay identical everywhere.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 59.

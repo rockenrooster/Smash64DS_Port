@@ -1748,3 +1748,41 @@ Refuted:
 
 What remains is the per-joint compose itself (trig `BuildLocal`, `LoadF32`,
 D-cache misses on DObj/FTParts), which is the A5 kernel's job.
+
+## 59. Map collision: per-kind yakumono group table
+
+A fresh stage split (`msp_g*`, lab `NDS_P2_MISC_SPLIT=1 NDS_TICK_HUD_SRC_SPLIT=1`)
+puts SPHD (physics and map collision) at a median of 115K (Dream Land) to 165K
+(Saffron). The MP family's self time is 82K on Dream Land and 128K on Saffron.
+The wall sweep alone is 18K and 37K.
+
+Every wall/floor sweep call walked all the stage's yakumono groups through O2R
+halfword reads (group id, line count, yakumono id per kind) to find the one or
+two groups that have lines of the queried kind. Saffron averages ~4 groups a
+call at ~100 calls a frame.
+
+The change: when the collision topology is built, the non-empty groups of each
+line kind are decoded once, in yakumono order, into a table. The table sits in
+the topology's own allocation, so it adds no new failure mode, and its count is
+clamped as the sweeps clamp. The wall sweep (ITCM) walks only this table; its
+topology check already guaranteed the table. The floor sweep uses the table
+when it belongs to the current geometry and falls back to the O2R walk
+otherwise. Each sweep keeps its own yakumono-id rule. Iteration order and
+every value are unchanged.
+
+Results, final build, replay IDENTICAL on all nine runs:
+
+| Stage | Control | Median | P95 |
+|---|---|---|---|
+| Mushroom Kingdom | `afmf_g8` | -5.0K | -10.9K |
+| Saffron | `afmf_g7` | -6.0K | -13.6K |
+| Yoshi's Island | `afmf_g5` | -3.9K | -5.1K |
+| Jungle | `afmf_g2` | -4.4K | -8.1K |
+| Zebes | `afmf_g3` | -4.9K | -7.9K |
+| Castle | `smcf_g0` | -4.5K | |
+| Dream Land (sweep) | `hfe0_g6` | -2.4K | -4.9K |
+| Hyrule | `afmf_g4` | +1.2K | flat |
+| Gate `gkg` | `gafmf` | +1.7K | +4.4K |
+
+The gate result is within the known ±4K layout band, while the other stages
+show a consistent fall. Banked for the any-stage goal, with the gate noted.

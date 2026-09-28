@@ -12,6 +12,22 @@ static MPGeometryData *sNdsMPTopologyGeometry;
 static MPGeometryData *sNdsMPLineGroupFailedGeometry;
 static MPGeometryData *sNdsMPTopologyFailedGeometry;
 static sb32 sNdsMPLineGroupsReady;
+/* Per line kind, the yakumono groups that HAVE lines of that kind, in
+ * yakumono order, decoded once with the topology (P2-2p8, 2026-09-28). The
+ * sweeps walked every group through O2R halfword reads on every query to
+ * find the one or two that do (Saffron's wall sweep: ~4 groups a call, ~100
+ * calls a frame). `count` is already clamped to 4096 as the sweeps clamp;
+ * each sweep still applies its own yakumono-id rule. Lives in the topology's
+ * allocation, valid exactly while sNdsMPKindGroupGeometry is the geometry. */
+typedef struct NDSMPKindGroup
+{
+    u16 first;
+    u16 count;
+    u32 yakumono_id;
+} NDSMPKindGroup;
+static const NDSMPKindGroup *sNdsMPKindGroups[nMPLineKindEnumCount];
+static u8 sNdsMPKindGroupCounts[nMPLineKindEnumCount];
+static MPGeometryData *sNdsMPKindGroupGeometry;
 
 _Static_assert(sizeof(MPVertexInfo) == 10u,
                "BattleShip MPVertexInfo ABI must remain 10 bytes");
@@ -166,6 +182,7 @@ void ndsMPCollisionInvalidateTopology(void)
     sNdsMPLineGroupFailedGeometry = NULL;
     sNdsMPTopologyFailedGeometry = NULL;
     sNdsMPLineGroupsReady = FALSE;
+    sNdsMPKindGroupGeometry = NULL;
     gMPCollisionVertexInfo = NULL;
     gMPCollisionLinesNum = 0;
     ndsMPCollisionClearTopologySnapshot();
@@ -2132,6 +2149,8 @@ static sb32 ndsMPBuildTopologyCache(void)
     MPGeometryData *previous_geometry = sNdsMPTopologyGeometry;
     MPVertexInfoContainer *vertex_info;
     s32 line_count = ndsMPTopologyLineCount();
+    u32 kind_group_total;
+    u32 kind_group_offset;
     u32 hash = 2166136261u;
     u32 shared_directed = 0u;
     u32 orphan_endpoints = 0u;
@@ -2157,6 +2176,7 @@ static sb32 ndsMPBuildTopologyCache(void)
     gMPCollisionVertexInfo = NULL;
     gMPCollisionLinesNum = 0;
     sNdsMPTopologyGeometry = NULL;
+    sNdsMPKindGroupGeometry = NULL;
     ndsMPCollisionClearTopologySnapshot();
     if ((geometry == NULL) || (line_count <= 0) ||
         (line_count > 4096))
@@ -2189,8 +2209,32 @@ static sb32 ndsMPBuildTopologyCache(void)
             return FALSE;
         }
     }
+    {
+        u32 yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+        u32 kind;
+        u32 y;
+
+        if (yakumono_count > 64u)
+        {
+            yakumono_count = 64u;
+        }
+        kind_group_total = 0u;
+        for (y = 0u; y < yakumono_count; y++)
+        {
+            NDSMPO2RHalfwordView info = ndsMPLineInfoAt(geometry->line_info, y);
+
+            for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+            {
+                if ((s32)ndsMPLineInfoLineCount(info, kind) > 0)
+                {
+                    kind_group_total++;
+                }
+            }
+        }
+    }
+    kind_group_offset = (((u32)line_count * sizeof(MPVertexInfo)) + 3u) & ~3u;
     vertex_info = syTaskmanMalloc(
-        (u32)line_count * sizeof(MPVertexInfo), 8u);
+        kind_group_offset + (kind_group_total * sizeof(NDSMPKindGroup)), 8u);
     if (vertex_info == NULL)
     {
         sNdsMPTopologyFailedGeometry = geometry;
@@ -2268,6 +2312,42 @@ static sb32 ndsMPBuildTopologyCache(void)
         hash = (hash ^ (u32)line_id) * 16777619u;
         hash = (hash ^ (u32)(edge_prev + 2)) * 16777619u;
         hash = (hash ^ (u32)(edge_next + 2)) * 16777619u;
+    }
+    {
+        NDSMPKindGroup *groups =
+            (NDSMPKindGroup *)((u8 *)vertex_info + kind_group_offset);
+        u32 yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+        u32 kind;
+        u32 y;
+
+        if (yakumono_count > 64u)
+        {
+            yakumono_count = 64u;
+        }
+        for (kind = 0u; kind < nMPLineKindEnumCount; kind++)
+        {
+            u32 n = 0u;
+
+            sNdsMPKindGroups[kind] = groups;
+            for (y = 0u; y < yakumono_count; y++)
+            {
+                NDSMPO2RHalfwordView info =
+                    ndsMPLineInfoAt(geometry->line_info, y);
+                s32 count = (s32)ndsMPLineInfoLineCount(info, kind);
+
+                if (count <= 0)
+                {
+                    continue;
+                }
+                groups->first = (u16)ndsMPLineInfoGroupID(info, kind);
+                groups->count = (u16)((count > 4096) ? 4096 : count);
+                groups->yakumono_id = ndsMPLineInfoYakumonoID(info);
+                groups++;
+                n++;
+            }
+            sNdsMPKindGroupCounts[kind] = (u8)n;
+        }
+        sNdsMPKindGroupGeometry = geometry;
     }
     gMPCollisionVertexInfo = vertex_info;
     gMPCollisionLinesNum = line_count;
@@ -2848,11 +2928,11 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
                                                sb32 is_diff)
 {
     MPGeometryData *geometry = gMPCollisionGeometry;
-    MPLineInfo *line_info;
     MPVertexLinks *links;
     MPVertexArray *ids;
     MPVertexPosContainer *verts;
-    u32 yakumono_count;
+    const NDSMPKindGroup *group;
+    u32 group_count;
     u32 i;
     s32 lr = (line_kind == nMPLineKindLWall) ? -1 : +1;
     f32 line_project_pos = 3.402823466e+38F;
@@ -2875,22 +2955,21 @@ ndsStageMPAdjustFloorLoopWallSweep(Vec3f *position,
             return FALSE;
         }
     }
+    if (sNdsMPKindGroupGeometry != geometry)
+    {
+        return FALSE;
+    }
     gNdsMPWallSweepCalls++;
-    line_info = geometry->line_info;
     links = geometry->vertex_links;
     ids = geometry->vertex_id;
     verts = geometry->vertex_data;
-    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
-    if (yakumono_count > 64u)
+    group = sNdsMPKindGroups[line_kind];
+    group_count = sNdsMPKindGroupCounts[line_kind];
+    for (i = 0u; i < group_count; i++, group++)
     {
-        yakumono_count = 64u;
-    }
-    for (i = 0u; i < yakumono_count; i++)
-    {
-        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
-        s32 first = (s32)ndsMPLineInfoGroupID(info, line_kind);
-        s32 count = (s32)ndsMPLineInfoLineCount(info, line_kind);
-        u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        s32 first = (s32)group->first;
+        s32 count = (s32)group->count;
+        u32 yakumono_id = group->yakumono_id;
         DObj *yakumono_dobj;
         f32 vedge_x = 0.0F;
         f32 vedge_y = 0.0F;
@@ -5394,6 +5473,7 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
     u32 yakumono_count;
     u32 i;
     f32 best_dist = 3.402823466e+38F;
+    const NDSMPKindGroup *floor_groups = NULL;
     s32 best_line = -1;
     u32 best_flags = 0u;
     u32 best_yakumono_id = 0u;
@@ -5425,17 +5505,24 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
      * frames of a 1600-frame gate run diverged, deterministically and in the
      * same four places on two consecutive runs. */
     ndsMPVertexF32Bind(geometry);
-    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
-    if (yakumono_count > 64u)
+    if (sNdsMPKindGroupGeometry == geometry)
     {
-        yakumono_count = 64u;
+        floor_groups = sNdsMPKindGroups[nMPLineKindFloor];
+        yakumono_count = sNdsMPKindGroupCounts[nMPLineKindFloor];
+    }
+    else
+    {
+        yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+        if (yakumono_count > 64u)
+        {
+            yakumono_count = 64u;
+        }
     }
     for (i = 0u; i < yakumono_count; i++)
     {
-        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
-        s32 first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
-        s32 count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindFloor);
-        u32 yakumono_id = ndsMPLineInfoYakumonoID(info);
+        s32 first;
+        s32 count;
+        u32 yakumono_id;
         DObj *yakumono_dobj = NULL;
         f32 vedge_x = 0.0F;
         f32 vedge_y = 0.0F;
@@ -5445,6 +5532,20 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
         s32 end;
         s32 line_id;
 
+        if (floor_groups != NULL)
+        {
+            first = (s32)floor_groups[i].first;
+            count = (s32)floor_groups[i].count;
+            yakumono_id = floor_groups[i].yakumono_id;
+        }
+        else
+        {
+            NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
+
+            first = (s32)ndsMPLineInfoGroupID(info, nMPLineKindFloor);
+            count = (s32)ndsMPLineInfoLineCount(info, nMPLineKindFloor);
+            yakumono_id = ndsMPLineInfoYakumonoID(info);
+        }
         if (count <= 0)
         {
             continue;
