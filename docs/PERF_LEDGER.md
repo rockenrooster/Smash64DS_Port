@@ -9176,15 +9176,14 @@ Purin P95: Dream Land 1,536K -> 1,408K, Mushroom 1,698K -> 1,583K. Gate +1-3K
 (layout band). Replay identical. CSS tour 12/12 drew.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 62.
 
-## 2026-09-28 — Native item owners: texture memo; DObj/stage world caches split
+## 2026-09-28 — Native item owners: texture memo
 
-**BANKED (any stage).** Native item owners re-resolved their fixed textures
-through the full resolver every draw (Piranha Plant bind 8.1K ticks). A
-per-site memo now replays the resolver's cache-hit tail, validated by
-generation (verify arm 0/14,400 mismatches). The stage world cache also
-shared, and halved, the per-frame DObj world cache and was refused on busy
-stages. It now has its own 64 slots.
-- Full-roster lab medians: Dream Land -58K, Jungle -63K, Mushroom -21K (memo).
-- Gate P95: 1,308K -> 1,302K.
-- Replay identical everywhere.
+**BANKED (item-heavy stages).** Native item owners re-resolved their fixed
+textures through the full resolver every draw (Piranha Plant bind 8.1K ticks).
+A per-site memo now replays the resolver's cache-hit tail, validated by
+generation (verify arm 0/14,400 mismatches). Same-ROM: Mushroom median -21K,
+P95 -21K; Saffron median -6K. Gate P50/P95 939K/1,308K -> 934K/1,298K.
+Replay identical.
+A world-cache split tried alongside it measured neutral against a fresh
+control and was reverted.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 64.

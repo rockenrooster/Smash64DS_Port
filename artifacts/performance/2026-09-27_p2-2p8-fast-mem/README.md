@@ -1951,7 +1951,7 @@ own its first 141,440 B for every battle (`NDS_FIGHTER_PACKET_ARENA_WORDS`),
 and `ndsRendererFighterPacketRelease` restores the clear at Results. The
 experiment is reverted, and `video.h` now lists that owner.
 
-## 64. Item draws: a texture memo for native owners, and split world caches
+## 64. Item draws: a texture memo for native owners (world-cache split refuted)
 
 An item witness (lab, `gNdsLabItemTicks` by `ITStruct.kind`) priced every
 item draw at 45K-100K ticks:
@@ -1964,9 +1964,9 @@ A Piranha Plant draw (2 triangles) splits as:
 - native submit 17K, including a full texture resolve of 7.4K;
 - adapter overhead ~6K.
 
-A Beam Sword's two DObjs each spent 18K rebuilding their world uncached.
+A Beam Sword's two DObjs each spend ~18K rebuilding their world uncached.
 
-**1. Owner texture memo** (`ndsRendererHardwareBindTextureOwnerMemo`).
+**Banked: owner texture memo** (`ndsRendererHardwareBindTextureOwnerMemo`).
 - One memo per bind site of a native owner whose texture state is generated.
 - The key covers the caller's run/frame id, the texel and TLUT images, the
   load size, prim, env, both othermode words, the combine and the geometry
@@ -1983,31 +1983,23 @@ A Beam Sword's two DObjs each spent 18K rebuilding their world uncached.
 - Same-ROM A/B (`ot0/ot1`), replay IDENTICAL:
   - Mushroom: median -21.2K (1,961 of 1,972 frames better), P95 -21K.
   - Saffron: median -6.0K.
+- Gate ROM (`gmemo` vs `gbps`): P50 938,880 -> 933,632, P95 1,307,968 ->
+  1,298,496. Replay IDENTICAL, native failures 0, heap 69,340.
+- The shell probe's CSS tour reads kind=fff drew=fff.
 
-**2. Split world caches.**
-- The stage world cache kept its matrices in the top 64 of the per-frame
-  DObj world cache's 128 slots. It was refused whenever a frame stored more
-  than 64 DObj worlds, and when it did allocate it halved the DObj cache.
-- It now owns slots 128-191 of a 192-entry array.
-- Both caches reserve against the ledger reserve minus 16 KiB, because the
-  animation cache sizes itself after them and keeps the full reserve.
-- Results, full-roster lab (the shipping configuration), `ws0` -> `ws1`,
-  replay IDENTICAL:
-
-| Stage | P50 | P95 | Heap low-water |
-|---|---|---|---|
-| Dream Land | 1,003K -> 947K (-58K) | 1,392K -> 1,333K | 70,228 -> 69,460 |
-| Jungle | 1,061K -> 996K (-63K) | 1,472K -> 1,413K | 64,792 -> 44,920 |
-| Zebes | -2.6K | 1,581K -> 1,540K | 55,700 -> 46,204 |
-| Yoshi's Island | -1.9K | +6K | 54,600 -> 62,792 |
-| Saffron | -1.7K | +2K | 42,432 -> 50,624 |
-| Mushroom | -1.2K | -4K | 71,788 -> 57,948 |
-
-Every low-water stays above the 25,600 B floor.
-
-Gate ROM (`gws1/2` vs `gbps/2`, both changes): P50 938,880 -> 936,256,
-P95 1,307,968 -> 1,302,016. Replay IDENTICAL, native failures 0, heap 69,340.
-The gate target never overflowed the DObj cache; the full-roster build did.
-
-Shell probe: the CSS tour reads kind=fff drew=fff. The BADSETUP at the stage
-select is unchanged; it is the known rung-9 fault.
+**Refuted: splitting the stage world cache from the DObj world cache.**
+- The stage world cache keeps its matrices in the top 64 of the per-frame
+  DObj world cache's 128 slots. A trial gave it its own 64 slots and relaxed
+  both caches' reserve by 16 KiB.
+- The first A/B (`ws0/ws1`) read Dream Land -58K and Jungle -63K. That
+  control was a stale lab binary carrying other probes.
+- A fresh control, built from the pre-change source with the same
+  allocation counters (`wcc_*` vs `wc_*`), reads ±1.5K on every stage.
+- The counters show why:
+  - On Jungle, Zebes, Yoshi's Island and Saffron the DObj cache itself is
+    refused (95-113K free at the attempt, against a ~125K need), so neither
+    cache exists in either build.
+  - On Dream Land, Castle, Hyrule and Mushroom both already existed.
+- The split was reverted. It cost up to 14K of heap for nothing.
+- The uncached world build on the tight stages is still open: it needs heap
+  those scenes do not have, or a cheaper uncached build.

@@ -79,26 +79,9 @@ u32 gNdsLabPimAcc[5];
 #define NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK \
     (NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_COUNT - 1u)
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT 64u
-/* The stage world entries keep their matrices in slots 128..191 of the DObj
- * world array, past the per-frame DObj cache's own 128 (P2-2p8, 2026-09-28).
- * They used to take the top 64 of those 128, so the stage cache was refused
- * whenever a frame had stored more than 64 DObj worlds -- every frame on
- * Jungle, Zebes, Yoshi's Island and Saffron -- and every item, weapon and
- * effect there rebuilt its whole DObj chain uncached (a lying Beam Sword:
- * ~18K ticks a DObj, two DObjs, every frame). */
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE \
-    NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT
-#define NDS_RENDERER_ADAPTER_DOBJ_WORLD_STORAGE_COUNT \
-    (NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT + \
+    (NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT - \
      NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT)
-_Static_assert(NDS_RENDERER_ADAPTER_DOBJ_WORLD_STORAGE_COUNT <= 255u,
-               "DObj world index and stage world_slot are u8");
-/* Both caches are optional acceleration sized before the animation cache,
- * which keeps the full ledger reserve for itself and shrinks by what these
- * take. 16 KiB under that reserve admits the ~17.7 KB pair on every stage;
- * the measured battle low-water stays well above the 25,600 B GObj floor. */
-#define NDS_RENDERER_ADAPTER_WORLD_CACHE_KEEP_FREE \
-    (NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES - 16384u)
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT 128u
 #define NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_MASK \
     (NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT - 1u)
@@ -4699,7 +4682,7 @@ static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
 {
     uintptr_t aligned;
     size_t bytes = sizeof(NDSRendererAdapterDObjWorldCacheEntry) *
-        NDS_RENDERER_ADAPTER_DOBJ_WORLD_STORAGE_COUNT;
+        NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
 
     if (sNdsRendererAdapterDObjWorldCache != NULL)
     {
@@ -4723,7 +4706,7 @@ static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
     if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
         (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
         (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
-         NDS_RENDERER_ADAPTER_WORLD_CACHE_KEEP_FREE))
+         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
     {
         return FALSE;
     }
@@ -4851,7 +4834,9 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     {
         return FALSE;
     }
-    if (ndsRendererAdapterEnsureDObjWorldCache() == FALSE)
+    if ((ndsRendererAdapterEnsureDObjWorldCache() == FALSE) ||
+        (sNdsRendererAdapterDObjWorldCacheCount >
+         NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE))
     {
         return FALSE;
     }
@@ -4866,7 +4851,7 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
         (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
         (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
-         NDS_RENDERER_ADAPTER_WORLD_CACHE_KEEP_FREE))
+         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
     {
         return FALSE;
     }
@@ -4876,6 +4861,8 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     if (sNdsRendererAdapterStageWorldCache != NULL)
     {
         memset(sNdsRendererAdapterStageWorldCache, 0, bytes);
+        sNdsRendererAdapterDObjWorldCacheDynamicLimit =
+            NDS_RENDERER_ADAPTER_STAGE_WORLD_SLOT_BASE;
         ndsRelocUpdateMemoryLedger();
         return TRUE;
     }
