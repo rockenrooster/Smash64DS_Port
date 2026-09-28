@@ -1934,3 +1934,19 @@ late O2R clips removed from its NitroFS):
 Note: NitroFS packs whatever sits in a build's `nitrofs/` directory. A build
 dir staged before this change still holds the 431 replaced O2R clips (1.3 MB,
 dead) until they are deleted.
+
+## 63. Refuted: the motion cache cannot borrow the framebuffer storage
+
+The raw motion ring gets what the general heap spares after fighters and the
+128 KiB reserve. That is 51,024 B on Dream Land, 2,768 B on Saffron and
+0 B in the all-content build, so most re-entered clips stream again.
+`include/sys/video.h` described `gSYFramebufferSets` (147,840 B) as never
+rasterised, with the Results photo wipe as its only reader. A lab ring placed
+there, and re-cleared before the wipe, crashed every stage at frame 280 in
+`syInterpGetFracFrame`.
+
+A per-asset payload checksum (store vs hit) showed the cause: a cached clip
+was overwritten inside the buffer. The fighter packets and lean lists already
+own its first 141,440 B for every battle (`NDS_FIGHTER_PACKET_ARENA_WORDS`),
+and `ndsRendererFighterPacketRelease` restores the clear at Results. The
+experiment is reverted, and `video.h` now lists that owner.

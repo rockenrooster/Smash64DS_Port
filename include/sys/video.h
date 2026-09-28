@@ -101,6 +101,12 @@ extern u16 gSYZBuffer[320 * 10];
  *     fallback in src/import/battleship_lbtransition.c).
  *   - ndsBaseSCManagerRunLoop             WRITES the clear, bounded by
  *     sizeof(gSYFramebufferSets), so it shrinks with this extent.
+ *   - (added after this list was derived) the P2-2 fighter packets and lean
+ *     lists own the first 141,440 B for every battle
+ *     (NDS_FIGHTER_PACKET_ARENA_WORDS, nds_renderer_preamble.c), idle player
+ *     regions go to a battle pool, and ndsRendererFighterPacketRelease
+ *     rewrites the clear at Results entry. The buffer is NOT free during a
+ *     battle (a 2026-09-28 motion-cache borrow corrupted packet words).
  *   - ndsBaseSCVSBattleStartScene         address arithmetic only
  *     (arena_size = &gSYFramebufferSets - &ovl4_BSS_END), and the port
  *     overwrites that field with ndsTaskmanArenaSize().
