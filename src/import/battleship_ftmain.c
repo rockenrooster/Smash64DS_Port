@@ -198,6 +198,16 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
+    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+    /* LAB: status changes per frame, in the SPHC column (unused without the
+     * SRC split). */
+    {
+        extern volatile u32 gNdsTickHudSrcPhysicsCaptureTicks;
+
+        gNdsTickHudSrcPhysicsCaptureTicks++;
+    }
+#endif
 #if NDS_P2_SAMUS_ATTACK_TOUR
     /* Read-only P2-3 acceptance observer. BattleShip has already selected and
      * installed the status; this only records transient states that can begin

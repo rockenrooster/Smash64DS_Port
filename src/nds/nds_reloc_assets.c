@@ -1840,6 +1840,16 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
         }
         gNdsRelocAssetFighterStreamReads++;
         gNdsRelocAssetFighterStreamReadBytes += entry.size;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
+    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+        /* LAB: motion reads per frame, in the SPHD column (unused without
+         * the SRC split). */
+        {
+            extern volatile u32 gNdsTickHudSrcPhysicsDefaultTicks;
+
+            gNdsTickHudSrcPhysicsDefaultTicks++;
+        }
+#endif
         return TRUE;
     }
 #else
