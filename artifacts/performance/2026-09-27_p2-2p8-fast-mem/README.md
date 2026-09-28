@@ -1471,3 +1471,53 @@ the stamp saves. Reverted.
 
 A rebuild of the reverted tree (`w32c`) reproduces `w32b` exactly: every
 bucket equal, replay IDENTICAL. The ROM hash differs by build stamp only.
+
+## 51. First any-stage sweep: Dream Land is the easiest stage
+
+The owner's gate (09-27) is any 4 fighters on any stage, items on. The
+four-CPU stress target hard-wires Dream Land and admits no other stage.
+`NDS_LAB_FOURCPU_SWEEP=1` adds boot-pokable stage and roster words
+(`gNdsLabFourCpuGkind`, `gNdsLabFourCpuKinds`).
+
+Building the sweep ROM (`build-p2p8-sweep`) took three things:
+- The eight `NDS_P2_STAGE_*` admission flags.
+- A lab-only ITCM eviction of `ndsFighterDisplayContractProjectTarget`.
+  Tick-HUD plus all stages overflowed ITCM by 112 B.
+- The shipping build's missing NitroFS files (620). Without them, other
+  stages crash at load.
+
+This ROM runs ~12K P50 above the gate ROM on Dream Land (959,936 against
+948,928).
+
+Runs were parallel, one runner slot each; GDB ports must be spaced (ARM7 =
+ARM9 + 1). Roster: DK/Samus/Link/Kirby, items on, 1,972 samples.
+
+| Stage | P50 | P95 | P99 | frames <= 1.12M | native failures |
+|---|---:|---:|---:|---:|---:|
+| Dream Land | 959,936 | 1,340,864 | 1,643,520 | 79.9% | 0 |
+| Jungle | 981,760 | 1,367,680 | 1,795,008 | 77.4% | 0 |
+| Hyrule | 1,002,496 | 1,402,048 | 1,830,848 | 73.7% | 12 |
+| Zebes | 1,068,352 | 1,505,024 | 1,879,744 | 60.1% | 0 |
+| Castle | 1,073,344 | 1,441,280 | 1,789,184 | 58.8% | 0 |
+| Saffron | 1,121,728 | 1,536,384 | 1,964,544 | 49.6% | 3 |
+| Mushroom | 1,185,536 | 1,520,128 | 1,859,904 | 35.2% | 0 |
+| Yoshi's Island | 1,267,968 | 1,688,128 | 2,089,984 | 20.2% | 0 |
+| Sector Z | crash at frame 79 | | | | |
+
+Where the extra cost goes (median buckets against Dream Land):
+- **Yoshi's Island:** MISC +242K (MCAM 196K against 81K) and SRC +130K.
+- **Mushroom Kingdom:** MISC +142K (items 130K: its stage hazards are items)
+  and SRC +110K.
+- **Castle / Saffron:** items 111K / 84K (bumper, Pokemon).
+- **Dream Land:** items median 128. FTR is flat at ~143K on every stage.
+
+**Sector Z** data-aborts at presented frame 79 in `gcParseDObjAnimJoint`
+(objanim.c:348) with this roster. Still to find out: whether the shipping
+flow (SSS) does the same.
+
+**Native failures** (stage domain):
+- Hyrule: 12, NO_PROGRAM.
+- Saffron: 3.
+- Roster Captain/Luigi/Mario/Fox on Dream Land: 48 (scene 22, identity
+  0x03F300A1, 24 REJECTED + 24 NO_PROGRAM from frame 196). These appear
+  with fast WRAM on and off alike.
