@@ -9127,3 +9127,11 @@ with no camera. The Yoshi cloud camera memo is now shared, and its row memo
 is scoped to the camera that owns it. Mushroom Kingdom: median -8.1K, P95
 -7.2K. Gate ROM: flat. Replay identical.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 54.
+
+## 2026-09-28 — Shield pose decode: ARM, O2, inline value reads
+
+**BANKED (tail).** A shielding fighter decodes every joint's guard script
+each tick. The decode is now ARM and O2, with inline reads and an exact
+CLZ-built Q-to-f32. Output words are unchanged. Saffron: P95 -5.4K. Gate:
+P95 -2.8K, median -1.9K. Replay identical.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 55.

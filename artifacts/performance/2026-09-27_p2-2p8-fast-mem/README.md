@@ -1620,3 +1620,35 @@ Results:
 - Replay IDENTICAL on all of these; native failures 0.
 
 Banked.
+
+## 55. Shield pose decode: ARM, O2, inline value reads
+
+A shielding fighter decodes every joint's compact guard script each tick,
+about 250-500 scratch words per fighter (a host decode of the nine blobs gives
+~1-2 KB per sector). Caching them would cost ~8 KB for four fighters, so the
+decode itself was made cheaper instead. Before, it was Os Thumb with an
+out-of-line value read and Q-to-f32 call for every word. The Saffron census
+charged the unpack family ~63K cycles on each shield frame (91 of 209
+over-gate frames).
+
+The change:
+- `ndsShieldPoseUnpackScript` and `ndsShieldPoseRefreshBaseRow` are now ARM
+  and O2.
+- The value read is inline.
+- Q-to-f32 builds the float bits directly with CLZ. The result is the same
+  bits as `ndsR2FixedToF32(value << (12 - frac), 12)`. This was checked for
+  every s16 value at fracs 6, 11 and 12; there are 0 mismatches.
+
+Results against the previous final ROMs, replay IDENTICAL in all:
+
+| Run | Median | Top 5% median | P95 |
+|---|---|---|---|
+| Dream Land gate (`gshd` vs `gsmcf`) | -1.9K | -2.7K | -2.8K |
+| Saffron (`shd2_g7` vs `smc1_g7`) | -1.0K | -4.0K | -5.4K |
+
+Castle, Mushroom Kingdom and Yoshi's Island are flat (±0.5K).
+
+The first sweep runs (`shd_g*`) also carried lab hurtbox counters and are
+superseded by `shd2_g*`.
+
+Banked.

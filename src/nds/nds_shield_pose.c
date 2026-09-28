@@ -32,6 +32,15 @@ __attribute__((used)) volatile u32 gNdsShieldPoseResidentBytes;
 #include <nds/generated/nds_shield_pose_assets.generated.h>
 
 #define NDS_SHIELD_POSE_CODE __attribute__((noinline, optimize("Os")))
+/* The per-tick decode (P2-2p8, 2026-09-28). A shielding fighter decodes
+ * every joint's script each tick, ~250-500 scratch words, and the Os Thumb
+ * decode made an out-of-line value read and Q->f32 call per word. ARM,
+ * O2, the helpers inline; the output words are unchanged (replay
+ * identical). Saffron P95 -5.4K, Dream Land P95 -2.8K. */
+#define NDS_SHIELD_POSE_HOT_CODE \
+    __attribute__((noinline, optimize("O2"), target("arm")))
+#define NDS_SHIELD_POSE_HOT_INLINE \
+    static inline __attribute__((always_inline, target("arm")))
 
 typedef struct NDSShieldPoseBlobHeader
 {
@@ -380,7 +389,7 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseNativeSelected(
              (const void *)sNdsShieldPoseDObjScratch)) ? TRUE : FALSE;
 }
 
-static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseReadValue(
+NDS_SHIELD_POSE_HOT_INLINE s32 ndsShieldPoseReadValue(
     const NDSShieldPoseView *view, const u8 **cursor, const u8 *end, s32 *out)
 {
     u32 token;
@@ -416,13 +425,31 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseReadValue(
     return TRUE;
 }
 
-static __attribute__((noinline, optimize("Os"))) f32
-ndsShieldPoseQToF32(s32 value, u32 frac)
+/* Q`frac` -> f32 for the blob's s16-range values: the bits
+ * ndsR2FixedToF32(value << (NDS_R2_AQ_VF - frac), NDS_R2_AQ_VF) returns,
+ * built directly -- |value| < 2^16 fits the significand, so no rounding
+ * (checked for every s16 at fracs 6, 11 and 12). */
+NDS_SHIELD_POSE_HOT_INLINE f32 ndsShieldPoseQToF32(s32 value, u32 frac)
 {
-    return ndsR2FixedToF32(value << (NDS_R2_AQ_VF - frac), NDS_R2_AQ_VF);
+    u32 m;
+    u32 msb;
+    u32 bits;
+    f32 f;
+
+    if (value == 0)
+    {
+        return 0.0F;
+    }
+    m = (value < 0) ? (0u - (u32)value) : (u32)value;
+    msb = 31u - (u32)__builtin_clz(m);
+    bits = ((value < 0) ? 0x80000000u : 0u) |
+           ((msb + 127u - frac) << 23) |
+           ((m << (23u - msb)) & 0x7fffffu);
+    __builtin_memcpy(&f, &bits, sizeof(f));
+    return f;
 }
 
-static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseUnpackScript(
+static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseUnpackScript(
     const NDSShieldPoseView *view, u16 handle, AObjEvent32 *scratch)
 {
     const u8 *cursor;
@@ -554,7 +581,7 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     return TRUE;
 }
 
-static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseRefreshBaseRow(
+static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
     const NDSShieldPoseView *view, u32 row)
 {
     const u8 *src;
