@@ -1786,3 +1786,31 @@ Results, final build, replay IDENTICAL on all nine runs:
 
 The gate result is within the known ±4K layout band, while the other stages
 show a consistent fall. Banked for the any-stage goal, with the gate noted.
+
+## 60. Yoshi's Island clouds: where the time is, and two refuted levers
+
+A new Yoshi census (`builds/p2p8-yoshi-census3`, compared with Dream Land's
+`census3`) puts the clouds at ~55K ticks a frame. The pieces are the native
+submit, the adapter, the matrix work and a texture resolve per cloud, spread
+over three clouds with six triangles each. Yoshi's other extras are
+`ndsBaseGcPlayDObjAnimJoint` float (~20K) and map collision.
+
+Lab timers (sweep ROM, since reverted):
+- The adapter's per-drawable loop costs ~36.7K ticks a frame over 9 drawables.
+- `ApplyMvpRecalc` (kind 48) takes ~22K of that, even though its row memo
+  hits 89% (2,560 of 2,880).
+- The shared camera memo takes ~3.4K.
+- The profile puts `ApplyMvpRecalc` at ~880 ticks a call. Most of that is
+  load stalls in 2.7 KB of cold Thumb code, not arithmetic.
+
+Refuted (reverted; same-ROM, replay IDENTICAL):
+- **Cloud local memo** (`clm0/1_g5`): 47% hits, median -2.9K.
+- **Translate-only MVP fast path** (`cmf0/1_g5`). All seven cloud locals are
+  kind-18 translations, so each drawable's three 4x4 products reduce exactly
+  to the camera rows plus one rounded row. The path was taken for all 9
+  drawables a frame (checked with counters), but the median was -0.06K: the
+  products were ~1.5K a frame of the loop's 36.7K.
+
+The lesson is that in the render adapters, per-call cost is cold-code and data
+misses. Deleting arithmetic inside a call does not move WORK-H; deleting calls,
+or moving the code to fast memory, does.
