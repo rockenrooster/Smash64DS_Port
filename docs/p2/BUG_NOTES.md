@@ -6878,3 +6878,29 @@ arms exit only on the exact same standing native-render failure signature
 `count=39 domain=2 scene=22 identity=66256979 status=6 root=51800
 material=37496536 reason=1`; direct rejects are zero. Receipt:
 `artifacts/performance/2026-09-26_p2-2p8-phase2-item-linkbomb-fixed/README.md`.
+
+## A1 CSS/SSS audio delay: logged, not yet investigated (2026-09-27)
+
+Owner report 2026-09-27: in the latest builds, CSS and SSS audio is delayed.
+The report is logged for later work; the current focus is VS-mode performance.
+
+What the report doesn't say: which ROM was played, and whether BGM, SFX or
+both are late. Ask for or construct that first.
+
+Suspects, in the order they changed:
+1. A8 moved BGM streaming to ARM7 (`d0d02c61a83`, 2026-09-26). A menu BGM
+   start now waits for an ARM7 storage open, the first packet read and the
+   first refill timer.
+2. FGM samples are filled by asynchronous ARM7 storage reads. A menu cue
+   that isn't cached (cursor, select, announcer) plays only after its read
+   lands.
+3. The ARM7 relink (`a9b229ffbc7`, 2026-09-27) moved the BGM worker's stack
+   and calico's mic/PM/RTC services to main RAM. The storage thread stayed
+   in WRAM. This is unlikely to add a visible delay, but check it.
+
+How to measure it later:
+- Time from the input tic (cursor move, confirm, scene entry) to the FGM
+  play request and to ARM7 channel start.
+- Compare r54 (before A8) with current.
+- The CSS probe (`builds/resume-20260905/probe-owner-vs-options.ps1 -Css`)
+  already walks Title -> VS -> CSS.

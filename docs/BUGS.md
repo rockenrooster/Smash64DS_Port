@@ -31,3 +31,4 @@ Stages:
 -Saffron city: **NOT FIXED in R36 ** the pokemon garage door hazard is always open. It should close and open periodically. **Transform chain VERIFIED by injection: the door's matrix tracks its joint, geometry submits, timing matches source. Only pixels unverified. Does it ever close over a full minute?** **DEFERRED by owner 9/22.** 
 
 Audio:
+-CSS and SSS: **audio is delayed (owner report 2026-09-27, latest builds). LOGGED for later; suspects in BUG_NOTES "A1".**

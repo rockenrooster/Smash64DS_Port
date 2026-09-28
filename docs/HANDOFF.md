@@ -17,8 +17,9 @@ are covered on the final ROMs; the Results/CSS tint-lifetime repair has natural
 transition probes and inspected A/B captures. Receipt:
 `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`. Runtime jobs
 finished; the checkpoint is pushed to origin/master. Root is still r54.
-**Owner 09-24: >=95% effort on four concurrent VS fighters; 1P campaign later.**
-Pre-stage 1P intros are static; the live-Intro experiment is archived/reverted.
+**Owner 09-27: VS Mode first, 1P deferred. Any 4 fighters on any stage hit the P95 gate
+with items on over a full 1-minute match (plus sudden death); CSS and SSS 100%; Results
+and transitions/loading seamless. CSS/SSS audio delay logged (BUGS.md, BUG_NOTES A1).**
 **Phase 2 ongoing:** Task36 retired; all-VS stage compilation, NDL, native MISC
 owners and view-space particles/dust landed (receipt
 `artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`). CSS
@@ -30,9 +31,8 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 split builds keep ndsFtPoseUpdate in main RAM) and DS-divide cuts; receipts
 `2026-09-2{6,7}_p2-2p8-*`. `429D478C` WORK-H P50/P95 948,928/1,322,752 (DTCM stack subtrees, ITCM packs, fighter state in 32 KB A9 WRAM);
 lab flags NDS_TICK_HUD_SRC_SPLIT, NDS_FTR_LEAN_PHASE_TICKS, NDS_CAMERA_FRAME_WITNESS, NDS_WHISPY_AOT_TICKS.
-Digest `--sequence --resync 4`, control `w32b`. P95 set: FTR +283K (DK's 3+
-lean states thrash two entries; heap spare buffer banked, 62 -> 44, verify arm
-0 mismatches), SINT +122K (motion start), SHDT +106K, SPRM +72K, MISC +60K.
+Digest `--sequence --resync 4`, control `w32b`. P95 band (split9): SINT +123K, SHDT
++72K, SPHD +41K, SPRM +25K, FTR +68K (44 materializations), MISC +74K.
 
 ## Continue, do not restart
 
