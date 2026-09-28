@@ -110,6 +110,109 @@ void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #define lbRelocGetFileData(type, file, offset) \
     ((type)((uintptr_t)(file) + (intptr_t)(offset)))
 
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
+    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+/* LAB: price the parts of a status change, in columns the SRC split leaves
+ * unused without it. SHDT = the motion fetch and SPRM = the figatree install,
+ * each only as called from the setter below; SCPU = the whole setter. MCAP =
+ * the new clip's first play (anim keys + part transforms) and MPRO = the
+ * setter's part/effect/hit-status resets, both only while a setter runs; these
+ * two are the cumulative MISC counters, so MCAM reads low in these rows. */
+#define NDS_LAB_STATUS_PRICE 1
+extern u32 cpuGetTiming(void);
+extern volatile u32 gNdsTickHudSrcHitDetectTicks;
+extern volatile u32 gNdsTickHudSrcParamsTicks;
+extern volatile u32 gNdsTickHudSrcComputerTicks;
+extern volatile u32 gNdsMiscCaptureTicks;
+extern volatile u32 gNdsMiscProcDisplayTicks;
+static u32 sNdsLabStatusDepth;
+
+#define NDS_LAB_TIMED_IN_SETTER(counter_, call_)                              \
+    do                                                                         \
+    {                                                                          \
+        if (sNdsLabStatusDepth != 0u)                                          \
+        {                                                                      \
+            u32 nds_lab_start_ = cpuGetTiming();                               \
+                                                                               \
+            call_;                                                             \
+            (counter_) += cpuGetTiming() - nds_lab_start_;                     \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            call_;                                                             \
+        }                                                                      \
+    } while (0)
+
+static void ndsLabTimedUpdateAnimKeys(GObj *fighter_gobj)
+{
+    NDS_LAB_TIMED_IN_SETTER(gNdsMiscCaptureTicks,
+                            ftParamUpdateAnimKeys(fighter_gobj));
+}
+
+static void ndsLabTimedPartsTransform(DObj *joint)
+{
+    NDS_LAB_TIMED_IN_SETTER(gNdsMiscCaptureTicks,
+                            ftParamsUpdateFighterPartsTransform(joint));
+}
+
+#define NDS_LAB_RESET_WRAP1(name_, type_)                                      \
+    static void ndsLabTimed_##name_(type_ a)                                   \
+    {                                                                          \
+        NDS_LAB_TIMED_IN_SETTER(gNdsMiscProcDisplayTicks, name_(a));           \
+    }
+#define NDS_LAB_RESET_WRAP2(name_, type_, type2_)                              \
+    static void ndsLabTimed_##name_(type_ a, type2_ b)                         \
+    {                                                                          \
+        NDS_LAB_TIMED_IN_SETTER(gNdsMiscProcDisplayTicks, name_(a, b));        \
+    }
+NDS_LAB_RESET_WRAP2(ftParamSetModelPartDetailAll, GObj *, u8)
+NDS_LAB_RESET_WRAP1(ftParamClearAttackCollAll, GObj *)
+NDS_LAB_RESET_WRAP1(ftParamResetModelPartAll, GObj *)
+NDS_LAB_RESET_WRAP1(ftParamResetTexturePartAll, GObj *)
+NDS_LAB_RESET_WRAP1(ftParamProcStopEffect, GObj *)
+NDS_LAB_RESET_WRAP1(ftParamStopLoopSFX, FTStruct *)
+NDS_LAB_RESET_WRAP1(ftParamResetStatUpdateColAnim, GObj *)
+NDS_LAB_RESET_WRAP2(ftParamSetHitStatusPartAll, GObj *, s32)
+NDS_LAB_RESET_WRAP2(ftParamSetHitStatusAll, GObj *, s32)
+NDS_LAB_RESET_WRAP1(ftParamResetFighterDamageCollsAll, GObj *)
+NDS_LAB_RESET_WRAP2(ftParamMoveDLLink, GObj *, u8)
+#define ftParamUpdateAnimKeys ndsLabTimedUpdateAnimKeys
+#define ftParamsUpdateFighterPartsTransform ndsLabTimedPartsTransform
+#define ftParamSetModelPartDetailAll ndsLabTimed_ftParamSetModelPartDetailAll
+#define ftParamClearAttackCollAll ndsLabTimed_ftParamClearAttackCollAll
+#define ftParamResetModelPartAll ndsLabTimed_ftParamResetModelPartAll
+#define ftParamResetTexturePartAll ndsLabTimed_ftParamResetTexturePartAll
+#define ftParamProcStopEffect ndsLabTimed_ftParamProcStopEffect
+#define ftParamStopLoopSFX ndsLabTimed_ftParamStopLoopSFX
+#define ftParamResetStatUpdateColAnim ndsLabTimed_ftParamResetStatUpdateColAnim
+#define ftParamSetHitStatusPartAll ndsLabTimed_ftParamSetHitStatusPartAll
+#define ftParamSetHitStatusAll ndsLabTimed_ftParamSetHitStatusAll
+#define ftParamResetFighterDamageCollsAll ndsLabTimed_ftParamResetFighterDamageCollsAll
+#define ftParamMoveDLLink ndsLabTimed_ftParamMoveDLLink
+
+static void *ndsLabTimedForceExtern(const void *file_id, void *heap)
+{
+    u32 start = cpuGetTiming();
+    void *file = lbRelocGetForceExternHeapFile(file_id, heap);
+
+    gNdsTickHudSrcHitDetectTicks += cpuGetTiming() - start;
+    return file;
+}
+
+static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
+                                   f32 anim_frame)
+{
+    u32 start = cpuGetTiming();
+
+    lbCommonAddFighterPartsFigatree(root_dobj, figatree, anim_frame);
+    gNdsTickHudSrcParamsTicks += cpuGetTiming() - start;
+}
+#define lbRelocGetForceExternHeapFile ndsLabTimedForceExtern
+#define lbCommonAddFighterPartsFigatree ndsLabTimedAddFigatree
+#else
+#define NDS_LAB_STATUS_PRICE 0
+#endif
+
 #define ftMainCheckGetUpdateDamage battleship_ftMainCheckGetUpdateDamage
 #define ftMainPlayHitSFX battleship_ftMainPlayHitSFX
 #define ftMainUpdateDamageStatFighter battleship_ftMainUpdateDamageStatFighter
@@ -174,6 +277,23 @@ void ndsTask108SitrRefreshCallbacks(GObj *fighter_gobj);
 #undef ftMainProcUpdateInterrupt
 #undef ftMainProcPhysicsMapDefault
 #undef ftMainProcPhysicsMapCapture
+#if NDS_LAB_STATUS_PRICE
+#undef lbRelocGetForceExternHeapFile
+#undef lbCommonAddFighterPartsFigatree
+#undef ftParamUpdateAnimKeys
+#undef ftParamsUpdateFighterPartsTransform
+#undef ftParamSetModelPartDetailAll
+#undef ftParamClearAttackCollAll
+#undef ftParamResetModelPartAll
+#undef ftParamResetTexturePartAll
+#undef ftParamProcStopEffect
+#undef ftParamStopLoopSFX
+#undef ftParamResetStatUpdateColAnim
+#undef ftParamSetHitStatusPartAll
+#undef ftParamSetHitStatusAll
+#undef ftParamResetFighterDamageCollsAll
+#undef ftParamMoveDLLink
+#endif
 
 void ftMainPlayAnimEventsAll(GObj *fighter_gobj)
 {
@@ -191,9 +311,19 @@ void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
+#if NDS_LAB_STATUS_PRICE
+    /* A status proc may set a status from inside a setter; only the outer
+     * call is timed so the column is not counted twice. */
+    u32 lab_start = cpuGetTiming();
+
+    sNdsLabStatusDepth++;
+#endif
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
             status_id, frame_begin, anim_speed, flags) != FALSE)
     {
+#if NDS_LAB_STATUS_PRICE
+        sNdsLabStatusDepth--;
+#endif
         return;
     }
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
@@ -251,5 +381,11 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     ndsDiagnosticsRecordImportedFTMainSetStatus(fighter_gobj, status_id,
                                                  frame_begin, anim_speed,
                                                  flags);
+#endif
+#if NDS_LAB_STATUS_PRICE
+    if (--sNdsLabStatusDepth == 0u)
+    {
+        gNdsTickHudSrcComputerTicks += cpuGetTiming() - lab_start;
+    }
 #endif
 }

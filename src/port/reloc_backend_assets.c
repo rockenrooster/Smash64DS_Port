@@ -1114,6 +1114,20 @@ static u32 sNdsRelocLoadedFileCount;
 /* Bumped by every change to the table's order, count or `data` pointers; the
  * by-data lookup's one-entry memo is valid only within one epoch. */
 static u32 sNdsRelocLoadedFilesEpoch;
+/* What ndsRelocPrepareFighterAnimHeapOverwrite's full scan saw about the asset
+ * about to be registered at that heap: the index of its entry, or -1 for none.
+ * The registration that follows at once reads it instead of scanning the table
+ * a second time; any change to the table in between bumps the epoch (or the
+ * count) and sends it back to the scan. One-shot. */
+static struct
+{
+    u32 asset_id;
+    const void *data;
+    u32 epoch;
+    u32 count;
+    s32 index;
+    u32 valid;
+} sNdsRelocPreparedAnim;
 static const void *sNdsRelocRelativeOffsetsMemoBase;
 static NDSRelocLoadedFile *sNdsRelocRelativeOffsetsMemo;
 static NDSRelocNormalizedMObjSub
@@ -6743,11 +6757,26 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     const u16 *known_extern_file_ids, u32 known_extern_count,
     sb32 is_known_extern_table)
 {
-    NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    NDSRelocLoadedFile *loaded;
     u16 read_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
     const u16 *source_ids = known_extern_file_ids;
     u16 *owned_ids = NULL;
     u32 count;
+
+    if ((sNdsRelocPreparedAnim.valid != 0u) &&
+        (sNdsRelocPreparedAnim.asset_id == asset_id) &&
+        (sNdsRelocPreparedAnim.data == data) &&
+        (sNdsRelocPreparedAnim.epoch == sNdsRelocLoadedFilesEpoch) &&
+        (sNdsRelocPreparedAnim.count == sNdsRelocLoadedFileCount))
+    {
+        loaded = (sNdsRelocPreparedAnim.index >= 0) ?
+            &sNdsRelocLoadedFiles[sNdsRelocPreparedAnim.index] : NULL;
+    }
+    else
+    {
+        loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    }
+    sNdsRelocPreparedAnim.valid = 0u;
 
     if ((loaded == NULL) &&
         (sNdsRelocLoadedFileCount >= NDS_RELOC_LOADED_FILE_CAPACITY))
@@ -7282,6 +7311,7 @@ static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
 {
     u32 i = 0;
     size_t old_bytes = 0u;
+    s32 asset_index = -1;
 
     if (data == NULL)
     {
@@ -7292,6 +7322,13 @@ static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
     {
         NDSRelocLoadedFile *loaded = &sNdsRelocLoadedFiles[i];
 
+        /* The first entry of `asset_id`, in the table as it stands after this
+         * loop: a removal only ever happens at the cursor, past any match
+         * already recorded, so the recorded index never moves. */
+        if ((asset_index < 0) && (loaded->asset_id == asset_id))
+        {
+            asset_index = (s32)i;
+        }
         if ((loaded->data == data) &&
             (ndsRelocIsFighterAnimID(loaded->asset_id) != FALSE))
         {
@@ -7319,6 +7356,12 @@ static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
         i++;
     }
 
+    sNdsRelocPreparedAnim.asset_id = asset_id;
+    sNdsRelocPreparedAnim.data = data;
+    sNdsRelocPreparedAnim.epoch = sNdsRelocLoadedFilesEpoch;
+    sNdsRelocPreparedAnim.count = sNdsRelocLoadedFileCount;
+    sNdsRelocPreparedAnim.index = asset_index;
+    sNdsRelocPreparedAnim.valid = 1u;
     if (old_bytes != 0u)
     {
         ndsAObjEvent32ForgetRange(data, old_bytes);
@@ -14729,9 +14772,17 @@ static sb32 ndsBattlePackResidencyStep(void)
 
 #endif /* NDS_R2_BATTLEPACK */
 
+/* Where each asset id's entry was last found, by its low byte. A hint only:
+ * it is checked against the entry before use, so an entry that moved (removal
+ * swaps the last entry down) or left just costs the scan it replaces. Entries
+ * are unique per asset (every store follows a failed find), so the hinted entry
+ * is the one the scan would return. */
+static u8 sNdsR2AnimCacheHint[256];
+
 static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
 {
     u32 i;
+    u32 hint;
 
     /* The ownership test belongs on the READ path too, not only where the arena is
      * reserved. Every entry's payload points into the reserved block, so once the
@@ -14746,10 +14797,17 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
     {
         return NULL;
     }
+    hint = sNdsR2AnimCacheHint[asset_id & 0xffu];
+    if ((hint < sNdsR2AnimCacheCount) &&
+        (sNdsR2AnimCache[hint].asset_id == asset_id))
+    {
+        return &sNdsR2AnimCache[hint];
+    }
     for (i = 0u; i < sNdsR2AnimCacheCount; i++)
     {
         if (sNdsR2AnimCache[i].asset_id == asset_id)
         {
+            sNdsR2AnimCacheHint[asset_id & 0xffu] = (u8)i;
             return &sNdsR2AnimCache[i];
         }
     }
@@ -15560,15 +15618,26 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * which answers it by opening the file and parsing the header -- a full
      * NitroFS directory walk for a question the asset table already answers,
      * and for a size the load below reports anyway (Task 76).
-     * ndsRelocAssetGetPath is a table lookup. */
-    if (ndsRelocAssetGetPath(asset_id) == NULL)
+     * ndsRelocAssetGetPath is a table lookup -- but for a generated fighter
+     * clip it FORMATS the path string, on every status change. A clip the raw
+     * cache holds was loaded through that path, so it exists; only a clip the
+     * cache does not hold asks the table. */
+    if (
+#if NDS_R2_ANIM_CACHE
+        (ndsR2AnimCacheFind(asset_id) == NULL) &&
+#endif
+        (ndsRelocAssetGetPath(asset_id) == NULL))
     {
         ndsRelocRecordExternalFixupFail(asset_id);
         return NULL;
     }
     asset_size = 0u;
-#if NDS_TICK_HUD
-    /* Observation only -- the load below is unchanged. "Force" may well mean
+#if NDS_TICK_HUD && defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    /* Lab builds only: the destination scan below walks the whole loaded-file
+     * table on every status change, and the gate ROM is not the place for an
+     * instrument's own cost.
+     *
+     * Observation only -- the load below is unchanged. "Force" may well mean
      * the caller wants pristine data restored, and the renderer does mutate
      * loaded fighter data, so the reload is not assumed redundant. This just
      * measures how often it reloads an asset the destination already holds. */
