@@ -9093,3 +9093,10 @@ Refuted the same day (section 48):
 - Data-uncached code reads +42K.
 
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` sections 48-49.
+
+## 2026-09-27 — Not banked: stage GX projection stamp
+
+The stage GX program re-copied an unchanged projection into 76 NOZ patches
+a frame. A per-patch stamp read -1.3K same-ROM. The final build, which
+needed a 64 B ITCM eviction and shifted main-RAM code, read +4.0K paired
+median. Reverted. Receipt section 50.

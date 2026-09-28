@@ -1445,3 +1445,29 @@ Other results and checks:
 - CSS smoke on the P2 ROM (`smash64ds.nds`, moved out of the root after the
   probe): the Link, Yoshi and Pikachu previews draw 12,162, 23,140 and
   33,550 triangles, the same as before this change.
+
+## 50. Not banked: stage GX projection stamp
+
+The dmiss9 census attributed 174 `memcpy` calls a frame (~25.7K cycles) to
+`ndsStageGxDraw`: the 64 B matrix patches of Dream Land's program. The
+patch kinds are 22 VIEW, 76 NOZ, 40 COMPOSED_NOZ, 30 CORNER_NOZ and
+6 COMPOSED.
+
+NOZ and PROJECTION patches depend only on the projection, and the
+projection moved on just 54 of 321 stage frames. So a stamp (kept in each
+patch's unused `aux`) skipped the rewrite whenever the projection was
+unchanged.
+
+The added bytes overflowed ITCM by 16 B, so `ndsFtrLookAtOutputs` (64 B,
+~1,060 cycles a byte) was evicted to make room.
+
+- Same-ROM (`ps0`/`ps1`): paired median -1,280, mean -1,226 (STG -1.0K);
+  replay IDENTICAL.
+- Final build (`psf`) vs `w32b`: paired median +3,968, and 1,774 of 1,972
+  frames were worse.
+
+The eviction and the 64 B shift of the code that follows it cost more than
+the stamp saves. Reverted.
+
+A rebuild of the reverted tree (`w32c`) reproduces `w32b` exactly: every
+bucket equal, replay IDENTICAL. The ROM hash differs by build stamp only.
