@@ -1950,3 +1950,64 @@ was overwritten inside the buffer. The fighter packets and lean lists already
 own its first 141,440 B for every battle (`NDS_FIGHTER_PACKET_ARENA_WORDS`),
 and `ndsRendererFighterPacketRelease` restores the clear at Results. The
 experiment is reverted, and `video.h` now lists that owner.
+
+## 64. Item draws: a texture memo for native owners, and split world caches
+
+An item witness (lab, `gNdsLabItemTicks` by `ITStruct.kind`) priced every
+item draw at 45K-100K ticks:
+- Mushroom Kingdom: ~137K a frame, of which the two Piranha Plants are ~90K.
+- Saffron: ~75K, mostly a lying Beam Sword at ~98K a draw.
+
+A Piranha Plant draw (2 triangles) splits as:
+- candidate find 4.3K;
+- matrices 12.5K (recalc 6.9K, world 3.3K);
+- native submit 17K, including a full texture resolve of 7.4K;
+- adapter overhead ~6K.
+
+A Beam Sword's two DObjs each spent 18K rebuilding their world uncached.
+
+**1. Owner texture memo** (`ndsRendererHardwareBindTextureOwnerMemo`).
+- One memo per bind site of a native owner whose texture state is generated.
+- The key covers the caller's run/frame id, the texel and TLUT images, the
+  load size, prim, env, both othermode words, the combine and the geometry
+  mode.
+- A hit replays the resolver's cache-hit tail exactly: the tile sync, LRU
+  stamp, name/params, active entry, pinned-hit record and the four stats
+  fields. The entry is revalidated by ready, name and key generation.
+- Wired into the Pakkun, the shared wave-1 item emitter (27 item owners),
+  POW block, tomato, Marumine, the Castle bumper and the Sector laser.
+- The lab verify arm (`gNdsRendererOwnerTexMemoVerify=1`) ran the full
+  resolver beside every would-be hit: 0 mismatches over ~14,400 checks
+  (Mushroom, Saffron, Castle, and Ness/Yoshi/Pikachu/Purin on Dream Land).
+- Pakkun bind: 8.1K -> 1.5K a draw.
+- Same-ROM A/B (`ot0/ot1`), replay IDENTICAL:
+  - Mushroom: median -21.2K (1,961 of 1,972 frames better), P95 -21K.
+  - Saffron: median -6.0K.
+
+**2. Split world caches.**
+- The stage world cache kept its matrices in the top 64 of the per-frame
+  DObj world cache's 128 slots. It was refused whenever a frame stored more
+  than 64 DObj worlds, and when it did allocate it halved the DObj cache.
+- It now owns slots 128-191 of a 192-entry array.
+- Both caches reserve against the ledger reserve minus 16 KiB, because the
+  animation cache sizes itself after them and keeps the full reserve.
+- Results, full-roster lab (the shipping configuration), `ws0` -> `ws1`,
+  replay IDENTICAL:
+
+| Stage | P50 | P95 | Heap low-water |
+|---|---|---|---|
+| Dream Land | 1,003K -> 947K (-58K) | 1,392K -> 1,333K | 70,228 -> 69,460 |
+| Jungle | 1,061K -> 996K (-63K) | 1,472K -> 1,413K | 64,792 -> 44,920 |
+| Zebes | -2.6K | 1,581K -> 1,540K | 55,700 -> 46,204 |
+| Yoshi's Island | -1.9K | +6K | 54,600 -> 62,792 |
+| Saffron | -1.7K | +2K | 42,432 -> 50,624 |
+| Mushroom | -1.2K | -4K | 71,788 -> 57,948 |
+
+Every low-water stays above the 25,600 B floor.
+
+Gate ROM (`gws1/2` vs `gbps/2`, both changes): P50 938,880 -> 936,256,
+P95 1,307,968 -> 1,302,016. Replay IDENTICAL, native failures 0, heap 69,340.
+The gate target never overflowed the DObj cache; the full-roster build did.
+
+Shell probe: the CSS tour reads kind=fff drew=fff. The BADSETUP at the stage
+select is unchanged; it is the known rung-9 fault.

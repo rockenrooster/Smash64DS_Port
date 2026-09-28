@@ -4,6 +4,13 @@
  * packet into DS GX triangles under the supplied traversal state. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
+/* Texture memos for the baked runs (ndsRendererHardwareBindTextureOwnerMemo),
+ * direct-mapped by the run's vertex table: a run's setup is generated, so
+ * the table address names it. A collision only refills. */
+#define NDS_NATIVE_ITEM_WAVE1_TEXMEMO_COUNT 32u
+static NDSRendererOwnerTextureMemo
+    sNdsNativeItemWave1TexMemo[NDS_NATIVE_ITEM_WAVE1_TEXMEMO_COUNT];
+
 static sb32 ndsNativeItemWave1Emit(
     const s16 *verts, const u32 *colors, const u16 *indices,
     u32 vertex_count, u32 triangle_count, u32 corner_count,
@@ -56,7 +63,11 @@ static sb32 ndsNativeItemWave1Emit(
      * actually uses a texture, and submit an untextured DS batch otherwise. */
     use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ? TRUE : FALSE;
     if ((use_texture != FALSE) &&
-        (ndsRendererHardwareBindTexture(stats, config, state) == FALSE))
+        (ndsRendererHardwareBindTextureOwnerMemo(
+             &sNdsNativeItemWave1TexMemo[
+                 ((u32)(uintptr_t)verts >> 3) &
+                 (NDS_NATIVE_ITEM_WAVE1_TEXMEMO_COUNT - 1u)],
+             (u32)(uintptr_t)verts, stats, config, state) == FALSE))
     {
         *submit_step = 3u;
         return FALSE;

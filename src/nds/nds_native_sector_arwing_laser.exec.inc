@@ -8,6 +8,9 @@
  * There is no display-list scan or execution on this path. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_sector_laser[1];
+
 sb32 ndsRendererSubmitNativeSectorArwingLaser(
     const void *tlut, const void *image,
     const NDSRendererConfig *config, NDSRendererStats *stats)
@@ -66,7 +69,8 @@ sb32 ndsRendererSubmitNativeSectorArwingLaser(
     ndsNativeSectorLaserSetup(stats, tlut, image);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_sector_laser[0], 0u, stats, config, &state) == FALSE)
     {
         gNdsSectorLaserSubmitStep = 3u;
         return FALSE;

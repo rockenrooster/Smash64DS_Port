@@ -4,6 +4,10 @@
  * MOBJ_FLAG_ALPHA current-image hook is translated to typed native state. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
 
+/* One memo per animation frame: the three images alternate every few ticks,
+ * so a single row would refill on nearly every draw. */
+static NDSRendererOwnerTextureMemo sNdsNativeInishiePakkunTexMemo[3];
+
 sb32 ndsRendererSubmitNativeInishiePakkun(
     const void *actor_base_ptr, u32 actor_bytes, const void *palette,
     const NDSRendererNativeMaterial *material,
@@ -95,7 +99,9 @@ sb32 ndsRendererSubmitNativeInishiePakkun(
     ndsNativeInishiePakkunSetupTail(stats);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeInishiePakkunTexMemo[frame], frame,
+            stats, config, &state) == FALSE)
     {
         gNdsInishiePakkunSubmitStep = 3u;
         return FALSE;

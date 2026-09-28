@@ -19,6 +19,9 @@
  * loaded file's own base, so nothing is re-derived here. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_marumine[1];
+
 sb32 ndsRendererSubmitNativeYamabukiMarumine(
     const void *actor_base_ptr, u32 actor_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats)
@@ -88,7 +91,8 @@ sb32 ndsRendererSubmitNativeYamabukiMarumine(
     ndsNativeMarumineSetup(stats, tlut, image);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_marumine[0], 0u, stats, config, &state) == FALSE)
     {
         gNdsYamabukiMarumineSubmitStep = 3u;
         return FALSE;

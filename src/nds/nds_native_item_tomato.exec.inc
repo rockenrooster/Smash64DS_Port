@@ -24,6 +24,9 @@
  * loaded file's own base, so nothing is re-derived here. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_tomato[1];
+
 sb32 ndsRendererSubmitNativeItemTomato(
     const void *actor_base_ptr, u32 actor_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats)
@@ -93,7 +96,8 @@ sb32 ndsRendererSubmitNativeItemTomato(
     ndsNativeItemTomatoSetup(stats, tlut, image);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_tomato[0], 0u, stats, config, &state) == FALSE)
     {
         gNdsItemTomatoSubmitStep = 3u;
         return FALSE;

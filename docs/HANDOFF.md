@@ -32,7 +32,7 @@ billboard camera, shield decode, AI floor memo): `D37EFA19` (`gafmf`, control) W
 P50/P95 936,128/1,305,856. Sweep ROM (NDS_LAB_FOURCPU_SWEEP, gNdsLabFourCpuGkind) P95:
 Mushroom 1.49M, Saffron 1.53M, Yoshi 1.60M, Zebes 1.49M, Castle 1.45M, Hyrule 1.38M,
 Jungle 1.36M. Digest `--sequence --resync 4`. P95 set: SRC +326K over median (status
-changes ~110K each). 09-28 sec 61-62: FNT walk fix + late fighters in BPS1 (their P95 6.03M->1.41M DL).
+changes ~110K each). 09-28 sec 61-64: FNT walk, late fighters in BPS1, item tex memo, world-cache split.
 
 ## Continue, do not restart
 

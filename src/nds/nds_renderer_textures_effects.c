@@ -14233,6 +14233,167 @@ static s32 ndsRendererHardwareBindTexture(
         stats, config, state, NULL, FALSE);
 }
 
+/* Native item owners' texture memo (P2-2p8, 2026-09-28). A native item owner
+ * (the Mushroom Kingdom Piranha Plant is the first) records the same generated
+ * texture state every draw and then binds through the full resolver above: on
+ * Mushroom Kingdom that bind is ~7.4K ticks of each ~41K-tick Pakkun draw, two
+ * Pakkuns a frame, and the answer is a resident cache hit every time.
+ *
+ * One memo belongs to one bind site whose texture state is generated and
+ * fixed; the caller's id names the run or frame when one site binds several.
+ * The key adds every live input: the texel and TLUT images and the load size
+ * the setup recorded, prim, env, both othermode words, the combine and the
+ * geometry mode. It remembers which cache entry the resolver landed on. A hit replays exactly the resolver's
+ * cache-hit tail: the tile sync, the LRU stamp, the name and parameter binds,
+ * the active entry, the pinned-hit record and the four stats fields. The entry
+ * is revalidated by readiness, name and key generation, so an evicted or
+ * recycled slot falls through to the full resolver and refills. */
+#define NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS 11u
+typedef struct NDSRendererOwnerTextureMemo
+{
+    u32 key[NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS];
+    u32 entry_generation;
+    u32 name;
+    u32 format;
+    u32 width;
+    u32 height;
+    u16 slot;
+    u8 valid;
+    u8 pad;
+} NDSRendererOwnerTextureMemo;
+
+volatile u32 gNdsRendererOwnerTexMemoHits;
+volatile u32 gNdsRendererOwnerTexMemoFills;
+volatile u32 gNdsRendererOwnerTexMemoStale;
+/* Same-binary A/B word: 0 sends every owner bind through the full resolver. */
+volatile u32 gNdsRendererOwnerTexMemoEnable
+    __attribute__((used, section(".data"))) = 1u;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* LAB: 1 = run the full resolver on every bind and count where a memo hit
+ * would have answered differently. */
+volatile u32 gNdsRendererOwnerTexMemoVerify
+    __attribute__((used, section(".data"))) = 0u;
+volatile u32 gNdsRendererOwnerTexMemoVerifyRuns;
+volatile u32 gNdsRendererOwnerTexMemoVerifyFail;
+#endif
+
+static s32 ndsRendererHardwareBindTextureOwnerMemo(
+    NDSRendererOwnerTextureMemo *memo, u32 owner_id,
+    NDSRendererStats *stats, const NDSRendererConfig *config,
+    NDSRendererTraversalState *state)
+{
+    NDSRendererHardwareTextureCacheEntry *entry;
+    u32 key[NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS];
+    u32 i;
+    sb32 match;
+
+    key[0] = owner_id;
+    key[1] = stats->texture_image;
+    key[2] = stats->texture_tlut_image;
+    key[3] = stats->texture_load_texels;
+    key[4] = stats->prim_color;
+    key[5] = stats->env_color;
+    key[6] = stats->othermode_h;
+    key[7] = stats->othermode_l;
+    key[8] = stats->texture_combine_w0;
+    key[9] = stats->texture_combine_w1;
+    key[10] = stats->geometry_mode;
+    match = ((memo->valid != 0u) &&
+             (gNdsRendererOwnerTexMemoEnable != 0u)) ? TRUE : FALSE;
+    for (i = 0u; (match != FALSE) && (i < NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS);
+         i++)
+    {
+        if (memo->key[i] != key[i])
+        {
+            match = FALSE;
+        }
+    }
+    if (match != FALSE)
+    {
+        entry = &sNdsRendererHardwareTextureCache[memo->slot];
+        if ((entry->ready == FALSE) || ((u32)entry->name != memo->name) ||
+            (entry->key_generation != memo->entry_generation))
+        {
+            memo->valid = 0u;
+            gNdsRendererOwnerTexMemoStale++;
+            match = FALSE;
+        }
+    }
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    if ((match != FALSE) && (gNdsRendererOwnerTexMemoVerify != 0u))
+    {
+        s32 ok = ndsRendererHardwareBindTexture(stats, config, state);
+
+        gNdsRendererOwnerTexMemoVerifyRuns++;
+        if ((ok == FALSE) ||
+            (sNdsRendererHardwareActiveTextureEntry !=
+             &sNdsRendererHardwareTextureCache[memo->slot]) ||
+            (sNdsRendererHardwareBoundTextureName != memo->name) ||
+            (stats->hardware_texture_format != memo->format) ||
+            (stats->hardware_texture_width != memo->width) ||
+            (stats->hardware_texture_height != memo->height))
+        {
+            gNdsRendererOwnerTexMemoVerifyFail++;
+        }
+        return ok;
+    }
+#endif
+    if (match != FALSE)
+    {
+        ndsRendererSyncTextureTile(stats);
+        entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+        if (entry->pinned != 0u)
+        {
+            ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+            ndsRendererHardwareApplyTextureParams(entry->params);
+            sNdsRendererHardwareActiveTextureEntry = entry;
+            ndsRendererHardwareRecordBattleStaticTextureHit(entry);
+        }
+        else if (sNdsRendererHardwareActiveTextureEntry != entry)
+        {
+            ndsRendererHardwareBindTextureName(stats, (u32)entry->name);
+            ndsRendererHardwareApplyTextureParams(entry->params);
+            sNdsRendererHardwareActiveTextureEntry = entry;
+        }
+        stats->hardware_texture_ready_count++;
+        stats->hardware_texture_format = memo->format;
+        stats->hardware_texture_width = memo->width;
+        stats->hardware_texture_height = memo->height;
+        gNdsRendererOwnerTexMemoHits++;
+        return TRUE;
+    }
+    if (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)
+    {
+        memo->valid = 0u;
+        return FALSE;
+    }
+    entry = sNdsRendererHardwareActiveTextureEntry;
+    memo->valid = 0u;
+    if ((entry != NULL) && (entry->ready != FALSE) &&
+        ((u32)entry->name == sNdsRendererHardwareBoundTextureName) &&
+        (entry->name != 0))
+    {
+        u32 slot = (u32)(entry - sNdsRendererHardwareTextureCache);
+
+        if (slot < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT)
+        {
+            for (i = 0u; i < NDS_RENDERER_OWNER_TEXMEMO_KEY_WORDS; i++)
+            {
+                memo->key[i] = key[i];
+            }
+            memo->slot = (u16)slot;
+            memo->name = (u32)entry->name;
+            memo->entry_generation = entry->key_generation;
+            memo->format = stats->hardware_texture_format;
+            memo->width = stats->hardware_texture_width;
+            memo->height = stats->hardware_texture_height;
+            memo->valid = 1u;
+            gNdsRendererOwnerTexMemoFills++;
+        }
+    }
+    return TRUE;
+}
+
 static s32 ndsRendererHardwareResolveResidentTexture(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,

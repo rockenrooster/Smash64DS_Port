@@ -16,6 +16,9 @@
  * flash silently stops appearing and nothing counts it. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_castle_bumper[1];
+
 sb32 ndsRendererSubmitNativeCastleBumper(
     const void *actor_base_ptr, u32 actor_bytes,
     const NDSRendererNativeMaterial *material,
@@ -112,7 +115,8 @@ sb32 ndsRendererSubmitNativeCastleBumper(
     ndsNativeCastleBumperSetupTail(stats, image);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_castle_bumper[0], 0u, stats, config, &state) == FALSE)
     {
         gNdsCastleBumperSubmitStep = 3u;
         return FALSE;

@@ -8,6 +8,9 @@
  * on this path. */
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
 
+/* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
+static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_powblock[2];
+
 sb32 ndsRendererSubmitNativeInishiePowblock(
     const void *tlut, const void *image_a, const void *image_b,
     const NDSRendererConfig *config, NDSRendererStats *stats)
@@ -60,7 +63,8 @@ sb32 ndsRendererSubmitNativeInishiePowblock(
     ndsNativeInishiePowblockSetupA(stats, tlut, image_a);
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+    if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_powblock[0], 0u, stats, config, &state) == FALSE)
     {
         gNdsInishiePowblockSubmitStep = 3u;
         return FALSE;
@@ -107,7 +111,8 @@ sb32 ndsRendererSubmitNativeInishiePowblock(
         ndsNativeInishiePowblockSetupB(stats, image_b);
         NDS_FIGHTER_PACKET_DMA_WAIT();
         ndsRendererHardwareEndBatch();
-        if (ndsRendererHardwareBindTexture(stats, config, &state) == FALSE)
+        if (ndsRendererHardwareBindTextureOwnerMemo(
+            &sNdsNativeOwnerTexMemo_powblock[1], 1u, stats, config, &state) == FALSE)
         {
             gNdsInishiePowblockSubmitStep = 4u;
             return FALSE;
