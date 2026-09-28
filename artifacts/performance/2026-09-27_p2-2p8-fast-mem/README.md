@@ -2081,3 +2081,12 @@ pre-existing late-roster crash on Yoshi's Island): a fighter DObj's
 `anim_joint.event32` holds a float (0xc035bfa0 = -2.84f) when
 `gcParseDObjAnimJoint` reads it. Logged for the S1 lane; gdb reads of that
 DObj return stale RAM on the cache-accurate fork.
+
+**Follow-up, same day: ITCM.** The first cut tested every DObj inside the ITCM
+`gcPlayAnimAll`, which grew ITCM by 296 B and pushed the published
+configuration over its limit. `battleship_gryoster_ground.c` now renames
+gryoster.c's `gcPlayAnimAll` to `ndsGRYosterCloudPlayAnimAll`, a `.main`
+copy of the player with the test. No other GObj runs the test, and the ITCM
+player shrank by 120 B. Re-measured on that ROM (`yoc0_g5`/`yoc1_g5`, whose
+lab joint witness adds ~100K to both arms): paired median -24.6K, P95
+1,717,824 -> 1,689,216, replay IDENTICAL.

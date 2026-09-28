@@ -2592,30 +2592,21 @@ static inline sb32 ndsMObjMatAnimWasStableZero(const MObj *mobj)
  *
  * For such a DObj the player below keeps everything the source player does to
  * state -- each live AObj's `length` advance and the END -> NULL step -- and
- * drops only the value writes nobody reads. Any live translation track, any
- * other matrix kind, or any other GObj takes the source player. */
+ * drops only the value writes nobody reads. Any live translation track or any
+ * other matrix kind takes the source player. Only the clouds reach it:
+ * battleship_gryoster_ground.c renames gryoster.c's gcPlayAnimAll to
+ * ndsGRYosterCloudPlayAnimAll, so no other GObj pays a test and the ITCM
+ * gcPlayAnimAll is unchanged. */
 volatile u32 gNdsGcDObjTraOnlyEnable __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsGcDObjTraOnlySkips;
 
-extern void *ndsGRYosterCloudGObj(u32 index);
-
 static sb32 ndsGcDObjAnimValuesUnread(const DObj *dobj)
 {
-    const GObj *gobj;
     const AObj *aobj;
 
     if ((gNdsGcDObjTraOnlyEnable == 0u) || (dobj->anim_wait == AOBJ_ANIM_NULL) ||
         (dobj->xobjs_num != 1) || (dobj->xobjs[0] == NULL) ||
-        (dobj->xobjs[0]->kind != nGCMatrixKindTra) ||
-        (gSCManagerBattleState == NULL) ||
-        (gSCManagerBattleState->gkind != nGRKindYoster))
-    {
-        return FALSE;
-    }
-    gobj = dobj->parent_gobj;
-    if ((gobj != ndsGRYosterCloudGObj(0u)) &&
-        (gobj != ndsGRYosterCloudGObj(1u)) &&
-        (gobj != ndsGRYosterCloudGObj(2u)))
+        (dobj->xobjs[0]->kind != nGCMatrixKindTra))
     {
         return FALSE;
     }
@@ -2656,17 +2647,19 @@ static void ndsGcAdvanceDObjAnimJoint(DObj *dobj)
 }
 #endif
 
-static void ndsGcPlayAnimAllStableSkip(GObj *gobj)
+static inline __attribute__((always_inline)) void
+ndsGcPlayAnimAllStableSkip(GObj *gobj, sb32 tra_only)
 {
     DObj *dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
 
+    (void)tra_only;
     while (dobj != NULL)
     {
         MObj *mobj;
 
         gcParseDObjAnimJoint(dobj);
 #if NDS_P2_STAGE_YOSTER
-        if (ndsGcDObjAnimValuesUnread(dobj) != FALSE)
+        if ((tra_only != FALSE) && (ndsGcDObjAnimValuesUnread(dobj) != FALSE))
         {
             ndsGcAdvanceDObjAnimJoint(dobj);
         }
@@ -2696,8 +2689,8 @@ static void ndsGcPlayAnimAllStableSkip(GObj *gobj)
     }
 }
 
-void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
-void gcPlayAnimAll(GObj *gobj)
+static inline __attribute__((always_inline)) void
+ndsGcPlayAnimAllBody(GObj *gobj, sb32 tra_only)
 {
     DObj *dobj;
     u32 active_count = ndsAObjEvent32CollectActiveMObjs(gobj, NULL);
@@ -2706,7 +2699,7 @@ void gcPlayAnimAll(GObj *gobj)
 
     (void)ndsAObjEvent32CollectActiveMObjs(gobj, active_mobjs);
 
-    ndsGcPlayAnimAllStableSkip(gobj);
+    ndsGcPlayAnimAllStableSkip(gobj, tra_only);
 
     for (dobj = (gobj != NULL) ? DObjGetStruct(gobj) : NULL;
          dobj != NULL;
@@ -2732,6 +2725,20 @@ void gcPlayAnimAll(GObj *gobj)
         }
     }
 }
+
+void gcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
+void gcPlayAnimAll(GObj *gobj)
+{
+    ndsGcPlayAnimAllBody(gobj, FALSE);
+}
+
+#if NDS_P2_STAGE_YOSTER
+/* Yoshi's Island's cloud GObjs (see ndsGcDObjAnimValuesUnread). */
+void ndsGRYosterCloudPlayAnimAll(GObj *gobj)
+{
+    ndsGcPlayAnimAllBody(gobj, TRUE);
+}
+#endif
 
 static sb32 ndsAObjEvent32NormalizeDObjTable(GObj *gobj,
                                              AObjEvent32 **anim_joints)

@@ -65,7 +65,17 @@ intptr_t lGRYosterParticleTextureBankHi;
 
 void ndsBaseGRCommonSetupInitAll(void);
 
+/* P2-2p8 (2026-09-28): gryoster.c names gcPlayAnimAll only for the three cloud
+ * GObjs (their process and their setup call), whose animated DObjs use a
+ * translate-only matrix. ndsGRYosterCloudPlayAnimAll is gcPlayAnimAll without
+ * the rotation/scale values nothing reads (battleship_sys_objanim.c,
+ * ndsGcDObjAnimValuesUnread). */
+void ndsGRYosterCloudPlayAnimAll(GObj *gobj);
+#define gcPlayAnimAll ndsGRYosterCloudPlayAnimAll
+
 #include "../../decomp/BattleShip-main/decomp/src/gr/grcommon/gryoster.c"
+
+#undef gcPlayAnimAll
 
 /* Gameplay transcription notes (all numeric behaviour is the included source,
  * cited per constant -- nothing below re-states a number):
