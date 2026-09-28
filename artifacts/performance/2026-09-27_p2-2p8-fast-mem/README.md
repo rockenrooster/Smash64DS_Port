@@ -1711,3 +1711,40 @@ Final build (lab word removed), replay IDENTICAL in all:
   `check-dtcm-residency.py`.
 
 Banked.
+
+## 57. Hurtbox reject: where it costs, and two refuted levers
+
+The profiles of the current tree (`builds/p2p8-dl-census3`,
+`builds/p2p8-yam-census3`) show the reject family's average cost per frame:
+
+| Stage | Reject family | `RejectPoints` self | `BuildLocal` | `HbVec` |
+|---|---|---|---|---|
+| Saffron | 46K ticks | 34K | 9.8K | 2.5K |
+| Dream Land | 7.2K ticks | | | |
+
+On Saffron's over-gate frames (116 of 195) the family is +152K cycles a frame
+(~76K ticks), the largest non-idle premium on that stage. The reason is the
+test count: items (the Pokémon) test every hurtbox of any fighter inside the
+source's ±1200 range box, which gives about 26K tests a match.
+
+Lab timers (`gNdsLabHbTime`, sweep ROM, since reverted) on Saffron:
+- About 2,100 ticks a test, including ~260 of timer overhead.
+- The world walk and compose take 1,194 (57%).
+- `InvSMin` takes 331.
+- 70% of composes take the trig `BuildLocal` path.
+- Composes ≈ tests: nearly every test composes its joint.
+
+Refuted:
+- **`InvSMin` bound kept across recomposes** (`hbi0/1_g*`, `ghbi0/1`). The
+  bound stayed valid while s²min ≥ a floor 1/256 below the derivation, and
+  `InvSMin` time fell by 17%. But it lost 317 rejects to the looser bound, and
+  medians were ±0 on five stages. Reverted.
+- **Per-fighter latch epochs** (`hfe0/1_g*`, `ghfe0/1`). Each fighter's
+  transform-invalidate bump retired only its own fighter's cached worlds.
+  Shadow mode (`hfs_g*`, all 8 stages) gave 0 flips, so it was safe. It was
+  also no faster: medians +0.5K from the extra call. The recomposes are
+  inherent; a joint's own fighter has updated between hit windows.
+  Reverted.
+
+What remains is the per-joint compose itself (trig `BuildLocal`, `LoadF32`,
+D-cache misses on DObj/FTParts), which is the A5 kernel's job.
