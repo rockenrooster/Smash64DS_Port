@@ -9077,3 +9077,19 @@ are 4 slots, reset with the lists at `gcSetupObjman`. `19D81E71` vs
 `wramfin`, replay identical: paired median -4,832, mean -5,307; P50/P95
 959,872/1,338,048; 1,571/1,972 frames within 1,120,000; vbi2 1,514. RED (P95).
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 47.
+
+## 2026-09-27 — All shared WRAM to ARM9; pose state in WRAM
+
+**BANKED.** ARM7 links in private WRAM, with the BGM worker's stack and
+calico's mic/PM/RTC services moved to its main-RAM reservation. ARM9 takes
+32 KB (WRAMCNT = 0). Each pose slot's joints and tracks use a fixed WRAM
+block. `429D478C` vs `wobj`, replay identical: paired median -8,960, mean
+-8,372; top 5% mean -14.3K; P50/P95 948,928/1,322,752; 1,601/1,972 frames
+within 1,120,000. The storage thread's stack must stay in WRAM: with it in
+main RAM, tail frames read +20K. RED (P95).
+
+Refuted the same day (section 48):
+- The present on the DTCM hot stack overflows 6 KB at entry.
+- Data-uncached code reads +42K.
+
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` sections 48-49.

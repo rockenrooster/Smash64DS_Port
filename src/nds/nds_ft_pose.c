@@ -88,6 +88,16 @@ void syInterpCubic(Vec3f *out, void *desc, f32 t);
 u32 ndsR2AObjLiveCount(void);
 
 static NdsFtPose sNdsFtPose[NDS_FT_POSE_FIGHTERS];
+
+#if NDS_P2_ARM9_WRAM
+#include <nds/nds_arm9_wram.h>
+_Static_assert(NDS_FT_POSE_FIGHTERS <= NDS_ARM9_WRAM_POSE_SLOTS,
+               "one WRAM pose slot per pose fighter");
+_Static_assert((sizeof(NdsFtPoseJoint) * (u32)nFTPartsJointNumMax) +
+                   (sizeof(NdsFtPoseTrack) * NDS_FT_POSE_POOL) <=
+                   NDS_ARM9_WRAM_POSE_SLOT_BYTES,
+               "a pose slot's joints and tracks fit its WRAM slot");
+#endif
 static NdsFtPose *sNdsFtPoseBinding;
 /* Where an overflowing clip's tracks go: animated, evaluated, never stored
  * anywhere a second track could read, so a malformed or oversized clip degrades
@@ -319,9 +329,30 @@ static NdsFtPose *ndsFtPoseOpen(GObj *gobj, u32 count)
     /* Scene-lifetime, from the taskman general heap exactly where the AObj
      * nodes this replaces would have been carved; rewound with the scene. The
      * AObj pool (`NDS_R2_AOBJ_POOL_COUNT`) shrinks by the same measure. */
-    pose->joints = syTaskmanMalloc(sizeof(NdsFtPoseJoint) * capacity, 0x4u);
-    pose->pool = syTaskmanMalloc(sizeof(NdsFtPoseTrack) * NDS_FT_POSE_POOL,
-                                 0x4u);
+#if NDS_P2_ARM9_WRAM
+    /* P2-2p8: each pose slot owns a fixed block of ARM9 shared WRAM
+     * (include/nds/nds_arm9_wram.h): the player's joints and tracks are
+     * read every evaluated tick, and a WRAM line fill is about half a
+     * main-RAM one. The rare fighter beyond the source joint bound keeps
+     * the arena. */
+    if (capacity == (u32)nFTPartsJointNumMax)
+    {
+        u8 *slot = (u8 *)NDS_ARM9_WRAM_POSE_BASE +
+            (u32)(pose - sNdsFtPose) * NDS_ARM9_WRAM_POSE_SLOT_BYTES;
+
+        pose->joints = (NdsFtPoseJoint *)(void *)slot;
+        pose->pool = (NdsFtPoseTrack *)(void *)
+            (slot + (sizeof(NdsFtPoseJoint) * capacity));
+    }
+    else
+#endif
+    {
+        pose->joints = syTaskmanMalloc(sizeof(NdsFtPoseJoint) * capacity,
+                                       0x4u);
+        pose->pool = syTaskmanMalloc(sizeof(NdsFtPoseTrack) *
+                                         NDS_FT_POSE_POOL,
+                                     0x4u);
+    }
     if ((pose->joints == NULL) || (pose->pool == NULL))
     {
         return NULL;

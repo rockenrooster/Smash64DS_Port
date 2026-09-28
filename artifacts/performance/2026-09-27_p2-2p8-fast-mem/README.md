@@ -1376,3 +1376,72 @@ ARM7 at 0x037C0000-0x037FFFFF. Neither overlaps the ARM9 block at
 Banked. About 11 cycles are saved per moved fill, against about 20 for the
 FTStruct pool. The remaining 3,248 B of the block would buy roughly 2-4K
 more (census statics or more joints).
+
+## 48. Refuted: the present on the hot stack, and data-uncached code
+
+The dmiss8 census still put ~234 fills a frame on the gameplay coroutine's
+main-RAM stack. Most of them were on the present's outer frames:
+`gcCaptureCameraGObj` (31), the stage display commit, effect dispatch, and
+the trampoline's own pushes. The same census put 1,879 fills a frame
+(18%) on main-RAM code lines. 1,578 of them were a function reading its own
+literal pool.
+
+**Present on the DTCM hot stack** (`ph1b`, lab word). The HUD's
+stack-buffer DMA was made static for this. The run faulted at presented
+frame 45, in `ndsRendererAdapterBuildDObjXObjMatrix` (a data abort) during
+the entry animations. The present's generic draw recursion does not fit in
+the 6 KB stack on top of its nested subtrees. Reverted. The hot stack keeps
+only the measured subtrees.
+
+**Data-uncached code** (`td0`/`td1`, lab word). MPU region 2 made the first
+1 MB of `.main` data-uncached; instructions stayed I-cached. Result: paired
+WORK-H median +42,432, and all buckets were worse; replay IDENTICAL. Each
+literal-pool line fill serves several loads, so uncached loads cost more
+than the fills they replace. Reverted.
+
+## 49. All 32 KB of shared WRAM to ARM9; pose state moves in
+
+ARM7 now links in its private WRAM (`linker/nds_arm7_ds7_arm9wram.ld`,
+origin 0x03800000), and ARM9 takes both shared blocks (WRAMCNT = 0, MPU
+region 3 at 32 KB). To fit the image below the DLDI shelter, some ARM7
+content moves to ARM7's main-RAM reservation (0x02ff0000):
+- the BGM worker's stack;
+- calico's microphone, power-management and RTC services (code and bss),
+  which the battle never runs.
+
+ARM7 now ends at 0x0380a690.
+
+**The storage thread's stack must stay in WRAM.** A first layout (`w32`)
+moved it and the sector buffer to main RAM:
+- It read paired median -8,960, but the top 5% mean was +6.3K.
+- The same-ROM pose A/B in that layout isolated about +20K on tail frames
+  from the storage thread's main-RAM traffic. Those are the motion-start
+  frames, where reads happen.
+
+Each pose slot's joints and tracks (4,404 B) now use a fixed 4,408 B WRAM
+slot (`include/nds/nds_arm9_wram.h`), not two arena allocations. The WRAM
+layout is:
+- 0x03000000: the FTStruct pool (at most 12,288 B);
+- 0x03003000: four pose slots;
+- the GObj/DObj slots at the top.
+
+The layout is checked at compile time.
+
+Same-ROM pose A/B (`pw0`/`pw1`, lab word since removed; replay IDENTICAL):
+- Paired median -8,960, mean -11,034.
+- Top 5% mean -15.5K.
+
+Final `429D478C` (`w32b`) vs `wobj`, replay IDENTICAL:
+- Paired median -8,960, mean -8,372; 1,875 frames better, 93 worse.
+- Top 5% median -18.2K, mean -14.3K (SRC -16K).
+- WORK-H P50/P95/P99 948,928/1,322,752/1,606,912.
+- 1,601 frames at or under 1,120,000.
+
+Other results and checks:
+- BGM: refills 99, overruns 0, read failures 0.
+- Native failures 0; heap low-water unchanged at 69,340.
+- Checks pass: DTCM residency, Task 20 layout, ITCM placement.
+- The P1 ROM links; the root was restored to `576F51ED`.
+- CSS smoke on the P2 ROM (`smash64ds.nds`, moved out of the root after the
+  probe): the Link, Yoshi and Pikachu previews draw 12,162, 23,140 and
+  33,550 triangles, the same as before this change.

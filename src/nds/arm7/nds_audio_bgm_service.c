@@ -8,7 +8,12 @@ _Static_assert(PxiChannel_User1 == NDS_BGM_IPC_CHANNEL, "BGM PXI channel ABI");
 #define BGM_CHANNEL 14u
 
 static Thread sBgmThread;
-static uint8_t sBgmStack[3072] __attribute__((aligned(8)));
+/* Main RAM (.sbss): ARM7's image must fit its private WRAM below the DLDI
+ * shelter now that ARM9 owns shared WRAM (linker/nds_arm7_ds7_arm9wram.ld).
+ * The worker runs once per refill; the storage thread's stack, which runs
+ * under every read, stays in WRAM. */
+static uint8_t sBgmStack[3072]
+    __attribute__((aligned(8), section(".sbss.sBgmStack")));
 static Mailbox sBgmMailbox;
 static uint32_t sBgmMessages[16];
 /* Calico clears a one-shot's callback after invoking it. Alternate two tasks

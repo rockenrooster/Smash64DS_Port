@@ -176,9 +176,10 @@ NDS_WHISPY_AOT_TICKS ?= 0
 # clock reads around each fighter proc, every tick) -- the same kind of lab
 # attribution. 0 leaves those columns 0; GCRA/SRC are measured as before.
 NDS_TICK_HUD_SRC_SPLIT ?= 0
-# P2-2p8: ARM9 owns the first 16 KB of shared WRAM (WRAMCNT = 2, a cacheable
-# MPU region at 0x03000000) and ARM7 links above it
-# (linker/nds_arm7_ds7_wram16.ld); the fighter FTStruct pool lives there.
+# P2-2p8: ARM9 owns all 32 KB of shared WRAM (WRAMCNT = 0, a cacheable MPU
+# region at 0x03000000) and ARM7 links in its private WRAM
+# (linker/nds_arm7_ds7_arm9wram.ld); the fighters' FTStruct pool, pose
+# state, GObjs and top joints live there (include/nds/nds_arm9_wram.h).
 # 0 is the lab control (ARM7 on calico's ds7.ld, the pool on the heap).
 NDS_P2_ARM9_WRAM ?= 1
 # P2-2p8 Phase 1 slice 7: the lean fighter path is every image's default --
@@ -6261,7 +6262,7 @@ nds-bgm-stream-arm7.o: $(PROJECT_ROOT)/src/nds/nds_bgm_stream.c $(PROJECT_ROOT)/
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-stream-arm7.d -c $< -o $@
 nds-bgm-service-arm7.o: $(PROJECT_ROOT)/src/nds/arm7/nds_audio_bgm_service.c $(PROJECT_ROOT)/include/nds/nds_bgm_ipc.h
 	$(CC) $(NDS_ARM7_FLAGS) -MMD -MP -MF nds-bgm-service-arm7.d -c $< -o $@
-NDS_ARM7_DS7_LD := $(if $(filter 1,$(NDS_P2_ARM9_WRAM)),$(PROJECT_ROOT)/linker/nds_arm7_ds7_wram16.ld,$(CALICO)/lib/ds7.ld)
+NDS_ARM7_DS7_LD := $(if $(filter 1,$(NDS_P2_ARM9_WRAM)),$(PROJECT_ROOT)/linker/nds_arm7_ds7_arm9wram.ld,$(CALICO)/lib/ds7.ld)
 $(NDS_ARM7_ELF): $(NDS_ARM7_OBJECTS) $(PROJECT_ROOT)/linker/nds_arm7_contract.ld $(NDS_ARM7_DS7_LD)
 	$(CC) $(NDS_ARM7_FLAGS) -specs=$(CALICO)/share/ds7.specs \
 		-L$(CALICO)/lib -Wl,-Map,nds-audio-arm7.map \

@@ -14,9 +14,12 @@ MEMORY {
 	main    : ORIGIN = 0x2fcc000, LENGTH = 0x28000 /* Main RAM (usable area for ARM7) */
 	twlwram : ORIGIN = 0x37c0000, LENGTH = 0x38000 /* DSi exclusive ARM7 WRAM (minus 32KB used as part of below) */
 	/* P2-2p8 (NDS_P2_ARM9_WRAM): the SDK script with the ARM7 image moved up
-	 * 16 KB, into the second shared-WRAM block and private WRAM, so ARM9 can
-	 * take the first block (WRAMCNT = 2). __sys_start is unchanged. */
-	wram    : ORIGIN = 0x37fc000, LENGTH = 0x13000 /* ARM7 WRAM (minus stacks/reserved BIOS memory) */
+	 * 32 KB, out of shared WRAM into ARM7's private WRAM, so ARM9 can take
+	 * both shared blocks (WRAMCNT = 0). __sys_start is unchanged; the image
+	 * must end below the DLDI shelter (linker/nds_arm7_contract.ld), which is
+	 * why the BGM worker's stack and three idle calico services live in main
+	 * RAM (.main / .main.bss). */
+	wram    : ORIGIN = 0x3800000, LENGTH = 0xf000 /* ARM7 WRAM (minus stacks/reserved BIOS memory) */
 }
 
 PHDRS {
@@ -122,6 +125,12 @@ SECTIONS {
 		)
 		*.16.o (.text .stub .text.* .gnu.linkonce.t.*)
 		*.16.o (.glue_7t .glue_7 .vfp11_veneer .v4_bx)
+		/* P2-2p8: services the battle never runs (microphone, power
+		 * management requests, RTC) move out of private WRAM, so the image
+		 * fits below the DLDI shelter with ARM9 owning shared WRAM. */
+		*libcalico_ds7.a:mic.32.o (.text .text.* .rodata .rodata.*)
+		*libcalico_ds7.a:pm.o (.text .text.* .rodata .rodata.*)
+		*libcalico_ds7.a:rtc.o (.text .text.* .rodata .rodata.*)
 		KEEP( *(SORT_NONE(.fini)) )
 
 		*.16.o (.rodata .rodata.* .gnu.linkonce.r.*)
@@ -205,6 +214,8 @@ SECTIONS {
 	/* Main RAM BSS area */
 	.main.bss . (NOLOAD) : {
 		*(.sbss .sbss.*)
+		*libcalico_ds7.a:mic.32.o (.bss .bss.* COMMON)
+		*libcalico_ds7.a:pm.o (.bss .bss.* COMMON)
 		*.16.o (.dynbss)
 		*.16.o (.bss .bss.* .gnu.linkonce.b.*)
 		*.16.o (COMMON)
