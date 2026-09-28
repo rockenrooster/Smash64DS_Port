@@ -9165,3 +9165,13 @@ it (394 a match). A boot pass now records (asset, file id) runs (12 runs, 256
 B). Ness/Yoshi/Pikachu/Purin on Dream Land (full-roster lab) P95 6.03M ->
 1.54M; gate +1.7K/-1.3K (layout band); replay identical.
 Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 61.
+
+## 2026-09-28 — BPS1 stream pack covers Ness, Yoshi, Pikachu and Purin
+
+**BANKED (late-fighter rosters).** Their motions loaded through the O2R path
+(~220K each even after the FNT fix: swap, prebake, finalize). They are now
+BPS1 clips like the other eight fighters (1,570 clips, 3.79 MB); the resident
+directory packs to 4 B a row (6,396 B, down from 9,600 B). Ness/Yoshi/Pikachu/
+Purin P95: Dream Land 1,536K -> 1,408K, Mushroom 1,698K -> 1,583K. Gate +1-3K
+(layout band). Replay identical. CSS tour 12/12 drew.
+Receipt: `artifacts/performance/2026-09-27_p2-2p8-fast-mem/README.md` section 62.

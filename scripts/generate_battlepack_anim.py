@@ -75,6 +75,10 @@ AOBJ32_IDS = {
     0x4DE, 0x4DF,                # Link entry effects
     0x584, 0x585,                # Kirby DK-staring effects
     0x670, 0x671, 0x672, 0x673,  # Captain entry/Falcon Flyer effects
+    0x5E1, 0x5E2,                # Purin entry effects
+    0x707, 0x708, 0x709, 0x70A, 0x70B,  # Ness entry (PK Fire start/loop/end)
+    0x7A1, 0x7A2,                # Yoshi entry effects
+    0x821, 0x822,                # Pikachu entry effects
 }
 
 # nds_reloc_assets.c:138-141.
@@ -87,6 +91,10 @@ LINK_FIRST, LINK_LAST = 0x45B, 0x4EA
 KIRBY_FIRST, KIRBY_LAST = 0x4EB, 0x5A4
 KIRBY_COPY_FIRST, KIRBY_COPY_LAST = 0x5DE, 0x5DF
 CAPTAIN_FIRST, CAPTAIN_LAST = 0x5E8, 0x67F
+PURIN_FIRST, PURIN_LAST = 0x5E0, 0x5E7
+NESS_FIRST, NESS_LAST = 0x680, 0x716
+YOSHI_FIRST, YOSHI_LAST = 0x717, 0x7A4
+PIKACHU_FIRST, PIKACHU_LAST = 0x7A5, 0x831
 
 # The item-flavoured clips, PROVEN excludable from the linked battle ELF rather
 # than guessed from names: every function that can set an item status is a
@@ -104,6 +112,10 @@ FIGHTER_RANGES = {
     "kirby": tuple(range(KIRBY_FIRST, KIRBY_LAST + 1)) +
              tuple(range(KIRBY_COPY_FIRST, KIRBY_COPY_LAST + 1)),
     "captain": range(CAPTAIN_FIRST, CAPTAIN_LAST + 1),
+    "purin": range(PURIN_FIRST, PURIN_LAST + 1),
+    "ness": range(NESS_FIRST, NESS_LAST + 1),
+    "yoshi": range(YOSHI_FIRST, YOSHI_LAST + 1),
+    "pikachu": range(PIKACHU_FIRST, PIKACHU_LAST + 1),
 }
 FIGHTER_PREFIXES = {
     "mario": ("FTMarioAnim",),
@@ -116,6 +128,10 @@ FIGHTER_PREFIXES = {
     # keeping both stems under one fighter key makes --fighter kirby complete.
     "kirby": ("FTKirbyAnim", "FTKirbyCopyAnim"),
     "captain": ("FTCaptainAnim",),
+    "purin": ("FTPurinAnim",),
+    "ness": ("FTNessAnim",),
+    "yoshi": ("FTYoshiAnim",),
+    "pikachu": ("FTPikachuAnim",),
 }
 
 CLIP_DIR = struct.Struct("<HHII")     # asset_id, script_count, byte_off, bytes

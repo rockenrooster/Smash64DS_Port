@@ -573,11 +573,10 @@ try {
         # exceeds its region is a recorder fault; wordsmax says how close the
         # widest packet came, so a decline can be read against real headroom.
         'printf "CSSPKT %d hit=%u rec=%u fault=%u decline=%u wordsmax=%u m0=%u m1=%u m2=%u m3=%u m4=%u m5=%u roots=%u tex=%u\n", $n, gNdsFighterPacketHits, gNdsFighterPacketRecords, gNdsFighterPacketFaults, gNdsFighterPacketDeclines, gNdsFighterPacketWordsMax, gNdsFighterPacketMissWord[0], gNdsFighterPacketMissWord[1], gNdsFighterPacketMissWord[2], gNdsFighterPacketMissWord[3], gNdsFighterPacketMissWord[4], gNdsFighterPacketMissWord[5], gNdsFighterPacketMissWord[6], gNdsFighterPacketMissWord[7]',
-        # A blocking-load fence is a fallback for real live I/O, not an ordinary
-        # CSS transition. Resume re-primes from the current stream cursor, so
-        # repeated suspend/resume pairs are audible timeline jumps even if no
-        # underrun is reported.
-        'printf "CSSBGMFENCE %d suspend=%u resume=%u seammiss=%u error=%u\n", $n, gNdsAudioBgmBlockingSuspendCount, gNdsAudioBgmBlockingResumeCount, gNdsAudioBgmSeamMissCount, gNdsAudioBgmErrorStopCount',
+        # BGM playback, seams and refills run on the ARM7 since d0d02c61a83, so
+        # the ARM9 blocking-load fence (suspend/resume counters) is gone; seam
+        # misses and error stops are what remain to watch across CSS loads.
+        'printf "CSSBGMFENCE %d seammiss=%u error=%u\n", $n, gNdsAudioBgmSeamMissCount, gNdsAudioBgmErrorStopCount',
         'printf "CSSCOMMIT %d n=%u s0=%06x s1=%06x s2=%06x s3=%06x\n", $n, gNdsMenuShellCssCommitCount, gNdsMenuShellCssCommitSlot[0], gNdsMenuShellCssCommitSlot[1], gNdsMenuShellCssCommitSlot[2], gNdsMenuShellCssCommitSlot[3]',
         'printf "CSSCFG %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u\n", $n, gNdsMatchConfig.fighters[0].fkind, gNdsMatchConfig.fighters[0].pkind, gNdsMatchConfig.fighters[0].level, gNdsMatchConfig.fighters[1].fkind, gNdsMatchConfig.fighters[1].pkind, gNdsMatchConfig.fighters[1].level, gNdsMatchConfig.fighters[2].fkind, gNdsMatchConfig.fighters[2].pkind, gNdsMatchConfig.fighters[2].level, gNdsMatchConfig.fighters[3].fkind, gNdsMatchConfig.fighters[3].pkind, gNdsMatchConfig.fighters[3].level',
         'printf "CSSXFER %d s0=%u/%u/%u s1=%u/%u/%u s2=%u/%u/%u s3=%u/%u/%u pl=%u cp=%u\n", $n, gSCManagerTransferBattleState.players[0].fkind, gSCManagerTransferBattleState.players[0].pkind, gSCManagerTransferBattleState.players[0].level, gSCManagerTransferBattleState.players[1].fkind, gSCManagerTransferBattleState.players[1].pkind, gSCManagerTransferBattleState.players[1].level, gSCManagerTransferBattleState.players[2].fkind, gSCManagerTransferBattleState.players[2].pkind, gSCManagerTransferBattleState.players[2].level, gSCManagerTransferBattleState.players[3].fkind, gSCManagerTransferBattleState.players[3].pkind, gSCManagerTransferBattleState.players[3].level, gSCManagerTransferBattleState.pl_count, gSCManagerTransferBattleState.cp_count',

@@ -1018,6 +1018,10 @@ static u32 ndsRelocAnimDirAssetForName(const char *name, u32 len)
     return asset_id;
 }
 
+#if NDS_R2_FTANIM_STREAM
+static s32 ndsRelocAssetOpenFighterStream(void);
+#endif
+
 static void ndsRelocAnimDirBuild(void)
 {
     NDSRelocAnimDirReader reader;
@@ -1134,6 +1138,11 @@ void ndsRelocAssetsInit(void)
     {
         gNdsRelocAssetInitResult = NDS_RELOC_ASSET_INIT_PASS;
         ndsRelocAnimDirBuild();
+#if NDS_R2_FTANIM_STREAM
+        /* Its resident directory is read in 256 B chunks: do that on the
+         * boot stack, not inside the first frame that streams a clip. */
+        (void)ndsRelocAssetOpenFighterStream();
+#endif
 #if NDS_BOOT_DIAG_TEXT
         /* P2-1L (11). gNdsRelocAssetInitResult is what every verifier reads;
          * the console line is the human copy, and the owner's free-play ROM
@@ -1590,7 +1599,12 @@ typedef struct NDSFtAnimStreamEntry
     u32 size;
 } NDSFtAnimStreamEntry;
 
-#define NDS_FTANIM_STREAM_DIR_MAX_ENTRIES 1200u
+#define NDS_FTANIM_STREAM_DIR_MAX_ENTRIES 1600u
+/* A resident row packs (offset / 16) << 14 | size: clips are 16-byte aligned
+ * (emit_stream_pack) and the largest is 11,568 B, so 18 + 14 bits cover a
+ * 4 MiB pack exactly. A row that does not fit leaves the resident copy off. */
+#define NDS_FTANIM_STREAM_DIR_SIZE_BITS 14u
+#define NDS_FTANIM_STREAM_DIR_CHUNK 32u
 
 typedef struct NDSFtAnimStreamDirRouteCell
 {
@@ -1603,19 +1617,20 @@ _Static_assert(sizeof(NDSFtAnimStreamDirRouteCell) == 32u,
 
 static NitroRom *sNdsFtAnimStreamRom;
 static NDSFtAnimStreamHeader sNdsFtAnimStreamHeader;
-/* BPS1's current dense directory is 1,165 x 8 B = 9,320 B.  It is immutable
- * metadata, and every live clip request used to issue a separate NitroROM range
- * read just to recover these two words before reading the payload.  Warm/cache
- * acquisition asks once for size and once for bytes, so that path paid the row
- * read twice.  Keep a measured, bounded resident copy; a future wider pack
- * simply leaves this disabled and uses the established per-row read below.
+/* BPS1's dense directory is 1,599 rows (Mario through Pikachu, 2026-09-28).
+ * It is immutable metadata, and every live clip request used to issue a
+ * separate NitroROM range read just to recover these two words before reading
+ * the payload.  Warm/cache acquisition asks once for size and once for bytes,
+ * so that path paid the row read twice.  Keep a measured, bounded resident
+ * copy, packed to 4 B a row (6,400 B; the 8 B rows it replaced were 9,600 B
+ * for 1,200); a future wider pack simply leaves this disabled and uses the
+ * established per-row read below.
  *
  * The route cell owns a complete D-cache line because the tick sampler pokes it
  * for same-ROM A/B.  A bare aligned u32 can share a line with unrelated writes
  * and get restored by a later writeback (the fighter draw-memo route already
  * hit that exact failure mode). */
-static NDSFtAnimStreamEntry
-    sNdsFtAnimStreamDir[NDS_FTANIM_STREAM_DIR_MAX_ENTRIES]
+static u32 sNdsFtAnimStreamDir[NDS_FTANIM_STREAM_DIR_MAX_ENTRIES]
     __attribute__((aligned(32)));
 static u16 sNdsFtAnimStreamFileId;
 static u8 sNdsFtAnimStreamState;
@@ -1684,14 +1699,52 @@ static s32 ndsRelocAssetOpenFighterStream(void)
     gNdsRelocAssetFighterStreamDirBytes = 0u;
     if (dense_count <= NDS_FTANIM_STREAM_DIR_MAX_ENTRIES)
     {
-        u32 dir_bytes = dense_count * sizeof(NDSFtAnimStreamEntry);
+        NDSFtAnimStreamEntry chunk[NDS_FTANIM_STREAM_DIR_CHUNK];
+        u32 row = 0u;
 
-        if (nitroromReadFile(rom, (u16)file_id, header->dir_off,
-                             sNdsFtAnimStreamDir, dir_bytes) != false)
+        while (row < dense_count)
+        {
+            u32 n = dense_count - row;
+            u32 i;
+
+            if (n > NDS_FTANIM_STREAM_DIR_CHUNK)
+            {
+                n = NDS_FTANIM_STREAM_DIR_CHUNK;
+            }
+            if (nitroromReadFile(rom, (u16)file_id,
+                                 header->dir_off +
+                                     (row * sizeof(NDSFtAnimStreamEntry)),
+                                 chunk, n * sizeof(NDSFtAnimStreamEntry)) ==
+                false)
+            {
+                break;
+            }
+            for (i = 0u; i < n; i++)
+            {
+                u32 offset = chunk[i].offset;
+                u32 size = chunk[i].size;
+
+                if (((offset & 15u) != 0u) ||
+                    ((offset >> 4) >=
+                     (1u << (32u - NDS_FTANIM_STREAM_DIR_SIZE_BITS))) ||
+                    (size >= (1u << NDS_FTANIM_STREAM_DIR_SIZE_BITS)))
+                {
+                    break;
+                }
+                sNdsFtAnimStreamDir[row + i] =
+                    ((offset >> 4) << NDS_FTANIM_STREAM_DIR_SIZE_BITS) | size;
+            }
+            if (i != n)
+            {
+                break;
+            }
+            row += n;
+        }
+        if (row == dense_count)
         {
             sNdsFtAnimStreamDirCount = (u16)dense_count;
             sNdsFtAnimStreamDirReady = TRUE;
-            gNdsRelocAssetFighterStreamDirBytes = dir_bytes;
+            gNdsRelocAssetFighterStreamDirBytes = dense_count * sizeof(u32);
         }
         else
         {
@@ -1735,7 +1788,12 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
             (sNdsFtAnimStreamDirReady != FALSE) &&
             (row < sNdsFtAnimStreamDirCount))
         {
-            entry = sNdsFtAnimStreamDir[row];
+            u32 packed = sNdsFtAnimStreamDir[row];
+
+            entry.offset =
+                (packed >> NDS_FTANIM_STREAM_DIR_SIZE_BITS) << 4;
+            entry.size =
+                packed & ((1u << NDS_FTANIM_STREAM_DIR_SIZE_BITS) - 1u);
             gNdsRelocAssetFighterStreamDirHits++;
         }
         else

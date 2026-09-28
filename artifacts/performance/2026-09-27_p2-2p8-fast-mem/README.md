@@ -1886,3 +1886,51 @@ Other findings:
   (Ness/Yoshi/Pikachu/Purin on Yoshi's Island and Saffron). The crash is the
   same with the lookup compiled out (`flo_g5`), so it predates this change.
   It is logged for the stability lane.
+
+## 62. Ness, Yoshi, Pikachu and Purin join the BPS1 stream pack
+
+After section 61 a late-fighter motion load still cost ~220K: read 54K,
+swap/register 16K, cache store with AObj16 prebake 65K, and a finalize that
+re-runs the AObj16 transform 72K. A BPS1 clip needs none of that.
+
+The change:
+- `generate_battlepack_anim.py` adds the four fighters' ranges and prefixes.
+- Their AObj32 entry clips join `AOBJ32_IDS`, from the production manifest's
+  `*_AOBJ32_ASSET_ROWS`: Purin 0x5E1-2, Ness 0x707-B, Yoshi 0x7A1-2,
+  Pikachu 0x821-2.
+- The Makefile streams the four stems and retains those 11 O2R files.
+- New pack: 1,570 clips, 3,785,408 B, ids 0x1F3-0x831.
+  `BATTLEPACK_STREAM_EQUIVALENCE=PASS`, no new spline clips.
+  `test_samus_roll_spline.py` PASS; `check_mf_pack.py` PASS (1570/1570).
+- The dense directory grew from 1,165 to 1,599 rows. Its resident copy now
+  packs `(offset/16) << 14 | size` into 4 B a row: 6,396 B, against the old
+  9,600 B array. A row that does not fit turns the resident copy off (the
+  per-row read remains).
+- The stream is opened at boot, so the chunked directory read runs on the
+  boot stack.
+
+Results (same-config pairs, replay IDENTICAL for each):
+
+| Arms | Roster / stage | P50 | P95 |
+|---|---|---|---|
+| `fl_g6` -> `fb_g6` | Ness/Yoshi/Pikachu/Purin, Dream Land (full-roster lab) | 979K -> 972K | **1,536K -> 1,408K** |
+| `fl_g8` -> `fb_g8` | Ness/Yoshi/Pikachu/Purin, Mushroom | 1,098K -> 1,089K | **1,698K -> 1,583K** |
+| `fr_def` -> `fbd_g6` | DK/Samus/Link/Kirby, Dream Land (full-roster lab) | -1.3K | -6.7K |
+| `gadir` -> `gbps`, `gbps2` | gate | +1.1K, +2.7K | +3.5K |
+
+The gate reading is inside the layout band. Fallback reads 0, stream
+failures 0, native failures 0, heap 69,340 unchanged.
+
+Shipping-configuration shell probe (`smash64ds-p2-shell-hwtri`, all fighters,
+late O2R clips removed from its NitroFS):
+- The CSS walk tour reads kind=fff drew=fff; all 12 previews drew.
+- The probe then stops with BADSETUP at the stage select (scene 21).
+- The control build (`fbbd686e40d` sources, `build-p2-shell-ctl`) stops at
+  the same place with the same `r0=2`. That is the known nondeterministic
+  rung-9 fault (`93fede1b140`), not this change.
+- `probe-p2-shell.ps1` also printed two BGM fence counters that A8 removed.
+  That line now prints only seam misses and error stops.
+
+Note: NitroFS packs whatever sits in a build's `nitrofs/` directory. A build
+dir staged before this change still holds the 431 replaced O2R clips (1.3 MB,
+dead) until they are deleted.

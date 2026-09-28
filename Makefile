@@ -4135,7 +4135,11 @@ NDS_FTANIM_STREAM_SOURCES := \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTLinkAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTKirbyAnim*) \
 	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTKirbyCopyAnim*) \
-	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim*)
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTCaptainAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTPurinAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTNessAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTYoshiAnim*) \
+	$(wildcard $(BATTLESHIP_O2R)/reloc_animations/FTPikachuAnim*)
 
 # Slice 1 phase 5's resident figatree pack. ONE fighter, because the taskman
 # arena holds 287,904 (Fox) or 271,728 (Mario) but not the ~559,632 both need.
@@ -5678,7 +5682,11 @@ NDS_FTANIM_STREAM_PATTERNS := \
 	reloc_animations/FTLinkAnim% \
 	reloc_animations/FTKirbyAnim% \
 	reloc_animations/FTKirbyCopyAnim% \
-	reloc_animations/FTCaptainAnim%
+	reloc_animations/FTCaptainAnim% \
+	reloc_animations/FTPurinAnim% \
+	reloc_animations/FTNessAnim% \
+	reloc_animations/FTYoshiAnim% \
+	reloc_animations/FTPikachuAnim%
 NDS_FTANIM_STREAM_AOBJ32_FILES := \
 	reloc_animations/FTMarioAnim134 \
 	reloc_animations/FTMarioAnim135 \
@@ -5695,7 +5703,18 @@ NDS_FTANIM_STREAM_AOBJ32_FILES := \
 	reloc_animations/FTCaptainAnim136 \
 	reloc_animations/FTCaptainAnim137 \
 	reloc_animations/FTCaptainAnim138 \
-	reloc_animations/FTCaptainAnim139
+	reloc_animations/FTCaptainAnim139 \
+	reloc_animations/FTPurinAnim001 \
+	reloc_animations/FTPurinAnim002 \
+	reloc_animations/FTNessAnim135 \
+	reloc_animations/FTNessAnim136 \
+	reloc_animations/FTNessAnim137 \
+	reloc_animations/FTNessAnim138 \
+	reloc_animations/FTNessAnim139 \
+	reloc_animations/FTYoshiAnim138 \
+	reloc_animations/FTYoshiAnim139 \
+	reloc_animations/FTPikachuAnim124 \
+	reloc_animations/FTPikachuAnim125
 # These AObj16 clips carry embedded SYInterpDesc data. BPS1 cannot encode
 # that pointer-bearing layout; the source-command census routes them through
 # the original O2R loader and checks this retention list.
