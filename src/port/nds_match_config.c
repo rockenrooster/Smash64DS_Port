@@ -187,7 +187,11 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #endif
 
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
-volatile u32 gNdsLabFourCpuGkind __attribute__((used)) = 0xffu;
+#ifndef NDS_LAB_FOURCPU_SWEEP_GKIND
+#define NDS_LAB_FOURCPU_SWEEP_GKIND 0xffu
+#endif
+volatile u32 gNdsLabFourCpuGkind __attribute__((used)) =
+    NDS_LAB_FOURCPU_SWEEP_GKIND;
 volatile u32 gNdsLabFourCpuKinds __attribute__((used)) = 0xffffffffu;
 #endif
 

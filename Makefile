@@ -763,7 +763,10 @@ NDS_LAB_FOURCPU_TWO ?=
 # 7 Saffron, 8 Mushroom Kingdom) and gNdsLabFourCpuKinds (four nFTKind
 # bytes, slot 0 lowest; admitted kinds only). 0xFF keeps the preset. Empty
 # (the default) emits nothing, so the gate ROM carries neither word.
+# `NDS_LAB_FOURCPU_SWEEP_GKIND=<n>` sets the stage word's initial value, for
+# harnesses that cannot poke it (the profile census).
 NDS_LAB_FOURCPU_SWEEP ?=
+NDS_LAB_FOURCPU_SWEEP_GKIND ?=
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -7022,6 +7025,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
 		$(if $(strip $(NDS_LAB_FOURCPU_TWO)),echo '#define NDS_LAB_FOURCPU_TWO 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)),echo '#define NDS_LAB_FOURCPU_SWEEP 1';) \
+		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_GKIND)),echo '#define NDS_LAB_FOURCPU_SWEEP_GKIND $(NDS_LAB_FOURCPU_SWEEP_GKIND)u';) \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \
