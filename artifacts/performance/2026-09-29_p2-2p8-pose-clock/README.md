@@ -62,3 +62,32 @@ cycles are ~32K ticks a frame outside the idle wait -- the stage GX draw's
 DMA0 poll (9.2K, the drain removed in `7a0708dd905`), the fighter packet
 submit's first main-RAM access after arming its DMA (3.1K), and literal-pool
 loads in the stage and fighter display code stalled behind GX DMA bursts.
+
+## Also banked: two exact refactors on hot paths
+
+- `include/nds/nds_r2_collision_fixed.h`: the hurtbox reject's local-matrix
+  build looked up six sin/cos table entries per joint through
+  `(int32_t)(angle * 651.8986206f)` -- a soft-float multiply and a float->int
+  call each. `ndsR2CfxAngleIndexBits` computes the same index in integer
+  operations: the 24x24-bit product rounded to nearest even, then truncated.
+  `angle_index_test.c` compares it with the host's IEEE binary32 expression for
+  every input whose product fits int32 (2,492,604,342 inputs, 0 mismatches);
+  the rest (infinities, NaNs, |product| >= 2^31) keep the float expression.
+  `scripts/check-r2-collision-fixed.ps1` passes.
+- `src/nds/nds_ft_pose.c`: `ndsFtPosePlay` read `dobj->parent_gobj->flags` for
+  every joint (a DObj line fill; the second-hottest PC of the function on the
+  whole-match profile). Every bound joint's parent is the pose's clock GObj, so
+  the three callers read the flag once per update and pass it in.
+
+Gate, same source otherwise (`ws1_gate` -> `ai1_gate`/`ai1b_gate`): P50 930,240
+-> 925,824 / 925,440, SRC median 422.8K -> 419.4K, P95 1,274,944 -> 1,271,680 /
+1,266,112; replay IDENTICAL (2 seam words; `ai1b` against `ai1` is identical
+after one resync).
+
+## Run-to-run spread on one ROM
+
+`ai1_gate` and `ai1b_gate` are the same ROM and configuration (`ai1b` pokes
+`gNdsFtPoseWholeStep` to its default of 1 at boot, which shifts the start by
+one frame). P50 differs by 0.4K, P95 by 5.6K and P99 by 24.5K. A single-pair
+P95 delta under ~5K is inside that spread; P50 and band means are the stable
+figures for small changes.

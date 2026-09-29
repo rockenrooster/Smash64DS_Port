@@ -1066,9 +1066,14 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
 /* ARM, not Thumb: the evaluator's SMULLs and CLZ inline here. ITCM
  * (2026-09-27 census: ~5.7K ticks/frame of non-memory stall at 1,592 B in main
  * RAM), in the room the pre-pose-engine anim residents left. */
+/* `play` is the GObj's !GOBJ_FLAG_NOANIM. Every bound joint's parent_gobj is
+ * the pose's clock GObj (the fighter, or its shadow under the oracle), so the
+ * caller reads it once per update instead of each joint reading its DObj's
+ * parent_gobj -- a main-RAM line fill per joint on the whole-match gate
+ * profile's top PC but one. */
 static void __attribute__((noinline, target("arm"), section(".itcm")))
 ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
-              const Vec3f *tra_scale)
+              const Vec3f *tra_scale, u32 play)
 {
     /* The catch-up: one `length += speed` per tick since the last evaluation,
      * none on the End tick (the parser's tail advance already placed every
@@ -1076,8 +1081,6 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
      * anim_wait is END). `catch_up` is 1 on a joint evaluated every tick. */
     const u32 catch_up = NDS_FCMP_NE_C(dobj->anim_wait, AOBJ_ANIM_END) ?
         ((pose->tick - (u32)joint->last_eval) & 0xffffu) : 0u;
-    const u32 play = ((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) == 0u) ?
-        1u : 0u;
     const s32 add_q = (catch_up != 0u) ? pose->speed_q * (s32)catch_up : 0;
     u32 eval_mask = joint->eval_mask;
     u32 i;
@@ -1385,6 +1388,8 @@ static void __attribute__((noinline, cold))
 ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
                          u32 evaluate_body, u32 advance)
 {
+    const u32 play =
+        ((pose->clock_gobj->flags & GOBJ_FLAG_NOANIM) == 0u) ? 1u : 0u;
     u32 e;
 
     for (e = 0u; e < pose->entry_count; e++)
@@ -1420,7 +1425,7 @@ ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
             scale = (translate_scales != NULL) ?
                 &translate_scales[joint->joint_id] : NULL;
             gNdsFtPoseJointEvals++;
-            ndsFtPosePlay(pose, joint, dobj, scale);
+            ndsFtPosePlay(pose, joint, dobj, scale, play);
             if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
             {
                 ndsFtPoseClearRunEntry(pose, e);
@@ -1440,6 +1445,8 @@ ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
 static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
                          u32 evaluate_body, u32 advance)
 {
+    const u32 play =
+        ((pose->clock_gobj->flags & GOBJ_FLAG_NOANIM) == 0u) ? 1u : 0u;
     u32 pending_lo;
     u32 pending_hi;
 
@@ -1540,7 +1547,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
             scale = (translate_scales != NULL) ?
                 &translate_scales[joint->joint_id] : NULL;
             gNdsFtPoseJointEvals++;
-            ndsFtPosePlay(pose, joint, dobj, scale);
+            ndsFtPosePlay(pose, joint, dobj, scale, play);
             if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_NULL))
             {
                 ndsFtPoseClearRunEntry(pose, e);
@@ -1696,7 +1703,9 @@ sb32 ndsFtPoseReapply(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
         dobj->anim_wait = AOBJ_ANIM_END;
         ndsFtPosePlay(pose, joint, dobj,
                       (translate_scales != NULL) ?
-                          &translate_scales[joint->joint_id] : NULL);
+                          &translate_scales[joint->joint_id] : NULL,
+                      ((pose->clock_gobj->flags & GOBJ_FLAG_NOANIM) == 0u) ?
+                          1u : 0u);
         dobj->anim_wait = wait_bak;
     }
 #if NDS_FT_POSE_ORACLE

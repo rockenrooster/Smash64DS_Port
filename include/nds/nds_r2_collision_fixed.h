@@ -322,18 +322,101 @@ static inline int32_t ndsR2CfxTableQ15(const uint16_t *table, int32_t index)
     return (index & 0x800) ? -value : value;
 }
 
+/* (int32_t)(angle * NDS_R2_CFX_RAD_TO_ID) -- the binary32 multiply rounded to
+ * nearest even, then truncated -- in integer operations (P2-2p8, 2026-09-29).
+ * On the ARM9 the float form was a soft-float multiply and a float->int call
+ * per lookup, six of each per local matrix. Proven equal to the float
+ * expression for every binary32 input whose product fits int32 (2,492,604,342
+ * of them; artifacts/performance/2026-09-29_p2-2p8-pose-clock/
+ * angle_index_test.c); for the rest -- infinities, NaNs, |product| >= 2^31 --
+ * this returns 0 and the caller evaluates the float expression itself.
+ * K = 651.8986206f is 0xa2f983 * 2^(136 - 150). */
+static inline int ndsR2CfxAngleIndexBits(uint32_t bits, int32_t *out)
+{
+    const uint32_t exponent = (bits >> 23) & 0xffu;
+    uint64_t product;
+    uint32_t rounded;
+    uint32_t rem;
+    uint32_t half;
+    int32_t biased;
+    uint32_t value;
+
+    if (exponent == 0u)
+    {
+        /* Zero or subnormal: |x * K| < 2^-116, which truncates to 0. */
+        *out = 0;
+        return 1;
+    }
+    if (exponent == 0xffu)
+    {
+        return 0;
+    }
+    product = (uint64_t)((bits & 0x7fffffu) | 0x800000u) * 0xa2f983u;
+    biased = (int32_t)exponent + 136 - 127;
+    if ((product >> 47) != 0u)
+    {
+        rounded = (uint32_t)(product >> 24);
+        rem = (uint32_t)(product & 0xffffffu);
+        half = 0x800000u;
+        biased += 1;
+    }
+    else
+    {
+        rounded = (uint32_t)(product >> 23);
+        rem = (uint32_t)(product & 0x7fffffu);
+        half = 0x400000u;
+    }
+    if ((rem > half) || ((rem == half) && ((rounded & 1u) != 0u)))
+    {
+        rounded++;
+        if (rounded == 0x1000000u)
+        {
+            rounded = 0x800000u;
+            biased += 1;
+        }
+    }
+    if (biased >= 158)
+    {
+        return 0;
+    }
+    if (biased < 127)
+    {
+        value = 0u;
+    }
+    else if (biased >= 150)
+    {
+        value = rounded << (biased - 150);
+    }
+    else
+    {
+        value = rounded >> (150 - biased);
+    }
+    *out = ((bits >> 31) != 0u) ? -(int32_t)value : (int32_t)value;
+    return 1;
+}
+
+static inline int32_t ndsR2CfxAngleIndex(float angle)
+{
+    uint32_t bits;
+    int32_t index;
+
+    __builtin_memcpy(&bits, &angle, sizeof(bits));
+    if (ndsR2CfxAngleIndexBits(bits, &index) != 0)
+    {
+        return index;
+    }
+    return (int32_t)(angle * NDS_R2_CFX_RAD_TO_ID);
+}
+
 static inline int32_t ndsR2CfxSinQ15(const uint16_t *table, float angle)
 {
-    return ndsR2CfxTableQ15(table,
-                            ((int32_t)(angle * NDS_R2_CFX_RAD_TO_ID)) & 0xFFF);
+    return ndsR2CfxTableQ15(table, ndsR2CfxAngleIndex(angle) & 0xFFF);
 }
 
 static inline int32_t ndsR2CfxCosQ15(const uint16_t *table, float angle)
 {
     return ndsR2CfxTableQ15(
-        table,
-        ((int32_t)((angle + NDS_R2_CFX_DEG90_RAD) * NDS_R2_CFX_RAD_TO_ID)) &
-            0xFFF);
+        table, ndsR2CfxAngleIndex(angle + NDS_R2_CFX_DEG90_RAD) & 0xFFF);
 }
 
 /* ------------------------------------------------------------------------
