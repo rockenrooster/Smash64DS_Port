@@ -849,6 +849,20 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   identical. Priced and refuted: a 200 KB anim cache (motion reads 362 -> 275,
   P95 -2.7K: reads are not a tail lever). Receipt `2026-09-27_p2-2p8-fast-mem`.
 
+- **09-28/29 solo, BANKED** (all replay identical): elastic motion cache, compact
+  ground maps, R1 retirement, hit fetch (09-28, gate 934,272 / 1,284,864); spline
+  bisection reuse (Sector Z P95 -88K); stage GX spans overlap the DMA; pose clock
+  whole-frame steps; integer sin/cos index for the hurtbox kernel and
+  `lbCommonSin/Cos`; A5 kernel 1/s table, unit-scale and zero-angle local builds,
+  and a local-frame reject that cuts the float tests 659 -> 286 (0 flips). Gate
+  `22c41b9718e` WORK-H P50/P95 928,000 / 1,263,808, two-VBlank 84.3%.
+  A fresh whole-match profile (`2026-09-29_p2-2p8-hurtbox-box`) puts the P90-98
+  premium over the median at 316K: A5 kernel ~37K before these cuts, soft float
+  ~29K (the source's float collision chain), pose attach ~32K, lean
+  materialisation ~9K (39 a match, 145K-683K each), shield pose ~5K. Tried and
+  reverted: a per-box hurtbox record, a stage DISP3DCNT shadow (the stall moved
+  to the next bus access: the stage draw is GX-DMA-bound).
+
 ## 7. Found along the way
 
 - **Camera-matrix staleness** for the boomerang (A6): an existing one-tick
