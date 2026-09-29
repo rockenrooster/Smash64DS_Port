@@ -419,6 +419,36 @@ static inline int32_t ndsR2CfxCosQ15(const uint16_t *table, float angle)
         table, ndsR2CfxAngleIndex(angle + NDS_R2_CFX_DEG90_RAD) & 0xFFF);
 }
 
+/* Both lookups for one angle. A zero or subnormal angle -- a joint axis the
+ * animation leaves at rest -- indexes 0 for the sine, and angle + 90 degrees
+ * is exactly NDS_R2_CFX_DEG90_RAD in binary32 (the addend is below half an
+ * ulp of it), so the cosine's index is a compile-time constant and the soft
+ * float add is skipped (P2-2p8, 2026-09-29). Every other angle takes the two
+ * functions above unchanged. */
+/* always_inline: scripts/check-r2-collision-fixed.ps1 allows soft float only
+ * inside the BuildLocal body. */
+/* A caller may route both fast paths through a same-ROM A/B word. */
+#ifndef NDS_R2_CFX_FAST_PATHS
+#define NDS_R2_CFX_FAST_PATHS() 1
+#endif
+static inline __attribute__((always_inline)) void
+ndsR2CfxSinCosQ15(const uint16_t *table, float angle, int64_t *sin_out,
+                  int64_t *cos_out)
+{
+    uint32_t bits;
+
+    __builtin_memcpy(&bits, &angle, sizeof(bits));
+    if (NDS_R2_CFX_FAST_PATHS() && ((bits & 0x7f800000u) == 0u))
+    {
+        *sin_out = ndsR2CfxTableQ15(table, 0);
+        *cos_out = ndsR2CfxTableQ15(
+            table, ndsR2CfxAngleIndex(NDS_R2_CFX_DEG90_RAD) & 0xFFF);
+        return;
+    }
+    *sin_out = ndsR2CfxSinQ15(table, angle);
+    *cos_out = ndsR2CfxCosQ15(table, angle);
+}
+
 /* ------------------------------------------------------------------------
  * Stage 2 -- gmCollisionTransformMatrixAll (gm/gmcollision.c:29) in fixed point
  *
@@ -442,17 +472,33 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
                                      const float translate[3])
 {
     const unsigned int rot_bits = NDS_R2_CFX_ROT_BITS;
-    int64_t sinx = ndsR2CfxSinQ15(table, rotate[0]);
-    int64_t cosx = ndsR2CfxCosQ15(table, rotate[0]);
-    int64_t siny = ndsR2CfxSinQ15(table, rotate[1]);
-    int64_t cosy = ndsR2CfxCosQ15(table, rotate[1]);
-    int64_t sinz = ndsR2CfxSinQ15(table, rotate[2]);
-    int64_t cosz = ndsR2CfxCosQ15(table, rotate[2]);
+    int64_t sinx;
+    int64_t cosx;
+    int64_t siny;
+    int64_t cosy;
+    int64_t sinz;
+    int64_t cosz;
     int64_t rot[3][3]; /* Q30 */
     int32_t row_scale[3];
+    uint32_t scale_bits[3];
+    int unit_scale;
     NDSR2CfxMtx out;
     unsigned int row;
     unsigned int col;
+
+    ndsR2CfxSinCosQ15(table, rotate[0], &sinx, &cosx);
+    ndsR2CfxSinCosQ15(table, rotate[1], &siny, &cosy);
+    ndsR2CfxSinCosQ15(table, rotate[2], &sinz, &cosz);
+    __builtin_memcpy(scale_bits, scale, sizeof(scale_bits));
+    /* All three scales exactly 1.0f -- most joints. Their fixed form is
+     * NDS_R2_CFX_ROT_ONE, which passes the guard below, and
+     * Shr(rot * 2^26, 30) is exactly (rot + 8) >> 4, inside ROT_MAX for any
+     * |rot| <= 2^30; so the per-row conversions and the nine 64-bit
+     * products are skipped with the same result (P2-2p8, 2026-09-29). */
+    unit_scale = (NDS_R2_CFX_FAST_PATHS() &&
+                  (scale_bits[0] == 0x3f800000u) &&
+                  (scale_bits[1] == 0x3f800000u) &&
+                  (scale_bits[2] == 0x3f800000u)) ? 1 : 0;
 
     /* The four triple products are formed at Q45 and reduced ONCE, not
      * reduced to Q15 between the two multiplies. Reducing in the middle is a
@@ -476,7 +522,7 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
                 (sinx * cosz);
     rot[2][2] = cosx * cosy;
 
-    for (row = 0u; row < 3u; row++)
+    for (row = 0u; (unit_scale == 0) && (row < 3u); row++)
     {
         row_scale[row] = ndsR2CollisionF32ToFixed(scale[row], rot_bits);
         if ((row_scale[row] == NDS_R2_COLLISION_F32_OVERFLOW) ||
@@ -496,6 +542,18 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
         }
     }
 
+    if (unit_scale != 0)
+    {
+        for (row = 0u; row < 3u; row++)
+        {
+            for (col = 0u; col < 3u; col++)
+            {
+                out.r[row][col] = (int32_t)((rot[row][col] + 8) >> 4);
+            }
+        }
+        *dst = out;
+        return 1;
+    }
     for (row = 0u; row < 3u; row++)
     {
         for (col = 0u; col < 3u; col++)

@@ -1,0 +1,6 @@
+ndsP2HbRejectPoints                      calls/frame: median band     6.2  P90-98 band    26.1  cycles per call in band     2383
+ndsR2CfxBuildLocal.constprop.0           calls/frame: median band     5.0  P90-98 band    21.0  cycles per call in band     1369
+gmCollisionGetFighterPartsWorldPosition  calls/frame: median band     2.3  P90-98 band     4.3  cycles per call in band     1994
+func_ovl2_800EDBA4                       calls/frame: median band     0.4  P90-98 band     2.4  cycles per call in band     1081
+ndsStageGxDraw                           calls/frame: median band    54.0  P90-98 band    54.0  cycles per call in band     1967
+ndsStageGxFlush.part.0                   calls/frame: median band    27.0  P90-98 band    27.0  cycles per call in band      351

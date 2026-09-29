@@ -35,12 +35,17 @@
 #define NDS_R2_CFX_DIV64(numerator, denominator) \
     ndsR2HwMathCfxDiv64((int64_t)(numerator), (int64_t)(denominator))
 #define NDS_R2_CFX_ISQRT64(value) ndsR2HwMathCfxIsqrt64(value)
+/* Same-ROM A/B word for the local build's zero-angle and unit-scale paths. */
+extern volatile u32 gNdsR2CfxFastPaths;
+#define NDS_R2_CFX_FAST_PATHS() (gNdsR2CfxFastPaths != 0u)
 #include <nds/nds_r2_collision_fixed.h>
 
 #define NDS_P2_HB_CHAIN_MAX 18
 /* Four world units, Q12. */
 #define NDS_P2_HB_MARGIN_Q12 (INT32_C(4) << NDS_R2_CFX_POS_BITS)
 #define NDS_P2_HB_CACHE_SLOTS 64u
+
+volatile u32 gNdsR2CfxFastPaths __attribute__((used, section(".data"))) = 1u;
 
 /* 0 off, 1 reject, 2 shadow: decide, count, and still run the float path so a
  * wrong reject shows up as a flip. `.data` so both values occupy one word. */
@@ -174,6 +179,50 @@ static int ndsP2HbWorldOf(NDSR2CfxMtx *out, DObj *joint)
     return 1;
 }
 
+/* An upper bound on 2^39 / sqrt(s2) -- 1/s at Q26 for s^2 = s2 at Q26 -- for
+ * s2 in [NDS_R2_CFX_S2_MIN, NDS_R2_CFX_S2_MAX] = [2^22, 2^30], without the
+ * divide and square-root units (P2-2p8, 2026-09-29: their busy-waits were ~18%
+ * of the kernel's hottest rows). With s2 = m * 2^q + r, m the top six bits
+ * (32..63), s2 >= m * 2^q, so
+ *   2^39 / sqrt(s2) <= 2^(39 - q/2) / sqrt(m)
+ * and the tables hold ceil(2^24 / sqrt(m)) (q even) and ceil(2^24 * sqrt(2/m))
+ * (q odd); the shift is exact. At most 1.56% above the exact value.
+ * artifacts/performance/2026-09-29_p2-2p8-hurtbox-box/invsqrt_test.c checks
+ * inv^2 * s2 >= 2^78 for every s2 in the range (1,069,547,521 values). */
+static const uint32_t sNdsP2HbInvSqrtEven[32] = {
+    2965821u, 2920539u, 2877269u, 2835868u,
+    2796203u, 2758158u, 2721624u, 2686505u,
+    2652711u, 2620161u, 2588781u, 2558502u,
+    2529261u, 2501000u, 2473666u, 2447209u,
+    2421583u, 2396746u, 2372657u, 2349281u,
+    2326582u, 2304528u, 2283090u, 2262240u,
+    2241950u, 2222197u, 2202957u, 2184208u,
+    2165930u, 2148103u, 2130709u, 2113731u,
+};
+static const uint32_t sNdsP2HbInvSqrtOdd[32] = {
+    4194304u, 4130266u, 4069073u, 4010522u,
+    3954428u, 3900624u, 3848958u, 3799292u,
+    3751500u, 3705468u, 3661089u, 3618268u,
+    3576915u, 3536948u, 3498292u, 3460876u,
+    3424635u, 3389510u, 3355444u, 3322384u,
+    3290283u, 3259095u, 3228777u, 3199290u,
+    3170596u, 3142661u, 3115451u, 3088936u,
+    3063087u, 3037876u, 3013277u, 2989267u,
+};
+
+static int32_t ndsP2HbInvSqrtQ26(uint32_t s2)
+{
+    const uint32_t q = 26u - (uint32_t)__builtin_clz(s2);
+    const uint32_t m = s2 >> q;
+    const uint32_t t = ((q & 1u) != 0u) ? sNdsP2HbInvSqrtOdd[m - 32u]
+                                        : sNdsP2HbInvSqrtEven[m - 32u];
+
+    return (int32_t)(t << (15u - ((q + 1u) >> 1)));
+}
+
+/* Same-ROM A/B word: 0 takes 1/s_min from the divide and root units. */
+volatile u32 gNdsP2HbInvTable __attribute__((used, section(".data"))) = 1u;
+
 /* 1/s_min for `joint`'s world (just produced by ndsP2HbWorldOf, so its slot
  * holds it unless another DObj evicted it). 0 = decline. */
 static int32_t ndsP2HbInvSMin(const DObj *joint, const NDSR2CfxMtx *w)
@@ -196,15 +245,23 @@ static int32_t ndsP2HbInvSMin(const DObj *joint, const NDSR2CfxMtx *w)
     s2_min = s2[0];
     if (s2[1] < s2_min) { s2_min = s2[1]; }
     if (s2[2] < s2_min) { s2_min = s2[2]; }
-    /* floor(sqrt(s2 << 22)) = s at Q24, rounded DOWN, so its reciprocal
-     * rounded UP bounds 1/s from above. s2 >= 1/16 (the guard) keeps the
-     * quotient inside int32. */
-    s_q24 = NDS_R2_CFX_ISQRT64((uint64_t)s2_min << 22);
-    if (s_q24 == 0u)
+    if (gNdsP2HbInvTable != 0u)
     {
-        return 0;
+        /* RowScales' guard already put s2_min in the table's range. */
+        inv = ndsP2HbInvSqrtQ26((uint32_t)s2_min);
     }
-    inv = NDS_R2_CFX_DIV64((int64_t)1 << 50, (int64_t)s_q24) + 1;
+    else
+    {
+        /* floor(sqrt(s2 << 22)) = s at Q24, rounded DOWN, so its reciprocal
+         * rounded UP bounds 1/s from above. s2 >= 1/16 (the guard) keeps the
+         * quotient inside int32. */
+        s_q24 = NDS_R2_CFX_ISQRT64((uint64_t)s2_min << 22);
+        if (s_q24 == 0u)
+        {
+            return 0;
+        }
+        inv = NDS_R2_CFX_DIV64((int64_t)1 << 50, (int64_t)s_q24) + 1;
+    }
     if ((slot->dobj == joint) && (slot->epoch == gNdsP2HurtboxLatchEpoch))
     {
         slot->inv_smin_q26 = inv;
