@@ -70,3 +70,28 @@ within -2.6K..+4.2K.
 
 The hit fetch is still 10-26K and the install 11-27K (Pikachu x4 is the
 outlier at 26.7K); the first play is ~24K on every roster.
+
+## Refuted: a whole-victim hurtbox bound (A5)
+
+Hurtbox-test frames (13% of frames) carry ~137K ticks over the rest; the reject
+kernel is ~56K of it (`split_hb` on `builds/p2p8-prof-census`). Tried: once per
+victim per latch epoch, the union of every damage box's per-box interval (same
+rounding, largest `sum_abs` and `inv_smin`), keyed on the epoch and a snapshot
+of the boxes, so one comparison stands for up to eleven per-box tests. Exact by
+construction and by measurement (same ROM, `gNdsP2HurtboxVictimBound` 0/1):
+rejects 13,499 = 13,499, passes 654 = 654, shadow-mode flips 0, replay
+IDENTICAL; 12,013 of the rejects came from the bound. But WORK-H P95
+1,287,616 -> 1,316,736 and P50 +3.8K (runs `vb0_gate`/`vb1_gate`/`vbs_gate`):
+the per-box cost is the once-per-epoch world composition, which the bound must
+still do for every box; the per-box test after it was already cheap, and the
+snapshot compare added to every call. Reverted. Same finding as the 09-27
+per-box cache and per-fighter epochs (`2026-09-27_p2-2p8-fast-mem` section 23).
+
+## Lean model rebuild, measured parts (lab, `NDS_FTR_LEAN_PHASE_TICKS=1`)
+
+Per materialization, Dream Land / Saffron / Jungle: 394K / 393K / 302K ticks;
+texture resolve + bind 86K / 77K / 36K, spans + materials 71K / 65K / 43K,
+corners 58K / 52K / 47K, run prepares 26K, root binds 25K, shade 24K, tint +
+readback 20K, the rest outside the list walk ~80K. Keys: Dream Land 39
+rebuilds of 23 distinct keys (16 repeats), Saffron 35 of 27. Removing every
+rebuild prices at -35K P95 on Dream Land, so a 20% cheaper rebuild is ~-6K.

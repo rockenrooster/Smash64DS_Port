@@ -27,12 +27,12 @@ reserve free 253,904 B (09-27) versus required 183,072 B. Campaign coverage and 
 renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
 Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
-**09-26..28 solo** (receipts `2026-09-2{6,7}_p2-2p8-*`; 09-28 = fast-mem sec 54-56:
-billboard camera, shield decode, AI floor memo): `D37EFA19` (`gafmf`, control) WORK-H
-P50/P95 936,128/1,305,856. Sweep ROM (NDS_LAB_FOURCPU_SWEEP, gNdsLabFourCpuGkind) P95:
-Mushroom 1.49M, Saffron 1.53M, Yoshi 1.60M, Zebes 1.49M, Castle 1.45M, Hyrule 1.38M,
-Jungle 1.36M. Digest `--sequence --resync 4`. P95 set: SRC +326K over median (status
-changes ~110K each). 09-28 sec 61-68; S1-S4 fixed, 45-match crash sweep clean (receipt `2026-09-28_p2-2p8-s1-event32-ledger`).
+**09-26..28 solo** (receipts `2026-09-2{6,7,8}_p2-2p8-*`). Gate `f1` WORK-H P50/P95
+934,272/1,284,864 after the elastic motion cache, compact ground maps, R1 retirement
+and cheaper hit fetch (`2026-09-28_p2-2p8-{tail-census,ram-supply,status-change}`). Lab
+sweep ROM (NDS_LAB_FOURCPU_SWEEP; build it with NDS_P2_PIKACHU/YOSHI/NESS/PURIN=1) P95
+1.21M-1.58M by roster. Digest `--sequence --resync 4`. P95 frames carry 1.2-1.6 status
+changes at 60-96K each (fetch, install, first play ~24K). Refuted: whole-victim hurtbox bound.
 
 ## Continue, do not restart
 
