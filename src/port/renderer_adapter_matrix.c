@@ -4173,6 +4173,8 @@ static NDSRendererAdapterMvpCamera *ndsRendererAdapterSharedMvpCamera(CObj *cobj
     return &sNdsSharedMvpCamera;
 }
 
+volatile u32 gNdsMvpRecalcRow3 __attribute__((used, section(".data"))) = 1u;
+
 static void ndsRendererAdapterApplyMvpRecalc(
     DObj *dobj,
     u32 kind,
@@ -4246,7 +4248,17 @@ static void ndsRendererAdapterApplyMvpRecalc(
         return;
     }
 
-    if ((*modelview_ptr != NULL) && (*projection_ptr != NULL))
+    /* Every kind below replaces rows 0-2 of the composed MVP and keeps its
+     * translation row, so only that row is formed here, with the full
+     * product's arithmetic (P2-2p8, 2026-09-29; the stage billboards'
+     * ndsRendererMtxMulRow3_20p12). Same-ROM A/B word gNdsMvpRecalcRow3. */
+    if ((*modelview_ptr != NULL) && (*projection_ptr != NULL) &&
+        (gNdsMvpRecalcRow3 != 0u))
+    {
+        ndsRendererMtxMulRow3_20p12(
+            *modelview_ptr, *projection_ptr, &composed);
+    }
+    else if ((*modelview_ptr != NULL) && (*projection_ptr != NULL))
     {
         ndsRendererMtxMul20p12(
             *modelview_ptr, *projection_ptr, &composed);

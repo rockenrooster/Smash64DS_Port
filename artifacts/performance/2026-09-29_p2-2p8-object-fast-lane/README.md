@@ -74,6 +74,30 @@ Replay IDENTICAL on all four pairs; 0 new native failures (Saffron's 3 are the
 owed stage weapon). Yoshi's Island refilled its routes 1,129 times: a
 capsule's header and third root shared a slot.
 
+## Banked: visual templates, a 64-slot route hash, and billboards' kept row
+
+- The procedural visual templates (the effect-tree owner's latched fans and
+  rings; Saffron draws 1,249 a match) take the fast lane without a route: the
+  latch, a flat single-list DObj, an arena list in no loaded file (checked,
+  as the body's claim needs it) and the body's effect-submit colour seeds.
+- The route table is 64 slots under a multiplicative hash: Yoshi's Island's
+  refills fell 1,129 -> 5.
+- `ndsRendererAdapterApplyMvpRecalc` forms only the translation row of
+  modelview x projection, since every recalc kind replaces rows 0-2 (word
+  `gNdsMvpRecalcRow3`; the stage billboards' row-3 multiply).
+
+Build `fl4` (`visual-ab.txt`):
+
+| run | P50 | P95 | P90-98 mean |
+|---|---:|---:|---:|
+| gate lane 0, row 0 (`f40a`/`f40b`) | 924,288 / 924,224 | 1,256,512 / 1,256,640 | 1,240,235 / 1,240,045 |
+| gate lane 1, row 1 (`f41a`/`f41b`) | **918,464 / 918,656** | **1,250,432 / 1,248,000** | **1,233,215 / 1,232,840** |
+| gate lane 1, row 0 -> 1 (`f4r0`/`f4r1`) | 918,912 -> 918,656 | 1,249,344 -> 1,248,000 | 1,233,022 -> 1,232,840 |
+| Yoshi's Island lane 0 -> 1 | 1,156,992 -> **1,142,080** | 1,536,256 -> **1,505,344** | 1,522,171 -> 1,502,440 |
+| Saffron lane 0 -> 1 | 1,115,136 -> **1,099,072** | 1,504,576 -> **1,480,960** | 1,486,234 -> 1,467,967 |
+
+Replay IDENTICAL on all five pairs; visual declines 0.
+
 ## Next
 
 The routed owners still pay their matrices (Charge Shot's float billboard

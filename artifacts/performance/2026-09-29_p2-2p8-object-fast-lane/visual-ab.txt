@@ -1,0 +1,25 @@
+f40a_gate  P50 924,288 P95 1,256,512 P99 1,453,824 2VB 84.9% SRCmed 413,568 STGmed 162,432 FTRmed 145,344 bandSRC 628,543 bandW 1,240,235 {'nf': 0, 'low': 359116}
+f41a_gate  P50 918,464 P95 1,250,432 P99 1,454,784 2VB 86.2% SRCmed 413,312 STGmed 162,432 FTRmed 145,344 bandSRC 631,649 bandW 1,233,215 {'nf': 0, 'low': 359116}
+f40b_gate  P50 924,224 P95 1,256,640 P99 1,454,592 2VB 84.9% SRCmed 413,504 STGmed 162,496 FTRmed 145,344 bandSRC 628,541 bandW 1,240,045 {'nf': 0, 'low': 359116}
+f41b_gate  P50 918,656 P95 1,248,000 P99 1,454,592 2VB 86.2% SRCmed 413,312 STGmed 162,432 FTRmed 145,344 bandSRC 631,723 bandW 1,232,840 {'nf': 0, 'low': 359116}
+f4r0_gate  P50 918,912 P95 1,249,344 P99 1,455,104 2VB 86.2% SRCmed 413,440 STGmed 162,368 FTRmed 145,216 bandSRC 631,757 bandW 1,233,022 {'nf': 0, 'low': 359116}
+f4r1_gate  P50 918,656 P95 1,248,000 P99 1,454,592 2VB 86.2% SRCmed 413,312 STGmed 162,432 FTRmed 145,344 bandSRC 631,723 bandW 1,232,840 {'nf': 0, 'low': 359116}
+f40_g5     P50 1,156,992 P95 1,536,256 P99 1,890,880 2VB 36.2% SRCmed 511,680 STGmed 123,456 FTRmed 145,664 bandSRC 719,162 bandW 1,522,171 {'nf': 0, 'low': 145880}
+f41_g5     P50 1,142,080 P95 1,505,344 P99 1,875,008 2VB 39.6% SRCmed 511,232 STGmed 123,456 FTRmed 145,664 bandSRC 723,419 bandW 1,502,440 {'nf': 0, 'low': 145880}
+f40_g7     P50 1,115,136 P95 1,504,576 P99 1,804,096 2VB 46.5% SRCmed 509,568 STGmed 170,368 FTRmed 147,776 bandSRC 755,850 bandW 1,486,234 {'nf': 3, 'low': 132680}
+f41_g7     P50 1,099,072 P95 1,480,960 P99 1,785,856 2VB 49.5% SRCmed 509,696 STGmed 170,304 FTRmed 147,712 bandSRC 762,009 bandW 1,467,967 {'nf': 3, 'low': 132680}
+f40a_gate hits 0 fills 4 item/fr 13176 weapon/fr 11627 effect/fr 12730 visual draws/declines 96 0 nf 0
+f41a_gate hits 1180 fills 4 item/fr 10904 weapon/fr 10132 effect/fr 12596 visual draws/declines 96 0 nf 0
+f40b_gate hits 0 fills 4 item/fr 13181 weapon/fr 11630 effect/fr 12724 visual draws/declines 96 0 nf 0
+f41b_gate hits 1180 fills 4 item/fr 10905 weapon/fr 10126 effect/fr 12598 visual draws/declines 96 0 nf 0
+f4r0_gate hits 1180 fills 4 item/fr 10920 weapon/fr 10171 effect/fr 12599 visual draws/declines 96 0 nf 0
+f4r1_gate hits 1180 fills 4 item/fr 10905 weapon/fr 10126 effect/fr 12598 visual draws/declines 96 0 nf 0
+f40_g5 hits 0 fills 5 item/fr 46576 weapon/fr 8813 effect/fr 28152 visual draws/declines 310 0 nf 0
+f41_g5 hits 3005 fills 5 item/fr 36058 weapon/fr 7493 effect/fr 27337 visual draws/declines 310 0 nf 0
+f40_g7 hits 0 fills 357 item/fr 55574 weapon/fr 8073 effect/fr 38181 visual draws/declines 1249 0 nf 3
+f41_g7 hits 3664 fills 357 item/fr 45579 weapon/fr 7621 effect/fr 34144 visual draws/declines 1249 0 nf 3
+digest f40a_gate vs f41a_gate: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f40a_gate vs f41b_gate: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f4r0_gate vs f4r1_gate: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f40_g5 vs f41_g5: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f40_g7 vs f41_g7: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)

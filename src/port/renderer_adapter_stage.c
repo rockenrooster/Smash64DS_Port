@@ -7242,14 +7242,18 @@ volatile u32 gNdsStageDLFastLaneFills;
 
 #define NDS_SDL_ROUTE_NONE 0u
 #define NDS_SDL_ROUTE_CHARGE_SHOT 1u
+/* Not stored: decided per draw from the effect-tree owner's latch. */
+#define NDS_SDL_ROUTE_VISUAL 0xffu
 /* 2 + an index into sNdsStageDLItemRoutes: the MObj-less item owners, whose
  * admission is the same everywhere -- the item submit, an Item GObj of the
  * owner's kind, no MObj -- and whose call is one of two shapes. */
 #define NDS_SDL_ROUTE_ITEM 2u
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
- * roots. */
-#define NDS_SDL_ROUTES 32u
+ * roots, and its header and third root shared a slot under an address-bit
+ * index. A multiplicative hash over 64 slots. */
+#define NDS_SDL_ROUTES 64u
+#define NDS_SDL_ROUTE_SHIFT 26u
 
 #if NDS_P2_ITEM_CORE
 typedef sb32 (*NDSStageDLItemSubmit)(const void *base, u32 bytes,
@@ -7340,10 +7344,8 @@ static NDSStageDLRoute sNdsStageDLRoutes[NDS_SDL_ROUTES];
 
 static inline NDSStageDLRoute *ndsStageDLRouteSlot(const Gfx *dl)
 {
-    const u32 a = (u32)(uintptr_t)dl;
-
-    return &sNdsStageDLRoutes[((a >> 3) ^ (a >> 11)) &
-                              (NDS_SDL_ROUTES - 1u)];
+    return &sNdsStageDLRoutes[((u32)(uintptr_t)dl * 2654435761u) >>
+                              NDS_SDL_ROUTE_SHIFT];
 }
 
 static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
@@ -7375,6 +7377,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     NDSStageDLRoute *route = ndsStageDLRouteSlot(dl);
     NDSRelocLoadedFile *loaded = route->loaded;
     GObj *owner = dobj->parent_gobj;
+    u32 route_kind = NDS_SDL_ROUTE_NONE;
     NDSRendererConfig config = {0};
     NDSRendererStats *render_stats;
     NDSRendererMatrix20p12 projection;
@@ -7385,19 +7388,49 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     void *saved_graphics_heap_ptr;
     sb32 handled = FALSE;
 
-    if ((route->dl != dl) || (route->route == NDS_SDL_ROUTE_NONE) ||
-        (loaded == NULL) || (loaded->data != route->data) ||
-        (loaded->data_size != route->data_size) ||
-        (loaded->asset_id != (u32)route->asset_id) ||
-        (dobj->mobj != NULL) || (owner == NULL) ||
-        (sNdsRendererAdapterStagePersistentActive == FALSE) ||
-        (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
-        (ndsRendererHardwareNoOracleEnabled() == FALSE))
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    /* The procedural visual templates need no route: the effect-tree owner
+     * latched the template for this GObj, and the body claims such a list
+     * before any loaded-file owner could -- its list lives in the arena, in
+     * no loaded file, so no earlier candidate can match it. The same tests,
+     * and the arena check whose failure the body reports instead. */
+    if ((sNdsRendererAdapterVisualEffectNativeActive != FALSE) &&
+        (sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+        (sNdsRendererAdapterImpactWaveNativeActive == FALSE) &&
+#if NDS_R2_REBIRTH_HALO_NATIVE
+        (sNdsRendererAdapterRebirthHaloNativeActive == FALSE) &&
+#endif
+        (sNdsRendererAdapterItemSubmitActive == FALSE) &&
+        (sNdsRendererAdapterStagePersistentActive != FALSE) &&
+        (dobj->dl == dl) && (dobj->child == NULL) &&
+        (ndsRendererHardwareNoOracleEnabled() != FALSE) &&
+        (ndsRelocFindLoadedFileContaining(dl, sizeof(*dl)) == NULL) &&
+        (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) != FALSE))
+    {
+        route_kind = NDS_SDL_ROUTE_VISUAL;
+        loaded = NULL;
+    }
+#endif
+    if ((route_kind == NDS_SDL_ROUTE_NONE) &&
+        ((route->dl != dl) || (route->route == NDS_SDL_ROUTE_NONE) ||
+         (loaded == NULL) || (loaded->data != route->data) ||
+         (loaded->data_size != route->data_size) ||
+         (loaded->asset_id != (u32)route->asset_id) ||
+         (dobj->mobj != NULL) || (owner == NULL) ||
+         (sNdsRendererAdapterStagePersistentActive == FALSE) ||
+         (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
+         (ndsRendererHardwareNoOracleEnabled() == FALSE)))
     {
         return FALSE;
     }
-    switch (route->route)
+    if (route_kind == NDS_SDL_ROUTE_NONE)
     {
+        route_kind = route->route;
+    }
+    switch (route_kind)
+    {
+    case NDS_SDL_ROUTE_VISUAL:
+        break;
     case NDS_SDL_ROUTE_CHARGE_SHOT:
         if ((owner->id != nGCCommonKindWeapon) ||
             (sNdsRendererAdapterItemSubmitActive != FALSE))
@@ -7409,7 +7442,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     {
 #if NDS_P2_ITEM_CORE
         ITStruct *ip;
-        const u32 item_route = (u32)route->route - NDS_SDL_ROUTE_ITEM;
+        const u32 item_route = route_kind - NDS_SDL_ROUTE_ITEM;
 
         if ((item_route >= (u32)nNDSStageDLItemRouteCount) ||
             (sNdsRendererAdapterItemSubmitActive == FALSE) ||
@@ -7471,7 +7504,44 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     ndsFighterDLDrawResetRuntimeRendererStats(render_stats);
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
 
-    if (route->route == NDS_SDL_ROUTE_CHARGE_SHOT)
+#if NDS_R2_IMPACT_WAVE_NATIVE
+    if (route_kind == NDS_SDL_ROUTE_VISUAL)
+    {
+        /* The body's effect-submit seeds, then its visual owner. */
+        if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+        {
+            render_stats->prim_color = sNdsRendererAdapterEffectPrimColor;
+        }
+        if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+        {
+            render_stats->env_color = sNdsRendererAdapterEffectEnvColor;
+        }
+        if (sNdsRendererAdapterEffectOtherModeValid != 0u)
+        {
+            render_stats->othermode_l = sNdsRendererAdapterEffectOtherModeL;
+        }
+        gNdsEffectDLSubmitOtherModeIn = render_stats->othermode_l;
+        handled = ndsRendererSubmitNativeVisualEffect(
+            sNdsRendererAdapterVisualEffectTemplate, &config, render_stats);
+        if (handled != FALSE)
+        {
+            gNdsVisualEffectNativeDrawCount++;
+        }
+        else
+        {
+            gNdsVisualEffectNativeDeclineCount++;
+            ndsStageRejectNativeRender(dobj, dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
+            /* Recorded with its own reason, as the body settles it. */
+            handled = TRUE;
+        }
+        gNdsEffectDLSubmitOtherModeOut = render_stats->othermode_l;
+        gNdsEffectDLSubmitCount++;
+        gNdsEffectDLPublishCount++;
+    }
+    else
+#endif
+    if (route_kind == NDS_SDL_ROUTE_CHARGE_SHOT)
     {
         handled = ndsRendererSubmitNativeSamusChargeShot(
             loaded->data, loaded->data_size, &config, render_stats);
@@ -7518,7 +7588,7 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
                 sNdsRendererAdapterItemOtherModeH[head];
         }
         const NDSStageDLItemRoute *item =
-            &sNdsStageDLItemRoutes[route->route - NDS_SDL_ROUTE_ITEM];
+            &sNdsStageDLItemRoutes[route_kind - NDS_SDL_ROUTE_ITEM];
 
         handled = (item->submit_rooted != NULL) ?
             item->submit_rooted(route->root, loaded->data,
