@@ -11954,21 +11954,84 @@ Vec3f *lbCommonReflect2D(Vec3f *a, Vec3f *b)
  * below is unchanged from lbcommon.c:321 and :340 -- including cos adding 90
  * degrees to the ANGLE before the multiply, which is not the same as adding
  * 0x400 to the index after it. */
+#include <nds/nds_r2_collision_fixed.h>
+
+/* P2-2p8 (2026-09-29): the same two expressions without soft float.
+ *
+ * `(s32)(x * 651.8986206F)` is ndsR2CfxAngleIndexBits' rounded integer
+ * product (proven equal to the float expression over every binary32 input
+ * whose product fits s32; the rest still evaluate the float expression), and
+ * `(f32)v * (1.0F / 32768.0F)` of a u16 table entry is exact -- float(v)
+ * with its exponent lowered by 15 -- so it is built from v's bits, with the
+ * negation a sign flip (zero included, as `-sin` of +0.0F is -0.0F). This
+ * TU is Thumb, where the 64-bit product and CLZ would be helper calls, so the
+ * shared core is ARM. On the gate these were ~70 calls and ~320 soft-float
+ * operations a frame. Cosine still adds its quarter turn to the angle in
+ * float first, exactly as before. */
+static u32 __attribute__((noinline, target("arm"), section(".itcm")))
+ndsLbCommonSinTableBits(f32 x)
+{
+    u32 bits;
+    s32 index;
+    u32 value;
+    u32 out = 0u;
+
+    __builtin_memcpy(&bits, &x, sizeof(bits));
+    if (ndsR2CfxAngleIndexBits(bits, &index) == 0)
+    {
+        index = (s32)(x * 651.8986206F);
+    }
+    index &= 0xFFF;
+    value = gSYSinTable[index & SINTABLE_MASK_ID];
+    if (value != 0u)
+    {
+        const u32 lead = (u32)__builtin_clz(value);
+
+        out = ((143u - lead) << 23) | (((value << lead) << 1) >> 9);
+    }
+    if ((index & 0x800) != 0)
+    {
+        out ^= 0x80000000u;
+    }
+    return out;
+}
+
+/* Same-ROM A/B word: 0 runs the previous float expressions. */
+volatile u32 gNdsLbCommonTrigInt __attribute__((used, section(".data"))) = 1u;
+
 f32 __attribute__((section(".itcm"))) lbCommonSin(f32 angle)
 {
-    s32 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
-    f32 sin = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
+    u32 bits;
+    f32 sin;
 
-    return (index & 0x800) ? -sin : sin;
+    if (gNdsLbCommonTrigInt == 0u)
+    {
+        s32 index = ((s32)(angle * 651.8986206F)) & 0xFFF;
+
+        sin = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
+        return (index & 0x800) ? -sin : sin;
+    }
+    bits = ndsLbCommonSinTableBits(angle);
+    __builtin_memcpy(&sin, &bits, sizeof(sin));
+    return sin;
 }
 
 f32 __attribute__((section(".itcm"))) lbCommonCos(f32 angle)
 {
-    s32 index =
-        ((s32)((angle + F_CST_DTOR32(90.0F)) * 651.8986206F)) & 0xFFF;
-    f32 cos = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
+    u32 bits;
+    f32 cos;
 
-    return (index & 0x800) ? -cos : cos;
+    if (gNdsLbCommonTrigInt == 0u)
+    {
+        s32 index =
+            ((s32)((angle + F_CST_DTOR32(90.0F)) * 651.8986206F)) & 0xFFF;
+
+        cos = (f32)gSYSinTable[index & SINTABLE_MASK_ID] * (1.0F / 32768.0F);
+        return (index & 0x800) ? -cos : cos;
+    }
+    bits = ndsLbCommonSinTableBits(angle + F_CST_DTOR32(90.0F));
+    __builtin_memcpy(&cos, &bits, sizeof(cos));
+    return cos;
 }
 
 static void ndsStageMPDownWaitLoopApplyRollTransN(GObj *fighter_gobj,

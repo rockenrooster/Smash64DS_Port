@@ -91,3 +91,17 @@ after one resync).
 one frame). P50 differs by 0.4K, P95 by 5.6K and P99 by 24.5K. A single-pair
 P95 delta under ~5K is inside that spread; P50 and band means are the stable
 figures for small changes.
+
+## Also banked: lbCommonSin/Cos without soft float
+
+`src/port/reloc_backend_compat_shims.c`: the port's `lbCommonSin`/`lbCommonCos`
+(~70 calls a gate frame) were a soft-float multiply, float->int, int->float and
+a second multiply each. The index is `ndsR2CfxAngleIndexBits` (above); the
+value `(f32)v * (1.0F / 32768.0F)` of a u16 table entry is exact, so it is built
+from v's bits (`sinbits_test.c`: all 65,536 entries and both signs match the
+float expression, zero's sign included). The shared core is ARM (this TU is
+Thumb) in ITCM; `ndsFighterDisplayContractProjectTarget` (368 B, which lab
+builds already evicted) and `ndsFtrLookAtOutputs` (64 B) left ITCM for it, so
+`build_lab`'s eviction step is now conditional. Same ROM, `gNdsLbCommonTrigInt`
+0 -> 1 (`ta0/ta1_gate`): P50 929,536 -> 928,960, SRC median -1.1K, P95
+1,274,112 -> 1,271,232 (inside the run-to-run spread); replay IDENTICAL.

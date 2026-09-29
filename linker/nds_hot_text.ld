@@ -101,7 +101,8 @@ SECTIONS {
 		 * below -- main-RAM functions at 2,400+ non-mem stall cycles a byte. */
 		*(.text.mpCollisionCheckExistLineID)
 		*(.text.ndsR2AObjLiveCount)
-		*(.text.ndsFtrLookAtOutputs)
+		/* ndsFtrLookAtOutputs (64 B, ~5.0K cycles/byte of rent) left 2026-09-29 for
+		 * the integer lbCommonSin/Cos A/B arm. */
 		*(.text.ndsR2CamMulQ)
 		*(.text.gcRunGObj)
 		*(.text.syVectorMag3D)
@@ -196,7 +197,9 @@ SECTIONS {
 		*(.text.ndsCoroutineSwap)
 		*(.text.ndsBaseMPProcessRunFloorCollisionAdjNewNULL)
 		*(.text.ndsRendererAdapterBeginParticleViewPass)
-		*(.text.ndsFighterDisplayContractProjectTarget)
+		/* ndsFighterDisplayContractProjectTarget (368 B) left 2026-09-29 for the
+		 * integer lbCommonSin/Cos core: the whole-match gate census puts it near the
+		 * bottom of ITCM rent (~5.2K cycles/byte), and lab builds already evicted it. */
 		*(.text.osSendMesg)
 		/* Third pack (2026-09-27 dmiss6 census): these seven for ftComputerProcDefault,
 		 * ndsBaseMPProcessCheckTestFloorCollision, osContStartReadData and fabsf. */
