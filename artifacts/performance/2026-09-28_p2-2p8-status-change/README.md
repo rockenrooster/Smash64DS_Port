@@ -95,3 +95,23 @@ corners 58K / 52K / 47K, run prepares 26K, root binds 25K, shade 24K, tint +
 readback 20K, the rest outside the list walk ~80K. Keys: Dream Land 39
 rebuilds of 23 distinct keys (16 repeats), Saffron 35 of 27. Removing every
 rebuild prices at -35K P95 on Dream Land, so a 20% cheaper rebuild is ~-6K.
+
+## Owed: six objects with no native owner (lab rosters)
+
+Six of nine full-content lab rosters record native failures (fail-closed, the
+object is not drawn); the gate roster records none. `gNdsNativeFailureLab`
+(runs `nf_*`), identity = GObj kind << 16 | asset id:
+
+| Object (asset, root) | Kind | Failures per match |
+|---|---|---|
+| Ness PK Fire pillar (NessSpecial3 336, root 0x870) | Item | DL 262, Castle 102, Yoshi's Island 36 |
+| Goldeen / Tosakinto (ITCommonObject 86, root 0xB618) | Item | Jungle 197 |
+| Bob-omb / BombHei (ITCommonObject 86, root 0x34C0) | Item | Zebes 108 |
+| Saffron stage weapon (StageYamabukiFile3 159, root 0x28A8) | Weapon | Saffron 76 |
+| NessSpecial2 (352, root 0x8E0) | Effect | Castle 12 |
+| SamusSpecial2 (349, root 0x930) | Effect | DL 3 |
+
+Each needs an owner in the pattern of `scripts/stages/generate_nds_native_*.py`
++ `src/nds/nds_native_*.exec.inc` + recognition in
+`src/port/renderer_adapter_stage.c`. Until then those frames also under-count
+draw cost.
