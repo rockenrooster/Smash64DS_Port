@@ -5129,6 +5129,58 @@ static s32 ndsRendererEntryEffectVertex(u32 corner,
     return TRUE;
 }
 
+/* P2-2p8 (2026-09-29): the generated tables are const, so the per-corner
+ * index checks the submit below runs before its first GX write prove the same
+ * thing on every draw. Sector Z's own Arwing draws eight FoxSpecial3 roots
+ * (~330 corners) on about half the match's frames, and that fence walked
+ * every corner of every root each time. A root's static half is now proven
+ * once and remembered here; the checks that depend on live state (materials,
+ * texture names, the traversal's modelview mask) still run on every draw.
+ * Same-ROM A/B word: gNdsEntryEffectStaticOnce (0 = prove every draw). */
+static u32 sNdsEntryEffectRootStaticOk[
+    (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
+volatile u32 gNdsEntryEffectStaticOnce __attribute__((used, section(".data"))) =
+    1u;
+
+/* ndsRendererEntryEffectVertex for a corner of a proven root. */
+static inline __attribute__((always_inline)) void
+ndsRendererEntryEffectVertexProven(u32 corner, NDSRendererInputVertex *out)
+{
+    const NDSEntryEffectPosition *position =
+        &sNdsEntryEffectPositions[sNdsEntryEffectCornerPosition[corner]];
+    const NDSEntryEffectColor *color =
+        &sNdsEntryEffectColors[sNdsEntryEffectCornerColor[corner]];
+
+    out->x = position->x;
+    out->y = position->y;
+    out->z = position->z;
+    out->s = sNdsEntryEffectS[sNdsEntryEffectCornerS[corner]];
+    out->t = sNdsEntryEffectT[sNdsEntryEffectCornerT[corner]];
+    out->r = color->r;
+    out->g = color->g;
+    out->b = color->b;
+    out->a = color->a;
+}
+
+/* ndsRendererHardwareVertexCoord(value, TRUE), inlined into the corner loop
+ * (the out-of-line copy was a call per coordinate, three per corner). */
+static inline __attribute__((always_inline)) v16
+ndsRendererEntryEffectCoord(s16 value)
+{
+    const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
+    s32 scaled = (s32)value << shift;
+
+    if (scaled > 32767)
+    {
+        return (v16)32767;
+    }
+    if (scaled < -32768)
+    {
+        return (v16)-32768;
+    }
+    return (v16)scaled;
+}
+
 /* DS-native landed entry-prop immutable presentation owner.
  *
  * Source ownership deliberately stops at the DObj: BattleShip continues to
@@ -5431,6 +5483,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 initial_othermode_l;
     u32 shield_variant = 0u;
     u32 ko_part = 0xffffffffu;
+    sb32 static_proven;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -5512,6 +5565,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
      * The old flat packet could only fail its contiguous corner bound; the
      * dictionary packet has more indices, so all of them are fenced here once
      * and the hot submit loop can remain branch-light. */
+    static_proven =
+        ((gNdsEntryEffectStaticOnce != 0u) &&
+         ((sNdsEntryEffectRootStaticOk[root_index >> 5] &
+           (1u << (root_index & 31u))) != 0u)) ? TRUE : FALSE;
     for (group_offset = 0u; group_offset < root->group_count; group_offset++)
     {
         const NDSEntryEffectGroup *group =
@@ -5521,6 +5578,36 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 override_index;
         u32 previous_override = 0xffffffffu;
 
+        if (static_proven != FALSE)
+        {
+            /* Only the checks that read live state. */
+            if ((group->material_slot != 0xffu) &&
+                ((materials == NULL) ||
+                 ((u32)group->material_slot >= material_count)))
+            {
+                return FALSE;
+            }
+            for (override_index = 0u;
+                 override_index < group->matrix_override_count;
+                 override_index++)
+            {
+                u32 source_root = sNdsEntryEffectMatrixOverrideRoot[
+                    (u32)group->matrix_override_first + override_index];
+
+                if ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
+                     (1u << (source_root & 31u))) == 0u)
+                {
+                    return FALSE;
+                }
+            }
+            if ((group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) &&
+                (owner_asset_id != 163u) &&
+                (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
+            {
+                return FALSE;
+            }
+            continue;
+        }
         if ((group->root_index != root_index) ||
             ((u32)group->first_vertex + corner_count >
              NDS_ENTRY_EFFECT_VERTEX_COUNT) ||
@@ -5588,6 +5675,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             return FALSE;
         }
+    }
+    if (static_proven == FALSE)
+    {
+        /* Every group's static half passed (a failure returned above). */
+        sNdsEntryEffectRootStaticOk[root_index >> 5] |=
+            1u << (root_index & 31u);
     }
 
     if (owner_asset_id == 84u)
@@ -6067,7 +6160,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
                     matrix_override_cursor++;
                 }
             }
-            if (ndsRendererEntryEffectVertex(vertex_index, &vertex) == FALSE)
+            if (static_proven != FALSE)
+            {
+                ndsRendererEntryEffectVertexProven(vertex_index, &vertex);
+            }
+            else if (ndsRendererEntryEffectVertex(vertex_index, &vertex) == FALSE)
             {
                 /* Prevalidation above makes this unreachable unless generated
                  * data is corrupted after the fence. End the open batch before
@@ -6137,9 +6234,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
             else
             {
                 glVertex3v16(
-                    ndsRendererHardwareVertexCoord(vtx->x, TRUE),
-                    ndsRendererHardwareVertexCoord(vtx->y, TRUE),
-                    ndsRendererHardwareVertexCoord(vtx->z, TRUE));
+                    ndsRendererEntryEffectCoord(vtx->x),
+                    ndsRendererEntryEffectCoord(vtx->y),
+                    ndsRendererEntryEffectCoord(vtx->z));
             }
         }
         if (cpu_projected_group != FALSE)

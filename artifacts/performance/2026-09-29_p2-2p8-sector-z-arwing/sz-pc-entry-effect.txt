@@ -1,0 +1,47 @@
+per-PC detail: ndsRendererSubmitNativeEntryEffect [0x0203c1f0, 0x0203e174) 8,068 bytes
+  167,883,155 cycles over 1,502 distinct PCs, 3.12% of the window
+
+        pc     cycles  %fn    insns  cyc/insn  mode  source  instruction
+----------  ---------  ---  -------  --------  ----  ------  -------------------------------------------------------
+0x0203d7cc  2,763,062  1.6  305,070      9.06  arm   ?       b	203d618 <ndsRendererSubmitNativeEntryEffect+0x1428>
+0x0203d7c8  2,440,568  1.5  305,070      8.00  arm   ?       str	r0, [ip, #1164]
+0x0203d548  1,856,547  1.1  305,113      6.08  arm   ?       beq	203d564 <ndsRendererSubmitNativeEntryEffect+0x1374>
+0x0203d564  1,813,181  1.1  305,114      5.94  arm   ?       ldr	r3, [sp, #76]
+0x0203d700  1,599,711  1.0  305,113      5.24  arm   ?       ldrsh	r5, [r5, r2]
+0x0203d70c  1,487,072  0.9  305,112      4.87  arm   ?       ldrb	ip, [lr, ip, lsl #2]
+0x0203d704  1,423,613  0.8  305,113      4.67  arm   ?       ldrsh	r6, [r1, #2]
+0x0203d798  1,356,269  0.8  305,072      4.45  arm   ?       bl	2020ee0 <ndsRendererHardwareVertexCoord.part.0>
+0x0203c4c8  1,350,401  0.8  305,329      4.42  arm   ?       ldr	r4, [pc, #3044]
+0x0203d544  1,328,104  0.8  305,113      4.35  arm   ?       str	r3, [r2, #1152]
+0x0203d69c  1,267,804  0.8  305,113      4.16  arm   ?       ldrh	r3, [r3, r0]
+0x0203c4c4  1,248,538  0.7  305,328      4.09  arm   ?       ldrh	r1, [r2, #2]!
+0x0203c498  1,240,011  0.7  305,328      4.06  arm   ?       cmp	r1, #206
+0x0203d490  1,203,698  0.7  271,584      4.43  arm   ?       bl	200c3a0 <ndsRendererHardwareLitShadeColorPrepared>
+0x0203d658  1,161,631  0.7  305,112      3.81  arm   ?       bls	203d678 <ndsRendererSubmitNativeEntryEffect+0x1488>
+0x0203d560  1,156,043  0.7  292,614      3.95  arm   ?       str	r3, [r2, #1160]
+0x0203d6a0  1,067,152  0.6  305,114      3.50  arm   ?       ldr	ip, [pc, #-1524]
+0x0203d710  1,062,654  0.6  305,112      3.48  arm   ?       ldrh	lr, [r0, r3]
+0x0203d6b4  1,059,404  0.6  305,112      3.47  arm   ?       ldrb	r2, [ip, r2]
+0x0203d6bc  1,020,788  0.6  305,112      3.35  arm   ?       ldrh	ip, [ip, r0]
+0x0203d6c0  1,008,193  0.6  305,113      3.30  arm   ?       ldr	r0, [pc, #-1544]
+0x0203d56c  1,001,542  0.6  305,112      3.28  arm   ?       beq	203d794 <ndsRendererSubmitNativeEntryEffect+0x15a4>
+0x0203c4a4    994,357  0.6  305,331      3.26  arm   ?       cmp	r1, #146
+0x0203c4ac    982,626  0.6  305,328      3.22  arm   ?       ldrh	r1, [ip, #2]!
+0x0203d7c4    957,223  0.6  305,070      3.14  arm   ?       str	r3, [ip, #1164]
+0x0203c4a0    933,626  0.6  305,328      3.06  arm   ?       ldrb	r1, [r3, #1]!
+0x0203c784    928,216  0.6   23,656     39.24  arm   ?       ldr	r6, [r2, #4]
+0x0203d760    921,897  0.5  305,112      3.02  arm   ?       bne	203d450 <ndsRendererSubmitNativeEntryEffect+0x1260>
+0x0203d4a0    919,699  0.5  271,584      3.39  arm   ?       beq	203d7d0 <ndsRendererSubmitNativeEntryEffect+0x15e0>
+0x0203c4d0    918,880  0.5  305,328      3.01  arm   ?       bls	203c494 <ndsRendererSubmitNativeEntryEffect+0x2a4>
+0x0203d7b0    915,245  0.5  305,070      3.00  arm   ?       bl	2020ee0 <ndsRendererHardwareVertexCoord.part.0>
+0x0203d7a4    915,210  0.5  305,070      3.00  arm   ?       bl	2020ee0 <ndsRendererHardwareVertexCoord.part.0>
+0x0203d6b8    912,365  0.5  305,114      2.99  arm   ?       ldr	ip, [pc, #-1540]
+0x0203d7e8    892,517  0.5  271,584      3.29  arm   ?       b	203d528 <ndsRendererSubmitNativeEntryEffect+0x1338>
+0x0203ca64    871,849  0.5   23,656     36.86  arm   ?       bne	203d17c <ndsRendererSubmitNativeEntryEffect+0xf8c>
+0x0203db60    870,737  0.5   22,587     38.55  arm   ?       beq	203db98 <ndsRendererSubmitNativeEntryEffect+0x19a8>
+0x0203d998    869,575  0.5   23,647     36.77  arm   ?       ldr	r3, [pc, #-2216]
+0x0203d6f4    850,362  0.5  305,112      2.79  arm   ?       ldrsh	r4, [r4, r1]
+0x0203d758    835,347  0.5  305,112      2.74  arm   ?       strb	r2, [sp, #181]
+0x0203c6d8    819,145  0.5    7,377    111.04  arm   ?       mov	r1, r6
+
+cyc/insn is the whole point: a row near 1.0 is doing work, a row far above it is waiting. Rank by cycles, then read the column that says which.

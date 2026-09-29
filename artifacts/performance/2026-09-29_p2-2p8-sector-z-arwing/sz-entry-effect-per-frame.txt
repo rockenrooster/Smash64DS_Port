@@ -1,0 +1,8 @@
+ndsRendererSubmitNativeEntryEffect ticks per profiled frame (builds/p2p8-prof-sz2, frames 100..1900)
+P25 0
+P50 19,686
+P75 93,934
+P90 94,808
+P95 100,449
+P99 113,924
+active runs (first region, length): [(1, 28), (125, 4), (192, 24), (347, 33), (396, 475), (911, 4), (1188, 16), (1207, 20), (1420, 381)]
