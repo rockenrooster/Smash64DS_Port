@@ -60,6 +60,12 @@ draw-side basis at the Arwing's own t), and the single path per coefficient set
 serves only the most recent; a small node table shared across streams is the
 next step. Sector Z also carries 119 native failures (owed).
 
+Tried and reverted: a shared node table (64 sets x 2 ways keyed on the
+coefficient set's generation, min and frac) in place of the single path per
+coefficient set. It reused fewer nodes on Sector Z (17,724-17,786 against
+20,184) and P95 came out 1,725,376-1,731,776 against the path's 1,708,864
+(`ntl*`, `nhl1_sz_g1`; a stronger hash changed nothing), so the path stays.
+
 ## Other findings from the same profile
 
 - Tier stall: `.main` code 36% non-memory stall, 39% memory stall; ~10.6K
@@ -73,3 +79,22 @@ next step. Sector Z also carries 119 native failures (owed).
 - `ndsR2CfxRowScales` ran three hardware square roots per call even when the
   caller (the hurtbox reject's `ndsP2HbInvSMin`) asks for neither output that
   reads them: volatile register traffic the compiler cannot remove.
+
+## Also banked: two waits that guarded nothing (`src/nds/nds_stage_gx.exec.inc`, `include/nds/nds_r2_collision_fixed.h`)
+
+- Stage GX spans: every span flush was followed by a full DMA0 drain, because
+  the next span's start set texture/alpha-test/fog first. Those are DISP3DCNT
+  and ALPHA_TEST_REF, rendering-engine registers outside the FIFO, so the
+  drain did not order anything. The whole-match profile charged that one
+  DMA0CNT poll 9.2K ticks a frame (968 cycles, 19 a frame). Now a run waits
+  only when the DMA in flight covers its own words, and a span start only when
+  an open Task 36 segment writes the FIFO. Same ROM, `gNdsStageGxOverlap`
+  0 -> 1: gate P95 1,273,536 -> 1,269,568 (`ov0/ov1_gate`), Yoshi's Island
+  1,461,376 -> 1,458,816, Mushroom 1,481,088 -> 1,480,960; replay IDENTICAL on
+  all three. The STG median did not move: the stage draw is geometry-engine
+  bound, so the wait mostly moves to the next flush.
+- `ndsR2CfxRowScales` skips the square root when neither output that reads it
+  was asked for (the hurtbox reject's `ndsP2HbInvSMin`): with the hardware
+  unit the root is volatile register traffic the compiler could not remove.
+  Three SQRTCNT sequences per call leave `ndsP2HbRejectPoints` (6 -> 3 SQRTCNT
+  accesses in its disassembly); no output changes.

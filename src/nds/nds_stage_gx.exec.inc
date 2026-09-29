@@ -20,6 +20,22 @@ static NDSStageGxPatch *sNdsStageGxPatches;
 static u32 *sNdsStageGxWords;
 /* Only the unsent span; ownership of DMA0 uses the existing renderer fence. */
 static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
+/* The last span handed to DMA0, [first, end) in words. While that DMA can
+ * still be running, only a run whose own words lie inside it has to wait
+ * before patching them.
+ *
+ * P2-2p8 (2026-09-28): every span flush used to be followed by a full drain,
+ * because the next span's start waited for DMA0 before setting texture, alpha
+ * test and fog. Those are DISP3DCNT / ALPHA_TEST_REF, rendering-engine
+ * registers outside the FIFO: draining first changes nothing about the
+ * command stream. The whole-match gate profile charged that one wait 9.2K
+ * ticks a frame (a 968-cycle DMA0CNT read, 19 a frame). Now the CPU patches
+ * the next runs while the geometry engine drains the previous span, and a
+ * wait remains only where a FIFO command follows (an open Task 36 segment's
+ * matrix pop) or a DMA would be re-armed (ndsStageGxFlush). Same-ROM A/B
+ * word: gNdsStageGxOverlap (0 = the old drain at every span start). */
+static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
+volatile u32 gNdsStageGxOverlap __attribute__((used, section(".data"))) = 1u;
 
 static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
@@ -308,6 +324,8 @@ static void ndsStageGxFlush(void)
     DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
     DMA_CR(0) = DMA_FIFO | sNdsStageGxWordCount;
     sNdsFighterPacketDmaPending = 1u;
+    sNdsStageGxDmaFirst = sNdsStageGxFirstWord;
+    sNdsStageGxDmaEnd = sNdsStageGxFirstWord + sNdsStageGxWordCount;
     sNdsStageGxWordCount = 0u;
     gNdsP2StageProgDmas++;
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
@@ -328,9 +346,15 @@ static void ndsStageGxAppend(const NDSStageGxRun *run,
     { ndsStageGxFlush(); }
     if (sNdsStageGxWordCount == 0u)
     {
-        /* Alpha-test registers are outside the FIFO. Drain the previous span
-         * before changing them; never merge across a hidden run or state edge. */
-        NDS_FIGHTER_PACKET_DMA_WAIT();
+        /* Alpha-test registers are outside the FIFO; never merge across a
+         * hidden run or state edge. Only an open Task 36 segment writes the
+         * FIFO here (its matrix mode and pop), and only that has to follow
+         * the previous span's DMA. */
+        if ((gNdsStageGxOverlap == 0u) ||
+            (sNdsNativeStageOwnerExecution.task36_segment_active != FALSE))
+        {
+            NDS_FIGHTER_PACKET_DMA_WAIT();
+        }
         ndsRendererNativeStageTask36EndSegment();
         ndsRendererHardwareEndBatch();
         glEnable(GL_TEXTURE_2D);
@@ -409,7 +433,16 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
     u64 near_bindings = ((u64)r->binding_lo | ((u64)r->binding_hi << 32)) &
         ~sNdsNativeStageOwnerExecution.rigid_binding_mask;
     sb32 near_boundary = FALSE;
-    NDS_FIGHTER_PACKET_DMA_WAIT();
+    /* This function writes nothing to the FIFO itself (its words reach it by
+     * ndsStageGxFlush's DMA, and the cold path's caller drains first), so it
+     * waits only when the DMA in flight may still be reading the words it is
+     * about to patch. */
+    if ((gNdsStageGxOverlap == 0u) ||
+        ((r->first_word < sNdsStageGxDmaEnd) &&
+         ((u32)r->first_word + r->word_count > sNdsStageGxDmaFirst)))
+    {
+        NDS_FIGHTER_PACKET_DMA_WAIT();
+    }
     while ((native->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z ||
             (native->flags & NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u) &&
            near_bindings != 0u)
