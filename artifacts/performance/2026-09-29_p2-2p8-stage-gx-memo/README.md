@@ -42,8 +42,6 @@ word the patch would have written. Over a full match on all nine VS stages
 material words and, where static no-Z/projection patches exist (Dream Land,
 Yoshi's Island), 1,750,128 and 2,326,960 projection words were kept; **0
 differ**. No declines.
-</content>
-</invoke>
 
 ## Billboards compose only the row they keep
 

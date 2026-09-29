@@ -45,5 +45,3 @@ with no stage change (2.7 KB of new BSS). Only same-ROM A/B figures are quoted.
 - **Hurtbox kernel** (Saffron profile `p2p8-prof-yb`): 2,300 cycles a test,
   20,535 tests a match in 379 frames; frames >= P95 average 66 tests (72K ticks).
   Half of a test is the joint world chain (compose, local build, slot walk).
-</content>
-</invoke>
