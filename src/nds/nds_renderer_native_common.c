@@ -5181,6 +5181,76 @@ ndsRendererEntryEffectCoord(s16 value)
     return (v16)scaled;
 }
 
+/* P2-2p8 (2026-09-29): entry-effect groups lit by the geometry engine.
+ *
+ * A lit group shaded every corner on the CPU
+ * (ndsRendererHardwareLitShadeColorPrepared) against a light direction the
+ * submit re-derived with soft float for every group. Sector Z's Arwing body is
+ * twenty such groups, ~300 corners, on about half the match's frames. The
+ * fighters moved the same formula onto light 0 (R2-03 E16); this does the same
+ * for a group the engine transforms itself:
+ *
+ *  - the direction is prepared once per root: model space, normalised to 127,
+ *    the vector the CPU dot used;
+ *  - it is stored as light 0 while the vector matrix is identity, and the
+ *    root's modelview then goes to the position matrix alone, so the engine
+ *    dots the untransformed source normal with that same vector and the
+ *    modelview's scale never enters;
+ *  - diffuse/ambient are the two source light colours at five bits, the
+ *    fighters' no-material mapping (ndsRendererR2MaterialChannel);
+ *  - each corner sends its normal (GFX_NORMAL) instead of a colour.
+ *
+ * Not exact: the engine's five-bit light arithmetic differs from the CPU's
+ * eight-bit clamp by a step or two of 31, the approximation every fighter
+ * already draws with. CPU-projected groups, ramp palettes and material-folded
+ * (PRIM x SHADE) groups keep the CPU shade.
+ *
+ * Same-ROM A/B word gNdsEntryEffectHwLight: 0 = the old path (direction per
+ * group, CPU shade), 1 = direction once per root (exact), 2 = engine light. */
+volatile u32 gNdsEntryEffectHwLight __attribute__((used, section(".data"))) =
+    2u;
+u32 gNdsEntryEffectHwLitGroups;
+u32 gNdsEntryEffectCpuLitGroups;
+
+#define NDS_ENTRY_EFFECT_LIGHT_COLORS \
+    (NDS_RENDERER_LIGHT_COLOR_1_MASK | NDS_RENDERER_LIGHT_COLOR_2_MASK)
+
+/* Defined after NDS_R2_NORMAL_PACK, below. */
+static inline u32 ndsRendererEntryEffectNormalWord(
+    const NDSRendererInputVertex *vtx);
+static inline u32 ndsRendererEntryEffectLightWord(
+    const NDSRendererHardwareLightDirection *direction);
+
+/* diffuse | ambient << 16 from the two source light colours; bit 15 clear, so
+ * the write leaves the vertex colour alone. */
+static inline u32 ndsRendererEntryEffectDiffuseAmbient(u32 light_1, u32 light_2)
+{
+    u32 diffuse = RGB15((light_1 >> 27) & 0x1fu, (light_1 >> 19) & 0x1fu,
+                        (light_1 >> 11) & 0x1fu);
+    u32 ambient = RGB15((light_2 >> 27) & 0x1fu, (light_2 >> 19) & 0x1fu,
+                        (light_2 >> 11) & 0x1fu);
+
+    return diffuse | (ambient << 16);
+}
+
+/* After the split load of the same modelview: light 0 is stored while the
+ * position and vector matrices are both identity, then the modelview is
+ * reloaded into the position matrix alone. The projection and the loader's
+ * cache (this submit's generation) still describe what the engine holds. */
+static void __attribute__((noinline)) ndsRendererEntryEffectLoadLitMatrices(
+    const NDSRendererMatrix20p12 *modelview,
+    const NDSRendererHardwareLightDirection *direction)
+{
+    ndsRendererHardwareEndBatch();
+    ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
+    MATRIX_IDENTITY = 0;
+    GFX_LIGHT_VECTOR = ndsRendererEntryEffectLightWord(direction);
+    GFX_LIGHT_COLOR = (u32)RGB15(31, 31, 31);
+    ndsRendererHardwareFighterSetMatrixMode(GL_POSITION);
+    ndsRendererHardwareFighterLoadModelviewWorldScaled(modelview);
+    ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
+}
+
 /* DS-native landed entry-prop immutable presentation owner.
  *
  * Source ownership deliberately stops at the DObj: BattleShip continues to
@@ -5484,6 +5554,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 shield_variant = 0u;
     u32 ko_part = 0xffffffffu;
     sb32 static_proven;
+    u32 hw_light_loaded = FALSE;
+    u32 last_dif_amb = 0xffffffffu;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -5951,6 +6023,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             &sNdsEntryEffectLightColors[group->light_state];
         u32 light_mask = sNdsEntryEffectLightMasks[group->light_state];
         s32 lit;
+        u32 hw_lit_group;
 
         /* The RSP transforms a vertex when G_VTX loads its cache slot.  A later
          * display list may then reuse that slot after the modelview changes.
@@ -6030,7 +6103,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
             gNdsEntryEffectWitness[2] = stats->env_color;
             gNdsEntryEffectWitness[3] = stats->othermode_l;
         }
-        if (lit != FALSE)
+        /* The direction depends on the battle light and this root's
+         * modelview, and no group changes either: once per root. */
+        if ((lit != FALSE) &&
+            ((gNdsEntryEffectHwLight == 0u) ||
+             ((light_direction_valid_mask[root_index >> 5] &
+               (1u << (root_index & 31u))) == 0u)))
         {
             ndsRendererHardwarePrepareLitDirection(
                 stats, config->initial_modelview,
@@ -6117,19 +6195,53 @@ s32 ndsRendererSubmitNativeEntryEffect(
         use_material_color = ndsRendererHardwareUseMaterialColor(stats);
         use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
         poly_fmt = ndsRendererHardwarePolyFmt(stats, polygon_alpha);
-        /* Lit groups are shaded on the CPU below, like the native fighter
-         * owner; POLY_FORMAT_LIGHT0 must stay absent even if a previous
-         * hardware-lit owner left a light vector in GX state. */
+        /* Lit groups are shaded on the CPU below unless the engine lights
+         * them (hw_lit_group, see gNdsEntryEffectHwLight); otherwise
+         * POLY_FORMAT_LIGHT0 must stay absent even if a previous hardware-lit
+         * owner left a light vector in GX state. */
         poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
+        hw_lit_group =
+            ((gNdsEntryEffectHwLight >= 2u) && (lit != FALSE) &&
+             (cpu_projected_group == FALSE) && (ramp_palette == 0u) &&
+             (use_material_color == FALSE) &&
+             ((stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK) != 0u) &&
+             ((stats->light_color_mask & NDS_ENTRY_EFFECT_LIGHT_COLORS) ==
+              NDS_ENTRY_EFFECT_LIGHT_COLORS)) ? TRUE : FALSE;
         if (cpu_projected_group != FALSE)
         {
             ndsRendererLoadHardwareMatrices(NULL, FALSE);
+            /* The next split load rewrites the vector matrix too. */
+            hw_light_loaded = FALSE;
         }
         else
         {
             ndsRendererLoadHardwareSplitMatrices(
                 config->initial_projection, config->initial_modelview,
                 matrix_generation);
+        }
+        if (hw_lit_group != FALSE)
+        {
+            u32 dif_amb = ndsRendererEntryEffectDiffuseAmbient(
+                stats->light_color_1, stats->light_color_2);
+
+            if (hw_light_loaded == FALSE)
+            {
+                ndsRendererEntryEffectLoadLitMatrices(
+                    config->initial_modelview,
+                    &light_direction_by_root[root_index]);
+                hw_light_loaded = TRUE;
+            }
+            if (dif_amb != last_dif_amb)
+            {
+                ndsRendererHardwareWriteDiffuseAmbient(dif_amb);
+                last_dif_amb = dif_amb;
+            }
+            poly_fmt |= (u32)POLY_FORMAT_LIGHT0;
+            gNdsEntryEffectHwLitGroups++;
+        }
+        else if (lit != FALSE)
+        {
+            gNdsEntryEffectCpuLitGroups++;
         }
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, texture_name, poly_fmt,
@@ -6173,7 +6285,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 return FALSE;
             }
 
-            if (lit != FALSE)
+            if (hw_lit_group != FALSE)
+            {
+                /* The engine lights the corner from its source normal. */
+                ndsRendererHardwareWriteNormalWord(
+                    ndsRendererEntryEffectNormalWord(vtx));
+                packed_color = 0u;
+            }
+            else if (lit != FALSE)
             {
                 if ((light_direction_valid_mask[source_root >> 5] &
                      (1u << (source_root & 31u))) == 0u)
@@ -6203,8 +6322,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
                     use_material_color, use_vertex_color,
                     vertex_color, TRUE, 0u);
             }
-            /* The ramp palette already holds the whole colour combiner. */
-            glColor((ramp_palette != 0u) ? 0x7fffu : packed_color);
+            if (hw_lit_group == FALSE)
+            {
+                /* The ramp palette already holds the whole colour combiner. */
+                glColor((ramp_palette != 0u) ? 0x7fffu : packed_color);
+            }
             if (use_texture != FALSE)
             {
                 /* Already converted from N64 s10.5 + tile/scale state to the
@@ -6520,6 +6642,27 @@ static s32 ndsRendererR2NormalComponent(s32 source)
     if (scaled > 511) { scaled = 511; }
     if (scaled < -512) { scaled = -512; }
     return scaled;
+}
+
+/* The entry-effect owner's two words in the same units: a corner's source
+ * normal, and light 0 from a prepared direction (model space, normalised to
+ * 127), negated for the engine's max(0, -L.N). */
+static inline u32 ndsRendererEntryEffectNormalWord(
+    const NDSRendererInputVertex *vtx)
+{
+    return NDS_R2_NORMAL_PACK(
+        (int)ndsRendererR2NormalComponent((s32)(s8)vtx->r),
+        (int)ndsRendererR2NormalComponent((s32)(s8)vtx->g),
+        (int)ndsRendererR2NormalComponent((s32)(s8)vtx->b));
+}
+
+static inline u32 ndsRendererEntryEffectLightWord(
+    const NDSRendererHardwareLightDirection *direction)
+{
+    return NDS_R2_NORMAL_PACK(
+        (int)ndsRendererR2NormalComponent(-direction->x),
+        (int)ndsRendererR2NormalComponent(-direction->y),
+        (int)ndsRendererR2NormalComponent(-direction->z));
 }
 
 static void ndsRendererNativeBuildDenseShadeWords(

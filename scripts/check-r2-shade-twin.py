@@ -95,8 +95,15 @@ TINT_REPLAY_MARKER = "reserved[0]"
 # not one of the reported face/body rows, so it is left alone here rather than
 # changed unverified.  If the halo is ever brought under the fighter fold, it
 # must move into EXPECTED_SITES and clamp with the others.
+#
+# The entry-effect owner (P2-2p8, 2026-09-29) lights its groups on the engine
+# with the same no-material mapping as the fighters' unfolded case: it admits a
+# group to the engine light only when use_material_color is FALSE, so there is
+# no prim to fold and nothing to clamp; a PRIM x SHADE group keeps the CPU
+# shade. Its model is the entry props and Sector Z's Arwing, not a fighter.
 KNOWN_UNFOLDED_SITES = (
     "ndsRendererSubmitNativeRebirthHalo",
+    "ndsRendererEntryEffectDiffuseAmbient",
 )
 
 

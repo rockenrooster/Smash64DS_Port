@@ -54,10 +54,63 @@ Lab ROM on Sector Z, same ROM, A/B word `gNdsEntryEffectStaticOnce` 0 -> 1
 1,698,944**, P99 2,030,528 -> 2,015,104; entry draws 8,188 both, 0 fallbacks;
 replay IDENTICAL.
 
+## Banked: the entry props lit by the geometry engine
+
+`src/nds/nds_renderer_native_common.c`. Every lit group of the owner shaded each
+corner on the CPU (`ndsRendererHardwareLitShadeColorPrepared`) against a light
+direction the submit re-derived with soft float for every group (~17 calls a
+frame of `ndsRendererHardwarePrepareLitDirection` in `sz-float-callers.txt`).
+
+- The direction is prepared once per root: the battle light and the root's
+  modelview are its only inputs, and no group changes either. Exact.
+- A lit group the engine transforms itself (not CPU-projected, no ramp palette,
+  no PRIM x SHADE fold, both light colours and the direction present) is lit
+  by light 0. The prepared direction (model space, normalised to 127, the
+  vector the CPU dot used) is stored while the vector matrix is identity, and
+  the modelview then goes to the position matrix alone
+  (`ndsRendererEntryEffectLoadLitMatrices`), so the engine dots the source
+  normal with that vector and the modelview's scale never enters. Diffuse and
+  ambient are the two source light colours at five bits, the fighters'
+  no-material mapping, and each corner sends `GFX_NORMAL` instead of a colour.
+  Not exact: the engine's five-bit light arithmetic, the approximation every
+  fighter already draws with (R2-03 E16).
+
+Same ROM, A/B word `gNdsEntryEffectHwLight` (0 = old path, 1 = direction once
+per root, 2 = engine light), 1,972 samples each (`hwlight-ab.txt`):
+
+| run | P50 | P95 | P99 |
+|---|---:|---:|---:|
+| Sector Z lab, 0 | 1,227,456 | 1,703,488 | 2,021,376 |
+| Sector Z lab, 1 | 1,225,664 | 1,694,272 | 2,007,232 |
+| Sector Z lab, 2 | **1,218,944** | **1,681,664** | **1,991,296** |
+| gate, 0 | 927,552 | 1,260,288 | 1,455,552 |
+| gate, 2 | 926,720 | 1,260,672 | 1,456,320 |
+
+Sector Z: arm 2 lit 19,805 groups on the engine and none on the CPU; 8,188
+entry draws and 0 fallbacks in every arm; native failures 119 in every arm
+(the stage's standing count); heap low-water 163,568 in every arm. The gate
+(no Arwing; the entry props of DK, Samus, Link and Kirby) is flat: 296 groups
+moved, 0 native failures. Replay digest IDENTICAL for every pair.
+
+Pixels (`artifacts/visibility/2026-09-29-sz-hwlight/`, same ROM, the word
+poked at battle start, exact presented-frame lock):
+`gate-f60-crop-cpu-hw-diff.png` is DK's entry barrel, arm 0 / arm 2 / the
+difference x20: the two are indistinguishable, and the 873 differing pixels
+sit on the barrel's shaded side, at most 9 of 255 (one five-bit step).
+`f900-crop-cpu-hw-diff.png` is Sector Z's Arwing entering at the left edge
+(81 pixels, at most 9 of 255). The Arwing is off screen at frames 300, 460,
+520, 700, 1300 and 1500, where the arms are pixel-identical.
+
+`scripts/check-r2-shade-twin.py` lists the new DIF_AMB site
+(`ndsRendererEntryEffectDiffuseAmbient`) as a known unfolded site. The
+checker's four other failures (the lean path's `ndsFtrLeanEntryResetShade` /
+`ndsFighterPacketApplyTintPrims`) predate this change: they fail identically
+on the `8bc4684098a` source.
+
 ## Next
 
-The per-corner work that remains is the CPU light and the immediate-mode
-emit. The fighters already moved the same shade formula
-(`ambient + diffuse * max(0, N.L) / 127`) onto the DS geometry engine's
-lighting (R2-03 E16, `NDS_R2_FIGHTER_HW_LIGHT`); with that, a root's corners
-are static and can be recorded once and replayed by DMA.
+With the light on the engine, a lit root's corners are static: the normal,
+the texture coordinate and the vertex come from const tables alone. What
+remains per corner is the immediate-mode decode and emit; a root can be
+recorded once as packed GX words and replayed by DMA, keyed on the few
+inherited states its groups read.
