@@ -1,0 +1,10 @@
+br0a_gate  P50 925,376 P95 1,261,312 P99 1,456,704 2VB 84.3% SRCmed 412,096 STGmed 165,056 FTRmed 144,576 bandSRC 627,096 bandW 1,243,985 {'nf': 0, 'low': 358604}
+br1a_gate  P50 922,176 P95 1,256,000 P99 1,464,000 2VB 85.1% SRCmed 412,032 STGmed 162,304 FTRmed 144,384 bandSRC 624,904 bandW 1,240,201 {'nf': 0, 'low': 358604}
+br0b_gate  P50 924,992 P95 1,256,640 P99 1,456,384 2VB 84.2% SRCmed 411,968 STGmed 164,992 FTRmed 144,576 bandSRC 626,061 bandW 1,243,150 {'nf': 0, 'low': 358604}
+br1b_gate  P50 922,560 P95 1,254,592 P99 1,463,680 2VB 85.0% SRCmed 412,032 STGmed 162,304 FTRmed 144,384 bandSRC 624,085 bandW 1,239,680 {'nf': 0, 'low': 358604}
+br0ca_gate P50 924,480 P95 1,256,320 P99 1,464,832 2VB 84.6% SRCmed 412,160 STGmed 164,608 FTRmed 144,768 bandSRC 626,347 bandW 1,243,392 {'nf': 0, 'low': 358604}
+br1ca_gate P50 923,200 P95 1,258,240 P99 1,460,672 2VB 84.9% SRCmed 412,032 STGmed 161,856 FTRmed 144,704 bandSRC 625,563 bandW 1,240,620 {'nf': 0, 'low': 358604}
+br0cb_gate P50 924,544 P95 1,256,064 P99 1,466,304 2VB 84.5% SRCmed 412,096 STGmed 164,608 FTRmed 144,832 bandSRC 625,148 bandW 1,243,306 {'nf': 0, 'low': 358604}
+br1cb_gate P50 922,432 P95 1,255,040 P99 1,464,832 2VB 85.0% SRCmed 412,416 STGmed 161,856 FTRmed 144,768 bandSRC 624,240 bandW 1,240,220 {'nf': 0, 'low': 358604}
+digest br0ca vs br1ca: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest br0ca vs br1cb: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)

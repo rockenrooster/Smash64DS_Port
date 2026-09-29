@@ -4029,6 +4029,9 @@ volatile u32 gNdsTask103MatRecalcCount;
 volatile u32 gNdsTask103MatBindings;
 #endif
 
+volatile u32 gNdsStageBillboardRow3 __attribute__((used, section(".data"))) =
+    1u;
+
 static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     CObj *cobj, NDSRendererAdapterNativeStageWorkspace *workspace,
     u32 binding_index
@@ -4059,8 +4062,36 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     gNdsTask103MatBindings++;
 #endif
     /* Preserve the source multiplication order when a camera owns both parts.
-     * Battle cameras normally supply LookAt*Persp in projection alone. */
-    if (camera->modelview_valid != FALSE)
+     * Battle cameras normally supply LookAt*Persp in projection alone.
+     *
+     * P2-2p8 (2026-09-29): an MVP-recalc binding (kind != 0: the stage's
+     * billboards, 11 a frame on Dream Land) has rows 0-2 replaced by
+     * ApplyMvpRecalc below, which reads only the translation row of this
+     * product -- so only that row is formed, bit for bit the full product's.
+     * Not the persp-scale kind: its scale-conversion refusal returns with the
+     * product itself as the result. Same-ROM A/B word gNdsStageBillboardRow3
+     * (0 = the full products). */
+    if ((kind != 0u) &&
+        (kind != NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND) &&
+        (gNdsStageBillboardRow3 != 0u))
+    {
+        const NDSRendererMatrix20p12 *lhs = &world;
+
+        if (camera->modelview_valid != FALSE)
+        {
+            ndsRendererMtxMulRow3_20p12(lhs, &camera->modelview, out);
+            lhs = out;
+        }
+        if (camera->projection_valid != FALSE)
+        {
+            ndsRendererMtxMulRow3_20p12(lhs, &camera->projection, out);
+        }
+        else if (camera->modelview_valid == FALSE)
+        {
+            *out = world;
+        }
+    }
+    else if (camera->modelview_valid != FALSE)
     {
         ndsRendererMtxMul20p12(&world, &camera->modelview, out);
         if (camera->projection_valid != FALSE)

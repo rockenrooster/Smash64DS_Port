@@ -1647,6 +1647,9 @@ extern volatile u32 gNdsNativeKirbyHatTableMisses[2];
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
                                     NDSRendererMatrix20p12 *dst);
+void ndsRendererMtxMulRow3_20p12(const NDSRendererMatrix20p12 *lhs,
+                                 const NDSRendererMatrix20p12 *rhs,
+                                 NDSRendererMatrix20p12 *out);
 void ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
                             const NDSRendererMatrix20p12 *rhs,
                             NDSRendererMatrix20p12 *out);

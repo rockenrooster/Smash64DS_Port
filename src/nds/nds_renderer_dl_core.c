@@ -315,6 +315,32 @@ ndsRendererMtxMul20p12(const NDSRendererMatrix20p12 *lhs,
     *out = temp;
 }
 
+/* Row 3 of lhs x rhs, exactly as ndsRendererMtxMul20p12 forms it, into
+ * out's row 3 (rows 0-2 untouched; out may be lhs). For a product whose
+ * orientation rows the caller replaces anyway (the stage's MVP-recalc
+ * billboards keep only the translation row). */
+void ndsRendererMtxMulRow3_20p12(const NDSRendererMatrix20p12 *lhs,
+                                 const NDSRendererMatrix20p12 *rhs,
+                                 NDSRendererMatrix20p12 *out)
+{
+    const s32 a0 = lhs->m[3][0];
+    const s32 a1 = lhs->m[3][1];
+    const s32 a2 = lhs->m[3][2];
+    const s32 a3 = lhs->m[3][3];
+    u32 col;
+
+    for (col = 0; col < 4u; col++)
+    {
+        s64 sum = (s64)a0 * rhs->m[0][col];
+
+        sum += (s64)a1 * rhs->m[1][col];
+        sum += (s64)a2 * rhs->m[2][col];
+        sum += (s64)a3 * rhs->m[3][col];
+        out->m[3][col] = ndsRendererClampS64ToS32(
+            ndsRendererRoundShiftS64(sum, NDS_RENDERER_DS_MTX_FRAC_BITS));
+    }
+}
+
 void NDS_R2_ITCM_PACK2_EVICTED_PLAIN_CODE
 ndsRendererMtxMulAffine20p12(const NDSRendererMatrix20p12 *lhs,
                                   const NDSRendererMatrix20p12 *rhs,

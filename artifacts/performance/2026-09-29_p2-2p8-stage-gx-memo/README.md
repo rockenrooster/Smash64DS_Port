@@ -44,3 +44,16 @@ Yoshi's Island), 1,750,128 and 2,326,960 projection words were kept; **0
 differ**. No declines.
 </content>
 </invoke>
+
+## Billboards compose only the row they keep
+
+`src/port/renderer_adapter_stage.c` + `ndsRendererMtxMulRow3_20p12`
+(`src/nds/nds_renderer_dl_core.c`): an MVP-recalc stage binding (Dream Land's
+11 camera billboards a frame) had its world multiplied by the camera in full,
+then `ApplyMvpRecalc` replaced rows 0-2 and kept only the translation row.
+Only that row is formed now, with the full product's arithmetic (so the kept
+row is the same bits); the persp-scale kind, whose refusal path returns the
+product itself, keeps the full multiply. Same-ROM A/B word
+`gNdsStageBillboardRow3`, two builds (`billboard-row3-ab.txt`; the second adds
+the persp-scale exclusion): STG median 165,024 -> 162,304 and 164,608 ->
+161,856; WORK-H P50 -2.8K / -1.7K; P95 inside spread; replay IDENTICAL.
