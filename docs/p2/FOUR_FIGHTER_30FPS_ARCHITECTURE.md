@@ -872,7 +872,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   1,683,584 -> 1,657,984) and FoxSpecial3's resolved group state kept across
   draws while the inherited state holds (`28aaf4f9df8`, 1,653,248 ->
   1,617,792). Sector Z lab P95 1,711,488 -> ~1,618K over the four; all exact
-  except the engine light. Receipt `2026-09-29_p2-2p8-sector-z-arwing`.
+  except the engine light. Then the composed CPU matrix only for roots a
+  CPU-projected corner reads (`f0434c38944`, -2.5K) and entry models admitted
+  ahead of the general stage submit (`3d87fe00a10`, -2K, inside spread).
+  Receipt `2026-09-29_p2-2p8-sector-z-arwing`.
+- **09-29 priced and refuted** (same-ROM A/Bs, all reverted): three lean
+  spares (materializations 39 -> 33, P95 flat, heap -124 KB), a per-box
+  hurtbox memo (40% hits, P95 flat: the first test per joint is the cost), a
+  lean-kernel skip for unchanged fighters (5% of draws), and a Q12 kernel
+  compose (FTR +6.6K: slower than the exact form). Attribution kept: a lean
+  materialization is ~386K ticks (-35K gate P95 if removed, diffuse), Dream
+  Land's stage is prepare 80K + commits 105K for 6,914 GX words, Sector Z and
+  Saffron have no rigid stage set. Receipt `2026-09-29_p2-2p8-refuted-levers`.
 
 ## 7. Found along the way
 

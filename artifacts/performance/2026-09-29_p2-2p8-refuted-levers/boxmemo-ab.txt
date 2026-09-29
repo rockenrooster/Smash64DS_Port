@@ -1,0 +1,5 @@
+bm0a_gate  P50 929,472 P95 1,271,360 P99 1,506,752 2VB 83.9% SRCmed 414,016 STGmed 169,088 FTRmed 144,192 bandSRC 630,217 bandW 1,252,116 {'nf': 0, 'low': 358092, 'Rejects': 13867, 'Passes': 286, 'gNdsP2HbLocalRejects': 373}
+bm1a_gate  P50 929,216 P95 1,272,384 P99 1,510,080 2VB 83.8% SRCmed 413,312 STGmed 169,024 FTRmed 144,256 bandSRC 630,234 bandW 1,251,892 {'nf': 0, 'low': 358092, 'Rejects': 13867, 'Passes': 286, 'gNdsP2HbLocalRejects': 373}
+bm0b_gate  P50 929,344 P95 1,272,768 P99 1,506,432 2VB 83.9% SRCmed 414,400 STGmed 169,088 FTRmed 144,320 bandSRC 630,686 bandW 1,253,326 {'nf': 0, 'low': 358092, 'Rejects': 13867, 'Passes': 286, 'gNdsP2HbLocalRejects': 373}
+bm1b_gate  P50 929,024 P95 1,270,784 P99 1,454,144 2VB 83.8% SRCmed 413,312 STGmed 169,088 FTRmed 144,448 bandSRC 629,485 bandW 1,249,827 {'nf': 0, 'low': 358092, 'Rejects': 13867, 'Passes': 286, 'gNdsP2HbLocalRejects': 373}
+memo hits 5609 of 14153 tests; decisions identical (rejects 13867, passes 286, local 373); digest IDENTICAL; reverted (no gain; memo-off arm itself +11K P95 vs g0a from layout)

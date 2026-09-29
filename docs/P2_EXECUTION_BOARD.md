@@ -73,7 +73,7 @@ selector retired, NDL default on. Shipping-like `8062C536` CSS previews exact.
 Receipts: `2026-09-26_p2-2p8-{phase3-residency,phase2-particle-ab}`. Owed: particle
 Task49/lifecycle, world-cache retirement, integrated gates. All-VS `9F69CA39` KEEP.
 `7E0B1C7F` CSS free 200,656 B. Owner 09-26: no subagents.
-MF2 check passes 1,570 clips/29 raw exceptions; scoped audit recorded in receipt.
+MF2 check passes (1,570 clips/29 raw exceptions); audit in receipt.
 `FB299B25`: 2,043 presents/Results; low-water 9,672 B, reserve RED. Reload passes.
 A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
 MF2 worst bank697,760 B unlinked; Kirby copy engagement still owed.
@@ -81,7 +81,7 @@ MF2 worst bank697,760 B unlinked; Kirby copy engagement still owed.
 0BD4523E replay exact;141 BGM refills, no audio failures, arena +20,480 B.
 AUD P95 6,528; WORK-H P95 2.625M/18.97 FPS, RED. Mixed audio identifies BGM.
 HeavyF7443068 gains16,384 B; admission still5,904 B short, plus later play.
-A8 FGM: ARM7 fills + 160 KiB arena landed 09-27 (FGM cache below).
+A8 FGM: ARM7 fills + 160 KiB arena landed 09-27.
 **Solo 09-26/27** (receipts `2026-09-2{6,7}_p2-2p8-*`, all replay identical):
 compact packet layout reverted (`BC3500EA` P95 1,955,392, was 2,626,368);
 edge-only ROM bounce (1,892,160); FGM LRU/aligned/envelopes + ARM7 async fills
@@ -91,7 +91,7 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange blocks; HUD digest; lab clocks out; DTCM hot stack/sine/scalars; stage GX + packs in ITCM; int->float convs; DTCM-stack subtrees; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, Yoshi clouds, S1-S4, elastic cache, compact maps, R1, hit fetch; 09-29: spline reuse, GX overlap, pose step, int trig, hurtbox table/local: gate 928,000/1,263,808; SZ Arwing x4 (P95 -94K). Owed: 6 native owners.
+MP f32 cache reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange blocks; HUD digest; lab clocks out; DTCM hot stack/sine/scalars; stage GX + packs in ITCM; int->float convs; DTCM-stack subtrees; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, Yoshi clouds, S1-S4, elastic cache, compact maps, R1, hit fetch; 09-29: spline reuse, GX overlap, pose step, int trig, hurtbox table/local: gate 928,000/1,263,808; SZ Arwing x6 (P95 -99K); 4 refuted (`..._refuted-levers`). Owed: 6 native owners.
 **Constraint**: CSS reserve >=183,072 B; owner route 253,904 free (09-27).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

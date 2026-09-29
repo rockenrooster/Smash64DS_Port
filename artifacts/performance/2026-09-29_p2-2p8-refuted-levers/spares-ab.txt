@@ -1,0 +1,8 @@
+g0a_gate   P50 926,912 P95 1,260,032 P99 1,454,336 2VB 84.5% SRCmed 412,928 STGmed 166,784 FTRmed 144,640 bandSRC 622,261 bandW 1,242,894 {'nf': 0, 'low': 361932}
+sp1a_gate  P50 929,984 P95 1,264,832 P99 1,472,320 2VB 83.9% SRCmed 413,568 STGmed 166,656 FTRmed 145,664 bandSRC 627,345 bandW 1,248,039 {'nf': 0, 'low': 358860}
+sp1b_gate  P50 930,048 P95 1,263,296 P99 1,471,104 2VB 84.0% SRCmed 413,888 STGmed 166,656 FTRmed 145,664 bandSRC 625,322 bandW 1,247,790 {'nf': 0, 'low': 358860}
+sp3a_gate  P50 931,520 P95 1,264,448 P99 1,470,656 2VB 83.5% SRCmed 414,144 STGmed 166,656 FTRmed 145,728 bandSRC 628,508 bandW 1,249,931 {'nf': 0, 'low': 234988}
+sp3b_gate  P50 931,200 P95 1,264,064 P99 1,471,872 2VB 83.5% SRCmed 414,080 STGmed 166,656 FTRmed 145,600 bandSRC 628,806 bandW 1,250,494 {'nf': 0, 'low': 234988}
+sp1a_gate {'materializations': 39, 'spare_hits': 19, 'spare_parks': 26, 'spare_allocs': 4, 'spare_alloc_refused': 0, 'key_distinct': 23, 'materialize_ticks': 14967040, 'gNdsTaskmanGeneralHeapFreeMin': 358860}
+sp3a_gate {'materializations': 33, 'spare_hits': 27, 'spare_parks': 20, 'spare_allocs': 11, 'spare_alloc_refused': 0, 'key_distinct': 23, 'materialize_ticks': 12700480, 'gNdsTaskmanGeneralHeapFreeMin': 234988}
+digest g0a vs sp1a/sp3a/sp3b: IDENTICAL x3; reverted
