@@ -5519,9 +5519,11 @@ static u32 ndsRendererHardwareMergeTextureParams(u32 params)
     return current;
 }
 
-/* Back in ITCM (2026-09-27): _arm_addsubsf3.o left for the port int->float
- * conversions, and the texture-bind path is materialization/hit-frame work. */
-static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareApplyTextureParams(u32 params)
+/* Main RAM again (2026-09-28): the whole-match gate census ranks this and
+ * ndsRendererHardwareBindTextureName at the bottom of ITCM rent (~1.6K and
+ * ~2.9K cycles/byte), and the pose engine's whole-frame clock step needed
+ * their 284 bytes. */
+static void __attribute__((noinline)) ndsRendererHardwareApplyTextureParams(u32 params)
 {
     if (((sNdsRendererGXStateShadow.valid_mask &
           NDS_RENDERER_GX_STATE_TEXTURE_PARAMS) != 0u) &&
@@ -5574,7 +5576,7 @@ _Static_assert(
     sizeof(sNdsRendererStageTextureSites) <= (12u * 1024u),
     "stage texture-site plans must stay below 12 KiB");
 
-static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareBindTextureName(
+static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name);
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -5835,7 +5837,7 @@ static u32 ndsRendererHardwareFogStateKey(const NDSRendererStats *stats)
            ((stats->fog_color & 0xfffu) << 20);
 }
 
-static void __attribute__((noinline, section(".itcm"))) ndsRendererHardwareBindTextureName(
+static void __attribute__((noinline)) ndsRendererHardwareBindTextureName(
     NDSRendererStats *stats,
     u32 texture_name)
 {

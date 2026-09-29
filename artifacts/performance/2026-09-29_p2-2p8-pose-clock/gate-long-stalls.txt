@@ -1,0 +1,42 @@
+frames 1801 over 327; instructions averaging >= 100.0 cycles: 281,452 ticks/frame, 483,014 ticks per over-gate frame
+  ticks/fr  over/fr   avg   pc        symbol / instruction
+  248,931  442,785 312313  01fffd34  armWaitForIrq | mcr	15, 0, r0, cr7, cr0, {4}
+    9,193    9,198    968  01ff8d40  ndsStageGxDraw | ldr	r3, [fp, #184]	@ 0xb8
+    3,080    3,174   1685  01ff9ca8  ndsFtrLeanPacketSubmit | ldr	r3, [ip]
+    1,620    1,610    417  02040c24  ndsRendererCommitNativeStageSegment | ldr	r4, [pc, #620]	@ 2040e98 <ndsRendererCommitNativeStageSegment+0xfe0>
+    1,062    1,059    298  02040c84  ndsRendererCommitNativeStageSegment | ldr	r2, [pc, #688]	@ 2040f3c <ndsRendererCommitNativeStageSegment+0x1084>
+      601      683    278  02040c30  ndsRendererCommitNativeStageSegment | beq	2040c70 <ndsRendererCommitNativeStageSegment+0xdb8>
+      547      591   1058  02101b4e  oamUpdate | ldrh	r3, [r2, #0]
+      473      549    331  01fffd28  armContextLoad | ldm	r0, {r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, sl, fp, ip, sp, lr}^
+      369      408    285  020830cc  ndsFtrLeanRun | b.n	208323e <ndsFtrLeanRun+0x9ce>
+      296      295    217  0208ff2a  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #628]	@ (20901a0 <ndsFighterDisplayContractSubmit+0x358>)
+      293      401    415  0201fb78  ndsRendererFlushWhispyNativePacket | ldr	r3, [r1, #184]	@ 0xb8
+      259      238    241  02040c9c  ndsRendererCommitNativeStageSegment | ldr	r2, [pc, #668]	@ 2040f40 <ndsRendererCommitNativeStageSegment+0x1088>
+      252      265    218  0208ff38  ndsFighterDisplayContractSubmit | ldr	r3, [r3, #0]
+      213      243    206  0208ff5c  ndsFighterDisplayContractSubmit | ldr	r3, [r6, #0]
+      202      221    202  0208313a  ndsFtrLeanRun | ldr	r2, [r4, r3]
+      197      186    196  0208ff86  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #568]	@ (20901c0 <ndsFighterDisplayContractSubmit+0x378>)
+      179      171    109  020f93b8  ndsCoroutineSwap | ldm	r1, {r4, r5, r6, r7, r8, r9, sl, fp}
+      177      188    187  02040cc0  ndsRendererCommitNativeStageSegment | ldr	r3, [ip, #3212]	@ 0xc8c
+      167      193    199  0208fefc  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #636]	@ (209017c <ndsFighterDisplayContractSubmit+0x334>)
+      143      132    169  0208313c  ndsFtrLeanRun | adds	r2, #1
+      141      213    124  0206d334  ndsRendererAdapterGetFrameCameraMatrices | ldr	r2, [r3, #32]
+      140      150    166  020905a8  ndsFtDisplayMainProcDisplayOnHotStack | ldr	r3, [pc, #92]	@ (2090608 <ndsFtDisplayMainProcDisplayOnHotStack+0x60>)
+      139      163    163  020900fc  ndsFighterDisplayContractSubmit | ldr	r3, [r6, #0]
+      137      199    124  0206d354  ndsRendererAdapterGetFrameCameraMatrices | ldr	r2, [r3, #64]	@ 0x40
+      134      143    155  01ffeb64  ndsFtrLookAtInputs | ldr	r3, [r3, #0]
+      133      114    181  0208fefe  ndsFighterDisplayContractSubmit | ldr	r0, [pc, #640]	@ (2090180 <ndsFighterDisplayContractSubmit+0x338>)
+      129      118    179  0209010e  ndsFighterDisplayContractSubmit | ldr	r0, [r5, r0]
+      120      131    185  020902dc  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #352]	@ (2090440 <ndsFighterDisplayContractSubmit+0x5f8>)
+      119      203    165  0207367c  ndsRendererAdapterPrepareInitialMatrices | ldr	r0, [sp, #44]	@ 0x2c
+      118      132    159  0209041c  ndsFighterDisplayContractSubmit | adds	r3, #64	@ 0x40
+      117      191   1057  02101b30  oamUpdate | ldrh	r3, [r2, #0]
+      116      124    132  0208fe5c  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #748]	@ (209014c <ndsFighterDisplayContractSubmit+0x304>)
+      116      124    156  0208ffa2  ndsFighterDisplayContractSubmit | ldr	r2, [r2, #32]
+      114      128    197  0209030a  ndsFighterDisplayContractSubmit | beq.n	20903de <ndsFighterDisplayContractSubmit+0x596>
+      112      144    185  0208ff1c  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #632]	@ (2090198 <ndsFighterDisplayContractSubmit+0x350>)
+      110      116    169  020900fa  ndsFighterDisplayContractSubmit | ?
+      110      119    153  0209009a  ndsFighterDisplayContractSubmit | ldr	r3, [pc, #388]	@ (2090220 <ndsFighterDisplayContractSubmit+0x3d8>)
+      106      193    149  02057ef8  ndsRendererInitStats | ldr	ip, [pc, #32]	@ 2057f20 <ndsRendererInitStats+0x50>
+      104      108    141  0209fc18  ndsBaseFTDisplayMainProcDisplay | ldr	r3, [r0, r3]
+      101       98    177  0208ff9c  ndsFighterDisplayContractSubmit | ldr	r2, [pc, #556]	@ (20901cc <ndsFighterDisplayContractSubmit+0x384>)

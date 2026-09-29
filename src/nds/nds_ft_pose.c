@@ -1307,6 +1307,76 @@ static inline void ndsFtPoseClearRunEntry(NdsFtPose *pose, u32 e)
     }
 }
 
+/* The whole-frame clock step (P2-2p8, 2026-09-28).
+ *
+ * At speed 1.0 a joint whose clock holds whole frames steps by integer
+ * arithmetic that binary32 performs exactly (every integer below 2^24 is
+ * representable), and a wait of w >= 2 leaves w - 1 > 0, so ndsFtPoseParse
+ * would return right after its step. The whole-match gate profile counted
+ * ~135 parser calls a frame, most of them exactly that: a nine-register call
+ * and two soft-float adds to count a joint down. This takes such a tick
+ * without entering the parser -- the same wait, frame and published GObj
+ * frame bits, from integer operations. Anything else (another speed, a
+ * fraction, a sign, a sentinel state, a wait that reaches zero) goes to
+ * ndsFtPoseParse unchanged. Same-ROM A/B word: gNdsFtPoseWholeStep. */
+volatile u32 gNdsFtPoseWholeStep __attribute__((used, section(".data"))) = 1u;
+
+/* `bits` as a non-negative whole number below 2^24; 0 when it is not one. */
+static inline u32 ndsFtPoseWholeValue(u32 bits, u32 *value)
+{
+    const u32 exponent = bits >> 23; /* the sign bit makes a negative >= 256 */
+    u32 shift;
+    u32 mantissa;
+
+    if (bits == 0u)
+    {
+        *value = 0u;
+        return 1u;
+    }
+    if ((exponent < 127u) || (exponent > 150u))
+    {
+        return 0u;
+    }
+    shift = 150u - exponent;
+    mantissa = (bits & 0x7fffffu) | 0x800000u;
+    if ((mantissa & ((1u << shift) - 1u)) != 0u)
+    {
+        return 0u;
+    }
+    *value = mantissa >> shift;
+    return 1u;
+}
+
+/* The binary32 bits of a whole number in [1, 2^24], exactly. */
+static inline u32 ndsFtPoseWholeBits(u32 value)
+{
+    const u32 lead = (u32)__builtin_clz(value);
+
+    return ((158u - lead) << 23) | (((value << lead) << 1) >> 9);
+}
+
+static inline u32 ndsFtPoseWholeStep(NdsFtPose *pose, NdsFtPoseJoint *joint,
+                                     const DObj *dobj)
+{
+    u32 wait;
+    u32 frame;
+
+    if ((gNdsFtPoseWholeStep == 0u) || (pose->speed_bits != 0x3f800000u) ||
+        (ndsR2FloatBits(dobj->anim_wait) !=
+         ndsR2FloatBits(NDS_FT_POSE_RUNNING)) ||
+        (ndsFtPoseWholeValue(joint->wait_bits, &wait) == 0u) ||
+        (wait < 2u) ||
+        (ndsFtPoseWholeValue(joint->frame_bits, &frame) == 0u))
+    {
+        return 0u;
+    }
+    joint->wait_bits = ndsFtPoseWholeBits(wait - 1u);
+    joint->frame_bits = ndsFtPoseWholeBits(frame + 1u);
+    pose->gobj_frame_bits = joint->frame_bits;
+    pose->gobj_frame_pending = 1u;
+    return 1u;
+}
+
 /* The compact running-entry mask owns 64 walk entries. A future fighter with a
  * wider source hierarchy must remain correct rather than silently dropping
  * joints, so keep the old complete scan as a cold fail-open path. The standing
@@ -1341,7 +1411,7 @@ ndsFtPoseRunWideFallback(NdsFtPose *pose, Vec3f *translate_scales,
             continue;
         }
         gNdsFtPoseJointTicks++;
-        if (advance != 0u)
+        if ((advance != 0u) && (ndsFtPoseWholeStep(pose, joint, dobj) == 0u))
         {
             ndsFtPoseParse(pose, joint, dobj);
         }
@@ -1461,7 +1531,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
             continue;
         }
         gNdsFtPoseJointTicks++;
-        if (advance != 0u)
+        if ((advance != 0u) && (ndsFtPoseWholeStep(pose, joint, dobj) == 0u))
         {
             ndsFtPoseParse(pose, joint, dobj);
         }

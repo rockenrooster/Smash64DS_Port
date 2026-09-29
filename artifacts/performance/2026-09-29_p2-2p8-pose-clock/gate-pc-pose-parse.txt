@@ -1,0 +1,56 @@
+per-PC detail: ndsFtPoseParse [0x020b14a0, 0x020b26c0) 4,640 bytes
+  54,994,455 cycles over 878 distinct PCs, 1.25% of the window
+
+        pc     cycles  %fn    insns  cyc/insn  mode  source  instruction
+----------  ---------  ---  -------  --------  ----  ------  -----------------------------------------
+0x020b15cc  2,898,737  5.3  239,805     12.09  arm   ?       pop	{r4, r5, r6, r7, r8, r9, sl, fp, pc}
+0x020b14b0  2,197,331  4.0  243,873      9.01  arm   ?       push	{r4, r5, r6, r7, r8, r9, sl, fp, lr}
+0x020b14d4  1,874,036  3.4  231,826      8.08  arm   ?       ldr	r5, [r0, #60]
+0x020b153c  1,748,088  3.2  103,634     16.87  arm   ?       ldrb	r5, [r4]
+0x020b14d0  1,521,618  2.8  243,875      6.24  arm   ?       beq	20b21f4 <ndsFtPoseParse+0xd54>
+0x020b1558  1,360,592  2.5  103,635     13.13  arm   ?       add	pc, pc, r3, lsl #2
+0x020b1540  1,283,977  2.3  103,634     12.39  arm   ?       ldr	r3, [pc, #3876]
+0x020b14e0    913,440  1.7  231,826      3.94  arm   ?       bl	1ffe55c <__aeabi_fadd>
+0x020b14cc    866,036  1.6  243,873      3.55  arm   ?       ldr	r4, [r1, #32]
+0x020b150c    853,128  1.6  231,826      3.68  arm   ?       bgt	20b15c8 <ndsFtPoseParse+0x128>
+0x020b14a4    782,774  1.4  244,070      3.21  arm   ?       ldr	r3, [r2, #116]
+0x020b1554    719,176  1.3  103,634      6.94  arm   ?       ldrh	r3, [r3, r5]
+0x020b14a0    716,546  1.3  244,070      2.94  arm   ?       ldr	ip, [pc, #4028]
+0x020b14f4    695,478  1.3  231,826      3.00  arm   ?       bl	1ffe55c <__aeabi_fadd>
+0x020b1b28    630,107  1.1  176,508      3.57  arm   ?       beq	20b1afc <ndsFtPoseParse+0x65c>
+0x020b19e4    575,069  1.0   66,208      8.69  arm   ?       beq	20b1a30 <ndsFtPoseParse+0x590>
+0x020b1ab8    528,822  1.0  100,395      5.27  arm   ?       strh	r2, [r5, #16]
+0x020b14a8    489,850  0.9  244,070      2.01  arm   ?       cmp	r3, ip
+0x020b1a9c    474,216  0.9  100,407      4.72  arm   ?       ldrsh	r0, [fp], #4
+0x020b1a7c    472,467  0.9   66,208      7.14  arm   ?       b	20b1b20 <ndsFtPoseParse+0x680>
+0x020b1aec    456,462  0.8  100,407      4.55  arm   ?       bne	20b220c <ndsFtPoseParse+0xd6c>
+0x020b14b8    415,363  0.8  243,873      1.70  arm   ?       str	r2, [sp, #12]
+0x020b14d8    390,667  0.7  231,826      1.69  arm   ?       ldr	r1, [r1, #28]
+0x020b2220    381,023  0.7   79,855      4.77  arm   ?       b	20b1af0 <ndsFtPoseParse+0x650>
+0x020b14f8    344,192  0.6  231,826      1.48  arm   ?       mov	r3, #1
+0x020b1a90    322,671  0.6   84,356      3.83  arm   ?       add	r9, r6, #1
+0x020b1ad0    310,062  0.6  100,407      3.09  arm   ?       cmp	r2, #255
+0x020b1b1c    308,924  0.6  176,508      1.75  arm   ?       bne	20b1560 <ndsFtPoseParse+0xc0>
+0x020b1b30    307,438  0.6  100,407      3.06  arm   ?       cmp	r2, #255
+0x020b1ae0    306,788  0.6  100,407      3.06  arm   ?       orrne	r2, r2, r1, lsl r6
+0x020b19d8    295,414  0.5   66,208      4.46  arm   ?       ldrh	lr, [r2, #26]
+0x020b14bc    275,305  0.5  243,873      1.13  arm   ?       mvn	r2, #16777216
+0x020b14c0    275,293  0.5  243,873      1.13  arm   ?       cmp	r3, r2
+0x020b14c4    275,207  0.5  243,873      1.13  arm   ?       mov	fp, r1
+0x020b14c8    275,143  0.5  243,873      1.13  arm   ?       mov	sl, r0
+0x020b1b34    274,736  0.5  100,407      2.74  arm   ?       bne	20b1a80 <ndsFtPoseParse+0x5e0>
+0x020b2214    261,408  0.5   79,855      3.27  arm   ?       blx	20b4900 <ndsR2FtAnimRecipQ30>
+0x020b15c8    260,740  0.5  239,807      1.09  arm   ?       add	sp, sp, #36
+0x020b14dc    258,896  0.5  231,826      1.12  arm   ?       add	r0, r5, #-2147483648
+0x020b14fc    253,141  0.5  231,826      1.09  arm   ?       cmp	r4, #0
+0x020b1500    252,651  0.5  231,826      1.09  arm   ?       str	r0, [fp, #32]
+0x020b1504    252,477  0.5  231,826      1.09  arm   ?       str	r0, [sl, #64]
+0x020b1508    252,445  0.5  231,826      1.09  arm   ?       str	r3, [sl, #68]
+0x020b1ab4    249,644  0.5  100,395      2.49  arm   ?       ldrsh	r0, [r4, #2]
+0x020b14ac    246,906  0.4  244,070      1.01  arm   ?       bxeq	lr
+0x020b14b4    244,035  0.4  243,873      1.00  arm   ?       sub	sp, sp, #36
+0x020b14e4    231,829  0.4  231,827      1.00  arm   ?       mov	r1, r4
+0x020b14e8    231,826  0.4  231,826      1.00  arm   ?       mov	r4, r0
+0x020b14ec    231,826  0.4  231,826      1.00  arm   ?       mov	r0, r5
+0x020b14f0    231,826  0.4  231,826      1.00  arm   ?       str	r4, [fp, #28]
+
