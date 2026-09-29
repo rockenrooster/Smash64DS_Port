@@ -869,6 +869,22 @@ try {
         )
     }
     if ($FirstPacketFault) {
+        # The raw-path emitters exist only where NDS_FIGHTER_LEGACY_EXEC=1 (R1
+        # retired them from the P2 targets); a break on a symbol the ELF does
+        # not link would end gdb's batch script at that line.
+        $rawEmitters = @(& $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] } |
+            Where-Object { $_ -like 'ndsRendererNativeEmitProductionRaw*Run' })
+        foreach ($emitter in @('ndsRendererNativeEmitProductionRawTexturedRun',
+                               'ndsRendererNativeEmitProductionRawUntexturedRun')) {
+            if ($rawEmitters -contains $emitter) {
+                $tag = if ($emitter -like '*Untextured*') { 'raw-untextured' } else { 'raw-textured' }
+                $gdbLines += @(
+                    "break $emitter if sNdsFighterPacketRecording != 0",
+                    'commands', 'silent',
+                    ('printf "FIRSTFAULT=' + $tag + ' frame=%u battle_slot=%d root=%u run=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.current_root, run_index'),
+                    'detach', 'quit', 'end')
+            }
+        }
         $gdbLines += @(
             'break ndsFighterPacketTryReplay if gNdsBattlePlayablePacingPresentedFrames >= 65',
             'commands', 'silent',
@@ -882,14 +898,6 @@ try {
             'commands', 'silent',
             'printf "FIRSTFAULT=split frame=%u battle_slot=%d root=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.current_root',
             'bt 20',
-            'detach', 'quit', 'end',
-            'break ndsRendererNativeEmitProductionRawTexturedRun if sNdsFighterPacketRecording != 0',
-            'commands', 'silent',
-            'printf "FIRSTFAULT=raw-textured frame=%u battle_slot=%d root=%u run=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.current_root, run_index',
-            'detach', 'quit', 'end',
-            'break ndsRendererNativeEmitProductionRawUntexturedRun if sNdsFighterPacketRecording != 0',
-            'commands', 'silent',
-            'printf "FIRSTFAULT=raw-untextured frame=%u battle_slot=%d root=%u run=%u\n", gNdsBattlePlayablePacingPresentedFrames, sNdsFighterPacketRecorder.packet - sNdsFighterPackets, sNdsFighterPacketRecorder.current_root, run_index',
             'detach', 'quit', 'end',
             'break ndsFighterPacketLoadGxComposedRecord if input->projection_matrix == 0 || input->gx_seed == 0 || (input->gx_local_count != 0 && input->gx_locals == 0)',
             'commands', 'silent',

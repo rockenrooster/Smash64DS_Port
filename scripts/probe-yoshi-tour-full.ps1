@@ -221,7 +221,7 @@ try {
     }
     if ($DebugContractCapture) {
         $commands += @(
-            'tbreak src/port/renderer_adapter_fighter.c:4962 if gNdsYoshiBugTourPhase == 7 && fp->nds_slot == 0',
+            'tbreak src/port/renderer_adapter_fighter.c:4995 if gNdsYoshiBugTourPhase == 7 && fp->nds_slot == 0',
             'continue',
             'set $ycroot = (DObj *)fighter_gobj->obj',
             'set $ycj9 = fp->joints[9]',
