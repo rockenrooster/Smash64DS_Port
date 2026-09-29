@@ -7166,9 +7166,40 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #define ndsRendererAdapterSubmitStageDLImpl ndsRendererAdapterSubmitStageDL
 #define NDS_LAB_SDL_MARK(i) ((void)0)
 #endif
+
+/* P2-2p8 (2026-09-29): entry models first, ahead of the general submit.
+ * The general submit is ~29 KB with a prologue that initialises dozens of
+ * per-owner locals, and it paid all of that before its first statement handed
+ * an entry model to its generated owner -- eight times a frame for Sector Z's
+ * Arwing. The admission now runs in this small frame and the general body is
+ * entered only for what it declines; a candidate the owner refuses records
+ * its failure there exactly as before. Same-ROM A/B word gNdsStageDLEntryFirst
+ * (0 = the body admits, as before). */
+volatile u32 gNdsStageDLEntryFirst __attribute__((used, section(".data"))) = 1u;
+
+static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
+    DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode);
+
 static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
                                                  GObj *camera_gobj,
                                                  u32 initial_geometry_mode)
+{
+    if ((dobj == NULL) || (dl == NULL))
+    {
+        return;
+    }
+    if ((gNdsStageDLEntryFirst != 0u) &&
+        (ndsRendererAdapterTryNativeEntryEffect(
+             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
+    {
+        return;
+    }
+    ndsRendererAdapterSubmitStageDLBody(dobj, dl, camera_gobj,
+                                        initial_geometry_mode);
+}
+
+static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
+    DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
     NDSRelocLoadedFile *loaded;
     NDSRendererConfig config = {0};
@@ -7409,10 +7440,12 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
         return;
     }
 
-    /* Entry models execute their generated native owners. Unhandled required
-     * roots below report a native failure; no interpreter is available. */
-    if (ndsRendererAdapterTryNativeEntryEffect(
-            dobj, dl, camera_gobj, initial_geometry_mode) != FALSE)
+    /* Entry models execute their generated native owners (admitted by the
+     * caller unless gNdsStageDLEntryFirst is 0). Unhandled required roots
+     * below report a native failure; no interpreter is available. */
+    if ((gNdsStageDLEntryFirst == 0u) &&
+        (ndsRendererAdapterTryNativeEntryEffect(
+             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
     {
         return;
     }

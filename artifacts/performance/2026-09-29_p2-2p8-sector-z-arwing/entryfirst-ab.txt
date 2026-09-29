@@ -1,0 +1,6 @@
+ef0_sz_g1  P50 1,182,976 P95 1,615,360 P99 1,926,976 2VB 42.0% SRCmed 571,648 STGmed 138,112 FTRmed 149,952 bandSRC 794,368 bandW 1,610,844 {'nf': 119, 'low': 157168, 'gNdsEntryEffectNativeDrawCount': 8188, 'gNdsEntryEffectNativeFallbackCount': 0}
+ef1_sz_g1  P50 1,182,144 P95 1,613,440 P99 1,922,496 2VB 42.4% SRCmed 571,712 STGmed 138,048 FTRmed 150,016 bandSRC 792,117 bandW 1,606,916 {'nf': 119, 'low': 157168, 'gNdsEntryEffectNativeDrawCount': 8188, 'gNdsEntryEffectNativeFallbackCount': 0}
+ef1b_sz_g1 P50 1,181,440 P95 1,612,928 P99 1,923,264 2VB 42.4% SRCmed 572,352 STGmed 138,048 FTRmed 149,952 bandSRC 795,366 bandW 1,606,925 {'nf': 119, 'low': 157168, 'gNdsEntryEffectNativeDrawCount': 8188, 'gNdsEntryEffectNativeFallbackCount': 0}
+ef0b_sz_g1 (second control) failed to start: melonDS did not open the ARM9 GDB listener (five emulators up)
+digest ef0 vs ef1: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest ef0 vs ef1b: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)

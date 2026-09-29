@@ -172,6 +172,17 @@ first CPU-projected group; the Arwing's never do. A/B word
 1,182,080 / 1,182,080 -> 1,181,312 / 1,180,992, P95 1,614,208 / 1,612,416 ->
 1,611,712 / 1,611,712; replay IDENTICAL.
 
+## Banked: entry models admitted ahead of the general stage submit
+
+`src/port/renderer_adapter_stage.c`: the general stage submit (~29 KB) paid
+its prologue before its first statement handed an entry model to the
+generated owner -- eight times a frame for the Arwing. The admission now runs
+in a small wrapper and the body is entered only for what it declines. A/B
+word `gNdsStageDLEntryFirst` (`entryfirst-ab.txt`; the second control failed
+to start): P50 1,182,976 -> 1,182,144 / 1,181,440, P95 1,615,360 ->
+1,613,440 / 1,612,928 -- inside run-to-run spread, kept as non-negative;
+replay IDENTICAL.
+
 ## Next
 
 Per root, the owner still pays its adapter (admission, the DObj world matrix,
