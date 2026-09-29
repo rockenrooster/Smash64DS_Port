@@ -161,6 +161,17 @@ Z lab P50/P95/P99 1,206,272 / 1,653,248 / 1,969,792 -> **1,185,856 /
 1,617,792 / 1,928,896**; 8 recordings, 7,416 replays; two-VBlank 40.3% ->
 41.7%; native failures 119 both; replay IDENTICAL.
 
+## Banked: the composed CPU matrix only where a corner reads it
+
+`src/nds/nds_renderer_native_common.c`: every root composed modelview x
+projection at submit, but only CPU-projected corners read it -- the root's own
+no-Z or cross-matrix groups, or a later root's cross-matrix corners naming it
+(fixed by the generated override table). Other roots now compose on their
+first CPU-projected group; the Arwing's never do. A/B word
+`gNdsEntryEffectLazyComposed`, two pairs (`lazycomposed-ab.txt`): Sector Z P50
+1,182,080 / 1,182,080 -> 1,181,312 / 1,180,992, P95 1,614,208 / 1,612,416 ->
+1,611,712 / 1,611,712; replay IDENTICAL.
+
 ## Next
 
 Per root, the owner still pays its adapter (admission, the DObj world matrix,

@@ -5300,6 +5300,41 @@ typedef struct NDSEntryEffectStateRoot
 } NDSEntryEffectStateRoot;
 
 static NDSEntryEffectStateRoot sNdsEntryEffectStateRoots[NDS_ENTRY_STATE_ROOTS];
+
+/* P2-2p8 (2026-09-29): a root's composed (modelview x projection) CPU matrix
+ * is read only by CPU-projected corners -- its own no-Z or cross-matrix
+ * groups, or a later root's cross-matrix corners that name it. The roots such
+ * corners name are fixed by the generated override table; any other root
+ * composes on its first CPU-projected group, and most never have one (Sector
+ * Z's Arwing: eight roots a frame). Same-ROM A/B word gNdsEntryEffectLazyComposed
+ * (0 = compose every root at submit). */
+volatile u32 gNdsEntryEffectLazyComposed __attribute__((used, section(".data"))) =
+    1u;
+static u32 sNdsEntryEffectOverrideSourceMask[
+    (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
+static u8 sNdsEntryEffectOverrideSourceReady;
+
+static u32 ndsRendererEntryEffectIsOverrideSource(u32 root_index)
+{
+    if (sNdsEntryEffectOverrideSourceReady == 0u)
+    {
+        u32 i;
+
+        for (i = 0u; i < NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT; i++)
+        {
+            u32 source = sNdsEntryEffectMatrixOverrideRoot[i];
+
+            if (source < NDS_ENTRY_EFFECT_ROOT_COUNT)
+            {
+                sNdsEntryEffectOverrideSourceMask[source >> 5] |=
+                    1u << (source & 31u);
+            }
+        }
+        sNdsEntryEffectOverrideSourceReady = 1u;
+    }
+    return ((sNdsEntryEffectOverrideSourceMask[root_index >> 5] &
+             (1u << (root_index & 31u))) != 0u) ? 1u : 0u;
+}
 static NDSEntryEffectGroupState
     sNdsEntryEffectStateGroups[NDS_ENTRY_STATE_GROUPS];
 
@@ -5682,6 +5717,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 state_ok = TRUE;
     u32 state_replayed = FALSE;
     u32 state_light_written = 0u;
+    u32 composed_ready = FALSE;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -6110,9 +6146,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
     ndsRendererHardwareEndBatch();
     sNdsRendererEntryEffectModelview[root_index] = *config->initial_modelview;
-    ndsRendererMtxMul20p12(
-        config->initial_modelview, config->initial_projection,
-        &sNdsRendererEntryEffectComposed[root_index]);
+    if ((gNdsEntryEffectLazyComposed == 0u) ||
+        (ndsRendererEntryEffectIsOverrideSource(root_index) != 0u))
+    {
+        ndsRendererMtxMul20p12(
+            config->initial_modelview, config->initial_projection,
+            &sNdsRendererEntryEffectComposed[root_index]);
+        composed_ready = TRUE;
+    }
     sNdsRendererEntryEffectModelviewValidMask[root_index >> 5] |=
         1u << (root_index & 31u);
     matrix_generation = ndsRendererNextMatrixGeneration();
@@ -6530,6 +6571,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
             ndsRendererLoadHardwareMatrices(NULL, FALSE);
             /* The next split load rewrites the vector matrix too. */
             hw_light_loaded = FALSE;
+            if (composed_ready == FALSE)
+            {
+                ndsRendererMtxMul20p12(
+                    config->initial_modelview, config->initial_projection,
+                    &sNdsRendererEntryEffectComposed[root_index]);
+                composed_ready = TRUE;
+            }
         }
         else
         {
