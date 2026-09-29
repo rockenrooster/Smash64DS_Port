@@ -1,0 +1,2725 @@
+== ndsRendererAdapterTryNativeEntryEffect [0207f180,02080048) cycles 25,344,421
+0207f180       64174      9025    7.11  push	{r4, r5, r6, r7, lr}
+0207f182        9047      9025    1.00  mov	r6, r9
+0207f184      136140      9024   15.09  mov	r5, r8
+0207f186        9024      9024    1.00  mov	lr, fp
+0207f188        9024      9024    1.00  mov	r7, sl
+0207f18a       36096      9024    4.00  push	{r5, r6, r7, lr}
+0207f18c      456242      9024   50.56  ldr	r4, [pc, #672]	@ (207f430 <ndsRendererAdapterTryNativeEntryEffect+0x2b0>)
+0207f18e       51732      9025    5.73  movs	r6, r0
+0207f190        9024      9024    1.00  add	sp, r4
+0207f192        9024      9024    1.00  movs	r5, r1
+0207f194        9024      9024    1.00  mov	r8, r2
+0207f196        9024      9024    1.00  movs	r1, #0
+0207f198        9024      9024    1.00  movs	r2, #52	@ 0x34
+0207f19a        9024      9024    1.00  add	r0, sp, #56	@ 0x38
+0207f19c      197292      9024   21.86  mov	r9, r3
+0207f19e        9024      9024    1.00  blx	1ffd924 <memset>
+0207f1a0      209066      9024   23.17  ?
+0207f1a2        9024      9024    1.00  cmp	r6, #0
+0207f1a4       18048      9024    2.00  bne.n	207f1a8 <ndsRendererAdapterTryNativeEntryEffect+0x28>
+0207f1a8        9024      9024    1.00  ldr	r7, [pc, #648]	@ (207f434 <ndsRendererAdapterTryNativeEntryEffect+0x2b4>)
+0207f1aa      573084      9024   63.51  ldr	r4, [r7, #4]
+0207f1ac       59613      9024    6.61  cmp	r4, #0
+0207f1ae        9024      9024    1.00  beq.n	207f216 <ndsRendererAdapterTryNativeEntryEffect+0x96>
+0207f1b0        9024      9024    1.00  movs	r3, #148	@ 0x94
+0207f1b2        9024      9024    1.00  lsls	r3, r3, #6
+0207f1b4        9024      9024    1.00  adds	r3, r4, r3
+0207f1b6        9024      9024    1.00  cmp	r3, r5
+0207f1b8       18008      9024    2.00  bne.n	207f1bc <ndsRendererAdapterTryNativeEntryEffect+0x3c>
+0207f1ba        2898        40   72.45  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1bc      220930      8985   24.59  ldr	r3, [pc, #632]	@ (207f438 <ndsRendererAdapterTryNativeEntryEffect+0x2b8>)
+0207f1be       17968      8984    2.00  adds	r3, r4, r3
+0207f1c0       15956      8984    1.78  cmp	r3, r5
+0207f1c2      190310      8984   21.18  bne.n	207f1c6 <ndsRendererAdapterTryNativeEntryEffect+0x46>
+0207f1c4        1040        40   26.00  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1c6        8947      8945    1.00  ldr	r3, [pc, #628]	@ (207f43c <ndsRendererAdapterTryNativeEntryEffect+0x2bc>)
+0207f1c8       17888      8944    2.00  adds	r3, r4, r3
+0207f1ca        8944      8944    1.00  cmp	r3, r5
+0207f1cc       17848      8944    2.00  bne.n	207f1d0 <ndsRendererAdapterTryNativeEntryEffect+0x50>
+0207f1ce         120        40    3.00  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1d0      151344      8904   17.00  ldr	r3, [pc, #620]	@ (207f440 <ndsRendererAdapterTryNativeEntryEffect+0x2c0>)
+0207f1d2       59568      8904    6.69  adds	r3, r4, r3
+0207f1d4        8904      8904    1.00  cmp	r3, r5
+0207f1d6       26632      8904    2.99  bne.n	207f1da <ndsRendererAdapterTryNativeEntryEffect+0x5a>
+0207f1d8         120        40    3.00  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1da      200336      8864   22.60  ldr	r3, [pc, #616]	@ (207f444 <ndsRendererAdapterTryNativeEntryEffect+0x2c4>)
+0207f1dc      130256      8865   14.69  adds	r3, r4, r3
+0207f1de        8864      8864    1.00  cmp	r3, r5
+0207f1e0      177239      8864   20.00  bne.n	207f1e4 <ndsRendererAdapterTryNativeEntryEffect+0x64>
+0207f1e2        1584        18   88.00  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1e4        8846      8846    1.00  ldr	r3, [pc, #608]	@ (207f448 <ndsRendererAdapterTryNativeEntryEffect+0x2c8>)
+0207f1e6       17692      8846    2.00  adds	r3, r4, r3
+0207f1e8        8846      8846    1.00  cmp	r3, r5
+0207f1ea       26502      8846    3.00  bne.n	207f1ee <ndsRendererAdapterTryNativeEntryEffect+0x6e>
+0207f1ec          54        18    3.00  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1ee        8828      8828    1.00  ldr	r3, [pc, #604]	@ (207f44c <ndsRendererAdapterTryNativeEntryEffect+0x2cc>)
+0207f1f0       17656      8828    2.00  adds	r3, r4, r3
+0207f1f2        8828      8828    1.00  cmp	r3, r5
+0207f1f4       17638      8828    2.00  bne.n	207f1f8 <ndsRendererAdapterTryNativeEntryEffect+0x78>
+0207f1f6          54        18    3.00  b.n	207f3be <ndsRendererAdapterTryNativeEntryEffect+0x23e>
+0207f1f8        8810      8810    1.00  ldr	r3, [pc, #596]	@ (207f450 <ndsRendererAdapterTryNativeEntryEffect+0x2d0>)
+0207f1fa       17620      8810    2.00  adds	r3, r4, r3
+0207f1fc      129273      8811   14.67  cmp	r3, r5
+0207f1fe      224386      8810   25.47  bne.n	207f202 <ndsRendererAdapterTryNativeEntryEffect+0x82>
+0207f202        8810      8810    1.00  ldr	r3, [pc, #592]	@ (207f454 <ndsRendererAdapterTryNativeEntryEffect+0x2d4>)
+0207f204       17623      8811    2.00  adds	r3, r4, r3
+0207f206        8810      8810    1.00  cmp	r5, r3
+0207f208       17620      8810    2.00  bne.n	207f20c <ndsRendererAdapterTryNativeEntryEffect+0x8c>
+0207f20c        8810      8810    1.00  ldr	r3, [pc, #584]	@ (207f458 <ndsRendererAdapterTryNativeEntryEffect+0x2d8>)
+0207f20e       17620      8810    2.00  adds	r3, r4, r3
+0207f210        8810      8810    1.00  cmp	r5, r3
+0207f212       26430      8810    3.00  bne.n	207f216 <ndsRendererAdapterTryNativeEntryEffect+0x96>
+0207f216        8810      8810    1.00  ldr	r3, [pc, #580]	@ (207f45c <ndsRendererAdapterTryNativeEntryEffect+0x2dc>)
+0207f218      245919      8810   27.91  ldr	r3, [r3, #0]
+0207f21a       59725      8810    6.78  cmp	r3, #0
+0207f21c      275182      8810   31.24  beq.n	207f22c <ndsRendererAdapterTryNativeEntryEffect+0xac>
+0207f21e        8810      8810    1.00  movs	r2, #146	@ 0x92
+0207f220       25174      8811    2.86  lsls	r2, r2, #2
+0207f222        8810      8810    1.00  adds	r3, r3, r2
+0207f224       25008      8810    2.84  cmp	r5, r3
+0207f226      178976      8810   20.32  bne.n	207f22c <ndsRendererAdapterTryNativeEntryEffect+0xac>
+0207f22c      159528      8810   18.11  ldr	r3, [pc, #560]	@ (207f460 <ndsRendererAdapterTryNativeEntryEffect+0x2e0>)
+0207f22e      543169      8810   61.65  ldr	r3, [r3, #0]
+0207f230       55720      8810    6.32  cmp	r3, #0
+0207f232      338170      8810   38.38  beq.n	207f240 <ndsRendererAdapterTryNativeEntryEffect+0xc0>
+0207f240       40459      8812    4.59  ldr	r3, [pc, #544]	@ (207f464 <ndsRendererAdapterTryNativeEntryEffect+0x2e4>)
+0207f242      396140      8810   44.96  ldr	r3, [r3, #0]
+0207f244       59295      8810    6.73  cmp	r3, #0
+0207f246       25000      8810    2.84  beq.n	207f254 <ndsRendererAdapterTryNativeEntryEffect+0xd4>
+0207f254      117489      8810   13.34  ldr	r3, [pc, #532]	@ (207f46c <ndsRendererAdapterTryNativeEntryEffect+0x2ec>)
+0207f256      274008      8810   31.10  ldr	r4, [r3, #0]
+0207f258       57030      8810    6.47  cmp	r4, #0
+0207f25a      372885      8810   42.33  beq.n	207f284 <ndsRendererAdapterTryNativeEntryEffect+0x104>
+0207f284       39534      8810    4.49  ldr	r3, [pc, #496]	@ (207f478 <ndsRendererAdapterTryNativeEntryEffect+0x2f8>)
+0207f286      311425      8810   35.35  ldr	r4, [r3, #0]
+0207f288       56413      8811    6.40  cmp	r4, #0
+0207f28a       40222      8810    4.57  beq.n	207f292 <ndsRendererAdapterTryNativeEntryEffect+0x112>
+0207f292      133112      8810   15.11  ldr	r3, [pc, #488]	@ (207f47c <ndsRendererAdapterTryNativeEntryEffect+0x2fc>)
+0207f294       17639      8810    2.00  ldr	r4, [r3, #0]
+0207f296       17625      8810    2.00  cmp	r5, r4
+0207f298        9065      8810    1.03  bcc.n	207f29c <ndsRendererAdapterTryNativeEntryEffect+0x11c>
+0207f29a      143645      8555   16.79  b.n	207f4c0 <ndsRendererAdapterTryNativeEntryEffect+0x340>
+0207f29c      104718      1962   53.37  ldr	r3, [pc, #480]	@ (207f480 <ndsRendererAdapterTryNativeEntryEffect+0x300>)
+0207f29e      116507      1962   59.38  ldr	r4, [r3, #0]
+0207f2a0       13234      1962    6.75  cmp	r4, #0
+0207f2a2        1962      1962    1.00  beq.n	207f2b6 <ndsRendererAdapterTryNativeEntryEffect+0x136>
+0207f2a4        1968      1962    1.00  cmp	r5, r4
+0207f2a6        1962      1962    1.00  bcc.n	207f2b6 <ndsRendererAdapterTryNativeEntryEffect+0x136>
+0207f2a8        1968      1962    1.00  movs	r3, #196	@ 0xc4
+0207f2aa        1962      1962    1.00  subs	r4, r5, r4
+0207f2ac        1968      1962    1.00  lsls	r3, r3, #3
+0207f2ae        1962      1962    1.00  cmp	r4, r3
+0207f2b0        5919      1962    3.02  bne.n	207f2b6 <ndsRendererAdapterTryNativeEntryEffect+0x136>
+0207f2b6       26200      1962   13.35  ldr	r3, [pc, #460]	@ (207f484 <ndsRendererAdapterTryNativeEntryEffect+0x304>)
+0207f2b8       40272      1962   20.53  ldr	r4, [r3, #0]
+0207f2ba       12949      1962    6.60  cmp	r4, #0
+0207f2bc       87857      1962   44.78  beq.n	207f2e8 <ndsRendererAdapterTryNativeEntryEffect+0x168>
+0207f2be        1962      1962    1.00  cmp	r5, r4
+0207f2c0       83955      1962   42.79  bcc.n	207f2e8 <ndsRendererAdapterTryNativeEntryEffect+0x168>
+0207f2c2         357       261    1.37  ldr	r3, [pc, #452]	@ (207f488 <ndsRendererAdapterTryNativeEntryEffect+0x308>)
+0207f2c4         771       261    2.95  subs	r4, r5, r4
+0207f2c6         261       261    1.00  adds	r3, r4, r3
+0207f2c8         771       261    2.95  cmp	r3, #0
+0207f2ca        4330       261   16.59  bne.n	207f2d0 <ndsRendererAdapterTryNativeEntryEffect+0x150>
+0207f2cc          48        16    3.00  bl	207fc80 <ndsRendererAdapterTryNativeEntryEffect+0xb00>
+0207f2ce         480        16   30.00  ?
+0207f2d0         245       245    1.00  ldr	r3, [pc, #440]	@ (207f48c <ndsRendererAdapterTryNativeEntryEffect+0x30c>)
+0207f2d2         490       245    2.00  adds	r3, r4, r3
+0207f2d4         245       245    1.00  cmp	r3, #0
+0207f2d6         474       245    1.93  bne.n	207f2dc <ndsRendererAdapterTryNativeEntryEffect+0x15c>
+0207f2d8          16        16    1.00  bl	207fc80 <ndsRendererAdapterTryNativeEntryEffect+0xb00>
+0207f2da         256        16   16.00  ?
+0207f2dc        4112       229   17.96  movs	r3, #184	@ 0xb8
+0207f2de         229       229    1.00  lsls	r3, r3, #2
+0207f2e0         683       229    2.98  cmp	r4, r3
+0207f2e2        2181       229    9.52  bne.n	207f2e8 <ndsRendererAdapterTryNativeEntryEffect+0x168>
+0207f2e4         447       149    3.00  bl	207fd6a <ndsRendererAdapterTryNativeEntryEffect+0xbea>
+0207f2e6        7450       149   50.00  ?
+0207f2e8        7070      1781    3.97  ldr	r3, [pc, #420]	@ (207f490 <ndsRendererAdapterTryNativeEntryEffect+0x310>)
+0207f2ea        9874      1781    5.54  ldr	r2, [r6, #4]
+0207f2ec        8413      1781    4.72  ldr	r3, [r3, #0]
+0207f2ee        1781      1781    1.00  mov	sl, r2
+0207f2f0        4503      1781    2.53  mov	fp, r3
+0207f2f2        1781      1781    1.00  cmp	r3, #0
+0207f2f4        8379      1781    4.70  bne.n	207f2f8 <ndsRendererAdapterTryNativeEntryEffect+0x178>
+0207f2f6       44105       885   49.84  b.n	207f91a <ndsRendererAdapterTryNativeEntryEffect+0x79a>
+0207f2f8         896       896    1.00  ldr	r3, [pc, #408]	@ (207f494 <ndsRendererAdapterTryNativeEntryEffect+0x314>)
+0207f2fa       35433       896   39.55  ldr	r4, [r3, #0]
+0207f2fc       20958       896   23.39  cmp	r4, #0
+0207f2fe       24276       896   27.09  bne.n	207f302 <ndsRendererAdapterTryNativeEntryEffect+0x182>
+0207f302         896       896    1.00  cmp	r2, #0
+0207f304        1792       896    2.00  bne.n	207f308 <ndsRendererAdapterTryNativeEntryEffect+0x188>
+0207f308        4687       896    5.23  ldr	r3, [r2, #0]
+0207f30a        4528       896    5.05  ldr	r2, [pc, #396]	@ (207f498 <ndsRendererAdapterTryNativeEntryEffect+0x318>)
+0207f30c        1792       896    2.00  cmp	r3, r2
+0207f30e         896       896    1.00  bne.n	207f312 <ndsRendererAdapterTryNativeEntryEffect+0x192>
+0207f310       18314       896   20.44  b.n	207fac4 <ndsRendererAdapterTryNativeEntryEffect+0x944>
+0207f312         885       885    1.00  movs	r2, #253	@ 0xfd
+0207f314        2635       885    2.98  lsls	r2, r2, #2
+0207f316         885       885    1.00  cmp	r3, r2
+0207f318        3265       885    3.69  bne.n	207f31c <ndsRendererAdapterTryNativeEntryEffect+0x19c>
+0207f31a         510       255    2.00  b.n	207f928 <ndsRendererAdapterTryNativeEntryEffect+0x7a8>
+0207f31c       10678       630   16.95  ldr	r2, [pc, #380]	@ (207f49c <ndsRendererAdapterTryNativeEntryEffect+0x31c>)
+0207f31e       27656       630   43.90  ldr	r4, [r2, #0]
+0207f320        4405       630    6.99  cmp	r4, #0
+0207f322         630       630    1.00  beq.n	207f32a <ndsRendererAdapterTryNativeEntryEffect+0x1aa>
+0207f324         632       630    1.00  cmp	r5, r4
+0207f326        1910       630    3.03  bcc.n	207f32a <ndsRendererAdapterTryNativeEntryEffect+0x1aa>
+0207f32a         630       630    1.00  mov	r2, fp
+0207f32c         630       630    1.00  cmp	r2, #0
+0207f32e         630       630    1.00  bne.n	207f332 <ndsRendererAdapterTryNativeEntryEffect+0x1b2>
+0207f330       27649       630   43.89  b.n	207f7e2 <ndsRendererAdapterTryNativeEntryEffect+0x662>
+0207f332       14454       816   17.71  ldr	r2, [pc, #364]	@ (207f4a0 <ndsRendererAdapterTryNativeEntryEffect+0x320>)
+0207f334       24859       816   30.46  ldr	r4, [r2, #0]
+0207f336        1632       816    2.00  cmp	r4, #0
+0207f338         844       816    1.03  bne.n	207f33c <ndsRendererAdapterTryNativeEntryEffect+0x1bc>
+0207f33a       41288       816   50.60  b.n	207f99c <ndsRendererAdapterTryNativeEntryEffect+0x81c>
+0207f3ac        6181      1648    3.75  movs	r0, #0
+0207f3ae      253184      9024   28.06  ldr	r3, [pc, #252]	@ (207f4ac <ndsRendererAdapterTryNativeEntryEffect+0x32c>)
+0207f3b0       55305      9024    6.13  add	sp, r3
+0207f3b2      433518      9024   48.04  pop	{r4, r5, r6, r7}
+0207f3b4       39821      9025    4.41  mov	fp, r7
+0207f3b6        9024      9024    1.00  mov	sl, r6
+0207f3b8        9024      9024    1.00  mov	r9, r5
+0207f3ba        9024      9024    1.00  mov	r8, r4
+0207f3bc      763279      9024   84.58  pop	{r4, r5, r6, r7, pc}
+0207f3be        5468       214   25.55  ldr	r3, [pc, #240]	@ (207f4b0 <ndsRendererAdapterTryNativeEntryEffect+0x330>)
+0207f3c0         704       214    3.29  subs	r4, r5, r4
+0207f3c2         214       214    1.00  adds	r3, r4, r3
+0207f3c4         214       214    1.00  cmp	r3, #0
+0207f3c6         232       214    1.08  beq.n	207f3d0 <ndsRendererAdapterTryNativeEntryEffect+0x250>
+0207f3c8         916       196    4.67  ldr	r3, [pc, #232]	@ (207f4b4 <ndsRendererAdapterTryNativeEntryEffect+0x334>)
+0207f3ca         392       196    2.00  adds	r3, r4, r3
+0207f3cc         196       196    1.00  cmp	r3, #0
+0207f3ce        7195       196   36.71  bne.n	207f418 <ndsRendererAdapterTryNativeEntryEffect+0x298>
+0207f3d0          36        36    1.00  movs	r7, #48	@ 0x30
+0207f3d2         214       214    1.00  movs	r2, #100	@ 0x64
+0207f3d4         214       214    1.00  movs	r1, #0
+0207f3d6         214       214    1.00  add	r0, sp, #336	@ 0x150
+0207f3d8         214       214    1.00  blx	1ffd924 <memset>
+0207f3da         642       214    3.00  ?
+0207f3dc       15661       214   73.18  movs	r3, #128	@ 0x80
+0207f3de       11597       214   54.19  ldr	r0, [r6, r3]
+0207f3e0        1482       214    6.93  mov	sl, r0
+0207f3e2         214       214    1.00  cmp	r0, #0
+0207f3e4         520       214    2.43  bne.n	207f3e8 <ndsRendererAdapterTryNativeEntryEffect+0x268>
+0207f3e8         214       214    1.00  movs	r3, #0
+0207f3ea         214       214    1.00  movs	r2, #0
+0207f3ec        2146       214   10.03  str	r3, [sp, #0]
+0207f3ee         214       214    1.00  add	r1, sp, #336	@ 0x150
+0207f3f0         214       214    1.00  bl	2074618 <ndsRendererAdapterBuildNativeMaterialSnapshot>
+0207f3f2       10422       214   48.70  ?
+0207f3f4         319       214    1.49  ldr	r3, [sp, #336]	@ 0x150
+0207f3f6         214       214    1.00  cmp	r0, #0
+0207f3f8        1611       214    7.53  bne.n	207f3fe <ndsRendererAdapterTryNativeEntryEffect+0x27e>
+0207f3fe         214       214    1.00  cmp	r7, r3
+0207f400        2127       214    9.94  beq.n	207f406 <ndsRendererAdapterTryNativeEntryEffect+0x286>
+0207f406         214       214    1.00  movs	r3, #84	@ 0x54
+0207f408         214       214    1.00  str	r3, [sp, #24]
+0207f40a         214       214    1.00  subs	r3, #85	@ 0x55
+0207f40c         214       214    1.00  mov	fp, r3
+0207f40e         214       214    1.00  adds	r3, #2
+0207f410         214       214    1.00  mov	sl, r3
+0207f412         214       214    1.00  add	r3, sp, #336	@ 0x150
+0207f414         214       214    1.00  str	r3, [sp, #20]
+0207f416       10235       214   47.83  b.n	207f4fc <ndsRendererAdapterTryNativeEntryEffect+0x37c>
+0207f418         637       178    3.58  ldr	r3, [pc, #156]	@ (207f4b8 <ndsRendererAdapterTryNativeEntryEffect+0x338>)
+0207f41a         356       178    2.00  adds	r3, r4, r3
+0207f41c        2760       178   15.51  cmp	r3, #0
+0207f41e         178       178    1.00  beq.n	207f42c <ndsRendererAdapterTryNativeEntryEffect+0x2ac>
+0207f420         482       178    2.71  ldr	r3, [pc, #152]	@ (207f4bc <ndsRendererAdapterTryNativeEntryEffect+0x33c>)
+0207f422         356       178    2.00  adds	r3, r4, r3
+0207f424         330       178    1.85  cmp	r3, #0
+0207f426         178       178    1.00  beq.n	207f42c <ndsRendererAdapterTryNativeEntryEffect+0x2ac>
+0207f428         482       178    2.71  bl	2080010 <ndsRendererAdapterTryNativeEntryEffect+0xe90>
+0207f42a        7689       178   43.20  ?
+0207f4c0       24533      8555    2.87  cmp	r4, #0
+0207f4c2      153609      8555   17.96  bne.n	207f4c6 <ndsRendererAdapterTryNativeEntryEffect+0x346>
+0207f4c6      279507      8555   32.67  ldr	r3, [pc, #652]	@ (207f754 <ndsRendererAdapterTryNativeEntryEffect+0x5d4>)
+0207f4c8       44575      8555    5.21  subs	r4, r5, r4
+0207f4ca        8555      8555    1.00  cmp	r4, r3
+0207f4cc       28261      8555    3.30  beq.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207f4ce       14547      7699    1.89  ble.n	207f4d2 <ndsRendererAdapterTryNativeEntryEffect+0x352>
+0207f4d0      170349      4275   39.85  b.n	207fc10 <ndsRendererAdapterTryNativeEntryEffect+0xa90>
+0207f4d2       13246      3424    3.87  ldr	r3, [pc, #644]	@ (207f758 <ndsRendererAdapterTryNativeEntryEffect+0x5d8>)
+0207f4d4        6848      3424    2.00  cmp	r4, r3
+0207f4d6       26400      3424    7.71  beq.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207f4d8       30685      2568   11.95  ble.n	207f4de <ndsRendererAdapterTryNativeEntryEffect+0x35e>
+0207f4da         856       856    1.00  bl	207fd0a <ndsRendererAdapterTryNativeEntryEffect+0xb8a>
+0207f4dc       57183       856   66.80  ?
+0207f4de        1712      1712    1.00  movs	r3, #253	@ 0xfd
+0207f4e0        4450      1712    2.60  lsls	r3, r3, #5
+0207f4e2        1712      1712    1.00  cmp	r4, r3
+0207f4e4       24138      1712   14.10  beq.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207f4e6         856       856    1.00  ldr	r3, [pc, #628]	@ (207f75c <ndsRendererAdapterTryNativeEntryEffect+0x5dc>)
+0207f4e8        2225       856    2.60  cmp	r4, r3
+0207f4ea       10776       856   12.59  beq.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207f4ee        6848      6848    1.00  movs	r3, #161	@ 0xa1
+0207f4f0       24085      6849    3.52  str	r3, [sp, #24]
+0207f4f2        6848      6848    1.00  subs	r3, #162	@ 0xa2
+0207f4f4       12862      6848    1.88  mov	fp, r3
+0207f4f6        6848      6848    1.00  movs	r3, #0
+0207f4f8       12296      6848    1.80  mov	sl, r3
+0207f4fa        6848      6848    1.00  str	r3, [sp, #20]
+0207f4fc      123840      7376   16.79  mov	r3, r8
+0207f4fe        7376      7376    1.00  cmp	r3, #0
+0207f500      109807      7376   14.89  bne.n	207f504 <ndsRendererAdapterTryNativeEntryEffect+0x384>
+0207f504      102269      7376   13.87  ldr	r1, [r3, #116]	@ 0x74
+0207f506       21491      7376    2.91  add	r3, sp, #52	@ 0x34
+0207f508       52608      7376    7.13  str	r3, [sp, #8]
+0207f50a        7376      7376    1.00  add	r7, sp, #172	@ 0xac
+0207f50c        7376      7376    1.00  add	r3, sp, #48	@ 0x30
+0207f50e        7376      7376    1.00  movs	r2, #0
+0207f510        7376      7376    1.00  str	r3, [sp, #0]
+0207f512        7376      7376    1.00  movs	r0, r6
+0207f514        7376      7376    1.00  add	r3, sp, #108	@ 0x6c
+0207f516        7376      7376    1.00  str	r7, [sp, #4]
+0207f518        7376      7376    1.00  bl	207ecf8 <ndsRendererAdapterPrepareInitialMatrices>
+0207f51a      421697      7376   57.17  ?
+0207f51c      175659      7376   23.81  ldr	r2, [sp, #48]	@ 0x30
+0207f51e       31174      7376    4.23  ldr	r3, [sp, #52]	@ 0x34
+0207f520       16190      7376    2.19  cmp	r2, #0
+0207f522       28142      7376    3.82  bne.n	207f526 <ndsRendererAdapterTryNativeEntryEffect+0x3a6>
+0207f524      211258      5285   39.97  b.n	207fc2c <ndsRendererAdapterTryNativeEntryEffect+0xaac>
+0207f526        2091      2091    1.00  cmp	r3, #0
+0207f528       69155      2091   33.07  bne.n	207f550 <ndsRendererAdapterTryNativeEntryEffect+0x3d0>
+0207f550       23600      7376    3.20  movs	r7, #188	@ 0xbc
+0207f552        7376      7376    1.00  add	r3, sp, #32
+0207f554       18192      7376    2.47  lsls	r7, r7, #3
+0207f556        7376      7376    1.00  adds	r7, r7, r3
+0207f558       18192      7376    2.47  movs	r0, r7
+0207f55a        7376      7376    1.00  blx	20627dc <ndsRendererInitStats>
+0207f55c      430251      7376   58.33  ?
+0207f55e      730921      7376   99.09  ldr	r3, [pc, #512]	@ (207f760 <ndsRendererAdapterTryNativeEntryEffect+0x5e0>)
+0207f560      540018      7376   73.21  ldr	r3, [r3, #0]
+0207f562       40277      7376    5.46  cmp	r3, #0
+0207f564        7377      7376    1.00  beq.n	207f592 <ndsRendererAdapterTryNativeEntryEffect+0x412>
+0207f566       78846      7376   10.69  ldr	r3, [pc, #508]	@ (207f764 <ndsRendererAdapterTryNativeEntryEffect+0x5e4>)
+0207f568       14753      7376    2.00  ldr	r3, [r3, #0]
+0207f56a       14752      7376    2.00  cmp	r3, #0
+0207f56c        7377      7376    1.00  beq.n	207f592 <ndsRendererAdapterTryNativeEntryEffect+0x412>
+0207f56e        7376      7376    1.00  movs	r1, #8
+0207f570        7378      7376    1.00  movs	r2, #156	@ 0x9c
+0207f572        7376      7376    1.00  ldr	r3, [pc, #500]	@ (207f768 <ndsRendererAdapterTryNativeEntryEffect+0x5e8>)
+0207f574        7378      7376    1.00  lsls	r2, r2, #3
+0207f576        7376      7376    1.00  ldrsb	r1, [r3, r1]
+0207f578       15457      7376    2.10  str	r1, [r7, r2]
+0207f57a        7376      7376    1.00  movs	r1, #9
+0207f57c      287726      7376   39.01  ldr	r2, [pc, #492]	@ (207f76c <ndsRendererAdapterTryNativeEntryEffect+0x5ec>)
+0207f57e        7376      7376    1.00  ldrsb	r1, [r3, r1]
+0207f580       21685      7376    2.94  str	r1, [r7, r2]
+0207f582        7376      7376    1.00  movs	r2, #10
+0207f584       19732      7376    2.68  ldrsb	r2, [r3, r2]
+0207f586        7376      7376    1.00  movs	r3, #157	@ 0x9d
+0207f588       19732      7376    2.68  lsls	r3, r3, #3
+0207f58a        8403      7376    1.14  str	r2, [r7, r3]
+0207f58c       19732      7376    2.68  movs	r2, #1
+0207f58e        7376      7376    1.00  ldr	r3, [pc, #480]	@ (207f770 <ndsRendererAdapterTryNativeEntryEffect+0x5f0>)
+0207f590       22045      7376    2.99  str	r2, [r7, r3]
+0207f592        7376      7376    1.00  movs	r3, #128	@ 0x80
+0207f594      104862      7376   14.22  ldr	r2, [r6, r3]
+0207f596       19747      7376    2.68  cmp	r2, #0
+0207f598      534002      7376   72.40  beq.n	207f634 <ndsRendererAdapterTryNativeEntryEffect+0x4b4>
+0207f59a        3861       491    7.86  ldr	r3, [pc, #472]	@ (207f774 <ndsRendererAdapterTryNativeEntryEffect+0x5f4>)
+0207f59c       22536       491   45.90  movs	r1, #0
+0207f59e       22254       491   45.32  ldr	r0, [r7, r3]
+0207f5a0        2659       491    5.42  movs	r3, #0
+0207f5a2        5571       491   11.35  str	r1, [sp, #28]
+0207f5a4         669       491    1.36  adds	r1, #16
+0207f5a6         491       491    1.00  mov	r8, r3
+0207f5a8         669       491    1.36  mov	ip, r1
+0207f5aa         491       491    1.00  str	r5, [sp, #44]	@ 0x2c
+0207f5ac       19607       491   39.93  ldr	r5, [sp, #36]	@ 0x24
+0207f5ae        4019       491    8.19  str	r4, [sp, #40]	@ 0x28
+0207f5b0         653       491    1.33  movs	r1, #128	@ 0x80
+0207f5b2       10221       491   20.82  ldrh	r4, [r2, #56]	@ 0x38
+0207f5b4        2094       491    4.26  lsls	r1, r1, #5
+0207f5b6         928       491    1.89  tst	r4, r1
+0207f5b8       28484       491   58.01  beq.n	207f5dc <ndsRendererAdapterTryNativeEntryEffect+0x45c>
+0207f5ba        1193        56   21.30  ldr	r1, [r2, #104]	@ 0x68
+0207f5bc        1705        56   30.45  lsls	r5, r1, #24
+0207f5be          56        56    1.00  lsrs	r3, r1, #24
+0207f5c0         166        56    2.96  orrs	r3, r5
+0207f5c2          56        56    1.00  mov	r5, ip
+0207f5c4         222        56    3.96  rors	r1, r5
+0207f5c6          56        56    1.00  lsls	r5, r1, #24
+0207f5c8         111        56    1.98  lsrs	r1, r1, #24
+0207f5ca          56        56    1.00  orrs	r1, r5
+0207f5cc         166        56    2.96  mov	r5, ip
+0207f5ce         112        56    2.00  rors	r1, r5
+0207f5d0         111        56    1.98  orrs	r1, r3
+0207f5d2          56        56    1.00  movs	r5, r1
+0207f5d4         166        56    2.96  movs	r3, #1
+0207f5d6          56        56    1.00  movs	r1, #1
+0207f5d8         166        56    2.96  orrs	r0, r3
+0207f5da          56        56    1.00  str	r1, [sp, #28]
+0207f5dc        8406       491   17.12  movs	r1, #128	@ 0x80
+0207f5de         491       491    1.00  lsls	r1, r1, #6
+0207f5e0        1423       491    2.90  tst	r4, r1
+0207f5e2       20856       491   42.48  beq.n	207f606 <ndsRendererAdapterTryNativeEntryEffect+0x486>
+0207f5e4         162        56    2.89  ldr	r3, [r2, #108]	@ 0x6c
+0207f5e6         112        56    2.00  lsls	r4, r3, #24
+0207f5e8         109        56    1.95  lsrs	r1, r3, #24
+0207f5ea          56        56    1.00  orrs	r1, r4
+0207f5ec         162        56    2.89  mov	r4, ip
+0207f5ee         112        56    2.00  rors	r3, r4
+0207f5f0         109        56    1.95  lsls	r4, r3, #24
+0207f5f2          56        56    1.00  lsrs	r3, r3, #24
+0207f5f4         162        56    2.89  orrs	r3, r4
+0207f5f6          56        56    1.00  mov	r4, ip
+0207f5f8         218        56    3.89  rors	r3, r4
+0207f5fa          56        56    1.00  orrs	r3, r1
+0207f5fc         957        56   17.09  str	r3, [sp, #32]
+0207f5fe          56        56    1.00  movs	r3, #2
+0207f600         162        56    2.89  orrs	r0, r3
+0207f602          56        56    1.00  subs	r3, #1
+0207f604         162        56    2.89  mov	r8, r3
+0207f606       16963       491   34.55  ldr	r2, [r2, #0]
+0207f608        3048       491    6.21  cmp	r2, #0
+0207f60a         491       491    1.00  bne.n	207f5b0 <ndsRendererAdapterTryNativeEntryEffect+0x430>
+0207f60c         673       491    1.37  mov	r2, r8
+0207f60e        5998       491   12.22  str	r5, [sp, #36]	@ 0x24
+0207f610         921       491    1.88  ldr	r4, [sp, #40]	@ 0x28
+0207f612         629       491    1.28  ldr	r5, [sp, #44]	@ 0x2c
+0207f614         669       491    1.36  cmp	r2, #0
+0207f616       12542       491   25.54  beq.n	207f620 <ndsRendererAdapterTryNativeEntryEffect+0x4a0>
+0207f618         130        56    2.32  movs	r2, #155	@ 0x9b
+0207f61a          56        56    1.00  ldr	r1, [sp, #32]
+0207f61c        1104        56   19.71  lsls	r2, r2, #3
+0207f61e          56        56    1.00  str	r1, [r7, r2]
+0207f620        1787       491    3.64  cmp	r3, #0
+0207f622       10430       491   21.24  beq.n	207f628 <ndsRendererAdapterTryNativeEntryEffect+0x4a8>
+0207f624         476        56    8.50  ldr	r3, [pc, #332]	@ (207f774 <ndsRendererAdapterTryNativeEntryEffect+0x5f4>)
+0207f626         190        56    3.39  str	r0, [r7, r3]
+0207f628         618       491    1.26  ldr	r3, [sp, #28]
+0207f62a         992       491    2.02  cmp	r3, #0
+0207f62c         974       491    1.98  beq.n	207f634 <ndsRendererAdapterTryNativeEntryEffect+0x4b4>
+0207f62e          56        56    1.00  ldr	r3, [pc, #328]	@ (207f778 <ndsRendererAdapterTryNativeEntryEffect+0x5f8>)
+0207f630         152        56    2.71  ldr	r2, [sp, #36]	@ 0x24
+0207f632          56        56    1.00  str	r2, [r7, r3]
+0207f634       26547      7376    3.60  ldr	r3, [pc, #324]	@ (207f77c <ndsRendererAdapterTryNativeEntryEffect+0x5fc>)
+0207f636       66406      7376    9.00  ldr	r3, [r3, #0]
+0207f638       25857      7376    3.51  cmp	r3, #0
+0207f63a        7376      7376    1.00  beq.n	207f66e <ndsRendererAdapterTryNativeEntryEffect+0x4ee>
+0207f63c      221760      7376   30.07  movs	r1, #1
+0207f63e        9026      7376    1.22  ldr	r3, [pc, #308]	@ (207f774 <ndsRendererAdapterTryNativeEntryEffect+0x5f4>)
+0207f640       21836      7376    2.96  mov	r8, r3
+0207f642      423561      7376   57.42  ldr	r3, [r7, r3]
+0207f644       48415      7376    6.56  tst	r1, r3
+0207f646        8552      7376    1.16  bne.n	207f658 <ndsRendererAdapterTryNativeEntryEffect+0x4d8>
+0207f648      188478      7320   25.75  ldr	r0, [pc, #308]	@ (207f780 <ndsRendererAdapterTryNativeEntryEffect+0x600>)
+0207f64a       40140      7320    5.48  orrs	r3, r1
+0207f64c      191678      7320   26.19  ldr	r0, [r0, #0]
+0207f64e       14640      7320    2.00  movs	r2, r0
+0207f650        7358      7320    1.01  ldr	r0, [pc, #292]	@ (207f778 <ndsRendererAdapterTryNativeEntryEffect+0x5f8>)
+0207f652       14640      7320    2.00  str	r2, [r7, r0]
+0207f654        7358      7320    1.01  mov	r2, r8
+0207f656        7320      7320    1.00  str	r3, [r7, r2]
+0207f658        7452      7376    1.01  movs	r2, #2
+0207f65a        7376      7376    1.00  tst	r2, r3
+0207f65c      182530      7376   24.75  bne.n	207f66e <ndsRendererAdapterTryNativeEntryEffect+0x4ee>
+0207f65e        7320      7320    1.00  ldr	r1, [pc, #292]	@ (207f784 <ndsRendererAdapterTryNativeEntryEffect+0x604>)
+0207f660       20924      7320    2.86  orrs	r3, r2
+0207f662      437851      7320   59.82  ldr	r0, [r1, #0]
+0207f664       42663      7320    5.83  movs	r1, #155	@ 0x9b
+0207f666        7320      7320    1.00  ldr	r2, [pc, #268]	@ (207f774 <ndsRendererAdapterTryNativeEntryEffect+0x5f4>)
+0207f668        8028      7320    1.10  lsls	r1, r1, #3
+0207f66a        7320      7320    1.00  str	r0, [r7, r1]
+0207f66c        8028      7320    1.10  str	r3, [r7, r2]
+0207f66e       10567      7376    1.43  ldr	r3, [pc, #280]	@ (207f788 <ndsRendererAdapterTryNativeEntryEffect+0x608>)
+0207f670       18406      7376    2.50  ldr	r3, [r3, #0]
+0207f672       14752      7376    2.00  cmp	r3, #0
+0207f674      449056      7376   60.88  beq.n	207f6be <ndsRendererAdapterTryNativeEntryEffect+0x53e>
+0207f676         523       523    1.00  ldr	r3, [pc, #276]	@ (207f78c <ndsRendererAdapterTryNativeEntryEffect+0x60c>)
+0207f678        5877       523   11.24  ldr	r3, [r3, #0]
+0207f67a        2281       523    4.36  lsls	r2, r3, #31
+0207f67c       32783       523   62.68  bpl.n	207f688 <ndsRendererAdapterTryNativeEntryEffect+0x508>
+0207f688         523       523    1.00  lsls	r3, r3, #30
+0207f68a        1046       523    2.00  bpl.n	207f694 <ndsRendererAdapterTryNativeEntryEffect+0x514>
+0207f694         611       523    1.17  ldr	r3, [pc, #260]	@ (207f79c <ndsRendererAdapterTryNativeEntryEffect+0x61c>)
+0207f696       16355       523   31.27  ldr	r3, [r3, #0]
+0207f698        3111       523    5.95  cmp	r3, #0
+0207f69a         523       523    1.00  beq.n	207f6a6 <ndsRendererAdapterTryNativeEntryEffect+0x526>
+0207f69c       31315       523   59.88  ldr	r3, [pc, #256]	@ (207f7a0 <ndsRendererAdapterTryNativeEntryEffect+0x620>)
+0207f69e       15962       523   30.52  ldr	r2, [r3, #0]
+0207f6a0         593       523    1.13  movs	r3, #142	@ 0x8e
+0207f6a2         523       523    1.00  lsls	r3, r3, #1
+0207f6a4         663       523    1.27  str	r2, [r7, r3]
+0207f6a6         523       523    1.00  ldr	r3, [pc, #252]	@ (207f7a4 <ndsRendererAdapterTryNativeEntryEffect+0x624>)
+0207f6a8        1116       523    2.13  ldr	r3, [r3, #0]
+0207f6aa        1046       523    2.00  cmp	r3, #0
+0207f6ac         593       523    1.13  bne.n	207f6be <ndsRendererAdapterTryNativeEntryEffect+0x53e>
+0207f6ae         523       523    1.00  ldr	r3, [pc, #248]	@ (207f7a8 <ndsRendererAdapterTryNativeEntryEffect+0x628>)
+0207f6b0        1116       523    2.13  ldr	r3, [r3, #0]
+0207f6b2        1046       523    2.00  cmp	r3, #1
+0207f6b4         977       523    1.87  bne.n	207f6be <ndsRendererAdapterTryNativeEntryEffect+0x53e>
+0207f6b6         507       507    1.00  ldr	r2, [pc, #244]	@ (207f7ac <ndsRendererAdapterTryNativeEntryEffect+0x62c>)
+0207f6b8         647       507    1.28  adds	r3, #28
+0207f6ba         507       507    1.00  adds	r3, #255	@ 0xff
+0207f6bc       12213       507   24.09  str	r2, [r7, r3]
+0207f6be        7376      7376    1.00  movs	r2, #4
+0207f6c0       20000      7376    2.71  movs	r3, #1
+0207f6c2        7376      7376    1.00  str	r2, [sp, #56]	@ 0x38
+0207f6c4       19970      7376    2.71  str	r3, [sp, #60]	@ 0x3c
+0207f6c6       12476      7376    1.69  ldr	r2, [sp, #48]	@ 0x30
+0207f6c8       20242      7376    2.74  movs	r3, #1
+0207f6ca        9056      7376    1.23  str	r2, [sp, #68]	@ 0x44
+0207f6cc       19980      7376    2.71  ldr	r2, [sp, #52]	@ 0x34
+0207f6ce        7376      7376    1.00  str	r3, [sp, #64]	@ 0x40
+0207f6d0       20585      7376    2.79  str	r2, [sp, #72]	@ 0x48
+0207f6d2        7387      7377    1.00  mov	r2, r9
+0207f6d4       19910      7376    2.70  str	r2, [sp, #76]	@ 0x4c
+0207f6d6        7376      7376    1.00  add	r2, sp, #32
+0207f6d8       19922      7376    2.70  adds	r2, #52	@ 0x34
+0207f6da        7376      7376    1.00  strb	r3, [r2, #0]
+0207f6dc      268043      7376   36.34  add	r3, sp, #56	@ 0x38
+0207f6de        7376      7376    1.00  str	r3, [sp, #4]
+0207f6e0       13696      7376    1.86  mov	r3, fp
+0207f6e2        7376      7376    1.00  movs	r1, r4
+0207f6e4       13636      7376    1.85  str	r3, [sp, #0]
+0207f6e6       76108      7376   10.32  ldr	r2, [sp, #20]
+0207f6e8       16281      7376    2.21  mov	r3, sl
+0207f6ea       12632      7376    1.71  ldr	r0, [sp, #24]
+0207f6ec       13336      7376    1.81  str	r7, [sp, #8]
+0207f6ee        7376      7376    1.00  blx	203c310 <ndsRendererSubmitNativeEntryEffect>
+0207f6f0      461211      7376   62.53  ?
+0207f6f2        7387      7377    1.00  cmp	r0, #0
+0207f6f4       54622      7376    7.41  bne.n	207f6f8 <ndsRendererAdapterTryNativeEntryEffect+0x578>
+0207f6f8      249103      7376   33.77  ldr	r2, [pc, #180]	@ (207f7b0 <ndsRendererAdapterTryNativeEntryEffect+0x630>)
+0207f6fa      130773      7377   17.73  ldr	r1, [r7, #84]	@ 0x54
+0207f6fc      416592      7377   56.47  ldr	r3, [r2, #0]
+0207f6fe       42356      7376    5.74  movs	r0, #1
+0207f700        7922      7376    1.07  adds	r3, r3, r1
+0207f702      196758      7376   26.68  str	r3, [r2, #0]
+0207f704        7922      7376    1.07  ldr	r2, [pc, #172]	@ (207f7b4 <ndsRendererAdapterTryNativeEntryEffect+0x634>)
+0207f706        7376      7376    1.00  ldr	r1, [r7, #88]	@ 0x58
+0207f708      321139      7376   43.54  ldr	r3, [r2, #0]
+0207f70a       45967      7376    6.23  adds	r3, r3, r1
+0207f70c        7414      7376    1.01  str	r3, [r2, #0]
+0207f70e        7376      7376    1.00  ldr	r2, [pc, #168]	@ (207f7b8 <ndsRendererAdapterTryNativeEntryEffect+0x638>)
+0207f710        7452      7376    1.01  ldr	r1, [r7, #92]	@ 0x5c
+0207f712        7376      7376    1.00  ldr	r3, [r2, #0]
+0207f714       14790      7376    2.01  adds	r3, r3, r1
+0207f716        7376      7376    1.00  str	r3, [r2, #0]
+0207f718        7452      7376    1.01  ldr	r2, [pc, #160]	@ (207f7bc <ndsRendererAdapterTryNativeEntryEffect+0x63c>)
+0207f71a      208736      7376   28.30  ldr	r1, [r7, #116]	@ 0x74
+0207f71c      210804      7377   28.58  ldr	r3, [r2, #0]
+0207f71e       14752      7376    2.00  adds	r3, r3, r1
+0207f720       13755      7376    1.86  movs	r1, #136	@ 0x88
+0207f722        7376      7376    1.00  str	r3, [r2, #0]
+0207f724      201869      7376   27.37  ldr	r2, [pc, #152]	@ (207f7c0 <ndsRendererAdapterTryNativeEntryEffect+0x640>)
+0207f726      219839      7376   29.80  ldr	r1, [r7, r1]
+0207f728       15238      7376    2.07  ldr	r3, [r2, #0]
+0207f72a       14752      7376    2.00  adds	r3, r3, r1
+0207f72c        8474      7376    1.15  movs	r1, #140	@ 0x8c
+0207f72e        7376      7376    1.00  str	r3, [r2, #0]
+0207f730        9448      7376    1.28  ldr	r2, [pc, #144]	@ (207f7c4 <ndsRendererAdapterTryNativeEntryEffect+0x644>)
+0207f732        7376      7376    1.00  ldr	r1, [r7, r1]
+0207f734        9448      7376    1.28  ldr	r3, [r2, #0]
+0207f736       14752      7376    2.00  adds	r3, r3, r1
+0207f738        8474      7376    1.15  movs	r1, #144	@ 0x90
+0207f73a        7376      7376    1.00  str	r3, [r2, #0]
+0207f73c      136467      7376   18.50  ldr	r2, [pc, #136]	@ (207f7c8 <ndsRendererAdapterTryNativeEntryEffect+0x648>)
+0207f73e       12440      7376    1.69  ldr	r1, [r7, r1]
+0207f740       24188      7376    3.28  ldr	r3, [r2, #0]
+0207f742       14752      7376    2.00  adds	r3, r3, r1
+0207f744       13523      7376    1.83  movs	r1, #148	@ 0x94
+0207f746        7376      7376    1.00  str	r3, [r2, #0]
+0207f748       19606      7376    2.66  ldr	r2, [pc, #128]	@ (207f7cc <ndsRendererAdapterTryNativeEntryEffect+0x64c>)
+0207f74a        7376      7376    1.00  ldr	r1, [r7, r1]
+0207f74c       19638      7376    2.66  ldr	r3, [r2, #0]
+0207f74e       14752      7376    2.00  adds	r3, r3, r1
+0207f750       13553      7376    1.84  str	r3, [r2, #0]
+0207f752      260763      7376   35.35  b.n	207f3ae <ndsRendererAdapterTryNativeEntryEffect+0x22e>
+0207f7e2       38026       880   43.21  ldr	r2, [pc, #772]	@ (207fae8 <ndsRendererAdapterTryNativeEntryEffect+0x968>)
+0207f7e4       23424       880   26.62  ldr	r4, [r2, #0]
+0207f7e6        1760       880    2.00  cmp	r4, #0
+0207f7e8       44905       880   51.03  beq.n	207f818 <ndsRendererAdapterTryNativeEntryEffect+0x698>
+0207f818       15839      1696    9.34  ldr	r4, [r7, #8]
+0207f81a        4597      1696    2.71  cmp	r5, r4
+0207f81c       48957      1696   28.87  bcs.n	207f820 <ndsRendererAdapterTryNativeEntryEffect+0x6a0>
+0207f81e       56740       991   57.26  b.n	207f3ac <ndsRendererAdapterTryNativeEntryEffect+0x22c>
+0207f820         705       705    1.00  cmp	r4, #0
+0207f822        2115       705    3.00  bne.n	207f826 <ndsRendererAdapterTryNativeEntryEffect+0x6a6>
+0207f826         717       705    1.02  ldr	r3, [pc, #724]	@ (207fafc <ndsRendererAdapterTryNativeEntryEffect+0x97c>)
+0207f828         705       705    1.00  subs	r4, r5, r4
+0207f82a       11531       705   16.36  ldr	r2, [pc, #724]	@ (207fb00 <ndsRendererAdapterTryNativeEntryEffect+0x980>)
+0207f82c        3510       705    4.98  adds	r3, r4, r3
+0207f82e         705       705    1.00  adds	r2, r4, r2
+0207f830         705       705    1.00  cmp	r3, #0
+0207f832        2115       705    3.00  bne.n	207f836 <ndsRendererAdapterTryNativeEntryEffect+0x6b6>
+0207f836         705       705    1.00  cmp	r2, #0
+0207f838        1410       705    2.00  bne.n	207f83c <ndsRendererAdapterTryNativeEntryEffect+0x6bc>
+0207f83c       25995       705   36.87  ldr	r3, [pc, #708]	@ (207fb04 <ndsRendererAdapterTryNativeEntryEffect+0x984>)
+0207f83e        1410       705    2.00  adds	r3, r4, r3
+0207f840        1261       705    1.79  cmp	r3, #0
+0207f842        1389       705    1.97  beq.n	207f86e <ndsRendererAdapterTryNativeEntryEffect+0x6ee>
+0207f844        1781       693    2.57  ldr	r2, [pc, #704]	@ (207fb08 <ndsRendererAdapterTryNativeEntryEffect+0x988>)
+0207f846        1386       693    2.00  adds	r2, r4, r2
+0207f848        1237       693    1.78  cmp	r2, #0
+0207f84a       10615       693   15.32  bne.n	207f84e <ndsRendererAdapterTryNativeEntryEffect+0x6ce>
+0207f84c         675        12   56.25  b.n	207fa76 <ndsRendererAdapterTryNativeEntryEffect+0x8f6>
+0207f84e         681       681    1.00  ldr	r3, [pc, #700]	@ (207fb0c <ndsRendererAdapterTryNativeEntryEffect+0x98c>)
+0207f850        1362       681    2.00  adds	r3, r4, r3
+0207f852         681       681    1.00  cmp	r3, #0
+0207f854         863       681    1.27  beq.n	207f86e <ndsRendererAdapterTryNativeEntryEffect+0x6ee>
+0207f856         669       669    1.00  ldr	r2, [pc, #696]	@ (207fb10 <ndsRendererAdapterTryNativeEntryEffect+0x990>)
+0207f858        1338       669    2.00  adds	r2, r4, r2
+0207f85a         669       669    1.00  cmp	r2, #0
+0207f85c       10144       669   15.16  beq.n	207f860 <ndsRendererAdapterTryNativeEntryEffect+0x6e0>
+0207f85e       31404       657   47.80  b.n	207f3ac <ndsRendererAdapterTryNativeEntryEffect+0x22c>
+0207f860          12        12    1.00  cmp	r3, #0
+0207f862          12        12    1.00  beq.n	207f86e <ndsRendererAdapterTryNativeEntryEffect+0x6ee>
+0207f864          12        12    1.00  ldr	r3, [pc, #680]	@ (207fb10 <ndsRendererAdapterTryNativeEntryEffect+0x990>)
+0207f866          24        12    2.00  adds	r3, r4, r3
+0207f868          12        12    1.00  cmp	r3, #0
+0207f86a          36        12    3.00  beq.n	207f86e <ndsRendererAdapterTryNativeEntryEffect+0x6ee>
+0207f86e          48        48    1.00  movs	r3, #1
+0207f870          98        48    2.04  movs	r2, #0
+0207f872          48        48    1.00  mov	sl, r3
+0207f874          98        48    2.04  movs	r3, #128	@ 0x80
+0207f876          48        48    1.00  ldr	r0, [r6, r3]
+0207f878          98        48    2.04  mov	fp, r4
+0207f87a          48        48    1.00  str	r6, [sp, #24]
+0207f87c        1086        48   22.62  movs	r4, r0
+0207f87e          48        48    1.00  movs	r6, r2
+0207f880         128        48    2.67  subs	r3, #28
+0207f882          48        48    1.00  mov	r1, sl
+0207f884         272        48    5.67  muls	r1, r3
+0207f886          48        48    1.00  add	r7, sp, #436	@ 0x1b4
+0207f888         728        48   15.17  str	r5, [sp, #20]
+0207f88a          48        48    1.00  adds	r5, r1, r7
+0207f88c          48        48    1.00  cmp	r4, #0
+0207f88e         144        48    3.00  bne.n	207f892 <ndsRendererAdapterTryNativeEntryEffect+0x712>
+0207f892          48        48    1.00  movs	r3, #0
+0207f894          48        48    1.00  movs	r2, #0
+0207f896          48        48    1.00  movs	r1, r7
+0207f898          48        48    1.00  movs	r0, r4
+0207f89a          48        48    1.00  str	r3, [sp, #0]
+0207f89c        1119        48   23.31  bl	2074618 <ndsRendererAdapterBuildNativeMaterialSnapshot>
+0207f89e        3048        48   63.50  ?
+0207f8a0          75        48    1.56  cmp	r0, #0
+0207f8a2         360        48    7.50  bne.n	207f8a6 <ndsRendererAdapterTryNativeEntryEffect+0x726>
+0207f8a6          48        48    1.00  ldr	r3, [r7, #0]
+0207f8a8          96        48    2.00  cmp	r3, #16
+0207f8aa         144        48    3.00  beq.n	207f8ae <ndsRendererAdapterTryNativeEntryEffect+0x72e>
+0207f8ae          48        48    1.00  adds	r7, #100	@ 0x64
+0207f8b0        1278        48   26.62  ldr	r4, [r4, #0]
+0207f8b2         288        48    6.00  cmp	r7, r5
+0207f8b4          48        48    1.00  bne.n	207f88c <ndsRendererAdapterTryNativeEntryEffect+0x70c>
+0207f8b6          48        48    1.00  movs	r2, r6
+0207f8b8          48        48    1.00  subs	r3, r4, #0
+0207f8ba        1292        48   26.92  ldr	r5, [sp, #20]
+0207f8bc        1044        48   21.75  mov	r4, fp
+0207f8be         160        48    3.33  ldr	r6, [sp, #24]
+0207f8c0         120        48    2.50  bne.n	207f8c4 <ndsRendererAdapterTryNativeEntryEffect+0x744>
+0207f8c2        2312        48   48.17  b.n	207fdcc <ndsRendererAdapterTryNativeEntryEffect+0xc4c>
+0207f91a         885       885    1.00  mov	r3, sl
+0207f91c       15030       885   16.98  cmp	r3, #0
+0207f91e       27407       885   30.97  bne.n	207f922 <ndsRendererAdapterTryNativeEntryEffect+0x7a2>
+0207f922         885       885    1.00  mov	r3, sl
+0207f924        4174       885    4.72  ldr	r3, [r3, #0]
+0207f926       36549       885   41.30  b.n	207f312 <ndsRendererAdapterTryNativeEntryEffect+0x192>
+0207f928         255       255    1.00  movs	r3, #128	@ 0x80
+0207f92a        9479       255   37.17  ldr	r3, [r6, r3]
+0207f92c        4157       255   16.30  str	r3, [sp, #20]
+0207f92e         255       255    1.00  cmp	r3, #0
+0207f930         255       255    1.00  bne.n	207f934 <ndsRendererAdapterTryNativeEntryEffect+0x7b4>
+0207f932       11685       255   45.82  b.n	207fb54 <ndsRendererAdapterTryNativeEntryEffect+0x9d4>
+0207f940        4052        80   50.65  ldr	r3, [pc, #488]	@ (207fb2c <ndsRendererAdapterTryNativeEntryEffect+0x9ac>)
+0207f942         470        80    5.88  subs	r4, r5, r4
+0207f944          84        80    1.05  adds	r3, r4, r3
+0207f946          80        80    1.00  cmp	r3, #0
+0207f948        2098        80   26.23  beq.n	207fa1e <ndsRendererAdapterTryNativeEntryEffect+0x89e>
+0207f94a         702        52   13.50  ldr	r3, [pc, #484]	@ (207fb30 <ndsRendererAdapterTryNativeEntryEffect+0x9b0>)
+0207f94c         106        52    2.04  adds	r3, r4, r3
+0207f94e          52        52    1.00  cmp	r3, #0
+0207f950        1908        52   36.69  beq.n	207fa1e <ndsRendererAdapterTryNativeEntryEffect+0x89e>
+0207f952          24        24    1.00  movs	r3, #136	@ 0x88
+0207f954          24        24    1.00  lsls	r3, r3, #5
+0207f956          24        24    1.00  cmp	r4, r3
+0207f958        1840        24   76.67  beq.n	207fa1e <ndsRendererAdapterTryNativeEntryEffect+0x89e>
+0207f97a         255       255    1.00  ldr	r2, [r3, #12]
+0207f97c        4864       255   19.07  cmp	r2, #8
+0207f97e        7877       255   30.89  bne.n	207f982 <ndsRendererAdapterTryNativeEntryEffect+0x802>
+0207f982         255       255    1.00  ldr	r3, [r3, #12]
+0207f984         510       255    2.00  cmp	r3, #7
+0207f986         755       255    2.96  bne.n	207f98a <ndsRendererAdapterTryNativeEntryEffect+0x80a>
+0207f988          95         5   19.00  b.n	207fb80 <ndsRendererAdapterTryNativeEntryEffect+0xa00>
+0207f98a         250       250    1.00  mov	r3, fp
+0207f98c         250       250    1.00  cmp	r3, #0
+0207f98e         250       250    1.00  bne.n	207f992 <ndsRendererAdapterTryNativeEntryEffect+0x812>
+0207f990        5425       250   21.70  b.n	207f7e2 <ndsRendererAdapterTryNativeEntryEffect+0x662>
+0207f99c       53632       816   65.73  ldr	r3, [pc, #404]	@ (207fb34 <ndsRendererAdapterTryNativeEntryEffect+0x9b4>)
+0207f99e       10316       816   12.64  ldr	r4, [r3, #0]
+0207f9a0        1632       816    2.00  cmp	r4, #0
+0207f9a2        5016       816    6.15  beq.n	207f9a6 <ndsRendererAdapterTryNativeEntryEffect+0x826>
+0207f9a6       36163       816   44.32  b.n	207f818 <ndsRendererAdapterTryNativeEntryEffect+0x698>
+0207fa12          32        32    1.00  subs	r3, #255	@ 0xff
+0207fa14          86        32    2.69  mov	fp, r3
+0207fa16          32        32    1.00  movs	r3, #0
+0207fa18          86        32    2.69  mov	sl, r3
+0207fa1a          32        32    1.00  str	r3, [sp, #20]
+0207fa1c        3419        32  106.84  b.n	207f4fc <ndsRendererAdapterTryNativeEntryEffect+0x37c>
+0207fa1e          80        80    1.00  movs	r3, #128	@ 0x80
+0207fa20         238        80    2.98  ldr	r0, [r6, r3]
+0207fa22         160        80    2.00  cmp	r0, #0
+0207fa24        1788        80   22.35  bne.n	207fa28 <ndsRendererAdapterTryNativeEntryEffect+0x8a8>
+0207fa28        2024        80   25.30  ldr	r3, [r0, #0]
+0207fa2a         560        80    7.00  cmp	r3, #0
+0207fa2c         160        80    2.00  beq.n	207fa30 <ndsRendererAdapterTryNativeEntryEffect+0x8b0>
+0207fa30          80        80    1.00  movs	r2, #0
+0207fa32        1584        80   19.80  str	r3, [sp, #0]
+0207fa34          80        80    1.00  add	r1, sp, #236	@ 0xec
+0207fa36          80        80    1.00  bl	2074618 <ndsRendererAdapterBuildNativeMaterialSnapshot>
+0207fa38        4048        80   50.60  ?
+0207fa3a          80        80    1.00  cmp	r0, #0
+0207fa3c        3745        80   46.81  bne.n	207fa40 <ndsRendererAdapterTryNativeEntryEffect+0x8c0>
+0207fa40          80        80    1.00  movs	r3, #98	@ 0x62
+0207fa42          80        80    1.00  adds	r3, #255	@ 0xff
+0207fa44          80        80    1.00  str	r3, [sp, #24]
+0207fa46          80        80    1.00  subs	r3, #99	@ 0x63
+0207fa48          80        80    1.00  subs	r3, #255	@ 0xff
+0207fa4a          80        80    1.00  mov	fp, r3
+0207fa4c          80        80    1.00  adds	r3, #2
+0207fa4e          80        80    1.00  mov	sl, r3
+0207fa50          80        80    1.00  add	r3, sp, #236	@ 0xec
+0207fa52          80        80    1.00  str	r3, [sp, #20]
+0207fa54        5282        80   66.03  b.n	207f4fc <ndsRendererAdapterTryNativeEntryEffect+0x37c>
+0207fa76          12        12    1.00  cmp	r3, #0
+0207fa78          48        12    4.00  bne.n	207fa7c <ndsRendererAdapterTryNativeEntryEffect+0x8fc>
+0207fa7c         204        12   17.00  ldr	r3, [pc, #136]	@ (207fb08 <ndsRendererAdapterTryNativeEntryEffect+0x988>)
+0207fa7e          24        12    2.00  adds	r3, r4, r3
+0207fa80          24        12    2.00  cmp	r3, #0
+0207fa82          12        12    1.00  bne.n	207fa86 <ndsRendererAdapterTryNativeEntryEffect+0x906>
+0207fa84         560        12   46.67  b.n	207f86e <ndsRendererAdapterTryNativeEntryEffect+0x6ee>
+0207fac4        3248       896    3.62  movs	r3, #128	@ 0x80
+0207fac6       38295       896   42.74  ldr	r3, [r6, r3]
+0207fac8        6132       896    6.84  cmp	r3, #0
+0207faca        1774       896    1.98  bne.n	207fad2 <ndsRendererAdapterTryNativeEntryEffect+0x952>
+0207facc         677       657    1.03  cmp	r5, r4
+0207face        2091       657    3.18  bcc.n	207fad2 <ndsRendererAdapterTryNativeEntryEffect+0x952>
+0207fad2       27624       896   30.83  ldr	r3, [pc, #16]	@ (207fae4 <ndsRendererAdapterTryNativeEntryEffect+0x964>)
+0207fad4       24934       896   27.83  ldr	r4, [r3, #0]
+0207fad6        1792       896    2.00  cmp	r5, r4
+0207fad8       15904       896   17.75  bcc.n	207fae0 <ndsRendererAdapterTryNativeEntryEffect+0x960>
+0207fada          80        80    1.00  cmp	r4, #0
+0207fadc        1528        80   19.10  beq.n	207fae0 <ndsRendererAdapterTryNativeEntryEffect+0x960>
+0207fade        3536        80   44.20  b.n	207f940 <ndsRendererAdapterTryNativeEntryEffect+0x7c0>
+0207fae0       39069       816   47.88  ldr	r3, [pc, #108]	@ (207fb50 <ndsRendererAdapterTryNativeEntryEffect+0x9d0>)
+0207fae2       42097       816   51.59  b.n	207f332 <ndsRendererAdapterTryNativeEntryEffect+0x1b2>
+0207fb54        1014       255    3.98  movs	r3, #132	@ 0x84
+0207fb56         255       255    1.00  mov	r2, sl
+0207fb58        1547       255    6.07  ldr	r3, [r2, r3]
+0207fb5a         660       255    2.59  cmp	r3, #0
+0207fb5c       12463       255   48.87  bne.n	207fb60 <ndsRendererAdapterTryNativeEntryEffect+0x9e0>
+0207fb60        2776       255   10.89  ldr	r2, [r3, #12]
+0207fb62         990       255    3.88  cmp	r2, #4
+0207fb64         510       255    2.00  bne.n	207fb68 <ndsRendererAdapterTryNativeEntryEffect+0x9e8>
+0207fb68        5871       255   23.02  ldr	r2, [pc, #820]	@ (207fea0 <ndsRendererAdapterTryNativeEntryEffect+0xd20>)
+0207fb6a       14624       255   57.35  ldr	r4, [r2, #0]
+0207fb6c        9074       255   35.58  ldr	r2, [sp, #20]
+0207fb6e         410       255    1.61  cmp	r5, r4
+0207fb70         255       255    1.00  adcs	r2, r2
+0207fb72         255       255    1.00  lsls	r2, r2, #24
+0207fb74         255       255    1.00  bne.n	207fb78 <ndsRendererAdapterTryNativeEntryEffect+0x9f8>
+0207fb76       13071       255   51.26  b.n	207f97a <ndsRendererAdapterTryNativeEntryEffect+0x7fa>
+0207fb80          20         5    4.00  movs	r1, #8
+0207fb82           5         5    1.00  movs	r0, r5
+0207fb84          15         5    3.00  bl	2071ecc <ndsRelocFindLoadedFileContaining>
+0207fb86         250         5   50.00  ?
+0207fb88           5         5    1.00  cmp	r0, #0
+0207fb8a           5         5    1.00  beq.n	207fb9c <ndsRendererAdapterTryNativeEntryEffect+0xa1c>
+0207fb8c           5         5    1.00  ldr	r3, [r0, #0]
+0207fb8e          10         5    2.00  movs	r2, r3
+0207fb90           5         5    1.00  str	r3, [sp, #24]
+0207fb92           5         5    1.00  movs	r3, #70	@ 0x46
+0207fb94           5         5    1.00  adds	r3, #255	@ 0xff
+0207fb96           5         5    1.00  cmp	r2, r3
+0207fb98           5         5    1.00  bne.n	207fb9c <ndsRendererAdapterTryNativeEntryEffect+0xa1c>
+0207fb9a         184         5   36.80  b.n	207fe50 <ndsRendererAdapterTryNativeEntryEffect+0xcd0>
+0207fc10      183181      4275   42.85  ldr	r3, [pc, #672]	@ (207feb4 <ndsRendererAdapterTryNativeEntryEffect+0xd34>)
+0207fc12       29345      4275    6.86  cmp	r4, r3
+0207fc14        7772      4275    1.82  bne.n	207fc18 <ndsRendererAdapterTryNativeEntryEffect+0xa98>
+0207fc16       27026       856   31.57  b.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207fc18        3419      3419    1.00  adds	r3, #176	@ 0xb0
+0207fc1a        3419      3419    1.00  cmp	r4, r3
+0207fc1c      157428      3419   46.05  bne.n	207fc20 <ndsRendererAdapterTryNativeEntryEffect+0xaa0>
+0207fc1e       35472       856   41.44  b.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207fc20        2832      2564    1.10  ldr	r3, [pc, #660]	@ (207feb8 <ndsRendererAdapterTryNativeEntryEffect+0xd38>)
+0207fc22        5126      2563    2.00  cmp	r4, r3
+0207fc24        4275      2563    1.67  beq.n	207fc2a <ndsRendererAdapterTryNativeEntryEffect+0xaaa>
+0207fc26        1707      1707    1.00  bl	207f29c <ndsRendererAdapterTryNativeEntryEffect+0x11c>
+0207fc28        3414      1707    2.00  ?
+0207fc2a       19001       856   22.20  b.n	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207fc2c       17494      5285    3.31  cmp	r3, #0
+0207fc2e        5285      5285    1.00  beq.n	207fc5a <ndsRendererAdapterTryNativeEntryEffect+0xada>
+0207fc30       13429      5285    2.54  movs	r3, #128	@ 0x80
+0207fc32        5285      5285    1.00  lsls	r3, r3, #5
+0207fc34       13441      5285    2.54  str	r3, [sp, #108]	@ 0x6c
+0207fc36        5306      5285    1.00  str	r3, [sp, #128]	@ 0x80
+0207fc38       13689      5285    2.59  str	r3, [sp, #148]	@ 0x94
+0207fc3a        5874      5285    1.11  str	r3, [sp, #168]	@ 0xa8
+0207fc3c      161204      5286   30.50  add	r3, sp, #108	@ 0x6c
+0207fc3e        5285      5285    1.00  str	r2, [sp, #112]	@ 0x70
+0207fc40       14293      5285    2.70  str	r2, [sp, #116]	@ 0x74
+0207fc42        5778      5285    1.09  str	r2, [sp, #120]	@ 0x78
+0207fc44       13848      5285    2.62  str	r2, [sp, #124]	@ 0x7c
+0207fc46        5333      5285    1.01  str	r2, [sp, #132]	@ 0x84
+0207fc48       14225      5285    2.69  str	r2, [sp, #136]	@ 0x88
+0207fc4a        6473      5285    1.22  str	r2, [sp, #140]	@ 0x8c
+0207fc4c       13276      5285    2.51  str	r2, [sp, #144]	@ 0x90
+0207fc4e        6470      5285    1.22  str	r2, [sp, #152]	@ 0x98
+0207fc50       13574      5285    2.57  str	r2, [sp, #156]	@ 0x9c
+0207fc52        5890      5285    1.11  str	r2, [sp, #160]	@ 0xa0
+0207fc54       14218      5285    2.69  str	r2, [sp, #164]	@ 0xa4
+0207fc56        5285      5285    1.00  str	r3, [sp, #48]	@ 0x30
+0207fc58      319342      5285   60.42  b.n	207f550 <ndsRendererAdapterTryNativeEntryEffect+0x3d0>
+0207fc80         122        32    3.81  movs	r3, #94	@ 0x5e
+0207fc82          32        32    1.00  adds	r3, #255	@ 0xff
+0207fc84          92        32    2.88  str	r3, [sp, #24]
+0207fc86          32        32    1.00  subs	r3, #95	@ 0x5f
+0207fc88        2097        32   65.53  b.n	207fa12 <ndsRendererAdapterTryNativeEntryEffect+0x892>
+0207fd0a       31064       856   36.29  ldr	r3, [pc, #444]	@ (207fec8 <ndsRendererAdapterTryNativeEntryEffect+0xd48>)
+0207fd0c        5992       856    7.00  cmp	r4, r3
+0207fd0e        1712       856    2.00  beq.n	207fd14 <ndsRendererAdapterTryNativeEntryEffect+0xb94>
+0207fd14         856       856    1.00  bl	207f4ee <ndsRendererAdapterTryNativeEntryEffect+0x36e>
+0207fd16        2568       856    3.00  ?
+0207fd6a        7748       149   52.00  ldr	r3, [pc, #364]	@ (207fed8 <ndsRendererAdapterTryNativeEntryEffect+0xd58>)
+0207fd6c        2910       149   19.53  ldr	r2, [r6, #4]
+0207fd6e         479       149    3.21  ldr	r3, [r3, #0]
+0207fd70         149       149    1.00  mov	sl, r2
+0207fd72         149       149    1.00  mov	fp, r3
+0207fd74         149       149    1.00  cmp	r3, #0
+0207fd76         447       149    3.00  bne.n	207fd7a <ndsRendererAdapterTryNativeEntryEffect+0xbfa>
+0207fd7a         149       149    1.00  subs	r3, r2, #0
+0207fd7c        8672       149   58.20  bne.n	207fd80 <ndsRendererAdapterTryNativeEntryEffect+0xc00>
+0207fd80         149       149    1.00  ldr	r2, [pc, #292]	@ (207fea8 <ndsRendererAdapterTryNativeEntryEffect+0xd28>)
+0207fd82         857       149    5.75  ldr	r3, [r3, #0]
+0207fd84         413       149    2.77  cmp	r3, r2
+0207fd86         149       149    1.00  bne.n	207fd8a <ndsRendererAdapterTryNativeEntryEffect+0xc0a>
+0207fd88        3110       149   20.87  b.n	207ff40 <ndsRendererAdapterTryNativeEntryEffect+0xdc0>
+0207fdcc         189        48    3.94  movs	r3, #85	@ 0x55
+0207fdce          48        48    1.00  str	r3, [sp, #24]
+0207fdd0         142        48    2.96  subs	r3, #86	@ 0x56
+0207fdd2          48        48    1.00  mov	fp, r3
+0207fdd4         142        48    2.96  add	r3, sp, #436	@ 0x1b4
+0207fdd6          48        48    1.00  str	r3, [sp, #20]
+0207fdd8         142        48    2.96  bl	207f4fc <ndsRendererAdapterTryNativeEntryEffect+0x37c>
+0207fdda        1637        48   34.10  ?
+0207fe50          20         5    4.00  ldr	r3, [r0, #8]
+0207fe52          10         5    2.00  cmp	r3, #0
+0207fe54          40         5    8.00  bne.n	207fe58 <ndsRendererAdapterTryNativeEntryEffect+0xcd8>
+0207fe58           5         5    1.00  movs	r1, r5
+0207fe5a           5         5    1.00  bl	2072a40 <ndsRelocNativeRootOffset>
+0207fe5c         274         5   54.80  ?
+0207fe5e         116         5   23.20  ldr	r3, [pc, #136]	@ (207fee8 <ndsRendererAdapterTryNativeEntryEffect+0xd68>)
+0207fe60          30         5    6.00  movs	r4, r0
+0207fe62           5         5    1.00  adds	r3, r0, r3
+0207fe64           5         5    1.00  cmp	r3, #0
+0207fe66          13         5    2.60  beq.n	207fe72 <ndsRendererAdapterTryNativeEntryEffect+0xcf2>
+0207fe68          18         1   18.00  ldr	r3, [pc, #128]	@ (207feec <ndsRendererAdapterTryNativeEntryEffect+0xd6c>)
+0207fe6a           2         1    2.00  adds	r3, r0, r3
+0207fe6c           1         1    1.00  cmp	r3, #0
+0207fe6e           3         1    3.00  beq.n	207fe72 <ndsRendererAdapterTryNativeEntryEffect+0xcf2>
+0207fe72           5         5    1.00  movs	r3, #1
+0207fe74           5         5    1.00  negs	r3, r3
+0207fe76           5         5    1.00  mov	fp, r3
+0207fe78           5         5    1.00  movs	r3, #0
+0207fe7a           5         5    1.00  mov	sl, r3
+0207fe7c         138         5   27.60  str	r3, [sp, #20]
+0207fe7e           5         5    1.00  bl	207f4fc <ndsRendererAdapterTryNativeEntryEffect+0x37c>
+0207fe80         365         5   73.00  ?
+0207ff40         596       149    4.00  movs	r3, #128	@ 0x80
+0207ff42        6988       149   46.90  ldr	r4, [r6, r3]
+0207ff44        1043       149    7.00  cmp	r4, #0
+0207ff46         447       149    3.00  bne.n	207ff4a <ndsRendererAdapterTryNativeEntryEffect+0xdca>
+0207ff4a         149       149    1.00  movs	r3, #1
+0207ff4c         149       149    1.00  movs	r2, #188	@ 0xbc
+0207ff4e         149       149    1.00  negs	r3, r3
+0207ff50         149       149    1.00  lsls	r2, r2, #3
+0207ff52         149       149    1.00  add	r1, sp, #32
+0207ff54        1356       149    9.10  str	r3, [r2, r1]
+0207ff56         149       149    1.00  add	r0, sp, #336	@ 0x150
+0207ff58         149       149    1.00  movs	r2, #100	@ 0x64
+0207ff5a         149       149    1.00  movs	r1, #0
+0207ff5c        6418       149   43.07  str	r3, [sp, #636]	@ 0x27c
+0207ff5e         149       149    1.00  blx	1ffd924 <memset>
+0207ff60        4470       149   30.00  ?
+0207ff62       18164       149  121.91  ldr	r3, [r4, #0]
+0207ff64        1043       149    7.00  cmp	r3, #0
+0207ff66         298       149    2.00  beq.n	207ff6c <ndsRendererAdapterTryNativeEntryEffect+0xdec>
+0207ff6c         149       149    1.00  movs	r3, #188	@ 0xbc
+0207ff6e         149       149    1.00  add	r2, sp, #32
+0207ff70         149       149    1.00  lsls	r3, r3, #3
+0207ff72         149       149    1.00  adds	r3, r3, r2
+0207ff74        1893       149   12.70  str	r3, [sp, #0]
+0207ff76         149       149    1.00  movs	r2, #0
+0207ff78         149       149    1.00  movs	r0, r4
+0207ff7a         149       149    1.00  add	r3, sp, #636	@ 0x27c
+0207ff7c        3987       149   26.76  add	r1, sp, #336	@ 0x150
+0207ff7e         149       149    1.00  bl	2074618 <ndsRendererAdapterBuildNativeMaterialSnapshot>
+0207ff80       10241       149   68.73  ?
+0207ff82         149       149    1.00  cmp	r0, #0
+0207ff84         516       149    3.46  bne.n	207ff8a <ndsRendererAdapterTryNativeEntryEffect+0xe0a>
+0207ff8a         149       149    1.00  movs	r3, #128	@ 0x80
+0207ff8c         149       149    1.00  ldr	r2, [sp, #336]	@ 0x150
+0207ff8e         149       149    1.00  lsls	r3, r3, #2
+0207ff90         149       149    1.00  cmp	r2, r3
+0207ff92         298       149    2.00  beq.n	207ff98 <ndsRendererAdapterTryNativeEntryEffect+0xe18>
+0207ff98         149       149    1.00  movs	r3, #188	@ 0xbc
+0207ff9a         149       149    1.00  add	r1, sp, #32
+0207ff9c        2912       149   19.54  lsls	r3, r3, #3
+0207ff9e        7748       149   52.00  ldr	r2, [sp, #636]	@ 0x27c
+0207ffa0        8546       149   57.36  ldr	r3, [r3, r1]
+0207ffa2        1043       149    7.00  orrs	r3, r2
+0207ffa4         149       149    1.00  cmp	r3, #1
+0207ffa6         298       149    2.00  bls.n	207ffac <ndsRendererAdapterTryNativeEntryEffect+0xe2c>
+0207ffac         149       149    1.00  movs	r3, #94	@ 0x5e
+0207ffae         149       149    1.00  movs	r4, #184	@ 0xb8
+0207ffb0         149       149    1.00  adds	r3, #255	@ 0xff
+0207ffb2         894       149    6.00  str	r3, [sp, #24]
+0207ffb4         149       149    1.00  subs	r3, #93	@ 0x5d
+0207ffb6         149       149    1.00  subs	r3, #255	@ 0xff
+0207ffb8         149       149    1.00  mov	sl, r3
+0207ffba         149       149    1.00  add	r3, sp, #336	@ 0x150
+0207ffbc        5267       149   35.35  mov	fp, r2
+0207ffbe         149       149    1.00  lsls	r4, r4, #2
+0207ffc0         447       149    3.00  str	r3, [sp, #20]
+0207ffc2         149       149    1.00  bl	207f4fc <ndsRendererAdapterTryNativeEntryEffect+0x37c>
+0207ffc4       12963       149   87.00  ?
+02080010        3878       178   21.79  ldr	r3, [pc, #48]	@ (2080044 <ndsRendererAdapterTryNativeEntryEffect+0xec4>)
+02080012        1056       178    5.93  cmp	r4, r3
+02080014         714       178    4.01  bne.n	208001a <ndsRendererAdapterTryNativeEntryEffect+0xe9a>
+0208001a         178       178    1.00  movs	r7, #16
+0208001c        6215       178   34.92  bl	207f3d2 <ndsRendererAdapterTryNativeEntryEffect+0x252>
+0208001e        5070       178   28.48  ?
+== ndsRendererSubmitNativeEntryEffect [0203c310,0203e900) cycles 160,394,576
+0203c310       86212      7377   11.69  push	{r4, r5, r6, r7, r8, r9, sl, fp, lr}
+0203c314        7376      7376    1.00  mov	r6, r3
+0203c318      556649      7376   75.47  ldr	r3, [pc, #2332]	@ 203cc3c <ndsRendererSubmitNativeEntryEffect+0x92c>
+0203c31c       42876      7378    5.81  mov	r9, r2
+0203c320        8420      7376    1.14  ldr	r2, [r3]
+0203c324        8420      7376    1.14  sub	sp, sp, #1040	@ 0x410
+0203c328        8420      7376    1.14  cmp	r2, #0
+0203c32c        8420      7376    1.14  mov	r7, r0
+0203c330        8420      7376    1.14  mov	r8, r1
+0203c334        8420      7376    1.14  sub	sp, sp, #12
+0203c338      217771      7376   29.52  beq	203c354 <ndsRendererSubmitNativeEntryEffect+0x44>
+0203c33c        3424       856    4.00  mov	r1, #67108864	@ 0x4000000
+0203c340       17120       856   20.00  ldr	r2, [r1, #184]	@ 0xb8
+0203c344        5992       856    7.00  cmp	r2, #0
+0203c348         856       856    1.00  blt	203c650 <ndsRendererSubmitNativeEntryEffect+0x340>
+0203c34c         856       856    1.00  mov	r2, #0
+0203c350         856       856    1.00  str	r2, [r3]
+0203c354        7376      7376    1.00  mov	r3, #0
+0203c358      114720      7376   15.55  ldr	r2, [sp, #1092]	@ 0x444
+0203c35c       24044      7376    3.26  ldr	r1, [sp, #1096]	@ 0x448
+0203c360       24044      7376    3.26  str	r3, [sp, #176]	@ 0xb0
+0203c364       24074      7376    3.26  cmp	r1, r3
+0203c368       24120      7376    3.27  cmpne	r2, r3
+0203c36c       24044      7376    3.26  moveq	r2, #1
+0203c370       24044      7376    3.26  movne	r2, #0
+0203c374       24044      7376    3.26  str	r3, [sp, #180]	@ 0xb4
+0203c378      122943      7376   16.67  mov	sl, r2
+0203c37c       25503      7376    3.46  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c380       25571      7376    3.47  ldr	r3, [sp, #1092]	@ 0x444
+0203c384      177356      7376   24.05  ldr	r3, [r3, #12]
+0203c388       43439      7376    5.89  subs	fp, r3, #0
+0203c38c       13124      7376    1.78  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c390      122696      7376   16.63  ldr	r3, [sp, #1092]	@ 0x444
+0203c394       19782      7376    2.68  ldr	r3, [r3, #16]
+0203c398      162488      7377   22.03  cmp	r3, #0
+0203c39c       24863      7376    3.37  str	r3, [sp, #16]
+0203c3a0       24591      7376    3.33  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c3a4       24537      7376    3.33  mov	r1, r8
+0203c3a8       24493      7376    3.32  mov	r0, r7
+0203c3ac      225294      7376   30.54  bl	2021870 <ndsRendererEntryEffectRoot>
+0203c3b0        7376      7376    1.00  subs	ip, r0, #0
+0203c3b4       11271      7376    1.53  str	ip, [sp, #12]
+0203c3b8      136110      7376   18.45  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c3bc       93315      7376   12.65  ldrb	r2, [ip, #6]
+0203c3c0       36699      7376    4.98  cmp	r2, #0
+0203c3c4       21404      7376    2.90  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c3c8       69751      7376    9.46  ldrh	r3, [ip, #4]
+0203c3cc       26804      7376    3.63  add	r1, r2, r3
+0203c3d0       21404      7376    2.90  cmp	r1, #108	@ 0x6c
+0203c3d4       21404      7376    2.90  mov	r1, r3
+0203c3d8      126964      7376   17.21  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c3dc      248912      7376   33.75  ldr	r0, [pc, #2140]	@ 203cc40 <ndsRendererSubmitNativeEntryEffect+0x930>
+0203c3e0       50206      7378    6.80  sub	r0, ip, r0
+0203c3e4        8453      7376    1.15  cmp	r0, #504	@ 0x1f8
+0203c3e8      189297      7376   25.66  str	r0, [sp, #24]
+0203c3ec        8456      7377    1.15  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c3f0        8485      7376    1.15  ldr	ip, [sp, #1096]	@ 0x448
+0203c3f4        8485      7376    1.15  asr	r0, r0, #3
+0203c3f8      189316      7377   25.66  ldr	ip, [ip, #1216]	@ 0x4c0
+0203c3fc       28550      7376    3.87  cmp	r7, #84	@ 0x54
+0203c400       30716      7376    4.16  str	ip, [sp, #40]	@ 0x28
+0203c404       26588      7376    3.60  ldr	ip, [sp, #1096]	@ 0x448
+0203c408       26624      7376    3.61  str	r0, [sp, #20]
+0203c40c       26666      7376    3.62  ldr	ip, [ip, #1228]	@ 0x4cc
+0203c410       26596      7377    3.61  str	ip, [sp, #32]
+0203c414       26585      7376    3.60  ldr	ip, [sp, #1096]	@ 0x448
+0203c418      585812      7376   79.42  ldr	ip, [ip, #280]	@ 0x118
+0203c41c       80604      7376   10.93  str	ip, [sp, #44]	@ 0x2c
+0203c420        9662      7376    1.31  ldr	ip, [sp, #1096]	@ 0x448
+0203c424       16276      7376    2.21  ldr	ip, [ip, #284]	@ 0x11c
+0203c428        9662      7376    1.31  str	ip, [sp, #48]	@ 0x30
+0203c42c       24299      7376    3.29  beq	203c738 <ndsRendererSubmitNativeEntryEffect+0x428>
+0203c430        9370      7162    1.31  cmp	r7, #163	@ 0xa3
+0203c434      431504      7162   60.25  bne	203c698 <ndsRendererSubmitNativeEntryEffect+0x388>
+0203c49c        3339       214   15.60  ldr	r0, [sp, #24]
+0203c4a0         947       214    4.43  cmp	r0, #248	@ 0xf8
+0203c4a4        7072       214   33.05  bgt	203c888 <ndsRendererSubmitNativeEntryEffect+0x578>
+0203c4a8         142        40    3.55  cmp	r0, #8
+0203c4ac        1972        40   49.30  bgt	203c8ac <ndsRendererSubmitNativeEntryEffect+0x59c>
+0203c4b8        2419       174   13.90  cmp	r7, #84	@ 0x54
+0203c4bc       13356       174   76.76  beq	203c9bc <ndsRendererSubmitNativeEntryEffect+0x6ac>
+0203c4c0       16891      6253    2.70  ldr	r0, [pc, #1932]	@ 203cc54 <ndsRendererSubmitNativeEntryEffect+0x944>
+0203c4c4      147866      6253   23.65  ldr	r0, [r0]
+0203c4c8       35014      6254    5.60  cmp	r0, #0
+0203c4cc       10003      6253    1.60  beq	203c728 <ndsRendererSubmitNativeEntryEffect+0x418>
+0203c4d0       10003      6253    1.60  mov	ip, #1
+0203c4d4       78490      6253   12.55  ldr	lr, [sp, #20]
+0203c4d8       95338      6253   15.25  ldr	r3, [pc, #1912]	@ 203cc58 <ndsRendererSubmitNativeEntryEffect+0x948>
+0203c4dc       18061      6253    2.89  lsr	r0, lr, #5
+0203c4e0      155505      6253   24.87  ldr	r3, [r3, r0, lsl #2]
+0203c4e4       34010      6253    5.44  and	r0, lr, #31
+0203c4e8       14765      6253    2.36  ands	r3, r3, ip, lsl r0
+0203c4ec        7759      6253    1.24  movne	r3, ip
+0203c4f0        8512      6253    1.36  moveq	r3, #0
+0203c4f4      130282      6253   20.84  str	r3, [sp, #28]
+0203c4f8      104612      7376   14.18  ldr	r0, [sp, #28]
+0203c4fc      178892      7376   24.25  ldr	r3, [pc, #2172]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203c500       35910      7376    4.87  cmp	r0, #0
+0203c504       11180      7376    1.52  add	r1, r1, r1, lsl #2
+0203c508       11180      7376    1.52  add	r1, r3, r1, lsl #2
+0203c50c       11596      7376    1.57  streq	r0, [sp, #56]	@ 0x38
+0203c510       11189      7376    1.52  streq	r2, [sp, #60]	@ 0x3c
+0203c514      400283      7376   54.27  bne	203c770 <ndsRendererSubmitNativeEntryEffect+0x460>
+0203c518        2001        42   47.64  ldrb	r3, [r1, #7]
+0203c51c         643        42   15.31  ldr	r2, [sp, #20]
+0203c520          92        42    2.19  cmp	r3, r2
+0203c524          54        42    1.29  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c528         150        42    3.57  ldrh	r3, [r1, #2]
+0203c52c          64        42    1.52  ldrh	ip, [r1]
+0203c530          54        42    1.29  ldr	lr, [pc, #1828]	@ 203cc5c <ndsRendererSubmitNativeEntryEffect+0x94c>
+0203c534          54        42    1.29  add	r2, r3, r3, lsl #1
+0203c538         578        42   13.76  add	r0, ip, r2
+0203c53c         105        42    2.50  cmp	r0, lr
+0203c540         105        42    2.50  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c544         195        42    4.64  ldrb	r0, [r1, #8]
+0203c548         170        42    4.05  cmp	r0, #12
+0203c54c          99        42    2.36  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c550         224        42    5.33  ldrb	r0, [r1, #9]
+0203c554         145        42    3.45  cmp	r0, #9
+0203c558         399        42    9.50  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c55c         105        42    2.50  ldrb	r0, [r1, #10]
+0203c560         147        42    3.50  cmp	r0, #6
+0203c564         105        42    2.50  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c568         105        42    2.50  ldrb	r0, [r1, #11]
+0203c56c         147        42    3.50  cmp	r0, #6
+0203c570         105        42    2.50  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c574         168        42    4.00  ldrb	r0, [r1, #12]
+0203c578         528        42   12.57  cmp	r0, #18
+0203c57c          99        42    2.36  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c580         174        42    4.14  ldrb	r0, [r1, #13]
+0203c584         145        42    3.45  cmp	r0, #10
+0203c588          99        42    2.36  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c58c         174        42    4.14  ldrb	r0, [r1, #19]
+0203c590         168        42    4.00  cmp	r0, #255	@ 0xff
+0203c594         416        42    9.90  beq	203c5a4 <ndsRendererSubmitNativeEntryEffect+0x294>
+0203c598         267        13   20.54  cmp	r9, #0
+0203c59c          49        13    3.77  cmpne	r0, r6
+0203c5a0          49        13    3.77  bcs	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c5a4         154        42    3.67  ldrh	r0, [r1, #4]
+0203c5a8         108        42    2.57  ldrb	lr, [r1, #18]
+0203c5ac         128        42    3.05  mov	r5, r0
+0203c5b0         108        42    2.57  add	r0, r0, lr
+0203c5b4         108        42    2.57  cmp	r0, #21
+0203c5b8         432        42   10.29  str	lr, [sp, #28]
+0203c5bc         111        42    2.64  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c5c0         111        42    2.64  cmp	r3, #0
+0203c5c4         111        42    2.64  beq	203c908 <ndsRendererSubmitNativeEntryEffect+0x5f8>
+0203c5c8         506        42   12.05  ldr	r3, [pc, #1680]	@ 203cc60 <ndsRendererSubmitNativeEntryEffect+0x950>
+0203c5cc         641        42   15.26  ldr	r0, [pc, #1680]	@ 203cc64 <ndsRendererSubmitNativeEntryEffect+0x954>
+0203c5d0          63        42    1.50  ldr	lr, [pc, #1680]	@ 203cc68 <ndsRendererSubmitNativeEntryEffect+0x958>
+0203c5d4          63        42    1.50  ldr	r4, [pc, #1680]	@ 203cc6c <ndsRendererSubmitNativeEntryEffect+0x95c>
+0203c5d8         488        42   11.62  add	lr, lr, ip, lsl #1
+0203c5dc         108        42    2.57  add	r3, r3, ip
+0203c5e0         108        42    2.57  add	r0, r0, ip, lsl #1
+0203c5e4         108        42    2.57  add	ip, r4, ip
+0203c5e8         108        42    2.57  str	r1, [sp, #64]	@ 0x40
+0203c5ec         110        42    2.62  str	r2, [sp, #68]	@ 0x44
+0203c5f0         108        42    2.57  add	r1, r3, r2
+0203c5f4         108        42    2.57  mov	r2, lr
+0203c5f8         795        42   18.93  mov	lr, ip
+0203c5fc        1450        42   34.52  b	203c630 <ndsRendererSubmitNativeEntryEffect+0x320>
+0203c600        1302       444    2.93  ldrb	ip, [lr, #1]!
+0203c604        1502       444    3.38  cmp	ip, #206	@ 0xce
+0203c608         444       444    1.00  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c60c        1762       444    3.97  ldrb	ip, [r3, #1]!
+0203c610        1482       444    3.34  cmp	ip, #146	@ 0x92
+0203c614         444       444    1.00  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c618        1986       444    4.47  ldrh	ip, [r2, #2]!
+0203c61c         659       444    1.48  sub	r4, r4, #184	@ 0xb8
+0203c620         888       444    2.00  cmp	ip, r4
+0203c624         444       444    1.00  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c628         444       444    1.00  cmp	r1, r3
+0203c62c         725       444    1.63  beq	203c900 <ndsRendererSubmitNativeEntryEffect+0x5f0>
+0203c630        2272       444    5.12  ldrh	ip, [r0, #2]!
+0203c634        2539       444    5.72  ldr	r4, [pc, #1784]	@ 203cd34 <ndsRendererSubmitNativeEntryEffect+0xa24>
+0203c638        1547       444    3.48  cmp	ip, r4
+0203c63c        1836       444    4.14  bls	203c600 <ndsRendererSubmitNativeEntryEffect+0x2f0>
+0203c644       28883      7376    3.92  add	sp, sp, #1040	@ 0x410
+0203c648       28839      7376    3.91  add	sp, sp, #12
+0203c64c      851499      7376  115.44  pop	{r4, r5, r6, r7, r8, r9, sl, fp, pc}
+0203c698      134911      7163   18.83  ldr	r0, [sp, #24]
+0203c69c       27977      7162    3.91  cmp	r0, #248	@ 0xf8
+0203c6a0       36211      7162    5.06  bgt	203c8c4 <ndsRendererSubmitNativeEntryEffect+0x5b4>
+0203c6a4       25811      6965    3.71  cmp	r0, #8
+0203c6a8      244146      6965   35.05  bgt	203c8e8 <ndsRendererSubmitNativeEntryEffect+0x5d8>
+0203c6b4        6109      6109    1.00  cmp	r7, #348	@ 0x15c
+0203c6b8      344363      6109   56.37  bne	203c860 <ndsRendererSubmitNativeEntryEffect+0x550>
+0203c6e4        4260      1065    4.00  mvn	r3, #0
+0203c6e8        4260      1065    4.00  str	r3, [sp, #52]	@ 0x34
+0203c6ec        4260      1065    4.00  mov	r3, #0
+0203c6f0        4260      1065    4.00  str	r3, [sp, #36]	@ 0x24
+0203c6f4        4492      1123    4.00  mov	r2, #0
+0203c6f8       52686      1123   46.92  ldr	r3, [pc, #1364]	@ 203cc54 <ndsRendererSubmitNativeEntryEffect+0x944>
+0203c6fc       49886      1123   44.42  ldr	r0, [r3]
+0203c700      102844      1123   91.58  ldr	r3, [pc, #1396]	@ 203cc7c <ndsRendererSubmitNativeEntryEffect+0x96c>
+0203c704        6738      1123    6.00  cmp	r0, r2
+0203c708        1123      1123    1.00  str	r2, [r3]
+0203c70c        2244      1123    2.00  str	r2, [r3, #4]
+0203c710        1397      1123    1.24  ldr	r3, [sp, #12]
+0203c714        2261      1123    2.01  ldrb	r2, [r3, #6]
+0203c718      120366      1123  107.18  bne	203c7e4 <ndsRendererSubmitNativeEntryEffect+0x4d4>
+0203c738       10234       214   47.82  ldr	r0, [pc, #1344]	@ 203cc80 <ndsRendererSubmitNativeEntryEffect+0x970>
+0203c73c        1327       214    6.20  cmp	r8, r0
+0203c740        1740       214    8.13  beq	203c9e0 <ndsRendererSubmitNativeEntryEffect+0x6d0>
+0203c744         322       196    1.64  add	r0, r0, #152	@ 0x98
+0203c748         322       196    1.64  cmp	r8, r0
+0203c74c        1707       196    8.71  beq	203ca4c <ndsRendererSubmitNativeEntryEffect+0x73c>
+0203c750         301       178    1.69  add	r0, r0, #96	@ 0x60
+0203c754         301       178    1.69  cmp	r8, r0
+0203c758        7414       178   41.65  moveq	r0, #2
+0203c75c         664       178    3.73  mvnne	r0, #0
+0203c760         816       178    4.58  str	r0, [sp, #52]	@ 0x34
+0203c764         664       178    3.73  mov	r0, #0
+0203c768         664       178    3.73  str	r0, [sp, #36]	@ 0x24
+0203c76c       10738       178   60.33  b	203c49c <ndsRendererSubmitNativeEntryEffect+0x18c>
+0203c770       26112      7354    3.55  mov	lr, r2
+0203c774       26081      7353    3.55  mov	r2, #0
+0203c778      733824     23614   31.08  ldrb	r0, [r1, #19]
+0203c77c      154680     23615    6.55  cmp	r0, #255	@ 0xff
+0203c780       87782     23614    3.72  beq	203c790 <ndsRendererSubmitNativeEntryEffect+0x480>
+0203c784         598       478    1.25  cmp	r9, #0
+0203c788         598       478    1.25  cmpne	r0, r6
+0203c78c         598       478    1.25  bcs	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c790      242842     23615   10.28  ldrb	r0, [r1, #18]
+0203c794       70882     23614    3.00  cmp	r0, #0
+0203c798      412805     23614   17.48  beq	203c828 <ndsRendererSubmitNativeEntryEffect+0x518>
+0203c7e4        4483      1123    3.99  mov	r0, #1
+0203c7e8        4483      1123    3.99  ldr	ip, [sp, #20]
+0203c7ec        4483      1123    3.99  ldr	r3, [pc, #1124]	@ 203cc58 <ndsRendererSubmitNativeEntryEffect+0x948>
+0203c7f0        4483      1123    3.99  lsr	r1, ip, #5
+0203c7f4       27393      1123   24.39  ldr	r3, [r3, r1, lsl #2]
+0203c7f8       70567      1123   62.84  and	r1, ip, #31
+0203c7fc        5606      1123    4.99  ands	r3, r3, r0, lsl r1
+0203c800        3363      1123    2.99  movne	r3, r0
+0203c804        4483      1123    3.99  moveq	r3, #0
+0203c808        4483      1123    3.99  cmp	r2, #0
+0203c80c        4529      1123    4.03  str	r3, [sp, #28]
+0203c810        4483      1123    3.99  beq	203ca8c <ndsRendererSubmitNativeEntryEffect+0x77c>
+0203c814        4483      1123    3.99  ldr	r3, [sp, #12]
+0203c818       20136      1123   17.93  ldrh	r1, [r3, #4]
+0203c81c       82920      1123   73.84  b	203c4f8 <ndsRendererSubmitNativeEntryEffect+0x1e8>
+0203c828      112276     23614    4.75  ldrb	r0, [r1, #6]
+0203c82c       81266     23614    3.44  cmp	r0, #255	@ 0xff
+0203c830       26896     23614    1.14  cmpne	r7, #163	@ 0xa3
+0203c834       29333     23614    1.24  beq	203c848 <ndsRendererSubmitNativeEntryEffect+0x538>
+0203c838      307565     22699   13.55  ldr	r3, [pc, #1164]	@ 203cccc <ndsRendererSubmitNativeEntryEffect+0x9bc>
+0203c83c      351503     22699   15.49  ldr	r3, [r3, r0, lsl #2]
+0203c840       72797     22699    3.21  cmp	r3, #0
+0203c844       22780     22699    1.00  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203c848       23758     23614    1.01  add	r2, r2, #1
+0203c84c       23758     23614    1.01  cmp	lr, r2
+0203c850       23758     23614    1.01  mov	r0, lr
+0203c854      250654     23614   10.61  bls	203dda0 <ndsRendererSubmitNativeEntryEffect+0x1a90>
+0203c858       39658     16261    2.44  add	r1, r1, #20
+0203c85c       73171     16261    4.50  b	203c778 <ndsRendererSubmitNativeEntryEffect+0x468>
+0203c860       13068      6109    2.14  ldr	r0, [pc, #1056]	@ 203cc88 <ndsRendererSubmitNativeEntryEffect+0x978>
+0203c864       13030      6109    2.13  cmp	r7, #85	@ 0x55
+0203c868       13030      6109    2.13  cmpeq	r8, r0
+0203c86c       13030      6109    2.13  moveq	r0, #1
+0203c870       13030      6109    2.13  movne	r0, #0
+0203c874       13342      6109    2.18  beq	203c6e4 <ndsRendererSubmitNativeEntryEffect+0x3d4>
+0203c878       67935      6097   11.14  str	r0, [sp, #36]	@ 0x24
+0203c87c       17081      6097    2.80  mvn	r0, #0
+0203c880       17023      6097    2.79  str	r0, [sp, #52]	@ 0x34
+0203c884      164485      6097   26.98  b	203c4c0 <ndsRendererSubmitNativeEntryEffect+0x1b0>
+0203c888         623       174    3.58  ldr	r0, [sp, #20]
+0203c88c         594       174    3.41  sub	r0, r0, #41	@ 0x29
+0203c890         543       174    3.12  cmp	r0, #21
+0203c894         891       174    5.12  bhi	203c4b8 <ndsRendererSubmitNativeEntryEffect+0x1a8>
+0203c8ac         160        40    4.00  ldr	r0, [pc, #988]	@ 203cc90 <ndsRendererSubmitNativeEntryEffect+0x980>
+0203c8b0         160        40    4.00  ldr	ip, [sp, #20]
+0203c8b4         200        40    5.00  lsr	r0, r0, ip
+0203c8b8         680        40   17.00  tst	r0, #1
+0203c8bc         160        40    4.00  beq	203c4b8 <ndsRendererSubmitNativeEntryEffect+0x1a8>
+0203c8c0        2640        40   66.00  b	203c6f4 <ndsRendererSubmitNativeEntryEffect+0x3e4>
+0203c8c4         776       197    3.94  ldr	r0, [sp, #20]
+0203c8c8         780       197    3.96  sub	r0, r0, #41	@ 0x29
+0203c8cc         776       197    3.94  cmp	r0, #21
+0203c8d0         776       197    3.94  bhi	203c6b4 <ndsRendererSubmitNativeEntryEffect+0x3a4>
+0203c8d4        6774       197   34.39  ldr	ip, [pc, #944]	@ 203cc8c <ndsRendererSubmitNativeEntryEffect+0x97c>
+0203c8d8        8703       197   44.18  lsr	r0, ip, r0
+0203c8dc         557       197    2.83  tst	r0, #1
+0203c8e0        7591       197   38.53  bne	203c6e4 <ndsRendererSubmitNativeEntryEffect+0x3d4>
+0203c8e4         764        48   15.92  b	203c6b4 <ndsRendererSubmitNativeEntryEffect+0x3a4>
+0203c8e8      289652      6966   41.58  ldr	r0, [pc, #928]	@ 203cc90 <ndsRendererSubmitNativeEntryEffect+0x980>
+0203c8ec      127509      6967   18.30  ldr	ip, [sp, #20]
+0203c8f0       21210      6966    3.04  lsr	r0, r0, ip
+0203c8f4        7277      6965    1.04  tst	r0, #1
+0203c8f8      351785      6965   50.51  beq	203c6b4 <ndsRendererSubmitNativeEntryEffect+0x3a4>
+0203c8fc       48816       904   54.00  b	203c6e4 <ndsRendererSubmitNativeEntryEffect+0x3d4>
+0203c900         657        42   15.64  ldr	r1, [sp, #64]	@ 0x40
+0203c904         366        42    8.71  ldr	r2, [sp, #68]	@ 0x44
+0203c908         127        42    3.02  ldr	r3, [sp, #28]
+0203c90c          98        42    2.33  cmp	r3, #0
+0203c910         923        42   21.98  beq	203c9f0 <ndsRendererSubmitNativeEntryEffect+0x6e0>
+0203c9bc         633       174    3.64  ldr	ip, [pc, #700]	@ 203cc80 <ndsRendererSubmitNativeEntryEffect+0x970>
+0203c9c0        5362       174   30.82  ldr	r0, [pc, #900]	@ 203cd4c <ndsRendererSubmitNativeEntryEffect+0xa3c>
+0203c9c4        1006       174    5.78  cmp	r8, r0
+0203c9c8         336       174    1.93  cmpne	r8, ip
+0203c9cc        1134       174    6.52  bne	203c4c0 <ndsRendererSubmitNativeEntryEffect+0x1b0>
+0203c9d0        1142        18   63.44  b	203c6f4 <ndsRendererSubmitNativeEntryEffect+0x3e4>
+0203c9e0          72        18    4.00  str	sl, [sp, #52]	@ 0x34
+0203c9e4          72        18    4.00  str	sl, [sp, #36]	@ 0x24
+0203c9e8        1854        18  103.00  b	203c49c <ndsRendererSubmitNativeEntryEffect+0x18c>
+0203c9f0          99        42    2.36  ldrb	r3, [r1, #6]
+0203c9f4         145        42    3.45  cmp	r3, #255	@ 0xff
+0203c9f8         495        42   11.79  beq	203ddc4 <ndsRendererSubmitNativeEntryEffect+0x1ab4>
+0203c9fc          97        40    2.42  cmp	r3, #65	@ 0x41
+0203ca00          97        40    2.42  bhi	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203ca04          97        40    2.42  cmp	r7, #163	@ 0xa3
+0203ca08          97        40    2.42  beq	203ca1c <ndsRendererSubmitNativeEntryEffect+0x70c>
+0203ca0c         618        40   15.45  ldr	r2, [pc, #696]	@ 203cccc <ndsRendererSubmitNativeEntryEffect+0x9bc>
+0203ca10        1028        40   25.70  ldr	r3, [r2, r3, lsl #2]
+0203ca14         174        40    4.35  cmp	r3, #0
+0203ca18         759        40   18.98  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203ca1c         432        40   10.80  ldr	r3, [sp, #56]	@ 0x38
+0203ca20         128        40    3.20  ldr	r2, [sp, #60]	@ 0x3c
+0203ca24          88        40    2.20  add	r3, r3, #1
+0203ca28          88        40    2.20  cmp	r3, r2
+0203ca2c          88        40    2.20  mov	r0, r2
+0203ca30          88        40    2.20  str	r3, [sp, #56]	@ 0x38
+0203ca34         569        40   14.22  bcs	203dde0 <ndsRendererSubmitNativeEntryEffect+0x1ad0>
+0203ca38          76        19    4.00  add	r1, r1, #20
+0203ca3c          85        19    4.47  b	203c518 <ndsRendererSubmitNativeEntryEffect+0x208>
+0203ca4c          72        18    4.00  mov	r0, #1
+0203ca50          72        18    4.00  str	r0, [sp, #52]	@ 0x34
+0203ca54          72        18    4.00  mov	r0, #0
+0203ca58         324        18   18.00  str	r0, [sp, #36]	@ 0x24
+0203ca5c        1656        18   92.00  b	203c49c <ndsRendererSubmitNativeEntryEffect+0x18c>
+0203ca90       28769      7354    3.91  ldr	r3, [sp, #28]
+0203ca94       29058      7353    3.95  cmp	r3, #0
+0203ca98      469102      7353   63.80  bne	203cac4 <ndsRendererSubmitNativeEntryEffect+0x7b4>
+0203ca9c          77        23    3.35  mov	r1, #0
+0203caa0          77        23    3.35  mov	r3, #1
+0203caa4          77        23    3.35  ldr	lr, [sp, #20]
+0203caa8          77        23    3.35  str	r1, [sp, #28]
+0203caac         221        23    9.61  ldr	r1, [pc, #420]	@ 203cc58 <ndsRendererSubmitNativeEntryEffect+0x948>
+0203cab0          86        23    3.74  lsr	ip, lr, #5
+0203cab4         239        23   10.39  ldr	r4, [r1, ip, lsl #2]
+0203cab8         664        23   28.87  and	lr, lr, #31
+0203cabc         109        23    4.74  orr	r3, r4, r3, lsl lr
+0203cac0          91        23    3.96  str	r3, [r1, ip, lsl #2]
+0203cac4       25920      7376    3.51  cmp	r7, #84	@ 0x54
+0203cac8       35734      7376    4.84  beq	203da34 <ndsRendererSubmitNativeEntryEffect+0x1724>
+0203cacc       25199      7162    3.52  ldr	r3, [pc, #452]	@ 203cc98 <ndsRendererSubmitNativeEntryEffect+0x988>
+0203cad0       26313      7162    3.67  cmp	r7, r3
+0203cad4       27746      7162    3.87  beq	203dc2c <ndsRendererSubmitNativeEntryEffect+0x191c>
+0203cad8      112281      7137   15.73  ldr	r3, [pc, #444]	@ 203cc9c <ndsRendererSubmitNativeEntryEffect+0x98c>
+0203cadc       26840      7136    3.76  cmp	r7, r3
+0203cae0       25924      7136    3.63  cmpeq	r8, #736	@ 0x2e0
+0203cae4       25858      7136    3.62  moveq	r3, #1
+0203cae8       25796      7136    3.61  movne	r3, #0
+0203caec       25796      7136    3.61  str	r3, [sp, #56]	@ 0x38
+0203caf0      290470      7136   40.70  bne	203dc90 <ndsRendererSubmitNativeEntryEffect+0x1980>
+0203caf4         596       149    4.00  subs	r3, r6, #1
+0203caf8        3366       149   22.59  movne	r3, #1
+0203cafc         596       149    4.00  cmp	r9, #0
+0203cb00         596       149    4.00  orreq	r3, r3, #1
+0203cb04         596       149    4.00  cmp	r3, #0
+0203cb08         596       149    4.00  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203cb0c        3336       149   22.39  ldr	r3, [r9]
+0203cb10        4843       149   32.50  ldr	r1, [sp, #1088]	@ 0x440
+0203cb14         322       149    2.16  cmp	r1, #1
+0203cb18        4541       149   30.48  cmpls	r3, #512	@ 0x200
+0203cb1c         626       149    4.20  movne	r3, #1
+0203cb20         596       149    4.00  moveq	r3, #0
+0203cb24         596       149    4.00  cmp	r2, #1
+0203cb28         596       149    4.00  orrne	r3, r3, #1
+0203cb2c         596       149    4.00  cmp	r3, #0
+0203cb30         596       149    4.00  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203cb34         596       149    4.00  mov	r1, #20
+0203cb38        2682       149   18.00  ldr	r3, [sp, #12]
+0203cb3c         596       149    4.00  ldrh	r2, [r3, #4]
+0203cb40         596       149    4.00  ldr	r3, [pc, #568]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203cb44         596       149    4.00  mla	r3, r1, r2, r3
+0203cb48         596       149    4.00  ldrb	r2, [r3, #19]
+0203cb4c         596       149    4.00  cmp	r2, #0
+0203cb50         596       149    4.00  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203cb54         596       149    4.00  ldrb	r3, [r3, #6]
+0203cb58        2980       149   20.00  cmp	r3, #58	@ 0x3a
+0203cb5c         596       149    4.00  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203cb60         596       149    4.00  ldr	r3, [pc, #356]	@ 203cccc <ndsRendererSubmitNativeEntryEffect+0x9bc>
+0203cb64         596       149    4.00  ldr	r2, [r3, #232]	@ 0xe8
+0203cb68         596       149    4.00  cmp	r2, #0
+0203cb6c         596       149    4.00  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203cb70        3070       149   20.60  ldr	r3, [r3, #236]	@ 0xec
+0203cb74        1043       149    7.00  cmp	r3, #0
+0203cb78        7865       149   52.79  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203cb7c      204774      7376   27.76  bl	1ff8508 <ndsRendererHardwareEndBatch>
+0203cb80        7376      7376    1.00  ldr	r5, [sp, #16]
+0203cb84        7376      7376    1.00  ldr	r4, [sp, #20]
+0203cb88        7376      7376    1.00  mov	lr, r5
+0203cb8c      120544      7376   16.34  ldr	r3, [pc, #268]	@ 203cca0 <ndsRendererSubmitNativeEntryEffect+0x990>
+0203cb90       42227      7376    5.72  add	ip, r3, r4, lsl #6
+0203cb94      388215      7376   52.63  ldm	lr!, {r0, r1, r2, r3}
+0203cb98      206825      7377   28.04  stmia	ip!, {r0, r1, r2, r3}
+0203cb9c      150719      7377   20.43  ldm	lr!, {r0, r1, r2, r3}
+0203cba0       71138      7376    9.64  stmia	ip!, {r0, r1, r2, r3}
+0203cba4       40357      7377    5.47  ldm	lr!, {r0, r1, r2, r3}
+0203cba8       32570      7376    4.42  stmia	ip!, {r0, r1, r2, r3}
+0203cbac      162576      7376   22.04  ldm	lr, {r0, r1, r2, r3}
+0203cbb0       72956      7376    9.89  stm	ip, {r0, r1, r2, r3}
+0203cbb4      685021      7376   92.87  ldr	r3, [pc, #348]	@ 203cd18 <ndsRendererSubmitNativeEntryEffect+0xa08>
+0203cbb8      550698      7377   74.65  ldr	r2, [sp, #24]
+0203cbbc       31067      7376    4.21  mov	r1, fp
+0203cbc0       22883      7376    3.10  add	r2, r3, r2, lsl #3
+0203cbc4       22959      7376    3.11  mov	r0, r5
+0203cbc8      105540      7376   14.31  bl	1ff94ec <ndsRendererMtxMul20p12>
+0203cbcc        7379      7377    1.00  mov	r1, #1
+0203cbd0      657819      7376   89.18  ldr	r0, [pc, #164]	@ 203cc7c <ndsRendererSubmitNativeEntryEffect+0x96c>
+0203cbd4       40091      7376    5.44  lsr	ip, r4, #5
+0203cbd8      435262      7377   59.00  ldr	r3, [r0, ip, lsl #2]
+0203cbdc       37843      7376    5.13  and	r2, r4, #31
+0203cbe0       21949      7376    2.98  orr	r3, r3, r1, lsl r2
+0203cbe4      113740      7376   15.42  str	r3, [r0, ip, lsl #2]
+0203cbe8       21949      7376    2.98  lsl	r3, r1, r2
+0203cbec       12174      7376    1.65  str	r3, [sp, #124]	@ 0x7c
+0203cbf0       16019      7376    2.17  str	ip, [sp, #120]	@ 0x78
+0203cbf4      422770      7376   57.32  bl	201d694 <ndsRendererNextMatrixGeneration>
+0203cbf8      105845      7376   14.35  mov	r1, r5
+0203cbfc       25585      7376    3.47  mov	r2, r0
+0203cc00       26131      7376    3.54  str	r0, [sp, #152]	@ 0x98
+0203cc04       25533      7376    3.46  mov	r0, fp
+0203cc08      287828      7376   39.02  bl	2028ac8 <ndsRendererLoadHardwareSplitMatrices>
+0203cc0c       11501      7376    1.56  mvn	r2, #0
+0203cc10       11501      7376    1.56  str	r2, [sp, #60]	@ 0x3c
+0203cc14      142737      7376   19.35  ldr	r2, [sp, #52]	@ 0x34
+0203cc18      173468      7376   23.52  mov	r3, #0
+0203cc1c       26330      7376    3.57  cmp	r7, #163	@ 0xa3
+0203cc20       26356      7377    3.57  cmpne	r2, #2
+0203cc24       26299      7376    3.57  movhi	r2, #1
+0203cc28       26267      7376    3.56  movls	r2, #0
+0203cc2c       27875      7376    3.78  str	r3, [sp, #108]	@ 0x6c
+0203cc30       26289      7376    3.56  str	r2, [sp, #148]	@ 0x94
+0203cc34       26295      7376    3.56  str	r3, [sp, #96]	@ 0x60
+0203cc38      497110      7376   67.40  b	203cda0 <ndsRendererSubmitNativeEntryEffect+0xa90>
+0203cd84          84         5   16.80  ldr	r2, [pc, #-232]	@ 203cca4 <ndsRendererSubmitNativeEntryEffect+0x994>
+0203cd88         204         5   40.80  ldr	r3, [r2]
+0203cd8c          29         5    5.80  add	r3, r3, #1
+0203cd90          44         5    8.80  str	r3, [r2]
+0203cd94       41608     23657    1.76  ldr	r3, [sp, #96]	@ 0x60
+0203cd98      372449     23656   15.74  add	r3, r3, #1
+0203cd9c       45363     23656    1.92  str	r3, [sp, #96]	@ 0x60
+0203cda0       68865     31032    2.22  ldr	r3, [sp, #12]
+0203cda4      120783     31032    3.89  ldr	r2, [sp, #96]	@ 0x60
+0203cda8      396704     31032   12.78  ldrb	r3, [r3, #6]
+0203cdac      127233     31032    4.10  cmp	r3, r2
+0203cdb0      102943     31032    3.32  bls	203e1ac <ndsRendererSubmitNativeEntryEffect+0x1e9c>
+0203cdb4       36028     23656    1.52  mov	r3, #20
+0203cdb8      920958     23657   38.93  ldr	r2, [sp, #12]
+0203cdbc       76061     23656    3.22  ldr	r1, [sp, #96]	@ 0x60
+0203cdc0       76051     23657    3.21  ldrh	r2, [r2, #4]
+0203cdc4      110090     23656    4.65  ldr	r0, [pc, #-76]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203cdc8       84278     23656    3.56  add	r4, r2, r1
+0203cdcc       73797     23656    3.12  mla	r0, r3, r4, r0
+0203cdd0       87671     23656    3.71  mov	r3, r0
+0203cdd4      229788     23656    9.71  ldr	lr, [pc, #-308]	@ 203cca8 <ndsRendererSubmitNativeEntryEffect+0x998>
+0203cdd8      467081     23656   19.74  ldr	ip, [pc, #-308]	@ 203ccac <ndsRendererSubmitNativeEntryEffect+0x99c>
+0203cddc      564083     23656   23.85  ldr	r5, [lr, r4, lsl #3]
+0203cde0       92867     23657    3.93  add	r0, lr, r4, lsl #3
+0203cde4      421308     23656   17.81  ldr	r2, [pc, #-152]	@ 203cd54 <ndsRendererSubmitNativeEntryEffect+0xa44>
+0203cde8      341954     23656   14.46  ldrb	lr, [r3, #10]
+0203cdec      628534     23656   26.57  ldrb	r2, [r2, r4]
+0203cdf0      266908     23656   11.28  str	r4, [sp, #80]	@ 0x50
+0203cdf4       34285     23656    1.45  add	r4, ip, lr, lsl #3
+0203cdf8      661389     23656   27.96  ldr	ip, [ip, lr, lsl #3]
+0203cdfc      180655     23656    7.64  ldr	lr, [r4, #4]
+0203ce00       38962     23656    1.65  ldr	r4, [sp, #44]	@ 0x2c
+0203ce04      173853     23656    7.35  ldr	r6, [r0, #4]
+0203ce08       58555     23656    2.48  eor	ip, ip, r4
+0203ce0c       27295     23656    1.15  and	ip, ip, r5
+0203ce10      194869     23656    8.24  ldr	r5, [sp, #48]	@ 0x30
+0203ce14       29113     23656    1.23  ldrb	r0, [r3, #8]
+0203ce18      203545     23656    8.60  ldr	r1, [pc, #-368]	@ 203ccb0 <ndsRendererSubmitNativeEntryEffect+0x9a0>
+0203ce1c       46285     23656    1.96  eor	lr, lr, r5
+0203ce20       45916     23656    1.94  and	lr, lr, r6
+0203ce24       45974     23656    1.94  eor	ip, ip, r4
+0203ce28       46054     23656    1.95  eor	r4, lr, r5
+0203ce2c       55813     23656    2.36  ldr	r5, [sp, #1096]	@ 0x448
+0203ce30       46760     23656    1.98  add	lr, r1, r0, lsl #3
+0203ce34      315228     23656   13.33  ldr	r0, [r1, r0, lsl #3]
+0203ce38      254993     23656   10.78  ldr	r1, [sp, #1092]	@ 0x444
+0203ce3c      208934     23656    8.83  ldr	lr, [lr, #4]
+0203ce40      370881     23656   15.68  ldr	r1, [r1, #20]
+0203ce44      154405     23656    6.53  str	ip, [r5, #280]	@ 0x118
+0203ce48       75042     23656    3.17  ldrb	ip, [r3, #6]
+0203ce4c       34605     23656    1.46  bic	r1, r1, lr
+0203ce50       52018     23656    2.20  mov	r6, ip
+0203ce54       32094     23656    1.36  ldrh	ip, [r3, #2]
+0203ce58      164807     23656    6.97  tst	r2, #1
+0203ce5c       43492     23656    1.84  str	ip, [sp, #84]	@ 0x54
+0203ce60      123986     23656    5.24  ldrb	ip, [r3, #18]
+0203ce64       61924     23656    2.62  orr	r1, r1, r0
+0203ce68       48603     23656    2.05  ldrbne	lr, [r3, #11]
+0203ce6c      131921     23656    5.58  str	r1, [r5, #304]	@ 0x130
+0203ce70       43200     23656    1.83  str	ip, [sp, #128]	@ 0x80
+0203ce74       42727     23656    1.81  mov	fp, r1
+0203ce78      348364     23657   14.73  ldrb	ip, [r3, #9]
+0203ce7c       46621     23656    1.97  ldrb	r1, [r3, #13]
+0203ce80       46621     23656    1.97  ldr	r0, [pc, #-468]	@ 203ccb4 <ndsRendererSubmitNativeEntryEffect+0x9a4>
+0203ce84       46591     23656    1.97  ldrne	r3, [pc, #-468]	@ 203ccb8 <ndsRendererSubmitNativeEntryEffect+0x9a8>
+0203ce88       46591     23656    1.97  str	r4, [r5, #284]	@ 0x11c
+0203ce8c      251811     23656   10.64  ldrne	r3, [r3, lr, lsl #2]
+0203ce90      319323     23657   13.50  ldrb	r0, [r0, r1]
+0203ce94      317145     23656   13.41  str	r4, [sp, #64]	@ 0x40
+0203ce98      264812     23656   11.19  ldreq	r3, [sp, #40]	@ 0x28
+0203ce9c       47921     23656    2.03  tst	r2, #2
+0203cea0       59984     23656    2.54  ldr	r2, [sp, #1096]	@ 0x448
+0203cea4      106956     23656    4.52  ldrne	lr, [pc, #-300]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203cea8      117811     23656    4.98  str	r3, [r2, #1216]	@ 0x4c0
+0203ceac       39069     23656    1.65  movne	r3, #20
+0203ceb0       73006     23656    3.09  ldrne	r4, [sp, #80]	@ 0x50
+0203ceb4      100618     23656    4.25  ldrne	r2, [pc, #-348]	@ 203cd60 <ndsRendererSubmitNativeEntryEffect+0xa50>
+0203ceb8      231806     23656    9.80  mlane	lr, r3, r4, lr
+0203cebc       53206     23656    2.25  ldrbne	r3, [lr, #12]
+0203cec0       42922     23656    1.81  ldreq	r3, [sp, #32]
+0203cec4      255779     23656   10.81  ldrne	r3, [r2, r3, lsl #2]
+0203cec8      176228     23656    7.45  ldr	r2, [sp, #1096]	@ 0x448
+0203cecc       28533     23656    1.21  tst	r0, #1
+0203ced0       29650     23656    1.25  str	r3, [r2, #1228]	@ 0x4cc
+0203ced4      230929     23656    9.76  ldr	r3, [r2, #320]	@ 0x140
+0203ced8      395688     23656   16.73  orr	r3, r3, #1
+0203cedc      106715     23656    4.51  str	r3, [r2, #320]	@ 0x140
+0203cee0      441953     23656   18.68  ldr	r3, [r2, #1212]	@ 0x4bc
+0203cee4       85468     23657    3.61  add	r3, r3, #1
+0203cee8       28848     23656    1.22  str	r3, [r2, #1212]	@ 0x4bc
+0203ceec       26983     23656    1.14  ldr	r2, [pc, #-568]	@ 203ccbc <ndsRendererSubmitNativeEntryEffect+0x9ac>
+0203cef0       26983     23656    1.14  str	r3, [sp, #24]
+0203cef4       26983     23656    1.14  add	r3, r2, ip, lsl #3
+0203cef8      517973     23656   21.90  ldr	r3, [r3, #4]
+0203cefc      144511     23657    6.11  ldr	r2, [r2, ip, lsl #3]
+0203cf00       26575     23656    1.12  ldr	ip, [sp, #1096]	@ 0x448
+0203cf04       26500     23656    1.12  mov	r5, r2
+0203cf08       26500     23656    1.12  str	r3, [sp, #16]
+0203cf0c       26506     23656    1.12  str	r2, [ip, #1204]	@ 0x4b4
+0203cf10       26500     23656    1.12  str	r3, [ip, #1208]	@ 0x4b8
+0203cf14       49007     23656    2.07  beq	203cf30 <ndsRendererSubmitNativeEntryEffect+0xc20>
+0203cf18      249049     23208   10.73  ldr	r3, [pc, #-608]	@ 203ccc0 <ndsRendererSubmitNativeEntryEffect+0x9b0>
+0203cf1c      177684     23208    7.66  ldr	r3, [r3, r1, lsl #3]
+0203cf20       44100     23208    1.90  str	r3, [ip, #1236]	@ 0x4d4
+0203cf24      103571     23209    4.46  ldr	r3, [ip, #1244]	@ 0x4dc
+0203cf28       60660     23208    2.61  orr	r3, r3, #1
+0203cf2c       36665     23208    1.58  str	r3, [ip, #1244]	@ 0x4dc
+0203cf30       38284     23656    1.62  tst	r0, #2
+0203cf34       58713     23656    2.48  beq	203cf58 <ndsRendererSubmitNativeEntryEffect+0xc48>
+0203cf38      143020     23208    6.16  ldr	r3, [pc, #-640]	@ 203ccc0 <ndsRendererSubmitNativeEntryEffect+0x9b0>
+0203cf3c       40154     23208    1.73  ldr	r2, [sp, #1096]	@ 0x448
+0203cf40       40122     23208    1.73  add	r3, r3, r1, lsl #3
+0203cf44       41365     23208    1.78  ldr	r3, [r3, #4]
+0203cf48       41539     23208    1.79  str	r3, [r2, #1240]	@ 0x4d8
+0203cf4c       40087     23208    1.73  ldr	r3, [r2, #1244]	@ 0x4dc
+0203cf50       57692     23208    2.49  orr	r3, r3, #2
+0203cf54       40043     23208    1.73  str	r3, [r2, #1244]	@ 0x4dc
+0203cf58      131946     23656    5.58  mov	r3, #20
+0203cf5c       62205     23656    2.63  ldr	r2, [pc, #-484]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203cf60      123623     23656    5.23  ldr	r1, [sp, #80]	@ 0x50
+0203cf64       63123     23656    2.67  mla	r2, r3, r1, r2
+0203cf68       95795     23656    4.05  ldrb	r2, [r2, #19]
+0203cf6c       77775     23656    3.29  cmp	r2, #255	@ 0xff
+0203cf70      226914     23656    9.59  beq	203d0a0 <ndsRendererSubmitNativeEntryEffect+0xd90>
+0203cf74        1547       491    3.15  mov	r3, #100	@ 0x64
+0203cf78        8981       491   18.29  mul	r2, r3, r2
+0203cf7c        1930       491    3.93  adds	r3, r9, r2
+0203cf80        1862       491    3.79  beq	203d0a0 <ndsRendererSubmitNativeEntryEffect+0xd90>
+0203cf84        1958       491    3.99  ldr	r2, [r9, r2]
+0203cf88        3230       491    6.58  ldrh	r1, [r3, #4]
+0203cf8c        1975       491    4.02  mov	r4, r2
+0203cf90        1700       491    3.46  tst	r2, #4
+0203cf94        3663       491    7.46  ldr	r2, [sp, #1096]	@ 0x448
+0203cf98       34310       491   69.88  ldr	r2, [r2, #4]
+0203cf9c        3292       491    6.70  add	r2, r2, #1
+0203cfa0         566       491    1.15  add	r2, r2, r1
+0203cfa4        3546       491    7.22  ldr	r1, [sp, #1096]	@ 0x448
+0203cfa8        1032       491    2.10  str	r2, [r1, #4]
+0203cfac       20128       491   40.99  ldr	r2, [r1, #204]	@ 0xcc
+0203cfb0        3205       491    6.53  add	r2, r2, #2
+0203cfb4        4219       491    8.59  str	r2, [r1, #204]	@ 0xcc
+0203cfb8       20999       491   42.77  ldr	r2, [r1, #208]	@ 0xd0
+0203cfbc        2548       491    5.19  add	r2, r2, #1
+0203cfc0        7637       491   15.55  str	r2, [r1, #208]	@ 0xd0
+0203cfc4         995       491    2.03  ldr	r2, [r1, #212]	@ 0xd4
+0203cfc8        1318       491    2.68  add	r2, r2, #1
+0203cfcc         995       491    2.03  str	r2, [r1, #212]	@ 0xd4
+0203cfd0        1471       491    3.00  ldr	r2, [r1, #216]	@ 0xd8
+0203cfd4        1394       491    2.84  add	r2, r2, #1
+0203cfd8       11009       491   22.42  str	r2, [r1, #216]	@ 0xd8
+0203cfdc        1670       491    3.40  ldr	r2, [r1, #200]	@ 0xc8
+0203cfe0        1768       491    3.60  add	r2, r2, #1
+0203cfe4        1670       491    3.40  str	r2, [r1, #200]	@ 0xc8
+0203cfe8        1670       491    3.40  ldr	r2, [sp, #1096]	@ 0x448
+0203cfec        1670       491    3.40  ldrh	r1, [r3, #6]
+0203cff0        7646       491   15.57  ldr	r2, [r2, #196]	@ 0xc4
+0203cff4        2233       491    4.55  add	r2, r2, r1
+0203cff8        8153       491   16.60  ldr	r1, [sp, #1096]	@ 0x448
+0203cffc        1806       491    3.68  str	r2, [r1, #196]	@ 0xc4
+0203d000       22504       491   45.83  beq	203d02c <ndsRendererSubmitNativeEntryEffect+0xd1c>
+0203d004         218        56    3.89  mov	r2, r1
+0203d008         938        56   16.75  ldr	r1, [r1, #1244]	@ 0x4dc
+0203d00c         598        56   10.68  ldr	r2, [r2, #228]	@ 0xe4
+0203d010         158        56    2.82  ldr	r0, [r3, #28]
+0203d014         158        56    2.82  ldr	ip, [sp, #1096]	@ 0x448
+0203d018        1338        56   23.89  orr	r1, r1, #1
+0203d01c         224        56    4.00  add	r2, r2, #2
+0203d020         224        56    4.00  str	r1, [ip, #1244]	@ 0x4dc
+0203d024         224        56    4.00  str	r0, [ip, #1236]	@ 0x4d4
+0203d028         224        56    4.00  str	r2, [ip, #228]	@ 0xe4
+0203d02c        1832       491    3.73  tst	r4, #8
+0203d030        5484       491   11.17  bne	203e11c <ndsRendererSubmitNativeEntryEffect+0x1e0c>
+0203d034        1664       491    3.39  tst	r4, #16
+0203d038       15866       491   32.31  beq	203d06c <ndsRendererSubmitNativeEntryEffect+0xd5c>
+0203d03c         978       342    2.86  ldr	r2, [sp, #1096]	@ 0x448
+0203d040       11334       342   33.14  ldr	r0, [r3, #40]	@ 0x28
+0203d044        5459       342   15.96  ldr	ip, [sp, #1096]	@ 0x448
+0203d048        1987       342    5.81  ldr	r1, [r3, #36]	@ 0x24
+0203d04c        1870       342    5.47  ldr	r2, [r2, #224]	@ 0xe0
+0203d050        2188       342    6.40  str	r0, [ip, #1216]	@ 0x4c0
+0203d054         420       342    1.23  ldrb	r0, [r3, #37]	@ 0x25
+0203d058        6318       342   18.47  and	r1, r1, #255	@ 0xff
+0203d05c        1047       342    3.06  add	r2, r2, #1
+0203d060        1047       342    3.06  str	r1, [ip, #1224]	@ 0x4c8
+0203d064        1054       342    3.08  str	r0, [ip, #1220]	@ 0x4c4
+0203d068        1047       342    3.06  str	r2, [ip, #224]	@ 0xe0
+0203d06c        1643       491    3.35  tst	r4, #32
+0203d070       21309       491   43.40  beq	203d090 <ndsRendererSubmitNativeEntryEffect+0xd80>
+0203d074         114        36    3.17  ldr	r2, [sp, #1096]	@ 0x448
+0203d078         632        36   17.56  ldr	r1, [r3, #44]	@ 0x2c
+0203d07c         135        36    3.75  ldr	r2, [r2, #224]	@ 0xe0
+0203d080         135        36    3.75  ldr	r0, [sp, #1096]	@ 0x448
+0203d084         135        36    3.75  add	r2, r2, #1
+0203d088         135        36    3.75  str	r2, [r0, #224]	@ 0xe0
+0203d08c         135        36    3.75  str	r1, [r0, #1228]	@ 0x4cc
+0203d090        1775       491    3.62  tst	r4, #1024	@ 0x400
+0203d094        2615       491    5.33  bne	203e2c8 <ndsRendererSubmitNativeEntryEffect+0x1fb8>
+0203d098        8770       491   17.86  tst	r4, #4096	@ 0x1000
+0203d09c        3660       491    7.45  bne	203e2b4 <ndsRendererSubmitNativeEntryEffect+0x1fa4>
+0203d0a0       42507     23656    1.80  mov	r1, #0
+0203d0a4       56011     23656    2.37  ldr	r0, [sp, #1096]	@ 0x448
+0203d0a8      382856     23656   16.18  bl	2029c7c <ndsRendererHardwareAlpha>
+0203d0ac       23656     23656    1.00  subs	r3, r0, #0
+0203d0b0       24380     23656    1.03  str	r3, [sp, #72]	@ 0x48
+0203d0b4       23786     23656    1.01  beq	203cd84 <ndsRendererSubmitNativeEntryEffect+0xa74>
+0203d0b8      110541     23651    4.67  subs	r1, r6, #255	@ 0xff
+0203d0bc       38895     23651    1.64  movne	r1, #1
+0203d0c0       38863     23651    1.64  mvn	r3, fp
+0203d0c4       38801     23651    1.64  str	r1, [sp, #116]	@ 0x74
+0203d0c8       39077     23651    1.65  ldr	r1, [sp, #84]	@ 0x54
+0203d0cc       38813     23651    1.64  and	r3, r3, #1
+0203d0d0       38783     23651    1.64  add	r1, r1, r1, lsl #1
+0203d0d4       38921     23651    1.65  str	r1, [sp, #100]	@ 0x64
+0203d0d8      255263     23651   10.79  ldr	r1, [sp, #128]	@ 0x80
+0203d0dc      261343     23651   11.05  str	r3, [sp, #132]	@ 0x84
+0203d0e0       29489     23651    1.25  cmp	r1, #0
+0203d0e4       29489     23651    1.25  orrne	r3, r3, #1
+0203d0e8       29489     23651    1.25  str	r3, [sp, #88]	@ 0x58
+0203d0ec       51836     23651    2.19  ldr	r3, [sp, #24]
+0203d0f0       54236     23651    2.29  cmp	r3, #0
+0203d0f4       29462     23651    1.25  beq	203de7c <ndsRendererSubmitNativeEntryEffect+0x1b6c>
+0203d0f8      120096     23651    5.08  tst	fp, #131072	@ 0x20000
+0203d0fc       76037     23651    3.21  beq	203de7c <ndsRendererSubmitNativeEntryEffect+0x1b6c>
+0203d100       38296     23196    1.65  mov	r2, #4
+0203d104       38202     23196    1.65  mov	r0, r5
+0203d108       38202     23196    1.65  ldr	r1, [sp, #16]
+0203d10c      325160     23196   14.02  bl	201da38 <ndsRendererCombineUsesColor>
+0203d110       25018     23196    1.08  ldr	r3, [pc, #-1108]	@ 203ccc4 <ndsRendererSubmitNativeEntryEffect+0x9b4>
+0203d114       26196     23196    1.13  str	r0, [sp, #24]
+0203d118      233351     23196   10.06  ldr	r3, [r3]
+0203d11c       64594     23196    2.78  cmp	r3, r8
+0203d120       35540     23196    1.53  beq	203de9c <ndsRendererSubmitNativeEntryEffect+0x1b8c>
+0203d124       33428     23196    1.44  ldr	r3, [sp, #24]
+0203d128       53202     23196    2.29  cmp	r3, #0
+0203d12c       33366     23196    1.44  ldr	r3, [pc, #-1132]	@ 203ccc8 <ndsRendererSubmitNativeEntryEffect+0x9b8>
+0203d130       33398     23196    1.44  str	r3, [sp, #68]	@ 0x44
+0203d134      191875     23196    8.27  beq	203d1b4 <ndsRendererSubmitNativeEntryEffect+0xea4>
+0203d138       74615     18060    4.13  ldr	r3, [r3]
+0203d13c       42826     18060    2.37  cmp	r3, #0
+0203d140       28071     18060    1.55  ldreq	r3, [sp, #120]	@ 0x78
+0203d144       28071     18060    1.55  lsleq	r3, r3, #2
+0203d148       28074     18061    1.55  beq	203d170 <ndsRendererSubmitNativeEntryEffect+0xe60>
+0203d14c       60226     18060    3.33  ldr	r2, [sp, #120]	@ 0x78
+0203d150       30749     18060    1.70  add	r3, sp, #1040	@ 0x410
+0203d154       26814     18060    1.48  add	r3, r3, #8
+0203d158       48618     18060    2.69  add	r3, r3, r2, lsl #2
+0203d15c       91290     18060    5.05  ldr	r3, [r3, #-872]	@ 0xfffffc98
+0203d160       48365     18060    2.68  ldr	r1, [sp, #124]	@ 0x7c
+0203d164       37610     18060    2.08  tst	r1, r3
+0203d168       20295     18060    1.12  lsl	r3, r2, #2
+0203d16c       52919     18060    2.93  bne	203d1b4 <ndsRendererSubmitNativeEntryEffect+0xea4>
+0203d170        4025      1796    2.24  mov	r1, #12
+0203d174        4025      1796    2.24  str	r3, [sp, #64]	@ 0x40
+0203d178       31977      1796   17.80  ldr	r3, [sp, #20]
+0203d17c        7115      1796    3.96  add	r2, sp, #280	@ 0x118
+0203d180        7115      1796    3.96  mla	r2, r1, r3, r2
+0203d184        7138      1796    3.97  ldr	r3, [sp, #1092]	@ 0x444
+0203d188        7115      1796    3.96  ldr	r0, [sp, #1096]	@ 0x448
+0203d18c       20051      1796   11.16  ldr	r1, [r3, #16]
+0203d190      138024      1796   76.85  bl	20205fc <ndsRendererHardwarePrepareLitDirection>
+0203d194        1945      1796    1.08  ldr	r3, [sp, #64]	@ 0x40
+0203d198       59971      1796   33.39  ldr	r1, [sp, #124]	@ 0x7c
+0203d19c        6295      1796    3.51  add	r3, r3, #1040	@ 0x410
+0203d1a0        6224      1796    3.47  add	r3, r3, #8
+0203d1a4        6224      1796    3.47  add	r3, sp, r3
+0203d1a8        6294      1796    3.50  ldr	r2, [r3, #-872]	@ 0xfffffc98
+0203d1ac        6544      1796    3.64  orr	r2, r2, r1
+0203d1b0        6224      1796    3.47  str	r2, [r3, #-872]	@ 0xfffffc98
+0203d1b4       39608     23652    1.67  cmp	r6, #255	@ 0xff
+0203d1b8      155444     23651    6.57  beq	203de6c <ndsRendererSubmitNativeEntryEffect+0x1b5c>
+0203d1bc       40408     22736    1.78  mov	r2, #76	@ 0x4c
+0203d1c0       39872     22736    1.75  mov	r1, #0
+0203d1c4       39764     22736    1.75  add	r0, sp, #204	@ 0xcc
+0203d1c8      159088     22736    7.00  bl	1ffd924 <memset>
+0203d1cc       22736     22736    1.00  cmp	r7, #163	@ 0xa3
+0203d1d0       22736     22736    1.00  beq	203e170 <ndsRendererSubmitNativeEntryEffect+0x1e60>
+0203d1d4      181660     22736    7.99  ldr	r3, [sp, #56]	@ 0x38
+0203d1d8      277031     22736   12.18  cmp	r3, #0
+0203d1dc      399988     22736   17.59  beq	203e148 <ndsRendererSubmitNativeEntryEffect+0x1e38>
+0203d1e0         596       149    4.00  ldr	r3, [sp, #1088]	@ 0x440
+0203d1e4         596       149    4.00  cmp	r3, #0
+0203d1e8         596       149    4.00  movne	r2, #59	@ 0x3b
+0203d1ec         596       149    4.00  moveq	r2, #58	@ 0x3a
+0203d1f0        2154       149   14.46  ldr	r3, [pc, #-1324]	@ 203cccc <ndsRendererSubmitNativeEntryEffect+0x9bc>
+0203d1f4        1641       149   11.01  ldr	r3, [r3, r2, lsl #2]
+0203d1f8        2763       149   18.54  mov	fp, r3
+0203d1fc       38497     22736    1.69  mov	r2, #1
+0203d200       38465     22736    1.69  mov	r1, #20
+0203d204       38465     22736    1.69  mov	r3, #24
+0203d208       80541     22736    3.54  ldr	r0, [sp, #80]	@ 0x50
+0203d20c       38871     22736    1.71  str	r2, [sp, #200]	@ 0xc8
+0203d210       39838     22736    1.75  ldr	r2, [pc, #-1176]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203d214       38557     22736    1.70  mla	r2, r1, r0, r2
+0203d218      276903     22736   12.18  mov	r1, r2
+0203d21c       96926     22736    4.26  ldr	r2, [pc, #-1364]	@ 203ccd0 <ndsRendererSubmitNativeEntryEffect+0x9c0>
+0203d220       76766     22736    3.38  ldrb	r0, [r1, #15]
+0203d224       44767     22736    1.97  mla	r2, r3, r6, r2
+0203d228       74449     22736    3.27  mov	r3, r2
+0203d22c       52870     22736    2.33  ldrb	r2, [r1, #14]
+0203d230       41259     22736    1.81  str	r0, [sp, #232]	@ 0xe8
+0203d234       41265     22736    1.81  ldrb	r0, [r1, #16]
+0203d238      304597     22736   13.40  ldrb	r1, [r1, #17]
+0203d23c       56175     22736    2.47  str	r2, [sp, #228]	@ 0xe4
+0203d240      771567     22736   33.94  ldrh	r2, [r3, #14]
+0203d244      477028     22737   20.98  ldrh	r3, [r3, #16]
+0203d248      175588     22736    7.72  str	r0, [sp, #236]	@ 0xec
+0203d24c       33913     22736    1.49  str	r1, [sp, #240]	@ 0xf0
+0203d250       35406     22736    1.56  ldr	r0, [sp, #1096]	@ 0x448
+0203d254       29057     22736    1.28  add	r1, sp, #200	@ 0xc8
+0203d258      447456     22736   19.68  str	r3, [sp, #272]	@ 0x110
+0203d25c       56617     22736    2.49  str	r2, [sp, #268]	@ 0x10c
+0203d260     1291294     22736   56.80  bl	2029a58 <ndsRendererHardwareTextureParams>
+0203d264       47900     22736    2.11  ldr	r3, [sp, #148]	@ 0x94
+0203d268       39030     22736    1.72  str	r0, [sp, #136]	@ 0x88
+0203d26c       28196     22736    1.24  cmp	r3, #0
+0203d270       30601     22736    1.35  beq	203d298 <ndsRendererSubmitNativeEntryEffect+0xf88>
+0203d274       34624     22683    1.53  ldr	r3, [pc, #-1448]	@ 203ccd4 <ndsRendererSubmitNativeEntryEffect+0x9c4>
+0203d278      271445     22683   11.97  cmp	r5, r3
+0203d27c      301886     22683   13.31  beq	203e2e4 <ndsRendererSubmitNativeEntryEffect+0x1fd4>
+0203d280       45135     17398    2.59  ldr	r2, [pc, #-1456]	@ 203ccd8 <ndsRendererSubmitNativeEntryEffect+0x9c8>
+0203d284       44103     17398    2.53  ldr	r3, [pc, #-1456]	@ 203ccdc <ndsRendererSubmitNativeEntryEffect+0x9cc>
+0203d288       46976     17398    2.70  ldr	r1, [sp, #16]
+0203d28c       52912     17398    3.04  cmp	r1, r2
+0203d290       43987     17398    2.53  cmpeq	r5, r3
+0203d294       44995     17398    2.59  beq	203e2f4 <ndsRendererSubmitNativeEntryEffect+0x1fe4>
+0203d298      148700     17427    8.53  mov	r1, fp
+0203d29c       41111     17427    2.36  ldr	r0, [sp, #1096]	@ 0x448
+0203d2a0      277032     17427   15.90  bl	202a220 <ndsRendererHardwareBindTextureName>
+0203d2a4       56041     17427    3.22  ldr	r3, [sp, #52]	@ 0x34
+0203d2a8       45195     17427    2.59  cmp	r3, #2
+0203d2ac       27671     17427    1.59  bls	203e210 <ndsRendererSubmitNativeEntryEffect+0x1f00>
+0203d2b0       25761     17427    1.48  mov	r3, #0
+0203d2b4      100158     17427    5.75  ldr	r5, [pc, #-1500]	@ 203cce0 <ndsRendererSubmitNativeEntryEffect+0x9d0>
+0203d2b8      432551     22736   19.02  str	r3, [sp, #92]	@ 0x5c
+0203d2bc      479506     22736   21.09  blx	1fff164 <glGetTexParameter>
+0203d2c0       28667     22736    1.26  ldr	r3, [sp, #136]	@ 0x88
+0203d2c4       23941     22736    1.05  bic	r0, r0, #-1073741824	@ 0xc0000000
+0203d2c8       22736     22736    1.00  bic	r0, r0, #983040	@ 0xf0000
+0203d2cc       22736     22736    1.00  orr	r0, r3, r0
+0203d2d0      241086     22736   10.60  bl	20205a0 <ndsRendererHardwareApplyTextureParams>
+0203d2d4       22736     22736    1.00  mov	r3, #0
+0203d2d8      143299     22737    6.30  str	r3, [r5]
+0203d2dc      133011     22736    5.85  ldr	r3, [sp, #1096]	@ 0x448
+0203d2e0      266829     22736   11.74  ldr	r2, [pc, #-1540]	@ 203cce4 <ndsRendererSubmitNativeEntryEffect+0x9d4>
+0203d2e4      297467     22736   13.08  ldr	r3, [r3, #144]	@ 0x90
+0203d2e8      118068     22736    5.19  ldr	r1, [sp, #1096]	@ 0x448
+0203d2ec       33317     22736    1.47  add	r3, r3, #1
+0203d2f0       42365     22736    1.86  str	r3, [r1, #144]	@ 0x90
+0203d2f4      379003     22736   16.67  ldr	r3, [r2]
+0203d2f8      270785     22736   11.91  add	r3, r3, #1
+0203d2fc       44441     22736    1.95  str	r3, [r2]
+0203d300       47078     23651    1.99  ldr	r0, [sp, #1096]	@ 0x448
+0203d304      386566     23651   16.34  bl	2028a0c <ndsRendererHardwareColorSource>
+0203d308       23827     23651    1.01  str	r0, [sp, #140]	@ 0x8c
+0203d30c       23651     23651    1.00  ldr	r0, [sp, #1096]	@ 0x448
+0203d310     1173896     23651   49.63  bl	20295dc <ndsRendererHardwareUseMaterialColor>
+0203d314       23651     23651    1.00  str	r0, [sp, #144]	@ 0x90
+0203d318      134395     23651    5.68  mov	r4, r0
+0203d31c       43433     23651    1.84  ldr	r0, [sp, #1096]	@ 0x448
+0203d320      234531     23651    9.92  bl	2029670 <ndsRendererHardwareUseVertexColor>
+0203d324      111047     23651    4.70  ldr	r1, [sp, #72]	@ 0x48
+0203d328      132687     23651    5.61  str	r0, [sp, #156]	@ 0x9c
+0203d32c       55191     23651    2.33  ldr	r0, [sp, #1096]	@ 0x448
+0203d330      487804     23651   20.63  bl	2027df0 <ndsRendererHardwarePolyFmt>
+0203d334       23651     23651    1.00  ldr	r3, [sp, #68]	@ 0x44
+0203d338      110779     23651    4.68  mov	r5, r0
+0203d33c       74209     23651    3.14  ldr	r3, [r3]
+0203d340       61767     23651    2.61  cmp	r3, #1
+0203d344       36971     23651    1.56  bls	203e00c <ndsRendererSubmitNativeEntryEffect+0x1cfc>
+0203d348       64257     23651    2.72  ldr	r3, [sp, #88]	@ 0x58
+0203d34c       64995     23651    2.75  ldr	r2, [sp, #24]
+0203d350       40518     23651    1.71  eor	r3, r3, #1
+0203d354       36878     23651    1.56  ands	r3, r2, r3
+0203d358      296301     23651   12.53  beq	203e004 <ndsRendererSubmitNativeEntryEffect+0x1cf4>
+0203d35c       26691     18060    1.48  ldr	r3, [sp, #92]	@ 0x5c
+0203d360       40926     18060    2.27  orrs	r3, r4, r3
+0203d364       25269     18060    1.40  bne	203e00c <ndsRendererSubmitNativeEntryEffect+0x1cfc>
+0203d368       25269     18060    1.40  ldr	r3, [sp, #1096]	@ 0x448
+0203d36c       80723     18060    4.47  ldr	r3, [r3, #1260]	@ 0x4ec
+0203d370       48435     18060    2.68  ands	r3, r3, #1
+0203d374       24825     18060    1.37  beq	203e004 <ndsRendererSubmitNativeEntryEffect+0x1cf4>
+0203d378       67018     18060    3.71  ldr	r3, [sp, #1096]	@ 0x448
+0203d37c      103792     18060    5.75  ldr	r3, [r3, #1244]	@ 0x4dc
+0203d380       46526     18060    2.58  and	r3, r3, #3
+0203d384       22254     18060    1.23  sub	r3, r3, #3
+0203d388       22254     18060    1.23  clz	r3, r3
+0203d38c       22254     18060    1.23  lsr	r3, r3, #5
+0203d390       22254     18060    1.23  str	r3, [sp, #16]
+0203d394       41318     23651    1.75  ldr	r3, [sp, #88]	@ 0x58
+0203d398      144653     23651    6.12  cmp	r3, #0
+0203d39c      299267     23651   12.65  beq	203dfec <ndsRendererSubmitNativeEntryEffect+0x1cdc>
+0203d3a0          20         5    4.00  mov	r1, #0
+0203d3a4          20         5    4.00  mov	r0, r1
+0203d3a8         210         5   42.00  bl	202c7e4 <ndsRendererLoadHardwareMatrices>
+0203d3ac           5         5    1.00  mov	r3, #0
+0203d3b0           5         5    1.00  str	r3, [sp, #108]	@ 0x6c
+0203d3b4       23784     23651    1.01  ldr	r3, [sp, #16]
+0203d3b8      158715     23651    6.71  cmp	r3, #0
+0203d3bc      218010     23651    9.22  beq	203dfc8 <ndsRendererSubmitNativeEntryEffect+0x1cb8>
+0203d3c0       32412     18060    1.79  ldr	r3, [sp, #108]	@ 0x6c
+0203d3c4       41391     18060    2.29  cmp	r3, #0
+0203d3c8       28749     18060    1.59  ldr	r3, [sp, #1096]	@ 0x448
+0203d3cc       39516     18060    2.19  ldr	r0, [r3, #1240]	@ 0x4d8
+0203d3d0       23154     18060    1.28  ldr	r1, [r3, #1236]	@ 0x4d4
+0203d3d4       23184     18060    1.28  lsr	r2, r0, #14
+0203d3d8       61453     18060    3.40  lsr	ip, r0, #1
+0203d3dc       25839     18060    1.43  and	r2, r2, #992	@ 0x3e0
+0203d3e0       25839     18060    1.43  and	ip, ip, #31744	@ 0x7c00
+0203d3e4       25809     18060    1.43  orr	r2, r2, ip
+0203d3e8       25809     18060    1.43  orr	r2, r2, r0, lsr #27
+0203d3ec       25812     18061    1.43  lsr	r3, r1, #14
+0203d3f0       25809     18060    1.43  lsr	r0, r1, #1
+0203d3f4       25809     18060    1.43  and	r3, r3, #992	@ 0x3e0
+0203d3f8       48456     18060    2.68  and	r0, r0, #31744	@ 0x7c00
+0203d3fc       23424     18060    1.30  orr	r3, r3, r0
+0203d400       23424     18060    1.30  orr	r3, r3, r1, lsr #27
+0203d404       23424     18060    1.30  orr	r3, r3, r2, lsl #16
+0203d408       23424     18060    1.30  str	r3, [sp, #112]	@ 0x70
+0203d40c      120145     18060    6.65  beq	203e0b8 <ndsRendererSubmitNativeEntryEffect+0x1da8>
+0203d410       18060     18060    1.00  ldr	r3, [sp, #60]	@ 0x3c
+0203d414       18082     18060    1.00  ldr	r2, [sp, #112]	@ 0x70
+0203d418       46708     18060    2.59  orr	r5, r5, #1
+0203d41c       23453     18060    1.30  cmp	r3, r2
+0203d420       23421     18060    1.30  movne	r3, #67108864	@ 0x4000000
+0203d424       44904     18061    2.49  strne	r2, [r3, #1216]	@ 0x4c0
+0203d428       27040     18060    1.50  mov	r3, #1
+0203d42c       37737     18060    2.09  ldr	r2, [pc, #-1868]	@ 203cce8 <ndsRendererSubmitNativeEntryEffect+0x9d8>
+0203d430       43882     18060    2.43  str	r3, [sp, #108]	@ 0x6c
+0203d434      228783     18060   12.67  ldr	r3, [r2]
+0203d438      103694     18060    5.74  add	r3, r3, #1
+0203d43c       22356     18060    1.24  str	r3, [r2]
+0203d440       62631     23651    2.65  ldr	r0, [pc, #-1884]	@ 203ccec <ndsRendererSubmitNativeEntryEffect+0x9dc>
+0203d444       42444     23651    1.79  mov	r3, r5
+0203d448       48821     23651    2.06  ldr	r0, [r0]
+0203d44c       39711     23651    1.68  mov	r2, fp
+0203d450       39712     23651    1.68  str	r0, [sp, #4]
+0203d454       39656     23651    1.68  ldr	r0, [pc, #-1900]	@ 203ccf0 <ndsRendererSubmitNativeEntryEffect+0x9e0>
+0203d458      133994     23651    5.67  ldr	r1, [sp, #116]	@ 0x74
+0203d45c       49259     23651    2.08  ldr	r0, [r0]
+0203d460       29791     23651    1.26  str	r0, [sp]
+0203d464       33111     23651    1.40  ldr	r0, [sp, #1096]	@ 0x448
+0203d468      498764     23651   21.09  bl	202c288 <ndsRendererHardwareBeginTriangleBatch>
+0203d46c      104634     23651    4.42  ldr	r3, [sp, #132]	@ 0x84
+0203d470       55932     23651    2.36  cmp	r3, #0
+0203d474       64971     23651    2.75  ldr	r3, [sp, #84]	@ 0x54
+0203d478      413851     23651   17.50  beq	203e028 <ndsRendererSubmitNativeEntryEffect+0x1d18>
+0203d47c          20         5    4.00  ldr	r2, [pc, #-1936]	@ 203ccf4 <ndsRendererSubmitNativeEntryEffect+0x9e4>
+0203d480          20         5    4.00  cmp	r3, #0
+0203d484         212         5   42.40  ldr	r3, [r2]
+0203d488          32         5    6.40  add	r3, r3, #1
+0203d48c          36         5    7.20  str	r3, [r2]
+0203d490           8         5    1.60  beq	203e03c <ndsRendererSubmitNativeEntryEffect+0x1d2c>
+0203d494       23654     23651    1.00  mov	r3, #20
+0203d498      139313     23651    5.89  ldr	ip, [sp, #80]	@ 0x50
+0203d49c       42706     23651    1.81  mov	lr, #0
+0203d4a0       42692     23651    1.81  mul	ip, r3, ip
+0203d4a4       77314     23651    3.27  mov	r3, ip
+0203d4a8      159969     23651    6.76  ldr	ip, [pc, #-1840]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203d4ac      133039     23651    5.63  ldr	r2, [pc, #-1980]	@ 203ccf8 <ndsRendererSubmitNativeEntryEffect+0x9e8>
+0203d4b0      176410     23651    7.46  ldrh	r3, [ip, r3]
+0203d4b4       91029     23651    3.85  ldr	r0, [pc, #-1984]	@ 203ccfc <ndsRendererSubmitNativeEntryEffect+0x9ec>
+0203d4b8      115251     23651    4.87  add	r2, r3, r2
+0203d4bc      164532     23651    6.96  ldr	r1, [pc, #-1988]	@ 203cd00 <ndsRendererSubmitNativeEntryEffect+0x9f0>
+0203d4c0      133688     23651    5.65  str	r2, [sp, #76]	@ 0x4c
+0203d4c4      529172     23651   22.37  ldr	r2, [pc, #-1952]	@ 203cd2c <ndsRendererSubmitNativeEntryEffect+0xa1c>
+0203d4c8       80538     23651    3.41  add	r0, r0, r3, lsl #1
+0203d4cc       25088     23651    1.06  add	r1, r1, r3, lsl #1
+0203d4d0       25088     23651    1.06  add	r3, r2, r3
+0203d4d4      180442     23651    7.63  str	r0, [sp, #64]	@ 0x40
+0203d4d8      159723     23651    6.75  str	r1, [sp, #68]	@ 0x44
+0203d4dc       39998     23651    1.69  str	r3, [sp, #72]	@ 0x48
+0203d4e0       39988     23651    1.69  str	lr, [sp, #136]	@ 0x88
+0203d4e4       39926     23651    1.69  str	lr, [sp, #60]	@ 0x3c
+0203d4e8       39926     23651    1.69  str	lr, [sp, #116]	@ 0x74
+0203d4ec      404613     23651   17.11  b	203d6ac <ndsRendererSubmitNativeEntryEffect+0x139c>
+0203d4f0      396752    271584    1.46  ldrsb	r3, [sp, #194]	@ 0xc2
+0203d4f4      411795    271585    1.52  ldr	r2, [pc, #-2036]	@ 203cd08 <ndsRendererSubmitNativeEntryEffect+0x9f8>
+0203d4f8      607336    271585    2.24  rsb	r3, r3, r3, lsl #9
+0203d4fc      279471    271584    1.03  cmp	r3, r2
+0203d500      314872    271584    1.16  ldrge	r1, [pc, #-2044]	@ 203cd0c <ndsRendererSubmitNativeEntryEffect+0x9fc>
+0203d504      279541    271584    1.03  ldrb	r0, [sp, #195]	@ 0xc3
+0203d508      550600    271584    2.03  smullge	ip, r1, r3, r1
+0203d50c      276813    271585    1.02  ldrlt	r1, [pc, #-2052]	@ 203cd10 <ndsRendererSubmitNativeEntryEffect+0xa00>
+0203d510      279407    271584    1.03  addge	r1, r1, r3
+0203d514      279375    271584    1.03  asrge	r3, r3, #31
+0203d518      316194    271584    1.16  rsbge	r1, r3, r1, asr #6
+0203d51c      279555    271584    1.03  lsl	r3, r0, #24
+0203d520      279553    271584    1.03  asr	r3, r3, #24
+0203d524      279459    271584    1.03  lsl	r0, r1, #22
+0203d528      279479    271584    1.03  ldr	r1, [pc, #-2088]	@ 203cd08 <ndsRendererSubmitNativeEntryEffect+0x9f8>
+0203d52c      279462    271585    1.03  rsb	r3, r3, r3, lsl #9
+0203d530      279459    271584    1.03  cmp	r3, r1
+0203d534      279491    271584    1.03  ldrge	r1, [pc, #-2096]	@ 203cd0c <ndsRendererSubmitNativeEntryEffect+0x9fc>
+0203d538      316146    271584    1.16  ldrb	r2, [sp, #196]	@ 0xc4
+0203d53c      551144    271584    2.03  smullge	ip, r1, r3, r1
+0203d540      545922    271585    2.01  addge	r1, r1, r3
+0203d544      279533    271584    1.03  asrge	r3, r3, #31
+0203d548      279473    271584    1.03  rsbge	r1, r3, r1, asr #6
+0203d54c      279473    271584    1.03  ldrlt	r1, [pc, #-2116]	@ 203cd10 <ndsRendererSubmitNativeEntryEffect+0xa00>
+0203d550      279491    271584    1.03  lsl	r3, r2, #24
+0203d554      279502    271584    1.03  ldr	r2, [pc, #-2136]	@ 203cd04 <ndsRendererSubmitNativeEntryEffect+0x9f4>
+0203d558      316091    271584    1.16  asr	r3, r3, #24
+0203d55c      279561    271584    1.03  and	r1, r2, r1, lsl #10
+0203d560      279499    271584    1.03  ldr	r2, [pc, #-2144]	@ 203cd08 <ndsRendererSubmitNativeEntryEffect+0x9f8>
+0203d564      279435    271584    1.03  rsb	r3, r3, r3, lsl #9
+0203d568      279467    271584    1.03  cmp	r3, r2
+0203d56c      279467    271584    1.03  ldrge	r2, [pc, #-2152]	@ 203cd0c <ndsRendererSubmitNativeEntryEffect+0x9fc>
+0203d570      279435    271584    1.03  lsr	r0, r0, #22
+0203d574      279435    271584    1.03  orr	r1, r1, r0
+0203d578      573537    271584    2.11  smullge	r0, r2, r3, r2
+0203d57c      275208    271584    1.01  mov	r0, #67108864	@ 0x4000000
+0203d580      277004    271584    1.02  addge	r2, r2, r3
+0203d584      276972    271584    1.02  asrge	r3, r3, #31
+0203d588      276972    271584    1.02  rsbge	r3, r3, r2, asr #6
+0203d58c      276972    271584    1.02  ldrlt	r3, [pc, #-2180]	@ 203cd10 <ndsRendererSubmitNativeEntryEffect+0xa00>
+0203d590      276972    271584    1.02  ldr	r2, [pc, #-2180]	@ 203cd14 <ndsRendererSubmitNativeEntryEffect+0xa04>
+0203d594      546760    271584    2.01  and	r3, r2, r3, lsl #20
+0203d598      302824    271584    1.12  orr	r3, r3, r1
+0203d59c      623040    271584    2.29  str	r3, [r0, #1156]	@ 0x484
+0203d5a0     1678411    305114    5.50  cmp	r6, #255	@ 0xff
+0203d5a4      320426    305113    1.05  movne	r2, #67108864	@ 0x4000000
+0203d5a8      448050    305112    1.47  ldrhne	r3, [sp, #190]	@ 0xbe
+0203d5ac      331351    305112    1.09  ldrhne	r1, [sp, #192]	@ 0xc0
+0203d5b0      894379    305113    2.93  orrne	r3, r3, r1, lsl #16
+0203d5b4      649387    305112    2.13  strne	r3, [r2, #1160]	@ 0x488
+0203d5b8     1969601    305112    6.46  ldr	r3, [sp, #88]	@ 0x58
+0203d5bc      643065    305112    2.11  cmp	r3, #0
+0203d5c0     1330395    305112    4.36  beq	203d8a4 <ndsRendererSubmitNativeEntryEffect+0x1594>
+0203d5c4          57        42    1.36  ldr	r3, [sp, #132]	@ 0x84
+0203d5c8          57        42    1.36  ldr	r1, [sp, #104]	@ 0x68
+0203d5cc          57        42    1.36  cmp	r3, #0
+0203d5d0          57        42    1.36  ldr	r3, [pc, #-2240]	@ 203cd18 <ndsRendererSubmitNativeEntryEffect+0xa08>
+0203d5d4          94        42    2.24  add	r2, r3, r1, lsl #6
+0203d5d8         127        42    3.02  beq	203dba8 <ndsRendererSubmitNativeEntryEffect+0x1898>
+0203d5dc          57        42    1.36  mov	r1, #3
+0203d5e0          57        42    1.36  ldr	r0, [sp, #60]	@ 0x3c
+0203d5e4          57        42    1.36  str	r2, [sp, #104]	@ 0x68
+0203d5e8         321        42    7.64  bl	2122944 <__aeabi_uidivmod>
+0203d5ec          42        42    1.00  cmp	r1, #0
+0203d5f0          42        42    1.00  ldr	r2, [sp, #104]	@ 0x68
+0203d5f4          98        42    2.33  bne	203d618 <ndsRendererSubmitNativeEntryEffect+0x1308>
+0203d5f8          99        14    7.07  ldr	r1, [pc, #-2276]	@ 203cd1c <ndsRendererSubmitNativeEntryEffect+0xa0c>
+0203d5fc          29        14    2.07  ldr	r0, [pc, #-2276]	@ 203cd20 <ndsRendererSubmitNativeEntryEffect+0xa10>
+0203d600         205        14   14.64  ldr	r3, [r1]
+0203d604          50        14    3.57  sub	r3, r3, #6
+0203d608          77        14    5.50  str	r3, [r1]
+0203d60c          31        14    2.21  smull	r0, r1, r3, r0
+0203d610          29        14    2.07  sub	r3, r1, r3, asr #31
+0203d614          17        14    1.21  str	r3, [sp, #136]	@ 0x88
+0203d618         110        42    2.62  add	r3, sp, #200	@ 0xc8
+0203d61c          54        42    1.29  str	r3, [sp]
+0203d620          54        42    1.29  mov	r0, r2
+0203d624          54        42    1.29  ldrsh	r1, [fp]
+0203d628          54        42    1.29  ldrsh	r2, [fp, #2]
+0203d62c          54        42    1.29  mov	r4, r3
+0203d630          54        42    1.29  ldrsh	r3, [fp, #4]
+0203d634         358        42    8.52  bl	2027c18 <ndsRendererTransformVertex20p12.part.0.isra.0>
+0203d638         250        42    5.95  ldr	r3, [sp, #1096]	@ 0x448
+0203d63c          71        42    1.69  ldr	r2, [sp, #1096]	@ 0x448
+0203d640         282        42    6.71  ldr	r3, [r3, #60]	@ 0x3c
+0203d644         190        42    4.52  ldr	r1, [sp, #136]	@ 0x88
+0203d648          42        42    1.00  add	r3, r3, #1
+0203d64c          42        42    1.00  str	r3, [r2, #60]	@ 0x3c
+0203d650          42        42    1.00  ldr	r3, [r2, #72]	@ 0x48
+0203d654          84        42    2.00  add	r3, r3, #1
+0203d658         167        42    3.98  str	r3, [r2, #72]	@ 0x48
+0203d65c          57        42    1.36  mov	r0, r4
+0203d660         441        42   10.50  bl	202e794 <ndsRendererHardwareClipVertex>
+0203d664          65        42    1.55  ldr	r3, [sp, #60]	@ 0x3c
+0203d668          64        42    1.52  ldr	r2, [sp, #100]	@ 0x64
+0203d66c          42        42    1.00  add	r3, r3, #1
+0203d670          42        42    1.00  str	r3, [sp, #60]	@ 0x3c
+0203d674          42        42    1.00  cmp	r2, r3
+0203d678         123        42    2.93  ldr	r3, [sp, #64]	@ 0x40
+0203d67c          94        42    2.24  add	r3, r3, #2
+0203d680          57        42    1.36  str	r3, [sp, #64]	@ 0x40
+0203d684          57        42    1.36  ldr	r3, [sp, #68]	@ 0x44
+0203d688          94        42    2.24  add	r3, r3, #2
+0203d68c          57        42    1.36  str	r3, [sp, #68]	@ 0x44
+0203d690          57        42    1.36  ldr	r3, [sp, #72]	@ 0x48
+0203d694          94        42    2.24  add	r3, r3, #1
+0203d698          42        42    1.00  str	r3, [sp, #72]	@ 0x48
+0203d69c          42        42    1.00  ldr	r3, [sp, #76]	@ 0x4c
+0203d6a0          84        42    2.00  add	r3, r3, #1
+0203d6a4          42        42    1.00  str	r3, [sp, #76]	@ 0x4c
+0203d6a8         232        42    5.52  bls	203e030 <ndsRendererSubmitNativeEntryEffect+0x1d20>
+0203d6ac       65289     23692    2.76  ldr	r2, [sp, #116]	@ 0x74
+0203d6b0      149761     23688    6.32  ldr	r3, [sp, #128]	@ 0x80
+0203d6b4       71635     23688    3.02  cmp	r2, r3
+0203d6b8      610016     23689   25.75  bcs	203d6ec <ndsRendererSubmitNativeEntryEffect+0x13dc>
+0203d6ec       74776     23688    3.16  ldr	r1, [sp, #20]
+0203d6f0       43578     23688    1.84  str	r1, [sp, #104]	@ 0x68
+0203d6f4      324390    305112    1.06  ldr	r3, [sp, #28]
+0203d6f8      711404    305112    2.33  cmp	r3, #0
+0203d6fc      326209    305112    1.07  beq	203d970 <ndsRendererSubmitNativeEntryEffect+0x1660>
+0203d700      327749    304668    1.08  ldr	r2, [sp, #72]	@ 0x48
+0203d704      367686    304668    1.21  ldr	r1, [pc, #-2512]	@ 203cd3c <ndsRendererSubmitNativeEntryEffect+0xa2c>
+0203d708      896327    304668    2.94  ldrb	r2, [r2]
+0203d70c      831545    304668    2.73  ldr	r3, [sp, #64]	@ 0x40
+0203d710      590168    304668    1.94  lsl	r2, r2, #1
+0203d714      875898    304668    2.87  ldrh	r2, [r1, r2]
+0203d718      946605    304669    3.11  ldr	r1, [pc, #-2528]	@ 203cd40 <ndsRendererSubmitNativeEntryEffect+0xa30>
+0203d71c      422357    304668    1.39  strh	r2, [sp, #190]	@ 0xbe
+0203d720      318921    304668    1.05  ldr	r2, [sp, #76]	@ 0x4c
+0203d724     1070838    304668    3.51  ldrh	r3, [r3]
+0203d728     1801930    304669    5.91  ldrb	r2, [r2]
+0203d72c      682807    304670    2.24  add	r3, r3, r3, lsl #1
+0203d730      339955    304669    1.12  lsl	r2, r2, #1
+0203d734     1173555    304668    3.85  ldrh	r2, [r1, r2]
+0203d738      798575    304669    2.62  ldr	r1, [pc, #-2556]	@ 203cd44 <ndsRendererSubmitNativeEntryEffect+0xa34>
+0203d73c      327587    304668    1.08  strh	r2, [sp, #192]	@ 0xc0
+0203d740      323037    304668    1.06  add	r2, r1, r3, lsl #1
+0203d744      323040    304669    1.06  lsl	r3, r3, #1
+0203d748     1198489    304668    3.93  ldrh	r3, [r1, r3]
+0203d74c      890990    304669    2.92  ldrh	r1, [r2, #2]
+0203d750      454772    304668    1.49  strh	r3, [sp, #184]	@ 0xb8
+0203d754      325323    304668    1.07  ldr	r3, [sp, #68]	@ 0x44
+0203d758      620363    304668    2.04  ldrh	r2, [r2, #4]
+0203d75c     1156523    304668    3.80  ldrh	r3, [r3]
+0203d760     1130881    304668    3.71  strh	r1, [sp, #186]	@ 0xba
+0203d764      312080    304668    1.02  ldr	r1, [pc, #-2596]	@ 203cd48 <ndsRendererSubmitNativeEntryEffect+0xa38>
+0203d768      313211    304668    1.03  strh	r2, [sp, #188]	@ 0xbc
+0203d76c      306945    304668    1.01  add	r2, r1, r3, lsl #2
+0203d770      306945    304668    1.01  lsl	r3, r3, #2
+0203d774     1200522    304668    3.94  ldrh	r3, [r1, r3]
+0203d778      652977    304669    2.14  add	fp, sp, #184	@ 0xb8
+0203d77c      784946    304669    2.58  strh	r3, [sp, #194]	@ 0xc2
+0203d780      321495    304668    1.06  ldrb	r3, [r2, #2]
+0203d784      620586    304668    2.04  strb	r3, [sp, #196]	@ 0xc4
+0203d788      321527    304668    1.06  ldrb	r3, [r2, #3]
+0203d78c      621084    305112    2.04  strb	r3, [sp, #197]	@ 0xc5
+0203d790      412715    305112    1.35  ldr	r3, [sp, #16]
+0203d794      632376    305113    2.07  cmp	r3, #0
+0203d798     1195812    305112    3.92  bne	203d4f0 <ndsRendererSubmitNativeEntryEffect+0x11e0>
+0203d79c       50486     33528    1.51  ldr	r3, [sp, #24]
+0203d7a0       74580     33528    2.22  cmp	r3, #0
+0203d7a4      423109     33528   12.62  beq	203dbf0 <ndsRendererSubmitNativeEntryEffect+0x18e0>
+0203d888       44171     33528    1.32  ldr	r1, [sp, #92]	@ 0x5c
+0203d88c       44570     33528    1.33  ldr	r2, [pc, #-2924]	@ 203cd28 <ndsRendererSubmitNativeEntryEffect+0xa18>
+0203d890       44100     33528    1.32  cmp	r1, #0
+0203d894       44010     33528    1.31  movne	r3, r2
+0203d898      100983     33528    3.01  mov	r2, #67108864	@ 0x4000000
+0203d89c      179404     33528    5.35  str	r3, [r2, #1152]	@ 0x480
+0203d8a0      370234     33528   11.04  b	203d5a0 <ndsRendererSubmitNativeEntryEffect+0x1290>
+0203d8a4      310524    305072    1.02  ldrsh	r3, [fp]
+0203d8a8      916950    305070    3.01  lsl	r2, r3, #4
+0203d8ac      310230    305070    1.02  cmp	r2, #32768	@ 0x8000
+0203d8b0      310200    305070    1.02  bge	203de20 <ndsRendererSubmitNativeEntryEffect+0x1b10>
+0203d8b4      310200    305070    1.02  cmn	r2, #32768	@ 0x8000
+0203d8b8      398961    305070    1.31  blt	203e66c <ndsRendererSubmitNativeEntryEffect+0x235c>
+0203d8bc      321703    305070    1.05  lsl	r3, r3, #20
+0203d8c0      321703    305070    1.05  asr	r3, r3, #16
+0203d8c4      321639    305070    1.05  ldrsh	r2, [fp, #2]
+0203d8c8      920733    305070    3.02  lsl	r1, r2, #4
+0203d8cc      321639    305070    1.05  cmp	r1, #32768	@ 0x8000
+0203d8d0      324100    305070    1.06  bge	203de18 <ndsRendererSubmitNativeEntryEffect+0x1b08>
+0203d8d4      320958    304446    1.05  cmn	r1, #32768	@ 0x8000
+0203d8d8      397574    304446    1.31  blt	203e664 <ndsRendererSubmitNativeEntryEffect+0x2354>
+0203d8dc      321017    304446    1.05  lsl	r2, r2, #20
+0203d8e0      320862    304447    1.05  asr	r1, r2, #16
+0203d8e4      321753    305070    1.05  ldrsh	r2, [fp, #4]
+0203d8e8      920781    305070    3.02  lsl	r0, r2, #4
+0203d8ec      321575    305070    1.05  cmp	r0, #32768	@ 0x8000
+0203d8f0      321575    305070    1.05  bge	203de28 <ndsRendererSubmitNativeEntryEffect+0x1b18>
+0203d8f4      321543    305070    1.05  cmn	r0, #32768	@ 0x8000
+0203d8f8      408975    305072    1.34  blt	203e5f4 <ndsRendererSubmitNativeEntryEffect+0x22e4>
+0203d8fc      323429    305070    1.06  lsl	r2, r2, #20
+0203d900      323397    305070    1.06  asr	r2, r2, #16
+0203d904      323397    305070    1.06  lsl	r3, r3, #16
+0203d908      323400    305071    1.06  lsr	r3, r3, #16
+0203d90c      323427    305070    1.06  orr	r3, r3, r1, lsl #16
+0203d910      374470    305070    1.23  ldr	r1, [sp, #60]	@ 0x3c
+0203d914      354285    305070    1.16  ldr	r0, [sp, #100]	@ 0x64
+0203d918      399620    305071    1.31  add	r1, r1, #1
+0203d91c      356761    305070    1.17  str	r1, [sp, #60]	@ 0x3c
+0203d920      320371    305070    1.05  cmp	r0, r1
+0203d924      320339    305070    1.05  ldr	r1, [sp, #64]	@ 0x40
+0203d928      620298    305070    2.03  add	r1, r1, #2
+0203d92c      320307    305070    1.05  str	r1, [sp, #64]	@ 0x40
+0203d930      320337    305070    1.05  ldr	r1, [sp, #68]	@ 0x44
+0203d934      620298    305070    2.03  add	r1, r1, #2
+0203d938      405938    305070    1.33  str	r1, [sp, #68]	@ 0x44
+0203d93c      322919    305070    1.06  ldr	r1, [sp, #72]	@ 0x48
+0203d940      622134    305070    2.04  add	r1, r1, #1
+0203d944      322889    305070    1.06  str	r1, [sp, #72]	@ 0x48
+0203d948      322857    305070    1.06  ldr	r1, [sp, #76]	@ 0x4c
+0203d94c      622001    305071    2.04  add	r1, r1, #1
+0203d950      322857    305070    1.06  str	r1, [sp, #76]	@ 0x4c
+0203d954      322997    305070    1.06  mov	r1, #67108864	@ 0x4000000
+0203d958      798211    305070    2.62  str	r3, [r1, #1164]	@ 0x48c
+0203d95c     2440560    305070    8.00  str	r2, [r1, #1164]	@ 0x48c
+0203d960     2279650    305074    7.47  bls	203df5c <ndsRendererSubmitNativeEntryEffect+0x1c4c>
+0203d964      281424    281424    1.00  ldr	r3, [sp, #20]
+0203d968      281424    281424    1.00  str	r3, [sp, #104]	@ 0x68
+0203d96c      844272    281424    3.00  b	203d6f4 <ndsRendererSubmitNativeEntryEffect+0x13e4>
+0203d970         544       444    1.23  ldr	r1, [sp, #72]	@ 0x48
+0203d974         511       444    1.15  ldr	r2, [pc, #-3152]	@ 203cd2c <ndsRendererSubmitNativeEntryEffect+0xa1c>
+0203d978         811       444    1.83  ldr	r3, [pc, #-3152]	@ 203cd30 <ndsRendererSubmitNativeEntryEffect+0xa20>
+0203d97c         510       444    1.15  sub	r2, r1, r2
+0203d980         510       444    1.15  cmp	r2, r3
+0203d984         510       444    1.15  bhi	203e1a4 <ndsRendererSubmitNativeEntryEffect+0x1e94>
+0203d988         510       444    1.15  ldr	r3, [sp, #64]	@ 0x40
+0203d98c        1254       444    2.82  ldrb	r0, [r1]
+0203d990        2208       444    4.97  ldrh	r2, [r3]
+0203d994        1573       444    3.54  ldr	r3, [pc, #-3176]	@ 203cd34 <ndsRendererSubmitNativeEntryEffect+0xa24>
+0203d998         909       444    2.05  cmp	r0, #206	@ 0xce
+0203d99c         513       444    1.16  cmpls	r2, r3
+0203d9a0         513       444    1.16  bhi	203e1a4 <ndsRendererSubmitNativeEntryEffect+0x1e94>
+0203d9a4         513       444    1.16  ldr	r3, [sp, #76]	@ 0x4c
+0203d9a8         513       444    1.16  ldr	ip, [pc, #-3192]	@ 203cd38 <ndsRendererSubmitNativeEntryEffect+0xa28>
+0203d9ac        1253       444    2.82  ldrb	r1, [r3]
+0203d9b0        1159       444    2.61  ldr	r3, [sp, #68]	@ 0x44
+0203d9b4        1667       444    3.75  ldrh	r3, [r3]
+0203d9b8        2148       444    4.84  cmp	r3, ip
+0203d9bc         507       444    1.14  cmpls	r1, #146	@ 0x92
+0203d9c0         507       444    1.14  bhi	203e1a4 <ndsRendererSubmitNativeEntryEffect+0x1e94>
+0203d9c4        1127       444    2.54  ldr	ip, [pc, #-3216]	@ 203cd3c <ndsRendererSubmitNativeEntryEffect+0xa2c>
+0203d9c8         517       444    1.16  lsl	r0, r0, #1
+0203d9cc        1947       444    4.39  ldrh	r0, [ip, r0]
+0203d9d0        1556       444    3.50  ldr	ip, [pc, #-3224]	@ 203cd40 <ndsRendererSubmitNativeEntryEffect+0xa30>
+0203d9d4         487       444    1.10  lsl	r1, r1, #1
+0203d9d8        2738       444    6.17  ldrh	r1, [ip, r1]
+0203d9dc         690       444    1.55  mov	ip, #6
+0203d9e0         465       444    1.05  mul	r2, ip, r2
+0203d9e4        1704       444    3.84  ldr	ip, [pc, #-3240]	@ 203cd44 <ndsRendererSubmitNativeEntryEffect+0xa34>
+0203d9e8         465       444    1.05  strh	r1, [sp, #192]	@ 0xc0
+0203d9ec         465       444    1.05  add	r1, ip, r2
+0203d9f0        1793       444    4.04  ldrh	r2, [ip, r2]
+0203d9f4        1283       444    2.89  strh	r0, [sp, #190]	@ 0xbe
+0203d9f8        1113       444    2.51  strh	r2, [sp, #184]	@ 0xb8
+0203d9fc         653       444    1.47  ldrh	r2, [r1, #2]
+0203da00         742       444    1.67  ldr	r0, [pc, #-3264]	@ 203cd48 <ndsRendererSubmitNativeEntryEffect+0xa38>
+0203da04         504       444    1.14  strh	r2, [sp, #186]	@ 0xba
+0203da08         674       444    1.52  ldrh	r2, [r1, #4]
+0203da0c         546       444    1.23  add	fp, sp, #184	@ 0xb8
+0203da10         753       444    1.70  strh	r2, [sp, #188]	@ 0xbc
+0203da14         501       444    1.13  add	r2, r0, r3, lsl #2
+0203da18        1173       444    2.64  lsl	r3, r3, #2
+0203da1c        2384       444    5.37  ldrh	r3, [r0, r3]
+0203da20        1913       444    4.31  strh	r3, [sp, #194]	@ 0xc2
+0203da24         462       444    1.04  ldrb	r3, [r2, #2]
+0203da28         900       444    2.03  strb	r3, [sp, #196]	@ 0xc4
+0203da2c         462       444    1.04  ldrb	r3, [r2, #3]
+0203da30        2545       444    5.73  b	203d78c <ndsRendererSubmitNativeEntryEffect+0x147c>
+0203da34        3894       214   18.20  ldr	lr, [sp, #52]	@ 0x34
+0203da38        6088       214   28.45  bics	r3, lr, #2
+0203da3c         766       214    3.58  moveq	r1, #48	@ 0x30
+0203da40         766       214    3.58  movne	r1, #16
+0203da44         766       214    3.58  subs	r3, r6, #1
+0203da48         766       214    3.58  movne	r3, #1
+0203da4c         766       214    3.58  cmp	r9, #0
+0203da50         766       214    3.58  orreq	r3, r3, #1
+0203da54         766       214    3.58  cmp	r3, #0
+0203da58        3884       214   18.15  str	r3, [sp, #56]	@ 0x38
+0203da5c         814       214    3.80  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203da60        2574       214   12.03  ldr	r3, [pc, #-3356]	@ 203cd4c <ndsRendererSubmitNativeEntryEffect+0xa3c>
+0203da64        1574       214    7.36  ldr	ip, [pc, #-3356]	@ 203cd50 <ndsRendererSubmitNativeEntryEffect+0xa40>
+0203da68         748       214    3.50  cmp	r8, ip
+0203da6c         694       214    3.24  cmpne	r8, r3
+0203da70         694       214    3.24  moveq	r3, #1
+0203da74         694       214    3.24  movne	r3, #0
+0203da78        4135       214   19.32  add	ip, ip, #136	@ 0x88
+0203da7c         838       214    3.92  cmp	r8, ip
+0203da80         838       214    3.92  orreq	r3, r3, #1
+0203da84         838       214    3.92  orr	r3, r1, r3, lsl #2
+0203da88        6243       214   29.17  ldr	r1, [r9]
+0203da8c        1293       214    6.04  cmp	r1, r3
+0203da90         409       214    1.91  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203da94         409       214    1.91  cmp	lr, #2
+0203da98        5976       214   27.93  mov	r4, lr
+0203da9c       12931       214   60.43  bhi	203cb7c <ndsRendererSubmitNativeEntryEffect+0x86c>
+0203daa0         216        54    4.00  cmp	r0, #0
+0203daa4         216        54    4.00  beq	203dc90 <ndsRendererSubmitNativeEntryEffect+0x1980>
+0203daa8         216        54    4.00  mov	ip, #20
+0203daac         216        54    4.00  and	r3, r1, #32
+0203dab0         216        54    4.00  str	r3, [sp, #64]	@ 0x40
+0203dab4         216        54    4.00  ldr	r3, [sp, #12]
+0203dab8        1171        54   21.69  ldr	r1, [pc, #-3392]	@ 203cd80 <ndsRendererSubmitNativeEntryEffect+0xa70>
+0203dabc         485        54    8.98  ldrh	r3, [r3, #4]
+0203dac0         322        54    5.96  str	r2, [sp, #72]	@ 0x48
+0203dac4         198        54    3.67  mla	lr, ip, r3, r1
+0203dac8         210        54    3.89  mov	ip, lr
+0203dacc         198        54    3.67  ldr	r1, [pc, #-3456]	@ 203cd54 <ndsRendererSubmitNativeEntryEffect+0xa44>
+0203dad0         204        54    3.78  add	lr, r3, r1
+0203dad4         198        54    3.67  mov	r2, lr
+0203dad8        1203        54   22.28  add	r5, lr, r0
+0203dadc         213        54    3.94  mov	lr, ip
+0203dae0         213        54    3.94  ldr	r3, [pc, #-3472]	@ 203cd58 <ndsRendererSubmitNativeEntryEffect+0xa48>
+0203dae4         214        54    3.96  add	r3, r3, r4, lsl #4
+0203dae8         213        54    3.94  str	r3, [sp, #60]	@ 0x3c
+0203daec         213        54    3.94  ldr	r3, [pc, #-3480]	@ 203cd5c <ndsRendererSubmitNativeEntryEffect+0xa4c>
+0203daf0         214        54    3.96  add	r3, r3, r4, lsl #4
+0203daf4         213        54    3.94  str	r3, [sp, #56]	@ 0x38
+0203daf8        1387        54   25.69  lsl	r3, r4, #2
+0203dafc         213        54    3.94  str	r3, [sp, #68]	@ 0x44
+0203db00        1527        54   28.28  ldrb	r3, [r2]
+0203db04         359        54    6.65  tst	r3, #2
+0203db08        2552        54   47.26  ldrne	r1, [pc, #-3504]	@ 203cd60 <ndsRendererSubmitNativeEntryEffect+0xa50>
+0203db0c        1828        54   33.85  ldrbne	r3, [lr, #12]
+0203db10          60        54    1.11  ldreq	r3, [sp, #32]
+0203db14        2104        54   38.96  ldrne	r3, [r1, r3, lsl #2]
+0203db18        2466        54   45.67  ldrb	r1, [lr, #19]
+0203db1c         212        54    3.93  cmp	r1, #0
+0203db20         204        54    3.78  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203db24         636        54   11.78  ldr	r1, [sp, #64]	@ 0x40
+0203db28         228        54    4.22  mov	ip, r2
+0203db2c         168        54    3.11  cmp	r1, #0
+0203db30        1262        54   23.37  ldrne	r3, [r9, #44]	@ 0x2c
+0203db34        1600        54   29.63  ldr	r0, [r9, #40]	@ 0x28
+0203db38        1750        54   32.41  bic	r4, r3, #255	@ 0xff
+0203db3c         207        54    3.83  mov	r3, #0
+0203db40         207        54    3.83  ldr	r1, [sp, #60]	@ 0x3c
+0203db44         207        54    3.83  bic	r0, r0, #255	@ 0xff
+0203db48        1639       162   10.12  ldr	r2, [r1]
+0203db4c         418       162    2.58  add	r1, r1, #4
+0203db50         183       162    1.13  cmp	r0, r2
+0203db54         981       162    6.06  beq	203db68 <ndsRendererSubmitNativeEntryEffect+0x1858>
+0203db58        2228       108   20.63  add	r3, r3, #1
+0203db5c         210       108    1.94  cmp	r3, #4
+0203db60        1140       108   10.56  bne	203db48 <ndsRendererSubmitNativeEntryEffect+0x1838>
+0203db68         108        54    2.00  ldr	r2, [sp, #56]	@ 0x38
+0203db6c        1851        54   34.28  ldr	r2, [r2, r3, lsl #2]
+0203db70         343        54    6.35  cmp	r4, r2
+0203db74          54        54    1.00  bne	203db58 <ndsRendererSubmitNativeEntryEffect+0x1848>
+0203db78        1805        54   33.43  ldr	r1, [sp, #68]	@ 0x44
+0203db7c         201        54    3.72  add	r2, ip, #1
+0203db80         201        54    3.72  add	r3, r1, r3
+0203db84         201        54    3.72  ldr	r1, [pc, #-3624]	@ 203cd64 <ndsRendererSubmitNativeEntryEffect+0xa54>
+0203db88        2357        54   43.65  ldr	r3, [r1, r3, lsl #2]
+0203db8c         370        54    6.85  cmp	r3, #0
+0203db90          57        54    1.06  beq	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203db94          57        54    1.06  cmp	r5, r2
+0203db98        2167        54   40.13  add	lr, lr, #20
+0203db9c         204        54    3.78  bne	203db00 <ndsRendererSubmitNativeEntryEffect+0x17f0>
+0203dba0         484        54    8.96  ldr	r2, [sp, #72]	@ 0x48
+0203dba4        1130        54   20.93  b	203cad8 <ndsRendererSubmitNativeEntryEffect+0x7c8>
+0203dbf0       48750     33528    1.45  ldr	r3, [sp, #24]
+0203dbf4      133807     33528    3.99  ldrh	r2, [sp, #194]	@ 0xc2
+0203dbf8      304639     33528    9.09  str	r3, [sp]
+0203dbfc       48885     33528    1.46  ldrh	r3, [sp, #196]	@ 0xc4
+0203dc00       49316     33528    1.47  ldr	r1, [sp, #144]	@ 0x90
+0203dc04       77308     33528    2.31  orr	r2, r2, r3, lsl #16
+0203dc08       48828     33528    1.46  eor	r3, r2, r2, ror #16
+0203dc0c       48888     33528    1.46  lsr	r3, r3, #8
+0203dc10       48828     33528    1.46  bic	r3, r3, #65280	@ 0xff00
+0203dc14       48828     33528    1.46  eor	r3, r3, r2, ror #8
+0203dc18      120384     33528    3.59  ldr	r0, [sp, #140]	@ 0x8c
+0203dc1c       49715     33528    1.48  ldr	r2, [sp, #156]	@ 0x9c
+0203dc20      427809     33528   12.76  bl	202d9d8 <ndsRendererHardwarePackedValidVertexColor>
+0203dc24       33528     33528    1.00  mov	r3, r0
+0203dc28      196775     33528    5.87  b	203d888 <ndsRendererSubmitNativeEntryEffect+0x1578>
+0203dc2c         311        80    3.89  subs	r3, r6, #1
+0203dc30         311        80    3.89  movne	r3, #1
+0203dc34         311        80    3.89  cmp	r9, #0
+0203dc38        1286        80   16.07  orreq	r3, r3, #1
+0203dc3c         293        80    3.66  cmp	r3, #0
+0203dc40         293        80    3.66  str	r3, [sp, #56]	@ 0x38
+0203dc44         293        80    3.66  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203dc48        4102        80   51.27  ldr	r3, [pc, #-3816]	@ 203cd68 <ndsRendererSubmitNativeEntryEffect+0xa58>
+0203dc4c         560        80    7.00  cmp	r8, r3
+0203dc50        1412        80   17.65  beq	203e020 <ndsRendererSubmitNativeEntryEffect+0x1d10>
+0203dc54          52        52    1.00  cmp	r8, #4352	@ 0x1100
+0203dc58        4628        52   89.00  beq	203e018 <ndsRendererSubmitNativeEntryEffect+0x1d08>
+0203dc5c         112        28    4.00  cmp	r8, #728	@ 0x2d8
+0203dc60         112        28    4.00  ldreq	r3, [pc, #-3836]	@ 203cd6c <ndsRendererSubmitNativeEntryEffect+0xa5c>
+0203dc64         112        28    4.00  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203dc68        3227        80   40.34  ldr	r2, [r9]
+0203dc6c         503        80    6.29  cmp	r2, r3
+0203dc70         122        80    1.52  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203dc74        4857        80   60.71  b	203cb7c <ndsRendererSubmitNativeEntryEffect+0x86c>
+0203dc90      258237      6987   36.96  ldr	r3, [pc, #-3876]	@ 203cd74 <ndsRendererSubmitNativeEntryEffect+0xa64>
+0203dc94       44551      6987    6.38  sub	r3, r7, r3
+0203dc98      187608      6987   26.85  clz	r3, r3
+0203dc9c       25162      6987    3.60  lsr	r3, r3, #5
+0203dca0       25058      6987    3.59  cmp	r8, #2608	@ 0xa30
+0203dca4       25026      6987    3.58  movne	r1, #0
+0203dca8       25026      6987    3.58  andeq	r1, r3, #1
+0203dcac       25026      6987    3.58  cmp	r1, #0
+0203dcb0       25814      6987    3.69  str	r1, [sp, #56]	@ 0x38
+0203dcb4      313578      6987   44.88  beq	203de30 <ndsRendererSubmitNativeEntryEffect+0x1b20>
+0203dda0       28336      7353    3.85  mov	r2, lr
+0203dda4      416300      7353   56.62  b	203ca90 <ndsRendererSubmitNativeEntryEffect+0x780>
+0203ddc4           8         2    4.00  ldr	r3, [sp, #56]	@ 0x38
+0203ddc8           8         2    4.00  ldr	r2, [sp, #60]	@ 0x3c
+0203ddcc           8         2    4.00  add	r3, r3, #1
+0203ddd0           8         2    4.00  cmp	r2, r3
+0203ddd4           8         2    4.00  mov	r0, r2
+0203ddd8          36         2   18.00  str	r3, [sp, #56]	@ 0x38
+0203dddc           8         2    4.00  bhi	203ca38 <ndsRendererSubmitNativeEntryEffect+0x728>
+0203dde0          89        23    3.87  ldr	r2, [sp, #60]	@ 0x3c
+0203dde4        1652        23   71.83  b	203ca9c <ndsRendererSubmitNativeEntryEffect+0x78c>
+0203de18        1180       624    1.89  ldr	r1, [pc, #2604]	@ 203e84c <ndsRendererSubmitNativeEntryEffect+0x253c>
+0203de1c        3080       624    4.94  b	203d8e4 <ndsRendererSubmitNativeEntryEffect+0x15d4>
+0203de30      212927      6989   30.47  ldr	r1, [pc, #2584]	@ 203e850 <ndsRendererSubmitNativeEntryEffect+0x2540>
+0203de34       43594      6988    6.24  cmp	r7, r1
+0203de38      202447      6988   28.97  cmpeq	r8, #1888	@ 0x760
+0203de3c       27105      6987    3.88  moveq	r1, #1
+0203de40       27073      6987    3.87  movne	r1, #0
+0203de44       27009      6987    3.87  mov	sl, r1
+0203de48      326650      6987   46.75  bne	203decc <ndsRendererSubmitNativeEntryEffect+0x1bbc>
+0203de6c        3588       915    3.92  mov	r3, #0
+0203de70        3588       915    3.92  mov	fp, r3
+0203de74        3588       915    3.92  str	r3, [sp, #92]	@ 0x5c
+0203de78       44603       915   48.75  b	203d300 <ndsRendererSubmitNativeEntryEffect+0xff0>
+0203de7c       18832       455   41.39  ldr	r3, [pc, #2516]	@ 203e858 <ndsRendererSubmitNativeEntryEffect+0x2548>
+0203de80       11744       455   25.81  ldr	r3, [r3]
+0203de84        1827       455    4.02  cmp	r8, r3
+0203de88         743       455    1.63  mov	r3, #0
+0203de8c         743       455    1.63  str	r3, [sp, #24]
+0203de90         743       455    1.63  ldrne	r3, [pc, #2500]	@ 203e85c <ndsRendererSubmitNativeEntryEffect+0x254c>
+0203de94         743       455    1.63  strne	r3, [sp, #68]	@ 0x44
+0203de98       40545       455   89.11  bne	203d1b4 <ndsRendererSubmitNativeEntryEffect+0xea4>
+0203de9c         968        26   37.23  ldr	r3, [pc, #2492]	@ 203e860 <ndsRendererSubmitNativeEntryEffect+0x2550>
+0203dea0         848        26   32.62  ldr	r2, [sp, #72]	@ 0x48
+0203dea4          32        26    1.23  str	r2, [r3]
+0203dea8          32        26    1.23  ldr	r2, [sp, #1096]	@ 0x448
+0203deac          56        26    2.15  ldr	r2, [r2, #1216]	@ 0x4c0
+0203deb0          32        26    1.23  str	r2, [r3, #4]
+0203deb4          32        26    1.23  ldr	r2, [sp, #1096]	@ 0x448
+0203deb8        1372        26   52.77  ldr	r2, [r2, #1228]	@ 0x4cc
+0203debc         104        26    4.00  str	r2, [r3, #8]
+0203dec0         104        26    4.00  ldr	r2, [sp, #64]	@ 0x40
+0203dec4         104        26    4.00  str	r2, [r3, #12]
+0203dec8         494        26   19.00  b	203d124 <ndsRendererSubmitNativeEntryEffect+0xe14>
+0203decc       25985      6987    3.72  cmp	r7, #324	@ 0x144
+0203ded0       25985      6987    3.72  beq	203e0dc <ndsRendererSubmitNativeEntryEffect+0x1dcc>
+0203ded4       25953      6987    3.71  cmp	r7, #85	@ 0x55
+0203ded8      668294      6987   95.65  bne	203cb7c <ndsRendererSubmitNativeEntryEffect+0x86c>
+0203dedc        1688        48   35.17  ldr	r3, [pc, #2432]	@ 203e864 <ndsRendererSubmitNativeEntryEffect+0x2554>
+0203dee0         306        48    6.38  cmp	r8, r3
+0203dee4          78        48    1.62  cmpne	r8, #1088	@ 0x440
+0203dee8          78        48    1.62  beq	203e0b0 <ndsRendererSubmitNativeEntryEffect+0x1da0>
+0203deec         876        48   18.25  ldr	r3, [pc, #2420]	@ 203e868 <ndsRendererSubmitNativeEntryEffect+0x2558>
+0203def0          78        48    1.62  cmp	r8, #12160	@ 0x2f80
+0203def4          78        48    1.62  cmpne	r8, r3
+0203def8        1738        48   36.21  beq	203df10 <ndsRendererSubmitNativeEntryEffect+0x1c00>
+0203defc          90        24    3.75  ldr	r2, [pc, #2408]	@ 203e86c <ndsRendererSubmitNativeEntryEffect+0x255c>
+0203df00          90        24    3.75  add	r3, r3, #432	@ 0x1b0
+0203df04          90        24    3.75  cmp	r8, r3
+0203df08          90        24    3.75  cmpne	r8, r2
+0203df0c          90        24    3.75  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203df10         114        48    2.38  mov	r3, #1
+0203df14         114        48    2.38  subs	r3, r3, r6
+0203df18         787        48   16.40  movne	r3, #1
+0203df1c         183        48    3.81  cmp	r9, #0
+0203df20         183        48    3.81  orreq	r3, r3, #1
+0203df24         183        48    3.81  subs	sl, r3, #0
+0203df28         183        48    3.81  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203df2c         183        48    3.81  rsb	r2, r3, #0
+0203df30         183        48    3.81  and	r2, r2, #100	@ 0x64
+0203df34        1381        48   28.77  ldr	r2, [r9, r2]
+0203df38        1706        48   35.54  add	r3, r3, #1
+0203df3c         177        48    3.69  cmp	r2, #16
+0203df40         177        48    3.69  bne	203c640 <ndsRendererSubmitNativeEntryEffect+0x330>
+0203df44         177        48    3.69  cmp	r6, r3
+0203df48         177        48    3.69  mov	r3, #1
+0203df4c         177        48    3.69  bhi	203df2c <ndsRendererSubmitNativeEntryEffect+0x1c1c>
+0203df50         177        48    3.69  mov	r3, #0
+0203df54         207        48    4.31  str	r3, [sp, #56]	@ 0x38
+0203df58        4572        48   95.25  b	203cb7c <ndsRendererSubmitNativeEntryEffect+0x86c>
+0203df5c       42695     23646    1.81  mov	r2, #1
+0203df60       78781     23646    3.33  ldr	r3, [sp, #1096]	@ 0x448
+0203df64       77858     23646    3.29  ldr	r1, [sp, #84]	@ 0x54
+0203df68      165987     23646    7.02  ldr	r3, [r3, #12]
+0203df6c      116426     23646    4.92  ldr	r0, [sp, #1096]	@ 0x448
+0203df70       33894     23646    1.43  add	r3, r3, r1
+0203df74       33982     23646    1.44  str	r3, [r0, #12]
+0203df78      368168     23647   15.57  ldr	r3, [r0, #76]	@ 0x4c
+0203df7c       84927     23646    3.59  add	r3, r3, r1
+0203df80      123876     23646    5.24  str	r3, [r0, #76]	@ 0x4c
+0203df84       37819     23646    1.60  ldr	r3, [r0, #84]	@ 0x54
+0203df88       54919     23646    2.32  add	r3, r3, r1
+0203df8c       39209     23646    1.66  str	r3, [r0, #84]	@ 0x54
+0203df90       33036     23646    1.40  ldr	r3, [r0, #80]	@ 0x50
+0203df94       33036     23646    1.40  ldr	r0, [sp, #100]	@ 0x64
+0203df98      135334     23646    5.72  add	r3, r3, r0
+0203df9c       38102     23646    1.61  ldr	r0, [sp, #1096]	@ 0x448
+0203dfa0       56972     23646    2.41  str	r3, [r0, #80]	@ 0x50
+0203dfa4       38207     23646    1.62  ldr	r3, [r0, #88]	@ 0x58
+0203dfa8       56928     23646    2.41  add	r3, r3, r1
+0203dfac       38321     23646    1.62  str	r3, [r0, #88]	@ 0x58
+0203dfb0      414739     23646   17.54  ldr	r3, [pc, #2232]	@ 203e870 <ndsRendererSubmitNativeEntryEffect+0x2560>
+0203dfb4      232395     23646    9.83  str	r2, [r3]
+0203dfb8      162954     23651    6.89  bl	1ff8508 <ndsRendererHardwareEndBatch>
+0203dfbc       24858     23651    1.05  ldr	r3, [sp, #112]	@ 0x70
+0203dfc0       24017     23651    1.02  str	r3, [sp, #60]	@ 0x3c
+0203dfc4      823177     23651   34.81  b	203cd94 <ndsRendererSubmitNativeEntryEffect+0xa84>
+0203dfc8       10091      5591    1.80  ldr	r3, [sp, #24]
+0203dfcc       14182      5591    2.54  cmp	r3, #0
+0203dfd0       10091      5591    1.80  ldrne	r2, [pc, #2204]	@ 203e874 <ndsRendererSubmitNativeEntryEffect+0x2564>
+0203dfd4       10091      5591    1.80  ldrne	r3, [r2]
+0203dfd8        5676      5591    1.02  addne	r3, r3, #1
+0203dfdc        5606      5591    1.00  strne	r3, [r2]
+0203dfe0       62466      5591   11.17  ldr	r3, [sp, #60]	@ 0x3c
+0203dfe4       12522      5591    2.24  str	r3, [sp, #112]	@ 0x70
+0203dfe8      101930      5591   18.23  b	203d440 <ndsRendererSubmitNativeEntryEffect+0x1130>
+0203dfec       31399     23646    1.33  ldr	r3, [sp, #1092]	@ 0x444
+0203dff0       30231     23646    1.28  ldr	r2, [sp, #152]	@ 0x98
+0203dff4      139749     23646    5.91  ldr	r1, [r3, #16]
+0203dff8      154375     23647    6.53  ldr	r0, [r3, #12]
+0203dffc      304752     23646   12.89  bl	2028ac8 <ndsRendererLoadHardwareSplitMatrices>
+0203e000       70938     23646    3.00  b	203d3b4 <ndsRendererSubmitNativeEntryEffect+0x10a4>
+0203e004        8578      5591    1.53  str	r3, [sp, #16]
+0203e008      208532      5591   37.30  b	203d394 <ndsRendererSubmitNativeEntryEffect+0x1084>
+0203e018         432        24   18.00  mov	r3, #16
+0203e01c         744        24   31.00  b	203dc68 <ndsRendererSubmitNativeEntryEffect+0x1958>
+0203e020         106        28    3.79  mov	r3, #28
+0203e024        1239        28   44.25  b	203dc68 <ndsRendererSubmitNativeEntryEffect+0x1958>
+0203e028       31263     23646    1.32  cmp	r3, #0
+0203e02c      101436     23646    4.29  bne	203d494 <ndsRendererSubmitNativeEntryEffect+0x1184>
+0203e030          20         5    4.00  ldr	r3, [sp, #88]	@ 0x58
+0203e034          20         5    4.00  cmp	r3, #0
+0203e038          90         5   18.00  beq	203df5c <ndsRendererSubmitNativeEntryEffect+0x1c4c>
+0203e03c         320         5   64.00  ldr	r3, [pc, #2100]	@ 203e878 <ndsRendererSubmitNativeEntryEffect+0x2568>
+0203e040          55         5   11.00  ldr	r3, [r3]
+0203e044          10         5    2.00  cmp	r3, #0
+0203e048          15         5    3.00  beq	203e050 <ndsRendererSubmitNativeEntryEffect+0x1d40>
+0203e050           5         5    1.00  mov	r2, #1
+0203e054           5         5    1.00  ldr	r3, [sp, #1096]	@ 0x448
+0203e058         128         5   25.60  ldr	r1, [sp, #84]	@ 0x54
+0203e05c         332         5   66.40  ldr	r3, [r3, #12]
+0203e060          39         5    7.80  ldr	r0, [sp, #1096]	@ 0x448
+0203e064           5         5    1.00  add	r3, r3, r1
+0203e068           5         5    1.00  str	r3, [r0, #12]
+0203e06c           5         5    1.00  ldr	r3, [r0, #76]	@ 0x4c
+0203e070          10         5    2.00  add	r3, r3, r1
+0203e074           5         5    1.00  str	r3, [r0, #76]	@ 0x4c
+0203e078         353         5   70.60  ldr	r3, [r0, #84]	@ 0x54
+0203e07c          32         5    6.40  add	r3, r3, r1
+0203e080         100         5   20.00  str	r3, [r0, #84]	@ 0x54
+0203e084           8         5    1.60  ldr	r3, [r0, #80]	@ 0x50
+0203e088           8         5    1.60  ldr	r0, [sp, #100]	@ 0x64
+0203e08c          12         5    2.40  add	r3, r3, r0
+0203e090           8         5    1.60  ldr	r0, [sp, #1096]	@ 0x448
+0203e094          12         5    2.40  str	r3, [r0, #80]	@ 0x50
+0203e098         178         5   35.60  ldr	r3, [r0, #92]	@ 0x5c
+0203e09c          23         5    4.60  add	r3, r3, r1
+0203e0a0          40         5    8.00  str	r3, [r0, #92]	@ 0x5c
+0203e0a4          17         5    3.40  ldr	r3, [pc, #1988]	@ 203e870 <ndsRendererSubmitNativeEntryEffect+0x2560>
+0203e0a8          18         5    3.60  str	r2, [r3]
+0203e0ac         235         5   47.00  b	203dfb8 <ndsRendererSubmitNativeEntryEffect+0x1ca8>
+0203e0b8       32355      1797   18.01  mov	r1, #12
+0203e0bc        7178      1796    4.00  ldr	r2, [sp, #20]
+0203e0c0        7178      1796    4.00  add	r3, sp, #280	@ 0x118
+0203e0c4        7178      1796    4.00  mla	r2, r1, r2, r3
+0203e0c8        7180      1796    4.00  ldr	r3, [sp, #1092]	@ 0x444
+0203e0cc        7178      1796    4.00  mov	r1, r2
+0203e0d0        7178      1796    4.00  ldr	r0, [r3, #16]
+0203e0d4       42353      1796   23.58  bl	2028844 <ndsRendererEntryEffectLoadLitMatrices>
+0203e0d8       86534      1796   48.18  b	203d410 <ndsRendererSubmitNativeEntryEffect+0x1100>
+0203e11c         212        56    3.79  ldr	r2, [sp, #1096]	@ 0x448
+0203e120         212        56    3.79  ldr	r0, [r3, #32]
+0203e124         212        56    3.79  ldr	r1, [r2, #1244]	@ 0x4dc
+0203e128         212        56    3.79  ldr	r2, [r2, #228]	@ 0xe4
+0203e12c         212        56    3.79  ldr	ip, [sp, #1096]	@ 0x448
+0203e130         212        56    3.79  orr	r1, r1, #2
+0203e134         212        56    3.79  add	r2, r2, #2
+0203e138         991        56   17.70  str	r1, [ip, #1244]	@ 0x4dc
+0203e13c         221        56    3.95  str	r0, [ip, #1240]	@ 0x4d8
+0203e140         221        56    3.95  str	r2, [ip, #228]	@ 0xe4
+0203e144        1268        56   22.64  b	203d034 <ndsRendererSubmitNativeEntryEffect+0xd24>
+0203e148       40164     22587    1.78  cmp	sl, #0
+0203e14c      267241     22587   11.83  beq	203e184 <ndsRendererSubmitNativeEntryEffect+0x1e74>
+0203e184      189591     22587    8.39  ldr	r3, [pc, #1732]	@ 203e850 <ndsRendererSubmitNativeEntryEffect+0x2540>
+0203e188       74243     22587    3.29  cmp	r7, r3
+0203e18c       34098     22587    1.51  cmpeq	r8, #1888	@ 0x760
+0203e190       34098     22587    1.51  beq	203e268 <ndsRendererSubmitNativeEntryEffect+0x1f58>
+0203e194       72609     22587    3.21  ldr	r3, [pc, #1704]	@ 203e844 <ndsRendererSubmitNativeEntryEffect+0x2534>
+0203e198      187619     22587    8.31  ldr	r3, [r3, r6, lsl #2]
+0203e19c       68569     22587    3.04  mov	fp, r3
+0203e1a0      291283     22587   12.90  b	203d1fc <ndsRendererSubmitNativeEntryEffect+0xeec>
+0203e1ac      226595      7376   30.72  ldr	r2, [pc, #1744]	@ 203e884 <ndsRendererSubmitNativeEntryEffect+0x2574>
+0203e1b0       39998      7376    5.42  cmp	sl, #0
+0203e1b4      220620      7376   29.91  ldr	r3, [r2]
+0203e1b8      218488      7376   29.62  add	r3, r3, #1
+0203e1bc       40303      7376    5.46  str	r3, [r2]
+0203e1c0      316515      7376   42.91  beq	203e1f0 <ndsRendererSubmitNativeEntryEffect+0x1ee0>
+0203e1d4        7376      7376    1.00  mov	r0, #1
+0203e1d8        8284      7376    1.12  ldr	r2, [pc, #1708]	@ 203e88c <ndsRendererSubmitNativeEntryEffect+0x257c>
+0203e1dc        8035      7376    1.09  ldr	r1, [sp, #20]
+0203e1e0      234955      7376   31.85  ldr	r3, [r2, r1, lsl #2]
+0203e1e4       48237      7376    6.54  add	r3, r3, r0
+0203e1e8       99435      7376   13.48  str	r3, [r2, r1, lsl #2]
+0203e1ec      230821      7376   31.29  b	203c644 <ndsRendererSubmitNativeEntryEffect+0x334>
+0203e1f0       86792      7377   11.77  ldr	r3, [pc, #1624]	@ 203e850 <ndsRendererSubmitNativeEntryEffect+0x2540>
+0203e1f4       31040      7376    4.21  cmp	r7, r3
+0203e1f8      130404      7376   17.68  cmpeq	r8, #1888	@ 0x760
+0203e1fc       24322      7376    3.30  ldreq	r2, [pc, #1676]	@ 203e890 <ndsRendererSubmitNativeEntryEffect+0x2580>
+0203e200       24212      7376    3.28  ldreq	r3, [r2]
+0203e204       24212      7376    3.28  addeq	r3, r3, #1
+0203e208       24212      7376    3.28  streq	r3, [r2]
+0203e20c       89536      7376   12.14  b	203e1d4 <ndsRendererSubmitNativeEntryEffect+0x1ec4>
+0203e210         170        53    3.21  mov	r3, #0
+0203e214         170        53    3.21  ldr	r2, [sp, #1096]	@ 0x448
+0203e218         788        53   14.87  ldr	lr, [sp, #52]	@ 0x34
+0203e21c         185        53    3.49  ldr	ip, [r2, #1216]	@ 0x4c0
+0203e220         185        53    3.49  ldr	r0, [r2, #1228]	@ 0x4cc
+0203e224        2102        53   39.66  ldr	r1, [pc, #1640]	@ 203e894 <ndsRendererSubmitNativeEntryEffect+0x2584>
+0203e228         660        53   12.45  ldr	r2, [pc, #1640]	@ 203e898 <ndsRendererSubmitNativeEntryEffect+0x2588>
+0203e22c          86        53    1.62  bic	ip, ip, #255	@ 0xff
+0203e230          86        53    1.62  bic	r0, r0, #255	@ 0xff
+0203e234          86        53    1.62  add	r2, r2, lr, lsl #4
+0203e238        1117        53   21.08  add	r1, r1, lr, lsl #4
+0203e23c         942       158    5.96  ldr	lr, [r2]
+0203e240         316       158    2.00  add	r2, r2, #4
+0203e244         251       158    1.59  cmp	ip, lr
+0203e248        2714       158   17.18  beq	203e294 <ndsRendererSubmitNativeEntryEffect+0x1f84>
+0203e24c         174       105    1.66  add	r3, r3, #1
+0203e250         174       105    1.66  cmp	r3, #4
+0203e254         384       105    3.66  bne	203e23c <ndsRendererSubmitNativeEntryEffect+0x1f2c>
+0203e25c         209        53    3.94  mov	r0, #1
+0203e260        2555        53   48.21  blx	211e550 <glAssignColorTable>
+0203e264         550        53   10.38  b	203d2b0 <ndsRendererSubmitNativeEntryEffect+0xfa0>
+0203e294         980        53   18.49  ldr	lr, [r1, r3, lsl #2]
+0203e298        1145        53   21.60  cmp	r0, lr
+0203e29c         182        53    3.43  bne	203e24c <ndsRendererSubmitNativeEntryEffect+0x1f3c>
+0203e2a0         208        53    3.92  ldr	r2, [sp, #52]	@ 0x34
+0203e2a4         192        53    3.62  add	r3, r3, r2, lsl #2
+0203e2a8         182        53    3.43  ldr	r2, [pc, #1516]	@ 203e89c <ndsRendererSubmitNativeEntryEffect+0x258c>
+0203e2ac        1313        53   24.77  ldr	r1, [r2, r3, lsl #2]
+0203e2b0        2244        53   42.34  b	203e25c <ndsRendererSubmitNativeEntryEffect+0x1f4c>
+0203e2b4         616        28   22.00  ldr	r0, [sp, #1096]	@ 0x448
+0203e2b8         148        28    5.29  ldr	r2, [r3, #96]	@ 0x60
+0203e2bc          28        28    1.00  ldr	r1, [r3, #92]	@ 0x5c
+0203e2c0         656        28   23.43  bl	201d7a0 <ndsRendererRecordTextureState>
+0203e2c4          84        28    3.00  b	203d0a0 <ndsRendererSubmitNativeEntryEffect+0xd90>
+0203e2c8        1120        28   40.00  ldr	r2, [r3, #80]	@ 0x50
+0203e2cc         644        28   23.00  ldr	r1, [r3, #76]	@ 0x4c
+0203e2d0          28        28    1.00  ldr	r0, [sp, #1096]	@ 0x448
+0203e2d4          28        28    1.00  str	r3, [sp, #68]	@ 0x44
+0203e2d8        2204        28   78.71  bl	201d984 <ndsRendererRecordSetTileSize>
+0203e2dc         488        28   17.43  ldr	r3, [sp, #68]	@ 0x44
+0203e2e0         134        28    4.79  b	203d098 <ndsRendererSubmitNativeEntryEffect+0xd88>
+0203e2e4      143547      5285   27.16  ldr	r3, [pc, #1460]	@ 203e8a0 <ndsRendererSubmitNativeEntryEffect+0x2590>
+0203e2e8      274496      5285   51.94  ldr	r2, [sp, #16]
+0203e2ec       19892      5285    3.76  cmp	r2, r3
+0203e2f0        6998      5285    1.32  bne	203d298 <ndsRendererSubmitNativeEntryEffect+0xf88>
+0203e2f4        7094      5309    1.34  cmp	r6, #65	@ 0x41
+0203e2f8      163180      5309   30.74  bhi	203d298 <ndsRendererSubmitNativeEntryEffect+0xf88>
+0203e2fc       21540      5309    4.06  ldr	r0, [pc, #1440]	@ 203e8a4 <ndsRendererSubmitNativeEntryEffect+0x2594>
+0203e300      253536      5309   47.76  ldrb	r3, [r0, r6]
+0203e304       39310      5309    7.40  cmp	r3, #0
+0203e308      274627      5309   51.73  bne	203e3b4 <ndsRendererSubmitNativeEntryEffect+0x20a4>
+0203e30c           4         4    1.00  mov	r3, #24
+0203e310          28         4    7.00  ldr	r1, [pc, #1424]	@ 203e8a8 <ndsRendererSubmitNativeEntryEffect+0x2598>
+0203e314           4         4    1.00  mla	r1, r3, r6, r1
+0203e318          80         4   20.00  ldr	r2, [r1, #8]
+0203e31c          16         4    4.00  cmp	r2, #0
+0203e320          16         4    4.00  beq	203e338 <ndsRendererSubmitNativeEntryEffect+0x2028>
+0203e324          16         4    4.00  ldrb	r2, [r1, #18]
+0203e328          16         4    4.00  cmp	r2, #1
+0203e32c         200         4   50.00  beq	203e610 <ndsRendererSubmitNativeEntryEffect+0x2300>
+0203e33c          16         4    4.00  mov	r1, #0
+0203e340          16         4    4.00  ldr	r2, [pc, #1380]	@ 203e8ac <ndsRendererSubmitNativeEntryEffect+0x259c>
+0203e344          92         4   23.00  b	203e350 <ndsRendererSubmitNativeEntryEffect+0x2040>
+0203e348         432       432    1.00  add	r1, r1, #1
+0203e34c         432       432    1.00  add	r2, r2, #20
+0203e350         436       436    1.00  subs	ip, r1, #108	@ 0x6c
+0203e354         436       436    1.00  movne	ip, #1
+0203e358         500       436    1.15  cmp	r3, #1
+0203e35c         448       436    1.03  movne	ip, #0
+0203e360         448       436    1.03  cmp	ip, #0
+0203e364         594       436    1.36  beq	203e3ac <ndsRendererSubmitNativeEntryEffect+0x209c>
+0203e368        8481       432   19.63  ldrb	r3, [r2, #6]
+0203e36c        2626       432    6.08  cmp	r6, r3
+0203e370         432       432    1.00  movne	r3, #1
+0203e374        1280       432    2.96  bne	203e348 <ndsRendererSubmitNativeEntryEffect+0x2038>
+0203e378         129         8   16.12  ldrb	r3, [r2, #9]
+0203e37c          33         8    4.12  cmp	r3, #9
+0203e380          20         8    2.50  bhi	203e3a4 <ndsRendererSubmitNativeEntryEffect+0x2094>
+0203e384          89         8   11.12  ldr	ip, [pc, #1316]	@ 203e8b0 <ndsRendererSubmitNativeEntryEffect+0x25a0>
+0203e388          35         8    4.38  ldr	lr, [pc, #1316]	@ 203e8b4 <ndsRendererSubmitNativeEntryEffect+0x25a4>
+0203e38c          89         8   11.12  ldr	ip, [ip, r3, lsl #3]
+0203e390          30         8    3.75  cmp	ip, lr
+0203e394         112         8   14.00  beq	203e644 <ndsRendererSubmitNativeEntryEffect+0x2334>
+0203e398          18         1   18.00  ldr	lr, [pc, #1304]	@ 203e8b8 <ndsRendererSubmitNativeEntryEffect+0x25a8>
+0203e39c           4         1    4.00  cmp	ip, lr
+0203e3a0          27         1   27.00  beq	203e624 <ndsRendererSubmitNativeEntryEffect+0x2314>
+0203e3ac          13         4    3.25  and	r3, r3, #255	@ 0xff
+0203e3b0          20         4    5.00  strb	r3, [r0, r6]
+0203e3b4       19282      5309    3.63  cmp	r3, #1
+0203e3b8       95313      5309   17.95  bne	203d298 <ndsRendererSubmitNativeEntryEffect+0xf88>
+0203e3bc       20131      5309    3.79  mov	r3, #0
+0203e3c0       20177      5309    3.80  mov	r1, #24
+0203e3c4       20131      5309    3.79  str	r3, [sp, #172]	@ 0xac
+0203e3c8       20229      5309    3.81  ldr	r3, [pc, #1240]	@ 203e8a8 <ndsRendererSubmitNativeEntryEffect+0x2598>
+0203e3cc       20107      5309    3.79  mov	ip, #12
+0203e3d0       20030      5309    3.77  mla	r3, r1, r6, r3
+0203e3d4       20910      5309    3.94  mov	r1, r3
+0203e3d8      109315      5309   20.59  ldr	r3, [pc, #1244]	@ 203e8bc <ndsRendererSubmitNativeEntryEffect+0x25ac>
+0203e3dc      181991      5309   34.28  ldr	r2, [pc, #1244]	@ 203e8c0 <ndsRendererSubmitNativeEntryEffect+0x25b0>
+0203e3e0      405033      5309   76.29  ldr	r3, [r3]
+0203e3e4       36889      5309    6.95  add	r3, r3, #1
+0203e3e8       63101      5309   11.89  str	r3, [sp, #16]
+0203e3ec        5384      5309    1.01  ldr	r3, [sp, #1096]	@ 0x448
+0203e3f0       10721      5309    2.02  ldr	lr, [r3, #1216]	@ 0x4c0
+0203e3f4        5370      5309    1.01  ldr	r0, [r3, #1228]	@ 0x4cc
+0203e3f8      137463      5309   25.89  bic	r3, lr, #255	@ 0xff
+0203e3fc       20090      5309    3.78  str	r3, [sp, #76]	@ 0x4c
+0203e400       20122      5309    3.79  bic	r3, r0, #255	@ 0xff
+0203e404       20122      5309    3.79  str	r3, [sp, #104]	@ 0x68
+0203e408       94759      5309   17.85  b	203e418 <ndsRendererSubmitNativeEntryEffect+0x2108>
+0203e40c       12175     12175    1.00  subs	ip, ip, #1
+0203e410       12175     12175    1.00  add	r2, r2, #20
+0203e414       12347     12175    1.01  beq	203e4a4 <ndsRendererSubmitNativeEntryEffect+0x2194>
+0203e418      369576     17480   21.14  ldr	r3, [r2, #4]
+0203e41c       69888     17480    4.00  cmp	r3, #0
+0203e420       17786     17480    1.02  beq	203e40c <ndsRendererSubmitNativeEntryEffect+0x20fc>
+0203e424      149315     17438    8.56  ldr	r4, [sp, #16]
+0203e428       82501     17439    4.73  ldr	r5, [r2, #8]
+0203e42c       58774     17438    3.37  cmp	r4, r5
+0203e430       17660     17438    1.01  bne	203e40c <ndsRendererSubmitNativeEntryEffect+0x20fc>
+0203e434      141225     17439    8.10  ldr	r4, [r2]
+0203e438      129935     17439    7.45  ldr	r5, [r1, #8]
+0203e43c       44291     17438    2.54  cmp	r4, r5
+0203e440       31022     17438    1.78  bne	203e40c <ndsRendererSubmitNativeEntryEffect+0x20fc>
+0203e444       31984     17438    1.83  ldr	r4, [sp, #76]	@ 0x4c
+0203e448       30977     17438    1.78  ldr	r5, [r2, #12]
+0203e44c       43898     17438    2.52  cmp	r4, r5
+0203e450       74125     17438    4.25  bne	203e40c <ndsRendererSubmitNativeEntryEffect+0x20fc>
+0203e454        7086      7017    1.01  ldr	r4, [sp, #104]	@ 0x68
+0203e458       41773      7017    5.95  ldr	r5, [r2, #16]
+0203e45c       18376      7017    2.62  cmp	r4, r5
+0203e460       30911      7017    4.41  bne	203e40c <ndsRendererSubmitNativeEntryEffect+0x20fc>
+0203e464        9775      5305    1.84  mov	r1, fp
+0203e468        9775      5305    1.84  ldr	r0, [sp, #1096]	@ 0x448
+0203e46c        9775      5305    1.84  str	r3, [sp, #16]
+0203e470        9775      5305    1.84  ldr	r5, [pc, #1100]	@ 203e8c4 <ndsRendererSubmitNativeEntryEffect+0x25b4>
+0203e474      110985      5305   20.92  bl	202a220 <ndsRendererHardwareBindTextureName>
+0203e478       92641      5305   17.46  ldr	r3, [sp, #16]
+0203e47c       18854      5309    3.55  mov	r1, r3
+0203e480       17573      5309    3.31  mov	r0, #1
+0203e484       17573      5309    3.31  str	r3, [sp, #16]
+0203e488      211791      5309   39.89  blx	211e550 <glAssignColorTable>
+0203e48c        5393      5309    1.02  ldr	r1, [pc, #1076]	@ 203e8c8 <ndsRendererSubmitNativeEntryEffect+0x25b8>
+0203e490        5432      5309    1.02  ldr	r3, [sp, #16]
+0203e494       96376      5309   18.15  ldr	r2, [r1]
+0203e498      185532      5309   34.95  add	r2, r2, #1
+0203e49c       28533      5309    5.37  str	r2, [r1]
+0203e4a0      314023      5309   59.15  b	203d2b8 <ndsRendererSubmitNativeEntryEffect+0xfa8>
+0203e4a4          96         4   24.00  ldr	r1, [pc, #1056]	@ 203e8cc <ndsRendererSubmitNativeEntryEffect+0x25bc>
+0203e4a8          20         4    5.00  mov	r3, #20
+0203e4ac          42         4   10.50  ldr	r4, [r1]
+0203e4b0          10         4    2.50  ldr	r5, [pc, #1048]	@ 203e8d0 <ndsRendererSubmitNativeEntryEffect+0x25c0>
+0203e4b4          10         4    2.50  add	r2, r4, #1
+0203e4b8          70         4   17.50  cmp	r2, #12
+0203e4bc          16         4    4.00  movcs	r2, #0
+0203e4c0          16         4    4.00  str	r2, [r1]
+0203e4c4          16         4    4.00  ldr	r2, [pc, #1012]	@ 203e8c0 <ndsRendererSubmitNativeEntryEffect+0x25b0>
+0203e4c8          16         4    4.00  ldr	r1, [sp, #16]
+0203e4cc          16         4    4.00  mla	r2, r3, r4, r2
+0203e4d0          16         4    4.00  mov	r3, r2
+0203e4d4          16         4    4.00  ldr	r2, [r2, #8]
+0203e4d8          72         4   18.00  str	ip, [sp, #92]	@ 0x5c
+0203e4dc          16         4    4.00  cmp	r1, r2
+0203e4e0          16         4    4.00  strne	ip, [r3, #4]
+0203e4e4          16         4    4.00  mov	r3, #24
+0203e4e8          16         4    4.00  orr	r2, r0, #255	@ 0xff
+0203e4ec          62         4   15.50  ldr	r0, [pc, #948]	@ 203e8a8 <ndsRendererSubmitNativeEntryEffect+0x2598>
+0203e4f0          18         4    4.50  orr	r1, lr, #255	@ 0xff
+0203e4f4          13         4    3.25  mla	r0, r3, r6, r0
+0203e4f8          97         4   24.25  mov	r3, r0
+0203e4fc         120         4   30.00  ldrh	r0, [r0, #12]
+0203e500          20         4    5.00  mov	lr, #0
+0203e504          34         4    8.50  str	r4, [sp, #64]	@ 0x40
+0203e508          10         4    2.50  str	r0, [sp, #112]	@ 0x70
+0203e50c         196         4   49.00  b	203e54c <ndsRendererSubmitNativeEntryEffect+0x223c>
+0203e510          56        32    1.75  ldr	ip, [r3, #8]
+0203e514          32        32    1.00  lsl	r0, lr, #1
+0203e518         414        32   12.94  ldrh	r0, [ip, r0]
+0203e51c          72        32    2.25  mov	r4, lr
+0203e520         160        32    5.00  str	r3, [sp, #156]	@ 0x9c
+0203e524          32        32    1.00  str	r2, [sp, #144]	@ 0x90
+0203e528          32        32    1.00  str	r1, [sp, #140]	@ 0x8c
+0203e52c         318        32    9.94  bl	201df88 <ndsRendererHardwareBlendPrimEnvTexel0>
+0203e530          32        32    1.00  mov	r3, r5
+0203e534          58        32    1.81  strh	r0, [r3], #2
+0203e538          32        32    1.00  mov	r5, r3
+0203e53c          32        32    1.00  ldr	r1, [sp, #140]	@ 0x8c
+0203e540          32        32    1.00  ldr	r2, [sp, #144]	@ 0x90
+0203e544          32        32    1.00  ldr	r3, [sp, #156]	@ 0x9c
+0203e548          32        32    1.00  add	lr, r4, #1
+0203e54c          68        36    1.89  ldr	ip, [sp, #112]	@ 0x70
+0203e550          83        36    2.31  cmp	lr, ip
+0203e554         109        36    3.03  bcc	203e510 <ndsRendererSubmitNativeEntryEffect+0x2200>
+0203e558         104         4   26.00  mov	r3, #20
+0203e55c          52         4   13.00  ldr	r1, [sp, #64]	@ 0x40
+0203e560          47         4   11.75  ldr	r2, [pc, #856]	@ 203e8c0 <ndsRendererSubmitNativeEntryEffect+0x25b0>
+0203e564          13         4    3.25  mla	r2, r3, r1, r2
+0203e568          55         4   13.75  ldr	r3, [r2, #4]
+0203e56c          28         4    7.00  str	r3, [sp, #184]	@ 0xb8
+0203e570          10         4    2.50  str	r3, [sp, #140]	@ 0x8c
+0203e574          18         4    4.50  bl	1ff8508 <ndsRendererHardwareEndBatch>
+0203e578          77         4   19.25  ldr	r3, [sp, #140]	@ 0x8c
+0203e57c          16         4    4.00  cmp	r3, #0
+0203e580          16         4    4.00  bne	203e698 <ndsRendererSubmitNativeEntryEffect+0x2388>
+0203e584          16         4    4.00  ldr	r3, [pc, #840]	@ 203e8d4 <ndsRendererSubmitNativeEntryEffect+0x25c4>
+0203e588          16         4    4.00  ldr	r3, [r3]
+0203e58c          16         4    4.00  cmp	r3, #0
+0203e590         168         4   42.00  beq	203e5cc <ndsRendererSubmitNativeEntryEffect+0x22bc>
+0203e5cc          16         4    4.00  mov	r0, #1
+0203e5d0          16         4    4.00  add	r1, sp, #184	@ 0xb8
+0203e5d4         152         4   38.00  blx	211df90 <glGenTextures>
+0203e5d8          68         4   17.00  cmp	r0, #0
+0203e5dc         264         4   66.00  bne	203e690 <ndsRendererSubmitNativeEntryEffect+0x2380>
+0203e610          16         4    4.00  ldrh	r3, [r1, #12]
+0203e614          16         4    4.00  cmp	r3, #8
+0203e618          72         4   18.00  movne	r3, #2
+0203e61c          16         4    4.00  moveq	r3, #1
+0203e620         176         4   44.00  b	203e33c <ndsRendererSubmitNativeEntryEffect+0x202c>
+0203e624           1         1    1.00  ldr	ip, [pc, #644]	@ 203e8b0 <ndsRendererSubmitNativeEntryEffect+0x25a0>
+0203e628           2         1    2.00  add	r3, ip, r3, lsl #3
+0203e62c           1         1    1.00  ldr	r3, [r3, #4]
+0203e630          25         1   25.00  ldr	ip, [pc, #692]	@ 203e8ec <ndsRendererSubmitNativeEntryEffect+0x25dc>
+0203e634           7         1    7.00  cmp	r3, ip
+0203e638          33         1   33.00  moveq	r3, #1
+0203e63c           4         1    4.00  movne	r3, #2
+0203e640          27         1   27.00  b	203e348 <ndsRendererSubmitNativeEntryEffect+0x2038>
+0203e644          16         7    2.29  ldr	ip, [pc, #612]	@ 203e8b0 <ndsRendererSubmitNativeEntryEffect+0x25a0>
+0203e648          20         7    2.86  add	r3, ip, r3, lsl #3
+0203e64c          16         7    2.29  ldr	r3, [r3, #4]
+0203e650          16         7    2.29  ldr	ip, [pc, #584]	@ 203e8a0 <ndsRendererSubmitNativeEntryEffect+0x2590>
+0203e654          20         7    2.86  cmp	r3, ip
+0203e658          58         7    8.29  moveq	r3, #1
+0203e65c          16         7    2.29  movne	r3, #2
+0203e660          93         7   13.29  b	203e348 <ndsRendererSubmitNativeEntryEffect+0x2038>
+0203e690          16         4    4.00  add	r0, sp, #184	@ 0xb8
+0203e694         200         4   50.00  bl	2028658 <ndsVramCensusTagBirth.constprop.0>
+0203e698         124         4   31.00  ldr	r1, [sp, #184]	@ 0xb8
+0203e69c          16         4    4.00  and	r3, r1, #65280	@ 0xff00
+0203e6a0          16         4    4.00  cmp	r3, #49152	@ 0xc000
+0203e6a4          16         4    4.00  beq	203e838 <ndsRendererSubmitNativeEntryEffect+0x2528>
+0203e6a8          16         4    4.00  mov	r0, #1
+0203e6ac         152         4   38.00  blx	211e328 <glBindTexture>
+0203e6b0           8         4    2.00  blx	1fff164 <glGetTexParameter>
+0203e6b4           4         4    1.00  ldr	r3, [pc, #532]	@ 203e8d0 <ndsRendererSubmitNativeEntryEffect+0x25c0>
+0203e6b8         240         4   60.00  ldr	r1, [pc, #560]	@ 203e8f0 <ndsRendererSubmitNativeEntryEffect+0x25e0>
+0203e6bc          61         4   15.25  str	r3, [sp, #4]
+0203e6c0           7         4    1.75  mov	r3, #0
+0203e6c4           7         4    1.75  ldr	r2, [r1, #12]
+0203e6c8           7         4    1.75  ldr	r4, [sp, #112]	@ 0x70
+0203e6cc           7         4    1.75  bic	r2, r2, #1
+0203e6d0           7         4    1.75  str	r2, [r1, #12]
+0203e6d4           7         4    1.75  ldr	r2, [sp, #184]	@ 0xb8
+0203e6d8         109         4   27.25  ldr	r1, [pc, #532]	@ 203e8f4 <ndsRendererSubmitNativeEntryEffect+0x25e4>
+0203e6dc          16         4    4.00  mov	r0, #1
+0203e6e0          16         4    4.00  str	r2, [r1]
+0203e6e4          16         4    4.00  ldr	r1, [pc, #472]	@ 203e8c4 <ndsRendererSubmitNativeEntryEffect+0x25b4>
+0203e6e8          16         4    4.00  str	r3, [sp]
+0203e6ec          16         4    4.00  mov	r2, r4
+0203e6f0          16         4    4.00  str	r3, [r1]
+0203e6f4          16         4    4.00  mov	r5, r1
+0203e6f8         144         4   36.00  mov	r1, r3
+0203e6fc         200         4   50.00  blx	211e384 <glColorTableEXT>
+0203e700           4         4    1.00  mov	r1, #1
+0203e704           4         4    1.00  add	r2, sp, #172	@ 0xac
+0203e708           4         4    1.00  mov	r0, r1
+0203e70c         139         4   34.75  blx	211e610 <glGetColorTableParameterEXT>
+0203e710         185         4   46.25  ldr	r3, [sp, #172]	@ 0xac
+0203e714          28         4    7.00  cmp	r4, r3
+0203e718         146         4   36.50  ldr	r3, [sp, #184]	@ 0xb8
+0203e71c          16         4    4.00  bne	203e798 <ndsRendererSubmitNativeEntryEffect+0x2488>
+0203e720          16         4    4.00  mov	r2, #24
+0203e724         124         4   31.00  ldr	r1, [pc, #380]	@ 203e8a8 <ndsRendererSubmitNativeEntryEffect+0x2598>
+0203e728         153         4   38.25  ldr	r0, [sp, #64]	@ 0x40
+0203e72c          17         4    4.25  mla	r1, r2, r6, r1
+0203e730          10         4    2.50  mov	r2, #20
+0203e734           7         4    1.75  mul	r0, r2, r0
+0203e738         125         4   31.25  mov	r2, r0
+0203e73c          68         4   17.00  ldr	r1, [r1, #8]
+0203e740          31         4    7.75  ldr	r0, [pc, #376]	@ 203e8c0 <ndsRendererSubmitNativeEntryEffect+0x25b0>
+0203e744          14         4    3.50  str	r1, [r0, r2]
+0203e748          93         4   23.25  ldr	r1, [sp, #16]
+0203e74c          17         4    4.25  add	r2, r0, r2
+0203e750          31         4    7.75  str	r1, [r2, #8]
+0203e754           7         4    1.75  ldr	r1, [sp, #76]	@ 0x4c
+0203e758         153         4   38.25  ldr	r0, [pc, #408]	@ 203e8f8 <ndsRendererSubmitNativeEntryEffect+0x25e8>
+0203e75c          23         4    5.75  str	r1, [r2, #12]
+0203e760          13         4    3.25  ldr	r1, [sp, #104]	@ 0x68
+0203e764          13         4    3.25  str	r3, [r2, #4]
+0203e768          13         4    3.25  str	r1, [r2, #16]
+0203e76c         230         4   57.50  ldr	r2, [r0]
+0203e770          24         4    6.00  mov	r1, fp
+0203e774           4         4    1.00  add	r2, r2, #1
+0203e778          68         4   17.00  str	r2, [r0]
+0203e77c          60         4   15.00  ldr	r0, [sp, #1096]	@ 0x448
+0203e780          39         4    9.75  str	r3, [sp, #16]
+0203e784         149         4   37.25  bl	202a220 <ndsRendererHardwareBindTextureName>
+0203e788           4         4    1.00  ldr	r3, [sp, #16]
+0203e78c           8         4    2.00  cmp	r3, #0
+0203e790         252         4   63.00  bne	203e47c <ndsRendererSubmitNativeEntryEffect+0x216c>

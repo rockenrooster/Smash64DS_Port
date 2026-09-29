@@ -5139,6 +5139,20 @@ static s32 ndsRendererEntryEffectVertex(u32 corner,
  * Same-ROM A/B word: gNdsEntryEffectStaticOnce (0 = prove every draw). */
 static u32 sNdsEntryEffectRootStaticOk[
     (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
+/* Set with the root's static bit when every corner's position also converts
+ * without ndsRendererEntryEffectCoord's clamp (the fast corners' condition). */
+static u32 sNdsEntryEffectRootCoordsFit[
+    (NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u];
+
+static inline __attribute__((always_inline)) u32
+ndsRendererEntryEffectPositionFits(const NDSEntryEffectPosition *position)
+{
+    const s32 limit = 32767 >> (12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+
+    return ((position->x <= limit) && (position->x >= -limit - 1) &&
+            (position->y <= limit) && (position->y >= -limit - 1) &&
+            (position->z <= limit) && (position->z >= -limit - 1)) ? 1u : 0u;
+}
 volatile u32 gNdsEntryEffectStaticOnce __attribute__((used, section(".data"))) =
     1u;
 
@@ -5211,6 +5225,22 @@ volatile u32 gNdsEntryEffectHwLight __attribute__((used, section(".data"))) =
     2u;
 u32 gNdsEntryEffectHwLitGroups;
 u32 gNdsEntryEffectCpuLitGroups;
+
+/* P2-2p8 (2026-09-29): the corners of a proven group whose colour is not per
+ * corner -- an engine-lit group (a normal per corner) or a ramp-palette group
+ * (one constant colour) -- straight from the const tables. The general loop
+ * spent ~141 instructions a corner on Sector Z's Arwing (the table walk
+ * spilled to the stack, each corner round-tripped an NDSRendererInputVertex
+ * through memory, and the normal took three divides); this one reads each
+ * table once and writes the four FIFO words. Same words. Same-ROM A/B word
+ * gNdsEntryEffectFastCorners (0 = the general loop). */
+volatile u32 gNdsEntryEffectFastCorners __attribute__((used, section(".data"))) =
+    1u;
+u32 gNdsEntryEffectFastCornerGroups;
+/* Defined after NDS_R2_NORMAL_PACK, below. */
+static u32 ndsRendererEntryEffectFastCornersReady(void);
+static void ndsRendererEntryEffectEmitFastCorners(u32 first, u32 count,
+                                                  u32 lit, u32 textured);
 
 #define NDS_ENTRY_EFFECT_LIGHT_COLORS \
     (NDS_RENDERER_LIGHT_COLOR_1_MASK | NDS_RENDERER_LIGHT_COLOR_2_MASK)
@@ -5554,6 +5584,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 shield_variant = 0u;
     u32 ko_part = 0xffffffffu;
     sb32 static_proven;
+    u32 coords_fit = TRUE;
     u32 hw_light_loaded = FALSE;
     u32 last_dif_amb = 0xffffffffu;
 
@@ -5712,6 +5743,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
             {
                 return FALSE;
             }
+            if (ndsRendererEntryEffectPositionFits(&sNdsEntryEffectPositions[
+                    sNdsEntryEffectCornerPosition[vertex_index]]) == 0u)
+            {
+                coords_fit = FALSE;
+            }
         }
         for (override_index = 0u;
              override_index < group->matrix_override_count;
@@ -5753,6 +5789,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
         /* Every group's static half passed (a failure returned above). */
         sNdsEntryEffectRootStaticOk[root_index >> 5] |=
             1u << (root_index & 31u);
+        if (coords_fit != FALSE)
+        {
+            sNdsEntryEffectRootCoordsFit[root_index >> 5] |=
+                1u << (root_index & 31u);
+        }
     }
 
     if (owner_asset_id == 84u)
@@ -6252,7 +6293,28 @@ s32 ndsRendererSubmitNativeEntryEffect(
             gNdsEntryEffectNativeNoZGroupDraws++;
         }
 
-        for (corner = 0u; corner < corner_count; corner++)
+        corner = 0u;
+        if ((static_proven != FALSE) && (gNdsEntryEffectFastCorners != 0u) &&
+            (cpu_projected_group == FALSE) &&
+            ((hw_lit_group != FALSE) || (ramp_palette != 0u)) &&
+            ((sNdsEntryEffectRootCoordsFit[root_index >> 5] &
+              (1u << (root_index & 31u))) != 0u) &&
+            (ndsRendererEntryEffectFastCornersReady() != 0u))
+        {
+            if (hw_lit_group == FALSE)
+            {
+                /* The ramp palette already holds the whole colour combiner;
+                 * the colour register holds for every corner after it. */
+                glColor(0x7fffu);
+            }
+            ndsRendererEntryEffectEmitFastCorners(
+                (u32)group->first_vertex, corner_count,
+                (hw_lit_group != FALSE) ? 1u : 0u,
+                (use_texture != FALSE) ? 1u : 0u);
+            gNdsEntryEffectFastCornerGroups++;
+            corner = corner_count;
+        }
+        for (; corner < corner_count; corner++)
         {
             u32 vertex_index = (u32)group->first_vertex + corner;
             NDSRendererInputVertex vertex;
@@ -6663,6 +6725,98 @@ static inline u32 ndsRendererEntryEffectLightWord(
         (int)ndsRendererR2NormalComponent(-direction->x),
         (int)ndsRendererR2NormalComponent(-direction->y),
         (int)ndsRendererR2NormalComponent(-direction->z));
+}
+
+/* The GFX_NORMAL word of every source colour entry (the corners' normals are
+ * colour entries). The table is const, so the words are built once. */
+static u32 sNdsEntryEffectNormalWords[NDS_ENTRY_EFFECT_COLOR_COUNT];
+static u8 sNdsEntryEffectFastCornersState;
+
+static u32 __attribute__((noinline)) ndsRendererEntryEffectFastCornersBuild(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_ENTRY_EFFECT_COLOR_COUNT; i++)
+    {
+        NDSRendererInputVertex vertex = {0};
+
+        vertex.r = sNdsEntryEffectColors[i].r;
+        vertex.g = sNdsEntryEffectColors[i].g;
+        vertex.b = sNdsEntryEffectColors[i].b;
+        sNdsEntryEffectNormalWords[i] = ndsRendererEntryEffectNormalWord(&vertex);
+    }
+    sNdsEntryEffectFastCornersState = 1u;
+    return 1u;
+}
+
+static u32 ndsRendererEntryEffectFastCornersReady(void)
+{
+    if (sNdsEntryEffectFastCornersState == 0u)
+    {
+        return ndsRendererEntryEffectFastCornersBuild();
+    }
+    return 1u;
+}
+
+/* One corner run; `lit` and `textured` are constants at each call below, so
+ * each of the four loops carries only its own writes. */
+static inline __attribute__((always_inline)) void
+ndsRendererEntryEffectFastCornerLoop(u32 first, u32 count, u32 lit,
+                                     u32 textured)
+{
+    const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
+    const u16 *position_index = &sNdsEntryEffectCornerPosition[first];
+    const u16 *color_index = &sNdsEntryEffectCornerColor[first];
+    const u8 *s_index = &sNdsEntryEffectCornerS[first];
+    const u8 *t_index = &sNdsEntryEffectCornerT[first];
+    const u16 *end = position_index + count;
+
+    while (position_index != end)
+    {
+        const NDSEntryEffectPosition *position =
+            &sNdsEntryEffectPositions[*position_index++];
+
+        if (lit != 0u)
+        {
+            ndsRendererHardwareWriteNormalWord(
+                sNdsEntryEffectNormalWords[*color_index]);
+        }
+        color_index++;
+        if (textured != 0u)
+        {
+            glTexCoord2t16((t16)sNdsEntryEffectS[*s_index],
+                           (t16)sNdsEntryEffectT[*t_index]);
+        }
+        s_index++;
+        t_index++;
+        glVertex3v16((v16)((s32)position->x << shift),
+                     (v16)((s32)position->y << shift),
+                     (v16)((s32)position->z << shift));
+    }
+}
+
+static void __attribute__((noinline)) ndsRendererEntryEffectEmitFastCorners(
+    u32 first, u32 count, u32 lit, u32 textured)
+{
+    if (lit != 0u)
+    {
+        if (textured != 0u)
+        {
+            ndsRendererEntryEffectFastCornerLoop(first, count, 1u, 1u);
+        }
+        else
+        {
+            ndsRendererEntryEffectFastCornerLoop(first, count, 1u, 0u);
+        }
+    }
+    else if (textured != 0u)
+    {
+        ndsRendererEntryEffectFastCornerLoop(first, count, 0u, 1u);
+    }
+    else
+    {
+        ndsRendererEntryEffectFastCornerLoop(first, count, 0u, 0u);
+    }
 }
 
 static void ndsRendererNativeBuildDenseShadeWords(

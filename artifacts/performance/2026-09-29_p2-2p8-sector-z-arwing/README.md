@@ -107,10 +107,46 @@ checker's four other failures (the lean path's `ndsFtrLeanEntryResetShade` /
 `ndsFighterPacketApplyTintPrims`) predate this change: they fail identically
 on the `8bc4684098a` source.
 
+## Where the owner's time goes after the light (profile `sz3`)
+
+`builds/p2p8-prof-sz3` is the lab profile of Sector Z with the engine light
+on (frames 100..1900). `sz3-counterfactual-p95.txt` still ranks the owner
+second (P95 -88K if removed); on the 901 frames it draws the Arwing it costs
+88K ticks of self time. `sz3-pc-entry-effect-full.txt` is every PC of the
+submit and of its adapter, split by how often each runs:
+
+| class | cycles a match | share | instructions each | cycles each |
+|---|---:|---:|---:|---:|
+| per corner (305K) | 75.4M | 47% | 141 | 247 |
+| per group (22.7K) | 56.6M | 35% | 476 | 2,488 |
+| per root (7.4K) | 26.2M | 16% | 270 | 3,558 |
+| adapter, per root | 25.3M | -- | 323 | 3,060 |
+
+The corner loop spilled its table walk to the stack, round-tripped each
+corner through an `NDSRendererInputVertex` in memory and spent three divides
+on the normal. The group and root costs are instruction-cache misses across
+the ~15 helpers a group calls (cycles per instruction 5 to 13).
+
+## Banked: fast corners
+
+`src/nds/nds_renderer_native_common.c`: a proven group whose colour is not
+per corner -- engine-lit (a normal per corner) or ramp-palette (one colour,
+written once before the run) -- emits its corners straight from the const
+tables (`ndsRendererEntryEffectEmitFastCorners`), with the normal words built
+once per source colour entry. A root takes it only when every position
+converts without the coordinate clamp (checked by the same one-time pass that
+proves the root's tables). The words written are the general loop's.
+
+Same ROM, A/B word `gNdsEntryEffectFastCorners` (`fastcorners-ab.txt`):
+Sector Z lab P50/P95/P99 1,216,512 / 1,683,584 / 1,998,144 ->
+**1,204,736 / 1,657,984 / 1,972,544**; 25,505 groups took the fast corners;
+0 fallbacks; native failures 119 both; replay IDENTICAL.
+
 ## Next
 
-With the light on the engine, a lit root's corners are static: the normal,
-the texture coordinate and the vertex come from const tables alone. What
-remains per corner is the immediate-mode decode and emit; a root can be
-recorded once as packed GX words and replayed by DMA, keyed on the few
-inherited states its groups read.
+The per-group state (~2,500 cycles a group, 27 groups an Arwing frame) is a
+function of the root's inherited state (prim, env, othermode, geometry mode,
+light colours, the combine count) and the resident texture names: a per-root
+cache of each group's resolved words (poly format, texture and palette words,
+diffuse/ambient) keyed on those inputs would skip the helper chain. Beyond
+that, a root's whole word stream can be replayed by DMA.
