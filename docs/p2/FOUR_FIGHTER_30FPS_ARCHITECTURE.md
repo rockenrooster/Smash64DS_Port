@@ -894,6 +894,18 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   bindings compose only the translation row `ApplyMvpRecalc` keeps
   (`f7793ae9996`: STG -2.7K, P50 -1.7K to -2.8K). Gate WORK-H P50/P95
   ~922,800 / ~1,256,600. Receipt `2026-09-29_p2-2p8-stage-gx-memo`.
+- **09-29 object draws priced; the stage-DL fast lane, BANKED** (replay
+  identical): items, weapons and effect models drew through the generic
+  stage-DL submit at 22K-78K ticks a list whatever their size (a Charge Shot
+  42K, a Beam Sword root 29K; 36K a frame on Dream Land, 72K Yoshi's Island,
+  88K Saffron, 117K Sector Z in the lab census). The body now records the
+  route when an owner draws a list; later draws of that list go straight to
+  the owner with the same inputs (Charge Shot, the thirteen MObj-less item
+  owners, the procedural visual templates), and the generic-cache quads bind
+  through the owner texture memo (verify mode 0 differences). Gate WORK-H
+  P50/P95 ~924K/1,256.5K -> ~918.5K/~1,249K; Yoshi's Island P95 -31K,
+  Saffron -24K (`cde0ccea3f2`, `e5c64860e14`, `008b5429544`). Receipt
+  `2026-09-29_p2-2p8-object-fast-lane`.
 
 ## 7. Found along the way
 
