@@ -533,10 +533,54 @@ void ndsFtPoseUnbind(GObj *gobj)
     }
 }
 
+#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_R2_FTANIM_STREAM
+void ndsR2AnimPinsDropGObj(GObj *gobj);
+#endif
+
+/* A zero-copy clip moved (reloc_backend_assets.c, ndsR2AnimPinRescue): every
+ * script cursor and TraI descriptor this fighter's joints hold inside
+ * [base, base + size) moves by `delta`. */
+void ndsFtPoseRelocateScripts(GObj *gobj, const void *base, u32 size,
+                              intptr_t delta)
+{
+    NdsFtPose *pose = ndsFtPoseFind(gobj);
+    const u8 *lo = base;
+    const u8 *hi = lo + size;
+    u32 e;
+
+    if (pose == NULL)
+    {
+        return;
+    }
+    for (e = 0u; (e < pose->entry_count) && (e < pose->capacity); e++)
+    {
+        NdsFtPoseJoint *joint = &pose->joints[e];
+        DObj *dobj = joint->dobj;
+        const u8 *script = (dobj != NULL) ?
+            (const u8 *)dobj->anim_joint.event16 : NULL;
+
+        if ((script != NULL) && (script >= lo) && (script < hi))
+        {
+            dobj->anim_joint.event16 =
+                (AObjEvent16 *)(void *)((u8 *)(uintptr_t)script + delta);
+        }
+        if ((joint->interpolate != NULL) &&
+            ((const u8 *)joint->interpolate >= lo) &&
+            ((const u8 *)joint->interpolate < hi))
+        {
+            joint->interpolate =
+                (void *)((u8 *)(uintptr_t)joint->interpolate + delta);
+        }
+    }
+}
+
 void ndsFtPoseRelease(GObj *gobj)
 {
     NdsFtPose *pose = ndsFtPoseFind(gobj);
 
+#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_R2_FTANIM_STREAM
+    ndsR2AnimPinsDropGObj(gobj);
+#endif
     if (pose == NULL)
     {
         return;

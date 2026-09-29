@@ -1114,6 +1114,74 @@ static u32 sNdsRelocLoadedFileCount;
 /* Bumped by every change to the table's order, count or `data` pointers; the
  * by-data lookup's one-entry memo is valid only within one epoch. */
 static u32 sNdsRelocLoadedFilesEpoch;
+
+/* ZERO-COPY MOTION CACHE HITS. A stream-format clip (BPS1: relative offsets,
+ * no fixups) that the raw motion cache holds is handed to the fighter where it
+ * lies, the way the resident battlepack hands out its clips, instead of being
+ * copied into the fighter's figatree heap and registered there on every status
+ * change (~11K ticks a change: the copy, the heap-overwrite scan, the
+ * registration and three status-buffer writes; receipt
+ * 2026-09-28_p2-2p8-status-change).
+ *
+ * The cache can give those bytes back (the elastic yield, the ring overwrite,
+ * a drop), so each fighter's clip is PINNED: pending from the fetch until the
+ * install binds it, then bound until the fighter's next fetch. Before any of
+ * those three reuses a pinned range, the pin is RESCUED -- the clip copied into
+ * the fighter's own heap, registered there exactly as the copy path registers
+ * it, and every pointer into it moved by the same delta: the authoritative
+ * force-file record, fp->figatree (Kirby's capture re-binds it) and each
+ * joint's script cursor (and TraI descriptor) the pose engine or the generic
+ * player holds. After a rescue the fighter is exactly where the copy path
+ * would have put it. A fetch drops the fighter's pins first: the install that
+ * always follows replaces the binding, and nothing reads the old clip between
+ * the two. The bytes the pose engine reads are the cached bytes either way. */
+#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_FT_POSE && NDS_R2_FTANIM_STREAM
+#define NDS_R2_ANIM_ZERO_COPY 1
+#else
+#define NDS_R2_ANIM_ZERO_COPY 0
+#endif
+#if NDS_R2_ANIM_ZERO_COPY
+#define NDS_R2_ANIM_PIN_SLOTS 8u
+#define NDS_R2_ANIM_PIN_FREE 0u
+#define NDS_R2_ANIM_PIN_PENDING 1u
+#define NDS_R2_ANIM_PIN_BOUND 2u
+typedef struct NDSR2AnimPin
+{
+    u8 *heap;
+    FTStruct *fp;
+    GObj *gobj;
+    const u8 *payload;
+    u32 size;
+    u32 asset_id;
+    u32 generation;
+    u32 state;
+    NDSRelocAssetHeader header;
+} NDSR2AnimPin;
+static NDSR2AnimPin sNdsR2AnimPins[NDS_R2_ANIM_PIN_SLOTS];
+/* Same-ROM A/B word: 0 keeps the copy path for every hit. */
+volatile u32 gNdsR2AnimZeroCopy __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsR2AnimZeroCopyHits;
+__attribute__((used)) volatile u32 gNdsR2AnimZeroCopyRescues;
+__attribute__((used)) volatile u32 gNdsR2AnimZeroCopyDrops;
+
+static const NDSR2AnimPin *ndsR2AnimPinForPayload(const void *payload)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+    {
+        const NDSR2AnimPin *pin = &sNdsR2AnimPins[i];
+
+        if ((pin->state != NDS_R2_ANIM_PIN_FREE) &&
+            (pin->payload == (const u8 *)payload) &&
+            (pin->generation == gNdsTaskmanHeapGeneration))
+        {
+            return pin;
+        }
+    }
+    return NULL;
+}
+#endif
 /* What ndsRelocPrepareFighterAnimHeapOverwrite's full scan saw about the asset
  * about to be registered at that heap: the index of its entry, or -1 for none.
  * The registration that follows at once reads it instead of scanning the table
@@ -6581,6 +6649,31 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     }
     align_mask = (size >= sizeof(u32)) ? (sizeof(u32) - 1u)
                                        : ((size >= sizeof(u16)) ? 1u : 0u);
+#if NDS_R2_ANIM_ZERO_COPY
+    {
+        /* A pinned cache clip is a stream clip: its slots are offsets, as the
+         * registered heap copy's are (ndsRelocMarkLoadedFileRelativeOffsets),
+         * and they resolve the same way against the clip's own base. */
+        const NDSR2AnimPin *pin = ndsR2AnimPinForPayload(file_base);
+
+        if (pin != NULL)
+        {
+            raw = (uintptr_t)ptr;
+            if ((raw <= pin->size) && (size <= (size_t)(pin->size - raw)))
+            {
+                gNdsRelocResolveOffsetCount++;
+                resolved = (uintptr_t)pin->payload + raw;
+                if ((resolved & align_mask) != 0u)
+                {
+                    gNdsRelocResolveMisalignCount++;
+                    gNdsRelocResolveMisalignValue = (u32)resolved;
+                    return NULL;
+                }
+                return (void *)resolved;
+            }
+        }
+    }
+#endif
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
     /* PlayersVS' two resident Selected clips are compiled directly from the
@@ -13850,8 +13943,184 @@ static sb32 ndsR2AnimCacheArenaStillOwned(void)
  * gMPCollisionGeometry fix settled on. */
 static void ndsBattlePackResidencyDrop(void);
 
+#if NDS_R2_ANIM_ZERO_COPY
+static void ndsRelocRecordAuthoritativeForceFile(void *heap, void *file);
+void ndsFtPoseRelocateScripts(GObj *gobj, const void *base, u32 size,
+                              intptr_t delta);
+
+/* The clip goes to the fighter's own heap and every pointer into it follows
+ * (see the block at sNdsR2AnimPins). A pin of a rewound scene is only
+ * forgotten: its fighter and heap are gone. */
+static void ndsR2AnimPinRescue(NDSR2AnimPin *pin)
+{
+    const u32 state = pin->state;
+    u8 *heap = pin->heap;
+    const u8 *payload = pin->payload;
+    const u32 size = pin->size;
+    const intptr_t delta = (intptr_t)heap - (intptr_t)payload;
+    NDSRelocLoadedFile *loaded;
+    u32 j;
+
+    pin->state = NDS_R2_ANIM_PIN_FREE;
+    if ((state == NDS_R2_ANIM_PIN_FREE) ||
+        (pin->generation != gNdsTaskmanHeapGeneration) ||
+        (heap == NULL) || (pin->fp == NULL))
+    {
+        gNdsR2AnimZeroCopyDrops++;
+        return;
+    }
+    ndsRelocPrepareFighterAnimHeapOverwrite(pin->asset_id, heap);
+    memcpy(heap, payload, size);
+    loaded = ndsRelocRegisterLoadedFile(pin->asset_id, 0, heap, &pin->header);
+    if (loaded != NULL)
+    {
+        ndsRelocMarkLoadedFileRelativeOffsets(loaded);
+    }
+    ndsRelocRecordAuthoritativeForceFile(heap, heap);
+    if ((const u8 *)pin->fp->figatree == payload)
+    {
+        pin->fp->figatree = (void *)heap;
+    }
+    if (state == NDS_R2_ANIM_PIN_BOUND)
+    {
+        ndsFtPoseRelocateScripts(pin->gobj, payload, size, delta);
+        for (j = 0u; j < ARRAY_COUNT(pin->fp->joints); j++)
+        {
+            DObj *dobj = pin->fp->joints[j];
+            const u8 *script = (dobj != NULL) ?
+                (const u8 *)dobj->anim_joint.event16 : NULL;
+
+            if ((script != NULL) && (script >= payload) &&
+                (script < payload + size))
+            {
+                dobj->anim_joint.event16 =
+                    (AObjEvent16 *)(void *)((u8 *)(uintptr_t)script + delta);
+            }
+        }
+    }
+    gNdsR2AnimZeroCopyRescues++;
+}
+
+static void ndsR2AnimPinsRescueRange(const u8 *start, const u8 *end)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+    {
+        NDSR2AnimPin *pin = &sNdsR2AnimPins[i];
+
+        if ((pin->state != NDS_R2_ANIM_PIN_FREE) && (pin->payload < end) &&
+            (start < pin->payload + pin->size))
+        {
+            ndsR2AnimPinRescue(pin);
+        }
+    }
+}
+
+static void ndsR2AnimPinsDropHeap(const void *heap)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+    {
+        if ((sNdsR2AnimPins[i].state != NDS_R2_ANIM_PIN_FREE) &&
+            (sNdsR2AnimPins[i].heap == (const u8 *)heap))
+        {
+            sNdsR2AnimPins[i].state = NDS_R2_ANIM_PIN_FREE;
+        }
+    }
+}
+
+/* The fighter is being destroyed (ndsFtPoseRelease): its heap is not a place
+ * a later rescue may write. */
+void ndsR2AnimPinsDropGObj(GObj *gobj)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+    {
+        if ((sNdsR2AnimPins[i].state != NDS_R2_ANIM_PIN_FREE) &&
+            (sNdsR2AnimPins[i].gobj == gobj))
+        {
+            sNdsR2AnimPins[i].state = NDS_R2_ANIM_PIN_FREE;
+            gNdsR2AnimZeroCopyDrops++;
+        }
+    }
+}
+
+/* lbCommonAddFighterPartsFigatree bound `figatree` for `gobj`: a pending pin
+ * of that clip is now the binding; any other pin of the fighter is not. */
+void ndsR2AnimZeroCopyNoteBind(GObj *gobj, const void *figatree)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+    {
+        NDSR2AnimPin *pin = &sNdsR2AnimPins[i];
+
+        if ((pin->state == NDS_R2_ANIM_PIN_FREE) || (pin->gobj != gobj))
+        {
+            continue;
+        }
+        pin->state = (pin->payload == (const u8 *)figatree) ?
+            NDS_R2_ANIM_PIN_BOUND : NDS_R2_ANIM_PIN_FREE;
+    }
+}
+
+/* A pending pin for the battle fighter whose figatree heap is `heap`, or NULL
+ * (not a fighter heap, or no free slot): the caller then copies. */
+static const u8 *ndsR2AnimPinTake(void *heap, const NDSR2AnimCacheEntry *cached,
+                                  u32 asset_id)
+{
+    GObj *gobj;
+    u32 i;
+
+    for (gobj = gGCCommonLinks[nGCCommonLinkIDFighter]; gobj != NULL;
+         gobj = gobj->link_next)
+    {
+        FTStruct *fp = ftGetStruct(gobj);
+
+        if ((fp == NULL) || (fp->figatree_heap != heap))
+        {
+            continue;
+        }
+        for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
+        {
+            NDSR2AnimPin *pin = &sNdsR2AnimPins[i];
+
+            if ((pin->state == NDS_R2_ANIM_PIN_FREE) ||
+                (pin->generation != gNdsTaskmanHeapGeneration))
+            {
+                pin->heap = (u8 *)heap;
+                pin->fp = fp;
+                pin->gobj = gobj;
+                pin->payload = (const u8 *)cached->payload;
+                pin->size = cached->size;
+                pin->asset_id = asset_id;
+                pin->generation = gNdsTaskmanHeapGeneration;
+                pin->header = cached->header;
+                pin->state = NDS_R2_ANIM_PIN_PENDING;
+                return pin->payload;
+            }
+        }
+        return NULL;
+    }
+    return NULL;
+}
+#endif
+
 static void ndsR2AnimCacheArenaDropForReset(void)
 {
+#if NDS_R2_ANIM_ZERO_COPY
+    /* Every pinned clip leaves the arena first (a rewound scene's pins are
+     * only forgotten -- ndsR2AnimPinRescue checks the generation). */
+    if (sNdsR2AnimCacheArena != NULL)
+    {
+        ndsR2AnimPinsRescueRange(sNdsR2AnimCacheArena,
+                                 sNdsR2AnimCacheArena +
+                                     sNdsR2AnimCacheArenaBytes);
+    }
+#endif
     /* BEFORE the pointers are cleared: the pack's storage is inside this block,
      * so a lookup that survived the rewind would otherwise hand the parser a
      * figatree pointing into memory the next scene already owns. */
@@ -14842,6 +15111,10 @@ static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
     const u8 *write_end = write_start + size;
     u32 i = 0u;
 
+#if NDS_R2_ANIM_ZERO_COPY
+    ndsR2AnimPinsRescueRange(write_start, write_end);
+#endif
+
     while (i < sNdsR2AnimCacheCount)
     {
         const u8 *entry_start = sNdsR2AnimCache[i].payload;
@@ -15560,6 +15833,11 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* Slice 1 phase 7's denominator. Without it every K0 row could read zero
      * because nobody asked, which is indistinguishable from a deletion. */
     NDS_K0_MARK(gNdsK0AfterGoAcquisitions, asset_id);
+#if NDS_R2_ANIM_ZERO_COPY
+    /* The install that follows this fetch replaces the fighter's binding; its
+     * old clip is not read in between, so it needs no rescue. */
+    ndsR2AnimPinsDropHeap(heap);
+#endif
 
 #if NDS_R2_ANIM_CACHE
     /* Settle arena ownership BEFORE the pack lookup, not only before the raw
@@ -15697,6 +15975,21 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 
         if (cached != NULL)
         {
+#if NDS_R2_ANIM_ZERO_COPY
+            if ((gNdsR2AnimZeroCopy != 0u) &&
+                (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM))
+            {
+                const u8 *payload = ndsR2AnimPinTake(heap, cached, asset_id);
+
+                if (payload != NULL)
+                {
+                    gNdsR2AnimCacheHits++;
+                    gNdsR2AnimZeroCopyHits++;
+                    ndsFighterManagerRecordExternToken(token, payload);
+                    return (void *)(uintptr_t)payload;
+                }
+            }
+#endif
             /* K0 line 6, "raw animation-file cache copies". */
             NDS_K0_MARK(gNdsK0AfterGoCacheCopies, asset_id);
             ndsRelocPrepareFighterAnimHeapOverwrite(asset_id, heap);

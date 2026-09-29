@@ -115,3 +115,33 @@ Each needs an owner in the pattern of `scripts/stages/generate_nds_native_*.py`
 + `src/nds/nds_native_*.exec.inc` + recognition in
 `src/port/renderer_adapter_stage.c`. Until then those frames also under-count
 draw cost.
+
+## Banked: zero-copy motion cache hits
+
+A stream clip (BPS1: relative offsets, no fixups) that the raw motion cache
+holds is handed to the fighter where it lies -- as the resident battlepack
+already hands out Mario's and Fox's clips -- instead of being copied into the
+fighter's figatree heap and registered there. `src/port/reloc_backend_assets.c`
+(`sNdsR2AnimPins`): each fighter's clip is pinned (pending from the fetch until
+`lbCommonAddFighterPartsFigatree` binds it, then bound until the fighter's next
+fetch). Before the cache reuses a pinned range (ring overwrite, elastic yield,
+drop), the pin is rescued: the clip is copied into the fighter's heap and
+registered exactly as the copy path does, and every pointer into it moves by
+the same delta -- the authoritative force-file record, `fp->figatree` (Kirby's
+capture re-binds it) and the joints' script cursors and TraI descriptors
+(`ndsFtPoseRelocateScripts` in `src/nds/nds_ft_pose.c`). A fetch drops the
+fighter's own pins first; a destroyed fighter's pins are dropped in
+`ndsFtPoseRelease`. The pointer resolver answers a pinned clip's offsets.
+Same-ROM A/B word `gNdsR2AnimZeroCopy` (default 1).
+
+| Run (same ROM, word 0 -> 1) | P50 | P95 | P99 | zero-copy hits / rescues | replay |
+|---|---|---|---|---|---|
+| Gate `zc0/zc1_gate` | 936,768 -> 934,208 | 1,291,136 -> **1,282,944** | 1,468,928 -> 1,462,976 | 481 / 2 | IDENTICAL |
+| DL lab `zn/zl_def` | 952,832 -> 951,808 | 1,318,208 -> 1,317,120 | | 426 / 4 | IDENTICAL |
+| Jungle `zn/zl_cy_g2` | 983,680 -> 982,016 | 1,333,376 -> 1,333,376 | | 353 / 6 | IDENTICAL |
+| Yoshi's Island `zn/zl_lk_g5` | 1,097,856 -> 1,091,712 | 1,473,600 -> **1,464,064** | | 429 / 6 | IDENTICAL |
+| Saffron `zn/zl_fp_g7` | 1,160,640 -> 1,158,208 | 1,578,368 -> **1,569,984** | | 483 / 3 | IDENTICAL |
+
+All nine lab rosters (`zl_*` against the copy-path build `sf_*`): replay
+IDENTICAL, 0-6 rescues a match, 0 drops, 0 misaligned resolves; native failures
+unchanged (the six owed owners above).

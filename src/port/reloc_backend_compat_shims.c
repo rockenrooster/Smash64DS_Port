@@ -9039,11 +9039,23 @@ static DObj *ndsLBCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root_dobj)
     return NULL;
 }
 
+#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_FT_POSE && NDS_R2_FTANIM_STREAM
+void ndsR2AnimZeroCopyNoteBind(GObj *gobj, const void *figatree);
+#endif
+
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame)
 {
 #if NDS_R2_BATTLEPACK
     figatree = ndsRelocResolveAuthoritativeForceFile(figatree);
+#endif
+#if NDS_R2_ANIM_CACHE && NDS_R2_BATTLEPACK && NDS_FT_POSE && NDS_R2_FTANIM_STREAM
+    /* A zero-copy cache clip is now this fighter's binding (see
+     * sNdsR2AnimPins in reloc_backend_assets.c). */
+    if ((root_dobj != NULL) && (root_dobj->parent_gobj != NULL))
+    {
+        ndsR2AnimZeroCopyNoteBind(root_dobj->parent_gobj, figatree);
+    }
 #endif
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;
