@@ -1,0 +1,57 @@
+Lab stage-DL census (gNdsLabStageDLCensus), HEAD 5637a3d495f + effect keying; ticks per call
+own = the whole submit; find/mtx/exec = its phases (0 when the call left before the phase marks)
+effects (1011) are keyed by the source asset of the list: 0x161 LinkSpecial2, 0x15d SamusSpecial2, 0x15c KirbySpecial2, 0x53-0x56 EFCommon, 0xfffe outside every loaded file
+
+== Sector Z (sdl6_g1.json), total 117,174 ticks/frame
+  ground actor             calls  7432  own  19403  per frame  73124  find     0 mtx     0 exec      0  pim world   3558 recalc  2212
+  effect asset 0xffff      calls  1519  own  29881  per frame  23017  find  1432 mtx  2530 exec   4490  pim world   8992 recalc   950
+  item NBumper             calls   703  own  44788  per frame  15966  find  6473 mtx 21449 exec  12754  pim world  12410 recalc  6708
+  weapon ChargeShot        calls   174  own  44432  per frame   3920  find  4250 mtx 13817 exec  23515  pim world   4024 recalc  7426
+  weapon ArwingLaser2D     calls    76  own  27919  per frame   1076  find  4390 mtx  6708 exec  14130  pim world   4358 recalc   139
+  weapon Boomerang         calls     5  own  27930  per frame     71  find     0 mtx     0 exec      0  pim world   5466 recalc   154
+
+== Yoshi's Island (sdl6_g5.json), total 71,986 ticks/frame
+  item Capsule             calls  1689  own  30292  per frame  25945  find  4654 mtx  6889 exec  16036  pim world   1896 recalc  2868
+  effect asset 0xffff      calls  1787  own  25527  per frame  23132  find  1043 mtx  1762 exec   3160  pim world   5704 recalc   382
+  item Box                 calls   695  own  33918  per frame  11954  find  5511 mtx  4054 exec  21229  pim world   1604 recalc   151
+  weapon ChargeShot        calls   316  own  41901  per frame   6714  find  4297 mtx 13051 exec  21685  pim world   4113 recalc  6589
+  item LinkBomb            calls   124  own  40988  per frame   2577  find  4488 mtx 14069 exec  19473  pim world   6619 recalc  5206
+  weapon Boomerang         calls   117  own  28032  per frame   1663  find     0 mtx     0 exec      0  pim world   5284 recalc   149
+
+== Dream Land (sdl7_g6.json), total 36,170 ticks/frame
+  weapon ChargeShot        calls   467  own  42278  per frame  10012  find  4258 mtx 15166 exec  19980  pim world   4115 recalc  8682
+  item Sword               calls   526  own  29084  per frame   7758  find  4950 mtx  7539 exec  13642  pim world   5265 recalc   144
+  effect asset 0x161       calls   213  own  25852  per frame   2792  find     0 mtx     0 exec      0  pim world   6546 recalc   154
+  item Taru                calls    95  own  49207  per frame   2371  find  5582 mtx  4969 exec  35434  pim world   2493 recalc   154
+  item BombHei             calls   121  own  38627  per frame   2370  find  6413 mtx 12148 exec  15913  pim world   2159 recalc  7685
+  effect asset 0x55        calls   181  own  22623  per frame   2076  find     0 mtx     0 exec      0  pim world   4470 recalc   110
+  weapon SpinAttack        calls    45  own  76521  per frame   1746  find     0 mtx     0 exec      0  pim world   6121 recalc   146
+  effect asset 0x15d       calls   126  own  25200  per frame   1610  find     0 mtx     0 exec      0  pim world   4722 recalc   538
+  effect asset 0x15c       calls    82  own  34227  per frame   1423  find     0 mtx     0 exec      0  pim world  18185 recalc   144
+  effect asset 0xfffe      calls    96  own  27890  per frame   1358  find  4694 mtx  7211 exec  12741  pim world   4789 recalc   155
+  effect asset 0x53        calls    44  own  39027  per frame    871  find  3652 mtx 11184 exec  20623  pim world   8695 recalc   159
+  effect asset 0x54        calls    78  own  21076  per frame    834  find     0 mtx     0 exec      0  pim world   4670 recalc   145
+  weapon Cutter            calls    38  own  23786  per frame    458  find     0 mtx     0 exec      0  pim world   4148 recalc   148
+  effect asset 0x163       calls    30  own  29461  per frame    448  find     0 mtx     0 exec      0  pim world   6046 recalc   137
+  weapon Boomerang         calls     3  own  27968  per frame     43  find     0 mtx     0 exec      0  pim world   6144 recalc   128
+
+== Saffron (sdl7_g7.json), total 88,337 ticks/frame
+  item Sword               calls  2356  own  34475  per frame  41188  find  5004 mtx 12876 exec  13578  pim world  10501 recalc   145
+  effect asset 0xfffe      calls  1249  own  28032  per frame  17754  find  4687 mtx  7244 exec  12865  pim world   4818 recalc   150
+  weapon ChargeShot        calls   297  own  44493  per frame   6701  find  4150 mtx 15372 exec  22160  pim world   3999 recalc  9044
+  effect asset 0x55        calls   384  own  22379  per frame   4358  find     0 mtx     0 exec      0  pim world   4555 recalc   111
+  item Taru                calls   119  own  45610  per frame   2752  find  5124 mtx  3952 exec  33510  pim world   1608 recalc   146
+  effect asset 0x161       calls   209  own  25567  per frame   2710  find     0 mtx     0 exec      0  pim world   6480 recalc   145
+  effect asset 0x54        calls   188  own  20918  per frame   1994  find     0 mtx     0 exec      0  pim world   4792 recalc   141
+  effect asset 0x15d       calls   129  own  25922  per frame   1696  find     0 mtx     0 exec      0  pim world   5518 recalc   692
+  item Hitokage            calls    60  own  48908  per frame   1488  find  5674 mtx  7814 exec  31387  pim world   5452 recalc   157
+  item Star                calls    48  own  60279  per frame   1467  find  6463 mtx 13907 exec  35825  pim world   4503 recalc  7164
+  item Fushigibana         calls    67  own  39764  per frame   1351  find  5436 mtx  7192 exec  23237  pim world   4906 recalc   145
+  item Marumine            calls    60  own  39683  per frame   1207  find  4378 mtx 16046 exec  16211  pim world   4128 recalc  9642
+  weapon SpinAttack        calls    24  own  78717  per frame    958  find     0 mtx     0 exec      0  pim world   5837 recalc   139
+  effect asset 0x56        calls    35  own  45839  per frame    814  find  4879 mtx 16527 exec  20765  pim world   5138 recalc  8987
+  effect asset 0x15c       calls    43  own  34432  per frame    751  find     0 mtx     0 exec      0  pim world  18343 recalc   144
+  effect asset 0x163       calls    30  own  29233  per frame    445  find     0 mtx     0 exec      0  pim world   5967 recalc   143
+  effect asset 0x53        calls    20  own  36016  per frame    365  find  4608 mtx  8886 exec  18013  pim world   6506 recalc   166
+  weapon Cutter            calls    18  own  23602  per frame    215  find     0 mtx     0 exec      0  pim world   4132 recalc   149
+  item LinkBomb            calls     6  own  40384  per frame    123  find  4608 mtx 12917 exec  19936  pim world   4203 recalc  6517

@@ -1,0 +1,10 @@
+fl0a_gate  P50 926,528 P95 1,256,832 P99 1,466,880 2VB 84.3% SRCmed 413,504 STGmed 163,392 FTRmed 145,664 bandSRC 626,676 bandW 1,244,089 {'nf': 0, 'low': 362444}
+fl1a_gate  P50 921,216 P95 1,255,488 P99 1,458,624 2VB 85.3% SRCmed 413,376 STGmed 163,392 FTRmed 145,664 bandSRC 626,449 bandW 1,238,096 {'nf': 0, 'low': 362444}
+fl0b_gate  P50 925,696 P95 1,256,832 P99 1,466,496 2VB 84.3% SRCmed 413,440 STGmed 163,392 FTRmed 145,792 bandSRC 628,883 bandW 1,244,582 {'nf': 0, 'low': 362444}
+fl1b_gate  P50 921,216 P95 1,256,192 P99 1,458,624 2VB 85.3% SRCmed 413,376 STGmed 163,328 FTRmed 145,600 bandSRC 628,194 bandW 1,238,317 {'nf': 0, 'low': 362444}
+fl0a_gate hits 0 item_ticks 26126784 weapon_ticks 25869696 effect_ticks 25205696 item_tris 6131 weapon_tris 1627 nf 0
+fl1a_gate hits 990 item_ticks 22096320 weapon_ticks 22746496 effect_ticks 25486272 item_tris 6131 weapon_tris 1627 nf 0
+fl0b_gate hits 0 item_ticks 26115968 weapon_ticks 25846336 effect_ticks 25214592 item_tris 6131 weapon_tris 1627 nf 0
+fl1b_gate hits 990 item_ticks 22095872 weapon_ticks 22742848 effect_ticks 25484032 item_tris 6131 weapon_tris 1627 nf 0
+digest fl0a vs fl1a: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest fl0a vs fl1b: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)

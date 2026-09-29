@@ -7162,6 +7162,16 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     {
         kind = (u32)((const s32 *)owner->user_data.p)[3] & 0xffffu;
     }
+    else if ((owner != NULL) && (id == 1011u))
+    {
+        /* Effects have no kind word: key them by the asset whose list this
+         * is (0xfffe = in no loaded file). */
+        const NDSRelocLoadedFile *effect_file =
+            ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+
+        kind = (effect_file != NULL) ? (effect_file->asset_id & 0xffffu) :
+                                       0xfffeu;
+    }
     key = (id & 0xffffu) | (kind << 16);
     for (i = 0u; i < NDS_LAB_STAGE_DL_CENSUS_ROWS; i++)
     {
@@ -7211,6 +7221,282 @@ volatile u32 gNdsStageDLEntryFirst __attribute__((used, section(".data"))) = 1u;
 static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode);
 
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* P2-2p8 (2026-09-29): the fast lane for owners the general body already
+ * served. A Samus Charge Shot or a Beam Sword root cost ~42K / ~29K ticks a
+ * draw on Dream Land (lab census), a quarter of it the body finding its
+ * owner: the entry-model scan, the loaded-file lookup and ~60 candidate
+ * tests, a 4 KB frame and 20 KB of Thumb code, every draw. The body now
+ * records the route when that owner draws a list, and a later draw of the
+ * same list goes straight to the owner with the same inputs: the same
+ * PrepareInitialMatrices, config, persistent stats and item colours, the
+ * same stats tail. A route holds only immutable admission facts (the loaded
+ * file, its asset and data, the root); everything live -- the GObj kind, the
+ * item kind, a NULL MObj, the submit context -- is tested again each draw,
+ * and anything else falls to the body as before. Owners with an MObj or a
+ * segment-E material are not routed. Same-ROM A/B word gNdsStageDLFastLane
+ * (0 = every draw through the body). */
+volatile u32 gNdsStageDLFastLane __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsStageDLFastLaneHits;
+volatile u32 gNdsStageDLFastLaneFills;
+
+#define NDS_SDL_ROUTE_NONE 0u
+#define NDS_SDL_ROUTE_CHARGE_SHOT 1u
+#define NDS_SDL_ROUTE_ITEM_SWORD 2u
+#define NDS_SDL_ROUTES 8u
+
+typedef struct NDSStageDLRoute
+{
+    const Gfx *dl;
+    NDSRelocLoadedFile *loaded;
+    const void *data;
+    u32 data_size;
+    u32 root;
+    u16 asset_id;
+    u8 route;
+    u8 pad;
+} NDSStageDLRoute;
+
+static NDSStageDLRoute sNdsStageDLRoutes[NDS_SDL_ROUTES];
+
+static inline NDSStageDLRoute *ndsStageDLRouteSlot(const Gfx *dl)
+{
+    return &sNdsStageDLRoutes[((u32)(uintptr_t)dl >> 3) &
+                              (NDS_SDL_ROUTES - 1u)];
+}
+
+static void ndsStageDLRouteRecord(const Gfx *dl, NDSRelocLoadedFile *loaded,
+                                  u32 root, u32 route)
+{
+    NDSStageDLRoute *slot = ndsStageDLRouteSlot(dl);
+
+    if ((loaded == NULL) || (loaded->data == NULL))
+    {
+        return;
+    }
+    if ((slot->dl != dl) || (slot->route != route))
+    {
+        gNdsStageDLFastLaneFills++;
+    }
+    slot->dl = dl;
+    slot->loaded = loaded;
+    slot->data = loaded->data;
+    slot->data_size = loaded->data_size;
+    slot->root = root;
+    slot->asset_id = (u16)loaded->asset_id;
+    slot->route = (u8)route;
+}
+
+/* TRUE when a routed owner drew `dl`; FALSE sends it to the body. */
+static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
+    DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
+{
+    NDSStageDLRoute *route = ndsStageDLRouteSlot(dl);
+    NDSRelocLoadedFile *loaded = route->loaded;
+    GObj *owner = dobj->parent_gobj;
+    NDSRendererConfig config = {0};
+    NDSRendererStats *render_stats;
+    NDSRendererMatrix20p12 projection;
+    NDSRendererMatrix20p12 modelview;
+    NDSRendererMatrix20p12 identity;
+    const NDSRendererMatrix20p12 *projection_ptr;
+    const NDSRendererMatrix20p12 *modelview_ptr;
+    void *saved_graphics_heap_ptr;
+    sb32 handled = FALSE;
+
+    if ((route->dl != dl) || (route->route == NDS_SDL_ROUTE_NONE) ||
+        (loaded == NULL) || (loaded->data != route->data) ||
+        (loaded->data_size != route->data_size) ||
+        (loaded->asset_id != (u32)route->asset_id) ||
+        (dobj->mobj != NULL) || (owner == NULL) ||
+        (sNdsRendererAdapterStagePersistentActive == FALSE) ||
+        (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
+        (ndsRendererHardwareNoOracleEnabled() == FALSE))
+    {
+        return FALSE;
+    }
+    switch (route->route)
+    {
+    case NDS_SDL_ROUTE_CHARGE_SHOT:
+        if ((owner->id != nGCCommonKindWeapon) ||
+            (sNdsRendererAdapterItemSubmitActive != FALSE))
+        {
+            return FALSE;
+        }
+        break;
+#if NDS_P2_ITEM_CORE
+    case NDS_SDL_ROUTE_ITEM_SWORD:
+    {
+        ITStruct *ip;
+
+        if ((sNdsRendererAdapterItemSubmitActive == FALSE) ||
+            (owner->id != nGCCommonKindItem))
+        {
+            return FALSE;
+        }
+        ip = itGetStruct(owner);
+        if ((ip == NULL) || (ip->kind != nITKindSword))
+        {
+            return FALSE;
+        }
+        break;
+    }
+#endif
+    default:
+        return FALSE;
+    }
+
+    saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
+    ndsRendererAdapterPrepareInitialMatrices(dobj,
+                                             (camera_gobj != NULL) ?
+                                                 CObjGetStruct(camera_gobj) :
+                                                 ((gGCCurrentCamera != NULL) ?
+                                                      CObjGetStruct(
+                                                          gGCCurrentCamera) :
+                                                      NULL),
+                                             TRUE,
+                                             &projection, &projection_ptr,
+                                             &modelview, &modelview_ptr);
+    config.max_depth = 8u;
+    config.max_commands = 8192u;
+    config.max_list_commands = 512u;
+    config.initial_projection = projection_ptr;
+    config.initial_modelview = modelview_ptr;
+    config.initial_geometry_mode = initial_geometry_mode;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    config.validate_range = ndsRendererAdapterStageValidateRange;
+    config.immutable_command_span = ndsRendererAdapterImmutableCommandSpan;
+    config.resolve_branch = ndsFighterDLDrawResolveBranch;
+    config.resolve_data = ndsFighterDLDrawResolveRendererData;
+    /* The body hands its draw state here; no routed owner reads it. */
+    config.user = NULL;
+    /* The owners' split-camera contract, on this copy as on the body's. */
+    if ((config.initial_projection == NULL) &&
+        (config.initial_modelview != NULL))
+    {
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        config.initial_projection = &identity;
+    }
+    else if ((config.initial_modelview == NULL) &&
+             (config.initial_projection != NULL))
+    {
+        ndsRendererAdapterMtxIdentity20p12(&identity);
+        config.initial_modelview = &identity;
+    }
+    render_stats = &sNdsRendererAdapterStagePersistentStats;
+    ndsFighterDLDrawResetRuntimeRendererStats(render_stats);
+    gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
+
+    if (route->route == NDS_SDL_ROUTE_CHARGE_SHOT)
+    {
+        handled = ndsRendererSubmitNativeSamusChargeShot(
+            loaded->data, loaded->data_size, &config, render_stats);
+        if (handled != FALSE)
+        {
+            gNdsChargeShotDrawCount++;
+        }
+        else
+        {
+            gNdsChargeShotSubmitFailCount++;
+        }
+    }
+#if NDS_P2_ITEM_CORE
+    else
+    {
+        u32 head = (sNdsRendererAdapterItemSubmitHead <
+                    NDS_RENDERER_STAGE_DL_HEADS) ?
+            sNdsRendererAdapterItemSubmitHead : 0u;
+
+        gNdsItemRendererLastHead = head;
+        gNdsItemRendererLastColorMask =
+            sNdsRendererAdapterItemColorMask[head];
+        gNdsItemRendererLastEnvColor = sNdsRendererAdapterItemEnvColor[head];
+        gNdsItemRendererLastOtherModeL =
+            sNdsRendererAdapterItemOtherModeL[head];
+        gNdsItemRendererLastOtherModeH =
+            sNdsRendererAdapterItemOtherModeH[head];
+        if ((sNdsRendererAdapterItemColorMask[head] & 1u) != 0u)
+        {
+            render_stats->prim_color = sNdsRendererAdapterItemPrimColor[head];
+        }
+        if ((sNdsRendererAdapterItemColorMask[head] & 2u) != 0u)
+        {
+            render_stats->env_color = sNdsRendererAdapterItemEnvColor[head];
+        }
+        if (sNdsRendererAdapterItemOtherModeLValid[head] != 0u)
+        {
+            render_stats->othermode_l =
+                sNdsRendererAdapterItemOtherModeL[head];
+        }
+        if (sNdsRendererAdapterItemOtherModeHValid[head] != 0u)
+        {
+            render_stats->othermode_h =
+                sNdsRendererAdapterItemOtherModeH[head];
+        }
+        gNdsItemSwordRoot = route->root;
+        handled = ndsRendererSubmitNativeItemSword(
+            route->root, loaded->data, loaded->data_size, &config,
+            render_stats);
+        if (handled != FALSE)
+        {
+            gNdsItemSwordDrawCount++;
+        }
+        else
+        {
+            gNdsItemSwordSubmitFailCount++;
+        }
+    }
+#endif
+    if (handled == FALSE)
+    {
+        /* The body's verdict for a drawn-nothing owner. */
+        ndsStageRejectNativeRender(dobj, dl, NDS_NATIVE_FAILURE_NO_PROGRAM,
+                                   render_stats);
+    }
+    ndsTaskmanSampleGraphicsHeap();
+    gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+    gNdsStageGCDrawAllLoopHardwareCarryCaptureCount++;
+    gNdsStageGCDrawAllLoopHardwareTriangleCount +=
+        render_stats->hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        render_stats->hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareProjectedDepthTriangleCount +=
+        render_stats->hardware_projected_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareDecalDepthTriangleCount +=
+        render_stats->hardware_decal_depth_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount +=
+        render_stats->hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount +=
+        render_stats->hardware_texture_upload_count;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount +=
+        render_stats->hardware_texture_ready_count;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount +=
+        render_stats->hardware_texture_reject_count;
+    if (render_stats->hardware_texture_ready_count != 0u)
+    {
+        if (render_stats->hardware_texture_format < 32u)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureFormatMask |=
+                1u << render_stats->hardware_texture_format;
+        }
+        if (render_stats->hardware_texture_width >
+            gNdsStageGCDrawAllLoopHardwareTextureMaxWidth)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureMaxWidth =
+                render_stats->hardware_texture_width;
+        }
+        if (render_stats->hardware_texture_height >
+            gNdsStageGCDrawAllLoopHardwareTextureMaxHeight)
+        {
+            gNdsStageGCDrawAllLoopHardwareTextureMaxHeight =
+                render_stats->hardware_texture_height;
+        }
+    }
+    gNdsStageDLFastLaneHits++;
+    return TRUE;
+}
+#endif
+
 static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
                                                  GObj *camera_gobj,
                                                  u32 initial_geometry_mode)
@@ -7219,6 +7505,14 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
     {
         return;
     }
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    if ((gNdsStageDLFastLane != 0u) &&
+        (ndsRendererAdapterSubmitStageDLFast(
+             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
+    {
+        return;
+    }
+#endif
     if ((gNdsStageDLEntryFirst != 0u) &&
         (ndsRendererAdapterTryNativeEntryEffect(
              dobj, dl, camera_gobj, initial_geometry_mode) != FALSE))
@@ -11458,6 +11752,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (charge_shot_native_handled != FALSE)
         {
             gNdsChargeShotDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, NDS_NATIVE_CHARGESHOT_ROOT,
+                                  NDS_SDL_ROUTE_CHARGE_SHOT);
+#endif
         }
         else
         {
@@ -11937,6 +12235,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_sword_native_handled != FALSE)
         {
             gNdsItemSwordDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, item_sword_root,
+                                  NDS_SDL_ROUTE_ITEM_SWORD);
+#endif
         }
         else
         {
