@@ -218,10 +218,12 @@ ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,
     {
         return;
     }
-
-    memset(dst, 0, sizeof(*dst));
+    /* The loop below writes all sixteen cells, so only a missing source is
+     * cleared (P2-2p8, 2026-09-29: the clear was a memset call on every
+     * conversion, ~25 a frame on Sector Z's heavier frames). */
     if (src == NULL)
     {
+        memset(dst, 0, sizeof(*dst));
         return;
     }
 
