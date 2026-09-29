@@ -862,6 +862,12 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   materialisation ~9K (39 a match, 145K-683K each), shield pose ~5K. Tried and
   reverted: a per-box hurtbox record, a stage DISP3DCNT shadow (the stall moved
   to the next bus access: the stage draw is GX-DMA-bound).
+- **09-29 Sector Z entry owner, BANKED** (replay identical): Sector Z's Arwing
+  is drawn by the entry-effect owner (FoxSpecial3's lists, ~94K ticks a frame
+  while it flies). Its static fence is proven once per root (`8bc4684098a`,
+  lab P95 1,711,488 -> 1,698,944) and its lit groups are lit by the geometry
+  engine, one five-bit step from the CPU shade (`a7f6aefa490`, 1,703,488 ->
+  1,681,664; gate flat). Receipt `2026-09-29_p2-2p8-sector-z-arwing`.
 
 ## 7. Found along the way
 
