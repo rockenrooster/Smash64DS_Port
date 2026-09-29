@@ -91,7 +91,7 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange blocks; HUD digest; lab clocks out; DTCM hot stack/sine/scalars; stage GX + packs in ITCM; int->float convs; DTCM-stack subtrees; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, Yoshi clouds, S1-S4, elastic cache, compact maps, R1, hit fetch; 09-29: spline reuse, GX overlap, pose step, int trig, hurtbox table/local: gate 928,000/1,263,808; SZ Arwing x6 (P95 -99K); 4 refuted (`..._refuted-levers`). Owed: 6 native owners.
+MP f32 cache reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange blocks; HUD digest; lab clocks out; DTCM hot stack/sine/scalars; stage GX + packs in ITCM; int->float convs; DTCM-stack subtrees; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, Yoshi clouds, S1-S4, elastic cache, compact maps, R1, hit fetch; 09-29: spline reuse, GX overlap, pose step, int trig, hurtbox table/local, SZ Arwing x6 (P95 -99K), stage GX memo, billboard row: gate 922.8K/1.2566M; 4 refuted. Owed 6 native owners
 **Constraint**: CSS reserve >=183,072 B; owner route 253,904 free (09-27).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.

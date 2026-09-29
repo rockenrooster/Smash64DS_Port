@@ -884,6 +884,16 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   materialization is ~386K ticks (-35K gate P95 if removed, diffuse), Dream
   Land's stage is prepare 80K + commits 105K for 6,914 GX words, Sector Z and
   Saffron have no rigid stage set. Receipt `2026-09-29_p2-2p8-refuted-levers`.
+- **09-29 stage GX words kept, BANKED** (replay identical): the compiled stage
+  program rewrote its MATERIAL words (three a run, ~130 ticks each, 53 runs a
+  frame on Dream Land) and its NOZ/PROJECTION patches every frame. Each run now
+  records what its words hold (texture-key generation, projection serial
+  checked once per stage-matrix generation) and skips the patch while that
+  holds (`f6e8cda2a75`: STG median -4.7K, P50 -5.0K, P95 -4.4K; lab verify
+  mode: 0 of 235K-2.3M kept words differ on all nine stages). Billboard
+  bindings compose only the translation row `ApplyMvpRecalc` keeps
+  (`f7793ae9996`: STG -2.7K, P50 -1.7K to -2.8K). Gate WORK-H P50/P95
+  ~922,800 / ~1,256,600. Receipt `2026-09-29_p2-2p8-stage-gx-memo`.
 
 ## 7. Found along the way
 
