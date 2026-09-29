@@ -142,11 +142,28 @@ Sector Z lab P50/P95/P99 1,216,512 / 1,683,584 / 1,998,144 ->
 **1,204,736 / 1,657,984 / 1,972,544**; 25,505 groups took the fast corners;
 0 fallbacks; native failures 119 both; replay IDENTICAL.
 
+## Banked: FoxSpecial3's group state, kept across draws
+
+`src/nds/nds_renderer_native_common.c`: what a group resolves before its
+corners (alpha, colour source, polygon format, texture parameters, the
+engine-light decision and its diffuse/ambient word) is a function of the
+tables and of the state the root inherits (initial prim, env, othermode,
+geometry mode, combine count, the light direction's presence, and the seeded
+light colours only where a lit group reads colours the root did not write).
+For FoxSpecial3's eight roots (Fox's entry Arwing and Sector Z's), a root whose
+every drawn group takes the fast corners records those values on one draw and
+replays them while its inherited state is unchanged; the texture name, the
+bind, the merged parameter word and the ramp palette are still derived on
+every draw. The words written are the recording draw's.
+
+Same ROM, A/B word `gNdsEntryEffectStateCache` (`statecache-ab.txt`): Sector
+Z lab P50/P95/P99 1,206,272 / 1,653,248 / 1,969,792 -> **1,185,856 /
+1,617,792 / 1,928,896**; 8 recordings, 7,416 replays; two-VBlank 40.3% ->
+41.7%; native failures 119 both; replay IDENTICAL.
+
 ## Next
 
-The per-group state (~2,500 cycles a group, 27 groups an Arwing frame) is a
-function of the root's inherited state (prim, env, othermode, geometry mode,
-light colours, the combine count) and the resident texture names: a per-root
-cache of each group's resolved words (poly format, texture and palette words,
-diffuse/ambient) keyed on those inputs would skip the helper chain. Beyond
-that, a root's whole word stream can be replayed by DMA.
+Per root, the owner still pays its adapter (admission, the DObj world matrix,
+the MVP recalc) and a composed CPU matrix only CPU-projected groups use; per
+group, the bind and the batch. Beyond that, a root's whole word stream can be
+replayed by DMA.

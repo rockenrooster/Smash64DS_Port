@@ -5242,6 +5242,95 @@ static u32 ndsRendererEntryEffectFastCornersReady(void);
 static void ndsRendererEntryEffectEmitFastCorners(u32 first, u32 count,
                                                   u32 lit, u32 textured);
 
+/* P2-2p8 (2026-09-29): FoxSpecial3's resolved group state, kept across draws.
+ *
+ * What a group resolves before its corners -- its alpha, the combine's colour
+ * source, the polygon format, the tile's texture parameters, the engine-light
+ * decision and its diffuse/ambient word -- is a function of the generated
+ * tables and of the state the root inherits at submit: the initial prim, env
+ * and othermode, the geometry mode, the combine count (the polygon ID), the
+ * light direction's presence and, only where a lit group reads colours no
+ * earlier group of the root wrote, the seeded light colours. The same
+ * FoxSpecial3 roots draw Fox's entry Arwing and Sector Z's, eight roots and 27
+ * groups on about half of a Sector Z match's frames, and that resolution was
+ * ~2,500 cycles a group (instruction-cache misses across ~15 helpers).
+ *
+ * A root whose every drawn group takes the fast corners records those values
+ * on one ordinary draw, and replays them while its inherited state is
+ * unchanged. What names the live texture system holds is still derived on
+ * every draw: the texture name, the bind, the merged parameter word and the
+ * ramp palette. Same GX words. Same-ROM A/B word gNdsEntryEffectStateCache
+ * (0 = resolve every draw). */
+volatile u32 gNdsEntryEffectStateCache __attribute__((used, section(".data"))) =
+    1u;
+u32 gNdsEntryEffectStateRecords;
+u32 gNdsEntryEffectStateReplays;
+
+#define NDS_ENTRY_STATE_ROOTS 8u
+#define NDS_ENTRY_STATE_GROUPS 32u
+#define NDS_ENTRY_STATE_SKIP 0x01u
+#define NDS_ENTRY_STATE_LIT 0x02u
+#define NDS_ENTRY_STATE_HW_LIT 0x04u
+#define NDS_ENTRY_STATE_RAMP 0x08u
+
+typedef struct NDSEntryEffectGroupState
+{
+    u32 poly_fmt;
+    u32 texture_params; /* before the merge with the bound texture's word */
+    u32 dif_amb;
+    u32 othermode_l;    /* what the batch's alpha-test state reads */
+    u32 flags;
+} NDSEntryEffectGroupState;
+
+typedef struct NDSEntryEffectStateRoot
+{
+    u32 valid;          /* 0 = none, 1 = recording, 2 = replayable */
+    u32 light_seed;     /* the seeded light colours are part of the key */
+    u32 prim_color;
+    u32 env_color;
+    u32 othermode_h;
+    u32 othermode_l;
+    u32 geometry_mode;
+    u32 combine_count;
+    u32 light_dir_mask;
+    u32 light_color_1;
+    u32 light_color_2;
+    u32 light_color_mask;
+    u32 words;          /* gNdsEntryEffectHwLight, gNdsEntryEffectFastCorners */
+} NDSEntryEffectStateRoot;
+
+static NDSEntryEffectStateRoot sNdsEntryEffectStateRoots[NDS_ENTRY_STATE_ROOTS];
+static NDSEntryEffectGroupState
+    sNdsEntryEffectStateGroups[NDS_ENTRY_STATE_GROUPS];
+
+static inline __attribute__((always_inline)) u32
+ndsRendererEntryEffectStateWords(void)
+{
+    return gNdsEntryEffectHwLight | (gNdsEntryEffectFastCorners << 8);
+}
+
+static u32 ndsRendererEntryEffectStateMatches(
+    const NDSEntryEffectStateRoot *state, const NDSRendererStats *stats,
+    u32 prim_color, u32 env_color, u32 othermode_h, u32 othermode_l,
+    u32 geometry_mode)
+{
+    return ((state->valid == 2u) &&
+            (state->prim_color == prim_color) &&
+            (state->env_color == env_color) &&
+            (state->othermode_h == othermode_h) &&
+            (state->othermode_l == othermode_l) &&
+            (state->geometry_mode == geometry_mode) &&
+            (state->combine_count == stats->texture_combine_count) &&
+            (state->light_dir_mask ==
+             (stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK)) &&
+            (state->words == ndsRendererEntryEffectStateWords()) &&
+            ((state->light_seed == 0u) ||
+             ((state->light_color_1 == stats->light_color_1) &&
+              (state->light_color_2 == stats->light_color_2) &&
+              (state->light_color_mask == stats->light_color_mask)))) ?
+        1u : 0u;
+}
+
 #define NDS_ENTRY_EFFECT_LIGHT_COLORS \
     (NDS_RENDERER_LIGHT_COLOR_1_MASK | NDS_RENDERER_LIGHT_COLOR_2_MASK)
 
@@ -5587,6 +5676,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 coords_fit = TRUE;
     u32 hw_light_loaded = FALSE;
     u32 last_dif_amb = 0xffffffffu;
+    NDSEntryEffectStateRoot *state_root = NULL;
+    NDSEntryEffectGroupState *state_groups = NULL;
+    u32 state_recording = FALSE;
+    u32 state_ok = TRUE;
+    u32 state_replayed = FALSE;
+    u32 state_light_written = 0u;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -6029,7 +6124,174 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (u32)(root - &sNdsEntryEffectRoots[0]), config);
 #endif
 
-    for (group_offset = 0u; group_offset < root->group_count; group_offset++)
+    if ((gNdsEntryEffectStateCache != 0u) && (static_proven != FALSE) &&
+        (owner_asset_id == 161u) && (material_count == 0u) &&
+        (root_index >= NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) &&
+        (root_index < NDS_ENTRY_EFFECT_FOX_ROOT_FIRST + NDS_ENTRY_STATE_ROOTS) &&
+        (root_offset != gNdsEntryEffectWitnessRoot))
+    {
+        u32 first = (u32)root->first_group -
+            (u32)sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_FOX_ROOT_FIRST].first_group;
+
+        if (first + (u32)root->group_count <= NDS_ENTRY_STATE_GROUPS)
+        {
+            state_root = &sNdsEntryEffectStateRoots[
+                root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST];
+            state_groups = &sNdsEntryEffectStateGroups[first];
+            if (ndsRendererEntryEffectStateMatches(
+                    state_root, stats, initial_prim_color, initial_env_color,
+                    initial_othermode_h, initial_othermode_l,
+                    config->initial_geometry_mode) != 0u)
+            {
+                state_replayed = TRUE;
+            }
+            else
+            {
+                state_recording = TRUE;
+                state_root->valid = 1u;
+                state_root->light_seed = 0u;
+                state_root->prim_color = initial_prim_color;
+                state_root->env_color = initial_env_color;
+                state_root->othermode_h = initial_othermode_h;
+                state_root->othermode_l = initial_othermode_l;
+                state_root->geometry_mode = config->initial_geometry_mode;
+                state_root->combine_count = stats->texture_combine_count;
+                state_root->light_dir_mask =
+                    stats->light_dir_mask & NDS_RENDERER_LIGHT_DIR_1_MASK;
+                state_root->light_color_1 = stats->light_color_1;
+                state_root->light_color_2 = stats->light_color_2;
+                state_root->light_color_mask = stats->light_color_mask;
+                state_root->words = ndsRendererEntryEffectStateWords();
+            }
+        }
+    }
+    if (state_replayed != FALSE)
+    {
+        u32 ramp_names[NDS_ENTRY_STATE_GROUPS];
+
+        /* Ramp palettes first: a lookup may upload, and a failed one leaves
+         * the ordinary loop a clean start. */
+        for (group_offset = 0u; group_offset < root->group_count;
+             group_offset++)
+        {
+            u32 index = (u32)root->first_group + group_offset;
+            const NDSEntryEffectGroup *group = &sNdsEntryEffectGroups[index];
+
+            ramp_names[group_offset] = 0u;
+            if ((state_groups[group_offset].flags & NDS_ENTRY_STATE_RAMP) != 0u)
+            {
+                u32 prim = ((sNdsEntryEffectColorWriteMasks[index] & 1u) != 0u) ?
+                    sNdsEntryEffectPrimColors[group->prim_color_index] :
+                    initial_prim_color;
+                u32 env = ((sNdsEntryEffectColorWriteMasks[index] & 2u) != 0u) ?
+                    sNdsEntryEffectEnvColors[group->env_color_index] :
+                    initial_env_color;
+
+                ramp_names[group_offset] = ndsRendererEntryRampPalette(
+                    &sNdsEntryEffectTextures[group->texture_slot], prim, env);
+                if (ramp_names[group_offset] == 0u)
+                {
+                    state_replayed = FALSE;
+                    state_root->valid = 0u;
+                    break;
+                }
+            }
+        }
+        for (group_offset = 0u;
+             (state_replayed != FALSE) && (group_offset < root->group_count);
+             group_offset++)
+        {
+            const NDSEntryEffectGroup *group =
+                &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
+            const NDSEntryEffectGroupState *state = &state_groups[group_offset];
+            u32 corner_count = (u32)group->triangle_count * 3u;
+            u32 textured = (group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) ?
+                TRUE : FALSE;
+            u32 hw_lit = ((state->flags & NDS_ENTRY_STATE_HW_LIT) != 0u) ?
+                TRUE : FALSE;
+            u32 texture_name = 0u;
+
+            if ((state->flags & NDS_ENTRY_STATE_SKIP) != 0u)
+            {
+                gNdsEntryEffectNativeAlphaSkipCount++;
+                continue;
+            }
+            if (textured != FALSE)
+            {
+                texture_name =
+                    sNdsRendererEntryEffectTextureName[group->texture_slot];
+                ndsRendererHardwareBindTextureName(stats, texture_name);
+                if ((state->flags & NDS_ENTRY_STATE_RAMP) != 0u)
+                {
+                    glAssignColorTable(GL_TEXTURE_2D,
+                                       (int)ramp_names[group_offset]);
+                    gNdsEntryRampPaletteDraws++;
+                }
+                ndsRendererHardwareApplyTextureParams(
+                    ndsRendererHardwareMergeTextureParams(
+                        state->texture_params));
+                sNdsRendererHardwareActiveTextureEntry = NULL;
+                stats->hardware_texture_ready_count++;
+                gNdsEntryEffectNativeTextureBindCount++;
+            }
+            if (hw_lit != FALSE)
+            {
+                if (hw_light_loaded == FALSE)
+                {
+                    if ((light_direction_valid_mask[root_index >> 5] &
+                         (1u << (root_index & 31u))) == 0u)
+                    {
+                        ndsRendererHardwarePrepareLitDirection(
+                            stats, config->initial_modelview,
+                            &light_direction_by_root[root_index]);
+                        light_direction_valid_mask[root_index >> 5] |=
+                            1u << (root_index & 31u);
+                    }
+                    ndsRendererEntryEffectLoadLitMatrices(
+                        config->initial_modelview,
+                        &light_direction_by_root[root_index]);
+                    hw_light_loaded = TRUE;
+                }
+                if (state->dif_amb != last_dif_amb)
+                {
+                    ndsRendererHardwareWriteDiffuseAmbient(state->dif_amb);
+                    last_dif_amb = state->dif_amb;
+                }
+                gNdsEntryEffectHwLitGroups++;
+            }
+            else if ((state->flags & NDS_ENTRY_STATE_LIT) != 0u)
+            {
+                gNdsEntryEffectCpuLitGroups++;
+            }
+            stats->othermode_l = state->othermode_l;
+            ndsRendererHardwareBeginTriangleBatch(
+                stats, textured, texture_name, state->poly_fmt,
+                sNdsRendererHardwareMatrixMode,
+                sNdsRendererHardwareMatrixGeneration);
+            if (hw_lit == FALSE)
+            {
+                glColor(0x7fffu);
+            }
+            ndsRendererEntryEffectEmitFastCorners(
+                (u32)group->first_vertex, corner_count, (hw_lit != FALSE) ? 1u : 0u,
+                (textured != FALSE) ? 1u : 0u);
+            gNdsEntryEffectFastCornerGroups++;
+            sNdsRendererHardwareSubmitted = TRUE;
+            stats->triangle_count += group->triangle_count;
+            stats->transformed_triangle_count += group->triangle_count;
+            stats->hardware_triangle_count += group->triangle_count;
+            stats->hardware_vertex_count += corner_count;
+            stats->hardware_zbuffer_triangle_count += group->triangle_count;
+            ndsRendererHardwareEndBatch();
+        }
+        if (state_replayed != FALSE)
+        {
+            gNdsEntryEffectStateReplays++;
+        }
+    }
+
+    for (group_offset = (state_replayed != FALSE) ? (u32)root->group_count : 0u;
+         group_offset < root->group_count; group_offset++)
     {
         const NDSEntryEffectGroup *group =
             &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
@@ -6109,6 +6371,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             stats->light_color_2 = light_state->b;
             stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
         }
+        state_light_written |= light_mask & 3u;
         if (group->material_slot != 0xffu)
         {
             const NDSRendererNativeMaterial *material =
@@ -6134,9 +6397,19 @@ s32 ndsRendererSubmitNativeEntryEffect(
              * ramp reaches alpha 0 at source tick 50 while its rotation track
              * runs to 130. */
             gNdsEntryEffectNativeAlphaSkipCount++;
+            if (state_recording != FALSE)
+            {
+                state_groups[group_offset].flags = NDS_ENTRY_STATE_SKIP;
+            }
             continue;
         }
         lit = ndsRendererHardwareLitShadeCombine(stats);
+        if ((state_recording != FALSE) && (lit != FALSE) &&
+            ((state_light_written & 3u) != 3u))
+        {
+            /* A lit group reads a colour this root did not write. */
+            state_root->light_seed = 1u;
+        }
         if (root_offset == gNdsEntryEffectWitnessRoot)
         {
             gNdsEntryEffectWitness[0] = polygon_alpha;
@@ -6225,6 +6498,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 glAssignColorTable(GL_TEXTURE_2D,
                     (int)ndsRendererEntryKoPalette(ko_part, stats->prim_color, stats->env_color));
             }
+            if (state_recording != FALSE)
+            {
+                state_groups[group_offset].texture_params = params;
+            }
             ndsRendererHardwareApplyTextureParams(
                 ndsRendererHardwareMergeTextureParams(params));
             sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -6284,6 +6561,19 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             gNdsEntryEffectCpuLitGroups++;
         }
+        if (state_recording != FALSE)
+        {
+            NDSEntryEffectGroupState *state = &state_groups[group_offset];
+
+            state->poly_fmt = poly_fmt;
+            state->dif_amb = (hw_lit_group != FALSE) ?
+                ndsRendererEntryEffectDiffuseAmbient(
+                    stats->light_color_1, stats->light_color_2) : 0u;
+            state->othermode_l = stats->othermode_l;
+            state->flags = ((lit != FALSE) ? NDS_ENTRY_STATE_LIT : 0u) |
+                ((hw_lit_group != FALSE) ? NDS_ENTRY_STATE_HW_LIT : 0u) |
+                ((ramp_palette != 0u) ? NDS_ENTRY_STATE_RAMP : 0u);
+        }
         ndsRendererHardwareBeginTriangleBatch(
             stats, use_texture, texture_name, poly_fmt,
             sNdsRendererHardwareMatrixMode,
@@ -6313,6 +6603,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 (use_texture != FALSE) ? 1u : 0u);
             gNdsEntryEffectFastCornerGroups++;
             corner = corner_count;
+        }
+        else
+        {
+            /* The replay only draws fast corners. */
+            state_ok = FALSE;
         }
         for (; corner < corner_count; corner++)
         {
@@ -6477,6 +6772,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
             stats->hardware_zbuffer_triangle_count += group->triangle_count;
         }
         ndsRendererHardwareEndBatch();
+    }
+    if ((state_recording != FALSE) && (state_ok != FALSE))
+    {
+        state_root->valid = 2u;
+        gNdsEntryEffectStateRecords++;
     }
     gNdsEntryEffectNativeDrawCount++;
     if ((owner_asset_id == 350u) && (root_offset == 0x0a30u))
