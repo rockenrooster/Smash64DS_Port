@@ -867,7 +867,12 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   while it flies). Its static fence is proven once per root (`8bc4684098a`,
   lab P95 1,711,488 -> 1,698,944) and its lit groups are lit by the geometry
   engine, one five-bit step from the CPU shade (`a7f6aefa490`, 1,703,488 ->
-  1,681,664; gate flat). Receipt `2026-09-29_p2-2p8-sector-z-arwing`.
+  1,681,664; gate flat). A fresh profile put the rest at ~247 cycles a corner
+  and ~2,500 a group: fast corners from the const tables (`f51600051ec`,
+  1,683,584 -> 1,657,984) and FoxSpecial3's resolved group state kept across
+  draws while the inherited state holds (`28aaf4f9df8`, 1,653,248 ->
+  1,617,792). Sector Z lab P95 1,711,488 -> ~1,618K over the four; all exact
+  except the engine light. Receipt `2026-09-29_p2-2p8-sector-z-arwing`.
 
 ## 7. Found along the way
 
