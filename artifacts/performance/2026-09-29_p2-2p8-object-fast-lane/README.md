@@ -50,6 +50,30 @@ else goes to the body as before. Same-ROM A/B word `gNdsStageDLFastLane`
 weapon 25.9M -> 22.7M (-6.7K a Charge Shot); triangle counts identical, 0
 native failures, replay IDENTICAL (both pairs).
 
+## Banked: every MObj-less item owner, and the quads' texture memo
+
+The route now also serves the MObj-less item owners (Sword, Bat, Capsule,
+Star Rod, Motion-Sensor Bomb, Box, Barrel, Egg, Onix, Hammer, Ray Gun, Fan,
+Heart) through one table: the item submit, an Item GObj of the owner's kind
+and no MObj are re-tested, the call is one of the two owner shapes. The
+generic-cache quads (Charge Shot, Samus's bomb, the Pokemon, Sing, the egg
+quads) bind through the native items' texture memo, keyed by their static
+index table (`src/nds/nds_native_textured_quad.exec.inc`); lab verify mode
+`gNdsRendererOwnerTexMemoVerify` ran the full resolver beside it: 1,036 (Dream
+Land) and 3,419 (Yoshi's Island) hits, 0 differ. Build `fl3`, same-ROM word
+`gNdsStageDLFastLane` (`items-ab.txt`):
+
+| run | P50 | P95 | P90-98 mean | item / weapon ticks a frame |
+|---|---:|---:|---:|---|
+| gate `f30a`/`f30b` (0) | 923,840 / 923,776 | 1,256,704 / 1,255,744 | 1,240,019 / 1,239,764 | 13,118 / 11,477 |
+| gate `f31a`/`f31b` (1) | **918,464 / 918,528** | **1,253,760 / 1,250,752** | **1,234,148 / 1,233,441** | 10,862 / 9,997 |
+| Saffron `f30`/`f31` | 1,115,648 -> **1,096,768** | 1,501,824 -> **1,484,096** | 1,486,418 -> 1,473,675 | 55,368 -> 44,240 |
+| Yoshi's Island `f30`/`f31` | 1,157,248 -> 1,152,448 | 1,529,984 -> 1,523,584 | 1,521,024 -> 1,511,848 | 46,187 -> 41,755 |
+
+Replay IDENTICAL on all four pairs; 0 new native failures (Saffron's 3 are the
+owed stage weapon). Yoshi's Island refilled its routes 1,129 times: a
+capsule's header and third root shared a slot.
+
 ## Next
 
 The routed owners still pay their matrices (Charge Shot's float billboard

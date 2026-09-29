@@ -7242,8 +7242,87 @@ volatile u32 gNdsStageDLFastLaneFills;
 
 #define NDS_SDL_ROUTE_NONE 0u
 #define NDS_SDL_ROUTE_CHARGE_SHOT 1u
-#define NDS_SDL_ROUTE_ITEM_SWORD 2u
-#define NDS_SDL_ROUTES 8u
+/* 2 + an index into sNdsStageDLItemRoutes: the MObj-less item owners, whose
+ * admission is the same everywhere -- the item submit, an Item GObj of the
+ * owner's kind, no MObj -- and whose call is one of two shapes. */
+#define NDS_SDL_ROUTE_ITEM 2u
+/* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
+ * for 1,469 hits a match): the owners are few, but a capsule alone draws three
+ * roots. */
+#define NDS_SDL_ROUTES 32u
+
+#if NDS_P2_ITEM_CORE
+typedef sb32 (*NDSStageDLItemSubmit)(const void *base, u32 bytes,
+                                     const NDSRendererConfig *config,
+                                     NDSRendererStats *stats);
+typedef sb32 (*NDSStageDLItemSubmitRooted)(u32 root, const void *base,
+                                           u32 bytes,
+                                           const NDSRendererConfig *config,
+                                           NDSRendererStats *stats);
+typedef struct NDSStageDLItemRoute
+{
+    NDSStageDLItemSubmit submit;
+    NDSStageDLItemSubmitRooted submit_rooted;
+    volatile u32 *draws;
+    volatile u32 *fails;
+    u32 item_kind;
+} NDSStageDLItemRoute;
+
+enum
+{
+    nNDSStageDLItemSword,
+    nNDSStageDLItemBat,
+    nNDSStageDLItemCapsule,
+    nNDSStageDLItemStarRod,
+    nNDSStageDLItemMSBomb,
+    nNDSStageDLItemBox,
+    nNDSStageDLItemTaru,
+    nNDSStageDLItemEgg,
+    nNDSStageDLItemIwark,
+    nNDSStageDLItemHammer,
+    nNDSStageDLItemLGun,
+    nNDSStageDLItemHarisen,
+    nNDSStageDLItemHeart,
+    nNDSStageDLItemRouteCount
+};
+
+static const NDSStageDLItemRoute sNdsStageDLItemRoutes[nNDSStageDLItemRouteCount] =
+{
+    [nNDSStageDLItemSword] = { NULL, ndsRendererSubmitNativeItemSword,
+        &gNdsItemSwordDrawCount, &gNdsItemSwordSubmitFailCount, nITKindSword },
+    [nNDSStageDLItemBat] = { NULL, ndsRendererSubmitNativeItemBat,
+        &gNdsItemBatDrawCount, &gNdsItemBatSubmitFailCount, nITKindBat },
+    [nNDSStageDLItemCapsule] = { NULL, ndsRendererSubmitNativeItemCapsule,
+        &gNdsItemCapsuleDrawCount, &gNdsItemCapsuleSubmitFailCount,
+        nITKindCapsule },
+    [nNDSStageDLItemStarRod] = { NULL, ndsRendererSubmitNativeItemStarRod,
+        &gNdsItemStarRodDrawCount, &gNdsItemStarRodSubmitFailCount,
+        nITKindStarRod },
+    [nNDSStageDLItemMSBomb] = { NULL, ndsRendererSubmitNativeItemMSBomb,
+        &gNdsItemMSBombDrawCount, &gNdsItemMSBombSubmitFailCount,
+        nITKindMSBomb },
+    [nNDSStageDLItemBox] = { ndsRendererSubmitNativeItemBox, NULL,
+        &gNdsItemBoxDrawCount, &gNdsItemBoxSubmitFailCount, nITKindBox },
+    [nNDSStageDLItemTaru] = { ndsRendererSubmitNativeItemTaru, NULL,
+        &gNdsItemTaruDrawCount, &gNdsItemTaruSubmitFailCount, nITKindTaru },
+    [nNDSStageDLItemEgg] = { ndsRendererSubmitNativeItemEgg, NULL,
+        &gNdsItemEggDrawCount, &gNdsItemEggSubmitFailCount, nITKindEgg },
+    [nNDSStageDLItemIwark] = { ndsRendererSubmitNativeItemIwark, NULL,
+        &gNdsItemIwarkDrawCount, &gNdsItemIwarkSubmitFailCount,
+        nITKindIwark },
+    [nNDSStageDLItemHammer] = { ndsRendererSubmitNativeItemHammer, NULL,
+        &gNdsItemHammerDrawCount, &gNdsItemHammerSubmitFailCount,
+        nITKindHammer },
+    [nNDSStageDLItemLGun] = { ndsRendererSubmitNativeItemLGun, NULL,
+        &gNdsItemLGunDrawCount, &gNdsItemLGunSubmitFailCount, nITKindLGun },
+    [nNDSStageDLItemHarisen] = { ndsRendererSubmitNativeItemHarisen, NULL,
+        &gNdsItemHarisenDrawCount, &gNdsItemHarisenSubmitFailCount,
+        nITKindHarisen },
+    [nNDSStageDLItemHeart] = { ndsRendererSubmitNativeItemHeart, NULL,
+        &gNdsItemHeartDrawCount, &gNdsItemHeartSubmitFailCount,
+        nITKindHeart },
+};
+#endif
 
 typedef struct NDSStageDLRoute
 {
@@ -7261,7 +7340,9 @@ static NDSStageDLRoute sNdsStageDLRoutes[NDS_SDL_ROUTES];
 
 static inline NDSStageDLRoute *ndsStageDLRouteSlot(const Gfx *dl)
 {
-    return &sNdsStageDLRoutes[((u32)(uintptr_t)dl >> 3) &
+    const u32 a = (u32)(uintptr_t)dl;
+
+    return &sNdsStageDLRoutes[((a >> 3) ^ (a >> 11)) &
                               (NDS_SDL_ROUTES - 1u)];
 }
 
@@ -7324,26 +7405,29 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
-#if NDS_P2_ITEM_CORE
-    case NDS_SDL_ROUTE_ITEM_SWORD:
+    default:
     {
+#if NDS_P2_ITEM_CORE
         ITStruct *ip;
+        const u32 item_route = (u32)route->route - NDS_SDL_ROUTE_ITEM;
 
-        if ((sNdsRendererAdapterItemSubmitActive == FALSE) ||
+        if ((item_route >= (u32)nNDSStageDLItemRouteCount) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE) ||
             (owner->id != nGCCommonKindItem))
         {
             return FALSE;
         }
         ip = itGetStruct(owner);
-        if ((ip == NULL) || (ip->kind != nITKindSword))
+        if ((ip == NULL) ||
+            ((u32)ip->kind != sNdsStageDLItemRoutes[item_route].item_kind))
         {
             return FALSE;
         }
         break;
-    }
-#endif
-    default:
+#else
         return FALSE;
+#endif
+    }
     }
 
     saved_graphics_heap_ptr = gSYTaskmanGraphicsHeap.ptr;
@@ -7433,17 +7517,21 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             render_stats->othermode_h =
                 sNdsRendererAdapterItemOtherModeH[head];
         }
-        gNdsItemSwordRoot = route->root;
-        handled = ndsRendererSubmitNativeItemSword(
-            route->root, loaded->data, loaded->data_size, &config,
-            render_stats);
+        const NDSStageDLItemRoute *item =
+            &sNdsStageDLItemRoutes[route->route - NDS_SDL_ROUTE_ITEM];
+
+        handled = (item->submit_rooted != NULL) ?
+            item->submit_rooted(route->root, loaded->data,
+                                loaded->data_size, &config, render_stats) :
+            item->submit(loaded->data, loaded->data_size, &config,
+                         render_stats);
         if (handled != FALSE)
         {
-            gNdsItemSwordDrawCount++;
+            (*item->draws)++;
         }
         else
         {
-            gNdsItemSwordSubmitFailCount++;
+            (*item->fails)++;
         }
     }
 #endif
@@ -12237,7 +12325,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             gNdsItemSwordDrawCount++;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             ndsStageDLRouteRecord(dl, loaded, item_sword_root,
-                                  NDS_SDL_ROUTE_ITEM_SWORD);
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemSword);
 #endif
         }
         else
@@ -12268,6 +12356,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_hammer_native_handled != FALSE)
         {
             gNdsItemHammerDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemHammer);
+#endif
         }
         else
         {
@@ -12429,6 +12521,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_bat_native_handled != FALSE)
         {
             gNdsItemBatDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, item_bat_root,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemBat);
+#endif
         }
         else
         {
@@ -12459,6 +12555,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_capsule_native_handled != FALSE)
         {
             gNdsItemCapsuleDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, item_capsule_root,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemCapsule);
+#endif
         }
         else
         {
@@ -12518,6 +12618,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_lgun_native_handled != FALSE)
         {
             gNdsItemLGunDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemLGun);
+#endif
         }
         else
         {
@@ -12547,6 +12651,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_harisen_native_handled != FALSE)
         {
             gNdsItemHarisenDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemHarisen);
+#endif
         }
         else
         {
@@ -12576,6 +12684,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_heart_native_handled != FALSE)
         {
             gNdsItemHeartDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemHeart);
+#endif
         }
         else
         {
@@ -12606,6 +12718,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_starrod_native_handled != FALSE)
         {
             gNdsItemStarRodDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, item_starrod_root,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemStarRod);
+#endif
         }
         else
         {
@@ -12669,6 +12785,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_msbomb_native_handled != FALSE)
         {
             gNdsItemMSBombDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, item_msbomb_root,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemMSBomb);
+#endif
         }
         else
         {
@@ -12728,6 +12848,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_box_native_handled != FALSE)
         {
             gNdsItemBoxDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemBox);
+#endif
         }
         else
         {
@@ -12757,6 +12881,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_taru_native_handled != FALSE)
         {
             gNdsItemTaruDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemTaru);
+#endif
         }
         else
         {
@@ -12786,6 +12914,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_egg_native_handled != FALSE)
         {
             gNdsItemEggDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemEgg);
+#endif
         }
         else
         {
@@ -12815,6 +12947,10 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         if (item_iwark_native_handled != FALSE)
         {
             gNdsItemIwarkDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+            ndsStageDLRouteRecord(dl, loaded, 0u,
+                                  NDS_SDL_ROUTE_ITEM + nNDSStageDLItemIwark);
+#endif
         }
         else
         {

@@ -1,0 +1,24 @@
+f30a_gate  P50 923,840 P95 1,256,704 P99 1,452,544 2VB 85.0% SRCmed 413,056 STGmed 163,008 FTRmed 145,536 bandSRC 630,954 bandW 1,240,019 {'nf': 0, 'low': 359884}
+f31a_gate  P50 918,464 P95 1,253,760 P99 1,448,768 2VB 86.2% SRCmed 413,056 STGmed 163,008 FTRmed 145,728 bandSRC 632,095 bandW 1,234,148 {'nf': 0, 'low': 359884}
+f30b_gate  P50 923,776 P95 1,255,744 P99 1,452,544 2VB 84.9% SRCmed 413,056 STGmed 163,008 FTRmed 145,792 bandSRC 628,838 bandW 1,239,764 {'nf': 0, 'low': 359884}
+f31b_gate  P50 918,528 P95 1,250,752 P99 1,449,792 2VB 86.1% SRCmed 412,864 STGmed 163,008 FTRmed 145,792 bandSRC 631,549 bandW 1,233,441 {'nf': 0, 'low': 359884}
+f30_g5     P50 1,157,248 P95 1,529,984 P99 1,887,936 2VB 36.0% SRCmed 509,952 STGmed 124,224 FTRmed 145,216 bandSRC 713,088 bandW 1,521,024 {'nf': 0, 'low': 147672}
+f31_g5     P50 1,152,448 P95 1,523,584 P99 1,876,736 2VB 37.1% SRCmed 509,952 STGmed 124,224 FTRmed 145,216 bandSRC 712,935 bandW 1,511,848 {'nf': 0, 'low': 147672}
+f30_g7     P50 1,115,648 P95 1,501,824 P99 1,803,264 2VB 46.6% SRCmed 506,240 STGmed 171,200 FTRmed 147,328 bandSRC 752,403 bandW 1,486,418 {'nf': 3, 'low': 134472}
+f31_g7     P50 1,096,768 P95 1,484,096 P99 1,790,528 2VB 50.1% SRCmed 506,752 STGmed 171,200 FTRmed 147,328 bandSRC 753,007 bandW 1,473,675 {'nf': 3, 'low': 134472}
+f3v_g6     P50 935,872 P95 1,286,784 P99 1,506,496 2VB 81.9% SRCmed 415,744 STGmed 165,632 FTRmed 145,792 bandSRC 632,186 bandW 1,267,669 {'nf': 0, 'low': 192716}
+f3v_g5     P50 1,163,072 P95 1,548,672 P99 1,892,160 2VB 34.5% SRCmed 509,504 STGmed 124,224 FTRmed 145,408 bandSRC 710,211 bandW 1,532,206 {'nf': 0, 'low': 147672}
+f30a_gate hits 0 fills 4 item/fr 13118 weapon/fr 11477 effect/fr 12633 texmemo hits/fills 1036 5 verify runs/fail None None nf 0
+f31a_gate hits 1084 fills 4 item/fr 10862 weapon/fr 9997 effect/fr 12788 texmemo hits/fills 1036 5 verify runs/fail None None nf 0
+f30b_gate hits 0 fills 4 item/fr 13122 weapon/fr 11483 effect/fr 12641 texmemo hits/fills 1036 5 verify runs/fail None None nf 0
+f31b_gate hits 1084 fills 4 item/fr 10861 weapon/fr 9998 effect/fr 12794 texmemo hits/fills 1036 5 verify runs/fail None None nf 0
+f30_g5 hits 0 fills 1129 item/fr 46187 weapon/fr 8887 effect/fr 28249 texmemo hits/fills 3419 325 verify runs/fail None None nf 0
+f31_g5 hits 1571 fills 1129 item/fr 41755 weapon/fr 7621 effect/fr 28537 texmemo hits/fills 3419 325 verify runs/fail None None nf 0
+f30_g7 hits 0 fills 4 item/fr 55368 weapon/fr 8136 effect/fr 38260 texmemo hits/fills 1936 215 verify runs/fail None None nf 3
+f31_g7 hits 2768 fills 4 item/fr 44240 weapon/fr 6855 effect/fr 38635 texmemo hits/fills 1936 215 verify runs/fail None None nf 3
+f3v_g6 hits 943 fills 145 item/fr 13990 weapon/fr 12679 effect/fr 14104 texmemo hits/fills 0 5 verify runs/fail 1036 0 nf 0
+f3v_g5 hits 1571 fills 1129 item/fr 52326 weapon/fr 8759 effect/fr 28675 texmemo hits/fills 0 325 verify runs/fail 3419 0 nf 0
+digest f30a_gate vs f31a_gate: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f30a_gate vs f31b_gate: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f30_g5 vs f31_g5: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest f30_g7 vs f31_g7: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)

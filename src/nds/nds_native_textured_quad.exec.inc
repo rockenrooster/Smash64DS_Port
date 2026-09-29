@@ -417,6 +417,18 @@ static void __attribute__((unused)) ndsRendererNativeQuadGuardDepth(
             (s64)position[i] * bias * 4096, (s32)distance);
 }
 
+/* Texture memo for the quads that bind through the generic cache (P2-2p8,
+ * 2026-09-29): Charge Shot, Samus's bomb, the Pokemon, Sing, the egg quads.
+ * Their texture state is generated and fixed, yet every draw ran the full
+ * resolver (~3.6K ticks a Charge Shot). Same memo as the native items'
+ * (ndsRendererHardwareBindTextureOwnerMemo: keyed on every live input,
+ * revalidated against the cache entry, a hit replays the resolver's hit
+ * tail), direct-mapped by the owner's static index table, which names the
+ * call site; a collision only refills. */
+#define NDS_NATIVE_QUAD_TEXMEMO_COUNT 16u
+static NDSRendererOwnerTextureMemo
+    sNdsNativeQuadTexMemo[NDS_NATIVE_QUAD_TEXMEMO_COUNT];
+
 /* `image` non-NULL selects the graded copy -- IA8, or CI4 when `tlut` names its
  * fixed palette; the generic cache stays the fallback so a full table degrades,
  * never fails. */
@@ -454,7 +466,10 @@ static s32 __attribute__((noinline, noclone)) ndsRendererNativeTexturedQuadGrade
             (tlut != NULL) ? 0u : (stats->env_color & 0xffffff00u));
     }
     if ((resident_texture == 0u) && (graded == FALSE) &&
-        (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)) return -1;
+        (ndsRendererHardwareBindTextureOwnerMemo(
+             &sNdsNativeQuadTexMemo[((u32)(uintptr_t)indices >> 2) &
+                                    (NDS_NATIVE_QUAD_TEXMEMO_COUNT - 1u)],
+             (u32)(uintptr_t)indices, stats, config, state) == FALSE)) return -1;
     alpha = ndsRendererHardwareAlpha(stats, &vertices[0]);
     if (alpha == 0u) return 0;
     material_color = ndsRendererHardwareColorSource(stats);
