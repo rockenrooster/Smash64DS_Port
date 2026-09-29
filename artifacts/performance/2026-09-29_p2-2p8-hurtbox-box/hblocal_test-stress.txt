@@ -1,0 +1,2 @@
+cases 20000000 float hit 6878802 miss 13121198 spins 0
+local rejects 12080486 (92.1% of float misses), violations 0

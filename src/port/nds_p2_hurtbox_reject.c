@@ -386,6 +386,127 @@ static int ndsP2HbDamageBox(const FTDamageColl *damage, int32_t off[3],
     return 1;
 }
 
+/* The float test's own frame (P2-2p8, 2026-09-29). The world-axis test below
+ * bounds the box by its world-aligned extents, which for a rotated joint are up
+ * to sqrt(3) wider than the box; the tests it passes on to the float path
+ * (654 a gate match, ~2.4 a P90-98 frame, each a soft-float world chain,
+ * inverse and three sqrtf) are mostly such corner misses.
+ *
+ * The source takes both attack points into the joint's frame (the inverse of
+ * W, minus the offset) and clips the segment against +/- (size + radius / s_k).
+ * Both points beyond the same face of one local axis is a miss whatever the
+ * clip loop then does: an x or y face shares an outcode bit and returns at the
+ * loop's first test, and every point the loop clips lies on the segment, so
+ * for a z face its final z outcodes still share the bit.
+ *
+ * No inverse is formed. With W's rows R_k and n_k = R_i x R_j ((k, i, j)
+ * cyclic), local_k(p) = (p - t) . n_k / (R_k . n_k), so a point is beyond the
+ * face local_k = h when (p - t) . n_k - h * det_k > 0 (det_k = R_k . n_k, made
+ * positive by flipping n_k), and that difference over |n_k| is its world
+ * distance to the face plane. Requiring it to exceed NDS_P2_HB_MARGIN_Q12 *
+ * |n_k|_1 keeps the world-axis test's four-unit margin; h uses the table bound
+ * on 1/s_k, which is never below the float's. Values outside the guards
+ * decline. A/B word gNdsP2HbLocalTest (0 = world axes only). */
+volatile u32 gNdsP2HbLocalTest __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsP2HbLocalRejects;
+
+static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
+                              const int32_t size[3], int32_t radius,
+                              const int32_t p0[3], const int32_t p1[3])
+{
+    static const u8 next[3] = { 1u, 2u, 0u };
+    static const u8 prev[3] = { 2u, 0u, 1u };
+    int32_t s2[3];
+    int64_t v0[3];
+    int64_t v1[3];
+    u32 k;
+    u32 c;
+
+    if (ndsR2CfxRowScales(w, s2, NULL, NULL, NULL) == 0)
+    {
+        return 0;
+    }
+    for (c = 0u; c < 3u; c++)
+    {
+        v0[c] = (int64_t)p0[c] - w->t[c];
+        v1[c] = (int64_t)p1[c] - w->t[c];
+    }
+    for (k = 0u; k < 3u; k++)
+    {
+        const u32 i = next[k];
+        const u32 j = prev[k];
+        int64_t n[3];
+        int64_t n1 = 0;
+        int64_t det;
+        int64_t num0;
+        int64_t num1;
+        int64_t reach;
+        int64_t hi;
+        int64_t lo;
+        int64_t thr;
+
+        for (c = 0u; c < 3u; c++)
+        {
+            const u32 a = next[c];
+            const u32 b = prev[c];
+
+            n[c] = ndsR2CfxShr((int64_t)w->r[i][a] * w->r[j][b] -
+                                   (int64_t)w->r[i][b] * w->r[j][a],
+                               NDS_R2_CFX_ROT_BITS);
+        }
+        det = ndsR2CfxShr((int64_t)w->r[k][0] * n[0] +
+                              (int64_t)w->r[k][1] * n[1] +
+                              (int64_t)w->r[k][2] * n[2],
+                          NDS_R2_CFX_ROT_BITS);
+        if (det < 0)
+        {
+            det = -det;
+            n[0] = -n[0];
+            n[1] = -n[1];
+            n[2] = -n[2];
+        }
+        /* det > 2^-10 at Q26 and below 2^7; |n| below 2^4 (Q26). */
+        if ((det < ((int64_t)1 << 16)) || (det >= ((int64_t)1 << 33)))
+        {
+            return 0;
+        }
+        for (c = 0u; c < 3u; c++)
+        {
+            const int64_t m = (n[c] < 0) ? -n[c] : n[c];
+
+            if (m >= ((int64_t)1 << 30))
+            {
+                return 0;
+            }
+            n1 += m;
+        }
+        /* size + radius / s_k, the radius term rounded up (Q12). */
+        reach = (int64_t)size[k] +
+                (((int64_t)radius * ndsP2HbInvSqrtQ26((uint32_t)s2[k]) +
+                  (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
+                 NDS_R2_CFX_ROT_BITS);
+        hi = (int64_t)off[k] + reach;
+        lo = (int64_t)off[k] - reach;
+        if ((hi >= ((int64_t)1 << 26)) || (hi <= -((int64_t)1 << 26)) ||
+            (lo >= ((int64_t)1 << 26)) || (lo <= -((int64_t)1 << 26)))
+        {
+            return 0;
+        }
+        num0 = v0[0] * n[0] + v0[1] * n[1] + v0[2] * n[2];
+        num1 = v1[0] * n[0] + v1[1] * n[1] + v1[2] * n[2];
+        thr = (int64_t)NDS_P2_HB_MARGIN_Q12 * n1;
+        if (((num0 - hi * det) > thr) && ((num1 - hi * det) > thr))
+        {
+            return 1;
+        }
+        if (((lo * det - num0) > thr) && ((lo * det - num1) > thr))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /* 1 = the float test would certainly miss; 0 = let it decide.
  *
  * The float test clips the attack's segment (pos_curr..pos_prev, or pos_curr
@@ -465,6 +586,12 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         {
             return 1;
         }
+    }
+    if ((gNdsP2HbLocalTest != 0u) &&
+        (ndsP2HbRejectLocal(&w, off, size, radius, p0, p1) != 0))
+    {
+        gNdsP2HbLocalRejects++;
+        return 1;
     }
     return 0;
 }

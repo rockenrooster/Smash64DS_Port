@@ -63,6 +63,31 @@ P95 5.6K. Replay digest IDENTICAL (kf00 vs kf11, and vs the shadow arm `kfs`,
 all 1,972 samples). Shadow mode (`gNdsP2HurtboxRejectMode=2`, both cuts on):
 0 flips. Native failures 0.
 
+## Banked: the float test's own frame
+
+The world-axis test bounds a box by its world-aligned extents, up to sqrt(3)
+wider than a rotated box, and the 654 tests a match it could not reject each
+paid the soft-float world chain, inverse and three sqrtf. The source decides in
+the joint's frame: both attack points beyond the same face of one local axis
+is a miss whatever its clip loop then does (an x or y face shares an outcode
+bit at the loop's first test; every clipped point lies on the segment, so a z
+face's final outcodes share it too). `ndsP2HbRejectLocal` tests exactly that
+without forming the inverse: with W's rows R_k and n_k = R_i x R_j,
+local_k(p) = (p - t) . n_k / (R_k . n_k), so the face test is one dot product
+per point, and the gap over |n_k|_1 keeps the same four-world-unit margin.
+
+`hblocal_test.c` transcribes the float side (SetInvertMatrix, the transforms,
+the outcode clip, `radius / vec_scale`) and runs it against the fixed test on
+20M random rotated, scaled and mirrored boxes with segments near them, the
+fixed world perturbed by up to 64 quanta a cell (`-default.txt`) and by 4,096
+quanta with positions to +/-12,000 (`-stress.txt`): 0 violations in both, and
+92.1% of the float misses rejected.
+
+Same ROM, `gNdsP2HbLocalTest` 0 -> 1 (`lt0`/`lt1`): float tests 659 -> 286
+(373 local rejects), P50 927,872 -> 928,000, **P95 1,271,168 -> 1,263,808**,
+P90-98 SRC mean 634,690 -> 625,580. Replay IDENTICAL; shadow arm (`lts`) 0
+flips; native failures 0.
+
 ## Tried and reverted: a per-box record
 
 The same attack coll is tried against every hurtbox of a victim, and every
