@@ -1,0 +1,9 @@
+mv_g0 material words checked 235341 different 0 | projection words checked 0 different 0 | runs drawn 78920 declines 0
+mv_g1 material words checked 413280 different 0 | projection words checked 0 different 0 | runs drawn 138110 declines 0
+mv_g2 material words checked 423789 different 0 | projection words checked 0 different 0 | runs drawn 141819 declines 0
+mv_g3 material words checked 330456 different 0 | projection words checked 0 different 0 | runs drawn 110488 declines 0
+mv_g4 material words checked 439593 different 0 | projection words checked 0 different 0 | runs drawn 146981 declines 0
+mv_g5 material words checked 342258 different 0 | projection words checked 2326960 different 0 | runs drawn 114434 declines 0
+mv_g7 material words checked 452991 different 0 | projection words checked 0 different 0 | runs drawn 151921 declines 0
+mv_g8 material words checked 382614 different 0 | projection words checked 0 different 0 | runs drawn 128245 declines 0
+mv_gate material words checked 318978 different 0 | projection words checked 1750128 different 0 | runs drawn 106542 declines 0

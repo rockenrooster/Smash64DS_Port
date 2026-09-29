@@ -167,7 +167,8 @@ SECTIONS {
 		*(.text.ndsFtPoseBodyChangedThisTick)
 		*(.text.syVectorNorm3D)
 		*(.text.ftCommonSquatCheckInterruptCommon)
-		*(.text.ndsBaseMPProcessRunFloorEdgeAdjust)
+		/* ndsBaseMPProcessRunFloorEdgeAdjust: out 2026-09-29 (48 B, ~76 ticks a
+		 * frame) for the stage GX run memo (nds_stage_gx.exec.inc). */
 		*(.text.glGetTexParameter)
 		*(.text.ftCommonDamageCommonProcPhysics)
 		*(.text.gcSetCameraMatrixMode)

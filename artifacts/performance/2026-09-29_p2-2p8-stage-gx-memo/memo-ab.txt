@@ -1,0 +1,6 @@
+sm0a_gate  P50 927,744 P95 1,259,712 P99 1,456,192 2VB 84.4% SRCmed 411,968 STGmed 168,320 FTRmed 144,896 bandSRC 623,272 bandW 1,243,485 {'nf': 0, 'low': 359628}
+sm1a_gate  P50 922,368 P95 1,254,400 P99 1,466,752 2VB 85.0% SRCmed 411,904 STGmed 163,648 FTRmed 144,896 bandSRC 624,325 bandW 1,240,188 {'nf': 0, 'low': 359628}
+sm0b_gate  P50 927,104 P95 1,259,712 P99 1,453,504 2VB 84.1% SRCmed 412,096 STGmed 168,320 FTRmed 144,896 bandSRC 625,894 bandW 1,243,376 {'nf': 0, 'low': 359628}
+sm1b_gate  P50 922,624 P95 1,256,128 P99 1,450,112 2VB 85.0% SRCmed 411,904 STGmed 163,648 FTRmed 145,088 bandSRC 623,561 bandW 1,239,408 {'nf': 0, 'low': 359628}
+digest sm0a vs sm1a: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)
+digest sm0a vs sm1b: IDENTICAL over 1972 recorded samples (control 1972, candidate 1972)

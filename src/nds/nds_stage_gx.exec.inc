@@ -37,6 +37,33 @@ static u32 sNdsStageGxFirstWord, sNdsStageGxWordCount, sNdsStageGxAlpha;
 static u32 sNdsStageGxDmaFirst, sNdsStageGxDmaEnd;
 volatile u32 gNdsStageGxOverlap __attribute__((used, section(".data"))) = 1u;
 
+/* Words that outlive the frame (P2-2p8, 2026-09-29). The program's words are
+ * a persistent buffer nothing but these patches writes, so a patch whose
+ * inputs did not move since it last wrote them has nothing to write:
+ *  - MATERIAL (three words a run): the run's polygon format and texture name
+ *    and parameters, resolved through libnds's texture and palette objects,
+ *    which only a texture-cache event moves (the key generation the prepared
+ *    table's proof already trusts). Dream Land: 53 a frame, ~130 ticks each.
+ *  - NOZ and PROJECTION (sixteen words a patch): the camera projection, which
+ *    is constant within a match unless the FOV moves; the per-triangle depth
+ *    column the painter pass writes is still rewritten every frame.
+ * Each run remembers what its words hold; a run that returned early keeps its
+ * old record, so a skipped frame never vouches for words it did not write.
+ * Same-ROM A/B word gNdsStageGxMemo (0 = patch every word every frame). */
+volatile u32 gNdsStageGxMemo __attribute__((used, section(".data"))) = 1u;
+typedef struct NDSStageGxRunMemo
+{
+    u32 poly_fmt;
+    u32 texture_name;
+    u32 texture_params;
+    u32 textured;
+    u32 material_gen;           /* texture key generation + 1; 0 = unwritten */
+    u32 projection_serial;      /* sNdsStageGxProjSerial its NOZ words hold */
+} NDSStageGxRunMemo;
+static NDSStageGxRunMemo *sNdsStageGxRunMemo;
+static NDSRendererMatrix20p12 sNdsStageGxProjCopy;
+static u32 sNdsStageGxProjSerial, sNdsStageGxProjGen;
+
 static u32 ndsStageGxHashBytes(const void *data, u32 bytes, u32 hash)
 {
     const u8 *p = data;
@@ -235,9 +262,11 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
      * decline and draw the stage uncompiled. */
     if ((uintptr_t)gSYTaskmanGeneralHeap.end < (uintptr_t)gSYTaskmanGeneralHeap.ptr ||
         (uintptr_t)gSYTaskmanGeneralHeap.end - (uintptr_t)gSYTaskmanGeneralHeap.ptr <
-            h.body_bytes + NDS_STAGE_GX_HEAP_KEEP_FREE)
+            h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)) +
+            NDS_STAGE_GX_HEAP_KEEP_FREE)
     { goto failed; }
-    body = syTaskmanMalloc(h.body_bytes, 32u);
+    body = syTaskmanMalloc(
+        h.body_bytes + (h.run_count * sizeof(NDSStageGxRunMemo)), 32u);
     if (body == NULL) { goto failed; }
     reason = 4u;
     if (!ndsRelocAssetStreamRead(&stream, sizeof(h), body, h.body_bytes) ||
@@ -248,6 +277,10 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     sNdsStageGxPatches = (NDSStageGxPatch *)(sNdsStageGxRuns + h.run_count);
     sNdsStageGxWords = (u32 *)(sNdsStageGxPatches + h.patch_count);
     sNdsStageGxStaticWorld = (u64)h.static_world_lo | ((u64)h.static_world_hi << 32);
+    sNdsStageGxRunMemo = (NDSStageGxRunMemo *)(void *)(body + h.body_bytes);
+    memset(sNdsStageGxRunMemo, 0, h.run_count * sizeof(NDSStageGxRunMemo));
+    sNdsStageGxProjSerial++;
+    sNdsStageGxProjGen = 0u;
     gNdsP2StageProgLoads++; gNdsP2StageProgBytes = h.body_bytes;
     return TRUE;
 failed:
@@ -413,6 +446,159 @@ static sb32 ndsStageGxComposedFor(u32 binding, u32 shift,
 
 /* ITCM since 2026-09-27: the fill census charged it ~8.5M cycles of
  * instruction-fetch stall in main RAM; low-rent renderer residents made room. */
+/* Out of ITCM: never on Dream Land's measured match, rare elsewhere. */
+static void __attribute__((noinline, cold)) ndsStageGxRefreshNear(
+    const NDSNativeStageRun *native)
+{
+    u32 p;
+
+    /* The old prepared-near cache has no camera in its key. Refresh only
+     * these rare boundary runs before taking the existing cold clipper. */
+    for (p = 0u; p < (u32)native->triangle_count * 3u; p++)
+    {
+        u32 dense = sNdsNativeStageCorners[native->first_corner + p];
+        NDSRendererInputVertex input;
+        NDSRendererClipVertex20p12 clip;
+        ndsRendererNativeStageInputVertex(&sNdsNativeStageVertices[dense], &input);
+        ndsRendererTransformVertex20p12(&sNdsNativeStageOwnerExecution.binding_composed[
+            sNdsNativeStageVertices[dense].matrix_binding], &input, &clip);
+        sNdsNativeStagePreparedDense[dense].near_inside = ndsRendererHardwareClipZWInsideNearPlane(clip.z, clip.w);
+    }
+    gNdsP2StageProgNearRuns++;
+}
+
+static void __attribute__((noinline, cold)) ndsStageGxCornerSource(
+    u32 *dst, const NDSStageGxPatch *q)
+{
+    const NDSNativeStageDenseVertex *v = &sNdsNativeStageVertices[q->index];
+    NDSRendererInputVertex input;
+    NDSRendererClipVertex20p12 clip;
+    NDSRendererMatrix20p12 projected;
+    ndsRendererNativeStageInputVertex(v, &input);
+    ndsRendererTransformVertex20p12(
+        &sNdsNativeStageOwnerExecution.binding_composed[v->matrix_binding], &input, &clip);
+    ndsRendererNativeStageProjectedDepthMatrix(&clip, &projected);
+    memcpy(dst, &projected, sizeof(projected));
+}
+
+/* The painter pass for a run with more no-Z patches than the draw keeps W
+ * columns for: read W back from the words the first pass wrote. */
+static void __attribute__((noinline, cold)) ndsStageGxNoZReadBack(
+    const NDSStageGxRun *r, u32 *corner_triangle, s16 *corner_depth)
+{
+    u32 p;
+
+    for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
+    {
+        const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
+        if (q->kind == NDS_STAGE_GX_NOZ || q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ)
+        {
+            u32 *dst = &sNdsStageGxWords[q->word], row;
+            s16 depth;
+            if (q->kind == NDS_STAGE_GX_CORNER_NOZ)
+            {
+                u32 triangle = q->aux >> 3;
+                if (*corner_triangle != triangle)
+                { *corner_triangle = triangle; *corner_depth = ndsRendererHardwareNextProjectedDepth(); }
+                depth = *corner_depth;
+            }
+            else { depth = ndsRendererHardwareNextProjectedDepth(); }
+            /* Same four rounded Z-column writes as SetNoZColumn, directly in
+             * the DMA buffer. X/Y/W were patched before consuming any depth. */
+            for (row = 0u; row < 4u; row++)
+            {
+                dst[row * 4u + 2u] = (u32)(s32)ndsRendererRoundShiftS64(
+                    (s64)(s32)dst[row * 4u + 3u] * depth, 12u);
+            }
+        }
+    }
+}
+
+static void __attribute__((noinline, cold)) ndsStageGxProjection(u32 *dst)
+{
+    NDSRendererMatrix20p12 projection = *sNdsNativeStageOwnerExecution.projection;
+    m4x4 matrix;
+    u32 col;
+    for (col = 0u; col < 4u; col++)
+    { projection.m[3][col] = ndsRendererRoundShiftS32Signed(projection.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT); }
+    ndsRendererCopyMtx20p12ToM4x4(&projection, &matrix);
+    memcpy(dst, &matrix, sizeof(matrix));
+}
+
+/* The frame's projection against the one the NOZ/PROJECTION words hold:
+ * compared once per stage-matrix generation, a new serial when it moved. */
+static inline u32 ndsStageGxProjectionSerial(void)
+{
+    if (sNdsStageGxProjGen != sNdsNativeStageMatrixGen)
+    {
+        const NDSRendererMatrix20p12 *projection =
+            sNdsNativeStageOwnerExecution.projection;
+
+        if (memcmp(projection, &sNdsStageGxProjCopy,
+                   sizeof(sNdsStageGxProjCopy)) != 0)
+        {
+            sNdsStageGxProjCopy = *projection;
+            sNdsStageGxProjSerial++;
+        }
+        sNdsStageGxProjGen = sNdsNativeStageMatrixGen;
+    }
+    return sNdsStageGxProjSerial;
+}
+
+/* gNdsStageGxMemo = 2 (lab): the memo still decides, and every word it keeps
+ * is compared with the word the patch would have written. [0] material words
+ * checked, [1] of them different, [2] projection words checked, [3] different
+ * (the painter's z column excluded: it is rewritten every frame). */
+volatile u32 gNdsStageGxMemoVerify[4] __attribute__((used));
+
+static void __attribute__((noinline, cold)) ndsStageGxMemoVerifyRun(
+    const NDSStageGxRun *r, const NDSNativeStagePreparedRun *prepared,
+    u32 submit_class, u32 owner, sb32 projection_kept, sb32 material_kept)
+{
+    u32 p;
+
+    for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
+    {
+        const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
+        const u32 *dst = &sNdsStageGxWords[q->word];
+        u32 fresh[16];
+        u32 i;
+
+        if ((q->kind == NDS_STAGE_GX_MATERIAL) && (material_kept != FALSE) &&
+            (ndsStageGxMaterial(fresh, prepared, submit_class, owner) != FALSE))
+        {
+            gNdsStageGxMemoVerify[0] += 3u;
+            for (i = 0u; i < 3u; i++)
+            {
+                gNdsStageGxMemoVerify[1] += (fresh[i] != dst[i]) ? 1u : 0u;
+            }
+        }
+        else if (((q->kind == NDS_STAGE_GX_NOZ) ||
+                  (q->kind == NDS_STAGE_GX_PROJECTION)) &&
+                 (projection_kept != FALSE))
+        {
+            if (q->kind == NDS_STAGE_GX_NOZ)
+            {
+                memcpy(fresh, sNdsNativeStageOwnerExecution.projection,
+                       sizeof(fresh));
+            }
+            else
+            {
+                ndsStageGxProjection(fresh);
+            }
+            for (i = 0u; i < 16u; i++)
+            {
+                if ((q->kind == NDS_STAGE_GX_NOZ) && ((i & 3u) == 2u))
+                {
+                    continue;
+                }
+                gNdsStageGxMemoVerify[2]++;
+                gNdsStageGxMemoVerify[3] += (fresh[i] != dst[i]) ? 1u : 0u;
+            }
+        }
+    }
+}
+
 static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index, u32 owner, NDSRendererStats *stats)
 {
     const NDSStageGxRun *r = &sNdsStageGxRuns[index];
@@ -433,6 +619,8 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
     u64 near_bindings = ((u64)r->binding_lo | ((u64)r->binding_hi << 32)) &
         ~sNdsNativeStageOwnerExecution.rigid_binding_mask;
     sb32 near_boundary = FALSE;
+    sb32 projection_kept = FALSE, material_kept = FALSE;
+    u32 projection_serial = 0u;
     /* This function writes nothing to the FIFO itself (its words reach it by
      * ndsStageGxFlush's DMA, and the cold path's caller drains first), so it
      * waits only when the DMA in flight may still be reading the words it is
@@ -455,27 +643,34 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
     }
     if (near_boundary != FALSE)
     {
-        /* The old prepared-near cache has no camera in its key. Refresh only
-         * these rare boundary runs before taking the existing cold clipper. */
-        for (p = 0u; p < (u32)native->triangle_count * 3u; p++)
-        {
-            u32 dense = sNdsNativeStageCorners[native->first_corner + p];
-            NDSRendererInputVertex input;
-            NDSRendererClipVertex20p12 clip;
-            ndsRendererNativeStageInputVertex(&sNdsNativeStageVertices[dense], &input);
-            ndsRendererTransformVertex20p12(&sNdsNativeStageOwnerExecution.binding_composed[
-                sNdsNativeStageVertices[dense].matrix_binding], &input, &clip);
-            sNdsNativeStagePreparedDense[dense].near_inside = ndsRendererHardwareClipZWInsideNearPlane(clip.z, clip.w);
-        }
-        gNdsP2StageProgNearRuns++;
+        ndsStageGxRefreshNear(native);
         return FALSE;
+    }
+    if (gNdsStageGxMemo != 0u)
+    {
+        NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[index];
+
+        projection_serial = ndsStageGxProjectionSerial();
+        projection_kept = (m->projection_serial == projection_serial) ?
+            TRUE : FALSE;
+        material_kept =
+            ((m->material_gen ==
+              sNdsRendererHardwareTextureKeyGeneration + 1u) &&
+             (m->poly_fmt == prepared->poly_fmt) &&
+             (m->texture_name == prepared->texture_name) &&
+             (m->texture_params == prepared->texture_params) &&
+             (m->textured == prepared->textured)) ? TRUE : FALSE;
+        if (gNdsStageGxMemo == 2u)
+        {
+            ndsStageGxMemoVerifyRun(r, prepared, native->submit_class, owner,
+                                    projection_kept, material_kept);
+        }
     }
     /* Validate/patch non-painter inputs before consuming depth or emitting vertices. */
     for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
     {
         const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
         u32 *dst = &sNdsStageGxWords[q->word];
-        m4x4 matrix;
         if (q->kind == NDS_STAGE_GX_VIEW)
         {
             if (sNdsStageGxViewGen != sNdsNativeStageMatrixGen)
@@ -487,19 +682,14 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
             }
             memcpy(dst, &sNdsStageGxViewMemo, sizeof(sNdsStageGxViewMemo));
         }
-        else if (q->kind == NDS_STAGE_GX_PROJECTION)
+        else if (q->kind == NDS_STAGE_GX_PROJECTION && projection_kept == FALSE)
         {
-            NDSRendererMatrix20p12 projection = *sNdsNativeStageOwnerExecution.projection;
-            u32 col;
-            for (col = 0u; col < 4u; col++)
-            { projection.m[3][col] = ndsRendererRoundShiftS32Signed(projection.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT); }
-            ndsRendererCopyMtx20p12ToM4x4(&projection, &matrix);
-            memcpy(dst, &matrix, sizeof(matrix));
+            ndsStageGxProjection(dst);
         }
         else if (q->kind == NDS_STAGE_GX_NOZ)
         {
             const NDSRendererMatrix20p12 *projection = sNdsNativeStageOwnerExecution.projection;
-            memcpy(dst, projection, sizeof(composed));
+            if (projection_kept == FALSE) { memcpy(dst, projection, sizeof(composed)); }
             if (noz_count < NDS_STAGE_GX_NOZ_LOCAL)
             {
                 noz_w[noz_count][0] = projection->m[0][3]; noz_w[noz_count][1] = projection->m[1][3];
@@ -535,15 +725,7 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
         }
         else if (q->kind == NDS_STAGE_GX_CORNER_SOURCE)
         {
-            const NDSNativeStageDenseVertex *v = &sNdsNativeStageVertices[q->index];
-            NDSRendererInputVertex input;
-            NDSRendererClipVertex20p12 clip;
-            NDSRendererMatrix20p12 projected;
-            ndsRendererNativeStageInputVertex(v, &input);
-            ndsRendererTransformVertex20p12(
-                &sNdsNativeStageOwnerExecution.binding_composed[v->matrix_binding], &input, &clip);
-            ndsRendererNativeStageProjectedDepthMatrix(&clip, &projected);
-            memcpy(dst, &projected, sizeof(projected));
+            ndsStageGxCornerSource(dst, q);
         }
         else if (q->kind == NDS_STAGE_GX_COLOR) { *dst = sNdsNativeStagePreparedDense[q->index].packed_color; }
         else if (q->kind == NDS_STAGE_GX_UV)
@@ -551,9 +733,21 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
             const NDSNativeStagePreparedDense *v = &sNdsNativeStagePreparedDense[q->index];
             *dst = (u32)(u16)v->s | ((u32)(u16)v->t << 16);
         }
-        else if (q->kind == NDS_STAGE_GX_MATERIAL &&
+        else if (q->kind == NDS_STAGE_GX_MATERIAL && material_kept == FALSE &&
                  !ndsStageGxMaterial(dst, prepared, native->submit_class, owner))
         { gNdsP2StageProgDeclines++; gNdsP2StageProgReason = 6u; return FALSE; }
+    }
+    if (gNdsStageGxMemo != 0u)
+    {
+        /* Every patch of the run was written or proven current. */
+        NDSStageGxRunMemo *m = &sNdsStageGxRunMemo[index];
+
+        m->projection_serial = projection_serial;
+        m->poly_fmt = prepared->poly_fmt;
+        m->texture_name = prepared->texture_name;
+        m->texture_params = prepared->texture_params;
+        m->textured = prepared->textured;
+        m->material_gen = sNdsRendererHardwareTextureKeyGeneration + 1u;
     }
     if (native->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
     { ndsRendererHardwareEnterProjectedForeground(); }
@@ -581,29 +775,8 @@ static sb32 __attribute__((noinline, section(".itcm"))) ndsStageGxDraw(u32 index
         }
     }
     else
-    for (p = r->first_patch; p < (u32)r->first_patch + r->patch_count; p++)
     {
-        const NDSStageGxPatch *q = &sNdsStageGxPatches[p];
-        if (q->kind == NDS_STAGE_GX_NOZ || q->kind == NDS_STAGE_GX_COMPOSED_NOZ || q->kind == NDS_STAGE_GX_CORNER_NOZ)
-        {
-            u32 *dst = &sNdsStageGxWords[q->word], row;
-            s16 depth;
-            if (q->kind == NDS_STAGE_GX_CORNER_NOZ)
-            {
-                u32 triangle = q->aux >> 3;
-                if (corner_triangle != triangle)
-                { corner_triangle = triangle; corner_depth = ndsRendererHardwareNextProjectedDepth(); }
-                depth = corner_depth;
-            }
-            else { depth = ndsRendererHardwareNextProjectedDepth(); }
-            /* Same four rounded Z-column writes as SetNoZColumn, directly in
-             * the DMA buffer. X/Y/W were patched before consuming any depth. */
-            for (row = 0u; row < 4u; row++)
-            {
-                dst[row * 4u + 2u] = (u32)(s32)ndsRendererRoundShiftS64(
-                    (s64)(s32)dst[row * 4u + 3u] * depth, 12u);
-            }
-        }
+        ndsStageGxNoZReadBack(r, &corner_triangle, &corner_depth);
     }
     if (prepared->textured != 0u)
     {
