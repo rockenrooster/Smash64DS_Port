@@ -1,0 +1,21 @@
+profile      D:\Stuff\DevFolder\Smash64DS_Port\builds\p2p8-prof-match\arm9-profile.csv
+elf          D:\Stuff\DevFolder\Smash64DS_Port\builds\build-p2p8-prof-match\smash64ds-p2-fourcpu-tickhud-hwtri.elf
+pc rows      80,220,679
+cycles       4,407,578,287
+unattributed 134,577 (0.00% -- BIOS, ITCM stubs, data)
+symbols hit  1,981 of 5,498 FUNC symbols
+
+section sizes
+  .itcm               32,528
+  .text.hot            3,956  free 4,236 of cap 8,192
+  .text.hot.draw       6,576  free 1,616 of cap 8,192
+
+== 0. stall accounting by tier (placement can only touch non-mem stall) ==
+   excluding idle spin: armWaitForIrq
+tier                   cycles        insns  cyc/insn  nonmem stall     %    mem stall     %
+--------------  -------------  -----------  --------  ------------  ----  -----------  ----
+.itcm           1,725,018,761  929,500,945      1.86   297,413,805  17.2  498,104,011  28.9
+.text.hot          78,421,420   17,091,883      4.59    34,220,584  43.6   27,108,953  34.6
+.text.hot.draw     15,962,009    5,941,707      2.69     5,009,783  31.4    5,010,519  31.4
+.main           1,691,373,669  424,761,386      3.98   607,462,524  35.9  659,149,759  39.0
+

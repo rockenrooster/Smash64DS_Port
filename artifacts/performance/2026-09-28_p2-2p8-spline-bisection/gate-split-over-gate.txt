@@ -1,0 +1,100 @@
+== E. per-frame split on over the gate (2,800,950 cycles): 327 marked frames vs 1473 control ==
+   marked   1,106,862,422 cycles, 3,384,900/frame
+   control  3,300,581,208 cycles, 2,240,720/frame
+   premium  1,144,180/frame
+   marked frames (region ids, frame = START + id): 8, 26, 27, 51, 86, 96, 111, 115, 116, 120, 164, 181, 186, 187, 191, 193, 209, 213, 249, 252, 257, 268, 274, 279, 280, 297, 308, 330, 333, 337, 343, 355, 366, 368, 373, 377, 386, 387, 407, 448, 455, 473, 476, 517, 548, 569, 576, 582, 597, 603, 657, 659, 660, 677, 679, 685, 690, 691, 697, 698, 700, 701, 715, 717, 718, 719, 720, 721, 728, 729, 742, 743, 749, 750, 751, 752, 753, 754, 775, 781, 782, 784, 785, 786, 794, 799, 803, 807, 811, 812, 815, 816, 819, 821, 823, 824, 826, 827, 830, 831, 832, 836, 837, 841, 844, 847, 852, 855, 856, 857, 859, 862, 867, 868, 870, 871, 892, 896, 905, 911, 923, 931, 933, 935, 936, 937, 938, 939, 940, 945, 948, 950, 956, 958, 981, 984, 985, 986, 990, 991, 992, 996, 1018, 1056, 1057, 1065, 1074, 1080, 1093, 1134, 1155, 1156, 1172, 1173, 1178, 1182, 1185, 1192, 1193, 1194, 1197, 1198, 1199, 1200, 1201, 1202, 1203, 1204, 1206, 1207, 1208, 1219, 1230, 1235, 1248, 1269, 1275, 1282, 1284, 1286, 1287, 1288, 1289, 1291, 1299, 1305, 1309, 1310, 1311, 1314, 1315, 1321, 1325, 1328, 1333, 1342, 1369, 1370, 1371, 1373, 1374, 1375, 1377, 1380, 1381, 1382, 1383, 1384, 1385, 1387, 1388, 1389, 1392, 1394, 1396, 1397, 1398, 1399, 1400, 1401, 1403, 1406, 1412, 1413, 1418, 1421, 1423, 1424, 1425, 1426, 1427, 1428, 1429, 1445, 1448, 1449, 1453, 1454, 1457, 1461, 1462, 1465, 1466, 1469, 1473, 1474, 1475, 1476, 1477, 1478, 1479, 1480, 1481, 1482, 1487, 1488, 1489, 1490, 1491, 1492, 1493, 1494, 1495, 1496, 1500, 1509, 1510, 1511, 1512, 1513, 1514, 1515, 1516, 1517, 1518, 1520, 1524, 1528, 1532, 1533, 1534, 1535, 1536, 1537, 1538, 1539, 1540, 1541, 1542, 1543, 1544, 1545, 1546, 1547, 1552, 1553, 1582, 1598, 1600, 1601, 1602, 1603, 1604, 1639, 1642, 1643, 1644, 1649, 1658, 1659, 1660, 1691, 1729, 1761, 1770, 1774, 1777, 1782, 1785, 1786, 1787, 1789, 1793, 1796, 1797, 1798, 1799
+
++cyc/frame  %prem   frames  of it mem   +insn  cyc/insn  tier            symbol
+----------  -----  -------  ---------  ------  --------  --------------  -------------------------------------------------------------
+   473,450   41.4  327/327          0       5  99,374.2  .itcm           armWaitForIrq
+    41,105    3.6  327/327          0  34,609       1.2  .itcm           __aeabi_fadd
+    37,672    3.3  148/327     17,073  15,516       2.4  .main           ndsP2HbRejectPoints
+    29,057    2.5  327/327          0  25,580       1.1  .itcm           __aeabi_fmul (+1 alias)
+    18,691    1.6  327/327      8,036   9,839       1.9  .main           ndsFtPoseParse
+    13,182    1.2  148/327      4,395   3,220       4.1  .main           ndsRendererHardwareResolveOrBindTexture
+    12,630    1.1  327/327      4,230   8,821       1.4  .itcm           ndsFtPosePlay
+    11,299    1.0  147/327      3,904   5,951       1.9  .main           ndsR2CfxBuildLocal.constprop.0
+    10,234    0.9  254/327      5,133     921      11.1  .main           ndsRendererAdapterSubmitStageDL
+     9,245    0.8  327/327      6,598   1,979       4.7  .itcm           ndsFTParamsInvalidateSubtree
+     8,351    0.7   27/327      4,312   3,252       2.6  .main           ndsFtrLeanMatCorners.constprop.0
+     7,013    0.6  327/327      4,644   2,016       3.5  .itcm           memset
+     6,834    0.6  327/327      5,936     914       7.5  .itcm           memcpy
+     6,803    0.6   81/327      1,801   3,946       1.7  .main           ndsShieldPoseUnpackScript
+     6,743    0.6  327/327      2,488   4,671       1.4  .itcm           ndsStageMPAdjustFloorLoopWallSweep
+     6,713    0.6  327/327      4,665   1,507       4.5  .itcm           ftDisplayMainDrawDefault
+     6,627    0.6  203/327      4,057     792       8.4  .main           battleship_ftMainSetStatus
+     6,371    0.6  197/327      4,822   1,174       5.4  .main           ndsFtPoseBindEntry
+     5,680    0.5   27/327      2,288     997       5.7  .main           ndsFtrLeanMatRun.constprop.0
+     5,409    0.5  327/327      1,664   2,830       1.9  .main           gcParseDObjAnimJoint
+     5,374    0.5  327/327      2,148   2,058       2.6  .itcm           sqrtf
+     4,473    0.4  115/327      2,210   1,410       3.2  .main           ndsFtrLeanEvent
+     4,430    0.4  327/327      2,363   1,324       3.3  .itcm           ftParamUpdateAnimKeys
+     4,299    0.4  327/327          0   3,897       1.1  .itcm           __aeabi_fdiv (+1 alias)
+     4,239    0.4   27/327      2,271     472       9.0  .main           ndsFtrLeanMaterialize
+     4,228    0.4   54/327      1,692   2,082       2.0  .main           ndsRendererValidateNativeFighterOwner
+     4,148    0.4  327/327      2,039   1,073       3.9  .main           gcParseMObjMatAnimJoint
+     4,033    0.4  314/327      1,552     635       6.4  .main           ndsRendererSubmitParticleQuad
+     3,965    0.3  327/327      1,920   1,418       2.8  .main           ndsRelocFindLoadedFileContaining
+     3,864    0.3  327/327      1,906     911       4.2  .main           ndsRendererAdapterBuildNativeMaterialSnapshot
+     3,722    0.3  327/327      1,493     854       4.4  .main           ndsLbParticleDrawTexturesOnHotStack
+     3,695    0.3   84/327      1,493   1,261       2.9  .main           ndsRendererSubmitNativeImpactWave
+     3,611    0.3  259/327      1,708   1,126       3.2  .main           gmCollisionGetFighterPartsWorldPosition
+     3,577    0.3  155/327      1,623     752       4.8  .main           ndsAudioFgmPlayAtPan
+     3,558    0.3  189/327      1,242   1,444       2.5  .main           func_ovl2_800ED490
+     3,516    0.3  327/327      1,364   1,135       3.1  .main           ndsStageMPSweepFloorLoopSweep
+     3,501    0.3  198/327      2,676     447       7.8  .main           ndsR2AnimCacheFind
+     3,451    0.3  298/327      1,032   1,253       2.8  .main           gmCollisionTransformMatrixAll
+     3,201    0.3  327/327      1,244   2,029       1.6  .itcm           mpCollisionGetFCCommonFloor
+     3,154    0.3  327/327      1,965   1,161       2.7  .itcm           ndsFtPoseUpdate
+     3,142    0.3  327/327      1,650     848       3.7  .main           ndsFtrLeanRun
+     3,037    0.3   91/327      1,010     986       3.1  .main           ndsRendererSubmitWhispyNativeQuad
+     2,913    0.3  198/327      1,416     774       3.8  .main           lbCommonAddFighterPartsFigatree
+     2,909    0.3   38/327        629   1,751       1.7  .main           syInterpGetQuartSum
+     2,900    0.3  146/327        418   1,710       1.7  .main           ndsP2HbVec
+     2,843    0.2  327/327        524   2,265       1.3  .itcm           ndsFtrLeanKernelCompose
+     2,836    0.2  172/327      1,354     866       3.3  .main           ndsNativeItemWave1Emit
+     2,734    0.2  261/327      1,465     305       9.0  .main           ndsStageGCDrawAllLoopRecordDObjDraw
+     2,733    0.2  276/327      1,895     295       9.3  .main           ndsRendererAdapterPrepareInitialMatrices
+     2,701    0.2  327/327      1,628     292       9.2  .main           ndsRendererAdapterBuildPersistentStageWorldMatrix.constprop.0
+     2,692    0.2   27/327      1,024     510       5.3  .main           ndsRendererNativeApplyStateDelta
+     2,638    0.2  254/327      1,340     215      12.3  .main           ndsRendererAdapterTryNativeEntryEffect
+     2,562    0.2  133/327        953   1,168       2.2  .main           ndsAObjEvent32NormalizeScript
+     2,554    0.2  198/327      1,213   1,096       2.3  .main           ndsRelocResolvePointerFromFileBase
+     2,511    0.2  327/327        617     746       3.4  .main           battleship_ftMainSearchHitFighter
+     2,477    0.2   87/327      1,499      56      43.9  .main           ndsRendererSubmitNativeEntryEffect
+     2,443    0.2  219/327      1,125   1,357       1.8  .itcm           ndsRendererAdapterMaterialAnimHash
+     2,395    0.2  326/327        915   1,282       1.9  .main           ndsR2FtAnimRecipQ30
+     2,373    0.2  327/327      1,881     209      11.3  .main           ndsRendererAdapterGetFrameCameraMatrices
+     2,329    0.2  327/327          0     842       2.8  .itcm           armDCacheFlush
+     2,322    0.2  327/327      1,375     363       6.4  .main           ndsAudioFgmUpdate
+     2,217    0.2   27/327      1,072     304       7.3  .main           ndsFtrLeanMatShade.constprop.0
+     2,202    0.2   81/327        581   1,424       1.5  .main           ndsShieldPoseRefreshBaseRow
+     2,157    0.2  327/327        666   1,333       1.6  .itcm           ndsStageCollisionLoopGeometryReady
+     2,154    0.2  327/327      1,214     852       2.5  .itcm           ndsRendererMtxMul20p12
+     2,145    0.2   19/327        929     737       2.9  .main           ndsRendererSubmitNativeVisualEffect
+     2,087    0.2   27/327        994   1,032       2.0  .main           ndsFtrLeanLearnVariant
+     2,071    0.2  271/327      1,397   1,043       2.0  .main           ndsFighterDisplayContractSelectDL
+     2,046    0.2  198/327      1,283     413       4.9  .main           ndsLBCommonGetTreeDObjNextFromRoot
+     2,018    0.2  281/327      1,362     518       3.9  .text.hot.draw  ndsRendererSyncTextureTile
+     2,012    0.2  327/327          0   1,546       1.3  .itcm           __aeabi_f2iz (+1 alias)
+     2,010    0.2  285/327        698     623       3.2  .text.hot.draw  ndsRendererMtxMulAffine20p12
+     1,964    0.2  280/327        963     472       4.2  .main           ndsRendererRecordSetTile
+     1,962    0.2  327/327        918     907       2.2  .itcm           ftGetStruct
+     1,947    0.2  327/327      1,115     359       5.4  .main           ndsFtrLeanPacketPatch
+     1,931    0.2  100/327        442   1,246       1.6  .main           ndsFtrLeanBuildJoints
+     1,913    0.2  198/327        864     178      10.7  .main           lbRelocGetForceExternHeapFile
+     1,910    0.2   64/327      1,411     435       4.4  .main           ndsFighterRendererInvalidateMaterialCachesForSlot
+     1,905    0.2  327/327        569     960       2.0  .main           memcmp
+     1,862    0.2   25/327        763     806       2.3  .main           ndsPreviewFileOffset
+     1,821    0.2  327/327        955     556       3.3  .main           ndsWhispyAOTStructFuncRunLean.isra.0
+     1,813    0.2  327/327          0   1,547       1.2  .itcm           __aeabi_fcmpeq
+     1,786    0.2   30/327        378     986       1.8  .main           ndsRendererHardwareTextureIdentOf
+     1,769    0.2  322/327      1,078     422       4.2  .main           ndsRelocGetFileData
+     1,754    0.2  327/327        543     543       3.2  .main           ndsBaseGcPlayDObjAnimJoint
+     1,735    0.2  327/327        898     197       8.8  .main           ndsRendererAdapterApplyMvpRecalc
+     1,721    0.2  327/327        460      46      37.1  .text.hot       battleship_ftMainProcUpdateInterrupt
+     1,710    0.1   27/327      1,011     725       2.4  .main           ndsFtrLeanPack
+     1,702    0.1  327/327        610   1,017       1.7  .itcm           ndsMPLineExtentSweepRejects
+     1,694    0.1  327/327          0     619       2.7  .itcm           armDCacheInvalidate
+     1,691    0.1  273/327        506   1,011       1.7  .main           ndsFtrLeanPreambleHash
+     1,689    0.1  317/327        682     264       6.4  .main           lbParticleUpdateStruct.part.0
