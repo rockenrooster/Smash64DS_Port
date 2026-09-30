@@ -11328,6 +11328,11 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
 
         ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
         sNdsRendererHardwareBoundTextureName = 0u;
+        /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
+         * names too, or a later glBindTexture of the name it still holds returns
+         * without writing the registers and draws with this packet's texture. */
+        glGlobalData.activeTexture = 0;
+        glGlobalData.activePalette = 0;
         sNdsRendererHardwareActiveTextureEntry = NULL;
         sNdsR2GxLastProjection = NULL;
         sNdsRendererHardwareMatrixMode =
@@ -14857,6 +14862,11 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
 
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareBoundTextureName = 0u;
+    /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
+     * names too, or a later glBindTexture of the name it still holds returns
+     * without writing the registers and draws with this packet's texture. */
+    glGlobalData.activeTexture = 0;
+    glGlobalData.activePalette = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsR2GxLastProjection = NULL;
     sNdsRendererHardwareMatrixMode =

@@ -363,6 +363,11 @@ static void ndsStageGxFlush(void)
     gNdsP2StageProgDmas++;
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareBoundTextureName = 0u;
+    /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
+     * names too, or a later glBindTexture of the name it still holds returns
+     * without writing the registers and draws with this packet's texture. */
+    glGlobalData.activeTexture = 0;
+    glGlobalData.activePalette = 0;
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsR2GxLastProjection = NULL;
     sNdsRendererHardwareMatrixLoaded = FALSE;
