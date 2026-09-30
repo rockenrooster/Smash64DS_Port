@@ -993,6 +993,13 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   +5..16K, ARM7 queueing), a two-queue ring. Dream Land P99 +53K is the
   event-32 ledger ForgetRange (~150K) landing on a heavier frame: owed.
   Receipt `2026-09-30_p2-2p8-clip-prefetch`.
+- **09-30 the event-32 ledger forgets a range by leaving holes, BANKED**
+  (replay identical): ForgetRange's ~4 real removals a match each compacted
+  the ledger and rebuilt the 8,192-slot index (~150-200K). A removed entry now
+  leaves a NULL command and an index tombstone; holes compact only when an
+  append would not fit. Lab P95 -1.4..-2.8K on six stages, Dream Land P99
+  -38K; gate flat. Refuted: swap-remove with backward-shift deletion (slower).
+  Receipt `2026-09-30_p2-2p8-ledger-holes`.
 
 ## 7. Found along the way
 

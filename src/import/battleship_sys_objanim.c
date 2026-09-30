@@ -1097,6 +1097,29 @@ static u32 sNdsAObjEvent32NormalizedLimit;
 static u32 sNdsAObjEvent32NormalizedHashSlots;
 static u32 sNdsEvent32InterpDescFixedCount;
 
+/* A RANGE FORGET THAT LEAVES HOLES (P2-2p8, 2026-09-30).
+ *
+ * ForgetRange compacted the ledger in order and rebuilt the whole index
+ * (8,192 slots cleared, every entry re-hashed) whenever it removed anything:
+ * ~150-200K ticks for a retired file's few hundred commands, about four times
+ * a match, landing on whichever load reuses the heap (a 1.5M Dream Land frame,
+ * Samus's second entry clip). Removing entries one by one with linear
+ * probing's backward-shift deletion was slower still (the index is dense
+ * around a file's addresses). Now a removed entry leaves a HOLE: its ledger
+ * command becomes NULL and its index slot a TOMBSTONE that lookups probe past
+ * and inserts reuse. Every live entry keeps its index and its slot, so every
+ * lookup returns what it returned before. Holes are compacted out (with the
+ * one rebuild) only when an append would not fit, and tombstones are
+ * rebuilt away once they fill a quarter of the index. Same-ROM A/B word
+ * gNdsAObjEvent32ForgetHoles (0 = compact and rebuild at every forget). */
+#define NDS_AOBJ_EVENT32_TOMB 0xffffu
+__attribute__((used, section(".data"))) volatile u32 gNdsAObjEvent32ForgetHoles = 1u;
+__attribute__((used)) volatile u32 gNdsAObjEvent32ForgetHoleRemovals;
+__attribute__((used)) volatile u32 gNdsAObjEvent32ForgetHoleRebuilds;
+__attribute__((used)) volatile u32 gNdsAObjEvent32LedgerCompactions;
+static u32 sNdsAObjEvent32Holes;
+static u32 sNdsAObjEvent32Tombs;
+
 /* Ledger entries per 4 KiB page of main RAM. ForgetRange runs at every fighter
  * motion load over a range (the figatree heap) whose AObj16 commands never
  * enter this ledger; with these counts it skips its whole-ledger scan when no
@@ -1484,6 +1507,8 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
     }
     memset(sNdsAObjEvent32NormalizedHash, 0, (size_t)hash_bytes);
     sNdsAObjEvent32NormalizedCount = 0u;
+    sNdsAObjEvent32Holes = 0u;
+    sNdsAObjEvent32Tombs = 0u;
     ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
     sNdsEvent32InterpDescFixedCount = 0u;
@@ -1576,8 +1601,14 @@ static void ndsAObjEvent32IndexNormalized(u32 index)
     for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
          probes++)
     {
-        if (sNdsAObjEvent32NormalizedHash[slot] == 0u)
+        const u32 entry = sNdsAObjEvent32NormalizedHash[slot];
+
+        if ((entry == 0u) || (entry == NDS_AOBJ_EVENT32_TOMB))
         {
+            if (entry == NDS_AOBJ_EVENT32_TOMB)
+            {
+                sNdsAObjEvent32Tombs--;
+            }
             sNdsAObjEvent32NormalizedHash[slot] = (u16)(index + 1u);
             gNdsAObjEvent32HashInsertProbeCount += probes + 1u;
             return;
@@ -1608,10 +1639,17 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
     {
         sNdsAObjEvent32NormalizedHash[i] = 0u;
     }
+    sNdsAObjEvent32Tombs = 0u;
     for (i = 0u; i < sNdsAObjEvent32NormalizedCount; i++)
     {
-        u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[i].command);
+        u32 slot;
         u32 probes;
+
+        if (sNdsAObjEvent32Normalized[i].command == NULL)
+        {
+            continue;
+        }
+        slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[i].command);
 
         for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
              probes++)
@@ -1632,6 +1670,58 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
             gNdsAObjEvent32HashOverflowCount++;
         }
     }
+}
+
+/* The index slot naming ledger entry `index`; the slot count when absent. */
+static u32 ndsAObjEvent32IndexSlotOf(u32 index)
+{
+    const u32 mask = sNdsAObjEvent32NormalizedHashSlots - 1u;
+    u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[index].command);
+    u32 probes;
+
+    for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots; probes++)
+    {
+        const u32 entry = sNdsAObjEvent32NormalizedHash[slot];
+
+        if (entry == 0u)
+        {
+            break;
+        }
+        if (entry == index + 1u)
+        {
+            return slot;
+        }
+        slot = (slot + 1u) & mask;
+    }
+    return sNdsAObjEvent32NormalizedHashSlots;
+}
+
+/* Drop the holes (every live entry moves down, in order) and rebuild. */
+static void ndsAObjEvent32CompactLedger(void)
+{
+    u32 read_index;
+    u32 write_index = 0u;
+
+    for (read_index = 0u; read_index < sNdsAObjEvent32NormalizedCount;
+         read_index++)
+    {
+        if (sNdsAObjEvent32Normalized[read_index].command == NULL)
+        {
+            continue;
+        }
+        if (write_index != read_index)
+        {
+            sNdsAObjEvent32Normalized[write_index] =
+                sNdsAObjEvent32Normalized[read_index];
+            sNdsAObjEvent32NormalizedSig[write_index] =
+                sNdsAObjEvent32NormalizedSig[read_index];
+        }
+        write_index++;
+    }
+    sNdsAObjEvent32NormalizedCount = write_index;
+    sNdsAObjEvent32Holes = 0u;
+    ndsAObjEvent32RebuildNormalizedIndex();
+    gNdsAObjEvent32LedgerCompactions++;
 }
 
 /* Sector Z Arwing flight-path descriptors (asset 0x99, MiscDataBank153).
@@ -1690,6 +1780,9 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
     u32 edge_lo[2];
     u32 edge_hi[2];
     u32 side;
+    const sb32 holes = ((gNdsAObjEvent32ForgetHoles != 0u) &&
+                        (sNdsAObjEvent32NormalizedHash != NULL)) ? TRUE : FALSE;
+    sb32 rebuild = FALSE;
 
     if ((base == NULL) || (size == 0u))
     {
@@ -1737,12 +1830,39 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
             u32 block;
             u32 edge;
 
+            if (command == 0u)
+            {
+                /* A hole: the ordered pass drops it with the rest. */
+                continue;
+            }
             if ((command >= range_start) && (command < range_end))
             {
                 ndsAObjEvent32PageAdd((const void *)command, -1);
+                if (holes != FALSE)
+                {
+                    const u32 slot = ndsAObjEvent32IndexSlotOf(read_index);
+
+                    if (slot < sNdsAObjEvent32NormalizedHashSlots)
+                    {
+                        sNdsAObjEvent32NormalizedHash[slot] =
+                            NDS_AOBJ_EVENT32_TOMB;
+                        sNdsAObjEvent32Tombs++;
+                    }
+                    else
+                    {
+                        rebuild = TRUE;
+                    }
+                    sNdsAObjEvent32Normalized[read_index].command = NULL;
+                    sNdsAObjEvent32Holes++;
+                    gNdsAObjEvent32ForgetHoleRemovals++;
+                }
                 continue;
             }
-            if (write_index != read_index)
+            if (holes != FALSE)
+            {
+                /* Kept in place: nothing moves. */
+            }
+            else if (write_index != read_index)
             {
                 sNdsAObjEvent32Normalized[write_index] =
                     sNdsAObjEvent32Normalized[read_index];
@@ -1783,9 +1903,19 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
             }
         }
     }
-    if (write_index != sNdsAObjEvent32NormalizedCount)
+    if (holes != FALSE)
+    {
+        if ((rebuild != FALSE) ||
+            (sNdsAObjEvent32Tombs > (sNdsAObjEvent32NormalizedHashSlots >> 2)))
+        {
+            gNdsAObjEvent32ForgetHoleRebuilds++;
+            ndsAObjEvent32RebuildNormalizedIndex();
+        }
+    }
+    else if (write_index != sNdsAObjEvent32NormalizedCount)
     {
         sNdsAObjEvent32NormalizedCount = write_index;
+        sNdsAObjEvent32Holes = 0u;
         ndsAObjEvent32RebuildNormalizedIndex();
     }
 
@@ -2070,7 +2200,8 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
             gNdsAObjEvent32HashMissCount++;
             break;
         }
-        if (sNdsAObjEvent32Normalized[entry - 1u].command == command)
+        if ((entry != NDS_AOBJ_EVENT32_TOMB) &&
+            (sNdsAObjEvent32Normalized[entry - 1u].command == command))
         {
             gNdsAObjEvent32HashHitCount++;
             found = (s32)(entry - 1u);
@@ -2460,6 +2591,12 @@ static sb32 ndsAObjEvent32NormalizeScript(
         gNdsAObjEvent32NormalizeFailCount++;
         return FALSE;
     }
+    if (((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) >
+         sNdsAObjEvent32NormalizedLimit) &&
+        (sNdsAObjEvent32Holes != 0u))
+    {
+        ndsAObjEvent32CompactLedger();
+    }
     if ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) >
         sNdsAObjEvent32NormalizedLimit)
     {
@@ -2525,6 +2662,8 @@ void ndsAObjEvent32ResetNormalizedScripts(void)
     sNdsAObjEvent32NormalizedLimit = 0u;
     sNdsAObjEvent32NormalizedHashSlots = 0u;
     sNdsAObjEvent32NormalizedCount = 0u;
+    sNdsAObjEvent32Holes = 0u;
+    sNdsAObjEvent32Tombs = 0u;
     ndsAObjEvent32PageReset();
     sNdsAObjEvent32PlanCount = 0u;
     /* Discarded with the ledger it shadows, in the same breath. */
