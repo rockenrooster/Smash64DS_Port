@@ -17033,6 +17033,18 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     file = ndsBattleShipLoadCSSSelectedFigatree(file_id, heap);
     if (file != NULL)
     {
+        /* The heap now holds the compiled Selected table, so neither the
+         * zero-copy pin nor the authoritative result of the clip it held
+         * before may outlive this load: ftMainSetStatus resolves fp->figatree
+         * through that record, and a stale one handed the CSS preview the
+         * previous clip (Pikachu and Ness contorted after selection, the
+         * selection intro cut short; owner playtest r55, 2026-09-30). */
+#if NDS_R2_ANIM_CACHE && NDS_R2_ANIM_ZERO_COPY
+        ndsR2AnimPinsDropHeap(heap);
+#endif
+#if NDS_R2_BATTLEPACK
+        ndsRelocRecordAuthoritativeForceFile(heap, file);
+#endif
         return file;
     }
 

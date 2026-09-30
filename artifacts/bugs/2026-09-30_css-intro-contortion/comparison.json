@@ -1,0 +1,259 @@
+{
+  "candidate": "r55-seam-repair",
+  "reference": "r54-long-trace",
+  "selected_samples_compared": 99,
+  "state_errors": [],
+  "endpoints": {
+    "9": {
+      "last_advancing": {
+        "type": "CSS_STATE",
+        "tic": 360,
+        "kind": 9,
+        "selected": 1,
+        "cursor": "196,110",
+        "status": 65537,
+        "motion": 1,
+        "goframe": 116.0,
+        "ftframe": 0.0,
+        "heap": 37416512,
+        "tree": 37416512,
+        "heapj0": 35153840,
+        "treej0": 35153840
+      },
+      "first_finished": {
+        "type": "CSS_STATE",
+        "tic": 364,
+        "kind": 9,
+        "selected": 1,
+        "cursor": "196,110",
+        "status": 65537,
+        "motion": 1,
+        "goframe": 0.0,
+        "ftframe": 0.0,
+        "heap": 37416512,
+        "tree": 37416512,
+        "heapj0": 35153840,
+        "treej0": 35153840
+      },
+      "last": {
+        "type": "CSS_STATE",
+        "tic": 460,
+        "kind": 9,
+        "selected": 1,
+        "cursor": "196,110",
+        "status": 65537,
+        "motion": 1,
+        "goframe": 0.0,
+        "ftframe": 0.0,
+        "heap": 37416512,
+        "tree": 37416512,
+        "heapj0": 35153840,
+        "treej0": 35153840
+      }
+    },
+    "11": {
+      "last_advancing": {
+        "type": "CSS_STATE",
+        "tic": 644,
+        "kind": 11,
+        "selected": 1,
+        "cursor": "36,110",
+        "status": 65538,
+        "motion": 2,
+        "goframe": 118.0,
+        "ftframe": 0.0,
+        "heap": 37416512,
+        "tree": 37416512,
+        "heapj0": 35143480,
+        "treej0": 35143480
+      },
+      "first_finished": {
+        "type": "CSS_STATE",
+        "tic": 648,
+        "kind": 11,
+        "selected": 1,
+        "cursor": "36,110",
+        "status": 65538,
+        "motion": 2,
+        "goframe": 0.0,
+        "ftframe": 0.0,
+        "heap": 37416512,
+        "tree": 37416512,
+        "heapj0": 35143480,
+        "treej0": 35143480
+      },
+      "last": {
+        "type": "CSS_STATE",
+        "tic": 700,
+        "kind": 11,
+        "selected": 1,
+        "cursor": "36,110",
+        "status": 65538,
+        "motion": 2,
+        "goframe": 0.0,
+        "ftframe": 0.0,
+        "heap": 37416512,
+        "tree": 37416512,
+        "heapj0": 35143480,
+        "treej0": 35143480
+      }
+    }
+  },
+  "pixel_comparisons": [
+    {
+      "anchor": "pikachu-240",
+      "size_a": [
+        416,
+        664
+      ],
+      "size_b": [
+        416,
+        664
+      ],
+      "crop": [
+        38,
+        235,
+        122,
+        300
+      ],
+      "different_pixels": 8,
+      "pixels": 5460,
+      "difference_bounds": [
+        40,
+        47,
+        45,
+        50
+      ]
+    },
+    {
+      "anchor": "pikachu-280",
+      "size_a": [
+        416,
+        664
+      ],
+      "size_b": [
+        416,
+        664
+      ],
+      "crop": [
+        38,
+        235,
+        122,
+        300
+      ],
+      "different_pixels": 0,
+      "pixels": 5460,
+      "difference_bounds": null
+    },
+    {
+      "anchor": "pikachu-440",
+      "size_a": [
+        416,
+        664
+      ],
+      "size_b": [
+        416,
+        664
+      ],
+      "crop": [
+        38,
+        235,
+        122,
+        300
+      ],
+      "different_pixels": 6,
+      "pixels": 5460,
+      "difference_bounds": [
+        31,
+        13,
+        37,
+        46
+      ]
+    },
+    {
+      "anchor": "ness-540",
+      "size_a": [
+        416,
+        664
+      ],
+      "size_b": [
+        416,
+        664
+      ],
+      "crop": [
+        38,
+        235,
+        122,
+        300
+      ],
+      "different_pixels": 58,
+      "pixels": 5460,
+      "difference_bounds": [
+        17,
+        7,
+        37,
+        36
+      ]
+    },
+    {
+      "anchor": "ness-580",
+      "size_a": [
+        416,
+        664
+      ],
+      "size_b": [
+        416,
+        664
+      ],
+      "crop": [
+        38,
+        235,
+        122,
+        300
+      ],
+      "different_pixels": 4,
+      "pixels": 5460,
+      "difference_bounds": [
+        33,
+        19,
+        40,
+        35
+      ]
+    },
+    {
+      "anchor": "ness-680",
+      "size_a": [
+        416,
+        664
+      ],
+      "size_b": [
+        416,
+        664
+      ],
+      "crop": [
+        38,
+        235,
+        122,
+        300
+      ],
+      "different_pixels": 23,
+      "pixels": 5460,
+      "difference_bounds": [
+        39,
+        19,
+        56,
+        57
+      ]
+    }
+  ],
+  "unified_diff_validation": {
+    "old_count": 5,
+    "new_count": 12,
+    "header_counts": [
+      5,
+      12
+    ],
+    "context_occurrences": 1,
+    "counts_correct": true
+  }
+}
