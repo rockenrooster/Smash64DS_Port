@@ -96,5 +96,18 @@ uncommitted scene-transition change), full match, items on
 (Refusals in parentheses are the old margin's.) Sector Z's STG bucket is back
 to baseline: default roster 262.4M -> 265.6M over the match (m1: 312.0M),
 the Kirby/Fox/Yoshi/Pikachu roster 261.1M -> 261.0M. Every heap low-water
-stays above the 25,600 floor. The lab sweep carries no replay digest columns;
-the gate ROM's digest is checked separately.
+stays above the 25,600 floor.
+
+Replay digest, `x0_*` against `m2_*` (`compare-replay-digest.py --sequence
+--resync 4` over the rows CSVs): identical over all 1,972 samples on the nine
+arms that refused nothing at the old margin; the two that did diverge (Dream
+Land Fox/Pikachu/Ness/Samus from sample 688, Zebes Pikachu x4 from 1,926), as
+they should: a refused script left joints without their animation, and the
+gameplay followed the detached joints.
+
+Gate ROM (default Dream Land roster, items on), two runs each: control
+`build-p2p8-b5` (built before the 09-30 collision, Results pacing and margin commits)
+P50 916,096 / P95 1,233,856; `build-p2p8-b6` (all three, plus the uncommitted
+scene-transition change) P50 915,776 / P95 1,233,408; digest
+identical over 1,972 samples in every pairing; 0 native failures; heap
+low-water 332,204 -> 329,644.
