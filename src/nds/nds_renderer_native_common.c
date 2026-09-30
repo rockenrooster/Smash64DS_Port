@@ -5405,6 +5405,112 @@ static void __attribute__((noinline)) ndsRendererEntryEffectLoadLitMatrices(
     ndsRendererHardwareFighterSetMatrixMode(GL_MODELVIEW);
 }
 
+/* P2-2p8 (2026-09-30): FoxSpecial3 roots replayed by DMA.
+ *
+ * A root the state cache replays writes the same GX commands on every draw:
+ * per group the bound texture's TEXIMAGE_PARAM and PLTT_BASE, DIF_AMB,
+ * POLYGON_ATTR, BEGIN, a COLOR, and the corners' NORMAL / TEX_COORD /
+ * VERTEX16 from const tables. On Sector Z that loop is the Arwing's eight
+ * roots on ~45% of a match's frames, and it ran at 16-90 cycles an
+ * instruction: scattered table reads missing the 4 KB data cache, and GX FIFO
+ * writes stalling on the geometry engine. The first replayed draw of a root
+ * now also records those commands as a packed list (the fighter packet's
+ * format); later draws send it by DMA, which reads memory without the CPU and
+ * feeds the FIFO at the engine's own pace. The one per-draw input inside the
+ * loop -- the lit-matrix load, whose light vector and position matrix come
+ * from this draw's modelview -- stays a CPU write between two DMA segments,
+ * at its place in the command order.
+ *
+ * Texture state is recorded as the state the polygons take, not as the calls
+ * that set it: after the batch begins, libnds's bound object holds the merged
+ * TEXIMAGE_PARAM the loop wrote and its palette's base (0 without one). What
+ * those words bake stays true while the key holds: the state cache replayed
+ * this draw, each group binds the same texture and ramp names, and since the
+ * record no scene texture reset, entry texture prepare or release, or ramp
+ * palette bake has happened. A ramp-eligible texture is drawn only through a
+ * ramp (ndsRendererEntryRampSlotEligible), so no group reads a palette another
+ * group assigned. The registers outside the FIFO that the loop's batches leave
+ * behind -- texturing on, the last threshold group's alpha reference, fog,
+ * alpha test off -- are set on the CPU. The arena exists only on Sector Z
+ * (ndsGRSectorSetupInitAll); elsewhere Fox's entry Arwing is one fly-by.
+ * Same-ROM A/B word gNdsEntryEffectPacket (0 = the group loop every draw). */
+volatile u32 gNdsEntryEffectPacket __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsEntryEffectPacketRecords;
+__attribute__((used)) volatile u32 gNdsEntryEffectPacketReplays;
+__attribute__((used)) volatile u32 gNdsEntryEffectPacketFaults;
+__attribute__((used)) volatile u32 gNdsEntryEffectPacketArenaWords;
+
+#if NDS_FIGHTER_PACKET_LIVE && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+#define NDS_ENTRY_PACKET_LIVE 1
+#else
+#define NDS_ENTRY_PACKET_LIVE 0
+#endif
+
+#if NDS_ENTRY_PACKET_LIVE
+#define NDS_ENTRY_PACKET_COUNTERS 13u
+
+typedef struct NDSEntryEffectPacket
+{
+    u32 *words;
+    u32 capacity;
+    u32 count;
+    u32 split;              /* words sent before the lit-matrix load */
+    u32 valid;
+    u32 disabled;           /* a record faulted: the loop draws it this scene */
+    u32 lit;                /* the loop loads the lit matrices */
+    u32 batches;            /* groups drawn */
+    u32 scene_generation;
+    u32 ramp_bakes;
+    u32 texture_prepares;
+    u32 texture_releases;
+    u32 alpha_valid;
+    u32 alpha_othermode_l;  /* the last drawn group with a threshold compare */
+    u32 last_othermode_l;   /* the last drawn group */
+    /* What the loop adds to the stats and the owner's counters
+     * (ndsEntryPacketCounters). */
+    u32 delta[NDS_ENTRY_PACKET_COUNTERS];
+} NDSEntryEffectPacket;
+
+typedef struct NDSEntryEffectPacketRecorder
+{
+    NDSEntryEffectPacket *packet;
+    u32 cmd_word;
+    u32 cmd_slot;
+    u32 fault;
+    u32 before[NDS_ENTRY_PACKET_COUNTERS];
+} NDSEntryEffectPacketRecorder;
+
+static NDSEntryEffectPacket sNdsEntryEffectPackets[NDS_ENTRY_STATE_ROOTS];
+/* Indexed like sNdsEntryEffectStateGroups: the names each group's words bake. */
+static u32 sNdsEntryEffectPacketNames[NDS_ENTRY_STATE_GROUPS];
+static u32 sNdsEntryEffectPacketRamps[NDS_ENTRY_STATE_GROUPS];
+static u32 sNdsEntryEffectPacketArenaGeneration;
+
+static NDSEntryEffectPacket *ndsRendererEntryEffectPacketFor(u32 slot);
+static u32 ndsRendererEntryEffectPacketCurrent(
+    const NDSEntryEffectPacket *packet, const NDSEntryEffectRoot *root,
+    u32 first, const u32 *ramp_names);
+static void ndsRendererEntryEffectPacketBegin(
+    NDSEntryEffectPacketRecorder *rec, NDSEntryEffectPacket *packet,
+    const NDSRendererStats *stats);
+static void ndsEntryPacketCmd(NDSEntryEffectPacketRecorder *rec, u32 opcode,
+                              u32 param_count, u32 p0, u32 p1);
+static void ndsEntryPacketSplit(NDSEntryEffectPacketRecorder *rec);
+static void ndsEntryPacketRecordGroup(NDSEntryEffectPacketRecorder *rec,
+                                      const NDSEntryEffectGroup *group,
+                                      const NDSEntryEffectGroupState *state,
+                                      u32 textured, u32 texture_name,
+                                      u32 hw_lit);
+static void ndsRendererEntryEffectPacketEnd(
+    NDSEntryEffectPacketRecorder *rec, const NDSEntryEffectRoot *root,
+    u32 first, const u32 *ramp_names, const NDSRendererStats *stats);
+static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
+    const NDSEntryEffectPacket *packet, NDSRendererStats *stats,
+    const NDSRendererMatrix20p12 *modelview,
+    NDSRendererHardwareLightDirection *direction, u32 direction_ready);
+#endif
+
 /* DS-native landed entry-prop immutable presentation owner.
  *
  * Source ownership deliberately stops at the DObj: BattleShip continues to
@@ -6209,6 +6315,16 @@ s32 ndsRendererSubmitNativeEntryEffect(
     if (state_replayed != FALSE)
     {
         u32 ramp_names[NDS_ENTRY_STATE_GROUPS];
+#if NDS_ENTRY_PACKET_LIVE
+        const u32 packet_first =
+            (u32)(state_groups - &sNdsEntryEffectStateGroups[0]);
+        NDSEntryEffectPacket *packet = NULL;
+        NDSEntryEffectPacketRecorder packet_rec;
+        u32 packet_recording = FALSE;
+        u32 packet_sent = FALSE;
+#else
+        const u32 packet_sent = FALSE;
+#endif
 
         /* Ramp palettes first: a lookup may upload, and a failed one leaves
          * the ordinary loop a clean start. */
@@ -6238,8 +6354,39 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 }
             }
         }
+#if NDS_ENTRY_PACKET_LIVE
+        if (state_replayed != FALSE)
+        {
+            packet = ndsRendererEntryEffectPacketFor(
+                root_index - NDS_ENTRY_EFFECT_FOX_ROOT_FIRST);
+        }
+        if (packet != NULL)
+        {
+            if (ndsRendererEntryEffectPacketCurrent(
+                    packet, root, packet_first, ramp_names) != 0u)
+            {
+                u32 bit = 1u << (root_index & 31u);
+
+                ndsRendererEntryEffectPacketReplay(
+                    packet, stats, config->initial_modelview,
+                    &light_direction_by_root[root_index],
+                    light_direction_valid_mask[root_index >> 5] & bit);
+                if (packet->lit != 0u)
+                {
+                    light_direction_valid_mask[root_index >> 5] |= bit;
+                }
+                packet_sent = TRUE;
+            }
+            else
+            {
+                ndsRendererEntryEffectPacketBegin(&packet_rec, packet, stats);
+                packet_recording = TRUE;
+            }
+        }
+#endif
         for (group_offset = 0u;
-             (state_replayed != FALSE) && (group_offset < root->group_count);
+             (state_replayed != FALSE) && (packet_sent == FALSE) &&
+             (group_offset < root->group_count);
              group_offset++)
         {
             const NDSEntryEffectGroup *group =
@@ -6292,11 +6439,24 @@ s32 ndsRendererSubmitNativeEntryEffect(
                         config->initial_modelview,
                         &light_direction_by_root[root_index]);
                     hw_light_loaded = TRUE;
+#if NDS_ENTRY_PACKET_LIVE
+                    if (packet_recording != FALSE)
+                    {
+                        ndsEntryPacketSplit(&packet_rec);
+                    }
+#endif
                 }
                 if (state->dif_amb != last_dif_amb)
                 {
                     ndsRendererHardwareWriteDiffuseAmbient(state->dif_amb);
                     last_dif_amb = state->dif_amb;
+#if NDS_ENTRY_PACKET_LIVE
+                    if (packet_recording != FALSE)
+                    {
+                        ndsEntryPacketCmd(&packet_rec, FIFO_DIFFUSE_AMBIENT, 1u,
+                                          state->dif_amb, 0u);
+                    }
+#endif
                 }
                 gNdsEntryEffectHwLitGroups++;
             }
@@ -6309,6 +6469,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 stats, textured, texture_name, state->poly_fmt,
                 sNdsRendererHardwareMatrixMode,
                 sNdsRendererHardwareMatrixGeneration);
+#if NDS_ENTRY_PACKET_LIVE
+            if (packet_recording != FALSE)
+            {
+                ndsEntryPacketRecordGroup(&packet_rec, group, state, textured,
+                                          texture_name, hw_lit);
+            }
+#endif
             if (hw_lit == FALSE)
             {
                 glColor(0x7fffu);
@@ -6325,6 +6492,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
             stats->hardware_zbuffer_triangle_count += group->triangle_count;
             ndsRendererHardwareEndBatch();
         }
+#if NDS_ENTRY_PACKET_LIVE
+        if (packet_recording != FALSE)
+        {
+            ndsRendererEntryEffectPacketEnd(&packet_rec, root, packet_first,
+                                            ramp_names, stats);
+        }
+#endif
         if (state_replayed != FALSE)
         {
             gNdsEntryEffectStateReplays++;
@@ -7166,6 +7340,391 @@ static void __attribute__((noinline)) ndsRendererEntryEffectEmitFastCorners(
         ndsRendererEntryEffectFastCornerLoop(first, count, 0u, 0u);
     }
 }
+
+/* The Arwing packet's bodies; described above ndsRendererSubmitNativeEntryEffect. */
+#if NDS_ENTRY_PACKET_LIVE
+/* The most words a root's record takes: per group TEX_FORMAT, PAL_FORMAT,
+ * DIF_AMB, POLY_FORMAT, BEGIN and COLOR; per corner NORMAL, TEX_COORD and
+ * VERTEX16's two words; a header per four commands, and one more for the
+ * header the split closes early. Rounded to 32 bytes. */
+static u32 ndsRendererEntryEffectPacketBound(u32 slot)
+{
+    const NDSEntryEffectRoot *root =
+        &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_FOX_ROOT_FIRST + slot];
+    u32 params = 0u;
+    u32 commands = 0u;
+    u32 g;
+
+    for (g = 0u; g < root->group_count; g++)
+    {
+        u32 corners = (u32)sNdsEntryEffectGroups[
+            (u32)root->first_group + g].triangle_count * 3u;
+
+        params += 6u + corners * 4u;
+        commands += 6u + corners * 3u;
+    }
+    return (params + (commands + 3u) / 4u + 1u + 7u) & ~7u;
+}
+#endif
+
+u32 ndsRendererEntryEffectPacketArenaWords(void)
+{
+#if NDS_ENTRY_PACKET_LIVE
+    u32 words = 0u;
+    u32 slot;
+
+    for (slot = 0u; slot < NDS_ENTRY_STATE_ROOTS; slot++)
+    {
+        words += ndsRendererEntryEffectPacketBound(slot);
+    }
+    return words;
+#else
+    return 0u;
+#endif
+}
+
+/* Sector Z's stage setup hands over an arena from the scene heap, or NULL; it
+ * is used while the heap generation it was set in lasts. */
+void ndsRendererEntryEffectPacketArenaSet(u32 *arena, u32 words)
+{
+#if NDS_ENTRY_PACKET_LIVE
+    u32 used = 0u;
+    u32 slot;
+
+    memset(sNdsEntryEffectPackets, 0, sizeof(sNdsEntryEffectPackets));
+    sNdsEntryEffectPacketArenaGeneration = gNdsTaskmanHeapGeneration;
+    gNdsEntryEffectPacketArenaWords = (arena != NULL) ? words : 0u;
+    if (arena == NULL)
+    {
+        return;
+    }
+    for (slot = 0u; slot < NDS_ENTRY_STATE_ROOTS; slot++)
+    {
+        u32 bound = ndsRendererEntryEffectPacketBound(slot);
+
+        if (used + bound > words)
+        {
+            break;
+        }
+        sNdsEntryEffectPackets[slot].words = &arena[used];
+        sNdsEntryEffectPackets[slot].capacity = bound;
+        used += bound;
+    }
+#else
+    (void)arena;
+    (void)words;
+#endif
+}
+
+#if NDS_ENTRY_PACKET_LIVE
+static NDSEntryEffectPacket *ndsRendererEntryEffectPacketFor(u32 slot)
+{
+    NDSEntryEffectPacket *packet;
+
+    if ((gNdsEntryEffectPacket == 0u) ||
+        (sNdsEntryEffectPacketArenaGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return NULL;
+    }
+    packet = &sNdsEntryEffectPackets[slot];
+    return ((packet->words != NULL) && (packet->disabled == 0u)) ?
+        packet : NULL;
+}
+
+static u32 ndsRendererEntryEffectPacketCurrent(
+    const NDSEntryEffectPacket *packet, const NDSEntryEffectRoot *root,
+    u32 first, const u32 *ramp_names)
+{
+    u32 g;
+
+    if ((packet->valid == 0u) ||
+        (packet->scene_generation != gNdsRendererSceneTextureVramResetCount) ||
+        (packet->ramp_bakes != gNdsEntryRampPaletteBakes) ||
+        (packet->texture_prepares != gNdsEntryEffectNativeTexturePrepareCount) ||
+        (packet->texture_releases != gNdsEntryEffectStartupTextureReleaseCount))
+    {
+        return 0u;
+    }
+    for (g = 0u; g < root->group_count; g++)
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[(u32)root->first_group + g];
+        u32 name = (group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) ?
+            sNdsRendererEntryEffectTextureName[group->texture_slot] : 0u;
+
+        if ((sNdsEntryEffectPacketNames[first + g] != name) ||
+            (sNdsEntryEffectPacketRamps[first + g] != ramp_names[g]))
+        {
+            return 0u;
+        }
+    }
+    return 1u;
+}
+
+static void ndsEntryPacketCounters(const NDSRendererStats *stats, u32 *out)
+{
+    out[0] = stats->triangle_count;
+    out[1] = stats->transformed_triangle_count;
+    out[2] = stats->hardware_triangle_count;
+    out[3] = stats->hardware_vertex_count;
+    out[4] = stats->hardware_zbuffer_triangle_count;
+    out[5] = stats->hardware_texture_ready_count;
+    out[6] = stats->hardware_texture_bind_count;
+    out[7] = gNdsEntryEffectFastCornerGroups;
+    out[8] = gNdsEntryEffectHwLitGroups;
+    out[9] = gNdsEntryEffectCpuLitGroups;
+    out[10] = gNdsEntryEffectNativeAlphaSkipCount;
+    out[11] = gNdsEntryEffectNativeTextureBindCount;
+    out[12] = gNdsEntryRampPaletteDraws;
+}
+
+/* One packed command: a header word carries four opcodes and their parameters
+ * follow in order. Every command recorded here takes a parameter, so no header
+ * needs the zero-parameter dummy word (ndsFighterPacketCmd). */
+static void ndsEntryPacketCmd(NDSEntryEffectPacketRecorder *rec, u32 opcode,
+                              u32 param_count, u32 p0, u32 p1)
+{
+    NDSEntryEffectPacket *packet = rec->packet;
+
+    if (packet->count + param_count + 1u > packet->capacity)
+    {
+        rec->fault = 1u;
+        return;
+    }
+    if (rec->cmd_slot >= 4u)
+    {
+        rec->cmd_word = packet->count++;
+        packet->words[rec->cmd_word] = 0u;
+        rec->cmd_slot = 0u;
+    }
+    packet->words[rec->cmd_word] |= opcode << (rec->cmd_slot * 8u);
+    rec->cmd_slot++;
+    packet->words[packet->count++] = p0;
+    if (param_count > 1u)
+    {
+        packet->words[packet->count++] = p1;
+    }
+}
+
+/* The CPU's lit-matrix load goes here: the words so far end on a whole
+ * command (a header's unused slots are NOPs), and the next opens a header. */
+static void ndsEntryPacketSplit(NDSEntryEffectPacketRecorder *rec)
+{
+    rec->cmd_slot = 4u;
+    rec->packet->split = rec->packet->count;
+    rec->packet->lit = 1u;
+}
+
+static void ndsRendererEntryEffectPacketBegin(
+    NDSEntryEffectPacketRecorder *rec, NDSEntryEffectPacket *packet,
+    const NDSRendererStats *stats)
+{
+    rec->packet = packet;
+    rec->cmd_word = 0u;
+    rec->cmd_slot = 4u;
+    rec->fault = 0u;
+    packet->valid = 0u;
+    packet->count = 0u;
+    packet->split = 0u;
+    packet->lit = 0u;
+    packet->batches = 0u;
+    packet->alpha_valid = 0u;
+    ndsEntryPacketCounters(stats, rec->before);
+}
+
+/* After the group's batch began: its texture state, POLYGON_ATTR, BEGIN, the
+ * unlit COLOR and ndsRendererEntryEffectFastCornerLoop's words, each packed
+ * from the expression libnds's own inline writes. */
+static void ndsEntryPacketRecordGroup(NDSEntryEffectPacketRecorder *rec,
+                                      const NDSEntryEffectGroup *group,
+                                      const NDSEntryEffectGroupState *state,
+                                      u32 textured, u32 texture_name,
+                                      u32 hw_lit)
+{
+    NDSEntryEffectPacket *packet = rec->packet;
+    const u32 shift = 12u - NDS_RENDERER_HW_WORLD_UNIT_SHIFT;
+    u32 expected = (textured != 0u) ? texture_name :
+        (u32)sNdsRendererHardwareNoTextureName;
+    u32 first = (u32)group->first_vertex;
+    u32 end = first + (u32)group->triangle_count * 3u;
+    int palette = -1;
+    u32 i;
+
+    if ((expected == 0u) || ((u32)glGlobalData.activeTexture != expected))
+    {
+        rec->fault = 1u;
+        return;
+    }
+    ndsEntryPacketCmd(rec, FIFO_TEX_FORMAT, 1u, glGetTexParameter(), 0u);
+    glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT,
+                                &palette);
+    ndsEntryPacketCmd(rec, FIFO_PAL_FORMAT, 1u,
+                      (palette >= 0) ? (u32)palette : 0u, 0u);
+    ndsEntryPacketCmd(rec, FIFO_POLY_FORMAT, 1u, state->poly_fmt, 0u);
+    ndsEntryPacketCmd(rec, FIFO_BEGIN, 1u, (u32)GL_TRIANGLE, 0u);
+    if (hw_lit == 0u)
+    {
+        ndsEntryPacketCmd(rec, FIFO_COLOR, 1u, 0x7fffu, 0u);
+    }
+    for (i = first; i < end; i++)
+    {
+        const NDSEntryEffectPosition *position =
+            &sNdsEntryEffectPositions[sNdsEntryEffectCornerPosition[i]];
+        v16 x = (v16)((s32)position->x << shift);
+        v16 y = (v16)((s32)position->y << shift);
+        v16 z = (v16)((s32)position->z << shift);
+
+        if (hw_lit != 0u)
+        {
+            ndsEntryPacketCmd(rec, FIFO_NORMAL, 1u,
+                sNdsEntryEffectNormalWords[sNdsEntryEffectCornerColor[i]], 0u);
+        }
+        if (textured != 0u)
+        {
+            t16 u = (t16)sNdsEntryEffectS[sNdsEntryEffectCornerS[i]];
+            t16 v = (t16)sNdsEntryEffectT[sNdsEntryEffectCornerT[i]];
+
+            ndsEntryPacketCmd(rec, FIFO_TEX_COORD, 1u,
+                              (u32)TEXTURE_PACK(u, v), 0u);
+        }
+        ndsEntryPacketCmd(rec, FIFO_VERTEX16, 2u,
+                          (u32)((y << 16) | (x & 0xFFFF)), (u32)(s32)z);
+    }
+    packet->batches++;
+    packet->last_othermode_l = state->othermode_l;
+    if ((state->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) ==
+        NDS_RENDERER_ALPHA_COMPARE_THRESHOLD)
+    {
+        packet->alpha_valid = 1u;
+        packet->alpha_othermode_l = state->othermode_l;
+    }
+}
+
+static void ndsRendererEntryEffectPacketEnd(
+    NDSEntryEffectPacketRecorder *rec, const NDSEntryEffectRoot *root,
+    u32 first, const u32 *ramp_names, const NDSRendererStats *stats)
+{
+    NDSEntryEffectPacket *packet = rec->packet;
+    u32 after[NDS_ENTRY_PACKET_COUNTERS];
+    u32 g;
+
+    if (rec->fault != 0u)
+    {
+        /* Nothing a fault depends on changes within the scene. */
+        packet->disabled = 1u;
+        gNdsEntryEffectPacketFaults++;
+        return;
+    }
+    ndsEntryPacketCounters(stats, after);
+    for (g = 0u; g < NDS_ENTRY_PACKET_COUNTERS; g++)
+    {
+        packet->delta[g] = after[g] - rec->before[g];
+    }
+    for (g = 0u; g < root->group_count; g++)
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[(u32)root->first_group + g];
+
+        sNdsEntryEffectPacketNames[first + g] =
+            (group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) ?
+            sNdsRendererEntryEffectTextureName[group->texture_slot] : 0u;
+        sNdsEntryEffectPacketRamps[first + g] = ramp_names[g];
+    }
+    packet->scene_generation = gNdsRendererSceneTextureVramResetCount;
+    packet->ramp_bakes = gNdsEntryRampPaletteBakes;
+    packet->texture_prepares = gNdsEntryEffectNativeTexturePrepareCount;
+    packet->texture_releases = gNdsEntryEffectStartupTextureReleaseCount;
+    DC_FlushRange(packet->words, packet->count * 4u);
+    packet->valid = 1u;
+    gNdsEntryEffectPacketRecords++;
+}
+
+static void ndsEntryPacketDmaStart(const u32 *words, u32 count)
+{
+    DMA_SRC(0) = (u32)(uintptr_t)words;
+    DMA_DEST(0) = (u32)(uintptr_t)&GFX_FIFO;
+    DMA_CR(0) = DMA_FIFO | count;
+}
+
+static void ndsRendererForgetLibndsTexture(void);
+
+/* The recorded loop, sent. `direction` is this root's light direction,
+ * prepared here (while the first segment drains) unless `direction_ready`. */
+static void __attribute__((noinline)) ndsRendererEntryEffectPacketReplay(
+    const NDSEntryEffectPacket *packet, NDSRendererStats *stats,
+    const NDSRendererMatrix20p12 *modelview,
+    NDSRendererHardwareLightDirection *direction, u32 direction_ready)
+{
+    const u32 *delta = packet->delta;
+
+    ndsRendererHardwareEndBatch();
+    while ((DMA_CR(0) & DMA_BUSY) != 0u)
+    {
+    }
+    if (packet->lit == 0u)
+    {
+        if (packet->count != 0u)
+        {
+            ndsEntryPacketDmaStart(packet->words, packet->count);
+        }
+    }
+    else
+    {
+        if (packet->split != 0u)
+        {
+            ndsEntryPacketDmaStart(packet->words, packet->split);
+        }
+        if (direction_ready == 0u)
+        {
+            ndsRendererHardwarePrepareLitDirection(stats, modelview, direction);
+        }
+        while ((DMA_CR(0) & DMA_BUSY) != 0u)
+        {
+        }
+        ndsRendererEntryEffectLoadLitMatrices(modelview, direction);
+        if (packet->count > packet->split)
+        {
+            ndsEntryPacketDmaStart(packet->words + packet->split,
+                                   packet->count - packet->split);
+        }
+    }
+    /* Not waited here: the next FIFO writer waits (P2-2p3). */
+    sNdsFighterPacketDmaPending = 1u;
+    /* The words moved the engine's texture and polygon state behind every
+     * tracker's back. */
+    ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
+    sNdsRendererHardwareBoundTextureName = 0u;
+    ndsRendererForgetLibndsTexture();
+    sNdsRendererHardwareActiveTextureEntry = NULL;
+    if (packet->batches != 0u)
+    {
+        if (packet->alpha_valid != 0u)
+        {
+            stats->othermode_l = packet->alpha_othermode_l;
+            ndsRendererHardwareApplyAlphaTest(stats);
+        }
+        stats->othermode_l = packet->last_othermode_l;
+        glEnable(GL_TEXTURE_2D);
+        ndsRendererHardwareApplyFog(stats);
+        glDisable(GL_ALPHA_TEST);
+        sNdsRendererHardwareSubmitted = TRUE;
+    }
+    stats->triangle_count += delta[0];
+    stats->transformed_triangle_count += delta[1];
+    stats->hardware_triangle_count += delta[2];
+    stats->hardware_vertex_count += delta[3];
+    stats->hardware_zbuffer_triangle_count += delta[4];
+    stats->hardware_texture_ready_count += delta[5];
+    stats->hardware_texture_bind_count += delta[6];
+    gNdsEntryEffectFastCornerGroups += delta[7];
+    gNdsEntryEffectHwLitGroups += delta[8];
+    gNdsEntryEffectCpuLitGroups += delta[9];
+    gNdsEntryEffectNativeAlphaSkipCount += delta[10];
+    gNdsEntryEffectNativeTextureBindCount += delta[11];
+    gNdsEntryRampPaletteDraws += delta[12];
+    gNdsEntryEffectPacketReplays++;
+}
+#endif
 
 static void ndsRendererNativeBuildDenseShadeWords(
     const NDSNativeDenseVertex *vertices, u32 vertex_count,

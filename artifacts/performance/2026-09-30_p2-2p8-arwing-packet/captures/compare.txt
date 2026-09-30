@@ -1,0 +1,8 @@
+Same-ROM captures, packet 1 vs 0 (build-p2p8-lab-cw, owner roster, Sector Z).
+Window 416x664: title bar rows 0-50, DS top screen rows 52-351, bottom screen 352+.
+The title (host FPS) and the tick-HUD 'FPS/UP' line are timing text and differ by design.
+frame 450: DS top screen differing pixels=0; title=33; HUD FPS line=0; rest of bottom screen=0
+frame 600: DS top screen differing pixels=0; title=72; HUD FPS line=174; rest of bottom screen=0
+frame 800: DS top screen differing pixels=0; title=42; HUD FPS line=126; rest of bottom screen=0
+frame 1500: DS top screen differing pixels=0; title=75; HUD FPS line=79; rest of bottom screen=0
+frame 1700: DS top screen differing pixels=0; title=44; HUD FPS line=125; rest of bottom screen=0
