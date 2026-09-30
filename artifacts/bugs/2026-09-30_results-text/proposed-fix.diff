@@ -1,0 +1,256 @@
+--- a/src/nds/nds_results_oam.c
++++ b/src/nds/nds_results_oam.c
+@@ -2,6 +2,7 @@
+ #include <stdint.h>
+ #include <string.h>
+ 
++#include <nds/arm9/cache.h>
+ #include <nds/arm9/sprite.h>
+ #include <nds/arm9/video.h>
+ #include <nds/dma.h>
+@@ -27,6 +28,9 @@
+ #define NDS_RESULTS_CELL_SLOTS 48u
+ #define NDS_RESULTS_PALETTE_BANKS 16u
+ #define NDS_RESULTS_MAX_TILES 4u
++/* WallpaperTint, WallpaperTint2 and Tint each emit four viewport cells.
++ * Higher OAM indices keep their bitmap pixels behind indexed foreground. */
++#define NDS_RESULTS_TINT_OBJECTS (3u * 4u)
+ #define NDS_RESULTS_FILL_CELL_WIDTH 32u
+ #define NDS_RESULTS_FILL_CELL_HEIGHT 8u
+ #define NDS_RESULTS_TINT_CELL_WIDTH 64u
+@@ -90,6 +94,8 @@
+     u8 env_r;
+     u8 env_g;
+     u8 env_b;
++    u8 is_tint_bank;
++    u8 tint_alpha;
+ } NDSResultsOamPalette;
+ 
+ static const NDSResultsOamShape sNdsResultsShapes[] =
+@@ -111,13 +117,16 @@
+ 
+ static NDSResultsOamCell sNdsResultsCells[NDS_RESULTS_CELL_SLOTS];
+ static NDSResultsOamPalette sNdsResultsPalettes[NDS_RESULTS_PALETTE_BANKS];
++static u16 sNdsResultsPalettePixels[NDS_RESULTS_PALETTE_BANKS * 16u];
++static u8 sNdsResultsTintBank[NDS_RESULTS_PALETTE_BANKS];
+ static u32 sNdsResultsIndexedScratch[(64u * 64u / 2u) / sizeof(u32)];
+ static u16 *sNdsResultsTintGfx;
+ static u16 *sNdsResultsFillGfx[NDS_RESULTS_FILL_CELL_HEIGHT];
+ static u32 sNdsResultsCellCount;
+ static u32 sNdsResultsPaletteCount;
+ static u32 sNdsResultsVramCursor;
+-static s32 sNdsResultsNextOamId = 127;
++static s32 sNdsResultsNextOamId = 127 - NDS_RESULTS_TINT_OBJECTS;
++static s32 sNdsResultsNextTintOamId = 127;
+ static s32 sNdsResultsPreviousNextOamId = 127;
+ static u32 sNdsResultsFrameNeedsCommit;
+ static u32 sNdsResultsActive;
+@@ -223,7 +232,8 @@
+     {
+         const NDSResultsOamPalette *palette = &sNdsResultsPalettes[bank];
+ 
+-        if ((palette->prim_r == prim_r) && (palette->prim_g == prim_g) &&
++        if ((palette->is_tint_bank == 0u) &&
++            (palette->prim_r == prim_r) && (palette->prim_g == prim_g) &&
+             (palette->prim_b == prim_b) && (palette->env_r == env_r) &&
+             (palette->env_g == env_g) && (palette->env_b == env_b))
+         {
+@@ -231,6 +241,34 @@
+         }
+     }
+     return -1;
++}
++
++static void ndsResultsWritePalette(u32 bank)
++{
++    const NDSResultsOamPalette *palette = &sNdsResultsPalettes[bank];
++    u32 index;
++
++    sNdsResultsPalettePixels[bank * 16u] = 0u;
++    for (index = 1u; index < 16u; index++)
++    {
++        u32 step = index - 1u;
++        u32 inv = 14u - step;
++        u8 red = (u8)(((u32)palette->env_r * inv + (u32)palette->prim_r * step + 7u) / 14u);
++        u8 green = (u8)(((u32)palette->env_g * inv + (u32)palette->prim_g * step + 7u) / 14u);
++        u8 blue = (u8)(((u32)palette->env_b * inv + (u32)palette->prim_b * step + 7u) / 14u);
++
++        if (palette->is_tint_bank != 0u)
++        {
++            u32 remaining = 255u - palette->tint_alpha;
++
++            red = (u8)(((u32)red * remaining + 127u) / 255u);
++            green = (u8)(((u32)green * remaining + 127u) / 255u);
++            blue = (u8)(((u32)blue * remaining + 127u) / 255u);
++        }
++
++        sNdsResultsPalettePixels[(bank * 16u) + index] =
++            ndsResultsRgb15(red, green, blue);
++    }
+ }
+ 
+ static s32 ndsResultsAllocPalette(u8 prim_r, u8 prim_g, u8 prim_b,
+@@ -239,7 +277,6 @@
+     s32 existing = ndsResultsFindPalette(prim_r, prim_g, prim_b,
+                                          env_r, env_g, env_b);
+     u32 bank;
+-    u32 index;
+ 
+     if (existing >= 0)
+     {
+@@ -257,18 +294,10 @@
+     sNdsResultsPalettes[bank].env_r = env_r;
+     sNdsResultsPalettes[bank].env_g = env_g;
+     sNdsResultsPalettes[bank].env_b = env_b;
+-    SPRITE_PALETTE[bank * 16u] = 0u;
+-    for (index = 1u; index < 16u; index++)
+-    {
+-        u32 step = index - 1u;
+-        u32 inv = 14u - step;
+-        u8 red = (u8)(((u32)env_r * inv + (u32)prim_r * step + 7u) / 14u);
+-        u8 green = (u8)(((u32)env_g * inv + (u32)prim_g * step + 7u) / 14u);
+-        u8 blue = (u8)(((u32)env_b * inv + (u32)prim_b * step + 7u) / 14u);
+-
+-        SPRITE_PALETTE[(bank * 16u) + index] =
+-            ndsResultsRgb15(red, green, blue);
+-    }
++    sNdsResultsPalettes[bank].is_tint_bank = 0u;
++    sNdsResultsPalettes[bank].tint_alpha = 0u;
++    sNdsResultsTintBank[bank] = 0xffu;
++    ndsResultsWritePalette(bank);
+     gNdsResultsOamPaletteCount = sNdsResultsPaletteCount;
+     return (s32)bank;
+ }
+@@ -1240,10 +1269,13 @@
+     }
+     memset(sNdsResultsCells, 0, sizeof(sNdsResultsCells));
+     memset(sNdsResultsPalettes, 0, sizeof(sNdsResultsPalettes));
++    memset(sNdsResultsPalettePixels, 0, sizeof(sNdsResultsPalettePixels));
++    memset(sNdsResultsTintBank, 0xff, sizeof(sNdsResultsTintBank));
+     sNdsResultsCellCount = 0u;
+     sNdsResultsPaletteCount = 0u;
+     sNdsResultsVramCursor = 0u;
+-    sNdsResultsNextOamId = 127;
++    sNdsResultsNextOamId = 127 - NDS_RESULTS_TINT_OBJECTS;
++    sNdsResultsNextTintOamId = 127;
+     sNdsResultsPreviousNextOamId = 127;
+     sNdsResultsFrameNeedsCommit = 0u;
+     sNdsResultsTintGfx = NULL;
+@@ -1307,7 +1339,8 @@
+     sNdsResultsCellCount = 0u;
+     sNdsResultsPaletteCount = 0u;
+     sNdsResultsVramCursor = 0u;
+-    sNdsResultsNextOamId = 127;
++    sNdsResultsNextOamId = 127 - NDS_RESULTS_TINT_OBJECTS;
++    sNdsResultsNextTintOamId = 127;
+     sNdsResultsPreviousNextOamId = 127;
+     sNdsResultsFrameNeedsCommit = 0u;
+     sNdsResultsTintGfx = NULL;
+@@ -1339,7 +1372,8 @@
+         oamClear(&oamMain, first_previous, 128 - first_previous);
+         sNdsResultsFrameNeedsCommit = 1u;
+     }
+-    sNdsResultsNextOamId = 127;
++    sNdsResultsNextOamId = 127 - NDS_RESULTS_TINT_OBJECTS;
++    sNdsResultsNextTintOamId = 127;
+     sNdsResultsPreviousNextOamId = 127;
+     gNdsResultsOamBeginFrameCount++;
+ #endif
+@@ -1446,6 +1480,56 @@
+ #endif
+ }
+ 
++static s32 ndsResultsTintEarlierIndexedObjs(u32 source_alpha)
++{
++    s32 id;
++    u32 alpha = (source_alpha > 255u) ? 255u : source_alpha;
++
++    if (alpha == 0u) return 1;
++
++    /* The source tint follows these sprites. DS OBJ composition cannot
++     * blend OBJ over OBJ. Earlier indexed sprites use a tinted copy;
++     * later headers/tables retain the ordinary source-colour bank.
++     * The two wallpaper fades precede indexed sprites; only the ordinary
++     * Results tint reaches a nonempty foreground prefix. */
++    for (id = sNdsResultsNextOamId + 1;
++         id < (s32)(128u - NDS_RESULTS_TINT_OBJECTS); id++)
++    {
++        SpriteEntry *entry = &oamMain.oamMemory[id];
++
++        if ((entry->blendMode != OBJMODE_BITMAP) &&
++            (entry->colorMode == OBJCOLOR_16))
++        {
++            u32 bank = entry->palette;
++            u32 tinted = sNdsResultsTintBank[bank];
++            NDSResultsOamPalette *palette;
++
++            if (tinted == 0xffu)
++            {
++                if (sNdsResultsPaletteCount >= NDS_RESULTS_PALETTE_BANKS)
++                {
++                    gNdsResultsOamFailurePaletteFull++;
++                    return 0;
++                }
++                tinted = sNdsResultsPaletteCount++;
++                sNdsResultsTintBank[bank] = (u8)tinted;
++                sNdsResultsPalettes[tinted] = sNdsResultsPalettes[bank];
++                sNdsResultsPalettes[tinted].is_tint_bank = 1u;
++                sNdsResultsPalettes[tinted].tint_alpha = 0u;
++                gNdsResultsOamPaletteCount = sNdsResultsPaletteCount;
++            }
++            palette = &sNdsResultsPalettes[tinted];
++            if (palette->tint_alpha != alpha)
++            {
++                palette->tint_alpha = (u8)alpha;
++                ndsResultsWritePalette(tinted);
++            }
++            entry->palette = (u8)tinted;
++        }
++    }
++    return 1;
++}
++
+ s32 ndsResultsOamEmitTintPlane(u32 source_alpha)
+ {
+ #if NDS_RENDERER_HW_TRIANGLES
+@@ -1462,19 +1546,25 @@
+         ndsResultsRecordFillFailure();
+         return 0;
+     }
+-    if ((sNdsResultsTintGfx == NULL) || (sNdsResultsNextOamId < 3))
++    if ((sNdsResultsTintGfx == NULL) ||
++        (sNdsResultsNextTintOamId < (s32)(128u - NDS_RESULTS_TINT_OBJECTS + 3u)))
+     {
+         gNdsResultsOamFailureOamFull++;
+         ndsResultsRecordFillFailure();
+         return 0;
+     }
++    if (ndsResultsTintEarlierIndexedObjs(source_alpha) == 0)
++    {
++        ndsResultsRecordFillFailure();
++        return 0;
++    }
+     alpha = ndsResultsBitmapAlpha(source_alpha);
+     for (i = 0u; i < 4u; i++)
+     {
+-        oamSet(&oamMain, sNdsResultsNextOamId, positions[i][0], positions[i][1],
++        oamSet(&oamMain, sNdsResultsNextTintOamId, positions[i][0], positions[i][1],
+                0, (int)alpha, SpriteSize_64x64, SpriteColorFormat_Bmp,
+                sNdsResultsTintGfx, 0, true, false, false, false, false);
+-        sNdsResultsNextOamId--;
++        sNdsResultsNextTintOamId--;
+         gNdsResultsOamEmitCount++;
+     }
+     sNdsResultsFrameNeedsCommit = 1u;
+@@ -1582,6 +1672,11 @@
+     {
+         return;
+     }
++    /* Commit palette and OAM together in VBlank; a mid-frame palette write
++     * would recolour the previous frame while its OBJ entries still show. */
++    DC_FlushRange(sNdsResultsPalettePixels, sizeof(sNdsResultsPalettePixels));
++    dmaCopyHalfWords(3, sNdsResultsPalettePixels, (void *)SPRITE_PALETTE,
++                     sizeof(sNdsResultsPalettePixels));
+     oamUpdate(&oamMain);
+     sNdsResultsPreviousNextOamId = sNdsResultsNextOamId;
+     sNdsResultsFrameNeedsCommit = 0u;

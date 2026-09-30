@@ -1,0 +1,24 @@
+{
+  "counter_iterations": [
+    120,
+    400
+  ],
+  "samples": 281,
+  "histogram_exact": {
+    "1": 225,
+    "2": 50,
+    "3": 2,
+    "4": 1,
+    "6": 1,
+    "10": 1,
+    "18": 1
+  },
+  "total_vblanks": 369,
+  "p50": 1,
+  "p95": 2,
+  "max": 18,
+  "mean_vblanks": 1.313167259786477,
+  "nominal_fps": 45.6910569105691,
+  "arm9_work_ticks": null,
+  "acceptance_qualified": false
+}

@@ -31,6 +31,22 @@
 #define NDS_RESULTS_FILL_CELL_HEIGHT 8u
 #define NDS_RESULTS_TINT_CELL_WIDTH 64u
 #define NDS_RESULTS_TINT_CELL_HEIGHT 64u
+/* 2026-09-30 (owner, r57: the winner / NO CONTEST text vanished). The source's
+ * black tints (mnvsresults.c:1643-1695: WallpaperTint, WallpaperTint2 and the
+ * regular Tint at tic 180, tic 30 for No Contest) alpha-blend over everything
+ * drawn before them, text included. The DS flattens every OBJ into one layer
+ * before blending, so an OBJ cannot blend over another OBJ: a tint cell that
+ * took a lower OAM index than the text replaced the glyphs with the darkened
+ * BG under them. The tints now take the twelve highest (lowest-priority)
+ * entries, four viewport cells each, so they only ever blend with the BGs and
+ * 3D beneath; the ordinary SObjs and fill rectangles allocate below them. What
+ * the tint did to earlier OBJs moves to their palettes: each indexed OBJ
+ * emitted before a tint in source order takes a copy of its bank with the
+ * tint's black blended in (ndsResultsTintEarlierIndexedObjs). Investigation:
+ * artifacts/bugs/2026-09-30_results-text. */
+#define NDS_RESULTS_TINT_OBJECTS (3u * 4u)
+#define NDS_RESULTS_FOREGROUND_TOP ((s32)(127u - NDS_RESULTS_TINT_OBJECTS))
+#define NDS_RESULTS_NO_TINT_BANK 0xffu
 
 _Static_assert(NDS_RESULTS_OBJ_GFX_ALIGNMENT == 128u,
                "Results OBJ gfx alignment drifted");
@@ -90,6 +106,8 @@ typedef struct NDSResultsOamPalette
     u8 env_r;
     u8 env_g;
     u8 env_b;
+    u8 is_tint_bank;    /* a tinted copy of another bank */
+    u8 tint_alpha;      /* the source alpha of the black blended into it */
 } NDSResultsOamPalette;
 
 static const NDSResultsOamShape sNdsResultsShapes[] =
@@ -111,13 +129,20 @@ static const NDSResultsOamShape sNdsResultsShapes[] =
 
 static NDSResultsOamCell sNdsResultsCells[NDS_RESULTS_CELL_SLOTS];
 static NDSResultsOamPalette sNdsResultsPalettes[NDS_RESULTS_PALETTE_BANKS];
+/* The banks' colours, staged: they reach OBJ palette RAM with the OAM in
+ * VBlank (ndsResultsOamCommit), so a tint step never recolours the frame on
+ * screen. u32 for whole-word copies. */
+static u32 sNdsResultsPaletteWords[NDS_RESULTS_PALETTE_BANKS * 8u];
+static u8 sNdsResultsTintBank[NDS_RESULTS_PALETTE_BANKS];
+static u32 sNdsResultsPaletteDirty;
 static u32 sNdsResultsIndexedScratch[(64u * 64u / 2u) / sizeof(u32)];
 static u16 *sNdsResultsTintGfx;
 static u16 *sNdsResultsFillGfx[NDS_RESULTS_FILL_CELL_HEIGHT];
 static u32 sNdsResultsCellCount;
 static u32 sNdsResultsPaletteCount;
 static u32 sNdsResultsVramCursor;
-static s32 sNdsResultsNextOamId = 127;
+static s32 sNdsResultsNextOamId = NDS_RESULTS_FOREGROUND_TOP;
+static s32 sNdsResultsNextTintOamId = 127;
 static s32 sNdsResultsPreviousNextOamId = 127;
 static u32 sNdsResultsFrameNeedsCommit;
 static u32 sNdsResultsActive;
@@ -155,6 +180,10 @@ volatile u32 gNdsResultsOamFailureCellSlotsFull;
 volatile u32 gNdsResultsOamFailureVramFull;
 volatile u32 gNdsResultsOamFailurePaletteFull;
 volatile u32 gNdsResultsOamFailureOamFull;
+/* OBJs a tint found already on a tinted bank: a second tint over the same
+ * sprites, which the source schedule never produces (the wallpaper tints
+ * precede every indexed OBJ). Nonzero means the palette plan needs stacking. */
+volatile u32 gNdsResultsOamTintStacked;
 
 static s32 ndsResultsRangeValid(const void *base, size_t size,
                                 const void *ptr, size_t bytes)
@@ -223,7 +252,8 @@ static s32 ndsResultsFindPalette(u8 prim_r, u8 prim_g, u8 prim_b,
     {
         const NDSResultsOamPalette *palette = &sNdsResultsPalettes[bank];
 
-        if ((palette->prim_r == prim_r) && (palette->prim_g == prim_g) &&
+        if ((palette->is_tint_bank == 0u) &&
+            (palette->prim_r == prim_r) && (palette->prim_g == prim_g) &&
             (palette->prim_b == prim_b) && (palette->env_r == env_r) &&
             (palette->env_g == env_g) && (palette->env_b == env_b))
         {
@@ -233,13 +263,41 @@ static s32 ndsResultsFindPalette(u8 prim_r, u8 prim_g, u8 prim_b,
     return -1;
 }
 
+/* The env-to-prim ramp of a bank, darkened by its tint: the source blends
+ * black at the tint's alpha over the texel, colour * (255 - alpha) / 255. */
+static void ndsResultsWritePalette(u32 bank)
+{
+    const NDSResultsOamPalette *palette = &sNdsResultsPalettes[bank];
+    u16 *colors = (u16 *)(void *)&sNdsResultsPaletteWords[bank * 8u];
+    u32 remaining = 255u - (u32)palette->tint_alpha;
+    u32 index;
+
+    colors[0] = 0u;
+    for (index = 1u; index < 16u; index++)
+    {
+        u32 step = index - 1u;
+        u32 inv = 14u - step;
+        u32 red = ((u32)palette->env_r * inv + (u32)palette->prim_r * step + 7u) / 14u;
+        u32 green = ((u32)palette->env_g * inv + (u32)palette->prim_g * step + 7u) / 14u;
+        u32 blue = ((u32)palette->env_b * inv + (u32)palette->prim_b * step + 7u) / 14u;
+
+        if (palette->is_tint_bank != 0u)
+        {
+            red = (red * remaining + 127u) / 255u;
+            green = (green * remaining + 127u) / 255u;
+            blue = (blue * remaining + 127u) / 255u;
+        }
+        colors[index] = ndsResultsRgb15((u8)red, (u8)green, (u8)blue);
+    }
+    sNdsResultsPaletteDirty = 1u;
+}
+
 static s32 ndsResultsAllocPalette(u8 prim_r, u8 prim_g, u8 prim_b,
                                   u8 env_r, u8 env_g, u8 env_b)
 {
     s32 existing = ndsResultsFindPalette(prim_r, prim_g, prim_b,
                                          env_r, env_g, env_b);
     u32 bank;
-    u32 index;
 
     if (existing >= 0)
     {
@@ -257,18 +315,10 @@ static s32 ndsResultsAllocPalette(u8 prim_r, u8 prim_g, u8 prim_b,
     sNdsResultsPalettes[bank].env_r = env_r;
     sNdsResultsPalettes[bank].env_g = env_g;
     sNdsResultsPalettes[bank].env_b = env_b;
-    SPRITE_PALETTE[bank * 16u] = 0u;
-    for (index = 1u; index < 16u; index++)
-    {
-        u32 step = index - 1u;
-        u32 inv = 14u - step;
-        u8 red = (u8)(((u32)env_r * inv + (u32)prim_r * step + 7u) / 14u);
-        u8 green = (u8)(((u32)env_g * inv + (u32)prim_g * step + 7u) / 14u);
-        u8 blue = (u8)(((u32)env_b * inv + (u32)prim_b * step + 7u) / 14u);
-
-        SPRITE_PALETTE[(bank * 16u) + index] =
-            ndsResultsRgb15(red, green, blue);
-    }
+    sNdsResultsPalettes[bank].is_tint_bank = 0u;
+    sNdsResultsPalettes[bank].tint_alpha = 0u;
+    sNdsResultsTintBank[bank] = NDS_RESULTS_NO_TINT_BANK;
+    ndsResultsWritePalette(bank);
     gNdsResultsOamPaletteCount = sNdsResultsPaletteCount;
     return (s32)bank;
 }
@@ -1240,10 +1290,15 @@ void ndsResultsOamEnter(void)
     }
     memset(sNdsResultsCells, 0, sizeof(sNdsResultsCells));
     memset(sNdsResultsPalettes, 0, sizeof(sNdsResultsPalettes));
+    memset(sNdsResultsPaletteWords, 0, sizeof(sNdsResultsPaletteWords));
+    memset(sNdsResultsTintBank, NDS_RESULTS_NO_TINT_BANK,
+           sizeof(sNdsResultsTintBank));
+    sNdsResultsPaletteDirty = 0u;
     sNdsResultsCellCount = 0u;
     sNdsResultsPaletteCount = 0u;
     sNdsResultsVramCursor = 0u;
-    sNdsResultsNextOamId = 127;
+    sNdsResultsNextOamId = NDS_RESULTS_FOREGROUND_TOP;
+    sNdsResultsNextTintOamId = 127;
     sNdsResultsPreviousNextOamId = 127;
     sNdsResultsFrameNeedsCommit = 0u;
     sNdsResultsTintGfx = NULL;
@@ -1304,10 +1359,14 @@ void ndsResultsOamExit(void)
     oamUpdate(&oamMain);
     REG_BLDCNT = sNdsResultsSavedBldCnt;
     memset(sNdsResultsCells, 0, sizeof(sNdsResultsCells));
+    memset(sNdsResultsTintBank, NDS_RESULTS_NO_TINT_BANK,
+           sizeof(sNdsResultsTintBank));
+    sNdsResultsPaletteDirty = 0u;
     sNdsResultsCellCount = 0u;
     sNdsResultsPaletteCount = 0u;
     sNdsResultsVramCursor = 0u;
-    sNdsResultsNextOamId = 127;
+    sNdsResultsNextOamId = NDS_RESULTS_FOREGROUND_TOP;
+    sNdsResultsNextTintOamId = 127;
     sNdsResultsPreviousNextOamId = 127;
     sNdsResultsFrameNeedsCommit = 0u;
     sNdsResultsTintGfx = NULL;
@@ -1333,13 +1392,16 @@ void ndsResultsOamBeginFrame(void)
     {
         return;
     }
+    /* After a commit this runs through the tint entries above the foreground
+     * range as well (the previous cursor is at most its top). */
     first_previous = sNdsResultsPreviousNextOamId + 1;
     if (first_previous < 128)
     {
         oamClear(&oamMain, first_previous, 128 - first_previous);
         sNdsResultsFrameNeedsCommit = 1u;
     }
-    sNdsResultsNextOamId = 127;
+    sNdsResultsNextOamId = NDS_RESULTS_FOREGROUND_TOP;
+    sNdsResultsNextTintOamId = 127;
     sNdsResultsPreviousNextOamId = 127;
     gNdsResultsOamBeginFrameCount++;
 #endif
@@ -1446,6 +1508,68 @@ s32 ndsResultsOamDrawGObj(struct GObj *gobj)
 #endif
 }
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* The tint's effect on the indexed OBJs emitted before it this frame (the
+ * entries between the foreground cursor and the top of the foreground range):
+ * each moves to its bank's tinted copy, made on first use and recoloured only
+ * when the alpha changes. OBJs emitted after the tint keep the source colours.
+ * Bitmap OBJs before a tint are only the tints' own cells, which live above
+ * the range. */
+static s32 ndsResultsTintEarlierIndexedObjs(u32 source_alpha)
+{
+    u32 alpha = (source_alpha > 255u) ? 255u : source_alpha;
+    s32 id;
+
+    if (alpha == 0u)
+    {
+        return 1;
+    }
+    for (id = sNdsResultsNextOamId + 1; id <= NDS_RESULTS_FOREGROUND_TOP; id++)
+    {
+        SpriteEntry *entry = &oamMain.oamMemory[id];
+        u32 bank;
+        u32 tinted;
+        NDSResultsOamPalette *palette;
+
+        if ((entry->blendMode == OBJMODE_BITMAP) ||
+            (entry->colorMode != OBJCOLOR_16))
+        {
+            continue;
+        }
+        bank = entry->palette;
+        if (sNdsResultsPalettes[bank].is_tint_bank != 0u)
+        {
+            gNdsResultsOamTintStacked++;
+            continue;
+        }
+        tinted = sNdsResultsTintBank[bank];
+        if (tinted == NDS_RESULTS_NO_TINT_BANK)
+        {
+            if (sNdsResultsPaletteCount >= NDS_RESULTS_PALETTE_BANKS)
+            {
+                gNdsResultsOamFailurePaletteFull++;
+                return 0;
+            }
+            tinted = sNdsResultsPaletteCount++;
+            sNdsResultsTintBank[bank] = (u8)tinted;
+            sNdsResultsPalettes[tinted] = sNdsResultsPalettes[bank];
+            sNdsResultsPalettes[tinted].is_tint_bank = 1u;
+            sNdsResultsPalettes[tinted].tint_alpha = 0u;
+            sNdsResultsTintBank[tinted] = NDS_RESULTS_NO_TINT_BANK;
+            gNdsResultsOamPaletteCount = sNdsResultsPaletteCount;
+        }
+        palette = &sNdsResultsPalettes[tinted];
+        if (palette->tint_alpha != alpha)
+        {
+            palette->tint_alpha = (u8)alpha;
+            ndsResultsWritePalette(tinted);
+        }
+        entry->palette = (u8)tinted;
+    }
+    return 1;
+}
+#endif
+
 s32 ndsResultsOamEmitTintPlane(u32 source_alpha)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1462,19 +1586,26 @@ s32 ndsResultsOamEmitTintPlane(u32 source_alpha)
         ndsResultsRecordFillFailure();
         return 0;
     }
-    if ((sNdsResultsTintGfx == NULL) || (sNdsResultsNextOamId < 3))
+    if ((sNdsResultsTintGfx == NULL) ||
+        (sNdsResultsNextTintOamId < NDS_RESULTS_FOREGROUND_TOP + 4))
     {
         gNdsResultsOamFailureOamFull++;
+        ndsResultsRecordFillFailure();
+        return 0;
+    }
+    if (ndsResultsTintEarlierIndexedObjs(source_alpha) == 0)
+    {
         ndsResultsRecordFillFailure();
         return 0;
     }
     alpha = ndsResultsBitmapAlpha(source_alpha);
     for (i = 0u; i < 4u; i++)
     {
-        oamSet(&oamMain, sNdsResultsNextOamId, positions[i][0], positions[i][1],
-               0, (int)alpha, SpriteSize_64x64, SpriteColorFormat_Bmp,
-               sNdsResultsTintGfx, 0, true, false, false, false, false);
-        sNdsResultsNextOamId--;
+        oamSet(&oamMain, sNdsResultsNextTintOamId, positions[i][0],
+               positions[i][1], 0, (int)alpha, SpriteSize_64x64,
+               SpriteColorFormat_Bmp, sNdsResultsTintGfx, 0, true, false,
+               false, false, false);
+        sNdsResultsNextTintOamId--;
         gNdsResultsOamEmitCount++;
     }
     sNdsResultsFrameNeedsCommit = 1u;
@@ -1578,9 +1709,24 @@ s32 ndsResultsOamEmitFillRect(s32 sx0, s32 sy0, s32 sx1, s32 sy1)
 void ndsResultsOamCommit(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    if ((sNdsResultsActive == 0u) || (sNdsResultsFrameNeedsCommit == 0u))
+    if ((sNdsResultsActive == 0u) ||
+        ((sNdsResultsFrameNeedsCommit == 0u) && (sNdsResultsPaletteDirty == 0u)))
     {
         return;
+    }
+    if (sNdsResultsPaletteDirty != 0u)
+    {
+        /* The allocated banks only, as the direct writes did: whole words
+         * (OBJ palette RAM takes no byte writes), in VBlank with the OAM. */
+        vu32 *dst = (vu32 *)(void *)SPRITE_PALETTE;
+        u32 words = sNdsResultsPaletteCount * 8u;
+        u32 i;
+
+        for (i = 0u; i < words; i++)
+        {
+            dst[i] = sNdsResultsPaletteWords[i];
+        }
+        sNdsResultsPaletteDirty = 0u;
     }
     oamUpdate(&oamMain);
     sNdsResultsPreviousNextOamId = sNdsResultsNextOamId;
