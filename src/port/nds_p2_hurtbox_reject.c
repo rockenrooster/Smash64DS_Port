@@ -233,6 +233,16 @@ typedef struct NDSP2HbDamageMemo
     int32_t off[3];
     int32_t size[3];
     u32 ok;
+    /* The world-axis box this coll's world gave it in epoch box_epoch
+     * (box_valid; cleared whenever the entry is refilled): the test's own
+     * pieces, so a re-test in the epoch runs the same arithmetic on them. */
+    u32 box_valid;
+    u32 box_epoch;
+    const FTStruct *box_fp;
+    int32_t box_center[3];
+    int32_t box_sum_abs[3];
+    int32_t box_inv_smin;
+    int64_t box_ext0[3];
 } NDSP2HbDamageMemo;
 static NDSP2HbAttackMemo sNdsP2HbAttackMemo;
 static NDSP2HbDamageMemo sNdsP2HbDamageMemo[NDS_P2_HB_DAMAGE_MEMO_SLOTS];
@@ -494,7 +504,7 @@ static const NDSP2HbAttackMemo *ndsP2HbAttackPoints(const Vec3f *pos_curr,
 }
 
 /* The damage box's offset and size in Q12; NULL when either is out of range. */
-static const NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
+static NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
 {
     NDSP2HbDamageMemo *m =
         &sNdsP2HbDamageMemo[((u32)(uintptr_t)damage >> 2) &
@@ -515,9 +525,57 @@ static const NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
         m->damage = damage;
         m->bits[0] = b0; m->bits[1] = b1; m->bits[2] = b2;
         m->bits[3] = b3; m->bits[4] = b4; m->bits[5] = b5;
+        m->box_valid = 0u;
     }
     return (m->ok != 0u) ? m : NULL;
 }
+
+/* The world-axis separation test on its pieces: ext0[c] = margin + sum_k
+ * |W[k][c]| * size_k (each term rounded up), sum_abs[c] = sum_k |W[k][c]|. */
+static inline int ndsP2HbAxisReject(const int32_t center[3],
+                                    const int64_t ext0[3],
+                                    const int32_t sum_abs[3],
+                                    int32_t inv_smin, int32_t radius,
+                                    const int32_t p0[3], const int32_t p1[3])
+{
+    u32 c;
+
+    for (c = 0u; c < 3u; c++)
+    {
+        const int32_t a = p0[c];
+        const int32_t b = p1[c];
+        const int32_t lo = (a < b) ? a : b;
+        const int32_t hi = (a < b) ? b : a;
+        int64_t rad_term;
+        int64_t ext;
+
+        /* radius * sum_abs * inv_smin, each reduction rounded up. */
+        rad_term = ((int64_t)radius * sum_abs[c] +
+                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
+                   NDS_R2_CFX_ROT_BITS;
+        rad_term = (rad_term * inv_smin +
+                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
+                   NDS_R2_CFX_ROT_BITS;
+        ext = ext0[c] + rad_term;
+        if (((int64_t)hi < (int64_t)center[c] - ext) ||
+            ((int64_t)lo > (int64_t)center[c] + ext))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* A coll is tested once per attack coll that reaches its fighter, so within an
+ * epoch most tests after the first find the joint's world cached and still
+ * paid the head, the walk, 1/s_min, the transform and the extents (4,550 of
+ * the gate's ~14,000 tests a match). The pieces the separation test reads are
+ * kept in the coll's damage memo entry for the epoch; a re-test runs the same
+ * separation test on them and goes on to the full path only when it does not
+ * separate (the local test needs the world). Same-ROM A/B word
+ * gNdsP2HbBoxCache (0 = always the full path). */
+volatile u32 gNdsP2HbBoxCache __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsP2HbBoxHits;
 
 /* 1 = the float test would certainly miss; 0 = let it decide.
  *
@@ -535,18 +593,50 @@ static const NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
 static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                f32 attack_size, const FTDamageColl *damage)
 {
+    const u32 epoch = gNdsP2HurtboxLatchEpoch;
     DObj *joint = damage->joint;
     const FTStruct *fp;
     const NDSP2HbAttackMemo *am;
-    const NDSP2HbDamageMemo *dm;
+    NDSP2HbDamageMemo *dm;
     const NDSR2CfxMtx *w;
     NDSP2HbWorld *slot;
     NDSR2CfxMtx scratch;
     int32_t center[3];
+    int32_t sum_abs[3];
+    int64_t ext0[3];
     int32_t radius;
     int32_t inv_smin;
     u32 c;
 
+    /* Every step below is a pure function of its inputs (the memos only
+     * cache), so taking the damage memo first changes no result: a failure
+     * anywhere returns 0 whichever step finds it. A box of this epoch was
+     * built only after the head below passed, and nothing the head reads
+     * (the joint, its fighter) changes within an epoch but the animlocks
+     * flag, which is read again. */
+    dm = ndsP2HbDamageBox(damage);
+    if (dm == NULL)
+    {
+        return 0;
+    }
+    if ((gNdsP2HbBoxCache != 0u) && (dm->box_valid != 0u) &&
+        (dm->box_epoch == epoch) && (dm->box_fp->is_use_animlocks == FALSE))
+    {
+        am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
+        if (am == NULL)
+        {
+            return 0;
+        }
+        if (ndsP2HbAxisReject(dm->box_center, dm->box_ext0, dm->box_sum_abs,
+                              dm->box_inv_smin, ndsR2CfxAbs32(am->radius),
+                              am->p0, am->p1) != 0)
+        {
+            gNdsP2HbBoxHits++;
+            return 1;
+        }
+        /* Not separated: the full path below repeats the test and goes on
+         * to the local test. */
+    }
     if ((joint == NULL) || (joint->parent_gobj == NULL))
     {
         return 0;
@@ -558,11 +648,6 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     }
     am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
     if (am == NULL)
-    {
-        return 0;
-    }
-    dm = ndsP2HbDamageBox(damage);
-    if (dm == NULL)
     {
         return 0;
     }
@@ -592,36 +677,36 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     for (c = 0u; c < 3u; c++)
     {
         int64_t ext = NDS_P2_HB_MARGIN_Q12;
-        int64_t sum_abs = 0;
-        int64_t rad_term;
-        const int32_t a = am->p0[c];
-        const int32_t b = am->p1[c];
-        const int32_t lo = (a < b) ? a : b;
-        const int32_t hi = (a < b) ? b : a;
+        int32_t abs_sum = 0;
         u32 k;
 
+        /* |W| <= 2^28 (the guards), so three cells sum inside an int32. */
         for (k = 0u; k < 3u; k++)
         {
             int64_t cell = ndsR2CfxAbs32(w->r[k][c]);
 
-            sum_abs += cell;
+            abs_sum += (int32_t)cell;
             ext += (cell * ndsR2CfxAbs32(dm->size[k]) +
                     (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
                    NDS_R2_CFX_ROT_BITS;
         }
-        /* radius * sum_abs * inv_smin, each reduction rounded up. */
-        rad_term = ((int64_t)radius * sum_abs +
-                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
-                   NDS_R2_CFX_ROT_BITS;
-        rad_term = (rad_term * inv_smin +
-                    (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
-                   NDS_R2_CFX_ROT_BITS;
-        ext += rad_term;
-        if (((int64_t)hi < (int64_t)center[c] - ext) ||
-            ((int64_t)lo > (int64_t)center[c] + ext))
-        {
-            return 1;
-        }
+        ext0[c] = ext;
+        sum_abs[c] = abs_sum;
+    }
+    dm->box_valid = 1u;
+    dm->box_epoch = epoch;
+    dm->box_fp = fp;
+    dm->box_inv_smin = inv_smin;
+    for (c = 0u; c < 3u; c++)
+    {
+        dm->box_center[c] = center[c];
+        dm->box_sum_abs[c] = sum_abs[c];
+        dm->box_ext0[c] = ext0[c];
+    }
+    if (ndsP2HbAxisReject(center, ext0, sum_abs, inv_smin, radius, am->p0,
+                          am->p1) != 0)
+    {
+        return 1;
     }
     if ((gNdsP2HbLocalTest != 0u) &&
         (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,

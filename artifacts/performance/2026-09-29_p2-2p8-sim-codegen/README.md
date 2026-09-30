@@ -142,3 +142,50 @@ been built before, 51% had the same TRS bits -- but a memo of the six table
 lookups keyed on the rotate bits (5,030 hits a match, `b5r0`/`b5r1`) moved
 P95 by nothing and band work by -2K (why the hits bought so little was not
 measured). Refuted and removed (it cost 2 KB of RAM).
+
+## Banked: the AObj ledger's hash, and a per-coll box for hurtbox re-tests (build `b10`)
+
+- `src/import/battleship_sys_objanim.c`: the event32 ledger's index hashed a
+  command pointer with two xor-folds, which keep adjacent words on adjacent
+  slots; a script's commands are adjacent words, so linear probing walked
+  whole scripts -- 23.6 probes a lookup and 30 an insert on the gate, at a
+  load under 20%. The multiplicative hash (top bits of the product) takes
+  1.2 and 1.1. Hits and misses are unchanged (1,057 / 3,243 a match): the
+  ledger's keys are unique, so a probe returns the same index whatever the
+  hash. Word `gNdsAObjEvent32HashMul`.
+- `src/port/nds_p2_hurtbox_reject.c`: a coll is tested once per attack coll
+  reaching its fighter, so within an epoch most tests after the first found
+  the joint's world cached and still paid the head, the walk, 1/s_min, the
+  transform and the extents. The separation test's pieces (center, extents,
+  row sums, 1/s_min) now stay in the coll's damage-memo entry for the epoch;
+  a re-test runs the same test on them (5,324 a match) and falls to the full
+  path only when it does not separate. Word `gNdsP2HbBoxCache`. +1 KB of
+  BSS (the memo array grows by exactly one D-cache way).
+
+| Run | P50 | P95 | P99 | band work |
+|---|---:|---:|---:|---:|
+| `b7h0_a`/`_b` (same ROM, folds) | 909,952 / 909,248 | 1,234,112 / 1,233,152 | 1,450,368 / 1,449,664 | 1,217,426 / 1,217,235 |
+| `b7h1_a`/`_b` (multiplicative) | 909,632 / 909,632 | **1,228,992 / 1,230,720** | 1,442,816 / 1,441,856 | 1,215,948 / 1,215,937 |
+| `b9x0_a`/`_b` (same ROM, no box) | 911,424 / 911,936 | 1,234,688 / 1,234,112 | 1,447,680 / 1,451,328 | 1,221,312 / 1,221,877 |
+| `b9x1_a`/`_b` (box) | 910,208 / 910,848 | **1,233,280 / 1,231,808** | 1,442,624 / 1,445,568 | 1,218,794 / 1,217,979 |
+| `b10_a`/`_b` (shipped build) | 911,488 / 911,488 | 1,235,136 / 1,235,136 | 1,439,872 / 1,439,872 | 1,219,888 / 1,219,888 |
+
+Replay IDENTICAL on every pair and against `b6`; shadow mode 0 flips; rejects
+and passes unchanged. Cross-build the shipped build reads P95 +3.3K over
+`b6` (1,231,808): the same-ROM pairs above are the evidence for each change;
+the difference between builds is layout (its SRC median moved +0.9K with no
+sim change in between).
+
+## Refuted: more spare lean lists (`b8`)
+
+A lab log of every lean materialization (frame, slot, which key words moved)
+showed Donkey re-materializing 13 lists a match in-match (~460K ticks each,
+key words 0 and 3: material rows and the drawn-DL set), Link 5 (~700K) and
+every fighter twice back to back at spawn. With up to three spare buffers
+per slot (the gate's heap low-water is ~357K free), materializations fell
+only 39 -> 33: Donkey's misses are states none of five buffers held, not an
+LRU depth problem. The grown slot state cost P50 +4.6K cross-build despite
+padding. Removed; the log is kept as a patch in the session notes only.
+Replaying the log against the gate's rows: removing Donkey's in-match
+materializations would be P95 -14K, all in-match ones -20K; spreading every
+one over two frames (half each) -14K.

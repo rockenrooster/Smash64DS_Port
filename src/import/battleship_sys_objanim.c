@@ -1041,6 +1041,8 @@ static inline u8 ndsAObjEvent32WordSig(u32 word)
 }
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
+/* 32 - log2(hash slots): ndsAObjEvent32HashSlot's multiplicative form. */
+static u32 sNdsAObjEvent32NormalizedHashShift = 32u;
 
 /* AN INDEX OVER THE LEDGER ABOVE -- not a second cache, and the distinction is
  * the whole of its safety argument.
@@ -1470,6 +1472,12 @@ sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
     sNdsAObjEvent32NormalizedHash = (u16 *)(void *)(storage + hash_offset);
     sNdsAObjEvent32NormalizedLimit = limit;
     sNdsAObjEvent32NormalizedHashSlots = hash_slots;
+    /* hash_slots is a power of two above limit >= 1, so the shift is 1..31. */
+    sNdsAObjEvent32NormalizedHashShift = 32u;
+    while ((1u << (32u - sNdsAObjEvent32NormalizedHashShift)) < hash_slots)
+    {
+        sNdsAObjEvent32NormalizedHashShift--;
+    }
     memset(sNdsAObjEvent32NormalizedHash, 0, (size_t)hash_bytes);
     sNdsAObjEvent32NormalizedCount = 0u;
     ndsAObjEvent32PageReset();
@@ -1518,13 +1526,25 @@ volatile u32 gNdsAObjEvent32HashOverflowCount;
 volatile u32 gNdsAObjEvent32HashOracleRuns;
 volatile u32 gNdsAObjEvent32HashOracleMismatch;
 
-/* Commands are 4-byte objects inside one loaded file, so the interesting bits
- * are low and adjacent; the two folds spread them over the whole slot range
- * without a multiply. */
+/* Commands are 4-byte objects inside one loaded file, so a script's commands
+ * are adjacent words. The two folds used before kept adjacent words on
+ * adjacent slots, and linear probing then walked whole scripts: on the gate a
+ * lookup took 12.2 probes and an insert ~37, at a load under 20% (P2-2p8,
+ * 2026-09-29). The multiplicative hash takes the product's top bits, which
+ * every input bit reaches. Placement only: the ledger's keys are unique, so a
+ * probe returns the same index whatever the hash. Same-ROM A/B word
+ * gNdsAObjEvent32HashMul (0 = the folds); it is read at every probe start, so
+ * it may only change between scenes (the index is rebuilt at each). */
+volatile u32 gNdsAObjEvent32HashMul __attribute__((used, section(".data"))) = 1u;
+
 static u32 ndsAObjEvent32HashSlot(const AObjEvent32 *command)
 {
     u32 h = (u32)(uintptr_t)command >> 2;
 
+    if (gNdsAObjEvent32HashMul != 0u)
+    {
+        return (h * 0x9E3779B1u) >> sNdsAObjEvent32NormalizedHashShift;
+    }
     h ^= h >> 7;
     h ^= h >> 13;
     return h & (sNdsAObjEvent32NormalizedHashSlots - 1u);
