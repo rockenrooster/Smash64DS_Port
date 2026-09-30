@@ -444,6 +444,14 @@ static void ndsMenuShellRun(u32 screen)
          * loop. Matches the battle's own placement -- logic update before the
          * frame's render/present calls. */
         ndsAudioBgmUpdate();
+        /* 2026-09-30 (owner: CSS/SSS audio late). The sound-effect cache's
+         * consumer, beside the battle's (taskman_seam_battle_host.c): it starts
+         * a cue whose asynchronous fill has completed, and advances envelopes
+         * and releases. Without it a menu cue that missed the cache -- a
+         * fighter's name, the stage select confirm -- waited in its handle
+         * until the next cue's request ran this from ndsAudioFgmPlayAtPan.
+         * Investigation: artifacts/bugs/2026-09-30_css-sss-audio-delay. */
+        ndsAudioFgmUpdate();
 
         ndsPlatformRenderDebugHud();
         ndsMenuShellRecordFrame();
