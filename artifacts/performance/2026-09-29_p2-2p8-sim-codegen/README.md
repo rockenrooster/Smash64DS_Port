@@ -79,3 +79,28 @@ at `ndsR2AnimCachePreloadMatch`. On the lab rosters a four-kind match fetches
 30-55% of a match's clips recur in every observed match of that kind (Kirby
 15 of ~55 over seven matches; DK 28 of ~53 over four; Pikachu 33 of ~60 over
 three).
+
+## Banked: two smaller ones (build `b3`)
+
+- `include/nds/nds_r2_collision_fixed.h`: the hurtbox reject's local build
+  held the Q15 sines and cosines as int64, so its twelve rotation products
+  were 64 x 64 multiplies. The pair products are exact in an int32 (at most
+  2^30) and each triple product is one widening multiply; UMULL 21 -> 7 in
+  `ndsR2CfxBuildLocal`. A host test over 20M random TRS inputs (zero and
+  signed-zero angles, random bit patterns, unit and non-unit scales) matches
+  the old header byte for byte; `scripts/check-r2-collision-fixed.ps1` passes.
+- `src/nds/nds_stage_gx.exec.inc`: the whole-match profile charged 8K ticks a
+  frame to one instruction, the first `GFX_CONTROL |= bits` after a stage
+  span's DMA was armed (595 cycles, 27 spans a frame: the register read waits
+  for the transfer). The next span's DISP3DCNT and ALPHA_TEST_REF writes now
+  go before the flush arms DMA0 -- the same writes in the same order. Word
+  `gNdsStageGxStateFirst`. The wait mostly moved to the next bus access: STG
+  median -0.5K.
+
+| Run | P50 | P95 | SRC median | STG median |
+|---|---:|---:|---:|---:|
+| `b2y_a`/`b2y_b` (previous build) | 912,384 / 912,064 | 1,233,984 / 1,233,984 | 408,128 | 163,072 |
+| `b3s0_a`/`b3s0_b` (local build, state after) | 911,488 / 911,232 | 1,232,832 / 1,234,176 | 406,400 | 163,520 |
+| `b3s1_a`/`b3s1_b` (state first) | **910,656 / 910,656** | **1,231,872 / 1,232,448** | 406,336 | 163,072 |
+
+Replay IDENTICAL on every pair.

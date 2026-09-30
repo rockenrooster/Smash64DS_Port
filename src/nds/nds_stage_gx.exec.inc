@@ -369,14 +369,44 @@ static void ndsStageGxFlush(void)
     sNdsRendererHardwareTriangleBatchOpen = FALSE;
 }
 
+/* The span's texture, alpha test and fog: DISP3DCNT and ALPHA_TEST_REF,
+ * rendering-engine registers outside the FIFO. */
+static inline void ndsStageGxSetSpanState(u32 alpha,
+                                          const NDSNativeStagePreparedRun *prepared)
+{
+    glEnable(GL_TEXTURE_2D);
+    if (alpha != 0u) { glEnable(GL_ALPHA_TEST); glAlphaFunc(prepared->alpha_ref); }
+    else { glDisable(GL_ALPHA_TEST); }
+    glDisable(GL_FOG);
+}
+
+/* P2-2p8 (2026-09-29): the next span's state is written BEFORE the flush arms
+ * DMA0 for the previous one. Written after it, its first register read
+ * (`GFX_CONTROL |= bits`) waited on the bus for the whole span transfer: 595
+ * cycles, 27 spans a frame, 8K ticks of the whole-match gate profile on that
+ * one instruction. The writes and their order are unchanged -- after a flush
+ * no batch is open, so neither the Task 36 end nor EndBatch below writes
+ * these registers -- only the DMA they no longer wait behind has moved.
+ * Same-ROM A/B word gNdsStageGxStateFirst (0 = after the flush). */
+volatile u32 gNdsStageGxStateFirst __attribute__((used, section(".data"))) = 1u;
+
 static void ndsStageGxAppend(const NDSStageGxRun *run,
                            const NDSNativeStagePreparedRun *prepared)
 {
     u32 alpha = prepared->alpha_test != 0u ? 0x100u | prepared->alpha_ref : 0u;
+    sb32 state_written = FALSE;
+
     if (sNdsStageGxWordCount != 0u &&
         (run->first_word != sNdsStageGxFirstWord + sNdsStageGxWordCount ||
          alpha != sNdsStageGxAlpha))
-    { ndsStageGxFlush(); }
+    {
+        if (gNdsStageGxStateFirst != 0u)
+        {
+            ndsStageGxSetSpanState(alpha, prepared);
+            state_written = TRUE;
+        }
+        ndsStageGxFlush();
+    }
     if (sNdsStageGxWordCount == 0u)
     {
         /* Alpha-test registers are outside the FIFO; never merge across a
@@ -390,10 +420,10 @@ static void ndsStageGxAppend(const NDSStageGxRun *run,
         }
         ndsRendererNativeStageTask36EndSegment();
         ndsRendererHardwareEndBatch();
-        glEnable(GL_TEXTURE_2D);
-        if (alpha != 0u) { glEnable(GL_ALPHA_TEST); glAlphaFunc(prepared->alpha_ref); }
-        else { glDisable(GL_ALPHA_TEST); }
-        glDisable(GL_FOG);
+        if (state_written == FALSE)
+        {
+            ndsStageGxSetSpanState(alpha, prepared);
+        }
         sNdsStageGxFirstWord = run->first_word;
         sNdsStageGxAlpha = alpha;
     }

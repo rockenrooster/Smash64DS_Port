@@ -449,6 +449,15 @@ ndsR2CfxSinCosQ15(const uint16_t *table, float angle, int64_t *sin_out,
     *cos_out = ndsR2CfxCosQ15(table, angle);
 }
 
+/* An empty asm that claims to rewrite `x`: GCC then keeps it a plain 32-bit
+ * register instead of reasoning its products up to 64 x 64 multiplies. The
+ * value is unchanged; the host build gets a no-op. */
+#if defined(__arm__)
+#define NDS_R2_CFX_OPAQUE(x) __asm__("" : "+r"(x))
+#else
+#define NDS_R2_CFX_OPAQUE(x) ((void)0)
+#endif
+
 /* ------------------------------------------------------------------------
  * Stage 2 -- gmCollisionTransformMatrixAll (gm/gmcollision.c:29) in fixed point
  *
@@ -506,21 +515,47 @@ static inline int ndsR2CfxBuildLocal(NDSR2CfxMtx *dst, const uint16_t *table,
      * that costs after six composes: 0.0108 world units against a 0.0200
      * bound, i.e. most of the budget, spent on a shift that saves nothing
      * (the Q45 product fits int64 with eighteen bits to spare). */
-    rot[0][0] = cosy * cosz;
-    rot[0][1] = cosy * sinz;
-    rot[0][2] = -siny * (INT64_C(1) << NDS_R2_CFX_TRIG_BITS);
+    {
+        /* The table's Q15 values are at most 2^15 in magnitude, so every
+         * pair product is at most 2^30 and exact in an int32, and each triple
+         * product is one widening multiply of that pair by a Q15 value. The
+         * int64 operands above made GCC multiply 64 x 64 (UMULL and two MLA)
+         * for all twelve (P2-2p8, 2026-09-29); the values are the same. */
+        int32_t sx = (int32_t)sinx;
+        int32_t cx = (int32_t)cosx;
+        int32_t sy = (int32_t)siny;
+        int32_t cy = (int32_t)cosy;
+        int32_t sz = (int32_t)sinz;
+        int32_t cz = (int32_t)cosz;
+        int32_t sxsy;
+        int32_t cxsy;
 
-    rot[1][0] = ndsR2CfxShr(sinx * siny * cosz, NDS_R2_CFX_TRIG_BITS) -
-                (cosx * sinz);
-    rot[1][1] = ndsR2CfxShr(sinx * siny * sinz, NDS_R2_CFX_TRIG_BITS) +
-                (cosx * cosz);
-    rot[1][2] = sinx * cosy;
+        NDS_R2_CFX_OPAQUE(sx);
+        NDS_R2_CFX_OPAQUE(cx);
+        NDS_R2_CFX_OPAQUE(sy);
+        NDS_R2_CFX_OPAQUE(cy);
+        NDS_R2_CFX_OPAQUE(sz);
+        NDS_R2_CFX_OPAQUE(cz);
+        sxsy = sx * sy;
+        cxsy = cx * sy;
+        NDS_R2_CFX_OPAQUE(sxsy);
+        NDS_R2_CFX_OPAQUE(cxsy);
+        rot[0][0] = (int64_t)(cy * cz);
+        rot[0][1] = (int64_t)(cy * sz);
+        rot[0][2] = (int64_t)(-sy) * (INT64_C(1) << NDS_R2_CFX_TRIG_BITS);
 
-    rot[2][0] = ndsR2CfxShr(cosx * siny * cosz, NDS_R2_CFX_TRIG_BITS) +
-                (sinx * sinz);
-    rot[2][1] = ndsR2CfxShr(cosx * siny * sinz, NDS_R2_CFX_TRIG_BITS) -
-                (sinx * cosz);
-    rot[2][2] = cosx * cosy;
+        rot[1][0] = ndsR2CfxShr((int64_t)sxsy * cz, NDS_R2_CFX_TRIG_BITS) -
+                    (int64_t)(cx * sz);
+        rot[1][1] = ndsR2CfxShr((int64_t)sxsy * sz, NDS_R2_CFX_TRIG_BITS) +
+                    (int64_t)(cx * cz);
+        rot[1][2] = (int64_t)(sx * cy);
+
+        rot[2][0] = ndsR2CfxShr((int64_t)cxsy * cz, NDS_R2_CFX_TRIG_BITS) +
+                    (int64_t)(sx * sz);
+        rot[2][1] = ndsR2CfxShr((int64_t)cxsy * sz, NDS_R2_CFX_TRIG_BITS) -
+                    (int64_t)(sx * cz);
+        rot[2][2] = (int64_t)(cx * cy);
+    }
 
     for (row = 0u; (unit_scale == 0) && (row < 3u); row++)
     {
