@@ -189,3 +189,21 @@ padding. Removed; the log is kept as a patch in the session notes only.
 Replaying the log against the gate's rows: removing Donkey's in-match
 materializations would be P95 -14K, all in-match ones -20K; spreading every
 one over two frames (half each) -14K.
+
+## Banked: an exact index for the motion cache (build `b11`)
+
+`src/port/reloc_backend_assets.c`: `ndsR2AnimCacheFind` answered hits from a
+low-byte hint, but every miss scanned all entries, and most finds miss (the
+preload steps ask after clips not yet held): 1,348 finds a gate match at 872
+ticks each. An open-addressed index on the asset id (512 slots for at most
+256 entries, linear probing with backward-shift deletion) is kept in step
+with every store, removal and reset; entries are unique per asset, so it
+returns the entry the scan would. Word `gNdsR2AnimCacheIndexed`; +1 KB BSS.
+
+| Run | P50 | P95 | P99 | band work |
+|---|---:|---:|---:|---:|
+| `b11i0_a`/`_b` (same ROM, hint and scan) | 913,536 / 913,728 | 1,237,696 / 1,240,384 | 1,446,144 / 1,444,288 | 1,222,083 / 1,222,426 |
+| `b11i1_a`/`_b` (index) | 913,024 / 912,832 | **1,231,872 / 1,236,928** | 1,444,672 / 1,442,432 | 1,219,777 / 1,220,002 |
+
+Replay IDENTICAL (and against `b10`); stream reads 222 in both arms. The
+build reads P50 +2K over `b10` in both arms -- layout again.

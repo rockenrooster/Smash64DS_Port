@@ -13771,6 +13771,12 @@ static sb32 ndsR2AnimPrebakeAObj16(u32 asset_id, void *payload, u32 size,
 #endif
 
 static NDSR2AnimCacheEntry sNdsR2AnimCache[NDS_R2_ANIM_CACHE_ENTRIES];
+/* The entries' asset-id index (ndsR2AnimCacheFind). */
+#define NDS_R2_ANIM_CACHE_INDEX_SLOTS 512u
+#define NDS_R2_ANIM_CACHE_INDEX_NONE 0xffffffffu
+_Static_assert(NDS_R2_ANIM_CACHE_ENTRIES * 2u <= NDS_R2_ANIM_CACHE_INDEX_SLOTS,
+               "anim cache index load factor");
+static u16 sNdsR2AnimCacheIndex[NDS_R2_ANIM_CACHE_INDEX_SLOTS];
 static u32 sNdsR2AnimCacheCount;
 /* Reserved from gSYTaskmanGeneralHeap, NOT static BSS -- see the header comment on
  * NDS_R2_ANIM_CACHE_ARENA_BYTES for why BSS cannot afford this. */
@@ -14145,6 +14151,7 @@ static void ndsR2AnimCacheArenaDropForReset(void)
     /* Drops every entry, which is what makes the payload pointers unreachable.
      * The entries are the only holders of those pointers. */
     sNdsR2AnimCacheCount = 0u;
+    memset(sNdsR2AnimCacheIndex, 0, sizeof(sNdsR2AnimCacheIndex));
     gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReservedBytes = 0u;
     gNdsR2AnimCacheBytes = 0u;
@@ -15059,6 +15066,85 @@ static sb32 ndsBattlePackResidencyStep(void)
  * is the one the scan would return. */
 static u8 sNdsR2AnimCacheHint[256];
 
+/* An exact index over the entries (P2-2p8, 2026-09-29): the hint answered a
+ * hit, but every miss scanned all entries, and most finds miss -- the preload
+ * steps ask after clips not yet held (1,348 finds a gate match at 872 ticks
+ * each). Open addressing on the asset id, 512 slots for at most 256 entries,
+ * slot = entry index + 1 (0 empty), kept in step with every store, removal
+ * and reset. Entries are unique per asset, so it returns the entry the scan
+ * would. Same-ROM A/B word gNdsR2AnimCacheIndexed (0 = hint and scan; the
+ * index is maintained either way). */
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheIndexed = 1u;
+
+static inline u32 ndsR2AnimCacheIndexHome(u32 asset_id)
+{
+    return (asset_id * 0x9E3779B1u) >> 23;
+}
+
+static u32 ndsR2AnimCacheIndexSlot(u32 asset_id)
+{
+    u32 slot = ndsR2AnimCacheIndexHome(asset_id);
+    u32 probes;
+
+    for (probes = 0u; probes < NDS_R2_ANIM_CACHE_INDEX_SLOTS; probes++)
+    {
+        const u32 entry = sNdsR2AnimCacheIndex[slot];
+
+        if (entry == 0u)
+        {
+            break;
+        }
+        if ((entry <= sNdsR2AnimCacheCount) &&
+            (sNdsR2AnimCache[entry - 1u].asset_id == asset_id))
+        {
+            return slot;
+        }
+        slot = (slot + 1u) & (NDS_R2_ANIM_CACHE_INDEX_SLOTS - 1u);
+    }
+    return NDS_R2_ANIM_CACHE_INDEX_NONE;
+}
+
+static void ndsR2AnimCacheIndexInsert(u32 asset_id, u32 index)
+{
+    u32 slot = ndsR2AnimCacheIndexHome(asset_id);
+
+    while (sNdsR2AnimCacheIndex[slot] != 0u)
+    {
+        slot = (slot + 1u) & (NDS_R2_ANIM_CACHE_INDEX_SLOTS - 1u);
+    }
+    sNdsR2AnimCacheIndex[slot] = (u16)(index + 1u);
+}
+
+/* Linear probing's deletion: empty the slot, then pull back every later
+ * member of the run whose home does not lie cyclically in (hole, it]. */
+static void ndsR2AnimCacheIndexDelete(u32 hole)
+{
+    u32 next = hole;
+
+    sNdsR2AnimCacheIndex[hole] = 0u;
+    for (;;)
+    {
+        u32 home;
+        u32 entry;
+
+        next = (next + 1u) & (NDS_R2_ANIM_CACHE_INDEX_SLOTS - 1u);
+        entry = sNdsR2AnimCacheIndex[next];
+        if (entry == 0u)
+        {
+            return;
+        }
+        home = ndsR2AnimCacheIndexHome(sNdsR2AnimCache[entry - 1u].asset_id);
+        if ((hole <= next) ? ((hole < home) && (home <= next)) :
+                             ((hole < home) || (home <= next)))
+        {
+            continue;
+        }
+        sNdsR2AnimCacheIndex[hole] = (u16)entry;
+        sNdsR2AnimCacheIndex[next] = 0u;
+        hole = next;
+    }
+}
+
 static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
 {
     u32 i;
@@ -15076,6 +15162,13 @@ static NDSR2AnimCacheEntry *ndsR2AnimCacheFind(u32 asset_id)
     if (sNdsR2AnimCacheCount == 0u)
     {
         return NULL;
+    }
+    if (gNdsR2AnimCacheIndexed != 0u)
+    {
+        const u32 slot = ndsR2AnimCacheIndexSlot(asset_id);
+
+        return (slot == NDS_R2_ANIM_CACHE_INDEX_NONE) ? NULL :
+            &sNdsR2AnimCache[sNdsR2AnimCacheIndex[slot] - 1u];
     }
     hint = sNdsR2AnimCacheHint[asset_id & 0xffu];
     if ((hint < sNdsR2AnimCacheCount) &&
@@ -15108,9 +15201,31 @@ static void ndsR2AnimCacheRemoveEntry(u32 index)
     {
         gNdsR2AnimCacheBytes = 0u;
     }
+    {
+        const u32 slot = ndsR2AnimCacheIndexSlot(sNdsR2AnimCache[index].asset_id);
+
+        if (slot != NDS_R2_ANIM_CACHE_INDEX_NONE)
+        {
+            ndsR2AnimCacheIndexDelete(slot);
+        }
+    }
     sNdsR2AnimCacheCount--;
     if (index != sNdsR2AnimCacheCount)
     {
+        /* The last entry moves down: its slot, found on its probe run by
+         * the old position it names, now names `index`. */
+        u32 slot = ndsR2AnimCacheIndexHome(
+            sNdsR2AnimCache[sNdsR2AnimCacheCount].asset_id);
+
+        while (sNdsR2AnimCacheIndex[slot] != 0u)
+        {
+            if (sNdsR2AnimCacheIndex[slot] == sNdsR2AnimCacheCount + 1u)
+            {
+                sNdsR2AnimCacheIndex[slot] = (u16)(index + 1u);
+                break;
+            }
+            slot = (slot + 1u) & (NDS_R2_ANIM_CACHE_INDEX_SLOTS - 1u);
+        }
         sNdsR2AnimCache[index] =
             sNdsR2AnimCache[sNdsR2AnimCacheCount];
     }
@@ -15215,6 +15330,7 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     memcpy(payload, data, size);
     entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
     entry->asset_id = asset_id;
+    ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
     entry->size = size;
     entry->payload = payload;
     entry->header = *header;
@@ -15584,6 +15700,7 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         NDSR2AnimCacheEntry *entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
 
         entry->asset_id = asset_id;
+        ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
         entry->size = (u32)loaded_size;
         entry->payload = payload;
         entry->header = header;

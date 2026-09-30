@@ -49,3 +49,7 @@ b9sh       P50 923,712 P95 1,376,448 P99 1,653,888 2VB 79.5% SRCmed 414,464 STGm
 b10_a      P50 911,488 P95 1,235,136 P99 1,439,872 2VB 87.4% SRCmed 406,784 STGmed 162,816 FTRmed 145,344 bandSRC 619,413 bandW 1,219,888 {'nf': 0, 'low': 355788, 'Rejects': 13867, 'Passes': 286, 'Flips': 0, 'gNdsP2HbLocalRejects': 373, 'gNdsP2HbBoxHits': 5324}
 b10_b      P50 911,488 P95 1,235,136 P99 1,439,872 2VB 87.4% SRCmed 406,784 STGmed 162,816 FTRmed 145,344 bandSRC 619,413 bandW 1,219,888 {'nf': 0, 'low': 355788, 'Rejects': 13867, 'Passes': 286, 'Flips': 0, 'gNdsP2HbLocalRejects': 373, 'gNdsP2HbBoxHits': 5324}
 b10sh      P50 924,544 P95 1,377,472 P99 1,658,560 2VB 79.6% SRCmed 414,016 STGmed 162,816 FTRmed 145,216 bandSRC 727,417 bandW 1,349,678 {'nf': 0, 'low': 355788, 'Rejects': 13867, 'Passes': 286, 'Flips': 0, 'gNdsP2HbLocalRejects': 373, 'gNdsP2HbBoxHits': 5324}
+b11i0_a    P50 913,536 P95 1,237,696 P99 1,446,144 2VB 87.1% SRCmed 406,400 STGmed 163,456 FTRmed 146,944 bandSRC 621,544 bandW 1,222,083 {'nf': 0, 'low': 354764}
+b11i0_b    P50 913,728 P95 1,240,384 P99 1,444,288 2VB 87.1% SRCmed 406,336 STGmed 163,520 FTRmed 146,944 bandSRC 623,947 bandW 1,222,426 {'nf': 0, 'low': 354764}
+b11i1_a    P50 913,024 P95 1,231,872 P99 1,444,672 2VB 87.4% SRCmed 406,144 STGmed 163,456 FTRmed 146,880 bandSRC 621,251 bandW 1,219,777 {'nf': 0, 'low': 354764}
+b11i1_b    P50 912,832 P95 1,236,928 P99 1,442,432 2VB 87.4% SRCmed 406,336 STGmed 163,456 FTRmed 146,880 bandSRC 620,556 bandW 1,220,002 {'nf': 0, 'low': 354764}
