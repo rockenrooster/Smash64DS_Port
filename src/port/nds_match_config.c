@@ -190,9 +190,13 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #ifndef NDS_LAB_FOURCPU_SWEEP_GKIND
 #define NDS_LAB_FOURCPU_SWEEP_GKIND 0xffu
 #endif
+#ifndef NDS_LAB_FOURCPU_SWEEP_KINDS
+#define NDS_LAB_FOURCPU_SWEEP_KINDS 0xffffffffu
+#endif
 volatile u32 gNdsLabFourCpuGkind __attribute__((used)) =
     NDS_LAB_FOURCPU_SWEEP_GKIND;
-volatile u32 gNdsLabFourCpuKinds __attribute__((used)) = 0xffffffffu;
+volatile u32 gNdsLabFourCpuKinds __attribute__((used)) =
+    NDS_LAB_FOURCPU_SWEEP_KINDS;
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)

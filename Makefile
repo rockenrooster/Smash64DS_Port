@@ -780,9 +780,11 @@ NDS_LAB_FOURCPU_TWO ?=
 # bytes, slot 0 lowest; admitted kinds only). 0xFF keeps the preset. Empty
 # (the default) emits nothing, so the gate ROM carries neither word.
 # `NDS_LAB_FOURCPU_SWEEP_GKIND=<n>` sets the stage word's initial value, for
-# harnesses that cannot poke it (the profile census).
+# harnesses that cannot poke it (the profile census);
+# `NDS_LAB_FOURCPU_SWEEP_KINDS=<decimal word>` does the same for the roster.
 NDS_LAB_FOURCPU_SWEEP ?=
 NDS_LAB_FOURCPU_SWEEP_GKIND ?=
+NDS_LAB_FOURCPU_SWEEP_KINDS ?=
 # LAB ONLY (with NDS_LAB_FOURCPU_SWEEP=1): record every syInterpGetFracFrame
 # call's segment key, t and result in gNdsInterpCapture, for the Sector Z
 # Arwing flight-table generator. Empty = no buffer.
@@ -7075,6 +7077,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		$(if $(strip $(NDS_LAB_FOURCPU_TWO)),echo '#define NDS_LAB_FOURCPU_TWO 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP)),echo '#define NDS_LAB_FOURCPU_SWEEP 1';) \
 		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_GKIND)),echo '#define NDS_LAB_FOURCPU_SWEEP_GKIND $(NDS_LAB_FOURCPU_SWEEP_GKIND)u';) \
+		$(if $(strip $(NDS_LAB_FOURCPU_SWEEP_KINDS)),echo '#define NDS_LAB_FOURCPU_SWEEP_KINDS $(NDS_LAB_FOURCPU_SWEEP_KINDS)u';) \
 		$(if $(strip $(NDS_INTERP_FRAC_CAPTURE)),echo '#define NDS_INTERP_FRAC_CAPTURE 1';) \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
