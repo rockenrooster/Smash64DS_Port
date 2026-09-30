@@ -1,0 +1,26 @@
+OFF line=3 f=165
+  P0 ga=0 fl=2 st=35 x=-3280.0 y=361.0
+  P1 ga=0 fl=3 st=10 x=90.0 y=2214.9
+  P2 ga=0 fl=4 st=10 x=756.0 y=1276.7
+  P3 ga=0 fl=5 st=10 x=-990.0 y=820.8
+TICK f=166
+  P0 ga=1 fl=-1 st=26 x=-3280.0 y=0.0
+  P1 ga=0 fl=3 st=10 x=90.0 y=2214.9
+  P2 ga=0 fl=4 st=10 x=756.0 y=1276.7
+  P3 ga=0 fl=5 st=10 x=-990.0 y=820.8
+TICK f=166
+  P0 ga=1 fl=-1 st=26 x=-3280.0 y=-3.0
+  P1 ga=0 fl=3 st=10 x=90.0 y=2214.9
+  P2 ga=0 fl=4 st=10 x=756.0 y=1276.7
+  P3 ga=0 fl=5 st=10 x=-990.0 y=820.8
+TICK f=167
+  P0 ga=1 fl=-1 st=26 x=-3280.0 y=-9.0
+  P1 ga=0 fl=3 st=10 x=90.0 y=2214.9
+  P2 ga=0 fl=4 st=10 x=756.0 y=1276.7
+  P3 ga=0 fl=5 st=10 x=-990.0 y=820.8
+TICK f=167
+  P0 ga=1 fl=-1 st=26 x=-3280.0 y=-18.0
+  P1 ga=0 fl=3 st=10 x=90.0 y=2214.9
+  P2 ga=0 fl=4 st=10 x=756.0 y=1276.7
+  P3 ga=0 fl=5 st=10 x=-990.0 y=820.8
+END f=1950

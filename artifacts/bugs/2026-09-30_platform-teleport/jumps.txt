@@ -1,0 +1,16 @@
+ctl-yi-d OFF line=3 f=165 P0 fl=2 st=35 stood y=361.0 -> 0.0 -3.0 -9.0 -18.0  first drop 361.0
+ctl-yi-d: 1 switch-off events with fighters present
+ctl-yi-o OFF line=3 f=165 P0 fl=2 st=35 stood y=361.0 -> 0.0 -2.4 -7.2 -14.4  first drop 361.0
+ctl-yi-o: 1 switch-off events with fighters present
+fix-yi-d OFF line=3 f=165 P0 fl=2 st=35 stood y=361.0 -> 361.0 358.0 352.0 343.0  first drop 0.0
+fix-yi-d: 1 switch-off events with fighters present
+fix-yi-o OFF line=3 f=165 P0 fl=2 st=35 stood y=361.0 -> 361.0 358.6 353.8 346.6  first drop 0.0
+fix-yi-o OFF line=3 f=1018 P1 fl=2 st=12 stood y=361.0 -> 361.0 357.0 349.0 337.0  first drop 0.0
+fix-yi-o OFF line=2 f=1247 P0 fl=1 st=10 stood y=1500.0 -> 1500.0 1560.0 1617.6 1672.8  first drop 0.0
+fix-yi-o: 3 switch-off events with fighters present
+ctl-sz-o: 3 switch-off events with fighters present
+ctl-sz-d OFF line=1 f=786 P0 fl=1 st=208 stood y=1738.2 -> 1738.2 1738.2 1738.2 1738.2  first drop 0.0
+ctl-sz-d: 2 switch-off events with fighters present
+fix-sz-o: 3 switch-off events with fighters present
+fix-sz-d OFF line=1 f=786 P0 fl=1 st=208 stood y=1738.2 -> 1738.2 1738.2 1738.2 1738.2  first drop 0.0
+fix-sz-d: 2 switch-off events with fighters present

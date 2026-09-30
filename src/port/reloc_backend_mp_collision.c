@@ -1249,10 +1249,32 @@ static sb32 ndsMPFindLineEndpoints(s32 line_id, Vec3f *left, Vec3f *right,
     return FALSE;
 }
 
+static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id);
+
+/* mpcollision.c:4094-4113: a line exists only while its yakumono is not
+ * switched off (Off or Hidden). Checking the geometry alone kept a fighter's
+ * floor line "live" after the stage switched its platform off (a Yoshi's
+ * Island cloud evaporating, the Sector Z Arwing leaving its lane), so
+ * mpProcessCheckTestFloorCollisionNew skipped the source's fall: the floor
+ * test failed on the off platform, and its edge branch set the fighter's y
+ * from the (0, 0) edge an off line reports -- owner: the fighter "teleports
+ * down, then falls". The AI, items and weapons ask the same question.
+ * The group lookup (memoised, ITCM) is also the line-id validation. */
 sb32 mpCollisionCheckExistLineID(s32 line_id)
 {
-    return (ndsMPFindLineEndpoints(line_id, NULL, NULL, NULL, NULL) != FALSE) ?
-        TRUE : FALSE;
+    u32 yakumono_id;
+    const DObj *yakumono_dobj;
+
+    if ((ndsMPFindLineYakumonoID(line_id, &yakumono_id) == FALSE) ||
+        (gMPCollisionYakumonoDObjs == NULL) ||
+        (yakumono_id >= NDS_MP_YAKUMONO_DOBJ_SLOTS))
+    {
+        return FALSE;
+    }
+    yakumono_dobj = gMPCollisionYakumonoDObjs->dobjs[yakumono_id];
+
+    return ((yakumono_dobj != NULL) &&
+            (yakumono_dobj->user_data.s < nMPYakumonoStatusOff)) ? TRUE : FALSE;
 }
 
 static sb32 ndsMPFindLineYakumonoID(s32 line_id, u32 *yakumono_id)

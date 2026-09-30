@@ -1,0 +1,97 @@
+OFF line=1 f=0
+TICK f=0
+  P0 ga=0 fl=1 st=5 x=-3301.0 y=1828.7
+  P1 ga=0 fl=1 st=5 x=-2094.0 y=1678.2
+  P2 ga=0 fl=1 st=5 x=-898.0 y=1567.2
+  P3 ga=0 fl=1 st=5 x=296.0 y=1710.2
+TICK f=0
+  P0 ga=0 fl=1 st=5 x=-3301.0 y=1828.7
+  P1 ga=0 fl=1 st=5 x=-2094.0 y=1678.2
+  P2 ga=0 fl=1 st=5 x=-898.0 y=1567.2
+  P3 ga=0 fl=1 st=5 x=296.0 y=1710.2
+TICK f=1
+  P0 ga=0 fl=1 st=5 x=-3301.0 y=1828.7
+  P1 ga=0 fl=1 st=5 x=-2094.0 y=1678.2
+  P2 ga=0 fl=1 st=5 x=-898.0 y=1567.2
+  P3 ga=0 fl=1 st=5 x=296.0 y=1710.2
+TICK f=1
+  P0 ga=0 fl=1 st=5 x=-3301.0 y=1828.7
+  P1 ga=0 fl=1 st=5 x=-2094.0 y=1678.2
+  P2 ga=0 fl=1 st=5 x=-898.0 y=1567.2
+  P3 ga=0 fl=1 st=5 x=296.0 y=1710.2
+OFF line=1 f=758
+  P0 ga=0 fl=1 st=10 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=41 x=676.1 y=1808.3
+  P2 ga=0 fl=1 st=190 x=158.9 y=1692.6
+  P3 ga=1 fl=1 st=25 x=1200.9 y=3774.2
+TICK f=758
+  P0 ga=0 fl=1 st=10 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=41 x=681.0 y=1811.3
+  P2 ga=0 fl=1 st=190 x=158.9 y=1692.6
+  P3 ga=1 fl=1 st=25 x=1163.9 y=3722.2
+TICK f=759
+  P0 ga=0 fl=1 st=10 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=41 x=684.2 y=1813.3
+  P2 ga=0 fl=1 st=190 x=158.9 y=1692.6
+  P3 ga=1 fl=1 st=25 x=1126.8 y=3670.2
+TICK f=759
+  P0 ga=0 fl=1 st=10 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=152 x=685.7 y=1814.2
+  P2 ga=0 fl=1 st=190 x=158.9 y=1692.6
+  P3 ga=1 fl=1 st=25 x=1089.8 y=3618.2
+TICK f=760
+  P0 ga=0 fl=1 st=10 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=152 x=685.7 y=1814.2
+  P2 ga=0 fl=1 st=190 x=158.9 y=1692.6
+  P3 ga=1 fl=1 st=25 x=1052.7 y=3566.2
+OFF line=1 f=795
+  P0 ga=0 fl=1 st=208 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=169 x=753.2 y=1855.1
+  P2 ga=1 fl=1 st=52 x=-176.1 y=2478.7
+  P3 ga=1 fl=1 st=53 x=1391.7 y=2687.1
+TICK f=795
+  P0 ga=0 fl=1 st=208 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=169 x=753.2 y=1855.1
+  P2 ga=1 fl=1 st=52 x=-239.4 y=2505.6
+  P3 ga=1 fl=1 st=53 x=1453.7 y=2708.9
+TICK f=796
+  P0 ga=0 fl=1 st=208 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=169 x=753.2 y=1855.1
+  P2 ga=1 fl=1 st=52 x=-301.4 y=2528.5
+  P3 ga=1 fl=1 st=53 x=1514.5 y=2726.5
+TICK f=796
+  P0 ga=0 fl=1 st=208 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=169 x=753.2 y=1855.1
+  P2 ga=1 fl=1 st=52 x=-362.3 y=2547.3
+  P3 ga=1 fl=1 st=53 x=1574.0 y=2740.0
+TICK f=797
+  P0 ga=0 fl=1 st=208 x=-256.1 y=1639.4
+  P1 ga=0 fl=1 st=169 x=753.2 y=1855.1
+  P2 ga=1 fl=1 st=52 x=-422.0 y=2562.2
+  P3 ga=1 fl=1 st=53 x=1632.2 y=2749.3
+OFF line=1 f=1781
+  P0 ga=1 fl=2 st=22 x=4967.1 y=1301.7
+  P1 ga=1 fl=-1 st=2 x=4555.6 y=10252.2
+  P2 ga=1 fl=2 st=54 x=4581.5 y=3999.5
+  P3 ga=0 fl=1 st=12 x=726.1 y=1838.6
+TICK f=1782
+  P0 ga=1 fl=2 st=22 x=4966.5 y=1358.1
+  P1 ga=1 fl=-1 st=2 x=4555.6 y=10215.8
+  P2 ga=1 fl=2 st=54 x=4581.5 y=3999.0
+  P3 ga=0 fl=1 st=12 x=740.5 y=1847.3
+TICK f=1782
+  P0 ga=1 fl=2 st=22 x=4965.9 y=1412.1
+  P1 ga=1 fl=-1 st=2 x=4555.6 y=10179.4
+  P2 ga=1 fl=2 st=54 x=4581.5 y=3996.7
+  P3 ga=0 fl=1 st=12 x=754.9 y=1856.0
+TICK f=1783
+  P0 ga=1 fl=2 st=22 x=4965.4 y=1463.7
+  P1 ga=1 fl=-1 st=2 x=4555.6 y=10143.0
+  P2 ga=1 fl=2 st=54 x=4581.5 y=3992.8
+  P3 ga=0 fl=1 st=12 x=769.2 y=1864.8
+TICK f=1783
+  P0 ga=1 fl=2 st=22 x=4964.9 y=1512.9
+  P1 ga=1 fl=-1 st=2 x=4555.6 y=10106.6
+  P2 ga=1 fl=2 st=54 x=4581.5 y=3987.2
+  P3 ga=0 fl=1 st=12 x=783.6 y=1873.5
+END f=1950
