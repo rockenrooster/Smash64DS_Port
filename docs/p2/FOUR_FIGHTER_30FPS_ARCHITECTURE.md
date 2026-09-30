@@ -920,6 +920,19 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   clip's first use). Gate WORK-H P50/P95 ~918.5K/~1,249K -> ~910.7K/~1,232K;
   Saffron lab P95 -8.4K (`45d6b475fe4`, `8597d6be8a8`). Receipt
   `2026-09-29_p2-2p8-sim-codegen`.
+- **09-29 hurtbox walk and re-test box, AObj ledger hash, BANKED** (replay
+  identical, shadow 0 flips): in the heaviest non-materialization frames the
+  hurtbox kernel was the largest compute delta (+53K over a median frame). Its
+  walk now checks the slot before FTParts and composes in place (P95 -2.5K
+  same-ROM), and a re-test in the epoch reuses the coll's separation pieces
+  (5,324 a match, -1.9K). The AObj ledger's xor-fold hash clustered a script's
+  adjacent words (23.6 probes a lookup); a multiplicative hash takes 1.2
+  (-3.3K). Cross-build the shipped build reads ~911.5K/~1,235K: layout drift
+  of +3K against the per-change same-ROM pairs. Refuted: a TRS-keyed trig
+  memo (no gain), more spare lean lists (39 -> 33 materializations, Donkey's
+  states are not an LRU problem). A materialization log puts Donkey at 13
+  in-match lists a match (~460K each), Link at 5 (~700K); removing Donkey's
+  would be P95 -14K (`964229de7f9`, `7df0e823bfb`).
 
 ## 7. Found along the way
 

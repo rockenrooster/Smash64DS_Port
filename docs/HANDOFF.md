@@ -28,11 +28,11 @@ renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
 Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26..29 solo** (receipts `2026-09-2{6,7,8,9}_p2-2p8-*`). Gate WORK-H P50/P95
-~910,700/~1,232,000 (`8597d6be8a8`); premium tables + whole-match profile in `..._hurtbox-box`;
+~911,500/~1,235,100 (`7df0e823bfb`; same-ROM wins, build layout +3K); profile `..._hurtbox-box`;
 SZ entry `..._sector-z-arwing`; refuted `..._refuted-levers`; stage GX `..._stage-gx-memo`; objects `..._object-fast-lane`; SMULL `..._sim-codegen`. Lab
 sweep ROM (NDS_LAB_FOURCPU_SWEEP; build it with NDS_P2_PIKACHU/YOSHI/NESS/PURIN=1) P95
 1.21M-1.58M by roster. Digest `--sequence --resync 4`. P95 frames carry 1.2-1.6 status
-changes at 60-96K each (fetch, install, first play ~24K). Refuted: whole-victim hurtbox bound.
+changes at 60-96K each. Next: lean materialization (DK 13/match ~460K, Link ~700K; not LRU).
 
 ## Continue, do not restart
 
