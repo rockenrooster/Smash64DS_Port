@@ -7,6 +7,8 @@
 #undef syInterpCubic
 #undef syInterpQuad
 
+#include <nds/nds_interp_exact.h>
+
 /* P2-2p8: syInterpGetFracFrame without its repeated work.
  *
  * The arc-length reparametrisation bisects [0,1] until the interval is under
@@ -48,8 +50,7 @@
 #define NDS_INTERP_FRAC_MEMO_WAYS 2u
 #define NDS_INTERP_FRAC_POINTS_MAX 64
 #define NDS_INTERP_PATH_SLOTS 4u
-/* The bisection stops once the interval is under 1e-5: seventeen halvings. */
-#define NDS_INTERP_PATH_DEPTH 20u
+#define NDS_INTERP_PATH_DEPTH NDS_IX_PATH_DEPTH
 
 typedef struct NDSInterpFracMemo
 {
@@ -59,20 +60,10 @@ typedef struct NDSInterpFracMemo
     u32 frac_bits;
 } NDSInterpFracMemo;
 
-typedef struct NDSInterpPathNode
-{
-    u32 min_bits;
-    u32 frac_bits;
-    u32 res_bits;
-} NDSInterpPathNode;
-
-typedef struct NDSInterpPath
-{
-    u32 cof[5];
-    u32 depth; /* 0 = empty slot */
-    u32 age;
-    NDSInterpPathNode node[NDS_INTERP_PATH_DEPTH];
-} NDSInterpPath;
+/* A path node's integral depends only on the segment's coefficients and the
+ * node's interval, so the float replica below and the integer kernel
+ * (nds_interp_exact.h) share one path table. */
+typedef NDSIxPath NDSInterpPath;
 
 static NDSInterpFracMemo
     sNdsInterpFracMemo[NDS_INTERP_FRAC_MEMO_SETS][NDS_INTERP_FRAC_MEMO_WAYS];
@@ -80,6 +71,10 @@ static NDSInterpPath sNdsInterpPaths[NDS_INTERP_PATH_SLOTS];
 static u32 sNdsInterpPathClock;
 
 volatile u32 gNdsInterpFracMemo __attribute__((used, section(".data"))) = 1u;
+/* P2-2p8 (2026-09-30): the bisection on bit patterns in ARM state
+ * (include/nds/nds_interp_exact.h), host-proved bit-exact against the
+ * source. Same-ROM A/B word: 1 = the integer kernel, 0 = the float replica. */
+volatile u32 gNdsInterpFracKernel __attribute__((used, section(".data"))) = 1u;
 #if NDS_TICK_HUD
 volatile u32 gNdsInterpFracOracle __attribute__((used, section(".data"))) = 0u;
 __attribute__((used)) volatile u32 gNdsInterpFracMemoHits;
@@ -276,6 +271,26 @@ static f32 ndsInterpGetFracFrameReuse(SYInterpDesc *desc, f32 t, s32 id,
     return ((f32) id + frac_frame) / ((f32) desc->points_num - 1.0F);
 }
 
+/* The same Bezier/Catrom arm on bit patterns: the source's time_scale, then
+ * the integer bisection, then the source's final divide. */
+static f32 ndsInterpGetFracFrameKernel(SYInterpDesc *desc, f32 t, s32 id,
+                                       const u32 cof_bits[5])
+{
+    f32 time_scale = (t - desc->keyframes[id]) * desc->length;
+    u32 reused = 0u;
+    u32 computed = 0u;
+    u32 frac_bits;
+
+    frac_bits = ndsIxBisect(cof_bits, ndsInterpFracBits(time_scale),
+                            ndsInterpPathFor(cof_bits), &reused, &computed);
+#if NDS_TICK_HUD
+    gNdsInterpFracNodesReused += reused;
+    gNdsInterpFracNodesComputed += computed;
+#endif
+    return ((f32) id + ndsInterpFracFloat(frac_bits)) /
+           ((f32) desc->points_num - 1.0F);
+}
+
 static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
 {
     NDSInterpFracMemo *set;
@@ -360,7 +375,9 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
         }
     }
     NDS_INTERP_FRAC_COUNT(gNdsInterpFracMemoMisses);
-    frac = ndsInterpGetFracFrameReuse(desc, t, id, cof_bits);
+    frac = (gNdsInterpFracKernel != 0u) ?
+        ndsInterpGetFracFrameKernel(desc, t, id, cof_bits) :
+        ndsInterpGetFracFrameReuse(desc, t, id, cof_bits);
 #if NDS_TICK_HUD
     if (gNdsInterpFracOracle != 0u)
     {
