@@ -1000,6 +1000,12 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   append would not fit. Lab P95 -1.4..-2.8K on six stages, Dream Land P99
   -38K; gate flat. Refuted: swap-remove with backward-shift deletion (slower).
   Receipt `2026-09-30_p2-2p8-ledger-holes`.
+- **09-30 carrying hurtbox worlds across epochs, REFUTED** (exact: 0
+  mismatches on nine stages): a held tick's world is the last one moved by the
+  parent's translation. Carries reached 39-47% of builds and same-ROM lab P95
+  -6..-19K, but only against the machinery's own overhead; cross-build against
+  the HEAD kernel the gate P95 is +4.7K and Saffron/Zebes flat/+5.6K. Patch and
+  data: `2026-09-30_p2-2p8-hurtbox-carry-refuted`.
 
 ## 7. Found along the way
 

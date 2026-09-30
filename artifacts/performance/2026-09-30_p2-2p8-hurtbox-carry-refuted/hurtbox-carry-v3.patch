@@ -1,0 +1,460 @@
+diff --git a/src/port/nds_p2_hurtbox_reject.c b/src/port/nds_p2_hurtbox_reject.c
+index 4e42fb0083f..7c032b850d8 100644
+--- a/src/port/nds_p2_hurtbox_reject.c
++++ b/src/port/nds_p2_hurtbox_reject.c
+@@ -43,7 +43,10 @@ extern volatile u32 gNdsR2CfxFastPaths;
+ #define NDS_P2_HB_CHAIN_MAX 18
+ /* Four world units, Q12. */
+ #define NDS_P2_HB_MARGIN_Q12 (INT32_C(4) << NDS_R2_CFX_POS_BITS)
+-#define NDS_P2_HB_CACHE_SLOTS 64u
++/* NDS_P2_HB_PLAYERS x NDS_P2_HB_JOINTS, one slot per fighter joint. */
++#define NDS_P2_HB_PLAYERS 4u
++#define NDS_P2_HB_JOINTS 40u
++#define NDS_P2_HB_CACHE_SLOTS (NDS_P2_HB_PLAYERS * NDS_P2_HB_JOINTS)
+ 
+ volatile u32 gNdsR2CfxFastPaths __attribute__((used, section(".data"))) = 1u;
+ 
+@@ -67,17 +70,44 @@ typedef struct NDSP2HbWorld
+     /* 1/s_min at Q26, rounded up (0 = not yet derived): s_min is the shortest
+      * world row, so radius * |W[k][c]| / s_k <= radius * |W[k][c]| * this. */
+     int32_t inv_smin_q26;
++    /* What the world was built from, so a later epoch can carry it forward
++     * (ndsP2HbLevel): rot_stamp names world.r's value; parent_stamp is the
++     * parent world's rot_stamp at the build (NDS_P2_HB_STAMP_ROOT for a root,
++     * 0 = never carried) and parent_t its translation. */
++    u32 rot_stamp;
++    u32 parent_stamp;
++    int32_t parent_t[3];
++    /* key[0..8] the rotation inputs, key[9..11] the translation inputs, of
++     * the local kind key_kind (ndsP2HbLevelKey). */
++    u32 key_kind;
++    u32 key[12];
+ } NDSP2HbWorld;
+ 
+ static NDSP2HbWorld sNdsP2HbCache[NDS_P2_HB_CACHE_SLOTS];
+ 
+-/* A world of this epoch for a DObj is in the slot its pointer hashes to. A
+- * fighter's DObjs are 136 bytes apart, so (ptr >> 4) & 63 put a joint and the
+- * joints eight or nine places along the pool on one slot; the multiplicative
+- * hash spreads them. */
+-static inline NDSP2HbWorld *ndsP2HbSlot(const void *dobj)
++/* A world of this epoch for a DObj is in its slot: slot (player, joint_id)
++ * of the fighter that owns it (FTParts::joint_id < FTPARTS_JOINT_NUM_MAX).
++ * It was the slot the DObj's pointer hashed to, 64 then 128 of them, but four
++ * fighters' tested chains are ~100 joints, so a direct-mapped hash evicted
++ * one fighter's worlds for another's between epochs, and a carried world
++ * needs its slot to survive (P2-2p8, 2026-09-30: 1,300 of 7,200 held-tick
++ * levels on Dream Land missed on another tenant, and their subtrees with
++ * them). The DObj tag still decides a hit, so a joint whose DObj was replaced
++ * simply misses. Same-ROM A/B word gNdsP2HbSlotShift: 0 = the joint slot,
++ * 25 / 26 = the pointer hash over 128 / 64 slots. */
++volatile u32 gNdsP2HbSlotShift __attribute__((used, section(".data"))) = 0u;
++
++static inline NDSP2HbWorld *ndsP2HbSlot(const void *dobj, const FTParts *parts,
++                                        u32 player)
+ {
+-    return &sNdsP2HbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >> 26];
++    const u32 shift = gNdsP2HbSlotShift;
++
++    if (shift != 0u)
++    {
++        return &sNdsP2HbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >> shift];
++    }
++    return &sNdsP2HbCache[((player & (NDS_P2_HB_PLAYERS - 1u)) *
++                           NDS_P2_HB_JOINTS) + parts->joint_id];
+ }
+ 
+ static inline u32 ndsP2HbBits(f32 value)
+@@ -368,24 +398,294 @@ static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
+     return 0;
+ }
+ 
++/* P2-2p8, 2026-09-30: a world carried forward instead of rebuilt.
++ *
++ * An epoch retires every cached world, but most of a fighter's worlds come
++ * back as the same matrices: body joints are posed only on the last source
++ * tick of a presented frame (NDS_FT_POSE_HOLD), so on the other tick their
++ * TRS is the previous tick's, and the root chain mostly just moves. On the
++ * gate a world build (BuildLocal + Compose + walk) was ~2,500 cycles, 10,600 a
++ * match, about two thirds of the kernel.
++ *
++ * ndsR2CfxCompose's rotation rows read only the parent's rotation and the
++ * local's, and BuildLocal derives the local's rotation from the rotate and
++ * scale bits alone; its translation row is
++ *   W.t[c] = Shr(sum_k P.r[k][c] * L.t[k]) + P.t[c].
++ * So when the joint's rotate and scale bits and the parent's rotation are the
++ * ones the slot was built from, W.r is unchanged and W.t moves by exactly the
++ * parent's translation change -- or, when the joint's own translate bits
++ * changed, is that one row recomputed. Either way the value is the full
++ * build's bit for bit, and so is every guard outcome: the unchanged parts
++ * passed their guards at the build, and the recomputed parts are checked with
++ * the build's own conditions. A parent's rotation is named by a stamp that
++ * only a full build renews, so equal stamps mean an equal rotation. A local
++ * taken from the cached float local (transform_update_mode, ndsR2CfxLoadF32)
++ * is keyed the same way on that matrix's rotation and translation cells -- a
++ * third of the tested joints are such locals, and rebuilding them renewed
++ * every descendant's stamp. A parent taken from a latched float world carries
++ * no stamp, so its children are always rebuilt.
++ *
++ * Same-ROM A/B word gNdsP2HbCarry: 0 always rebuilds; 2 carries AND rebuilds,
++ * counts any difference in gNdsP2HbCarryMismatches and keeps the rebuilt
++ * world. */
++#define NDS_P2_HB_STAMP_ROOT 0xFFFFFFFFu
++
++volatile u32 gNdsP2HbCarry __attribute__((used, section(".data"))) = 1u;
++__attribute__((used)) volatile u32 gNdsP2HbCarries;
++__attribute__((used)) volatile u32 gNdsP2HbCarryRows;
++__attribute__((used)) volatile u32 gNdsP2HbBuilds;
++__attribute__((used)) volatile u32 gNdsP2HbCarryMismatches;
++static u32 sNdsP2HbStampNext;
++
++static u32 ndsP2HbNewStamp(void)
++{
++    u32 stamp = sNdsP2HbStampNext + 1u;
++
++    if ((stamp == 0u) || (stamp == NDS_P2_HB_STAMP_ROOT))
++    {
++        stamp = 1u;
++    }
++    sNdsP2HbStampNext = stamp;
++    return stamp;
++}
++
++#define NDS_P2_HB_KEY_TRS 1u
++#define NDS_P2_HB_KEY_MTX 2u
++
++/* The inputs `cursor`'s local is built from (ndsP2HbLocal): rotate and scale
++ * bits in key[0..5] (key[6..8] zero) and translate bits in key[9..11] for a
++ * TRS local; the cached float local's rotation cells in key[0..8] and its
++ * translation row in key[9..11] for transform_update_mode. Returns the kind. */
++static u32 ndsP2HbLevelKey(u32 key[12], const DObj *cursor,
++                           const FTParts *parts)
++{
++    u32 c;
++
++    if (parts->transform_update_mode == 0)
++    {
++        key[0] = ndsP2HbBits(cursor->rotate.vec.f.x);
++        key[1] = ndsP2HbBits(cursor->rotate.vec.f.y);
++        key[2] = ndsP2HbBits(cursor->rotate.vec.f.z);
++        key[3] = ndsP2HbBits(cursor->scale.vec.f.x);
++        key[4] = ndsP2HbBits(cursor->scale.vec.f.y);
++        key[5] = ndsP2HbBits(cursor->scale.vec.f.z);
++        key[6] = 0u;
++        key[7] = 0u;
++        key[8] = 0u;
++        key[9] = ndsP2HbBits(cursor->translate.vec.f.x);
++        key[10] = ndsP2HbBits(cursor->translate.vec.f.y);
++        key[11] = ndsP2HbBits(cursor->translate.vec.f.z);
++        return NDS_P2_HB_KEY_TRS;
++    }
++    for (c = 0u; c < 3u; c++)
++    {
++        key[c] = ndsP2HbBits(parts->unk_dobjtrans_0x10[0][c]);
++        key[3u + c] = ndsP2HbBits(parts->unk_dobjtrans_0x10[1][c]);
++        key[6u + c] = ndsP2HbBits(parts->unk_dobjtrans_0x10[2][c]);
++        key[9u + c] = ndsP2HbBits(parts->unk_dobjtrans_0x10[3][c]);
++    }
++    return NDS_P2_HB_KEY_MTX;
++}
++
++/* Brings `slot` to `cursor`'s world for `epoch`, from the parent world `pw`
++ * named by `pstamp` (0 = a world no stamp names); `pw` NULL is a root, whose
++ * world is its local (gmCollisionCopyMatrix). Returns 0 to decline. A slot's
++ * tag is cleared before a build writes its world, so a failed build never
++ * leaves a tag on a stale world; a carry writes nothing until it has passed.
++ * `pw` may be this very slot's world (a parent on the same slot): its
++ * translation is read before anything is written, and Compose reads lhs into
++ * a temp. */
++static int ndsP2HbLevel(NDSP2HbWorld *slot, const DObj *cursor,
++                        const FTParts *parts, const NDSR2CfxMtx *pw,
++                        u32 pstamp, u32 epoch)
++{
++    const u32 carry = gNdsP2HbCarry;
++    const u32 want = (pw == NULL) ? NDS_P2_HB_STAMP_ROOT : pstamp;
++    u32 key[12];
++    u32 kind;
++    int32_t pt[3];
++    int32_t carried_t[3];
++    /* 0 = no carry, 1 = carried, -1 = the carry declines (a guard). */
++    int carried = 0;
++    u32 c;
++
++    for (c = 0u; c < 3u; c++)
++    {
++        pt[c] = (pw != NULL) ? pw->t[c] : 0;
++    }
++    kind = ndsP2HbLevelKey(key, cursor, parts);
++    if ((carry != 0u) && (want != 0u) && (slot->dobj == cursor) &&
++        (slot->key_kind == kind) && (slot->parent_stamp == want) &&
++        (((key[0] ^ slot->key[0]) | (key[1] ^ slot->key[1]) |
++          (key[2] ^ slot->key[2]) | (key[3] ^ slot->key[3]) |
++          (key[4] ^ slot->key[4]) | (key[5] ^ slot->key[5]) |
++          (key[6] ^ slot->key[6]) | (key[7] ^ slot->key[7]) |
++          (key[8] ^ slot->key[8])) == 0u))
++    {
++        int64_t t[3];
++
++        carried = 1;
++        if (((key[9] ^ slot->key[9]) | (key[10] ^ slot->key[10]) |
++             (key[11] ^ slot->key[11])) == 0u)
++        {
++            for (c = 0u; c < 3u; c++)
++            {
++                t[c] = (int64_t)slot->world.t[c] - slot->parent_t[c] + pt[c];
++            }
++        }
++        else
++        {
++            int32_t lt[3];
++
++            /* The local's translation and its guard, as BuildLocal and
++             * LoadF32 both convert and check it. */
++            for (c = 0u; c < 3u; c++)
++            {
++                float value;
++
++                __builtin_memcpy(&value, &key[9u + c], sizeof(value));
++                lt[c] = ndsR2CollisionF32ToFixed(value, NDS_R2_CFX_POS_BITS);
++                if ((lt[c] == NDS_R2_COLLISION_F32_OVERFLOW) ||
++                    (ndsR2CfxAbs32(lt[c]) >= NDS_R2_CFX_POS_MAX))
++                {
++                    carried = -1;
++                }
++            }
++            /* Compose's translation row. */
++            for (c = 0u; (carried > 0) && (c < 3u); c++)
++            {
++                t[c] = (pw == NULL) ? (int64_t)lt[c]
++                                    : ndsR2CfxShr(
++                                          (int64_t)pw->r[0][c] * lt[0] +
++                                              (int64_t)pw->r[1][c] * lt[1] +
++                                              (int64_t)pw->r[2][c] * lt[2],
++                                          NDS_R2_CFX_ROT_BITS) +
++                                          (int64_t)pt[c];
++            }
++            gNdsP2HbCarryRows++;
++        }
++        for (c = 0u; (carried > 0) && (c < 3u); c++)
++        {
++            if ((t[c] >= (int64_t)NDS_R2_CFX_POS_MAX) ||
++                (t[c] <= -(int64_t)NDS_R2_CFX_POS_MAX))
++            {
++                carried = -1;
++            }
++            carried_t[c] = (int32_t)t[c];
++        }
++        if (carry == 1u)
++        {
++            if (carried < 0)
++            {
++                return 0;
++            }
++            for (c = 0u; c < 3u; c++)
++            {
++                slot->world.t[c] = carried_t[c];
++                slot->parent_t[c] = pt[c];
++            }
++            slot->key[9] = key[9];
++            slot->key[10] = key[10];
++            slot->key[11] = key[11];
++            slot->epoch = epoch;
++            gNdsP2HbCarries++;
++            return 1;
++        }
++    }
++    {
++        /* The full build. Under gNdsP2HbCarry 2 a carry above is checked
++         * against it: the old rotation is kept aside first. */
++        int32_t carried_r[3][3];
++        int same = 0;
++
++        if (carried > 0)
++        {
++            __builtin_memcpy(carried_r, slot->world.r, sizeof(carried_r));
++        }
++        slot->dobj = NULL;
++        if (pw == NULL)
++        {
++            if (ndsP2HbLocal(&slot->world, cursor, parts) == 0)
++            {
++                if (carried > 0)
++                {
++                    gNdsP2HbCarryMismatches++;
++                }
++                return 0;
++            }
++        }
++        else
++        {
++            NDSR2CfxMtx local;
++
++            if ((ndsP2HbLocal(&local, cursor, parts) == 0) ||
++                (ndsR2CfxCompose(&slot->world, pw, &local) == 0))
++            {
++                if (carried > 0)
++                {
++                    gNdsP2HbCarryMismatches++;
++                }
++                return 0;
++            }
++        }
++        if (carried < 0)
++        {
++            gNdsP2HbCarryMismatches++;
++        }
++        else if (carried > 0)
++        {
++            same = ((__builtin_memcmp(carried_r, slot->world.r,
++                                      sizeof(carried_r)) == 0) &&
++                    (carried_t[0] == slot->world.t[0]) &&
++                    (carried_t[1] == slot->world.t[1]) &&
++                    (carried_t[2] == slot->world.t[2])) ? 1 : 0;
++            if (same == 0)
++            {
++                gNdsP2HbCarryMismatches++;
++            }
++        }
++        slot->dobj = cursor;
++        slot->epoch = epoch;
++        if (same == 0)
++        {
++            slot->rot_stamp = ndsP2HbNewStamp();
++            slot->inv_smin_q26 = 0;
++        }
++        slot->parent_stamp = want;
++        slot->key_kind = kind;
++        for (c = 0u; c < 3u; c++)
++        {
++            slot->parent_t[c] = pt[c];
++        }
++        for (c = 0u; c < 12u; c++)
++        {
++            slot->key[c] = key[c];
++        }
++        gNdsP2HbBuilds++;
++        return 1;
++    }
++}
++
+ /* World matrix of `joint`: func_ovl2_800EDBA4's walk (is_use_animlocks FALSE)
+  * -- up to the first ancestor with a latched world or to the root -- composed in
+- * fixed point, with each composed level cached for this latch epoch.
++ * fixed point, with each composed level cached for this latch epoch and carried
++ * into later ones where ndsP2HbLevel can.
+  *
+  * Returns the joint's world -- in the joint's cache slot, or in *scratch when
+  * the walk stopped on a latched world at the joint itself -- or NULL to
+- * decline; *slot_out is the joint's slot when the world is in one. The slot is
+- * checked before the DObj's FTParts is read, each level is composed straight
+- * into its slot, and a slot's tag is cleared before its world is written, so a
+- * failed build never leaves a tag on a stale world (P2-2p8, 2026-09-29: the
+- * previous walk read FTParts first and copied every level three times). */
+-static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
++ * decline; *slot_out is the joint's slot when the world is in one. Each level
++ * is composed straight into its slot (P2-2p8, 2026-09-29: the walk copied
++ * every level three times); the slot is found from the level's FTParts, so
++ * FTParts is read first again (2026-09-30). */
++static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, u32 player,
++                                        NDSR2CfxMtx *scratch,
+                                         NDSP2HbWorld **slot_out)
+ {
+     DObj *chain[NDS_P2_HB_CHAIN_MAX];
+     const FTParts *chain_parts[NDS_P2_HB_CHAIN_MAX];
+     const u32 epoch = gNdsP2HurtboxLatchEpoch;
+     const NDSR2CfxMtx *acc;
++    u32 acc_stamp;
+     NDSP2HbWorld *slot;
+     DObj *cursor = joint;
+     s32 depth = 0;
+@@ -393,19 +693,19 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+     *slot_out = NULL;
+     for (;;)
+     {
+-        const FTParts *parts;
++        const FTParts *parts = ftGetParts(cursor);
+ 
+-        slot = ndsP2HbSlot(cursor);
++        if ((parts == NULL) || (parts->joint_id >= NDS_P2_HB_JOINTS))
++        {
++            return NULL;
++        }
++        slot = ndsP2HbSlot(cursor, parts, player);
+         if ((slot->dobj == cursor) && (slot->epoch == epoch))
+         {
+             acc = &slot->world;
++            acc_stamp = slot->rot_stamp;
+             break;
+         }
+-        parts = ftGetParts(cursor);
+-        if (parts == NULL)
+-        {
+-            return NULL;
+-        }
+         if (parts->unk_dobjtrans_0x5 != 0)
+         {
+             if (ndsR2CfxLoadF32(scratch,
+@@ -418,20 +718,17 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+                 return scratch;
+             }
+             acc = scratch;
++            acc_stamp = 0u;
+             break;
+         }
+         if (cursor->parent == DOBJ_PARENT_NULL)
+         {
+-            /* The root's world is its local (gmCollisionCopyMatrix). */
+-            slot->dobj = NULL;
+-            if (ndsP2HbLocal(&slot->world, cursor, parts) == 0)
++            if (ndsP2HbLevel(slot, cursor, parts, NULL, 0u, epoch) == 0)
+             {
+                 return NULL;
+             }
+-            slot->dobj = cursor;
+-            slot->epoch = epoch;
+-            slot->inv_smin_q26 = 0;
+             acc = &slot->world;
++            acc_stamp = slot->rot_stamp;
+             break;
+         }
+         if (depth >= NDS_P2_HB_CHAIN_MAX)
+@@ -445,26 +742,16 @@ static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+     }
+     while (depth > 0)
+     {
+-        NDSR2CfxMtx local;
+-
+         depth--;
+         cursor = chain[depth];
+-        slot = ndsP2HbSlot(cursor);
+-        if (ndsP2HbLocal(&local, cursor, chain_parts[depth]) == 0)
++        slot = ndsP2HbSlot(cursor, chain_parts[depth], player);
++        if (ndsP2HbLevel(slot, cursor, chain_parts[depth], acc, acc_stamp,
++                         epoch) == 0)
+         {
+             return NULL;
+         }
+-        /* Compose reads lhs into a temp before writing dst, so acc may be
+-         * this very slot (a parent on the same slot). */
+-        slot->dobj = NULL;
+-        if (ndsR2CfxCompose(&slot->world, acc, &local) == 0)
+-        {
+-            return NULL;
+-        }
+-        slot->dobj = cursor;
+-        slot->epoch = epoch;
+-        slot->inv_smin_q26 = 0;
+         acc = &slot->world;
++        acc_stamp = slot->rot_stamp;
+     }
+     *slot_out = slot;
+     return acc;
+@@ -651,7 +938,7 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
+     {
+         return 0;
+     }
+-    w = ndsP2HbWorldOf(joint, &scratch, &slot);
++    w = ndsP2HbWorldOf(joint, fp->player, &scratch, &slot);
+     if (w == NULL)
+     {
+         return 0;
