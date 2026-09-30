@@ -965,6 +965,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   (P93-97 frames, +321K over the median) on the status-change pose cluster
   (~40K), the hurtbox kernel (~31K) and soft float (~27K). Receipt
   `2026-09-30_p2-2p8-anim-bitcmp`.
+- **09-30 floor/ceiling sweeps reject a segment by its x span, BANKED**
+  (replay identical): Sector Z is soft-float bound (fadd 91K a frame) and its
+  floor sweep ran the segment kernel ~810 times a frame; the kernel's
+  non-flat branch rejects a segment whose x span misses the sweep's, and the
+  loops now make that same bit-compare test before the call. Same-ROM Sector
+  Z P50 -22.3K, P95 1,621K -> 1,584K (-37.5K), two-VBlank 41.5% -> 44.5%;
+  Castle and Saffron P95 -2.9K; Dream Land's floors are flat (gate neutral).
+  Refuted: a per-binding stage near-plane test (unions straddle the plane).
+  Receipt `2026-09-30_p2-2p8-segment-xreject`.
 
 ## 7. Found along the way
 

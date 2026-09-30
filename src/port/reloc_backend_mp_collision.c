@@ -2993,6 +2993,29 @@ static s32 sNdsMPWallSweepEdgeInt[NDS_MP_YAKUMONO_DOBJ_SLOTS][4];
 volatile u32 gNdsMPSweepGroupReject __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsMPSweepGroupRejects;
 
+/* The floor and ceiling sweeps' per-segment x reject (P2-2p8, 2026-09-30).
+ * ndsMPFCSegmentCrossesKernel's non-flat branch returns 0 when the segment's
+ * x span [min(v1.x, v2.x), max(v1.x, v2.x)] misses the sweep's
+ * [min(position.x, translate.x), max(...)] -- the same selections and the
+ * same bit compares (nds_fcmp.h) on the same floats. Made in the sweep loop,
+ * that test skips the call, its NULL guards and the two subtractions it opens
+ * with; on Sector Z the kernel ran ~810 times a frame. A flat segment
+ * (v1.y == v2.y) tests its crossing point instead of the span, so it always
+ * goes to the kernel. Same-ROM A/B word gNdsMPSweepSegmentXReject. */
+volatile u32 gNdsMPSweepSegmentXReject __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsMPSweepSegmentXRejects;
+
+/* TRUE when a non-flat segment's x span misses [sweep_min, sweep_max]. */
+static inline sb32 ndsMPSweepSegmentXMisses(const Vec3f *v1, const Vec3f *v2,
+                                            f32 sweep_min, f32 sweep_max)
+{
+    const f32 min_x = NDS_FCMP_LT(v1->x, v2->x) ? v1->x : v2->x;
+    const f32 max_x = NDS_FCMP_GT(v1->x, v2->x) ? v1->x : v2->x;
+
+    return (NDS_FCMP_LT(max_x, sweep_min) || NDS_FCMP_LT(sweep_max, min_x)) ?
+        TRUE : FALSE;
+}
+
 /* 1 = reject group `g`'s lines for this sweep, on axis `axis` (0 x for the
  * walls, 1 y for floors and ceilings). `state` is the call's lazy truncation
  * of position / translate on that axis (0 not yet, 1 held, 2 unusable).
@@ -5831,6 +5854,8 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
             Vec3f sweep_position = group_position;
             Vec3f sweep_translate = group_translate;
+            f32 sweep_min_x;
+            f32 sweep_max_x;
             u32 j;
 
             gNdsStageMPSweepFloorLoopLineSweepVisitCount++;
@@ -5853,6 +5878,10 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             {
                 continue;
             }
+            sweep_min_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
+                sweep_position.x : sweep_translate.x;
+            sweep_max_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
+                sweep_translate.x : sweep_position.x;
             for (j = 0u; j + 1u < vertex_count; j++)
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
@@ -5867,7 +5896,10 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 ndsMPVertexF32Get(verts, v1_id, &v1.x, &v1.y);
                 ndsMPVertexF32Get(verts, v2_id, &v2.x, &v2.y);
 
-                if ((v1.y == v2.y) &&
+                const sb32 seg_flat =
+                    (ndsFcmpBits(v1.y) == ndsFcmpBits(v2.y)) ? TRUE : FALSE;
+
+                if ((seg_flat != FALSE) &&
                     (sweep_translate.y > sweep_position.y) &&
                     (sweep_position.y <= v1.y) &&
                     (sweep_translate.y >= v1.y) &&
@@ -5880,6 +5912,13 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 {
                     is_flat_ascending = TRUE;
                     saw_flat_ascending_sweep = TRUE;
+                }
+                if ((seg_flat == FALSE) && (gNdsMPSweepSegmentXReject != 0u) &&
+                    (ndsMPSweepSegmentXMisses(&v1, &v2, sweep_min_x,
+                                              sweep_max_x) != FALSE))
+                {
+                    gNdsMPSweepSegmentXRejects++;
+                    continue;
                 }
 
                 if (ndsMPFCSegmentCrosses(
@@ -6263,6 +6302,8 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
             Vec3f sweep_position = group_position;
             Vec3f sweep_translate = group_translate;
+            f32 sweep_min_x;
+            f32 sweep_max_x;
             u32 j;
 
             if ((vertex_count < 2u) || (vertex_count > 128u))
@@ -6284,19 +6325,31 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             {
                 continue;
             }
+            sweep_min_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
+                sweep_position.x : sweep_translate.x;
+            sweep_max_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
+                sweep_translate.x : sweep_position.x;
             for (j = 0u; j + 1u < vertex_count; j++)
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
                 u32 v2_id = ndsMPVertexID(ids, vertex_first + j + 1u);
-                Vec3f v1 = { (f32)ndsMPVertexX(verts, v1_id),
-                             (f32)ndsMPVertexY(verts, v1_id), 0.0F };
-                Vec3f v2 = { (f32)ndsMPVertexX(verts, v2_id),
-                             (f32)ndsMPVertexY(verts, v2_id), 0.0F };
+                Vec3f v1 = { 0.0F, 0.0F, 0.0F };
+                Vec3f v2 = { 0.0F, 0.0F, 0.0F };
                 f32 hit_x;
                 f32 hit_y;
                 f32 hit_dist;
 
+                ndsMPVertexF32Get(verts, v1_id, &v1.x, &v1.y);
+                ndsMPVertexF32Get(verts, v2_id, &v2.x, &v2.y);
                 gNdsStageMPCeilFloorLoopLineSweepVisitCount++;
+                if ((gNdsMPSweepSegmentXReject != 0u) &&
+                    (ndsFcmpBits(v1.y) != ndsFcmpBits(v2.y)) &&
+                    (ndsMPSweepSegmentXMisses(&v1, &v2, sweep_min_x,
+                                              sweep_max_x) != FALSE))
+                {
+                    gNdsMPSweepSegmentXRejects++;
+                    continue;
+                }
                 if (ndsMPFCSegmentCrosses(&sweep_position, &sweep_translate,
                         &v1, &v2, -1, &hit_x, &hit_y) == FALSE)
                 {

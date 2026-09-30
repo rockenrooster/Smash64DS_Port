@@ -43,3 +43,15 @@ and its local builds ~31K (`ndsP2HbRejectPoints` 29.5K in the band against
 call), the status-change pose cluster ~40K (parse +11.9K, play +5.8K,
 invalidate +5.4K, shield-pose unpack +4.8K, bind +3.9K, set-status +4.1K),
 soft float ~27K. Steady: lean kernel compose 54K a frame, stage GX draw 48K.
+
+## Refuted: the stage near-plane test per binding
+
+`ndsStageGxDraw` tests each projected run against every non-rigid binding it
+names (~297 tests a frame on Dream Land, six 64-bit products each). A
+per-binding test on the union of the bounds of every run naming the binding
+is exact (the test takes the box's minimum z and w, so a union that passes
+implies each run passes) and was kept per stage-matrix generation. Same ROM
+(`nu0_*` off, `nu1_*` on): P50 914,432 -> 918,784 / 918,208, STG median
+162,944 -> 166,976. The unions straddle the near plane (a binding's runs span
+the stage), so the union rarely passes and only adds a call. Removed, with the
+ITCM eviction it needed.
