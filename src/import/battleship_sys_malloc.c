@@ -133,8 +133,19 @@ void ndsTaskmanElasticReleaseAll(void)
     ndsTaskmanElasticMakeRoom((uintptr_t)gSYTaskmanGeneralHeap.end);
 }
 
+/* An ARM7 read may still be landing in the general heap's free bytes (the
+ * fighter motion prefetch, reloc_backend_assets.c): the reset waits for it.
+ * Weak so a target without the prefetch links. */
+__attribute__((weak)) void ndsR2AnimPrefetchDrain(void)
+{
+}
+
 void syMallocInit(SYMallocRegion *bp, u32 id, void *start, size_t size)
 {
+    if (bp == &gSYTaskmanGeneralHeap)
+    {
+        ndsR2AnimPrefetchDrain();
+    }
     battleship_syMallocInit(bp, id, start, size);
     if (bp == &gSYTaskmanGeneralHeap)
     {
@@ -145,6 +156,10 @@ void syMallocInit(SYMallocRegion *bp, u32 id, void *start, size_t size)
 
 void syMallocReset(SYMallocRegion *bp)
 {
+    if (bp == &gSYTaskmanGeneralHeap)
+    {
+        ndsR2AnimPrefetchDrain();
+    }
     battleship_syMallocReset(bp);
     if (bp == &gSYTaskmanGeneralHeap)
     {

@@ -13769,7 +13769,12 @@ typedef struct NDSR2AnimCacheEntry {
      * ndsRelocNormalizeFighterAObj16File transform, so the load path can set
      * format_fixups_applied and skip it. Zero for anything the prebake declined,
      * which is why the load path reads the flag rather than assuming. */
-    u32 aobj16_ready;
+    u16 aobj16_ready;
+    /* Fetched since the ring's cursor last passed it (see
+     * ndsR2AnimCacheRawRingAllocAligned). */
+    u8 referenced;
+    /* Read by the prefetch and not fetched yet (counters only). */
+    u8 prefetched;
 } NDSR2AnimCacheEntry;
 
 #define NDS_R2_ANIM_CACHE_READY_RAW 0u
@@ -13794,6 +13799,13 @@ static u32 sNdsR2AnimCacheCount;
 static u8 *sNdsR2AnimCacheArena;
 static u32 sNdsR2AnimCacheArenaBytes;
 static u32 sNdsR2AnimCacheArenaUsed;
+/* The motion prefetch (after ndsR2AnimDirectReadEntry): an ARM7 read may be
+ * landing in the ring, and nothing may take those bytes until it has. */
+void ndsR2AnimPrefetchDrain(void);
+static void ndsR2AnimPrefetchRetire(const u8 *lo, const u8 *hi);
+/* Prefetched clips dropped before any fetch used them, and first uses. */
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchWasted;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchUsed;
 /* CSS/setup callers only need a handful of imminent fighter clips resident.
  * Reserving the battle arena there would require ~452 KiB plus KEEP_FREE and
  * correctly declines in the menu scene.  A raw-only arena is intentionally
@@ -14139,6 +14151,7 @@ static const u8 *ndsR2AnimPinTake(void *heap, const NDSR2AnimCacheEntry *cached,
 
 static void ndsR2AnimCacheArenaDropForReset(void)
 {
+    ndsR2AnimPrefetchDrain();
 #if NDS_R2_ANIM_ZERO_COPY
     /* Every pinned clip leaves the arena first (a rewound scene's pins are
      * only forgotten -- ndsR2AnimPinRescue checks the generation). */
@@ -14414,6 +14427,7 @@ static u8 *ndsR2AnimCacheElasticYield(u8 *need_top)
         return arena;
     }
     delta = (u32)(want - (uintptr_t)arena);
+    ndsR2AnimPrefetchRetire(arena, arena + delta);
     ndsR2AnimCacheEvictRawRange(0u, delta);
     sNdsR2AnimCacheArena = arena + delta;
     sNdsR2AnimCacheArenaBytes = bytes - delta;
@@ -15204,6 +15218,10 @@ static void ndsR2AnimCacheRemoveEntry(u32 index)
     {
         return;
     }
+    if (sNdsR2AnimCache[index].prefetched != 0u)
+    {
+        gNdsR2AnimPrefetchWasted++;
+    }
     if (gNdsR2AnimCacheBytes >= sNdsR2AnimCache[index].size)
     {
         gNdsR2AnimCacheBytes -= sNdsR2AnimCache[index].size;
@@ -15272,6 +15290,24 @@ static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
  * fixup or use, so the cache owns no live object pointers. Keep the arena as a
  * variable-size circular log: wrapping evicts only byte ranges the incoming
  * template overwrites instead of invalidating every unrelated clip at once. */
+/* THE RING STEPS OVER CLIPS IN USE (P2-2p8, 2026-09-30).
+ *
+ * The ring overwrote whatever its cursor reached, so a clip every fighter
+ * keeps returning to -- each one's Wait, fetched 34-55 times a match -- was
+ * dropped on every lap and read from storage again (~5 times a match each,
+ * ~31K ticks a read). A clip fetched since the cursor last passed it is now
+ * stepped over once (its mark is cleared) and the new clip goes after it:
+ * the CLOCK approximation of LRU, over variable sizes and without moving a
+ * byte. The bytes skipped before such a clip stay unused until the next lap.
+ * Same ROM, four lab stages: 4-8% fewer reads (replayed on the lab traces:
+ * 7-12%; LRU 8-12%). Bounded: after NDS_R2_ANIM_CACHE_CLOCK_STEPS steps (each clears at
+ * least one mark) the range is evicted as before. Only which clips stay
+ * cached changes; a clip's bytes are the same wherever they come from.
+ * Same-ROM A/B word gNdsR2AnimCacheClock. */
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimCacheClock = 1u;
+__attribute__((used)) volatile u32 gNdsR2AnimCacheClockSkips;
+#define NDS_R2_ANIM_CACHE_CLOCK_STEPS 8u
+
 /* `align` (a power of two, >= 16) aligns the returned ADDRESS: the arena's
  * base is only guaranteed NDS_RELOC_ALIGN_BYTES. */
 static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
@@ -15303,6 +15339,49 @@ static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
         aligned = first;
         gNdsR2AnimCacheRawRecycles++;
     }
+    if (gNdsR2AnimCacheClock != 0u)
+    {
+        u32 steps;
+
+        for (steps = 0u; steps < NDS_R2_ANIM_CACHE_CLOCK_STEPS; steps++)
+        {
+            const u8 *lo = sNdsR2AnimCacheArena + aligned;
+            const u8 *hi = lo + size;
+            const u8 *past = NULL;
+            u32 i;
+
+            for (i = 0u; i < sNdsR2AnimCacheCount; i++)
+            {
+                NDSR2AnimCacheEntry *e = &sNdsR2AnimCache[i];
+                const u8 *s = (const u8 *)e->payload;
+                const u8 *t = s + e->size;
+
+                if ((e->referenced != 0u) && (s < hi) && (lo < t))
+                {
+                    e->referenced = 0u;
+                    if ((past == NULL) || (t > past))
+                    {
+                        past = t;
+                    }
+                }
+            }
+            if (past == NULL)
+            {
+                break;
+            }
+            gNdsR2AnimCacheClockSkips++;
+            aligned = (u32)((((uintptr_t)past + align - 1u) &
+                             ~(uintptr_t)(align - 1u)) - base);
+            if ((aligned > sNdsR2AnimCacheArenaBytes) ||
+                (size > (sNdsR2AnimCacheArenaBytes - aligned)))
+            {
+                aligned = first;
+                gNdsR2AnimCacheRawRecycles++;
+            }
+        }
+    }
+    ndsR2AnimPrefetchRetire(&sNdsR2AnimCacheArena[aligned],
+                            &sNdsR2AnimCacheArena[aligned] + size);
     ndsR2AnimCacheEvictRawRange(aligned, size);
     sNdsR2AnimCacheArenaUsed = aligned + size;
     gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
@@ -15355,6 +15434,8 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     memcpy(payload, data, size);
     entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
     entry->asset_id = asset_id;
+    entry->referenced = 0u;
+    entry->prefetched = 0u;
     ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
     entry->size = size;
     entry->payload = payload;
@@ -15411,47 +15492,24 @@ __attribute__((used, section(".data"))) volatile u32 gNdsR2AnimDirectRead = 1u;
 __attribute__((used)) volatile u32 gNdsR2AnimDirectReads;
 __attribute__((used)) volatile u32 gNdsR2AnimDirectRefusals;
 
-static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
+/* A READY_STREAM entry for `size` clip bytes at `payload` in the ring. */
+static NDSR2AnimCacheEntry *ndsR2AnimCacheAddStreamEntry(u32 asset_id,
+                                                         u8 *payload, u32 size)
 {
     NDSR2AnimCacheEntry *entry;
-    u8 *slot;
-    u32 head;
-    u32 size;
-    u32 span;
 
-    if ((ndsRelocAssetFighterStreamClipSpan(asset_id, &head, &size, &span) ==
-         FALSE) ||
-        (ndsR2AnimCacheArenaEnsure() == FALSE) ||
-        (sNdsR2AnimCacheArenaRawOnly == FALSE))
-    {
-        gNdsR2AnimDirectRefusals++;
-        return NULL;
-    }
     if (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES)
     {
         /* As the store does: a full table before the ring wraps. */
         ndsR2AnimCacheRemoveEntry(0u);
     }
-    slot = (u8 *)ndsR2AnimCacheRawRingAllocAligned(span, 32u);
-    if ((slot == NULL) ||
-        (ndsRelocAssetReadFighterStreamClipSpan(asset_id, slot, span) ==
-         FALSE))
-    {
-        /* The slot's range was evicted and holds nothing: no entry names it. */
-        gNdsR2AnimDirectRefusals++;
-        return NULL;
-    }
-    if (head != 0u)
-    {
-        memmove(slot, slot + head, size);
-    }
-    sNdsR2AnimCacheArenaUsed = (u32)(slot - sNdsR2AnimCacheArena) + size;
-    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
     entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
     entry->asset_id = asset_id;
+    entry->referenced = 0u;
+    entry->prefetched = 0u;
     ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
     entry->size = size;
-    entry->payload = slot;
+    entry->payload = payload;
     memset(&entry->header, 0, sizeof(entry->header));
     entry->header.file_id = asset_id;
     entry->header.data_size = size;
@@ -15472,6 +15530,420 @@ static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
         sNdsR2AnimStoredThisMatch[word] |= bit;
     }
     return entry;
+}
+
+static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
+{
+    u8 *slot;
+    u32 head;
+    u32 size;
+    u32 span;
+
+    if ((ndsRelocAssetFighterStreamClipSpan(asset_id, &head, &size, &span,
+                                            NULL) == FALSE) ||
+        (ndsR2AnimCacheArenaEnsure() == FALSE) ||
+        (sNdsR2AnimCacheArenaRawOnly == FALSE))
+    {
+        gNdsR2AnimDirectRefusals++;
+        return NULL;
+    }
+    slot = (u8 *)ndsR2AnimCacheRawRingAllocAligned(span, 32u);
+    if ((slot == NULL) ||
+        (ndsRelocAssetReadFighterStreamClipSpan(asset_id, slot, span) ==
+         FALSE))
+    {
+        /* The slot's range was evicted and holds nothing: no entry names it. */
+        gNdsR2AnimDirectRefusals++;
+        return NULL;
+    }
+    if (head != 0u)
+    {
+        memmove(slot, slot + head, size);
+    }
+    sNdsR2AnimCacheArenaUsed = (u32)(slot - sNdsR2AnimCacheArena) + size;
+    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    return ndsR2AnimCacheAddStreamEntry(asset_id, slot, size);
+}
+
+/* THE MOTION PREFETCH (P2-2p8, 2026-09-30).
+ *
+ * A clip read blocks the ARM9 for the whole ARM7 round trip (~21K ticks
+ * after ndsR2AnimDirectReadEntry), and most reads are a fighter's FIRST use
+ * of a clip, which no eviction policy can avoid. What follows a clip is
+ * predictable: the table (scripts/motion/generate_clip_successors.py, from
+ * lab clip traces) names the two clips that most often followed each one in
+ * the same fighter's fetches. An installed clip is queued; in the frame's
+ * idle time before its presentation VBlank (ndsR2AnimPrefetchIdle, called
+ * from the VBlank wait) its successors are read into ring slots
+ * ASYNCHRONOUSLY (ndsAudioStorageReadAsync) and landed as ordinary
+ * READY_STREAM entries. A fetch of a clip still in flight waits for that read
+ * instead of starting another. Issued at the install instead, the reads
+ * queued the next blocking read behind them on the ARM7 and the issue and
+ * landing added ~6K ticks a status change: blocking reads -55%, P95 +5..16K
+ * (same ROM, seven stages). In the idle time both costs are off the frame.
+ *
+ * Nothing the game computes depends on it: a clip's bytes are the pack's
+ * whether read now, earlier or never. An ARM7 write must never land in bytes
+ * something else owns, so every path that takes ring bytes first waits for a
+ * read covering them (ndsR2AnimPrefetchRetire: the ring allocation, the
+ * elastic give-back, the arena drop) and the heap reset waits for all of them
+ * (ndsR2AnimPrefetchDrain, battleship_sys_malloc.c). Two requests at most in
+ * flight: the ARM7 mailbox holds 20 (FGM fills use 16, one sync read). Same-ROM
+ * A/B word gNdsR2AnimPrefetch. */
+#include <nds/nds_audio_storage.h>
+#include <nds/generated/nds_clip_successors.generated.h>
+
+#define NDS_R2_ANIM_PREFETCH_SLOTS 2u
+typedef struct NDSR2AnimPrefetch {
+    /* One D-cache line of its own: the ARM7 writes its reply here. */
+    NdsAudioStorageRequest request;
+    u8 *slot;
+    u32 asset_id;
+    u32 head;
+    u32 size;
+    u32 span;
+    u32 generation;
+    u32 busy;
+} NDSR2AnimPrefetch;
+static NDSR2AnimPrefetch sNdsR2AnimPrefetchSlots[NDS_R2_ANIM_PREFETCH_SLOTS];
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimPrefetch = 1u;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchIssued;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchLanded;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchWaits;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchRetired;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchRefused;
+/* Refusals by cause: [0] no stream span, [1] no raw ring, [2] ring slot,
+ * [3] storage request. */
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchRefusedWhy[4];
+
+/* Spin until the ARM7 has finished with this request (landed or failed). */
+static s32 ndsR2AnimPrefetchWait(NDSR2AnimPrefetch *p)
+{
+    s32 r;
+
+    while ((r = ndsAudioStorageReadAsyncPoll(&p->request)) == 0)
+    {
+    }
+    return r;
+}
+
+/* Every in-flight read whose slot meets [lo, hi) finishes and is discarded:
+ * those bytes are about to belong to someone else. */
+static void ndsR2AnimPrefetchRetire(const u8 *lo, const u8 *hi)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PREFETCH_SLOTS; i++)
+    {
+        NDSR2AnimPrefetch *p = &sNdsR2AnimPrefetchSlots[i];
+
+        if ((p->busy != 0u) && (p->slot < hi) && (lo < p->slot + p->span))
+        {
+            (void)ndsR2AnimPrefetchWait(p);
+            p->busy = 0u;
+            gNdsR2AnimPrefetchRetired++;
+        }
+    }
+}
+
+void ndsR2AnimPrefetchDrain(void)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PREFETCH_SLOTS; i++)
+    {
+        NDSR2AnimPrefetch *p = &sNdsR2AnimPrefetchSlots[i];
+
+        if (p->busy != 0u)
+        {
+            (void)ndsR2AnimPrefetchWait(p);
+            p->busy = 0u;
+            gNdsR2AnimPrefetchRetired++;
+        }
+    }
+}
+
+/* Land every finished read as a cache entry; a read of `wanted` still in
+ * flight is waited for (the fetch needs it now). */
+static void ndsR2AnimPrefetchPoll(u32 wanted)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PREFETCH_SLOTS; i++)
+    {
+        NDSR2AnimPrefetch *p = &sNdsR2AnimPrefetchSlots[i];
+        s32 r;
+
+        if (p->busy == 0u)
+        {
+            continue;
+        }
+        r = ndsAudioStorageReadAsyncPoll(&p->request);
+        if ((r == 0) && (p->asset_id == wanted))
+        {
+            r = ndsR2AnimPrefetchWait(p);
+            gNdsR2AnimPrefetchWaits++;
+        }
+        if (r == 0)
+        {
+            continue;
+        }
+        p->busy = 0u;
+        if ((r < 0) || (p->generation != gNdsTaskmanHeapGeneration) ||
+            (ndsR2AnimCacheArenaStillOwned() == FALSE) ||
+            (p->slot < sNdsR2AnimCacheArena) ||
+            ((p->slot + p->span) >
+             (sNdsR2AnimCacheArena + sNdsR2AnimCacheArenaBytes)) ||
+            (ndsR2AnimCacheFind(p->asset_id) != NULL))
+        {
+            gNdsR2AnimPrefetchRetired++;
+            continue;
+        }
+        if (p->head != 0u)
+        {
+            memmove(p->slot, p->slot + p->head, p->size);
+        }
+        if (sNdsR2AnimCacheArenaUsed ==
+            (u32)(p->slot - sNdsR2AnimCacheArena) + p->span)
+        {
+            /* Nothing was placed after it: the spare sector bytes go back. */
+            sNdsR2AnimCacheArenaUsed =
+                (u32)(p->slot - sNdsR2AnimCacheArena) + p->size;
+            gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+        }
+        ndsR2AnimCacheAddStreamEntry(p->asset_id, p->slot, p->size)
+            ->prefetched = 1u;
+        gNdsR2AnimPrefetchLanded++;
+    }
+}
+
+/* Installed clips whose successors the idle time has not read yet. */
+#define NDS_R2_ANIM_PREFETCH_QUEUE 8u
+static u16 sNdsR2AnimPrefetchQueue[NDS_R2_ANIM_PREFETCH_QUEUE];
+static u32 sNdsR2AnimPrefetchQueueCount;
+/* Idle-time budget: stop this many ticks before the presentation VBlank
+ * (the longest step -- a ring allocation or an 11.5 KB landing -- is well
+ * under it), and start a read only with time left for it to land: one left
+ * in flight at the frame's end queues the next frame's first blocking read
+ * behind it on the ARM7. */
+#define NDS_R2_ANIM_PREFETCH_IDLE_MARGIN 40000u
+#define NDS_R2_ANIM_PREFETCH_ISSUE_MARGIN 90000u
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchIdleCalls;
+__attribute__((used)) volatile u32 gNdsR2AnimPrefetchIdleStops;
+u32 ndsPlatformTicksToPresentVBlank(void);
+
+static void ndsR2AnimPrefetchNote(u32 asset_id)
+{
+    u32 i;
+
+    if ((gNdsR2AnimPrefetch == 0u) || (sNdsR2AnimCacheArenaElastic == FALSE))
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsR2AnimPrefetchQueueCount; i++)
+    {
+        if (sNdsR2AnimPrefetchQueue[i] == asset_id)
+        {
+            return;
+        }
+    }
+    if (sNdsR2AnimPrefetchQueueCount == NDS_R2_ANIM_PREFETCH_QUEUE)
+    {
+        /* The oldest install is the least likely to matter now. */
+        memmove(&sNdsR2AnimPrefetchQueue[0], &sNdsR2AnimPrefetchQueue[1],
+                (NDS_R2_ANIM_PREFETCH_QUEUE - 1u) * sizeof(u16));
+        sNdsR2AnimPrefetchQueueCount--;
+    }
+    sNdsR2AnimPrefetchQueue[sNdsR2AnimPrefetchQueueCount++] = (u16)asset_id;
+}
+
+/* The row of `asset_id` in the successor table, or NDS_CLIP_SUCCESSOR_ROWS. */
+static u32 ndsR2AnimPrefetchRow(u32 asset_id)
+{
+    u32 lo = 0u;
+    u32 hi = NDS_CLIP_SUCCESSOR_ROWS;
+
+    while (lo < hi)
+    {
+        const u32 mid = (lo + hi) >> 1;
+
+        if (sNdsClipSuccessorKey[mid] < asset_id)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+    return ((lo < NDS_CLIP_SUCCESSOR_ROWS) &&
+            (sNdsClipSuccessorKey[lo] == asset_id)) ?
+        lo : NDS_CLIP_SUCCESSOR_ROWS;
+}
+
+static sb32 ndsR2AnimPrefetchInFlight(u32 asset_id)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_R2_ANIM_PREFETCH_SLOTS; i++)
+    {
+        if ((sNdsR2AnimPrefetchSlots[i].busy != 0u) &&
+            (sNdsR2AnimPrefetchSlots[i].asset_id == asset_id))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* The next clip worth reading: the oldest queued install's first successor
+ * that is neither cached nor in flight. Installs with none left leave the
+ * queue. 0 = nothing to read. */
+static u32 ndsR2AnimPrefetchNextCandidate(void)
+{
+    while (sNdsR2AnimPrefetchQueueCount != 0u)
+    {
+        const u32 row = ndsR2AnimPrefetchRow(sNdsR2AnimPrefetchQueue[0]);
+        u32 k;
+
+        if (row != NDS_CLIP_SUCCESSOR_ROWS)
+        {
+            for (k = 0u; k < 2u; k++)
+            {
+                const u32 next = sNdsClipSuccessorNext[row][k];
+
+                if ((next != 0u) && (ndsR2AnimCacheFind(next) == NULL) &&
+                    (ndsR2AnimPrefetchInFlight(next) == FALSE))
+                {
+                    return next;
+                }
+            }
+        }
+        memmove(&sNdsR2AnimPrefetchQueue[0], &sNdsR2AnimPrefetchQueue[1],
+                (sNdsR2AnimPrefetchQueueCount - 1u) * sizeof(u16));
+        sNdsR2AnimPrefetchQueueCount--;
+    }
+    return 0u;
+}
+
+/* One asynchronous read of `next` into a free slot. FALSE: nothing issued. */
+static sb32 ndsR2AnimPrefetchIssue(u32 next)
+{
+    NDSR2AnimPrefetch *p = NULL;
+    u32 head;
+    u32 size;
+    u32 span;
+    u32 sector;
+    u32 i;
+    u8 *slot;
+
+    for (i = 0u; i < NDS_R2_ANIM_PREFETCH_SLOTS; i++)
+    {
+        if (sNdsR2AnimPrefetchSlots[i].busy == 0u)
+        {
+            p = &sNdsR2AnimPrefetchSlots[i];
+            break;
+        }
+    }
+    if (p == NULL)
+    {
+        return FALSE;
+    }
+    if (ndsRelocAssetFighterStreamClipSpan(next, &head, &size, &span,
+                                           &sector) == FALSE)
+    {
+        gNdsR2AnimPrefetchRefused++;
+        gNdsR2AnimPrefetchRefusedWhy[0]++;
+        return FALSE;
+    }
+    if ((ndsR2AnimCacheArenaEnsure() == FALSE) ||
+        (sNdsR2AnimCacheArenaRawOnly == FALSE))
+    {
+        gNdsR2AnimPrefetchRefused++;
+        gNdsR2AnimPrefetchRefusedWhy[1]++;
+        return FALSE;
+    }
+    slot = (u8 *)ndsR2AnimCacheRawRingAllocAligned(span, 32u);
+    if (slot == NULL)
+    {
+        gNdsR2AnimPrefetchRefused++;
+        gNdsR2AnimPrefetchRefusedWhy[2]++;
+        return FALSE;
+    }
+    if (ndsAudioStorageReadAsync(&p->request, sector, slot, span) == 0)
+    {
+        /* The reserved bytes hold nothing and no entry names them. */
+        gNdsR2AnimPrefetchRefused++;
+        gNdsR2AnimPrefetchRefusedWhy[3]++;
+        return FALSE;
+    }
+    p->slot = slot;
+    p->asset_id = next;
+    p->head = head;
+    p->size = size;
+    p->span = span;
+    p->generation = gNdsTaskmanHeapGeneration;
+    p->busy = 1u;
+    gNdsR2AnimPrefetchIssued++;
+    return TRUE;
+}
+
+void ndsR2AnimPrefetchIdle(void)
+{
+    if ((gNdsR2AnimPrefetch == 0u) ||
+        ((sNdsR2AnimPrefetchQueueCount == 0u) &&
+         (sNdsR2AnimPrefetchSlots[0].busy == 0u) &&
+         (sNdsR2AnimPrefetchSlots[1].busy == 0u)))
+    {
+        return;
+    }
+    gNdsR2AnimPrefetchIdleCalls++;
+    for (;;)
+    {
+        u32 next;
+        sb32 busy;
+        u32 i;
+
+        if (ndsPlatformTicksToPresentVBlank() < NDS_R2_ANIM_PREFETCH_IDLE_MARGIN)
+        {
+            gNdsR2AnimPrefetchIdleStops++;
+            return;
+        }
+        ndsR2AnimPrefetchPoll(0u);
+        next = (ndsPlatformTicksToPresentVBlank() >=
+                NDS_R2_ANIM_PREFETCH_ISSUE_MARGIN) ?
+            ndsR2AnimPrefetchNextCandidate() : 0u;
+        if ((next != 0u) && (ndsR2AnimPrefetchIssue(next) != FALSE))
+        {
+            continue;
+        }
+        busy = FALSE;
+        for (i = 0u; i < NDS_R2_ANIM_PREFETCH_SLOTS; i++)
+        {
+            busy |= (sNdsR2AnimPrefetchSlots[i].busy != 0u) ? TRUE : FALSE;
+        }
+        if ((busy == FALSE) && (next == 0u))
+        {
+            return;
+        }
+        if ((busy == FALSE) && (next != 0u))
+        {
+            /* Refused with every slot free: drop that install's turn. */
+            if (sNdsR2AnimPrefetchQueueCount != 0u)
+            {
+                memmove(&sNdsR2AnimPrefetchQueue[0], &sNdsR2AnimPrefetchQueue[1],
+                        (sNdsR2AnimPrefetchQueueCount - 1u) * sizeof(u16));
+                sNdsR2AnimPrefetchQueueCount--;
+            }
+        }
+    }
+}
+
+#else
+static void ndsR2AnimPrefetchRetire(const u8 *lo, const u8 *hi)
+{
+    (void)lo;
+    (void)hi;
 }
 #endif
 
@@ -15807,6 +16279,8 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         NDSR2AnimCacheEntry *entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
 
         entry->asset_id = asset_id;
+        entry->referenced = 0u;
+        entry->prefetched = 0u;
         ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
         entry->size = (u32)loaded_size;
         entry->payload = payload;
@@ -16241,6 +16715,19 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 #endif
         if (cached != NULL)
         {
+            if (direct == FALSE)
+            {
+                NDSR2AnimCacheEntry *used =
+                    (NDSR2AnimCacheEntry *)(uintptr_t)cached;
+
+                /* A use: the ring steps over this clip on its next pass. */
+                used->referenced = 1u;
+                if (used->prefetched != 0u)
+                {
+                    used->prefetched = 0u;
+                    gNdsR2AnimPrefetchUsed++;
+                }
+            }
 #if NDS_R2_ANIM_ZERO_COPY
             if ((gNdsR2AnimZeroCopy != 0u) &&
                 (cached->aobj16_ready == NDS_R2_ANIM_CACHE_READY_STREAM))
@@ -16486,6 +16973,49 @@ void *ndsRelocResolveAuthoritativeForceFile(void *file)
 }
 #endif
 
+#if defined(NDS_LAB_CLIP_TRACE) && NDS_LAB_CLIP_TRACE && NDS_TICK_HUD && \
+    defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
+    NDS_IMPORT_BATTLESHIP_FTMANAGER && NDS_R2_ANIM_CACHE && NDS_R2_ANIM_ZERO_COPY
+/* LAB (a lab build with CPPFLAGS=-DNDS_LAB_CLIP_TRACE=1): one word per
+ * fighter clip fetch -- clip index (asset - 499, 11 bits), outcome (2: 0
+ * zero-copy hit, 1 copy hit, 2 storage read, 3 other), battle slot (2), frame
+ * (17). The source of scripts/motion/generate_clip_successors.py's table;
+ * read with -ExtraGlobals gNdsLabClipTraceCount,gNdsLabClipTrace[i]... */
+#define NDS_LAB_CLIP_TRACE_ON 1
+#define NDS_LAB_CLIP_TRACE_MAX 900u
+__attribute__((used)) volatile u32 gNdsLabClipTrace[NDS_LAB_CLIP_TRACE_MAX];
+__attribute__((used)) volatile u32 gNdsLabClipTraceCount;
+extern volatile u32 gNdsFrameCounter;
+
+static void ndsLabClipTraceNote(u32 asset_id, const void *heap, u32 outcome)
+{
+    u32 slot = 3u;
+    GObj *gobj;
+    const u32 n = gNdsLabClipTraceCount;
+
+    for (gobj = gGCCommonLinks[nGCCommonLinkIDFighter]; gobj != NULL;
+         gobj = gobj->link_next)
+    {
+        FTStruct *fp = ftGetStruct(gobj);
+
+        if ((fp != NULL) && (fp->figatree_heap == heap))
+        {
+            slot = (u32)fp->player & 3u;
+            break;
+        }
+    }
+    if (n < NDS_LAB_CLIP_TRACE_MAX)
+    {
+        gNdsLabClipTrace[n] = ((asset_id - 499u) & 0x7ffu) |
+            ((outcome & 3u) << 11) | (slot << 13) |
+            ((gNdsFrameCounter & 0x1ffffu) << 15);
+    }
+    gNdsLabClipTraceCount = n + 1u;
+}
+#else
+#define NDS_LAB_CLIP_TRACE_ON 0
+#endif
+
 void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
 {
     u32 token = ndsRelocFileID(file_id);
@@ -16521,7 +17051,26 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
             gNdsAnimUseBits[asset_id >> 5] |= 1u << (asset_id & 31u);
         }
 #endif
+#if NDS_R2_ANIM_CACHE && NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
+        /* Finished prefetches become entries first; this clip in flight is
+         * waited for rather than read again. */
+        ndsR2AnimPrefetchPoll(asset_id);
+#endif
+#if NDS_LAB_CLIP_TRACE_ON
+        {
+            const u32 lab_zc = gNdsR2AnimZeroCopyHits;
+            const u32 lab_hits = gNdsR2AnimCacheHits;
+            const u32 lab_reads = gNdsRelocAssetFighterStreamReads;
+
+            file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
+            ndsLabClipTraceNote(asset_id, heap,
+                (gNdsRelocAssetFighterStreamReads != lab_reads) ? 2u :
+                (gNdsR2AnimZeroCopyHits != lab_zc) ? 0u :
+                (gNdsR2AnimCacheHits != lab_hits) ? 1u : 3u);
+        }
+#else
         file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
+#endif
 #if NDS_FIGHTER_ANIM_AUDIT
         gNdsFighterAnimAuditLoadSerial++;
         gNdsFighterAnimAuditLoadAssetID = asset_id;
@@ -16539,6 +17088,9 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
         if (file != NULL)
         {
             gNdsRelocForceFighterAnimResolveCount++;
+#if NDS_R2_ANIM_CACHE && NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
+            ndsR2AnimPrefetchNote(asset_id);
+#endif
         }
         else
         {

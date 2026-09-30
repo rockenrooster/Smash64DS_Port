@@ -983,6 +983,16 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   P50 -2.6K, P95 -1.4K. A clip trace sizes the next step: a ring that steps
   over hit clips plus successor prefetch halves the reads in simulation.
   Receipt `2026-09-30_p2-2p8-direct-clip-read`.
+- **09-30 fighter clip prefetch in the idle time + a stepping ring, BANKED**
+  (replay identical on nine stages, three rosters, gate): a table from 27 lab
+  clip traces names each clip's two likeliest successors; they are read by
+  the ARM7 asynchronously in the frame's idle time before its presentation
+  VBlank, and the ring steps over clips fetched since its last pass. Lab P95
+  -1.5K..-24.8K on all 13 stage/roster pairs (mean -7.5K), blocking reads
+  -41..-54%; gate P95 -5.2K/-6.2K. Refuted: issuing at the install (P95
+  +5..16K, ARM7 queueing), a two-queue ring. Dream Land P99 +53K is the
+  event-32 ledger ForgetRange (~150K) landing on a heavier frame: owed.
+  Receipt `2026-09-30_p2-2p8-clip-prefetch`.
 
 ## 7. Found along the way
 

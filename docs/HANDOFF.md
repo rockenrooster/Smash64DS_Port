@@ -28,7 +28,7 @@ renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
 Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
 MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 **09-26..29 solo** (receipts `2026-09-2{6,7,8,9}_p2-2p8-*`). Gate WORK-H P50/P95
-~908,200/~1,227,300 (clip reads, 09-30); lab P95 1.25-1.57M by stage (`..._direct-clip-read`);
+~910,000/~1,222,500 (clip prefetch, 09-30); lab P95 1.24-1.57M by stage (`..._clip-prefetch`);
 SZ entry `..._sector-z-arwing`; refuted `..._refuted-levers`; stage GX `..._stage-gx-memo`; objects `..._object-fast-lane`; SMULL `..._sim-codegen`. Lab
 sweep ROM (NDS_LAB_FOURCPU_SWEEP; build it with NDS_P2_PIKACHU/YOSHI/NESS/PURIN=1) P95
 1.21M-1.58M by roster. Digest `--sequence --resync 4`. P95 frames carry 1.2-1.6 status

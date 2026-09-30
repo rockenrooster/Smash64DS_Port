@@ -110,11 +110,12 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
 s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
                                        u32 *out_size);
 /* The whole sectors a stream clip touches: `span` bytes (a multiple of 512)
- * starting at the clip's sector, with the clip `head` bytes in. The read takes
- * a 32-byte aligned buffer of exactly `span` bytes and is one storage command
- * (nds_reloc_assets.c). */
+ * starting at the clip's sector (`out_sector`, ROM-absolute, may be NULL),
+ * with the clip `head` bytes in. The read takes a 32-byte aligned buffer of
+ * exactly `span` bytes and is one storage command (nds_reloc_assets.c). */
 s32 ndsRelocAssetFighterStreamClipSpan(u32 asset_id, u32 *out_head,
-                                       u32 *out_size, u32 *out_span);
+                                       u32 *out_size, u32 *out_span,
+                                       u32 *out_sector);
 s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);

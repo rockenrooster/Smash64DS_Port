@@ -42,6 +42,11 @@ volatile uint32_t gNdsAudioStorageFailures;
 volatile uint32_t gNdsAudioStorageAsyncRequests;
 volatile uint32_t gNdsAudioStorageWaitTicks64;
 volatile uint32_t gNdsAudioStorageWaitMaxTicks64;
+/* The longest wait's frame (gNdsFrameCounter), ROM offset and size. */
+volatile uint32_t gNdsAudioStorageWaitMaxFrame;
+volatile uint32_t gNdsAudioStorageWaitMaxOffset;
+volatile uint32_t gNdsAudioStorageWaitMaxBytes;
+extern volatile uint32_t gNdsFrameCounter;
 volatile uint32_t gNdsAudioStorageMapFailure;
 volatile uint32_t gNdsAudioStorageMapDevice;
 volatile uint32_t gNdsAudioStorageMapVolumeSector;
@@ -197,7 +202,12 @@ static int ndsAudioStorageCall(uint32_t operation, uint32_t offset,
         waited = (uint32_t)tickGetCount() - wait_start;
         gNdsAudioStorageWaitTicks64 += waited;
         if (waited > gNdsAudioStorageWaitMaxTicks64)
+        {
             gNdsAudioStorageWaitMaxTicks64 = waited;
+            gNdsAudioStorageWaitMaxFrame = gNdsFrameCounter;
+            gNdsAudioStorageWaitMaxOffset = offset;
+            gNdsAudioStorageWaitMaxBytes = bytes;
+        }
     }
     if (bytes != 0u) DC_InvalidateRange(destination, bytes);
     if (reply != ndsAudioStorageReply(sequence, NDS_AUDIO_STORAGE_OK))

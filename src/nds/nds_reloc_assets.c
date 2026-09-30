@@ -1918,7 +1918,8 @@ static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
 #endif
 
 s32 ndsRelocAssetFighterStreamClipSpan(u32 asset_id, u32 *out_head,
-                                       u32 *out_size, u32 *out_span)
+                                       u32 *out_size, u32 *out_span,
+                                       u32 *out_sector)
 {
 #if NDS_R2_FTANIM_STREAM
     u32 start;
@@ -1931,12 +1932,17 @@ s32 ndsRelocAssetFighterStreamClipSpan(u32 asset_id, u32 *out_head,
     *out_head = start & 511u;
     *out_size = size;
     *out_span = ((start + size + 511u) & ~511u) - (start & ~511u);
+    if (out_sector != NULL)
+    {
+        *out_sector = start & ~511u;
+    }
     return TRUE;
 #else
     (void)asset_id;
     (void)out_head;
     (void)out_size;
     (void)out_span;
+    (void)out_sector;
     return FALSE;
 #endif
 }

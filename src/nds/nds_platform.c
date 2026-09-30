@@ -3658,12 +3658,41 @@ void ndsPlatformSchedulePresentAtVBlank(u32 vblank)
     sEarliestPresentVBlank = vblank;
 }
 
+/* THE FRAME'S IDLE TIME (P2-2p8, 2026-09-30). Between a frame's last work and
+ * the VBlank it is presented at, the ARM9 sleeps. The fighter motion prefetch
+ * (reloc_backend_assets.c) issues and lands its ARM7 reads there, checking
+ * ndsPlatformTicksToPresentVBlank before each bounded step so the present
+ * never moves. Weak so a target without the prefetch links. */
+__attribute__((weak)) void ndsR2AnimPrefetchIdle(void)
+{
+}
+
+static u32 sIdlePresentVBlank;
+
+/* cpuGetTiming ticks (2,130 a scanline) until the VBlank this frame will be
+ * presented at: the next one, or `earliest` when the pacing scheduled a later
+ * one. */
+u32 ndsPlatformTicksToPresentVBlank(void)
+{
+    const u32 line = REG_VCOUNT;
+    u32 lines = (line < 192u) ? (192u - line) : ((263u - line) + 192u);
+    const s32 ahead = (s32)(sIdlePresentVBlank - sVBlankCount);
+
+    if ((sIdlePresentVBlank != 0u) && (ahead > 1))
+    {
+        lines += 263u * (u32)(ahead - 1);
+    }
+    return lines * 2130u;
+}
+
 static void ndsPlatformWaitForScheduledVBlank(void)
 {
     u32 earliest = sEarliestPresentVBlank;
 
     sEarliestPresentVBlank = 0u;
     NDS_FREEZE_DIAGNOSTICS_VBLANK_WAIT();
+    sIdlePresentVBlank = earliest;
+    ndsR2AnimPrefetchIdle();
     do
     {
         swiWaitForVBlank();
