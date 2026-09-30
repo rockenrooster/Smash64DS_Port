@@ -71,6 +71,23 @@ typedef struct NDSP2HbWorld
 
 static NDSP2HbWorld sNdsP2HbCache[NDS_P2_HB_CACHE_SLOTS];
 
+/* A world of this epoch for a DObj is in the slot its pointer hashes to. A
+ * fighter's DObjs are 136 bytes apart, so (ptr >> 4) & 63 put a joint and the
+ * joints eight or nine places along the pool on one slot; the multiplicative
+ * hash spreads them. */
+static inline NDSP2HbWorld *ndsP2HbSlot(const void *dobj)
+{
+    return &sNdsP2HbCache[((u32)(uintptr_t)dobj * 0x9E3779B1u) >> 26];
+}
+
+static inline u32 ndsP2HbBits(f32 value)
+{
+    u32 bits;
+
+    __builtin_memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
 static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 {
     const float rotate[3] = { dobj->rotate.vec.f.x, dobj->rotate.vec.f.y,
@@ -86,7 +103,7 @@ static int ndsP2HbLocalFromDObj(NDSR2CfxMtx *dst, const DObj *dobj)
 
 /* The joint's local, as the source would use it: its cached float local when
  * transform_update_mode is set, otherwise built from the DObj TRS in fixed
- * point (gmCollisionTransformMatrixAll's terms) without caching it. */
+ * point (gmCollisionTransformMatrixAll's terms). */
 static int ndsP2HbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
                         const FTParts *parts)
 {
@@ -95,88 +112,6 @@ static int ndsP2HbLocal(NDSR2CfxMtx *dst, const DObj *dobj,
         return ndsR2CfxLoadF32(dst, (float (*)[4])parts->unk_dobjtrans_0x10);
     }
     return ndsP2HbLocalFromDObj(dst, dobj);
-}
-
-static NDSP2HbWorld *ndsP2HbSlot(const DObj *dobj)
-{
-    return &sNdsP2HbCache[((u32)(uintptr_t)dobj >> 4) &
-                          (NDS_P2_HB_CACHE_SLOTS - 1u)];
-}
-
-/* World matrix of `joint`: func_ovl2_800EDBA4's walk (is_use_animlocks FALSE)
- * -- up to the first ancestor with a latched world or to the root -- composed in
- * fixed point, with each composed level cached for this latch epoch. */
-static int ndsP2HbWorldOf(NDSR2CfxMtx *out, DObj *joint)
-{
-    DObj *chain[NDS_P2_HB_CHAIN_MAX];
-    const u32 epoch = gNdsP2HurtboxLatchEpoch;
-    NDSR2CfxMtx acc;
-    DObj *cursor = joint;
-    s32 depth = 0;
-    s32 i;
-
-    for (;;)
-    {
-        NDSP2HbWorld *slot = ndsP2HbSlot(cursor);
-        const FTParts *parts = ftGetParts(cursor);
-
-        if (parts == NULL)
-        {
-            return 0;
-        }
-        if ((slot->dobj == cursor) && (slot->epoch == epoch))
-        {
-            acc = slot->world;
-            break;
-        }
-        if (parts->unk_dobjtrans_0x5 != 0)
-        {
-            if (ndsR2CfxLoadF32(&acc, (float (*)[4])parts->mtx_translate) == 0)
-            {
-                return 0;
-            }
-            break;
-        }
-        if (cursor->parent == DOBJ_PARENT_NULL)
-        {
-            /* The root's world is its local (gmCollisionCopyMatrix). */
-            if (ndsP2HbLocal(&acc, cursor, parts) == 0)
-            {
-                return 0;
-            }
-            slot->dobj = cursor;
-            slot->epoch = epoch;
-            slot->world = acc;
-            break;
-        }
-        if (depth >= NDS_P2_HB_CHAIN_MAX)
-        {
-            return 0;
-        }
-        chain[depth++] = cursor;
-        cursor = cursor->parent;
-    }
-    for (i = depth - 1; i >= 0; i--)
-    {
-        const FTParts *parts = ftGetParts(chain[i]);
-        NDSR2CfxMtx local;
-        NDSR2CfxMtx world;
-        NDSP2HbWorld *slot;
-
-        if ((parts == NULL) || (ndsP2HbLocal(&local, chain[i], parts) == 0) ||
-            (ndsR2CfxCompose(&world, &acc, &local) == 0))
-        {
-            return 0;
-        }
-        slot = ndsP2HbSlot(chain[i]);
-        slot->dobj = chain[i];
-        slot->epoch = epoch;
-        slot->world = world;
-        slot->inv_smin_q26 = 0;
-        acc = world;
-    }
-    *out = acc;
-    return 1;
 }
 
 /* An upper bound on 2^39 / sqrt(s2) -- 1/s at Q26 for s^2 = s2 at Q26 -- for
@@ -223,21 +158,15 @@ static int32_t ndsP2HbInvSqrtQ26(uint32_t s2)
 /* Same-ROM A/B word: 0 takes 1/s_min from the divide and root units. */
 volatile u32 gNdsP2HbInvTable __attribute__((used, section(".data"))) = 1u;
 
-/* 1/s_min for `joint`'s world (just produced by ndsP2HbWorldOf, so its slot
- * holds it unless another DObj evicted it). 0 = decline. */
-static int32_t ndsP2HbInvSMin(const DObj *joint, const NDSR2CfxMtx *w)
+/* 1/s_min for the world `w` (the caller keeps it in the joint's slot).
+ * 0 = decline. */
+static int32_t ndsP2HbInvSMinOf(const NDSR2CfxMtx *w)
 {
-    NDSP2HbWorld *slot = ndsP2HbSlot(joint);
     int32_t s2[3];
     int32_t s2_min;
     uint32_t s_q24;
     int32_t inv;
 
-    if ((slot->dobj == joint) && (slot->epoch == gNdsP2HurtboxLatchEpoch) &&
-        (slot->inv_smin_q26 != 0))
-    {
-        return slot->inv_smin_q26;
-    }
     if (ndsR2CfxRowScales(w, s2, NULL, NULL, NULL) == 0)
     {
         return 0;
@@ -261,10 +190,6 @@ static int32_t ndsP2HbInvSMin(const DObj *joint, const NDSR2CfxMtx *w)
             return 0;
         }
         inv = NDS_R2_CFX_DIV64((int64_t)1 << 50, (int64_t)s_q24) + 1;
-    }
-    if ((slot->dobj == joint) && (slot->epoch == gNdsP2HurtboxLatchEpoch))
-    {
-        slot->inv_smin_q26 = inv;
     }
     return inv;
 }
@@ -296,7 +221,11 @@ typedef struct NDSP2HbAttackMemo
     int32_t radius;
     u32 ok;
 } NDSP2HbAttackMemo;
-#define NDS_P2_HB_DAMAGE_MEMO_SLOTS 8u
+/* An FTDamageColl is 11 words, so a victim's eleven colls take eleven
+ * distinct slots of sixteen under (ptr >> 2) & 15; eight slots put three pairs
+ * of one victim's colls on the same slot (P2-2p8, 2026-09-29: memo misses on
+ * the gate 8,499 -> 2,150 a match). */
+#define NDS_P2_HB_DAMAGE_MEMO_SLOTS 16u
 typedef struct NDSP2HbDamageMemo
 {
     const FTDamageColl *damage;
@@ -307,84 +236,6 @@ typedef struct NDSP2HbDamageMemo
 } NDSP2HbDamageMemo;
 static NDSP2HbAttackMemo sNdsP2HbAttackMemo;
 static NDSP2HbDamageMemo sNdsP2HbDamageMemo[NDS_P2_HB_DAMAGE_MEMO_SLOTS];
-
-static inline u32 ndsP2HbBits(f32 value)
-{
-    u32 bits;
-
-    __builtin_memcpy(&bits, &value, sizeof(bits));
-    return bits;
-}
-
-/* The attack's two points and radius, as ndsP2HbVec / the radius conversion
- * give them; 0 when any is out of range. */
-static int ndsP2HbAttackPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
-                               f32 attack_size, int32_t p0[3], int32_t p1[3],
-                               int32_t *radius_out)
-{
-    NDSP2HbAttackMemo *m = &sNdsP2HbAttackMemo;
-    u32 bits[7];
-    int32_t radius;
-    u32 i;
-
-    bits[0] = ndsP2HbBits(pos_curr->x); bits[1] = ndsP2HbBits(pos_curr->y);
-    bits[2] = ndsP2HbBits(pos_curr->z); bits[3] = ndsP2HbBits(pos_prev->x);
-    bits[4] = ndsP2HbBits(pos_prev->y); bits[5] = ndsP2HbBits(pos_prev->z);
-    bits[6] = ndsP2HbBits(attack_size);
-    if (__builtin_memcmp(bits, m->bits, sizeof(bits)) != 0)
-    {
-        radius = ndsR2CollisionF32ToFixed(attack_size, NDS_R2_CFX_POS_BITS);
-        m->ok = ((radius != NDS_R2_COLLISION_F32_OVERFLOW) &&
-                 (ndsR2CfxAbs32(radius) < NDS_R2_CFX_POS_MAX) &&
-                 (ndsP2HbVec(m->p0, pos_curr) != 0) &&
-                 (ndsP2HbVec(m->p1, pos_prev) != 0)) ? 1u : 0u;
-        m->radius = radius;
-        __builtin_memcpy(m->bits, bits, sizeof(bits));
-    }
-    if (m->ok == 0u)
-    {
-        return 0;
-    }
-    for (i = 0u; i < 3u; i++)
-    {
-        p0[i] = m->p0[i];
-        p1[i] = m->p1[i];
-    }
-    *radius_out = m->radius;
-    return 1;
-}
-
-/* The damage box's offset and size in Q12; 0 when either is out of range. */
-static int ndsP2HbDamageBox(const FTDamageColl *damage, int32_t off[3],
-                            int32_t size[3])
-{
-    NDSP2HbDamageMemo *m = &sNdsP2HbDamageMemo[((u32)(uintptr_t)damage >> 2) &
-                                               (NDS_P2_HB_DAMAGE_MEMO_SLOTS - 1u)];
-    u32 bits[6];
-    u32 i;
-
-    bits[0] = ndsP2HbBits(damage->offset.x); bits[1] = ndsP2HbBits(damage->offset.y);
-    bits[2] = ndsP2HbBits(damage->offset.z); bits[3] = ndsP2HbBits(damage->size.x);
-    bits[4] = ndsP2HbBits(damage->size.y); bits[5] = ndsP2HbBits(damage->size.z);
-    if ((m->damage != damage) ||
-        (__builtin_memcmp(bits, m->bits, sizeof(bits)) != 0))
-    {
-        m->ok = ((ndsP2HbVec(m->off, &damage->offset) != 0) &&
-                 (ndsP2HbVec(m->size, &damage->size) != 0)) ? 1u : 0u;
-        m->damage = damage;
-        __builtin_memcpy(m->bits, bits, sizeof(bits));
-    }
-    if (m->ok == 0u)
-    {
-        return 0;
-    }
-    for (i = 0u; i < 3u; i++)
-    {
-        off[i] = m->off[i];
-        size[i] = m->size[i];
-    }
-    return 1;
-}
 
 /* The float test's own frame (P2-2p8, 2026-09-29). The world-axis test below
  * bounds the box by its world-aligned extents, which for a rotated joint are up
@@ -507,6 +358,167 @@ static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
     return 0;
 }
 
+/* World matrix of `joint`: func_ovl2_800EDBA4's walk (is_use_animlocks FALSE)
+ * -- up to the first ancestor with a latched world or to the root -- composed in
+ * fixed point, with each composed level cached for this latch epoch.
+ *
+ * Returns the joint's world -- in the joint's cache slot, or in *scratch when
+ * the walk stopped on a latched world at the joint itself -- or NULL to
+ * decline; *slot_out is the joint's slot when the world is in one. The slot is
+ * checked before the DObj's FTParts is read, each level is composed straight
+ * into its slot, and a slot's tag is cleared before its world is written, so a
+ * failed build never leaves a tag on a stale world (P2-2p8, 2026-09-29: the
+ * previous walk read FTParts first and copied every level three times). */
+static const NDSR2CfxMtx *ndsP2HbWorldOf(DObj *joint, NDSR2CfxMtx *scratch,
+                                        NDSP2HbWorld **slot_out)
+{
+    DObj *chain[NDS_P2_HB_CHAIN_MAX];
+    const FTParts *chain_parts[NDS_P2_HB_CHAIN_MAX];
+    const u32 epoch = gNdsP2HurtboxLatchEpoch;
+    const NDSR2CfxMtx *acc;
+    NDSP2HbWorld *slot;
+    DObj *cursor = joint;
+    s32 depth = 0;
+
+    *slot_out = NULL;
+    for (;;)
+    {
+        const FTParts *parts;
+
+        slot = ndsP2HbSlot(cursor);
+        if ((slot->dobj == cursor) && (slot->epoch == epoch))
+        {
+            acc = &slot->world;
+            break;
+        }
+        parts = ftGetParts(cursor);
+        if (parts == NULL)
+        {
+            return NULL;
+        }
+        if (parts->unk_dobjtrans_0x5 != 0)
+        {
+            if (ndsR2CfxLoadF32(scratch,
+                                (float (*)[4])parts->mtx_translate) == 0)
+            {
+                return NULL;
+            }
+            if (depth == 0)
+            {
+                return scratch;
+            }
+            acc = scratch;
+            break;
+        }
+        if (cursor->parent == DOBJ_PARENT_NULL)
+        {
+            /* The root's world is its local (gmCollisionCopyMatrix). */
+            slot->dobj = NULL;
+            if (ndsP2HbLocal(&slot->world, cursor, parts) == 0)
+            {
+                return NULL;
+            }
+            slot->dobj = cursor;
+            slot->epoch = epoch;
+            slot->inv_smin_q26 = 0;
+            acc = &slot->world;
+            break;
+        }
+        if (depth >= NDS_P2_HB_CHAIN_MAX)
+        {
+            return NULL;
+        }
+        chain[depth] = cursor;
+        chain_parts[depth] = parts;
+        depth++;
+        cursor = cursor->parent;
+    }
+    while (depth > 0)
+    {
+        NDSR2CfxMtx local;
+
+        depth--;
+        cursor = chain[depth];
+        slot = ndsP2HbSlot(cursor);
+        if (ndsP2HbLocal(&local, cursor, chain_parts[depth]) == 0)
+        {
+            return NULL;
+        }
+        /* Compose reads lhs into a temp before writing dst, so acc may be
+         * this very slot (a parent on the same slot). */
+        slot->dobj = NULL;
+        if (ndsR2CfxCompose(&slot->world, acc, &local) == 0)
+        {
+            return NULL;
+        }
+        slot->dobj = cursor;
+        slot->epoch = epoch;
+        slot->inv_smin_q26 = 0;
+        acc = &slot->world;
+    }
+    *slot_out = slot;
+    return acc;
+}
+
+/* The attack's two points and radius, as ndsP2HbVec / the radius conversion
+ * give them; NULL when any is out of range. */
+static const NDSP2HbAttackMemo *ndsP2HbAttackPoints(const Vec3f *pos_curr,
+                                                     const Vec3f *pos_prev,
+                                                     f32 attack_size)
+{
+    NDSP2HbAttackMemo *m = &sNdsP2HbAttackMemo;
+    const u32 b0 = ndsP2HbBits(pos_curr->x);
+    const u32 b1 = ndsP2HbBits(pos_curr->y);
+    const u32 b2 = ndsP2HbBits(pos_curr->z);
+    const u32 b3 = ndsP2HbBits(pos_prev->x);
+    const u32 b4 = ndsP2HbBits(pos_prev->y);
+    const u32 b5 = ndsP2HbBits(pos_prev->z);
+    const u32 b6 = ndsP2HbBits(attack_size);
+
+    if (((b0 ^ m->bits[0]) | (b1 ^ m->bits[1]) | (b2 ^ m->bits[2]) |
+         (b3 ^ m->bits[3]) | (b4 ^ m->bits[4]) | (b5 ^ m->bits[5]) |
+         (b6 ^ m->bits[6])) != 0u)
+    {
+        const int32_t radius =
+            ndsR2CollisionF32ToFixed(attack_size, NDS_R2_CFX_POS_BITS);
+
+        m->ok = ((radius != NDS_R2_COLLISION_F32_OVERFLOW) &&
+                 (ndsR2CfxAbs32(radius) < NDS_R2_CFX_POS_MAX) &&
+                 (ndsP2HbVec(m->p0, pos_curr) != 0) &&
+                 (ndsP2HbVec(m->p1, pos_prev) != 0)) ? 1u : 0u;
+        m->radius = radius;
+        m->bits[0] = b0; m->bits[1] = b1; m->bits[2] = b2; m->bits[3] = b3;
+        m->bits[4] = b4; m->bits[5] = b5; m->bits[6] = b6;
+    }
+    return (m->ok != 0u) ? m : NULL;
+}
+
+/* The damage box's offset and size in Q12; NULL when either is out of range. */
+static const NDSP2HbDamageMemo *ndsP2HbDamageBox(const FTDamageColl *damage)
+{
+    NDSP2HbDamageMemo *m =
+        &sNdsP2HbDamageMemo[((u32)(uintptr_t)damage >> 2) &
+                            (NDS_P2_HB_DAMAGE_MEMO_SLOTS - 1u)];
+    const u32 b0 = ndsP2HbBits(damage->offset.x);
+    const u32 b1 = ndsP2HbBits(damage->offset.y);
+    const u32 b2 = ndsP2HbBits(damage->offset.z);
+    const u32 b3 = ndsP2HbBits(damage->size.x);
+    const u32 b4 = ndsP2HbBits(damage->size.y);
+    const u32 b5 = ndsP2HbBits(damage->size.z);
+
+    if ((m->damage != damage) ||
+        (((b0 ^ m->bits[0]) | (b1 ^ m->bits[1]) | (b2 ^ m->bits[2]) |
+          (b3 ^ m->bits[3]) | (b4 ^ m->bits[4]) | (b5 ^ m->bits[5])) != 0u))
+    {
+        m->ok = ((ndsP2HbVec(m->off, &damage->offset) != 0) &&
+                 (ndsP2HbVec(m->size, &damage->size) != 0)) ? 1u : 0u;
+        m->damage = damage;
+        m->bits[0] = b0; m->bits[1] = b1; m->bits[2] = b2;
+        m->bits[3] = b3; m->bits[4] = b4; m->bits[5] = b5;
+    }
+    return (m->ok != 0u) ? m : NULL;
+}
+
 /* 1 = the float test would certainly miss; 0 = let it decide.
  *
  * The float test clips the attack's segment (pos_curr..pos_prev, or pos_curr
@@ -516,17 +528,20 @@ static int ndsP2HbRejectLocal(const NDSR2CfxMtx *w, const int32_t off[3],
  *   sum_k |W[k][c]| * size_k + radius * sum_k |W[k][c]| / s_k
  * and s_k >= s_min bounds the second sum. The segment lies inside the box its
  * two ends span. Separation of the two boxes on one world axis, by more than
- * the margin, proves the miss. */
+ * the margin, proves the miss.
+ *
+ * The memos and the world are read in place: nothing between their lookup and
+ * the last use below writes another memo entry or cache slot. */
 static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
                                f32 attack_size, const FTDamageColl *damage)
 {
     DObj *joint = damage->joint;
     const FTStruct *fp;
-    NDSR2CfxMtx w;
-    int32_t off[3];
-    int32_t size[3];
-    int32_t p0[3];
-    int32_t p1[3];
+    const NDSP2HbAttackMemo *am;
+    const NDSP2HbDamageMemo *dm;
+    const NDSR2CfxMtx *w;
+    NDSP2HbWorld *slot;
+    NDSR2CfxMtx scratch;
     int32_t center[3];
     int32_t radius;
     int32_t inv_smin;
@@ -541,35 +556,56 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
     {
         return 0;
     }
-    if ((ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size, p0, p1,
-                             &radius) == 0) ||
-        (ndsP2HbDamageBox(damage, off, size) == 0) ||
-        (ndsP2HbWorldOf(&w, joint) == 0))
+    am = ndsP2HbAttackPoints(pos_curr, pos_prev, attack_size);
+    if (am == NULL)
     {
         return 0;
     }
-    inv_smin = ndsP2HbInvSMin(joint, &w);
-    if (inv_smin <= 0)
+    dm = ndsP2HbDamageBox(damage);
+    if (dm == NULL)
     {
         return 0;
     }
-    ndsR2CfxTransformPoint(center, &w, off);
-    radius = ndsR2CfxAbs32(radius);
+    w = ndsP2HbWorldOf(joint, &scratch, &slot);
+    if (w == NULL)
+    {
+        return 0;
+    }
+    if ((slot != NULL) && (slot->inv_smin_q26 != 0))
+    {
+        inv_smin = slot->inv_smin_q26;
+    }
+    else
+    {
+        inv_smin = ndsP2HbInvSMinOf(w);
+        if (inv_smin <= 0)
+        {
+            return 0;
+        }
+        if (slot != NULL)
+        {
+            slot->inv_smin_q26 = inv_smin;
+        }
+    }
+    ndsR2CfxTransformPoint(center, w, dm->off);
+    radius = ndsR2CfxAbs32(am->radius);
     for (c = 0u; c < 3u; c++)
     {
         int64_t ext = NDS_P2_HB_MARGIN_Q12;
         int64_t sum_abs = 0;
         int64_t rad_term;
-        int32_t lo = (p0[c] < p1[c]) ? p0[c] : p1[c];
-        int32_t hi = (p0[c] < p1[c]) ? p1[c] : p0[c];
+        const int32_t a = am->p0[c];
+        const int32_t b = am->p1[c];
+        const int32_t lo = (a < b) ? a : b;
+        const int32_t hi = (a < b) ? b : a;
         u32 k;
 
         for (k = 0u; k < 3u; k++)
         {
-            int64_t cell = ndsR2CfxAbs32(w.r[k][c]);
+            int64_t cell = ndsR2CfxAbs32(w->r[k][c]);
 
             sum_abs += cell;
-            ext += (cell * ndsR2CfxAbs32(size[k]) +
+            ext += (cell * ndsR2CfxAbs32(dm->size[k]) +
                     (((int64_t)1 << NDS_R2_CFX_ROT_BITS) - 1)) >>
                    NDS_R2_CFX_ROT_BITS;
         }
@@ -588,7 +624,8 @@ static int ndsP2HbRejectPoints(const Vec3f *pos_curr, const Vec3f *pos_prev,
         }
     }
     if ((gNdsP2HbLocalTest != 0u) &&
-        (ndsP2HbRejectLocal(&w, off, size, radius, p0, p1) != 0))
+        (ndsP2HbRejectLocal(w, dm->off, dm->size, radius, am->p0,
+                            am->p1) != 0))
     {
         gNdsP2HbLocalRejects++;
         return 1;

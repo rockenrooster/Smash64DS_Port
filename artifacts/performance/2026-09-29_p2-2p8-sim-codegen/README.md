@@ -104,3 +104,41 @@ three).
 | `b3s1_a`/`b3s1_b` (state first) | **910,656 / 910,656** | **1,231,872 / 1,232,448** | 406,336 | 163,072 |
 
 Replay IDENTICAL on every pair.
+
+## Banked: the hurtbox reject's walk, rearranged (build `b4`)
+
+The whole-match profile (`p2p8-prof-gate6`) put 2,316 cycles of
+`ndsP2HbRejectPoints`' own time on a test (13,791 a match), besides 1,259 a
+call in the local build: most of it data-cache misses and 48-byte copies. In
+the 67 heaviest frames that are not lean materializations, the kernel and its
+local build are +53K ticks over a median frame -- the largest compute delta
+there. `src/port/nds_p2_hurtbox_reject.c` now:
+
+- checks a DObj's cache slot before reading its FTParts, composes each level
+  straight into its slot and hands the caller a pointer (five copies of a
+  3x4 matrix per level gone), and reuses the joint's slot for 1/s_min instead
+  of hashing it again;
+- hashes the slot multiplicatively: a fighter's DObjs are 136 bytes apart,
+  so `(ptr >> 4) & 63` put joints eight or nine places apart on one slot;
+- compares the attack and damage memos inline instead of calling `memcmp`;
+- gives the damage memo 16 slots: an FTDamageColl is 11 words, so a victim's
+  eleven colls take eleven distinct slots (misses 8,499 -> 2,150 a match);
+- clears a slot's 1/s_min whenever a root's world is stored (the old walk left
+  it from the slot's previous DObj -- a joint on the root would have read it).
+
+Same values tested: rejects/passes/local rejects 13,867 / 286 / 373 in every
+arm, shadow mode (`gNdsP2HurtboxRejectMode=2`) 0 flips, replay IDENTICAL.
+
+| Run | P50 | P95 | band work | band SRC |
+|---|---:|---:|---:|---:|
+| `b4k0_a`/`_b` (same ROM, previous walk) | 909,568 / 909,440 | 1,234,752 / 1,235,520 | 1,223,313 / 1,223,594 | 625,460 / 625,747 |
+| `b4k1_a`/`_b` (same ROM, this walk) | 909,376 / 909,440 | **1,232,576 / 1,232,576** | 1,220,643 / 1,220,672 | 623,327 / 623,237 |
+| `b6_a`/`_b` (shipped build, previous walk deleted) | 910,656 / 910,272 | 1,231,808 / 1,231,808 | 1,217,843 / 1,217,844 | 614,817 / 614,804 |
+
+Census (`b4cen`, removed before commit): 15,410 composes a match, 3,546 of
+them into a slot holding another DObj's world of the same epoch; 4,550 tests
+found the joint's own world cached. Of the locals built from a DObj that had
+been built before, 51% had the same TRS bits -- but a memo of the six table
+lookups keyed on the rotate bits (5,030 hits a match, `b5r0`/`b5r1`) moved
+P95 by nothing and band work by -2K (why the hits bought so little was not
+measured). Refuted and removed (it cost 2 KB of RAM).
