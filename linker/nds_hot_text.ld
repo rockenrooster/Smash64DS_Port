@@ -191,10 +191,12 @@ SECTIONS {
 		*(.text.gmCameraRunFuncCamera)
 		*(.text.ftComputerCheckEvadeDistance)
 		*(.text.ndsR2CameraCurrentLookAt)
-		*(.text.ndsFighterDisplayContractSetLight)
+		/* 2026-09-29: ndsFighterDisplayContractSetLight left ITCM (88 B, ~140 ticks a
+		 * frame) for the map-collision wall sweep's group reject. */
 		*(.text.lbCommonTan)
 		*(.text.ndsBaseMPProcessCheckFloorEdgeCollisionR)
-		*(.text.ndsRendererProfileSetOwner)
+		/* 2026-09-29: ndsRendererProfileSetOwner left ITCM too (116 B; the lab
+		 * sweep build already ran without it) for the same wall sweep. */
 		*(.text.ndsCoroutineSwap)
 		*(.text.ndsBaseMPProcessRunFloorCollisionAdjNewNULL)
 		*(.text.ndsRendererAdapterBeginParticleViewPass)
