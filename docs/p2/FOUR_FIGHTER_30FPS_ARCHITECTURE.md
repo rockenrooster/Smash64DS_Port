@@ -1006,6 +1006,12 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   -6..-19K, but only against the machinery's own overhead; cross-build against
   the HEAD kernel the gate P95 is +4.7K and Saffron/Zebes flat/+5.6K. Patch and
   data: `2026-09-30_p2-2p8-hurtbox-carry-refuted`.
+- **09-30 the damage meter's source display callback is not called, BANKED**
+  (replay identical, lower-screen pixels identical): with the lower-screen HUD
+  its SObj work (~180 soft-float calls a frame) had no reader. Gate P50 -10.0K,
+  P95 -9.2K (4/4 pairs, 1,221.6K -> 1,212.4K); lab P95 -12..-14K. Also the
+  meter colour kept per (damage, colour id). Receipt
+  `2026-09-30_p2-2p8-hud-damage-display`.
 
 ## 7. Found along the way
 

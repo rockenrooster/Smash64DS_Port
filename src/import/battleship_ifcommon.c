@@ -88,6 +88,10 @@ static void ndsIFCommonSetTicCount(u32 tics);
 static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 static GObjProcess *ndsIFCommonAddGObjProcess(
     GObj *gobj, void (*proc)(GObj *), u8 kind, u32 priority);
+static void ndsIFCommonAddGObjDisplay(GObj *gobj,
+                                      void (*proc_display)(GObj *),
+                                      u8 dl_link, u32 priority,
+                                      u32 camera_tag);
 
 /* NOT INSTRUMENTED HERE, and the reason is worth keeping: the announcement
  * question ("does the source announce GAME SET / TIME UP and the port fail to
@@ -114,7 +118,9 @@ static GObjProcess *ndsIFCommonAddGObjProcess(
 #define sySchedulerSetTicCount ndsIFCommonSetTicCount
 #define lbCommonMakeSObjForGObj ndsIFCommonMakeSObjForGObj
 #define gcAddGObjProcess ndsIFCommonAddGObjProcess
+#define gcAddGObjDisplay ndsIFCommonAddGObjDisplay
 #include "../../decomp/BattleShip-main/decomp/src/if/ifcommon.c"
+#undef gcAddGObjDisplay
 #undef gcAddGObjProcess
 #undef lbCommonMakeSObjForGObj
 #undef sySchedulerSetTicCount
@@ -147,6 +153,32 @@ static GObjProcess *ndsIFCommonAddGObjProcess(
         kind = nGCProcessKindFunc;
     }
     return gcAddGObjProcess(gobj, proc, kind, priority);
+}
+
+u32 ndsIFCommonSkipDamageDisplay(void);
+
+/* The damage meter's display callback behind ndsIFCommonSkipDamageDisplay.
+ * Installed where the source adds it (ifcommon.c:923), so the capture loop
+ * pays one call and no test for every other GObj. */
+static void ndsIFCommonPlayerDamageProcDisplayGate(GObj *interface_gobj)
+{
+    if (ndsIFCommonSkipDamageDisplay() != FALSE)
+    {
+        return;
+    }
+    ifCommonPlayerDamageProcDisplay(interface_gobj);
+}
+
+static void ndsIFCommonAddGObjDisplay(GObj *gobj,
+                                      void (*proc_display)(GObj *),
+                                      u8 dl_link, u32 priority,
+                                      u32 camera_tag)
+{
+    if (proc_display == ifCommonPlayerDamageProcDisplay)
+    {
+        proc_display = ndsIFCommonPlayerDamageProcDisplayGate;
+    }
+    gcAddGObjDisplay(gobj, proc_display, dl_link, priority, camera_tag);
 }
 
 static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite)
@@ -682,21 +714,40 @@ u32 ndsIFCommonGetBattleHudDamageState(u32 player,
     {
         /* ifCommonPlayerDamageProcDisplay:815-823, expression-for-expression.
          * The DS sink consumes the already-resolved primitive colour instead
-         * of reimplementing this float/truncation rule with integer math. */
-        damage_scale = 1.0F - (source->damage / 300.0F);
-        if (damage_scale < 0.0F)
+         * of reimplementing this float/truncation rule with integer math.
+         * The colour is a function of (damage, color_id) alone, so each
+         * player's is kept and the float expression runs only when either
+         * moves (P2-2p8, 2026-09-30: ~11 soft-float calls a player a frame). */
+        static u8 sNdsIFCommonHudColorValid[GMCOMMON_PLAYERS_MAX];
+        static s32 sNdsIFCommonHudColorDamage[GMCOMMON_PLAYERS_MAX];
+        static u8 sNdsIFCommonHudColorId[GMCOMMON_PLAYERS_MAX];
+        static u8 sNdsIFCommonHudColorRgb[GMCOMMON_PLAYERS_MAX][3];
+
+        if ((sNdsIFCommonHudColorValid[player] == 0u) ||
+            (sNdsIFCommonHudColorDamage[player] != source->damage) ||
+            (sNdsIFCommonHudColorId[player] != (u8)color_id))
         {
-            damage_scale = 0.0F;
+            damage_scale = 1.0F - (source->damage / 300.0F);
+            if (damage_scale < 0.0F)
+            {
+                damage_scale = 0.0F;
+            }
+            sNdsIFCommonHudColorRgb[player][0] = (u8)((s32)
+                ((dIFCommonPlayerDamageDigitColorsR[color_id] - 0x64) *
+                 damage_scale) + 0x64);
+            sNdsIFCommonHudColorRgb[player][1] = (u8)((s32)
+                ((dIFCommonPlayerDamageDigitColorsG[color_id] - 0x14) *
+                 damage_scale) + 0x14);
+            sNdsIFCommonHudColorRgb[player][2] = (u8)((s32)
+                ((dIFCommonPlayerDamageDigitColorsB[color_id] - 0x14) *
+                 damage_scale) + 0x14);
+            sNdsIFCommonHudColorDamage[player] = source->damage;
+            sNdsIFCommonHudColorId[player] = (u8)color_id;
+            sNdsIFCommonHudColorValid[player] = 1u;
         }
-        out->color_r = (u8)((s32)
-            ((dIFCommonPlayerDamageDigitColorsR[color_id] - 0x64) *
-             damage_scale) + 0x64);
-        out->color_g = (u8)((s32)
-            ((dIFCommonPlayerDamageDigitColorsG[color_id] - 0x14) *
-             damage_scale) + 0x14);
-        out->color_b = (u8)((s32)
-            ((dIFCommonPlayerDamageDigitColorsB[color_id] - 0x14) *
-             damage_scale) + 0x14);
+        out->color_r = sNdsIFCommonHudColorRgb[player][0];
+        out->color_g = sNdsIFCommonHudColorRgb[player][1];
+        out->color_b = sNdsIFCommonHudColorRgb[player][2];
     }
     out->is_update_anim = source->is_update_anim;
     out->char_count = (u8)char_count;
@@ -873,6 +924,25 @@ void ndsIFCommonRecordHUDState(void)
     gNdsIFCommonHUDGameStatus = gSCManagerBattleState->game_status;
 }
 
+/* P2-2p8, 2026-09-30: whether the source damage meter's display callback may
+ * be left uncalled. With the lower-screen HUD its output has no reader: the
+ * callback only sizes and places the meter's SObjs (lbCommonPrepSObjAttr and
+ * lbCommonPrepSObjDraw are empty on the DS), while the lower screen draws the
+ * meter from sIFCommonPlayerDamageInterface through
+ * ndsIFCommonRecordHUDState / ndsIFCommonGetBattleHudDamageState, which the
+ * update callback keeps. It was ~180 soft-float calls and ~7K ticks every
+ * battle frame. Same-ROM A/B word gNdsIFCommonDamageDisplaySkip (0 = call
+ * it). */
+volatile u32 gNdsIFCommonDamageDisplaySkip
+    __attribute__((used, section(".data"))) = 1u;
+
+u32 ndsIFCommonSkipDamageDisplay(void)
+{
+    return ((gNdsIFCommonDamageDisplaySkip != 0u) &&
+            (gNdsIFCommonHUDLowerTextMode != 0u) &&
+            (gNdsSceneManagerCurrIsBattle != 0u)) ? TRUE : FALSE;
+}
+
 u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
 {
     u32 route = 0u;
@@ -896,7 +966,8 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
         route = 2u;
         gNdsIFCommonHUDLowerStockRouteCount++;
     }
-    else if (gobj->proc_display == ifCommonPlayerDamageProcDisplay)
+    else if ((gobj->proc_display == ifCommonPlayerDamageProcDisplay) ||
+             (gobj->proc_display == ndsIFCommonPlayerDamageProcDisplayGate))
     {
         /* P2-2's owner-approved screen split moves the steady VS HUD below:
          * timer, stock AND damage. The source damage GObj remains live -- its
