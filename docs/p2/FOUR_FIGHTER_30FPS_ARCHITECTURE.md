@@ -933,6 +933,19 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   states are not an LRU problem). A materialization log puts Donkey at 13
   in-match lists a match (~460K each), Link at 5 (~700K); removing Donkey's
   would be P95 -14K (`964229de7f9`, `7df0e823bfb`).
+- **09-30 map-collision group rejects, BANKED** (replay identical per stage):
+  the lab stages' premium over Dream Land is mostly flat sim time (SRC medians
+  483-562K vs 408K); on Peach's Castle the wall sweep alone made 1,850
+  soft-float calls a frame. The wall, floor and ceiling sweeps now skip a
+  line group whose lines' span misses a truncated superset of the sweep's
+  range (exact; backoff for groups that never reject), compute a moving
+  group's offsets once per group, and store the extent reject's bounds at
+  fill. Same-ROM lab P95: Peach's Castle 1,401K -> 1,340K (two-VBlank
+  59.7% -> 70.7%), Saffron -11.8K, Yoshi's Island -9.0K, Mushroom -8.6K,
+  Dream Land -5.4K, Sector Z -2.4K; gate ROM neutral (`444044b9052`). Found:
+  the simulation's digest depends on the build's heap layout (two layouts
+  differ on Dream Land and Saffron with every new word off; kernel modes
+  agree within each) -- open. Receipt `2026-09-30_p2-2p8-map-collision`.
 
 ## 7. Found along the way
 
