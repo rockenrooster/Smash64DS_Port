@@ -249,6 +249,9 @@ __attribute__((used)) volatile u32 gNdsTitleFireDisableCount;
 __attribute__((used)) volatile u32 gNdsTitleFireFrameCount;
 static u32 sOriginalSpriteOverlayLayerMask;
 static s32 sOriginalSpriteOverlayNeedsFlush;
+/* Layers hidden while a picture is written into them (bit 0 BG2, bit 1 BG3);
+ * shown again at the next EndFrame commit. */
+static u32 sOriginalSpriteOverlayRevealPending;
 /* P2-2p8 Phase 1 slice 2b: while a battle that left BG3 empty lends bank D to
  * 3D textures (ndsPlatformVramTakeBankD), the foreground layer is withheld. A
  * scene that asks for it is remembered and gets it back at
@@ -1207,6 +1210,52 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
 #endif
 }
 
+/* A converted wallpaper is written straight into the visible BG2 bitmap, a
+ * row at a time from NitroFS, while the owner's tint over it (Results Tint2,
+ * an OBJ plane) reaches the screen only at the frame's OAM commit. So the rows
+ * showed as they landed: at Results tic 80 the wallpaper stood full-bright for
+ * two retraces before the black tint the source makes in the same tic
+ * (mnvsresults.c:3235-3242) covered it, the r62 transition captures'
+ * battle-results 0225/0226 (also in the r58 baseline, 0328-0333). The layer
+ * is hidden while it is written; the EndFrame that commits the frame's OBJ
+ * planes and brightness shows it again. */
+void ndsPlatformHideOriginalSpriteOverlayUntilCommit(s32 is_foreground)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 layer = (is_foreground != FALSE) ? 1u : 0u;
+    int bg = (layer != 0u) ?
+        sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
+
+    if ((bg < 0) || ((sOriginalSpriteOverlayLayerMask & (1u << layer)) == 0u))
+    {
+        return;
+    }
+    bgHide(bg);
+    sOriginalSpriteOverlayRevealPending |= 1u << layer;
+#else
+    (void)is_foreground;
+#endif
+}
+
+#if NDS_RENDERER_HW_TRIANGLES
+static void ndsPlatformRevealOriginalSpriteOverlay(void)
+{
+    u32 pending = sOriginalSpriteOverlayRevealPending;
+
+    sOriginalSpriteOverlayRevealPending = 0u;
+    /* A layer the scene gave up meanwhile stays as the mask left it. */
+    pending &= sOriginalSpriteOverlayLayerMask;
+    if (((pending & 1u) != 0u) && (sOriginalSpriteOverlayBg >= 0))
+    {
+        bgShow(sOriginalSpriteOverlayBg);
+    }
+    if (((pending & 2u) != 0u) && (sOriginalSpriteOverlayForegroundBg >= 0))
+    {
+        bgShow(sOriginalSpriteOverlayForegroundBg);
+    }
+}
+#endif
+
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1459,7 +1508,10 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
      * layer hidden, which is also the safer failure. */
     if (is_enabled != FALSE)
     {
-        s3dLayerEnableOnNextPresent = TRUE;
+        if ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) == 0u)
+        {
+            s3dLayerEnableOnNextPresent = TRUE;
+        }
         return;
     }
     s3dLayerEnableOnNextPresent = FALSE;
@@ -1467,6 +1519,32 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
 #else
     (void)is_enabled;
 #endif
+}
+
+void ndsPlatformBeginSceneTransition(void)
+{
+    ndsVideoSetTransitionBlackout(TRUE);
+#if NDS_RENDERER_HW_TRIANGLES
+    /* The last scene frame has already swapped; its build list is empty.
+     * Drain asynchronous submission before retiring that retained GX list. */
+    ndsRendererFighterPacketDmaWait();
+#if NDS_TASK29_GX_CENSUS
+    ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
+#endif
+    glFlush(GL_TRANS_MANUALSORT);
+#endif
+    /* A scene-boundary wait, with no extra logic tick or gameplay present. */
+    swiWaitForVBlank();
+    ndsVideoBlackoutCommit();
+    ndsPlatformSet3DLayerEnabled(FALSE);
+    ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
+    /* Keep the existing bank-D loan guard; a lent bank is not an overlay. */
+    ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+    ndsPlatformClearBattleTextHud();
+    /* Results' OBJ tenant retires here, under the cover, rather than at its
+     * START press: that exit cleared OAM mid-frame, so the text vanished one
+     * scanout before the black (r62 results-css 0029). Idempotent. */
+    ndsResultsOamExit();
 }
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -3796,14 +3874,6 @@ void ndsPlatformEndFrame(void)
         if (submitted != 0u)
         {
             gNdsHardwareRendererFlushCount++;
-            /* Commit a deferred 3D-layer enable only now, with this scene's
-             * own frame completed: the retained-image hazard this guards is
-             * documented at s3dLayerEnableOnNextPresent. */
-            if (s3dLayerEnableOnNextPresent != FALSE)
-            {
-                REG_DISPCNT |= DISPLAY_BG0_ACTIVE;
-                s3dLayerEnableOnNextPresent = FALSE;
-            }
         }
         else
         {
@@ -3838,6 +3908,15 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
 #endif
+    if ((submitted != 0u) && (s3dLayerEnableOnNextPresent != FALSE))
+    {
+        /* The swap retrace starts rasterizing the new GX list. Keep BG0
+         * hidden until the following retrace can display that completed list.
+         * Only a hidden -> visible ownership change pays this wait. */
+        swiWaitForVBlank();
+        REG_DISPCNT |= DISPLAY_BG0_ACTIVE;
+        s3dLayerEnableOnNextPresent = FALSE;
+    }
     /* P2-2p8 Phase 1 slice 2b: a battle's pending bank D return lands here,
      * after the VBlank that made the next scene's first 3D frame the displayed
      * one -- from now on no displayed geometry reads D. */
@@ -3879,7 +3958,6 @@ void ndsPlatformEndFrame(void)
      * Covers 3D, both staging layers, and fade-only frames with no staging
      * commit; blackout precedence resolves inside the sole register owner. */
     ndsLBFadePushHardwareFrame();
-    ndsVideoBlackoutCommit();
 #if NDS_SCENE_MIP_CACHE_LAB
     ndsPlatformSceneWallpaperCommitAffine();
 #endif
@@ -3903,6 +3981,10 @@ void ndsPlatformEndFrame(void)
         ndsPlatformSceneWallpaperCommitAffine();
     }
 #endif
+    /* A layer written this frame shows with the OBJ planes committed above. */
+    ndsPlatformRevealOriginalSpriteOverlay();
+    /* Release brightness only after this frame's BG/OAM owners committed. */
+    ndsVideoBlackoutCommit();
     sTicks++;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfilePostVBlankTicks +=

@@ -11,6 +11,9 @@ void ndsVideoBootstrapStart(void);
 void ndsVideoBootstrapUpdate(void);
 /* Apply queued blackout changes in the platform's VBlank commit window. */
 void ndsVideoBlackoutCommit(void);
+/* Port loading cover (see include/sys/video.h): set at a scene exit, released
+ * only by a scene-owned complete draw. */
+void ndsVideoSetTransitionBlackout(s32 black);
 /* Source-fade latch (BattleShip lbFade, black-only): fade-down level 0..16,
  * pushed once per frame by ndsLBFadePushHardwareFrame() after all draws and
  * resolved against blackout (which wins) in the same commit. Sole register

@@ -133,6 +133,11 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
     return sEpoch;
 }
 
+void ndsPlatformHideOriginalSpriteOverlayUntilCommit(s32 is_foreground)
+{
+    (void)is_foreground;
+}
+
 u32 ndsPlatformQueueNativeWallpaperAffine(s32 pa, s32 pd, s32 dx, s32 dy)
 {
     if ((pa <= 0) || (pa > 32767) || (pd <= 0) || (pd > 32767) ||

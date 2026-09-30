@@ -47,6 +47,7 @@
 #endif
 
 static sb32 sNdsVideoBlackout = FALSE;
+static sb32 sNdsVideoTransitionBlackout = FALSE;
 static u32 sNdsVideoSourceFadeLevel;
 static sb32 sNdsVideoBrightnessDirty = FALSE;
 
@@ -54,6 +55,17 @@ void ndsVideoSetBlackout(sb32 black)
 {
     sNdsVideoBlackout = (black != FALSE) ? TRUE : FALSE;
     sNdsVideoBrightnessDirty = TRUE;
+}
+
+void ndsVideoSetTransitionBlackout(sb32 black)
+{
+    sb32 next = (black != FALSE) ? TRUE : FALSE;
+
+    if (next != sNdsVideoTransitionBlackout)
+    {
+        sNdsVideoTransitionBlackout = next;
+        sNdsVideoBrightnessDirty = TRUE;
+    }
 }
 
 sb32 ndsVideoGetBlackout(void)
@@ -111,7 +123,8 @@ void ndsVideoBlackoutCommit(void)
 #ifdef ARM9
     {
         const u16 value = ndsVideoResolveBrightnessValue(
-            (u32)sNdsVideoBlackout, sNdsVideoSourceFadeLevel);
+            (u32)(sNdsVideoBlackout || sNdsVideoTransitionBlackout),
+            sNdsVideoSourceFadeLevel);
 
         REG_MASTER_BRIGHT = value;
         REG_MASTER_BRIGHT_SUB = value;

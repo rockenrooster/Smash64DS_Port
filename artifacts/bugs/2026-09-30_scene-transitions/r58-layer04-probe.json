@@ -1,0 +1,12 @@
+{
+  "register": "0x04000000",
+  "original": "0x21155d",
+  "masks": {
+    "BG0_3D": 256,
+    "BG2": 1024,
+    "BG3": 2048,
+    "OBJ": 4096
+  },
+  "guest_logic_modified": false,
+  "word_writes_only": true
+}

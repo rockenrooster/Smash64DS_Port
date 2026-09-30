@@ -4,6 +4,7 @@
  * the Option screen. It lives in its own fragment like every other screen;
  * including it here rather than in the nds_menu_shell.c aggregator keeps the
  * one-TU build while this screen's own TU boundary is still the router. */
+#include <sys/video.h>
 #include "nds_menu_shell_data.c"
 #include "nds_menu_shell_characters.c"
 #include "nds_menu_shell_vsrecord.c"
@@ -482,6 +483,10 @@ static void ndsMenuShellRun(u32 screen)
 
         ndsPlatformRenderDebugHud();
         ndsMenuShellRecordFrame();
+        /* The leaving frame commits the loading cover, so the exit below (the
+         * CSS hides its previews' BG0 first) is never on screen (r62 css-sss
+         * 0038). */
+        ndsVideoSetTransitionBlackout((sMenuLeaving != FALSE) ? TRUE : FALSE);
         ndsPlatformEndFrame();
         ndsMenuShellRecordPresent();
     }

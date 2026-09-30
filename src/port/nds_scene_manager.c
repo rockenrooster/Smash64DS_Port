@@ -1,6 +1,7 @@
 /* P2-1b -- the port-owned scene seam. Contract and reasoning: include/nds/nds_scene_manager.h. */
 
 #include <nds/nds_os.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_frontend_overlay.h>
 #include <nds/nds_particle_runtime.h>
@@ -376,6 +377,8 @@ void ndsSceneManagerExit(void)
                      (uintptr_t)gSYTaskmanGeneralHeap.start);
     u32 freed = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
                       (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+
+    ndsPlatformBeginSceneTransition();
 
 #if NDS_P2_STAGE_HYRULE && NDS_RENDERER_HW_TRIANGLES
     /* Taskman finished the frame/VBlank bracket before returning here. Drain

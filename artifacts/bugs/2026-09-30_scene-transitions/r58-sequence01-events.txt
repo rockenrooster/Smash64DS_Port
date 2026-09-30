@@ -1,0 +1,1490 @@
+Reading symbols from D:\Stuff\DevFolder\Smash64DS_Port\builds\codex-transitions\smash64ds.elf...
+0xfffffffc in ?? ()
+warning: could not convert '$seed_in_css' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Breakpoint 1 at 0x22ab040: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 577.
+Breakpoint 2 at 0x22ab050: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 595.
+Breakpoint 3 at 0x22ab078: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 620.
+Breakpoint 4 at 0x22ab0f4: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 644.
+Breakpoint 5 at 0x22ab360: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_sss.c, line 779.
+Breakpoint 6 at 0x211fc80: file /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/keys.c, line 66.
+Breakpoint 7 at 0x20b9408: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 295.
+Breakpoint 8 at 0x20a799c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 271.
+Breakpoint 9 at 0x2297990: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 705.
+Breakpoint 10 at 0x2011d88: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3724.
+Breakpoint 11 at 0x20672e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 210.
+Breakpoint 12 at 0x1fffd90: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+Breakpoint 13 at 0x201d630: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_storage.c, line 91.
+Note: breakpoint 10 (disabled) also set at pc 0x2011d88.
+Temporary breakpoint 14 at 0x2011d88: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3724.
+SCENE kind=27 prev=27 frame=5 task=0 heap_free=0
+SCENE kind=1 prev=27 frame=9 task=1 heap_free=744756
+FEED title-enter
+SCENE kind=7 prev=1 frame=13 task=1 heap_free=388712
+FEED mode-enter
+SCENE kind=9 prev=7 frame=17 task=1 heap_free=698208
+FEED vs-enter
+SCENE kind=16 prev=9 frame=21 task=1 heap_free=517288
+FEED css-enter visit=1 roster=0,1,28,28 pkind=0,1,2,2
+
+Temporary breakpoint 14, ndsPlatformEndFrame () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:3724
+3724	    u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
+FRAME phase=4 tick=135 css=1 sss=0 tic=0 present=337 frame=22 vblank=562 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=64 overlayflush=1
+Breakpoint 15 at 0x201014c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 435.
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=135 css=1 sss=0 tic=0 present=337 frame=22 vblank=563 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=64 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=136 css=1 sss=0 tic=0 present=338 frame=22 vblank=564 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=65 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=137 css=1 sss=0 tic=0 present=339 frame=22 vblank=565 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=65 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=138 css=1 sss=0 tic=0 present=340 frame=22 vblank=566 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=66 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=139 css=1 sss=0 tic=0 present=341 frame=22 vblank=567 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=66 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=140 css=1 sss=0 tic=0 present=342 frame=22 vblank=568 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=66 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=140 css=1 sss=0 tic=0 present=342 frame=22 vblank=569 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=67 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=141 css=1 sss=0 tic=0 present=343 frame=22 vblank=570 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=67 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=142 css=1 sss=0 tic=0 present=344 frame=22 vblank=571 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=68 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=143 css=1 sss=0 tic=0 present=345 frame=22 vblank=572 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=68 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=144 css=1 sss=0 tic=0 present=346 frame=22 vblank=573 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=69 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=145 css=1 sss=0 tic=0 present=347 frame=22 vblank=574 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=69 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=146 css=1 sss=0 tic=0 present=348 frame=22 vblank=575 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=70 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=147 css=1 sss=0 tic=0 present=349 frame=22 vblank=576 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=70 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=148 css=1 sss=0 tic=0 present=350 frame=22 vblank=577 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=71 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=149 css=1 sss=0 tic=0 present=351 frame=22 vblank=578 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=71 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=150 css=1 sss=0 tic=0 present=352 frame=22 vblank=579 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=72 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=151 css=1 sss=0 tic=0 present=353 frame=22 vblank=580 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=72 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=152 css=1 sss=0 tic=0 present=354 frame=22 vblank=581 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=73 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=153 css=1 sss=0 tic=0 present=355 frame=22 vblank=582 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=73 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=154 css=1 sss=0 tic=0 present=356 frame=22 vblank=583 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=74 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=155 css=1 sss=0 tic=0 present=357 frame=22 vblank=584 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=74 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=156 css=1 sss=0 tic=0 present=358 frame=22 vblank=585 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=75 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=157 css=1 sss=0 tic=0 present=359 frame=22 vblank=586 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=75 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=158 css=1 sss=0 tic=0 present=360 frame=22 vblank=587 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=76 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=159 css=1 sss=0 tic=0 present=361 frame=22 vblank=588 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=76 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=160 css=1 sss=0 tic=0 present=362 frame=22 vblank=589 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=77 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=161 css=1 sss=0 tic=0 present=363 frame=22 vblank=590 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=77 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=162 css=1 sss=0 tic=0 present=364 frame=22 vblank=591 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=78 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=163 css=1 sss=0 tic=0 present=365 frame=22 vblank=592 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=78 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=164 css=1 sss=0 tic=0 present=366 frame=22 vblank=593 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=79 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=165 css=1 sss=0 tic=0 present=367 frame=22 vblank=594 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=79 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=166 css=1 sss=0 tic=0 present=368 frame=22 vblank=595 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=80 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=167 css=1 sss=0 tic=0 present=369 frame=22 vblank=596 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=80 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=168 css=1 sss=0 tic=0 present=370 frame=22 vblank=597 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=81 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=169 css=1 sss=0 tic=0 present=371 frame=22 vblank=598 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=81 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=170 css=1 sss=0 tic=0 present=372 frame=22 vblank=599 scene=16 prev=9 manager=16 dispcnt=00211d5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=171 css=1 sss=0 tic=0 present=373 frame=23 vblank=600 scene=21 prev=16 manager=16 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=172 css=1 sss=0 tic=0 present=374 frame=24 vblank=601 scene=21 prev=16 manager=16 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+SCENE kind=21 prev=16 frame=25 task=1 heap_free=106928
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=4 tick=173 css=1 sss=0 tic=0 present=375 frame=25 vblank=602 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+FEED sss-enter visit=1 stage=6 time=1 rules=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=603 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=604 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=605 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=606 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=607 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=608 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=609 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=610 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=611 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=612 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=1 css=1 sss=1 tic=0 present=376 frame=26 vblank=613 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=2 css=1 sss=1 tic=0 present=376 frame=26 vblank=614 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=2 css=1 sss=1 tic=0 present=376 frame=26 vblank=615 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=3 css=1 sss=1 tic=0 present=377 frame=26 vblank=616 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=4 css=1 sss=1 tic=0 present=378 frame=26 vblank=617 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=5 css=1 sss=1 tic=0 present=379 frame=26 vblank=618 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 15, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=6 css=1 sss=1 tic=0 present=380 frame=26 vblank=619 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+Note: breakpoint 10 (disabled) also set at pc 0x2011d88.
+Temporary breakpoint 16 at 0x2011d88: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3724.
+
+Temporary breakpoint 16, ndsPlatformEndFrame () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:3724
+3724	    u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
+FRAME phase=5 tick=55 css=1 sss=1 tic=0 present=428 frame=26 vblank=667 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+Breakpoint 17 at 0x201014c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 435.
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=55 css=1 sss=1 tic=0 present=429 frame=26 vblank=668 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=56 css=1 sss=1 tic=0 present=430 frame=26 vblank=669 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=57 css=1 sss=1 tic=0 present=430 frame=26 vblank=670 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=58 css=1 sss=1 tic=0 present=432 frame=26 vblank=671 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=59 css=1 sss=1 tic=0 present=432 frame=26 vblank=672 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=60 css=1 sss=1 tic=0 present=434 frame=26 vblank=673 scene=21 prev=16 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=61 css=1 sss=1 tic=0 present=435 frame=27 vblank=674 scene=22 prev=21 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=62 css=1 sss=1 tic=0 present=436 frame=28 vblank=675 scene=22 prev=21 manager=21 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+SCENE kind=22 prev=21 frame=29 task=1 heap_free=792400
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=5 tick=63 css=1 sss=1 tic=0 present=437 frame=29 vblank=676 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+STOP battle-start stage=0 time=1 rules=1 players=1 cpus=3 roster=0,8,1,6 pkind=0,1,1,1 frame=30
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=677 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=678 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=679 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=680 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=681 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=682 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=683 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=684 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=685 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=686 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=687 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=688 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=689 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=690 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=691 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=692 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=693 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=694 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=695 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=696 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=697 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=698 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=699 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=700 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=701 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=702 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=703 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=704 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=705 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=706 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=707 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=708 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=709 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=710 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=711 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=712 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=713 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=714 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=715 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=716 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=717 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=718 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=719 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=720 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=721 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=722 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=723 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=724 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=725 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=726 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=727 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=728 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=729 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=730 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=731 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=732 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=733 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=734 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=735 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=736 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=737 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=738 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=739 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=740 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=741 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=742 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=743 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=744 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=745 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=746 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=747 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=748 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=749 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=750 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=751 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=752 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=753 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=754 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=755 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=756 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=757 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=758 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=759 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=760 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=761 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=762 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=763 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=764 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=765 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=766 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=767 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=768 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=769 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=770 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=771 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=772 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=773 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=774 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=775 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=776 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=777 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=778 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=779 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=780 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=781 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=782 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=783 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=784 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=785 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=786 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=787 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=788 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=789 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=790 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=791 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=792 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=793 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=794 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=795 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=796 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=797 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=798 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=799 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=800 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=801 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=802 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=803 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=804 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=805 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=806 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=807 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=808 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=809 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=810 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=811 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=812 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=813 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=814 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=815 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=816 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=817 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=818 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=819 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=820 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=821 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=822 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=823 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=824 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=825 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=826 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=827 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=828 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=829 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=830 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=831 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=832 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=833 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=834 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=835 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=836 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=837 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=838 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=839 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=840 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=841 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=842 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=843 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=844 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=845 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=846 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=847 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=848 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=849 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=850 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=851 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=852 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=853 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=854 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=855 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=856 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=857 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=858 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=859 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=860 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=861 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=862 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=863 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=864 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=865 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=866 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=867 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=868 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=869 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=870 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=871 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=872 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=873 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=874 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=875 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=876 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=877 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=878 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=879 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=880 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=881 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=882 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=883 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=884 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=885 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=886 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=887 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=888 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=889 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=890 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=891 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=892 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=893 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=894 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=895 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=896 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=897 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=898 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=899 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=900 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=901 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=902 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=903 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=904 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=905 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=906 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=907 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=908 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=909 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=910 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=911 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=912 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=913 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=914 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=915 scene=22 prev=21 manager=22 dispcnt=00211c5d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=916 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=917 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=918 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=919 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=920 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=921 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=922 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=923 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=924 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=925 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=926 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=927 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=928 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=929 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=930 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=931 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=932 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=933 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=934 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=935 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=936 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=937 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=938 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=939 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=940 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=941 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=942 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=943 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=944 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=945 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=946 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=947 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=948 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=949 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=950 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=951 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=952 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=953 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=954 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=955 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=956 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=957 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=958 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=959 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=960 scene=22 prev=21 manager=22 dispcnt=0021145d sub=00010100 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=82 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=438 frame=30 vblank=961 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=0000 subbright=0000 bg2=4086 bg3=4884 flush=83 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=439 frame=31 vblank=962 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=800d subbright=800d bg2=4086 bg3=4884 flush=84 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=439 frame=31 vblank=963 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=800d subbright=800d bg2=4086 bg3=4884 flush=84 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=440 frame=32 vblank=964 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=800b subbright=800b bg2=4086 bg3=4884 flush=85 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=440 frame=32 vblank=965 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=800b subbright=800b bg2=4086 bg3=4884 flush=85 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=441 frame=33 vblank=966 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=8008 subbright=8008 bg2=4086 bg3=4884 flush=86 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=441 frame=33 vblank=967 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=8008 subbright=8008 bg2=4086 bg3=4884 flush=86 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=442 frame=34 vblank=968 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=8005 subbright=8005 bg2=4086 bg3=4884 flush=87 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=442 frame=34 vblank=969 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=8005 subbright=8005 bg2=4086 bg3=4884 flush=87 overlayflush=1
+
+Breakpoint 17, 0x0201014c in ndsPlatformVBlankInterrupt () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:435
+435	}
+FRAME phase=7 tick=64 css=1 sss=1 tic=0 present=443 frame=35 vblank=970 scene=22 prev=21 manager=22 dispcnt=0021155d sub=00011110 bright=8003 subbright=8003 bg2=4086 bg3=4884 flush=88 overlayflush=1
+Temporary breakpoint 18 at 0x20fe6dc: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c, line 3273.
+
+Temporary breakpoint 18, ifCommonBattleSetInterface (proc_update=<optimized out>, proc_set=<optimized out>, sfx_id=527, restore_wait=90) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c:3273
+3273	    gSCManagerBattleState->game_status = nSCBattleGameStatusEnd;
+
+COLLECTOR ERROR RuntimeError('*stopped,reason="breakpoint-hit",disp="del",bkptno="18",frame={addr="0x020fe6dc",func="ifCommonBattleSetInterface",args=[{name="proc_update",value="<optimized out>"},{name="proc_set",value="<optimized out>"},{name="sfx_id",value="527"},{name="restore_wait",value="90"}],file="D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/if/ifcommon.c",fullname="D:\\\\Stuff\\\\DevFolder\\\\Smash64DS_Port\\\\decomp\\\\BattleShip-main\\\\decomp\\\\src\\\\if\\\\ifcommon.c",line="3273",arch="armv5te"},thread-id="1",stopped-threads="all"')

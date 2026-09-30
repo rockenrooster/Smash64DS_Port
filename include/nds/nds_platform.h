@@ -51,6 +51,10 @@ u32 ndsPlatformCommitOriginalSpriteFinalLayer(s32 is_foreground,
 void ndsPlatformCommitOriginalSpritePreview(void);
 void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground);
 void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground);
+/* Hide an overlay layer while a new picture is written into its visible
+ * bitmap; the next ndsPlatformEndFrame shows it again with that frame's OBJ
+ * and brightness commits. */
+void ndsPlatformHideOriginalSpriteOverlayUntilCommit(s32 is_foreground);
 void ndsPlatformClearOriginalSpritePreview(void);
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask);
 void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
@@ -58,6 +62,8 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
  * own no 3D content hide it so a retained previous 3D frame cannot bleed
  * through; CSS/battle/Results show it when they own 3D again. */
 void ndsPlatformSet3DLayerEnabled(s32 is_enabled);
+/* Retire the old display before destination asset construction. */
+void ndsPlatformBeginSceneTransition(void);
 /* Map the source engine's 320x240 viewport edge coordinates to the DS GX
  * viewport. CSS uses the source PlayersVS camera's (10,10)-(310,230) window;
  * restoring the full viewport afterwards prevents that menu camera from

@@ -309,7 +309,10 @@ void mnVSResultsLabelProcDisplay(GObj *gobj)
  * Do not retry bare `swi #0` -- it is measured, not suspected. */
 void ndsMNVSResultsSetLoadScene(void)
 {
-    ndsResultsOamExit();
+    /* The OBJ tenant is not retired here: this runs mid-frame, and clearing
+     * OAM now took the text off the screen a scanout before the loading
+     * cover. The harness commits this frame black, and
+     * ndsPlatformBeginSceneTransition retires the tenant under it. */
 #if NDS_DEMO_FOX_CPU_LADDER
     /* THE DEMO LADDER (owner, 2026-08-17): Fox opens at level 1 and gains a
      * level every time Mario wins and START starts the next match, wrapping
@@ -765,6 +768,7 @@ void mnVSResultsStartScene(void)
      * source republishes it on the new emblem's first update. */
     sNdsVSResultsEmblemGObj = NULL;
     gNdsVSResultsStartCount++;
+    ndsPlatformSet3DLayerEnabled(TRUE);
     ndsResultsOamEnter();
     ndsBaseMNVSResultsStartScene();
 }

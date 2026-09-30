@@ -48,6 +48,7 @@ static void ndsOpeningMoviePresentFrame(void)
     (void)ndsPlatformReadInput();
     ndsPlatformBeginFrame();
     ndsPlatformRenderDebugHud();
+    ndsVideoSetTransitionBlackout(FALSE);
     ndsPlatformEndFrame();
     gNdsFrameCounter++;
     gNdsOpeningMoviePresentFrameCount++;

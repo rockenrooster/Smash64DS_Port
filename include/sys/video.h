@@ -186,6 +186,9 @@ void syVideoSetFlags(u32 flags);
 
 void ndsVideoSetBlackout(sb32 black);
 sb32 ndsVideoGetBlackout(void);
+/* Port loading cover, independent of source BLACKOUT/NOBLACKOUT and lbFade.
+ * Release only after a scene-owned complete draw, never a loading present. */
+void ndsVideoSetTransitionBlackout(sb32 black);
 /* Frame-boundary apply of the blackout latch; call after VBlank (see
  * src/port/video_blackout.c). Cheap no-op when the latch is clean. */
 void ndsVideoBlackoutCommit(void);

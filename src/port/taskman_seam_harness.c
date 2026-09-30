@@ -156,6 +156,12 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
              * redundant main-loop present, so removing that present would
              * otherwise take the HUD with it. */
             ndsPlatformRenderDebugHud();
+            /* A frame whose update asked for the next scene is the last one:
+             * it commits the loading cover instead of releasing it, so the
+             * teardown after the loop (overlay layers, OBJ tenants, BG0) is
+             * never on screen (r62 results-css 0029/0030). */
+            ndsVideoSetTransitionBlackout(
+                (sSYTaskmanStatus == nSYTaskmanStatusLoadScene) ? TRUE : FALSE);
             ndsPlatformEndFrame();
         }
     }

@@ -341,6 +341,10 @@ s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
          (memcmp(palette, sWallpaperPalette, sizeof(sWallpaperPalette)) != 0)))
     {
         sWallpaperAsset = NULL;
+        /* The upload writes the visible bitmap row by row: hidden until this
+         * frame's commit, so the new picture appears whole and under the
+         * owner's tint of the same frame (Results tic 80). */
+        ndsPlatformHideOriginalSpriteOverlayUntilCommit(FALSE);
         if (ndsNativeWallpaperUpload(asset, dest, pitch, palette) == FALSE)
         {
             gNdsNativeWallpaperReadFailureCount++;

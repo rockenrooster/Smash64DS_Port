@@ -1,5 +1,6 @@
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_r2_hwmath_unit.h>
+#include <sys/video.h>
 
 /* Effect-instance pool free count (efmanager.c:1720), sampled per presented
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
@@ -775,6 +776,7 @@ static void ndsBattlePlayablePresentFrame(void)
     (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileHudTicks = cpuGetTiming() - hud_start;
 #endif
+    ndsVideoSetTransitionBlackout(FALSE);
     ndsPlatformEndFrame();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     phase_start = cpuGetTiming();

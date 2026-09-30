@@ -1,0 +1,13 @@
+{
+  "status": "INVESTIGATION_COMPLETE_FIX_UNBUILT",
+  "scanouts": 885,
+  "capture_hashes_verified": 885,
+  "links_verified": true,
+  "proposed_files": 10,
+  "rom_sha256": "2C22DE8E17D5D016459F868D4D56D261AE64929985E4C3A504DC326F39C56439",
+  "elf_sha256": "99F2775E82DBA54AF06A04411DCC5169067F6003AA5AF8DB35D575DCB6438C48",
+  "config_restored_sha256": "00E57544867E06FB1A45D8BE2FBB3B5F1016C3C55AA32A11B3BAF419949052B3",
+  "report_sha256": "d630597f0125495b7015f6454205861e0aa0b15f581e862e38777932e8df9a3e",
+  "proposal_sha256": "8dccd93a56b5e77ca07fe475fa5e4b67b8da8cf22f84f685c09bb6fbef19175d",
+  "native_candidate_build_and_verifiers": "NOT_RUN"
+}
