@@ -61,6 +61,25 @@ Owner roster (Kirby/Fox/Yoshi/Pikachu): P50 -7.6K, **P95 -29.1K**, P99
 -26.6K, mean -13.6K. Lab default roster: P50 -24.0K, **P95 -22.1K**, P99
 -29.7K. Both repeats agree within 0.4K at P50 and 0 at P95.
 
+The harness's own WORK-H summary (all 1,972 frames, the gate quantity):
+
+| arm | ROM | packet | WORK-H P50 | WORK-H P95 |
+| --- | --- | --- | ---: | ---: |
+| `tab1_sz` / `tab1b_sz` | table build `7F2F6B22` | - | 1,029,440 / 1,028,544 | 1,381,248 / 1,380,544 |
+| `erp1_sz` / `erp1b_sz` | this build `93827980` | 1 | 1,025,024 / 1,025,984 | 1,366,784 / 1,366,464 |
+| `erp0_sz` / `erp0b_sz` | this build | 0 | 1,033,664 / 1,034,432 | 1,396,992 / 1,396,032 |
+| `tabd1_sz` | table build, default roster | - | 1,065,792 | 1,473,600 |
+| `erpd1_sz` | this build, default roster | 1 | 1,045,824 | 1,472,768 |
+| `erpd0_sz` | this build, default roster | 0 | 1,069,056 | 1,500,288 |
+
+Same ROM, the packet is worth -29.9K (owner) / -27.5K (default) at WORK-H
+P95. Against the previous build (the flight table's), the shipped
+configuration moved -14.3K / -0.8K: this build's packet-off arm is +15.6K /
++26.7K slower than the table build, which differs from it only by this
+change's code and its 7.5 KB arena (allocated whatever the word, so every
+later scene allocation sits 7,552 B further on). That part is layout, not
+the packet, and it is what a cross-build number banks.
+
 Counters (owner / default roster): 5,824 of 5,848 / 7,408 of 7,416 state
 replays sent by DMA; records 24 / 8; **faults 0**; native failures 0 / 119
 (the default roster's standing count) in both arms; heap low-water 86,664 /

@@ -1012,6 +1012,26 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   P95 -9.2K (4/4 pairs, 1,221.6K -> 1,212.4K); lab P95 -12..-14K. Also the
   meter colour kept per (damage, colour id). Receipt
   `2026-09-30_p2-2p8-hud-damage-display`.
+- **09-30 the spline's arc-length bisection on bit patterns in ARM state,
+  BANKED** (host-proven exact over 164.9M checks, device oracle 0
+  mismatches): owner: the Sector Z Arwing is "the massive P95 hit" (~230K a
+  flight frame). The kernel keeps libgcc's float ops (an inlined integer
+  version grew 12.5 KB and cost +48K at P95: the I-cache). SZ P95 -8.8K.
+  Receipt `2026-09-30_p2-2p8-interp-kernel`.
+- **09-30 the Arwing answers its spline from a flight table, BANKED** (replay
+  identical, oracle 0 mismatches): eight authored patterns, each started from
+  frame 0, ask the same (segment, t) questions every flight; a lab capture
+  recorded the device's answers, keyed on everything the function reads
+  (`assets/stages/sector_arwing_frac.bin`, 103,336 B, SZ heap only). SZ owner
+  roster P95 -65.5K, default roster -78.6K. Receipt
+  `2026-09-30_p2-2p8-arwing-frac`.
+- **09-30 the Arwing's eight roots sent by DMA, BANKED** (replay identical,
+  DS top screen pixel-identical on five flight frames): the state cache's
+  replayed group loop is recorded once as a packed GX list and sent by DMA,
+  with the lit-matrix load a CPU write between two segments. Same-ROM SZ P95
+  -29.9K (owner roster), -27.5K (default); cross-build vs the table build
+  -14.3K / -0.8K (the packet-off arm moved +16..27K with the build's layout).
+  Receipt `2026-09-30_p2-2p8-arwing-packet`.
 
 ## 7. Found along the way
 
