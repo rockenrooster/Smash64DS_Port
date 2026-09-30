@@ -66,14 +66,29 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
      * setup reserves two 64 KiB graphics heaps, two 50 KiB display lists and
      * a 48 KiB RDP buffer; those N64 reservations exhausted the DS arena
      * before its first GObj. Apply the existing native buffer budget here. */
+    /* VS Results builds four fighters' models and materials after its first
+     * frames, and with the source's two 32 KiB graphics heaps and 48 KiB RDP
+     * buffer reserved a four-kind lineup ran the general heap out while making
+     * the second fighter (owner playtest r55, 2026-09-30: Mario/Kirby/Fox/
+     * Yoshi froze before Results). The native renderer uses neither, so they
+     * take the battle sizes here (111,600 B back); the scene's display lists
+     * keep their source capacities. */
     if ((desc != NULL) &&
         (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
          (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
-         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers)) &&
+         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
+         (gSCManagerSceneData.scene_curr == nSCKindVSResults)) &&
         (ndsBattleSetupIsRebudgeted(tsetup) == FALSE))
     {
         ds_setup = *tsetup;
         ndsBattleRebudgetSceneSetup(&ds_setup);
+        if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
+        {
+            ds_setup.scene_setup.dl_buffer0_size =
+                tsetup->scene_setup.dl_buffer0_size;
+            ds_setup.scene_setup.dl_buffer1_size =
+                tsetup->scene_setup.dl_buffer1_size;
+        }
         tsetup = &ds_setup;
     }
 

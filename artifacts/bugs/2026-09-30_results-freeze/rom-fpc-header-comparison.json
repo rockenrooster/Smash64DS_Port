@@ -1,0 +1,232 @@
+{
+  "arms": {
+    "r54": {
+      "0": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 16392,
+        "fkind": 0,
+        "section_count": 2,
+        "fixup_count": 232,
+        "span_count": 22,
+        "reserved": 0,
+        "data_bytes": 14144,
+        "data_hash": 1978917981,
+        "fixup_hash": 470255599,
+        "span_hash": 891534568,
+        "main_asset_id": 203,
+        "model_asset_id": 296,
+        "model_source_bytes": 29968,
+        "reserved_tail": 0,
+        "path": "fighters/battle/00.fpc",
+        "rom_file_bytes": 16392
+      },
+      "1": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 16520,
+        "fkind": 1,
+        "section_count": 2,
+        "fixup_count": 246,
+        "span_count": 22,
+        "reserved": 0,
+        "data_bytes": 14160,
+        "data_hash": 1196184884,
+        "fixup_hash": 1239756627,
+        "span_hash": 2662571960,
+        "main_asset_id": 209,
+        "model_asset_id": 313,
+        "model_source_bytes": 32336,
+        "reserved_tail": 0,
+        "path": "fighters/battle/01.fpc",
+        "rom_file_bytes": 16520
+      },
+      "6": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 25292,
+        "fkind": 6,
+        "section_count": 2,
+        "fixup_count": 478,
+        "span_count": 50,
+        "reserved": 0,
+        "data_bytes": 20740,
+        "data_hash": 1687468428,
+        "fixup_hash": 170346984,
+        "span_hash": 1505975190,
+        "main_asset_id": 247,
+        "model_asset_id": 338,
+        "model_source_bytes": 44256,
+        "reserved_tail": 0,
+        "path": "fighters/battle/06.fpc",
+        "rom_file_bytes": 25292
+      },
+      "8": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 40064,
+        "fkind": 8,
+        "section_count": 2,
+        "fixup_count": 591,
+        "span_count": 95,
+        "reserved": 0,
+        "data_bytes": 34068,
+        "data_hash": 2114482671,
+        "fixup_hash": 2454310238,
+        "span_hash": 1160712283,
+        "main_asset_id": 229,
+        "model_asset_id": 328,
+        "model_source_bytes": 120864,
+        "reserved_tail": 0,
+        "path": "fighters/battle/08.fpc",
+        "rom_file_bytes": 40064
+      }
+    },
+    "r55": {
+      "0": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 16392,
+        "fkind": 0,
+        "section_count": 2,
+        "fixup_count": 232,
+        "span_count": 22,
+        "reserved": 0,
+        "data_bytes": 14144,
+        "data_hash": 1978917981,
+        "fixup_hash": 470255599,
+        "span_hash": 891534568,
+        "main_asset_id": 203,
+        "model_asset_id": 296,
+        "model_source_bytes": 29968,
+        "reserved_tail": 0,
+        "path": "fighters/battle/00.fpc",
+        "rom_file_bytes": 16392
+      },
+      "1": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 16520,
+        "fkind": 1,
+        "section_count": 2,
+        "fixup_count": 246,
+        "span_count": 22,
+        "reserved": 0,
+        "data_bytes": 14160,
+        "data_hash": 1196184884,
+        "fixup_hash": 1239756627,
+        "span_hash": 2662571960,
+        "main_asset_id": 209,
+        "model_asset_id": 313,
+        "model_source_bytes": 32336,
+        "reserved_tail": 0,
+        "path": "fighters/battle/01.fpc",
+        "rom_file_bytes": 16520
+      },
+      "6": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 25476,
+        "fkind": 6,
+        "section_count": 2,
+        "fixup_count": 494,
+        "span_count": 48,
+        "reserved": 0,
+        "data_bytes": 20820,
+        "data_hash": 4041973672,
+        "fixup_hash": 3269691026,
+        "span_hash": 734875492,
+        "main_asset_id": 247,
+        "model_asset_id": 338,
+        "model_source_bytes": 44256,
+        "reserved_tail": 0,
+        "path": "fighters/battle/06.fpc",
+        "rom_file_bytes": 25476
+      },
+      "8": {
+        "magic": 826495046,
+        "version": 2,
+        "file_bytes": 41384,
+        "fkind": 8,
+        "section_count": 2,
+        "fixup_count": 723,
+        "span_count": 73,
+        "reserved": 0,
+        "data_bytes": 34596,
+        "data_hash": 3586754908,
+        "fixup_hash": 1949326869,
+        "span_hash": 1269346559,
+        "main_asset_id": 229,
+        "model_asset_id": 328,
+        "model_source_bytes": 120864,
+        "reserved_tail": 0,
+        "path": "fighters/battle/08.fpc",
+        "rom_file_bytes": 41384
+      }
+    }
+  },
+  "changes": {
+    "0": {},
+    "1": {},
+    "6": {
+      "file_bytes": {
+        "r54": 25292,
+        "r55": 25476
+      },
+      "fixup_count": {
+        "r54": 478,
+        "r55": 494
+      },
+      "span_count": {
+        "r54": 50,
+        "r55": 48
+      },
+      "data_bytes": {
+        "r54": 20740,
+        "r55": 20820
+      },
+      "data_hash": {
+        "r54": 1687468428,
+        "r55": 4041973672
+      },
+      "fixup_hash": {
+        "r54": 170346984,
+        "r55": 3269691026
+      },
+      "span_hash": {
+        "r54": 1505975190,
+        "r55": 734875492
+      }
+    },
+    "8": {
+      "file_bytes": {
+        "r54": 40064,
+        "r55": 41384
+      },
+      "fixup_count": {
+        "r54": 591,
+        "r55": 723
+      },
+      "span_count": {
+        "r54": 95,
+        "r55": 73
+      },
+      "data_bytes": {
+        "r54": 34068,
+        "r55": 34596
+      },
+      "data_hash": {
+        "r54": 2114482671,
+        "r55": 3586754908
+      },
+      "fixup_hash": {
+        "r54": 2454310238,
+        "r55": 1949326869
+      },
+      "span_hash": {
+        "r54": 1160712283,
+        "r55": 1269346559
+      }
+    }
+  }
+}

@@ -1,0 +1,204 @@
+Reading symbols from D:\Stuff\DevFolder\Smash64DS_Port\builds\p2p8-playtest-r57\smash64ds.elf...
+0xfffffffc in ?? ()
+warning: could not convert '$seed_in_css' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Breakpoint 1 at 0x22a8d7c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 569.
+Breakpoint 2 at 0x22a8d8c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 587.
+Breakpoint 3 at 0x22a8db4: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 612.
+Breakpoint 4 at 0x22a8e30: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 636.
+Breakpoint 5 at 0x22a909c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_sss.c, line 779.
+Breakpoint 6 at 0x211e190: file /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/keys.c, line 66.
+Breakpoint 7 at 0x20b795c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 295.
+Breakpoint 8 at 0x20a694c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 271.
+Breakpoint 9 at 0x22956d0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 705.
+Breakpoint 10 at 0x2011d88: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3724.
+Breakpoint 11 at 0x2066290: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 210.
+Breakpoint 12 at 0x1fffdbc: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+SCENE kind=27 prev=27 frame=5 task=0 heap_free=0
+SCENE kind=1 prev=27 frame=9 task=1 heap_free=753716
+FEED title-enter
+SCENE kind=7 prev=1 frame=13 task=1 heap_free=397672
+FEED mode-enter
+SCENE kind=9 prev=7 frame=17 task=1 heap_free=707168
+FEED vs-enter
+SCENE kind=16 prev=9 frame=21 task=1 heap_free=526248
+FEED css-enter visit=1 roster=0,1,28,28 pkind=0,1,2,2
+SCENE kind=21 prev=16 frame=25 task=1 heap_free=115888
+FEED sss-enter visit=1 stage=6 time=1 rules=1
+SCENE kind=22 prev=21 frame=29 task=1 heap_free=801360
+STOP battle-start stage=0 time=1 rules=1 players=1 cpus=3 roster=0,8,1,6 pkind=0,1,1,1 frame=30
+STOP results-enter visit=1 frame=2074
+RESULTS_ENTRY dl_overflow=28602 gfx_overflow=0 gfx_no_room=0 malloc_overflow=0
+SCENE kind=24 prev=22 frame=2076 task=1 heap_free=329880
+
+Breakpoint 10, ndsPlatformEndFrame () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:3724
+3724	    u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
+
+MI_STOP *stopped,reason="breakpoint-hit",disp="keep",bkptno="10",frame={addr="0x02011d88",func="ndsPlatformEndFrame",args=[],file="D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c",fullname="D:\\Stuff\\DevFolder\\Smash64DS_Port\\src\\nds\\nds_platform.c",line="3724",arch="armv5te"},thread-id="1",stopped-threads="all"
+
+COLLECTOR initial-stop
+SNAPSHOT pc=02011d88 lr=020a52ad sp=022e2798 cpsr=6000003f
+ndsPlatformEndFrame in section .main
+=> 0x2011d88 <ndsPlatformEndFrame>:	push	{r3, r4, r5, r6, r7, lr}
+   0x2011d8a <ndsPlatformEndFrame+2>:	mov	lr, r9
+   0x2011d8c <ndsPlatformEndFrame+4>:	mov	r7, r8
+   0x2011d8e <ndsPlatformEndFrame+6>:	push	{r7, lr}
+   0x2011d90 <ndsPlatformEndFrame+8>:	blx	0x2062b68 <ndsRendererHardwareConsumeSubmittedFrame>
+   0x2011d94 <ndsPlatformEndFrame+12>:	subs	r6, r0, #0
+   0x2011d96 <ndsPlatformEndFrame+14>:	bne.n	0x2011e30 <ndsPlatformEndFrame+168>
+   0x2011d98 <ndsPlatformEndFrame+16>:	ldr	r4, [pc, #400]	@ (0x2011f2c <ndsPlatformEndFrame+420>)
+#0  ndsPlatformEndFrame () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:3724
+#1  0x020a52ac in ndsSeamRunSourceMenuScene (tfunc=tfunc@entry=0x2268be4 <sSYTaskmanDefaultFunction>, is_results=is_results@entry=1) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_harness.c:159
+#2  0x020a586a in syTaskmanRunTask (tfunc=tfunc@entry=0x2268be4 <sSYTaskmanDefaultFunction>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_harness.c:344
+#3  0x020a8e82 in syTaskmanLoadScene (tscene=tscene@entry=0x22e2904, func_start=0x22924e9 <ndsMNVSResultsFuncStartTimed>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-playtest-r55/battleship_overlay/src/sys/taskman.c:1254
+#4  0x020a903a in ndsBaseSyTaskmanStartTask (tsetup=tsetup@entry=0x22e2904) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-playtest-r55/battleship_overlay/src/sys/taskman.c:1322
+#5  0x020a91c2 in syTaskmanStartTask (tsetup=0x22e2904, tsetup@entry=0x22e29ac) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:121
+#6  0x0208bce6 in scManagerFuncUpdate (setup=setup@entry=0x22e29ac) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_backend_compat_shims.c:1461
+#7  0x0229524c in ndsMNVSResultsManagerFuncUpdate (setup=setup@entry=0x21a7a80 <dMNVSResultsTaskmanSetup>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:483
+#8  0x02295280 in ndsBaseMNVSResultsStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c:3451
+#9  0x0229574c in mnVSResultsStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c:769
+#10 0x02068730 in ndsBaseSCManagerRunLoop (arg=arg@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-playtest-r55/battleship_overlay/src/sc/scmanager.c:1052
+#11 0x02068b26 in scManagerRunLoop (arg=arg@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scmanager.c:16
+#12 0x02064240 in syMainThread5 (arg=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c:207
+#13 0x0206393c in ndsOsThreadEntry (arg=0x2217540 <gSYMainThread5>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/libultra_os.c:143
+#14 0x02063902 in portCoroutineTrampolineC (coroutine=0x22dea28) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/coroutine.c:275
+#15 0x02116364 in ndsCoroutineTrampoline () at D:/Stuff/DevFolder/Smash64DS_Port/src/port\coroutine_arm.s:23
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+STATE scene=24 prev=22 task=0 frame=2278 heap_start=022fb400 heap_ptr=023d4b88 heap_end=023e4b00 heap_free=65400
+OVERFLOW count=0 request=0 align=0 headroom=0 lr=00000000
+$1 = {count = 0, domain = 0, scene = 0, identity = 0, status = 0, root = 0, material = 0, reason = 0}
+$2 = {game_type = 1 '\001', gkind = 0 '\000', is_team_battle = 0 '\000', game_rules = 1 '\001', pl_count = 1 '\001', cp_count = 3 '\003', time_limit = 1 '\001', stocks = 2 '\002', handicap = 0 '\000', is_team_attack = 0 '\000', is_stage_select = 1 '\001', damage_ratio = 100 'd', item_toggles = 0, is_reset_players = 1 '\001', game_status = 7 '\a', time_remain = 0, time_passed = 3600, item_appearance_rate = 0 '\000', is_show_score = 1, is_not_teamshadows = 0, players = {{level = 3 '\003', handicap = 9 '\t', pkind = 0 '\000', fkind = 0 '\000', team = 0 '\000', player = 0 '\000', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', is_single_stockicon = 1 '\001', tag = 0 '\000', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 2, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 0, total_damage_all = 109, total_damage_players = {0, 70, 12, 27}, stock_damage_all = 61, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007bc0, stale_id = 0, stale_info = {{attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 8 '\b', team = 0 '\000', player = 1 '\001', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 231, total_damage_all = 29, total_damage_players = {0, 0, 14, 15}, stock_damage_all = 29, combo_damage_foe = 0, combo_count_foe = 0, fighter_gobj = 0x3007cd0, stale_id = 2, stale_info = {{attack_id = 7, motion_count = 623}, {attack_id = 15, motion_count = 632}, {attack_id = 30, motion_count = 573}, {attack_id = 13, motion_count = 599}, {attack_id = 10, motion_count = 609}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 1 '\001', team = 1 '\001', player = 2 '\002', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 1, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 1, total_damage_given = 79, total_damage_all = 101, total_damage_players = {0, 73, 0, 28}, stock_damage_all = 74, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007de0, stale_id = 3, stale_info = {{attack_id = 18, motion_count = 464}, {attack_id = 11, motion_count = 554}, {attack_id = 18, motion_count = 587}, {attack_id = 35, motion_count = 384}, {attack_id = 0, motion_count = 387}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 6 '\006', team = 1 '\001', player = 3 '\003', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 70, total_damage_all = 142, total_damage_players = {0, 88, 53, 0}, stock_damage_all = 142, combo_damage_foe = 14, combo_count_foe = 1, fighter_gobj = 0x3007ef0, stale_id = 1, stale_info = {{attack_id = 10, motion_count = 536}, {attack_id = 32, motion_count = 105}, {attack_id = 35, motion_count = 211}, {attack_id = 15, motion_count = 243}, {attack_id = 11, motion_count = 482}}}}}
+$3 = (SCBattleState *) 0x223d570 <gSCManagerTransferBattleState>
+$4 = {game_type = 1 '\001', gkind = 0 '\000', is_team_battle = 0 '\000', game_rules = 1 '\001', pl_count = 1 '\001', cp_count = 3 '\003', time_limit = 1 '\001', stocks = 2 '\002', handicap = 0 '\000', is_team_attack = 0 '\000', is_stage_select = 1 '\001', damage_ratio = 100 'd', item_toggles = 0, is_reset_players = 1 '\001', game_status = 7 '\a', time_remain = 0, time_passed = 3600, item_appearance_rate = 0 '\000', is_show_score = 1, is_not_teamshadows = 0, players = {{level = 3 '\003', handicap = 9 '\t', pkind = 0 '\000', fkind = 0 '\000', team = 0 '\000', player = 0 '\000', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', is_single_stockicon = 1 '\001', tag = 0 '\000', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 2, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 0, total_damage_all = 109, total_damage_players = {0, 70, 12, 27}, stock_damage_all = 61, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007bc0, stale_id = 0, stale_info = {{attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 8 '\b', team = 0 '\000', player = 1 '\001', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 231, total_damage_all = 29, total_damage_players = {0, 0, 14, 15}, stock_damage_all = 29, combo_damage_foe = 0, combo_count_foe = 0, fighter_gobj = 0x3007cd0, stale_id = 2, stale_info = {{attack_id = 7, motion_count = 623}, {attack_id = 15, motion_count = 632}, {attack_id = 30, motion_count = 573}, {attack_id = 13, motion_count = 599}, {attack_id = 10, motion_count = 609}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 1 '\001', team = 1 '\001', player = 2 '\002', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 1, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 1, total_damage_given = 79, total_damage_all = 101, total_damage_players = {0, 73, 0, 28}, stock_damage_all = 74, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007de0, stale_id = 3, stale_info = {{attack_id = 18, motion_count = 464}, {attack_id = 11, motion_count = 554}, {attack_id = 18, motion_count = 587}, {attack_id = 35, motion_count = 384}, {attack_id = 0, motion_count = 387}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 6 '\006', team = 1 '\001', player = 3 '\003', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 70, total_damage_all = 142, total_damage_players = {0, 88, 53, 0}, stock_damage_all = 142, combo_damage_foe = 14, combo_count_foe = 1, fighter_gobj = 0x3007ef0, stale_id = 1, stale_info = {{attack_id = 10, motion_count = 536}, {attack_id = 32, motion_count = 105}, {attack_id = 35, motion_count = 211}, {attack_id = 15, motion_count = 243}, {attack_id = 11, motion_count = 482}}}}}
+$5 = 200
+$6 = 80120512
+$7 = 4
+$8 = {0x3007bc0, 0x3007cd0, 0x3007de0, 0x3007ef0}
+$9 = 410
+$10 = 28602
+$11 = 1
+$12 = 208
+$13 = 1
+$14 = 156
+$15 = 156
+$16 = 0
+$17 = 0
+$18 = {0, 0, 0, 0}
+$19 = 93
+$20 = 40
+$21 = {{request = {abi = 1095980081, operation = 5, sequence = 396, offset = 2583040, destination = 37623520, bytes = 3072, reserved = {0, 2147585024}}, slot = 0x23e16e0 "d", asset_id = 551, head = 272, size = 2592, span = 3072, generation = 7, busy = 0}, {request = {abi = 1095980081, operation = 5, sequence = 373, offset = 2520064, destination = 37567520, bytes = 3072, reserved = {0, 2147579136}}, slot = 0x23d3c20 "`", asset_id = 524, head = 32, size = 2704, span = 3072, generation = 7, busy = 0}}
+$22 = 0
+$23 = {679, 679, 704, 704, 1392, 0, 0, 0}
+$24 = 1
+$25 = 92
+$26 = 33867
+$27 = 403
+$28 = 33867
+$29 = 0
+$30 = {abi = 1095980081, operation = 2, sequence = 33464, offset = 5505168, destination = 35538080, bytes = 32, reserved = {0, 0}}
+$31 = 33464
+$32 = 8
+$33 = (u8 *) 0x0 <ndsCoroutineReadSp>
+$34 = 0
+$35 = 0
+$36 = 56
+$37 = 1536
+$38 = 0
+$39 = 0
+$40 = 28602
+$41 = 0
+$42 = 0
+$43 = 0
+$44 = 0
+$45 = 5120
+$46 = 550
+$47 = 1
+$48 = 0
+
+CAPTURE exit=0
+
+RESULTS_CHECK 19^done,value="24 '\\030'" 20^done,value="200"
+Note: breakpoint 10 (disabled) also set at pc 0x2011d88.
+Breakpoint 13 at 0x2011d88: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3724.
+SCENE kind=16 prev=24 frame=2497 task=1 heap_free=61228
+FEED css-enter visit=2 roster=0,8,1,6 pkind=0,1,1,1
+
+Breakpoint 13, ndsPlatformEndFrame () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:3724
+3724	    u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
+
+COLLECTOR return-css
+SNAPSHOT pc=02011d88 lr=022a6dd7 sp=022e2710 cpsr=0000003f
+ndsPlatformEndFrame in section .main
+=> 0x2011d88 <ndsPlatformEndFrame>:	push	{r3, r4, r5, r6, r7, lr}
+   0x2011d8a <ndsPlatformEndFrame+2>:	mov	lr, r9
+   0x2011d8c <ndsPlatformEndFrame+4>:	mov	r7, r8
+   0x2011d8e <ndsPlatformEndFrame+6>:	push	{r7, lr}
+   0x2011d90 <ndsPlatformEndFrame+8>:	blx	0x2062b68 <ndsRendererHardwareConsumeSubmittedFrame>
+   0x2011d94 <ndsPlatformEndFrame+12>:	subs	r6, r0, #0
+   0x2011d96 <ndsPlatformEndFrame+14>:	bne.n	0x2011e30 <ndsPlatformEndFrame+168>
+   0x2011d98 <ndsPlatformEndFrame+16>:	ldr	r4, [pc, #400]	@ (0x2011f2c <ndsPlatformEndFrame+420>)
+#0  ndsPlatformEndFrame () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c:3724
+#1  0x022a6dd6 in ndsMenuShellRun (screen=screen@entry=3) at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c:450
+#2  0x022a8fea in ndsMenuShellRunCharSelect () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c:640
+#3  0x020a5698 in syTaskmanRunTask (tfunc=tfunc@entry=0x2268be4 <sSYTaskmanDefaultFunction>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_harness.c:240
+#4  0x020a8e82 in syTaskmanLoadScene (tscene=tscene@entry=0x22e29bc, func_start=0x0 <ndsControllerPlaybackCommitFrame>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-playtest-r55/battleship_overlay/src/sys/taskman.c:1254
+#5  0x020a903a in ndsBaseSyTaskmanStartTask (tsetup=tsetup@entry=0x22e29bc) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-playtest-r55/battleship_overlay/src/sys/taskman.c:1322
+#6  0x020a91c2 in syTaskmanStartTask (tsetup=tsetup@entry=0x22e29bc) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:121
+#7  0x022a942e in mnPlayersVSStartScene () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c:835
+#8  0x0206889c in ndsBaseSCManagerRunLoop (arg=arg@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-playtest-r55/battleship_overlay/src/sc/scmanager.c:1006
+#9  0x02068b26 in scManagerRunLoop (arg=arg@entry=0) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scmanager.c:16
+#10 0x02064240 in syMainThread5 (arg=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/sys/main.c:207
+#11 0x0206393c in ndsOsThreadEntry (arg=0x2217540 <gSYMainThread5>) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/libultra_os.c:143
+#12 0x02063902 in portCoroutineTrampolineC (coroutine=0x22dea28) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/coroutine.c:275
+#13 0x02116364 in ndsCoroutineTrampoline () at D:/Stuff/DevFolder/Smash64DS_Port/src/port\coroutine_arm.s:23
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+STATE scene=16 prev=24 task=0 frame=2498 heap_start=022fb400 heap_ptr=023d09d0 heap_end=023e4b00 heap_free=82224
+OVERFLOW count=0 request=0 align=0 headroom=0 lr=00000000
+$49 = {count = 0, domain = 0, scene = 0, identity = 0, status = 0, root = 0, material = 0, reason = 0}
+$50 = {game_type = 1 '\001', gkind = 0 '\000', is_team_battle = 0 '\000', game_rules = 1 '\001', pl_count = 1 '\001', cp_count = 3 '\003', time_limit = 1 '\001', stocks = 2 '\002', handicap = 0 '\000', is_team_attack = 0 '\000', is_stage_select = 1 '\001', damage_ratio = 100 'd', item_toggles = 0, is_reset_players = 1 '\001', game_status = 7 '\a', time_remain = 0, time_passed = 3600, item_appearance_rate = 0 '\000', is_show_score = 1, is_not_teamshadows = 0, players = {{level = 3 '\003', handicap = 9 '\t', pkind = 0 '\000', fkind = 0 '\000', team = 0 '\000', player = 0 '\000', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', is_single_stockicon = 1 '\001', tag = 0 '\000', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 2, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 0, total_damage_all = 109, total_damage_players = {0, 70, 12, 27}, stock_damage_all = 61, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007bc0, stale_id = 0, stale_info = {{attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 8 '\b', team = 0 '\000', player = 1 '\001', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 231, total_damage_all = 29, total_damage_players = {0, 0, 14, 15}, stock_damage_all = 29, combo_damage_foe = 0, combo_count_foe = 0, fighter_gobj = 0x3007cd0, stale_id = 2, stale_info = {{attack_id = 7, motion_count = 623}, {attack_id = 15, motion_count = 632}, {attack_id = 30, motion_count = 573}, {attack_id = 13, motion_count = 599}, {attack_id = 10, motion_count = 609}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 1 '\001', team = 1 '\001', player = 2 '\002', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 1, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 1, total_damage_given = 79, total_damage_all = 101, total_damage_players = {0, 73, 0, 28}, stock_damage_all = 74, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007de0, stale_id = 3, stale_info = {{attack_id = 18, motion_count = 464}, {attack_id = 11, motion_count = 554}, {attack_id = 18, motion_count = 587}, {attack_id = 35, motion_count = 384}, {attack_id = 0, motion_count = 387}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 6 '\006', team = 1 '\001', player = 3 '\003', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 70, total_damage_all = 142, total_damage_players = {0, 88, 53, 0}, stock_damage_all = 142, combo_damage_foe = 14, combo_count_foe = 1, fighter_gobj = 0x3007ef0, stale_id = 1, stale_info = {{attack_id = 10, motion_count = 536}, {attack_id = 32, motion_count = 105}, {attack_id = 35, motion_count = 211}, {attack_id = 15, motion_count = 243}, {attack_id = 11, motion_count = 482}}}}}
+$51 = (SCBattleState *) 0x223d570 <gSCManagerTransferBattleState>
+$52 = {game_type = 1 '\001', gkind = 0 '\000', is_team_battle = 0 '\000', game_rules = 1 '\001', pl_count = 1 '\001', cp_count = 3 '\003', time_limit = 1 '\001', stocks = 2 '\002', handicap = 0 '\000', is_team_attack = 0 '\000', is_stage_select = 1 '\001', damage_ratio = 100 'd', item_toggles = 0, is_reset_players = 1 '\001', game_status = 7 '\a', time_remain = 0, time_passed = 3600, item_appearance_rate = 0 '\000', is_show_score = 1, is_not_teamshadows = 0, players = {{level = 3 '\003', handicap = 9 '\t', pkind = 0 '\000', fkind = 0 '\000', team = 0 '\000', player = 0 '\000', costume = 0 '\000', shade = 0 '\000', color = 0 '\000', is_single_stockicon = 1 '\001', tag = 0 '\000', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 2, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 0, total_damage_all = 109, total_damage_players = {0, 70, 12, 27}, stock_damage_all = 61, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007bc0, stale_id = 0, stale_info = {{attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}, {attack_id = 0, motion_count = 0}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 8 '\b', team = 0 '\000', player = 1 '\001', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 0, total_kos_players = {0, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 231, total_damage_all = 29, total_damage_players = {0, 0, 14, 15}, stock_damage_all = 29, combo_damage_foe = 0, combo_count_foe = 0, fighter_gobj = 0x3007cd0, stale_id = 2, stale_info = {{attack_id = 7, motion_count = 623}, {attack_id = 15, motion_count = 632}, {attack_id = 30, motion_count = 573}, {attack_id = 13, motion_count = 599}, {attack_id = 10, motion_count = 609}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 1 '\001', team = 1 '\001', player = 2 '\002', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 1, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 1, total_damage_given = 79, total_damage_all = 101, total_damage_players = {0, 73, 0, 28}, stock_damage_all = 74, combo_damage_foe = 5, combo_count_foe = 1, fighter_gobj = 0x3007de0, stale_id = 3, stale_info = {{attack_id = 18, motion_count = 464}, {attack_id = 11, motion_count = 554}, {attack_id = 18, motion_count = 587}, {attack_id = 35, motion_count = 384}, {attack_id = 0, motion_count = 387}}}, {level = 3 '\003', handicap = 9 '\t', pkind = 1 '\001', fkind = 6 '\006', team = 1 '\001', player = 3 '\003', costume = 0 '\000', shade = 0 '\000', color = 4 '\004', is_single_stockicon = 1 '\001', tag = 4 '\004', stock_count = 2 '\002', is_spgame_enemy = 0 '\000', place = 0 '\000', falls = 0, score = 1, total_kos_players = {1, 0, 0, 0}, unk_pblock_0x28 = 0, unk_pblock_0x2C = 0, total_selfdestructs = 0, total_damage_given = 70, total_damage_all = 142, total_damage_players = {0, 88, 53, 0}, stock_damage_all = 142, combo_damage_foe = 14, combo_count_foe = 1, fighter_gobj = 0x3007ef0, stale_id = 1, stale_info = {{attack_id = 10, motion_count = 536}, {attack_id = 32, motion_count = 105}, {attack_id = 35, motion_count = 211}, {attack_id = 15, motion_count = 243}, {attack_id = 11, motion_count = 482}}}}}
+$53 = 415
+$54 = 80120512
+$55 = 4
+$56 = {0x3007bc0, 0x3007cd0, 0x3007de0, 0x3007ef0}
+$57 = 410
+$58 = 28602
+$59 = 1
+$60 = 208
+$61 = 1
+$62 = 156
+$63 = 156
+$64 = 0
+$65 = 0
+$66 = {0, 0, 0, 0}
+$67 = 93
+$68 = 40
+$69 = {{request = {abi = 1095980081, operation = 5, sequence = 396, offset = 2583040, destination = 37623520, bytes = 3072, reserved = {0, 2147585024}}, slot = 0x23e16e0 "d", asset_id = 551, head = 272, size = 2592, span = 3072, generation = 7, busy = 0}, {request = {abi = 1095980081, operation = 5, sequence = 373, offset = 2520064, destination = 37567520, bytes = 3072, reserved = {0, 2147579136}}, slot = 0x23d3c20 "`", asset_id = 524, head = 32, size = 2704, span = 3072, generation = 7, busy = 0}}
+$70 = 0
+$71 = {679, 679, 704, 704, 1392, 0, 0, 0}
+$72 = 1
+$73 = 92
+$74 = 37866
+$75 = 408
+$76 = 37865
+$77 = 0
+$78 = {abi = 1095980081, operation = 2, sequence = 37458, offset = 46464512, destination = 37656928, bytes = 1024, reserved = {0, 0}}
+$79 = 37458
+$80 = 9
+$81 = (u8 *) 0x23a2320 "`"
+$82 = 52000
+$83 = 8416
+$84 = 56
+$85 = 1536
+$86 = 0
+$87 = 0
+$88 = 28602
+$89 = 0
+$90 = 0
+$91 = 0
+$92 = 0
+$93 = 5120
+$94 = 497
+$95 = 1
+$96 = 1

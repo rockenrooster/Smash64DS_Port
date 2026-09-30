@@ -1,0 +1,308 @@
+{
+  "scope": "Investigator only; proposed repair not applied",
+  "runner": "repo-local accurate melonDS slot0 / ARM9 GDB 3300 / JIT disabled",
+  "roms": {
+    "r54": {
+      "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\remaining-bugs-playtest-r54\\smash64ds.nds",
+      "rom_sha256": "C8FC02AA2DF0BB6E84C2E0AF4EF2BF6F8C731A95EA1E7D8F129BABFC8B863121",
+      "elf_sha256": "F5BBD5F8077CD62FAAADB62B2E0A330FBCB9F1405AFC84926BE5EE5B98170BDB"
+    },
+    "r55": {
+      "rom": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\builds\\p2p8-playtest-r55\\smash64ds.nds",
+      "rom_sha256": "AB60DFA8ABF50E04BECFBF4FCA2F08FC6A14B2B6064C0C9F15DEFEB7C9162CE8",
+      "elf_sha256": "5E06F75C5FDF5060137AEFD47851FE782BCD3B09517B997545C2D9B070AEEB57"
+    }
+  },
+  "runs": {
+    "r54-sss": {
+      "launcher": "r54-sss EXIT 0",
+      "collector": "r54-sss STOPPED STOP battle-start stage=0 time=1 rules=1 players=1 cpus=3 roster=0,8,1,6 pkind=0,1,1,1 frame=29 14^done,value=\"22 '\\\\026'\" 15^done,value=\"0\" elapsed=25.0s",
+      "evidence": "r54-sss.txt"
+    },
+    "r55-alloc-sss": {
+      "launcher": "r55-alloc-sss EXIT 0",
+      "collector": "r55-alloc-sss STOPPED SCENE kind=24 prev=22 frame=2076 task=1 heap_free=329880 18^done,value=\"24 '\\\\030'\" 19^done,value=\"120\" elapsed=111.2s",
+      "evidence": "r55-alloc-sss.txt"
+    },
+    "r55-alloc-historical": {
+      "launcher": "r55-alloc-historical EXIT 0",
+      "collector": "r55-alloc-historical STOPPED SCENE kind=24 prev=22 frame=2076 task=1 heap_free=210344 22^done,value=\"24 '\\\\030'\" 23^done,value=\"120\" elapsed=114.8s",
+      "evidence": "r55-alloc-historical.txt"
+    },
+    "r55-budget-owner": {
+      "launcher": "r55-budget-owner EXIT 0",
+      "collector": "r55-budget-owner ERROR RuntimeError('state read failed: 26^error,msg=\"Cannot execute this command while the target is running.\\\\nUse the \\\\\"interrupt\\\\\" command to stop the target\\\\nand then try again.\"') elapsed=308.9s",
+      "evidence": "r55-budget-owner.txt"
+    },
+    "r54-results-fixture": {
+      "launcher": "r54-results-fixture EXIT 0",
+      "collector": "r54-results-fixture STOPPED SCENE kind=24 prev=22 frame=2075 task=1 heap_free=121580 22^done,value=\"24 '\\\\030'\" 23^done,value=\"0\" elapsed=110.5s",
+      "evidence": "r54-results-fixture.txt"
+    },
+    "r55-budget-owner-exit": {
+      "launcher": "r55-budget-owner-exit EXIT 0",
+      "collector": "r55-budget-owner-exit STOPPED FEED css-enter visit=2 roster=0,8,1,6 pkind=0,1,1,1 27^done,value=\"16 '\\\\020'\" 28^done,value=\"415\" elapsed=114.2s",
+      "evidence": "r55-budget-owner-exit.txt"
+    },
+    "r55-native-buffers-owner": {
+      "launcher": "r55-native-buffers-owner EXIT 0",
+      "collector": "r55-native-buffers-owner STOPPED FEED css-enter visit=2 roster=0,8,1,6 pkind=0,1,1,1 28^done,value=\"16 '\\\\020'\" 29^done,value=\"415\" elapsed=134.4s",
+      "evidence": "r55-native-buffers-owner.txt"
+    },
+    "r55-native-buffers-css60": {
+      "launcher": "r55-native-buffers-css60 EXIT 0",
+      "collector": "r55-native-buffers-css60 STOPPED FEED css-enter visit=2 roster=0,8,1,6 pkind=0,1,1,1 27^done,value=\"16 '\\\\020'\" 28^done,value=\"415\" elapsed=113.4s",
+      "evidence": "r55-native-buffers-css60.txt"
+    }
+  },
+  "files": {
+    "r54-default-globals.json": {
+      "bytes": 4137,
+      "sha256": "C4047DECDDFE1688823A3DC09A2EE29CCC69A60D01BC39742C1A54C2D0D9622B"
+    },
+    "r54-default-summary.json": {
+      "bytes": 10135,
+      "sha256": "640A59EC73C14DCA4AE31C31A4A7242CD36CD199416B3A89FDDBEB54C2FF8397"
+    },
+    "r54-default.png": {
+      "bytes": 55824,
+      "sha256": "935EC679DAADA9836F92CFD5224C6EAAC88B2522F687B1A940AD741FA6EEB97D"
+    },
+    "r54-default.txt": {
+      "bytes": 27027,
+      "sha256": "777A88399C1B39D97484BAAC13D462684A55C6E19B8D73E65D60909FC98461A2"
+    },
+    "r54-results-fixture-allocations.json": {
+      "bytes": 376547,
+      "sha256": "CB873006EBBAD7A4B5CB14F4928875236BF0C6AFCC67043589C4CA2D66EDDBD3"
+    },
+    "r54-results-fixture-allocations.md": {
+      "bytes": 55789,
+      "sha256": "8681E3793718F327C91E1270B547AFC9C06488B2E29660BCD5A6ED84A0D869BE"
+    },
+    "r54-results-fixture-globals.json": {
+      "bytes": 8090,
+      "sha256": "78747950A535D000C3AFF6DC23A4344D4CE2F72074EBB20F221D10BBBF057FD7"
+    },
+    "r54-results-fixture-summary.json": {
+      "bytes": 13966,
+      "sha256": "DF4403E3AE46F3C5EB53BA959BB23EF6B1BAF271DC57037F5F5AF1DF20DE215B"
+    },
+    "r54-results-fixture.png": {
+      "bytes": 91230,
+      "sha256": "77D478824CF46846D66BD9714AE2CBC5B977213D84C2E6D85EAB7299E8CED740"
+    },
+    "r54-results-fixture.txt": {
+      "bytes": 135239,
+      "sha256": "83D27DF050A89DEE547407FA59ADD94C6F867E41BE17432EF4F38DAE2F6222D9"
+    },
+    "r54-sss-globals.json": {
+      "bytes": 7872,
+      "sha256": "663147AA4A0A4CCC6CB8427BFF1C2BA7C3E0F5CC3AD8AA40ECA3BF2D72E9D1AD"
+    },
+    "r54-sss-summary.json": {
+      "bytes": 13552,
+      "sha256": "6A28B4933C78F31B0BE8A7474D08EA0134D14240638CB17A6B76A74AE9913912"
+    },
+    "r54-sss.png": {
+      "bytes": 66217,
+      "sha256": "486D6D82CE4BEC8CFABB19A1748370D32C36E00A5D14545D2BED94FD87741441"
+    },
+    "r54-sss.txt": {
+      "bytes": 36502,
+      "sha256": "A706FD341B90E265B02972CB2FB92C2006E6706D0CEE1604719F29B1114B568B"
+    },
+    "r55-alloc-historical-allocations.json": {
+      "bytes": 613773,
+      "sha256": "497F3679A3EFF31074141E15371133263A6AC18FD6AFA7D1083FFE4F33751739"
+    },
+    "r55-alloc-historical-allocations.md": {
+      "bytes": 50200,
+      "sha256": "2C81A2FD65B11BF2BB4D6186A0B48AA953023024B60380E31863FA1A9E89DC6F"
+    },
+    "r55-alloc-historical-globals.json": {
+      "bytes": 9421,
+      "sha256": "388015F7083C8495C0B2980958960E6A2122C8B1D17208AAE21BD29594A15410"
+    },
+    "r55-alloc-historical-summary.json": {
+      "bytes": 15769,
+      "sha256": "471803606CDEC4703E34F2A0465B26BF7AE47BED1F7FBEBB0F3A0B390F2C113D"
+    },
+    "r55-alloc-historical.png": {
+      "bytes": 46295,
+      "sha256": "374E7899AE5DFC28C587201F6C752C364231974FC14A7F4357FBA2A11578467E"
+    },
+    "r55-alloc-historical.txt": {
+      "bytes": 171096,
+      "sha256": "DF8DE2238520E8E364023AE751E06361C6F27A28EF2FC88FE7FF5651672A4245"
+    },
+    "r55-alloc-sss-allocations.json": {
+      "bytes": 464237,
+      "sha256": "CEEF42E9A079BF5B461FB552A17A2692A29173FF81869A57C48D3B776CBA7E34"
+    },
+    "r55-alloc-sss-allocations.md": {
+      "bytes": 52093,
+      "sha256": "8415E2ED71EA118914BE97BB8823BF15E78BD64FC1AC192992F9BE712D3F43AC"
+    },
+    "r55-alloc-sss-globals.json": {
+      "bytes": 9418,
+      "sha256": "70A41064D0AFBA26301277396615721F78076960A22569DE0EEEEF295651389E"
+    },
+    "r55-alloc-sss-summary.json": {
+      "bytes": 15950,
+      "sha256": "BF36DF395EA04374811FF02684A8A0DF58C2A549FC1255D63FAEE5F1FC063659"
+    },
+    "r55-alloc-sss.png": {
+      "bytes": 46456,
+      "sha256": "511839573E881987F043C0F2DDAD63366387AD9D30CB1F16B973552CBBD79366"
+    },
+    "r55-alloc-sss.txt": {
+      "bytes": 144759,
+      "sha256": "C7E93F57229BDB0EE7C6D913D1AF17724900B1A8312172CD9EA6F2E0DBD393A3"
+    },
+    "r55-budget-owner-allocations.json": {
+      "bytes": 624230,
+      "sha256": "B8D1CFCA74067894624919859D321F42E5A834259A41AFE83B3A373FAD920497"
+    },
+    "r55-budget-owner-allocations.md": {
+      "bytes": 45938,
+      "sha256": "53649C76EAC632FAB47600EFEC23E5FBF5F49FBFEABBA4E2B0DB64D3F0C74701"
+    },
+    "r55-budget-owner-exit-globals.json": {
+      "bytes": 9619,
+      "sha256": "79F5521D3DBC2568D168293A456AA2DBCCFD7684252109EC0152BAB34E3E6BB6"
+    },
+    "r55-budget-owner-exit-return-css.png": {
+      "bytes": 59764,
+      "sha256": "F888A26E8BF3CA91647FF8CF126726586C87DA6CE0ECEFF87089648FDF698C44"
+    },
+    "r55-budget-owner-exit-summary.json": {
+      "bytes": 14932,
+      "sha256": "602E11291CCBF1CDA12718E56BA525B585A2B87279A474B0DFB296CB722463F2"
+    },
+    "r55-budget-owner-exit.png": {
+      "bytes": 37757,
+      "sha256": "75678C14999B826089FABA18F3905CFC18C82B4F9392F7AEA004E6BC9759A56F"
+    },
+    "r55-budget-owner-exit.txt": {
+      "bytes": 27531,
+      "sha256": "45A5398B9B177024286480DCF0779659C0952A4281451FAF7F2576D7D169D6F7"
+    },
+    "r55-budget-owner-globals.json": {
+      "bytes": 9426,
+      "sha256": "A7CE661E59637718245466117397DC18E4D343FF69C0021D807DA3BF2D0A027A"
+    },
+    "r55-budget-owner-return-css.png": {
+      "bytes": 39940,
+      "sha256": "8BDDE04593D164D57886832C64151A5681C6A6CBF9CBF4BF1B20FA0DAE58D364"
+    },
+    "r55-budget-owner-summary.json": {
+      "bytes": 15302,
+      "sha256": "1FD0772179163EC791D3EB1DD2A111F82CF1C6B1F2DA30B129D1FE1C2656FA58"
+    },
+    "r55-budget-owner.png": {
+      "bytes": 37751,
+      "sha256": "A42B9695C4FCA412985588FE0DDB1F88D2461762FA135DCB8E48C413264C0316"
+    },
+    "r55-budget-owner.txt": {
+      "bytes": 160094,
+      "sha256": "93AD7BDA84FBA26D2A38E07AABCD015EA737720219CF6DB1AC0E210C61B6FC9C"
+    },
+    "r55-default.txt": {
+      "bytes": 2201,
+      "sha256": "A7669A5B845622220D92D1E1292D83F9FBFF806F392E55E878EC21362A9C957A"
+    },
+    "r55-default2-globals.json": {
+      "bytes": 8881,
+      "sha256": "11356415E162879E296CC3E52EB3EBBEF224D41F67FB0C45D304A01DCB46C537"
+    },
+    "r55-default2-summary.json": {
+      "bytes": 15413,
+      "sha256": "6B6BF26AC5A8818F7E9258E4FF6FE06F986B3545C24105946CDC14C7E4D84AA2"
+    },
+    "r55-default2.txt": {
+      "bytes": 41334,
+      "sha256": "F12CF9E268FF1B2FFFB3C0B3FB97CE3953FC9E192194C33D2B246DB8CA9F370A"
+    },
+    "r55-native-buffers-css60-globals.json": {
+      "bytes": 10125,
+      "sha256": "E0328F0364DA9BF087C10832EDB7D5477447D928D65766A1B983154041580E0B"
+    },
+    "r55-native-buffers-css60-return-css.png": {
+      "bytes": 57268,
+      "sha256": "09BB88058FA047DF9B5B7A4F620082919266AD153FDF6C5D0C37A30E5986DEB6"
+    },
+    "r55-native-buffers-css60-summary.json": {
+      "bytes": 15438,
+      "sha256": "50477F3DE750B5628657E1FF9BC8E1863CB88721B564D5773D57165A5213A800"
+    },
+    "r55-native-buffers-css60.png": {
+      "bytes": 37753,
+      "sha256": "7A4C2CE89136415271882D2A96039940821F72B84D6FA97E9C1F52EAAEAB900D"
+    },
+    "r55-native-buffers-css60.txt": {
+      "bytes": 27487,
+      "sha256": "60F82462C402E8BAC96BADAD84E316D8828DCAD02A2BD1129FE616358B86974C"
+    },
+    "r55-native-buffers-owner-allocations.json": {
+      "bytes": 627715,
+      "sha256": "D5E45066237B4CB4980A61E6C12FFD33448B4D7B8B0AF4AD9837ECA290BE80B2"
+    },
+    "r55-native-buffers-owner-allocations.md": {
+      "bytes": 49471,
+      "sha256": "E263B10A9D8B489CEC8623C452260D3F4C9955BB60F3BCEC1AC38288D0BF4A1F"
+    },
+    "r55-native-buffers-owner-globals.json": {
+      "bytes": 10130,
+      "sha256": "9D8D4180EBD6BCD2CA7C144AD923B658FE3F8D3480DC4A6DCED533DE2D86F2F5"
+    },
+    "r55-native-buffers-owner-return-css.png": {
+      "bytes": 59759,
+      "sha256": "53E6A047F14A5DDE56162675CC8353857D21D29D79CD43B523ED52D5248D9B88"
+    },
+    "r55-native-buffers-owner-summary.json": {
+      "bytes": 15444,
+      "sha256": "2178B728B89B581E7F4EB477A1D68A71A80B7B917784A81E0442FBAE7FC1C380"
+    },
+    "r55-native-buffers-owner.png": {
+      "bytes": 37760,
+      "sha256": "03DB41A0E5CDE82E8A36F206A94CCB65125F246B20A44FDE8A1F106485D748D1"
+    },
+    "r55-native-buffers-owner.txt": {
+      "bytes": 156765,
+      "sha256": "417982CF430F8DD7B12F2426F1B28BAB53A860410E4A477E5C764B9FCF3C1F38"
+    },
+    "r55-prefetch0-globals.json": {
+      "bytes": 9311,
+      "sha256": "664A775FE11FC04BDA4031129B83204AFAC7178F86C56CBBCABC66155055948F"
+    },
+    "r55-prefetch0-summary.json": {
+      "bytes": 15844,
+      "sha256": "6C0787A4772C7F9CF7100829D2C1014819729F0CFF07E97F2BFC70E99138ABDC"
+    },
+    "r55-prefetch0.png": {
+      "bytes": 46433,
+      "sha256": "35002F31A4403D45B7C9A4FB86AE69BF487AB82B20F851E956EB615602954531"
+    },
+    "r55-prefetch0.txt": {
+      "bytes": 41224,
+      "sha256": "D26074E47401F697A50260D5A7567C5B673CA367BF4E5B7A6EB3C91CF673FEE4"
+    },
+    "REPORT.md": {
+      "bytes": 33026,
+      "sha256": "5CEE0551164F89220356F4F1E28E9B4FF14A1A0D93B6BC614B6897F81F03B188"
+    },
+    "rom-fpc-header-comparison.json": {
+      "bytes": 5874,
+      "sha256": "11396693D59CD6B34975608B05ECF39B7DBE66FB0BF2D998BFE58AA87012D106"
+    }
+  },
+  "proposal_hunk": {
+    "file": "src/import/battleship_sys_taskman.c",
+    "start": 69,
+    "old_lines": 10,
+    "new_lines": 19,
+    "matches_current_source": true
+  },
+  "restored_config_sha256": "F430E1CF4BD43959950765928B0C526C495013C61A151164E326CB07CEA5FA92"
+}
