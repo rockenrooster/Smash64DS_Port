@@ -1860,6 +1860,128 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
 #endif
 }
 
+/* ONE STORAGE COMMAND PER CLIP (P2-2p8, 2026-09-30).
+ *
+ * ndsRelocAssetLoadFighterStreamClip reads a clip's exact byte range. Clips
+ * sit at 16-byte offsets, so the range starts and ends inside a sector, and
+ * the storage path splits it: the ARM9 reader sends the 32-byte-multiple body
+ * and then a second request for the last few bytes, and the ARM7 reads the
+ * body as a partial head sector, a multi-sector run and a partial tail sector
+ * -- four sector-read calls and two PXI round trips for a ~2.3 KB clip, with
+ * the tail sector read twice. The ARM9 is blocked for all of it (~28-37K
+ * ticks a clip on the four-CPU lab).
+ *
+ * These two read the WHOLE sectors a clip touches in one request instead: the
+ * span starts at the clip's sector and is a multiple of 512, so both sides
+ * take their direct path. The caller supplies a 32-byte aligned buffer of
+ * `span` bytes and finds the clip `head` bytes into it. The bytes are the
+ * pack's own; only the number of commands changes. The pack is 512-aligned in
+ * the ROM image (every NitroFS file is), so a sector here is a sector of the
+ * card image. */
+#if NDS_R2_FTANIM_STREAM
+static s32 ndsRelocAssetFighterStreamClipStart(u32 asset_id, u32 *out_start,
+                                               u32 *out_size)
+{
+    const NDSFtAnimStreamHeader *header = &sNdsFtAnimStreamHeader;
+    u32 row;
+    u32 packed;
+    u32 offset;
+    u32 size;
+
+    if ((gNdsRelocAssetFighterStreamDispatch == 0u) ||
+        (ndsRelocAssetOpenFighterStream() == FALSE) ||
+        (sNdsFtAnimStreamDirReady == FALSE) ||
+        (gNdsRelocAssetFighterStreamDirRoute.route == 0u) ||
+        (asset_id < header->first_id) || (asset_id > header->last_id))
+    {
+        return FALSE;
+    }
+    row = asset_id - header->first_id;
+    if (row >= sNdsFtAnimStreamDirCount)
+    {
+        return FALSE;
+    }
+    packed = sNdsFtAnimStreamDir[row];
+    offset = (packed >> NDS_FTANIM_STREAM_DIR_SIZE_BITS) << 4;
+    size = packed & ((1u << NDS_FTANIM_STREAM_DIR_SIZE_BITS) - 1u);
+    if ((offset < header->data_off) || (size == 0u) ||
+        (offset > header->blob_bytes) ||
+        (size > (header->blob_bytes - offset)))
+    {
+        return FALSE;
+    }
+    *out_start = nitroromGetFileOffset(sNdsFtAnimStreamRom,
+                                       sNdsFtAnimStreamFileId) + offset;
+    *out_size = size;
+    return TRUE;
+}
+#endif
+
+s32 ndsRelocAssetFighterStreamClipSpan(u32 asset_id, u32 *out_head,
+                                       u32 *out_size, u32 *out_span)
+{
+#if NDS_R2_FTANIM_STREAM
+    u32 start;
+    u32 size;
+
+    if (ndsRelocAssetFighterStreamClipStart(asset_id, &start, &size) == FALSE)
+    {
+        return FALSE;
+    }
+    *out_head = start & 511u;
+    *out_size = size;
+    *out_span = ((start + size + 511u) & ~511u) - (start & ~511u);
+    return TRUE;
+#else
+    (void)asset_id;
+    (void)out_head;
+    (void)out_size;
+    (void)out_span;
+    return FALSE;
+#endif
+}
+
+s32 ndsRelocAssetReadFighterStreamClipSpan(u32 asset_id, void *dst, u32 span)
+{
+#if NDS_R2_FTANIM_STREAM
+    u32 start;
+    u32 size;
+    u32 read_start;
+
+    if ((dst == NULL) ||
+        (ndsRelocAssetFighterStreamClipStart(asset_id, &start, &size) ==
+         FALSE) ||
+        (span != (((start + size + 511u) & ~511u) - (start & ~511u))))
+    {
+        return FALSE;
+    }
+    read_start = (u32)tickGetCount();
+    if (nitroromRead(sNdsFtAnimStreamRom, start & ~511u, dst, span) == false)
+    {
+        gNdsRelocAssetFighterStreamFailures++;
+        return FALSE;
+    }
+    gNdsRelocAssetFighterStreamReadTicks64 += (u32)tickGetCount() - read_start;
+    gNdsRelocAssetFighterStreamReads++;
+    gNdsRelocAssetFighterStreamReadBytes += size;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
+    NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
+    /* LAB: motion reads per frame (SPHD), as the exact-range reader counts. */
+    {
+        extern volatile u32 gNdsTickHudSrcPhysicsDefaultTicks;
+
+        gNdsTickHudSrcPhysicsDefaultTicks++;
+    }
+#endif
+    return TRUE;
+#else
+    (void)asset_id;
+    (void)dst;
+    (void)span;
+    return FALSE;
+#endif
+}
+
 /* Calico's NitroRom API reads the application's FNT/FAT by file id and then
  * dispatches one exact ROM range read. It bypasses the stdio/FAT path which
  * otherwise reopens, walks and seeks a fighter clip during the frame that

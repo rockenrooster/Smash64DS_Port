@@ -974,6 +974,15 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   Castle and Saffron P95 -2.9K; Dream Land's floors are flat (gate neutral).
   Refuted: a per-binding stage near-plane test (unions straddle the plane).
   Receipt `2026-09-30_p2-2p8-segment-xreject`.
+- **09-30 fighter clip misses read whole sectors into the ring, BANKED**
+  (replay identical): a status change costs ~66-69K on the lab and 36-44% of
+  changes read a clip at 43-51K, 27-37K of it the ARM9 blocked on the ARM7.
+  A miss now reads the clip's whole sectors in one storage request straight
+  into a ring slot and pins it like a hit (no heap copy, no second request).
+  Same-ROM per read 43-51K -> ~31K on four stages; lab P95 -3K..-18K; gate
+  P50 -2.6K, P95 -1.4K. A clip trace sizes the next step: a ring that steps
+  over hit clips plus successor prefetch halves the reads in simulation.
+  Receipt `2026-09-30_p2-2p8-direct-clip-read`.
 
 ## 7. Found along the way
 

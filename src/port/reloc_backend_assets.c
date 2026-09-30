@@ -15272,32 +15272,46 @@ static void ndsR2AnimCacheEvictRawRange(u32 offset, u32 size)
  * fixup or use, so the cache owns no live object pointers. Keep the arena as a
  * variable-size circular log: wrapping evicts only byte ranges the incoming
  * template overwrites instead of invalidating every unrelated clip at once. */
-static void *ndsR2AnimCacheRawRingAlloc(u32 size)
+/* `align` (a power of two, >= 16) aligns the returned ADDRESS: the arena's
+ * base is only guaranteed NDS_RELOC_ALIGN_BYTES. */
+static void *ndsR2AnimCacheRawRingAllocAligned(u32 size, u32 align)
 {
+    uintptr_t base;
     u32 aligned;
+    u32 first;
 
     if (ndsR2AnimCacheArenaEnsure() == FALSE)
     {
         return NULL;
     }
-    if ((size == 0u) || (size > sNdsR2AnimCacheArenaBytes))
+    base = (uintptr_t)sNdsR2AnimCacheArena;
+    first = (u32)(((base + align - 1u) & ~(uintptr_t)(align - 1u)) -
+                  (uintptr_t)sNdsR2AnimCacheArena);
+    if ((size == 0u) || (first > sNdsR2AnimCacheArenaBytes) ||
+        (size > (sNdsR2AnimCacheArenaBytes - first)))
     {
         gNdsR2AnimCacheArenaOverflows++;
         gNdsR2AnimCacheArenaOverflowLastSize = size;
         gNdsR2AnimCacheArenaOverflowLastUsed = sNdsR2AnimCacheArenaUsed;
         return NULL;
     }
-    aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+    aligned = (u32)(((base + sNdsR2AnimCacheArenaUsed + align - 1u) &
+                     ~(uintptr_t)(align - 1u)) - base);
     if ((aligned > sNdsR2AnimCacheArenaBytes) ||
         (size > (sNdsR2AnimCacheArenaBytes - aligned)))
     {
-        aligned = 0u;
+        aligned = first;
         gNdsR2AnimCacheRawRecycles++;
     }
     ndsR2AnimCacheEvictRawRange(aligned, size);
     sNdsR2AnimCacheArenaUsed = aligned + size;
     gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
     return &sNdsR2AnimCacheArena[aligned];
+}
+
+static void *ndsR2AnimCacheRawRingAlloc(u32 size)
+{
+    return ndsR2AnimCacheRawRingAllocAligned(size, 16u);
 }
 
 /* Called with the payload already byte-swapped and not yet fixed up. */
@@ -15378,6 +15392,88 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
         sNdsR2AnimStoredThisMatch[word] |= bit;
     }
 }
+
+#if NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
+/* A MISS READ STRAIGHT INTO THE RING (P2-2p8, 2026-09-30).
+ *
+ * The stream miss read a clip into the fighter's figatree heap, copied it
+ * into the ring as a template, registered the heap as a loaded file and
+ * returned the heap -- and the next fetch of the clip was a zero-copy hit on
+ * the ring's copy. This reads the clip's whole sectors into the ring in one
+ * storage command (ndsRelocAssetReadFighterStreamClipSpan), moves the clip to
+ * the start of its slot, gives back the tail sector's spare bytes, and makes
+ * the entry the READY_STREAM template the store would have made; the caller
+ * then pins it exactly as it pins a hit. The heap copy, its registration and
+ * the second storage request go; the bytes the parser reads are the pack's
+ * own either way. Any refusal returns NULL before an entry exists and the
+ * established miss path runs. Same-ROM A/B word gNdsR2AnimDirectRead. */
+__attribute__((used, section(".data"))) volatile u32 gNdsR2AnimDirectRead = 1u;
+__attribute__((used)) volatile u32 gNdsR2AnimDirectReads;
+__attribute__((used)) volatile u32 gNdsR2AnimDirectRefusals;
+
+static const NDSR2AnimCacheEntry *ndsR2AnimDirectReadEntry(u32 asset_id)
+{
+    NDSR2AnimCacheEntry *entry;
+    u8 *slot;
+    u32 head;
+    u32 size;
+    u32 span;
+
+    if ((ndsRelocAssetFighterStreamClipSpan(asset_id, &head, &size, &span) ==
+         FALSE) ||
+        (ndsR2AnimCacheArenaEnsure() == FALSE) ||
+        (sNdsR2AnimCacheArenaRawOnly == FALSE))
+    {
+        gNdsR2AnimDirectRefusals++;
+        return NULL;
+    }
+    if (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES)
+    {
+        /* As the store does: a full table before the ring wraps. */
+        ndsR2AnimCacheRemoveEntry(0u);
+    }
+    slot = (u8 *)ndsR2AnimCacheRawRingAllocAligned(span, 32u);
+    if ((slot == NULL) ||
+        (ndsRelocAssetReadFighterStreamClipSpan(asset_id, slot, span) ==
+         FALSE))
+    {
+        /* The slot's range was evicted and holds nothing: no entry names it. */
+        gNdsR2AnimDirectRefusals++;
+        return NULL;
+    }
+    if (head != 0u)
+    {
+        memmove(slot, slot + head, size);
+    }
+    sNdsR2AnimCacheArenaUsed = (u32)(slot - sNdsR2AnimCacheArena) + size;
+    gNdsR2AnimCacheArenaUsedBytes = sNdsR2AnimCacheArenaUsed;
+    entry = &sNdsR2AnimCache[sNdsR2AnimCacheCount++];
+    entry->asset_id = asset_id;
+    ndsR2AnimCacheIndexInsert(asset_id, sNdsR2AnimCacheCount - 1u);
+    entry->size = size;
+    entry->payload = slot;
+    memset(&entry->header, 0, sizeof(entry->header));
+    entry->header.file_id = asset_id;
+    entry->header.data_size = size;
+    entry->header.reloc_intern_offset = 0xffffu;
+    entry->header.reloc_extern_offset = 0xffffu;
+    entry->aobj16_ready = NDS_R2_ANIM_CACHE_READY_STREAM;
+    gNdsR2AnimCacheFills++;
+    gNdsR2AnimCacheBytes += size;
+    if (asset_id < (NDS_R2_ANIM_STORED_BITS * 32u))
+    {
+        u32 word = asset_id >> 5;
+        u32 bit = 1u << (asset_id & 31u);
+
+        if ((sNdsR2AnimStoredThisMatch[word] & bit) != 0u)
+        {
+            gNdsR2AnimCacheRestores++;
+        }
+        sNdsR2AnimStoredThisMatch[word] |= bit;
+    }
+    return entry;
+}
+#endif
 
 volatile u32 gNdsR2AnimWarmLoaded;
 volatile u32 gNdsR2AnimWarmBytes;
@@ -16133,7 +16229,16 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * because they write absolute pointers into it. */
     {
         const NDSR2AnimCacheEntry *cached = ndsR2AnimCacheFind(asset_id);
+        sb32 direct = FALSE;
 
+#if NDS_R2_FTANIM_STREAM && NDS_R2_ANIM_ZERO_COPY
+        if ((cached == NULL) && (gNdsR2AnimDirectRead != 0u) &&
+            (gNdsR2AnimZeroCopy != 0u))
+        {
+            cached = ndsR2AnimDirectReadEntry(asset_id);
+            direct = (cached != NULL) ? TRUE : FALSE;
+        }
+#endif
         if (cached != NULL)
         {
 #if NDS_R2_ANIM_ZERO_COPY
@@ -16144,8 +16249,16 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
 
                 if (payload != NULL)
                 {
-                    gNdsR2AnimCacheHits++;
-                    gNdsR2AnimZeroCopyHits++;
+                    if (direct != FALSE)
+                    {
+                        gNdsR2AnimCacheMisses++;
+                        gNdsR2AnimDirectReads++;
+                    }
+                    else
+                    {
+                        gNdsR2AnimCacheHits++;
+                        gNdsR2AnimZeroCopyHits++;
+                    }
                     ndsFighterManagerRecordExternToken(token, payload);
                     return (void *)(uintptr_t)payload;
                 }
@@ -16172,7 +16285,14 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                     goto fail;
                 }
                 ndsRelocMarkLoadedFileRelativeOffsets(loaded);
-                gNdsR2AnimCacheHits++;
+                if (direct != FALSE)
+                {
+                    gNdsR2AnimCacheMisses++;
+                }
+                else
+                {
+                    gNdsR2AnimCacheHits++;
+                }
                 ndsFighterManagerRecordExternToken(token, heap);
                 ndsRelocSetStatusBufferFile(token, heap);
                 ndsRelocSetStatusBufferFile(asset_id, heap);
@@ -16198,7 +16318,14 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
             {
                 goto fail;
             }
-            gNdsR2AnimCacheHits++;
+            if (direct != FALSE)
+            {
+                gNdsR2AnimCacheMisses++;
+            }
+            else
+            {
+                gNdsR2AnimCacheHits++;
+            }
             ndsFighterManagerRecordExternToken(token, heap);
             ndsRelocSetStatusBufferFile(token, heap);
             ndsRelocSetStatusBufferFile(asset_id, heap);
