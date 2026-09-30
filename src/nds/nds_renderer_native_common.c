@@ -11135,6 +11135,17 @@ s32 ndsRendererFighterPacketPrecheck(
     return TRUE;
 }
 
+/* A fighter packet sets TEXIMAGE_PARAM / PLTT_BASE behind libnds. Forget
+ * libnds's active names too, or a later glBindTexture of the name it still
+ * holds returns without writing the registers and draws with the packet's
+ * texture (Yoshi's guard egg, invisible in the owner's r55 playtest). Out of
+ * line because the lean submit runs from ITCM. */
+static void __attribute__((noinline)) ndsRendererForgetLibndsTexture(void)
+{
+    glGlobalData.activeTexture = 0;
+    glGlobalData.activePalette = 0;
+}
+
 /* The per-frame path. A hit patches the moving words, flushes, DMAs the
  * packet and leaves every CPU-side GX tracker invalidated so the next writer
  * re-issues its state. A miss arms a record into the slot's arena region and
@@ -11328,11 +11339,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
 
         ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
         sNdsRendererHardwareBoundTextureName = 0u;
-        /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
-         * names too, or a later glBindTexture of the name it still holds returns
-         * without writing the registers and draws with this packet's texture. */
-        glGlobalData.activeTexture = 0;
-        glGlobalData.activePalette = 0;
+        ndsRendererForgetLibndsTexture();
         sNdsRendererHardwareActiveTextureEntry = NULL;
         sNdsR2GxLastProjection = NULL;
         sNdsRendererHardwareMatrixMode =
@@ -14862,11 +14869,7 @@ ndsFtrLeanPacketSubmit(u32 battle_slot)
 
     ndsRendererHardwareInvalidateGXState(NDS_RENDERER_GX_STATE_ALL);
     sNdsRendererHardwareBoundTextureName = 0u;
-    /* The packet set TEXIMAGE_PARAM / PLTT_BASE behind libnds: forget its active
-     * names too, or a later glBindTexture of the name it still holds returns
-     * without writing the registers and draws with this packet's texture. */
-    glGlobalData.activeTexture = 0;
-    glGlobalData.activePalette = 0;
+    ndsRendererForgetLibndsTexture();
     sNdsRendererHardwareActiveTextureEntry = NULL;
     sNdsR2GxLastProjection = NULL;
     sNdsRendererHardwareMatrixMode =
