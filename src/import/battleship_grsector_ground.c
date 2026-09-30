@@ -147,9 +147,14 @@ void ndsBaseGRCommonSetupInitAll(void);
  *   DObj renderer rather than a Sector-specific native packet; the law 8
  *   packet for every stage is one pipeline job (P2-4n1).
  */
+void ndsInterpArwingFracLoad(void);
+
 void ndsGRSectorSetupInitAll(void)
 {
     ndsBaseGRCommonSetupInitAll();
+    /* The Arwing's flight table (battleship_sys_interp.c): its results for the
+     * eight authored patterns, into this scene's heap. */
+    ndsInterpArwingFracLoad();
 }
 
 /* SECTOR-ARWING: Arwing GObj accessor for the movement route. The source

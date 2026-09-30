@@ -8,6 +8,9 @@
 #undef syInterpQuad
 
 #include <nds/nds_interp_exact.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_startup.h>
+#include <sys/taskman.h>
 
 /* P2-2p8: syInterpGetFracFrame without its repeated work.
  *
@@ -89,6 +92,218 @@ __attribute__((used)) volatile u32 gNdsInterpFracOracleMismatches;
 #else
 #define NDS_INTERP_FRAC_COUNT(counter) ((void)0)
 #endif
+
+#if defined(NDS_INTERP_FRAC_CAPTURE) && NDS_INTERP_FRAC_CAPTURE
+#include <nds/arm9/cache.h>
+/* LAB ONLY (Makefile NDS_INTERP_FRAC_CAPTURE): every memo-path call's segment
+ * key (the memo's h1/h2), t and result, in call order, for the Sector Z Arwing
+ * flight-table generator. The count keeps running past the end so a dump can
+ * tell a full buffer from a complete one. */
+#define NDS_INTERP_CAPTURE_MAX 8192u
+__attribute__((used)) u32 gNdsInterpCapture[NDS_INTERP_CAPTURE_MAX][4];
+__attribute__((used)) volatile u32 gNdsInterpCaptureCount;
+
+static void ndsInterpCaptureRecord(u32 h1, u32 h2, u32 t_bits, u32 frac_bits)
+{
+    u32 n = gNdsInterpCaptureCount;
+
+    if (n < NDS_INTERP_CAPTURE_MAX)
+    {
+        gNdsInterpCapture[n][0] = h1;
+        gNdsInterpCapture[n][1] = h2;
+        gNdsInterpCapture[n][2] = t_bits;
+        gNdsInterpCapture[n][3] = frac_bits;
+        /* The debugger reads memory, not the data cache. */
+        DC_FlushRange(&gNdsInterpCapture[n][0], sizeof(gNdsInterpCapture[n]));
+    }
+    gNdsInterpCaptureCount = n + 1u;
+    DC_FlushRange((const void *)&gNdsInterpCaptureCount,
+                  sizeof(gNdsInterpCaptureCount));
+}
+#define NDS_INTERP_CAPTURE(h1, h2, t_bits, frac_bits) \
+    ndsInterpCaptureRecord((h1), (h2), (t_bits), (frac_bits))
+#else
+#define NDS_INTERP_CAPTURE(h1, h2, t_bits, frac_bits) ((void)0)
+#endif
+
+/* P2-2p8 (2026-09-30): the Sector Z Arwing's flight table.
+ *
+ * The Arwing is a moving platform, so its TraI path is gameplay state on every
+ * tick, and each call of its bisection costs ~62 quartics through libgcc. But
+ * it flies one of eight authored patterns (grsector.c
+ * dGRSectorArwingSectorDescs), each started from frame 0, so every flight of a
+ * pattern asks the same (segment, t) questions. A lab capture of all eight
+ * (scripts/stages/generate_sector_arwing_frac.py) holds the device's own answer
+ * to each, keyed exactly as the memo below is: the segment hash h1/h2 over
+ * everything syInterpGetFracFrame reads, and t's bits. An entry is used only
+ * when all three match; anything else -- another stage, another animation, a t
+ * the capture never saw -- is computed as before, so the table cannot change a
+ * result. ndsGRSectorSetupInitAll loads it into the scene heap; residency is
+ * keyed on gNdsTaskmanHeapGeneration. Same-ROM A/B word gNdsArwingFracTable
+ * (0 = never consult it). */
+#define NDS_ARWING_FRAC_MAGIC 0x46575241u /* 'ARWF' */
+#define NDS_ARWING_FRAC_VERSION 1u
+#define NDS_ARWING_FRAC_MAX_BYTES 0x20000u
+/* The checked allocator halts on an overflow, and the rest of the match still
+ * allocates after stage setup (fighters' effects, items, the GObj cap latch at
+ * 25,600 free): the table is loaded only when this much stays free after it. */
+#define NDS_ARWING_FRAC_HEAP_MARGIN 0x18000u
+
+typedef struct NDSArwingFracSegment
+{
+    u32 h1;
+    u32 h2;
+    u32 first;
+    u32 count;
+} NDSArwingFracSegment;
+
+volatile u32 gNdsArwingFracTable __attribute__((used, section(".data"))) = 1u;
+#if NDS_TICK_HUD
+__attribute__((used)) volatile u32 gNdsArwingFracHits;
+__attribute__((used)) volatile u32 gNdsArwingFracLoads;
+__attribute__((used)) volatile u32 gNdsArwingFracBytes;
+__attribute__((used)) volatile u32 gNdsArwingFracFreeAtLoad;
+#endif
+static const NDSArwingFracSegment *sNdsArwingFracSegments;
+static const u32 *sNdsArwingFracEntries; /* {t_bits, frac_bits} pairs */
+static u32 sNdsArwingFracSegmentCount;
+static u32 sNdsArwingFracGeneration;
+static u32 sNdsArwingFracSeg;   /* the segment that answered last */
+static u32 sNdsArwingFracEntry; /* the entry that answered last */
+
+void ndsInterpArwingFracLoad(void)
+{
+    NdsRelocAssetStream stream;
+    u32 header[4];
+    u32 bytes;
+    u32 free_bytes;
+    u8 *body;
+
+    sNdsArwingFracSegments = NULL;
+    sNdsArwingFracEntries = NULL;
+    sNdsArwingFracSegmentCount = 0u;
+    if (ndsRelocAssetStreamOpen(&stream,
+                                "nitro:/stages/sector_arwing_frac.bin") == FALSE)
+    {
+        return;
+    }
+    if ((ndsRelocAssetStreamRead(&stream, 0u, header, sizeof(header)) ==
+         FALSE) ||
+        (header[0] != NDS_ARWING_FRAC_MAGIC) ||
+        (header[1] != NDS_ARWING_FRAC_VERSION) || (header[2] == 0u) ||
+        (header[3] == 0u) || (header[2] > 0x1000u) || (header[3] > 0x4000u))
+    {
+        ndsRelocAssetStreamClose(&stream);
+        return;
+    }
+    bytes = header[2] * (u32)sizeof(NDSArwingFracSegment) + header[3] * 8u;
+    free_bytes = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+                       (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+#if NDS_TICK_HUD
+    gNdsArwingFracFreeAtLoad = free_bytes;
+#endif
+    if ((bytes > NDS_ARWING_FRAC_MAX_BYTES) ||
+        (free_bytes < bytes + NDS_ARWING_FRAC_HEAP_MARGIN))
+    {
+        ndsRelocAssetStreamClose(&stream);
+        return;
+    }
+    body = syTaskmanMalloc((size_t)bytes, 0x4u);
+    if ((body == NULL) ||
+        (ndsRelocAssetStreamRead(&stream, (u32)sizeof(header), body, bytes) ==
+         FALSE))
+    {
+        ndsRelocAssetStreamClose(&stream);
+        return;
+    }
+    ndsRelocAssetStreamClose(&stream);
+    sNdsArwingFracSegments = (const NDSArwingFracSegment *)body;
+    sNdsArwingFracEntries =
+        (const u32 *)(body + header[2] * (u32)sizeof(NDSArwingFracSegment));
+    sNdsArwingFracSegmentCount = header[2];
+    sNdsArwingFracGeneration = gNdsTaskmanHeapGeneration;
+    sNdsArwingFracSeg = 0u;
+    sNdsArwingFracEntry = 0u;
+#if NDS_TICK_HUD
+    gNdsArwingFracLoads++;
+    gNdsArwingFracBytes = bytes;
+#endif
+}
+
+static sb32 ndsInterpArwingFracLookup(u32 h1, u32 h2, u32 t_bits,
+                                      u32 *frac_bits)
+{
+    const NDSArwingFracSegment *seg;
+    u32 end;
+    u32 lo;
+    u32 hi;
+    u32 i;
+
+    if ((sNdsArwingFracSegments == NULL) ||
+        (sNdsArwingFracGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return FALSE;
+    }
+    seg = &sNdsArwingFracSegments[sNdsArwingFracSeg];
+    if ((seg->h1 != h1) || (seg->h2 != h2))
+    {
+        for (i = 0u; i < sNdsArwingFracSegmentCount; i++)
+        {
+            if ((sNdsArwingFracSegments[i].h1 == h1) &&
+                (sNdsArwingFracSegments[i].h2 == h2))
+            {
+                break;
+            }
+        }
+        if (i == sNdsArwingFracSegmentCount)
+        {
+            return FALSE;
+        }
+        sNdsArwingFracSeg = i;
+        seg = &sNdsArwingFracSegments[i];
+        sNdsArwingFracEntry = seg->first;
+    }
+    end = seg->first + seg->count;
+    /* A flight asks in increasing t: this entry or the next one first. */
+    i = sNdsArwingFracEntry;
+    if ((i >= seg->first) && (i < end))
+    {
+        if (sNdsArwingFracEntries[i * 2u] == t_bits)
+        {
+            *frac_bits = sNdsArwingFracEntries[i * 2u + 1u];
+            return TRUE;
+        }
+        if ((i + 1u < end) && (sNdsArwingFracEntries[(i + 1u) * 2u] == t_bits))
+        {
+            sNdsArwingFracEntry = i + 1u;
+            *frac_bits = sNdsArwingFracEntries[(i + 1u) * 2u + 1u];
+            return TRUE;
+        }
+    }
+    /* The generator sorts each segment by t's bits (unsigned). */
+    lo = seg->first;
+    hi = end;
+    while (lo < hi)
+    {
+        u32 mid = lo + ((hi - lo) >> 1);
+
+        if (sNdsArwingFracEntries[mid * 2u] < t_bits)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            hi = mid;
+        }
+    }
+    if ((lo < end) && (sNdsArwingFracEntries[lo * 2u] == t_bits))
+    {
+        sNdsArwingFracEntry = lo;
+        *frac_bits = sNdsArwingFracEntries[lo * 2u + 1u];
+        return TRUE;
+    }
+    return FALSE;
+}
 
 static inline u32 ndsInterpFracBits(f32 value)
 {
@@ -297,6 +512,7 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
     NDSInterpFracMemo hit;
     const f32 *point;
     u32 cof_bits[5];
+    u32 table_bits;
     u32 h1 = 2166136261u;
     u32 h2 = 0x9e3779b9u;
     u32 t_bits;
@@ -371,13 +587,25 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
                 set[0] = hit;
             }
             NDS_INTERP_FRAC_COUNT(gNdsInterpFracMemoHits);
+            NDS_INTERP_CAPTURE(h1, h2, t_bits, hit.frac_bits);
             return ndsInterpFracFloat(hit.frac_bits);
         }
     }
     NDS_INTERP_FRAC_COUNT(gNdsInterpFracMemoMisses);
-    frac = (gNdsInterpFracKernel != 0u) ?
-        ndsInterpGetFracFrameKernel(desc, t, id, cof_bits) :
-        ndsInterpGetFracFrameReuse(desc, t, id, cof_bits);
+    if ((gNdsArwingFracTable != 0u) &&
+        (ndsInterpArwingFracLookup(h1, h2, t_bits, &table_bits) != FALSE))
+    {
+#if NDS_TICK_HUD
+        gNdsArwingFracHits++;
+#endif
+        frac = ndsInterpFracFloat(table_bits);
+    }
+    else
+    {
+        frac = (gNdsInterpFracKernel != 0u) ?
+            ndsInterpGetFracFrameKernel(desc, t, id, cof_bits) :
+            ndsInterpGetFracFrameReuse(desc, t, id, cof_bits);
+    }
 #if NDS_TICK_HUD
     if (gNdsInterpFracOracle != 0u)
     {
@@ -397,6 +625,7 @@ static f32 ndsInterpGetFracFrameMemo(SYInterpDesc *desc, f32 t)
     set[0].h2 = h2;
     set[0].t_bits = t_bits;
     set[0].frac_bits = ndsInterpFracBits(frac);
+    NDS_INTERP_CAPTURE(h1, h2, t_bits, set[0].frac_bits);
     return frac;
 }
 

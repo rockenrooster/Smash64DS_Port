@@ -1,0 +1,11 @@
+0xfffffffc in ?? ()
+Breakpoint 1 at 0x200c7ac: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/main.c, line 96.
+
+Breakpoint 1, main () at D:/Stuff/DevFolder/Smash64DS_Port/src/nds/main.c:111
+111	    ndsP2Arm9WramInit();
+Breakpoint 2 at 0x20c5934: grSectorArwingUpdateWait. (2 locations)
+Breakpoint 3 at 0x20c638c: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/gr/grcommon/grsector.c, line 1049.
+FLIGHT_START 1 source_pattern=3 forced=0 count=0
+FLIGHT_END 1 count=1200
+DONE count=1200
+[Inferior 1 (Remote target) killed]
