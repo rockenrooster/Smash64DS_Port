@@ -1323,8 +1323,28 @@ static u32 ndsAObjEvent32CapacityForGKind(u32 gkind, sb32 *stage_bound)
  * DK/Samus/Link/Kirby, Mario/Fox/Samus/Captain) on all nine stages
  * (artifacts/performance/2026-09-28_p2-2p8-s1-event32-ledger/). The stress
  * roster itself overflowed the old bounds on Castle, Sector Z (the first S1
- * witness), Jungle and Hyrule. */
+ * witness), Jungle and Hyrule.
+ *
+ * 2026-09-30: a margin of 384 no longer held. Every Ness/Yoshi/Pikachu/Purin
+ * motion is an event32 clip, and the elastic motion cache and the idle-time
+ * clip prefetch now keep more of them resident (so normalized) than the 09-28
+ * census saw. Full-match lab rows at the old margin: Dream Land with
+ * Fox/Pikachu/Ness/Samus refused 84 scripts (23 detached joints); Jungle with
+ * Captain/Yoshi/Kirby/DK filled at 3,288 and a Poke Ball's rays lost their
+ * animation (the ball then faulted, see battleship_item_mball.c); Mushroom
+ * Kingdom, Saffron, Castle and Yoshi's Island ran within 3..17 entries of
+ * their limits. So the margin also counts the roster's event32-motion
+ * fighters: 768 more for each Ness, Yoshi, Pikachu or Purin. Live high-water
+ * (count less holes) against the limit this gives, full-match lab rows: Jungle
+ * Captain/Yoshi/Kirby/DK 3,406..3,500 of 4,056; Dream Land
+ * Fox/Pikachu/Ness/Samus 3,303 of 4,082; Zebes Pikachu x4 6,449 of 8,191;
+ * Dream Land and Sector Z DK/Samus/Link/Kirby keep their old limits (2,546
+ * of 3,072 and 2,752 of 3,358). A flat 2,048 held too, but its heap on
+ * Sector Z's default roster pushed the Arwing's flight table and DMA arena
+ * under their heap checks (STG +26K a frame). Receipt
+ * 2026-09-30_p2-2p8-event32-margin. */
 #define NDS_AOBJ_EVENT32_ROSTER_MARGIN 384u
+#define NDS_AOBJ_EVENT32_MOTION_MARGIN 768u
 static const u16 sNdsAObjEvent32EntryClipCommands[nFTKindPlayableEnd + 1] = {
     378u, /* Mario 0x279 */
     318u, /* Fox 0x309 */
@@ -1384,6 +1404,13 @@ static u32 ndsAObjEvent32RosterLimit(u32 gkind, u32 limit)
             (player->fkind <= nFTKindPlayableEnd))
         {
             need += sNdsAObjEvent32EntryClipCommands[player->fkind];
+            if ((player->fkind == nFTKindYoshi) ||
+                (player->fkind == nFTKindPikachu) ||
+                (player->fkind == nFTKindPurin) ||
+                (player->fkind == nFTKindNess))
+            {
+                need += NDS_AOBJ_EVENT32_MOTION_MARGIN;
+            }
         }
     }
     if (need > (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u))
@@ -1987,6 +2014,7 @@ sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site)
 
 
 volatile u32 gNdsAObjEvent32NormalizedHighWater;
+volatile u32 gNdsAObjEvent32LiveHighWater __attribute__((used));
 /* Longest single script plan seen (commands), the demand behind
  * NDS_AOBJ_EVENT32_PLAN_MAX. */
 volatile u32 gNdsAObjEvent32PlanHighWater;
@@ -2644,6 +2672,16 @@ static sb32 ndsAObjEvent32NormalizeScript(
     if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32NormalizedHighWater)
     {
         gNdsAObjEvent32NormalizedHighWater = sNdsAObjEvent32NormalizedCount;
+    }
+    /* The count keeps the holes ForgetRange leaves until an append needs the
+     * room, so it is not the working set; live entries are what a limit must
+     * hold (2026-09-30: Jungle, Captain/Yoshi/Kirby/DK, live ~3,300 against a
+     * 3,288 limit). */
+    if ((sNdsAObjEvent32NormalizedCount - sNdsAObjEvent32Holes) >
+        gNdsAObjEvent32LiveHighWater)
+    {
+        gNdsAObjEvent32LiveHighWater =
+            sNdsAObjEvent32NormalizedCount - sNdsAObjEvent32Holes;
     }
     gNdsAObjEvent32NormalizeScriptCount++;
     gNdsAObjEvent32NormalizeCommandCount += sNdsAObjEvent32PlanCount;

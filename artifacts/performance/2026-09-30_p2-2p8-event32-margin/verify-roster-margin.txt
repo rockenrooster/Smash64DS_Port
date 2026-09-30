@@ -1,0 +1,12 @@
+m2_def     limit=3072 hw=2954 livehw=2546 fail=0 detach=0 removed=728 compact=0 heapmin=161452 natfail=0
+m2_cy_g2   limit=4056 hw=4056 livehw=3406 fail=0 detach=0 removed=1972 compact=1 heapmin=74896 natfail=197
+m2_cy_g8   limit=4030 hw=3685 livehw=2717 fail=0 detach=0 removed=1339 compact=0 heapmin=146640 natfail=0
+m2_fp_g6   limit=4082 hw=4079 livehw=3303 fail=0 detach=0 removed=933 compact=1 heapmin=278404 natfail=268
+m2_fp_g7   limit=5122 hw=4089 livehw=2897 fail=0 detach=0 removed=1223 compact=0 heapmin=212908 natfail=76
+m2_kk_g6   limit=3072 hw=1559 livehw=1559 fail=0 detach=0 removed=0 compact=0 heapmin=435224 natfail=0
+m2_lk_g0   limit=4361 hw=2929 livehw=1922 fail=0 detach=0 removed=1361 compact=0 heapmin=242260 natfail=114
+m2_lk_g5   limit=5362 hw=4399 livehw=3223 fail=0 detach=0 removed=1176 compact=0 heapmin=163928 natfail=0
+m2_pp_g3   limit=8191 hw=6836 livehw=6449 fail=0 detach=0 removed=758 compact=0 heapmin=397988 natfail=108
+m2_kk_g4   limit=1536 hw=1474 livehw=1474 fail=0 detach=0 removed=0 compact=0 heapmin=462380 natfail=611
+m2_o_g1    limit=5365 hw=3967 livehw=3320 fail=0 detach=0 removed=1830 compact=0 heapmin=67464 natfail=0
+m2_d_g1    limit=3358 hw=3350 livehw=2752 fail=0 detach=0 removed=1499 compact=1 heapmin=61248 natfail=119

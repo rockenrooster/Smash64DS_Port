@@ -1,0 +1,24 @@
+n0_def     limit=3072 hw=2954 fail=0 detach=0 removed=728 compact=0 need=2136 stage=3072 heapmin=164012 natfail=0
+n7_def     limit=7000 hw=2954 fail=0 detach=0 removed=728 compact=0 need=0 stage=7000 heapmin=136172 natfail=0
+n0_cy_g2   NO JSON | TICKFAULT __excpt_entry pc=01fffed0 lr=020dea28 TICKFAULT_GOBJ active=57 max=-1 free=100356 frame=937
+n7_cy_g2   limit=7000 hw=4713 fail=0 detach=0 removed=1972 compact=0 need=0 stage=7000 heapmin=72240 natfail=197
+n0_cy_g8   limit=3262 hw=3257 fail=0 detach=0 removed=1339 compact=1 need=3262 stage=3262 heapmin=153040 natfail=0
+n7_cy_g8   limit=7000 hw=3685 fail=0 detach=0 removed=1607 compact=0 need=0 stage=7000 heapmin=126160 natfail=0
+n0_fp_g6   limit=3072 hw=3072 fail=84 detach=23 removed=933 compact=2 need=2546 stage=3072 heapmin=284964 natfail=112
+n7_fp_g6   limit=7000 hw=4236 fail=0 detach=0 removed=933 compact=0 need=0 stage=7000 heapmin=258180 natfail=268
+n0_fp_g7   limit=3586 hw=3572 fail=0 detach=0 removed=1223 compact=1 need=3586 stage=3586 heapmin=231340 natfail=76
+n7_fp_g7   limit=7000 hw=4089 fail=0 detach=0 removed=1223 compact=0 need=0 stage=7000 heapmin=206092 natfail=76
+n0_kk_g6   limit=3072 hw=1559 fail=0 detach=0 removed=0 compact=0 need=1445 stage=3072 heapmin=437784 natfail=0
+n7_kk_g6   limit=7000 hw=1559 fail=0 detach=0 removed=0 compact=0 need=0 stage=7000 heapmin=409944 natfail=0
+n0_lk_g0   limit=2825 hw=2823 fail=0 detach=0 removed=1361 compact=1 need=2825 stage=2825 heapmin=260692 natfail=114
+n7_lk_g0   limit=7000 hw=2929 fail=0 detach=0 removed=1361 compact=0 need=0 stage=7000 heapmin=231636 natfail=114
+n0_lk_g5   limit=3826 hw=3823 fail=0 detach=0 removed=1176 compact=1 need=3826 stage=3826 heapmin=182360 natfail=0
+n7_lk_g5   limit=7000 hw=4399 fail=0 detach=0 removed=1176 compact=0 need=0 stage=7000 heapmin=158296 natfail=0
+n0_pp_g3   limit=6532 hw=6532 fail=149 detach=56 removed=0 compact=0 need=6532 stage=6532 heapmin=409760 natfail=108
+n7_pp_g3   limit=7000 hw=6836 fail=0 detach=0 removed=0 compact=0 need=0 stage=7000 heapmin=406500 natfail=108
+n0_kk_g4   limit=1536 hw=1474 fail=0 detach=0 removed=0 compact=0 need=1312 stage=1536 heapmin=464940 natfail=611
+n7_kk_g4   limit=7000 hw=1474 fail=0 detach=0 removed=214 compact=0 need=0 stage=7000 heapmin=425324 natfail=611
+n0_o_g1    limit=3829 hw=3828 fail=0 detach=0 removed=1830 compact=1 need=3829 stage=3829 heapmin=85896 natfail=0
+n7_o_g1    limit=7000 hw=3967 fail=0 detach=0 removed=1830 compact=0 need=0 stage=7000 heapmin=61832 natfail=0
+n0_d_g1    limit=3358 hw=3350 fail=0 detach=0 removed=1499 compact=1 need=3358 stage=3358 heapmin=63808 natfail=119
+n7_d_g1    limit=7000 hw=3418 fail=0 detach=0 removed=1499 compact=0 need=0 stage=7000 heapmin=50720 natfail=119

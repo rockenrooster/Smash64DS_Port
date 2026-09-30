@@ -410,8 +410,27 @@ void itMBallDroppedSetStatus(GObj *item_gobj)
     itMainSetStatus(item_gobj, dITMBallStatusDescs, nITMBallStatusDropped);
 }
 
+/* The rays follow the ball (itmball.c:343-346 and :451-454) through a pointer
+ * nothing clears. On N64 an ended rays effect leaves its DObj in the pool, so
+ * a late write lands in a dead object and nothing shows. This port's eject
+ * clears the GObj's object pointer, so the same write faulted (2026-09-30,
+ * Kongo Jungle: the event-32 ledger refused the rays' scripts, the effect had
+ * no animation and ended on its first update, and the ball's next update
+ * wrote through NULL + 0x1C). Following only an effect that still has its
+ * DObj keeps the source's visible result. */
+static void ndsITMBallRaysFollow(ITStruct *mball_ip, GObj *mball_gobj)
+{
+    GObj *effect_gobj = mball_ip->item_vars.mball.effect_gobj;
+
+    if ((effect_gobj != NULL) && (DObjGetStruct(effect_gobj) != NULL))
+    {
+        DObjGetStruct(effect_gobj)->translate.vec.f =
+            DObjGetStruct(mball_gobj)->translate.vec.f;
+    }
+}
+
 // 0x8017CA48
-// decomp itmball.c:308-348 verbatim.
+// decomp itmball.c:308-348, the rays follow through ndsITMBallRaysFollow.
 sb32 itMBallOpenProcUpdate(GObj *mball_gobj)
 {
     ITStruct *mball_ip = itGetStruct(mball_gobj);
@@ -447,10 +466,8 @@ sb32 itMBallOpenProcUpdate(GObj *mball_gobj)
     }
     mball_ip->multi--;
 
-    if (mball_ip->item_vars.mball.effect_gobj != NULL)
-    {
-        DObjGetStruct(mball_ip->item_vars.mball.effect_gobj)->translate.vec.f = DObjGetStruct(mball_gobj)->translate.vec.f;
-    }
+    ndsITMBallRaysFollow(mball_ip, mball_gobj);
+
     return FALSE;
 }
 
@@ -549,7 +566,7 @@ void itMBallOpenSetStatus(GObj *item_gobj)
 }
 
 // 0x8017CCBC
-// decomp itmball.c:416-456 verbatim.
+// decomp itmball.c:416-456, the rays follow through ndsITMBallRaysFollow.
 sb32 itMBallOpenAirProcUpdate(GObj *mball_gobj)
 {
     ITStruct *mball_ip = itGetStruct(mball_gobj);
@@ -585,10 +602,8 @@ sb32 itMBallOpenAirProcUpdate(GObj *mball_gobj)
     }
     mball_ip->multi--;
 
-    if (mball_ip->item_vars.mball.effect_gobj != NULL)
-    {
-        DObjGetStruct(mball_ip->item_vars.mball.effect_gobj)->translate.vec.f = DObjGetStruct(mball_gobj)->translate.vec.f;
-    }
+    ndsITMBallRaysFollow(mball_ip, mball_gobj);
+
     return FALSE;
 }
 

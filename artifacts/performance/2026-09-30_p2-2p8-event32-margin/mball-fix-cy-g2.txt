@@ -1,0 +1,22 @@
+INIT f=936 ball=023c8940
+OPEN f=937 ball=023c8940 multi=30 fx=023c8e48 fxobj=023cafb0
+EJECT-FX f=937 gobj=023c8e48
+#0  gcEjectGObj (gobj=gobj@entry=0x23c8e48) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:1882
+#1  0x02106638 in efManagerNoStructProcUpdate (effect_gobj=0x23c8e48) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ef/efmanager.c:1816
+#2  0x0200140e in gcRunGObjProcess (gobjproc=0x23c842c) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:2290
+#3  0x01ffc1b0 in ndsBaseGcRunAll () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:2358
+EJECT-FX f=937 gobj=023c8e48
+#0  gcEjectGObj (gobj=0x23c8e48) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:1882
+#1  0x0200143e in gcRunGObjProcess (gobjproc=0x23c842c) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:2308
+#2  0x01ffc1b0 in ndsBaseGcRunAll () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:2358
+#3  0x02001470 in gcRunAll () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_objman.c:592
+EJECT-FX f=937 gobj=023c8e48
+#0  gcEjectGObj (gobj=0x23c8e48) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:1888
+#1  gcEjectGObj (gobj=0x23c8e48) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:1880
+#2  0x0200143e in gcRunGObjProcess (gobjproc=0x23c842c) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:2308
+#3  0x01ffc1b0 in ndsBaseGcRunAll () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2p8-lab-cw/battleship_overlay/src/sys/objman.c:2358
+OPEN f=937 ball=023c8940 multi=29 fx=023c8e48 fxobj=00000000
+STOP f=937 pc=01fffed0
+#0  __excpt_entry () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s:71
+#1  0x020dea28 in itMBallOpenProcUpdate (mball_gobj=0x44118c62) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_item_mball.c:452
+#2  0x00000000 in ?? ()

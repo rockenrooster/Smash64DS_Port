@@ -1,0 +1,20 @@
+m2_def     n=1910 P50=933,056 P95=1,258,560 P99=1,525,376 mean=947,692 vbi2=1716 vbi3=250 AObjEvent32NormalizeFailCount=0
+m2_cy_g2   n=1910 P50=963,712 P95=1,295,360 P99=1,588,544 mean=992,321 vbi2=1621 vbi3=335 AObjEvent32NormalizeFailCount=0
+m2_cy_g8   n=1910 P50=1,106,304 P95=1,464,320 P99=1,695,424 mean=1,130,656 vbi2=1048 vbi3=899 AObjEvent32NormalizeFailCount=0
+m2_fp_g6   n=1910 P50=966,848 P95=1,361,216 P99=1,598,976 mean=993,377 vbi2=1581 vbi3=385 AObjEvent32NormalizeFailCount=0
+m2_fp_g7   n=1910 P50=1,119,680 P95=1,508,800 P99=1,717,568 mean=1,142,705 vbi2=996 vbi3=949 AObjEvent32NormalizeFailCount=0
+m2_kk_g6   n=1910 P50=886,336 P95=1,173,504 P99=1,337,792 mean=893,144 vbi2=1813 vbi3=158 AObjEvent32NormalizeFailCount=0
+m2_lk_g0   n=1910 P50=958,080 P95=1,311,424 P99=1,528,768 mean=988,628 vbi2=1615 vbi3=351 AObjEvent32NormalizeFailCount=0
+m2_lk_g5   n=1910 P50=1,064,320 P95=1,383,808 P99=1,552,640 mean=1,085,551 vbi2=1267 vbi3=697 AObjEvent32NormalizeFailCount=0
+m2_pp_g3   n=1910 P50=981,440 P95=1,399,168 P99=1,619,712 mean=1,021,326 vbi2=1523 vbi3=438 AObjEvent32NormalizeFailCount=0
+m2_kk_g4   n=1910 P50=857,280 P95=1,187,456 P99=1,327,232 mean=871,476 vbi2=1800 vbi3=172 AObjEvent32NormalizeFailCount=0
+m2_o_g1    n=1910 P50=1,041,024 P95=1,378,048 P99=1,584,640 mean=1,054,000 vbi2=1337 vbi3=624 AObjEvent32NormalizeFailCount=0
+m2_d_g1    n=1910 P50=1,065,216 P95=1,495,360 P99=1,882,496 mean=1,087,800 vbi2=1194 vbi3=738 AObjEvent32NormalizeFailCount=0
+
+Sector Z STG bucket (frames >= 64): total, P50, P95
+x0_d_g1   262.4M P50=137,984 P95=140,288
+m1_d_g1   312.0M P50=163,072 P95=164,864
+m2_d_g1   265.6M P50=139,776 P95=142,144
+x0_o_g1   261.1M P50=137,344 P95=139,584
+m1_o_g1   262.4M P50=137,984 P95=140,224
+m2_o_g1   261.0M P50=137,280 P95=139,648
