@@ -1,0 +1,66 @@
+--- a/src/nds/nds_results_oam.c
++++ b/src/nds/nds_results_oam.c
+@@ -126,8 +126,19 @@
+     { 8u, 16u, SpriteSize_8x16 },
+     { 8u, 32u, SpriteSize_8x32 }
+ };
+ 
++/* Tile plans depend only on final dimensions and the constant shape table.
++ * Results repeats the same 18 pairs twice per SObj per frame. */
++#define NDS_RESULTS_PLAN_MEMO_SLOTS 32u
++typedef struct NDSResultsOamPlanMemo
++{
++    u32 key;
++    NDSResultsOamTilePlan plan;
++} NDSResultsOamPlanMemo;
++static NDSResultsOamPlanMemo sNdsResultsPlanMemo[NDS_RESULTS_PLAN_MEMO_SLOTS];
++static u32 sNdsResultsPlanMemoNext;
++
+ static NDSResultsOamCell sNdsResultsCells[NDS_RESULTS_CELL_SLOTS];
+ static NDSResultsOamPalette sNdsResultsPalettes[NDS_RESULTS_PALETTE_BANKS];
+ /* The banks' colours, staged: they reach OBJ palette RAM with the OAM in
+  * VBlank (ndsResultsOamCommit), so a tint step never recolours the frame on
+@@ -431,12 +442,24 @@
+                                     NDSResultsOamTilePlan *plan)
+ {
+     NDSResultsOamShape chosen[NDS_RESULTS_MAX_TILES];
+     u32 count;
+-
+-    if ((plan == NULL) || (width == 0u) || (height == 0u) || (height > 64u))
+-    {
+-        return 0;
++    u32 key;
++    u32 i;
++
++    if ((plan == NULL) || (width == 0u) || (height == 0u) || (height > 64u) ||
++        (width > 64u * NDS_RESULTS_MAX_TILES))
++    {
++        return 0;
++    }
++    key = (height << 16) | width;
++    for (i = 0u; i < NDS_RESULTS_PLAN_MEMO_SLOTS; i++)
++    {
++        if (sNdsResultsPlanMemo[i].key == key)
++        {
++            *plan = sNdsResultsPlanMemo[i].plan;
++            return 1;
++        }
+     }
+     memset(plan, 0, sizeof(*plan));
+     for (count = 1u; count <= NDS_RESULTS_MAX_TILES; count++)
+     {
+@@ -445,8 +468,14 @@
+         ndsResultsSearchTilePlan(width, height, count, 0u, 0u, 0u,
+                                  chosen, plan, &best_area);
+         if (plan->count != 0u)
+         {
++            NDSResultsOamPlanMemo *memo =
++                &sNdsResultsPlanMemo[sNdsResultsPlanMemoNext];
++            memo->key = key;
++            memo->plan = *plan;
++            sNdsResultsPlanMemoNext =
++                (sNdsResultsPlanMemoNext + 1u) % NDS_RESULTS_PLAN_MEMO_SLOTS;
+             return 1;
+         }
+     }
+     return 0;

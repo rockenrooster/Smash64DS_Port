@@ -1,0 +1,449 @@
+{
+  "tag": "r58-ffa-detail1",
+  "complete_tics": 420,
+  "missing_tics": [],
+  "all": {
+    "n": 420,
+    "vblanks": {
+      "mean": 1.24,
+      "p50": 1.0,
+      "p95": 2,
+      "max": 27
+    },
+    "recorder_interval": {
+      "mean": 1.24,
+      "p50": 1,
+      "p95": 2,
+      "max": 18
+    },
+    "update_ticks": {
+      "mean": 91808.91,
+      "p50": 91520.0,
+      "p95": 131648,
+      "max": 5235840
+    },
+    "audio_record_ticks": {
+      "mean": 3970.13,
+      "p50": 3840.0,
+      "p95": 5504,
+      "max": 19520
+    },
+    "draw_ticks": {
+      "mean": 313828.11,
+      "p50": 332224.0,
+      "p95": 442048,
+      "max": 9691968
+    },
+    "present_ticks": {
+      "mean": 286254.17,
+      "p50": 231392.0,
+      "p95": 555328,
+      "max": 564864
+    },
+    "total_ticks": {
+      "mean": 695861.33,
+      "p50": 560192.0,
+      "p95": 1120384,
+      "max": 15255808
+    },
+    "storage_wait_ticks": {
+      "mean": 8993.52,
+      "p50": 0.0,
+      "p95": 0,
+      "max": 3223616
+    },
+    "histogram": {
+      "1": 355,
+      "2": 59,
+      "3": 2,
+      "4": 1,
+      "6": 2,
+      "27": 1
+    },
+    "recorder_histogram": {
+      "1": 354,
+      "2": 58,
+      "3": 2,
+      "4": 1,
+      "6": 2,
+      "10": 1,
+      "18": 1
+    },
+    "effective_fps": 48.136,
+    "storage_requests": 536
+  },
+  "r57_comparison_120_400": {
+    "n": 281,
+    "vblanks": {
+      "mean": 1.3,
+      "p50": 1,
+      "p95": 2,
+      "max": 27
+    },
+    "recorder_interval": {
+      "mean": 1.3,
+      "p50": 1,
+      "p95": 2,
+      "max": 18
+    },
+    "update_ticks": {
+      "mean": 120948.38,
+      "p50": 105344,
+      "p95": 133696,
+      "max": 5235840
+    },
+    "audio_record_ticks": {
+      "mean": 4197.12,
+      "p50": 3904,
+      "p95": 5632,
+      "max": 19520
+    },
+    "draw_ticks": {
+      "mean": 415818.7,
+      "p50": 388160,
+      "p95": 442624,
+      "max": 9691968
+    },
+    "present_ticks": {
+      "mean": 186643.81,
+      "p50": 134144,
+      "p95": 557184,
+      "max": 564864
+    },
+    "total_ticks": {
+      "mean": 727608.03,
+      "p50": 560192,
+      "p95": 1120384,
+      "max": 15255808
+    },
+    "storage_wait_ticks": {
+      "mean": 11471.94,
+      "p50": 0,
+      "p95": 0,
+      "max": 3223616
+    },
+    "histogram": {
+      "1": 230,
+      "2": 46,
+      "3": 2,
+      "4": 1,
+      "6": 1,
+      "27": 1
+    },
+    "recorder_histogram": {
+      "1": 230,
+      "2": 45,
+      "3": 2,
+      "4": 1,
+      "6": 1,
+      "10": 1,
+      "18": 1
+    },
+    "effective_fps": 46.058,
+    "storage_requests": 461
+  },
+  "steady_300_420": {
+    "n": 121,
+    "vblanks": {
+      "mean": 1.38,
+      "p50": 1,
+      "p95": 2,
+      "max": 2
+    },
+    "recorder_interval": {
+      "mean": 1.39,
+      "p50": 1,
+      "p95": 2,
+      "max": 2
+    },
+    "update_ticks": {
+      "mean": 111013.02,
+      "p50": 111360,
+      "p95": 137600,
+      "max": 154240
+    },
+    "audio_record_ticks": {
+      "mean": 3987.04,
+      "p50": 3840,
+      "p95": 3968,
+      "max": 9728
+    },
+    "draw_ticks": {
+      "mean": 436203.9,
+      "p50": 435904,
+      "p95": 442688,
+      "max": 445888
+    },
+    "present_ticks": {
+      "mean": 221913.39,
+      "p50": 29056,
+      "p95": 560704,
+      "max": 564416
+    },
+    "total_ticks": {
+      "mean": 773117.36,
+      "p50": 560256,
+      "p95": 1120448,
+      "max": 1120448
+    },
+    "storage_wait_ticks": {
+      "mean": 0,
+      "p50": 0,
+      "p95": 0,
+      "max": 0
+    },
+    "histogram": {
+      "1": 75,
+      "2": 46
+    },
+    "recorder_histogram": {
+      "1": 74,
+      "2": 47
+    },
+    "effective_fps": 43.347,
+    "storage_requests": 0
+  },
+  "steady_2vb_300_420": {
+    "n": 46,
+    "vblanks": {
+      "mean": 2,
+      "p50": 2.0,
+      "p95": 2,
+      "max": 2
+    },
+    "recorder_interval": {
+      "mean": 1.52,
+      "p50": 2.0,
+      "p95": 2,
+      "max": 2
+    },
+    "update_ticks": {
+      "mean": 126049.39,
+      "p50": 124672.0,
+      "p95": 140672,
+      "max": 154240
+    },
+    "audio_record_ticks": {
+      "mean": 4044.52,
+      "p50": 3840.0,
+      "p95": 3968,
+      "max": 9728
+    },
+    "draw_ticks": {
+      "mean": 438747.83,
+      "p50": 439424.0,
+      "p95": 445568,
+      "max": 445888
+    },
+    "present_ticks": {
+      "mean": 551492.17,
+      "p50": 553696.0,
+      "p95": 563456,
+      "max": 564416
+    },
+    "total_ticks": {
+      "mean": 1120333.91,
+      "p50": 1120320.0,
+      "p95": 1120448,
+      "max": 1120448
+    },
+    "storage_wait_ticks": {
+      "mean": 0,
+      "p50": 0.0,
+      "p95": 0,
+      "max": 0
+    },
+    "histogram": {
+      "2": 46
+    },
+    "recorder_histogram": {
+      "1": 22,
+      "2": 24
+    },
+    "effective_fps": 29.913,
+    "storage_requests": 0
+  },
+  "long_iterations": [
+    {
+      "tic": 80,
+      "vblanks": 6,
+      "present_interval": 6,
+      "recorder_interval": 1,
+      "update_ticks": 19520,
+      "audio_record_ticks": 2944,
+      "draw_ticks": 3082048,
+      "present_ticks": 257088,
+      "total_ticks": 3361600,
+      "storage_wait_ticks": 553664,
+      "storage_requests": 74,
+      "storage_bytes": 42512,
+      "payload_reads": 176,
+      "stream_reads": 0,
+      "stream_ticks": 0,
+      "update_wait_ticks": 0,
+      "update_requests": 0,
+      "audio_wait_ticks": 0,
+      "audio_requests": 0,
+      "draw_wait_ticks": 553664,
+      "draw_requests": 74,
+      "present_wait_ticks": 0,
+      "present_requests": 0
+    },
+    {
+      "tic": 120,
+      "vblanks": 27,
+      "present_interval": 27,
+      "recorder_interval": 10,
+      "update_ticks": 5235840,
+      "audio_record_ticks": 8640,
+      "draw_ticks": 9691968,
+      "present_ticks": 319360,
+      "total_ticks": 15255808,
+      "storage_wait_ticks": 3223616,
+      "storage_requests": 457,
+      "storage_bytes": 76639,
+      "payload_reads": 5,
+      "stream_reads": 4,
+      "stream_ticks": 111424,
+      "update_wait_ticks": 3223616,
+      "update_requests": 457,
+      "audio_wait_ticks": 0,
+      "audio_requests": 0,
+      "draw_wait_ticks": 0,
+      "draw_requests": 0,
+      "present_wait_ticks": 0,
+      "present_requests": 0
+    },
+    {
+      "tic": 210,
+      "vblanks": 4,
+      "present_interval": 4,
+      "recorder_interval": 1,
+      "update_ticks": 149824,
+      "audio_record_ticks": 12480,
+      "draw_ticks": 1708608,
+      "present_ticks": 369600,
+      "total_ticks": 2240512,
+      "storage_wait_ticks": 0,
+      "storage_requests": 1,
+      "storage_bytes": 13824,
+      "payload_reads": 0,
+      "stream_reads": 0,
+      "stream_ticks": 0,
+      "update_wait_ticks": 0,
+      "update_requests": 1,
+      "audio_wait_ticks": 0,
+      "audio_requests": 0,
+      "draw_wait_ticks": 0,
+      "draw_requests": 0,
+      "present_wait_ticks": 0,
+      "present_requests": 0
+    },
+    {
+      "tic": 230,
+      "vblanks": 3,
+      "present_interval": 3,
+      "recorder_interval": 1,
+      "update_ticks": 122176,
+      "audio_record_ticks": 3840,
+      "draw_ticks": 1033664,
+      "present_ticks": 520768,
+      "total_ticks": 1680448,
+      "storage_wait_ticks": 0,
+      "storage_requests": 0,
+      "storage_bytes": 0,
+      "payload_reads": 0,
+      "stream_reads": 0,
+      "stream_ticks": 0,
+      "update_wait_ticks": 0,
+      "update_requests": 0,
+      "audio_wait_ticks": 0,
+      "audio_requests": 0,
+      "draw_wait_ticks": 0,
+      "draw_requests": 0,
+      "present_wait_ticks": 0,
+      "present_requests": 0
+    },
+    {
+      "tic": 270,
+      "vblanks": 3,
+      "present_interval": 3,
+      "recorder_interval": 1,
+      "update_ticks": 212032,
+      "audio_record_ticks": 5760,
+      "draw_ticks": 1057920,
+      "present_ticks": 404800,
+      "total_ticks": 1680512,
+      "storage_wait_ticks": 0,
+      "storage_requests": 2,
+      "storage_bytes": 0,
+      "payload_reads": 0,
+      "stream_reads": 0,
+      "stream_ticks": 0,
+      "update_wait_ticks": 0,
+      "update_requests": 2,
+      "audio_wait_ticks": 0,
+      "audio_requests": 0,
+      "draw_wait_ticks": 0,
+      "draw_requests": 0,
+      "present_wait_ticks": 0,
+      "present_requests": 0
+    },
+    {
+      "tic": 290,
+      "vblanks": 6,
+      "present_interval": 6,
+      "recorder_interval": 1,
+      "update_ticks": 131264,
+      "audio_record_ticks": 3840,
+      "draw_ticks": 3153472,
+      "present_ticks": 72448,
+      "total_ticks": 3361024,
+      "storage_wait_ticks": 0,
+      "storage_requests": 0,
+      "storage_bytes": 0,
+      "payload_reads": 0,
+      "stream_reads": 0,
+      "stream_ticks": 0,
+      "update_wait_ticks": 0,
+      "update_requests": 0,
+      "audio_wait_ticks": 0,
+      "audio_requests": 0,
+      "draw_wait_ticks": 0,
+      "draw_requests": 0,
+      "present_wait_ticks": 0,
+      "present_requests": 0
+    }
+  ],
+  "long_recorder": [
+    {
+      "tic": 81,
+      "interval": 6
+    },
+    {
+      "tic": 120,
+      "interval": 10
+    },
+    {
+      "tic": 121,
+      "interval": 18
+    },
+    {
+      "tic": 211,
+      "interval": 4
+    },
+    {
+      "tic": 231,
+      "interval": 3
+    },
+    {
+      "tic": 271,
+      "interval": 3
+    },
+    {
+      "tic": 291,
+      "interval": 6
+    }
+  ],
+  "clock_anomalies": []
+}

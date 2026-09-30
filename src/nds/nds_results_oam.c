@@ -127,6 +127,22 @@ static const NDSResultsOamShape sNdsResultsShapes[] =
     { 8u, 32u, SpriteSize_8x32 }
 };
 
+/* A tile plan depends only on the final dimensions and the constant shape
+ * table above, and Results asks for the same ~18 pairs twice per SObj per
+ * frame: the exhaustive search was ~76,500 ticks of a steady FFA frame, the
+ * margin that decided 48 of 121 steady frames taking two VBlanks
+ * (artifacts/bugs/2026-09-30_results-pacing, section 3). Key 0 is never a real
+ * pair (both dimensions are nonzero), so the zeroed table starts empty; a
+ * replaced slot just recomputes the same exact plan. */
+#define NDS_RESULTS_PLAN_MEMO_SLOTS 32u
+typedef struct NDSResultsOamPlanMemo
+{
+    u32 key;
+    NDSResultsOamTilePlan plan;
+} NDSResultsOamPlanMemo;
+static NDSResultsOamPlanMemo sNdsResultsPlanMemo[NDS_RESULTS_PLAN_MEMO_SLOTS];
+static u32 sNdsResultsPlanMemoNext;
+
 static NDSResultsOamCell sNdsResultsCells[NDS_RESULTS_CELL_SLOTS];
 static NDSResultsOamPalette sNdsResultsPalettes[NDS_RESULTS_PALETTE_BANKS];
 /* The banks' colours, staged: they reach OBJ palette RAM with the OAM in
@@ -432,10 +448,22 @@ static s32 ndsResultsChooseTilePlan(u32 width, u32 height,
 {
     NDSResultsOamShape chosen[NDS_RESULTS_MAX_TILES];
     u32 count;
+    u32 key;
+    u32 i;
 
-    if ((plan == NULL) || (width == 0u) || (height == 0u) || (height > 64u))
+    if ((plan == NULL) || (width == 0u) || (height == 0u) || (height > 64u) ||
+        (width > 0xffffu))
     {
         return 0;
+    }
+    key = (height << 16) | width;
+    for (i = 0u; i < NDS_RESULTS_PLAN_MEMO_SLOTS; i++)
+    {
+        if (sNdsResultsPlanMemo[i].key == key)
+        {
+            *plan = sNdsResultsPlanMemo[i].plan;
+            return 1;
+        }
     }
     memset(plan, 0, sizeof(*plan));
     for (count = 1u; count <= NDS_RESULTS_MAX_TILES; count++)
@@ -446,6 +474,13 @@ static s32 ndsResultsChooseTilePlan(u32 width, u32 height,
                                  chosen, plan, &best_area);
         if (plan->count != 0u)
         {
+            NDSResultsOamPlanMemo *memo =
+                &sNdsResultsPlanMemo[sNdsResultsPlanMemoNext];
+
+            memo->key = key;
+            memo->plan = *plan;
+            sNdsResultsPlanMemoNext =
+                (sNdsResultsPlanMemoNext + 1u) & (NDS_RESULTS_PLAN_MEMO_SLOTS - 1u);
             return 1;
         }
     }
@@ -772,15 +807,31 @@ static void ndsResultsBilerpPremultiplied(const u32 taps[4], u32 fx, u32 fy,
     }
 }
 
+/* The resampling steps, once per baked cell: (source << 16) / final is the
+ * same for every pixel of a cell, and was two software divides per pixel
+ * (artifacts/bugs/2026-09-30_results-pacing, section 5 B). */
+static void ndsResultsSampleSteps(const NDSResultsOamSource *source,
+                                  u32 final_width, u32 final_height,
+                                  u32 *step_x_q16, u32 *step_y_q16)
+{
+    *step_x_q16 = ((u32)(u16)source->sprite->width << 16) / final_width;
+    *step_y_q16 = ((u32)(u16)source->sprite->height << 16) / final_height;
+}
+
+/* x / 17 for x < 1,000 (checked exhaustively): the 4-bit quantizers below see
+ * at most 255 + 8. -Os makes a constant divide a libcall per pixel. */
+static inline u32 ndsResultsDiv17(u32 x)
+{
+    return (x * 3856u) >> 16;
+}
+
 static s32 ndsResultsSamplePrefiltered(const NDSResultsOamSource *source,
-                                       u32 final_width, u32 final_height,
+                                       u32 step_x_q16, u32 step_y_q16,
                                        u32 destination_x, u32 destination_y,
                                        u8 rgba[4])
 {
     u32 source_width = (u32)(u16)source->sprite->width;
     u32 source_height = (u32)(u16)source->sprite->height;
-    u32 step_x_q16 = (source_width << 16) / final_width;
-    u32 step_y_q16 = (source_height << 16) / final_height;
     s32 source_x_q16 = (s32)(step_x_q16 >> 1) - 0x8000 +
                        (s32)(destination_x * step_x_q16);
     s32 source_y_q16 = (s32)(step_y_q16 >> 1) - 0x8000 +
@@ -859,9 +910,13 @@ static s32 ndsResultsWriteIndexedCell(NDSResultsOamCell *cell,
 {
     u32 bytes = ((u32)cell->cell_width * cell->cell_height) / 2u;
     u8 *scratch = (u8 *)sNdsResultsIndexedScratch;
+    u32 step_x_q16;
+    u32 step_y_q16;
     u32 y;
     u32 word;
 
+    ndsResultsSampleSteps(source, final_width, final_height, &step_x_q16,
+                          &step_y_q16);
     memset(scratch, 0, bytes);
     for (y = 0u; y < cell->cell_height; y++)
     {
@@ -881,7 +936,7 @@ static s32 ndsResultsWriteIndexedCell(NDSResultsOamCell *cell,
             {
                 continue;
             }
-            if (ndsResultsSamplePrefiltered(source, final_width, final_height,
+            if (ndsResultsSamplePrefiltered(source, step_x_q16, step_y_q16,
                                             destination_x, destination_y,
                                             rgba) == 0)
             {
@@ -893,13 +948,13 @@ static s32 ndsResultsWriteIndexedCell(NDSResultsOamCell *cell,
                 {
                     continue;
                 }
-                index = (u8)(((u32)rgba[0] + 8u) / 17u);
+                index = (u8)ndsResultsDiv17((u32)rgba[0] + 8u);
                 if (index == 0u) index = 1u;
                 if (index > 15u) index = 15u;
             }
             else
             {
-                index = (u8)(((u32)rgba[3] + 8u) / 17u);
+                index = (u8)ndsResultsDiv17((u32)rgba[3] + 8u);
                 if (index > 15u) index = 15u;
                 if (index == 0u) continue;
             }
@@ -928,8 +983,12 @@ static s32 ndsResultsWriteBitmapCell(NDSResultsOamCell *cell,
                                      u32 final_width, u32 final_height)
 {
     u32 bytes = (u32)cell->cell_width * cell->cell_height * sizeof(u16);
+    u32 step_x_q16;
+    u32 step_y_q16;
     u32 y;
 
+    ndsResultsSampleSteps(source, final_width, final_height, &step_x_q16,
+                          &step_y_q16);
     dmaFillHalfWords(0u, cell->gfx, bytes);
     for (y = 0u; y < cell->cell_height; y++)
     {
@@ -946,7 +1005,7 @@ static s32 ndsResultsWriteBitmapCell(NDSResultsOamCell *cell,
             {
                 continue;
             }
-            if (ndsResultsSamplePrefiltered(source, final_width, final_height,
+            if (ndsResultsSamplePrefiltered(source, step_x_q16, step_y_q16,
                                             destination_x, destination_y,
                                             rgba) == 0)
             {

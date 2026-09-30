@@ -225,13 +225,17 @@ static s32 ndsNativeWallpaperUpload(const NDSNativeWallpaper *asset,
             const u8 *indices = (const u8 *)sWallpaperRow;
             for (x = asset->native_w; x != 0u; x--)
             {
+                /* A valid intensity is a replicated nibble (0x00, 0x11 ..
+                 * 0xff): exactly the bytes with x % 17 == 0, and x / 17 is
+                 * then the nibble. -Os made both a libcall per pixel (~1M
+                 * ticks for the Results wallpaper; results-pacing report C). */
                 u32 intensity = indices[x - 1u];
-                if ((intensity % 17u) != 0u)
+                if ((intensity >> 4) != (intensity & 15u))
                 {
                     ndsRelocAssetStreamClose(&stream);
                     return FALSE;
                 }
-                sWallpaperRow[x - 1u] = palette[intensity / 17u];
+                sWallpaperRow[x - 1u] = palette[intensity & 15u];
             }
         }
         for (x = 0u; x < asset->native_w; x++)

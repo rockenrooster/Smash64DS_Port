@@ -1,0 +1,31 @@
+Reading symbols from D:\Stuff\DevFolder\Smash64DS_Port\builds\p2p8-playtest-r62\smash64ds.elf...
+0xfffffffc in ?? ()
+warning: could not convert '$seed_in_css' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Breakpoint 1 at 0x22aba8c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 612.
+Breakpoint 2 at 0x22aba9c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 630.
+Breakpoint 3 at 0x22abac4: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 655.
+Breakpoint 4 at 0x22abb40: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 679.
+Breakpoint 5 at 0x22abdac: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_sss.c, line 779.
+Breakpoint 6 at 0x21200ac: file /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/keys.c, line 66.
+Breakpoint 7 at 0x20b9800: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 295.
+Breakpoint 8 at 0x20a7d34: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 272.
+Breakpoint 9 at 0x22983b0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 705.
+Breakpoint 10 at 0x2011e24: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3749.
+Breakpoint 11 at 0x2067614: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 210.
+Breakpoint 12 at 0x1fffd88: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+Breakpoint 13 at 0x201d954: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_storage.c, line 103.
+Breakpoint 14 at 0x20a65e8: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_harness.c, line 72.
+SCENE kind=27 prev=27 frame=5 task=0 heap_free=0
+SCENE kind=1 prev=27 frame=9 task=1 heap_free=741940
+FEED title-enter
+SCENE kind=7 prev=1 frame=13 task=1 heap_free=385896
+FEED mode-enter
+SCENE kind=9 prev=7 frame=17 task=1 heap_free=695392
+FEED vs-enter
+SCENE kind=16 prev=9 frame=21 task=1 heap_free=514472
+FEED css-enter visit=1 roster=0,1,28,28 pkind=0,1,2,2
+SCENE kind=21 prev=16 frame=25 task=1 heap_free=104112
+FEED sss-enter visit=1 stage=6 time=1 rules=1
+SCENE kind=22 prev=21 frame=29 task=1 heap_free=789584
+STOP battle-start stage=0 time=1 rules=1 players=1 cpus=3 roster=0,8,1,6 pkind=0,1,1,1 frame=30

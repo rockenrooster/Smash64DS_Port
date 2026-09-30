@@ -26,6 +26,18 @@ static Mutex sStorageMutex;
 static Mutex sRomInitMutex;
 static NdsAudioStorageRequest sStorageRequest;
 static uint8_t sStorageBounce[512] __attribute__((aligned(32)));
+/* NitroROM path resolution walks the FNT in tiny slices, each an ARM7 round
+ * trip: VS Results' tic 120 made 424 of them (2,624,640 waited ticks) and No
+ * Contest's tic 1 566 (artifacts/bugs/2026-09-30_results-pacing, section 5 D).
+ * The FNT is immutable, so one whole 512-byte sector is kept and slices are
+ * served from it. Dropped on ROM open/close; payloads never use it. */
+#define NDS_STORAGE_FNT_PAGE_BYTES 512u
+static uint8_t sStorageFntPage[NDS_STORAGE_FNT_PAGE_BYTES]
+    __attribute__((aligned(32)));
+static uint32_t sStorageFntPageOffset;
+static int sStorageFntPageReady;
+volatile uint32_t gNdsAudioStorageFntPageHits;
+volatile uint32_t gNdsAudioStorageFntPageFills;
 static uint32_t sStorageSequence;
 static NitroRom sCardRom;
 static int sCardRomReady;
@@ -233,7 +245,34 @@ static bool ndsAudioStorageReadCard(void *unused, uint32_t offset,
     {
         uint32_t part;
         uintptr_t address = (uintptr_t)out;
-        if (((address & 31u) == 0u) && (bytes >= 32u) &&
+        uint32_t fnt_offset = g_envAppNdsHeader->fnt_rom_offset;
+        uint32_t fnt_size = g_envAppNdsHeader->fnt_size;
+        uint32_t page_offset = offset & ~(NDS_STORAGE_FNT_PAGE_BYTES - 1u);
+
+        if ((offset >= fnt_offset) && ((offset - fnt_offset) < fnt_size) &&
+            (bytes <= fnt_size - (offset - fnt_offset)) &&
+            (page_offset <= rom_bytes) &&
+            (NDS_STORAGE_FNT_PAGE_BYTES <= rom_bytes - page_offset))
+        {
+            uint32_t skip = offset - page_offset;
+
+            part = NDS_STORAGE_FNT_PAGE_BYTES - skip;
+            if (part > bytes) part = bytes;
+            if (!sStorageFntPageReady || (sStorageFntPageOffset != page_offset))
+            {
+                sStorageFntPageReady = 0;
+                ok = ndsAudioStorageCall(NDS_AUDIO_STORAGE_READ_CARD,
+                                         page_offset, sStorageFntPage,
+                                         NDS_STORAGE_FNT_PAGE_BYTES);
+                if (!ok) break;
+                sStorageFntPageOffset = page_offset;
+                sStorageFntPageReady = 1;
+                gNdsAudioStorageFntPageFills++;
+            }
+            else gNdsAudioStorageFntPageHits++;
+            memcpy(out, sStorageFntPage + skip, part);
+        }
+        else if (((address & 31u) == 0u) && (bytes >= 32u) &&
             (address <= UINT32_MAX) &&
             ndsAudioStorageMainRange((uint32_t)address, bytes))
         {
@@ -349,6 +388,7 @@ static void ndsAudioStorageCloseCard(void *unused)
     mutexLock(&sStorageMutex);
     (void)ndsAudioStorageCall(NDS_AUDIO_STORAGE_CLOSE_CARD, 0u, NULL, 0u);
     sCardRomReady = 0;
+    sStorageFntPageReady = 0;
     free(sRomExtentAllocation);
     sRomExtentAllocation = NULL;
     mutexUnlock(&sStorageMutex);
@@ -389,6 +429,7 @@ NitroRom *__wrap_nitroromGetSelf(void)
         }
         pxiWaitRemote((PxiChannel)NDS_AUDIO_STORAGE_CHANNEL);
         mutexLock(&sStorageMutex);
+        sStorageFntPageReady = 0;
         int opened = argv0 ?
             ndsAudioStorageCall(NDS_AUDIO_STORAGE_OPEN_MAP, 0u, &sRomMap, sizeof(sRomMap)) :
             ndsAudioStorageCall(NDS_AUDIO_STORAGE_OPEN_CARD, 0u, NULL, 0u);

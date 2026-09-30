@@ -1,0 +1,168 @@
+{
+  "tag": "r58-nc-draw1",
+  "function_totals_by_tic": {
+    "1": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 51264,
+        "max": 14272
+      },
+      "glTexImage2D": {
+        "calls": 18,
+        "ticks": 51008,
+        "max": 4096
+      },
+      "glColorTableEXT": {
+        "calls": 18,
+        "ticks": 50880,
+        "max": 3968
+      },
+      "ndsRendererHardwareResolveOrBindTexture": {
+        "calls": 16,
+        "ticks": 1487872,
+        "max": 281920
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 6,
+        "ticks": 5793536,
+        "max": 4117504
+      }
+    },
+    "60": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 14912,
+        "max": 4608
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 8,
+        "ticks": 1441728,
+        "max": 712320
+      }
+    },
+    "80": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15168,
+        "max": 4672
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 703872,
+        "max": 605312
+      }
+    },
+    "120": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 14784,
+        "max": 4608
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115840,
+        "max": 25920
+      }
+    },
+    "210": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15872,
+        "max": 4992
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116416,
+        "max": 26368
+      }
+    },
+    "230": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15616,
+        "max": 4992
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115648,
+        "max": 25920
+      }
+    },
+    "270": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15040,
+        "max": 4736
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115520,
+        "max": 26304
+      }
+    },
+    "290": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15424,
+        "max": 4992
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115648,
+        "max": 26240
+      }
+    },
+    "300": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15744,
+        "max": 4992
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116736,
+        "max": 26432
+      }
+    },
+    "301": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 15232,
+        "max": 4864
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115584,
+        "max": 26368
+      }
+    },
+    "302": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 14592,
+        "max": 4736
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116352,
+        "max": 26496
+      }
+    },
+    "303": {
+      "ndsBaseFTDisplayMainProcDisplay": {
+        "calls": 4,
+        "ticks": 14592,
+        "max": 4224
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115520,
+        "max": 26240
+      }
+    }
+  },
+  "storage_by_tic_file": {},
+  "steady_plan_dimensions": [],
+  "unmatched_returns": [],
+  "unclosed_entries": {}
+}

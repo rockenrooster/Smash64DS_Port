@@ -1,0 +1,507 @@
+{
+  "tag": "r58-nc-detail1",
+  "function_totals_by_tic": {
+    "1": {
+      "ndsAudioStorageCall": {
+        "calls": 648,
+        "ticks": 4695936,
+        "max": 190016
+      },
+      "ftManagerMakeFighter": {
+        "calls": 4,
+        "ticks": 2747904,
+        "max": 1433408
+      },
+      "mnVSResultsInitFighter": {
+        "calls": 4,
+        "ticks": 5921152,
+        "max": 2342272
+      },
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 3054016,
+        "max": 3054016
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 28,
+        "ticks": 25664,
+        "max": 5824
+      },
+      "ndsResultsResolveSource": {
+        "calls": 28,
+        "ticks": 8832,
+        "max": 960
+      },
+      "ndsResultsFindCell": {
+        "calls": 30,
+        "ticks": 3456,
+        "max": 256
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 14,
+        "ticks": 5763072,
+        "max": 958848
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 6,
+        "ticks": 5794240,
+        "max": 4117504
+      }
+    },
+    "60": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1600,
+        "max": 1600
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 50,
+        "ticks": 41344,
+        "max": 5888
+      },
+      "ndsResultsResolveSource": {
+        "calls": 50,
+        "ticks": 16768,
+        "max": 1408
+      },
+      "ndsResultsFindCell": {
+        "calls": 52,
+        "ticks": 8000,
+        "max": 512
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 25,
+        "ticks": 1390336,
+        "max": 586880
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 8,
+        "ticks": 1441856,
+        "max": 712000
+      }
+    },
+    "80": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1600,
+        "max": 1600
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48704,
+        "max": 5696
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 19072,
+        "max": 1152
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9344,
+        "max": 448
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 643584,
+        "max": 588416
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 704192,
+        "max": 605696
+      }
+    },
+    "120": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1664,
+        "max": 1664
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48576,
+        "max": 5888
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18560,
+        "max": 1152
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9216,
+        "max": 320
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 56640,
+        "max": 7680
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116352,
+        "max": 25920
+      }
+    },
+    "210": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1728,
+        "max": 1728
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48704,
+        "max": 5952
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18432,
+        "max": 1152
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9472,
+        "max": 320
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 56256,
+        "max": 7552
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116736,
+        "max": 26368
+      }
+    },
+    "230": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1600,
+        "max": 1600
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48512,
+        "max": 5760
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18624,
+        "max": 1152
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9152,
+        "max": 320
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 56704,
+        "max": 7552
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116032,
+        "max": 25984
+      }
+    },
+    "270": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1600,
+        "max": 1600
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48192,
+        "max": 5824
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18432,
+        "max": 1152
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9344,
+        "max": 384
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 55744,
+        "max": 7360
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115712,
+        "max": 26240
+      }
+    },
+    "290": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1664,
+        "max": 1664
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48256,
+        "max": 5760
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18560,
+        "max": 1216
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9280,
+        "max": 384
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 55616,
+        "max": 7232
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115264,
+        "max": 26240
+      }
+    },
+    "300": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1600,
+        "max": 1600
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48448,
+        "max": 5824
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18752,
+        "max": 1280
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9280,
+        "max": 320
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 56000,
+        "max": 7552
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116352,
+        "max": 26496
+      }
+    },
+    "301": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1600,
+        "max": 1600
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48064,
+        "max": 5888
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18368,
+        "max": 1088
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 8960,
+        "max": 320
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 55680,
+        "max": 7488
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115776,
+        "max": 26432
+      }
+    },
+    "302": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1664,
+        "max": 1664
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48448,
+        "max": 5824
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 19072,
+        "max": 1344
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9408,
+        "max": 320
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 56384,
+        "max": 7616
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 116928,
+        "max": 26560
+      }
+    },
+    "303": {
+      "ndsNativeWallpaperDraw": {
+        "calls": 1,
+        "ticks": 1664,
+        "max": 1664
+      },
+      "ndsResultsChooseTilePlan": {
+        "calls": 60,
+        "ticks": 48192,
+        "max": 5824
+      },
+      "ndsResultsResolveSource": {
+        "calls": 60,
+        "ticks": 18688,
+        "max": 1216
+      },
+      "ndsResultsFindCell": {
+        "calls": 62,
+        "ticks": 9536,
+        "max": 384
+      },
+      "ndsResultsPrepareSObj": {
+        "calls": 30,
+        "ticks": 55744,
+        "max": 7360
+      },
+      "ndsResultsOamDrawGObj": {
+        "calls": 9,
+        "ticks": 115776,
+        "max": 26304
+      }
+    }
+  },
+  "storage_by_tic_file": {
+    "1": {
+      "nitro:/animation/ftanim_stream_pack.bin": {
+        "calls": 9,
+        "bytes": 8480,
+        "wait_ticks": 102272
+      },
+      "<header/FNT/FAT/padding>": {
+        "calls": 566,
+        "bytes": 18112,
+        "wait_ticks": 3494656
+      },
+      "nitro:/reloc/reloc_submotions/FTMarioSubMotionTaunt": {
+        "calls": 7,
+        "bytes": 3744,
+        "wait_ticks": 62208
+      },
+      "nitro:/fighters/kirby_high.bin": {
+        "calls": 3,
+        "bytes": 30176,
+        "wait_ticks": 199808
+      },
+      "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearAlt2": {
+        "calls": 5,
+        "bytes": 8704,
+        "wait_ticks": 79808
+      },
+      "nitro:/reloc/reloc_submotions/FTFoxSubMotionTaunt": {
+        "calls": 6,
+        "bytes": 2848,
+        "wait_ticks": 51776
+      },
+      "nitro:/fighters/yoshi_high.bin": {
+        "calls": 4,
+        "bytes": 19232,
+        "wait_ticks": 141952
+      },
+      "nitro:/reloc/reloc_submotions/FTYoshiSubMotionAppearAlt2": {
+        "calls": 6,
+        "bytes": 1408,
+        "wait_ticks": 43520
+      },
+      "nitro:/wallpapers/native_wallpaper_results.bin": {
+        "calls": 42,
+        "bytes": 42240,
+        "wait_ticks": 353216
+      }
+    }
+  },
+  "steady_plan_dimensions": [
+    {
+      "width": 7,
+      "height": 9,
+      "calls": 80
+    },
+    {
+      "width": 13,
+      "height": 10,
+      "calls": 32
+    },
+    {
+      "width": 16,
+      "height": 21,
+      "calls": 8
+    },
+    {
+      "width": 17,
+      "height": 21,
+      "calls": 24
+    },
+    {
+      "width": 19,
+      "height": 31,
+      "calls": 8
+    },
+    {
+      "width": 20,
+      "height": 32,
+      "calls": 32
+    },
+    {
+      "width": 25,
+      "height": 32,
+      "calls": 16
+    },
+    {
+      "width": 29,
+      "height": 32,
+      "calls": 16
+    },
+    {
+      "width": 53,
+      "height": 11,
+      "calls": 16
+    },
+    {
+      "width": 96,
+      "height": 10,
+      "calls": 8
+    }
+  ],
+  "unmatched_returns": [],
+  "unclosed_entries": {}
+}

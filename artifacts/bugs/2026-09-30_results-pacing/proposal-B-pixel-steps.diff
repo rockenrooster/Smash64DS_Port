@@ -1,0 +1,64 @@
+--- a/src/nds/nds_results_oam.c
++++ b/src/nds/nds_results_oam.c
+@@ -772,16 +772,14 @@
+     }
+ }
+ 
+ static s32 ndsResultsSamplePrefiltered(const NDSResultsOamSource *source,
+-                                       u32 final_width, u32 final_height,
++                                       u32 step_x_q16, u32 step_y_q16,
+                                        u32 destination_x, u32 destination_y,
+                                        u8 rgba[4])
+ {
+     u32 source_width = (u32)(u16)source->sprite->width;
+     u32 source_height = (u32)(u16)source->sprite->height;
+-    u32 step_x_q16 = (source_width << 16) / final_width;
+-    u32 step_y_q16 = (source_height << 16) / final_height;
+     s32 source_x_q16 = (s32)(step_x_q16 >> 1) - 0x8000 +
+                        (s32)(destination_x * step_x_q16);
+     s32 source_y_q16 = (s32)(step_y_q16 >> 1) - 0x8000 +
+                        (s32)(destination_y * step_y_q16);
+@@ -858,8 +856,10 @@
+                                       u32 final_width, u32 final_height)
+ {
+     u32 bytes = ((u32)cell->cell_width * cell->cell_height) / 2u;
+     u8 *scratch = (u8 *)sNdsResultsIndexedScratch;
++    u32 step_x_q16 = ((u32)(u16)source->sprite->width << 16) / final_width;
++    u32 step_y_q16 = ((u32)(u16)source->sprite->height << 16) / final_height;
+     u32 y;
+     u32 word;
+ 
+     memset(scratch, 0, bytes);
+@@ -880,9 +880,9 @@
+                 (destination_y >= final_height))
+             {
+                 continue;
+             }
+-            if (ndsResultsSamplePrefiltered(source, final_width, final_height,
++            if (ndsResultsSamplePrefiltered(source, step_x_q16, step_y_q16,
+                                             destination_x, destination_y,
+                                             rgba) == 0)
+             {
+                 return 0;
+@@ -927,8 +927,10 @@
+                                      const NDSResultsOamSource *source,
+                                      u32 final_width, u32 final_height)
+ {
+     u32 bytes = (u32)cell->cell_width * cell->cell_height * sizeof(u16);
++    u32 step_x_q16 = ((u32)(u16)source->sprite->width << 16) / final_width;
++    u32 step_y_q16 = ((u32)(u16)source->sprite->height << 16) / final_height;
+     u32 y;
+ 
+     dmaFillHalfWords(0u, cell->gfx, bytes);
+     for (y = 0u; y < cell->cell_height; y++)
+@@ -945,9 +947,9 @@
+                 (destination_y >= final_height))
+             {
+                 continue;
+             }
+-            if (ndsResultsSamplePrefiltered(source, final_width, final_height,
++            if (ndsResultsSamplePrefiltered(source, step_x_q16, step_y_q16,
+                                             destination_x, destination_y,
+                                             rgba) == 0)
+             {
+                 return 0;

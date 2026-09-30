@@ -1,0 +1,19 @@
+--- a/src/nds/nds_native_wallpaper.c
++++ b/src/nds/nds_native_wallpaper.c
+@@ -225,14 +225,14 @@
+             const u8 *indices = (const u8 *)sWallpaperRow;
+             for (x = asset->native_w; x != 0u; x--)
+             {
+                 u32 intensity = indices[x - 1u];
+-                if ((intensity % 17u) != 0u)
++                if ((intensity >> 4) != (intensity & 15u))
+                 {
+                     ndsRelocAssetStreamClose(&stream);
+                     return FALSE;
+                 }
+-                sWallpaperRow[x - 1u] = palette[intensity / 17u];
++                sWallpaperRow[x - 1u] = palette[intensity >> 4];
+             }
+         }
+         for (x = 0u; x < asset->native_w; x++)
+         {

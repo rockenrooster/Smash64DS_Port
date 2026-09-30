@@ -1,0 +1,100 @@
+{
+  "r58-ffa-trace1": {
+    "steady_active_by_vblank": {
+      "1": {
+        "n": 73,
+        "active_p50": 542272,
+        "active_min": 518016,
+        "active_max": 554496
+      },
+      "2": {
+        "n": 48,
+        "active_p50": 565568.0,
+        "active_min": 555072,
+        "active_max": 593920
+      }
+    },
+    "two_vblank_tics": [
+      1,
+      121,
+      194,
+      239,
+      271,
+      279,
+      291,
+      292,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      308,
+      315,
+      316,
+      317,
+      321,
+      322,
+      324,
+      325,
+      328,
+      329,
+      330,
+      331,
+      332,
+      338,
+      340,
+      346,
+      347,
+      348,
+      352,
+      353,
+      354,
+      356,
+      359,
+      364,
+      370,
+      372,
+      378,
+      380,
+      383,
+      385,
+      386,
+      388,
+      394,
+      400,
+      402,
+      403,
+      404,
+      408,
+      409,
+      410,
+      411,
+      412,
+      416,
+      417,
+      418,
+      420
+    ]
+  },
+  "r58-nc-trace1": {
+    "steady_active_by_vblank": {
+      "1": {
+        "n": 121,
+        "active_p50": 350080,
+        "active_min": 345536,
+        "active_max": 377152
+      }
+    },
+    "two_vblank_tics": [
+      2,
+      80
+    ]
+  },
+  "fixture": [
+    "STOP battle-start stage=0 time=1 rules=1 players=1 cpus=3 roster=0,8,1,6 pkind=0,1,1,1 frame=30",
+    "STOP results-enter visit=1 frame=2074",
+    "RESULTS_ENTRY dl_overflow=28602 gfx_overflow=0 gfx_no_room=0 malloc_overflow=0"
+  ]
+}

@@ -1,0 +1,45 @@
+Reading symbols from D:\Stuff\DevFolder\Smash64DS_Port\builds\p2p8-playtest-r58\smash64ds.elf...
+0xfffffffc in ?? ()
+warning: could not convert '$seed_in_css' from the host encoding (CP1252) to UTF-32.
+This normally should not happen, please file a bug report.
+Breakpoint 1 at 0x22ab040: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 577.
+Breakpoint 2 at 0x22ab050: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 595.
+Breakpoint 3 at 0x22ab078: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 620.
+Breakpoint 4 at 0x22ab0f4: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_router.c, line 644.
+Breakpoint 5 at 0x22ab360: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_menu_shell_sss.c, line 779.
+Breakpoint 6 at 0x211fc80: file /home/davem/projects/devkitpro/pacman-packages/libnds/src/libnds-2.0.2/arm9/../source/arm9/keys.c, line 66.
+Breakpoint 7 at 0x20b9408: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_scvsbattle.c, line 295.
+Breakpoint 8 at 0x20a799c: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 271.
+Breakpoint 9 at 0x2297990: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_mnvsresults.c, line 705.
+Breakpoint 10 at 0x2011d88: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3724.
+Breakpoint 11 at 0x20672e0: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 210.
+Breakpoint 12 at 0x1fffd90: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+Breakpoint 13 at 0x201d630: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_audio_storage.c, line 91.
+Breakpoint 14 at 0x20a6270: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_harness.c, line 72.
+SCENE kind=27 prev=27 frame=5 task=0 heap_free=0
+SCENE kind=1 prev=27 frame=9 task=1 heap_free=744756
+FEED title-enter
+SCENE kind=7 prev=1 frame=13 task=1 heap_free=388712
+FEED mode-enter
+SCENE kind=9 prev=7 frame=17 task=1 heap_free=698208
+FEED vs-enter
+SCENE kind=16 prev=9 frame=21 task=1 heap_free=517288
+FEED css-enter visit=1 roster=0,1,28,28 pkind=0,1,2,2
+SCENE kind=21 prev=16 frame=25 task=1 heap_free=106928
+FEED sss-enter visit=1 stage=6 time=1 rules=1
+SCENE kind=22 prev=21 frame=29 task=1 heap_free=792400
+STOP battle-start stage=0 time=1 rules=1 players=1 cpus=3 roster=0,8,1,6 pkind=0,1,1,1 frame=30
+STOP results-enter visit=1 frame=2074
+RESULTS_ENTRY dl_overflow=28602 gfx_overflow=0 gfx_no_room=0 malloc_overflow=0
+SCENE kind=24 prev=22 frame=2076 task=1 heap_free=320920
+
+Breakpoint 14, ndsSeamRunSourceMenuScene (tfunc=tfunc@entry=0x226aea4 <sSYTaskmanDefaultFunction>, is_results=is_results@entry=1) at D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_harness.c:72
+72	    if (is_results == 0u)
+
+COLLECTOR start
+Temporary breakpoint 15 at 0x22949b8: file D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c, line 274.
+
+Temporary breakpoint 15, 0x022949b8 in mnVSResultsCheckExit () at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c:274
+274				if (gSYControllerDevices[i].button_tap & START_BUTTON)
+
+COLLECTOR end
