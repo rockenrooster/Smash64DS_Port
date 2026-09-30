@@ -2432,6 +2432,85 @@ void ndsAudioFgmUpdate(void)
     }
 }
 
+/* 2026-09-30 (owner, r58: "menu navigation sounds ... play after the next
+ * menu is loaded"). A menu screen ends on the frame its confirm cue is asked
+ * for, and the next screen's loads then hold the ARM9 and the ARM7's storage
+ * queue: a cue still filling, or one whose start the ARM7 has not taken yet,
+ * starts after the load. These two let a transition put its cues first. */
+__attribute__((used)) volatile u32 gNdsAudioFgmSettleFrames;
+__attribute__((used)) volatile u32 gNdsAudioFgmSettleTimeouts;
+__attribute__((used)) volatile u32 gNdsAudioFgmPrefetchRequests;
+
+static u32 ndsAudioFgmPendingHandles(void)
+{
+    u32 count = 0u;
+    u32 i;
+
+    for (i = 0u; i < NDS_AUDIO_FGM_HANDLE_COUNT; i++)
+    {
+        if ((sNdsAudioFgmHandles[i].live != FALSE) &&
+            (sNdsAudioFgmHandles[i].pending != FALSE))
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
+/* Until no requested cue is waiting for its sample, then one VBlank more so
+ * the ARM7 has started the channel; at most `max_frames` VBlanks. The screen
+ * keeps its last frame meanwhile. */
+void ndsAudioFgmSettle(u32 max_frames)
+{
+    u32 frame;
+
+    for (frame = 0u; frame < max_frames; frame++)
+    {
+        ndsAudioFgmUpdate();
+        swiWaitForVBlank();
+        gNdsAudioFgmSettleFrames++;
+        if (ndsAudioFgmPendingHandles() == 0u)
+        {
+            ndsAudioFgmUpdate();
+            return;
+        }
+    }
+    gNdsAudioFgmSettleTimeouts++;
+}
+
+/* Starts the sample reads for `ids` that the cache does not already hold,
+ * without playing anything, and waits up to `max_frames` VBlanks for them to
+ * land. A miss is harmless: the cue then fills when it is first asked for. */
+void ndsAudioFgmPrefetch(const u16 *ids, u32 count, u32 max_frames)
+{
+    u32 frame;
+    u32 i;
+
+    if ((ids == NULL) || (gNdsAudioFgmLoaded == 0u))
+    {
+        return;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        const NDSAudioFgmPackEntry *entry = ndsAudioFgmFindEntry(ids[i]);
+
+        if (entry != NULL)
+        {
+            (void)ndsAudioFgmCacheAcquire(entry);
+            gNdsAudioFgmPrefetchRequests++;
+        }
+    }
+    for (frame = 0u; frame < max_frames; frame++)
+    {
+        ndsAudioFgmPollFills();
+        if (sNdsAudioFgmFillPartsInFlight == 0u)
+        {
+            return;
+        }
+        swiWaitForVBlank();
+    }
+}
+
 void ndsAudioFgmPauseGame(void)
 {
     u32 active_channels;

@@ -304,10 +304,37 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
     }
 }
 
+/* 2026-09-30 (owner, r58: menu sounds were late or stuttered the first time
+ * through, "fixes itself if I navigate around a lot (probably caching) ... we
+ * can take time to load everything prior"). Every cue a menu screen asks for,
+ * read into the FGM cache ahead of its first request: at boot, and again on
+ * each screen entry, where it costs nothing while they are still cached and
+ * refills what a match evicted. The CSS fighter names stay on demand. */
+#define NDS_MENU_FGM_SETTLE_FRAMES 20u
+#define NDS_MENU_FGM_PREFETCH_BOOT_FRAMES 120u
+#define NDS_MENU_FGM_PREFETCH_ENTRY_FRAMES 10u
+
+static const u16 kNdsMenuShellCueIds[] = {
+    nSYAudioFGMMenuScroll2, nSYAudioFGMMenuSelect, nSYAudioFGMMenuDenied,
+    nSYAudioFGMMenuScroll1, nSYAudioFGMTitlePressStart, nSYAudioFGMStageSelect,
+    nSYAudioFGMMarioDash, nSYAudioFGMSamusDash, nSYAudioFGMPlayerSlotClose,
+    nSYAudioFGMPlayerSlotWhoosh, nSYAudioVoiceAnnounceFreeForAll,
+    nSYAudioVoiceAnnounceTeamBattle, nSYAudioVoicePublicCheer
+};
+
+static void ndsMenuShellPrefetchCues(u32 max_frames)
+{
+    ndsAudioFgmPrefetch(kNdsMenuShellCueIds,
+                        (u32)(sizeof(kNdsMenuShellCueIds) /
+                              sizeof(kNdsMenuShellCueIds[0])),
+                        max_frames);
+}
+
 static void ndsMenuShellRun(u32 screen)
 {
     u32 enter_start = cpuGetTiming();
 
+    ndsMenuShellPrefetchCues(NDS_MENU_FGM_PREFETCH_ENTRY_FRAMES);
     sMenuScreen = screen;
     sMenuTics = 0u;
     sMenuChangeWait = 0u;
@@ -459,6 +486,11 @@ static void ndsMenuShellRun(u32 screen)
         ndsMenuShellRecordPresent();
     }
 
+    /* 2026-09-30 (owner, r58): the cue the exit press asked for plays BEFORE
+     * the next screen loads, not after it -- the teardown below and the next
+     * screen's entry hold the ARM9 and the ARM7's storage queue. */
+    ndsAudioFgmSettle(NDS_MENU_FGM_SETTLE_FRAMES);
+
     /* EVERY title exit path lands here (START/A is the only one today), so
      * this is where the fire hands BG3 back: disable restores the identity
      * affine and priority 0, and the NEXT screen's entry clears the bitmap
@@ -539,6 +571,7 @@ void ndsMenuShellRunStartup(void)
      * .bss, outside the taskman arena, and survive every scene's rewind. */
 #if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
     ndsAudioAssetLoadFenced();
+    ndsMenuShellPrefetchCues(NDS_MENU_FGM_PREFETCH_BOOT_FRAMES);
 #endif
     gNdsMenuShellStartupCount++;
 
