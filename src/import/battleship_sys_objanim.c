@@ -17,6 +17,10 @@ extern sb32 ndsSyMallocWouldFit(const SYMallocRegion *bp, size_t size,
  * appears in the P2 configuration nobody measures. */
 volatile u32 gNdsR2CubicSaturations;
 
+/* The overlay's sentinel and zero tests as bit compares (the objanim.c
+ * import patch, NDS_OA_*). Same-ROM A/B word: 0 = the float compares. */
+volatile u32 gNdsObjAnimBitCompare __attribute__((used, section(".data"))) = 1u;
+
 #define gcAddDObjAnimJoint ndsBaseGcAddDObjAnimJoint
 #define gcAddMObjMatAnimJoint ndsBaseGcAddMObjMatAnimJoint
 #define gcAddMObjAll ndsBaseGcAddMObjAll
@@ -2644,7 +2648,7 @@ void gcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 void gcPlayMObjMatAnim(MObj *mobj)
 {
     sb32 was_active = ((mobj != NULL) &&
-                       (mobj->anim_wait != AOBJ_ANIM_NULL));
+                       NDS_FCMP_NE_C(mobj->anim_wait, AOBJ_ANIM_NULL));
 
     ndsBaseGcPlayMObjMatAnim(mobj);
     if (was_active != FALSE)

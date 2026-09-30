@@ -957,6 +957,14 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   whether it fired; `-ftrivial-auto-var-init` "fixed" it only by moving the
   heap. The path now re-finds its record after the store, as does
   registration after it allocates. Receipt `2026-09-30_p2-2p8-layout-digest`.
+- **09-30 object-animation sentinel tests as bit compares, BANKED** (replay
+  identical): ~580 `__aeabi_fcmpeq` calls a frame were the generic animator's
+  `anim_wait` tests against the AOBJ_ANIM_* sentinels and its payload-vs-0.0F
+  tests; the objanim import patch compares bits (exact for every input).
+  Same-ROM gate P50 -4.7K, P95 -4.2K. A fresh gate profile puts the tail
+  (P93-97 frames, +321K over the median) on the status-change pose cluster
+  (~40K), the hurtbox kernel (~31K) and soft float (~27K). Receipt
+  `2026-09-30_p2-2p8-anim-bitcmp`.
 
 ## 7. Found along the way
 

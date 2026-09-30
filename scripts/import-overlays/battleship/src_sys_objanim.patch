@@ -1,10 +1,21 @@
 --- a/src/sys/objanim.c
 +++ b/src/sys/objanim.c
-@@ -1,4 +1,39 @@
+@@ -1,4 +1,54 @@
  #include <sys/obj.h>
 +#if defined(SSB64_TARGET_NDS)
 +#include <stdint.h>
 +#include <nds/nds_startup.h>
++#include <nds/nds_fcmp.h>
++
++/* P2-2p8: the parsers' and players' sentinel and zero tests compare bits
++ * instead of calling __aeabi_fcmpeq (~580 calls a frame on the four-CPU
++ * gate). Exact for every input: the AOBJ_ANIM_* constants are finite and
++ * non-zero, so equal bits are equal values and a NaN matches neither; the
++ * zero test folds -0.0 into +0.0 and counts a NaN as non-zero, as `!=` does. */
++extern volatile u32 gNdsObjAnimBitCompare; /* same-ROM A/B word */
++#define NDS_OA_EQ(x, c) ((gNdsObjAnimBitCompare != 0u) ?     NDS_FCMP_EQ_C((x), (c)) : ((x) == (c)))
++#define NDS_OA_NE(x, c) ((gNdsObjAnimBitCompare != 0u) ?     NDS_FCMP_NE_C((x), (c)) : ((x) != (c)))
++#define NDS_OA_NE0(x) ((gNdsObjAnimBitCompare != 0u) ?     NDS_FCMP_NE0(x) : ((x) != 0.0F))
 +
 +/* THE FREEZE THAT IS NOT A `while (TRUE);`.
 + *
@@ -36,11 +47,15 @@
 + * at least one word, so 4096 iterations is 16 KB of script eaten for one joint
 + * in one frame; no animation in the game comes near it. */
 +#define NDS_OBJANIM_EVENT_LIMIT 4096u
++#else
++#define NDS_OA_EQ(x, c) ((x) == (c))
++#define NDS_OA_NE(x, c) ((x) != (c))
++#define NDS_OA_NE0(x) ((x) != 0.0F)
 +#endif
  
  extern void syInterpCubic(Vec3f*, void*, f32);
  
-@@ -273,6 +308,9 @@
+@@ -273,10 +323,13 @@
      u32 command_kind;
      u32 flags;
      f32 payload;
@@ -48,9 +63,42 @@
 +    u32 events = 0;
 +#endif
  
-     if (dobj->anim_wait != AOBJ_ANIM_NULL)
+-    if (dobj->anim_wait != AOBJ_ANIM_NULL)
++    if (NDS_OA_NE(dobj->anim_wait, AOBJ_ANIM_NULL))
      {
-@@ -626,9 +664,29 @@
+-        if (dobj->anim_wait == AOBJ_ANIM_CHANGED)
++        if (NDS_OA_EQ(dobj->anim_wait, AOBJ_ANIM_CHANGED))
+         {
+             dobj->anim_wait = -dobj->anim_frame;
+         }
+@@ -355,7 +408,7 @@
+                         track_aobjs[i]->rate_target = 0.0F;
+                         track_aobjs[i]->kind = nGCAnimKindCubic;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             track_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -392,7 +445,7 @@
+ 
+                         track_aobjs[i]->kind = nGCAnimKindLinear;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             track_aobjs[i]->rate_base = (track_aobjs[i]->value_target - track_aobjs[i]->value_base) / payload;
+                         }
+@@ -435,7 +488,7 @@
+ 
+                         track_aobjs[i]->kind = nGCAnimKindCubic;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             track_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -626,9 +679,29 @@
  
                  // empty, but necessary
              default:
@@ -81,7 +129,34 @@
          while (dobj->anim_wait <= 0.0F);
      }
  }
-@@ -836,6 +894,9 @@
+@@ -723,7 +796,7 @@
+     f32 temp_f22;
+     f32 temp_f24;
+ 
+-    if (dobj->anim_wait != AOBJ_ANIM_NULL) 
++    if (NDS_OA_NE(dobj->anim_wait, AOBJ_ANIM_NULL)) 
+     {
+         aobj = dobj->aobj;
+ 
+@@ -731,7 +804,7 @@
+         {
+             if (aobj->kind != nGCAnimKindNone)
+             {
+-                if (dobj->anim_wait != AOBJ_ANIM_END) 
++                if (NDS_OA_NE(dobj->anim_wait, AOBJ_ANIM_END)) 
+                 { 
+                     aobj->length += dobj->anim_speed; 
+                 }
+@@ -820,7 +893,7 @@
+             }
+             aobj = aobj->next;
+         }
+-        if (dobj->anim_wait == AOBJ_ANIM_END) 
++        if (NDS_OA_EQ(dobj->anim_wait, AOBJ_ANIM_END)) 
+         { 
+             dobj->anim_wait = AOBJ_ANIM_NULL;
+         }
+@@ -836,10 +909,13 @@
      u32 command_kind;
      u32 flags;
      f32 payload;
@@ -89,9 +164,51 @@
 +    u32 events = 0;
 +#endif
  
-     if (mobj->anim_wait != AOBJ_ANIM_NULL)
+-    if (mobj->anim_wait != AOBJ_ANIM_NULL)
++    if (NDS_OA_NE(mobj->anim_wait, AOBJ_ANIM_NULL))
      {
-@@ -1234,9 +1295,29 @@
+-        if (mobj->anim_wait == AOBJ_ANIM_CHANGED)
++        if (NDS_OA_EQ(mobj->anim_wait, AOBJ_ANIM_CHANGED))
+         {
+             mobj->anim_wait = -mobj->anim_frame;
+         }
+@@ -924,7 +1000,7 @@
+ 
+                         mat_aobjs[i]->kind = nGCAnimKindCubic;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             mat_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -961,7 +1037,7 @@
+ 
+                         mat_aobjs[i]->kind = nGCAnimKindLinear;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             mat_aobjs[i]->rate_base = (mat_aobjs[i]->value_target - mat_aobjs[i]->value_base) / payload;
+                         }
+@@ -1005,7 +1081,7 @@
+ 
+                         mat_aobjs[i]->kind = nGCAnimKindCubic;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             mat_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -1189,7 +1265,7 @@
+ 
+                         matspecial_aobjs[i]->kind = nGCAnimKindLinear;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             matspecial_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -1234,9 +1310,29 @@
                  break;
  
              default:
@@ -122,7 +239,61 @@
          while (mobj->anim_wait <= 0.0F);
      }
  }
-@@ -2493,6 +2574,9 @@
+@@ -1257,7 +1353,7 @@
+     SYColorPack sp38; // sp38
+     SYColorPack sp34; // sp34
+ 
+-    if (mobj->anim_wait != AOBJ_ANIM_NULL) 
++    if (NDS_OA_NE(mobj->anim_wait, AOBJ_ANIM_NULL)) 
+     {
+         aobj = mobj->aobj;
+         
+@@ -1265,7 +1361,7 @@
+         {
+             if (aobj->kind != nGCAnimKindNone) 
+             {
+-                if (mobj->anim_wait != AOBJ_ANIM_END) 
++                if (NDS_OA_NE(mobj->anim_wait, AOBJ_ANIM_END)) 
+                 { 
+                     aobj->length += mobj->anim_speed; 
+                 }
+@@ -1418,7 +1514,7 @@
+             }
+             aobj = aobj->next;
+         }
+-        if (mobj->anim_wait == AOBJ_ANIM_END)
++        if (NDS_OA_EQ(mobj->anim_wait, AOBJ_ANIM_END))
+         {
+             mobj->anim_wait = AOBJ_ANIM_NULL;
+         }
+@@ -1588,7 +1684,7 @@
+ 
+     if ((aobj != NULL) && (aobj->kind != nGCAnimKindNone))
+     {
+-        if ((is_desc_or_dobj == 0) && (dobj->anim_wait != AOBJ_ANIM_END))
++        if ((is_desc_or_dobj == 0) && (NDS_OA_NE(dobj->anim_wait, AOBJ_ANIM_END)))
+         {
+             aobj->length += dobj->anim_speed;
+         }
+@@ -1624,7 +1720,7 @@
+ 
+             if ((aobj != NULL) && (aobj->kind != nGCAnimKindNone))
+             {
+-                if ((is_desc_or_dobj == 0) && (dobj->anim_wait != AOBJ_ANIM_END))
++                if ((is_desc_or_dobj == 0) && (NDS_OA_NE(dobj->anim_wait, AOBJ_ANIM_END)))
+                 {
+                     aobj->length += dobj->anim_speed;
+                 }
+@@ -1708,7 +1804,7 @@
+         value = scale;
+         break;
+     }
+-    if (value != 0.0F)
++    if (NDS_OA_NE0(value))
+     {
+         if (TRUE);
+ 
+@@ -2493,10 +2589,13 @@
      u32 command_kind;
      u32 flags;
      f32 payload;
@@ -130,9 +301,42 @@
 +    u32 events = 0;
 +#endif
  
-     if (cobj->anim_wait != AOBJ_ANIM_NULL)
+-    if (cobj->anim_wait != AOBJ_ANIM_NULL)
++    if (NDS_OA_NE(cobj->anim_wait, AOBJ_ANIM_NULL))
      {
-@@ -2815,8 +2899,28 @@
+-        if (cobj->anim_wait == AOBJ_ANIM_CHANGED)
++        if (NDS_OA_EQ(cobj->anim_wait, AOBJ_ANIM_CHANGED))
+         {
+             cobj->anim_wait = -cobj->anim_frame;
+         }
+@@ -2574,7 +2673,7 @@
+                         track_aobjs[i]->rate_target = 0.0F;
+                         track_aobjs[i]->kind = nGCAnimKindCubic;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             track_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -2611,7 +2710,7 @@
+ 
+                         track_aobjs[i]->kind = nGCAnimKindLinear;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             track_aobjs[i]->rate_base = (track_aobjs[i]->value_target - track_aobjs[i]->value_base) / payload;
+                         }
+@@ -2654,7 +2753,7 @@
+ 
+                         track_aobjs[i]->kind = nGCAnimKindCubic;
+ 
+-                        if (payload != 0.0F)
++                        if (NDS_OA_NE0(payload))
+                         {
+                             track_aobjs[i]->length_invert = 1.0F / payload;
+                         }
+@@ -2815,8 +2914,28 @@
  
                  // empty, but necessary
              default:
@@ -161,3 +365,30 @@
          }
          while (cobj->anim_wait <= 0.0F);
      }
+@@ -2824,7 +2943,7 @@
+ 
+ void gcPlayCObjCamAnim(CObj *cobj)
+ {
+-    if (cobj->anim_wait != AOBJ_ANIM_NULL)
++    if (NDS_OA_NE(cobj->anim_wait, AOBJ_ANIM_NULL))
+     {
+         AObj *aobj = cobj->aobj;
+         f32 value;
+@@ -2833,7 +2952,7 @@
+         {
+             if (aobj->kind != nGCAnimKindNone)
+             {
+-                if (cobj->anim_wait != AOBJ_ANIM_END)
++                if (NDS_OA_NE(cobj->anim_wait, AOBJ_ANIM_END))
+                 {
+                     aobj->length += cobj->anim_speed;
+                 }
+@@ -2905,7 +3024,7 @@
+             }
+             aobj = aobj->next;
+         }
+-        if (cobj->anim_wait == AOBJ_ANIM_END)
++        if (NDS_OA_EQ(cobj->anim_wait, AOBJ_ANIM_END))
+         {
+             cobj->anim_wait = AOBJ_ANIM_NULL;
+         }
