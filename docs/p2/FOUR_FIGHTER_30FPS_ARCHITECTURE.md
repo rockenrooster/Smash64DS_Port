@@ -946,6 +946,17 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   the simulation's digest depends on the build's heap layout (two layouts
   differ on Dream Land and Saffron with every new word off; kernel modes
   agree within each) -- open. Receipt `2026-09-30_p2-2p8-map-collision`.
+- **09-30 build-dependent digest: a stale loaded-file pointer, FIXED** (every
+  layout now agrees on all nine stages; gate digest unchanged): a fighter
+  clip's full load registered its record, stored the raw template in the
+  animation cache, then finalized the record -- but the store can wrap the
+  cache ring over another fighter's pinned zero-copy clip, whose rescue
+  compacts the loaded-file table, so finalize fixed up a different file and
+  the clip kept its relocation chain (Samus's back roll played no animation
+  and ended at once). The arena's size, set by the build's heap, decided
+  whether it fired; `-ftrivial-auto-var-init` "fixed" it only by moving the
+  heap. The path now re-finds its record after the store, as does
+  registration after it allocates. Receipt `2026-09-30_p2-2p8-layout-digest`.
 
 ## 7. Found along the way
 

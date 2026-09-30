@@ -32,7 +32,7 @@ MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
 SZ entry `..._sector-z-arwing`; refuted `..._refuted-levers`; stage GX `..._stage-gx-memo`; objects `..._object-fast-lane`; SMULL `..._sim-codegen`. Lab
 sweep ROM (NDS_LAB_FOURCPU_SWEEP; build it with NDS_P2_PIKACHU/YOSHI/NESS/PURIN=1) P95
 1.21M-1.58M by roster. Digest `--sequence --resync 4`. P95 frames carry 1.2-1.6 status
-changes. Open: sim digest depends on heap layout (`..._map-collision`); lean remats (DK 13/match).
+changes. Fixed: build-dependent digest (stale loaded-file ptr, `..._layout-digest`). Open: lean remats (DK 13/match).
 
 ## Continue, do not restart
 

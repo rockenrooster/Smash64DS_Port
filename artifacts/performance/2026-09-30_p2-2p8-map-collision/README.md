@@ -69,7 +69,7 @@ backoff, Mushroom Kingdom read P50 +4.3K (its checks were pure cost) and
 Zebes +5.5K (no wall groups, but the call-level truncations ran anyway; they
 are now lazy).
 
-## Found: the simulation depends on the build's heap layout
+## Found: the simulation depended on the build (resolved)
 
 The `cb` build's all-off arm differs from the previous builds' (`cq0`,
 `l12`) on Dream Land (from frame 1370) and Saffron (from 1137), though every
@@ -82,8 +82,13 @@ differ. An inert 64-byte BSS pad on HEAD changes nothing on six stages
 (`st*`) moves Dream Land back to the old digest and leaves Saffron on the new
 one. Something in the simulation reads memory whose contents depend on heap
 placement or stack history (the kind-group array grew by 4 bytes a group
-here, shifting every later allocation of the stage load). Open; the next
-step is a per-component digest at those frames to name the object.
+here, shifting every later allocation of the stage load).
+
+Resolved (same day, `2026-09-30_p2-2p8-layout-digest`): not an
+uninitialised read but a stale loaded-file pointer. A fighter clip's full
+load finalized a record that an animation-cache pin rescue had moved, so the
+clip kept its raw relocation chain and played no animation; whether the
+cache's ring reached a pin depended on the arena size, hence on the build.
 
 ## Gate
 

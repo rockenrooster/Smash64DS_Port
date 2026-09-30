@@ -6923,6 +6923,17 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
                 ndsRelocRecordExternalFixupFail(asset_id);
                 return NULL;
             }
+            /* An allocation can take the anim cache's elastic bytes back,
+             * and a pinned clip's rescue then compacts sNdsRelocLoadedFiles
+             * (see ndsRelocForceLoadFighterAObj16File): find the record
+             * again rather than write through the one looked up before. */
+            loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+            if ((loaded == NULL) &&
+                (sNdsRelocLoadedFileCount >= NDS_RELOC_LOADED_FILE_CAPACITY))
+            {
+                gNdsOpeningRoomRelocPointerFixupFailCount++;
+                return NULL;
+            }
         }
         memcpy(owned_ids, source_ids, count * sizeof(*owned_ids));
     }
@@ -16259,6 +16270,20 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * fixups make the image position-dependent and unusable as a template. */
     ndsR2AnimCacheStore(asset_id, heap, (u32)asset_size, &header,
                         NDS_R2_ANIM_CACHE_READY_RAW);
+    /* The store can wrap the raw ring over another fighter's pinned
+     * zero-copy clip. That clip's rescue re-registers it and compacts
+     * sNdsRelocLoadedFiles (ndsRelocPrepareFighterAnimHeapOverwrite), so
+     * `loaded` may now name a different record: finalizing that one left this
+     * clip's relocation chain unresolved, every joint resolved NULL and the
+     * fighter's new status played no animation (a Samus roll that ended the
+     * tick it began, 2026-09-30). Whether the ring reaches a pin depends on
+     * the arena's size, i.e. on the build's heap, so the simulation followed
+     * the code layout. This clip's record is the one that holds its heap. */
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    if ((loaded == NULL) || (loaded->data != heap))
+    {
+        goto fail;
+    }
 #endif
     gNdsRelocForceFighterAnimFallbackStep = 4u;
     if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
