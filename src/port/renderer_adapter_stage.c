@@ -4513,6 +4513,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         camera_gobj_ptr);
 }
 
+#if NDS_P2_STAGE_SECTOR
+extern DObj *ndsGRSectorPlatformDObj(void);
+#endif
+
 static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     void *camera_gobj_ptr)
 {
@@ -4791,11 +4795,24 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
     workspace->frame.topology_generation = workspace->topology_generation;
     workspace->frame.topology_stamp = workspace->topology_stamp;
     workspace->frame.hidden_binding_mask = 0u;
-    for (i = 0u; i < workspace->binding_count; i++)
     {
-        if ((workspace->binding_dobjs[i]->flags & DOBJ_FLAG_NOTEXTURE) != 0u)
+#if NDS_P2_STAGE_SECTOR
+        /* Owner (r58): the Sector Z wing-platform collision proxy is not
+         * drawn (ndsGRSectorPlatformDObj). */
+        const DObj *hidden_dobj = ndsGRSectorPlatformDObj();
+#else
+        const DObj *hidden_dobj = NULL;
+#endif
+
+        for (i = 0u; i < workspace->binding_count; i++)
         {
-            workspace->frame.hidden_binding_mask |= (u64)1u << i;
+            if (((workspace->binding_dobjs[i]->flags & DOBJ_FLAG_NOTEXTURE) !=
+                 0u) ||
+                ((hidden_dobj != NULL) &&
+                 (workspace->binding_dobjs[i] == hidden_dobj)))
+            {
+                workspace->frame.hidden_binding_mask |= (u64)1u << i;
+            }
         }
     }
 #if NDS_TASK103_STAGE_RUN_PHASE

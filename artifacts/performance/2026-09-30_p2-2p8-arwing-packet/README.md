@@ -80,6 +80,17 @@ change's code and its 7.5 KB arena (allocated whatever the word, so every
 later scene allocation sits 7,552 B further on). That part is layout, not
 the packet, and it is what a cross-build number banks.
 
+Layout experiment (lab ROM `C48730C2`, reverted, not shipped): the arena
+rounded to whole kilobytes (the D-cache set period) and skipped while the word
+is 0. Owner roster: padded arena on (`lay1_sz`) 1,364,544 vs 1,366,784
+(-2.2K); no arena, packet off (`lay0_sz`) 1,392,576 vs arena, packet off
+1,396,992 (-4.4K) and vs the table build 1,381,248 (+11.3K). Default roster:
+`layd1_sz` 1,473,600 vs 1,472,768 (+0.8K); `layd0_sz` 1,481,920 vs 1,500,288
+(-18.4K) and vs the table build 1,473,600 (+8.3K). So padding buys nothing,
+most of the drift is the code layout, and the rest moves with timing: heap
+low-water went 64,576 -> 53,712 when the arena was *removed* (idle-time clip
+prefetch decisions follow frame timing). Digests identical throughout.
+
 Counters (owner / default roster): 5,824 of 5,848 / 7,408 of 7,416 state
 replays sent by DMA; records 24 / 8; **faults 0**; native failures 0 / 119
 (the default roster's standing count) in both arms; heap low-water 86,664 /

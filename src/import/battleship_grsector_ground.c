@@ -207,4 +207,23 @@ DObj *ndsGRSectorArwingMapDObj11(void)
     return gGRCommonStruct.sector.map_dobjs[11];
 }
 
+/* The Arwing's wing-platform collision proxy: stage layer 1's yakumono DObj 1,
+ * which grSectorArwingUpdateCollisions moves to the Arwing every tick
+ * (grsector.c:999-1008). Its list (O2R file 109, 0x75F0 -> 0x7638) is a flat
+ * six-triangle strip that sets light colours and carries normals in its vertex
+ * colour fields; drawn unlit here it showed as an orange slab on the Arwing
+ * that stays level through a barrel roll. Owner (r58): remove it. The renderer
+ * leaves its binding out (renderer_adapter_stage.c); the DObj itself, its
+ * collision and every flag stay as the source has them. NULL off Sector Z. */
+DObj *ndsGRSectorPlatformDObj(void)
+{
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindSector) ||
+        (gMPCollisionYakumonoDObjs == NULL) || (gMPCollisionYakumonosNum < 2))
+    {
+        return NULL;
+    }
+    return gMPCollisionYakumonoDObjs->dobjs[1];
+}
+
 #endif /* NDS_P2_STAGE_SECTOR */

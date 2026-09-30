@@ -15234,6 +15234,20 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
             continue;
         }
         scanned++;
+        /* objdisplay.c gcDrawDObjTree / gcDrawDObjTreeDLLinks (:1563, :1707):
+         * a HIDDEN DObj draws nothing and neither does its subtree; its
+         * siblings still draw. The Sector Z Arwing shows one of its DObjs 7
+         * and 9 and hides the other (grsector.c:457-467); the scan drew the
+         * hidden one too, an orange shape the owner read as a debug overlay
+         * of the platform (r58). */
+        if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0)
+        {
+            if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
+            {
+                stack[stack_count++] = dobj->sib_next;
+            }
+            continue;
+        }
         if (is_layer != FALSE)
         {
             gNdsStageGCDrawAllLoopLayerDObjMask |= owner_mask;
@@ -15259,7 +15273,10 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
             }
         }
 #if NDS_RENDERER_HW_TRIANGLES
+        /* DOBJ_FLAG_NOTEXTURE: the source skips this DObj's own lists and
+         * still draws its children (objdisplay.c:1568, :1714). */
         if ((dobj->dv != NULL) &&
+            ((dobj->flags & DOBJ_FLAG_NOTEXTURE) == 0) &&
             (sNdsStageGCDrawAllLoopHardwareSubmitActive != FALSE) &&
             ((callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) ||
              (callback_kind ==
