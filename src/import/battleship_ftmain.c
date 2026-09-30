@@ -308,6 +308,10 @@ void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
                                                s32 status_id);
 #endif
 
+/* See the flattened-walk block in ftMainSetStatus below. */
+__attribute__((used, section(".data"))) volatile u32 gNdsFtStatusFlatKeep = 1u;
+__attribute__((used)) volatile u32 gNdsFtStatusFlatKept;
+
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
 {
@@ -318,6 +322,9 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 
     sNdsLabStatusDepth++;
 #endif
+    FTStruct *nds_topology_fp;
+    u32 nds_topology_word;
+
     if (ndsDiagnosticsHandleImportedFTMainSetStatusBefore(fighter_gobj,
             status_id, frame_begin, anim_speed, flags) != FALSE)
     {
@@ -326,8 +333,15 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
 #endif
         return;
     }
+    nds_topology_fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+    nds_topology_word = (nds_topology_fp != NULL) ?
+        nds_topology_fp->anim_desc.word : 0xffffffffu;
     battleship_ftMainSetStatus(fighter_gobj, status_id, frame_begin,
                                anim_speed, flags);
+    if (nds_topology_fp != NULL)
+    {
+        nds_topology_word |= nds_topology_fp->anim_desc.word;
+    }
 #if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP && \
     NDS_TICK_HUD && !NDS_TICK_HUD_SRC_SPLIT
     /* LAB: status changes per frame, in the SPHC column (unused without the
@@ -350,8 +364,26 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
      * Invalidate BOTH consumers that key on those stable identities: the
      * flattened per-frame transform-invalidation walk and the renderer caches.
      * The former is gameplay-critical: ftCommonCapturePulledRotateScale reads
-     * the dynamically enabled item-heavy joint's world matrix. */
-    ndsFTParamsInvalidateFlatWalkCacheForFighter(fighter_gobj);
+     * the dynamically enabled item-heavy joint's world matrix.
+     *
+     * P2-2p8 (2026-09-29): the setter touches the topology only through the
+     * hidden-part loop (ftmain.c:4630-4651) and the TransN re-link
+     * (:4710-4722), and both are driven by the anim_desc bits above the five
+     * flag bits: the loop runs an add, update or eject for every such bit set
+     * in the OLD or the NEW word, and TransN's is one of them. With none set
+     * in either word no DObj was added, ejected or re-linked, the flattened
+     * walk still lists the same FTParts in the same order, and re-walking it
+     * is ~3.6K ticks a change for nothing. Same-ROM A/B word
+     * gNdsFtStatusFlatKeep (0 = always drop). */
+    if ((gNdsFtStatusFlatKeep == 0u) || (nds_topology_fp == NULL) ||
+        ((nds_topology_word & ~0x1Fu) != 0u))
+    {
+        ndsFTParamsInvalidateFlatWalkCacheForFighter(fighter_gobj);
+    }
+    else
+    {
+        gNdsFtStatusFlatKept++;
+    }
     ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);
 #if NDS_P2_HURTBOX_REJECT
     /* The same topology change retires the hurtbox reject's cached worlds

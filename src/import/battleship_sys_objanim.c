@@ -331,28 +331,52 @@ static NDS_R2_CUBIC_ATTR f32 ndsR2CubicValueFixed(const AObj *aobj)
         NDS_R2_AQ_T_MAX);
     s32 length_q = ndsR2AnimClamp(
         ndsR2F32ToFixed(aobj->length, NDS_R2_CUBIC_VF), NDS_R2_AQ_LEN_MAX);
+    s32 t2;
+    s32 t3;
+    s32 omt2;
+    s32 tmt;
+    s32 h_vb;
+    s32 h_vt;
+    s32 h_rb;
+    s32 h_rt;
+    s64 acc;
+
+    /* NDS_R2_AQ_OPAQUE (nds_anim_fixed.h): keeps each product a single
+     * SMULL/SMLAL instead of the 64 x 64 sequence GCC emits once it has proved
+     * the truncations below are no-ops. Values unchanged. */
+    NDS_R2_AQ_OPAQUE(t);
+    NDS_R2_AQ_OPAQUE(length_q);
     /* t is Q16 and normally in [0,1], so t*t reaches 2^32 and needs the 64-bit
      * product. Every requantising shift rounds rather than truncates. */
-    s32 t2 = (s32)((((s64)t * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
-    s32 t3 = (s32)((((s64)t2 * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
+    t2 = (s32)((((s64)t * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
+    NDS_R2_AQ_OPAQUE(t2);
+    t3 = (s32)((((s64)t2 * t) + (NDS_R2_CUBIC_BONE / 2)) >> NDS_R2_CUBIC_BF);
+    NDS_R2_AQ_OPAQUE(t3);
     /* (1-t)^2 == 1 - 2t + t^2 exactly, so reuse t2 instead of squaring (1-t).
      * Cheaper by a multiply AND a shift, and it deletes that rounding step
      * rather than merely rounding it -- which matters because near t=1 the
      * square is small and a truncated one loses most of its significance. */
-    s32 omt2 = (t2 - (2 * t)) + NDS_R2_CUBIC_BONE;
-    s32 h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_CUBIC_BONE;
-    s32 h_vt = (3 * t2) - (2 * t3);
+    omt2 = (t2 - (2 * t)) + NDS_R2_CUBIC_BONE;
+    tmt = t2 - t;
+    h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_CUBIC_BONE;
+    h_vt = (3 * t2) - (2 * t3);
+    NDS_R2_AQ_OPAQUE(omt2);
+    NDS_R2_AQ_OPAQUE(tmt);
     /* These two carry a factor of `length`, which is unbounded, so they are the
      * only places that need a wider intermediate for range as well as rounding.
      * Q12 value x Q16 basis, shifted by VF, is Q16 again. SMULL/SMLAL make a
      * 32x32->64 on ARM9 a single instruction; it is the 64-bit ADDS/ADCS chains
      * that arm A paid for, and there are none left here. */
-    s32 h_rb = (s32)((((s64)length_q * omt2) + (1 << (NDS_R2_CUBIC_VF - 1))) >>
+    h_rb = (s32)((((s64)length_q * omt2) + (1 << (NDS_R2_CUBIC_VF - 1))) >>
         NDS_R2_CUBIC_VF);
-    s32 h_rt = (s32)((((s64)length_q * (t2 - t)) +
+    h_rt = (s32)((((s64)length_q * tmt) +
         (1 << (NDS_R2_CUBIC_VF - 1))) >> NDS_R2_CUBIC_VF);
+    NDS_R2_AQ_OPAQUE(h_vb);
+    NDS_R2_AQ_OPAQUE(h_vt);
+    NDS_R2_AQ_OPAQUE(h_rb);
+    NDS_R2_AQ_OPAQUE(h_rt);
     /* Q12 x Q16 = Q28 in the accumulator, shifted back to Q12 at the end. */
-    s64 acc = (s64)ndsR2F32ToFixed(aobj->value_base, NDS_R2_CUBIC_VF) * h_vb;
+    acc = (s64)ndsR2F32ToFixed(aobj->value_base, NDS_R2_CUBIC_VF) * h_vb;
 
     gNdsR2CubicEvals++;
     acc += (s64)ndsR2F32ToFixed(aobj->value_target, NDS_R2_CUBIC_VF) * h_vt;

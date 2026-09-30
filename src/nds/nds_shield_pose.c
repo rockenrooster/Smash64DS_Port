@@ -581,6 +581,17 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseApplyScript(
     return TRUE;
 }
 
+/* Which blob each scratch row was last decoded from (P2-2p8). The scratch is
+ * shared by every guarding fighter, so each apply decodes its base rows again
+ * (~3.8K ticks an all-joint apply); a row that already holds this blob's
+ * values, decoded in this heap generation, is left as it is. Only
+ * ndsShieldPoseRefreshBaseRow writes the scratch. Same-ROM A/B word
+ * gNdsShieldPoseBaseMemo (0 = decode every time). */
+static const void *sNdsShieldPoseScratchOwner[NDS_SHIELD_POSE_MAX_BASE_COUNT];
+static u32 sNdsShieldPoseScratchGeneration;
+__attribute__((used, section(".data"))) volatile u32 gNdsShieldPoseBaseMemo = 1u;
+__attribute__((used)) volatile u32 gNdsShieldPoseBaseMemoHits;
+
 static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
     const NDSShieldPoseView *view, u32 row)
 {
@@ -596,6 +607,21 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
     {
         return FALSE;
     }
+    if (sNdsShieldPoseScratchGeneration != gNdsTaskmanHeapGeneration)
+    {
+        for (i = 0u; i < NDS_SHIELD_POSE_MAX_BASE_COUNT; i++)
+        {
+            sNdsShieldPoseScratchOwner[i] = NULL;
+        }
+        sNdsShieldPoseScratchGeneration = gNdsTaskmanHeapGeneration;
+    }
+    if ((gNdsShieldPoseBaseMemo != 0u) &&
+        (sNdsShieldPoseScratchOwner[row] == (const void *)view->h))
+    {
+        gNdsShieldPoseBaseMemoHits++;
+        return TRUE;
+    }
+    sNdsShieldPoseScratchOwner[row] = NULL;
     src = view->base_data + view->base_offsets[row];
     if (src >= end)
     {
@@ -624,6 +650,7 @@ static s32 NDS_SHIELD_POSE_HOT_CODE ndsShieldPoseRefreshBaseRow(
                              : NDS_SHIELD_POSE_BASE_ROT_FRAC);
     }
     dst->scale.x = dst->scale.y = dst->scale.z = 1.0F;
+    sNdsShieldPoseScratchOwner[row] = (const void *)view->h;
     return TRUE;
 }
 

@@ -207,6 +207,20 @@ static inline s32 ndsR2AnimArgToQ(s32 arg, s32 shift)
 #define NDS_R2_AQ_T_MAX  (2 * NDS_R2_AQ_BONE)
 #define NDS_R2_AQ_LEN_MAX (1024 << NDS_R2_AQ_LF)
 
+/* An empty asm that claims to rewrite `x`. The clamps below bound every s32
+ * intermediate, and from those bounds GCC proves the (s32) truncations are
+ * no-ops, keeps the wider values, and then multiplies them 64 x 64 (UMULL plus
+ * two MLA per product) instead of one SMULL/SMLAL: the cubic arm compiled to
+ * 115 instructions, 144 cycles an evaluation on the four-CPU profile
+ * (P2-2p8, 2026-09-29). Withdrawing that range knowledge keeps each value a
+ * 32-bit register. The values are unchanged -- this removes information from
+ * the compiler, never from the arithmetic. The host harness gets a no-op. */
+#if defined(__arm__)
+#define NDS_R2_AQ_OPAQUE(x) __asm__("" : "+r"(x))
+#else
+#define NDS_R2_AQ_OPAQUE(x) ((void)0)
+#endif
+
 NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimClamp(s32 v, s32 limit)
 {
     if (v > limit)
@@ -314,17 +328,37 @@ NDS_R2_AQ_KERNEL_ATTR s32 ndsR2AnimEvalQ(s32 len, s32 inv, s32 vb, s32 vt,
         s32 t = ndsR2AnimClamp(
             (s32)((((s64)len * inv) + ((s64)1 << (NDS_R2_AQ_TSH - 1))) >>
                 NDS_R2_AQ_TSH), NDS_R2_AQ_T_MAX);
-        s32 t2 = (s32)((((s64)t * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
-        s32 t3 = (s32)((((s64)t2 * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
-        s32 omt2 = (t2 - (2 * t)) + NDS_R2_AQ_BONE;
-        s32 h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_AQ_BONE;
-        s32 h_vt = (3 * t2) - (2 * t3);
-        s32 h_rb = (s32)((((s64)lenc * omt2) + (1 << (NDS_R2_AQ_VF - 1))) >>
-            NDS_R2_AQ_VF);
-        s32 h_rt = (s32)((((s64)lenc * (t2 - t)) + (1 << (NDS_R2_AQ_VF - 1))) >>
-            NDS_R2_AQ_VF);
-        s64 acc = (s64)vb * h_vb;
+        s32 t2;
+        s32 t3;
+        s32 omt2;
+        s32 tmt;
+        s32 h_vb;
+        s32 h_vt;
+        s32 h_rb;
+        s32 h_rt;
+        s64 acc;
 
+        NDS_R2_AQ_OPAQUE(t);
+        NDS_R2_AQ_OPAQUE(lenc);
+        t2 = (s32)((((s64)t * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
+        NDS_R2_AQ_OPAQUE(t2);
+        t3 = (s32)((((s64)t2 * t) + (NDS_R2_AQ_BONE / 2)) >> NDS_R2_AQ_BF);
+        NDS_R2_AQ_OPAQUE(t3);
+        omt2 = (t2 - (2 * t)) + NDS_R2_AQ_BONE;
+        tmt = t2 - t;
+        h_vb = ((2 * t3) - (3 * t2)) + NDS_R2_AQ_BONE;
+        h_vt = (3 * t2) - (2 * t3);
+        NDS_R2_AQ_OPAQUE(omt2);
+        NDS_R2_AQ_OPAQUE(tmt);
+        h_rb = (s32)((((s64)lenc * omt2) + (1 << (NDS_R2_AQ_VF - 1))) >>
+            NDS_R2_AQ_VF);
+        h_rt = (s32)((((s64)lenc * tmt) + (1 << (NDS_R2_AQ_VF - 1))) >>
+            NDS_R2_AQ_VF);
+        NDS_R2_AQ_OPAQUE(h_vb);
+        NDS_R2_AQ_OPAQUE(h_vt);
+        NDS_R2_AQ_OPAQUE(h_rb);
+        NDS_R2_AQ_OPAQUE(h_rt);
+        acc = (s64)vb * h_vb;
         acc += (s64)vt * h_vt;
         acc += (s64)rb * h_rb;
         acc += (s64)rt * h_rt;

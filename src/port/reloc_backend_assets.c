@@ -13811,6 +13811,17 @@ volatile u32 gNdsR2AnimCacheArenaReserveCount;
 volatile u32 gNdsR2AnimCacheArenaReserveFailCount;
 volatile u32 gNdsR2AnimCacheArenaInvalidations;
 volatile u32 gNdsR2AnimCacheRawRecycles;
+/* Stores of an asset this match already stored once: each is a clip the cache
+ * held and gave up, then read from storage again. Cleared by
+ * ndsR2AnimCachePreloadMatch. */
+#define NDS_R2_ANIM_STORED_BITS 72u
+static u32 sNdsR2AnimStoredThisMatch[NDS_R2_ANIM_STORED_BITS];
+__attribute__((used)) volatile u32 gNdsR2AnimCacheRestores;
+#if NDS_TICK_HUD
+/* Tick-HUD census: one bit per fighter clip fetched this match (hit or read),
+ * cleared with the stores above. */
+__attribute__((used)) volatile u32 gNdsAnimUseBits[NDS_R2_ANIM_STORED_BITS];
+#endif
 /* ANIM_REQUIRED_BYTES, measured. The plan (docs/RAM_RECOVERY_PLAN.md 0.3/6.1)
  * forbids sizing the arena from the old ~82 KiB estimate, and the reject COUNT
  * cannot size it either: a refused asset is re-requested every time it is
@@ -15228,6 +15239,17 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     }
     gNdsR2AnimCacheFills++;
     gNdsR2AnimCacheBytes += size;
+    if (asset_id < (NDS_R2_ANIM_STORED_BITS * 32u))
+    {
+        u32 word = asset_id >> 5;
+        u32 bit = 1u << (asset_id & 31u);
+
+        if ((sNdsR2AnimStoredThisMatch[word] & bit) != 0u)
+        {
+            gNdsR2AnimCacheRestores++;
+        }
+        sNdsR2AnimStoredThisMatch[word] |= bit;
+    }
 }
 
 volatile u32 gNdsR2AnimWarmLoaded;
@@ -15641,6 +15663,17 @@ void ndsR2AnimCachePreloadMatch(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
     ndsRendererAdapterPrepareWorldCaches();
+#endif
+    memset(sNdsR2AnimStoredThisMatch, 0, sizeof(sNdsR2AnimStoredThisMatch));
+#if NDS_TICK_HUD
+    {
+        u32 i;
+
+        for (i = 0u; i < NDS_R2_ANIM_STORED_BITS; i++)
+        {
+            gNdsAnimUseBits[i] = 0u;
+        }
+    }
 #endif
     sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     /* Arm the walk AND settle ownership first. This is the second-entry seam:
@@ -16212,6 +16245,13 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
          * consulted, so it is still paid on every acquisition. The asset -> path
          * discovery (gNdsK0AfterGoPathLookups) is the half the pack removes. */
         NDS_K0_MARK(gNdsK0AfterGoTokenResolves, asset_id);
+#if NDS_TICK_HUD && NDS_R2_ANIM_CACHE
+        /* Census: which fighter clips this match fetched (hit or read). */
+        if (asset_id < (NDS_R2_ANIM_STORED_BITS * 32u))
+        {
+            gNdsAnimUseBits[asset_id >> 5] |= 1u << (asset_id & 31u);
+        }
+#endif
         file = ndsRelocForceLoadFighterAObj16File(token, asset_id, heap);
 #if NDS_FIGHTER_ANIM_AUDIT
         gNdsFighterAnimAuditLoadSerial++;
