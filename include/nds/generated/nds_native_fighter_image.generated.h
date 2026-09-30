@@ -97,7 +97,10 @@ typedef struct NDSNativePreparedDenseVertex
 #define NDS_NATIVE_IMAGE_SLOT_BOSS 22u
 #define NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1 23u
 #define NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1 24u
-#define NDS_NATIVE_IMAGE_OWNER_SLOTS 25u
+#define NDS_NATIVE_IMAGE_SLOT_METAKNIGHT 25u
+#define NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1 26u
+#define NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2 27u
+#define NDS_NATIVE_IMAGE_OWNER_SLOTS 28u
 
 /* One row per image owner: slot suffix, nitro basename, and the two
  * image struct types whose sizeof() is the byte count. This is the
@@ -132,6 +135,9 @@ typedef struct NDSNativePreparedDenseVertex
     NDS_NATIVE_OWNER_IMAGE_ROW_BOSS(X) \
     NDS_NATIVE_OWNER_IMAGE_ROW_MARIO_SKELETON1(X) \
     NDS_NATIVE_OWNER_IMAGE_ROW_FOX_SKELETON1(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT_SKELETON1(X) \
+    NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT_SKELETON2(X) \
     /* end */
 
 #if NDS_P2_LUIGI
@@ -334,6 +340,30 @@ typedef struct NDSNativePreparedDenseVertex
 #else
 #define NDS_NATIVE_OWNER_IMAGE_ROW_FOX_SKELETON1(X)
 #endif
+#if NDS_P4_METAKNIGHT
+#define NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT, \
+      "nitro:/fighters/metaknight_high.bin", "nitro:/fighters/metaknight_low.bin", \
+      NDSNativeMetaknightHighImage, NDSNativeMetaknightLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT(X)
+#endif
+#if NDS_P4_METAKNIGHT
+#define NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT_SKELETON1(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1, \
+      "nitro:/fighters/metaknight_skeleton1_high.bin", "nitro:/fighters/metaknight_skeleton1_low.bin", \
+      NDSNativeMetaknight_Skeleton1HighImage, NDSNativeMetaknight_Skeleton1LowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT_SKELETON1(X)
+#endif
+#if NDS_P4_METAKNIGHT
+#define NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT_SKELETON2(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2, \
+      "nitro:/fighters/metaknight_skeleton2_high.bin", "nitro:/fighters/metaknight_skeleton2_low.bin", \
+      NDSNativeMetaknight_Skeleton2HighImage, NDSNativeMetaknight_Skeleton2LowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_ROW_METAKNIGHT_SKELETON2(X)
+#endif
 
 /* Owners whose image tables are NOT taken from an image in this build,
  * i.e. the ones ndsRendererNativeVerifyOwnerImage walks. Same rows,
@@ -362,6 +392,7 @@ typedef struct NDSNativePreparedDenseVertex
     NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_NPURIN(X) \
     NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_NNESS(X) \
     NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_BOSS(X) \
+    NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_METAKNIGHT(X) \
     /* end */
 
 #if NDS_P2_LUIGI && !NDS_NATIVE_OWNER_IMAGE_LUIGI
@@ -524,6 +555,13 @@ typedef struct NDSNativePreparedDenseVertex
       NDSNativeBossHighImage, NDSNativeBossLowImage)
 #else
 #define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_BOSS(X)
+#endif
+#if NDS_P4_METAKNIGHT && !NDS_NATIVE_OWNER_IMAGE_METAKNIGHT
+#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_METAKNIGHT(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT, METAKNIGHT, \
+      NDSNativeMetaknightHighImage, NDSNativeMetaknightLowImage)
+#else
+#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_METAKNIGHT(X)
 #endif
 
 /* Boss high native-owner image. */
@@ -3485,6 +3523,1128 @@ typedef struct NDSNativeMario_Skeleton1LowImage
 
 #define NDS_NATIVE_IMAGE_MARIO_SKELETON1_LOW_MEMBERS_DENSE_NORMALS(X) \
     X(NDSNativeMario_Skeleton1LowImage, dense_normals, sNdsNativeMario_Skeleton1FighterDenseVerticesLow)
+
+/* Metaknight high native-owner image. */
+typedef struct NDSNativeMetaknightHighImage
+{
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[62];
+    u8 state_sequence[398];
+    NDSNativeVertexAction vertex_actions[46];
+    u8 epoch_direct_policy[39];
+    NDSNativeDenseVertex dense_vertices[713];
+    u32 dense_normals[713];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[713];
+#endif
+    u16 action_dense_spans[46];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[713];
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u16 packed_corners[1221];
+#endif
+    u16 run_first_unique[35];
+    u8 run_unique_count[35];
+    u16 run_unique_dense[561];
+    u16 triangles[407];
+    NDSNativeRun runs[35];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[380];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[380];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[380];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[1199];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[191];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[191];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[191];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[821];
+#endif
+    NDSNativeEpoch epochs[39];
+} NDSNativeMetaknightHighImage;
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_BYTES ((u32)sizeof(NDSNativeMetaknightHighImage))
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_STATE_DELTAS_COUNT 62u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_STATE_SEQUENCE_COUNT 398u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_VERTEX_ACTIONS_COUNT 46u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_EPOCH_DIRECT_POLICY_COUNT 39u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_DENSE_VERTICES_COUNT 713u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_DENSE_NORMALS_COUNT 713u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PREPARED_DENSE_COUNT 713u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_ACTION_DENSE_SPANS_COUNT 46u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_DENSE_COLOR_SOURCE_COUNT 713u
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PACKED_CORNERS_COUNT 1221u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_RUN_FIRST_UNIQUE_COUNT 35u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_RUN_UNIQUE_COUNT_COUNT 35u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_RUN_UNIQUE_DENSE_COUNT 561u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_TRIANGLES_COUNT 407u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_RUNS_COUNT 35u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 380u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 380u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 380u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_VERTICES_M1_COUNT 1199u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 191u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 191u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 191u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_PRIMITIVE_VERTICES_M2_COUNT 821u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_EPOCHS_COUNT 39u
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMetaknightHighImage, prepared_dense, sNdsNativeMetaknightFighterPreparedDense)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G1(X)
+#endif
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeMetaknightHighImage, dense_color_source, sNdsNativeMetaknightFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeMetaknightHighImage, packed_corners, sNdsNativeMetaknightFighterPackedCorners)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G4(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G6(X) \
+    X(NDSNativeMetaknightHighImage, primitive_group_first_m1, sNdsNativeMetaknightFighterPrimitiveGroupFirst) \
+    X(NDSNativeMetaknightHighImage, primitive_group_count_m1, sNdsNativeMetaknightFighterPrimitiveGroupCount) \
+    X(NDSNativeMetaknightHighImage, primitive_group_type_m1, sNdsNativeMetaknightFighterPrimitiveGroupType) \
+    X(NDSNativeMetaknightHighImage, primitive_group_first_vertex_m1, sNdsNativeMetaknightFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeMetaknightHighImage, primitive_group_vertex_count_m1, sNdsNativeMetaknightFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeMetaknightHighImage, primitive_vertices_m1, sNdsNativeMetaknightFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G6(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G7(X) \
+    X(NDSNativeMetaknightHighImage, primitive_group_first_m2, sNdsNativeMetaknightFighterPrimitiveGroupFirst) \
+    X(NDSNativeMetaknightHighImage, primitive_group_count_m2, sNdsNativeMetaknightFighterPrimitiveGroupCount) \
+    X(NDSNativeMetaknightHighImage, primitive_group_type_m2, sNdsNativeMetaknightFighterPrimitiveGroupType) \
+    X(NDSNativeMetaknightHighImage, primitive_group_first_vertex_m2, sNdsNativeMetaknightFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeMetaknightHighImage, primitive_group_vertex_count_m2, sNdsNativeMetaknightFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeMetaknightHighImage, primitive_vertices_m2, sNdsNativeMetaknightFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G7(X)
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS(X) \
+    X(NDSNativeMetaknightHighImage, state_deltas, sNdsNativeMetaknightFighterStateDeltas) \
+    X(NDSNativeMetaknightHighImage, state_sequence, sNdsNativeMetaknightFighterStateSequence) \
+    X(NDSNativeMetaknightHighImage, vertex_actions, sNdsNativeMetaknightFighterVertexActions) \
+    X(NDSNativeMetaknightHighImage, epoch_direct_policy, sNdsNativeMetaknightFighterEpochDirectPolicy) \
+    X(NDSNativeMetaknightHighImage, dense_vertices, sNdsNativeMetaknightFighterDenseVertices) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMetaknightHighImage, action_dense_spans, sNdsNativeMetaknightFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeMetaknightHighImage, run_first_unique, sNdsNativeMetaknightFighterRunFirstUnique) \
+    X(NDSNativeMetaknightHighImage, run_unique_count, sNdsNativeMetaknightFighterRunUniqueCount) \
+    X(NDSNativeMetaknightHighImage, run_unique_dense, sNdsNativeMetaknightFighterRunUniqueDense) \
+    X(NDSNativeMetaknightHighImage, triangles, sNdsNativeMetaknightFighterTriangles) \
+    X(NDSNativeMetaknightHighImage, runs, sNdsNativeMetaknightFighterRuns) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G6(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_G7(X) \
+    X(NDSNativeMetaknightHighImage, epochs, sNdsNativeMetaknightFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeMetaknightHighImage, dense_normals, sNdsNativeMetaknightFighterDenseVertices)
+
+/* Metaknight low native-owner image. */
+typedef struct NDSNativeMetaknightLowImage
+{
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[62];
+    u8 state_sequence[398];
+    NDSNativeVertexAction vertex_actions[46];
+    u8 epoch_direct_policy[39];
+    NDSNativeDenseVertex dense_vertices[713];
+    u32 dense_normals[713];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[713];
+#endif
+    u16 action_dense_spans[46];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[713];
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u16 packed_corners[1221];
+#endif
+    u16 run_first_unique[35];
+    u8 run_unique_count[35];
+    u16 run_unique_dense[561];
+    u16 triangles[407];
+    NDSNativeRun runs[35];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[380];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[380];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[380];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[1199];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[35];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[191];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[191];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[191];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[821];
+#endif
+    NDSNativeEpoch epochs[39];
+} NDSNativeMetaknightLowImage;
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_BYTES ((u32)sizeof(NDSNativeMetaknightLowImage))
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_STATE_DELTAS_COUNT 62u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_STATE_SEQUENCE_COUNT 398u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_VERTEX_ACTIONS_COUNT 46u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_EPOCH_DIRECT_POLICY_COUNT 39u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_DENSE_VERTICES_COUNT 713u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_DENSE_NORMALS_COUNT 713u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PREPARED_DENSE_COUNT 713u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_ACTION_DENSE_SPANS_COUNT 46u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_DENSE_COLOR_SOURCE_COUNT 713u
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PACKED_CORNERS_COUNT 1221u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_RUN_FIRST_UNIQUE_COUNT 35u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_RUN_UNIQUE_COUNT_COUNT 35u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_RUN_UNIQUE_DENSE_COUNT 561u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_TRIANGLES_COUNT 407u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_RUNS_COUNT 35u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 380u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 380u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 380u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_VERTICES_M1_COUNT 1199u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 35u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 191u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 191u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 191u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_PRIMITIVE_VERTICES_M2_COUNT 821u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_EPOCHS_COUNT 39u
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMetaknightLowImage, prepared_dense, sNdsNativeMetaknightFighterPreparedDenseLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G1(X)
+#endif
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G3(X) \
+    X(NDSNativeMetaknightLowImage, dense_color_source, sNdsNativeMetaknightFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G4(X) \
+    X(NDSNativeMetaknightLowImage, packed_corners, sNdsNativeMetaknightFighterPackedCornersLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G4(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G6(X) \
+    X(NDSNativeMetaknightLowImage, primitive_group_first_m1, sNdsNativeMetaknightFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_count_m1, sNdsNativeMetaknightFighterPrimitiveGroupCountLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_type_m1, sNdsNativeMetaknightFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_first_vertex_m1, sNdsNativeMetaknightFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_vertex_count_m1, sNdsNativeMetaknightFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeMetaknightLowImage, primitive_vertices_m1, sNdsNativeMetaknightFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G6(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G7(X) \
+    X(NDSNativeMetaknightLowImage, primitive_group_first_m2, sNdsNativeMetaknightFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_count_m2, sNdsNativeMetaknightFighterPrimitiveGroupCountLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_type_m2, sNdsNativeMetaknightFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_first_vertex_m2, sNdsNativeMetaknightFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeMetaknightLowImage, primitive_group_vertex_count_m2, sNdsNativeMetaknightFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeMetaknightLowImage, primitive_vertices_m2, sNdsNativeMetaknightFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G7(X)
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS(X) \
+    X(NDSNativeMetaknightLowImage, state_deltas, sNdsNativeMetaknightFighterStateDeltasLow) \
+    X(NDSNativeMetaknightLowImage, state_sequence, sNdsNativeMetaknightFighterStateSequenceLow) \
+    X(NDSNativeMetaknightLowImage, vertex_actions, sNdsNativeMetaknightFighterVertexActionsLow) \
+    X(NDSNativeMetaknightLowImage, epoch_direct_policy, sNdsNativeMetaknightFighterEpochDirectPolicyLow) \
+    X(NDSNativeMetaknightLowImage, dense_vertices, sNdsNativeMetaknightFighterDenseVerticesLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMetaknightLowImage, action_dense_spans, sNdsNativeMetaknightFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G4(X) \
+    X(NDSNativeMetaknightLowImage, run_first_unique, sNdsNativeMetaknightFighterRunFirstUniqueLow) \
+    X(NDSNativeMetaknightLowImage, run_unique_count, sNdsNativeMetaknightFighterRunUniqueCountLow) \
+    X(NDSNativeMetaknightLowImage, run_unique_dense, sNdsNativeMetaknightFighterRunUniqueDenseLow) \
+    X(NDSNativeMetaknightLowImage, triangles, sNdsNativeMetaknightFighterTrianglesLow) \
+    X(NDSNativeMetaknightLowImage, runs, sNdsNativeMetaknightFighterRunsLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G6(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_G7(X) \
+    X(NDSNativeMetaknightLowImage, epochs, sNdsNativeMetaknightFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeMetaknightLowImage, dense_normals, sNdsNativeMetaknightFighterDenseVerticesLow)
+
+/* Metaknight_Skeleton1 high native-owner image. */
+typedef struct NDSNativeMetaknight_Skeleton1HighImage
+{
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[17];
+    u8 state_sequence[47];
+    NDSNativeVertexAction vertex_actions[40];
+    u8 epoch_direct_policy[12];
+    NDSNativeDenseVertex dense_vertices[178];
+    u32 dense_normals[178];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[178];
+#endif
+    u16 action_dense_spans[40];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[178];
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u16 packed_corners[603];
+#endif
+    u16 run_first_unique[22];
+    u8 run_unique_count[22];
+    u16 run_unique_dense[244];
+    u16 triangles[201];
+    NDSNativeRun runs[22];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[166];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[166];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[166];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[559];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[91];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[91];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[91];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[409];
+#endif
+    NDSNativeEpoch epochs[12];
+} NDSNativeMetaknight_Skeleton1HighImage;
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_BYTES ((u32)sizeof(NDSNativeMetaknight_Skeleton1HighImage))
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_STATE_DELTAS_COUNT 17u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_STATE_SEQUENCE_COUNT 47u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_VERTEX_ACTIONS_COUNT 40u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_EPOCH_DIRECT_POLICY_COUNT 12u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_DENSE_VERTICES_COUNT 178u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_DENSE_NORMALS_COUNT 178u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PREPARED_DENSE_COUNT 178u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_ACTION_DENSE_SPANS_COUNT 40u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_DENSE_COLOR_SOURCE_COUNT 178u
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PACKED_CORNERS_COUNT 603u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_RUN_FIRST_UNIQUE_COUNT 22u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_RUN_UNIQUE_COUNT_COUNT 22u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_RUN_UNIQUE_DENSE_COUNT 244u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_TRIANGLES_COUNT 201u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_RUNS_COUNT 22u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 166u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 166u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 166u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_VERTICES_M1_COUNT 559u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 91u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 91u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 91u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_PRIMITIVE_VERTICES_M2_COUNT 409u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_EPOCHS_COUNT 12u
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, prepared_dense, sNdsNativeMetaknight_Skeleton1FighterPreparedDense)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G1(X)
+#endif
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, dense_color_source, sNdsNativeMetaknight_Skeleton1FighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, packed_corners, sNdsNativeMetaknight_Skeleton1FighterPackedCorners)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G4(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G6(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_first_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirst) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_count_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupCount) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_type_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupType) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_first_vertex_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_vertex_count_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupVertexCount) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_vertices_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G6(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_first_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirst) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_count_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupCount) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_type_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupType) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_first_vertex_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_group_vertex_count_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupVertexCount) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, primitive_vertices_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G7(X)
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, state_deltas, sNdsNativeMetaknight_Skeleton1FighterStateDeltas) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, state_sequence, sNdsNativeMetaknight_Skeleton1FighterStateSequence) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, vertex_actions, sNdsNativeMetaknight_Skeleton1FighterVertexActions) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, epoch_direct_policy, sNdsNativeMetaknight_Skeleton1FighterEpochDirectPolicy) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, dense_vertices, sNdsNativeMetaknight_Skeleton1FighterDenseVertices) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, action_dense_spans, sNdsNativeMetaknight_Skeleton1FighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, run_first_unique, sNdsNativeMetaknight_Skeleton1FighterRunFirstUnique) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, run_unique_count, sNdsNativeMetaknight_Skeleton1FighterRunUniqueCount) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, run_unique_dense, sNdsNativeMetaknight_Skeleton1FighterRunUniqueDense) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, triangles, sNdsNativeMetaknight_Skeleton1FighterTriangles) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, runs, sNdsNativeMetaknight_Skeleton1FighterRuns) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G6(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, epochs, sNdsNativeMetaknight_Skeleton1FighterEpochs)
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeMetaknight_Skeleton1HighImage, dense_normals, sNdsNativeMetaknight_Skeleton1FighterDenseVertices)
+
+/* Metaknight_Skeleton1 low native-owner image. */
+typedef struct NDSNativeMetaknight_Skeleton1LowImage
+{
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[17];
+    u8 state_sequence[47];
+    NDSNativeVertexAction vertex_actions[40];
+    u8 epoch_direct_policy[12];
+    NDSNativeDenseVertex dense_vertices[178];
+    u32 dense_normals[178];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[178];
+#endif
+    u16 action_dense_spans[40];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[178];
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u16 packed_corners[603];
+#endif
+    u16 run_first_unique[22];
+    u8 run_unique_count[22];
+    u16 run_unique_dense[244];
+    u16 triangles[201];
+    NDSNativeRun runs[22];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[166];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[166];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[166];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[559];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[22];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[91];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[91];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[91];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[409];
+#endif
+    NDSNativeEpoch epochs[12];
+} NDSNativeMetaknight_Skeleton1LowImage;
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_BYTES ((u32)sizeof(NDSNativeMetaknight_Skeleton1LowImage))
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_STATE_DELTAS_COUNT 17u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_STATE_SEQUENCE_COUNT 47u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_VERTEX_ACTIONS_COUNT 40u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_EPOCH_DIRECT_POLICY_COUNT 12u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_DENSE_VERTICES_COUNT 178u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_DENSE_NORMALS_COUNT 178u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PREPARED_DENSE_COUNT 178u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_ACTION_DENSE_SPANS_COUNT 40u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_DENSE_COLOR_SOURCE_COUNT 178u
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PACKED_CORNERS_COUNT 603u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_RUN_FIRST_UNIQUE_COUNT 22u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_RUN_UNIQUE_COUNT_COUNT 22u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_RUN_UNIQUE_DENSE_COUNT 244u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_TRIANGLES_COUNT 201u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_RUNS_COUNT 22u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 166u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 166u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 166u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_VERTICES_M1_COUNT 559u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 22u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 91u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 91u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 91u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_PRIMITIVE_VERTICES_M2_COUNT 409u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_EPOCHS_COUNT 12u
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, prepared_dense, sNdsNativeMetaknight_Skeleton1FighterPreparedDenseLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G1(X)
+#endif
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G3(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, dense_color_source, sNdsNativeMetaknight_Skeleton1FighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, packed_corners, sNdsNativeMetaknight_Skeleton1FighterPackedCornersLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G4(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G6(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_first_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirstLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_count_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupCountLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_type_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupTypeLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_first_vertex_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_vertex_count_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_vertices_m1, sNdsNativeMetaknight_Skeleton1FighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G6(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_first_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirstLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_count_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupCountLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_type_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupTypeLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_first_vertex_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_group_vertex_count_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, primitive_vertices_m2, sNdsNativeMetaknight_Skeleton1FighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G7(X)
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, state_deltas, sNdsNativeMetaknight_Skeleton1FighterStateDeltasLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, state_sequence, sNdsNativeMetaknight_Skeleton1FighterStateSequenceLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, vertex_actions, sNdsNativeMetaknight_Skeleton1FighterVertexActionsLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, epoch_direct_policy, sNdsNativeMetaknight_Skeleton1FighterEpochDirectPolicyLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, dense_vertices, sNdsNativeMetaknight_Skeleton1FighterDenseVerticesLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, action_dense_spans, sNdsNativeMetaknight_Skeleton1FighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, run_first_unique, sNdsNativeMetaknight_Skeleton1FighterRunFirstUniqueLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, run_unique_count, sNdsNativeMetaknight_Skeleton1FighterRunUniqueCountLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, run_unique_dense, sNdsNativeMetaknight_Skeleton1FighterRunUniqueDenseLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, triangles, sNdsNativeMetaknight_Skeleton1FighterTrianglesLow) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, runs, sNdsNativeMetaknight_Skeleton1FighterRunsLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G6(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, epochs, sNdsNativeMetaknight_Skeleton1FighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeMetaknight_Skeleton1LowImage, dense_normals, sNdsNativeMetaknight_Skeleton1FighterDenseVerticesLow)
+
+/* Metaknight_Skeleton2 high native-owner image. */
+typedef struct NDSNativeMetaknight_Skeleton2HighImage
+{
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[18];
+    u8 state_sequence[29];
+    NDSNativeVertexAction vertex_actions[29];
+    u8 epoch_direct_policy[11];
+    NDSNativeDenseVertex dense_vertices[134];
+    u32 dense_normals[134];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[134];
+#endif
+    u16 action_dense_spans[29];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[134];
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u16 packed_corners[558];
+#endif
+    u16 run_first_unique[23];
+    u8 run_unique_count[23];
+    u16 run_unique_dense[187];
+    u16 triangles[186];
+    NDSNativeRun runs[23];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[154];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[154];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[154];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[518];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[54];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[54];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[54];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[318];
+#endif
+    NDSNativeEpoch epochs[11];
+} NDSNativeMetaknight_Skeleton2HighImage;
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_BYTES ((u32)sizeof(NDSNativeMetaknight_Skeleton2HighImage))
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_STATE_DELTAS_COUNT 18u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_STATE_SEQUENCE_COUNT 29u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_VERTEX_ACTIONS_COUNT 29u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_EPOCH_DIRECT_POLICY_COUNT 11u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_DENSE_VERTICES_COUNT 134u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_DENSE_NORMALS_COUNT 134u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PREPARED_DENSE_COUNT 134u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_ACTION_DENSE_SPANS_COUNT 29u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_DENSE_COLOR_SOURCE_COUNT 134u
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PACKED_CORNERS_COUNT 558u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_RUN_FIRST_UNIQUE_COUNT 23u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_RUN_UNIQUE_COUNT_COUNT 23u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_RUN_UNIQUE_DENSE_COUNT 187u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_TRIANGLES_COUNT 186u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_RUNS_COUNT 23u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 154u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 154u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 154u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_VERTICES_M1_COUNT 518u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 54u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 54u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 54u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_PRIMITIVE_VERTICES_M2_COUNT 318u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_EPOCHS_COUNT 11u
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, prepared_dense, sNdsNativeMetaknight_Skeleton2FighterPreparedDense)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G1(X)
+#endif
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, dense_color_source, sNdsNativeMetaknight_Skeleton2FighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, packed_corners, sNdsNativeMetaknight_Skeleton2FighterPackedCorners)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G4(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G6(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_first_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirst) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_count_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupCount) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_type_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupType) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_first_vertex_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_vertex_count_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupVertexCount) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_vertices_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G6(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_first_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirst) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_count_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupCount) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_type_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupType) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_first_vertex_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_group_vertex_count_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupVertexCount) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, primitive_vertices_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G7(X)
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, state_deltas, sNdsNativeMetaknight_Skeleton2FighterStateDeltas) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, state_sequence, sNdsNativeMetaknight_Skeleton2FighterStateSequence) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, vertex_actions, sNdsNativeMetaknight_Skeleton2FighterVertexActions) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, epoch_direct_policy, sNdsNativeMetaknight_Skeleton2FighterEpochDirectPolicy) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, dense_vertices, sNdsNativeMetaknight_Skeleton2FighterDenseVertices) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, action_dense_spans, sNdsNativeMetaknight_Skeleton2FighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, run_first_unique, sNdsNativeMetaknight_Skeleton2FighterRunFirstUnique) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, run_unique_count, sNdsNativeMetaknight_Skeleton2FighterRunUniqueCount) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, run_unique_dense, sNdsNativeMetaknight_Skeleton2FighterRunUniqueDense) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, triangles, sNdsNativeMetaknight_Skeleton2FighterTriangles) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, runs, sNdsNativeMetaknight_Skeleton2FighterRuns) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G6(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, epochs, sNdsNativeMetaknight_Skeleton2FighterEpochs)
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeMetaknight_Skeleton2HighImage, dense_normals, sNdsNativeMetaknight_Skeleton2FighterDenseVertices)
+
+/* Metaknight_Skeleton2 low native-owner image. */
+typedef struct NDSNativeMetaknight_Skeleton2LowImage
+{
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[18];
+    u8 state_sequence[29];
+    NDSNativeVertexAction vertex_actions[29];
+    u8 epoch_direct_policy[11];
+    NDSNativeDenseVertex dense_vertices[134];
+    u32 dense_normals[134];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[134];
+#endif
+    u16 action_dense_spans[29];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[134];
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+    u16 packed_corners[558];
+#endif
+    u16 run_first_unique[23];
+    u8 run_unique_count[23];
+    u16 run_unique_dense[187];
+    u16 triangles[186];
+    NDSNativeRun runs[23];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[154];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[154];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[154];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[518];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[54];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[54];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[54];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[318];
+#endif
+    NDSNativeEpoch epochs[11];
+} NDSNativeMetaknight_Skeleton2LowImage;
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_BYTES ((u32)sizeof(NDSNativeMetaknight_Skeleton2LowImage))
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_STATE_DELTAS_COUNT 18u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_STATE_SEQUENCE_COUNT 29u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_VERTEX_ACTIONS_COUNT 29u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_EPOCH_DIRECT_POLICY_COUNT 11u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_DENSE_VERTICES_COUNT 134u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_DENSE_NORMALS_COUNT 134u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PREPARED_DENSE_COUNT 134u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_ACTION_DENSE_SPANS_COUNT 29u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_DENSE_COLOR_SOURCE_COUNT 134u
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PACKED_CORNERS_COUNT 558u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_RUN_FIRST_UNIQUE_COUNT 23u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_RUN_UNIQUE_COUNT_COUNT 23u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_RUN_UNIQUE_DENSE_COUNT 187u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_TRIANGLES_COUNT 186u
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_RUNS_COUNT 23u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 154u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 154u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 154u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_VERTICES_M1_COUNT 518u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 54u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 54u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 54u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_PRIMITIVE_VERTICES_M2_COUNT 318u
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_EPOCHS_COUNT 11u
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, prepared_dense, sNdsNativeMetaknight_Skeleton2FighterPreparedDenseLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G1(X)
+#endif
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G3(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, dense_color_source, sNdsNativeMetaknight_Skeleton2FighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, packed_corners, sNdsNativeMetaknight_Skeleton2FighterPackedCornersLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G4(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G6(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_first_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirstLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_count_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupCountLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_type_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupTypeLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_first_vertex_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_vertex_count_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_vertices_m1, sNdsNativeMetaknight_Skeleton2FighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G6(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_first_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirstLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_count_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupCountLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_type_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupTypeLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_first_vertex_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_group_vertex_count_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, primitive_vertices_m2, sNdsNativeMetaknight_Skeleton2FighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G7(X)
+#endif
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, state_deltas, sNdsNativeMetaknight_Skeleton2FighterStateDeltasLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, state_sequence, sNdsNativeMetaknight_Skeleton2FighterStateSequenceLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, vertex_actions, sNdsNativeMetaknight_Skeleton2FighterVertexActionsLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, epoch_direct_policy, sNdsNativeMetaknight_Skeleton2FighterEpochDirectPolicyLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, dense_vertices, sNdsNativeMetaknight_Skeleton2FighterDenseVerticesLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, action_dense_spans, sNdsNativeMetaknight_Skeleton2FighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G4(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, run_first_unique, sNdsNativeMetaknight_Skeleton2FighterRunFirstUniqueLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, run_unique_count, sNdsNativeMetaknight_Skeleton2FighterRunUniqueCountLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, run_unique_dense, sNdsNativeMetaknight_Skeleton2FighterRunUniqueDenseLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, triangles, sNdsNativeMetaknight_Skeleton2FighterTrianglesLow) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, runs, sNdsNativeMetaknight_Skeleton2FighterRunsLow) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G6(X) \
+    NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_G7(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, epochs, sNdsNativeMetaknight_Skeleton2FighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeMetaknight_Skeleton2LowImage, dense_normals, sNdsNativeMetaknight_Skeleton2FighterDenseVerticesLow)
 
 /* MMario high native-owner image. */
 typedef struct NDSNativeMMarioHighImage

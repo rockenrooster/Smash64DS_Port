@@ -148,7 +148,22 @@ static void ndsFtPublicStopFGM(alSoundEffect *sfx)
 #define ftPublicTryStartCall battleship_ftPublicTryStartCall
 #define ftPublicProcUpdate battleship_ftPublicProcUpdate
 
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_p4_roster.h>
+#include <nds/generated/nds_p4_audio.generated.h>
+
+static u16 ndsMetaPublicChantFGM(const FTStruct *fp)
+{
+    if (fp->fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+        return NDS_P4_METAKNIGHT_CHANT_FGM;
+    return ((u32)fp->fkind < ARRAY_COUNT(dFTCommonDataPublicFighterCallFGMs)) ?
+        dFTCommonDataPublicFighterCallFGMs[fp->fkind] : nSYAudioFGMVoiceEnd;
+}
+
+#include "../../builds/p4/meta-knight-lifecycle/ftpublic.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftpublic.c"
+#endif
 
 #undef ftPublicMakeActor
 #undef ftPublicCommonCheck

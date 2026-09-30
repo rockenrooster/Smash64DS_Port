@@ -23,6 +23,7 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_menu_shell.h>
+#include <nds/nds_p4_roster.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_scene.h>
 #include <nds/nds_scene_manager.h>

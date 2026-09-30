@@ -16,6 +16,9 @@
 #include <sys/controller.h>
 #include <sys/objdef.h>
 #include <sys/objtypes.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight_types.h>
+#endif
 
 #ifndef U8_MAX
 #define U8_MAX 255
@@ -3433,6 +3436,9 @@ typedef union FTPassiveVars {
     FTPurinPassiveVars purin;
     FTNessPassiveVars ness;
     FTBossPassiveVars boss;
+#if NDS_P4_METAKNIGHT
+    FTMetaKnightPassiveVars metaknight;
+#endif
 } FTPassiveVars;
 
 typedef struct ftMarioSpecialHiStatusVars { sb32 is_air_bool; } ftMarioSpecialHiStatusVars;
@@ -3600,6 +3606,9 @@ typedef union FTStatusVars {
     FTPikachuStatusVars pikachu;
     FTNessStatusVars ness;
     FTBossStatusVars boss;
+#if NDS_P4_METAKNIGHT
+    FTMetaKnightStatusVars metaknight;
+#endif
 } FTStatusVars;
 
 typedef struct ftKirbyAttack100Effect {

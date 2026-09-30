@@ -125,6 +125,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
      * preflight from steady replay hits. TryReplay fails closed without arming
      * a recorder if the immediate-handoff contract is ever broken. */
     if ((packet_prechecked != 0u) &&
+#if NDS_P4_METAKNIGHT
+        (slot != NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) &&
+#endif
         (ndsFighterPacketTryReplay(
              slot, use_low_detail, texture_memo_owner_key, packet_key, TRUE,
              inputs, input_count, stats, out_hardware_started) != 0))
@@ -159,7 +162,11 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     gNdsR2ExecPreflightTicks += cpuGetTiming() - e15b_mark;
 #endif
 #if NDS_FIGHTER_PACKET_LIVE
-    if (ndsFighterPacketTryReplay(
+    if (
+#if NDS_P4_METAKNIGHT
+        (slot != NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) &&
+#endif
+        ndsFighterPacketTryReplay(
             slot, use_low_detail, texture_memo_owner_key, packet_key, FALSE,
             inputs, input_count, stats, out_hardware_started) != 0)
     {
@@ -205,6 +212,33 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     /* Nothing outside this loop is known to leave GL_PROJECTION alone, so the
      * projection elide only claims what one execute can prove. */
     sNdsR2GxLastProjection = NULL;
+#endif
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        const u8 *logical_slots = sNdsMetaKnightPrograms[
+            sNdsMetaKnightSelectedRoute.skeleton][use_low_detail].palette;
+        u32 logical;
+        /* Store every required cross-joint matrix before the first primitive.
+         * Neither visible-root order nor a later-hidden part may decide which
+         * pose a cross-matrix vertex reads. Matrix-only inputs emit no roots. */
+        for (logical = 0u; logical < NDS_NATIVE_METAKNIGHT_SOURCE_BINDING_COUNT; logical++)
+        {
+            u32 index = sNdsMetaKnightSelectedRoute.binding_input[logical];
+            u32 matrix_slot = logical_slots[logical];
+            if ((index == 0xffu) || (matrix_slot > NDS_NATIVE_GX_MATRIX_SLOT_MAX)) continue;
+            if (index >= input_count) return FALSE;
+#if NDS_R2_FIGHTER_HW_MTX
+            ndsRendererLoadHardwareSplitMatrices(inputs[index].projection_matrix,
+                inputs[index].modelview_matrix, ndsRendererNextMatrixGeneration());
+#else
+            ndsRendererLoadHardwareRawComposedMatrix(inputs[index].composed_matrix,
+                ndsRendererNextMatrixGeneration());
+#endif
+            *out_hardware_started = TRUE;
+            glStoreMatrix((int)matrix_slot);
+        }
+    }
 #endif
     for (root_index = 0u; root_index < root_count; root_index++)
     {

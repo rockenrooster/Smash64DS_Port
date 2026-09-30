@@ -229,12 +229,15 @@ def decode_lakitu():
     require(quads["quad1"][1] == [(3, 2, 1), (0, 3, 1)], "quad1 tris changed")
     require(quads["quad2"][1] == [(3, 2, 1), (2, 0, 1)], "quad2 tris changed")
     # Typed-source pins: DObjDesc ids/translates, anim script census, DL macros.
-    CASTLE_DL_DIR = (REPO / "decomp/BattleShip-main/decomp/build/us/src"
-                     / "relocData/StageCastleFile2")
-    dl_text = (CASTLE_DL_DIR / "DL_0x3F20.dl.inc.c").read_text()
-    dl_text += (CASTLE_DL_DIR / "DL_0x3F80.dl.inc.c").read_text()
-    dl_text += (CASTLE_DL_DIR / "DL_0x3FF8.dl.inc.c").read_text()
-    dl_text += (CASTLE_DL_DIR / "gap_0x3684_sub_0x9EC.dl.inc.c").read_text()
+    CASTLE_DL_DIR = _paths.battleship_input_path(
+        REPO, "decomp/BattleShip-main/decomp/build/us/src/relocData/StageCastleFile2")
+    dl_text = ""
+    for name in ("DL_0x3F20.dl.inc.c", "DL_0x3F80.dl.inc.c",
+                 "DL_0x3FF8.dl.inc.c", "gap_0x3684_sub_0x9EC.dl.inc.c"):
+        path = CASTLE_DL_DIR / name
+        raw = path.read_bytes()
+        _paths.record_reference_input(path, raw)
+        dl_text += raw.decode().replace("\r\n", "\n").replace("\r", "\n")
     for tok in ("gsSPDisplayList((Gfx *)dStageCastleFile2_DL_0x3F80)",
                 "gsSPVertex((Vtx *)dStageCastleFile2_gap_0x3684_sub_0x7DC, 4, 0)",
                 "gsSPVertex((Vtx *)dStageCastleFile2_gap_0x3684_sub_0x81C, 4, 0)",

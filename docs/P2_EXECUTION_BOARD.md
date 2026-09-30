@@ -45,65 +45,46 @@ The newer candidates below do not inherit that qualification.
 The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 ### Execution cursor
 
-Focus (owner 09-22): **P2-2p8 four-fighter 30 FPS -- architecture.**
-Plan: `p2/FOUR_FIGHTER_30FPS_ARCHITECTURE.md`, D1-D9, log section 6.
-Phase 0 closed; Phase 1 through `98ebd1e2e51`.
-**Phase 3 IMPLEMENT**, owner reprioritization 09-24: >=95% four-concurrent VS
-performance; 1P later, pre-stage intros static images. Live-Intro edits reverted.
-Receipt: `artifacts/performance/2026-09-24_p2-2p8-phase2-stage/README.md`.
-Completed scoped checks (not phase acceptance): B3 conserves exactly; MINS is
-off by default. M1 ImpactWave/DamageSlash has replay/Task49 proof. Pooled GObj
-serials remove stale item binding; Link Bomb, clouds/TaruCann and Fox Blaster
-have focused positive owner proofs. Reuse their receipts:
+**Isolated owner experiment (2026-09-30): Meta Knight, P4.** Worktree
+`.worktrees/meta-knight`, branch `codex/meta-knight`, base `2e093297c5c`.
+Owner explicitly requested a new CSS entry and playable match; this branch does
+not reassign the main agent's P2 performance work. Worktree lifetime: 2026-10-07.
+Phase: BUILD; the bounded roster interaction repair is frozen.
+Status: `IMPLEMENTED_NOT_ACCEPTED`; root holds Git-checkpoint ownership while the
+integrator waits. Source is frozen and no owned producer/build is live.
+Builds first, second and third exited 2; unique logs remain under
+`builds/p4/meta-knight-native/`. Read-root repairs passed 23 host fixtures;
+the third build cleared those failures. Its native-owner closure policy diagnostic
+is repaired; all six consumed-field closures pass. Kirby hat admission now accepts
+Meta's source no-copy policy; the compiled 13^4 roster fixture passes.
+`runtime_integration` is now the **sole integrator/producer/build/timing writer**;
+root performs documentation/review only until ownership returns. Accurate emulator
+boot-policy check session 6161 exited 0. Build four session 57783 exited 2; log
+`builds/p4/meta-knight-native/build-fourth.log`. No ROM packaged or target emulator
+launched. Make's five literal native Ness/Yoshi/Purin O2R prerequisites are repaired
+and focused diff checks pass. No fifth job/log exists: its idle check found the main
+`build-lab-baked2` writer active (make PIDs 53176/14004).
+The four capture/throw/bounce transformations and Yoshi effect-size read pass
+eight fixtures; actual donor rows confirm column 10 and bounce FGM 306. Captor-side
+DK routing passes. All helpers are frozen; the integrator owns outputs and builds.
+Main's multi-roster collectors currently block target runs.
+Nine lifecycle copies were emitted (exit 0); receipt has the new manifest identity.
+Next: wait for that writer exit, start incremental build five, then natural
+CSS/SSS/match/Results/rematch proof. Target `smash64ds-p2-shell-hwtri`,
+`BUILD=build-p4-meta-knight`, Meta flag 1; no main writes or P1 changes.
+Evidence:
+`artifacts/performance/2026-09-30_p4-meta-knight/README.md`.
+Checks owed: deterministic import, legacy-ID regression, native model/motions,
+specials/jumps/CPU/copy, CSS/HUD/audio/results, natural-input match and Latest.
+No fighter ROM or runtime/performance PASS yet. Runtime integration owns all
+producers/builds; read-root validation and other character helpers are frozen.
+Thread-capacity failures recorded. Family 6 alpha remains one native experiment,
+not an accepted visual delta. No emulator/cadence proof exists yet.
 
-- M1: `artifacts/performance/2026-09-25_p2-2p8-phase2-m1/README.md`.
-- Lifetime/integrated: `artifacts/performance/2026-09-26_p2-2p8-phase2-item-linkbomb-fixed/README.md`.
-- Bomb: `artifacts/performance/2026-09-26_p2-2p8-phase2-link-bomb/link-bomb-proof.txt`.
-- Ground: `artifacts/performance/2026-09-26_p2-2p8-phase2-ground/` (mixed timing).
-- Fox: `artifacts/verification/2026-09-26_p2-2p8-phase2-fox-ndl.txt`.
+The main P2 cursor at branch creation is preserved in
+`archive/P4_META_KNIGHT_BASE_CURSOR_2026-09-30.md`. Main continues its own
+four-fighter performance lane; this worktree executes the owner-requested P4 experiment.
 
-**Engagement owed:** Fireball playback reaches GO but never Special-N; no state
-injection. Lakitu/Bronto slots remain unengaged in the canonical 59 s match
-(Bronto's first wait is 6,000..15,999 source updates). Their host/replay proof:
-`artifacts/performance/2026-09-26_p2-2p8-phase2-efground/README.md`.
-
-**Particle/Dust (09-26):** view-space particles `608C79AC` and dust `8B4D66EE`
-replay-identical, native failures 39->0; KEEP/IMPLEMENTED_NOT_ACCEPTED. Particle
-selector retired, NDL default on. Shipping-like `8062C536` CSS previews exact.
-Receipts: `2026-09-26_p2-2p8-{phase3-residency,phase2-particle-ab}`. Owed: particle
-Task49/lifecycle, world-cache retirement, integrated gates. All-VS `9F69CA39` KEEP.
-`7E0B1C7F` CSS free 200,656 B. Owner 09-26: no subagents.
-MF2 check passes (1,570 clips/29 raw exceptions); audit in receipt.
-`FB299B25`: 2,043 presents/Results; low-water 9,672 B, reserve RED. Reload passes.
-A7 loan 265,216 B. Trace accounts 36,300 B of play allocations; hats 16,188 B.
-MF2 worst bank697,760 B unlinked; Kirby copy engagement still owed.
-**A8 IMPLEMENTED_NOT_ACCEPTED**:17 host tests pass.
-0BD4523E replay exact;141 BGM refills, no audio failures, arena +20,480 B.
-AUD P95 6,528; WORK-H P95 2.625M/18.97 FPS, RED. Mixed audio identifies BGM.
-HeavyF7443068 gains16,384 B; admission still5,904 B short, plus later play.
-A8 FGM: ARM7 fills + 160 KiB arena landed 09-27.
-**Solo 09-26/27** (receipts `2026-09-2{6,7}_p2-2p8-*`, all replay identical):
-compact packet layout reverted (`BC3500EA` P95 1,955,392, was 2,626,368);
-edge-only ROM bounce (1,892,160); FGM LRU/aligned/envelopes + ARM7 async fills
-(1,852,672); 160 KiB FGM ring arena (-72 KiB); fast cpuGetTiming; stage no-Z
-local W columns (STG P50 253K); status path (token index, path formatter,
-ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
-world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
-ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
-cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 cache reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange; HUD digest; lab clocks; DTCM hot stack/sine/scalars; stage GX + packs in ITCM; i2f convs; DTCM-stack subtrees; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, YI clouds, S1-S4, elastic cache, maps, R1, hit fetch; 09-29: spline, GX overlap, pose step, int trig, hurtbox x4, Arwing x6, GX memo, bboard, objs, SMULL, AObj hash, anim idx; 09-30: MPgrp, digest, anim, segx, clip IO x3, ledger, HUD: gate 899K/1.212M. Owe 6 owners
-**Constraint**: CSS reserve >=183,072 B; owner route 253,904 free (09-27).
-After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
-Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
-
-Closed 09-22 bug sweep: owner fixes/deferred rows and remaining obligations are
-in `p2/REMAINING_BUGS_IMPLEMENTATION_PLAN_2026-09-22.md` and
-`docs/archive/P2_CLOSED_ROWS.md`. Last historical publication r54
-`C8FC02AA2DF0BB6E` is saved in `builds/remaining-bugs-playtest-r54/`.
-Boundary/Latest, per-hat captures and preview-pack test pin drift remain owed.
-
-Preserve owner 1P/CSS work and the published ROM until gates pass. Older scoped
-proofs: `p2/BUG_NOTES.md`, `docs/archive/P2_CLOSED_ROWS.md`.
 
 ## Queue — acceptance only
 

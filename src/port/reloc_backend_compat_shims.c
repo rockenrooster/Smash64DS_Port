@@ -11,6 +11,10 @@
 #include <nds/nds_native_stage_blob.h>
 #include <nds/nds_scene_manager.h>
 #include <sys/vector.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#include <nds/nds_p4_roster.h>
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 void ndsFighterRendererInvalidateMaterialCaches(void);
@@ -2082,6 +2086,10 @@ sb32 ftParamCheckSetFighterColAnimID(GObj *fighter_gobj, s32 colanim_id,
 #endif
 }
 
+#if NDS_P4_METAKNIGHT
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+#endif
+
 sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
 {
     FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
@@ -2106,6 +2114,18 @@ sb32 ftParamCheckSetSkeletonColAnimID(GObj *fighter_gobj, s32 damage_level)
         /* The body image is resident only when the match has an electric
          * attacker; an unexpected source still gets the flash, never a
          * rejected fighter draw. */
+#if NDS_P4_METAKNIGHT
+        if (fp->fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+        {
+            /* Exact source family 0x18, inherited by define_character.
+             * gmcolscripts.c programs 24..27 alternate skeleton IDs 2/1;
+             * MetaMain's own table is at 618, descriptors 428/520. Required
+             * native skeleton art/residency remains a qualification gate. */
+            result = ftParamCheckSetFighterColAnimID(fighter_gobj,
+                NDS_META_ELECTRIC_COLANIM_FAMILY + damage_level, 0);
+        }
+        else
+#endif
         result = ftParamCheckSetFighterColAnimID(
             fighter_gobj,
             ((ndsFTManagerSkeletonReady(fp->fkind) != FALSE) ?
@@ -4182,6 +4202,10 @@ static sb32 ndsFighterWalkDeferredInterrupt(GObj *fighter_gobj)
 
 sb32 ftCommonSpecialHiCheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_P4_METAKNIGHT
+    if ((u32)ftGetStruct(fighter_gobj)->fkind == NDS_P4_RUNTIME_METAKNIGHT)
+        return ndsMetaKnightCheckSpecialHi(fighter_gobj);
+#endif
     if ((ndsFighterMarioFoxJumpLoopProofEnabled() != FALSE) &&
         (sNdsFighterJumpKneeBendInterruptActive != FALSE))
     {
@@ -5128,6 +5152,10 @@ void ftCommonAttackAirProcMap(GObj *fighter_gobj)
 
 sb32 ftCommonJumpAerialCheckInterruptCommon(GObj *fighter_gobj)
 {
+#if NDS_P4_METAKNIGHT
+    if ((u32)ftGetStruct(fighter_gobj)->fkind == NDS_P4_RUNTIME_METAKNIGHT)
+        return ndsMetaKnightCheckJumpInterrupt(fighter_gobj);
+#endif
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
         (sNdsFighterDashRunDamageFallSourceInterruptActive != FALSE))
     {
@@ -6861,6 +6889,19 @@ void ftCommonCaptureShoulderedSetStatus(GObj *fighter_gobj)
 #if NDS_P2_DONKEY
 void ftCommonCaptureShoulderedProcInterrupt(GObj *fighter_gobj)
 {
+#if NDS_P4_METAKNIGHT
+    FTStruct *victim = ftGetStruct(fighter_gobj);
+
+    /* CustomGrabAction dispatches by the captor's identity. Meta Knight's
+     * thrown-DK grab animation keeps the captured fighter in this common
+     * state, but its source hook suppresses ordinary DK breakout checks. */
+    if ((victim->capture_gobj != NULL) &&
+        (ftGetStruct(victim->capture_gobj)->fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT) &&
+        (ndsMetaKnightCaptureDKInterrupt(fighter_gobj) != FALSE))
+    {
+        return;
+    }
+#endif
     ndsBaseFTCommonCaptureShoulderedProcInterrupt(fighter_gobj);
 }
 #endif
@@ -12584,6 +12625,15 @@ static const u8 dNdsFTParamCostumeTeam[nFTKindEnumCount][3] =
  * reading past a 189-byte table. */
 s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
 {
+#if NDS_P4_METAKNIGHT
+    if (fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        /* MetaKnight/main.asm set_default_costumes: four royal selections.
+         * All six physical costumes remain own Meta material alternatives. */
+        static const u8 royal[] = NDS_META_COSTUME_ROYAL;
+        return ((u32)color < ARRAY_COUNT(royal)) ? royal[color] : color;
+    }
+#endif
     if ((fkind < 0) || (fkind >= (s32)nFTKindEnumCount) ||
         (color < 0) || (color >= 4))
     {
@@ -12594,6 +12644,14 @@ s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
 
 s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
 {
+#if NDS_P4_METAKNIGHT
+    if (fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        /* Same exact source macro's red/blue/green fields. */
+        static const u8 team[] = NDS_META_COSTUME_TEAM;
+        return ((u32)color < ARRAY_COUNT(team)) ? team[color] : color;
+    }
+#endif
     if ((fkind < 0) || (fkind >= (s32)nFTKindEnumCount) ||
         (color < 0) || (color >= 3))
     {

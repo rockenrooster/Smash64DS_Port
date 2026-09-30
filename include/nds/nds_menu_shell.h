@@ -9,10 +9,13 @@
  * port sys/malloc.h and defines SYMallocRegion twice. The CSS's source bound is
  * four and nds_menu_shell.c statically checks this against GMCOMMON_PLAYERS_MAX. */
 #define NDS_MENU_SHELL_PLAYERS 4u
-/* Same leaf-header rule for the source's twelve playable fighter kinds. The
- * implementation statically checks this against nFTKindPlayableEnd once the
- * fighter headers are available. */
+/* Compact selection/telemetry capacity; extended runtime kind 29 is mapped
+ * to selection 12 before indexing. The legacy source enum stays unchanged. */
+#if NDS_P4_METAKNIGHT
+#define NDS_MENU_SHELL_FIGHTER_KINDS 13u
+#else
 #define NDS_MENU_SHELL_FIGHTER_KINDS 12u
+#endif
 
 /* P2-1d -- the VS shell's real screens: title, main menu, VS menu and its
  * rules, plus P2-1e/1f's character and stage selects.

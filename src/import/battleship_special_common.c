@@ -4,6 +4,10 @@
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI
 
 #include <ft/fighter.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#include <nds/nds_p4_roster.h>
+#endif
 
 #define NDS_SPECIAL_COMMON_WEAK_STATUS(name)           \
     __attribute__((weak)) void name(GObj *fighter_gobj) \
@@ -92,8 +96,26 @@ NDS_SPECIAL_COMMON_WEAK_STATUS(ftNessSpecialAirLwStartSetStatus)
 void ftKirbySpecialNSetStatusSelect(GObj *fighter_gobj);
 void ftKirbySpecialAirNSetStatusSelect(GObj *fighter_gobj);
 
+#if NDS_P4_METAKNIGHT
+#define ftCommonSpecialNCheckInterruptCommon ndsBaseP4SpecialNCheckInterruptCommon
+#define ftCommonSpecialAirCheckInterruptCommon ndsBaseP4SpecialAirCheckInterruptCommon
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialn.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspecialair.c"
+#if NDS_P4_METAKNIGHT
+#undef ftCommonSpecialNCheckInterruptCommon
+#undef ftCommonSpecialAirCheckInterruptCommon
+sb32 ftCommonSpecialNCheckInterruptCommon(GObj *gobj)
+{
+    return ((u32)ftGetStruct(gobj)->fkind == NDS_P4_RUNTIME_METAKNIGHT) ?
+        ndsMetaKnightCheckSpecialN(gobj) : ndsBaseP4SpecialNCheckInterruptCommon(gobj);
+}
+sb32 ftCommonSpecialAirCheckInterruptCommon(GObj *gobj)
+{
+    return ((u32)ftGetStruct(gobj)->fkind == NDS_P4_RUNTIME_METAKNIGHT) ?
+        ndsMetaKnightCheckSpecialAir(gobj) : ndsBaseP4SpecialAirCheckInterruptCommon(gobj);
+}
+#endif
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI

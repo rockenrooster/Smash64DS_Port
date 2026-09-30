@@ -1011,6 +1011,12 @@ NDS_P2_ITEM_CORE = $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS) \
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_KIRBY ?= 0
+NDS_P4_METAKNIGHT ?= 0
+META_KNIGHT_SOURCE_DIR ?= $(PROJECT_ROOT)/decomp/smashremix-plus-extra/extra_characters/MetaKnight
+NDS_REFERENCE_ROOT ?= $(PROJECT_ROOT)
+ifneq ($(filter 0 1,$(NDS_P4_METAKNIGHT)),$(NDS_P4_METAKNIGHT))
+$(error NDS_P4_METAKNIGHT must be 0 or 1)
+endif
 # P2-3 fighter: GDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_GDONKEY ?= 0
@@ -1130,6 +1136,7 @@ NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_
 NDS_NATIVE_OWNER_IMAGE_NESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NESS),0)
 NDS_NATIVE_OWNER_IMAGE_PURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PURIN),0)
 NDS_NATIVE_OWNER_IMAGE_KIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_KIRBY),0)
+NDS_NATIVE_OWNER_IMAGE_METAKNIGHT = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P4_METAKNIGHT),0)
 NDS_NATIVE_OWNER_IMAGE_MMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_MMARIO),0)
 NDS_NATIVE_OWNER_IMAGE_NMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NMARIO),0)
 NDS_NATIVE_OWNER_IMAGE_NFOX = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NFOX),0)
@@ -4009,8 +4016,8 @@ ERROR_FILTER = $(NDS_BASE_ERROR_FILTER) && if [ -f "$(DEPSDIR)/$*.d" ]; \
 
 BATTLESHIP_DECOMP := decomp/BattleShip-main/decomp
 BATTLESHIP_SYS := $(BATTLESHIP_DECOMP)/src/sys
-BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
-BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
+BATTLESHIP_O2R := $(NDS_REFERENCE_ROOT)/decomp/BattleShip-main/BattleShip_o2r
+BATTLESHIP_RELOCDATA := $(NDS_REFERENCE_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
 # decomp/ is immutable source of truth. Twelve DS adaptations need source-level
 # interposition inside imported BattleShip translation units; generate those
@@ -4053,6 +4060,9 @@ SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
 # intentionally shadow stddef/string/etc. Compatibility headers expose the
 # narrow ABI needed by each imported source slice.
 INCLUDES := include $(BATTLESHIP_DECOMP)/src $(BATTLESHIP_SYS)
+ifeq ($(NDS_P4_METAKNIGHT),1)
+INCLUDES += builds/p4/meta-knight-runtime builds/p4/meta-knight-native/include builds/p4/meta-knight-native
+endif
 
 # Explicit matrix controls must survive canonical target defaults in a lab.
 # Keep the published output protected from this diagnostic escape.
@@ -4978,6 +4988,15 @@ CFILES += nds_ui_kit.c
 endif
 ifeq ($(NDS_P2_MENU_SHELL),1)
 CFILES += nds_menu_shell.c
+endif
+CFILES += nds_p4_roster.c
+ifeq ($(NDS_P4_METAKNIGHT),1)
+CFILES += nds_metaknight_special.c
+NDS_META_LIFECYCLE_DIR := $(PROJECT_ROOT)/builds/p4/meta-knight-lifecycle
+NDS_META_LIFECYCLE_OUTPUTS := $(foreach name,ftkirbyspecialn.c ftcommoncapturekirby.c ftpublic.c mnvsresults.c efmanager.c nds_meta_lifecycle.generated.h lifecycle-source-manifest.json,$(NDS_META_LIFECYCLE_DIR)/$(name))
+$(NDS_META_LIFECYCLE_OUTPUTS) &: $(PROJECT_ROOT)/scripts/fighters/generate_meta_lifecycle_source.py $(PROJECT_ROOT)/builds/p4/meta-knight-donor/resolved-actions.json $(PROJECT_ROOT)/builds/p4/meta-knight-donor/donor-manifest.json
+	python "$(PROJECT_ROOT)/scripts/fighters/generate_meta_lifecycle_source.py"
+$(foreach name,battleship_kirby battleship_ftcommon_capturekirby battleship_ftpublic battleship_mnvsresults battleship_efmanager battleship_lbbackup reloc_backend_compat_shims,$(name).o): $(NDS_META_LIFECYCLE_OUTPUTS)
 endif
 
 export LD := $(CC)
@@ -6383,6 +6402,9 @@ endif
 ifeq ($(NDS_P2_PURIN),1)
 NDS_NATIVE_IMAGE_OWNERS += purin
 endif
+ifeq ($(NDS_P4_METAKNIGHT),1)
+NDS_NATIVE_IMAGE_OWNERS += metaknight metaknight_skeleton1 metaknight_skeleton2
+endif
 ifeq ($(NDS_P2_KIRBY),1)
 NDS_NATIVE_IMAGE_OWNERS += kirby
 NDS_NATIVE_KIRBY_HAT_STEMS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),kirby_hat_$(id)_high kirby_hat_$(id)_low)
@@ -6578,13 +6600,13 @@ NDS_NATIVE_NESS_PKTHUNDER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_na
 NDS_NATIVE_NESS_PKTHUNDER_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ness_pkthunder.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
-	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/NessModel
+	$(BATTLESHIP_O2R)/reloc_fighters_main/NessModel
 NDS_NATIVE_YOSHI_EGG_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_yoshi_egg.generated.inc
 NDS_NATIVE_YOSHI_EGG_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_yoshi_egg.generated.h
 NDS_NATIVE_YOSHI_EGG_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_egg.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
-	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiModel
+	$(BATTLESHIP_O2R)/reloc_fighters_main/YoshiModel
 NDS_NATIVE_YOSHI_EGGLAY_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_yoshi_egglay.generated.inc
 NDS_NATIVE_PURIN_SING_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_purin_sing.generated.inc
 NDS_NATIVE_PURIN_SING_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_purin_sing.generated.h
@@ -6596,18 +6618,18 @@ NDS_NATIVE_SAMUS_BOMB_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_sam
 NDS_NATIVE_SAMUS_BOMB_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_samus_bomb.generated.h
 NDS_NATIVE_NESS_PKTAIL_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_ness_pktail.generated.inc
 NDS_NATIVE_NESS_PKTAIL_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_ness_pktail.generated.h
-NDS_NATIVE_PURIN_SING_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_purin_sing.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/PurinSpecial2
+NDS_NATIVE_PURIN_SING_PREREQ := $(PROJECT_ROOT)/scripts/stages/generate_nds_native_purin_sing.py $(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py $(BATTLESHIP_O2R)/reloc_fighters_main/PurinSpecial2
 NDS_NATIVE_YOSHI_EGGLAY_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_yoshi_egglay.generated.h
 NDS_NATIVE_YOSHI_EGGLAY_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_egglay.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
-	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiSpecial3
+	$(BATTLESHIP_O2R)/reloc_fighters_main/YoshiSpecial3
 NDS_NATIVE_YOSHI_ENTRYEGG_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_yoshi_entryegg.generated.inc
 NDS_NATIVE_YOSHI_ENTRYEGG_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_yoshi_entryegg.generated.h
 NDS_NATIVE_YOSHI_ENTRYEGG_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoshi_entryegg.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
-	$(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiSpecial2
+	$(BATTLESHIP_O2R)/reloc_fighters_main/YoshiSpecial2
 NDS_NATIVE_THUNDERGROUND_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderground.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wppikachu/wppikachuthunder.c
 NDS_NATIVE_ITEM_TOMATO_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_tomato.generated.inc
 NDS_NATIVE_ITEM_TOMATO_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_tomato.generated.h
@@ -6753,7 +6775,11 @@ $(NITROFS_DIR)/fighters/shield_pose/%.bin: $(NDS_SHIELD_POSE_SOURCE_DIR)/%.bin
 
 $(NDS_NITROFS_ADMISSION_FILES): $(NDS_FIGHTER_ADMISSION_PREREQ)
 	@mkdir -p "$(dir $@)"
+ifeq ($(NDS_P4_METAKNIGHT),1)
+	cp "$(PROJECT_ROOT)/assets/fighters/admission.bin" "$@"
+else
 	python "$(PROJECT_ROOT)/scripts/fighters/generate_nds_fighter_admission.py" --no-header --out "$@"
+endif
 
 $(NDS_NATIVE_CASTLE_BUMPER_PACKET) $(NDS_NATIVE_CASTLE_BUMPER_HEADER) &: $(NDS_NATIVE_CASTLE_BUMPER_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_castle_bumper.py" --emit
@@ -6921,6 +6947,7 @@ $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWN
 # scripts/fighters/check_native_owner_image_spans.py -- run it after any owners
 # regeneration and after any checkout that touches the header.
 NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
+	$(PROJECT_ROOT)/scripts/_paths.py \
 	$(NDS_NATIVE_IMAGE_GENERATOR) \
 	$(NDS_NATIVE_OWNERS_GENERATOR) \
 	$(NDS_NATIVE_OWNER_IR) \
@@ -6928,12 +6955,18 @@ NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/native_skeletons.py \
 	$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
 NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss mario_skeleton1 fox_skeleton1
+ifeq ($(NDS_P4_METAKNIGHT),1)
+NDS_NATIVE_IMAGE_ALL_OWNERS += metaknight metaknight_skeleton1 metaknight_skeleton2
+endif
 NDS_NATIVE_IMAGE_ALL_SRCS := $(foreach owner,$(NDS_NATIVE_IMAGE_ALL_OWNERS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_low.image.c)
 NDS_NATIVE_IMAGE_ALL_SRCS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_low.image.c)
 NDS_NATIVE_IMAGE_ALL_SRCS += $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_skeletons.generated.inc
+ifeq ($(NDS_P4_METAKNIGHT),1)
+NDS_NATIVE_IMAGE_ALL_SRCS += $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_metaknight.generated.inc
+endif
 
 $(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS) &: $(NDS_NATIVE_IMAGE_GENERATOR_DEPS)
-	python "$(NDS_NATIVE_IMAGE_GENERATOR)"
+	python "$(NDS_NATIVE_IMAGE_GENERATOR)" --repo-root "$(PROJECT_ROOT)" --source-root "$(NDS_REFERENCE_ROOT)" $(if $(filter 1,$(NDS_P4_METAKNIGHT)),--extra-model-ir "$(PROJECT_ROOT)/builds/p4/meta-knight-native/meta-knight-model-ir.json",)
 	@touch $(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS)
 
 # CFLAGS force-includes nds_build_config.h. Keep that generated header as an
@@ -7092,6 +7125,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
+		echo '#define NDS_P4_METAKNIGHT $(NDS_P4_METAKNIGHT)'; \
 		echo '#define NDS_P2_GDONKEY $(NDS_P2_GDONKEY)'; \
 		echo '#define NDS_P2_MMARIO $(NDS_P2_MMARIO)'; \
 		echo '#define NDS_P2_NMARIO $(NDS_P2_NMARIO)'; \
@@ -7119,6 +7153,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NESS $(NDS_NATIVE_OWNER_IMAGE_NESS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_PURIN $(NDS_NATIVE_OWNER_IMAGE_PURIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_KIRBY $(NDS_NATIVE_OWNER_IMAGE_KIRBY)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_METAKNIGHT $(NDS_NATIVE_OWNER_IMAGE_METAKNIGHT)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_MMARIO $(NDS_NATIVE_OWNER_IMAGE_MMARIO)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NMARIO $(NDS_NATIVE_OWNER_IMAGE_NMARIO)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NFOX $(NDS_NATIVE_OWNER_IMAGE_NFOX)'; \
@@ -7532,7 +7567,26 @@ endif
 # racing on the named AObj32 files in an incremental build.
 $(NDS_NITROFS_RELOC_FILES): | prune-streamed-ftanim
 
-$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_NITROFS_SHIELD_POSE_FILES) $(NDS_NITROFS_ADMISSION_FILES) $(NDS_BANNER_ICON)
+ifeq ($(NDS_P4_METAKNIGHT),1)
+NDS_META_RELOC_INPUTS := $(wildcard $(PROJECT_ROOT)/builds/p4/meta-knight-native/reloc_extra/*)
+NDS_META_RELOC_OUTPUTS := $(patsubst $(PROJECT_ROOT)/builds/p4/meta-knight-native/reloc_extra/%,$(NITROFS_DIR)/reloc/reloc_extra/%,$(NDS_META_RELOC_INPUTS))
+NDS_META_BGM_OUTPUT := $(NITROFS_DIR)/audio/bgm_win_meta_knight_ima.bin
+NDS_META_CORE_OUTPUTS := $(NITROFS_DIR)/fighters/preview/29.fpc $(NITROFS_DIR)/fighters/preview/29.ext $(NITROFS_DIR)/fighters/battle/29.fpc $(NITROFS_DIR)/fighters/battle/29.ext
+$(NITROFS_DIR)/fighters/preview/29.fpc $(NITROFS_DIR)/fighters/preview/29.ext: $(NITROFS_DIR)/fighters/preview/%: $(PROJECT_ROOT)/assets/fighters/preview_core/%
+	@mkdir -p $(dir $@)
+	cp $< $@
+$(NITROFS_DIR)/fighters/battle/29.fpc $(NITROFS_DIR)/fighters/battle/29.ext: $(NITROFS_DIR)/fighters/battle/%: $(PROJECT_ROOT)/assets/fighters/battle_core/%
+	@mkdir -p $(dir $@)
+	cp $< $@
+$(NDS_META_BGM_OUTPUT): $(PROJECT_ROOT)/builds/p4/meta-knight-native/audio/bgm_win_meta_knight_ima.bin
+	@mkdir -p $(dir $@)
+	cp $< $@
+$(NDS_META_RELOC_OUTPUTS): $(NITROFS_DIR)/reloc/reloc_extra/%: $(PROJECT_ROOT)/builds/p4/meta-knight-native/reloc_extra/%
+	@mkdir -p $(dir $@)
+	cp $< $@
+endif
+
+$(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_META_CORE_OUTPUTS) $(NDS_META_BGM_OUTPUT) $(NDS_META_RELOC_OUTPUTS) $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_NITROFS_SHIELD_POSE_FILES) $(NDS_NITROFS_ADMISSION_FILES) $(NDS_BANNER_ICON)
 
 # All targets share this packaging boundary, including diagnostics and P1.
 # Audit actual link objects and their textual compiler inputs before ndstool.
@@ -8127,7 +8181,8 @@ $(NITROFS_DIR)/audio/bgm_battle_select_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
-$(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(PROJECT_ROOT)/assets/audio/fgm_phase_pack_ima.bin
+NDS_FGM_PACK_INPUT := $(if $(filter 1,$(NDS_P4_METAKNIGHT)),$(PROJECT_ROOT)/builds/p4/meta-knight-native/audio/fgm_phase_pack_ima.bin,$(PROJECT_ROOT)/assets/audio/fgm_phase_pack_ima.bin)
+$(NITROFS_DIR)/audio/fgm_phase_pack_ima.bin: $(NDS_FGM_PACK_INPUT)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
@@ -8481,7 +8536,7 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # below carries the flag values themselves and is rewritten only when they
 # change, so the bake is keyed on what actually varies rather than on a
 # timestamp that another build controls.
-NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)$(NDS_P2_STAGE_YAMABUKI)$(NDS_P2_STAGE_INISHIE)$(NDS_P2_STAGE_SECTOR)
+NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)$(NDS_P2_STAGE_YAMABUKI)$(NDS_P2_STAGE_INISHIE)$(NDS_P2_STAGE_SECTOR)$(NDS_P4_METAKNIGHT)
 NDS_MN_UI_KIT_STAMP := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.flags.stamp
 
 $(NDS_MN_UI_KIT_STAMP): FORCE
@@ -8490,17 +8545,22 @@ $(NDS_MN_UI_KIT_STAMP): FORCE
 	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
 
 $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
+		$(PROJECT_ROOT)/scripts/_paths.py \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(PROJECT_ROOT)/scripts/menus/p4_meta_knight_ui.py \
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_MN_UI_KIT_STAMP) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P4_METAKNIGHT=$(NDS_P4_METAKNIGHT) META_KNIGHT_SOURCE_DIR="$(META_KNIGHT_SOURCE_DIR)" NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) NDS_P2_STAGE_SECTOR=$(NDS_P2_STAGE_SECTOR) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the
 # dependency edge so an o2r refresh cannot silently leave a stale C include.
 $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET) &: \
+		$(PROJECT_ROOT)/scripts/_paths.py \
 		$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py \
+		$(PROJECT_ROOT)/scripts/menus/p4_meta_knight_ui.py \
+		$(NDS_MN_UI_KIT_STAMP) \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
@@ -8512,7 +8572,7 @@ $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET) &: \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LuigiModel
-	python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P4_METAKNIGHT=$(NDS_P4_METAKNIGHT) META_KNIGHT_SOURCE_DIR="$(META_KNIGHT_SOURCE_DIR)" python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET)
 
 $(NITROFS_DIR)/menus/battle_hud.bin: $(NDS_BATTLE_HUD_ASSET)

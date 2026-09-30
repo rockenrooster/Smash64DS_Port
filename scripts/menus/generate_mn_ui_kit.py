@@ -62,6 +62,13 @@ import tempfile
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
+# Native bakes may also consume source-qualified EXTRA PNGs. This module stays
+# a build-time dependency; no image decoder is linked into the DS executable.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _paths
+import p4_meta_knight_ui as meta_knight_ui
+
 
 _STAGE_FLAG_NAMES = (
     "NDS_P2_STAGE_YOSTER",
@@ -81,10 +88,20 @@ def _prime_check_stage_flags(repo_root: Path) -> None:
     if not stamp.exists():
         return
     values = stamp.read_text(encoding="ascii").strip()
-    if len(values) != len(_STAGE_FLAG_NAMES) or any(ch not in "01" for ch in values):
+    if len(values) not in (len(_STAGE_FLAG_NAMES), len(_STAGE_FLAG_NAMES) + 1) or any(ch not in "01" for ch in values):
         return
     for name, value in zip(_STAGE_FLAG_NAMES, values):
         os.environ.setdefault(name, value)
+    os.environ.setdefault("NDS_P4_METAKNIGHT", values[8] if len(values) == 9 else "0")
+
+
+# CSS surface families are defined at module import, before main refreshes the
+# stage families. Prime their stamped variant before constructing those tables.
+if "--check" in sys.argv:
+    _check_parser = argparse.ArgumentParser(add_help=False)
+    _check_parser.add_argument("--repo-root", type=Path, default=Path("."))
+    _check_args, _check_remaining = _check_parser.parse_known_args()
+    _prime_check_stage_flags(_check_args.repo_root.resolve())
 
 # ---------------------------------------------------------------------------
 # Container
@@ -142,6 +159,7 @@ class RelocFile:
 
     def __init__(self, path: Path) -> None:
         raw = path.read_bytes()
+        _paths.record_reference_input(path, raw)
         if len(raw) < RELO_HEADER_BYTES:
             raise ConvertError(f"{path.name}: shorter than a RELO header")
         magic = struct.unpack_from("<I", raw, 4)[0]
@@ -511,7 +529,7 @@ O2R_DIRS = ("reloc_menus", "reloc_fighters_common", "reloc_stages",
 
 
 def o2r_path(repo_root: Path, name: str) -> Path:
-    base = repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r"
+    base = _paths.battleship_o2r_root(repo_root)
     for folder in O2R_DIRS:
         candidate = base / folder / name
         if candidate.exists():
@@ -541,8 +559,7 @@ class Glyph:
 
 
 def convert_font(repo_root: Path, offsets: dict[str, int]) -> list[Glyph]:
-    path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-            "reloc_menus" / "MNCommonFonts")
+    path = o2r_path(repo_root, "MNCommonFonts")
     fileobj = RelocFile(path)
     if fileobj.file_id != offsets["llMNCommonFontsFileID"]:
         raise ConvertError(
@@ -1088,10 +1105,12 @@ class Placement:
     # A CI sprite drawn through a DIFFERENT palette, by its reloc symbol.  The
     # player panel is one card sprite and eight palettes (see `lut_override`).
     lut_symbol: str | None = None
+    # One of Meta Knight's pinned EXTRA PNGs, decoded through its donor format.
+    source_png: str | None = None
 
 
 def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
-                 lut_offset: int | None = None
+                 lut_offset: int | None = None, source_raster=None
                  ) -> tuple[int, int, list[list[tuple[int, int, int, int]]]]:
     """One placement decoded, combined and scaled to the DS frame's 4/5.
 
@@ -1108,13 +1127,15 @@ def place_raster(fileobj: RelocFile | None, part: Placement, offset: int,
                     for _ in range(part.size[1])]
     else:
         period_s = part.period[0] if part.period is not None else None
-        sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
-                                              (255, 255, 255), alpha_ramp=True,
-                                              width_override=period_s,
-                                              lut_override=lut_offset)
-        prim = part.tint if part.tint is not None else (sprite.red,
-                                                        sprite.green,
-                                                        sprite.blue)
+        if source_raster is None:
+            sprite, raster = decode_sprite_raster(fileobj, part.symbol, offset,
+                                                  (255, 255, 255), alpha_ramp=True,
+                                                  width_override=period_s,
+                                                  lut_override=lut_offset)
+            source_prim = (sprite.red, sprite.green, sprite.blue)
+        else:
+            raster, source_prim = source_raster, (255, 255, 255)
+        prim = part.tint if part.tint is not None else source_prim
         combined = []
         for row in raster:
             out = []
@@ -1271,6 +1292,13 @@ def convert_surface(cache: dict[str, RelocFile], offsets: dict[str, int],
         for part in parts:
             if part.fill is not None:
                 out.append(place_raster(None, part, 0))
+                continue
+            if part.source_png is not None:
+                try:
+                    raster = meta_knight_ui.load_image(repo_root, part.source_png)
+                except (ValueError, OSError) as error:
+                    raise ConvertError(str(error)) from error
+                out.append(place_raster(None, part, 0, source_raster=raster))
                 continue
             if part.symbol not in offsets:
                 raise ConvertError(
@@ -2380,6 +2408,9 @@ for _name, _x, _y, _texts in VS_BUTTONS:
 # shell blits a cell's own surface at entry when its fighter_mask bit is clear
 # (mnplayersvs.c:296-314 over the init snapshot, :4694).
 CSS_PORTRAIT_FKIND = (4, 0, 2, 5, 3, 7, 11, 6, 8, 1, 9, 10)
+CSS_METAKNIGHT = meta_knight_ui.enabled()
+if CSS_METAKNIGHT:
+    CSS_PORTRAIT_FKIND += (29,)
 CSS_SHADOW = {
     4: "llMNPlayersPortraitsLuigiShadowSprite",
     7: "llMNPlayersPortraitsCaptainShadowSprite",
@@ -2406,6 +2437,9 @@ CSS_SHADOW = {
 # CSS_LOCKED_* surface deleted in the same edit.
 CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
 CSS_INPROGRESS_FKIND = (4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
+if CSS_METAKNIGHT:
+    CSS_BUILT_FKIND += (29,)
+    CSS_INPROGRESS_FKIND += (29,)
 # The dim laid over an in-progress fighter's portrait before its question mark.
 # The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
 # of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
@@ -2448,8 +2482,19 @@ CSS_PORTRAIT_SYMBOL = {
 CSS_SHADOW_NOISE = 0x30
 
 
-def css_portrait_pos(portrait: int) -> tuple[int, int]:
+def onep_css_portrait_pos(portrait: int) -> tuple[int, int]:
     return (((portrait % 6) * 45) + 25, ((1 if portrait >= 6 else 0) * 43) + 36)
+
+
+def css_portrait_pos(portrait: int) -> tuple[int, int]:
+    if not 0 <= portrait < len(CSS_PORTRAIT_FKIND):
+        raise ConvertError(f"CSS portrait outside admitted layout: {portrait}")
+    # The thirteenth portrait occupies the new seventh top-row cell. Keep the
+    # twelve legacy cells in the same rows/columns and keep all 45x43 cell art.
+    columns = 7 if CSS_METAKNIGHT else 6
+    left = (320 - columns * CSS_PORTRAIT_W) // 2
+    column, row = ((6, 0) if portrait == 12 else (portrait % 6, portrait // 6))
+    return left + column * CSS_PORTRAIT_W, 36 + row * CSS_PORTRAIT_H
 
 
 def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]:
@@ -2457,7 +2502,7 @@ def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]
         # mnPlayersVSMakeWallpaper, :1370, full-bleed per the P2-1k ruling.
         STONE_FULL_BLEED,
     ]
-    for portrait in range(12):
+    for portrait in range(len(CSS_PORTRAIT_FKIND)):
         x, y = css_portrait_pos(portrait)
         fkind = CSS_PORTRAIT_FKIND[portrait]
         parts.append(Placement("MNPlayersPortraits",
@@ -2475,8 +2520,17 @@ def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]
         if fkind in CSS_BUILT_FKIND:
             # The fighter's own portrait, at the box's own position and the
             # box's own scale -- finding (5).
-            parts.append(Placement("MNPlayersPortraits",
-                                   CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
+            if fkind == 29:
+                # EXTRA supplies its own 32-square portrait and flash variant.
+                # Centre the complete source artwork inside the source cell.
+                parts.append(Placement("MetaKnight", "", x + (45 - 32) // 2,
+                                       y + (43 - 32) // 2, False,
+                                       source_png=("portrait_flash.png" if
+                                                   portrait == flash_portrait else
+                                                   "portrait.png")))
+            else:
+                parts.append(Placement("MNPlayersPortraits",
+                                       CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
             if fkind in CSS_INPROGRESS_FKIND:
                 # A SCRIM, THEN THE SOURCE'S OWN PLATE AT FULL STRENGTH.  The
                 # question mark is a thin glyph -- 219 texels of a 45x43 cell,
@@ -2526,7 +2580,7 @@ SURFACE_SOURCES.append(
 def onep_css_screen_parts() -> tuple[Placement, ...]:
     parts: list[Placement] = [STONE_FULL_BLEED]
     for portrait in range(12):
-        x, y = css_portrait_pos(portrait)
+        x, y = onep_css_portrait_pos(portrait)
         fkind = CSS_PORTRAIT_FKIND[portrait]
         parts.append(Placement(
             "MNPlayersPortraits", "llMNPlayersPortraitsPortraitFireBgSprite",
@@ -2789,6 +2843,10 @@ CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS", "LIN
                      "NESS",
                      "PURIN",
                      "KIRBY")
+if CSS_METAKNIGHT:
+    CSS_EMBLEM_SYMBOL += ("llFTEmblemSpritesKirbySprite",)
+    CSS_NAME_SYMBOL += ("",)
+    CSS_FIGHTER_TOKEN += ("METAKNIGHT",)
 CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
 CSS_TINT_COM = (0x44, 0x44, 0x44)
 # (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,
@@ -2833,9 +2891,16 @@ def css_gate(player: int, state: str, lut: str, shut: bool,
         parts.append(Placement("FTEmblemSprites", CSS_EMBLEM_SYMBOL[fighter],
                                start + 24, 143, False, tint))
         if with_name:
-            parts.append(Placement("MNPlayersCommon",
-                                    CSS_NAME_SYMBOL[fighter],
-                                    start + 22, 201, False))
+            if CSS_METAKNIGHT and fighter == 12:
+                # The donor 72x16 nameplate must fit the existing 66-wide card
+                # pocket. Preserve every letter and the source height.
+                parts.append(Placement("MetaKnight", "", start + 22, 201, False,
+                                       dest=(frame_pos(CSS_GATE_BOX[2]), frame_pos(16)),
+                                       source_png="nameplate.png"))
+            else:
+                parts.append(Placement("MNPlayersCommon",
+                                        CSS_NAME_SYMBOL[fighter],
+                                        start + 22, 201, False))
     if team_label is not None:
         # mnPlayersVSMakeTeamSelect, mnplayersvs.c:487: RED/BLUE/GREEN is a
         # 24x10 source sprite at (player*69+34, 131), above the card.  It is
@@ -2945,7 +3010,10 @@ SURFACE_SOURCES.append(SurfaceSpec(
 # rectangles for both flash states and both READY states.  Multiple players can
 # select the same mirror fighter; runtime ORs their visible flash GObjs per
 # portrait and chooses one of these four exact outcomes.
-for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0), ("LINK", 3)):
+CSS_FLASH_PORTRAITS = (("MARIO", 1), ("FOX", 9), ("LUIGI", 0), ("LINK", 3))
+if CSS_METAKNIGHT:
+    CSS_FLASH_PORTRAITS += (("METAKNIGHT", 12),)
+for _token, _portrait in CSS_FLASH_PORTRAITS:
     _x, _y = css_portrait_pos(_portrait)
     _box = (_x + 1, _y + 1, 43, 41)
     for _ready in (0, 1):

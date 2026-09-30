@@ -22,6 +22,9 @@ import struct
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import _paths
+
 
 DAMAGE_SYMBOLS = [f"llIFCommonPlayerDamageDigit{i}Sprite" for i in range(10)] + [
     "llIFCommonPlayerDamageSymbolPercentSprite"
@@ -308,6 +311,7 @@ def quantize_portrait(ui, raster, width: int, height: int, cell_width=16, cell_h
 
 def read_o2r_payload(path: Path) -> bytes:
     raw = path.read_bytes()
+    _paths.record_reference_input(path, raw)
     if len(raw) < min(header for header, _ in O2R_PAYLOAD_LAYOUTS):
         raise BakeError(f"{path.name}: RELO too short")
     if struct.unpack_from("<I", raw, 4)[0] != 0x52454C4F:
@@ -327,7 +331,7 @@ def read_o2r_payload(path: Path) -> bytes:
 
 
 def stock_asset(ui, repo_root: Path, spec: dict):
-    path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
+    path = (_paths.battleship_o2r_root(repo_root) /
             "reloc_fighters_main" / spec["file"])
     payload = read_o2r_payload(path)
     sprite = spec["sprite"]
@@ -344,11 +348,24 @@ def stock_asset(ui, repo_root: Path, spec: dict):
         raise BakeError(f"{spec['file']}: source stock sprite lost SP_TEXSHUF")
 
     tex = spec["texture"]
+    if tex + 80 > len(payload):
+        raise BakeError(f"{spec['file']}: stock texture out of range")
+    palettes = []
+    for pal_off in spec["palettes"]:
+        if pal_off + 32 > len(payload):
+            raise BakeError(f"{spec['file']}: stock palette out of range")
+        palettes.append(payload[pal_off:pal_off + 32])
+    return stock_cells(ui, payload[tex:tex + 80], palettes)
+
+
+def stock_cells(ui, texture: bytes, source_palettes: list[bytes]):
+    if len(texture) != 80 or not source_palettes or any(len(p) != 32 for p in source_palettes):
+        raise BakeError("stock CI4 texture/palette extent drift")
     # Bitmap width_img is 16: eight visible pixels plus eight padded pixels.
     # Undo the exact SP_TEXSHUF odd-row qword swap before sampling x=0..7.
     source = []
     for y in range(10):
-        row = bytes(payload[tex + y * 8:tex + (y + 1) * 8])
+        row = bytes(texture[y * 8:(y + 1) * 8])
         row = ui.deswizzle_row(row, y, True, 8)
         pixels = []
         for byte in row:
@@ -367,12 +384,10 @@ def stock_asset(ui, repo_root: Path, spec: dict):
             indices[y * 8 + x] = source[sy][sx]
 
     palettes = []
-    for pal_off in spec["palettes"]:
-        if pal_off + 32 > len(payload):
-            raise BakeError(f"{spec['file']}: stock palette out of range")
+    for source_palette in source_palettes:
         palette = []
         for i in range(16):
-            n64 = struct.unpack_from(">H", payload, pal_off + i * 2)[0]
+            n64 = struct.unpack_from(">H", source_palette, i * 2)[0]
             palette.append(ui.rgba8_to_ds(*ui.rgba16_to_rgba8(n64)))
         # DS 4bpp OBJ always treats index 0 as transparent, matching these CI4
         # source assets' transparent palette entry.
@@ -412,7 +427,7 @@ def c_metric_u8(name: str, rows: list[tuple[int, int]]) -> list[str]:
 def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     ui = load_ui_generator(repo_root)
     offsets = ui.load_reloc_offsets(repo_root)
-    o2r = repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r"
+    o2r = _paths.battleship_o2r_root(repo_root)
 
     interface_sets = [
         ("reloc_interface/IFCommonPlayerDamage", DAMAGE_SYMBOLS),
@@ -466,6 +481,20 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         portrait_gfx.append(gfx)
         portrait_palettes.append(palette)
 
+    meta_knight_gfx = None
+    meta_knight_palettes = []
+    if ui.CSS_METAKNIGHT:
+        try:
+            raster = ui.meta_knight_ui.load_image(repo_root, "portrait.png")
+            stock_texture, stock_palettes = ui.meta_knight_ui.load_stock(repo_root)
+        except (ValueError, OSError) as error:
+            raise BakeError(str(error)) from error
+        raster = ui.box_scale(raster, 16, 15)
+        gfx, palette = quantize_portrait(ui, raster, 16, 15)
+        portrait_gfx.append(gfx)
+        portrait_palettes.append(palette)
+        meta_knight_gfx, meta_knight_palettes = stock_cells(ui, stock_texture, stock_palettes)
+
     mario_gfx, mario_palettes = stock_asset(ui, repo_root, MODEL_STOCK["MARIO"])
     fox_gfx, fox_palettes = stock_asset(ui, repo_root, MODEL_STOCK["FOX"])
     luigi_gfx, luigi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LUIGI"])
@@ -506,9 +535,12 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         gfx, palette = quantize_portrait(ui, cell, 64, 32, 64, 32)
         score_gfx.append(gfx)
         score_palettes.append(palette)
-    graphics = glyph_groups + [portrait_gfx, [
+    stock_gfx = [
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
-        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx], score_gfx]
+        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx]
+    if meta_knight_gfx is not None:
+        stock_gfx.append(meta_knight_gfx)
+    graphics = glyph_groups + [portrait_gfx, stock_gfx, score_gfx]
     payload = b"".join(cell for group in graphics for cell in group)
     binary = struct.pack("<II", 0x31444842, len(payload)) + payload
     binary_output.parent.mkdir(parents=True, exist_ok=True)
@@ -522,8 +554,9 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         "#define NDS_BATTLE_HUD_DAMAGE_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_TIMER_GLYPHS 11u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS 11u",
-        f"#define NDS_BATTLE_HUD_PORTRAITS {len(PORTRAIT_SYMBOLS)}u",
-        f"#define NDS_BATTLE_HUD_STOCK_OWNERS {len(MODEL_STOCK)}u",
+        f"#define NDS_BATTLE_HUD_PORTRAITS {len(portrait_gfx)}u",
+        f"#define NDS_BATTLE_HUD_STOCK_OWNERS {len(stock_gfx)}u",
+        f"#define NDS_BATTLE_HUD_METAKNIGHT {int(ui.CSS_METAKNIGHT)}u",
         "#define NDS_BATTLE_HUD_DAMAGE_GFX_BYTES 512u",
         "#define NDS_BATTLE_HUD_TIMER_GFX_BYTES 128u",
         "#define NDS_BATTLE_HUD_STOCK_DIGIT_GFX_BYTES 128u",
@@ -568,6 +601,9 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     lines += [""]
     lines += c_array_u16("kNdsBattleHudKirbyStockPalette", kirby_palettes)
     lines += [""]
+    if meta_knight_palettes:
+        lines += c_array_u16("kNdsBattleHudMetaKnightStockPalette", meta_knight_palettes)
+        lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += c_array_u16("kNdsBattleHudScorePalette", score_palettes)
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

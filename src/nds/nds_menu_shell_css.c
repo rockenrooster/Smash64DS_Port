@@ -70,7 +70,10 @@
 #define NDS_CSS_DS(v) (((v) * 4) / 5)
 
 #define NDS_CSS_SLOTS 4
-#define NDS_CSS_PORTRAITS 12
+#define NDS_CSS_LEGACY_PORTRAITS 12u
+#define NDS_CSS_PORTRAITS (NDS_CSS_LEGACY_PORTRAITS + (NDS_P4_METAKNIGHT ? 1u : 0u))
+#define NDS_CSS_GRID_COLUMNS (NDS_P4_METAKNIGHT ? 7u : 6u)
+#define NDS_CSS_GRID_LEFT ((320u - NDS_CSS_GRID_COLUMNS * 45u) / 2u)
 
 /* mnPlayersVSAdjustCursor's clamps and its full-deflection step. */
 #define NDS_CSS_CURSOR_X_MIN 0
@@ -139,7 +142,7 @@
  * -- twelve entries, transcribed whole rather than trimmed to the two fighters
  * that exist, because it is the SOURCE's array and trimming it would make P2-3
  * edit this file again for no benefit). */
-static const u16 kNdsCssAnnounceVoice[NDS_CSS_PORTRAITS] = {
+static const u16 kNdsCssAnnounceVoice[NDS_CSS_LEGACY_PORTRAITS] = {
     499u, 486u, 483u, 513u, 498u, 497u,
     535u, 485u, 496u, 507u, 508u, 501u
 };
@@ -151,11 +154,17 @@ static const u8 kNdsCssPortraitFighter[NDS_CSS_PORTRAITS] = {
     (u8)nFTKindLink, (u8)nFTKindSamus, (u8)nFTKindCaptain,
     (u8)nFTKindNess, (u8)nFTKindYoshi, (u8)nFTKindKirby,
     (u8)nFTKindFox, (u8)nFTKindPikachu, (u8)nFTKindPurin
+#if NDS_P4_METAKNIGHT
+    , (u8)NDS_P4_RUNTIME_METAKNIGHT
+#endif
 };
 
 /* mnPlayersVSGetPortrait, the inverse (mnplayersvs.c:2168). */
 static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
     1u, 9u, 2u, 4u, 0u, 3u, 7u, 5u, 8u, 10u, 11u, 6u
+#if NDS_P4_METAKNIGHT
+    , 12u
+#endif
 };
 
 /* Which fighters this build HAS. Same shape as the source's fighter_mask; a
@@ -295,7 +304,7 @@ static u32 sCssReadyShown;
 static u8 sCssFlashRemain[NDS_CSS_SLOTS];
 static u8 sCssFlashVisible[NDS_CSS_SLOTS];
 static u8 sCssFlashKind[NDS_CSS_SLOTS];
-static u8 sCssFlashShown[4];
+static u8 sCssFlashShown[4u + (NDS_P4_METAKNIGHT ? 1u : 0u)];
 
 /* One cursor: the DS has one keypad, so exactly one player has a controller.
  * mnPlayersVSUpdateControllerOrders would report orders[0] = 0 and -1 for the
@@ -325,13 +334,25 @@ static void ndsMenuShellCssAnnounceMode(void)
 static void ndsMenuShellCssAnnounce(u32 slot)
 {
     u32 fkind = (u32)sCssFkind[slot];
+    u32 selection = ndsRosterSelectionIndex(fkind);
+    u32 voice;
 
-    if (fkind >= NDS_CSS_PORTRAITS)
+    if (selection >= NDS_CSS_PORTRAITS)
     {
         return;
     }
     ndsMenuShellCssCue(NDS_CSS_FGM_ANNOUNCE_WHOOSH);
-    ndsMenuShellCssCue((u32)kNdsCssAnnounceVoice[fkind]);
+#if NDS_P4_METAKNIGHT
+    if (selection == NDS_P4_UI_METAKNIGHT)
+    {
+        voice = ndsP4MetaKnightAnnouncerID();
+    }
+    else
+#endif
+    {
+        voice = (u32)kNdsCssAnnounceVoice[selection];
+    }
+    ndsMenuShellCssCue(voice);
     gNdsMenuShellCssAnnounceCount++;
 }
 
@@ -371,7 +392,14 @@ static u32 ndsMenuShellCssSaveLocked(u32 fkind)
 
 static u32 ndsMenuShellCssFighterLocked(u32 fkind)
 {
-    if (fkind >= NDS_CSS_PORTRAITS)
+#if NDS_P4_METAKNIGHT
+    /* Extended selections have no legacy unlock bit or serialized record row. */
+    if (fkind == NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        return FALSE;
+    }
+#endif
+    if (fkind >= NDS_CSS_LEGACY_PORTRAITS)
     {
         return TRUE;
     }
@@ -412,36 +440,31 @@ u32 ndsMenuShellCssWalkTargetKind(u32 slot)
 /* mnPlayersVSMakePortraitShadow's own placement, mnplayersvs.c:2412. */
 static s32 ndsMenuShellCssPortraitX(u32 portrait)
 {
-    return (s32)(((portrait >= 6u) ? (portrait - 6u) : portrait) * 45u) + 25;
+    u32 column = (portrait == 12u) ? 6u : (portrait % 6u);
+
+    return (s32)(NDS_CSS_GRID_LEFT + column * 45u);
 }
 
 static s32 ndsMenuShellCssPortraitY(u32 portrait)
 {
-    return (s32)(((portrait >= 6u) ? 1u : 0u) * 43u) + 36;
+    return (s32)(((portrait >= 6u && portrait < 12u) ? 1u : 0u) * 43u) + 36;
 }
 
 /* mnPlayersVSCenterPuckInPortrait, mnplayersvs.c:3454. */
 static void ndsMenuShellCssCenterPuck(u32 slot, u32 fkind)
 {
     u32 portrait;
+    u32 selection = ndsRosterSelectionIndex(fkind);
 
-    if (fkind >= NDS_CSS_PORTRAITS)
+    if (selection >= NDS_CSS_PORTRAITS)
     {
         sCssPuckX[slot] = (s16)NDS_CSS_PUCK_HOME_X;
         sCssPuckY[slot] = (s16)NDS_CSS_PUCK_HOME_Y;
         return;
     }
-    portrait = (u32)kNdsCssFighterPortrait[fkind];
-    if (portrait >= 6u)
-    {
-        sCssPuckX[slot] = (s16)((portrait * 45u) - (6u * 45u) + 36u);
-        sCssPuckY[slot] = (s16)89;
-    }
-    else
-    {
-        sCssPuckX[slot] = (s16)((portrait * 45u) + 36u);
-        sCssPuckY[slot] = (s16)46;
-    }
+    portrait = (u32)kNdsCssFighterPortrait[selection];
+    sCssPuckX[slot] = (s16)(ndsMenuShellCssPortraitX(portrait) + 11);
+    sCssPuckY[slot] = (s16)(ndsMenuShellCssPortraitY(portrait) + 10);
 }
 
 /* mnPlayersVSGetPuckFighterKind, mnplayersvs.c:3001 -- which fighter the
@@ -451,23 +474,32 @@ static u32 ndsMenuShellCssPuckFighterKind(u32 slot)
     s32 x = (s32)sCssPuckX[slot] + 13;
     s32 y = (s32)sCssPuckY[slot] + 12;
     u32 fkind;
+    u32 column;
+    u32 portrait;
 
-    if ((x <= 24) || (x >= 295))
+    if ((x < (s32)NDS_CSS_GRID_LEFT) ||
+        (x >= (s32)(NDS_CSS_GRID_LEFT + NDS_CSS_GRID_COLUMNS * 45u)))
     {
         return (u32)nFTKindNull;
     }
+    column = (u32)(x - (s32)NDS_CSS_GRID_LEFT) / 45u;
     if ((y > 35) && (y < 79))
     {
-        fkind = (u32)kNdsCssPortraitFighter[(x - 25) / 45];
+        portrait = (column == 6u) ? 12u : column;
     }
     else if ((y > 78) && (y < 122))
     {
-        fkind = (u32)kNdsCssPortraitFighter[((x - 25) / 45) + 6];
+        if (column >= 6u)
+        {
+            return (u32)nFTKindNull;
+        }
+        portrait = column + 6u;
     }
     else
     {
         return (u32)nFTKindNull;
     }
+    fkind = (u32)kNdsCssPortraitFighter[portrait];
     return (ndsMenuShellCssFighterLocked(fkind) != FALSE) ?
         (u32)nFTKindNull : fkind;
 }
@@ -583,7 +615,7 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 #define NDS_CSS_GATE_NA 0u
 #define NDS_CSS_GATE_MAN 1u
 #define NDS_CSS_GATE_COM 2u
-#define NDS_CSS_GATE_FIGHTERS 12u
+#define NDS_CSS_GATE_FIGHTERS NDS_CSS_PORTRAITS
 #define NDS_CSS_GATE_MAN_F0 3u
 #define NDS_CSS_GATE_COM_F0 (NDS_CSS_GATE_MAN_F0 + NDS_CSS_GATE_FIGHTERS)
 #define NDS_CSS_GATE_HOLD_F0 (NDS_CSS_GATE_COM_F0 + NDS_CSS_GATE_FIGHTERS)
@@ -596,7 +628,12 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA + NDS_CSS_GATE_STATES,
                "FFA gate surfaces must stay contiguous by player");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_KIRBY ==
+_Static_assert(
+#if NDS_P4_METAKNIGHT
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_METAKNIGHT ==
+#else
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_KIRBY ==
+#endif
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA +
                        (NDS_CSS_SLOTS * NDS_CSS_GATE_STATES) - 1u,
                "FFA gate block must contain all landed fighter states");
@@ -619,7 +656,12 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_0_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (2u * NDS_CSS_TEAM_GATE_STRIDE),
                "team gate surfaces must stay contiguous by team");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_KIRBY ==
+_Static_assert(
+#if NDS_P4_METAKNIGHT
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_METAKNIGHT ==
+#else
+                   NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_KIRBY ==
+#endif
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_GATE_STRIDE) - 1u,
                "team gate surface block must contain every landed fighter state");
@@ -865,6 +907,12 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     else if (fkind == (u32)nFTKindKirby)
     {
         fighter = 11u;
+    }
+#endif
+#if NDS_P4_METAKNIGHT
+    else if (fkind == NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        fighter = NDS_P4_UI_METAKNIGHT;
     }
 #endif
     else
@@ -1405,7 +1453,8 @@ static void ndsMenuShellCssMove(void)
 #define NDS_CSS_FLASH_KIND_FOX 1u
 #define NDS_CSS_FLASH_KIND_LUIGI 2u
 #define NDS_CSS_FLASH_KIND_LINK 3u
-#define NDS_CSS_FLASH_KIND_COUNT 4u
+#define NDS_CSS_FLASH_KIND_METAKNIGHT 4u
+#define NDS_CSS_FLASH_KIND_COUNT (4u + (NDS_P4_METAKNIGHT ? 1u : 0u))
 
 static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
 {
@@ -1429,12 +1478,33 @@ static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
         return NDS_CSS_FLASH_KIND_LINK;
     }
 #endif
+#if NDS_P4_METAKNIGHT
+    if (fkind == NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        return NDS_CSS_FLASH_KIND_METAKNIGHT;
+    }
+#endif
     return NDS_CSS_FLASH_KIND_NONE;
 }
 
 static NdsUiKitSurfaceId ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
 {
     u32 ready = (sCssReadyShown == 1u) ? 1u : 0u;
+
+#if NDS_P4_METAKNIGHT
+    if (kind == NDS_CSS_FLASH_KIND_METAKNIGHT)
+    {
+        if (ready != 0u)
+        {
+            return (visible != FALSE) ?
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_METAKNIGHT_ON_READY1 :
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_METAKNIGHT_OFF_READY1;
+        }
+        return (visible != FALSE) ?
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_METAKNIGHT_ON_READY0 :
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_METAKNIGHT_OFF_READY0;
+    }
+#endif
 
     if (kind == NDS_CSS_FLASH_KIND_MARIO)
     {
@@ -1853,8 +1923,8 @@ static void ndsMenuShellCssApplyKind(u32 slot)
              * two choices but not the source RNG state/sequence. */
             do
             {
-                fkind = (u32)syUtilsRandTimeUCharRange(
-                    (s32)nFTKindPlayableEnd + 1);
+                fkind = ndsRosterRuntimeKind((u32)syUtilsRandTimeUCharRange(
+                    (s32)NDS_CSS_PORTRAITS));
             }
             while (ndsMenuShellCssFighterLocked(fkind) != FALSE);
             sCssFkind[slot] = (u8)fkind;
@@ -2421,7 +2491,8 @@ static u32 ndsMenuShellCssWalkTourStep(void)
     }
 
     while (((u32)sCssWalkTourKind < (u32)NDS_CSS_PORTRAITS) &&
-           (ndsMenuShellCssFighterLocked((u32)sCssWalkTourKind) != FALSE))
+           (ndsMenuShellCssFighterLocked(
+                ndsRosterRuntimeKind((u32)sCssWalkTourKind)) != FALSE))
     {
         sCssWalkTourKind++;
     }
@@ -2445,7 +2516,7 @@ static u32 ndsMenuShellCssWalkTourStep(void)
     kind = (u32)sCssWalkTourKind;
     gNdsMenuShellCssWalkTourKindMask |= 1u << kind;
     /* Baseline AFTER the select, so the kind's own first frames are counted. */
-    ndsMenuShellCssWalkTourSelect(kind);
+    ndsMenuShellCssWalkTourSelect(ndsRosterRuntimeKind(kind));
     sCssWalkTourTriBase = gNdsFighterDLAllDrawP0HardwareTriangleCount;
     sCssWalkTourHold = (u32)NDS_CSS_WALK_TOUR_HOLD_TICS;
     return TRUE;
@@ -2756,6 +2827,9 @@ static void ndsMenuShellCssInit(void)
     sCssFlashShown[NDS_CSS_FLASH_KIND_FOX] = 0u;
     sCssFlashShown[NDS_CSS_FLASH_KIND_LUIGI] = 0u;
     sCssFlashShown[NDS_CSS_FLASH_KIND_LINK] = 0u;
+#if NDS_P4_METAKNIGHT
+    sCssFlashShown[NDS_CSS_FLASH_KIND_METAKNIGHT] = 0u;
+#endif
     /* P2-1N (4): seeded from the transfer state exactly as the source seeds
      * sMNPlayersVSIsTeamBattle on scene entry (mnplayersvs.c:4679). */
     sCssIsTeamBattle = (gSCManagerTransferBattleState.is_team_battle != 0) ?

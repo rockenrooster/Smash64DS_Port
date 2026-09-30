@@ -14,6 +14,32 @@ PROGRAMS = (("mario", 1), ("fox", 1))
 IMAGE_OWNERS = tuple(f"{name}_skeleton{sid}" for name, sid in PROGRAMS)
 
 
+def explicit_context(source_provider, owner_name, detail, source_roots, *, binding_source_joints=None):
+    """Compile a typed donor skeleton through the ordinary native root ABI.
+
+    Roots/joints/flags are supplied by the validated raw selector reader, not
+    borrowed from a base fighter or discovered through global source catalogs.
+    """
+    joints = [row["joint_id"] for row in source_roots]
+    if len(set(joints)) != len(joints):
+        raise ValueError("explicit skeleton has duplicate source joint roots")
+    if any(row.get("skeleton_flags", 0) & 0x3F for row in source_roots):
+        raise ValueError("explicit skeleton needs paired/custom draw mode support")
+    domain = joints if binding_source_joints is None else list(binding_source_joints)
+    if len(set(domain)) != len(domain) or any(joint not in domain for joint in joints):
+        raise ValueError("explicit skeleton source binding domain does not cover its joints")
+    bindings = [domain.index(joint) for joint in joints]
+    context = owners.build_p2_root_set_runtime_context(
+        Path(__file__).resolve().parents[2], owner_name, detail,
+        [row["offset"] for row in source_roots], source_provider=source_provider,
+        root_bindings=bindings)
+    context["cross_slots"].extend([owners.PACKED_GX_SLOT_CURRENT] *
+                                  (len(domain) - len(context["cross_slots"])))
+    context["binding_source_joints"] = domain
+    context["source_skeleton_flags"] = [row.get("skeleton_flags", 0) for row in source_roots]
+    return context
+
+
 def root_offsets(repo: Path, name: str, skeleton_id=1) -> tuple[int, ...]:
     title = owners._owner_title(name)
     matches = list((repo / "decomp/BattleShip-main/decomp/src/relocData").glob(
@@ -28,7 +54,8 @@ def root_offsets(repo: Path, name: str, skeleton_id=1) -> tuple[int, ...]:
     if match is None:
         raise ValueError(f"{name}: missing annotated skeleton table")
     offset, size, count = int(match[1], 16), int(match[2]), int(match[3])
-    payload, _ = source.oler_data(source.o2r_path_by_id(int(path.name.split('_')[0])))
+    payload, _ = source.oler_data(source.o2r_path_by_id(
+        int(path.name.split('_')[0]), repo_root=repo))
     if size != count * 8 or payload is None or offset + size > len(payload):
         raise ValueError(f"{name}: invalid skeleton extent")
     table = re.search(r"/\* @ 0x([\da-fA-F]+),\s*12 bytes:(?:(?!\*/).)*\*/"

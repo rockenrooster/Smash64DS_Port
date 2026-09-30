@@ -409,14 +409,22 @@ def merge_spans(intervals):
 
 
 O2R_ID_CACHE = None
+O2R_ROOT_ID_CACHES = {}
 
 
-def o2r_path_by_id(fid):
+def o2r_path_by_id(fid, repo_root=None, *, o2r_root=None):
     """Resolve an O2R file id to its repo path via resource headers."""
     global O2R_ID_CACHE
-    if O2R_ID_CACHE is None:
-        O2R_ID_CACHE = {}
-        for p in O2R.rglob("*"):
+    if repo_root is not None and o2r_root is not None:
+        raise ValueError("provide either a repo root or an O2R root, not both")
+    explicit = repo_root is not None or o2r_root is not None
+    root = (Path(o2r_root) if o2r_root is not None else
+            Path(repo_root) / "decomp/BattleShip-main/BattleShip_o2r" if repo_root is not None else O2R)
+    key = str(root.resolve())
+    cache = O2R_ROOT_ID_CACHES.get(key) if explicit else O2R_ID_CACHE
+    if cache is None:
+        cache = {}
+        for p in root.rglob("*"):
             if not p.is_file() or p.suffix:
                 continue
             try:
@@ -426,8 +434,12 @@ def o2r_path_by_id(fid):
                 continue
             if len(head) < 0x48 or head[4:8] != b"OLER":
                 continue
-            O2R_ID_CACHE[struct.unpack_from("<I", head, 0x40)[0]] = p
-    return O2R_ID_CACHE.get(fid)
+            cache[struct.unpack_from("<I", head, 0x40)[0]] = p
+        if explicit:
+            O2R_ROOT_ID_CACHES[key] = cache
+        else:
+            O2R_ID_CACHE = cache
+    return cache.get(fid)
 
 
 def vtx_off_of(name):

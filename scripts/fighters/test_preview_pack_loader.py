@@ -120,6 +120,8 @@ HARNESS_HEAD = r'''
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define NDS_P4_METAKNIGHT 0
+#include <nds/nds_p4_roster.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -530,7 +532,7 @@ class PreviewPackLoaderTest(unittest.TestCase):
             built = subprocess.run(
                 [compiler, "-std=c11", "-Wall", "-Wextra", "-Werror",
                  "-fmax-errors=8" if "gcc" in compiler else "-ferror-limit=8",
-                 str(source), "-o", str(program)],
+                 "-I", str(ROOT / "include"), str(source), "-o", str(program)],
                 capture_output=True)
             self.assertEqual(
                 built.returncode, 0,

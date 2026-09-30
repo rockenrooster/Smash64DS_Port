@@ -29,6 +29,7 @@ import os
 import re
 import struct
 import sys
+import _paths
 from collections import Counter
 from pathlib import Path
 
@@ -965,11 +966,12 @@ ESTIMATE = {
 # --------------------------------------------------------------------------
 def load_o2r_blob(repo_root: Path, name: str, expected_sha256: str) -> bytes:
     """Return the raw bank payload from an O2R 'BLBO' resource."""
-    path = repo_root / O2R_PARTICLES / name
+    path = _paths.battleship_input_path(repo_root, O2R_PARTICLES / name)
     source = path.read_bytes()
     actual = hashlib.sha256(source).hexdigest()
     if actual != expected_sha256:
         raise SystemExit(f"{path}: SHA-256 {actual} != {expected_sha256}")
+    _paths.record_reference_input(path, source)
     if len(source) < O2R_BLOB_DATA_OFFSET:
         raise SystemExit(f"{path}: truncated O2R resource header")
     if source[4:8] != O2R_BLOB_MAGIC:
@@ -2768,12 +2770,14 @@ def build_shield_a5i3(repo_root: Path) -> tuple[bytes, int, int]:
     is one static block rather than one per player.
     """
     asset = SHIELD_A5I3_ASSET
-    path = repo_root / RELOC_ASSET_DIR / asset["file"]
+    path = _paths.battleship_input_path(repo_root, RELOC_ASSET_DIR / asset["file"])
     if not path.is_file():
         raise SystemExit(f"{path}: missing reloc payload for the shield "
                          f"({asset['symbol']})")
     count = asset["width"] * asset["height"]
-    raw = path.read_bytes()[asset["offset"]:asset["offset"] + count]
+    payload = path.read_bytes()
+    _paths.record_reference_input(path, payload)
+    raw = payload[asset["offset"]:asset["offset"] + count]
     if len(raw) != count:
         raise SystemExit(f"SHIELD: wanted {count} IA8 bytes at "
                          f"0x{asset['offset']:x}, file holds {len(raw)}")
@@ -2858,12 +2862,14 @@ def build_fireball_pal16(repo_root: Path) -> tuple[bytes, int, int]:
     depth: lower 4bit = left dot"). Swapping every byte is the whole conversion.
     """
     asset = FIREBALL_ASSET
-    path = repo_root / RELOC_ASSET_DIR / asset["file"]
+    path = _paths.battleship_input_path(repo_root, RELOC_ASSET_DIR / asset["file"])
     if not path.is_file():
         raise SystemExit(f"{path}: missing reloc payload for the fireball "
                          f"({asset['symbol']})")
     count = (asset["width"] * asset["height"]) // 2
-    raw = path.read_bytes()[asset["offset"]:asset["offset"] + count]
+    payload = path.read_bytes()
+    _paths.record_reference_input(path, payload)
+    raw = payload[asset["offset"]:asset["offset"] + count]
     if len(raw) != count:
         raise SystemExit(f"FIREBALL: wanted {count} CI4 bytes at "
                          f"0x{asset['offset']:x}, file holds {len(raw)}")
@@ -2882,7 +2888,9 @@ def build_fireball_palettes(repo_root: Path) -> list[list[int]]:
     render the fireball as a black square instead of a flame.
     """
     asset = FIREBALL_ASSET
-    raw = (repo_root / RELOC_ASSET_DIR / asset["file"]).read_bytes()
+    path = _paths.battleship_input_path(repo_root, RELOC_ASSET_DIR / asset["file"])
+    raw = path.read_bytes()
+    _paths.record_reference_input(path, raw)
     palettes = []
     for which, offset in enumerate(asset["palette_offsets"]):
         entries = []
@@ -2912,11 +2920,12 @@ def build_source_asset_quads(repo_root: Path,
     """
     candidates = []
     for index, asset in enumerate(SOURCE_QUAD_ASSETS):
-        path = repo_root / RELOC_ASSET_DIR / asset["file"]
+        path = _paths.battleship_input_path(repo_root, RELOC_ASSET_DIR / asset["file"])
         if not path.is_file():
             raise SystemExit(f"{path}: missing reloc payload for "
                              f"{asset['name']} ({asset['symbol']})")
         payload = path.read_bytes()
+        _paths.record_reference_input(path, payload)
         pixels = decode_source_asset_texels(payload, asset)
         pixels, src_w, src_h = apply_source_quad_wrap(asset, pixels)
         key = SOURCE_QUAD_TEXTURE_STRIDE + index

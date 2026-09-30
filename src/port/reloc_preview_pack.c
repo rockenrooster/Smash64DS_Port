@@ -1,8 +1,15 @@
 /* Included by reloc_backend_assets.c: shares the scene-owned file registry and
  * its existing source-format normalizers. Never pages fighter data at runtime. */
 #include <nds/nds_preview_pack.h>
+#include <nds/nds_p4_runtime.h>
 #include <nds/nds_scene_manager.h>
 #include <stdio.h>
+#define NDS_PREVIEW_CORE_HAS_EXTERNS \
+    (NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P4_METAKNIGHT)
+#if NDS_P4_METAKNIGHT
+#include <nds/generated/nds_metaknight_core_contract.generated.h>
+static const u32 sNdsMetaCoreExpectedHeader[16] = NDS_META_CORE_FPC_HEADER_WORDS;
+#endif
 
 u32 ndsRelocUseBattleCoreFighterData(void)
 {
@@ -14,7 +21,7 @@ u32 ndsRelocUseBattleCoreFighterData(void)
 #endif
 }
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
 typedef struct NDSBattleForeignImageRow {
     u16 asset_id;
     u16 reserved;
@@ -30,18 +37,22 @@ typedef struct NDSPreviewResident {
     u32 model_source_bytes;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
     NDSBattleForeignImageRow *foreign_images;
     u32 foreign_count;
+#if NDS_P4_METAKNIGHT
+    u32 externs_ready;
+#endif
 #endif
 } NDSPreviewResident;
 
-static NDSPreviewResident sNdsPreviewResidents[12];
+static NDSPreviewResident sNdsPreviewResidents[
+    NDS_P4_LEGACY_SELECTION_COUNT + (NDS_P4_METAKNIGHT != 0)];
 volatile u32 gNdsPreviewPackLoadCount;
 volatile u32 gNdsPreviewPackDataBytes;
 volatile u32 gNdsPreviewPackFailure;
 volatile u32 gNdsPreviewPackFailureKind;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
 volatile u32 gNdsBattleCoreExternPatchCount;
 volatile u32 gNdsBattleCoreExternLoadCount;
 volatile u32 gNdsBattleCoreExternFailure;
@@ -67,7 +78,71 @@ typedef struct NDSBattleExternRow {
 } NDSBattleExternRow;
 _Static_assert(sizeof(NDSBattleExternHeader) == 24u, "battle extern header ABI");
 _Static_assert(sizeof(NDSBattleExternRow) == 6u, "battle extern row ABI");
+#if NDS_P4_METAKNIGHT
+static const NDSBattleExternRow sNdsMetaCoreExpectedExterns[] = {
+#define NDS_META_CORE_EXTERN_ROW(slot_, dep_, target_) { slot_, dep_, target_ },
+    NDS_META_CORE_EXTERN_ROWS(NDS_META_CORE_EXTERN_ROW)
+#undef NDS_META_CORE_EXTERN_ROW
+};
+_Static_assert(ARRAY_COUNT(sNdsMetaCoreExpectedExterns) == NDS_META_CORE_EXTERN_COUNT,
+               "Meta complete source Main extern census");
 #endif
+static s32 ndsRelocPatchCompactMainExternsLoaded(s32 fkind,
+    NDSRelocLoadedFile *main_loaded, s32 is_battle_pack);
+#endif
+
+s32 ndsRelocPrewarmMetaCoreStatusFiles(s32 fkind)
+{
+#if NDS_P4_METAKNIGHT
+    u32 i;
+    if (ndsP4IsMetaKnight(fkind) == FALSE) return TRUE;
+    /* Caller selects the existing scene-lifetime allocator. Never inherit a
+     * resettable per-fighter CSS block for source status/cache residency. */
+    for (i = 0u; i <= ARRAY_COUNT(sNdsMetaCoreExpectedExterns); i++)
+    {
+        u32 asset = (i == ARRAY_COUNT(sNdsMetaCoreExpectedExterns)) ?
+            NDS_META_CORE_MOTION_ASSET : sNdsMetaCoreExpectedExterns[i].dep_asset;
+        NDSRelocLoadedFile *loaded = ndsRelocEnsureLoadedAsset(asset);
+        if ((loaded == NULL) || (loaded->owner_generation != sNdsRelocSceneGeneration))
+            return FALSE;
+        ndsRelocAddStatusBufferFile(asset, loaded->data);
+        if (ndsRelocFindStatusNode(sNdsRelocStatusBuffer, sNdsRelocStatusBufferCount,
+                                  asset) != loaded->data) return FALSE;
+    }
+    {
+        FTData *data = ndsP4GetFighterData(fkind);
+        NDSRelocLoadedFile *motion = ndsRelocFindLoadedFileByAsset(NDS_META_CORE_MOTION_ASSET);
+        if ((data == NULL) || (data->p_file_mainmotion == NULL) ||
+            (data->p_file_submotion == NULL) || (motion == NULL) ||
+            (motion->owner_generation != sNdsRelocSceneGeneration) ||
+            (data->file_mainmotion_id != NDS_META_CORE_MOTION_ASSET) ||
+            (data->file_submotion_id != NDS_META_CORE_MOTION_ASSET)) return FALSE;
+        *data->p_file_mainmotion = lbRelocGetStatusBufferFile(data->file_mainmotion_id);
+        *data->p_file_submotion = lbRelocGetStatusBufferFile(data->file_submotion_id);
+        if ((*data->p_file_mainmotion != motion->data) ||
+            (*data->p_file_submotion != motion->data)) return FALSE;
+        /* The CSS working-set sizer consumes these source-defined menu rows
+         * before a lazy per-fighter FPC transaction begins. */
+        ndsP4BindFighterMotionData(fkind);
+    }
+#else
+    (void)fkind;
+#endif
+    return TRUE;
+}
+
+static s32 ndsPreviewBattlePackForKind(s32 fkind)
+{
+    if (ndsRelocUseBattleCoreFighterData() != FALSE) return TRUE;
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind))
+        return (gNdsSceneManagerCurrIsBattle != 0u) ||
+               (gSCManagerSceneData.scene_curr == nSCKindVSResults);
+#else
+    (void)fkind;
+#endif
+    return FALSE;
+}
 
 static u32 ndsPreviewHash(const void *data, size_t size, u32 hash)
 {
@@ -93,7 +168,7 @@ static const NDSPreviewPackSection *ndsPreviewSection(
     {
         return NULL;
     }
-    kind = loaded->reserved[0] - 1u;
+    kind = ndsRosterSelectionIndex(loaded->reserved[0] - 1u);
     if ((kind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
         (loaded->reserved[1] >= NDS_PREVIEW_PACK_MAX_SECTIONS))
     {
@@ -428,7 +503,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     FTData *fighter;
     FILE *file;
     char preview_path[] = "nitro:/fighters/preview/00.fpc";
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
     char battle_path[] = "nitro:/fighters/battle/00.fpc";
 #endif
     char *path = preview_path;
@@ -444,12 +519,11 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 #endif
     if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
          (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-         && (ndsRelocUseBattleCoreFighterData() == FALSE)
-#endif
+         && (ndsPreviewBattlePackForKind(fkind) == FALSE)
         ) ||
-        ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return NULL; }
-    fighter = dFTManagerDataFiles[fkind];
+        (ndsRosterSelectionIndex((u32)fkind) >=
+         ARRAY_COUNT(sNdsPreviewResidents))) { return NULL; }
+    fighter = ndsP4GetFighterData(fkind);
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
         (fighter->p_file_model == NULL)) { ndsPreviewPackLoadHalt(1u, fkind); }
 
@@ -491,8 +565,8 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-    if (ndsRelocUseBattleCoreFighterData() != FALSE)
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
+    if (ndsPreviewBattlePackForKind(fkind) != FALSE)
     {
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
@@ -532,6 +606,11 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     {
         ndsPreviewPackLoadHalt(4u, fkind);
     }
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind) &&
+        memcmp(&header, sNdsMetaCoreExpectedHeader, sizeof(header)) != 0)
+        ndsPreviewPackLoadHalt(4u, fkind);
+#endif
     /* Metadata is smaller than its bytes on disk; the file-size equality above
      * proves this addition cannot overflow the positive signed file length. */
     load->allocation = header.data_bytes +
@@ -732,11 +811,14 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
          * readable, so it happens here and not one step earlier: a transaction
          * cancelled before REGISTER leaves no resident and no loaded-file row
          * behind at all. */
-        resident = &sNdsPreviewResidents[fkind];
+        resident = &sNdsPreviewResidents[ndsRosterSelectionIndex((u32)fkind)];
         resident->model_source_bytes = load->model_source_bytes;
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
         resident->foreign_images = NULL;
         resident->foreign_count = 0u;
+#if NDS_P4_METAKNIGHT
+        resident->externs_ready = FALSE;
+#endif
 #endif
         resident->sections = load->sections;
         resident->spans = load->spans;
@@ -775,6 +857,22 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
             records[i]->reserved[0] = (u8)(fkind + 1);
             records[i]->reserved[1] = (u8)i;
         }
+#if NDS_P4_METAKNIGHT
+        if (ndsP4IsMetaKnight(fkind))
+        {
+            /* All eleven source externs and the private motion file must be
+             * resident before typed normalization can inspect the closure.
+             * FTData publication remains at the ordinary owner boundary. */
+            for (i = 0u; i < load->section_count; i++)
+                ndsRelocAddStatusBufferFile(records[i]->asset_id, records[i]->data);
+            if ((load->is_battle_pack != 0u) &&
+                (ndsRelocPrewarmMetaCoreStatusFiles(fkind) == FALSE))
+                ndsPreviewPackLoadHalt(14u, (u32)fkind);
+            if (ndsRelocPatchCompactMainExternsLoaded(fkind, records[0],
+                                                       load->is_battle_pack) == FALSE)
+                ndsPreviewPackLoadHalt(14u, (u32)fkind);
+        }
+#endif
         if (ndsRelocNormalizeFighterAttributesFile(records[0]) == FALSE)
         {
             ndsPreviewPackLoadHalt(11u, (u32)fkind);
@@ -821,7 +919,7 @@ s32 ndsRelocPreviewFighterLoadStep(void *handle, u32 byte_budget, u32 *out_bytes
  * whole closure already relocated, registered and normalized. */
 static s32 ndsPreviewPackLoadPublish(NDSPreviewPackLoad *load)
 {
-    FTData *fighter = dFTManagerDataFiles[load->fkind];
+    FTData *fighter = ndsP4GetFighterData(load->fkind);
     s32 fkind = load->fkind;
     u32 allocation = load->allocation;
     u8 *data = load->data;
@@ -884,7 +982,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     return ndsPreviewPackLoadPublish(load);
 }
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_PREVIEW_CORE_HAS_EXTERNS
 static s32 ndsBattleForeignImagesValid(const NDSBattleForeignImageRow *rows,
                                        u32 count, u32 bytes)
 {
@@ -922,11 +1020,11 @@ static __attribute__((noinline, noreturn)) void ndsBattleCoreExternHalt(s32 fkin
     ndsPreviewPackLoadHalt(14u, (u32)fkind);
 }
 
-s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
+static s32 ndsRelocPatchCompactMainExternsLoaded(s32 fkind,
+    NDSRelocLoadedFile *main_loaded, s32 is_battle_pack)
 {
     NDSBattleExternHeader header;
     NDSBattleExternRow rows[NDS_BATTLE_EXTERN_MAX];
-    NDSRelocLoadedFile *main_loaded;
     NDSPreviewResident *resident;
     NDSBattleForeignImageRow *foreign_images = NULL;
     FILE *file;
@@ -934,27 +1032,29 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     u64 bank_bytes;
     u64 expected_bytes;
     u32 allocation;
-    FTData *fighter;
-    char path[] = "nitro:/fighters/battle/00.ext";
-    const u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+    char battle_path[] = "nitro:/fighters/battle/00.ext";
+    char preview_path[] = "nitro:/fighters/preview/00.ext";
+    char *path = (is_battle_pack != FALSE) ? battle_path : preview_path;
+    u32 digit_at = (is_battle_pack != FALSE) ? sizeof("nitro:/fighters/battle/") - 1u :
+                                             sizeof("nitro:/fighters/preview/") - 1u;
     u32 i;
 
-    if (((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
-        (ndsRelocUseBattleCoreFighterData() == FALSE))
+    if ((ndsRosterSelectionIndex((u32)fkind) >=
+         ARRAY_COUNT(sNdsPreviewResidents)))
     {
         return FALSE;
     }
-    fighter = dFTManagerDataFiles[fkind];
-    if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
-        (*fighter->p_file_main == NULL))
-    {
-        ndsBattleCoreExternHalt(fkind);
-    }
-    main_loaded = ndsRelocFindLoadedFileByData(*fighter->p_file_main);
     if ((main_loaded == NULL) || (main_loaded->reserved[0] != (u8)(fkind + 1u)))
     {
         ndsBattleCoreExternHalt(fkind);
     }
+    resident = &sNdsPreviewResidents[ndsRosterSelectionIndex((u32)fkind)];
+    if ((resident->generation != sNdsRelocSceneGeneration) ||
+        (main_loaded->owner_generation != sNdsRelocSceneGeneration))
+        ndsBattleCoreExternHalt(fkind);
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind) && resident->externs_ready != FALSE) return TRUE;
+#endif
 
     path[digit_at] = (char)('0' + ((u32)fkind / 10u));
     path[digit_at + 1u] = (char)('0' + ((u32)fkind % 10u));
@@ -978,6 +1078,15 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     {
         ndsBattleCoreExternHalt(fkind);
     }
+#if NDS_P4_METAKNIGHT
+    /* BEX2 hashes its foreign bank, not these rows. Qualify the complete
+     * source-derived Meta directory before allocating or mutating pointers. */
+    if (ndsP4IsMetaKnight(fkind) &&
+        ((header.count != NDS_META_CORE_EXTERN_COUNT) || (header.foreign_count != 0u) ||
+         (header.foreign_bytes != 0u) ||
+         (memcmp(rows, sNdsMetaCoreExpectedExterns, sizeof(sNdsMetaCoreExpectedExterns)) != 0)))
+        ndsBattleCoreExternHalt(fkind);
+#endif
     allocation = ((u32)bank_bytes + 15u) & ~15u;
     if (allocation != 0u)
     {
@@ -1007,7 +1116,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
             ndsRelocWriteNative32(foreign_data + i, ndsRelocReadBe32(foreign_data + i));
         }
     }
-    resident = &sNdsPreviewResidents[fkind];
+    resident = &sNdsPreviewResidents[ndsRosterSelectionIndex((u32)fkind)];
     resident->foreign_images = foreign_images;
     resident->foreign_count = header.foreign_count;
     gNdsBattleCoreForeignImageBytes += allocation;
@@ -1028,6 +1137,11 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
         }
         dep = ndsRelocFindLoadedFileByAsset(rows[i].dep_asset);
         was_loaded = (dep != NULL) ? TRUE : FALSE;
+#if NDS_P4_METAKNIGHT
+        /* Meta's scene-lifetime prewarm is complete before its CSS block is
+         * selected. REGISTER performs lookup/publication only. */
+        if (ndsP4IsMetaKnight(fkind) == FALSE)
+#endif
         dep = ndsRelocEnsureLoadedAsset(rows[i].dep_asset);
         if (dep != NULL)
         {
@@ -1055,7 +1169,35 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
                                    (u8 *)dep->data + dep_offset);
         gNdsBattleCoreExternPatchCount++;
     }
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind))
+    {
+        NDSRelocLoadedFile *motion = ndsRelocFindLoadedFileByAsset(NDS_META_CORE_MOTION_ASSET);
+        if ((motion == NULL) || (motion->owner_generation != sNdsRelocSceneGeneration))
+            ndsBattleCoreExternHalt(fkind);
+        ndsRelocAddStatusBufferFile(NDS_META_CORE_MOTION_ASSET, motion->data);
+        if (ndsRelocFindStatusNode(sNdsRelocStatusBuffer, sNdsRelocStatusBufferCount,
+                                  NDS_META_CORE_MOTION_ASSET) != motion->data)
+            ndsBattleCoreExternHalt(fkind);
+    }
+#endif
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind)) resident->externs_ready = TRUE;
+#endif
     return TRUE;
+}
+
+s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
+{
+    FTData *fighter;
+
+    if ((ndsRosterSelectionIndex((u32)fkind) >= ARRAY_COUNT(sNdsPreviewResidents)) ||
+        (ndsPreviewBattlePackForKind(fkind) == FALSE)) return FALSE;
+    fighter = ndsP4GetFighterData(fkind);
+    if ((fighter == NULL) || (fighter->p_file_main == NULL) || *fighter->p_file_main == NULL)
+        ndsBattleCoreExternHalt(fkind);
+    return ndsRelocPatchCompactMainExternsLoaded(fkind,
+        ndsRelocFindLoadedFileByData(*fighter->p_file_main), TRUE);
 }
 #endif
 
@@ -1064,7 +1206,8 @@ void ndsRelocReleasePreviewFighter(s32 fkind)
     u32 i = 0u;
     u8 owner;
 
-    if ((fkind < 0) || ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)))
+    if (ndsRosterSelectionIndex((u32)fkind) >=
+        ARRAY_COUNT(sNdsPreviewResidents))
     {
         return;
     }
@@ -1130,8 +1273,8 @@ void ndsRelocReleasePreviewFighter(s32 fkind)
         }
         i++;
     }
-    memset(&sNdsPreviewResidents[fkind], 0,
-           sizeof(sNdsPreviewResidents[fkind]));
+    memset(&sNdsPreviewResidents[ndsRosterSelectionIndex((u32)fkind)], 0,
+           sizeof(sNdsPreviewResidents[0]));
     sNdsRelocRelativeOffsetsMemo = NULL;
     sNdsRelocRelativeOffsetsMemoBase = NULL;
 }

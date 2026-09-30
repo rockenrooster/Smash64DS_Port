@@ -8,6 +8,10 @@
 #include <nds/nds_renderer.h>
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#define ifCommonPlayerTagProcDisplay ndsP4BasePlayerTagProcDisplay
+#endif
 #include <sys/objhelper.h>
 #include <sys/objman.h>
 #include <nds/nds_scene_manager.h>
@@ -129,6 +133,15 @@ static void ndsIFCommonAddGObjDisplay(GObj *gobj,
 #undef ifCommonBattleUpdateInterfaceAll
 #undef ifCommonEntryAllMakeInterface
 #undef ifCommonItemArrowSetAttr
+#if NDS_P4_METAKNIGHT
+#undef ifCommonPlayerTagProcDisplay
+void ifCommonPlayerTagProcDisplay(GObj *gobj)
+{
+    s32 player = ifGetPlayer(gobj);
+    FTStruct *fp = ftGetStruct(gSCManagerBattleState->players[player].fighter_gobj);
+    if (ndsMetaKnightCapeHidden(fp) == FALSE) ndsP4BasePlayerTagProcDisplay(gobj);
+}
+#endif
 
 static void ndsIFCommonAnnounceProcUpdate(GObj *interface_gobj)
 {

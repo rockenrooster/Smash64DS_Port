@@ -12,6 +12,7 @@
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_p4_roster.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
@@ -1986,6 +1987,9 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * with its source colour preserved and DS texel alpha forced opaque; keep that
  * representation distinct from the ordinary alpha-carrying conversion. */
 #define NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS (1u << 29)
+/* P4 Meta Knight's IA8 surface uses TEXEL0 only for alpha. Its white-RGB A5
+ * representation must never alias the ordinary intensity-RGB representation. */
+#define NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_ONLY (1u << 28)
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)

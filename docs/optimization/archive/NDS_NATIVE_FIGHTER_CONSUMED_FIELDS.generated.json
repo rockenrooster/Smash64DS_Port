@@ -2299,6 +2299,14 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "prepared_run.poly_fmt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "prepared_run.texture_entry",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "prepared_run.textured",
           "classification": "live_camera_independent"
         },

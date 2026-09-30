@@ -14,6 +14,8 @@ change needed to make the four bodies one.
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
+import _paths
 
 
 def census(repo, sm, asset_id: int) -> tuple:
@@ -24,7 +26,9 @@ def census(repo, sm, asset_id: int) -> tuple:
     Returns `(scanned, hits)` where `hits` is a sorted tuple of
     `(file_id, slot, offset)` for every external reference to `asset_id`.
     """
-    root = repo / "decomp/BattleShip-main/BattleShip_o2r"
+    root = _paths.battleship_o2r_root(repo)
+    if not root.is_dir():
+        raise FileNotFoundError(f"required O2R census corpus is absent: {root}")
     hits = []
     scanned = 0
     for path in sorted(root.rglob("*")):
@@ -34,7 +38,8 @@ def census(repo, sm, asset_id: int) -> tuple:
         if len(blob) < 0x50 or blob[4:8] != b"OLER":
             continue
         scanned += 1
-        rel = str(path.relative_to(repo)).replace("\\", "/")
+        rel = str(Path("decomp/BattleShip-main/BattleShip_o2r") /
+                  path.relative_to(root)).replace("\\", "/")
         res = sm.load_o2r(repo, sm.InputSpec(rel, hashlib.sha256(blob).hexdigest()))
         for slot, ref in res.external.items():
             if ref.asset_id == asset_id:

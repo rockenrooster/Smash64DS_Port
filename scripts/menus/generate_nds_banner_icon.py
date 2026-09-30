@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from generate_mn_ui_kit import (  # noqa: E402
     ConvertError, RelocFile, box_scale, decode_sprite_raster,
-    load_reloc_offsets, write_png,
+    load_reloc_offsets, o2r_path, write_png,
 )
 
 ICON_W = ICON_H = 32
@@ -54,8 +54,7 @@ def build_icon(repo_root: Path) -> tuple[list[int], list[tuple[int, int, int]]]:
     offsets = load_reloc_offsets(repo_root)
     if SOURCE_SYMBOL not in offsets:
         raise ConvertError(f"{SOURCE_SYMBOL} has no offset in either header")
-    path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-            "reloc_menus" / SOURCE_O2R)
+    path = o2r_path(repo_root, SOURCE_O2R)
     fileobj = RelocFile(path)
     _, raster = decode_sprite_raster(fileobj, SOURCE_SYMBOL,
                                      offsets[SOURCE_SYMBOL], (255, 255, 255),

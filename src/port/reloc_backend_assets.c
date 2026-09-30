@@ -24,6 +24,23 @@
 #include <nds/nds_shield_pose.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
+#if NDS_P4_METAKNIGHT
+#include <nds_metaknight_native_assets.generated.h>
+#include <nds_metaknight_attribute_metadata.generated.h>
+#include <nds/nds_p4_runtime.h>
+
+#define NDS_P4_ATTR_OFFSET_CHECK(field_, offset_) \
+    _Static_assert(offsetof(FTAttributes, field_) == (offset_), \
+                   "Meta Knight FTAttributes mixed-field ABI drift")
+NDS_P4_ATTR_OFFSET_CHECK(dead_fgm_ids, NDS_META_ATTR_DEAD_FGM_0_OFFSET);
+NDS_P4_ATTR_OFFSET_CHECK(deadup_sfx, NDS_META_ATTR_DEADUP_SFX_OFFSET);
+NDS_P4_ATTR_OFFSET_CHECK(damage_sfx, NDS_META_ATTR_DAMAGE_SFX_OFFSET);
+NDS_P4_ATTR_OFFSET_CHECK(smash_sfx, NDS_META_ATTR_SMASH_SFX_0_OFFSET);
+NDS_P4_ATTR_OFFSET_CHECK(itemthrow_vel_scale, NDS_META_ATTR_ITEMTHROW_VEL_SCALE_OFFSET);
+NDS_P4_ATTR_OFFSET_CHECK(itemthrow_damage_scale, NDS_META_ATTR_ITEMTHROW_DAMAGE_SCALE_OFFSET);
+NDS_P4_ATTR_OFFSET_CHECK(heavyget_sfx, NDS_META_ATTR_HEAVYGET_SFX_OFFSET);
+#undef NDS_P4_ATTR_OFFSET_CHECK
+#endif
 /* P2-3f9: gSCManagerBattleState -- the animation cache's BattlePack carve is a
  * per-match decision and the roster is where that decision comes from. */
 #include <sc/scene.h>
@@ -3353,6 +3370,59 @@ static u32 ndsRelocFileID(const void *file_id)
     return (u32)(uintptr_t)file_id;
 }
 
+#if NDS_P4_METAKNIGHT
+enum NDSRelocP4Role {
+    nNDSRelocP4None,
+    nNDSRelocP4MAIN,
+    nNDSRelocP4MODEL,
+    nNDSRelocP4MOTION,
+    nNDSRelocP4ANIM16,
+    nNDSRelocP4ANIM32,
+    nNDSRelocP4SHIELD,
+    nNDSRelocP4DEPENDENCY
+};
+
+/* One generated identity domain covers owned and byte-qualified inherited
+ * resources. FTData passes numeric native IDs; donor code addresses never
+ * enter this registry. Roles, rather than a contiguous guessed ID range,
+ * distinguish AObj16, AObj32 and the already lowered FT motion/event file. */
+static u32 ndsRelocP4AssetRole(u32 asset_id)
+{
+    switch (asset_id)
+    {
+#define NDS_P4_ASSET_ROLE(id_, path_, role_, payload_, allocation_) \
+    case id_: return nNDSRelocP4##role_;
+        NDS_METAKNIGHT_NATIVE_ASSETS(NDS_P4_ASSET_ROLE)
+#undef NDS_P4_ASSET_ROLE
+    default: return nNDSRelocP4None;
+    }
+}
+
+static size_t ndsRelocP4GeneratedPayloadSize(u32 asset_id)
+{
+    switch (asset_id)
+    {
+#define NDS_P4_PAYLOAD_SIZE(id_, path_, role_, payload_, allocation_) \
+    case id_: return (size_t)NDS_RELOC_ALIGN(payload_);
+        NDS_METAKNIGHT_NATIVE_ASSETS(NDS_P4_PAYLOAD_SIZE)
+#undef NDS_P4_PAYLOAD_SIZE
+    default: return 0u;
+    }
+}
+
+static size_t ndsRelocP4GeneratedAllocSize(u32 asset_id)
+{
+    switch (asset_id)
+    {
+#define NDS_P4_ALLOC_SIZE(id_, path_, role_, payload_, allocation_) \
+    case id_: return (size_t)(allocation_);
+        NDS_METAKNIGHT_NATIVE_ASSETS(NDS_P4_ALLOC_SIZE)
+#undef NDS_P4_ALLOC_SIZE
+    default: return 0u;
+    }
+}
+#endif
+
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
 extern size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id);
 extern void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id,
@@ -3925,6 +3995,11 @@ static s32 ndsRelocIsDemoAnimID(u32 asset_id)
 static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token);
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
+#if NDS_P4_METAKNIGHT
+    u32 p4_role = ndsRelocP4AssetRole(asset_id);
+    if ((p4_role == nNDSRelocP4ANIM16) || (p4_role == nNDSRelocP4ANIM32))
+        return TRUE;
+#endif
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         return TRUE;
@@ -4015,6 +4090,20 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
     {
         return TRUE;
     }
+    return FALSE;
+}
+#elif NDS_P4_METAKNIGHT
+/* The P4 canary does not require a donor parent's runtime feature flag for
+ * animation ownership. Every reached borrowed ID is in the generated set. */
+static s32 ndsRelocIsFighterAnimID(u32 asset_id)
+{
+    u32 role = ndsRelocP4AssetRole(asset_id);
+
+    if ((role == nNDSRelocP4ANIM16) || (role == nNDSRelocP4ANIM32)) return TRUE;
+    if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) return TRUE;
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    if (ndsRelocIsDemoAnimID(asset_id) != FALSE) return TRUE;
+#endif
     return FALSE;
 }
 #elif NDS_IMPORT_BATTLESHIP_VS_RESULTS
@@ -4747,6 +4836,9 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
+#if NDS_P4_METAKNIGHT
+    if (ndsRelocP4AssetRole(token) != nNDSRelocP4None) return token;
+#endif
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 
@@ -5656,6 +5748,9 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
+#if NDS_P4_METAKNIGHT
+    if (ndsRelocP4AssetRole(asset_id) != nNDSRelocP4None) return TRUE;
+#endif
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
@@ -7209,6 +7304,9 @@ static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 
 static s32 ndsRelocIsFighterAObj32Asset(u32 asset_id)
 {
+#if NDS_P4_METAKNIGHT
+    if (ndsRelocP4AssetRole(asset_id) == nNDSRelocP4ANIM32) return TRUE;
+#endif
     return ((asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR1) ||
             (asset_id == NDS_RELOC_ASSET_MARIO_ANIM_APPEAR2) ||
             (asset_id == NDS_RELOC_ASSET_FOX_ANIM_APPEAR) ||
@@ -8277,6 +8375,24 @@ static s32 ndsRelocFighterAttributesMatchSource(
     {
         return FALSE;
     }
+#if NDS_P4_METAKNIGHT
+    if (asset_id == NDS_METAKNIGHT_MAIN_FILE_ID)
+    {
+        /* Exact linked source values come from the mixed-width metadata
+         * producer. Parent audio IDs are not a valid Meta Knight oracle. */
+        return
+            (attr->dead_fgm_ids[0] == NDS_META_ATTR_DEAD_FGM_0_EXPECTED) &&
+            (attr->dead_fgm_ids[1] == NDS_META_ATTR_DEAD_FGM_1_EXPECTED) &&
+            (attr->deadup_sfx == NDS_META_ATTR_DEADUP_SFX_EXPECTED) &&
+            (attr->damage_sfx == NDS_META_ATTR_DAMAGE_SFX_EXPECTED) &&
+            (attr->smash_sfx[0] == NDS_META_ATTR_SMASH_SFX_0_EXPECTED) &&
+            (attr->smash_sfx[1] == NDS_META_ATTR_SMASH_SFX_1_EXPECTED) &&
+            (attr->smash_sfx[2] == NDS_META_ATTR_SMASH_SFX_2_EXPECTED) &&
+            (attr->itemthrow_vel_scale == NDS_META_ATTR_ITEMTHROW_VEL_SCALE_EXPECTED) &&
+            (attr->itemthrow_damage_scale == NDS_META_ATTR_ITEMTHROW_DAMAGE_SCALE_EXPECTED) &&
+            (attr->heavyget_sfx == NDS_META_ATTR_HEAVYGET_SFX_EXPECTED);
+    }
+#endif
     if (asset_id == NDS_RELOC_ASSET_MARIO_MAIN)
     {
         return
@@ -8887,6 +9003,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
         attr_offset = NDS_RELOC_SYMBOL_PURIN_MAIN_ATTRIBUTES;
     }
 #endif
+#if NDS_P4_METAKNIGHT
+    else if (loaded->asset_id == NDS_METAKNIGHT_MAIN_FILE_ID)
+    {
+        attr_offset = NDS_METAKNIGHT_ATTRIBUTE_OFFSET;
+    }
+#endif
 #if NDS_P2_KIRBY
     else if (loaded->asset_id == NDS_RELOC_ASSET_KIRBY_MAIN)
     {
@@ -9171,6 +9293,9 @@ static size_t ndsRelocAssetAllocSize(u32 asset_id);
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded);
 static s32 ndsRelocNormalizeBattleInterfaceSprites(
     NDSRelocLoadedFile *loaded);
+#if NDS_P4_METAKNIGHT
+static s32 ndsRelocNormalizeP4FighterSprites(NDSRelocLoadedFile *loaded);
+#endif
 static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
                                           u32 *seen_count);
 static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
@@ -9568,6 +9693,13 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     {
         return FALSE;
     }
+#if NDS_P4_METAKNIGHT
+    if (ndsRelocNormalizeP4FighterSprites(loaded) == FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+#endif
 #if NDS_R2_RELOC_FIXUP_TIMING
     {
         u32 total;
@@ -10195,6 +10327,82 @@ static s32 ndsRelocNormalizeSpriteBitmapTable(NDSRelocLoadedFile *loaded,
     }
     return TRUE;
 }
+
+#if NDS_P4_METAKNIGHT
+typedef struct NDSRelocP4SpriteDesc {
+    u32 asset_id;
+    u32 offset;
+    u32 width;
+    u32 height;
+    u32 bitmap_count;
+    u32 bmfmt;
+    u32 bmsiz;
+    u32 bitmap_asset_id;
+    u32 bitmap_offset;
+} NDSRelocP4SpriteDesc;
+
+static const NDSRelocP4SpriteDesc sNdsRelocP4SpriteDescs[] = {
+#define NDS_P4_SPRITE_ROW(asset_, offset_, width_, height_, count_, fmt_, siz_, bmasset_, bmoffset_) \
+    { asset_, offset_, width_, height_, count_, fmt_, siz_, bmasset_, bmoffset_ },
+    NDS_META_SPRITES(NDS_P4_SPRITE_ROW)
+#undef NDS_P4_SPRITE_ROW
+};
+
+static s32 ndsRelocNormalizeP4FighterSprites(NDSRelocLoadedFile *loaded)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(sNdsRelocP4SpriteDescs); i++)
+    {
+        const NDSRelocP4SpriteDesc *desc = &sNdsRelocP4SpriteDescs[i];
+        NDSRelocLoadedFile *bitmap_owner;
+        Sprite *sprite;
+        Sprite native;
+        u32 sprite_offset = desc->offset;
+        u32 bitmap_offset = desc->bitmap_offset;
+
+        if (loaded->asset_id != desc->asset_id) continue;
+        if ((loaded->reserved[0] != 0u) &&
+            !ndsPreviewFileOffset(loaded, sprite_offset, sizeof(Sprite), &sprite_offset))
+            return FALSE;
+        if (ndsRelocRangeInLoadedFile(loaded, sprite_offset, sizeof(Sprite)) == FALSE)
+            return FALSE;
+        sprite = (Sprite *)((u8 *)loaded->data + sprite_offset);
+        bitmap_owner = ndsRelocFindLoadedFileByAsset(desc->bitmap_asset_id);
+        if (bitmap_owner != NULL && bitmap_owner->reserved[0] != 0u &&
+            !ndsPreviewFileOffset(bitmap_owner, bitmap_offset,
+                sizeof(Bitmap) * desc->bitmap_count, &bitmap_offset))
+            return FALSE;
+        if ((bitmap_owner == NULL) ||
+            (ndsRelocRangeInLoadedFile(bitmap_owner, bitmap_offset,
+                sizeof(Bitmap) * desc->bitmap_count) == FALSE) ||
+            (sprite->bitmap != (Bitmap *)((u8 *)bitmap_owner->data + bitmap_offset)))
+            return FALSE;
+        if (((u32)(u16)sprite->width == desc->width) &&
+            ((u32)(u16)sprite->height == desc->height) &&
+            ((u32)(u16)sprite->nbitmaps == desc->bitmap_count) &&
+            (sprite->bmfmt == desc->bmfmt) && (sprite->bmsiz == desc->bmsiz))
+            continue;
+        /* Validate the exact word-swapped signature before changing either
+         * record. Bitmap storage may belong to a different qualified file. */
+        if (((u32)(u16)sprite->width != desc->height) ||
+            ((u32)(u16)sprite->height != desc->width) ||
+            ((u32)(u16)sprite->nbitmaps != (12u * desc->bitmap_count + 24u)) ||
+            ((u32)(u16)sprite->ndisplist != desc->bitmap_count))
+            return FALSE;
+        native = *sprite;
+        ndsRelocNormalizeSpriteHeaderFields(&native, (u8)desc->bmfmt, (u8)desc->bmsiz);
+        if (((u32)(u16)native.width != desc->width) ||
+            ((u32)(u16)native.height != desc->height) ||
+            ((u32)(u16)native.nbitmaps != desc->bitmap_count) ||
+            (ndsRelocNormalizeSpriteBitmapTable(bitmap_owner, &native,
+                desc->bitmap_count) == FALSE))
+            return FALSE;
+        *sprite = native;
+    }
+    return TRUE;
+}
+#endif
 
 static s32 ndsRelocNormalizeBattleInterfaceSprites(
     NDSRelocLoadedFile *loaded)
@@ -11926,6 +12134,11 @@ static size_t ndsRelocAssetAllocSize(u32 asset_id)
 {
     NDSRelocAssetHeader header;
 
+#if NDS_P4_METAKNIGHT
+    size_t p4_payload_size = ndsRelocP4GeneratedPayloadSize(asset_id);
+    if (p4_payload_size != 0u) return p4_payload_size;
+#endif
+
     if ((asset_id != NDS_RELOC_ASSET_INVALID) &&
         (ndsRelocAssetReadHeader(asset_id, &header) != FALSE))
     {
@@ -12122,6 +12335,10 @@ static size_t ndsRelocP2FindGeneratedPayloadSize(
 
 static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
 {
+#if NDS_P4_METAKNIGHT
+    size_t p4_payload_size = ndsRelocP4GeneratedPayloadSize(asset_id);
+    if (p4_payload_size != 0u) return p4_payload_size;
+#endif
     size_t size = ndsRelocP2FindGeneratedPayloadSize(
         sNdsP2BaseFighterPayloadSizes,
         sizeof(sNdsP2BaseFighterPayloadSizes) /
@@ -13031,6 +13248,11 @@ static size_t ndsRelocP2FindGeneratedAllocSize(
 static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
 {
     size_t size;
+
+#if NDS_P4_METAKNIGHT
+    size = ndsRelocP4GeneratedAllocSize(asset_id);
+    if (size != 0u) return size;
+#endif
 
     /* P2-3: BattleShip's ftManagerSetupFileSize asks the immutable reloc table
      * for every fighter motion's transitive allocation size before allocating
@@ -14728,7 +14950,11 @@ sNdsR2CssInitialMotionDescs[nFTKindPlayableEnd + 1] = {
  * actually consumes. */
 static u32 ndsR2AnimCacheSetupBytes(void)
 {
+#if NDS_P4_METAKNIGHT
+    u32 ids[nFTKindPlayableEnd + 1 + 2];
+#else
     u32 ids[nFTKindPlayableEnd + 1];
+#endif
     u32 count = 0u;
     u32 total = 0u;
     s32 kind;
@@ -14764,6 +14990,29 @@ static u32 ndsR2AnimCacheSetupBytes(void)
         }
         total = ((total + 15u) & ~15u) + (u32)bytes;
     }
+#if NDS_P4_METAKNIGHT
+    {
+        const FTData *meta = ndsP4GetFighterData(NDS_P4_RUNTIME_METAKNIGHT);
+        static const u32 rows[] = { 0u, 4u };
+        u32 row;
+        if (meta == NULL || meta->submotion == NULL) return 0u;
+        for (row = 0u; row < ARRAY_COUNT(rows); row++)
+        {
+            u32 asset_id = ndsRelocAssetIDForToken(
+                (u32)(uintptr_t)meta->submotion->motion_desc[rows[row]].anim_file_id);
+            u32 i, stream_size;
+            sb32 stream_ready;
+            size_t bytes;
+            if (asset_id == NDS_RELOC_ASSET_INVALID || !ndsRelocIsFighterAnimID(asset_id)) return 0u;
+            for (i = 0u; i < count && ids[i] != asset_id; i++) { }
+            if (i != count) continue;
+            ids[count++] = asset_id;
+            bytes = ndsR2AnimCachePayloadBytes(asset_id, &stream_ready, &stream_size);
+            if (!bytes || total > UINT32_MAX - 15u || bytes > UINT32_MAX - total - 15u) return 0u;
+            total = ((total + 15u) & ~15u) + (u32)bytes;
+        }
+    }
+#endif
     return total;
 }
 

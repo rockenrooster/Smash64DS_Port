@@ -599,6 +599,9 @@ typedef enum NDSRendererProfileOwner
 #if NDS_P2_1P_GAME
     NDS_RENDERER_PROFILE_OWNER_BOSS,
 #endif
+#if NDS_P4_METAKNIGHT
+    NDS_RENDERER_PROFILE_OWNER_METAKNIGHT,
+#endif
 #if NDS_TASK49_GX_DIFFER
     /* Task49/M1 effect-stream owner.  This diagnostic owner must not enlarge
      * the production owner enum: several hot arrays and compact owner maps use
@@ -641,7 +644,10 @@ typedef enum NDSRendererProfileOwner
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NPURIN  22u
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NNESS   23u
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_BOSS    24u
-#if NDS_P2_1P_GAME
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT 25u
+#if NDS_P4_METAKNIGHT
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 26u
+#elif NDS_P2_1P_GAME
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 25u
 #elif NDS_P2_NNESS
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 24u
@@ -1159,6 +1165,21 @@ typedef struct NDSRendererNativeFighterRoot
      * branch-free. */
     const NDSRendererNativeFighterPreamble *preamble;
 } NDSRendererNativeFighterRoot;
+
+#if NDS_P4_METAKNIGHT
+/* The selected roots and any matrix-only tail share the adapter's existing
+ * per-draw workspace. Source joint identities are independent of dense order. */
+s32 ndsRendererNativeMetaKnightSelectRoots(u32 detail, u32 skeleton, const void *asset_base,
+    u32 asset_size, u32 owner_generation, const u32 *offsets,
+    const u32 *material_counts, const u8 *material_source_joints,
+    u8 *input_source_joints, u32 selected_count,
+    u32 *input_count);
+s32 ndsRendererNativeMetaKnightMaterialReference(u32 detail, u32 skeleton, u32 source_joint,
+    u32 binder_joint,
+    u32 root_offset, u32 material, u32 *asset_id, u32 *source_offset);
+s32 ndsRendererNativeMetaKnightMaterialContext(u32 detail, u32 skeleton,
+    u32 source_joint, u32 root_offset, u32 *required, u32 *inherited);
+#endif
 
 /* Mode-7 laboratory candidate.  The adapter supplies exact BattleShip local
  * matrices and live topology; the DS backend validates the complete owner

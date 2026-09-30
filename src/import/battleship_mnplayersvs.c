@@ -19,6 +19,7 @@
 #include <nds/nds_renderer.h>
 #include <nds/generated/nds_native_fighter_image.generated.h>
 #include <nds/nds_menu_shell.h>
+#include <nds/nds_p4_runtime.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_startup.h>
 #include <sc/scene.h>
@@ -357,10 +358,130 @@ volatile s32
 volatile s32
     gNdsPlayersVSPreviewSelectedKindMotion[NDS_MENU_SHELL_FIGHTER_KINDS];
 
-_Static_assert((nFTKindPlayableEnd + 1) == NDS_MENU_SHELL_FIGHTER_KINDS,
+_Static_assert((nFTKindPlayableEnd + 1 + (NDS_P4_METAKNIGHT != 0)) ==
+               NDS_MENU_SHELL_FIGHTER_KINDS,
                "PlayersVS production telemetry must cover every playable kind");
-_Static_assert(nFTKindPlayableEnd < 32,
+_Static_assert(NDS_MENU_SHELL_FIGHTER_KINDS <= 32u,
                "PlayersVS resident-kind mask must cover every playable kind");
+
+/* Residency and telemetry use compact selection rows, while source fighter
+ * objects and resource ownership keep their runtime kind (Meta Knight=29). */
+static sb32 ndsMNPlayersVSPreviewIsPlayableKind(s32 fkind)
+{
+    return ndsRosterSelectionIndex((u32)fkind) != NDS_P4_NO_SELECTION_INDEX;
+}
+
+static u32 ndsMNPlayersVSPreviewKindBit(s32 fkind)
+{
+    u32 selection = ndsRosterSelectionIndex((u32)fkind);
+    return (selection < NDS_MENU_SHELL_FIGHTER_KINDS) ? 1u << selection : 0u;
+}
+
+static s32 ndsMNPlayersVSPreviewSelectedStatus(s32 fkind)
+{
+#if NDS_P4_METAKNIGHT
+    /* EXTRA MetaKnight/config.yaml supplies select_pose: 4. */
+    if (ndsP4IsMetaKnight(fkind) != FALSE) return nFTDemoStatusWin4;
+#endif
+    return mnPlayersVSGetStatusSelected(fkind);
+}
+
+#if NDS_P4_METAKNIGHT
+/* The source preview process has a twelve-kind selected-pose switch. Keep its
+ * rotation and transition rules while using EXTRA's own selected menu row. */
+static void ndsMNPlayersVSMetaKnightPreviewProcUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    MNPlayersSlotVS *slot = &sMNPlayersVSSlots[fp->player];
+    DObj *root = DObjGetStruct(fighter_gobj);
+
+    if (slot->is_fighter_selected != FALSE)
+    {
+        if (root->rotate.vec.f.y < F_CLC_DTOR32(0.1F))
+        {
+            if (slot->is_status_selected == FALSE)
+            {
+                scSubsysFighterSetStatus(fighter_gobj,
+                    ndsMNPlayersVSPreviewSelectedStatus(fp->fkind));
+                slot->is_status_selected = TRUE;
+            }
+        }
+        else
+        {
+            root->rotate.vec.f.y += F_CST_DTOR32(20.0F);
+            if (root->rotate.vec.f.y > F_CLC_DTOR32(360.0F))
+            {
+                root->rotate.vec.f.y = 0.0F;
+                scSubsysFighterSetStatus(fighter_gobj,
+                    ndsMNPlayersVSPreviewSelectedStatus(fp->fkind));
+                slot->is_status_selected = TRUE;
+            }
+        }
+    }
+    else
+    {
+        root->rotate.vec.f.y += F_CST_DTOR32(2.0F);
+        if (root->rotate.vec.f.y > F_CST_DTOR32(360.0F))
+        {
+            root->rotate.vec.f.y -= F_CST_DTOR32(360.0F);
+        }
+    }
+}
+#endif
+
+static void ndsMNPlayersVSPreviewUpdateFighter(s32 player)
+{
+#if NDS_P4_METAKNIGHT
+    MNPlayersSlotVS *slot = &sMNPlayersVSSlots[player];
+
+    if (ndsP4IsMetaKnight(slot->fkind) != FALSE)
+    {
+        FTDesc desc = dFTManagerDefaultFighterDesc;
+        GObj *fighter_gobj = slot->player;
+        f32 rotation = F_CST_DTOR32(0.0F);
+        DObj *root;
+
+        /* Same hide/destroy/create boundary as mnPlayersVSUpdateFighter and
+         * mnPlayersVSMakeFighter. Runtime kind 29 never indexes their original
+         * dSCSubsysFighterScales[12] table. Character.define_character copies
+         * Meta Knight's menu_zoom from its declared JIGGLYPUFF parent (1.26).
+         * The model, motion and status providers remain Meta Knight's own. */
+        if (fighter_gobj != NULL)
+        {
+            if (slot->pkind == nFTPlayerKindNot)
+            {
+                fighter_gobj->flags = GOBJ_FLAG_HIDDEN;
+                return;
+            }
+            rotation = DObjGetStruct(fighter_gobj)->rotate.vec.f.y;
+            ftManagerDestroyFighter(fighter_gobj);
+        }
+        slot->shade = mnPlayersVSGetShade(player);
+        desc.fkind = slot->fkind;
+        slot->costume = desc.costume = mnPlayersVSGetFreeCostume(slot->fkind, player);
+        desc.shade = slot->shade;
+        desc.figatree_heap = slot->figatree_heap;
+        desc.player = player;
+        fighter_gobj = ftManagerMakeFighter(&desc);
+        slot->player = fighter_gobj;
+        slot->is_status_selected = FALSE;
+        gcAddGObjProcess(fighter_gobj, ndsMNPlayersVSMetaKnightPreviewProcUpdate,
+                         nGCProcessKindFunc, 1);
+        root = DObjGetStruct(fighter_gobj);
+        root->translate.vec.f.x = (player * 840) - 1250;
+        root->translate.vec.f.y = -850.0F;
+        root->rotate.vec.f.y = rotation;
+        root->scale.vec.f.x = root->scale.vec.f.y = root->scale.vec.f.z = 1.26F;
+        if (slot->pkind == nFTPlayerKindCom)
+        {
+            ftParamCheckSetFighterColAnimID(fighter_gobj,
+                                           nGMColAnimFighterComPlayer, 0);
+        }
+        return;
+    }
+#endif
+    mnPlayersVSUpdateFighter(player);
+}
 
 static void ndsMNPlayersVSPreviewValidatePermanentFailures(void)
 {
@@ -376,19 +497,15 @@ static void ndsMNPlayersVSPreviewValidatePermanentFailures(void)
 static sb32 ndsMNPlayersVSPreviewIsPermanentFailure(s32 fkind)
 {
     ndsMNPlayersVSPreviewValidatePermanentFailures();
-    return ((fkind >= nFTKindPlayableStart) &&
-            (fkind <= nFTKindPlayableEnd) &&
-            ((sNdsPlayersVSPreviewPermanentFailMask & (1u << fkind)) != 0u)) ?
+    return ((sNdsPlayersVSPreviewPermanentFailMask &
+             ndsMNPlayersVSPreviewKindBit(fkind)) != 0u) ?
         TRUE : FALSE;
 }
 
 static void ndsMNPlayersVSPreviewMarkPermanentFailure(s32 fkind)
 {
     ndsMNPlayersVSPreviewValidatePermanentFailures();
-    if ((fkind >= nFTKindPlayableStart) && (fkind <= nFTKindPlayableEnd))
-    {
-        sNdsPlayersVSPreviewPermanentFailMask |= 1u << fkind;
-    }
+    sNdsPlayersVSPreviewPermanentFailMask |= ndsMNPlayersVSPreviewKindBit(fkind);
 }
 
 /* fkind -> generated native owner-image slot. Mario and Fox draw from their
@@ -433,6 +550,10 @@ static sb32 ndsMNPlayersVSPreviewOwnerImageSlot(s32 fkind, u32 *out_slot)
 #if NDS_P2_KIRBY
     NDS_CSS_OWNER_IMAGE_SLOT(nFTKindKirby, NDS_NATIVE_IMAGE_SLOT_KIRBY)
 #endif
+#if NDS_P4_METAKNIGHT
+    NDS_CSS_OWNER_IMAGE_SLOT(NDS_P4_RUNTIME_METAKNIGHT,
+                             NDS_NATIVE_IMAGE_SLOT_METAKNIGHT)
+#endif
 #undef NDS_CSS_OWNER_IMAGE_SLOT
     (void)out_slot;
     return FALSE;
@@ -451,7 +572,8 @@ static sb32 ndsMNPlayersVSPreviewEnsureOwnerImage(s32 fkind, u32 detail)
     }
     if (ndsRendererNativeEnsureOwnerImage(slot, detail) == FALSE)
     {
-        gNdsPlayersVSPreviewResidentOwnerFailMask |= 1u << fkind;
+        gNdsPlayersVSPreviewResidentOwnerFailMask |=
+            ndsMNPlayersVSPreviewKindBit(fkind);
         return FALSE;
     }
     return TRUE;
@@ -483,13 +605,13 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     const void *initial_anim_file;
     u32 kind_bit;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsMNPlayersVSPreviewIsPlayableKind(fkind) == FALSE)
     {
         return FALSE;
     }
-    kind_bit = 1u << fkind;
+    kind_bit = ndsMNPlayersVSPreviewKindBit(fkind);
     gNdsPlayersVSPreviewResidentPrepareMask |= kind_bit;
-    data = dFTManagerDataFiles[fkind];
+    data = ndsP4GetFighterData(fkind);
     /* This is the source manager's own residency invariant:
      * ftManagerSetupFilesAllKind only tests p_file_main, and when it is absent
      * loads main plus the model/motion/special status-buffer closure together. */
@@ -505,6 +627,16 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
     }
     if (stage == NDS_PLAYERS_VS_PREPARE_OWNER_LOW)
     {
+#if NDS_P4_METAKNIGHT
+        if (ndsP4IsMetaKnight(fkind))
+        {
+            /* CSS constructs source HIGH-detail demos. LOW remains complete
+             * in the match owner path; caching both here would retain 87,988
+             * bytes in the 80 KiB CSS block before any actor allocation. */
+            gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+            return TRUE;
+        }
+#endif
         if (ndsMNPlayersVSPreviewEnsureOwnerImage(fkind, 1u) == FALSE)
         {
             return FALSE;
@@ -548,7 +680,7 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentStage(
      * selection. Heap NULL probes residency without copying; a non-resident
      * row falls back to the same cache preload as row 0. */
     {
-        s32 selected_status = mnPlayersVSGetStatusSelected(fkind);
+        s32 selected_status = ndsMNPlayersVSPreviewSelectedStatus(fkind);
         s32 selected_row = selected_status - nFTDemoStatusNull;
         const void *selected_anim_file;
 
@@ -673,6 +805,13 @@ static u32 ndsMNPlayersVSPreviewOwnerImageBytes(s32 fkind, u32 use_low_detail)
                                         (u32)sizeof(NDSNativeKirbyHighImage);
     }
 #endif
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind) != FALSE)
+    {
+        return (use_low_detail != 0u) ? NDS_NATIVE_IMAGE_METAKNIGHT_LOW_BYTES :
+                                        NDS_NATIVE_IMAGE_METAKNIGHT_HIGH_BYTES;
+    }
+#endif
     (void)fkind;
     (void)use_low_detail;
     return 0u;
@@ -767,11 +906,11 @@ void ndsMNPlayersClearPreviewFighterFiles(s32 fkind)
 {
     FTData *data;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsMNPlayersVSPreviewIsPlayableKind(fkind) == FALSE)
     {
         return;
     }
-    data = dFTManagerDataFiles[fkind];
+    data = ndsP4GetFighterData(fkind);
     if (data == NULL)
     {
         return;
@@ -865,6 +1004,15 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
         }
     }
     ndsTaskmanSwapMallocRegion(previous);
+#if NDS_P4_METAKNIGHT
+    /* previous is the source scene-lifetime region, as in the animation-cache
+     * warmer. Complete Meta's status dependency closure before any resettable
+     * fighter block can be selected by Begin/Step. Cached source generation
+     * ownership is checked by the loader, and block cancellation cannot retire
+     * these shared status bytes. */
+    if (ndsRelocPrewarmMetaCoreStatusFiles(NDS_P4_RUNTIME_METAKNIGHT) == FALSE)
+        return ndsMNPlayersVSPreviewPoolFail(5u);
+#endif
     /* The four closure blocks now have their fixed space and the shared tree is
      * pinned. Reserve every CSS row-0 animation before the first lazy per-kind
      * acquisition can run; the cache sizer uses immutable source descriptors
@@ -1010,12 +1158,12 @@ static sb32 ndsMNPlayersVSPreviewBindResidentKindMain(s32 fkind,
 {
     FTData *data;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd) ||
+    if ((ndsMNPlayersVSPreviewIsPlayableKind(fkind) == FALSE) ||
         (main_file == NULL))
     {
         return FALSE;
     }
-    data = dFTManagerDataFiles[fkind];
+    data = ndsP4GetFighterData(fkind);
     if ((data == NULL) || (data->p_file_main == NULL))
     {
         return FALSE;
@@ -1047,8 +1195,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     s32 fkind;
 
     if ((block == NULL) || (block->refs != 0u) ||
-        (block->fkind < nFTKindPlayableStart) ||
-        (block->fkind > nFTKindPlayableEnd))
+        (ndsMNPlayersVSPreviewIsPlayableKind(block->fkind) == FALSE))
     {
         return FALSE;
     }
@@ -1072,7 +1219,7 @@ static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
     ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
     syMallocReset(&block->arena);
     block->fkind = nFTKindNull;
-    gNdsPlayersVSPreviewResidentReadyMask &= ~(1u << fkind);
+    gNdsPlayersVSPreviewResidentReadyMask &= ~ndsMNPlayersVSPreviewKindBit(fkind);
     gNdsPlayersVSPreviewReleaseRetireCount++;
     if (reason == nNDSPlayersVSResidentRetireExit)
     {
@@ -1149,7 +1296,7 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
             return nNDSPlayersVSResidentAcquireRetry;
         }
         sNdsPlayersVSPreviewResidencyActionBudget--;
-        data = dFTManagerDataFiles[fkind];
+        data = ndsP4GetFighterData(fkind);
         gNdsPlayersVSPreviewAcquireLoadCount++;
         syMallocReset(&block->arena);
         previous = ndsTaskmanSwapMallocRegion(&block->arena);
@@ -1305,7 +1452,7 @@ ndsMNPlayersVSPreviewServiceCompactLoad(NDSPlayersVSResidentBlock *block,
              * staged closure is published here, the particle bank is created
              * by the source's own guarded path, and the block is proven to
              * still have room for both native owner images. */
-            data = dFTManagerDataFiles[fkind];
+            data = ndsP4GetFighterData(fkind);
             if (data != NULL)
             {
                 ftManagerSetupFilesAllKind(fkind);
@@ -1377,7 +1524,7 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
 #endif
     u32 i;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd) ||
+    if ((ndsMNPlayersVSPreviewIsPlayableKind(fkind) == FALSE) ||
         (sNdsPlayersVSResidentPoolsReady == FALSE))
     {
         gNdsPlayersVSPreviewAcquireFailCount++;
@@ -1482,7 +1629,7 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
     {
         /* Starting a miss is deliberately a cursor-only action. The first
          * NitroFS payload byte cannot move until a later CSS tic. */
-        data = dFTManagerDataFiles[fkind];
+        data = ndsP4GetFighterData(fkind);
         gNdsPlayersVSPreviewAcquireLoadCount++;
         syMallocReset(&block->arena);
         previous = ndsTaskmanSwapMallocRegion(&block->arena);
@@ -1593,7 +1740,7 @@ static sb32 ndsMNPlayersVSPreviewKindIsWarm(s32 fkind)
 {
     u32 i;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsMNPlayersVSPreviewIsPlayableKind(fkind) == FALSE)
     {
         return FALSE;
     }
@@ -1652,7 +1799,7 @@ static sb32 ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
 {
     u32 i;
 
-    if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
+    if (ndsMNPlayersVSPreviewIsPlayableKind(fkind) == FALSE)
     {
         return FALSE;
     }
@@ -1747,7 +1894,7 @@ void ndsMNPlayersVSPreviewInit(void)
         gNdsPlayersVSPreviewLastFreeStatus[i] = -1;
         gNdsPlayersVSPreviewLastFreeMotion[i] = -1;
     }
-    for (i = 0; i <= nFTKindPlayableEnd; i++)
+    for (i = 0; i < ARRAY_COUNT(gNdsPlayersVSPreviewSelectedKindFrames); i++)
     {
         gNdsPlayersVSPreviewSelectedKindFrames[i] = 0u;
         gNdsPlayersVSPreviewSelectedKindStatus[i] = -1;
@@ -1940,7 +2087,7 @@ static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
     sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
 
     payload_before = gNdsRelocAssetPayloadReadCount;
-    mnPlayersVSUpdateFighter((s32)slot);
+    ndsMNPlayersVSPreviewUpdateFighter((s32)slot);
     payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
     gNdsPlayersVSPreviewRebuildCount++;
     gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
@@ -2024,6 +2171,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #endif
 #if NDS_P2_KIRBY
         && (fkind != nFTKindKirby)
+#endif
+#if NDS_P4_METAKNIGHT
+        && (ndsP4IsMetaKnight(fkind) == FALSE)
 #endif
     )
     {
@@ -2164,7 +2314,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                 u32 payload_before = gNdsRelocAssetPayloadReadCount;
                 u32 payload_delta;
 
-                mnPlayersVSUpdateFighter((s32)slot);
+                ndsMNPlayersVSPreviewUpdateFighter((s32)slot);
                 payload_delta =
                     gNdsRelocAssetPayloadReadCount - payload_before;
                 gNdsPlayersVSPreviewRebuildCount++;
@@ -2241,8 +2391,7 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         ftManagerDestroyFighter(fighter_gobj);
         sMNPlayersVSSlots[slot].player = NULL;
     }
-    if ((old_fkind >= nFTKindPlayableStart) &&
-        (old_fkind <= nFTKindPlayableEnd))
+    if (ndsMNPlayersVSPreviewIsPlayableKind(old_fkind) != FALSE)
     {
         gNdsPlayersVSPreviewReleaseCount++;
         if (ndsMNPlayersVSPreviewReleaseResidentKind(old_fkind) != FALSE)
@@ -2424,15 +2573,16 @@ void ndsMNPlayersVSPreviewFrame(void)
                 gNdsPlayersVSPreviewStatus[slot] = fp->status_id;
                 gNdsPlayersVSPreviewMotion[slot] = fp->motion_id;
                 if ((sMNPlayersVSSlots[slot].is_fighter_selected != FALSE) &&
-                    (sMNPlayersVSSlots[slot].fkind >= nFTKindPlayableStart) &&
-                    (sMNPlayersVSSlots[slot].fkind <= nFTKindPlayableEnd))
+                    (ndsMNPlayersVSPreviewIsPlayableKind(
+                        sMNPlayersVSSlots[slot].fkind) != FALSE))
                 {
-                    u32 fkind = (u32)sMNPlayersVSSlots[slot].fkind;
+                    u32 selection = ndsRosterSelectionIndex(
+                        (u32)sMNPlayersVSSlots[slot].fkind);
 
-                    gNdsPlayersVSPreviewSelectedKindMask |= 1u << fkind;
-                    gNdsPlayersVSPreviewSelectedKindFrames[fkind]++;
-                    gNdsPlayersVSPreviewSelectedKindStatus[fkind] = fp->status_id;
-                    gNdsPlayersVSPreviewSelectedKindMotion[fkind] = fp->motion_id;
+                    gNdsPlayersVSPreviewSelectedKindMask |= 1u << selection;
+                    gNdsPlayersVSPreviewSelectedKindFrames[selection]++;
+                    gNdsPlayersVSPreviewSelectedKindStatus[selection] = fp->status_id;
+                    gNdsPlayersVSPreviewSelectedKindMotion[selection] = fp->motion_id;
                 }
                 if (sMNPlayersVSSlots[slot].is_fighter_selected == FALSE)
                 {

@@ -176,7 +176,73 @@ void ndsMNVSResultsSetLoadScene(void);
 
 void ndsBaseMNVSResultsStartScene(void);
 
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight_lifecycle.h>
+#include <nds/nds_p4_roster.h>
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+
+static u32 ndsMetaVSResultAnnouncer(s32 kind, const u32 *legacy);
+static s32 ndsMetaVSResultSeriesKind(s32 kind);
+static f32 ndsMetaVSResultFighterScale(s32 kind);
+static f32 ndsMetaVSResultWinsX(s32 kind, const f32 *legacy);
+static char *ndsMetaVSResultName(s32 kind, char **legacy);
+static f32 ndsMetaVSResultNameX(s32 kind, const f32 *legacy);
+static f32 ndsMetaVSResultNameScale(s32 kind, const f32 *legacy);
+
+#include "../../builds/p4/meta-knight-lifecycle/mnvsresults.c"
+
+static u32 ndsMetaVSResultAnnouncer(s32 kind, const u32 *legacy)
+{
+    return (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT) ? ndsP4MetaKnightAnnouncerID() :
+           (((u32)kind < NDS_P4_LEGACY_SELECTION_COUNT) ? legacy[kind] : nSYAudioFGMVoiceEnd);
+}
+
+static s32 ndsMetaVSResultSeriesKind(s32 kind)
+{
+    /* config series_logo_model=KIRBY declares this emblem resource sharing;
+     * the fighter keeps its own kind, FTData, motion and result poses. */
+    return (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT) ? nFTKindKirby : kind;
+}
+
+static f32 ndsMetaVSResultFighterScale(s32 kind)
+{
+    if (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        u32 bits = NDS_META_RESULTS_MODEL_SCALE_BITS;
+        f32 scale;
+        memcpy(&scale, &bits, sizeof(scale));
+        return scale;
+    }
+    return ((u32)kind < NDS_P4_LEGACY_SELECTION_COUNT) ? dSCSubsysFighterScales[kind] : 0.0F;
+}
+
+static f32 ndsMetaVSResultWinsX(s32 kind, const f32 *legacy)
+{
+    return (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT) ? NDS_META_RESULTS_WINS_X :
+           (((u32)kind < NDS_P4_LEGACY_SELECTION_COUNT) ? legacy[kind] : 0.0F);
+}
+
+static char *ndsMetaVSResultName(s32 kind, char **legacy)
+{
+    static char name[] = NDS_META_RESULTS_NAME;
+    return (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT) ? name :
+           (((u32)kind < NDS_P4_LEGACY_SELECTION_COUNT) ? legacy[kind] : NULL);
+}
+
+static f32 ndsMetaVSResultNameX(s32 kind, const f32 *legacy)
+{
+    return (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT) ? NDS_META_RESULTS_NAME_X :
+           (((u32)kind < NDS_P4_LEGACY_SELECTION_COUNT) ? legacy[kind] : 0.0F);
+}
+
+static f32 ndsMetaVSResultNameScale(s32 kind, const f32 *legacy)
+{
+    return (kind == (s32)NDS_P4_RUNTIME_METAKNIGHT) ? NDS_META_RESULTS_NAME_SCALE :
+           (((u32)kind < NDS_P4_LEGACY_SELECTION_COUNT) ? legacy[kind] : 0.0F);
+}
+#else
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsresults.c"
+#endif
 
 #undef mnVSResultsStartScene
 #undef scManagerFuncUpdate

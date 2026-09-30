@@ -2,6 +2,7 @@
 #include <ft/ftcomputer.h>
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_p4_runtime.h>
 #include <string.h>
 
 /* The published ROM is source-normal. Automated fast iteration explicitly
@@ -35,7 +36,11 @@ volatile u32 gNdsBattlePlayableFoxCpuEnabled = 0u;
 #define ftComputerSetFighterDamageDetectSize \
     ndsBaseFTComputerSetFighterDamageDetectSize
 
+#if NDS_P4_METAKNIGHT
+#include <nds/generated/battleship_ftcomputer.generated.inc>
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcomputer.c"
+#endif
 
 #undef ftComputerSetupAll
 #undef ftComputerProcessAll

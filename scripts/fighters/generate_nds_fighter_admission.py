@@ -55,8 +55,10 @@ Outputs:
 import argparse
 import collections
 import itertools
+import json
 import math
 import os
+import re
 import struct
 import sys
 
@@ -297,6 +299,8 @@ def part_rows(c, main, d):
                     details, built only for costume != 0 (ftmanager.c:789)
     The stream lists run in lockstep with the MObj chain
     (lbCommonAddMObjForFighterPartsDObj)."""
+    if hasattr(c, 'native_part_rows'):
+        return c.native_part_rows(d)
     out = []
     for cont in [o for o in c.objects.get(main, ()) if o.type_name == 'FTCommonPartContainer']:
         rows = {}
@@ -734,6 +738,8 @@ def _ids(values):
 def texture_part_targets(c, main):
     """{(common joint index, detail): {MObj index: ids}} from the kind's
     FTTexturePartContainer and every SetTexturePartID in its motion scripts."""
+    if hasattr(c, 'native_texture_part_targets'):
+        return c.native_texture_part_targets()
     ids = collections.defaultdict(set)
     for fid, objs in c.objects.items():
         payload = c.payload(fid)
@@ -763,7 +769,7 @@ def material_choices(c, info, cstream, mstream, tp_ids):
     """{costume: set((texture_id_curr, texture_id_next, palette_id))}"""
     fl = info['flags'] or (MOBJ_TEXTURE | 0x20 | MOBJ_ALPHA)
     out = {}
-    for costume in range(COSTUMES):
+    for costume in range(getattr(c, 'costume_count', COSTUMES)):
         vals = {0: 0.0, 5: 0.0, 8: info['prim_l'] / 255.0, 9: 0.0}
         if cstream:
             vals.update(costume_values(c, cstream, costume))
@@ -818,7 +824,7 @@ def mobj_table_extents(c, main):
                 cstream = cl[k] if k < len(cl) else None
                 mstream = ml[k] if k < len(ml) else None
                 seen = {t: set() for t in MA_TRACKS}
-                for costume in range(COSTUMES):
+                for costume in range(getattr(c, 'costume_count', COSTUMES)):
                     vals = {0: 0.0, 5: 0.0, 8: info['prim_l'] / 255.0, 9: 0.0}
                     if cstream:
                         vals.update(costume_values(c, cstream, costume))
@@ -860,7 +866,7 @@ def enumerate_kind(name, main, c):
                    for k, info in enumerate(infos)]
             # costume mask per whole-part combination (one choice per MObj)
             combos = collections.OrderedDict()
-            for costume in range(COSTUMES):
+            for costume in range(getattr(c, 'costume_count', COSTUMES)):
                 if where[0] == 'access' and costume == 0:
                     continue   # the access part exists only for costume != 0
                 lists = [sorted(p[costume]) for p in per]
@@ -991,7 +997,7 @@ def fnv1a32(data):
     return h
 
 
-def build(kinds_only=None):
+def build(kinds_only=None, meta_native_dir=None):
     types = est.TypeTable()
     types.load_dirs(est.HEADER_DIRS)
     census = est.parse_native_image_census(est.NATIVE_IMAGE_FLAGS_BY_NAME['hwtri'])
@@ -1007,25 +1013,90 @@ def build(kinds_only=None):
         c = Closure(name, L.idx)
         tables[name] = enumerate_kind(name, main, c)
         root_max = max(root_max, joint_root_max(c, main))
+    kind_entries = list(KINDS)
+    if meta_native_dir is not None:
+        import extra_texture_admission as extra
+        c = extra.MetaTextureClosure(meta_native_dir, sys.modules[__name__])
+        tables['MetaKnight'] = enumerate_kind('MetaKnight', extra.MAIN_ID, c)
+        c.validate_records(tables['MetaKnight'])
+        build.meta_report = c.report(tables['MetaKnight'])
+        root_max = max(root_max, joint_root_max(c, extra.MAIN_ID))
+        kind_entries.append(('MetaKnight', extra.MAIN_ID))
     build.root_max = root_max
     # payload: header (magic, version, kinds, 12 x 2 x (first, count)) + records
     index = []
     records = b''
     count = 0
-    for fkind, (name, _) in enumerate(KINDS):
+    for fkind, (name, _) in enumerate(kind_entries):
         for d in (0, 1):
             recs = list(tables[name][d].values())
             index.append((count, len(recs)))
             for r in recs:
                 records += pack_record(r, fkind)
             count += len(recs)
-    head = struct.pack('<4I', MAGIC, VERSION, len(KINDS), RECORD_WORDS)
+    head = struct.pack('<4I', MAGIC, VERSION, len(kind_entries), RECORD_WORDS)
     head += b''.join(struct.pack('<2I', a, b) for a, b in index)
     payload = head + records
     return tables, index, payload
 
 
+def build_from_legacy_payload(legacy_payload, meta_native_dir):
+    """Extend the qualified twelve-row artifact without rebuilding P2 inputs.
+
+    The tracked header qualifies size/hash/ABI. Source record bytes and the
+    established twelve ordinal directory entries are preserved exactly.
+    """
+    with open(legacy_payload, 'rb') as fh:
+        legacy = fh.read()
+    with open(HEADER_PATH, encoding='utf-8') as fh:
+        pinned = fh.read()
+    def pin(name):
+        matches = re.findall(r'^#define\s+' + name + r'\s+(0x[0-9A-Fa-f]+|[0-9]+)u\s*$', pinned, re.M)
+        if len(matches) != 1:
+            raise ValueError('legacy admission header has no unique ' + name)
+        return int(matches[0], 0)
+    current_kinds = pin('NDS_FIGHTER_ADMISSION_KINDS')
+    prefix = 'NDS_FIGHTER_ADMISSION_LEGACY_' if current_kinds == 13 else 'NDS_FIGHTER_ADMISSION_'
+    if (len(legacy) != pin(prefix + 'PAYLOAD_BYTES') or
+            fnv1a32(legacy) != pin(prefix + 'PAYLOAD_FNV') or
+            current_kinds not in (12, 13) or
+            len(legacy) < 208 or struct.unpack_from('<4I', legacy) != (MAGIC, VERSION, 12, RECORD_WORDS)):
+        raise ValueError('legacy admission payload does not match its qualified tracked header')
+    index = list(struct.iter_unpack('<2I', legacy[16:208]))
+    count = 0
+    for first, length in index:
+        if first != count:
+            raise ValueError('legacy admission directory is not a contiguous twelve-kind source artifact')
+        count += length
+    if len(legacy) != 208 + count * RECORD_WORDS * 4:
+        raise ValueError('legacy admission record bounds differ from its directory')
+    import extra_texture_admission as extra
+    closure = extra.MetaTextureClosure(meta_native_dir, sys.modules[__name__])
+    meta = enumerate_kind('MetaKnight', extra.MAIN_ID, closure)
+    closure.validate_records(meta)
+    build.meta_report = closure.report(meta)
+    build.meta_report['legacy_payload_fnv'] = fnv1a32(legacy)
+    build.meta_report['legacy_payload_bytes'] = len(legacy)
+    build.meta_report['legacy_record_bytes_preserved'] = len(legacy) - 208
+    build.root_max = max(pin('NDS_FIGHTER_ADMISSION_ROOT_MAX'), joint_root_max(closure, extra.MAIN_ID))
+    records = bytearray(legacy[208:])
+    for detail in (0, 1):
+        rows = list(meta[detail].values())
+        index.append((count, len(rows)))
+        for row in rows:
+            records.extend(pack_record(row, 12))
+        count += len(rows)
+    head = struct.pack('<4I', MAGIC, VERSION, 13, RECORD_WORDS)
+    head += b''.join(struct.pack('<2I', first, length) for first, length in index)
+    return {'MetaKnight': meta}, index, head + records
+
+
 def render_header(index, payload):
+    kind_entries = list(KINDS)
+    if len(index) == 2 * (len(KINDS) + 1):
+        kind_entries.append(('MetaKnight', 5455))
+    if len(index) != len(kind_entries) * 2:
+        raise ValueError('admission index count has no established roster mapping')
     lines = [
         '/* GENERATED by scripts/fighters/generate_nds_fighter_admission.py -- do not edit.',
         ' * P2-2p8 Phase 1 slice 2b: the fighter texture admission table. The',
@@ -1036,7 +1107,7 @@ def render_header(index, payload):
         '',
         '#define NDS_FIGHTER_ADMISSION_MAGIC 0x%08Xu' % MAGIC,
         '#define NDS_FIGHTER_ADMISSION_VERSION %du' % VERSION,
-        '#define NDS_FIGHTER_ADMISSION_KINDS %du' % len(KINDS),
+        '#define NDS_FIGHTER_ADMISSION_KINDS %du' % len(kind_entries),
         '#define NDS_FIGHTER_ADMISSION_RECORD_WORDS %du' % RECORD_WORDS,
         '#define NDS_FIGHTER_ADMISSION_HEADER_BYTES %du' % (16 + 8 * len(index)),
         '#define NDS_FIGHTER_ADMISSION_PAYLOAD_BYTES %du' % len(payload),
@@ -1053,7 +1124,16 @@ def render_header(index, payload):
         '',
         '/* records per kind (BattleShip ordinal) x detail (0 HIGH, 1 LOW) */',
     ]
-    for fkind, (name, _) in enumerate(KINDS):
+    if len(kind_entries) > len(KINDS):
+        lines.extend(('#define NDS_FIGHTER_ADMISSION_METAKNIGHT_INDEX 12u',
+                      '#define NDS_FIGHTER_ADMISSION_METAKNIGHT_RUNTIME_KIND 29u'))
+        meta_report = getattr(build, 'meta_report', {})
+        if 'legacy_payload_fnv' in meta_report:
+            lines.extend(('#define NDS_FIGHTER_ADMISSION_LEGACY_PAYLOAD_BYTES %du' %
+                          meta_report['legacy_payload_bytes'],
+                          '#define NDS_FIGHTER_ADMISSION_LEGACY_PAYLOAD_FNV 0x%08Xu' %
+                          meta_report['legacy_payload_fnv']))
+    for fkind, (name, _) in enumerate(kind_entries):
         for d in (0, 1):
             first, n = index[fkind * 2 + d]
             lines.append('/* %-8s %s: first %4d count %3d */' % (name, 'LOW ' if d else 'HIGH', first, n))
@@ -1063,7 +1143,9 @@ def render_header(index, payload):
 def report(tables):
     bpp = {'Pal16': 4}
     print('%-8s %-4s %6s %6s %10s %8s' % ('kind', 'det', 'recs', 'hats', 'DS B (all)', 'costume0'))
-    for name, _ in KINDS:
+    for name, _ in list(KINDS) + ([('MetaKnight', 5455)] if 'MetaKnight' in tables else []):
+        if name not in tables:
+            continue
         for d in (1, 0):
             recs = list(tables[name][d].values())
             hats = sum(1 for r in recs if r['hat'])
@@ -1082,8 +1164,17 @@ def main(argv=None):
     ap.add_argument('--report', action='store_true')
     ap.add_argument('--no-header', action='store_true',
                     help='do not rewrite the tracked header (payload only)')
+    ap.add_argument('--meta-native-dir', default=None,
+                    help='append Meta Knight from the qualified EXTRA native resource directory')
+    ap.add_argument('--meta-report', default=None,
+                    help='write typed Meta texture/source closure evidence to this JSON path')
+    ap.add_argument('--legacy-payload', default=None,
+                    help='extend the twelve-kind artifact qualified by the tracked header')
     args = ap.parse_args(argv)
-    tables, index, payload = build()
+    if args.legacy_payload and not args.meta_native_dir:
+        ap.error('--legacy-payload requires --meta-native-dir')
+    tables, index, payload = (build_from_legacy_payload(args.legacy_payload, args.meta_native_dir)
+                              if args.legacy_payload else build(meta_native_dir=args.meta_native_dir))
     header = render_header(index, payload)
     if args.check:
         try:
@@ -1108,6 +1199,12 @@ def main(argv=None):
             fh.write(payload)
     if args.report:
         report(tables)
+    if args.meta_report:
+        if args.meta_native_dir is None:
+            ap.error('--meta-report requires --meta-native-dir')
+        with open(args.meta_report, 'w', encoding='utf-8', newline='\n') as fh:
+            json.dump(build.meta_report, fh, indent=2, sort_keys=True)
+            fh.write('\n')
     return 0
 
 

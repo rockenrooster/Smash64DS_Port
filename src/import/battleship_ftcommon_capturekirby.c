@@ -71,5 +71,33 @@ void ndsBaseFTCommonCaptureApplyCaptureKnockback(GObj *fighter_gobj,
 #define ftCommonCaptureApplyCatchKnockback ndsBaseFTCommonCaptureApplyCatchKnockback
 #define ftCommonCaptureApplyCaptureKnockback ndsBaseFTCommonCaptureApplyCaptureKnockback
 
+#if NDS_P4_METAKNIGHT
+#include <string.h>
+#include <nds/nds_metaknight_lifecycle.h>
+#include <nds/nds_p4_roster.h>
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+
+s32 ndsMetaKirbyVictimStarDamage(FTStruct *victim, const FTKirbyCopy *copy)
+{
+    if (victim->fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+        return NDS_META_KIRBY_STAR_DAMAGE;
+    return ((u32)victim->fkind < (u32)nFTKindEnumCount) ? copy[victim->fkind].star_damage : 0;
+}
+
+f32 ndsMetaKirbyVictimStarScale(FTStruct *victim, const FTKirbyCopy *copy)
+{
+    if (victim->fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        u32 bits = NDS_META_KIRBY_STAR_SCALE_BITS;
+        f32 scale;
+        memcpy(&scale, &bits, sizeof(scale));
+        return scale;
+    }
+    return ((u32)victim->fkind < (u32)nFTKindEnumCount) ? copy[victim->fkind].effect_scale : 0.0F;
+}
+
+#include "../../builds/p4/meta-knight-lifecycle/ftcommoncapturekirby.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturekirby.c"
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturewait.c"

@@ -26,6 +26,10 @@
 #include <nds/nds_preview_pack.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_shield_pose.h>
+#include <nds/nds_p4_runtime.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#endif
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/generated/nds_native_fighter_image.generated.h>
 
@@ -80,7 +84,11 @@ static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
 }
 #define syTaskmanMalloc ndsFTManagerPoolMalloc
 #endif
+#if NDS_P4_METAKNIGHT
+#include <nds/generated/battleship_ftmanager.generated.inc>
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
+#endif
 #if NDS_P2_ARM9_WRAM
 #undef syTaskmanMalloc
 #endif
@@ -149,6 +157,11 @@ void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
     sNdsFTManagerPoolToWram = 1u;
 #endif
     ndsBaseFTManagerAllocFighter(data_flags, allocs_num);
+#if NDS_P4_METAKNIGHT
+    ndsP4ResetFighterData(data_flags);
+    if (gFTManagerFigatreeHeapSize < ndsP4GetFighterData(NDS_P4_RUNTIME_METAKNIGHT)->file_anim_size)
+        gFTManagerFigatreeHeapSize = ndsP4GetFighterData(NDS_P4_RUNTIME_METAKNIGHT)->file_anim_size;
+#endif
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* Both VS entries (battle and Sudden Death) come through here before
      * their player loop allocates a figatree heap or makes a fighter. */
@@ -172,7 +185,7 @@ void *ndsBaseFTManagerAllocFigatreeHeapKind(s32 fkind);
 
 void *ftManagerAllocFigatreeHeapKind(s32 fkind)
 {
-    FTData *data = dFTManagerDataFiles[fkind];
+    FTData *data = ndsP4GetFighterData(fkind);
     void *heap = ndsBattleIdleScratchAlloc(data->file_anim_size, 0x10u);
 
     return (heap != NULL) ? heap : ndsBaseFTManagerAllocFigatreeHeapKind(fkind);
@@ -329,10 +342,10 @@ static void ndsFTManagerPreloadVariantOwnerImages(void)
 }
 #endif
 
-#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P4_METAKNIGHT
 static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 {
-    FTData *data = dFTManagerDataFiles[fkind];
+    FTData *data = ndsP4GetFighterData(fkind);
 
     /* BattleShip ftManagerSetupFilesKind owns these exact post-Main loads.
      * The compact FPC has already supplied Main and Model, so loading Model a
@@ -390,11 +403,11 @@ static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
-#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P4_METAKNIGHT
     s32 preview = ndsRelocLoadPreviewFighter(fkind);
     if (preview != FALSE)
     {
-        FTData *data = dFTManagerDataFiles[fkind];
+        FTData *data = ndsP4GetFighterData(fkind);
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((preview == 2) &&
             (ndsRelocUseBattleCoreFighterData() != FALSE))
@@ -408,6 +421,16 @@ void ftManagerSetupFilesAllKind(s32 fkind)
             ndsFTManagerSetupCompactBattleFilesKind(fkind);
         }
 #endif
+#if NDS_P4_METAKNIGHT
+        if (ndsP4IsMetaKnight(fkind) &&
+            (ndsRelocUseBattleCoreFighterData() == FALSE))
+        {
+            /* Meta's FPC REGISTER has restored the complete BEX closure and
+             * private motion asset. Publish the source's lookup-only aliases
+             * in CSS too, before the native descriptor table is bound. */
+            ndsFTManagerSetupCompactBattleFilesKind(fkind);
+        }
+#endif
         /* Preserve ftmanager.c's guarded bank creation/publication. Demo's
          * event scripts and per-status figatree loads remain the source path. */
         if ((preview == 2) && (data->particles_script_lo != 0))
@@ -418,6 +441,9 @@ void ftManagerSetupFilesAllKind(s32 fkind)
             *data->p_particle = efParticleGetBankID(data->particles_script_lo);
         }
         ndsEFManagerRetryDeferredDescs();
+#if NDS_P4_METAKNIGHT
+        ndsP4BindFighterMotionData(fkind);
+#endif
         return;
     }
 #endif
@@ -430,6 +456,9 @@ void ftManagerSetupFilesAllKind(s32 fkind)
      * Captain exception: Fox reflector, DK/Samus/Link entries and Falcon's
      * EntryCar/Kick/Punch all use the same deferred-desc contract. */
     ndsBaseFTManagerSetupFilesAllKind(fkind);
+#if NDS_P4_METAKNIGHT
+    ndsP4BindFighterMotionData(fkind);
+#endif
     ndsEFManagerRetryDeferredDescs();
 #if NDS_P2_1P_GAME
     /* Scene-start preload for wave-replaced variant owners; no-op by
@@ -527,6 +556,13 @@ static sb32 ndsFTManagerMatchHasElectricAttacker(void)
 
 sb32 ndsFTManagerSkeletonReady(s32 fkind)
 {
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind) != FALSE)
+        return (ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1, 0u) &&
+                ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2, 0u)) ||
+               (ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1, 1u) &&
+                ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2, 1u));
+#endif
     if (fkind == nFTKindMario)
         return ndsRendererNativeOwnerImageResident(NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1, 0u);
     if (fkind == nFTKindFox)
@@ -541,6 +577,10 @@ sb32 ndsFTManagerSkeletonReady(s32 fkind)
 static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 {
     u32 image_slot = NDS_NATIVE_IMAGE_OWNER_SLOTS;
+#if NDS_P4_METAKNIGHT
+    if (ndsP4IsMetaKnight(fkind) != FALSE)
+        return NDS_NATIVE_IMAGE_SLOT_METAKNIGHT;
+#endif
 
 #if NDS_P2_LUIGI
     if (fkind == nFTKindLuigi)
@@ -700,6 +740,21 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 
 void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
 {
+#if NDS_P4_METAKNIGHT
+    /* Damage/item interactions can select either source electric skeleton.
+     * Prepare both in the match epoch; undamageable menu demos use the base. */
+    if (desc != NULL && ndsP4IsMetaKnight(desc->fkind) &&
+        desc->pkind != nFTPlayerKindDemo)
+    {
+        u32 detail = (desc->detail == nFTPartsDetailLow) ? 1u : 0u;
+        if (!ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1, detail) ||
+            !ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2, detail))
+        {
+            syDebugPrintf("Meta Knight electric owner admission failed\n");
+            while (TRUE) { }
+        }
+    }
+#endif
     /* Electric bodies share one image across HIGH/LOW; load at construction,
      * never when a hit first selects the alternate skeleton. Results
      * fighters cannot be hit, and that scene has no arena room to spare. */
@@ -838,12 +893,13 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
+    FTData *nds_data = (desc != NULL) ? ndsP4GetFighterData(desc->fkind) : NULL;
+
     ndsFTManagerEnsureOwnerImages(desc);
     if ((desc != NULL) && (desc->figatree_heap != NULL) &&
-        (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&
-        (dFTManagerDataFiles[desc->fkind] != NULL))
+        (nds_data != NULL))
     {
-        u32 expect = (u32)dFTManagerDataFiles[desc->fkind]->file_anim_size;
+        u32 expect = (u32)nds_data->file_anim_size;
 
         gNdsFTManagerFigatreeSlotKindCount++;
         gNdsFTManagerFigatreeSlotKindBytes += expect;
@@ -904,6 +960,10 @@ void ftManagerDestroyFighter(GObj *fighter_gobj)
 {
     if (fighter_gobj != NULL)
     {
+#if NDS_P4_METAKNIGHT
+        if (ndsP4IsMetaKnight(ftGetStruct(fighter_gobj)->fkind))
+            ndsMetaKnightSetCapeEnvironment(fighter_gobj, FALSE);
+#endif
         ndsFtPoseRelease(fighter_gobj);
     }
     ndsBaseFTManagerDestroyFighter(fighter_gobj);

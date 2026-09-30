@@ -106,4 +106,12 @@ void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
 }
 #endif
 
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_p4_runtime.h>
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+_Static_assert(NDS_META_INHERITED_VICTIM_LOOKUP_KIND == nFTKindPurin,
+               "Meta Yoshi lookup differs from the qualified inherited column");
+#include "../../builds/p4/meta-knight-lifecycle/ftcommoncaptureyoshi.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncaptureyoshi.c"
+#endif

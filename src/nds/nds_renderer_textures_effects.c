@@ -557,6 +557,57 @@ static s32 ndsRendererHardwareUseSecondCycle(const NDSRendererStats *stats)
              NDS_RENDERER_CYC_2CYCLE)) ? TRUE : FALSE;
 }
 
+static s32 ndsRendererHardwareMetaKnightFeedbackSurface(
+    const NDSRendererStats *stats)
+{
+#if NDS_P4_METAKNIGHT
+    return ((stats != NULL) && (stats->texture_combine_count != 0u) &&
+            (stats->texture_combine_w0 == 0xfc123245u) &&
+            (stats->texture_combine_w1 == 0x00400087u) &&
+            (ndsRendererHardwareUseSecondCycle(stats) != FALSE)) ? TRUE : FALSE;
+#else
+    (void)stats;
+    return FALSE;
+#endif
+}
+
+static s32 ndsRendererHardwareMetaKnightPrimSquaredSurface(
+    const NDSRendererStats *stats)
+{
+#if NDS_P4_METAKNIGHT
+    return ((stats != NULL) && (stats->texture_combine_count != 0u) &&
+            (stats->texture_combine_w0 == 0xfc321803u) &&
+            (stats->texture_combine_w1 == 0xff17ffffu) &&
+            (ndsRendererHardwareUseSecondCycle(stats) != FALSE)) ? TRUE : FALSE;
+#else
+    (void)stats;
+    return FALSE;
+#endif
+}
+
+static u32 ndsRendererHardwareSquarePrimitiveRgb(u32 primitive)
+{
+    u32 red = (primitive >> 24) & 0xffu;
+    u32 green = (primitive >> 16) & 0xffu;
+    u32 blue = (primitive >> 8) & 0xffu;
+
+    return (((red * red + 127u) / 255u) << 24) |
+           (((green * green + 127u) / 255u) << 16) |
+           (((blue * blue + 127u) / 255u) << 8) | (primitive & 0xffu);
+}
+
+static inline u16 ndsRendererHardwareAlphaOnlyIa8Coverage5(u32 texel)
+{
+    return (u16)(((texel & 0x0fu) * 31u + 7u) / 15u);
+}
+
+static inline u8 ndsRendererHardwareGradedCoverageByte(u32 coverage,
+                                                      s32 alpha_only)
+{
+    return (u8)((coverage << 3) |
+                ((alpha_only != FALSE) ? 0u : (coverage >> 2)));
+}
+
 /* A 2-CYCLE LIST WHOSE SECOND CYCLE ONLY MODULATES BY SHADE.
  *
  * The classifier below reads the cycle-1 slot on a 2-cycle list, because that
@@ -846,6 +897,23 @@ static s32 ndsRendererHardwareOutputUsesAlpha(const NDSRendererStats *stats,
     }
     w0 = stats->texture_combine_w0;
     w1 = stats->texture_combine_w1;
+    if (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE)
+    {
+        /* (TEXEL0_A * SHADE_A) * ENV_A. COMBINED is in the second
+         * cycle's A slot, which the legacy c/d-only dependency test misses. */
+        return ((source == NDS_RENDERER_ACMUX_TEXEL0) ||
+                (source == NDS_RENDERER_ACMUX_SHADE) ||
+                (source == NDS_RENDERER_ACMUX_ENVIRONMENT)) ? TRUE : FALSE;
+    }
+    if (ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE)
+    {
+        /* IMPLEMENTED_NOT_ACCEPTED: the bounded source-surface experiment
+         * defines incoming COMBINED_A=0 and LOD=1. Its all-white vertices
+         * and binary CI4 palette are qualified by the native owner producer.
+         * Pixel feedback and filtered edges still require donor comparison. */
+        return ((source == NDS_RENDERER_ACMUX_TEXEL0) ||
+                (source == NDS_RENDERER_ACMUX_PRIMITIVE)) ? TRUE : FALSE;
+    }
     if (ndsRendererHardwareUseSecondCycle(stats) == FALSE)
     {
         return ndsRendererCombineUsesAlpha(w0, w1, source);
@@ -1031,6 +1099,10 @@ static s32 ndsRendererHardwareUseTexture(const NDSRendererStats *stats)
             stats, NDS_RENDERER_HW_USETEX_REJECT_NO_COMBINE);
         return FALSE;
     }
+    if (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE)
+    {
+        return TRUE; /* source alpha coverage, with RGB supplied by PRIM^2 */
+    }
     if (ndsRendererHardwarePrimitiveDecal(stats) != FALSE)
     {
         ndsRendererHardwareRecordUseTextureReject(
@@ -1061,6 +1133,11 @@ static s32 ndsRendererHardwareUsesLitPrimitiveModulate(
     u32 c;
     u32 d;
 
+    if (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE)
+    {
+        return TRUE;
+    }
+
     if ((stats == NULL) || (stats->texture_combine_count == 0u) ||
         (ndsRendererHardwareSecondCyclePassesCombined(stats) == FALSE))
     {
@@ -1084,6 +1161,18 @@ static s32 ndsRendererHardwareUsesLitPrimitiveModulate(
 
 static u32 ndsRendererHardwareColorSource(const NDSRendererStats *stats)
 {
+    if (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE)
+    {
+        /* Cycle 0 PRIM*SHADE, then cycle 1 COMBINED*PRIM. The source
+         * white vertices are compiled to the existing ambient-white path. */
+        return ndsRendererHardwareSquarePrimitiveRgb(stats->prim_color);
+    }
+    if (ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE)
+    {
+        /* White SHADE makes both RGB cycles reproduce the one source image;
+         * second-cycle TEXEL1 names first-cycle TEXEL0 on the source RDP. */
+        return 0xffffffffu;
+    }
     if (ndsRendererHardwarePrimEnvTexel0BlendMode(stats) !=
         NDS_RENDERER_PRIM_ENV_BLEND_NONE)
     {
@@ -1123,6 +1212,10 @@ static s32 ndsRendererHardwareLitShadeCombine(const NDSRendererStats *stats)
 
 static s32 ndsRendererHardwareUseMaterialColor(const NDSRendererStats *stats)
 {
+    if (ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE)
+    {
+        return FALSE;
+    }
     if ((stats != NULL) && (stats->texture_combine_count != 0u))
     {
         if (ndsRendererHardwareLitShadeCombine(stats) != FALSE)
@@ -1140,6 +1233,10 @@ static s32 ndsRendererHardwareUseMaterialColor(const NDSRendererStats *stats)
 
 static s32 ndsRendererHardwareUseVertexColor(const NDSRendererStats *stats)
 {
+    if (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE)
+    {
+        return TRUE;
+    }
     if ((stats == NULL) || (stats->texture_combine_count == 0u))
     {
         return TRUE;
@@ -1182,6 +1279,23 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
                                     const NDSRendererInputVertex *vtx)
 {
     u32 alpha = 0xffu;
+
+    if (ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE)
+    {
+        /* Defined C=0/LOD=1 experiment: A=(1-PRIM_A)*TEXEL0_A. The
+         * resident CI4 texture supplies binary coverage independently. */
+        u32 source_alpha = 255u - (stats->prim_color & 0xffu);
+
+        return (source_alpha == 0u) ? 0u :
+            ((source_alpha < 8u) ? 1u : (source_alpha >> 3));
+    }
+    if (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE)
+    {
+        u32 source_alpha = stats->env_color & 0xffu;
+
+        return (source_alpha == 0u) ? 0u :
+            ((source_alpha < 8u) ? 1u : (source_alpha >> 3));
+    }
 
     if (vtx != NULL)
     {
@@ -1235,6 +1349,11 @@ static u32 ndsRendererHardwareAlpha(const NDSRendererStats *stats,
 static s32 ndsRendererHardwareAlphaUsesVertex(
     const NDSRendererStats *stats)
 {
+    if ((ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE) ||
+        (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE))
+    {
+        return FALSE; /* owner producer proves every source vertex alpha=255 */
+    }
     if ((stats != NULL) &&
         ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) !=
          NDS_RENDERER_ALPHA_COMPARE_THRESHOLD) &&
@@ -12776,6 +12895,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 use_texel1 = FALSE;
     s32 alpha_ignores_texels = FALSE;
     s32 graded_coverage = FALSE;
+    s32 alpha_only = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -13208,6 +13328,17 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          (ndsRendererHardwareOutputUsesAlpha(
               stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE)) ? TRUE : FALSE;
 
+    alpha_only = ndsRendererHardwareMetaKnightPrimSquaredSurface(stats);
+    if ((alpha_only != FALSE) &&
+        ((format != NDS_RENDERER_HW_TEXTURE_FMT_IA) ||
+         (size != NDS_RENDERER_HW_TEXTURE_SIZ_8B) ||
+         (use_texel1 != FALSE) || (fraction_entry != NULL)))
+    {
+        /* The qualified source family carries IA8 coverage. A different
+         * representation needs its own producer contract before admission. */
+        return FALSE;
+    }
+
     memset(&key, 0, sizeof(key));
     key.image = primary_image;
     key.image_format = primary_image_format;
@@ -13276,6 +13407,10 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     if (alpha_ignores_texels != FALSE)
     {
         key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS;
+    }
+    if (alpha_only != FALSE)
+    {
+        key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_ONLY;
     }
     if (use_texel1 != FALSE)
     {
@@ -13764,6 +13899,14 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
          ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
           (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
+    if (alpha_only != FALSE)
+    {
+        if (upload_buffer != sNdsRendererHardwareTextureScratch)
+        {
+            return FALSE;
+        }
+        graded_coverage = TRUE;
+    }
 
     /* Only the power-of-two rectangle handed to libnds is observable.  The
      * shared scratch arena is sized for the worst 128x128 texture, but smaller
@@ -13814,7 +13957,17 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                 u32 dst_index = (y * upload_width) + x;
                 u16 color;
 
-                if (use_texel1_ci4_lut != FALSE)
+                if (alpha_only != FALSE)
+                {
+                    /* Preserve all sixteen independent IA8 alpha levels,
+                     * rounded into the DS A5 lane. Intensity is not a colour
+                     * input of this combiner and must not darken PRIM^2. */
+                    u32 source_texel = ndsRendererReadTextureByte(
+                        config, texels_src, src_index, format, size);
+
+                    color = ndsRendererHardwareAlphaOnlyIa8Coverage5(source_texel);
+                }
+                else if (use_texel1_ci4_lut != FALSE)
                 {
                     u32 index0 = ndsRendererReadTexturePackedNibble(
                         config, texels_src, src_index, format, size);
@@ -13933,7 +14086,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         {
             u32 coverage = sNdsRendererHardwareTextureScratch[i] & 0x1fu;
 
-            packed[i] = (u8)((coverage << 3) | (coverage >> 2));
+            packed[i] = ndsRendererHardwareGradedCoverageByte(coverage, alpha_only);
         }
         /* Each palette step is the endpoint lerp at the midpoint of the
          * coverage band it serves, through the same helper the RGB5A1 bake
@@ -13943,7 +14096,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             u32 v = (i << 2) + 2u;
             u16 texel0 = (u16)(0x8000u | v | (v << 5) | (v << 10));
 
-            resident_palette[i] =
+            resident_palette[i] = (alpha_only != FALSE) ? 0x7fffu :
                 (u16)(ndsRendererHardwareBlendPrimEnvTexel0(
                           texel0, stats->prim_color,
                           stats->env_color) & 0x7fffu);
@@ -17186,6 +17339,11 @@ extern NDSFtrAdmitMallinfo mallinfo(void);
 #define NDS_FTR_ADMIT_D_HI 0x06880000u
 #define NDS_FTR_ADMIT_INDEX_WORDS (4u + 4u * NDS_FIGHTER_ADMISSION_KINDS)
 
+#if NDS_P4_METAKNIGHT
+_Static_assert(NDS_FIGHTER_ADMISSION_KINDS == 13u,
+               "Meta Knight requires its typed compact admission row");
+#endif
+
 volatile u32 gNdsFtrLeanAdmitFail __attribute__((used));
 volatile u32 gNdsFtrLeanAdmitFailFirst[4] __attribute__((used));
 
@@ -17195,6 +17353,18 @@ static int sNdsFtrAdmitSavedLock;
 static u32 sNdsFtrAdmitIndex[NDS_FTR_ADMIT_INDEX_WORDS];
 static u32 sNdsFtrAdmitChunk[NDS_FTR_ADMIT_CHUNK *
                              NDS_FIGHTER_ADMISSION_RECORD_WORDS];
+
+static u32 ndsFtrAdmitIndexForKind(u32 kind, u32 detail)
+{
+    u32 selection = ndsRosterSelectionIndex(kind);
+
+    if ((selection >= NDS_FIGHTER_ADMISSION_KINDS) || (detail >= 2u))
+    {
+        return NDS_P4_NO_SELECTION_INDEX;
+    }
+    return 4u + (selection * 2u + detail) * 2u;
+}
+
 static const NDSRendererConfig sNdsFtrAdmitConfig = {
     .texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED
 };
@@ -18081,7 +18251,9 @@ static void ndsFtrAdmitIdentCensus(NdsRelocAssetStream *stream,
     gNdsFtrCarveLab.census_runs++;
     for (kind = 0u; kind < NDS_FIGHTER_ADMISSION_KINDS; kind++)
     {
-        if ((present & (1u << kind)) == 0u)
+        u32 runtime_kind = ndsRosterRuntimeKind(kind);
+
+        if ((runtime_kind >= 32u) || (present & (1u << runtime_kind)) == 0u)
         {
             continue;
         }
@@ -18196,7 +18368,10 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
     }
     for (i = 0u; i < count; i++)
     {
-        present |= 1u << (fkind[i] & 31u);
+        if (fkind[i] < 32u)
+        {
+            present |= 1u << fkind[i];
+        }
     }
     if (ndsRelocAssetStreamOpen(&stream, "nitro:/fighters/admission.bin") ==
         FALSE)
@@ -18235,13 +18410,14 @@ ndsFtrLeanAdmitRun(NDSRendererStats *scratch, const u32 *fkind,
         u32 first;
         u32 n;
         u32 r;
+        u32 index = ndsFtrAdmitIndexForKind(kind, d);
 
-        if (kind >= NDS_FIGHTER_ADMISSION_KINDS)
+        if (index == NDS_P4_NO_SELECTION_INDEX)
         {
             continue;
         }
-        first = sNdsFtrAdmitIndex[4u + (kind * 2u + d) * 2u];
-        n = sNdsFtrAdmitIndex[5u + (kind * 2u + d) * 2u];
+        first = sNdsFtrAdmitIndex[index];
+        n = sNdsFtrAdmitIndex[index + 1u];
 #if NDS_VRAM_CENSUS_LIVE
         /* Census attribution: these uploads belong to this fighter's slot. */
         gNdsVramCensusDrawSlotPlus1 = (player[i] & 3u) + 1u;

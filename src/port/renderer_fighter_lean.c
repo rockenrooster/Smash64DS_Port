@@ -21,6 +21,7 @@
 #include <nds/renderer_fighter_lean.h>
 #include <nds/generated/nds_fighter_admission.generated.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_p4_runtime.h>
 
 /* Slice 2b BSS diet: the per-root arrays hold the most DL-bearing joints any
  * kind x detail has (generator max, 24) instead of the draw collection's 32;
@@ -121,7 +122,7 @@ static u32 ndsFtrLeanAdmitCollectBases(void)
 
     for (i = 0u; i < sNdsFtrAdmitCount; i++)
     {
-        const FTData *data = dFTManagerDataFiles[sNdsFtrAdmitKind[i]];
+        const FTData *data = ndsP4GetFighterData((s32)sNdsFtrAdmitKind[i]);
         void **files[9];
         u32 f;
 
@@ -206,7 +207,8 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
     ndsFtrLeanAdmitSync();
     if ((ndsFtrLeanAdmitBattleScene() == FALSE) ||
         (sNdsFtrAdmitCount >= NDS_FTR_LEAN_ADMIT_FIGHTERS) ||
-        (fkind >= 12u) || (sNdsFtrAdmitDone == sNdsFtrAdmitGen))
+        (ndsRosterSelectionIndex(fkind) == NDS_P4_NO_SELECTION_INDEX) ||
+        (sNdsFtrAdmitDone == sNdsFtrAdmitGen))
     {
         return;
     }
@@ -804,6 +806,13 @@ static u32 ndsFtrLeanEligible(FTStruct *fp, u32 *owner_slot)
         return NDS_FTR_LEAN_KIND_NONE;
     }
     kind = NDS_FTR_LEAN_OWNER_KIND(*owner_slot);
+#if NDS_P4_METAKNIGHT
+    /* Meta Knight's selected-root vector may contain matrix-only tail inputs
+     * and uses the independent logical-joint palette domain. The native
+     * production owner implements that contract; this cached-list kernel
+     * requires its own qualification before it can consume the new content. */
+    if (ndsP4IsMetaKnight(fp->fkind) != FALSE) return NDS_FTR_LEAN_KIND_NONE;
+#endif
     if ((kind == NDS_FTR_LEAN_KIND_NONE) ||
         ((gNdsRendererFastRunMode !=
           NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) &&
@@ -1578,6 +1587,9 @@ static u32 ndsFtrLeanProve(u32 slot, FTStruct *fp, NDSFtrLeanInstance *inst,
 static NDS_FTR_LEAN_RUN_INLINE sb32
 ndsFtrLeanRun(u32 slot, FTStruct *fp, u32 route)
 {
+#if NDS_P4_METAKNIGHT
+    if (ndsMetaKnightCapeHidden(fp) != FALSE) return TRUE;
+#endif
     NDSFtrLeanInstance *inst = &sNdsFtrLeanInstances[slot];
     u32 owner_slot = 0u;
     u32 kind;

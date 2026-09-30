@@ -15,6 +15,10 @@ typedef struct alSoundEffect {
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_p4_runtime.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#endif
 
 void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
                                      f32 anim_frame);
@@ -248,7 +252,11 @@ static void ndsLabTimedAddFigatree(DObj *root_dobj, void *figatree,
 #define ftMainProcUpdateInterrupt battleship_ftMainProcUpdateInterrupt
 #define ftMainProcPhysicsMapDefault battleship_ftMainProcPhysicsMapDefault
 #define ftMainProcPhysicsMapCapture battleship_ftMainProcPhysicsMapCapture
+#if NDS_P4_METAKNIGHT
+#include <nds/generated/battleship_ftmain.generated.inc>
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmain.c"
+#endif
 #undef ftMainCheckGetUpdateDamage
 #undef ftMainPlayHitSFX
 #undef ftMainUpdateDamageStatFighter

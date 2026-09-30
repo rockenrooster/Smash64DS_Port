@@ -213,6 +213,9 @@ typedef struct NDSNativeRoot
 /* Image members embed PreparedDense, so its complete type must precede this
  * header. Standalone image TUs use the generator's matching definition. */
 #include <nds/generated/nds_native_fighter_image.generated.h>
+#if NDS_P4_METAKNIGHT
+#include "generated/nds_native_metaknight.generated.inc"
+#endif
 
 /* Passive fighter model parts replace one live DObj display list while
  * keeping that joint's matrix binding.  Generated variants therefore carry
@@ -741,10 +744,297 @@ typedef struct NDSNativeFighterOwnerRuntime
     u32 asset_data_size;
 } NDSNativeFighterOwnerRuntime;
 
+#define NDS_FTR_COUNT(a) ((u32)(sizeof(a) / sizeof((a)[0])))
+
+#if NDS_P4_METAKNIGHT
+static NDSNativeFighterRuntimeTables sNdsNativeMetaknightFighterHighTables;
+static NDSNativeFighterRuntimeTables sNdsNativeMetaknightFighterLowTables;
+static NDSNativeFighterRuntimeTables sNdsNativeMetaknightSkeleton1HighTables;
+static NDSNativeFighterRuntimeTables sNdsNativeMetaknightSkeleton1LowTables;
+static NDSNativeFighterRuntimeTables sNdsNativeMetaknightSkeleton2HighTables;
+static NDSNativeFighterRuntimeTables sNdsNativeMetaknightSkeleton2LowTables;
+/* Immutable roots remain in the generated union. Only this draw's compact
+ * identity translation changes when a source status swaps visible DObjs. */
+typedef struct NDSNativeMetaKnightSelectedRoute {
+    const void *asset_base;
+    u32 owner_generation, heap_generation, selected_count, input_count, detail, skeleton;
+    u8 storage_root[NDS_NATIVE_FIGHTER_ROOT_MAX];
+    u8 source_binding[NDS_NATIVE_FIGHTER_ROOT_MAX];
+    u8 selected_palette_slots[NDS_NATIVE_FIGHTER_ROOT_MAX];
+    u8 binding_input[NDS_NATIVE_METAKNIGHT_SOURCE_BINDING_COUNT];
+    u8 valid;
+} NDSNativeMetaKnightSelectedRoute;
+static NDSNativeMetaKnightSelectedRoute sNdsMetaKnightSelectedRoute;
+static NDSNativeFighterOwnerRuntime sNdsNativeMetaknightSelectedOwner;
+
+typedef struct NDSNativeMetaKnightProgram {
+    NDSNativeFighterRuntimeTables *tables;
+    const NDSNativeRoot *storage;
+    const NDSNativeMetaknightSourceRoot *sources;
+    const u8 *palette;
+    const u16 *material_assets;
+    const u32 *material_offsets;
+    const u32 (*lights)[2];
+    const u8 *inherited, *required;
+    u32 root_count, material_count, light_count, unique_count, image_slot;
+} NDSNativeMetaKnightProgram;
+
+#define NDS_META_PROGRAM(tables_, prefix_, image_, slot_) { \
+    &(tables_), prefix_##StorageRoots, prefix_##SourceRoots, \
+    prefix_##CrossPaletteSlots, prefix_##MaterialAssets, prefix_##MaterialOffsets, \
+    prefix_##RootLightPreambles, NULL, NULL, NDS_FTR_COUNT(prefix_##StorageRoots), \
+    NDS_FTR_COUNT(prefix_##MaterialOffsets), NDS_FTR_COUNT(prefix_##RootLightPreambles), \
+    image_##_RUN_UNIQUE_DENSE_COUNT, slot_ }
+/* Low metadata uses a suffix; spell the six tiny immutable descriptors
+ * explicitly so the producer's source arrays remain the only root inventory. */
+static const NDSNativeMetaKnightProgram sNdsMetaKnightPrograms[3][2] = {
+    {
+        NDS_META_PROGRAM(sNdsNativeMetaknightFighterHighTables, sNdsNativeMetaknight,
+            NDS_NATIVE_IMAGE_METAKNIGHT_HIGH, NDS_NATIVE_IMAGE_SLOT_METAKNIGHT),
+        { &sNdsNativeMetaknightFighterLowTables, sNdsNativeMetaknightStorageRootsLow,
+          sNdsNativeMetaknightSourceRootsLow, sNdsNativeMetaknightCrossPaletteSlotsLow,
+          sNdsNativeMetaknightMaterialAssetsLow, sNdsNativeMetaknightMaterialOffsetsLow,
+          sNdsNativeMetaknightRootLightPreamblesLow,
+          NULL, NULL,
+          NDS_FTR_COUNT(sNdsNativeMetaknightStorageRootsLow), NDS_FTR_COUNT(sNdsNativeMetaknightMaterialOffsetsLow),
+          NDS_FTR_COUNT(sNdsNativeMetaknightRootLightPreamblesLow),
+          NDS_NATIVE_IMAGE_METAKNIGHT_LOW_RUN_UNIQUE_DENSE_COUNT, NDS_NATIVE_IMAGE_SLOT_METAKNIGHT }
+    },
+    {
+        { &sNdsNativeMetaknightSkeleton1HighTables, sNdsNativeMetaknightSkeleton1StorageRoots,
+          sNdsNativeMetaknightSkeleton1SourceRoots, sNdsNativeMetaknightSkeleton1CrossPaletteSlots,
+          sNdsNativeMetaknightSkeleton1MaterialAssets, sNdsNativeMetaknightSkeleton1MaterialOffsets,
+          sNdsNativeMetaknightSkeleton1RootLightPreambles,
+          sNdsNativeMetaknightSkeleton1MaterialInherited, sNdsNativeMetaknightSkeleton1RequiredMaterialSlots,
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton1StorageRoots), NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton1MaterialOffsets),
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton1RootLightPreambles),
+          NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH_RUN_UNIQUE_DENSE_COUNT, NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1 },
+        { &sNdsNativeMetaknightSkeleton1LowTables, sNdsNativeMetaknightSkeleton1StorageRootsLow,
+          sNdsNativeMetaknightSkeleton1SourceRootsLow, sNdsNativeMetaknightSkeleton1CrossPaletteSlotsLow,
+          sNdsNativeMetaknightSkeleton1MaterialAssetsLow, sNdsNativeMetaknightSkeleton1MaterialOffsetsLow,
+          sNdsNativeMetaknightSkeleton1RootLightPreamblesLow,
+          sNdsNativeMetaknightSkeleton1MaterialInheritedLow, sNdsNativeMetaknightSkeleton1RequiredMaterialSlotsLow,
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton1StorageRootsLow), NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton1MaterialOffsetsLow),
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton1RootLightPreamblesLow),
+          NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW_RUN_UNIQUE_DENSE_COUNT, NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1 }
+    },
+    {
+        { &sNdsNativeMetaknightSkeleton2HighTables, sNdsNativeMetaknightSkeleton2StorageRoots,
+          sNdsNativeMetaknightSkeleton2SourceRoots, sNdsNativeMetaknightSkeleton2CrossPaletteSlots,
+          sNdsNativeMetaknightSkeleton2MaterialAssets, sNdsNativeMetaknightSkeleton2MaterialOffsets,
+          sNdsNativeMetaknightSkeleton2RootLightPreambles,
+          sNdsNativeMetaknightSkeleton2MaterialInherited, sNdsNativeMetaknightSkeleton2RequiredMaterialSlots,
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton2StorageRoots), NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton2MaterialOffsets),
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton2RootLightPreambles),
+          NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH_RUN_UNIQUE_DENSE_COUNT, NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2 },
+        { &sNdsNativeMetaknightSkeleton2LowTables, sNdsNativeMetaknightSkeleton2StorageRootsLow,
+          sNdsNativeMetaknightSkeleton2SourceRootsLow, sNdsNativeMetaknightSkeleton2CrossPaletteSlotsLow,
+          sNdsNativeMetaknightSkeleton2MaterialAssetsLow, sNdsNativeMetaknightSkeleton2MaterialOffsetsLow,
+          sNdsNativeMetaknightSkeleton2RootLightPreamblesLow,
+          sNdsNativeMetaknightSkeleton2MaterialInheritedLow, sNdsNativeMetaknightSkeleton2RequiredMaterialSlotsLow,
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton2StorageRootsLow), NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton2MaterialOffsetsLow),
+          NDS_FTR_COUNT(sNdsNativeMetaknightSkeleton2RootLightPreamblesLow),
+          NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW_RUN_UNIQUE_DENSE_COUNT, NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2 }
+    }
+};
+#undef NDS_META_PROGRAM
+
+static sb32 ndsNativeMetaKnightRouteOwned(u32 detail)
+{
+    return ((sNdsMetaKnightSelectedRoute.valid != 0u) &&
+            (sNdsMetaKnightSelectedRoute.detail == detail) &&
+            (sNdsMetaKnightSelectedRoute.owner_generation != 0u) &&
+            (sNdsMetaKnightSelectedRoute.heap_generation == gNdsTaskmanHeapGeneration)) ?
+        TRUE : FALSE;
+}
+
+static const NDSNativeMetaknightSourceRoot *ndsNativeMetaKnightSourceRoot(
+    u32 detail, u32 skeleton, u32 source_joint, u32 offset)
+{
+    const NDSNativeMetaKnightProgram *program;
+    const NDSNativeMetaknightSourceRoot *rows;
+    u32 i;
+
+    if ((detail >= 2u) || (skeleton >= 3u)) return NULL;
+    program = &sNdsMetaKnightPrograms[skeleton][detail];
+    rows = program->sources;
+    for (i = 0u; i < program->root_count; i++)
+    {
+        if ((rows[i].source_joint == source_joint) && (rows[i].root_offset == offset))
+            return &rows[i];
+    }
+    return NULL;
+}
+
+s32 ndsRendererNativeMetaKnightMaterialContext(u32 detail, u32 skeleton,
+    u32 source_joint, u32 root_offset, u32 *required, u32 *inherited)
+{
+    const NDSNativeMetaknightSourceRoot *row = ndsNativeMetaKnightSourceRoot(
+        detail, skeleton, source_joint, root_offset);
+    const NDSNativeMetaKnightProgram *program;
+    u32 i;
+    if ((row == NULL) || (required == NULL) || (inherited == NULL)) return FALSE;
+    program = &sNdsMetaKnightPrograms[skeleton][detail];
+    if (row->storage_root >= program->root_count) return FALSE;
+    if (ndsRendererNativeOwnerImageResident(program->image_slot, detail) == FALSE) return FALSE;
+    *required = 0u;
+    *inherited = (program->inherited != NULL) ? program->inherited[row->storage_root] : 0u;
+    if (program->required != NULL)
+    {
+        *required = program->required[row->storage_root];
+        return TRUE;
+    }
+    if (program->tables->epochs == NULL) return FALSE;
+    for (i = 0u; i < program->storage[row->storage_root].epoch_count; i++)
+    {
+        u32 e = program->storage[row->storage_root].first_epoch + i;
+        u32 slot;
+        if (e >= program->tables->epoch_count) return FALSE;
+        slot = program->tables->epochs[e].material_slot;
+        if ((slot != NDS_NATIVE_MATERIAL_NONE) && (slot + 1u > *required)) *required = slot + 1u;
+    }
+    return TRUE;
+}
+
+s32 ndsRendererNativeMetaKnightMaterialReference(u32 detail, u32 skeleton, u32 source_joint,
+    u32 binder_joint,
+    u32 root_offset, u32 material, u32 *asset_id, u32 *source_offset)
+{
+    const NDSNativeMetaknightSourceRoot *row = ndsNativeMetaKnightSourceRoot(
+        detail, skeleton, source_joint, root_offset);
+    const NDSNativeMetaKnightProgram *program;
+    u32 index;
+
+    if ((row == NULL) || (asset_id == NULL) || (source_offset == NULL)) return FALSE;
+    program = &sNdsMetaKnightPrograms[skeleton][detail];
+    if (row->storage_root >= program->root_count) return FALSE;
+    if ((program->inherited != NULL) && (program->inherited[row->storage_root] != 0u))
+    {
+        u32 i;
+        program = &sNdsMetaKnightPrograms[0][detail];
+        for (i = 0u; i < program->root_count; i++)
+        {
+            if ((program->sources[i].kind == 0u) &&
+                (program->sources[i].source_joint == binder_joint)) break;
+        }
+        if (i == program->root_count) return FALSE;
+        row = &program->sources[i];
+    }
+    else if (source_joint != binder_joint) return FALSE;
+    if (material >= row->material_count) return FALSE;
+    index = (u32)row->material_first + material;
+    if (index >= program->material_count) return FALSE;
+    *asset_id = program->material_assets[index];
+    *source_offset = program->material_offsets[index];
+    return TRUE;
+}
+
+s32 ndsRendererNativeMetaKnightSelectRoots(u32 detail, u32 skeleton, const void *asset_base,
+    u32 asset_size, u32 owner_generation, const u32 *offsets,
+    const u32 *material_counts, const u8 *material_source_joints,
+    u8 *input_source_joints, u32 selected_count,
+    u32 *input_count)
+{
+    NDSNativeMetaKnightSelectedRoute *route = &sNdsMetaKnightSelectedRoute;
+    const NDSNativeMetaKnightProgram *program;
+    NDSNativeFighterRuntimeTables *tables;
+    const NDSNativeRoot *storage;
+    const u8 *palette;
+    u32 required = 0u, count = selected_count, i;
+
+    route->valid = 0u;
+    if ((detail >= 2u) || (skeleton >= 3u)) return FALSE;
+    program = &sNdsMetaKnightPrograms[skeleton][detail];
+    tables = program->tables;
+    storage = program->storage;
+    palette = program->palette;
+    if ((asset_base == NULL) || (owner_generation == 0u) ||
+        (asset_size != NDS_NATIVE_METAKNIGHT_MODEL_DATA_SIZE) ||
+        (offsets == NULL) || (material_counts == NULL) || (material_source_joints == NULL) ||
+        (input_source_joints == NULL) || (input_count == NULL) ||
+        (selected_count == 0u) || (selected_count > NDS_NATIVE_FIGHTER_ROOT_MAX) ||
+        (ndsRendererNativeOwnerImageResident(program->image_slot, detail) == FALSE) ||
+        (tables->epochs == NULL) || (tables->runs == NULL) ||
+        (tables->dense_vertices == NULL) || (tables->run_first_unique == NULL) ||
+        (tables->run_unique_count == NULL) || (tables->run_unique_dense == NULL)) return FALSE;
+    memset(route->binding_input, 0xff, sizeof(route->binding_input));
+    for (i = 0u; i < selected_count; i++)
+    {
+        const NDSNativeMetaknightSourceRoot *source = ndsNativeMetaKnightSourceRoot(
+            detail, skeleton, input_source_joints[i], offsets[i]);
+        const NDSNativeRoot *root;
+        u32 e, inherited = (source != NULL && source->storage_root < program->root_count && program->inherited != NULL) ?
+            program->inherited[source->storage_root] : 0u;
+        if ((source == NULL) || (source->binding >= NDS_NATIVE_METAKNIGHT_SOURCE_BINDING_COUNT) ||
+            (source->storage_root >= program->root_count) ||
+            ((inherited == 0u) && (material_counts[i] != source->material_count)) ||
+            ((inherited != 0u) && (material_counts[i] < program->required[source->storage_root])) ||
+            (route->binding_input[source->binding] != 0xffu)) return FALSE;
+        for (e = 0u; e < material_counts[i]; e++)
+        {
+            u32 asset, offset;
+            if (ndsRendererNativeMetaKnightMaterialReference(detail, skeleton,
+                    input_source_joints[i], material_source_joints[i], offsets[i], e,
+                    &asset, &offset) == FALSE) return FALSE;
+        }
+        route->storage_root[i] = (u8)source->storage_root;
+        route->source_binding[i] = source->binding;
+        route->binding_input[source->binding] = (u8)i;
+        route->selected_palette_slots[i] = palette[source->binding];
+        root = &storage[source->storage_root];
+        if ((root->root_offset != offsets[i]) ||
+            ((u32)root->first_epoch + root->epoch_count > tables->epoch_count)) return FALSE;
+        for (e = 0u; e < root->epoch_count; e++)
+        {
+            const NDSNativeEpoch *epoch = &tables->epochs[root->first_epoch + e];
+            u32 r;
+            if ((u32)epoch->first_run + epoch->run_count > tables->run_count) return FALSE;
+            for (r = 0u; r < epoch->run_count; r++)
+            {
+                u32 run = epoch->first_run + r;
+                u32 first = tables->run_first_unique[run], n = tables->run_unique_count[run], v;
+                u32 extent = program->unique_count;
+                if ((first > extent) || (n > extent - first)) return FALSE;
+                for (v = 0u; v < n; v++)
+                {
+                    u32 dense = tables->run_unique_dense[first + v], binding;
+                    if (dense >= tables->dense_count) return FALSE;
+                    binding = tables->dense_vertices[dense].matrix_binding;
+                    if (binding >= NDS_NATIVE_METAKNIGHT_SOURCE_BINDING_COUNT) return FALSE;
+                    if (palette[binding] <= NDS_NATIVE_GX_MATRIX_SLOT_MAX) required |= 1u << binding;
+                }
+            }
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_METAKNIGHT_SOURCE_BINDING_COUNT; i++)
+    {
+        if (((required & (1u << i)) != 0u) && (route->binding_input[i] == 0xffu))
+        {
+            if (count >= NDS_NATIVE_FIGHTER_ROOT_MAX) return FALSE;
+            route->binding_input[i] = (u8)count;
+            input_source_joints[count++] = sNdsNativeMetaknightBindingSourceJoints[i];
+        }
+    }
+    route->asset_base = asset_base;
+    route->owner_generation = owner_generation;
+    route->heap_generation = gNdsTaskmanHeapGeneration;
+    route->selected_count = selected_count;
+    route->input_count = count;
+    route->detail = detail;
+    route->skeleton = skeleton;
+    sNdsNativeMetaknightSelectedOwner = (NDSNativeFighterOwnerRuntime){
+        tables, storage, selected_count, route->selected_palette_slots,
+        program->lights, program->light_count,
+        NDS_NATIVE_METAKNIGHT_MODEL_DATA_SIZE
+    };
+    *input_count = count;
+    route->valid = 1u;
+    return TRUE;
+}
+#endif
+
 #define NDS_NATIVE_FIGHTER_OWNER_COUNT \
     NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT
-
-#define NDS_FTR_COUNT(a) ((u32)(sizeof(a) / sizeof((a)[0])))
 
 static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
 {
@@ -4526,6 +4816,47 @@ static const u8 sNdsSkeletonCrossSlots[32] = { [0 ... 31] = 31u };
 static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
                                             const void *base)
 {
+#if NDS_P4_METAKNIGHT
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON1)
+    {
+        if (use_low_detail != 0u)
+            NDS_IMG_BIND(sNdsNativeMetaknightSkeleton1LowTables,
+                NDSNativeMetaknight_Skeleton1LowImage, base, NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_LOW);
+        else
+            NDS_IMG_BIND(sNdsNativeMetaknightSkeleton1HighTables,
+                NDSNativeMetaknight_Skeleton1HighImage, base, NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON1_HIGH);
+        sNdsMetaKnightSelectedRoute.valid = 0u;
+        return;
+    }
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_METAKNIGHT_SKELETON2)
+    {
+        if (use_low_detail != 0u)
+            NDS_IMG_BIND(sNdsNativeMetaknightSkeleton2LowTables,
+                NDSNativeMetaknight_Skeleton2LowImage, base, NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_LOW);
+        else
+            NDS_IMG_BIND(sNdsNativeMetaknightSkeleton2HighTables,
+                NDSNativeMetaknight_Skeleton2HighImage, base, NDS_NATIVE_IMAGE_METAKNIGHT_SKELETON2_HIGH);
+        sNdsMetaKnightSelectedRoute.valid = 0u;
+        return;
+    }
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_METAKNIGHT)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeMetaknightFighterLowTables,
+                         NDSNativeMetaknightLowImage, base,
+                         NDS_NATIVE_IMAGE_METAKNIGHT_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeMetaknightFighterHighTables,
+                         NDSNativeMetaknightHighImage, base,
+                         NDS_NATIVE_IMAGE_METAKNIGHT_HIGH);
+        }
+        sNdsMetaKnightSelectedRoute.valid = 0u;
+        return;
+    }
+#endif
     if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1)
     {
         NDS_IMG_BIND(sNdsMario1SkeletonTables, NDSNativeMario_Skeleton1HighImage,
@@ -5259,6 +5590,13 @@ void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
 static const NDSNativeFighterOwnerRuntime *
 ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
 {
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        return (ndsNativeMetaKnightRouteOwned(use_low_detail) != FALSE) ?
+            &sNdsNativeMetaknightSelectedOwner : NULL;
+    }
+#endif
     if (slot == 0u)
     {
         return (use_low_detail != 0u) ?
@@ -5670,6 +6008,14 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
     u32 *programs_tried)
 {
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        if (programs_tried != NULL) *programs_tried = 1u;
+        return ((ndsNativeMetaKnightRouteOwned(use_low_detail) != FALSE) &&
+                (root_count == sNdsMetaKnightSelectedRoute.selected_count)) ? 0u : 0xffu;
+    }
+#endif
     u32 program_count = 1u;
     u32 program;
 
@@ -5815,6 +6161,16 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     {
         return NULL;
     }
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        const NDSNativeRoot *root;
+        if ((ndsNativeMetaKnightRouteOwned(use_low_detail) == FALSE) ||
+            (owner != &sNdsNativeMetaknightSelectedOwner)) return NULL;
+        root = &owner->roots[sNdsMetaKnightSelectedRoute.storage_root[binding]];
+        return (root->root_offset == root_offset) ? root : NULL;
+    }
+#endif
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
     if ((use_low_detail < NDS_NATIVE_IMAGE_DETAILS) &&
         (battle_slot < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS))

@@ -47,7 +47,11 @@ The generated header is the single ABI the runtime and the image share.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import re
 from pathlib import Path
+from typing import Mapping
 
 import sys
 
@@ -341,8 +345,30 @@ def _kirby_hat_type(modelpart_id: int, detail: str) -> str:
 def render_header(
         contexts: dict[tuple[str, str], dict[str, object]],
         hat_contexts: dict[tuple[int, str], dict[str, object]],
+        *, extra_owner_guards: Mapping[str, str] | None = None,
         ) -> str:
     """The one ABI the image and the runtime share."""
+    guards = dict(extra_owner_guards or {})
+    extra_owners = tuple(sorted(guards))
+    declared_extra = {name for name, _detail in contexts if name not in IMAGE_OWNERS}
+    if declared_extra != set(extra_owners):
+        raise ValueError("extra image contexts require exactly matching owner guards")
+    for name, guard in guards.items():
+        if (name in IMAGE_OWNERS or not re.fullmatch(r"[a-z][a-z0-9_]*", name) or
+                not re.fullmatch(r"[A-Z][A-Z0-9_]*", guard)):
+            raise ValueError("extra image owner/guard is invalid or collides with legacy identity")
+        if any((name, detail) not in contexts for detail in DETAILS):
+            raise ValueError("extra image owner requires both source details")
+        if any(contexts[(name, detail)].get("owner_name") != name or
+               contexts[(name, detail)].get("detail") != detail for detail in DETAILS):
+            raise ValueError("extra image context identity/detail mismatch")
+    image_owners = IMAGE_OWNERS + extra_owners
+    # Skeletons have no in-binary twin: their tables always come from images.
+    verify_owners = P2_IMAGE_OWNERS + tuple(name for name in extra_owners if "_skeleton" not in name)
+
+    def guard_for(name):
+        return guards.get(name, _owner_guard(name))
+
     hat_bindings = {
         int(context["root_bindings"][0])
         for context in hat_contexts.values()
@@ -430,9 +456,9 @@ def render_header(
         " * owner numbering: only P2-3 owners have images. */",
     ] + [
         f"#define NDS_NATIVE_IMAGE_SLOT_{name.upper()} {index}u"
-        for index, name in enumerate(IMAGE_OWNERS)
+        for index, name in enumerate(image_owners)
     ] + [
-        f"#define NDS_NATIVE_IMAGE_OWNER_SLOTS {len(IMAGE_OWNERS)}u",
+        f"#define NDS_NATIVE_IMAGE_OWNER_SLOTS {len(image_owners)}u",
         "",
         "/* One row per image owner: slot suffix, nitro basename, and the two",
         " * image struct types whose sizeof() is the byte count. This is the",
@@ -444,7 +470,7 @@ def render_header(
         "#define NDS_NATIVE_OWNER_IMAGE_ROWS(X) \\",
     ] + [
         line
-        for index, name in enumerate(IMAGE_OWNERS)
+        for index, name in enumerate(image_owners)
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
             f"    NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
@@ -454,10 +480,10 @@ def render_header(
         "",
     ] + [
         line
-        for name in IMAGE_OWNERS
+        for name in image_owners
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
-            f"#if {_owner_guard(name)}",
+            f"#if {guard_for(name)}",
             f"#define NDS_NATIVE_OWNER_IMAGE_ROW_{name.upper()}(X) \\",
             f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, \\",
             f"      \"nitro:/fighters/{name}_high.bin\", \"nitro:/fighters/{name}_low.bin\", \\",
@@ -474,17 +500,17 @@ def render_header(
         "#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROWS(X) \\",
     ] + [
         f"    NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_{name.upper()}(X) \\"
-        for name in P2_IMAGE_OWNERS
+        for name in verify_owners
         if ((name, "high") in contexts) and ((name, "low") in contexts)
     ] + [
         "    /* end */",
         "",
     ] + [
         line
-        for name in P2_IMAGE_OWNERS
+        for name in verify_owners
         if ((name, "high") in contexts) and ((name, "low") in contexts)
         for line in (
-            f"#if {_owner_guard(name)} && !NDS_NATIVE_OWNER_IMAGE_{name.upper()}",
+            f"#if {guard_for(name)} && !NDS_NATIVE_OWNER_IMAGE_{name.upper()}",
             f"#define NDS_NATIVE_OWNER_IMAGE_VERIFY_ROW_{name.upper()}(X) \\",
             f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}, {name.upper()}, \\",
             f"      {_image_type(name, 'high')}, {_image_type(name, 'low')})",
@@ -514,6 +540,9 @@ def render_header(
             f"}} {type_name};",
             "",
         ]
+        if owner_name in extra_owners:
+            lines += [f"#define NDS_NATIVE_IMAGE_{owner_name.upper()}_{detail.upper()}_BYTES "
+                      f"((u32)sizeof({type_name}))", ""]
         for ctype, name, values, guard in members:
             macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
                      f"{detail.upper()}_{name.upper()}_COUNT")
@@ -686,6 +715,55 @@ def render_header(
     return "\n".join(lines)
 
 
+def load_extra_model_ir(path: Path, *, include_inventory: bool = False):
+    """Load the explicit host canary result; restore typed primitive mode keys.
+
+    The source adapter owns root/resource identity and native compilation. This
+    loader cannot synthesize missing arrays, borrow a parent or alter legacy
+    owner metadata to make an incomplete image appear valid.
+    """
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    if (data.get("schema_version") != 1 or
+            data.get("status") != "NATIVE_MODEL_IR_NOT_RUNTIME_ADMISSION" or
+            data.get("character") != "Meta Knight"):
+        raise ValueError("extra image input is not a qualified Meta Knight model IR inventory")
+    model_ir = data.get("model_ir", {})
+    if set(model_ir) != set(DETAILS):
+        raise ValueError("extra image input must contain both source details")
+    contexts = {}
+    source_entries = [("metaknight", detail, model_ir[detail]) for detail in DETAILS]
+    skeleton_ir = data.get("skeleton_ir")
+    if not isinstance(skeleton_ir, dict) or set(skeleton_ir) != {"1", "2"}:
+        raise ValueError("extra image input must cover both source-required electric skeletons")
+    for sid in ("1", "2"):
+        if set(skeleton_ir[sid]) != set(DETAILS):
+            raise ValueError("extra image skeleton input must cover both source details")
+        source_entries.extend((f"metaknight_skeleton{sid}", detail, skeleton_ir[sid][detail]) for detail in DETAILS)
+    for owner_name, detail, entry in source_entries:
+        context = entry["ir"]
+        # JSON object keys cannot preserve int primitive modes; recover the
+        # exact two declared modes and refuse missing/unknown alternatives.
+        streams = context.get("primitive_streams", {})
+        if set(streams) != {"1", "2"}:
+            raise ValueError("extra image input primitive modes must be exactly 1 and 2")
+        context["primitive_streams"] = {int(mode): rows for mode, rows in streams.items()}
+        if context.get("owner_name") != owner_name or context.get("detail") != detail:
+            raise ValueError("extra image input owner/detail identity mismatch")
+        if context.get("source_asset_id") != entry.get("source_asset_id"):
+            raise ValueError("extra image input asset identity mismatch")
+        # Hash the JSON-normalized context before any emitter consumes it.
+        encoded = json.dumps(context, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        if hashlib.sha256(encoded).hexdigest() != entry.get("ir_sha256"):
+            raise ValueError("extra image input native IR SHA256 mismatch")
+        if any(entry.get("counts", {}).get(key) != len(context[field])
+               for key, field in (("roots", "roots"), ("triangles", "triangles"),
+                                  ("dense_vertices", "dense_vertices"), ("epochs", "epochs"),
+                                  ("runs", "runs"), ("state_deltas", "state"))):
+            raise ValueError("extra image input native array census mismatch")
+        contexts[(owner_name, detail)] = context
+    return (data, contexts) if include_inventory else contexts
+
+
 def render_image(owner_name: str, detail: str,
                  context: dict[str, object]) -> str:
     """The standalone translation unit whose bytes become the NitroFS payload.
@@ -764,24 +842,34 @@ def render_kirby_hat_image(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, default=_paths.REPO_ROOT)
+    parser.add_argument("--source-root", type=Path,
+                        help="read-only donor/source root; output stays under --repo-root")
     parser.add_argument("--check", action="store_true")
+    parser.add_argument("--extra-model-ir", type=Path)
     args = parser.parse_args()
     repo_root = Path(args.repo_root).resolve()
+    source_root = Path(args.source_root).resolve() if args.source_root is not None else repo_root
 
     contexts: dict[tuple[str, str], dict[str, object]] = {}
     for owner_name in P2_IMAGE_OWNERS:
         for detail in DETAILS:
             contexts[(owner_name, detail)] = (
                 owners.build_p2_owner_runtime_context(
-                    repo_root, owner_name, detail))
+                    source_root, owner_name, detail))
     hat_contexts: dict[tuple[int, str], dict[str, object]] = {}
-    skeleton_contexts = skeletons.contexts(repo_root)
+    skeleton_contexts = skeletons.contexts(source_root)
     contexts.update(skeleton_contexts)
+    extra_guards = {}
+    extra_inventory = None
+    if args.extra_model_ir is not None:
+        extra_inventory, extra_contexts = load_extra_model_ir(args.extra_model_ir, include_inventory=True)
+        contexts.update(extra_contexts)
+        extra_guards.update({name: "NDS_P4_METAKNIGHT" for name, _detail in extra_contexts})
     for modelpart_id in owners.KIRBY_COPY_HAT_MODEL_PART_IDS:
         for detail in DETAILS:
             hat_contexts[(modelpart_id, detail)] = (
                 owners.build_p2_kirby_hat_runtime_context(
-                    repo_root, detail, modelpart_id))
+                    source_root, detail, modelpart_id))
 
     # The owners generator guards exactly `NATIVE_OWNER_IMAGE_ARRAYS` out of
     # the ARM9 binary. If this tool's member table ever names a different set,
@@ -806,8 +894,11 @@ def main() -> int:
             skeletons.render_runtime(skeleton_contexts),
         repo_root / "include" / "nds" / "generated"
         / "nds_native_fighter_image.generated.h": render_header(
-            contexts, hat_contexts),
+            contexts, hat_contexts, extra_owner_guards=extra_guards),
     }
+    if extra_inventory is not None:
+        products[repo_root / "src/nds/generated/nds_native_metaknight.generated.inc"] = \
+            owners.render_explicit_model_runtime_metadata(extra_inventory)
     for (owner_name, detail), context in contexts.items():
         path = (repo_root / "src" / "nds" / "generated"
                 / f"nds_native_fighter_{owner_name}_{detail}.image.c")

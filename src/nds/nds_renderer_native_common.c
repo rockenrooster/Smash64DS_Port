@@ -20,6 +20,35 @@ static inline u32 ndsRendererNativeRunPolyAlpha(const NDSNativeRun *run)
             NDS_NATIVE_RUN_ALPHA_SHIFT);
 }
 
+/* Deliberate source-transparent output, distinct from a renderer rejection.
+ * Kept across scene counters for directed positive/zero/positive witnesses. */
+#if NDS_P4_METAKNIGHT
+__attribute__((used)) volatile u32 gNdsP4TransparentRunCount;
+__attribute__((used)) volatile u32 gNdsP4TransparentTriangleCount;
+#endif
+
+static sb32 ndsRendererNativeMetaKnightRunTransparent(
+    const NDSRendererStats *stats, u32 alpha)
+{
+    return ((alpha == 0u) &&
+            ((ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE) ||
+             (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE))) ?
+        TRUE : FALSE;
+}
+
+static void ndsRendererNativeRecordTransparentRun(NDSRendererStats *stats,
+                                                   u32 triangle_count)
+{
+#if NDS_P4_METAKNIGHT
+    gNdsP4TransparentRunCount++;
+    gNdsP4TransparentTriangleCount += triangle_count;
+    stats->triangle_count += triangle_count;
+#else
+    (void)stats;
+    (void)triangle_count;
+#endif
+}
+
 static inline s32 ndsRendererFastRawStateEligible(
     const NDSRendererTraversalState *state)
 {
@@ -3720,7 +3749,16 @@ static s32 ndsRendererNativePreflightProductionOwner(
         return FALSE;
     }
     root_count = sNdsNativeFighterActiveOwner->root_count;
-    if ((input_count != root_count) ||
+    if (
+#if NDS_P4_METAKNIGHT
+        ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) ?
+            ((ndsNativeMetaKnightRouteOwned(use_low_detail) == FALSE) ||
+             (sNdsMetaKnightSelectedRoute.asset_base != asset_base) ||
+             (input_count != sNdsMetaKnightSelectedRoute.input_count)) :
+            (input_count != root_count)) ||
+#else
+        (input_count != root_count) ||
+#endif
         (root_count > NDS_NATIVE_FIGHTER_ROOT_MAX))
     {
         return FALSE;
@@ -3790,6 +3828,21 @@ static s32 ndsRendererNativePreflightProductionOwner(
             }
         }
     }
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        for (root_index = root_count; root_index < input_count; root_index++)
+        {
+            if ((inputs[root_index].modelview_matrix == NULL) ||
+#if NDS_R2_FIGHTER_HW_MTX
+                (inputs[root_index].projection_matrix == NULL) ||
+#else
+                (inputs[root_index].composed_matrix == NULL) ||
+#endif
+                (inputs[root_index].root_offset != 0u)) return FALSE;
+        }
+    }
+#endif
     return TRUE;
 }
 
@@ -4315,6 +4368,14 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
     sNdsNativeFighterActiveRootLightPreambles = owner->root_light_preambles;
     sNdsNativeFighterActiveRootLightPreambleCount =
         owner->root_light_preamble_count;
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        sNdsNativeFighterActiveDenseNormals = (u32 *)owner->tables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt = &sNdsNativeImageDenseNormalsReady;
+        return owner->tables->dense_normals != NULL;
+    }
+#endif
     if (ndsRendererNativeFighterRootProgram(slot) == NDS_NATIVE_SKELETON_PROGRAM)
     {
         sNdsNativeFighterActiveDenseNormals = (u32 *)owner->tables->dense_normals;
@@ -8099,7 +8160,9 @@ ndsRendererNativeShadeProductionActions(
 #else
     u32 use_material =
         policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
-    u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
+    u32 material_color = (use_material != 0u) ?
+        ((ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE) ?
+            ndsRendererHardwareColorSource(stats) : stats->prim_color) : 0u;
 #endif
     u32 action_offset;
     /* Identical to `prepared_direction != NULL` in every build that prepares
@@ -9448,6 +9511,11 @@ ndsRendererNativePrepareProductionRunCore(
     run_unlit = ndsRendererNativeRunUsesVertexColor(run);
     run_poly_alpha = (run_unlit != FALSE) ?
         ndsRendererNativeRunPolyAlpha(run) : 31u;
+    if ((ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE) ||
+        (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE))
+    {
+        run_poly_alpha = ndsRendererHardwareAlpha(stats, NULL);
+    }
 #if NDS_R2_FIGHTER_HW_LIGHT
     if (run_unlit == FALSE)
     {
@@ -9495,6 +9563,8 @@ ndsRendererNativePrepareProductionRunCore(
         ((family != NDS_NATIVE_DIRECT_POLICY_LIT_ONLY) &&
          (family != NDS_NATIVE_DIRECT_POLICY_TEXTURED_PASS2) &&
          (family != NDS_NATIVE_DIRECT_POLICY_LIT_PASS2) &&
+         (ndsRendererHardwareMetaKnightFeedbackSurface(stats) == FALSE) &&
+         (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) == FALSE) &&
          (stats->env_color != 0xffffffffu)) ||
         (state->matrix_valid == 0u) ||
         (state->matrix_generation == 0u))
@@ -9509,7 +9579,8 @@ ndsRendererNativePrepareProductionRunCore(
     material_color =
         ((policy->vertex_flags &
           NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL) != 0u) ?
-            stats->prim_color : 0u;
+            ((ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE) ?
+                ndsRendererHardwareColorSource(stats) : stats->prim_color) : 0u;
     state->texture_prepare_source_zbuffered = TRUE;
     state->texture_prepare_decal_depth = FALSE;
     state->texture_prepare_prim_depth = FALSE;
@@ -9684,6 +9755,8 @@ ndsRendererNativePrepareProductionRunCore(
     NDS_FIGHTER_PACKET_HOOK(
         (sNdsFighterPacketRecorder.pending_tint = tint,
          sNdsFighterPacketRecorder.pending_tint_rgb = sNdsR2EpochTintRgb));
+    if (ndsRendererNativeMetaKnightRunTransparent(stats, run_poly_alpha) == FALSE)
+    {
     NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordPrepare(
         ((use_texture != FALSE) || (tint != 0u)) ? TRUE : FALSE,
         state->texture_prepare_poly_fmt,
@@ -9694,6 +9767,7 @@ ndsRendererNativePrepareProductionRunCore(
         state->texture_prepare_origin_s,
         state->texture_prepare_origin_t,
         state->texture_prepare_offset));
+    }
     if ((hierarchy_run != NULL) && (policy->textured != 0u) &&
         (resolved_texture.entry == NULL))
     {
@@ -9808,7 +9882,8 @@ ndsRendererNativePrepareProductionRunCore(
         hierarchy_run->vertex_flags = state->texture_prepare_vertex_flags;
         hierarchy_run->textured = state->texture_prepare_enabled;
     }
-    else if (packet_mode == 0u)
+    else if ((packet_mode == 0u) &&
+             (ndsRendererNativeMetaKnightRunTransparent(stats, run_poly_alpha) == FALSE))
     {
         if (tint != 0u)
         {
@@ -12312,7 +12387,9 @@ ndsFtrLeanMatShade(NDSFtrLeanMat *m, const NDSNativeEpoch *epoch,
             epoch_policy & NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK];
     u32 use_material =
         policy->vertex_flags & NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL;
-    u32 material_color = (use_material != 0u) ? stats->prim_color : 0u;
+    u32 material_color = (use_material != 0u) ?
+        ((ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE) ?
+            ndsRendererHardwareColorSource(stats) : stats->prim_color) : 0u;
     u32 k;
 
     sNdsR2EpochTintTexture = 0u;
@@ -12586,6 +12663,11 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     run_unlit = ndsRendererNativeRunUsesVertexColor(run);
     run_poly_alpha = (run_unlit != FALSE) ?
         ndsRendererNativeRunPolyAlpha(run) : 31u;
+    if ((ndsRendererHardwareMetaKnightFeedbackSurface(stats) != FALSE) ||
+        (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE))
+    {
+        run_poly_alpha = ndsRendererHardwareAlpha(stats, NULL);
+    }
     if (run_unlit == FALSE)
     {
 #if NDS_R2_UNLIT_VERTEX_EPOCH
@@ -12626,6 +12708,8 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         ((family != NDS_NATIVE_DIRECT_POLICY_LIT_ONLY) &&
          (family != NDS_NATIVE_DIRECT_POLICY_TEXTURED_PASS2) &&
          (family != NDS_NATIVE_DIRECT_POLICY_LIT_PASS2) &&
+         (ndsRendererHardwareMetaKnightFeedbackSurface(stats) == FALSE) &&
+         (ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) == FALSE) &&
          (stats->env_color != 0xffffffffu)) ||
         (state->matrix_valid == 0u) ||
         (state->matrix_generation == 0u))
@@ -12652,7 +12736,8 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     state->texture_prepare_material_color =
         ((policy->vertex_flags &
           NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL) != 0u) ?
-            stats->prim_color : 0u;
+            ((ndsRendererHardwareMetaKnightPrimSquaredSurface(stats) != FALSE) ?
+                ndsRendererHardwareColorSource(stats) : stats->prim_color) : 0u;
     state->texture_prepare_vertex_flags = policy->vertex_flags;
     if (state->texture_prepare_valid == 0u)
     {
@@ -12852,6 +12937,16 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
     else
     {
         ndsFtrLeanPack1(pk, REG2ID(GFX_TEX_FORMAT), 0u);
+    }
+    if (ndsRendererNativeMetaKnightRunTransparent(stats, run_poly_alpha) != FALSE)
+    {
+        /* State and resident texture preparation above still complete. Omit
+         * only pixel emission: alpha zero must never reach DS wireframe mode.
+         * The packet key carries the live preamble/ENV identity, so a later
+         * positive alpha materializes a new list with its actual geometry. */
+        ndsRendererNativeRecordTransparentRun(stats, triangles);
+        m->run_count++;
+        return (pk->fault != 0u) ? nNDSFtrLeanDeclineCapacity : 0u;
     }
     ndsFtrLeanPack1(pk, REG2ID(GFX_POLY_FORMAT),
                     state->texture_prepare_poly_fmt);
@@ -15938,6 +16033,12 @@ static s32 ndsRendererNativeSubmitProductionRun(
     {
         return ndsRendererNativeDirectReject(stats);
     }
+    if (ndsRendererNativeMetaKnightRunTransparent(
+            stats, state->texture_prepare_poly_alpha) != FALSE)
+    {
+        ndsRendererNativeRecordTransparentRun(stats, run->triangle_count);
+        return TRUE;
+    }
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_phase_start = cpuGetTiming();
@@ -18353,6 +18454,20 @@ static void ndsRendererNativeCommitHierarchyRoot(
             m2_phase_start = cpuGetTiming();
 #endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE
+            if (ndsRendererNativeMetaKnightRunTransparent(
+                    stats, (prepared_run->poly_fmt >> 16) & 31u) != FALSE)
+            {
+                /* Hierarchy preflight retains its texture handle and sampler.
+                 * Keep the resident lifetime warm while submitting no pixels. */
+                if (prepared_run->texture_entry != NULL)
+                {
+                    prepared_run->texture_entry->last_used_frame =
+                        sNdsRendererHardwareFrameSerial + 1u;
+                }
+                ndsRendererNativeRecordTransparentRun(stats, run->triangle_count);
+                (*run_count)++;
+                continue;
+            }
             ndsRendererNativeBeginHierarchyBatch(
                 stats, prepared_run, matrix_generation);
             if (submit_class == NDS_NATIVE_RUN_CROSS_MATRIX)

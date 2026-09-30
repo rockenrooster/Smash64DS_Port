@@ -658,6 +658,30 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareMetaKnightFeedbackSurface",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "stats.texture_combine_count stats.texture_combine_w0 stats.texture_combine_w1",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererHardwareMetaKnightPrimSquaredSurface",
+        "tracked_bases": ("stats",),
+        "fields": _classified(
+            FIELD_CLASS_LIVE,
+            "stats.texture_combine_count stats.texture_combine_w0 stats.texture_combine_w1",
+        ),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
+        "closure": "ndsRendererNativeRecordTransparentRun",
+        "tracked_bases": ("stats",),
+        "fields": _classified(FIELD_CLASS_CALLBACK, "stats.triangle_count"),
+    },
+    {
+        "path": "src/nds/nds_renderer.c",
         "closure": "ndsRendererHardwareAlphaUsesVertex",
         "tracked_bases": ("stats",),
         "fields": _classified(
@@ -1412,13 +1436,14 @@ class O2RResource:
 
 
 def checked_bytes(repo_root: Path, spec: InputSpec) -> bytes:
-    path = repo_root / spec.path
+    path = _paths.battleship_input_path(repo_root, spec.path)
     if not path.is_file():
-        raise falsify(f"required input is absent: {spec.path}")
+        raise falsify(f"required input is absent: {spec.path} ({path})")
     payload = path.read_bytes()
     actual = sha256(payload)
     if actual != spec.sha256:
-        raise falsify(f"{spec.path}: SHA256 {actual} != pinned {spec.sha256}")
+        raise falsify(f"{spec.path} ({path}): SHA256 {actual} != pinned {spec.sha256}")
+    _paths.record_reference_input(path, payload)
     return payload
 
 

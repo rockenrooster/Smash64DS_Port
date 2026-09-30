@@ -19,11 +19,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
+import _paths
 
 import generate_battle_playable_texture_census as census
 import generate_battle_playable_static_textures as static
 
-SOURCE = ROOT / "decomp/BattleShip-main/decomp/assets/us/relocData/85.vpk0.bin"
+SOURCE = _paths.battleship_input_path(ROOT, "decomp/BattleShip-main/decomp/assets/us/relocData/85.vpk0.bin")
 O2R_SPEC = census.InputSpec(
     "decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects3",
     "f0310bc543527d5099f52b513f8a0f4c72a5a5ea3d124a00a487309de63242d1",

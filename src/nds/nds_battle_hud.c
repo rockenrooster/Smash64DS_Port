@@ -10,8 +10,16 @@
 #include <nds/nds_startup.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_p4_roster.h>
 
 #include "generated/battle_hud.generated.inc"
+
+#if NDS_P4_METAKNIGHT
+_Static_assert(NDS_BATTLE_HUD_METAKNIGHT == 1u &&
+                   NDS_BATTLE_HUD_STOCK_OWNERS == 13u &&
+                   NDS_BATTLE_HUD_PORTRAITS == 13u,
+               "Meta Knight requires its qualified HUD assets in this configuration");
+#endif
 
 #define NDS_BATTLE_HUD_PLAYERS 4u
 #define NDS_BATTLE_HUD_DAMAGE_PALETTE_BASE 0u
@@ -423,6 +431,13 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 5u) costume = 0u;
         source = kNdsBattleHudKirbyStockPalette[costume];
     }
+#if NDS_P4_METAKNIGHT
+    else if (fkind == NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        if (costume >= 6u) costume = 0u;
+        source = kNdsBattleHudMetaKnightStockPalette[costume];
+    }
+#endif
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -612,6 +627,9 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindNess) owner = 9u;
     else if (fkind == (u32)nFTKindPurin) owner = 10u;
     else if (fkind == (u32)nFTKindKirby) owner = 11u;
+#if NDS_P4_METAKNIGHT
+    else if (fkind == NDS_P4_RUNTIME_METAKNIGHT) owner = NDS_P4_UI_METAKNIGHT;
+#endif
     else return;
 
     if (stock == 0x7fu)
@@ -684,6 +702,9 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindNess) owner = 9u;
     else if (fkind == (u32)nFTKindPurin) owner = 10u;
     else if (fkind == (u32)nFTKindKirby) owner = 11u;
+#if NDS_P4_METAKNIGHT
+    else if (fkind == NDS_P4_RUNTIME_METAKNIGHT) owner = NDS_P4_UI_METAKNIGHT;
+#endif
     else return;
 
     if (sNdsBattleHudPortraitPaletteOwner[player] != (u8)owner)

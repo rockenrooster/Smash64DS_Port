@@ -503,7 +503,7 @@ def decode_pack(blob: bytes) -> dict:
             "data": data, "roots": seen_roots}
 
 
-def parse_kinds(arg: str | None) -> list:
+def parse_kinds(arg: str | None, allow_meta: bool = False) -> list:
     if not arg:
         return list(KIND_ORDER)
     out = []
@@ -511,7 +511,9 @@ def parse_kinds(arg: str | None) -> list:
         tok = tok.strip().lower()
         if not tok:
             continue
-        if tok.isdigit():
+        if allow_meta and tok in ('metaknight', '29'):
+            out.append('metaknight')
+        elif tok.isdigit():
             idx = int(tok)
             if not (0 <= idx < len(KIND_ORDER)):
                 raise PackError("bad fkind %s" % tok)
@@ -532,24 +534,49 @@ def main(argv=None) -> int:
                     help="comma list of kind names or fkind numbers")
     ap.add_argument("--with-menu-sections", action="store_true",
                     help="also emit section 2 menu anims (idle + Selected)")
+    ap.add_argument("--meta-native-dir", default=None,
+                    help="opt in Meta Knight through its frozen native resources")
+    ap.add_argument("--meta-model-ir", default=None,
+                    help="qualified Meta base/electric native IR JSON")
     args = ap.parse_args(argv)
     try:
-        kinds = parse_kinds(args.kinds)
+        kinds = parse_kinds(args.kinds, allow_meta=args.meta_native_dir is not None)
+        if args.meta_native_dir is not None and args.kinds is None:
+            kinds.append('metaknight')
     except PackError as e:
         print("error: %s" % e)
         return 2
     os.makedirs(args.output_dir, exist_ok=True)
-    if args.input_dir is None:
+    legacy_kinds = [kind for kind in kinds if kind != 'metaknight']
+    if args.input_dir is None and legacy_kinds:
         import preview_source_metadata
         args.input_dir = os.path.join(args.output_dir, "source-metadata")
-        result = preview_source_metadata.generate(args.input_dir, kinds)
+        result = preview_source_metadata.generate(args.input_dir, legacy_kinds)
         if not result["ok"]:
             print("source metadata contains unresolved entries; affected packs will be refused")
     failed = False
     report = []
     for kind in kinds:
-        fkind = KIND_ORDER.index(kind)
+        fkind = 29 if kind == 'metaknight' else KIND_ORDER.index(kind)
         try:
+            if kind == 'metaknight':
+                import extra_core_packs
+                blob, extern, meta = extra_core_packs.build_meta_pack(
+                    args.meta_native_dir, args.meta_model_ir,
+                    with_menu_sections=args.with_menu_sections)
+                decode_pack(blob)
+                with open(os.path.join(args.output_dir, '29.fpc'), 'wb') as fh:
+                    fh.write(blob)
+                with open(os.path.join(args.output_dir, '29.ext'), 'wb') as fh:
+                    fh.write(extern)
+                with open(os.path.join(args.output_dir, 'meta_preview_core_manifest.json'),
+                          'w', encoding='utf-8', newline='\n') as fh:
+                    json.dump(meta, fh, indent=2, sort_keys=True)
+                    fh.write('\n')
+                print('29.fpc metaknight bytes=%d resident+HIGH=%d / 81920' %
+                      (len(blob), meta['css_pack_and_high_image_peak']))
+                report.append((29, kind, meta['section_bytes'], len(blob)))
+                continue
             m, raw = load_kind(args.input_dir, kind)
             blob, meta = build_pack(kind, fkind, m, raw,
                                     with_menu_sections=args.with_menu_sections)

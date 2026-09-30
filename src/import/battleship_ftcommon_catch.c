@@ -152,7 +152,15 @@ void ndsBaseFTCommonThrowSetStatus(GObj *fighter_gobj, sb32 is_throwf);
 sb32 ndsBaseFTCommonThrowCheckInterruptCatchWait(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrown1.c"
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_p4_runtime.h>
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+_Static_assert(NDS_META_INHERITED_VICTIM_LOOKUP_KIND == nFTKindPurin,
+               "Meta ordinary throw lookup differs from the qualified inherited column");
+#include "../../builds/p4/meta-knight-lifecycle/ftcommonthrow.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonthrow.c"
+#endif
 
 #undef ftCommonThrownProcUpdate
 #undef ftCommonThrownProcPhysics

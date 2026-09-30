@@ -15,7 +15,9 @@ import json
 import re
 import struct
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Mapping
 
 import sys as _sys
 from pathlib import Path as _Path
@@ -34,6 +36,53 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 from native_owner_image_arrays import NATIVE_OWNER_SUPPRESSED_ARRAYS  # noqa: E402
 
 import generate_nds_native_stage as stage_manifest
+
+
+@dataclass(frozen=True)
+class NativeOwnerSource:
+    """Explicit, frozen typed input for owners outside the BattleShip catalog.
+
+    Identity and pointer domains come from the caller's resolved resource. No
+    catalog entry or global dictionary is synthesized for a new donor. Source
+    roots/bindings remain explicit arguments to the existing root-set compiler.
+    """
+    resource: stage_manifest.O2RResource
+
+    def __post_init__(self):
+        resource = self.resource
+        if not isinstance(resource, stage_manifest.O2RResource):
+            raise ValueError("native owner source requires a typed O2RResource")
+        if type(resource.file_id) is not int or not 0 <= resource.file_id < 0xffff:
+            raise ValueError("native owner source requires an explicit u16 asset identity")
+        if (resource.spec.file_id is not None and
+                resource.spec.file_id != resource.file_id):
+            raise ValueError("native owner source identity disagrees with its input spec")
+        if hashlib.sha256(resource.source).hexdigest() != resource.spec.sha256:
+            raise ValueError("native owner source SHA256 disagrees with its input spec")
+        if not resource.payload or len(resource.payload) % 4:
+            raise ValueError("native owner source payload is not whole words")
+        if resource.spec.payload_sha256 is not None and \
+                hashlib.sha256(resource.payload).hexdigest() != resource.spec.payload_sha256:
+            raise ValueError("native owner source payload SHA256 changed")
+        if resource.internal.keys() & resource.external.keys():
+            raise ValueError("native owner source pointer domains overlap")
+        if ((resource.spec.internal_fixups is not None and
+             resource.spec.internal_fixups != len(resource.internal)) or
+                (resource.spec.external_fixups is not None and
+                 resource.spec.external_fixups != len(resource.external))):
+            raise ValueError("native owner source declared fixup count disagrees with pointer domains")
+        for domain, refs in (("internal", resource.internal), ("external", resource.external)):
+            for slot, ref in refs.items():
+                if type(slot) is not int or slot < 0 or slot % 4 or slot + 4 > len(resource.payload):
+                    raise ValueError("native owner source relocation slot is out of bounds")
+                if (type(ref.asset_id) is not int or not 0 <= ref.asset_id < 0xffff or
+                        type(ref.offset) is not int or ref.offset < 0 or ref.offset % 4):
+                    raise ValueError("native owner source relocation identity/offset is invalid")
+                if ref.offset != (struct.unpack_from(">I", resource.payload, slot)[0] & 0xffff) * 4:
+                    raise ValueError("native owner source relocation disagrees with source word")
+                if domain == "internal" and (ref.asset_id != resource.file_id or
+                                               ref.offset >= len(resource.payload)):
+                    raise ValueError("native owner source internal target is out of bounds")
 
 
 DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
@@ -219,7 +268,8 @@ SOURCE_CLOSURE_POLICIES = (
                 """
                 execution.hierarchy_epochs execution.hierarchy_runs
                 input.materials input.preamble prepared_epoch.light_direction_valid
-                prepared_run.textured state.current_transform_vertex_mask
+                prepared_run.poly_fmt prepared_run.texture_entry prepared_run.textured
+                state.current_transform_vertex_mask
                 state.input_vertex_valid_mask state.matrix_generation state.matrix_valid
                 state.modelview_valid state.prepared_light_direction_valid
                 state.prepared_texcoord_valid_mask state.prepared_vertex_color_valid_mask
@@ -1025,6 +1075,11 @@ DIRECT_POLICY_FAMILIES = (
     # switches cycle 0 to SHADE while retaining G_CC_PASS2. This is the exact
     # PASS2 counterpart of family 2, again with no cycle-2 ENV modulation.
     (0xfcffffff, 0xfffe7c38, "VERTEX", 0),
+    # P4 Meta Knight joint-34 passive surfaces, exact source combines.
+    # Their material/texture consumer contracts are independently qualified;
+    # no approximate alias removes TEXEL1 or the second PRIMITIVE factor.
+    (0xfc123245, 0x00400087, "VERTEX|TEXTURE", 1),
+    (0xfc321803, 0xff17ffff, "MATERIAL|VERTEX|TEXTURE", 1),
 )
 # Source G_SETCOMBINE pairs that are pixel-identical to a family above on the
 # owner models that use them.  Pikachu's head root 0x1c40 (P2-3, the first
@@ -1043,6 +1098,15 @@ DIRECT_POLICY_FAMILIES = (
 # words because it never reads this IR.
 DIRECT_POLICY_COMBINE_ALIASES = {
     (0xfc121605, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
+    # EXTRA Meta Knight wings: both RGB cycles equal family 0, while
+    # cycle-0 alpha is TEXEL0_A * SHADE_A (G_ACMUX_SHADE == 4 in gbi.h).
+    # The existing per-triangle source-alpha proof below is required before
+    # replacing that multiplication with family 0's TEXEL0_A passthrough.
+    (0xfc121805, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
+    # Meta Knight electric skeleton 1: the PRIMITIVE*SHADE RGB cycles
+    # match family 1, with SHADE_A instead of constant-one cycle-0 alpha.
+    # Keep the same source-alpha proof at every reached triangle.
+    (0xfc327e05, 0xff17f9ff): (0xfc327e05, 0xff17fdff),
     # Boss's hand epochs set cycle-0 alpha D to SHADE where family 2 has 1
     # (0xff1679ff vs 0xff167dff; every other mux field identical, decoded
     # against decomp gbi.h GCCc0w1/GCCc1w1). Cycle-1 alpha multiplies cycle-0
@@ -1530,7 +1594,8 @@ def _source_commands(payload: bytes, owner_name: str, root_offset: int):
     raise ValueError(f"{owner_name} root 0x{root_offset:x} exceeds 255 commands")
 
 
-def _decode_control(owner_name: str, root_index: int, commands, image_refs):
+def _decode_control(owner_name: str, root_index: int, commands, image_refs,
+                    source_asset_id: int | None = None):
     before, after = [], []
     before_sync = after_sync = 0
     material = INVALID_U8
@@ -1561,7 +1626,9 @@ def _decode_control(owner_name: str, root_index: int, commands, image_refs):
             if op == 0xfd:
                 ref = image_refs[command_index]
                 w1 = ref.offset
-                if ref.asset_id != P2_O2R_ASSETS[owner_name][1]:
+                own_asset_id = (P2_O2R_ASSETS[owner_name][1]
+                                if source_asset_id is None else source_asset_id)
+                if ref.asset_id != own_asset_id:
                     if not 0 <= ref.asset_id < 0xffff:
                         raise ValueError("foreign IMAGE asset does not fit u16+1")
                     asset_plus_one = ref.asset_id + 1
@@ -1583,6 +1650,16 @@ def _combine_alias_state(control, current: bool) -> bool:
         if op == 0xfc:
             current = (w0, w1) in DIRECT_POLICY_COMBINE_ALIASES
     return current
+
+
+def _check_explicit_white_combine(payload, combine, slot_offsets, indices):
+    """Prove the immutable operand used by the P4 native material policies."""
+    if combine not in ((0xfc123245, 0x00400087), (0xfc321803, 0xff17ffff)):
+        return
+    for slot in indices:
+        offset = slot_offsets[slot]
+        if offset is None or payload[offset + 12:offset + 16] != b"\xff\xff\xff\xff":
+            raise ValueError("explicit P4 material policy requires immutable white source vertices")
 
 
 def _check_combine_alias_alpha(payload: bytes, owner_name: str,
@@ -1681,6 +1758,7 @@ def _build_source_export_for_owners(
         root_specs_by_owner: dict[str, tuple[tuple[int, int], ...]] | None = None,
         deferred_root_specs_by_owner:
             dict[str, tuple[tuple[int, int], ...]] | None = None,
+        source_providers: Mapping[str, NativeOwnerSource] | None = None,
         ) -> dict[str, bytes]:
     """Decode one ordered owner set into the shared source-order IR.
 
@@ -1710,18 +1788,26 @@ def _build_source_export_for_owners(
     passes += [(owner_name, True) for owner_name in owner_names
                if deferred.get(owner_name)]
     for owner_name, is_deferred in passes:
-        payload = load_o2r_payload(repo_root, owner_name)
-        image_path, image_file_id, image_sha = P2_O2R_ASSETS[owner_name]
-        image_resource = stage_manifest.load_o2r(
-            repo_root, stage_manifest.InputSpec(
-                str(image_path), image_sha, image_file_id))
+        provider = source_providers.get(owner_name) if source_providers is not None else None
+        payload = load_o2r_payload(repo_root, owner_name, provider)
+        if provider is None:
+            image_path, image_file_id, image_sha = P2_O2R_ASSETS[owner_name]
+            image_resource = stage_manifest.load_o2r(
+                repo_root, stage_manifest.InputSpec(
+                    str(image_path), image_sha, image_file_id))
+        else:
+            image_resource = provider.resource
+            image_file_id = image_resource.file_id
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
         slot_offsets = [None] * VERTEX_CACHE_SIZE
         combine_aliased = False
+        source_combine = None
         if root_specs_by_owner is not None and owner_name in root_specs_by_owner:
             own_specs = root_specs_by_owner[owner_name]
         else:
+            if provider is not None:
+                raise ValueError(f"{owner_name}: explicit source requires explicit root bindings")
             own_specs = tuple(
                 (root_offset, root_index)
                 for root_index, root_offset in enumerate(
@@ -1737,12 +1823,16 @@ def _build_source_export_for_owners(
             for root_offset, logical_binding in own_specs + deferred_specs
         }
         for root_index, (root_offset, logical_binding) in enumerate(root_specs):
-            commands, parent_mask, parent_root = _source_root_commands(
-                payload, owner_name, root_offset)
+            if provider is None:
+                commands, parent_mask, parent_root = _source_root_commands(
+                    payload, owner_name, root_offset)
+            else:
+                commands = _source_commands(payload, owner_name, root_offset)
+                parent_mask, parent_root = [False] * len(commands), None
             # Pair-mode streams insert parent vertex loads but retain every
             # post-DL control word. Resolve IMAGE pointers at their original
             # source slots, never from the relocation chain's encoded high bits.
-            layout = _PAIR_LAYOUT_CACHE.get(owner_name, {})
+            layout = _PAIR_LAYOUT_CACHE.get(owner_name, {}) if provider is None else {}
             source_root = next((post for post, synthetic in
                                 layout.get("synthetic_by_post", {}).items()
                                 if synthetic == root_offset), root_offset)
@@ -1758,6 +1848,10 @@ def _build_source_export_for_owners(
                         raise ValueError(
                             f"{owner_name} IMAGE has no source relocation")
                     image_refs[command_index] = ref
+                elif provider is not None and op == 0x01:
+                    ref = image_resource.pointer_at(source_root + source_index * 8 + 4)
+                    if ref is None or ref.asset_id != image_file_id:
+                        raise ValueError(f"{owner_name}: vertex source is unresolved or foreign")
                 source_index += 1
             if parent_root is not None and parent_root not in binding_by_offset:
                 raise ValueError(
@@ -1777,8 +1871,26 @@ def _build_source_export_for_owners(
                        commands[command_index][0] in SOURCE_TRIANGLE_OPS):
                     command_index += 1
                 triangle_blocks.append((block_start, command_index))
+            if provider is not None:
+                # EXTRA skinning can leave a vertex load after the final
+                # triangles for the NEXT joint to consume. Keep it as a normal
+                # action epoch with zero runs; post-load controls remain the
+                # root tail. No source cache writer is discarded or deferred.
+                tail_cursor = triangle_blocks[-1][1] if triangle_blocks else 0
+                while True:
+                    first_action = next((index for index in range(tail_cursor, len(commands) - 1)
+                                         if commands[index][0] in SOURCE_ACTION_OPS), None)
+                    if first_action is None:
+                        break
+                    action_end = first_action + 1
+                    while action_end < len(commands) - 1 and \
+                            commands[action_end][0] in SOURCE_ACTION_OPS:
+                        action_end += 1
+                    triangle_blocks.append((action_end, action_end))
+                    tail_cursor = action_end
             if not triangle_blocks:
-                raise ValueError(f"{owner_name} root {root_index} has no triangles")
+                if provider is None:
+                    raise ValueError(f"{owner_name} root {root_index} has no triangles")
 
             first_epoch = len(epochs)
             cursor = 0
@@ -1798,8 +1910,11 @@ def _build_source_export_for_owners(
                     for index in range(cursor, action_indices[0])
                 ]
                 combine_aliased = _combine_alias_state(control, combine_aliased)
+                for _index, op, w0, w1 in control:
+                    if op == 0xfc:
+                        source_combine = (w0, w1)
                 before, after, before_sync, after_sync, material = \
-                    _decode_control(owner_name, root_index, control, image_refs)
+                    _decode_control(owner_name, root_index, control, image_refs, image_file_id)
                 before_first, before_count = _append_state_span(
                     before, states, state_lookup, sequence
                 )
@@ -1848,6 +1963,8 @@ def _build_source_export_for_owners(
                                 payload, owner_name, root_index, index,
                                 slot_offsets, indices
                             )
+                        if provider is not None:
+                            _check_explicit_white_combine(payload, source_combine, slot_offsets, indices)
                         submit_class = 0 if bindings == {logical_binding} else 1
                         if current_class is not None and \
                                 submit_class != current_class:
@@ -1863,10 +1980,11 @@ def _build_source_export_for_owners(
                             compact |= 0x8000
                         triangles.append(compact)
                         run_mask |= sum(1 << slot for slot in set(indices))
-                runs.append((
-                    run_first, len(triangles) - run_first,
-                    current_class, run_mask,
-                ))
+                if current_class is not None:
+                    runs.append((
+                        run_first, len(triangles) - run_first,
+                        current_class, run_mask,
+                    ))
                 epochs.append((
                     before_first, after_first, first_action, first_run,
                     before_count, after_count, before_sync, after_sync,
@@ -1880,8 +1998,11 @@ def _build_source_export_for_owners(
                 for index in range(cursor, len(commands) - 1)
             ]
             combine_aliased = _combine_alias_state(tail_control, combine_aliased)
+            for _index, op, w0, w1 in tail_control:
+                if op == 0xfc:
+                    source_combine = (w0, w1)
             tail, tail_after, tail_sync, tail_after_sync, tail_material = \
-                _decode_control(owner_name, root_index, tail_control, image_refs)
+                _decode_control(owner_name, root_index, tail_control, image_refs, image_file_id)
             if tail_after or tail_after_sync or tail_material != INVALID_U8:
                 raise ValueError(f"{owner_name} root {root_index}: invalid tail")
             if tail:
@@ -3461,7 +3582,7 @@ def build_p2_owner_model_inventory(
         raise ValueError(f"no P2 native-owner census for {owner_name}")
 
     relative_path, file_id, expected_hash = P2_O2R_ASSETS[owner_name]
-    source_path = repo_root / relative_path
+    source_path = _paths.battleship_input_path(repo_root, relative_path)
     if hashlib.sha256(source_path.read_bytes()).hexdigest() != expected_hash:
         raise ValueError(f"{owner_name} model O2R changed before inventory")
 
@@ -3625,15 +3746,19 @@ def unpack_many(fmt: str, payload: bytes):
     return [item for item in struct.iter_unpack(fmt, payload)]
 
 
-def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
+def load_o2r_payload(repo_root: Path, owner_name: str,
+                     source_provider: NativeOwnerSource | None = None) -> bytes:
+    if source_provider is not None:
+        return source_provider.resource.payload
     relative_path, expected_file_id, expected_hash = P2_O2R_ASSETS[owner_name]
-    path = repo_root / relative_path
+    path = _paths.battleship_input_path(repo_root, relative_path)
     source = path.read_bytes()
     actual_hash = hashlib.sha256(source).hexdigest()
     if actual_hash != expected_hash:
         raise ValueError(
             f"{owner_name} O2R: SHA256 {actual_hash} != {expected_hash}"
         )
+    _paths.record_reference_input(path, source)
     if len(source) < O2R_RESOURCE_HEADER_SIZE + 16:
         raise ValueError(f"{owner_name} O2R: truncated resource header")
     if source[4:8] != b"OLER":
@@ -3666,8 +3791,9 @@ def _load_owner_root_program_payload(repo_root: Path, owner_name: str) -> tuple[
         raise ValueError(f"{owner_name}: no owner-root program source")
     relative_path, expected_file_id, container_offset = \
         OWNER_ROOT_PROGRAM_SOURCES[owner_name]
-    path = repo_root / relative_path
+    path = _paths.battleship_input_path(repo_root, relative_path)
     source = path.read_bytes()
+    _paths.record_reference_input(path, source)
     if len(source) < O2R_RESOURCE_HEADER_SIZE + 16 or source[4:8] != b"OLER":
         raise ValueError(f"{owner_name} root-program O2R has an invalid header")
     file_id = struct.unpack_from("<I", source, O2R_RESOURCE_HEADER_SIZE)[0]
@@ -3810,7 +3936,8 @@ def _owner_root_program_overrides(
 
 
 def decode_epoch_light_color_state(
-        payload: bytes, owner_name: str, roots, epochs):
+        payload: bytes, owner_name: str, roots, epochs,
+        *, allow_prefix_updates: bool = False):
     """Recover compact root-prefix and exact intra-root light state."""
     result = {index: ([], []) for index in range(len(epochs))}
     preambles = []
@@ -3851,7 +3978,7 @@ def decode_epoch_light_color_state(
                     f"{owner_name} root {root_index}: split light color pair"
                 )
 
-        first_root_triangle = epochs[root[1]][11]
+        first_root_triangle = epochs[root[1]][11] if root[4] else root[3] - 1
         prefix_lights = [command for command in light_commands
                          if command[0] < first_root_triangle]
         if not prefix_lights:
@@ -3859,13 +3986,32 @@ def decode_epoch_light_color_state(
         else:
             prefix_offsets = [w0 & 0xffff for _index, w0, _w1
                               in prefix_lights]
-            if prefix_offsets != [0x00, 0x04, 0x18, 0x1c]:
+            compact_prefix = [0x00, 0x04, 0x18, 0x1c]
+            if prefix_offsets != compact_prefix and not (
+                    allow_prefix_updates and len(prefix_offsets) % 4 == 0 and
+                    prefix_offsets == compact_prefix * (len(prefix_offsets) // 4)):
                 raise ValueError(
                     f"{owner_name} root {root_index}: light prefix is not "
                     "the compact two-pair layout"
                 )
-            preambles.append((prefix_lights[0][2], prefix_lights[2][2]))
+            if len(prefix_lights) > 4:
+                first_vertex = next((index for index in range(first_root_triangle)
+                                     if payload[root[0] + index * 8] in SOURCE_ACTION_OPS),
+                                    first_root_triangle)
+                if prefix_lights[-1][0] >= first_vertex:
+                    raise ValueError(f"{owner_name}: prefix update crosses a vertex-cache write")
+            # No geometry precedes this prefix. Complete source light updates
+            # before the first vertex span therefore collapse to their final
+            # pair without losing a shaded vertex or an intervening draw.
+            preambles.append((prefix_lights[-4][2], prefix_lights[-2][2]))
         prefix_command_count += len(prefix_lights)
+        if not root[4]:
+            # Explicit donors may have source END-only roots or control-only
+            # accessory roots. Their exact tail state and compact light prefix
+            # remain executable even though no geometry epoch is needed.
+            if len(prefix_lights) != len(light_commands):
+                raise ValueError(f"{owner_name}: state-only root has non-prefix lights")
+            continue
 
         previous_triangle = -1
         consumed_lights = 0
@@ -4383,7 +4529,8 @@ def decode_joint_topology(
 
 def build_dense_geometry(
         vertex, triangles, runs, epochs, owners, repo_root: Path | None = None,
-        owner_root_bindings=None, action_bindings=None):
+        owner_root_bindings=None, action_bindings=None,
+        source_providers: Mapping[str, NativeOwnerSource] | None = None):
     # action_bindings: {vertex action row: binding} for loads a welded joint's
     # pre-matrix DL performs under its parent's matrix (OWNER_DL_PAIR_MODE);
     # every other load keeps its root's binding.
@@ -4393,7 +4540,9 @@ def build_dense_geometry(
         repo_root = _paths.REPO_ROOT
     repo_root = Path(repo_root).resolve()
     payloads = {
-        owner_name: load_o2r_payload(repo_root, owner_name)
+        owner_name: load_o2r_payload(
+            repo_root, owner_name,
+            source_providers.get(owner_name) if source_providers is not None else None)
         for owner_name, _ in owners
     }
     dense_vertices = []
@@ -5590,6 +5739,174 @@ def emit_rows(
     return result
 
 
+def render_explicit_model_runtime_metadata(inventory: dict) -> str:
+    """Source-indexed roots/materials/hierarchy for the native P4 consumer.
+
+    Geometry storage is the complete union, while the live draw supplies a
+    natural selected subset. Lookup identity is (source offset, source joint),
+    never a union-root ordinal standing in for a live binding. The canonical
+    hierarchy describes source construction only; hidden-parent records remain
+    explicit because status scripts change the actual live tree.
+    """
+    if (inventory.get("status") != "NATIVE_MODEL_IR_NOT_RUNTIME_ADMISSION" or
+            inventory.get("character") != "Meta Knight"):
+        raise ValueError("runtime metadata requires explicit Meta Knight native model IR")
+    model = inventory["model"]
+    programs = inventory["model_ir"]
+    lines = ["/* Generated by the native owner/image producers. Do not edit. */",
+             "#if defined(NDS_P4_METAKNIGHT) && NDS_P4_METAKNIGHT", "",
+             "/* Root kind: 0 canonical, 1 hidden, 2 passive, 3 accessory, 4 skeleton. */",
+             "typedef struct NDSNativeMetaknightSourceRoot", "{",
+             "    u32 root_offset;", "    u16 storage_root;",
+             "    u8 source_joint;", "    u8 binding;",
+             "    u16 material_first;", "    u8 material_count;", "    u8 kind;",
+             "} NDSNativeMetaknightSourceRoot;", "",
+             "typedef struct NDSNativeMetaknightSourceJoint", "{",
+             "    u8 source_joint;", "    u8 parent_index;",
+             "    u8 binding;", "    u8 descriptor_index;",
+             "} NDSNativeMetaknightSourceJoint;", "",
+             "typedef struct NDSNativeMetaknightHiddenPart", "{",
+             "    s32 source_joint;", "    s32 parent_joint;",
+             "    s32 part_index;", "    s32 joint_kind;",
+             "} NDSNativeMetaknightHiddenPart;", "",
+             f"#define NDS_NATIVE_METAKNIGHT_MODEL_ASSET_ID {programs['high']['source_asset_id']}u",
+             f"#define NDS_NATIVE_METAKNIGHT_MODEL_DATA_SIZE {programs['high']['ir']['asset_data_size']}u",
+             f"#define NDS_NATIVE_METAKNIGHT_SOURCE_BINDING_COUNT {len(programs['high']['binding_source_joints'])}u",
+             ""]
+    if programs["high"]["binding_source_joints"] != programs["low"]["binding_source_joints"]:
+        raise ValueError("runtime metadata source binding domains differ between details")
+    source_joints = programs["high"]["binding_source_joints"]
+    lines += emit_rows("u8", "sNdsNativeMetaknightBindingSourceJoints", [f"{joint}u" for joint in source_joints])
+    hidden = model["hidden_records"]
+    lines += emit_rows("NDSNativeMetaknightHiddenPart", "sNdsNativeMetaknightHiddenParts",
+                       ["{{ {}, {}, {}, {} }}".format(row["joint_id"], row["parent_joint_id"],
+                                                     row["part_index"], row["joint_kind"]) for row in hidden])
+    lines += ["/* Hidden table is a bounded source span; action reachability is separate. */", ""]
+    for detail in ("high", "low"):
+        program = programs[detail]
+        context = program["ir"]
+        suffix = "" if detail == "high" else "Low"
+        source_roots = program["source_roots"]
+        root_rows = context["roots"]
+        if len(source_roots) != len(root_rows):
+            raise ValueError("runtime metadata source/native root cardinality mismatch")
+        root_format = "{{ 0x{:08x}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}"
+        lines += emit_rows("NDSNativeRoot", f"sNdsNativeMetaknightStorageRoots{suffix}",
+                           [root_format.format(*row[:7], light)
+                            for row, light in zip(root_rows, context["light_preamble_indices"])])
+        lines += [f"static const u32 sNdsNativeMetaknightRootLightPreambles{suffix}"
+                  f"[{len(context['light_preambles'])}][2] =", "{"]
+        lines += [f"    {{ 0x{first:08x}u, 0x{second:08x}u }}," for first, second in context["light_preambles"]]
+        lines += ["};", ""]
+        lines += emit_rows("u8", f"sNdsNativeMetaknightCrossPaletteSlots{suffix}",
+                           [f"{slot}u" for slot in context["cross_slots"]])
+        candidates = model["details"][detail]["canonical_roots"] + model["details"][detail]["hidden_roots"]
+        candidates += model["modelparts"]["roots"][detail]
+        accessory = model["accesspart"]
+        if accessory is not None and "root" in accessory:
+            candidates.append({"joint_id": accessory["joint_id"], **accessory["root"]})
+        material_map = {(row["offset"], row["joint_id"]): row["materials"] for row in candidates}
+        material_offsets = []
+        material_assets = []
+        metadata_rows = []
+        kind_ids = {"canonical": 0, "hidden": 1, "modelpart": 2, "accessory": 3}
+        for index, row in enumerate(source_roots):
+            if row["offset"] != root_rows[index][0]:
+                raise ValueError("runtime metadata root identity differs from native IR")
+            materials = material_map[(row["offset"], row["joint_id"])]
+            first = len(material_offsets)
+            for material in materials:
+                source_name = material["resource"]
+                if source_name == "CHARACTER":
+                    asset_id = program["source_asset_id"]
+                else:
+                    asset_id = inventory.get("source_resource_ids", {}).get(source_name)
+                    if type(asset_id) is not int:
+                        raise ValueError("runtime material metadata needs explicit source asset identity")
+                material_offsets.append(material["offset"])
+                material_assets.append(asset_id)
+            metadata_rows.append("{{ 0x{:08x}u, {}u, {}u, {}u, {}u, {}u, {}u }}".format(
+                row["offset"], index, row["joint_id"], row["binding"], first, len(materials), kind_ids[row["kind"]]))
+        lines += emit_rows("NDSNativeMetaknightSourceRoot", f"sNdsNativeMetaknightSourceRoots{suffix}", metadata_rows)
+        lines += emit_rows("u32", f"sNdsNativeMetaknightMaterialOffsets{suffix}", [f"0x{offset:x}u" for offset in material_offsets])
+        lines += emit_rows("u16", f"sNdsNativeMetaknightMaterialAssets{suffix}", [f"{asset}u" for asset in material_assets])
+        canonical = [index for index, row in enumerate(source_roots) if row["kind"] == "canonical"]
+        lines += emit_rows("u8", f"sNdsNativeMetaknightCanonicalRootIndices{suffix}", [f"{index}u" for index in canonical])
+        lines += [f"#define NDS_NATIVE_METAKNIGHT_{detail.upper()}_STORAGE_ROOT_COUNT {len(root_rows)}u",
+                  f"#define NDS_NATIVE_METAKNIGHT_{detail.upper()}_CANONICAL_ROOT_COUNT {len(canonical)}u", ""]
+        descriptors = model["details"][detail]["descriptors"]
+        active_depth = {}
+        nodes = [(0, 255, 255, 255)]  # Source manager's synthetic TopN.
+        for descriptor in model["selected_descriptor_indices"]:
+            depth = descriptors[descriptor]["depth"] & 0xFFF
+            if depth and depth - 1 not in active_depth:
+                raise ValueError("runtime metadata canonical source hierarchy has no parent")
+            parent = 0 if not depth else active_depth[depth - 1]
+            source_joint = descriptor + 4
+            binding = source_joints.index(source_joint) if source_joint in source_joints else 255
+            nodes.append((source_joint, parent, binding, descriptor))
+            active_depth[depth] = len(nodes) - 1
+        if len(nodes) != model["canonical_live_nodes"]:
+            raise ValueError("runtime metadata canonical source hierarchy cardinality changed")
+        lines += emit_rows("NDSNativeMetaknightSourceJoint", f"sNdsNativeMetaknightCanonicalHierarchy{suffix}",
+                           ["{{ {}u, {}u, {}u, {}u }}".format(*node) for node in nodes])
+        lines += ["/* Passive and hidden roots are selected by source state; this is not a draw-all union. */", ""]
+    skeleton_ir = inventory.get("skeleton_ir", {})
+    if set(skeleton_ir) != {"1", "2"}:
+        raise ValueError("runtime metadata must cover both source-required electric skeletons")
+    for sid in ("1", "2"):
+        variant = model["skeletons"]["variants"][sid]
+        typed_roots = {row["joint_id"]: row for row in variant["roots"]}
+        for detail in ("high", "low"):
+            program = skeleton_ir[sid][detail]
+            context = program["ir"]
+            suffix = "" if detail == "high" else "Low"
+            stem = f"sNdsNativeMetaknightSkeleton{sid}"
+            rows = context["roots"]
+            source_roots = program["source_roots"]
+            if program["binding_source_joints"] != source_joints or len(rows) != len(source_roots):
+                raise ValueError("electric skeleton runtime metadata source binding domain differs")
+            lines += emit_rows("NDSNativeRoot", f"{stem}StorageRoots{suffix}",
+                               [root_format.format(*row[:7], light)
+                                for row, light in zip(rows, context["light_preamble_indices"])])
+            lines += [f"static const u32 {stem}RootLightPreambles{suffix}"
+                      f"[{len(context['light_preambles'])}][2] =", "{"]
+            lines += [f"    {{ 0x{first:08x}u, 0x{second:08x}u }}," for first, second in context["light_preambles"]]
+            lines += ["};", ""]
+            lines += emit_rows("u8", f"{stem}CrossPaletteSlots{suffix}",
+                               [f"{slot}u" for slot in context["cross_slots"]])
+            source_rows = []
+            offsets = []
+            assets = []
+            for index, row in enumerate(source_roots):
+                if row["offset"] != rows[index][0] or row["binding"] != context["root_bindings"][index]:
+                    raise ValueError("electric skeleton source/native root identity differs")
+                first = len(offsets)
+                materials = typed_roots[row["joint_id"]]["materials_by_detail"][detail]
+                for material in materials:
+                    name = material["resource"]
+                    asset = program["source_asset_id"] if name == "CHARACTER" else inventory.get("source_resource_ids", {}).get(name)
+                    if type(asset) is not int:
+                        raise ValueError("electric skeleton material needs explicit source identity")
+                    offsets.append(material["offset"])
+                    assets.append(asset)
+                source_rows.append("{{ 0x{:08x}u, {}u, {}u, {}u, {}u, {}u, 4u }}".format(
+                    row["offset"], index, row["joint_id"], row["binding"], first, len(materials)))
+            lines += emit_rows("NDSNativeMetaknightSourceRoot", f"{stem}SourceRoots{suffix}", source_rows)
+            lines += emit_rows("u32", f"{stem}MaterialOffsets{suffix}", [f"0x{offset:x}u" for offset in offsets])
+            lines += emit_rows("u16", f"{stem}MaterialAssets{suffix}", [f"{asset}u" for asset in assets])
+            lines += emit_rows("u8", f"{stem}Flags{suffix}", [f"{row['skeleton_flags']}u" for row in source_roots])
+            lines += emit_rows("u8", f"{stem}MaterialInherited{suffix}",
+                               [f"{int(typed_roots[row['joint_id']]['material_binding_by_detail'][detail]['kind'] == 'inherited')}u"
+                                for row in source_roots])
+            lines += emit_rows("u8", f"{stem}RequiredMaterialSlots{suffix}",
+                               [f"{typed_roots[row['joint_id']]['material_binding_by_detail'][detail]['required_count']}u"
+                                for row in source_roots])
+            lines += [f"#define NDS_NATIVE_METAKNIGHT_SKELETON{sid}_{detail.upper()}_ROOT_COUNT {len(rows)}u", ""]
+    lines += ["#endif /* NDS_P4_METAKNIGHT */", ""]
+    return "\n".join(lines)
+
+
 def render_p2_owner_runtime_program(
         context: dict[str, object]) -> list[str]:
     """Emit one independent P2-3 owner using the production table ABI."""
@@ -6588,6 +6905,8 @@ def build_p2_single_root_runtime_context(
 
 def build_p2_root_set_runtime_context(
         repo_root: Path, owner_name: str, detail: str, root_offsets,
+        *, source_provider: NativeOwnerSource | None = None,
+        root_bindings=None,
         ) -> dict[str, object]:
     """Compile a complete source-selected root set with independent bindings.
 
@@ -6595,12 +6914,27 @@ def build_p2_root_set_runtime_context(
     transforms; no canonical-body topology is guessed for an alternate vector.
     """
     root_offsets = tuple(root_offsets)
-    bindings = tuple(range(len(root_offsets)))
+    bindings = tuple(range(len(root_offsets))) if root_bindings is None else tuple(root_bindings)
     if not root_offsets:
         raise ValueError(f"{owner_name}: empty native root set")
+    if len(bindings) != len(root_offsets) or any(
+            type(binding) is not int or not 0 <= binding < PACKED_GX_SLOT_CURRENT
+            for binding in bindings):
+        raise ValueError(f"{owner_name}: root bindings do not fit the explicit source domain")
+    if detail not in ("high", "low"):
+        raise ValueError(f"{owner_name}: invalid source detail {detail!r}")
+    if source_provider is not None:
+        if not isinstance(source_provider, NativeOwnerSource):
+            raise ValueError("explicit source requires NativeOwnerSource")
+        for offset in root_offsets:
+            if (type(offset) is not int or offset < 0 or offset % 8 or
+                    offset + 8 > len(source_provider.resource.payload)):
+                raise ValueError(f"{owner_name}: explicit root offset is unaligned/out of bounds")
+    providers = None if source_provider is None else {owner_name: source_provider}
     data = _build_source_export_for_owners(
         repo_root, (owner_name,), detail,
         root_specs_by_owner={owner_name: tuple(zip(root_offsets, bindings))},
+        source_providers=providers,
     )
     state = unpack_many(STATE_DELTA_FORMAT, data["state"])
     sequence = list(data["sequence"])
@@ -6613,9 +6947,10 @@ def build_p2_root_set_runtime_context(
     roots = unpack_many("<IHHHBBBB2x", data[f"{owner_name}_roots"])
     if tuple(root[0] for root in roots) != root_offsets:
         raise ValueError(f"{owner_name}: unexpected source root set")
-    payload = load_o2r_payload(repo_root, owner_name)
+    payload = load_o2r_payload(repo_root, owner_name, source_provider)
     owner_preambles_state, owner_preambles, prefix_light_count, intra_light_count = \
-        decode_epoch_light_color_state(payload, owner_name, roots, epochs)
+        decode_epoch_light_color_state(payload, owner_name, roots, epochs,
+                                       allow_prefix_updates=source_provider is not None)
     light_preambles = [(0, 0)]
     light_indices = []
     for preamble in owner_preambles:
@@ -6641,12 +6976,26 @@ def build_p2_root_set_runtime_context(
      action_dense_first, run_first_corner, run_owners, run_root_bindings,
      run_binding_sets) = build_dense_geometry(
         vertex, triangles, runs, epochs, owner_roots, repo_root,
-        owner_root_bindings=(bindings,), action_bindings=vertex_bindings)
+        owner_root_bindings=(bindings,), action_bindings=vertex_bindings,
+        source_providers=providers)
+    cross_slots = [INVALID_U8] * len(roots)
+    if source_provider is not None:
+        # Allocate only bindings whose source triangles cross matrices. This
+        # follows decoded cache ownership; no donor topology/census is guessed.
+        binding_count = max(bindings) + 1
+        cross_slots = [PACKED_GX_SLOT_CURRENT] * binding_count
+        crossed = sorted({binding for run, used in zip(runs, run_binding_sets)
+                          if run[2] == 1 for binding in used})
+        if len(crossed) > PACKED_GX_SLOT_CURRENT - GX_HIERARCHY_SLOT_LIMIT:
+            raise ValueError(f"{owner_name}: source crossings exceed GX snapshot slots")
+        for binding, palette_slot in zip(crossed, range(GX_HIERARCHY_SLOT_LIMIT,
+                                                       PACKED_GX_SLOT_CURRENT)):
+            cross_slots[binding] = palette_slot
     (action_dense_spans, packed_corners, run_first_unique,
      run_unique_count, run_unique_dense) = build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
         action_dense_first, run_first_corner, run_owners,
-        run_root_bindings, run_binding_sets, [[INVALID_U8] * len(roots)],
+        run_root_bindings, run_binding_sets, [cross_slots],
         detail, (owner_name,), validate_cross_census=False)
     primitive_streams = {
         mode: build_fighter_primitive_streams(
@@ -6670,10 +7019,11 @@ def build_p2_root_set_runtime_context(
     dense_normals = _build_dense_shade_words(
         dense_vertices, runs, run_first_unique, run_unique_count,
         run_unique_dense, run_metadata)
-    return {
+    result = {
         "owner_name": owner_name,
         "detail": detail,
-        "asset_data_size": owner_asset_data_size(payload, owner_name),
+        "asset_data_size": (owner_asset_data_size(payload, owner_name)
+                            if source_provider is None else len(payload)),
         "runtime_root_aliases": {},
         "unlit_uniform_roots": unlit_uniform_roots,
         "unlit_vertex_alpha_deltas": unlit_vertex_alpha_deltas,
@@ -6710,6 +7060,13 @@ def build_p2_root_set_runtime_context(
         "run_unique_dense": run_unique_dense,
         "primitive_streams": primitive_streams,
     }
+    if source_provider is not None:
+        result["source_asset_id"] = source_provider.resource.file_id
+        result["cross_slots"] = cross_slots
+        # Root-set matrices are supplied by source-selected live DObjs. No
+        # synthetic hierarchy is inferred from these independently baked roots.
+        result["topology"] = None
+    return result
 
 
 def _rebase_dense_word(value: int, dense_base: int) -> int:
@@ -9199,14 +9556,22 @@ def generate(repo_root: Path | None = None) -> str:
             "NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL | "
             "NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX",
         "VERTEX": "NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX",
+        "MATERIAL|VERTEX|TEXTURE":
+            "NDS_RENDERER_VERTEX_CONTEXT_USE_MATERIAL | "
+            "NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX | "
+            "NDS_RENDERER_VERTEX_CONTEXT_USE_TEXTURE",
     }
+    policy_rows = ["{{ 0x{:08x}u, 0x{:08x}u, {}, {}u, {{ 0u, 0u }} }}".format(
+            combine_w0, combine_w1, policy_flag_expressions[flags], textured)
+         for combine_w0, combine_w1, flags, textured in DIRECT_POLICY_FAMILIES]
+    lines += ["#if defined(NDS_P4_METAKNIGHT) && NDS_P4_METAKNIGHT"]
     lines += emit_rows(
         "NDSNativeDirectPolicy", "sNdsNativeFighterDirectPolicies",
-        ["{{ 0x{:08x}u, 0x{:08x}u, {}, {}u, {{ 0u, 0u }} }}".format(
-            combine_w0, combine_w1, policy_flag_expressions[flags], textured)
-         for combine_w0, combine_w1, flags, textured in
-         DIRECT_POLICY_FAMILIES],
+        policy_rows,
     )
+    lines += ["#else"]
+    lines += emit_rows("NDSNativeDirectPolicy", "sNdsNativeFighterDirectPolicies", policy_rows[:6])
+    lines += ["#endif", ""]
     lines += emit_rows(
         "u8", "sNdsNativeFighterEpochDirectPolicy",
         [f"0x{value:02x}u" for value in direct_epoch_policies],

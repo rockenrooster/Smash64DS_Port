@@ -207,7 +207,13 @@ uintptr_t lEFCommonParticleTextureBankHi;
 #undef EFFECT_ALLOC_NUM
 #define EFFECT_ALLOC_NUM NDS_R2_EFFECT_POOL
 
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight_lifecycle.h>
+#include <nds/nds_p4_runtime.h>
+#include "../../builds/p4/meta-knight-lifecycle/efmanager.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ef/efmanager.c"
+#endif
 
 #undef efManagerInitEffects
 #undef efManagerDamageNormalLightMakeEffect

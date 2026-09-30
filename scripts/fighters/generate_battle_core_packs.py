@@ -761,12 +761,15 @@ def _shield_asset_map() -> dict[int, int]:
             for row in doc.get("fighters", [])}
 
 
-def generate(output_dir: pathlib.Path, kinds: list[str]):
+def generate(output_dir: pathlib.Path, kinds: list[str], *, meta_native_dir=None,
+             meta_model_ir=None):
     output_dir.mkdir(parents=True, exist_ok=True)
     source_dir = output_dir / "source-metadata"
-    result = preview.generate(source_dir, kinds)
-    if not result["ok"]:
-        raise BattlePackError("preview source metadata is not closed")
+    legacy_kinds = [kind for kind in kinds if kind != 'metaknight']
+    if legacy_kinds:
+        result = preview.generate(source_dir, legacy_kinds)
+        if not result["ok"]:
+            raise BattlePackError("preview source metadata is not closed")
 
     types = est.TypeTable()
     types.load_dirs(est.HEADER_DIRS)
@@ -774,6 +777,25 @@ def generate(output_dir: pathlib.Path, kinds: list[str]):
     reports = []
     patch_rows = []
     for kind in kinds:
+        if kind == 'metaknight':
+            if meta_native_dir is None:
+                raise BattlePackError('Meta battle pack requires the explicit frozen resource directory')
+            import extra_core_packs
+            blob, extern, report = extra_core_packs.build_meta_pack(meta_native_dir, meta_model_ir)
+            (output_dir / '29.fpc').write_bytes(blob)
+            (output_dir / '29.ext').write_bytes(extern)
+            # Adapt the complete FPC report to the existing battle receipt
+            # counters; all Meta texture bytes belong to model 5456.
+            battle_report = dict(report)
+            battle_report.update(model_spans=report['spans'],
+                                 external_patches=len(report['external_patches']),
+                                 foreign_texture_allocation=0,
+                                 resident_with_foreign_textures=report['resident_allocation'])
+            reports.append(battle_report)
+            patch_rows.extend({'fkind': 29, 'main_asset': report['main_asset'],
+                               'slot': slot, 'dep_asset': dep, 'target_offset': target}
+                              for slot, dep, target in report['external_patches'])
+            continue
         meta = json.loads((source_dir / (kind + "_compact_map.json")).read_text(
             encoding="utf-8"))
         blob, report, patches, foreign_rows, foreign_data = _build_one(
@@ -829,10 +851,15 @@ def main(argv=None) -> int:
                     help="comma-separated base fighter names")
     ap.add_argument("--emit-shared", action="store_true",
                     help="also refresh the complete-roster generated manifest")
+    ap.add_argument("--meta-native-dir", default=None,
+                    help="opt in Meta Knight from frozen native resources")
+    ap.add_argument("--meta-model-ir", default=None,
+                    help="qualified Meta base/electric native IR JSON")
     args = ap.parse_args(argv)
-    kinds = fpc.parse_kinds(args.kinds)
+    kinds = fpc.parse_kinds(args.kinds, allow_meta=args.meta_native_dir is not None)
     try:
-        manifest = generate(pathlib.Path(args.output_dir), kinds)
+        manifest = generate(pathlib.Path(args.output_dir), kinds,
+                            meta_native_dir=args.meta_native_dir, meta_model_ir=args.meta_model_ir)
         if args.emit_shared:
             _write_shared(manifest)
     except (BattlePackError, fpc.PackError, OSError, KeyError, ValueError,

@@ -1,4 +1,7 @@
 #include <sys/matrix.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#endif
 #if NDS_P2_STAGE_SECTOR
 #include <sys/interp.h>
 #include <sys/objanim.h>
@@ -7951,6 +7954,22 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 #endif
         }
     }
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        /* The live Meta Knight tree includes only reached hidden DObjs. Its
+         * visible-root order is independent of the immutable 23-root union,
+         * so capture the actual source chains instead of a canonical GX plan. */
+        if (flat_worlds == FALSE)
+        {
+            flat_worlds = ndsRendererAdapterComposeOwnerWorldsSource(
+                root, bindings, binding_count,
+                sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
+                seed_is_identity);
+        }
+        if (flat_worlds == FALSE) return FALSE;
+    }
+#endif
     /* One forward pass over the baked binding order, composing straight into the
      * modelview array so the worlds need no second home -- and, since the seed
      * carries the camera, no second pass either. On failure nothing has been

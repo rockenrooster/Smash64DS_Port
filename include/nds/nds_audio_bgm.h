@@ -667,6 +667,9 @@ void ndsAudioBgmDiagnosticsReset(void);
 void ndsAudioBgmUpdate(void);
 void ndsAudioBgmStopAll(void);
 void ndsAudioBgmPlay(s32 player, s32 bgm_id);
+#if NDS_P4_METAKNIGHT
+void ndsP4MetaKnightPlayVictoryBGM(void);
+#endif
 s32 ndsAudioBgmCheckPlaying(s32 player);
 s32 ndsAudioBgmIsPlaying(void);
 void ndsAudioBgmSetVolume(s32 player, u32 vol);
@@ -716,6 +719,9 @@ extern volatile u32 gNdsAudioBgmWinFoxPlayCount;
 extern volatile u32 gNdsAudioBgmResultsPlayCount;
 extern volatile u32 gNdsAudioBgmModeSelectPlayCount;
 extern volatile u32 gNdsAudioBgmBattleSelectPlayCount;
+#if NDS_P4_METAKNIGHT
+extern volatile u32 gNdsAudioBgmMetaKnightVictoryPlayCount;
+#endif
 extern volatile u32 gNdsAudioBgmNaturalStopCount;
 extern volatile u32 gNdsAudioBgmLastNaturalStopTrackID;
 extern volatile u32 gNdsAudioBgmPostNaturalTransitionCount;

@@ -92,6 +92,9 @@ _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
  * configuration. */
 #if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS || NDS_P2_YOSHI || (NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2))
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
+/* Source status/motion caches use the caller's existing scene-lifetime arena;
+ * Meta's per-kind CSS block contains only FPC data and its HIGH owner image. */
+s32 ndsRelocPrewarmMetaCoreStatusFiles(s32 fkind);
 
 /* Resumable form of the same compact load, for the character-select preview
  * transaction. M03: the one-call form moved the whole pack (up to 32,032 data

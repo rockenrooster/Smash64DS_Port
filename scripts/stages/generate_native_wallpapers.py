@@ -139,7 +139,7 @@ def rgba8_to_ds_opaque(red: int, green: int, blue: int, alpha: int,
 
 
 def convert_source(repo_root: Path, source: WallpaperSource) -> ConvertedAsset:
-    path = repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" / source.o2r
+    path = _paths.battleship_o2r_root(repo_root) / source.o2r
     fileobj = RelocFile(path)
     if fileobj.file_id != source.file_id:
         raise ConvertError(

@@ -21,8 +21,8 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 
 ROOT = _paths.REPO_ROOT
-SCB = ROOT / "decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_scb"
-TXB = ROOT / "decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_txb"
+SCB = _paths.battleship_input_path(ROOT, "decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_scb")
+TXB = _paths.battleship_input_path(ROOT, "decomp/BattleShip-main/BattleShip_o2r/particles/efcommon_particle_txb")
 SCB_SHA256 = "4c639924f0c1ce6e4b3d0c5b3d6b49605d237ff7b79816ddd26ff8631ab0eb1d"
 TXB_SHA256 = "8bffc07309693cb79b29f4e4d1faf3fd29cb42a115ccb4ae143d9308480bc860"
 LIGHT_TEXTURES = (33, 34, 35, 36)

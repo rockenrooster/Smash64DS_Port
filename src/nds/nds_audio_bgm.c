@@ -8,6 +8,9 @@
 #include <nds/nds_audio_fgm.h>
 #include <nds/nds_bgm_ipc.h>
 #include <sys/audio.h>
+#if NDS_P4_METAKNIGHT
+#include <nds_p4_bgm.generated.h>
+#endif
 
 #define NDS_AUDIO_BGM_PATH_PUPUPU "nitro:/audio/bgm_pupupu_ima.bin"
 #define NDS_AUDIO_BGM_PATH_WIN_MARIO "nitro:/audio/bgm_win_mario_ima.bin"
@@ -821,6 +824,20 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
+#if NDS_P4_METAKNIGHT
+    ,
+    {
+        NDS_P4_METAKNIGHT_VICTORY_BGM,
+        "nitro:/audio/bgm_win_meta_knight_ima.bin",
+        NDS_P4_METAKNIGHT_VICTORY_STREAM_BYTES,
+        0u,
+        NDS_P4_METAKNIGHT_VICTORY_ASSET_BYTES,
+        NDS_P4_METAKNIGHT_VICTORY_PACKET_COUNT,
+        NDS_AUDIO_BGM_NO_LOOP,
+        0u,
+        FALSE
+    }
+#endif
 };
 
 volatile u32 gNdsAudioBgmResult;
@@ -870,6 +887,9 @@ volatile u32 gNdsAudioBgmWinFoxPlayCount;
 volatile u32 gNdsAudioBgmResultsPlayCount;
 volatile u32 gNdsAudioBgmModeSelectPlayCount;
 volatile u32 gNdsAudioBgmBattleSelectPlayCount;
+#if NDS_P4_METAKNIGHT
+volatile u32 gNdsAudioBgmMetaKnightVictoryPlayCount;
+#endif
 #if NDS_P2_STAGE_YOSTER
 volatile u32 gNdsAudioBgmYosterPlayCount;
 #endif
@@ -1116,6 +1136,9 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmWinMarioPlayCount = 0u;
     gNdsAudioBgmWinFoxPlayCount = 0u;
     gNdsAudioBgmResultsPlayCount = 0u;
+#if NDS_P4_METAKNIGHT
+    gNdsAudioBgmMetaKnightVictoryPlayCount = 0u;
+#endif
 #if NDS_P2_STAGE_YOSTER
     gNdsAudioBgmYosterPlayCount = 0u;
 #endif
@@ -1178,6 +1201,9 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     case nSYAudioBGMResults: gNdsAudioBgmResultsPlayCount++; break;
     case nSYAudioBGMModeSelect: gNdsAudioBgmModeSelectPlayCount++; break;
     case nSYAudioBGMBattleSelect: gNdsAudioBgmBattleSelectPlayCount++; break;
+#if NDS_P4_METAKNIGHT
+    case NDS_P4_METAKNIGHT_VICTORY_BGM: gNdsAudioBgmMetaKnightVictoryPlayCount++; break;
+#endif
 #if NDS_P2_STAGE_YOSTER
     case nSYAudioBGMYoster: gNdsAudioBgmYosterPlayCount++; break;
 #endif
@@ -1197,6 +1223,13 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     gNdsAudioBgmResult = NDS_AUDIO_BGM_PASS;
     ndsBgmPost(NDS_BGM_PLAY, (generation << 6) | index, FALSE);
 }
+
+#if NDS_P4_METAKNIGHT
+void ndsP4MetaKnightPlayVictoryBGM(void)
+{
+    ndsAudioBgmPlay(0, NDS_P4_METAKNIGHT_VICTORY_BGM);
+}
+#endif
 
 void ndsAudioBgmStopAll(void)
 {

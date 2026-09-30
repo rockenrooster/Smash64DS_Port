@@ -49,4 +49,12 @@ void ftCommonCaptureCaptainProcPhysics(GObj *fighter_gobj);
 void ftCommonCaptureCaptainUpdatePositions(GObj *fighter_gobj,
                                            GObj *capture_gobj, Vec3f *pos);
 
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_p4_runtime.h>
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+_Static_assert(NDS_META_INHERITED_VICTIM_LOOKUP_KIND == nFTKindPurin,
+               "Meta inherited victim lookup differs from the qualified native column");
+#include "../../builds/p4/meta-knight-lifecycle/ftcommoncapturecaptain.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncapturecaptain.c"
+#endif

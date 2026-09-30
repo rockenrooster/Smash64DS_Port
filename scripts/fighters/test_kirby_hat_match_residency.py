@@ -201,6 +201,9 @@ def test_source_roster_copy_closure():
     fixture = COMMON + r'''
 #include <setjmp.h>
 #define NDS_P2_KIRBY 1
+#define NDS_P4_METAKNIGHT 1
+#define NDS_P4_RUNTIME_METAKNIGHT 29u
+#define NDS_META_KIRBY_COPY_ID 8u
 enum { GMCOMMON_PLAYERS_MAX = 4, nFTPlayerKindNot = 2, nFTKindKirby = 8,
        nFTKindEnumCount = 27 };
 typedef struct { int16_t copy_id, copy_modelpart_id; float scale; int damage; } FTKirbyCopy;
@@ -225,14 +228,15 @@ int main(void) {
         copy_table[i].copy_modelpart_id = parts[i];
     }
     battle.cp_count = 4;
-    // Every ordered four-slot roster, including mirrors and multiple Kirbys.
-    for (unsigned roster = 0; roster < 12*12*12*12; ++roster) {
+    // Every legacy/new ordered roster, including mirrors and multiple Kirbys.
+    for (unsigned roster = 0; roster < 13*13*13*13; ++roster) {
         unsigned r = roster, mask = 0, kirby = 0;
         for (unsigned slot = 0; slot < 4; ++slot) {
-            unsigned kind = r % 12; r /= 12;
+            unsigned selection = r % 13; r /= 13;
+            unsigned kind = selection == 12 ? 29 : selection;
             battle.players[slot].fkind = kind;
             kirby |= kind == 8;
-            if (kind != 8) mask |= 1u << parts[kind];
+            if (kind != 8 && kind != 29) mask |= 1u << parts[kind];
         }
         ndsKirbyHatPrepareMatch();
         assert(admitted_high == (kirby ? mask : 0));
@@ -244,6 +248,10 @@ int main(void) {
     battle.players[2].pkind = battle.players[3].pkind = nFTPlayerKindNot;
     ndsKirbyHatPrepareMatch();
     assert(admitted_high == (1u << 7) && admitted_low == 0);
+    battle.players[1].fkind = 29;
+    ndsKirbyHatPrepareMatch();
+    assert(admitted_high == 0 && admitted_low == 0);
+    assert(battle.players[1].fkind == 29);
     battle.players[1].fkind = 26; // Giant DK aliases the normal DK copy row.
     ndsKirbyHatPrepareMatch();
     assert(admitted_high == (1u << 4));

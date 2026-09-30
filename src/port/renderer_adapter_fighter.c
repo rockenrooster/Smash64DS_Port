@@ -5,6 +5,12 @@ typedef struct NDSFighterDisplayContractEvent {
     const Gfx *dl;
 } NDSFighterDisplayContractEvent;
 
+#if NDS_P4_METAKNIGHT && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static u8 sNdsMetaKnightInputSourceJoints[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+static u8 sNdsMetaKnightMaterialSourceJoints[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+static u32 sNdsMetaKnightInputCount;
+#endif
+
 _Static_assert(NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS == GMCOMMON_PLAYERS_MAX,
                "Kirby hat residency must cover every battle player slot");
 
@@ -585,6 +591,14 @@ void gcDrawMObjForDObj(DObj *dobj, Gfx **dls)
     (void)dls;
     if (sNdsFighterDisplayContract.active != 0u)
     {
+#if NDS_P4_METAKNIGHT
+        if ((dobj != NULL) && (dobj->mobj == NULL) && (dobj->parent_gobj != NULL))
+        {
+            FTStruct *fp = ftGetStruct(dobj->parent_gobj);
+            if ((fp != NULL) && ((u32)fp->fkind == NDS_P4_RUNTIME_METAKNIGHT))
+                return; /* source leaves segment E bound to the previous MObj */
+        }
+#endif
         sNdsFighterDisplayContract.material_dobj = dobj;
         sNdsFighterDisplayContract.material_ready = TRUE;
     }
@@ -1946,6 +1960,26 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
             &sNdsFighterDisplayReplayPreambles[collection->indices[i]] :
             &sNdsRendererAdapterZeroPreamble;
     }
+#if NDS_P4_METAKNIGHT
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        for (i = collection->selected_count; i < sNdsMetaKnightInputCount; i++)
+        {
+            NDSRendererNativeFighterRoot *matrix_input = &workspace->production_roots[i];
+            if (modelviews[i] == NULL) return FALSE;
+            *matrix_input = (NDSRendererNativeFighterRoot){0};
+            matrix_input->modelview_matrix = modelviews[i];
+            matrix_input->composed_matrix = &workspace->composed_matrices[i];
+            matrix_input->preamble = &sNdsRendererAdapterZeroPreamble;
+#if NDS_R2_FIGHTER_HW_MTX
+            matrix_input->projection_matrix = projection;
+#else
+            if (ndsRendererAdapterComposeNativeRootMatrix(modelviews[i], projection,
+                    &workspace->composed_matrices[i]) == FALSE) return FALSE;
+#endif
+        }
+    }
+#endif
     return TRUE;
 }
 
@@ -2627,6 +2661,94 @@ static sb32 ndsFighterNativeLoadedFileAllowed(
     return FALSE;
 }
 
+#if NDS_P4_METAKNIGHT && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+static sb32 ndsFighterPrepareMetaKnightSelectedRoute(
+    u32 detail, u32 selected_count, NDSRelocLoadedFile *file,
+    NDSRendererAdapterNativeOwnerWorkspace *workspace)
+{
+    FTStruct *fp;
+    u32 i, inputs;
+    DObj *first;
+
+    sNdsMetaKnightInputCount = 0u;
+    if ((file == NULL) || (file->asset_id != 5456u) || (workspace == NULL) ||
+        (selected_count == 0u) || (selected_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+        return FALSE;
+    first = workspace->matrix_bindings[0];
+    if ((first == NULL) || (first->parent_gobj == NULL)) return FALSE;
+    fp = ftGetStruct(first->parent_gobj);
+    if ((fp == NULL) || ((u32)fp->fkind != NDS_P4_RUNTIME_METAKNIGHT)) return FALSE;
+    for (i = 0u; i < selected_count; i++)
+    {
+        DObj *dobj = workspace->matrix_bindings[i];
+        FTParts *parts = (dobj != NULL) ? ftGetParts(dobj) : NULL;
+        if ((parts == NULL) || ((u32)parts->joint_id >= 64u) ||
+            (dobj->parent_gobj != fp->fighter_gobj) ||
+            (fp->joints[parts->joint_id] != dobj)) return FALSE;
+        sNdsMetaKnightInputSourceJoints[i] = (u8)parts->joint_id;
+        {
+            u32 required, inherited;
+            DObj *material_dobj = workspace->material_dobjs[i];
+            FTParts *binder_parts;
+            MObj *mobj;
+            u32 material = 0u;
+            if (ndsRendererNativeMetaKnightMaterialContext(detail, fp->colanim.skeleton_id,
+                    parts->joint_id, workspace->root_offsets[i], &required, &inherited) == FALSE)
+                return FALSE;
+            if ((required == 0u) || (inherited == 0u))
+            {
+                /* No segment-E call consumes an inherited chain. Keep this
+                 * source DObj's own material inventory for its setup lifetime. */
+                material_dobj = dobj;
+                workspace->material_dobjs[i] = dobj;
+            }
+            binder_parts = (material_dobj != NULL) ? ftGetParts(material_dobj) : NULL;
+            if ((binder_parts == NULL) || ((u32)binder_parts->joint_id >= 64u) ||
+                (material_dobj->parent_gobj != fp->fighter_gobj)) return FALSE;
+            sNdsMetaKnightMaterialSourceJoints[i] = (u8)binder_parts->joint_id;
+            mobj = material_dobj->mobj;
+            for (; mobj != NULL; mobj = mobj->next, material++)
+            {
+                u32 asset, source_offset, bytes;
+                const void *data;
+                const MObjSub *expected;
+                if ((ndsRendererNativeMetaKnightMaterialReference(detail,
+                        fp->colanim.skeleton_id,
+                        parts->joint_id, binder_parts->joint_id, workspace->root_offsets[i], material,
+                        &asset, &source_offset) == FALSE) ||
+                    (ndsRelocGetLoadedAssetView(asset, &data, &bytes) == FALSE))
+                    return FALSE;
+                expected = ndsRelocNativeAssetAddress(data, source_offset);
+                if ((expected == NULL) || (mobj->sub.sprites != expected->sprites) ||
+                    (mobj->sub.palettes != expected->palettes) ||
+                    (mobj->sub.fmt != expected->fmt) || (mobj->sub.siz != expected->siz) ||
+                    (mobj->sub.block_fmt != expected->block_fmt) ||
+                    (mobj->sub.block_siz != expected->block_siz)) return FALSE;
+            }
+            workspace->material_counts[i] = material;
+        }
+    }
+    if (ndsRendererNativeMetaKnightSelectRoots(detail, fp->colanim.skeleton_id,
+            file->data, file->data_size,
+            file->owner_generation, workspace->root_offsets, workspace->material_counts,
+            sNdsMetaKnightMaterialSourceJoints,
+            sNdsMetaKnightInputSourceJoints, selected_count, &inputs) == FALSE)
+        return FALSE;
+    if (inputs > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED) return FALSE;
+    for (i = selected_count; i < inputs; i++)
+    {
+        u32 joint = sNdsMetaKnightInputSourceJoints[i];
+        DObj *dobj = (joint < 64u) ? fp->joints[joint] : NULL;
+        FTParts *parts = (dobj != NULL) ? ftGetParts(dobj) : NULL;
+        if ((parts == NULL) || ((u32)parts->joint_id != joint) ||
+            (dobj->parent_gobj != fp->fighter_gobj)) return FALSE;
+        workspace->matrix_bindings[i] = dobj;
+    }
+    sNdsMetaKnightInputCount = inputs;
+    return TRUE;
+}
+#endif
+
 static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
     u32 owner_slot, u32 expected_asset_id,
     const NDSFighterDLAllDrawCollection *collection,
@@ -2770,6 +2892,15 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
         workspace->material_counts[i] = material_count;
     }
     *out_owner_file = owner_file;
+#if NDS_P4_METAKNIGHT
+    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+    {
+        FTStruct *fp = ftGetStruct(workspace->matrix_bindings[0]->parent_gobj);
+        u32 detail = (fp->detail_curr == nFTPartsDetailLow) ? 1u : 0u;
+        if (ndsFighterPrepareMetaKnightSelectedRoute(detail, collection->selected_count,
+                owner_file, workspace) == FALSE) return nNDSFighterDrawPlanSelected;
+    }
+#endif
     return nNDSFighterDrawPlanOk;
 }
 
@@ -2878,6 +3009,13 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
     {
         return FALSE;
     }
+#if NDS_P4_METAKNIGHT
+    if ((u32)fp->fkind == NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        *owner_slot = NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT;
+        return TRUE;
+    }
+#endif
     if (fp->fkind == nFTKindMario)
     {
         *owner_slot = 0u;
@@ -3072,6 +3210,9 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
 
 static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
 {
+#if NDS_P4_METAKNIGHT
+    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) return 5456u;
+#endif
     if (owner_slot == 0u)
     {
         return 0x128u; /* llMarioModelFileID */
@@ -3223,6 +3364,10 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
 
 static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
 {
+#if NDS_P4_METAKNIGHT
+    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT)
+        return NDS_RENDERER_PROFILE_OWNER_METAKNIGHT;
+#endif
     if (owner_slot == 0u)
     {
         return NDS_RENDERER_PROFILE_OWNER_MARIO;
@@ -3530,6 +3675,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         return;
     }
 
+#if NDS_P4_METAKNIGHT
+    if (ndsMetaKnightCapeHidden(fp) != FALSE) return;
+#endif
     if (pixels != NULL)
     {
         ndsFighterRejectNativeRender(fp, NULL, NULL,
@@ -3912,6 +4060,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             ndsFighterDrawPlanApply(
                 &sNdsFighterDrawPlan[slot].data,
                 &sNdsRendererAdapterNativeOwnerWorkspace);
+#if NDS_P4_METAKNIGHT
+            if ((owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) &&
+                (ndsFighterPrepareMetaKnightSelectedRoute(use_low_detail,
+                    collection.selected_count, native_owner_file,
+                    &sNdsRendererAdapterNativeOwnerWorkspace) == FALSE))
+            {
+                native_owner_enabled = FALSE;
+                gNdsFtrDeclineStage = 4u;
+            }
+#endif
         }
         else
         {
@@ -4204,7 +4362,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 ((native_owner_hierarchy_mode == FALSE) &&
                  (ndsRendererAdapterPrepareNativeOwnerMatrices(
                     owner_slot, root, native_owner_matrix_bindings,
-                    collection.selected_count,
+#if NDS_P4_METAKNIGHT
+                    (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) ?
+                        sNdsMetaKnightInputCount :
+#endif
+                        collection.selected_count,
                     (gGCCurrentCamera != NULL) ?
                         CObjGetStruct(gGCCurrentCamera) : NULL,
                     &native_owner_projection,
@@ -4285,6 +4447,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              * falls through to material preparation and the full production
              * producer below before any record/direct execution. */
             if ((native_owner_hierarchy_mode == FALSE) &&
+#if NDS_P4_METAKNIGHT
+                (owner_slot != NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) &&
+#endif
                 (detailed_output == FALSE) && (no_oracle != FALSE) &&
                 (ndsRendererAdapterRefreshNativePacketInputs(
                     color_modulate, &collection, native_owner_projection,
@@ -4454,6 +4619,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     (u32)native_owner_packet_predicted,
                     native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
+#if NDS_P4_METAKNIGHT
+                    (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_METAKNIGHT) ?
+                        sNdsMetaKnightInputCount :
+#endif
                     collection.selected_count,
                     &persistent_stats,
                     &production_hardware_started);

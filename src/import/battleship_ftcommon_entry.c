@@ -3,6 +3,9 @@
 #include <sc/scene.h>
 #include <nds/nds_startup.h>
 #include <sys/taskman.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_p4_roster.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -388,6 +391,16 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     fp->lr = 0;
     fp->status_vars.common.entry.floor_line_id = fp->coll_data.floor_line_id;
 
+#if NDS_P4_METAKNIGHT
+    if (fp->fkind == (s32)NDS_P4_RUNTIME_METAKNIGHT)
+    {
+        /* Meta main.asm edits its own E4/E5 EntryR/L motions and installs
+         * entry_script=8013DD68: skip constructor effects, retain Appear.
+         * These source status indices resolve against Meta's own FTData. */
+        status_id = (entry_id == 0) ? 0xE4 : 0xE5;
+    }
+    else
+#endif
     if ((fp->fkind == nFTKindMario)
 #if NDS_P2_LUIGI
         /* BattleShip ftcommonentry.c:20 and :192-196. Luigi's row of

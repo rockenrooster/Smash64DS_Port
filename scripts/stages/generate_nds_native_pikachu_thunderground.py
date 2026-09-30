@@ -89,6 +89,7 @@ REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO / "scripts" / "stages"))
 
 import generate_nds_native_stage as sm  # noqa: E402
+import _paths  # noqa: E402
 
 OUT = REPO / "src/nds/generated/nds_native_pikachu_thunderground.generated.inc"
 OUT_HEADER = REPO / "include/nds/generated/nds_native_pikachu_thunderground.generated.h"
@@ -214,7 +215,9 @@ def decode_combine(w0: int, w1: int) -> dict:
 
 
 def census() -> tuple:
-    root = REPO / "decomp/BattleShip-main/BattleShip_o2r"
+    root = _paths.battleship_o2r_root(REPO)
+    if not root.is_dir():
+        raise FileNotFoundError(f"required O2R census corpus is absent: {root}")
     hits = []
     scanned = 0
     for path in sorted(root.rglob("*")):
@@ -224,7 +227,8 @@ def census() -> tuple:
         if len(blob) < 0x50 or blob[4:8] != b"OLER":
             continue
         scanned += 1
-        rel = str(path.relative_to(REPO)).replace("\\", "/")
+        rel = str(Path("decomp/BattleShip-main/BattleShip_o2r") /
+                  path.relative_to(root)).replace("\\", "/")
         res = sm.load_o2r(REPO, sm.InputSpec(rel, hashlib.sha256(blob).hexdigest()))
         for slot, ref in res.external.items():
             if ref.asset_id == ASSET:

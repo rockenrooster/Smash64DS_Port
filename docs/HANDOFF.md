@@ -1,7 +1,7 @@
 # Handoff
 
 P2 follows `PROJECT_GOAL.md` and `P2_PLAN.md`; `P2_EXECUTION_BOARD.md` owns focus, decisions, artifacts and the
-**Execution cursor**. This file is a route, not another task or metric ledger.
+**Execution cursor**. Isolated `codex/meta-knight` continues that cursor and its P4 receipt; the main checkout retains the historical P2 route below.
 
 ## Current route (2026-09-26)
 

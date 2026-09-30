@@ -5,6 +5,10 @@
 #include <ft/ftdata_file_slots.h>
 #include <ft/fighter.h>
 #include <nds/nds_startup.h>
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_metaknight.h>
+#include <nds/nds_p4_roster.h>
+#endif
 #include <reloc_data.h>
 
 #define FTFOX_REFLECTOR_RELEASE_LAG 18
@@ -42,7 +46,18 @@ sb32 ftFoxSpecialLwTurnCheckInterruptLoop(GObj *fighter_gobj);
 
 uintptr_t llFoxMainMotionLwReflectorFTSpecialColl = 0x19B0u;
 
+#if NDS_P4_METAKNIGHT
+#define ftCommonSpecialLwCheckInterruptCommon ndsBaseP4SpecialLwCheckInterruptCommon
+#endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonspeciallw.c"
+#if NDS_P4_METAKNIGHT
+#undef ftCommonSpecialLwCheckInterruptCommon
+sb32 ftCommonSpecialLwCheckInterruptCommon(GObj *gobj)
+{
+    return ((u32)ftGetStruct(gobj)->fkind == NDS_P4_RUNTIME_METAKNIGHT) ?
+        ndsMetaKnightCheckSpecialLw(gobj) : ndsBaseP4SpecialLwCheckInterruptCommon(gobj);
+}
+#endif
 #define ftFoxSpecialLwStartSetStatus battleship_ftFoxSpecialLwStartSetStatus
 #define ftFoxSpecialAirLwStartSetStatus battleship_ftFoxSpecialAirLwStartSetStatus
 #define ftFoxSpecialLwHitSetStatus battleship_ftFoxSpecialLwHitSetStatus

@@ -23362,3 +23362,12 @@ over the stress match: 13,499 rejects, 0 flips; replay identical.
 Task 37 still extracts `memcmp`. Tick-HUD builds self-test them at boot
 (`gNdsFastMemSelfTestFailures` must read 0). FGM cue lookup is an id map built at
 pack load. WORK-H P50/P95 1,215,616/1,657,152, replay identical.
+
+2026-09-30 P4 isolated Meta Knight: `codex/meta-knight`, runtime kind 29 and CSS
+row 12, preserves all legacy identities. Pinned EXTRA donor resolves to typed
+native moves, geometry/materials, motion, six costumes, UI, own voices/victory
+music and save identity. Source/host checks cover import, packs, renderer routing
+and capture boundaries. Preview plus selected image is 62,160 B of 81,920 B.
+`IMPLEMENTED_NOT_ACCEPTED`: four build failures are retained; natural playable
+ROM, directed behavior/pixels/audio, Latest, cadence/performance and cold replay
+remain due. Receipt: `artifacts/performance/2026-09-30_p4-meta-knight/README.md`.

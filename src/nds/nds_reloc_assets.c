@@ -1,6 +1,9 @@
 #include <filesystem.h>
 #include <nds.h>
 #include <calico.h>
+#if NDS_P4_METAKNIGHT
+#include <nds_metaknight_native_assets.generated.h>
+#endif
 
 /* ONE LOCK FOR THE WHOLE FILESYSTEM. libfat/nitrofs are not reentrant and
  * the BGM refill runs on a calico worker thread (nds_audio_bgm.c), so a
@@ -455,6 +458,11 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
 #undef NDS_P2_FIGHTER_ASSET_ENTRY
+#endif
+#if NDS_P4_METAKNIGHT
+#define NDS_META_ASSET_ENTRY(id_, path_, role_, payload_, allocation_) { id_, id_, path_ },
+    NDS_METAKNIGHT_NATIVE_ASSETS(NDS_META_ASSET_ENTRY)
+#undef NDS_META_ASSET_ENTRY
 #endif
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     /* R02/R03/K06 -- THE PATH HALF OF THE RESULTS DEMO POSES, AND IT WAS THE

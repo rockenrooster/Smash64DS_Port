@@ -20,7 +20,18 @@ sb32 ndsBaseFTCommonDownBounceCheckUpOrDown(GObj *fighter_gobj);
 void ndsBaseFTCommonDownBounceUpdateEffects(GObj *fighter_gobj);
 void ndsBaseFTCommonDownBounceSetStatus(GObj *fighter_gobj);
 
+#if NDS_P4_METAKNIGHT
+#include <nds/nds_p4_runtime.h>
+#include "../../builds/p4/meta-knight-lifecycle/nds_meta_lifecycle.generated.h"
+static u16 ndsMetaDownBounceFGM(const FTStruct *fp)
+{
+    if (ndsP4IsMetaKnight(fp->fkind)) return NDS_META_DOWN_BOUNCE_FGM;
+    return dFTCommonDataDownBounceSFX[ndsP4GetThrownScriptColumn(fp->fkind)];
+}
+#include "../../builds/p4/meta-knight-lifecycle/ftcommondownwaitbounce.c"
+#else
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommondownwaitbounce.c"
+#endif
 
 #undef ftCommonDownWaitProcUpdate
 #undef ftCommonDownWaitProcInterrupt

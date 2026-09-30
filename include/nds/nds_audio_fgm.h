@@ -5,7 +5,12 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
+#if NDS_P4_METAKNIGHT
+#include <nds/generated/nds_p4_audio.generated.h>
+#define NDS_AUDIO_FGM_ENTRY_COUNT NDS_P4_AUDIO_ENTRY_COUNT
+#else
 #define NDS_AUDIO_FGM_ENTRY_COUNT 573u
+#endif
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -106,8 +111,13 @@
 /* Full source cue set, including both forked tails of PublicPrologue/TitleWait.
  * Their complete schedules fit the 60 KiB slot at 12/8 kHz respectively;
  * other long voices use 16 kHz. Every cue passes the acoustic/cache checker. */
+#if NDS_P4_METAKNIGHT
+#define NDS_AUDIO_FGM_PACK_BYTES NDS_P4_AUDIO_PACK_BYTES
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO NDS_P4_AUDIO_MAPPING_SHA256_LO
+#else
 #define NDS_AUDIO_FGM_PACK_BYTES 6968728u
 #define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x63e22da5u
+#endif
 #define NDS_AUDIO_FGM_CACHE_BYTES 163840u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

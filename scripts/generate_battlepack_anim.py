@@ -57,10 +57,10 @@ import json
 import pathlib
 import struct
 import sys
+import _paths
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DEFAULT_BANK = (ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r"
-                / "reloc_animations")
+DEFAULT_BANK = _paths.battleship_o2r_root(ROOT) / "reloc_animations"
 
 MAGIC = b"BPA1"
 VERSION = 1
@@ -173,6 +173,7 @@ def read_clip(probe, path):
     must take the original O2R loader instead -- `build` routes it out by
     name and refuses to pack it."""
     raw = path.read_bytes()
+    _paths.record_reference_input(path, raw)
     f = probe.load(raw)
     if f is None:
         return None
