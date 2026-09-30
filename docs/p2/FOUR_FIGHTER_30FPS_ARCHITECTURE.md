@@ -906,6 +906,20 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   P50/P95 ~924K/1,256.5K -> ~918.5K/~1,249K; Yoshi's Island P95 -31K,
   Saffron -24K (`cde0ccea3f2`, `e5c64860e14`, `008b5429544`). Receipt
   `2026-09-29_p2-2p8-object-fast-lane`.
+- **09-29 status-change costs priced; SMULL for the Q12 cubic, BANKED** (replay
+  identical): a status change is ~111K ticks on the gate profile (pose first
+  play 36K, lean events 23K, motion fetch 17K plus the ARM7 read wait, install
+  10K). The pose evaluator's cubic compiled to 64 x 64 multiplies (GCC proved
+  its truncations no-ops and kept wide values); an asm barrier makes every
+  product one SMULL (190 -> 119 instructions, host-equal over 300M inputs).
+  Also: parser reciprocals from a table, the flattened walk kept across
+  status changes that touch no hidden part (511 of 702), ShieldPose base rows
+  decoded once per blob, the hurtbox local build's trig products 32-bit, the
+  stage span state written before its DMA. Refuted: an LRU refresh of the
+  motion ring (the gate's ring wraps once a match; 194 of its 220 reads are a
+  clip's first use). Gate WORK-H P50/P95 ~918.5K/~1,249K -> ~910.7K/~1,232K;
+  Saffron lab P95 -8.4K (`45d6b475fe4`, `8597d6be8a8`). Receipt
+  `2026-09-29_p2-2p8-sim-codegen`.
 
 ## 7. Found along the way
 
