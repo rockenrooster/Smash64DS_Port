@@ -1,6 +1,6 @@
 """Compile native stage tables to GX templates; no N64 commands at runtime.
 
-All nine VS stages. Constant worlds and known colour/UV are
+All nine VS stages and every 1P-only stage. Constant worlds and known colour/UV are
 baked; animated inputs, camera matrices and painter depth use patch sites.
 """
 import argparse
@@ -13,10 +13,26 @@ MAGIC = 0x31505847  # GXP1
 VIEW, WORLD, NOZ, COLOR, UV, PROJECTION, COMPOSED_NOZ, CORNER_NOZ = range(1, 9)
 MATERIAL = 9
 COMPOSED, CORNER_SOURCE = 10, 11
-STAGES = ('castle', 'sector', 'jungle', 'zebes', 'hyrule', 'yoster',
-          'dreamland', 'yamabuki', 'inishie')
+VS_STAGES = ('castle', 'sector', 'jungle', 'zebes', 'hyrule', 'yoster',
+             'dreamland', 'yamabuki', 'inishie')
+# P2-6: the 1P campaign's own venues (team stages, Metal, Polygon, Final
+# Destination, the Race and both boards per fighter) take the same templates.
+BOARD_FIGHTERS = ('mario', 'fox', 'donkey', 'samus', 'luigi', 'link', 'yoshi',
+                  'captain', 'kirby', 'pikachu', 'purin', 'ness')
+ONE_P_STAGES = (('pupupusmall', 'yostersmall', 'metal', 'zako', 'last', 'bonus3') +
+                tuple(f'bonus1_{f}' for f in BOARD_FIGHTERS) +
+                tuple(f'bonus2_{f}' for f in BOARD_FIGHTERS))
+STAGES = VS_STAGES + ONE_P_STAGES
 # Heap ceiling for one stage's body (battle-lifetime, nds_stage_gx.exec.inc).
 BODY_MAX = 36992
+# The boards hold one fighter and no items, so their bodies may run larger
+# (Purin's Board the Platforms: 46,552 B); the loader's free-heap check still
+# declines a body the battle cannot keep.
+BOARD_BODY_MAX = 49152
+
+
+def body_max(name):
+    return BOARD_BODY_MAX if name.startswith(('bonus1_', 'bonus2_')) else BODY_MAX
 HEADER = struct.Struct('<12I')
 RUN_V1 = struct.Struct('<6H')
 RUN_V2 = struct.Struct('<6H6h')
@@ -149,7 +165,7 @@ def texture_used(policy):
 
 def compile_packet(packet, name='dreamland'):
     if name not in STAGES:
-        raise ValueError('Only VS stages are admitted')
+        raise ValueError('Only the native stage venues are admitted')
     words, patches = [], []
     runs = [(0,) * 14] * len(packet.runs)
     static_mask = stage.blob_rigid_mask(name) & ~stage.blob_camera_mask(packet)
@@ -264,7 +280,7 @@ def compile_packet(packet, name='dreamland'):
     body = b''.join(RUN.pack(*r) for r in runs)
     body += b''.join(PATCH.pack(*p) for p in patches)
     body += struct.pack(f'<{len(words)}I', *words)
-    if len(body) > BODY_MAX:
+    if len(body) > body_max(name):
         raise ValueError('GX template exceeds the stage body heap ceiling')
     return HEADER.pack(MAGIC, 5, stage.blob_gkind(name), len(runs), len(words),
                        len(patches), (1 << len(packet.segments)) - 1, signature(packet), len(body),

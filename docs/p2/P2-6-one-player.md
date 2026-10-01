@@ -24,13 +24,25 @@ and Congra (walks `cwalk29`..`cwalk48`, `artifacts/visibility/2026-10-01_1p/`).
 | 6 Giant DK | 0 | a DK player/ally loads DK's full files here (the compact pack faulted Giant DK's construction) |
 | 8 Kirby Team | 0 | |
 | 10 Meta Crystal | 0 | the Mario/Luigi/Metal Mario pipe: the deferred-desc retry now names the entering fighter's Special2 slot first (a Mario ally or Metal Mario after Mario Bros faulted on a bare effect GObj) |
-| 11 Race | 0 | |
+| 11 Race | 0 | the lights drew opaque: a Sec layer's display head 1 enters with G_RM_AA_ZB_XLU_SURF (layer 1) or G_RM_AA_XLU_SURF, and the stage generator had seeded it as zero; head 1 now starts translucent (`head_entry_othermode_l`, runtime `ndsNativeStageHeadEntryOtherModeL`) and its runs request intensity coverage for their I8 BLENDPE lerp. Same fix on Sector Z's glows and the alpha-threshold head-1 runs of the boards, Hyrule, Zebes, Saffron and Mushroom Kingdom |
 | 12 Polygon Team | 0 | low-water 91,540 B (fighter files in the overlay tail) |
-| 13 Master Hand | 0 | |
+| 13 Master Hand | 0 | stood frozen (owner 10-01): the port's entry statuses lacked the source's Boss arms (Appear -> his own Wait, his AI target), and his 30 battle motions were stub symbols with no file. They ride the 1P rows now, his 8 AnimJoint motions flagged AObj32 so their scripts are normalized (as AObj16 his Appear never ended and he stayed an undamageable ghost). `mh05`: attacks cycle, Link damages him |
 | 7 Board the Platforms | 0 | the platform lights (DObjs 1-2, DL link 1) drew opaque: the source's layer-1 head 1 starts them at G_RM_AA_ZB_XLU_SURF and their BLENDPE lerp's alpha is TEXEL0 * PRIM on an I8 tile; the baked roots now carry each head's render mode and request intensity coverage (owner: "they look good now") |
 | Ending 48 | 659 sprite | blank: the port's generic DObj-tree draws are recorders, so the MVCommon room and the figure never draw (needs native room geometry) |
 | Staffroll 56 | ~1 sprite/frame | names and jobs draw natively (glyph quads, `cwalk53`); crosshair and box via the S2D tenant, frame rects in the overlay |
 | Congra 55 | 0 | correct |
+
+Battle HUD anchored to the 3D (owner 10-01: tags "offset around edges of
+screen", VS too): fighter tags, item arrows and hit sparks map a projected
+point with the battle 3D's own scale -- the camera's 300 x 220 viewport fills
+256 x 192, so x 128/150 and y 96/110 -- instead of the 2D layer's uniform 0.8,
+which pulled them toward the centre by up to ~8 px at the edges
+(`ndsIFCommonBattleScreenX/Y`).
+
+The 1P venues (team stages, Metal, Polygon, Final Destination, the Race and
+both boards per fighter) now take the VS stages' compiled GX templates
+(`compile_nds_stage_gx.py`, `sNdsStageGxPaths`); the boards' bodies may run to
+48 KiB (Purin's Board the Platforms is 46,552 B).
 
 Per-battle pacing in the walk (present intervals of 2 VBlanks, `PACE`;
 proxy, not the gate): 0 93%, 1 Yoshi Team 78%, 2 94%, 3 93%, 4 86%, 5 93%,

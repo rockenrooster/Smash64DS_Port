@@ -1153,6 +1153,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "segment.link",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "stats.command_count",
           "classification": "callback_visible_mutation_output"
         },

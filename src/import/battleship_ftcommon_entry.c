@@ -4,6 +4,9 @@
 #include <sc/scene.h>
 #include <nds/nds_startup.h>
 #include <sys/taskman.h>
+#if NDS_P2_1P_GAME
+#include <ft/ftchar/ftboss/ftboss.h>
+#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -243,7 +246,18 @@ void ftCommonEntryNullProcUpdate(GObj *fighter_gobj)
 
         if (fp->status_vars.common.entry.entry_wait == 0)
         {
-            /* P2-2 has no Boss fighter; this is the source's non-Boss arm. */
+#if NDS_P2_1P_GAME
+            /* BattleShip ftcommonentry.c:72-75: Master Hand leaves the entry
+             * for his own Wait, whose AI picks every attack. Taking the common
+             * Wait below left him standing in a status he has no motion for,
+             * the whole fight (owner 10-01: "master hand doing no
+             * animations"). */
+            if (fp->fkind == nFTKindBoss)
+            {
+                ftBossWaitSetStatus(fighter_gobj);
+                return;
+            }
+#endif
             fp->lr = fp->status_vars.common.entry.lr;
             DObjGetStruct(fighter_gobj)->translate.vec.f = fp->entry_pos;
             fp->coll_data.floor_line_id =
@@ -363,6 +377,14 @@ void ftCommonAppearProcUpdate(GObj *fighter_gobj)
         fp->lr = fp->status_vars.common.entry.lr;
         DObjGetStruct(fighter_gobj)->translate.vec.f = fp->entry_pos;
         fp->coll_data.floor_line_id = fp->status_vars.common.entry.floor_line_id;
+#if NDS_P2_1P_GAME
+        /* BattleShip ftcommonentry.c:125-129. */
+        if (fp->fkind == nFTKindBoss)
+        {
+            ftBossWaitSetStatus(fighter_gobj);
+            return;
+        }
+#endif
         ftCommonWaitSetStatus(fighter_gobj);
     }
 }
@@ -623,6 +645,27 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         }
         efManagerCaptainEntryCarMakeEffect(
             &fp->entry_pos, fp->status_vars.common.entry.lr);
+    }
+#endif
+#if NDS_P2_1P_GAME
+    else if (fp->fkind == nFTKindBoss)
+    {
+        /* BattleShip ftcommonentry.c:28,240-252. Master Hand's row is
+         * nFTBossStatusAppear for both facings, and his AI's target is the
+         * first fighter link that is not himself. EntryNull here skipped his
+         * Appear and left target_gobj unset. */
+        GObj *boss_target_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+
+        while (boss_target_gobj != NULL)
+        {
+            if (boss_target_gobj != fighter_gobj)
+            {
+                break;
+            }
+            boss_target_gobj = boss_target_gobj->link_next;
+        }
+        fp->passive_vars.boss.p->target_gobj = boss_target_gobj;
+        status_id = nFTBossStatusAppear;
     }
 #endif
     else

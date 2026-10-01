@@ -802,6 +802,7 @@ void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
 
 #if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
 extern volatile u32 gNdsMenuShellWalkRoute;
+extern volatile u32 gNdsCampaignWalkMeasure;
 
 /* Campaign walk only (owner 2026-09-30: "make the human a lvl 9 CPU and the
  * opponents lvl 1 CPUs for campaign walking"; playtest ROMs keep the source
@@ -825,8 +826,8 @@ static void ndsCampaignWalkCpuRoute(FTDesc *desc)
         desc->pkind = nFTPlayerKindCom;
         desc->level = 9;
     }
-    else if (gSCManagerBattleState->players[desc->player].is_spgame_enemy !=
-             FALSE)
+    else if ((gSCManagerBattleState->players[desc->player].is_spgame_enemy !=
+              FALSE) && (gNdsCampaignWalkMeasure == 0u))
     {
         desc->level = 1;
         /* Walk speed: an 18-Yoshi team outlasted a level-9 player's five

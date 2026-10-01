@@ -1590,4 +1590,34 @@ NDS_1P_DEMO_RELOC_FILES := \
 	reloc_submotions/FTNCaptainSubMotionIdle \
 	reloc_submotions/FTNKirbySubMotionIdle \
 	reloc_submotions/FTNPikachuSubMotionIdle \
-	reloc_submotions/FTNNessSubMotionIdle
+	reloc_submotions/FTNNessSubMotionIdle \
+	reloc_animations/FTMasterHandAnim000 \
+	reloc_animations/FTMasterHandAnim001 \
+	reloc_animations/FTMasterHandAnim002 \
+	reloc_animations/FTMasterHandAnim003 \
+	reloc_animations/FTMasterHandAnim004 \
+	reloc_animations/FTMasterHandAnim005 \
+	reloc_animations/FTMasterHandAnim006 \
+	reloc_animations/FTMasterHandAnim007 \
+	reloc_animations/FTMasterHandAnim008 \
+	reloc_animations/FTMasterHandAnim009 \
+	reloc_animations/FTMasterHandAnim010 \
+	reloc_animations/FTMasterHandAnim011 \
+	reloc_animations/FTMasterHandAnim012 \
+	reloc_animations/FTMasterHandAnim013 \
+	reloc_animations/FTMasterHandAnim014 \
+	reloc_animations/FTMasterHandAnim015 \
+	reloc_animations/FTMasterHandAnim016 \
+	reloc_animations/FTMasterHandAnim017 \
+	reloc_animations/FTMasterHandAnim018 \
+	reloc_animations/FTMasterHandAnim019 \
+	reloc_animations/FTMasterHandAnim020 \
+	reloc_animations/FTMasterHandAnim021 \
+	reloc_animations/FTMasterHandAnim026 \
+	reloc_animations/FTMasterHandAnim027 \
+	reloc_animations/FTMasterHandAnim028 \
+	reloc_animations/FTMasterHandAnim029 \
+	reloc_animations/FTMasterHandAnim030 \
+	reloc_animations/FTMasterHandAnim031 \
+	reloc_animations/FTMasterHandAnim032 \
+	reloc_animations/FTMasterHandAnim033

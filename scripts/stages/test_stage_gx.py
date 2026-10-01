@@ -18,7 +18,7 @@ import compile_nds_stage_gx as gx
 def test_compiled_corners_patch_coverage_and_stack(name):
     packet = gx.stage.generate(gx.stage._paths.REPO_ROOT, name)
     blob = gx.compile_packet(packet, name)
-    assert len(blob) - gx.HEADER.size <= gx.BODY_MAX
+    assert len(blob) - gx.HEADER.size <= gx.body_max(name)
     header, runs, patches, words = gx.decode(blob)
     assert header[2] == gx.stage.blob_gkind(name)
     assert header[6] == (1 << len(packet.segments)) - 1 and header[7] == gx.signature(packet)
@@ -88,7 +88,17 @@ def test_compiled_corners_patch_coverage_and_stack(name):
         triangles += nt
     assert triangles == {'castle':136, 'sector':299, 'jungle':182, 'zebes':151,
                          'hyrule':206, 'yoster':164, 'dreamland':202,
-                         'yamabuki':243, 'inishie':176}[name]
+                         'yamabuki':243, 'inishie':176,
+                         'pupupusmall':124, 'yostersmall':160, 'metal':153,
+                         'zako':138, 'last':198, 'bonus3':325,
+                         'bonus1_mario':166, 'bonus1_fox':172, 'bonus1_donkey':170,
+                         'bonus1_samus':124, 'bonus1_luigi':154, 'bonus1_link':182,
+                         'bonus1_yoshi':268, 'bonus1_captain':130, 'bonus1_kirby':166,
+                         'bonus1_pikachu':222, 'bonus1_purin':174, 'bonus1_ness':246,
+                         'bonus2_mario':291, 'bonus2_fox':267, 'bonus2_donkey':304,
+                         'bonus2_samus':188, 'bonus2_luigi':272, 'bonus2_link':396,
+                         'bonus2_yoshi':226, 'bonus2_captain':365, 'bonus2_kirby':267,
+                         'bonus2_pikachu':305, 'bonus2_purin':451, 'bonus2_ness':288}[name]
     damaged = bytearray(blob)
     damaged[-1] ^= 1
     with pytest.raises(ValueError):

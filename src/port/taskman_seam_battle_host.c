@@ -1315,6 +1315,12 @@ volatile u32 gNdsCampaignContinuePlaybackFrameCount;
 volatile u32 gNdsCampaignContinuePlaybackTapCount;
 volatile u32 gNdsCampaignTransitionHeapFreeMin = 0xffffffffu;
 volatile u32 gNdsCampaignTransitionStartStage = 0xffffffffu;
+/* Pacing measurement window, GDB-written at a 1P battle's scene entry and
+ * cleared when the window closes: while set the enemies keep the source's
+ * level and damage and nothing is KO'd for the walk, so the fight is the one a
+ * player sees (the level-9 human stays: a stand-in for a player who never
+ * idles). */
+volatile u32 gNdsCampaignWalkMeasure;
 
 static u32 sNdsCampaignBattlePlaybackFrame;
 static u32 sNdsCampaignStageClearPlaybackFrame;
@@ -1455,7 +1461,7 @@ static void ndsCampaignDrivePlayback(void)
          * machinery spawns the next. A level-9 Link could not clear the
          * 18-Yoshi team in its five minutes. Master Hand is left to the
          * fight (its defeat is HP, not a fall). */
-        if ((gNdsMenuShellWalkRoute == 1u) &&
+        if ((gNdsMenuShellWalkRoute == 1u) && (gNdsCampaignWalkMeasure == 0u) &&
             (sNdsCampaignBattlePlaybackFrame > 120u) &&
             ((sNdsCampaignBattlePlaybackFrame % 45u) == 0u) &&
             (gMPCollisionGroundData != NULL))

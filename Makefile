@@ -8448,6 +8448,11 @@ $(NITROFS_DIR)/stages/native_stage_%.bin: $(NDS_NATIVE_STAGE_BLOB_DIR)/native_st
 
 # Phase 2 GX templates live on NitroFS; no duplicated template slab in main RAM.
 NDS_STAGE_GX_STAGES := castle sector jungle zebes hyrule yoster dreamland yamabuki inishie
+# P2-6: the 1P campaign's venues take the same templates (sNdsStageGxPaths).
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_STAGE_GX_STAGES += pupupusmall yostersmall metal zako last bonus3 \
+	$(foreach f,mario fox donkey samus luigi link yoshi captain kirby pikachu purin ness,bonus1_$(f) bonus2_$(f))
+endif
 NDS_STAGE_GX_FILES := $(foreach stage,$(NDS_STAGE_GX_STAGES),$(NITROFS_DIR)/stages/$(stage).gxp)
 $(NITROFS_DIR)/stages/%.gxp: $(NDS_NATIVE_STAGE_GENERATOR_PREREQ) $(PROJECT_ROOT)/scripts/stages/compile_nds_stage_gx.py
 	@mkdir -p $(dir $@)

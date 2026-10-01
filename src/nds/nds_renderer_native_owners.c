@@ -726,6 +726,27 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
  * pinned include moves. */
 #define NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP (1u << 1)
 
+/* A run on a Sec layer's display head 1 that draws under the translucent mode
+ * the head entered with (ndsNativeStageHeadEntryOtherModeL): its I tile's
+ * texel alpha is the intensity, so its texture is resolved with the intensity
+ * coverage request (Race to the Finish's lights). Mirror of RUN_FLAG_HEAD_XLU,
+ * scripts/stages/generate_nds_native_stage.py. */
+#define NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU (1u << 2)
+
+/* The render mode a Sec layer's display head 1 enters with
+ * (gr/grdisplay.c:66-145): G_RM_AA_ZB_XLU_SURF on layer 1 (link 6),
+ * G_RM_AA_XLU_SURF on layers 0, 2 and 3. Head 0's opaque surface mode is
+ * zero to every runtime test and stays zero. The generator seeds the same
+ * word (head_entry_othermode_l), or a head-1 run's policy would not match. */
+static inline u32 ndsNativeStageHeadEntryOtherModeL(u32 link, u32 head)
+{
+    if (head != 1u)
+    {
+        return 0u;
+    }
+    return (link == 6u) ? 0x005049D8u : 0x005041C8u;
+}
+
 /* Which check of ndsRendererNativeStageValidateTopologyFull declined last
  * (1-based, in source order; 0 = passed or never run). Every decline is one
  * store on the fail path, nothing on the pass path. Stage admission reports
@@ -936,7 +957,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             (run->state_policy >= NDS_NATIVE_STAGE_STATE_POLICY_COUNT) ||
             ((run->flags &
               ~(NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX |
-                NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP)) != 0u) ||
+                NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP |
+                NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU)) != 0u) ||
             ((u32)run->first_corner + corner_count >
              NDS_NATIVE_STAGE_CORNER_COUNT))
         {
@@ -1671,6 +1693,11 @@ static s32 ndsRendererNativeStagePrepareRun(
 #if NDS_R2_STAGE_ROUTE_PROBE
     gNdsR2StageTextureProbeRun = run_index;
 #endif
+    /* Held only across this run's texture resolve below (and cleared on
+     * every exit from it): the request keys the I tile's texture with its
+     * intensity as coverage, for this run alone. */
+    sNdsRendererHardwareIntensityCoverage =
+        ((run->flags & NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU) != 0u) ? 1u : 0u;
     if ((run->flags & NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP) != 0u)
     {
         /* The source material samples no texel (the generator refuses a ramp
@@ -1685,6 +1712,7 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
             gNdsNativeStagePrepareRunFailStep = 7u;
             gNdsNativeStagePrepareRunFailRun = run_index;
+            sNdsRendererHardwareIntensityCoverage = 0u;
             return FALSE;
         }
         use_texture = TRUE;
@@ -1736,8 +1764,10 @@ static s32 ndsRendererNativeStagePrepareRun(
             stats->texture_load_block_dxt;
         gNdsNativeStagePrepareRunTexture[7] =
             stats->texture_tiles[ndsRendererActiveTextureTile(stats)].line;
+        sNdsRendererHardwareIntensityCoverage = 0u;
         return FALSE;
     }
+    sNdsRendererHardwareIntensityCoverage = 0u;
 #if NDS_R2_STAGE_ROUTE_PROBE
     gNdsR2StageTextureProbeRun = 0xffffffffu;
 #endif
@@ -4380,6 +4410,9 @@ s32 ndsRendererPrepareNativeStageOwner(
                         &sNdsNativeStageOwnerExecution.preflight_stats);
                     sNdsNativeStageOwnerExecution.preflight_stats
                         .geometry_mode = ndsNativeStageSegmentEntryGeometry(segment->initial_geometry);
+                    sNdsNativeStageOwnerExecution.preflight_stats
+                        .othermode_l = ndsNativeStageHeadEntryOtherModeL(
+                            segment->link, head);
                 }
                 NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
                 current_head = head;

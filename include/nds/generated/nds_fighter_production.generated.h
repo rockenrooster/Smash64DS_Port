@@ -3457,7 +3457,7 @@
     X(llFTKirbyAnimWin2FileID, 0x1a1u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearL") \
     X(llFTKirbyAnimClapsFileID, 0x1a3u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearAlt2")
 
-#define NDS_1P_DEMO_ANIM_COUNT 57u
+#define NDS_1P_DEMO_ANIM_COUNT 87u
 #define NDS_1P_DEMO_ANIM_ASSET_ROWS(X) \
     X(llFTMarioAnimDollFallsFileID, 0x16bu, "nitro:/reloc/reloc_submotions/FTMarioSubMotionVictory2") \
     X(llFTMarioAnimDollRevivalFileID, 0x16cu, "nitro:/reloc/reloc_submotions/FTMarioSubMotionVictory3") \
@@ -3515,6 +3515,46 @@
     X(llFTNCaptainAnimPose1PFileID, 0x1efu, "nitro:/reloc/reloc_submotions/FTNCaptainSubMotionIdle") \
     X(llFTNKirbyAnimPose1PFileID, 0x1f0u, "nitro:/reloc/reloc_submotions/FTNKirbySubMotionIdle") \
     X(llFTNPikachuAnimPose1PFileID, 0x1f1u, "nitro:/reloc/reloc_submotions/FTNPikachuSubMotionIdle") \
-    X(llFTNNessAnimPose1PFileID, 0x1f2u, "nitro:/reloc/reloc_submotions/FTNNessSubMotionIdle")
+    X(llFTNNessAnimPose1PFileID, 0x1f2u, "nitro:/reloc/reloc_submotions/FTNNessSubMotionIdle") \
+    X(llFTBossAnimDefaultFileID, 0x832u, "nitro:/reloc/reloc_animations/FTMasterHandAnim000") \
+    X(llFTBossAnimSlapFileID, 0x833u, "nitro:/reloc/reloc_animations/FTMasterHandAnim001") \
+    X(llFTBossAnimShooFileID, 0x834u, "nitro:/reloc/reloc_animations/FTMasterHandAnim002") \
+    X(llFTBossAnimLaunchFileID, 0x835u, "nitro:/reloc/reloc_animations/FTMasterHandAnim003") \
+    X(llFTBossAnimFlyFileID, 0x836u, "nitro:/reloc/reloc_animations/FTMasterHandAnim004") \
+    X(llFTBossAnimLandingFileID, 0x837u, "nitro:/reloc/reloc_animations/FTMasterHandAnim005") \
+    X(llFTBossAnimWalkStartFileID, 0x838u, "nitro:/reloc/reloc_animations/FTMasterHandAnim006") \
+    X(llFTBossAnimWalkFileID, 0x839u, "nitro:/reloc/reloc_animations/FTMasterHandAnim007") \
+    X(llFTBossAnimUnknown1FileID, 0x83au, "nitro:/reloc/reloc_animations/FTMasterHandAnim008") \
+    X(llFTBossAnimFlickFileID, 0x83bu, "nitro:/reloc/reloc_animations/FTMasterHandAnim009") \
+    X(llFTBossAnimChargeStart1FileID, 0x83cu, "nitro:/reloc/reloc_animations/FTMasterHandAnim010") \
+    X(llFTBossAnimChargeStart2FileID, 0x83du, "nitro:/reloc/reloc_animations/FTMasterHandAnim011") \
+    X(llFTBossAnimLanding2FileID, 0x83eu, "nitro:/reloc/reloc_animations/FTMasterHandAnim012") \
+    X(llFTBossAnimPunch1FileID, 0x83fu, "nitro:/reloc/reloc_animations/FTMasterHandAnim013") \
+    X(llFTBossAnimPointStartFileID, 0x840u, "nitro:/reloc/reloc_animations/FTMasterHandAnim014") \
+    X(llFTBossAnimPokeFileID, 0x841u, "nitro:/reloc/reloc_animations/FTMasterHandAnim015") \
+    X(llFTBossAnimPointFileID, 0x842u, "nitro:/reloc/reloc_animations/FTMasterHandAnim016") \
+    X(llFTBossAnimDrillFileID, 0x843u, "nitro:/reloc/reloc_animations/FTMasterHandAnim017") \
+    X(llFTBossAnimPunch2FileID, 0x844u, "nitro:/reloc/reloc_animations/FTMasterHandAnim018") \
+    X(llFTBossAnimGunDrawFileID, 0x845u, "nitro:/reloc/reloc_animations/FTMasterHandAnim019") \
+    X(llFTBossAnimGunShootFileID, 0x846u, "nitro:/reloc/reloc_animations/FTMasterHandAnim020") \
+    X(llFTBossAnimGunAimFileID, 0x847u, "nitro:/reloc/reloc_animations/FTMasterHandAnim021") \
+    X(llFTBossAnimSlamStartFileID, 0x84cu, "nitro:/reloc/reloc_animations/FTMasterHandAnim026") \
+    X(llFTBossAnimPunch3FileID, 0x84du, "nitro:/reloc/reloc_animations/FTMasterHandAnim027") \
+    X(llFTBossAnimPunchEndFileID, 0x84eu, "nitro:/reloc/reloc_animations/FTMasterHandAnim028") \
+    X(llFTBossAnimSlamFileID, 0x84fu, "nitro:/reloc/reloc_animations/FTMasterHandAnim029") \
+    X(llFTBossAnimDyingStartFileID, 0x850u, "nitro:/reloc/reloc_animations/FTMasterHandAnim030") \
+    X(llFTBossAnimDyingFileID, 0x851u, "nitro:/reloc/reloc_animations/FTMasterHandAnim031") \
+    X(llFTBossAnimUnknown6FileID, 0x852u, "nitro:/reloc/reloc_animations/FTMasterHandAnim032") \
+    X(llFTBossAnimAppearFileID, 0x853u, "nitro:/reloc/reloc_animations/FTMasterHandAnim033")
+
+#define NDS_1P_BOSS_AOBJ32_ASSET_ROWS(X) \
+    X(llFTBossAnimLaunchFileID, 0x835u) \
+    X(llFTBossAnimFlyFileID, 0x836u) \
+    X(llFTBossAnimLandingFileID, 0x837u) \
+    X(llFTBossAnimDrillFileID, 0x843u) \
+    X(llFTBossAnimPunch3FileID, 0x84du) \
+    X(llFTBossAnimPunchEndFileID, 0x84eu) \
+    X(llFTBossAnimSlamFileID, 0x84fu) \
+    X(llFTBossAnimAppearFileID, 0x853u)
 
 #endif

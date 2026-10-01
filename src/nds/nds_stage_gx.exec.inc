@@ -1,4 +1,5 @@
-/* Phase 2: native GX templates for all nine VS stages.
+/* Phase 2: native GX templates for the nine VS stages and (P2-6) every
+ * 1P-only venue.
  * Included after the stage helpers. No N64 decoder or runtime GX recorder. */
 #include <nds/nds_stage_gx.h>
 
@@ -221,21 +222,46 @@ static sb32 ndsStageGxValidate(const NDSStageGxHeader *h, const u8 *body)
     return TRUE;
 }
 
+/* One template per native stage gkind; NULL where none is compiled (10 and 11
+ * have no native program). P2-6: the 1P campaign's venues -- the team stages,
+ * Metal, Polygon, Final Destination, the Race and both boards per fighter --
+ * joined the nine VS stages; a build without 1P content stages none of them,
+ * and a missing file declines to the uncompiled draw. */
+static const char *const sNdsStageGxPaths[] = {
+    "nitro:/stages/castle.gxp", "nitro:/stages/sector.gxp",
+    "nitro:/stages/jungle.gxp", "nitro:/stages/zebes.gxp",
+    "nitro:/stages/hyrule.gxp", "nitro:/stages/yoster.gxp",
+    "nitro:/stages/dreamland.gxp", "nitro:/stages/yamabuki.gxp",
+    "nitro:/stages/inishie.gxp", "nitro:/stages/pupupusmall.gxp",
+    NULL, NULL,
+    "nitro:/stages/yostersmall.gxp", "nitro:/stages/metal.gxp",
+    "nitro:/stages/zako.gxp", "nitro:/stages/bonus3.gxp",
+    "nitro:/stages/last.gxp",
+    "nitro:/stages/bonus1_mario.gxp", "nitro:/stages/bonus1_fox.gxp",
+    "nitro:/stages/bonus1_donkey.gxp", "nitro:/stages/bonus1_samus.gxp",
+    "nitro:/stages/bonus1_luigi.gxp", "nitro:/stages/bonus1_link.gxp",
+    "nitro:/stages/bonus1_yoshi.gxp", "nitro:/stages/bonus1_captain.gxp",
+    "nitro:/stages/bonus1_kirby.gxp", "nitro:/stages/bonus1_pikachu.gxp",
+    "nitro:/stages/bonus1_purin.gxp", "nitro:/stages/bonus1_ness.gxp",
+    "nitro:/stages/bonus2_mario.gxp", "nitro:/stages/bonus2_fox.gxp",
+    "nitro:/stages/bonus2_donkey.gxp", "nitro:/stages/bonus2_samus.gxp",
+    "nitro:/stages/bonus2_luigi.gxp", "nitro:/stages/bonus2_link.gxp",
+    "nitro:/stages/bonus2_yoshi.gxp", "nitro:/stages/bonus2_captain.gxp",
+    "nitro:/stages/bonus2_kirby.gxp", "nitro:/stages/bonus2_pikachu.gxp",
+    "nitro:/stages/bonus2_purin.gxp", "nitro:/stages/bonus2_ness.gxp"
+};
+#define NDS_STAGE_GX_PATH_COUNT \
+    (sizeof(sNdsStageGxPaths) / sizeof(sNdsStageGxPaths[0]))
+
 static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
 {
-    static const char *const paths[] = {
-        "nitro:/stages/castle.gxp", "nitro:/stages/sector.gxp",
-        "nitro:/stages/jungle.gxp", "nitro:/stages/zebes.gxp",
-        "nitro:/stages/hyrule.gxp", "nitro:/stages/yoster.gxp",
-        "nitro:/stages/dreamland.gxp", "nitro:/stages/yamabuki.gxp",
-        "nitro:/stages/inishie.gxp"
-    };
     NdsRelocAssetStream stream = { NULL };
     NDSStageGxHeader h;
     u8 *body;
     u32 reason = 1u;
     u32 gkind = sNdsNativeStagePacketActive->gkind;
-    if (gkind >= sizeof(paths) / sizeof(paths[0])) { return FALSE; }
+    if ((gkind >= NDS_STAGE_GX_PATH_COUNT) || (sNdsStageGxPaths[gkind] == NULL))
+    { return FALSE; }
     if (sNdsStageGxGeneration != gNdsTaskmanHeapGeneration)
     {
         sNdsStageGxGeneration = gNdsTaskmanHeapGeneration;
@@ -244,7 +270,7 @@ static sb32 __attribute__((noinline, cold, optimize("Os"))) ndsStageGxLoad(void)
     if (sNdsStageGxRuns != NULL) { return TRUE; }
     if (sNdsStageGxAttempted != FALSE) { return FALSE; }
     sNdsStageGxAttempted = TRUE;
-    if (!ndsRelocAssetStreamOpen(&stream, paths[gkind]) ||
+    if (!ndsRelocAssetStreamOpen(&stream, sNdsStageGxPaths[gkind]) ||
         !ndsRelocAssetStreamRead(&stream, 0u, &h, sizeof(h))) { goto failed; }
     reason = 2u;
     if (h.magic != 0x31505847u || h.version != 5u || h.gkind != gkind ||
@@ -291,7 +317,8 @@ failed:
 
 static sb32 ndsStageGxEligible(u32 segment)
 {
-    if (sNdsNativeStagePacketActive->gkind >= 9u ||
+    u32 gkind = sNdsNativeStagePacketActive->gkind;
+    if (gkind >= NDS_STAGE_GX_PATH_COUNT || sNdsStageGxPaths[gkind] == NULL ||
         segment >= NDS_NATIVE_STAGE_SEGMENT_COUNT) { return FALSE; }
     if (!ndsStageGxLoad()) { gNdsP2StageProgDeclines++; return FALSE; }
     if ((sNdsStageGxStaticWorld & ~sNdsNativeStageOwnerExecution.rigid_binding_mask) != 0u)

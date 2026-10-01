@@ -297,6 +297,48 @@ def build_one_p_demo_submotions(
     return rows
 
 
+def extend_one_p_rows_with_boss_motions(
+    one_p_rows: list[dict[str, object]],
+    results_rows: list[dict[str, object]],
+    boss: dict[str, object],
+) -> list[dict[str, object]]:
+    """Add Master Hand's FTMotionDesc animations (the boss manifest's
+    `motion_files`, ids recovered from the relocData names) to the 1P rows,
+    under the same one-symbol-one-file rule."""
+    rows = list(one_p_rows)
+    taken_symbols = {str(row["symbol"]) for row in results_rows + rows}
+    taken_ids = {int(row["asset"]["id"]) for row in results_rows + rows}
+    for entry in boss["motion_files"]:
+        symbol = str(entry["symbol"])
+        asset = entry.get("asset")
+        if asset is None:
+            raise ValueError(f"Boss motion {symbol} has no recovered O2R file")
+        file_id = int(asset["id"])
+        if symbol in taken_symbols:
+            continue
+        if file_id in taken_ids:
+            raise ValueError(
+                f"Boss motion {symbol} (0x{file_id:x}) is routed twice")
+        if ((MARIO_ANIM_FIRST <= file_id <= MARIO_ANIM_LAST) or
+                (FOX_ANIM_FIRST <= file_id <= FOX_ANIM_LAST)):
+            raise ValueError(
+                f"Boss motion 0x{file_id:x} lands inside the always-compiled "
+                f"Mario/Fox animation bank")
+        taken_symbols.add(symbol)
+        taken_ids.add(file_id)
+        rows.append({
+            "symbol": symbol,
+            "asset": {
+                "id": file_id,
+                "path": str(asset["path"]),
+                "bytes": int(asset["bytes"]),
+                "sha256": str(asset["sha256"]),
+            },
+        })
+    rows.sort(key=lambda row: int(row["asset"]["id"]))
+    return rows
+
+
 CORE_SLOT_NAMES = (
     "main",
     "mainmotion",
@@ -816,23 +858,47 @@ def motion_animjoint_symbols(ftdata_text: str, fighter: str) -> list[str]:
     block = find_initializer(ftdata_text, f"FTMotionDesc dFT{fighter}MotionDescs[]")
     result: list[str] = []
 
+    def flags_name_animjoint(flags: str) -> bool:
+        if re.search(r"\bFTANIM_FLAG_ANIMJOINT\b", flags) is not None:
+            return True
+        # Master Hand's last descriptor carries its flags as a number
+        # (0x40000008: XROTN_JOINT | ANIMJOINT).
+        literal = flags.strip()
+        return (re.fullmatch(r"0[xX][0-9A-Fa-f]+|[0-9]+", literal) is not None
+                and (int(literal, 0) & 0x8) != 0)
+
+    def admit(fields: list[str]) -> None:
+        symbol_match = re.fullmatch(r"&([A-Za-z0-9_]+FileID)", fields[0].strip())
+        if symbol_match is None or not flags_name_animjoint(fields[2]):
+            return
+        symbol = symbol_match.group(1)
+        if symbol not in result:
+            result.append(symbol)
+
     # Concrete descriptors are brace-enclosed triples.  The table also has a
     # few scalar zero/0x80000000 placeholder triples; those intentionally have
     # no file-id symbol and cannot contribute an Event32 asset.
-    for match in re.finditer(r"\{([^{}]*)\}", strip_c_comments(block), re.DOTALL):
+    stripped = strip_c_comments(block)
+    for match in re.finditer(r"\{([^{}]*)\}", stripped, re.DOTALL):
         fields = split_top_level_csv(match.group(1))
         if len(fields) != 3:
             raise ValueError(
                 f"{fighter}: malformed FTMotionDesc initializer: {match.group(0)}"
             )
-        symbol_match = re.fullmatch(r"&([A-Za-z0-9_]+FileID)", fields[0].strip())
-        if symbol_match is None:
-            continue
-        if re.search(r"\bFTANIM_FLAG_ANIMJOINT\b", fields[2]) is None:
-            continue
-        symbol = symbol_match.group(1)
-        if symbol not in result:
-            result.append(symbol)
+        admit(fields)
+    # Master Hand's table ends in one descriptor written as three bare values
+    # (`&llFTBossAnimAppearFileID, 0x00000970, 0x40000008`) rather than a
+    # braced triple, so the loop above never saw his Appear: read a bare
+    # `&symbol` and the two values after it as one descriptor too.
+    bare = [field.strip() for field in
+            split_top_level_csv(re.sub(r"\{[^{}]*\}", "", stripped))
+            if field.strip()]
+    for index, field in enumerate(bare):
+        if field.startswith("&"):
+            if index + 2 >= len(bare):
+                raise ValueError(
+                    f"{fighter}: bare FTMotionDesc {field} is not a triple")
+            admit(bare[index:index + 3])
     return result
 
 
@@ -1466,6 +1532,13 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         "llBossModelFileID": 0x158,
     }:
         raise ValueError(f"Boss core roots drifted from source: {boss_core_ids}")
+    # Master Hand's battle motions ride the 1P rows: his llFTBossAnim* symbols
+    # are stubs (absent from reloc_data_symbols.us.txt), so until they had a
+    # route every motion resolved nothing and the figatree heap kept whatever
+    # it held -- he fought frozen (owner 10-01). The recovered ids above are
+    # the source's, and these files are 1P-only like the demo poses.
+    one_p_demo_submotions = extend_one_p_rows_with_boss_motions(
+        one_p_demo_submotions, results_demo_submotions, boss)
 
     return {
         "schema": "smash64ds.p2-fighter-production-manifest.v2",
@@ -2164,6 +2237,20 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
                 suffix=suffix,
             )
         )
+    lines.append("")
+    # Master Hand's AnimJoint (AObjEvent32) motions, which ride the 1P rows
+    # above: the loader must not run the AObj16 header normalizer over them,
+    # and gcAddDObjAnimJoint must normalize their scripts (the generated
+    # fighters' `*_AOBJ32_ASSET_ROWS` contract).
+    boss_event32: list[tuple[str, int]] = []
+    for event32 in manifest["boss"]["event32_motion_files"]:
+        row = (str(event32["symbol"]), int(event32["asset"]["id"]))
+        if row not in boss_event32:
+            boss_event32.append(row)
+    lines.append("#define NDS_1P_BOSS_AOBJ32_ASSET_ROWS(X) \\")
+    for index, (symbol, file_id) in enumerate(boss_event32):
+        suffix = " \\" if index + 1 < len(boss_event32) else ""
+        lines.append(f"    X({symbol}, 0x{file_id:x}u){suffix}")
     lines.append("")
     if emitted_demo != len(demo_rows):
         raise ValueError(

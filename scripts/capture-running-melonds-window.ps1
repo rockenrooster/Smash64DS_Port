@@ -129,16 +129,20 @@ try {
     }
 
 # Match scripts/lib/melonds.ps1's canonical stacked-screen window profile.
-[void][Smash64DSRunningMelonDSCapture]::ShowWindow($handle, 9)
+# Without activating it (owner 10-01: runs took focus every shot):
+# SW_SHOWNOACTIVATE (4) restores a minimized window without focus,
+# SWP_NOACTIVATE|SWP_NOZORDER (0x14) sizes it in place, and
+# PrintWindow(PW_RENDERFULLCONTENT) below reads the HWND's own content even
+# when other windows cover it.
+[void][Smash64DSRunningMelonDSCapture]::ShowWindow($handle, 4)
 [void][Smash64DSRunningMelonDSCapture]::SetWindowPos(
-    $handle, [IntPtr](-1),
+    $handle, [IntPtr]::Zero,
     $script:MelonDSCanonicalWindowX,
     $script:MelonDSCanonicalWindowY,
     $script:MelonDSCanonicalWindowWidth,
     $script:MelonDSCanonicalWindowHeight,
-    0x40)
-[void][Smash64DSRunningMelonDSCapture]::SetForegroundWindow($handle)
-Start-Sleep -Milliseconds 250
+    0x14)
+Start-Sleep -Milliseconds 100
 
 $rect = New-Object Smash64DSRunningMelonDSCapture+Rect
 if (-not [Smash64DSRunningMelonDSCapture]::GetWindowRect(
@@ -190,12 +194,7 @@ try {
 } finally {
     try {
         if ($captureAcquired) {
-            try {
-                [void][Smash64DSRunningMelonDSCapture]::SetWindowPos(
-                    $handle, [IntPtr](-2), 0, 0, 0, 0, 0x43)
-            } finally {
-                $captureMutex.ReleaseMutex()
-            }
+            $captureMutex.ReleaseMutex()
         }
     } finally {
         $captureMutex.Dispose()

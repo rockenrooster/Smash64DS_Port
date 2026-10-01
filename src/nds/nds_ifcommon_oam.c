@@ -587,6 +587,8 @@ volatile u32 gNdsTask39FxObjVramRemaining;
 
 static void ndsTask39HitSparksDraw(void);
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
+static f32 ndsIFCommonBattleScreenX(f32 projected_x);
+static f32 ndsIFCommonBattleScreenY(f32 projected_y);
 static void ndsIFCommonResetPlayerTags(void);
 static void ndsIFCommonResetItemArrow(void);
 
@@ -2888,9 +2890,9 @@ static void ndsTask39HitSparksDraw(void)
                            gGMCameraMatrix, &pos,
                            &projected_x, &projected_y);
         center_x = ndsIFCommonRoundFloatHalfUp(
-            128.0F + (projected_x * 0.8F));
+            ndsIFCommonBattleScreenX(projected_x));
         center_y = ndsIFCommonRoundFloatHalfUp(
-            96.0F - (projected_y * 0.8F));
+            ndsIFCommonBattleScreenY(projected_y));
         if ((center_x < -16) || (center_x > 272) ||
             (center_y < -16) || (center_y > 208))
         {
@@ -2988,6 +2990,29 @@ static s32 ndsIFCommonRoundQ16HalfUp(s32 value)
 {
     return (value >= 0) ? ((value + 0x8000) >> 16) :
                           -(((-value) + 0x8000) >> 16);
+}
+
+/* A battle point the source projects (func_ovl2_800EB924: x, y about the
+ * viewport centre, in source pixels) on the DS screen. The battle's 3D fills
+ * the screen, so the camera's 300 x 220 viewport maps onto 256 x 192: x
+ * scales by 128/150 and y by 96/110, not the 2D layer's uniform 0.8, which is
+ * right only for screen-fixed HUD. Anchoring a fighter's tag, an item arrow
+ * or a hit spark at 0.8 pulled it toward the centre by up to ~8 px at the
+ * screen's edges (owner 10-01: tags "offset around edges of screen"). */
+static f32 ndsIFCommonBattleScreenX(f32 projected_x)
+{
+    f32 half = (f32)gGMCameraStruct.viewport_width * 0.5F;
+
+    return (half > 0.0F) ? (128.0F + (projected_x * (128.0F / half))) :
+                           (128.0F + (projected_x * 0.8F));
+}
+
+static f32 ndsIFCommonBattleScreenY(f32 projected_y)
+{
+    f32 half = (f32)gGMCameraStruct.viewport_height * 0.5F;
+
+    return (half > 0.0F) ? (96.0F - (projected_y * (96.0F / half))) :
+                           (96.0F - (projected_y * 0.8F));
 }
 
 static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
@@ -3654,8 +3679,6 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
     Vec3f pos;
     f32 projected_x;
     f32 projected_y;
-    s32 source_x;
-    s32 source_y;
     s32 screen_x;
     s32 screen_y;
     u32 tag;
@@ -3769,12 +3792,14 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
     {
         return ndsIFCommonPlayerTagRecognized();
     }
-    source_x = (s32)((gGMCameraStruct.viewport_center_x + projected_x) -
-                     (sobj->sprite.width * 0.5F));
-    source_y = (s32)((gGMCameraStruct.viewport_center_y - projected_y) -
-                     sobj->sprite.height);
-    screen_x = ndsIFCommonRoundFloatHalfUp((f32)source_x * 0.8F);
-    screen_y = ndsIFCommonRoundFloatHalfUp((f32)source_y * 0.8F);
+    /* The source's SObj position: the tag's bottom centre on the projected
+     * point. The OAM tag is the sprite's own size, so it is centred on the
+     * point's DS position rather than scaled with it. */
+    screen_x = ndsIFCommonRoundFloatHalfUp(
+        ndsIFCommonBattleScreenX(projected_x) -
+        ((f32)sobj->sprite.width * 0.5F));
+    screen_y = ndsIFCommonRoundFloatHalfUp(
+        ndsIFCommonBattleScreenY(projected_y) - (f32)sobj->sprite.height);
     if ((screen_x <= -32) || (screen_x >= 256) ||
         (screen_y <= -32) || (screen_y >= 192))
     {
@@ -3899,10 +3924,20 @@ static s32 ndsIFCommonEmitItemArrow(struct GObj *gobj)
     {
         return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackMatrixLimit);
     }
-    origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
-        sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
-    origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
-        sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    /* The source put the arrow's bottom centre on the item's projected point
+     * (pos = centre + projected - (width / 2, height)); that point takes the
+     * battle 3D's mapping (ndsIFCommonBattleScreenX/Y) and the 0.8-scaled
+     * arrow hangs from it. */
+    origin_x = ndsIFCommonRoundFloatHalfUp(
+        ndsIFCommonBattleScreenX(
+            (sobj->pos.x + ((f32)NDS_IFCOMMON_ITEM_WIDTH * 0.5F)) -
+            (f32)gGMCameraStruct.viewport_center_x) -
+        ((f32)NDS_IFCOMMON_ITEM_WIDTH * 0.4F));
+    origin_y = ndsIFCommonRoundFloatHalfUp(
+        ndsIFCommonBattleScreenY(
+            (f32)gGMCameraStruct.viewport_center_y -
+            (sobj->pos.y + (f32)NDS_IFCOMMON_ITEM_HEIGHT)) -
+        ((f32)NDS_IFCOMMON_ITEM_HEIGHT * 0.8F));
     center_x = origin_x + ndsIFCommonRoundQ16HalfUp(
         (s32)(NDS_IFCOMMON_ITEM_CELL_WIDTH / 2u) * (s32)scale_q16);
     center_y = origin_y + ndsIFCommonRoundQ16HalfUp(

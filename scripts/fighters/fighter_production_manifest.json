@@ -1159,6 +1159,276 @@
         "bytes": 784,
         "sha256": "1612cba51f1d8d532afa73351a04de885202a3131868cf71348927e4b2badb67"
       }
+    },
+    {
+      "symbol": "llFTBossAnimDefaultFileID",
+      "asset": {
+        "id": 2098,
+        "path": "reloc_animations/FTMasterHandAnim000",
+        "bytes": 1440,
+        "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimSlapFileID",
+      "asset": {
+        "id": 2099,
+        "path": "reloc_animations/FTMasterHandAnim001",
+        "bytes": 2064,
+        "sha256": "b98f01d7bede12fe194ca52240b33f73299b00bdb494394dd637ad71e870e7f6"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimShooFileID",
+      "asset": {
+        "id": 2100,
+        "path": "reloc_animations/FTMasterHandAnim002",
+        "bytes": 2272,
+        "sha256": "ee7282f999c2b42db773169aa096b75e8374ef28e275153d10c53b9a6f545917"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimLaunchFileID",
+      "asset": {
+        "id": 2101,
+        "path": "reloc_animations/FTMasterHandAnim003",
+        "bytes": 3360,
+        "sha256": "38297c4b861f6d4bdf2f994dc3fc4eb56598c49f53f53069a542a20f6be30117"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimFlyFileID",
+      "asset": {
+        "id": 2102,
+        "path": "reloc_animations/FTMasterHandAnim004",
+        "bytes": 1856,
+        "sha256": "c41870079e5fa85e046c541cc4407f6486bed8dc9e464bc136210d8ed85421f9"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimLandingFileID",
+      "asset": {
+        "id": 2103,
+        "path": "reloc_animations/FTMasterHandAnim005",
+        "bytes": 5760,
+        "sha256": "ff4a4b00e72876e9bb67046267d9e8b2d5532b6eea6a77416f7da18f6e35faca"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimWalkStartFileID",
+      "asset": {
+        "id": 2104,
+        "path": "reloc_animations/FTMasterHandAnim006",
+        "bytes": 2944,
+        "sha256": "e10f347fb1388dfa367df645ec7e3fe11433dbb167ab738dc5b1e1a58b5d29e8"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimWalkFileID",
+      "asset": {
+        "id": 2105,
+        "path": "reloc_animations/FTMasterHandAnim007",
+        "bytes": 1392,
+        "sha256": "4ea979a7667f26f154202674d5a429379aa0c709ad1d87e967f8dac7e37f5fa3"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimUnknown1FileID",
+      "asset": {
+        "id": 2106,
+        "path": "reloc_animations/FTMasterHandAnim008",
+        "bytes": 2176,
+        "sha256": "f2d566854d72b4d150f5e79383feae2bf3c6ce8dd15828efde9860558e41e7b7"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimFlickFileID",
+      "asset": {
+        "id": 2107,
+        "path": "reloc_animations/FTMasterHandAnim009",
+        "bytes": 2576,
+        "sha256": "4c2afe4f3bbabc953c4852b37b0af109fae8446117534234a49bbc500d01ecc2"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimChargeStart1FileID",
+      "asset": {
+        "id": 2108,
+        "path": "reloc_animations/FTMasterHandAnim010",
+        "bytes": 1536,
+        "sha256": "d24c36d8b8ae4726ca4c265f436e3a30e0e9ee793301df48b9019838f205259b"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimChargeStart2FileID",
+      "asset": {
+        "id": 2109,
+        "path": "reloc_animations/FTMasterHandAnim011",
+        "bytes": 896,
+        "sha256": "70faaa21b2a93102b339d95e5197f0a6d2a8b7019dc16b357bce6c338956c100"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimLanding2FileID",
+      "asset": {
+        "id": 2110,
+        "path": "reloc_animations/FTMasterHandAnim012",
+        "bytes": 3184,
+        "sha256": "bbce25741821e185ce33d4b4d872a80824dc7458e17dedc43264bb8e594be5d6"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPunch1FileID",
+      "asset": {
+        "id": 2111,
+        "path": "reloc_animations/FTMasterHandAnim013",
+        "bytes": 576,
+        "sha256": "5285d9d2652d1c968bc05fc1605d92914ff298ce89263e80651b3dbfd8e744c9"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPointStartFileID",
+      "asset": {
+        "id": 2112,
+        "path": "reloc_animations/FTMasterHandAnim014",
+        "bytes": 1728,
+        "sha256": "55b69184d22577d4253a8af2cb4052021d4b873d9711a38f15830be092e4af1f"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPokeFileID",
+      "asset": {
+        "id": 2113,
+        "path": "reloc_animations/FTMasterHandAnim015",
+        "bytes": 1872,
+        "sha256": "079839e3810c726c074ccfdd3edbd26bb04a7ad55215b5e46b67a0ceca642f18"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPointFileID",
+      "asset": {
+        "id": 2114,
+        "path": "reloc_animations/FTMasterHandAnim016",
+        "bytes": 576,
+        "sha256": "70a43bcf590d8a63654dc142b916a8b4dc73bb2a3d34901461f6fda268df0ad5"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimDrillFileID",
+      "asset": {
+        "id": 2115,
+        "path": "reloc_animations/FTMasterHandAnim017",
+        "bytes": 6576,
+        "sha256": "ab727aca0967ae4111692dce3d4bc8beca8206aabfbe66ecbcaef8e1262dafe8"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPunch2FileID",
+      "asset": {
+        "id": 2116,
+        "path": "reloc_animations/FTMasterHandAnim018",
+        "bytes": 3376,
+        "sha256": "3a289fe8dc17cfa65d21d6d0b932be723688cc258f3c3718140695f963378665"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimGunDrawFileID",
+      "asset": {
+        "id": 2117,
+        "path": "reloc_animations/FTMasterHandAnim019",
+        "bytes": 1232,
+        "sha256": "70cebe22651ef5194aa729bca06da92288ad750d4ab85638812ea98b1d567d89"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimGunShootFileID",
+      "asset": {
+        "id": 2118,
+        "path": "reloc_animations/FTMasterHandAnim020",
+        "bytes": 1824,
+        "sha256": "d5dca3dd90554d78ec0a4b0605020c063e3a94bdba3ff8c66999feec7e8ddb26"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimGunAimFileID",
+      "asset": {
+        "id": 2119,
+        "path": "reloc_animations/FTMasterHandAnim021",
+        "bytes": 624,
+        "sha256": "b7e6a4f04e9187760332d17467093960736289391b69dc0dc983812e31dd72e8"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimSlamStartFileID",
+      "asset": {
+        "id": 2124,
+        "path": "reloc_animations/FTMasterHandAnim026",
+        "bytes": 1392,
+        "sha256": "f1247bb073da8cdaa60e31cd90d02ad4fc5e6f04c5891ca83a974c3f09582893"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPunch3FileID",
+      "asset": {
+        "id": 2125,
+        "path": "reloc_animations/FTMasterHandAnim027",
+        "bytes": 1424,
+        "sha256": "2dc32b52b6ff2c1f5e85be831e5f50e06a589bbd202b5daf4e9015de9622ee04"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPunchEndFileID",
+      "asset": {
+        "id": 2126,
+        "path": "reloc_animations/FTMasterHandAnim028",
+        "bytes": 1888,
+        "sha256": "fbae3cf6a2b6d944b37aa5c54ae1baf29527d774409267eaf50af0fd6fe45335"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimSlamFileID",
+      "asset": {
+        "id": 2127,
+        "path": "reloc_animations/FTMasterHandAnim029",
+        "bytes": 3952,
+        "sha256": "a9bd76f09711dda8843f569b4c529adbf665595294013c0cb943732aaf3558fc"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimDyingStartFileID",
+      "asset": {
+        "id": 2128,
+        "path": "reloc_animations/FTMasterHandAnim030",
+        "bytes": 1184,
+        "sha256": "7062b71f4f2dc1d27153a9a085434c68329f036e7d86b5f043cfd5a7a970b03b"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimDyingFileID",
+      "asset": {
+        "id": 2129,
+        "path": "reloc_animations/FTMasterHandAnim031",
+        "bytes": 3040,
+        "sha256": "eb72616c3f0345e9fe5a519952fc001f0b01e5470ce3267e6592cc445e2a71ba"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimUnknown6FileID",
+      "asset": {
+        "id": 2130,
+        "path": "reloc_animations/FTMasterHandAnim032",
+        "bytes": 1184,
+        "sha256": "fcdc2276052f99f5b305f31a697aff02cfd422af737e301a0041d2edcd54cf86"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimAppearFileID",
+      "asset": {
+        "id": 2131,
+        "path": "reloc_animations/FTMasterHandAnim033",
+        "bytes": 13952,
+        "sha256": "51009a21b9f37aa03e75f2650fd0dcc2dd73e4cda84856aaba4cfab9e75e7cc1"
+      }
     }
   ],
   "fighters": [
@@ -81781,7 +82051,7 @@
         }
       }
     ],
-    "event32_motion_file_count": 7,
+    "event32_motion_file_count": 8,
     "event32_motion_files": [
       {
         "symbol": "llFTBossAnimLaunchFileID",
@@ -81865,6 +82135,18 @@
           "data_bytes": 3872,
           "alloc_bytes": 3872,
           "sha256": "a9bd76f09711dda8843f569b4c529adbf665595294013c0cb943732aaf3558fc"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimAppearFileID",
+        "asset": {
+          "id": 2131,
+          "id_hex": "0x853",
+          "path": "reloc_animations/FTMasterHandAnim033",
+          "bytes": 13952,
+          "data_bytes": 13872,
+          "alloc_bytes": 13872,
+          "sha256": "51009a21b9f37aa03e75f2650fd0dcc2dd73e4cda84856aaba4cfab9e75e7cc1"
         }
       }
     ],

@@ -7330,6 +7330,13 @@ static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 #if NDS_P2_KIRBY
     NDS_P2_KIRBY_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
 #endif
+#if NDS_P2_1P_GAME
+    /* Master Hand's AnimJoint motions (his Appear among them), routed by the
+     * 1P rows: treated as AObj16 they skipped the script normalizer, every
+     * joint parsed one raw word and stopped, and his Appear never ended --
+     * he stayed a ghost nothing could damage (owner 10-01). */
+    NDS_1P_BOSS_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
 #undef NDS_P2_FIGHTER_AOBJ32_TEST
     return FALSE;
 }

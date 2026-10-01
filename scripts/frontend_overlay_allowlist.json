@@ -911,6 +911,16 @@
       "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
       "target_symbol": "ndsCampaignWalkBoardOnePlatform",
       "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head, loaded for the whole 1P campaign; a battle loans only the tail past __nds_frontend_1p_end."
+    },
+    {
+      "source_symbol": "ftCommonAppearProcUpdate",
+      "target_symbol": "ftBossWaitSetStatus",
+      "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage): ftcommonentry.c sends him from the entry to his own Wait. VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
+    },
+    {
+      "source_symbol": "ftCommonEntryNullProcUpdate",
+      "target_symbol": "ftBossWaitSetStatus",
+      "reason": "The source caller runs this target only for fighter kind Boss (Master Hand, the 1P Game final stage): ftcommonentry.c sends him from the entry to his own Wait. VS CSS cannot select Boss, so no VS fighter takes this branch; the 1P Game retains the frontend for the whole nested battle."
     }
   ]
 }

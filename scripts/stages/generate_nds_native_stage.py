@@ -169,6 +169,12 @@ RUN_FLAG_PROJECTED_CROSS_MATRIX = 1 << 0
 # sits on that ramp, and the run's polygon alpha is the triangle's peak. Mirror:
 # NDS_NATIVE_STAGE_RUN_FLAG_ALPHA_RAMP, src/nds/nds_renderer_native_owners.c.
 RUN_FLAG_VERTEX_ALPHA_RAMP = 1 << 1
+# A run on a Sec layer's display head 1 that draws under the render mode the
+# head entered with (head_entry_othermode_l): translucent, so an I tile's texel
+# alpha is its intensity. The runtime requests intensity coverage for its
+# texture (sNdsRendererHardwareIntensityCoverage). Mirror:
+# NDS_NATIVE_STAGE_RUN_FLAG_HEAD_XLU, src/nds/nds_renderer_native_owners.c.
+RUN_FLAG_HEAD_XLU = 1 << 2
 ALPHA_RAMP_TEXELS = 32
 # S10.5 texel units, as every packet ST is: the mid column of the 8-wide ramp,
 # and the T of a corner that carries the triangle's peak alpha.
@@ -201,6 +207,22 @@ OTHERMODE_Z_CMP = 1 << 4
 # sides: Hyrule's rear roof/wall faces over the front ones (owner report).
 GEOMETRY_CULL_BACK = 1 << 10
 DEFAULT_OTHERMODE_H = (1 << 19) | (2 << 12)
+# The render mode a Sec layer's display head 1 enters with (gr/grdisplay.c:66-
+# 145): layer 1 (link 6) sets G_RM_AA_ZB_XLU_SURF, layers 0, 2 and 3 set
+# G_RM_AA_XLU_SURF. A head-1 list that sets no mode of its own draws
+# translucent under it; folding head 1 into the zero word drew Race to the
+# Finish's lights and Sector Z's glows opaque (owner 10-01). Head 0 enters
+# with an opaque surface mode, which the runtime treats exactly as zero, so
+# its word stays zero and every head-0 policy is unchanged. Mirror:
+# ndsNativeStageHeadEntryOtherModeL, src/nds/nds_renderer_native_owners.c.
+OTHERMODE_L_AA_XLU_SURF = 0x005041C8
+OTHERMODE_L_AA_ZB_XLU_SURF = 0x005049D8
+
+
+def head_entry_othermode_l(link: int, head: int) -> int:
+    if head != 1:
+        return 0
+    return OTHERMODE_L_AA_ZB_XLU_SURF if link == 6 else OTHERMODE_L_AA_XLU_SURF
 
 TEXTURE_INVALIDATING_OPS = frozenset(
     (
@@ -554,7 +576,7 @@ SOURCE_CLOSURE_POLICIES = (
                 frame.dobjs frame.rigid_binding_mask
                 frame.topology_generation frame.topology_stamp
                 segment.binding_count segment.first_binding
-                segment.initial_geometry
+                segment.initial_geometry segment.link
                 """,
             ),
             **_classified(
@@ -2821,6 +2843,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             if head not in states_by_head:
                 states_by_head[head] = SourceState(
                     desc.layer_entry_geometry | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
+                    othermode_l=head_entry_othermode_l(owner.link, head),
                     state_hash=fnv1a_u32((0x53454733, owner.owner, owner.link)),
                     texture_hash=fnv1a_u32((0x54455833, owner.owner, owner.link)))
                 slots_by_head[head] = {}
@@ -3296,6 +3319,12 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     int(current_run["flags"])
                                     | RUN_FLAG_PROJECTED_CROSS_MATRIX
                                 )
+                            if (head == 1 and state.othermode_l
+                                    == head_entry_othermode_l(owner.link, head)):
+                                current_run["flags"] = (
+                                    int(current_run["flags"])
+                                    | RUN_FLAG_HEAD_XLU
+                                )
                             corners.extend(dense_indices)
                             current_run["triangles"] = int(current_run["triangles"]) + 1
                             triangle_count += 1
@@ -3554,6 +3583,7 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
 
             unknown_flags = run.flags & ~(
                 RUN_FLAG_PROJECTED_CROSS_MATRIX | RUN_FLAG_VERTEX_ALPHA_RAMP
+                | RUN_FLAG_HEAD_XLU
             )
             if unknown_flags:
                 raise falsify(
