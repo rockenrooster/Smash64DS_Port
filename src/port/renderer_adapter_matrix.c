@@ -7861,6 +7861,7 @@ ndsRendererAdapterPrepareOwnerMatricesPerBinding(
  * many. */
 static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     u32 slot,
+    u32 use_low_detail,
     DObj *root,
     DObj *const *bindings,
     u32 binding_count,
@@ -8069,8 +8070,13 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
          * modelview it semantically consumes. This is representation-only: the
          * hardware still loads gx_seed/gx_locals below, and the CPU mirror is
          * never submitted as the fighter matrix. If the mirror cannot be built,
-         * decline GX and fall through to the already-correct CPU path. */
-        if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
+         * decline GX and fall through to the already-correct CPU path.
+         * P2-6: every owner whose tables set G_TEXTURE_GEN, not only Link --
+         * the polygons and Metal Mario are environment-mapped whole, and
+         * without the mirror each texgen run rejected the owner (the fighter
+         * drew nothing). */
+        if (ndsRendererNativeFighterOwnerUsesTexgen(slot, use_low_detail) !=
+            FALSE)
         {
             if (ndsRendererAdapterComposeOwnerWorldsFlat(
                     slot, bindings, binding_count,

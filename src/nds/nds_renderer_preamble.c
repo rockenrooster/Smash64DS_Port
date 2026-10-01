@@ -3778,6 +3778,10 @@ ndsFighterPacketRecordPrepare(
             group->first_site = packet->texgen_site_count;
             group->site_count = 0u;
             group->root = (u8)rec->current_root;
+            /* reserved[0]: G_TEXTURE_GEN_LINEAR (use_texgen 2). */
+            group->reserved[0] = (u8)((use_texgen == 2u) ? 1u : 0u);
+            group->reserved[1] = 0u;
+            group->reserved[2] = 0u;
             rec->texgen_group = packet->texgen_group_count;
             packet->texgen_group_count++;
         }

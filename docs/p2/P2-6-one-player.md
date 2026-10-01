@@ -15,17 +15,17 @@ Reuse `battleship_sc1pmanager.c`, `battleship_sc1pgame_runtime.c`, the imported 
 The walk ROM (`TARGET=smash64ds NDS_P2_MENU_WALK=1`, route 1: the human a
 level-9 CPU, enemies level 1, enemies below stage 12 KO'd every 45 frames)
 plays the whole ladder: stages 0-13, every bonus, Master Hand, Ending, Staffroll
-and Congra (walks `cwalk29`..`cwalk32`, `artifacts/visibility/2026-10-01_1p/`).
+and Congra (walks `cwalk29`..`cwalk37`, `artifacts/visibility/2026-10-01_1p/`).
 
 | Stage / scene | Native failures | State |
 |---|---|---|
 | 0-5, 9 | 0-2 fighter | clear |
-| 6 Giant DK, 8 Kirby Team | 7 / 4 fighter | Link AppearR (status 0xE0) owner rejects |
+| 6 Giant DK, 8 Kirby Team | 7 / 4 fighter | Link AppearR (status 0xE0) owner rejects; degenerate-texgen fix landed, re-walk pending |
 | 7 Board the Platforms | 0 (was 22,911) | platforms skip the topology, draw through baked roots |
-| 10 Meta Crystal | 1,469 stage | still declines (reason 7 materials) |
-| 11 Race | 162 fighter (stage 5,307 -> 0) | NMario RebirthWait rejects; barrel bomb baked |
-| 12 Polygon Team | 760 fighter | clears; low-water 8,104 B (floor 25,600); preview halt 20 after a long run |
-| 13 Master Hand | 25,300 fighter | defeated, but not drawn |
+| 10 Meta Crystal | 0 (stage 1,469, fighter 145) | material descriptor 0x1E18; Metal Mario texgen mirror |
+| 11 Race | 0 (stage 5,307, fighter 169) | polygons drawn; barrel bomb's DL-link-1 part baked |
+| 12 Polygon Team | 0 (was 879) | polygons drawn (texgen mirror + G_TEXTURE_GEN_LINEAR); low-water 5,248 B (floor 25,600) |
+| 13 Master Hand | 0 (was 25,300) | drawn: commonparts flags restored, root 0xfe0's unlit run tagged |
 | Ending 48 / Staffroll 56 | 659 / 46,725 sprite | blank screens |
 | Congra 55 | 0 | correct |
 

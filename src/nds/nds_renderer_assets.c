@@ -1556,6 +1556,17 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLinkClapsLowOwner, &sNdsNativeLinkFighterLowTables,
     sNdsNativeLinkClapsRootsLow, sNdsNativeLinkClapsCrossPaletteSlotsLow,
     sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+/* Neutral-B with an item in hand: SpecialN's boomerang on Claps's
+ * shield-on-back tree. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkSpecialNItemHighOwner, &sNdsNativeLinkFighterHighTables,
+    sNdsNativeLinkSpecialNItemRoots, sNdsNativeLinkSpecialNItemCrossPaletteSlots,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkSpecialNItemLowOwner, &sNdsNativeLinkFighterLowTables,
+    sNdsNativeLinkSpecialNItemRootsLow,
+    sNdsNativeLinkSpecialNItemCrossPaletteSlotsLow,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
 #endif
 #endif
 
@@ -4289,18 +4300,27 @@ ndsRendererNativeFighterTablesForResolvedRoot(
     }
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
-        (owner == &sNdsNativeLinkSpecialNLowOwner))
+        (owner == &sNdsNativeLinkSpecialNLowOwner) ||
+        (owner == &sNdsNativeLinkSpecialNItemHighOwner) ||
+        (owner == &sNdsNativeLinkSpecialNItemLowOwner))
     {
+        const sb32 item = ((owner == &sNdsNativeLinkSpecialNItemHighOwner) ||
+                           (owner == &sNdsNativeLinkSpecialNItemLowOwner)) ?
+            TRUE : FALSE;
+        const u8 *source_owners = (item != FALSE) ?
+            sNdsNativeLinkSpecialNItemSourceOwners :
+            sNdsNativeLinkSpecialNSourceOwners;
         u32 source_owner;
 
         if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))
         {
             return NULL;
         }
-        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];
+        source_owner = source_owners[binding];
         if (source_owner == 2u)
         {
-            return (owner == &sNdsNativeLinkSpecialNLowOwner) ?
+            return ((owner == &sNdsNativeLinkSpecialNLowOwner) ||
+                    (owner == &sNdsNativeLinkSpecialNItemLowOwner)) ?
                 &sNdsNativeLinkBoomerangFighterLowTables :
                 &sNdsNativeLinkBoomerangFighterHighTables;
         }
@@ -4404,8 +4424,15 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
     }
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
-        (owner == &sNdsNativeLinkSpecialNLowOwner))
+        (owner == &sNdsNativeLinkSpecialNLowOwner) ||
+        (owner == &sNdsNativeLinkSpecialNItemHighOwner) ||
+        (owner == &sNdsNativeLinkSpecialNItemLowOwner))
     {
+        const u8 *source_owners =
+            ((owner == &sNdsNativeLinkSpecialNItemHighOwner) ||
+             (owner == &sNdsNativeLinkSpecialNItemLowOwner)) ?
+            sNdsNativeLinkSpecialNItemSourceOwners :
+            sNdsNativeLinkSpecialNSourceOwners;
         u32 source_owner;
 
         if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))
@@ -4413,7 +4440,7 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
             *count = 0u;
             return NULL;
         }
-        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];
+        source_owner = source_owners[binding];
         if (source_owner == 2u)
         {
             *count = NDS_FTR_COUNT(sNdsNativeLinkBoomerangRootLightPreambles);
@@ -5554,6 +5581,12 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             return (use_low_detail != 0u) ?
                 &sNdsNativeLinkClapsLowOwner : &sNdsNativeLinkClapsHighOwner;
         }
+        if (program == 5u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeLinkSpecialNItemLowOwner :
+                &sNdsNativeLinkSpecialNItemHighOwner;
+        }
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -5655,6 +5688,52 @@ u32 ndsRendererNativeFighterRootProgram(u32 slot)
         (u32)sNdsNativeFighterRootPrograms[slot] : 0u;
 }
 
+/* Source G_TEXTURE_GEN (Fast3D's LookAt texgen) consumes the finished current
+ * modelview, which a GX-compose owner otherwise leaves only on the geometry
+ * engine. Link's shield was the first such run; every polygon body and Metal
+ * Mario are environment-mapped whole, and without the CPU mirror each of their
+ * texgen runs rejected the owner -- the fighter drew nothing. Whether an owner
+ * needs the mirror is a property of its generated state deltas, so it is
+ * answered once per bound delta table, not per frame. */
+u32 ndsRendererNativeFighterOwnerUsesTexgen(u32 slot, u32 use_low_detail)
+{
+    static const NDSNativeStateDelta *sDeltas[NDS_NATIVE_FIGHTER_OWNER_COUNT][2];
+    static u8 sTexgen[NDS_NATIVE_FIGHTER_OWNER_COUNT][2];
+    const NDSNativeFighterOwnerRuntime *owner;
+    const NDSNativeFighterRuntimeTables *tables;
+    u32 detail = (use_low_detail != 0u) ? 1u : 0u;
+    u32 texgen = FALSE;
+    u32 i;
+
+    if (slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT)
+    {
+        return FALSE;
+    }
+    owner = ndsRendererNativeFighterOwnerForDetail(slot, use_low_detail);
+    tables = (owner != NULL) ? owner->tables : NULL;
+    if ((tables == NULL) || (tables->state_deltas == NULL))
+    {
+        return FALSE;
+    }
+    if (sDeltas[slot][detail] == tables->state_deltas)
+    {
+        return sTexgen[slot][detail];
+    }
+    for (i = 0u; i < tables->state_delta_count; i++)
+    {
+        if ((tables->state_deltas[i].effect == NDS_NATIVE_STATE_GEOMETRY) &&
+            ((tables->state_deltas[i].w1 & NDS_RENDERER_GEOM_TEXTURE_GEN) !=
+             0u))
+        {
+            texgen = TRUE;
+            break;
+        }
+    }
+    sDeltas[slot][detail] = tables->state_deltas;
+    sTexgen[slot][detail] = (u8)texgen;
+    return texgen;
+}
+
 void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
 {
     if (slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT)
@@ -5678,7 +5757,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
-    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) && (program <= 4u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) && (program <= 5u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5766,8 +5845,8 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
-        /* canonical + Entry + Catch + SpecialN + Claps. */
-        program_count = 5u;
+        /* canonical + Entry + Catch + SpecialN + Claps + SpecialNItem. */
+        program_count = 6u;
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)

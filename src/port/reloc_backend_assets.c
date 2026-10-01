@@ -102,6 +102,8 @@
 #define NDS_RELOC_ASSET_BOSS_MODEL 0x158u /* reloc_fighters_main/BossModel, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_BOSS_MAIN_MOTION 0xf9u /* reloc_fighters_main/BossMainMotion, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_BOSS_MAIN 0xfau /* reloc_fighters_main/BossMain, admit_fighter.py --fighter boss */
+/* 250_BossMain.c dBossMain_attr: right after the 12-byte sprites at 0xdc. */
+#define NDS_RELOC_SYMBOL_BOSS_MAIN_ATTRIBUTES 0xe8u
 /* The polygons' shared texture bank (302, o2r reloc_extern_data/MiscData302)
  * every polygon model names, and MasterHandIcon (345), which every polygon
  * main and Master Hand's main name: extern dependencies only. */
@@ -8644,6 +8646,23 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 334u);
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (asset_id == NDS_RELOC_ASSET_BOSS_MAIN)
+    {
+        /* 250_BossMain.c:107-114: no voice anywhere, item scales 100. */
+        return
+            (attr->dead_fgm_ids[0] == nSYAudioFGMVoiceEnd) &&
+            (attr->dead_fgm_ids[1] == nSYAudioFGMVoiceEnd) &&
+            (attr->deadup_sfx == nSYAudioFGMVoiceEnd) &&
+            (attr->damage_sfx == nSYAudioFGMVoiceEnd) &&
+            (attr->smash_sfx[0] == nSYAudioFGMVoiceEnd) &&
+            (attr->smash_sfx[1] == nSYAudioFGMVoiceEnd) &&
+            (attr->smash_sfx[2] == nSYAudioFGMVoiceEnd) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == nSYAudioFGMVoiceEnd);
+    }
+#endif
 #if NDS_P2_MMARIO
     if (asset_id == NDS_RELOC_ASSET_MMARIO_MAIN)
     {
@@ -9016,6 +9035,17 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     else if (loaded->asset_id == NDS_RELOC_ASSET_MMARIO_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_MMARIO_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_1P_GAME
+    /* Master Hand. Without this the commonparts flags kept the u32 swap's
+     * lane: 0 instead of 250_BossMain.c's 0x01, so the pre/post display-list
+     * pairs (dBossModel_JointTree's 23 pair bases) were drawn as plain lists
+     * and the native owner, which welds them, saw 23 roots for its 18 --
+     * Master Hand was never drawn. */
+    else if (loaded->asset_id == NDS_RELOC_ASSET_BOSS_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_BOSS_MAIN_ATTRIBUTES;
     }
 #endif
 #if NDS_P2_NMARIO

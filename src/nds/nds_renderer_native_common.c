@@ -9829,7 +9829,15 @@ static s32 ndsRendererNativePrepareTexgenDirectionQ15(
         (u64)(transformed_z * transformed_z);
     if (length_squared == 0u)
     {
-        return FALSE;
+        /* A joint scaled to zero (Link's 1P entry) leaves the LookAt no
+         * direction in its space. Its vertices collapse onto one point, so the
+         * run draws nothing whatever its texcoords; the RSP normalises the zero
+         * vector to zero instead of failing the list, and so does this. It
+         * used to reject the whole owner for those frames. */
+        out->x = 0;
+        out->y = 0;
+        out->z = 0;
+        return TRUE;
     }
     length = ndsR2HwMathSqrt64(length_squared);
     if ((length == 0u) || (length > (u32)INT_MAX))
@@ -9842,12 +9850,53 @@ static s32 ndsRendererNativePrepareTexgenDirectionQ15(
     return TRUE;
 }
 
+/* G_TEXTURE_GEN_LINEAR maps the angle rather than its cosine: F3DEX2 computes
+ * 0.5 + asin(d)/pi, i.e. acos(-d)/pi, over the same [0, 1] range the spherical
+ * (d + 1)/2 covers. Q16 samples at d = i/128 - 1, interpolated linearly. */
+static const u16 sNdsNativeTexgenLinearAcos[257] =
+{
+        0u,  2609u,  3692u,  4525u,  5229u,  5850u,  6412u,  6931u,
+     7414u,  7869u,  8300u,  8711u,  9105u,  9483u,  9848u, 10200u,
+    10542u, 10874u, 11197u, 11512u, 11819u, 12119u, 12413u, 12701u,
+    12983u, 13260u, 13532u, 13799u, 14063u, 14322u, 14577u, 14828u,
+    15077u, 15321u, 15563u, 15802u, 16037u, 16270u, 16501u, 16729u,
+    16954u, 17178u, 17399u, 17618u, 17835u, 18050u, 18263u, 18474u,
+    18684u, 18892u, 19098u, 19303u, 19506u, 19708u, 19909u, 20108u,
+    20305u, 20502u, 20697u, 20891u, 21084u, 21276u, 21467u, 21656u,
+    21845u, 22033u, 22219u, 22405u, 22590u, 22774u, 22958u, 23140u,
+    23322u, 23502u, 23683u, 23862u, 24041u, 24219u, 24396u, 24573u,
+    24749u, 24924u, 25099u, 25274u, 25447u, 25621u, 25793u, 25966u,
+    26138u, 26309u, 26480u, 26650u, 26820u, 26990u, 27159u, 27328u,
+    27496u, 27665u, 27832u, 28000u, 28167u, 28334u, 28501u, 28667u,
+    28833u, 28999u, 29164u, 29330u, 29495u, 29660u, 29824u, 29989u,
+    30153u, 30317u, 30481u, 30645u, 30809u, 30973u, 31136u, 31300u,
+    31463u, 31626u, 31789u, 31952u, 32116u, 32279u, 32442u, 32605u,
+    32768u, 32930u, 33093u, 33256u, 33419u, 33583u, 33746u, 33909u,
+    34072u, 34235u, 34399u, 34562u, 34726u, 34890u, 35054u, 35218u,
+    35382u, 35546u, 35711u, 35875u, 36040u, 36205u, 36371u, 36536u,
+    36702u, 36868u, 37034u, 37201u, 37368u, 37535u, 37703u, 37870u,
+    38039u, 38207u, 38376u, 38545u, 38715u, 38885u, 39055u, 39226u,
+    39397u, 39569u, 39742u, 39914u, 40088u, 40261u, 40436u, 40611u,
+    40786u, 40962u, 41139u, 41316u, 41494u, 41673u, 41852u, 42033u,
+    42213u, 42395u, 42577u, 42761u, 42945u, 43130u, 43316u, 43502u,
+    43690u, 43879u, 44068u, 44259u, 44451u, 44644u, 44838u, 45033u,
+    45230u, 45427u, 45626u, 45827u, 46029u, 46232u, 46437u, 46643u,
+    46851u, 47061u, 47272u, 47485u, 47700u, 47917u, 48136u, 48357u,
+    48581u, 48806u, 49034u, 49265u, 49498u, 49733u, 49972u, 50214u,
+    50458u, 50707u, 50958u, 51213u, 51472u, 51736u, 52003u, 52275u,
+    52552u, 52834u, 53122u, 53416u, 53716u, 54023u, 54338u, 54661u,
+    54993u, 55335u, 55687u, 56052u, 56430u, 56824u, 57235u, 57666u,
+    58121u, 58604u, 59123u, 59685u, 60306u, 61010u, 61843u, 62926u,
+    65535u,
+};
+
 static s32 ndsRendererNativeTexgenCoord(
     s32 nx,
     s32 ny,
     s32 nz,
     const NDSNativeTexgenDirectionQ15 *direction,
-    u32 texture_scale)
+    u32 texture_scale,
+    u32 linear)
 {
     const s64 unit = (s64)127 * 32767;
     s64 dot =
@@ -9862,6 +9911,29 @@ static s32 ndsRendererNativeTexgenCoord(
     else if (dot < -unit)
     {
         dot = -unit;
+    }
+    if (linear != 0u)
+    {
+        /* Q8.8 table position of d in [-1, 1]; the result is the spherical
+         * expression below with (d + 1)/2 replaced by acos(-d)/pi. */
+        u32 position = (u32)ndsR2HwMathDiv64(
+            (dot + unit) * 65536, (s32)(2 * unit));
+        u32 index = position >> 8;
+        u32 low;
+        u32 high;
+        u32 angle;
+
+        if (index >= 256u)
+        {
+            angle = sNdsNativeTexgenLinearAcos[256];
+        }
+        else
+        {
+            low = sNdsNativeTexgenLinearAcos[index];
+            high = sNdsNativeTexgenLinearAcos[index + 1u];
+            angle = low + (((high - low) * (position & 0xffu)) >> 8);
+        }
+        return (s32)(((u64)angle * (texture_scale & 0xffffu)) >> 18);
     }
     /* Fast3D produces an N64 s/t value first and the DS FIFO uses 1/16-texel
      * coordinates where N64 source tc is 1/32 texel. The existing ordinary UV
@@ -9893,6 +9965,10 @@ ndsRendererNativeRebuildProductionRunUv(
         ((stats != NULL) &&
          ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u)) ?
             TRUE : FALSE;
+    u32 texgen_linear =
+        ((use_texgen != FALSE) &&
+         ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) !=
+          0u)) ? TRUE : FALSE;
     NDSNativeTexgenDirectionQ15 lookat_x;
     NDSNativeTexgenDirectionQ15 lookat_y;
 
@@ -9900,8 +9976,7 @@ ndsRendererNativeRebuildProductionRunUv(
     {
         const LookAt *look_at = ndsRendererAdapterCurrentLookAt();
 
-        if (((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) != 0u) ||
-            (look_at == NULL) || (state == NULL) ||
+        if ((look_at == NULL) || (state == NULL) ||
             (state->modelview_valid == 0u) ||
             (ndsRendererNativePrepareTexgenDirectionQ15(
                  &look_at->l[0], &state->modelview,
@@ -9937,9 +10012,11 @@ ndsRendererNativeRebuildProductionRunUv(
             s32 nz = (s32)(s8)(rgba >> 8);
 
             scaled_s = ndsRendererNativeTexgenCoord(
-                nx, ny, nz, &lookat_x, state->texture_prepare_scale_s);
+                nx, ny, nz, &lookat_x, state->texture_prepare_scale_s,
+                texgen_linear);
             scaled_t = ndsRendererNativeTexgenCoord(
-                nx, ny, nz, &lookat_y, state->texture_prepare_scale_t);
+                nx, ny, nz, &lookat_y, state->texture_prepare_scale_t,
+                texgen_linear);
         }
         else
         {
@@ -10079,13 +10156,17 @@ ndsRendererNativePrepareProductionRunCore(
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u)) ||
         ((run_unlit != FALSE) &&
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u)) ||
-        ((stats->geometry_mode &
-          (NDS_RENDERER_GEOM_FOG |
-           NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR)) != 0u) ||
 #if NDS_P2_LINK
+        /* G_TEXTURE_GEN_LINEAR only selects the texgen mapping (the polygon
+         * team's Link, Captain and Ness parts); without G_TEXTURE_GEN the RSP
+         * ignores it. */
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_FOG) != 0u) ||
         ((((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) &&
           ((policy->textured == 0u) || (state->modelview_valid == 0u)))) ||
 #else
+        ((stats->geometry_mode &
+          (NDS_RENDERER_GEOM_FOG |
+           NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR)) != 0u) ||
         ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) ||
 #endif
         (geometry_cull != expected_geometry_cull) ||
@@ -10297,8 +10378,10 @@ ndsRendererNativePrepareProductionRunCore(
     NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketRecordPrepare(
         ((use_texture != FALSE) || (tint != 0u)) ? TRUE : FALSE,
         state->texture_prepare_poly_fmt,
-        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) ?
-            TRUE : FALSE,
+        /* 0 none, 1 spherical, 2 linear: the group remembers its mapping. */
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) == 0u) ? 0u :
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) != 0u) ?
+            2u : 1u,
         state->texture_prepare_scale_s,
         state->texture_prepare_scale_t,
         state->texture_prepare_origin_s,
@@ -11500,9 +11583,11 @@ static s32 ndsFighterPacketPatchTexgen(
                 ny = (s32)(s8)(rgba >> 16);
                 nz = (s32)(s8)(rgba >> 8);
                 scaled_s = ndsRendererNativeTexgenCoord(
-                    nx, ny, nz, &lookat_x, group->scale_s);
+                    nx, ny, nz, &lookat_x, group->scale_s,
+                    group->reserved[0]);
                 scaled_t = ndsRendererNativeTexgenCoord(
-                    nx, ny, nz, &lookat_y, group->scale_t);
+                    nx, ny, nz, &lookat_y, group->scale_t,
+                    group->reserved[0]);
                 s = (s16)(scaled_s - ((s32)group->origin_s << 2) +
                           group->offset);
                 t = (s16)(scaled_t - ((s32)group->origin_t << 2) +
@@ -12680,9 +12765,9 @@ static s32 ndsFtrLeanPatchTexgenMapped(
             ny = (s32)(s8)(rgba >> 16);
             nz = (s32)(s8)(rgba >> 8);
             scaled_s = ndsRendererNativeTexgenCoord(
-                nx, ny, nz, &lookat_x, group->scale_s);
+                nx, ny, nz, &lookat_x, group->scale_s, group->reserved[0]);
             scaled_t = ndsRendererNativeTexgenCoord(
-                nx, ny, nz, &lookat_y, group->scale_t);
+                nx, ny, nz, &lookat_y, group->scale_t, group->reserved[0]);
             s = (s16)(scaled_s - ((s32)group->origin_s << 2) +
                       group->offset);
             t = (s16)(scaled_t - ((s32)group->origin_t << 2) +
@@ -13222,13 +13307,17 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) == 0u)) ||
         ((run_unlit != FALSE) &&
          ((stats->geometry_mode & NDS_RENDERER_GEOM_LIGHTING) != 0u)) ||
-        ((stats->geometry_mode &
-          (NDS_RENDERER_GEOM_FOG |
-           NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR)) != 0u) ||
 #if NDS_P2_LINK
+        /* G_TEXTURE_GEN_LINEAR only selects the texgen mapping (the polygon
+         * team's Link, Captain and Ness parts); without G_TEXTURE_GEN the RSP
+         * ignores it. */
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_FOG) != 0u) ||
         ((((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) &&
           ((policy->textured == 0u) || (state->modelview_valid == 0u)))) ||
 #else
+        ((stats->geometry_mode &
+          (NDS_RENDERER_GEOM_FOG |
+           NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR)) != 0u) ||
         ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) ||
 #endif
         (geometry_cull != expected_geometry_cull) ||
@@ -13406,7 +13495,8 @@ ndsFtrLeanMatRun(NDSFtrLeanMat *m, u32 run_index, u32 epoch_policy,
         group->first_site = packet->texgen_site_count;
         group->site_count = 0u;
         group->root = (u8)m->root;
-        group->reserved[0] = 0u;
+        group->reserved[0] = (u8)(((stats->geometry_mode &
+            NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) != 0u) ? 1u : 0u);
         group->reserved[1] = 0u;
         group->reserved[2] = 0u;
         m->texgen_group = packet->texgen_group_count;
@@ -17795,6 +17885,12 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeLinkClapsBindingParents[0]));
             return sNdsNativeLinkClapsBindingParents;
         }
+        if (program == 5u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkSpecialNItemBindingParents) /
+                           sizeof(sNdsNativeLinkSpecialNItemBindingParents[0]));
+            return sNdsNativeLinkSpecialNItemBindingParents;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkBindingParents) /
                        sizeof(sNdsNativeLinkBindingParents[0]));
@@ -18145,6 +18241,12 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
             *count = (u32)(sizeof(sNdsNativeLinkClapsCrossPaletteSlots) /
                            sizeof(sNdsNativeLinkClapsCrossPaletteSlots[0]));
             return sNdsNativeLinkClapsCrossPaletteSlots;
+        }
+        if (program == 5u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkSpecialNItemCrossPaletteSlots) /
+                           sizeof(sNdsNativeLinkSpecialNItemCrossPaletteSlots[0]));
+            return sNdsNativeLinkSpecialNItemCrossPaletteSlots;
         }
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /

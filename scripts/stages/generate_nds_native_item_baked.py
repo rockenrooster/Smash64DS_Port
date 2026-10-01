@@ -157,6 +157,8 @@ ENTRIES = (
      "ITBonus1ObjectHeader (file 253) data: DObjDesc 1, DL list 1 (ittarget.c)"),
     ("TaruBomb", "MiscData162", 0x0548, GOBJ_ITEM,
      "GRBonus3File3: Race to the Finish's barrel bomb (ittarubomb.c)"),
+    ("TaruBombLink1", "MiscData162", 0x06C8, GOBJ_ITEM,
+     "GRBonus3File3 DObjDesc 0x0788 DObj 2: the barrel's DL-link 1 list"),
     ("Bonus2PlatformSmall0", "Bonus2Common", 0x3A60, GOBJ_GROUND_DISPLAY,
      "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Small, DObj 0"),
     ("Bonus2PlatformSmall1", "Bonus2Common", 0x3C10, GOBJ_GROUND_DISPLAY,

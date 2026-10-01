@@ -1808,6 +1808,9 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
  * instead of walking every binding to the root through the DObj world hash. */
 const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count);
 u32 ndsRendererNativeFighterRootProgram(u32 slot);
+/* TRUE when the owner's bound tables ever set G_TEXTURE_GEN: its runs need
+ * the finished current modelview beside a GX compose. */
+u32 ndsRendererNativeFighterOwnerUsesTexgen(u32 slot, u32 use_low_detail);
 void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program);
 u32 ndsRendererNativeFighterSelectRootProgram(
     u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,

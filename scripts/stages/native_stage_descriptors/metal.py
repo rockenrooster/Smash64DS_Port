@@ -13,7 +13,7 @@ MatAnimJoint scripts, and all four layer DLs call into segment-E
 material programs: DL_0x1708 calls segs 0/8/0x10/0x18/0x20, DL_0x2950
 calls 0x10/8/0 (reverse order), DL_0x3368 calls 0, DL_0x3B50 calls
 0/8/0x10/0x18. Pairing is file-grounded: the MObjSub tables hold 5/3/1/4
-MObjSubs at 0xC38-0xE18 / 0x1E20+0x1ED0+0x1F48 / 0x3228 / 0x3558-0x36C0,
+MObjSubs at 0xC38-0xE18 / 0x1E18+0x1ED0+0x1F48 / 0x3228 / 0x3558-0x36C0,
 and segment 8*i matches gcDrawMObjForDObj's branch slot for MObj i --
 thirteen material events, twelve of length 3 and one of length 2.
 
@@ -42,7 +42,7 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="metal",
-    include_sha="8cd11b3cb695e789074c18eeafe0dfd65633722260c6a8929a3c53f23aec80a8",
+    include_sha="7f01c214b9498b75647cc6a90376116903868d4bffe9adc86afc03119a720618",
     generated_segment_index=-1,
     symbol_prefix="Metal",
     macro_prefix="METAL_",
@@ -50,7 +50,7 @@ DESCRIPTOR = StageDescriptor(
         "callbacks": 4,
         "dobjs": 8,
         "bindings": 4,
-        "commands": 461,
+        "commands": 459,
         "vertex_commands": 29,
         "source_vertices": 362,
         "modify_vertex_commands": 0,
@@ -63,8 +63,8 @@ DESCRIPTOR = StageDescriptor(
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        "state_events": 227,
-        "state_deltas": 112,
+        "state_events": 225,
+        "state_deltas": 110,
         "sync_events": 108,
     },
     o2r_inputs={
@@ -165,7 +165,7 @@ DESCRIPTOR = StageDescriptor(
     # MObjSub, in binding then segment order. Segment 8*i matches
     # gcDrawMObjForDObj's branch slot for MObj i of the owning DObj.
     # L0's five MObjSubs (0xC38..0xE18) feed DL_0x1708's five branches;
-    # L1's three (0x1E20/0x1ED0/0x1F48) feed DL_0x2950 in reverse DL order;
+    # L1's three (0x1E18/0x1ED0/0x1F48, the MObjSub list at 0x1FC0) feed DL_0x2950 in reverse DL order;
     # L2's one (0x3228) feeds DL_0x3368; L3's four (0x3558..0x36C0) feed
     # DL_0x3B50.
     material_sources=(
@@ -174,7 +174,7 @@ DESCRIPTOR = StageDescriptor(
         (117, 0x1708, 0x0D28, 0x10),
         (117, 0x1708, 0x0DA0, 0x18),
         (117, 0x1708, 0x0E18, 0x20),
-        (117, 0x2950, 0x1E20, 0x00),
+        (117, 0x2950, 0x1E18, 0x00),
         (117, 0x2950, 0x1ED0, 0x08),
         (117, 0x2950, 0x1F48, 0x10),
         (117, 0x3368, 0x3228, 0x00),
@@ -183,10 +183,7 @@ DESCRIPTOR = StageDescriptor(
         (117, 0x3B50, 0x3648, 0x10),
         (117, 0x3B50, 0x36C0, 0x18),
     ),
-    # L1's first MObjSub (0x1E20) has a zero flag word, which
-    # gcDrawMObjForDObj draws as TEXTURE | 0x20 | ALPHA (objdisplay.c:1239):
-    # five commands, not the bare branch-and-end two.
-    material_command_partition=(3, 3, 3, 3, 3, 5, 3, 3, 3, 3, 3, 3, 3),
+    material_command_partition=(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
         (OWNER_LAYER0, 4, 0, 1, 0, 8),

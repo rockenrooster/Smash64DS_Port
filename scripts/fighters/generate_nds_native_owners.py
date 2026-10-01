@@ -2559,6 +2559,7 @@ OWNER_ROOT_PROGRAM_ROOT_COUNTS = {
     ("samus", "FSmash"): 16,
     ("link", "Catch"): 22,
     ("link", "SpecialN"): 20,
+    ("link", "SpecialNItem"): 20,
     ("yoshi", "Catch"): 19,
     ("yoshi", "Throw"): 19,
     # Ness canonical draws 14 roots in both details; Win3 lights descriptor 13
@@ -2632,6 +2633,16 @@ OWNER_ROOT_PROGRAMS = {
         # declined, and a packed fighter that declines is halt 20 -- Link
         # losing a match froze the Results screen.
         ("Claps", ((20, 0), (11, -1), (21, 0), (19, -1))),
+        # Neutral-B while holding an item. LightItemPickup and HeavyItemPickup
+        # (224_LinkMainMotion.c:528-539) move the shield to the back --
+        # (21, 0), (19, -1) -- and only ItemDrop/ItemThrow put it back, so a
+        # boomerang thrown with an item in hand has SpecialN's boomerang and
+        # sheathed sword on Claps's shield-on-back tree: the sword (joint 20)
+        # now walks BEFORE the shield (joint 21), where SpecialN has the shield
+        # (joint 19) first. Same twenty roots, a different order, so no other
+        # program matches; it declined as validate code 3 and, packed, halted
+        # the Polygon Team (halt 20).
+        ("SpecialNItem", ((11, 1), (20, 0), (21, 0), (19, -1))),
     ),
     # 246_YoshiMainMotion.c's only model-part commands are ThrowF :965/:975 and
     # ThrowB :988/:998, both SetModelPartID(7, 1) followed by a restore to
@@ -6418,6 +6429,18 @@ def build_p2_owner_runtime_context(
         range(canonical_root_count, len(roots)), light_preambles,
         light_indices, dense_vertices, run_first_unique, run_unique_count,
         run_unique_dense, run_metadata, unlit_vertex_alpha_deltas)
+    # A canonical root may still clear G_LIGHTING itself: Master Hand's 0xfe0
+    # draws its epoch-2 run in raw vertex colours whenever the source shows
+    # it, and the production executor rejected the whole owner there (P2-6,
+    # 1,750 failures per Master Hand fight).  Tag those runs for the
+    # vertex-colour path without rewriting the root; every VS owner's
+    # canonical roots are lit, so their tables do not move.
+    _bake_unlit_uniform_roots(
+        owner_name, detail, state, sequence, epochs, roots,
+        range(canonical_root_count), light_preambles, light_indices,
+        dense_vertices, run_first_unique, run_unique_count,
+        run_unique_dense, run_metadata, unlit_vertex_alpha_deltas,
+        tag_only=True)
     dense_normals = _build_dense_shade_words(
         dense_vertices, runs, run_first_unique, run_unique_count,
         run_unique_dense, run_metadata)
@@ -7539,7 +7562,7 @@ def _bake_unlit_uniform_roots(
         owner_name: str, detail: str, state, sequence, epochs, roots,
         root_indices, light_preambles, light_indices, dense_vertices,
         run_first_unique, run_unique_count, run_unique_dense,
-        run_metadata, alpha_deltas):
+        run_metadata, alpha_deltas, tag_only=False):
     """Bake standalone roots the source draws unlit in one colour as lit roots.
 
     Appended root programs insert source parts the canonical draw never
@@ -7560,6 +7583,10 @@ def _bake_unlit_uniform_roots(
     colour, cannot use one ambient colour; those unlit runs are tagged for the
     production vertex-colour path instead.  Returns {root_offset: colour} for
     the emitted single-colour bake provenance mark.
+
+    tag_only never rewrites a root: its unlit runs are only tagged for the
+    vertex-colour path.  The canonical roots take that form, because their
+    state rows are frozen tables.
     """
     if not isinstance(state, list) or not isinstance(sequence, list):
         raise ValueError(f"{owner_name} {detail}: state tables are not lists")
@@ -7578,7 +7605,7 @@ def _bake_unlit_uniform_roots(
                     first:first + run_unique_count[run_index]]:
                 # Dense rows are (x, y, z, s, t, binding, slot, rgba).
                 colours.add(int(dense_vertices[dense_id][7]) & 0xffffff00)
-        if lit_runs or len(colours) != 1:
+        if tag_only or lit_runs or len(colours) != 1:
             for run_index in unlit_runs:
                 first = run_first_unique[run_index]
                 dense_ids = run_unique_dense[
@@ -8478,7 +8505,8 @@ def build_owner_root_programs(
         program_rows_by_offset = root_rows_by_offset
         source_owners = None
         donor = None
-        if owner_name == "link" and program_name == "SpecialN":
+        if owner_name == "link" and program_name in ("SpecialN",
+                                                     "SpecialNItem"):
             # Link's Neutral-B motion temporarily re-enables joint 11 with
             # modelpart 1 while joint 20 stays visible.  The modelpart resolver
             # correctly returns 0xF8, but that address belongs to extern-data
@@ -8576,10 +8604,16 @@ def build_owner_root_programs(
             # second synthetic hierarchy. Cross-root vertex-cache restores are
             # still source-static and remap by canonical display identity.
             parents = tuple(INVALID_U8 for _ in root_offsets)
-        elif owner_name == "link" and program_name == "SpecialN":
-            entry = next((row for row in programs if row["name"] == "Entry"), None)
+        elif owner_name == "link" and program_name in ("SpecialN",
+                                                       "SpecialNItem"):
+            # SpecialN is Entry's tree with the boomerang in the hand;
+            # SpecialNItem is Claps's (shield on the back) with the same.
+            base_name = "Entry" if program_name == "SpecialN" else "Claps"
+            entry = next((row for row in programs
+                          if row["name"] == base_name), None)
             if entry is None:
-                raise ValueError("link SpecialN requires Entry program first")
+                raise ValueError(
+                    f"link {program_name} requires {base_name} program first")
             expected_offsets = (
                 *entry["root_offsets"][:5],
                 KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET,
@@ -8587,7 +8621,8 @@ def build_owner_root_programs(
             )
             if root_offsets != expected_offsets:
                 raise ValueError(
-                    f"link {detail} SpecialN roots {tuple(map(hex, root_offsets))} "
+                    f"link {detail} {program_name} roots "
+                    f"{tuple(map(hex, root_offsets))} "
                     f"!= {tuple(map(hex, expected_offsets))}")
             if len(root_offsets) != OWNER_ROOT_PROGRAM_ROOT_COUNTS[
                     (owner_name, program_name)]:
@@ -8665,7 +8700,8 @@ def build_owner_root_programs(
                     f"link {detail} {program_name}: derived cross {cross} "
                     f"!= {expected_cross}")
         new_offsets = set(root_offsets) - canonical_offset_set
-        if not (owner_name == "link" and program_name == "SpecialN"):
+        if not (owner_name == "link" and
+                program_name in ("SpecialN", "SpecialNItem")):
             _assert_owner_root_program_vertex_cache(
                 repo_root, owner_name, detail, root_offsets, new_offsets, cross,
                 canonical_offsets)

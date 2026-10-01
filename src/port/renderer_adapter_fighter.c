@@ -4203,7 +4203,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     ) == FALSE)) ||
                 ((native_owner_hierarchy_mode == FALSE) &&
                  (ndsRendererAdapterPrepareNativeOwnerMatrices(
-                    owner_slot, root, native_owner_matrix_bindings,
+                    owner_slot, use_low_detail, root,
+                    native_owner_matrix_bindings,
                     collection.selected_count,
                     (gGCCurrentCamera != NULL) ?
                         CObjGetStruct(gGCCurrentCamera) : NULL,
