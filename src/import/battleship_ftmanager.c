@@ -740,6 +740,21 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
  * construction will call (same kinds, details and electric skeletons), only in
  * descending size. Construction then finds them resident. Nothing is loaded
  * that construction would not have loaded; only the order changes. */
+static void ndsFTManagerBattleLowDetail(FTDesc *desc);
+
+/* The detail construction will give this player: the source's fighter-count
+ * rule, then the same low-detail override ftManagerMakeFighter applies. */
+static u32 ndsFTManagerPreloadDetail(s32 player, sb32 high)
+{
+    FTDesc desc = dFTManagerDefaultFighterDesc;
+
+    desc.fkind = gSCManagerBattleState->players[player].fkind;
+    desc.pkind = gSCManagerBattleState->players[player].pkind;
+    desc.detail = (high != FALSE) ? nFTPartsDetailHigh : nFTPartsDetailLow;
+    ndsFTManagerBattleLowDetail(&desc);
+    return (u32)desc.detail;
+}
+
 static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 {
     s32 order[GMCOMMON_PLAYERS_MAX];
@@ -763,7 +778,9 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
         order[count] = player;
         bytes[count] = (slot < NDS_NATIVE_IMAGE_OWNER_SLOTS) ?
             (ndsRendererNativeOwnerImageSize(slot, 0u) +
-             ((high != FALSE) ? 0u : ndsRendererNativeOwnerImageSize(slot, 1u))) :
+             ((ndsFTManagerPreloadDetail(player, high) ==
+               (u32)nFTPartsDetailHigh) ?
+                  0u : ndsRendererNativeOwnerImageSize(slot, 1u))) :
             0u;
         count++;
     }
@@ -789,7 +806,7 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 
         desc.fkind = gSCManagerBattleState->players[order[i]].fkind;
         desc.pkind = gSCManagerBattleState->players[order[i]].pkind;
-        desc.detail = (high != FALSE) ? nFTPartsDetailHigh : nFTPartsDetailLow;
+        desc.detail = (u8)ndsFTManagerPreloadDetail(order[i], high);
         ndsFTManagerEnsureOwnerImages(&desc);
     }
 }
@@ -841,11 +858,41 @@ static void ndsCampaignWalkCpuRoute(FTDesc *desc)
 }
 #endif
 
+/* Owner 2026-10-01: low-detail models are allowed in one- and two-fighter
+ * matches ("the DS screen is small anyways"). The source picks
+ * nFTPartsDetailHigh below three fighters (scvsbattle.c:188/460,
+ * sc1pgame.c:1379/2139); battles take the four-fighter Lo-poly parts instead.
+ * The source's own close-ups (KO, pause, stage-clear zoom) still switch to
+ * high detail through ftParamSetModelPartDetailAll, as in every four-fighter
+ * match, and a low-detail battle already prepares both owner images. Playable
+ * kinds and Metal Mario (whose owner image carries both details); Master
+ * Hand keeps the source's choice. Display scenes (CSS, intro, Results) are
+ * untouched. */
+static void ndsFTManagerBattleLowDetail(FTDesc *desc)
+{
+    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+    if ((desc == NULL) || (desc->detail != nFTPartsDetailHigh) ||
+        (desc->pkind == nFTPlayerKindDemo) ||
+        !(((desc->fkind >= 0) && (desc->fkind <= nFTKindPlayableEnd)) ||
+          (desc->fkind == nFTKindMMario)))
+    {
+        return;
+    }
+    if ((scene == (u32)nSCKindVSBattle) || (scene == (u32)nSCKind1PGame) ||
+        (scene == (u32)nSCKind1PBonusStage) ||
+        (scene == (u32)nSCKind1PTrainingMode))
+    {
+        desc->detail = nFTPartsDetailLow;
+    }
+}
+
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
 #if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
     ndsCampaignWalkCpuRoute(desc);
 #endif
+    ndsFTManagerBattleLowDetail(desc);
     ndsFTManagerEnsureOwnerImages(desc);
     if ((desc != NULL) && (desc->figatree_heap != NULL) &&
         (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&
