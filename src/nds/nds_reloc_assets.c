@@ -519,6 +519,10 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #if NDS_P2_KIRBY
     NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
 #endif
+#if NDS_P2_1P_GAME
+    /* The 1P scenes' poses: the same pair of tables, the same lockstep. */
+    NDS_1P_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_PATH_ENTRY)
+#endif
 #undef NDS_RELOC_DEMO_ANIM_PATH_ENTRY
 #endif
 };

@@ -131,6 +131,78 @@ RESULTS_DEMO_SUBMOTIONS = (
 # own NDS_P2_<KIND> flag.
 RESULTS_DEMO_BASE_GATES = ("Mario", "Fox")
 
+# The 1P scenes' demo poses (P2-6).  The intro's player and ally cards take
+# nFTDemoStatusIntroL (submotion row 13); its VS fighters take IntroR (row 14)
+# at frame_begin = the member's place, so Yoshi's TeamPoses and Kirby's Pose2
+# carry every team member's spot in the formation; the continue screen's and
+# the ending's figure take DollFall/DollRevival (rows 9/10).  As with the
+# Results rows, nothing in a fighter's closure reaches these files: unstaged,
+# `ftMainSetStatus` replayed the heap's last motion, so every intro fighter
+# stood in his DemoNull Wait and every team member on the formation origin.
+# Rows 9/10/13 for the twelve playable kinds, row 14 for every kind the intro
+# shows as an opponent (variants and Master Hand included).  The id comes from
+# the O2R header, as for the Results rows; one gate, the 1P game.
+ONE_P_DEMO_SUBMOTIONS = (
+    # animation symbol, O2R path  (the dFT<Kind>SubMotionDescs row naming it)
+    ("llFTBossAnimPose1PFileID", "reloc_submotions/FTBossSubMotionAttack4"),  # Boss row 14
+    ("llFTCaptainAnimDollFallFileID", "reloc_submotions/FTCaptainSubMotionVictory2"),  # Captain row 9
+    ("llFTCaptainAnimDollRevivalFileID", "reloc_submotions/FTCaptainSubMotionVictory3"),  # Captain row 10
+    ("llFTCaptainAnimUnknownFileID", "reloc_submotions/FTCaptainSubMotionResults1"),  # Captain row 13
+    ("llFTDonkeyAnimDollFallFileID", "reloc_submotions/FTDonkeySubMotionVictory2"),  # Donkey row 9
+    ("llFTDonkeyAnimDollRevivalFileID", "reloc_submotions/FTDonkeySubMotionVictory3"),  # Donkey row 10
+    ("llFTDonkeyAnimPose1PFileID", "reloc_submotions/FTDonkeySubMotionResults2"),  # Donkey row 13
+    ("llFTGDonkeyAnimPose1PFileID", "reloc_submotions/FTDonkeySubMotionResults3"),  # Donkey row 14
+    ("llFTFoxAnimDollFallFileID", "reloc_submotions/FTFoxSubMotionVictory2"),  # Fox row 9
+    ("llFTFoxAnimDollFileID", "reloc_submotions/FTFoxSubMotionVictory3"),  # Fox row 10
+    ("llFTFoxAnimPosePostBlasterFileID", "reloc_submotions/FTFoxSubMotionResults3"),  # Fox row 13
+    ("llFTFoxAnimPoseBlaster2FileID", "reloc_submotions/FTFoxSubMotionResults4"),  # Fox row 14
+    ("llFTKirbyAnimDollFallFileID", "reloc_submotions/FTKirbySubMotionVictory1"),  # Kirby row 9
+    ("llFTKirbyAnimDollRevivalFileID", "reloc_submotions/FTKirbySubMotionVictory2"),  # Kirby row 10
+    ("llFTKirbyAnimPoseFileID", "reloc_submotions/FTKirbySubMotionResults2"),  # Kirby row 13
+    ("llFTKirbyAnimPose2FileID", "reloc_submotions/FTKirbySubMotionResults3"),  # Kirby row 14
+    ("llFTLinkAnimDollFallFileID", "reloc_submotions/FTLinkSubMotionVictory1"),  # Link row 9
+    ("llFTLinkAnimDollRevivalFileID", "reloc_submotions/FTLinkSubMotionVictory2"),  # Link row 10
+    ("llFTLinkAnimPosePlayerFileID", "reloc_submotions/FTLinkSubMotionResults2"),  # Link row 13
+    ("llFTLinkAnimPoseOpponentFileID", "reloc_submotions/FTLinkSubMotionResults3"),  # Link row 14
+    ("llFTLuigiAnimDollFallFileID", "reloc_submotions/FTLuigiSubMotionAppearAlt2"),  # Luigi row 9
+    ("llFTLuigiAnimDollRevivalFileID", "reloc_submotions/FTLuigiSubMotionVictory2"),  # Luigi row 10
+    ("llFTLuigiAnimPosePlayerFileID", "reloc_submotions/FTLuigiSubMotionVictory3"),  # Luigi row 13
+    ("llFTLuigiAnimPoseEnemyFileID", "reloc_submotions/FTLuigiSubMotionResults1"),  # Luigi row 14
+    ("llFTMarioAnimDollFallsFileID", "reloc_submotions/FTMarioSubMotionVictory2"),  # Mario row 9
+    ("llFTMarioAnimDollRevivalFileID", "reloc_submotions/FTMarioSubMotionVictory3"),  # Mario row 10
+    ("llFTMarioAnimPoseFileID", "reloc_submotions/FTMarioSubMotionResults3"),  # Mario row 13
+    ("llFTMarioAnimPose2FileID", "reloc_submotions/FTMarioSubMotionResults4"),  # Mario row 14
+    ("llFTMMarioAnimPose1PFileID", "reloc_submotions/FTMMarioSubMotionIdle"),  # MMario row 14
+    ("llFTNCaptainAnimPose1PFileID", "reloc_submotions/FTNCaptainSubMotionIdle"),  # NCaptain row 14
+    ("llFTNDonkeyAnimPose1PFileID", "reloc_submotions/FTNDonkeySubMotionIdle"),  # NDonkey row 14
+    ("llFTNessAnimDollFallFileID", "reloc_submotions/FTNessSubMotionVictory2"),  # Ness row 9
+    ("llFTNessAnimDollRevivalFileID", "reloc_submotions/FTNessSubMotionVictory3"),  # Ness row 10
+    ("llFTNessAnimPosePlayerFileID", "reloc_submotions/FTNessSubMotionResults1"),  # Ness row 13
+    ("llFTNFoxAnimPose1PFileID", "reloc_submotions/FTNFoxSubMotionIdle"),  # NFox row 14
+    ("llFTNKirbyAnimPose1PFileID", "reloc_submotions/FTNKirbySubMotionIdle"),  # NKirby row 14
+    ("llFTNLinkAnimPose1PFileID", "reloc_submotions/FTNLinkSubMotionIdle"),  # NLink row 14
+    ("llFTNMarioAnimPose1PFileID", "reloc_submotions/FTNMarioSubMotionIdle"),  # NMario row 14
+    ("llFTNNessAnimPose1PFileID", "reloc_submotions/FTNNessSubMotionIdle"),  # NNess row 14
+    ("llFTNPikachuAnimPose1PFileID", "reloc_submotions/FTNPikachuSubMotionIdle"),  # NPikachu row 14
+    ("llFTNSamusAnimPose1PFileID", "reloc_submotions/FTNSamusSubMotionIdle"),  # NSamus row 14
+    ("llFTNYoshiAnimPose1PFileID", "reloc_submotions/FTNYoshiSubMotionIdle"),  # NYoshi row 14
+    ("llFTPikachuAnimDollFallFileID", "reloc_submotions/FTPikachuSubMotionVictory1"),  # Pikachu row 9
+    ("llFTPikachuAnimDollRevivalFileID", "reloc_submotions/FTPikachuSubMotionVictory2"),  # Pikachu row 10
+    ("llFTPikachuAnimPosePlayerFileID", "reloc_submotions/FTPikachuSubMotionResults2"),  # Pikachu row 13
+    ("llFTPikachuAnimPoseEnemyFileID", "reloc_submotions/FTPikachuSubMotionResults3"),  # Pikachu row 14
+    ("llFTPurinAnimDollFallFileID", "reloc_submotions/FTPurinSubMotionVictory2"),  # Purin row 9
+    ("llFTPurinAnimDollRevivalFileID", "reloc_submotions/FTPurinSubMotionVictory3"),  # Purin row 10
+    ("llFTPurinAnimUnknownFileID", "reloc_submotions/FTPurinSubMotionResults1"),  # Purin row 13
+    ("llFTSamusAnimDollFallFileID", "reloc_submotions/FTSamusSubMotionVictory1"),  # Samus row 9
+    ("llFTSamusAnimDollRevivalFileID", "reloc_submotions/FTSamusSubMotionVictory2"),  # Samus row 10
+    ("llFTSamusAnimPosePlayerFileID", "reloc_submotions/FTSamusSubMotionResults2"),  # Samus row 13
+    ("llFTSamusAnimUnknownFileID", "reloc_submotions/FTSamusSubMotionResults3"),  # Samus row 14
+    ("llFTYoshiAnimDollFallFileID", "reloc_submotions/FTYoshiSubMotionVictory1"),  # Yoshi row 9
+    ("llFTYoshiAnimDollRevivalFileID", "reloc_submotions/FTYoshiSubMotionVictory2"),  # Yoshi row 10
+    ("llFTYoshiAnimUnknown7FileID", "reloc_submotions/FTYoshiSubMotionResultsAlt2"),  # Yoshi row 13
+    ("llFTYoshiAnimTeamPosesFileID", "reloc_submotions/FTYoshiSubMotionResultsAlt3"),  # Yoshi row 14
+)
+
 
 def build_results_demo_submotions(
     by_path: dict[str, dict[str, object]]
@@ -185,6 +257,46 @@ def build_results_demo_submotions(
             )
     rows.sort(key=lambda row: int(row["asset"]["id"]))
     return rows
+def build_one_p_demo_submotions(
+    by_path: dict[str, dict[str, object]],
+    results_rows: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Resolve `ONE_P_DEMO_SUBMOTIONS` against the O2R headers, as the Results
+    rows are resolved.  A symbol or file the Results table already routes may
+    not appear again: one symbol address answers one file."""
+    taken_symbols = {str(row["symbol"]) for row in results_rows}
+    taken_ids = {int(row["asset"]["id"]) for row in results_rows}
+    rows: list[dict[str, object]] = []
+    for symbol, path in ONE_P_DEMO_SUBMOTIONS:
+        record = by_path.get(path)
+        if record is None:
+            raise ValueError(f"1P demo submotion {symbol}: {path} is not an O2R file")
+        file_id = int(record["file_id"])
+        if (symbol in taken_symbols) or (file_id in taken_ids):
+            raise ValueError(
+                f"1P demo submotion {symbol} (0x{file_id:x}) is routed twice"
+            )
+        if ((MARIO_ANIM_FIRST <= file_id <= MARIO_ANIM_LAST) or
+                (FOX_ANIM_FIRST <= file_id <= FOX_ANIM_LAST)):
+            raise ValueError(
+                f"1P demo submotion 0x{file_id:x} lands inside the always-compiled "
+                f"Mario/Fox animation bank"
+            )
+        taken_symbols.add(symbol)
+        taken_ids.add(file_id)
+        rows.append({
+            "symbol": symbol,
+            "asset": {
+                "id": file_id,
+                "path": path,
+                "bytes": int(record["bytes"]),
+                "sha256": str(record["sha256"]),
+            },
+        })
+    rows.sort(key=lambda row: int(row["asset"]["id"]))
+    return rows
+
+
 CORE_SLOT_NAMES = (
     "main",
     "mainmotion",
@@ -1232,6 +1344,8 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     semantic_ids = load_relocdata_semantic_ids(relocdata_root, named_symbols)
     by_id, by_path = scan_o2r(o2r_root)
     results_demo_submotions = build_results_demo_submotions(by_path)
+    one_p_demo_submotions = build_one_p_demo_submotions(
+        by_path, results_demo_submotions)
     ftmanager_file_size_census = build_ftmanager_file_size_census(
         repo_root, ftdata_text, named_symbols, port_symbols, semantic_ids, by_id
     )
@@ -1383,6 +1497,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         ),
         "ftmanager_file_size_census": ftmanager_file_size_census,
         "results_demo_submotions": results_demo_submotions,
+        "one_p_demo_submotions": one_p_demo_submotions,
         "fighters": fighters,
         "variant_closures": variant_closures,
         "boss": boss,
@@ -1601,6 +1716,10 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
         (f"NDS_P2_{name.upper()}_DEMO_RELOC_FILES", demo_by_gate.get(name, []))
         for name in BOOTSTRAP_FIGHTERS[2:]
     )
+    demo_lists.append((
+        "NDS_1P_DEMO_RELOC_FILES",
+        [str(row["asset"]["path"]) for row in manifest["one_p_demo_submotions"]],
+    ))
     for variable, paths in demo_lists:
         if not paths:
             lines.append(f"{variable} :=")
@@ -2032,6 +2151,20 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             )
         lines.append("")
         emitted_demo += len(rows)
+    one_p_rows = list(manifest["one_p_demo_submotions"])
+    lines.append(f"#define NDS_1P_DEMO_ANIM_COUNT {len(one_p_rows)}u")
+    lines.append("#define NDS_1P_DEMO_ANIM_ASSET_ROWS(X) \\")
+    for index, row in enumerate(one_p_rows):
+        suffix = " \\" if index + 1 < len(one_p_rows) else ""
+        lines.append(
+            "    X({symbol}, 0x{file_id:x}u, \"nitro:/reloc/{path}\"){suffix}".format(
+                symbol=row["symbol"],
+                file_id=int(row["asset"]["id"]),
+                path=row["asset"]["path"],
+                suffix=suffix,
+            )
+        )
+    lines.append("")
     if emitted_demo != len(demo_rows):
         raise ValueError(
             f"Results demo rows lost a gate: emitted {emitted_demo} of "

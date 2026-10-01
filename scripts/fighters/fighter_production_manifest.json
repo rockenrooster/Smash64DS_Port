@@ -646,6 +646,521 @@
       }
     }
   ],
+  "one_p_demo_submotions": [
+    {
+      "symbol": "llFTMarioAnimDollFallsFileID",
+      "asset": {
+        "id": 363,
+        "path": "reloc_submotions/FTMarioSubMotionVictory2",
+        "bytes": 3264,
+        "sha256": "99b09a9e7ce072671f5f702c7726e95e8a8cb0d74932ba0763f42dbeed1048c6"
+      }
+    },
+    {
+      "symbol": "llFTMarioAnimDollRevivalFileID",
+      "asset": {
+        "id": 364,
+        "path": "reloc_submotions/FTMarioSubMotionVictory3",
+        "bytes": 10432,
+        "sha256": "5797d83271878ef458d73323cc8a47de3b9ad6d6f8b29bdb83aa12a660475dce"
+      }
+    },
+    {
+      "symbol": "llFTMarioAnimPoseFileID",
+      "asset": {
+        "id": 368,
+        "path": "reloc_submotions/FTMarioSubMotionResults3",
+        "bytes": 480,
+        "sha256": "2e124926aed18f2abc40dd47bf57c14d522eb743093dbd3496b031a15e71269f"
+      }
+    },
+    {
+      "symbol": "llFTMarioAnimPose2FileID",
+      "asset": {
+        "id": 369,
+        "path": "reloc_submotions/FTMarioSubMotionResults4",
+        "bytes": 496,
+        "sha256": "916fb5423810e43649adfbffc5855b9fcdfca641a1a178cf586dcb70314d5e29"
+      }
+    },
+    {
+      "symbol": "llFTFoxAnimDollFallFileID",
+      "asset": {
+        "id": 375,
+        "path": "reloc_submotions/FTFoxSubMotionVictory2",
+        "bytes": 3984,
+        "sha256": "ddef02b2df3e8c094447af673500a033101ae7cac4a7cdcde8e96169ac46bf78"
+      }
+    },
+    {
+      "symbol": "llFTFoxAnimDollFileID",
+      "asset": {
+        "id": 376,
+        "path": "reloc_submotions/FTFoxSubMotionVictory3",
+        "bytes": 11536,
+        "sha256": "0ea87bb0064295b37239ee6c5e560764644a78dfe16698894e458da562269c85"
+      }
+    },
+    {
+      "symbol": "llFTFoxAnimPosePostBlasterFileID",
+      "asset": {
+        "id": 379,
+        "path": "reloc_submotions/FTFoxSubMotionResults3",
+        "bytes": 544,
+        "sha256": "b235ca83178873b55a5097731a3374ddc4efc38ae5d99b840561497894d1a9db"
+      }
+    },
+    {
+      "symbol": "llFTFoxAnimPoseBlaster2FileID",
+      "asset": {
+        "id": 380,
+        "path": "reloc_submotions/FTFoxSubMotionResults4",
+        "bytes": 528,
+        "sha256": "03b1cbd38c07cff7f4542f1adc0791fb926630376f6b4e97533a8638970a4824"
+      }
+    },
+    {
+      "symbol": "llFTDonkeyAnimDollFallFileID",
+      "asset": {
+        "id": 387,
+        "path": "reloc_submotions/FTDonkeySubMotionVictory2",
+        "bytes": 3968,
+        "sha256": "e1785b92e8a368faba5a4a5bd90cf829a9e4ba158d1718ff6fe06fda0a370337"
+      }
+    },
+    {
+      "symbol": "llFTDonkeyAnimDollRevivalFileID",
+      "asset": {
+        "id": 388,
+        "path": "reloc_submotions/FTDonkeySubMotionVictory3",
+        "bytes": 8720,
+        "sha256": "8a3f72d221f89fefb35a7d2294023f1332e46c35920f8b8e458d13d7d6db0a53"
+      }
+    },
+    {
+      "symbol": "llFTDonkeyAnimPose1PFileID",
+      "asset": {
+        "id": 391,
+        "path": "reloc_submotions/FTDonkeySubMotionResults2",
+        "bytes": 528,
+        "sha256": "073d5d61d58b57e035549578d64a8cbdfc6bd3418081e36d4d7c7b6242a27ca1"
+      }
+    },
+    {
+      "symbol": "llFTGDonkeyAnimPose1PFileID",
+      "asset": {
+        "id": 392,
+        "path": "reloc_submotions/FTDonkeySubMotionResults3",
+        "bytes": 624,
+        "sha256": "bd309b8817d10cefa18f31b34860b54be64eb50fe7ee908b6fb8c37c3c2e6cb4"
+      }
+    },
+    {
+      "symbol": "llFTSamusAnimDollFallFileID",
+      "asset": {
+        "id": 398,
+        "path": "reloc_submotions/FTSamusSubMotionVictory1",
+        "bytes": 3584,
+        "sha256": "a86a50d6928cd9092ce00d5411d328541dcea91186fd86b6e13327696f2ab742"
+      }
+    },
+    {
+      "symbol": "llFTSamusAnimDollRevivalFileID",
+      "asset": {
+        "id": 399,
+        "path": "reloc_submotions/FTSamusSubMotionVictory2",
+        "bytes": 7536,
+        "sha256": "8a22bb7ffe9978808e73c6949b9b9efffd08dd143f8012aa285840afd3b10a6b"
+      }
+    },
+    {
+      "symbol": "llFTSamusAnimPosePlayerFileID",
+      "asset": {
+        "id": 402,
+        "path": "reloc_submotions/FTSamusSubMotionResults2",
+        "bytes": 496,
+        "sha256": "e3a5ef1f17440552b54f4f46611dda96b0d08d5a6663a3d03a408a6a035a3a18"
+      }
+    },
+    {
+      "symbol": "llFTSamusAnimUnknownFileID",
+      "asset": {
+        "id": 403,
+        "path": "reloc_submotions/FTSamusSubMotionResults3",
+        "bytes": 432,
+        "sha256": "927cf13ff96aaf731c23ced74a4027cb10646e8ddc8ed6cbe97ffe99c4684781"
+      }
+    },
+    {
+      "symbol": "llFTLinkAnimDollFallFileID",
+      "asset": {
+        "id": 409,
+        "path": "reloc_submotions/FTLinkSubMotionVictory1",
+        "bytes": 3824,
+        "sha256": "3b644ad99a8b8524638fb46ba2825049e4732d06df2d3cf1415dc58dc14d6653"
+      }
+    },
+    {
+      "symbol": "llFTLinkAnimDollRevivalFileID",
+      "asset": {
+        "id": 410,
+        "path": "reloc_submotions/FTLinkSubMotionVictory2",
+        "bytes": 9184,
+        "sha256": "b90b20e8614415726aed791adff7125919a7a0807ebab7a7448815370f51088d"
+      }
+    },
+    {
+      "symbol": "llFTLinkAnimPosePlayerFileID",
+      "asset": {
+        "id": 414,
+        "path": "reloc_submotions/FTLinkSubMotionResults2",
+        "bytes": 592,
+        "sha256": "063725d02fabc0e0a38a3b8c052d2a0211ea03eaea1f1c5d5bdb33133aaef81c"
+      }
+    },
+    {
+      "symbol": "llFTLinkAnimPoseOpponentFileID",
+      "asset": {
+        "id": 415,
+        "path": "reloc_submotions/FTLinkSubMotionResults3",
+        "bytes": 512,
+        "sha256": "ec22abbe988eabc47e75d16783506418aece317f28fee5558f993ece29d46db8"
+      }
+    },
+    {
+      "symbol": "llFTKirbyAnimDollFallFileID",
+      "asset": {
+        "id": 421,
+        "path": "reloc_submotions/FTKirbySubMotionVictory1",
+        "bytes": 3856,
+        "sha256": "73001fa67ab714226101d3bce80cd267179143802b30e9613dcf9feec28e15db"
+      }
+    },
+    {
+      "symbol": "llFTKirbyAnimDollRevivalFileID",
+      "asset": {
+        "id": 422,
+        "path": "reloc_submotions/FTKirbySubMotionVictory2",
+        "bytes": 9088,
+        "sha256": "a944a903f11a976b59483375dd13008fdfbf802cf545d01f929c04f2dd69719b"
+      }
+    },
+    {
+      "symbol": "llFTKirbyAnimPoseFileID",
+      "asset": {
+        "id": 427,
+        "path": "reloc_submotions/FTKirbySubMotionResults2",
+        "bytes": 592,
+        "sha256": "73725f9ee464a9200bbdb98fb69710706e201acd446c5ad88d895a15776565df"
+      }
+    },
+    {
+      "symbol": "llFTKirbyAnimPose2FileID",
+      "asset": {
+        "id": 428,
+        "path": "reloc_submotions/FTKirbySubMotionResults3",
+        "bytes": 2272,
+        "sha256": "4a209182bf4673efdd7289c01854e7171ef156092bcbc4cf061063be0b0bb20c"
+      }
+    },
+    {
+      "symbol": "llFTCaptainAnimDollFallFileID",
+      "asset": {
+        "id": 433,
+        "path": "reloc_submotions/FTCaptainSubMotionVictory2",
+        "bytes": 3712,
+        "sha256": "d11e8560dff5a16000e1fdd4fe3ab1206bef380db8879da44bb530b493a33068"
+      }
+    },
+    {
+      "symbol": "llFTCaptainAnimDollRevivalFileID",
+      "asset": {
+        "id": 434,
+        "path": "reloc_submotions/FTCaptainSubMotionVictory3",
+        "bytes": 9728,
+        "sha256": "ba1589fe525807e83bec6fc1230979be750048ab58372ab912785a93a8344d8a"
+      }
+    },
+    {
+      "symbol": "llFTCaptainAnimUnknownFileID",
+      "asset": {
+        "id": 435,
+        "path": "reloc_submotions/FTCaptainSubMotionResults1",
+        "bytes": 480,
+        "sha256": "93b0ccf9b600968634c50d61a37766b18c6bace0ce614cf832ae63e4ff1dddee"
+      }
+    },
+    {
+      "symbol": "llFTNessAnimDollFallFileID",
+      "asset": {
+        "id": 440,
+        "path": "reloc_submotions/FTNessSubMotionVictory2",
+        "bytes": 4032,
+        "sha256": "3eb581d1b89df8c25e1f8573e31dae28252b8bbaab0be2928b3fd487b2129707"
+      }
+    },
+    {
+      "symbol": "llFTNessAnimDollRevivalFileID",
+      "asset": {
+        "id": 441,
+        "path": "reloc_submotions/FTNessSubMotionVictory3",
+        "bytes": 11472,
+        "sha256": "b3d185a1ca65415dc4ce70d17b4d8f403584623ba56d28c450497793fe9dcfbd"
+      }
+    },
+    {
+      "symbol": "llFTNessAnimPosePlayerFileID",
+      "asset": {
+        "id": 442,
+        "path": "reloc_submotions/FTNessSubMotionResults1",
+        "bytes": 624,
+        "sha256": "f2d6661ebc071799d7d00b27476f4cfe59ed5e421ecae92a91c99a33c47532f3"
+      }
+    },
+    {
+      "symbol": "llFTYoshiAnimDollFallFileID",
+      "asset": {
+        "id": 448,
+        "path": "reloc_submotions/FTYoshiSubMotionVictory1",
+        "bytes": 3968,
+        "sha256": "b2a833bffb9af7aa5421591fa762af8d5534b703314e032dba6c03d2b2f2145d"
+      }
+    },
+    {
+      "symbol": "llFTYoshiAnimDollRevivalFileID",
+      "asset": {
+        "id": 449,
+        "path": "reloc_submotions/FTYoshiSubMotionVictory2",
+        "bytes": 8720,
+        "sha256": "fcec606e6ad9390829f140d691bf3eef1bd47338a3a354c703d4acd0ae71b995"
+      }
+    },
+    {
+      "symbol": "llFTYoshiAnimUnknown7FileID",
+      "asset": {
+        "id": 456,
+        "path": "reloc_submotions/FTYoshiSubMotionResultsAlt2",
+        "bytes": 544,
+        "sha256": "9df793b61e4abb4bc1dfd2b5839f4af27451fc1bf7d4980b1148d762046111d7"
+      }
+    },
+    {
+      "symbol": "llFTYoshiAnimTeamPosesFileID",
+      "asset": {
+        "id": 457,
+        "path": "reloc_submotions/FTYoshiSubMotionResultsAlt3",
+        "bytes": 4736,
+        "sha256": "243802fb5713c1eccba8c50b9f27f73eb4d160d5eed4ec2d93c2f4213f0f1b81"
+      }
+    },
+    {
+      "symbol": "llFTBossAnimPose1PFileID",
+      "asset": {
+        "id": 461,
+        "path": "reloc_submotions/FTBossSubMotionAttack4",
+        "bytes": 624,
+        "sha256": "abfba3cf8daa91b73732cc2463012b2884728d8540faed5df93ae0d1bf734e33"
+      }
+    },
+    {
+      "symbol": "llFTLuigiAnimDollFallFileID",
+      "asset": {
+        "id": 465,
+        "path": "reloc_submotions/FTLuigiSubMotionAppearAlt2",
+        "bytes": 3360,
+        "sha256": "99c3b56540dd8cbdf661c82181e48962f0084465bbfe4b3acbf99cc0f4495225"
+      }
+    },
+    {
+      "symbol": "llFTLuigiAnimDollRevivalFileID",
+      "asset": {
+        "id": 466,
+        "path": "reloc_submotions/FTLuigiSubMotionVictory2",
+        "bytes": 8208,
+        "sha256": "1732095b22b8e2474a9eefd4f7c1a3c6cdb74f2684c1b3138eefe3e70060d021"
+      }
+    },
+    {
+      "symbol": "llFTLuigiAnimPosePlayerFileID",
+      "asset": {
+        "id": 467,
+        "path": "reloc_submotions/FTLuigiSubMotionVictory3",
+        "bytes": 560,
+        "sha256": "dd9213124679be1d1f1299b8b1c3e01e8f369eea6444ca5de02d01a817bfaf98"
+      }
+    },
+    {
+      "symbol": "llFTLuigiAnimPoseEnemyFileID",
+      "asset": {
+        "id": 468,
+        "path": "reloc_submotions/FTLuigiSubMotionResults1",
+        "bytes": 512,
+        "sha256": "866ad4e40bfe34ba7fadd8ebcdd8b05f67a9080bc8ede2100ae7120d28a8ad84"
+      }
+    },
+    {
+      "symbol": "llFTPurinAnimDollFallFileID",
+      "asset": {
+        "id": 473,
+        "path": "reloc_submotions/FTPurinSubMotionVictory2",
+        "bytes": 3504,
+        "sha256": "01f6d909524d04d9f5142b90696992c0756d6a870f89b423781f7b57f4be3f76"
+      }
+    },
+    {
+      "symbol": "llFTPurinAnimDollRevivalFileID",
+      "asset": {
+        "id": 474,
+        "path": "reloc_submotions/FTPurinSubMotionVictory3",
+        "bytes": 7200,
+        "sha256": "7ca38a1cdd75b7837dc1ebe4952df3912a3acc7539e171e7155002cf5d470858"
+      }
+    },
+    {
+      "symbol": "llFTPurinAnimUnknownFileID",
+      "asset": {
+        "id": 475,
+        "path": "reloc_submotions/FTPurinSubMotionResults1",
+        "bytes": 464,
+        "sha256": "e38898917ab5227f0d01d56c74d463331d18485bd9dcd955b7a417295fae0a1d"
+      }
+    },
+    {
+      "symbol": "llFTPikachuAnimDollFallFileID",
+      "asset": {
+        "id": 481,
+        "path": "reloc_submotions/FTPikachuSubMotionVictory1",
+        "bytes": 3728,
+        "sha256": "ebfd32a9ee0b84bcc67e029681b709942db0cd0e6d28704aa6beec26e9ce8d3a"
+      }
+    },
+    {
+      "symbol": "llFTPikachuAnimDollRevivalFileID",
+      "asset": {
+        "id": 482,
+        "path": "reloc_submotions/FTPikachuSubMotionVictory2",
+        "bytes": 9648,
+        "sha256": "515ff33e8e3fe84d57f5497c2eee4eb58497176a50a8fe705946815a1d3a934b"
+      }
+    },
+    {
+      "symbol": "llFTPikachuAnimPosePlayerFileID",
+      "asset": {
+        "id": 486,
+        "path": "reloc_submotions/FTPikachuSubMotionResults2",
+        "bytes": 592,
+        "sha256": "c9a766e7df8a9273cb924c522caa90dd7a81c21a8814a3d34c988c8e325cde45"
+      }
+    },
+    {
+      "symbol": "llFTPikachuAnimPoseEnemyFileID",
+      "asset": {
+        "id": 487,
+        "path": "reloc_submotions/FTPikachuSubMotionResults3",
+        "bytes": 624,
+        "sha256": "dfa9eed91444dc597bf667263e577701dd5096912ed386a6aa1a8ec66af10c24"
+      }
+    },
+    {
+      "symbol": "llFTMMarioAnimPose1PFileID",
+      "asset": {
+        "id": 488,
+        "path": "reloc_submotions/FTMMarioSubMotionIdle",
+        "bytes": 464,
+        "sha256": "21a5c269e95b1a1a5e9e9f68ec29f90eb9f2c89e5761f922f9dde2a3ed33614c"
+      }
+    },
+    {
+      "symbol": "llFTNMarioAnimPose1PFileID",
+      "asset": {
+        "id": 489,
+        "path": "reloc_submotions/FTNMarioSubMotionIdle",
+        "bytes": 768,
+        "sha256": "c6f1b09b3db501a9f86fe902bb13a98572107f39923bacf9aba33e1975dd6b2a"
+      }
+    },
+    {
+      "symbol": "llFTNFoxAnimPose1PFileID",
+      "asset": {
+        "id": 490,
+        "path": "reloc_submotions/FTNFoxSubMotionIdle",
+        "bytes": 816,
+        "sha256": "b4629beba09e805d42482969d60eefecc6663ee1d686bf126fcce91c32ca7e71"
+      }
+    },
+    {
+      "symbol": "llFTNDonkeyAnimPose1PFileID",
+      "asset": {
+        "id": 491,
+        "path": "reloc_submotions/FTNDonkeySubMotionIdle",
+        "bytes": 816,
+        "sha256": "2b7499b84311e1a354e494c2a36be7941bb5a3edea323496252ea090d6765ed7"
+      }
+    },
+    {
+      "symbol": "llFTNSamusAnimPose1PFileID",
+      "asset": {
+        "id": 492,
+        "path": "reloc_submotions/FTNSamusSubMotionIdle",
+        "bytes": 800,
+        "sha256": "ecaf5de15257ce2eb9a176973663889a97974357055886817c8847daf8a81515"
+      }
+    },
+    {
+      "symbol": "llFTNLinkAnimPose1PFileID",
+      "asset": {
+        "id": 493,
+        "path": "reloc_submotions/FTNLinkSubMotionIdle",
+        "bytes": 832,
+        "sha256": "be58da736e49429f1ecc7a2a07192a342d16c3662dc727fb8848183d74bce13f"
+      }
+    },
+    {
+      "symbol": "llFTNYoshiAnimPose1PFileID",
+      "asset": {
+        "id": 494,
+        "path": "reloc_submotions/FTNYoshiSubMotionIdle",
+        "bytes": 864,
+        "sha256": "b257f9a1ff62fc7b652c312bfc915649de5c6e53f7b38c15d89202a0363bf608"
+      }
+    },
+    {
+      "symbol": "llFTNCaptainAnimPose1PFileID",
+      "asset": {
+        "id": 495,
+        "path": "reloc_submotions/FTNCaptainSubMotionIdle",
+        "bytes": 768,
+        "sha256": "a364982b29bd378e3f7f5f64c157b7f55d71e263d370aa43ba6820843054e5df"
+      }
+    },
+    {
+      "symbol": "llFTNKirbyAnimPose1PFileID",
+      "asset": {
+        "id": 496,
+        "path": "reloc_submotions/FTNKirbySubMotionIdle",
+        "bytes": 752,
+        "sha256": "390dd939d52d13fb2550287b3cd566630cc8e57f60ab31a821e746a4a0145dcf"
+      }
+    },
+    {
+      "symbol": "llFTNPikachuAnimPose1PFileID",
+      "asset": {
+        "id": 497,
+        "path": "reloc_submotions/FTNPikachuSubMotionIdle",
+        "bytes": 848,
+        "sha256": "99f7f6dcbc65748403934d1959fe1cc1bc229f1e8076e680bc6d9cfe526b3fb5"
+      }
+    },
+    {
+      "symbol": "llFTNNessAnimPose1PFileID",
+      "asset": {
+        "id": 498,
+        "path": "reloc_submotions/FTNNessSubMotionIdle",
+        "bytes": 784,
+        "sha256": "1612cba51f1d8d532afa73351a04de885202a3131868cf71348927e4b2badb67"
+      }
+    }
+  ],
   "fighters": [
     {
       "fighter": "Mario",

@@ -3457,4 +3457,64 @@
     X(llFTKirbyAnimWin2FileID, 0x1a1u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearL") \
     X(llFTKirbyAnimClapsFileID, 0x1a3u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionAppearAlt2")
 
+#define NDS_1P_DEMO_ANIM_COUNT 57u
+#define NDS_1P_DEMO_ANIM_ASSET_ROWS(X) \
+    X(llFTMarioAnimDollFallsFileID, 0x16bu, "nitro:/reloc/reloc_submotions/FTMarioSubMotionVictory2") \
+    X(llFTMarioAnimDollRevivalFileID, 0x16cu, "nitro:/reloc/reloc_submotions/FTMarioSubMotionVictory3") \
+    X(llFTMarioAnimPoseFileID, 0x170u, "nitro:/reloc/reloc_submotions/FTMarioSubMotionResults3") \
+    X(llFTMarioAnimPose2FileID, 0x171u, "nitro:/reloc/reloc_submotions/FTMarioSubMotionResults4") \
+    X(llFTFoxAnimDollFallFileID, 0x177u, "nitro:/reloc/reloc_submotions/FTFoxSubMotionVictory2") \
+    X(llFTFoxAnimDollFileID, 0x178u, "nitro:/reloc/reloc_submotions/FTFoxSubMotionVictory3") \
+    X(llFTFoxAnimPosePostBlasterFileID, 0x17bu, "nitro:/reloc/reloc_submotions/FTFoxSubMotionResults3") \
+    X(llFTFoxAnimPoseBlaster2FileID, 0x17cu, "nitro:/reloc/reloc_submotions/FTFoxSubMotionResults4") \
+    X(llFTDonkeyAnimDollFallFileID, 0x183u, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionVictory2") \
+    X(llFTDonkeyAnimDollRevivalFileID, 0x184u, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionVictory3") \
+    X(llFTDonkeyAnimPose1PFileID, 0x187u, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionResults2") \
+    X(llFTGDonkeyAnimPose1PFileID, 0x188u, "nitro:/reloc/reloc_submotions/FTDonkeySubMotionResults3") \
+    X(llFTSamusAnimDollFallFileID, 0x18eu, "nitro:/reloc/reloc_submotions/FTSamusSubMotionVictory1") \
+    X(llFTSamusAnimDollRevivalFileID, 0x18fu, "nitro:/reloc/reloc_submotions/FTSamusSubMotionVictory2") \
+    X(llFTSamusAnimPosePlayerFileID, 0x192u, "nitro:/reloc/reloc_submotions/FTSamusSubMotionResults2") \
+    X(llFTSamusAnimUnknownFileID, 0x193u, "nitro:/reloc/reloc_submotions/FTSamusSubMotionResults3") \
+    X(llFTLinkAnimDollFallFileID, 0x199u, "nitro:/reloc/reloc_submotions/FTLinkSubMotionVictory1") \
+    X(llFTLinkAnimDollRevivalFileID, 0x19au, "nitro:/reloc/reloc_submotions/FTLinkSubMotionVictory2") \
+    X(llFTLinkAnimPosePlayerFileID, 0x19eu, "nitro:/reloc/reloc_submotions/FTLinkSubMotionResults2") \
+    X(llFTLinkAnimPoseOpponentFileID, 0x19fu, "nitro:/reloc/reloc_submotions/FTLinkSubMotionResults3") \
+    X(llFTKirbyAnimDollFallFileID, 0x1a5u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionVictory1") \
+    X(llFTKirbyAnimDollRevivalFileID, 0x1a6u, "nitro:/reloc/reloc_submotions/FTKirbySubMotionVictory2") \
+    X(llFTKirbyAnimPoseFileID, 0x1abu, "nitro:/reloc/reloc_submotions/FTKirbySubMotionResults2") \
+    X(llFTKirbyAnimPose2FileID, 0x1acu, "nitro:/reloc/reloc_submotions/FTKirbySubMotionResults3") \
+    X(llFTCaptainAnimDollFallFileID, 0x1b1u, "nitro:/reloc/reloc_submotions/FTCaptainSubMotionVictory2") \
+    X(llFTCaptainAnimDollRevivalFileID, 0x1b2u, "nitro:/reloc/reloc_submotions/FTCaptainSubMotionVictory3") \
+    X(llFTCaptainAnimUnknownFileID, 0x1b3u, "nitro:/reloc/reloc_submotions/FTCaptainSubMotionResults1") \
+    X(llFTNessAnimDollFallFileID, 0x1b8u, "nitro:/reloc/reloc_submotions/FTNessSubMotionVictory2") \
+    X(llFTNessAnimDollRevivalFileID, 0x1b9u, "nitro:/reloc/reloc_submotions/FTNessSubMotionVictory3") \
+    X(llFTNessAnimPosePlayerFileID, 0x1bau, "nitro:/reloc/reloc_submotions/FTNessSubMotionResults1") \
+    X(llFTYoshiAnimDollFallFileID, 0x1c0u, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionVictory1") \
+    X(llFTYoshiAnimDollRevivalFileID, 0x1c1u, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionVictory2") \
+    X(llFTYoshiAnimUnknown7FileID, 0x1c8u, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionResultsAlt2") \
+    X(llFTYoshiAnimTeamPosesFileID, 0x1c9u, "nitro:/reloc/reloc_submotions/FTYoshiSubMotionResultsAlt3") \
+    X(llFTBossAnimPose1PFileID, 0x1cdu, "nitro:/reloc/reloc_submotions/FTBossSubMotionAttack4") \
+    X(llFTLuigiAnimDollFallFileID, 0x1d1u, "nitro:/reloc/reloc_submotions/FTLuigiSubMotionAppearAlt2") \
+    X(llFTLuigiAnimDollRevivalFileID, 0x1d2u, "nitro:/reloc/reloc_submotions/FTLuigiSubMotionVictory2") \
+    X(llFTLuigiAnimPosePlayerFileID, 0x1d3u, "nitro:/reloc/reloc_submotions/FTLuigiSubMotionVictory3") \
+    X(llFTLuigiAnimPoseEnemyFileID, 0x1d4u, "nitro:/reloc/reloc_submotions/FTLuigiSubMotionResults1") \
+    X(llFTPurinAnimDollFallFileID, 0x1d9u, "nitro:/reloc/reloc_submotions/FTPurinSubMotionVictory2") \
+    X(llFTPurinAnimDollRevivalFileID, 0x1dau, "nitro:/reloc/reloc_submotions/FTPurinSubMotionVictory3") \
+    X(llFTPurinAnimUnknownFileID, 0x1dbu, "nitro:/reloc/reloc_submotions/FTPurinSubMotionResults1") \
+    X(llFTPikachuAnimDollFallFileID, 0x1e1u, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionVictory1") \
+    X(llFTPikachuAnimDollRevivalFileID, 0x1e2u, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionVictory2") \
+    X(llFTPikachuAnimPosePlayerFileID, 0x1e6u, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionResults2") \
+    X(llFTPikachuAnimPoseEnemyFileID, 0x1e7u, "nitro:/reloc/reloc_submotions/FTPikachuSubMotionResults3") \
+    X(llFTMMarioAnimPose1PFileID, 0x1e8u, "nitro:/reloc/reloc_submotions/FTMMarioSubMotionIdle") \
+    X(llFTNMarioAnimPose1PFileID, 0x1e9u, "nitro:/reloc/reloc_submotions/FTNMarioSubMotionIdle") \
+    X(llFTNFoxAnimPose1PFileID, 0x1eau, "nitro:/reloc/reloc_submotions/FTNFoxSubMotionIdle") \
+    X(llFTNDonkeyAnimPose1PFileID, 0x1ebu, "nitro:/reloc/reloc_submotions/FTNDonkeySubMotionIdle") \
+    X(llFTNSamusAnimPose1PFileID, 0x1ecu, "nitro:/reloc/reloc_submotions/FTNSamusSubMotionIdle") \
+    X(llFTNLinkAnimPose1PFileID, 0x1edu, "nitro:/reloc/reloc_submotions/FTNLinkSubMotionIdle") \
+    X(llFTNYoshiAnimPose1PFileID, 0x1eeu, "nitro:/reloc/reloc_submotions/FTNYoshiSubMotionIdle") \
+    X(llFTNCaptainAnimPose1PFileID, 0x1efu, "nitro:/reloc/reloc_submotions/FTNCaptainSubMotionIdle") \
+    X(llFTNKirbyAnimPose1PFileID, 0x1f0u, "nitro:/reloc/reloc_submotions/FTNKirbySubMotionIdle") \
+    X(llFTNPikachuAnimPose1PFileID, 0x1f1u, "nitro:/reloc/reloc_submotions/FTNPikachuSubMotionIdle") \
+    X(llFTNNessAnimPose1PFileID, 0x1f2u, "nitro:/reloc/reloc_submotions/FTNNessSubMotionIdle")
+
 #endif

@@ -33,37 +33,43 @@ and Congra (walks `cwalk29`..`cwalk48`, `artifacts/visibility/2026-10-01_1p/`).
 | Congra 55 | 0 | correct |
 
 Per-battle pacing in the walk (present intervals of 2 VBlanks, `PACE`;
-proxy, not the gate): 0 93%, 1 Yoshi Team 78%, 2 94%, 3 94%, 4 88%, 5 93%,
-6 94%, 7 Board the Platforms 6%, 8 96%, 9 94%, 10 95%, 11 Race 72%,
-12 Polygon Team 39%, 13 Master Hand 89% (`cwalk49`). Board the Platforms' ARM9
-profile (`artifacts/task37-census/1p-pf01-st7`): 177 of 200 frames over the
-gate; the platforms' per-DObj submit (`ndsRendererAdapterSubmitStageDLBody`,
-275K cycles/frame) and the baked-item emit (213K) lead.
+proxy, not the gate): 0 93%, 1 Yoshi Team 78%, 2 94%, 3 93%, 4 86%, 5 93%,
+6 94%, 7 Board the Platforms 18%, 8 96%, 9 94%, 10 95%, 11 Race 72%,
+12 Polygon Team 39%, 13 Master Hand 89% (`cwalk54`). The walk KOs an enemy
+every 45 frames, so the team stages spawn far more often than in play.
+Board the Platforms was 6% (`cwalk49`): its ARM9 profile
+(`artifacts/task37-census/1p-pf01-st7`) put 177 of 200 frames over the gate,
+led by the platforms' per-DObj submit (`ndsRendererAdapterSubmitStageDLBody`,
+275K cycles/frame). Their baked roots now take the stage DL fast lane
+(`NDS_SDL_ROUTE_BAKED`): 833M -> 653M cycles over the same 200 frames
+(`1p-pf02-st7`), now led by the baked emit (205K cycles/frame), the native
+stage segments (188K) and texture binding (118K).
 
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
 renderer by the lab ROM `NDS_1P_INTRO_BAKE=1`
 (`scripts/menus/bake_1p_intro_stills.ps1`, packed by
-`scripts/menus/pack_1p_intro_stills.py`). 193 stills: every player card
-(cards 0, 1, 3 x 12 kinds x 4 costumes), every ally card, the VS fighters of
-stages 0, 2, 4, 5, 6, 9, 10, 13 and the recolours the source applies. Found on
-the way: costume accessories (Purin's bow and hats, Pikachu's hats) were lost by
-the draw capture -- Purin in costumes 1-3 declined everywhere, Pikachu drew
-hatless -- now bound to their joint and carried by an Accessory root program;
-camera xobj kinds 12-17 (the Reflect LookAts the intro's stage cameras use) had
-no view. Open: the three team VS stills (Yoshi, Kirby, Polygon Teams) -- baked
-one member per boot, but every member draws at the formation origin: the Demo
-pose's per-member frame (`ftMainSetStatus(..., frame_begin = i, 0.0F)`) does
-not place them.
+`scripts/menus/pack_1p_intro_stills.py`; the stills are ROM-derived and stay
+out of the public repository). 201 stills: every player card (cards 0, 1, 3 x
+12 kinds x 4 costumes), every ally card, the VS fighters of every battle stage
+(the Yoshi, Kirby and Polygon Teams composited from one member per boot) and
+the recolours the source applies. Found on the way: costume accessories
+(Purin's bow and hats, Pikachu's hats) were lost by the draw capture -- Purin
+in costumes 1-3 declined everywhere, Pikachu drew hatless -- now bound to their
+joint and carried by an Accessory root program; camera xobj kinds 12-17 (the
+Reflect LookAts the intro's stage cameras use) had no view.
 
-Open (owner 10-01: "different poses and different scale"): aligned against an
-N64 frame of stage 1 (Mario vs Link), the cameras, statuses (IntroL/IntroR),
-motions (Pose / PoseOpponent), frames and speeds all match the source, yet
-N64's Mario turns three-quarters to the camera where ours is in profile, and
-N64's Link tilts with the sword diagonal. The figures' root body joints carry
-the turn (Mario J4 yaw 0.435, J5 (-0.164, -1.466, -0.168)); next is the pose
-oracle (`NDS_FT_POSE_ORACLE=1` bake, which draws through the source parser) to
-split the pose engine from the draw composition. Re-bake once fixed.
+Poses (owner 10-01: "different poses and different scale"): the intro's
+IntroL/IntroR statuses select submotion rows 13/14, and their animation
+symbols (`llFT<Kind>AnimPose*FileID`, the team poses, Master Hand's, the
+figure's DollFall/DollRevival) were port stubs with no file behind them. An
+unresolved token leaves the figatree heap untouched, so every intro fighter
+replayed his DemoNull Wait -- Mario in profile, Link upright, every team member
+on the formation origin. The generator now emits the 57 1P demo rows
+(`NDS_1P_DEMO_ANIM_ASSET_ROWS`: token registry, path table and staging in
+lockstep, checked by `test_results_demo_submotion_routes.py`), and the re-bake
+matches the N64 frame (Mario three-quarters with his fist up, Link's diagonal
+sword, 18 Yoshis, 8 hatted Kirbys, the Polygon crowd).
 
 ## Source route contract
 

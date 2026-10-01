@@ -1532,3 +1532,62 @@ NDS_P2_KIRBY_DEMO_RELOC_FILES := \
 	reloc_submotions/FTKirbySubMotionAppearR \
 	reloc_submotions/FTKirbySubMotionAppearL \
 	reloc_submotions/FTKirbySubMotionAppearAlt2
+
+NDS_1P_DEMO_RELOC_FILES := \
+	reloc_submotions/FTMarioSubMotionVictory2 \
+	reloc_submotions/FTMarioSubMotionVictory3 \
+	reloc_submotions/FTMarioSubMotionResults3 \
+	reloc_submotions/FTMarioSubMotionResults4 \
+	reloc_submotions/FTFoxSubMotionVictory2 \
+	reloc_submotions/FTFoxSubMotionVictory3 \
+	reloc_submotions/FTFoxSubMotionResults3 \
+	reloc_submotions/FTFoxSubMotionResults4 \
+	reloc_submotions/FTDonkeySubMotionVictory2 \
+	reloc_submotions/FTDonkeySubMotionVictory3 \
+	reloc_submotions/FTDonkeySubMotionResults2 \
+	reloc_submotions/FTDonkeySubMotionResults3 \
+	reloc_submotions/FTSamusSubMotionVictory1 \
+	reloc_submotions/FTSamusSubMotionVictory2 \
+	reloc_submotions/FTSamusSubMotionResults2 \
+	reloc_submotions/FTSamusSubMotionResults3 \
+	reloc_submotions/FTLinkSubMotionVictory1 \
+	reloc_submotions/FTLinkSubMotionVictory2 \
+	reloc_submotions/FTLinkSubMotionResults2 \
+	reloc_submotions/FTLinkSubMotionResults3 \
+	reloc_submotions/FTKirbySubMotionVictory1 \
+	reloc_submotions/FTKirbySubMotionVictory2 \
+	reloc_submotions/FTKirbySubMotionResults2 \
+	reloc_submotions/FTKirbySubMotionResults3 \
+	reloc_submotions/FTCaptainSubMotionVictory2 \
+	reloc_submotions/FTCaptainSubMotionVictory3 \
+	reloc_submotions/FTCaptainSubMotionResults1 \
+	reloc_submotions/FTNessSubMotionVictory2 \
+	reloc_submotions/FTNessSubMotionVictory3 \
+	reloc_submotions/FTNessSubMotionResults1 \
+	reloc_submotions/FTYoshiSubMotionVictory1 \
+	reloc_submotions/FTYoshiSubMotionVictory2 \
+	reloc_submotions/FTYoshiSubMotionResultsAlt2 \
+	reloc_submotions/FTYoshiSubMotionResultsAlt3 \
+	reloc_submotions/FTBossSubMotionAttack4 \
+	reloc_submotions/FTLuigiSubMotionAppearAlt2 \
+	reloc_submotions/FTLuigiSubMotionVictory2 \
+	reloc_submotions/FTLuigiSubMotionVictory3 \
+	reloc_submotions/FTLuigiSubMotionResults1 \
+	reloc_submotions/FTPurinSubMotionVictory2 \
+	reloc_submotions/FTPurinSubMotionVictory3 \
+	reloc_submotions/FTPurinSubMotionResults1 \
+	reloc_submotions/FTPikachuSubMotionVictory1 \
+	reloc_submotions/FTPikachuSubMotionVictory2 \
+	reloc_submotions/FTPikachuSubMotionResults2 \
+	reloc_submotions/FTPikachuSubMotionResults3 \
+	reloc_submotions/FTMMarioSubMotionIdle \
+	reloc_submotions/FTNMarioSubMotionIdle \
+	reloc_submotions/FTNFoxSubMotionIdle \
+	reloc_submotions/FTNDonkeySubMotionIdle \
+	reloc_submotions/FTNSamusSubMotionIdle \
+	reloc_submotions/FTNLinkSubMotionIdle \
+	reloc_submotions/FTNYoshiSubMotionIdle \
+	reloc_submotions/FTNCaptainSubMotionIdle \
+	reloc_submotions/FTNKirbySubMotionIdle \
+	reloc_submotions/FTNPikachuSubMotionIdle \
+	reloc_submotions/FTNNessSubMotionIdle

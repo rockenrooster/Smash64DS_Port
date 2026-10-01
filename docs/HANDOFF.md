@@ -31,7 +31,7 @@ r65b. Open: owner's rematch VFX loss (not reproduced on 3 stages/2 rosters; ask 
 Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
 **10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra, 0 battle failures
 (`cwalk49`; table `p2/P2-6-one-player.md`). Staffroll + Board the Platforms lights done; intro stills baked locally
-(ROM-derived); owner: poses differ from N64 (open). Next: Ending room, 1P P95 (Board the Platforms per-DObj submit).
+(ROM-derived); intro poses fixed (1P demo anim rows, 201 stills re-baked). Next: Ending room, 1P P95 (Board the Platforms).
 
 ## Continue, do not restart
 

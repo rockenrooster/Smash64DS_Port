@@ -5964,6 +5964,12 @@ endif
 ifeq ($(NDS_P2_KIRBY),1)
 NDS_VS_RESULTS_RELOC_FILES += $(NDS_P2_KIRBY_DEMO_RELOC_FILES)
 endif
+# P2-6: the 1P scenes' demo poses -- the intro's IntroL/IntroR (team
+# formations included) and the figure's dolls -- from the same generated table
+# as their runtime token rows (NDS_1P_DEMO_ANIM_ASSET_ROWS).
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_VS_RESULTS_RELOC_FILES += $(NDS_1P_DEMO_RELOC_FILES)
+endif
 endif
 
 NDS_STARTUP_RELOC_FILES := \

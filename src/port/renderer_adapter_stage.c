@@ -7317,6 +7317,13 @@ volatile u32 gNdsStageDLFastLaneFills;
  * admission is the same everywhere -- the item submit, an Item GObj of the
  * owner's kind, no MObj -- and whose call is one of two shapes. */
 #define NDS_SDL_ROUTE_ITEM 2u
+/* A baked root (nds_native_item_baked.exec.inc) under a ground-display GObj:
+ * Board the Platforms' platforms, ~30 lists a frame, which each paid the
+ * whole body -- its owner probes, the entry-effect probe and the baked-root
+ * search -- for one table lookup. The route keeps the root handle (in `root`)
+ * and its material slot count (in `pad`); the MObj materials are live, so they
+ * are snapshotted again on every draw, as the body does. */
+#define NDS_SDL_ROUTE_BAKED 0xfeu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7485,7 +7492,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (loaded == NULL) || (loaded->data != route->data) ||
          (loaded->data_size != route->data_size) ||
          (loaded->asset_id != (u32)route->asset_id) ||
-         (dobj->mobj != NULL) || (owner == NULL) ||
+         ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED)) ||
+         (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
          (ndsRendererHardwareNoOracleEnabled() == FALSE)))
@@ -7507,6 +7515,15 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
             return FALSE;
         }
         break;
+#if NDS_P2_ITEM_CORE
+    case NDS_SDL_ROUTE_BAKED:
+        if ((owner->id != nGCCommonKindGroundDisplay) ||
+            (sNdsRendererAdapterItemSubmitActive != FALSE))
+        {
+            return FALSE;
+        }
+        break;
+#endif
     default:
     {
 #if NDS_P2_ITEM_CORE
@@ -7624,6 +7641,42 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
     }
 #if NDS_P2_ITEM_CORE
+    else if (route_kind == NDS_SDL_ROUTE_BAKED)
+    {
+        /* The body's baked branch: the DObj's MObjs in order are the root's
+         * live segment-E materials. */
+        NDSRendererNativeMaterial baked_materials[
+            NDS_NATIVE_BAKED_MATERIAL_SLOTS];
+        MObj *mobj = dobj->mobj;
+        u32 slots = (u32)route->pad;
+        u32 i;
+
+        for (i = 0u; (i < slots) && (i < NDS_NATIVE_BAKED_MATERIAL_SLOTS);
+             i++)
+        {
+            if ((mobj == NULL) ||
+                (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                     mobj, &baked_materials[i], FALSE, NULL, NULL) == FALSE))
+            {
+                break;
+            }
+            mobj = mobj->next;
+        }
+        handled = (i == slots) ?
+            ndsRendererSubmitNativeBaked(
+                (const void *)(uintptr_t)route->root, loaded->data,
+                loaded->data_size, baked_materials, i, &config,
+                render_stats) :
+            FALSE;
+        if (handled != FALSE)
+        {
+            gNdsItemBakedDrawCount++;
+        }
+        else
+        {
+            gNdsItemBakedSubmitFailCount++;
+        }
+    }
     else
     {
         u32 head = (sNdsRendererAdapterItemSubmitHead <
@@ -13152,6 +13205,19 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
             if (item_baked_native_handled != FALSE)
             {
                 gNdsItemBakedDrawCount++;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+                /* A ground display's baked root draws through the fast lane
+                 * from now on (NDS_SDL_ROUTE_BAKED); its admission is the
+                 * GObj kind and the same submit context, checked per draw. */
+                if ((dobj->parent_gobj->id == nGCCommonKindGroundDisplay) &&
+                    (sNdsRendererAdapterItemSubmitActive == FALSE) &&
+                    (sNdsRendererAdapterEffectSubmitActive == FALSE))
+                {
+                    ndsStageDLRouteRecord(dl, loaded, (u32)(uintptr_t)baked,
+                                          NDS_SDL_ROUTE_BAKED);
+                    ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
+                }
+#endif
             }
             else
             {

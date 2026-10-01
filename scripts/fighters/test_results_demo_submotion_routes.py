@@ -77,7 +77,11 @@ def demo_rows() -> list[dict]:
             "fighter_production_manifest.json carries no "
             "results_demo_submotions; the Results demo table was removed from "
             "the generator and this test must follow it")
-    return list(rows)
+    # The 1P scenes' poses (P2-6) ride the same two tables and the same
+    # staging fan-in under one gate, NDS_P2_1P_GAME.
+    one_p = [dict(row, gate="1P")
+             for row in manifest.get("one_p_demo_submotions", [])]
+    return list(rows) + one_p
 
 
 def o2r_file_id(path: str) -> int | None:
@@ -107,6 +111,8 @@ def make_variable(text: str, name: str) -> list[str]:
 
 def gate_for(name: str) -> str:
     """The Make/C flag a generated demo variable rides."""
+    if name.startswith("NDS_1P_DEMO_"):
+        return "1P_GAME"
     kind = re.match(r"NDS_(?:P2_)?(\w+)_DEMO_(?:ANIM_ASSET_ROWS|RELOC_FILES)$",
                     name)
     if kind is None:

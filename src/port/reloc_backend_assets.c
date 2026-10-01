@@ -3867,6 +3867,13 @@ static const NDSRelocDemoAnimTokenRow sNdsRelocDemoAnimTokens[] =
 #if NDS_P2_KIRBY
     NDS_P2_KIRBY_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
 #endif
+    /* The 1P scenes' rows: the intro's IntroL/IntroR poses (rows 13/14) and
+     * the figure's DollFall/DollRevival (rows 9/10). Unresolved, every intro
+     * fighter replayed his DemoNull Wait from the figatree heap and every
+     * team member stood on the formation origin. */
+#if NDS_P2_1P_GAME
+    NDS_1P_DEMO_ANIM_ASSET_ROWS(NDS_RELOC_DEMO_ANIM_TOKEN_ROW)
+#endif
 #undef NDS_RELOC_DEMO_ANIM_TOKEN_ROW
 };
 
