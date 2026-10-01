@@ -5791,6 +5791,38 @@ static u32 ndsRendererEntryRampPalette(const NDSEntryEffectTexture *texture,
     return entry->name;
 }
 
+/* Which refusal the entry-effect owner took (lab builds only: the stores
+ * stay out of the gate ROM). A distinct constant store per site keeps GCC
+ * from merging the tails. */
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+__attribute__((used)) volatile u32 gNdsEntryEffectRejectLine;
+__attribute__((used)) volatile u32 gNdsEntryEffectRejectRoot;
+#define NDS_ENTRY_EFFECT_REJECT() \
+    do { gNdsEntryEffectRejectLine = __LINE__; \
+         gNdsEntryEffectRejectRoot = (owner_asset_id << 16) ^ root_offset; \
+         return FALSE; } while (0)
+#else
+#define NDS_ENTRY_EFFECT_REJECT() return FALSE
+#endif
+/* The presented frame (renderer serial) that last drew a root with a
+ * startup-only entry texture. VSBattle retires those textures at GO, but an
+ * entry effect already playing can outlive GO: Samus's drew three more frames
+ * on Jungle, Zebes, Hyrule and Dream Land and found its texture name 0 (the
+ * refusal at the texture-slot check, 2026-09-30 native-owner census). */
+#if NDS_RENDERER_HW_TRIANGLES
+static u32 sNdsEntryEffectStartupDrawSerial;
+#endif
+
+u32 ndsRendererEntryEffectStartupIdleFrames(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    return (sNdsRendererHardwareFrameSerial + 1u) -
+           sNdsEntryEffectStartupDrawSerial;
+#else
+    return 0xffffffffu;
+#endif
+}
+
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,
@@ -5829,19 +5861,19 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (config->initial_projection == NULL) ||
         (config->initial_modelview == NULL))
     {
-        return FALSE;
+        NDS_ENTRY_EFFECT_REJECT();
     }
     root = ndsRendererEntryEffectRoot(owner_asset_id, root_offset);
     if ((root == NULL) || (root->group_count == 0u) ||
         ((u32)root->first_group + root->group_count >
          NDS_ENTRY_EFFECT_GROUP_COUNT))
     {
-        return FALSE;
+        NDS_ENTRY_EFFECT_REJECT();
     }
     root_index = (u32)(root - &sNdsEntryEffectRoots[0]);
     if (root_index >= NDS_ENTRY_EFFECT_ROOT_COUNT)
     {
-        return FALSE;
+        NDS_ENTRY_EFFECT_REJECT();
     }
     initial_prim_color = stats->prim_color;
     initial_env_color = stats->env_color;
@@ -5867,7 +5899,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         if ((shield_variant == 5u) ||
             (sNdsEntryShieldTextureName[shield_variant] == 0u))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
     }
     /* The first root of either source effect begins a new synchronous DObj
@@ -5925,7 +5957,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 ((materials == NULL) ||
                  ((u32)group->material_slot >= material_count)))
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
             for (override_index = 0u;
                  override_index < group->matrix_override_count;
@@ -5937,14 +5969,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 if ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
                      (1u << (source_root & 31u))) == 0u)
                 {
-                    return FALSE;
+                    NDS_ENTRY_EFFECT_REJECT();
                 }
             }
             if ((group->texture_slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) &&
                 (owner_asset_id != 163u) &&
                 (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
             continue;
         }
@@ -5963,7 +5995,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             ((u32)group->matrix_override_first + group->matrix_override_count >
              NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         for (corner = 0u; corner < corner_count; corner++)
         {
@@ -5978,7 +6010,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 (sNdsEntryEffectCornerColor[vertex_index] >=
                  NDS_ENTRY_EFFECT_COLOR_COUNT))
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
             if (ndsRendererEntryEffectPositionFits(&sNdsEntryEffectPositions[
                     sNdsEntryEffectCornerPosition[vertex_index]]) == 0u)
@@ -6005,7 +6037,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
                   (1u << (source_root & 31u))) == 0u))
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
             previous_override = override_corner;
         }
@@ -6018,7 +6050,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             ((owner_asset_id != 163u) &&
              (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u)))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
     }
     if (static_proven == FALSE)
@@ -6045,7 +6077,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             expected_effects |= NDS_RENDERER_NATIVE_MATERIAL_LIGHT1;
         }
         if ((materials == NULL) || (material_count != 1u) ||
-            (materials[0].effects != expected_effects)) { return FALSE; }
+            (materials[0].effects != expected_effects)) { NDS_ENTRY_EFFECT_REJECT(); }
         if (ko_part < 3u)
         {
             for (group_offset = 0u; group_offset < root->group_count; group_offset++)
@@ -6054,14 +6086,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 const NDSEntryEffectGroup *group = &sNdsEntryEffectGroups[index];
                 u32 environment = ((sNdsEntryEffectColorWriteMasks[index] & 2u) != 0u) ?
                     sNdsEntryEffectEnvColors[group->env_color_index] : initial_env_color;
-                if (group->material_slot != 0u) { return FALSE; }
+                if (group->material_slot != 0u) { NDS_ENTRY_EFFECT_REJECT(); }
                 if ((expected_effects & NDS_RENDERER_NATIVE_MATERIAL_ENV) != 0u)
                 {
                     environment = materials[0].env_color;
                 }
                 if (ndsRendererEntryKoPalette(ko_part, materials[0].prim_w1, environment) == 0u)
                 {
-                    return FALSE;
+                    NDS_ENTRY_EFFECT_REJECT();
                 }
             }
         }
@@ -6072,7 +6104,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
         if ((materials == NULL) || (material_count != 1u))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         switch (root_offset)
         {
@@ -6098,11 +6130,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
             expected_effects = NDS_RENDERER_NATIVE_MATERIAL_PRIM;
             break;
         default:
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         if (materials[0].effects != expected_effects)
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
     }
 
@@ -6126,7 +6158,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             (sNdsRendererEntryEffectTextureName[
                  NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT] == 0u))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
     }
 
@@ -6161,7 +6193,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             (root->group_count != 1u) || (group->material_slot != 0u) ||
             (group->texture_slot != primary_slot))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         if (owner_asset_id == 350u)
         {
@@ -6170,7 +6202,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 (sNdsRendererEntryEffectTextureName[
                      NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT] == 0u))
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
         }
         else if ((sNdsRendererEntryEffectTextureName[
@@ -6180,7 +6212,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  (sNdsRendererEntryEffectTextureName[
                       NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT] == 0u))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
     }
 
@@ -6195,7 +6227,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         if ((root_offset != 0x11680u) || (materials == NULL) ||
             (material_count != 9u))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         for (material_index = 0u; material_index < material_count;
              material_index++)
@@ -6203,7 +6235,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             if (materials[material_index].effects !=
                 NDS_RENDERER_NATIVE_MATERIAL_PRIM)
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
         }
     }
@@ -6232,12 +6264,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
         else
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         if ((materials == NULL) ||
             (material_count != expected_material_count))
         {
-            return FALSE;
+            NDS_ENTRY_EFFECT_REJECT();
         }
         for (material_index = 0u; material_index < material_count;
              material_index++)
@@ -6245,7 +6277,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
             if (materials[material_index].effects !=
                 NDS_RENDERER_NATIVE_MATERIAL_PRIM)
             {
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
         }
     }
@@ -6861,7 +6893,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  * data is corrupted after the fence. End the open batch before
                  * refusing so the adapter can fall back safely. */
                 ndsRendererHardwareEndBatch();
-                return FALSE;
+                NDS_ENTRY_EFFECT_REJECT();
             }
 
             if (hw_lit_group != FALSE)
@@ -6960,7 +6992,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                 if (ndsRendererEntryEffectVertex(
                         group->first_vertex, &first_vertex) == FALSE)
                 {
-                    return FALSE;
+                    NDS_ENTRY_EFFECT_REJECT();
                 }
 
                 gNdsEntryEffectRootPolyFmt[diag_root] = poly_fmt;
@@ -7001,6 +7033,25 @@ s32 ndsRendererSubmitNativeEntryEffect(
         gNdsEntryEffectStateRecords++;
     }
     gNdsEntryEffectNativeDrawCount++;
+    {
+        u32 g;
+
+        /* A root drawing a startup-only texture keeps those textures
+         * alive (ndsRendererEntryEffectStartupIdleFrames). */
+        for (g = 0u; g < (u32)root->group_count; g++)
+        {
+            u32 slot = sNdsEntryEffectGroups[(u32)root->first_group + g]
+                .texture_slot;
+
+            if ((slot != NDS_ENTRY_EFFECT_TEXTURE_NONE) &&
+                (sNdsEntryEffectTextureStartupOnly[slot] != 0u))
+            {
+                sNdsEntryEffectStartupDrawSerial =
+                    sNdsRendererHardwareFrameSerial + 1u;
+                break;
+            }
+        }
+    }
     if ((owner_asset_id == 350u) && (root_offset == 0x0a30u))
     {
         gNdsFalconKickNativeSubmitCount++;

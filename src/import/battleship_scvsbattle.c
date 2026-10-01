@@ -64,6 +64,7 @@ void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
 void ndsRendererHardwareReleaseEntryStartupTextures(void);
+u32 ndsRendererEntryEffectStartupIdleFrames(void);
 static void ndsSCVSBattleBeginScenePlacement(void);
 static void ndsSCVSBattleStartPlayBGM(void);
 static void ndsSCVSBattlePrepareBeforeTimer(void);
@@ -398,9 +399,14 @@ void scVSBattleFuncUpdate(void)
      * here so their direct GL allocations stop competing with gameplay items.
      * This stays VSBattle-local on purpose: 1P can introduce a new fighter
      * later in the same scene and therefore has a different lifetime. */
+    /* An entry effect already playing at GO keeps drawing for a few frames
+     * (Samus's three on Jungle/Zebes/Hyrule/Dream Land found its textures
+     * gone, 2026-09-30), so the retirement waits for one presented frame in
+     * which no startup-texture root drew. */
     if ((sNdsSCVSBattleEntryStartupTexturesRetired == FALSE) &&
         (gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo) &&
+        (ndsRendererEntryEffectStartupIdleFrames() >= 2u))
     {
         {
             /* Sector Z's fly-by draws Fox's entry Arwing list all match long
