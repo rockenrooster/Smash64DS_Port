@@ -132,6 +132,32 @@ u32 gNdsLabPimAcc[5];
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
 
+/* objdisplay.c:2950-2983, camera xobj kinds 12-17: the view of 6/7, 8/9 or
+ * 10/11 together with the LookAt the RSP's texgen reads. */
+static void ndsRendererAdapterReflectCameraView(const CObj *cobj, u32 kind,
+                                                Mtx *mtx, LookAt *look_at)
+{
+    if (kind <= 13u)
+    {
+        syMatrixLookAtReflect(mtx, look_at,
+                              cobj->vec.eye.x, cobj->vec.eye.y,
+                              cobj->vec.eye.z, cobj->vec.at.x,
+                              cobj->vec.at.y, cobj->vec.at.z,
+                              cobj->vec.up.x, cobj->vec.up.y,
+                              cobj->vec.up.z);
+    }
+    else
+    {
+        syMatrixModLookAtReflect(mtx, look_at,
+                                 cobj->vec.eye.x, cobj->vec.eye.y,
+                                 cobj->vec.eye.z, cobj->vec.at.x,
+                                 cobj->vec.at.y, cobj->vec.at.z,
+                                 cobj->vec.up.x, 0.0F,
+                                 (kind <= 15u) ? 1.0F : 0.0F,
+                                 (kind <= 15u) ? 0.0F : 1.0F);
+    }
+}
+
 const LookAt *ndsRendererAdapterCurrentLookAt(void)
 {
     /* BattleShip Interpreter::SpReset initializes these two coefficient
@@ -143,6 +169,7 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void)
         .l = { { .l = { .dir = { 0, 127, 0 } } },
                { .l = { .dir = { 127, 0, 0 } } } }
     };
+    static LookAt reflect_look_at;
     CObj *cobj = (gGCCurrentCamera != NULL) ?
         CObjGetStruct(gGCCurrentCamera) : NULL;
     u32 i;
@@ -155,6 +182,16 @@ const LookAt *ndsRendererAdapterCurrentLookAt(void)
                 (cobj->xobjs[i]->kind == NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
             {
                 return ndsR2CameraCurrentLookAt();
+            }
+            /* A Reflect camera emits its own gSPLookAtX/Y. */
+            if ((cobj->xobjs[i] != NULL) && (cobj->xobjs[i]->kind >= 12) &&
+                (cobj->xobjs[i]->kind <= 17))
+            {
+                Mtx mtx;
+
+                ndsRendererAdapterReflectCameraView(
+                    cobj, (u32)cobj->xobjs[i]->kind, &mtx, &reflect_look_at);
+                return &reflect_look_at;
             }
         }
     }
@@ -5940,6 +5977,35 @@ static sb32 ndsRendererAdapterBuildCameraMatrices(
                 *modelview_valid = TRUE;
             }
             break;
+        case 12:
+        case 13:
+        case 14:
+        case 15:
+        case 16:
+        case 17:
+        {
+            /* objdisplay.c:2950-2983: the Reflect forms of 6-11 -- the same
+             * view, plus the LookAt texgen reads
+             * (ndsRendererAdapterCurrentLookAt). The 1P intro's stage cameras
+             * are kind 15; without this arm their fighters had a projection
+             * and no view and drew off screen. */
+            LookAt look_at;
+
+            ndsRendererAdapterReflectCameraView(cobj, (u32)xobj->kind, &mtx,
+                                                &look_at);
+            ndsRendererAdapterMtxFromN64(&mtx, &incoming);
+            if ((xobj->kind & 1u) == 0u)
+            {
+                ndsRendererAdapterMulBefore(projection, &incoming,
+                                            projection_valid);
+            }
+            else
+            {
+                *modelview = incoming;
+                *modelview_valid = TRUE;
+            }
+            break;
+        }
         default:
             break;
         }

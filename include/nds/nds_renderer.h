@@ -1603,6 +1603,11 @@ extern volatile u32 gNdsMBallRaysMaterialRejectCount;
  * image for the current scene (call from fighter CREATION, never a draw);
  * Verify compares it against the arrays while both still exist. */
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
+/* The Polygon Team scene: polygon images share a small buffer pool for the
+ * current arena generation (see the pool in nds_renderer_assets.c). The
+ * caller (ftmanager) answers which fighter kinds are still linked. */
+void ndsRendererNativeArmPolygonImagePool(void);
+u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot);
 s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail);
 /* Bytes Ensure would allocate for that image, or 0 if this build has none. */
 u32 ndsRendererNativeOwnerImageSize(u32 owner_slot, u32 use_low_detail);
@@ -2022,6 +2027,9 @@ extern volatile u32 gNdsRendererFoxGunDrawCount;
 extern volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
 void ndsRendererEndParticleQuads(void);
+/* Marks this frame's GX list submitted when world quads are its only geometry
+ * (the staff roll), so the platform flushes it and shows BG0. */
+void ndsRendererHardwareNoteQuadFrame(void);
 /* DEBUG-ONLY. Draws a world-space collision-diamond outline inside an open
  * particle quad batch (see src/nds/nds_renderer.c). For tuning the fireball's
  * stage-collision box; no-op if no batch is open. */

@@ -15,25 +15,55 @@ Reuse `battleship_sc1pmanager.c`, `battleship_sc1pgame_runtime.c`, the imported 
 The walk ROM (`TARGET=smash64ds NDS_P2_MENU_WALK=1`, route 1: the human a
 level-9 CPU, enemies level 1, enemies below stage 12 KO'd every 45 frames)
 plays the whole ladder: stages 0-13, every bonus, Master Hand, Ending, Staffroll
-and Congra (walks `cwalk29`..`cwalk37`, `artifacts/visibility/2026-10-01_1p/`).
+and Congra (walks `cwalk29`..`cwalk48`, `artifacts/visibility/2026-10-01_1p/`).
 
 | Stage / scene | Native failures | State |
 |---|---|---|
-| 0-5, 9 | 0-2 fighter | clear |
-| 6 Giant DK, 8 Kirby Team | 7 / 4 fighter | Link AppearR (status 0xE0) owner rejects; degenerate-texgen fix landed, re-walk pending |
-| 7 Board the Platforms | 0 (was 22,911) | platforms skip the topology, draw through baked roots |
-| 10 Meta Crystal | 0 (stage 1,469, fighter 145) | material descriptor 0x1E18; Metal Mario texgen mirror |
-| 11 Race | 0 (stage 5,307, fighter 169) | polygons drawn; barrel bomb's DL-link-1 part baked |
-| 12 Polygon Team | 0 (was 879) | polygons drawn (texgen mirror + G_TEXTURE_GEN_LINEAR); low-water 5,248 B (floor 25,600) |
-| 13 Master Hand | 0 (was 25,300) | drawn: commonparts flags restored, root 0xfe0's unlit run tagged |
-| Ending 48 / Staffroll 56 | 659 / 46,725 sprite | blank screens |
+| 0-3, 5, 9 | 0 | clear (full walk `cwalk45`) |
+| 4 Mario Bros | 0 (was 45 sprite) | the ally's heart tag: its sprite row was missing from the IFCommonPlayerTags geometry table, and the OAM arm refused tag 5 |
+| 6 Giant DK | 0 | a DK player/ally loads DK's full files here (the compact pack faulted Giant DK's construction) |
+| 8 Kirby Team | 0 | |
+| 10 Meta Crystal | 0 | the Mario/Luigi/Metal Mario pipe: the deferred-desc retry now names the entering fighter's Special2 slot first (a Mario ally or Metal Mario after Mario Bros faulted on a bare effect GObj) |
+| 11 Race | 0 | |
+| 12 Polygon Team | 0 | low-water 91,540 B (fighter files in the overlay tail) |
+| 13 Master Hand | 0 | |
+| 7 Board the Platforms | 0 | the platform lights (DObjs 1-2, DL link 1) drew opaque: the source's layer-1 head 1 starts them at G_RM_AA_ZB_XLU_SURF and their BLENDPE lerp's alpha is TEXEL0 * PRIM on an I8 tile; the baked roots now carry each head's render mode and request intensity coverage (owner: "they look good now") |
+| Ending 48 | 659 sprite | blank: the port's generic DObj-tree draws are recorders, so the MVCommon room and the figure never draw (needs native room geometry) |
+| Staffroll 56 | ~1 sprite/frame | names and jobs draw natively (glyph quads, `cwalk53`); crosshair and box via the S2D tenant, frame rects in the overlay |
 | Congra 55 | 0 | correct |
 
-Landed on the way: 1P compact ground maps and wallpapers, Bonus 1 targets/HUD,
-Kirby Team hats, identical-detail owner images aliased, polygon ShieldPose from
-the base packages, zero-copy pin ownership (the Polygon Team crash), multi-MObj
-stage materials, VS CSS without the in-progress plate. Open beyond the table:
-1P intro fighter stills (owner: rendered stills), 1P P95 per stage.
+Per-battle pacing in the walk (present intervals of 2 VBlanks, `PACE`;
+proxy, not the gate): 0 93%, 1 Yoshi Team 78%, 2 94%, 3 94%, 4 88%, 5 93%,
+6 94%, 7 Board the Platforms 6%, 8 96%, 9 94%, 10 95%, 11 Race 72%,
+12 Polygon Team 39%, 13 Master Hand 89% (`cwalk49`). Board the Platforms' ARM9
+profile (`artifacts/task37-census/1p-pf01-st7`): 177 of 200 frames over the
+gate; the platforms' per-DObj submit (`ndsRendererAdapterSubmitStageDLBody`,
+275K cycles/frame) and the baked-item emit (213K) lead.
+
+Intro fighter stills (owner: rendered stills). The shipping intro is static
+and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
+renderer by the lab ROM `NDS_1P_INTRO_BAKE=1`
+(`scripts/menus/bake_1p_intro_stills.ps1`, packed by
+`scripts/menus/pack_1p_intro_stills.py`). 193 stills: every player card
+(cards 0, 1, 3 x 12 kinds x 4 costumes), every ally card, the VS fighters of
+stages 0, 2, 4, 5, 6, 9, 10, 13 and the recolours the source applies. Found on
+the way: costume accessories (Purin's bow and hats, Pikachu's hats) were lost by
+the draw capture -- Purin in costumes 1-3 declined everywhere, Pikachu drew
+hatless -- now bound to their joint and carried by an Accessory root program;
+camera xobj kinds 12-17 (the Reflect LookAts the intro's stage cameras use) had
+no view. Open: the three team VS stills (Yoshi, Kirby, Polygon Teams) -- baked
+one member per boot, but every member draws at the formation origin: the Demo
+pose's per-member frame (`ftMainSetStatus(..., frame_begin = i, 0.0F)`) does
+not place them.
+
+Open (owner 10-01: "different poses and different scale"): aligned against an
+N64 frame of stage 1 (Mario vs Link), the cameras, statuses (IntroL/IntroR),
+motions (Pose / PoseOpponent), frames and speeds all match the source, yet
+N64's Mario turns three-quarters to the camera where ours is in profile, and
+N64's Link tilts with the sword diagonal. The figures' root body joints carry
+the turn (Mario J4 yaw 0.435, J5 (-0.164, -1.466, -0.168)); next is the pose
+oracle (`NDS_FT_POSE_ORACLE=1` bake, which draws through the source parser) to
+split the pose engine from the draw composition. Re-bake once fixed.
 
 ## Source route contract
 

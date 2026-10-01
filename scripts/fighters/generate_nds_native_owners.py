@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import struct
 from collections import Counter
@@ -937,6 +938,20 @@ OWNER_PLAN_COUNTS = {
     "kirby": (23, 7),
 }
 
+# Link's 1P intro program (OWNER_ROOT_PROGRAMS["link"] "Intro") exists for ONE
+# consumer: the offline bake of the intro stills (scripts/menus/
+# bake_1p_intro_stills.ps1), whose lab ROM runs the live intro. The shipping
+# intro shows those stills, so its owner never needs the four intro roots --
+# about a quarter more Link image, resident in every match with Link. The
+# Makefile exports NDS_OWNER_LINK_INTRO=1 only for NDS_1P_INTRO_BAKE builds and
+# stamps the value so switching configurations regenerates the owners.
+LINK_INTRO_PROGRAM = os.environ.get("NDS_OWNER_LINK_INTRO", "0") == "1"
+# What the intro roots add to the pinned censuses below: per-corner restores
+# for their cross-binding corners (both details), and the tail-state rows that
+# move every later appendix root's tail_state_first.
+LINK_INTRO_RESTORES = 24 if LINK_INTRO_PROGRAM else 0
+LINK_INTRO_TAIL_STATES = 133 if LINK_INTRO_PROGRAM else 0
+
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
 # per-corner/current-root restores in the exact flattened owner packet.
 OWNER_GX_PLAN_COUNTS = {
@@ -948,7 +963,7 @@ OWNER_GX_PLAN_COUNTS = {
     # OWNER_CROSS_BINDING_SLOTS above.
     "captain": (1, 6, 6, 0, 0),
     "samus": (1, 5, 5, 0, 0),
-    "link": (1, 8, 8, 6, 44),
+    "link": (1, 8, 8, 6, 44 + LINK_INTRO_RESTORES),
     "pikachu": (1, 8, 8, 11, 130),
     "yoshi": (1, 6, 6, 14, 122),
     # MMario seeds; the inventory falsifier reports stores/restores.
@@ -987,7 +1002,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "donkey": (1, 6, 6, 10, 74),
         "captain": (1, 6, 6, 0, 0),
         "samus": (1, 5, 5, 0, 0),
-        "link": (1, 8, 8, 2, 6),
+        "link": (1, 8, 8, 2, 6 + LINK_INTRO_RESTORES),
         "pikachu": (1, 8, 8, 11, 106),
         "yoshi": (1, 6, 6, 8, 62),
         "mmario": (1, 5, 5, 8, 70),
@@ -1960,8 +1975,10 @@ P2_OWNER_MODEL_CENSUS = {
         "low": (48, 203, 23, 199, 23, 23, 14, 174, 597, 0, 56, 0, 0),
     },
     "link": {
-        "high": (86, 353, 69, 338, 61, 52, 19, 420, 1014, 13, 52, 32, 44),
-        "low": (83, 351, 55, 217, 47, 47, 19, 335, 651, 1, 52, 32, 6),
+        "high": (86, 353, 69, 338, 61, 52, 19, 420, 1014, 13, 52, 32,
+                 44 + LINK_INTRO_RESTORES),
+        "low": (83, 351, 55, 217, 47, 47, 19, 335, 651, 1, 52, 32,
+                6 + LINK_INTRO_RESTORES),
     },
     "pikachu": {
         "high": (38, 103, 63, 317, 56, 23, 16, 255, 951, 25, 4, 0, 130),
@@ -2459,6 +2476,18 @@ P2_ROOT_PROGRAM_APPENDIX = {
         "high": ((7, 0x6d90), (0, 0x69e0), (7, 0x6b50)),
         "low":  ((7, 0x6d90), (0, 0x69e0), (7, 0x6b50)),
     },
+    # The costume accessories (OWNER_ACCESSORY_PARTS): one display list each,
+    # keyed to the binding of the joint whose matrix draws it -- Purin's
+    # joint 6 is binding 0, Pikachu's joint 11 binding 4, in both details.
+    # FTAccessPart has no per-detail list, so both details bake the same one.
+    "purin": {
+        "high": ((0, 0x4a60),),
+        "low":  ((0, 0x4a60),),
+    },
+    "pikachu": {
+        "high": ((4, 0x63f0),),
+        "low":  ((4, 0x63f0),),
+    },
 }
 
 # Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
@@ -2732,6 +2761,64 @@ OWNER_ROOT_PROGRAM_SOURCES = {
     ),
 }
 
+# The 1P intro poses (bake only; see LINK_INTRO_PROGRAM).
+# scsubsysdatalink.c D_ovl1_803919EC, run by both PosePlayer (status 0x1000D,
+# the cards) and PoseOpponent (0x1000E, the VS screen), is four raw
+# SetModelPartID words -- 0xA0B00001 (22, 1), 0xA0B80001 (23, 1), 0xA0C00001
+# (24, 1), 0xA0580002 (11, 2) -- and an end. All four joints already draw, so
+# the topology is canonical's nineteen roots with four display lists replaced;
+# Link owns no per-binding variant table, so the replacement is a program.
+# Without it every intro Link declined (validate code 4) and drew nothing.
+#
+# The appendix rows sit at the canonical bindings of the joints they replace:
+# joint 11 is binding 5, joints 22/23/24 are bindings 10/11/12. LinkMain's
+# modelparts rows name the High display list for both details, so the offsets
+# are the same in each. 0x94f0 must stay immediately before 0x9b98: the pair
+# welds through the vertex cache exactly as canonical 0x2ef0/0x3398 do.
+LINK_INTRO_APPENDIX_OFFSETS = frozenset({0xa100, 0x93b8, 0x94f0, 0x9b98})
+
+# Costume accessories. For a costume other than 0, ftParamInitAllParts
+# (ftparam.c:1036-1054) gives the FTAttributes.accesspart joint a parts GObj
+# holding one display list -- Purin's bow and hats, Pikachu's hats -- and
+# ftDisplayMainDrawAccessory issues it under that joint's matrix: Purin's
+# BEFORE the joint's own list (ftdisplaymain.c:776, :814), Pikachu's AFTER it
+# (:819). The live root vector is canonical with that one list inserted at the
+# joint, which only a complete program can carry: without it every Purin in
+# costumes 1-3 declined (the intro still bake, validate code 4) and Pikachu's
+# hat was dropped from the capture. (joint, display list, drawn before the
+# joint's own list); _verify_owner_accesspart re-reads joint and list from the
+# Main payload's FTAccessPart row (OWNER_ACCESSORY_SOURCES).
+OWNER_ACCESSORY_PARTS = {
+    "purin": (6, 0x4a60, True),
+    "pikachu": (11, 0x63f0, False),
+}
+OWNER_ACCESSORY_SOURCES = {
+    # 233_PurinMain.c: `/* @ 0x00C0, 16 bytes: FTAttributes.accesspart */`.
+    "purin": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/PurinMain"),
+        0x00e9,
+        0x00c0,
+    ),
+    # 243_PikachuMain.c: `/* @ 0x0130, 16 bytes: FTAttributes.accesspart */`.
+    "pikachu": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/PikachuMain"),
+        0x00f3,
+        0x0130,
+    ),
+}
+for _owner in OWNER_ACCESSORY_PARTS:
+    OWNER_ROOT_PROGRAMS[_owner] = (
+        OWNER_ROOT_PROGRAMS.get(_owner, ()) + (("Accessory", "accesspart"),))
+if LINK_INTRO_PROGRAM:
+    OWNER_ROOT_PROGRAMS["link"] += (
+        ("Intro", ((22, 1), (23, 1), (24, 1), (11, 2))),
+    )
+    for _detail in ("high", "low"):
+        P2_ROOT_PROGRAM_APPENDIX["link"][_detail] += (
+            (5, 0xa100), (10, 0x93b8), (11, 0x94f0), (12, 0x9b98))
+
 LINK_ROOT_PROGRAM_EXPECTED_PARENTS = {
     "Entry": (255, 0, 1, 2, 3, 1, 5, 6, 7, 1, 1, 10, 11, 0, 13, 14, 0, 16, 17),
 }
@@ -2747,14 +2834,14 @@ LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
     # 0x7db0/0x7ea8/0x7f98 draw unlit in one vertex colour, so their light
     # index names the baked (0, colour) preamble from _bake_unlit_uniform_roots
     # (0xfffffd00 for the hookshot tip, white for the chain), not preamble 0.
-    ("high", 0x81c0): (0x000081c0, 52, 443, 41, 2, 1, 2, 7),
-    ("high", 0x7db0): (0x00007db0, 54, 444, 31, 1, 4, 2, 8),
-    ("high", 0x7ea8): (0x00007ea8, 55, 448, 30, 1, 4, 2, 9),
-    ("high", 0x7f98): (0x00007f98, 56, 452, 25, 1, 2, 2, 9),
-    ("low", 0x8380):  (0x00008380, 47, 442, 39, 2, 2, 2, 7),
-    ("low", 0x7db0):  (0x00007db0, 49, 444, 31, 1, 4, 2, 8),
-    ("low", 0x7ea8):  (0x00007ea8, 50, 448, 30, 1, 4, 2, 9),
-    ("low", 0x7f98):  (0x00007f98, 51, 452, 25, 1, 2, 2, 9),
+    ("high", 0x81c0): (0x000081c0, 52, 443 + LINK_INTRO_TAIL_STATES, 41, 2, 1, 2, 7),
+    ("high", 0x7db0): (0x00007db0, 54, 444 + LINK_INTRO_TAIL_STATES, 31, 1, 4, 2, 8),
+    ("high", 0x7ea8): (0x00007ea8, 55, 448 + LINK_INTRO_TAIL_STATES, 30, 1, 4, 2, 9),
+    ("high", 0x7f98): (0x00007f98, 56, 452 + LINK_INTRO_TAIL_STATES, 25, 1, 2, 2, 9),
+    ("low", 0x8380):  (0x00008380, 47, 442 + LINK_INTRO_TAIL_STATES, 39, 2, 2, 2, 7),
+    ("low", 0x7db0):  (0x00007db0, 49, 444 + LINK_INTRO_TAIL_STATES, 31, 1, 4, 2, 8),
+    ("low", 0x7ea8):  (0x00007ea8, 50, 448 + LINK_INTRO_TAIL_STATES, 30, 1, 4, 2, 9),
+    ("low", 0x7f98):  (0x00007f98, 51, 452 + LINK_INTRO_TAIL_STATES, 25, 1, 2, 2, 9),
 }
 
 # Kirby hidden-part programs.  The source type is the important trap here:
@@ -3671,12 +3758,16 @@ def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
     return _extend_payload_with_pairs(source[data_offset:data_end], owner_name)
 
 
-def _load_owner_root_program_payload(repo_root: Path, owner_name: str) -> tuple[bytes, int]:
-    """Load the Main reloc payload that owns an owner's modelparts_container."""
-    if owner_name not in OWNER_ROOT_PROGRAM_SOURCES:
-        raise ValueError(f"{owner_name}: no owner-root program source")
-    relative_path, expected_file_id, container_offset = \
-        OWNER_ROOT_PROGRAM_SOURCES[owner_name]
+def _load_owner_root_program_payload(
+        repo_root: Path, owner_name: str,
+        source: tuple[Path, int, int] | None = None) -> tuple[bytes, int]:
+    """Load the Main reloc payload that owns an owner's modelparts_container
+    (or, given `source`, the row that source names)."""
+    if source is None:
+        if owner_name not in OWNER_ROOT_PROGRAM_SOURCES:
+            raise ValueError(f"{owner_name}: no owner-root program source")
+        source = OWNER_ROOT_PROGRAM_SOURCES[owner_name]
+    relative_path, expected_file_id, container_offset = source
     path = repo_root / relative_path
     source = path.read_bytes()
     if len(source) < O2R_RESOURCE_HEADER_SIZE + 16 or source[4:8] != b"OLER":
@@ -5989,6 +6080,8 @@ def render_p2_owner_runtime_program(
         # marker and the alternate arrays, so runtime code compiles the program
         # selector out and Link retains its existing fail-closed behavior.
         lines += ["#define NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT 1", ""]
+        if LINK_INTRO_PROGRAM:
+            lines += ["#define NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT 1", ""]
     if owner_name == "yoshi" and detail == "high" and root_programs:
         # Yoshi's grab family installs hidden part 4, so the live vector is 19
         # roots against a canonical 18 and only a complete program can carry it.
@@ -6002,6 +6095,12 @@ def render_p2_owner_runtime_program(
         # program arrays, so the selector compiles out and Ness keeps its
         # current fail-closed behaviour instead of failing to link.
         lines += ["#define NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT 1", ""]
+    if (owner_name in OWNER_ACCESSORY_PARTS and detail == "high" and
+            root_programs):
+        # The costume accessory (OWNER_ACCESSORY_PARTS). Same transition-safe
+        # contract as the markers above.
+        lines += [f"#define NDS_NATIVE_{owner_name.upper()}_ROOT_PROGRAMS_PRESENT 1",
+                  ""]
     trio = context.get("kirby_trio_bodies")
     if owner_name == "kirby" and trio:
         # One resident root per reachable head, selected at runtime by the
@@ -7275,6 +7374,18 @@ def _assert_owner_root_program_vertex_cache(
                 f"cache bindings {sorted(binding_set)} escape current/previous "
                 f"{sorted(allowed)}"
             )
+        # A replacement PAIR may keep the weld its canonical pair has: Link's
+        # intro hands 0x94f0/0x9b98 read each other's cache exactly as
+        # canonical 0x2ef0/0x3398 do at the same two bindings, and the
+        # appendix bakes them in that order (P2_ROOT_PROGRAM_APPENDIX).
+        if (root_offsets[binding] in new_offsets and binding != 0 and
+                binding_set == {binding - 1, binding} and
+                root_offsets[binding - 1] in new_offsets and
+                canonical_offsets is not None and
+                len(canonical_offsets) == len(root_offsets) and
+                canonical_offsets[binding - 1] in canonical_reads.get(
+                    canonical_offsets[binding], ())):
+            continue
         if root_offsets[binding] in new_offsets and binding_set != {binding}:
             raise ValueError(
                 f"{owner_name} {detail} new root 0x{root_offsets[binding]:x} "
@@ -7456,11 +7567,21 @@ def _derive_owner_root_program_cross_slots(
         root_offset for _binding, root_offset in
         context.get("root_program_appendix_specs", ())
     }
+    # An appendix root that REPLACES its binding's display list (Link's
+    # Intro) is the only root drawing that joint, so it stores the matrix
+    # other roots' CROSS runs restore even when it has none of its own. A
+    # hidden root keyed to a canonical root's binding (Catch) still defers
+    # the store to that canonical root.
+    canonical_root_bindings = {
+        binding for ordinal, binding in enumerate(root_bindings)
+        if roots[ordinal][0] not in appendix_offsets
+    }
     slots = tuple(
         canonical_slots[binding]
         if (binding in cross_bindings and
             (roots[ordinal][0] not in appendix_offsets or
-             root_has_cross[ordinal]))
+             root_has_cross[ordinal] or
+             binding not in canonical_root_bindings))
         else PACKED_GX_SLOT_CURRENT
         for ordinal, binding in enumerate(root_bindings)
     )
@@ -7805,6 +7926,87 @@ def _verify_program_roots_lit(
                 "before it; give it an explicit preamble")
         previous_light = light_index
         previous_context = root_context
+
+
+def _verify_owner_accesspart(repo_root: Path, owner_name: str) -> None:
+    """The pinned accessory joint and list are the Main payload's own row."""
+    joint_id, display_offset, _before = OWNER_ACCESSORY_PARTS[owner_name]
+    main_payload, row_offset = _load_owner_root_program_payload(
+        repo_root, owner_name, OWNER_ACCESSORY_SOURCES[owner_name])
+    if row_offset + 16 > len(main_payload):
+        raise ValueError(f"{owner_name} accesspart row is out of range")
+    source_joint, display_word = struct.unpack_from(
+        ">iI", main_payload, row_offset)
+    source_display = (display_word & 0xffff) * 4
+    if (source_joint, source_display) != (joint_id, display_offset):
+        raise ValueError(
+            f"{owner_name} accesspart is (joint {source_joint}, "
+            f"0x{source_display:x}), pinned (joint {joint_id}, "
+            f"0x{display_offset:x})")
+
+
+def _build_owner_accessory_program(
+        repo_root: Path, context: dict[str, object], owner_name: str,
+        detail: str, payload: bytes, canonical_offsets: tuple[int, ...],
+        root_rows_by_offset) -> dict[str, object]:
+    """Canonical with the costume accessory's list inserted at its joint."""
+    joint_id, accessory_offset, before = OWNER_ACCESSORY_PARTS[owner_name]
+    _verify_owner_accesspart(repo_root, owner_name)
+    descriptors = _owner_joint_descriptors(payload, owner_name, detail, {})[:-1]
+    selected = tuple(sorted(_owner_selected_descriptor_indices(
+        owner_name, len(descriptors))))
+    joints, bindings = _owner_root_program_joint_bindings(
+        context, payload, owner_name, detail, descriptors, selected)
+    if joint_id not in joints:
+        raise ValueError(
+            f"{owner_name} {detail}: accessory joint {joint_id} draws no root")
+    joint_ordinal = joints.index(joint_id)
+    if canonical_offsets[joint_ordinal] == accessory_offset:
+        raise ValueError(f"{owner_name} {detail}: accessory is canonical")
+    appendix = dict((offset, binding) for binding, offset in
+                    context.get("root_program_appendix_specs", ()))
+    if appendix.get(accessory_offset) != bindings[joint_ordinal]:
+        raise ValueError(
+            f"{owner_name} {detail}: accessory 0x{accessory_offset:x} appendix "
+            f"binding {appendix.get(accessory_offset)} != joint {joint_id}'s "
+            f"binding {bindings[joint_ordinal]}")
+    at = joint_ordinal if before else joint_ordinal + 1
+    root_offsets = (canonical_offsets[:at] + (accessory_offset,) +
+                    canonical_offsets[at:])
+    root_joints = joints[:at] + (joint_id,) + joints[at:]
+    root_bindings = (bindings[:at] + (bindings[joint_ordinal],) +
+                     bindings[at:])
+    if accessory_offset not in root_rows_by_offset:
+        raise ValueError(
+            f"{owner_name} {detail}: accessory 0x{accessory_offset:x} lacks "
+            "its appendix bake")
+    program_roots = [root_rows_by_offset[offset][0] for offset in root_offsets]
+    program_light_indices = [root_rows_by_offset[offset][1]
+                             for offset in root_offsets]
+    # The accessory has no JointTree node of its own: production captures
+    # every root from its live matrix, as for the hidden-part programs.
+    parents = tuple(INVALID_U8 for _ in root_offsets)
+    root_contexts = [context for _ in program_roots]
+    cross = _derive_owner_root_program_cross_slots(
+        context, owner_name, detail, "Accessory", program_roots,
+        root_joints, root_bindings, root_contexts)
+    _assert_owner_root_program_vertex_cache(
+        repo_root, owner_name, detail, root_offsets, {accessory_offset},
+        cross, canonical_offsets)
+    _verify_program_roots_lit(
+        context, owner_name, detail, "Accessory", program_roots,
+        program_light_indices, root_contexts)
+    return {
+        "name": "Accessory",
+        "roots": program_roots,
+        "light_indices": program_light_indices,
+        "binding_parents": parents,
+        "cross_slots": cross,
+        "root_offsets": root_offsets,
+        "root_joints": root_joints,
+        "root_bindings": root_bindings,
+        "verification_contexts": root_contexts,
+    }
 
 
 def build_owner_root_programs(
@@ -8358,6 +8560,11 @@ def build_owner_root_programs(
     programs = []
     ness_covered_appendix: set[int] = set()
     for program_name, events in OWNER_ROOT_PROGRAMS[owner_name]:
+        if events == "accesspart":
+            programs.append(_build_owner_accessory_program(
+                repo_root, context, owner_name, detail, payload,
+                canonical_offsets, root_rows_by_offset))
+            continue
         overrides = _owner_root_program_overrides(
             repo_root, owner_name, detail, events)
         descriptors = _owner_joint_descriptors(
@@ -8592,6 +8799,9 @@ def build_owner_root_programs(
             hidden_offsets = set(root_offsets) - canonical_offset_set - {
                 offset for _binding, offset in context.get("variant_specs", ())
             }
+            # The intro program's four replacements share the appendix when
+            # it is built; Catch owns the rest of it.
+            appendix_offsets -= LINK_INTRO_APPENDIX_OFFSETS
             if hidden_offsets != appendix_offsets:
                 raise ValueError(
                     f"link {detail} Catch hidden roots "
@@ -8604,6 +8814,24 @@ def build_owner_root_programs(
             # second synthetic hierarchy. Cross-root vertex-cache restores are
             # still source-static and remap by canonical display identity.
             parents = tuple(INVALID_U8 for _ in root_offsets)
+        elif owner_name == "link" and program_name == "Intro":
+            # Four replacements on drawable joints, nothing inserted: the
+            # canonical count, and exactly the four appendix roots new.
+            if len(root_offsets) != canonical_root_count:
+                raise ValueError(
+                    f"link {detail} Intro root count {len(root_offsets)} "
+                    f"!= canonical {canonical_root_count}")
+            new_intro = set(root_offsets) - canonical_offset_set
+            if new_intro != LINK_INTRO_APPENDIX_OFFSETS:
+                raise ValueError(
+                    f"link {detail} Intro new roots "
+                    f"{sorted(map(hex, new_intro))} != "
+                    f"{sorted(map(hex, LINK_INTRO_APPENDIX_OFFSETS))}")
+            # Same joints, same bindings, same tree: canonical's schedule. The
+            # override-driven decode re-keys cross bindings by DISPLAY offset
+            # (for programs that reorder roots), and bindings 11/12 -- a cross
+            # pair -- change display here while keeping their joints.
+            parents = tuple(context["topology"][1])
         elif owner_name == "link" and program_name in ("SpecialN",
                                                        "SpecialNItem"):
             # SpecialN is Entry's tree with the boomerang in the hand;
@@ -8734,6 +8962,7 @@ def build_owner_root_programs(
                 f"{sorted(map(hex, ness_covered_appendix))} != "
                 f"{sorted(map(hex, appendix_offsets))}")
     if owner_name == "link":
+        mismatches = []
         for (_expected_detail, root_offset), expected in \
                 LINK_ROOT_PROGRAM_EXPECTED_APPENDIX.items():
             if _expected_detail != detail:
@@ -8741,9 +8970,11 @@ def build_owner_root_programs(
             row, light_index = root_rows_by_offset[root_offset]
             rendered = (*row[:7], light_index)
             if rendered != expected:
-                raise ValueError(
-                    f"link {detail} appendix root 0x{root_offset:x}: "
-                    f"{rendered} != {expected}")
+                mismatches.append(
+                    f"0x{root_offset:x}: {rendered} != {expected}")
+        if mismatches:
+            raise ValueError(
+                f"link {detail} appendix roots: " + "; ".join(mismatches))
     return programs
 
 

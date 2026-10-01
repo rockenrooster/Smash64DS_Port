@@ -1567,6 +1567,18 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLinkSpecialNItemRootsLow,
     sNdsNativeLinkSpecialNItemCrossPaletteSlotsLow,
     sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT)
+/* The 1P intro poses: canonical's tree with four display lists replaced.
+ * Generated only for the intro-still bake (NDS_1P_INTRO_BAKE). */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkIntroHighOwner, &sNdsNativeLinkFighterHighTables,
+    sNdsNativeLinkIntroRoots, sNdsNativeLinkIntroCrossPaletteSlots,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkIntroLowOwner, &sNdsNativeLinkFighterLowTables,
+    sNdsNativeLinkIntroRootsLow, sNdsNativeLinkIntroCrossPaletteSlotsLow,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+#endif
 #endif
 #endif
 
@@ -1667,6 +1679,18 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativePikachuLowOwner, &sNdsNativePikachuFighterLowTables,
     sNdsNativePikachuRootsLow, sNdsNativePikachuCrossPaletteSlotsLow,
     sNdsNativePikachuRootLightPreambles, NDS_NATIVE_PIKACHU_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+/* A costume's hat: canonical with the accessory list after joint 11's. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativePikachuAccessoryHighOwner, &sNdsNativePikachuFighterHighTables,
+    sNdsNativePikachuAccessoryRoots, sNdsNativePikachuAccessoryCrossPaletteSlots,
+    sNdsNativePikachuRootLightPreambles, NDS_NATIVE_PIKACHU_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativePikachuAccessoryLowOwner, &sNdsNativePikachuFighterLowTables,
+    sNdsNativePikachuAccessoryRootsLow,
+    sNdsNativePikachuAccessoryCrossPaletteSlotsLow,
+    sNdsNativePikachuRootLightPreambles, NDS_NATIVE_PIKACHU_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_YOSHI
@@ -2035,6 +2059,19 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativePurinLowOwner, &sNdsNativePurinFighterLowTables,
     sNdsNativePurinRootsLow, sNdsNativePurinCrossPaletteSlotsLow,
     sNdsNativePurinRootLightPreambles, NDS_NATIVE_PURIN_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+/* A costume's bow or hat: canonical with the accessory list before joint
+ * 6's. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativePurinAccessoryHighOwner, &sNdsNativePurinFighterHighTables,
+    sNdsNativePurinAccessoryRoots, sNdsNativePurinAccessoryCrossPaletteSlots,
+    sNdsNativePurinRootLightPreambles, NDS_NATIVE_PURIN_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativePurinAccessoryLowOwner, &sNdsNativePurinFighterLowTables,
+    sNdsNativePurinAccessoryRootsLow,
+    sNdsNativePurinAccessoryCrossPaletteSlotsLow,
+    sNdsNativePurinRootLightPreambles, NDS_NATIVE_PURIN_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_KIRBY
@@ -5030,6 +5067,156 @@ s32 ndsRendererNativeOwnerImageResident(u32 owner_slot, u32 use_low_detail)
                  gNdsTaskmanHeapGeneration)) ? TRUE : FALSE;
 }
 
+#if NDS_P2_1P_GAME
+/* THE POLYGON TEAM SHARES FIVE IMAGE BUFFERS, NOT TWELVE.
+ *
+ * sc1PGame stage 12 loads every polygon kind at FuncStart and replaces a
+ * defeated polygon mid-battle with the next variation; at most three are
+ * alive, plus the one being replaced, whose GObj is still linked when its
+ * successor is made. Twelve resident images (the old wave preload) were ~170 KB
+ * of an arena that reached 5,248 B free. The images now live in a pool of
+ * NDS_NATIVE_POLYGON_POOL_ENTRIES buffers, each the largest polygon image:
+ * fighter construction -- load time for the first wave, wave replacement
+ * afterwards, the same mid-battle stream a Kirby copy hat makes -- takes a free
+ * buffer, or the least recently loaded one whose kind no linked fighter uses
+ * after unbinding that kind's tables. A reload binds through NDS_IMG_BIND,
+ * which forgets the table's UV memo, so fresh prepared_dense is rebuilt.
+ *
+ * ftmanager arms the pool for the scene's arena generation, so a later scene
+ * that ensures a polygon image (a CSS preview, Results) allocates as before. */
+#define NDS_NATIVE_POLYGON_POOL_ENTRIES 5u
+#define NDS_NATIVE_POLYGON_POOL_FREE 0xffu
+
+static struct
+{
+    u8 *base;
+    u32 stride;
+    u32 heap_generation;
+    u32 armed_generation;
+    u32 clock;
+    u8 owner[NDS_NATIVE_POLYGON_POOL_ENTRIES];
+    u32 loaded_at[NDS_NATIVE_POLYGON_POOL_ENTRIES];
+} sNdsNativePolygonPool = { NULL, 0u, 0u, 0xffffffffu, 0u, { 0u }, { 0u } };
+__attribute__((used)) volatile u32 gNdsNativePolygonPoolBytes;
+__attribute__((used)) volatile u32 gNdsNativePolygonPoolEvictions;
+__attribute__((used)) volatile u32 gNdsNativePolygonPoolFull;
+
+void ndsRendererNativeArmPolygonImagePool(void)
+{
+    sNdsNativePolygonPool.armed_generation = gNdsTaskmanHeapGeneration;
+}
+
+static s32 ndsRendererNativePolygonPoolOwns(u32 owner_slot)
+{
+    return ((owner_slot >= NDS_NATIVE_IMAGE_SLOT_NMARIO) &&
+            (owner_slot <= NDS_NATIVE_IMAGE_SLOT_NNESS) &&
+            (sNdsNativePolygonPool.armed_generation ==
+             gNdsTaskmanHeapGeneration)) ? TRUE : FALSE;
+}
+
+static void ndsRendererNativePolygonPoolUnbind(u32 owner_slot)
+{
+    u32 detail;
+
+    for (detail = 0u; detail < NDS_NATIVE_IMAGE_DETAILS; detail++)
+    {
+        NDSNativeOwnerImageSlot *slot =
+            &sNdsNativeOwnerImage[owner_slot][detail];
+
+        if (slot->base != NULL)
+        {
+            ndsRendererNativeBindOwnerImage(owner_slot, detail, NULL);
+            slot->base = NULL;
+            slot->heap_generation = 0u;
+            slot->bytes = 0u;
+        }
+    }
+}
+
+static void *ndsRendererNativePolygonPoolTake(u32 owner_slot, u32 bytes)
+{
+    u32 entry = NDS_NATIVE_POLYGON_POOL_ENTRIES;
+    u32 i;
+
+    if ((sNdsNativePolygonPool.base == NULL) ||
+        (sNdsNativePolygonPool.heap_generation != gNdsTaskmanHeapGeneration))
+    {
+        u32 stride = 0u;
+        u32 slot;
+        u32 detail;
+
+        for (slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
+             slot <= NDS_NATIVE_IMAGE_SLOT_NNESS; slot++)
+        {
+            for (detail = 0u; detail < NDS_NATIVE_IMAGE_DETAILS; detail++)
+            {
+                u32 image_bytes =
+                    ndsRendererNativeOwnerImageBytes(slot, detail);
+
+                if (image_bytes > stride)
+                {
+                    stride = image_bytes;
+                }
+            }
+        }
+        stride = (stride + 0xfu) & ~0xfu;
+        sNdsNativePolygonPool.base = (stride != 0u) ?
+            (u8 *)ndsSceneAssetAlloc(
+                stride * NDS_NATIVE_POLYGON_POOL_ENTRIES, 0x10u) : NULL;
+        if (sNdsNativePolygonPool.base == NULL)
+        {
+            return NULL;
+        }
+        sNdsNativePolygonPool.stride = stride;
+        sNdsNativePolygonPool.heap_generation = gNdsTaskmanHeapGeneration;
+        sNdsNativePolygonPool.clock = 0u;
+        for (i = 0u; i < NDS_NATIVE_POLYGON_POOL_ENTRIES; i++)
+        {
+            sNdsNativePolygonPool.owner[i] = NDS_NATIVE_POLYGON_POOL_FREE;
+            sNdsNativePolygonPool.loaded_at[i] = 0u;
+        }
+        gNdsNativePolygonPoolBytes = stride * NDS_NATIVE_POLYGON_POOL_ENTRIES;
+    }
+    if (bytes > sNdsNativePolygonPool.stride)
+    {
+        return NULL;
+    }
+    for (i = 0u; i < NDS_NATIVE_POLYGON_POOL_ENTRIES; i++)
+    {
+        if (sNdsNativePolygonPool.owner[i] == NDS_NATIVE_POLYGON_POOL_FREE)
+        {
+            entry = i;
+            break;
+        }
+    }
+    if (entry == NDS_NATIVE_POLYGON_POOL_ENTRIES)
+    {
+        u32 oldest = 0xffffffffu;
+
+        for (i = 0u; i < NDS_NATIVE_POLYGON_POOL_ENTRIES; i++)
+        {
+            if ((sNdsNativePolygonPool.loaded_at[i] < oldest) &&
+                (ndsFTManagerOwnerImageSlotLive(
+                     sNdsNativePolygonPool.owner[i]) == FALSE))
+            {
+                oldest = sNdsNativePolygonPool.loaded_at[i];
+                entry = i;
+            }
+        }
+        if (entry == NDS_NATIVE_POLYGON_POOL_ENTRIES)
+        {
+            gNdsNativePolygonPoolFull++;
+            return NULL;
+        }
+        ndsRendererNativePolygonPoolUnbind(sNdsNativePolygonPool.owner[entry]);
+        gNdsNativePolygonPoolEvictions++;
+    }
+    sNdsNativePolygonPool.owner[entry] = (u8)owner_slot;
+    sNdsNativePolygonPool.loaded_at[entry] = ++sNdsNativePolygonPool.clock;
+    return sNdsNativePolygonPool.base + (entry * sNdsNativePolygonPool.stride);
+}
+#endif
+
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
 {
     NdsRelocAssetStream stream;
@@ -5090,14 +5277,23 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
      * Kongo Jungle at load. The scratch is empty in every other scene and
      * re-seeded with the arena at each battle entry, and the slot's
      * heap_generation retires the image on exactly that boundary. */
-    buffer = ndsBattleIdleScratchAlloc(bytes, 0x10u);
-    if (buffer != NULL)
+#if NDS_P2_1P_GAME
+    if (ndsRendererNativePolygonPoolOwns(owner_slot) != FALSE)
     {
-        gNdsNativeOwnerImageScratchBytes += bytes;
+        buffer = ndsRendererNativePolygonPoolTake(owner_slot, bytes);
     }
     else
+#endif
     {
-        buffer = ndsSceneAssetAlloc(bytes, 0x10u);
+        buffer = ndsBattleIdleScratchAlloc(bytes, 0x10u);
+        if (buffer != NULL)
+        {
+            gNdsNativeOwnerImageScratchBytes += bytes;
+        }
+        else
+        {
+            buffer = ndsSceneAssetAlloc(bytes, 0x10u);
+        }
     }
     if (buffer == NULL)
     {
@@ -5339,6 +5535,14 @@ void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
             }
         }
     }
+#if NDS_P2_1P_GAME
+    if ((sNdsNativePolygonPool.base != NULL) &&
+        ((uintptr_t)sNdsNativePolygonPool.base >= start) &&
+        ((uintptr_t)sNdsNativePolygonPool.base < end))
+    {
+        sNdsNativePolygonPool.base = NULL;
+    }
+#endif
 #else
     (void)base;
     (void)size;
@@ -5587,6 +5791,13 @@ ndsRendererNativeFighterOwnerForProgramDetail(
                 &sNdsNativeLinkSpecialNItemLowOwner :
                 &sNdsNativeLinkSpecialNItemHighOwner;
         }
+#if defined(NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT)
+        if (program == 6u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeLinkIntroLowOwner : &sNdsNativeLinkIntroHighOwner;
+        }
+#endif
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -5658,11 +5869,29 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
+#if NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU) && (program == 1u))
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativePikachuAccessoryLowOwner :
+            &sNdsNativePikachuAccessoryHighOwner;
+    }
+#endif
+#if NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN) && (program == 1u))
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativePurinAccessoryLowOwner :
+            &sNdsNativePurinAccessoryHighOwner;
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -5681,6 +5910,14 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     return (owner != NULL) ? owner :
         ndsRendererNativeFighterCanonicalOwnerForDetail(slot, use_low_detail);
 }
+
+#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+#if defined(NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT)
+#define NDS_NATIVE_LINK_LAST_PROGRAM 6u
+#else
+#define NDS_NATIVE_LINK_LAST_PROGRAM 5u
+#endif
+#endif
 
 u32 ndsRendererNativeFighterRootProgram(u32 slot)
 {
@@ -5757,7 +5994,8 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
-    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) && (program <= 5u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) &&
+        (program <= NDS_NATIVE_LINK_LAST_PROGRAM))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5797,11 +6035,29 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
+#if NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+    /* canonical + Accessory. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU) && (program <= 1u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#endif
+#if NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+    /* canonical + Accessory. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN) && (program <= 1u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)) && \
     !(NDS_P2_YOSHI && defined(NDS_NATIVE_YOSHI_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_NESS && defined(NDS_NATIVE_NESS_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
@@ -5845,8 +6101,9 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
-        /* canonical + Entry + Catch + SpecialN + Claps + SpecialNItem. */
-        program_count = 6u;
+        /* canonical + Entry + Catch + SpecialN + Claps + SpecialNItem
+         * (+ Intro in the intro-still bake). */
+        program_count = NDS_NATIVE_LINK_LAST_PROGRAM + 1u;
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
@@ -5868,6 +6125,20 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     {
         /* canonical + Win3 + YoYo + FSmash. */
         program_count = 4u;
+    }
+#endif
+#if NDS_P2_PIKACHU && defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU)
+    {
+        /* canonical + Accessory. */
+        program_count = 2u;
+    }
+#endif
+#if NDS_P2_PURIN && defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN)
+    {
+        /* canonical + Accessory. */
+        program_count = 2u;
     }
 #endif
     for (program = 0u; program < program_count; program++)

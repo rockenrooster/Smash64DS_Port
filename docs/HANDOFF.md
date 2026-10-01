@@ -29,10 +29,9 @@ paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240
 native owners (`1fe468cc3bb`), transition hold (owner r64, `VERIFIED-hold.md`), world-cache GO retry. Playtest
 r65b. Open: owner's rematch VFX loss (not reproduced on 3 stages/2 rosters; ask roster, stage, which VFX),
 Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
-**10-01 1P campaign:** the walk ROM (`TARGET=smash64ds NDS_P2_MENU_WALK=1`) plays stages 0-13, every bonus,
-Master Hand, Ending, Staffroll and Congra; per-stage failures and open items are the table in
-`p2/P2-6-one-player.md` "Campaign walk status"; stages 10-13 now 0 failures. Next: Zako low-water (5,248 B),
-Ending/Staffroll, intro rendered stills (owner choice), re-walk 0-9, then 1P P95 (Zako ~20 FPS: CPU texgen).
+**10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra, 0 battle failures
+(`cwalk49`; table `p2/P2-6-one-player.md`). Staffroll + Board the Platforms lights done; intro stills baked locally
+(ROM-derived); owner: poses differ from N64 (open). Next: Ending room, 1P P95 (Board the Platforms per-DObj submit).
 
 ## Continue, do not restart
 

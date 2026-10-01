@@ -55,6 +55,16 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
                                    u32 texture_h, const Vec3f *pos, f32 size,
                                    u32 color, u8 alpha, f32 depth_bias,
                                    f32 roll, sb32 mirror_x);
+/* One textured parallelogram in world space under the current camera:
+ * corners centre +- right_leg +- up_leg, the texture's (0,0)-(texture_w,
+ * texture_h) texels across it with T increasing against up_leg. For quads the
+ * source draws under a DObj matrix rather than facing the camera (the staff
+ * roll's glyphs). */
+sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
+                                            u32 texture_h, const Vec3f *centre,
+                                            const Vec3f *right_leg,
+                                            const Vec3f *up_leg, u32 color,
+                                            u8 alpha);
 extern volatile u32 gNdsSourceAssetQuadAttempts;
 extern volatile u32 gNdsSourceAssetQuadDrawn;
 extern volatile u32 gNdsSourceAssetQuadMissMask;

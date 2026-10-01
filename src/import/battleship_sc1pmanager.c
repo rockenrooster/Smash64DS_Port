@@ -66,6 +66,18 @@ void ndsBaseSC1PManagerUpdateScene(void);
 
 void sc1PManagerUpdateScene(void)
 {
+#if NDS_P2_MENU_WALK && (NDS_1P_WALK_START_STAGE >= 0)
+    /* LAB (Makefile NDS_1P_WALK_START_STAGE): the walk enters the ladder at
+     * one stage, for instruments that cannot poke it -- the ARM9 profiler
+     * runs without a debugger. */
+    static u8 sNdsWalkStartStagePoked;
+
+    if (sNdsWalkStartStagePoked == 0u)
+    {
+        gSCManagerSceneData.spgame_stage = (u8)NDS_1P_WALK_START_STAGE;
+        sNdsWalkStartStagePoked = 1u;
+    }
+#endif
     ndsBaseSC1PManagerUpdateScene();
 }
 

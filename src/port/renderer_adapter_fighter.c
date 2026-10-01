@@ -457,6 +457,8 @@ void ndsFighterDisplayContractProjectTarget(CObj *cobj,
 void ndsFighterDisplayContractSelectDL(const Gfx *dl)
 {
     NDSFighterDisplayContractEvent *event;
+    const FTParts *parts;
+    sb32 is_accessory;
 
     if ((sNdsFighterDisplayContract.active == 0u) || (dl == NULL))
     {
@@ -475,10 +477,25 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
         }
         return;
     }
+    /* A costume accessory (ftDisplayMainDrawAccessory, ftdisplaymain.c:723)
+     * is the second list drawn under ONE prepared joint matrix: Purin's comes
+     * before the joint's own list (:776), Pikachu's after it (:819). Bound
+     * like any other list, the second of the pair found the matrix consumed
+     * and became the next joint's pre-matrix list: Purin's body was dropped
+     * (her bow took its root and the owner declined), Pikachu's hat was never
+     * drawn. The accessory belongs to the joint whose parts own it, and it
+     * leaves the matrix for the joint's own list. */
+    is_accessory =
+        ((sNdsFighterDisplayContract.current_dobj != NULL) &&
+         ((parts = ftGetParts(sNdsFighterDisplayContract.current_dobj)) !=
+          NULL) &&
+         (parts->gobj != NULL) && (DObjGetStruct(parts->gobj) != NULL) &&
+         (DObjGetStruct(parts->gobj)->dl == dl)) ? TRUE : FALSE;
     event = &sNdsFighterDisplayContract.events[
         sNdsFighterDisplayContract.event_count++];
     event->dl = dl;
-    event->dobj = (sNdsFighterDisplayContract.matrix_ready != 0u) ?
+    event->dobj = ((sNdsFighterDisplayContract.matrix_ready != 0u) ||
+                   (is_accessory != FALSE)) ?
         sNdsFighterDisplayContract.current_dobj : NULL;
     event->matrix_dobj = event->dobj;
     event->material_dobj =
@@ -529,7 +546,10 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
         sNdsFighterDisplayContract.pending_event =
             (s32)sNdsFighterDisplayContract.event_count - 1;
     }
-    sNdsFighterDisplayContract.matrix_ready = FALSE;
+    if (is_accessory == FALSE)
+    {
+        sNdsFighterDisplayContract.matrix_ready = FALSE;
+    }
     sNdsFighterDisplayContract.material_ready = FALSE;
     gNdsFighterDisplayContractSelectedCount++;
 }

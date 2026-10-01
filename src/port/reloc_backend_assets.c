@@ -2866,6 +2866,11 @@ static const NDSRelocSpriteNormalizeDesc
       G_IM_FMT_IA, G_IM_SIZ_8b },
     { NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, 0x0cd8u, 20u, 24u, 1u,
       G_IM_FMT_IA, G_IM_SIZ_8b },
+    /* The ally heart (ifCommonPlayerTagMakeInterface, tag 5): 1P campaign
+     * stages with allies. Without its row the header kept N64 lane order
+     * and every ally tag was a sprite-domain native failure. */
+    { NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS, 0x0eb8u, 15u, 24u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
     /* MNCommon (reloc asset 0x0), stage_reloc_file.py --extend. */
     { NDS_RELOC_ASSET_MN_COMMON, 0x15c0u, 24u, 13u, 1u,
       G_IM_FMT_IA, G_IM_SIZ_8b },

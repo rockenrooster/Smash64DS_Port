@@ -4058,6 +4058,68 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
 #endif
 }
 
+sb32 ndsParticleDrawOwnTextureParallelogram(u32 texture_name, u32 texture_w,
+                                            u32 texture_h, const Vec3f *centre,
+                                            const Vec3f *right_leg,
+                                            const Vec3f *up_leg, u32 color,
+                                            u8 alpha)
+{
+#if NDS_R2_PARTICLE_DRAW
+    Vec3f camera_right;
+    Vec3f camera_up;
+    Vec3f right;
+    Vec3f up;
+    f32 right_length;
+    f32 up_length;
+    f32 size;
+
+    if ((texture_name == 0u) || (texture_w == 0u) || (texture_h == 0u) ||
+        (centre == NULL) || (right_leg == NULL) || (up_leg == NULL) ||
+        (alpha == 0u))
+    {
+        return FALSE;
+    }
+    /* Loads the current camera; the billboard basis it returns is unused. */
+    if (ndsParticleSetCurrentCamera(&camera_right, &camera_up) == FALSE)
+    {
+        return FALSE;
+    }
+    /* The submit scales a unit basis by `size`: give it the longer leg as the
+     * size and both legs relative to it, so the basis stays within its Q13
+     * range whatever the legs' lengths. */
+    right_length = sqrtf((right_leg->x * right_leg->x) +
+                         (right_leg->y * right_leg->y) +
+                         (right_leg->z * right_leg->z));
+    up_length = sqrtf((up_leg->x * up_leg->x) + (up_leg->y * up_leg->y) +
+                      (up_leg->z * up_leg->z));
+    size = (right_length > up_length) ? right_length : up_length;
+    if (size <= 0.0F)
+    {
+        return FALSE;
+    }
+    right.x = right_leg->x / size;
+    right.y = right_leg->y / size;
+    right.z = right_leg->z / size;
+    up.x = up_leg->x / size;
+    up.y = up_leg->y / size;
+    up.z = up_leg->z / size;
+    if (ndsRendererSubmitParticleQuad(texture_name, centre, size, color,
+                                      alpha, 0u, 0u, &right, &up, 0u, 0u, 0u,
+                                      texture_w, texture_h) == FALSE)
+    {
+        ndsRendererEndParticleQuads();
+        return FALSE;
+    }
+    ndsRendererEndParticleQuads();
+    ndsRendererHardwareNoteQuadFrame();
+    return TRUE;
+#else
+    (void)texture_name; (void)texture_w; (void)texture_h; (void)centre;
+    (void)right_leg; (void)up_leg; (void)color; (void)alpha;
+    return FALSE;
+#endif
+}
+
 sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
                                     u32 color, u8 alpha, f32 depth_bias)
 {

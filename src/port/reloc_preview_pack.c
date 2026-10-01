@@ -449,6 +449,20 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
 #endif
         ) ||
         ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return NULL; }
+#if NDS_P2_1P_GAME
+    /* Giant DK's stage. GDonkeyMain's extern tree names DonkeyModel, and the
+     * relocator resolves those externs by SOURCE offset. A compact DK pack
+     * (a DK player or ally) publishes DonkeyModel re-laid-out by its spans,
+     * so Giant DK's commonparts pointed into the wrong bytes and its
+     * construction faulted in lbCommonSetupFighterPartsDObjs (walk cwalk39,
+     * reproduced with ally 0 forced to DK). DK loads its full files here. */
+    if ((fkind == nFTKindDonkey) &&
+        (gSCManagerSceneData.scene_curr == nSCKind1PGame) &&
+        (gSCManagerSceneData.spgame_stage == (u8)nSC1PGameStageDonkey))
+    {
+        return NULL;
+    }
+#endif
     fighter = dFTManagerDataFiles[fkind];
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
         (fighter->p_file_model == NULL)) { ndsPreviewPackLoadHalt(1u, fkind); }

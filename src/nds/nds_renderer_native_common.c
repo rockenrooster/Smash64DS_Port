@@ -17891,6 +17891,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeLinkSpecialNItemBindingParents[0]));
             return sNdsNativeLinkSpecialNItemBindingParents;
         }
+#if defined(NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT)
+        if (program == 6u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkIntroBindingParents) /
+                           sizeof(sNdsNativeLinkIntroBindingParents[0]));
+            return sNdsNativeLinkIntroBindingParents;
+        }
+#endif
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkBindingParents) /
                        sizeof(sNdsNativeLinkBindingParents[0]));
@@ -17900,6 +17908,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_PIKACHU
     if (slot == 7u)
     {
+#if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativePikachuAccessoryBindingParents) /
+                           sizeof(sNdsNativePikachuAccessoryBindingParents[0]));
+            return sNdsNativePikachuAccessoryBindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativePikachuBindingParents) /
                        sizeof(sNdsNativePikachuBindingParents[0]));
         return sNdsNativePikachuBindingParents;
@@ -17967,6 +17983,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_PURIN
     if (slot == 10u)
     {
+#if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativePurinAccessoryBindingParents) /
+                           sizeof(sNdsNativePurinAccessoryBindingParents[0]));
+            return sNdsNativePurinAccessoryBindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativePurinBindingParents) /
                        sizeof(sNdsNativePurinBindingParents[0]));
         return sNdsNativePurinBindingParents;
@@ -18248,6 +18272,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                            sizeof(sNdsNativeLinkSpecialNItemCrossPaletteSlots[0]));
             return sNdsNativeLinkSpecialNItemCrossPaletteSlots;
         }
+#if defined(NDS_NATIVE_LINK_INTRO_PROGRAM_PRESENT)
+        if (program == 6u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkIntroCrossPaletteSlots) /
+                           sizeof(sNdsNativeLinkIntroCrossPaletteSlots[0]));
+            return sNdsNativeLinkIntroCrossPaletteSlots;
+        }
+#endif
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /
                        sizeof(sNdsNativeLinkCrossPaletteSlots[0]));
@@ -18257,6 +18289,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_PIKACHU
     if (slot == 7u)
     {
+#if defined(NDS_NATIVE_PIKACHU_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativePikachuAccessoryCrossPaletteSlots) /
+                           sizeof(sNdsNativePikachuAccessoryCrossPaletteSlots[0]));
+            return sNdsNativePikachuAccessoryCrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativePikachuCrossPaletteSlots) /
                        sizeof(sNdsNativePikachuCrossPaletteSlots[0]));
         return sNdsNativePikachuCrossPaletteSlots;
@@ -18316,6 +18356,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_PURIN
     if (slot == 10u)
     {
+#if defined(NDS_NATIVE_PURIN_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativePurinAccessoryCrossPaletteSlots) /
+                           sizeof(sNdsNativePurinAccessoryCrossPaletteSlots[0]));
+            return sNdsNativePurinAccessoryCrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativePurinCrossPaletteSlots) /
                        sizeof(sNdsNativePurinCrossPaletteSlots[0]));
         return sNdsNativePurinCrossPaletteSlots;

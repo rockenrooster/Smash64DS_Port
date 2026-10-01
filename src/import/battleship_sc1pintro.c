@@ -118,7 +118,16 @@
 #include <it/item.h>
 #include <mn/menu.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_reloc_assets.h>
+#if NDS_1P_INTRO_BAKE
+#include <nds/nds_renderer.h>
+#endif
 #include <reloc_data.h>
+#include <stdio.h>
+#if NDS_1P_INTRO_BAKE
+#include <nds/arm9/video.h>
+#include <nds/arm9/videoGL.h>
+#endif
 #include <sc/scene.h>
 #include <sys/audio.h>
 #include <sys/controller.h>
@@ -159,6 +168,14 @@ static void ndsSC1PIntroDraw(void);
 
 /* Pre-stage intros show their fighters as static pictures (owner, 2026-09-24:
  * "pre-stage intros static images"). 0 restores the source's live cards. */
+#ifndef NDS_1P_INTRO_BAKE
+#define NDS_1P_INTRO_BAKE 0
+#endif
+#if NDS_1P_INTRO_BAKE
+/* LAB: the still bake renders the source's live cards. */
+#undef NDS_1P_INTRO_STATIC
+#define NDS_1P_INTRO_STATIC 0
+#endif
 #ifndef NDS_1P_INTRO_STATIC
 #define NDS_1P_INTRO_STATIC 1
 #endif
@@ -172,9 +189,211 @@ static void ndsSC1PIntroDraw(void);
  * (ndsSC1PIntroMakeStaticFighters); every other part of the scene -- sky,
  * banners, VS decal or bonus picture, labels, figures, stage info, names, the
  * ally line, announcer, BGM, timing and exits -- runs as the source wrote it. */
+/* The baked stills (owner 2026-10-01: "Rendered stills"). Each is one card
+ * group of the source's live intro -- the player's card, an ally's, or the
+ * stage's VS fighters -- rendered by this renderer in the bake ROM
+ * (NDS_1P_INTRO_BAKE, scripts/menus/bake_1p_intro_stills.ps1) at the tic the
+ * cards settle, display-captured from the 3D layer, cropped and stored as a
+ * 256-colour image with its screen box (scripts/menus/pack_1p_intro_stills.py).
+ * They are written into the BG3 bitmap, which sits above the sky (BG2) and
+ * under the banners, names and VS decal (OBJ), where the source draws its
+ * fighter cameras. Which still a card uses is a file name: the card id, kind
+ * and costume the source reads (sc1PIntroInitVars), and for the VS fighters
+ * the stage, preferring a variant baked for this player's kind and costume
+ * (the source recolours an opponent that matches the player). */
+#define NDS_SC1P_INTRO_STILL_MAGIC 0x31493153u /* "S1I1" */
+
+typedef struct NDSSC1PIntroStillHeader
+{
+    u32 magic;
+    u16 x;
+    u16 y;
+    u16 w;
+    u16 h;
+    u16 tex_w;
+    u16 tex_h;
+    u16 colors;
+    u16 reserved;
+} NDSSC1PIntroStillHeader;
+
+__attribute__((used)) volatile u32 gNdsSC1PIntroStillsDrawn;
+__attribute__((used)) volatile u32 gNdsSC1PIntroStillsMissing;
+
+static s32 ndsSC1PIntroBlitStill(const char *path, u16 *layer, u32 pitch)
+{
+    NDSSC1PIntroStillHeader header;
+    FILE *file;
+    u16 *palette;
+    u8 *texels;
+    u32 bytes;
+    u32 y;
+    s32 ok = FALSE;
+
+    ndsFsLock();
+    file = fopen(path, "rb");
+    if (file == NULL)
+    {
+        ndsFsUnlock();
+        return FALSE;
+    }
+    if ((fread(&header, 1u, sizeof(header), file) == sizeof(header)) &&
+        (header.magic == NDS_SC1P_INTRO_STILL_MAGIC) &&
+        (header.colors != 0u) && (header.colors <= 256u) &&
+        (header.w <= header.tex_w) && (header.h <= header.tex_h) &&
+        ((u32)header.x + header.w <= 256u) &&
+        ((u32)header.y + header.h <= 192u))
+    {
+        bytes = (header.colors * sizeof(u16)) +
+                ((u32)header.tex_w * header.tex_h);
+        palette = syTaskmanMalloc(bytes, 0x4u);
+        if ((palette != NULL) &&
+            (fread(palette, 1u, bytes, file) == bytes))
+        {
+            texels = (u8 *)(palette + header.colors);
+            for (y = 0u; y < header.h; y++)
+            {
+                const u8 *row = texels + (y * header.tex_w);
+                u16 *dst = layer + ((header.y + y) * pitch) + header.x;
+                u32 x;
+
+                for (x = 0u; x < header.w; x++)
+                {
+                    if (row[x] != 0u)
+                    {
+                        dst[x] = palette[row[x]] | 0x8000u;
+                    }
+                }
+            }
+            ok = TRUE;
+        }
+    }
+    fclose(file);
+    ndsFsUnlock();
+    return ok;
+}
+
+static char *ndsSC1PIntroPutDigits(char *p, u32 value, u32 count)
+{
+    char *end = p + count;
+
+    p = end;
+    while (count-- != 0u)
+    {
+        *--p = (char)('0' + (value % 10u));
+        value /= 10u;
+    }
+    return end;
+}
+
+/* nitro:/intro/<kind><id>[_<fkind>_<costume>].s1i, the id `digits` wide. */
+static void ndsSC1PIntroStillPath(char *out, char kind, u32 id, u32 digits,
+                                  s32 fkind, s32 costume)
+{
+    const char *text = "nitro:/intro/";
+    char *p = out;
+
+    while (*text != '\0')
+    {
+        *p++ = *text++;
+    }
+    *p++ = kind;
+    p = ndsSC1PIntroPutDigits(p, id, digits);
+    if (fkind >= 0)
+    {
+        *p++ = '_';
+        p = ndsSC1PIntroPutDigits(p, (u32)fkind, 2u);
+        *p++ = '_';
+        p = ndsSC1PIntroPutDigits(p, (u32)costume, 1u);
+    }
+    text = ".s1i";
+    while (*text != '\0')
+    {
+        *p++ = *text++;
+    }
+    *p = '\0';
+}
+
+static void ndsSC1PIntroDrawStill(char kind, u32 card, FTDemoDesc *desc,
+                                  u16 *layer, u32 pitch)
+{
+    char path[48];
+
+    ndsSC1PIntroStillPath(path, kind, card, 1u, desc->fkind, desc->costume);
+    if (ndsSC1PIntroBlitStill(path, layer, pitch) != FALSE)
+    {
+        gNdsSC1PIntroStillsDrawn++;
+    }
+    else gNdsSC1PIntroStillsMissing++;
+}
+
+/* Written at the scene's first draw, not in FuncStart: the source-menu pump
+ * clears both overlay layers once before the first draw
+ * (ndsSeamRunSourceMenuScene). */
+static s32 sNdsSC1PIntroStillsStage = -1;
+
 static void ndsSC1PIntroMakeStaticFighters(s32 stage)
 {
-    (void)stage;
+    sNdsSC1PIntroStillsStage = stage;
+}
+
+static void ndsSC1PIntroBlitStills(void)
+{
+    s32 stage = sNdsSC1PIntroStillsStage;
+    u32 pitch = 0u;
+    u16 *layer;
+    char path[48];
+
+    if (stage < 0)
+    {
+        return;
+    }
+    sNdsSC1PIntroStillsStage = -1;
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(TRUE, &pitch, NULL,
+                                                     NULL, NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        gNdsSC1PIntroStillsMissing++;
+        return;
+    }
+    /* VS fighters first: the cards' cameras draw over them. The VS still for
+     * this player's kind and costume when one was baked, else the stage's. */
+    ndsSC1PIntroStillPath(path, 'o', (u32)stage, 2u,
+                          sSC1PIntroPlayerFighterDemoDesc.fkind,
+                          sSC1PIntroPlayerFighterDemoDesc.costume);
+    if (ndsSC1PIntroBlitStill(path, layer, pitch) == FALSE)
+    {
+        ndsSC1PIntroStillPath(path, 'o', (u32)stage, 2u, -1, 0);
+        if (ndsSC1PIntroBlitStill(path, layer, pitch) == FALSE)
+        {
+            gNdsSC1PIntroStillsMissing++;
+        }
+        else gNdsSC1PIntroStillsDrawn++;
+    }
+    else gNdsSC1PIntroStillsDrawn++;
+
+    switch (stage)
+    {
+    case nSC1PGameStageDonkey:
+        ndsSC1PIntroDrawStill('a', 5u, &sSC1PIntroAlly2FighterDemoDesc,
+                              layer, pitch);
+        ndsSC1PIntroDrawStill('a', 4u, &sSC1PIntroAlly1FighterDemoDesc,
+                              layer, pitch);
+        ndsSC1PIntroDrawStill('p', 3u, &sSC1PIntroPlayerFighterDemoDesc,
+                              layer, pitch);
+        break;
+
+    case nSC1PGameStageMario:
+        ndsSC1PIntroDrawStill('a', 2u, &sSC1PIntroAlly1FighterDemoDesc,
+                              layer, pitch);
+        ndsSC1PIntroDrawStill('p', 1u, &sSC1PIntroPlayerFighterDemoDesc,
+                              layer, pitch);
+        break;
+
+    default:
+        ndsSC1PIntroDrawStill('p', 0u, &sSC1PIntroPlayerFighterDemoDesc,
+                              layer, pitch);
+        break;
+    }
 }
 
 static void ndsSC1PIntroFuncStartStatic(void)
@@ -235,10 +454,358 @@ static void ndsSC1PIntroFuncStartStatic(void)
 }
 #endif
 
+#if NDS_1P_INTRO_BAKE
+/* LAB still bake (scripts/menus/bake_1p_intro_stills.ps1). At tic
+ * gNdsIntroBakeTic the 3D layer alone is display-captured into bank D (LCDC,
+ * 0x06860000) and ndsIntroBakeCaptured() stops for the debugger, which dumps
+ * it; one boot bakes one configuration, poked before the intro. Bit n of
+ * gNdsIntroBakeShow keeps the card whose card_anim_frame_id is n (0..5: the
+ * player's and allies' cards), bit 6 the VS fighters. The clear is
+ * transparent and antialiasing off, so a pixel is a fighter's exactly when its
+ * capture alpha bit is set. */
+volatile u32 gNdsIntroBakeTic __attribute__((used)) = 240u;
+volatile u32 gNdsIntroBakeShow __attribute__((used)) = 0x7fu;
+volatile u32 gNdsIntroBakeArmed __attribute__((used));
+volatile u32 gNdsIntroBakeCount __attribute__((used));
+volatile s32 gNdsIntroBakeMember __attribute__((used)) = -1;
+volatile s32 gNdsIntroBakeDepth __attribute__((used));
+static GObj *sNdsIntroBakeMemberGObj;
+static CObj *sNdsIntroBakeStageCamera;
+extern float cosf(float x);
+extern float sinf(float x);
+extern float sqrtf(float x);
+
+void __attribute__((noinline, used)) ndsIntroBakeCaptured(void)
+{
+    gNdsIntroBakeCount++;
+    __asm__ volatile("" ::: "memory");
+}
+
+static void ndsSC1PIntroBakeBeforeDraw(void)
+{
+    GObj *fighter_gobj;
+
+    glDisable(GL_ANTIALIAS);
+    glClearColor(0, 0, 0, 0);
+    for (fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+         fighter_gobj != NULL;
+         fighter_gobj = fighter_gobj->link_next)
+    {
+        u32 group = (fighter_gobj->proc_display ==
+                     sc1PIntroVSFighterProcDisplay) ? (1u << 6) :
+            (1u << (ftGetStruct(fighter_gobj)->card_anim_frame_id & 7));
+
+        if ((gNdsIntroBakeShow & group) == 0u)
+        {
+            fighter_gobj->flags |= GOBJ_FLAG_HIDDEN;
+        }
+    }
+}
+
+static void ndsSC1PIntroBakeAfterDraw(void)
+{
+    if (gNdsIntroBakeArmed == 0u)
+    {
+        if ((u32)sc1PIntroTotalTimeTics == gNdsIntroBakeTic)
+        {
+            if ((sNdsIntroBakeMemberGObj != NULL) &&
+                (sNdsIntroBakeStageCamera != NULL))
+            {
+                /* The member's distance from the stage camera, x16, for the
+                 * far-to-near composite. The pose moves the figure on TransN,
+                 * TopN's child (the Demo pose's root motion), turned by
+                 * TopN's yaw; the collision helpers' cached joint matrices
+                 * are never refreshed in the intro, so this reads the live
+                 * DObj transforms instead. */
+                DObj *topn = DObjGetStruct(sNdsIntroBakeMemberGObj);
+                DObj *transn = (topn != NULL) ? topn->child : NULL;
+                Vec3f pos = { 0.0F, 0.0F, 0.0F };
+                f32 dx;
+                f32 dy;
+                f32 dz;
+
+                if (topn != NULL)
+                {
+                    pos = topn->translate.vec.f;
+                    if (transn != NULL)
+                    {
+                        f32 yaw = topn->rotate.vec.f.y;
+                        f32 c = cosf(yaw);
+                        f32 sn = sinf(yaw);
+                        Vec3f t = transn->translate.vec.f;
+
+                        pos.x += (t.x * c) + (t.z * sn);
+                        pos.y += t.y;
+                        pos.z += (t.z * c) - (t.x * sn);
+                    }
+                }
+                dx = pos.x - sNdsIntroBakeStageCamera->vec.eye.x;
+                dy = pos.y - sNdsIntroBakeStageCamera->vec.eye.y;
+                dz = pos.z - sNdsIntroBakeStageCamera->vec.eye.z;
+                gNdsIntroBakeDepth =
+                    (s32)(sqrtf((dx * dx) + (dy * dy) + (dz * dz)) * 16.0F);
+            }
+            vramSetBankD(VRAM_D_LCD);
+            REG_DISPCAPCNT = DCAP_ENABLE | DCAP_MODE(DCAP_MODE_A) |
+                             DCAP_SRC_A(DCAP_SRC_A_3DONLY) |
+                             DCAP_SIZE(3) | DCAP_OFFSET(0) | DCAP_BANK(3);
+            gNdsIntroBakeArmed = 1u;
+        }
+        return;
+    }
+    if ((REG_DISPCAPCNT & DCAP_ENABLE) == 0u)
+    {
+        gNdsIntroBakeArmed = 0u;
+        ndsIntroBakeCaptured();
+    }
+}
+
+/* Team stages bake one member per boot (gNdsIntroBakeMember >= 0), which is
+ * what fits: eighteen Yoshis' figatree heaps, eight Kirbys' hats on the one
+ * hat slot an intro fighter has, or ten polygons' files do not fit beside each
+ * other in the scene heap. The pack step composites the members far to near
+ * by gNdsIntroBakeDepth, the member's distance from the stage camera. -1 is
+ * the source's own whole VS set. */
+
+static sb32 ndsSC1PIntroBakeIsTeamMember(s32 stage)
+{
+    return ((gNdsIntroBakeMember >= 0) &&
+            ((stage == nSC1PGameStageYoshi) || (stage == nSC1PGameStageKirby) ||
+             (stage == nSC1PGameStageZako))) ? TRUE : FALSE;
+}
+
+static void ndsSC1PIntroBakeHeap(s32 index)
+{
+    if (sSC1PIntroFigatreeHeaps[index] == NULL)
+    {
+        sSC1PIntroFigatreeHeaps[index] =
+            syTaskmanMalloc(gFTManagerFigatreeHeapSize, 0x10);
+    }
+}
+
+static sb32 ndsSC1PIntroBakeShowsCards(void)
+{
+    return ((gNdsIntroBakeShow & 0x3fu) != 0u) ? TRUE : FALSE;
+}
+
+static sb32 ndsSC1PIntroBakeShowsVS(void)
+{
+    return ((gNdsIntroBakeShow & (1u << 6)) != 0u) ? TRUE : FALSE;
+}
+
+/* sc1PIntroMakeFighter for one card, only when the bake shows it. */
+static void ndsSC1PIntroBakeMakeCard(FTDemoDesc fighter, s32 card, s32 heap)
+{
+    if ((gNdsIntroBakeShow & (1u << card)) == 0u)
+    {
+        return;
+    }
+    ndsSC1PIntroBakeHeap(heap);
+    sc1PIntroMakeFighterCamera(fighter.fkind, card);
+    sc1PIntroMakeFighter(fighter, card, &sSC1PIntroFigatreeHeaps[heap]);
+}
+
+/* sc1PIntroSetupFighterFiles, minus the kinds this bake never makes. */
+static void ndsSC1PIntroBakeSetupFighterFiles(s32 stage)
+{
+    if (ndsSC1PIntroBakeShowsVS() == FALSE)
+    {
+        /* Cards only: the shown cards' kinds (sc1PIntroInitFighters'
+         * card numbering) and no VS fighter at all. */
+        if ((gNdsIntroBakeShow & ((1u << 0) | (1u << 1) | (1u << 3))) != 0u)
+        {
+            ftManagerSetupFilesAllKind(sSC1PIntroPlayerFighterDemoDesc.fkind);
+        }
+        if ((gNdsIntroBakeShow & ((1u << 2) | (1u << 4))) != 0u)
+        {
+            ftManagerSetupFilesAllKind(sSC1PIntroAlly1FighterDemoDesc.fkind);
+        }
+        if ((gNdsIntroBakeShow & (1u << 5)) != 0u)
+        {
+            ftManagerSetupFilesAllKind(sSC1PIntroAlly2FighterDemoDesc.fkind);
+        }
+        return;
+    }
+    if (ndsSC1PIntroBakeIsTeamMember(stage) == FALSE)
+    {
+        sc1PIntroSetupFighterFiles(stage);
+        return;
+    }
+    if (ndsSC1PIntroBakeShowsCards() != FALSE)
+    {
+        ftManagerSetupFilesAllKind(sSC1PIntroPlayerFighterDemoDesc.fkind);
+    }
+    switch (stage)
+    {
+    case nSC1PGameStageYoshi:
+        ftManagerSetupFilesAllKind(nFTKindYoshi);
+        break;
+
+    case nSC1PGameStageKirby:
+        ftManagerSetupFilesAllKind(nFTKindKirby);
+        break;
+
+    default:
+        ftManagerSetupFilesAllKind(nFTKindNStart + gNdsIntroBakeMember);
+        break;
+    }
+}
+
+/* sc1PIntroInitFighters without its ally line, which reads the 2D files the
+ * bake never loads. */
+static void ndsSC1PIntroBakeInitFighters(s32 stage)
+{
+    switch (stage)
+    {
+    case nSC1PGameStageDonkey:
+        ndsSC1PIntroBakeMakeCard(sSC1PIntroAlly2FighterDemoDesc, 5, 2);
+        ndsSC1PIntroBakeMakeCard(sSC1PIntroAlly1FighterDemoDesc, 4, 1);
+        ndsSC1PIntroBakeMakeCard(sSC1PIntroPlayerFighterDemoDesc, 3, 0);
+        break;
+
+    case nSC1PGameStageMario:
+        ndsSC1PIntroBakeMakeCard(sSC1PIntroAlly1FighterDemoDesc, 2, 1);
+        ndsSC1PIntroBakeMakeCard(sSC1PIntroPlayerFighterDemoDesc, 1, 0);
+        break;
+
+    default:
+        ndsSC1PIntroBakeMakeCard(sSC1PIntroPlayerFighterDemoDesc, 0, 0);
+        break;
+    }
+}
+
+/* One member of sc1PIntroInitVSFighters' team loops (sc1pintro.c:1257-1306),
+ * the member's own iteration of that loop and nothing else. */
+static void ndsSC1PIntroBakeInitVSMember(s32 stage)
+{
+    s32 i = gNdsIntroBakeMember;
+    GObj *fighter_gobj;
+
+    sNdsIntroBakeStageCamera = sc1PIntroMakeStageCamera(stage, 32);
+    ndsSC1PIntroBakeHeap(i + 1);
+
+    switch (stage)
+    {
+    case nSC1PGameStageYoshi:
+        fighter_gobj = sc1PIntroMakeVSFighter(nFTKindYoshi, stage, i, &sSC1PIntroFigatreeHeaps[i + 1], 32);
+
+        if ((sSC1PIntroPlayerFighterDemoDesc.costume == i % SC1PGAME_STAGE_YOSHI_VARIATIONS_COUNT) && (sSC1PIntroPlayerFighterDemoDesc.fkind == nFTKindYoshi))
+        {
+            ftParamInitAllParts(fighter_gobj, i % SC1PGAME_STAGE_YOSHI_VARIATIONS_COUNT, 1);
+        }
+        else ftParamInitAllParts(fighter_gobj, i % SC1PGAME_STAGE_YOSHI_VARIATIONS_COUNT, 0);
+        break;
+
+    case nSC1PGameStageKirby:
+        fighter_gobj = sc1PIntroMakeVSFighter(nFTKindKirby, stage, i, &sSC1PIntroFigatreeHeaps[i + 1], 32);
+        sc1PIntroSetKirbyTeamModelPartIDs(fighter_gobj, stage);
+        {
+            /* The member's hat is a copy-hat image the battle admits before
+             * GO and the intro never loads (ftParamSetModelPartID, unlike the
+             * copy path, binds no image); a lone member owns hat slot 0. */
+            FTStruct *fp = ftGetStruct(fighter_gobj);
+            s32 part = fp->modelpart_status[6 - nFTPartsJointCommonStart].modelpart_id_curr;
+
+            if ((part >= 3) && (part <= 13))
+            {
+                (void)ndsRendererNativeEnsureKirbyCopyHat(0u, (u32)part, 0u);
+            }
+        }
+
+        if (sSC1PIntroCheckCostumeUsed(stage, nFTKindKirby, 0) != FALSE)
+        {
+            ftParamInitAllParts(fighter_gobj, ftParamGetCostumeCommonID(nFTKindMario, 1), 0);
+        }
+        break;
+
+    default:
+        fighter_gobj = sc1PIntroMakeVSFighter(nFTKindNStart + i, stage, 0, &sSC1PIntroFigatreeHeaps[i + 1], 32);
+        break;
+    }
+    sNdsIntroBakeMemberGObj = fighter_gobj;
+}
+
+/* sc1PIntroFuncStart for the bake: the capture is the 3D layer alone, so only
+ * what draws there is built. Of the intro's four files only SC1PIntro is
+ * loaded -- its camera animations frame both the cards and the VS fighters;
+ * the bonus pictures and the names are 2D (the four together cost 400 KB of
+ * the scene heap, probe zm02). A VS-only bake makes no cards. */
+static void ndsSC1PIntroFuncStartBake(void)
+{
+    LBRelocSetup rl_setup;
+    s32 i;
+
+    rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+    rl_setup.table_files_num = (u32)&llRelocFileCount;
+    rl_setup.file_heap = NULL;
+    rl_setup.file_heap_size = 0;
+    rl_setup.status_buffer = sSC1PIntroStatusBuffer;
+    rl_setup.status_buffer_size = ARRAY_COUNT(sSC1PIntroStatusBuffer);
+    rl_setup.force_status_buffer = sSC1PIntroForceStatusBuffer;
+    rl_setup.force_status_buffer_size = ARRAY_COUNT(sSC1PIntroForceStatusBuffer);
+
+    lbRelocInitSetup(&rl_setup);
+    lbRelocLoadFilesExtern(dSC1PIntroFileIDs, 1, sSC1PIntroFiles,
+                           syTaskmanMalloc(
+                               lbRelocGetAllocSize(dSC1PIntroFileIDs, 1),
+                               0x10));
+    gcMakeGObjSPAfter(0, sc1PIntroFuncRun, 0, GOBJ_PRIORITY_DEFAULT);
+    gcMakeDefaultCameraGObj(0, GOBJ_PRIORITY_DEFAULT, 100,
+                            COBJ_FLAG_FILLCOLOR | COBJ_FLAG_ZBUFFER,
+                            GPACK_RGBA8888(0x00, 0x00, 0x00, 0xFF));
+    sc1PIntroInitVars();
+    efParticleInitAll();
+    efManagerInitEffects();
+    ftManagerAllocFighter(FTDATA_FLAG_SUBMOTION,
+                          (ndsSC1PIntroBakeIsTeamMember(sSC1PIntroStage) != FALSE) ?
+                              2 : sc1PIntroGetFighterAllocsNum(sSC1PIntroStage));
+    ndsSC1PIntroBakeSetupFighterFiles(sSC1PIntroStage);
+
+    for (i = 0; i < (s32)ARRAY_COUNT(sSC1PIntroFigatreeHeaps); i++)
+    {
+        sSC1PIntroFigatreeHeaps[i] = NULL;
+    }
+    sNdsIntroBakeMemberGObj = NULL;
+    sNdsIntroBakeStageCamera = NULL;
+    if (sc1PIntroCheckNotBonusStage(sSC1PIntroStage) != FALSE)
+    {
+        if (ndsSC1PIntroBakeShowsCards() != FALSE)
+        {
+            ndsSC1PIntroBakeInitFighters(sSC1PIntroStage);
+        }
+        if (ndsSC1PIntroBakeShowsVS() != FALSE)
+        {
+            if (ndsSC1PIntroBakeIsTeamMember(sSC1PIntroStage) != FALSE)
+            {
+                ndsSC1PIntroBakeInitVSMember(sSC1PIntroStage);
+            }
+            else
+            {
+                for (i = 0; i < sc1PIntroGetFighterAllocsNum(sSC1PIntroStage);
+                     i++)
+                {
+                    ndsSC1PIntroBakeHeap(i);
+                }
+                sc1PIntroInitVSFighters(sSC1PIntroStage);
+            }
+        }
+    }
+    scSubsysFighterSetLightParams(-20.0F, 30.0F, 0xFF, 0xFF, 0xFF, 0xFF);
+    sySchedulerSetTicCount(0);
+}
+#endif
+
 static void ndsSC1PIntroDraw(void)
 {
     GObj *fighter_gobj;
     sb32 visible = FALSE;
+
+#if NDS_1P_INTRO_BAKE
+    ndsSC1PIntroBakeBeforeDraw();
+#endif
+#if NDS_1P_INTRO_STATIC
+    ndsSC1PIntroBlitStills();
+#endif
 
     /* Source reveal timing lives in GObj hidden flags (Yoshi/Kirby
      * unhide by tic, Zako is always shown). Mirror the VS preview rule:
@@ -259,6 +826,9 @@ static void ndsSC1PIntroDraw(void)
     ndsPlatformSet3DViewportSource(10, 10, 310, 230);
     scManagerFuncDraw();
     ndsPlatformReset3DViewport();
+#if NDS_1P_INTRO_BAKE
+    ndsSC1PIntroBakeAfterDraw();
+#endif
 }
 
 void sc1PIntroStartScene(void)
@@ -268,6 +838,9 @@ void sc1PIntroStartScene(void)
 #endif
 #if NDS_1P_INTRO_STATIC
     dSC1PIntroTaskmanSetup.func_start = ndsSC1PIntroFuncStartStatic;
+#endif
+#if NDS_1P_INTRO_BAKE
+    dSC1PIntroTaskmanSetup.func_start = ndsSC1PIntroFuncStartBake;
 #endif
     ndsBaseSC1PIntroStartScene();
 }

@@ -54,10 +54,18 @@
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif
 
-#define NDS_S2D_SRC_ORIGIN_X 10
-#define NDS_S2D_SRC_ORIGIN_Y 10
-#define NDS_S2D_SCALE_X_Q16 55924u
-#define NDS_S2D_SCALE_Y_Q16 57195u
+/* The source frame each tenant maps onto the 256x192 screen. Every tenant
+ * but one draws in the 320x240 frame and shows (10,10)-(310,230); the staff
+ * roll runs at 640x480 (scstaffroll.c's viewports are (20,20)-(620,460)) and
+ * its sprites sit in that frame, so they map with half the scale. */
+static s32 sNdsS2DSrcOriginX = 10;
+static s32 sNdsS2DSrcOriginY = 10;
+static u32 sNdsS2DScaleXQ16 = 55924u;
+static u32 sNdsS2DScaleYQ16 = 57195u;
+#define NDS_S2D_SRC_ORIGIN_X sNdsS2DSrcOriginX
+#define NDS_S2D_SRC_ORIGIN_Y sNdsS2DSrcOriginY
+#define NDS_S2D_SCALE_X_Q16 sNdsS2DScaleXQ16
+#define NDS_S2D_SCALE_Y_Q16 sNdsS2DScaleYQ16
 #define NDS_S2D_ALIGN 128u
 #define NDS_S2D_VRAM_BYTES (64u * 1024u)
 #define NDS_S2D_CELLS 96u
@@ -1721,6 +1729,7 @@ static s32 ndsS2DSceneIsTenant(u32 scene)
     case nSCKind1PContinue:
     case nSCKind1PChallenger:
     case nSCKindMessage:
+    case nSCKindStaffroll:
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif
@@ -1756,6 +1765,20 @@ void ndsSource2DEnterForScene(u32 scene)
     if (ndsS2DSceneIsTenant(scene) == FALSE)
     {
         return;
+    }
+    if (scene == (u32)nSCKindStaffroll)
+    {
+        sNdsS2DSrcOriginX = 20;
+        sNdsS2DSrcOriginY = 20;
+        sNdsS2DScaleXQ16 = 27962u;   /* 256 / 600 */
+        sNdsS2DScaleYQ16 = 28597u;   /* 192 / 440 */
+    }
+    else
+    {
+        sNdsS2DSrcOriginX = 10;
+        sNdsS2DSrcOriginY = 10;
+        sNdsS2DScaleXQ16 = 55924u;   /* 256 / 300 */
+        sNdsS2DScaleYQ16 = 57195u;   /* 192 / 220 */
     }
     /* Under a held frame the OBJ init would recolour the frame on screen;
      * the Thaw enters (ndsSource2DEnterPending). */

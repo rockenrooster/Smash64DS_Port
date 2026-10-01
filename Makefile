@@ -1561,6 +1561,20 @@ NDS_BOOT_DIAG_TEXT ?= 1
 # between steps so each screen is both measurable and capturable. Zero means no
 # injection at all and the shell is driven only by the player.
 NDS_P2_MENU_WALK ?= 0
+# LAB ONLY. 1 builds the 1P intro with its live fighter cards and the gdb-driven
+# display-capture hook that bakes the shipping intro's fighter stills
+# (scripts/menus/bake_1p_intro_stills.ps1). Never 1 in anything published.
+NDS_1P_INTRO_BAKE ?= 0
+# LAB ONLY (with NDS_P2_MENU_WALK): the 1P ladder stage the walk starts at; -1
+# is the source's own start. For instruments that run without a debugger.
+NDS_1P_WALK_START_STAGE ?= -1
+# The bake runs the live intro, whose Link needs the intro root program; no
+# shipping scene does (generate_nds_native_owners.py LINK_INTRO_PROGRAM). The
+# owners are generated into the shared source tree, so the value is stamped
+# there and a change of value regenerates them before anything compiles.
+export NDS_OWNER_LINK_INTRO := $(NDS_1P_INTRO_BAKE)
+NDS_OWNER_LINK_INTRO_STAMP := $(PROJECT_ROOT)/src/nds/generated/.owner_link_intro
+$(shell mkdir -p "$(dir $(NDS_OWNER_LINK_INTRO_STAMP))"; [ "$$(cat "$(NDS_OWNER_LINK_INTRO_STAMP)" 2>/dev/null)" = "$(NDS_OWNER_LINK_INTRO)" ] || echo "$(NDS_OWNER_LINK_INTRO)" > "$(NDS_OWNER_LINK_INTRO_STAMP)")
 # PROBE BUILDS ONLY. 1 makes the reason-20 preview halt count instead of
 # spinning forever, so the shell walk can cross a CSS where one fighter's
 # preview has no native owner (measured 2026-09-22: kind 11, Ness). Never 1 in
@@ -6754,6 +6768,7 @@ NDS_NATIVE_OWNERS_GENERATOR := $(PROJECT_ROOT)/scripts/fighters/generate_nds_nat
 NDS_NATIVE_OWNER_IR := $(PROJECT_ROOT)/src/nds/nds_native_fighter_owner.generated.inc
 NDS_NATIVE_ACTOR_TARU_PREREQ := \
 	$(NDS_NATIVE_OWNERS_GENERATOR) \
+	$(NDS_OWNER_LINK_INTRO_STAMP) \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
 	$(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/jungle.py \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/gr/grcommon/grjungle.c \
@@ -6949,6 +6964,7 @@ $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWN
 NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
 	$(NDS_NATIVE_IMAGE_GENERATOR) \
 	$(NDS_NATIVE_OWNERS_GENERATOR) \
+	$(NDS_OWNER_LINK_INTRO_STAMP) \
 	$(NDS_NATIVE_OWNER_IR) \
 	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
 	$(PROJECT_ROOT)/scripts/fighters/native_skeletons.py \
@@ -7191,6 +7207,8 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_UI_KIT $(NDS_P2_UI_KIT)'; \
 		echo '#define NDS_P2_MENU_SHELL $(NDS_P2_MENU_SHELL)'; \
 		echo '#define NDS_P2_MENU_WALK $(NDS_P2_MENU_WALK)u'; \
+		echo '#define NDS_1P_INTRO_BAKE $(NDS_1P_INTRO_BAKE)'; \
+		echo '#define NDS_1P_WALK_START_STAGE ($(NDS_1P_WALK_START_STAGE))'; \
 		echo '#define NDS_BOOT_DIAG_TEXT $(NDS_BOOT_DIAG_TEXT)'; \
 		echo '#define NDS_R2_PATH $(NDS_R2_PATH)'; \
 		echo '#define NDS_R2_STAGE_DIRECT $(NDS_R2_STAGE_DIRECT)'; \
@@ -7658,6 +7676,17 @@ $(OUTPUT).nds: $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(NITROFS_DIR)/wallp
 $(NITROFS_DIR)/wallpapers/%.bin: $(PROJECT_ROOT)/assets/wallpapers/%.bin
 	@mkdir -p $(dir $@)
 	cp $< $@
+
+# P2-6. The 1P intro's fighter stills, baked from this renderer by the lab
+# ROM NDS_1P_INTRO_BAKE=1 (scripts/menus/bake_1p_intro_stills.ps1, packed by
+# scripts/menus/pack_1p_intro_stills.py). Campaign builds only.
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_1P_INTRO_STILLS := $(wildcard $(PROJECT_ROOT)/assets/intro/*.s1i)
+$(OUTPUT).nds: $(patsubst $(PROJECT_ROOT)/assets/intro/%,$(NITROFS_DIR)/intro/%,$(NDS_1P_INTRO_STILLS))
+$(NITROFS_DIR)/intro/%.s1i: $(PROJECT_ROOT)/assets/intro/%.s1i
+	@mkdir -p $(dir $@)
+	cp $< $@
+endif
 
 $(NDS_NATIVE_WALLPAPER_INC) $(NDS_NATIVE_WALLPAPER_ASSETS) &: \
 		$(PROJECT_ROOT)/scripts/stages/generate_native_wallpapers.py \
@@ -8458,6 +8487,7 @@ NDS_PREVIEW_CORE_FILES := $(addprefix $(NDS_PREVIEW_CORE_DIR)/,$(NDS_PREVIEW_COR
 NDS_PREVIEW_NITRO_FILES := $(addprefix $(NITROFS_DIR)/fighters/preview/,$(NDS_PREVIEW_CORE_NAMES))
 NDS_PREVIEW_CORE_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py \
+	$(NDS_OWNER_LINK_INTRO_STAMP) \
 	$(PROJECT_ROOT)/scripts/fighters/preview_source_metadata.py \
 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
@@ -8496,6 +8526,7 @@ NDS_BATTLE_CORE_NITRO_FILES := $(NDS_BATTLE_CORE_NITRO_FPC) $(NDS_BATTLE_CORE_NI
 NDS_BATTLE_CORE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/archive/NDS_BATTLE_CORE_PACKS.generated.json
 NDS_BATTLE_CORE_DEPS := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_battle_core_packs.py \
+	$(NDS_OWNER_LINK_INTRO_STAMP) \
 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_fighter_admission.py \
 	$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py \
 	$(PROJECT_ROOT)/scripts/fighters/preview_source_metadata.py \

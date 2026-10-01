@@ -1,5 +1,6 @@
 #include <ef/effect.h>
 #include <ft/fighter.h>
+#include <ft/ftdata_file_slots.h>
 #include <sc/scene.h>
 #include <nds/nds_startup.h>
 #include <sys/taskman.h>
@@ -68,6 +69,7 @@ static u32 ndsFTCommonEntryArenaFree(void)
 #define NDS_FTCOMMON_ENTRY_WAIT 120
 
 GObj *efManagerMarioEntryDokanMakeEffect(Vec3f *pos, s32 fkind);
+extern EFDesc dEFManagerMarioEntryDokanEffectDesc;
 GObj *efManagerFoxEntryArwingMakeEffect(Vec3f *pos, s32 lr);
 GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
 #if NDS_P2_SAMUS
@@ -161,6 +163,37 @@ GObj *efManagerCaptainEntryCarMakeEffect(Vec3f *pos, s32 lr);
 void ftCaptainAppearEndSetStatus(GObj *fighter_gobj);
 #endif
 void ndsEFManagerRetryDeferredDescs(void);
+
+/* The pipe's desc is shared by Mario, Luigi and Metal Mario, and
+ * efManagerMarioEntryDokanMakeEffect (efmanager.c:5669-5683) points it at the
+ * entering fighter's Special2 slot itself -- for Mario and Luigi only, and only
+ * AFTER the port's deferred-desc retry above has run against whichever slot the
+ * previous pipe named. After the Mario Bros stage that was Luigi's slot from a
+ * freed scene: the desc deferred at effect init, the retry could not map it,
+ * and the next pipe (a Mario ally on Giant DK's stage, walk cwalk44; Metal
+ * Mario, cwalk43) was a bare GObj whose NULL DObj the maker wrote through.
+ * Name the entering fighter's slot first, then retry. */
+static void ndsFTCommonEntryDokanPrepare(s32 fkind)
+{
+#if NDS_P2_LUIGI
+    if (fkind == nFTKindLuigi)
+    {
+        dEFManagerMarioEntryDokanEffectDesc.file_head = &gFTDataLuigiSpecial2;
+    }
+    else
+#endif
+#if NDS_P2_MMARIO
+    if (fkind == nFTKindMMario)
+    {
+        dEFManagerMarioEntryDokanEffectDesc.file_head = &gFTDataMMarioSpecial2;
+    }
+    else
+#endif
+    {
+        dEFManagerMarioEntryDokanEffectDesc.file_head = &gFTMarioFileSpecial2;
+    }
+    ndsEFManagerRetryDeferredDescs();
+}
 
 /* NDS_PARTIAL_IMPORT: decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonentry.c
  *
@@ -412,6 +445,7 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     {
         status_id = (entry_id == 0) ? nFTMarioStatusAppearR :
                                       nFTMarioStatusAppearL;
+        ndsFTCommonEntryDokanPrepare(fp->fkind);
         efManagerMarioEntryDokanMakeEffect(&fp->entry_pos, fp->fkind);
     }
     else if (fp->fkind == nFTKindFox)
@@ -560,6 +594,9 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
     {
         /* BattleShip ftcommonentry.c:26,194-197. MMario reuses the Mario AppearR/AppearL pair and the Dokan pipe entry. */
         status_id = (entry_id == 0) ? nFTMarioStatusAppearR : nFTMarioStatusAppearL;
+        /* The maker names no file for Metal Mario; his own slot is named
+         * here (ndsFTCommonEntryDokanPrepare) and kept through the call. */
+        ndsFTCommonEntryDokanPrepare(fp->fkind);
         efManagerMarioEntryDokanMakeEffect(&fp->entry_pos, fp->fkind);
     }
 #endif

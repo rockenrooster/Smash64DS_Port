@@ -9959,6 +9959,14 @@ void ndsRendererEndParticleQuads(void)
 #endif
 }
 
+/* A frame whose only geometry is world quads (the staff roll's names) is still
+ * a GX frame: the platform flushes it, and shows BG0, only for a submitted one.
+ * Every other quad shares a frame with a fighter or stage that marks it. */
+void ndsRendererHardwareNoteQuadFrame(void)
+{
+    sNdsRendererHardwareSubmitted = TRUE;
+}
+
 #if NDS_R2_FOX_BLASTER_QUAD
 /* ARM946E-S has no FPU. The beam's source DObj is already a closed four-vertex
  * contract, so paying __aeabi_fmul/__aeabi_f2iz for every coordinate would
@@ -12799,6 +12807,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 alpha_ignores_texels = FALSE;
     s32 graded_coverage = FALSE;
     s32 intensity_coverage = FALSE;
+    s32 blendpe_coverage = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -13240,6 +13249,18 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
          ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
           (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
+    /* The same request over the BLENDPE lerp whose alpha is TEXEL0 * PRIM on
+     * an I8 tile (Board the Platforms' lights; the I4 form already has its
+     * dedicated A5I3 bake above): the lerp's palette, the intensity as
+     * graded coverage, PRIM alpha left on the polygon. Unrequested, the I
+     * tile converts with one-bit alpha and the lights drew as solid discs. */
+    blendpe_coverage =
+        ((sNdsRendererHardwareIntensityCoverage != 0u) &&
+         (use_texel1 == FALSE) &&
+         (alpha_ignores_texels == FALSE) &&
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA) &&
+         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+         (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)) ? TRUE : FALSE;
 
     memset(&key, 0, sizeof(key));
     key.image = primary_image;
@@ -13310,7 +13331,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     {
         key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS;
     }
-    if (intensity_coverage != FALSE)
+    if ((intensity_coverage != FALSE) || (blendpe_coverage != FALSE))
     {
         key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_I_TEXEL_ALPHA;
     }
@@ -13798,7 +13819,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
          (upload_buffer == sNdsRendererHardwareTextureScratch) &&
          (alpha_ignores_texels == FALSE) &&
          ((prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) ||
-          (intensity_coverage != FALSE)) &&
+          (intensity_coverage != FALSE) || (blendpe_coverage != FALSE)) &&
          (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
          ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
           (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
@@ -18768,6 +18789,10 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
 void ndsRendererEndParticleQuads(void)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
+}
+
+void ndsRendererHardwareNoteQuadFrame(void)
+{
 }
 #endif
 

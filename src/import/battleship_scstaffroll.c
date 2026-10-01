@@ -113,6 +113,11 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#include <string.h>
+#include <nds/arm9/video.h>
+#include <nds/nds_effects.h>
+#include <nds/nds_platform.h>
+#include <nds/nds_renderer.h>
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
@@ -120,24 +125,13 @@ extern size_t ndsTaskmanArenaSize(void);
 #define scStaffrollStartScene ndsBaseSCStaffrollStartScene
 void ndsBaseSCStaffrollStartScene(void);
 
-/* Port glyph seam (P2-6 step 8 tail): the decode/blit primitives live in
- * src/port/sprite_preview_backend.c (linked via scene_backend.o). The
- * object-like rename below rebinds the gcDrawDObjTreeForGObj CALL sites
- * (:1509, :1523) -- and only those, since :738/:1970 are bare references
- * carrying no paren -- to the wrapper defined after the include, which keeps
- * the recorder call and appends the glyph draw. An object-like rename only
- * swaps an identifier, so prototypes stay valid; every source line, including
- * the DL builder (:2053-2102) and DObj attach (:1570, :1758), is untouched. */
-extern s32 ndsStaffrollGlyphEnsure(const void *image, u32 width, u32 height,
-                                   u32 *out_slot);
-extern void ndsStaffrollGlyphBlit(u32 slot, s32 org_x, s32 org_y,
-                                  u8 prim_r, u8 prim_g, u8 prim_b,
-                                  u16 *preview, u32 preview_pitch,
-                                  u32 preview_width, u32 preview_height);
-extern s32 ndsStaffrollFrameBegin(u16 **out_preview, u32 *out_pitch);
-extern void ndsStaffrollFrameCommit(void);
-extern void ndsStaffrollGlyphCacheInvalidate(void);
-extern void ndsStaffrollDrawGObjGlyphs(struct GObj *gobj);
+/* Port draw seam (P2-6 step 8 tail). The object-like rename below rebinds
+ * the gcDrawDObjTreeForGObj CALL sites (:1509, :1523) -- and only those, since
+ * :738/:1970 are bare references carrying no paren -- to the wrapper defined
+ * after the include, which keeps the recorder call and draws the glyphs on the
+ * 3D engine. An object-like rename only swaps an identifier, so prototypes
+ * stay valid; every source line, including the DL builder (:2053-2102) and
+ * DObj attach (:1570, :1758), is untouched. */
 extern void ndsPortGcDrawDObjTreeForGObj(struct GObj *gobj);
 #define gcDrawDObjTreeForGObj ndsPortGcDrawDObjTreeForGObj
 
@@ -151,112 +145,394 @@ extern void scStaffrollMakeTextBoxGObj(void);
 #undef scStaffrollStartScene
 #undef gcDrawDObjTreeForGObj
 
-/* Per-scene invalidation: the cache keys on Image pointers resolved from
- * sSCStaffrollFiles[0]; a changed file pointer means a new scene load, so
- * the previous scene's entries (and pool) are dropped before reuse. */
+/* THE NAMES AND JOBS, natively.
+ *
+ * Each glyph is the quad scStaffrollInitNameAndJobDisplayLists (:2053-2102)
+ * builds: object corners (+-width, +-height, 0), the I/4b image's
+ * (0,0)-(width,height) texels across it, drawn under the root DObj's
+ * TraRotRpyRSca matrix (the cubic path and the AnimJoint) and the glyph DObj's
+ * Tra offset, by the 3D camera, with TEXEL0 x PRIMITIVE colour and TEXEL0
+ * alpha over an XLU blend (:1499-1525). On the DS that is one textured
+ * parallelogram per glyph through the particle quad path, whose texture is
+ * A3I5: alpha I*7/15, a grey ramp index I*31/15, tinted by the PRIMITIVE vertex
+ * colour. One texture per glyph, made on first use; the scene's textures are
+ * released when a new staff roll loads its file. */
+static u32 sNdsStaffrollGlyphNames[ARRAY_COUNT(dSCStaffrollNameAndJobSpriteInfo)];
 static const void *sNdsStaffrollGlyphFile = NULL;
+volatile u32 gNdsStaffrollGlyphDraws;
+volatile u32 gNdsStaffrollGlyphFailures;
 
-static void ndsStaffrollWalkDObjs(DObj *dobj, f32 base_x, f32 base_y,
-                                  u8 prim_r, u8 prim_g, u8 prim_b,
-                                  u16 *preview, u32 preview_pitch)
+typedef struct NDSStaffrollGlyphFill
 {
-    while (dobj != NULL)
+    const u8 *image;
+    u32 width;
+    u32 height;
+    u32 texture_width;
+} NDSStaffrollGlyphFill;
+
+static u32 ndsStaffrollPow2(u32 value)
+{
+    u32 size = 8u;
+
+    while (size < value)
     {
-        f32 world_x = base_x + dobj->translate.vec.f.x;
-        f32 world_y = base_y + dobj->translate.vec.f.y;
-        u32 i;
+        size <<= 1;
+    }
+    return size;
+}
 
-        /* Only DObjs carrying a glyph DL (attached at :1570, :1758 from
-         * sSCStaffrollNameAndJobDisplayLists) draw; every other DObj (scroll
-         * parents, text-box roots) only contributes its offset. */
-        for (i = 0u; i < ARRAY_COUNT(sSCStaffrollNameAndJobDisplayLists); i++)
+static s32 ndsStaffrollGlyphFillTexels(u8 *pixels, u32 bytes, void *user_data)
+{
+    const NDSStaffrollGlyphFill *fill = (const NDSStaffrollGlyphFill *)user_data;
+    u32 row_bytes;
+    u32 x;
+    u32 y;
+
+    if ((pixels == NULL) || (fill == NULL) || (fill->image == NULL))
+    {
+        return FALSE;
+    }
+    memset(pixels, 0, bytes);
+    /* The DL loads the image `width` rounded up to 16 texels per row
+     * (:2088); rows are packed 4 bits a texel, high nibble first, in a file
+     * whose 32-bit words the relocator byte-swapped (hence ^3). */
+    row_bytes = ((fill->width + 15u) / 16u) * 8u;
+    for (y = 0u; y < fill->height; y++)
+    {
+        for (x = 0u; x < fill->width; x++)
         {
-            if (dobj->dl == sSCStaffrollNameAndJobDisplayLists[i])
-            {
-                const void *image = lbRelocGetFileData(
-                    const void *, sSCStaffrollFiles[0],
-                    (const void *)dSCStaffrollNameAndJobSpriteInfo[i].offset);
-                u32 slot;
+            u32 index = (y * row_bytes) + (x >> 1);
+            u8 packed = fill->image[index ^ 3u];
+            u32 level = ((x & 1u) == 0u) ? (u32)(packed >> 4) :
+                                           (u32)(packed & 0x0fu);
+            u32 texel = (y * fill->texture_width) + x;
 
-                if (ndsStaffrollGlyphEnsure(
-                        image,
-                        (u32)dSCStaffrollNameAndJobSpriteInfo[i].width,
-                        (u32)dSCStaffrollNameAndJobSpriteInfo[i].height,
-                        &slot) != FALSE)
-                {
-                    ndsStaffrollGlyphBlit(
-                        slot, (s32)world_x, (s32)world_y,
-                        prim_r, prim_g, prim_b,
-                        preview, preview_pitch, 320u, 240u);
-                }
-                break;
+            if (texel < bytes)
+            {
+                pixels[texel] = (u8)((((level * 7u) + 7u) / 15u) << 5) |
+                                (u8)(((level * 31u) + 7u) / 15u);
             }
         }
-        if (dobj->child != NULL)
+    }
+    return TRUE;
+}
+
+static void ndsStaffrollReleaseGlyphs(void)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(sNdsStaffrollGlyphNames); i++)
+    {
+        if (sNdsStaffrollGlyphNames[i] != 0u)
         {
-            ndsStaffrollWalkDObjs(dobj->child, world_x, world_y,
-                                  prim_r, prim_g, prim_b, preview,
-                                  preview_pitch);
+            ndsRendererHardwareReleaseIFCommonCloudAtlas(
+                &sNdsStaffrollGlyphNames[i]);
+            sNdsStaffrollGlyphNames[i] = 0u;
         }
-        dobj = dobj->sib_next;
     }
 }
 
-void ndsStaffrollDrawGObjGlyphs(struct GObj *gobj)
+static u32 ndsStaffrollGlyphTexture(u32 glyph)
 {
-    u8 prim_r;
-    u8 prim_g;
-    u8 prim_b;
-    u16 *preview;
-    u32 preview_pitch;
-    DObj *root;
+    static u16 ramp[32];
+    NDSStaffrollGlyphFill fill;
+    u32 i;
 
-    if (gobj == NULL)
+    if (sNdsStaffrollGlyphNames[glyph] != 0u)
     {
-        return;
+        return sNdsStaffrollGlyphNames[glyph];
     }
+    if (ramp[31] == 0u)
+    {
+        for (i = 0u; i < 32u; i++)
+        {
+            ramp[i] = (u16)(i | (i << 5) | (i << 10));
+        }
+    }
+    fill.image = lbRelocGetFileData(
+        const u8 *, sSCStaffrollFiles[0],
+        (const void *)dSCStaffrollNameAndJobSpriteInfo[glyph].offset);
+    fill.width = (u32)dSCStaffrollNameAndJobSpriteInfo[glyph].width;
+    fill.height = (u32)dSCStaffrollNameAndJobSpriteInfo[glyph].height;
+    fill.texture_width = ndsStaffrollPow2(fill.width);
+    if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
+            fill.texture_width, ndsStaffrollPow2(fill.height), ramp,
+            ndsStaffrollGlyphFillTexels, &fill,
+            &sNdsStaffrollGlyphNames[glyph]) == FALSE)
+    {
+        sNdsStaffrollGlyphNames[glyph] = 0u;
+    }
+    return sNdsStaffrollGlyphNames[glyph];
+}
+
+static void ndsStaffrollDrawGObjGlyphs(struct GObj *gobj)
+{
+    u32 color;
+    DObj *root;
+    DObj *glyph_dobj;
+    Mtx44f mf;
+
     /* Tint is the PRIMITIVE each display proc sets: job :1506
      * (0x7F, 0x7F, 0x89), name :1520 (0x88, 0x93, 0xFF). Any other DObj GObj
      * (:738, :1970) keeps the recorder call only. */
     if (gobj->proc_display == scStaffrollJobProcDisplay)
     {
-        prim_r = 0x7Fu;
-        prim_g = 0x7Fu;
-        prim_b = 0x89u;
+        color = RGB15(0x7F >> 3, 0x7F >> 3, 0x89 >> 3);
     }
     else if (gobj->proc_display == scStaffrollNameProcDisplay)
     {
-        prim_r = 0x88u;
-        prim_g = 0x93u;
-        prim_b = 0xFFu;
+        color = RGB15(0x88 >> 3, 0x93 >> 3, 0xFF >> 3);
     }
     else
     {
         return;
     }
-    if ((gobj->obj_kind != 1u) || (gobj->obj == NULL))
+    if ((gobj->obj_kind != nGCCommonAppendDObj) || (gobj->obj == NULL))
     {
         return;
     }
     if (sNdsStaffrollGlyphFile != sSCStaffrollFiles[0])
     {
-        ndsStaffrollGlyphCacheInvalidate();
+        ndsStaffrollReleaseGlyphs();
         sNdsStaffrollGlyphFile = sSCStaffrollFiles[0];
     }
     root = (DObj *)gobj->obj;
-    if (ndsStaffrollFrameBegin(&preview, &preview_pitch) == FALSE)
+    if ((root->flags & DOBJ_FLAG_HIDDEN) != 0u)
     {
         return;
     }
-    ndsStaffrollWalkDObjs(root, 0.0F, 0.0F, prim_r, prim_g, prim_b,
-                          preview, preview_pitch);
-    ndsStaffrollFrameCommit();
+    syMatrixTraRotRpyRScaF(&mf, root->translate.vec.f.x,
+                           root->translate.vec.f.y, root->translate.vec.f.z,
+                           root->rotate.vec.f.x, root->rotate.vec.f.y,
+                           root->rotate.vec.f.z, root->scale.vec.f.x,
+                           root->scale.vec.f.y, root->scale.vec.f.z);
+    for (glyph_dobj = root->child; glyph_dobj != NULL;
+         glyph_dobj = glyph_dobj->sib_next)
+    {
+        u32 glyph;
+
+        if ((glyph_dobj->flags & DOBJ_FLAG_HIDDEN) != 0u)
+        {
+            continue;
+        }
+        for (glyph = 0u; glyph < ARRAY_COUNT(sSCStaffrollNameAndJobDisplayLists);
+             glyph++)
+        {
+            if (glyph_dobj->dl == sSCStaffrollNameAndJobDisplayLists[glyph])
+            {
+                break;
+            }
+        }
+        if (glyph >= ARRAY_COUNT(sSCStaffrollNameAndJobDisplayLists))
+        {
+            continue;
+        }
+        {
+            /* Row vectors, as the source composes: p * Tra(child) * root. */
+            const Vec3f *t = &glyph_dobj->translate.vec.f;
+            f32 w = (f32)dSCStaffrollNameAndJobSpriteInfo[glyph].width;
+            f32 h = (f32)dSCStaffrollNameAndJobSpriteInfo[glyph].height;
+            Vec3f centre;
+            Vec3f right;
+            Vec3f up;
+            u32 name = ndsStaffrollGlyphTexture(glyph);
+
+            centre.x = (t->x * mf[0][0]) + (t->y * mf[1][0]) +
+                       (t->z * mf[2][0]) + mf[3][0];
+            centre.y = (t->x * mf[0][1]) + (t->y * mf[1][1]) +
+                       (t->z * mf[2][1]) + mf[3][1];
+            centre.z = (t->x * mf[0][2]) + (t->y * mf[1][2]) +
+                       (t->z * mf[2][2]) + mf[3][2];
+            right.x = w * mf[0][0];
+            right.y = w * mf[0][1];
+            right.z = w * mf[0][2];
+            up.x = h * mf[1][0];
+            up.y = h * mf[1][1];
+            up.z = h * mf[1][2];
+            if ((name != 0u) &&
+                (ndsParticleDrawOwnTextureParallelogram(
+                     name, (u32)w, (u32)h, &centre, &right, &up, color,
+                     0xFFu) != FALSE))
+            {
+                gNdsStaffrollGlyphDraws++;
+            }
+            else
+            {
+                gNdsStaffrollGlyphFailures++;
+            }
+        }
+    }
 }
 
 void ndsPortGcDrawDObjTreeForGObj(struct GObj *gobj)
 {
     gcDrawDObjTreeForGObj(gobj);
-    ndsStaffrollDrawGObjGlyphs(gobj);
+    if (gobj != NULL)
+    {
+        ndsStaffrollDrawGObjGlyphs(gobj);
+    }
+}
+
+/* THE FILL RECTANGLES: the text box frame (dSCStaffrollTextBoxDisplayList,
+ * :476-487, while its GObj lives) and the lock-on highlight
+ * (scStaffrollHighlightProcDisplay, :785-826), both G_CYC_FILL rectangles in
+ * the 640x480 frame, drawn by the 3D camera over the names. On the DS they are
+ * painted into the sprite overlay layer, mapped like the scene's sprites
+ * ((20,20)-(620,460) onto 256x192), and erased the next frame. */
+#define NDS_STAFFROLL_RECT_MAX 8u
+
+typedef struct NDSStaffrollRect
+{
+    s16 x0;
+    s16 y0;
+    s16 x1;
+    s16 y1;
+} NDSStaffrollRect;
+
+static NDSStaffrollRect sNdsStaffrollRects[NDS_STAFFROLL_RECT_MAX];
+static u32 sNdsStaffrollRectCount;
+static sb32 sNdsStaffrollBackdropSet;
+
+static s32 ndsStaffrollMapX(s32 x)
+{
+    s32 mapped = ((x - 20) * 256) / 600;
+
+    return (mapped < 0) ? 0 : ((mapped > 256) ? 256 : mapped);
+}
+
+static s32 ndsStaffrollMapY(s32 y)
+{
+    s32 mapped = ((y - 20) * 192) / 440;
+
+    return (mapped < 0) ? 0 : ((mapped > 192) ? 192 : mapped);
+}
+
+static void ndsStaffrollFillRect(u16 *layer, u32 pitch, const NDSStaffrollRect *r,
+                                 u16 value)
+{
+    s32 x;
+    s32 y;
+
+    for (y = r->y0; y < r->y1; y++)
+    {
+        for (x = r->x0; x < r->x1; x++)
+        {
+            layer[((u32)y * pitch) + (u32)x] = value;
+        }
+    }
+}
+
+static void ndsStaffrollAddRect(NDSStaffrollRect *rects, u32 *count,
+                                s32 ulx, s32 uly, s32 lrx, s32 lry)
+{
+    NDSStaffrollRect *r;
+
+    if (*count >= NDS_STAFFROLL_RECT_MAX)
+    {
+        return;
+    }
+    r = &rects[(*count)++];
+    r->x0 = (s16)ndsStaffrollMapX(ulx);
+    r->y0 = (s16)ndsStaffrollMapY(uly);
+    /* A 2-pixel hi-res edge stays at least one DS pixel. */
+    r->x1 = (s16)ndsStaffrollMapX(lrx);
+    r->y1 = (s16)ndsStaffrollMapY(lry);
+    if (r->x1 <= r->x0) { r->x1 = (s16)(r->x0 + 1); }
+    if (r->y1 <= r->y0) { r->y1 = (s16)(r->y0 + 1); }
+}
+
+static void ndsStaffrollDrawRects(void)
+{
+    NDSStaffrollRect rects[NDS_STAFFROLL_RECT_MAX];
+    u32 count = 0u;
+    u32 frame_count = 0u;
+    u32 box_count;
+    u32 pitch = 0u;
+    u16 *layer;
+    GObj *gobj;
+    u32 i;
+
+    layer = ndsPlatformGetOriginalSpriteOverlayLayer(TRUE, &pitch, NULL, NULL,
+                                                     NULL);
+    if ((layer == NULL) || (pitch == 0u))
+    {
+        return;
+    }
+    for (gobj = gGCCommonLinks[7]; gobj != NULL; gobj = gobj->link_next)
+    {
+        if ((gobj->obj != NULL) &&
+            (DObjGetStruct(gobj)->dl == dSCStaffrollTextBoxDisplayList))
+        {
+            ndsStaffrollAddRect(rects, &count, 346, 35, 348, 164);
+            ndsStaffrollAddRect(rects, &count, 346, 35, 584, 37);
+            ndsStaffrollAddRect(rects, &count, 582, 35, 584, 164);
+            ndsStaffrollAddRect(rects, &count, 346, 162, 584, 164);
+            break;
+        }
+    }
+    box_count = count;
+    if (gGCCommonLinks[nGCCommonLinkIDHighlight] != NULL)
+    {
+        s32 size = sSCStaffrollHighlightSize;
+        f32 x = sSCStaffrollHighlightPositionX;
+        f32 y = sSCStaffrollHighlightPositionY;
+
+        ndsStaffrollAddRect(rects, &count,
+            scStaffrollGetLockOnPositionX((size * -30) + x),
+            scStaffrollGetLockOnPositionY((size * -25) + y),
+            scStaffrollGetLockOnPositionX(((size * -30) + 2) + x),
+            scStaffrollGetLockOnPositionY(((size * 45) + 2) + y));
+        ndsStaffrollAddRect(rects, &count,
+            scStaffrollGetLockOnPositionX((size * -30) + x),
+            scStaffrollGetLockOnPositionY((size * -25) + y),
+            scStaffrollGetLockOnPositionX(((size * 65) + 2) + x),
+            scStaffrollGetLockOnPositionY(((size * -25) + 2) + y));
+        ndsStaffrollAddRect(rects, &count,
+            scStaffrollGetLockOnPositionX((size * -30) + x),
+            scStaffrollGetLockOnPositionY((size * 45) + y),
+            scStaffrollGetLockOnPositionX(((size * 65) + 2) + x),
+            scStaffrollGetLockOnPositionY(((size * 45) + 2) + y));
+        ndsStaffrollAddRect(rects, &count,
+            scStaffrollGetLockOnPositionX((size * 65) + x),
+            scStaffrollGetLockOnPositionY((size * -25) + y),
+            scStaffrollGetLockOnPositionX(((size * 65) + 2) + x),
+            scStaffrollGetLockOnPositionY(((size * 45) + 2) + y));
+    }
+    for (i = 0u; i < sNdsStaffrollRectCount; i++)
+    {
+        ndsStaffrollFillRect(layer, pitch, &sNdsStaffrollRects[i], 0u);
+    }
+    for (i = 0u; i < count; i++)
+    {
+        ndsStaffrollFillRect(layer, pitch, &rects[i],
+                             (i < box_count) ?
+                                 (u16)(0x8000u | RGB15(0x42 >> 3, 0x3A >> 3,
+                                                       0x31 >> 3)) :
+                                 (u16)(0x8000u | RGB15(0x80 >> 3, 0, 0)));
+        sNdsStaffrollRects[i] = rects[i];
+    }
+    frame_count = count;
+    sNdsStaffrollRectCount = frame_count;
+}
+
+/* scStaffrollFuncDraw with the scene's DS frame around it: the 3D camera's
+ * (20,20)-(620,460) viewport is the 640x480 form of the 320x240 window every
+ * other source scene presents, and the fill rectangles follow the frame. */
+static void ndsStaffrollFuncDraw(void)
+{
+    if (sNdsStaffrollBackdropSet == FALSE)
+    {
+        /* The scene's default camera fills black (scstaffroll.c:2189); the
+         * backdrop otherwise keeps the previous menu's colour. At the first
+         * draw, so a held transition frame stays until the scene draws. */
+        ndsPlatformSetBackdropColor(RGB15(0, 0, 0));
+        sNdsStaffrollBackdropSet = TRUE;
+    }
+    ndsPlatformSet3DLayerEnabled(TRUE);
+    ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+    scStaffrollFuncDraw();
+    ndsPlatformReset3DViewport();
+    ndsStaffrollDrawRects();
 }
 
 void scStaffrollStartScene(void)
@@ -272,7 +548,10 @@ void scStaffrollStartScene(void)
     setup = dSCStaffrollTaskmanSetup;
     setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+    setup.scene_setup.func_draw = ndsStaffrollFuncDraw;
     setup.func_start = scStaffrollFuncStart;
+    sNdsStaffrollRectCount = 0u;
+    sNdsStaffrollBackdropSet = FALSE;
     syTaskmanStartTask(&setup);
 }
 

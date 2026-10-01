@@ -1142,6 +1142,23 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
     }
+#if NDS_P2_LUIGI
+    /* ftdata.c lists llMarioSpecial2FileID as Luigi's and Metal Mario's
+     * Special2 too: one pipe file, three slots, and the pipe's desc names
+     * whichever slot its last maker chose. A slot missing here gave span 0,
+     * which no retry can ever map, so a pipe desc deferred while it named
+     * Luigi's slot stayed disabled and the next pipe built a bare GObj. */
+    if (file_head == &gFTDataLuigiSpecial2)
+    {
+        return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
+    }
+#endif
+#if NDS_P2_MMARIO
+    if (file_head == &gFTDataMMarioSpecial2)
+    {
+        return ndsRelocGetLoadedFileSize(&llMarioSpecial2FileID);
+    }
+#endif
     if (file_head == &gFTDataFoxSpecial3)
     {
         return ndsRelocGetLoadedFileSize(&llFoxSpecial3FileID);

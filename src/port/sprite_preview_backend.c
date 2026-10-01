@@ -1318,55 +1318,6 @@ void gcSetMatrixFuncList(syMtxProcess *proc_mtx)
     (void)proc_mtx;
 }
 
-/* Campaign remains paused. Its unfinished software glyph path is preserved
- * host-only; no new ROM may carry that compositor while native work is parked. */
-void ndsStaffrollGlyphCacheInvalidate(void)
-{
-    /* No native glyph residency has been admitted yet. */
-}
-
-s32 ndsStaffrollGlyphEnsure(const void *image, u32 width, u32 height,
-                            u32 *out_slot)
-{
-    if (out_slot != NULL) { *out_slot = 0xffffffffu; }
-    ndsRendererRecordNativeFailure(
-        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
-        0xffffffffu, (width << 16) | (height & 0xffffu),
-        (u32)(uintptr_t)image, 0u, NDS_NATIVE_FAILURE_NO_PROGRAM);
-    return FALSE;
-}
-
-void ndsStaffrollGlyphBlit(u32 slot, s32 org_x, s32 org_y,
-                           u8 prim_r, u8 prim_g, u8 prim_b,
-                           u16 *preview, u32 preview_pitch,
-                           u32 preview_width, u32 preview_height)
-{
-    (void)org_x; (void)org_y;
-    (void)prim_r; (void)prim_g; (void)prim_b;
-    (void)preview_pitch; (void)preview_width; (void)preview_height;
-    ndsRendererRecordNativeFailure(
-        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
-        slot, 0u, (u32)(uintptr_t)preview, 0u,
-        NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER);
-}
-
-s32 ndsStaffrollFrameBegin(u16 **out_preview, u32 *out_pitch)
-{
-    if (out_preview != NULL) { *out_preview = NULL; }
-    if (out_pitch != NULL) { *out_pitch = 0u; }
-    ndsRendererRecordNativeFailure(
-        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
-        0xffffffffu, 0u, 0u, 0u, NDS_NATIVE_FAILURE_NO_PROGRAM);
-    return FALSE;
-}
-
-void ndsStaffrollFrameCommit(void)
-{
-    ndsRendererRecordNativeFailure(
-        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
-        0xffffffffu, 0u, 0u, 0u, NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER);
-}
-
 /* The sink body. Runs only under ndsMenuFillSinkSceneGated; every other
  * scene never reaches past the gate, so battle/results/startup behaviour is
  * unchanged by construction. */

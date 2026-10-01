@@ -86,6 +86,24 @@ GOBJ_GROUND_DISPLAY = 1009
 # with the source's render mode; one that sets its own still overrides it.
 WEAPON_RENDER_MODE = (0xE200001C, 0x005041C8)
 
+# Board the Platforms' platforms hang under layer-1 yakumono DObjs and draw in
+# that layer's gcDrawDObjTreeDLLinksForGObj, which writes each DL link to its
+# own display-list head: grDisplayLayer1PriProcDisplay / SecProcDisplay
+# (grdisplay.c:86-109) start head 0 with G_RM_AA_ZB_OPA_SURF and head 1 with
+# G_RM_AA_ZB_XLU_SURF. Every platform's DObj 0 is DL link 0 (the board) and
+# DObjs 1-2 are link 1 (the lights; 136_Bonus2Common.c DObjDLLink tables).
+# None of these lists sets a render mode, so each root starts with its head's
+# mode -- the lights drew opaque when they inherited the traversal's. The
+# board is seeded too: the heads never share state in the source, so a light
+# drawn before the next board must not leave it translucent.
+GROUND_LINK0_RENDER_MODE = (0xE200001C, 0x00552078)
+GROUND_LINK1_RENDER_MODE = (0xE200001C, 0x005049D8)
+GROUND_LINK1_ROOTS = frozenset(
+    f"Bonus2{kind}{size}{dobj}"
+    for kind in ("Platform", "Boarded")
+    for size in ("Small", "Medium", "Large")
+    for dobj in (1, 2))
+
 # (name, file, root, gobj kind, source note). A root that already has a
 # hand-written owner must not appear here (the adapter would draw it twice).
 ENTRIES = (
@@ -253,13 +271,17 @@ def combine_reads_texel0_alpha(w0, w1):
     """TRUE when either cycle's alpha mux selects TEXEL0 alpha and the colour
     is not one of the renderer's own I-tile bakes (the BLENDPE endpoint lerp
     and the flat PRIM rgb, nds_renderer_textures_effects.c), which already
-    keep coverage."""
+    keep coverage -- except the lerp whose alpha is TEXEL0 * PRIM: its bake
+    keeps coverage on I4 only, so an I8 tile asks (Board the Platforms'
+    lights drew as solid discs)."""
     alpha = ((w0 >> 12) & 7, (w1 >> 12) & 7, (w0 >> 9) & 7, (w1 >> 9) & 7,
              (w1 >> 21) & 7, (w1 >> 3) & 7, (w1 >> 18) & 7, w1 & 7)
     color0 = ((w0 >> 20) & 0xF, (w1 >> 28) & 0xF, (w0 >> 15) & 0x1F, (w1 >> 15) & 7)
     blendpe = color0 == (3, 5, 1, 5)
+    blendpe_prim_alpha = blendpe and alpha[:4] == (ACMUX_TEXEL0, 7, 3, 7)
     prim_rgb = color0 == (15, 15, 31, 3)
-    return (ACMUX_TEXEL0 in alpha) and not blendpe and not prim_rgb
+    return ((ACMUX_TEXEL0 in alpha) and (not blendpe or blendpe_prim_alpha)
+            and not prim_rgb)
 
 
 def group_flags(ops):
@@ -294,6 +316,12 @@ CACHE_SEEDS = {
     # KamexHydro1 patches the STs of list 0's slots 0-1 (G_MODIFYVTX) and
     # draws them with its own slots 2-3.
     "KamexHydro1": 0xF848,
+    # A boarded platform's second light sets no combine of its own: both
+    # lights are DL link 1, so the source draws list 2 right after list 1 on
+    # the same display-list head and it inherits list 1's state.
+    "Bonus2BoardedSmall2": 0x53C0,
+    "Bonus2BoardedMedium2": 0x5A20,
+    "Bonus2BoardedLarge2": 0x6080,
 }
 G_MWO_POINT_ST = 0x14
 
@@ -465,6 +493,10 @@ def build():
         if gobj_kind == GOBJ_WEAPON:
             ops = [(STATE_OTHERMODE, WEAPON_RENDER_MODE[0],
                     WEAPON_RENDER_MODE[1], 0)] + ops
+        elif gobj_kind == GOBJ_GROUND_DISPLAY:
+            mode = (GROUND_LINK1_RENDER_MODE if name in GROUND_LINK1_ROOTS
+                    else GROUND_LINK0_RENDER_MODE)
+            ops = [(STATE_OTHERMODE, mode[0], mode[1], 0)] + ops
         flags = group_flags(ops)
         group_base = len(all_groups)
         roots.append(dict(

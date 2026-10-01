@@ -50,6 +50,31 @@ GObj *ndsBaseFTManagerMakeFighter(FTDesc *desc);
 void ndsBaseFTManagerDestroyFighter(GObj *fighter_gobj);
 void ndsBaseFTManagerAllocFighter(u32 data_flags, s32 allocs_num);
 
+#if NDS_P2_1P_GAME
+#include <nds/nds_frontend_overlay.h>
+
+/* Campaign battles (1P game, bonus, training) borrow the front-end overlay's
+ * tail as asset storage (ndsFrontendOverlayBeginScene), and so far only the
+ * native owner images used it: the Polygon Team ended with ~100 KB free there
+ * and 5,248 B in the taskman arena. ftmanager's own allocations -- each
+ * fighter's Main extern tree (ftmanager.c:285), the common files, the pools
+ * and the figatree heaps -- are scene-lifetime bump allocations exactly like
+ * the arena's, so they take the tail first and spill to the arena when it is
+ * full. Every other scene has no cursor and allocates from the arena. */
+static void *ndsFTManagerHeapMalloc(size_t size, u32 align)
+{
+    if ((gSCManagerSceneData.scene_curr == nSCKind1PGame) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PBonusStage) ||
+        (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode))
+    {
+        return ndsSceneAssetAlloc(size, align);
+    }
+    return syTaskmanMalloc(size, align);
+}
+#else
+#define ndsFTManagerHeapMalloc syTaskmanMalloc
+#endif
+
 #if NDS_P2_ARM9_WRAM
 #include <nds/nds_arm9_wram.h>
 
@@ -76,12 +101,14 @@ static void *ndsFTManagerPoolMalloc(size_t size, u32 align)
         return (void *)NDS_ARM9_WRAM_BASE;
     }
     sNdsFTManagerPoolToWram = 0u;
-    return syTaskmanMalloc(size, align);
+    return ndsFTManagerHeapMalloc(size, align);
 }
 #define syTaskmanMalloc ndsFTManagerPoolMalloc
+#elif NDS_P2_1P_GAME
+#define syTaskmanMalloc ndsFTManagerHeapMalloc
 #endif
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftmanager.c"
-#if NDS_P2_ARM9_WRAM
+#if NDS_P2_ARM9_WRAM || NDS_P2_1P_GAME
 #undef syTaskmanMalloc
 #endif
 
@@ -203,20 +230,16 @@ void ftManagerSetupFileSize(void)
 }
 
 #if NDS_P2_1P_GAME
-/* Campaign wave preload: Zako waves replace the fighter mid-battle
+/* Campaign variant images. Zako waves replace the fighter mid-battle
  * (sc1PGameSpawnEnemyTeamNext picks the next N-kind variation and calls
- * ftManagerMakeFighter, with either detail by fighter count), and wave
- * replacement is gameplay, not load time -- a NitroFS read there would
- * stall the battle. The source already preloads every N kind's files at
- * scene start (sc1pgame.c Zako branch calls ftManagerSetupFilesAllKind
- * for NStart..NEnd); preload the matching native images here, both
- * details, so every later Ensure is a residency hit. NLuigi reuses the
- * NMario packet and needs no slot of its own. Metal Mario's own stage
- * preloads its single owner the same way. Other stages never create
- * these kinds, so nothing else pays. Each line is additionally gated on
- * its image flag or its verification profile, so both paths load before
- * gameplay. Pure static control builds need no image. Results
- * are intentionally ignored: fighter creation re-ensures anyway. */
+ * ftManagerMakeFighter, with either detail by fighter count). Preloading all
+ * twelve polygon images at scene start kept every replacement a residency hit
+ * but held ~170 KB the stage could not spare (5,248 B low-water); the stage
+ * now arms the polygon image pool instead, and a replacement streams its image
+ * at construction like a Kirby copy hat. NLuigi reuses the NMario packet and
+ * needs no slot of its own. Metal Mario's stage preloads its single owner,
+ * both details. Other stages never create these kinds, so nothing else pays.
+ * Results are intentionally ignored: fighter creation re-ensures anyway. */
 static void ndsFTManagerPreloadVariantOwnerImages(void)
 {
     /* The campaign's stage field persists through menus and VS matches. */
@@ -226,94 +249,10 @@ static void ndsFTManagerPreloadVariantOwnerImages(void)
     }
     if (gSCManagerSceneData.spgame_stage == (u8)nSC1PGameStageZako)
     {
-#if NDS_NATIVE_OWNER_IMAGE_NMARIO || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NMARIO)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NFOX || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NFOX)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NDONKEY || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NDONKEY)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NSAMUS || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NSAMUS)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NLINK || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NLINK)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NYOSHI || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NYOSHI)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NCAPTAIN || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NCAPTAIN)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NKIRBY || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NKIRBY)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NPIKACHU || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NPIKACHU)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NPURIN || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NPURIN)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 1u);
-#endif
-#endif
-#if NDS_NATIVE_OWNER_IMAGE_NNESS || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NNESS)
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 0u);
-        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 0u);
-        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 1u);
-#endif
-#endif
+        /* Not all twelve: the polygon images share a buffer pool for this
+         * arena (nds_renderer_assets.c), filled by fighter construction --
+         * the first wave at load, replacements as they are made. */
+        ndsRendererNativeArmPolygonImagePool();
     }
     if (gSCManagerSceneData.spgame_stage == (u8)nSC1PGameStageMMario)
     {
@@ -696,6 +635,31 @@ static u32 ndsFTManagerImageSlotForKind(s32 fkind)
 #endif
     return image_slot;
 }
+
+#if NDS_P2_1P_GAME
+/* Polygon image pool eviction (nds_renderer_assets.c): does a linked fighter
+ * still name this image slot? sc1PGameSpawnEnemyTeamNext makes the next
+ * polygon in the replaced one's FTStruct before its GObj unlinks, so that GObj
+ * already names the new kind and no longer pins the old image. */
+u32 ndsFTManagerOwnerImageSlotLive(u32 image_slot)
+{
+    GObj *fighter_gobj;
+
+    for (fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+         fighter_gobj != NULL;
+         fighter_gobj = fighter_gobj->link_next)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+
+        if ((fp != NULL) &&
+            (ndsFTManagerImageSlotForKind(fp->fkind) == image_slot))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+#endif
 #endif
 
 void ndsFTManagerEnsureOwnerImages(FTDesc *desc)

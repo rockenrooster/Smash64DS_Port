@@ -2141,6 +2141,13 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     {
         return TRUE;
     }
+    /* This bake runs while the battle's files load -- before the OAM init
+     * below it, which used to be the hold's only end on this path. The held
+     * frame (the 1P intro's banners, the SSS) still reads bank E, so baking
+     * the GO, spark and end tiles into it showed them through the held
+     * sprites (owner 2026-10-01: intro banners full of blue blocks). End the
+     * hold first; the cover stands until the battle presents. */
+    ndsPlatformTransitionThaw();
 
     start = cpuGetTiming();
     gNdsIFCommonNativeOamPrepareCount++;
@@ -3225,9 +3232,10 @@ static s32 ndsIFCommonEmitCloudSObj(
     return TRUE;
 }
 
-/* Player tags (1P/2P/3P/4P/CP, source ifCommonPlayerTagProcDisplay).
+/* Player tags (1P/2P/3P/4P/CP and the 1P allies' heart, source
+ * ifCommonPlayerTagProcDisplay).
  *
- * The five glyphs are IA8 bitmaps 19-21 wide by 24 high living in the
+ * The six glyphs are IA8 bitmaps 15-21 wide by 24 high living in the
  * IFCommonPlayerTags reloc file, not the GameStatus file this unit prepares,
  * so they cannot ride the hybrid OBJ bake. Each distinct live bitmap is
  * decoded once into its own 4bpp 32x32 OBJ cell; the draw arm then replays
@@ -3703,7 +3711,7 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
         return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
     }
     tag = (u32)battle_player->tag;
-    if (tag > (u32)nIFPlayerTagKindCP)
+    if (tag > (u32)nIFPlayerTagKindHeart)
     {
         return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackUnknownSprite);
     }

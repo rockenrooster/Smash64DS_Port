@@ -1351,7 +1351,7 @@
       "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Pikachu",
-      "file_bytes": 28320,
+      "file_bytes": 28456,
       "fixups": 409,
       "fkind": 9,
       "foreign_texture_allocation": 0,
@@ -1361,14 +1361,18 @@
       "main_asset": 243,
       "model_asset": 341,
       "model_spans": 40,
-      "model_structural_bytes": 22172,
-      "resident_allocation": 24984,
-      "resident_with_foreign_textures": 24984,
+      "model_structural_bytes": 22308,
+      "resident_allocation": 25120,
+      "resident_with_foreign_textures": 25120,
       "root_cells": 44,
       "texture_images": [
         {
           "asset": 341,
           "offset": 29520
+        },
+        {
+          "asset": 341,
+          "offset": 29792
         },
         {
           "asset": 341,
@@ -1384,7 +1388,7 @@
       "external_file_bytes": 36,
       "external_patches": 2,
       "fighter": "Purin",
-      "file_bytes": 17768,
+      "file_bytes": 17904,
       "fixups": 250,
       "fkind": 10,
       "foreign_texture_allocation": 0,
@@ -1394,11 +1398,15 @@
       "main_asset": 233,
       "model_asset": 330,
       "model_spans": 26,
-      "model_structural_bytes": 13148,
-      "resident_allocation": 15704,
-      "resident_with_foreign_textures": 15704,
+      "model_structural_bytes": 13284,
+      "resident_allocation": 15840,
+      "resident_with_foreign_textures": 15840,
       "root_cells": 23,
       "texture_images": [
+        {
+          "asset": 330,
+          "offset": 26576
+        },
         {
           "asset": 330,
           "offset": 26992
