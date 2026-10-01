@@ -178,13 +178,14 @@ def load_o2r_resource(
     expected_file_id: int,
     expected_extern_count: int,
 ) -> O2RResource:
-    path = repo_root / relative_path
+    path = _paths.battleship_input_path(repo_root, relative_path)
     if not path.is_file():
         raise falsify(
             f"required BattleShip O2R corpus is absent: {path}. "
-            "Pass --repo-root pointing at a checkout that contains decomp/."
+            "Provide BATTLESHIP_O2R or NDS_REFERENCE_ROOT for the read-only corpus."
         )
     source = path.read_bytes()
+    _paths.record_reference_input(path, source)
     source_hash = sha256(source)
     if source_hash != expected_source_hash:
         raise falsify(

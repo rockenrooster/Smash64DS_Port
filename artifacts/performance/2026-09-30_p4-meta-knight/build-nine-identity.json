@@ -1,0 +1,37 @@
+[
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\builds\\build-p4-meta-knight\\smash64ds-p2-shell-freeplay-hwtri.nds",
+    "bytes": 64928768,
+    "sha256": "C0F93220BBD24477A3E7AE62CEF9FF4B0A69856C4B8D274CFD84BB8FD5D3422F"
+  },
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\builds\\build-p4-meta-knight\\smash64ds-p2-shell-freeplay-hwtri.elf",
+    "bytes": 27604428,
+    "sha256": "9020CA3C998D52E25EBFCB80C85200CD28BF8C699C35EE123F69ECBE0E6DC1BF"
+  },
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\builds\\build-p4-meta-knight\\.map",
+    "bytes": 4853891,
+    "sha256": "EDEFC895CFAAFC9BC51D768E18705AA53C12DFED17383ABE1262676811ED76A3"
+  },
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\builds\\build-p4-meta-knight\\nds-audio-arm7.map",
+    "bytes": 185632,
+    "sha256": "87FF8A883782F11ADD81FA93ADD29C90D5FF7F6A142105EBC9BB2EA4E821863D"
+  },
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\builds\\build-p4-meta-knight\\nds_build_config.h",
+    "bytes": 12472,
+    "sha256": "0233A0F1650E3045AE0147F82516E47D37110329AD772052DDB9E15362996061"
+  },
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\emulators\\melonds-runners\\slot0\\melonDS.exe",
+    "bytes": 38493696,
+    "sha256": "DE80E46BDCF1FD986162DE6AFFD9EE1148F8C40565DBAF667B9C2B3EF5475715"
+  },
+  {
+    "path": "D:\\Stuff\\DevFolder\\Smash64DS_Port\\.worktrees\\meta-knight\\emulators\\melonds-runners\\slot0\\melonDS.toml",
+    "bytes": 3577,
+    "sha256": "D9B181E3F4F2CA13241F4F3067311F12EB51D5496666F236004E40AFD1E438E7"
+  }
+]

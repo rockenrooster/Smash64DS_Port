@@ -34,7 +34,8 @@ $output = if ([IO.Path]::IsPathRooted($OutputRoot)) {
     [IO.Path]::GetFullPath((Join-Path $root $OutputRoot))
 }
 
-if (-not $output.StartsWith($root, [StringComparison]::OrdinalIgnoreCase)) {
+$overlayWorkspacePrefix = $root.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+if (-not $output.StartsWith($overlayWorkspacePrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw "BattleShip overlay must be generated inside the repository: $output"
 }
 
@@ -83,8 +84,23 @@ try {
 $narrowCredits = @('staff', 'titles', 'info', 'companies')
 $narrowDir = Join-Path $output 'src/sc/sccommon/credits'
 New-Item -ItemType Directory -Path $narrowDir -Force | Out-Null
+$creditReadRoot = $sourceRoot
+if ($env:NDS_REFERENCE_ROOT) {
+    $creditReferenceRoot = $env:NDS_REFERENCE_ROOT
+    if ($creditReferenceRoot -match '^/([A-Za-z])/(.*)$') {
+        $creditReferenceRoot = $Matches[1].ToUpperInvariant() + ':/' + $Matches[2]
+    }
+    # Only these four ignored encoded inputs may come from the reference.
+    # Pristine C sources, adaptation patches and generated output stay local.
+    $creditReadRoot = Join-Path ([IO.Path]::GetFullPath($creditReferenceRoot)) 'decomp/BattleShip-main/decomp'
+}
 foreach ($name in $narrowCredits) {
-    $encoded = Get-Content -LiteralPath (Join-Path $sourceRoot "src/credits/$name.credits.encoded") -Raw -Encoding UTF8
+    $creditInput = Join-Path $creditReadRoot "src/credits/$name.credits.encoded"
+    $encoded = Get-Content -LiteralPath $creditInput -Raw -Encoding UTF8
+    if ($env:NDS_REFERENCE_ROOT) {
+        $creditHash = (Get-FileHash -LiteralPath $creditInput -Algorithm SHA256).Hash.ToLowerInvariant()
+        Write-Output ('REFERENCE_INPUT ' + (@{ path = $creditInput; bytes = (Get-Item -LiteralPath $creditInput).Length; sha256 = $creditHash } | ConvertTo-Json -Compress))
+    }
     $out = @()
     foreach ($token in ($encoded -split ',')) {
         $t = $token.Trim()
@@ -104,6 +120,15 @@ foreach ($name in $narrowCredits) {
         (Join-Path $narrowDir "$name.credits.narrow"),
         (($out -join ',') + ",`n"),
         [System.Text.Encoding]::ASCII)
+    # The source includes these positional metadata tables beside the encoded
+    # text. They are ignored producer outputs too, and must accompany the exact
+    # text rows in this overlay rather than resolve back into a missing tree.
+    $creditMetadataInput = Join-Path $creditReadRoot "src/credits/$name.credits.metadata"
+    Copy-Item -LiteralPath $creditMetadataInput -Destination (Join-Path $narrowDir "$name.credits.metadata")
+    if ($env:NDS_REFERENCE_ROOT) {
+        $creditMetadataHash = (Get-FileHash -LiteralPath $creditMetadataInput -Algorithm SHA256).Hash.ToLowerInvariant()
+        Write-Output ('REFERENCE_INPUT ' + (@{ path = $creditMetadataInput; bytes = (Get-Item -LiteralPath $creditMetadataInput).Length; sha256 = $creditMetadataHash } | ConvertTo-Json -Compress))
+    }
 }
 
 Set-Content -LiteralPath (Join-Path $output '.stamp') -Value (

@@ -26,6 +26,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
+import _paths
+
 
 class Falsifier(RuntimeError):
     """A source or census assumption changed and must be reviewed."""
@@ -338,10 +340,11 @@ class O2RResource:
 
 
 def checked_bytes(repo_root: Path, spec: InputSpec) -> bytes:
-    path = repo_root / spec.path
+    path = _paths.battleship_input_path(repo_root, spec.path)
     if not path.is_file():
         raise falsify(f"required input is absent: {spec.path}")
     payload = path.read_bytes()
+    _paths.record_reference_input(path, payload)
     actual = sha256(payload)
     if actual != spec.sha256:
         raise falsify(f"{spec.path}: SHA256 {actual} != pinned {spec.sha256}")

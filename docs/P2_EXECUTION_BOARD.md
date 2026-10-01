@@ -49,34 +49,54 @@ The two new Samus roots cost +2,880 P50 / +8,768 P95, UNDER the 14,080 floor.
 `.worktrees/meta-knight`, branch `codex/meta-knight`, base `2e093297c5c`.
 Owner explicitly requested a new CSS entry and playable match; this branch does
 not reassign the main agent's P2 performance work. Worktree lifetime: 2026-10-07.
-Phase: BUILD; the bounded roster interaction repair is frozen.
-Status: `IMPLEMENTED_NOT_ACCEPTED`; root holds Git-checkpoint ownership while the
-integrator waits. Source is frozen and no owned producer/build is live.
-Builds first, second and third exited 2; unique logs remain under
-`builds/p4/meta-knight-native/`. Read-root repairs passed 23 host fixtures;
-the third build cleared those failures. Its native-owner closure policy diagnostic
-is repaired; all six consumed-field closures pass. Kirby hat admission now accepts
-Meta's source no-copy policy; the compiled 13^4 roster fixture passes.
+Phase: VERIFY; native freeplay build passed, gameplay proof is next.
+Status: `IMPLEMENTED_NOT_ACCEPTED`, checkpoint `92bddf1b3e4` pushed to
+`origin/codex/meta-knight`. Build five session 53064 exited 2, log `build-fifth.log`:
+native stage generation passed and C compilation began; static textures rejected
+the missing local `ExternDataBank103`. Static-texture census and unconditional
+Dream Land water 103/104 readers are repaired; two override/negative fixtures pass.
+The remaining legacy CSS and shield-pose chains are repaired; four new and four
+existing affected fixtures pass. All prior failure/job history is in the receipt.
+All eight credit includes are closed through producer-owned reference read/hash
+and local encoded/metadata output receipts. Build eight session 82919 exited 2 at
+ARM9 link; all producers completed and ARM7's five-input native-only check passed.
+The existing strong export is `ndsBaseFTCommonJumpAerialUpdateModelYaw`; Meta's
+two-line binding now uses it. Build nine session 30239 exited 0, log `build-ninth.log`.
+ROM: `builds/build-p4-meta-knight/smash64ds-p2-shell-freeplay-hwtri.nds`,
+64,928,768 B, SHA256 `C0F93220BBD24477A3E7AE62CEF9FF4B0A69856C4B8D274CFD84BB8FD5D3422F`.
+ARM9 native-only passed over 324 actual inputs, ARM7 over five; overlay check passed.
+Freeplay config confirms Meta 1, fast logic 0, menu walk 0. Identity: checkpoint
+`92bddf1b` plus the documented read-root/Make/credit overlay.
+Gameplay/capture source is frozen; root's overlay is documentation.
+Prior build failures, source checks and all unique logs are retained in the receipt.
 `runtime_integration` is now the **sole integrator/producer/build/timing writer**;
 root performs documentation/review only until ownership returns. Accurate emulator
-boot-policy check session 6161 exited 0. Build four session 57783 exited 2; log
-`builds/p4/meta-knight-native/build-fourth.log`. No ROM packaged or target emulator
-launched. Make's five literal native Ness/Yoshi/Purin O2R prerequisites are repaired
-and focused diff checks pass. No fifth job/log exists: its idle check found the main
-`build-lab-baked2` writer active (make PIDs 53176/14004).
-The four capture/throw/bounce transformations and Yoshi effect-size read pass
-eight fixtures; actual donor rows confirm column 10 and bounce FGM 306. Captor-side
-DK routing passes. All helpers are frozen; the integrator owns outputs and builds.
-Main's multi-roster collectors currently block target runs.
-Nine lifecycle copies were emitted (exit 0); receipt has the new manifest identity.
-Next: wait for that writer exit, start incremental build five, then natural
-CSS/SSS/match/Results/rematch proof. Target `smash64ds-p2-shell-hwtri`,
+boot-policy check session 6161 exited 0. O2R prerequisites are repaired; no target
+emulator has launched. Direct stream producer: 1,570 clips, zero mismatches and
+pinned hash preserved. Private Meta 172 resources are staged; final link/package
+and native-object checks are still pending.
+Capture/bounce/hat source fixtures pass; nine lifecycle copies emitted. Helpers
+are frozen. Main collectors block timing/visual acceptance.
+Owned PID49456/session97088 exited; main baked6 collector fleet is active.
+Title/UI load passes, but next kind60 is automatic Explain, with input ring/count0;
+the prior natural Start claim is retracted. Explain has a real data abort; counter
+192 is boot sizing-probe failures, not per-scene allocation failures. Per-kind
+Mario/Luigi heaps exclude a direct Meta-global-maximum cause; first fault needed.
+Private UI profile now caps60FPS (JIT off, same storage/ports); no game state edits.
+Owned 60FPS MI session21235/PID29316 localizes input only during the main fleet;
+bindings confirmed in UI, instantaneous keypress still lacks a positive witness.
+OSK transport failed at a higher Windows integrity barrier; user must close it.
+Only owned PID53264/MI93574 remains halted at title with exception breakpoint4.
+Seed1, playback0, empty saves/states, backup result3; no game state writes.
+User was asked to signal readiness for a brief held Enter; response pending.
+Next: coordinated manual input, then natural keyboard
+CSS/SSS/match/Results/rematch proof. Target `smash64ds-p2-shell-freeplay-hwtri`,
 `BUILD=build-p4-meta-knight`, Meta flag 1; no main writes or P1 changes.
 Evidence:
 `artifacts/performance/2026-09-30_p4-meta-knight/README.md`.
 Checks owed: deterministic import, legacy-ID regression, native model/motions,
 specials/jumps/CPU/copy, CSS/HUD/audio/results, natural-input match and Latest.
-No fighter ROM or runtime/performance PASS yet. Runtime integration owns all
+ROM build passes; no gameplay/runtime/performance PASS yet. Runtime integration owns all
 producers/builds; read-root validation and other character helpers are frozen.
 Thread-capacity failures recorded. Family 6 alpha remains one native experiment,
 not an accepted visual delta. No emulator/cadence proof exists yet.

@@ -1638,6 +1638,52 @@
       "path": "src/nds/nds_renderer.c"
     },
     {
+      "closure": "ndsRendererHardwareMetaKnightFeedbackSurface",
+      "fields": [
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererHardwareMetaKnightPrimSquaredSurface",
+      "fields": [
+        {
+          "access": "stats.texture_combine_count",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
+          "classification": "live_camera_independent"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
+      "closure": "ndsRendererNativeRecordTransparentRun",
+      "fields": [
+        {
+          "access": "stats.triangle_count",
+          "classification": "callback_visible_mutation_output"
+        }
+      ],
+      "path": "src/nds/nds_renderer.c"
+    },
+    {
       "closure": "ndsRendererHardwareAlphaUsesVertex",
       "fields": [
         {

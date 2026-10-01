@@ -10,6 +10,12 @@ No main ROM, build directory, runner, generated file or live cursor is changed.
 There were three existing directories under `.worktrees/`; this is the fourth.
 Retain the experiment through October 7, 2026 unless the owner extends it.
 
+Implementation checkpoint `92bddf1b3e47b3d5a086b645fd4fa8f76c455949` is committed
+and pushed to `origin/codex/meta-knight` as `IMPLEMENTED_NOT_ACCEPTED`. It preserves
+122 scoped source/test/evidence files. Main/decomp/AGENTS/CLAUDE are unchanged;
+no lab binaries, raw logs or runner configs were committed. Build five must use
+this source identity; later root documentation updates do not change its code.
+
 ## Current identity and evidence
 
 - P4 plans and shared contracts read. They describe an unimplemented source
@@ -21,8 +27,8 @@ Retain the experiment through October 7, 2026 unless the owner extends it.
 - Meta Knight sources, motions, model binary, UI images and sound files exist.
 - Donor Bass invocation supports `-sym logfile.log`; export does not depend on
   an assumed assembler feature.
-- Donor resolution is completed below; no DS ROM, gameplay, pixel, audio or timing
-  PASS yet.
+- Donor resolution and native ROM build are completed below; no gameplay, pixel,
+  audio or timing PASS yet.
 - Host preflight passed: both exact source pins clean, 8,363 tracked inputs,
   bundled tools and hash-pinned appender dependencies present, Python 3.13.15.
 - Original ROM found at
@@ -142,8 +148,105 @@ integrator's one-time audit repaired all five remaining literal O2R prerequisite
 in the native Ness/Yoshi/Purin owner block, with default ignored input roots also
 following `NDS_REFERENCE_ROOT`. Focused diff checks pass. Fifth launch found the
 main `build-lab-baked2` writer active (make PIDs 53176/14004), so no fifth job/log
-exists yet. Next: that writer's exit and the same incremental target. No ROM
-packaged yet. Meta's
+existed at that check. The subsequent atomic idle check passed and build five is
+ran on checkpoint `92bddf1b3e4`, integrator exec session 53064, log `build-fifth.log`.
+It exited 2 after native stage generation and the start of C compilation: static
+textures rejected absent local `ExternDataBank103`. Integrator repairs that owning
+reader while `export_validation` audits other active ignored-input read boundaries
+without editing. The complete pinned static-texture census and unconditional
+Dream Land water 103/104 reader are now repaired; logical paths/source hashes stay
+unchanged, physical reference reads are recorded and outputs stay local. Two
+override/negative fixtures pass. The bounded audit is closed with two remaining
+active chains: legacy CSS Main/Idle/corpus reads in `preview_source_metadata`, and
+shield-pose manifest O2Rs through `estimate_fighter_pack.load_pinned_sources`.
+Both are now repaired: preview Main/Idle and ID lookup use the selected corpus with
+a root-scoped cache; shield-pose reads honor the same pinned O2R root. Four new
+override/negative fixtures and four existing affected fixtures pass; focused diff
+checks are clean. No other concrete missing read surfaced in the bounded audit.
+Sixth build exec session 76673 exited 2, log `build-sixth.log`, on four ignored
+credit encoded inputs; static textures now retain their payload/metadata hashes.
+Those input reads were repaired without changing local C/patch/output roots.
+Expanded shell-hwtri config also proved menu walk 1, so natural proof switched to
+the existing `smash64ds-p2-shell-freeplay-hwtri` target. Seventh build exec session
+37888 exited 2, log `build-seventh.log`, on companion credit metadata includes,
+after legacy preview/shield progress and ShieldPose qualification. Its config
+confirms Meta 1, fast logic 0, menu walk 0. The complete credit family is now closed:
+eight includes (four encoded, four metadata) are read/hashed from the explicit
+reference corpus; narrowed encoded tables and exact metadata copies are emitted
+only inside the owned overlay, with bounded output deletion verified. Diff checks
+pass. Eighth freeplay build is live after main baked5 exited and the idle check,
+integrator exec session 82919, log `build-eighth.log`; expected exit 0 plus native
+ROM. It passed credit includes; 1,570 direct-ROM clips had zero mismatches and
+retained their pinned hash, and all 172 Meta resources were staged. ARM7's
+native-only check passed over five actual inputs; UI/HUD Meta baking completed.
+The command ultimately exited 2 at ARM9 link with one unresolved symbol,
+`ftCommonJumpAerialUpdateModelYaw`, called by Meta's multi-jump helper. All current
+producers completed. The normal-moveset import already exports the exact source
+routine as strong symbol `ndsBaseFTCommonJumpAerialUpdateModelYaw`; Meta now calls
+it through a two-line declaration/binding change. Ninth freeplay build is live
+after idle check, integrator exec session 30239, log `build-ninth.log`, and exited 0.
+First ROM is `builds/build-p4-meta-knight/smash64ds-p2-shell-freeplay-hwtri.nds`,
+64,928,768 B; SHA256
+`C0F93220BBD24477A3E7AE62CEF9FF4B0A69856C4B8D274CFD84BB8FD5D3422F`.
+ARM9 native-only passes over 324 actual inputs, ARM7 over five; frontend overlay
+passes. All six Meta image bins are staged. This proves a native build, not
+playability. Main slot1 baked5 collector PID40408 is active; owned ports5593/5594
+are free. Integrator prepares read-only guest probes and waits for the collector
+exit before natural owned GUI/timing. That collector and main writers have now
+exited; only owned slot0 melonDS PID17492 is active, at its ROM picker. Private
+portable TOML confirms JIT off, isolated storage and ports5593/5594, with audio
+muted. Its keyboard bindings are all -1; integrator configures owned controls
+before loading/natural input. Controls are now configured (Z attack, X special,
+A/S jump, Q grab, W shield, arrows stick, Enter Start, Backspace taunt), through
+the owned TOML setter with the emulator stopped. Config hash
+`451606FA0581A09322AAF91B5BB2C097464446AB9D4AD3D489A1BD22D720C30B`;
+empty saves/states and private disposable DLDI. ARM7 map SHA256
+`87FF8A883782F11ADD81FA93ADD29C90D5FF7F6A142105EBC9BB2EA4E821863D`.
+Owned PID30364 now listens only on ports5593/5594; main collector is absent.
+Native boot reached `ndsPlatformEndFrame` with playback disabled; startup GDB
+exited 0 and detached. Visible title/flame background and FPS HUD render. Read-only
+scene probe session6729 is live; next input is natural Start into menus. Meta
+selection/gameplay remain unverified. A second GDB attachment failed negotiation;
+its values and prior partial/fire-only title observation are discarded. This fork
+requires one persistent MI session per emulator run, with explicit owned port.
+Persistent MI session97088, owned PID49456, now confirms coherent title/logo,
+copyright and PRESS START. UI kit loads 66,496 B; open/title-load fails 0, playback 0.
+**Correction:** exact enum/source/input evidence shows `next_kind=60` is automatic
+Explain attract, not natural Start. Input count/ring stayed zero. Unthrottled title
+runs about600FPS and reaches650 idle tics before UI input. The claimed Start
+witness is retracted. Explain incurs192 arena allocation failures and recursively
+data-aborts (`__excpt_entry`, mode0x97, abort SP0x02fffd8e,
+lr_usr0x0206ea51/`ndsMPVertexF32Reset+52`, screen0xFFFFFFFF). This is a real unresolved
+startup fault; whether it is a Meta regression remains unknown. **Causal correction:**
+192 is `gNdsTaskmanArenaAllocFailCount`, the boot `calloc` sizing ladder, not Explain
+exhaustion. Chosen arena is905,728 B; heap starts0x022D2CC0. Explain loads only
+Mario/Luigi and allocates their per-kind animation sizes, not the Meta-raised global
+65,264 B maximum. Its native task buffers are3,408 B. The first fault PC/DFAR/LR,
+heap bounds/free space and title-to-Explain counter delta are still needed.
+Owned PID49456/session97088 exited; main baked6 collector fleet is now active.
+Private UI profile caps60FPS, JIT still off, config SHA256
+`D9B181E3F4F2CA13241F4F3067311F12EB51D5496666F236004E40AFD1E438E7`.
+ROM/ELF are unchanged. `target-artifact-identity.json` under the private native
+build records full ROM/ELF/map/config/runner identities, copied unchanged to
+`build-nine-identity.json` here (metadata only, not runner settings or binaries).
+Native asset helper
+reviews the actual Explain scene budget read-only. Natural Start, Meta CSS and
+match proof remain due, after the main fleet exits. Owned capped run MI session
+21235/PID29316 currently localizes input without timing/visual acceptance during
+the main fleet. Input/hotkeys UI confirms Return=Start, Z=A, X=B and the remaining
+bindings. Instantaneous sky chords, including an immediate-resume attempt at early
+title, have no positive input witness. Integrator tests only supported OSK/sky
+actions next; no raw Windows automation or fighter/scene mutation. Bounded OSK
+did not register input; Windows reports its higher integrity and denies automated
+close/shutdown. User was asked to close OSK and signal readiness for held Enter.
+Owned PID53264/MI93574 stays halted at title (`armWaitForIrq`, frame243 then280),
+exception breakpoint4 armed. No manual handoff run was consumed. Seed1 at
+0x021873A0, playback0, saves/states empty, backup load result3. Baseline taskman heap
+{start0x02307800,end0x023E4A00,ptr0x0238FD98}; chosen905728 and probe failures192
+already precede Explain. Fault cause and natural input remain unresolved.
+Identity remains
+checkpoint `92bddf1b` plus the documented read-root/Make/credit overlay; gameplay
+and capture code remain frozen. No ROM packaged yet. Meta's
 65,264 B maximum animation is included by the actual runtime allocation path.
 No additional unchecked victim table surfaced in the bounded damage/item/visibility
 review; target interaction proof remains due.
@@ -159,7 +262,7 @@ admission, exercise CSS → SSS → human Meta Knight match → results/rematch,
 complete Latest. Authoritative visual/timing runs wait for main collectors to
 finish; main runners, configs and save state remain untouched.
 
-Still unrun: DS ROM link/package, actual image bytes/resource peaks, source-required
+Native ROM link/package passes. Still unrun: actual image bytes/resource peaks, source-required
 move/interruption/CPU/copy/entry/results/audio lifecycle, native pixels, full match,
 timing/cadence and Latest. No ticks/FPS/P50/P95 values exist for this character yet.
 

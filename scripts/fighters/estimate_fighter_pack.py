@@ -93,6 +93,12 @@ import re
 import struct
 import sys
 from collections import Counter, OrderedDict
+from pathlib import Path
+
+_scripts_root = Path(__file__).resolve().parents[1]
+if str(_scripts_root) not in sys.path:
+    sys.path.insert(0, str(_scripts_root))
+import _paths
 
 # --------------------------------------------------------------------------
 # Repository layout
@@ -1294,11 +1300,13 @@ def reconcile_source_locations(pf):
 def load_pinned_sources(members):
     """Read the manifest's O2Rs and their actual chains, not retired sidecars."""
     sources = {}
-    root = os.path.join(REPO_ROOT, "decomp", "BattleShip-main", "BattleShip_o2r")
+    root = _paths.battleship_o2r_root(Path(REPO_ROOT))
     incoming = []
     for member in members:
-        with open(os.path.join(root, member["path"]), "rb") as fh:
+        path = root / member["path"]
+        with open(path, "rb") as fh:
             raw = fh.read()
+        _paths.record_reference_input(path, raw)
         digest = hashlib.sha256(raw).hexdigest()
         if digest != member["sha256"] or len(raw) < 0x50 or raw[4:8] != b"OLER":
             raise Refusal("O2R identity/header mismatch: %s" % member["path"])

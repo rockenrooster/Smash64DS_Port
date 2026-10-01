@@ -92,6 +92,11 @@ import sys
 import hashlib
 from pathlib import Path
 
+_scripts_root = Path(__file__).resolve().parents[1]
+if str(_scripts_root) not in sys.path:
+    sys.path.insert(0, str(_scripts_root))
+import _paths
+
 REPO = Path(__file__).resolve().parents[2]
 
 O2R = REPO / "decomp/BattleShip-main/BattleShip_o2r"
@@ -125,7 +130,9 @@ def decode_ptr(w):
 
 
 def oler_data(path):
-    b = Path(path).read_bytes()
+    path = Path(path)
+    b = path.read_bytes()
+    _paths.record_reference_input(path, b)
     if b[4:8] != b"OLER":
         return None, None
     ec = struct.unpack_from("<I", b, 0x40 + 8)[0]
@@ -419,9 +426,10 @@ def o2r_path_by_id(fid, repo_root=None, *, o2r_root=None):
         raise ValueError("provide either a repo root or an O2R root, not both")
     explicit = repo_root is not None or o2r_root is not None
     root = (Path(o2r_root) if o2r_root is not None else
-            Path(repo_root) / "decomp/BattleShip-main/BattleShip_o2r" if repo_root is not None else O2R)
+            _paths.battleship_o2r_root(Path(repo_root) if repo_root is not None else REPO))
     key = str(root.resolve())
-    cache = O2R_ROOT_ID_CACHES.get(key) if explicit else O2R_ID_CACHE
+    is_default_root = not explicit and root.resolve() == O2R.resolve()
+    cache = O2R_ID_CACHE if is_default_root else O2R_ROOT_ID_CACHES.get(key)
     if cache is None:
         cache = {}
         for p in root.rglob("*"):
@@ -435,9 +443,8 @@ def o2r_path_by_id(fid, repo_root=None, *, o2r_root=None):
             if len(head) < 0x48 or head[4:8] != b"OLER":
                 continue
             cache[struct.unpack_from("<I", head, 0x40)[0]] = p
-        if explicit:
-            O2R_ROOT_ID_CACHES[key] = cache
-        else:
+        O2R_ROOT_ID_CACHES[key] = cache
+        if is_default_root:
             O2R_ID_CACHE = cache
     return cache.get(fid)
 
@@ -1412,8 +1419,9 @@ def build_kind(gen, man_by_fighter, costumes, disp, key, sel_idx,
           and not FAILURES)
     entry["checks"] = checks
     entry["failures"] = list(local_fail)
-    main_data, _ = oler_data(O2R / main_a["path"])
-    idle_data, _ = oler_data(O2R / mf0["asset"]["path"])
+    read_o2r_root = _paths.battleship_o2r_root(REPO)
+    main_data, _ = oler_data(read_o2r_root / main_a["path"])
+    idle_data, _ = oler_data(read_o2r_root / mf0["asset"]["path"])
     if main_data is None or len(main_data) != main_a["data_bytes"]:
         bad("main OLER data mismatch")
         return entry, None, local_fail

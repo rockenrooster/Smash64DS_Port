@@ -18,7 +18,7 @@ void gcSetAnimSpeed(GObj *gobj, f32 anim_speed);
 sb32 mpCommonCheckFighterCeilHeavyCliff(GObj *fighter_gobj);
 typedef struct LBParticle LBParticle;
 LBParticle *efManagerDustHeavyDoubleMakeEffect(Vec3f *pos, s32 lr, f32 f_index);
-void ftCommonJumpAerialUpdateModelYaw(FTStruct *fp);
+void ndsBaseFTCommonJumpAerialUpdateModelYaw(FTStruct *fp);
 
 /* Preserve the original common-input predicates while selecting this
  * character's resolved native setters before any legacy kind-indexed table. */
@@ -227,7 +227,7 @@ void ndsMetaKnightMultiJumpSetStatus(GObj *fighter_gobj, s32 input_source)
     fp->status_vars.common.jumpaerial.turn_tics =
         ((fp->input.pl.stick_range.x * fp->lr) < FTCOMMON_JUMPAERIAL_TURN_STICK_RANGE_MIN) ?
         FTCOMMON_JUMPAERIAL_TURN_FRAMES : 0;
-    ftCommonJumpAerialUpdateModelYaw(fp);
+    ndsBaseFTCommonJumpAerialUpdateModelYaw(fp);
 }
 
 sb32 ndsMetaKnightCheckJumpInterrupt(GObj *fighter_gobj)
