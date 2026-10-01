@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-26.
+Updated: 2026-09-30.
 
 **Last integrated Boundary GREEN: N04.08; P2-2p8 acceptance RED.** Figures below.
 
@@ -91,7 +91,7 @@ ForgetRange skip); ARM pose clock; HUD state once per pass; stage witness off +
 world pointer chain; reloc lookup memos; A5 hurtbox reject (shadow 0 flips);
 ARM memcpy/memset/memcmp in ITCM, FGM id map, matrix leaves, searched flat-walk
 cache; lab splits off; libgcc pose clock; HUD div15 (`2026-09-27_p2-2p8-fast-mem`):
-MP f32 reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange; HUD digest; lab clocks; DTCM stack/subtrees/sine/scalars; stage GX+packs in ITCM; i2f convs; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, YI clouds, S1-S4, elastic cache, maps, R1, hit fetch; 09-29: spline, GX overlap, pose step, int trig, hurtbox x4, Arwing x6, GX memo, bboard, objs, SMULL, AObj hash, anim idx; 09-30: MPgrp, digest, anim, segx, clip IO x3, ledger, HUD, SZ Arwing x3: gate 899K/1.212M, SZ 1.37M. Owe 6 owners
+MP f32 reads; billboard memo; STG span; ITCM x4; witnesses; Results guard; key words; HW div; lean spare; stage memo + data pin; ForgetRange; HUD digest; lab clocks; DTCM stack/subtrees/sine/scalars; stage GX+packs in ITCM; i2f convs; objs+pose in WRAM; 09-28: FNT, BPS1 x12, 1P overlay, arena cliff, YI clouds, S1-S4, elastic cache, maps, R1, hit fetch; 09-29: spline, GX overlap, pose step, int trig, hurtbox x4, Arwing x6, GX memo, bboard, objs, SMULL, AObj hash, anim idx; 09-30: MPgrp, digest, anim, segx, clip IO x3, ledger, HUD, SZ Arwing x3, baked owners, hold: gate 922K/1.240M. **Checkpoint; next 1P.**
 **Constraint**: CSS reserve >=183,072 B; owner route 253,904 free (09-27).
 After static growth use `artifacts/performance/2026-09-23_css-preview-heap/tools/run-owner-css.ps1`.
 Specs: `artifacts/performance/2026-09-23_p2-2p8-phase-specs/`.
@@ -137,7 +137,7 @@ pixels/audio or unexercised states stay engineering work.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-5i1 | Item manager and twenty common items | **SOURCE PRESENT; Sword lifetime repair recorded** | Remaining kinds, children, states, interactions and full natural-path acceptance stay open. |
-| P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM; draw owners missing** | Dispatch proved (`gNdsItMonsterMakerMask` = `1fff`). Saffron monsters' VFX makers have no native owner. |
+| P2-5i2 | The 13 Poke Ball Pokemon | **13 DRAWN; Hitmonlee open** | Baked `1fe468cc3bb`: 0 native failures, 13 forced arms. Hitmonlee never reaches the adapter. |
 | P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | Native owners exist for 1 of 42 item shapes. `MBallThrown` effect desc excluded on a false premise. |
 | P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Pickup animation FileIDs resolved 09-09; `itMainCheckShootNoAmmo` weak stub in P2-3f54. |
 | P2-5u1 | Item Switch and VS Options screens | **Entry/row repair committed** | `eafdf226c52`. Switch mask honoured by the spawn law; UI half uncensused. |
