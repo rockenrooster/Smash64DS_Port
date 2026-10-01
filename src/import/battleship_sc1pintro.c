@@ -150,10 +150,90 @@ static void ndsSC1PIntroDraw(void);
  * set and the fighter viewport matches the source rect, exactly as the
  * 1P CSS bridge does for its single preview. */
 #define scManagerFuncDraw ndsSC1PIntroDraw
+#define sc1PIntroFuncStart ndsBaseSC1PIntroFuncStart
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c"
+#undef sc1PIntroFuncStart
 #undef scManagerFuncDraw
 
 #undef sc1PIntroStartScene
+
+/* Pre-stage intros show their fighters as static pictures (owner, 2026-09-24:
+ * "pre-stage intros static images"). 0 restores the source's live cards. */
+#ifndef NDS_1P_INTRO_STATIC
+#define NDS_1P_INTRO_STATIC 1
+#endif
+
+#if NDS_1P_INTRO_STATIC
+/* sc1pintro.c:1928-2035 (sc1PIntroFuncStart) without the fighters. The
+ * source loads the full files of every kind the intro shows and one figatree
+ * heap per actor (21 for the Yoshi Team, 13 for the Polygons): Yoshi's Main
+ * alone asked 144,640 B against 79,460 B free after the stage-1 fight
+ * (artifacts/bugs/2026-10-01_1p-campaign). The cards become static pictures
+ * (ndsSC1PIntroMakeStaticFighters); every other part of the scene -- sky,
+ * banners, VS decal or bonus picture, labels, figures, stage info, names, the
+ * ally line, announcer, BGM, timing and exits -- runs as the source wrote it. */
+static void ndsSC1PIntroMakeStaticFighters(s32 stage)
+{
+    (void)stage;
+}
+
+static void ndsSC1PIntroFuncStartStatic(void)
+{
+    LBRelocSetup rl_setup;
+
+    rl_setup.table_addr = (uintptr_t)&lLBRelocTableAddr;
+    rl_setup.table_files_num = (u32)&llRelocFileCount;
+    rl_setup.file_heap = NULL;
+    rl_setup.file_heap_size = 0;
+    rl_setup.status_buffer = sSC1PIntroStatusBuffer;
+    rl_setup.status_buffer_size = ARRAY_COUNT(sSC1PIntroStatusBuffer);
+    rl_setup.force_status_buffer = sSC1PIntroForceStatusBuffer;
+    rl_setup.force_status_buffer_size = ARRAY_COUNT(sSC1PIntroForceStatusBuffer);
+
+    lbRelocInitSetup(&rl_setup);
+    lbRelocLoadFilesListed(dSC1PIntroFileIDs, sSC1PIntroFiles);
+    gcMakeGObjSPAfter(0, sc1PIntroFuncRun, 0, GOBJ_PRIORITY_DEFAULT);
+    gcMakeDefaultCameraGObj(0, GOBJ_PRIORITY_DEFAULT, 100,
+                            COBJ_FLAG_FILLCOLOR | COBJ_FLAG_ZBUFFER,
+                            GPACK_RGBA8888(0x00, 0x00, 0x00, 0xFF));
+    sc1PIntroInitVars();
+    efParticleInitAll();
+    efManagerInitEffects();
+    sc1PIntroMakePicturesCamera();
+    sc1PIntroMakeDecalsCamera();
+    sc1PIntroMakeBannersCamera();
+    sc1PIntroMakeSky();
+    sc1PIntroMakeBanners();
+
+    if (sc1PIntroCheckNotBonusStage(sSC1PIntroStage) != FALSE)
+    {
+        sc1PIntroMakeVSDecal();
+    }
+    else sc1PIntroMakeBonusPicture(sSC1PIntroStage);
+
+    sc1PIntroMakeLabels(sSC1PIntroStage);
+    sc1PIntroMakeFigures(sSC1PIntroStage);
+    sc1PIntroMakeStageInfo(sSC1PIntroStage);
+
+    if (sc1PIntroCheckNotBonusStage(sSC1PIntroStage) != FALSE)
+    {
+        /* sc1PIntroInitFighters makes the ally line with the ally cards. */
+        if ((sSC1PIntroStage == nSC1PGameStageDonkey) ||
+            (sSC1PIntroStage == nSC1PGameStageMario))
+        {
+            sc1PIntroMakeAllyText(sSC1PIntroStage);
+        }
+        ndsSC1PIntroMakeStaticFighters(sSC1PIntroStage);
+    }
+    if (sSC1PIntroStage == nSC1PGameStageBoss)
+    {
+        syAudioPlayBGM(0, nSYAudioBGMBossStage);
+    }
+    else syAudioPlayBGM(0, nSYAudioBGM1PIntro);
+
+    sySchedulerSetTicCount(0);
+}
+#endif
 
 static void ndsSC1PIntroDraw(void)
 {
@@ -185,6 +265,9 @@ void sc1PIntroStartScene(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsFighterIntroTransientReset();
+#endif
+#if NDS_1P_INTRO_STATIC
+    dSC1PIntroTaskmanSetup.func_start = ndsSC1PIntroFuncStartStatic;
 #endif
     ndsBaseSC1PIntroStartScene();
 }

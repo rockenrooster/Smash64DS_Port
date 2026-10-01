@@ -42,7 +42,7 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="metal",
-    include_sha="f5b18bd4d8d126feb07ab14a0df1be9fb3562d70b08ad858df5b7b05573532cf",
+    include_sha="8cd11b3cb695e789074c18eeafe0dfd65633722260c6a8929a3c53f23aec80a8",
     generated_segment_index=-1,
     symbol_prefix="Metal",
     macro_prefix="METAL_",
@@ -50,7 +50,7 @@ DESCRIPTOR = StageDescriptor(
         "callbacks": 4,
         "dobjs": 8,
         "bindings": 4,
-        "commands": 458,
+        "commands": 461,
         "vertex_commands": 29,
         "source_vertices": 362,
         "modify_vertex_commands": 0,
@@ -63,8 +63,8 @@ DESCRIPTOR = StageDescriptor(
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        "state_events": 224,
-        "state_deltas": 109,
+        "state_events": 227,
+        "state_deltas": 112,
         "sync_events": 108,
     },
     o2r_inputs={
@@ -183,7 +183,10 @@ DESCRIPTOR = StageDescriptor(
         (117, 0x3B50, 0x3648, 0x10),
         (117, 0x3B50, 0x36C0, 0x18),
     ),
-    material_command_partition=(3, 3, 3, 3, 3, 2, 3, 3, 3, 3, 3, 3, 3),
+    # L1's first MObjSub (0x1E20) has a zero flag word, which
+    # gcDrawMObjForDObj draws as TEXTURE | 0x20 | ALPHA (objdisplay.c:1239):
+    # five commands, not the bare branch-and-end two.
+    material_command_partition=(3, 3, 3, 3, 3, 5, 3, 3, 3, 3, 3, 3, 3),
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
         (OWNER_LAYER0, 4, 0, 1, 0, 8),

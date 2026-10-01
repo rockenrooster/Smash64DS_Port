@@ -85,8 +85,8 @@ class WallpaperSource:
     runtime_asset_id: int | None = None  # DS registry identity can alias file_id
 
 
-# The nine VS stages (1P paused: no Last/Metal/small/bonus/training
-# wallpapers) plus VS Results. Container choice per map header extern list,
+# The nine VS stages, the 1P arenas and bonus boards (small Yoshi's Island
+# shares StageYoshi), plus VS Results; Training's wallpapers are not here yet. Container choice per map header extern list,
 # quoted in the module docstring; order follows dMNMapsFileInfos.
 SOURCES: tuple[WallpaperSource, ...] = (
     WallpaperSource("pupupu", "reloc_stages/StageDreamLand", 0x58, 0x26C88, True, 0x10058),
@@ -98,6 +98,15 @@ SOURCES: tuple[WallpaperSource, ...] = (
     WallpaperSource("sector", "reloc_stages/StageSector", 0x63, 0x26C88, True, 0x10063),
     WallpaperSource("hyrule", "reloc_stages/StageCastle", 0x5F, 0x26C88, True, 0x1005F),
     WallpaperSource("inishie", "reloc_stages/StageHyruleWallpaper", 0x5B, 0x26C88, True, 0x1005B),
+    # The 1P arenas and boards. The o2r names these containers from a guess
+    # table (src/nds/nds_reloc_assets.c): ROM file 96 (Final Destination) is
+    # held by StageYamabukiWallpaper, 97 (Duel Zone) by StageInishieWallpaper,
+    # 98 (Meta Crystal) by StageLastWallpaper and 119 (every bonus board) by
+    # StageMetalWallpaper; the file id each holds is checked below.
+    WallpaperSource("last", "reloc_stages/StageYamabukiWallpaper", 0x60, 0x26C88, True, 0x10060),
+    WallpaperSource("zako", "reloc_stages/StageInishieWallpaper", 0x61, 0x26C88, True, 0x10061),
+    WallpaperSource("metal", "reloc_stages/StageLastWallpaper", 0x62, 0x26C88, True, 0x10062),
+    WallpaperSource("bonus", "reloc_stages/StageMetalWallpaper", 0x77, 0x26C88, True, 0x10077),
     WallpaperSource("results", "reloc_menus/MNVSResults", 0x22, 0xD5C8, False),
 )
 

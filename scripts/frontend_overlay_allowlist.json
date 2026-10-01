@@ -304,7 +304,7 @@
     },
     {
       "source_symbol": "dSC1PIntroTaskmanSetup",
-      "target_symbol": "sc1PIntroFuncStart",
+      "target_symbol": "ndsBaseSC1PIntroFuncStart",
       "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
     },
     {
@@ -653,6 +653,16 @@
       "reason": "The producer prepares the frontend before the resident scene switch. These are non-VS entries; nested campaign calls retain the overlay until the driver returns."
     },
     {
+      "source_symbol": "ndsIFCommonRouteGObjToLowerTextHUD",
+      "target_symbol": "sc1PGameTeamStockDisplayProcDisplay",
+      "reason": "The lower-HUD route compares a GObj's display procedure with the 1P team stock procedure's address to claim it; the address is never called, and the procedure only exists on 1P battles, which keep the 1P head loaded."
+    },
+    {
+      "source_symbol": "ndsFrontendOverlayBeginScene",
+      "target_symbol": "__nds_frontend_1p_end",
+      "reason": "Overlay owner uses the 1P battle-time head's end as the address where a 1P, bonus or training battle's tail loan starts, not as executable code."
+    },
+    {
       "source_symbol": "ndsFrontendOverlayBeginScene",
       "target_symbol": "__nds_frontend_end",
       "reason": "Overlay owner uses the linker range as addresses for the exclusive scene-asset loan, not as executable code."
@@ -891,6 +901,16 @@
       "source_symbol": "ndsBaseSCManagerRunLoop",
       "target_symbol": "sc1PBonusStageStartScene",
       "reason": "The producer inserts ndsFrontendOverlayPrepareDispatch before this resident scene switch; non-VS entries have the frontend loaded before the call."
+    },
+    {
+      "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
+      "target_symbol": "ndsCampaignWalkBreakOneTarget",
+      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head, loaded for the whole 1P campaign; a battle loans only the tail past __nds_frontend_1p_end."
+    },
+    {
+      "source_symbol": "scene_backend.c::ndsCampaignDrivePlayback",
+      "target_symbol": "ndsCampaignWalkBoardOnePlatform",
+      "reason": "Campaign-walk lab only (NDS_P2_MENU_WALK): the resident drive calls this only in nSCKind1PBonusStage, whose board code is in the overlay's 1P head, loaded for the whole 1P campaign; a battle loans only the tail past __nds_frontend_1p_end."
     }
   ]
 }

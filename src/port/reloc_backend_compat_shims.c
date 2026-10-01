@@ -12752,11 +12752,30 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
                 ((fp->detail_base == nFTPartsDetailLow) ||
                  (fp->detail_curr == nFTPartsDetailLow)) ? 1u : 0u;
 
+            /* A scene that admitted its hats up front (VS, the 1P ladder)
+             * binds every detail it admitted, a pointer copy: a fighter made
+             * holding a power (the Kirby Team, ftmanager.c:634) gets here
+             * before ftmanager.c:704 sets its detail, so the detail fields
+             * are stale and cannot say which hat it will draw. */
+            if (ndsRendererNativeKirbyHatMatchHasPart(
+                    (u32)modelpart_id, 1u) != FALSE)
+            {
+                hat_low_reachable = 1u;
+            }
+            /* The slot the draw will look the hat up by. A battle fighter's
+             * nds_slot is its player, but it is recorded only after
+             * ftManagerMakeFighter returns (reloc_backend_fighter_model.c),
+             * and a fighter made holding a power reaches this inside it
+             * (ftManagerInitFighter, ftmanager.c:634), where nds_slot is still
+             * the previous occupant's or zero. */
+            u32 hat_slot = (gNdsSceneManagerCurrIsBattle != 0u) ?
+                (u32)fp->player : (u32)fp->nds_slot;
+
             if ((ndsRendererNativeEnsureKirbyCopyHat(
-                     (u32)fp->nds_slot, (u32)modelpart_id, 0u) == FALSE) ||
+                     hat_slot, (u32)modelpart_id, 0u) == FALSE) ||
                 ((hat_low_reachable != 0u) &&
                  (ndsRendererNativeEnsureKirbyCopyHat(
-                      (u32)fp->nds_slot, (u32)modelpart_id, 1u) == FALSE)))
+                      hat_slot, (u32)modelpart_id, 1u) == FALSE)))
             {
                 /* A missing native image is a failed residency contract. It
                  * must never silently remove the source's copied ability. */

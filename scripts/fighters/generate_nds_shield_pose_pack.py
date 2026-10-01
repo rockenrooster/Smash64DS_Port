@@ -97,6 +97,67 @@ SPECS = (
 )
 
 
+# The polygon fighters (sc1PGame's Polygon Team) reuse their base fighter's
+# ShieldPose file: each N<Name>Main points at the same nine targets in it as
+# <Name>Main does, so the base package serves both Mains.  Source file ids from
+# include/reloc_data.h; polygon_main_fixup_targets proves the pairing from the
+# pinned O2R relocation chain on every bake.
+POLYGON_MAIN_IDS = {
+    "Fox": 0xd3, "Ness": 0xf1, "Donkey": 0xd6, "Samus": 0xdb, "Link": 0xe3,
+    "Kirby": 0xe7, "Captain": 0xed, "Pikachu": 0xf5, "Purin": 0xea,
+}
+O2R_FIGHTERS = ROOT / "decomp" / "BattleShip-main" / "BattleShip_o2r" / "reloc_fighters_main"
+# FTAttributes: translate_scales sits 0x4C bytes after dobj_lookup
+# (decomp ft/fttypes.h).  The native guard refuses a translate-scaled fighter
+# (ndsShieldPoseNativeSelected), which would then run the source path over the
+# package's handles, so every Main served by a package must leave it NULL.
+TRANSLATE_SCALES_FROM_DOBJ_LOOKUP = 0x4C
+
+
+def _o2r_pointers(name):
+    raw = (O2R_FIGHTERS / name).read_bytes()
+    if len(raw) < 0x50 or raw[4:8] != b"OLER":
+        raise RuntimeError("%s: not an O2R reloc file" % name)
+    fid, intern, extern, count = struct.unpack_from("<IHHI", raw, 0x40)
+    table_end = 0x4C + 2 * count
+    payload = raw[table_end + 4:]
+    deps = struct.unpack_from("<%dH" % count, raw, 0x4C)
+    refs = {}
+    for head, donors in ((intern, None), (extern, deps)):
+        cursor, index = head, 0
+        while cursor != 0xFFFF:
+            slot = cursor * 4
+            if slot + 4 > len(payload) or slot in refs:
+                raise RuntimeError("%s: invalid relocation chain" % name)
+            word = struct.unpack_from(">I", payload, slot)[0]
+            refs[slot] = (fid if donors is None else donors[index],
+                          (word & 0xFFFF) * 4)
+            cursor, index = word >> 16, index + 1
+    return fid, refs, payload
+
+
+def polygon_main_fixup_targets(spec):
+    """Prove N<Name>Main points at exactly the base package's nine targets."""
+    name = "N%sMain" % spec.name
+    fid, refs, payload = _o2r_pointers(name)
+    if fid != POLYGON_MAIN_IDS[spec.name]:
+        raise RuntimeError("%s file id %#x, expected %#x" %
+                           (name, fid, POLYGON_MAIN_IDS[spec.name]))
+    targets = sorted(t[1] for t in refs.values() if t[0] == spec.shield_id)
+    expected = sorted((spec.dobj_off,) + spec.table_offs)
+    if targets != expected:
+        raise RuntimeError("%s ShieldPose fixups changed: got %s want %s" %
+                           (name, [hex(v) for v in targets],
+                            [hex(v) for v in expected]))
+    dobj_slot = min(s for s, t in refs.items()
+                    if t == (spec.shield_id, spec.dobj_off))
+    scales = dobj_slot + TRANSLATE_SCALES_FROM_DOBJ_LOOKUP
+    if (scales in refs) or (struct.unpack_from(">I", payload, scales)[0] != 0):
+        raise RuntimeError("%s has translate_scales; the native guard "
+                           "cannot serve it" % name)
+    return fid
+
+
 def source_main_fixup_slots(spec, types=None):
     """Return the nine source Main slots that point into one ShieldPose file.
 
@@ -913,6 +974,16 @@ def render_asset_header(rows, max_base_count, max_scratch_words):
             "0x%04xu" % v for v in row["main_fixup_slots"]]
         out.append("    X(%s)%s" % (", ".join(args), suffix))
     out.append("")
+    out.append("/* Polygon fighter, its base fighter, and the polygon Main's source")
+    out.append(" * file id: that Main's nine ShieldPose fixups resolve into the base")
+    out.append(" * fighter's package exactly as the base Main's do. */")
+    out.append("#define NDS_SHIELD_POSE_POLYGON_ROWS(X) \\")
+    for index, row in enumerate(rows):
+        suffix = " \\" if index + 1 != len(rows) else ""
+        out.append("    X(nFTKindN%s, nFTKind%s, %du)%s" %
+                   (row["fighter"], row["fighter"],
+                    row["polygon_main_asset"], suffix))
+    out.append("")
     return "\n".join(out)
 
 
@@ -926,6 +997,10 @@ def build_assets(write=False):
     for spec in SPECS:
         main_motion_count, sub_motion_count = assert_no_shieldpose_motion_descriptors(spec)
         main_fixup_slots = source_main_fixup_slots(spec, types)
+        polygon_main_asset = polygon_main_fixup_targets(spec)
+        assert_no_shieldpose_motion_descriptors(Spec(
+            "N" + spec.name, polygon_main_asset, spec.shield_id,
+            spec.dobj_off, spec.table_offs))
         data = _build_for_spec(spec)
         blob = render_blob(data)
         row = {
@@ -938,6 +1013,7 @@ def build_assets(write=False):
             "dobj_offset": spec.dobj_off,
             "table_offsets": list(spec.table_offs),
             "main_fixup_slots": list(main_fixup_slots),
+            "polygon_main_asset": polygon_main_asset,
             "shieldpose_motion_descriptors": 0,
             "main_motion_descriptor_count": main_motion_count,
             "sub_motion_descriptor_count": sub_motion_count,

@@ -1101,7 +1101,9 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_IMMUTABLE, "workspace.binding_count workspace.binding_dobjs"
             ),
-            **_classified(FIELD_CLASS_LIVE, "workspace.materials"),
+            # The slot's own MObj is the binding DObj's list walked to the
+            # material event's branch index (gcDrawMObjForDObj's order).
+            **_classified(FIELD_CLASS_LIVE, "workspace.materials mobj.next"),
             **_classified(
                 FIELD_CLASS_CALLBACK,
                 """
@@ -1877,6 +1879,11 @@ def build_material_events(
                 f"0x{source.segment_index:x} is not a Gfx-aligned branch slot"
             )
         flags = struct.unpack_from(">H", resource.payload, source.mobj_offset + 0x30)[0]
+        if flags == 0:
+            # gcDrawMObjForDObj (sys/objdisplay.c:1239-1242) draws a zero
+            # flag word as TEXTURE | 0x20 | ALPHA; the runtime's material
+            # flags (ndsRendererAdapterMaterialFlags) say the same.
+            flags = MOBJ_FLAG_TEXTURE | 0x20 | MOBJ_FLAG_ALPHA
         palette_ref = resource.pointer_at(source.mobj_offset + 0x2C)
         palette_word = checked_u32(
             resource.payload, source.mobj_offset + 0x2C, "MObj palettes"

@@ -47,6 +47,7 @@
 
 #if NDS_P2_1P_GAME
 
+#include <nds/nds_frontend_overlay.h>
 #include <stdint.h>
 #include <PR/gbi.h>
 #include <PR/os.h>
@@ -170,6 +171,61 @@ void ndsBaseSC1PBonusStageStartScene(void);
 void sc1PBonusStageStartScene(void)
 {
     ndsBaseSC1PBonusStageStartScene();
+    /* As sc1PGameStartScene: the board may have borrowed the frontend tail. */
+    ndsFrontendOverlayRestoreTail();
 }
+
+#if NDS_P2_MENU_WALK
+/* Campaign walk only (route 1, ndsCampaignDrivePlayback): the walk's player
+ * has no target or platform seeking, so the walk completes the tasks through
+ * the source's own handlers. One live target takes its damage proc and is
+ * destroyed the way a hit destroys it, so the count, the HUD, the Complete
+ * announce and the stage clear's target tally all run. */
+void ndsCampaignWalkBreakOneTarget(void)
+{
+    GObj *item_gobj;
+
+    for (item_gobj = gGCCommonLinks[nGCCommonLinkIDItem]; item_gobj != NULL;
+         item_gobj = item_gobj->link_next)
+    {
+        ITStruct *ip = itGetStruct(item_gobj);
+
+        if ((ip != NULL) && (ip->kind == nITKindTarget) &&
+            (ip->proc_damage != NULL))
+        {
+            if (ip->proc_damage(item_gobj) != FALSE)
+            {
+                itMainDestroyItem(item_gobj);
+            }
+            return;
+        }
+    }
+}
+
+/* One unboarded platform (sc1PBonusStageInitPlatforms marks it id | 0x8000)
+ * is boarded through sc1PBonusStageUpdatePlatformCount, the handler the
+ * source's landing check calls (sc1PBonusStageBonus2ProcUpdate). */
+void ndsCampaignWalkBoardOnePlatform(void)
+{
+    s32 i;
+
+    if (gMPCollisionYakumonoDObjs == NULL)
+    {
+        return;
+    }
+    for (i = 0; (i < gMPCollisionYakumonosNum) &&
+                (i < NDS_MP_YAKUMONO_DOBJ_SLOTS); i++)
+    {
+        DObj *dobj = gMPCollisionYakumonoDObjs->dobjs[i];
+
+        if ((dobj != NULL) && (dobj->child != NULL) &&
+            ((dobj->child->user_data.s & 0x8000) != 0))
+        {
+            sc1PBonusStageUpdatePlatformCount(dobj);
+            return;
+        }
+    }
+}
+#endif
 
 #endif /* NDS_P2_1P_GAME */

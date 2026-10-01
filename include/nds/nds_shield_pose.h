@@ -16,6 +16,10 @@ s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
  * from the native package after the FPC has been normalized. */
 s32 ndsShieldPosePatchCompactMain(s32 fkind, void *main_data, u32 main_bytes);
 s32 ndsShieldPoseReplacesSourceFile(s32 fkind);
+/* TRUE when a native package answers every fixup this Main makes into this
+ * ShieldPose file (a base fighter's or a polygon's), so the extern-tree loader
+ * neither reserves nor loads the raw file. */
+s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset);
 s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle);
 s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle);
 s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj);

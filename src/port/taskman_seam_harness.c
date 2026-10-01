@@ -73,6 +73,10 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
     {
         ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
         ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+        /* A source 2D scene with no native screen of its own presents its
+         * sprites through the OBJ presenter (src/nds/nds_source2d.c); every
+         * other scene is a no-op here. */
+        ndsSource2DEnterForScene(gNdsSceneManagerCurrKind);
     }
     ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
     while ((tfunc != NULL) && (tfunc->task_update != NULL) &&

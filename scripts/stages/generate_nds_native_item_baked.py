@@ -48,6 +48,20 @@ FILES = {
         "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/NessSpecial2",
         "3512fa549138f4bc1541c7cbb1ca45d0521207af38462a4ed87ef17298ebdb8a",
         352, None, None, None),
+    "BonusDataBank150": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_bonus/BonusDataBank150",
+        "28e3af3f9b7fb8d553b261715ae0fb6e7b36e226b8f6aec9b2eb79487260bf1d",
+        150, 4, 0, None),
+    "Bonus2Common": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_bonus/Bonus2Common",
+        "fd673c99070c36bde367a5423966d532655225c1d8af80e0e95e9bb6c1478e33",
+        136, 155, 0,
+        "e6c01d89c93069509f3be95c6a60318c8902264ae708f38233e46a02cfca8d19"),
+    "MiscData162": sm.InputSpec(
+        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/MiscData162",
+        "361173fa9420fbfee4c344f9ddce12fce05c94a9746063520779f20dc60614fd",
+        162, 19, 0,
+        "52378c9f1a32b66f659e1a60bb31becedd832a05f16e95191099ca4a7fab4781"),
     "NessSpecial3": sm.InputSpec(
         "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/NessSpecial3",
         "5495f90a2d16eebebd8d93af2c42c53cbdc3e5a35d316eae234000ef77fa3071",
@@ -59,6 +73,9 @@ FILES = {
 GOBJ_EFFECT = 1011
 GOBJ_WEAPON = 1012
 GOBJ_ITEM = 1013
+# A stage layer's own GObj (nGCCommonKindGroundDisplay): Board the Platforms'
+# platforms are DObj subtrees hung under its layer-1 yakumono DObjs.
+GOBJ_GROUND_DISPLAY = 1009
 
 # Every weapon draws after wpDisplayDrawNormal (wpdisplay.c:131):
 # gDPSetRenderMode(G_RM_AA_XLU_SURF, G_RM_AA_XLU_SURF2), with G_ZBUFFER
@@ -136,6 +153,46 @@ ENTRIES = (
      "NessSpecial1 0x34 PKFireItemAttributes, DObj 2 (itnesspkfire.c)"),
     ("NessPKFirePillarFlame", "NessSpecial3", 0x0960, GOBJ_ITEM,
      "NessSpecial1 0x34 PKFireItemAttributes, DObj 3 (itnesspkfire.c)"),
+    ("BonusTarget", "BonusDataBank150", 0x1048, GOBJ_ITEM,
+     "ITBonus1ObjectHeader (file 253) data: DObjDesc 1, DL list 1 (ittarget.c)"),
+    ("TaruBomb", "MiscData162", 0x0548, GOBJ_ITEM,
+     "GRBonus3File3: Race to the Finish's barrel bomb (ittarubomb.c)"),
+    ("Bonus2PlatformSmall0", "Bonus2Common", 0x3A60, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Small, DObj 0"),
+    ("Bonus2PlatformSmall1", "Bonus2Common", 0x3C10, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Small, DObj 1"),
+    ("Bonus2PlatformSmall2", "Bonus2Common", 0x3CC0, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Small, DObj 2"),
+    ("Bonus2PlatformMedium0", "Bonus2Common", 0x42B0, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Medium, DObj 0"),
+    ("Bonus2PlatformMedium1", "Bonus2Common", 0x4440, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Medium, DObj 1"),
+    ("Bonus2PlatformMedium2", "Bonus2Common", 0x44F0, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Medium, DObj 2"),
+    ("Bonus2PlatformLarge0", "Bonus2Common", 0x4AE0, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Large, DObj 0"),
+    ("Bonus2PlatformLarge1", "Bonus2Common", 0x4C70, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Large, DObj 1"),
+    ("Bonus2PlatformLarge2", "Bonus2Common", 0x4D20, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageInitPlatforms: dSC1PBonusStagePlatformDescs Large, DObj 2"),
+    ("Bonus2BoardedSmall0", "Bonus2Common", 0x5210, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Small, DObj 0"),
+    ("Bonus2BoardedSmall1", "Bonus2Common", 0x53C0, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Small, DObj 1"),
+    ("Bonus2BoardedSmall2", "Bonus2Common", 0x5468, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Small, DObj 2"),
+    ("Bonus2BoardedMedium0", "Bonus2Common", 0x5890, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Medium, DObj 0"),
+    ("Bonus2BoardedMedium1", "Bonus2Common", 0x5A20, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Medium, DObj 1"),
+    ("Bonus2BoardedMedium2", "Bonus2Common", 0x5AC8, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Medium, DObj 2"),
+    ("Bonus2BoardedLarge0", "Bonus2Common", 0x5EF0, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 0"),
+    ("Bonus2BoardedLarge1", "Bonus2Common", 0x6080, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 1"),
+    ("Bonus2BoardedLarge2", "Bonus2Common", 0x6128, GOBJ_GROUND_DISPLAY,
+     "sc1PBonusStageUpdatePlatformCount: dSC1PBonusStageBoardedPlatformDescs Large, DObj 2"),
 )
 
 # Native state effect codes (src/nds/nds_renderer_assets.c) and the executor's

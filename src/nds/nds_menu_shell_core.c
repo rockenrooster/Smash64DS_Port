@@ -1127,8 +1127,14 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
         (curr != (u32)nSCKind1PIntro))
     {
         /* Outside the source menu/intro route the pads park neutral, so the battle
-         * the route reaches runs its human side idle. */
-        if (sWalk1PArmed != 0u)
+         * the route reaches runs its human side idle -- except in the scenes
+         * the campaign drive owns (ndsCampaignDrivePlayback): it runs first in
+         * the same pump iteration, and parking here would erase its taps (the
+         * stage clear then never proceeds). */
+        if ((sWalk1PArmed != 0u) &&
+            (curr != (u32)nSCKind1PGame) &&
+            (curr != (u32)nSCKind1PStageClear) &&
+            (curr != (u32)nSCKind1PContinue))
         {
             ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
         }

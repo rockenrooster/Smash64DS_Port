@@ -943,6 +943,17 @@ u32 ndsIFCommonSkipDamageDisplay(void)
             (gNdsSceneManagerCurrIsBattle != 0u)) ? TRUE : FALSE;
 }
 
+#if NDS_P2_1P_GAME
+/* 1P team battles (the Yoshi, Kirby and Polygon teams): the source's rows of
+ * enemy stock icons (sc1PGameTeamStockDisplayProcDisplay, sc1pgame.c) join
+ * the lower HUD with the rest of the battle interface (owner 2026-08-17: the
+ * bottom screen is the battle HUD). The route records how many icons the
+ * source shows this frame; nds_battle_hud.c draws them. The procedure's
+ * address is only compared here, never called. */
+extern void sc1PGameTeamStockDisplayProcDisplay(GObj *interface_gobj);
+volatile u32 gNdsIFCommonHUDTeamStockCount;
+#endif
+
 u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
 {
     u32 route = 0u;
@@ -979,6 +990,23 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
         route = 4u;
         gNdsIFCommonHUDLowerDamageRouteCount++;
     }
+#if NDS_P2_1P_GAME
+    else if (gobj->proc_display == sc1PGameTeamStockDisplayProcDisplay)
+    {
+        SObj *sobj;
+        u32 count = 0u;
+
+        for (sobj = SObjGetStruct(gobj); sobj != NULL; sobj = sobj->next)
+        {
+            if ((sobj->sprite.attr & SP_HIDDEN) == 0u)
+            {
+                count++;
+            }
+        }
+        gNdsIFCommonHUDTeamStockCount = count;
+        route = 8u;
+    }
+#endif
     if (route != 0u)
     {
         gNdsIFCommonHUDLowerRouteMask |= route;

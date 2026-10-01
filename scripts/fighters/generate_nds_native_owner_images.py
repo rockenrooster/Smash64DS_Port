@@ -468,6 +468,22 @@ def render_header(
         )
     ] + [
         "",
+        "/* Owners whose high and low images are the same bytes: every member",
+        " * has the same type, name, guard and values in both details, so the",
+        " * two compile to one image under any build config. The source draws",
+        " * these at one detail (the polygons, Master Hand, Metal Mario and the",
+        " * skeletons), and the runtime binds the second detail to the first",
+        " * detail's loaded image instead of reading the same bytes again. */",
+        "#define NDS_NATIVE_OWNER_IMAGE_SHARED_DETAIL_ROWS(X) \\",
+    ] + [
+        f"    X(NDS_NATIVE_IMAGE_SLOT_{name.upper()}) \\"
+        for name in IMAGE_OWNERS
+        if ((name, "high") in contexts) and ((name, "low") in contexts)
+        and (_member_values(contexts[(name, "high")])
+             == _member_values(contexts[(name, "low")]))
+    ] + [
+        "    /* end */",
+        "",
         "/* Owners whose image tables are NOT taken from an image in this build,",
         " * i.e. the ones ndsRendererNativeVerifyOwnerImage walks. Same rows,",
         " * different guard: the verifier runs exactly where the bind does not. */",

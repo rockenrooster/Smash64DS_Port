@@ -9,10 +9,20 @@
 
 extern u8 __nds_frontend_start[];
 extern u8 __nds_frontend_end[];
+/* End of the 1P battle-time head (linker/nds_frontend_overlay.ld). */
+extern u8 __nds_frontend_1p_end[];
 
 static u8 *sNdsFrontendCursor;
 static u32 sNdsFrontendInitialized;
 static u32 sNdsFrontendLoaded;
+/* A 1P, bonus or training battle borrowed the tail: its code and the scene
+ * status buffers are overwritten until the overlay is reloaded. */
+static u32 sNdsFrontendTailLoaned;
+/* ...and an allocation actually landed in it (nothing to reload otherwise). */
+static u32 sNdsFrontendTailDirty;
+
+volatile u32 gNdsFrontendOverlayTailLoanCount;
+volatile u32 gNdsFrontendOverlayTailReloadCount;
 
 volatile u32 gNdsFrontendOverlayLoadCount;
 volatile u32 gNdsFrontendOverlayLoadFailCount;
@@ -27,6 +37,30 @@ static void ndsFrontendOverlayLoadHalt(void)
 {
     gNdsFrontendOverlayLoadFailCount++;
     for (;;) {}
+}
+
+/* Load (or reload over a borrowed tail) and activate overlay 0. A reload while
+ * head code is on the stack rewrites those bytes with themselves. */
+static void ndsFrontendOverlayLoadNow(void)
+{
+    sb32 ok;
+
+    ndsFsLock();
+    ok = (sNdsFrontendInitialized != 0u) || ovlInit();
+    if (ok != FALSE)
+    {
+        sNdsFrontendInitialized = 1u;
+        ok = ovlLoadAndActivate(0u);
+    }
+    ndsFsUnlock();
+    if (ok == FALSE)
+    {
+        ndsFrontendOverlayLoadHalt();
+    }
+    sNdsFrontendLoaded = 1u;
+    sNdsFrontendTailLoaned = 0u;
+    sNdsFrontendTailDirty = 0u;
+    gNdsFrontendOverlayLoadCount++;
 }
 
 void ndsFrontendOverlayPrepareDispatch(u32 kind)
@@ -56,25 +90,29 @@ void ndsFrontendOverlayPrepareDispatch(u32 kind)
         }
         return;
     }
-    if (sNdsFrontendLoaded == 0u)
+    if ((sNdsFrontendLoaded == 0u) || (sNdsFrontendTailDirty != 0u))
     {
-        sb32 ok;
-
-        ndsFsLock();
-        ok = (sNdsFrontendInitialized != 0u) || ovlInit();
-        if (ok != FALSE)
+        if (sNdsFrontendTailDirty != 0u)
         {
-            sNdsFrontendInitialized = 1u;
-            ok = ovlLoadAndActivate(0u);
+            gNdsFrontendOverlayTailReloadCount++;
         }
-        ndsFsUnlock();
-        if (ok == FALSE)
-        {
-            ndsFrontendOverlayLoadHalt();
-        }
-        sNdsFrontendLoaded = 1u;
-        gNdsFrontendOverlayLoadCount++;
+        ndsFrontendOverlayLoadNow();
     }
+    sNdsFrontendTailLoaned = 0u;
+}
+
+/* The campaign's nested battles return into head code (sc1PGameStartScene,
+ * sc1PBonusStageStartScene); the tail must be back before the manager calls
+ * the next intro, tally, continue or challenger scene. */
+void ndsFrontendOverlayRestoreTail(void)
+{
+    sNdsFrontendCursor = NULL;
+    if (sNdsFrontendTailDirty != 0u)
+    {
+        gNdsFrontendOverlayTailReloadCount++;
+        ndsFrontendOverlayLoadNow();
+    }
+    sNdsFrontendTailLoaned = 0u;
 }
 
 void ndsFrontendOverlayBeginScene(u32 kind)
@@ -92,6 +130,25 @@ void ndsFrontendOverlayBeginScene(u32 kind)
         gNdsFrontendOverlayLoanBytes =
             (u32)(__nds_frontend_end - __nds_frontend_start);
         gNdsFrontendOverlayLoanCount++;
+    }
+    else if (((kind == (u32)nSCKind1PGame) ||
+              (kind == (u32)nSCKind1PBonusStage) ||
+              (kind == (u32)nSCKind1PTrainingMode)) &&
+             (sNdsFrontendLoaded != 0u))
+    {
+        /* A campaign, bonus or training battle runs head code only (the
+         * linker script's 1P battle-time head); the menu and scene code after
+         * it borrows out as this battle's asset storage, as VS borrows the
+         * whole range. The previous scene's status buffers live in the tail:
+         * drop the relocator's reference before the bytes are reused (this
+         * scene installs its own in its FuncStart, after this seam). */
+        ndsRelocReleaseSceneStatusBuffers();
+        sNdsFrontendCursor = __nds_frontend_1p_end;
+        gNdsFrontendOverlayLoanBytes =
+            (u32)(__nds_frontend_end - __nds_frontend_1p_end);
+        gNdsFrontendOverlayLoanCount++;
+        gNdsFrontendOverlayTailLoanCount++;
+        sNdsFrontendTailLoaned = 1u;
     }
 }
 
@@ -121,6 +178,10 @@ void *ndsFrontendOverlayTryAlloc(size_t bytes, u32 alignment)
         return NULL;
     }
     sNdsFrontendCursor = (u8 *)(start + bytes);
+    if (sNdsFrontendTailLoaned != 0u)
+    {
+        sNdsFrontendTailDirty = 1u;
+    }
     gNdsFrontendOverlayUsedBytes =
         (u32)(sNdsFrontendCursor - __nds_frontend_start);
     gNdsFrontendOverlayAllocCount++;

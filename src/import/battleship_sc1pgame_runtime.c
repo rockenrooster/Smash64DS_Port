@@ -7,6 +7,7 @@
 
 #if NDS_P2_1P_GAME
 
+#include <nds/nds_frontend_overlay.h>
 #include <stdint.h>
 #include <ssb_types.h>
 #include <ft/fighter.h>
@@ -59,6 +60,12 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
 /* Keep the source runtime and replace only its platform entry. */
 #define sc1PGameStartScene ndsExcludedSC1PGameStartScene
 
+#if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+#include <nds/nds_kirby_hat_residency.h>
+void ndsRendererNativeBeginKirbyHatMatch(void);
+static void ndsSC1PGamePrepareKirbyHats(void);
+#endif
+
 static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
 {
     s32 capacity = 0;
@@ -78,6 +85,9 @@ static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
     }
     ftManagerAllocFighter(flags,
         ((capacity > 0) && (capacity <= source_capacity)) ? capacity : source_capacity);
+#if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+    ndsSC1PGamePrepareKirbyHats();
+#endif
 }
 #define ftManagerAllocFighter ndsSC1PGameAllocFighters
 
@@ -101,6 +111,40 @@ static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
  * a data pointer inside the function. */
 #include <battleship_overlay/src/sc/sc1pmode/sc1pgame.c>
 #undef ftManagerAllocFighter
+
+#if NDS_P2_KIRBY && NDS_RENDERER_HW_TRIANGLES
+/* Admit the copy hats this ladder fight can show before its fighter loop,
+ * as the VS battle does (battleship_scvsbattle.c): the Kirby Team's members
+ * are made already holding a power, so their hat binds inside
+ * ftManagerMakeFighter (ftmanager.c:634) and has to be resident by then.
+ * Without this no hat was admitted and the first copied Kirby halted the
+ * draw. The copy table lives in Kirby's MainMotion, so his files are set up
+ * here, where the loop would have set them up a moment later. */
+static void ndsSC1PGamePrepareKirbyHats(void)
+{
+    s32 player;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return;
+    }
+    ndsRendererNativeBeginKirbyHatMatch();
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        if ((gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot) &&
+            (gSCManagerBattleState->players[player].fkind == nFTKindKirby))
+        {
+            ftManagerSetupFilesAllKind(nFTKindKirby);
+            break;
+        }
+    }
+    ndsKirbyHatPrepare1PMatch(
+        (gSCManagerSceneData.spgame_stage == nSC1PGameStageKirby) ?
+            dSC1PGameKirbyTeamCopyKinds : NULL,
+        ARRAY_COUNT(dSC1PGameKirbyTeamCopyKinds),
+        gSC1PManagerKirbyTeamFinalCopy);
+}
+#endif
 
 #undef sc1PGameStartScene
 
@@ -190,6 +234,10 @@ void sc1PGameStartScene(void)
     syAudioSetBGMVolume(0, 0x7800);
     func_800266A0_272A0();
     gmRumbleInitPlayers();
+    /* The battle may have borrowed the frontend tail (nds_frontend_overlay.c):
+     * reload it before the manager calls the next intro, tally, continue or
+     * challenger scene. */
+    ndsFrontendOverlayRestoreTail();
 }
 
 #endif /* NDS_P2_1P_GAME */

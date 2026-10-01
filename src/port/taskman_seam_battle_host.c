@@ -1355,6 +1355,53 @@ static void ndsCampaignTransitionTrackHeap(void)
     }
 }
 
+/* The first battle-like update of a walk arms the stage clear and continue
+ * drives below. */
+static void ndsCampaignTransitionTrackingBegin(void)
+{
+    if (sNdsCampaignTransitionTracking != FALSE)
+    {
+        return;
+    }
+    sNdsCampaignTransitionTracking = TRUE;
+    sNdsCampaignTallyFinalProofStopped = FALSE;
+    gNdsCampaignTransitionStartStage = (u32)gSCManagerSceneData.spgame_stage;
+    gNdsCampaignTransitionHeapFreeMin = 0xffffffffu;
+    gNdsCampaignBattlePlaybackFrameCount = 0u;
+    gNdsCampaignBattlePlaybackAttackCount = 0u;
+    gNdsCampaignBattlePlaybackApproachCount = 0u;
+    gNdsCampaignBattlePlaybackMissingOpponentCount = 0u;
+    gNdsCampaignStageClearPlaybackFrameCount = 0u;
+    gNdsCampaignStageClearPlaybackTapCount = 0u;
+    gNdsCampaignContinuePlaybackFrameCount = 0u;
+    gNdsCampaignContinuePlaybackTapCount = 0u;
+}
+
+extern void ndsCampaignWalkBreakOneTarget(void);
+extern void ndsCampaignWalkBoardOnePlatform(void);
+
+/* TRUE when `gobj` is a fighter GObj linked in this scene. A player row keeps
+ * the GObj of a team fighter that is already down, and a row the stage does
+ * not use keeps the previous stage's: neither may be dereferenced. */
+static sb32 ndsCampaignFighterLinked(const GObj *gobj)
+{
+    const GObj *link;
+
+    if (gobj == NULL)
+    {
+        return FALSE;
+    }
+    for (link = gGCCommonLinks[nGCCommonLinkIDFighter]; link != NULL;
+         link = link->link_next)
+    {
+        if (link == gobj)
+        {
+            return (DObjGetStruct(link) != NULL) ? TRUE : FALSE;
+        }
+    }
+    return FALSE;
+}
+
 static GObj *ndsCampaignFindOpponentGObj(void)
 {
     s32 player;
@@ -1367,7 +1414,8 @@ static GObj *ndsCampaignFindOpponentGObj(void)
     {
         if ((player != gSCManagerSceneData.player) &&
             (gSCManagerBattleState->players[player].pkind == nFTPlayerKindCom) &&
-            (gSCManagerBattleState->players[player].fighter_gobj != NULL))
+            (ndsCampaignFighterLinked(
+                 gSCManagerBattleState->players[player].fighter_gobj) != FALSE))
         {
             return gSCManagerBattleState->players[player].fighter_gobj;
         }
@@ -1395,25 +1443,50 @@ static void ndsCampaignDrivePlayback(void)
             ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
             return;
         }
-        if (sNdsCampaignTransitionTracking == FALSE)
-        {
-            sNdsCampaignTransitionTracking = TRUE;
-            sNdsCampaignTallyFinalProofStopped = FALSE;
-            gNdsCampaignTransitionStartStage =
-                (u32)gSCManagerSceneData.spgame_stage;
-            gNdsCampaignTransitionHeapFreeMin = 0xffffffffu;
-            gNdsCampaignBattlePlaybackFrameCount = 0u;
-            gNdsCampaignBattlePlaybackAttackCount = 0u;
-            gNdsCampaignBattlePlaybackApproachCount = 0u;
-            gNdsCampaignBattlePlaybackMissingOpponentCount = 0u;
-            gNdsCampaignStageClearPlaybackFrameCount = 0u;
-            gNdsCampaignStageClearPlaybackTapCount = 0u;
-            gNdsCampaignContinuePlaybackFrameCount = 0u;
-            gNdsCampaignContinuePlaybackTapCount = 0u;
-        }
+        ndsCampaignTransitionTrackingBegin();
         ndsCampaignTransitionTrackHeap();
         sNdsCampaignBattlePlaybackFrame++;
         gNdsCampaignBattlePlaybackFrameCount = sNdsCampaignBattlePlaybackFrame;
+
+        /* Campaign walk only (route 1, owner 2026-09-30: the human is a
+         * level-9 CPU, enemies level 1): every 45 battle frames after the
+         * first 120, the first live enemy is placed below the bottom blast
+         * zone, so the source's own dead check KOs it and the team/wave
+         * machinery spawns the next. A level-9 Link could not clear the
+         * 18-Yoshi team in its five minutes. Master Hand is left to the
+         * fight (its defeat is HP, not a fall). */
+        if ((gNdsMenuShellWalkRoute == 1u) &&
+            (sNdsCampaignBattlePlaybackFrame > 120u) &&
+            ((sNdsCampaignBattlePlaybackFrame % 45u) == 0u) &&
+            (gMPCollisionGroundData != NULL))
+        {
+            /* Round-robin over the enemy slots: a team slot whose fighter is
+             * already down keeps its GObj, and always taking the first slot
+             * starved the live ones. */
+            static s32 sNdsCampaignKoNext;
+            s32 step;
+
+            for (step = 0; step < GMCOMMON_PLAYERS_MAX; step++)
+            {
+                s32 player = (sNdsCampaignKoNext + step) % GMCOMMON_PLAYERS_MAX;
+                GObj *enemy_gobj =
+                    gSCManagerBattleState->players[player].fighter_gobj;
+
+                if ((player == gSCManagerSceneData.player) ||
+                    (gSCManagerBattleState->players[player].is_spgame_enemy ==
+                     FALSE) ||
+                    (ndsCampaignFighterLinked(enemy_gobj) == FALSE) ||
+                    (gSCManagerBattleState->players[player].fkind ==
+                     nFTKindBoss))
+                {
+                    continue;
+                }
+                DObjGetStruct(enemy_gobj)->translate.vec.f.y =
+                    gMPCollisionGroundData->map_bound_bottom - 4000.0F;
+                sNdsCampaignKoNext = player + 1;
+                break;
+            }
+        }
 
         player_gobj = gSCManagerBattleState->players[
             gSCManagerSceneData.player].fighter_gobj;
@@ -1454,6 +1527,37 @@ static void ndsCampaignDrivePlayback(void)
         else
         {
             ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        }
+        return;
+    }
+
+    if (scene == (u32)nSCKind1PBonusStage)
+    {
+        /* Campaign walk only (route 1): every 60 updates after the first 120,
+         * one target breaks or one platform is boarded through the source's
+         * own handlers (battleship_sc1pbonusstage.c), so the board completes
+         * and the stage clear tallies the bonus. The pad stays neutral. */
+        ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        if ((gNdsMenuShellWalkRoute != 1u) || (gNdsK0BattleInGo == 0u) ||
+            (gSCManagerBattleState == NULL))
+        {
+            sNdsCampaignBattlePlaybackFrame = 0u;
+            return;
+        }
+        ndsCampaignTransitionTrackingBegin();
+        ndsCampaignTransitionTrackHeap();
+        sNdsCampaignBattlePlaybackFrame++;
+        if ((sNdsCampaignBattlePlaybackFrame > 120u) &&
+            ((sNdsCampaignBattlePlaybackFrame % 60u) == 0u))
+        {
+            if (gSCManagerBattleState->gkind >= nGRKindBonus2Start)
+            {
+                ndsCampaignWalkBoardOnePlatform();
+            }
+            else
+            {
+                ndsCampaignWalkBreakOneTarget();
+            }
         }
         return;
     }

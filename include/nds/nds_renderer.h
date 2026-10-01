@@ -1618,6 +1618,7 @@ u32 ndsRendererHardwareReleaseTexturesInRange(const void *base, size_t size);
  * shared image/table; display scenes use their bounded preview working slots. */
 void ndsRendererNativeBeginKirbyHatMatch(void);
 s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask);
+s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail);
 s32 ndsRendererNativeEnsureKirbyCopyHat(
     u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail);
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY
@@ -1822,7 +1823,8 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
  * Dream Land literals. Both read the packet the renderer selected. */
 u64 ndsRendererNativeStageRigidBindingMask(void);
 s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
-                                          u32 *binding_index, u32 *flags);
+                                          u32 *binding_index, u32 *flags,
+                                          u32 *mobj_index);
 /* P2-4n1 step 7: DLLink packets expose the DObj index and display head each
  * binding was compiled from; FALSE means the active packet has no heads. */
 s32 ndsRendererNativeStageBindingIdentity(u32 binding, u32 *dobj_index,

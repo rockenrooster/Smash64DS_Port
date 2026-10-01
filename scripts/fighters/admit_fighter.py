@@ -1492,7 +1492,9 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
     if not is_variant:
         kit = "scripts/menus/generate_mn_ui_kit.py"
         kt = T.text(kit)
-        for var in ("CSS_BUILT_FKIND", "CSS_INPROGRESS_FKIND"):
+        # Owner 2026-10-01: no in-progress "?" plate any more, so an admitted
+        # fighter joins the built set only.
+        for var in ("CSS_BUILT_FKIND",):
             m = re.search(rf"{var} = \(([^)]*)\)", kt)
             if str(S["kind"]) not in [x.strip() for x in m.group(1).split(",")]:
                 T.replace(kit, m.group(0), f"{var} = ({m.group(1).rstrip()}, {S['kind']})")

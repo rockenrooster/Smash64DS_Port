@@ -105,6 +105,11 @@ class CompactMapSpec:
     container_path: str
     container_file_id: int
     container_asset_id: int   # DS registry identity (kNDSNativeWallpapers key)
+    header_offset: int = GROUND_HEADER_OFFSET   # llGR*MapMapHeader
+
+    @property
+    def wallpaper_slot(self) -> int:
+        return self.header_offset + GROUND_WALLPAPER_OFFSET
 
 
 # gkind order (gr/grdef.h:11-19). Container choice is what each map header's
@@ -129,6 +134,65 @@ MAPS: tuple[CompactMapSpec, ...] = (
                    "reloc_stages/StagePokemon", 0x5E, 0x1005E),
     CompactMapSpec("Mushroom Kingdom", 8, "reloc_stages/GRInishieMap", 260,
                    "reloc_stages/StageHyruleWallpaper", 0x5B, 0x1005B),
+    # The 1P arenas and boards (2026-10-01). Their MPGroundData sits at 0x14
+    # like the VS maps' or at 0 (reloc_data.h llGR*MapMapHeader); Race to the
+    # Finish names no wallpaper container and is not here.
+    CompactMapSpec("Small Yoshi's Island", 12, "reloc_stages/GRYosterSmallMap", 270,
+                   "reloc_stages/StageYoshi", 0x5D, 0x1005D),
+    CompactMapSpec("Meta Crystal", 13, "reloc_stages/GRMetalMap", 269,
+                   "reloc_stages/StageLastWallpaper", 0x62, 0x10062),
+    CompactMapSpec("Duel Zone", 14, "reloc_stages/GRZakoMap", 268,
+                   "reloc_stages/StageInishieWallpaper", 0x61, 0x10061),
+    CompactMapSpec("Final Destination", 16, "reloc_stages/GRLastMap", 266,
+                   "reloc_stages/StageYamabukiWallpaper", 0x60, 0x10060, 0x0),
+    CompactMapSpec("Bonus 1 Mario", 17, "reloc_stages/GRBonus1MarioMap", 271,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Fox", 18, "reloc_stages/GRBonus1FoxMap", 272,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Donkey", 19, "reloc_stages/GRBonus1DonkeyMap", 273,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Samus", 20, "reloc_stages/GRBonus1SamusMap", 274,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Luigi", 21, "reloc_stages/GRBonus1LuigiMap", 275,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Link", 22, "reloc_stages/GRBonus1LinkMap", 276,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Yoshi", 23, "reloc_stages/GRBonus1YoshiMap", 277,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Captain", 24, "reloc_stages/GRBonus1CaptainMap", 278,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Kirby", 25, "reloc_stages/GRBonus1KirbyMap", 279,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Pikachu", 26, "reloc_stages/GRBonus1PikachuMap", 280,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Purin", 27, "reloc_stages/GRBonus1PurinMap", 281,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 1 Ness", 28, "reloc_stages/GRBonus1NessMap", 282,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Mario", 29, "reloc_stages/GRBonus2MarioMap", 283,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Fox", 30, "reloc_stages/GRBonus2FoxMap", 284,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Donkey", 31, "reloc_stages/GRBonus2DonkeyMap", 285,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Samus", 32, "reloc_stages/GRBonus2SamusMap", 286,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Luigi", 33, "reloc_stages/GRBonus2LuigiMap", 287,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Link", 34, "reloc_stages/GRBonus2LinkMap", 288,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Yoshi", 35, "reloc_stages/GRBonus2YoshiMap", 289,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Captain", 36, "reloc_stages/GRBonus2CaptainMap", 290,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Kirby", 37, "reloc_stages/GRBonus2KirbyMap", 291,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Pikachu", 38, "reloc_stages/GRBonus2PikachuMap", 292,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Purin", 39, "reloc_stages/GRBonus2PurinMap", 293,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
+    CompactMapSpec("Bonus 2 Ness", 40, "reloc_stages/GRBonus2NessMap", 294,
+                   "reloc_stages/StageMetalWallpaper", 0x77, 0x10077, 0x0),
 )
 MAPS_BY_PATH = {spec.map_path: spec for spec in MAPS}
 
@@ -279,16 +343,17 @@ def build_compact_map(spec: CompactMapSpec, map_raw: bytes,
     external = chain_slots(m.payload, m.external_head, m.name)
     require(len(external) == len(m.extern_ids),
             f"{m.name}: extern chain and id table disagree")
-    hits = [i for i, (slot, _) in enumerate(external) if slot == WALLPAPER_SLOT]
+    wallpaper_slot = spec.wallpaper_slot
+    hits = [i for i, (slot, _) in enumerate(external) if slot == wallpaper_slot]
     require(len(hits) == 1, f"{m.name}: no unique external slot at "
-            f"0x{WALLPAPER_SLOT:X}")
+            f"0x{wallpaper_slot:X}")
     k = hits[0]
     require(m.extern_ids[k] == spec.container_file_id and
             external[k][1] == CONTAINER_SPRITE_OFFSET and
             m.extern_ids.count(spec.container_file_id) == 1,
             f"{m.name}: wallpaper slot does not name "
             f"{spec.container_path}+0x{CONTAINER_SPRITE_OFFSET:X}")
-    require(WALLPAPER_SLOT not in {slot for slot, _ in internal},
+    require(wallpaper_slot not in {slot for slot, _ in internal},
             f"{m.name}: wallpaper slot is also an internal fixup")
 
     stub_bitmaps = bytearray(c.payload[CONTAINER_BITMAP_OFFSET:
@@ -310,7 +375,7 @@ def build_compact_map(spec: CompactMapSpec, map_raw: bytes,
     m.payload.extend(bytes(compact_size - len(m.payload)))
 
     new_internal = internal + [
-        (WALLPAPER_SLOT, sprite_offset),
+        (wallpaper_slot, sprite_offset),
         (sprite_offset + SPRITE_BITMAP_OFFSET, bitmap_offset),
     ]
     new_external = [e for i, e in enumerate(external) if i != k]
@@ -349,14 +414,14 @@ def verify_compact_map(spec: CompactMapSpec, map_raw: bytes,
     external = chain_slots(payload, out.external_head, out.name)
     require(len(internal) == len(s_internal) + 2 and
             len(external) == len(s_external) - 1, "fixup counts")
-    kept_external = [e for e in s_external if e[0] != WALLPAPER_SLOT]
+    kept_external = [e for e in s_external if e[0] != spec.wallpaper_slot]
     require(external == kept_external, "external fixups changed")
     require(internal[:len(s_internal)] == s_internal and
             set(internal[len(s_internal):]) ==
-            {(WALLPAPER_SLOT, compact.stub_sprite_offset),
+            {(spec.wallpaper_slot, compact.stub_sprite_offset),
              (compact.stub_sprite_offset + SPRITE_BITMAP_OFFSET,
               compact.stub_bitmap_offset)}, "internal fixups")
-    k = [e[0] for e in s_external].index(WALLPAPER_SLOT)
+    k = [e[0] for e in s_external].index(spec.wallpaper_slot)
     require(out.extern_ids == [x for i, x in enumerate(src.extern_ids)
                                if i != k] and
             spec.container_file_id not in out.extern_ids,
@@ -423,7 +488,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.map is not None:
             spec = MAPS_BY_PATH.get(args.map.replace("\\", "/"))
             require(spec is not None and args.output is not None,
-                    "--map needs one of the nine VS maps and --output")
+                    "--map needs one of the compact maps and --output")
             compact = build_compact_map(spec, *read_pair(o2r_root, spec))
             write_atomic(args.output, compact.data)
             return 0

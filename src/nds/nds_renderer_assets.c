@@ -3599,6 +3599,8 @@ static NDSNativeOwnerImageSlot
 
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageFailCount;
+/* Second-detail binds served by the first detail's image (same bytes). */
+__attribute__((used)) volatile u32 gNdsNativeOwnerImageSharedCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageBytes;
 /* Of gNdsNativeOwnerImageBytes, how many came from the battle scratch in idle
  * fighter-packet ports rather than the taskman arena. */
@@ -4002,6 +4004,31 @@ s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
     sNdsNativeKirbyHatMatchReady = TRUE;
     gNdsNativeKirbyHatMatchReadyCount++;
     return TRUE;
+}
+
+/* TRUE when this scene admitted its hats up front and holds `part` at
+ * `use_low_detail`: binding it is then a pointer copy, never a load. */
+s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail)
+{
+    u32 i;
+
+    if ((sNdsNativeKirbyHatMatchGeneration != gNdsTaskmanHeapGeneration) ||
+        (sNdsNativeKirbyHatMatchReady == FALSE))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsNativeKirbyHatMatchCount; i++)
+    {
+        const NDSNativeKirbyHatImageSlot *slot =
+            &sNdsNativeKirbyHatMatchImages[i];
+
+        if ((slot->copy_modelpart_id == part) &&
+            (slot->use_low_detail == use_low_detail) && slot->valid)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 s32 ndsRendererNativeEnsureKirbyCopyHat(
@@ -4473,6 +4500,13 @@ void ndsRendererNativeBeginKirbyHatMatch(void) {}
 s32 ndsRendererNativePrepareKirbyHatMatch(u32 high_mask, u32 low_mask)
 {
     return ((high_mask | low_mask) == 0u) ? TRUE : FALSE;
+}
+
+s32 ndsRendererNativeKirbyHatMatchHasPart(u32 part, u32 use_low_detail)
+{
+    (void)part;
+    (void)use_low_detail;
+    return FALSE;
 }
 
 s32 ndsRendererNativeEnsureKirbyCopyHat(
@@ -4994,6 +5028,34 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
     {
         return FALSE;
     }
+    /* An owner whose two details the generator proved to be one image binds
+     * the second detail to the bytes the first already loaded. The Polygon
+     * Team preloads both details of all twelve polygons, so reading them twice
+     * was 165 KB the stage could not spare. Both slots then point into one
+     * buffer, and ndsRendererNativeReleaseOwnerImagesInRange unbinds both
+     * when it goes. The shared prepared_dense scratch is written whole by
+     * each draw from the same baked inputs, exactly as two fighters of one
+     * owner and detail already share it. */
+#define NDS_NATIVE_OWNER_IMAGE_SHARED_ROW(slot_)                               \
+    if (owner_slot == (slot_))                                                 \
+    {                                                                          \
+        const NDSNativeOwnerImageSlot *other_ =                                \
+            &sNdsNativeOwnerImage[owner_slot][use_low_detail ^ 1u];            \
+        if ((other_->base != NULL) &&                                          \
+            (other_->heap_generation == gNdsTaskmanHeapGeneration) &&          \
+            (other_->bytes == bytes))                                          \
+        {                                                                      \
+            slot->base = other_->base;                                         \
+            slot->heap_generation = other_->heap_generation;                   \
+            slot->bytes = other_->bytes;                                       \
+            gNdsNativeOwnerImageSharedCount++;                                 \
+            ndsRendererNativeBindOwnerImage(owner_slot, use_low_detail,        \
+                                            slot->base);                       \
+            return TRUE;                                                       \
+        }                                                                      \
+    }
+    NDS_NATIVE_OWNER_IMAGE_SHARED_DETAIL_ROWS(NDS_NATIVE_OWNER_IMAGE_SHARED_ROW)
+#undef NDS_NATIVE_OWNER_IMAGE_SHARED_ROW
     /* Battle-lifetime, like the figatree heaps: in a two-player VS match the
      * idle fighter-packet ports carry a scratch block the taskman arena never
      * sees (gcSetupObjman), so an image that fits there leaves the arena its

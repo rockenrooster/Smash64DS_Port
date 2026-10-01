@@ -34,13 +34,12 @@
  * and only the four newcomers can be locked by it (mnplayersvs.c:300-313;
  * starters take the default-FALSE arm). ndsMenuShellCssFighterLocked applies
  * both: unadmitted fighters are locked whatever the save says, and admitted
- * newcomers are locked until mnMessageApplyUnlock earns them
- * (mnmessage.c:284-301). Harness builds keep the old dev-open cart behind the
- * gate in ndsMenuShellCssSaveLocked (Boundary p2_shell_loop plays locked
- * fighters); published builds honour the save. The plate draws every
- * admitted portrait unlocked; ndsMenuShellCssSyncLockedCells covers a
- * save-locked newcomer's cell with its CSS_LOCKED_* surface at entry, so a
- * fresh save shows four locked cells and an earned unlock shows the portrait.
+ * newcomers were locked until mnMessageApplyUnlock earned them
+ * (mnmessage.c:284-301). Since 2026-10-01 (owner: every fighter works) the
+ * save no longer locks any VS cell (ndsMenuShellCssSaveLocked); the plate
+ * draws every admitted portrait unlocked, and ndsMenuShellCssSyncLockedCells,
+ * which covered a save-locked newcomer's cell with its CSS_LOCKED_* surface,
+ * now finds none to cover.
  *
  * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
  *   - TEAMS ARE NO LONGER A NARROWING. P2-2 adds the source RED/BLUE/GREEN
@@ -340,32 +339,17 @@ static void ndsMenuShellCssAnnounce(u32 slot)
 /* Runtime harness id for the dev-open gate below comes from the parent
  * nds_menu_shell.c include set; this fragment must not inject headers mid-TU. */
 
-/* mnPlayersVSCheckFighterLocked, mnplayersvs.c:296-314, over the save mask
- * the source snapshots at init (mnplayersvs.c:4694). Only Luigi, Ness,
- * Captain and Purin consult the mask -- the newcomer set
- * mnMessageApplyUnlock writes (mnmessage.c:287) -- and every other fkind
- * takes the source's default-FALSE arm. Fresh-cart defaults are unlock 0,
- * fighter 0 (scmanager.c:313-314), so all four start locked. */
+/* mnPlayersVSCheckFighterLocked, mnplayersvs.c:296-314, consults the save
+ * mask for the four newcomers (Luigi, Ness, Captain, Purin -- the set
+ * mnMessageApplyUnlock writes, mnmessage.c:287), and a fresh cart starts with
+ * all four locked (scmanager.c:313-314): the ? plate over a dark shadow.
+ * Owner 2026-10-01: every fighter works, so the VS character select offers all
+ * twelve from the first boot -- no locked cell, no plate, no shade. The save
+ * mask itself is untouched, so the 1P challengers and unlock messages still
+ * run as the source wrote them. */
 static u32 ndsMenuShellCssSaveLocked(u32 fkind)
 {
-    /* Dev-open cartridge, harness builds only: the Boundary p2_shell_loop lap
-     * plays fighters the source locks, so the gate stays open there. Published
-     * (harness id normal) honours the save. */
-    if (gNdsSceneHarnessMode != (u32)NDS_DEV_SCENE_HARNESS_NORMAL)
-    {
-        return FALSE;
-    }
-    switch ((s32)fkind)
-    {
-    case nFTKindLuigi:
-    case nFTKindNess:
-    case nFTKindCaptain:
-    case nFTKindPurin:
-        return ((gSCManagerBackupData.fighter_mask & (1u << fkind)) != 0u) ?
-            FALSE : TRUE;
-    default:
-        break;
-    }
+    (void)fkind;
     return FALSE;
 }
 

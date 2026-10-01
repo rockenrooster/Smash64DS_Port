@@ -2,6 +2,7 @@
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
+#include <nds/nds_source2d.h>
 
 void lbCommonClearExternSpriteParams(void)
 {
@@ -314,6 +315,81 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
  * site. Intentional hidden/offscreen SObjs never reach here (callers skip
  * them silently); everything reaching here is a loud failure, never a
  * successful empty draw. */
+#if NDS_P2_MENU_WALK
+/* Walk builds only: one row per (scene, bitmap) the native path refused, so a
+ * campaign walk names every source sprite a scene still lacks a presentation
+ * for -- its shape, position, scale and how often it was asked for. */
+typedef struct NDSSObjFailCensus
+{
+    u32 bitmap;
+    u32 count;
+    u8 scene;
+    u8 fmt;
+    u8 siz;
+    u8 frame_scene_order;
+    u16 width;
+    u16 height;
+    u16 nbitmaps;
+    u16 attr;
+    u16 gobj_id;
+    u16 dl_link;
+    s16 x;
+    s16 y;
+    s16 scalex100;
+    s16 scaley100;
+    u32 rgba;
+} NDSSObjFailCensus;
+
+#define NDS_SOBJ_FAIL_CENSUS_ROWS 256u
+__attribute__((used)) volatile u32 gNdsSObjFailCensusCount;
+__attribute__((used)) volatile u32 gNdsSObjFailCensusDropped;
+__attribute__((used)) NDSSObjFailCensus
+    gNdsSObjFailCensus[NDS_SOBJ_FAIL_CENSUS_ROWS];
+
+static void ndsSObjFailCensusRecord(const GObj *gobj, const SObj *sobj,
+                                    u32 scene)
+{
+    u32 bitmap = (u32)(uintptr_t)sobj->sprite.bitmap;
+    u32 n = gNdsSObjFailCensusCount;
+    u32 i;
+
+    for (i = 0u; i < n; i++)
+    {
+        if ((gNdsSObjFailCensus[i].bitmap == bitmap) &&
+            (gNdsSObjFailCensus[i].scene == (u8)scene))
+        {
+            gNdsSObjFailCensus[i].count++;
+            return;
+        }
+    }
+    if (n >= NDS_SOBJ_FAIL_CENSUS_ROWS)
+    {
+        gNdsSObjFailCensusDropped++;
+        return;
+    }
+    gNdsSObjFailCensus[n].bitmap = bitmap;
+    gNdsSObjFailCensus[n].count = 1u;
+    gNdsSObjFailCensus[n].scene = (u8)scene;
+    gNdsSObjFailCensus[n].fmt = (u8)sobj->sprite.bmfmt;
+    gNdsSObjFailCensus[n].siz = (u8)sobj->sprite.bmsiz;
+    gNdsSObjFailCensus[n].width = (u16)sobj->sprite.width;
+    gNdsSObjFailCensus[n].height = (u16)sobj->sprite.height;
+    gNdsSObjFailCensus[n].nbitmaps = (u16)sobj->sprite.nbitmaps;
+    gNdsSObjFailCensus[n].attr = (u16)sobj->sprite.attr;
+    gNdsSObjFailCensus[n].gobj_id = (gobj != NULL) ? (u16)gobj->id : 0xffffu;
+    gNdsSObjFailCensus[n].dl_link =
+        (gobj != NULL) ? (u16)gobj->dl_link_id : 0xffffu;
+    gNdsSObjFailCensus[n].x = (s16)sobj->pos.x;
+    gNdsSObjFailCensus[n].y = (s16)sobj->pos.y;
+    gNdsSObjFailCensus[n].scalex100 = (s16)(sobj->sprite.scalex * 100.0F);
+    gNdsSObjFailCensus[n].scaley100 = (s16)(sobj->sprite.scaley * 100.0F);
+    gNdsSObjFailCensus[n].rgba = ((u32)sobj->sprite.red << 24) |
+        ((u32)sobj->sprite.green << 16) | ((u32)sobj->sprite.blue << 8) |
+        (u32)sobj->sprite.alpha;
+    gNdsSObjFailCensusCount = n + 1u;
+}
+#endif
+
 static void ndsSObjRecordSpriteFailure(const GObj *gobj, const SObj *sobj,
                                        u32 reason)
 {
@@ -331,6 +407,9 @@ static void ndsSObjRecordSpriteFailure(const GObj *gobj, const SObj *sobj,
                   (u32)sobj->sprite.bmsiz);
         root = (u32)(uintptr_t)sobj->sprite.bitmap;
         material = (u32)(uintptr_t)sobj->sprite.LUT;
+#if NDS_P2_MENU_WALK
+        ndsSObjFailCensusRecord(gobj, sobj, scene);
+#endif
     }
     ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, scene, identity,
                                    status, root, material, reason);
@@ -860,6 +939,47 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
  * ndsSObjPreviewBeginFrame, which resets it. */
 static Gfx *sNdsMenuFillDrainMark = NULL;
 
+/* The source 2D presenter's view of the DL state a display callback writes
+ * before drawing its SObjs (nds_source2d.c): the DS gbi keeps prim/env/
+ * combine/othermode words and zeroes the syncs and scissor (opcode 0). The
+ * last prim colour of the frame modulates a no-attribute draw. */
+static u32 sNdsSObjStatePrim = 0xffffffffu;
+static u32 sNdsSObjNoAttrDraw;
+
+/* Drain state-only words since the mark. FALSE at the first word the
+ * presenter cannot represent (a fill rectangle): those stay for the frame's
+ * missing-owner report. */
+static u32 ndsSObjDrainStateWords(void)
+{
+    Gfx *cursor = sNdsMenuFillDrainMark;
+    Gfx *end = gSYTaskmanDLHeads[0];
+
+    if ((cursor == NULL) || (end == NULL) || (cursor > end))
+    {
+        return FALSE;
+    }
+    for (; cursor < end; cursor++)
+    {
+        switch (cursor->words.w0 >> 24)
+        {
+        case 0x00u: /* zeroed sync/scissor/unsupported-state packet */
+        case 0xe2u: /* G_SETOTHERMODE_L: render mode, alpha compare */
+        case 0xe3u: /* G_SETOTHERMODE_H: cycle type */
+        case 0xfbu: /* G_SETENVCOLOR */
+        case 0xfcu: /* G_SETCOMBINE */
+            break;
+        case 0xfau: /* G_SETPRIMCOLOR */
+            sNdsSObjStatePrim = cursor->words.w1;
+            break;
+        default:
+            sNdsMenuFillDrainMark = cursor;
+            return FALSE;
+        }
+    }
+    sNdsMenuFillDrainMark = end;
+    return TRUE;
+}
+
 volatile u32 gNdsMenuFillRectCount;
 volatile u32 gNdsMenuFillPixelCount;
 
@@ -894,6 +1014,8 @@ void ndsSObjPreviewBeginFrame(void)
     }
     ndsIFCommonNativeOamBeginFrame();
     ndsResultsOamBeginFrame();
+    ndsSource2DBeginFrame();
+    sNdsSObjStatePrim = 0xffffffffu;
     sNdsSObjFrameForeground = FALSE;
     sNdsSObjFrameActive = TRUE;
     sNdsSObjFramePendingWallpaper = NULL;
@@ -1030,6 +1152,20 @@ void lbCommonDrawSObjAttr(GObj *gobj)
         }
         return;
     }
+    /* The source 2D scenes with no native screen (1P intro, stage clear,
+     * continue, challenger, message, congratulations): the OBJ presenter
+     * owns every sprite of the callback (src/nds/nds_source2d.c). */
+    if ((record_startup == 0u) && (sNdsSObjFrameActive != FALSE) &&
+        (ndsSource2DIsActive() != 0))
+    {
+        (void)ndsSObjDrainStateWords();
+        if (ndsSource2DDrawGObjModulated(
+                gobj, (sNdsSObjNoAttrDraw != 0u) ?
+                          (sNdsSObjStatePrim >> 8) : 0xffffffu) != 0)
+        {
+            return;
+        }
+    }
 
     while (sobj != NULL)
     {
@@ -1089,7 +1225,9 @@ void lbCommonDrawSObjNoAttr(GObj *gobj)
         ndsDrawLayeredSObjFrame(gobj, 1u);
         return;
     }
+    sNdsSObjNoAttrDraw = 1u;
     lbCommonDrawSObjAttr(gobj);
+    sNdsSObjNoAttrDraw = 0u;
 }
 
 void lbCommonDrawSprite(GObj *camera_gobj)
@@ -1264,6 +1402,14 @@ static void ndsMenuFillSinkEndFrame(void)
          * instead of reporting the retired generic menu renderer as missing. */
         sNdsMenuFillDrainMark = gSYTaskmanDLHeads[0];
         return;
+    }
+    if (ndsSource2DIsActive() != 0)
+    {
+        /* A source 2D scene's display callbacks close with state words after
+         * their last draw (the stage clear text's trailing gDPPipeSync, its
+         * wallpaper's render-mode restore): the presenter consumes those as
+         * it consumes the ones before a draw; anything else still reports. */
+        (void)ndsSObjDrainStateWords();
     }
     if ((ndsMenuFillSinkSceneGated() != FALSE) &&
         (sNdsMenuFillDrainMark != gSYTaskmanDLHeads[0]))

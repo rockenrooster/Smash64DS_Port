@@ -11,12 +11,8 @@ sections 0, 6 and 8, then the board cursor. Evidence:
 `artifacts/performance/2026-09-2*_p2-2p8-*`; `scripts/compare-replay-digest.py`
 is the gameplay-equivalence check every phase runs.
 
-Phase 1 (fighters): slices 1-7 landed through `98ebd1e2e51`, with slice 7 an
-**IMPLEMENTED_NOT_ACCEPTED** checkpoint. Lean defaults and Ness's yo-yo/bat
-are covered on the final ROMs; the Results/CSS tint-lifetime repair has natural
-transition probes and inspected A/B captures. Receipt:
-`artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`. Runtime jobs
-finished; the checkpoint is pushed to origin/master. Root is still r54.
+Phase 1 (fighters): slices 1-7 through `98ebd1e2e51` (slice 7 IMPLEMENTED_NOT_ACCEPTED;
+receipt `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`). Root is still r54.
 **Owner 09-27: VS Mode first, 1P deferred. Any 4 fighters on any stage hit the P95 gate
 with items on over a full 1-minute match (plus sudden death); CSS and SSS 100%; Results
 and transitions/loading seamless. CSS/SSS audio delay + in-match SFX glitches logged (BUG_NOTES A1/A2).**
@@ -33,6 +29,10 @@ paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240
 native owners (`1fe468cc3bb`), transition hold (owner r64, `VERIFIED-hold.md`), world-cache GO retry. Playtest
 r65b. Open: owner's rematch VFX loss (not reproduced on 3 stages/2 rosters; ask roster, stage, which VFX),
 Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
+**10-01 1P campaign:** the walk ROM (`TARGET=smash64ds NDS_P2_MENU_WALK=1`) plays stages 0-13, every bonus,
+Master Hand, Ending, Staffroll and Congra; per-stage failures and open items are the table in
+`p2/P2-6-one-player.md` "Campaign walk status". Next: Master Hand draw, Ending/Staffroll, Meta Crystal
+materials, Zako low-water, intro rendered stills (owner choice), then 1P P95.
 
 ## Continue, do not restart
 

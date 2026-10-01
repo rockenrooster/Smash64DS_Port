@@ -3640,9 +3640,13 @@ u64 ndsRendererNativeStageRigidBindingMask(void)
  * stage binding and expects one MObj flag word. Both live in the packet's
  * material-event table (binding_index / flags per material_slot), which is
  * where the adapter's hand-written {20,22,31,32} / {1,1,0x6b,0x6b} came from.
- * FALSE when the active stage has no such slot. */
+ * The event's segment_index is the slot's segment-0xE branch offset, 8 per
+ * MObj in the DObj's list (gcDrawMObjForDObj), so it also names WHICH MObj:
+ * Meta Crystal's and Race to the Finish's layers carry MObjs of different
+ * flags behind one DObj. FALSE when the active stage has no such slot. */
 s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
-                                          u32 *binding_index, u32 *flags)
+                                          u32 *binding_index, u32 *flags,
+                                          u32 *mobj_index)
 {
     const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
     u32 i;
@@ -3660,30 +3664,33 @@ s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
         {
             *binding_index = event->binding_index;
             *flags = event->flags;
+            *mobj_index = (u32)event->segment_index / 8u;
             return TRUE;
         }
     }
     return FALSE;
 }
 
+/* Every material slot commits with the packet's first segment. The commit
+ * replays the source draw's texture-id side effect on the live MObj, which no
+ * later segment of the frame reads, and an event's segment_index is its MObj's
+ * branch offset rather than a capture segment -- compared against the capture
+ * segment, a second or later MObj (offset 8, 16, ...) never committed. Every
+ * slot of a single-MObj stage has offset 0, so those commit exactly as before. */
 u32 ndsRendererNativeStageMaterialMask(u32 segment_index)
 {
     const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
     u32 mask = 0u;
     u32 i;
 
-    if ((packet == NULL) || (segment_index >= packet->segment_count))
+    if ((packet == NULL) || (segment_index >= packet->segment_count) ||
+        (segment_index != 0u))
     {
         return 0u;
     }
     for (i = 0u; i < packet->material_event_count; i++)
     {
-        const NDSNativeStageMaterialEvent *event = &packet->materials[i];
-
-        if (event->segment_index == segment_index)
-        {
-            mask |= 1u << event->material_slot;
-        }
+        mask |= 1u << packet->materials[i].material_slot;
     }
     return mask;
 }

@@ -836,8 +836,51 @@ static void ndsFTManagerPreloadVSOwnerImagesLargestFirst(void)
 void ndsFtrLeanAdmitNoteFighter(u32 player, u32 fkind, u32 costume,
                                 u32 detail);
 
+#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+extern volatile u32 gNdsMenuShellWalkRoute;
+
+/* Campaign walk only (owner 2026-09-30: "make the human a lvl 9 CPU and the
+ * opponents lvl 1 CPUs for campaign walking"; playtest ROMs keep the source
+ * defaults). NDS_P2_MENU_WALK is 0 in every published configuration, and the
+ * walk's campaign route is the only caller that sets route 1. The battle
+ * state keeps the source's own pkind/level rows, so the 1P setup, its counts
+ * and the fighters' detail level are exactly a human run's; only the made
+ * fighter is driven by the computer. Every enemy, wave replacements included,
+ * is made through here, so each one takes level 1. */
+static void ndsCampaignWalkCpuRoute(FTDesc *desc)
+{
+    if ((desc == NULL) || (gNdsMenuShellWalkRoute != 1u) ||
+        (gSCManagerSceneData.scene_curr != nSCKind1PGame) ||
+        (gSCManagerBattleState == NULL) ||
+        ((u32)desc->player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return;
+    }
+    if ((s32)desc->player == (s32)gSCManagerSceneData.player)
+    {
+        desc->pkind = nFTPlayerKindCom;
+        desc->level = 9;
+    }
+    else if (gSCManagerBattleState->players[desc->player].is_spgame_enemy !=
+             FALSE)
+    {
+        desc->level = 1;
+        /* Walk speed: an 18-Yoshi team outlasted a level-9 player's five
+         * minutes. Enemies start at 120%, so a hit or two ends each; Master
+         * Hand keeps its own HP rules. */
+        if (desc->fkind != nFTKindBoss)
+        {
+            desc->damage = 120;
+        }
+    }
+}
+#endif
+
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
+#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+    ndsCampaignWalkCpuRoute(desc);
+#endif
     ndsFTManagerEnsureOwnerImages(desc);
     if ((desc != NULL) && (desc->figatree_heap != NULL) &&
         (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&

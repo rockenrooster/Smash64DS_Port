@@ -22,6 +22,11 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseSlotLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseTrackOverflow);
 NDS_FT_POSE_COUNTER(gNdsFtPoseAObjLiveMax);
 NDS_FT_POSE_COUNTER(gNdsFtPoseRunMaskFallbacks);
+/* TraI evaluations skipped for want of a path (see ndsFtPosePlay), and the
+ * first one's fighter kind, status, motion, joint entry, script cursor,
+ * figatree, eval mask and pose tick. */
+NDS_FT_POSE_COUNTER(gNdsFtPoseTraINullSkips);
+__attribute__((used)) volatile u32 gNdsFtPoseTraINullWitness[8];
 /* P2-2p8 joint lever, animation half. The limit is a runtime variable so both
  * counters have a compiled writer in every build (--gc-sections drops a global
  * whose only writer is inside a false `#if`, and `used` does not save it), and
@@ -1099,6 +1104,39 @@ ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
     dobj->anim_joint.event16 = (AObjEvent16 *)pc;
 }
 
+#if defined(ARM9)
+#include <nds/arm9/cache.h>
+#endif
+/* Cold, out of the ITCM player: records the first TraI evaluation that has no
+ * path to follow. */
+static void __attribute__((noinline, cold)) ndsFtPoseNoteTraINull(
+    const NdsFtPose *pose, const NdsFtPoseJoint *joint, const DObj *dobj)
+{
+    if (gNdsFtPoseTraINullSkips++ == 0u)
+    {
+        const FTStruct *fp = (pose->gobj != NULL) ?
+            ftGetStruct((GObj *)pose->gobj) : NULL;
+
+        gNdsFtPoseTraINullWitness[0] = (fp != NULL) ? (u32)fp->fkind : ~0u;
+        gNdsFtPoseTraINullWitness[1] = (fp != NULL) ? (u32)fp->status_id : ~0u;
+        gNdsFtPoseTraINullWitness[2] = (fp != NULL) ? (u32)fp->motion_id : ~0u;
+        gNdsFtPoseTraINullWitness[3] = (u32)(joint - pose->joints);
+        gNdsFtPoseTraINullWitness[4] =
+            (u32)(uintptr_t)dobj->anim_joint.event16;
+        gNdsFtPoseTraINullWitness[5] =
+            (fp != NULL) ? (u32)(uintptr_t)fp->figatree : 0u;
+        gNdsFtPoseTraINullWitness[6] = joint->eval_mask;
+        gNdsFtPoseTraINullWitness[7] = pose->tick;
+#if defined(ARM9)
+        DC_FlushRange((const void *)gNdsFtPoseTraINullWitness,
+                      sizeof(gNdsFtPoseTraINullWitness));
+#endif
+    }
+#if defined(ARM9)
+    DC_FlushRange((const void *)&gNdsFtPoseTraINullSkips, sizeof(u32));
+#endif
+}
+
 /* ---- the player (sys/objanim.c:714 / lb/lbcommon.c:1261, Q form) --------- */
 
 /* ARM, not Thumb: the evaluator's SMULLs and CLZ inline here. ITCM
@@ -1157,6 +1195,13 @@ ndsFtPosePlay(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj,
          * fighter (Luigi) take the slow arm. */
         if (t->track == nGCAnimTrackTraI)
         {
+            if (joint->interpolate == NULL)
+            {
+                /* The source cannot reach this (its TraI AObj would read a
+                 * NULL path); count it rather than fault. */
+                ndsFtPoseNoteTraINull(pose, joint, dobj);
+                continue;
+            }
             if (NDS_FCMP_LT0(value))
             {
                 value = 0.0F;

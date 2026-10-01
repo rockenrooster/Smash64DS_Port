@@ -9,6 +9,7 @@
 #include <nds/timers.h>
 #include <PR/sp.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_platform.h>
 
 #if NDS_SHIP_TELEMETRY
 #define NDS_IFCOMMON_TELEMETRY_TICK() cpuGetTiming()
@@ -26,6 +27,14 @@
 #include <ft/fighter.h>
 #include <sc/scene.h>
 #include <if/interface.h>
+#if NDS_P2_1P_GAME
+#include <gr/ground.h>
+#endif
+#include <nds/nds_reloc_assets.h>
+
+/* lbcommon.c's generic SObj display callback (the port's lbcommon header is
+ * not included here). */
+extern void lbCommonDrawSObjAttr(GObj *gobj);
 
 s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 palette[32],
@@ -55,7 +64,11 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_IFCOMMON_TAG_BANK_BYTES 3072u
 #define NDS_IFCOMMON_ITEM_BANK_BASE 63744u
 #define NDS_IFCOMMON_ITEM_BANK_BYTES 64u
-#define NDS_IFCOMMON_USED_BYTES 63808u
+/* The 1P bonus boards' task icon (one target or platform, 16x16 4bpp), on
+ * the next 128-byte OBJ tile boundary. */
+#define NDS_IFCOMMON_TASK_BANK_BASE 63872u
+#define NDS_IFCOMMON_TASK_BANK_BYTES 128u
+#define NDS_IFCOMMON_USED_BYTES 64000u
 #define NDS_IFCOMMON_ANNOUNCE_TIME_UP 0u
 #define NDS_IFCOMMON_ANNOUNCE_GAME_SET 1u
 #define NDS_IFCOMMON_END_FIRST 16u
@@ -2089,6 +2102,10 @@ void ndsIFCommonNativeOamInit(void)
     gNdsTask39FxObjVramBytes = 0u;
     gNdsTask39FxObjVramRemaining = NDS_IFCOMMON_OBJ_VRAM_BYTES;
 #if NDS_RENDERER_HW_TRIANGLES
+    /* The battle's first OBJ write: a held frame's OBJs (the 1P intro's,
+     * nds_source2d.c) still read bank E and the OAM, so the hold ends here
+     * (ndsPlatformTransitionThaw), before the init and the atlas bakes. */
+    ndsPlatformTransitionThaw();
     oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
     oamClear(&oamMain, 0, 128);
     oamUpdate(&oamMain);
@@ -3229,9 +3246,12 @@ static void ndsIFCommonResetPlayerTags(void)
     sNdsIFCommonPlayerTagCursorValid = FALSE;
 }
 
+static const Bitmap *sNdsIFCommonTaskBitmap;
+
 static void ndsIFCommonResetItemArrow(void)
 {
     memset(&sNdsIFCommonItemArrow, 0, sizeof(sNdsIFCommonItemArrow));
+    sNdsIFCommonTaskBitmap = NULL;
 }
 
 /* IFCommonItem's pickup arrow is source I4 + SP_TRANSPARENT. The retained
@@ -3898,6 +3918,425 @@ static s32 ndsIFCommonEmitItemArrow(struct GObj *gobj)
     return TRUE;
 }
 
+#if NDS_P2_1P_GAME
+/* The 1P bonus boards' task row (sc1PBonusStageMakeTargetSprites /
+ * MakePlatformSprites, sc1pbonusstage.c): one SObj per remaining target or
+ * platform, all the same 16x16 CI4 SC1PStageClear3 sprite, SP_TEXSHUF |
+ * SP_TRANSPARENT, at the top left of the game screen. The one live bitmap is
+ * decoded once into a 16x16 4bpp cell with its own LUT as palette 9
+ * (transparent source entries become index 0); each SObj is then placed like
+ * the item arrow, through the screen's 0.8 matrix. */
+#define NDS_IFCOMMON_TASK_PALETTE 9u
+#define NDS_IFCOMMON_TASK_SIZE 16u
+
+static s32 ndsIFCommonBakeTaskIcon(const Sprite *sprite)
+{
+    u32 cell[NDS_IFCOMMON_TASK_BANK_BYTES / sizeof(u32)];
+    u8 *cell_bytes = (u8 *)cell;
+    u8 remap[16];
+    u16 colors[16];
+    const Bitmap *bitmap;
+    const u8 *pixels;
+    const u16 *lut;
+    u32 width_img;
+    u32 row_bytes;
+    u32 used = 1u;
+    u32 *dst;
+    u32 i;
+    u32 y;
+
+    if ((sprite == NULL) || (sprite->bitmap == NULL) || (sprite->LUT == NULL) ||
+        (sprite->bmfmt != G_IM_FMT_CI) || (sprite->bmsiz != G_IM_SIZ_4b) ||
+        (sprite->nbitmaps != 1) ||
+        ((u32)(u16)sprite->width > NDS_IFCOMMON_TASK_SIZE) ||
+        ((u32)(u16)sprite->height > NDS_IFCOMMON_TASK_SIZE))
+    {
+        return FALSE;
+    }
+    if (sNdsIFCommonTaskBitmap == sprite->bitmap)
+    {
+        return TRUE;
+    }
+    bitmap = sprite->bitmap;
+    pixels = (const u8 *)bitmap->buf;
+    lut = (const u16 *)sprite->LUT;
+    width_img = (u32)(u16)bitmap->width_img;
+    if (width_img == 0u)
+    {
+        width_img = (u32)(u16)bitmap->width;
+    }
+    if ((pixels == NULL) || (width_img < (u32)(u16)sprite->width))
+    {
+        return FALSE;
+    }
+    /* RGBA5551 LUT, halfword-swapped within its words like every converted
+     * LUT (entry i at [i ^ 1]); alpha 0 is the cutout. */
+    memset(remap, 0, sizeof(remap));
+    memset(colors, 0, sizeof(colors));
+    for (i = 0u; i < 16u; i++)
+    {
+        u16 rgba = lut[i ^ 1u];
+
+        if ((rgba & 1u) == 0u)
+        {
+            continue;
+        }
+        if (used >= 16u)
+        {
+            return FALSE;
+        }
+        remap[i] = (u8)used;
+        colors[used] = (u16)(((rgba >> 11) & 0x1fu) |
+                             (((rgba >> 6) & 0x1fu) << 5) |
+                             (((rgba >> 1) & 0x1fu) << 10));
+        used++;
+    }
+    if (used > 16u)
+    {
+        return FALSE;
+    }
+    memset(cell, 0, sizeof(cell));
+    row_bytes = (width_img + 1u) / 2u;
+    for (y = 0u; y < (u32)(u16)sprite->height; y++)
+    {
+        u32 x;
+
+        for (x = 0u; x < (u32)(u16)sprite->width; x++)
+        {
+            /* SP_TEXSHUF: odd rows swap 8-texel halves (the item arrow's
+             * reader, ndsIFCommonReadItemArrowI4). */
+            u32 shuffled_x = x ^ (((y & 1u) != 0u) ? 8u : 0u);
+            u8 packed;
+            u8 index;
+            u32 offset;
+
+            if (shuffled_x >= width_img)
+            {
+                return FALSE;
+            }
+            packed = pixels[((y * row_bytes) + (shuffled_x >> 1)) ^ 3u];
+            index = remap[((shuffled_x & 1u) == 0u) ?
+                          (packed >> 4) : (packed & 0x0fu)];
+            if (index == 0u)
+            {
+                continue;
+            }
+            offset = ((y >> 3) * 2u + (x >> 3)) * 32u +
+                     ((y & 7u) * 4u) + ((x & 7u) >> 1);
+            if ((x & 1u) == 0u)
+            {
+                cell_bytes[offset] = (u8)((cell_bytes[offset] & 0xf0u) | index);
+            }
+            else
+            {
+                cell_bytes[offset] =
+                    (u8)((cell_bytes[offset] & 0x0fu) | (index << 4));
+            }
+        }
+    }
+    dst = (u32 *)(void *)((u8 *)SPRITE_GFX + NDS_IFCOMMON_TASK_BANK_BASE);
+    for (i = 0u; i < (u32)(sizeof(cell) / sizeof(cell[0])); i++)
+    {
+        dst[i] = cell[i];
+    }
+    for (i = 0u; i < 16u; i++)
+    {
+        SPRITE_PALETTE[NDS_IFCOMMON_TASK_PALETTE * 16u + i] = colors[i];
+    }
+    sNdsIFCommonTaskBitmap = sprite->bitmap;
+    return TRUE;
+}
+
+static s32 ndsIFCommonIsBonusTaskGObj(struct GObj *gobj)
+{
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PBonusStage) ||
+        (gSCManagerBattleState == NULL) || (gobj == NULL))
+    {
+        return FALSE;
+    }
+    return (gobj == ((gSCManagerBattleState->gkind >= nGRKindBonus2Start) ?
+                     gGRCommonStruct.bonus2.interface_gobj :
+                     gGRCommonStruct.bonus1.interface_gobj)) ? TRUE : FALSE;
+}
+
+static s32 ndsIFCommonEmitBonusTasks(struct GObj *gobj)
+{
+    u32 scale_q16 = NDS_IFCOMMON_SCREEN_SCALE_Q16;
+    s32 matrix_index = -1;
+    SObj *sobj;
+
+    if (gNdsIFCommonNativeOamEnabled == 0u)
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackDisabled);
+    }
+    for (sobj = SObjGetStruct(gobj); sobj != NULL; sobj = sobj->next)
+    {
+        s32 origin_x;
+        s32 origin_y;
+        s32 x;
+        s32 y;
+
+        if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
+        {
+            continue;
+        }
+        if ((sobj->sprite.scalex != 1.0F) || (sobj->sprite.scaley != 1.0F) ||
+            (ndsIFCommonBakeTaskIcon(&sobj->sprite) == FALSE))
+        {
+            return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackBadAsset);
+        }
+        if (sNdsIFCommonNextOamID < 0)
+        {
+            return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackObjectLimit);
+        }
+        if (matrix_index < 0)
+        {
+            matrix_index = ndsIFCommonMatrixForScale((u16)(
+                ((1u << 24) + (scale_q16 / 2u)) / scale_q16));
+            if (matrix_index < 0)
+            {
+                return ndsIFCommonItemArrowMiss(
+                    nNDSIFCommonFallbackMatrixLimit);
+            }
+        }
+        origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
+            sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+        origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
+            sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+        x = origin_x + ndsIFCommonRoundQ16HalfUp(
+            (s32)(NDS_IFCOMMON_TASK_SIZE / 2u) * (s32)scale_q16) -
+            (s32)(NDS_IFCOMMON_TASK_SIZE / 2u);
+        y = origin_y + ndsIFCommonRoundQ16HalfUp(
+            (s32)(NDS_IFCOMMON_TASK_SIZE / 2u) * (s32)scale_q16) -
+            (s32)(NDS_IFCOMMON_TASK_SIZE / 2u);
+        oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0,
+               NDS_IFCOMMON_TASK_PALETTE,
+               SpriteSize_16x16, SpriteColorFormat_16Color,
+               (u16 *)((u8 *)SPRITE_GFX + NDS_IFCOMMON_TASK_BANK_BASE),
+               matrix_index, false, false, false, false, false);
+        sNdsIFCommonNextOamID--;
+        sNdsIFCommonFrameNeedsCommit = TRUE;
+        gNdsIFCommonNativeOamFrameObjectCount++;
+    }
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    gNdsIFCommonNativeOamFrameDrawCalls++;
+    return TRUE;
+}
+#endif
+
+/* The IFCommonAnnounceCommon messages (ifcommon.c dIFCommonAnnounce*
+ * SpriteData: SUDDEN DEATH!, FAILURE, COMPLETE!): IA8 letters with SP_TEXSHUF
+ * | SP_TRANSPARENT, prim and env set per message by ifCommonAnnounceSetColors.
+ * Each distinct letter is decoded once at the screen's 0.8 grid into a 32x32
+ * 4bpp cell in the end bank -- these messages never share the screen with
+ * TIME UP or GAME SET, and whichever comes next re-lays the bank -- and the
+ * message's ramp (env at intensity 0 to prim at 15, the IA combine) is
+ * palette 8. */
+#define NDS_IFCOMMON_COMMON_LETTER_MAX 12u
+#define NDS_IFCOMMON_COMMON_LETTER_CELL 32u
+#define NDS_IFCOMMON_COMMON_LETTER_BYTES 512u
+#define NDS_IFCOMMON_COMMON_PALETTE 8u
+#define NDS_IFCOMMON_ASSET_ANNOUNCE_COMMON 37u
+
+typedef struct NDSIFCommonCommonLetter
+{
+    const Bitmap *bitmap;
+    u16 *gfx;
+} NDSIFCommonCommonLetter;
+
+static NDSIFCommonCommonLetter
+    sNdsIFCommonCommonLetters[NDS_IFCOMMON_COMMON_LETTER_MAX];
+static u32 sNdsIFCommonCommonLetterCount;
+static u32 sNdsIFCommonCommonPaletteKey = 0xffffffffu;
+
+static s32 ndsIFCommonIsCommonLetter(const SObj *sobj)
+{
+    u32 asset_id;
+    u32 offset;
+
+    return ((sobj->sprite.bitmap != NULL) &&
+            (sobj->sprite.bmfmt == G_IM_FMT_IA) &&
+            (sobj->sprite.bmsiz == G_IM_SIZ_8b) &&
+            (ndsRelocGetLoadedPointerProvenance(sobj->sprite.bitmap,
+                                                &asset_id, &offset) != 0) &&
+            (asset_id == NDS_IFCOMMON_ASSET_ANNOUNCE_COMMON)) ? TRUE : FALSE;
+}
+
+static u16 *ndsIFCommonBakeCommonLetter(const Sprite *sprite)
+{
+    u32 cell[NDS_IFCOMMON_COMMON_LETTER_BYTES / sizeof(u32)];
+    u8 *cell_bytes = (u8 *)cell;
+    u32 width = (u32)(u16)sprite->width;
+    u32 height = (u32)(u16)sprite->height;
+    u32 ds_width;
+    u32 ds_height;
+    u16 *gfx;
+    u32 *dst;
+    u32 slot;
+    u32 y;
+
+    for (slot = 0u; slot < sNdsIFCommonCommonLetterCount; slot++)
+    {
+        if (sNdsIFCommonCommonLetters[slot].bitmap == sprite->bitmap)
+        {
+            return sNdsIFCommonCommonLetters[slot].gfx;
+        }
+    }
+    if (sNdsIFCommonCommonLetterCount >= NDS_IFCOMMON_COMMON_LETTER_MAX)
+    {
+        return NULL;
+    }
+    ds_width = (width * 4u + 2u) / 5u;
+    ds_height = (height * 4u + 2u) / 5u;
+    if ((width == 0u) || (height == 0u) ||
+        (ds_width > NDS_IFCOMMON_COMMON_LETTER_CELL) ||
+        (ds_height > NDS_IFCOMMON_COMMON_LETTER_CELL))
+    {
+        return NULL;
+    }
+    if (sNdsIFCommonCommonLetterCount == 0u)
+    {
+        /* The end bank is about to hold these letters: TIME UP / GAME SET
+         * must be laid out again before either shows. */
+        sNdsIFCommonAnnounceActive = FALSE;
+    }
+    memset(cell, 0, sizeof(cell));
+    for (y = 0u; y < ds_height; y++)
+    {
+        u32 source_y = ((2u * y + 1u) * height) / (2u * ds_height);
+        u32 x;
+
+        for (x = 0u; x < ds_width; x++)
+        {
+            u32 source_x = ((2u * x + 1u) * width) / (2u * ds_width);
+            u32 offset = (((y >> 3) * (NDS_IFCOMMON_COMMON_LETTER_CELL >> 3)) +
+                          (x >> 3)) * 32u + ((y & 7u) * 4u) + ((x & 7u) >> 1);
+            u8 ia;
+            u8 index;
+
+            if (ndsIFCommonReadTagI8(sprite, source_x, source_y, &ia) == FALSE)
+            {
+                return NULL;
+            }
+            /* The player tags' IA rule: alpha nibble >= 8 is kept, the
+             * intensity nibble picks the ramp entry, 0 stays transparent. */
+            if ((ia & 0x0fu) < 8u)
+            {
+                continue;
+            }
+            index = (u8)(ia >> 4);
+            if (index == 0u)
+            {
+                index = 1u;
+            }
+            if ((x & 1u) == 0u)
+            {
+                cell_bytes[offset] = (u8)((cell_bytes[offset] & 0xf0u) | index);
+            }
+            else
+            {
+                cell_bytes[offset] =
+                    (u8)((cell_bytes[offset] & 0x0fu) | (u8)(index << 4));
+            }
+        }
+    }
+    gfx = (u16 *)((u8 *)SPRITE_GFX + NDS_IFCOMMON_END_BANK_BASE +
+                  sNdsIFCommonCommonLetterCount *
+                      NDS_IFCOMMON_COMMON_LETTER_BYTES);
+    dst = (u32 *)(void *)gfx;
+    for (y = 0u; y < (u32)(sizeof(cell) / sizeof(cell[0])); y++)
+    {
+        dst[y] = cell[y];
+    }
+    sNdsIFCommonCommonLetters[sNdsIFCommonCommonLetterCount].bitmap =
+        sprite->bitmap;
+    sNdsIFCommonCommonLetters[sNdsIFCommonCommonLetterCount].gfx = gfx;
+    sNdsIFCommonCommonLetterCount++;
+    return gfx;
+}
+
+static void ndsIFCommonCommonPalette(const SObj *sobj)
+{
+    u32 key = ((u32)sobj->sprite.red << 24) | ((u32)sobj->sprite.green << 16) |
+              ((u32)sobj->sprite.blue << 8) ^
+              (((u32)sobj->envcolor.r << 16) | ((u32)sobj->envcolor.g << 8) |
+               (u32)sobj->envcolor.b);
+    u16 *palette = &SPRITE_PALETTE[NDS_IFCOMMON_COMMON_PALETTE * 16u];
+    u32 i;
+
+    if (key == sNdsIFCommonCommonPaletteKey)
+    {
+        return;
+    }
+    sNdsIFCommonCommonPaletteKey = key;
+    palette[0] = 0u;
+    for (i = 1u; i < 16u; i++)
+    {
+        /* Entry i is intensity nibble i (entry 1 also holds intensity 0). */
+        u32 t = (i == 1u) ? 0u : i;
+        u32 red = sobj->envcolor.r +
+            ndsIFCommonDiv15((u32)((s32)sobj->sprite.red -
+                                   (s32)sobj->envcolor.r + 255) * t) -
+            ndsIFCommonDiv15(255u * t);
+        u32 green = sobj->envcolor.g +
+            ndsIFCommonDiv15((u32)((s32)sobj->sprite.green -
+                                   (s32)sobj->envcolor.g + 255) * t) -
+            ndsIFCommonDiv15(255u * t);
+        u32 blue = sobj->envcolor.b +
+            ndsIFCommonDiv15((u32)((s32)sobj->sprite.blue -
+                                   (s32)sobj->envcolor.b + 255) * t) -
+            ndsIFCommonDiv15(255u * t);
+
+        palette[i] = ndsIFCommonPackRgb15((u8)red, (u8)green, (u8)blue);
+    }
+}
+
+static s32 ndsIFCommonEmitCommonLetters(struct GObj *gobj)
+{
+    SObj *sobj;
+
+    if (gNdsIFCommonNativeOamEnabled == 0u)
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackDisabled);
+    }
+    for (sobj = SObjGetStruct(gobj); sobj != NULL; sobj = sobj->next)
+    {
+        u16 *gfx;
+
+        if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
+        {
+            continue;
+        }
+        if ((ndsIFCommonIsCommonLetter(sobj) == FALSE) ||
+            (sobj->sprite.scalex != 1.0F) || (sobj->sprite.scaley != 1.0F))
+        {
+            return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackBadAsset);
+        }
+        gfx = ndsIFCommonBakeCommonLetter(&sobj->sprite);
+        if (gfx == NULL)
+        {
+            return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackObjectLimit);
+        }
+        if (sNdsIFCommonNextOamID < 0)
+        {
+            return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackObjectLimit);
+        }
+        ndsIFCommonCommonPalette(sobj);
+        oamSet(&oamMain, sNdsIFCommonNextOamID,
+               ndsIFCommonRoundFloatHalfUp(sobj->pos.x * 0.8F),
+               ndsIFCommonRoundFloatHalfUp(sobj->pos.y * 0.8F), 0,
+               NDS_IFCOMMON_COMMON_PALETTE,
+               SpriteSize_32x32, SpriteColorFormat_16Color, gfx, -1,
+               false, false, false, false, false);
+        sNdsIFCommonNextOamID--;
+        sNdsIFCommonFrameNeedsCommit = TRUE;
+        gNdsIFCommonNativeOamFrameObjectCount++;
+    }
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    gNdsIFCommonNativeOamFrameDrawCalls++;
+    return TRUE;
+}
+
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -3926,6 +4365,17 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     if (gobj->proc_display == ifCommonItemArrowProcDisplay)
     {
         return ndsIFCommonEmitItemArrow(gobj);
+    }
+#if NDS_P2_1P_GAME
+    if (ndsIFCommonIsBonusTaskGObj(gobj) != FALSE)
+    {
+        return ndsIFCommonEmitBonusTasks(gobj);
+    }
+#endif
+    if ((gobj->proc_display == lbCommonDrawSObjAttr) &&
+        (ndsIFCommonIsCommonLetter(sobj) != FALSE))
+    {
+        return ndsIFCommonEmitCommonLetters(gobj);
     }
 
     for (scan = sobj; scan != NULL; scan = scan->next)

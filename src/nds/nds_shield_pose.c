@@ -281,7 +281,27 @@ static s32 NDS_SHIELD_POSE_CODE ndsShieldPoseGetView(
                           : FALSE;
 }
 
-static s32 ndsShieldPosePackageForFKind(s32 fkind)
+/* The Polygon Team's fighters guard with their base fighter's ShieldPose file
+ * (dFTN<Name>Data names it), and each polygon Main points at the same nine
+ * targets in it as the base Main does -- the generator proves both and that
+ * neither Main has translate_scales. The base package therefore serves the
+ * polygon too: twelve kinds load in that one stage, and the raw files were
+ * 79 KB it could not spare. */
+typedef struct NDSShieldPosePolygonDesc
+{
+    s16 fkind;
+    s16 base_fkind;
+    u16 main_asset;
+} NDSShieldPosePolygonDesc;
+
+#define NDS_SHIELD_POSE_POLYGON_ROW(fkind_, base_, main_)                     \
+    { (s16)(fkind_), (s16)(base_), (u16)(main_) },
+static const NDSShieldPosePolygonDesc sNdsShieldPosePolygons[] = {
+    NDS_SHIELD_POSE_POLYGON_ROWS(NDS_SHIELD_POSE_POLYGON_ROW)
+};
+#undef NDS_SHIELD_POSE_POLYGON_ROW
+
+static s32 ndsShieldPosePackageForBaseFKind(s32 fkind)
 {
     u32 i;
 
@@ -290,6 +310,42 @@ static s32 ndsShieldPosePackageForFKind(s32 fkind)
         if (sNdsShieldPoseAssets[i].fkind == fkind)
         {
             return (s32)i;
+        }
+    }
+    return -1;
+}
+
+/* The package a fighter of this kind guards with: its own, or for a polygon
+ * its base fighter's. */
+static s32 ndsShieldPosePackageForFKind(s32 fkind)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(sNdsShieldPosePolygons); i++)
+    {
+        if (sNdsShieldPosePolygons[i].fkind == fkind)
+        {
+            return ndsShieldPosePackageForBaseFKind(
+                sNdsShieldPosePolygons[i].base_fkind);
+        }
+    }
+    return ndsShieldPosePackageForBaseFKind(fkind);
+}
+
+static s32 ndsShieldPosePolygonMainPackage(u32 owner_asset, u32 dep_asset)
+{
+    u32 i;
+
+    for (i = 0u; i < ARRAY_COUNT(sNdsShieldPosePolygons); i++)
+    {
+        if (sNdsShieldPosePolygons[i].main_asset == owner_asset)
+        {
+            s32 package = ndsShieldPosePackageForBaseFKind(
+                sNdsShieldPosePolygons[i].base_fkind);
+
+            return ((package >= 0) &&
+                    (sNdsShieldPoseAssets[package].shield_asset == dep_asset))
+                       ? package : -1;
         }
     }
     return -1;
@@ -307,12 +363,22 @@ static s32 ndsShieldPosePackageForAssets(u32 owner_asset, u32 dep_asset)
             return (s32)i;
         }
     }
-    return -1;
+    return ndsShieldPosePolygonMainPackage(owner_asset, dep_asset);
 }
 
 s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
 {
     return (ndsShieldPosePackageForFKind(fkind) >= 0) ? TRUE : FALSE;
+}
+
+s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset)
+{
+    s32 package = ndsShieldPosePackageForAssets(owner_asset, dep_asset);
+    NDSShieldPoseView view;
+
+    return ((package >= 0) &&
+            (ndsShieldPoseGetView((u32)package, &view) != FALSE)) ? TRUE
+                                                                   : FALSE;
 }
 
 s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
@@ -685,7 +751,11 @@ s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
         (ndsShieldPoseGetView((u32)package, &view) == FALSE))
     {
         gNdsShieldPoseNativeFixupRejectCount++;
-        return -1;
+        /* A polygon Main whose base package is not staged in this build
+         * keeps the raw file: every one of its nine fixups misses the same
+         * way, and ndsShieldPoseNativeSelected then sees source pointers. */
+        return (ndsShieldPosePolygonMainPackage(owner_asset, dep_asset) >= 0)
+                   ? 0 : -1;
     }
     desc = &sNdsShieldPoseAssets[package];
     if (target_offset == desc->dobj_offset)
@@ -881,6 +951,12 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
 s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
 {
     (void)fkind;
+    return FALSE;
+}
+
+s32 ndsShieldPoseServesDependency(u32 owner_asset, u32 dep_asset)
+{
+    (void)owner_asset; (void)dep_asset;
     return FALSE;
 }
 

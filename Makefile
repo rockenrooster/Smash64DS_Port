@@ -4269,7 +4269,7 @@ NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playab
 NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
 NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
 NDS_NATIVE_WALLPAPER_INC := $(PROJECT_ROOT)/src/nds/generated/native_wallpapers.generated.inc
-NDS_NATIVE_WALLPAPER_NAMES := pupupu zebes jungle yoster yamabuki castle sector hyrule inishie results
+NDS_NATIVE_WALLPAPER_NAMES := pupupu zebes jungle yoster yamabuki castle sector hyrule inishie last zako metal bonus results
 NDS_NATIVE_WALLPAPER_ASSETS := $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(PROJECT_ROOT)/assets/wallpapers/native_wallpaper_$(name).bin)
 # P2-2/P2-3. The lower battle HUD is AOT-only: source IFCommon digits and each
 # admitted fighter's portrait/stock icon are baked straight into tiled 4bpp
@@ -4411,6 +4411,11 @@ override NDS_P2_YOSHI := 1
 override NDS_P2_NESS := 1
 override NDS_P2_PURIN := 1
 override NDS_P2_KIRBY := 1
+# The campaign's own variants: Giant Donkey Kong (stage 7, sc1pgame.c:394)
+# and Metal Mario (stage 11). Without them the stage's fighter has no
+# attributes and ftManagerMakeFighter faults on its parts container.
+override NDS_P2_GDONKEY := 1
+override NDS_P2_MMARIO := 1
 endif
 
 ifneq ($(NDS_BGM_FALSIFIER_OFF),0)
@@ -4427,7 +4432,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
-CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_results_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_audio_storage.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_results_oam.c nds_source2d.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_audio_storage.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -5231,7 +5236,9 @@ endif
 
 # P2-6 steps 5/6: the 25 bonus boards' maps, geometry banks, the four shared
 # image banks, the shared wallpaper 119 (o2r container StageMetalWallpaper),
-# Race's two banks, the target-object file 150 and Kirby's copy table 230.
+# Race's two banks, the target model file 150, the target's attribute file
+# 253 (llITBonus1ObjectHeaderFileID; its one extern is 150) and Kirby's copy
+# table 230.
 # Same bank-number rule as above; reloc_backend_assets.c carries the ids.
 ifeq ($(NDS_P2_1P_GAME),1)
 NDS_BONUS_RELOC_FILES := \
@@ -5292,6 +5299,7 @@ NDS_BONUS_RELOC_FILES := \
 	reloc_bonus/BonusDataBank149 \
 	reloc_extern_data/MiscData162 \
 	reloc_bonus/BonusDataBank150 \
+	reloc_extern_data/MiscData253 \
 	reloc_extern_data/MiscData230
 else
 NDS_BONUS_RELOC_FILES :=
@@ -5850,7 +5858,9 @@ NDS_1P_RELOC_FILES := \
 	reloc_fighters_main/NPurinMain \
 	reloc_fighters_main/NPurinModel \
 	reloc_fighters_main/NNessMain \
-	reloc_fighters_main/NNessModel
+	reloc_fighters_main/NNessModel \
+	reloc_extern_data/MiscData302 \
+	reloc_fighters_main/MasterHandIcon
 
 NDS_MODES_RELOC_FILES := \
 	reloc_menus/MNData \
@@ -7661,6 +7671,10 @@ $(NDS_NATIVE_WALLPAPER_INC) $(NDS_NATIVE_WALLPAPER_ASSETS) &: \
 		$(BATTLESHIP_O2R)/reloc_stages/StageSector \
 		$(BATTLESHIP_O2R)/reloc_stages/StageCastle \
 		$(BATTLESHIP_O2R)/reloc_stages/StageHyruleWallpaper \
+		$(BATTLESHIP_O2R)/reloc_stages/StageYamabukiWallpaper \
+		$(BATTLESHIP_O2R)/reloc_stages/StageInishieWallpaper \
+		$(BATTLESHIP_O2R)/reloc_stages/StageLastWallpaper \
+		$(BATTLESHIP_O2R)/reloc_stages/StageMetalWallpaper \
 		$(BATTLESHIP_O2R)/reloc_menus/MNVSResults
 	python "$(PROJECT_ROOT)/scripts/stages/generate_native_wallpapers.py" --repo-root "$(PROJECT_ROOT)" --output-dir "$(PROJECT_ROOT)/assets/wallpapers" --header "$(NDS_NATIVE_WALLPAPER_INC)"
 nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
@@ -7926,6 +7940,25 @@ NDS_COMPACT_GROUND_MAP_FILES := \
 	reloc_stages/GRHyruleMap reloc_stages/GRYosterMap \
 	reloc_stages/GRPupupuMap reloc_stages/GRYamabukiMap \
 	reloc_stages/GRInishieMap
+# The 1P arenas and boards follow the same flag (2026-10-01): each still
+# loaded a 158,928-byte wallpaper container into every 1P battle.
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_COMPACT_GROUND_MAP_FILES += \
+	reloc_stages/GRYosterSmallMap reloc_stages/GRMetalMap \
+	reloc_stages/GRZakoMap reloc_stages/GRLastMap \
+	reloc_stages/GRBonus1MarioMap reloc_stages/GRBonus1FoxMap \
+	reloc_stages/GRBonus1DonkeyMap reloc_stages/GRBonus1SamusMap \
+	reloc_stages/GRBonus1LuigiMap reloc_stages/GRBonus1LinkMap \
+	reloc_stages/GRBonus1YoshiMap reloc_stages/GRBonus1CaptainMap \
+	reloc_stages/GRBonus1KirbyMap reloc_stages/GRBonus1PikachuMap \
+	reloc_stages/GRBonus1PurinMap reloc_stages/GRBonus1NessMap \
+	reloc_stages/GRBonus2MarioMap reloc_stages/GRBonus2FoxMap \
+	reloc_stages/GRBonus2DonkeyMap reloc_stages/GRBonus2SamusMap \
+	reloc_stages/GRBonus2LuigiMap reloc_stages/GRBonus2LinkMap \
+	reloc_stages/GRBonus2YoshiMap reloc_stages/GRBonus2CaptainMap \
+	reloc_stages/GRBonus2KirbyMap reloc_stages/GRBonus2PikachuMap \
+	reloc_stages/GRBonus2PurinMap reloc_stages/GRBonus2NessMap
+endif
 NDS_COMPACT_GROUND_MAP_CONTAINERS := \
 	$(BATTLESHIP_O2R)/reloc_movies/MVOpeningRoomWallpaper \
 	$(BATTLESHIP_O2R)/reloc_stages/StageSector \
@@ -7935,7 +7968,11 @@ NDS_COMPACT_GROUND_MAP_CONTAINERS := \
 	$(BATTLESHIP_O2R)/reloc_stages/StageYoshi \
 	$(BATTLESHIP_O2R)/reloc_stages/StageDreamLand \
 	$(BATTLESHIP_O2R)/reloc_stages/StagePokemon \
-	$(BATTLESHIP_O2R)/reloc_stages/StageHyruleWallpaper
+	$(BATTLESHIP_O2R)/reloc_stages/StageHyruleWallpaper \
+	$(BATTLESHIP_O2R)/reloc_stages/StageYamabukiWallpaper \
+	$(BATTLESHIP_O2R)/reloc_stages/StageInishieWallpaper \
+	$(BATTLESHIP_O2R)/reloc_stages/StageLastWallpaper \
+	$(BATTLESHIP_O2R)/reloc_stages/StageMetalWallpaper
 NDS_COMPACT_GROUND_MAPS_STAMP := $(PROJECT_ROOT)/$(BUILD)/nds_compact_ground_maps.stamp
 
 $(NDS_COMPACT_GROUND_MAPS_STAMP): FORCE

@@ -3585,6 +3585,33 @@ static sb32 ndsRendererAdapterNativeStageTransformFlags(
     return FALSE;
 }
 
+#if NDS_P2_1P_GAME
+/* Board the Platforms' platforms (sc1PBonusStageInitPlatforms and
+ * sc1PBonusStageUpdatePlatformCount, sc1pbonusstage.c:539/614) are DObj trees
+ * from Bonus2Common hung under the board's yakumono DObjs at runtime. They are
+ * not packet geometry -- every bonus2 descriptor excludes them -- so the
+ * topology skips each one whole, and ndsStageGCDrawAllLoopSubmitForeignSubtrees
+ * draws it through the per-DObj path, where generate_nds_native_item_baked.py's
+ * roots own its lists. Recognised by the file its DLLink array lives in. */
+static sb32 ndsRendererAdapterIsForeignStageSubtree(const DObj *dobj)
+{
+    const NDSRelocLoadedFile *loaded;
+
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind < nGRKindBonus2Start) ||
+        (gSCManagerBattleState->gkind > nGRKindBonus2End) ||
+        (dobj == NULL) || (dobj->dl_link == NULL))
+    {
+        return FALSE;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(dobj->dl_link,
+                                              sizeof(DObjDLLink));
+    return ((loaded != NULL) &&
+            (loaded->asset_id == NDS_RELOC_ASSET_BONUS2_COMMON)) ? TRUE
+                                                                 : FALSE;
+}
+#endif
+
 static sb32 ndsRendererAdapterCollectNativeStageDObjs(
     DObj *dobj, u32 owner, u16 parent_index, u8 depth, u32 dl_links,
     NDSRendererAdapterNativeStageWorkspace *workspace)
@@ -3595,6 +3622,12 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
         u32 index;
         u16 transform_flags;
 
+#if NDS_P2_1P_GAME
+        if (ndsRendererAdapterIsForeignStageSubtree(dobj) != FALSE)
+        {
+            continue;
+        }
+#endif
         if ((workspace->dobj_count >= NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
             (depth > 31u) || ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0u) ||
             (ndsRendererAdapterNativeStageTransformFlags(
@@ -4412,16 +4445,25 @@ static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
     {
         u32 binding_index;
         u32 flags;
+        u32 mobj_index;
         MObj *mobj;
 
         if ((ndsRendererNativeStageMaterialBinding(i, &binding_index,
-                                                   &flags) == FALSE) ||
+                                                   &flags, &mobj_index) ==
+             FALSE) ||
             (binding_index >= workspace->binding_count) ||
             (workspace->binding_dobjs[binding_index] == NULL))
         {
             return FALSE;
         }
+        /* The slot's own MObj: the DObj's list in draw order, as
+         * gcDrawMObjForDObj walks it. */
         mobj = workspace->binding_dobjs[binding_index]->mobj;
+        while ((mobj != NULL) && (mobj_index != 0u))
+        {
+            mobj = mobj->next;
+            mobj_index--;
+        }
         if ((mobj == NULL) ||
             (ndsRendererAdapterMaterialFlags(mobj) != (u16)flags) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(

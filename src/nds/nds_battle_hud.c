@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <ft/fighter.h>
+#include <sc/scene.h>
 #include <nds/nds_battle_hud.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_renderer.h>
@@ -83,6 +84,9 @@ volatile u32 gNdsBattleHudScoreFrameMask;
  * "none", so the first draw after prepare/clear always uploads. */
 static u8 sNdsBattleHudPortraitPaletteOwner[NDS_BATTLE_HUD_PLAYERS];
 static u32 sNdsBattleHudPrepared;
+#if NDS_P2_1P_GAME
+static u32 sNdsBattleHudTeamStockCount;
+#endif
 static u32 sNdsBattleHudStateHash = 0xffffffffu;
 
 volatile u32 gNdsBattleHudPrepareCount;
@@ -593,26 +597,35 @@ static void ndsBattleHudDrawDamage(
     }
 }
 
+/* The baked stock icon of a fighter kind (battle_hud.bin order). */
+static u32 ndsBattleHudStockOwner(u32 fkind)
+{
+    if (fkind == (u32)nFTKindMario) return 0u;
+    if (fkind == (u32)nFTKindFox) return 1u;
+    if (fkind == (u32)nFTKindLuigi) return 2u;
+    if (fkind == (u32)nFTKindDonkey) return 3u;
+    if (fkind == (u32)nFTKindCaptain) return 4u;
+    if (fkind == (u32)nFTKindSamus) return 5u;
+    if (fkind == (u32)nFTKindLink) return 6u;
+    if (fkind == (u32)nFTKindPikachu) return 7u;
+    if (fkind == (u32)nFTKindYoshi) return 8u;
+    if (fkind == (u32)nFTKindNess) return 9u;
+    if (fkind == (u32)nFTKindPurin) return 10u;
+    if (fkind == (u32)nFTKindKirby) return 11u;
+    return 0xffu;
+}
+
 static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
 {
     u32 stock = ndsBattleHudStock(player);
-    u32 owner;
+    u32 owner = ndsBattleHudStockOwner(fkind);
     u32 palette = NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player;
     u32 i;
 
-    if (fkind == (u32)nFTKindMario) owner = 0u;
-    else if (fkind == (u32)nFTKindFox) owner = 1u;
-    else if (fkind == (u32)nFTKindLuigi) owner = 2u;
-    else if (fkind == (u32)nFTKindDonkey) owner = 3u;
-    else if (fkind == (u32)nFTKindCaptain) owner = 4u;
-    else if (fkind == (u32)nFTKindSamus) owner = 5u;
-    else if (fkind == (u32)nFTKindLink) owner = 6u;
-    else if (fkind == (u32)nFTKindPikachu) owner = 7u;
-    else if (fkind == (u32)nFTKindYoshi) owner = 8u;
-    else if (fkind == (u32)nFTKindNess) owner = 9u;
-    else if (fkind == (u32)nFTKindPurin) owner = 10u;
-    else if (fkind == (u32)nFTKindKirby) owner = 11u;
-    else return;
+    if (owner == 0xffu)
+    {
+        return;
+    }
 
     if (stock == 0x7fu)
     {
@@ -742,6 +755,59 @@ static void ndsBattleHudDrawTimer(u32 *next_id)
         NDS_BATTLE_HUD_WHITE_PALETTE);
 }
 
+#if NDS_P2_1P_GAME
+/* src/import/battleship_ifcommon.c: icons the source's team stock row shows
+ * this frame (0 = none). Consumed by each render. */
+extern volatile u32 gNdsIFCommonHUDTeamStockCount;
+
+/* The 1P team's remaining stocks (sc1PGameTeamStockDisplayProcDisplay): the
+ * source rows of ten 10-pixel icons from (20,20), as the lower HUD's own 8x8
+ * stock icon of the team's kind in the first enemy slot's palette, at the
+ * same pitch (scaled 0.8) from the top-left of the bottom screen. */
+static void ndsBattleHudDrawTeamStock(u32 count, u32 *next_id)
+{
+    u32 player;
+    u32 i;
+
+    if ((count == 0u) || (gSCManagerBattleState == NULL))
+    {
+        return;
+    }
+    for (player = 0u; player < NDS_BATTLE_HUD_PLAYERS; player++)
+    {
+        u32 fkind;
+        u32 owner;
+
+        if ((gSCManagerBattleState->players[player].is_spgame_enemy == FALSE) ||
+            ((gNdsIFCommonHUDActivePlayerMask & (1u << player)) == 0u))
+        {
+            continue;
+        }
+        fkind = ndsBattleHudFkind(player);
+        /* Polygons (nFTKindN*) show their base fighter's icon. */
+        if ((fkind >= (u32)nFTKindNStart) && (fkind <= (u32)nFTKindNEnd))
+        {
+            fkind -= (u32)nFTKindNStart;
+        }
+        owner = ndsBattleHudStockOwner(fkind);
+        if (owner == 0xffu)
+        {
+            return;
+        }
+        if (count > 30u) count = 30u;
+        for (i = 0u; i < count; i++)
+        {
+            ndsBattleHudSetOam(next_id,
+                               NDS_BATTLE_HUD_SOURCE_SCALE(20 + (s32)(i % 10u) * 10),
+                               NDS_BATTLE_HUD_SOURCE_SCALE(4 + (s32)(i / 10u) * 10),
+                               SpriteSize_8x8, sNdsBattleHudStockGfx[owner],
+                               NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player);
+        }
+        return;
+    }
+}
+#endif
+
 void ndsBattleHudRender(void)
 {
     NDSBattleHudDamageState damage_state[NDS_BATTLE_HUD_PLAYERS];
@@ -769,6 +835,15 @@ void ndsBattleHudRender(void)
         }
     }
     hash = ndsBattleHudFingerprint(damage_state);
+#if NDS_P2_1P_GAME
+    {
+        u32 team_count = gNdsIFCommonHUDTeamStockCount;
+
+        gNdsIFCommonHUDTeamStockCount = 0u;
+        hash = ndsBattleHudMix(hash, 0x7ea70000u | team_count);
+        sNdsBattleHudTeamStockCount = team_count;
+    }
+#endif
     if (sNdsBattleHudScoreFrame != gNdsFrameCounter) sNdsBattleHudScoreCount = 0u;
     hash = ndsBattleHudMix(hash, sNdsBattleHudScoreCount);
     for (player = 0u; player < sNdsBattleHudScoreCount; player++)
@@ -805,6 +880,9 @@ void ndsBattleHudRender(void)
         ndsBattleHudDrawDamage(player, &damage_state[player], &next_id);
     }
     ndsBattleHudDrawScores(&next_id);
+#if NDS_P2_1P_GAME
+    ndsBattleHudDrawTeamStock(sNdsBattleHudTeamStockCount, &next_id);
+#endif
     oamUpdate(&oamSub);
     gNdsBattleHudOamCount = next_id;
     gNdsBattleHudActiveMask = gNdsIFCommonHUDActivePlayerMask;

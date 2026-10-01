@@ -15351,6 +15351,101 @@ volatile u32 gNdsTask103FinishTicks;
 volatile u32 gNdsTask103FinishCount;
 #endif
 
+#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES
+/* Board the Platforms: the platforms hung under a layer the native packet just
+ * drew (ndsRendererAdapterIsForeignStageSubtree) draw here, after it, as the
+ * source's gcDrawDObjTreeDLLinks reaches them inside the same layer. Each
+ * platform DObj goes through the per-DObj path, whose baked roots own the
+ * Bonus2Common lists. Not ITCM: one board's handful of platforms. */
+static void ndsStageGCDrawAllLoopSubmitForeignSubtrees(GObj *display)
+{
+    DObj *stack[64];
+    u32 stack_count = 0u;
+    sb32 began = FALSE;
+    DObj *root;
+
+    if ((display == NULL) || (gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind < nGRKindBonus2Start) ||
+        (gSCManagerBattleState->gkind > nGRKindBonus2End) ||
+        (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE))
+    {
+        return;
+    }
+    root = DObjGetStruct(display);
+    if (root != NULL)
+    {
+        stack[stack_count++] = root;
+    }
+    while (stack_count != 0u)
+    {
+        DObj *dobj = stack[--stack_count];
+        sb32 foreign = FALSE;
+
+        if ((dobj->flags & DOBJ_FLAG_HIDDEN) == 0u)
+        {
+            foreign = ndsRendererAdapterIsForeignStageSubtree(dobj);
+        }
+        if (foreign != FALSE)
+        {
+            /* The platform and its descendants, never its siblings. */
+            DObj *sub[16];
+            u32 sub_count = 0u;
+
+            if (began == FALSE)
+            {
+                ndsRendererAdapterBeginStageTraversal();
+                began = TRUE;
+            }
+            sub[sub_count++] = dobj;
+            while (sub_count != 0u)
+            {
+                DObj *part = sub[--sub_count];
+
+                if ((part->flags & DOBJ_FLAG_HIDDEN) != 0u)
+                {
+                    if ((part != dobj) && (part->sib_next != NULL) &&
+                        (sub_count < ARRAY_COUNT(sub)))
+                    {
+                        sub[sub_count++] = part->sib_next;
+                    }
+                    continue;
+                }
+                if ((part->dl_link != NULL) &&
+                    ((part->flags & DOBJ_FLAG_NOTEXTURE) == 0u))
+                {
+                    ndsRendererAdapterSubmitStageDObj(
+                        part, NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS,
+                        sNdsStageGCDrawAllLoopCurrentCameraGObj,
+                        ndsStageGCDrawAllLoopInitialGeometryMode());
+                }
+                if ((part != dobj) && (part->sib_next != NULL) &&
+                    (sub_count < ARRAY_COUNT(sub)))
+                {
+                    sub[sub_count++] = part->sib_next;
+                }
+                if ((part->child != NULL) && (sub_count < ARRAY_COUNT(sub)))
+                {
+                    sub[sub_count++] = part->child;
+                }
+            }
+        }
+        if ((dobj->sib_next != NULL) && (stack_count < ARRAY_COUNT(stack)))
+        {
+            stack[stack_count++] = dobj->sib_next;
+        }
+        if ((foreign == FALSE) && ((dobj->flags & DOBJ_FLAG_HIDDEN) == 0u) &&
+            (dobj->child != NULL) && (stack_count < ARRAY_COUNT(stack)))
+        {
+            stack[stack_count++] = dobj->child;
+        }
+    }
+    if (began != FALSE)
+    {
+        ndsRendererAdapterEndStageTraversal();
+    }
+}
+#endif
+
 s32 NDS_R2_ITCM_PACK2_CODE
 ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
                                            void *display_gobj,
@@ -15463,9 +15558,28 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
             NDS_RENDERER_PROFILE_OWNER_STAGE].exclusive_ticks +=
             cpuGetTiming() - owner_start;
 #endif
+#if NDS_P2_1P_GAME
+        if (handled != FALSE)
+        {
+            ndsStageGCDrawAllLoopSubmitForeignSubtrees(display);
+        }
+#endif
         return handled;
 #else
+#if NDS_P2_1P_GAME
+        {
+            s32 handled = ndsRendererAdapterCommitNativeStageDisplay(
+                display, link_id);
+
+            if (handled != FALSE)
+            {
+                ndsStageGCDrawAllLoopSubmitForeignSubtrees(display);
+            }
+            return handled;
+        }
+#else
         return ndsRendererAdapterCommitNativeStageDisplay(display, link_id);
+#endif
 #endif
     }
 #endif

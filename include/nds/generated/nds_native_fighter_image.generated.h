@@ -335,6 +335,30 @@ typedef struct NDSNativePreparedDenseVertex
 #define NDS_NATIVE_OWNER_IMAGE_ROW_FOX_SKELETON1(X)
 #endif
 
+/* Owners whose high and low images are the same bytes: every member
+ * has the same type, name, guard and values in both details, so the
+ * two compile to one image under any build config. The source draws
+ * these at one detail (the polygons, Master Hand, Metal Mario and the
+ * skeletons), and the runtime binds the second detail to the first
+ * detail's loaded image instead of reading the same bytes again. */
+#define NDS_NATIVE_OWNER_IMAGE_SHARED_DETAIL_ROWS(X) \
+    X(NDS_NATIVE_IMAGE_SLOT_MMARIO) \
+    X(NDS_NATIVE_IMAGE_SLOT_NMARIO) \
+    X(NDS_NATIVE_IMAGE_SLOT_NFOX) \
+    X(NDS_NATIVE_IMAGE_SLOT_NDONKEY) \
+    X(NDS_NATIVE_IMAGE_SLOT_NSAMUS) \
+    X(NDS_NATIVE_IMAGE_SLOT_NLINK) \
+    X(NDS_NATIVE_IMAGE_SLOT_NYOSHI) \
+    X(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN) \
+    X(NDS_NATIVE_IMAGE_SLOT_NKIRBY) \
+    X(NDS_NATIVE_IMAGE_SLOT_NPIKACHU) \
+    X(NDS_NATIVE_IMAGE_SLOT_NPURIN) \
+    X(NDS_NATIVE_IMAGE_SLOT_NNESS) \
+    X(NDS_NATIVE_IMAGE_SLOT_BOSS) \
+    X(NDS_NATIVE_IMAGE_SLOT_MARIO_SKELETON1) \
+    X(NDS_NATIVE_IMAGE_SLOT_FOX_SKELETON1) \
+    /* end */
+
 /* Owners whose image tables are NOT taken from an image in this build,
  * i.e. the ones ndsRendererNativeVerifyOwnerImage walks. Same rows,
  * different guard: the verifier runs exactly where the bind does not. */

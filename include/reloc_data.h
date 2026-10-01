@@ -511,6 +511,14 @@ extern uintptr_t llNMarioModelFileID;
 /* NMarioMain (reloc file 0xcf, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
 extern uintptr_t llNMarioMainFileID;
 
+/* GDonkeyMain (reloc file 0xd7) and Metal Mario's MMarioMain (0xce),
+ * MMarioMainMotion (0xcd) and MMarioModel (0x12c), reloc_fighters_main: the
+ * 1P campaign's variants; values in reloc_backend_ftdata_symbols.c. */
+extern uintptr_t llGDonkeyMainFileID;
+extern uintptr_t llMMarioMainFileID;
+extern uintptr_t llMMarioMainMotionFileID;
+extern uintptr_t llMMarioModelFileID;
+
 /* BossModel (reloc file 0x158, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter boss. */
 extern uintptr_t llBossModelFileID;
 
@@ -2085,7 +2093,7 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRBonus3MapBumpersDObjDesc, 0x0) \
     X(llGRBonus3MapItemHead, 0x0) \
     X(llGRBonus3MapMapHead, 0x0) \
-    X(llITBonus1ObjectHeaderFileID, 0x96) \
+    X(llITBonus1ObjectHeaderFileID, 0xfd) \
     X(llKirbySpecial1FileID, 0xe6) \
     X(llMVCommonRoomBackgroundMObjSub, 0x42f8) \
     X(llMVCommonRoomBackgroundMatAnimJoint, 0x8788) \

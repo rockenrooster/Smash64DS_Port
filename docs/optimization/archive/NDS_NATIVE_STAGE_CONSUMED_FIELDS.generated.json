@@ -3041,6 +3041,10 @@
       "closure": "ndsRendererAdapterPrepareNativeStageMaterials",
       "fields": [
         {
+          "access": "mobj.next",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "workspace.binding_count",
           "classification": "immutable_generation"
         },

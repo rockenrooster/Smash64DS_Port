@@ -19,6 +19,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
+#include <nds/nds_source2d.h>
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_scene.h>
 #include <nds/nds_startup.h>
@@ -1627,6 +1628,7 @@ static void ndsPlatformTransitionCover(s32 retire_list)
      * START press: that exit cleared OAM mid-frame, so the text vanished one
      * scanout before the black (r62 results-css 0029). Idempotent. */
     ndsResultsOamExit();
+    ndsSource2DExit();
 }
 
 /* SCENE TRANSITION HOLD (owner, r64, 2026-09-30: "keep what's currently on
@@ -1721,6 +1723,7 @@ void ndsPlatformTransitionThaw(void)
     /* Results' OBJ tenant, entered at its scene start under the held battle
      * frame (nds_results_oam.c). */
     ndsResultsOamEnterPending();
+    ndsSource2DEnterPending();
 #endif
 }
 
@@ -4265,6 +4268,7 @@ void ndsPlatformEndFrame(void)
     ndsRendererHardwareCommitPendingTextureRefreshes();
     ndsIFCommonNativeOamCommit();
     ndsResultsOamCommit();
+    ndsSource2DCommit();
 #if NDS_P2_UI_KIT
     /* P2-1c. After the battle's OBJ tenant, because the two share one shadow
      * OAM and the later publisher wins; they are never live in the same scene,

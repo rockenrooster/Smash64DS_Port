@@ -102,6 +102,11 @@
 #define NDS_RELOC_ASSET_BOSS_MODEL 0x158u /* reloc_fighters_main/BossModel, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_BOSS_MAIN_MOTION 0xf9u /* reloc_fighters_main/BossMainMotion, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_BOSS_MAIN 0xfau /* reloc_fighters_main/BossMain, admit_fighter.py --fighter boss */
+/* The polygons' shared texture bank (302, o2r reloc_extern_data/MiscData302)
+ * every polygon model names, and MasterHandIcon (345), which every polygon
+ * main and Master Hand's main name: extern dependencies only. */
+#define NDS_RELOC_ASSET_NCOMMON_TEXTURE 0x12eu
+#define NDS_RELOC_ASSET_MASTER_HAND_ICON 0x159u
 #define NDS_RELOC_ASSET_MN_SCREEN_ADJUST 0xfu /* reloc_menus/MNScreenAdjust, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS2_COMMON 0x88u /* reloc_bonus/Bonus2Common, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM 0xeu /* reloc_bonus/BonusPicturePlatform, stage_reloc_file.py */
@@ -229,8 +234,9 @@
  * on (Mario/Donkey/Luigi 120, Fox/Samus/Captain 121, Yoshi/Pikachu/Purin
  * 122, Link/Kirby/Ness 123), the shared wallpaper 119 every board map names
  * (held by the o2r container named StageMetalWallpaper -- nds_reloc_assets.c
- * explains the mislabelling), the target-object file 150 the boards load
- * (llITBonus1ObjectHeaderFileID) and Kirby's copy-ability table 230 = 0xe6
+ * explains the mislabelling), the target attribute file 253 the boards load
+ * (llITBonus1ObjectHeaderFileID) with the target model file 150 it names,
+ * and Kirby's copy-ability table 230 = 0xe6
  * the Kirby Team stage loads (o2r MiscData230). Each is rowed because the
  * extern-tree loader refuses a parent with an unrowed dependency. */
 #define NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER 0x10077u
@@ -290,6 +296,9 @@
 #define NDS_RELOC_ASSET_BONUS_DATA_BANK_149 0x95u
 #define NDS_RELOC_ASSET_MISC_DATA_162 0xa2u
 #define NDS_RELOC_ASSET_IT_BONUS1_OBJECT 0x96u
+/* US file 253 (relocFileDescriptions.us.txt), the target's ITAttributes;
+ * its one extern is the target model in file 150 above. */
+#define NDS_RELOC_ASSET_IT_BONUS1_OBJECT_HEADER 0xfdu
 #define NDS_RELOC_ASSET_KIRBY_SPECIAL1 0xe6u
 #endif
 /* P2-4 opt-in stages. An asset id is its relocData file number in hex, which
@@ -692,6 +701,8 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * 0x2a8; llMMarioMainFileID is 0xce in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_MMARIO_MAIN_ATTRIBUTES 0x2a8u
 #define NDS_RELOC_ASSET_MMARIO_MAIN 0xceu
+#define NDS_RELOC_ASSET_MMARIO_MAIN_MOTION 0xcdu
+#define NDS_RELOC_ASSET_MMARIO_MODEL 0x12cu
 #endif
 #if NDS_P2_NMARIO
 /* fighter_production_manifest.json: dFTNMarioData field 24 puts his FTAttributes at
@@ -4838,6 +4849,44 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llNFoxMainFileID)) return NDS_RELOC_ASSET_NFOX_MAIN;
     if (token == ndsRelocFileID(&llNMarioModelFileID)) return NDS_RELOC_ASSET_NMARIO_MODEL;
     if (token == ndsRelocFileID(&llNMarioMainFileID)) return NDS_RELOC_ASSET_NMARIO_MAIN;
+    /* The same files named by file id, as extern dependencies: a polygon
+     * main names its model and MasterHandIcon, each model the shared polygon
+     * texture, Master Hand's main its motion and model. Without these the
+     * extern tree refused every polygon main and its pointers stayed raw.
+     */
+    switch (token)
+    {
+    case NDS_RELOC_ASSET_NNESS_MODEL:
+    case NDS_RELOC_ASSET_NPURIN_MODEL:
+    case NDS_RELOC_ASSET_NPIKACHU_MODEL:
+    case NDS_RELOC_ASSET_NKIRBY_MODEL:
+    case NDS_RELOC_ASSET_NCAPTAIN_MODEL:
+    case NDS_RELOC_ASSET_NYOSHI_MODEL:
+    case NDS_RELOC_ASSET_NLINK_MODEL:
+    case NDS_RELOC_ASSET_NSAMUS_MODEL:
+    case NDS_RELOC_ASSET_NDONKEY_MODEL:
+    case NDS_RELOC_ASSET_NFOX_MODEL:
+    case NDS_RELOC_ASSET_NMARIO_MODEL:
+    case NDS_RELOC_ASSET_BOSS_MODEL:
+    case NDS_RELOC_ASSET_BOSS_MAIN_MOTION:
+    case NDS_RELOC_ASSET_NCOMMON_TEXTURE:
+    case NDS_RELOC_ASSET_MASTER_HAND_ICON:
+        return token;
+    default:
+        break;
+    }
+#if NDS_P2_GDONKEY
+    /* Giant DK's own file is his main; model, motion, specials and icon are
+     * Donkey Kong's (GDonkeyMain's extern table), rowed with Donkey. */
+    if (token == ndsRelocFileID(&llGDonkeyMainFileID)) return NDS_RELOC_ASSET_GDONKEY_MAIN;
+#endif
+#if NDS_P2_MMARIO
+    if (token == ndsRelocFileID(&llMMarioMainFileID)) return NDS_RELOC_ASSET_MMARIO_MAIN;
+    if (token == ndsRelocFileID(&llMMarioMainMotionFileID)) return NDS_RELOC_ASSET_MMARIO_MAIN_MOTION;
+    if (token == ndsRelocFileID(&llMMarioModelFileID)) return NDS_RELOC_ASSET_MMARIO_MODEL;
+    if (token == NDS_RELOC_ASSET_MMARIO_MAIN_MOTION) return NDS_RELOC_ASSET_MMARIO_MAIN_MOTION;
+    if (token == NDS_RELOC_ASSET_MMARIO_MODEL) return NDS_RELOC_ASSET_MMARIO_MODEL;
+#endif
     if (token == ndsRelocFileID(&llBossModelFileID)) return NDS_RELOC_ASSET_BOSS_MODEL;
     if (token == ndsRelocFileID(&llBossMainMotionFileID)) return NDS_RELOC_ASSET_BOSS_MAIN_MOTION;
     if (token == ndsRelocFileID(&llBossMainFileID)) return NDS_RELOC_ASSET_BOSS_MAIN;
@@ -5232,7 +5281,20 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_149) return NDS_RELOC_ASSET_BONUS_DATA_BANK_149;
     if (token == NDS_RELOC_ASSET_MISC_DATA_162) return NDS_RELOC_ASSET_MISC_DATA_162;
     if (token == NDS_RELOC_ASSET_IT_BONUS1_OBJECT) return NDS_RELOC_ASSET_IT_BONUS1_OBJECT;
-    if (token == NDS_RELOC_ASSET_KIRBY_SPECIAL1) return NDS_RELOC_ASSET_KIRBY_SPECIAL1;
+    /* The source loads both of these by row address (sc1pbonusstage.c:430,
+     * sc1pgame.c:2081), not only as an extern dependency by id; an id-only
+     * row left the target attributes and Kirby Team's PK Fire file unloaded
+     * (the load returns the caller's heap untouched). */
+    if ((token == ndsRelocFileID(&llITBonus1ObjectHeaderFileID)) ||
+        (token == NDS_RELOC_ASSET_IT_BONUS1_OBJECT_HEADER))
+    {
+        return NDS_RELOC_ASSET_IT_BONUS1_OBJECT_HEADER;
+    }
+    if ((token == ndsRelocFileID(&llKirbySpecial1FileID)) ||
+        (token == NDS_RELOC_ASSET_KIRBY_SPECIAL1))
+    {
+        return NDS_RELOC_ASSET_KIRBY_SPECIAL1;
+    }
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
@@ -5646,6 +5708,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
     case NDS_RELOC_ASSET_BONUS_DATA_BANK_149:
     case NDS_RELOC_ASSET_MISC_DATA_162:
     case NDS_RELOC_ASSET_IT_BONUS1_OBJECT:
+    case NDS_RELOC_ASSET_IT_BONUS1_OBJECT_HEADER:
     case NDS_RELOC_ASSET_KIRBY_SPECIAL1:
 #endif
         return TRUE;
@@ -5760,9 +5823,19 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
     case NDS_RELOC_ASSET_NFOX_MAIN:
     case NDS_RELOC_ASSET_NMARIO_MODEL:
     case NDS_RELOC_ASSET_NMARIO_MAIN:
+#if NDS_P2_GDONKEY
+    case NDS_RELOC_ASSET_GDONKEY_MAIN:
+#endif
+#if NDS_P2_MMARIO
+    case NDS_RELOC_ASSET_MMARIO_MAIN:
+    case NDS_RELOC_ASSET_MMARIO_MAIN_MOTION:
+    case NDS_RELOC_ASSET_MMARIO_MODEL:
+#endif
     case NDS_RELOC_ASSET_BOSS_MODEL:
     case NDS_RELOC_ASSET_BOSS_MAIN_MOTION:
     case NDS_RELOC_ASSET_BOSS_MAIN:
+    case NDS_RELOC_ASSET_NCOMMON_TEXTURE:
+    case NDS_RELOC_ASSET_MASTER_HAND_ICON:
     case NDS_RELOC_ASSET_MN_SCREEN_ADJUST:
     case NDS_RELOC_ASSET_BONUS2_COMMON:
     case NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM:
@@ -6171,26 +6244,61 @@ static s32 ndsRelocPointerRangeInLoadedFile(const NDSRelocLoadedFile *loaded,
  * always did. The packet size check cannot ask that way: Training Mode
  * rewrites `wallpaper` after load, so it asks the loaded size instead. The P1
  * build compiles none of this: its packets, rows and pins are the source sizes. */
-#define NDS_RELOC_COMPACT_GROUND_MAP_HEADER 0x14u
 #define NDS_RELOC_COMPACT_GROUND_MAP_GROWTH 784u
 #define NDS_RELOC_COMPACT_WALLPAPER_BITMAP 0x269c8u
 
 /* gr/grdef.h order. The wallpaper is the container each map's header named
  * before the rewrite, which is the row identity in kNDSNativeWallpapers
- * (generate_native_wallpapers.py SOURCES). */
+ * (generate_native_wallpapers.py SOURCES); the header is where the map's
+ * MPGroundData sits (reloc_data.h llGR*MapMapHeader). The 1P arenas and the
+ * 24 boards joined 2026-10-01: each still loaded its 158,928-byte container
+ * into every 1P battle, and the Polygon Team's twelve fighters then did not
+ * fit. Race to the Finish names no wallpaper container and stays a plain map. */
 static const struct {
     u32 map_asset_id;
     u32 wallpaper_asset_id;
+    u32 header_offset;
 } sNdsRelocCompactGroundMaps[] = {
-    { NDS_RELOC_ASSET_GR_CASTLE_MAP, NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER },
-    { NDS_RELOC_ASSET_GR_SECTOR_MAP, NDS_RELOC_ASSET_STAGE_SECTOR },
-    { NDS_RELOC_ASSET_GR_JUNGLE_MAP, NDS_RELOC_ASSET_STAGE_JUNGLE },
-    { NDS_RELOC_ASSET_GR_ZEBES_MAP, NDS_RELOC_ASSET_STAGE_ZEBES },
-    { NDS_RELOC_ASSET_GR_HYRULE_MAP, NDS_RELOC_ASSET_STAGE_CASTLE },
-    { NDS_RELOC_ASSET_GR_YOSTER_MAP, NDS_RELOC_ASSET_STAGE_YOSHI },
-    { NDS_RELOC_ASSET_GR_PUPUPU_MAP, NDS_RELOC_ASSET_STAGE_DREAM_LAND },
-    { NDS_RELOC_ASSET_GR_YAMABUKI_MAP, NDS_RELOC_ASSET_STAGE_POKEMON },
-    { NDS_RELOC_ASSET_GR_INISHIE_MAP, NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER }
+    { NDS_RELOC_ASSET_GR_CASTLE_MAP, NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER, 0x14u },
+    { NDS_RELOC_ASSET_GR_SECTOR_MAP, NDS_RELOC_ASSET_STAGE_SECTOR, 0x14u },
+    { NDS_RELOC_ASSET_GR_JUNGLE_MAP, NDS_RELOC_ASSET_STAGE_JUNGLE, 0x14u },
+    { NDS_RELOC_ASSET_GR_ZEBES_MAP, NDS_RELOC_ASSET_STAGE_ZEBES, 0x14u },
+    { NDS_RELOC_ASSET_GR_HYRULE_MAP, NDS_RELOC_ASSET_STAGE_CASTLE, 0x14u },
+    { NDS_RELOC_ASSET_GR_YOSTER_MAP, NDS_RELOC_ASSET_STAGE_YOSHI, 0x14u },
+    { NDS_RELOC_ASSET_GR_PUPUPU_MAP, NDS_RELOC_ASSET_STAGE_DREAM_LAND, 0x14u },
+    { NDS_RELOC_ASSET_GR_YAMABUKI_MAP, NDS_RELOC_ASSET_STAGE_POKEMON, 0x14u },
+    { NDS_RELOC_ASSET_GR_INISHIE_MAP, NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER, 0x14u }
+#if NDS_P2_1P_GAME
+    ,
+    { NDS_RELOC_ASSET_GR_YOSTER_SMALL_MAP, NDS_RELOC_ASSET_STAGE_YOSHI, 0x14u },
+    { NDS_RELOC_ASSET_GR_METAL_MAP, NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER, 0x14u },
+    { NDS_RELOC_ASSET_GR_ZAKO_MAP, NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER, 0x14u },
+    { NDS_RELOC_ASSET_GR_LAST_MAP, NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_MARIO_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_FOX_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_DONKEY_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_SAMUS_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_LUIGI_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_LINK_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_YOSHI_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_CAPTAIN_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_KIRBY_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_PIKACHU_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_PURIN_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS1_NESS_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_MARIO_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_FOX_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_DONKEY_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_SAMUS_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_LUIGI_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_LINK_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_YOSHI_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_CAPTAIN_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_KIRBY_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_PIKACHU_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_PURIN_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u },
+    { NDS_RELOC_ASSET_GR_BONUS2_NESS_MAP, NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER, 0x0u }
+#endif
 };
 
 /* Compact maps whose stub Sprite was normalized (once per load), and wallpaper
@@ -6231,16 +6339,21 @@ static __attribute__((noinline)) Sprite *ndsRelocCompactGroundMapSprite(
 {
     const MPGroundData *ground_data;
     Sprite *sprite;
+    s32 index = (loaded != NULL) ?
+        ndsRelocCompactGroundMapIndex(loaded->asset_id) : -1;
+    u32 header;
 
-    if ((loaded == NULL) ||
-        (ndsRelocCompactGroundMapIndex(loaded->asset_id) < 0) ||
-        (ndsRelocRangeInLoadedFile(loaded, NDS_RELOC_COMPACT_GROUND_MAP_HEADER,
-                                   sizeof(MPGroundData)) == FALSE))
+    if (index < 0)
     {
         return NULL;
     }
-    ground_data = (const MPGroundData *)((const u8 *)loaded->data +
-                                         NDS_RELOC_COMPACT_GROUND_MAP_HEADER);
+    header = sNdsRelocCompactGroundMaps[index].header_offset;
+    if (ndsRelocRangeInLoadedFile(loaded, header, sizeof(MPGroundData)) ==
+        FALSE)
+    {
+        return NULL;
+    }
+    ground_data = (const MPGroundData *)((const u8 *)loaded->data + header);
     sprite = ground_data->wallpaper;
     return (ndsRelocPointerRangeInLoadedFile(loaded, sprite,
                                              sizeof(Sprite)) != FALSE) ?
@@ -12008,7 +12121,9 @@ static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
     {
         u32 dep_asset_id = ndsRelocAssetIDForToken(extern_ids[i]);
 
-        if (ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) != FALSE)
+        if ((ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) !=
+             FALSE) ||
+            (ndsShieldPoseServesDependency(asset_id, dep_asset_id) != FALSE))
         {
             continue;
         }
@@ -12324,7 +12439,12 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     {
         u32 dep_asset_id = ndsRelocAssetIDForToken(loaded->extern_file_ids[i]);
 
-        if (ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) != FALSE)
+        /* A ShieldPose file a native guard package answers for this Main
+         * (ndsShieldPoseResolveExternalFixup) is never read raw: the size
+         * pass above skipped it too, so it is neither reserved nor loaded. */
+        if ((ndsRelocNativeEntryOwnsDependency(asset_id, dep_asset_id) !=
+             FALSE) ||
+            (ndsShieldPoseServesDependency(asset_id, dep_asset_id) != FALSE))
         {
             continue;
         }
@@ -14089,21 +14209,41 @@ void ndsR2AnimPinsDropGObj(GObj *gobj)
 }
 
 /* lbCommonAddFighterPartsFigatree bound `figatree` for `gobj`: a pending pin
- * of that clip is now the binding; any other pin of the fighter is not. */
+ * of that clip in this fighter's heap is now the binding, and this fighter
+ * owns it; any other pin of the fighter is not.
+ *
+ * Owned by the binder, not by whoever the fetch found. ndsR2AnimPinTake names
+ * the first linked fighter with the heap, and the Polygon Team's next polygon
+ * (sc1PGameSpawnEnemyTeamNext) takes its predecessor's heap -- and FTStruct --
+ * in the same frame that predecessor's GObj is still linked. The pin then named
+ * the old GObj: this bind never marked it, a later rescue moved fp->figatree
+ * into the heap without moving the joints' scripts (it moves them only for a
+ * bound pin), and the new polygon played on from cache bytes the next clip
+ * overwrote -- the Polygon Team's TraI crash. */
 void ndsR2AnimZeroCopyNoteBind(GObj *gobj, const void *figatree)
 {
+    FTStruct *fp = (gobj != NULL) ? ftGetStruct(gobj) : NULL;
     u32 i;
 
     for (i = 0u; i < NDS_R2_ANIM_PIN_SLOTS; i++)
     {
         NDSR2AnimPin *pin = &sNdsR2AnimPins[i];
 
-        if ((pin->state == NDS_R2_ANIM_PIN_FREE) || (pin->gobj != gobj))
+        if (pin->state == NDS_R2_ANIM_PIN_FREE)
         {
             continue;
         }
-        pin->state = (pin->payload == (const u8 *)figatree) ?
-            NDS_R2_ANIM_PIN_BOUND : NDS_R2_ANIM_PIN_FREE;
+        if ((fp != NULL) && (pin->payload == (const u8 *)figatree) &&
+            (pin->heap == (u8 *)fp->figatree_heap))
+        {
+            pin->gobj = gobj;
+            pin->fp = fp;
+            pin->state = NDS_R2_ANIM_PIN_BOUND;
+        }
+        else if (pin->gobj == gobj)
+        {
+            pin->state = NDS_R2_ANIM_PIN_FREE;
+        }
     }
 }
 

@@ -146,6 +146,14 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x158, 0x158, "nitro:/reloc/reloc_fighters_main/BossModel" },
     { 0xf9, 0xf9, "nitro:/reloc/reloc_fighters_main/BossMainMotion" },
     { 0xfa, 0xfa, "nitro:/reloc/reloc_fighters_main/BossMain" },
+    { 0x12e, 0x12e, "nitro:/reloc/reloc_extern_data/MiscData302" },
+    { 0x159, 0x159, "nitro:/reloc/reloc_fighters_main/MasterHandIcon" },
+    /* The campaign's variants: Giant DK (his main; the rest is Donkey's) and
+     * Metal Mario (main, motion, model; specials are Mario's). */
+    { 0xd7, 0xd7, "nitro:/reloc/reloc_fighters_main/GDonkeyMain" },
+    { 0xce, 0xce, "nitro:/reloc/reloc_fighters_main/MMarioMain" },
+    { 0xcd, 0xcd, "nitro:/reloc/reloc_fighters_main/MMarioMainMotion" },
+    { 0x12c, 0x12c, "nitro:/reloc/reloc_fighters_main/MMarioModel" },
     { 0xf, 0xf, "nitro:/reloc/reloc_menus/MNScreenAdjust" },
     { 0x88, 0x88, "nitro:/reloc/reloc_bonus/Bonus2Common" },
     { 0xe, 0xe, "nitro:/reloc/reloc_bonus/BonusPicturePlatform" },
@@ -367,6 +375,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x95, 0x95, "nitro:/reloc/reloc_bonus/BonusDataBank149" },
     { 0xa2, 0xa2, "nitro:/reloc/reloc_extern_data/MiscData162" },
     { 0x96, 0x96, "nitro:/reloc/reloc_bonus/BonusDataBank150" },
+    { 0xfd, 0xfd, "nitro:/reloc/reloc_extern_data/MiscData253" },
     { 0xe6, 0xe6, "nitro:/reloc/reloc_extern_data/MiscData230" },
 #endif
 #if NDS_P2_STAGE_YAMABUKI

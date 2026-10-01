@@ -10,6 +10,31 @@ Reuse `battleship_sc1pmanager.c`, `battleship_sc1pgame_runtime.c`, the imported 
 
 `NDS_P2_1P_GAME=0` in a published configuration is not a pause or a claim that code is missing. Flag-on candidate work must preserve the VS configuration and be qualified before publishing an enabled feature.
 
+## Campaign walk status (2026-10-01)
+
+The walk ROM (`TARGET=smash64ds NDS_P2_MENU_WALK=1`, route 1: the human a
+level-9 CPU, enemies level 1, enemies below stage 12 KO'd every 45 frames)
+plays the whole ladder: stages 0-13, every bonus, Master Hand, Ending, Staffroll
+and Congra (walks `cwalk29`..`cwalk32`, `artifacts/visibility/2026-10-01_1p/`).
+
+| Stage / scene | Native failures | State |
+|---|---|---|
+| 0-5, 9 | 0-2 fighter | clear |
+| 6 Giant DK, 8 Kirby Team | 7 / 4 fighter | Link AppearR (status 0xE0) owner rejects |
+| 7 Board the Platforms | 0 (was 22,911) | platforms skip the topology, draw through baked roots |
+| 10 Meta Crystal | 1,469 stage | still declines (reason 7 materials) |
+| 11 Race | 162 fighter (stage 5,307 -> 0) | NMario RebirthWait rejects; barrel bomb baked |
+| 12 Polygon Team | 760 fighter | clears; low-water 8,104 B (floor 25,600); preview halt 20 after a long run |
+| 13 Master Hand | 25,300 fighter | defeated, but not drawn |
+| Ending 48 / Staffroll 56 | 659 / 46,725 sprite | blank screens |
+| Congra 55 | 0 | correct |
+
+Landed on the way: 1P compact ground maps and wallpapers, Bonus 1 targets/HUD,
+Kirby Team hats, identical-detail owner images aliased, polygon ShieldPose from
+the base packages, zero-copy pin ownership (the Polygon Team crash), multi-MObj
+stage materials, VS CSS without the in-progress plate. Open beyond the table:
+1P intro fighter stills (owner: rendered stills), 1P P95 per stage.
+
 ## Source route contract
 
 Use `dSC1PGameStageDesc`, its enum and manager branches; table entries with placeholder venue IDs for bonus dispatch are not battle venues to instantiate.

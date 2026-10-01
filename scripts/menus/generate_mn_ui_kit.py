@@ -2388,14 +2388,10 @@ CSS_SHADOW = {
 }
 # Which fighter portraits have reached P2 production. Same source fkind values
 # the shell's NDS_CSS_FIGHTER_MASK carries when the corresponding fighter is
-# enabled: Mario, Fox, Luigi, Donkey Kong, Captain Falcon, Samus, Link, Pikachu,
-# Yoshi. Mario and Fox are complete; the rest are IN
-# PROGRESS -- playable and selectable, but not finished (owner, 2026-08-23:
-# "characters that are in progress should show as selectable with the ? over
-# the top of their icon/portrait to show that they are in progress").  Both
-# sets bake their real portrait; the in-progress set additionally gets the
-# source's own question-mark plate over it at partial alpha, so the fighter
-# stays recognisable underneath and the cell still reads as "not finished".
+# enabled: all twelve. Until 2026-10-01 a fighter that was playable but not
+# finished also got a scrim and the source's question-mark plate over its
+# portrait (owner, 2026-08-23); owner 2026-10-01: every fighter works, so every
+# cell bakes its plain portrait and that treatment is gone.
 #
 # ADDING A FKIND HERE RETIRES ITS PLATE-STACK SHADOW.  CSS_SHADOW is indexed
 # by fkind for the four fighters the retail cart locks, and the built branch
@@ -2405,13 +2401,6 @@ CSS_SHADOW = {
 # carry no allowlist entry; a future fighter leaving CSS_SHADOW needs its
 # CSS_LOCKED_* surface deleted in the same edit.
 CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
-CSS_INPROGRESS_FKIND = (4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
-# The dim laid over an in-progress fighter's portrait before its question mark.
-# The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
-# of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
-# again at 235) tinted the portrait without reading as a mark.  The scrim is
-# what gives the glyph its contrast back.
-CSS_INPROGRESS_SCRIM_ALPHA = 120
 # The source's own portrait cell, mnPlayersVSMakePortrait (:2437).
 CSS_PORTRAIT_W = 45
 CSS_PORTRAIT_H = 43
@@ -2477,23 +2466,6 @@ def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]
             # box's own scale -- finding (5).
             parts.append(Placement("MNPlayersPortraits",
                                    CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
-            if fkind in CSS_INPROGRESS_FKIND:
-                # A SCRIM, THEN THE SOURCE'S OWN PLATE AT FULL STRENGTH.  The
-                # question mark is a thin glyph -- 219 texels of a 45x43 cell,
-                # measured -- so blending it alone over a bright portrait
-                # changed colours without reading as a mark.  Dimming the cell
-                # first gives the same glyph the dark field it has on a locked
-                # cell, and the fighter still shows through the scrim, which is
-                # the whole point: recognisable AND visibly unfinished.
-                parts.append(Placement(
-                    "MNPlayersPortraits", "", x, y, False,
-                    fill=(0x00, 0x00, 0x00, CSS_INPROGRESS_SCRIM_ALPHA),
-                    size=(CSS_PORTRAIT_W, CSS_PORTRAIT_H)))
-                parts.append(Placement(
-                    "MNPlayersPortraits",
-                    "llMNPlayersPortraitsPortraitQuestionMarkSprite", x, y,
-                    False, (0xC4, 0xB9, 0xA9),
-                    env=(0x5B, 0x41, 0x33)))
             continue
         shadow = CSS_SHADOW.get(fkind)
         if shadow is not None:
@@ -2519,10 +2491,9 @@ SURFACE_SOURCES.append(
 # cursor hit tests, fighter selection, difficulty, stock, costume, START/B and
 # campaign state; these surfaces are only its native DS presentation sink.
 #
-# Do NOT reuse css_screen_parts() here: that helper deliberately adds the
-# project's "in progress" scrim/question-mark treatment to VS portraits.  1P's
-# source scene has no such state.  It shows the real portrait for every
-# unlocked fighter and uses the four retail locked stacks separately.
+# Do NOT reuse css_screen_parts() here: that helper bakes the VS flash plate
+# and its own locked stack.  1P's source scene shows the real portrait for
+# every unlocked fighter and uses the four retail locked stacks separately.
 def onep_css_screen_parts() -> tuple[Placement, ...]:
     parts: list[Placement] = [STONE_FULL_BLEED]
     for portrait in range(12):

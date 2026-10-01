@@ -3,6 +3,8 @@
 #include <nds/nds_freeze_diagnostics.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_source2d.h>
+#include <gr/ground.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_task37_profile.h>
 #if NDS_R2_COLLISION_L7_ORACLE

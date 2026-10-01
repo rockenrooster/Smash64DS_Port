@@ -630,6 +630,32 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_1P_GAME
+    /* The 1P-only grounds (small Yoshi's Island, Meta Crystal, Duel Zone,
+     * Race to the Finish, Final Destination and the 24 bonus boards) have no
+     * stage TU of their own: the original common setup builds their four
+     * geometry layers and yakumono, its grMainSetupMakeGround dispatch
+     * (grmainsetup.c:31-50) reaches the bonus constructors or nothing, and it
+     * makes the item and effect appear actors. Without this arm they fell to
+     * the compatibility setup below, which builds none of that: no stage
+     * geometry drew, no target or platform existed (so the stage clear read
+     * a never-written target count) and no item ever appeared. */
+    if ((gSCManagerBattleState != NULL) &&
+        ((gSCManagerBattleState->gkind == nGRKindYosterSmall) ||
+         (gSCManagerBattleState->gkind == nGRKindMetal) ||
+         (gSCManagerBattleState->gkind == nGRKindZako) ||
+         (gSCManagerBattleState->gkind == nGRKindBonus3) ||
+         (gSCManagerBattleState->gkind == nGRKindLast) ||
+         ((gSCManagerBattleState->gkind >= nGRKindBonus1Start) &&
+          (gSCManagerBattleState->gkind <= nGRKindBonus2End))) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsBaseGRCommonSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 

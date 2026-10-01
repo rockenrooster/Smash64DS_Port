@@ -23,3 +23,17 @@
     X(nFTKindCaptain, 236u, 334u, 3334u, 0x0000u, 0x04d0u, 0x0980u, 0x0e50u, 0x1320u, 0x17e0u, 0x1ca0u, 0x2180u, 0x2650u, 0x0760u, 0x0764u, 0x0768u, 0x076cu, 0x0770u, 0x0774u, 0x0778u, 0x077cu, 0x0780u) \
     X(nFTKindPikachu, 243u, 343u, 4061u, 0x0000u, 0x0500u, 0x0b50u, 0x11a0u, 0x17f0u, 0x1e60u, 0x24b0u, 0x2b00u, 0x3150u, 0x06f4u, 0x06f8u, 0x06fcu, 0x0700u, 0x0704u, 0x0708u, 0x070cu, 0x0710u, 0x0714u) \
     X(nFTKindPurin, 233u, 331u, 6037u, 0x0000u, 0x0450u, 0x0c40u, 0x1480u, 0x1ca0u, 0x2540u, 0x2cd0u, 0x3560u, 0x3da0u, 0x074cu, 0x0750u, 0x0754u, 0x0758u, 0x075cu, 0x0760u, 0x0764u, 0x0768u, 0x076cu)
+
+/* Polygon fighter, its base fighter, and the polygon Main's source
+ * file id: that Main's nine ShieldPose fixups resolve into the base
+ * fighter's package exactly as the base Main's do. */
+#define NDS_SHIELD_POSE_POLYGON_ROWS(X) \
+    X(nFTKindNFox, nFTKindFox, 211u) \
+    X(nFTKindNNess, nFTKindNess, 241u) \
+    X(nFTKindNDonkey, nFTKindDonkey, 214u) \
+    X(nFTKindNSamus, nFTKindSamus, 219u) \
+    X(nFTKindNLink, nFTKindLink, 227u) \
+    X(nFTKindNKirby, nFTKindKirby, 231u) \
+    X(nFTKindNCaptain, nFTKindCaptain, 237u) \
+    X(nFTKindNPikachu, nFTKindPikachu, 245u) \
+    X(nFTKindNPurin, nFTKindPurin, 234u)
