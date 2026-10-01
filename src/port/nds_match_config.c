@@ -197,6 +197,11 @@ volatile u32 gNdsLabFourCpuGkind __attribute__((used)) =
     NDS_LAB_FOURCPU_SWEEP_GKIND;
 volatile u32 gNdsLabFourCpuKinds __attribute__((used)) =
     NDS_LAB_FOURCPU_SWEEP_KINDS;
+/* Boot-poked item switch (0 keeps every kind) and rate (the enum count or
+ * more keeps the preset's; 5 is very high). With the source's dITManagerForceMonsterKind this puts one Poke
+ * Ball Pokemon on screen for an owner capture. */
+volatile u32 gNdsLabItemToggles __attribute__((used));
+volatile u32 gNdsLabItemRate __attribute__((used)) = 0xffu;
 #endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
@@ -430,6 +435,14 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     if (gNdsLabFourCpuGkind < 9u)
     {
         cfg->gkind = (u8)gNdsLabFourCpuGkind;
+    }
+    if (gNdsLabItemToggles != 0u)
+    {
+        cfg->item_toggles = gNdsLabItemToggles;
+    }
+    if (gNdsLabItemRate < (u32)nSCBattleItemSwitchEnumCount)
+    {
+        cfg->item_appearance_rate = (u8)gNdsLabItemRate;
     }
 #endif
 #if NDS_P2_FOUR_CPU_ROSTER

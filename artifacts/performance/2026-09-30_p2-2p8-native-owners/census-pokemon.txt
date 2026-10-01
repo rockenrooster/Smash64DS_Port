@@ -1,0 +1,26 @@
+== nm_01_iwark: 0 rows, total 0
+== nm_02_kabigon: 0 rows, total 0
+== nm_03_tosakinto: 0 rows, total 0
+== nm_04_nyars: 0 rows, total 0
+== nm_05_lizardon: 0 rows, total 0
+== nm_06_spear: 0 rows, total 0
+== nm_07_kamex: 0 rows, total 0
+== nm_08_mlucky: 0 rows, total 0
+== nm_09_starmie: 0 rows, total 0
+== nm_10_sawamura: 0 rows, total 0
+== nm_11_dogas: 0 rows, total 0
+== nm_12_pippi: 0 rows, total 0
+== nm_13_mew: 0 rows, total 0
+nm_01_iwark n=1910 P50=1,125,952 P95=1,539,456 P99=1,768,960 mean=1,121,168 vbi2=989 vbi3=945 ItemBakedDrawCount=1108 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90220096
+nm_02_kabigon n=1910 P50=978,560 P95=1,333,952 P99=1,577,984 mean=997,893 vbi2=1547 vbi3=415 ItemBakedDrawCount=335 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90222704
+nm_03_tosakinto n=1910 P50=1,026,048 P95=1,440,640 P99=1,711,232 mean=1,043,666 vbi2=1387 vbi3=565 ItemBakedDrawCount=591 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90224152
+nm_04_nyars n=1910 P50=1,024,320 P95=1,503,232 P99=1,762,176 mean=1,055,007 vbi2=1343 vbi3=593 ItemBakedDrawCount=524 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90226752
+nm_05_lizardon n=1910 P50=1,133,056 P95=1,704,256 P99=1,940,992 mean=1,171,680 vbi2=989 vbi3=873 ItemBakedDrawCount=882 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90232032
+nm_06_spear n=1910 P50=1,051,904 P95=1,447,552 P99=1,688,192 mean=1,062,334 vbi2=1306 vbi3=645 ItemBakedDrawCount=797 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90234440
+nm_07_kamex n=1910 P50=1,038,336 P95=1,390,272 P99=1,664,960 mean=1,046,586 vbi2=1333 vbi3=623 ItemBakedDrawCount=547 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90238304
+nm_08_mlucky n=1910 P50=994,752 P95=1,332,992 P99=1,619,136 mean=1,009,871 vbi2=1529 vbi3=428 ItemBakedDrawCount=470 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90242832
+nm_09_starmie n=1910 P50=1,040,064 P95=1,426,944 P99=1,671,232 mean=1,053,467 vbi2=1327 vbi3=627 ItemBakedDrawCount=776 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90249496
+nm_10_sawamura n=1910 P50=975,936 P95=1,311,552 P99=1,578,304 mean=994,442 vbi2=1607 vbi3=354 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=0
+nm_11_dogas n=1910 P50=1,040,128 P95=1,562,880 P99=1,787,392 mean=1,099,978 vbi2=1201 vbi3=723 ItemBakedDrawCount=2468 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90253104
+nm_12_pippi n=1910 P50=1,056,896 P95=1,510,976 P99=1,765,824 mean=1,083,516 vbi2=1182 vbi3=759 ItemBakedDrawCount=723 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90256560
+nm_13_mew  n=1910 P50=1,006,144 P95=1,397,824 P99=1,602,368 mean=1,024,578 vbi2=1455 vbi3=501 ItemBakedDrawCount=361 ItemBakedSubmitFailCount=0 ItemBakedLastRoot=90225616

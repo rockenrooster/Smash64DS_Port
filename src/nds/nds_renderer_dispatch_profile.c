@@ -6,7 +6,9 @@ _Static_assert(sizeof(NDSRendererNativeFailure) == 32,
 #if defined(NDS_TICK_HUD) && NDS_TICK_HUD
 /* P2-2p8 Phase 1 slice 2c (lab): the record above keeps only the FIRST
  * failure, so a count can hide several causes. The first 16 distinct
- * (identity, status, reason) with their counts and first frame. */
+ * (identity, root, reason) with their counts and first frame. 2026-09-30:
+ * keyed on the root, not the status: the stage domain's status is the gkind
+ * (one value a run), and an owner is written per root. */
 volatile u32 gNdsNativeFailureLabCount __attribute__((used));
 volatile u32 gNdsNativeFailureLab[16][5] __attribute__((used));
 #endif
@@ -22,7 +24,7 @@ void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
         for (i = 0u; (i < n) && (i < 16u); i++)
         {
             if ((gNdsNativeFailureLab[i][0] == identity) &&
-                (gNdsNativeFailureLab[i][1] == status) &&
+                (gNdsNativeFailureLab[i][1] == root) &&
                 (gNdsNativeFailureLab[i][2] == reason))
             {
                 gNdsNativeFailureLab[i][3]++;
@@ -32,7 +34,7 @@ void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
         if ((i == n) && (n < 16u))
         {
             gNdsNativeFailureLab[n][0] = identity;
-            gNdsNativeFailureLab[n][1] = status;
+            gNdsNativeFailureLab[n][1] = root;
             gNdsNativeFailureLab[n][2] = reason;
             gNdsNativeFailureLab[n][3] = 1u;
             gNdsNativeFailureLab[n][4] = gNdsRendererProfileFrameCount;

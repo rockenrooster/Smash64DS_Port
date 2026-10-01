@@ -1,0 +1,28 @@
+== nb_fp_g0: 0 rows, total 0
+== nb_fp_g2: 2 rows, total 6
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+== nb_fp_g4: 2 rows, total 6
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+== nb_fp_g6: 2 rows, total 6
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+== nb_d_g1: 1 rows, total 3
+   kind   5 asset 65535 (0xffff)  root 0x0000  reason 2  count 3  first f81
+== nb_d_g4: 0 rows, total 0
+== nb_cy_g2: 0 rows, total 0
+== nb_pp_g3: 0 rows, total 0
+== nb_kk_g4: 0 rows, total 0
+== nb_lk_g0: 1 rows, total 12
+   kind 1011 asset   352 (0x0160)  root 0x08e0  reason 1  count 12  first f688
+nb_fp_g0   n=1910 P50=1,021,632 P95=1,406,272 P99=1,784,640 mean=1,057,272 vbi2=1403 vbi3=541 ItemBakedDrawCount=102 ItemBakedSubmitFailCount=0
+nb_fp_g2   n=1910 P50=1,006,976 P95=1,442,048 P99=1,743,552 mean=1,040,609 vbi2=1460 vbi3=487 ItemBakedDrawCount=365 ItemBakedSubmitFailCount=0
+nb_fp_g4   n=1910 P50=954,560 P95=1,342,976 P99=1,609,472 mean=980,581 vbi2=1627 vbi3=331 ItemBakedDrawCount=204 ItemBakedSubmitFailCount=0
+nb_fp_g6   n=1910 P50=960,768 P95=1,370,304 P99=1,628,160 mean=991,043 vbi2=1587 vbi3=376 ItemBakedDrawCount=262 ItemBakedSubmitFailCount=0
+nb_d_g1    n=1910 P50=1,089,856 P95=1,514,624 P99=1,885,184 mean=1,109,562 vbi2=1102 vbi3=823 ItemBakedDrawCount=116 ItemBakedSubmitFailCount=0
+nb_d_g4    n=1910 P50=962,752 P95=1,348,544 P99=1,721,536 mean=979,836 vbi2=1590 vbi3=358 ItemBakedDrawCount=12 ItemBakedSubmitFailCount=0
+nb_cy_g2   n=1910 P50=964,352 P95=1,291,136 P99=1,595,072 mean=992,039 vbi2=1626 vbi3=330 ItemBakedDrawCount=197 ItemBakedSubmitFailCount=0
+nb_pp_g3   n=1910 P50=980,224 P95=1,395,648 P99=1,622,272 mean=1,020,070 vbi2=1521 vbi3=440 ItemBakedDrawCount=108 ItemBakedSubmitFailCount=0
+nb_kk_g4   n=1910 P50=855,360 P95=1,232,256 P99=1,381,312 mean=877,323 vbi2=1752 vbi3=220 ItemBakedDrawCount=611 ItemBakedSubmitFailCount=0
+nb_lk_g0   n=1910 P50=960,064 P95=1,315,776 P99=1,555,328 mean=990,227 vbi2=1610 vbi3=354 ItemBakedDrawCount=102 ItemBakedSubmitFailCount=0

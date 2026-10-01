@@ -86,6 +86,7 @@
 #include "generated/nds_native_item_tomato.generated.inc"
 #include "nds_native_item_tomato.exec.inc"
 #include "nds_native_item_wave1_emit.exec.inc"
+#include "nds_native_item_baked.exec.inc"
 #include "generated/nds_native_item_star.generated.inc"
 #include "nds_native_item_star.exec.inc"
 #include "generated/nds_native_item_sword.generated.inc"

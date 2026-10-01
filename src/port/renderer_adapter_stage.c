@@ -28,6 +28,7 @@
 #include <nds/generated/nds_native_item_starrod.generated.h>
 #include <nds/generated/nds_native_item_fflower.generated.h>
 #include <nds/generated/nds_native_item_msbomb.generated.h>
+#include <nds/generated/nds_native_item_baked.generated.h>
 #include <nds/generated/nds_native_item_nbumper.generated.h>
 #include <nds/generated/nds_native_item_box.generated.h>
 #include <nds/generated/nds_native_item_taru.generated.h>
@@ -303,6 +304,15 @@ sb32 ndsRendererSubmitNativeItemBombHei(
     const void *file_base_ptr, u32 file_bytes,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* The baked roots (nds_native_item_baked.exec.inc). */
+const void *ndsNativeBakedItemFind(u32 asset_id, u32 root, u32 gobj_kind,
+                                   const Gfx *dl, u32 *material_slots);
+sb32 ndsRendererSubmitNativeBaked(
+    const void *handle, const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererNativeMaterial *materials, u32 material_count,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+extern volatile u32 gNdsItemBakedDrawCount;
+extern volatile u32 gNdsItemBakedSubmitFailCount;
 sb32 ndsRendererSubmitNativeItemLGun(
     const void *file_base_ptr, u32 file_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats);
@@ -7893,6 +7903,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
     sb32 item_egg_native_handled = FALSE;
     sb32 item_iwark_native_candidate = FALSE;
     sb32 item_iwark_native_handled = FALSE;
+    sb32 item_baked_native_handled = FALSE;
 #endif
     u32 visual_effect_template = 0u;
     sb32 visual_effect_native_candidate = FALSE;
@@ -13045,6 +13056,68 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         }
     }
 
+    /* 2026-09-30: the baked roots (generate_nds_native_item_baked.py) -- the
+     * roots a full-match lab census found drawn with no owner: PK Fire's
+     * pillar, Bob-omb walking left, the placed Bumper, the Ray Gun's shot,
+     * Razor Leaf -- and the Poke Ball Pokemon and their weapons, which it
+     * could not reach. One lookup names the root for its GObj kind; its live
+     * segment-E materials are the DObj's MObjs in order. */
+    if ((loaded != NULL) && (dobj != NULL) && (dobj->parent_gobj != NULL) &&
+        NDS_NATIVE_BAKED_ASSET_MATCH(loaded->asset_id))
+    {
+        u32 baked_slots = 0u;
+        const void *baked = ndsNativeBakedItemFind(
+            loaded->asset_id, ndsRelocNativeRootOffset(loaded, dl),
+            (u32)dobj->parent_gobj->id, dl, &baked_slots);
+
+        if (baked != NULL)
+        {
+            NDSRendererNativeMaterial baked_materials[
+                NDS_NATIVE_BAKED_MATERIAL_SLOTS];
+            NDSRendererConfig item_config = config;
+            NDSRendererMatrix20p12 identity;
+            MObj *mobj = dobj->mobj;
+            u32 i;
+
+            for (i = 0u; i < baked_slots; i++)
+            {
+                if ((mobj == NULL) ||
+                    (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                         mobj, &baked_materials[i], FALSE,
+                         NULL, NULL) == FALSE))
+                {
+                    break;
+                }
+                mobj = mobj->next;
+            }
+            if ((item_config.initial_projection == NULL) &&
+                (item_config.initial_modelview != NULL))
+            {
+                ndsRendererAdapterMtxIdentity20p12(&identity);
+                item_config.initial_projection = &identity;
+            }
+            else if ((item_config.initial_modelview == NULL) &&
+                     (item_config.initial_projection != NULL))
+            {
+                ndsRendererAdapterMtxIdentity20p12(&identity);
+                item_config.initial_modelview = &identity;
+            }
+            item_baked_native_handled = (i == baked_slots) ?
+                ndsRendererSubmitNativeBaked(
+                    baked, loaded->data, loaded->data_size,
+                    baked_materials, i, &item_config, render_stats) :
+                FALSE;
+            if (item_baked_native_handled != FALSE)
+            {
+                gNdsItemBakedDrawCount++;
+            }
+            else
+            {
+                gNdsItemBakedSubmitFailCount++;
+            }
+        }
+    }
+
     if (item_tomato_native_candidate != FALSE)
     {
         /* Same split-camera contract every fixed owner documents: fill the
@@ -13199,6 +13272,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         (item_iwark_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
         (item_kirbystar_native_handled == FALSE) &&
+        (item_baked_native_handled == FALSE) &&
 #endif
         (visual_effect_native_settled == FALSE) &&
         (impact_wave_native_candidate != FALSE))
@@ -13308,6 +13382,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         (item_iwark_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
         (item_kirbystar_native_handled == FALSE) &&
+        (item_baked_native_handled == FALSE) &&
 #endif
         /* Unconditional: this owner has no build flag, so it must be excluded
          * from BOTH the impact-wave ON arm here and the OFF arm below. */
@@ -13420,6 +13495,7 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
         && (item_iwark_native_handled == FALSE)
         && (item_tomato_native_handled == FALSE)
         && (item_kirbystar_native_handled == FALSE)
+        && (item_baked_native_handled == FALSE)
 #endif
         && (visual_effect_native_settled == FALSE)
        )

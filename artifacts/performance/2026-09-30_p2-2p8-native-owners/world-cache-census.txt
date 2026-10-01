@@ -1,0 +1,19 @@
+world caches at the first battle frame (lab ROM before the GO retry): free heap at each attempt, allocated mask, match low-water
+wc_cy_g1     freeDObj=103,792 freeStage=      0 mask=0 lowwater= 55,504
+wc_cy_g2     freeDObj=200,816 freeStage=192,112 mask=3 lowwater= 79,280
+wc_cy_g8     freeDObj=261,648 freeStage=252,944 mask=3 lowwater=133,328
+wc_d_g1      freeDObj=133,616 freeStage=      0 mask=0 lowwater= 61,248
+wc_d_g6      freeDObj=280,688 freeStage=271,984 mask=3 lowwater=148,140
+wc_fp_g1     freeDObj=252,532 freeStage=243,824 mask=3 lowwater=138,148
+wc_fp_g6     freeDObj=400,308 freeStage=391,600 mask=3 lowwater=265,092
+wc_fp_g7     freeDObj=340,244 freeStage=331,536 mask=3 lowwater=199,596
+wc_kk_g1     freeDObj=416,516 freeStage=407,808 mask=3 lowwater=281,620
+wc_kk_g4     freeDObj=585,332 freeStage=576,624 mask=3 lowwater=449,068
+wc_lk_g0     freeDObj=352,944 freeStage=344,240 mask=3 lowwater=228,948
+wc_lk_g1     freeDObj=179,072 freeStage=170,368 mask=3 lowwater= 61,632
+wc_lk_g5     freeDObj=283,824 freeStage=275,120 mask=3 lowwater=150,616
+wc_mon01_g1  freeDObj=133,712 freeStage=      0 mask=0 lowwater= 63,492
+wc_mon05_g1  freeDObj=133,712 freeStage=      0 mask=0 lowwater= 64,144
+wc_o_g1      freeDObj=170,416 freeStage=161,712 mask=3 lowwater= 71,864
+wc_pp_g1     freeDObj=393,860 freeStage=385,152 mask=3 lowwater=253,232
+wc_pp_g3     freeDObj=511,396 freeStage=502,688 mask=3 lowwater=384,676

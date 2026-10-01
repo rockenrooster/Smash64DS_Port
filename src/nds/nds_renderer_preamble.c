@@ -1986,6 +1986,11 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * with its source colour preserved and DS texel alpha forced opaque; keep that
  * representation distinct from the ordinary alpha-carrying conversion. */
 #define NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS (1u << 29)
+/* An I tile baked with its intensity as graded coverage (GL_RGB8_A5, a grey
+ * ramp palette) for an owner that asked for it: see
+ * sNdsRendererHardwareIntensityCoverage. The same image without the request
+ * is the opaque I conversion, so the two must not share an entry. */
+#define NDS_RENDERER_HW_TEXTURE_KEY_I_TEXEL_ALPHA (1u << 28)
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)

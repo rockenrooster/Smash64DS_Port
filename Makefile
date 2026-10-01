@@ -6618,6 +6618,9 @@ NDS_NATIVE_THUNDERGROUND_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_
 NDS_NATIVE_ITEM_TOMATO_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_tomato.generated.inc
 NDS_NATIVE_ITEM_TOMATO_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_tomato.generated.h
 NDS_NATIVE_ITEM_TOMATO_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_tomato.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
+NDS_NATIVE_ITEM_BAKED_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_baked.generated.inc
+NDS_NATIVE_ITEM_BAKED_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_baked.generated.h
+NDS_NATIVE_ITEM_BAKED_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_baked.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py
 NDS_NATIVE_ITEM_GLUCKY_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_item_glucky.generated.inc
 NDS_NATIVE_ITEM_GLUCKY_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_item_glucky.generated.h
 NDS_NATIVE_ITEM_GLUCKY_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_glucky.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
@@ -6861,6 +6864,12 @@ scene_backend.o: $(NDS_NATIVE_DAMAGE_FLY_MDUST_HEADER)
 $(NDS_NATIVE_ITEM_TOMATO_PACKET) $(NDS_NATIVE_ITEM_TOMATO_HEADER) &: $(NDS_NATIVE_ITEM_TOMATO_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_tomato.py" --emit
 	@touch $(NDS_NATIVE_ITEM_TOMATO_PACKET) $(NDS_NATIVE_ITEM_TOMATO_HEADER)
+
+$(NDS_NATIVE_ITEM_BAKED_PACKET) $(NDS_NATIVE_ITEM_BAKED_HEADER) &: $(NDS_NATIVE_ITEM_BAKED_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_baked.py" --emit
+	@touch $(NDS_NATIVE_ITEM_BAKED_PACKET) $(NDS_NATIVE_ITEM_BAKED_HEADER)
+nds_renderer.o: $(NDS_NATIVE_ITEM_BAKED_PACKET) $(NDS_NATIVE_ITEM_BAKED_HEADER)
+renderer_adapter_stage.o: $(NDS_NATIVE_ITEM_BAKED_HEADER)
 
 $(NDS_NATIVE_ITEM_GLUCKY_PACKET) $(NDS_NATIVE_ITEM_GLUCKY_HEADER) &: $(NDS_NATIVE_ITEM_GLUCKY_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_glucky.py" --emit

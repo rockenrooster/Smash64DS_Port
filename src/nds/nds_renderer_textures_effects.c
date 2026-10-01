@@ -684,6 +684,18 @@ static u32 ndsRendererHardwarePrimEnvTexel0BlendMode(
  * call sites below are both unreachable for the rebirth-halo beam (its
  * othermode_l 0x552078 takes their opaque early return first), so this closes a
  * latent asymmetry rather than fixing a measured defect. */
+/* Set by an owner around a draw whose combine reads TEXEL0 alpha from an I
+ * tile outside the recognised bakes above: rgb = TEXEL0 * SHADE with alpha
+ * TEXEL0 * PRIM, Koffing's smog (generate_nds_native_item_baked.py marks the
+ * group). ndsRendererHardwareConvertI forces every I texel opaque, which is
+ * right for the combines that ignore texel alpha and drew that smog as solid
+ * black-and-yellow squares; with this set an I4/I8 tile bakes its intensity
+ * as GL_RGB8_A5 coverage over a grey ramp, and the DS modulates the grey by
+ * the vertex colour and the coverage by the polygon's PRIM alpha, as the
+ * combine does. An owner request rather than a combine rule, so no other
+ * surface's texture key or static corpus entry moves (2026-09-30). */
+static u32 sNdsRendererHardwareIntensityCoverage;
+
 static s32 ndsRendererHardwareBlendModeKeepsTexelCoverage(u32 mode)
 {
     return ((mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) ||
@@ -12776,6 +12788,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 use_texel1 = FALSE;
     s32 alpha_ignores_texels = FALSE;
     s32 graded_coverage = FALSE;
+    s32 intensity_coverage = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -13207,6 +13220,16 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
               stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
          (ndsRendererHardwareOutputUsesAlpha(
               stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE)) ? TRUE : FALSE;
+    /* An owner's intensity-coverage request (sNdsRendererHardwareIntensity
+     * Coverage): only an I4/I8 tile none of the bakes above already owns. */
+    intensity_coverage =
+        ((sNdsRendererHardwareIntensityCoverage != 0u) &&
+         (use_texel1 == FALSE) &&
+         (alpha_ignores_texels == FALSE) &&
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_NONE) &&
+         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+         ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
+          (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
 
     memset(&key, 0, sizeof(key));
     key.image = primary_image;
@@ -13276,6 +13299,10 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     if (alpha_ignores_texels != FALSE)
     {
         key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS;
+    }
+    if (intensity_coverage != FALSE)
+    {
+        key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_I_TEXEL_ALPHA;
     }
     if (use_texel1 != FALSE)
     {
@@ -13760,7 +13787,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         ((use_texel1 == FALSE) && (fraction_entry == NULL) &&
          (upload_buffer == sNdsRendererHardwareTextureScratch) &&
          (alpha_ignores_texels == FALSE) &&
-         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) &&
+         ((prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_SOURCE_ALPHA) ||
+          (intensity_coverage != FALSE)) &&
          (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
          ((size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) ||
           (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B))) ? TRUE : FALSE;
@@ -13943,7 +13971,10 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             u32 v = (i << 2) + 2u;
             u16 texel0 = (u16)(0x8000u | v | (v << 5) | (v << 10));
 
-            resident_palette[i] =
+            /* An intensity-coverage tile keeps TEXEL0's own grey: the
+             * vertex/PRIM modulate is the hardware's, not the bake's. */
+            resident_palette[i] = (intensity_coverage != FALSE) ?
+                (u16)(texel0 & 0x7fffu) :
                 (u16)(ndsRendererHardwareBlendPrimEnvTexel0(
                           texel0, stats->prim_color,
                           stats->env_color) & 0x7fffu);

@@ -1,0 +1,36 @@
+== nw_cy_g1: 0 rows, total 0
+== nw_cy_g2: 0 rows, total 0
+== nw_cy_g8: 0 rows, total 0
+== nw_d_g1: 0 rows, total 3
+== nw_def: 0 rows, total 0
+== nw_fp_g1: 0 rows, total 0
+== nw_fp_g6: 0 rows, total 0
+== nw_fp_g7: 0 rows, total 0
+== nw_kk_g4: 0 rows, total 0
+== nw_kk_g6: 0 rows, total 0
+== nw_lk_g0: 0 rows, total 0
+== nw_lk_g1: 0 rows, total 0
+== nw_lk_g5: 0 rows, total 0
+== nw_mon01_g7: 0 rows, total 3
+== nw_mon05_g1: 0 rows, total 3
+== nw_o_g1: 0 rows, total 0
+== nw_pp_g1: 0 rows, total 0
+== nw_pp_g3: 0 rows, total 0
+nw_cy_g1   n=1910 P50=1,053,312 P95=1,405,248 P99=1,688,704 mean=1,075,697 vbi2=1318 vbi3=631 WorldCacheAllocatedMask=1 TaskmanGeneralHeapFreeMin=46792 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_cy_g2   n=1910 P50=968,448 P95=1,296,960 P99=1,602,944 mean=996,209 vbi2=1609 vbi3=347 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=79280 ItemBakedDrawCount=197 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_cy_g8   n=1910 P50=1,110,720 P95=1,471,616 P99=1,697,024 mean=1,134,837 vbi2=1035 vbi3=911 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=133328 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_d_g1    n=1910 P50=1,070,784 P95=1,486,144 P99=1,868,864 mean=1,090,710 vbi2=1166 vbi3=764 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=47936 ItemBakedDrawCount=116 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_def     n=1910 P50=937,408 P95=1,263,616 P99=1,556,096 mean=951,659 vbi2=1710 vbi3=255 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=148140 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_fp_g1   n=1910 P50=1,069,376 P95=1,398,720 P99=1,655,104 mean=1,080,733 vbi2=1239 vbi3=716 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=138148 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_fp_g6   n=1910 P50=969,344 P95=1,384,320 P99=1,642,240 mean=1,000,307 vbi2=1564 vbi3=397 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=265092 ItemBakedDrawCount=262 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_fp_g7   n=1910 P50=1,123,840 P95=1,516,736 P99=1,737,088 mean=1,147,798 vbi2=980 vbi3=963 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=199596 ItemBakedDrawCount=76 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_kk_g4   n=1910 P50=861,376 P95=1,245,504 P99=1,405,568 mean=882,632 vbi2=1740 vbi3=232 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=449068 ItemBakedDrawCount=611 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_kk_g6   n=1910 P50=891,008 P95=1,175,296 P99=1,349,696 mean=896,383 vbi2=1807 vbi3=164 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=421912 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_lk_g0   n=1910 P50=962,496 P95=1,324,864 P99=1,573,568 mean=995,235 vbi2=1592 vbi3=370 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=228948 ItemBakedDrawCount=114 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_lk_g1   n=1910 P50=1,023,808 P95=1,414,272 P99=1,660,288 mean=1,052,312 vbi2=1333 vbi3=626 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=61632 ItemBakedDrawCount=306 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_lk_g5   n=1910 P50=1,064,576 P95=1,385,984 P99=1,573,568 mean=1,085,887 vbi2=1267 vbi3=696 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=150616 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_mon01_g7 n=1910 P50=1,165,760 P95=1,508,288 P99=1,845,824 mean=1,172,245 vbi2=805 vbi3=1125 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=84608 ItemBakedDrawCount=986 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_mon05_g1 n=1910 P50=1,212,032 P95=1,648,896 P99=1,930,496 mean=1,224,329 vbi2=728 vbi3=1160 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=50832 ItemBakedDrawCount=798 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_o_g1    n=1910 P50=1,046,656 P95=1,376,448 P99=1,590,784 mean=1,056,886 vbi2=1333 vbi3=628 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=71864 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_pp_g1   n=1910 P50=1,123,840 P95=1,480,384 P99=1,730,688 mean=1,136,493 vbi2=985 vbi3=954 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=253232 ItemBakedDrawCount=0 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0
+nw_pp_g3   n=1910 P50=985,984 P95=1,405,056 P99=1,633,984 mean=1,025,582 vbi2=1502 vbi3=458 WorldCacheAllocatedMask=3 TaskmanGeneralHeapFreeMin=384676 ItemBakedDrawCount=108 ItemBakedSubmitFailCount=0 AObjEvent32NormalizeFailCount=0

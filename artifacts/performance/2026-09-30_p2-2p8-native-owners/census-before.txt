@@ -1,0 +1,57 @@
+== nr_cy_g2: 1 rows, total 197
+   kind 1013 asset    86 (0x0056)  root 0xb618  reason 1  count 197  first f953
+== nr_cy_g8: 0 rows, total 0
+== nr_d_g0: 0 rows, total 0
+== nr_d_g1: 2 rows, total 119
+   kind   5 asset 65535 (0xffff)  root 0x0000  reason 2  count 3  first f81
+   kind 1013 asset    86 (0x0056)  root 0x7af8  reason 1  count 116  first f1858
+== nr_d_g2: 0 rows, total 0
+== nr_d_g3: 0 rows, total 0
+== nr_d_g4: 1 rows, total 12
+   kind 1012 asset    86 (0x0056)  root 0x40a8  reason 1  count 12  first f1342
+== nr_d_g5: 0 rows, total 0
+== nr_d_g6: 0 rows, total 0
+== nr_d_g7: 1 rows, total 3
+   kind   5 asset 65535 (0xffff)  root 0x0000  reason 2  count 3  first f81
+== nr_d_g8: 0 rows, total 0
+== nr_fp_g0: 2 rows, total 102
+   kind 1013 asset   336 (0x0150)  root 0x0870  reason 1  count 51  first f1487
+   kind 1013 asset   336 (0x0150)  root 0x0960  reason 1  count 51  first f1487
+== nr_fp_g1: 0 rows, total 0
+== nr_fp_g2: 5 rows, total 371
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+   kind 1013 asset   336 (0x0150)  root 0x0870  reason 1  count 176  first f502
+   kind 1013 asset   336 (0x0150)  root 0x0960  reason 1  count 176  first f502
+   kind 1013 asset    86 (0x0056)  root 0x34c0  reason 1  count 13  first f1258
+== nr_fp_g3: 2 rows, total 6
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+== nr_fp_g4: 4 rows, total 210
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+   kind 1013 asset   336 (0x0150)  root 0x0870  reason 1  count 102  first f1055
+   kind 1013 asset   336 (0x0150)  root 0x0960  reason 1  count 102  first f1055
+== nr_fp_g5: 0 rows, total 0
+== nr_fp_g6: 4 rows, total 268
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 2  count 3  first f196
+   kind 1011 asset   349 (0x015d)  root 0x0930  reason 1  count 3  first f196
+   kind 1013 asset   336 (0x0150)  root 0x0870  reason 1  count 131  first f721
+   kind 1013 asset   336 (0x0150)  root 0x0960  reason 1  count 131  first f721
+== nr_fp_g7: 2 rows, total 76
+   kind 1012 asset   159 (0x009f)  root 0x28a8  reason 1  count 38  first f1832
+   kind 1012 asset   159 (0x009f)  root 0x2998  reason 1  count 38  first f1832
+== nr_fp_g8: 2 rows, total 102
+   kind 1013 asset   336 (0x0150)  root 0x0870  reason 1  count 51  first f1391
+   kind 1013 asset   336 (0x0150)  root 0x0960  reason 1  count 51  first f1391
+== nr_kk_g4: 2 rows, total 611
+   kind 1013 asset    86 (0x0056)  root 0x12730  reason 1  count 177  first f1313
+   kind 1012 asset    86 (0x0056)  root 0x13050  reason 1  count 434  first f1325
+== nr_lk_g0: 3 rows, total 114
+   kind 1011 asset   352 (0x0160)  root 0x08e0  reason 1  count 12  first f688
+   kind 1013 asset   336 (0x0150)  root 0x0870  reason 1  count 51  first f952
+   kind 1013 asset   336 (0x0150)  root 0x0960  reason 1  count 51  first f952
+== nr_lk_g5: 0 rows, total 0
+== nr_o_g1: 0 rows, total 0
+== nr_pp_g3: 1 rows, total 108
+   kind 1013 asset    86 (0x0056)  root 0x34c0  reason 1  count 108  first f1766
