@@ -1926,6 +1926,14 @@ static NDSRendererAdapterStageWorldCacheEntry
     *sNdsRendererAdapterStageWorldCache;
 static u32 sNdsRendererAdapterStageWorldCacheCount;
 static u32 sNdsRendererAdapterStageWorldCacheAllocationAttempted;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+/* Lab builds only: the free heap each optional world cache saw at its last
+ * allocation attempt and whether it took it; against the match low-water
+ * this sizes the reserve the attempt keeps. */
+__attribute__((used)) volatile u32 gNdsDObjWorldCacheFreeAtAttempt;
+__attribute__((used)) volatile u32 gNdsStageWorldCacheFreeAtAttempt;
+__attribute__((used)) volatile u32 gNdsWorldCacheAllocatedMask;
+#endif
 static u32 sNdsRendererAdapterStageWorldNextGeneration;
 static u8 sNdsRendererAdapterStageWorldIndex[
     NDS_RENDERER_ADAPTER_STAGE_WORLD_INDEX_COUNT];
@@ -4698,6 +4706,9 @@ static void ndsRendererAdapterResetSceneCaches(void)
     sNdsRendererAdapterDObjWorldCacheDynamicLimit =
         NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
     sNdsRendererAdapterDObjWorldCacheAllocationAttempted = FALSE;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsWorldCacheAllocatedMask = 0u;
+#endif
     memset(sNdsRendererAdapterDObjWorldIndex, 0,
            sizeof(sNdsRendererAdapterDObjWorldIndex));
     sNdsRendererAdapterStageWorldCache = NULL;
@@ -4721,21 +4732,55 @@ static u32 ndsRendererAdapterDObjWorldIndexHash(const DObj *dobj)
     return (u32)key & NDS_RENDERER_ADAPTER_DOBJ_WORLD_INDEX_MASK;
 }
 
+/* The optional world caches' heap reserve (2026-09-30). The first battle
+ * frame keeps the runtime reserve: the countdown still allocates (threads,
+ * entry effects; ~60 KB on Sector Z's default roster). An attempt that
+ * misses it is retried once at GO, where what the match still takes is small
+ * on the short-heap rosters (8-13 KB after GO on the tightest lab arms) and
+ * the larger post-GO allocations are caches that size themselves to the free
+ * heap: that attempt keeps the GObj latch's 25,600 floor plus headroom.
+ * Sector Z's default roster missed the first-frame reserve by ~6 KB and drew
+ * every stage DObj without these caches (STG +23.5K a frame).
+ * Receipt 2026-09-30_p2-2p8-native-owners. */
+#define NDS_RENDERER_ADAPTER_WORLD_CACHE_GO_RESERVE (48u * 1024u)
+
+/* 1 before GO, 2 from GO in a VS battle: the attempt phase. */
+static u32 ndsRendererAdapterWorldCachePhase(void)
+{
+    return ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+            (gSCManagerBattleState != NULL) &&
+            (gSCManagerBattleState->game_status == nSCBattleGameStatusGo)) ?
+        2u : 1u;
+}
+
+static size_t ndsRendererAdapterWorldCacheReserve(u32 phase)
+{
+    return (phase >= 2u) ? (size_t)NDS_RENDERER_ADAPTER_WORLD_CACHE_GO_RESERVE :
+                           (size_t)NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES;
+}
+
 static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
 {
     uintptr_t aligned;
     size_t bytes = sizeof(NDSRendererAdapterDObjWorldCacheEntry) *
         NDS_RENDERER_ADAPTER_DOBJ_WORLD_CACHE_COUNT;
+    u32 phase;
 
     if (sNdsRendererAdapterDObjWorldCache != NULL)
     {
         return TRUE;
     }
-    if (sNdsRendererAdapterDObjWorldCacheAllocationAttempted != FALSE)
+    phase = ndsRendererAdapterWorldCachePhase();
+    if (sNdsRendererAdapterDObjWorldCacheAllocationAttempted >= phase)
     {
         return FALSE;
     }
-    sNdsRendererAdapterDObjWorldCacheAllocationAttempted = TRUE;
+    sNdsRendererAdapterDObjWorldCacheAllocationAttempted = phase;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsDObjWorldCacheFreeAtAttempt =
+        (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+              (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+#endif
     if ((gSYTaskmanGeneralHeap.ptr == NULL) ||
         (gSYTaskmanGeneralHeap.end == NULL))
     {
@@ -4745,16 +4790,23 @@ static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
         ~(uintptr_t)0x0fu;
     /* This is optional draw acceleration. Honor the scene ledger's runtime
      * reserve; otherwise it can trigger the source object cap
-     * during the countdown. A miss uses the existing native matrix builder. */
+     * during the countdown. A miss uses the existing native matrix builder.
+     * From GO the reserve is ndsRendererAdapterWorldCacheReserve's. */
     if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
         (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
         (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
-         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
+         ndsRendererAdapterWorldCacheReserve(phase)))
     {
         return FALSE;
     }
     sNdsRendererAdapterDObjWorldCache =
         (NDSRendererAdapterDObjWorldCacheEntry *)syTaskmanMalloc(bytes, 0x10u);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    if (sNdsRendererAdapterDObjWorldCache != NULL)
+    {
+        gNdsWorldCacheAllocatedMask |= 1u;
+    }
+#endif
     /* This DS cache now consumes the original scene heap, so keep the P1
      * reserve ledger truthful after its lazy first-frame allocation. */
     ndsRelocUpdateMemoryLedger();
@@ -4868,12 +4920,14 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     uintptr_t aligned;
     size_t bytes = sizeof(NDSRendererAdapterStageWorldCacheEntry) *
         NDS_RENDERER_ADAPTER_STAGE_WORLD_CACHE_COUNT;
+    u32 phase;
 
     if (sNdsRendererAdapterStageWorldCache != NULL)
     {
         return TRUE;
     }
-    if (sNdsRendererAdapterStageWorldCacheAllocationAttempted != FALSE)
+    phase = ndsRendererAdapterWorldCachePhase();
+    if (sNdsRendererAdapterStageWorldCacheAllocationAttempted >= phase)
     {
         return FALSE;
     }
@@ -4883,7 +4937,12 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     {
         return FALSE;
     }
-    sNdsRendererAdapterStageWorldCacheAllocationAttempted = TRUE;
+    sNdsRendererAdapterStageWorldCacheAllocationAttempted = phase;
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    gNdsStageWorldCacheFreeAtAttempt =
+        (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
+              (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+#endif
     if ((gSYTaskmanGeneralHeap.ptr == NULL) ||
         (gSYTaskmanGeneralHeap.end == NULL))
     {
@@ -4894,13 +4953,19 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
         (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
         (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
-         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
+         ndsRendererAdapterWorldCacheReserve(phase)))
     {
         return FALSE;
     }
     sNdsRendererAdapterStageWorldCache =
         (NDSRendererAdapterStageWorldCacheEntry *)
             syTaskmanMalloc(bytes, 0x10u);
+#if defined(NDS_LAB_FOURCPU_SWEEP) && NDS_LAB_FOURCPU_SWEEP
+    if (sNdsRendererAdapterStageWorldCache != NULL)
+    {
+        gNdsWorldCacheAllocatedMask |= 2u;
+    }
+#endif
     if (sNdsRendererAdapterStageWorldCache != NULL)
     {
         memset(sNdsRendererAdapterStageWorldCache, 0, bytes);
