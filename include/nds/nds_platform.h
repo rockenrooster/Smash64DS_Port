@@ -62,8 +62,33 @@ void ndsPlatformSetOriginalSpriteOverlayEnabled(s32 is_enabled);
  * own no 3D content hide it so a retained previous 3D frame cannot bleed
  * through; CSS/battle/Results show it when they own 3D again. */
 void ndsPlatformSet3DLayerEnabled(s32 is_enabled);
-/* Retire the old display before destination asset construction. */
+/* 1 (default): scene transitions hold the old frame (below); 0: the r63
+ * black loading cover from the leaving frame to the next scene's first. */
+#ifndef NDS_TRANSITION_HOLD
+#define NDS_TRANSITION_HOLD 1
+#endif
+/* The scene exit: the old frame stays on screen (the transition hold below)
+ * while the next scene loads. */
 void ndsPlatformBeginSceneTransition(void);
+/* SCENE TRANSITION HOLD (owner r64): the last complete frame stays on screen
+ * until the next scene first writes the display, as the N64's framebuffer
+ * does; only then the loading cover goes up, until that scene's first
+ * complete present. HoldBegin is called after the leaving frame's present;
+ * Thaw ends a hold (a no-op without one) and is called by every display
+ * write the next scene makes, and before every scene's cover release. */
+void ndsPlatformTransitionHoldBegin(void);
+void ndsPlatformTransitionThaw(void);
+/* Nonzero while the old scene's display is held. Its exit records a
+ * teardown instead of performing it (the Thaw applies it). */
+u32 ndsPlatformTransitionHolding(void);
+/* A texture write about to land: ends the hold when the held frame shows 3D,
+ * whose texels it may overwrite. */
+void ndsPlatformTransitionThawIf3DShown(void);
+/* An exit that cleared an OAM shadow during the hold: the Thaw uploads it
+ * (engine 0 main, 1 sub). */
+void ndsPlatformTransitionHoldPendOamUpdate(u32 engine);
+/* The main backdrop colour (BG palette entry 0), hold-aware. */
+void ndsPlatformSetBackdropColor(u16 color);
 /* Map the source engine's 320x240 viewport edge coordinates to the DS GX
  * viewport. CSS uses the source PlayersVS camera's (10,10)-(310,230) window;
  * restoring the full viewport afterwards prevents that menu camera from

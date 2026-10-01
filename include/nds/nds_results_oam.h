@@ -7,6 +7,9 @@ struct GObj;
 
 void ndsResultsOamEnter(void);
 void ndsResultsOamExit(void);
+/* An Enter made while a transition held the previous frame (its OBJ, palette
+ * and blend writes would show over that frame) runs here, from the Thaw. */
+void ndsResultsOamEnterPending(void);
 s32 ndsResultsOamIsActive(void);
 void ndsResultsOamBeginFrame(void);
 s32 ndsResultsOamDrawGObj(struct GObj *gobj);

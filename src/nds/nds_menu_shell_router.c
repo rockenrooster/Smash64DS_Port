@@ -377,6 +377,11 @@ static void ndsMenuShellRun(u32 screen)
         gNdsMenuShellCssPreviewTicksMax = 0u;
     }
 
+    /* The display setup below is this screen's first write: the previous
+     * screen's held frame (the transition hold) gives way to the loading
+     * cover here, which this screen's first complete frame releases. */
+    ndsPlatformTransitionThaw();
+
     /* Main BG0 is the retained 3D surface in MODE_5_3D. Only the character
      * select owns 3D inside this native menu shell; every other screen hides
      * it so CSS's last fighter frame cannot remain composited over Stage
@@ -483,11 +488,29 @@ static void ndsMenuShellRun(u32 screen)
 
         ndsPlatformRenderDebugHud();
         ndsMenuShellRecordFrame();
+#if NDS_TRANSITION_HOLD
+        /* The leaving frame is presented whole and then held: the exit below
+         * (the CSS hides its previews' BG0 first) records its teardown
+         * instead of showing it, and the next screen's first display write
+         * ends the hold (ndsPlatformTransitionHoldBegin). Every other frame
+         * is a complete one of this screen: it releases the loading cover. */
+        if (sMenuLeaving == FALSE)
+        {
+            ndsPlatformTransitionThaw();
+            ndsVideoSetTransitionBlackout(FALSE);
+        }
+        ndsPlatformEndFrame();
+        if (sMenuLeaving != FALSE)
+        {
+            ndsPlatformTransitionHoldBegin();
+        }
+#else
         /* The leaving frame commits the loading cover, so the exit below (the
          * CSS hides its previews' BG0 first) is never on screen (r62 css-sss
          * 0038). */
         ndsVideoSetTransitionBlackout((sMenuLeaving != FALSE) ? TRUE : FALSE);
         ndsPlatformEndFrame();
+#endif
         ndsMenuShellRecordPresent();
     }
 
@@ -519,7 +542,7 @@ static void ndsMenuShellRun(u32 screen)
     }
 
     ndsUiKitExit();
-    BG_PALETTE[0] = NDS_MENU_BACKDROP_BLACK;
+    ndsPlatformSetBackdropColor(NDS_MENU_BACKDROP_BLACK);
     gNdsMenuShellExitCount[screen]++;
     gNdsMenuShellScreen = 0xffffffffu;
 

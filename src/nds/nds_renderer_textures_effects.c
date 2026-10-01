@@ -3263,6 +3263,9 @@ static void ndsFtrAdmitSceneResetGuard(void);
 void ndsRendererHardwareResetSceneTextureVram(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+    /* The reset frees every texel a held frame's 3D still draws with (the
+     * transition hold, nds_platform.c): such a frame ends here. */
+    ndsPlatformTransitionThawIf3DShown();
     /* Runtime, not a build flag: the control arm has to be the same binary.
      * This ROM's pacing is cache-placement sensitive and separately linked arms
      * have already confused two comparisons on this row. */
@@ -4034,6 +4037,13 @@ static u32 ndsRendererR2FighterTintLookup(u32 material_color)
 static void ndsRendererHardwareServiceFighterTintTiles(void)
 {
     ndsR2FighterTintSyncGeneration();
+    /* Not under a held frame (nds_platform.c, the transition hold): its
+     * uploads could land on texels that frame still draws with. The queue
+     * waits for the first frame after the Thaw. */
+    if (ndsPlatformTransitionHolding() != 0u)
+    {
+        return;
+    }
     while (sNdsR2FighterTintQueueCount != 0u)
     {
         u32 rgb = sNdsR2FighterTintQueue[--sNdsR2FighterTintQueueCount];

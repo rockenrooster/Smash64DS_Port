@@ -4298,6 +4298,7 @@ LDFLAGS := -specs=$(NDS_HOT_TEXT_SPECS) -g $(ARCH) \
 	-Wl,-Map,$(notdir $*.map),--gc-sections,--emit-relocs \
 	-Wl,--wrap=nitroromGetSelf,--wrap=dvmMountVolume,--wrap=dvmUnmountVolume \
 	-Wl,--wrap=cpuGetTiming \
+	-Wl,--wrap=glTexImage2D,--wrap=glColorTableEXT,--wrap=glColorSubTableEXT \
 	-Wl,-T,$(NDS_MEMORY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_FRONTEND_OVERLAY_LINKER_SCRIPT) \
 	-Wl,-T,$(NDS_HOT_TEXT_LINKER_SCRIPT)

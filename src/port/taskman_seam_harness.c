@@ -132,6 +132,20 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
         {
             ndsMNVSResultsRecordFrame();
         }
+#if NDS_TRANSITION_HOLD
+        /* taskman.c:994: an update that asks for the next scene breaks the
+         * loop before its draw, so the N64 keeps scanning the frame drawn
+         * before it. That frame is held from here. Drawing this one drew
+         * Results after its exit block had moved scene_curr to the character
+         * select, and the SObj backend keys the Results OBJ tenant on
+         * scene_curr: the held frame lost its text and tint (r65a
+         * results-css 0030). */
+        if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
+        {
+            ndsPlatformTransitionHoldBegin();
+            break;
+        }
+#endif
 
         /* Results owns fade progression in display callbacks; preserve the
          * source one-update/one-draw contract in fast verification too. */
@@ -156,6 +170,24 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
              * redundant main-loop present, so removing that present would
              * otherwise take the HUD with it. */
             ndsPlatformRenderDebugHud();
+#if NDS_TRANSITION_HOLD
+            /* A frame whose draw asked for the next scene is the last one
+             * (taskman.c:1008 breaks after it): presented whole and then
+             * held, so the teardown after the loop (overlay layers, OBJ
+             * tenants, BG0) records itself instead of showing
+             * (ndsPlatformTransitionHoldBegin). Any other frame is a complete
+             * one of this scene and releases the loading cover. */
+            if (sSYTaskmanStatus != nSYTaskmanStatusLoadScene)
+            {
+                ndsPlatformTransitionThaw();
+                ndsVideoSetTransitionBlackout(FALSE);
+            }
+            ndsPlatformEndFrame();
+            if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
+            {
+                ndsPlatformTransitionHoldBegin();
+            }
+#else
             /* A frame whose update asked for the next scene is the last one:
              * it commits the loading cover instead of releasing it, so the
              * teardown after the loop (overlay layers, OBJ tenants, BG0) is
@@ -163,6 +195,7 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
             ndsVideoSetTransitionBlackout(
                 (sSYTaskmanStatus == nSYTaskmanStatusLoadScene) ? TRUE : FALSE);
             ndsPlatformEndFrame();
+#endif
         }
     }
 

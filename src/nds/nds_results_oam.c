@@ -8,6 +8,7 @@
 #include <PR/sp.h>
 #include <sys/vector.h>
 
+#include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_results_oam.h>
@@ -1336,6 +1337,22 @@ static s32 ndsResultsBakeFillCell(u32 content_height, u16 **out_gfx)
     return 1;
 }
 
+/* Results' scene start enters the OBJ tenant while the battle's last frame is
+ * still the held picture (ndsPlatformTransitionHoldBegin): its OAM clear,
+ * blend targets and tint cells would show over that frame for the whole
+ * Results load. Nothing draws through the tenant before Results' first frame,
+ * whose first display write Thaws the hold -- so the Enter waits for that. */
+static u32 sNdsResultsEnterPending;
+
+void ndsResultsOamEnterPending(void)
+{
+    if (sNdsResultsEnterPending != 0u)
+    {
+        sNdsResultsEnterPending = 0u;
+        ndsResultsOamEnter();
+    }
+}
+
 void ndsResultsOamEnter(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1343,6 +1360,12 @@ void ndsResultsOamEnter(void)
                      NDS_RESULTS_TINT_CELL_HEIGHT * sizeof(u16);
     u32 i;
 
+    if (ndsPlatformTransitionHolding() != 0u)
+    {
+        sNdsResultsEnterPending = 1u;
+        return;
+    }
+    sNdsResultsEnterPending = 0u;
     if (sNdsResultsActive != 0u)
     {
         ndsResultsOamExit();

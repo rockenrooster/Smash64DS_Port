@@ -414,6 +414,9 @@ s32 ndsUiKitEnter(u32 engine)
         return FALSE;
     }
 
+    /* Its OAM init and OBJ VRAM loads are display writes: a held previous
+     * frame ends here. */
+    ndsPlatformTransitionThaw();
     gNdsUiKitEngine = engine;
     if (engine == NDS_UI_KIT_ENGINE_SUB)
     {
@@ -458,7 +461,17 @@ void ndsUiKitExit(void)
         return;
     }
     oamClear(ndsUiKitOam(), 0, NDS_UI_KIT_OAM_IDS);
-    oamUpdate(ndsUiKitOam());
+    /* A screen's exit runs under the transition hold, whose picture still
+     * shows these sprites: the cleared shadow is uploaded by the Thaw. */
+    if (ndsPlatformTransitionHolding() != 0u)
+    {
+        ndsPlatformTransitionHoldPendOamUpdate(
+            (gNdsUiKitEngine == NDS_UI_KIT_ENGINE_SUB) ? 1u : 0u);
+    }
+    else
+    {
+        oamUpdate(ndsUiKitOam());
+    }
     memset(sNdsUiKitText, 0, sizeof(sNdsUiKitText));
     memset(sNdsUiKitSprites, 0, sizeof(sNdsUiKitSprites));
     sNdsUiKitActive = FALSE;

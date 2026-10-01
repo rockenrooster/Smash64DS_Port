@@ -776,6 +776,9 @@ static void ndsBattlePlayablePresentFrame(void)
     (NDS_RENDERER_PROFILE_LEVEL >= 1)
     gNdsRendererProfileHudTicks = cpuGetTiming() - hud_start;
 #endif
+    /* A complete battle frame: it ends a transition hold that nothing ended
+     * before it (a branch otherwise) and releases the loading cover. */
+    ndsPlatformTransitionThaw();
     ndsVideoSetTransitionBlackout(FALSE);
     ndsPlatformEndFrame();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1

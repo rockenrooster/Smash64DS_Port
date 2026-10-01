@@ -161,6 +161,37 @@ static u32 sTicks;
 static u32 sHeldKeys;
 static volatile u32 sVBlankCount;
 static u32 sEarliestPresentVBlank;
+/* Scene transition hold (ndsPlatformTransitionHoldBegin, below). EXIT: the
+ * old scene is tearing down -- its display teardown is recorded, not done.
+ * LOAD: the next scene is starting -- its first display write ends the hold.
+ * The state is up here because the layer owners above the hold's own code
+ * consult it. */
+#define NDS_TRANSITION_HOLD_NONE 0u
+#define NDS_TRANSITION_HOLD_EXIT 1u
+#define NDS_TRANSITION_HOLD_LOAD 2u
+static u32 sNdsTransitionHold;
+#if NDS_TRANSITION_HOLD
+#define NDS_TRANSITION_HOLD_PENDING_TITLE_FIRE_OFF 1u
+#define NDS_TRANSITION_HOLD_PENDING_LAYER_MASK 2u
+#define NDS_TRANSITION_HOLD_PENDING_BACKDROP 4u
+#define NDS_TRANSITION_HOLD_PENDING_OAM_MAIN 8u
+#define NDS_TRANSITION_HOLD_PENDING_OAM_SUB 16u
+static u32 sNdsTransitionHoldPending;
+static u32 sNdsTransitionHoldLayerMask;
+static u16 sNdsTransitionHoldBackdrop;
+static s32 sNdsTransitionHoldWants3D;
+/* Service presents seen during the hold; the cap is its failsafe (600 is ten
+ * seconds; SSS -> battle, the longest load, measured 170). */
+static u32 sNdsTransitionHoldPresents;
+#define NDS_TRANSITION_HOLD_MAX_PRESENTS 600u
+#endif
+volatile u32 gNdsTransitionHoldCount;
+volatile u32 gNdsTransitionThawCount;
+/* What ended the last hold (a return address) and when (VBlank counts):
+ * read by the transition captures. */
+volatile u32 gNdsTransitionThawCaller;
+volatile u32 gNdsTransitionHoldVBlank;
+volatile u32 gNdsTransitionThawVBlank;
 volatile u32 gNdsPlatformHeldKeys;
 static u32 sPerfSampleReady;
 static u32 sPerfLastTick;
@@ -1103,6 +1134,8 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
     {
         u32 layer = (is_foreground != FALSE) ? 1u : 0u;
 
+        /* A visible overlay write: the held frame ends here. */
+        ndsPlatformTransitionThaw();
         if ((layer != 0u) && (sOriginalSpriteOverlayBg3Lent != 0u) &&
             (sOriginalSpriteOverlayBg3ReturnPending != 0u))
         {
@@ -1177,6 +1210,13 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
     int bg = (is_foreground != FALSE) ?
         sOriginalSpriteOverlayForegroundBg : sOriginalSpriteOverlayBg;
 
+    /* An exit's clear waits for the Thaw's own; the next scene's ends the
+     * hold. */
+    if (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT)
+    {
+        return;
+    }
+    ndsPlatformTransitionThaw();
     if ((is_foreground != FALSE) && (sOriginalSpriteOverlayBg3Lent != 0u))
     {
         if (sOriginalSpriteOverlayBg3ReturnPending == 0u)
@@ -1230,6 +1270,7 @@ void ndsPlatformHideOriginalSpriteOverlayUntilCommit(s32 is_foreground)
     {
         return;
     }
+    ndsPlatformTransitionThaw();
     bgHide(bg);
     sOriginalSpriteOverlayRevealPending |= 1u << layer;
 #else
@@ -1259,8 +1300,20 @@ static void ndsPlatformRevealOriginalSpriteOverlay(void)
 void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    u32 previous_mask = sOriginalSpriteOverlayLayerMask;
+    u32 previous_mask;
 
+#if NDS_TRANSITION_HOLD
+    /* An exit's mask (the source menus turn the overlay off) is applied by
+     * the Thaw, after its cover; the next scene's ends the hold. */
+    if (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT)
+    {
+        sNdsTransitionHoldPending |= NDS_TRANSITION_HOLD_PENDING_LAYER_MASK;
+        sNdsTransitionHoldLayerMask = layer_mask;
+        return;
+    }
+#endif
+    ndsPlatformTransitionThaw();
+    previous_mask = sOriginalSpriteOverlayLayerMask;
     layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
     /* P2-2p8 Phase 1 slice 7 (owner playtest, 2026-09-24): a scene that only
      * ASKS for BG3 while a battle's bank D return is pending no longer takes
@@ -1385,6 +1438,15 @@ s32 ndsPlatformVramTakeBankD(void)
         sOriginalSpriteOverlayBg3ReturnPending = 0u;
         return TRUE;
     }
+    /* Hiding BG3 and remapping D changes no pixel of a held frame whose BG3
+     * shows nothing (the take's own premise, ndsPlatformVramBg3Empty); one
+     * that does show it ends the hold first. */
+    if ((sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE) &&
+        ((REG_DISPCNT & DISPLAY_BG3_ACTIVE) != 0u) &&
+        (ndsPlatformVramBg3Empty() == FALSE))
+    {
+        ndsPlatformTransitionThaw();
+    }
     sOriginalSpriteOverlayBg3Wanted =
         ((sOriginalSpriteOverlayLayerMask &
           NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND) != 0u) ? 1u : 0u;
@@ -1506,6 +1568,15 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
      * frame was submitted and flushed, means every enable shows that scene's
      * own first frame or nothing at all. A scene that never presents keeps the
      * layer hidden, which is also the safer failure. */
+#if NDS_TRANSITION_HOLD
+    /* While a frame is held, BG0 is that frame's: the request is recorded and
+     * the Thaw, which hides the old list, applies it. */
+    if (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE)
+    {
+        sNdsTransitionHoldWants3D = (is_enabled != FALSE) ? TRUE : FALSE;
+        return;
+    }
+#endif
     if (is_enabled != FALSE)
     {
         if ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) == 0u)
@@ -1521,17 +1592,28 @@ void ndsPlatformSet3DLayerEnabled(s32 is_enabled)
 #endif
 }
 
-void ndsPlatformBeginSceneTransition(void)
+/* The loading cover (r63): black on both screens at a VBlank, then the old
+ * scene's BG0, overlays, lower HUD and Results OBJ tenant retired under it.
+ * The next scene's first complete present releases it. */
+static void ndsPlatformTransitionCover(s32 retire_list)
 {
     ndsVideoSetTransitionBlackout(TRUE);
 #if NDS_RENDERER_HW_TRIANGLES
-    /* The last scene frame has already swapped; its build list is empty.
-     * Drain asynchronous submission before retiring that retained GX list. */
+    /* Drain asynchronous submission before retiring the retained GX list. */
     ndsRendererFighterPacketDmaWait();
+    if (retire_list != FALSE)
+    {
+        /* At the scene exit the last frame has already swapped: the build
+         * list is empty. (A hold's Thaw may come mid-way through the next
+         * scene's first frame, whose build list it must not swap in half
+         * built -- hiding BG0 alone retires the old list there.) */
 #if NDS_TASK29_GX_CENSUS
-    ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
+        ndsRendererTask29GXRecordFlush(GL_TRANS_MANUALSORT);
 #endif
-    glFlush(GL_TRANS_MANUALSORT);
+        glFlush(GL_TRANS_MANUALSORT);
+    }
+#else
+    (void)retire_list;
 #endif
     /* A scene-boundary wait, with no extra logic tick or gameplay present. */
     swiWaitForVBlank();
@@ -1545,6 +1627,186 @@ void ndsPlatformBeginSceneTransition(void)
      * START press: that exit cleared OAM mid-frame, so the text vanished one
      * scanout before the black (r62 results-css 0029). Idempotent. */
     ndsResultsOamExit();
+}
+
+/* SCENE TRANSITION HOLD (owner, r64, 2026-09-30: "keep what's currently on
+ * the screen until the next screen is ready, then switch").
+ *
+ * That is what the N64 shows: its VI scans the last framebuffer until the
+ * next scene's first composed frame replaces it (artifacts/bugs/2026-09-30_
+ * scene-transitions/REPORT.md section 3). Nothing here is a framebuffer --
+ * BG0 re-renders the retained GX list from texture VRAM every frame and the
+ * 2D layers scan their VRAM live -- so the old frame stays on screen exactly
+ * as long as nothing writes those. Hence:
+ *  - the hold starts after the leaving frame's present (menu shell), at a
+ *    source menu's leaving update, which it never draws (taskman.c:994), or
+ *    at the scene exit (battle): where r63 committed black;
+ *  - EXIT, while the old scene tears down: the layer owners record its
+ *    display teardown (BG0 off, overlay mask, title fire, backdrop, OBJ
+ *    shadows) instead of performing it;
+ *  - LOAD, from ndsPlatformBeginSceneTransition: the next scene's software
+ *    runs; its first display write -- a 2D layer, an OBJ tenant, bank D under
+ *    a visible BG3, a texture upload under a visible BG0 -- calls the Thaw;
+ *  - the Thaw is the r63 cover plus the recorded teardown, so the black now
+ *    lasts only while the next scene builds its first frame; every scene's
+ *    first complete present releases it, as before.
+ * EndFrame presents nothing during a hold: a loading service frame must not
+ * commit the next scene's half-built OBJ shadows, fades or wallpaper.
+ * Measured on r64 (trace, VBlanks): SSS -> battle held 147 of 170. */
+void ndsPlatformTransitionHoldBegin(void)
+{
+#if NDS_TRANSITION_HOLD
+    if (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE)
+    {
+        return;
+    }
+    sNdsTransitionHold = NDS_TRANSITION_HOLD_EXIT;
+    sNdsTransitionHoldPending = 0u;
+    sNdsTransitionHoldWants3D = FALSE;
+    sNdsTransitionHoldPresents = 0u;
+    gNdsTransitionHoldCount++;
+    gNdsTransitionHoldVBlank = sVBlankCount;
+#endif
+}
+
+u32 ndsPlatformTransitionHolding(void)
+{
+    return sNdsTransitionHold;
+}
+
+void ndsPlatformTransitionThaw(void)
+{
+#if NDS_TRANSITION_HOLD
+    u32 pending;
+
+    if (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE)
+    {
+        return;
+    }
+    gNdsTransitionThawCaller = (u32)(uintptr_t)__builtin_return_address(0);
+    gNdsTransitionThawVBlank = sVBlankCount;
+    gNdsTransitionThawCount++;
+    pending = sNdsTransitionHoldPending;
+    sNdsTransitionHold = NDS_TRANSITION_HOLD_NONE;
+    sNdsTransitionHoldPending = 0u;
+    ndsPlatformTransitionCover(FALSE);
+    /* The old scene's exit, in its order, now under the cover. */
+    if ((pending & NDS_TRANSITION_HOLD_PENDING_TITLE_FIRE_OFF) != 0u)
+    {
+        ndsPlatformSetTitleFireEnabled(FALSE, 0, 0);
+    }
+    if ((pending & NDS_TRANSITION_HOLD_PENDING_LAYER_MASK) != 0u)
+    {
+        ndsPlatformSetOriginalSpriteOverlayLayerMask(
+            sNdsTransitionHoldLayerMask);
+    }
+    if ((pending & NDS_TRANSITION_HOLD_PENDING_BACKDROP) != 0u)
+    {
+        BG_PALETTE[0] = sNdsTransitionHoldBackdrop;
+    }
+    if ((pending & NDS_TRANSITION_HOLD_PENDING_OAM_MAIN) != 0u)
+    {
+        oamUpdate(&oamMain);
+    }
+    if ((pending & NDS_TRANSITION_HOLD_PENDING_OAM_SUB) != 0u)
+    {
+        oamUpdate(&oamSub);
+    }
+    /* The next scene's own BG0 request, made while BG0 was the old frame's:
+     * enabled at its first presented frame (ndsPlatformEndFrame). */
+    if (sNdsTransitionHoldWants3D != FALSE)
+    {
+        ndsPlatformSet3DLayerEnabled(TRUE);
+    }
+    /* Results' OBJ tenant, entered at its scene start under the held battle
+     * frame (nds_results_oam.c). */
+    ndsResultsOamEnterPending();
+#endif
+}
+
+void ndsPlatformTransitionThawIf3DShown(void)
+{
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    if ((sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE) &&
+        ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) != 0u))
+    {
+        ndsPlatformTransitionThaw();
+    }
+#endif
+}
+
+void ndsPlatformTransitionHoldPendOamUpdate(u32 engine)
+{
+#if NDS_TRANSITION_HOLD
+    sNdsTransitionHoldPending |= (engine != 0u) ?
+        NDS_TRANSITION_HOLD_PENDING_OAM_SUB :
+        NDS_TRANSITION_HOLD_PENDING_OAM_MAIN;
+#else
+    (void)engine;
+#endif
+}
+
+void ndsPlatformSetBackdropColor(u16 color)
+{
+#if NDS_TRANSITION_HOLD
+    if (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT)
+    {
+        sNdsTransitionHoldPending |= NDS_TRANSITION_HOLD_PENDING_BACKDROP;
+        sNdsTransitionHoldBackdrop = color;
+        return;
+    }
+#endif
+    ndsPlatformTransitionThaw();
+    BG_PALETTE[0] = color;
+}
+
+void ndsPlatformBeginSceneTransition(void)
+{
+#if NDS_TRANSITION_HOLD
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererFighterPacketDmaWait();
+#endif
+    /* A battle's exit has no leaving-frame call: its hold starts here. */
+    ndsPlatformTransitionHoldBegin();
+    /* The old scene has exited; what runs from now is the next one. */
+    sNdsTransitionHold = NDS_TRANSITION_HOLD_LOAD;
+#else
+    ndsPlatformTransitionCover(TRUE);
+#endif
+}
+
+/* Texture writes the next scene makes while a frame with 3D is held would
+ * overwrite that frame's texels under it: the link wraps libnds's uploads
+ * (-Wl,--wrap, Makefile) to end the hold first. */
+int __real_glTexImage2D(int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
+                        int sizeX, int sizeY, int empty2, int param,
+                        const void *texture);
+void __real_glColorTableEXT(int target, int empty1, u16 width, int empty2,
+                            int empty3, const u16 *table);
+void __real_glColorSubTableEXT(int target, int start, int count, int empty1,
+                               int empty2, const u16 *data);
+
+int __wrap_glTexImage2D(int target, int empty1, GL_TEXTURE_TYPE_ENUM type,
+                        int sizeX, int sizeY, int empty2, int param,
+                        const void *texture)
+{
+    ndsPlatformTransitionThawIf3DShown();
+    return __real_glTexImage2D(target, empty1, type, sizeX, sizeY, empty2,
+                               param, texture);
+}
+
+void __wrap_glColorTableEXT(int target, int empty1, u16 width, int empty2,
+                            int empty3, const u16 *table)
+{
+    ndsPlatformTransitionThawIf3DShown();
+    __real_glColorTableEXT(target, empty1, width, empty2, empty3, table);
+}
+
+void __wrap_glColorSubTableEXT(int target, int start, int count, int empty1,
+                               int empty2, const u16 *data)
+{
+    ndsPlatformTransitionThawIf3DShown();
+    __real_glColorSubTableEXT(target, start, count, empty1, empty2, data);
 }
 
 #if NDS_RENDERER_HW_TRIANGLES
@@ -1679,6 +1941,7 @@ static void ndsPlatformCommitNativeWallpaperAffine(void)
 
 void ndsPlatformCommitOriginalSpriteOverlayTransform(void)
 {
+    ndsPlatformTransitionThaw();
     ndsPlatformCommitNativeWallpaperAffine();
 }
 
@@ -1695,6 +1958,16 @@ void ndsPlatformSetTitleFireEnabled(s32 is_enabled, s32 pa, s32 pd)
     {
         return;
     }
+#if NDS_TRANSITION_HOLD
+    /* The title's exit hands BG3 back after the Thaw's cover. */
+    if ((is_enabled == FALSE) &&
+        (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT))
+    {
+        sNdsTransitionHoldPending |= NDS_TRANSITION_HOLD_PENDING_TITLE_FIRE_OFF;
+        return;
+    }
+#endif
+    ndsPlatformTransitionThaw();
     if (is_enabled != FALSE)
     {
         /* BEHIND BG2, which is where the fire belongs: the title's wordmark
@@ -3322,6 +3595,13 @@ static void ndsPlatformRenderBattleTextHud(void)
 
 void ndsPlatformClearBattleTextHud(void)
 {
+    /* The lower screen is part of the held picture: an exit's clear waits
+     * for the Thaw's, the next scene's ends the hold. */
+    if (sNdsTransitionHold == NDS_TRANSITION_HOLD_EXIT)
+    {
+        return;
+    }
+    ndsPlatformTransitionThaw();
     gNdsBattleTextHudClearCount++;
     ndsBattleHudClear();
 #if NDS_BATTLE_FPS_HUD_ENABLED
@@ -3799,8 +4079,28 @@ void ndsPlatformEndFrame(void)
     u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
-    u32 submitted = ndsRendererHardwareConsumeSubmittedFrame();
+    u32 submitted;
 
+#if NDS_TRANSITION_HOLD
+    /* A present while a frame is held is a loading service present -- every
+     * scene's own frame Thaws before its EndFrame. It keeps the pacing and
+     * commits nothing: no frame consume (its cloud emit and tint-tile
+     * uploads), flush, OBJ shadow, fade, wallpaper or bank D return of the
+     * scene being built. Ten seconds of them end the hold regardless, so a
+     * present path that never Thaws degrades to the r63 cover, not to an
+     * invisible scene. */
+    if (sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE)
+    {
+        if (++sNdsTransitionHoldPresents < NDS_TRANSITION_HOLD_MAX_PRESENTS)
+        {
+            ndsPlatformWaitForScheduledVBlank();
+            sTicks++;
+            return;
+        }
+        ndsPlatformTransitionThaw();
+    }
+#endif
+    submitted = ndsRendererHardwareConsumeSubmittedFrame();
     if ((submitted != 0u) || (sOriginalSpriteOverlayNeedsFlush != FALSE))
     {
         if (submitted != 0u)

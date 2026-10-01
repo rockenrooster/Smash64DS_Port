@@ -1032,6 +1032,45 @@ the three-subagent cap. Phase 5's kernel reads the Q locals Phase 4 produces.
   -29.9K (owner roster), -27.5K (default); cross-build vs the table build
   -14.3K / -0.8K (the packet-off arm moved +16..27K with the build's layout).
   Receipt `2026-09-30_p2-2p8-arwing-packet`.
+- **09-30 the event-32 ledger covers event32-motion rosters, BANKED** (a
+  crash): Jungle Captain/Yoshi/Kirby/DK died at f937 (the ledger full, a Poke
+  Ball's rays lost their animation, the ball wrote through the ejected
+  effect). The margin adds 768 per Ness/Yoshi/Pikachu/Purin; 0 refusals on
+  12 rosters, replay identical where nothing refused before; the ball
+  follows only a live effect. Receipt `2026-09-30_p2-2p8-event32-margin`.
+- **09-30 scene transitions: a black cover from the last frame to the next
+  scene's first** (owner r58; `52a026d86a9`, gate digest identical): no old
+  stage under Results, no Results fighters over the CSS, no half-built
+  screens, no tic-80 wallpaper flash. Evidence
+  `artifacts/bugs/2026-09-30_scene-transitions/VERIFIED-r63.md`.
+- **09-30 scene transitions hold the last frame** (owner r64: "keep what's
+  currently on the screen until the next screen is ready, then switch"; r65a
+  "much better"): BG0 keeps re-rendering the retained GX list and the 2D
+  layers scan VRAM, so the old frame stays while the layer owners record the
+  old scene's display teardown instead of doing it; the next scene's first
+  display write (a 2D layer, an OBJ tenant, bank D under BG3, a texture or
+  palette upload under BG0) thaws it into the r63 cover, which now lasts only
+  while the first frame builds. Results' leaving frame is no longer drawn
+  (taskman.c:994 breaks before it; drawn, it lost its text and tint). Gate
+  +4.4K P50 / +4.7K P95 with no transition in the run (placement), digest
+  identical. Evidence
+  `artifacts/bugs/2026-09-30_scene-transitions/VERIFIED-hold.md`.
+- **09-30 native owners for the roots drawn with none**: a root-keyed lab
+  census (25 arms) found PK Fire's pillar, Bob-omb walking left, the placed
+  Bumper, the Ray Gun's shot, Goldeen, Koffing and its smog, Razor Leaf and
+  a Ness effect drawn by no owner; ITCommonData adds most Poke Ball Pokemon
+  and their weapons. One generator compiles 32 such roots to native state
+  deltas, material hooks and geometry groups (`generate_nds_native_item_baked.py`),
+  one adapter lookup runs them: 0 native failures on the census arms and on
+  13 forced-Pokemon arms. Samus's entry effect drew three frames past GO
+  into retired textures: the retirement now waits for an idle frame. The
+  image growth (+13.3 KB) tipped Sector Z's default roster under the world
+  caches' first-frame reserve (STG +23.5K a frame); a missed attempt now
+  retries at GO keeping 48 KB. Gate (draws no baked root) P50 +2.0K, P95
+  +2.1K, digest identical: carrying cost. Open: Link's 3 entry frames on
+  Sector Z/Saffron (a texture bind fails: VRAM at the entry burst) and
+  Hitmonlee (made, never reaches the adapter).
+  Receipt `2026-09-30_p2-2p8-native-owners`.
 
 ## 7. Found along the way
 
