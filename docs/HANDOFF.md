@@ -35,6 +35,7 @@ rigid mask 0 (pin needs a VS heap check). **10-02 VS regression fixed (`319c15bd
 arena 93 KB -- VS CSS hid every preview, VS Results froze at tic 120. A duplicate FAT mount (65,832 B) is gone;
 CSS reserve 230,112 free (needs 183,072), Results podium fits on three rosters. Re-probe both after any static or
 NitroFS growth (scratchpad `resprobe.ps1`). Pikachu self-hit burst toward camera (`53e26f7b7ee`); Hitmonlee draws (`59390301261`).
+**10-02 final P95 pass, 1P first** (natural play, share within 2 VBlanks; table and levers in `p2/P2-6-one-player.md`): Link/Fox/Targets/Pikachu/Samus/Metal 97-99%; Master Hand 94.4% (packets replay + wallpaper fixed cubic, `5ce05818f39`); Kirby Team 94.4%; Board the Platforms 91.3% (two-way texture memo, `e30b6e3747c`); Yoshi Team 84-91%; Giant DK 84-89%; Polygon 88%; Mario Bros 81-86%; Race 40-52%. Profiles `artifacts/task37-census/1p-pf21s*` (scratchpad `cf95.py` ranks P95 drops).
 
 ## Continue, do not restart
 
@@ -56,5 +57,4 @@ only after recording an outcome, a concrete blocker or an owner priority change.
 
 Record unavailable helpers and denied Git operations with their retry condition. Preserve owner
 edits and qualified artifacts; a doc change does not repair a failure or establish a game PASS.
-
 Bug-sweep lessons (2026-09-19..22): `p2/BUG_NOTES.md` "Standing lessons".

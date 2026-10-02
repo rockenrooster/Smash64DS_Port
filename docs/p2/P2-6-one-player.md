@@ -107,6 +107,32 @@ venues still ship mask 0 and need their VS heap checked before a pin: Hyrule
 grows past its ceiling (30,252 -> 40,492 B), Saffron to 46,172 B, and Congo
 Jungle's program already declines at runtime on the loader heap (reason 3).
 
+### Final P95 pass (from 2026-10-02)
+
+The gate is >= 95% of presents within two VBlanks on every 1P stage. Natural
+play (walk ROM with `gNdsCampaignWalkMeasure`: the human a level-9 CPU,
+enemies at source levels), up to 1,200 presented frames, stopped at the
+battle's end (scratchpad `pace3.ps1`, `pacesweep.ps1`; two runs where the
+stage was reached two ways):
+
+| Stage | Within 2 VBlanks | Where the tail is (`1p-pf21s<N>` profiles, `cf95.py` P95 drops) |
+|---|---|---|
+| 0 Link, 2 Fox, 3 Targets, 5 Pikachu, 9 Samus, 10 Metal | 97-99% | pass |
+| 13 Master Hand | 84.5% -> 94.4% | his packets faulted on capacity every frame (7,609 words, half region 4,420); now replay (`5ce05818f39`). Left: hurtbox kernel (MH's many hurtboxes), FD stage GX |
+| 8 Kirby Team | 94.4% | stage GX draw, lean compose |
+| 7 Board the Platforms | 87.9% -> 91.3% | baked-run texture memo thrash, now two-way (`e30b6e3747c`); a 15-frame spike from the platforms' material/anim keyframes remains |
+| 1 Yoshi Team | 84-91% | lean compose, soft float, stage segments |
+| 6 Giant DK | 84-89% | broad: lean compose, stage GX, soft float, pose; one 2.7M-tick texture frame at entry |
+| 12 Polygon Team | 88% | hurtbox kernel, packet replays and texgen |
+| 4 Mario Bros | 81-86% | four fighters (not yet profiled) |
+| 11 Race | 40-52% | broad: soft float 117K ticks a frame (collision sweeps, item range checks, AI), sweeps, pose |
+
+The Race's share sits on its median, so it moves several points between
+builds from layout alone; read it from same-ROM A/Bs. Master Hand's stage
+background (~24 boss wallpaper GObjs) now animates through the fixed-point
+cubic (`ndsGcPlayAnimAllFixedCubic`), which took its float player off the top
+of that battle's soft-float callers.
+
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
 renderer by the lab ROM `NDS_1P_INTRO_BAKE=1`
