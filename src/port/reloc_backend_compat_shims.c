@@ -1048,6 +1048,17 @@ static u32 sNdsGMColScriptsItemLinkBombCritical[] = {
     NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsItemLinkBombCritical)
 };
 
+/* gmcolscripts.c:1021-1027: the Challenger Approaching silhouette, solid
+ * black for as long as the scene runs (sc1PChallengerMakeFighter :228). It
+ * had no row, so the setter refused id 80 and the challenger drew in its
+ * own colours (owner r67: "missing the applicable silhouette"). */
+static u32 sNdsGMColScriptsFighterChallenger[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0x00, 0x00, 0xFF),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterChallenger),
+    NDS_GM_COL_COMMAND_END()
+};
+
 /* BattleShip gmcolscripts.c:720-779: Kirby's Stone. High/Mid/Low are the
  * three looping white pulses the stone's damage tiers select; Start/End are
  * the brown fade in and out around the transform. */
@@ -1291,6 +1302,8 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
         { sNdsGMColScriptsFighterStar, 100, FALSE },
     [nGMColAnimItemLinkBombCritical] =
         { sNdsGMColScriptsItemLinkBombCritical, 60, TRUE },
+    [nGMColAnimFighterChallenger] =
+        { sNdsGMColScriptsFighterChallenger, 60, TRUE },
     [nGMColAnimScreenFlashDeadExplode] =
         { sNdsGMColScriptsScreenFlashDeadExplode, 60, TRUE },
     [nGMColAnimScreenFlashDamageNormal] =
@@ -6524,12 +6537,31 @@ void ndsCompatFTDonkeyThrowFDamageSetStatus(GObj *fighter_gobj)
 }
 #endif
 
+/* decomp ft/fighter.h:24-29. The source's ftSetupDropItem is a macro that
+ * drops the held item where it is: itMainSetFighterDrop with a zero velocity
+ * and throw_mul 1.0 runs the kind's Dropped status, unhooks the item from the
+ * holder's joint and clears fp->item_gobj (itmain.c:318-375). Clearing only
+ * fp->item_gobj left the item in its Hold status, still riding the holder's
+ * item joint through the 0x52 matrix and never pickable again: a barrel or
+ * crate knocked out of a lifting fighter's hands (ftCommonHeavyGetProcDamage)
+ * followed the damage animation instead of falling, rolling or breaking. */
 void ftSetupDropItem(FTStruct *fp)
 {
+#if NDS_P2_ITEM_CORE
+    Vec3f vel;
+
+    if ((fp == NULL) || (fp->item_gobj == NULL))
+    {
+        return;
+    }
+    vel.x = vel.y = vel.z = 0.0F;
+    itMainSetFighterDrop(fp->item_gobj, &vel, 1.0F);
+#else
     if (fp != NULL)
     {
         fp->item_gobj = NULL;
     }
+#endif
 }
 
 void ftCommonThrownSetStatusDamageRelease(GObj *fighter_gobj)
@@ -7932,6 +7964,11 @@ sb32 ftCommonCaptureTrappedUpdateBreakoutVars(FTStruct *fp)
     return is_mash;
 }
 
+#if NDS_P2_ITEM_CORE
+extern s32 syUtilsRandIntRange(s32 range);
+extern sb32 itMainCheckShootNoAmmo(GObj *item_gobj);
+#endif
+
 void ftParamUpdateDamage(FTStruct *fp, s32 damage)
 {
     if (fp != NULL)
@@ -7966,6 +8003,35 @@ void ftParamUpdateDamage(FTStruct *fp, s32 damage)
             gNdsFighterNaturalMovesetThrowDamageAfter =
                 (u32)fp->percent_damage;
         }
+#if NDS_P2_ITEM_CORE
+        /* decomp ft/ftparam.c:1539-1553: a knockback hit knocks the held
+         * item loose with probability damage/60 (a spent shooter on a coin
+         * flip as well); Donkey Kong keeps a heavy item, which his damage
+         * status settles itself (ftcommondamage.c:816-830). */
+        if (fp->item_gobj != NULL)
+        {
+            if ((fp->damage_knockback != 0.0F) &&
+                ((fp->hitlag_tics == 0) || !(fp->is_knockback_paused) ||
+                 !(fp->damage_knockback <
+                   (fp->damage_knockback_stack + 30.0F))))
+            {
+                ITStruct *ip = itGetStruct(fp->item_gobj);
+
+                if ((ip->weight != nITWeightHeavy) ||
+                    ((fp->fkind != nFTKindDonkey) &&
+                     (fp->fkind != nFTKindNDonkey) &&
+                     (fp->fkind != nFTKindGDonkey)))
+                {
+                    if ((damage > syUtilsRandIntRange(60)) ||
+                        ((itMainCheckShootNoAmmo(fp->item_gobj) != FALSE) &&
+                         (syUtilsRandIntRange(2) == 0)))
+                    {
+                        ftSetupDropItem(fp);
+                    }
+                }
+            }
+        }
+#endif
     }
     if ((ndsFighterMarioFoxStageMPPassiveLoopProofEnabled() != FALSE) &&
         (sNdsStageMPPassiveLoopThrowReleaseActive != FALSE))
