@@ -311,6 +311,9 @@ void ndsSamusAttackTourRecordStatusTransition(GObj *fighter_gobj,
 /* See the flattened-walk block in ftMainSetStatus below. */
 __attribute__((used, section(".data"))) volatile u32 gNdsFtStatusFlatKeep = 1u;
 __attribute__((used)) volatile u32 gNdsFtStatusFlatKept;
+/* The renderer half of the same test (2026-10-02); 0 = always invalidate. */
+__attribute__((used, section(".data"))) volatile u32 gNdsFtStatusRenderKeep = 1u;
+__attribute__((used)) volatile u32 gNdsFtStatusRenderKept;
 
 void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
                      f32 frame_begin, f32 anim_speed, u32 flags)
@@ -384,7 +387,24 @@ void ftMainSetStatus(GObj *fighter_gobj, s32 status_id,
     {
         gNdsFtStatusFlatKept++;
     }
-    ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);
+    /* The renderer caches (display-contract memo, draw plan, lean instance)
+     * key on the drawn DObjs and their DLs. A status change moves those only
+     * through the topology above or through the model-part writers, which
+     * invalidate on their own when they change a part
+     * (ndsFTParamInvalidateModelPartRenderer); texture parts reach the lean
+     * path through its writer serial. Re-deriving them after every change
+     * cost the next draw the source DL walk, the material hashes and the
+     * lean re-tuple and re-proof, which found the same answer. Same-ROM A/B
+     * word gNdsFtStatusRenderKeep. */
+    if ((gNdsFtStatusRenderKeep == 0u) || (nds_topology_fp == NULL) ||
+        ((nds_topology_word & ~0x1Fu) != 0u))
+    {
+        ndsFighterRendererInvalidateStatusCachesOnSetStatus(fighter_gobj);
+    }
+    else
+    {
+        gNdsFtStatusRenderKept++;
+    }
 #if NDS_P2_HURTBOX_REJECT
     /* The same topology change retires the hurtbox reject's cached worlds
      * (src/port/nds_p2_hurtbox_reject.c keys them on the DObj pointer). */
