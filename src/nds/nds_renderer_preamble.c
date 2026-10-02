@@ -3495,6 +3495,12 @@ typedef struct NDSFighterPacketRecorder
     u32 need[4];
     /* The texgen overflow is reserved at the top of this record's region. */
     u32 x_reserved;
+    /* P2-6 (2026-10-02) GX texgen: the current group's corners carry no
+     * TEXCOORD (the engine derives it from GFX_NORMAL through the texture
+     * matrix), so the matrix goes back to identity before the next run. */
+    u32 hw_texgen;
+    /* TEXIMAGE_PARAM texgen bits the next recorded bind takes, or 0. */
+    u32 tex_param_or;
 } NDSFighterPacketRecorder;
 
 static NDSFighterPacket sNdsFighterPackets[NDS_FIGHTER_PACKET_SLOTS];
@@ -3788,7 +3794,13 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordBoundTexture(void
     tex_index = ndsFighterPacketCmd(REG2ID(GFX_TEX_FORMAT), 1u);
     if (rec->fault == 0u)
     {
-        rec->words[tex_index] = (u32)glGetTexParameter();
+        u32 param = (u32)glGetTexParameter();
+
+        if (rec->tex_param_or != 0u)
+        {
+            param = (param & ~((u32)3u << 30)) | rec->tex_param_or;
+        }
+        rec->words[tex_index] = param;
     }
     glGetColorTableParameterEXT(
         GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
@@ -3864,6 +3876,40 @@ ndsFighterPacketReserveTexgenOverflow(NDSFighterPacketRecorder *rec)
     rec->x_reserved = 1u;
 }
 
+/* P2-6 (2026-10-02): GX TEXGEN. A spherical texgen run whose corners send
+ * GFX_NORMAL (the lit runs) records no per-corner TEXCOORD; its texture bind
+ * takes TEXIMAGE_PARAM texgen mode 2 (normal source) and, before its BEGIN,
+ * the packet loads the texture matrix the replay patches per frame (rows 0-2:
+ * the S and T lookat directions times the run's scale, see
+ * ndsFighterPacketHwTexgenEntry) and one TEXCOORD with the constant part of
+ * the source's texcoord. The engine then forms S = base + N.M per corner,
+ * which is ndsRendererNativeTexgenCoord's expression to within 1/16 texel
+ * (the clamp of the dot aside, which only a normal longer than 127 reaches).
+ * Mode 2 takes the raw normal, as the source's dot takes the model-space one.
+ * The Fighting Polygons are environment-mapped all over: the per-corner patch
+ * was the largest render cost of the frames over the Race's gate. The next
+ * run (and the record's end) restores the identity texture matrix that the
+ * mode-1 binds everywhere else rely on. LINEAR and unlit runs keep the CPU
+ * patch. Same-ROM A/B word gNdsFighterPacketHwTexgen (0 = CPU patch; read
+ * when a packet records). */
+volatile u32 gNdsFighterPacketHwTexgen __attribute__((used, section(".data"))) =
+    1u;
+volatile u32 gNdsFighterPacketHwTexgenGroups;
+
+/* The source texcoord's constant part, packed for one TEXCOORD: defined with
+ * the texgen arithmetic (nds_renderer_native_common.c). */
+static u32 ndsFighterPacketTexgenBaseWord(u32 scale_s, u32 scale_t,
+                                          u32 origin_s, u32 origin_t,
+                                          s32 offset);
+
+static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketRecordTexIdentity(void)
+{
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
+    ndsFighterPacketCmd0(REG2ID(MATRIX_IDENTITY));
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+    sNdsFighterPacketRecorder.hw_texgen = 0u;
+}
+
 /* One hook at the end of a run's texture prepare stands in for the three
  * batch writes the production path makes through shared, ITCM-resident
  * helpers (texture bind, POLYGON_ATTR, BEGIN). Those helpers write only when
@@ -3880,11 +3926,17 @@ ndsFighterPacketRecordPrepare(
     u32 scale_t,
     u32 origin_s,
     u32 origin_t,
-    s32 offset)
+    s32 offset,
+    u32 lit)
 {
     NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
     NDSFighterPacket *packet = rec->packet;
+    NDSFighterPacketTexgenGroup *hw_group = NULL;
 
+    if (rec->hw_texgen != 0u)
+    {
+        ndsFighterPacketRecordTexIdentity();
+    }
     rec->texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
     rec->in_texgen = ((use_texture != 0u) && (use_texgen != 0u)) ? 1u : 0u;
     if ((use_texture != 0u) && (use_texgen != 0u))
@@ -3918,22 +3970,59 @@ ndsFighterPacketRecordPrepare(
             group->first_site = packet->texgen_site_count;
             group->site_count = 0u;
             group->root = (u8)rec->current_root;
-            /* reserved[0]: G_TEXTURE_GEN_LINEAR (use_texgen 2). */
+            /* reserved[0]: G_TEXTURE_GEN_LINEAR (use_texgen 2).
+             * reserved[1]: GX texgen; origin_s then names the texture
+             * matrix's first parameter word (its origins live in the
+             * recorded base TEXCOORD). */
             group->reserved[0] = (u8)((use_texgen == 2u) ? 1u : 0u);
             group->reserved[1] = 0u;
             group->reserved[2] = 0u;
             rec->texgen_group = packet->texgen_group_count;
             packet->texgen_group_count++;
+#if NDS_P2_LINK
+            if ((use_texgen == 1u) && (lit != 0u) &&
+                (gNdsFighterPacketHwTexgen != 0u))
+            {
+                hw_group = group;
+            }
+#else
+            (void)lit;
+#endif
         }
     }
     if (use_texture != 0u)
     {
+        rec->tex_param_or = (hw_group != NULL) ? ((u32)2u << 30) : 0u;
         ndsFighterPacketRecordBoundTexture();
+        rec->tex_param_or = 0u;
         ndsFighterPacketNoteTextureEntry();
     }
     else
     {
         ndsFighterPacketCmd1(REG2ID(GFX_TEX_FORMAT), 0u);
+    }
+    if (hw_group != NULL)
+    {
+        u32 base = ndsFighterPacketTexgenBaseWord(
+            scale_s, scale_t, origin_s, origin_t, offset);
+        u32 at;
+        u32 k;
+
+        ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_TEXTURE);
+        at = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x3), 12u);
+        if (rec->fault == 0u)
+        {
+            for (k = 0u; k < 12u; k++)
+            {
+                rec->words[at + k] = 0u;
+            }
+            hw_group->origin_s = at;
+            hw_group->reserved[1] = 1u;
+        }
+        ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+        ndsFighterPacketCmd1(FIFO_TEX_COORD, base);
+        rec->hw_texgen = 1u;
+        gNdsFighterPacketHwTexgenGroups++;
     }
     ndsFighterPacketCmd1(REG2ID(GFX_POLY_FORMAT), poly_fmt);
     ndsFighterPacketCmd1(FIFO_BEGIN, (u32)GL_TRIANGLE);
@@ -3949,6 +4038,12 @@ ndsFighterPacketRecordTexCoord(u32 word, u32 dense_id)
     NDSFighterPacketTexgenGroup *group;
     u32 i;
 
+    if (rec->hw_texgen != 0u)
+    {
+        /* GX texgen: the engine forms this corner's texcoord from its
+         * GFX_NORMAL; a TEXCOORD here would replace it. */
+        return;
+    }
     rec->need[1] += rec->in_texgen;
     i = ndsFighterPacketCmd(FIFO_TEX_COORD, 1u);
     if (rec->fault != 0u)

@@ -10400,7 +10400,11 @@ ndsRendererNativePrepareProductionRunCore(
         state->texture_prepare_scale_t,
         state->texture_prepare_origin_s,
         state->texture_prepare_origin_t,
-        state->texture_prepare_offset));
+        state->texture_prepare_offset,
+        /* The corners send GFX_NORMAL (GX texgen's input) exactly when the
+         * run lights. */
+        ((state->texture_prepare_poly_fmt & POLY_FORMAT_LIGHT0) != 0u) ?
+            1u : 0u));
     if ((hierarchy_run != NULL) && (policy->textured != 0u) &&
         (resolved_texture.entry == NULL))
     {
@@ -11504,6 +11508,40 @@ _Static_assert(((((u64)0xffffu) * NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >> 8) <=
                    (u64)0xffffffffu,
                "the texgen scale factor must fit a 32x32 multiply");
 
+/* GX texgen (gNdsFighterPacketHwTexgen, nds_renderer_preamble.c). The engine
+ * forms S = TEXCOORD + (N0*m0 + N1*m4 + N2*m8) >> 21 per GFX_NORMAL, the
+ * normal 1.0.9 and the matrix 20.12. The corner's normal word is the source
+ * s8 normal n scaled by 511/127 (ndsRendererR2NormalComponent), so the
+ * source's (n.Lq) * scale / (8 * 127 * 32767) is N.M >> 21 with
+ * M = Lq * scale * 2^18 / (511 * 32767): a 2^48 reciprocal and a shift. */
+#define NDS_FIGHTER_PACKET_HW_TEXGEN_RECIP \
+    (((u64)1u << 48) / ((u64)511u * 32767u))
+
+static inline u32 ndsFighterPacketHwTexgenEntry(s32 direction, u32 scale)
+{
+    return (u32)(s32)(((s64)direction * (s64)(scale & 0xffffu) *
+                       (s64)NDS_FIGHTER_PACKET_HW_TEXGEN_RECIP) >> 30);
+}
+
+/* ndsRendererNativeTexgenCoord's value at a zero dot plus the group's origin
+ * and offset terms: the constant every corner of the group shares. */
+static u32 ndsFighterPacketTexgenBaseWord(u32 scale_s, u32 scale_t,
+                                          u32 origin_s, u32 origin_t,
+                                          s32 offset)
+{
+    const u64 unit = (u64)NDS_NATIVE_TEXGEN_UNIT;
+    const u32 factor_s = (u32)((((u64)(scale_s & 0xffffu)) *
+                                NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >> 8);
+    const u32 factor_t = (u32)((((u64)(scale_t & 0xffffu)) *
+                                NDS_NATIVE_TEXGEN_SCALE_RECIP_Q48) >> 8);
+    const s32 s = (s32)((unit * factor_s) >> 40) + offset -
+        ((s32)origin_s << 2);
+    const s32 t = (s32)((unit * factor_t) >> 40) + offset -
+        ((s32)origin_t << 2);
+
+    return (u32)(u16)(s16)s | ((u32)(u16)(s16)t << 16);
+}
+
 /* ndsRendererNativeTexgenCoord's non-LINEAR value with the scale's factor
  * made by the caller: a 32-bit dot (see ndsFighterPacketPatchTexgen) and one
  * 32x32->64 multiply. */
@@ -11598,6 +11636,27 @@ static s32 ndsFighterPacketPatchTexgen(
                 return FALSE;
             }
             directions_for = inputs[group->root].modelview_matrix;
+        }
+        if (group->reserved[1] != 0u)
+        {
+            /* GX texgen: the group's texture matrix, rows 0-2 (N.x, N.y,
+             * N.z), columns S then T (MTX_LOAD_4x3 parameters 0-1, 3-4,
+             * 6-7; the rest stay zero). */
+            const u32 at = group->origin_s;
+            u32 *m;
+
+            if ((at + 12u) > packet->word_count)
+            {
+                return FALSE;
+            }
+            m = &packet->words[at];
+            m[0] = ndsFighterPacketHwTexgenEntry(lookat_x.x, group->scale_s);
+            m[1] = ndsFighterPacketHwTexgenEntry(lookat_y.x, group->scale_t);
+            m[3] = ndsFighterPacketHwTexgenEntry(lookat_x.y, group->scale_s);
+            m[4] = ndsFighterPacketHwTexgenEntry(lookat_y.y, group->scale_t);
+            m[6] = ndsFighterPacketHwTexgenEntry(lookat_x.z, group->scale_s);
+            m[7] = ndsFighterPacketHwTexgenEntry(lookat_y.z, group->scale_t);
+            continue;
         }
         /* P2-6 (2026-10-02): a polygon's texgen sites are 93% distinct
          * normals (Race, 1p-pf10r-st11: 364 sites a frame, 337 computed), so
@@ -11701,6 +11760,18 @@ static s32 ndsFighterPacketPatchTexgen(
     (void)input_count;
     return TRUE;
 }
+
+static u32 ndsFighterPacketTexgenBaseWord(u32 scale_s, u32 scale_t,
+                                          u32 origin_s, u32 origin_t,
+                                          s32 offset)
+{
+    (void)scale_s;
+    (void)scale_t;
+    (void)origin_s;
+    (void)origin_t;
+    (void)offset;
+    return 0u;
+}
 #endif
 
 static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketAbortRecord(void)
@@ -11744,6 +11815,11 @@ static void NDS_FIGHTER_PACKET_COLD_CODE ndsFighterPacketFinishRecord(
     if (packet == NULL)
     {
         return;
+    }
+    if (rec->hw_texgen != 0u)
+    {
+        /* The last run was GX texgen: leave the identity texture matrix. */
+        ndsFighterPacketRecordTexIdentity();
     }
     for (i = 0u; i < 4u; i++)
     {
@@ -12277,6 +12353,8 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     rec->pending_tint_rgb = 0u;
     rec->in_texgen = 0u;
     rec->x_reserved = 0u;
+    rec->hw_texgen = 0u;
+    rec->tex_param_or = 0u;
     for (i = 0u; i < 4u; i++)
     {
         rec->need[i] = 0u;
