@@ -83,7 +83,16 @@ Polygon Team 61% -> 80%; Race 15% -> 36%. Sweep of every other stage at the
 same build: 84-98% (Giant DK 84%, Master Hand 87%, Mario Bros 85%). The Race
 is the one stage under the floor: three polygons, the player and Bob-ombs on
 the largest map (busy median 2.45M cycles a present against 2.23M; profile
-`1p-pf12r-st11`).
+`1p-pf12r-st11`). Fighter packets then moved texgen to the geometry engine
+(TEXIMAGE_PARAM mode 2 with a per-group texture matrix, `87760f7dfdf`):
+Polygon Team 88%, Race 43% (median 2.28M, `1p-pf15r-st11`). Measured and
+dropped as no gain: a line- or segment-level x reject in the floor/ceiling
+sweeps (the y test already leaves only the lines near the fighter) and a
+pointer memo for the collision geometry check (slower: cold statics). The
+Race's remaining cost is spread thin: soft-float adds 143K a frame across
+dozens of callers, wall/floor/ceiling sweeps 210K, poses 120K, the stage's
+animated bindings and run culls ~110K, items (six Bob-ombs against four
+fighters) ~85K. Run-ahead would absorb it and is refused (D4).
 
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
