@@ -2515,6 +2515,14 @@ def onep_css_screen_parts() -> tuple[Placement, ...]:
         Placement("MNPlayersCommon", "llMNPlayersCommon1PTextSprite",
                   33, 132, False, (0x00, 0x00, 0x00)),
 
+        # mnPlayers1PGameLabelsProcDisplay (:1102): the separator fill comes
+        # first, then lbCommonDrawSObjAttr draws the label sprites over it, so
+        # the "Options" text sits on top of the bar.  gDPFillRectangle's
+        # endpoint is the source viewport edge; clipping the 163x5 source
+        # rectangle at the DS panel is exact.
+        Placement("MNPlayers1PMode", "", 157, 136, False,
+                  fill=(0x57, 0x60, 0x88, 0xFF), size=(163, 5)),
+
         # mnPlayers1PGameMakeLabels (:1350).  These are static for the life of
         # the scene; time, difficulty and stock themselves are separate states
         # below so changing one does not re-read this full-screen surface.
@@ -2536,11 +2544,6 @@ def onep_css_screen_parts() -> tuple[Placement, ...]:
                   145, 159, False, (0xC5, 0xB6, 0xA7)),
         Placement("MNPlayers1PMode", "llMNPlayers1PModeStockColonTextSprite",
                   144, 179, False, (0xC5, 0xB6, 0xA7)),
-        # mnPlayers1PGameLabelsProcDisplay (:1058): separator fill before the
-        # label sprites.  gDPFillRectangle's endpoint is the source viewport
-        # edge; clipping the 163x5 source rectangle at the DS panel is exact.
-        Placement("MNPlayers1PMode", "", 157, 136, False,
-                  fill=(0x57, 0x60, 0x88, 0xFF), size=(163, 5)),
     ))
     return tuple(parts)
 
