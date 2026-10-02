@@ -762,6 +762,25 @@ void ndsFighterRendererInvalidateStatusCachesOnSetStatus(GObj *fighter_gobj)
     sNdsFtrDrawMemo[slot].valid = 0u;
 }
 
+/* A fighter was made in this slot, or the slot's display registration
+ * changed. The memo and the draw plan hold the previous fighter's DObjs, and
+ * the replacement can take the very same FTStruct, GObj and root DObj (the
+ * free lists are LIFO), so the memo key cannot tell the two apart. A status
+ * change no longer invalidates them unless it moved the topology
+ * (battleship_ftmain.c), which also covered a new fighter's first status, so
+ * the lifetime boundary does it here. Owner r70: the 4P VS CSS froze -- a
+ * rebuilt Mario preview replayed the old one's freed DObjs (no MObjs,
+ * validate reject 7) into ndsPreviewPackLoadHalt(20). */
+void ndsFighterRendererInvalidateSlotDrawCaches(u32 slot)
+{
+    if (slot >= GMCOMMON_PLAYERS_MAX)
+    {
+        return;
+    }
+    sNdsFighterStatusGeneration[slot]++;
+    sNdsFtrDrawMemo[slot].valid = 0u;
+}
+
 static u32 ndsFtrDrawMemoMixBytes(const void *data, u32 bytes)
 {
     const u8 *p = data;

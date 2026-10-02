@@ -1438,6 +1438,9 @@ static FTStruct *ndsFighterManagerLiveStruct(u32 slot)
     return (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
 }
 
+/* renderer_adapter_fighter.c, included after this file. */
+void ndsFighterRendererInvalidateSlotDrawCaches(u32 slot);
+
 void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj, u32 slot)
 {
     FTStruct *fp;
@@ -1446,6 +1449,8 @@ void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj, u32 slot)
     {
         return;
     }
+    /* Registered or released: either way the slot's drawn DObjs change. */
+    ndsFighterRendererInvalidateSlotDrawCaches(slot);
     /* Scene-local fighters live in taskman arenas. A menu/results owner must
      * clear its registration before that arena is rewound or the next scene
      * can mistake a stale FTStruct address for a live fighter. */
@@ -1737,6 +1742,7 @@ static void ndsFighterManagerRecordCreatedFighter(GObj *fighter_gobj,
     sNdsFighterManagerLiveGObjs[player] = fighter_gobj;
     fp->nds_magic = NDS_FTSTRUCT_MAGIC;
     fp->nds_slot = (u32)player;
+    ndsFighterRendererInvalidateSlotDrawCaches((u32)player);
     /* The imported BattleShip FTStruct is authoritative.  Earlier port proof
      * code copied all 3,012 bytes into a second static pool here; no gameplay
      * reader consumed that copy, while it permanently reduced the DS heap that
