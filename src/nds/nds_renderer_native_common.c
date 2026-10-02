@@ -13960,11 +13960,13 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     packet->tint_bind_overflow = 0u;
     packet->fence_other = 0u;
     packet->tint_bind_seen = 0u;
-    /* TryReplay's arming: the shade words below are derived at the execute's
-     * own modulate (the traversal's, 0 -- ndsRendererInitTraversalState with
-     * no config), while the replay state names the live one, exactly as a
-     * record of this draw would; the per-frame ApplyTint then evolves them as
-     * the replay evolves its packet's. */
+    /* TryReplay's arming: the packet names the live modulate, and the shade
+     * words below are derived at it (the traversal takes it after its init
+     * below), exactly as a record of this draw would; the per-frame ApplyTint
+     * then evolves them as the replay evolves its packet's. They used to be
+     * derived at the traversal's own 0 under the live name, so a fighter
+     * recorded inside a colour animation -- the challenger's black, a hurt
+     * flash -- drew and replayed in its plain colours. */
     packet->tint_modulate = inputs[0].config->color_modulate;
     packet->tint_prim_hash = 2166136261u;
     for (i = 0u; i < input_count; i++)
@@ -13982,6 +13984,7 @@ ndsFtrLeanMaterialize(u32 battle_slot, u32 entry, const u32 *key,
     m.pk.cmd_slot = 4u;
     m.texgen_group = NDS_FIGHTER_PACKET_TEXGEN_GROUP_NONE;
     ndsRendererInitTraversalState(state, NULL, stats, NULL, NULL, 0u);
+    state->color_modulate = packet->tint_modulate;
     if (*sNdsNativeFighterActiveDenseNormalsBuilt == 0u)
     {
         ndsRendererR2BuildDenseNormals();
@@ -17408,6 +17411,10 @@ static void ndsRendererNativeBindOwnerRootState(
     state->modelview_valid = 0u;
     state->matrix_valid = 0u;
     state->matrix_word_valid = 0u;
+    /* The fighter's colour animation (hurt flash, the challenger's black):
+     * the shared owner state is initialised once per owner, so each root
+     * takes this draw's modulate, as ndsRendererInitTraversalState does. */
+    state->color_modulate = config->color_modulate;
     if ((stats != NULL) && (config->initial_geometry_mode != 0u))
     {
         stats->geometry_mode = config->initial_geometry_mode;

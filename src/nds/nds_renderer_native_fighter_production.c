@@ -180,6 +180,12 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 
     ndsRendererInitTraversalState(
         state, NULL, stats, NULL, NULL, 0u);
+    /* The fighter's colour animation (a hurt flash, the challenger's black):
+     * one modulate per draw, on every root's config. A record names it
+     * (tint_modulate), so its shade words are derived at it too. */
+    state->color_modulate =
+        ((input_count != 0u) && (inputs[0].config != NULL)) ?
+            inputs[0].config->color_modulate : 0u;
 #if NDS_R2_FIGHTER_HW_LIGHT
     /* R2-03 E16. Light 0's colour is white and the source's two light colours
      * become the material's diffuse and ambient, so the engine evaluates
