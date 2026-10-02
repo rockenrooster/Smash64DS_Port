@@ -46,6 +46,7 @@
 #if NDS_P2_1P_GAME
 
 #include <stdint.h>
+#include <string.h>
 #include <PR/gbi.h>
 #include <PR/ultratypes.h>
 #include <ft/fighter.h>
@@ -254,6 +255,14 @@ void mnPlayers1PBonusStartScene(void)
      * eject HiScoreGObj when non-NULL on the first cursor move, so a
      * revisit would eject the torn-down GObj. Null it on entry. */
     sMNPlayers1PBonusHiScoreGObj = NULL;
+    /* The slot too, which the overlay's BSS zeroing also cleared and no init
+     * resets: its `player` is the last visit's fighter GObj, and the first
+     * fighter change of a revisit hands it to mnPlayers1PBonusMakeFighter,
+     * which reads its root DObj and destroys it (:1343-1346) -- a data abort
+     * on the freed GObj (owner r71: "Bonus CSS freezes often"; every visit
+     * after the first). The 1P game select's InitSlot nulls its own
+     * (mnplayers1pgame.c:3356); this one never did. */
+    memset(&sMNPlayers1PBonusSlot, 0, sizeof(sMNPlayers1PBonusSlot));
 #if NDS_P2_MENU_SHELL
     sNdsMNPlayers1PBonusTotalGObj = NULL;
 #endif
