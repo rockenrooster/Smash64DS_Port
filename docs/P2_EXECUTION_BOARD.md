@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-10-01.
+Updated: 2026-10-02.
 
 **Last integrated Boundary GREEN: N04.08; P2-2p8 acceptance RED.** Figures below.
 
@@ -34,7 +34,7 @@ SHA-256 C6574420A9FC0E77B670093CE7AE1B595A62583488C5A9D72DD367877B0E9477
 | P2-3 Fighter production | **Acceptance OPEN** | Link diagnostic-only; Samus engagement owed. Queue below. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Collision parity and Hyrule/Inishie natural proof pass; three VS captures remain. |
 | P2-5 Items | **Native coverage incomplete** | Sword repair/fidelity-02 landed; kinds, children, atlas and interactions remain open. |
-| P2-6 1P Game | **LADDER PLAYS END TO END 10-01** | Walk ROM: stages 0-13, bonuses, Master Hand, Ending, Staffroll, Congra (`p2/P2-6-one-player.md` table). Open: MH/Ending/Staffroll undrawn, Metal declines, Zako low-water, intro stills; flag stays 0. |
+| P2-6 1P Game | **PLAYS END TO END; P95 PASS RUNNING** | 6 of 14 stages >= 95% in 2 VBlanks; MH/Kirby Team 94.4%, BtP 91%, Race 40-52% (`p2/P2-6-one-player.md` final-pass table). |
 | P2-7 Modes & meta | **Options/Backup Clear accepted** | Bake DATA/VS Record/Sound Test surfaces (retired MAIN slab); Characters works. 1P gated. |
 
 ## Current integration checkpoint
@@ -137,7 +137,7 @@ pixels/audio or unexercised states stay engineering work.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-5i1 | Item manager and twenty common items | **SOURCE PRESENT; Sword lifetime repair recorded** | Remaining kinds, children, states, interactions and full natural-path acceptance stay open. |
-| P2-5i2 | The 13 Poke Ball Pokemon | **13 DRAWN** | Baked `1fe468cc3bb`: 0 native failures, 13 forced arms. Hitmonlee (and Clefairy's Metronome copies) drew on link 18, which the item gate refused: `59390301261`. |
+| P2-5i2 | The 13 Poke Ball Pokemon | **13 DRAWN** | Baked `1fe468cc3bb`, 0 native failures; Hitmonlee/Metronome on link 18 `59390301261`. |
 | P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | Native owners exist for 1 of 42 item shapes. `MBallThrown` effect desc excluded on a false premise. |
 | P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Pickup animation FileIDs resolved 09-09; `itMainCheckShootNoAmmo` weak stub in P2-3f54. |
 | P2-5u1 | Item Switch and VS Options screens | **Entry/row repair committed** | `eafdf226c52`. Switch mask honoured by the spawn law; UI half uncensused. |
