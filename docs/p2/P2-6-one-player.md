@@ -90,9 +90,18 @@ dropped as no gain: a line- or segment-level x reject in the floor/ceiling
 sweeps (the y test already leaves only the lines near the fighter) and a
 pointer memo for the collision geometry check (slower: cold statics). The
 Race's remaining cost is spread thin: soft-float adds 143K a frame across
-dozens of callers, wall/floor/ceiling sweeps 210K, poses 120K, the stage's
-animated bindings and run culls ~110K, items (six Bob-ombs against four
-fighters) ~85K. Run-ahead would absorb it and is refused (D4).
+dozens of callers, wall/floor/ceiling sweeps 210K, poses 120K, items (six
+Bob-ombs against four fighters) ~85K. Run-ahead would absorb it and is
+refused (D4). What did move it: every blob-resident stage but Yoster shipped
+rigid binding mask 0, so the Race composed its 24 bindings on the CPU every
+frame although none moves (a frame-to-frame world probe over a 600-frame run
+and a walk down the course). bonus3's mask now pins its 18 non-billboard
+bindings, the compiled GX program bakes their worlds (body 39,076 B, the
+boards' ceiling), and the run cull tests a rigid run's world box against one
+camera x projection a frame (`56a77844b42`): Race 43% -> 50.2%, at the
+floor. The other blob stages (the VS venues included) still ship mask 0;
+the same probe and pin is the next stage lever, within each venue's body
+ceiling.
 
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
