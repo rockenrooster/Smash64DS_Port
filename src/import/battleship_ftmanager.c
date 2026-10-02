@@ -707,6 +707,8 @@ void ndsFTManagerEnsureOwnerImages(FTDesc *desc)
              * opponents. Neither update changes detail, so load only the
              * requested image. */
             if (((gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
+                 (gSCManagerSceneData.scene_curr == nSCKind1PBonus1Players) ||
+                 (gSCManagerSceneData.scene_curr == nSCKind1PBonus2Players) ||
                  (gSCManagerSceneData.scene_curr == nSCKind1PIntro)) &&
                 (desc->pkind == nFTPlayerKindDemo))
             {
@@ -911,7 +913,9 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 #if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
     if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
         ((gSCManagerSceneData.scene_curr == nSCKindPlayersVS) ||
-         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers)) &&
+         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PBonus1Players) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PBonus2Players)) &&
         (gFTDataKirbyMainMotion == NULL))
     {
         sNdsFTManagerKirbyPreviewMainMotionSaved = gFTDataKirbyMainMotion;

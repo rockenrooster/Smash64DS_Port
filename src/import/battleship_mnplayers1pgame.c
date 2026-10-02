@@ -114,17 +114,20 @@ extern void efManagerInitEffects(void);
 
 extern void ndsFighterManagerRegisterDisplayFighter(GObj *gobj, u32 slot);
 extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
-static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc);
-static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj);
-static void ndsMNPlayers1PGameSkipPreload(s32 fkind);
+GObj *ndsMNPlayers1PPreviewMakeFighter(FTDesc *desc);
+void ndsMNPlayers1PPreviewDestroyFighter(GObj *gobj);
+void ndsMNPlayers1PPreviewSkipPreload(s32 fkind);
+void ndsMNPlayers1PPreviewRetire(void);
 static void ndsMNPlayers1PGameDraw(void);
 
 /* Keep the source's selection, rotation and costume logic. These
  * backend boundaries give its single preview the same instance lifetime and
- * material invalidation as the VS character-select bridge. */
-#define ftManagerMakeFighter ndsMNPlayers1PGameMakeFighter
-#define ftManagerDestroyFighter ndsMNPlayers1PGameDestroyFighter
-#define ftManagerSetupFilesAllKind ndsMNPlayers1PGameSkipPreload
+ * material invalidation as the VS character-select bridge. The bonus
+ * character select (battleship_mnplayers1pbonus.c) shares them: the two
+ * scenes never run at once and each shows one preview. */
+#define ftManagerMakeFighter ndsMNPlayers1PPreviewMakeFighter
+#define ftManagerDestroyFighter ndsMNPlayers1PPreviewDestroyFighter
+#define ftManagerSetupFilesAllKind ndsMNPlayers1PPreviewSkipPreload
 #define gcDrawAll ndsMNPlayers1PGameDraw
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayers1pgame.c"
 #undef gcDrawAll
@@ -139,7 +142,7 @@ static void *sNdsPlayers1PGamePreviewBase;
 static u32 sNdsPlayers1PGamePreviewGeneration;
 static s32 sNdsPlayers1PGamePreviewFkind = nFTKindNull;
 
-static void ndsMNPlayers1PGameSkipPreload(s32 fkind)
+void ndsMNPlayers1PPreviewSkipPreload(s32 fkind)
 {
     (void)fkind;
 }
@@ -159,7 +162,7 @@ static void ndsMNPlayers1PGameInitPreviewArena(void)
     }
 }
 
-static void ndsMNPlayers1PGameRetirePreview(void)
+void ndsMNPlayers1PPreviewRetire(void)
 {
     s32 fkind = sNdsPlayers1PGamePreviewFkind;
 
@@ -179,7 +182,7 @@ static void ndsMNPlayers1PGameRetirePreview(void)
     sNdsPlayers1PGamePreviewFkind = nFTKindNull;
 }
 
-static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc)
+GObj *ndsMNPlayers1PPreviewMakeFighter(FTDesc *desc)
 {
     GObj *gobj;
     SYMallocRegion *previous;
@@ -200,11 +203,11 @@ static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc)
     return gobj;
 }
 
-static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj)
+void ndsMNPlayers1PPreviewDestroyFighter(GObj *gobj)
 {
     ndsFighterManagerRegisterDisplayFighter(NULL, (u32)ftGetStruct(gobj)->nds_slot);
     ftManagerDestroyFighter(gobj);
-    ndsMNPlayers1PGameRetirePreview();
+    ndsMNPlayers1PPreviewRetire();
 }
 
 static void ndsMNPlayers1PGameDraw(void)
@@ -258,7 +261,7 @@ void mnPlayers1PGameStartScene(void)
     ndsMenuShellOnePlayerCssExit();
 #endif
     ndsFighterManagerRegisterDisplayFighter(NULL, (u32)sMNPlayers1PGameManPlayer);
-    ndsMNPlayers1PGameRetirePreview();
+    ndsMNPlayers1PPreviewRetire();
 }
 
 #endif /* NDS_P2_1P_GAME */

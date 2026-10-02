@@ -56,12 +56,34 @@
 void ndsBaseMN1PModeStartScene(void);
 
 static void ndsMN1PModeDraw(void);
+static s32 ndsMN1PModeTapButtons(u32 buttons);
 
 #define gcDrawAll ndsMN1PModeDraw
+#define scSubsysControllerGetPlayerTapButtons ndsMN1PModeTapButtons
 #include "../../decomp/BattleShip-main/decomp/src/mn/mn1pmode/mn1pmode.c"
+#undef scSubsysControllerGetPlayerTapButtons
 #undef gcDrawAll
 
 #undef mn1PModeStartScene
+
+/* TRAINING MODE IS CLOSED (owner, 2026-10-02: "Training mode can be disabled
+ * for now"). Its tab stays and the cursor still visits it, but the confirm
+ * the source reads for it (mn1PModeFuncRun's A/START tap) is answered with
+ * the menu's denied sound instead of the hand-off to its character select.
+ * Every other tab and the B tap read the source's taps unchanged. */
+static s32 ndsMN1PModeTapButtons(u32 buttons)
+{
+    s32 player = scSubsysControllerGetPlayerTapButtons(buttons);
+
+    if ((player != FALSE) &&
+        ((buttons & (A_BUTTON | START_BUTTON)) != 0u) &&
+        (sMN1PModeOption == nMN1PModeOptionTrainingMode))
+    {
+        func_800269C0_275C0(nSYAudioFGMMenuDenied);
+        return FALSE;
+    }
+    return player;
+}
 
 static void ndsMN1PModeDraw(void)
 {

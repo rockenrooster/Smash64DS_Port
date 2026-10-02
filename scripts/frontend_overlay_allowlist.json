@@ -108,6 +108,11 @@
       "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
     },
     {
+      "source_symbol": "dMNPlayers1PBonusTaskmanSetup",
+      "target_symbol": "battleship_mnplayers1pbonus.c::ndsMNPlayers1PBonusDraw",
+      "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
+    },
+    {
       "source_symbol": "dMNPlayers1PGameTaskmanSetup",
       "target_symbol": "battleship_mnplayers1pgame.c::ndsMNPlayers1PGameDraw",
       "reason": "Source menu/opening task setup retains its callback addresses; the matching scene is dispatched only after the frontend is loaded. These setups are never installed for VS."
@@ -276,6 +281,11 @@
       "source_symbol": "dSC1PChallengerTaskmanSetup",
       "target_symbol": "sc1PChallengerFuncStart",
       "reason": "This source setup is installed only for its non-VS scene. The frontend is loaded before scene entry and retained throughout nested 1P calls."
+    },
+    {
+      "source_symbol": "dSC1PChallengerTaskmanSetup",
+      "target_symbol": "battleship_sc1pchallenger.c::ndsSC1PChallengerDraw",
+      "reason": "The scene's gcDrawAll wrapper (3D layer, viewport, backdrop) in the same setup. Installed only for its non-VS scene; the frontend is loaded before scene entry and retained throughout nested 1P calls."
     },
     {
       "source_symbol": "dSC1PGameTaskmanSetup",

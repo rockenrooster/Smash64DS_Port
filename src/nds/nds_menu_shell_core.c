@@ -1116,6 +1116,10 @@ u32 ndsMenuShellWalkWantsResultsStart(void)
  * before the 1P CSS to walk another fighter's campaign. */
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PUpHolds = 28u;
 NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PRightHolds = 24u;
+/* The 1P Mode menu tab the walk confirms, as down taps from 1P GAME: 0 the
+ * campaign, 2 Bonus 1 Practice, 3 Bonus 2 Practice (Training is closed). The
+ * bonus character selects take the same puck path as the 1P one. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalk1PModeDowns = 0u;
 
 void ndsMenuShellWalkDrive1PSourceMenus(void)
 {
@@ -1139,6 +1143,8 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
     }
     if ((curr != (u32)nSCKind1PMode) &&
         (curr != (u32)nSCKind1PGamePlayers) &&
+        (curr != (u32)nSCKind1PBonus1Players) &&
+        (curr != (u32)nSCKind1PBonus2Players) &&
         (curr != (u32)nSCKind1PIntro))
     {
         /* Outside the source menu/intro route the pads park neutral, so the battle
@@ -1163,7 +1169,16 @@ void ndsMenuShellWalkDrive1PSourceMenus(void)
     }
     if (curr == (u32)nSCKind1PMode)
     {
-        if ((sWalk1PTic == 12u) || (sWalk1PTic == 13u))
+        /* One two-tic down hold per tab, eight tics apart (the menu's stick
+         * wait is 7), then the confirm. */
+        const u32 press = 12u + (gNdsMenuShellWalk1PModeDowns * 8u);
+
+        if ((sWalk1PTic >= 12u) && (sWalk1PTic < press) &&
+            (((sWalk1PTic - 12u) % 8u) < 2u))
+        {
+            stick_y = -80;
+        }
+        else if ((sWalk1PTic == press) || (sWalk1PTic == (press + 1u)))
         {
             buttons = (u16)A_BUTTON;
         }

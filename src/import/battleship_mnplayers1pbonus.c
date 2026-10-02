@@ -54,6 +54,7 @@
 #include <gm/gmsound.h>
 #include <if/interface.h>
 #include <mn/menu.h>
+#include <nds/nds_platform.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -86,9 +87,45 @@ extern sb32 mnPlayers1PBonusCheckBonusCompleteAll(void);
 /* Landed precedent extern (battleship_mntraining.c:90); called at :2835. */
 extern void efManagerInitEffects(void);
 
+/* THE PREVIEW, NOT THE ROSTER (owner r67: Bonus 1/2 Practice "do not
+ * work"). mnPlayers1PBonusFuncStart sets up every playable fighter's files
+ * (:2837-2840) so any puck pick can show its model at once; the 12 kinds do
+ * not fit the DS heap, and the fourth (Samus, 73,120 B) halted in
+ * ndsSyMallocOverflowHalt on entry. The 1P game select's preview boundary
+ * (battleship_mnplayers1pgame.c) replaces that preload: the one fighter the
+ * select shows loads into a resettable arena when it is made and retires
+ * when it is destroyed. Selection, costume and rotation stay the source's. */
+extern void ndsFighterManagerRegisterDisplayFighter(GObj *gobj, u32 slot);
+GObj *ndsMNPlayers1PPreviewMakeFighter(FTDesc *desc);
+void ndsMNPlayers1PPreviewDestroyFighter(GObj *gobj);
+void ndsMNPlayers1PPreviewSkipPreload(s32 fkind);
+void ndsMNPlayers1PPreviewRetire(void);
+static void ndsMNPlayers1PBonusDraw(void);
+
+#define ftManagerMakeFighter ndsMNPlayers1PPreviewMakeFighter
+#define ftManagerDestroyFighter ndsMNPlayers1PPreviewDestroyFighter
+#define ftManagerSetupFilesAllKind ndsMNPlayers1PPreviewSkipPreload
+#define gcDrawAll ndsMNPlayers1PBonusDraw
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayers1pbonus.c"
+#undef gcDrawAll
+#undef ftManagerSetupFilesAllKind
+#undef ftManagerDestroyFighter
+#undef ftManagerMakeFighter
 
 #undef mnPlayers1PBonusStartScene
+
+/* The select's preview is 3D, which BG0 shows only while a scene asks, in
+ * the cameras' (10,10)-(310,230) window -- the 1P game select's draw. */
+static void ndsMNPlayers1PBonusDraw(void)
+{
+    GObj *fighter = sMNPlayers1PBonusSlot.player;
+
+    ndsPlatformSet3DLayerEnabled((fighter != NULL) &&
+        ((fighter->flags & GOBJ_FLAG_HIDDEN) == 0u));
+    ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+    gcDrawAll();
+    ndsPlatformReset3DViewport();
+}
 
 void mnPlayers1PBonusStartScene(void)
 {
@@ -99,6 +136,9 @@ void mnPlayers1PBonusStartScene(void)
      * revisit would eject the torn-down GObj. Null it on entry. */
     sMNPlayers1PBonusHiScoreGObj = NULL;
     ndsBaseMNPlayers1PBonusStartScene();
+    ndsFighterManagerRegisterDisplayFighter(NULL,
+                                            (u32)sMNPlayers1PBonusManPlayer);
+    ndsMNPlayers1PPreviewRetire();
 }
 
 #endif /* NDS_P2_1P_GAME */

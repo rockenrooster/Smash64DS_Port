@@ -195,12 +195,24 @@ const void *ndsRelocNativeRootAddress(const void *base, u32 root_offset)
     return NULL;
 }
 
+/* The character selects whose one-fighter previews load from the preview
+ * packs: VS, the 1P game, and the two bonus practice selects, which show the
+ * same preview (mnplayers1pbonus.c) and loaded every fighter's full files
+ * without it. */
+static u32 ndsRelocSceneShowsPreviewFighter(void)
+{
+    u8 scene = gSCManagerSceneData.scene_curr;
+
+    return ((scene == nSCKind1PGamePlayers) || (scene == nSCKindPlayersVS) ||
+            (scene == nSCKind1PBonus1Players) ||
+            (scene == nSCKind1PBonus2Players)) ? TRUE : FALSE;
+}
+
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
 {
     NDSRelocLoadedFile *loaded;
     u32 mapped;
-    if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
-        (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
+    if ((ndsRelocSceneShowsPreviewFighter() == FALSE)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
@@ -442,8 +454,7 @@ void *ndsRelocPreviewFighterLoadBegin(s32 fkind)
     /* The source/oracle renderer still consumes full Gfx/Vtx programs. */
     return NULL;
 #endif
-    if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
-         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
+    if (((ndsRelocSceneShowsPreviewFighter() == FALSE)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
          && (ndsRelocUseBattleCoreFighterData() == FALSE)
 #endif
