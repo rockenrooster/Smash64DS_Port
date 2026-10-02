@@ -13079,13 +13079,22 @@ static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
 }
 
 #define NDS_ITEM_DISPLAY_LINK 11
+/* Items the source moves onto the effects link after making them: the Poke
+ * Ball's Hitmonlee (itsawamura.c, gcMoveGObjDLHead(item_gobj, 18, ...)) and
+ * Clefairy's Metronome copies of Hitmonlee and Starmie (itpippi.c, the same
+ * call). Admitting only link 11 refused all three, which is why Hitmonlee was
+ * "made, never reaches the adapter" while its two display lists sat baked and
+ * unused. The camera already captures link 18 for the effects; the GObj-kind
+ * check keeps that link's effect traffic out of the item submit. */
+#define NDS_ITEM_EFFECT_DISPLAY_LINK 18
 
 static sb32 ndsStageGCDrawAllLoopIsItemDisplay(GObj *gobj, s32 link_id)
 {
     return ((gobj != NULL) &&
             (gobj->id == nGCCommonKindItem) &&
-            (gobj->dl_link_id == NDS_ITEM_DISPLAY_LINK) &&
-            (link_id == NDS_ITEM_DISPLAY_LINK)) ? TRUE : FALSE;
+            (gobj->dl_link_id == link_id) &&
+            ((link_id == NDS_ITEM_DISPLAY_LINK) ||
+             (link_id == NDS_ITEM_EFFECT_DISPLAY_LINK))) ? TRUE : FALSE;
 }
 
 /* THIS PREDICATE IS WHAT "THE BATTLE HARDWARE PATH DOES NOT CONSUME SOURCE
