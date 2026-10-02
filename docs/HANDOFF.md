@@ -23,7 +23,7 @@ paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240
 1.12M, RED; `94ea559f062`); lab P95 1.21-1.58M by roster/stage; SZ owner roster 1.37M. 09-30 landed: baked
 native owners (`1fe468cc3bb`), transition hold (owner r64, `VERIFIED-hold.md`), world-cache GO retry. Playtest
 r65b. Open: owner's rematch VFX loss (not reproduced on 3 stages/2 rosters; ask roster, stage, which VFX),
-Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
+Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 black), lean remats (DK 13/match).
 **10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra with 0 battle
 failures (table `p2/P2-6-one-player.md`). Landed: intro stills/poses, staff roll, Master Hand, Race/board lights, HUD
 anchors, bonus map colours (RSP lighting baked, `390d513c5cb`), Ending room + figure (NitroFS room table), platform
@@ -34,7 +34,7 @@ texgen, fast-lane routes, off-screen culls, rigid stage bindings: `p2/P2-6-one-p
 rigid mask 0 (pin needs a VS heap check). **10-02 VS regression fixed (`319c15bd292`):** 1P growth had shrunk the
 arena 93 KB -- VS CSS hid every preview, VS Results froze at tic 120. A duplicate FAT mount (65,832 B) is gone;
 CSS reserve 230,112 free (needs 183,072), Results podium fits on three rosters. Re-probe both after any static or
-NitroFS growth (scratchpad `resprobe.ps1`). Pikachu self-hit burst toward camera (`53e26f7b7ee`).
+NitroFS growth (scratchpad `resprobe.ps1`). Pikachu self-hit burst toward camera (`53e26f7b7ee`); Hitmonlee draws (`59390301261`).
 
 ## Continue, do not restart
 

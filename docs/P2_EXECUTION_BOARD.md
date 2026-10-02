@@ -137,7 +137,7 @@ pixels/audio or unexercised states stay engineering work.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-5i1 | Item manager and twenty common items | **SOURCE PRESENT; Sword lifetime repair recorded** | Remaining kinds, children, states, interactions and full natural-path acceptance stay open. |
-| P2-5i2 | The 13 Poke Ball Pokemon | **13 DRAWN; Hitmonlee open** | Baked `1fe468cc3bb`: 0 native failures, 13 forced arms. Hitmonlee never reaches the adapter. |
+| P2-5i2 | The 13 Poke Ball Pokemon | **13 DRAWN** | Baked `1fe468cc3bb`: 0 native failures, 13 forced arms. Hitmonlee (and Clefairy's Metronome copies) drew on link 18, which the item gate refused: `59390301261`. |
 | P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | Native owners exist for 1 of 42 item shapes. `MBallThrown` effect desc excluded on a false premise. |
 | P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Pickup animation FileIDs resolved 09-09; `itMainCheckShootNoAmmo` weak stub in P2-3f54. |
 | P2-5u1 | Item Switch and VS Options screens | **Entry/row repair committed** | `eafdf226c52`. Switch mask honoured by the spawn law; UI half uncensused. |
