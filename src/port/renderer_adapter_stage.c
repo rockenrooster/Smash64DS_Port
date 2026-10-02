@@ -313,6 +313,8 @@ sb32 ndsRendererSubmitNativeBaked(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsNativeBakedRootOffscreen(const void *handle,
                                  const NDSRendererConfig *config);
+/* The bumper quad's (nds_native_castle_bumper.exec.inc). */
+sb32 ndsNativeCastleBumperOffscreen(const NDSRendererConfig *config);
 extern volatile u32 gNdsItemBakedDrawCount;
 extern volatile u32 gNdsItemBakedSubmitFailCount;
 sb32 ndsRendererSubmitNativeItemLGun(
@@ -7700,6 +7702,17 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (route_kind == NDS_SDL_ROUTE_BAKED_ITEM)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE))
+    {
+        gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+        gNdsStageDLFastLaneHits++;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_STAGE_CASTLE
+    /* P2-6 (2026-10-02): the same exit for a bumper quad wholly outside the
+     * view (see ndsNativeCastleBumperOffscreen). */
+    if ((route_kind == NDS_SDL_ROUTE_CASTLE_BUMPER) &&
+        (ndsNativeCastleBumperOffscreen(&config) != FALSE))
     {
         gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
         gNdsStageDLFastLaneHits++;

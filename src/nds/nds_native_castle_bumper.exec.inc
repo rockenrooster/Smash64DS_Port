@@ -19,6 +19,58 @@
 /* Texture memo per bind site (ndsRendererHardwareBindTextureOwnerMemo). */
 static NDSRendererOwnerTextureMemo sNdsNativeOwnerTexMemo_castle_bumper[1];
 
+/* P2-6 (2026-10-02): the fast lane's early exit for the quad
+ * (renderer_adapter_stage.c, NDS_SDL_ROUTE_CASTLE_BUMPER). The Race places
+ * four bumpers along its course and drew all four every frame, a few
+ * thousand cycles each, while the camera shows one at most. TRUE when every
+ * corner lies outside one side plane of the draw's clip matrix (modelview x
+ * projection, the stage GX runs' and the baked roots' test). The lane resets
+ * its stats per draw, so a skipped quad leaves nothing for the next list. */
+volatile u32 gNdsCastleBumperCulled;
+
+sb32 ndsNativeCastleBumperOffscreen(const NDSRendererConfig *config)
+{
+    NDSRendererMatrix20p12 m;
+    u32 plane;
+
+    if ((config == NULL) || (config->initial_projection == NULL) ||
+        (config->initial_modelview == NULL))
+    {
+        return FALSE;
+    }
+    ndsRendererMtxMul20p12(config->initial_modelview,
+                           config->initial_projection, &m);
+    for (plane = 0u; plane < 4u; plane++)
+    {
+        const u32 col = plane >> 1;
+        const s64 sign = ((plane & 1u) != 0u) ? 1 : -1;
+        u32 i;
+
+        for (i = 0u; i < NDS_NATIVE_CASTLE_BUMPER_VERTEX_COUNT; i++)
+        {
+            const s16 *v = &sNdsNativeCastleBumperVerts[i * 5u];
+            s64 d = (s64)m.m[3][3] + (sign * (s64)m.m[3][col]);
+            u32 axis;
+
+            for (axis = 0u; axis < 3u; axis++)
+            {
+                d += ((s64)m.m[axis][3] + (sign * (s64)m.m[axis][col])) *
+                     (s64)v[axis];
+            }
+            if (d >= 0)
+            {
+                break;
+            }
+        }
+        if (i == NDS_NATIVE_CASTLE_BUMPER_VERTEX_COUNT)
+        {
+            gNdsCastleBumperCulled++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 sb32 ndsRendererSubmitNativeCastleBumper(
     const void *actor_base_ptr, u32 actor_bytes,
     const NDSRendererNativeMaterial *material,
