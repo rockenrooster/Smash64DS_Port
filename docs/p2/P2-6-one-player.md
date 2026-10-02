@@ -32,6 +32,8 @@ and Congra (walks `cwalk29`..`cwalk48`, `artifacts/visibility/2026-10-01_1p/`).
 | Ending 48 | 0 stage | the room draws: each room GObj submits its own tree with the room camera and the MVCommon lists run as baked roots (`generate_nds_native_item_baked.py` GOBJ_SCENE). The table is a NitroFS file the ending loads into its own heap (`movies/room_baked.bin`, 22 KB; linked into the overlay tail it had cost every scene's arena 22 KB). The props' later lists inherit TLUT mode, texture and flat unlit geometry from the list before them (seed replay); the background's lit lists are baked with the room light (45, 45); walls past the v16 range store their vertices shifted (`vertex_shift`, up to 7,658 source units); the books' CI8 cover indexes one colour past its 255-entry TLUT (load widened to 256). The fade-in and closing light drive MASTER_BRIGHT (`ndsVideoSetSceneFade`); the figure draws through the intro's transient fighter submit (`end11`); 1 sprite failure a frame remains |
 | Staffroll 56 | ~1 sprite/frame | names and jobs draw natively (glyph quads, `cwalk53`); crosshair and box via the S2D tenant, frame rects in the overlay |
 | Congra 55 | 0 | correct |
+| Bonus boards, every fighter (owner playtest 10-01, Kirby) | 0 | 15 of the 24 boards drew no map, only targets and platforms (the walk ran Link only). Their first brick is a CI4 image using index 3 under a three-colour LOADTLUT (the other nine load four colours of the same image); the RDP reads stale TMEM there, the DS resolve refused the texture (BAD_TLUT) and the stage owner refused the whole map every frame. A stage palette shorter than its indices now reads the source's following palette words (`98be04a7540`); `bonsweep.ps1`: all 24 boards load their GX program |
+| 12 Polygon Team as Kirby (owner playtest 10-01) | 0 | froze two thirds in: in a match a copy hat binds only from the set admitted at its start, and the Polygon Team admitted none, so the first swallowed polygon reached `ndsKirbyHatResidencyHalt(5)`, an infinite loop. A power outside the set now loads late into the slot's working buffer above the 25,600-byte floor; failing that the hat does not draw and the power stays (`1c1c67b90f4`; forced-empty test: 2 late loads, no freeze) |
 
 Battle HUD anchored to the 3D (owner 10-01: tags "offset around edges of
 screen", VS too): fighter tags, item arrows and hit sparks map a projected
@@ -57,6 +59,17 @@ led by the platforms' per-DObj submit (`ndsRendererAdapterSubmitStageDLBody`,
 (`NDS_SDL_ROUTE_BAKED`): 833M -> 653M cycles over the same 200 frames
 (`1p-pf02-st7`), now led by the baked emit (205K cycles/frame), the native
 stage segments (188K) and texture binding (118K).
+
+Owner floor for content work (10-01): WORK P50 under 1.12M ticks, i.e. more
+than half the frames within two VBlanks (`PACE` b2). The Polygon Team's
+packets never replayed -- each polygon needs 28 texgen groups and 484 texgen
+sites against the packet struct's 8 and 256, so every draw recorded, faulted
+and drew direct; a record now takes the overflow from the top of its own
+region (`04cc889b6e4`, with the texgen divides as reciprocals and 1P stage
+runs culled by their bounds). Polygon Team 22% -> 58% (Link), 48% (Kirby);
+Race 9% (b3 79%); Board the Platforms 20% (Kirby, idle). The lean path for
+the 1P-only owners was tried and reverted (polygons re-materialized every
+frame, +700K cycles).
 
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this

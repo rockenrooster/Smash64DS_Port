@@ -16,13 +16,9 @@ receipt `artifacts/performance/2026-09-24_p2-2p8-phase1-slice7/README.md`). Root
 **Owner 09-27: VS Mode first, 1P deferred. Any 4 fighters on any stage hit the P95 gate
 with items on over a full 1-minute match (plus sudden death); CSS and SSS 100%; Results
 and transitions/loading seamless. CSS/SSS audio delay + in-match SFX glitches logged (BUG_NOTES A1/A2).**
-**Phase 2 ongoing:** Task36 retired; all-VS stage compilation, NDL, native MISC
-owners and view-space particles/dust landed (receipt
-`artifacts/performance/2026-09-26_p2-2p8-phase2-particle-ab/README.md`). CSS
-reserve free 253,904 B (09-27) versus required 183,072 B. Campaign coverage and global
-renderer retirement remain debt. Bank measured battle wins (D9); no restarts.
-Phase 3 A8 BGM committed `d0d02c61a83`; heavy F7443068 admission 5,904 B short;
-MF2 unlinked. Receipt `2026-09-26_p2-2p8-phase3-residency/README.md`.
+**Phase 2/3:** all-VS stage compilation, NDL, MISC owners, view-space particles (receipt
+`2026-09-26_p2-2p8-phase2-particle-ab`); A8 BGM `d0d02c61a83` (`2026-09-26_p2-2p8-phase3-residency`).
+Global renderer retirement remains debt. Bank measured battle wins (D9); no restarts.
 **09-26..30 solo** (receipts `2026-09-{26..30}_p2-2p8-*`). **09-30 owner checkpoint: optimization
 paused "not 100% complete"; the 1P campaign is next.** Gate WORK P50/P95 922,240/1,240,256 (target P95
 1.12M, RED; `94ea559f062`); lab P95 1.21-1.58M by roster/stage; SZ owner roster 1.37M. 09-30 landed: baked
@@ -32,7 +28,10 @@ Hitmonlee undrawn, Link's 3 entry frames on SZ/Saffron, Results photo (tic 0-80 
 **10-01 1P campaign:** the walk ROM plays 0-13, bonuses, Master Hand, Ending, Staffroll, Congra with 0 battle
 failures (table `p2/P2-6-one-player.md`). Landed: intro stills/poses, staff roll, Master Hand, Race/board lights, HUD
 anchors, bonus map colours (RSP lighting baked, `390d513c5cb`), Ending room + figure (NitroFS room table), platform
-bake. Next: 1P P95 (BTP 18%, Polygon Team 39%, Race 72%, Yoshi Team 81%, Mario Bros, MH; profile first).
+bake. Owner playtest 10-01 (Kirby): 15 of 24 bonus boards drew no map (3-colour TLUT, `98be04a7540`); Polygon Team
+froze on a copy hat the match never admitted (`1c1c67b90f4`); polygon packets now replay (`04cc889b6e4`). Owner floor
+for content work: P50 < 1.12M (>50% of frames within 2 VBlanks). Below it: Race 9%, Board the Platforms 20%
+(Kirby), Polygon Team 48% (Kirby; Link 58%). Probes: session scratchpad `bonus.ps1`/`freeze.ps1`/`profwalk.ps1`.
 
 ## Continue, do not restart
 
