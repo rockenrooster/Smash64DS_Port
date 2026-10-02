@@ -311,6 +311,8 @@ sb32 ndsRendererSubmitNativeBaked(
     const void *handle, const void *file_base_ptr, u32 file_bytes,
     const NDSRendererNativeMaterial *materials, u32 material_count,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsNativeBakedRootOffscreen(const void *handle,
+                                 const NDSRendererConfig *config);
 extern volatile u32 gNdsItemBakedDrawCount;
 extern volatile u32 gNdsItemBakedSubmitFailCount;
 sb32 ndsRendererSubmitNativeItemLGun(
@@ -7586,6 +7588,20 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         ndsRendererAdapterMtxIdentity20p12(&identity);
         config.initial_modelview = &identity;
     }
+#if NDS_P2_ITEM_CORE
+    /* P2-6 (2026-10-01): a ground display's baked root wholly outside the
+     * view draws nothing; skip it before the stats reset, its MObj snapshots
+     * and the submit (Board the Platforms submits ~26 a frame, most of them
+     * off screen; see ndsNativeBakedRootOffscreen). */
+    if ((route_kind == NDS_SDL_ROUTE_BAKED) &&
+        (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
+                                     &config) != FALSE))
+    {
+        gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
+        gNdsStageDLFastLaneHits++;
+        return TRUE;
+    }
+#endif
     render_stats = &sNdsRendererAdapterStagePersistentStats;
     ndsFighterDLDrawResetRuntimeRendererStats(render_stats);
     gNdsStageGCDrawAllLoopHardwareCarrySeedCount++;
@@ -7777,6 +7793,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
 }
 #endif
 
+volatile u32 gNdsStageDLBodyCalls;
+
 static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
                                                  GObj *camera_gobj,
                                                  u32 initial_geometry_mode)
@@ -7799,6 +7817,7 @@ static void ndsRendererAdapterSubmitStageDLImpl(DObj *dobj, const Gfx *dl,
     {
         return;
     }
+    gNdsStageDLBodyCalls++;
     ndsRendererAdapterSubmitStageDLBody(dobj, dl, camera_gobj,
                                         initial_geometry_mode);
 }

@@ -78,6 +78,160 @@ const void *ndsNativeBakedItemFind(u32 asset_id, u32 root, u32 gobj_kind,
     return NULL;
 }
 
+/* P2-6 (2026-10-01): A ROOT WHOLLY OUTSIDE THE VIEW EMITS NOTHING. Board the
+ * Platforms submits every platform (body and lights, ~30 roots) each frame
+ * while the camera shows a few; each emit binds its texture, loads both
+ * matrices and encodes every corner on the CPU (Kirby's board: 2.87M busy
+ * cycles a frame, the baked emit 208K of it, 1p-pf09b-st7). A root's
+ * object-space bounds are taken once from its groups' vertices (cached by
+ * root and heap generation); when every corner lies outside one side plane
+ * of its own clip matrix (modelview x projection, the same test as the stage
+ * GX runs) its EMIT ops are skipped. Its state ops still run, so what the
+ * next list inherits is unchanged. A/B word gNdsBakedCull (0 = emit all). */
+#define NDS_NATIVE_BAKED_BOUNDS_CACHE 64u
+typedef struct NDSNativeBakedBounds
+{
+    const NDSNativeBakedRoot *root;
+    u32 generation;
+    s16 minimum[3];
+    s16 maximum[3];
+    u32 empty;
+} NDSNativeBakedBounds;
+static NDSNativeBakedBounds sNdsNativeBakedBounds[NDS_NATIVE_BAKED_BOUNDS_CACHE];
+volatile u32 gNdsBakedCull __attribute__((used, section(".data"))) = 1u;
+__attribute__((used)) volatile u32 gNdsBakedCulledRoots;
+
+static sb32 ndsNativeBakedRootOutsideView(
+    const NDSNativeBakedRoot *r, const NDSNativeBakedOp *op_table,
+    const NDSNativeBakedGroup *group_table, const NDSRendererConfig *config)
+{
+    NDSNativeBakedBounds *b = &sNdsNativeBakedBounds[
+        ((u32)(uintptr_t)r >> 2) & (NDS_NATIVE_BAKED_BOUNDS_CACHE - 1u)];
+    NDSRendererMatrix20p12 m;
+    u32 plane;
+    u32 axis;
+
+    if ((b->root != r) || (b->generation != gNdsTaskmanHeapGeneration))
+    {
+        s32 lo[3] = { 32767, 32767, 32767 };
+        s32 hi[3] = { -32768, -32768, -32768 };
+        u32 any = FALSE;
+        u32 i;
+
+        for (i = 0u; i < (u32)r->op_count; i++)
+        {
+            const NDSNativeBakedOp *op = &op_table[r->first_op + i];
+            const NDSNativeBakedGroup *g;
+            u32 v;
+
+            if (op->op != NDS_NATIVE_BAKED_OP_EMIT)
+            {
+                continue;
+            }
+            g = &group_table[op->arg];
+            for (v = 0u; v < (u32)g->vertex_count; v++)
+            {
+                for (axis = 0u; axis < 3u; axis++)
+                {
+                    s32 c = (s32)g->verts[(v * 5u) + axis];
+
+                    lo[axis] = (c < lo[axis]) ? c : lo[axis];
+                    hi[axis] = (c > hi[axis]) ? c : hi[axis];
+                }
+                any = TRUE;
+            }
+        }
+        b->root = r;
+        b->generation = gNdsTaskmanHeapGeneration;
+        b->empty = (any == FALSE) ? TRUE : FALSE;
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            b->minimum[axis] = (s16)lo[axis];
+            b->maximum[axis] = (s16)hi[axis];
+        }
+    }
+    if (b->empty != FALSE)
+    {
+        return FALSE;
+    }
+    ndsRendererMtxMul20p12(config->initial_modelview,
+                           config->initial_projection, &m);
+    for (plane = 0u; plane < 4u; plane++)
+    {
+        u32 col = plane >> 1;
+        s64 sign = ((plane & 1u) != 0u) ? 1 : -1;
+        s64 d = (s64)m.m[3][3] + (sign * (s64)m.m[3][col]);
+
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            s64 c = (s64)m.m[axis][3] + (sign * (s64)m.m[axis][col]);
+
+            d += c * (s64)((c >= 0) ? b->maximum[axis] : b->minimum[axis]);
+        }
+        if (d < 0)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* The fast lane's early exit (renderer_adapter_stage.c): TRUE when the
+ * root `handle` under `config`'s matrices is wholly outside the view, so the
+ * lane can skip its stats reset, material snapshots and submit. The lane
+ * resets its stats per draw, so nothing a skipped root would have set is
+ * inherited by the next. */
+sb32 ndsNativeBakedRootOffscreen(const void *handle,
+                                 const NDSRendererConfig *config)
+{
+    const NDSNativeBakedRoot *r = (const NDSNativeBakedRoot *)handle;
+    const NDSNativeBakedOp *op_table = sNdsNativeBakedOps;
+    const NDSNativeBakedGroup *group_table = sNdsNativeBakedGroups;
+    NDSRendererConfig shifted_config;
+    NDSRendererMatrix20p12 shifted_modelview;
+
+    if ((gNdsBakedCull == 0u) || (r == NULL) || (config == NULL) ||
+        (config->initial_projection == NULL) ||
+        (config->initial_modelview == NULL))
+    {
+        return FALSE;
+    }
+#if NDS_P2_1P_GAME
+    if ((gNdsNativeBakedRoomRoots != NULL) &&
+        (r >= gNdsNativeBakedRoomRoots) &&
+        (r < gNdsNativeBakedRoomRoots + gNdsNativeBakedRoomRootCount))
+    {
+        op_table = gNdsNativeBakedRoomOps;
+        group_table = gNdsNativeBakedRoomGroups;
+    }
+#endif
+    if (r->vertex_shift != 0u)
+    {
+        const s32 scale = (s32)1 << r->vertex_shift;
+        u32 row;
+        u32 col;
+
+        shifted_modelview = *config->initial_modelview;
+        for (row = 0u; row < 3u; row++)
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                shifted_modelview.m[row][col] *= scale;
+            }
+        }
+        shifted_config = *config;
+        shifted_config.initial_modelview = &shifted_modelview;
+        config = &shifted_config;
+    }
+    if (ndsNativeBakedRootOutsideView(r, op_table, group_table, config) ==
+        FALSE)
+    {
+        return FALSE;
+    }
+    gNdsBakedCulledRoots++;
+    return TRUE;
+}
+
 sb32 ndsRendererSubmitNativeBaked(
     const void *handle, const void *file_base_ptr, u32 file_bytes,
     const NDSRendererNativeMaterial *materials, u32 material_count,
@@ -90,6 +244,7 @@ sb32 ndsRendererSubmitNativeBaked(
     NDSRendererTraversalState state;
     NDSRendererConfig shifted_config;
     NDSRendererMatrix20p12 shifted_modelview;
+    sb32 skip_emit;
     u32 i;
 
 #if NDS_P2_1P_GAME
@@ -144,6 +299,14 @@ sb32 ndsRendererSubmitNativeBaked(
         config = &shifted_config;
     }
 
+    skip_emit = ((gNdsBakedCull != 0u) &&
+                 (ndsNativeBakedRootOutsideView(
+                      r, op_table, group_table, config) != FALSE)) ?
+        TRUE : FALSE;
+    if (skip_emit != FALSE)
+    {
+        gNdsBakedCulledRoots++;
+    }
     ndsRendererInitTraversalState(&state, config, stats, NULL, NULL, 0u);
     for (i = 0u; i < (u32)r->op_count; i++)
     {
@@ -165,6 +328,10 @@ sb32 ndsRendererSubmitNativeBaked(
             const NDSNativeBakedGroup *g = &group_table[op->arg];
             sb32 emitted;
 
+            if (skip_emit != FALSE)
+            {
+                break;
+            }
             sNdsRendererHardwareIntensityCoverage =
                 ((g->flags & NDS_NATIVE_BAKED_GROUP_I_COVERAGE) != 0u) ?
                     1u : 0u;
