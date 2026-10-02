@@ -539,6 +539,48 @@ static void ndsStaffrollFuncDraw(void)
     ndsStaffrollDrawRects();
 }
 
+/* THE NAME PATH. llSCStaffrollInterpolation (SCStaffroll 0x7304) is the one
+ * SYInterpDesc the source reads directly -- scStaffrollInitVars stores it
+ * (:2112) and every name and job thread evaluates it with syInterpCubic
+ * (:1474) -- rather than through a SetInterp script, so neither the figatree
+ * TraI pass nor the event32 ledger (battleship_sys_objanim.c) fixes its mixed
+ * {u8 kind; u8 pad; s16 points_num} word 0. The loader's word swap leaves it
+ * reading kind 6 / 512 points (the source's is kind 2, 6 points); no interp.c
+ * switch names kind 6, so syInterpCubic writes nothing and every name keeps
+ * the translate it spawned with. Only the AnimJoint's RotZ plays, and the
+ * roll fans out around the screen centre instead of flying the path. Fixed
+ * once with the loader's own transform, and only from the swapped form (a
+ * kind no SYInterpKind names), so a native descriptor is never swapped back. */
+volatile u32 gNdsStaffrollInterpHeaderFixes;
+
+static void ndsStaffrollFixNameInterpolation(void)
+{
+    u32 *word = (u32 *)(void *)sSCStaffrollNameInterpolation;
+    u32 native;
+
+    if ((word == NULL) ||
+        (sSCStaffrollNameInterpolation->kind <= nSYInterpKindCatrom))
+    {
+        return;
+    }
+    native = ndsRelocSYInterpDescHeaderNative(*word);
+    if (((native & 0xffu) <= nSYInterpKindCatrom) &&
+        (((native >> 8) & 0xffu) == 0u) && ((native >> 16) >= 2u))
+    {
+        *word = native;
+        gNdsStaffrollInterpHeaderFixes++;
+    }
+}
+
+/* scStaffrollFuncStart, then the name path's header: the file is loaded
+ * (:2191) and the descriptor resolved (:2112) by then, and the name threads
+ * first read it frames later, once the crosshair has settled (:1464). */
+static void ndsStaffrollFuncStart(void)
+{
+    scStaffrollFuncStart();
+    ndsStaffrollFixNameInterpolation();
+}
+
 void scStaffrollStartScene(void)
 {
     SYTaskmanSetup setup;
@@ -553,7 +595,7 @@ void scStaffrollStartScene(void)
     setup.scene_setup.arena_start = ndsTaskmanArenaStart();
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();
     setup.scene_setup.func_draw = ndsStaffrollFuncDraw;
-    setup.func_start = scStaffrollFuncStart;
+    setup.func_start = ndsStaffrollFuncStart;
     sNdsStaffrollRectCount = 0u;
     sNdsStaffrollBackdropSet = FALSE;
     syTaskmanStartTask(&setup);

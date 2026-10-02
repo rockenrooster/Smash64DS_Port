@@ -464,8 +464,18 @@ static s32 ndsS2DFindBitmap(const NDSSource2DSource *source, u32 source_x,
     return 0;
 }
 
-/* One stored texel, undoing the loader's word swap and SP_TEXSHUF's odd-row
- * swizzle (the host reference's rules, sprite_reference.c:2124-2252). */
+/* One stored texel, undoing the loader's word swap and the odd-row swizzle
+ * (the host reference's rules, sprite_reference.c:2124-2252).
+ *
+ * The swizzle is undone on every odd row whatever the SObj's attr says:
+ * lbCommonDrawSObjBitmap loads every size with a dxt-0 gDPLoadBlock
+ * (lbcommon.c:2316, :2364, :2412, :2460), which never swaps a line, so each
+ * SObj bitmap is stored with its odd rows pre-swapped (every staged Sprite
+ * record carries SP_TEXSHUF). SP_TEXSHUF itself is only read by libultra's
+ * spDraw. The staff roll's SObjs reset attr to a bare SP_TRANSPARENT
+ * (scstaffroll.c:1070, :1189, :1921, :1950) and still draw unswizzled on
+ * the N64; keyed on the flag, its crosshair, brackets and box text drew with
+ * every odd row eight texels out. */
 static s32 ndsS2DReadRaw(const NDSSource2DSource *source, u32 source_x,
                          u32 source_y, u32 *out_value)
 {
@@ -484,8 +494,7 @@ static s32 ndsS2DReadRaw(const NDSSource2DSource *source, u32 source_x,
         return 0;
     }
     buf = (const u8 *)bitmap->buf;
-    shuffle = (((sprite->attr & SP_TEXSHUF) != 0u) && ((local_y & 1u) != 0u)) ?
-        1u : 0u;
+    shuffle = ((local_y & 1u) != 0u) ? 1u : 0u;
     switch (sprite->bmsiz)
     {
     case G_IM_SIZ_4b:
@@ -801,8 +810,8 @@ static void ndsS2DPrepareRow(const NDSSource2DSource *source, u32 source_y,
     row->width = (u32)(u16)bitmap->width;
     row->width_img = width_img;
     row->local_y = local_y;
-    row->shuffle = (((sprite->attr & SP_TEXSHUF) != 0u) &&
-                    ((local_y & 1u) != 0u)) ? 1u : 0u;
+    /* Every odd row: see ndsS2DReadRaw. */
+    row->shuffle = ((local_y & 1u) != 0u) ? 1u : 0u;
 }
 
 /* ndsS2DReadRaw's texel for x below the row's strip width. */
@@ -2071,6 +2080,10 @@ static s32 ndsS2DSceneIsTenant(u32 scene)
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif
+    /* The bonus practice character selects have no baked surface (the 1P
+     * game select's is nds_menu_shell_onep.c); their SObjs draw here. */
+    case nSCKind1PBonus1Players:
+    case nSCKind1PBonus2Players:
         return TRUE;
     default:
         return FALSE;
