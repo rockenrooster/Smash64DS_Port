@@ -660,8 +660,11 @@ if (($null -eq $fgm249) -or
     # samples, 21,624 IMA bytes, fork 683 and the 249,683 voice order are all
     # unchanged; the prior hash was
     # ce5695bd782346e162346433c421a54bb90f69de17dafd31350f5fdd40f7424f.
+    # 2026-10-02: the rests in its rise/fall schedule (UCD pitch code 0)
+    # render as silence; content only. Prior hash
+    # f605b044c731d8ca8cd71338996bf14c15c54a3fde47117522854a7d17051646.
     ($fgm249.acoustic_oracle.aot_rendered_pcm_sha256 -ne
-        'f605b044c731d8ca8cd71338996bf14c15c54a3fde47117522854a7d17051646')) {
+        '0f9a9898a7d9b421d956020f674a73e177a6ac03dd5e914a8431ad3274726f12')) {
     throw 'FGM 249 Samus SpecialHi lost its exact root+fork source-program render.'
 }
 # Samus full-charge release is a bounded one-shot, not a sequencer loop. The
