@@ -7326,6 +7326,12 @@ volatile u32 gNdsStageDLFastLaneFills;
  * and its material slot count (in `pad`); the MObj materials are live, so they
  * are snapshotted again on every draw, as the body does. */
 #define NDS_SDL_ROUTE_BAKED 0xfeu
+/* P2-6 (2026-10-01): a baked root under an Item GObj (the Race's Bob-ombs
+ * and placed Bumpers): every draw went through the body (the Race: 8 body
+ * submits a frame, none routed). Same inputs as the body's baked branch --
+ * the item submit's head colours over the reset persistent stats -- and the
+ * same off-screen exit as NDS_SDL_ROUTE_BAKED. */
+#define NDS_SDL_ROUTE_BAKED_ITEM 0xfdu
 /* Yoshi's Island's capsules and boxes thrashed an 8-slot table (1,231 fills
  * for 1,469 hits a match): the owners are few, but a capsule alone draws three
  * roots, and its header and third root shared a slot under an address-bit
@@ -7494,7 +7500,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
          (loaded == NULL) || (loaded->data != route->data) ||
          (loaded->data_size != route->data_size) ||
          (loaded->asset_id != (u32)route->asset_id) ||
-         ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED)) ||
+         ((dobj->mobj != NULL) && (route->route != NDS_SDL_ROUTE_BAKED) &&
+          (route->route != NDS_SDL_ROUTE_BAKED_ITEM)) ||
          (owner == NULL) ||
          (sNdsRendererAdapterStagePersistentActive == FALSE) ||
          (sNdsRendererAdapterEffectSubmitActive != FALSE) ||
@@ -7521,6 +7528,13 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
     case NDS_SDL_ROUTE_BAKED:
         if ((owner->id != nGCCommonKindGroundDisplay) ||
             (sNdsRendererAdapterItemSubmitActive != FALSE))
+        {
+            return FALSE;
+        }
+        break;
+    case NDS_SDL_ROUTE_BAKED_ITEM:
+        if ((owner->id != nGCCommonKindItem) ||
+            (sNdsRendererAdapterItemSubmitActive == FALSE))
         {
             return FALSE;
         }
@@ -7593,7 +7607,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
      * view draws nothing; skip it before the stats reset, its MObj snapshots
      * and the submit (Board the Platforms submits ~26 a frame, most of them
      * off screen; see ndsNativeBakedRootOffscreen). */
-    if ((route_kind == NDS_SDL_ROUTE_BAKED) &&
+    if (((route_kind == NDS_SDL_ROUTE_BAKED) ||
+         (route_kind == NDS_SDL_ROUTE_BAKED_ITEM)) &&
         (ndsNativeBakedRootOffscreen((const void *)(uintptr_t)route->root,
                                      &config) != FALSE))
     {
@@ -7657,7 +7672,8 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         }
     }
 #if NDS_P2_ITEM_CORE
-    else if (route_kind == NDS_SDL_ROUTE_BAKED)
+    else if ((route_kind == NDS_SDL_ROUTE_BAKED) ||
+             (route_kind == NDS_SDL_ROUTE_BAKED_ITEM))
     {
         /* The body's baked branch: the DObj's MObjs in order are the root's
          * live segment-E materials. */
@@ -7666,6 +7682,35 @@ static sb32 __attribute__((noinline)) ndsRendererAdapterSubmitStageDLFast(
         MObj *mobj = dobj->mobj;
         u32 slots = (u32)route->pad;
         u32 i;
+
+        if (route_kind == NDS_SDL_ROUTE_BAKED_ITEM)
+        {
+            /* The body's item seeds, as the item routes below take them. */
+            u32 head = (sNdsRendererAdapterItemSubmitHead <
+                        NDS_RENDERER_STAGE_DL_HEADS) ?
+                sNdsRendererAdapterItemSubmitHead : 0u;
+
+            if ((sNdsRendererAdapterItemColorMask[head] & 1u) != 0u)
+            {
+                render_stats->prim_color =
+                    sNdsRendererAdapterItemPrimColor[head];
+            }
+            if ((sNdsRendererAdapterItemColorMask[head] & 2u) != 0u)
+            {
+                render_stats->env_color =
+                    sNdsRendererAdapterItemEnvColor[head];
+            }
+            if (sNdsRendererAdapterItemOtherModeLValid[head] != 0u)
+            {
+                render_stats->othermode_l =
+                    sNdsRendererAdapterItemOtherModeL[head];
+            }
+            if (sNdsRendererAdapterItemOtherModeHValid[head] != 0u)
+            {
+                render_stats->othermode_h =
+                    sNdsRendererAdapterItemOtherModeH[head];
+            }
+        }
 
         for (i = 0u; (i < slots) && (i < NDS_NATIVE_BAKED_MATERIAL_SLOTS);
              i++)
@@ -13239,6 +13284,15 @@ static void __attribute__((noinline)) ndsRendererAdapterSubmitStageDLBody(
                 {
                     ndsStageDLRouteRecord(dl, loaded, (u32)(uintptr_t)baked,
                                           NDS_SDL_ROUTE_BAKED);
+                    ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
+                }
+                else if ((dobj->parent_gobj->id == nGCCommonKindItem) &&
+                         (sNdsRendererAdapterItemSubmitActive != FALSE) &&
+                         (sNdsRendererAdapterEffectSubmitActive == FALSE) &&
+                         (sNdsRendererAdapterStagePersistentActive != FALSE))
+                {
+                    ndsStageDLRouteRecord(dl, loaded, (u32)(uintptr_t)baked,
+                                          NDS_SDL_ROUTE_BAKED_ITEM);
                     ndsStageDLRouteSlot(dl)->pad = (u8)baked_slots;
                 }
 #endif
