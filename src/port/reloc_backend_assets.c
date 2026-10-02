@@ -3954,12 +3954,6 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
     {
         return TRUE;
     }
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
-    if (ndsRelocIsDemoAnimID(asset_id) != FALSE)
-    {
-        return TRUE;
-    }
-#endif
 #if NDS_P2_LUIGI
     if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
         (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
@@ -4040,6 +4034,17 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
     {
         return TRUE;
     }
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+    /* Last, not first (2026-10-02): the demo table is a linear scan with a
+     * token resolve per row, and a battle clip's id usually falls inside its
+     * id bounds, so every status change of a fighter other than Mario or Fox
+     * paid the whole scan before the range arms above answered. The
+     * predicate is an OR of pure tests; their order changes no answer. */
+    if (ndsRelocIsDemoAnimID(asset_id) != FALSE)
+    {
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 #elif NDS_IMPORT_BATTLESHIP_VS_RESULTS
