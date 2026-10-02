@@ -7901,6 +7901,27 @@ static NDSRendererMatrix20p12 sNdsRendererParticleProjection;
 static NDSRendererMatrix20p12 sNdsRendererParticleModelview;
 static u32 sNdsRendererParticleCameraValid;
 static u32 sNdsRendererParticleViewSpace;
+/* Owner BUGS.md (r71): attack VFX lost against Master Hand as Kirby, and
+ * VFX that sometimes fail to draw on the Fox and Master Hand stages. The
+ * battle's particle displays are efDisplayZPerspCLDProcDisplay on DL links
+ * 18 and 15 (G_RM_CLD_SURF) and efDisplayZPerspXLUProcDisplay on 25
+ * (G_RM_XLU_SURF), efdisplay.c:37-62: neither compares Z, so a hit spark
+ * whose centre lies inside Master Hand's palm, or behind a stage part, still
+ * paints over it. Depth-tested here, the same spark was hidden. The DS
+ * cannot turn its depth test off per polygon, so such a pass keeps its
+ * camera's X/Y/W and replaces clip Z with the renderer's next foreground
+ * painter depth, as the Fox blaster's no-Z list does. Only
+ * efDisplayZPerspAAXLUProcDisplay's link 10 (G_RM_AA_ZB_XLU_SURF) keeps the
+ * depth test. */
+static u32 sNdsRendererParticleNoDepth;
+volatile u32 gNdsParticleNoDepthLoads;
+static s32 ndsRendererHardwareNextProjectedDepth(void);
+static void ndsRendererHardwareEnterProjectedForeground(void);
+
+void ndsRendererSetParticleNoDepth(u32 no_depth)
+{
+    sNdsRendererParticleNoDepth = (no_depth != 0u) ? TRUE : FALSE;
+}
 volatile u32 gNdsParticleViewPasses;
 volatile u32 gNdsParticleViewCenters;
 volatile u32 gNdsParticleViewRejects;
@@ -7957,6 +7978,7 @@ static s32 ndsRendererParticleTransformCenter(s32 center[3], u32 fraction_bits)
  * mirrors its modelview normalization while replacing only clip Z. */
 static s32 ndsRendererLoadParticleCameraMatrices(void)
 {
+    NDSRendererMatrix20p12 projection = sNdsRendererParticleProjection;
     NDSRendererMatrix20p12 scaled_modelview;
     m4x4 projection_hw;
     m4x4 modelview_hw;
@@ -7965,6 +7987,22 @@ static s32 ndsRendererLoadParticleCameraMatrices(void)
     if (sNdsRendererParticleCameraValid == FALSE)
     {
         return FALSE;
+    }
+    if (sNdsRendererParticleNoDepth != FALSE)
+    {
+        s16 projected_z;
+        u32 row;
+
+        /* The particle passes draw after the fighters and the stage; a
+         * frame with no source-Z triangle yet still belongs in front. */
+        ndsRendererHardwareEnterProjectedForeground();
+        projected_z = (s16)ndsRendererHardwareNextProjectedDepth();
+        for (row = 0u; row < 4u; row++)
+        {
+            projection.m[row][2] = (s32)ndsRendererRoundShiftS64(
+                (s64)projection.m[row][3] * projected_z, 12u);
+        }
+        gNdsParticleNoDepthLoads++;
     }
     if (sNdsRendererParticleViewSpace != FALSE)
     {
@@ -7981,8 +8019,7 @@ static s32 ndsRendererLoadParticleCameraMatrices(void)
             scaled_modelview.m[3][col],
             NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
     }
-    ndsRendererCopyMtx20p12ToM4x4(&sNdsRendererParticleProjection,
-                                  &projection_hw);
+    ndsRendererCopyMtx20p12ToM4x4(&projection, &projection_hw);
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     glLoadMatrix4x4(&projection_hw);
     ndsRendererCopyMtx20p12ToM4x4(&scaled_modelview, &modelview_hw);
@@ -18837,6 +18874,11 @@ s32 ndsRendererSubmitWhispyNativeQuad(u32 texture_name,
 void ndsRendererEndParticleQuads(void)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
+}
+
+void ndsRendererSetParticleNoDepth(u32 no_depth)
+{
+    (void)no_depth;
 }
 
 void ndsRendererHardwareNoteQuadFrame(void)

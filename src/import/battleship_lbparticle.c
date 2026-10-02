@@ -4219,6 +4219,11 @@ static u32 sNdsFireGrindLastUpdateFrame;
 #include <nds/nds_battle_hud.h>
 #include <port/coroutine.h>
 
+/* ef/efdisplay.c, imported by battleship_efmanager.c: the two particle
+ * displays whose render modes compare no Z. */
+extern void efDisplayZPerspCLDProcDisplay(GObj *effect_gobj);
+extern void efDisplayZPerspXLUProcDisplay(GObj *effect_gobj);
+
 static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 {
     Vec3f right;
@@ -4329,6 +4334,13 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
     (void)right;
     (void)up;
     atlas_name = 0u;
+#endif
+#if NDS_R2_PARTICLE_DRAW
+    /* efdisplay.c's CLD and plain-XLU particle displays compare no Z; see
+     * ndsRendererSetParticleNoDepth. */
+    ndsRendererSetParticleNoDepth(
+        ((gobj->proc_display == efDisplayZPerspCLDProcDisplay) ||
+         (gobj->proc_display == efDisplayZPerspXLUProcDisplay)) ? 1u : 0u);
 #endif
 
     dLBParticleCurrentTransformID++;
@@ -4949,6 +4961,9 @@ static void ndsLbParticleDrawTexturesBody(GObj *gobj)
 #endif
         ndsRendererEndParticleQuads();
     }
+#if NDS_R2_PARTICLE_DRAW
+    ndsRendererSetParticleNoDepth(0u);
+#endif
 #if NDS_R2_WHISPY_NATIVE_AOT
     if (gNdsWhispyAOTRoute >= 6u)
     {

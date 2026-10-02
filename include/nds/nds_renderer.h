@@ -2027,6 +2027,12 @@ extern volatile u32 gNdsRendererFoxGunDrawCount;
 extern volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
 void ndsRendererEndParticleQuads(void);
+/* Nonzero for a particle pass whose source display sets a no-Z render mode
+ * (efDisplayZPerspCLDProcDisplay's G_RM_CLD_SURF, efDisplayZPerspXLU's
+ * G_RM_XLU_SURF): each batch the pass opens draws at the next foreground
+ * painter depth. lbParticleDrawTextures sets it per pass and clears it after;
+ * every other particle draw runs with it clear. */
+void ndsRendererSetParticleNoDepth(u32 no_depth);
 /* Marks this frame's GX list submitted when world quads are its only geometry
  * (the staff roll), so the platform flushes it and shows BG0. */
 void ndsRendererHardwareNoteQuadFrame(void);
