@@ -498,6 +498,7 @@ static void ndsMenuShellRun(u32 screen)
         {
             ndsPlatformTransitionThaw();
             ndsVideoSetTransitionBlackout(FALSE);
+            ndsAudioReleaseDeferredBGM();
         }
         ndsPlatformEndFrame();
         if (sMenuLeaving != FALSE)

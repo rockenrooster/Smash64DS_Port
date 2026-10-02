@@ -81,6 +81,13 @@ void ndsPlatformTransitionThaw(void);
 /* Nonzero while the old scene's display is held. Its exit records a
  * teardown instead of performing it (the Thaw applies it). */
 u32 ndsPlatformTransitionHolding(void);
+/* Nonzero while the next scene has not presented a complete frame: its
+ * software runs under the held frame or under the loading cover. */
+u32 ndsPlatformSceneLoading(void);
+/* Start the BGM a loading scene requested (src/port/reloc_backend_compat_
+ * shims.c syAudioPlayBGM): called by every complete frame, beside its cover
+ * release. A no-op when nothing waits. */
+void ndsAudioReleaseDeferredBGM(void);
 /* A texture write about to land: ends the hold when the held frame shows 3D,
  * whose texels it may overwrite. */
 void ndsPlatformTransitionThawIf3DShown(void);

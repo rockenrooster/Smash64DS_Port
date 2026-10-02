@@ -1676,6 +1676,17 @@ u32 ndsPlatformTransitionHolding(void)
     return sNdsTransitionHold;
 }
 
+u32 ndsPlatformSceneLoading(void)
+{
+#if NDS_TRANSITION_HOLD
+    if (sNdsTransitionHold == NDS_TRANSITION_HOLD_LOAD)
+    {
+        return TRUE;
+    }
+#endif
+    return (ndsVideoGetTransitionBlackout() != FALSE) ? TRUE : FALSE;
+}
+
 void ndsPlatformTransitionThaw(void)
 {
 #if NDS_TRANSITION_HOLD
@@ -4103,6 +4114,12 @@ void ndsPlatformEndFrame(void)
         ndsPlatformTransitionThaw();
     }
 #endif
+    /* A present path that releases its cover without the explicit call
+     * still starts the music its scene asked for during the load. */
+    if (ndsPlatformSceneLoading() == FALSE)
+    {
+        ndsAudioReleaseDeferredBGM();
+    }
     submitted = ndsRendererHardwareConsumeSubmittedFrame();
     if ((submitted != 0u) || (sOriginalSpriteOverlayNeedsFlush != FALSE))
     {

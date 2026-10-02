@@ -780,6 +780,7 @@ static void ndsBattlePlayablePresentFrame(void)
      * before it (a branch otherwise) and releases the loading cover. */
     ndsPlatformTransitionThaw();
     ndsVideoSetTransitionBlackout(FALSE);
+    ndsAudioReleaseDeferredBGM();
     ndsPlatformEndFrame();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     phase_start = cpuGetTiming();

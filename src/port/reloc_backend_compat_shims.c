@@ -1362,17 +1362,74 @@ SYAudioCSPlayerCompat *gSYAudioCSPlayers[1] = {
     &sNdsAudioCSPlayerCompat
 };
 
+/* SCENE-START MUSIC WAITS FOR THE SCENE'S FIRST FRAME (owner 2026-10-02: from
+ * the 1P stage clear to the next intro, "it starts playing sfx before the
+ * rendered still intro is visible"). A scene's FuncStart starts its BGM
+ * (sc1pintro.c:1981-1983, the battles, the stage clear); on the N64 its first
+ * frame follows within a tic or two, but here the load and the first draw
+ * can run 1-3 s under the held frame or the loading cover -- the intro's
+ * first draw alone is ~80 VBlanks -- so the music played over black. A BGM
+ * requested while the scene has not presented a complete frame
+ * (ndsPlatformSceneLoading) is remembered and started by that frame
+ * (ndsAudioReleaseDeferredBGM, at every cover release). Until then the
+ * source's queries see it as playing, so a scene that waits on its music
+ * does not run ahead; a volume set for it is applied when it starts; a stop
+ * cancels it. Whatever was already playing continues meanwhile. */
+extern u32 ndsPlatformSceneLoading(void);
+static s32 sNdsDeferredBgmPlayer = -1;
+static s32 sNdsDeferredBgmId;
+static u32 sNdsDeferredBgmVolume;
+static u32 sNdsDeferredBgmVolumeSet;
+volatile u32 gNdsDeferredBgmCount;
+
+static void ndsSyAudioPlayBGMNow(s32 player, s32 bgm_id)
+{
+    ndsAudioBgmPlay(player, bgm_id);
+    sNdsAudioCSPlayerCompat.state =
+        (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
+}
+
+void ndsAudioReleaseDeferredBGM(void)
+{
+    const s32 player = sNdsDeferredBgmPlayer;
+
+    if (player < 0)
+    {
+        return;
+    }
+    sNdsDeferredBgmPlayer = -1;
+    ndsSyAudioPlayBGMNow(player, sNdsDeferredBgmId);
+    if (sNdsDeferredBgmVolumeSet != 0u)
+    {
+        ndsAudioBgmSetVolume(player, sNdsDeferredBgmVolume);
+    }
+}
+
 void syAudioStopBGMAll(void)
 {
+    sNdsDeferredBgmPlayer = -1;
     ndsAudioBgmStopAll();
     sNdsAudioCSPlayerCompat.state = AL_STOPPED;
 }
 
 void syAudioPlayBGM(s32 player, s32 bgm_id)
 {
-    ndsAudioBgmPlay(player, bgm_id);
-    sNdsAudioCSPlayerCompat.state =
-        (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
+    if ((player >= 0) && (ndsPlatformSceneLoading() != FALSE))
+    {
+        sNdsDeferredBgmPlayer = player;
+        sNdsDeferredBgmId = bgm_id;
+        sNdsDeferredBgmVolumeSet = 0u;
+        gNdsDeferredBgmCount++;
+        sNdsAudioCSPlayerCompat.state = AL_PLAYING;
+    }
+    else
+    {
+        if (player == sNdsDeferredBgmPlayer)
+        {
+            sNdsDeferredBgmPlayer = -1;
+        }
+        ndsSyAudioPlayBGMNow(player, bgm_id);
+    }
     gNdsSCVSBattleStageBGM = (u32)bgm_id;
     gNdsSCVSBattleCompatAudioMask |= 1u << 0;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
@@ -1381,7 +1438,8 @@ void syAudioPlayBGM(s32 player, s32 bgm_id)
 void syAudioUpdateBGMState(void)
 {
     sNdsAudioCSPlayerCompat.state =
-        (ndsAudioBgmIsPlaying() != FALSE) ? AL_PLAYING : AL_STOPPED;
+        ((sNdsDeferredBgmPlayer >= 0) || (ndsAudioBgmIsPlaying() != FALSE)) ?
+            AL_PLAYING : AL_STOPPED;
 }
 
 void func_800266A0_272A0(void)
@@ -1440,7 +1498,9 @@ void *func_800269C0_275C0(u16 fgm_id)
 
 s32 syAudioCheckBGMPlaying(s32 sngplayer)
 {
-    s32 is_playing = ndsAudioBgmCheckPlaying(sngplayer);
+    s32 is_playing = ((sNdsDeferredBgmPlayer >= 0) &&
+                      (sngplayer == sNdsDeferredBgmPlayer)) ? TRUE :
+        ndsAudioBgmCheckPlaying(sngplayer);
     gNdsSCVSBattleCompatAudioMask |= 1u << 2;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;
     return is_playing;
@@ -1448,7 +1508,15 @@ s32 syAudioCheckBGMPlaying(s32 sngplayer)
 
 void syAudioSetBGMVolume(s32 sngplayer, u32 vol)
 {
-    ndsAudioBgmSetVolume(sngplayer, vol);
+    if ((sNdsDeferredBgmPlayer >= 0) && (sngplayer == sNdsDeferredBgmPlayer))
+    {
+        sNdsDeferredBgmVolume = vol;
+        sNdsDeferredBgmVolumeSet = 1u;
+    }
+    else
+    {
+        ndsAudioBgmSetVolume(sngplayer, vol);
+    }
     gNdsSCVSBattleLastAudioVolume = vol;
     gNdsSCVSBattleCompatAudioMask |= 1u << 3;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_AUDIO;

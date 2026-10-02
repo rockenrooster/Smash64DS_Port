@@ -75,6 +75,11 @@ sb32 ndsVideoGetBlackout(void)
     return sNdsVideoBlackout;
 }
 
+sb32 ndsVideoGetTransitionBlackout(void)
+{
+    return sNdsVideoTransitionBlackout;
+}
+
 void ndsVideoSetSourceFade(u32 level)
 {
     if (level > 16u)

@@ -50,6 +50,7 @@ static void ndsOpeningMoviePresentFrame(void)
     ndsPlatformRenderDebugHud();
     ndsPlatformTransitionThaw();
     ndsVideoSetTransitionBlackout(FALSE);
+    ndsAudioReleaseDeferredBGM();
     ndsPlatformEndFrame();
     gNdsFrameCounter++;
     gNdsOpeningMoviePresentFrameCount++;

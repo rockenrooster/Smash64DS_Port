@@ -186,6 +186,7 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
             {
                 ndsPlatformTransitionThaw();
                 ndsVideoSetTransitionBlackout(FALSE);
+                ndsAudioReleaseDeferredBGM();
             }
             ndsPlatformEndFrame();
             if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
