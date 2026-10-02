@@ -71,6 +71,20 @@ Race 9% (b3 79%); Board the Platforms 20% (Kirby, idle). The lean path for
 the 1P-only owners was tried and reverted (polygons re-materialized every
 frame, +700K cycles).
 
+10-01/02 floor work (natural play, 600 presented frames, share within two
+VBlanks): baked roots off screen draw nothing (`1c7d84cae67`, Board the
+Platforms 20% -> 84%); the texgen patch reuses directions and searches
+newest first (`bb74a45cd2f`), then drops the cache scan for a previous-normal
+memo with 32-bit dots (`eabbe73e0d4`: a polygon's sites are 93% distinct);
+item baked roots, the GBumper quad and two-way route slots keep the Race's
+lists on the stage DL fast lane (`e4f359048bb`, `eabbe73e0d4`: body submits
+2,402 -> 3); an off-screen bumper quad skips its owner (`9f11dd99405`).
+Polygon Team 61% -> 80%; Race 15% -> 36%. Sweep of every other stage at the
+same build: 84-98% (Giant DK 84%, Master Hand 87%, Mario Bros 85%). The Race
+is the one stage under the floor: three polygons, the player and Bob-ombs on
+the largest map (busy median 2.45M cycles a present against 2.23M; profile
+`1p-pf12r-st11`).
+
 Intro fighter stills (owner: rendered stills). The shipping intro is static
 and blits `assets/intro/*.s1i` (`ndsSC1PIntroBlitStills`), baked from this
 renderer by the lab ROM `NDS_1P_INTRO_BAKE=1`

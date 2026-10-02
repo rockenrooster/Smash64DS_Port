@@ -764,7 +764,10 @@ ndsMPLineExtentRejects(MPVertexArray *ids, MPVertexPosContainer *verts,
  * fighters floating under the stage. The y half is provably exact and, on Dream
  * Land, is the discriminating axis anyway: the main floor and the three
  * pass-through platforms sit at four distinct heights. */
-static int NDS_R2_ITCM_PACK2_CODE ndsMPLineExtentSweepRejects(MPVertexArray *ids,
+/* P2-6 (2026-10-02): inline in the two sweeps that call it. Out of line in
+ * ITCM it was a long call per line from their main-RAM Thumb (the Race: 256
+ * calls a frame at 131 cycles each, 1p-pf12r-st11). */
+static inline int ndsMPLineExtentSweepRejects(MPVertexArray *ids,
                                        MPVertexPosContainer *verts,
                                        u32 line_id, u32 vertex_first,
                                        u32 vertex_count,
@@ -5874,8 +5877,10 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
             u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
-            Vec3f sweep_position = group_position;
-            Vec3f sweep_translate = group_translate;
+            Vec3f line_position;
+            Vec3f line_translate;
+            const Vec3f *sweep_position = &group_position;
+            const Vec3f *sweep_translate = &group_translate;
             f32 sweep_min_x;
             f32 sweep_max_x;
             u32 j;
@@ -5888,22 +5893,26 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
             }
             if ((is_dynamic != FALSE) && (gNdsMPSweepGroupHoist == 0u))
             {
-                sweep_position.x = (position->x - vedge_x) + speed_x;
-                sweep_position.y = (position->y - vedge_y) + speed_y;
-                sweep_translate.x = translate->x - vedge_x;
-                sweep_translate.y = translate->y - vedge_y;
+                line_position = group_position;
+                line_translate = group_translate;
+                line_position.x = (position->x - vedge_x) + speed_x;
+                line_position.y = (position->y - vedge_y) + speed_y;
+                line_translate.x = translate->x - vedge_x;
+                line_translate.y = translate->y - vedge_y;
+                sweep_position = &line_position;
+                sweep_translate = &line_translate;
             }
             if (ndsMPLineExtentSweepRejects(ids, verts, (u32)line_id,
                                             vertex_first, vertex_count,
-                                            &sweep_position,
-                                            &sweep_translate) != 0)
+                                            sweep_position,
+                                            sweep_translate) != 0)
             {
                 continue;
             }
-            sweep_min_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
-                sweep_position.x : sweep_translate.x;
-            sweep_max_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
-                sweep_translate.x : sweep_position.x;
+            sweep_min_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
+                sweep_position->x : sweep_translate->x;
+            sweep_max_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
+                sweep_translate->x : sweep_position->x;
             for (j = 0u; j + 1u < vertex_count; j++)
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
@@ -5922,14 +5931,14 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                     (ndsFcmpBits(v1.y) == ndsFcmpBits(v2.y)) ? TRUE : FALSE;
 
                 if ((seg_flat != FALSE) &&
-                    (sweep_translate.y > sweep_position.y) &&
-                    (sweep_position.y <= v1.y) &&
-                    (sweep_translate.y >= v1.y) &&
-                    (((sweep_position.x < sweep_translate.x) ?
-                        sweep_position.x : sweep_translate.x) <=
+                    (sweep_translate->y > sweep_position->y) &&
+                    (sweep_position->y <= v1.y) &&
+                    (sweep_translate->y >= v1.y) &&
+                    (((sweep_position->x < sweep_translate->x) ?
+                        sweep_position->x : sweep_translate->x) <=
                         ((v1.x > v2.x) ? v1.x : v2.x)) &&
-                    (((sweep_position.x > sweep_translate.x) ?
-                        sweep_position.x : sweep_translate.x) >=
+                    (((sweep_position->x > sweep_translate->x) ?
+                        sweep_position->x : sweep_translate->x) >=
                         ((v1.x < v2.x) ? v1.x : v2.x)))
                 {
                     is_flat_ascending = TRUE;
@@ -5944,13 +5953,13 @@ static sb32 ndsStageMPSweepFloorLoopSweep(Vec3f *position,
                 }
 
                 if (ndsMPFCSegmentCrosses(
-                        &sweep_position, &sweep_translate, &v1, &v2, +1,
+                        sweep_position, sweep_translate, &v1, &v2, +1,
                         &hit_x, &hit_y) == FALSE)
                 {
                     continue;
                 }
                 gNdsStageMPSweepFloorLoopLineSweepCandidateCount++;
-                hit_dist = fabsf(hit_y - (sweep_position.y - speed_y));
+                hit_dist = fabsf(hit_y - (sweep_position->y - speed_y));
                 if (hit_dist >= best_dist)
                 {
                     continue;
@@ -6322,8 +6331,10 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
         {
             u32 vertex_first = ndsMPVertexLinkFirst(links, (u32)line_id);
             u32 vertex_count = ndsMPVertexLinkCount(links, (u32)line_id);
-            Vec3f sweep_position = group_position;
-            Vec3f sweep_translate = group_translate;
+            Vec3f line_position;
+            Vec3f line_translate;
+            const Vec3f *sweep_position = &group_position;
+            const Vec3f *sweep_translate = &group_translate;
             f32 sweep_min_x;
             f32 sweep_max_x;
             u32 j;
@@ -6335,22 +6346,26 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
             }
             if ((is_dynamic != FALSE) && (gNdsMPSweepGroupHoist == 0u))
             {
-                sweep_position.x = (position->x - vedge_x) + speed_x;
-                sweep_position.y = (position->y - vedge_y) + speed_y;
-                sweep_translate.x = translate->x - vedge_x;
-                sweep_translate.y = translate->y - vedge_y;
+                line_position = group_position;
+                line_translate = group_translate;
+                line_position.x = (position->x - vedge_x) + speed_x;
+                line_position.y = (position->y - vedge_y) + speed_y;
+                line_translate.x = translate->x - vedge_x;
+                line_translate.y = translate->y - vedge_y;
+                sweep_position = &line_position;
+                sweep_translate = &line_translate;
             }
             if (ndsMPLineExtentSweepRejects(ids, verts, (u32)line_id,
                                             vertex_first, vertex_count,
-                                            &sweep_position,
-                                            &sweep_translate) != 0)
+                                            sweep_position,
+                                            sweep_translate) != 0)
             {
                 continue;
             }
-            sweep_min_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
-                sweep_position.x : sweep_translate.x;
-            sweep_max_x = NDS_FCMP_LT(sweep_position.x, sweep_translate.x) ?
-                sweep_translate.x : sweep_position.x;
+            sweep_min_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
+                sweep_position->x : sweep_translate->x;
+            sweep_max_x = NDS_FCMP_LT(sweep_position->x, sweep_translate->x) ?
+                sweep_translate->x : sweep_position->x;
             for (j = 0u; j + 1u < vertex_count; j++)
             {
                 u32 v1_id = ndsMPVertexID(ids, vertex_first + j);
@@ -6372,13 +6387,13 @@ static sb32 ndsStageMPCeilFloorLoopSweep(Vec3f *position,
                     gNdsMPSweepSegmentXRejects++;
                     continue;
                 }
-                if (ndsMPFCSegmentCrosses(&sweep_position, &sweep_translate,
+                if (ndsMPFCSegmentCrosses(sweep_position, sweep_translate,
                         &v1, &v2, -1, &hit_x, &hit_y) == FALSE)
                 {
                     continue;
                 }
                 gNdsStageMPCeilFloorLoopLineSweepCandidateCount++;
-                hit_dist = fabsf(hit_y - (sweep_position.y - speed_y));
+                hit_dist = fabsf(hit_y - (sweep_position->y - speed_y));
                 if (hit_dist >= best_dist)
                 {
                     continue;

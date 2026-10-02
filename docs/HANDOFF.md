@@ -30,8 +30,9 @@ failures (table `p2/P2-6-one-player.md`). Landed: intro stills/poses, staff roll
 anchors, bonus map colours (RSP lighting baked, `390d513c5cb`), Ending room + figure (NitroFS room table), platform
 bake. Owner playtest 10-01 (Kirby): 15 of 24 bonus boards drew no map (3-colour TLUT, `98be04a7540`); Polygon Team
 froze on a copy hat the match never admitted (`1c1c67b90f4`); polygon packets now replay (`04cc889b6e4`). Owner floor
-for content work: P50 < 1.12M (>50% of frames within 2 VBlanks). Below it: Race 9%, Board the Platforms 20%
-(Kirby), Polygon Team 48% (Kirby; Link 58%). Probes: session scratchpad `bonus.ps1`/`freeze.ps1`/`profwalk.ps1`.
+for content work: P50 < 1.12M (>50% of frames within 2 VBlanks). 10-02: every stage 80-98% except the Race
+(36%; texgen, fast-lane routes, off-screen cull: `p2/P2-6-one-player.md`). Probes: session scratchpad
+`pace2.ps1`/`pacesweep.ps1`/`profwalk.ps1`.
 
 ## Continue, do not restart
 
