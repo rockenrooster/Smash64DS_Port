@@ -3627,8 +3627,16 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
             continue;
         }
 #endif
+        /* A hidden DObj is part of the topology like any other: whether it
+         * draws is a per-frame fact the binding mask applies
+         * (ndsRendererAdapterStageDObjHiddenInTree). Refusing it here refused
+         * the whole packet, so a map whose AnimJoints hide DObjs drew nothing
+         * -- Kirby's Board the Platforms starts with a rail carrier and three
+         * of its six animated rails hidden (owner r71: "started the stage
+         * without fully rendering the map structure"; topology step 10, 5 of
+         * 17 layer-1 DObjs collected). */
         if ((workspace->dobj_count >= NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
-            (depth > 31u) || ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0u) ||
+            (depth > 31u) ||
             (ndsRendererAdapterNativeStageTransformFlags(
                  dobj, &transform_flags) == FALSE))
         {
@@ -3705,6 +3713,25 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
         }
     }
     return TRUE;
+}
+
+/* The source's tree walk skips a hidden DObj and everything under it
+ * (gcDrawDObjTreeDLLinks, objdisplay.c:1707-1744; gcDrawDObjTree likewise),
+ * so a binding is hidden while its DObj or any ancestor is. Stage maps are
+ * one to three levels deep. */
+static sb32 ndsRendererAdapterStageDObjHiddenInTree(const DObj *dobj)
+{
+    u32 depth = 0u;
+
+    while ((dobj != NULL) && (dobj != DOBJ_PARENT_NULL) && (depth++ < 32u))
+    {
+        if ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0u)
+        {
+            return TRUE;
+        }
+        dobj = dobj->parent;
+    }
+    return FALSE;
 }
 
 static u32 ndsRendererAdapterNativeStageStampValue(u32 stamp, uintptr_t value)
@@ -4866,6 +4893,8 @@ static s32 ndsRendererAdapterPrepareNativeStageOwnerBody(
         {
             if (((workspace->binding_dobjs[i]->flags & DOBJ_FLAG_NOTEXTURE) !=
                  0u) ||
+                (ndsRendererAdapterStageDObjHiddenInTree(
+                     workspace->binding_dobjs[i]) != FALSE) ||
                 ((hidden_dobj != NULL) &&
                  (workspace->binding_dobjs[i] == hidden_dobj)))
             {
