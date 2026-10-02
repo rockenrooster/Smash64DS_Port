@@ -570,18 +570,13 @@ static u16 ndsS2DLutColor(const NDSSource2DSource *source, u32 index)
 
 /* A texel as 0xRRGGBBAA. I and IA follow the Results convention: I is white
  * with the intensity as coverage, IA carries both. */
-static s32 ndsS2DReadRGBA(const NDSSource2DSource *source, u32 x, u32 y,
-                          u32 *out_rgba)
+static s32 ndsS2DConvertRGBA(const NDSSource2DSource *source, u32 raw,
+                             u32 *out_rgba)
 {
     const Sprite *sprite = source->sprite;
-    u32 raw;
     u32 intensity;
     u32 alpha;
 
-    if (ndsS2DReadRaw(source, x, y, &raw) == 0)
-    {
-        return 0;
-    }
     switch (sprite->bmfmt)
     {
     case G_IM_FMT_I:
@@ -621,6 +616,18 @@ static s32 ndsS2DReadRGBA(const NDSSource2DSource *source, u32 x, u32 y,
     default:
         return 0;
     }
+}
+
+static s32 ndsS2DReadRGBA(const NDSSource2DSource *source, u32 x, u32 y,
+                          u32 *out_rgba)
+{
+    u32 raw;
+
+    if (ndsS2DReadRaw(source, x, y, &raw) == 0)
+    {
+        return 0;
+    }
+    return ndsS2DConvertRGBA(source, raw, out_rgba);
 }
 
 static void ndsS2DBilerp(const u32 taps[4], u32 fx, u32 fy, u8 rgba[4])
@@ -718,6 +725,231 @@ static s32 ndsS2DSampleNearestRaw(const NDSSource2DSource *source,
         sy = (u32)(u16)source->sprite->height - 1u;
     }
     return ndsS2DReadRaw(source, sx, sy, out_raw);
+}
+
+/* ---- the row sampler (P2-6, 2026-10-02) ----
+ *
+ * The 1P intro's first draw baked its sprites at ~900 cycles a pixel
+ * (profile 1p-intro01-st1: 90M cycles, ~80 VBlanks of black, with the scene
+ * already started): each of a filtered pixel's four taps found its strip again
+ * (a divide), re-validated the strip's range and switched on the format, and
+ * the blend divided three times. The bake now finds each destination row's
+ * source strips once and reads the taps straight from them. A tap at or past
+ * the row's strip width takes the per-texel reader, so failures and unusual
+ * strip layouts are exactly the old path's (ndsS2DFindBitmap returns the same
+ * strip for every x below its width). When all four taps are opaque the
+ * blend's divides reduce exactly to a shift: the alpha factor cancels,
+ * (255 S + 255 * 2^15) / (255 * 2^16) = floor((S + 2^15) / 2^16).
+ * gNdsS2DRowSampler 0 is the per-pixel path (same-ROM A/B); 1 with
+ * gNdsS2DRowVerify 1 runs both and counts differing pixels. */
+volatile u32 gNdsS2DRowSampler __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsS2DRowVerify __attribute__((used, section(".data")));
+volatile u32 gNdsS2DRowVerifyPixels;
+volatile u32 gNdsS2DRowVerifyMismatches;
+
+typedef struct NDSSource2DSrcRow
+{
+    const u8 *buf;      /* NULL: every tap takes the per-texel reader */
+    u32 width;          /* the strip's width: taps at or past it fall back */
+    u32 width_img;
+    u32 local_y;
+    u32 shuffle;
+    u32 y;              /* the source row */
+} NDSSource2DSrcRow;
+
+static void ndsS2DPrepareRow(const NDSSource2DSource *source, u32 source_y,
+                             NDSSource2DSrcRow *row)
+{
+    const Sprite *sprite = source->sprite;
+    const Bitmap *bitmap;
+    u32 local_y;
+    u32 width_img;
+    u32 height;
+    size_t bytes;
+
+    row->buf = NULL;
+    row->width = 0u;
+    row->y = source_y;
+    if (ndsS2DFindBitmap(source, 0u, source_y, &bitmap, &local_y, &width_img,
+                         &height) == 0)
+    {
+        return;
+    }
+    switch (sprite->bmsiz)
+    {
+    case G_IM_SIZ_4b:
+        bytes = (size_t)((width_img + 1u) / 2u) * height;
+        break;
+    case G_IM_SIZ_8b:
+        bytes = (size_t)width_img * height;
+        break;
+    case G_IM_SIZ_16b:
+        bytes = (size_t)width_img * height * sizeof(u16);
+        break;
+    case G_IM_SIZ_32b:
+        bytes = (size_t)width_img * height * sizeof(u32);
+        break;
+    default:
+        return;
+    }
+    if (ndsS2DRangeValid(source->file_data, source->file_size, bitmap->buf,
+                         bytes) == 0)
+    {
+        return;
+    }
+    row->buf = (const u8 *)bitmap->buf;
+    row->width = (u32)(u16)bitmap->width;
+    row->width_img = width_img;
+    row->local_y = local_y;
+    row->shuffle = (((sprite->attr & SP_TEXSHUF) != 0u) &&
+                    ((local_y & 1u) != 0u)) ? 1u : 0u;
+}
+
+/* ndsS2DReadRaw's texel for x below the row's strip width. */
+static inline u32 ndsS2DRowRaw(u32 bmsiz, const NDSSource2DSrcRow *row, u32 x)
+{
+    switch (bmsiz)
+    {
+    case G_IM_SIZ_4b:
+    {
+        u32 row_bytes = (row->width_img + 1u) / 2u;
+        u8 packed;
+
+        if ((row->shuffle != 0u) && ((x ^ 8u) < row->width_img)) x ^= 8u;
+        packed = row->buf[(((size_t)row->local_y * row_bytes) + (x >> 1)) ^ 3u];
+        return ((x & 1u) == 0u) ? (u32)(packed >> 4) : (u32)(packed & 0x0fu);
+    }
+    case G_IM_SIZ_8b:
+        if ((row->shuffle != 0u) && ((x ^ 4u) < row->width_img)) x ^= 4u;
+        return row->buf[(((size_t)row->local_y * row->width_img) + x) ^ 3u];
+    case G_IM_SIZ_16b:
+        if ((row->shuffle != 0u) && ((x ^ 2u) < row->width_img)) x ^= 2u;
+        return ((const u16 *)(const void *)row->buf)[
+            (((size_t)row->local_y * row->width_img) + x) ^ 1u];
+    default:
+    {
+        u32 value;
+
+        if ((row->shuffle != 0u) && ((x ^ 2u) < row->width_img)) x ^= 2u;
+        memcpy(&value, row->buf + ((((size_t)row->local_y * row->width_img) +
+                                    x) * sizeof(u32)), sizeof(u32));
+        return value;
+    }
+    }
+}
+
+static inline s32 ndsS2DRowTapRaw(const NDSSource2DSource *source,
+                                  const NDSSource2DSrcRow *row, u32 x,
+                                  u32 *out_raw)
+{
+    if ((row->buf != NULL) && (x < row->width))
+    {
+        *out_raw = ndsS2DRowRaw(source->sprite->bmsiz, row, x);
+        return 1;
+    }
+    return ndsS2DReadRaw(source, x, row->y, out_raw);
+}
+
+static inline s32 ndsS2DRowTapRGBA(const NDSSource2DSource *source,
+                                   const NDSSource2DSrcRow *row, u32 x,
+                                   u32 *out_rgba)
+{
+    u32 raw;
+
+    if (ndsS2DRowTapRaw(source, row, x, &raw) == 0)
+    {
+        return 0;
+    }
+    return ndsS2DConvertRGBA(source, raw, out_rgba);
+}
+
+/* The filtered sample's vertical half for one destination row: the rows its
+ * two taps read and the fraction between them (ndsS2DSampleFiltered). */
+typedef struct NDSSource2DRowPair
+{
+    NDSSource2DSrcRow row0;
+    NDSSource2DSrcRow row1;
+    u32 fy;
+} NDSSource2DRowPair;
+
+static void ndsS2DPrepareFilteredRows(const NDSSource2DSource *source,
+                                      u32 step_y_q16, u32 destination_y,
+                                      NDSSource2DRowPair *pair)
+{
+    u32 source_height = (u32)(u16)source->sprite->height;
+    s32 sy_q16 = (s32)(step_y_q16 >> 1) - 0x8000 +
+                 (s32)(destination_y * step_y_q16);
+    u32 sy_q8;
+    u32 y0;
+    u32 y1;
+
+    if (sy_q16 < 0) sy_q16 = 0;
+    sy_q8 = (u32)sy_q16 >> 8;
+    y0 = sy_q8 >> 8;
+    if (y0 >= source_height) y0 = source_height - 1u;
+    y1 = ((y0 + 1u) < source_height) ? (y0 + 1u) : y0;
+    pair->fy = sy_q8 & 0xffu;
+    ndsS2DPrepareRow(source, y0, &pair->row0);
+    if (y1 == y0)
+    {
+        pair->row1 = pair->row0;
+    }
+    else
+    {
+        ndsS2DPrepareRow(source, y1, &pair->row1);
+    }
+}
+
+static s32 ndsS2DSampleFilteredRows(const NDSSource2DSource *source,
+                                    const NDSSource2DRowPair *pair,
+                                    u32 step_x_q16, u32 destination_x,
+                                    u8 rgba[4])
+{
+    u32 source_width = (u32)(u16)source->sprite->width;
+    s32 sx_q16 = (s32)(step_x_q16 >> 1) - 0x8000 +
+                 (s32)(destination_x * step_x_q16);
+    u32 sx_q8;
+    u32 x0;
+    u32 x1;
+    u32 taps[4];
+
+    if (sx_q16 < 0) sx_q16 = 0;
+    sx_q8 = (u32)sx_q16 >> 8;
+    x0 = sx_q8 >> 8;
+    if (x0 >= source_width) x0 = source_width - 1u;
+    x1 = ((x0 + 1u) < source_width) ? (x0 + 1u) : x0;
+    if ((ndsS2DRowTapRGBA(source, &pair->row0, x0, &taps[0]) == 0) ||
+        (ndsS2DRowTapRGBA(source, &pair->row0, x1, &taps[1]) == 0) ||
+        (ndsS2DRowTapRGBA(source, &pair->row1, x0, &taps[2]) == 0) ||
+        (ndsS2DRowTapRGBA(source, &pair->row1, x1, &taps[3]) == 0))
+    {
+        return 0;
+    }
+    if ((taps[0] & taps[1] & taps[2] & taps[3] & 0xffu) == 0xffu)
+    {
+        const u32 fx = sx_q8 & 0xffu;
+        const u32 fy = pair->fy;
+        const u32 w0 = (256u - fx) * (256u - fy);
+        const u32 w1 = fx * (256u - fy);
+        const u32 w2 = (256u - fx) * fy;
+        const u32 w3 = fx * fy;
+        u32 channel;
+
+        rgba[3] = 255u;
+        for (channel = 0u; channel < 3u; channel++)
+        {
+            const u32 shift = 24u - (channel * 8u);
+            const u32 s = (((taps[0] >> shift) & 0xffu) * w0) +
+                          (((taps[1] >> shift) & 0xffu) * w1) +
+                          (((taps[2] >> shift) & 0xffu) * w2) +
+                          (((taps[3] >> shift) & 0xffu) * w3);
+
+            rgba[channel] = (u8)((s + 0x8000u) >> 16);
+        }
+        return 1;
+    }
+    ndsS2DBilerp(taps, sx_q8 & 0xffu, pair->fy, rgba);
+    return 1;
 }
 
 /* ---- palettes ---- */
@@ -922,11 +1154,14 @@ static const NDSSource2DCI8 *ndsS2DLut8Table(const NDSSource2DSource *source)
     memset(used, 0, sizeof(used));
     for (y = 0u; y < (u32)(u16)sprite->height; y++)
     {
+        NDSSource2DSrcRow scan_row;
+
+        ndsS2DPrepareRow(source, y, &scan_row);
         for (x = 0u; x < (u32)(u16)sprite->width; x++)
         {
             u32 raw;
 
-            if (ndsS2DReadRaw(source, x, y, &raw) != 0)
+            if (ndsS2DRowTapRaw(source, &scan_row, x, &raw) != 0)
             {
                 used[raw & 0xffu] = 1u;
             }
@@ -1232,10 +1467,32 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
     for (y = 0u; y < cell->cell_height; y++)
     {
         u32 dy = (u32)cell->tile_y + y;
+        const u32 rows = (gNdsS2DRowSampler != 0u) ? 1u : 0u;
+        const u32 verify = ((rows != 0u) && (gNdsS2DRowVerify != 0u)) ? 1u : 0u;
+        NDSSource2DRowPair pair;
+        NDSSource2DSrcRow nearest_row;
 
         if (dy >= cell->final_height)
         {
             break;
+        }
+        if (rows != 0u)
+        {
+            if ((cell->encoding == NDS_S2D_ENC_LUT4) ||
+                (cell->encoding == NDS_S2D_ENC_LUT8))
+            {
+                u32 sy = ((dy * step_y_q16) + (step_y_q16 >> 1)) >> 16;
+
+                if (sy >= (u32)(u16)source->sprite->height)
+                {
+                    sy = (u32)(u16)source->sprite->height - 1u;
+                }
+                ndsS2DPrepareRow(source, sy, &nearest_row);
+            }
+            else
+            {
+                ndsS2DPrepareFilteredRows(source, step_y_q16, dy, &pair);
+            }
         }
         for (x = 0u; x < cell->cell_width; x++)
         {
@@ -1251,9 +1508,36 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
             {
                 u32 raw;
                 u32 index;
+                s32 ok;
 
-                if (ndsS2DSampleNearestRaw(source, step_x_q16, step_y_q16, dx,
-                                           dy, &raw) == 0)
+                if (rows != 0u)
+                {
+                    u32 sx = ((dx * step_x_q16) + (step_x_q16 >> 1)) >> 16;
+
+                    if (sx >= (u32)(u16)source->sprite->width)
+                    {
+                        sx = (u32)(u16)source->sprite->width - 1u;
+                    }
+                    ok = ndsS2DRowTapRaw(source, &nearest_row, sx, &raw);
+                    if (verify != 0u)
+                    {
+                        u32 want = 0u;
+                        s32 want_ok = ndsS2DSampleNearestRaw(
+                            source, step_x_q16, step_y_q16, dx, dy, &want);
+
+                        gNdsS2DRowVerifyPixels++;
+                        if ((want_ok != ok) || ((ok != 0) && (want != raw)))
+                        {
+                            gNdsS2DRowVerifyMismatches++;
+                        }
+                    }
+                }
+                else
+                {
+                    ok = ndsS2DSampleNearestRaw(source, step_x_q16, step_y_q16,
+                                                dx, dy, &raw);
+                }
+                if (ok == 0)
                 {
                     return 0;
                 }
@@ -1273,8 +1557,32 @@ static s32 ndsS2DWriteCell(NDSSource2DCell *cell,
                 }
                 continue;
             }
-            if (ndsS2DSampleFiltered(source, step_x_q16, step_y_q16, dx, dy,
-                                     rgba) == 0)
+            if (rows != 0u)
+            {
+                s32 ok = ndsS2DSampleFilteredRows(source, &pair, step_x_q16,
+                                                  dx, rgba);
+
+                if (verify != 0u)
+                {
+                    u8 want[4] = { 0u, 0u, 0u, 0u };
+                    s32 want_ok = ndsS2DSampleFiltered(source, step_x_q16,
+                                                       step_y_q16, dx, dy,
+                                                       want);
+
+                    gNdsS2DRowVerifyPixels++;
+                    if ((want_ok != ok) ||
+                        ((ok != 0) && (memcmp(want, rgba, sizeof(want)) != 0)))
+                    {
+                        gNdsS2DRowVerifyMismatches++;
+                    }
+                }
+                if (ok == 0)
+                {
+                    return 0;
+                }
+            }
+            else if (ndsS2DSampleFiltered(source, step_x_q16, step_y_q16, dx,
+                                          dy, rgba) == 0)
             {
                 return 0;
             }
@@ -1512,23 +1820,53 @@ static s32 ndsS2DDrawBackground(const SObj *sobj,
         s32 out_y = screen_y + y;
         u16 *row;
         s32 x;
+        const u32 rows = (gNdsS2DRowSampler != 0u) ? 1u : 0u;
+        NDSSource2DRowPair pair;
 
         if ((out_y < 0) || (out_y >= 192))
         {
             continue;
+        }
+        if (rows != 0u)
+        {
+            ndsS2DPrepareFilteredRows(source, step_y_q16, (u32)y, &pair);
         }
         row = &layer[(u32)out_y * pitch];
         for (x = 0; x < (s32)final_width; x++)
         {
             s32 out_x = screen_x + x;
             u8 rgba[4];
+            s32 ok;
 
             if ((out_x < 0) || (out_x >= 256))
             {
                 continue;
             }
-            if (ndsS2DSampleFiltered(source, step_x_q16, step_y_q16, (u32)x,
-                                     (u32)y, rgba) == 0)
+            if (rows != 0u)
+            {
+                ok = ndsS2DSampleFilteredRows(source, &pair, step_x_q16,
+                                              (u32)x, rgba);
+                if (gNdsS2DRowVerify != 0u)
+                {
+                    u8 want[4] = { 0u, 0u, 0u, 0u };
+                    s32 want_ok = ndsS2DSampleFiltered(source, step_x_q16,
+                                                       step_y_q16, (u32)x,
+                                                       (u32)y, want);
+
+                    gNdsS2DRowVerifyPixels++;
+                    if ((want_ok != ok) ||
+                        ((ok != 0) && (memcmp(want, rgba, sizeof(want)) != 0)))
+                    {
+                        gNdsS2DRowVerifyMismatches++;
+                    }
+                }
+            }
+            else
+            {
+                ok = ndsS2DSampleFiltered(source, step_x_q16, step_y_q16,
+                                          (u32)x, (u32)y, rgba);
+            }
+            if (ok == 0)
             {
                 gNdsSource2DFailBackground++;
                 return 0;

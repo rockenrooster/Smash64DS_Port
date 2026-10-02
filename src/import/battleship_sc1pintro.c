@@ -119,6 +119,12 @@
 #include <mn/menu.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_task37_profile.h>
+/* LAB: a profile ROM built with NDS_TASK37_PROFILE_START=65000 (a battle
+ * frame no run reaches) profiles the 1P intro's first draw instead. */
+#if NDS_TASK37_PROFILE && (NDS_TASK37_PROFILE_START == 65000u)
+#define NDS_TASK37_PROFILE_INTRO_DRAW 1
+#endif
 #if NDS_1P_INTRO_BAKE
 #include <nds/nds_renderer.h>
 #endif
@@ -824,7 +830,27 @@ static void ndsSC1PIntroDraw(void)
     /* Every Intro fighter/stage camera uses (10,10)-(310,230) inside the
      * source 320x240 frame; present the same window the VS preview uses. */
     ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+#if NDS_TASK37_PROFILE && defined(NDS_TASK37_PROFILE_INTRO_DRAW) && \
+    NDS_TASK37_PROFILE_INTRO_DRAW
+    /* LAB: the ARM9 profile window is the intro's first draw (~80 VBlanks
+     * on 10-02 while its BGM already played). */
+    {
+        static u32 sNdsIntroDrawProfiled;
+
+        if (sNdsIntroDrawProfiled == 0u)
+        {
+            ndsTask37ProfileWriteMarker(NDS_TASK37_PROFILE_MARKER_RESET);
+        }
+        scManagerFuncDraw();
+        if (sNdsIntroDrawProfiled == 0u)
+        {
+            sNdsIntroDrawProfiled = 1u;
+            ndsTask37ProfileWriteMarker(NDS_TASK37_PROFILE_MARKER_DUMP);
+        }
+    }
+#else
     scManagerFuncDraw();
+#endif
     ndsPlatformReset3DViewport();
 #if NDS_1P_INTRO_BAKE
     ndsSC1PIntroBakeAfterDraw();
