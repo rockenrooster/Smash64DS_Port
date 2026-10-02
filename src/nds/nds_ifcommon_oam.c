@@ -591,6 +591,7 @@ static f32 ndsIFCommonBattleScreenX(f32 projected_x);
 static f32 ndsIFCommonBattleScreenY(f32 projected_y);
 static void ndsIFCommonResetPlayerTags(void);
 static void ndsIFCommonResetItemArrow(void);
+static void ndsIFCommonResetCommonLetters(void);
 
 static u32 ndsIFCommonHashMix(u32 hash, u32 value)
 {
@@ -2084,6 +2085,7 @@ void ndsIFCommonNativeOamInit(void)
     memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
     sNdsTask39HitSparkGfx = NULL;
     ndsIFCommonResetPlayerTags();
+    ndsIFCommonResetCommonLetters();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     sNdsTask39FxSpawnTickAccum = 0u;
     sNdsTask39FxUpdateTickAccum = 0u;
@@ -2168,6 +2170,7 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     ndsIFCommonReleaseTrafficAtlas();
     ndsIFCommonResetPlayerTags();
     ndsIFCommonResetItemArrow();
+    ndsIFCommonResetCommonLetters();
     sNdsIFCommonPrepared = FALSE;
     sNdsIFCommonPreparedFile = NULL;
     sNdsIFCommonPreparedFileSize = 0u;
@@ -2267,6 +2270,8 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
         return TRUE;
     }
     start = cpuGetTiming();
+    /* TIME UP / GAME SET take the end bank the common letters live in. */
+    ndsIFCommonResetCommonLetters();
     slots = (game_set != FALSE) ? sNdsIFCommonGameSetSlots :
                                   sNdsIFCommonTimeUpSlots;
 #if defined(NDS_IF_GAMESTATUS_COMPACT) && NDS_IF_GAMESTATUS_COMPACT
@@ -4190,7 +4195,24 @@ typedef struct NDSIFCommonCommonLetter
 static NDSIFCommonCommonLetter
     sNdsIFCommonCommonLetters[NDS_IFCOMMON_COMMON_LETTER_MAX];
 static u32 sNdsIFCommonCommonLetterCount;
-static u32 sNdsIFCommonCommonPaletteKey = 0xffffffffu;
+/* The ramp palette 8 holds: the message's prim and env as 0xRRGGBB. */
+static u32 sNdsIFCommonCommonPalettePrim;
+static u32 sNdsIFCommonCommonPaletteEnv;
+static u32 sNdsIFCommonCommonPaletteValid;
+
+/* Owner r71: "Failure" and "Complete" did not draw correctly. The letter
+ * cells and palette 8 were cached for the life of the ROM, but both are
+ * shared hardware: TIME UP / GAME SET re-lay the end bank under the cached
+ * cells, and other scenes' OBJ presenters (source 2D, results) rewrite OBJ
+ * VRAM and the palette, so a later message drew from whatever was there --
+ * and COMPLETE! plus FAILURE need 13 distinct letters against the 12-cell
+ * cache. The cache now lives for one battle scene and one end-bank layout. */
+static void ndsIFCommonResetCommonLetters(void)
+{
+    memset(sNdsIFCommonCommonLetters, 0, sizeof(sNdsIFCommonCommonLetters));
+    sNdsIFCommonCommonLetterCount = 0u;
+    sNdsIFCommonCommonPaletteValid = FALSE;
+}
 
 static s32 ndsIFCommonIsCommonLetter(const SObj *sobj)
 {
@@ -4300,18 +4322,26 @@ static u16 *ndsIFCommonBakeCommonLetter(const Sprite *sprite)
 
 static void ndsIFCommonCommonPalette(const SObj *sobj)
 {
-    u32 key = ((u32)sobj->sprite.red << 24) | ((u32)sobj->sprite.green << 16) |
-              ((u32)sobj->sprite.blue << 8) ^
-              (((u32)sobj->envcolor.r << 16) | ((u32)sobj->envcolor.g << 8) |
-               (u32)sobj->envcolor.b);
+    /* Prim and env compared whole: the old single-word key folded them with
+     * a mis-parenthesised XOR, and FAILURE's (white over blue) came out as
+     * 0xffffffff -- the never-written sentinel -- so its ramp was never
+     * written at all. */
+    u32 prim = ((u32)sobj->sprite.red << 16) |
+               ((u32)sobj->sprite.green << 8) | (u32)sobj->sprite.blue;
+    u32 env = ((u32)sobj->envcolor.r << 16) |
+              ((u32)sobj->envcolor.g << 8) | (u32)sobj->envcolor.b;
     u16 *palette = &SPRITE_PALETTE[NDS_IFCOMMON_COMMON_PALETTE * 16u];
     u32 i;
 
-    if (key == sNdsIFCommonCommonPaletteKey)
+    if ((sNdsIFCommonCommonPaletteValid != FALSE) &&
+        (prim == sNdsIFCommonCommonPalettePrim) &&
+        (env == sNdsIFCommonCommonPaletteEnv))
     {
         return;
     }
-    sNdsIFCommonCommonPaletteKey = key;
+    sNdsIFCommonCommonPalettePrim = prim;
+    sNdsIFCommonCommonPaletteEnv = env;
+    sNdsIFCommonCommonPaletteValid = TRUE;
     palette[0] = 0u;
     for (i = 1u; i < 16u; i++)
     {
