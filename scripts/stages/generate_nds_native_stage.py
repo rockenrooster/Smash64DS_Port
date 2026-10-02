@@ -5092,6 +5092,15 @@ _BLOB_RIGID_MASKS = {
     # billboards (bindings 14-17, 19, 20) are its camera bindings and stay
     # live; the other 18 were composed on the CPU every frame for nothing.
     "bonus3": 0x00E13FFF,
+    # The other 1P-only maps, from the same probe over a 900-frame natural
+    # run of each 1P battle (2026-10-02): every binding whose world never
+    # moved, less the billboards. Final Destination's binding 3 (its
+    # background) moves; Yoshi's Island small keeps only bindings that also
+    # stay static on the VS Yoshi's Island (its clouds sink when stood on).
+    "metal": 0xF,
+    "zako": 0x1,
+    "last": 0x17,
+    "yostersmall": 0x1C014,
 }
 
 #: DObj anim-joint tables the ground code attaches at RUNTIME, per stage:
