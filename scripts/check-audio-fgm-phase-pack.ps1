@@ -288,7 +288,11 @@ if (([int]$metadata.format_version -ne 4) -or
     # cache does not move.
     # 2026-09-27: the slots became a 160 KiB ring arena (P2-2p8 A8); cues take
     # their own size, so the cache no longer moves with the largest body.
-    ([int64]$metadata.resident_bytes -ne 6968728) -or
+    # 6968728 -> 6976788 on 2026-10-02: the menu click family (127, 157, 158,
+    # 163, 164, 165, 167) joined FULL_PROGRAM_AOT_IDS -- 158's four-note select
+    # chime and 165's two beeps were one held first note -- and each click
+    # now carries its own 32 kHz body instead of the shared deduplicated one.
+    ([int64]$metadata.resident_bytes -ne 6976788) -or
     ([int64]$metadata.resident_limit_bytes -ne 163840) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -336,7 +340,8 @@ if (([int]$metadata.format_version -ne 4) -or
     #    16 kHz so the 968-tick snore fits a cache slot).
     # -> 0x934c0fc8 on 2026-09-06: 44/66 render at 64 kHz, doubling their
     #    retained-sample proofs in the selector table (P2_CONTENT audit repin).
-    ($metadata.mapping_sha256_lo -ne '0x63e22da5') -or
+    # -> 0x1d465e9f on 2026-10-02 for the menu click family's render change.
+    ($metadata.mapping_sha256_lo -ne '0x1d465e9f') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -412,8 +417,14 @@ if (([int]$metadata.format_version -ne 4) -or
     # so their payloads and seven retained-sample extents changed; every cue
     # under +1200 cents is bit-identical. 6969332 -> 6968728 bytes, mapping
     # 0x1e9afe37 -> 0x63e22da5. Entry count and the cache are unmoved.
+    # 2026-10-02: the menu click family renders its source programs (owner r68,
+    # "the A select sounds are silent"), and a rest (UCD pitch code 0) renders
+    # as the silence n_env.c makes of it instead of a note 13 semitones down
+    # (owner r67: the bonus announcers "start at too low of a pitch"); 35 cues
+    # change, sizes do not. The prior pin was
+    # 52514d45dea6f27ec74750b83c2cbb8a971ef46ddd2b9cf03b85a4e7c0571cef.
     ($metadata.pack_sha256 -ne
-        '52514d45dea6f27ec74750b83c2cbb8a971ef46ddd2b9cf03b85a4e7c0571cef')) {
+        'a55515e2698d44051e6e3021a0c8d204baf198c1ec09171d58391df1c22c60b6')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

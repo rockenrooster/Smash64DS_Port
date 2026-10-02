@@ -1268,6 +1268,26 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # not scale with the 7.0-second source schedule. Announcer 483 and crowd
     # chant 603 are single-note and stay on the cheaper flat path.
     325, 326, 327, 328, 329, 330, 331, 332, 333, 334, 335, 336,
+    # Owner r68 (2026-10-02): "the 'A' select sounds are silent in all the
+    # menus". 158 MenuSelect is a four-note rising chime in the source -- notes
+    # 4/11/18/20 at UCD volumes 130/160/160/100 -- and the flat path held its
+    # first note (pitch 4, articulation volume 40 -> DS 20) as one 120 ms
+    # blip of the same click wave the cursor plays: no chime, and quieter than
+    # the scroll it follows. The other menu cues of the same class render the
+    # same way, so they join it: 165 MenuDenied (13, rest-pitch 0, 13: two
+    # beeps, flat played one held tone), 167 PlayerSlotWhoosh (12/13/12/10
+    # with its pitch modulators) and 127 SamusDash (pitch 1 then 24 at a
+    # lower volume, flat held pitch 1). Same composite render as 159/166.
+    #
+    # The single-pitch menu clicks join too, for the balance between them. The
+    # flat path maps the articulation's PRE-mixer target linearly to the DS
+    # channel volume, but n_env.c squares it (source_quadratic_target), so a
+    # flat cue sits ~6-7 dB above the source law that every composite render
+    # (the other 500-odd cues) follows: the flat cursor click measured 4,087
+    # RMS against 1,734 rendered, which left the rendered select chime 10 dB
+    # under the click it follows instead of the source's 3 dB. 157
+    # TitlePressStart, 163 MenuScroll1 and 164 MenuScroll2.
+    127, 157, 158, 163, 164, 165, 167,
 ))
 
 ATTACK_ACTION_AUDIT_SHA256 = (
@@ -7731,6 +7751,7 @@ def fgm_program_notes(program: list[list]) -> tuple[list[dict], list[dict]]:
     tick = 0
     previous_duration = None
     previous_cut = False
+    previous_rest = False
     notes = []
     forks = []
     for row in program:
@@ -7749,7 +7770,9 @@ def fgm_program_notes(program: list[list]) -> tuple[list[dict], list[dict]]:
             forks.append({"program_id": int(row[1]), "start_tick": tick})
         elif op == "note":
             duration = int(row[3])
-            starts_new = (previous_duration is None or
+            # A rest (pitch code 0) stops the sound (below), so the note after
+            # one opens a new sound like the first note does.
+            starts_new = (previous_duration is None or previous_rest or
                           (previous_cut and previous_duration > 1))
             notes.append({
                 "start_tick": tick,
@@ -7767,6 +7790,7 @@ def fgm_program_notes(program: list[list]) -> tuple[list[dict], list[dict]]:
             tick += duration
             previous_duration = duration
             previous_cut = cut_before_note_end
+            previous_rest = int(row[1]) == 0
     if not notes:
         raise ValueError("FGM program has no notes")
     return notes, forks
@@ -7819,10 +7843,15 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
     voice_start_tick = 0
     active_root_volume = 255
     previous_target = 0
+    frequency = 0
     for tick in range(tick_count):
         note = next(note for note in notes
                     if note["start_tick"] <= tick < note["end_tick"])
-        if tick == note["start_tick"] and note["starts_new_voice"]:
+        # n_env.c's UCD note op: pitch code 0 releases the playing sound
+        # instead of retuning it, so a rest is silence -- the sound that was
+        # playing fades over the rest's first tick, as a cut note does.
+        rest = note["pitch_code"] == 0
+        if tick == note["start_tick"] and note["starts_new_voice"] and not rest:
             source_phase = 0.0
             voice_start_tick = tick
             active_root_volume = note["root_volume"]
@@ -7834,11 +7863,12 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
             local_tick = len(articulation_states) - 1
         state = articulation_states[local_tick]
         target = source_quadratic_target(active_root_volume, state["volume"])
-        if note["release_tick"] == tick:
+        if (note["release_tick"] == tick) or rest:
             target = 0
-        frequency = round(FGM_OUTPUT_RATE * source_pitch_ratio(
-            state["pitch"] + note["pitch_code"] * 100 - 1300 +
-            note["pitch_offset_cents"]))
+        if not rest:
+            frequency = round(FGM_OUTPUT_RATE * source_pitch_ratio(
+                state["pitch"] + note["pitch_code"] * 100 - 1300 +
+                note["pitch_offset_cents"]))
         for sample_in_tick in range(samples_per_tick):
             if loop is not None:
                 loop_start = int(loop["start"])
