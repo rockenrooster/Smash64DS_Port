@@ -1808,20 +1808,26 @@ static void ndsAObjEvent32CompactLedger(void)
  * Fix word 0 with ndsRelocSYInterpDescHeaderNative (reloc_backend_assets.c)
  * when the owning SetInterp script first normalizes. The transform is not
  * idempotent, so the ledger below is the exactly-once precondition: one entry
- * per fixed descriptor, refused (reason 13) on a repeat, on a duplicate name
- * inside one plan, or on ledger overflow. Purged with the command ledger it
- * shadows (ForgetRange per retired buffer, Reset on scene teardown), so a
- * reused address fixes exactly once again. 32 slots cover the 14 source
- * descs with margin; growth is coverage of a finite corpus, not a leak. */
+ * per fixed descriptor, holding the word the fix wrote. A path can be shared:
+ * Kirby's Board the Platforms runs two rail platforms on one SYInterpDesc,
+ * two scripts with different phases. A later script (or a second SetInterp in
+ * the same plan) naming a ledgered descriptor whose word 0 still reads as
+ * fixed is admitted without fixing again; a word that no longer matches is a
+ * stale entry and is refused (reason 13), as is ledger overflow. Purged with
+ * the command ledger it shadows (ForgetRange per retired buffer, Reset on
+ * scene teardown), so a reused address fixes exactly once again. 32 slots
+ * cover the 14 Sector Z descs with margin; growth is coverage of a finite
+ * corpus, not a leak. */
 #define NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX 32u
 static void *sNdsEvent32InterpDescFixed[NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX];
+static u32 sNdsEvent32InterpDescFixedWord[NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX];
 /* Definition site: src/port/reloc_backend_assets.c (non-static for this use). */
 extern u32 ndsRelocSYInterpDescHeaderNative(u32 swapped);
 __attribute__((used)) volatile u32 gNdsEvent32SYInterpDescFixCount;
 __attribute__((used)) volatile u32 gNdsEvent32SYInterpDescUnresolvedCount;
 __attribute__((used)) volatile u32 gNdsEvent32SYInterpDescUnresolvedAddr;
 
-static s32 ndsEvent32InterpDescIsFixed(const void *desc)
+static s32 ndsEvent32InterpDescFindFixed(const void *desc)
 {
     u32 i;
 
@@ -1829,10 +1835,10 @@ static s32 ndsEvent32InterpDescIsFixed(const void *desc)
     {
         if (sNdsEvent32InterpDescFixed[i] == desc)
         {
-            return TRUE;
+            return (s32)i;
         }
     }
-    return FALSE;
+    return -1;
 }
 
 void ndsAObjEvent32ForgetRange(const void *base, size_t size)
@@ -2005,6 +2011,8 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
             {
                 sNdsEvent32InterpDescFixed[kept] =
                     sNdsEvent32InterpDescFixed[scan];
+                sNdsEvent32InterpDescFixedWord[kept] =
+                    sNdsEvent32InterpDescFixedWord[scan];
             }
             kept++;
         }
@@ -2517,13 +2525,16 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
 /* Read-only mirror of the fix loop below. Every DObj SetInterp (TraI) command
  * in the plan must name a resident 24-byte SYInterpDesc (sizeof(SYInterpDesc)
  * is 24; only word 0 is rewritten, but the whole struct must be resident for
- * the path to be usable) that no plan entry and no earlier script already
- * claimed, with room left in the fixed ledger. Writes nothing, touches no
- * fix counter; unresolved/refusal accounting only. */
+ * the path to be usable). A descriptor an earlier plan entry names is fixed
+ * by that entry; one already in the ledger is admitted while its word 0 still
+ * holds what the fix wrote. Every other descriptor needs room left in the
+ * fixed ledger. Writes nothing, touches no fix counter; unresolved/refusal
+ * accounting only. */
 static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind)
 {
     u32 i;
     u32 fresh = 0u;
+    s32 fixed_index;
 
     if (owner_kind != nNDSAObjEvent32OwnerDObj)
     {
@@ -2561,8 +2572,18 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
                 break;
             }
         }
-        if ((j < i) || (ndsEvent32InterpDescIsFixed(desc) != FALSE))
+        if (j < i)
         {
+            continue;
+        }
+        fixed_index = ndsEvent32InterpDescFindFixed(desc);
+        if (fixed_index >= 0)
+        {
+            if (*(const u32 *)desc ==
+                sNdsEvent32InterpDescFixedWord[fixed_index])
+            {
+                continue;
+            }
             gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
             gNdsEvent32SYInterpDescUnresolvedCount++;
             (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
@@ -2586,7 +2607,9 @@ static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind
 }
 
 /* Applies the validated fixes. Runs only after ValidateInterpDescs approved
- * the whole plan, so it cannot overflow the ledger it just budgeted. */
+ * the whole plan, so it cannot overflow the ledger it just budgeted. A shared
+ * descriptor is already in the ledger (from an earlier script, or from the
+ * plan entry that fixed it a moment ago) and is left as it is. */
 static void ndsAObjEvent32FixInterpDescs(void)
 {
     u32 i;
@@ -2601,9 +2624,15 @@ static void ndsAObjEvent32FixInterpDescs(void)
             u32 *word =
                 (u32 *)(void *)sNdsAObjEvent32Plan[i].command[1].p;
 
+            if (ndsEvent32InterpDescFindFixed(word) >= 0)
+            {
+                continue;
+            }
             *word = ndsRelocSYInterpDescHeaderNative(*word);
             sNdsEvent32InterpDescFixed[sNdsEvent32InterpDescFixedCount] =
                 (void *)word;
+            sNdsEvent32InterpDescFixedWord[sNdsEvent32InterpDescFixedCount] =
+                *word;
             sNdsEvent32InterpDescFixedCount++;
             gNdsEvent32SYInterpDescFixCount++;
         }
