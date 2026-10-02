@@ -60,6 +60,11 @@ typedef struct NDSStageGxRunMemo
     u32 textured;
     u32 material_gen;           /* texture key generation + 1; 0 = unwritten */
     u32 projection_serial;      /* sNdsStageGxProjSerial its NOZ words hold */
+    /* A rigid run's world-space box for the cull (ndsStageGxRunOutsideView),
+     * valid while world_serial is gNdsStageRigidWorldSerial + 1. */
+    s32 world_lo[3];
+    s32 world_hi[3];
+    u32 world_serial;
 } NDSStageGxRunMemo;
 static NDSStageGxRunMemo *sNdsStageGxRunMemo;
 static NDSRendererMatrix20p12 sNdsStageGxProjCopy;
@@ -356,14 +361,59 @@ static sb32 ndsStageGxInsideNear(const NDSStageGxRun *run, const NDSRendererMatr
 #define NDS_STAGE_GX_CULL_FIRST_GKIND 9u /* nGRKindPupupuSmall: 1P venues on */
 volatile u32 gNdsStageGxCull __attribute__((used, section(".data"))) = 1u;
 volatile u32 gNdsStageGxCulledRuns;
-static NDSRendererMatrix20p12 sNdsStageGxCullRigid;
-static u32 sNdsStageGxCullRigidBinding = UINT_MAX;
-static u32 sNdsStageGxCullRigidGen;
+/* P2-6 (2026-10-02): A RIGID RUN TESTS ITS WORLD BOX. A rigid binding's world
+ * is constant until the next capture, so its runs' object-space boxes go to
+ * world space once (the eight corners through the world, floor and ceiling
+ * at the integer unit: never smaller) and the cull tests them against one
+ * camera x projection a frame, where it used to form world x camera x
+ * projection, two products, at every binding switch. The Race's 18 static
+ * bindings made rigid (generate_nds_native_stage.py) would otherwise have
+ * paid that ~36 times a frame. */
+extern volatile u32 gNdsStageRigidWorldSerial;
+static NDSRendererMatrix20p12 sNdsStageGxCullCameraProjection;
+static u32 sNdsStageGxCullCameraGen = UINT_MAX;
+
+static void ndsStageGxRigidWorldBox(const NDSStageGxRun *r,
+                                    const NDSRendererMatrix20p12 *w,
+                                    NDSStageGxRunMemo *memo)
+{
+    u32 corner;
+    u32 axis;
+    s64 lo[3] = { INT64_MAX, INT64_MAX, INT64_MAX };
+    s64 hi[3] = { INT64_MIN, INT64_MIN, INT64_MIN };
+
+    for (corner = 0u; corner < 8u; corner++)
+    {
+        const s64 x = ((corner & 1u) != 0u) ? r->maximum[0] : r->minimum[0];
+        const s64 y = ((corner & 2u) != 0u) ? r->maximum[1] : r->minimum[1];
+        const s64 z = ((corner & 4u) != 0u) ? r->maximum[2] : r->minimum[2];
+
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            const s64 v = (x * w->m[0][axis]) + (y * w->m[1][axis]) +
+                (z * w->m[2][axis]) + (s64)w->m[3][axis];
+
+            lo[axis] = (v < lo[axis]) ? v : lo[axis];
+            hi[axis] = (v > hi[axis]) ? v : hi[axis];
+        }
+    }
+    for (axis = 0u; axis < 3u; axis++)
+    {
+        /* Q12 to units, outward: floor the low side, ceiling the high. */
+        memo->world_lo[axis] = (s32)(lo[axis] >> 12);
+        memo->world_hi[axis] = (s32)((hi[axis] + 4095) >> 12);
+    }
+    memo->world_serial = gNdsStageRigidWorldSerial + 1u;
+}
 
 static sb32 ndsStageGxRunOutsideView(u32 index)
 {
     const NDSStageGxRun *r = &sNdsStageGxRuns[index];
     const NDSRendererMatrix20p12 *m;
+    const s32 *box_lo;
+    const s32 *box_hi;
+    s32 local_lo[3];
+    s32 local_hi[3];
     u32 binding;
     u32 plane;
     u32 axis;
@@ -385,26 +435,30 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
     if ((sNdsNativeStageOwnerExecution.rigid_binding_mask &
          ((u64)1u << binding)) != 0u)
     {
+        NDSStageGxRunMemo *memo = &sNdsStageGxRunMemo[index];
+
         if ((sNdsNativeStageOwnerExecution.binding_world == NULL) ||
             (sNdsNativeStageOwnerExecution.camera_modelview == NULL) ||
             (sNdsNativeStageOwnerExecution.projection == NULL))
         {
             return FALSE;
         }
-        if ((sNdsStageGxCullRigidBinding != binding) ||
-            (sNdsStageGxCullRigidGen != sNdsNativeStageMatrixGen))
+        if (memo->world_serial != gNdsStageRigidWorldSerial + 1u)
         {
-            ndsRendererMtxMul20p12(
-                &sNdsNativeStageOwnerExecution.binding_world[binding],
-                sNdsNativeStageOwnerExecution.camera_modelview,
-                &sNdsStageGxCullRigid);
-            ndsRendererMtxMul20p12(&sNdsStageGxCullRigid,
-                                   sNdsNativeStageOwnerExecution.projection,
-                                   &sNdsStageGxCullRigid);
-            sNdsStageGxCullRigidBinding = binding;
-            sNdsStageGxCullRigidGen = sNdsNativeStageMatrixGen;
+            ndsStageGxRigidWorldBox(
+                r, &sNdsNativeStageOwnerExecution.binding_world[binding],
+                memo);
         }
-        m = &sNdsStageGxCullRigid;
+        if (sNdsStageGxCullCameraGen != sNdsNativeStageMatrixGen)
+        {
+            ndsRendererMtxMul20p12(sNdsNativeStageOwnerExecution.camera_modelview,
+                                   sNdsNativeStageOwnerExecution.projection,
+                                   &sNdsStageGxCullCameraProjection);
+            sNdsStageGxCullCameraGen = sNdsNativeStageMatrixGen;
+        }
+        m = &sNdsStageGxCullCameraProjection;
+        box_lo = memo->world_lo;
+        box_hi = memo->world_hi;
     }
     else
     {
@@ -413,6 +467,13 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
             return FALSE;
         }
         m = &sNdsNativeStageOwnerExecution.binding_composed[binding];
+        for (axis = 0u; axis < 3u; axis++)
+        {
+            local_lo[axis] = r->minimum[axis];
+            local_hi[axis] = r->maximum[axis];
+        }
+        box_lo = local_lo;
+        box_hi = local_hi;
     }
     for (plane = 0u; plane < 4u; plane++)
     {
@@ -424,7 +485,7 @@ static sb32 ndsStageGxRunOutsideView(u32 index)
         {
             s64 c = (s64)m->m[axis][3] + (sign * (s64)m->m[axis][col]);
 
-            d += c * (s64)((c >= 0) ? r->maximum[axis] : r->minimum[axis]);
+            d += c * (s64)((c >= 0) ? box_hi[axis] : box_lo[axis]);
         }
         if (d < 0)
         {

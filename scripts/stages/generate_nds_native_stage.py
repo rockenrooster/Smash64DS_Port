@@ -5086,6 +5086,12 @@ _BLOB_GKIND = {
 _BLOB_RIGID_MASKS = {
     "dreamland": 0x00000381C00FFFFF,
     "yoster": 0x78014,
+    # Race to the Finish, measured 2026-10-02 (P2-6): a probe comparing every
+    # binding's composed world frame to frame saw none of the 24 move over a
+    # 600-frame natural run and a 120-frame walk down the course. The six
+    # billboards (bindings 14-17, 19, 20) are its camera bindings and stay
+    # live; the other 18 were composed on the CPU every frame for nothing.
+    "bonus3": 0x00E13FFF,
 }
 
 #: DObj anim-joint tables the ground code attaches at RUNTIME, per stage:

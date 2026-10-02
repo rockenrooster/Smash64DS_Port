@@ -4299,6 +4299,10 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
 }
 
 #if NDS_TASK36_HW_COMPOSE
+/* Bumped by every rigid world capture; read by the stage GX cull
+ * (nds_stage_gx.exec.inc). */
+volatile u32 gNdsStageRigidWorldSerial;
+
 static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
@@ -4331,6 +4335,9 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     }
     workspace->task36_runtime_rigid_mask =
         rigid_mask;
+    /* The stage GX cull keeps each rigid run's world-space bounds until the
+     * worlds are captured again (nds_stage_gx.exec.inc). */
+    gNdsStageRigidWorldSerial++;
 #if NDS_TASK44_STAGE_STEADY
     workspace->task44_rigid_binding_count = 0u;
     for (binding_index = 0u;

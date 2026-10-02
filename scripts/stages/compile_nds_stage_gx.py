@@ -32,7 +32,11 @@ BOARD_BODY_MAX = 49152
 
 
 def body_max(name):
-    return BOARD_BODY_MAX if name.startswith(('bonus1_', 'bonus2_')) else BODY_MAX
+    # The Race (bonus3) likewise: one player, three polygons and a few items,
+    # 248 KB of general heap free at its low-water mark (P2-6, 2026-10-02);
+    # its 18 rigid bindings' baked worlds take its body to 39,076 B.
+    return (BOARD_BODY_MAX if name.startswith(('bonus1_', 'bonus2_', 'bonus3'))
+            else BODY_MAX)
 HEADER = struct.Struct('<12I')
 RUN_V1 = struct.Struct('<6H')
 RUN_V2 = struct.Struct('<6H6h')
