@@ -2983,8 +2983,10 @@ volatile u32 gNdsMPWallSweepGroupRejects;
 
 /* trunc(v) when |v| < 2^20 (float spacing there is at most 1/8), else
  * FALSE. */
-/* ITCM (P2-6, 2026-10-02: census admission, 82 B). */
-static sb32 __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
+/* Out of ITCM again (2026-10-02): it and the AI process were the two
+ * smallest of the four census admissions, and the tick-HUD gate ROM, whose
+ * instrument keeps code in ITCM too, overflowed it by 144 B with all four. */
+static sb32 __attribute__((noinline))
 ndsMPWallSweepTrunc(f32 v, s32 *out)
 {
     s32 t;
