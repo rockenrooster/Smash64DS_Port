@@ -1068,6 +1068,25 @@ static u32 ndsMenuFillSinkOnePlayerNativeOwner(void)
 }
 #endif
 
+/* The ending (mvending.c) and the staff roll (scstaffroll.c) draw every
+ * source list through DS owners: the room's baked roots and the figure, the
+ * fade as MASTER_BRIGHT (battleship_mvending.c), the names as world quads and
+ * the frames and crosshair as SObjs. The camera, light and fade words their
+ * procs still write into head 0 (the ending's fade: state words around one
+ * G_FILLRECT) are consumed there, not an unowned menu -- each frame of both
+ * scenes had recorded one SPRITE / NO_PROGRAM failure. */
+static u32 ndsMenuFillSinkMovieNativeOwner(void)
+{
+#if NDS_P2_1P_GAME
+    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+    return ((scene == (u32)nSCKindEnding) ||
+            (scene == (u32)nSCKindStaffroll)) ? TRUE : FALSE;
+#else
+    return FALSE;
+#endif
+}
+
 void ndsSObjPreviewEndFrame(void)
 {
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
@@ -1358,7 +1377,8 @@ static u32 ndsMenuFillSinkSceneGated(void)
  * Do not interpret the words or report a successful empty composition. */
 static void ndsMenuFillSinkEndFrame(void)
 {
-    if (ndsMenuFillSinkOnePlayerNativeOwner() != FALSE)
+    if ((ndsMenuFillSinkOnePlayerNativeOwner() != FALSE) ||
+        (ndsMenuFillSinkMovieNativeOwner() != FALSE))
     {
         /* The 1P label callback's source fill rectangle is part of the native
          * ONEP_CSS_SCREEN bake. Consume the words at this explicit owner seam
