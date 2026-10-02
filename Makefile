@@ -8630,7 +8630,9 @@ $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET) &: \
 		$(BATTLESHIP_O2R)/reloc_menus/MNPlayersPortraits \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxModel \
-		$(BATTLESHIP_O2R)/reloc_fighters_main/LuigiModel
+		$(BATTLESHIP_O2R)/reloc_fighters_main/LuigiModel \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/YoshiModel \
+		$(BATTLESHIP_O2R)/reloc_fighters_common/FTStocksZako
 	python "$(PROJECT_ROOT)/scripts/menus/generate_battle_hud.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_BATTLE_HUD_INC) $(NDS_BATTLE_HUD_ASSET)
 

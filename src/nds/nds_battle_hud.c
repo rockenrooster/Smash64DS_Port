@@ -71,6 +71,11 @@ static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
 static u16 *sNdsBattleHudPortraitGfx[NDS_BATTLE_HUD_PORTRAITS];
 static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
 static u16 *sNdsBattleHudScoreGfx[NDS_BATTLE_HUD_SCORE_FRAMES];
+/* The 1P team rows' own cells, after the score frames in battle_hud.bin: the
+ * Polygon Team's stock icon and Yoshi's icon once per team-palette lane
+ * (generate_battle_hud.py team_lanes). */
+static u16 *sNdsBattleHudZakoStockGfx;
+static u16 *sNdsBattleHudTeamLaneGfx[NDS_BATTLE_HUD_TEAM_LANES];
 #define NDS_BATTLE_HUD_SCORE_MAX 16u
 typedef struct { s16 x, y, scale; u16 frame; } NDSBattleHudScore;
 static NDSBattleHudScore sNdsBattleHudScores[NDS_BATTLE_HUD_SCORE_MAX];
@@ -305,6 +310,15 @@ static u32 ndsBattleHudPrepare(void)
         if (sNdsBattleHudScoreGfx[i] == NULL) goto failed;
         dmaCopy(kNdsBattleHudScorePalette[i], &SPRITE_PALETTE_SUB[(13u + i) * 16u], 32u);
     }
+    sNdsBattleHudZakoStockGfx = ndsBattleHudAlloc(
+        file, SpriteSize_8x8, NDS_BATTLE_HUD_STOCK_GFX_BYTES);
+    if (sNdsBattleHudZakoStockGfx == NULL) goto failed;
+    for (i = 0u; i < NDS_BATTLE_HUD_TEAM_LANES; i++)
+    {
+        sNdsBattleHudTeamLaneGfx[i] = ndsBattleHudAlloc(
+            file, SpriteSize_8x8, NDS_BATTLE_HUD_STOCK_GFX_BYTES);
+        if (sNdsBattleHudTeamLaneGfx[i] == NULL) goto failed;
+    }
     if (fgetc(file) != EOF || ferror(file)) goto failed;
     fclose(file);
     ndsFsUnlock();
@@ -357,7 +371,9 @@ static void ndsBattleHudDamagePalette(
     }
 }
 
-static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
+/* Loads `palette` (a player's stock slot, or a 1P team-row palette) with the
+ * baked stock LUT of fkind's costume. */
+static void ndsBattleHudStockPalette(u32 palette, u32 fkind, u32 costume)
 {
     const u16 *source;
 
@@ -432,10 +448,7 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 5u) costume = 0u;
         source = kNdsBattleHudMarioStockPalette[costume];
     }
-    dmaCopy(source,
-            &SPRITE_PALETTE_SUB[(NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player) *
-                                16u],
-            16u * sizeof(u16));
+    dmaCopy(source, &SPRITE_PALETTE_SUB[palette * 16u], 16u * sizeof(u16));
 }
 
 static void ndsBattleHudSetOam(u32 *next_id, s32 x, s32 y,
@@ -757,15 +770,35 @@ static void ndsBattleHudDrawTimer(u32 *next_id)
 
 #if NDS_P2_1P_GAME
 /* src/import/battleship_ifcommon.c: icons the source's team stock row shows
- * this frame (0 = none). Consumed by each render. */
+ * this frame (0 = none), each one's look in gNdsIFCommonHUDTeamStockLook.
+ * Consumed by each render. */
 extern volatile u32 gNdsIFCommonHUDTeamStockCount;
 
+/* The team row's palettes: 15, which no other band uses, then 14 -- the
+ * second score frame's, which no 1P battle shows (the 1P battle state clears
+ * is_show_score, sc1pmanager.c:270, and score effects need it,
+ * ftcommondead.c:55-68). Two hold every source team: the Polygon and Kirby
+ * Teams show one LUT, the Yoshi Team's six pack into
+ * NDS_BATTLE_HUD_YOSHI_TEAM_PALETTES. */
+#define NDS_BATTLE_HUD_TEAM_PALETTES 2u
+static const u8 sNdsBattleHudTeamPalette[NDS_BATTLE_HUD_TEAM_PALETTES] = {
+    15u, 14u
+};
+_Static_assert(NDS_BATTLE_HUD_YOSHI_TEAM_PALETTES <=
+                   NDS_BATTLE_HUD_TEAM_PALETTES,
+               "the Yoshi Team row needs more palettes than it has");
+
 /* The 1P team's remaining stocks (sc1PGameTeamStockDisplayProcDisplay): the
- * source rows of ten 10-pixel icons from (20,20), as the lower HUD's own 8x8
- * stock icon of the team's kind in the first enemy slot's palette, at the
- * same pitch (scaled 0.8) from the top-left of the bottom screen. */
+ * source rows of ten 10-pixel icons from (20,20), at the same pitch (scaled
+ * 0.8) from the top-left of the bottom screen. Each icon shows what the
+ * source gave its SObj (sc1pgame.c:1690-1705): the Polygon Team's own stock
+ * sprite, or the team fighter's stock icon in that member's LUT -- for the
+ * Yoshi Team, Yoshi's icon in that costume's lane of a packed palette. */
 static void ndsBattleHudDrawTeamStock(u32 count, u32 *next_id)
 {
+    u32 keys[NDS_BATTLE_HUD_TEAM_PALETTES] = { 0u, 0u };
+    u32 fkind = (u32)nFTKindNull;
+    u32 owner;
     u32 player;
     u32 i;
 
@@ -773,37 +806,91 @@ static void ndsBattleHudDrawTeamStock(u32 count, u32 *next_id)
     {
         return;
     }
+    /* The team fighter: every member of the Yoshi and Kirby Teams is one. */
     for (player = 0u; player < NDS_BATTLE_HUD_PLAYERS; player++)
     {
-        u32 fkind;
-        u32 owner;
-
-        if ((gSCManagerBattleState->players[player].is_spgame_enemy == FALSE) ||
-            ((gNdsIFCommonHUDActivePlayerMask & (1u << player)) == 0u))
+        if ((gSCManagerBattleState->players[player].is_spgame_enemy != FALSE) &&
+            ((gNdsIFCommonHUDActivePlayerMask & (1u << player)) != 0u))
         {
+            fkind = ndsBattleHudFkind(player);
+            break;
+        }
+    }
+    owner = ndsBattleHudStockOwner(fkind);
+    if (count > NDS_BATTLE_HUD_TEAM_STOCK_MAX)
+    {
+        count = NDS_BATTLE_HUD_TEAM_STOCK_MAX;
+    }
+    for (i = 0u; i < count; i++)
+    {
+        u32 look = gNdsIFCommonHUDTeamStockLook[i];
+        u32 key;
+        u32 slot;
+        u16 *gfx;
+
+        /* key: which LUT the icon's palette holds (never 0). */
+        if (look == NDS_BATTLE_HUD_TEAM_LOOK_ZAKO)
+        {
+            key = 0x100u;
+            gfx = sNdsBattleHudZakoStockGfx;
+        }
+        else if ((look < 6u) && (fkind == (u32)nFTKindYoshi))
+        {
+            key = 0x200u | kNdsBattleHudYoshiTeamLook[look][0];
+            gfx = sNdsBattleHudTeamLaneGfx[kNdsBattleHudYoshiTeamLook[look][1]];
+        }
+        else if ((look < 6u) && (owner != 0xffu))
+        {
+            key = 0x10000u | (fkind << 8) | look;
+            gfx = sNdsBattleHudStockGfx[owner];
+        }
+        else
+        {
+            ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, 0u,
+                0x7ea70000u | look, fkind, i, 0u,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
             continue;
         }
-        fkind = ndsBattleHudFkind(player);
-        /* Polygons (nFTKindN*) show their base fighter's icon. */
-        if ((fkind >= (u32)nFTKindNStart) && (fkind <= (u32)nFTKindNEnd))
+        for (slot = 0u; slot < NDS_BATTLE_HUD_TEAM_PALETTES; slot++)
         {
-            fkind -= (u32)nFTKindNStart;
+            if ((keys[slot] == 0u) || (keys[slot] == key))
+            {
+                break;
+            }
         }
-        owner = ndsBattleHudStockOwner(fkind);
-        if (owner == 0xffu)
+        if (slot >= NDS_BATTLE_HUD_TEAM_PALETTES)
         {
-            return;
+            ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, 0u,
+                0x7ea70000u | look, fkind, i, key,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
+            continue;
         }
-        if (count > 30u) count = 30u;
-        for (i = 0u; i < count; i++)
+        if (keys[slot] == 0u)
         {
-            ndsBattleHudSetOam(next_id,
-                               NDS_BATTLE_HUD_SOURCE_SCALE(20 + (s32)(i % 10u) * 10),
-                               NDS_BATTLE_HUD_SOURCE_SCALE(4 + (s32)(i / 10u) * 10),
-                               SpriteSize_8x8, sNdsBattleHudStockGfx[owner],
-                               NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player);
+            u16 *palette = &SPRITE_PALETTE_SUB[
+                (u32)sNdsBattleHudTeamPalette[slot] * 16u];
+
+            keys[slot] = key;
+            if (key == 0x100u)
+            {
+                dmaCopy(kNdsBattleHudZakoStockPalette[0], palette,
+                        16u * sizeof(u16));
+            }
+            else if (key < 0x10000u)
+            {
+                dmaCopy(kNdsBattleHudYoshiTeamPalette[key & 0xffu], palette,
+                        16u * sizeof(u16));
+            }
+            else
+            {
+                ndsBattleHudStockPalette(sNdsBattleHudTeamPalette[slot],
+                                         fkind, look);
+            }
         }
-        return;
+        ndsBattleHudSetOam(next_id,
+                           NDS_BATTLE_HUD_SOURCE_SCALE(20 + (s32)(i % 10u) * 10),
+                           NDS_BATTLE_HUD_SOURCE_SCALE(4 + (s32)(i / 10u) * 10),
+                           SpriteSize_8x8, gfx, sNdsBattleHudTeamPalette[slot]);
     }
 }
 #endif
@@ -838,9 +925,15 @@ void ndsBattleHudRender(void)
 #if NDS_P2_1P_GAME
     {
         u32 team_count = gNdsIFCommonHUDTeamStockCount;
+        u32 i;
 
         gNdsIFCommonHUDTeamStockCount = 0u;
         hash = ndsBattleHudMix(hash, 0x7ea70000u | team_count);
+        for (i = 0u; (i < team_count) && (i < NDS_BATTLE_HUD_TEAM_STOCK_MAX);
+             i++)
+        {
+            hash = ndsBattleHudMix(hash, gNdsIFCommonHUDTeamStockLook[i]);
+        }
         sNdsBattleHudTeamStockCount = team_count;
     }
 #endif
@@ -874,7 +967,8 @@ void ndsBattleHudRender(void)
         fkind = ndsBattleHudFkind(player);
         costume = ndsBattleHudCostume(player);
         ndsBattleHudDamagePalette(player, &damage_state[player]);
-        ndsBattleHudStockPalette(player, fkind, costume);
+        ndsBattleHudStockPalette(NDS_BATTLE_HUD_STOCK_PALETTE_BASE + player,
+                                 fkind, costume);
         ndsBattleHudDrawPortrait(player, fkind, &next_id);
         ndsBattleHudDrawStock(player, fkind, &next_id);
         ndsBattleHudDrawDamage(player, &damage_state[player], &next_id);

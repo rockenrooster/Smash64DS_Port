@@ -177,6 +177,20 @@ MODEL_STOCK = {
     },
 }
 
+# The Fighting Polygon Team's stock row (sc1pgame.c:1702-1703) shows one
+# shared sprite, not a fighter's: llFTStocksZakoSprite (reloc_data.h, 0x80) in
+# FTStocksZako (relocData file 25), an 8x8 CI4 icon whose relocated bitmap and
+# LUT words name the texture at 0x08 and its one LUT at 0x50. Not a
+# MODEL_STOCK row: it belongs to no fighter kind.
+ZAKO_STOCK = {
+    "dir": "reloc_fighters_common",
+    "file": "FTStocksZako",
+    "sprite": 0x80,
+    "texture": 0x08,
+    "height": 8,
+    "palettes": [0x50],
+}
+
 
 class BakeError(RuntimeError):
     pass
@@ -328,15 +342,16 @@ def read_o2r_payload(path: Path) -> bytes:
 
 def stock_asset(ui, repo_root: Path, spec: dict):
     path = (repo_root / "decomp" / "BattleShip-main" / "BattleShip_o2r" /
-            "reloc_fighters_main" / spec["file"])
+            spec.get("dir", "reloc_fighters_main") / spec["file"])
     payload = read_o2r_payload(path)
     sprite = spec["sprite"]
+    src_h = spec.get("height", 10)
     if sprite + 68 > len(payload):
         raise BakeError(f"{spec['file']}: stock Sprite out of range")
     width, height = struct.unpack_from(">hh", payload, sprite + 4)
     attr = struct.unpack_from(">H", payload, sprite + 20)[0]
     bmfmt, bmsiz = payload[sprite + 48], payload[sprite + 49]
-    if (width, height, bmfmt, bmsiz) != (8, 10, ui.G_IM_FMT_CI, ui.G_IM_SIZ_4b):
+    if (width, height, bmfmt, bmsiz) != (8, src_h, ui.G_IM_FMT_CI, ui.G_IM_SIZ_4b):
         raise BakeError(
             f"{spec['file']}: stock Sprite drifted: {width}x{height} "
             f"fmt={bmfmt} siz={bmsiz}")
@@ -347,7 +362,7 @@ def stock_asset(ui, repo_root: Path, spec: dict):
     # Bitmap width_img is 16: eight visible pixels plus eight padded pixels.
     # Undo the exact SP_TEXSHUF odd-row qword swap before sampling x=0..7.
     source = []
-    for y in range(10):
+    for y in range(src_h):
         row = bytes(payload[tex + y * 8:tex + (y + 1) * 8])
         row = ui.deswizzle_row(row, y, True, 8)
         pixels = []
@@ -355,13 +370,14 @@ def stock_asset(ui, repo_root: Path, spec: dict):
             pixels.extend([(byte >> 4) & 0xF, byte & 0xF])
         source.append(pixels[:8])
 
-    # 320x240 -> 256x192.  The 8x10 source icon becomes 6x8, but lives in an
-    # 8x8 DS cell.  Nearest sampling preserves CI4 index identity so every
-    # costume palette remains valid for the one shared glyph.
-    dst_w, dst_h = 6, 8
+    # 320x240 -> 256x192.  The 8x10 source icon becomes 6x8 (the 8x8 Polygon
+    # Team icon 6x6), but lives in an 8x8 DS cell.  Nearest sampling preserves
+    # CI4 index identity so every costume palette remains valid for the one
+    # shared glyph.
+    dst_w, dst_h = 6, (src_h * 4 + 2) // 5
     indices = [0] * 64
     for y in range(dst_h):
-        sy = min(9, (y * 10) // dst_h)
+        sy = min(src_h - 1, (y * src_h) // dst_h)
         for x in range(dst_w):
             sx = min(7, (x * 8) // dst_w)
             indices[y * 8 + x] = source[sy][sx]
@@ -379,6 +395,42 @@ def stock_asset(ui, repo_root: Path, spec: dict):
         palette[0] &= 0x7FFF
         palettes.append(palette)
     return pack_obj4(indices, 8, 8), palettes
+
+
+def team_lanes(gfx: bytes, palettes: list[list[int]]):
+    """The 1P Yoshi Team row draws every member in its own costume's LUT
+    (sc1pgame.c:1693-1694), six costumes at once, and the sub OBJ engine has
+    two palettes to spare.  The glyph indices whose colour every costume
+    shares keep their place; each costume gets a lane -- its varying entries
+    on indices the glyph never uses -- and a copy of the glyph remapped to
+    that lane.  Returns the lane glyphs, the packed palettes and, per
+    costume, (palette, lane)."""
+    indices = []
+    for byte in gfx:
+        indices.extend([byte & 0xF, byte >> 4])
+    used = sorted(set(indices) - {0})
+    varying = [i for i in used if len({pal[i] for pal in palettes}) > 1]
+    free = [i for i in range(1, 16) if i not in used]
+    if not varying:
+        raise BakeError("team lanes: the costumes share every colour")
+    lanes = [varying] + [free[k:k + len(varying)]
+                         for k in range(0, len(free) - len(varying) + 1,
+                                        len(varying))]
+    lane_gfx = []
+    for lane in lanes:
+        remap = dict(zip(varying, lane))
+        lane_gfx.append(pack_obj4([remap.get(i, i) for i in indices], 8, 8))
+    packed = []
+    looks = []
+    for costume, palette in enumerate(palettes):
+        slot, lane = divmod(costume, len(lanes))
+        if lane == 0:
+            packed.append([palette[i] if (i in used and i not in varying)
+                           else 0 for i in range(16)])
+        for src, dst in zip(varying, lanes[lane]):
+            packed[slot][dst] = palette[src]
+        looks.append(bytes([slot, lane]))
+    return lane_gfx, packed, looks
 
 
 def c_array_u8(name: str, rows: list[bytes]) -> list[str]:
@@ -480,6 +532,11 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     purin_gfx, purin_palettes = stock_asset(ui, repo_root, MODEL_STOCK["PURIN"])
     ness_gfx, ness_palettes = stock_asset(ui, repo_root, MODEL_STOCK["NESS"])
     yoshi_gfx, yoshi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["YOSHI"])
+    zako_gfx, zako_palettes = stock_asset(ui, repo_root, ZAKO_STOCK)
+    yoshi_lane_gfx, yoshi_team_palettes, yoshi_team_looks = team_lanes(
+        yoshi_gfx, yoshi_palettes)
+    if len(yoshi_team_palettes) > 2:
+        raise BakeError("Yoshi Team row needs more than its two palettes")
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -508,7 +565,8 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         score_palettes.append(palette)
     graphics = glyph_groups + [portrait_gfx, [
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
-        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx], score_gfx]
+        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx], score_gfx,
+        [zako_gfx] + yoshi_lane_gfx]
     payload = b"".join(cell for group in graphics for cell in group)
     binary = struct.pack("<II", 0x31444842, len(payload)) + payload
     binary_output.parent.mkdir(parents=True, exist_ok=True)
@@ -534,6 +592,8 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
         "#define NDS_BATTLE_HUD_SCORE_GFX_BYTES 1024u",
         "#define NDS_BATTLE_HUD_STOCK_CONTENT_W 6u",
         "#define NDS_BATTLE_HUD_STOCK_CONTENT_H 8u",
+        f"#define NDS_BATTLE_HUD_TEAM_LANES {len(yoshi_lane_gfx)}u",
+        f"#define NDS_BATTLE_HUD_YOSHI_TEAM_PALETTES {len(yoshi_team_palettes)}u",
         "",
     ]
     lines += c_metric_u8("kNdsBattleHudDamageMetric", glyph_metrics[0])
@@ -570,6 +630,12 @@ def bake(repo_root: Path, output: Path, binary_output: Path) -> None:
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += c_array_u16("kNdsBattleHudScorePalette", score_palettes)
+    # The 1P team row's palettes have no reader outside the 1P build.
+    lines += ["", "#if NDS_P2_1P_GAME"]
+    lines += c_array_u16("kNdsBattleHudZakoStockPalette", zako_palettes)
+    lines += c_array_u16("kNdsBattleHudYoshiTeamPalette", yoshi_team_palettes)
+    lines += c_array_u8("kNdsBattleHudYoshiTeamLook", yoshi_team_looks)
+    lines += ["#endif"]
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]
 
     text = "\n".join(lines)

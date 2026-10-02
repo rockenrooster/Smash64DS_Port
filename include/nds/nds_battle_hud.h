@@ -45,6 +45,16 @@ u32 ndsBattleHudSubmitScoreParticle(u32 frame, f32 source_x, f32 source_y, f32 s
 u32 ndsIFCommonGetBattleHudDamageState(u32 player,
                                        NDSBattleHudDamageState *out);
 
+/* The 1P team stock row (sc1PGameTeamStockDisplayProcDisplay), one look per
+ * shown icon in source order, published by battleship_ifcommon.c's lower-HUD
+ * route: the index of the team fighter's stock LUT the source drew the icon
+ * with, or the Polygon Team's own sprite. 30 is the largest team
+ * (SC1PGAME_STAGE_MAX_TEAM_COUNT). */
+#define NDS_BATTLE_HUD_TEAM_STOCK_MAX 30u
+#define NDS_BATTLE_HUD_TEAM_LOOK_ZAKO 0xfeu
+#define NDS_BATTLE_HUD_TEAM_LOOK_NONE 0xffu
+extern volatile u8 gNdsIFCommonHUDTeamStockLook[NDS_BATTLE_HUD_TEAM_STOCK_MAX];
+
 extern volatile u32 gNdsBattleHudPrepareCount;
 extern volatile u32 gNdsBattleHudRenderCount;
 extern volatile u32 gNdsBattleHudChangeCount;

@@ -948,10 +948,42 @@ u32 ndsIFCommonSkipDamageDisplay(void)
  * enemy stock icons (sc1PGameTeamStockDisplayProcDisplay, sc1pgame.c) join
  * the lower HUD with the rest of the battle interface (owner 2026-08-17: the
  * bottom screen is the battle HUD). The route records how many icons the
- * source shows this frame; nds_battle_hud.c draws them. The procedure's
- * address is only compared here, never called. */
+ * source shows this frame and each one's look; nds_battle_hud.c draws them.
+ * The procedure's address is only compared here, never called. */
 extern void sc1PGameTeamStockDisplayProcDisplay(GObj *interface_gobj);
+/* sc1pgame.c:766, set for the Yoshi and Kirby Teams by
+ * sc1PGameInitTeamStockDisplay (:1743): the team fighter's FTSprites, whose
+ * stock_luts the display proc gives each icon (:1693-1699). */
+extern FTSprites *sSC1PGameEnemyTeamSprites;
 volatile u32 gNdsIFCommonHUDTeamStockCount;
+volatile u8 gNdsIFCommonHUDTeamStockLook[NDS_BATTLE_HUD_TEAM_STOCK_MAX];
+
+/* What the source gave one icon (sc1pgame.c:1690-1705), read back from its
+ * SObj: the index of the stock LUT it draws with -- every Yoshi Team member
+ * its own costume's (:1694) -- or the Polygon Team's sprite (:1703). The
+ * Polygon Team never sets sSC1PGameEnemyTeamSprites, so its stage is tested
+ * first, as the display proc's own switch does. The search ends at the
+ * source's own index; Yoshi's six LUTs are the most a team fighter has. */
+static u8 ndsIFCommonTeamStockLook(const SObj *sobj)
+{
+    u32 lut;
+
+    if (gSCManagerSceneData.spgame_stage == nSC1PGameStageZako)
+    {
+        return NDS_BATTLE_HUD_TEAM_LOOK_ZAKO;
+    }
+    if (sSC1PGameEnemyTeamSprites != NULL)
+    {
+        for (lut = 0u; lut < 6u; lut++)
+        {
+            if (sobj->sprite.LUT == sSC1PGameEnemyTeamSprites->stock_luts[lut])
+            {
+                return (u8)lut;
+            }
+        }
+    }
+    return NDS_BATTLE_HUD_TEAM_LOOK_NONE;
+}
 #endif
 
 u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
@@ -1000,6 +1032,11 @@ u32 ndsIFCommonRouteGObjToLowerTextHUD(GObj *gobj)
         {
             if ((sobj->sprite.attr & SP_HIDDEN) == 0u)
             {
+                if (count < NDS_BATTLE_HUD_TEAM_STOCK_MAX)
+                {
+                    gNdsIFCommonHUDTeamStockLook[count] =
+                        ndsIFCommonTeamStockLook(sobj);
+                }
                 count++;
             }
         }
