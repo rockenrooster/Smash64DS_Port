@@ -48,6 +48,9 @@
 
 static sb32 sNdsVideoBlackout = FALSE;
 static sb32 sNdsVideoTransitionBlackout = FALSE;
+/* The main screen shows the transition snapshot (nds_platform.c): the loading
+ * cover darkens only the lower screen meanwhile. */
+static sb32 sNdsVideoTransitionMainHeld = FALSE;
 static u32 sNdsVideoSourceFadeLevel;
 static sb32 sNdsVideoBrightnessDirty = FALSE;
 static u32 sNdsVideoSceneFadeDown;
@@ -66,6 +69,17 @@ void ndsVideoSetTransitionBlackout(sb32 black)
     if (next != sNdsVideoTransitionBlackout)
     {
         sNdsVideoTransitionBlackout = next;
+        sNdsVideoBrightnessDirty = TRUE;
+    }
+}
+
+void ndsVideoSetTransitionMainHeld(sb32 held)
+{
+    sb32 next = (held != FALSE) ? TRUE : FALSE;
+
+    if (next != sNdsVideoTransitionMainHeld)
+    {
+        sNdsVideoTransitionMainHeld = next;
         sNdsVideoBrightnessDirty = TRUE;
     }
 }
@@ -148,10 +162,13 @@ void ndsVideoBlackoutCommit(void)
     sNdsVideoBrightnessDirty = FALSE;
 #ifdef ARM9
     {
+        u32 fade = (sNdsVideoSceneFadeDown > sNdsVideoSourceFadeLevel) ?
+            sNdsVideoSceneFadeDown : sNdsVideoSourceFadeLevel;
         u16 value = ndsVideoResolveBrightnessValue(
-            (u32)(sNdsVideoBlackout || sNdsVideoTransitionBlackout),
-            (sNdsVideoSceneFadeDown > sNdsVideoSourceFadeLevel) ?
-                sNdsVideoSceneFadeDown : sNdsVideoSourceFadeLevel);
+            (u32)(sNdsVideoBlackout || sNdsVideoTransitionBlackout), fade);
+        u16 main_value = (sNdsVideoTransitionMainHeld != FALSE) ?
+            ndsVideoResolveBrightnessValue((u32)sNdsVideoBlackout, fade) :
+            value;
 
         /* A white scene fade only where nothing darkens: MASTER_BRIGHT
          * mode 1 (up) brightens toward white by level/16. */
@@ -159,8 +176,12 @@ void ndsVideoBlackoutCommit(void)
         {
             value = (u16)((1u << 14) | sNdsVideoSceneFadeUp);
         }
+        if ((main_value == 0u) && (sNdsVideoSceneFadeUp != 0u))
+        {
+            main_value = (u16)((1u << 14) | sNdsVideoSceneFadeUp);
+        }
 
-        REG_MASTER_BRIGHT = value;
+        REG_MASTER_BRIGHT = main_value;
         REG_MASTER_BRIGHT_SUB = value;
     }
 #endif

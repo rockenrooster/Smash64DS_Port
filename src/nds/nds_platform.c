@@ -186,6 +186,22 @@ static s32 sNdsTransitionHoldWants3D;
 static u32 sNdsTransitionHoldPresents;
 #define NDS_TRANSITION_HOLD_MAX_PRESENTS 600u
 #endif
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+/* The transition snapshot (ndsPlatformTransitionSnapshotBegin, below): 0, or
+ * 1 + the texture bank (0 = A, 1 = B) the held frame was captured into and
+ * the main screen now shows; the bank's VRAMCNT value to restore. */
+static u32 sNdsTransitionSnapshotBank;
+static u8 sNdsTransitionSnapshotBankCr;
+#endif
+/* Runtime A/B word (the control arm is the same binary); counters read by
+ * the transition captures. Decline: 1 brightness, 2 display mode, 3 capture
+ * busy, 4 no free texture bank, 5 capture timeout. */
+volatile u32 gNdsTransitionSnapshotEnable __attribute__((used, section(".data"))) = 1u;
+volatile u32 gNdsTransitionSnapshotCount;
+volatile u32 gNdsTransitionSnapshotReleaseCount;
+volatile u32 gNdsTransitionSnapshotAbortCount;
+volatile u32 gNdsTransitionSnapshotDecline;
+volatile u32 gNdsTransitionSnapshotDeclineCount;
 volatile u32 gNdsTransitionHoldCount;
 volatile u32 gNdsTransitionThawCount;
 /* What ended the last hold (a return address) and when (VBlank counts):
@@ -1631,6 +1647,159 @@ static void ndsPlatformTransitionCover(s32 retire_list)
     ndsSource2DExit();
 }
 
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+/* Whether libnds's texture allocator holds any live block inside bank
+ * `bank` (0 = A, 1 = B; LCD addresses). */
+static u32 ndsPlatformTextureBankInUse(u32 bank)
+{
+    const s_vramBlock *mb = glGlob->vramBlocks[0];
+    const s_SingleBlock *b;
+    u32 lo = 0x06800000u + (bank << 17);
+    u32 hi = lo + 0x20000u;
+    u32 guard = 0u;
+
+    if (mb == NULL)
+    {
+        return TRUE;
+    }
+    for (b = mb->firstBlock; (b != NULL) && (guard < 4096u);
+         b = b->node[1], guard++)
+    {
+        u32 block_lo = (u32)(uintptr_t)b->AddrSet;
+        u32 block_hi = block_lo + b->blockSize;
+
+        if ((b->indexOut != 0u) && (block_lo < hi) && (block_hi > lo))
+        {
+            return TRUE;
+        }
+    }
+    return (guard >= 4096u) ? TRUE : FALSE;
+}
+
+/* Back to the live layers: display mode 1, the bank to its texture slot. */
+static void ndsPlatformTransitionSnapshotRestore(void)
+{
+    vu8 *cr = (vu8 *)0x04000240u;
+    u32 bank = sNdsTransitionSnapshotBank - 1u;
+
+    REG_DISPCNT = (REG_DISPCNT & ~0x000F0000u) | 0x00010000u;
+    cr[bank] = sNdsTransitionSnapshotBankCr;
+    sNdsTransitionSnapshotBank = 0u;
+    ndsVideoSetTransitionMainHeld(FALSE);
+}
+
+/* THE TRANSITION SNAPSHOT (owner, r68, 2026-10-02: "Do we have to have the
+ * Black transition screen everywhere instead of holding the last frame?").
+ *
+ * The hold below keeps the leaving frame only until the next scene's first
+ * display write, because nothing here is a framebuffer: BG0 re-renders from
+ * texture VRAM and the 2D layers scan theirs live. The display capture unit
+ * makes one. At the hold's start the frame on screen is captured, whole and
+ * composited (BG, OBJ and 3D, before master brightness), into a texture bank
+ * that holds no texture -- so neither the captured frame's 3D nor any upload
+ * the next scene makes (libnds allocates only in banks mapped as texture)
+ * reads or writes it -- and the main screen then shows that bank directly
+ * (display mode 2). Every layer behind it is free for the next scene; the
+ * loading cover darkens only the lower screen; the next scene's first
+ * complete frame switches back (ndsPlatformEndFrame). A texture upload
+ * before that ends it early under the old black cover, because a 3D scene's
+ * VRAM layout (the battle's statics run contiguously from bank A) must not
+ * be planned around a borrowed bank. A frame with no texture-free bank (a
+ * battle's), or one under a fade, keeps the hold alone. */
+static void ndsPlatformTransitionSnapshotBegin(void)
+{
+    vu8 *cr = (vu8 *)0x04000240u;
+    u32 bank;
+    u32 i;
+
+    if ((gNdsTransitionSnapshotEnable == 0u) ||
+        (sNdsTransitionSnapshotBank != 0u))
+    {
+        return;
+    }
+    gNdsTransitionSnapshotDecline = 0u;
+    if ((REG_MASTER_BRIGHT != 0u) || (REG_MASTER_BRIGHT_SUB != 0u))
+    {
+        /* The capture is taken before brightness: under a fade it would
+         * show the frame brighter than it was. */
+        gNdsTransitionSnapshotDecline = 1u;
+    }
+    else if ((REG_DISPCNT & 0x00030000u) != 0x00010000u)
+    {
+        gNdsTransitionSnapshotDecline = 2u;
+    }
+    else if ((REG_DISPCAPCNT & DCAP_ENABLE) != 0u)
+    {
+        gNdsTransitionSnapshotDecline = 3u;
+    }
+    if (gNdsTransitionSnapshotDecline != 0u)
+    {
+        gNdsTransitionSnapshotDeclineCount++;
+        return;
+    }
+    /* B first: slot 1 fills only after slot 0. */
+    for (bank = 2u; bank-- > 0u;)
+    {
+        if (((cr[bank] & 0x87u) == 0x83u) &&
+            (ndsPlatformTextureBankInUse(bank) == FALSE))
+        {
+            break;
+        }
+    }
+    if (bank > 1u)
+    {
+        gNdsTransitionSnapshotDecline = 4u;
+        gNdsTransitionSnapshotDeclineCount++;
+        return;
+    }
+    sNdsTransitionSnapshotBankCr = cr[bank];
+    cr[bank] = VRAM_ENABLE;
+    REG_DISPCAPCNT = DCAP_ENABLE | DCAP_MODE(DCAP_MODE_A) |
+                     DCAP_SRC_A(DCAP_SRC_A_COMPOSITED) |
+                     DCAP_SIZE(DCAP_SIZE_256x192) | DCAP_OFFSET(0) |
+                     DCAP_BANK(bank);
+    /* The capture runs through the next whole frame and clears its enable
+     * bit at that frame's end. */
+    for (i = 0u; (i < 3u) && ((REG_DISPCAPCNT & DCAP_ENABLE) != 0u); i++)
+    {
+        swiWaitForVBlank();
+    }
+    if ((REG_DISPCAPCNT & DCAP_ENABLE) != 0u)
+    {
+        REG_DISPCAPCNT = 0u;
+        cr[bank] = sNdsTransitionSnapshotBankCr;
+        gNdsTransitionSnapshotDecline = 5u;
+        gNdsTransitionSnapshotDeclineCount++;
+        return;
+    }
+    /* Inside the VBlank the wait returned in: the next scanout is the
+     * capture. */
+    REG_DISPCNT = (REG_DISPCNT & ~0x000F0000u) | 0x00020000u | (bank << 18);
+    sNdsTransitionSnapshotBank = bank + 1u;
+    ndsVideoSetTransitionMainHeld(TRUE);
+    gNdsTransitionSnapshotCount++;
+}
+#endif
+
+/* A texture upload, or the battle's texture VRAM reset, while the snapshot
+ * shows: the black cover takes the main screen at a VBlank, then the bank
+ * goes back to its texture slot before the upload plans around it. */
+void ndsPlatformTransitionSnapshotAbort(void)
+{
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    if (sNdsTransitionSnapshotBank == 0u)
+    {
+        return;
+    }
+    gNdsTransitionSnapshotAbortCount++;
+    ndsVideoSetTransitionBlackout(TRUE);
+    ndsVideoSetTransitionMainHeld(FALSE);
+    swiWaitForVBlank();
+    ndsVideoBlackoutCommit();
+    ndsPlatformTransitionSnapshotRestore();
+#endif
+}
+
 /* SCENE TRANSITION HOLD (owner, r64, 2026-09-30: "keep what's currently on
  * the screen until the next screen is ready, then switch").
  *
@@ -1668,6 +1837,9 @@ void ndsPlatformTransitionHoldBegin(void)
     sNdsTransitionHoldPresents = 0u;
     gNdsTransitionHoldCount++;
     gNdsTransitionHoldVBlank = sVBlankCount;
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsPlatformTransitionSnapshotBegin();
+#endif
 #endif
 }
 
@@ -1741,6 +1913,10 @@ void ndsPlatformTransitionThaw(void)
 void ndsPlatformTransitionThawIf3DShown(void)
 {
 #if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    if (sNdsTransitionSnapshotBank != 0u)
+    {
+        ndsPlatformTransitionSnapshotAbort();
+    }
     if ((sNdsTransitionHold != NDS_TRANSITION_HOLD_NONE) &&
         ((REG_DISPCNT & DISPLAY_BG0_ACTIVE) != 0u))
     {
@@ -4304,6 +4480,16 @@ void ndsPlatformEndFrame(void)
 #endif
     /* A layer written this frame shows with the OBJ planes committed above. */
     ndsPlatformRevealOriginalSpriteOverlay();
+#if NDS_TRANSITION_HOLD && NDS_RENDERER_HW_TRIANGLES
+    /* The next scene's first complete frame replaces the snapshot. */
+    if ((sNdsTransitionSnapshotBank != 0u) &&
+        (sNdsTransitionHold == NDS_TRANSITION_HOLD_NONE) &&
+        (ndsVideoGetTransitionBlackout() == FALSE))
+    {
+        ndsPlatformTransitionSnapshotRestore();
+        gNdsTransitionSnapshotReleaseCount++;
+    }
+#endif
     /* Release brightness only after this frame's BG/OAM owners committed. */
     ndsVideoBlackoutCommit();
     sTicks++;

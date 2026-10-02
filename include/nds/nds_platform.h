@@ -91,6 +91,8 @@ void ndsAudioReleaseDeferredBGM(void);
 /* A texture write about to land: ends the hold when the held frame shows 3D,
  * whose texels it may overwrite. */
 void ndsPlatformTransitionThawIf3DShown(void);
+/* Ends the transition snapshot early, under the black cover. */
+void ndsPlatformTransitionSnapshotAbort(void);
 /* An exit that cleared an OAM shadow during the hold: the Thaw uploads it
  * (engine 0 main, 1 sub). */
 void ndsPlatformTransitionHoldPendOamUpdate(u32 engine);

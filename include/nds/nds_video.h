@@ -15,6 +15,9 @@ void ndsVideoBlackoutCommit(void);
  * only by a scene-owned complete draw. */
 void ndsVideoSetTransitionBlackout(s32 black);
 s32 ndsVideoGetTransitionBlackout(void);
+/* While the main screen shows the transition snapshot (nds_platform.c), the
+ * loading cover leaves it alone and darkens only the lower screen. */
+void ndsVideoSetTransitionMainHeld(s32 held);
 /* Source-fade latch (BattleShip lbFade, black-only): fade-down level 0..16,
  * pushed once per frame by ndsLBFadePushHardwareFrame() after all draws and
  * resolved against blackout (which wins) in the same commit. Sole register
