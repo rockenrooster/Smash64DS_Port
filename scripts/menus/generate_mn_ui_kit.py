@@ -506,8 +506,12 @@ def load_reloc_offsets(repo_root: Path) -> dict[str, int]:
 # MPGroundData struct.
 # reloc_movies joined the search for Peach's Castle: its wallpaper lives in
 # MVOpeningRoomWallpaper, the opening movie's room, not under reloc_stages.
+# reloc_interface joined for the Bonus Practice selects: their record numbers
+# are mnPlayers1PBonusMakeNumber's (mnplayers1pbonus.c:181), which draws the
+# HUD digit font out of IFCommonDigits (dMNPlayers1PBonusFileIDs[9], :28).
+# Searched last, so no container an earlier folder already resolves can move.
 O2R_DIRS = ("reloc_menus", "reloc_fighters_common", "reloc_stages",
-            "reloc_movies")
+            "reloc_movies", "reloc_interface")
 
 
 def o2r_path(repo_root: Path, name: str) -> Path:
@@ -2248,6 +2252,9 @@ for _option in ONEP_MODE_OPTIONS:
 # the same way.
 VS_TAB_HI = ((0x82, 0x00, 0x28), (0xFF, 0x00, 0x28))
 VS_TAB_NOT = ((0x00, 0x00, 0x00), (0x82, 0x82, 0xAA))
+# selcolors (mnvsmode.c:235): the white a pressed button turns while its
+# confirm cue plays -- VS START (:1323) and VS OPTIONS (:1334) only.
+VS_TAB_SEL = ((0x00, 0x00, 0x00), (0xFF, 0xFF, 0xFF))
 
 # mnVSModeMakeBackground (:965) then mnVSModeRenderMenuName (:909), in the
 # source's own construction order -- background link 2 / display 0 first, then
@@ -2494,7 +2501,15 @@ SURFACE_SOURCES.append(
 # Do NOT reuse css_screen_parts() here: that helper bakes the VS flash plate
 # and its own locked stack.  1P's source scene shows the real portrait for
 # every unlocked fighter and uses the four retail locked stacks separately.
-def onep_css_screen_parts() -> tuple[Placement, ...]:
+#
+# The stone and the twelve fire-box/portrait pairs are their own helper because
+# the Bonus Practice selects draw the identical grid: the same wallpaper
+# (mnplayers1pbonus.c:827-843) and the same cells, `col * 45 + 25` by
+# `row * 43 + 36` (:539-552, where mnplayers1pgame.c:618-619 has them), that
+# the portraits slide to (GetNextPortraitX :293-320). One function is what
+# keeps the two bases equal texel for texel where the 1P select's READY band
+# and save-lock cells restore them; check_bonus_css_shared_states proves it.
+def onep_portrait_grid_parts() -> tuple[Placement, ...]:
     parts: list[Placement] = [STONE_FULL_BLEED]
     for portrait in range(12):
         x, y = css_portrait_pos(portrait)
@@ -2504,6 +2519,11 @@ def onep_css_screen_parts() -> tuple[Placement, ...]:
             x, y, False))
         parts.append(Placement(
             "MNPlayersPortraits", CSS_PORTRAIT_SYMBOL[fkind], x, y, False))
+    return tuple(parts)
+
+
+def onep_css_screen_parts() -> tuple[Placement, ...]:
+    parts: list[Placement] = list(onep_portrait_grid_parts())
 
     # mnPlayers1PGameMakeGate (:880): the 1P-specific 82x91 red card at
     # (25,127), then the black 1P tag at (33,132).  The card's authored LUT is
@@ -3826,9 +3846,11 @@ def option_sound_row(stereo: bool, hi: bool) -> SurfaceSpec:
 
 
 def option_simple_row(token: str, x: int, y: int, symbol: str,
-                      text_x: int, text_y: int, hi: bool) -> SurfaceSpec:
+                      text_x: int, text_y: int, hi: bool,
+                      state=None) -> SurfaceSpec:
     """One ScreenAdjust/BackupClear row: tabs + label text."""
-    state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
+    if state is None:
+        state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
     parts: list[Placement] = option_tabs(x, y, state)
     parts.append(Placement("MNOption", symbol, text_x, text_y, False,
                            (0x00, 0x00, 0x00)))
@@ -3885,13 +3907,17 @@ DATA_BACKGROUND = (
 
 
 def data_row(token: str, x: int, y: int, symbol: str,
-             text_x: int, text_y: int, hi: bool) -> SurfaceSpec:
+             text_x: int, text_y: int, hi: bool,
+             state=None, suffix=None) -> SurfaceSpec:
     """One Data row: lrs-16 tabs + its label text."""
-    state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
+    if state is None:
+        state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
+    if suffix is None:
+        suffix = "_HI" if hi else ""
     parts: list[Placement] = option_tabs(x, y, state, 16, overlap=2)
     parts.append(Placement("MNData", symbol, text_x, text_y, False,
                            (0x00, 0x00, 0x00)))
-    return SurfaceSpec(token + ("_HI" if hi else ""), tuple(parts), MENU_FIELD,
+    return SurfaceSpec(token + suffix, tuple(parts), MENU_FIELD,
                        under=DATA_BACKGROUND, box=(x, y, 164, 29))
 
 
@@ -3909,6 +3935,23 @@ DATA_ROWS = (
 DATA_SURFACE_SPECS = (
     SurfaceSpec("DATA", DATA_BACKGROUND, MENU_FIELD),
     *(data_row(*row, hi) for hi in (False, True) for row in DATA_ROWS),
+)
+
+# Owner r69: "VS Start button has no visual feedback, it should turn white
+# when SFX plays." The source's third tab state, nMNOptionTabStatusSelected:
+# a pressed row turns white (selcolors, env 000000 / prim FFFFFF) on the
+# frame its select cue plays, and the next scene's load holds that frame --
+# VS START and VS OPTIONS (mnvsmode.c:1323/:1334), Backup Clear
+# (mnoption.c:895) and the Data rows (mndata.c:675-695). Appended last so
+# no existing id moves.
+PRESSED_SURFACE_SPECS = (
+    *(vs_button(f"VS_BTN_{_n}_SEL", _x, _y, VS_TAB_SEL, _t)
+      for _n, _x, _y, _t in VS_BUTTONS if _n in ("START", "OPTIONS")),
+    option_simple_row("OPTION_BACKUP_CLEAR_SEL", 69, 136,
+                      "llMNOptionBackupClearTextSprite", 86, 140, False,
+                      state=VS_TAB_SEL),
+    *(data_row(*row, False, state=VS_TAB_SEL, suffix="_SEL")
+      for row in DATA_ROWS),
 )
 
 
@@ -4091,6 +4134,160 @@ def characters_surface(entry: tuple) -> SurfaceSpec:
 # to index `CHARACTERS_MARIO + fkind` directly.
 CHARACTERS_SURFACE_SPECS = tuple(characters_surface(entry)
                                  for entry in CHARACTERS_KINDS)
+
+
+# ---------------------------------------------------------------------------
+# P2-6 -- source Bonus Practice character selects, DS-native presentation.
+# ---------------------------------------------------------------------------
+#
+# `mnplayers1pbonus.c` owns the behaviour of BOTH bonus selects: it is one
+# source TU behind nSCKind1PBonus1Players and nSCKind1PBonus2Players, and
+# sMNPlayers1PBonusBonusKind (InitVars :2771-2775) is the only difference --
+# 0 Break the Targets, 1 Board the Platforms -- which an A press on the title
+# flips in place (CheckGameModeInRange :2056, UpdateGameMode :2081-2102).
+# Cursor hit tests, puck and pick, costume, records, B/back and START stay
+# the source's; these surfaces are only its presentation sink, exactly as the
+# ONEP_* family above is for mnplayers1pgame.c (nds_menu_shell_onep.c draws
+# both from their sources' state).
+#
+# The grid is the 1P select's own (onep_portrait_grid_parts), so the 1P
+# select's READY band (ONEP_READY_*) and the four save-lock cells
+# (CSS_LOCKED_*) restore this base unchanged -- check_bonus_css_shared_states
+# proves it on the composited texels rather than assuming it.  What differs is
+# the source's own layout: no time selector and no Option column (this source
+# makes neither), the 1P card 33 px further right (MakeGate :743-796), the
+# title tracking the bonus kind (MakeLabels :877-910), and the puck fighter's
+# record under the fighter column (MakeHiScore :1171-1178) plus, once every
+# fighter has cleared the bonus, the all-fighter total (MakeTotalTime
+# :1187-1244).  Every family below sits on the stone alone except the gate, so
+# a state change is one opaque restore of its own box.
+#
+# Appended after every older family in main(), so no pre-existing id moves.
+def bonus_css_screen_parts() -> tuple[Placement, ...]:
+    return onep_portrait_grid_parts() + (
+        # mnPlayers1PBonusMakeGate (:755-791): the 1P-specific red card at
+        # (58,127) and the black 1P tag at pos_x[0] + 58 = (66,132).  Like the
+        # 1P select's card, its authored LUT is the GateMan1P LUT
+        # mnPlayers1PBonusSetGateLUT assigns (:728-740), so no override.
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeRedCardSprite",
+                  58, 127, False),
+        Placement("MNPlayersCommon", "llMNPlayersCommon1PTextSprite",
+                  66, 132, False, (0x00, 0x00, 0x00)),
+        # mnPlayers1PBonusMakeLabels (:905-909): BACK at (244,23), no tint.
+        # The title beside it changes with the bonus kind, so it is a state.
+        Placement("MNPlayersCommon", "llMNPlayersCommonBackButtonSprite",
+                  244, 23, False),
+    )
+
+
+# mnPlayers1PBonusMakeLabels (:885-897): the kind's own title at (27,24),
+# PRIM E3/AC/04.  In sMNPlayers1PBonusBonusKind order.
+BONUS_TITLE_BOX = (27, 24, 192, 11)
+BONUS_TITLE_STATES = (
+    ("TARGETS", "llMNPlayersGameModesBonus1BreakTheTargetsTextSprite"),
+    ("PLATFORMS", "llMNPlayersGameModesBonus2BoardThePlatformsTextSprite"),
+)
+
+# mnPlayers1PBonusMakeNameAndEmblem (:575-625): the series emblem in black at
+# (68,144) and the fighter's name at (66,202) -- the 1P select's pair, 33 px
+# right; ONEP_EMBLEM_SYMBOL/ONEP_NAME_SYMBOL transcribe the identical tables
+# (:587-604).  The box is the card's own 82-px span: the source's TOTAL BEST
+# TIME starts at x 142, two pixels past it, and owns its own box below.
+BONUS_GATE_BOX = (58, 127, 82, 92)
+
+# THE RECORD ROW.  The puck process re-runs mnPlayers1PBonusMakeHiScore every
+# frame (:2248): nothing off the grid (:1048/:1121), the best time when the
+# puck fighter has cleared the bonus (CheckBonusComplete :1153-1168,
+# MakeBestTime :1033-1094) and otherwise the best count with the kind's own
+# word (MakeBestTaskCount :1107-1150, REGION_US positions).  Labels and time
+# marks are box-wide states over the stone; the digits are BONUS_DIGIT_*
+# glyphs placed per MakeNumber, so a value change is a restore plus glyphs.
+# The box runs past the frame because the count words are 95/96 px rasters at
+# x 235 (their ink ends at x 280); the canvas itself clips at the screen.
+BONUS_RECORD_GREY = (0x7E, 0x7C, 0x77)
+BONUS_RECORD_BOX = (177, 194, 155, 12)
+BONUS_RECORD_STATES = (
+    ("NONE", ()),
+    ("TIME", (
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeBestTimeTextSprite",
+                  177, 198, False, BONUS_RECORD_GREY),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeSecSprite",
+                  239, 195, False, BONUS_RECORD_GREY, env=(0x00, 0x00, 0x00)),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeCSecSprite",
+                  261, 195, False, BONUS_RECORD_GREY,
+                  env=(0x00, 0x00, 0x00)))),
+    ("TARGETS", (
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeTargetsTextSprite",
+                  235, 195, False, BONUS_RECORD_GREY),)),
+    ("PLATFORMS", (
+        Placement("MNPlayers1PMode", "llMNPlayers1PModePlatformsTextSprite",
+                  235, 195, False, BONUS_RECORD_GREY),)),
+)
+
+# THE TOTAL ROW.  mnPlayers1PBonusMakeTotalTime (:1198-1243) is made at entry
+# (:2860-2863) and on the title toggle (:2093-2101), only when
+# CheckBonusCompleteAll (:2799) says every fighter has cleared the bonus.
+BONUS_TOTAL_BOX = (142, 206, 141, 11)
+BONUS_TOTAL_STATES = (
+    ("NONE", ()),
+    ("TIME", (
+        Placement("MNPlayers1PMode",
+                  "llMNPlayers1PModeTotalBestTimeTextSprite",
+                  142, 209, False, BONUS_RECORD_GREY),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeCSecSprite",
+                  261, 206, False, BONUS_RECORD_GREY, env=(0x00, 0x00, 0x00)),
+        Placement("MNPlayers1PMode", "llMNPlayers1PModeSecSprite",
+                  239, 206, False, BONUS_RECORD_GREY,
+                  env=(0x00, 0x00, 0x00)))),
+)
+
+# mnPlayers1PBonusMakeNumber (:181-217) draws every record value one HUD
+# digit at a time, llIFCommonDigits<N>Sprite under SetDigitColors (:150-160,
+# ENV black / PRIM 7E/7C/77 from the callers' colors2).  KEYED glyphs at a
+# dummy origin: the presenter places each at its own digit site through
+# ndsUiKitBlitSurfacesAt, so fifteen digit sites cost ten manifest rows (a
+# per-site bake would cost 150, and every row is overlay RAM).  The box is
+# the 8x10 cell so the narrower 1 keeps the same canvas.
+BONUS_DIGIT_BOX = (0, 0, 8, 10)
+
+
+def bonus_css_state(token: str, parts: tuple[Placement, ...],
+                    box: tuple[int, int, int, int]) -> SurfaceSpec:
+    return SurfaceSpec(token, parts, None, under=bonus_css_screen_parts(),
+                       box=box)
+
+
+# The runtime indexes BONUS_GATE_MARIO + fkind and BONUS_DIGIT_0 + digit, so
+# both blocks stay contiguous in that order (pinned by nds_menu_shell_onep.c's
+# _Static_asserts and by test_bonus_css_native.py).
+BONUS_CSS_SURFACE_SPECS = (
+    SurfaceSpec("BONUS_CSS_SCREEN", bonus_css_screen_parts(), MENU_FIELD),
+    *(bonus_css_state(
+        f"BONUS_TITLE_{_token}",
+        (Placement("MNPlayersGameModes", _symbol, 27, 24, False,
+                   (0xE3, 0xAC, 0x04)),),
+        BONUS_TITLE_BOX)
+      for _token, _symbol in BONUS_TITLE_STATES),
+    bonus_css_state("BONUS_GATE_EMPTY", (), BONUS_GATE_BOX),
+    *(bonus_css_state(
+        f"BONUS_GATE_{_token}",
+        (Placement("FTEmblemSprites", ONEP_EMBLEM_SYMBOL[_fkind],
+                   68, 144, False, (0x00, 0x00, 0x00)),
+         Placement("MNPlayersCommon", ONEP_NAME_SYMBOL[_fkind],
+                   66, 202, False)),
+        BONUS_GATE_BOX)
+      for _fkind, _token in enumerate(ONEP_FIGHTER_TOKEN)),
+    *(bonus_css_state(f"BONUS_RECORD_{_token}", _parts, BONUS_RECORD_BOX)
+      for _token, _parts in BONUS_RECORD_STATES),
+    *(bonus_css_state(f"BONUS_TOTAL_{_token}", _parts, BONUS_TOTAL_BOX)
+      for _token, _parts in BONUS_TOTAL_STATES),
+    *(SurfaceSpec(f"BONUS_DIGIT_{_digit}",
+                  (Placement("IFCommonDigits",
+                             f"llIFCommonDigits{_digit}Sprite", 0, 0, False,
+                             BONUS_RECORD_GREY, env=(0x00, 0x00, 0x00)),),
+                  None, box=BONUS_DIGIT_BOX)
+      for _digit in range(10)),
+)
 
 
 
@@ -4435,6 +4632,48 @@ def check_title_anim_block(surfaces: list[Surface]) -> None:
             "part on every animated frame")
 
 
+def check_bonus_css_shared_states(surfaces: list[Surface]) -> None:
+    """The Bonus Practice selects blit restore surfaces they did not bake.
+
+    nds_menu_shell_onep.c draws the 1P select's READY band (ONEP_READY_ON/OFF,
+    composited over ONEP_CSS_SCREEN) and the four save-lock cells
+    (CSS_LOCKED_*, composited over CSS_SCREEN) on the bonus screen too.  That
+    is exact only while BONUS_CSS_SCREEN equals the base each was composited
+    over inside its own box -- the texels a blit overwrites.  Checked texel for
+    texel, so an edit to any of the three bases that reaches a shared box fails
+    the bake instead of shipping a seam.
+    """
+    by_token = {surface.token: surface for surface in surfaces}
+    bonus = by_token["BONUS_CSS_SCREEN"]
+    shared = [("ONEP_CSS_SCREEN", "ONEP_READY_ON"),
+              ("ONEP_CSS_SCREEN", "ONEP_READY_OFF")]
+    shared += [("CSS_SCREEN", f"CSS_LOCKED_{token}")
+               for _fkind, _portrait, token in CSS_LOCKED_CELLS]
+
+    def texel(surface: Surface, x: int, y: int) -> int:
+        sx = x - surface.dst_x
+        sy = y - surface.dst_y
+        if not ((0 <= sx < surface.width) and (0 <= sy < surface.height)):
+            raise ConvertError(
+                f"{surface.token} does not cover ({x},{y}); the shared-state "
+                "check needs full-screen bases")
+        return surface.texels[sy * surface.width + sx]
+
+    for base_token, state_token in shared:
+        base = by_token[base_token]
+        state = by_token[state_token]
+        mismatch = sum(
+            1
+            for y in range(state.dst_y, state.dst_y + state.height)
+            for x in range(state.dst_x, state.dst_x + state.width)
+            if texel(bonus, x, y) != texel(base, x, y))
+        if mismatch != 0:
+            raise ConvertError(
+                f"BONUS_CSS_SCREEN differs from {base_token} in {mismatch} "
+                f"texels inside {state_token}'s box; the bonus select would "
+                "restore that box with the other screen's art")
+
+
 def write_png(path: Path, width: int, height: int, rgb: bytes) -> None:
     """Minimal RGB8 PNG so a human can look at the bake without a ROM."""
     import zlib
@@ -4682,7 +4921,14 @@ def main(argv: list[str] | None = None) -> int:
     # Native Data art is the newest family; appended last for the same reason.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in DATA_SURFACE_SPECS)
+    # Pressed (white) tab states are newer still.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in PRESSED_SURFACE_SPECS)
+    # The Bonus Practice selects' art is newer still, so it converts last.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in BONUS_CSS_SURFACE_SPECS)
     check_title_anim_block(surfaces)
+    check_bonus_css_shared_states(surfaces)
 
     pack, image_table = build_pack(glyphs, images)
     surface_pack, surface_table = build_surface_pack(surfaces)

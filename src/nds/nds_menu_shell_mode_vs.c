@@ -218,6 +218,10 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
 #define NDS_MENU_VS_DS(v) (((v) * 4) / 5)
 
 static u32 sMenuVsCursor;
+/* The button A pressed (NDS_MENU_VS_ENTRIES: none): mnVSModeUpdateButton's
+ * nMNOptionTabStatusSelected, the white it turns while the confirm cue plays
+ * (mnvsmode.c:1323/:1334), held by the transition snapshot after that. */
+static u32 sMenuVsSelected = NDS_MENU_VS_ENTRIES;
 static u32 sMenuVsRule;
 static s32 sMenuVsTime;
 static s32 sMenuVsStock;
@@ -248,6 +252,12 @@ static NdsUiKitSurfaceId ndsMenuShellVsWantSurface(u32 button)
 {
     u32 lit = (sMenuVsCursor == button) ? TRUE : FALSE;
 
+    if (sMenuVsSelected == button)
+    {
+        return (NdsUiKitSurfaceId)((button == NDS_MENU_VS_START) ?
+            NDS_MN_UI_KIT_SURFACE_VS_BTN_START_SEL :
+            NDS_MN_UI_KIT_SURFACE_VS_BTN_OPTIONS_SEL);
+    }
     switch (button)
     {
     case NDS_MENU_VS_START:
@@ -470,6 +480,7 @@ static void ndsMenuShellVsLoadRules(void)
     }
     sMenuVsArrowsShown = TRUE;
     sMenuVsCursor = NDS_MENU_VS_START;
+    sMenuVsSelected = NDS_MENU_VS_ENTRIES;
     if (gSCManagerTransferBattleState.is_team_battle == FALSE)
     {
         sMenuVsRule = (gSCManagerTransferBattleState.game_rules ==
@@ -611,9 +622,20 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
 
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
+        /* mnvsmode.c:1318-1343: only VS START and VS OPTIONS take A; each
+         * plays the select cue and turns its button white, and the frame
+         * showing it is the one the transition holds. The rule and value
+         * rows take none. */
+        if ((sMenuVsCursor != NDS_MENU_VS_START) &&
+            (sMenuVsCursor != NDS_MENU_VS_OPTIONS))
+        {
+            return;
+        }
+        ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
+        sMenuVsSelected = sMenuVsCursor;
+        ndsMenuShellVsSyncButtons(NDS_MENU_VS_ENTRIES);
         if (sMenuVsCursor == NDS_MENU_VS_START)
         {
-            ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
             ndsMenuShellVsSaveRules();
             /* VS START goes to the CHARACTER SELECT, which is where it goes in
              * the source too (mnvsmode.c's VS START leads to nSCKindPlayersVS,

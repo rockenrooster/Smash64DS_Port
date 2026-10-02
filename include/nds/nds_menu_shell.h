@@ -155,9 +155,47 @@ void ndsMenuShellOnePlayerCssPresent(s32 cursor_x, s32 cursor_y,
 /* TRUE only while the native 1P CSS presenter owns the source scene's 2D
  * output. The source object graph still runs because it owns menu behaviour;
  * this is the narrow hand-off that prevents those already-represented SObjs
- * and fill words from being diagnosed as missing native programs. */
+ * and fill words from being diagnosed as missing native programs. It and
+ * ndsMenuShellOnePlayerCssExit serve the Bonus Practice selects below too:
+ * one owner, never live for two scenes at once. */
 u32 ndsMenuShellOnePlayerCssOwnsSource2D(void);
 void ndsMenuShellOnePlayerCssExit(void);
+
+/* P2-6. The Bonus 1/2 Practice character selects: mnplayers1pbonus.c, ONE
+ * source TU behind nSCKind1PBonus1Players and nSCKind1PBonus2Players, is the
+ * only behaviour owner -- hit tests, puck and pick, costume, the record read
+ * from the save and every transition. Its draw seam
+ * (battleship_mnplayers1pbonus.c) publishes the evaluated state below.
+ * Coordinates are in the source's 320x240 frame. */
+#define NDS_MENU_SHELL_BONUS_RECORD_NONE 0u
+#define NDS_MENU_SHELL_BONUS_RECORD_TIME 1u
+#define NDS_MENU_SHELL_BONUS_RECORD_COUNT 2u
+
+typedef struct NdsMenuShellBonusCssState {
+    s32 cursor_x;
+    s32 cursor_y;
+    u32 cursor_status;
+    s32 puck_x;
+    s32 puck_y;
+    u32 puck_visible;
+    /* The fighter kind whose emblem and name the gate shows, or -1. */
+    s32 gate_fkind;
+    /* sMNPlayers1PBonusBonusKind: 0 Break the Targets, 1 Board the
+     * Platforms. */
+    u32 bonus_kind;
+    u32 fighter_mask;
+    u32 ready_visible;
+    /* The puck fighter's record (mnPlayers1PBonusMakeHiScore): TIME carries
+     * minutes, seconds and hundredths; COUNT carries the count in [0]. */
+    u32 record_kind;
+    u32 record_value[3];
+    /* The all-fighter total (mnPlayers1PBonusMakeTotalTime): minutes,
+     * seconds and hundredths after that function's own carries. */
+    u32 total_visible;
+    u32 total_value[3];
+} NdsMenuShellBonusCssState;
+
+void ndsMenuShellBonusCssPresent(const NdsMenuShellBonusCssState *state);
 
 /* The shell's 2D CSS owns source fighter previews through a deliberately
  * bounded PlayersVS subset; these are implemented by the imported source TU.

@@ -63,6 +63,9 @@ static u8 sMenuOptionFlash;
  * nothing and a change blits exactly the row that changed. Same
  * discipline as the VS Options screen's row surfaces. */
 static NdsUiKitSurfaceId sMenuOptionRowSurface[NDS_MENU_OPTION_ROWS];
+/* Backup Clear pressed: its tab turns white on the frame the select cue
+ * plays (mnoption.c:895, nMNOptionTabStatusSelected). */
+static u32 sMenuOptionPressed;
 
 __attribute__((used)) volatile u32 gNdsMenuShellOptionBlitCount;
 __attribute__((used)) volatile u32 gNdsMenuShellOptionCommitCount;
@@ -94,6 +97,10 @@ static NdsUiKitSurfaceId ndsMenuShellOptionWantSurface(u32 row)
             NDS_MN_UI_KIT_SURFACE_OPTION_SCREEN_ADJUST;
     default:
         break;
+    }
+    if (sMenuOptionPressed != 0u)
+    {
+        return NDS_MN_UI_KIT_SURFACE_OPTION_BACKUP_CLEAR_SEL;
     }
     return (hi != 0u) ?
         NDS_MN_UI_KIT_SURFACE_OPTION_BACKUP_CLEAR_HI :
@@ -148,6 +155,7 @@ static void ndsMenuShellOptionLoad(void)
     {
         sMenuOptionRowSurface[row] = NDS_MENU_VS_SURFACE_NONE;
     }
+    sMenuOptionPressed = 0u;
 }
 
 /* mnOptionWriteBackup (:818-824) exactly. */
@@ -251,6 +259,8 @@ static void ndsMenuShellUpdateOption(u32 held, u32 taps)
         }
         ndsMenuShellOptionWriteBackup();
         ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
+        sMenuOptionPressed = 1u;
+        ndsMenuShellOptionSyncRows(NDS_MENU_OPTION_ROWS);
         ndsMenuShellGoto((u32)nSCKindBackupClear);
         return;
     }

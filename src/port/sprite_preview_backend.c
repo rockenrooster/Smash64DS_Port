@@ -1048,11 +1048,17 @@ extern u32 ndsMenuShellOnePlayerCssOwnsSource2D(void);
  * SObjs are represented AOT by nds_menu_shell_onep.c, though, so once that
  * native owner is active they are not an unimplemented graphics path. Keep
  * this scene-specific and owner-latched: every other source menu continues to
- * fail loudly until it has its own native presentation owner. */
+ * fail loudly until it has its own native presentation owner. The Bonus
+ * Practice selects (mnplayers1pbonus.c, both scene kinds) present through the
+ * same owner, so the same latch covers their SObjs and the portrait-shadow
+ * combiner words mnPlayers1PBonusPortraitProcDisplay writes (:446-455). */
 static u32 ndsMenuFillSinkOnePlayerNativeOwner(void)
 {
-    return (((u32)gSCManagerSceneData.scene_curr ==
-             (u32)nSCKind1PGamePlayers) &&
+    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+    return (((scene == (u32)nSCKind1PGamePlayers) ||
+             (scene == (u32)nSCKind1PBonus1Players) ||
+             (scene == (u32)nSCKind1PBonus2Players)) &&
             (ndsMenuShellOnePlayerCssOwnsSource2D() != FALSE)) ? TRUE : FALSE;
 }
 #else

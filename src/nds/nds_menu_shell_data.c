@@ -58,6 +58,9 @@ static u32 sMenuDataHaveSoundTest;
 /* What is currently ON SCREEN, so a still screen blits nothing and a cursor
  * move blits exactly the two rows that changed (Option-screen discipline). */
 static NdsUiKitSurfaceId sMenuDataRowSurface[NDS_MENU_DATA_ROWS];
+/* The row A pressed, white on the frame its select cue plays (mndata.c:
+ * 675-695, nMNOptionTabStatusSelected); NDS_MENU_DATA_ROWS: none. */
+static u32 sMenuDataPressed = NDS_MENU_DATA_ROWS;
 
 __attribute__((used)) volatile u32 gNdsMenuShellDataBlitCount;
 
@@ -80,6 +83,20 @@ static NdsUiKitSurfaceId ndsMenuShellDataWantSurface(u32 row)
 {
     u32 hi = (row == sMenuDataCursor) ? 1u : 0u;
 
+    if (row == sMenuDataPressed)
+    {
+        if (sMenuDataHaveSoundTest == FALSE)
+        {
+            return (row == NDS_MENU_DATA_CHARACTERS) ?
+                NDS_MN_UI_KIT_SURFACE_DATA_CHARACTERS_NOSOUND_SEL :
+                NDS_MN_UI_KIT_SURFACE_DATA_VS_RECORD_NOSOUND_SEL;
+        }
+        return (row == NDS_MENU_DATA_CHARACTERS) ?
+            NDS_MN_UI_KIT_SURFACE_DATA_CHARACTERS_SEL :
+            ((row == NDS_MENU_DATA_VS_RECORD) ?
+                NDS_MN_UI_KIT_SURFACE_DATA_VS_RECORD_SEL :
+                NDS_MN_UI_KIT_SURFACE_DATA_SOUND_TEST_SEL);
+    }
     if (sMenuDataHaveSoundTest == FALSE)
     {
         if (row == NDS_MENU_DATA_CHARACTERS)
@@ -161,6 +178,7 @@ static void ndsMenuShellDataLoad(void)
             sMenuDataRowSurface[row] = NDS_MENU_VS_SURFACE_NONE;
         }
     }
+    sMenuDataPressed = NDS_MENU_DATA_ROWS;
 }
 
 static void ndsMenuShellPopulateData(void)
@@ -231,6 +249,8 @@ static void ndsMenuShellUpdateData(u32 held, u32 taps)
             (ndsSceneManagerFind(want_kind) != NULL))
         {
             ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
+            sMenuDataPressed = sMenuDataCursor;
+            ndsMenuShellDataRefresh();
             ndsMenuShellGoto(want_kind);
             return;
         }

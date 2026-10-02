@@ -161,6 +161,54 @@
       "reason": "The native screen shows its numbers through the kit number helper (ndsUiKitSetNumber, the common MNCommonDigit cells) while the source draws its own digit sprites (dMNSoundTestDigitSpriteOffsets / llMNSoundTestDigit*); the common digits stand in until that art is baked.",
       "ruling": "Owner order 2026-09-07 (docs/HANDOFF.md): DATA children last; delete when the screen's own digits are baked.",
       "status": "ruled"
+    },
+    {
+      "screen": "1p_bonus_css_shell",
+      "kind": "missing",
+      "key": "re:llMNCommonFonts\\w+Sprite",
+      "reason": "NOT DRAWN BY THE SOURCE EITHER. dMNPlayers1PBonusFontOffsets (mnplayers1pbonus.c:220-239) and its widths table (:242-246) are initialized data that nothing in the file reads: the bonus select builds no menu-font string (it has no counterpart of the 1P select's MakeString). The audit counts every file-scope table as live.",
+      "ruling": "Source-read fact, mnplayers1pbonus.c:220-246 (no reader in the file)",
+      "status": "ruled"
+    },
+    {
+      "screen": "1p_bonus_css_shell",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon\\dDarkSprite",
+      "reason": "NOT DRAWN BY THE SOURCE EITHER. dMNPlayers1PBonusDigitOffsets (mnplayers1pbonus.c:799-811) and dMNPlayers1PBonusDigitWidths (:814-818) have no reader: every number this select draws goes through mnPlayers1PBonusMakeNumber (:181), whose digits are the IFCommon HUD font the BONUS_DIGIT_* glyphs bake.",
+      "ruling": "Source-read fact, mnplayers1pbonus.c:799-818 (no reader in the file)",
+      "status": "ruled"
+    },
+    {
+      "screen": "1p_bonus_css_shell",
+      "kind": "missing",
+      "key": "llMNPlayersCommonCPPuckSprite",
+      "reason": "NOT DRAWN BY THE SOURCE EITHER. Its only reference is dMNPlayers1PBonusPuckSpriteOffsets (mnplayers1pbonus.c:2180-2187), which nothing reads; mnPlayers1PBonusMakePuck (:2380-2386) indexes its own 1P-4P table, and this select has no CPU slot.",
+      "ruling": "Source-read fact, mnplayers1pbonus.c:2180-2187 and :2380-2405",
+      "status": "ruled"
+    },
+    {
+      "screen": "1p_bonus_css_shell",
+      "kind": "missing",
+      "key": "re:llMNPlayersCommon[2-4]P(Puck|Text|TextGradient)Sprite",
+      "reason": "The puck, gate tag and cursor tag of a select entered from controller 2-4. MakePuck (:2391-2405), MakeGate (:782) and UpdateCursor (:1452) index their 1P-4P tables by sMNPlayers1PBonusManPlayer, the port that chose 1P mode (InitVars :2761). The DS has one controller, so the native screen draws the 1P art; 2P-4P become reachable only with additional controller ownership.",
+      "ruling": "P2-2 single-console scope (the css row's 2P-4P rulings); BattleShip mnPlayers1PBonusInitVars / mnPlayers1PBonusInitSlot",
+      "status": "ruled"
+    },
+    {
+      "screen": "1p_bonus_css_shell",
+      "kind": "missing",
+      "key": "llMNPlayersPortraitsCrossSprite",
+      "reason": "NOT DRAWN BY THE SOURCE EITHER. mnPlayers1PBonusPortraitAddCross's only caller (:555-558) is gated on mnPlayers1PBonusCheckFighterCrossed, which is `return FALSE;` (:322-326).",
+      "ruling": "Source-read fact, mnplayers1pbonus.c:322-326",
+      "status": "ruled"
+    },
+    {
+      "screen": "1p_bonus_css_shell",
+      "kind": "missing",
+      "key": "llMNPlayersPortraitsWhiteSquareSprite",
+      "reason": "The pick flash: mnPlayers1PBonusMakePortraitFlash (:1622-1638) blinks the white square behind the chosen portrait every tic for 16 tics (thread :1599-1619, flash camera priority 50 between the fire boxes' 60 and the portraits' 40). The native owner does not present it, exactly as it does not for the 1P select, whose source draws the identical flash; each blink edge would be a NitroFS re-blit of a portrait cell. The VS select's CSS_FLASH_* families are the template if it ships.",
+      "ruling": "No ruling yet (2026-10-02 native bonus select draft): shared with the 1P select's native owner, which omits the same flash.",
+      "status": "open"
     }
   ]
 }

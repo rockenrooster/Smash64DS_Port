@@ -895,15 +895,23 @@ static void ndsUiKitSurfaceRow(const u16 *src, u16 *layer, u32 pitch,
 }
 
 static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
-                                  u16 *layer, u32 pitch, u32 layer_w,
-                                  u32 layer_h)
+                                  const s16 *site, u16 *layer, u32 pitch,
+                                  u32 layer_w, u32 layer_h)
 {
-    const NdsUiKitSurfaceMetric *metric = &kNdsUiKitSurfaceMetrics[index];
+    /* A copy, so a caller's site moves this blit and never the manifest; the
+     * row writer clips the moved origin exactly as it clips a baked one. */
+    NdsUiKitSurfaceMetric placed = kNdsUiKitSurfaceMetrics[index];
+    const NdsUiKitSurfaceMetric *metric = &placed;
     u32 row_bytes = (u32)metric->width * sizeof(u16);
     u32 rows_per_slice = NDS_UI_KIT_STAGING_BYTES / row_bytes;
     u32 hash = 0x811C9DC5u;
     u32 row = 0u;
 
+    if ((site != NULL) && (site[0] != NDS_UI_KIT_SITE_BAKED))
+    {
+        placed.x = site[0];
+        placed.y = site[1];
+    }
     while (row < (u32)metric->height)
     {
         u32 rows = (u32)metric->height - row;
@@ -947,7 +955,7 @@ static s32 ndsUiKitBlitOneSurface(NdsRelocAssetStream *stream, u32 index,
 }
 
 static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
-                                     u32 count,
+                                     const s16 *sites, u32 count,
                                      sb32 is_foreground)
 {
     NdsRelocAssetStream stream;
@@ -987,8 +995,9 @@ static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
             ok = FALSE;
             continue;
         }
-        if (ndsUiKitBlitOneSurface(&stream, surfaces[i], layer, pitch, layer_w,
-                                   layer_h) == FALSE)
+        if (ndsUiKitBlitOneSurface(&stream, surfaces[i],
+                                   (sites != NULL) ? &sites[2u * i] : NULL,
+                                   layer, pitch, layer_w, layer_h) == FALSE)
         {
             ok = FALSE;
         }
@@ -1000,13 +1009,19 @@ static s32 ndsUiKitBlitSurfacesLayer(const NdsUiKitSurfaceId *surfaces,
 
 s32 ndsUiKitBlitSurfaces(const NdsUiKitSurfaceId *surfaces, u32 count)
 {
-    return ndsUiKitBlitSurfacesLayer(surfaces, count, FALSE);
+    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, FALSE);
 }
 
 s32 ndsUiKitBlitForegroundSurfaces(const NdsUiKitSurfaceId *surfaces,
                                    u32 count)
 {
-    return ndsUiKitBlitSurfacesLayer(surfaces, count, TRUE);
+    return ndsUiKitBlitSurfacesLayer(surfaces, NULL, count, TRUE);
+}
+
+s32 ndsUiKitBlitSurfacesAt(const NdsUiKitSurfaceId *surfaces,
+                           const s16 *sites, u32 count)
+{
+    return ndsUiKitBlitSurfacesLayer(surfaces, sites, count, FALSE);
 }
 
 void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height)

@@ -94,6 +94,7 @@ OPTION_SURFACES = r'''
 #define NDS_MN_UI_KIT_SURFACE_OPTION_SCREEN_ADJUST 46u
 #define NDS_MN_UI_KIT_SURFACE_OPTION_BACKUP_CLEAR_HI 47u
 #define NDS_MN_UI_KIT_SURFACE_OPTION_BACKUP_CLEAR 48u
+#define NDS_MN_UI_KIT_SURFACE_OPTION_BACKUP_CLEAR_SEL 49u
 '''
 
 BACKUP_PREAMBLE = r'''
@@ -190,6 +191,7 @@ enum { nSCKindTitle = 0, nSCKindModeSelect = 1, nSCKindOption = 2, nSCKindBackup
 u32 sMenuOptionCursor;
 u8 sMenuOptionSound, sMenuOptionFlash;
 NdsUiKitSurfaceId sMenuOptionRowSurface[3];
+u32 sMenuOptionPressed;
 u32 gNdsMenuShellOptionBlitCount, gNdsMenuShellOptionCommitCount;
 struct { u8 scene_prev, scene_curr; } gSCManagerSceneData;
 struct { int is_allow_screenflash, sound_mono_or_stereo; } gSCManagerBackupData;

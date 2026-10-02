@@ -22,21 +22,19 @@
  * stages them), MNSelectCommon / MNPlayersGameModes / MNPlayersSpotlight /
  * FTEmblemSprites / MNCommonFonts / IFCommonDigits / FTStocksZako (all have
  * NDS_MENU_RELOC_SYMBOLS X rows generating reloc_data.h externs),
- * MNPlayers1PMode (extern reloc_data.h:1224, staged 2026-09-04).
- * UNSTAGED (no extern under include/, no global under src/): one file --
- *   MNPlayersDifficulty (llMNPlayersDifficultyFileID).
- * Orchestrator: python scripts/menus/stage_reloc_file.py --file MNPlayersDifficulty --list NDS_1P_RELOC_FILES
+ * MNPlayers1PMode (extern reloc_data.h:1224, staged 2026-09-04), and since
+ * then MNPlayersDifficulty (reloc_data.h's MNPlayersDifficulty block).
  * Portraits/names ride MNPlayersPortraits + MNPlayersCommon as noted.
  *
  * Shims vs unresolved, see handoff report:
  * - Menu-owned sMNPlayers1PBonus* statics + slot type MNPlayersSlotBonus
  *   (decomp mn/menu.h): owned here by the include, not shimmed.
  * - nMNPlayersCursorStatus* and every other nMNPlayers* member the source
- *   names: carried by include/mn/mndef.h (2026-09-05 widening). Reloc
- *   census the same day: two rows unstaged, the Bonus1/Bonus2 game-mode
- *   text sprites (llMNPlayersGameModesBonus1BreakTheTargetsTextSprite,
- *   ...Bonus2BoardThePlatformsTextSprite), queued for the reloc-staging
- *   agent as an --extend of MNPlayersGameModes.
+ *   names: carried by include/mn/mndef.h (2026-09-05 widening). The two
+ *   game-mode titles that census found unstaged
+ *   (llMNPlayersGameModesBonus1BreakTheTargetsTextSprite,
+ *   ...Bonus2BoardThePlatformsTextSprite) are X rows of MNPlayersGameModes
+ *   in reloc_data.h now, with geometry rows in reloc_backend_assets.c.
  * - Best-time/task-count backup accessors, ftParam and ftGetStruct,
  *   scSubsys, gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
  *   no stubs.
@@ -55,6 +53,9 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_platform.h>
+#if NDS_P2_MENU_SHELL
+#include <nds/nds_menu_shell.h>
+#endif
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -114,12 +115,130 @@ static void ndsMNPlayers1PBonusDraw(void);
 
 #undef mnPlayers1PBonusStartScene
 
+#if NDS_P2_MENU_SHELL
+/* The total row is rebuilt only where the source rebuilds it -- at entry
+ * (:2860-2863) and on the title toggle (:2093-2101) -- so its three values
+ * are read once per made GObj and kind instead of summing twelve records a
+ * frame. Reset by StartScene: a revisit's GObj may reuse the address. */
+static GObj *sNdsMNPlayers1PBonusTotalGObj;
+static s32 sNdsMNPlayers1PBonusTotalKind;
+static u32 sNdsMNPlayers1PBonusTotal[3];
+
+/* The select's 2D screen is native (nds_menu_shell_onep.c, the 1P select's
+ * owner). Everything here is READ from what this frame's processes left:
+ * the SObj positions and GObj flags the source set, and the records through
+ * the source's own accessors in the arithmetic of the Make function whose
+ * SObjs the native screen replaces. No source state is written. */
+static void ndsMNPlayers1PBonusPresentNative(void)
+{
+    NdsMenuShellBonusCssState state;
+    GObj *cursor = sMNPlayers1PBonusSlot.cursor;
+    GObj *puck = sMNPlayers1PBonusSlot.puck;
+    GObj *name_emblem = sMNPlayers1PBonusSlot.name_emblem_gobj;
+    SObj *cursor_sobj = (cursor != NULL) ? SObjGetStruct(cursor) : NULL;
+    SObj *puck_sobj = (puck != NULL) ? SObjGetStruct(puck) : NULL;
+
+    if ((cursor_sobj == NULL) || (puck_sobj == NULL))
+    {
+        return;
+    }
+    state.cursor_x = (s32)cursor_sobj->pos.x;
+    state.cursor_y = (s32)cursor_sobj->pos.y;
+    state.cursor_status = (u32)sMNPlayers1PBonusSlot.cursor_status;
+    state.puck_x = (s32)puck_sobj->pos.x;
+    state.puck_y = (s32)puck_sobj->pos.y;
+    /* mnPlayers1PBonusPuckProcUpdate (:2214-2223) hides the token itself. */
+    state.puck_visible = ((puck->flags & GOBJ_FLAG_HIDDEN) == 0u) ?
+        TRUE : FALSE;
+    /* mnPlayers1PBonusUpdateNameAndEmblem (:1573-1584) hides the pair while
+     * no fighter is under the puck and re-makes it for the slot's fighter. */
+    state.gate_fkind = ((name_emblem != NULL) &&
+                        ((name_emblem->flags & GOBJ_FLAG_HIDDEN) == 0u)) ?
+        (s32)sMNPlayers1PBonusSlot.fkind : -1;
+    state.bonus_kind = (u32)sMNPlayers1PBonusBonusKind;
+    state.fighter_mask = (u32)sMNPlayers1PBonusFighterMask;
+    /* mnPlayers1PBonusReadyProcUpdate (:2554-2571). */
+    state.ready_visible = ((sMNPlayers1PBonusIsSelected != FALSE) &&
+                           (sMNPlayers1PBonusReadyBlinkWait < 30)) ?
+        TRUE : FALSE;
+
+    /* mnPlayers1PBonusMakeHiScore (:1171-1178), which the puck process runs
+     * every frame (:2248): the record GObj exists only while the puck is
+     * over a portrait cell (:1048, :1121), locked cells included. */
+    state.record_kind = NDS_MENU_SHELL_BONUS_RECORD_NONE;
+    state.record_value[0] = 0u;
+    state.record_value[1] = 0u;
+    state.record_value[2] = 0u;
+    if (sMNPlayers1PBonusHiScoreGObj != NULL)
+    {
+        s32 fkind = mnPlayers1PBonusGetForcePuckFighterKind();
+
+        if (fkind != nFTKindNull)
+        {
+            if (mnPlayers1PBonusCheckBonusComplete(fkind) != FALSE)
+            {
+                /* mnPlayers1PBonusMakeBestTime (:1050-1092). */
+                u32 best_time = mnPlayers1PBonusGetBestTime(fkind);
+
+                state.record_kind = NDS_MENU_SHELL_BONUS_RECORD_TIME;
+                state.record_value[0] =
+                    (u32)mnPlayers1PBonusGetMins(best_time);
+                state.record_value[1] =
+                    (u32)mnPlayers1PBonusGetSec(best_time);
+                state.record_value[2] =
+                    (u32)mnPlayers1PBonusGetCSec(best_time);
+            }
+            else
+            {
+                /* mnPlayers1PBonusMakeBestTaskCount (:1145). */
+                state.record_kind = NDS_MENU_SHELL_BONUS_RECORD_COUNT;
+                state.record_value[0] =
+                    (u32)mnPlayers1PBonusGetBestTaskCount(fkind);
+            }
+        }
+    }
+
+    /* mnPlayers1PBonusMakeTotalTime (:1187-1244) with its own carries
+     * (:1210-1243): hundredths, then seconds plus their carry, then minutes
+     * plus theirs. */
+    state.total_visible = (sMNPlayers1PBonusTotalTimeGObj != NULL) ?
+        TRUE : FALSE;
+    if ((state.total_visible != FALSE) &&
+        ((sMNPlayers1PBonusTotalTimeGObj != sNdsMNPlayers1PBonusTotalGObj) ||
+         (sMNPlayers1PBonusBonusKind != sNdsMNPlayers1PBonusTotalKind)))
+    {
+        s32 centiseconds = mnPlayers1PBonusGetTotalCSec();
+        s32 remainder = centiseconds / 100;
+        s32 seconds = mnPlayers1PBonusGetTotalSec() + remainder;
+
+        sNdsMNPlayers1PBonusTotal[2] = (u32)(centiseconds % 100);
+        remainder = seconds / TIME_SEC;
+        seconds %= TIME_SEC;
+        sNdsMNPlayers1PBonusTotal[1] = (u32)seconds;
+        sNdsMNPlayers1PBonusTotal[0] =
+            (u32)(mnPlayers1PBonusGetTotalMins() + remainder);
+        sNdsMNPlayers1PBonusTotalGObj = sMNPlayers1PBonusTotalTimeGObj;
+        sNdsMNPlayers1PBonusTotalKind = sMNPlayers1PBonusBonusKind;
+    }
+    state.total_value[0] = sNdsMNPlayers1PBonusTotal[0];
+    state.total_value[1] = sNdsMNPlayers1PBonusTotal[1];
+    state.total_value[2] = sNdsMNPlayers1PBonusTotal[2];
+
+    ndsMenuShellBonusCssPresent(&state);
+}
+#endif
+
 /* The select's preview is 3D, which BG0 shows only while a scene asks, in
- * the cameras' (10,10)-(310,230) window -- the 1P game select's draw. */
+ * the cameras' (10,10)-(310,230) window -- the 1P game select's draw. Its
+ * 2D screen is presented natively first, from the state this frame's
+ * processes left, as the 1P select's draw does. */
 static void ndsMNPlayers1PBonusDraw(void)
 {
     GObj *fighter = sMNPlayers1PBonusSlot.player;
 
+#if NDS_P2_MENU_SHELL
+    ndsMNPlayers1PBonusPresentNative();
+#endif
     ndsPlatformSet3DLayerEnabled((fighter != NULL) &&
         ((fighter->flags & GOBJ_FLAG_HIDDEN) == 0u));
     ndsPlatformSet3DViewportSource(10, 10, 310, 230);
@@ -135,7 +254,13 @@ void mnPlayers1PBonusStartScene(void)
      * eject HiScoreGObj when non-NULL on the first cursor move, so a
      * revisit would eject the torn-down GObj. Null it on entry. */
     sMNPlayers1PBonusHiScoreGObj = NULL;
+#if NDS_P2_MENU_SHELL
+    sNdsMNPlayers1PBonusTotalGObj = NULL;
+#endif
     ndsBaseMNPlayers1PBonusStartScene();
+#if NDS_P2_MENU_SHELL
+    ndsMenuShellOnePlayerCssExit();
+#endif
     ndsFighterManagerRegisterDisplayFighter(NULL,
                                             (u32)sMNPlayers1PBonusManPlayer);
     ndsMNPlayers1PPreviewRetire();

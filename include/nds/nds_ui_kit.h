@@ -224,6 +224,16 @@ s32 ndsUiKitBlitSurfaces(const NdsUiKitSurfaceId *surfaces, u32 count);
  * is in front of the fighter preview. */
 s32 ndsUiKitBlitForegroundSurfaces(const NdsUiKitSurfaceId *surfaces,
                                    u32 count);
+/* P2-6. The same one-open BG2 list, but `sites` (two s16 a surface, x then y,
+ * DS screen pixels) can move a surface's top-left off its baked origin; an x
+ * of NDS_UI_KIT_SITE_BAKED keeps the baked one, and a NULL `sites` is
+ * ndsUiKitBlitSurfaces exactly. Built for KEYED glyphs a screen places at many
+ * sites -- the Bonus Practice select's record digits are ten glyph surfaces
+ * drawn at fifteen digit sites, where a surface per site would cost 150
+ * manifest rows -- riding in the same open as the state they sit on. */
+#define NDS_UI_KIT_SITE_BAKED (-32768)
+s32 ndsUiKitBlitSurfacesAt(const NdsUiKitSurfaceId *surfaces,
+                           const s16 *sites, u32 count);
 /* Clear a small rectangle of BG3 to transparent before replacing/removing a
  * keyed foreground surface. Coordinates are already in DS screen pixels. */
 void ndsUiKitClearForegroundRect(s32 x, s32 y, u32 width, u32 height);

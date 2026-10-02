@@ -2080,10 +2080,14 @@ static s32 ndsS2DSceneIsTenant(u32 scene)
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif
-    /* The bonus practice character selects have no baked surface (the 1P
-     * game select's is nds_menu_shell_onep.c); their SObjs draw here. */
+#if !NDS_P2_MENU_SHELL
+    /* The bonus practice character selects present natively through the 1P
+     * select's owner (nds_menu_shell_onep.c), whose baked screen is not
+     * bounded by this presenter's 64 KB OBJ bank. Only a shell-off build,
+     * which compiles that owner out, still draws their SObjs here. */
     case nSCKind1PBonus1Players:
     case nSCKind1PBonus2Players:
+#endif
         return TRUE;
     default:
         return FALSE;

@@ -169,6 +169,14 @@ SCREENS = (
                ("mn/mndata/mnsoundtest.c",), "SoundTest", "SOUNDTEST"),
     ScreenSpec("vs_record_shell", "VS Record (native)",
                ("mn/mndata/mnvsrecord.c",), "VsRecord", "VSRECORD"),
+    # The Bonus Practice selects' native screen (nds_menu_shell_onep.c's
+    # ndsMenuShellBonusCss*, 2026-10-02). Longest-tag-wins keeps those
+    # functions off the VS "Css" row. It has no backdrop case: the owner blits
+    # its own base. Keyed *_shell because IMPORTED_SCREENS still audits the
+    # same source through the reloc path its object graph keeps resolving.
+    ScreenSpec("1p_bonus_css_shell",
+               "Bonus Practice character select (native)",
+               ("mn/mnplayers/mnplayers1pbonus.c",), "BonusCss", "BONUSCSS"),
 )
 
 # ---------------------------------------------------------------------------
@@ -290,9 +298,26 @@ IMPORTED_SCREENS = (
                        "battleship_mnvsresults.c"),
 )
 
-# `ndsUiKitSetNumber` fans one call out over the ten digit cells.
+# `ndsUiKitSetNumber` fans one call out over the ten digit cells.  A bare name
+# is an IMAGE_ token; a SURFACE_ or IMAGE_ prefix is kept as written.
+#
+# nds_menu_shell_onep.c's hand, token and READY helpers serve the 1P select
+# AND the Bonus Practice selects.  They are named for the 1P select, so their
+# own bodies file under "Css"; a call names what the helper draws for the
+# CALLER's screen, which is how the bonus row sees the shared art it shows.
 HELPER_TOKENS = {
     "ndsUiKitSetNumber": tuple(f"DIGIT_{d}" for d in range(10)),
+    "ndsMenuShellOnePlayerCssSyncCursor": (
+        "CSS_CURSOR_POINT", "CSS_CURSOR_GRAB", "CSS_CURSOR_HOVER",
+        "CSS_CURSOR_1P"),
+    "ndsMenuShellOnePlayerCssSyncPuck": ("PUCK_1P",),
+    # The READY band, its foreground banner, PRESS START, and the save-lock
+    # cells the band's restore re-applies.
+    "ndsMenuShellOnePlayerCssSyncReady": (
+        "SURFACE_ONEP_READY_ON", "SURFACE_ONEP_READY_OFF",
+        "SURFACE_CSS_READY_FOREGROUND", "CSS_READY_PRESS", "CSS_READY_START",
+        "SURFACE_CSS_LOCKED_LUIGI", "SURFACE_CSS_LOCKED_CAPTAIN",
+        "SURFACE_CSS_LOCKED_NESS", "SURFACE_CSS_LOCKED_PURIN"),
 }
 
 # A token the shell indexes with `+ <expr>`: the whole consecutive block is
@@ -342,6 +367,14 @@ TOKEN_FAMILIES = {
         f"CSS_TEAM_SELECT_{team}_{player}"
         for team in ("RED", "BLUE", "GREEN")
         for player in range(4)),
+    # nds_menu_shell_onep.c's bonus presenter indexes BONUS_GATE_MARIO + fkind
+    # and BONUS_DIGIT_0 + digit; its _Static_asserts pin both blocks.
+    "BONUS_GATE_MARIO": tuple(
+        f"BONUS_GATE_{fighter}"
+        for fighter in ("MARIO", "FOX", "DONKEY", "SAMUS", "LUIGI", "LINK",
+                        "YOSHI", "CAPTAIN", "KIRBY", "PIKACHU", "PURIN",
+                        "NESS")),
+    "BONUS_DIGIT_0": tuple(f"BONUS_DIGIT_{d}" for d in range(10)),
 }
 
 SHELL_PATH = Path("src/nds/nds_menu_shell.c")
@@ -684,7 +717,7 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
     # These surfaces are appended after the fire atlas, outside SURFACE_SOURCES.
     for table in ("ITEM_SWITCH_SURFACE_SPECS", "VS_OPTIONS_SURFACE_SPECS",
                   "OPTION_SURFACE_SPECS", "BACKUP_CLEAR_SURFACE_SPECS",
-                  "CHARACTERS_SURFACE_SPECS"):
+                  "CHARACTERS_SURFACE_SPECS", "BONUS_CSS_SURFACE_SPECS"):
         for spec in getattr(module, table, ()):
             target = out.setdefault(f"SURFACE_{spec.token}", set())
             for part in spec.parts:
@@ -915,7 +948,9 @@ def scan_shell(repo_root: Path) -> ShellInventory:
         for helper, tokens in HELPER_TOKENS.items():
             if helper in line:
                 for token in tokens:
-                    record(screen_of(function, line_no), f"IMAGE_{token}", site)
+                    record(screen_of(function, line_no),
+                           token if token.startswith(("IMAGE_", "SURFACE_"))
+                           else f"IMAGE_{token}", site)
     return inventory
 
 
